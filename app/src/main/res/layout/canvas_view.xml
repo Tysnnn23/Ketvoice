@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Canvas Spotify : SurfaceView remplacé par TextureView pour rester clippable
+     et animable à l'intérieur du coin arrondi de la pochette. -->
+<androidx.media3.ui.PlayerView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/canvas_view"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/transparent"
+    app:use_controller="false"
+    app:resize_mode="zoom"
+    app:surface_type="texture_view"
+    app:shutter_background_color="@android:color/transparent" />

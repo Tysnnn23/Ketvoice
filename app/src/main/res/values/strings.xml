@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Ketvoice</string>
+    <string name="tab_home">Accueil</string>
+    <string name="tab_explore">Explorer</string>
+    <string name="tab_library">Bibliothèque</string>
+    <string name="listen_now">Écouter maintenant</string>
+    <string name="explorer_title">Explorer</string>
+    <string name="library_title">Bibliothèque</string>
+    <string name="search_hint">Rechercher</string>
+    <string name="recents">Recents</string>
+    <string name="trending">Tendances</string>
+    <string name="albums_singles">Albums et singles</string>
+</resources>

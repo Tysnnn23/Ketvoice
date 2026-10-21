@@ -1,0 +1,93 @@
+package com.ketvoice.app.ui.sub
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.ketvoice.app.data.*
+import com.ketvoice.app.player.Player
+import com.ketvoice.app.theme.LocalTheme
+import com.ketvoice.app.ui.AppUi
+import com.ketvoice.app.ui.common.Cover
+import com.ketvoice.app.ui.player.formatSecs
+
+@Composable
+fun CatalogScreen() {
+    val request = AppUi.catalogRequest.value ?: return
+    val theme = LocalTheme.current
+    val recent by ListeningHistory.tracks.collectAsState()
+    val known by ListeningHistory.knownTracks.collectAsState()
+    val downloads by Downloader.items.collectAsState()
+    val art by ArtworkRepo.covers.collectAsState()
+    val player by Player.state.collectAsState()
+    var page by remember(request) { mutableStateOf<CatalogPage?>(null) }
+    var loading by remember(request) { mutableStateOf(request.kind in listOf("album", "genre")) }
+    var attempt by remember { mutableIntStateOf(0) }
+    LaunchedEffect(request, attempt) {
+        if (request.kind in listOf("album", "genre")) {
+            loading = true
+            page = if (request.kind == "album" && request.id.startsWith("MPRE")) {
+                YouTubeCatalog.album(request.id)
+            } else CatalogRepo.page(request)
+            loading = false
+        }
+    }
+    val tracks = when (request.kind) {
+        "favorites" -> (known + recent + downloads.map { it.track }).distinctBy { it.id }.filter { it.id in AppSettings.favoriteIds.value }
+        "history" -> recent
+        else -> page?.tracks.orEmpty()
+    }
+    LaunchedEffect(tracks) { ArtworkRepo.enrich(tracks) }
+    Column(Modifier.fillMaxSize().background(theme.background).statusBarsPadding()) {
+        Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, "Retour", tint = theme.onBackground,
+                modifier = Modifier.size(30.dp).clickable { AppUi.overlay.value = AppUi.NONE })
+            Spacer(Modifier.width(14.dp))
+            Text(page?.title ?: request.title, color = theme.onBackground, fontSize = 24.sp,
+                fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        }
+        if (loading) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(color = theme.accent, modifier = Modifier.size(26.dp), strokeWidth = 2.dp)
+        } else if (tracks.isEmpty()) Column(Modifier.padding(24.dp)) {
+            Text(if (request.kind in listOf("album", "genre")) "Ce catalogue est temporairement indisponible." else "Aucun titre dans cette collection.", color = theme.secondary)
+            if (request.kind in listOf("album", "genre")) Text("Réessayer", color = theme.accent, modifier = Modifier.clickable { attempt++ }.padding(vertical = 16.dp))
+        } else LazyColumn(contentPadding = PaddingValues(bottom = 205.dp)) {
+            if (page?.cover != null) item {
+                Row(Modifier.padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Cover(page!!.title, page!!.cover, 100.dp, 12.dp)
+                    Text(page!!.subtitle, color = theme.secondary, modifier = Modifier.padding(16.dp))
+                }
+            }
+            itemsIndexed(tracks, key = { i, t -> "${t.id}:$i" }) { index, track ->
+                val active = player.current?.id == track.id
+                Row(Modifier.fillMaxWidth().clickable { Player.playQueue(tracks, index) }.padding(horizontal = 18.dp, vertical = 7.dp),
+                    verticalAlignment = Alignment.CenterVertically) {
+                    Cover(track.title, art["t:${track.id}"] ?: track.coverUrl, 52.dp, 8.dp)
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(track.title, color = if (active) theme.accent else theme.onBackground, fontWeight = FontWeight.SemiBold,
+                            fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(track.artist, color = theme.secondary, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                    if (track.durationMs > 0) Text(formatSecs(track.durationMs), color = theme.secondary, fontSize = 12.sp)
+                    Icon(Icons.Filled.MoreVert, "Options", tint = theme.secondary,
+                        modifier = Modifier.size(36.dp).clickable { AppUi.trackMenuTrack.value = track }.padding(6.dp))
+                }
+            }
+        }
+    }
+}
