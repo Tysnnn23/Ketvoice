@@ -78,7 +78,7 @@ All notable public changes to Ketvoice are documented here. The app UI is French
 - Initial Kotlin/Jetpack Compose Android implementation.
 - Liquid Glass foundation, home/explore/library screens, custom full-screen player, queue, lyrics, downloads, and settings.
 - Four archived build variants were preserved: `1.0.0`, `1.0.0-compat`, `1.0.0-fix1`, and `1.0.0-fix2`.
-- These builds did not contain the development credentials later added to intermediate builds. They are archived for reference and are not supported.
+- These builds predate the session cookie and add-on credentials added in intermediate builds. They contain an obsolete example add-on URL in their settings help text, but no session cookie or access token. They are archived for reference and are not supported.
 
 ## Earlier internal builds
 

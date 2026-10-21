@@ -193,7 +193,7 @@ See [SECURITY.md](SECURITY.md) and [PRIVACY.md](PRIVACY.md).
 
 The latest public version is **2.3.1**. See [CHANGELOG.md](CHANGELOG.md) for the full release history.
 
-Earlier development builds from **1.2.0 through 2.3.0** contained development-only Spotify cookies and private add-on endpoints in their default settings. Those binaries are intentionally not published. Version **2.3.1** is the first clean public APK. The original **1.0.0** builds never contained those credentials and are archived as-is in the legacy release.
+Earlier development builds from **1.2.0 through 2.3.0** contained development-only Spotify session cookies and private add-on credentials in their default settings. Those binaries are intentionally not published. Version **2.3.1** is the first clean public APK. The original **1.0.0** builds predate those credentials and are archived as-is in the legacy release; their help text contains one obsolete example add-on URL, but no session cookie or access token.
 
 ## Legal
 
