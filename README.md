@@ -12,7 +12,7 @@
   <a href="https://github.com/Tysnnn23/Ketvoice/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/Tysnnn23/Ketvoice?display_name=tag&sort=semver"></a>
   <img alt="Android 12+" src="https://img.shields.io/badge/Android-12%2B-3DDC84?logo=android&logoColor=white">
   <img alt="Kotlin" src="https://img.shields.io/badge/Kotlin-2.2-7F52FF?logo=kotlin&logoColor=white">
-  <img alt="Jetpack Compose" src="https://img.shields.io/badge/Jetpack%20Compose-Material%203-4285F4?logo=jetpackcompose&logoColor=white">
+  <img alt="Jetpack Compose" src="https://img.shields.io/badge/Jetpack%20Compose-4285F4?logo=jetpackcompose&logoColor=white">
 </p>
 
 ## Overview
