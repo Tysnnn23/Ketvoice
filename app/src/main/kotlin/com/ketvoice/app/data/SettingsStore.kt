@@ -29,7 +29,6 @@ object SettingsStore {
         s.classicGradient.value = p.getBoolean("classicGradient", s.classicGradient.value)
         s.animatedArtwork.value = p.getBoolean("animatedArtwork", s.animatedArtwork.value)
         s.canvasWithMobileData.value = p.getBoolean("canvasWithMobileData", s.canvasWithMobileData.value)
-        s.canvasUrl.value = p.getString("canvasUrl", s.canvasUrl.value) ?: ""
         s.artistSignatures.value = p.getBoolean("artistSignatures", s.artistSignatures.value)
         s.syncedLyrics.value = p.getBoolean("syncedLyrics", s.syncedLyrics.value)
         s.blurInactiveLyrics.value = p.getBoolean("blurInactiveLyrics", s.blurInactiveLyrics.value)
@@ -61,12 +60,15 @@ object SettingsStore {
         }
         s.cacheBytes.value = (kotlin.math.round(s.cacheBytes.value / 500_000_000.0).toLong() * 500_000_000L)
             .coerceIn(500_000_000L, 10_000_000_000L)
-        p.getString("spDc", null)?.let { s.spDc.value = it }
-        s.addonLastBabe.value = p.getString("addonLastBabe", s.addonLastBabe.value).orEmpty()
-        s.addonLosslessBridge.value =
-            p.getString("addonLosslessBridge", s.addonLosslessBridge.value) ?: s.addonLosslessBridge.value
-        s.addonUltraMax.value =
-            p.getString("addonUltraMax", s.addonUltraMax.value) ?: s.addonUltraMax.value
+        // Migration 2.4 : les anciens secrets locaux sont supprimés de l'appareil.
+        // Ils vivent désormais uniquement côté Supabase.
+        p.edit()
+            .remove("spDc")
+            .remove("canvasUrl")
+            .remove("addonLastBabe")
+            .remove("addonLosslessBridge")
+            .remove("addonUltraMax")
+            .apply()
 
         s.playNextOnSwipe.value = p.getBoolean("playNextOnSwipe", s.playNextOnSwipe.value)
         s.noRepeatSuggestions.value = p.getBoolean("noRepeatSuggestions", s.noRepeatSuggestions.value)
@@ -97,7 +99,6 @@ object SettingsStore {
             .putBoolean("classicGradient", s.classicGradient.value)
             .putBoolean("animatedArtwork", s.animatedArtwork.value)
             .putBoolean("canvasWithMobileData", s.canvasWithMobileData.value)
-            .putString("canvasUrl", s.canvasUrl.value)
             .putBoolean("artistSignatures", s.artistSignatures.value)
             .putBoolean("syncedLyrics", s.syncedLyrics.value)
             .putBoolean("blurInactiveLyrics", s.blurInactiveLyrics.value)
@@ -107,7 +108,6 @@ object SettingsStore {
             .putString("betterLyricsKey", s.betterLyricsKey.value)
             .putString("lyricaUrl", s.lyricaUrl.value)
             .putString("translationSource", s.translationSource.value)
-            .putString("addonLastBabe", s.addonLastBabe.value)
             .putString("wifiQuality", s.wifiQuality.value)
             .putString("mobileQuality", s.mobileQuality.value)
             .putBoolean("skipSilence", s.skipSilence.value)
@@ -117,9 +117,6 @@ object SettingsStore {
             .putString("localMusicFolder", s.localMusicFolder.value)
             .putBoolean("filterNonAudio", s.filterNonAudio.value)
             .putLong("cacheBytes", s.cacheBytes.value)
-            .putString("spDc", s.spDc.value)
-            .putString("addonLosslessBridge", s.addonLosslessBridge.value)
-            .putString("addonUltraMax", s.addonUltraMax.value)
             .putBoolean("playNextOnSwipe", s.playNextOnSwipe.value)
             .putBoolean("noRepeatSuggestions", s.noRepeatSuggestions.value)
             .putBoolean("stopOnSwipeFromRecents", s.stopOnSwipeFromRecents.value)

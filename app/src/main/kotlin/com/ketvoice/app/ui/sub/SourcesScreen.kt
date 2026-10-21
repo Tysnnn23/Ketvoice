@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.ketvoice.app.data.CustomSource
 import com.ketvoice.app.data.CustomSources
+import com.ketvoice.app.data.KetvoiceApi
 import com.ketvoice.app.theme.LocalTheme
 import com.ketvoice.app.theme.T
 import com.ketvoice.app.ui.AppUi
@@ -58,6 +59,8 @@ fun SourcesScreen() {
     var deleteFor by remember { mutableStateOf<CustomSource?>(null) }
     var refreshing by remember { mutableStateOf<String?>(null) }
     var flash by remember { mutableStateOf<String?>(null) }
+    var apiTesting by remember { mutableStateOf(false) }
+    var apiOk by remember { mutableStateOf<Boolean?>(null) }
 
     Column(Modifier.fillMaxSize().background(th.background).statusBarsPadding()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
@@ -75,8 +78,8 @@ fun SourcesScreen() {
         LazyColumn(contentPadding = PaddingValues(start = 18.dp, end = 18.dp, bottom = 160.dp)) {
             item {
                 Text(
-                    "Ajoutez des sources de streaming et de téléchargement via une URL HTTPS terminée par .json. " +
-                        "Ketvoice vérifie le manifeste et interroge réellement la source avant de l'activer.",
+                    "Ketvoice API est la source intégrée : recherche, streaming et canvas passent par Supabase, " +
+                        "sans cookie ni jeton dans l'application. Vous pouvez aussi ajouter des manifestes .json.",
                     color = th.secondary, style = T.sub, lineHeight = 18.sp,
                     modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
                 )
@@ -84,6 +87,23 @@ fun SourcesScreen() {
                     Text(flash.orEmpty(), color = th.accent, fontSize = 13.sp,
                         modifier = Modifier.padding(bottom = 12.dp))
                 }
+                KetvoiceApiCard(
+                    testing = apiTesting,
+                    lastTestOk = apiOk,
+                    onTest = {
+                        if (!apiTesting) {
+                            apiTesting = true
+                            scope.launch {
+                                val ok = KetvoiceApi.health()
+                                apiOk = ok
+                                apiTesting = false
+                                flash = if (ok) "Ketvoice API répond correctement ✓"
+                                else "Ketvoice API est indisponible pour le moment."
+                            }
+                        }
+                    }
+                )
+                Spacer(Modifier.height(18.dp))
             }
             if (sources.isEmpty()) {
                 item {
@@ -93,9 +113,9 @@ fun SourcesScreen() {
                             contentAlignment = Alignment.Center) {
                             Icon(Icons.Filled.Tune, null, tint = th.accent, modifier = Modifier.size(26.dp))
                         }
-                        Text("Aucune source", color = th.onBackground, fontWeight = FontWeight.Bold,
+                        Text("Aucune source personnalisée", color = th.onBackground, fontWeight = FontWeight.Bold,
                             fontSize = 17.sp, modifier = Modifier.padding(top = 12.dp))
-                        Text("Les résultats YouTube Music restent disponibles sans source.",
+                        Text("Ketvoice API et YouTube Music restent disponibles.",
                             color = th.secondary, style = T.sub, modifier = Modifier.padding(top = 5.dp))
                         Text("Ajouter une source .json", color = Color.White, fontWeight = FontWeight.SemiBold,
                             modifier = Modifier.clip(RoundedCornerShape(999.dp)).background(th.accent)
@@ -194,6 +214,51 @@ fun SourcesScreen() {
                             flash = "Source supprimée."
                         }.padding(10.dp))
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun KetvoiceApiCard(
+    testing: Boolean,
+    lastTestOk: Boolean?,
+    onTest: () -> Unit
+) {
+    val th = LocalTheme.current
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(th.card).padding(14.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(42.dp).clip(CircleShape).background(th.accent.copy(alpha = .12f)),
+                contentAlignment = Alignment.Center) {
+                Icon(Icons.Filled.Tune, null, tint = th.accent, modifier = Modifier.size(21.dp))
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(KetvoiceApi.DISPLAY_NAME, color = th.onBackground, fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text("Recherche, streaming et canvas · Supabase",
+                    color = th.secondary, style = T.caption, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            Text("ACTIF", color = th.accent, fontSize = 10.sp, fontWeight = FontWeight.Bold,
+                modifier = Modifier.clip(RoundedCornerShape(5.dp))
+                    .background(th.accent.copy(alpha = .12f))
+                    .padding(horizontal = 7.dp, vertical = 4.dp))
+        }
+        Row(Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                when (lastTestOk) {
+                    true -> "Serveur et secrets validés"
+                    false -> "Test impossible pour le moment"
+                    null -> "Aucun réglage de cookie ou de jeton requis"
+                },
+                color = th.secondary, fontSize = 12.sp
+            )
+            Spacer(Modifier.weight(1f))
+            if (testing) {
+                CircularProgressIndicator(color = th.accent, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
+            } else {
+                Text("Tester", color = th.accent, fontWeight = FontWeight.SemiBold, fontSize = 13.sp,
+                    modifier = Modifier.clickable(onClick = onTest).padding(horizontal = 6.dp, vertical = 4.dp))
             }
         }
     }

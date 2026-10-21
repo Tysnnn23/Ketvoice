@@ -7,11 +7,57 @@
 
 ---
 
+## 🚀 2.4.0 — KETVOICE API
+
+**Released:** 21 October 2026<br>
+**Version:** `2.4.0` (`versionCode` 11)<br>
+**Status:** ✅ Latest source release — APK validated, publication pending
+
+Version 2.4.0 moves the remaining sensitive music-source and Spotify Canvas work to a Supabase Edge Function called **Ketvoice API**. The app keeps its French Liquid Glass interface and its real playback pipeline, but it no longer asks the user to paste a Spotify cookie or private add-on URLs.
+
+### 🔐 Credentials — before → after
+
+| Area | 😕 Before | ✅ After |
+|---|---|---|
+| **Spotify Canvas** | The user had to find and paste a personal `sp_dc` cookie into Settings. | Ketvoice API resolves Canvas server-side. The app has no Spotify cookie field and receives only a Canvas URL and Spotify ID. |
+| **Source search and streams** | Add-on base URLs and tokens were user-supplied app settings. | Ketvoice API searches the configured providers and returns only track metadata and short-lived stream URLs. |
+| **APK contents** | No credentials were bundled, but users still handled sensitive values. | The APK contains only the public Supabase `anon` key and the function URL. Spotify and add-on credentials live in Supabase Vault. |
+| **Server permissions** | No Ketvoice backend existed. | The function uses the Supabase service role only to read named Vault secrets. The helper RPC is service-role-only. |
+
+### 🎵 Sources and Canvas — before → after
+
+| Area | 😕 Before | ✅ After |
+|---|---|---|
+| **Source UI** | Users added JSON manifests and configured private add-ons manually. | A pinned **Ketvoice API** card appears in **Search → Sources** and Settings, with a health test. |
+| **Source results** | Results came from user-configured endpoints. | Server-side results are labelled `API` in the app and cover Ultra MAX, Lossless Bridge, and Last Babe when available. |
+| **Playback quality** | The app resolved add-on streams directly. | Ketvoice API resolves a fast MP3 start and a FLAC upgrade when a lossless provider has the track. |
+| **Canvas setup** | Manual Spotify cookie entry. | No setup. Canvas works when Spotify has a Canvas for the track and the server session is valid. |
+| **Provider failures** | A slow or failing add-on could delay the whole search. | Each source search has an eight-second cap, results are cached for 60 seconds, and HTTP `429` puts a provider on a five-minute cooldown. |
+
+### ✅ Validation — before → after
+
+| Check | 😕 Before | ✅ After |
+|---|---|---|
+| **Backend** | No server-side broker. | Live `/health`, `/search`, `/stream`, and `/canvas` checks pass. Ultra MAX returns MP3, Last Babe returns FLAC, and Canvas returns a real `canvaz.scdn.co` URL. |
+| **Android build** | 2.3.1 only. | `compileDebugKotlin`, `assembleDebug`, `assembleRelease`, JVM tests, and `lintDebug` pass for 2.4.0. |
+| **APK scan** | No credentials in 2.3.1. | No `sp_dc` value, long Spotify cookie pattern, or private add-on host in the signed 2.4.0 APK. |
+| **Runtime** | No 2.4.0 run. | Android 16 emulator: search shows `API` results, playback reaches `PLAYING`, and Canvas downloads to the app cache. |
+| **Settings** | Cookie and add-on fields were visible. | Canvas and Sources are read-only Ketvoice API sections; the app shows version 2.4.0 and a server health test. |
+
+### ⚠️ Known limitations
+
+- Lossless Bridge can return HTTP `429` from its upstream. Ketvoice API skips it temporarily and keeps Ultra MAX / Last Babe available.
+- Runtime validation used an Android 16 emulator, not a physical device.
+- The public Supabase `anon` key can be extracted from any client. `verify_jwt` prevents unauthenticated calls, but it is not a full abuse barrier.
+- Custom JSON sources remain user-managed and are separate from Ketvoice API.
+
+---
+
 ## 🚀 2.3.1 — THE CLEAN PUBLIC BUILD
 
 **Released:** 21 October 2026  
 **Version:** `2.3.1` (`versionCode` 10)  
-**Status:** ✅ Latest public release
+**Status:** ✅ Previous clean public release
 
 This release is intentionally small in code and huge in safety. It removes the personal credentials that made the earlier APKs unsafe to share.
 
@@ -166,7 +212,8 @@ Their binaries embedded development-only credentials and are **not published**. 
 
 | Version | APK published? | Why |
 |---|---|---|
-| **2.3.1** | ✅ Yes | Clean public build with no embedded credentials. |
+| **2.4.0** | ⏳ Pending | Credentials moved to Supabase Vault; sign-off required before publishing the APK. |
+| **2.3.1** | ✅ Yes | Clean public build with no embedded credentials. Superseded by 2.4.0. |
 | **2.3.0** | 🚫 No | Embedded Spotify cookie and private add-on credentials. |
 | **2.2.0** | 🚫 No | Embedded development credentials. |
 | **2.1.0** | 🚫 No | Embedded development credentials. |
@@ -179,6 +226,7 @@ Their binaries embedded development-only credentials and are **not published**. 
 ---
 
 <p align="center">
-  <strong>Latest clean release:</strong>
-  <a href="https://github.com/Tysnnn23/Ketvoice/releases/latest">Ketvoice 2.3.1</a>
+  <strong>Latest published release:</strong>
+  <a href="https://github.com/Tysnnn23/Ketvoice/releases/latest">Ketvoice 2.3.1</a><br>
+  <strong>Prepared release:</strong> Ketvoice 2.4.0
 </p>

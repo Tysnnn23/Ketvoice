@@ -18,7 +18,6 @@ object AppSettings {
     val classicGradient = mutableStateOf(false)
     val animatedArtwork = mutableStateOf(true)
     val canvasWithMobileData = mutableStateOf(false)
-    val canvasUrl = mutableStateOf("")
     val artistSignatures = mutableStateOf(true)
     val syncedLyrics = mutableStateOf(true)
     val blurInactiveLyrics = mutableStateOf(true)
@@ -62,11 +61,7 @@ object AppSettings {
 
     // SOURCES
     // Aucun cookie, jeton ou endpoint privé n'est livré avec l'application.
-    // Ces valeurs se configurent dans Réglages → Sources / Spotify Canvas.
-    val addonLastBabe = mutableStateOf("")
-    val spDc = mutableStateOf("")
-    val addonLosslessBridge = mutableStateOf("")
-    val addonUltraMax = mutableStateOf("")
+    // Les sources et les canvas passent par Ketvoice API (Supabase).
 
     // DIVERS
     val playNextOnSwipe = mutableStateOf(false)

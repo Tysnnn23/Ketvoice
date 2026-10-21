@@ -18,9 +18,8 @@ import kotlin.math.abs
 /**
  * Passerelle réseau réelle de Ketvoice :
  *  - YouTube Music (InnerTube WEB_REMIX) pour le catalogue de base,
- *  - addons BitChord « Lossless Bridge » (FLAC monochrome) et
- *    « Ultra MAX » (Deezer) pour le streaming : démarrage rapide MP3 puis
- *    bascule sur le FLAC une fois prêt,
+ *  - Ketvoice API (Supabase) pour la recherche et le streaming des sources,
+ *    ainsi que pour les canvas Spotify,
  *  - LRCLIB pour les paroles synchronisées.
  */
 object MusicApi {
@@ -202,12 +201,7 @@ object MusicApi {
             }
         }
 
-    suspend fun searchAddons(q: String): List<Track> = coroutineScope {
-        val lb = async { searchAddon(AppSettings.addonLosslessBridge.value, "lb", q) }
-        val um = async { searchAddon(AppSettings.addonUltraMax.value, "um", q) }
-        val last = async { searchAddon(AppSettings.addonLastBabe.value, "last", q) }
-        lb.await() + um.await() + last.await()
-    }
+    suspend fun searchAddons(q: String): List<Track> = KetvoiceApi.search(q)
 
     suspend fun searchAll(q: String): List<Track> = coroutineScope {
         if (q.isBlank()) return@coroutineScope emptyList()
@@ -250,17 +244,8 @@ object MusicApi {
         null
     }
 
-    suspend fun addonStream(track: Track, tag: String): StreamInfo? {
-        val base = when (tag) {
-            "lb" -> AppSettings.addonLosslessBridge.value
-            "last" -> AppSettings.addonLastBabe.value
-            else -> AppSettings.addonUltraMax.value
-        }
-        if (base.isBlank()) return null
-        val match = if (track.addon == tag && !track.addonId.isNullOrBlank()) track
-            else bestMatchTrack(base, tag, track)
-        return match?.addonId?.let { streamOf(base, it) }
-    }
+    suspend fun addonStream(track: Track, tag: String): StreamInfo? =
+        KetvoiceApi.stream(track, tag)
 
     suspend fun losslessStream(track: Track): StreamInfo? = coroutineScope {
         val bridge = async { addonStream(track, "lb") }

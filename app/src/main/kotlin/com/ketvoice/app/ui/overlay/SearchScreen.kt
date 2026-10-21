@@ -121,16 +121,8 @@ fun SearchScreen() {
             artists = emptyList()
             coroutineScope {
                 val custom = async { CustomSources.searchAll(q) }
-                val builtIn = async {
-                    coroutineScope {
-                        listOf(AppSettings.addonLosslessBridge.value to "lb", AppSettings.addonUltraMax.value to "um",
-                            AppSettings.addonLastBabe.value to "last")
-                            .filter { (base, _) -> base.isNotBlank() }
-                            .map { (base, tag) -> async { MusicApi.searchAddon(base, tag, q) } }
-                            .flatMap { it.await() }
-                    }
-                }
-                results = custom.await() + builtIn.await()
+                val ketvoice = async { MusicApi.searchAddons(q) }
+                results = custom.await() + ketvoice.await()
                 allResults = results
             }
         }
@@ -398,20 +390,20 @@ private fun SearchResultRow(track: Track, cover: String?, onClick: () -> Unit) {
         }
         Spacer(Modifier.width(8.dp))
         val custom = track.addon?.startsWith("cs:") == true
+        val ketvoice = track.addon == "um" || track.addon == "lb" || track.addon == "last"
         val badge = when {
             custom -> "SRC"
-            track.addon == "lb" || track.addon == "last" -> "FLAC"
-            track.addon == "um" -> "MP3"
+            ketvoice -> "API"
             else -> "YT"
         }
         Text(
             badge,
-            color = if (custom || track.addon == "lb" || track.addon == "last") th.accent else th.secondary,
+            color = if (custom || ketvoice) th.accent else th.secondary,
             fontSize = 10.sp,
             fontWeight = FontWeight.Bold,
             modifier = Modifier
                 .clip(RoundedCornerShape(5.dp))
-                .background(if (custom || track.addon == "lb" || track.addon == "last")
+                .background(if (custom || ketvoice)
                     th.accent.copy(alpha = 0.12f) else th.card)
                 .padding(horizontal = 6.dp, vertical = 3.dp)
         )
@@ -425,17 +417,31 @@ private fun SourcesCard(compact: Boolean = false) {
     Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = if (compact) 4.dp else 10.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text("Sources personnalisées", style = T.section, color = th.onBackground)
+                Text("Ketvoice API", style = T.section, color = th.onBackground)
                 Text(
-                    if (custom.isEmpty()) "Aucune source ajoutée"
-                    else "${custom.count { it.enabled }} active(s) sur ${custom.size}",
+                    "Recherche, streaming et canvas · Supabase",
                     color = th.secondary, style = T.caption, modifier = Modifier.padding(top = 3.dp)
                 )
             }
+            Box(Modifier.size(34.dp).clip(CircleShape).background(th.accent.copy(alpha = .12f)),
+                contentAlignment = Alignment.Center) {
+                Icon(Icons.Filled.Tune, null, tint = th.accent, modifier = Modifier.size(17.dp))
+            }
+        }
+        Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("Source intégrée · active", color = th.secondary, style = T.caption)
+            Spacer(Modifier.weight(1f))
             Text("Gérer", color = th.accent, fontWeight = FontWeight.SemiBold, fontSize = 13.sp,
                 modifier = Modifier.clickable { AppUi.overlay.value = AppUi.SOURCES }
                     .padding(start = 12.dp, top = 8.dp, bottom = 8.dp))
         }
+        Spacer(Modifier.height(10.dp))
+        Text("Sources personnalisées", style = T.section, color = th.onBackground)
+        Text(
+            if (custom.isEmpty()) "Aucune source .json ajoutée"
+            else "${custom.count { it.enabled }} active(s) sur ${custom.size}",
+            color = th.secondary, style = T.caption, modifier = Modifier.padding(top = 3.dp)
+        )
         if (custom.isNotEmpty()) {
             custom.take(4).forEach { source ->
                 Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {

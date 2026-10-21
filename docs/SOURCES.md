@@ -1,6 +1,8 @@
 # Custom JSON Sources
 
-Ketvoice can search and stream from user-provided HTTPS sources. Add a source in **Search → Sources** or **Settings → Sources personnalisées**. The URL must begin with `https://` and end with `.json`.
+Ketvoice 2.4.0 includes **Ketvoice API**, a built-in Supabase broker for music-source search, streams, and Spotify Canvas. It needs no user configuration and keeps its provider credentials on the server. This document covers the optional custom JSON sources that can be added alongside it.
+
+Custom sources can be added from user-provided HTTPS manifests. Add a source in **Search → Sources** or **Settings → Sources personnalisées**. The URL must begin with `https://` and end with `.json`.
 
 A source is saved only after Ketvoice downloads the manifest and performs a real test search. The test response must be valid JSON. Sources that require POST, authentication, or cannot answer a basic search are rejected.
 
@@ -123,5 +125,6 @@ Only HTTPS stream URLs are accepted.
 
 - Custom sources are third-party code endpoints, not sandboxed plugins. Only add sources you trust.
 - The source can see your IP address, search queries, and requested track identifiers.
-- Ketvoice does not send your YouTube or Spotify cookies to custom sources.
+- Ketvoice does not send your YouTube session or any Spotify credentials to custom sources.
+- Ketvoice API does not send your custom source URLs to its upstream providers.
 - A source that changes its response format or becomes unavailable will disappear from results until it responds again.

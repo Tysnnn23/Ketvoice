@@ -1,21 +1,22 @@
 # Security Policy
 
-## Supported version
+## Supported versions
 
 | Version | Supported |
 | --- | --- |
-| 2.3.1 | Yes |
+| 2.4.0 | Yes |
+| 2.3.1 | Best effort — previous clean release |
 | 2.3.0 and earlier | No |
 
-Version 2.3.1 is the first public release with no embedded credentials.
+Version 2.4.0 is the first release where Spotify Canvas and private music-source credentials are handled by a server-side broker instead of the installed app.
 
 ## Reporting a vulnerability
 
 Please use GitHub’s private vulnerability reporting / Security Advisories for this repository. Do not open a public issue containing:
 
-- Spotify `sp_dc` cookies
+- Spotify `sp_dc` cookies or access tokens
 - YouTube `SAPISID` cookies
-- Private add-on URLs or tokens
+- Supabase service-role keys, Vault values, or private add-on URLs
 - Personal access tokens
 - Keystore files or passwords
 
@@ -23,19 +24,37 @@ Include the affected version, Android version, reproduction steps, and the impac
 
 ## Credentials in this project
 
-No credentials, cookies, API tokens, or private add-on endpoints are committed to this repository or bundled in the 2.3.1 APK.
+No Spotify cookies, add-on tokens, private add-on endpoints, or Supabase service-role keys are committed to this repository or bundled in the 2.4.0 APK.
 
-Runtime credentials entered by the user are kept on the device:
+### Ketvoice API
+
+The APK talks to the `ketvoice-api` Supabase Edge Function. Its sensitive server-side values are stored in Supabase Vault:
+
+- `SP_DC` — Spotify session cookie used for Canvas lookup
+- `ADDON_ULTRAMAX` — Ultra MAX source endpoint and token
+- `ADDON_LOSSLESSBRIDGE` — Lossless Bridge source endpoint and token
+- `ADDON_LASTBABE` — Last Babe source endpoint and token
+
+The Edge Function reads these values with the Supabase service role. The helper RPC that exposes a named Vault value is restricted to the service role. The function source in `supabase/functions/ketvoice-api/` contains no secret values.
+
+The app contains the Supabase project URL and the public `anon` JWT. This key is designed to be public; it is not a credential that grants access to Vault or the database. The function uses `verify_jwt`, so requests must carry a valid project JWT.
+
+`verify_jwt` is not a complete abuse barrier. Because the `anon` key can be extracted from any installed client, a determined user can call the function and consume project quota. The function does not expose the underlying cookies or add-on tokens.
+
+### On-device data
 
 - The YouTube Music web session is stored with Android Keystore encryption.
-- The Spotify Canvas `sp_dc` value and custom source URLs are app settings stored locally.
-- The app disables Android backup (`android:allowBackup="false"`).
+- Custom JSON source URLs are app settings stored locally.
+- The Spotify `sp_dc` cookie is no longer accepted or stored by the app.
+- Android backup is disabled (`android:allowBackup="false"`).
 
 Clearing app data or uninstalling the app removes the local session and settings. Logging out of YouTube Music removes the app session but does not revoke the Google account session on the web.
 
 ## Historical binaries
 
 Development builds from 1.2.0 through 2.3.0 contained a Spotify session cookie and private add-on endpoints in their defaults. They are intentionally not published. Do not redistribute copies of those APKs.
+
+Version 2.3.1 is the previous clean binary. Version 2.4.0 supersedes it and removes the remaining user-side Spotify and add-on configuration.
 
 ## APK integrity
 

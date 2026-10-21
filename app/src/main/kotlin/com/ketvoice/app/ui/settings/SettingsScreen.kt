@@ -75,7 +75,7 @@ private val noRip: MutableInteractionSource = MutableInteractionSource()
  *  - qualité Wi-Fi / données mobiles → choix réel du flux (FLAC ↔ MP3),
  *  - ignorer les silences → moteur Media3,
  *  - mode des paroles → LyricsRepo réel,
- *  - canvas → sp_dc + test pipeline réel,
+ *  - canvas → Ketvoice API + test pipeline réel,
  *  - téléchargements → FLAC/MP3 du downloader,
  *  - stockage → taille réelle du cache + purge.
  */
@@ -83,7 +83,6 @@ private val noRip: MutableInteractionSource = MutableInteractionSource()
 fun SettingsScreen() {
     val th = LocalTheme.current
     val ctx = LocalContext.current
-    var spdcOpen by remember { mutableStateOf(false) }
     var editSetting by remember { mutableStateOf("") }
     var accentOpen by remember { mutableStateOf(false) }
     var choice by remember { mutableStateOf<ChoiceSpec?>(null) }
@@ -331,7 +330,12 @@ fun SettingsScreen() {
             }
 
             // ==================================================== CANVAS
-            Section("CANVAS") {
+            Section("KETVOICE API · CANVAS") {
+                SRow(
+                    Icons.Filled.Videocam, "Ketvoice API",
+                    sub = "Canvas Spotify résolu et authentifié côté Supabase",
+                    value = "Intégré"
+                ) {}
                 SToggle(
                     Icons.Filled.Videocam, "Pochette animée",
                     "Canvas Spotify si disponible ; sinon pochette fixe",
@@ -355,17 +359,8 @@ fun SettingsScreen() {
                     }
                 }
                 SRow(
-                    Icons.Filled.Person, "Cookie Spotify (sp_dc)",
-                    sub = "Nécessaire pour télécharger les canvas",
-                    value = if (AppSettings.spDc.value.isBlank()) "Vide" else "Défini"
-                ) { spdcOpen = true }
-                SRow(Icons.Filled.Videocam, "Serveur canvas (facultatif)",
-                    sub = "Instance Paxsenix ou AuraMusic ; aucun cookie transmis",
-                    value = if (AppSettings.canvasUrl.value.isBlank()) "Spotify direct" else "Configuré"
-                ) { editSetting = "canvas" }
-                SRow(
                     Icons.Filled.Bolt, "Tester le canvas",
-                    sub = if (testing.value) "Test en cours…" else "Vérifie le pipeline Spotify",
+                    sub = if (testing.value) "Test en cours…" else "Vérifie le pipeline Ketvoice API",
                     value = ""
                 ) {
                     if (!testing.value) {
@@ -376,8 +371,8 @@ fun SettingsScreen() {
                                 testing.value = false
                                 android.widget.Toast.makeText(
                                     ctx,
-                                    if (ok) "Canvas prêt : pipeline fonctionnel ✓"
-                                    else "Échec : vérifie le cookie sp_dc / la connexion",
+                                    if (ok) "Canvas prêt : Ketvoice API fonctionne ✓"
+                                    else "Échec : vérifie la connexion à Ketvoice API",
                                     android.widget.Toast.LENGTH_LONG
                                 ).show()
                             }
@@ -388,15 +383,20 @@ fun SettingsScreen() {
 
             Section("SOURCES") {
                 SRow(
+                    Icons.Filled.Tune, "Ketvoice API",
+                    sub = "Recherche, streaming et téléchargements · Supabase",
+                    value = "Intégré"
+                ) { AppUi.overlay.value = AppUi.SOURCES }
+                SRow(
                     Icons.Filled.Tune, "Sources personnalisées",
                     sub = "URLs HTTPS terminées par .json · streaming et téléchargements",
                     value = if (customSources.isEmpty()) "Aucune" else "${customSources.size} source(s)"
                 ) { AppUi.overlay.value = AppUi.SOURCES }
-                Text("Démarrage YouTube Music, puis qualité supérieure après préchargement. Repli source si YouTube est indisponible.",
-                    color = th.secondary, fontSize = 13.sp, modifier = Modifier.padding(16.dp))
-                SRow(Icons.Filled.CloudDownload, "Lossless Bridge", sub = "FLAC · streaming et téléchargement") { editSetting = "bridge" }
-                SRow(Icons.Filled.CloudDownload, "Last Babe", sub = "FLAC · lien signé pouvant expirer") { editSetting = "last" }
-                SRow(Icons.Filled.CloudDownload, "Ultra MAX", sub = "Streaming et téléchargement") { editSetting = "ultra" }
+                Text(
+                    "Ketvoice API protège les identifiants côté Supabase. Aucun cookie Spotify " +
+                        "ni jeton d'addon n'est stocké dans l'application.",
+                    color = th.secondary, fontSize = 13.sp, modifier = Modifier.padding(16.dp)
+                )
             }
 
             // ==================================================== TÉLÉCHARGEMENTS
@@ -456,14 +456,14 @@ fun SettingsScreen() {
             Section("À PROPOS") {
                 SRow(
                     Icons.Filled.Image, "Version",
-                    sub = "YouTube Music · sources .json · canvas · paroles",
-                    value = "2.3.1"
+                    sub = "YouTube Music · Ketvoice API · canvas · paroles",
+                    value = "2.4.0"
                 ) {}
             }
 
             Text(
-                "Pas de serveur Ketvoice intermédiaire : le streaming, les paroles, " +
-                    "les pochettes et les canvas sont chargés en direct depuis leurs sources.",
+                "Ketvoice API (Supabase) gère les sources et les canvas. " +
+                    "Aucun cookie Spotify ni jeton d'addon n'est livré dans l'APK.",
                 color = th.secondary,
                 fontSize = 12.sp,
                 lineHeight = 17.sp,
@@ -472,36 +472,14 @@ fun SettingsScreen() {
         }
     }
 
-    // ---------- Dialog sp_dc ----------
-    if (spdcOpen) {
-        SpDcDialogBody(onClose = { spdcOpen = false })
-    }
     if (editSetting.isNotBlank()) {
-        val state = when (editSetting) {
-            "better" -> AppSettings.betterLyricsKey
-            "lyrica" -> AppSettings.lyricaUrl
-            "canvas" -> AppSettings.canvasUrl
-            "bridge" -> AppSettings.addonLosslessBridge
-            "last" -> AppSettings.addonLastBabe
-            else -> AppSettings.addonUltraMax
-        }
-        val title = when (editSetting) {
-            "better" -> "Clé BetterLyrics"
-            "lyrica" -> "URL de l'instance Lyrica"
-            "canvas" -> "URL du serveur canvas"
-            "bridge" -> "Lossless Bridge"
-            "last" -> "Last Babe"
-            else -> "Ultra MAX"
-        }
+        val state = if (editSetting == "better") AppSettings.betterLyricsKey else AppSettings.lyricaUrl
+        val title = if (editSetting == "better") "Clé BetterLyrics" else "URL de l'instance Lyrica"
         ConfigValueDialog(title, state.value, editSetting == "better", onClose = { editSetting = "" }) { value ->
             state.value = if (editSetting == "better") value.trim()
                 else value.trim().removeSuffix("/manifest.json").trimEnd('/')
             SettingsStore.save()
             MusicApi.resetLyricsLookups()
-            if (editSetting == "canvas") {
-                com.ketvoice.app.data.CanvasRepo.resetAuth()
-                Player.state.value.current?.let { track -> settingsScope.launch { com.ketvoice.app.data.CanvasRepo.resolve(track) } }
-            }
             LyricsRepo.clear()
             Player.state.value.current?.let { LyricsRepo.load(it, force = true) }
         }
@@ -849,78 +827,6 @@ private fun CacheLimitRow() {
         LaunchedEffect(AppSettings.cacheBytes.value) {
             kotlinx.coroutines.delay(200)
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { AudioCache.trimTo(ctx, AppSettings.cacheBytes.value) }
-        }
-    }
-}
-
-@Composable
-private fun SpDcDialogBody(onClose: () -> Unit) {
-    val th = LocalTheme.current
-    val ctx = LocalContext.current
-    var value by remember { mutableStateOf(AppSettings.spDc.value) }
-    androidx.compose.ui.window.Dialog(onDismissRequest = onClose) {
-        Column(
-            Modifier
-                .clip(RoundedCornerShape(22.dp))
-                .background(th.card)
-                .padding(20.dp)
-        ) {
-            Text(
-                "Cookie Spotify (sp_dc)",
-                color = th.onBackground,
-                fontWeight = FontWeight.Bold,
-                fontSize = 18.sp
-            )
-            Spacer(Modifier.height(6.dp))
-            Text(
-                "Cookie de votre compte Spotify, stocké sur l'appareil et envoyé uniquement à Spotify. Ne partagez jamais cette valeur.",
-                color = th.secondary,
-                fontSize = 13.sp,
-                lineHeight = 18.sp
-            )
-            Spacer(Modifier.height(12.dp))
-            TextField(
-                value = value,
-                onValueChange = { value = it },
-                singleLine = true,
-                visualTransformation = PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = th.hairline,
-                    unfocusedContainerColor = th.hairline,
-                    focusedTextColor = th.onBackground,
-                    unfocusedTextColor = th.onBackground,
-                    cursorColor = th.accent
-                ),
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(Modifier.height(14.dp))
-        Row(Modifier.align(Alignment.End)) {
-                Text(
-                    "Annuler", color = th.accent,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier
-                        .clickable(noRip, null) { onClose() }
-                        .padding(10.dp)
-                )
-                Text(
-                    "Enregistrer", color = th.accent,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier
-                        .clickable(noRip, null) {
-                            AppSettings.spDc.value = value.trim()
-                            com.ketvoice.app.data.CanvasRepo.resetAuth()
-                            SettingsStore.save()
-                            android.widget.Toast.makeText(
-                                ctx,
-                                if (value.trim().isBlank()) "Cookie vidé" else "Cookie enregistré",
-                                android.widget.Toast.LENGTH_SHORT
-                            ).show()
-                            onClose()
-                        }
-                        .padding(10.dp)
-                )
-            }
         }
     }
 }
