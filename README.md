@@ -238,5 +238,5 @@ You are responsible for complying with the terms of service of any provider you 
 ## Acknowledgements
 
 - The Liquid Glass rendering uses [Kyant0 Backdrop](https://github.com/Kyant0/Backdrop).
-- The custom-source protocol is compatible with the BitChord add-on format.
+- The custom-source protocol is compatible with the add-on format.
 - Artwork, metadata, lyrics, and canvas data are retrieved from their respective public providers at runtime.
