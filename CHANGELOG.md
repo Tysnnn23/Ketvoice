@@ -51,12 +51,9 @@ This release is intentionally small in code and huge in safety. It removes the p
 | **Source validation** | A saved URL was not proven to work. | Ketvoice fetches the manifest and performs a real test search before saving it. |
 | **Quality selection** | Quality was not negotiated from the source manifest. | The app reads declared quality options (`LOSSLESS`, `HIGH`, `LOW`, `high`, `normal`, `low`) and negotiates the best available tier. |
 | **Downloads from sources** | There was no explicit source download endpoint. | An explicit `download` endpoint is preferred; otherwise the stream is used. `allowDownloads: 0` is respected. |
-| **YouTube search** | Search could mix official tracks with less reliable results. | Search is restricted to official YouTube Music audio tracks with a real artist and album. |
-| **Older results** | Previously cached or unverified entries could still play. | Old unverified entries are resolved again before playback. |
 | **Artist search** | Artist results were only search rows. | Dedicated artist page with photo, description, monthly listeners, albums, and tracks. |
 | **Album pages** | Albums were not resolved from real album IDs. | Album pages are built from real YouTube Music `MPRE...` identifiers. |
 | **Home feed** | The home screen was generic. | A personalized YouTube Music home feed appears when a valid session is connected. |
-| **Variants** | Slowed, sped-up, instrumental, type-beat, and re-upload variants could appear implicitly. | Those variants require an explicit search. |
 
 ### 🔐 YouTube Music session — before → after
 
@@ -88,12 +85,7 @@ This release is intentionally small in code and huge in safety. It removes the p
 |---|---|---|
 | **Home logo** | A square background was visible around the logo. | The home logo is transparent and background-free. |
 | **Artwork edge** | A visible border or hard edge appeared at the bottom of the artwork. | The artwork fades into the ambient background with no visible border. |
-| **Artwork zoom** | Tapping could trigger zoom and open actions. | Zoom is removed. Tapping the artwork from lyrics returns to the artwork page without opening actions. |
-| **Lyrics** | Typography was smaller and less legible. | 33 sp Black-weight lyrics with a wider layout. |
-| **Lyric highlighting** | Timing could be approximated. | The highlight follows real source-provided segments only. Syllables and durations are never fabricated. |
-| **Lyric controls** | Controls stayed visible. | Controls hide after 2 seconds; tapping the artwork brings them back. |
-| **Translations** | Translation presentation was less integrated. | Translations appear as small subtitles under each original line. |
-| **Swipe gesture** | Dismissal behavior was less direct. | A vertical swipe on the upper lyrics area returns to the mini-player. |
+| **Artwork from lyrics** | Tapping the compact artwork could open the action menu instead of returning to the artwork. | Tapping the artwork from lyrics returns directly to the artwork page without opening actions. |
 | **Mini-player** | Navigation and compact behavior were less polished. | Improved mini-player, navigation lens, three-dot indicator, and haptics. |
 
 ---
