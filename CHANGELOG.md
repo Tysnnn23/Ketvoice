@@ -2,16 +2,47 @@
 
 <p align="center">
   <strong>Every public version, explained as a before → after story.</strong><br>
-  The app interface is French. These release notes are in English.
+  Eleven interface languages, French by default. These release notes are in English.
 </p>
 
 ---
 
-## 🚀 2.4.0 — KETVOICE API
+## 🚀 2.5.0 — OFFLINE MUSIC, LANGUAGES & MOTION
+
+**Released:** 21 October 2026<br>
+**Version:** `2.5.0` (`versionCode` 12)<br>
+**Status:** Final release; supersedes the unpublished 2.4.0 candidate
+
+### Before → after
+
+| Area | Before | After |
+|---|---|---|
+| **Languages** | French-only interface. | French, English, Hindi, Japanese, Chinese, Russian, Italian, Spanish, German, Portuguese, and Korean throughout the interface, persisted in Settings and available offline. Original songs, artists, and lyric text remain unchanged. |
+| **Downloads** | A single failed stream could prevent a usable offline song. | Redirect handling, retry/resume, audio signature and response-length validation, selected-quality preference, and playable fallbacks. The saved format is shown honestly. |
+| **Offline lyrics** | Lyrics were fetched independently of the audio download. | The best available native syllable, word, line, or plain lyrics are stored with the song as JSON and LRC sidecars, then loaded locally before network requests. No timings are fabricated. |
+| **Canvas** | Playback cache only. | Explicit song downloads also retain available Canvas media. Persistent Spotify-ID and artist-qualified album mappings allow reuse. |
+| **Library** | Simple collection rows. | Local-music card, horizontal collection cards, artist circles, albums, recent tracks, and downloads, backed by actual library data. |
+| **Player motion** | Full-screen dismissal without a cover handoff. | Fading artwork flight between the full player and mini-player, in both directions. |
+| **Lyric motion** | Abrupt line emphasis and small looping dots. | Animated line color/blur/scale, lyric-view opening and closing, and larger dots that illuminate sequentially, grow, merge, and fade before lyrics. |
+| **Providers** | A third provider could stall or rate-limit requests. | Only Ultra MAX and Last Babe remain in built-in routing; the retired provider's server configuration and Vault secret are deleted. |
+| **Credentials** | Server migration prepared as 2.4.0. | That isolation is included here: Spotify/add-on credentials stay in Supabase Vault, never in the APK. |
+
+### Validation and limitations
+
+- JVM tests, Android lint, debug/release builds, APK signing/integrity checks, and credential scans are part of the release checks.
+- Android 16 emulator: real source search, playback, downloaded audio/lyric sidecars/Canvas, and language switching across screens.
+- A provider may not offer lyrics, Canvas, or the selected audio quality. Optional asset failures do not discard saved audio. Lower-quality fallback is possible.
+- Interface translations are machine-assisted with curated corrections; external provider content is left intact. Physical-device validation is not available.
+- Explicit downloads may fetch Canvas over mobile data even when automatic artwork downloads are Wi-Fi-only.
+- No 2.4.0 APK or credential-bearing historical APKs are published with this release.
+
+---
+
+## 🧪 2.4.0 — KETVOICE API (SUPERSEDED CANDIDATE)
 
 **Released:** 21 October 2026<br>
 **Version:** `2.4.0` (`versionCode` 11)<br>
-**Status:** ✅ Latest source release — APK validated, publication pending
+**Status:** Unpublished candidate — included in and superseded by 2.5.0
 
 Version 2.4.0 moves the remaining sensitive music-source and Spotify Canvas work to a Supabase Edge Function called **Ketvoice API**. The app keeps its French Liquid Glass interface and its real playback pipeline, but it no longer asks the user to paste a Spotify cookie or private add-on URLs.
 
@@ -29,7 +60,7 @@ Version 2.4.0 moves the remaining sensitive music-source and Spotify Canvas work
 | Area | 😕 Before | ✅ After |
 |---|---|---|
 | **Source UI** | Users added JSON manifests and configured private add-ons manually. | A pinned **Ketvoice API** card appears in **Search → Sources** and Settings, with a health test. |
-| **Source results** | Results came from user-configured endpoints. | Server-side results are labelled `API` in the app and cover Ultra MAX, Lossless Bridge, and Last Babe when available. |
+| **Source results** | Results came from user-configured endpoints. | Server-side results are labelled `API` in the app. The final 2.5.0 provider set is Ultra MAX and Last Babe. |
 | **Playback quality** | The app resolved add-on streams directly. | Ketvoice API resolves a fast MP3 start and a FLAC upgrade when a lossless provider has the track. |
 | **Canvas setup** | Manual Spotify cookie entry. | No setup. Canvas works when Spotify has a Canvas for the track and the server session is valid. |
 | **Provider failures** | A slow or failing add-on could delay the whole search. | Each source search has an eight-second cap, results are cached for 60 seconds, and HTTP `429` puts a provider on a five-minute cooldown. |
@@ -46,7 +77,7 @@ Version 2.4.0 moves the remaining sensitive music-source and Spotify Canvas work
 
 ### ⚠️ Known limitations
 
-- Lossless Bridge can return HTTP `429` from its upstream. Ketvoice API skips it temporarily and keeps Ultra MAX / Last Babe available.
+- Providers can rate-limit requests. Ketvoice API temporarily skips unavailable providers and continues with available sources.
 - Runtime validation used an Android 16 emulator, not a physical device.
 - The public Supabase `anon` key can be extracted from any client. `verify_jwt` prevents unauthenticated calls, but it is not a full abuse barrier.
 - Custom JSON sources remain user-managed and are separate from Ketvoice API.

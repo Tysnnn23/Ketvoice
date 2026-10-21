@@ -8,6 +8,7 @@ import androidx.media3.database.StandaloneDatabaseProvider
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.cache.Cache
 import androidx.media3.datasource.cache.CacheDataSource
 import androidx.media3.datasource.cache.CacheEvictor
@@ -54,7 +55,9 @@ object AudioCache {
                 .setUserAgent("Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/124.0 Mobile Safari/537.36")
         ).setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
     }
-    fun factory(context: Context): DataSource.Factory = source(context)
+    // File/content URIs must use their local data source, not HTTP or a second
+    // copy in the streaming cache. Only network URIs reach CacheDataSource.
+    fun factory(context: Context): DataSource.Factory = DefaultDataSource.Factory(context, source(context))
 
     /** Cache a real initial audio block before switching quality. */
     suspend fun warm(trackId: String, stream: MusicApi.StreamInfo, positionMs: Long = 0, durationMs: Long = 0): Boolean = withContext(Dispatchers.IO) {

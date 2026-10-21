@@ -1,0 +1,93 @@
+"""Publish a checked release using existing GitHub credentials, kept in memory.
+
+Run only after committing and pushing the validated source. Starts as a draft;
+uploads are checked before --publish makes the release public.
+"""
+import argparse
+import hashlib
+import json
+import mimetypes
+import os
+import pathlib
+import subprocess
+import urllib.error
+import urllib.parse
+import urllib.request
+
+ROOT = pathlib.Path(__file__).resolve().parents[1]
+parser = argparse.ArgumentParser()
+parser.add_argument('--publish', action='store_true')
+args = parser.parse_args()
+TAG = 'v2.5.0'
+REPO = 'Tysnnn23/Ketvoice'
+STAGE = ROOT / 'release-assets/2.5.0'
+FILES = [
+    'Ketvoice-2.5.0.apk', 'SHA256SUMS.txt', 'RELEASE-NOTES.md', 'validation.json',
+    'library-ja.png', 'player-offline-ja.png', 'lyrics-offline-en.png', 'settings-ja.png',
+]
+EXPECTED_APK = 'e30fb8e09a09347f776168b3b565aac7bf102b3fd45a78827e7729f9a81b763b'
+
+def git(*argv):
+    return subprocess.check_output(['git', *argv], cwd=ROOT).decode().strip()
+
+if git('status', '--porcelain'):
+    raise SystemExit('Commit the validated source before publishing.')
+commit = git('rev-parse', 'HEAD')
+if commit != git('rev-parse', 'origin/main'):
+    raise SystemExit('Push the source commit first.')
+for name in FILES:
+    if not (STAGE / name).is_file():
+        raise SystemExit('Missing release asset: ' + name)
+if hashlib.sha256((STAGE / FILES[0]).read_bytes()).hexdigest() != EXPECTED_APK:
+    raise SystemExit('APK checksum does not match the validated binary.')
+
+token = os.environ.get('GITHUB_TOKEN', '')
+if not token:
+    env = dict(os.environ, GIT_TERMINAL_PROMPT='0', GCM_INTERACTIVE='never')
+    result = subprocess.run(['git', 'credential', 'fill'], cwd=ROOT, env=env,
+        input=b'protocol=https\nhost=github.com\n\n', capture_output=True, check=True)
+    fields = dict(line.split('=', 1) for line in result.stdout.decode().splitlines() if '=' in line)
+    token = fields.get('password', '')
+if not token:
+    raise SystemExit('No GitHub credential available.')
+
+def api(path, method='GET', data=None, content_type='application/json'):
+    url = path if path.startswith('https://') else 'https://api.github.com' + path
+    body = json.dumps(data).encode() if isinstance(data, dict) else data
+    headers = {'Authorization': 'Bearer ' + token, 'User-Agent': 'Ketvoice-release',
+        'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28'}
+    if body is not None:
+        headers['Content-Type'] = content_type
+    request = urllib.request.Request(url, data=body, headers=headers, method=method)
+    with urllib.request.urlopen(request, timeout=300) as response:
+        return json.load(response)
+
+releases = api(f'/repos/{REPO}/releases?per_page=100')
+release = next((r for r in releases if r['tag_name'] == TAG), None)
+if release and not release['draft']:
+    raise SystemExit('Release already published; refusing to overwrite it.')
+if not release:
+    release = api(f'/repos/{REPO}/releases', 'POST', {
+        'tag_name': TAG, 'target_commitish': commit, 'name': 'Ketvoice 2.5.0',
+        'body': (STAGE / 'RELEASE-NOTES.md').read_text(encoding='utf-8'),
+        'draft': True, 'prerelease': False,
+    })
+
+existing = {a['name']: a for a in release['assets']}
+upload = release['upload_url'].split('{')[0]
+for name in FILES:
+    data = (STAGE / name).read_bytes()
+    digest = 'sha256:' + hashlib.sha256(data).hexdigest()
+    asset = existing.get(name)
+    if not asset:
+        asset = api(upload + '?name=' + urllib.parse.quote(name), 'POST', data,
+            mimetypes.guess_type(name)[0] or 'application/octet-stream')
+    if asset.get('state') != 'uploaded' or asset.get('size') != len(data):
+        raise SystemExit('Asset verification failed: ' + name)
+    if asset.get('digest') and asset['digest'] != digest:
+        raise SystemExit('Remote checksum mismatch: ' + name)
+    print('Verified asset:', name, len(data), flush=True)
+
+if args.publish:
+    release = api(f'/repos/{REPO}/releases/{release["id"]}', 'PATCH', {'draft': False, 'make_latest': 'true'})
+print('Published' if not release['draft'] else 'Draft ready:', release['html_url'])

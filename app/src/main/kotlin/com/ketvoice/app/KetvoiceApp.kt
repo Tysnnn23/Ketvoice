@@ -14,6 +14,11 @@ import java.io.File
  */
 class KetvoiceApp : Application(), ImageLoaderFactory {
 
+    override fun onCreate() {
+        super.onCreate()
+        com.ketvoice.app.data.AppText.init(this)
+    }
+
     override fun newImageLoader(): ImageLoader {
         val dir = File(filesDir, "images").apply { if (!exists()) mkdirs() }
         return ImageLoader.Builder(this)

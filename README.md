@@ -17,9 +17,9 @@
 
 ## Overview
 
-Ketvoice is an independent Android music client whose visual language is inspired by Apple Music and iOS 26. The UI is entirely in French. It is not affiliated with Apple, YouTube, Spotify, BitChord, or any music provider.
+Ketvoice is an independent Android music client whose visual language is inspired by Apple Music and iOS 26. French is the default interface language; Settings offers 11 languages across the app. It is not affiliated with Apple, YouTube, Spotify, BitChord, or any music provider.
 
-The current release candidate is **2.4.0** (`versionCode` 11). It is an Android 12+ build with `minSdk 31` and `targetSdk 36`. The latest published APK remains **2.3.1** until 2.4.0 publication.
+The current version is **2.5.0** (`versionCode` 12), for Android 12+ (`minSdk 31`, `targetSdk 36`). This release includes the server-side API work originally prepared for the unpublished 2.4.0 build.
 
 Music-source search, stream resolution, and Spotify Canvas now go through **Ketvoice API**, a Supabase Edge Function. The APK contains only the project’s public Supabase `anon` key and the function URL. Spotify and source credentials remain in Supabase Vault and are never shipped with the app.
 
@@ -32,6 +32,9 @@ Music-source search, stream resolution, and Spotify Canvas now go through **Ketv
 - Real Liquid Glass panels powered by the Kyant0 Backdrop SDK, with adaptive tint, refraction, blur, and rim lighting.
 - Light and dark themes with a user-selectable accent color applied across controls, progress bars, switches, and selection states.
 - Home, Explore, and Library tabs, floating glass navigation, a collapsible mini-player, and animated transitions throughout.
+- Artwork transitions between the full player and mini-player with a fading cover flight in both directions.
+- A redesigned Library with local music, collection cards, artists, albums, recent plays, and offline downloads. Collections reflect actual listening history and downloads.
+- French, English, Hindi, Japanese, Chinese, Russian, Italian, Spanish, German, Portuguese, and Korean interface languages. Song titles, artist names, and original lyrics stay unchanged.
 - Fully custom full-screen player: artwork, canvas, scrubbing, transport controls, volume, queue, lyrics, and bottom sheets.
 - Adjustable launcher icon variants.
 - Transparent Ketvoice logo and gradient artwork treatment without a visible image border.
@@ -41,7 +44,9 @@ Music-source search, stream resolution, and Spotify Canvas now go through **Ketv
 - Media3/ExoPlayer playback with a foreground `MediaSessionService`.
 - Queue management, previous/next, shuffle, repeat, favorites, and playback history.
 - Audio cache with a configurable limit from 0.5 GB to 10 GB.
-- Download queue with FLAC/MP3 quality modes and per-track progress.
+- Real downloads with FLAC/MP3 quality modes, progress, HTTPS redirects, audio validation, retry/resume, and alternative streams when a provider fails.
+- Downloads include the best available lyric timing (native syllables → native words → timed lines → plain text), stored as JSON and LRC sidecars.
+- Available Canvas videos are retained for offline playback, with shared caching by Spotify track and artist-qualified album identity.
 - Permanent image cache with retries for missing artwork.
 - Fast-start stream resolution followed by a higher-quality stream when available.
 
@@ -61,15 +66,16 @@ Music-source search, stream resolution, and Spotify Canvas now go through **Ketv
 - Real word-by-word or syllable-by-syllable highlighting only when the provider supplies the timing data. Timings are never invented.
 - Translation subtitles displayed below each original line, using existing TTML translations, cache, and public translation providers.
 - Karaoke-style highlight progression based on the actual segment duration.
+- Animated line emphasis, lyric-view transitions, and a larger three-dot introduction: sequential illumination, growth, merge, and fade.
 - Controls hide after two seconds; tapping the artwork brings them back.
 - Swipe down from the lyrics header to return to the mini-player.
 
 ### Music sources and Spotify Canvas
 
 - Built-in **Ketvoice API** source card in **Search → Sources** and **Settings → Sources**.
-- Server-side search across three configured providers, shown in the app as `API` results.
+- Server-side search across Ultra MAX and Last Babe, shown in the app as `API` results. Retired provider routing and its Vault credential have been removed.
 - Fast MP3 playback with automatic FLAC upgrade when a lossless stream is available.
-- The server returns only short-lived stream URLs and minimal track metadata. Add-on IDs, tokens, and upstream URLs stay on the server.
+- The server returns stream URLs, track IDs, and minimal track metadata. Private provider base URLs and credentials stay on the server; the client fetches audio from the returned media URL.
 - Spotify Canvas lookup, Spotify authentication, and `sp_dc` handling run inside Ketvoice API. The installed app never receives the Spotify cookie.
 - Canvas video is cached locally and can be limited to Wi-Fi in Settings.
 - A built-in health check in **Search → Sources** verifies the function and its server-side secrets.
@@ -88,7 +94,7 @@ Music-source search, stream resolution, and Spotify Canvas now go through **Ketv
 
 - Real Canvas lookup through Spotify Pathfinder, resolved by Ketvoice API.
 - Canvas video is cached locally and shown in the player when available.
-- Canvas download can be restricted to Wi-Fi.
+- Automatic Canvas downloads can be restricted to Wi-Fi. Explicit song downloads also request Canvas, independently of the animated-artwork display setting, and can use mobile data.
 - No Spotify `sp_dc` cookie or user setup is required. No Spotify credential is bundled with the app.
 
 ### Settings
@@ -101,7 +107,15 @@ Music-source search, stream resolution, and Spotify Canvas now go through **Ketv
 
 ## Download
 
-Download the latest published APK from the [Releases](https://github.com/Tysnnn23/Ketvoice/releases/latest) page. The validated 2.4.0 APK is prepared but not published yet.
+### 2.5.0 preview
+
+<p align="center">
+  <img src="https://github.com/Tysnnn23/Ketvoice/releases/download/v2.5.0/library-ja.png" width="230" alt="Redesigned Library in Japanese, dark theme" />
+  <img src="https://github.com/Tysnnn23/Ketvoice/releases/download/v2.5.0/player-offline-ja.png" width="230" alt="Offline FLAC playback with cached Canvas" />
+  <img src="https://github.com/Tysnnn23/Ketvoice/releases/download/v2.5.0/lyrics-offline-en.png" width="230" alt="Downloaded synchronized lyrics" />
+</p>
+
+Download the APK and its SHA-256 checksum from the [Releases](https://github.com/Tysnnn23/Ketvoice/releases/latest) page.
 
 - Minimum Android version: **Android 12 (API 31)**
 - Package: `com.ketvoice.app`
@@ -145,7 +159,7 @@ Run the JVM tests and lint with:
 
 ### Release signing
 
-The project intentionally ships only a debug build configuration. Add your own release keystore and signing configuration before publishing a production build. Never commit keystores, passwords, cookies, or tokens.
+The repository has an unsigned release build type; the distributed APK is signed separately with the existing Android Debug development certificate. Add your own release keystore and signing configuration before publishing a production build. Never commit keystores, passwords, cookies, or tokens.
 
 ## Project structure
 
@@ -187,16 +201,16 @@ The project intentionally ships only a debug build configuration. Add your own r
 
 ## Status and limitations
 
-- Version 2.4.0 was built and validated with JVM unit tests, Android lint, a live Ketvoice API check, and an Android 16 emulator run. It has not been through a device-farm, physical-device, or Play Store validation process.
+- Validation uses JVM unit tests, Android lint, live Ketvoice API checks, and an Android 16 emulator. There is no physical-device, device-farm, or Play Store validation.
 - YouTube Music, lyrics, Canvas, artwork, Ketvoice API upstreams, and custom sources depend on third-party services that can change or rate-limit requests.
 - A YouTube web session may be rejected or require additional verification. The app never fabricates a connected state.
 - Search history cannot be read back from YouTube Music; only accepted playback events are submitted.
 - Canvas availability depends on Spotify having a Canvas for that track and on a valid server-side Spotify session.
-- Lossless Bridge can return HTTP `429` upstream. Ketvoice API skips that provider for five minutes and continues with the other sources.
+- FLAC availability is provider-dependent. Failed lossless downloads can fall back to a lower-quality playable stream; the download list reports the format actually saved.
 - Ketvoice API caps a source search at eight seconds and caches results for 60 seconds. The first invocation after inactivity can still incur a function cold start.
 - The public Supabase `anon` key can be extracted from any installed client. `verify_jwt` blocks anonymous HTTP calls, but it is not a complete abuse barrier.
 - Custom sources that require POST requests, authentication, or a search endpoint that cannot return JSON for a test query are rejected.
-- The UI is French by design. Source comments and internal identifiers may also be in French.
+- Translations are bundled for offline use. External provider errors, catalog descriptions, song names, and lyric content are not rewritten as interface text. Some translations are machine-assisted and can be improved.
 
 ## Security and privacy
 
@@ -211,7 +225,7 @@ See [SECURITY.md](SECURITY.md) and [PRIVACY.md](PRIVACY.md).
 
 ## Versioning and legacy builds
 
-The latest published binary is **2.3.1**. The validated **2.4.0** source and APK are ready for publication. See [CHANGELOG.md](CHANGELOG.md) for the full release history.
+**2.5.0** supersedes the unpublished 2.4.0 candidate. Only the final new APK is distributed. See [CHANGELOG.md](CHANGELOG.md) for the full release history.
 
 Earlier development builds from **1.2.0 through 2.3.0** contained development-only Spotify session cookies and private add-on credentials in their default settings. Those binaries are intentionally not published. Version **2.3.1** was the first clean public APK. Version **2.4.0** moves the remaining source and Canvas credentials to Supabase Vault. The original **1.0.0** builds predate those credentials and are archived as-is in the legacy release; their help text contains one obsolete example add-on URL, but no session cookie or access token.
 

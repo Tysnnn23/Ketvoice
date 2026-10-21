@@ -6,9 +6,12 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -20,8 +23,8 @@ import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
+import com.ketvoice.app.ui.common.Icon
+import com.ketvoice.app.ui.common.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -36,6 +39,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
@@ -143,6 +148,7 @@ fun FullPlayerScreen(
                 Box(Modifier.fillMaxSize()) {
                 if (shownPage == PlayerPage.ARTWORK) {
                     Box(Modifier.width(sceneWidth).height(if (wide) safeHeight else safeHeight * .55f)
+                        .onGloballyPositioned { AppUi.playerCoverBounds.value = it.boundsInRoot() }
                         .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
                         .drawWithContent {
                             drawContent()
@@ -185,9 +191,15 @@ fun FullPlayerScreen(
                 // detector can consume taps, seek drags or lyric scrolling.
                 PlayerHandle(Modifier.offset(x = (sceneWidth - 120.dp) / 2).padding(top = topInset), onClose = { close() })
 
-                AnimatedVisibility(page != PlayerPage.ARTWORK,
-                    enter = fadeIn(tween(260)) + slideInVertically(tween(300)) { it / 14 },
-                    exit = fadeOut(tween(160)) + slideOutVertically(tween(180)) { it / 14 }) {
+                AnimatedVisibility(
+                    visible = page != PlayerPage.ARTWORK,
+                    enter = fadeIn(tween(300)) +
+                        slideInVertically(spring(dampingRatio = .86f, stiffness = 330f)) { it / 5 } +
+                        scaleIn(initialScale = .92f, animationSpec = spring(dampingRatio = .86f, stiffness = 330f)),
+                    exit = fadeOut(tween(190)) +
+                        slideOutVertically(tween(230)) { it / 7 } +
+                        scaleOut(targetScale = .94f, animationSpec = tween(230))
+                ) {
                     val sceneEnd = if (expanded || wide) safeHeight - 12.dp else contentBottom
                     Box(Modifier.offset(y = sceneTop).height((sceneEnd - sceneTop).coerceAtLeast(80.dp)).width(sceneWidth)) {
                         if (page == PlayerPage.QUEUE) QueuePane(state, Modifier.fillMaxSize().padding(horizontal = if (wide) 18.dp else margin))
@@ -244,7 +256,7 @@ fun FullPlayerScreen(
 private fun PlayerHandle(modifier: Modifier, onClose: () -> Unit) {
     val threshold = with(LocalDensity.current) { 72.dp.toPx() }
     var distance by remember { mutableFloatStateOf(0f) }
-    Box(modifier.width(120.dp).height(30.dp).semantics { contentDescription = "Fermer le lecteur" }
+    Box(modifier.width(120.dp).height(30.dp).semantics { contentDescription = com.ketvoice.app.data.AppText.t("Fermer le lecteur") }
         .clickable(onClick = onClose).pointerInput(Unit) {
             detectVerticalDragGestures(onVerticalDrag = { change, dy -> change.consume(); distance += dy },
                 onDragStart = { distance = 0f }, onDragEnd = { if (distance > threshold) onClose(); distance = 0f },
@@ -260,7 +272,7 @@ internal fun PlayerTitle(track: Track, compact: Boolean, cover: String?, sheetAc
     val favorite = track.id in AppSettings.favoriteIds.value
     Row(modifier, verticalAlignment = Alignment.CenterVertically) {
         if (compact) { Cover(track.title, cover, size = 56.dp, radius = 8.dp,
-            modifier = Modifier.semantics { contentDescription = "Revenir à la pochette" }.clickable(onClick = onCover)); Spacer(Modifier.width(12.dp)) }
+            modifier = Modifier.semantics { contentDescription = com.ketvoice.app.data.AppText.t("Revenir à la pochette") }.clickable(onClick = onCover)); Spacer(Modifier.width(12.dp)) }
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (track.explicit) {
@@ -268,10 +280,10 @@ internal fun PlayerTitle(track: Track, compact: Boolean, cover: String?, sheetAc
                         modifier = Modifier.clip(RoundedCornerShape(2.dp)).background(Color.White).padding(horizontal = 2.dp))
                     Spacer(Modifier.width(5.dp))
                 }
-                Text(track.title, color = Color.White, fontSize = if (compact) 17.sp else 18.sp,
+                Text(track.title, localize = false, color = Color.White, fontSize = if (compact) 17.sp else 18.sp,
                     fontWeight = FontWeight.Bold, letterSpacing = (-.5).sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            Text(track.artist, color = Color(0xFF868893), fontSize = 16.sp, letterSpacing = (-.5).sp,
+            Text(track.artist, localize = false, color = Color(0xFF868893), fontSize = 16.sp, letterSpacing = (-.5).sp,
                 maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         Spacer(Modifier.width(8.dp))

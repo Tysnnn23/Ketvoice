@@ -8,8 +8,8 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
+import com.ketvoice.app.ui.common.Icon
+import com.ketvoice.app.ui.common.Text
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -49,6 +49,7 @@ fun CatalogScreen() {
     val tracks = when (request.kind) {
         "favorites" -> (known + recent + downloads.map { it.track }).distinctBy { it.id }.filter { it.id in AppSettings.favoriteIds.value }
         "history" -> recent
+        "all" -> (known + recent + downloads.map { it.track }).distinctBy { it.id }
         else -> page?.tracks.orEmpty()
     }
     LaunchedEffect(tracks) { ArtworkRepo.enrich(tracks) }
@@ -79,9 +80,9 @@ fun CatalogScreen() {
                     Cover(track.title, art["t:${track.id}"] ?: track.coverUrl, 52.dp, 8.dp)
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
-                        Text(track.title, color = if (active) theme.accent else theme.onBackground, fontWeight = FontWeight.SemiBold,
+                        Text(track.title, localize = false, color = if (active) theme.accent else theme.onBackground, fontWeight = FontWeight.SemiBold,
                             fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(track.artist, color = theme.secondary, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(track.artist, localize = false, color = theme.secondary, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                     if (track.durationMs > 0) Text(formatSecs(track.durationMs), color = theme.secondary, fontSize = 12.sp)
                     Icon(Icons.Filled.MoreVert, "Options", tint = theme.secondary,

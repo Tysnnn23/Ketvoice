@@ -14,8 +14,8 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.Smartphone
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
+import com.ketvoice.app.ui.common.Icon
+import com.ketvoice.app.ui.common.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -92,6 +92,7 @@ fun TrackMenuSheet(track: Track, onClose: () -> Unit) {
                     }
                     Text(
                         track.title,
+                        localize = false,
                         color = Color.White,
                         style = T.bodyBold,
                         fontSize = 17.sp,
@@ -101,6 +102,7 @@ fun TrackMenuSheet(track: Track, onClose: () -> Unit) {
                 }
                 Text(
                     track.artist,
+                    localize = false,
                     color = Color.White.copy(alpha = 0.6f),
                     style = T.sub,
                     maxLines = 1,

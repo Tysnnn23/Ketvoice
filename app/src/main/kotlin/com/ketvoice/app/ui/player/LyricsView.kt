@@ -1,6 +1,16 @@
 package com.ketvoice.app.ui.player
 
 import android.widget.Toast
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.DragInteraction
@@ -17,8 +27,8 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
+import com.ketvoice.app.ui.common.Icon
+import com.ketvoice.app.ui.common.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,6 +38,8 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.platform.LocalContext
@@ -63,6 +75,7 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
     val active = lyrics.indexAt(position)
     val list = rememberLazyListState()
     var following by remember(track.id) { mutableStateOf(true) }
+    var introDone by remember(track.id) { mutableStateOf(false) }
     var translationEnabled by remember(track.id) { mutableStateOf(false) }
     var translated by remember(track.id, lyrics.lines) { mutableStateOf<Map<Int, String>>(emptyMap()) }
     var translating by remember(track.id) { mutableStateOf(false) }
@@ -75,17 +88,29 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
             translating = true
             try {
                 LyricsTranslation.stream(lyrics.lines, target, active) { index, text -> translated = translated + (index to text) }
-                if (translated.isEmpty()) Toast.makeText(context, "Traduction temporairement indisponible", Toast.LENGTH_SHORT).show()
+                if (translated.isEmpty()) Toast.makeText(context, AppText.t("Traduction temporairement indisponible"), Toast.LENGTH_SHORT).show()
             } finally { translating = false }
         }
     }
     LaunchedEffect(track.id) { list.scrollToItem(0); following = true }
+    LaunchedEffect(track.id, lyrics.lines) {
+        introDone = false
+        if (lyrics.lines.isNotEmpty()) {
+            val first = lyrics.lines.firstOrNull { it.timeMs >= 0 }?.timeMs
+            val remaining = if (first != null) {
+                (first - Player.currentPositionMs()).coerceIn(2400L, 2600L)
+            } else 2200L
+            delay(remaining)
+        }
+        introDone = true
+    }
     LaunchedEffect(list) {
         list.interactionSource.interactions.collect { if (it is DragInteraction.Start) following = false }
     }
     BoxWithConstraints(modifier) {
         val viewportPx = with(LocalDensity.current) { maxHeight.toPx() }
-        LaunchedEffect(active, following, expanded, lyrics.lines) {
+        LaunchedEffect(active, following, expanded, lyrics.lines, introDone) {
+            if (!introDone) return@LaunchedEffect
             if (following && active >= 0) list.animateScrollToItem(active, -(viewportPx * .17f).toInt())
             else if (following && active < 0) list.scrollToItem(0)
         }
@@ -94,24 +119,50 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
                 LazyColumn(state = list, modifier = Modifier.weight(1f).fillMaxWidth(),
                     contentPadding = PaddingValues(top = 22.dp, bottom = 110.dp),
                     verticalArrangement = Arrangement.spacedBy(25.dp)) {
-                    if (active < 0 && lyrics.isTimed) item(key = "intro") { IntroDots() }
-                    itemsIndexed(lyrics.lines, key = { i, l -> "$i:${l.timeMs}" }) { index, line ->
-                        val current = index == active
-                        val distance = if (active < 0) 1 else abs(index - active)
-                        val blur = if (!AppSettings.blurInactiveLyrics.value || current || !lyrics.isTimed) 0.dp
-                            else if (distance <= 1) 1.dp else 2.dp
-                        val lineModifier = Modifier.fillMaxWidth().clickable {
-                            if (lyrics.isTimed && line.timeMs >= 0) { Player.seekTo(line.timeMs); following = true }
-                        }
-                        Column(lineModifier) {
-                            if (current && line.words.isNotEmpty()) KaraokeLine(line, Modifier.fillMaxWidth())
-                            else Text(line.text, color = if (current || !lyrics.isTimed) Color.White else Color(0xFF74747C),
-                                fontSize = 33.sp, lineHeight = 41.sp, letterSpacing = (-.3).sp,
-                                fontWeight = FontWeight.Black, modifier = Modifier.fillMaxWidth().blur(blur))
-                            if (translationEnabled) translated[index]?.let { subtitle ->
-                                Text(subtitle, color = Color.White.copy(alpha = if (current || !lyrics.isTimed) .82f else .43f),
-                                    fontSize = 16.sp, lineHeight = 22.sp, fontWeight = FontWeight.Medium,
-                                    modifier = Modifier.fillMaxWidth().padding(top = 7.dp))
+                    if (!introDone && lyrics.isTimed) {
+                        item(key = "intro-${track.id}") { IntroDots() }
+                    } else {
+                        itemsIndexed(lyrics.lines, key = { i, l -> "$i:${l.timeMs}" }) { index, line ->
+                            val current = index == active
+                            val distance = if (active < 0) 1 else abs(index - active)
+                            val blur = if (!AppSettings.blurInactiveLyrics.value || current || !lyrics.isTimed) 0.dp
+                                else if (distance <= 1) 1.dp else 2.dp
+                            val lineColor by animateColorAsState(
+                                targetValue = if (current || !lyrics.isTimed) Color.White else Color(0xFF74747C),
+                                animationSpec = tween(240),
+                                label = "lyricColor"
+                            )
+                            val lineBlur by animateDpAsState(blur, tween(220), label = "lyricBlur")
+                            val lineScale by animateFloatAsState(
+                                targetValue = if (current && lyrics.isTimed) 1.025f else 1f,
+                                animationSpec = spring(dampingRatio = .78f, stiffness = 420f),
+                                label = "lyricScale"
+                            )
+                            val lineModifier = Modifier.fillMaxWidth().clickable {
+                                if (lyrics.isTimed && line.timeMs >= 0) { Player.seekTo(line.timeMs); following = true }
+                            }
+                            Column(
+                                lineModifier.graphicsLayer {
+                                    scaleX = lineScale
+                                    scaleY = lineScale
+                                    transformOrigin = TransformOrigin(0f, .5f)
+                                }
+                            ) {
+                                if (current && line.words.isNotEmpty()) KaraokeLine(line, Modifier.fillMaxWidth())
+                                else Text(line.text, localize = false, color = lineColor,
+                                    fontSize = 33.sp, lineHeight = 41.sp, letterSpacing = (-.3).sp,
+                                    fontWeight = FontWeight.Black, modifier = Modifier.fillMaxWidth().blur(lineBlur))
+                                AnimatedVisibility(
+                                    visible = translationEnabled && translated[index] != null,
+                                    enter = fadeIn(tween(180)),
+                                    exit = fadeOut(tween(120))
+                                ) {
+                                    translated[index]?.let { subtitle ->
+                                        Text(subtitle, localize = false, color = Color.White.copy(alpha = if (current || !lyrics.isTimed) .82f else .43f),
+                                            fontSize = 16.sp, lineHeight = 22.sp, fontWeight = FontWeight.Medium,
+                                            modifier = Modifier.fillMaxWidth().padding(top = 7.dp))
+                                    }
+                                }
                             }
                         }
                     }
@@ -157,9 +208,9 @@ private fun KaraokeLine(line: MusicApi.LyricLine, modifier: Modifier) {
     }
     var layout by remember(line.text) { mutableStateOf<TextLayoutResult?>(null) }
     Box(modifier) {
-        Text(line.text, color = Color(0xFF9A99A0), fontSize = 33.sp, lineHeight = 41.sp, letterSpacing = (-.3).sp,
+        Text(line.text, localize = false, color = Color(0xFF9A99A0), fontSize = 33.sp, lineHeight = 41.sp, letterSpacing = (-.3).sp,
             fontWeight = FontWeight.Black, onTextLayout = { layout = it }, modifier = Modifier.fillMaxWidth())
-        Text(line.text, color = Color.White, fontSize = 33.sp, lineHeight = 41.sp, letterSpacing = (-.3).sp,
+        Text(line.text, localize = false, color = Color.White, fontSize = 33.sp, lineHeight = 41.sp, letterSpacing = (-.3).sp,
             fontWeight = FontWeight.Black,
             style = androidx.compose.ui.text.TextStyle(shadow = Shadow(Color.White.copy(alpha = .28f), Offset.Zero, 5f)),
             modifier = Modifier.fillMaxWidth().drawWithContent {
@@ -201,13 +252,34 @@ internal fun segmentProgress(now: Long, start: Long, end: Long): Float = when {
 
 @Composable
 private fun IntroDots() {
-    var tick by remember { mutableLongStateOf(0L) }
-    LaunchedEffect(Unit) { while (true) { tick = android.os.SystemClock.uptimeMillis(); delay(40) } }
-    Canvas(Modifier.size(44.dp, 23.dp)) {
+    val progress = remember { Animatable(0f) }
+    LaunchedEffect(Unit) {
+        progress.animateTo(1f, tween(2400, easing = LinearEasing))
+    }
+    Canvas(Modifier.size(120.dp, 46.dp)) {
+        val t = progress.value
+        val dot = 9.dp.toPx()
+        val gap = 27.dp.toPx()
+        val center = Offset(size.width / 2f, size.height / 2f)
+        val centers = listOf(center.x - gap, center.x, center.x + gap)
+        val illumination = listOf(
+            ((t - .02f) / .17f).coerceIn(0f, 1f),
+            ((t - .21f) / .17f).coerceIn(0f, 1f),
+            ((t - .40f) / .17f).coerceIn(0f, 1f)
+        )
+        val merge = ((t - .66f) / .26f).coerceIn(0f, 1f)
+        val grow = ((t - .55f) / .20f).coerceIn(0f, 1f)
+        val vanish = ((t - .91f) / .09f).coerceIn(0f, 1f)
         repeat(3) { index ->
-            val phase = ((tick + index * 220) % 1100) / 1100f
-            val alpha = .3f + .7f * ((kotlin.math.sin(phase * Math.PI * 2) + 1) / 2).toFloat()
-            drawCircle(Color.White.copy(alpha = alpha), 4.dp.toPx(), Offset((7 + index * 12).dp.toPx(), size.height / 2))
+            val x = centers[index] + (center.x - centers[index]) * merge
+            val radius = dot * (1f + illumination[index] * .10f + grow * .18f)
+            val alpha = (.25f + .75f * illumination[index]) * (1f - vanish)
+            drawCircle(Color.White.copy(alpha = alpha * .18f), radius * 1.9f, Offset(x, center.y))
+            drawCircle(Color.White.copy(alpha = alpha), radius, Offset(x, center.y))
+        }
+        if (merge > 0f) {
+            val radius = dot * (1.2f + grow * .55f) * (1f - vanish * .25f)
+            drawCircle(Color.White.copy(alpha = merge * (1f - vanish)), radius, center)
         }
     }
 }

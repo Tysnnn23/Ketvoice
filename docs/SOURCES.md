@@ -1,6 +1,6 @@
 # Custom JSON Sources
 
-Ketvoice 2.4.0 includes **Ketvoice API**, a built-in Supabase broker for music-source search, streams, and Spotify Canvas. It needs no user configuration and keeps its provider credentials on the server. This document covers the optional custom JSON sources that can be added alongside it.
+Ketvoice 2.5.0 includes **Ketvoice API**, a built-in Supabase broker for music-source search, streams, and Spotify Canvas. It needs no user configuration and keeps its provider credentials on the server. The active built-in providers are Ultra MAX (`um`) and Last Babe (`last`). This document covers the optional custom JSON sources that can be added alongside them.
 
 Custom sources can be added from user-provided HTTPS manifests. Add a source in **Search → Sources** or **Settings → Sources personnalisées**. The URL must begin with `https://` and end with `.json`.
 
@@ -120,6 +120,12 @@ A stream endpoint can return an object or an array. Ketvoice accepts fields such
 - `quality`, `streamQuality`, or `audioQuality`
 
 Only HTTPS stream URLs are accepted.
+
+## Offline downloads
+
+Downloads follow HTTPS redirects and retry interrupted responses using byte ranges when supported. The app validates audio signatures and complete known response lengths before committing the file. The list shows the format actually saved, including a lower-quality fallback when the selected quality is unavailable.
+
+Available lyrics are retained as a JSON sidecar (including native word/syllable timing and provider translations) and an interoperable LRC file. Available Canvas media is stored in the shared persistent Canvas cache. Optional asset failures do not discard a completed audio download.
 
 ## Security and limitations
 

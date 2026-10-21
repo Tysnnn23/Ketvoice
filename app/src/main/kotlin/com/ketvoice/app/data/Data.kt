@@ -17,7 +17,7 @@ data class Track(
     val explicit: Boolean = false,
     val coverUrl: String? = null,
     // --- sources réelles ---
-    val addon: String? = null,         // "lb" (Lossless Bridge) | "um" (Ultra MAX)
+    val addon: String? = null,         // "um" (Ultra MAX) | "last" (Last Babe)
     val addonId: String? = null,       // id côté addon (monochrome / deezer)
     val videoId: String? = null,       // YouTube Music
     val spotifyId: String? = null,     // pour les canvases

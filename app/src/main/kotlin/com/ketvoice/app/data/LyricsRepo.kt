@@ -50,6 +50,23 @@ object LyricsRepo {
             _state.value = State(source = "Désactivées", sourceKey = MusicApi.SRC_OFF)
             return
         }
+        // Un titre téléchargé emporte ses meilleures paroles : elles passent
+        // avant toute requête réseau, même en mode hors ligne.
+        if (!refresh) {
+            val local = runCatching { Downloader.localLyrics(track.id) }.getOrNull()
+            if (local != null && local.second.isNotEmpty()) {
+                _state.value = State(
+                    loading = false,
+                    source = "Téléchargé · ${local.first}",
+                    sourceKey = source,
+                    lines = local.second,
+                    isTimed = local.second.any { it.timeMs >= 0 },
+                    wordTimed = local.second.any { it.words.size >= 2 },
+                    syllableTimed = local.second.any { it.syllableTimed }
+                )
+                return
+            }
+        }
         _state.value = State(loading = true, sourceKey = source)
         job = scope.launch {
             var bestRank = -1

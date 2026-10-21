@@ -12,8 +12,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
+import com.ketvoice.app.ui.common.Icon
+import com.ketvoice.app.ui.common.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -103,9 +103,9 @@ fun HomeScreen() {
                     itemsIndexed(albums, key = { _, album -> album.id }) { _, album ->
                         Column(Modifier.width(156.dp).clickable { AppUi.openCatalog(CatalogRequest("album", album.id, album.title)) }) {
                             Cover(album.title, album.coverUrl, 156.dp, 13.dp)
-                            Text(album.title, color = theme.onBackground, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
+                            Text(album.title, localize = false, color = theme.onBackground, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
                                 maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))
-                            Text(album.artist, color = theme.secondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(album.artist, localize = false, color = theme.secondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                     }
                 }
@@ -138,9 +138,9 @@ private fun HomeRecentRow(track: Track, active: Boolean, onPlay: () -> Unit, onM
         Cover(track.title, art["t:${track.id}"] ?: track.coverUrl, 50.dp, 7.dp)
         Spacer(Modifier.width(13.dp))
         Column(Modifier.weight(1f)) {
-            Text(track.title, color = if (active) theme.accent else theme.onBackground, fontSize = 15.sp,
+            Text(track.title, localize = false, color = if (active) theme.accent else theme.onBackground, fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(track.artist, color = theme.secondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(track.artist, localize = false, color = theme.secondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         Box(Modifier.size(38.dp).clickable(onClick = onMenu), contentAlignment = Alignment.Center) {
             Icon(Icons.Filled.MoreVert, "Options de ${track.title}", tint = theme.secondary, modifier = Modifier.size(21.dp))
@@ -157,12 +157,12 @@ private fun TrackCarousel(tracks: List<Track>, onMenu: (Track) -> Unit) {
             Column(Modifier.width(156.dp).clickable { Player.playQueue(tracks, i) }) {
                 Cover(track.title, art["t:${track.id}"] ?: track.coverUrl, 156.dp, 13.dp)
                 Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(track.title, color = theme.onBackground, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
+                    Text(track.title, localize = false, color = theme.onBackground, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
                         maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                     Icon(Icons.Filled.MoreVert, "Options de ${track.title}", tint = theme.secondary,
                         modifier = Modifier.size(22.dp).clickable { onMenu(track) })
                 }
-                Text(track.artist, color = theme.secondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(track.artist, localize = false, color = theme.secondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
     }

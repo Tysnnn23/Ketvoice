@@ -12,7 +12,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.Text
+import com.ketvoice.app.ui.common.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -74,7 +74,7 @@ class YouTubeLoginActivity : ComponentActivity() {
                                 val ok = runCatching { YouTubeMusicSession.validate(cookie) }.getOrDefault(false)
                                 checking = false
                                 if (ok) { CookieManager.getInstance().flush(); finish() }
-                                else Toast.makeText(this@YouTubeLoginActivity, "Google n'a pas confirmé de session connectée.", Toast.LENGTH_LONG).show()
+                        else Toast.makeText(this@YouTubeLoginActivity, com.ketvoice.app.data.AppText.t("Google n'a pas confirmé de session connectée."), Toast.LENGTH_LONG).show()
                             }
                         }.padding(18.dp))
                 }

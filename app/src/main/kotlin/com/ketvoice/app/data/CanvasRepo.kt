@@ -60,31 +60,48 @@ object CanvasRepo {
         }
     }
 
-    /** Résout puis télécharge le canvas du morceau (retente après 10 min d'échec). */
-    suspend fun resolve(track: Track) = withContext(Dispatchers.IO) {
+    /**
+     * Résout puis télécharge le canvas du morceau (retente après 10 min d'échec).
+     *
+     * [force] est utilisé par le téléchargement hors ligne : même si les
+     * pochettes animées sont coupées à l'écran ou si le réseau est facturé, le
+     * Canvas demandé est conservé pour plus tard.
+     */
+    suspend fun resolve(track: Track, force: Boolean = false) = withContext(Dispatchers.IO) {
         val ctx = appContext ?: return@withContext
-        // Le réglage « Pochette animée » coupe aussi le téléchargement.
-        if (!AppSettings.animatedArtwork.value) return@withContext
+        // Le réglage « Pochette animée » coupe le téléchargement automatique,
+        // sauf quand le morceau est explicitement téléchargé.
+        if (!force && !AppSettings.animatedArtwork.value) return@withContext
         fun recentlyFailed() = failed[track.id]?.let {
             System.currentTimeMillis() - it < 10 * 60_000L
         } == true
-        if (_paths.value.containsKey(track.id) || recentlyFailed()) return@withContext
+        if (localPath(track.id) != null || (!force && recentlyFailed())) return@withContext
         mutex.withLock {
-            if (_paths.value.containsKey(track.id) || recentlyFailed()) return@withLock
+            if (localPath(track.id) != null || (!force && recentlyFailed())) return@withLock
             try {
                 val prefs = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                val albumKey = albumKey(track)
+                val albumSpotifyId = prefs.getString(albumKey, null)
                 var spotifyId = track.spotifyId ?: prefs.getString(track.id, null)
                 var dest: File? = spotifyId?.let { File(canvasDir(ctx), "$it.mp4") }
+                // Album reuse is a fallback, never a replacement for a known
+                // song's own Canvas. Artist-qualified keys avoid collisions.
+                if (dest?.exists() != true && spotifyId == null && albumSpotifyId != null) {
+                    dest = File(canvasDir(ctx), "$albumSpotifyId.mp4")
+                }
                 val alreadyDownloaded = dest?.let { it.exists() && it.length() > 10_000 } == true
 
                 if (!alreadyDownloaded) {
-                    if (!networkAllowed(ctx)) return@withLock
+                    if (!force && !networkAllowed(ctx)) return@withLock
                     val resolved = KetvoiceApi.canvas(track.copy(spotifyId = spotifyId)) ?: run {
                         failed[track.id] = System.currentTimeMillis()
                         return@withLock
                     }
                     spotifyId = resolved.spotifyId
-                    prefs.edit().putString(track.id, spotifyId).apply()
+                    prefs.edit()
+                        .putString(track.id, spotifyId)
+                        .putString(albumKey, spotifyId)
+                        .apply()
                     val target = File(canvasDir(ctx), "$spotifyId.mp4")
                     dest = target
                     if (!target.exists() || target.length() < 10_000) {
@@ -94,11 +111,28 @@ object CanvasRepo {
                         }
                     }
                 }
-                dest?.let { _paths.value = _paths.value + (track.id to it.absolutePath) }
+                dest?.let {
+                    // Le Canvas peut être partagé par plusieurs titres du même
+                    // album : on mémorise le chemin pour ce titre également.
+                    prefs.edit().putString(track.id, it.nameWithoutExtension).apply()
+                    _paths.value = _paths.value + (track.id to it.absolutePath)
+                }
             } catch (_: Exception) {
                 failed[track.id] = System.currentTimeMillis()
             }
         }
+    }
+
+    /** Chemin local déjà disponible pour ce titre, sans réseau. */
+    fun localPath(trackId: String): File? {
+        val path = _paths.value[trackId] ?: return null
+        return File(path).takeIf { it.exists() && it.length() > 10_000 }
+    }
+
+    private fun albumKey(track: Track): String {
+        val album = track.album.trim().lowercase(java.util.Locale.ROOT)
+        val artist = track.artist.substringBefore(',').trim().lowercase(java.util.Locale.ROOT)
+        return if (album.isBlank()) "album:${track.id}" else "album:$artist:$album"
     }
 
     /** Diagnostic : vérifie que Ketvoice API résout réellement un canvas. */
@@ -123,24 +157,55 @@ object CanvasRepo {
 
     private fun download(url: String, dest: File): File? {
         return try {
-            val c = (URL(url).openConnection() as HttpURLConnection).apply {
-                connectTimeout = 15_000
-                readTimeout = 40_000
-                setRequestProperty("User-Agent", UA)
+            var current = URL(url)
+            var c: HttpURLConnection? = null
+            var code = 0
+            // Les URLs cnvs.mp4 signées redirigent souvent vers un CDN.
+            for (hop in 0..5) {
+                c = (current.openConnection() as HttpURLConnection).apply {
+                    connectTimeout = 15_000
+                    readTimeout = 60_000
+                    instanceFollowRedirects = true
+                    setRequestProperty("User-Agent", UA)
+                    setRequestProperty("Accept", "video/mp4,video/*;q=0.9,*/*;q=0.8")
+                }
+                code = c.responseCode
+                val location = c.getHeaderField("Location")
+                if (code in listOf(301, 302, 303, 307, 308) && !location.isNullOrBlank()) {
+                    c.disconnect()
+                    current = URL(current, location)
+                    continue
+                }
+                break
             }
-            if (c.responseCode !in 200..299) {
-                c.disconnect()
+            val conn = c ?: return null
+            if (code !in 200..299) {
+                conn.disconnect()
                 return null
             }
             val tmp = File(dest.parentFile, dest.name + ".part")
-            c.inputStream.use { input -> tmp.outputStream().use { input.copyTo(it) } }
-            c.disconnect()
+            if (tmp.exists()) tmp.delete()
+            conn.inputStream.use { input -> tmp.outputStream().use { input.copyTo(it) } }
+            conn.disconnect()
             if (tmp.length() < 10_000) {
                 tmp.delete()
                 return null
             }
+            // Un MP4 valide commence par une boîte ftyp dans ses premiers octets.
+            val head = ByteArray(16)
+            tmp.inputStream().use { it.read(head) }
+            val ftyp = head[4].toInt() == 0x66 && head[5].toInt() == 0x74 &&
+                head[6].toInt() == 0x79 && head[7].toInt() == 0x70
+            if (!ftyp) {
+                tmp.delete()
+                return null
+            }
             if (dest.exists()) dest.delete()
-            if (tmp.renameTo(dest)) dest else null
+            if (tmp.renameTo(dest)) dest else run {
+                tmp.copyTo(dest, overwrite = true)
+                tmp.delete()
+                dest.takeIf { it.exists() && it.length() > 10_000 }
+            }
         } catch (_: Exception) {
             null
         }

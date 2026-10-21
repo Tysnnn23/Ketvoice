@@ -6,7 +6,6 @@ It keeps the sensitive provider values out of the APK:
 
 - `SP_DC` — Spotify Canvas session cookie
 - `ADDON_ULTRAMAX` — Ultra MAX source base URL/token
-- `ADDON_LOSSLESSBRIDGE` — Lossless Bridge source base URL/token
 - `ADDON_LASTBABE` — Last Babe source base URL/token
 
 The function source contains no secret values. It reads a named Vault entry through a service-role-only RPC and caches the result in memory for five minutes.
@@ -18,7 +17,7 @@ The function source contains no secret values. It reads a named Vault entry thro
 | `GET /health` | Confirms the function is running and reports which server secrets are configured |
 | `GET /source.json` | Describes the built-in source card to the app |
 | `GET /search?q=...` | Searches the configured providers and returns normalized tracks |
-| `GET /stream?source=...&id=...&title=...&artist=...` | Resolves a short-lived stream URL |
+| `GET /stream?source=um\|last&id=...&title=...&artist=...` | Resolves a stream URL; unsupported provider tags are rejected |
 | `GET /canvas?spotifyId=...&title=...&artist=...` | Resolves a Spotify Canvas URL |
 
 All routes return JSON. The function is deployed with `verify_jwt` enabled.
@@ -55,5 +54,5 @@ The `anon` key is public by design. Do not put the `service_role` key, the Spoti
 - Search results are cached in memory for 60 seconds.
 - Each provider search has an eight-second timeout.
 - An HTTP `429` from a provider skips it for five minutes; the other providers continue.
-- Lossless Bridge can be rate-limited upstream. Ultra MAX (MP3) and Last Babe (FLAC) remain available.
+- Ultra MAX (MP3) and Last Babe (FLAC) are the only configured providers. The retired provider's routing and Vault entry were deleted in 2.5.0.
 - Supabase function logs can contain request metadata and IP addresses. Configure retention and access according to your own policy.

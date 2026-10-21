@@ -12,8 +12,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DownloadDone
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
+import com.ketvoice.app.ui.common.Icon
+import com.ketvoice.app.ui.common.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -164,6 +164,7 @@ fun DownloadsScreen() {
                         Column(Modifier.weight(1f)) {
                             Text(
                                 item.track.title,
+                                localize = false,
                                 color = th.onBackground,
                                 style = T.bodyBold,
                                 maxLines = 1,
@@ -176,6 +177,18 @@ fun DownloadsScreen() {
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
+                            if (item.hasLyrics || item.hasCanvas) {
+                                Text(
+                                    listOfNotNull(
+                                        if (item.hasLyrics) "Paroles enregistrées" else null,
+                                        if (item.hasCanvas) "Canvas enregistré" else null
+                                    ).joinToString(" · "),
+                                    color = th.accent,
+                                    fontSize = 10.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
                         }
                         Spacer(Modifier.width(8.dp))
                         Box(

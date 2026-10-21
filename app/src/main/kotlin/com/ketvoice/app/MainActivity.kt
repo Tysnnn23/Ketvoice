@@ -15,7 +15,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Text
+import com.ketvoice.app.ui.common.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
@@ -45,6 +45,7 @@ class MainActivity : ComponentActivity() {
 
         // réglages chargés AVANT l'init du cache audio / du player
         runCatching { com.ketvoice.app.data.SettingsStore.load(this) }
+            .onFailure { android.util.Log.e("KetvoiceSettings", "Could not restore settings", it) }
         runCatching { com.ketvoice.app.data.YouTubeMusicSession.init(this) }
         runCatching { com.ketvoice.app.data.CustomSources.init(this) }
         runCatching {
@@ -118,7 +119,7 @@ private fun CrashReportsDialog() {
                 runCatching {
                     val cm = activity.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                     cm.setPrimaryClip(ClipData.newPlainText("ketvoice_crash", report))
-                    Toast.makeText(activity, "Copié — colle-le dans la conversation", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(activity, com.ketvoice.app.data.AppText.t("Copié — colle-le dans la conversation"), Toast.LENGTH_SHORT).show()
                 }
                 Crash.clearAll(activity)
                 visible = false

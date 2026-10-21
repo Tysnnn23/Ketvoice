@@ -28,8 +28,8 @@ import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SkipNext
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
+import com.ketvoice.app.ui.common.Icon
+import com.ketvoice.app.ui.common.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -44,6 +44,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
@@ -95,7 +97,15 @@ fun MiniPlayerPill(modifier: Modifier = Modifier, onOpen: () -> Unit) {
                     .padding(start = 6.dp, end = 14.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Cover(current.title, cover, size = 46.dp, radius = 9.dp)
+                Cover(
+                    current.title,
+                    cover,
+                    size = 46.dp,
+                    radius = 9.dp,
+                    modifier = Modifier.onGloballyPositioned {
+                        AppUi.miniCoverBounds.value = it.boundsInRoot()
+                    }
+                )
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -105,6 +115,7 @@ fun MiniPlayerPill(modifier: Modifier = Modifier, onOpen: () -> Unit) {
                         }
                         Text(
                             current.title,
+                            localize = false,
                             style = T.bodyBold.copy(fontSize = 15.sp),
                             color = th.onBackground,
                             maxLines = 1,
@@ -113,6 +124,7 @@ fun MiniPlayerPill(modifier: Modifier = Modifier, onOpen: () -> Unit) {
                     }
                     Text(
                         current.artist,
+                        localize = false,
                         style = T.sub.copy(fontSize = 12.5.sp),
                         color = th.secondary,
                         maxLines = 1,

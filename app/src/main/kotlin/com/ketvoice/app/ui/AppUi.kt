@@ -55,6 +55,19 @@ object AppUi {
     /** Lecteur plein écran ouvert */
     val showPlayer = androidx.compose.runtime.mutableStateOf(false)
 
+    /** Vol de pochette entre le mini-lecteur et le lecteur plein écran. */
+    data class CoverFlight(
+        val cover: String?,
+        val title: String,
+        val from: androidx.compose.ui.geometry.Rect,
+        val to: androidx.compose.ui.geometry.Rect,
+        val opening: Boolean,
+        val token: Long = System.nanoTime()
+    )
+    val playerCoverBounds = androidx.compose.runtime.mutableStateOf<androidx.compose.ui.geometry.Rect?>(null)
+    val miniCoverBounds = androidx.compose.runtime.mutableStateOf<androidx.compose.ui.geometry.Rect?>(null)
+    val coverFlight = androidx.compose.runtime.mutableStateOf<CoverFlight?>(null)
+
     /** Vue paroles dans le lecteur */
     val showLyrics = androidx.compose.runtime.mutableStateOf(false)
 

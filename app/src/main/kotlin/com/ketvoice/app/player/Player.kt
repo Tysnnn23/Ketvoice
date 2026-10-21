@@ -55,7 +55,7 @@ data class PlayerUiState(
  *
  * Stratégie de démarrage rapide :
  *   1. téléchargement local si présent,
- *   2. recherche du match Ultra MAX (MP3) + Lossless Bridge (FLAC) en PARALLÈLE,
+ *   2. recherche du match Ultra MAX (MP3) + Last Babe (FLAC) en PARALLÈLE,
  *   3. la lecture démarre dès que le MP3 est prêt (sans attendre le FLAC),
  *   4. si la qualité « Sans perte » est visée et que le FLAC aboutit,
  *      bascule transparente à la position courante.
@@ -107,7 +107,7 @@ object Player {
             scope.launch {
                 val alternative = withTimeoutOrNull(25_000) {
                     if (failed?.format?.contains("flac", true) == true) MusicApi.addonStream(track, "um")
-                    else MusicApi.losslessStream(track) ?: MusicApi.addonStream(track, "um")
+                    else MusicApi.flacStream(track) ?: MusicApi.addonStream(track, "um")
                 }
                 if (gen != generation) return@launch
                 if (alternative != null && alternative.url != failed?.url) {
@@ -205,7 +205,7 @@ object Player {
         return if (isMetered()) AppSettings.mobileQuality.value else AppSettings.wifiQuality.value
     }
 
-    /** true si on doit monter en FLAC (Lossless Bridge) après le démarrage MP3. */
+    /** true si on doit monter en FLAC (Last Babe) après le démarrage MP3. */
     private fun wantsLossless(): Boolean = qualitySetting() == "Sans perte"
 
     private fun isMetered(): Boolean {
@@ -281,6 +281,7 @@ object Player {
         resolutionJob = scope.launch(Dispatchers.Main) {
             val local = Downloader.itemFor(track.id)
             if (local != null) {
+                activeStream = null
                 startItem(c, resolvedTrack, local.file.toURI().toString(), 0L, desiredPlay)
                 _state.value = _state.value.copy(quality = "Téléchargé · ${local.format}")
                 return@launch
@@ -301,7 +302,7 @@ object Player {
             val youtube = async(Dispatchers.IO) { runCatching { MusicApi.youtubeStream(resolvedTrack) }.getOrNull() }
             val mp3 = async(Dispatchers.IO) { runCatching { MusicApi.addonStream(resolvedTrack, "um") }.getOrNull() }
             val flac = async(Dispatchers.IO) {
-                if (wantsLossless()) runCatching { MusicApi.losslessStream(resolvedTrack) }.getOrNull() else null
+                if (wantsLossless()) runCatching { MusicApi.flacStream(resolvedTrack) }.getOrNull() else null
             }
             val custom = async(Dispatchers.IO) {
                 runCatching { com.ketvoice.app.data.CustomSources.streamForTrack(resolvedTrack) }.getOrNull()
@@ -379,7 +380,7 @@ object Player {
         _state.value = _state.value.copy(queue = q)
         appContext?.let {
             android.widget.Toast.makeText(
-                it, "« ${track.title} » jouera ensuite",
+                it, com.ketvoice.app.data.AppText.t("« ${track.title} » jouera ensuite"),
                 android.widget.Toast.LENGTH_SHORT
             ).show()
         }

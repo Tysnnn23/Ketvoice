@@ -9,8 +9,8 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DragHandle
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
+import com.ketvoice.app.ui.common.Icon
+import com.ketvoice.app.ui.common.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -82,9 +82,9 @@ private fun QueueRow(track: Track, cover: String?, modifier: Modifier = Modifier
         Cover(track.title, cover, size = 46.dp, radius = 6.dp)
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
-            Text((if (track.explicit) "ᴱ  " else "") + track.title, color = Color.White, fontSize = 15.sp,
+            Text((if (track.explicit) "ᴱ  " else "") + track.title, localize = false, color = Color.White, fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(track.artist, color = Color(0xFF8B8B93), fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(track.artist, localize = false, color = Color(0xFF8B8B93), fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         if (current) NowPlayingBars(playing, Modifier.padding(horizontal = 8.dp))
         Box(Modifier.size(32.dp).clickable(onClick = onRemove), contentAlignment = Alignment.CenterEnd) {

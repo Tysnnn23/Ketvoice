@@ -46,8 +46,8 @@ import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.VolumeDown
 import androidx.compose.material.icons.filled.VolumeUp
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
+import com.ketvoice.app.ui.common.Icon
+import com.ketvoice.app.ui.common.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -396,7 +396,7 @@ fun PlayerTransport(
 @Composable
 fun TransportGlyph(kind: String, modifier: Modifier = Modifier, tint: Color = Color.White) {
     val description = when (kind) { "previous" -> "Précédent"; "next" -> "Suivant"; "pause" -> "Pause"; else -> "Lecture" }
-    Canvas(modifier.semantics { contentDescription = description }) {
+    Canvas(modifier.semantics { contentDescription = com.ketvoice.app.data.AppText.t(description) }) {
         fun triangle(x: Float, width: Float, top: Float, bottom: Float) {
             val mid = (top + bottom) / 2
             val r = width * .10f
@@ -715,6 +715,7 @@ fun LyricsPreviewLine(onOpen: () -> Unit) {
     ) {
         Text(
             text,
+            localize = activeText == null,
             color = Color.White.copy(alpha = if (activeText != null) 0.96f else 0.5f),
             fontSize = if (activeText != null) 16.sp else 14.sp,
             fontWeight = FontWeight.Bold,

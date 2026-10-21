@@ -14,8 +14,8 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
+import com.ketvoice.app.ui.common.Icon
+import com.ketvoice.app.ui.common.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -69,7 +69,7 @@ fun ArtistScreen() {
             Icon(Icons.AutoMirrored.Filled.ArrowBack, "Retour", tint = theme.onBackground,
                 modifier = Modifier.size(30.dp).clickable { AppUi.overlay.value = AppUi.NONE })
             Spacer(Modifier.width(12.dp))
-            Text(artist?.name ?: request.name, color = theme.onBackground, fontSize = 20.sp,
+            Text(artist?.name ?: request.name, localize = false, color = theme.onBackground, fontSize = 20.sp,
                 fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f))
             if (page != null) Box(Modifier.size(38.dp).clickable { attempt++ }, contentAlignment = Alignment.Center) {
@@ -103,7 +103,7 @@ fun ArtistScreen() {
                             }
                         }
                         Column(Modifier.weight(1f).padding(start = 18.dp, bottom = 6.dp)) {
-                            Text(data.artist.name, color = theme.onBackground, fontSize = 28.sp,
+                            Text(data.artist.name, localize = false, color = theme.onBackground, fontSize = 28.sp,
                                 fontWeight = FontWeight.Black, letterSpacing = (-.8).sp, maxLines = 2,
                                 overflow = TextOverflow.Ellipsis)
                             if (data.listeners.isNotBlank()) {
@@ -118,7 +118,7 @@ fun ArtistScreen() {
                 }
                 if (data.description.isNotBlank()) item {
                     Column(Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
-                        Text(data.description, color = theme.secondary, fontSize = 13.5.sp, lineHeight = 19.sp,
+                        Text(data.description, localize = false, color = theme.secondary, fontSize = 13.5.sp, lineHeight = 19.sp,
                             maxLines = if (expandedBio) 40 else 4, overflow = TextOverflow.Ellipsis)
                         Text(if (expandedBio) "Réduire" else "Lire plus", color = theme.accent,
                             fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
@@ -152,10 +152,10 @@ fun ArtistScreen() {
                         Cover(track.title, art["t:${track.id}"] ?: track.coverUrl, 50.dp, 7.dp)
                         Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
-                            Text(track.title, color = if (active) theme.accent else theme.onBackground,
+                            Text(track.title, localize = false, color = if (active) theme.accent else theme.onBackground,
                                 fontSize = 16.sp, fontWeight = FontWeight.SemiBold, maxLines = 1,
                                 overflow = TextOverflow.Ellipsis)
-                            Text(track.artist, color = theme.secondary, fontSize = 12.5.sp, maxLines = 1,
+                            Text(track.artist, localize = false, color = theme.secondary, fontSize = 12.5.sp, maxLines = 1,
                                 overflow = TextOverflow.Ellipsis)
                         }
                         if (track.durationMs > 0) Text(formatSecs(track.durationMs), color = theme.secondary, fontSize = 12.sp)
@@ -174,7 +174,7 @@ fun ArtistScreen() {
                                 AppUi.openCatalog(com.ketvoice.app.data.CatalogRequest("album", album.id, album.title))
                             }) {
                                 Cover(album.title, art["a:${album.id}"] ?: album.coverUrl, 150.dp, 12.dp)
-                                Text(album.title, color = theme.onBackground, fontSize = 14.sp,
+                                Text(album.title, localize = false, color = theme.onBackground, fontSize = 14.sp,
                                     fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
                                     modifier = Modifier.padding(top = 7.dp))
                                 Text(album.type, color = theme.secondary, fontSize = 12.sp, maxLines = 1,
@@ -197,7 +197,7 @@ fun ArtistScreen() {
                                             contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
                                     }
                                 }
-                                Text(related.name, color = theme.onBackground, fontSize = 13.sp,
+                                Text(related.name, localize = false, color = theme.onBackground, fontSize = 13.sp,
                                     fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis,
                                     modifier = Modifier.padding(top = 7.dp))
                             }

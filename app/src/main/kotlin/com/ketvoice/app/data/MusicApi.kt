@@ -5,7 +5,9 @@ import android.content.SharedPreferences
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONArray
 import org.json.JSONObject
 import org.json.JSONTokener
@@ -247,12 +249,8 @@ object MusicApi {
     suspend fun addonStream(track: Track, tag: String): StreamInfo? =
         KetvoiceApi.stream(track, tag)
 
-    suspend fun losslessStream(track: Track): StreamInfo? = coroutineScope {
-        val bridge = async { addonStream(track, "lb") }
-        val last = async { addonStream(track, "last") }
-        bridge.await()?.takeIf { it.format.contains("flac", true) }?.also { last.cancel() }
-            ?: last.await()?.takeIf { it.format.contains("flac", true) }
-    }
+    suspend fun flacStream(track: Track): StreamInfo? =
+        addonStream(track, "last")?.takeIf { it.format.contains("flac", true) }
     suspend fun streamOf(base: String, id: String): StreamInfo? = withContext(Dispatchers.IO) {
         val raw = cachedHttp("$base/stream/${enc(id)}") ?: return@withContext null
         try {
@@ -267,11 +265,11 @@ object MusicApi {
 
     /**
      * Résout les deux qualités : `fast` (MP3 Ultra MAX) pour démarrer vite,
-     * `best` (FLAC Lossless Bridge) pour la montée en qualité.
+     * `best` (FLAC Last Babe) pour la montée en qualité.
      */
     suspend fun resolve(track: Track): Streams = coroutineScope {
         val fast = async { addonStream(track, "um") }
-        val best = async { losslessStream(track) }
+        val best = async { flacStream(track) }
         val custom = async { runCatching { CustomSources.streamForTrack(track, forDownload = true) }.getOrNull() }
         val customStream = custom.await()
         // Une piste issue d'une source .json doit réellement lire cette source :
@@ -437,6 +435,36 @@ object MusicApi {
             lyricCache[key] = LyricCacheEntry(now, result)
         }
         result
+    }
+
+    /**
+     * Choisit la meilleure version réellement disponible pour un téléchargement :
+     * syllabes > mots > lignes synchronisées > texte. Les sources sont lancées
+     * en parallèle et le résultat le plus complet gagne.
+     */
+    suspend fun bestLyrics(track: Track): Triple<String, List<LyricLine>, String>? = coroutineScope {
+        val results = mutableListOf<Triple<String, List<LyricLine>, String>>()
+        val lock = Any()
+        val jobs = lyricSources.map { src ->
+            async(Dispatchers.IO) {
+                runCatching { lyrics(track, source = src) }.getOrNull()?.let { (label, lines) ->
+                    if (lines.isNotEmpty()) synchronized(lock) { results += Triple(label, lines, src) }
+                }
+            }
+        }
+        withTimeoutOrNull(18_000) { jobs.joinAll() }
+        jobs.forEach { it.cancel() }
+        synchronized(lock) {
+            results.maxByOrNull { (_, lines, src) ->
+                val timing = when {
+                    lines.any { it.syllableTimed } -> 500
+                    lines.any { it.words.size >= 2 } -> 400
+                    lines.any { it.timeMs >= 0 } -> 300
+                    else -> 100
+                }
+                timing + lines.size.coerceAtMost(80) + if (src == SRC_LRCLIB) 5 else 0
+            }
+        }
     }
 
     private fun labelFor(source: String): String = when (source) {

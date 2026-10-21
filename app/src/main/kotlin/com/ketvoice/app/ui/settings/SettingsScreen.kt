@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayCircle
@@ -33,8 +34,8 @@ import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.filled.Vibration
 import androidx.compose.material.icons.filled.Wifi
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
+import com.ketvoice.app.ui.common.Icon
+import com.ketvoice.app.ui.common.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.*
@@ -50,6 +51,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.ketvoice.app.data.AppLanguage
 import com.ketvoice.app.data.AppSettings
 import com.ketvoice.app.data.CustomSources
 import com.ketvoice.app.data.HomeFeed
@@ -150,6 +152,33 @@ fun SettingsScreen() {
                     AppSettings.personalizedYouTubeHome.value = it
                     SettingsStore.save()
                     if (it && youtube.connected) HomeFeed.refreshYouTube() else if (!it) HomeFeed.clearPersonalized()
+                }
+            }
+
+            // ==================================================== LANGUE
+            Section("LANGUE DE L'APPLICATION") {
+                val currentLanguage = AppLanguage.fromLabel(AppSettings.language.value)
+                SRow(
+                    Icons.Filled.Language, "Langue de l'application",
+                    sub = "Traduit toute l'interface, pas seulement les réglages",
+                    value = currentLanguage.nativeName
+                ) {
+                    choice = ChoiceSpec(
+                        "Langue de l'application",
+                        "Choisissez la langue de tous les écrans de Ketvoice.",
+                        currentLanguage.label,
+                        AppLanguage.all.map { language ->
+                            ChoiceOption(
+                                language.label,
+                                language.nativeName,
+                                if (language == AppLanguage.FRENCH) "Langue d'origine"
+                                else "${language.englishName} · interface complète"
+                            )
+                        }
+                    ) { id ->
+                        AppSettings.language.value = id
+                        SettingsStore.save()
+                    }
                 }
             }
 
@@ -371,8 +400,8 @@ fun SettingsScreen() {
                                 testing.value = false
                                 android.widget.Toast.makeText(
                                     ctx,
-                                    if (ok) "Canvas prêt : Ketvoice API fonctionne ✓"
-                                    else "Échec : vérifie la connexion à Ketvoice API",
+                                    com.ketvoice.app.data.AppText.t(if (ok) "Canvas prêt : Ketvoice API fonctionne ✓"
+                                    else "Échec : vérifie la connexion à Ketvoice API"),
                                     android.widget.Toast.LENGTH_LONG
                                 ).show()
                             }
@@ -442,7 +471,7 @@ fun SettingsScreen() {
                     scope.launch {
                         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { AudioCache.clear(ctx) }
                         cacheUsedMb.intValue = (AudioCache.sizeBytes(ctx) / 1_000_000L).toInt()
-                        android.widget.Toast.makeText(ctx, "Cache des chansons vidé", android.widget.Toast.LENGTH_SHORT).show()
+                    android.widget.Toast.makeText(ctx, com.ketvoice.app.data.AppText.t("Cache des chansons vidé"), android.widget.Toast.LENGTH_SHORT).show()
                     }
                 }
                 SRow(
@@ -457,7 +486,7 @@ fun SettingsScreen() {
                 SRow(
                     Icons.Filled.Image, "Version",
                     sub = "YouTube Music · Ketvoice API · canvas · paroles",
-                    value = "2.4.0"
+                    value = "2.5.0"
                 ) {}
             }
 
@@ -566,7 +595,7 @@ private fun ChoiceDialog(spec: ChoiceSpec, onDismiss: () -> Unit) {
                         onDismiss()
                     }.padding(horizontal = 20.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
-                            Text(option.label, color = th.onBackground, fontSize = 16.sp)
+                            Text(option.label, localize = spec.title != "Langue de l'application", color = th.onBackground, fontSize = 16.sp)
                             if (option.sub.isNotBlank()) Text(option.sub, color = th.secondary,
                                 fontSize = 12.sp, lineHeight = 16.sp)
                         }

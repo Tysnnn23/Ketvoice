@@ -4,6 +4,7 @@ import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -15,15 +16,32 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import coil.compose.AsyncImage
 import com.ketvoice.app.data.AppSettings
+import com.ketvoice.app.data.ArtworkRepo
 import com.ketvoice.app.glass.LocalBackdropLayer
 import com.ketvoice.app.glass.rememberGlassBackdrop
+import com.ketvoice.app.player.Player
 import com.ketvoice.app.theme.KetvoiceTheme
 import com.ketvoice.app.theme.LocalTheme
 import com.ketvoice.app.ui.account.AccountDialog
@@ -38,6 +56,8 @@ import com.ketvoice.app.ui.settings.SettingsScreen
 import com.ketvoice.app.ui.sub.QueueScreen
 import com.ketvoice.app.ui.sub.SubScreensRouter
 import com.kyant.backdrop.backdrops.layerBackdrop
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 
 /**
  * Racine de Ketvoice :
@@ -64,6 +84,47 @@ fun AppRoot() {
     KetvoiceTheme(useDark = useDark) {
         val th = LocalTheme.current
         val backdrop = rememberGlassBackdrop(th.background)
+        val playerState by Player.state.collectAsState()
+        val artwork by ArtworkRepo.covers.collectAsState()
+        var wasPlayerVisible by remember { mutableStateOf(AppUi.showPlayer.value) }
+
+        // Ouvre/ferme le lecteur : une copie de la pochette vole entre la
+        // position du lecteur et celle du mini-lecteur, en fondu.
+        LaunchedEffect(AppUi.showPlayer.value, playerState.current?.id) {
+            val visible = AppUi.showPlayer.value
+            if (visible != wasPlayerVisible) {
+                wasPlayerVisible = visible
+                if (AppSettings.reduceAnimations.value) {
+                    AppUi.coverFlight.value = null
+                    return@LaunchedEffect
+                }
+                val current = playerState.current
+                val mini = AppUi.miniCoverBounds.value
+                val full = if (visible) {
+                    // On first open, wait for the artwork's actual layout.
+                    snapshotFlow { AppUi.playerCoverBounds.value }.filterNotNull().first()
+                } else AppUi.playerCoverBounds.value
+                if (current != null && mini != null) {
+                    if (visible && full != null) {
+                        AppUi.coverFlight.value = AppUi.CoverFlight(
+                            cover = artwork["t:${current.id}"] ?: current.coverUrl,
+                            title = current.title,
+                            from = mini,
+                            to = full,
+                            opening = true
+                        )
+                    } else if (!visible && full != null) {
+                        AppUi.coverFlight.value = AppUi.CoverFlight(
+                            cover = artwork["t:${current.id}"] ?: current.coverUrl,
+                            title = current.title,
+                            from = full,
+                            to = mini,
+                            opening = false
+                        )
+                    }
+                }
+            }
+        }
 
         CompositionLocalProvider(LocalBackdropLayer provides backdrop) {
             Box(Modifier.fillMaxSize()) {
@@ -136,16 +197,17 @@ fun AppRoot() {
                 // ---- Lecteur plein écran : glisse depuis le bas ----
                 AnimatedVisibility(
                     visible = AppUi.showPlayer.value,
-                    enter = fadeIn(tween(180)) + slideInVertically(
-                        spring(dampingRatio = 0.92f, stiffness = 380f)
-                    ) { fullHeight -> fullHeight },
-                    exit = fadeOut(tween(160)) + slideOutVertically(tween(260)) { fullHeight -> fullHeight },
+                    enter = fadeIn(tween(if (AppSettings.reduceAnimations.value) 0 else 300)),
+                    exit = fadeOut(tween(if (AppSettings.reduceAnimations.value) 0 else 260)),
                     modifier = Modifier
                         .fillMaxSize()
                         .zIndex(6f)
                 ) {
                     FullPlayerScreen(modifier = Modifier.fillMaxSize())
                 }
+
+                // ---- Pochette qui vole entre le lecteur et le mini-lecteur ----
+                CoverFlightOverlay()
 
                 // ---- Dialog compte ----
                 AppUi.trackMenuTrack.value?.let { track ->
@@ -160,6 +222,52 @@ fun AppRoot() {
                     AccountDialog(Modifier.zIndex(8f))
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun CoverFlightOverlay() {
+    val flight = AppUi.coverFlight.value ?: return
+    val density = LocalDensity.current
+    val progress = remember(flight.token) { Animatable(0f) }
+    LaunchedEffect(flight.token) {
+        progress.animateTo(
+            targetValue = 1f,
+            animationSpec = tween(if (flight.opening) 440 else 380, easing = FastOutSlowInEasing)
+        )
+        AppUi.coverFlight.value = null
+    }
+    val t = progress.value
+    val eased = t * t * (3f - 2f * t)
+    fun lerp(a: Float, b: Float): Float = a + (b - a) * eased
+    val left = lerp(flight.from.left, flight.to.left)
+    val top = lerp(flight.from.top, flight.to.top)
+    val width = lerp(flight.from.width, flight.to.width).coerceAtLeast(1f)
+    val height = lerp(flight.from.height, flight.to.height).coerceAtLeast(1f)
+    val fade = if (t < .68f) 1f else (1f - (t - .68f) / .32f).coerceIn(0f, 1f)
+    Box(
+        Modifier
+            .offset(x = with(density) { left.toDp() }, y = with(density) { top.toDp() })
+            .size(width = with(density) { width.toDp() }, height = with(density) { height.toDp() })
+            .graphicsLayer { alpha = fade }
+            .clip(RoundedCornerShape(12.dp))
+            .zIndex(6.5f)
+    ) {
+        val cover = flight.cover
+        if (cover != null) {
+            AsyncImage(
+                model = cover,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+        } else {
+            Box(
+                Modifier.fillMaxSize().background(
+                    Brush.linearGradient(listOf(Color(0xFF5E5CE6), Color(0xFFBF5AF2), Color(0xFF2C2C2E)))
+                )
+            )
         }
     }
 }

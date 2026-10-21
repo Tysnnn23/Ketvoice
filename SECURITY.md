@@ -4,11 +4,12 @@
 
 | Version | Supported |
 | --- | --- |
-| 2.4.0 | Yes |
+| 2.5.0 | Yes |
+| 2.4.0 | Unpublished candidate, superseded by 2.5.0 |
 | 2.3.1 | Best effort — previous clean release |
 | 2.3.0 and earlier | No |
 
-Version 2.4.0 is the first release where Spotify Canvas and private music-source credentials are handled by a server-side broker instead of the installed app.
+The server-side isolation introduced in the 2.4.0 candidate ships in 2.5.0: Spotify Canvas and private music-source credentials are handled by a broker instead of the installed app.
 
 ## Reporting a vulnerability
 
@@ -24,7 +25,7 @@ Include the affected version, Android version, reproduction steps, and the impac
 
 ## Credentials in this project
 
-No Spotify cookies, add-on tokens, private add-on endpoints, or Supabase service-role keys are committed to this repository or bundled in the 2.4.0 APK.
+No Spotify cookies, add-on tokens, private add-on endpoints, or Supabase service-role keys are committed to this repository or bundled in the 2.5.0 APK.
 
 ### Ketvoice API
 
@@ -32,10 +33,11 @@ The APK talks to the `ketvoice-api` Supabase Edge Function. Its sensitive server
 
 - `SP_DC` — Spotify session cookie used for Canvas lookup
 - `ADDON_ULTRAMAX` — Ultra MAX source endpoint and token
-- `ADDON_LOSSLESSBRIDGE` — Lossless Bridge source endpoint and token
 - `ADDON_LASTBABE` — Last Babe source endpoint and token
 
 The Edge Function reads these values with the Supabase service role. The helper RPC that exposes a named Vault value is restricted to the service role. The function source in `supabase/functions/ketvoice-api/` contains no secret values.
+
+The retired provider's route and Vault entry were deleted in 2.5.0. Requests to unsupported provider tags are rejected.
 
 The app contains the Supabase project URL and the public `anon` JWT. This key is designed to be public; it is not a credential that grants access to Vault or the database. The function uses `verify_jwt`, so requests must carry a valid project JWT.
 
@@ -54,7 +56,7 @@ Clearing app data or uninstalling the app removes the local session and settings
 
 Development builds from 1.2.0 through 2.3.0 contained a Spotify session cookie and private add-on endpoints in their defaults. They are intentionally not published. Do not redistribute copies of those APKs.
 
-Version 2.3.1 is the previous clean binary. Version 2.4.0 supersedes it and removes the remaining user-side Spotify and add-on configuration.
+Version 2.3.1 is the previous clean binary. Version 2.5.0 includes the server-side isolation from the unpublished 2.4.0 candidate and supersedes both.
 
 ## APK integrity
 

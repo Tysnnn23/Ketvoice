@@ -42,7 +42,7 @@ object LauncherIcons {
         if (notify) {
             Toast.makeText(
                 context,
-                "Icône mise à jour — le lanceur peut mettre quelques secondes",
+                com.ketvoice.app.data.AppText.t("Icône mise à jour — le lanceur peut mettre quelques secondes"),
                 Toast.LENGTH_SHORT
             ).show()
         }

@@ -7,7 +7,7 @@
 //   GET  /health
 //   GET  /source.json
 //   GET  /search?q=...
-//   GET  /stream?source=um|lb|last&id=...&title=...&artist=...
+//   GET  /stream?source=um|last&id=...&title=...&artist=...
 //   GET  /canvas?spotifyId=...&title=...&artist=...
 //
 // This file contains no credentials.
@@ -29,7 +29,6 @@ const CORS = {
 
 const ADDONS = [
   { tag: "um", env: "ADDON_ULTRAMAX", label: "Ultra MAX" },
-  { tag: "lb", env: "ADDON_LOSSLESSBRIDGE", label: "Lossless Bridge" },
   { tag: "last", env: "ADDON_LASTBABE", label: "Last Babe" },
 ] as const;
 
@@ -566,21 +565,19 @@ async function resolveCanvas(
 // ------------------------------------------------------------------- routes
 
 async function health(): Promise<Response> {
-  const [spDc, um, lb, last] = await Promise.all([
+  const [spDc, um, last] = await Promise.all([
     secret("SP_DC"),
     secret("ADDON_ULTRAMAX"),
-    secret("ADDON_LOSSLESSBRIDGE"),
     secret("ADDON_LASTBABE"),
   ]);
   return json({
     ok: true,
     name: "Ketvoice API",
-    version: "2.4.0",
+    version: "2.5.0",
     backend: "Supabase Edge Function",
     secrets: {
       spotify: !!spDc,
       ultraMax: !!um,
-      losslessBridge: !!lb,
       lastBabe: !!last,
     },
   });

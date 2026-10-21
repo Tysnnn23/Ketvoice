@@ -16,8 +16,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
+import com.ketvoice.app.ui.common.Icon
+import com.ketvoice.app.ui.common.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -53,7 +53,7 @@ import kotlinx.coroutines.launch
 
 /**
  * RECHERCHE (captures 22-23) : YouTube Music + addons BitChord
- * (Lossless Bridge FLAC / Ultra MAX Deezer), résultats réels jouables.
+ * (Last Babe FLAC / Ultra MAX Deezer), résultats réels jouables.
  */
 @Composable
 fun SearchScreen() {
@@ -255,7 +255,7 @@ fun SearchScreen() {
                         ) {
                             Icon(Icons.Filled.Search, null, tint = th.secondary, modifier = Modifier.size(20.dp))
                             Spacer(Modifier.width(12.dp))
-                            Text(previousQuery, color = th.onBackground, fontSize = 16.sp)
+                            Text(previousQuery, localize = false, color = th.onBackground, fontSize = 16.sp)
                         }
                     }
                 }
@@ -302,7 +302,7 @@ fun SearchScreen() {
                                             contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
                                     }
                                 }
-                                Text(artist.name, color = th.onBackground, fontSize = 13.sp,
+                                Text(artist.name, localize = false, color = th.onBackground, fontSize = 13.sp,
                                     fontWeight = FontWeight.SemiBold, maxLines = 2,
                                     overflow = TextOverflow.Ellipsis,
                                     modifier = Modifier.padding(top = 7.dp))
@@ -366,6 +366,7 @@ private fun SearchResultRow(track: Track, cover: String?, onClick: () -> Unit) {
         Column(Modifier.weight(1f)) {
             Text(
                 track.title,
+                localize = false,
                 color = th.onBackground,
                 style = T.bodyBold,
                 maxLines = 1,
@@ -467,5 +468,3 @@ private fun SourcesCard(compact: Boolean = false) {
         )
     }
 }
-
-

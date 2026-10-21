@@ -4,9 +4,10 @@ Ketvoice is an Android client with a small Supabase-hosted backend, **Ketvoice A
 
 ## Data stored on the device
 
-- App settings, theme, accent color, cache limits, and custom source URLs.
+- App settings, interface language, theme, accent color, cache limits, and custom source URLs.
 - Playback history, favorites, queue state, and downloaded files.
 - Cached audio, artwork, lyrics, and Canvas videos.
+- Downloaded lyrics in JSON/LRC sidecars and references to persistent Canvas files. Album reuse keys include the artist to avoid mixing unrelated albums with the same title.
 - A YouTube Music web session when the user signs in.
 
 The YouTube session is encrypted with Android Keystore. Other settings are stored in the app’s private preference storage. Android backup is disabled. The Spotify `sp_dc` cookie is no longer accepted or stored by the app.
@@ -20,6 +21,8 @@ Search, stream, and Canvas requests go to the `ketvoice-api` Supabase Edge Funct
 Spotify and source credentials remain in Supabase Vault and are not returned to the app. Supabase may retain function invocation logs containing request metadata, IP address, and timestamps according to the project’s configuration.
 
 ### Direct providers
+
+Interface translations ship inside the APK and do not make network requests. Optional **lyric translation** is a separate feature and may contact translation providers. Downloading a song also checks lyric providers and requests its Canvas if available, even when animated artwork is not displayed.
 
 The app also makes direct requests to the providers needed for the feature being used, which may include:
 
@@ -36,7 +39,7 @@ A custom JSON source receives search queries and track identifiers and may log t
 
 ## Removing data
 
-Use **Settings → Storage** to clear caches, log out of YouTube Music to remove the app session, or clear Android app data / uninstall the app to remove all local state. Server-side function logs are retained according to the Supabase project configuration.
+Use **Settings → Storage** to clear the audio playback cache. Downloaded song lyrics and shared Canvas files are retained separately. Deleting a download removes its audio and lyric sidecars; a shared Canvas is retained for reuse. Log out of YouTube Music to remove the app session, or clear Android app data / uninstall the app to remove all local state. Server-side function logs are retained according to the Supabase project configuration.
 
 ## Contact
 

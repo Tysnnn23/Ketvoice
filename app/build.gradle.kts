@@ -12,9 +12,9 @@ android {
         applicationId = "com.ketvoice.app"
         minSdk = 31
         targetSdk = 36
-        versionCode = 11
-        versionName = "2.4.0"
-        resourceConfigurations += listOf("fr", "en")
+        versionCode = 12
+        versionName = "2.5.0"
+        resourceConfigurations += listOf("fr", "en", "hi", "ja", "zh", "ru", "it", "es", "de", "pt", "ko")
     }
 
     buildTypes {
