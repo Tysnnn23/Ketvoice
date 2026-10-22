@@ -111,7 +111,7 @@ fun FullPlayerScreen(
     }
     LaunchedEffect(track.id) { LyricsRepo.load(track) }
     LaunchedEffect(page, sheet, interaction, touching, expanded, lyrics.lines.isNotEmpty(), AppUi.showAccount.value, adaptivePlayer) {
-        if (!adaptivePlayer && page == PlayerPage.LYRICS && !expanded && !touching && sheet.isBlank() &&
+        if (!com.ketvoice.app.BuildConfig.IS_QUEST && !adaptivePlayer && page == PlayerPage.LYRICS && !expanded && !touching && sheet.isBlank() &&
             lyrics.lines.isNotEmpty() && !AppUi.showAccount.value) {
             kotlinx.coroutines.delay(2000)
             expanded = true
@@ -119,6 +119,19 @@ fun FullPlayerScreen(
     }
 
     BoxWithConstraints(modifier.fillMaxSize().background(Color.Black)) {
+        if (com.ketvoice.app.BuildConfig.IS_QUEST) {
+            QuestLandscapePlayer(state, track, cover, canvas[track.id], ambience, page,
+                onPage = ::navigate, onClose = ::close, onTrackMenu = { sheet = "track" },
+                onSources = { sheet = "sources" }, onOutput = { sheet = "audio" })
+            if (sheet.isNotBlank()) PlayerSheetScrim({ sheet = "" }) {
+                when (sheet) {
+                    "sources" -> LyricsSourceSheet(track, onClose = { sheet = "" })
+                    "track" -> TrackMenuSheet(track) { sheet = "" }
+                    else -> AudioOutputSheet { sheet = "" }
+                }
+            }
+            return@BoxWithConstraints
+        }
         if (adaptivePlayer) {
             TabletPlayer(state, track, cover, canvas[track.id], ambience, page,
                 onPage = ::navigate, onClose = ::close, onTrackMenu = { sheet = "track" },

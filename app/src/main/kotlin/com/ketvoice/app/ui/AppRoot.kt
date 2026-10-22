@@ -139,7 +139,10 @@ fun AppRoot() {
         val layout = AdaptiveLayout(if (quest) questLayout.contentWidthDp else maxWidth.value,
             maxHeight.value, preferPhone = quest)
         val queueOverlay = AppUi.overlay.value == AppUi.QUEUE
-        val pageMaxWidth = if (quest) questLayout.contentWidthDp.dp else when (AppUi.overlay.value) {
+        val pageMaxWidth = if (quest) when (AppUi.overlay.value) {
+            AppUi.SETTINGS, AppUi.SOURCES -> minOf(maxWidth, 840.dp)
+            else -> questLayout.contentWidthDp.dp
+        } else when (AppUi.overlay.value) {
             AppUi.QUEUE -> maxWidth
             AppUi.SETTINGS, AppUi.SOURCES -> 840.dp
             AppUi.SEARCH, AppUi.CATALOG, AppUi.DOWNLOADS -> 1060.dp
@@ -239,9 +242,7 @@ fun AppRoot() {
                         .fillMaxSize()
                         .zIndex(6f)
                 ) {
-                    if (quest) Box(Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
-                        FullPlayerScreen(modifier = Modifier.width(questLayout.playerWidthDp.dp).fillMaxHeight())
-                    } else FullPlayerScreen(modifier = Modifier.fillMaxSize())
+                    FullPlayerScreen(modifier = Modifier.fillMaxSize())
                 }
 
                 // ---- Pochette qui vole entre le lecteur et le mini-lecteur ----

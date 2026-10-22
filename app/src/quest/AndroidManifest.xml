@@ -6,11 +6,13 @@
     <uses-feature android:name="android.hardware.faketouch" android:required="false" />
     <application android:hardwareAccelerated="true">
         <meta-data android:name="com.oculus.supportedDevices" android:value="quest3|quest3s" />
-        <activity android:name=".MainActivity" android:resizeableActivity="true">
-            <layout android:defaultWidth="540dp" android:defaultHeight="900dp"
-                android:minWidth="360dp" android:minHeight="600dp" />
+        <activity android:name=".YouTubeLoginActivity" android:screenOrientation="landscape" />
+        <activity android:name=".MainActivity" android:resizeableActivity="true" android:screenOrientation="landscape">
+            <layout android:defaultWidth="1280dp" android:defaultHeight="800dp"
+                android:minWidth="960dp" android:minHeight="600dp" />
             <meta-data android:name="com.oculus.vrshell.supports_free_resizing" android:value="true" />
-            <meta-data android:name="com.oculus.vrshell.free_resizing_limits" android:value="360,1600,600,1600" />
+            <meta-data android:name="com.oculus.vrshell.free_resizing_limits" android:value="960,1920,600,1200" />
+            <meta-data android:name="com.oculus.vrshell.free_resizing_lock_aspect_ratio" android:value="true" />
         </activity>
     </application>
 </manifest>

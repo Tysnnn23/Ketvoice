@@ -17,7 +17,7 @@ import urllib.request
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 parser = argparse.ArgumentParser()
 parser.add_argument('--publish', action='store_true')
-parser.add_argument('--version', choices=['2.6.0', '2.6.1', '2.7.0'], default='2.6.0')
+parser.add_argument('--version', choices=['2.6.0', '2.6.1', '2.7.0', '2.7.1'], default='2.6.0')
 args = parser.parse_args()
 VERSION = args.version
 TAG = 'v' + VERSION
@@ -31,10 +31,14 @@ if VERSION == '2.6.0':
         'tablet-settings.png', 'phone-search-songs.png']
 if VERSION == '2.7.0':
     FILES += ['Ketvoice-2.7.0-Quest.apk', 'quest-mobile-style.png']
+if VERSION == '2.7.1':
+    FILES[0] = 'Ketvoice-2.7.1-Quest.apk'
+    FILES += ['quest-landscape-lyrics.png', 'quest-landscape-queue.png']
 EXPECTED_APK = {
     '2.6.0': '8636778748a8c956db8b3fb3286d3bc5e07b743e0310d65cd2d1a1c32c8998d1',
     '2.6.1': 'be3225dfbe3abb95f548741ed6eb7a1597612e2bb7b24fe306a88a0bf1736676',
     '2.7.0': '4fe2929308f5c6f74dbf6cc64f528ced959e035fd05ea323aff53f03408559bc',
+    '2.7.1': '38bd77b76fe0be32413b5c4f3647a5a3c4c5b8b03774ca8d32e007033c7cb2cc',
 }[VERSION]
 
 def git(*argv):
@@ -101,5 +105,6 @@ for name in FILES:
     print('Verified asset:', name, len(data), flush=True)
 
 if args.publish:
-    release = api(f'/repos/{REPO}/releases/{release["id"]}', 'PATCH', {'draft': False, 'make_latest': 'true'})
+    release = api(f'/repos/{REPO}/releases/{release["id"]}', 'PATCH', {
+        'draft': False, 'make_latest': 'false' if VERSION == '2.7.1' else 'true'})
 print('Published' if not release['draft'] else 'Draft ready:', release['html_url'])

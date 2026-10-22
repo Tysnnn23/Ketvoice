@@ -19,7 +19,7 @@
 
 Ketvoice is an independent Android music client whose visual language is inspired by Apple Music and iOS 26. French is the default interface language; Settings offers 11 languages across the app. It is not affiliated with Apple, YouTube, Spotify, BitChord, or any music provider.
 
-The current version is **2.7.0** (`versionCode` 15). The mobile APK supports Android 12+ (`minSdk 31`, `targetSdk 36`); a separate **Quest 3/3S window APK** (`minSdk 32`, `targetSdk 34`) preserves the original mobile interface. Music publishing with an optional lyrics sidecar is fixed server-side. See [2.7.0 release notes](docs/releases/v2.7.0.md).
+The mobile/tablet version remains **2.7.0** (`versionCode` 15, Android 12+, target SDK 36). The **Quest 3/3S window build is 2.7.1** (`versionCode` 16, minimum SDK 32, target SDK 34), with landscape-only layout and artwork/controls left, lyrics right. Music publishing with an optional lyrics sidecar remains fixed server-side. See [Quest 2.7.1 notes](docs/releases/v2.7.1.md) and [mobile 2.7.0 notes](docs/releases/v2.7.0.md).
 
 Music-source search, stream resolution, Spotify Canvas, and published-content lookup go through two Supabase Edge Functions: **Ketvoice API** for sources/Canvas and **Ketvoice Content** for public publications. The APK contains only the project’s public Supabase `anon` key and function URLs. Spotify and source credentials remain in Supabase Vault and are never shipped with the app.
 
@@ -29,9 +29,9 @@ Music-source search, stream resolution, Spotify Canvas, and published-content lo
 
 ### Quest 3 / Quest 3S window build
 
-- **The same mobile UI**, not a replacement dashboard: original player, artwork/Canvas, icon controls, Liquid Glass, floating navigation, and lyric animations. Wide Quest windows do not switch to the tablet rail/two-pane player.
+- **Landscape only, with the mobile style**: original artwork/Canvas, icon controls, Liquid Glass, floating navigation, and lyric animations. In lyrics/queue mode, artwork, title, artist, and transport stay on the left; lyrics or queue fill the right. No giant text-button dashboard, tablet rail, or portrait-phone frame.
 - Optional lyric sizing and foreground keep-awake; sleep timer in the ordinary track ⋯ menu.
-- Download **Ketvoice-2.7.0-Quest.apk** and follow [Quest installation instructions](docs/QUEST.md). Headset-targeted manifest and arm64 support are included; physical Quest hardware validation is still required. This is a 2D app window, not an immersive VR environment.
+- Download **[Ketvoice-2.7.1-Quest.apk](https://github.com/Tysnnn23/Ketvoice/releases/download/v2.7.1/Ketvoice-2.7.1-Quest.apk)** and follow [Quest installation instructions](docs/QUEST.md). Headset-targeted manifest and arm64 support are included; physical Quest hardware validation is still required. This is a 2D app window, not an immersive VR environment. The **[mobile 2.7.0 APK](https://github.com/Tysnnn23/Ketvoice/releases/download/v2.7.0/Ketvoice-2.7.0.apk)** is unchanged.
 
 ### Interface
 
@@ -255,7 +255,7 @@ See [SECURITY.md](SECURITY.md) and [PRIVACY.md](PRIVACY.md).
 
 ## Versioning and legacy builds
 
-**2.7.0** supersedes 2.6.1. The 2.6.1, 2.6.0, and 2.5.0 releases remain available and are not overwritten. Only the final mobile and Quest APKs and their matching assets are distributed with 2.7.0. See [CHANGELOG.md](CHANGELOG.md) for the full release history.
+**2.7.0** remains the mobile/tablet release; **2.7.1** updates only Quest's landscape layout. Earlier releases and their assets remain available and are not overwritten. See [CHANGELOG.md](CHANGELOG.md) for the full release history.
 
 Earlier development builds from **1.2.0 through 2.3.0** contained development-only Spotify session cookies and private add-on credentials in their default settings. Those binaries are intentionally not published. Version **2.3.1** was the first clean public APK. Version **2.4.0** moves the remaining source and Canvas credentials to Supabase Vault. The original **1.0.0** builds predate those credentials and are archived as-is in the legacy release; their help text contains one obsolete example add-on URL, but no session cookie or access token.
 

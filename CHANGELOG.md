@@ -7,6 +7,20 @@
 
 ---
 
+## 2.7.1 — QUEST LANDSCAPE: ARTWORK LEFT, LYRICS RIGHT
+
+**Quest-only release:** 22 October 2026 · **versionCode:** 16
+
+- Both Quest activities request landscape; default 1280×800 dp window with aspect-ratio locking. Removed the portrait-phone frame.
+- Lyrics and queue use the right pane. Artwork/Canvas, title, artist, and original mobile playback/volume controls remain left and no longer disappear after the phone's two-second lyric delay.
+- Normal artwork mode retains cover left and controls right. Mobile icons, animations, karaoke, and styling are reused without the oversized Quest toolbar.
+- 68 tests pass per flavor; Quest build/lint/signature checks pass. Signed APK UI checks run on an Android emulator at 1280×800 and 960×600 dp. Physical Quest validation remains outstanding.
+- The mobile 2.7.0 APK, backend, and previous release assets are unchanged. No new mobile APK is published.
+
+See [Quest 2.7.1 notes](docs/releases/v2.7.1.md).
+
+---
+
 ## 2.7.0 — MOBILE-STYLE QUEST WINDOW & MUSIC UPLOAD FIX
 
 **Released:** 22 October 2026 · **versionCode:** 15

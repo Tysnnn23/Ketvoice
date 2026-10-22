@@ -25,6 +25,8 @@ android {
         }
         create("quest") {
             dimension = "device"
+            versionCode = 16
+            versionName = "2.7.1"
             minSdk = 32
             targetSdk = 34
             buildConfigField("boolean", "IS_QUEST", "true")
