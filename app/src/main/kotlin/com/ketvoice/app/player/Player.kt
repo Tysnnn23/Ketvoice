@@ -20,6 +20,7 @@ import com.ketvoice.app.data.CanvasRepo
 import com.ketvoice.app.data.Downloader
 import com.ketvoice.app.data.LyricsRepo
 import com.ketvoice.app.data.MusicApi
+import com.ketvoice.app.data.PublicationApi
 import com.ketvoice.app.data.Track
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -297,6 +298,17 @@ object Player {
             if (cached != null) {
                 start(cached)
                 _state.value = _state.value.copy(quality = "En cache · ${label(cached)}")
+                return@launch
+            }
+            if (resolvedTrack.addon == "upload" || resolvedTrack.id.startsWith("kv:upload:")) {
+                val stream = PublicationApi.stream(resolvedTrack)
+                if (stream == null) {
+                    resolving = false
+                    _state.value = _state.value.copy(isPlaying = false, playWhenReady = false, buffering = false, quality = "Aucun flux disponible")
+                    return@launch
+                }
+                start(stream)
+                AudioCache.cacheWhole(track.id, stream)
                 return@launch
             }
             val youtube = async(Dispatchers.IO) { runCatching { MusicApi.youtubeStream(resolvedTrack) }.getOrNull() }

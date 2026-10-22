@@ -18,14 +18,15 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 parser = argparse.ArgumentParser()
 parser.add_argument('--publish', action='store_true')
 args = parser.parse_args()
-TAG = 'v2.5.0'
+TAG = 'v2.6.0'
 REPO = 'Tysnnn23/Ketvoice'
-STAGE = ROOT / 'release-assets/2.5.0'
+STAGE = ROOT / 'release-assets/2.6.0'
 FILES = [
-    'Ketvoice-2.5.0.apk', 'SHA256SUMS.txt', 'RELEASE-NOTES.md', 'validation.json',
-    'library-ja.png', 'player-offline-ja.png', 'lyrics-offline-en.png', 'settings-ja.png',
+    'Ketvoice-2.6.0.apk', 'SHA256SUMS.txt', 'RELEASE-NOTES.md', 'validation.json',
+    'tablet-navigation.png', 'tablet-search.png', 'tablet-player.png', 'tablet-settings.png',
+    'phone-search-songs.png',
 ]
-EXPECTED_APK = 'e30fb8e09a09347f776168b3b565aac7bf102b3fd45a78827e7729f9a81b763b'
+EXPECTED_APK = '8636778748a8c956db8b3fb3286d3bc5e07b743e0310d65cd2d1a1c32c8998d1'
 
 def git(*argv):
     return subprocess.check_output(['git', *argv], cwd=ROOT).decode().strip()
@@ -68,7 +69,7 @@ if release and not release['draft']:
     raise SystemExit('Release already published; refusing to overwrite it.')
 if not release:
     release = api(f'/repos/{REPO}/releases', 'POST', {
-        'tag_name': TAG, 'target_commitish': commit, 'name': 'Ketvoice 2.5.0',
+        'tag_name': TAG, 'target_commitish': commit, 'name': 'Ketvoice 2.6.0',
         'body': (STAGE / 'RELEASE-NOTES.md').read_text(encoding='utf-8'),
         'draft': True, 'prerelease': False,
     })

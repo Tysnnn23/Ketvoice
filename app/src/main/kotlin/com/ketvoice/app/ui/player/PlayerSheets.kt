@@ -128,6 +128,11 @@ fun TrackMenuSheet(track: Track, onClose: () -> Unit) {
             if (!downloaded) Downloader.download(track)
             onClose()
         }
+        val publisher by com.ketvoice.app.data.PublisherSession.allowed.collectAsState()
+        if (publisher) MenuItemRow("Importer des lyrics", Icons.Filled.PlaylistAdd) {
+            onClose()
+            com.ketvoice.app.ui.AppUi.openPublisher(track)
+        }
         Spacer(Modifier.height(10.dp))
         }
     }

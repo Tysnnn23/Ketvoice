@@ -47,6 +47,7 @@ class MainActivity : ComponentActivity() {
         runCatching { com.ketvoice.app.data.SettingsStore.load(this) }
             .onFailure { android.util.Log.e("KetvoiceSettings", "Could not restore settings", it) }
         runCatching { com.ketvoice.app.data.YouTubeMusicSession.init(this) }
+        runCatching { com.ketvoice.app.data.PublisherSession.init(this) }
         runCatching { com.ketvoice.app.data.CustomSources.init(this) }
         runCatching {
             com.ketvoice.app.util.LauncherIcons.apply(

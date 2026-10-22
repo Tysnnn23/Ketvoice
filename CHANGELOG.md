@@ -7,6 +7,39 @@
 
 ---
 
+## 📱 2.6.0 — TABLETS, RICHER ARTIST SEARCH & PUBLIC PUBLICATIONS
+
+**Released:** 22 October 2026<br>
+**Version:** `2.6.0` (`versionCode` 13)<br>
+**Status:** Final release; 2.5.0 remains published and is not overwritten
+
+### Before → after
+
+| Area | Before | After |
+|---|---|---|
+| **Tablet navigation** | Phone navigation stretched across large windows. | A floating glass rail appears at tablet widths, with a compact labelled rail for portrait tablets and an expanded rail on wide landscapes. |
+| **Tablet layouts** | Lists, grids, settings, and dialogs used phone widths. | Track grids gain columns, Explore tiles adapt, Settings/import forms keep readable widths, and mini-player/dialog bounds stop stretching. |
+| **Tablet player** | One vertically stretched player column. | Artwork and controls sit beside lyrics or queue when the window has room. Short landscape windows such as phones keep the single-pane landscape player instead of squeezing two panes. |
+| **Artist search** | Searching an artist name showed artist cards, but the strict song parser discarded valid rows. | Artist searches now show the artist’s songs in a separate section as well as the artist card. Requests use the same `WEB_REMIX` client as artist/album lookups, and rows still need their own official-audio watch endpoint. |
+| **Search chrome** | On phones, the floating mini-player and navigation could cover results while the keyboard was open. | Floating chrome hides while the IME is visible and returns when the keyboard closes. |
+| **Public songs** | Every playable track came from external sources. | Authorized publications appear in normal search and the Ketvoice API source, with public streaming, downloads, artwork, and lyrics. |
+| **Public lyrics** | Lyrics came only from external providers. | A published TTML/LRC version adds a selectable **Ketvoice API** lyric provider. Auto mode may use it when it answers within a short window, then falls back to the existing providers. Original timing is preserved. |
+| **Publishing access** | No in-app import workflow. | Only the verified **konnektsupport@gmail.com** mailbox can publish. A matching YouTube profile reveals the entry point, but the broker re-verifies the Supabase Auth user and confirmed email on every write. |
+| **Import workflow** | Not available. | **Settings → Import a song** accepts MP3/M4A/AAC/FLAC/WAV/OGG/Opus up to 25 MiB, an optional cover, and optional TTML/LRC. **Track ⋯ → Import lyrics** previews native timing before publishing a supplementary public version. |
+| **Write security** | Not applicable. | No client write grants on the public tables or media bucket. The broker validates files/signatures/sizes, rejects unauthenticated and forged requests before consuming bodies, and uses a server-side service role. The YouTube session is never sent to the content service. |
+
+### Validation and limitations
+
+- JVM tests, Android lint, debug/release builds, signing checks, and credential scans are part of the release checks.
+- Android 16 emulator: phone portrait, phone landscape, tablet portrait, and 1280×800 dp landscape windows; artist searches returning real songs; keyboard-safe search; adaptive settings/import/player screens.
+- A mocked HTTP/Storage harness exercises the publication broker and authorization paths. Live checks confirm public reads, rejected unauthorized/forged writes, database grants/RLS, and security advisories.
+- A real authenticated upload requires the mailbox owner to open the Supabase email link. Development did not impersonate that account or send mail automatically.
+- Published media is public and counts against Supabase storage/egress quotas. There is no separate moderation queue beyond the single authorized publisher.
+- Tablet validation is emulator-only; no physical tablet or device farm was available.
+- No historical 1.2.0–2.3.0 APKs are published, and the public 2.5.0 release remains unchanged.
+
+---
+
 ## 🚀 2.5.0 — OFFLINE MUSIC, LANGUAGES & MOTION
 
 **Released:** 21 October 2026<br>

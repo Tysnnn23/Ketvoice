@@ -57,4 +57,37 @@ class OfficialMusicParserTest {
         assertEquals("7", tracks.single().albumId)
         assertEquals("5", tracks.single().artistId)
     }
+
+    @Test fun mobileArtistSearchKeepsOfficialSongsWithTypedAlbumActions() {
+        val item = row()
+        val renderer = item.getJSONObject("musicResponsiveListItemRenderer")
+        val runs = renderer.getJSONArray("flexColumns").getJSONObject(1)
+            .getJSONObject("musicResponsiveListItemFlexColumnRenderer").getJSONObject("text").getJSONArray("runs")
+        runs.getJSONObject(0).remove("navigationEndpoint")
+        runs.getJSONObject(1).remove("navigationEndpoint")
+        renderer.put("flexColumns", renderer.getJSONArray("flexColumns").put(1,
+            JSONObject().put("musicResponsiveListItemFlexColumnRenderer", JSONObject().put("text",
+                JSONObject().put("runs", JSONArray().put(JSONObject().put("text", "Artiste officiel • Vrai album • 3:31")))))))
+        fun action(icon: String, id: String, page: String) = JSONObject().put("menuNavigationItemRenderer",
+            JSONObject().put("icon", JSONObject().put("iconType", icon)).put("navigationEndpoint", browse(id, page)))
+        renderer.put("menu", JSONObject().put("menuRenderer", JSONObject().put("items", JSONArray()
+            .put(action("ARTIST", "UCofficial", "MUSIC_PAGE_TYPE_ARTIST"))
+            .put(action("ALBUM", "MPREalbum", "MUSIC_PAGE_TYPE_ALBUM")))))
+        val song = OfficialMusicParser.parse(response(item), "Artiste officiel").single()
+        assertEquals("Artiste officiel", song.artist)
+        assertEquals("MPREalbum", song.albumId)
+        assertEquals(211_000L, song.durationMs)
+    }
+
+    @Test fun albumEvidenceInAnotherMetadataColumnIsAccepted() {
+        val item = row()
+        val columns = item.getJSONObject("musicResponsiveListItemRenderer").getJSONArray("flexColumns")
+        val meta = columns.getJSONObject(1).getJSONObject("musicResponsiveListItemFlexColumnRenderer")
+            .getJSONObject("text").getJSONArray("runs")
+        val album = meta.getJSONObject(1)
+        meta.remove(1)
+        columns.put(JSONObject().put("musicResponsiveListItemFlexColumnRenderer", JSONObject().put("text",
+            JSONObject().put("runs", JSONArray().put(album)))))
+        assertEquals("MPREalbum", OfficialMusicParser.parse(response(item)).single().albumId)
+    }
 }

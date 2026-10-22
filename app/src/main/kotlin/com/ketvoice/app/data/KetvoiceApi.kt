@@ -1,6 +1,7 @@
 package com.ketvoice.app.data
 
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
@@ -23,9 +24,9 @@ object KetvoiceApi {
 
     const val DISPLAY_NAME = "Ketvoice API"
 
-    private const val BASE =
+    internal const val BASE =
         "https://xodklrunqlzyeiqtovgx.supabase.co/functions/v1/ketvoice-api"
-    private const val ANON_KEY =
+    internal const val ANON_KEY =
         "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhvZGtscnVucWx6eWVpcXRvdmd4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI1ODgzNjgsImV4cCI6MjEwODE2NDM2OH0.V-F8ZhM21Ht1yRV5FXOuZcddufvY8aIW5kclb-F2zao"
 
     private const val UA =
@@ -72,9 +73,10 @@ object KetvoiceApi {
      */
     suspend fun search(query: String): List<Track> = withContext(Dispatchers.IO) {
         if (query.trim().length < 2) return@withContext emptyList()
-        val root = getJson("/search?q=${encode(query.trim())}") ?: return@withContext emptyList()
-        val tracks = root.optJSONArray("tracks") ?: JSONArray()
-        (0 until tracks.length()).mapNotNull { index ->
+        val publicTracks = async { PublicationApi.search(query) }
+        val root = getJson("/search?q=${encode(query.trim())}")
+        val tracks = root?.optJSONArray("tracks") ?: JSONArray()
+        publicTracks.await() + (0 until tracks.length()).mapNotNull { index ->
             val item = tracks.optJSONObject(index) ?: return@mapNotNull null
             val addon = item.optString("source")
             val addonId = item.optString("addonId")

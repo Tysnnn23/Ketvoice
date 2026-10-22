@@ -82,10 +82,12 @@ object MusicApi {
     const val SRC_LIRIQO = "liriqo"
     const val SRC_LYRICA = "lyrica"
     const val SRC_LRCRED = "lrcred"
-    val lyricSources = listOf(SRC_LIRIQO, SRC_BETTER, SRC_LRCRED, SRC_LYRICA, SRC_NETEASE, SRC_LRCLIB, SRC_OVH)
+    const val SRC_KETVOICE = "ketvoice"
+    val lyricSources = listOf(SRC_KETVOICE, SRC_LIRIQO, SRC_BETTER, SRC_LRCRED, SRC_LYRICA, SRC_NETEASE, SRC_LRCLIB, SRC_OVH)
 
     fun sourceName(source: String): String = when (source) {
         SRC_AUTO -> "Automatique"
+        SRC_KETVOICE -> "Ketvoice API"
         SRC_BETTER -> "BetterLyrics"
         SRC_LIRIQO -> "LiriQo"
         SRC_LYRICA -> "Lyrica"
@@ -153,25 +155,17 @@ object MusicApi {
 
     // ------------------------------------------------------ YouTube Music
     suspend fun searchYtMusic(q: String): List<Track> = withContext(Dispatchers.IO) {
-        val payload = JSONObject().apply {
-            put(
-                "context", JSONObject().apply {
-                    put(
-                        "client", JSONObject().apply {
-                            put("clientName", "WEB_REMIX")
-                            put("clientVersion", "1.20240101.01.00")
-                            put("hl", "fr")
-                            put("gl", "FR")
-                        }
-                    )
-                }
-            )
-            put("query", q)
-            put("params", OfficialMusicParser.SONGS_FILTER)
-        }.toString()
-        val raw = http("https://music.youtube.com/youtubei/v1/search?key=$YT_KEY", "POST", payload)
-            ?: return@withContext emptyList()
-        OfficialMusicParser.parse(raw, q)
+        if (q.isBlank()) return@withContext emptyList()
+        // Use the same WEB_REMIX client as artist/album requests. A mobile
+        // browser UA strips metadata links from otherwise valid song rows.
+        val fields = JSONObject().put("query", q).put("params", OfficialMusicParser.SONGS_FILTER)
+        val raw = YouTubeApi.request("search", fields, authenticated = false)
+        val songs = raw?.let { OfficialMusicParser.parse(it.toString(), q) }.orEmpty()
+        if (songs.isNotEmpty()) return@withContext songs
+        // Some regions no longer honor the song filter. The unfiltered reply
+        // still has to pass exactly the same official-audio checks.
+        YouTubeApi.request("search", JSONObject().put("query", q), authenticated = false)
+            ?.let { OfficialMusicParser.parse(it.toString(), q) }.orEmpty()
     }
 
     // ------------------------------------------------------------ Addons
@@ -268,6 +262,10 @@ object MusicApi {
      * `best` (FLAC Last Babe) pour la montée en qualité.
      */
     suspend fun resolve(track: Track): Streams = coroutineScope {
+        if (track.addon == "upload" || track.id.startsWith("kv:upload:")) {
+            val stream = PublicationApi.stream(track)
+            return@coroutineScope Streams(fast = stream, best = stream, artwork = track.coverUrl, album = track.album, durationMs = track.durationMs)
+        }
         val fast = async { addonStream(track, "um") }
         val best = async { flacStream(track) }
         val custom = async { runCatching { CustomSources.streamForTrack(track, forDownload = true) }.getOrNull() }
@@ -468,6 +466,7 @@ object MusicApi {
     }
 
     private fun labelFor(source: String): String = when (source) {
+        SRC_KETVOICE -> "Ketvoice API"
         SRC_LRCLIB -> "LRCLIB"
         SRC_NETEASE -> "NetEase Cloud Music"
         SRC_OVH -> "Lyrics.ovh"
@@ -481,6 +480,10 @@ object MusicApi {
         forcePlain: Boolean,
         source: String
     ): Pair<String, List<LyricLine>> {
+        if (source == SRC_KETVOICE) {
+            val lines = PublicationApi.lyrics(track)
+            return "Ketvoice API" to if (forcePlain) lines.map { LyricLine(-1L, it.text) } else lines
+        }
         if (source in setOf(SRC_BETTER, SRC_LIRIQO, SRC_LYRICA, SRC_LRCRED)) {
             return ExtraLyricsProviders.fetch(source, track, forcePlain)
         }
@@ -499,8 +502,18 @@ object MusicApi {
                 "Lyrics.ovh" to emptyList()
             }
         }
-        // Auto : les 3 sources partent EN PARALLÈLE, LRCLIB reste prioritaire.
+        // Auto : les sources partent EN PARALLÈLE. Les paroles publiées dans
+        // Ketvoice API sont une version explicite et passent devant les
+        // sources externes si elles répondent dans une courte fenêtre ; sinon
+        // le chargement normal n'est pas bloqué.
         return coroutineScope {
+            val kvDef = async(Dispatchers.IO) {
+                try {
+                    kotlinx.coroutines.withTimeoutOrNull(600) { PublicationApi.lyrics(track) }.orEmpty()
+                } catch (_: Exception) {
+                    emptyList()
+                }
+            }
             val lrcDef = async(Dispatchers.IO) {
                 try { fetchLyrics(track, title, artist, forcePlain) }
                 catch (_: Exception) { "LRCLIB" to emptyList<LyricLine>() }
@@ -512,6 +525,14 @@ object MusicApi {
             val ovhDef = async(Dispatchers.IO) {
                 try { ovhLyrics(title, artist) }
                 catch (_: Exception) { "Lyrics.ovh" to emptyList<LyricLine>() }
+            }
+            val kv = kvDef.await()
+            if (kv.isNotEmpty()) {
+                lrcDef.cancel()
+                neDef.cancel()
+                ovhDef.cancel()
+                val lines = if (forcePlain) kv.map { LyricLine(-1L, it.text) } else kv
+                return@coroutineScope "Ketvoice API" to lines
             }
             val lrc = lrcDef.await()
             if (lrc.second.isNotEmpty()) {
@@ -824,7 +845,7 @@ object MusicApi {
      * LRC classique + LRC enrichi. Si la source fournit des balises
      * `<mm:ss.xx>` par mot/syllabe, on les conserve ; sinon `words` reste vide.
      */
-    private fun parseLrc(lrc: String): List<LyricLine> {
+    internal fun parseLrc(lrc: String): List<LyricLine> {
         val out = mutableListOf<LyricLine>()
         for (raw in lrc.replace("\r", "").lines()) {
             val line = raw.trim()

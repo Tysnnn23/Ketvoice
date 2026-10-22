@@ -759,6 +759,7 @@ fun PlayerSheetScrim(onClose: () -> Unit, content: @Composable () -> Unit) {
         Box(
             Modifier
                 .align(Alignment.BottomCenter)
+                .widthIn(max = 560.dp)
                 .fillMaxWidth()
                 .clickable(noRipple, null) { },
         ) { content() }

@@ -82,6 +82,7 @@ object Downloader {
         scope.launch {
             try {
                 val preferFlac = AppSettings.downloadQualityMode.value == 0
+                val publication = track.addon == "upload" || track.id.startsWith("kv:upload:")
                 val streams = withTimeoutOrNull(75_000) { MusicApi.resolve(track) }
                 val candidates = linkedSetOf<MusicApi.StreamInfo>()
                 if (preferFlac) {
@@ -93,7 +94,7 @@ object Downloader {
                 }
                 // Repli direct : la résolution parallèle peut avoir été coupée
                 // par un addon lent, mais l'autre qualité reste accessible.
-                if (candidates.isEmpty()) {
+                if (candidates.isEmpty() && !publication) {
                     runCatching { MusicApi.addonStream(track, "um") }.getOrNull()?.let { candidates += it }
                     runCatching { MusicApi.flacStream(track) }.getOrNull()?.let { candidates += it }
                 }
@@ -113,7 +114,7 @@ object Downloader {
                 }
 
                 // Dernier recours : le flux YouTube Music, sans secret côté APK.
-                if (gotFile == null) {
+                if (gotFile == null && !publication) {
                     val yt = withTimeoutOrNull(35_000) { runCatching { MusicApi.youtubeStream(track) }.getOrNull() }
                     if (yt != null) {
                         val dest = fileFor(c, track.id, extOf(yt))

@@ -19,9 +19,9 @@
 
 Ketvoice is an independent Android music client whose visual language is inspired by Apple Music and iOS 26. French is the default interface language; Settings offers 11 languages across the app. It is not affiliated with Apple, YouTube, Spotify, BitChord, or any music provider.
 
-The current version is **2.5.0** (`versionCode` 12), for Android 12+ (`minSdk 31`, `targetSdk 36`). This release includes the server-side API work originally prepared for the unpublished 2.4.0 build.
+The current version is **2.6.0** (`versionCode` 13), for Android 12+ (`minSdk 31`, `targetSdk 36`). It adds an adaptive tablet interface, richer YouTube artist searches, and a restricted publishing workflow for public songs and lyrics.
 
-Music-source search, stream resolution, and Spotify Canvas now go through **Ketvoice API**, a Supabase Edge Function. The APK contains only the project’s public Supabase `anon` key and the function URL. Spotify and source credentials remain in Supabase Vault and are never shipped with the app.
+Music-source search, stream resolution, Spotify Canvas, and published-content lookup go through two Supabase Edge Functions: **Ketvoice API** for sources/Canvas and **Ketvoice Content** for public publications. The APK contains only the project’s public Supabase `anon` key and function URLs. Spotify and source credentials remain in Supabase Vault and are never shipped with the app.
 
 > The APK is debug-signed for personal installation and testing. It is not a Play Store release.
 
@@ -32,6 +32,7 @@ Music-source search, stream resolution, and Spotify Canvas now go through **Ketv
 - Real Liquid Glass panels powered by the Kyant0 Backdrop SDK, with adaptive tint, refraction, blur, and rim lighting.
 - Light and dark themes with a user-selectable accent color applied across controls, progress bars, switches, and selection states.
 - Home, Explore, and Library tabs, floating glass navigation, a collapsible mini-player, and animated transitions throughout.
+- Adaptive layouts driven by real window constraints: a glass navigation rail at tablet widths, a reading-width Settings page, multi-column track grids, and a two-pane player with artwork/controls beside lyrics or queue. Short landscape windows keep the phone player instead of squeezing two panes.
 - Artwork transitions between the full player and mini-player with a fading cover flight in both directions.
 - A redesigned Library with local music, collection cards, artists, albums, recent plays, and offline downloads. Collections reflect actual listening history and downloads.
 - French, English, Hindi, Japanese, Chinese, Russian, Italian, Spanish, German, Portuguese, and Korean interface languages. Song titles, artist names, and original lyrics stay unchanged.
@@ -54,6 +55,7 @@ Music-source search, stream resolution, and Spotify Canvas now go through **Ketv
 
 - Official YouTube Music search restricted to verified audio tracks with an artist and album.
 - Artist search with a dedicated artist page: real profile image, description, monthly listeners, albums, and tracks.
+- Artist-name searches also return that artist’s songs in a separate section, not only artist cards. Song rows use the same `WEB_REMIX` client as artist/album requests and still require the row’s own official-audio watch endpoint.
 - Album pages resolved from real YouTube Music album identifiers.
 - Personalized YouTube Music home feed when a valid web session is connected.
 - First-party Google sign-in through a WebView, or an explicit manual `SAPISID` cookie fallback.
@@ -97,22 +99,33 @@ Music-source search, stream resolution, and Spotify Canvas now go through **Ketv
 - Automatic Canvas downloads can be restricted to Wi-Fi. Explicit song downloads also request Canvas, independently of the animated-artwork display setting, and can use mobile data.
 - No Spotify `sp_dc` cookie or user setup is required. No Spotify credential is bundled with the app.
 
+### Public publications
+
+- Publishing is restricted to the verified **konnektsupport@gmail.com** mailbox. A matching YouTube profile only reveals the entry point; the content broker re-checks the Supabase Auth user and confirmed email on every write, so a forged client request cannot publish.
+- **Settings → Import a song** accepts MP3, M4A, AAC, FLAC, WAV, OGG, or Opus up to 25 MiB, an optional JPEG/PNG/WebP cover up to 4 MiB, and optional TTML/LRC lyrics up to 1 MiB.
+- **Track ⋯ → Import lyrics** searches normally, previews native TTML/LRC timing, and publishes a new public lyrics version without inventing timing.
+- Published songs are returned by normal search and by the Ketvoice API source, and can be played and downloaded like other tracks. Published lyrics add a selectable **Ketvoice API** provider. Auto mode may use that provider when it answers within a short window, then falls back to external providers.
+- The publisher must confirm the rights/public-distribution checkbox. Published audio, covers, and lyrics are public to all users, consume the project’s storage/egress quotas, and can be removed by the project owner.
+- The public media bucket has no client write policy; the broker validates signatures and sizes and performs uploads with a server-side service role.
+
 ### Settings
 
 - Real, persisted settings for theme, accent color, launcher icon, playback quality, downloads, storage, lyrics, translation, Canvas, and YouTube Music.
 - Choice rows open a sub-menu instead of silently changing a value.
 - **Ketvoice API · Canvas** and **Sources** sections expose the server-side pipeline and a health test, with no cookie or token fields.
+- For the authorized publisher only, a **Publications Ketvoice API** section provides song import, lyrics import, and publishing sign-out.
 - Cache size and cache clearing reflect real files on the device.
 - No demo account or fake “connected” state.
 
 ## Download
 
-### 2.5.0 preview
+### 2.6.0 preview
 
 <p align="center">
-  <img src="https://github.com/Tysnnn23/Ketvoice/releases/download/v2.5.0/library-ja.png" width="230" alt="Redesigned Library in Japanese, dark theme" />
-  <img src="https://github.com/Tysnnn23/Ketvoice/releases/download/v2.5.0/player-offline-ja.png" width="230" alt="Offline FLAC playback with cached Canvas" />
-  <img src="https://github.com/Tysnnn23/Ketvoice/releases/download/v2.5.0/lyrics-offline-en.png" width="230" alt="Downloaded synchronized lyrics" />
+  <img src="https://github.com/Tysnnn23/Ketvoice/releases/download/v2.6.0/tablet-navigation.png" width="230" alt="Tablet navigation rail and adaptive layout" />
+  <img src="https://github.com/Tysnnn23/Ketvoice/releases/download/v2.6.0/tablet-search.png" width="230" alt="Tablet search showing artist cards and that artist's songs" />
+  <img src="https://github.com/Tysnnn23/Ketvoice/releases/download/v2.6.0/tablet-player.png" width="230" alt="Two-pane tablet player with artwork, controls, and lyrics" />
+  <img src="https://github.com/Tysnnn23/Ketvoice/releases/download/v2.6.0/phone-search-songs.png" width="230" alt="Phone search returning songs as well as artist cards" />
 </p>
 
 Download the APK and its SHA-256 checksum from the [Releases](https://github.com/Tysnnn23/Ketvoice/releases/latest) page.
@@ -122,7 +135,7 @@ Download the APK and its SHA-256 checksum from the [Releases](https://github.com
 - Signing: Android debug certificate
 - Verify the SHA-256 checksum shown in the release notes after downloading.
 
-No Spotify cookies, add-on tokens, or private add-on endpoints are included in the public source or the release APK. The app contains only the public Supabase `anon` key and the Ketvoice API URL. Spotify and source credentials are held in Supabase Vault.
+No Spotify cookies, add-on tokens, private add-on endpoints, or Supabase service-role keys are included in the public source or the release APK. The app contains only the public Supabase `anon` key and the function URLs. Spotify and source credentials are held in Supabase Vault; publication writes run through server-side functions.
 
 ## Build from source
 
@@ -170,18 +183,22 @@ The repository has an unsigned release build type; the distributed APK is signed
 │   └── src/
 │       ├── main/
 │       │   ├── kotlin/com/ketvoice/app/
-│       │   │   ├── data/       # catalog, sources, settings, lyrics, cache
+│       │   │   ├── data/       # catalog, sources, settings, lyrics, cache, publications
 │       │   │   ├── glass/      # Liquid Glass rendering
 │       │   │   ├── player/     # Media3 playback and session service
 │       │   │   ├── theme/      # colors and typography
-│       │   │   └── ui/         # screens, player, settings, overlays
+│       │   │   └── ui/         # screens, player, settings, overlays, adaptive layout
 │       │   ├── res/
 │       │   └── AndroidManifest.xml
 │       └── test/               # JVM unit tests
 ├── supabase/
-│   └── functions/ketvoice-api/  # search, stream, and Canvas broker
+│   ├── README.md
+│   └── functions/
+│       ├── ketvoice-api/       # source search, streams, and Canvas
+│       └── ketvoice-content/   # restricted publishing and public reads
 ├── docs/
 │   ├── SOURCES.md
+│   ├── releases/
 │   └── assets/logo.png
 ├── CHANGELOG.md
 ├── PRIVACY.md
@@ -196,12 +213,16 @@ The repository has an unsigned release build type; the distributed APK is signed
 - Coil image loading
 - Gson
 - Kyant0 Backdrop
-- Supabase Edge Functions (Deno) for Ketvoice API
+- Supabase Edge Functions (Deno) for Ketvoice API and Ketvoice Content
 - JUnit 4 and org.json for JVM tests
 
 ## Status and limitations
 
-- Validation uses JVM unit tests, Android lint, live Ketvoice API checks, and an Android 16 emulator. There is no physical-device, device-farm, or Play Store validation.
+- Validation uses JVM unit tests, Android lint, live Ketvoice API checks, a mocked publication broker harness, and an Android 16 emulator. There is no physical-device, device-farm, or Play Store validation.
+- Tablet layouts are validated on an emulator at phone, portrait-tablet, and landscape-tablet window sizes. Split-screen windows follow the same constraints but were not exhaustively device-tested.
+- Publishing requires the mailbox owner to complete a Supabase email login. Email delivery depends on the project’s Supabase Auth templates and rate limits; the app does not send mail automatically.
+- A real authenticated upload must be confirmed by the mailbox owner. Development validated the broker with mocked storage/HTTP tests and live rejection/read checks, not by impersonating that account.
+- Published media is public and storage/egress usage counts against the Supabase project’s quotas. Only the authorized mailbox can publish; there is no separate moderation queue.
 - YouTube Music, lyrics, Canvas, artwork, Ketvoice API upstreams, and custom sources depend on third-party services that can change or rate-limit requests.
 - A YouTube web session may be rejected or require additional verification. The app never fabricates a connected state.
 - Search history cannot be read back from YouTube Music; only accepted playback events are submitted.
@@ -216,7 +237,8 @@ The repository has an unsigned release build type; the distributed APK is signed
 
 See [SECURITY.md](SECURITY.md) and [PRIVACY.md](PRIVACY.md).
 
-- No Ketvoice account is used, and no analytics or advertising SDK is included.
+- No Ketvoice listener account is required. The restricted publisher signs in to Supabase Auth with the authorized mailbox; the service verifies that user and its confirmed email on every write.
+- No analytics or advertising SDK is included.
 - Spotify and source credentials are stored in Supabase Vault and read only by the Ketvoice API function with the service role.
 - The APK contains the public Supabase `anon` key, which is not a secret.
 - YouTube session data is encrypted locally with Android Keystore and is not sent to Ketvoice API.
@@ -225,7 +247,7 @@ See [SECURITY.md](SECURITY.md) and [PRIVACY.md](PRIVACY.md).
 
 ## Versioning and legacy builds
 
-**2.5.0** supersedes the unpublished 2.4.0 candidate. Only the final new APK is distributed. See [CHANGELOG.md](CHANGELOG.md) for the full release history.
+**2.6.0** supersedes 2.5.0. The 2.5.0 release remains available and is not overwritten. Only the final new APK and its matching assets are distributed with 2.6.0. See [CHANGELOG.md](CHANGELOG.md) for the full release history.
 
 Earlier development builds from **1.2.0 through 2.3.0** contained development-only Spotify session cookies and private add-on credentials in their default settings. Those binaries are intentionally not published. Version **2.3.1** was the first clean public APK. Version **2.4.0** moves the remaining source and Canvas credentials to Supabase Vault. The original **1.0.0** builds predate those credentials and are archived as-is in the legacy release; their help text contains one obsolete example add-on URL, but no session cookie or access token.
 

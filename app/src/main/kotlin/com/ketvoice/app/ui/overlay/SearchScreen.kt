@@ -19,6 +19,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import com.ketvoice.app.ui.common.Icon
 import com.ketvoice.app.ui.common.Text
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -36,6 +37,7 @@ import com.ketvoice.app.data.MusicArtist
 import com.ketvoice.app.data.SearchHistory
 import com.ketvoice.app.data.Downloader
 import com.ketvoice.app.data.MusicApi
+import com.ketvoice.app.data.PublicationApi
 import com.ketvoice.app.data.Track
 import com.ketvoice.app.data.YouTubeCatalog
 import com.ketvoice.app.data.YouTubeMusicSession
@@ -44,6 +46,7 @@ import com.ketvoice.app.theme.LocalTheme
 import com.ketvoice.app.theme.Palette
 import com.ketvoice.app.theme.T
 import com.ketvoice.app.ui.AppUi
+import com.ketvoice.app.ui.adaptive.LocalAdaptiveLayout
 import com.ketvoice.app.ui.common.AccountAvatar
 import com.ketvoice.app.ui.common.Cover
 import kotlinx.coroutines.delay
@@ -58,8 +61,10 @@ import kotlinx.coroutines.launch
 @Composable
 fun SearchScreen() {
     val th = LocalTheme.current
-    var segment by remember { mutableIntStateOf(0) } // 0 YouTube | 1 Sources | 2 Bibliothèque
-    var query by remember { mutableStateOf(AppUi.searchSeed.value) }
+    val layout = LocalAdaptiveLayout.current
+    var attempt by rememberSaveable { mutableIntStateOf(0) }
+    var segment by rememberSaveable { mutableIntStateOf(0) } // 0 YouTube | 1 Sources | 2 Bibliothèque
+    var query by rememberSaveable { mutableStateOf(AppUi.searchSeed.value) }
     var results by remember { mutableStateOf<List<Track>>(emptyList()) }
     var allResults by remember { mutableStateOf<List<Track>>(emptyList()) }
     var artists by remember { mutableStateOf<List<MusicArtist>>(emptyList()) }
@@ -68,7 +73,7 @@ fun SearchScreen() {
     val customSources by CustomSources.sources.collectAsState()
     val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
     val recentQueries by SearchHistory.queries.collectAsState()
-    var lastSubmitted by remember { mutableStateOf("") }
+    var lastSubmitted by rememberSaveable { mutableStateOf("") }
     fun submitSearch(force: Boolean = false) {
         val q = query.trim()
         if (q.length < 2) return
@@ -83,7 +88,7 @@ fun SearchScreen() {
     // La graine est consommée une seule fois (tuile genre / album).
     LaunchedEffect(Unit) { AppUi.searchSeed.value = "" }
 
-    LaunchedEffect(query, segment) {
+    LaunchedEffect(query, segment, attempt) {
         val q = query.trim()
         if (q.length < 2) {
             results = emptyList()
@@ -107,11 +112,13 @@ fun SearchScreen() {
             coroutineScope {
                 val yt = async { MusicApi.searchYtMusic(q) }
                 val foundArtists = async { YouTubeCatalog.searchArtists(q) }
+                val publications = async { PublicationApi.search(q) }
                 val addons = async { MusicApi.searchAddons(q) }
                 results = yt.await()
                 allResults = results
                 artists = foundArtists.await()
                 loading = false
+                results = (results + publications.await()).distinctBy { it.id }
                 // Addon latency must never hold the YouTube catalogue hostage.
                 allResults = results + addons.await()
             }
@@ -139,19 +146,22 @@ fun SearchScreen() {
             .fillMaxSize()
             .background(th.background)
             .verticalScroll(rememberScrollState())
-            .padding(top = 44.dp)
+            .statusBarsPadding()
+            .padding(top = 12.dp)
     ) {
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 6.dp),
-            horizontalArrangement = Arrangement.End
-        ) {
-            AccountAvatar(
-                "K", size = 42.dp, modifier = Modifier.clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null
-                ) { AppUi.showAccount.value = true })
+        if (!layout.hasRail) {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.End
+            ) {
+                AccountAvatar(
+                    "K", size = 42.dp, modifier = Modifier.clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) { AppUi.showAccount.value = true })
+            }
         }
 
         // Champ de recherche iOS
@@ -166,7 +176,7 @@ fun SearchScreen() {
         ) {
             Icon(Icons.Filled.Search, null, tint = th.secondary, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
-            Box {
+            Box(Modifier.weight(1f)) {
                 if (query.isEmpty()) {
                     Text("Rechercher un titre ou un artiste…", color = th.secondary, fontSize = 16.sp)
                 }
@@ -180,7 +190,7 @@ fun SearchScreen() {
                     singleLine = true,
                     keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Search),
                     keyboardActions = androidx.compose.foundation.text.KeyboardActions(onSearch = { submitSearch(true) }),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 40.dp)
                 )
             }
         }
@@ -315,10 +325,20 @@ fun SearchScreen() {
                     SourcesCard(compact = true)
                     Spacer(Modifier.height(6.dp))
                 }
-                results.forEachIndexed { index, track ->
+                if (segment == 0) {
+                    Text("Titres", style = T.section, color = th.onBackground,
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp))
+                    if (results.isEmpty()) Text("Catalogue indisponible · Réessayer", color = th.secondary,
+                        modifier = Modifier.clickable { attempt++ }.padding(horizontal = 20.dp, vertical = 16.dp))
+                }
+                results.chunked(layout.trackColumns).forEachIndexed { rowIndex, row ->
+                    Row(Modifier.fillMaxWidth()) {
+                    row.forEachIndexed { column, track ->
+                    val index = rowIndex * layout.trackColumns + column
                     SearchResultRow(
                         track = track,
                         cover = art["t:${track.id}"] ?: track.coverUrl,
+                        modifier = Modifier.weight(1f),
                         onClick = {
                             submitSearch()
                             // Correspondance addon déjà présente dans les résultats :
@@ -340,19 +360,22 @@ fun SearchScreen() {
                             Player.playQueue(queue, index)
                         }
                     )
+                    }
+                    if (row.size < layout.trackColumns) Spacer(Modifier.weight(1f))
+                    }
                 }
             }
         }
 
-        Spacer(Modifier.height(150.dp))
+        Spacer(Modifier.height(layout.bottomPaddingDp.dp))
     }
 }
 
 @Composable
-private fun SearchResultRow(track: Track, cover: String?, onClick: () -> Unit) {
+private fun SearchResultRow(track: Track, cover: String?, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val th = LocalTheme.current
     Row(
-        Modifier
+        modifier
             .fillMaxWidth()
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
@@ -391,7 +414,7 @@ private fun SearchResultRow(track: Track, cover: String?, onClick: () -> Unit) {
         }
         Spacer(Modifier.width(8.dp))
         val custom = track.addon?.startsWith("cs:") == true
-        val ketvoice = track.addon == "um" || track.addon == "lb" || track.addon == "last"
+        val ketvoice = track.addon in setOf("um", "last", "upload")
         val badge = when {
             custom -> "SRC"
             ketvoice -> "API"

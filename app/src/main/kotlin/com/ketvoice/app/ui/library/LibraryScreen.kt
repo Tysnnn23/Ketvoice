@@ -31,6 +31,7 @@ import com.ketvoice.app.data.*
 import com.ketvoice.app.player.Player
 import com.ketvoice.app.theme.LocalTheme
 import com.ketvoice.app.ui.AppUi
+import com.ketvoice.app.ui.adaptive.LocalAdaptiveLayout
 import com.ketvoice.app.ui.common.AccountAvatar
 import com.ketvoice.app.ui.common.Cover
 
@@ -42,13 +43,15 @@ private val playlistTints = listOf(
 @Composable
 fun LibraryScreen() {
     val theme = LocalTheme.current
+    val layout = LocalAdaptiveLayout.current
+    val columns = layout.trackColumns
     val recent by ListeningHistory.tracks.collectAsState()
     val known by ListeningHistory.knownTracks.collectAsState()
     val downloads by Downloader.items.collectAsState()
     val all = (known + recent + downloads.map { it.track }).distinctBy { it.id }
     val liked = all.filter { it.id in AppSettings.favoriteIds.value }
     val albums = (recent + downloads.map { it.track })
-        .filter { !it.albumId.isNullOrBlank() && it.albumId!!.all(Char::isDigit) }
+        .filter { !it.albumId.isNullOrBlank() && (it.albumId!!.all(Char::isDigit) || it.albumId.startsWith("MPRE")) }
         .distinctBy { it.albumId }
     val artists = all.groupBy { it.artist.substringBefore(',').trim() }
         .filterKeys { it.isNotBlank() }
@@ -58,7 +61,7 @@ fun LibraryScreen() {
 
     LazyColumn(
         Modifier.fillMaxSize().background(theme.background).statusBarsPadding(),
-        contentPadding = PaddingValues(bottom = 210.dp)
+        contentPadding = PaddingValues(bottom = layout.bottomPaddingDp.dp)
     ) {
         item {
             LibraryHeader()
@@ -152,11 +155,11 @@ fun LibraryScreen() {
                 ) {
                     items(albums, key = { it.albumId!! }) { track ->
                         Column(
-                            Modifier.width(142.dp).clickable {
+                            Modifier.width(layout.collectionSizeDp.dp).clickable {
                                 AppUi.openCatalog(CatalogRequest("album", track.albumId!!, track.album))
                             }
                         ) {
-                            Cover(track.album, track.coverUrl, 142.dp, 12.dp)
+                            Cover(track.album, track.coverUrl, layout.collectionSizeDp.dp, 12.dp)
                             Text(
                                 track.album,
                                 localize = false,
@@ -184,17 +187,29 @@ fun LibraryScreen() {
             SectionHeader("Titres récents", if (recent.isEmpty()) "Votre historique apparaîtra ici" else "Reprenez l'écoute")
         }
         if (recent.isNotEmpty()) {
-            itemsIndexed(recent.take(6), key = { _, track -> "recent-${track.id}" }) { index, track ->
-                LibraryTrackRow(track, index) { Player.playQueue(recent.take(6), index) }
+            items(recent.take(6).chunked(columns), key = { "recent-${it.first().id}" }) { row ->
+                Row(Modifier.fillMaxWidth()) {
+                    row.forEach { track ->
+                        LibraryTrackRow(track, modifier = Modifier.weight(1f)) {
+                            Player.playQueue(recent.take(6), recent.indexOf(track))
+                        }
+                    }
+                    if (row.size < columns) Spacer(Modifier.weight(1f))
+                }
             }
         }
         if (downloads.isNotEmpty()) {
             item {
                 SectionHeader("Téléchargements", "${downloads.size} titres disponibles hors ligne")
             }
-            items(downloads.take(5), key = { "download-${it.track.id}" }) { item ->
-                LibraryTrackRow(item.track, 0, downloaded = true) {
-                    Player.playQueue(downloads.map { it.track }, downloads.indexOf(item))
+            items(downloads.take(6).chunked(columns), key = { "download-${it.first().track.id}" }) { row ->
+                Row(Modifier.fillMaxWidth()) {
+                    row.forEach { item ->
+                        LibraryTrackRow(item.track, downloaded = true, modifier = Modifier.weight(1f)) {
+                            Player.playQueue(downloads.map { it.track }, downloads.indexOf(item))
+                        }
+                    }
+                    if (row.size < columns) Spacer(Modifier.weight(1f))
                 }
             }
         }
@@ -252,8 +267,10 @@ private fun LibraryHeader() {
         ) {
             Icon(Icons.Filled.History, null, tint = theme.onBackground, modifier = Modifier.size(19.dp))
         }
-        Spacer(Modifier.width(10.dp))
-        AccountAvatar("K", 36.dp, Modifier.clickable { AppUi.showAccount.value = true })
+        if (!LocalAdaptiveLayout.current.hasRail) {
+            Spacer(Modifier.width(10.dp))
+            AccountAvatar("K", 36.dp, Modifier.clickable { AppUi.showAccount.value = true })
+        }
     }
 }
 
@@ -346,10 +363,11 @@ private fun LibraryCollectionCard(
     tint: Color,
     onClick: () -> Unit
 ) {
-    Column(Modifier.width(142.dp).clickable(onClick = onClick)) {
-        Box(Modifier.size(142.dp).clip(RoundedCornerShape(15.dp))) {
+    val size = LocalAdaptiveLayout.current.collectionSizeDp.dp
+    Column(Modifier.width(size).clickable(onClick = onClick)) {
+        Box(Modifier.size(size).clip(RoundedCornerShape(15.dp))) {
             if (cover != null) {
-                Cover(title, cover, 142.dp, 15.dp)
+                Cover(title, cover, size, 15.dp)
             } else {
                 Box(
                     Modifier.fillMaxSize().background(
@@ -389,11 +407,11 @@ private fun LibraryCollectionCard(
 }
 
 @Composable
-private fun LibraryTrackRow(track: Track, index: Int, downloaded: Boolean = false, onClick: () -> Unit) {
+private fun LibraryTrackRow(track: Track, downloaded: Boolean = false, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val theme = LocalTheme.current
     val cover = ArtworkRepo.coverForTrack(track) ?: track.coverUrl
     Row(
-        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 18.dp, vertical = 7.dp),
+        modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 18.dp, vertical = 7.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Cover(track.title, cover, 50.dp, 9.dp)

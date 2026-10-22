@@ -1,6 +1,6 @@
 # Privacy Notes
 
-Ketvoice is an Android client with a small Supabase-hosted backend, **Ketvoice API**, used for music-source search, stream resolution, and Spotify Canvas. It does not include analytics, advertising, or crash-reporting SDKs, and it does not create a Ketvoice account.
+Ketvoice is an Android client with two small Supabase-hosted backends, **Ketvoice API** (music-source search, stream resolution, and Spotify Canvas) and **Ketvoice Content** (public publication search and restricted publishing). It does not include analytics, advertising, or crash-reporting SDKs, and listeners do not create a Ketvoice account. Only the authorized publisher signs in with Supabase Auth to publish public songs or lyrics.
 
 ## Data stored on the device
 
@@ -9,6 +9,7 @@ Ketvoice is an Android client with a small Supabase-hosted backend, **Ketvoice A
 - Cached audio, artwork, lyrics, and Canvas videos.
 - Downloaded lyrics in JSON/LRC sidecars and references to persistent Canvas files. Album reuse keys include the artist to avoid mixing unrelated albums with the same title.
 - A YouTube Music web session when the user signs in.
+- A Supabase Auth session for the authorized publisher, including an access token and a refresh token encrypted with Android Keystore.
 
 The YouTube session is encrypted with Android Keystore. Other settings are stored in the app’s private preference storage. Android backup is disabled. The Spotify `sp_dc` cookie is no longer accepted or stored by the app.
 
@@ -19,6 +20,16 @@ The YouTube session is encrypted with Android Keystore. Other settings are store
 Search, stream, and Canvas requests go to the `ketvoice-api` Supabase Edge Function. Those requests contain the search query or track metadata such as title, artist, and Spotify ID. The function returns track metadata, short-lived stream URLs, and Canvas URLs.
 
 Spotify and source credentials remain in Supabase Vault and are not returned to the app. Supabase may retain function invocation logs containing request metadata, IP address, and timestamps according to the project’s configuration.
+
+### Ketvoice Content and publishing
+
+Public song/lyrics searches and streaming metadata go to the `ketvoice-content` function. They contain the search query, track ID/title/artist, and requested lyrics identity.
+
+The authorized publisher signs in through Supabase Auth using a one-time email link or code. The app stores the resulting session; the refresh token is encrypted with Android Keystore. The function checks the Auth user’s confirmed email on every write and never trusts an email supplied by the client.
+
+Audio files, optional cover art, lyrics, title, artist, album, and the rights confirmation are uploaded to the project’s public storage bucket and public tables. Published content is visible to every Ketvoice user and to anyone with its public media URL. The publisher’s email address is used for authorization but is not included in public track metadata. The YouTube session cookie is not sent to the publication service.
+
+Published content can be removed by the project owner through Supabase. Deleting local app data does not remove already published content.
 
 ### Direct providers
 
@@ -39,7 +50,7 @@ A custom JSON source receives search queries and track identifiers and may log t
 
 ## Removing data
 
-Use **Settings → Storage** to clear the audio playback cache. Downloaded song lyrics and shared Canvas files are retained separately. Deleting a download removes its audio and lyric sidecars; a shared Canvas is retained for reuse. Log out of YouTube Music to remove the app session, or clear Android app data / uninstall the app to remove all local state. Server-side function logs are retained according to the Supabase project configuration.
+Use **Settings → Storage** to clear the audio playback cache. Downloaded song lyrics and shared Canvas files are retained separately. Deleting a download removes its audio and lyric sidecars; a shared Canvas is retained for reuse. Log out of YouTube Music to remove the app session, sign out of publishing to remove the publisher refresh token, or clear Android app data / uninstall the app to remove all local state. Published public content is removed separately on the server. Server-side function logs are retained according to the Supabase project configuration.
 
 ## Contact
 

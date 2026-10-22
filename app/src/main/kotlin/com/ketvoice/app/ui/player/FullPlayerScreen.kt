@@ -56,6 +56,7 @@ import com.ketvoice.app.glass.LocalBackdropLayer
 import com.ketvoice.app.glass.rememberGlassBackdrop
 import com.ketvoice.app.player.Player
 import com.ketvoice.app.ui.AppUi
+import com.ketvoice.app.ui.adaptive.LocalAdaptiveLayout
 import com.ketvoice.app.ui.common.Cover
 import com.kyant.backdrop.backdrops.layerBackdrop
 
@@ -86,6 +87,7 @@ fun FullPlayerScreen(
     val ambience = rememberCoverAmbience(cover)
     val context = LocalContext.current
     val backdrop = rememberGlassBackdrop(Color.Black)
+    val adaptivePlayer = LocalAdaptiveLayout.current.adaptivePlayer
     fun navigate(next: PlayerPage) {
         page = next
         expanded = false
@@ -108,8 +110,8 @@ fun FullPlayerScreen(
         }
     }
     LaunchedEffect(track.id) { LyricsRepo.load(track) }
-    LaunchedEffect(page, sheet, interaction, touching, expanded, lyrics.lines.isNotEmpty(), AppUi.showAccount.value) {
-        if (page == PlayerPage.LYRICS && !expanded && !touching && sheet.isBlank() &&
+    LaunchedEffect(page, sheet, interaction, touching, expanded, lyrics.lines.isNotEmpty(), AppUi.showAccount.value, adaptivePlayer) {
+        if (!adaptivePlayer && page == PlayerPage.LYRICS && !expanded && !touching && sheet.isBlank() &&
             lyrics.lines.isNotEmpty() && !AppUi.showAccount.value) {
             kotlinx.coroutines.delay(2000)
             expanded = true
@@ -117,6 +119,19 @@ fun FullPlayerScreen(
     }
 
     BoxWithConstraints(modifier.fillMaxSize().background(Color.Black)) {
+        if (adaptivePlayer) {
+            TabletPlayer(state, track, cover, canvas[track.id], ambience, page,
+                onPage = ::navigate, onClose = ::close, onTrackMenu = { sheet = "track" },
+                onSources = { sheet = "sources" }, onOutput = { sheet = "audio" })
+            if (sheet.isNotBlank()) PlayerSheetScrim({ sheet = "" }) {
+                when (sheet) {
+                    "sources" -> LyricsSourceSheet(track, onClose = { sheet = "" })
+                    "track" -> TrackMenuSheet(track) { sheet = "" }
+                    else -> AudioOutputSheet { sheet = "" }
+                }
+            }
+            return@BoxWithConstraints
+        }
         val margin = maxWidth * .08f
         val bottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
         val topInset = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()

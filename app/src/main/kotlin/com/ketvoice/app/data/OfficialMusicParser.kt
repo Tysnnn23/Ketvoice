@@ -40,14 +40,23 @@ object OfficialMusicParser {
             val title = (0 until titleRuns.length()).joinToString("") { titleRuns.optJSONObject(it)?.optString("text").orEmpty() }
             val variants = listOf("slowed", "sped up", "speed up", "nightcore", "8d", "bass boosted", "reverb", "karaoke")
             if (variants.any { title.contains(it, true) && !query.contains(it, true) }) return@mapNotNull null
-            val meta = runs(1)
+            val metadata = (1 until cols.length()).flatMap { index ->
+                val values = runs(index)
+                (0 until values.length()).mapNotNull { values.optJSONObject(it) }
+            }.toMutableList()
+            row.optJSONArray("fixedColumns")?.let { fixed ->
+                for (column in 0 until fixed.length()) {
+                    val values = fixed.optJSONObject(column)?.optJSONObject("musicResponsiveListItemFixedColumnRenderer")
+                        ?.optJSONObject("text")?.optJSONArray("runs") ?: continue
+                    for (i in 0 until values.length()) values.optJSONObject(i)?.let { metadata += it }
+                }
+            }
             val artists = mutableListOf<String>()
             var album = ""
             var albumId = ""
             var artistId = ""
             var duration = 0L
-            for (i in 0 until meta.length()) {
-                val run = meta.optJSONObject(i) ?: continue
+            for (run in metadata) {
                 val name = run.optString("text").trim()
                 val browse = run.optJSONObject("navigationEndpoint")?.optJSONObject("browseEndpoint")
                 val page = browse?.optJSONObject("browseEndpointContextSupportedConfigs")
@@ -57,7 +66,38 @@ object OfficialMusicParser {
                     if (artistId.isEmpty()) artistId = browse.optString("browseId")
                 }
                 if (page == "MUSIC_PAGE_TYPE_ALBUM") { album = name; albumId = browse.optString("browseId") }
-                if (name.matches(Regex("\\d+:\\d{2}(?::\\d{2})?"))) duration = name.split(':').fold(0L) { v, part -> v * 60 + part.toLong() } * 1000
+                name.split(Regex("\\s*[•·]\\s*")).firstOrNull {
+                    it.matches(Regex("\\d+:\\d{2}(?::\\d{2})?"))
+                }?.let { time -> duration = time.split(':').fold(0L) { v, part -> v * 60 + part.toLong() } * 1000 }
+            }
+            // Mobile WEB_REMIX responses can contain plain metadata text and
+            // expose album/artist links only in the row's own typed actions.
+            // Never use a menu watch endpoint as proof of official audio.
+            if (artists.isEmpty() || albumId.isBlank()) {
+                val actions = mutableListOf<JSONObject>()
+                objects(row.optJSONObject("menu"), "menuNavigationItemRenderer", actions)
+                fun actionId(icon: String, page: String): String = actions.firstNotNullOfOrNull { action ->
+                    val endpoint = action.optJSONObject("navigationEndpoint")?.optJSONObject("browseEndpoint")
+                    if (action.optJSONObject("icon")?.optString("iconType") == icon && endpoint
+                        ?.optJSONObject("browseEndpointContextSupportedConfigs")?.optJSONObject("browseEndpointContextMusicConfig")
+                        ?.optString("pageType") == page) endpoint.optString("browseId").takeIf { it.isNotBlank() } else null
+                }.orEmpty()
+                val segments = (0 until runs(1).length()).joinToString("") { runs(1).optJSONObject(it)?.optString("text").orEmpty() }
+                    .split(Regex("\\s*[•·]\\s*")).map { it.trim() }
+                if (artists.isEmpty()) {
+                    val id = actionId("ARTIST", "MUSIC_PAGE_TYPE_ARTIST")
+                    if (id.startsWith("UC") && segments.firstOrNull()?.isNotBlank() == true) {
+                        artistId = id
+                        artists += segments.first()
+                    }
+                }
+                if (albumId.isBlank()) {
+                    val id = actionId("ALBUM", "MUSIC_PAGE_TYPE_ALBUM")
+                    if (id.startsWith("MPRE") && segments.getOrNull(1)?.isNotBlank() == true) {
+                        albumId = id
+                        album = segments[1]
+                    }
+                }
             }
             // Les « type beats », instrumentales et reprises ne font pas partie
             // du catalogue officiel de l'artiste même s'ils ont une page album.

@@ -54,6 +54,12 @@ object AppUi {
 
     /** Lecteur plein écran ouvert */
     val showPlayer = androidx.compose.runtime.mutableStateOf(false)
+    val showPublisher = androidx.compose.runtime.mutableStateOf(false)
+    val publisherTrack = androidx.compose.runtime.mutableStateOf<com.ketvoice.app.data.Track?>(null)
+    fun openPublisher(track: com.ketvoice.app.data.Track? = null) {
+        publisherTrack.value = track
+        showPublisher.value = true
+    }
 
     /** Vol de pochette entre le mini-lecteur et le lecteur plein écran. */
     data class CoverFlight(

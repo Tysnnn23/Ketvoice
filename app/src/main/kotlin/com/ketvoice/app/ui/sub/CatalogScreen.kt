@@ -3,8 +3,10 @@ package com.ketvoice.app.ui.sub
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.MoreVert
@@ -22,6 +24,7 @@ import com.ketvoice.app.data.*
 import com.ketvoice.app.player.Player
 import com.ketvoice.app.theme.LocalTheme
 import com.ketvoice.app.ui.AppUi
+import com.ketvoice.app.ui.adaptive.LocalAdaptiveLayout
 import com.ketvoice.app.ui.common.Cover
 import com.ketvoice.app.ui.player.formatSecs
 
@@ -66,8 +69,10 @@ fun CatalogScreen() {
         } else if (tracks.isEmpty()) Column(Modifier.padding(24.dp)) {
             Text(if (request.kind in listOf("album", "genre")) "Ce catalogue est temporairement indisponible." else "Aucun titre dans cette collection.", color = theme.secondary)
             if (request.kind in listOf("album", "genre")) Text("Réessayer", color = theme.accent, modifier = Modifier.clickable { attempt++ }.padding(vertical = 16.dp))
-        } else LazyColumn(contentPadding = PaddingValues(bottom = 205.dp)) {
-            if (page?.cover != null) item {
+        } else LazyVerticalGrid(
+            columns = if (LocalAdaptiveLayout.current.hasRail) GridCells.Adaptive(400.dp) else GridCells.Fixed(1),
+            contentPadding = PaddingValues(bottom = LocalAdaptiveLayout.current.bottomPaddingDp.dp)) {
+            if (page?.cover != null) item(span = { GridItemSpan(maxLineSpan) }) {
                 Row(Modifier.padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
                     Cover(page!!.title, page!!.cover, 100.dp, 12.dp)
                     Text(page!!.subtitle, color = theme.secondary, modifier = Modifier.padding(16.dp))

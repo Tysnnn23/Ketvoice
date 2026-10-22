@@ -39,7 +39,8 @@ fun AccountDialog(modifier: Modifier = Modifier) {
     var cookieOpen by remember { mutableStateOf(false) }
     BackHandler { AppUi.showAccount.value = false }
     Box(modifier.fillMaxSize().background(Color.Black.copy(alpha = .45f)).clickable { AppUi.showAccount.value = false }) {
-        Column(Modifier.padding(18.dp).padding(top = 82.dp).clip(RoundedCornerShape(26.dp)).background(theme.card)
+        Column(Modifier.align(androidx.compose.ui.Alignment.TopCenter).widthIn(max = 560.dp)
+            .padding(18.dp).padding(top = 82.dp).clip(RoundedCornerShape(26.dp)).background(theme.card)
             .clickable(enabled = false) {}.padding(22.dp)
             .verticalScroll(rememberScrollState())) {
             Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {

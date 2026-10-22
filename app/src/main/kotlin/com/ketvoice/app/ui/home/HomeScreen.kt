@@ -30,6 +30,7 @@ import com.ketvoice.app.data.*
 import com.ketvoice.app.player.Player
 import com.ketvoice.app.theme.LocalTheme
 import com.ketvoice.app.ui.AppUi
+import com.ketvoice.app.ui.adaptive.LocalAdaptiveLayout
 import com.ketvoice.app.ui.common.AccountAvatar
 import com.ketvoice.app.ui.common.Cover
 import com.ketvoice.app.ui.player.PlayerSheetScrim
@@ -48,7 +49,8 @@ fun HomeScreen() {
     val youtube by YouTubeMusicSession.profile.collectAsState()
     val player by Player.state.collectAsState()
     var grid by remember { mutableStateOf(false) }
-    val pageWidth = (LocalConfiguration.current.screenWidthDp - 38).dp
+    val layout = LocalAdaptiveLayout.current
+    val pageWidth = layout.recentPageWidthDp.dp
     LaunchedEffect(Unit) { HomeFeed.start(context) }
     LaunchedEffect(recent) { ArtworkRepo.enrich(recent.take(20)) }
     LaunchedEffect(state) {
@@ -56,16 +58,18 @@ fun HomeScreen() {
     }
     Box(Modifier.fillMaxSize().background(theme.background)) {
         LazyColumn(state = state, modifier = Modifier.fillMaxSize().statusBarsPadding(),
-            contentPadding = PaddingValues(top = 12.dp, bottom = 205.dp)) {
+            contentPadding = PaddingValues(top = if (layout.hasRail) 24.dp else 12.dp, bottom = layout.bottomPaddingDp.dp)) {
             item {
-                Box(Modifier.fillMaxWidth().padding(horizontal = 18.dp)) {
-                    AccountAvatar("K", 36.dp, Modifier.align(Alignment.TopEnd).clickable { AppUi.showAccount.value = true })
+                if (!layout.hasRail) {
+                    Box(Modifier.fillMaxWidth().padding(horizontal = 18.dp)) {
+                        AccountAvatar("K", 36.dp, Modifier.align(Alignment.TopEnd).clickable { AppUi.showAccount.value = true })
+                    }
                 }
                 Column(Modifier.padding(horizontal = 18.dp)) {
                     Image(painterResource(R.drawable.logo_clean), "Ketvoice",
                         Modifier.height(48.dp).width(48.dp), contentScale = ContentScale.Fit)
-                    Text("Écouter maintenant", color = theme.onBackground, fontSize = 30.sp, fontWeight = FontWeight.Black,
-                        letterSpacing = (-1).sp, maxLines = 1, modifier = Modifier.padding(top = 14.dp))
+                    Text("Écouter maintenant", color = theme.onBackground, fontSize = if (layout.hasRail) 40.sp else 30.sp, fontWeight = FontWeight.Black,
+                        letterSpacing = (-1).sp, maxLines = 2, modifier = Modifier.padding(top = 14.dp))
                     Text(if (youtube.connected) "$origin · ${youtube.name}" else origin,
                         color = theme.secondary, fontSize = 12.sp, maxLines = 1,
                         overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 3.dp, bottom = 22.dp))

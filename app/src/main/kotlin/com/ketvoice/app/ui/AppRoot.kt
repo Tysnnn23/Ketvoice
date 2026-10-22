@@ -47,6 +47,9 @@ import com.ketvoice.app.theme.LocalTheme
 import com.ketvoice.app.ui.account.AccountDialog
 import com.ketvoice.app.ui.chrome.GlassBottomBar
 import com.ketvoice.app.ui.chrome.MiniPlayerPill
+import com.ketvoice.app.ui.chrome.TabletNavigationRail
+import com.ketvoice.app.ui.adaptive.AdaptiveLayout
+import com.ketvoice.app.ui.adaptive.LocalAdaptiveLayout
 import com.ketvoice.app.ui.explorer.ExplorerScreen
 import com.ketvoice.app.ui.home.HomeScreen
 import com.ketvoice.app.ui.library.LibraryScreen
@@ -86,6 +89,10 @@ fun AppRoot() {
         val backdrop = rememberGlassBackdrop(th.background)
         val playerState by Player.state.collectAsState()
         val artwork by ArtworkRepo.covers.collectAsState()
+        // Un clavier ouvert masque le chrome flottant : sinon le mini-lecteur
+        // et la barre d'onglets se dessinent au-dessus des résultats.
+        val density = LocalDensity.current
+        val imeVisible = WindowInsets.ime.getBottom(density) > 0
         var wasPlayerVisible by remember { mutableStateOf(AppUi.showPlayer.value) }
 
         // Ouvre/ferme le lecteur : une copie de la pochette vole entre la
@@ -126,7 +133,16 @@ fun AppRoot() {
             }
         }
 
-        CompositionLocalProvider(LocalBackdropLayer provides backdrop) {
+        BoxWithConstraints(Modifier.fillMaxSize()) {
+        val layout = AdaptiveLayout(maxWidth.value, maxHeight.value)
+        val queueOverlay = AppUi.overlay.value == AppUi.QUEUE
+        val pageMaxWidth = when (AppUi.overlay.value) {
+            AppUi.QUEUE -> maxWidth
+            AppUi.SETTINGS, AppUi.SOURCES -> 840.dp
+            AppUi.SEARCH, AppUi.CATALOG, AppUi.DOWNLOADS -> 1060.dp
+            else -> 1280.dp
+        }
+        CompositionLocalProvider(LocalBackdropLayer provides backdrop, LocalAdaptiveLayout provides layout) {
             Box(Modifier.fillMaxSize()) {
                 // ---- Contenu principal : capturé par le backdrop, animé à chaque page ----
                 Box(
@@ -135,6 +151,9 @@ fun AppRoot() {
                         .background(th.background)
                         .layerBackdrop(backdrop)
                 ) {
+                    Box(Modifier.fillMaxSize().padding(start = if (queueOverlay) 0.dp else layout.railWidthDp.dp), contentAlignment = Alignment.TopCenter) {
+                    Box(Modifier.widthIn(max = pageMaxWidth).fillMaxSize()
+                        .padding(horizontal = if (layout.hasRail && !queueOverlay) 16.dp else 0.dp)) {
                     AnimatedContent(
                         targetState = AppUi.tab.value to AppUi.overlay.value,
                         contentAlignment = Alignment.Center,
@@ -165,23 +184,37 @@ fun AppRoot() {
                             }
                         }
                     }
+                    }
+                    }
+                }
+
+                if (layout.hasRail && AppUi.overlay.value != AppUi.QUEUE) {
+                    TabletNavigationRail(Modifier.width(layout.railWidthDp.dp).align(Alignment.CenterStart).zIndex(3f))
                 }
 
                 // ---- Chrome flottant en verre ----
                 AnimatedVisibility(
                     visible = AppUi.overlay.value != AppUi.SETTINGS &&
                         AppUi.overlay.value != AppUi.QUEUE &&
-                        !AppUi.showPlayer.value,
+                        !AppUi.showPlayer.value &&
+                        !imeVisible,
                     enter = fadeIn(tween(220)) + slideInVertically(tween(220)) { it / 3 },
                     exit = fadeOut(tween(220)) + slideOutVertically(tween(220)) { it / 3 },
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
+                        .padding(start = layout.railWidthDp.dp)
+                        .fillMaxWidth()
                         .zIndex(3f)
                 ) {
-                    Column(Modifier.imePadding().navigationBarsPadding().padding(bottom = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Column(Modifier.widthIn(max = if (layout.hasRail) 640.dp else 560.dp).fillMaxWidth()
+                        .imePadding().navigationBarsPadding().padding(bottom = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         MiniPlayerPill(onOpen = { AppUi.showPlayer.value = true })
-                        Spacer(Modifier.height(10.dp))
-                        GlassBottomBar(collapsed = AppUi.bottomCollapsed.value && AppUi.overlay.value == AppUi.NONE)
+                        if (!layout.hasRail) {
+                            Spacer(Modifier.height(10.dp))
+                            GlassBottomBar(collapsed = AppUi.bottomCollapsed.value && AppUi.overlay.value == AppUi.NONE)
+                        }
+                    }
                     }
                 }
 
@@ -221,7 +254,15 @@ fun AppRoot() {
                 if (AppUi.showAccount.value) {
                     AccountDialog(Modifier.zIndex(8f))
                 }
+                if (AppUi.showPublisher.value) {
+                    Box(Modifier.fillMaxSize().zIndex(9f)) {
+                        com.ketvoice.app.ui.settings.PublisherScreen(AppUi.publisherTrack.value) {
+                            AppUi.showPublisher.value = false
+                        }
+                    }
+                }
             }
+        }
         }
     }
 }

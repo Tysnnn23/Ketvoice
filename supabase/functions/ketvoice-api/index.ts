@@ -573,7 +573,7 @@ async function health(): Promise<Response> {
   return json({
     ok: true,
     name: "Ketvoice API",
-    version: "2.5.0",
+    version: "2.6.0",
     backend: "Supabase Edge Function",
     secrets: {
       spotify: !!spDc,

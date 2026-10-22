@@ -90,6 +90,7 @@ fun SettingsScreen() {
     var choice by remember { mutableStateOf<ChoiceSpec?>(null) }
     val settingsScope = rememberCoroutineScope()
     val youtube by YouTubeMusicSession.profile.collectAsState()
+    val publisher by com.ketvoice.app.data.PublisherSession.allowed.collectAsState()
     val customSources by CustomSources.sources.collectAsState()
 
     Column(
@@ -152,6 +153,30 @@ fun SettingsScreen() {
                     AppSettings.personalizedYouTubeHome.value = it
                     SettingsStore.save()
                     if (it && youtube.connected) HomeFeed.refreshYouTube() else if (!it) HomeFeed.clearPersonalized()
+                }
+            }
+
+            if (publisher || (youtube.connected && com.ketvoice.app.data.PublisherAccess.matches(youtube.email))) {
+                Section("PUBLICATIONS KETVOICE API") {
+                    if (!publisher) {
+                        SRow(Icons.Filled.CloudDownload, "Vérifier mon accès",
+                            sub = "Confirmez votre adresse par un lien de connexion à usage unique", value = "") {
+                            AppUi.openPublisher()
+                        }
+                    } else {
+                        SRow(Icons.Filled.CloudDownload, "Importer un son",
+                            sub = "Publier un fichier audio, sa pochette et ses paroles pour tous", value = "") {
+                            AppUi.openPublisher()
+                        }
+                        SRow(Icons.Filled.Mic, "Importer des lyrics",
+                            sub = "Recherchez un titre puis ouvrez son menu ⋯ pour publier un TTML ou LRC", value = "") {
+                            AppUi.searchSeed.value = ""
+                            AppUi.overlay.value = AppUi.SEARCH
+                        }
+                        SRow(Icons.Filled.Person, "Déconnecter la publication", sub = "", value = "") {
+                            com.ketvoice.app.data.PublisherSession.signOut()
+                        }
+                    }
                 }
             }
 
@@ -486,7 +511,7 @@ fun SettingsScreen() {
                 SRow(
                     Icons.Filled.Image, "Version",
                     sub = "YouTube Music · Ketvoice API · canvas · paroles",
-                    value = "2.5.0"
+                    value = "2.6.0"
                 ) {}
             }
 

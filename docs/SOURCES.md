@@ -1,6 +1,6 @@
 # Custom JSON Sources
 
-Ketvoice 2.5.0 includes **Ketvoice API**, a built-in Supabase broker for music-source search, streams, and Spotify Canvas. It needs no user configuration and keeps its provider credentials on the server. The active built-in providers are Ultra MAX (`um`) and Last Babe (`last`). This document covers the optional custom JSON sources that can be added alongside them.
+Ketvoice 2.6.0 includes **Ketvoice API**, a built-in Supabase broker for music-source search, streams, and Spotify Canvas. It needs no user configuration and keeps its provider credentials on the server. The active built-in providers are Ultra MAX (`um`) and Last Babe (`last`). Search also returns songs published through Ketvoice Content. This document covers the optional custom JSON sources that can be added alongside them.
 
 Custom sources can be added from user-provided HTTPS manifests. Add a source in **Search → Sources** or **Settings → Sources personnalisées**. The URL must begin with `https://` and end with `.json`.
 
