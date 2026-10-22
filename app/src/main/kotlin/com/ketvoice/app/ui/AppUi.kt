@@ -56,8 +56,17 @@ object AppUi {
     val showPlayer = androidx.compose.runtime.mutableStateOf(false)
     val showPublisher = androidx.compose.runtime.mutableStateOf(false)
     val publisherTrack = androidx.compose.runtime.mutableStateOf<com.ketvoice.app.data.Track?>(null)
+    val publisherLink = androidx.compose.runtime.mutableStateOf<String?>(null)
     fun openPublisher(track: com.ketvoice.app.data.Track? = null) {
         publisherTrack.value = track
+        showPublisher.value = true
+    }
+    fun openPublisherLink(link: String) {
+        if (!showPublisher.value) publisherTrack.value = null
+        publisherLink.value = link
+        showPlayer.value = false
+        showAccount.value = false
+        trackMenuTrack.value = null
         showPublisher.value = true
     }
 

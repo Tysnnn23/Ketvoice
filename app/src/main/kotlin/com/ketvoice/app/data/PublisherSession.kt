@@ -26,16 +26,40 @@ object PublisherSession {
     }
 
     suspend fun sendLink() = withContext(Dispatchers.IO) {
-        PublicationApi.auth("/otp", JSONObject().put("email", PublisherAccess.EMAIL).put("create_user", true))
+        PublicationApi.auth("/otp?redirect_to=${java.net.URLEncoder.encode(PublisherAccess.REDIRECT_URL, "UTF-8")}",
+            JSONObject().put("email", PublisherAccess.EMAIL).put("create_user", false))
         Unit
     }
 
     suspend fun verify(input: String) = withContext(Dispatchers.IO) {
-        val link = PublisherAccess.verification(input)
-        val body = JSONObject().put(link.key, link.value).put("type", link.type)
-        if (link.type == "email") body.put("email", PublisherAccess.EMAIL)
-        val result = PublicationApi.auth("/verify", body)
-        mutex.withLock { accept(result) }
+        mutex.withLock {
+            val text = input.trim()
+            if (text.startsWith("ketvoice://", ignoreCase = true)) {
+                acceptRedirect(text)
+                return@withLock
+            }
+            val link = PublisherAccess.verification(text)
+            val body = JSONObject().put(link.key, link.value).put("type", link.type)
+            if (link.key == "token") body.put("email", PublisherAccess.EMAIL)
+            accept(PublicationApi.auth("/verify", body))
+        }
+    }
+
+    /**
+     * Supabase finishes the email link at ketvoice://auth and appends the
+     * session in the fragment. The server still checks the mailbox and the
+     * admin session before any publication is accepted.
+     */
+    private suspend fun acceptRedirect(url: String) {
+        val values = PublisherAccess.redirect(url)
+        require(values["error"].isNullOrBlank() && values["error_description"].isNullOrBlank()) {
+            "Lien expiré ou déjà utilisé. Demandez un nouveau lien."
+        }
+        require(!values["access_token"].isNullOrBlank() && values["token_type"] == "bearer") { "Lien invalide" }
+        val nextRefresh = values["refresh_token"]?.takeIf { it.isNotBlank() } ?: error("Lien invalide")
+        // Never trust identity or expiry supplied by an external Intent. Exchange
+        // the refresh token for a server-validated session, then check the broker.
+        accept(PublicationApi.auth("/token?grant_type=refresh_token", JSONObject().put("refresh_token", nextRefresh)))
     }
 
     private suspend fun accept(result: JSONObject) {

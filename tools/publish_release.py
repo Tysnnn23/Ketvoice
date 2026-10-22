@@ -17,16 +17,22 @@ import urllib.request
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 parser = argparse.ArgumentParser()
 parser.add_argument('--publish', action='store_true')
+parser.add_argument('--version', choices=['2.6.0', '2.6.1'], default='2.6.0')
 args = parser.parse_args()
-TAG = 'v2.6.0'
+VERSION = args.version
+TAG = 'v' + VERSION
 REPO = 'Tysnnn23/Ketvoice'
-STAGE = ROOT / 'release-assets/2.6.0'
+STAGE = ROOT / 'release-assets' / VERSION
 FILES = [
-    'Ketvoice-2.6.0.apk', 'SHA256SUMS.txt', 'RELEASE-NOTES.md', 'validation.json',
-    'tablet-navigation.png', 'tablet-search.png', 'tablet-player.png', 'tablet-settings.png',
-    'phone-search-songs.png',
+    f'Ketvoice-{VERSION}.apk', 'SHA256SUMS.txt', 'RELEASE-NOTES.md', 'validation.json',
 ]
-EXPECTED_APK = '8636778748a8c956db8b3fb3286d3bc5e07b743e0310d65cd2d1a1c32c8998d1'
+if VERSION == '2.6.0':
+    FILES += ['tablet-navigation.png', 'tablet-search.png', 'tablet-player.png',
+        'tablet-settings.png', 'phone-search-songs.png']
+EXPECTED_APK = {
+    '2.6.0': '8636778748a8c956db8b3fb3286d3bc5e07b743e0310d65cd2d1a1c32c8998d1',
+    '2.6.1': 'be3225dfbe3abb95f548741ed6eb7a1597612e2bb7b24fe306a88a0bf1736676',
+}[VERSION]
 
 def git(*argv):
     return subprocess.check_output(['git', *argv], cwd=ROOT).decode().strip()
@@ -69,7 +75,7 @@ if release and not release['draft']:
     raise SystemExit('Release already published; refusing to overwrite it.')
 if not release:
     release = api(f'/repos/{REPO}/releases', 'POST', {
-        'tag_name': TAG, 'target_commitish': commit, 'name': 'Ketvoice 2.6.0',
+        'tag_name': TAG, 'target_commitish': commit, 'name': 'Ketvoice ' + VERSION,
         'body': (STAGE / 'RELEASE-NOTES.md').read_text(encoding='utf-8'),
         'draft': True, 'prerelease': False,
     })

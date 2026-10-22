@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -33,6 +34,7 @@ import androidx.core.view.WindowCompat
 import com.ketvoice.app.player.Player
 import com.ketvoice.app.theme.KetvoiceTheme
 import com.ketvoice.app.ui.AppRoot
+import com.ketvoice.app.ui.AppUi
 import com.ketvoice.app.util.Crash
 
 class MainActivity : ComponentActivity() {
@@ -81,6 +83,34 @@ class MainActivity : ComponentActivity() {
                 CrashReportsDialog()
                 AppRoot()
             }
+        }
+        handleAuthIntent(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleAuthIntent(intent)
+    }
+
+    /**
+     * Email links either point at Supabase's /auth/v1/verify endpoint (the app
+     * can verify the token itself) or at ketvoice://auth (Supabase already
+     * verified it and appended the session). Both open the publisher screen;
+     * the server remains the only authority for publication rights.
+     */
+    private fun handleAuthIntent(intent: Intent?) {
+        if (intent?.action != Intent.ACTION_VIEW) return
+        val uri = intent.data ?: return
+        val supabaseLink = uri.scheme == "https" &&
+            uri.host == com.ketvoice.app.data.PublisherAccess.HOST &&
+            uri.path == "/auth/v1/verify"
+        val appLink = uri.scheme == "ketvoice" && uri.host == "auth"
+        if (supabaseLink || appLink) {
+            AppUi.openPublisherLink(uri.toString())
+            // Do not retain bearer credentials in the Activity's launch Intent
+            // or replay a one-use email link when the Activity is recreated.
+            intent.data = null
         }
     }
 

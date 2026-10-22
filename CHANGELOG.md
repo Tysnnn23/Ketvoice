@@ -7,6 +7,22 @@
 
 ---
 
+## 🔗 2.6.1 — PUBLISHER LOGIN RETURNS TO KETVOICE
+
+**Released:** 22 October 2026<br>
+**Version:** `2.6.1` (`versionCode` 14)<br>
+**Status:** Login hotfix; 2.6.0 and 2.5.0 remain unchanged
+
+- **Before:** opening the email link ended at localhost; pasting a standard Supabase link also used the wrong verification payload.
+- **After:** new email links return to `ketvoice://auth`, reopening the publisher screen in a cold or already-running app. The original email link is verified using `token_hash` when pasted manually.
+- Callback sessions are checked against Supabase and the publication broker; only the confirmed publisher mailbox can publish. No client-side permission bypass, SMTP credential, or paid subscription is added.
+- Numeric codes remain supported, but the selected delivery workflow is a direct email link, not a customized code-only email.
+- 61 JVM tests pass; lint has 0 errors; 17 mocked publication API checks and 5 emulator callback checks pass. The mailbox owner must still complete the real email-login test.
+
+See [2.6.1 notes](docs/releases/v2.6.1.md) for installation, checksums, and limitations. Request a **new** email link after installing.
+
+---
+
 ## 📱 2.6.0 — TABLETS, RICHER ARTIST SEARCH & PUBLIC PUBLICATIONS
 
 **Released:** 22 October 2026<br>

@@ -27,6 +27,8 @@ Public song/lyrics searches and streaming metadata go to the `ketvoice-content` 
 
 The authorized publisher signs in through Supabase Auth using a one-time email link or code. The app stores the resulting session; the refresh token is encrypted with Android Keystore. The function checks the Auth user’s confirmed email on every write and never trusts an email supplied by the client.
 
+From 2.6.1, the email link can return to the app through `ketvoice://auth`. Callback credentials are exchanged with Supabase for a validated session and checked by the publication broker; they are not copied into the on-screen entry field or retained in the Activity launch intent. The custom scheme is not a domain-verified Android App Link; choose only Ketvoice when Android offers an app choice.
+
 Audio files, optional cover art, lyrics, title, artist, album, and the rights confirmation are uploaded to the project’s public storage bucket and public tables. Published content is visible to every Ketvoice user and to anyone with its public media URL. The publisher’s email address is used for authorization but is not included in public track metadata. The YouTube session cookie is not sent to the publication service.
 
 Published content can be removed by the project owner through Supabase. Deleting local app data does not remove already published content.

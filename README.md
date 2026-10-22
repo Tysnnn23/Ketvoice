@@ -19,7 +19,7 @@
 
 Ketvoice is an independent Android music client whose visual language is inspired by Apple Music and iOS 26. French is the default interface language; Settings offers 11 languages across the app. It is not affiliated with Apple, YouTube, Spotify, BitChord, or any music provider.
 
-The current version is **2.6.0** (`versionCode` 13), for Android 12+ (`minSdk 31`, `targetSdk 36`). It adds an adaptive tablet interface, richer YouTube artist searches, and a restricted publishing workflow for public songs and lyrics.
+The current version is **2.6.1** (`versionCode` 14), for Android 12+ (`minSdk 31`, `targetSdk 36`). It fixes publisher email login by reopening Ketvoice instead of redirecting to localhost, on top of 2.6.0's tablet interface, richer artist searches, and public song/lyrics publishing.
 
 Music-source search, stream resolution, Spotify Canvas, and published-content lookup go through two Supabase Edge Functions: **Ketvoice API** for sources/Canvas and **Ketvoice Content** for public publications. The APK contains only the project’s public Supabase `anon` key and function URLs. Spotify and source credentials remain in Supabase Vault and are never shipped with the app.
 
@@ -102,6 +102,7 @@ Music-source search, stream resolution, Spotify Canvas, and published-content lo
 ### Public publications
 
 - Publishing is restricted to the verified **konnektsupport@gmail.com** mailbox. A matching YouTube profile only reveals the entry point; the content broker re-checks the Supabase Auth user and confirmed email on every write, so a forged client request cannot publish.
+- In **2.6.1**, request a new email link and open it on the same device: Supabase redirects to `ketvoice://auth` and Ketvoice checks your access automatically. The original email link can also be pasted into the app. Older localhost links should not be reused. See [publisher login release notes](docs/releases/v2.6.1.md) for mail-client and rate-limit caveats.
 - **Settings → Import a song** accepts MP3, M4A, AAC, FLAC, WAV, OGG, or Opus up to 25 MiB, an optional JPEG/PNG/WebP cover up to 4 MiB, and optional TTML/LRC lyrics up to 1 MiB.
 - **Track ⋯ → Import lyrics** searches normally, previews native TTML/LRC timing, and publishes a new public lyrics version without inventing timing.
 - Published songs are returned by normal search and by the Ketvoice API source, and can be played and downloaded like other tracks. Published lyrics add a selectable **Ketvoice API** provider. Auto mode may use that provider when it answers within a short window, then falls back to external providers.
@@ -247,7 +248,7 @@ See [SECURITY.md](SECURITY.md) and [PRIVACY.md](PRIVACY.md).
 
 ## Versioning and legacy builds
 
-**2.6.0** supersedes 2.5.0. The 2.5.0 release remains available and is not overwritten. Only the final new APK and its matching assets are distributed with 2.6.0. See [CHANGELOG.md](CHANGELOG.md) for the full release history.
+**2.6.1** supersedes 2.6.0. Both 2.6.0 and 2.5.0 remain available and are not overwritten. Only the final new APK and its matching assets are distributed with 2.6.1. See [CHANGELOG.md](CHANGELOG.md) for the full release history.
 
 Earlier development builds from **1.2.0 through 2.3.0** contained development-only Spotify session cookies and private add-on credentials in their default settings. Those binaries are intentionally not published. Version **2.3.1** was the first clean public APK. Version **2.4.0** moves the remaining source and Canvas credentials to Supabase Vault. The original **1.0.0** builds predate those credentials and are archived as-is in the legacy release; their help text contains one obsolete example add-on URL, but no session cookie or access token.
 

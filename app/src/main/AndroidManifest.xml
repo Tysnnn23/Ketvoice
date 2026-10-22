@@ -34,7 +34,27 @@
             android:launchMode="singleTask"
             android:windowSoftInputMode="adjustResize"
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|uiMode"
-            android:theme="@style/Theme.Ketvoice" />
+            android:theme="@style/Theme.Ketvoice">
+            <!-- A cliqué sur le lien Supabase : l'app vérifie le token elle-même. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="https"
+                    android:host="xodklrunqlzyeiqtovgx.supabase.co"
+                    android:pathPrefix="/auth/v1/verify" />
+            </intent-filter>
+            <!-- Supabase a vérifié le lien et renvoie la session à l'app. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="ketvoice"
+                    android:host="auth" />
+            </intent-filter>
+        </activity>
 
         <!-- Variantes d'icône : un alias actif à la fois (voir LauncherIcons). -->
         <activity-alias

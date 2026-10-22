@@ -495,7 +495,12 @@
   "Audio requis (25 Mo maximum)": "Audio required (25 MB maximum)",
   "Format audio non pris en charge": "Unsupported audio format",
   "Pochette trop volumineuse (4 Mo maximum)": "Cover too large (4 MB maximum)",
-  "Pochette JPEG, PNG ou WebP requise": "JPEG, PNG or WebP cover required"
+  "Pochette JPEG, PNG ou WebP requise": "JPEG, PNG or WebP cover required",
+  "Un lien de connexion à usage unique sera envoyé à cette adresse. Ouvrez-le depuis cet appareil pour vérifier automatiquement votre accès dans Ketvoice. Aucun cookie YouTube n'est envoyé au serveur de publication.": "A single-use login link will be sent to this address. Open it from this device to automatically check your access in Ketvoice. No YouTube cookies are sent to the publishing server.",
+  "Lien envoyé. Ouvrez-le depuis cet appareil pour revenir dans Ketvoice. Si besoin, collez-le ci-dessous.": "Link sent. Open it from this device to return to Ketvoice. If necessary, paste it below.",
+  "Lien reçu par email (ou code)": "Link received by email (or code)",
+  "Lien invalide": "Invalid link",
+  "Lien expiré ou déjà utilisé. Demandez un nouveau lien.": "Link expired or already used. Request a new link."
  },
  "hi": {
   "Accueil": "होम",
@@ -993,7 +998,12 @@
   "Audio requis (25 Mo maximum)": "ऑडियो आवश्यक (अधिकतम 25 एमबी)",
   "Format audio non pris en charge": "असमर्थित ऑडियो प्रारूप",
   "Pochette trop volumineuse (4 Mo maximum)": "कवर बहुत बड़ा (अधिकतम 4 एमबी)",
-  "Pochette JPEG, PNG ou WebP requise": "JPEG, PNG या WebP कवर आवश्यक है"
+  "Pochette JPEG, PNG ou WebP requise": "JPEG, PNG या WebP कवर आवश्यक है",
+  "Un lien de connexion à usage unique sera envoyé à cette adresse. Ouvrez-le depuis cet appareil pour vérifier automatiquement votre accès dans Ketvoice. Aucun cookie YouTube n'est envoyé au serveur de publication.": "इस पते पर एक एकल-उपयोग लॉगिन लिंक भेजा जाएगा। केटवॉइस में अपनी पहुंच की स्वचालित रूप से जांच करने के लिए इसे इस डिवाइस से खोलें। प्रकाशन सर्वर पर कोई YouTube कुकीज़ नहीं भेजी जाती हैं।",
+  "Lien envoyé. Ouvrez-le depuis cet appareil pour revenir dans Ketvoice. Si besoin, collez-le ci-dessous.": "लिंक भेजा गया. केटवॉइस पर लौटने के लिए इसे इस डिवाइस से खोलें। यदि आवश्यक हो तो इसे नीचे चिपकाएँ।",
+  "Lien reçu par email (ou code)": "ईमेल द्वारा प्राप्त लिंक (या कोड)",
+  "Lien invalide": "अमान्य लिंक",
+  "Lien expiré ou déjà utilisé. Demandez un nouveau lien.": "लिंक की समय सीमा समाप्त हो गई है या पहले से ही उपयोग किया जा चुका है. एक नये लिंक का अनुरोध करें."
  },
  "ja": {
   "Accueil": "ホーム",
@@ -1491,7 +1501,12 @@
   "Audio requis (25 Mo maximum)": "音声が必要 (最大 25 MB)",
   "Format audio non pris en charge": "サポートされていないオーディオ形式",
   "Pochette trop volumineuse (4 Mo maximum)": "カバーが大きすぎます (最大 4 MB)",
-  "Pochette JPEG, PNG ou WebP requise": "JPEG、PNG、または WebP のカバーが必要です"
+  "Pochette JPEG, PNG ou WebP requise": "JPEG、PNG、または WebP のカバーが必要です",
+  "Un lien de connexion à usage unique sera envoyé à cette adresse. Ouvrez-le depuis cet appareil pour vérifier automatiquement votre accès dans Ketvoice. Aucun cookie YouTube n'est envoyé au serveur de publication.": "1 回限りのログイン リンクがこのアドレスに送信されます。このデバイスから開くと、Ketvoice でのアクセスが自動的にチェックされます。 YouTube Cookie は公開サーバーに送信されません。",
+  "Lien envoyé. Ouvrez-le depuis cet appareil pour revenir dans Ketvoice. Si besoin, collez-le ci-dessous.": "リンクが送信されました。 Ketvoice に戻るには、このデバイスから開きます。必要に応じて、下に貼り付けます。",
+  "Lien reçu par email (ou code)": "電子メールで受信したリンク (またはコード)",
+  "Lien invalide": "無効なリンク",
+  "Lien expiré ou déjà utilisé. Demandez un nouveau lien.": "リンクの有効期限が切れているか、すでに使用されています。新しいリンクをリクエストします。"
  },
  "zh": {
   "Accueil": "首页",
@@ -1989,7 +2004,12 @@
   "Audio requis (25 Mo maximum)": "需要音频（最大 25 MB）",
   "Format audio non pris en charge": "不支持的音频格式",
   "Pochette trop volumineuse (4 Mo maximum)": "封面太大（最大 4 MB）",
-  "Pochette JPEG, PNG ou WebP requise": "需要 JPEG、PNG 或 WebP 封面"
+  "Pochette JPEG, PNG ou WebP requise": "需要 JPEG、PNG 或 WebP 封面",
+  "Un lien de connexion à usage unique sera envoyé à cette adresse. Ouvrez-le depuis cet appareil pour vérifier automatiquement votre accès dans Ketvoice. Aucun cookie YouTube n'est envoyé au serveur de publication.": "一次性登录链接将发送到该地址。从此设备打开它以自动检查您在 Ketvoice 中的访问权限。不会将 YouTube cookie 发送到发布服务器。",
+  "Lien envoyé. Ouvrez-le depuis cet appareil pour revenir dans Ketvoice. Si besoin, collez-le ci-dessous.": "链接已发送。从此设备打开它以返回 Ketvoice。如果需要的话，将其粘贴到下面。",
+  "Lien reçu par email (ou code)": "通过电子邮件（或代码）收到的链接",
+  "Lien invalide": "链接无效",
+  "Lien expiré ou déjà utilisé. Demandez un nouveau lien.": "链接已过期或已使用。请求新链接。"
  },
  "ru": {
   "Accueil": "Главная",
@@ -2487,7 +2507,12 @@
   "Audio requis (25 Mo maximum)": "Требуется аудио (максимум 25 МБ)",
   "Format audio non pris en charge": "Неподдерживаемый аудиоформат",
   "Pochette trop volumineuse (4 Mo maximum)": "Обложка слишком большая (максимум 4 МБ)",
-  "Pochette JPEG, PNG ou WebP requise": "Требуется обложка в формате JPEG, PNG или WebP."
+  "Pochette JPEG, PNG ou WebP requise": "Требуется обложка в формате JPEG, PNG или WebP.",
+  "Un lien de connexion à usage unique sera envoyé à cette adresse. Ouvrez-le depuis cet appareil pour vérifier automatiquement votre accès dans Ketvoice. Aucun cookie YouTube n'est envoyé au serveur de publication.": "На этот адрес будет отправлена ​​одноразовая ссылка для входа. Откройте его с этого устройства, чтобы автоматически проверить ваш доступ в Ketvoice. Никакие файлы cookie YouTube не отправляются на сервер публикации.",
+  "Lien envoyé. Ouvrez-le depuis cet appareil pour revenir dans Ketvoice. Si besoin, collez-le ci-dessous.": "Ссылка отправлена. Откройте его с этого устройства, чтобы вернуться в Ketvoice. Если необходимо, вставьте его ниже.",
+  "Lien reçu par email (ou code)": "Ссылка, полученная по электронной почте (или код)",
+  "Lien invalide": "Неверная ссылка",
+  "Lien expiré ou déjà utilisé. Demandez un nouveau lien.": "Срок действия ссылки истек или уже использован. Запросите новую ссылку."
  },
  "it": {
   "Accueil": "Home",
@@ -2985,7 +3010,12 @@
   "Audio requis (25 Mo maximum)": "Audio richiesto (massimo 25 MB)",
   "Format audio non pris en charge": "Formato audio non supportato",
   "Pochette trop volumineuse (4 Mo maximum)": "Copertina troppo grande (massimo 4 MB)",
-  "Pochette JPEG, PNG ou WebP requise": "È richiesta la copertina JPEG, PNG o WebP"
+  "Pochette JPEG, PNG ou WebP requise": "È richiesta la copertina JPEG, PNG o WebP",
+  "Un lien de connexion à usage unique sera envoyé à cette adresse. Ouvrez-le depuis cet appareil pour vérifier automatiquement votre accès dans Ketvoice. Aucun cookie YouTube n'est envoyé au serveur de publication.": "A questo indirizzo verrà inviato un collegamento di accesso monouso. Aprilo da questo dispositivo per verificare automaticamente il tuo accesso a Ketvoice. Nessun cookie di YouTube viene inviato al server di pubblicazione.",
+  "Lien envoyé. Ouvrez-le depuis cet appareil pour revenir dans Ketvoice. Si besoin, collez-le ci-dessous.": "Collegamento inviato. Aprilo da questo dispositivo per tornare a Ketvoice. Se necessario, incollalo qui sotto.",
+  "Lien reçu par email (ou code)": "Link ricevuto via email (o codice)",
+  "Lien invalide": "Collegamento non valido",
+  "Lien expiré ou déjà utilisé. Demandez un nouveau lien.": "Link scaduto o già utilizzato. Richiedi un nuovo collegamento."
  },
  "es": {
   "Accueil": "Inicio",
@@ -3483,7 +3513,12 @@
   "Audio requis (25 Mo maximum)": "Audio requerido (25 MB máximo)",
   "Format audio non pris en charge": "Formato de audio no compatible",
   "Pochette trop volumineuse (4 Mo maximum)": "Portada demasiado grande (4 MB como máximo)",
-  "Pochette JPEG, PNG ou WebP requise": "Se requiere portada JPEG, PNG o WebP"
+  "Pochette JPEG, PNG ou WebP requise": "Se requiere portada JPEG, PNG o WebP",
+  "Un lien de connexion à usage unique sera envoyé à cette adresse. Ouvrez-le depuis cet appareil pour vérifier automatiquement votre accès dans Ketvoice. Aucun cookie YouTube n'est envoyé au serveur de publication.": "Se enviará un enlace de inicio de sesión de un solo uso a esta dirección. Ábrelo desde este dispositivo para comprobar automáticamente tu acceso en Ketvoice. No se envían cookies de YouTube al servidor de publicación.",
+  "Lien envoyé. Ouvrez-le depuis cet appareil pour revenir dans Ketvoice. Si besoin, collez-le ci-dessous.": "Enlace enviado. Ábrelo desde este dispositivo para volver a Ketvoice. Si es necesario, pégalo a continuación.",
+  "Lien reçu par email (ou code)": "Enlace recibido por correo electrónico (o código)",
+  "Lien invalide": "Enlace no válido",
+  "Lien expiré ou déjà utilisé. Demandez un nouveau lien.": "Enlace caducado o ya utilizado. Solicite un nuevo enlace."
  },
  "de": {
   "Accueil": "Start",
@@ -3981,7 +4016,12 @@
   "Audio requis (25 Mo maximum)": "Audio erforderlich (maximal 25 MB)",
   "Format audio non pris en charge": "Nicht unterstütztes Audioformat",
   "Pochette trop volumineuse (4 Mo maximum)": "Cover zu groß (maximal 4 MB)",
-  "Pochette JPEG, PNG ou WebP requise": "JPEG-, PNG- oder WebP-Cover erforderlich"
+  "Pochette JPEG, PNG ou WebP requise": "JPEG-, PNG- oder WebP-Cover erforderlich",
+  "Un lien de connexion à usage unique sera envoyé à cette adresse. Ouvrez-le depuis cet appareil pour vérifier automatiquement votre accès dans Ketvoice. Aucun cookie YouTube n'est envoyé au serveur de publication.": "An diese Adresse wird ein einmaliger Login-Link gesendet. Öffnen Sie es von diesem Gerät aus, um Ihren Zugriff in Ketvoice automatisch zu überprüfen. Es werden keine YouTube-Cookies an den Veröffentlichungsserver gesendet.",
+  "Lien envoyé. Ouvrez-le depuis cet appareil pour revenir dans Ketvoice. Si besoin, collez-le ci-dessous.": "Link gesendet. Öffnen Sie es von diesem Gerät aus, um zu Ketvoice zurückzukehren. Fügen Sie es bei Bedarf unten ein.",
+  "Lien reçu par email (ou code)": "Link per E-Mail (oder Code) erhalten",
+  "Lien invalide": "Ungültiger Link",
+  "Lien expiré ou déjà utilisé. Demandez un nouveau lien.": "Link abgelaufen oder bereits verwendet. Fordern Sie einen neuen Link an."
  },
  "pt": {
   "Accueil": "Início",
@@ -4479,7 +4519,12 @@
   "Audio requis (25 Mo maximum)": "Áudio necessário (máximo de 25 MB)",
   "Format audio non pris en charge": "Formato de áudio não suportado",
   "Pochette trop volumineuse (4 Mo maximum)": "Capa muito grande (máximo de 4 MB)",
-  "Pochette JPEG, PNG ou WebP requise": "Capa JPEG, PNG ou WebP necessária"
+  "Pochette JPEG, PNG ou WebP requise": "Capa JPEG, PNG ou WebP necessária",
+  "Un lien de connexion à usage unique sera envoyé à cette adresse. Ouvrez-le depuis cet appareil pour vérifier automatiquement votre accès dans Ketvoice. Aucun cookie YouTube n'est envoyé au serveur de publication.": "Um link de login de uso único será enviado para este endereço. Abra-o neste dispositivo para verificar automaticamente seu acesso no Ketvoice. Nenhum cookie do YouTube é enviado ao servidor de publicação.",
+  "Lien envoyé. Ouvrez-le depuis cet appareil pour revenir dans Ketvoice. Si besoin, collez-le ci-dessous.": "Link enviado. Abra-o neste dispositivo para retornar ao Ketvoice. Se necessário, cole abaixo.",
+  "Lien reçu par email (ou code)": "Link recebido por e-mail (ou código)",
+  "Lien invalide": "Link inválido",
+  "Lien expiré ou déjà utilisé. Demandez un nouveau lien.": "O link expirou ou já está em uso. Solicite um novo link."
  },
  "ko": {
   "Accueil": "홈",
@@ -4977,6 +5022,11 @@
   "Audio requis (25 Mo maximum)": "오디오 필요(최대 25MB)",
   "Format audio non pris en charge": "지원되지 않는 오디오 형식",
   "Pochette trop volumineuse (4 Mo maximum)": "표지가 너무 큼(최대 4MB)",
-  "Pochette JPEG, PNG ou WebP requise": "JPEG, PNG 또는 WebP 표지 필요"
+  "Pochette JPEG, PNG ou WebP requise": "JPEG, PNG 또는 WebP 표지 필요",
+  "Un lien de connexion à usage unique sera envoyé à cette adresse. Ouvrez-le depuis cet appareil pour vérifier automatiquement votre accès dans Ketvoice. Aucun cookie YouTube n'est envoyé au serveur de publication.": "일회용 로그인 링크가 이 주소로 전송됩니다. Ketvoice에서 액세스를 자동으로 확인하려면 이 장치에서 엽니다. YouTube 쿠키는 게시 서버로 전송되지 않습니다.",
+  "Lien envoyé. Ouvrez-le depuis cet appareil pour revenir dans Ketvoice. Si besoin, collez-le ci-dessous.": "링크가 전송되었습니다. Ketvoice로 돌아가려면 이 기기에서 열어보세요. 필요한 경우 아래에 붙여넣으세요.",
+  "Lien reçu par email (ou code)": "이메일(또는 코드)로 받은 링크",
+  "Lien invalide": "잘못된 링크",
+  "Lien expiré ou déjà utilisé. Demandez un nouveau lien.": "링크가 만료되었거나 이미 사용되었습니다. 새 링크를 요청하세요."
  }
 }

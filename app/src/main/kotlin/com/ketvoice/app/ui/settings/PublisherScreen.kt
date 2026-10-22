@@ -27,11 +27,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ketvoice.app.data.*
 import com.ketvoice.app.player.Player
 import com.ketvoice.app.theme.LocalTheme
+import com.ketvoice.app.ui.AppUi
 import com.ketvoice.app.ui.common.Icon
 import com.ketvoice.app.ui.common.Text
 import kotlinx.coroutines.Dispatchers
@@ -86,6 +88,15 @@ fun PublisherScreen(target: Track?, onClose: () -> Unit) {
             try { block() }
             catch (failure: Exception) { error = failure.message?.take(250) ?: "Publication impossible" }
             finally { busy = false }
+        }
+    }
+    LaunchedEffect(AppUi.publisherLink.value, busy) {
+        if (busy) return@LaunchedEffect
+        val link = AppUi.publisherLink.value ?: return@LaunchedEffect
+        AppUi.publisherLink.value = null
+        operation {
+            PublisherSession.verify(link)
+            verification = ""
         }
     }
     suspend fun copy(uri: Uri, max: Long, extensions: Set<String>): File = withContext(Dispatchers.IO) {
@@ -151,12 +162,13 @@ fun PublisherScreen(target: Track?, onClose: () -> Unit) {
             if (!allowed) {
                 Text("Vérification du compte de publication", color = theme.onBackground, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 Text(PublisherAccess.EMAIL, localize = false, color = theme.accent)
-                Text("Un lien de connexion à usage unique sera envoyé à cette adresse. Aucun cookie YouTube n'est envoyé au serveur de publication.", color = theme.secondary)
+                Text("Un lien de connexion à usage unique sera envoyé à cette adresse. Ouvrez-le depuis cet appareil pour vérifier automatiquement votre accès dans Ketvoice. Aucun cookie YouTube n'est envoyé au serveur de publication.", color = theme.secondary)
                 PublishButton("Envoyer le lien de connexion", !busy) {
-                    operation { PublisherSession.sendLink(); info = "Lien envoyé. Copiez le lien reçu par email et collez-le ci-dessous sans l'ouvrir, ou saisissez son code." }
+                    operation { PublisherSession.sendLink(); info = "Lien envoyé. Ouvrez-le depuis cet appareil pour revenir dans Ketvoice. Si besoin, collez-le ci-dessous." }
                 }
-                OutlinedTextField(verification, { verification = it }, enabled = !busy, label = { Text("Code ou lien reçu par email") },
-                    modifier = Modifier.fillMaxWidth(), singleLine = true, visualTransformation = PasswordVisualTransformation(),
+                OutlinedTextField(verification, { verification = it }, enabled = !busy, label = { Text("Lien reçu par email (ou code)") },
+                    modifier = Modifier.fillMaxWidth(), singleLine = true,
+                    visualTransformation = if (verification.trim().all { it in '0'..'9' }) VisualTransformation.None else PasswordVisualTransformation(),
                     colors = fieldColors)
                 PublishButton("Vérifier mon accès", !busy && verification.isNotBlank()) {
                     operation { PublisherSession.verify(verification); verification = "" }

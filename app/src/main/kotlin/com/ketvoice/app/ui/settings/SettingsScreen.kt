@@ -511,7 +511,7 @@ fun SettingsScreen() {
                 SRow(
                     Icons.Filled.Image, "Version",
                     sub = "YouTube Music · Ketvoice API · canvas · paroles",
-                    value = "2.6.0"
+                    value = "2.6.1"
                 ) {}
             }
 
