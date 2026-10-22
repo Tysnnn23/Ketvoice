@@ -23,6 +23,7 @@ import com.ketvoice.app.ui.adaptive.LocalAdaptiveLayout
 import com.ketvoice.app.ui.common.AccountAvatar
 import com.ketvoice.app.ui.common.Icon
 import com.ketvoice.app.ui.common.Text
+import com.ketvoice.app.ui.quest.questPointer
 
 @Composable
 fun TabletNavigationRail(modifier: Modifier = Modifier) {
@@ -45,6 +46,7 @@ fun TabletNavigationRail(modifier: Modifier = Modifier) {
                     val selected = if (tab == -1) AppUi.overlay.value == AppUi.SEARCH
                         else AppUi.tab.value == tab && AppUi.overlay.value == AppUi.NONE
                     val itemModifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp))
+                        .questPointer()
                         .background(if (selected) theme.onBackground.copy(alpha = .12f) else androidx.compose.ui.graphics.Color.Transparent)
                         .clickable {
                             if (tab == -1) AppUi.overlay.value = AppUi.SEARCH else AppUi.selectTab(tab)
@@ -65,6 +67,7 @@ fun TabletNavigationRail(modifier: Modifier = Modifier) {
         Spacer(Modifier.weight(1f))
         Icon(Icons.Filled.Settings, "Réglages", tint = theme.secondary,
             modifier = Modifier.size(48.dp).clip(RoundedCornerShape(20.dp))
+                .questPointer()
                 .clickable { AppUi.overlay.value = AppUi.SETTINGS }.padding(12.dp))
     }
 }

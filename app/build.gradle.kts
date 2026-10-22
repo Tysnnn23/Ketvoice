@@ -12,9 +12,26 @@ android {
         applicationId = "com.ketvoice.app"
         minSdk = 31
         targetSdk = 36
-        versionCode = 14
-        versionName = "2.6.1"
+        versionCode = 15
+        versionName = "2.7.0"
         resourceConfigurations += listOf("fr", "en", "hi", "ja", "zh", "ru", "it", "es", "de", "pt", "ko")
+    }
+
+    flavorDimensions += "device"
+    productFlavors {
+        create("mobile") {
+            dimension = "device"
+            buildConfigField("boolean", "IS_QUEST", "false")
+        }
+        create("quest") {
+            dimension = "device"
+            minSdk = 32
+            targetSdk = 34
+            buildConfigField("boolean", "IS_QUEST", "true")
+            // Quest uses arm64; x86_64 permits the same panel build to be
+            // exercised on an Android emulator without shipping 32-bit ABIs.
+            ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
+        }
     }
 
     buildTypes {
@@ -32,6 +49,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     packaging {
         resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"

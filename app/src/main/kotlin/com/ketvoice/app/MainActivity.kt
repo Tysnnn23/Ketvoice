@@ -19,7 +19,8 @@ import androidx.compose.material3.AlertDialog
 import com.ketvoice.app.ui.common.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -30,7 +31,6 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.sp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.core.view.WindowCompat
 import com.ketvoice.app.player.Player
 import com.ketvoice.app.theme.KetvoiceTheme
 import com.ketvoice.app.ui.AppRoot
@@ -74,11 +74,14 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val view = LocalView.current
-            val dark = isSystemInDarkTheme()
-            SideEffect {
-                WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !dark
-                WindowCompat.getInsetsController(window, view).isAppearanceLightNavigationBars = !dark
+            val playback by Player.state.collectAsState()
+            val keepAwake = BuildConfig.IS_QUEST && com.ketvoice.app.data.AppSettings.questKeepAwake.value && playback.playWhenReady
+            DisposableEffect(view, keepAwake) {
+                view.keepScreenOn = keepAwake
+                onDispose { view.keepScreenOn = false }
             }
+            val dark = isSystemInDarkTheme()
+            // AppRoot owns bar contrast, including the always-dark player.
             KetvoiceTheme(dark) {
                 CrashReportsDialog()
                 AppRoot()

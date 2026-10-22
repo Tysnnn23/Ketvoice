@@ -17,6 +17,11 @@ ASSET = APP / 'src/main/assets/translations.json'
 SOURCE = APP / 'src/main/kotlin/com/ketvoice/app'
 CATALOG = json.loads(ASSET.read_text(encoding='utf-8'))
 MESSAGES = [
+    'QUEST · CONFORT',
+    'Garder la fenêtre éveillée', 'Pendant la lecture au premier plan uniquement',
+    'Taille des paroles', 'Lisibilité à distance dans le casque',
+    'Standard', 'Grand', 'Très grand', 'Minuterie', 'Pause dans {0} min',
+    'Annuler la minuterie', 'Ce casque', 'Lire', 'Pochette',
     "Un lien de connexion à usage unique sera envoyé à cette adresse. Ouvrez-le depuis cet appareil pour vérifier automatiquement votre accès dans Ketvoice. Aucun cookie YouTube n'est envoyé au serveur de publication.",
     'Lien envoyé. Ouvrez-le depuis cet appareil pour revenir dans Ketvoice. Si besoin, collez-le ci-dessous.',
     'Lien reçu par email (ou code)', 'Lien invalide',
@@ -87,6 +92,10 @@ for path in SOURCE.rglob('*.kt'):
             MESSAGES.append(message)
 
 REVIEWED = {
+    'Pause dans {0} min': ['Pause in {0} min', '{0} मिनट में रोकें', '{0}分後に一時停止', '{0} 分钟后暂停', 'Пауза через {0} мин', 'Pausa tra {0} min', 'Pausar en {0} min', 'Pause in {0} Min.', 'Pausar em {0} min', '{0}분 후 일시정지'],
+    'Ce casque': ['This headset', 'यह हेडसेट', 'このヘッドセット', '此头显', 'Эта гарнитура', 'Questo visore', 'Este visor', 'Dieses Headset', 'Este headset', '이 헤드셋'],
+    'Lire': ['Play', 'चलाएँ', '再生', '播放', 'Воспроизвести', 'Riproduci', 'Reproducir', 'Abspielen', 'Reproduzir', '재생'],
+    'Pochette': ['Artwork', 'एल्बम कवर', 'アートワーク', '封面', 'Обложка', 'Copertina', 'Carátula', 'Cover', 'Capa', '앨범 아트'],
     '{0} titres': ['{0} songs', '{0} गाने', '{0}曲', '{0} 首歌曲', '{0} треков', '{0} brani', '{0} canciones', '{0} Songs', '{0} músicas', '{0}곡'],
     '{0} titre': ['{0} song', '{0} गाना', '{0}曲', '{0} 首歌曲', '{0} трек', '{0} brano', '{0} canción', '{0} Song', '{0} música', '{0}곡'],
     'Lecture depuis {0}': ['Playing from {0}', '{0} से चल रहा है', '{0}から再生中', '正在播放 {0}', 'Воспроизведение: {0}', 'In riproduzione da {0}', 'Reproduciendo desde {0}', 'Wiedergabe von {0}', 'Reproduzindo de {0}', '{0}에서 재생'],
@@ -112,6 +121,9 @@ def translate(message, language):
             time.sleep(attempt + 1)
 
 for index, (language, table) in enumerate(CATALOG.items()):
+    # Removed prototype: keep the mobile player rather than a Quest dashboard.
+    for retired in ('Mode cinéma', 'Pochette et Canvas en grand, commandes toujours accessibles', 'KETVOICE · QUEST'):
+        table.pop(retired, None)
     for message in dict.fromkeys(MESSAGES):
         if message in REVIEWED:
             table[message] = REVIEWED[message][index]

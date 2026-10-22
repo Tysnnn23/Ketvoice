@@ -218,8 +218,10 @@ fun FullPlayerScreen(
                     val sceneEnd = if (expanded || wide) safeHeight - 12.dp else contentBottom
                     Box(Modifier.offset(y = sceneTop).height((sceneEnd - sceneTop).coerceAtLeast(80.dp)).width(sceneWidth)) {
                         if (page == PlayerPage.QUEUE) QueuePane(state, Modifier.fillMaxSize().padding(horizontal = if (wide) 18.dp else margin))
-                        else LyricsPane(track, expanded, onSource = { sheet = "sources" },
-                            modifier = Modifier.fillMaxSize().padding(horizontal = if (wide) 18.dp else margin * .8f))
+                         else LyricsPane(track, expanded, onSource = { sheet = "sources" },
+                            modifier = Modifier.fillMaxSize().padding(horizontal = if (wide) 18.dp else margin * .8f),
+                            fontScale = if (com.ketvoice.app.BuildConfig.IS_QUEST)
+                                com.ketvoice.app.ui.quest.QuestLayout.lyricsScale(AppSettings.questLyricsSize.value) else 1f)
                     }
                 }
 
@@ -249,7 +251,7 @@ fun FullPlayerScreen(
                             onOutput = { sheet = "audio" },
                             onProfile = { AppUi.showAccount.value = true },
                             onQueue = { navigate(PlayerPage.QUEUE) })
-                        Text("Ce téléphone", color = Color(0xFF777984), fontSize = 10.sp,
+                        Text(if (com.ketvoice.app.BuildConfig.IS_QUEST) "Ce casque" else "Ce téléphone", color = Color(0xFF777984), fontSize = 10.sp,
                             fontWeight = FontWeight.SemiBold, modifier = Modifier.align(Alignment.CenterHorizontally).padding(top = 18.dp, bottom = 19.dp))
                     }
                 }

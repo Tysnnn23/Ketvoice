@@ -131,6 +131,19 @@ fun SettingsScreen() {
             }
 
             // ==================================================== YOUTUBE MUSIC
+            if (com.ketvoice.app.BuildConfig.IS_QUEST) {
+                Section("QUEST · CONFORT") {
+                    SToggle(Icons.Filled.Brightness6, "Garder la fenêtre éveillée",
+                        "Pendant la lecture au premier plan uniquement",
+                        AppSettings.questKeepAwake.value) { AppSettings.questKeepAwake.value = it; SettingsStore.save() }
+                    SRow(Icons.Filled.Subtitles, "Taille des paroles",
+                        sub = "Lisibilité à distance dans le casque",
+                        value = listOf("Standard", "Grand", "Très grand")[AppSettings.questLyricsSize.value]) {
+                        AppSettings.questLyricsSize.value = (AppSettings.questLyricsSize.value + 1) % 3
+                        SettingsStore.save()
+                    }
+                }
+            }
             Section("YOUTUBE MUSIC") {
                 SRow(
                     Icons.Filled.PlayCircle, "Compte YouTube Music",
@@ -511,7 +524,7 @@ fun SettingsScreen() {
                 SRow(
                     Icons.Filled.Image, "Version",
                     sub = "YouTube Music · Ketvoice API · canvas · paroles",
-                    value = "2.6.1"
+                    value = com.ketvoice.app.BuildConfig.VERSION_NAME + if (com.ketvoice.app.BuildConfig.IS_QUEST) " · Quest" else ""
                 ) {}
             }
 

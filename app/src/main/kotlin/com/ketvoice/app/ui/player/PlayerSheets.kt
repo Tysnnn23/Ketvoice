@@ -6,10 +6,13 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.PlaylistAdd
@@ -20,6 +23,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -35,6 +40,7 @@ import com.ketvoice.app.data.Track
 import com.ketvoice.app.glass.GlassPanel
 import com.ketvoice.app.glass.GlassParams
 import com.ketvoice.app.player.Player
+import com.ketvoice.app.player.SleepTimer
 import com.ketvoice.app.theme.LocalTheme
 import com.ketvoice.app.theme.T
 import com.ketvoice.app.ui.common.Cover
@@ -61,6 +67,8 @@ fun TrackMenuSheet(track: Track, onClose: () -> Unit) {
         Column(
             Modifier
                 .fillMaxWidth()
+                .heightIn(max = 650.dp)
+                .verticalScroll(rememberScrollState())
                 .clickable(noRip, null) { }
         ) {
         Box(
@@ -133,6 +141,18 @@ fun TrackMenuSheet(track: Track, onClose: () -> Unit) {
             onClose()
             com.ketvoice.app.ui.AppUi.openPublisher(track)
         }
+        if (com.ketvoice.app.BuildConfig.IS_QUEST) {
+            val remaining by SleepTimer.remainingSeconds.collectAsState()
+            var timerOpen by remember { mutableStateOf(false) }
+            MenuItemRow(if (remaining > 0) "Pause dans ${(remaining + 59) / 60} min" else "Minuterie",
+                Icons.Filled.Bedtime) { timerOpen = !timerOpen }
+            if (timerOpen) listOf(15, 30, 60, 0).forEach { minutes ->
+                MenuItemRow(if (minutes == 0) "Annuler la minuterie" else "Pause dans $minutes min", Icons.Filled.Bedtime) {
+                    SleepTimer.set(minutes)
+                    onClose()
+                }
+            }
+        }
         Spacer(Modifier.height(10.dp))
         }
     }
@@ -189,7 +209,7 @@ fun AudioOutputSheet(onClose: () -> Unit) {
         )
 
         OutputCard(
-            title = "Ce téléphone",
+            title = if (com.ketvoice.app.BuildConfig.IS_QUEST) "Ce casque" else "Ce téléphone",
             sub = "Haut-parleur, écouteurs ou Bluetooth",
             icon = Icons.Filled.Smartphone,
             trailing = { Icon(Icons.Filled.Check, null, tint = LocalTheme.current.accent) },

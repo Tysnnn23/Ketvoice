@@ -7,6 +7,19 @@
 
 ---
 
+## 2.7.0 — MOBILE-STYLE QUEST WINDOW & MUSIC UPLOAD FIX
+
+**Released:** 22 October 2026 · **versionCode:** 15
+
+- Separate Quest 3/3S APK that reuses the mobile interface, player, gestures, floating navigation, Liquid Glass, and animations. No replacement Quest dashboard, oversized toolbar, tablet rail, or forced two-pane player.
+- Portrait window defaults and bounded phone-style content on wide windows. Optional lyric sizing/keep-awake in Settings and a sleep timer in the existing track menu.
+- Fixed music upload rollback caused by parsing an empty successful PostgREST 201 response after saving associated lyrics. Deployed server-side; existing clients benefit too. Server authorization and validation stay intact.
+- 66 JVM tests pass per flavor; both release builds and lint pass with 0 errors; 21 mocked broker checks pass. Signed Quest APK installation/UI/timer checks use an Android emulator. No physical Quest compatibility/FPS guarantee or real owner upload is claimed.
+
+See [2.7.0 notes](docs/releases/v2.7.0.md) and [Quest guide](docs/QUEST.md). Previous published releases are preserved.
+
+---
+
 ## 🔗 2.6.1 — PUBLISHER LOGIN RETURNS TO KETVOICE
 
 **Released:** 22 October 2026<br>

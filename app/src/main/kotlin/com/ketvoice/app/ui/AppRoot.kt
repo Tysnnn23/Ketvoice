@@ -134,9 +134,12 @@ fun AppRoot() {
         }
 
         BoxWithConstraints(Modifier.fillMaxSize()) {
-        val layout = AdaptiveLayout(maxWidth.value, maxHeight.value)
+        val quest = com.ketvoice.app.BuildConfig.IS_QUEST
+        val questLayout = com.ketvoice.app.ui.quest.QuestLayout(maxWidth.value, maxHeight.value)
+        val layout = AdaptiveLayout(if (quest) questLayout.contentWidthDp else maxWidth.value,
+            maxHeight.value, preferPhone = quest)
         val queueOverlay = AppUi.overlay.value == AppUi.QUEUE
-        val pageMaxWidth = when (AppUi.overlay.value) {
+        val pageMaxWidth = if (quest) questLayout.contentWidthDp.dp else when (AppUi.overlay.value) {
             AppUi.QUEUE -> maxWidth
             AppUi.SETTINGS, AppUi.SOURCES -> 840.dp
             AppUi.SEARCH, AppUi.CATALOG, AppUi.DOWNLOADS -> 1060.dp
@@ -236,7 +239,9 @@ fun AppRoot() {
                         .fillMaxSize()
                         .zIndex(6f)
                 ) {
-                    FullPlayerScreen(modifier = Modifier.fillMaxSize())
+                    if (quest) Box(Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
+                        FullPlayerScreen(modifier = Modifier.width(questLayout.playerWidthDp.dp).fillMaxHeight())
+                    } else FullPlayerScreen(modifier = Modifier.fillMaxSize())
                 }
 
                 // ---- Pochette qui vole entre le lecteur et le mini-lecteur ----

@@ -49,6 +49,8 @@ object SettingsStore {
         s.downloadQualityMode.value = p.getInt("downloadQualityMode", s.downloadQualityMode.value)
 
         s.highPerformanceMode.value = p.getBoolean("highPerformanceMode", s.highPerformanceMode.value)
+        s.questLyricsSize.value = p.getInt("questLyricsSize", 0).coerceIn(0, 2)
+        s.questKeepAwake.value = p.getBoolean("questKeepAwake", true)
         s.localMusicFolder.value = p.getString("localMusicFolder", s.localMusicFolder.value)
         s.filterNonAudio.value = p.getBoolean("filterNonAudio", s.filterNonAudio.value)
         s.cacheBytes.value = p.getLong("cacheBytes", s.cacheBytes.value)
@@ -114,6 +116,8 @@ object SettingsStore {
             .putInt("lyricsMode", s.lyricsMode.value)
             .putInt("downloadQualityMode", s.downloadQualityMode.value)
             .putBoolean("highPerformanceMode", s.highPerformanceMode.value)
+            .putInt("questLyricsSize", s.questLyricsSize.value)
+            .putBoolean("questKeepAwake", s.questKeepAwake.value)
             .putString("localMusicFolder", s.localMusicFolder.value)
             .putBoolean("filterNonAudio", s.filterNonAudio.value)
             .putLong("cacheBytes", s.cacheBytes.value)

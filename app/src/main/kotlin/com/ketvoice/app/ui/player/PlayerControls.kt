@@ -87,6 +87,7 @@ import com.ketvoice.app.data.ArtworkRepo
 import com.ketvoice.app.data.Track
 import com.ketvoice.app.player.Player
 import com.ketvoice.app.ui.common.gradientFor
+import com.ketvoice.app.ui.quest.questPointer
 import kotlinx.coroutines.launch
 import java.io.File
 import java.util.Locale
@@ -558,6 +559,7 @@ fun SmallCircleButton(
         Modifier
             .size(size)
             .clip(CircleShape)
+            .questPointer()
             .background(if (active) Color.White.copy(alpha = 0.26f) else if (transparent) Color.Transparent else Color.White.copy(alpha = 0.13f))
             .clickable(noRipple, null) { onClick() },
         contentAlignment = Alignment.Center

@@ -19,13 +19,19 @@
 
 Ketvoice is an independent Android music client whose visual language is inspired by Apple Music and iOS 26. French is the default interface language; Settings offers 11 languages across the app. It is not affiliated with Apple, YouTube, Spotify, BitChord, or any music provider.
 
-The current version is **2.6.1** (`versionCode` 14), for Android 12+ (`minSdk 31`, `targetSdk 36`). It fixes publisher email login by reopening Ketvoice instead of redirecting to localhost, on top of 2.6.0's tablet interface, richer artist searches, and public song/lyrics publishing.
+The current version is **2.7.0** (`versionCode` 15). The mobile APK supports Android 12+ (`minSdk 31`, `targetSdk 36`); a separate **Quest 3/3S window APK** (`minSdk 32`, `targetSdk 34`) preserves the original mobile interface. Music publishing with an optional lyrics sidecar is fixed server-side. See [2.7.0 release notes](docs/releases/v2.7.0.md).
 
 Music-source search, stream resolution, Spotify Canvas, and published-content lookup go through two Supabase Edge Functions: **Ketvoice API** for sources/Canvas and **Ketvoice Content** for public publications. The APK contains only the project’s public Supabase `anon` key and function URLs. Spotify and source credentials remain in Supabase Vault and are never shipped with the app.
 
 > The APK is debug-signed for personal installation and testing. It is not a Play Store release.
 
 ## Features
+
+### Quest 3 / Quest 3S window build
+
+- **The same mobile UI**, not a replacement dashboard: original player, artwork/Canvas, icon controls, Liquid Glass, floating navigation, and lyric animations. Wide Quest windows do not switch to the tablet rail/two-pane player.
+- Optional lyric sizing and foreground keep-awake; sleep timer in the ordinary track ⋯ menu.
+- Download **Ketvoice-2.7.0-Quest.apk** and follow [Quest installation instructions](docs/QUEST.md). Headset-targeted manifest and arm64 support are included; physical Quest hardware validation is still required. This is a 2D app window, not an immersive VR environment.
 
 ### Interface
 
@@ -150,25 +156,26 @@ No Spotify cookies, add-on tokens, private add-on endpoints, or Supabase service
 Set `ANDROID_HOME` (or create `local.properties` with `sdk.dir=...`) and run:
 
 ```bash
-./gradlew assembleDebug
+./gradlew assembleMobileDebug assembleQuestDebug
 ```
 
 The debug APK is written to:
 
 ```text
-app/build/outputs/apk/debug/app-debug.apk
+app/build/outputs/apk/mobile/debug/app-mobile-debug.apk
+app/build/outputs/apk/quest/debug/app-quest-debug.apk
 ```
 
 On Windows:
 
 ```powershell
-.\gradlew.bat assembleDebug
+.\gradlew.bat assembleMobileDebug assembleQuestDebug
 ```
 
 Run the JVM tests and lint with:
 
 ```bash
-./gradlew testDebugUnitTest lintDebug
+./gradlew testMobileDebugUnitTest testQuestDebugUnitTest lintMobileDebug lintQuestDebug
 ```
 
 ### Release signing
@@ -248,7 +255,7 @@ See [SECURITY.md](SECURITY.md) and [PRIVACY.md](PRIVACY.md).
 
 ## Versioning and legacy builds
 
-**2.6.1** supersedes 2.6.0. Both 2.6.0 and 2.5.0 remain available and are not overwritten. Only the final new APK and its matching assets are distributed with 2.6.1. See [CHANGELOG.md](CHANGELOG.md) for the full release history.
+**2.7.0** supersedes 2.6.1. The 2.6.1, 2.6.0, and 2.5.0 releases remain available and are not overwritten. Only the final mobile and Quest APKs and their matching assets are distributed with 2.7.0. See [CHANGELOG.md](CHANGELOG.md) for the full release history.
 
 Earlier development builds from **1.2.0 through 2.3.0** contained development-only Spotify session cookies and private add-on credentials in their default settings. Those binaries are intentionally not published. Version **2.3.1** was the first clean public APK. Version **2.4.0** moves the remaining source and Canvas credentials to Supabase Vault. The original **1.0.0** builds predate those credentials and are archived as-is in the legacy release; their help text contains one obsolete example add-on URL, but no session cookie or access token.
 

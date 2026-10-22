@@ -17,7 +17,7 @@ import urllib.request
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 parser = argparse.ArgumentParser()
 parser.add_argument('--publish', action='store_true')
-parser.add_argument('--version', choices=['2.6.0', '2.6.1'], default='2.6.0')
+parser.add_argument('--version', choices=['2.6.0', '2.6.1', '2.7.0'], default='2.6.0')
 args = parser.parse_args()
 VERSION = args.version
 TAG = 'v' + VERSION
@@ -29,9 +29,12 @@ FILES = [
 if VERSION == '2.6.0':
     FILES += ['tablet-navigation.png', 'tablet-search.png', 'tablet-player.png',
         'tablet-settings.png', 'phone-search-songs.png']
+if VERSION == '2.7.0':
+    FILES += ['Ketvoice-2.7.0-Quest.apk', 'quest-mobile-style.png']
 EXPECTED_APK = {
     '2.6.0': '8636778748a8c956db8b3fb3286d3bc5e07b743e0310d65cd2d1a1c32c8998d1',
     '2.6.1': 'be3225dfbe3abb95f548741ed6eb7a1597612e2bb7b24fe306a88a0bf1736676',
+    '2.7.0': '4fe2929308f5c6f74dbf6cc64f528ced959e035fd05ea323aff53f03408559bc',
 }[VERSION]
 
 def git(*argv):
@@ -47,6 +50,8 @@ for name in FILES:
         raise SystemExit('Missing release asset: ' + name)
 if hashlib.sha256((STAGE / FILES[0]).read_bytes()).hexdigest() != EXPECTED_APK:
     raise SystemExit('APK checksum does not match the validated binary.')
+if VERSION == '2.7.0' and hashlib.sha256((STAGE / 'Ketvoice-2.7.0-Quest.apk').read_bytes()).hexdigest() != '7dad32c00f26e7508869d683e9338aa9eb7a73f795e42c418f4d13c2a1a91db6':
+    raise SystemExit('Quest APK checksum does not match the validated binary.')
 
 token = os.environ.get('GITHUB_TOKEN', '')
 if not token:

@@ -51,6 +51,10 @@ object AppSettings {
     // PERFORMANCE
     val highPerformanceMode = mutableStateOf(false)
 
+    // Quest panel controls. These do not disable existing motion or glass.
+    val questLyricsSize = mutableStateOf(0) // 0 standard (same as mobile) | 1 large | 2 extra large
+    val questKeepAwake = mutableStateOf(true)
+
     // MUSIQUE LOCALE
     val localMusicFolder = mutableStateOf<String?>(null)
     val filterNonAudio = mutableStateOf(true)

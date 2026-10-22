@@ -67,7 +67,7 @@ import kotlin.math.abs
 /** Content only. The player owns the header, actions, sheets and transport. */
 @Composable
 internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
-                        modifier: Modifier = Modifier) {
+                        modifier: Modifier = Modifier, fontScale: Float = 1f) {
     val lyrics by LyricsRepo.state.collectAsState()
     // A StateFlow must be collected. Reading flow.value inside derivedStateOf
     // does not subscribe and was leaving both highlight and scroll frozen.
@@ -148,9 +148,9 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
                                     transformOrigin = TransformOrigin(0f, .5f)
                                 }
                             ) {
-                                if (current && line.words.isNotEmpty()) KaraokeLine(line, Modifier.fillMaxWidth())
+                                if (current && line.words.isNotEmpty()) KaraokeLine(line, Modifier.fillMaxWidth(), fontScale)
                                 else Text(line.text, localize = false, color = lineColor,
-                                    fontSize = 33.sp, lineHeight = 41.sp, letterSpacing = (-.3).sp,
+                                    fontSize = (33 * fontScale).sp, lineHeight = (41 * fontScale).sp, letterSpacing = (-.3).sp,
                                     fontWeight = FontWeight.Black, modifier = Modifier.fillMaxWidth().blur(lineBlur))
                                 AnimatedVisibility(
                                     visible = translationEnabled && translated[index] != null,
@@ -201,16 +201,16 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
 }
 
 @Composable
-private fun KaraokeLine(line: MusicApi.LyricLine, modifier: Modifier) {
+private fun KaraokeLine(line: MusicApi.LyricLine, modifier: Modifier, fontScale: Float = 1f) {
     var now by remember(line) { mutableLongStateOf(Player.currentPositionMs()) }
     LaunchedEffect(line) {
         while (true) { now = Player.currentPositionMs(); delay(16) }
     }
     var layout by remember(line.text) { mutableStateOf<TextLayoutResult?>(null) }
     Box(modifier) {
-        Text(line.text, localize = false, color = Color(0xFF9A99A0), fontSize = 33.sp, lineHeight = 41.sp, letterSpacing = (-.3).sp,
+        Text(line.text, localize = false, color = Color(0xFF9A99A0), fontSize = (33 * fontScale).sp, lineHeight = (41 * fontScale).sp, letterSpacing = (-.3).sp,
             fontWeight = FontWeight.Black, onTextLayout = { layout = it }, modifier = Modifier.fillMaxWidth())
-        Text(line.text, localize = false, color = Color.White, fontSize = 33.sp, lineHeight = 41.sp, letterSpacing = (-.3).sp,
+        Text(line.text, localize = false, color = Color.White, fontSize = (33 * fontScale).sp, lineHeight = (41 * fontScale).sp, letterSpacing = (-.3).sp,
             fontWeight = FontWeight.Black,
             style = androidx.compose.ui.text.TextStyle(shadow = Shadow(Color.White.copy(alpha = .28f), Offset.Zero, 5f)),
             modifier = Modifier.fillMaxWidth().drawWithContent {

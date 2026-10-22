@@ -497,6 +497,12 @@ object Player {
         }
     }
 
+    fun pause() {
+        desiredPlay = false
+        _state.value = _state.value.copy(playWhenReady = false)
+        controller?.pause()
+    }
+
     fun toggle() {
         val c = controller ?: return
         val state = _state.value

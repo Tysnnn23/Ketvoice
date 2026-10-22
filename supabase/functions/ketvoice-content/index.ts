@@ -16,8 +16,11 @@ async function api(path: string, init: RequestInit = {}): Promise<Response> {
 async function database(path: string, init: RequestInit = {}): Promise<Row[]> {
   const res = await api("/rest/v1/" + path, init);
   if (!res.ok) throw new HttpError(502,"Service de publication indisponible");
-  if (res.status === 204) return [];
-  return await res.json();
+  // INSERT with PostgREST's default return=minimal is 201 with no body,
+  // not necessarily 204. Parsing that empty body threw SyntaxError after
+  // audio/cover storage and rolled back a valid song with a lyric sidecar.
+  const text = await res.text();
+  return text.trim() ? JSON.parse(text) : [];
 }
 async function administrator(req: Request): Promise<string> {
   const token = req.headers.get("x-ketvoice-admin");
