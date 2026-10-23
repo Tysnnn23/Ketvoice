@@ -39,6 +39,7 @@ import com.ketvoice.app.ui.common.Icon
 import com.ketvoice.app.ui.common.Text
 import com.ketvoice.app.ui.quest.QuestLayout
 import com.kyant.backdrop.backdrops.layerBackdrop
+import com.ketvoice.app.ui.motion.Motion
 
 /** Original mobile controls, arranged for the Quest's landscape window.
  * Lyrics/queue never replace or hide the artwork and transport column. */
@@ -50,12 +51,11 @@ internal fun QuestLandscapePlayer(
 ) {
     val backdrop = rememberGlassBackdrop(Color.Black)
     val companion = page != PlayerPage.ARTWORK
-    val duration = if (AppSettings.reduceAnimations.value) 0 else 280
+    val duration = Motion.duration(280)
     CompositionLocalProvider(LocalBackdropLayer provides backdrop) {
         Box(Modifier.fillMaxSize().background(Color.Black).layerBackdrop(backdrop)) {
             // Bounded gradient rather than a second full-window blurred video.
-            Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(ambience.color, Color.Black))))
-            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .4f)))
+            PlayerSceneBackground(track, canvas, state.isPlaying, cover, ambience, simple = true)
             Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()
                 .padding(horizontal = 28.dp, vertical = 8.dp)) {
                 Row(Modifier.fillMaxWidth().height(44.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -72,9 +72,9 @@ internal fun QuestLandscapePlayer(
                             if (companion) (maxHeight - 296.dp).coerceAtLeast(96.dp) else maxHeight)
                         val artworkSize by animateDpAsState(targetSize, tween(duration), label = "quest-landscape-artwork")
                         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
-                            horizontalAlignment = Alignment.CenterHorizontally,
+                            horizontalAlignment = Alignment.Start,
                             verticalArrangement = if (companion) Arrangement.Top else Arrangement.Center) {
-                            ArtworkCanvas(track, canvas, state.isPlaying,
+                            ArtworkCanvas(track, if (panoramicCanvasActive(canvas)) null else canvas, state.isPlaying,
                                 Modifier.size(artworkSize).clip(RoundedCornerShape(24.dp))
                                     .semantics { contentDescription = AppText.t("Pochette") }
                                     .onGloballyPositioned { AppUi.playerCoverBounds.value = it.boundsInRoot() })

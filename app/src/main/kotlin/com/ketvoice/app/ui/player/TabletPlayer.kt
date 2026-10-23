@@ -35,6 +35,8 @@ import com.ketvoice.app.ui.adaptive.AdaptiveLayout
 import com.ketvoice.app.ui.common.Icon
 import com.ketvoice.app.ui.common.Text
 import com.kyant.backdrop.backdrops.layerBackdrop
+import com.ketvoice.app.ui.motion.Motion
+import androidx.compose.animation.core.tween
 
 /** A bounded artwork/control column alongside lyrics or queue on large windows. */
 @Composable
@@ -48,8 +50,7 @@ internal fun TabletPlayer(
         BoxWithConstraints(Modifier.fillMaxSize().background(Color.Black).layerBackdrop(backdrop)) {
             val layout = AdaptiveLayout(maxWidth.value, maxHeight.value)
             // Avoid blurring a full 4K texture behind a second video surface.
-            Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(ambience.color, Color.Black))))
-            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .52f)))
+            PlayerSceneBackground(track, canvas, state.isPlaying, cover, ambience, simple = true)
             Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()
                 .padding(horizontal = if (maxWidth >= 1000.dp) 40.dp else 24.dp)) {
                 Row(Modifier.fillMaxWidth().height(64.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -99,9 +100,9 @@ private fun NowPlayingColumn(
         val artworkSize = minOf(maxWidth, 420.dp, (availableHeight - 340.dp).coerceAtLeast(100.dp))
         val topSpace = ((availableHeight - artworkSize - 340.dp) / 2).coerceAtLeast(0.dp)
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally) {
+            horizontalAlignment = Alignment.Start) {
             Spacer(Modifier.height(topSpace))
-            ArtworkCanvas(track, canvas, state.isPlaying,
+            ArtworkCanvas(track, if (panoramicCanvasActive(canvas)) null else canvas, state.isPlaying,
                 Modifier.size(artworkSize).clip(RoundedCornerShape(24.dp))
                     .onGloballyPositioned { AppUi.playerCoverBounds.value = it.boundsInRoot() })
             Spacer(Modifier.height(24.dp))
@@ -138,7 +139,7 @@ private fun PlayerCompanionPane(
             }
         }
         Spacer(Modifier.height(18.dp))
-        AnimatedContent(page == PlayerPage.QUEUE, transitionSpec = { fadeIn().togetherWith(fadeOut()) },
+        AnimatedContent(page == PlayerPage.QUEUE, transitionSpec = { fadeIn(tween(Motion.duration())).togetherWith(fadeOut(tween(Motion.duration()))) },
             label = "tablet-companion", modifier = Modifier.weight(1f).fillMaxWidth()) { queue ->
             if (queue) QueuePane(state, Modifier.fillMaxSize())
             else LyricsPane(track, expanded = false, onSource = onSources, modifier = Modifier.fillMaxSize())

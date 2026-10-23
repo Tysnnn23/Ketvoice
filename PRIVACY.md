@@ -33,6 +33,14 @@ Audio files, optional cover art, lyrics, title, artist, album, and the rights co
 
 Published content can be removed by the project owner through Supabase. Deleting local app data does not remove already published content.
 
+### Optional local Wi-Fi handoff (2.8.0)
+
+Disabled by default. While enabled and the app is in the foreground, Ketvoice uses mDNS to advertise a temporary instance identifier, device label, protocol version and LAN port. Nearby devices on the same private IPv4 subnet can discover that announcement. Discovery is stopped when the app goes into the background or the option is disabled.
+
+After an explicit request, the recipient sees a confirmation dialog. Accepting permits a single playback handoff containing catalog track identifiers, title/artist/album, duration, position, playback flags and up to 50 queue entries. No account cookies/tokens, source configuration, local files or stream URLs are included. The recipient resolves online catalog media through its normal providers, which can require Internet access.
+
+Local messages use unencrypted HTTP. There is no cryptographic pairing or verified device identity: names are self-reported, and another network participant may observe metadata and position. Use this feature only on trusted private networks. Receiver approval protects against unattended requests, not network interception. Handoff protocol state is temporary and is not uploaded to a Ketvoice cloud service.
+
 ### Direct providers
 
 Interface translations ship inside the APK and do not make network requests. Optional **lyric translation** is a separate feature and may contact translation providers. Downloading a song also checks lyric providers and requests its Canvas if available, even when animated artwork is not displayed.

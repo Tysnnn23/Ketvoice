@@ -17,6 +17,8 @@ object AppSettings {
     val fullArtwork = mutableStateOf(false)
     val classicGradient = mutableStateOf(false)
     val animatedArtwork = mutableStateOf(true)
+    val panoramicCanvas = mutableStateOf(false)
+    val systemReduceMotion = mutableStateOf(false) // runtime only; never persisted
     val canvasWithMobileData = mutableStateOf(false)
     val artistSignatures = mutableStateOf(true)
     val syncedLyrics = mutableStateOf(true)
@@ -45,6 +47,9 @@ object AppSettings {
     val volumeNormalization = mutableStateOf(true)
     val automix = mutableStateOf(false)
     val skipSilence = mutableStateOf(false)
+    val equalizerEnabled = mutableStateOf(false)
+    val equalizerGains = mutableStateOf(listOf(0, 0, 0, 0, 0))
+    val wifiHandoffEnabled = mutableStateOf(false)
     val spatialAudio = mutableStateOf(false)
     val downloadQuality = mutableStateOf("~35MB par piste")
 
@@ -52,7 +57,8 @@ object AppSettings {
     val highPerformanceMode = mutableStateOf(false)
 
     // Quest panel controls. These do not disable existing motion or glass.
-    val questLyricsSize = mutableStateOf(0) // 0 standard (same as mobile) | 1 large | 2 extra large
+    val lyricsTextSize = mutableStateOf(0)
+    val questLyricsSize = lyricsTextSize // preserve existing callers/preferences
     val questKeepAwake = mutableStateOf(true)
 
     // MUSIQUE LOCALE

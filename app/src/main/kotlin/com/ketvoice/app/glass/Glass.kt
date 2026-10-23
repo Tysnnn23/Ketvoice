@@ -2,12 +2,16 @@ package com.ketvoice.app.glass
 
 import android.os.Build
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.unit.dp
 import com.ketvoice.app.data.AppSettings
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
@@ -54,13 +58,13 @@ data class GlassParams(
 ) {
     companion object {
         fun pill(blur: Float = 24f, dark: Boolean = false) =
-            GlassParams(cornerRadiusPx = 9999f, bevelPx = 30f, refractionPx = 30f, blurPx = blur, dark = dark)
+            GlassParams(cornerRadiusPx = 9999f, bevelPx = 24f, refractionPx = 18f, blurPx = blur, dark = dark)
 
         fun circle(blur: Float = 24f, dark: Boolean = false) =
-            GlassParams(cornerRadiusPx = 9999f, bevelPx = 20f, refractionPx = 34f, blurPx = blur, dark = dark)
+            GlassParams(cornerRadiusPx = 9999f, bevelPx = 18f, refractionPx = 18f, blurPx = blur, dark = dark)
 
         fun sheet(radiusPx: Float, dark: Boolean = false) =
-            GlassParams(cornerRadiusPx = radiusPx, bevelPx = 44f, refractionPx = 46f, blurPx = 34f, tintStrength = 0.20f, dark = dark)
+            GlassParams(cornerRadiusPx = radiusPx, bevelPx = 30f, refractionPx = 24f, blurPx = 28f, tintStrength = 0.16f, dark = dark)
     }
 }
 
@@ -78,16 +82,20 @@ fun GlassPanel(
 ) {
     val backdrop = LocalBackdropLayer.current
     val surface = if (params.dark) {
-        Color.Black.copy(alpha = 0.28f)
+        Color.Black.copy(alpha = 0.22f)
     } else {
-        Color.White.copy(alpha = 0.34f)
+        Color.White.copy(alpha = 0.25f)
     }
+    val rim = remember(params.dark) { Brush.linearGradient(listOf(
+        Color.White.copy(alpha = if (params.dark) .32f else .66f), Color.White.copy(alpha = .04f),
+        Color.White.copy(alpha = .14f))) }
+    val edge = if (enabled) Modifier.border(.7.dp, rim, shape) else Modifier
 
     if (backdrop != null && enabled && !AppSettings.reduceDynamicBlur.value &&
         !AppSettings.highPerformanceMode.value
     ) {
         Box(
-            modifier = modifier.drawBackdrop(
+            modifier = modifier.then(edge).drawBackdrop(
                 backdrop = backdrop,
                 shape = { shape },
                 effects = {
@@ -110,7 +118,7 @@ fun GlassPanel(
         }
     } else {
         // Verre désactivé ou backdrop absent : panneau translucide statique.
-        Box(modifier = modifier.background(surface, shape)) {
+        Box(modifier = modifier.then(edge).background(surface, shape)) {
             content()
         }
     }

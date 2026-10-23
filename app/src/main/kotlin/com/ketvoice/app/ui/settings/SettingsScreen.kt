@@ -136,12 +136,6 @@ fun SettingsScreen() {
                     SToggle(Icons.Filled.Brightness6, "Garder la fenêtre éveillée",
                         "Pendant la lecture au premier plan uniquement",
                         AppSettings.questKeepAwake.value) { AppSettings.questKeepAwake.value = it; SettingsStore.save() }
-                    SRow(Icons.Filled.Subtitles, "Taille des paroles",
-                        sub = "Lisibilité à distance dans le casque",
-                        value = listOf("Standard", "Grand", "Très grand")[AppSettings.questLyricsSize.value]) {
-                        AppSettings.questLyricsSize.value = (AppSettings.questLyricsSize.value + 1) % 3
-                        SettingsStore.save()
-                    }
                 }
             }
             Section("YOUTUBE MUSIC") {
@@ -222,6 +216,15 @@ fun SettingsScreen() {
 
             // ==================================================== APPARENCE
             Section("APPARENCE") {
+                SToggle(Icons.Filled.Videocam, "Canvas panoramique",
+                    "Optionnel : Canvas en fond assombri, pochette fixe pour éviter un double décodage",
+                    AppSettings.panoramicCanvas.value) { AppSettings.panoramicCanvas.value=it;SettingsStore.save() }
+                SToggle(Icons.Filled.Bolt, "Animations réduites", "Atténue les mouvements décoratifs, sans désactiver le karaoké",
+                    AppSettings.reduceAnimations.value) { AppSettings.reduceAnimations.value=it;SettingsStore.save() }
+                SRow(Icons.Filled.Subtitles, "Taille des paroles", sub="Lisibilité sans agrandir les boutons",
+                    value=listOf("Standard","Grand","Très grand")[AppSettings.lyricsTextSize.value]) {
+                    AppSettings.lyricsTextSize.value=(AppSettings.lyricsTextSize.value+1)%3;SettingsStore.save()
+                }
                 SRow(
                     Icons.Filled.DarkMode, "Thème",
                     sub = "S'applique immédiatement à toute l'app",
@@ -285,6 +288,8 @@ fun SettingsScreen() {
 
             // ==================================================== LECTURE
             Section("LECTURE") {
+                SRow(Icons.Filled.Tune, "Égaliseur", sub="Traitement réel de la session audio", value="") { AppUi.showEqualizer.value=true }
+                SRow(Icons.Filled.Wifi, "Transfert sur le même Wi-Fi", sub="Découverte locale et confirmation sur le destinataire", value="") { AppUi.showHandoff.value=true }
                 SRow(
                     Icons.Filled.Analytics, "Qualité en Wi-Fi",
                     sub = "Sans perte = FLAC, sinon MP3 rapide",

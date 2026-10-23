@@ -104,6 +104,8 @@ object AppUi {
         bottomCollapsed.value = false
     }
     val showAudioOutput = androidx.compose.runtime.mutableStateOf(false)
+    val showEqualizer = androidx.compose.runtime.mutableStateOf(false)
+    val showHandoff = androidx.compose.runtime.mutableStateOf(false)
 
     /** Sélecteur de source des paroles (feuille du lecteur) */
     val showLyricsSource = androidx.compose.runtime.mutableStateOf(false)

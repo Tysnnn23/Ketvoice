@@ -17,7 +17,7 @@ import urllib.request
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 parser = argparse.ArgumentParser()
 parser.add_argument('--publish', action='store_true')
-parser.add_argument('--version', choices=['2.6.0', '2.6.1', '2.7.0', '2.7.1'], default='2.6.0')
+parser.add_argument('--version', choices=['2.6.0', '2.6.1', '2.7.0', '2.7.1', '2.8.0'], default='2.6.0')
 args = parser.parse_args()
 VERSION = args.version
 TAG = 'v' + VERSION
@@ -34,12 +34,20 @@ if VERSION == '2.7.0':
 if VERSION == '2.7.1':
     FILES[0] = 'Ketvoice-2.7.1-Quest.apk'
     FILES += ['quest-landscape-lyrics.png', 'quest-landscape-queue.png']
+if VERSION == '2.8.0':
+    FILES += ['Ketvoice-2.8.0-Quest.apk', 'phone-player.png', 'phone-equalizer.png',
+        'quest-player.png', 'quest-equalizer.png', 'quest-wifi.png', 'quest-consent.png']
 EXPECTED_APK = {
     '2.6.0': '8636778748a8c956db8b3fb3286d3bc5e07b743e0310d65cd2d1a1c32c8998d1',
     '2.6.1': 'be3225dfbe3abb95f548741ed6eb7a1597612e2bb7b24fe306a88a0bf1736676',
     '2.7.0': '4fe2929308f5c6f74dbf6cc64f528ced959e035fd05ea323aff53f03408559bc',
     '2.7.1': '38bd77b76fe0be32413b5c4f3647a5a3c4c5b8b03774ca8d32e007033c7cb2cc',
+    '2.8.0': 'ab9d4d0bf350d44e835a7782afdf07151c3a7f72f53b4e5214d70c066e09d142',
 }[VERSION]
+QUEST_APK = {
+    '2.7.0': ('Ketvoice-2.7.0-Quest.apk', '7dad32c00f26e7508869d683e9338aa9eb7a73f795e42c418f4d13c2a1a91db6'),
+    '2.8.0': ('Ketvoice-2.8.0-Quest.apk', '1cd2ccb9adce8a787372da4a5e285382753b3baa4346458b10490587d7a961c6'),
+}.get(VERSION)
 
 def git(*argv):
     return subprocess.check_output(['git', *argv], cwd=ROOT).decode().strip()
@@ -54,7 +62,7 @@ for name in FILES:
         raise SystemExit('Missing release asset: ' + name)
 if hashlib.sha256((STAGE / FILES[0]).read_bytes()).hexdigest() != EXPECTED_APK:
     raise SystemExit('APK checksum does not match the validated binary.')
-if VERSION == '2.7.0' and hashlib.sha256((STAGE / 'Ketvoice-2.7.0-Quest.apk').read_bytes()).hexdigest() != '7dad32c00f26e7508869d683e9338aa9eb7a73f795e42c418f4d13c2a1a91db6':
+if QUEST_APK and hashlib.sha256((STAGE / QUEST_APK[0]).read_bytes()).hexdigest() != QUEST_APK[1]:
     raise SystemExit('Quest APK checksum does not match the validated binary.')
 
 token = os.environ.get('GITHUB_TOKEN', '')

@@ -28,6 +28,7 @@ object SettingsStore {
         s.fullArtwork.value = p.getBoolean("fullArtwork", s.fullArtwork.value)
         s.classicGradient.value = p.getBoolean("classicGradient", s.classicGradient.value)
         s.animatedArtwork.value = p.getBoolean("animatedArtwork", s.animatedArtwork.value)
+        s.panoramicCanvas.value = p.getBoolean("panoramicCanvas", false)
         s.canvasWithMobileData.value = p.getBoolean("canvasWithMobileData", s.canvasWithMobileData.value)
         s.artistSignatures.value = p.getBoolean("artistSignatures", s.artistSignatures.value)
         s.syncedLyrics.value = p.getBoolean("syncedLyrics", s.syncedLyrics.value)
@@ -45,11 +46,15 @@ object SettingsStore {
         s.wifiQuality.value = p.getString("wifiQuality", s.wifiQuality.value) ?: "Sans perte"
         s.mobileQuality.value = p.getString("mobileQuality", s.mobileQuality.value) ?: "Élevé"
         s.skipSilence.value = p.getBoolean("skipSilence", s.skipSilence.value)
+        s.equalizerEnabled.value = p.getBoolean("equalizerEnabled", false)
+        s.equalizerGains.value = com.ketvoice.app.player.EqualizerProfile.normalize(
+            p.getString("equalizerGains", "").orEmpty().split(',').mapNotNull { it.toIntOrNull() })
+        s.wifiHandoffEnabled.value = p.getBoolean("wifiHandoffEnabled", false)
         s.lyricsMode.value = p.getInt("lyricsMode", s.lyricsMode.value)
         s.downloadQualityMode.value = p.getInt("downloadQualityMode", s.downloadQualityMode.value)
 
         s.highPerformanceMode.value = p.getBoolean("highPerformanceMode", s.highPerformanceMode.value)
-        s.questLyricsSize.value = p.getInt("questLyricsSize", 0).coerceIn(0, 2)
+        s.lyricsTextSize.value = p.getInt("lyricsTextSize", p.getInt("questLyricsSize", 0)).coerceIn(0, 2)
         s.questKeepAwake.value = p.getBoolean("questKeepAwake", true)
         s.localMusicFolder.value = p.getString("localMusicFolder", s.localMusicFolder.value)
         s.filterNonAudio.value = p.getBoolean("filterNonAudio", s.filterNonAudio.value)
@@ -100,6 +105,8 @@ object SettingsStore {
             .putBoolean("fullArtwork", s.fullArtwork.value)
             .putBoolean("classicGradient", s.classicGradient.value)
             .putBoolean("animatedArtwork", s.animatedArtwork.value)
+            .putBoolean("panoramicCanvas", s.panoramicCanvas.value)
+            .putInt("lyricsTextSize", s.lyricsTextSize.value)
             .putBoolean("canvasWithMobileData", s.canvasWithMobileData.value)
             .putBoolean("artistSignatures", s.artistSignatures.value)
             .putBoolean("syncedLyrics", s.syncedLyrics.value)
@@ -113,6 +120,9 @@ object SettingsStore {
             .putString("wifiQuality", s.wifiQuality.value)
             .putString("mobileQuality", s.mobileQuality.value)
             .putBoolean("skipSilence", s.skipSilence.value)
+            .putBoolean("equalizerEnabled", s.equalizerEnabled.value)
+            .putString("equalizerGains", s.equalizerGains.value.joinToString(","))
+            .putBoolean("wifiHandoffEnabled", s.wifiHandoffEnabled.value)
             .putInt("lyricsMode", s.lyricsMode.value)
             .putInt("downloadQualityMode", s.downloadQualityMode.value)
             .putBoolean("highPerformanceMode", s.highPerformanceMode.value)

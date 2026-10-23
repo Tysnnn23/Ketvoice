@@ -17,6 +17,8 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.Smartphone
+import androidx.compose.material.icons.filled.Equalizer
+import androidx.compose.material.icons.filled.Wifi
 import com.ketvoice.app.ui.common.Icon
 import com.ketvoice.app.ui.common.Text
 import androidx.compose.runtime.Composable
@@ -239,6 +241,12 @@ fun AudioOutputSheet(onClose: () -> Unit) {
             fontSize = 12.sp,
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp)
         )
+        MenuItemRow("Égaliseur", Icons.Filled.Equalizer) {
+            onClose();com.ketvoice.app.ui.AppUi.showEqualizer.value=true
+        }
+        MenuItemRow("Transférer sur le même Wi-Fi", Icons.Filled.Wifi) {
+            onClose();com.ketvoice.app.ui.AppUi.showHandoff.value=true
+        }
         Spacer(Modifier.height(12.dp))
         }
     }

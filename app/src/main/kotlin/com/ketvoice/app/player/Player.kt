@@ -34,9 +34,11 @@ import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.async
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.selects.select
+import kotlinx.coroutines.flow.first
 
 data class PlayerUiState(
     val queue: List<Track> = listOf(),
+    val queueEntryIds: List<String> = emptyList(),
     val index: Int = -1,
     val isPlaying: Boolean = false,
     val positionMs: Long = 0L,
@@ -64,7 +66,8 @@ data class PlayerUiState(
 object Player {
 
     private var controller: MediaController? = null
-    private var pendingPlay: Triple<Track, List<Track>, Int?>? = null
+    private data class PendingPlay(val track: Track, val queue: List<Track>, val index: Int?, val position: Long, val playing: Boolean)
+    private var pendingPlay: PendingPlay? = null
     private var connected = false
     private var appContext: Context? = null
     private var generation = 0
@@ -82,6 +85,9 @@ object Player {
      *  et les paroles, pour éviter de recomposer toute la fenêtre à chaque tic. */
     private val _position = MutableStateFlow(0L)
     val positionMs: StateFlow<Long> = _position
+    private val _seekEpoch = MutableStateFlow(0L)
+    val seekEpoch: StateFlow<Long> = _seekEpoch
+    val playbackEpoch: Int get() = generation
 
     private val _state = MutableStateFlow(PlayerUiState())
     val state: StateFlow<PlayerUiState> = _state
@@ -129,6 +135,12 @@ object Player {
                 _state.value.current?.let { com.ketvoice.app.data.ListeningHistory.record(it) }
                 historyGeneration = generation
             }
+            if (isPlaying) _state.value.current?.let { track ->
+                if (recordedListens.add(track.id)) com.ketvoice.app.data.YouTubeMusicSession.recordListen(track)
+            }
+            positionNow()
+        }
+        override fun onPositionDiscontinuity(oldPosition: Player.PositionInfo, newPosition: Player.PositionInfo, reason: Int) {
             positionNow()
         }
 
@@ -171,7 +183,7 @@ object Player {
                 c.volume = 1f
                 pendingPlay?.let { pending ->
                     pendingPlay = null
-                    playTrack(pending.first, pending.second, pending.third)
+                    playTrack(pending.track, pending.queue, pending.index, pending.position, pending.playing)
                 }
             } catch (_: Exception) {
                 connected = false
@@ -220,15 +232,16 @@ object Player {
     }
 
     // ------------------------------------------------------------ Lecture
-    fun playTrack(track: Track, queue: List<Track> = listOf(track), startIndex: Int? = null) {
+    fun playTrack(track: Track, queue: List<Track> = listOf(track), startIndex: Int? = null,
+                  startPositionMs: Long = 0L, autoPlay: Boolean = true) {
         val c = controller ?: run {
-            pendingPlay = Triple(track, queue, startIndex)
+            pendingPlay = PendingPlay(track, queue, startIndex, startPositionMs, autoPlay)
             appContext?.let { if (!connected) connect(it) }
             return
         }
         resolutionJob?.cancel()
         resolving = true
-        desiredPlay = true
+        desiredPlay = autoPlay
         activeStream = null
         fallbackAttempts = 0
         c.pause()
@@ -262,9 +275,11 @@ object Player {
         val prev = _state.value
         _state.value = PlayerUiState(
             queue = initialQueue,
+            queueEntryIds = QueueEntryIds.reconcile(prev.queue.map { it.id }, prev.queueEntryIds, initialQueue.map { it.id }),
             index = idx,
             isPlaying = false,
-            playWhenReady = true,
+            playWhenReady = autoPlay,
+            positionMs = startPositionMs.coerceAtLeast(0),
             buffering = true,
             shuffle = prev.shuffle,
             repeatOne = prev.repeatOne,
@@ -272,7 +287,7 @@ object Player {
             quality = "Connexion…",
             durationMs = resolvedTrack.durationMs
         )
-        _position.value = 0L
+        _position.value = startPositionMs.coerceAtLeast(0)
 
         // Canvas + paroles démarrent sans attendre la résolution audio.
         scope.launch { CanvasRepo.resolve(resolvedTrack) }
@@ -283,17 +298,17 @@ object Player {
             val local = Downloader.itemFor(track.id)
             if (local != null) {
                 activeStream = null
-                startItem(c, resolvedTrack, local.file.toURI().toString(), 0L, desiredPlay)
+                startItem(c, resolvedTrack, local.file.toURI().toString(), startPositionMs.coerceAtLeast(0), desiredPlay)
                 _state.value = _state.value.copy(quality = "Téléchargé · ${local.format}")
                 return@launch
             }
 
             val cached = AudioCache.complete(track.id, wantsLossless())
-            fun start(stream: MusicApi.StreamInfo, position: Long = 0) {
+            fun start(stream: MusicApi.StreamInfo, position: Long = startPositionMs.coerceAtLeast(0)) {
                 val latest = _state.value.current ?: resolvedTrack
                 activeStream = stream
                 startItem(c, latest, stream.url, position, desiredPlay, AudioCache.key(track.id, stream))
-                _state.value = _state.value.copy(quality = label(stream), isPlaying = desiredPlay)
+                _state.value = _state.value.copy(quality = label(stream), isPlaying = c.isPlaying)
             }
             if (cached != null) {
                 start(cached)
@@ -389,7 +404,9 @@ object Player {
         val q = s.queue.toMutableList()
         val insertAt = (s.index + 1).coerceIn(0, q.size)
         q.add(insertAt, track)
-        _state.value = _state.value.copy(queue = q)
+        val keys = s.queueEntryIds.toMutableList()
+        keys.add(insertAt.coerceAtMost(keys.size), java.util.UUID.randomUUID().toString())
+        _state.value = _state.value.copy(queue = q, queueEntryIds = keys)
         appContext?.let {
             android.widget.Toast.makeText(
                 it, com.ketvoice.app.data.AppText.t("« ${track.title} » jouera ensuite"),
@@ -418,6 +435,7 @@ object Player {
         if (i !in s.queue.indices) return
         val q = s.queue.toMutableList()
         q.removeAt(i)
+        val keys = s.queueEntryIds.toMutableList().apply { if (i in indices) removeAt(i) }
         if (q.isEmpty()) {
             generation++
             resolutionJob?.cancel()
@@ -433,10 +451,12 @@ object Player {
         }
         if (i == s.index) {
             val nextIndex = i.coerceAtMost(q.lastIndex)
+            _state.value = s.copy(queue = q, queueEntryIds = keys, index = nextIndex)
             playTrack(q[nextIndex], q, nextIndex)
         } else {
             _state.value = s.copy(
                 queue = q,
+                queueEntryIds = keys,
                 index = if (i < s.index) (s.index - 1).coerceAtLeast(0) else s.index
             )
         }
@@ -449,13 +469,15 @@ object Player {
         val q = s.queue.toMutableList()
         val item = q.removeAt(from)
         q.add(to, item)
+        val keys = s.queueEntryIds.toMutableList()
+        if (from in keys.indices && to in keys.indices) keys.add(to, keys.removeAt(from))
         val newIndex = when {
             from == s.index -> to
             from < s.index && to >= s.index -> s.index - 1
             from > s.index && to <= s.index -> s.index + 1
             else -> s.index
         }
-        _state.value = s.copy(queue = q, index = newIndex)
+        _state.value = s.copy(queue = q, queueEntryIds = keys, index = newIndex)
     }
 
     fun setAutoplay(on: Boolean) {
@@ -491,10 +513,6 @@ object Player {
         c.playWhenReady = autoPlay
         resolving = false
         _state.value = _state.value.copy(playWhenReady = autoPlay, buffering = true)
-        // Une écoute réellement lancée peut être signalée à YouTube Music.
-        if (recordedListens.add(t.id)) {
-            com.ketvoice.app.data.YouTubeMusicSession.recordListen(t)
-        }
     }
 
     fun pause() {
@@ -540,8 +558,7 @@ object Player {
         val c = controller ?: return
         val s = _state.value
         if (c.currentPosition > 3_000 || s.queue.size <= 1) {
-            c.seekTo(0)
-            positionNow()
+            seekTo(0)
             return
         }
         val previous = (s.index - 1).coerceAtLeast(0)
@@ -572,13 +589,13 @@ object Player {
         controller?.seekTo(position)
         _position.value = position
         _state.value = _state.value.copy(positionMs = position)
+        _seekEpoch.value++
     }
 
     fun seekBy(deltaMs: Long) {
         val c = controller ?: return
         val target = (c.currentPosition + deltaMs).coerceIn(0L, c.duration.coerceAtLeast(0L))
-        c.seekTo(target)
-        positionNow()
+        seekTo(target)
     }
 
     /** Position immédiate pour le rendu karaoké (sans attendre le tic global). */
@@ -615,4 +632,12 @@ object Player {
     }
 
     fun volumeValue(): Float = controller?.volume ?: 1f
+    fun applyEqualizer() {
+        controller?.sendCustomCommand(androidx.media3.session.SessionCommand(PlaybackService.CMD_EQUALIZER, Bundle.EMPTY), Bundle.EMPTY)
+    }
+
+    suspend fun awaitReady(trackId: String): Boolean = withTimeoutOrNull(45_000) {
+        state.first { it.current?.id == trackId && !it.buffering && controller?.playbackState == Player.STATE_READY }
+        true
+    } ?: false
 }

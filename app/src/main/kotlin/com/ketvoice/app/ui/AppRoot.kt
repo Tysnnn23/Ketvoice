@@ -61,6 +61,7 @@ import com.ketvoice.app.ui.sub.SubScreensRouter
 import com.kyant.backdrop.backdrops.layerBackdrop
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
+import com.ketvoice.app.ui.motion.Motion
 
 /**
  * Racine de Ketvoice :
@@ -69,6 +70,7 @@ import kotlinx.coroutines.flow.first
  */
 @Composable
 fun AppRoot() {
+    com.ketvoice.app.ui.motion.ObserveSystemMotion()
     val themeMode = AppSettings.themeMode.value
     val useDark = if (themeMode == 1) false else if (themeMode == 2) true else null
     val view = androidx.compose.ui.platform.LocalView.current
@@ -85,6 +87,7 @@ fun AppRoot() {
     }
 
     KetvoiceTheme(useDark = useDark) {
+        com.ketvoice.app.ui.player.PlaybackFeatureDialogs()
         val th = LocalTheme.current
         val backdrop = rememberGlassBackdrop(th.background)
         val playerState by Player.state.collectAsState()
@@ -101,7 +104,7 @@ fun AppRoot() {
             val visible = AppUi.showPlayer.value
             if (visible != wasPlayerVisible) {
                 wasPlayerVisible = visible
-                if (AppSettings.reduceAnimations.value) {
+                if (Motion.reduced) {
                     AppUi.coverFlight.value = null
                     return@LaunchedEffect
                 }
@@ -164,10 +167,10 @@ fun AppRoot() {
                         targetState = AppUi.tab.value to AppUi.overlay.value,
                         contentAlignment = Alignment.Center,
                         transitionSpec = {
-                            (fadeIn(tween(240)) + slideInVertically(
-                                tween(300, easing = FastOutSlowInEasing)
+                            (fadeIn(tween(Motion.duration())) + slideInVertically(
+                                tween(Motion.duration(), easing = FastOutSlowInEasing)
                             ) { fullHeight -> fullHeight / 14 }).togetherWith(
-                                fadeOut(tween(160))
+                                fadeOut(tween(Motion.duration()))
                             )
                         },
                         label = "nav"
@@ -204,8 +207,8 @@ fun AppRoot() {
                         AppUi.overlay.value != AppUi.QUEUE &&
                         !AppUi.showPlayer.value &&
                         !imeVisible,
-                    enter = fadeIn(tween(220)) + slideInVertically(tween(220)) { it / 3 },
-                    exit = fadeOut(tween(220)) + slideOutVertically(tween(220)) { it / 3 },
+                    enter = fadeIn(tween(Motion.duration())) + slideInVertically(tween(Motion.duration())) { it / 3 },
+                    exit = fadeOut(tween(Motion.duration())) + slideOutVertically(tween(Motion.duration())) { it / 3 },
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .padding(start = layout.railWidthDp.dp)
@@ -236,8 +239,8 @@ fun AppRoot() {
                 // ---- Lecteur plein écran : glisse depuis le bas ----
                 AnimatedVisibility(
                     visible = AppUi.showPlayer.value,
-                    enter = fadeIn(tween(if (AppSettings.reduceAnimations.value) 0 else 300)),
-                    exit = fadeOut(tween(if (AppSettings.reduceAnimations.value) 0 else 260)),
+                    enter = fadeIn(tween(Motion.duration())),
+                    exit = fadeOut(tween(Motion.duration())),
                     modifier = Modifier
                         .fillMaxSize()
                         .zIndex(6f)
@@ -281,12 +284,17 @@ private fun CoverFlightOverlay() {
     LaunchedEffect(flight.token) {
         progress.animateTo(
             targetValue = 1f,
-            animationSpec = tween(if (flight.opening) 440 else 380, easing = FastOutSlowInEasing)
+            animationSpec = tween(Motion.duration(if (flight.opening) 380 else 320), easing = FastOutSlowInEasing)
         )
         AppUi.coverFlight.value = null
     }
     val t = progress.value
-    val eased = t * t * (3f - 2f * t)
+    // easeOutBack léger à l'ouverture (overshoot ~4 %), smoothstep à la fermeture.
+    val c1 = 1.2588f; val c3 = c1 + 1f
+    val eased = if (flight.opening) {
+        val x = t - 1f
+        1f + c3 * x * x * x + c1 * x * x
+    } else t * t * (3f - 2f * t)
     fun lerp(a: Float, b: Float): Float = a + (b - a) * eased
     val left = lerp(flight.from.left, flight.to.left)
     val top = lerp(flight.from.top, flight.to.top)

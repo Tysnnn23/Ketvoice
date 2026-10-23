@@ -59,6 +59,8 @@ import com.ketvoice.app.ui.AppUi
 import com.ketvoice.app.ui.adaptive.LocalAdaptiveLayout
 import com.ketvoice.app.ui.common.Cover
 import com.kyant.backdrop.backdrops.layerBackdrop
+import com.ketvoice.app.ui.motion.Motion
+import androidx.compose.animation.animateColorAsState
 
 enum class PlayerPage { ARTWORK, LYRICS, QUEUE }
 
@@ -167,11 +169,11 @@ fun FullPlayerScreen(
                     }
                 }
             }) {
-                AmbientArtwork(cover, ambience)
+                PlayerSceneBackground(track, canvas[track.id], state.isPlaying, cover, ambience)
 
                 AnimatedContent(page, transitionSpec = {
-                    (fadeIn(tween(270)) + slideInVertically(tween(300)) { it / 35 })
-                        .togetherWith(fadeOut(tween(190)))
+                    (fadeIn(tween(Motion.duration())) + slideInVertically(tween(Motion.duration())) { it / 35 })
+                        .togetherWith(fadeOut(tween(Motion.duration())))
                 }, label = "player-page", modifier = Modifier.fillMaxSize()) { shownPage ->
                 Box(Modifier.fillMaxSize()) {
                 if (shownPage == PlayerPage.ARTWORK) {
@@ -188,7 +190,7 @@ fun FullPlayerScreen(
                                 .90f to Color.White.copy(alpha = .16f), 1f to Color.Transparent),
                                 blendMode = BlendMode.DstIn)
                         }.swipeToMini { close() }) {
-                        ArtworkCanvas(track, canvas[track.id], state.isPlaying, Modifier.fillMaxSize())
+                        ArtworkCanvas(track, if (panoramicCanvasActive(canvas[track.id])) null else canvas[track.id], state.isPlaying, Modifier.fillMaxSize())
                         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(
                             0f to Color.Black.copy(alpha = .16f), .52f to Color.Transparent,
                             .83f to ambience.color.copy(alpha = .45f), 1f to ambience.color.copy(alpha = .85f))))
@@ -221,20 +223,19 @@ fun FullPlayerScreen(
 
                 AnimatedVisibility(
                     visible = page != PlayerPage.ARTWORK,
-                    enter = fadeIn(tween(300)) +
-                        slideInVertically(spring(dampingRatio = .86f, stiffness = 330f)) { it / 5 } +
-                        scaleIn(initialScale = .92f, animationSpec = spring(dampingRatio = .86f, stiffness = 330f)),
-                    exit = fadeOut(tween(190)) +
-                        slideOutVertically(tween(230)) { it / 7 } +
-                        scaleOut(targetScale = .94f, animationSpec = tween(230))
+                    enter = fadeIn(tween(Motion.duration())) +
+                        slideInVertically(tween(Motion.duration())) { it / 10 } +
+                        scaleIn(initialScale = if(Motion.reduced) 1f else .98f, animationSpec = tween(Motion.duration())),
+                    exit = fadeOut(tween(Motion.duration())) +
+                        slideOutVertically(tween(Motion.duration())) { it / 10 } +
+                        scaleOut(targetScale = if(Motion.reduced) 1f else .98f, animationSpec = tween(Motion.duration()))
                 ) {
                     val sceneEnd = if (expanded || wide) safeHeight - 12.dp else contentBottom
                     Box(Modifier.offset(y = sceneTop).height((sceneEnd - sceneTop).coerceAtLeast(80.dp)).width(sceneWidth)) {
                         if (page == PlayerPage.QUEUE) QueuePane(state, Modifier.fillMaxSize().padding(horizontal = if (wide) 18.dp else margin))
                          else LyricsPane(track, expanded, onSource = { sheet = "sources" },
                             modifier = Modifier.fillMaxSize().padding(horizontal = if (wide) 18.dp else margin * .8f),
-                            fontScale = if (com.ketvoice.app.BuildConfig.IS_QUEST)
-                                com.ketvoice.app.ui.quest.QuestLayout.lyricsScale(AppSettings.questLyricsSize.value) else 1f)
+                            fontScale = com.ketvoice.app.ui.quest.QuestLayout.lyricsScale(AppSettings.lyricsTextSize.value))
                     }
                 }
 
@@ -269,7 +270,7 @@ fun FullPlayerScreen(
                     }
                 }
             }
-            AnimatedContent(sheet, transitionSpec = { fadeIn(tween(170)).togetherWith(fadeOut(tween(120))) }, label = "player-sheet") { selected ->
+            AnimatedContent(sheet, transitionSpec = { fadeIn(tween(Motion.duration())).togetherWith(fadeOut(tween(Motion.duration()))) }, label = "player-sheet") { selected ->
                 if (selected.isNotBlank()) PlayerSheetScrim({ sheet = "" }) {
                     when (selected) {
                         "sources" -> LyricsSourceSheet(track, onClose = { sheet = "" })
@@ -300,6 +301,16 @@ private fun PlayerHandle(modifier: Modifier, onClose: () -> Unit) {
 internal fun PlayerTitle(track: Track, compact: Boolean, cover: String?, sheetAction: () -> Unit,
                          modifier: Modifier = Modifier, share: Boolean = false, onCover: () -> Unit = {}) {
     val favorite = track.id in AppSettings.favoriteIds.value
+    var favoriteTap by remember(track.id) { mutableIntStateOf(0) }
+    val pulse = remember(track.id) { androidx.compose.animation.core.Animatable(1f) }
+    val starColor by animateColorAsState(if (favorite) com.ketvoice.app.theme.LocalTheme.current.accent else Color(0xFFCED2E3),
+        tween(Motion.duration()), label = "favorite-color")
+    LaunchedEffect(favoriteTap, Motion.reduced) {
+        if (favoriteTap > 0 && !Motion.reduced) {
+            pulse.animateTo(1.16f, tween(Motion.PRESS))
+            pulse.animateTo(1f, tween(Motion.FADE))
+        } else pulse.snapTo(1f)
+    }
     Row(modifier, verticalAlignment = Alignment.CenterVertically) {
         if (compact) { Cover(track.title, cover, size = 56.dp, radius = 8.dp,
             modifier = Modifier.semantics { contentDescription = com.ketvoice.app.data.AppText.t("Revenir à la pochette") }.clickable(onClick = onCover)); Spacer(Modifier.width(12.dp)) }
@@ -313,16 +324,18 @@ internal fun PlayerTitle(track: Track, compact: Boolean, cover: String?, sheetAc
                 Text(track.title, localize = false, color = Color.White, fontSize = if (compact) 17.sp else 18.sp,
                     fontWeight = FontWeight.Bold, letterSpacing = (-.5).sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            Text(track.artist, localize = false, color = Color(0xFF868893), fontSize = 16.sp, letterSpacing = (-.5).sp,
+            Text(track.artist, localize = false, color = Color.White.copy(alpha = .70f), fontSize = 16.sp, letterSpacing = (-.5).sp,
                 maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         Spacer(Modifier.width(8.dp))
         SmallCircleButton({
+            favoriteTap++
             AppSettings.favoriteIds.value = if (favorite) AppSettings.favoriteIds.value - track.id else AppSettings.favoriteIds.value + track.id
             SettingsStore.save()
         }, active = favorite, size = 36.dp) {
             Icon(if (favorite) Icons.Filled.Star else Icons.Filled.StarBorder,
-                if (favorite) "Retirer des favoris" else "Ajouter aux favoris", tint = Color(0xFFCED2E3), modifier = Modifier.size(23.dp))
+                if (favorite) "Retirer des favoris" else "Ajouter aux favoris", tint = starColor,
+                modifier = Modifier.size(23.dp).graphicsLayer { scaleX = pulse.value; scaleY = pulse.value })
         }
         Spacer(Modifier.width(8.dp))
         SmallCircleButton(sheetAction, size = 36.dp) {

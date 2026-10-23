@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SkipNext
 import com.ketvoice.app.ui.common.Icon
 import com.ketvoice.app.ui.common.Text
+import com.ketvoice.app.ui.motion.Motion
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -208,6 +209,13 @@ private fun MiniProgressLine(modifier: Modifier = Modifier) {
     val posMs by Player.positionMs.collectAsState()
     val durationMs = Player.state.collectAsState().value.durationMs.coerceAtLeast(1L)
     val fraction = (posMs.toFloat() / durationMs).coerceIn(0f, 1f)
+    // Interpolation linéaire continue : plus aucun saut entre les tics de position.
+    val smooth by animateFloatAsState(
+        targetValue = fraction,
+        animationSpec = if (Motion.reduced) androidx.compose.animation.core.snap()
+        else tween(durationMillis = 500, easing = androidx.compose.animation.core.LinearEasing),
+        label = "miniProgress"
+    )
     Box(
         modifier
             .height(3.dp)
@@ -216,7 +224,7 @@ private fun MiniProgressLine(modifier: Modifier = Modifier) {
         Box(
             Modifier
                 .fillMaxHeight()
-                .fillMaxWidth(fraction)
+                .fillMaxWidth(smooth)
                 .clip(RoundedCornerShape(topEnd = 2.dp, bottomEnd = 2.dp))
                 .background(LocalTheme.current.accent)
         )

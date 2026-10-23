@@ -7,6 +7,23 @@
 
 ---
 
+## 2.8.0 — GLASS, MOTION, EQUALIZER & SAME-WIFI HANDOFF
+
+**Mobile, tablet and Quest:** 23 October 2026 · **versionCode:** 17
+
+- Liquid Glass surfaces get tighter bevel/refraction and a soft gradient rim; Quest hover light follows the pointer.
+- One motion vocabulary with an **Animations réduites** toggle and Android's animator scale respected. The three intro dots are now fixed-size lights that switch on in sequence — no halo, circle, merge, or zoom — in a reserved slot so lyrics do not jump.
+- Lyrics stay visible during the intro, follow correctly, pause following on manual scroll, and resume after a seek. Karaoke masks are built once per layout instead of every frame.
+- Equalizer with five bands, presets, and ±12 dB controls, applied to the real playback audio session through the device's native effect and clamped to its supported range. Unsupported devices are told so.
+- Same-Wi-Fi transfer with local mDNS discovery and **mandatory confirmation on the receiver**: current track, position, flags, and up to 50 catalog queue entries. No QR code, account, cookies, tokens, files, or private URLs.
+- Lyrics size now applies on phones/tablets; optional panoramic Canvas is off by default; favorite and transport polish; stable queue row keys.
+- 87 JVM tests pass per flavor; lint 0 errors. Signed APKs checked on an Android 16 emulator: phone player, Quest landscape player, native equalizer effect, mDNS discovery, and a real LAN offer with explicit refusal. No physical Quest or real owner upload test.
+- The 2.7.0 server-side music-upload fix is unchanged; no backend change in this release.
+
+See [2.8.0 notes](docs/releases/v2.8.0.md), [Quest guide](docs/QUEST.md), and [2.7.1 Quest notes](docs/releases/v2.7.1.md). Previous releases are preserved.
+
+---
+
 ## 2.7.1 — QUEST LANDSCAPE: ARTWORK LEFT, LYRICS RIGHT
 
 **Quest-only release:** 22 October 2026 · **versionCode:** 16

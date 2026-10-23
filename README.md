@@ -19,7 +19,7 @@
 
 Ketvoice is an independent Android music client whose visual language is inspired by Apple Music and iOS 26. French is the default interface language; Settings offers 11 languages across the app. It is not affiliated with Apple, YouTube, Spotify, BitChord, or any music provider.
 
-The mobile/tablet version remains **2.7.0** (`versionCode` 15, Android 12+, target SDK 36). The **Quest 3/3S window build is 2.7.1** (`versionCode` 16, minimum SDK 32, target SDK 34), with landscape-only layout and artwork/controls left, lyrics right. Music publishing with an optional lyrics sidecar remains fixed server-side. See [Quest 2.7.1 notes](docs/releases/v2.7.1.md) and [mobile 2.7.0 notes](docs/releases/v2.7.0.md).
+The current release is **2.8.0** (`versionCode` 17) for both **mobile/tablet** (Android 12+, target SDK 36) and **Quest 3/3S** (minimum SDK 32, target SDK 34, landscape-only window). It adds the equalizer, same-Wi-Fi handoff, refined Liquid Glass, and the new motion system. See [2.8.0 notes](docs/releases/v2.8.0.md).
 
 Music-source search, stream resolution, Spotify Canvas, and published-content lookup go through two Supabase Edge Functions: **Ketvoice API** for sources/Canvas and **Ketvoice Content** for public publications. The APK contains only the project’s public Supabase `anon` key and function URLs. Spotify and source credentials remain in Supabase Vault and are never shipped with the app.
 
@@ -30,8 +30,8 @@ Music-source search, stream resolution, Spotify Canvas, and published-content lo
 ### Quest 3 / Quest 3S window build
 
 - **Landscape only, with the mobile style**: original artwork/Canvas, icon controls, Liquid Glass, floating navigation, and lyric animations. In lyrics/queue mode, artwork, title, artist, and transport stay on the left; lyrics or queue fill the right. No giant text-button dashboard, tablet rail, or portrait-phone frame.
-- Optional lyric sizing and foreground keep-awake; sleep timer in the ordinary track ⋯ menu.
-- Download **[Ketvoice-2.7.1-Quest.apk](https://github.com/Tysnnn23/Ketvoice/releases/download/v2.7.1/Ketvoice-2.7.1-Quest.apk)** and follow [Quest installation instructions](docs/QUEST.md). Headset-targeted manifest and arm64 support are included; physical Quest hardware validation is still required. This is a 2D app window, not an immersive VR environment. The **[mobile 2.7.0 APK](https://github.com/Tysnnn23/Ketvoice/releases/download/v2.7.0/Ketvoice-2.7.0.apk)** is unchanged.
+- Pointer hover light on interactive controls, optional lyric sizing, foreground keep-awake, and the sleep timer in the ordinary track ⋯ menu.
+- Download **[Ketvoice-2.8.0-Quest.apk](https://github.com/Tysnnn23/Ketvoice/releases/download/v2.8.0/Ketvoice-2.8.0-Quest.apk)** and follow [Quest installation instructions](docs/QUEST.md). Headset-targeted manifest and arm64 support are included; physical Quest hardware validation is still required. This is a 2D app window, not an immersive VR environment. The same-version **[mobile/tablet 2.8.0 APK](https://github.com/Tysnnn23/Ketvoice/releases/download/v2.8.0/Ketvoice-2.8.0.apk)** is available in the same release.
 
 ### Interface
 
@@ -49,6 +49,9 @@ Music-source search, stream resolution, Spotify Canvas, and published-content lo
 ### Playback and storage
 
 - Media3/ExoPlayer playback with a foreground `MediaSessionService`.
+- Native equalizer on the real playback audio session, with five bands, presets, and ±12 dB controls clamped to what the device supports.
+- Same-Wi-Fi handoff to another Ketvoice instance with explicit receiver confirmation; catalog metadata, queue, and position only — no account tokens, files, or private URLs.
+- One motion system with reduced-motion support; lyrics follow and karaoke stay accurate while decorative movement is removed.
 - Queue management, previous/next, shuffle, repeat, favorites, and playback history.
 - Audio cache with a configurable limit from 0.5 GB to 10 GB.
 - Real downloads with FLAC/MP3 quality modes, progress, HTTPS redirects, audio validation, retry/resume, and alternative streams when a provider fails.

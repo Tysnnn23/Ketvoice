@@ -27,6 +27,8 @@ class PlaybackService : MediaSessionService() {
 
     override fun onCreate() {
         super.onCreate()
+        // A media-button service restart may happen before MainActivity.
+        com.ketvoice.app.data.SettingsStore.load(applicationContext)
         val player = ExoPlayer.Builder(this)
             .setMediaSourceFactory(DefaultMediaSourceFactory(AudioCache.factory(this)))
             .setLoadControl(
@@ -45,6 +47,9 @@ class PlaybackService : MediaSessionService() {
             .setWakeMode(C.WAKE_MODE_NETWORK)
             .build()
         player.skipSilenceEnabled = AppSettings.skipSilence.value
+        player.addListener(object : androidx.media3.common.Player.Listener {
+            override fun onAudioSessionIdChanged(audioSessionId: Int) { AudioEqualizer.bind(audioSessionId) }
+        })
 
         mediaSession = MediaSession.Builder(this, player)
             .setSessionActivity(
@@ -55,17 +60,28 @@ class PlaybackService : MediaSessionService() {
                 )
             )
             .setCallback(object : MediaSession.Callback {
+                override fun onConnect(session: MediaSession, controller: MediaSession.ControllerInfo): MediaSession.ConnectionResult {
+                    if (controller.packageName != packageName) return super.onConnect(session, controller)
+                    val commands = MediaSession.ConnectionResult.DEFAULT_SESSION_COMMANDS.buildUpon()
+                        .add(SessionCommand(CMD_SKIP_SILENCE, Bundle.EMPTY))
+                        .add(SessionCommand(CMD_EQUALIZER, Bundle.EMPTY)).build()
+                    return MediaSession.ConnectionResult.AcceptedResultBuilder(session)
+                        .setAvailableSessionCommands(commands).build()
+                }
                 override fun onCustomCommand(
                     session: MediaSession,
                     controller: MediaSession.ControllerInfo,
                     command: SessionCommand,
                     args: Bundle
                 ): com.google.common.util.concurrent.ListenableFuture<androidx.media3.session.SessionResult> {
+                    if (controller.packageName != packageName) return com.google.common.util.concurrent.Futures.immediateFuture(
+                        androidx.media3.session.SessionResult(androidx.media3.session.SessionError.ERROR_PERMISSION_DENIED))
                     if (command.customAction == CMD_SKIP_SILENCE) {
                         val on = args.getBoolean("on", false)
                         player.skipSilenceEnabled = on
                         AppSettings.skipSilence.value = on
                     }
+                    if (command.customAction == CMD_EQUALIZER) AudioEqualizer.apply()
                     return com.google.common.util.concurrent.Futures.immediateFuture(
                         androidx.media3.session.SessionResult(
                             androidx.media3.session.SessionResult.RESULT_SUCCESS
@@ -80,6 +96,7 @@ class PlaybackService : MediaSessionService() {
         mediaSession
 
     override fun onDestroy() {
+        AudioEqualizer.release()
         mediaSession?.player?.release()
         mediaSession?.release()
         mediaSession = null
@@ -88,5 +105,6 @@ class PlaybackService : MediaSessionService() {
 
     companion object {
         const val CMD_SKIP_SILENCE = "ketvoice.set_skip_silence"
+        const val CMD_EQUALIZER = "ketvoice.apply_equalizer"
     }
 }

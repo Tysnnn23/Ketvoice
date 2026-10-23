@@ -1,6 +1,6 @@
-# Ketvoice on Quest 3 / Quest 3S
+﻿# Ketvoice on Quest 3 / Quest 3S
 
-Install **Ketvoice-2.7.1-Quest.apk** from the [2.7.1 Quest release](https://github.com/Tysnnn23/Ketvoice/releases/tag/v2.7.1). The phone/tablet APK remains **2.7.0**, unchanged.
+Install **Ketvoice-2.8.0-Quest.apk** from the [2.8.0 release](https://github.com/Tysnnn23/Ketvoice/releases/tag/v2.8.0). The same release also contains the **2.8.0** phone/tablet APK.
 
 This is a **landscape-only 2D Horizon OS window with the mobile visual style**, not an immersive 3D app. Original artwork/Canvas, icon controls, floating navigation, and lyric animations are reused. Opening lyrics puts the artwork, title, artist, and playback controls on the **left**, with synchronized lyrics on the **right**. The queue uses the same right-hand pane. There is no oversized text-button dashboard or portrait phone frame.
 
@@ -11,7 +11,7 @@ This is a **landscape-only 2D Horizon OS window with the mobile visual style**, 
 3. Install the Quest APK with Meta Quest Developer Hub, SideQuest, or ADB:
 
    ```text
-   adb install -r Ketvoice-2.7.1-Quest.apk
+   adb install -r Ketvoice-2.8.0-Quest.apk
    ```
 
    If several devices are connected, specify the **headset's** serial with `adb -s <headset-serial> install -r ...`.

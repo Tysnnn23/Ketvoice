@@ -27,6 +27,7 @@ import com.ketvoice.app.data.Track
 import com.ketvoice.app.player.Player
 import com.ketvoice.app.player.PlayerUiState
 import com.ketvoice.app.ui.common.Cover
+import com.ketvoice.app.ui.motion.Motion
 import kotlin.math.roundToInt
 
 @Composable
@@ -46,11 +47,13 @@ internal fun QueuePane(state: PlayerUiState, modifier: Modifier = Modifier) {
             fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
         Spacer(Modifier.height(9.dp))
         LazyColumn(Modifier.weight(1f).fillMaxWidth(), contentPadding = PaddingValues(bottom = 18.dp)) {
-            itemsIndexed(upcoming, key = { i, t -> "${t.id}:${state.index + 1 + i}" }) { i, t ->
+            itemsIndexed(upcoming, key = { i, t -> state.queueEntryIds.getOrNull(state.index + 1 + i) ?: "${t.id}:${state.index + 1 + i}" }) { i, t ->
                 val index = state.index + 1 + i
                 var drag by remember(t.id, index) { mutableFloatStateOf(0f) }
                 val rowHeight = with(LocalDensity.current) { 58.dp.toPx() }
-                QueueRow(t, art["t:${t.id}"] ?: t.coverUrl, modifier = Modifier.graphicsLayer { translationY = drag },
+                QueueRow(t, art["t:${t.id}"] ?: t.coverUrl, modifier = Modifier
+                    .then(if (Motion.reduced) Modifier else Modifier.animateItem())
+                    .graphicsLayer { translationY = drag },
                     handle = Modifier.pointerInput(t.id, index) {
                         detectVerticalDragGestures(onDragStart = { drag = 0f },
                             onVerticalDrag = { change, delta -> change.consume(); drag += delta },

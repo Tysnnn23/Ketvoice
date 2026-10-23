@@ -88,6 +88,10 @@ import com.ketvoice.app.data.Track
 import com.ketvoice.app.player.Player
 import com.ketvoice.app.ui.common.gradientFor
 import com.ketvoice.app.ui.quest.questPointer
+import com.ketvoice.app.ui.motion.Motion
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import kotlinx.coroutines.launch
 import java.io.File
 import java.util.Locale
@@ -121,9 +125,9 @@ fun ArtworkCanvas(
             targetState = Art(track.id, cover, canvasPath),
             // La clé inclut le canvas : dès que le MP4 est prêt, le fondu
             // remplace réellement la pochette fixe par le canvas.
-            contentKey = { "${it.id}:${it.canvas.orEmpty()}:${it.cover.orEmpty()}" },
+            contentKey = { if (it.canvas != null) "${it.id}:video:${it.canvas}" else "${it.id}:art:${it.cover.orEmpty()}" },
             transitionSpec = {
-                fadeIn(tween(300)).togetherWith(fadeOut(tween(250)))
+                fadeIn(tween(Motion.duration())).togetherWith(fadeOut(tween(Motion.duration())))
             },
             label = "artwork"
         ) { data ->
@@ -173,6 +177,13 @@ fun ArtworkCanvas(
 @Composable
 private fun CanvasVideo(path: String, playing: Boolean, modifier: Modifier = Modifier) {
     val context = LocalContext.current
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    var visible by remember(lifecycle) { mutableStateOf(lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) }
+    DisposableEffect(lifecycle) {
+        val observer = LifecycleEventObserver { _, _ -> visible = lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED) }
+        lifecycle.addObserver(observer)
+        onDispose { lifecycle.removeObserver(observer) }
+    }
     val exo = remember(path) {
         ExoPlayer.Builder(context)
             .setAudioAttributes(
@@ -190,7 +201,7 @@ private fun CanvasVideo(path: String, playing: Boolean, modifier: Modifier = Mod
                 prepare()
             }
     }
-    LaunchedEffect(playing, exo) { exo.playWhenReady = playing }
+    LaunchedEffect(playing, visible, exo) { exo.playWhenReady = playing && visible }
     DisposableEffect(exo) { onDispose { runCatching { exo.release() } } }
     AndroidView(
         factory = { ctx ->
@@ -201,6 +212,8 @@ private fun CanvasVideo(path: String, playing: Boolean, modifier: Modifier = Mod
             }
         },
         modifier = modifier,
+        onReset = null,
+        onRelease = { it.player = null },
         update = { it.player = exo }
     )
 }
@@ -229,15 +242,19 @@ fun ScrubBar(
     val anim = remember(trackId) { Animatable(0f) }
     val dragScope = rememberCoroutineScope()
     val fraction = (posMs.toFloat() / dur).coerceIn(0f, 1f)
+    val seekEpoch by Player.seekEpoch.collectAsState()
+    var lastSeek by remember(trackId) { mutableLongStateOf(seekEpoch) }
 
     LaunchedEffect(durationMs) { anim.snapTo(fraction) }
-    LaunchedEffect(fraction) {
+    LaunchedEffect(fraction, seekEpoch, Motion.reduced) {
         if (dragFraction == null) {
-            if (kotlin.math.abs(fraction - anim.value) < 0.0005f) {
+            if (Motion.reduced || lastSeek != seekEpoch || kotlin.math.abs(fraction - anim.value) > .04f ||
+                kotlin.math.abs(fraction - anim.value) < 0.0005f) {
                 anim.snapTo(fraction)
             } else {
                 anim.animateTo(fraction, tween(230, easing = LinearEasing))
             }
+            lastSeek = seekEpoch
         }
     }
 
@@ -380,8 +397,8 @@ fun PlayerTransport(
             AnimatedContent(
                 targetState = playing,
                 transitionSpec = {
-                    (fadeIn(tween(120)) + scaleIn(initialScale = 0.65f, animationSpec = tween(200)))
-                        .togetherWith(fadeOut(tween(90)) + scaleOut(targetScale = 0.65f, animationSpec = tween(160)))
+                    (fadeIn(tween(Motion.duration(Motion.PRESS))) + scaleIn(initialScale = if(Motion.reduced) 1f else .85f, animationSpec = tween(Motion.duration())))
+                        .togetherWith(fadeOut(tween(Motion.duration(Motion.PRESS))) + scaleOut(targetScale = if(Motion.reduced) 1f else .85f, animationSpec = tween(Motion.duration())))
                 },
                 label = "playpause"
             ) { p ->
@@ -499,7 +516,7 @@ fun PlayerBottomBar(
         verticalAlignment = Alignment.CenterVertically
     ) {
         SmallCircleButton(onClick = onLyrics, active = lyricsActive, transparent = !lyricsActive) { tint ->
-            LyricsGlyph(Modifier.size(25.dp), tint)
+            LyricsGlyph(Modifier.size(25.dp).semantics { contentDescription = com.ketvoice.app.data.AppText.t("Paroles") }, tint)
         }
         Spacer(Modifier.weight(1f))
         Row(
@@ -542,7 +559,7 @@ fun PlayerBottomBar(
         }
         Spacer(Modifier.weight(1f))
         SmallCircleButton(onClick = onQueue, active = false, transparent = true) { tint ->
-            QueueGlyph(Modifier.size(27.dp), tint)
+            QueueGlyph(Modifier.size(25.dp).semantics { contentDescription = com.ketvoice.app.data.AppText.t("File d'attente") }, tint)
         }
     }
 }
@@ -555,16 +572,22 @@ fun SmallCircleButton(
     transparent: Boolean = false,
     inner: @Composable (Color) -> Unit
 ) {
+    val source = remember { MutableInteractionSource() }
+    // Fond animé : plus de "flash" sec quand le bouton devient actif/inactif.
+    val bgAlpha by animateFloatAsState(
+        targetValue = if (active) 0.22f else if (transparent) 0f else 0.10f,
+        animationSpec = tween(Motion.duration(Motion.FADE)), label = "circleBg"
+    )
     Box(
-        Modifier
-            .size(size)
-            .clip(CircleShape)
-            .questPointer()
-            .background(if (active) Color.White.copy(alpha = 0.26f) else if (transparent) Color.Transparent else Color.White.copy(alpha = 0.13f))
-            .clickable(noRipple, null) { onClick() },
+        Modifier.size(maxOf(size, 48.dp)).clip(CircleShape).questPointer()
+            .clickable(source, null, role = androidx.compose.ui.semantics.Role.Button) { onClick() },
         contentAlignment = Alignment.Center
     ) {
-        inner(if (active) Color.White else Color.White.copy(alpha = 0.92f))
+        Box(Modifier.size(size).clip(CircleShape)
+            .background(Color.White.copy(alpha = bgAlpha)),
+            contentAlignment = Alignment.Center) {
+            inner(if (active) Color.White else Color.White.copy(alpha = 0.92f))
+        }
     }
 }
 
@@ -647,11 +670,13 @@ fun QueueActionsBar(
 
 @Composable
 private fun RowScope.QueueSegment(active: Boolean, onClick: () -> Unit, inner: @Composable (Color) -> Unit) {
+    // fond du segment animé (fade d'état au lieu d'un flash sec)
+    val segAlpha by animateFloatAsState(if (active) 0.20f else 0f, tween(Motion.duration(Motion.FADE)), label = "segBg")
     Box(
         Modifier
             .weight(1f)
             .fillMaxHeight()
-            .background(if (active) Color.White.copy(alpha = 0.20f) else Color.Transparent)
+            .background(Color.White.copy(alpha = segAlpha))
             .clickable(noRipple, null) { onClick() },
         contentAlignment = Alignment.Center
     ) {
@@ -738,8 +763,8 @@ fun LyricsPreviewLine(onOpen: () -> Unit) {
 @Composable
 fun Modifier.pressScale(min: Float = 0.86f, isPressed: Boolean): Modifier {
     val s by animateFloatAsState(
-        targetValue = if (isPressed) min else 1f,
-        animationSpec = spring(dampingRatio = 0.62f, stiffness = 900f),
+        targetValue = if (isPressed && !Motion.reduced) min else 1f,
+        animationSpec = tween(Motion.duration(Motion.PRESS)),
         label = "press"
     )
     return this.graphicsLayer { scaleX = s; scaleY = s }
@@ -752,10 +777,16 @@ fun formatSecs(ms: Long): String {
 
 @Composable
 fun PlayerSheetScrim(onClose: () -> Unit, content: @Composable () -> Unit) {
+    // Fade animé du voile : 0 → 0.35 en douceur au lieu d'apparaître d'un coup.
+    val scrimAlpha by animateFloatAsState(
+        targetValue = 0.35f,
+        animationSpec = tween(Motion.duration(Motion.FADE)),
+        label = "scrim"
+    )
     Box(
         Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.35f))
+            .background(Color.Black.copy(alpha = scrimAlpha))
             .clickable(noRipple, null) { onClose() }
     ) {
         Box(

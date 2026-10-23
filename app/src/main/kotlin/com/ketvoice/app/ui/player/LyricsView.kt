@@ -22,6 +22,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Language
@@ -53,10 +54,16 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.PointerEventPass
 import com.ketvoice.app.data.*
 import com.ketvoice.app.glass.GlassPanel
 import com.ketvoice.app.glass.GlassParams
 import com.ketvoice.app.player.Player
+import com.ketvoice.app.ui.motion.Motion
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.distinctUntilChanged
 import com.ketvoice.app.theme.LocalTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
@@ -67,15 +74,22 @@ import kotlin.math.abs
 /** Content only. The player owns the header, actions, sheets and transport. */
 @Composable
 internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
-                        modifier: Modifier = Modifier, fontScale: Float = 1f) {
+                        modifier: Modifier = Modifier,
+                        fontScale: Float = com.ketvoice.app.ui.quest.QuestLayout.lyricsScale(AppSettings.lyricsTextSize.value)) {
     val lyrics by LyricsRepo.state.collectAsState()
     // A StateFlow must be collected. Reading flow.value inside derivedStateOf
     // does not subscribe and was leaving both highlight and scroll frozen.
-    val position by Player.positionMs.collectAsState()
-    val active = lyrics.indexAt(position)
+    val position = Player.positionMs.collectAsState()
+    val active by remember(lyrics) { derivedStateOf { lyrics.indexAt(position.value) } }
+    val firstLineMs = remember(lyrics.lines) { lyrics.lines.firstOrNull { it.timeMs >= 0 }?.timeMs ?: 0L }
+    val intro by remember(firstLineMs, lyrics.isTimed) { derivedStateOf {
+        lyrics.isTimed && LyricsMotion.showIntro(position.value, firstLineMs)
+    } }
     val list = rememberLazyListState()
     var following by remember(track.id) { mutableStateOf(true) }
-    var introDone by remember(track.id) { mutableStateOf(false) }
+    val revealed = remember(track.id, lyrics.lines) { mutableSetOf<Int>() }
+    val seekEpoch by Player.seekEpoch.collectAsState()
+    val reduced = Motion.reduced
     var translationEnabled by remember(track.id) { mutableStateOf(false) }
     var translated by remember(track.id, lyrics.lines) { mutableStateOf<Map<Int, String>>(emptyMap()) }
     var translating by remember(track.id) { mutableStateOf(false) }
@@ -93,56 +107,65 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
         }
     }
     LaunchedEffect(track.id) { list.scrollToItem(0); following = true }
-    LaunchedEffect(track.id, lyrics.lines) {
-        introDone = false
-        if (lyrics.lines.isNotEmpty()) {
-            val first = lyrics.lines.firstOrNull { it.timeMs >= 0 }?.timeMs
-            val remaining = if (first != null) {
-                (first - Player.currentPositionMs()).coerceIn(2400L, 2600L)
-            } else 2200L
-            delay(remaining)
-        }
-        introDone = true
-    }
+    LaunchedEffect(seekEpoch) { following = true }
     LaunchedEffect(list) {
         list.interactionSource.interactions.collect { if (it is DragInteraction.Start) following = false }
     }
     BoxWithConstraints(modifier) {
         val viewportPx = with(LocalDensity.current) { maxHeight.toPx() }
-        LaunchedEffect(active, following, expanded, lyrics.lines, introDone) {
-            if (!introDone) return@LaunchedEffect
-            if (following && active >= 0) list.animateScrollToItem(active, -(viewportPx * .17f).toInt())
-            else if (following && active < 0) list.scrollToItem(0)
+        LaunchedEffect(active, following, expanded, lyrics.lines, viewportPx, reduced, seekEpoch) {
+            if (!following || lyrics.lines.isEmpty()) return@LaunchedEffect
+            val targetIndex = LyricsMotion.targetIndex(active, lyrics.isTimed)
+            val anchor = -(viewportPx * .18f).toInt()
+            val item = list.layoutInfo.visibleItemsInfo.firstOrNull { it.index == targetIndex }
+            if (reduced || item == null || active < 0) list.scrollToItem(targetIndex, if (active < 0) 0 else anchor)
+            else list.animateScrollBy((item.offset + anchor).toFloat(), tween(Motion.FOLLOW))
         }
         Column(Modifier.fillMaxSize()) {
             if (lyrics.lines.isNotEmpty()) {
-                LazyColumn(state = list, modifier = Modifier.weight(1f).fillMaxWidth(),
+                LazyColumn(state = list, modifier = Modifier.weight(1f).fillMaxWidth().pointerInput(Unit) {
+                    awaitPointerEventScope { while (true) {
+                        if (awaitPointerEvent(PointerEventPass.Initial).type == PointerEventType.Scroll) following = false
+                    } }
+                },
                     contentPadding = PaddingValues(top = 22.dp, bottom = 110.dp),
                     verticalArrangement = Arrangement.spacedBy(25.dp)) {
-                    if (!introDone && lyrics.isTimed) {
-                        item(key = "intro-${track.id}") { IntroDots() }
-                    } else {
+                    if (lyrics.isTimed) item(key = "intro-${track.id}") {
+                        // Keep the slot's geometry stable when the first verse
+                        // starts: the dots disappear, the lyrics do not jump.
+                        Box(Modifier.height(if (firstLineMs > 0) 32.dp else 0.dp)) {
+                            if (intro) IntroDots(firstLineMs)
+                        }
+                    }
+                    run {
                         itemsIndexed(lyrics.lines, key = { i, l -> "$i:${l.timeMs}" }) { index, line ->
                             val current = index == active
                             val distance = if (active < 0) 1 else abs(index - active)
-                            val blur = if (!AppSettings.blurInactiveLyrics.value || current || !lyrics.isTimed) 0.dp
-                                else if (distance <= 1) 1.dp else 2.dp
+                            val blur = if (reduced || !AppSettings.blurInactiveLyrics.value || current || !lyrics.isTimed) 0.dp
+                                else if (distance <= 1) .3.dp else .8.dp
+                            val entry = remember(index, track.id) { Animatable(if (index in revealed || reduced) 1f else 0f) }
+                            LaunchedEffect(index, reduced) {
+                                if (reduced || !revealed.add(index)) entry.snapTo(1f)
+                                else { delay(index.coerceAtMost(5) * 45L); entry.animateTo(1f, tween(Motion.FADE)) }
+                            }
                             val lineColor by animateColorAsState(
-                                targetValue = if (current || !lyrics.isTimed) Color.White else Color(0xFF74747C),
-                                animationSpec = tween(240),
+                                targetValue = if (current || !lyrics.isTimed) Color.White else Color.White.copy(alpha = .62f),
+                                animationSpec = tween(Motion.duration()),
                                 label = "lyricColor"
                             )
-                            val lineBlur by animateDpAsState(blur, tween(220), label = "lyricBlur")
+                            val lineBlur by animateDpAsState(blur, tween(Motion.duration()), label = "lyricBlur")
                             val lineScale by animateFloatAsState(
-                                targetValue = if (current && lyrics.isTimed) 1.025f else 1f,
-                                animationSpec = spring(dampingRatio = .78f, stiffness = 420f),
+                                targetValue = if (!reduced && current && lyrics.isTimed) 1.012f else 1f,
+                                animationSpec = tween(Motion.duration()),
                                 label = "lyricScale"
                             )
                             val lineModifier = Modifier.fillMaxWidth().clickable {
                                 if (lyrics.isTimed && line.timeMs >= 0) { Player.seekTo(line.timeMs); following = true }
                             }
                             Column(
-                                lineModifier.graphicsLayer {
+                                 lineModifier.graphicsLayer {
+                                    alpha = entry.value
+                                    translationY = if (reduced) 0f else (1f - entry.value) * 8.dp.toPx()
                                     scaleX = lineScale
                                     scaleY = lineScale
                                     transformOrigin = TransformOrigin(0f, .5f)
@@ -154,8 +177,8 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
                                     fontWeight = FontWeight.Black, modifier = Modifier.fillMaxWidth().blur(lineBlur))
                                 AnimatedVisibility(
                                     visible = translationEnabled && translated[index] != null,
-                                    enter = fadeIn(tween(180)),
-                                    exit = fadeOut(tween(120))
+                                    enter = fadeIn(tween(Motion.duration())),
+                                    exit = fadeOut(tween(Motion.duration()))
                                 ) {
                                     translated[index]?.let { subtitle ->
                                         Text(subtitle, localize = false, color = Color.White.copy(alpha = if (current || !lyrics.isTimed) .82f else .43f),
@@ -203,38 +226,50 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
 @Composable
 private fun KaraokeLine(line: MusicApi.LyricLine, modifier: Modifier, fontScale: Float = 1f) {
     var now by remember(line) { mutableLongStateOf(Player.currentPositionMs()) }
-    LaunchedEffect(line) {
-        while (true) { now = Player.currentPositionMs(); delay(16) }
+    val playing by remember { Player.state.map { it.isPlaying }.distinctUntilChanged() }.collectAsState(false)
+    val position by Player.positionMs.collectAsState()
+    LaunchedEffect(line, playing) {
+        now = Player.currentPositionMs()
+        if (playing) while (true) { withFrameNanos { now = Player.currentPositionMs() } }
     }
+    LaunchedEffect(position, playing) { if (!playing) now = position }
     var layout by remember(line.text) { mutableStateOf<TextLayoutResult?>(null) }
+    // Character paths depend on text layout, not playback time. Build once;
+    // each frame changes only clipping widths rather than allocating paths.
+    val masks = remember(layout, line) { layout?.let { measured ->
+        var offset = 0
+        line.words.map { word ->
+            val start = offset
+            val end = (start + word.text.length).coerceAtMost(line.text.length)
+            offset = end
+            val slices = if (start >= end) emptyList() else (0 until measured.lineCount).mapNotNull { row ->
+                val from = maxOf(start, measured.getLineStart(row))
+                val to = minOf(end, measured.getLineEnd(row))
+                if (from < to) {
+                    val path = measured.getPathForRange(from, to)
+                    LyricMaskSlice(path, path.getBounds(), measured.getBidiRunDirection(from) == ResolvedTextDirection.Rtl)
+                } else null
+            }
+            LyricWordMask(word.startMs, word.endMs, slices, slices.sumOf { it.bounds.width.toDouble() }.toFloat())
+        }
+    }.orEmpty() }
     Box(modifier) {
-        Text(line.text, localize = false, color = Color(0xFF9A99A0), fontSize = (33 * fontScale).sp, lineHeight = (41 * fontScale).sp, letterSpacing = (-.3).sp,
+        Text(line.text, localize = false, color = Color.White.copy(alpha = .62f), fontSize = (33 * fontScale).sp, lineHeight = (41 * fontScale).sp, letterSpacing = (-.3).sp,
             fontWeight = FontWeight.Black, onTextLayout = { layout = it }, modifier = Modifier.fillMaxWidth())
         Text(line.text, localize = false, color = Color.White, fontSize = (33 * fontScale).sp, lineHeight = (41 * fontScale).sp, letterSpacing = (-.3).sp,
             fontWeight = FontWeight.Black,
-            style = androidx.compose.ui.text.TextStyle(shadow = Shadow(Color.White.copy(alpha = .28f), Offset.Zero, 5f)),
+            style = androidx.compose.ui.text.TextStyle(shadow = Shadow(Color.White.copy(alpha = .14f), Offset.Zero, 2f)),
             modifier = Modifier.fillMaxWidth().drawWithContent {
-                val measured = layout ?: return@drawWithContent
-                var offset = 0
-                line.words.forEach { word ->
-                    val start = offset
-                    val end = (start + word.text.length).coerceAtMost(line.text.length)
-                    offset = end
-                    if (start >= end) return@forEach
-                    val progress = segmentProgress(now, word.startMs, word.endMs)
+                masks.forEach { word ->
+                    val progress = segmentProgress(now, word.start, word.end)
                     if (progress <= 0f) return@forEach
-                    val ranges = (0 until measured.lineCount).mapNotNull { row ->
-                        val from = maxOf(start, measured.getLineStart(row))
-                        val to = minOf(end, measured.getLineEnd(row))
-                        if (from < to) Triple(from, to, measured.getPathForRange(from, to)) else null
-                    }
-                    var remaining = ranges.sumOf { it.third.getBounds().width.toDouble() }.toFloat() * progress
-                    ranges.forEach { (from, _, path) ->
-                        val bounds = path.getBounds()
+                    var remaining = word.width * progress
+                    word.slices.forEach { slice ->
+                        val bounds = slice.bounds
                         val fill = remaining.coerceIn(0f, bounds.width)
                         remaining -= bounds.width
-                        if (fill > 0f) clipPath(path) {
-                            if (measured.getBidiRunDirection(from) == ResolvedTextDirection.Rtl) {
+                        if (fill > 0f) clipPath(slice.path) {
+                            if (slice.rtl) {
                                 clipRect(bounds.right - fill, bounds.top, bounds.right, bounds.bottom) { this@drawWithContent.drawContent() }
                             } else clipRect(bounds.left, bounds.top, bounds.left + fill, bounds.bottom) { this@drawWithContent.drawContent() }
                         }
@@ -244,6 +279,9 @@ private fun KaraokeLine(line: MusicApi.LyricLine, modifier: Modifier, fontScale:
     }
 }
 
+private data class LyricMaskSlice(val path: androidx.compose.ui.graphics.Path, val bounds: androidx.compose.ui.geometry.Rect, val rtl: Boolean)
+private data class LyricWordMask(val start: Long, val end: Long, val slices: List<LyricMaskSlice>, val width: Float)
+
 internal fun segmentProgress(now: Long, start: Long, end: Long): Float = when {
     now < start -> 0f
     end <= start -> 1f // Source supplied a start only: do not invent a duration.
@@ -251,35 +289,14 @@ internal fun segmentProgress(now: Long, start: Long, end: Long): Float = when {
 }
 
 @Composable
-private fun IntroDots() {
-    val progress = remember { Animatable(0f) }
-    LaunchedEffect(Unit) {
-        progress.animateTo(1f, tween(2400, easing = LinearEasing))
-    }
-    Canvas(Modifier.size(120.dp, 46.dp)) {
-        val t = progress.value
-        val dot = 9.dp.toPx()
-        val gap = 27.dp.toPx()
-        val center = Offset(size.width / 2f, size.height / 2f)
-        val centers = listOf(center.x - gap, center.x, center.x + gap)
-        val illumination = listOf(
-            ((t - .02f) / .17f).coerceIn(0f, 1f),
-            ((t - .21f) / .17f).coerceIn(0f, 1f),
-            ((t - .40f) / .17f).coerceIn(0f, 1f)
-        )
-        val merge = ((t - .66f) / .26f).coerceIn(0f, 1f)
-        val grow = ((t - .55f) / .20f).coerceIn(0f, 1f)
-        val vanish = ((t - .91f) / .09f).coerceIn(0f, 1f)
+internal fun IntroDots(firstLineMs: Long) {
+    val position by Player.positionMs.collectAsState()
+    val lit = LyricsMotion.litDots(position, firstLineMs)
+    Row(Modifier.height(32.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
         repeat(3) { index ->
-            val x = centers[index] + (center.x - centers[index]) * merge
-            val radius = dot * (1f + illumination[index] * .10f + grow * .18f)
-            val alpha = (.25f + .75f * illumination[index]) * (1f - vanish)
-            drawCircle(Color.White.copy(alpha = alpha * .18f), radius * 1.9f, Offset(x, center.y))
-            drawCircle(Color.White.copy(alpha = alpha), radius, Offset(x, center.y))
-        }
-        if (merge > 0f) {
-            val radius = dot * (1.2f + grow * .55f) * (1f - vanish * .25f)
-            drawCircle(Color.White.copy(alpha = merge * (1f - vanish)), radius, center)
+            val opacity by animateFloatAsState(if (index < lit) 1f else .3f,
+                tween(Motion.duration(180)), label = "intro-light-$index")
+            Canvas(Modifier.size(12.dp)) { drawCircle(Color.White.copy(alpha = opacity)) }
         }
     }
 }

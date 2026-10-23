@@ -13,19 +13,32 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
-import com.ketvoice.app.BuildConfig
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.PointerEventPass
+import com.ketvoice.app.ui.motion.Motion
 
 /** Horizon OS delivers standard pointer events; no hand-tracking permission. */
-fun Modifier.questPointer(): Modifier = if (!BuildConfig.IS_QUEST) this else composed {
+fun Modifier.questPointer(): Modifier = composed {
     val source = remember { MutableInteractionSource() }
     val hovered by source.collectIsHoveredAsState()
     var focused by remember { mutableStateOf(false) }
-    val glow by animateFloatAsState(if (hovered || focused) 1f else 0f, label = "quest-pointer")
-    this.hoverable(source).onFocusChanged { focused = it.isFocused }.drawBehind {
+    var point by remember { mutableStateOf<Offset?>(null) }
+    val reduced = Motion.reduced
+    val glow by animateFloatAsState(if (hovered || focused) 1f else 0f,
+        androidx.compose.animation.core.tween(Motion.duration()), label = "glass-pointer")
+    this.hoverable(source).onFocusChanged { focused = it.isFocused }.pointerInput(Unit) {
+        awaitPointerEventScope { while (true) {
+            val event = awaitPointerEvent(PointerEventPass.Initial)
+            point = event.changes.firstOrNull()?.position
+        } }
+    }.drawBehind {
         if (glow > 0f) {
-            drawRoundRect(Color.White.copy(alpha = .10f * glow), cornerRadius = CornerRadius(18.dp.toPx()))
-            drawRoundRect(Color.White.copy(alpha = .8f * glow), cornerRadius = CornerRadius(18.dp.toPx()),
-                style = Stroke(2.dp.toPx()))
+            drawRoundRect(Brush.radialGradient(listOf(Color.White.copy(alpha = .22f * glow), Color.Transparent),
+                center = if (reduced) center else point ?: center, radius = size.maxDimension.coerceAtLeast(1f)), cornerRadius = CornerRadius(18.dp.toPx()))
+            drawRoundRect(Color.White.copy(alpha = .35f * glow), cornerRadius = CornerRadius(18.dp.toPx()),
+                style = Stroke(1.dp.toPx()))
         }
     }
 }
