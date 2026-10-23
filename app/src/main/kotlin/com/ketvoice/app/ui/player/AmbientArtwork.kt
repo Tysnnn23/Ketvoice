@@ -18,31 +18,26 @@ import coil.request.SuccessResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-data class CoverAmbience(val color: Color = Color(0xFF20212A), val veil: Float = .25f)
+data class CoverAmbience(val color: Color = Color(0xFF20212A), val veil: Float = .62f, val accent: Color? = null)
 
 @Composable
 internal fun rememberCoverAmbience(url: String?): CoverAmbience {
     val context = LocalContext.current
     return produceState(CoverAmbience(), url) {
+        value = CoverAmbience()
         if (url == null) return@produceState
         val result = context.imageLoader.execute(ImageRequest.Builder(context).data(url).size(64).allowHardware(false).build()) as? SuccessResult
             ?: return@produceState
         value = withContext(Dispatchers.Default) {
             val bitmap = result.drawable.toBitmap(48, 48)
-            var r = 0.0; var g = 0.0; var b = 0.0; var weight = 0.0; var light = 0.0
+            val pixels = mutableListOf<Int>()
             for (y in 0 until bitmap.height step 2) for (x in 0 until bitmap.width step 2) {
-                val pixel = bitmap.getPixel(x, y)
-                val cr = ((pixel shr 16) and 255) / 255.0
-                val cg = ((pixel shr 8) and 255) / 255.0
-                val cb = (pixel and 255) / 255.0
-                val chroma = maxOf(cr, cg, cb) - minOf(cr, cg, cb)
-                val w = .15 + chroma
-                r += cr * w; g += cg * w; b += cb * w; weight += w
-                light += .2126 * cr + .7152 * cg + .0722 * cb
+                pixels += bitmap.getPixel(x, y)
             }
-            val meanLight = light / ((bitmap.width + 1) / 2 * ((bitmap.height + 1) / 2))
-            CoverAmbience(Color((r / weight).toFloat(), (g / weight).toFloat(), (b / weight).toFloat()),
-                (.16 + meanLight * .45).toFloat().coerceIn(.18f, .58f))
+            val dominant = AlbumColors.dominant(pixels.toIntArray()) ?: return@withContext CoverAmbience()
+            val sampled = Color(dominant)
+            CoverAmbience(Color(sampled.red * .55f, sampled.green * .55f, sampled.blue * .55f),
+                accent = Color(AlbumColors.readableAccent(dominant)))
         }
     }.value
 }

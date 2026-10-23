@@ -62,14 +62,14 @@ internal fun QuestLandscapePlayer(
                     SmallCircleButton(onClose, size = 36.dp, transparent = true) {
                         Icon(Icons.Filled.KeyboardArrowDown, "Fermer le lecteur", tint = it, modifier = Modifier.size(26.dp))
                     }
-                    Text("Lecture en cours", color = Color.White.copy(alpha = .65f), fontSize = 12.sp,
+                    Text("Lecture en cours", color = Color.White.copy(alpha = .80f), fontSize = 14.sp,
                         modifier = Modifier.padding(start = 8.dp))
                 }
                 Row(Modifier.weight(1f).fillMaxWidth().padding(top = 12.dp, bottom = 12.dp),
                     horizontalArrangement = Arrangement.spacedBy(40.dp)) {
                     BoxWithConstraints(Modifier.weight(QuestLayout.CONTROL_PANE_FRACTION).fillMaxHeight()) {
                         val targetSize = minOf(maxWidth, 480.dp,
-                            if (companion) (maxHeight - 296.dp).coerceAtLeast(96.dp) else maxHeight)
+                             if (companion) (maxHeight - (if (Motion.reduced) 326.dp else 296.dp)).coerceAtLeast(96.dp) else maxHeight)
                         val artworkSize by animateDpAsState(targetSize, tween(duration), label = "quest-landscape-artwork")
                         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
                             horizontalAlignment = Alignment.Start,
@@ -77,7 +77,7 @@ internal fun QuestLandscapePlayer(
                             ArtworkCanvas(track, if (panoramicCanvasActive(canvas)) null else canvas, state.isPlaying,
                                 Modifier.size(artworkSize).clip(RoundedCornerShape(24.dp))
                                     .semantics { contentDescription = AppText.t("Pochette") }
-                                    .onGloballyPositioned { AppUi.playerCoverBounds.value = it.boundsInRoot() })
+                                    .onGloballyPositioned { AppUi.playerCoverBounds.value = it.boundsInRoot() }, depth = true)
                             AnimatedVisibility(companion, enter = fadeIn(tween(duration)), exit = fadeOut(tween(duration))) {
                                 Column(Modifier.fillMaxWidth().padding(top = 16.dp)) {
                                     QuestMobileControls(state, track, cover, page, onPage, onTrackMenu, onOutput)
@@ -123,5 +123,5 @@ private fun QuestMobileControls(
         onLyrics = { onPage(if (page == PlayerPage.LYRICS) PlayerPage.ARTWORK else PlayerPage.LYRICS) },
         onOutput = onOutput, onProfile = { AppUi.showAccount.value = true },
         onQueue = { onPage(if (page == PlayerPage.QUEUE) PlayerPage.ARTWORK else PlayerPage.QUEUE) })
-    if (state.buffering) Text("Chargement…", color = Color.White.copy(alpha = .6f), fontSize = 11.sp)
+    if (state.buffering) Text("Chargement…", color = Color.White.copy(alpha = .8f), fontSize = 13.sp)
 }

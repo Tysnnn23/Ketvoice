@@ -61,6 +61,10 @@ import com.ketvoice.app.ui.common.Cover
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.ketvoice.app.ui.motion.Motion
 import androidx.compose.animation.animateColorAsState
+import com.ketvoice.app.theme.LocalTheme
+import com.ketvoice.app.theme.KetTheme
+import androidx.compose.material3.MaterialTheme
+import com.ketvoice.app.ui.common.TrackTitle
 
 enum class PlayerPage { ARTWORK, LYRICS, QUEUE }
 
@@ -86,7 +90,13 @@ fun FullPlayerScreen(
     val canvas by CanvasRepo.paths.collectAsState()
     val lyrics by LyricsRepo.state.collectAsState()
     val cover = covers["t:${track.id}"] ?: track.coverUrl
-    val ambience = rememberCoverAmbience(cover)
+    val sampled = rememberCoverAmbience(cover)
+    val ambientColor by animateColorAsState(sampled.color, tween(Motion.duration(420)), label = "album-background")
+    val ambience = sampled.copy(color = ambientColor)
+    val preferredAccent = LocalTheme.current.accent
+    val albumAccent by animateColorAsState(
+        if (AppSettings.albumColors.value) sampled.accent ?: preferredAccent else preferredAccent,
+        tween(Motion.duration(420)), label = "album-accent")
     val context = LocalContext.current
     val backdrop = rememberGlassBackdrop(Color.Black)
     val adaptivePlayer = LocalAdaptiveLayout.current.adaptivePlayer
@@ -120,6 +130,8 @@ fun FullPlayerScreen(
         }
     }
 
+    CompositionLocalProvider(LocalTheme provides KetTheme.dark().copy(accent = albumAccent, secondary = Color.White.copy(alpha = .78f))) {
+    MaterialTheme(colorScheme = MaterialTheme.colorScheme.copy(primary = albumAccent, onPrimary = Color.Black)) {
     BoxWithConstraints(modifier.fillMaxSize().background(Color.Black)) {
         if (com.ketvoice.app.BuildConfig.IS_QUEST) {
             QuestLandscapePlayer(state, track, cover, canvas[track.id], ambience, page,
@@ -190,7 +202,7 @@ fun FullPlayerScreen(
                                 .90f to Color.White.copy(alpha = .16f), 1f to Color.Transparent),
                                 blendMode = BlendMode.DstIn)
                         }.swipeToMini { close() }) {
-                        ArtworkCanvas(track, if (panoramicCanvasActive(canvas[track.id])) null else canvas[track.id], state.isPlaying, Modifier.fillMaxSize())
+                        ArtworkCanvas(track, if (panoramicCanvasActive(canvas[track.id])) null else canvas[track.id], state.isPlaying, Modifier.fillMaxSize(), depth = true)
                         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(
                             0f to Color.Black.copy(alpha = .16f), .52f to Color.Transparent,
                             .83f to ambience.color.copy(alpha = .45f), 1f to ambience.color.copy(alpha = .85f))))
@@ -281,6 +293,8 @@ fun FullPlayerScreen(
             }
         }
     }
+    }
+    }
 }
 
 @Composable
@@ -321,11 +335,17 @@ internal fun PlayerTitle(track: Track, compact: Boolean, cover: String?, sheetAc
                         modifier = Modifier.clip(RoundedCornerShape(2.dp)).background(Color.White).padding(horizontal = 2.dp))
                     Spacer(Modifier.width(5.dp))
                 }
-                Text(track.title, localize = false, color = Color.White, fontSize = if (compact) 17.sp else 18.sp,
-                    fontWeight = FontWeight.Bold, letterSpacing = (-.5).sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                TrackTitle(track.title, color = Color.White, fontSize = if (compact) 20.sp else 22.sp,
+                    selected = true, maxLines = if (compact) 1 else 2)
             }
-            Text(track.artist, localize = false, color = Color.White.copy(alpha = .70f), fontSize = 16.sp, letterSpacing = (-.5).sp,
-                maxLines = 1, overflow = TextOverflow.Ellipsis)
+            // Nom d'artiste cliquable → ouvre la page artiste
+            Text(track.artist, localize = false, color = Color.White.copy(alpha = .82f), fontSize = 17.sp, letterSpacing = (-.5).sp,
+                maxLines = 1, overflow = TextOverflow.Ellipsis,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { track.artistId?.let { AppUi.openArtist(it, track.artist) } }
+                    .semantics { contentDescription = "Ouvrir la page de ${track.artist}" }
+            )
         }
         Spacer(Modifier.width(8.dp))
         SmallCircleButton({

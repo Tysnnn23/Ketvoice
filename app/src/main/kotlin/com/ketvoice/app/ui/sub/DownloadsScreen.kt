@@ -34,6 +34,11 @@ import com.ketvoice.app.theme.T
 import com.ketvoice.app.ui.AppUi
 import com.ketvoice.app.ui.adaptive.LocalAdaptiveLayout
 import com.ketvoice.app.ui.common.Cover
+import com.ketvoice.app.ui.common.DownloadCover
+import com.ketvoice.app.ui.common.TrackTitle
+import com.ketvoice.app.ui.common.EmptyState
+import com.ketvoice.app.ui.common.openTrackSearch
+import com.ketvoice.app.ui.motion.Motion
 import java.util.Locale
 
 /**
@@ -46,8 +51,10 @@ fun DownloadsScreen() {
     val list by Downloader.items.collectAsState()
     val busy by Downloader.busy.collectAsState()
     val progress by Downloader.progress.collectAsState()
+    val activeTracks by Downloader.activeTracks.collectAsState()
     val art by ArtworkRepo.covers.collectAsState()
     val total = list.sumOf { it.bytes }
+    val shown = (activeTracks.values + list.map { it.track }).distinctBy { it.id }
 
     Column(
         Modifier
@@ -108,33 +115,9 @@ fun DownloadsScreen() {
             Spacer(Modifier.height(4.dp))
         }
 
-        if (list.isEmpty()) {
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .padding(40.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        Icons.Filled.DownloadDone, null,
-                        tint = th.secondary,
-                        modifier = Modifier.size(48.dp)
-                    )
-                    Spacer(Modifier.height(12.dp))
-                    Text(
-                        if (busy.isNotEmpty()) {
-                            "Téléchargement en cours…"
-                        } else {
-                            "Aucun téléchargement.\nDans le lecteur, menu ⋯ → Télécharger."
-                        },
-                        style = T.sub,
-                        color = th.secondary,
-                        lineHeight = 20.sp,
-                        modifier = Modifier.padding(4.dp)
-                    )
-                }
-            }
+        if (shown.isEmpty()) {
+            EmptyState("Aucun téléchargement", "Pour écouter hors ligne, ouvrez le menu d'un titre puis choisissez Télécharger.",
+                "Rechercher des titres", onAction = ::openTrackSearch)
         } else {
             val tracks = list.map { it.track }
             LazyVerticalGrid(
@@ -142,59 +125,61 @@ fun DownloadsScreen() {
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 6.dp, bottom = LocalAdaptiveLayout.current.bottomPaddingDp.dp)
             ) {
-                items(count = list.size, key = { list[it].track.id }) { index ->
-                    val item = list[index]
+                items(count = shown.size, key = { shown[it].id }) { index ->
+                    val track = shown[index]
+                    val item = list.firstOrNull { it.track.id == track.id }
                     Row(
                         Modifier
+                            .then(if (Motion.reduced) Modifier else Modifier.animateItem())
                             .fillMaxWidth()
                             .clip(androidx.compose.foundation.shape.RoundedCornerShape(14.dp))
-                            .clickable(
+                             .clickable(
+                                enabled = item != null,
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null
                             ) {
-                                Player.playQueue(tracks, index)
+                                Player.playQueue(tracks, tracks.indexOfFirst { it.id == track.id }.coerceAtLeast(0))
                             }
                             .padding(horizontal = 6.dp, vertical = 7.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Cover(
-                            item.track.title,
-                            art["t:${item.track.id}"] ?: item.track.coverUrl,
+                        DownloadCover(
+                            track,
+                            art["t:${track.id}"] ?: track.coverUrl,
                             size = 56.dp,
                             radius = 9.dp
                         )
                         Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
+                            TrackTitle(track.title, color = th.onBackground)
                             Text(
-                                item.track.title,
+                                if (item != null) "${track.artist} · ${item.format} · ${formatSize(item.bytes)}" else track.artist,
                                 localize = false,
-                                color = th.onBackground,
-                                style = T.bodyBold,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Text(
-                                "${item.track.artist} · ${item.format} · ${formatSize(item.bytes)}",
                                 color = th.secondary,
                                 style = T.sub,
+                                fontSize = if (com.ketvoice.app.BuildConfig.IS_QUEST) 14.sp else 13.sp,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
-                            if (item.hasLyrics || item.hasCanvas) {
+                            if (track.id in busy) Text(
+                                if ((progress[track.id] ?: 0) >= 99) "Audio enregistré · finalisation…"
+                                else "Téléchargement en cours · ${progress[track.id] ?: 0} %", color = th.accent,
+                                fontSize = if (com.ketvoice.app.BuildConfig.IS_QUEST) 14.sp else 12.sp)
+                            if (item != null && (item.hasLyrics || item.hasCanvas)) {
                                 Text(
                                     listOfNotNull(
                                         if (item.hasLyrics) "Paroles enregistrées" else null,
                                         if (item.hasCanvas) "Canvas enregistré" else null
                                     ).joinToString(" · "),
                                     color = th.accent,
-                                    fontSize = 10.sp,
+                                    fontSize = if (com.ketvoice.app.BuildConfig.IS_QUEST) 13.sp else 11.sp,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
                             }
                         }
                         Spacer(Modifier.width(8.dp))
-                        Box(
+                        if (item != null) Box(
                             Modifier
                                 .size(38.dp)
                                 .clip(CircleShape)

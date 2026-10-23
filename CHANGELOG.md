@@ -7,6 +7,27 @@
 
 ---
 
+## 2.10.0 — ALBUM COLOURS, ARTWORK DEPTH & LIBRARY MOTION
+
+**Mobile, tablet and Quest · versionCode 19**
+
+- Album-derived player accents with contrast adjustment and an opt-out setting.
+- Subtle artwork depth that leaves gestures intact, one-time collection entrances, locale-aware animated album sorting and real per-track download progress/success feedback.
+- Longer titles, actionable empty states and clearer Quest detail text; landscape split panes and the 2.9.0 artist pages remain intact.
+- A5 (playlist-add animation) is explicitly deferred; no new playlist feature is introduced.
+- 98 JVM tests and 7 Android Compose tests pass per flavor. Lint has 0 errors (129 warnings, 8 hints). Both APKs retain the existing development signing certificate.
+- Device UI checks use owned-metadata fixtures on an Android 16 emulator, not physical Quest hardware or a live provider download. Previous releases and the backend are unchanged.
+
+See [2.10.0 release notes](docs/releases/v2.10.0.md) and [implementation/validation details](docs/SELECTED-POLISH.md).
+
+## 2.9.0 — ARTIST PAGES & PLAYER READABILITY
+
+- Full-width blurred artist banners with gradient overlays and larger artist headings.
+- Larger player titles and clickable artist names when a catalog artist ID is available.
+- See the original [2.9.0 change notes](CHANGES-2.9.0.md).
+
+---
+
 ## 2.8.0 — GLASS, MOTION, EQUALIZER & SAME-WIFI HANDOFF
 
 **Mobile, tablet and Quest:** 23 October 2026 · **versionCode:** 17

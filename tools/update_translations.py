@@ -17,6 +17,19 @@ ASSET = APP / 'src/main/assets/translations.json'
 SOURCE = APP / 'src/main/kotlin/com/ketvoice/app'
 CATALOG = json.loads(ASSET.read_text(encoding='utf-8'))
 MESSAGES = [
+    'Couleurs de la pochette',
+    "Accents du lecteur adaptés à l'album, avec contraste renforcé",
+    'Profondeur de pochette', 'Mouvement léger au toucher ou au pointeur, sans modifier les gestes',
+    'Trier', 'Récents', 'Titre A–Z', 'Artiste A–Z', 'Rechercher des titres',
+    'Aucun téléchargement', "Pour écouter hors ligne, ouvrez le menu d'un titre puis choisissez Télécharger.",
+    'Audio enregistré · finalisation…', 'Téléchargement en cours · {0} %',
+    'Catalogue indisponible', 'Aucun titre dans cette collection.',
+    "Ajoutez des titres avec l'étoile du lecteur pour les retrouver ici.",
+    'Vos titres écoutés apparaîtront ici. Lancez une première écoute.',
+    'Vérifiez votre connexion, puis réessayez.', 'Écoutez un titre pour commencer votre collection.',
+    'Essayez un autre titre, artiste ou album parmi vos téléchargements.',
+    "Essayez un titre plus court ou le nom de l'artiste. Vérifiez aussi votre connexion.",
+    'Choisissez un titre puis utilisez Lire ensuite pour préparer la suite.', 'Ajouter des titres',
     'Canvas panoramique',
     'Optionnel : Canvas en fond assombri, pochette fixe pour éviter un double décodage',
     'Animations réduites', 'Atténue les mouvements décoratifs, sans désactiver le karaoké',
@@ -115,6 +128,11 @@ for path in SOURCE.rglob('*.kt'):
             MESSAGES.append(message)
 
 REVIEWED = {
+    'Couleurs de la pochette': ['Album artwork colors', 'एल्बम कवर के रंग', 'アルバムアートの色', '专辑封面配色', 'Цвета обложки альбома', 'Colori della copertina', 'Colores de la carátula', 'Albumcover-Farben', 'Cores da capa do álbum', '앨범 아트 색상'],
+    'Profondeur de pochette': ['Artwork depth', 'एल्बम कवर की गहराई', 'アルバムアートの奥行き', '封面景深', 'Глубина обложки', 'Profondità della copertina', 'Profundidad de la carátula', 'Albumcover-Tiefe', 'Profundidade da capa', '앨범 아트 깊이'],
+    'Audio enregistré · finalisation…': ['Audio saved · finishing…', 'ऑडियो सहेजा गया · पूरा किया जा रहा है…', '音声を保存済み · 仕上げ中…', '音频已保存 · 正在完成…', 'Аудио сохранено · завершение…', 'Audio salvato · completamento…', 'Audio guardado · finalizando…', 'Audio gespeichert · wird abgeschlossen…', 'Áudio salvo · finalizando…', '오디오 저장됨 · 마무리 중…'],
+    'Lire ensuite': ['Play next', 'अगला चलाएँ', '次に再生', '下一首播放', 'Воспроизвести следующим', 'Riproduci dopo', 'Reproducir a continuación', 'Als Nächstes abspielen', 'Reproduzir a seguir', '다음에 재생'],
+    'Choisissez un titre puis utilisez Lire ensuite pour préparer la suite.': ['Choose a track, then use Play next to add it to the queue.', 'कोई ट्रैक चुनें, फिर उसे कतार में जोड़ने के लिए अगला चलाएँ का उपयोग करें।', '曲を選び、「次に再生」でキューに追加してください。', '选择曲目，然后使用“下一首播放”将其加入队列。', 'Выберите трек и нажмите «Воспроизвести следующим», чтобы добавить его в очередь.', 'Scegli un brano e usa Riproduci dopo per aggiungerlo alla coda.', 'Elige una pista y usa Reproducir a continuación para añadirla a la cola.', 'Wählen Sie einen Titel und fügen Sie ihn mit „Als Nächstes abspielen“ zur Warteschlange hinzu.', 'Escolha uma faixa e use Reproduzir a seguir para adicioná-la à fila.', '트랙을 선택한 후 다음에 재생을 눌러 대기열에 추가하세요.'],
     "Reprendre la lecture ici ?": ["Resume playback here?", "यहाँ प्लेबैक फिर से शुरू करें?", "ここで再生を再開しますか？", "在这里继续播放？", "Возобновить воспроизведение здесь?", "Riprendere la riproduzione qui?", "¿Reanudar la reproducción aquí?", "Wiedergabe hier fortsetzen?", "Retomar a reprodução aqui?", "여기에서 재생을 재개할까요?"],
     "La lecture et la file seront reprises uniquement après votre accord.": ["Playback and the queue will resume only after your approval.", "आपकी स्वीकृति के बाद ही प्लेबैक और कतार फिर से शुरू होंगे।", "再生とキューは、あなたが承認した後にのみ再開されます。", "只有在您同意后才会恢复播放和队列。", "Воспроизведение и очередь возобновятся только после вашего согласия.", "Riproduzione e coda riprenderanno solo dopo la tua approvazione.", "La reproducción y la cola se reanudarán solo tras tu aprobación.", "Wiedergabe und Warteschlange werden erst nach Ihrer Zustimmung fortgesetzt.", "A reprodução e a fila só serão retomadas após a sua aprovação.", "재생과 대기열은 승인 후에만 재개됩니다."],
     "Lecture transférée": ["Playback transferred", "प्लेबैक स्थानांतरित हुआ", "再生を転送しました", "播放已转移", "Воспроизведение передано", "Riproduzione trasferita", "Reproducción transferida", "Wiedergabe übertragen", "Reprodução transferida", "재생이 전송되었습니다"],
@@ -166,5 +184,9 @@ for index, (language, table) in enumerate(CATALOG.items()):
             table[message] = REVIEWED[message][index]
         elif message not in table:
             table[message] = translate(message, language)
-    ASSET.write_text(json.dumps(CATALOG, ensure_ascii=False, indent=1) + '\n', encoding='utf-8')
     print(language, len(table), flush=True)
+
+# Publish the complete catalog at once: a build must not see half-updated languages.
+temporary = ASSET.with_suffix('.json.tmp')
+temporary.write_text(json.dumps(CATALOG, ensure_ascii=False, indent=1) + '\n', encoding='utf-8')
+temporary.replace(ASSET)

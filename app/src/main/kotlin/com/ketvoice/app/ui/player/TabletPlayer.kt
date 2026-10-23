@@ -104,7 +104,7 @@ private fun NowPlayingColumn(
             Spacer(Modifier.height(topSpace))
             ArtworkCanvas(track, if (panoramicCanvasActive(canvas)) null else canvas, state.isPlaying,
                 Modifier.size(artworkSize).clip(RoundedCornerShape(24.dp))
-                    .onGloballyPositioned { AppUi.playerCoverBounds.value = it.boundsInRoot() })
+                     .onGloballyPositioned { AppUi.playerCoverBounds.value = it.boundsInRoot() }, depth = true)
             Spacer(Modifier.height(24.dp))
             PlayerTitle(track, false, cover, onTrackMenu, Modifier.fillMaxWidth())
             Spacer(Modifier.height(12.dp))

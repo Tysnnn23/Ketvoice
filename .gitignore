@@ -19,3 +19,6 @@ Thumbs.db
 
 # Local release staging
 release-assets/
+
+# Local SDK, emulator images and Gradle distribution
+.tools/

@@ -20,8 +20,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -93,25 +95,45 @@ fun ArtistScreen() {
             else -> LazyColumn(contentPadding = PaddingValues(bottom = 210.dp)) {
                 val data = page!!
                 item {
-                    Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.Bottom) {
-                        Box(Modifier.size(132.dp).clip(CircleShape)
-                            .background(Brush.linearGradient(listOf(theme.card, theme.hairline)))) {
-                            if (!data.artist.photo.isNullOrBlank()) {
-                                AsyncImage(model = data.artist.photo, contentDescription = data.artist.name,
-                                    contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-                            }
+                    // Bannière plein écran : photo de l'artiste pleine largeur,
+                    // floutée, avec fondu progressif vers le fond de la page.
+                    Box(Modifier.fillMaxWidth().height(300.dp)) {
+                        if (!data.artist.photo.isNullOrBlank()) {
+                            AsyncImage(
+                                model = data.artist.photo,
+                                contentDescription = data.artist.name,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .blur(26.dp)
+                                    .graphicsLayer { scaleX = 1.15f; scaleY = 1.15f }
+                            )
+                        } else {
+                            Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(theme.card, theme.hairline))))
                         }
-                        Column(Modifier.weight(1f).padding(start = 18.dp, bottom = 6.dp)) {
-                            Text(data.artist.name, localize = false, color = theme.onBackground, fontSize = 28.sp,
-                                fontWeight = FontWeight.Black, letterSpacing = (-.8).sp, maxLines = 2,
+                        // Fondu bas : la photo se dissout dans le fond de la page
+                        Box(Modifier.fillMaxSize().background(
+                            Brush.verticalGradient(listOf(
+                                Color.Black.copy(alpha = 0.25f),
+                                Color.Transparent,
+                                theme.background
+                            ))
+                        ))
+                        // Fondu haut : sombre pour la lisibilité de la barre de statut
+                        Box(Modifier.fillMaxWidth().height(90.dp).align(Alignment.TopCenter).background(
+                            Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.55f), Color.Transparent))
+                        ))
+                        // Nom de l'artiste par-dessus la bannière
+                        Column(Modifier.align(Alignment.BottomStart).padding(horizontal = 20.dp, vertical = 16.dp)) {
+                            Text(data.artist.name, localize = false, color = Color.White, fontSize = 34.sp,
+                                fontWeight = FontWeight.Black, letterSpacing = (-.9).sp, maxLines = 2,
                                 overflow = TextOverflow.Ellipsis)
                             if (data.listeners.isNotBlank()) {
-                                Text(data.listeners, color = theme.secondary, fontSize = 12.sp,
+                                Text(data.listeners, color = Color.White.copy(alpha = 0.8f), fontSize = 12.sp,
                                     maxLines = 2, overflow = TextOverflow.Ellipsis,
                                     modifier = Modifier.padding(top = 6.dp))
                             }
-                            Text("Artiste · YouTube Music", color = theme.secondary, fontSize = 12.sp,
+                            Text("Artiste · YouTube Music", color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp,
                                 modifier = Modifier.padding(top = 3.dp))
                         }
                     }

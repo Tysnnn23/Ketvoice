@@ -216,6 +216,10 @@ fun SettingsScreen() {
 
             // ==================================================== APPARENCE
             Section("APPARENCE") {
+                SToggle(Icons.Filled.ColorLens, "Couleurs de la pochette", "Accents du lecteur adaptés à l'album, avec contraste renforcé",
+                    AppSettings.albumColors.value) { AppSettings.albumColors.value = it; SettingsStore.save() }
+                SToggle(Icons.Filled.Videocam, "Profondeur de pochette", "Mouvement léger au toucher ou au pointeur, sans modifier les gestes",
+                    AppSettings.artworkDepth.value) { AppSettings.artworkDepth.value = it; SettingsStore.save() }
                 SToggle(Icons.Filled.Videocam, "Canvas panoramique",
                     "Optionnel : Canvas en fond assombri, pochette fixe pour éviter un double décodage",
                     AppSettings.panoramicCanvas.value) { AppSettings.panoramicCanvas.value=it;SettingsStore.save() }

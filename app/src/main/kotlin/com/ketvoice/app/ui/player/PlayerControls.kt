@@ -7,6 +7,7 @@ import android.os.Build
 import android.view.LayoutInflater
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
@@ -89,6 +90,7 @@ import com.ketvoice.app.player.Player
 import com.ketvoice.app.ui.common.gradientFor
 import com.ketvoice.app.ui.quest.questPointer
 import com.ketvoice.app.ui.motion.Motion
+import com.ketvoice.app.ui.motion.artworkDepth
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -109,7 +111,8 @@ fun ArtworkCanvas(
     playing: Boolean,
     modifier: Modifier = Modifier,
     corner: Dp = 0.dp,
-    badge: Boolean = false
+    badge: Boolean = false,
+    depth: Boolean = false
 ) {
     val art by ArtworkRepo.covers.collectAsState()
     val cover = art["t:${track.id}"] ?: track.coverUrl
@@ -122,6 +125,7 @@ fun ArtworkCanvas(
             .background(Brush.linearGradient(gradient))
     ) {
         AnimatedContent(
+            modifier = Modifier.fillMaxSize().then(if (depth) Modifier.artworkDepth() else Modifier),
             targetState = Art(track.id, cover, canvasPath),
             // La clé inclut le canvas : dès que le MP4 est prêt, le fondu
             // remplace réellement la pochette fixe par le canvas.
@@ -573,20 +577,21 @@ fun SmallCircleButton(
     inner: @Composable (Color) -> Unit
 ) {
     val source = remember { MutableInteractionSource() }
-    // Fond animé : plus de "flash" sec quand le bouton devient actif/inactif.
-    val bgAlpha by animateFloatAsState(
-        targetValue = if (active) 0.22f else if (transparent) 0f else 0.10f,
-        animationSpec = tween(Motion.duration(Motion.FADE)), label = "circleBg"
-    )
+    val accent = com.ketvoice.app.theme.LocalTheme.current.accent
+    val activeSurface = Color(accent.red * .18f, accent.green * .18f, accent.blue * .18f, .92f)
+    val surface by animateColorAsState(if (active) activeSurface else Color.White.copy(alpha = if (transparent) 0f else .10f),
+        tween(Motion.duration()), label = "circleBg")
+    val ink by animateColorAsState(if (active) accent else Color.White.copy(alpha = .92f),
+        tween(Motion.duration()), label = "circleInk")
     Box(
         Modifier.size(maxOf(size, 48.dp)).clip(CircleShape).questPointer()
             .clickable(source, null, role = androidx.compose.ui.semantics.Role.Button) { onClick() },
         contentAlignment = Alignment.Center
     ) {
         Box(Modifier.size(size).clip(CircleShape)
-            .background(Color.White.copy(alpha = bgAlpha)),
+            .background(surface),
             contentAlignment = Alignment.Center) {
-            inner(if (active) Color.White else Color.White.copy(alpha = 0.92f))
+            inner(ink)
         }
     }
 }
@@ -672,15 +677,16 @@ fun QueueActionsBar(
 private fun RowScope.QueueSegment(active: Boolean, onClick: () -> Unit, inner: @Composable (Color) -> Unit) {
     // fond du segment animé (fade d'état au lieu d'un flash sec)
     val segAlpha by animateFloatAsState(if (active) 0.20f else 0f, tween(Motion.duration(Motion.FADE)), label = "segBg")
+    val accent = com.ketvoice.app.theme.LocalTheme.current.accent
     Box(
         Modifier
             .weight(1f)
             .fillMaxHeight()
-            .background(Color.White.copy(alpha = segAlpha))
+            .background(Color.Black.copy(alpha = segAlpha * 2.4f))
             .clickable(noRipple, null) { onClick() },
         contentAlignment = Alignment.Center
     ) {
-        inner(if (active) Color.White else Color.White.copy(alpha = 0.62f))
+        inner(if (active) accent else Color.White.copy(alpha = 0.78f))
     }
 }
 

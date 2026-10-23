@@ -106,14 +106,14 @@ fun TrackMenuSheet(track: Track, onClose: () -> Unit) {
                         color = Color.White,
                         style = T.bodyBold,
                         fontSize = 17.sp,
-                        maxLines = 1,
+                        maxLines = 3,
                         overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                     )
                 }
                 Text(
                     track.artist,
                     localize = false,
-                    color = Color.White.copy(alpha = 0.6f),
+                    color = Color.White.copy(alpha = 0.78f),
                     style = T.sub,
                     maxLines = 1,
                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis

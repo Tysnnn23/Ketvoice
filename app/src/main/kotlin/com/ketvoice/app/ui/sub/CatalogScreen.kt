@@ -27,6 +27,10 @@ import com.ketvoice.app.ui.AppUi
 import com.ketvoice.app.ui.adaptive.LocalAdaptiveLayout
 import com.ketvoice.app.ui.common.Cover
 import com.ketvoice.app.ui.player.formatSecs
+import com.ketvoice.app.ui.common.DownloadCover
+import com.ketvoice.app.ui.common.TrackTitle
+import com.ketvoice.app.ui.common.EmptyState
+import com.ketvoice.app.ui.common.openTrackSearch
 
 @Composable
 fun CatalogScreen() {
@@ -66,9 +70,17 @@ fun CatalogScreen() {
         }
         if (loading) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator(color = theme.accent, modifier = Modifier.size(26.dp), strokeWidth = 2.dp)
-        } else if (tracks.isEmpty()) Column(Modifier.padding(24.dp)) {
-            Text(if (request.kind in listOf("album", "genre")) "Ce catalogue est temporairement indisponible." else "Aucun titre dans cette collection.", color = theme.secondary)
-            if (request.kind in listOf("album", "genre")) Text("Réessayer", color = theme.accent, modifier = Modifier.clickable { attempt++ }.padding(vertical = 16.dp))
+        } else if (tracks.isEmpty()) {
+            val remote = request.kind in listOf("album", "genre")
+            EmptyState(if (remote) "Catalogue indisponible" else "Aucun titre dans cette collection.",
+                when (request.kind) {
+                    "favorites" -> "Ajoutez des titres avec l'étoile du lecteur pour les retrouver ici."
+                    "history" -> "Vos titres écoutés apparaîtront ici. Lancez une première écoute."
+                    "album", "genre" -> "Vérifiez votre connexion, puis réessayez."
+                    else -> "Écoutez un titre pour commencer votre collection."
+                }, if (remote) "Réessayer" else "Rechercher des titres") {
+                    if (remote) attempt++ else openTrackSearch()
+                }
         } else LazyVerticalGrid(
             columns = if (LocalAdaptiveLayout.current.hasRail) GridCells.Adaptive(400.dp) else GridCells.Fixed(1),
             contentPadding = PaddingValues(bottom = LocalAdaptiveLayout.current.bottomPaddingDp.dp)) {
@@ -82,14 +94,13 @@ fun CatalogScreen() {
                 val active = player.current?.id == track.id
                 Row(Modifier.fillMaxWidth().clickable { Player.playQueue(tracks, index) }.padding(horizontal = 18.dp, vertical = 7.dp),
                     verticalAlignment = Alignment.CenterVertically) {
-                    Cover(track.title, art["t:${track.id}"] ?: track.coverUrl, 52.dp, 8.dp)
+                    DownloadCover(track, art["t:${track.id}"] ?: track.coverUrl, 52.dp, 8.dp)
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
-                        Text(track.title, localize = false, color = if (active) theme.accent else theme.onBackground, fontWeight = FontWeight.SemiBold,
-                            fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(track.artist, localize = false, color = theme.secondary, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        TrackTitle(track.title, color = if (active) theme.accent else theme.onBackground, selected = active)
+                        Text(track.artist, localize = false, color = theme.secondary, fontSize = if (com.ketvoice.app.BuildConfig.IS_QUEST) 14.sp else 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
-                    if (track.durationMs > 0) Text(formatSecs(track.durationMs), color = theme.secondary, fontSize = 12.sp)
+                    if (track.durationMs > 0) Text(formatSecs(track.durationMs), localize = false, color = theme.secondary, fontSize = if (com.ketvoice.app.BuildConfig.IS_QUEST) 14.sp else 12.sp)
                     Icon(Icons.Filled.MoreVert, "Options", tint = theme.secondary,
                         modifier = Modifier.size(36.dp).clickable { AppUi.trackMenuTrack.value = track }.padding(6.dp))
                 }

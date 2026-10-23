@@ -206,7 +206,7 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
                 Row(Modifier.fillMaxWidth().height(48.dp), verticalAlignment = Alignment.CenterVertically) {
                     SmallCircleButton(onSource, size = 36.dp) { Icon(Icons.Filled.Language, "Sources des paroles", tint = it, modifier = Modifier.size(21.dp)) }
                     Spacer(Modifier.weight(1f))
-                    if (!following && lyrics.isTimed) Text("Suivre la lecture", color = Color.White, fontSize = 11.sp,
+                    if (!following && lyrics.isTimed) Text("Suivre la lecture", color = Color.White, fontSize = if (com.ketvoice.app.BuildConfig.IS_QUEST) 14.sp else 11.sp,
                         modifier = Modifier.clickable { following = true }.padding(8.dp))
                     SmallCircleButton({
                         translationEnabled = !translationEnabled
@@ -216,7 +216,7 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
                     }
                 }
             } else if (!following && lyrics.isTimed) {
-                Text("Reprendre le suivi", color = Color.White, fontSize = 12.sp,
+                Text("Reprendre le suivi", color = Color.White, fontSize = if (com.ketvoice.app.BuildConfig.IS_QUEST) 14.sp else 12.sp,
                     modifier = Modifier.align(Alignment.CenterHorizontally).clickable { following = true }.padding(12.dp))
             }
         }
@@ -318,7 +318,7 @@ internal fun LyricsSourceSheet(track: Track, onClose: () -> Unit) {
     GlassPanel(Modifier.fillMaxWidth().padding(10.dp), RoundedCornerShape(26.dp), GlassParams.sheet(radius, true)) {
         Column(Modifier.fillMaxWidth().heightIn(max = 600.dp).verticalScroll(rememberScrollState()).padding(18.dp)) {
             Text("Sources des paroles", color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.Bold)
-            Text("Syllabes natives → mots natifs → lignes → texte", color = Color(0xFF9A9BA4), fontSize = 12.sp,
+            Text("Syllabes natives → mots natifs → lignes → texte", color = Color.White.copy(alpha = .78f), fontSize = if (com.ketvoice.app.BuildConfig.IS_QUEST) 14.sp else 12.sp,
                 modifier = Modifier.padding(top = 5.dp, bottom = 12.dp))
             (listOf(MusicApi.SRC_AUTO) + MusicApi.lyricSources + MusicApi.SRC_OFF).forEach { source ->
                 val status = results[source]
@@ -344,7 +344,7 @@ internal fun LyricsSourceSheet(track: Track, onClose: () -> Unit) {
                             status.timed -> "Ligne par ligne · ${status.lines} lignes"
                             else -> "Texte non synchronisé · ${status.lines} lignes"
                         }
-                        Text(description, color = Color(0xFF92949E), fontSize = 11.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        Text(description, color = Color.White.copy(alpha = .78f), fontSize = if (com.ketvoice.app.BuildConfig.IS_QUEST) 14.sp else 11.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
                     }
                     if (selected) Icon(Icons.Filled.Check, "Sélectionnée", tint = LocalTheme.current.accent, modifier = Modifier.size(20.dp))
                 }
@@ -352,7 +352,7 @@ internal fun LyricsSourceSheet(track: Track, onClose: () -> Unit) {
             Text("Relancer les sources en ligne", color = Color.White, fontSize = 14.sp,
                 modifier = Modifier.fillMaxWidth().clickable { LyricsRepo.load(track, force = true, refresh = true); onClose() }.padding(12.dp))
             Text("Paroles fournies notamment par lrc.red, BetterLyrics et LiriQo. Les accès peuvent varier selon le titre.",
-                color = Color(0xFF92949E), fontSize = 10.sp, modifier = Modifier.padding(12.dp))
+                color = Color.White.copy(alpha = .78f), fontSize = if (com.ketvoice.app.BuildConfig.IS_QUEST) 13.sp else 10.sp, modifier = Modifier.padding(12.dp))
         }
     }
 }

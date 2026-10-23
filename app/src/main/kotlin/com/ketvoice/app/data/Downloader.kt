@@ -51,6 +51,8 @@ object Downloader {
 
     private val _busy = MutableStateFlow<Set<String>>(emptySet())
     val busy: StateFlow<Set<String>> = _busy
+    private val _activeTracks = MutableStateFlow<Map<String, Track>>(emptyMap())
+    val activeTracks: StateFlow<Map<String, Track>> = _activeTracks
 
     /** Progression par id de piste, en pourcentage (0-100). */
     private val _progress = MutableStateFlow<Map<String, Int>>(emptyMap())
@@ -77,6 +79,7 @@ object Downloader {
             return
         }
         _busy.update { it + track.id }
+        _activeTracks.update { it + (track.id to track) }
         _progress.update { it + (track.id to 0) }
         toast("Téléchargement de « ${track.title} »…")
         scope.launch {
@@ -192,6 +195,7 @@ object Downloader {
             } finally {
                 _progress.update { it - track.id }
                 _busy.update { it - track.id }
+                _activeTracks.update { it - track.id }
             }
         }
     }

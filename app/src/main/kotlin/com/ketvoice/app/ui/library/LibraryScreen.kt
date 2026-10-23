@@ -34,6 +34,18 @@ import com.ketvoice.app.ui.AppUi
 import com.ketvoice.app.ui.adaptive.LocalAdaptiveLayout
 import com.ketvoice.app.ui.common.AccountAvatar
 import com.ketvoice.app.ui.common.Cover
+import com.ketvoice.app.ui.common.DownloadCover
+import com.ketvoice.app.ui.common.EmptyState
+import com.ketvoice.app.ui.common.openTrackSearch
+import com.ketvoice.app.ui.common.TrackTitle
+import com.ketvoice.app.ui.motion.Motion
+import com.ketvoice.app.ui.motion.collectionEntry
+import com.ketvoice.app.ui.motion.rememberSeenCollections
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.platform.testTag
 
 private val playlistTints = listOf(
     Color(0xFFEF476F), Color(0xFF118AB2), Color(0xFF6C5CE7),
@@ -48,11 +60,15 @@ fun LibraryScreen() {
     val recent by ListeningHistory.tracks.collectAsState()
     val known by ListeningHistory.knownTracks.collectAsState()
     val downloads by Downloader.items.collectAsState()
+    val seen = rememberSeenCollections()
+    var albumOrder by rememberSaveable { mutableIntStateOf(0) }
+    var sortOpen by remember { mutableStateOf(false) }
     val all = (known + recent + downloads.map { it.track }).distinctBy { it.id }
     val liked = all.filter { it.id in AppSettings.favoriteIds.value }
-    val albums = (recent + downloads.map { it.track })
+    val sourceAlbums = (recent + downloads.map { it.track })
         .filter { !it.albumId.isNullOrBlank() && (it.albumId!!.all(Char::isDigit) || it.albumId.startsWith("MPRE")) }
         .distinctBy { it.albumId }
+    val albums = remember(sourceAlbums, albumOrder) { AlbumOrder.sort(sourceAlbums, albumOrder) }
     val artists = all.groupBy { it.artist.substringBefore(',').trim() }
         .filterKeys { it.isNotBlank() }
         .entries
@@ -60,7 +76,7 @@ fun LibraryScreen() {
         .take(12)
 
     LazyColumn(
-        Modifier.fillMaxSize().background(theme.background).statusBarsPadding(),
+        Modifier.fillMaxSize().testTag("library-list").background(theme.background).statusBarsPadding(),
         contentPadding = PaddingValues(bottom = layout.bottomPaddingDp.dp)
     ) {
         item {
@@ -77,6 +93,7 @@ fun LibraryScreen() {
             ) {
                 item {
                     LibraryCollectionCard(
+                        modifier = Modifier.collectionEntry("favorites", seen, 0),
                         title = "Titres que vous aimez",
                         subtitle = "${liked.size} titres",
                         cover = liked.firstOrNull()?.let { ArtworkRepo.coverForTrack(it) ?: it.coverUrl },
@@ -85,6 +102,7 @@ fun LibraryScreen() {
                 }
                 item {
                     LibraryCollectionCard(
+                        modifier = Modifier.collectionEntry("downloads", seen, 1),
                         title = "Téléchargements",
                         subtitle = "${downloads.size} hors ligne",
                         cover = downloads.firstOrNull()?.let { ArtworkRepo.coverForTrack(it.track) ?: it.track.coverUrl },
@@ -93,6 +111,7 @@ fun LibraryScreen() {
                 }
                 item {
                     LibraryCollectionCard(
+                        modifier = Modifier.collectionEntry("history", seen, 2),
                         title = "Récemment écoutés",
                         subtitle = "${recent.size} titres",
                         cover = recent.firstOrNull()?.let { ArtworkRepo.coverForTrack(it) ?: it.coverUrl },
@@ -101,6 +120,7 @@ fun LibraryScreen() {
                 }
                 item {
                     LibraryCollectionCard(
+                        modifier = Modifier.collectionEntry("all", seen, 3),
                         title = "Tous les titres",
                         subtitle = "${all.size} titres",
                         cover = all.firstOrNull()?.let { ArtworkRepo.coverForTrack(it) ?: it.coverUrl },
@@ -149,13 +169,30 @@ fun LibraryScreen() {
         if (albums.isNotEmpty()) {
             item {
                 SectionHeader("Albums", "Vos écoutes récentes")
+                Box(Modifier.fillMaxWidth().padding(horizontal = 18.dp)) {
+                    TextButton(onClick = { sortOpen = true }) {
+                        Text("Trier", color = theme.accent)
+                        Text(" · ", localize = false, color = theme.secondary)
+                        Text(AlbumOrder.labels[albumOrder], color = theme.accent)
+                    }
+                    DropdownMenu(expanded = sortOpen, onDismissRequest = { sortOpen = false }) {
+                        AlbumOrder.labels.forEachIndexed { index, label ->
+                            DropdownMenuItem(text = { Text(label, color = theme.onBackground) }, onClick = {
+                                albumOrder = index; sortOpen = false
+                            })
+                        }
+                    }
+                }
                 LazyRow(
+                    modifier = Modifier.testTag("library-albums"),
                     contentPadding = PaddingValues(horizontal = 18.dp),
-                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                     horizontalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    items(albums, key = { it.albumId!! }) { track ->
-                        Column(
-                            Modifier.width(layout.collectionSizeDp.dp).clickable {
+                    itemsIndexed(albums, key = { _, track -> track.albumId!! }) { index, track ->
+                         Column(
+                            Modifier.then(if (Motion.reduced) Modifier else Modifier.animateItem())
+                                .collectionEntry("album:${track.albumId}", seen, index)
+                                .width(layout.collectionSizeDp.dp).clickable {
                                 AppUi.openCatalog(CatalogRequest("album", track.albumId!!, track.album))
                             }
                         ) {
@@ -166,7 +203,7 @@ fun LibraryScreen() {
                                 color = theme.onBackground,
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.SemiBold,
-                                maxLines = 1,
+                                maxLines = 2,
                                 overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier.padding(top = 7.dp)
                             )
@@ -174,7 +211,7 @@ fun LibraryScreen() {
                                 track.artist,
                                 localize = false,
                                 color = theme.secondary,
-                                fontSize = 11.sp,
+                                fontSize = if (com.ketvoice.app.BuildConfig.IS_QUEST) 13.sp else 11.sp,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -215,25 +252,8 @@ fun LibraryScreen() {
         }
         if (all.isEmpty()) {
             item {
-                Column(
-                    Modifier.fillMaxWidth().padding(horizontal = 28.dp, vertical = 22.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Icon(Icons.Filled.Download, null, tint = theme.secondary, modifier = Modifier.size(34.dp))
-                    Text(
-                        "Votre bibliothèque est vide",
-                        color = theme.onBackground,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(top = 12.dp)
-                    )
-                    Text(
-                        "Écoutez un titre ou téléchargez-le pour le retrouver ici, même hors ligne.",
-                        color = theme.secondary,
-                        fontSize = 13.sp,
-                        modifier = Modifier.padding(top = 5.dp)
-                    )
-                }
+                EmptyState("Votre bibliothèque est vide", "Écoutez un titre ou téléchargez-le pour le retrouver ici, même hors ligne.",
+                    "Rechercher des titres", onAction = ::openTrackSearch)
             }
         }
     }
@@ -347,7 +367,7 @@ private fun SectionHeader(title: String, subtitle: String) {
         Text(
             subtitle,
             color = theme.secondary,
-            fontSize = 11.sp,
+            fontSize = if (com.ketvoice.app.BuildConfig.IS_QUEST) 13.sp else 11.sp,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(bottom = 3.dp)
@@ -361,10 +381,11 @@ private fun LibraryCollectionCard(
     subtitle: String,
     cover: String?,
     tint: Color,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
     val size = LocalAdaptiveLayout.current.collectionSizeDp.dp
-    Column(Modifier.width(size).clickable(onClick = onClick)) {
+    Column(modifier.width(size).clickable(onClick = onClick)) {
         Box(Modifier.size(size).clip(RoundedCornerShape(15.dp))) {
             if (cover != null) {
                 Cover(title, cover, size, 15.dp)
@@ -392,14 +413,14 @@ private fun LibraryCollectionCard(
             color = LocalTheme.current.onBackground,
             fontSize = 14.sp,
             fontWeight = FontWeight.SemiBold,
-            maxLines = 1,
+            maxLines = 2,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(top = 8.dp)
         )
         Text(
             subtitle,
             color = LocalTheme.current.secondary,
-            fontSize = 11.sp,
+            fontSize = if (com.ketvoice.app.BuildConfig.IS_QUEST) 13.sp else 11.sp,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
@@ -414,17 +435,9 @@ private fun LibraryTrackRow(track: Track, downloaded: Boolean = false, modifier:
         modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 18.dp, vertical = 7.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Cover(track.title, cover, 50.dp, 9.dp)
+        DownloadCover(track, cover, 50.dp, 9.dp)
         Column(Modifier.weight(1f).padding(start = 12.dp)) {
-            Text(
-                track.title,
-                localize = false,
-                color = theme.onBackground,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+            TrackTitle(track.title, color = theme.onBackground, fontSize = 15.sp)
             Text(
                 track.artist,
                 localize = false,

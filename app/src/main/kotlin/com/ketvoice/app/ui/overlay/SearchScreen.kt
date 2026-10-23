@@ -49,6 +49,9 @@ import com.ketvoice.app.ui.AppUi
 import com.ketvoice.app.ui.adaptive.LocalAdaptiveLayout
 import com.ketvoice.app.ui.common.AccountAvatar
 import com.ketvoice.app.ui.common.Cover
+import com.ketvoice.app.ui.common.DownloadCover
+import com.ketvoice.app.ui.common.TrackTitle
+import com.ketvoice.app.ui.common.EmptyState
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -283,15 +286,12 @@ fun SearchScreen() {
             }
 
             results.isEmpty() && artists.isEmpty() -> {
-                Column(Modifier.padding(horizontal = 20.dp, vertical = 30.dp)) {
-                    Text("Aucun résultat pour « $query »", color = th.secondary, style = T.body)
-                    if (segment == 1) {
-                        Text("Vérifiez que vos sources sont activées et accessibles.",
-                            color = th.secondary, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
-                        Text("Gérer les sources", color = th.accent, fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.clickable { AppUi.overlay.value = AppUi.SOURCES }
-                                .padding(top = 18.dp))
-                    }
+                EmptyState("Aucun résultat pour « $query »", when (segment) {
+                    1 -> "Vérifiez que vos sources sont activées et accessibles."
+                    2 -> "Essayez un autre titre, artiste ou album parmi vos téléchargements."
+                    else -> "Essayez un titre plus court ou le nom de l'artiste. Vérifiez aussi votre connexion."
+                }, if (segment == 1) "Gérer les sources" else "Réessayer") {
+                    if (segment == 1) AppUi.overlay.value = AppUi.SOURCES else attempt++
                 }
             }
 
@@ -384,17 +384,10 @@ private fun SearchResultRow(track: Track, cover: String?, modifier: Modifier = M
             .padding(horizontal = 20.dp, vertical = 7.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Cover(track.title, cover, size = 52.dp, radius = 8.dp)
+        DownloadCover(track, cover, size = 52.dp, radius = 8.dp)
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
-            Text(
-                track.title,
-                localize = false,
-                color = th.onBackground,
-                style = T.bodyBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+            TrackTitle(track.title, color = th.onBackground)
             Text(
                 buildString {
                     append(track.artist)
@@ -405,6 +398,7 @@ private fun SearchResultRow(track: Track, cover: String?, modifier: Modifier = M
                 },
                 color = th.secondary,
                 style = T.sub,
+                fontSize = if (com.ketvoice.app.BuildConfig.IS_QUEST) 14.sp else 13.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.clickable(enabled = track.artistId?.startsWith("UC") == true) {
@@ -423,7 +417,7 @@ private fun SearchResultRow(track: Track, cover: String?, modifier: Modifier = M
         Text(
             badge,
             color = if (custom || ketvoice) th.accent else th.secondary,
-            fontSize = 10.sp,
+            fontSize = if (com.ketvoice.app.BuildConfig.IS_QUEST) 12.sp else 10.sp,
             fontWeight = FontWeight.Bold,
             modifier = Modifier
                 .clip(RoundedCornerShape(5.dp))
