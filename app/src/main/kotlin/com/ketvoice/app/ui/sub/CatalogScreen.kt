@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.MoreVert
@@ -16,10 +17,15 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.ketvoice.app.data.*
 import com.ketvoice.app.player.Player
 import com.ketvoice.app.theme.LocalTheme
@@ -28,6 +34,7 @@ import com.ketvoice.app.ui.adaptive.LocalAdaptiveLayout
 import com.ketvoice.app.ui.common.Cover
 import com.ketvoice.app.ui.player.formatSecs
 import com.ketvoice.app.ui.common.DownloadCover
+import com.ketvoice.app.ui.common.gradientFor
 import com.ketvoice.app.ui.common.TrackTitle
 import com.ketvoice.app.ui.common.EmptyState
 import com.ketvoice.app.ui.common.openTrackSearch
@@ -67,6 +74,30 @@ fun CatalogScreen() {
             Spacer(Modifier.width(14.dp))
             Text(page?.title ?: request.title, color = theme.onBackground, fontSize = 24.sp,
                 fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        }
+        // Mosaïque 2x2 : les 4 premières pochettes de la collection en guise de grande cover
+        if (tracks.isNotEmpty()) {
+            val mosaicCovers = tracks.take(4).map { ArtworkRepo.coverForTrack(it) ?: it.coverUrl }
+            Box(Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
+                Row(Modifier.size(168.dp).clip(RoundedCornerShape(18.dp))) {
+                    for (i in 0 until 4) {
+                        val url = mosaicCovers.getOrNull(i)
+                        Box(Modifier.weight(1f).fillMaxHeight().background(
+                            if (url != null) Brush.linearGradient(listOf(Color.Black, Color.Black)) else Brush.linearGradient(gradientFor(request.id + i))
+                        )) {
+                            if (url != null) {
+                                AsyncImage(model = url, contentDescription = null,
+                                    contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                            } else {
+                                Text(tracks.getOrNull(i)?.title?.take(1)?.uppercase() ?: "♪",
+                                    localize = false, color = Color.White.copy(alpha = 0.85f),
+                                    fontSize = 26.sp, fontWeight = FontWeight.Black,
+                                    modifier = Modifier.align(Alignment.Center))
+                            }
+                        }
+                    }
+                }
+            }
         }
         if (loading) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator(color = theme.accent, modifier = Modifier.size(26.dp), strokeWidth = 2.dp)

@@ -97,26 +97,23 @@ fun ArtistScreen() {
                 item {
                     // Bannière plein écran : photo de l'artiste pleine largeur,
                     // floutée, avec fondu progressif vers le fond de la page.
-                    Box(Modifier.fillMaxWidth().height(300.dp)) {
+                    Box(Modifier.fillMaxWidth().height(360.dp)) {
                         if (!data.artist.photo.isNullOrBlank()) {
                             AsyncImage(
                                 model = data.artist.photo,
                                 contentDescription = data.artist.name,
                                 contentScale = ContentScale.Crop,
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .blur(26.dp)
-                                    .graphicsLayer { scaleX = 1.15f; scaleY = 1.15f }
+                                modifier = Modifier.fillMaxSize()
                             )
                         } else {
                             Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(theme.card, theme.hairline))))
                         }
-                        // Fondu bas : la photo se dissout dans le fond de la page
+                        // Scrim bas : dégradé sombre pour faire ressortir le nom (style ref)
                         Box(Modifier.fillMaxSize().background(
                             Brush.verticalGradient(listOf(
-                                Color.Black.copy(alpha = 0.25f),
+                                Color.Black.copy(alpha = 0.20f),
                                 Color.Transparent,
-                                theme.background
+                                Color.Black.copy(alpha = 0.72f)
                             ))
                         ))
                         // Fondu haut : sombre pour la lisibilité de la barre de statut
@@ -125,9 +122,9 @@ fun ArtistScreen() {
                         ))
                         // Nom de l'artiste par-dessus la bannière
                         Column(Modifier.align(Alignment.BottomStart).padding(horizontal = 20.dp, vertical = 16.dp)) {
-                            Text(data.artist.name, localize = false, color = Color.White, fontSize = 34.sp,
-                                fontWeight = FontWeight.Black, letterSpacing = (-.9).sp, maxLines = 2,
-                                overflow = TextOverflow.Ellipsis)
+                            Text(data.artist.name, localize = false, color = Color.White, fontSize = 40.sp,
+                                fontWeight = FontWeight.Black, letterSpacing = (-1.2).sp, maxLines = 2,
+                                overflow = TextOverflow.Ellipsis, lineHeight = 44.sp)
                             if (data.listeners.isNotBlank()) {
                                 Text(data.listeners, color = Color.White.copy(alpha = 0.8f), fontSize = 12.sp,
                                     maxLines = 2, overflow = TextOverflow.Ellipsis,
