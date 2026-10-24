@@ -19,7 +19,7 @@
 
 Ketvoice is an independent Android music client whose visual language is inspired by Apple Music and iOS 26. French is the default interface language; Settings offers 11 languages across the app. It is not affiliated with Apple, YouTube, Spotify or any music provider.
 
-The current release is **2.11.0** (`versionCode` 20) for both **mobile/tablet** (Android 12+, target SDK 36) and **Quest 3/3S** (minimum SDK 32, target SDK 34, landscape-only window). It adds owner-only replacement of imported audio/artwork, a global video Canvas switch, opt-in Sonic Canvas and offline capsules. Previous artwork, lyric, equalizer and single-device Wi-Fi features remain. Ketogether group listening is deferred. See [2.11.0 notes](docs/releases/v2.11.0.md).
+The current release is **2.12.0** (`versionCode` 21) for both **mobile/tablet** (Android 12+, target SDK 36) and **Quest 3/3S** (minimum SDK 32, target SDK 34, landscape-only window). It adds local playlists, a public-link Spotify playlist import with explicit incompleteness warnings, selected design finishes with individual switches, and a fully audited translation catalog. Owner-only imported-media editing, Canvas controls, Sonic Canvas, offline capsules and single-device Wi-Fi handoff remain. Ketogether group listening is deferred. See [2.12.0 notes](docs/releases/v2.12.0.md).
 
 Music-source search, stream resolution, Spotify Canvas, and published-content lookup go through two Supabase Edge Functions: **Ketvoice API** for sources/Canvas and **Ketvoice Content** for public publications. The APK contains only the project’s public Supabase `anon` key and function URLs. Spotify and source credentials remain in Supabase Vault and are never shipped with the app.
 
@@ -31,7 +31,7 @@ Music-source search, stream resolution, Spotify Canvas, and published-content lo
 
 - **Landscape only, with the mobile style**: original artwork/Canvas, icon controls, Liquid Glass, floating navigation, and lyric animations. In lyrics/queue mode, artwork, title, artist, and transport stay on the left; lyrics or queue fill the right. No giant text-button dashboard, tablet rail, or portrait-phone frame.
 - Pointer hover light on interactive controls, optional lyric sizing, foreground keep-awake, and the sleep timer in the ordinary track ⋯ menu.
-- Download **[Ketvoice-2.11.0-Quest.apk](https://github.com/Tysnnn23/Ketvoice/releases/download/v2.11.0/Ketvoice-2.11.0-Quest.apk)** and follow [Quest installation instructions](docs/QUEST.md). Headset-targeted manifest and arm64 support are included; physical Quest hardware validation is still required. This is a 2D app window, not an immersive VR environment. The same-version **[mobile/tablet 2.11.0 APK](https://github.com/Tysnnn23/Ketvoice/releases/download/v2.11.0/Ketvoice-2.11.0.apk)** is available in the same release.
+- Download **[Ketvoice-2.12.0-Quest.apk](https://github.com/Tysnnn23/Ketvoice/releases/download/v2.12.0/Ketvoice-2.12.0-Quest.apk)** and follow [Quest installation instructions](docs/QUEST.md). Headset-targeted manifest and arm64 support are included; physical Quest hardware validation is still required. This is a 2D app window, not an immersive VR environment. The same-version **[mobile/tablet 2.12.0 APK](https://github.com/Tysnnn23/Ketvoice/releases/download/v2.12.0/Ketvoice-2.12.0.apk)** is available in the same release.
 
 ### Interface
 
@@ -41,6 +41,9 @@ Music-source search, stream resolution, Spotify Canvas, and published-content lo
 - Adaptive layouts driven by real window constraints: a glass navigation rail at tablet widths, a reading-width Settings page, multi-column track grids, and a two-pane player with artwork/controls beside lyrics or queue. Short landscape windows keep the phone player instead of squeezing two panes.
 - Artwork transitions between the full player and mini-player with a fading cover flight in both directions.
 - A redesigned Library with local music, collection cards, artists, albums, recent plays, and offline downloads. Collections reflect actual listening history and downloads.
+- Local playlists: create, rename, delete, reorder, remove and play; add a song from its menu. Playlists never leave the device and keep no expiring stream URLs.
+- Spotify playlist import by public link: preview visible titles, confirm that the preview may be incomplete, then match them in Ketvoice. Unmatched titles stay visible and can be resolved by hand; no Spotify sign-in, cookie or audio download is used.
+- Seven selectable design finishes (D1, D2, D3, D4, D5, D7, D8), each with its own switch in Settings → Design Ketvoice.
 - French, English, Hindi, Japanese, Chinese, Russian, Italian, Spanish, German, Portuguese, and Korean interface languages. Song titles, artist names, and original lyrics stay unchanged.
 - Fully custom full-screen player: artwork, canvas, scrubbing, transport controls, volume, queue, lyrics, and bottom sheets.
 - Adjustable launcher icon variants.

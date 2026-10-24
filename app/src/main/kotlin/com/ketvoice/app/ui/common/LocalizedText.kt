@@ -17,6 +17,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.TextUnit
 import com.ketvoice.app.data.AppText
+import com.ketvoice.app.data.DesignChoices
 
 /**
  * Même contrat que `Material3.Text`, mais le texte est traduit avant rendu.
@@ -52,12 +53,13 @@ fun Text(
         color = color,
         fontSize = fontSize,
         fontStyle = fontStyle,
-        fontWeight = fontWeight,
+        fontWeight = if (DesignChoices.enabled("D4") && fontWeight == FontWeight.Black) FontWeight.ExtraBold else fontWeight,
         fontFamily = fontFamily,
         letterSpacing = letterSpacing,
         textDecoration = textDecoration,
         textAlign = textAlign,
-        lineHeight = lineHeight,
+        lineHeight = if (DesignChoices.enabled("D4") && lineHeight == TextUnit.Unspecified && fontSize != TextUnit.Unspecified)
+            fontSize * 1.30f else lineHeight,
         overflow = overflow,
         softWrap = softWrap,
         maxLines = maxLines,

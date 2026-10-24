@@ -23,12 +23,14 @@ import com.ketvoice.app.player.EqualizerProfile
 import com.ketvoice.app.player.Player
 import com.ketvoice.app.ui.AppUi
 import com.ketvoice.app.ui.common.Text
+import com.ketvoice.app.ui.common.AppAlertDialog as AlertDialog
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Composable
 fun PlaybackFeatureDialogs() {
+    com.ketvoice.app.ui.library.PlaylistDialogs()
     if (AppUi.showCapsule.value) com.ketvoice.app.ui.sub.CapsuleDialog { AppUi.showCapsule.value = false }
     val app=LocalContext.current.applicationContext
     val lifecycle=LocalLifecycleOwner.current.lifecycle

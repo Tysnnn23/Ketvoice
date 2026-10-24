@@ -17,6 +17,7 @@ object SettingsStore {
         val p = context.applicationContext.getSharedPreferences(NAME, Context.MODE_PRIVATE)
         prefs = p
         val s = AppSettings
+        DesignChoices.all.forEach { DesignChoices.set(it.code, p.getBoolean("design212_${it.code}", true)) }
 
         s.themeMode.value = p.getInt("themeMode", s.themeMode.value)
         s.accentArgb.value = p.getLong("accentArgb", s.accentArgb.value)
@@ -149,6 +150,7 @@ object SettingsStore {
             .putBoolean("smartAudioAlignment", s.smartAudioAlignment.value)
             .putBoolean("techStats", s.techStats.value)
             .putInt("appIconVariant", s.appIconVariant.value)
+            .also { editor -> DesignChoices.all.forEach { editor.putBoolean("design212_${it.code}", DesignChoices.enabled(it.code)) } }
             .apply()
     }
 }

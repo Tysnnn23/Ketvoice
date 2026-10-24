@@ -39,6 +39,7 @@ import com.ketvoice.app.data.Downloader
 import com.ketvoice.app.data.MusicApi
 import com.ketvoice.app.data.PublicationApi
 import com.ketvoice.app.data.Track
+import com.ketvoice.app.data.PlaylistStore
 import com.ketvoice.app.data.YouTubeCatalog
 import com.ketvoice.app.data.YouTubeMusicSession
 import com.ketvoice.app.player.Player
@@ -64,6 +65,8 @@ import kotlinx.coroutines.launch
 @Composable
 fun SearchScreen() {
     val th = LocalTheme.current
+    val scope = rememberCoroutineScope()
+    var playlistError by remember { mutableStateOf("") }
     val layout = LocalAdaptiveLayout.current
     var attempt by rememberSaveable { mutableIntStateOf(0) }
     var segment by rememberSaveable { mutableIntStateOf(0) } // 0 YouTube | 1 Sources | 2 Bibliothèque
@@ -198,6 +201,13 @@ fun SearchScreen() {
             }
         }
         Spacer(Modifier.height(14.dp))
+        AppUi.playlistResolution.value?.let { pending ->
+            Column(Modifier.padding(horizontal=20.dp)) {
+                Text("Choisissez une version pour la playlist",color=th.accent)
+                if(playlistError.isNotBlank())Text(playlistError,color=th.secondary)
+                androidx.compose.material3.TextButton(onClick={AppUi.playlistResolution.value=null;AppUi.openPlaylist(pending.playlistId)}){Text("Annuler")}
+            }
+        }
 
         // Segments
         Row(
@@ -357,7 +367,12 @@ fun SearchScreen() {
                             } else track
                             val queue = results.toMutableList().also { it[index] = playable }
                             // Pas d'ouverture forcée du lecteur : le mini-lecteur prend le relais.
-                            Player.playQueue(queue, index)
+                            val pending=AppUi.playlistResolution.value
+                            if(pending==null)Player.playQueue(queue,index) else scope.launch {
+                                try{PlaylistStore.resolve(pending.playlistId,pending.entryId,playable)
+                                    AppUi.playlistResolution.value=null;AppUi.openPlaylist(pending.playlistId)}
+                                catch(_:Exception){playlistError="Impossible d'enregistrer la playlist"}
+                            }
                         }
                     )
                     }

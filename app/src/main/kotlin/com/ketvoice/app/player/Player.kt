@@ -170,6 +170,7 @@ object Player {
         ArtworkRepo.init(context.applicationContext)
         Downloader.init(context.applicationContext)
         com.ketvoice.app.data.OfflineCapsule.init(context.applicationContext)
+        com.ketvoice.app.data.PlaylistStore.init(context.applicationContext)
         com.ketvoice.app.data.ListeningHistory.init(context.applicationContext)
         com.ketvoice.app.data.HomeFeed.start(context.applicationContext)
         MusicApi.init(context.applicationContext)

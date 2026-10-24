@@ -7,6 +7,20 @@
 
 ---
 
+## 2.12.0 — PLAYLISTS, SPOTIFY IMPORT & SELECTED DESIGN FINISHES
+
+**Mobile, tablet and Quest · versionCode 21**
+
+- Library gains **Créer une playlist** and **Importer depuis Spotify**. Playlists are local only: create, rename, delete, reorder, remove and play, with an atomic bounded store and no expiring stream URLs kept on disk.
+- Spotify import reads a public playlist preview by link, warns that the preview may be incomplete, requires confirmation, and lists matched and unmatched titles separately. No Spotify login, cookie, audio or 30-second preview download is used. Unmatched titles stay visible and can be resolved manually.
+- The import cover is an original Ketvoice artwork tinted by the playlist and may use the public artwork URL as a dimmed background.
+- Selected designs **D1, D2, D3, D4, D5, D7 and D8** are implemented, each with its own switch in Réglages → Design Ketvoice. D6 was not implemented. Quest remains a 2D landscape window.
+- The whole interface is audited and translated: 745 messages per language across the 10 non-French catalogs, placeholder parity checked, and the selected language now also applies to native Android dialogs.
+- 117 JVM tests and 15 Android Compose tests pass per flavor; lint and release results are recorded in `validation.json`.
+- No real Spotify account, Spotify audio download, authenticated owner edit or physical Quest run is claimed. See [2.12.0 release notes](docs/releases/v2.12.0.md).
+
+---
+
 ## 2.11.0 — IMPORTED MEDIA EDITS, SONIC CANVAS & OFFLINE CAPSULES
 
 **Mobile, tablet and Quest · versionCode 20**

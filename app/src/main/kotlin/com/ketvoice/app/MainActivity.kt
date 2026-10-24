@@ -38,6 +38,9 @@ import com.ketvoice.app.ui.AppUi
 import com.ketvoice.app.util.Crash
 
 class MainActivity : ComponentActivity() {
+    override fun attachBaseContext(newBase: android.content.Context) {
+        super.attachBaseContext(com.ketvoice.app.data.AppLocales.wrap(newBase))
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // d'abord : trappeur de crash (avant toute initialisation)

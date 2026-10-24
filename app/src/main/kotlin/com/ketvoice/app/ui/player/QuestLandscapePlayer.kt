@@ -8,6 +8,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -40,6 +41,7 @@ import com.ketvoice.app.ui.common.Text
 import com.ketvoice.app.ui.quest.QuestLayout
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.ketvoice.app.ui.motion.Motion
+import com.ketvoice.app.data.DesignChoices
 
 /** Original mobile controls, arranged for the Quest's landscape window.
  * Lyrics/queue never replace or hide the artwork and transport column. */
@@ -66,7 +68,7 @@ internal fun QuestLandscapePlayer(
                         modifier = Modifier.padding(start = 8.dp))
                 }
                 Row(Modifier.weight(1f).fillMaxWidth().padding(top = 12.dp, bottom = 12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(40.dp)) {
+                    horizontalArrangement = Arrangement.spacedBy(if(DesignChoices.enabled("D8"))24.dp else 40.dp)) {
                     BoxWithConstraints(Modifier.weight(QuestLayout.CONTROL_PANE_FRACTION).fillMaxHeight()) {
                         val targetSize = minOf(maxWidth, 480.dp,
                              if (companion) (maxHeight - (if (Motion.reduced) 326.dp else 296.dp)).coerceAtLeast(96.dp) else maxHeight)
@@ -85,6 +87,8 @@ internal fun QuestLandscapePlayer(
                             }
                         }
                     }
+                    if(DesignChoices.enabled("D8"))Box(Modifier.width(1.dp).fillMaxHeight().background(Brush.verticalGradient(
+                        listOf(Color.Transparent,Color.White.copy(alpha=.14f),Color.Transparent))))
                     AnimatedContent(page, transitionSpec = {
                         fadeIn(tween(duration)).togetherWith(fadeOut(tween(duration)))
                     }, label = "quest-landscape-pane", modifier = Modifier.weight(1f - QuestLayout.CONTROL_PANE_FRACTION).fillMaxHeight()) { shown ->
@@ -93,7 +97,9 @@ internal fun QuestLandscapePlayer(
                                 verticalArrangement = Arrangement.Center) {
                                 QuestMobileControls(state, track, cover, shown, onPage, onTrackMenu, onOutput)
                             }
-                        } else Column(Modifier.fillMaxSize()) {
+                        } else Column(Modifier.fillMaxSize().then(if(DesignChoices.enabled("D8"))
+                            Modifier.clip(RoundedCornerShape(20.dp)).background(Color.Black.copy(alpha=.10f))
+                                .border(.6.dp,Color.White.copy(alpha=.08f),RoundedCornerShape(20.dp)).padding(14.dp) else Modifier)) {
                             if (shown == PlayerPage.LYRICS) Text("Paroles", color = Color.White.copy(alpha = .7f),
                                 fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 8.dp))
                             if (shown == PlayerPage.QUEUE) QueuePane(state, Modifier.weight(1f).fillMaxWidth())

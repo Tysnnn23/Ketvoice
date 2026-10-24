@@ -110,11 +110,13 @@ class SelectedPolishTest {
         compose.onNodeWithTag("library-list").performScrollToNode(hasText("Trier"))
         compose.onNodeWithText("Trier").performClick()
         compose.onNodeWithText("Titre A–Z").performClick()
+        compose.onNodeWithTag("library-list").performScrollToNode(hasTestTag("library-albums"))
         compose.onNodeWithTag("library-albums").performScrollToIndex(0)
         compose.onNodeWithText("Alpha album").assertIsDisplayed()
         screenshot("sorted-library")
         compose.onNodeWithTag("library-albums").performScrollToIndex(2)
         compose.onNodeWithText("Zèbre album").assertIsDisplayed()
+        compose.onNodeWithTag("library-list").performScrollToNode(hasTestTag("library-albums"))
         compose.onNodeWithTag("library-albums").performScrollToIndex(0)
         compose.onNodeWithText("Alpha album").assertIsDisplayed()
     }

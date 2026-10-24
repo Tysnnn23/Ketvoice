@@ -51,6 +51,7 @@ fun HomeScreen() {
     var grid by remember { mutableStateOf(false) }
     val layout = LocalAdaptiveLayout.current
     val pageWidth = layout.recentPageWidthDp.dp
+    val featured = shelves.firstOrNull { it.tracks.isNotEmpty() }?.tracks ?: recent.take(6)
     LaunchedEffect(Unit) { HomeFeed.start(context) }
     LaunchedEffect(recent) { ArtworkRepo.enrich(recent.take(20)) }
     LaunchedEffect(state) {
@@ -60,21 +61,28 @@ fun HomeScreen() {
         LazyColumn(state = state, modifier = Modifier.fillMaxSize().statusBarsPadding(),
             contentPadding = PaddingValues(top = if (layout.hasRail) 24.dp else 12.dp, bottom = layout.bottomPaddingDp.dp)) {
             item {
-                if (!layout.hasRail) {
+                if (!layout.hasRail && !DesignChoices.enabled("D1")) {
                     Box(Modifier.fillMaxWidth().padding(horizontal = 18.dp)) {
                         AccountAvatar("K", 36.dp, Modifier.align(Alignment.TopEnd).clickable { AppUi.showAccount.value = true })
                     }
                 }
                 Column(Modifier.padding(horizontal = 18.dp)) {
-                    Image(painterResource(R.drawable.logo_clean), "Ketvoice",
+                    if(DesignChoices.enabled("D1"))Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
+                        Image(painterResource(R.drawable.logo_clean),"Ketvoice",Modifier.size(30.dp),contentScale=ContentScale.Fit)
+                        Text("KETVOICE",localize=false,color=theme.onBackground,fontSize=13.sp,fontWeight=FontWeight.Bold,
+                            letterSpacing=2.sp,modifier=Modifier.weight(1f).padding(start=10.dp))
+                        if(!layout.hasRail)AccountAvatar("K",36.dp,Modifier.clickable{AppUi.showAccount.value=true})
+                    } else Image(painterResource(R.drawable.logo_clean), "Ketvoice",
                         Modifier.height(48.dp).width(48.dp), contentScale = ContentScale.Fit)
                     Text("Écouter maintenant", color = theme.onBackground, fontSize = if (layout.hasRail) 40.sp else 30.sp, fontWeight = FontWeight.Black,
                         letterSpacing = (-1).sp, maxLines = 2, modifier = Modifier.padding(top = 14.dp))
-                    Text(if (youtube.connected) "$origin · ${youtube.name}" else origin,
-                        color = theme.secondary, fontSize = 12.sp, maxLines = 1,
-                        overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 3.dp, bottom = 22.dp))
+                    Row(Modifier.padding(top=3.dp,bottom=22.dp)) {
+                        Text(origin,color=theme.secondary,fontSize=12.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
+                        if(youtube.connected)Text(" · ${youtube.name}",localize=false,color=theme.secondary,fontSize=12.sp,maxLines=1)
+                    }
                 }
             }
+            if(DesignChoices.enabled("D2")&&featured.isNotEmpty())item(key="editorial"){HomeEditorial(featured)}
             item {
                 Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp).padding(bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text("Récents", color = theme.onBackground, fontSize = 16.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
@@ -115,12 +123,15 @@ fun HomeScreen() {
                 }
             }
             shelves.forEach { shelf ->
+                val shown=if(DesignChoices.enabled("D2"))shelf.tracks.filterNot{it.id==featured.firstOrNull()?.id} else shelf.tracks
+                if(shown.isNotEmpty()) {
                 item(key = shelf.title) {
                     Column(Modifier.padding(start = 18.dp, end = 18.dp, top = 28.dp, bottom = 12.dp)) {
                         Text(shelf.title, color = theme.onBackground, fontSize = 19.sp, fontWeight = FontWeight.Bold)
                         Text(shelf.subtitle, color = theme.secondary, fontSize = 12.sp, modifier = Modifier.padding(top = 3.dp))
                     }
-                    TrackCarousel(shelf.tracks, onMenu = { AppUi.trackMenuTrack.value = it })
+                    TrackCarousel(shown, onMenu = { AppUi.trackMenuTrack.value = it })
+                }
                 }
             }
             if (shelves.isEmpty()) item {

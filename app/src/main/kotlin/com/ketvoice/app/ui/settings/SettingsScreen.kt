@@ -210,11 +210,21 @@ fun SettingsScreen() {
                     ) { id ->
                         AppSettings.language.value = id
                         SettingsStore.save()
+                        com.ketvoice.app.data.AppLocales.apply(ctx, AppLanguage.fromLabel(id))
                     }
                 }
             }
 
             // ==================================================== APPARENCE
+            Section("DESIGN KETVOICE") {
+                Text("Chaque finition peut être retirée séparément, sans modifier vos playlists ni votre musique.", color = th.secondary)
+                com.ketvoice.app.data.DesignChoices.all.forEach { option ->
+                    SToggle(Icons.Filled.Tune, option.title, "Revenir à la présentation précédente en désactivant cette option",
+                        com.ketvoice.app.data.DesignChoices.enabled(option.code)) {
+                        com.ketvoice.app.data.DesignChoices.set(option.code, it); SettingsStore.save()
+                    }
+                }
+            }
             Section("APPARENCE") {
                 SToggle(Icons.Filled.ColorLens, "Couleurs de la pochette", "Accents du lecteur adaptés à l'album, avec contraste renforcé",
                     AppSettings.albumColors.value) { AppSettings.albumColors.value = it; SettingsStore.save() }

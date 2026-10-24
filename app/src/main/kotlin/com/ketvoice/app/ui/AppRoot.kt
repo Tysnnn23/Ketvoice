@@ -188,6 +188,7 @@ fun AppRoot() {
                                 AppUi.QUEUE -> QueueScreen()
                                 AppUi.CATALOG -> com.ketvoice.app.ui.sub.CatalogScreen()
                                 AppUi.ARTIST -> com.ketvoice.app.ui.sub.ArtistScreen()
+                                AppUi.PLAYLIST -> com.ketvoice.app.ui.library.PlaylistScreen()
                                 AppUi.SOURCES -> com.ketvoice.app.ui.sub.SourcesScreen()
                                 else -> SubScreensRouter()
                             }

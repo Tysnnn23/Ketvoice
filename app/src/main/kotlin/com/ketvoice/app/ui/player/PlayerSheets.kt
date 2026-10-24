@@ -130,6 +130,9 @@ fun TrackMenuSheet(track: Track, onClose: () -> Unit) {
             Player.playNext(track)
             onClose()
         }
+        MenuItemRow("Ajouter à une playlist", Icons.Filled.PlaylistAdd) {
+            onClose(); com.ketvoice.app.ui.AppUi.addToPlaylist.value = track
+        }
         val downloaded = Downloader.itemFor(track.id) != null
         MenuItemRow(
             if (downloaded) "Téléchargé ✓" else "Télécharger",

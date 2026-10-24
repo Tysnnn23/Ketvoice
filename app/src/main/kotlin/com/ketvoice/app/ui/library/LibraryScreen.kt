@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.MusicNote
 import com.ketvoice.app.ui.common.Icon
 import com.ketvoice.app.ui.common.Text
 import androidx.compose.runtime.*
@@ -45,6 +46,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.ui.platform.testTag
 
 private val playlistTints = listOf(
@@ -60,6 +62,8 @@ fun LibraryScreen() {
     val recent by ListeningHistory.tracks.collectAsState()
     val known by ListeningHistory.knownTracks.collectAsState()
     val downloads by Downloader.items.collectAsState()
+    val playlists by PlaylistStore.lists.collectAsState()
+    val playlistLoadError by PlaylistStore.loadError.collectAsState()
     val seen = rememberSeenCollections()
     var albumOrder by rememberSaveable { mutableIntStateOf(0) }
     var sortOpen by remember { mutableStateOf(false) }
@@ -83,10 +87,33 @@ fun LibraryScreen() {
             LibraryHeader()
         }
         item {
+            SectionHeader("Playlists", "Sur cet appareil")
+            Row(Modifier.fillMaxWidth().padding(horizontal=18.dp),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+                OutlinedButton(onClick={AppUi.showCreatePlaylist.value=true},enabled=!playlistLoadError,
+                    modifier=Modifier.weight(1f).heightIn(min=58.dp).testTag("create-playlist"),shape=RoundedCornerShape(16.dp)) {
+                    Text("Créer une playlist",fontSize=13.sp,maxLines=3,color=theme.accent)
+                }
+                OutlinedButton(onClick={AppUi.showSpotifyImport.value=true},enabled=!playlistLoadError,
+                    modifier=Modifier.weight(1f).heightIn(min=58.dp).testTag("import-spotify"),shape=RoundedCornerShape(16.dp)) {
+                    Text("Importer depuis Spotify",fontSize=13.sp,maxLines=3,color=theme.accent)
+                }
+            }
+            if(playlistLoadError)Text("Impossible de lire les playlists enregistrées",color=theme.secondary,modifier=Modifier.padding(18.dp))
+            if(playlists.isNotEmpty())LazyRow(contentPadding=PaddingValues(18.dp),horizontalArrangement=Arrangement.spacedBy(14.dp)) {
+                items(playlists,key={it.id}){playlist->
+                    Column(Modifier.width(layout.collectionSizeDp.dp).clickable{AppUi.openPlaylist(playlist.id)}) {
+                        PlaylistArtwork(playlist,playlist.name,Modifier.size(layout.collectionSizeDp.dp))
+                        Text(playlist.name,localize=false,color=theme.onBackground,fontSize=14.sp,maxLines=2,overflow=TextOverflow.Ellipsis,modifier=Modifier.padding(top=8.dp))
+                        Text("${playlist.entries.size} titres",color=theme.secondary,fontSize=12.sp)
+                    }
+                }
+            }
+        }
+        item {
             LocalMusicCard(all, downloads.size)
         }
         item {
-            SectionHeader("Playlists", "Vos collections")
+            SectionHeader("Collections", "Votre bibliothèque")
             LazyRow(
                 contentPadding = PaddingValues(horizontal = 18.dp),
                 horizontalArrangement = Arrangement.spacedBy(14.dp)
@@ -98,6 +125,7 @@ fun LibraryScreen() {
                         subtitle = "${liked.size} titres",
                         cover = liked.firstOrNull()?.let { ArtworkRepo.coverForTrack(it) ?: it.coverUrl },
                         tint = Color(0xFF8E44AD)
+                        , kindIcon = Icons.Filled.Star, artwork = liked.take(4)
                     ) { AppUi.openCatalog(CatalogRequest("favorites", "local", "Favoris")) }
                 }
                 item {
@@ -107,6 +135,7 @@ fun LibraryScreen() {
                         subtitle = "${downloads.size} hors ligne",
                         cover = downloads.firstOrNull()?.let { ArtworkRepo.coverForTrack(it.track) ?: it.track.coverUrl },
                         tint = Color(0xFF118AB2)
+                        , kindIcon = Icons.Filled.Download, artwork = downloads.take(4).map { it.track }
                     ) { AppUi.overlay.value = AppUi.DOWNLOADS }
                 }
                 item {
@@ -116,6 +145,7 @@ fun LibraryScreen() {
                         subtitle = "${recent.size} titres",
                         cover = recent.firstOrNull()?.let { ArtworkRepo.coverForTrack(it) ?: it.coverUrl },
                         tint = Color(0xFF06D6A0)
+                        , kindIcon = Icons.Filled.History, artwork = recent.take(4)
                     ) { AppUi.openCatalog(CatalogRequest("history", "local", "Récemment écoutés")) }
                 }
                 item {
@@ -125,6 +155,7 @@ fun LibraryScreen() {
                         subtitle = "${all.size} titres",
                         cover = all.firstOrNull()?.let { ArtworkRepo.coverForTrack(it) ?: it.coverUrl },
                         tint = Color(0xFFEF476F)
+                        , kindIcon = Icons.Filled.MusicNote, artwork = all.take(4)
                     ) { AppUi.openCatalog(CatalogRequest("all", "local", "Tous les titres")) }
                 }
             }
@@ -382,12 +413,24 @@ private fun LibraryCollectionCard(
     cover: String?,
     tint: Color,
     modifier: Modifier = Modifier,
+    kindIcon: androidx.compose.ui.graphics.vector.ImageVector = Icons.Filled.Star,
+    artwork: List<Track> = emptyList(),
     onClick: () -> Unit
 ) {
     val size = LocalAdaptiveLayout.current.collectionSizeDp.dp
     Column(modifier.width(size).clickable(onClick = onClick)) {
         Box(Modifier.size(size).clip(RoundedCornerShape(15.dp))) {
-            if (cover != null) {
+            if (DesignChoices.enabled("D3") && artwork.size > 1) {
+                Row(Modifier.fillMaxSize()) { repeat(2){column->
+                    Column(Modifier.weight(1f)) { repeat(2){row->
+                        val track=artwork[(column+row*2)%artwork.size]
+                        Box(Modifier.weight(1f).fillMaxWidth().background(tint.copy(alpha=.32f))) {
+                            coil.compose.AsyncImage(ArtworkRepo.coverForTrack(track)?:track.coverUrl,null,
+                                Modifier.fillMaxSize(),contentScale=androidx.compose.ui.layout.ContentScale.Crop)
+                        }
+                    } }
+                } }
+            } else if (cover != null) {
                 Cover(title, cover, size, 15.dp)
             } else {
                 Box(
@@ -402,7 +445,7 @@ private fun LibraryCollectionCard(
                 )
             )
             Icon(
-                Icons.Filled.Star,
+                if (DesignChoices.enabled("D3")) kindIcon else Icons.Filled.Star,
                 null,
                 tint = Color.White.copy(alpha = .9f),
                 modifier = Modifier.align(Alignment.TopEnd).padding(11.dp).size(18.dp)

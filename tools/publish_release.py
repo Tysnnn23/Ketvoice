@@ -17,7 +17,7 @@ import urllib.request
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 parser = argparse.ArgumentParser()
 parser.add_argument('--publish', action='store_true')
-parser.add_argument('--version', choices=['2.6.0', '2.6.1', '2.7.0', '2.7.1', '2.8.0', '2.9.0', '2.10.0', '2.11.0'], default='2.11.0')
+parser.add_argument('--version', choices=['2.6.0', '2.6.1', '2.7.0', '2.7.1', '2.8.0', '2.9.0', '2.10.0', '2.11.0', '2.12.0'], default='2.12.0')
 args = parser.parse_args()
 VERSION = args.version
 TAG = 'v' + VERSION
@@ -46,6 +46,8 @@ if VERSION == '2.10.0':
         'quest-queue-long-title', 'sorted-library')]
 if VERSION == '2.11.0':
     FILES += ['Ketvoice-2.11.0-Quest.apk', 'NOTES.md']
+if VERSION == '2.12.0':
+    FILES += ['Ketvoice-2.12.0-Quest.apk', 'NOTES.md']
 EXPECTED_APK = {
     '2.6.0': '8636778748a8c956db8b3fb3286d3bc5e07b743e0310d65cd2d1a1c32c8998d1',
     '2.6.1': 'be3225dfbe3abb95f548741ed6eb7a1597612e2bb7b24fe306a88a0bf1736676',
@@ -55,6 +57,7 @@ EXPECTED_APK = {
     '2.9.0': 'e38507d8868504a5da931fc64442a1a2d5399719631c41451aa8ea03350c1687',
     '2.10.0': '75859c983b111f7c48565cbc60d537739960b46c4c6472d1060a88a412e13529',
     '2.11.0': '3c453649f0f6b6fe96272461483c4a2310c82c7f5da829c33e017575947f94ea',
+    '2.12.0': 'db5028894d28ac1ab5b5e00e7fef334b09ac774781e128fbc02c6455b2b21bd0',
 }[VERSION]
 QUEST_APK = {
     '2.7.0': ('Ketvoice-2.7.0-Quest.apk', '7dad32c00f26e7508869d683e9338aa9eb7a73f795e42c418f4d13c2a1a91db6'),
@@ -62,6 +65,7 @@ QUEST_APK = {
     '2.9.0': ('Ketvoice-2.9.0-Quest.apk', '1e651b600c5a93290883181a60ec5041d88cdaf32eeff4fa32b362e067062a41'),
     '2.10.0': ('Ketvoice-2.10.0-Quest.apk', 'f0dcdb53def929c909ec0b08b495f50c9a8f256a8fa2dba451b7c8c4b22fab83'),
     '2.11.0': ('Ketvoice-2.11.0-Quest.apk', '3a455c30c7dbd79ed8037596524038ea8bf859dde0bf46361061b2dad3f16e29'),
+    '2.12.0': ('Ketvoice-2.12.0-Quest.apk', 'f39dc2fc960664c795a434f9f9b302b1780d862d50a14dcecafe92d58fbc1455'),
 }.get(VERSION)
 
 def git(*argv):

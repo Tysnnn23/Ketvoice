@@ -57,20 +57,24 @@ fun KetvoiceTheme(useDark: Boolean? = null, content: @Composable () -> Unit) {
     val sysDark = isSystemInDarkTheme()
     val isDark = useDark ?: sysDark
     val accent = Color(com.ketvoice.app.data.AppSettings.accentArgb.value.toInt())
-    val th = (if (isDark) KetTheme.dark() else KetTheme.light()).copy(accent = accent)
+    val base = (if (isDark) KetTheme.dark() else KetTheme.light()).copy(accent = accent)
+    val th = if (com.ketvoice.app.data.DesignChoices.enabled("D1")) base.copy(
+        background=if(isDark)Color(0xFF0C0D12) else Color(0xFFF7F7FA),
+        card=if(isDark)Color(0xFF1B1D26) else Color.White,
+        secondary=if(isDark)Color(0xFFB6B9C6) else Color(0xFF555A69)) else base
     androidx.compose.runtime.CompositionLocalProvider(LocalTheme provides th) {
         MaterialTheme(
             colorScheme = if (isDark) darkColorScheme(
-                background = Palette.Black,
+                background = th.background,
                 onBackground = Palette.White,
-                surface = Palette.Black,
+                surface = th.card,
                 primary = accent,
                 onSurface = Palette.White,
                 onSurfaceVariant = Palette.SecondaryTextDark
             ) else lightColorScheme(
-                background = Palette.White,
+                background = th.background,
                 onBackground = Palette.Black,
-                surface = Palette.White,
+                surface = th.card,
                 primary = accent,
                 onSurface = Palette.Black,
                 onSurfaceVariant = Palette.SecondaryTextLight

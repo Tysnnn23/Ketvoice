@@ -62,6 +62,7 @@ fun PublisherScreen(target: Track?, onClose: () -> Unit) {
     val allowed by PublisherSession.allowed.collectAsState()
     val scope = rememberCoroutineScope()
     val folder = remember { File(context.cacheDir, "publisher/${UUID.randomUUID()}").apply { mkdirs() } }
+    val filenames = remember { java.util.concurrent.ConcurrentHashMap<String,String>() }
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf("") }
     var info by remember { mutableStateOf("") }
@@ -123,6 +124,7 @@ fun PublisherScreen(target: Track?, onClose: () -> Unit) {
                     size += count; require(size <= max) { "Fichier trop volumineux" }; out.write(buffer, 0, count) }
             } }
             require(file.length() > 0) { "Fichier vide" }
+            filenames[file.absolutePath] = name.take(200)
             file
         } catch (failure: Exception) { file.delete(); throw failure }
     }
@@ -194,6 +196,8 @@ fun PublisherScreen(target: Track?, onClose: () -> Unit) {
             } else {
                 Text("Publication publique · Compte vérifié", color = theme.accent, fontWeight = FontWeight.SemiBold)
                 if (target == null || editMode) {
+                    if(DesignChoices.enabled("D7")) ImportComparison(editable?.track ?: target,audio,cover,
+                        audio?.let{filenames[it.absolutePath]},duration)
                     if (editMode) {
                         Text(target!!.title, localize = false, color = theme.onBackground, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                         Text(target.artist, localize = false, color = theme.secondary)
@@ -211,8 +215,10 @@ fun PublisherScreen(target: Track?, onClose: () -> Unit) {
                         modifier = Modifier.fillMaxWidth(), colors = fieldColors)
                     }
                     PublishButton(if (cover == null) "Ajouter une pochette" else "Changer la pochette", !busy) { coverPicker.launch(arrayOf("image/jpeg", "image/png", "image/webp")) }
-                    cover?.let { image -> AsyncImage(image, null, Modifier.size(160.dp).clip(RoundedCornerShape(18.dp))) }
-                    if (editMode && cover == null) editable?.track?.coverUrl?.let { AsyncImage(it, null, Modifier.size(160.dp).clip(RoundedCornerShape(18.dp))) }
+                    if(!DesignChoices.enabled("D7")) {
+                        cover?.let { image -> AsyncImage(image, null, Modifier.size(160.dp).clip(RoundedCornerShape(18.dp))) }
+                        if (editMode && cover == null) editable?.track?.coverUrl?.let { AsyncImage(it, null, Modifier.size(160.dp).clip(RoundedCornerShape(18.dp))) }
+                    }
                     Text("Pochette facultative · JPEG, PNG, WebP · 4 Mo maximum", color = theme.secondary, fontSize = 12.sp)
                 } else {
                     Text(target.title, localize = false, color = theme.onBackground, fontSize = 20.sp, fontWeight = FontWeight.Bold)

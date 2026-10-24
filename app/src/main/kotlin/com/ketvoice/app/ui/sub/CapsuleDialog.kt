@@ -15,6 +15,7 @@ import com.ketvoice.app.player.Player
 import com.ketvoice.app.theme.LocalTheme
 import com.ketvoice.app.ui.common.Text
 import com.ketvoice.app.ui.common.TrackTitle
+import com.ketvoice.app.ui.common.AppAlertDialog as AlertDialog
 
 @Composable
 fun CapsuleDialog(onClose: () -> Unit) {

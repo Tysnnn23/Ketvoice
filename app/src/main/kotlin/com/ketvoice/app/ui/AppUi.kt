@@ -31,6 +31,14 @@ object AppUi {
     val CATALOG = 15
     val SOURCES = 16
     val ARTIST = 17
+    val PLAYLIST = 18
+    val playlistId = androidx.compose.runtime.mutableStateOf<String?>(null)
+    val showCreatePlaylist = androidx.compose.runtime.mutableStateOf(false)
+    val showSpotifyImport = androidx.compose.runtime.mutableStateOf(false)
+    val addToPlaylist = androidx.compose.runtime.mutableStateOf<com.ketvoice.app.data.Track?>(null)
+    data class PlaylistResolution(val playlistId: String, val entryId: String)
+    val playlistResolution = androidx.compose.runtime.mutableStateOf<PlaylistResolution?>(null)
+    fun openPlaylist(id: String) { playlistId.value = id; overlay.intValue = PLAYLIST; showPlayer.value = false; bottomCollapsed.value = false }
     val catalogRequest = androidx.compose.runtime.mutableStateOf<com.ketvoice.app.data.CatalogRequest?>(null)
     fun openCatalog(request: com.ketvoice.app.data.CatalogRequest) {
         catalogRequest.value = request
@@ -99,6 +107,7 @@ object AppUi {
     val showTrackMenu = androidx.compose.runtime.mutableStateOf(false)
     val trackMenuTrack = androidx.compose.runtime.mutableStateOf<com.ketvoice.app.data.Track?>(null)
     fun selectTab(index: Int) {
+        playlistResolution.value = null
         tab.intValue = index
         overlay.intValue = NONE
         showPlayer.value = false

@@ -23,3 +23,7 @@ release-assets/
 # Local SDK, emulator images and Gradle distribution
 .tools/
 supabase/.temp/
+.kotlin/
+tools/.translation-batch-cache.json
+tools/ui-messages.json
+tools/ui-messages-missing.json
