@@ -16,6 +16,9 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -147,9 +150,28 @@ fun FullPlayerScreen(
             return@BoxWithConstraints
         }
         if (adaptivePlayer) {
-            TabletPlayer(state, track, cover, canvas[track.id], ambience, page,
-                onPage = ::navigate, onClose = ::close, onTrackMenu = { sheet = "track" },
-                onSources = { sheet = "sources" }, onOutput = { sheet = "audio" })
+            // Swipe horizontal pour fermer le player sur tablette.
+            var dragX by remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
+            Box(Modifier.fillMaxSize().graphicsLayer { translationX = dragX }.pointerInput(Unit) {
+                awaitEachGesture {
+                    val down = awaitFirstDown()
+                    dragX = 0f
+                    var total = 0f
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        val change = event.changes.firstOrNull() ?: break
+                        total += change.positionChange().x
+                        dragX = total
+                        if (!change.pressed) break
+                        change.consume()
+                    }
+                    if (kotlin.math.abs(total) > 380f) close() else dragX = 0f
+                }
+            }) {
+                TabletPlayer(state, track, cover, canvas[track.id], ambience, page,
+                    onPage = ::navigate, onClose = ::close, onTrackMenu = { sheet = "track" },
+                    onSources = { sheet = "sources" }, onOutput = { sheet = "audio" })
+            }
             if (sheet.isNotBlank()) PlayerSheetScrim({ sheet = "" }) {
                 when (sheet) {
                     "sources" -> LyricsSourceSheet(track, onClose = { sheet = "" })

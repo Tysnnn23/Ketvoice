@@ -297,6 +297,14 @@ object Player {
         scope.launch { ArtworkRepo.enrich(listOf(resolvedTrack)) }
 
         resolutionJob = scope.launch(Dispatchers.Main) {
+            // Fichier local (MediaStore) : lecture directe, aucune résolution réseau.
+            if (resolvedTrack.id.startsWith("local:") && resolvedTrack.streamUrl != null) {
+                activeStream = null
+                startItem(c, resolvedTrack, resolvedTrack.streamUrl, startPositionMs.coerceAtLeast(0), desiredPlay)
+                _state.value = _state.value.copy(quality = "Fichier local", buffering = false)
+                resolving = false
+                return@launch
+            }
             val local = Downloader.itemFor(track.id)
             if (local != null) {
                 activeStream = null

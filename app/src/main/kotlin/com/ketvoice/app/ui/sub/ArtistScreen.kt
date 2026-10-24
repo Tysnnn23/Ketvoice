@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.CircularProgressIndicator
+import com.ketvoice.app.ui.common.GlassBackButton
 import com.ketvoice.app.ui.common.Icon
 import com.ketvoice.app.ui.common.Text
 import androidx.compose.runtime.*
@@ -68,8 +69,7 @@ fun ArtistScreen() {
     Column(Modifier.fillMaxSize().background(theme.background).statusBarsPadding()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, "Retour", tint = theme.onBackground,
-                modifier = Modifier.size(30.dp).clickable { AppUi.overlay.value = AppUi.NONE })
+            GlassBackButton { AppUi.overlay.value = AppUi.NONE }
             Spacer(Modifier.width(12.dp))
             Text(artist?.name ?: request.name, localize = false, color = theme.onBackground, fontSize = 20.sp,
                 fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis,
@@ -227,3 +227,4 @@ fun ArtistScreen() {
         }
     }
 }
+

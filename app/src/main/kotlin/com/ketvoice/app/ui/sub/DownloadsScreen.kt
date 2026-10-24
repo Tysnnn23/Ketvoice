@@ -13,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DownloadDone
+import com.ketvoice.app.ui.common.GlassBackButton
 import com.ketvoice.app.ui.common.Icon
 import com.ketvoice.app.ui.common.Text
 import androidx.compose.runtime.Composable
@@ -68,16 +69,7 @@ fun DownloadsScreen() {
                 .padding(start = 14.dp, end = 16.dp, top = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                Icons.AutoMirrored.Filled.ArrowBack, "Retour",
-                tint = th.onBackground,
-                modifier = Modifier
-                    .size(30.dp)
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null
-                    ) { AppUi.overlay.value = AppUi.NONE }
-            )
+            GlassBackButton { AppUi.overlay.value = AppUi.NONE }
             Spacer(Modifier.width(12.dp))
             Text("Téléchargements", style = T.hugeTitle, color = th.onBackground, fontSize = 30.sp)
         }
@@ -214,3 +206,4 @@ private fun formatSize(bytes: Long): String {
         String.format(Locale.FRANCE, "%.1f Mo", mo)
     }
 }
+

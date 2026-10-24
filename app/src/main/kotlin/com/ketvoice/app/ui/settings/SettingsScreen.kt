@@ -106,13 +106,7 @@ fun SettingsScreen() {
                 .padding(start = 14.dp, end = 16.dp, top = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                Icons.AutoMirrored.Filled.ArrowBack, "Retour",
-                tint = th.onBackground,
-                modifier = Modifier
-                    .size(30.dp)
-                    .clickable(noRip, null) { AppUi.overlay.value = AppUi.NONE }
-            )
+            com.ketvoice.app.ui.common.GlassBackButton { AppUi.overlay.value = AppUi.NONE }
             Spacer(Modifier.width(12.dp))
             Text("Réglages", style = T.hugeTitle, color = th.onBackground, fontSize = 30.sp)
         }

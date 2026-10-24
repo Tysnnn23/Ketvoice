@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.PlayArrow
@@ -137,6 +138,16 @@ fun LibraryScreen() {
                         tint = Color(0xFF118AB2)
                         , kindIcon = Icons.Filled.Download, artwork = downloads.take(4).map { it.track }
                     ) { AppUi.overlay.value = AppUi.DOWNLOADS }
+                }
+                item {
+                    LibraryCollectionCard(
+                        modifier = Modifier.collectionEntry("localmusic", seen, 1),
+                        title = "Musique locale",
+                        subtitle = "Fichiers de cet appareil",
+                        cover = null,
+                        tint = Color(0xFFF4A261)
+                        , kindIcon = Icons.Filled.Folder, artwork = listOf<Track>()
+                    ) { AppUi.overlay.value = AppUi.LOCAL_FILES }
                 }
                 item {
                     LibraryCollectionCard(
@@ -505,3 +516,4 @@ private fun LibraryTrackRow(track: Track, downloaded: Boolean = false, modifier:
         }
     }
 }
+

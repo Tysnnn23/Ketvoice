@@ -80,7 +80,7 @@ fun SimpleSubScreens(title: String, subtitle: String = "") {
 fun SubScreensRouter() {
     when (AppUi.overlay.value) {
         AppUi.DOWNLOADS -> DownloadsScreen()
-        AppUi.LOCAL_FILES -> SimpleSubScreens("Musique locale")
+        AppUi.LOCAL_FILES -> LocalMusicScreen()
         AppUi.REPLAY -> SimpleSubScreens("Replay", "Vos meilleures chansons, artistes, albums et genres")
         AppUi.EXPORT -> SimpleSubScreens("Exporter les données", "Un fichier JSON de vos réglages et historique")
         AppUi.IMPORT -> SimpleSubScreens("Importer des données", "Remplace les réglages et l'historique sur cet appareil")

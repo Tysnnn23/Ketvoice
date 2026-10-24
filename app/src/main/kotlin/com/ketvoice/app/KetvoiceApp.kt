@@ -14,8 +14,15 @@ import java.io.File
  */
 class KetvoiceApp : Application(), ImageLoaderFactory {
 
+    companion object {
+        @JvmStatic
+        lateinit var instance: KetvoiceApp
+            private set
+    }
+
     override fun onCreate() {
         super.onCreate()
+        instance = this
         com.ketvoice.app.data.AppText.init(this)
     }
 
