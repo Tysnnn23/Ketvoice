@@ -17,9 +17,23 @@
 
 ## Overview
 
+### 3.0.0-Beta3 — rebuilt APKs
+
+The Beta3 rebuild keeps the recent beta changes (artist banner, local music,
+glass back buttons, tablet swipe-to-close, image-cache purge and seek feedback).
+Its app version remains **3.0.0-Beta3**, with **versionCode 25** for upgrading.
+The original Beta3 APK was an unsigned ZIP and Android rejected its signature;
+the rebuild is signed automatically and verified before upload.
+
+- [Mobile APK](https://github.com/Tysnnn23/Ketvoice/releases/download/v3.0.0-Beta3-rebuild.1/Ketvoice-3.0.0-Beta3-rebuild.1.apk)
+- [Quest APK](https://github.com/Tysnnn23/Ketvoice/releases/download/v3.0.0-Beta3-rebuild.1/Ketvoice-3.0.0-Beta3-rebuild.1-Quest.apk)
+- [Rebuild notes and validation limits](docs/releases/v3.0.0-Beta3-rebuild.1.md)
+
+This is a separate prerelease; existing releases and tags are not replaced.
+
 Ketvoice is an independent Android music client whose visual language is inspired by Apple Music and iOS 26. French is the default interface language; Settings offers 11 languages across the app. It is not affiliated with Apple, YouTube, Spotify or any music provider.
 
-The current release is **2.12.0** (`versionCode` 21) for both **mobile/tablet** (Android 12+, target SDK 36) and **Quest 3/3S** (minimum SDK 32, target SDK 34, landscape-only window). It adds local playlists, a public-link Spotify playlist import with explicit incompleteness warnings, selected design finishes with individual switches, and a fully audited translation catalog. Owner-only imported-media editing, Canvas controls, Sonic Canvas, offline capsules and single-device Wi-Fi handoff remain. Ketogether group listening is deferred. See [2.12.0 notes](docs/releases/v2.12.0.md).
+The stable release is **2.12.0** (`versionCode` 21) for both **mobile/tablet** (Android 12+, target SDK 36) and **Quest 3/3S** (minimum SDK 32, target SDK 34, landscape-only window). It adds local playlists, a public-link Spotify playlist import with explicit incompleteness warnings, selected design finishes with individual switches, and a fully audited translation catalog. Owner-only imported-media editing, Canvas controls, Sonic Canvas, offline capsules and single-device Wi-Fi handoff remain. Ketogether group listening is deferred. See [2.12.0 notes](docs/releases/v2.12.0.md).
 
 Music-source search, stream resolution, Spotify Canvas, and published-content lookup go through two Supabase Edge Functions: **Ketvoice API** for sources/Canvas and **Ketvoice Content** for public publications. The APK contains only the project’s public Supabase `anon` key and function URLs. Spotify and source credentials remain in Supabase Vault and are never shipped with the app.
 

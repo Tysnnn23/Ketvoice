@@ -744,7 +744,11 @@
   "À l'affiche": "On display",
   "À publier": "To be published",
   "Écouter": "Listen",
-  "Éditeur visuel des imports": "Visual import editor"
+  "Éditeur visuel des imports": "Visual import editor",
+  "Autorisez l'accès aux fichiers audio pour afficher votre musique locale.": "Allow access to audio files to display your local music.",
+  "Autoriser l'accès": "Allow access",
+  "Impossible de lire les fichiers audio.": "Unable to read audio files.",
+  "Vérifiez les autorisations puis réessayez.": "Check permissions and try again."
  },
  "hi": {
   "Accueil": "होम",
@@ -1491,7 +1495,11 @@
   "À l'affiche": "प्रदर्शन पर",
   "À publier": "प्रकाशित किया जाना है",
   "Écouter": "सुनो",
-  "Éditeur visuel des imports": "दृश्य आयात संपादक"
+  "Éditeur visuel des imports": "दृश्य आयात संपादक",
+  "Autorisez l'accès aux fichiers audio pour afficher votre musique locale.": "अपना स्थानीय संगीत दिखाने के लिए ऑडियो फ़ाइलों तक पहुँच की अनुमति दें।",
+  "Autoriser l'accès": "पहुँच की अनुमति दें",
+  "Impossible de lire les fichiers audio.": "ऑडियो फ़ाइलें पढ़ी नहीं जा सकीं।",
+  "Vérifiez les autorisations puis réessayez.": "अनुमतियाँ जाँचें और फिर से प्रयास करें।"
  },
  "ja": {
   "Accueil": "ホーム",
@@ -2238,7 +2246,11 @@
   "À l'affiche": "展示中",
   "À publier": "公開予定",
   "Écouter": "聞いてください",
-  "Éditeur visuel des imports": "ビジュアルインポートエディタ"
+  "Éditeur visuel des imports": "ビジュアルインポートエディタ",
+  "Autorisez l'accès aux fichiers audio pour afficher votre musique locale.": "ローカルの音楽を表示するには、音声ファイルへのアクセスを許可してください。",
+  "Autoriser l'accès": "アクセスを許可",
+  "Impossible de lire les fichiers audio.": "音声ファイルを読み込めません。",
+  "Vérifiez les autorisations puis réessayez.": "権限を確認して、もう一度お試しください。"
  },
  "zh": {
   "Accueil": "首页",
@@ -2985,7 +2997,11 @@
   "À l'affiche": "展示中",
   "À publier": "#待发表",
   "Écouter": "#听",
-  "Éditeur visuel des imports": "#可视化导入编辑器"
+  "Éditeur visuel des imports": "#可视化导入编辑器",
+  "Autorisez l'accès aux fichiers audio pour afficher votre musique locale.": "请允许访问音频文件，以显示本地音乐。",
+  "Autoriser l'accès": "允许访问",
+  "Impossible de lire les fichiers audio.": "无法读取音频文件。",
+  "Vérifiez les autorisations puis réessayez.": "请检查权限后重试。"
  },
  "ru": {
   "Accueil": "Главная",
@@ -3732,7 +3748,11 @@
   "À l'affiche": "На дисплее",
   "À publier": "Будет опубликовано",
   "Écouter": "Слушать",
-  "Éditeur visuel des imports": "Визуальный редактор импорта"
+  "Éditeur visuel des imports": "Визуальный редактор импорта",
+  "Autorisez l'accès aux fichiers audio pour afficher votre musique locale.": "Разрешите доступ к аудиофайлам, чтобы показать музыку на устройстве.",
+  "Autoriser l'accès": "Разрешить доступ",
+  "Impossible de lire les fichiers audio.": "Не удалось прочитать аудиофайлы.",
+  "Vérifiez les autorisations puis réessayez.": "Проверьте разрешения и повторите попытку."
  },
  "it": {
   "Accueil": "Home",
@@ -4479,7 +4499,11 @@
   "À l'affiche": "In mostra",
   "À publier": "Da pubblicare",
   "Écouter": "Ascolta",
-  "Éditeur visuel des imports": "Editor di importazione visiva"
+  "Éditeur visuel des imports": "Editor di importazione visiva",
+  "Autorisez l'accès aux fichiers audio pour afficher votre musique locale.": "Consenti l'accesso ai file audio per visualizzare la tua musica locale.",
+  "Autoriser l'accès": "Consenti accesso",
+  "Impossible de lire les fichiers audio.": "Impossibile leggere i file audio.",
+  "Vérifiez les autorisations puis réessayez.": "Controlla le autorizzazioni e riprova."
  },
  "es": {
   "Accueil": "Inicio",
@@ -5226,7 +5250,11 @@
   "À l'affiche": "En exhibición",
   "À publier": "Por publicar",
   "Écouter": "Escucha",
-  "Éditeur visuel des imports": "Editor de importación visual"
+  "Éditeur visuel des imports": "Editor de importación visual",
+  "Autorisez l'accès aux fichiers audio pour afficher votre musique locale.": "Permite el acceso a los archivos de audio para mostrar tu música local.",
+  "Autoriser l'accès": "Permitir acceso",
+  "Impossible de lire les fichiers audio.": "No se pueden leer los archivos de audio.",
+  "Vérifiez les autorisations puis réessayez.": "Revisa los permisos e inténtalo de nuevo."
  },
  "de": {
   "Accueil": "Start",
@@ -5973,7 +6001,11 @@
   "À l'affiche": "Ausgestellt",
   "À publier": "Wird veröffentlicht",
   "Écouter": "Hör zu",
-  "Éditeur visuel des imports": "Visueller Importeditor"
+  "Éditeur visuel des imports": "Visueller Importeditor",
+  "Autorisez l'accès aux fichiers audio pour afficher votre musique locale.": "Erlaube den Zugriff auf Audiodateien, um deine lokale Musik anzuzeigen.",
+  "Autoriser l'accès": "Zugriff erlauben",
+  "Impossible de lire les fichiers audio.": "Audiodateien konnten nicht gelesen werden.",
+  "Vérifiez les autorisations puis réessayez.": "Prüfe die Berechtigungen und versuche es erneut."
  },
  "pt": {
   "Accueil": "Início",
@@ -6720,7 +6752,11 @@
   "À l'affiche": "Em exibição",
   "À publier": "A ser publicado",
   "Écouter": "Ouça",
-  "Éditeur visuel des imports": "Editor de importação visual"
+  "Éditeur visuel des imports": "Editor de importação visual",
+  "Autorisez l'accès aux fichiers audio pour afficher votre musique locale.": "Permita o acesso aos arquivos de áudio para exibir sua música local.",
+  "Autoriser l'accès": "Permitir acesso",
+  "Impossible de lire les fichiers audio.": "Não foi possível ler os arquivos de áudio.",
+  "Vérifiez les autorisations puis réessayez.": "Verifique as permissões e tente novamente."
  },
  "ko": {
   "Accueil": "홈",
@@ -7467,6 +7503,10 @@
   "À l'affiche": "전시중",
   "À publier": "출시 예정",
   "Écouter": "들어보세요",
-  "Éditeur visuel des imports": "비주얼 가져오기 편집기"
+  "Éditeur visuel des imports": "비주얼 가져오기 편집기",
+  "Autorisez l'accès aux fichiers audio pour afficher votre musique locale.": "기기의 음악을 표시하려면 오디오 파일 접근을 허용하세요.",
+  "Autoriser l'accès": "접근 허용",
+  "Impossible de lire les fichiers audio.": "오디오 파일을 읽을 수 없습니다.",
+  "Vérifiez les autorisations puis réessayez.": "권한을 확인한 후 다시 시도하세요."
  }
 }

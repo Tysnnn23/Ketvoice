@@ -40,6 +40,7 @@ import coil.compose.AsyncImage
 import com.ketvoice.app.data.AppSettings
 import com.ketvoice.app.data.ArtworkRepo
 import com.ketvoice.app.glass.LocalBackdropLayer
+import com.ketvoice.app.glass.BackdropCapture
 import com.ketvoice.app.glass.rememberGlassBackdrop
 import com.ketvoice.app.player.Player
 import com.ketvoice.app.theme.KetvoiceTheme
@@ -154,11 +155,11 @@ fun AppRoot() {
         CompositionLocalProvider(LocalBackdropLayer provides backdrop, LocalAdaptiveLayout provides layout) {
             Box(Modifier.fillMaxSize()) {
                 // ---- Contenu principal : capturé par le backdrop, animé à chaque page ----
-                Box(
-                    Modifier
+                BackdropCapture(
+                    backdrop = backdrop,
+                    modifier = Modifier
                         .fillMaxSize()
                         .background(th.background)
-                        .layerBackdrop(backdrop)
                 ) {
                     Box(Modifier.fillMaxSize().padding(start = if (queueOverlay) 0.dp else layout.railWidthDp.dp), contentAlignment = Alignment.TopCenter) {
                     Box(Modifier.widthIn(max = pageMaxWidth).fillMaxSize()

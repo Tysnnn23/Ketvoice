@@ -1,0 +1,33 @@
+{
+  "Autorisez l'accès aux fichiers audio pour afficher votre musique locale.": {
+    "en": "Allow access to audio files to display your local music.",
+    "de": "Erlaube den Zugriff auf Audiodateien, um deine lokale Musik anzuzeigen.",
+    "es": "Permite el acceso a los archivos de audio para mostrar tu música local.",
+    "it": "Consenti l'accesso ai file audio per visualizzare la tua musica locale.",
+    "pt": "Permita o acesso aos arquivos de áudio para exibir sua música local.",
+    "hi": "अपना स्थानीय संगीत दिखाने के लिए ऑडियो फ़ाइलों तक पहुँच की अनुमति दें।",
+    "ja": "ローカルの音楽を表示するには、音声ファイルへのアクセスを許可してください。",
+    "zh": "请允许访问音频文件，以显示本地音乐。",
+    "ru": "Разрешите доступ к аудиофайлам, чтобы показать музыку на устройстве.",
+    "ko": "기기의 음악을 표시하려면 오디오 파일 접근을 허용하세요."
+  },
+  "Autoriser l'accès": {
+    "en": "Allow access", "de": "Zugriff erlauben", "es": "Permitir acceso", "it": "Consenti accesso",
+    "pt": "Permitir acesso", "hi": "पहुँच की अनुमति दें", "ja": "アクセスを許可", "zh": "允许访问",
+    "ru": "Разрешить доступ", "ko": "접근 허용"
+  },
+  "Impossible de lire les fichiers audio.": {
+    "en": "Unable to read audio files.", "de": "Audiodateien konnten nicht gelesen werden.",
+    "es": "No se pueden leer los archivos de audio.", "it": "Impossibile leggere i file audio.",
+    "pt": "Não foi possível ler os arquivos de áudio.", "hi": "ऑडियो फ़ाइलें पढ़ी नहीं जा सकीं।",
+    "ja": "音声ファイルを読み込めません。", "zh": "无法读取音频文件。",
+    "ru": "Не удалось прочитать аудиофайлы.", "ko": "오디오 파일을 읽을 수 없습니다."
+  },
+  "Vérifiez les autorisations puis réessayez.": {
+    "en": "Check permissions and try again.", "de": "Prüfe die Berechtigungen und versuche es erneut.",
+    "es": "Revisa los permisos e inténtalo de nuevo.", "it": "Controlla le autorizzazioni e riprova.",
+    "pt": "Verifique as permissões e tente novamente.", "hi": "अनुमतियाँ जाँचें और फिर से प्रयास करें।",
+    "ja": "権限を確認して、もう一度お試しください。", "zh": "请检查权限后重试。",
+    "ru": "Проверьте разрешения и повторите попытку.", "ko": "권한을 확인한 후 다시 시도하세요."
+  }
+}

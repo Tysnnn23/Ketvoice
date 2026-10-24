@@ -12,7 +12,8 @@ android {
         applicationId = "com.ketvoice.app"
         minSdk = 31
         targetSdk = 36
-        versionCode = 24
+        // Rebuilt Beta3: permit an in-place upgrade from the original code 24.
+        versionCode = 25
         versionName = "3.0.0-Beta3"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         resourceConfigurations += listOf("fr", "en", "hi", "ja", "zh", "ru", "it", "es", "de", "pt", "ko")
@@ -35,8 +36,23 @@ android {
         }
     }
 
+    // Release APKs must be installable straight from assemble*Release. The
+    // previous Beta3 uploader shipped the unsigned Gradle output by mistake.
+    signingConfigs {
+        create("sideload") {
+            val customStore = providers.environmentVariable("KETVOICE_KEYSTORE").orNull
+            storeFile = file(customStore ?: "${System.getProperty("user.home")}/.android/debug.keystore")
+            storePassword = if (customStore == null) "android" else
+                providers.environmentVariable("KETVOICE_STORE_PASSWORD").orNull
+            keyAlias = if (customStore == null) "androiddebugkey" else
+                providers.environmentVariable("KETVOICE_KEY_ALIAS").orNull
+            keyPassword = if (customStore == null) "android" else
+                providers.environmentVariable("KETVOICE_KEY_PASSWORD").orNull
+        }
+    }
     buildTypes {
         release {
+            signingConfig = signingConfigs.getByName("sideload")
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
         }

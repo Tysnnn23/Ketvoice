@@ -55,10 +55,15 @@ fun CatalogScreen() {
     LaunchedEffect(request, attempt) {
         if (request.kind in listOf("album", "genre")) {
             loading = true
-            page = if (request.kind == "album" && request.id.startsWith("MPRE")) {
-                YouTubeCatalog.album(request.id)
-            } else CatalogRepo.page(request)
-            loading = false
+            try {
+                page = if (request.kind == "album" && request.id.startsWith("MPRE")) {
+                    YouTubeCatalog.album(request.id)
+                } else CatalogRepo.page(request)
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                page = null
+            } finally { loading = false }
         }
     }
     val tracks = when (request.kind) {
@@ -67,7 +72,11 @@ fun CatalogScreen() {
         "all" -> (known + recent + downloads.map { it.track }).distinctBy { it.id }
         else -> page?.tracks.orEmpty()
     }
-    LaunchedEffect(tracks) { ArtworkRepo.enrich(tracks) }
+    LaunchedEffect(tracks) {
+        try { ArtworkRepo.enrich(tracks) }
+        catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+        catch (_: Exception) { /* Keep the catalog usable if optional artwork fails. */ }
+    }
     Column(Modifier.fillMaxSize().background(theme.background).statusBarsPadding()) {
         Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             GlassBackButton { AppUi.overlay.value = AppUi.NONE }
@@ -80,9 +89,11 @@ fun CatalogScreen() {
             val mosaicCovers = tracks.take(4).map { ArtworkRepo.coverForTrack(it) ?: it.coverUrl }
             Box(Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
                 Row(Modifier.size(168.dp).clip(RoundedCornerShape(18.dp))) {
-                    for (i in 0 until 4) {
+                    for (column in 0 until 2) Column(Modifier.weight(1f).fillMaxHeight()) {
+                    for (row in 0 until 2) {
+                        val i = row * 2 + column
                         val url = mosaicCovers.getOrNull(i)
-                        Box(Modifier.weight(1f).fillMaxHeight().background(
+                        Box(Modifier.weight(1f).fillMaxWidth().background(
                             if (url != null) Brush.linearGradient(listOf(Color.Black, Color.Black)) else Brush.linearGradient(gradientFor(request.id + i))
                         )) {
                             if (url != null) {
@@ -95,6 +106,7 @@ fun CatalogScreen() {
                                     modifier = Modifier.align(Alignment.Center))
                             }
                         }
+                    }
                     }
                 }
             }
@@ -139,4 +151,3 @@ fun CatalogScreen() {
         }
     }
 }
-

@@ -21,10 +21,24 @@ object LocalMusic {
     val scanning = _scanning.asStateFlow()
     private val _scanned = MutableStateFlow(false)
     val scanned = _scanned.asStateFlow()
+    private val _failed = MutableStateFlow(false)
+    val failed = _failed.asStateFlow()
+
+    val permission: String get() = if (android.os.Build.VERSION.SDK_INT >= 33)
+        android.Manifest.permission.READ_MEDIA_AUDIO else android.Manifest.permission.READ_EXTERNAL_STORAGE
+    fun hasPermission(context: Context): Boolean = androidx.core.content.ContextCompat.checkSelfPermission(
+        context, permission) == android.content.pm.PackageManager.PERMISSION_GRANTED
 
     fun scan(context: Context) {
         if (_scanning.value) return
+        if (!hasPermission(context)) {
+            _tracks.value = emptyList()
+            _scanned.value = false
+            _failed.value = false
+            return
+        }
         _scanning.value = true
+        _failed.value = false
         kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
             val list = mutableListOf<Track>()
             try {
@@ -65,6 +79,7 @@ object LocalMusic {
                     }
                 }
             } catch (_: Exception) {
+                _failed.value = true
             }
             _tracks.value = list
             _scanning.value = false

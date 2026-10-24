@@ -15,6 +15,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.platform.LocalContext
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -41,12 +48,23 @@ import com.ketvoice.app.ui.player.formatSecs
 @Composable
 fun LocalMusicScreen() {
     val theme = LocalTheme.current
+    val context = LocalContext.current
+    var allowed by remember { mutableStateOf(LocalMusic.hasPermission(context)) }
+    val permissionRequest = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+        allowed = it
+        LocalMusic.scan(context)
+    }
     val tracks by LocalMusic.tracks.collectAsState()
     val scanning by LocalMusic.scanning.collectAsState()
     val scanned by LocalMusic.scanned.collectAsState()
+    val failed by LocalMusic.failed.collectAsState()
     val player by Player.state.collectAsState()
 
-    LaunchedEffect(Unit) { LocalMusic.scan(com.ketvoice.app.KetvoiceApp.instance) }
+    LifecycleResumeEffect(Unit) {
+        allowed = LocalMusic.hasPermission(context)
+        LocalMusic.scan(context)
+        onPauseOrDispose { }
+    }
 
     Column(Modifier.fillMaxSize().background(theme.background).statusBarsPadding()) {
         Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -55,23 +73,40 @@ fun LocalMusicScreen() {
             Column(Modifier.weight(1f)) {
                 Text("Musique locale", color = theme.onBackground, fontSize = 24.sp, fontWeight = FontWeight.Bold)
                 Text(
-                    if (scanning) "Analyse de l'appareil…" else "${tracks.size} titre(s) sur cet appareil",
-                    localize = false, color = theme.secondary, fontSize = 13.sp
+                    if (scanning) "Analyse de l'appareil…" else "${tracks.size} titres",
+                    color = theme.secondary, fontSize = 13.sp
                 )
             }
             Icon(Icons.Filled.Refresh, "Rafraîchir", tint = theme.onBackground,
                 modifier = Modifier.size(30.dp).clickable {
-                    LocalMusic.scan(com.ketvoice.app.KetvoiceApp.instance)
+                    allowed = LocalMusic.hasPermission(context)
+                    LocalMusic.scan(context)
                 }.padding(4.dp))
+        }
+
+        if (!allowed) {
+            Column(Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("Autorisez l'accès aux fichiers audio pour afficher votre musique locale.", color = theme.secondary)
+                androidx.compose.material3.TextButton(onClick = { permissionRequest.launch(LocalMusic.permission) }) {
+                    Text("Autoriser l'accès", color = theme.accent)
+                }
+                androidx.compose.material3.TextButton(onClick = {
+                    context.startActivity(android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                        android.net.Uri.parse("package:${context.packageName}")))
+                }) { Text("Réglages", color = theme.accent) }
+            }
+            return@Column
         }
 
         // Mosaïque 2x2 des 4 premières pochettes, comme les autres collections
         if (tracks.isNotEmpty()) {
             Box(Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
                 Row(Modifier.size(168.dp).clip(RoundedCornerShape(18.dp))) {
-                    for (i in 0 until 4) {
+                    for (column in 0 until 2) Column(Modifier.weight(1f).fillMaxHeight()) {
+                    for (row in 0 until 2) {
+                        val i = row * 2 + column
                         val url = tracks.getOrNull(i)?.coverUrl
-                        Box(Modifier.weight(1f).fillMaxHeight().background(
+                        Box(Modifier.weight(1f).fillMaxWidth().background(
                             Brush.linearGradient(gradientFor("local$i"))
                         )) {
                             if (url != null) {
@@ -85,11 +120,15 @@ fun LocalMusicScreen() {
                             }
                         }
                     }
+                    }
                 }
             }
         }
 
-        if (!scanning && tracks.isEmpty() && scanned) {
+        if (failed) {
+            com.ketvoice.app.ui.common.EmptyState("Impossible de lire les fichiers audio.",
+                "Vérifiez les autorisations puis réessayez.", "Réessayer") { LocalMusic.scan(context) }
+        } else if (!scanning && tracks.isEmpty() && scanned) {
             Box(Modifier.fillMaxSize().padding(40.dp), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(Icons.Filled.Folder, null, tint = theme.secondary, modifier = Modifier.size(48.dp))
@@ -98,7 +137,8 @@ fun LocalMusicScreen() {
                 }
             }
         } else {
-            LazyColumn(Modifier.fillMaxSize()) {
+            LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(
+                bottom = com.ketvoice.app.ui.adaptive.LocalAdaptiveLayout.current.bottomPaddingDp.dp)) {
                 itemsIndexed(tracks, key = { _, t -> t.id }) { index, track ->
                     val active = player.current?.id == track.id
                     Row(Modifier.fillMaxWidth().clickable { Player.playQueue(tracks, index) }
@@ -136,5 +176,3 @@ fun LocalMusicScreen() {
         }
     }
 }
-
-

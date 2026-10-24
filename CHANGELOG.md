@@ -7,6 +7,24 @@
 
 ---
 
+## 3.0.0-Beta3 — SIGNED APK REBUILD (versionCode 25)
+
+- Rebuilt the latest Beta3 source, retaining the recent beta UI and crash fixes.
+- The original mobile and Quest APKs had no valid Android signature. Release
+  outputs are now automatically signed, and a blocking verification gate checks
+  certificate, version, ZIP CRC, 16 KB alignment and downloaded release hashes.
+- Protected captured screens from sampling their own glass backdrop; preserved
+  Liquid Glass on sibling chrome. Hardened catalog/artist error handling.
+- Fixed local-audio permission requests for Android 12/12L and 13+, denied/read
+  error states, true 2×2 cover mosaics and bottom navigation clearance.
+- 117 JVM and 19 Compose tests pass per flavor, plus 8 packaging-gate unit tests.
+  Both signed release APKs install and launch on an emulator. No physical-device,
+  real owner-session or full live provider playback validation is claimed.
+- [Rebuild notes](docs/releases/v3.0.0-Beta3-rebuild.1.md). Separate prerelease tag;
+  the original Beta3 and all previous releases remain intact.
+
+---
+
 ## 2.12.0 — PLAYLISTS, SPOTIFY IMPORT & SELECTED DESIGN FINISHES
 
 **Mobile, tablet and Quest · versionCode 21**

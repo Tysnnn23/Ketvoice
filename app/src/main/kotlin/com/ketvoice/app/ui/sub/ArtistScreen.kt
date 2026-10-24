@@ -61,7 +61,11 @@ fun ArtistScreen() {
         failed = false
         try {
             page = YouTubeCatalog.artist(request.id)
-            page?.let { runCatching { ArtworkRepo.enrich(it.tracks) } }
+            page?.let {
+                try { ArtworkRepo.enrich(it.tracks) }
+                catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+                catch (_: Exception) { /* Optional artwork must not hide a loaded artist. */ }
+            }
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -233,4 +237,3 @@ fun ArtistScreen() {
         }
     }
 }
-

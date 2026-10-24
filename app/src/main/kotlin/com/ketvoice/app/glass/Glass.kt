@@ -4,7 +4,9 @@ import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -15,6 +17,8 @@ import androidx.compose.ui.unit.dp
 import com.ketvoice.app.data.AppSettings
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.LayerBackdrop
 import com.kyant.backdrop.drawBackdrop
 import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.lens
@@ -35,6 +39,17 @@ import com.kyant.backdrop.highlight.Highlight
  * API 31-32 : flou + teinte (pas de RuntimeShader), rendu propre garanti.
  */
 val LocalBackdropLayer = staticCompositionLocalOf<Backdrop?> { null }
+
+/** Capture content without letting a descendant sample its own render layer.
+ * Chrome stays a sibling and keeps the real backdrop, so Liquid Glass remains
+ * enabled outside the capture. This also protects new inline glass controls. */
+@Composable
+fun BackdropCapture(backdrop: LayerBackdrop, modifier: Modifier = Modifier,
+                    content: @Composable BoxScope.() -> Unit) {
+    Box(modifier.layerBackdrop(backdrop)) {
+        CompositionLocalProvider(LocalBackdropLayer provides null) { content() }
+    }
+}
 
 /** Backdrop racine : fond opaque + contenu de l'app. */
 @Composable
