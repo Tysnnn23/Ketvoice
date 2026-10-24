@@ -78,6 +78,10 @@ fun GlassPanel(
     shape: Shape,
     params: GlassParams,
     enabled: Boolean = true,
+    // Un panneau posé DANS le contenu capturé par layerBackdrop ne doit jamais
+    // lire ce même backdrop (drawBackdrop) : boucle de rétroaction → stack
+    // overflow natif du RenderThread (crash page artiste / réglages).
+    captured: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val backdrop = LocalBackdropLayer.current
@@ -91,7 +95,7 @@ fun GlassPanel(
         Color.White.copy(alpha = .14f))) }
     val edge = if (enabled) Modifier.border(.7.dp, rim, shape) else Modifier
 
-    if (backdrop != null && enabled && !AppSettings.reduceDynamicBlur.value &&
+    if (backdrop != null && enabled && !captured && !AppSettings.reduceDynamicBlur.value &&
         !AppSettings.highPerformanceMode.value
     ) {
         Box(

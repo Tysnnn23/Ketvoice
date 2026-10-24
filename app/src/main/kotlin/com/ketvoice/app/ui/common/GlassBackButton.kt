@@ -21,7 +21,10 @@ fun GlassBackButton(onBack: () -> Unit) {
         modifier = Modifier.size(52.dp),
         shape = CircleShape,
         params = GlassParams.circle(dark = false),
-        enabled = AppSettings.liquidGlass.value
+        enabled = AppSettings.liquidGlass.value,
+        // Posé dans le contenu capturé (overlay screens) : verre statique pour
+        // éviter la boucle drawBackdrop → crash RenderThread.
+        captured = true
     ) {
         Box(Modifier.size(52.dp).clickable { onBack() }, contentAlignment = Alignment.Center) {
             Icon(Icons.AutoMirrored.Filled.ArrowBack, "Retour", modifier = Modifier.size(26.dp))
