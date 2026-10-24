@@ -59,10 +59,16 @@ fun ArtistScreen() {
     LaunchedEffect(request.id, attempt) {
         loading = true
         failed = false
-        page = runCatching { YouTubeCatalog.artist(request.id) }.getOrNull()
+        try {
+            page = YouTubeCatalog.artist(request.id)
+            page?.let { runCatching { ArtworkRepo.enrich(it.tracks) } }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            page = null
+        }
         failed = page == null
         loading = false
-        page?.let { ArtworkRepo.enrich(it.tracks) }
     }
 
     val artist = page?.artist

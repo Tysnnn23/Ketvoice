@@ -294,7 +294,7 @@ fun ScrubBar(
                     )
                 }
         ) {
-            val barH = 6.dp.toPx()
+            val barH = if (dragFraction != null) 8.dp.toPx() else 6.dp.toPx()
             val y = size.height / 2f
             val w = size.width
             val x = w * shown

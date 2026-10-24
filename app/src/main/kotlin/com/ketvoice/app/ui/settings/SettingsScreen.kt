@@ -528,10 +528,18 @@ fun SettingsScreen() {
                     }
                 }
                 SRow(
-                    Icons.Filled.Image, "Cache des images",
-                    sub = "Conservées dans l'app ; aucun bouton de purge",
-                    value = "Permanent"
-                ) {}
+                    Icons.Filled.Image, "Vider le cache des images",
+                    sub = "Pochettes et photos d'artistes re-téléchargées à la demande"
+                ) {
+                    scope.launch {
+                        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                            runCatching {
+                                coil.Coil.imageLoader(ctx).let { it.diskCache?.clear(); it.memoryCache?.clear() }
+                            }
+                        }
+                        android.widget.Toast.makeText(ctx, com.ketvoice.app.data.AppText.t("Cache des images vidé"), android.widget.Toast.LENGTH_SHORT).show()
+                    }
+                }
             }
 
             // ==================================================== À PROPOS
