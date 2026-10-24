@@ -63,15 +63,13 @@ object CanvasRepo {
     /**
      * Résout puis télécharge le canvas du morceau (retente après 10 min d'échec).
      *
-     * [force] est utilisé par le téléchargement hors ligne : même si les
-     * pochettes animées sont coupées à l'écran ou si le réseau est facturé, le
-     * Canvas demandé est conservé pour plus tard.
+     * [force] autorise le réseau facturé lors d'un téléchargement explicite,
+     * mais ne contourne jamais le réglage global des vidéos Canvas.
      */
     suspend fun resolve(track: Track, force: Boolean = false) = withContext(Dispatchers.IO) {
         val ctx = appContext ?: return@withContext
-        // Le réglage « Pochette animée » coupe le téléchargement automatique,
-        // sauf quand le morceau est explicitement téléchargé.
-        if (!force && !AppSettings.animatedArtwork.value) return@withContext
+        // Un arrêt global coupe aussi les futurs téléchargements explicites.
+        if (!AppSettings.animatedArtwork.value) return@withContext
         fun recentlyFailed() = failed[track.id]?.let {
             System.currentTimeMillis() - it < 10 * 60_000L
         } == true

@@ -7,6 +7,10 @@ import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.DefaultRenderersFactory
+import androidx.media3.exoplayer.audio.DefaultAudioSink
+import androidx.media3.exoplayer.audio.AudioSink
+import androidx.media3.exoplayer.audio.TeeAudioProcessor
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
@@ -29,7 +33,13 @@ class PlaybackService : MediaSessionService() {
         super.onCreate()
         // A media-button service restart may happen before MainActivity.
         com.ketvoice.app.data.SettingsStore.load(applicationContext)
-        val player = ExoPlayer.Builder(this)
+        val renderers = object : DefaultRenderersFactory(this) {
+            override fun buildAudioSink(context: android.content.Context, enableFloatOutput: Boolean, enableAudioTrackPlaybackParams: Boolean): AudioSink =
+                DefaultAudioSink.Builder(context).setEnableFloatOutput(enableFloatOutput)
+                    .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
+                    .setAudioProcessors(arrayOf(TeeAudioProcessor(SonicMeter))).build()
+        }
+        val player = ExoPlayer.Builder(this, renderers)
             .setMediaSourceFactory(DefaultMediaSourceFactory(AudioCache.factory(this)))
             .setLoadControl(
                 androidx.media3.exoplayer.DefaultLoadControl.Builder()
@@ -48,6 +58,9 @@ class PlaybackService : MediaSessionService() {
             .build()
         player.skipSilenceEnabled = AppSettings.skipSilence.value
         player.addListener(object : androidx.media3.common.Player.Listener {
+            override fun onIsPlayingChanged(isPlaying: Boolean) { if (!isPlaying) SonicMeter.reset() }
+            override fun onPositionDiscontinuity(oldPosition: androidx.media3.common.Player.PositionInfo,
+                newPosition: androidx.media3.common.Player.PositionInfo, reason: Int) { SonicMeter.reset() }
             override fun onAudioSessionIdChanged(audioSessionId: Int) { AudioEqualizer.bind(audioSessionId) }
         })
 
@@ -96,6 +109,7 @@ class PlaybackService : MediaSessionService() {
         mediaSession
 
     override fun onDestroy() {
+        SonicMeter.observe(false)
         AudioEqualizer.release()
         mediaSession?.player?.release()
         mediaSession?.release()

@@ -91,6 +91,78 @@ async function store(path: string, data: Uint8Array, mime: string): Promise<void
   const res = await api(`/storage/v1/object/${BUCKET}/${path}`, {method:"POST",headers:{"Content-Type":mime,"Cache-Control":"31536000","x-upsert":"false"},body:data});
   if(!res.ok) throw new HttpError(502,"Impossible de sauvegarder le fichier");
 }
+async function readAudio(file: FormDataEntryValue | null) {
+  if (!(file instanceof File) || !file.size || file.size > MAX_AUDIO) throw new HttpError(400,"Audio requis (25 Mo maximum)");
+  const ext=file.name.toLowerCase().split('.').pop() || "";
+  const mimes: Record<string,string>={mp3:"audio/mpeg",m4a:"audio/mp4",aac:"audio/aac",flac:"audio/flac",wav:"audio/wav",ogg:"audio/ogg",opus:"audio/ogg"};
+  const data=new Uint8Array(await file.arrayBuffer());
+  const ascii=(a:number,b:number)=>new TextDecoder().decode(data.slice(a,b));
+  const frame=data[0]===255 && (data[1]&224)===224;
+  const valid=ext==="mp3" ? (ascii(0,3)==="ID3" || frame) : ext==="m4a" ? ascii(4,8)==="ftyp" : ext==="aac" ? frame : ext==="flac" ? ascii(0,4)==="fLaC" : ext==="wav" ? ascii(0,4)==="RIFF" && ascii(8,12)==="WAVE" : ["ogg","opus"].includes(ext) && ascii(0,4)==="OggS";
+  if(!mimes[ext] || !valid) throw new HttpError(400,"Format audio non pris en charge");
+  return {data,ext,mime:mimes[ext],size:file.size};
+}
+async function readCover(file: FormDataEntryValue | null) {
+  if(file === null) return null;
+  if(!(file instanceof File) || !file.size || file.size>MAX_COVER) throw new HttpError(400,"Pochette trop volumineuse ou vide (4 Mo maximum)");
+  const data=new Uint8Array(await file.arrayBuffer()), h=new TextDecoder().decode(data.slice(0,12));
+  if(data[0]===255 && data[1]===216 && data[2]===255) return {data,ext:"jpg",mime:"image/jpeg"};
+  if(data[0]===137 && h.slice(1,4)==="PNG") return {data,ext:"png",mime:"image/png"};
+  if(h.startsWith("RIFF") && h.slice(8,12)==="WEBP") return {data,ext:"webp",mime:"image/webp"};
+  throw new HttpError(400,"Pochette JPEG, PNG ou WebP requise");
+}
+function uploadId(value: unknown): string {
+  const id=String(value ?? "").replace(/^kv:upload:/, "").toLowerCase();
+  if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(id))
+    throw new HttpError(400,"Seuls les titres importés peuvent être modifiés");
+  return id;
+}
+async function ownedSong(id: string, owner: string): Promise<Row> {
+  const rows=await database(`ketvoice_tracks?id=eq.${id}&created_by=eq.${encodeURIComponent(owner)}&published=eq.true&limit=1`);
+  if(!rows.length || rows[0].created_by!==owner || rows[0].id!==id) throw new HttpError(404,"Titre importé introuvable pour ce compte");
+  return rows[0];
+}
+async function revision(row: Row): Promise<string> {
+  const bytes=new TextEncoder().encode(JSON.stringify([row.audio_path,row.cover_path,row.duration_ms]));
+  return [...new Uint8Array(await crypto.subtle.digest("SHA-256",bytes))].map(n=>n.toString(16).padStart(2,"0")).join("");
+}
+async function updateSong(req: Request, owner: string): Promise<Response> {
+  const bytes=await bounded(req,MAX_AUDIO+MAX_COVER+65536);
+  const form=await new Request(req.url,{method:"POST",headers:{"content-type":req.headers.get("content-type") || ""},body:bytes}).formData();
+  if([...form.keys()].some(k=>!["metadata","audio","cover"].includes(k)) || ["metadata","audio","cover"].some(k=>form.getAll(k).length>1))
+    throw new HttpError(400,"Champs de modification invalides");
+  let meta: Row;
+  try { meta=JSON.parse(String(form.get("metadata") || "{}")); }
+  catch { throw new HttpError(400,"Métadonnées invalides"); }
+  if(!meta || Array.isArray(meta) || typeof meta!=="object" || Object.keys(meta).some(k=>!["trackId","revision","durationMs","rightsConfirmed"].includes(k)))
+    throw new HttpError(400,"Métadonnées invalides");
+  if(meta.rightsConfirmed!==true) throw new HttpError(400,"Confirmez vos droits de publication");
+  const id=uploadId(meta.trackId), old=await ownedSong(id,owner);
+  if(meta.revision!==await revision(old)) throw new HttpError(409,"Ce titre a changé. Rouvrez sa modification.");
+  if(!form.has("audio") && !form.has("cover")) throw new HttpError(400,"Choisissez un nouvel audio ou une nouvelle pochette");
+  const audio=form.has("audio") ? await readAudio(form.get("audio")) : null;
+  const image=await readCover(form.get("cover"));
+  const update: Row={};
+  if(audio) { update.duration_ms=duration(meta.durationMs); update.format=audio.ext; update.bytes=audio.size; }
+  const prefix=`${id}/${crypto.randomUUID()}`, uploaded:string[]=[];
+  let patchAttempted=false, definitelyUncommitted=false;
+  try {
+    if(audio) { const path=`${prefix}/audio.${audio.ext}`;await store(path,audio.data,audio.mime);uploaded.push(path);update.audio_path=path; }
+    if(image) { const path=`${prefix}/cover.${image.ext}`;await store(path,image.data,image.mime);uploaded.push(path);update.cover_path=path; }
+    const coverFilter=old.cover_path ? `eq.${encodeURIComponent(String(old.cover_path))}` : "is.null";
+    patchAttempted=true;
+    const result=await database(`ketvoice_tracks?id=eq.${id}&created_by=eq.${encodeURIComponent(owner)}&published=eq.true&audio_path=eq.${encodeURIComponent(String(old.audio_path))}&cover_path=${coverFilter}`,
+      {method:"PATCH",headers:{Prefer:"return=representation"},body:JSON.stringify(update)});
+    if(!result.length) { definitelyUncommitted=true;throw new HttpError(409,"Ce titre a changé. Rouvrez sa modification."); }
+    // Immutable new paths prevent stale CDN content. Keep previous media intact,
+    // including on an ambiguous PATCH timeout; never delete a possibly committed file.
+    return json({published:true,track:track(result[0]),revision:await revision(result[0])});
+  } catch(error) {
+    if(uploaded.length && (!patchAttempted || definitelyUncommitted))
+      await api(`/storage/v1/object/${BUCKET}`,{method:"DELETE",body:JSON.stringify({prefixes:uploaded})}).catch(()=>{});
+    throw error;
+  }
+}
 async function publishSong(req: Request, owner: string): Promise<Response> {
   const bytes = await bounded(req, MAX_AUDIO + MAX_COVER + MAX_LYRICS + 65536);
   const form = await new Request(req.url,{method:"POST",headers:{"content-type":req.headers.get("content-type") || ""},body:bytes}).formData();
@@ -170,6 +242,11 @@ Deno.serve(async(req:Request)=>{
     if(path.startsWith("/admin/")) {
       const owner=await administrator(req);
       if(req.method==="GET" && path==="/admin/session") return json({allowed:true});
+      if(req.method==="GET" && path==="/admin/song") {
+        const row=await ownedSong(uploadId(url.searchParams.get("id")),owner);
+        return json({track:track(row),revision:await revision(row)});
+      }
+      if(req.method==="POST" && path==="/admin/song/update") return await updateSong(req,owner);
       if(req.method==="POST" && path==="/admin/song") return await publishSong(req,owner);
       if(req.method==="POST" && path==="/admin/lyrics") {
         const data=JSON.parse(new TextDecoder("utf-8",{fatal:true}).decode(await bounded(req,MAX_LYRICS+8192)));

@@ -69,14 +69,19 @@ object PublicationApi {
         return Track(id, item.optString("title"), item.optString("artist"), item.optString("album"),
             durationMs = item.optLong("durationMs"), streamUrl = stream, downloadUrl = stream,
             coverUrl = item.optString("artworkURL").takeIf { it.startsWith("https://") },
-            addon = "upload", addonId = item.optString("addonId"), lyricsProvider = "Ketvoice API")
+            addon = "upload", addonId = item.optString("addonId"), lyricsProvider = "Ketvoice API").also(ArtworkRepo::acceptPublication)
     }
 
-    suspend fun stream(wanted: Track): MusicApi.StreamInfo? = withContext(Dispatchers.IO) {
-        val song = wanted.takeIf { it.streamUrl?.startsWith("$ROOT/storage/v1/object/public/ketvoice-public-media/") == true }
-            ?: get("/track?id=${enc(wanted.addonId ?: wanted.id.removePrefix("kv:upload:"))}")?.optJSONObject("track")?.let(::track)
+    suspend fun stream(wanted: Track, cachedFallback: MusicApi.StreamInfo? = null): MusicApi.StreamInfo? = withContext(Dispatchers.IO) {
+        val fresh = get("/track?id=${enc(wanted.addonId ?: wanted.id.removePrefix("kv:upload:"))}")?.optJSONObject("track")?.let(::track)
+        if (fresh == null && cachedFallback != null) return@withContext cachedFallback
+        val song = fresh ?: wanted.takeIf { it.streamUrl?.startsWith("$ROOT/storage/v1/object/public/ketvoice-public-media/") == true }
         val url = song?.streamUrl ?: return@withContext null
-        MusicApi.StreamInfo(url, url.substringBefore('?').substringAfterLast('.'), "Ketvoice API", wanted.id, url)
+        if (fresh != null) {
+            ListeningHistory.replacePublication(fresh)
+            com.ketvoice.app.player.Player.refreshPublication(fresh)
+        }
+        MusicApi.StreamInfo(url, url.substringBefore('?').substringAfterLast('.'), "Ketvoice API", ImportedSong.cacheTag(url), url)
     }
 
     suspend fun lyrics(track: Track): List<MusicApi.LyricLine> = withContext(Dispatchers.IO) {
@@ -110,11 +115,37 @@ object PublicationApi {
     private fun metadata(track: Track) = JSONObject().put("trackId", track.id).put("title", track.title)
         .put("artist", track.artist).put("album", track.album).put("durationMs", track.durationMs).put("isrc", track.isrc ?: "")
 
-    suspend fun publishSong(track: Track, audio: File, cover: File?, lyrics: File?, onProgress: (Int) -> Unit): Track = withContext(Dispatchers.IO) {
+    data class EditableSong(val track: Track, val revision: String)
+
+    suspend fun editableSong(wanted: Track): EditableSong = withContext(Dispatchers.IO) {
+        val id = ImportedSong.id(wanted) ?: error("Seuls les titres importés peuvent être modifiés")
+        val c = connection("$BASE/admin/song?id=${enc(id)}", "GET", PublisherSession.token())
+        try {
+            val result = response(c)
+            EditableSong(track(result.getJSONObject("track")) ?: error("Titre importé invalide"), result.getString("revision"))
+        } finally { c.disconnect() }
+    }
+
+    suspend fun updateSong(wanted: EditableSong, audio: File?, cover: File?, durationMs: Long,
+                           onProgress: (Int) -> Unit): Track {
+        require(ImportedSong.id(wanted.track) != null)
+        require(audio != null || cover != null)
+        val body = JSONObject().put("trackId", wanted.track.id).put("revision", wanted.revision)
+            .put("rightsConfirmed", true).put("durationMs", durationMs)
+        val updated = upload("/admin/song/update", body, audio, cover, null, onProgress)
+        ListeningHistory.replacePublication(updated)
+        com.ketvoice.app.player.Player.refreshPublication(updated)
+        return updated
+    }
+
+    suspend fun publishSong(track: Track, audio: File, cover: File?, lyrics: File?, onProgress: (Int) -> Unit): Track =
+        upload("/admin/song", metadata(track).put("rightsConfirmed", true), audio, cover, lyrics, onProgress)
+
+    private suspend fun upload(path: String, meta: JSONObject, audio: File?, cover: File?, lyrics: File?, onProgress: (Int) -> Unit): Track = withContext(Dispatchers.IO) {
         val token = PublisherSession.token()
         val boundary = "Ketvoice${UUID.randomUUID()}"
-        val c = connection("$BASE/admin/song", "POST", token)
-        val files = listOfNotNull("audio" to audio, cover?.let { "cover" to it }, lyrics?.let { "lyrics" to it })
+        val c = connection("$BASE$path", "POST", token)
+        val files = listOfNotNull(audio?.let { "audio" to it }, cover?.let { "cover" to it }, lyrics?.let { "lyrics" to it })
         val total = files.sumOf { it.second.length() }.coerceAtLeast(1)
         var sent = 0L
         try {
@@ -122,7 +153,7 @@ object PublicationApi {
             c.setRequestProperty("Content-Type", "multipart/form-data; boundary=$boundary")
             c.outputStream.use { out ->
                 fun write(value: String) = out.write(value.toByteArray(Charsets.UTF_8))
-                write("--$boundary\r\nContent-Disposition: form-data; name=\"metadata\"\r\n\r\n${metadata(track).put("rightsConfirmed", true)}\r\n")
+                write("--$boundary\r\nContent-Disposition: form-data; name=\"metadata\"\r\n\r\n$meta\r\n")
                 files.forEach { (name, file) ->
                     val filename = "$name.${file.extension.lowercase()}"
                     write("--$boundary\r\nContent-Disposition: form-data; name=\"$name\"; filename=\"$filename\"\r\nContent-Type: application/octet-stream\r\n\r\n")

@@ -45,6 +45,7 @@ import coil.compose.AsyncImage
 
 @Composable
 fun PublisherScreen(target: Track?, onClose: () -> Unit) {
+    val editMode = AppUi.editImportedSong.value && ImportedSong.id(target) != null
     val theme = LocalTheme.current
     val context = LocalContext.current
     val fieldColors = OutlinedTextFieldDefaults.colors(
@@ -76,6 +77,7 @@ fun PublisherScreen(target: Track?, onClose: () -> Unit) {
     var rights by remember { mutableStateOf(false) }
     var published by remember { mutableStateOf(false) }
     var uploadedTrack by remember { mutableStateOf<Track?>(null) }
+    var editable by remember(target?.id) { mutableStateOf<PublicationApi.EditableSong?>(null) }
     var progress by remember { mutableIntStateOf(0) }
     val progressPoster = remember { android.os.Handler(android.os.Looper.getMainLooper()) }
     BackHandler { if (!busy) onClose() }
@@ -89,6 +91,13 @@ fun PublisherScreen(target: Track?, onClose: () -> Unit) {
             catch (failure: Exception) { error = failure.message?.take(250) ?: "Publication impossible" }
             finally { busy = false }
         }
+    }
+    fun loadEditable() = operation {
+        editable = PublicationApi.editableSong(target!!)
+        duration = editable!!.track.durationMs
+    }
+    LaunchedEffect(allowed, target?.id, editMode) {
+        if (editMode && allowed && editable == null) loadEditable()
     }
     LaunchedEffect(AppUi.publisherLink.value, busy) {
         if (busy) return@LaunchedEffect
@@ -132,7 +141,7 @@ fun PublisherScreen(target: Track?, onClose: () -> Unit) {
                 } finally { retriever.release() }
             }
             audio?.delete(); audio = file
-            title = meta[0].orEmpty(); artist = meta[1].orEmpty(); album = meta[2].orEmpty()
+            if (!editMode) { title = meta[0].orEmpty(); artist = meta[1].orEmpty(); album = meta[2].orEmpty() }
             duration = meta[3]?.toLongOrNull() ?: 0L
         }
     }
@@ -154,7 +163,7 @@ fun PublisherScreen(target: Track?, onClose: () -> Unit) {
         Column(Modifier.widthIn(max = 780.dp).fillMaxSize().statusBarsPadding().navigationBarsPadding()
             .verticalScroll(rememberScrollState()).padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text(if (target == null) "Importer un son" else "Importer des lyrics", color = theme.onBackground,
+                Text(if (editMode) "Modifier le titre importé" else if (target == null) "Importer un son" else "Importer des lyrics", color = theme.onBackground,
                     fontSize = 27.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                 Icon(Icons.Filled.Close, "Fermer", tint = theme.secondary,
                     modifier = Modifier.size(48.dp).clip(RoundedCornerShape(24.dp)).clickable(enabled = !busy, onClick = onClose).padding(12.dp))
@@ -174,28 +183,42 @@ fun PublisherScreen(target: Track?, onClose: () -> Unit) {
                     operation { PublisherSession.verify(verification); verification = "" }
                 }
             } else if (published) {
-                Text("Publication réussie", color = theme.accent, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                Text(if (editMode) "Modifications enregistrées" else "Publication réussie", color = theme.accent, fontSize = 22.sp, fontWeight = FontWeight.Bold)
                 Text("Ce contenu est maintenant public dans Ketvoice API.", color = theme.onBackground)
-                uploadedTrack?.let { song -> PublishButton("Écouter maintenant", !busy) { Player.playTrack(song); onClose() } }
+                uploadedTrack?.let { song ->
+                    if (editMode && Downloader.itemFor(song.id) != null)
+                        Text("La version hors ligne est inchangée. Supprimez son téléchargement puis téléchargez-la à nouveau pour actualiser l'audio.", color = theme.secondary)
+                    else PublishButton("Écouter maintenant", !busy) { Player.playTrack(song); onClose() }
+                }
                 PublishButton("Fermer", true, onClick = onClose)
             } else {
                 Text("Publication publique · Compte vérifié", color = theme.accent, fontWeight = FontWeight.SemiBold)
-                if (target == null) {
+                if (target == null || editMode) {
+                    if (editMode) {
+                        Text(target!!.title, localize = false, color = theme.onBackground, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                        Text(target.artist, localize = false, color = theme.secondary)
+                        Text("Choisissez uniquement les fichiers à remplacer. Les paroles et l'identifiant du titre sont conservés. Vérifiez leur synchronisation si l'audio change.", color = theme.secondary)
+                        if (editable == null) PublishButton("Recharger le titre importé", !busy, quiet = true, onClick = ::loadEditable)
+                    }
                     PublishButton(if (audio == null) "Choisir le fichier audio" else "Changer le fichier audio", !busy) { audioPicker.launch(arrayOf("audio/*", "application/octet-stream")) }
                     Text("MP3, M4A, AAC, FLAC, WAV, OGG ou Opus · 25 Mo maximum", color = theme.secondary, fontSize = 12.sp)
+                    if (!editMode) {
                     OutlinedTextField(title, { title = it.take(200) }, label = { Text("Titre") }, enabled = !busy, singleLine = true,
                         modifier = Modifier.fillMaxWidth(), colors = fieldColors)
                     OutlinedTextField(artist, { artist = it.take(200) }, label = { Text("Artiste") }, enabled = !busy, singleLine = true,
                         modifier = Modifier.fillMaxWidth(), colors = fieldColors)
                     OutlinedTextField(album, { album = it.take(200) }, label = { Text("Album") }, enabled = !busy, singleLine = true,
                         modifier = Modifier.fillMaxWidth(), colors = fieldColors)
+                    }
                     PublishButton(if (cover == null) "Ajouter une pochette" else "Changer la pochette", !busy) { coverPicker.launch(arrayOf("image/jpeg", "image/png", "image/webp")) }
                     cover?.let { image -> AsyncImage(image, null, Modifier.size(160.dp).clip(RoundedCornerShape(18.dp))) }
+                    if (editMode && cover == null) editable?.track?.coverUrl?.let { AsyncImage(it, null, Modifier.size(160.dp).clip(RoundedCornerShape(18.dp))) }
                     Text("Pochette facultative · JPEG, PNG, WebP · 4 Mo maximum", color = theme.secondary, fontSize = 12.sp)
                 } else {
                     Text(target.title, localize = false, color = theme.onBackground, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                     Text(target.artist, localize = false, color = theme.secondary)
                 }
+                if (!editMode) {
                 PublishButton(if (imported == null) "Choisir les paroles TTML ou LRC" else "Changer les paroles", !busy) { lyricPicker.launch(arrayOf("text/*", "application/ttml+xml", "application/xml", "application/octet-stream")) }
                 Text("TTML ou LRC · 1 Mo maximum · Les timings du fichier sont conservés", color = theme.secondary, fontSize = 12.sp)
                 imported?.let { sample ->
@@ -203,14 +226,17 @@ fun PublisherScreen(target: Track?, onClose: () -> Unit) {
                     Text(sample.lines.take(3).joinToString("\n") { it.text }, localize = false, color = theme.onBackground,
                         modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(theme.card).padding(16.dp))
                 }
+                }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(rights, { rights = it }, enabled = !busy,
                         colors = CheckboxDefaults.colors(checkedColor = theme.accent, uncheckedColor = theme.secondary))
                     Text("Je possède les droits nécessaires et j'autorise la diffusion publique de ces fichiers.", color = theme.onBackground, fontSize = 13.sp, modifier = Modifier.weight(1f))
                 }
-                PublishButton("Publier pour tous les utilisateurs", !busy && rights && (if (target != null) imported != null else audio != null && title.isNotBlank() && artist.isNotBlank())) {
+                PublishButton(if (editMode) "Enregistrer les modifications" else "Publier pour tous les utilisateurs", !busy && rights &&
+                    (if (editMode) editable != null && (audio != null || cover != null) else if (target != null) imported != null else audio != null && title.isNotBlank() && artist.isNotBlank())) {
                     operation {
-                        if (target != null) PublicationApi.publishLyrics(target, imported!!)
+                        if (editMode) uploadedTrack = PublicationApi.updateSong(editable!!, audio, cover, duration) { progressPoster.post { progress = it } }
+                        else if (target != null) PublicationApi.publishLyrics(target, imported!!)
                         else uploadedTrack = PublicationApi.publishSong(Track("pending", title.trim(), artist.trim(), album.trim(), duration),
                             audio!!, cover, lyricFile) { progressPoster.post { progress = it } }
                         published = true

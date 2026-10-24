@@ -18,6 +18,7 @@ object AppSettings {
     val classicGradient = mutableStateOf(false)
     val animatedArtwork = mutableStateOf(true)
     val panoramicCanvas = mutableStateOf(false)
+    val sonicCanvas = mutableStateOf(false)
     val albumColors = mutableStateOf(true)
     val artworkDepth = mutableStateOf(true)
     val systemReduceMotion = mutableStateOf(false) // runtime only; never persisted

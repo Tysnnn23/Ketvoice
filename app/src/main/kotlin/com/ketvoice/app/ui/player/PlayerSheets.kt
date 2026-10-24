@@ -139,6 +139,10 @@ fun TrackMenuSheet(track: Track, onClose: () -> Unit) {
             onClose()
         }
         val publisher by com.ketvoice.app.data.PublisherSession.allowed.collectAsState()
+        if (publisher && com.ketvoice.app.data.ImportedSong.id(track) != null) MenuItemRow("Modifier l'audio ou la pochette", Icons.Filled.Download) {
+            onClose()
+            com.ketvoice.app.ui.AppUi.openPublisher(track, edit = true)
+        }
         if (publisher) MenuItemRow("Importer des lyrics", Icons.Filled.PlaylistAdd) {
             onClose()
             com.ketvoice.app.ui.AppUi.openPublisher(track)

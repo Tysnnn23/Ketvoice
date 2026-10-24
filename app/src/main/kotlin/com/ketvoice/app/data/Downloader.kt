@@ -13,6 +13,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.flow.first
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -59,6 +63,7 @@ object Downloader {
     val progress: StateFlow<Map<String, Int>> = _progress
 
     private var ctx: Context? = null
+    private val connections = java.util.concurrent.ConcurrentHashMap<String, HttpURLConnection>()
 
     fun init(context: Context) {
         if (ctx != null) return
@@ -68,23 +73,25 @@ object Downloader {
 
     fun itemFor(trackId: String): Item? = _items.value.firstOrNull { it.track.id == trackId }
 
-    fun download(track: Track) {
-        val c = ctx ?: return
+    @Synchronized fun download(track: Track, capsuleLimit: Long? = null): Job? {
+        val c = ctx ?: return null
         if (itemFor(track.id) != null) {
             toast("Déjà téléchargé")
-            return
+            return null
         }
         if (track.id in _busy.value) {
             toast("Téléchargement déjà en cours…")
-            return
+            return null
         }
         _busy.update { it + track.id }
         _activeTracks.update { it + (track.id to track) }
         _progress.update { it + (track.id to 0) }
         toast("Téléchargement de « ${track.title} »…")
-        scope.launch {
+        return scope.launch {
             try {
-                val preferFlac = AppSettings.downloadQualityMode.value == 0
+                val budget = DownloadBudget(capsuleLimit ?: Long.MAX_VALUE)
+                val audioLimit = if (capsuleLimit == null) Long.MAX_VALUE else (capsuleLimit - minOf(1_048_576L, capsuleLimit / 4)).coerceAtLeast(0)
+                val preferFlac = capsuleLimit == null && AppSettings.downloadQualityMode.value == 0
                 val publication = track.addon == "upload" || track.id.startsWith("kv:upload:")
                 val streams = withTimeoutOrNull(75_000) { MusicApi.resolve(track) }
                 val candidates = linkedSetOf<MusicApi.StreamInfo>()
@@ -108,7 +115,7 @@ object Downloader {
                     val dest = fileFor(c, track.id, extOf(candidate))
                     val urls = listOfNotNull(candidate.downloadUrl, candidate.url)
                         .distinct().filter { it.startsWith("https://") }
-                    if (urls.any { fetch(it, dest, track.id) }) {
+                    if (urls.any { fetch(it, dest, track.id, audioLimit) { !isActive } }) {
                         gotFile = dest
                         gotStream = candidate
                         break
@@ -121,7 +128,7 @@ object Downloader {
                     val yt = withTimeoutOrNull(35_000) { runCatching { MusicApi.youtubeStream(track) }.getOrNull() }
                     if (yt != null) {
                         val dest = fileFor(c, track.id, extOf(yt))
-                        if (fetch(yt.url, dest, track.id)) {
+                        if (fetch(yt.url, dest, track.id, audioLimit) { !isActive }) {
                             gotFile = dest
                             gotStream = yt
                         } else {
@@ -136,6 +143,7 @@ object Downloader {
                     return@launch
                 }
 
+                check(budget.spend(file.length())) { "Budget de la capsule atteint" }
                 _progress.value = _progress.value + (track.id to 99)
                 val meta = JSONObject().apply {
                     put("id", track.id)
@@ -157,7 +165,13 @@ object Downloader {
                 // Commit audio first. An optional lyrics/Canvas provider must
                 // never turn a successful audio download into a failed item.
                 val metaFile = File(dir(c), file.nameWithoutExtension + ".json")
-                metaFile.writeText(meta.toString(), Charsets.UTF_8)
+                var metadataSize = 0L
+                fun persistMeta() {
+                    val bytes = meta.toString().toByteArray(Charsets.UTF_8)
+                    check(budget.replace(metadataSize, bytes.size.toLong())) { "Budget de la capsule atteint" }
+                    writeAtomic(metaFile, bytes); metadataSize = bytes.size.toLong()
+                }
+                persistMeta()
                 refresh()
 
                 // Les paroles sont téléchargées AVANT l'écriture finale : le
@@ -165,7 +179,9 @@ object Downloader {
                 val best = withTimeoutOrNull(30_000) { runCatching { MusicApi.bestLyrics(track) }.getOrNull() }
                 if (best != null && best.second.isNotEmpty()) {
                     val lyricsFile = File(dir(c), file.nameWithoutExtension + ".lyrics.json")
-                    runCatching { saveLyrics(lyricsFile, best.first, best.second, best.third) }
+                    val saved = runCatching { saveLyrics(lyricsFile, best.first, best.second, best.third, (budget.remaining - 8192).coerceAtLeast(0)) }.getOrDefault(false)
+                    if (saved) {
+                    check(budget.spend(lyricsFile.length()))
                     meta.put("lyricsFile", lyricsFile.name)
                     meta.put("lyricsSource", best.first)
                     meta.put("lyricsSourceKey", best.third)
@@ -173,23 +189,37 @@ object Downloader {
                     meta.put("lyricsTimed", best.second.any { it.timeMs >= 0 })
                     // Sidecar LRC lisible par les autres lecteurs.
                     runCatching {
-                        File(dir(c), file.nameWithoutExtension + ".lrc").writeText(toLrc(best.second), Charsets.UTF_8)
+                        val bytes = toLrc(best.second).toByteArray(Charsets.UTF_8)
+                        if (bytes.size <= budget.remaining - 8192 && budget.spend(bytes.size.toLong()))
+                            writeAtomic(File(dir(c), file.nameWithoutExtension + ".lrc"), bytes)
+                    }
+                    }
+                }
+
+                if (capsuleLimit != null && isActive) {
+                    val image = runCatching { offlineCover(track, (budget.remaining - 8192).coerceAtLeast(0)) }.getOrNull()
+                    if (image != null && budget.spend(image.size.toLong())) {
+                        val path = File(dir(c), file.nameWithoutExtension + ".cover.jpg")
+                        writeAtomic(path, image); meta.put("coverFile", path.name)
+                        meta.put("coverUrl", Uri.fromFile(path).toString())
                     }
                 }
 
                 // Le Canvas est indépendant de la qualité audio et reste dans
                 // son cache permanent, réutilisable par les autres titres.
-                withTimeoutOrNull(50_000) { runCatching { CanvasRepo.resolve(track, force = true) } }
+                if (capsuleLimit == null) withTimeoutOrNull(50_000) { runCatching { CanvasRepo.resolve(track, force = true) } }
                 val canvas = CanvasRepo.localPath(track.id)
                 if (canvas != null) {
                     meta.put("canvasFile", canvas.absolutePath)
                     meta.put("canvasSpotifyId", canvas.nameWithoutExtension)
                 }
 
-                metaFile.writeText(meta.toString(), Charsets.UTF_8)
+                persistMeta()
                 _progress.value = _progress.value + (track.id to 100)
                 refresh()
                 toast("« ${track.title} » téléchargé")
+            } catch (cancelled: CancellationException) {
+                throw cancelled
             } catch (_: Exception) {
                 toast("Échec du téléchargement")
             } finally {
@@ -200,6 +230,24 @@ object Downloader {
         }
     }
 
+    suspend fun prepareCapsuleTrack(track: Track, limit: Long): Boolean {
+        if (itemFor(track.id) != null) return true
+        if (track.id in busy.value) {
+            busy.first { track.id !in it }
+            return itemFor(track.id) != null
+        }
+        val job = download(track, limit) ?: return itemFor(track.id) != null
+        try { job.join() }
+        catch (cancelled: CancellationException) { job.cancel(); connections[track.id]?.disconnect(); throw cancelled }
+        return itemFor(track.id) != null
+    }
+
+    fun storedBytes(item: Item): Long {
+        val stem = item.file.nameWithoutExtension
+        return item.file.length() + listOf(".json", ".lyrics.json", ".lrc", ".cover.jpg")
+            .sumOf { File(item.file.parentFile, stem + it).takeIf { it.exists() }?.length() ?: 0L }
+    }
+
     fun delete(item: Item) {
         runCatching {
             item.file.delete()
@@ -207,6 +255,8 @@ object Downloader {
             File(item.file.parentFile, "$stem.json").delete()
             File(item.file.parentFile, "$stem.lyrics.json").delete()
             File(item.file.parentFile, "$stem.lrc").delete()
+            File(item.file.parentFile, "$stem.cover.jpg").delete()
+            ArtworkRepo.removeOfflineCover(item.track.id)
         }
         refresh()
     }
@@ -250,8 +300,9 @@ object Downloader {
         file: File,
         source: String,
         lines: List<MusicApi.LyricLine>,
-        sourceKey: String
-    ) {
+        sourceKey: String,
+        limit: Long = Long.MAX_VALUE
+    ): Boolean {
         val root = JSONObject().apply {
             put("source", source)
             put("sourceKey", sourceKey)
@@ -276,7 +327,10 @@ object Downloader {
                 }
             })
         }
-        file.writeText(root.toString(), Charsets.UTF_8)
+        val bytes = root.toString().toByteArray(Charsets.UTF_8)
+        if (bytes.size > limit) return false
+        writeAtomic(file, bytes)
+        return true
     }
 
     private fun toLrc(lines: List<MusicApi.LyricLine>): String = buildString {
@@ -337,7 +391,8 @@ object Downloader {
                 val o = JSONObject(metaFile.readText(Charsets.UTF_8))
                 val file = File(dir, o.optString("file"))
                 if (!file.exists() || file.length() < 10_000) return@runCatching
-                val cover = o.optString("coverUrl").takeIf { it.isNotEmpty() }
+                val coverFile = File(dir, file.nameWithoutExtension + ".cover.jpg").takeIf { it.isFile && it.length() > 0 }
+                val cover = coverFile?.let { Uri.fromFile(it).toString() } ?: o.optString("coverUrl").takeIf { it.isNotEmpty() }
                 val lyricsFile = o.optString("lyricsFile").takeIf { it.isNotEmpty() }?.let { File(dir, it) }
                 val canvasName = o.optString("canvasFile").takeIf { it.isNotEmpty() }
                 val canvasFile = canvasName?.let { File(it) }
@@ -356,6 +411,7 @@ object Downloader {
                     lyricsProvider = o.optString("lyricsSource", "LRCLIB"),
                     coverUrl = cover
                 )
+                if (coverFile != null) ArtworkRepo.acceptOfflineCover(track.id, coverFile)
                 list += Item(
                     track = track,
                     file = file,
@@ -371,17 +427,28 @@ object Downloader {
         _items.value = list.sortedByDescending { it.file.lastModified() }
     }
 
-    private fun fetch(url: String, dest: File, id: String): Boolean {
+    private class LimitExceeded : Exception()
+
+    private fun writeAtomic(file: File, bytes: ByteArray) {
+        val atomic = android.util.AtomicFile(file)
+        val out = atomic.startWrite()
+        try { out.write(bytes); atomic.finishWrite(out) }
+        catch (failure: Exception) { atomic.failWrite(out); throw failure }
+    }
+
+    private fun fetch(url: String, dest: File, id: String, limit: Long = Long.MAX_VALUE, cancelled: () -> Boolean = { false }): Boolean {
         val tmp = File(dest.parentFile, dest.name + ".part")
         tmp.delete()
         var validator: String? = null
         repeat(3) {
+          if (cancelled()) { tmp.delete(); throw CancellationException() }
           var connection: HttpURLConnection? = null
           try {
             var current = URL(url)
             val offset = tmp.takeIf { it.exists() }?.length() ?: 0L
             var responseCode = 0
             for (hop in 0..5) {
+                if (cancelled()) throw CancellationException()
                 if (current.protocol != "https") return false
                 connection = (current.openConnection() as HttpURLConnection).apply {
                     connectTimeout = 15_000
@@ -395,6 +462,7 @@ object Downloader {
                         validator?.let { setRequestProperty("If-Range", it) }
                     }
                 }
+                connections[id] = connection
                 responseCode = connection.responseCode
                 val location = connection.getHeaderField("Location")
                 if (responseCode in listOf(301, 302, 303, 307, 308) && !location.isNullOrBlank()) {
@@ -418,14 +486,17 @@ object Downloader {
             }
             validator = c.getHeaderField("ETag") ?: c.getHeaderField("Last-Modified")
             val total = if (resumed) range!!.groupValues[3].toLong() else c.contentLengthLong
+            if (total > limit) { tmp.delete(); return false }
             val buf = ByteArray(128 * 1024)
             var written = if (resumed) offset else 0L
             var lastTick = 0L
             c.inputStream.use { input ->
                 FileOutputStream(tmp, resumed).use { out ->
                     while (true) {
+                        if (cancelled()) throw CancellationException()
                         val n = input.read(buf)
                         if (n < 0) break
+                        if (n > limit - written) throw LimitExceeded()
                         out.write(buf, 0, n)
                         written += n
                         val now = System.currentTimeMillis()
@@ -448,14 +519,63 @@ object Downloader {
                 tmp.delete()
             }
             return dest.exists() && dest.length() > 10_000
+          } catch (cancelled: CancellationException) {
+              tmp.delete(); throw cancelled
+          } catch (_: LimitExceeded) {
+              tmp.delete(); return false
           } catch (_: Exception) {
               // Keep a partial response only for the next Range attempt.
           } finally {
-              connection?.disconnect()
+               connection?.disconnect()
+               connection?.let { connections.remove(id, it) }
           }
         }
         tmp.delete()
         return false
+    }
+
+    /** Small independent cover file, so a capsule does not depend on an image-cache hit. */
+    private fun offlineCover(track: Track, available: Long): ByteArray? {
+        val limit = minOf(512 * 1024L, available)
+        if (limit < 1024) return null
+        var url = URL(ArtworkRepo.coverForTrack(track) ?: return null)
+        repeat(5) {
+            if (url.protocol != "https") return null
+            val c = url.openConnection() as HttpURLConnection
+            try {
+                connections[track.id] = c
+                c.connectTimeout = 8000; c.readTimeout = 12000; c.instanceFollowRedirects = false
+                val status = c.responseCode
+                if (status in listOf(301, 302, 303, 307, 308)) {
+                    url = URL(url, c.getHeaderField("Location") ?: return null)
+                    return@repeat
+                }
+                if (status !in 200..299 || c.contentLengthLong > limit) return null
+                val output = java.io.ByteArrayOutputStream()
+                c.inputStream.use { input ->
+                    val bytes = ByteArray(8192)
+                    while (true) {
+                        val count = input.read(bytes); if (count < 0) break
+                        if (count > limit - output.size()) return null
+                        output.write(bytes, 0, count)
+                    }
+                }
+                val data = output.toByteArray()
+                val bounds = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                android.graphics.BitmapFactory.decodeByteArray(data, 0, data.size, bounds)
+                if (bounds.outWidth <= 0 || bounds.outHeight <= 0 || bounds.outWidth.toLong() * bounds.outHeight > 50_000_000) return null
+                var sample = 1
+                while (maxOf(bounds.outWidth, bounds.outHeight) / sample > 512) sample *= 2
+                val bitmap = android.graphics.BitmapFactory.decodeByteArray(data, 0, data.size,
+                    android.graphics.BitmapFactory.Options().apply { inSampleSize = sample }) ?: return null
+                return try {
+                    val image = java.io.ByteArrayOutputStream()
+                    bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 85, image)
+                    image.toByteArray().takeIf { it.size <= limit }
+                } finally { bitmap.recycle() }
+            } finally { connections.remove(track.id, c); c.disconnect() }
+        }
+        return null
     }
 
     /** Évite d'enregistrer une page HTML/JSON d'erreur comme fichier audio. */

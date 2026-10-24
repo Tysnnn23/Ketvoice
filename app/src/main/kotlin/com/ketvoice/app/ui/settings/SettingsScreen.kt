@@ -407,14 +407,16 @@ fun SettingsScreen() {
 
             // ==================================================== CANVAS
             Section("KETVOICE API · CANVAS") {
+                SToggle(Icons.Filled.Bolt, "Sonic Canvas", "Fond réactif au signal audio réel, sans microphone. Désactivé avec les animations réduites.",
+                    AppSettings.sonicCanvas.value) { AppSettings.sonicCanvas.value = it; SettingsStore.save() }
                 SRow(
                     Icons.Filled.Videocam, "Ketvoice API",
                     sub = "Canvas Spotify résolu et authentifié côté Supabase",
                     value = "Intégré"
                 ) {}
                 SToggle(
-                    Icons.Filled.Videocam, "Pochette animée",
-                    "Canvas Spotify si disponible ; sinon pochette fixe",
+                    Icons.Filled.Videocam, "Activer les Canvas vidéo",
+                    "Coupe les vidéos et leurs téléchargements. Sonic Canvas possède son propre réglage.",
                     AppSettings.animatedArtwork.value
                 ) {
                     AppSettings.animatedArtwork.value = it

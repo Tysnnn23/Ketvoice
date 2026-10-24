@@ -31,6 +31,13 @@ object ListeningHistory {
         _tracks.value = recentWith(_tracks.value, saved)
         prefs?.edit()?.putString("tracks", gson.toJson(_tracks.value))?.apply()
     }
+    @Synchronized fun replacePublication(track: Track) {
+        if (ImportedSong.id(track) == null) return
+        val safe = track.copy(streamUrl = null, downloadUrl = null)
+        _tracks.value = _tracks.value.map { if (it.id == track.id) safe else it }
+        _known.value = _known.value.map { if (it.id == track.id) safe else it }
+        prefs?.edit()?.putString("tracks", gson.toJson(_tracks.value))?.putString("known", gson.toJson(_known.value))?.apply()
+    }
     fun recentWith(previous: List<Track>, track: Track): List<Track> =
         (listOf(track) + previous.filterNot {
             it.id == track.id || (it.title.equals(track.title, true) && it.artist.equals(track.artist, true))

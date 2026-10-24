@@ -47,12 +47,35 @@ object ArtworkRepo {
         val map = mutableMapOf<String, String>()
         p.all.forEach { (k, v) ->
             if (v is String && v.startsWith("https://")) map[k] = v
+            else if (v is String && v.startsWith("file://")) {
+                val file = runCatching { java.io.File(android.net.Uri.parse(v).path!!).canonicalFile }.getOrNull()
+                if (file != null && file.isFile && file.path.startsWith(ctx.filesDir.canonicalPath + java.io.File.separator)) map[k] = v
+            }
             else if (v is String && v.isBlank()) p.edit().remove(k).apply()
         }
         _covers.value = map
     }
 
     fun coverForTrack(track: Track): String? = _covers.value["t:${track.id}"] ?: track.coverUrl
+    fun acceptOfflineCover(id: String, file: java.io.File) {
+        val value = android.net.Uri.fromFile(file).toString()
+        context?.getSharedPreferences(PREFS, Context.MODE_PRIVATE)?.edit()?.putString("t:$id", value)?.apply()
+        _covers.update { it + ("t:$id" to value) }
+    }
+    fun removeOfflineCover(id: String) {
+        val key = "t:$id"
+        if (_covers.value[key]?.startsWith("file:") != true) return
+        context?.getSharedPreferences(PREFS, Context.MODE_PRIVATE)?.edit()?.remove(key)?.apply()
+        _covers.update { it - key }
+    }
+    fun acceptPublication(track: Track) {
+        if (ImportedSong.id(track) == null) return
+        val key = "t:${track.id}"
+        val editor = context?.getSharedPreferences(PREFS, Context.MODE_PRIVATE)?.edit()
+        val cover = track.coverUrl
+        if (cover != null) { editor?.putString(key, cover)?.apply(); _covers.update { it + (key to cover) } }
+        else { editor?.remove(key)?.apply(); _covers.update { it - key } }
+    }
     fun coverForAlbum(album: Album): String? = _covers.value["a:${album.id}"] ?: album.coverUrl
 
     /**
@@ -63,6 +86,7 @@ object ArtworkRepo {
         val ctx = context ?: return
         val prefs = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val todo = tracks.filter { track ->
+            ImportedSong.id(track) == null &&
             (track.coverUrl.isNullOrBlank() || !track.coverUrl.startsWith("https://") || track.addon == null) &&
                 (failedAt[track.id]?.let { System.currentTimeMillis() - it > 120_000 } != false) &&
                 prefs.getString("t:${track.id}", null) == null && synchronized(inFlight) {

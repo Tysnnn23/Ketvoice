@@ -22,3 +22,4 @@ release-assets/
 
 # Local SDK, emulator images and Gradle distribution
 .tools/
+supabase/.temp/

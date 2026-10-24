@@ -15,6 +15,14 @@ The YouTube session is encrypted with Android Keystore. Other settings are store
 
 ## Network requests
 
+### Sonic Canvas and offline capsules (2.11.0)
+
+Sonic Canvas is opt-in. It measures coarse energy bands from decoded playback PCM on the device, only while its player background is visible and playing. It does not use the microphone, record audio, or send measurements anywhere. Reduced motion disables its reactive movement; unsupported PCM paths remain static. It is not voice or beat recognition.
+
+An offline capsule stores a local selection and ordinary downloaded audio, available lyric sidecars and small independent artwork files. Preparation begins only after selection preview and confirmation. It never evicts or replaces existing downloads. Its byte budget covers the durable capsule files, not the separately managed shared playback/image cache; source availability and download size can leave a selection partially ready. Keep the app open during preparation. Cancellation preserves already saved media.
+
+For imported publications, the verified publishing account can replace audio or artwork only on its own uploaded tracks. The broker verifies ownership and uses new immutable Storage paths and an atomic compare-and-swap of the media paths. Existing lyrics and track IDs remain. Older uploaded media is retained to avoid breaking existing links; no automatic deletion of old revisions is performed. Offline downloads on other devices do not silently change and must be downloaded again to obtain new audio.
+
 ### Ketvoice API
 
 Search, stream, and Canvas requests go to the `ketvoice-api` Supabase Edge Function. Those requests contain the search query or track metadata such as title, artist, and Spotify ID. The function returns track metadata, short-lived stream URLs, and Canvas URLs.
@@ -43,7 +51,7 @@ Local messages use unencrypted HTTP. There is no cryptographic pairing or verifi
 
 ### Direct providers
 
-Interface translations ship inside the APK and do not make network requests. Optional **lyric translation** is a separate feature and may contact translation providers. Downloading a song also checks lyric providers and requests its Canvas if available, even when animated artwork is not displayed.
+Interface translations ship inside the APK and do not make network requests. Optional **lyric translation** is a separate feature and may contact translation providers. Downloading a song also checks lyric providers and, when video Canvas is enabled, requests its Canvas if available. Offline capsules do not fetch Canvas videos.
 
 The app also makes direct requests to the providers needed for the feature being used, which may include:
 

@@ -167,8 +167,9 @@ object Player {
         connected = true
         appContext = context.applicationContext
         CanvasRepo.init(context.applicationContext)
-        Downloader.init(context.applicationContext)
         ArtworkRepo.init(context.applicationContext)
+        Downloader.init(context.applicationContext)
+        com.ketvoice.app.data.OfflineCapsule.init(context.applicationContext)
         com.ketvoice.app.data.ListeningHistory.init(context.applicationContext)
         com.ketvoice.app.data.HomeFeed.start(context.applicationContext)
         MusicApi.init(context.applicationContext)
@@ -310,13 +311,13 @@ object Player {
                 startItem(c, latest, stream.url, position, desiredPlay, AudioCache.key(track.id, stream))
                 _state.value = _state.value.copy(quality = label(stream), isPlaying = c.isPlaying)
             }
-            if (cached != null) {
+            if (cached != null && com.ketvoice.app.data.ImportedSong.id(resolvedTrack) == null) {
                 start(cached)
                 _state.value = _state.value.copy(quality = "En cache · ${label(cached)}")
                 return@launch
             }
             if (resolvedTrack.addon == "upload" || resolvedTrack.id.startsWith("kv:upload:")) {
-                val stream = PublicationApi.stream(resolvedTrack)
+                val stream = PublicationApi.stream(resolvedTrack, cached)
                 if (stream == null) {
                     resolving = false
                     _state.value = _state.value.copy(isPlaying = false, playWhenReady = false, buffering = false, quality = "Aucun flux disponible")
@@ -632,6 +633,12 @@ object Player {
     }
 
     fun volumeValue(): Float = controller?.volume ?: 1f
+    fun refreshPublication(track: Track) {
+        if (com.ketvoice.app.data.ImportedSong.id(track) == null) return
+        scope.launch(Dispatchers.Main.immediate) {
+            _state.value = _state.value.copy(queue = _state.value.queue.map { if (it.id == track.id) track else it })
+        }
+    }
     fun applyEqualizer() {
         controller?.sendCustomCommand(androidx.media3.session.SessionCommand(PlaybackService.CMD_EQUALIZER, Bundle.EMPTY), Bundle.EMPTY)
     }

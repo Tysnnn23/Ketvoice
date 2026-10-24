@@ -19,7 +19,7 @@
 
 Ketvoice is an independent Android music client whose visual language is inspired by Apple Music and iOS 26. French is the default interface language; Settings offers 11 languages across the app. It is not affiliated with Apple, YouTube, Spotify or any music provider.
 
-The current release is **2.10.0** (`versionCode` 19) for both **mobile/tablet** (Android 12+, target SDK 36) and **Quest 3/3S** (minimum SDK 32, target SDK 34, landscape-only window). It adds album-derived player colours, subtle artwork depth, animated library sorting, per-track download feedback and readability improvements, retaining the 2.9.0 artist pages and the earlier equalizer/Wi-Fi features. See [2.10.0 notes](docs/releases/v2.10.0.md).
+The current release is **2.11.0** (`versionCode` 20) for both **mobile/tablet** (Android 12+, target SDK 36) and **Quest 3/3S** (minimum SDK 32, target SDK 34, landscape-only window). It adds owner-only replacement of imported audio/artwork, a global video Canvas switch, opt-in Sonic Canvas and offline capsules. Previous artwork, lyric, equalizer and single-device Wi-Fi features remain. Ketogether group listening is deferred. See [2.11.0 notes](docs/releases/v2.11.0.md).
 
 Music-source search, stream resolution, Spotify Canvas, and published-content lookup go through two Supabase Edge Functions: **Ketvoice API** for sources/Canvas and **Ketvoice Content** for public publications. The APK contains only the project’s public Supabase `anon` key and function URLs. Spotify and source credentials remain in Supabase Vault and are never shipped with the app.
 
@@ -31,7 +31,7 @@ Music-source search, stream resolution, Spotify Canvas, and published-content lo
 
 - **Landscape only, with the mobile style**: original artwork/Canvas, icon controls, Liquid Glass, floating navigation, and lyric animations. In lyrics/queue mode, artwork, title, artist, and transport stay on the left; lyrics or queue fill the right. No giant text-button dashboard, tablet rail, or portrait-phone frame.
 - Pointer hover light on interactive controls, optional lyric sizing, foreground keep-awake, and the sleep timer in the ordinary track ⋯ menu.
-- Download **[Ketvoice-2.10.0-Quest.apk](https://github.com/Tysnnn23/Ketvoice/releases/download/v2.10.0/Ketvoice-2.10.0-Quest.apk)** and follow [Quest installation instructions](docs/QUEST.md). Headset-targeted manifest and arm64 support are included; physical Quest hardware validation is still required. This is a 2D app window, not an immersive VR environment. The same-version **[mobile/tablet 2.10.0 APK](https://github.com/Tysnnn23/Ketvoice/releases/download/v2.10.0/Ketvoice-2.10.0.apk)** is available in the same release.
+- Download **[Ketvoice-2.11.0-Quest.apk](https://github.com/Tysnnn23/Ketvoice/releases/download/v2.11.0/Ketvoice-2.11.0-Quest.apk)** and follow [Quest installation instructions](docs/QUEST.md). Headset-targeted manifest and arm64 support are included; physical Quest hardware validation is still required. This is a 2D app window, not an immersive VR environment. The same-version **[mobile/tablet 2.11.0 APK](https://github.com/Tysnnn23/Ketvoice/releases/download/v2.11.0/Ketvoice-2.11.0.apk)** is available in the same release.
 
 ### Interface
 

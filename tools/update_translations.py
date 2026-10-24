@@ -17,6 +17,25 @@ ASSET = APP / 'src/main/assets/translations.json'
 SOURCE = APP / 'src/main/kotlin/com/ketvoice/app'
 CATALOG = json.loads(ASSET.read_text(encoding='utf-8'))
 MESSAGES = [
+    "Modifier l'audio ou la pochette", 'Modifier le titre importé', 'Recharger le titre importé',
+    'Modifications enregistrées', 'Enregistrer les modifications',
+    "La version hors ligne est inchangée. Supprimez son téléchargement puis téléchargez-la à nouveau pour actualiser l'audio.",
+    "Choisissez uniquement les fichiers à remplacer. Les paroles et l'identifiant du titre sont conservés. Vérifiez leur synchronisation si l'audio change.",
+    'Seuls les titres importés peuvent être modifiés', 'Titre importé introuvable pour ce compte',
+    'Ce titre a changé. Rouvrez sa modification.', 'Choisissez un nouvel audio ou une nouvelle pochette',
+    'Champs de modification invalides', 'Métadonnées invalides', 'Pochette trop volumineuse ou vide (4 Mo maximum)',
+    'Sonic Canvas', 'Fond réactif au signal audio réel, sans microphone. Désactivé avec les animations réduites.',
+    'Activer les Canvas vidéo', 'Coupe les vidéos et leurs téléchargements. Sonic Canvas possède son propre réglage.',
+    'Capsule hors ligne', 'Préparer une capsule hors ligne', 'Durée souhaitée', 'Budget des fichiers',
+    "Préparez une réserve pour votre trajet. Favoris en priorité, puis historique et sélection choisie. Aucun fichier existant n'est supprimé ou remplacé.",
+    "Inclure la sélection d'accueil", 'Voir la sélection', '{0} titres sélectionnés',
+    'Durée et taille de la sélection sont estimées. Le budget est contrôlé sur les fichiers réellement écrits, hors cache partagé. Pochettes et paroles sont conservées si disponibles et si elles tiennent dans le budget. Les vidéos Canvas ne sont pas ajoutées à la capsule.',
+    'Écoutez ou recherchez quelques titres, puis créez votre sélection.', '{0} / {1} audios prêts',
+    '{0} paroles · {1} pochettes enregistrées', 'Gardez Ketvoice ouvert pendant la préparation.',
+    'Écouter la capsule', 'Préparer la capsule', 'Remplacer la sélection', 'Arrêter',
+    'Préparation de la capsule…', 'Préparation terminée. Seuls les fichiers réellement enregistrés sont indiqués prêts.',
+    'Préparation arrêtée. Les téléchargements déjà enregistrés sont conservés.',
+    "Préparation interrompue. Vérifiez le réseau et l'espace disponible.", 'Budget de la capsule atteint',
     'Couleurs de la pochette',
     "Accents du lecteur adaptés à l'album, avec contraste renforcé",
     'Profondeur de pochette', 'Mouvement léger au toucher ou au pointeur, sans modifier les gestes',
@@ -128,6 +147,10 @@ for path in SOURCE.rglob('*.kt'):
             MESSAGES.append(message)
 
 REVIEWED = {
+    'Sonic Canvas': ['Sonic Canvas'] * 10,
+    'Capsule hors ligne': ['Offline capsule', 'ऑफ़लाइन कैप्सूल', 'オフラインカプセル', '离线胶囊', 'Офлайн-капсула', 'Capsula offline', 'Cápsula sin conexión', 'Offline-Kapsel', 'Cápsula offline', '오프라인 캡슐'],
+    "Modifier l'audio ou la pochette": ['Replace audio or artwork', 'ऑडियो या एल्बम कवर बदलें', '音声またはアルバムアートを変更', '替换音频或封面', 'Заменить аудио или обложку', 'Sostituisci audio o copertina', 'Reemplazar audio o carátula', 'Audio oder Albumcover ersetzen', 'Substituir áudio ou capa', '오디오 또는 앨범 아트 교체'],
+    'Activer les Canvas vidéo': ['Enable video Canvases', 'वीडियो Canvas सक्षम करें', '動画Canvasを有効にする', '启用视频 Canvas', 'Включить видео Canvas', 'Attiva i Canvas video', 'Activar Canvas de vídeo', 'Video-Canvas aktivieren', 'Ativar Canvas de vídeo', '동영상 Canvas 활성화'],
     'Couleurs de la pochette': ['Album artwork colors', 'एल्बम कवर के रंग', 'アルバムアートの色', '专辑封面配色', 'Цвета обложки альбома', 'Colori della copertina', 'Colores de la carátula', 'Albumcover-Farben', 'Cores da capa do álbum', '앨범 아트 색상'],
     'Profondeur de pochette': ['Artwork depth', 'एल्बम कवर की गहराई', 'アルバムアートの奥行き', '封面景深', 'Глубина обложки', 'Profondità della copertina', 'Profundidad de la carátula', 'Albumcover-Tiefe', 'Profundidade da capa', '앨범 아트 깊이'],
     'Audio enregistré · finalisation…': ['Audio saved · finishing…', 'ऑडियो सहेजा गया · पूरा किया जा रहा है…', '音声を保存済み · 仕上げ中…', '音频已保存 · 正在完成…', 'Аудио сохранено · завершение…', 'Audio salvato · completamento…', 'Audio guardado · finalizando…', 'Audio gespeichert · wird abgeschlossen…', 'Áudio salvo · finalizando…', '오디오 저장됨 · 마무리 중…'],
@@ -156,6 +179,12 @@ REVIEWED = {
     'Lecture depuis {0}': ['Playing from {0}', '{0} से चल रहा है', '{0}から再生中', '正在播放 {0}', 'Воспроизведение: {0}', 'In riproduzione da {0}', 'Reproduciendo desde {0}', 'Wiedergabe von {0}', 'Reproduzindo de {0}', '{0}에서 재생'],
     '{0} Mo': ['{0} MB'] * 10,
 }
+
+extra = json.loads((ROOT / 'tools/content-feature-translations.json').read_text(encoding='utf-8'))
+for language in CATALOG:
+    assert len(extra['translations'][language]) == len(extra['keys'])
+REVIEWED.update({message: [extra['translations'][language][index] for language in CATALOG]
+                 for index, message in enumerate(extra['keys'])})
 
 def translate(message, language):
     target = 'zh-CN' if language == 'zh' else language

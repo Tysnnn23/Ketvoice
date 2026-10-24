@@ -83,6 +83,9 @@ fun DownloadsScreen() {
         }
 
         val percent = if (progress.isNotEmpty()) progress.values.average().toInt() else 0
+        androidx.compose.material3.TextButton(onClick = { AppUi.showCapsule.value = true }, modifier = Modifier.padding(horizontal = 14.dp)) {
+            Text("Préparer une capsule hors ligne", color = th.accent)
+        }
         Text(
             buildString {
                 append("${list.size} titre${if (list.size > 1) "s" else ""}")

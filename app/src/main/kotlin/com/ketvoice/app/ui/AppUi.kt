@@ -57,12 +57,15 @@ object AppUi {
     val showPublisher = androidx.compose.runtime.mutableStateOf(false)
     val publisherTrack = androidx.compose.runtime.mutableStateOf<com.ketvoice.app.data.Track?>(null)
     val publisherLink = androidx.compose.runtime.mutableStateOf<String?>(null)
-    fun openPublisher(track: com.ketvoice.app.data.Track? = null) {
+    val editImportedSong = androidx.compose.runtime.mutableStateOf(false)
+    fun openPublisher(track: com.ketvoice.app.data.Track? = null, edit: Boolean = false) {
+        if (edit && com.ketvoice.app.data.ImportedSong.id(track) == null) return
+        editImportedSong.value = edit
         publisherTrack.value = track
         showPublisher.value = true
     }
     fun openPublisherLink(link: String) {
-        if (!showPublisher.value) publisherTrack.value = null
+        if (!showPublisher.value) { publisherTrack.value = null; editImportedSong.value = false }
         publisherLink.value = link
         showPlayer.value = false
         showAccount.value = false
@@ -106,6 +109,7 @@ object AppUi {
     val showAudioOutput = androidx.compose.runtime.mutableStateOf(false)
     val showEqualizer = androidx.compose.runtime.mutableStateOf(false)
     val showHandoff = androidx.compose.runtime.mutableStateOf(false)
+    val showCapsule = androidx.compose.runtime.mutableStateOf(false)
 
     /** Sélecteur de source des paroles (feuille du lecteur) */
     val showLyricsSource = androidx.compose.runtime.mutableStateOf(false)

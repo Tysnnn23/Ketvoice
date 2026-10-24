@@ -1,3 +1,4 @@
+@file:androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 package com.ketvoice.app.ui
 
 import android.graphics.Bitmap
@@ -21,6 +22,9 @@ import com.ketvoice.app.theme.KetvoiceTheme
 import com.ketvoice.app.ui.common.DownloadCover
 import com.ketvoice.app.ui.library.LibraryScreen
 import com.ketvoice.app.ui.player.*
+import com.ketvoice.app.ui.sub.CapsuleDialog
+import com.ketvoice.app.ui.settings.PublisherScreen
+import com.ketvoice.app.player.SonicMeter
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.After
 import org.junit.Before
@@ -55,6 +59,11 @@ class SelectedPolishTest {
         update(Downloader.busy, emptySet())
         update(Downloader.progress, emptyMap())
         AppUi.overlay.value = AppUi.NONE
+        AppUi.editImportedSong.value = false
+        AppSettings.sonicCanvas.value = false
+        AppSettings.animatedArtwork.value = true
+        update(PublisherSession.allowed, false)
+        update(OfflineCapsule.state, CapsuleState())
     }
     @After fun restore() {
         AppSettings.language.value = oldLanguage
@@ -64,6 +73,11 @@ class SelectedPolishTest {
         update(Downloader.items, emptyList())
         update(Downloader.busy, emptySet())
         update(Downloader.progress, emptyMap())
+        update(PublisherSession.allowed, false)
+        AppUi.editImportedSong.value = false
+        AppSettings.animatedArtwork.value = true
+        AppSettings.sonicCanvas.value = false
+        SonicMeter.observe(false)
     }
     private fun screenshot(name: String) {
         val file = File(context.getExternalFilesDir("qa-polish"), "$name.png")
@@ -164,6 +178,60 @@ class SelectedPolishTest {
         }
         compose.onNodeWithTag("qa-depth").performTouchInput { swipeLeft() }
         compose.runOnIdle { assertTrue(dragged < 0f) }
+    }
+
+    @Test fun importedAudioEditingIsOfferedOnlyForImportedSongs() {
+        update(PublisherSession.allowed, true)
+        val imported = qa.copy(id = "kv:upload:11111111-1111-4111-8111-111111111111", addon = "upload")
+        var selected by mutableStateOf(imported)
+        compose.setContent { KetvoiceTheme(useDark = true) { TrackMenuSheet(selected) {} } }
+        compose.onNodeWithText("Modifier l'audio ou la pochette").assertExists()
+        compose.runOnIdle { selected = qa.copy(id = "yt:abcdefghijk") }
+        compose.onNodeWithText("Modifier l'audio ou la pochette").assertDoesNotExist()
+    }
+
+    @Test fun editingScreenRequiresVerifiedPublisherBeforeFilesCanBeSubmitted() {
+        AppUi.editImportedSong.value = true
+        val imported = qa.copy(id = "kv:upload:11111111-1111-4111-8111-111111111111", addon = "upload")
+        compose.setContent { KetvoiceTheme(useDark = true) { PublisherScreen(imported) {} } }
+        compose.onNodeWithText("Vérification du compte de publication").assertExists()
+        compose.onNodeWithText("Enregistrer les modifications").assertDoesNotExist()
+    }
+
+    @Test fun capsuleRequiresAnExplicitPreviewAndPreparation() {
+        update(ListeningHistory.tracks, listOf(qa.copy(durationMs = 180000)))
+        compose.setContent { KetvoiceTheme(useDark = true) { CapsuleDialog {} } }
+        compose.onNodeWithText("Voir la sélection").performScrollTo().performClick()
+        compose.onNodeWithText("1 titres sélectionnés").assertExists()
+        compose.runOnIdle { assertFalse(OfflineCapsule.state.value.busy); assertTrue(Downloader.busy.value.isEmpty()) }
+        compose.onNodeWithText("Préparer la capsule").assertExists()
+    }
+
+    @Test fun disabledVideoCanvasDoesNotTryToPlayAnUnavailableVideo() {
+        AppSettings.animatedArtwork.value = false
+        compose.setContent { KetvoiceTheme(useDark = true) {
+            ArtworkCanvas(qa, "/nonexistent/qa-video.mp4", false, Modifier.size(180.dp))
+        } }
+        compose.runOnIdle { assertFalse(panoramicCanvasActive("/nonexistent/qa-video.mp4")) }
+    }
+
+    @Test fun pcmTapKeepsAudioUnchangedAndFeedsRealEnergy() {
+        val processor = androidx.media3.exoplayer.audio.TeeAudioProcessor(SonicMeter)
+        processor.configure(androidx.media3.common.audio.AudioProcessor.AudioFormat(48000, 1, androidx.media3.common.C.ENCODING_PCM_16BIT))
+        processor.flush()
+        val input = java.nio.ByteBuffer.allocateDirect(9600).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+        repeat(4800) { i -> input.putShort((kotlin.math.sin(2 * Math.PI * 80 * i / 48000) * 12000).toInt().toShort()) }
+        input.flip()
+        val expected = ByteArray(input.remaining()); input.duplicate().get(expected)
+        SonicMeter.observe(true)
+        processor.queueInput(input)
+        val output = processor.output
+        val actual = ByteArray(output.remaining()); output.get(actual)
+        assertArrayEquals(expected, actual)
+        assertTrue(SonicMeter.levels.value.low > 0f)
+        SonicMeter.observe(false)
+        assertEquals(com.ketvoice.app.player.SonicLevels(), SonicMeter.levels.value)
+        processor.reset()
     }
 
     @Test fun questQueueKeepsControlsAndLongTitlesWithReducedMotion() {

@@ -7,6 +7,20 @@
 
 ---
 
+## 2.11.0 — IMPORTED MEDIA EDITS, SONIC CANVAS & OFFLINE CAPSULES
+
+**Mobile, tablet and Quest · versionCode 20**
+
+- The verified publisher can replace audio and/or artwork only on its own imported publications. Ownership, file validation and concurrent-edit protection are enforced server-side; lyrics and track IDs are preserved.
+- Imported stream cache keys include the immutable media revision URL. Existing offline downloads are never silently replaced.
+- A global video Canvas switch disables video playback and future video downloads. Sonic Canvas is separate and off by default, reacting to local decoded PCM without using the microphone.
+- Offline capsules provide a duration/budget selection preview, favorite-first planning and sequential downloads without evicting existing files. Readiness comes from saved files; shared caches are outside the capsule budget.
+- Ketogether remains deferred; existing single-device Wi-Fi handoff is unchanged.
+- 110 JVM tests and 12 Android Compose tests pass per flavor; lint 0 errors, 137 warnings, 8 hints. Broker checks: 21 existing and 23 edit cases mocked; 3 live read-only checks. Content broker v4 deployed with JWT verification on.
+- No authenticated real-owner edit, full live capsule download or physical Quest test is claimed. See [2.11.0 release notes](docs/releases/v2.11.0.md).
+
+---
+
 ## 2.10.0 — ALBUM COLOURS, ARTWORK DEPTH & LIBRARY MOTION
 
 **Mobile, tablet and Quest · versionCode 19**

@@ -29,6 +29,7 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun PlaybackFeatureDialogs() {
+    if (AppUi.showCapsule.value) com.ketvoice.app.ui.sub.CapsuleDialog { AppUi.showCapsule.value = false }
     val app=LocalContext.current.applicationContext
     val lifecycle=LocalLifecycleOwner.current.lifecycle
     val enabled=AppSettings.wifiHandoffEnabled.value
