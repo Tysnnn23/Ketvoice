@@ -17,7 +17,7 @@
 
 ## Overview
 
-Ketvoice is an independent Android music client whose visual language is inspired by Apple Music and iOS 26. French is the default interface language; Settings offers 11 languages across the app. It is not affiliated with Apple, YouTube, Spotify, BitChord, or any music provider.
+Ketvoice is an independent Android music client whose visual language is inspired by Apple Music and iOS 26. French is the default interface language; Settings offers 11 languages across the app. It is not affiliated with Apple, YouTube, Spotify or any music provider.
 
 The current release is **2.10.0** (`versionCode` 19) for both **mobile/tablet** (Android 12+, target SDK 36) and **Quest 3/3S** (minimum SDK 32, target SDK 34, landscape-only window). It adds album-derived player colours, subtle artwork depth, animated library sorting, per-track download feedback and readability improvements, retaining the 2.9.0 artist pages and the earlier equalizer/Wi-Fi features. See [2.10.0 notes](docs/releases/v2.10.0.md).
 
