@@ -231,7 +231,12 @@ fun FullPlayerScreen(
                         fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.width(sceneWidth).padding(top = topInset + 32.dp))
-                    PlayerTitle(track, false, cover, sheetAction = { sheet = "track" },
+                    PlayerTitle(track, false, cover, sheetAction = { sheet = "track" }, onArtist = {
+                        track.artistId?.takeIf { it.startsWith("UC") }?.let {
+                            AppUi.showPlayer.value = false
+                            AppUi.openArtist(it, track.artist)
+                        }
+                    },
                         modifier = Modifier.width(sceneWidth).offset(y = if (wide) safeHeight - 66.dp
                             else minOf(safeHeight * .514f, contentBottom - 61.dp)).padding(horizontal = margin))
                 } else {
@@ -242,6 +247,11 @@ fun FullPlayerScreen(
                         } else sheet = "track"
                     }, share = expanded, onCover = {
                         navigate(PlayerPage.ARTWORK)
+                    }, onArtist = {
+                        track.artistId?.takeIf { it.startsWith("UC") }?.let {
+                            AppUi.showPlayer.value = false
+                            AppUi.openArtist(it, track.artist)
+                        }
                     },
                         modifier = Modifier.width(sceneWidth).offset(y = headerTop).padding(horizontal = if (wide) 18.dp else margin)
                             .height(headerHeight).swipeToMini { close() })
@@ -331,7 +341,8 @@ private fun PlayerHandle(modifier: Modifier, onClose: () -> Unit) {
 
 @Composable
 internal fun PlayerTitle(track: Track, compact: Boolean, cover: String?, sheetAction: () -> Unit,
-                         modifier: Modifier = Modifier, share: Boolean = false, onCover: () -> Unit = {}) {
+                         modifier: Modifier = Modifier, share: Boolean = false, onCover: () -> Unit = {},
+                         onArtist: () -> Unit = { track.artistId?.let { AppUi.openArtist(it, track.artist) } }) {
     val favorite = track.id in AppSettings.favoriteIds.value
     var favoriteTap by remember(track.id) { mutableIntStateOf(0) }
     val pulse = remember(track.id) { androidx.compose.animation.core.Animatable(1f) }
@@ -361,7 +372,7 @@ internal fun PlayerTitle(track: Track, compact: Boolean, cover: String?, sheetAc
                 maxLines = 1, overflow = TextOverflow.Ellipsis,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { track.artistId?.let { AppUi.openArtist(it, track.artist) } }
+                    .clickable(onClick = onArtist)
                     .semantics { contentDescription = "Ouvrir la page de ${track.artist}" }
             )
         }

@@ -7,6 +7,18 @@
 
 ---
 
+## 3.0.1 — IMMERSIVE ARTIST PROFILES (versionCode 26)
+
+- Artist pages now open with a large, unblurred portrait and a gradual blend into
+  a color sampled from the artwork; playback and refresh actions sit in the header.
+- Artist biographies are translated to the selected app language, with the
+  original text retained if translation is unavailable.
+- Tapping an artist in the full-screen player now reveals the profile and keeps
+  audio playing in the mini-player.
+- See [3.0.1 release notes](docs/releases/v3.0.1.md). Existing releases remain intact.
+
+---
+
 ## 3.0.0-Beta3 — SIGNED APK REBUILD (versionCode 25)
 
 - Rebuilt the latest Beta3 source, retaining the recent beta UI and crash fixes.

@@ -17,19 +17,16 @@
 
 ## Overview
 
-### 3.0.0-Beta3 — rebuilt APKs
+### 3.0.1 — immersive artist profiles
 
-The Beta3 rebuild keeps the recent beta changes (artist banner, local music,
-glass back buttons, tablet swipe-to-close, image-cache purge and seek feedback).
-Its app version remains **3.0.0-Beta3**, with **versionCode 25** for upgrading.
-The original Beta3 APK was an unsigned ZIP and Android rejected its signature;
-the rebuild is signed automatically and verified before upload.
+Artist pages now feature an immersive portrait header with a color-matched
+gradient and biographies translated to the selected interface language. Tapping
+an artist in the full-screen player opens the profile while playback continues
+in the mini-player. This update is versionCode 26 for mobile and Quest.
 
-- [Mobile APK](https://github.com/Tysnnn23/Ketvoice/releases/download/v3.0.0-Beta3-rebuild.1/Ketvoice-3.0.0-Beta3-rebuild.1.apk)
-- [Quest APK](https://github.com/Tysnnn23/Ketvoice/releases/download/v3.0.0-Beta3-rebuild.1/Ketvoice-3.0.0-Beta3-rebuild.1-Quest.apk)
-- [Rebuild notes and validation limits](docs/releases/v3.0.0-Beta3-rebuild.1.md)
-
-This is a separate prerelease; existing releases and tags are not replaced.
+- [Mobile APK](https://github.com/Tysnnn23/Ketvoice/releases/download/v3.0.1/Ketvoice-3.0.1.apk)
+- [Quest APK](https://github.com/Tysnnn23/Ketvoice/releases/download/v3.0.1/Ketvoice-3.0.1-Quest.apk)
+- [Release notes and validation limits](docs/releases/v3.0.1.md)
 
 Ketvoice is an independent Android music client whose visual language is inspired by Apple Music and iOS 26. French is the default interface language; Settings offers 11 languages across the app. It is not affiliated with Apple, YouTube, Spotify or any music provider.
 
