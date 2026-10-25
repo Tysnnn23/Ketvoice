@@ -17,14 +17,15 @@
 
 ## Overview
 
-### 3.0.1 — immersive artist profiles
+### 3.0.2 — artist image framing
 
-Artist pages now feature an immersive portrait header with a color-matched
-gradient and biographies translated to the selected interface language. Tapping
-an artist in the full-screen player opens the profile while playback continues
-in the mini-player. This update is versionCode 26 for mobile and Quest. The
-signed APKs are available from the [3.0.1 GitHub release](https://github.com/Tysnnn23/Ketvoice/releases/tag/v3.0.1).
-See the [3.0.1 release notes](docs/releases/v3.0.1.md) for validation limits.
+Artist pages prefer wide header artwork when available and no longer crop square
+portraits to fill the whole screen. The larger header fades into a soft color
+sampled from the image, with the artist name and playback controls below it.
+This update is versionCode 27 for mobile and Quest. Download the signed
+[mobile APK](https://github.com/Tysnnn23/Ketvoice/releases/download/v3.0.2/Ketvoice-3.0.2.apk)
+or [Quest APK](https://github.com/Tysnnn23/Ketvoice/releases/download/v3.0.2/Ketvoice-3.0.2-Quest.apk).
+See the [3.0.2 release notes](docs/releases/v3.0.2.md) for validation limits.
 
 Ketvoice is an independent Android music client whose visual language is inspired by Apple Music and iOS 26. French is the default interface language; Settings offers 11 languages across the app. It is not affiliated with Apple, YouTube, Spotify or any music provider.
 

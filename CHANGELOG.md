@@ -7,6 +7,17 @@
 
 ---
 
+## 3.0.2 — ARTIST IMAGE FRAMING (versionCode 27)
+
+- Artist profiles now prefer a wide header image when the catalog provides one.
+  Square portraits keep their natural width instead of being enlarged to cover
+  the entire page, eliminating the excessive crop.
+- A taller, full-screen-inspired header fades into a sampled pastel tone, with
+  the artist name and functional shuffle/play/share controls on that surface.
+- See [3.0.2 release notes](docs/releases/v3.0.2.md) for validation limits.
+
+---
+
 ## 3.0.1 — IMMERSIVE ARTIST PROFILES (versionCode 26)
 
 - Artist pages now open with a large, unblurred portrait and a gradual blend into

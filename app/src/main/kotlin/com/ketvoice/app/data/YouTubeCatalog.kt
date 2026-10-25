@@ -39,8 +39,7 @@ object YouTubeCatalog {
             ?: YouTubeJson.objects(raw, "musicVisualHeaderRenderer").firstOrNull() ?: return null
         val name = YouTubeJson.text(header.optJSONObject("title"))
         if (name.isBlank()) return null
-        val artist = MusicArtist(id, name,
-            YouTubeJson.image(header.optJSONObject("thumbnail") ?: header.optJSONObject("foregroundThumbnail") ?: header))
+        val artist = MusicArtist(id, name, artistHeaderImage(header))
         val description = YouTubeJson.objects(raw, "musicDescriptionShelfRenderer").firstOrNull()
             ?.let { YouTubeJson.text(it.optJSONObject("description")) }.orEmpty()
         val listeners = YouTubeJson.text(header.optJSONObject("monthlyListenerCount"))
@@ -85,6 +84,23 @@ object YouTubeCatalog {
         }
         return ArtistPage(artist, description, parseRows(raw, officialOnly = true).take(20),
             releases.distinctBy { it.id }, related.distinctBy { it.id }.take(12), listeners)
+    }
+
+    internal fun artistHeaderImage(header: JSONObject): String? {
+        val candidates = listOf("foregroundThumbnail", "thumbnail")
+            .flatMap { field ->
+                val images = header.optJSONObject(field) ?: return@flatMap emptyList()
+                YouTubeJson.objects(images, "thumbnail") + listOf(images)
+            }
+        val wide = candidates.flatMap { source ->
+            val thumbnails = source.optJSONArray("thumbnails") ?: return@flatMap emptyList()
+            (0 until thumbnails.length()).mapNotNull { thumbnails.optJSONObject(it) }
+        }.filter { it.optInt("width") >= 600 && it.optInt("width") > it.optInt("height") * 1.25 }
+            .maxByOrNull { it.optInt("width") }
+            ?.optString("url")?.takeIf { it.startsWith("https://") }
+        return wide ?: YouTubeJson.image(header.optJSONObject("thumbnail"))
+            ?: YouTubeJson.image(header.optJSONObject("foregroundThumbnail"))
+            ?: YouTubeJson.image(header.optJSONObject("backgroundThumbnail"))
     }
 
     suspend fun album(id: String): CatalogPage? {
