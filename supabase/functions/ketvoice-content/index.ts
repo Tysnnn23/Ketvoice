@@ -16,17 +16,14 @@ async function api(path: string, init: RequestInit = {}): Promise<Response> {
 async function database(path: string, init: RequestInit = {}): Promise<Row[]> {
   const res = await api("/rest/v1/" + path, init);
   if (!res.ok) throw new HttpError(502,"Service de publication indisponible");
-  // INSERT with PostgREST's default return=minimal is 201 with no body,
-  // not necessarily 204. Parsing that empty body threw SyntaxError after
-  // audio/cover storage and rolled back a valid song with a lyric sidecar.
+
   const text = await res.text();
   return text.trim() ? JSON.parse(text) : [];
 }
 async function administrator(req: Request): Promise<string> {
   const token = req.headers.get("x-ketvoice-admin");
   if (!token || token.length > 12000) throw new HttpError(401,"Connexion administrateur requise");
-  // Auth server verifies signature, expiry and the real user record. Never trust
-  // a decoded email, a YouTube display profile, or user-editable user_metadata.
+
   const res = await api("/auth/v1/user", {headers:{Authorization:`Bearer ${token}`}});
   if (!res.ok) throw new HttpError(401,"Session administrateur expirée");
   const user = await res.json();
@@ -154,8 +151,7 @@ async function updateSong(req: Request, owner: string): Promise<Response> {
     const result=await database(`ketvoice_tracks?id=eq.${id}&created_by=eq.${encodeURIComponent(owner)}&published=eq.true&audio_path=eq.${encodeURIComponent(String(old.audio_path))}&cover_path=${coverFilter}`,
       {method:"PATCH",headers:{Prefer:"return=representation"},body:JSON.stringify(update)});
     if(!result.length) { definitelyUncommitted=true;throw new HttpError(409,"Ce titre a changé. Rouvrez sa modification."); }
-    // Immutable new paths prevent stale CDN content. Keep previous media intact,
-    // including on an ambiguous PATCH timeout; never delete a possibly committed file.
+
     return json({published:true,track:track(result[0]),revision:await revision(result[0])});
   } catch(error) {
     if(uploaded.length && (!patchAttempted || definitelyUncommitted))

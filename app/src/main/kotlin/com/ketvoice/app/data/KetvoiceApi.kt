@@ -10,16 +10,6 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
 
-/**
- * Client de la source intégrée **Ketvoice API**.
- *
- * Toutes les opérations sensibles (recherche addon, flux signés, Spotify
- * Canvas) passent par une Supabase Edge Function. L'APK ne contient ni cookie
- * Spotify, ni jeton d'addon : ces valeurs restent côté Supabase.
- *
- * La clé ci-dessous est la clé publique `anon` du projet Supabase. Elle est
- * destinée au client et ne donne accès qu'aux fonctions autorisées.
- */
 object KetvoiceApi {
 
     const val DISPLAY_NAME = "Ketvoice API"
@@ -62,15 +52,10 @@ object KetvoiceApi {
     private fun getJson(path: String, readTimeoutMs: Int = 30_000): JSONObject? =
         get(path, readTimeoutMs)?.let { raw -> runCatching { JSONObject(raw) }.getOrNull() }
 
-    /** Vérifie que la fonction Supabase et les secrets serveur sont disponibles. */
     suspend fun health(): Boolean = withContext(Dispatchers.IO) {
         getJson("/health")?.optBoolean("ok") == true
     }
 
-    /**
-     * Recherche agrégée côté Supabase. Les identifiants addon restent sur le
-     * serveur ; le client ne reçoit que les métadonnées utiles.
-     */
     suspend fun search(query: String): List<Track> = withContext(Dispatchers.IO) {
         if (query.trim().length < 2) return@withContext emptyList()
         val publicTracks = async { PublicationApi.search(query) }
@@ -96,14 +81,9 @@ object KetvoiceApi {
         }
     }
 
-    /**
-     * Résout un flux via Supabase. Le serveur choisit l'addon, garde son jeton
-     * et renvoie uniquement l'URL signée temporaire.
-     */
     suspend fun stream(track: Track, tag: String): MusicApi.StreamInfo? =
         withContext(Dispatchers.IO) {
-            // Un identifiant n'est réutilisable que pour l'addon qui l'a émis.
-            // Sinon le serveur refait une correspondance titre/artiste.
+
             val addonId = if (track.addon == tag) track.addonId.orEmpty() else ""
             val path = buildString {
                 append("/stream?source=")
@@ -127,10 +107,6 @@ object KetvoiceApi {
             )
         }
 
-    /**
-     * Résout et renvoie l'URL du canvas Spotify. Le cookie `sp_dc` et le TOTP
-     * sont exécutés côté Supabase, jamais dans l'application.
-     */
     suspend fun canvas(track: Track): CanvasResult? = withContext(Dispatchers.IO) {
         val path = buildString {
             append("/canvas?title=")

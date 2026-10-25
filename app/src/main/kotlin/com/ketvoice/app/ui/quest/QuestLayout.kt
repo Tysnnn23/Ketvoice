@@ -1,6 +1,5 @@
 package com.ketvoice.app.ui.quest
 
-/** Quest is a landscape window; keep the mobile styling, not a portrait frame. */
 data class QuestLayout(val widthDp: Float, val heightDp: Float) {
     val contentWidthDp: Float get() = widthDp.coerceAtMost(1440f)
     val playerWidthDp: Float get() = widthDp

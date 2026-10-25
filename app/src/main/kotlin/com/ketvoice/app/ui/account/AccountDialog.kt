@@ -29,7 +29,6 @@ import com.ketvoice.app.theme.LocalTheme
 import com.ketvoice.app.ui.AppUi
 import kotlinx.coroutines.launch
 
-/** Connexion réelle à YouTube Music, sans compte fabriqué ni profil factice. */
 @Composable
 fun AccountDialog(modifier: Modifier = Modifier) {
     val theme = LocalTheme.current

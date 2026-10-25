@@ -4,15 +4,6 @@ import android.content.Context
 import org.json.JSONObject
 import java.util.concurrent.ConcurrentHashMap
 
-/**
- * Traduction à l'exécution des textes d'interface.
- *
- * Le français est la langue source. `assets/translations.json` contient les
- * traductions des libellés visibles ; les données utilisateur (titres,
- * artistes, paroles) ne sont jamais traduites. Un texte absent du dictionnaire
- * est renvoyé tel quel, ce qui rend le système sûr même pour les chaînes
- * dynamiques ou les noms de marque.
- */
 object AppText {
 
     private val dictionaries = ConcurrentHashMap<String, UiTextDictionary>()

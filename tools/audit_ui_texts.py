@@ -49,7 +49,7 @@ def ui_message(value):
     if re.search(r'^[a-z0-9_:./#-]+$',v):return False
     if '/' in v and not re.search(r'\s',v):return False
     if re.search(r'(?:^|\s)(?:import|package)\s',v):return False
-    # Generic placeholder-only patterns would swallow user titles or arbitrary status text.
+
     literal=re.sub(r'\{\d+}', '',v)
     return len(re.findall(r'[^\W\d_]',literal))>=2
 

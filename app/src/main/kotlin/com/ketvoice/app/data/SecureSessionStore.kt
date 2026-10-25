@@ -10,7 +10,6 @@ import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
-/** Session secrets are never written to logs or stored as plaintext preferences. */
 class SecureSessionStore(context: Context) {
     private val prefs = context.getSharedPreferences("private-sessions", Context.MODE_PRIVATE)
     private fun key(): SecretKey {

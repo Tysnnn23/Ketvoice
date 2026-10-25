@@ -71,14 +71,12 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
-/** Content only. The player owns the header, actions, sheets and transport. */
 @Composable
 internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
                         modifier: Modifier = Modifier,
                         fontScale: Float = com.ketvoice.app.ui.quest.QuestLayout.lyricsScale(AppSettings.lyricsTextSize.value)) {
     val lyrics by LyricsRepo.state.collectAsState()
-    // A StateFlow must be collected. Reading flow.value inside derivedStateOf
-    // does not subscribe and was leaving both highlight and scroll frozen.
+
     val position = Player.positionMs.collectAsState()
     val active by remember(lyrics) { derivedStateOf { lyrics.indexAt(position.value) } }
     val firstLineMs = remember(lyrics.lines) { lyrics.lines.firstOrNull { it.timeMs >= 0 }?.timeMs ?: 0L }
@@ -131,8 +129,7 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
                     contentPadding = PaddingValues(top = 22.dp, bottom = 110.dp),
                     verticalArrangement = Arrangement.spacedBy(25.dp)) {
                     if (lyrics.isTimed) item(key = "intro-${track.id}") {
-                        // Keep the slot's geometry stable when the first verse
-                        // starts: the dots disappear, the lyrics do not jump.
+
                         Box(Modifier.height(if (firstLineMs > 0) 32.dp else 0.dp)) {
                             if (intro) IntroDots(firstLineMs)
                         }
@@ -234,8 +231,7 @@ private fun KaraokeLine(line: MusicApi.LyricLine, modifier: Modifier, fontScale:
     }
     LaunchedEffect(position, playing) { if (!playing) now = position }
     var layout by remember(line.text) { mutableStateOf<TextLayoutResult?>(null) }
-    // Character paths depend on text layout, not playback time. Build once;
-    // each frame changes only clipping widths rather than allocating paths.
+
     val masks = remember(layout, line) { layout?.let { measured ->
         var offset = 0
         line.words.map { word ->
@@ -284,7 +280,7 @@ private data class LyricWordMask(val start: Long, val end: Long, val slices: Lis
 
 internal fun segmentProgress(now: Long, start: Long, end: Long): Float = when {
     now < start -> 0f
-    end <= start -> 1f // Source supplied a start only: do not invent a duration.
+    end <= start -> 1f
     else -> ((now - start).toFloat() / (end - start)).coerceIn(0f, 1f)
 }
 

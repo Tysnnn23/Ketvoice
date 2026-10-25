@@ -3,11 +3,6 @@ package com.ketvoice.app.data
 import android.content.Context
 import android.content.SharedPreferences
 
-/**
- * Persistance légère des réglages (SharedPreferences).
- * Sauvegarde à la mise en arrière-plan ; rechargée avant l'init du cache
- * audio pour que la limite choisie soit appliquée dès le démarrage.
- */
 object SettingsStore {
 
     private const val NAME = "ketvoice_settings"
@@ -64,15 +59,14 @@ object SettingsStore {
         s.filterNonAudio.value = p.getBoolean("filterNonAudio", s.filterNonAudio.value)
         s.cacheBytes.value = p.getLong("cacheBytes", s.cacheBytes.value)
             .coerceIn(500_000_000L, 10_000_000_000L)
-        // Migration 1.3 : le cache chansons passe à 10 Go par défaut.
+
         if (!p.getBoolean("cacheMigrated10g", false)) {
             s.cacheBytes.value = 10_000_000_000L
             p.edit().putBoolean("cacheMigrated10g", true).apply()
         }
         s.cacheBytes.value = (kotlin.math.round(s.cacheBytes.value / 500_000_000.0).toLong() * 500_000_000L)
             .coerceIn(500_000_000L, 10_000_000_000L)
-        // Migration 2.4 : les anciens secrets locaux sont supprimés de l'appareil.
-        // Ils vivent désormais uniquement côté Supabase.
+
         p.edit()
             .remove("spDc")
             .remove("canvasUrl")

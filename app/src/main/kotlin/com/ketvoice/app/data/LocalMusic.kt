@@ -9,11 +9,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-/**
- * Musique locale : scan MediaStore et lecture directe des fichiers de l'appareil.
- * Les pistes utilisent l'id "local:<mediaStoreId>" et un streamUrl "content://…"
- * qui est joué nativement par ExoPlayer/Media3.
- */
 object LocalMusic {
     private val _tracks = MutableStateFlow<List<Track>>(emptyList())
     val tracks = _tracks.asStateFlow()
@@ -87,7 +82,6 @@ object LocalMusic {
         }
     }
 
-    /** Pochette d'album via l'ALBUM_ID MediaStore (miniature système). */
     fun albumArtUri(albumId: Long): String =
         Uri.parse("content://media/external/audio/albumart/$albumId").toString()
 }

@@ -45,11 +45,6 @@ object PublisherSession {
         }
     }
 
-    /**
-     * Supabase finishes the email link at ketvoice://auth and appends the
-     * session in the fragment. The server still checks the mailbox and the
-     * admin session before any publication is accepted.
-     */
     private suspend fun acceptRedirect(url: String) {
         val values = PublisherAccess.redirect(url)
         require(values["error"].isNullOrBlank() && values["error_description"].isNullOrBlank()) {
@@ -57,8 +52,7 @@ object PublisherSession {
         }
         require(!values["access_token"].isNullOrBlank() && values["token_type"] == "bearer") { "Lien invalide" }
         val nextRefresh = values["refresh_token"]?.takeIf { it.isNotBlank() } ?: error("Lien invalide")
-        // Never trust identity or expiry supplied by an external Intent. Exchange
-        // the refresh token for a server-validated session, then check the broker.
+
         accept(PublicationApi.auth("/token?grant_type=refresh_token", JSONObject().put("refresh_token", nextRefresh)))
     }
 

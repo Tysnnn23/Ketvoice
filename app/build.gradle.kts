@@ -12,7 +12,7 @@ android {
         applicationId = "com.ketvoice.app"
         minSdk = 31
         targetSdk = 36
-        // Rebuilt Beta3: permit an in-place upgrade from the original code 24.
+
         versionCode = 25
         versionName = "3.0.0-Beta3"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -30,14 +30,11 @@ android {
             minSdk = 32
             targetSdk = 34
             buildConfigField("boolean", "IS_QUEST", "true")
-            // Quest uses arm64; x86_64 permits the same panel build to be
-            // exercised on an Android emulator without shipping 32-bit ABIs.
+
             ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
         }
     }
 
-    // Release APKs must be installable straight from assemble*Release. The
-    // previous Beta3 uploader shipped the unsigned Gradle output by mistake.
     signingConfigs {
         create("sideload") {
             val customStore = providers.environmentVariable("KETVOICE_KEYSTORE").orNull

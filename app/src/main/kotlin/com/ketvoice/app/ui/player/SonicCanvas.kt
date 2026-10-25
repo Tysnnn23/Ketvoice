@@ -40,7 +40,7 @@ internal fun SonicCanvas(playing: Boolean, color: Color) {
             drawCircle(Brush.radialGradient(listOf(tint.copy(alpha = .09f + energy * .28f), Color.Transparent),
                 center, radius * (1f + energy * .40f)), radius * (1f + energy * .40f), center)
         }
-        // Conservative veil: white lyrics and transport remain readable.
+
         drawRect(Color.Black.copy(alpha = .24f))
     }
 }

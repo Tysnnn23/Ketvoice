@@ -11,7 +11,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
 import com.ketvoice.app.ui.motion.Motion
 
-/** Full text stays available to accessibility; only the selected title scrolls. */
 @Composable
 fun TrackTitle(text: String, color: Color, modifier: Modifier = Modifier, selected: Boolean = false,
                fontSize: TextUnit = 16.sp, maxLines: Int = 2) {

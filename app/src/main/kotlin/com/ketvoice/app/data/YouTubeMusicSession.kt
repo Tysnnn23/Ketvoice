@@ -57,11 +57,7 @@ object YouTubeMusicSession {
         HomeFeed.refreshYouTube()
         return true
     }
-    /**
-     * Connexion de secours : accepte l'en-tête Cookie complet copié depuis un
-     * navigateur, ou uniquement la valeur SAPISID. La session n'est déclarée
-     * connectée qu'après validation par `account/account_menu`.
-     */
+
     suspend fun connectCookie(raw: String): Boolean {
         val value = normalizeCookie(raw)
         if (value.isBlank()) {
@@ -89,12 +85,12 @@ object YouTubeMusicSession {
         android.webkit.CookieManager.getInstance().flush()
         HomeFeed.clearPersonalized()
     }
-    /** Search is submitted only on validation/tap, never for each keystroke. */
+
     fun submitSearch(query: String) {
         if (!_profile.value.connected || query.isBlank()) return
         scope.launch { YouTubeApi.request("search", JSONObject().put("query", query).put("params", OfficialMusicParser.SONGS_FILTER)) }
     }
-    /** Only an actually-started listen is sent, using YouTube's returned tracking endpoint. */
+
     fun recordListen(track: Track) {
         if (!_profile.value.connected || !AppSettings.syncYouTubeHistory.value) return
         scope.launch {
@@ -115,8 +111,7 @@ object YouTubeMusicSession {
                 if (c.responseCode in 200..299) {
                     _profile.value = _profile.value.copy(syncedListens = _profile.value.syncedListens + 1,
                         message = "Dernière écoute acceptée par YouTube Music")
-                    // Le profil vient de changer côté YouTube : on rafraîchit
-                    // l'accueil personnel avec les données réellement renvoyées.
+
                     HomeFeed.refreshYouTube()
                 }
                 else _profile.value = _profile.value.copy(message = "Écoute non synchronisée : YouTube a refusé la requête")

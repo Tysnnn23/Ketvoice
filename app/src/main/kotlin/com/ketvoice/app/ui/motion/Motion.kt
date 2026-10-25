@@ -9,7 +9,6 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.platform.LocalContext
 import com.ketvoice.app.data.AppSettings
 
-/** One timing vocabulary. Reduced motion removes decoration, not lyric timing. */
 object Motion {
     const val FADE = 220
     const val PRESS = 140

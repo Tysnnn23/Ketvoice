@@ -38,7 +38,6 @@ import com.kyant.backdrop.backdrops.layerBackdrop
 import com.ketvoice.app.ui.motion.Motion
 import androidx.compose.animation.core.tween
 
-/** A bounded artwork/control column alongside lyrics or queue on large windows. */
 @Composable
 internal fun TabletPlayer(
     state: PlayerUiState, track: Track, cover: String?, canvas: String?, ambience: CoverAmbience,
@@ -49,7 +48,7 @@ internal fun TabletPlayer(
     CompositionLocalProvider(LocalBackdropLayer provides backdrop) {
         BoxWithConstraints(Modifier.fillMaxSize().background(Color.Black).layerBackdrop(backdrop)) {
             val layout = AdaptiveLayout(maxWidth.value, maxHeight.value)
-            // Avoid blurring a full 4K texture behind a second video surface.
+
             PlayerSceneBackground(track, canvas, state.isPlaying, cover, ambience, simple = true)
             Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()
                 .padding(horizontal = if (maxWidth >= 1000.dp) 40.dp else 24.dp)) {

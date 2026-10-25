@@ -2,7 +2,6 @@ package com.ketvoice.app.ui.adaptive
 
 import androidx.compose.runtime.staticCompositionLocalOf
 
-/** Window constraints, not device type: also handles rotation and split screen. */
 data class AdaptiveLayout(val widthDp: Float, val heightDp: Float, val preferPhone: Boolean = false) {
     val hasRail: Boolean get() = !preferPhone && widthDp >= 600f && heightDp >= 480f
     val expandedRail: Boolean get() = hasRail && widthDp >= 1200f

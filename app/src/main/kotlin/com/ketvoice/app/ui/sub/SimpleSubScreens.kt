@@ -24,7 +24,6 @@ import com.ketvoice.app.ui.AppUi
 
 private val noRip: MutableInteractionSource = MutableInteractionSource()
 
-/** Sous-écrans simples (Téléchargements, Musique locale, Replay, etc.) v1 : placeholders propres. */
 @Composable
 fun SimpleSubScreens(title: String, subtitle: String = "") {
     val th = LocalTheme.current
@@ -75,7 +74,6 @@ fun SimpleSubScreens(title: String, subtitle: String = "") {
     }
 }
 
-/** Écrans ad-hoc mappés à l'overlay AppUi */
 @Composable
 fun SubScreensRouter() {
     when (AppUi.overlay.value) {

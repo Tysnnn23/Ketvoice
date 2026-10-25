@@ -7,11 +7,6 @@ import coil.disk.DiskCache
 import coil.memory.MemoryCache
 import java.io.File
 
-/**
- * Cache d'images Coil permanent : stocké dans filesDir (jamais purgé par le
- * bouton « vider le cache musical », ni par le nettoyage du cache système).
- * Plafond 2 Go, entrées LRU gérées par Coil.
- */
 class KetvoiceApp : Application(), ImageLoaderFactory {
 
     companion object {

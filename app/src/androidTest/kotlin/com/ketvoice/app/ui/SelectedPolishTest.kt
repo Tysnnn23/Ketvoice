@@ -34,7 +34,6 @@ import org.junit.Assert.*
 import java.io.File
 import com.ketvoice.app.BuildConfig
 
-/** In-memory fixtures only: no sign-in, provider, stream or database calls. */
 class SelectedPolishTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
     private val context get() = InstrumentationRegistry.getInstrumentation().targetContext
@@ -134,7 +133,7 @@ class SelectedPolishTest {
             update(Downloader.busy, emptySet())
             update(Downloader.progress, emptyMap())
         }
-        // Freeze the clock to inspect the temporary success feedback.
+
         compose.mainClock.advanceTimeBy(320)
         compose.onNodeWithContentDescription("Téléchargé").assertExists()
         screenshot("download-complete")

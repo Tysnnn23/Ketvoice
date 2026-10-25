@@ -19,7 +19,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.PointerEventPass
 import com.ketvoice.app.ui.motion.Motion
 
-/** Horizon OS delivers standard pointer events; no hand-tracking permission. */
 fun Modifier.questPointer(): Modifier = composed {
     val source = remember { MutableInteractionSource() }
     val hovered by source.collectIsHoveredAsState()

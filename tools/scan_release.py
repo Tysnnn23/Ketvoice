@@ -26,8 +26,7 @@ def leaves(value):
 
 if args.deny_list_json:
     denied.update(leaves(json.loads(args.deny_list_json.read_text(encoding='utf-8-sig'))))
-    # Legacy extraction inventories also contain public protocol endpoints.
-    # These are not credentials; private provider hosts/URLs remain denied.
+
     public_hosts = {'open.spotify.com', 'api-partner.spotify.com', 'spclient.wg.spotify.com'}
     denied = {value for value in denied if not (
         value.startswith('https://') and urlsplit(value).hostname in public_hosts
@@ -48,7 +47,7 @@ count = 0
 def scan(name, data):
     global count
     count += 1
-    # DEX uses UTF-8, resources may also contain UTF-16 strings.
+
     for value in denied:
         if value.encode() in data or value.encode('utf-16le') in data:
             failures.append((name, 'legacy credential'))

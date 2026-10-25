@@ -24,7 +24,6 @@ data class HandoffPeer(val id: String, val serviceName: String, val name: String
 data class HandoffStatus(val listening: Boolean = false, val peers: List<HandoffPeer> = emptyList(),
     val message: String = "Transfert Wi-Fi désactivé", val sending: Boolean = false)
 
-/** Opt-in, foreground-only mDNS + direct LAN transfer. No cloud, QR or auth tokens. */
 object WifiHandoff {
     private const val TYPE="_ketvoice._tcp."
     private val main=Handler(Looper.getMainLooper())

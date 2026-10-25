@@ -1,6 +1,5 @@
 package com.ketvoice.app.player
 
-/** Stable per-occurrence keys: duplicate songs must not share a UI item key. */
 object QueueEntryIds {
     fun reconcile(oldIds: List<String>, oldKeys: List<String>, ids: List<String>,
                   newKey: () -> String = { java.util.UUID.randomUUID().toString() }): List<String> {

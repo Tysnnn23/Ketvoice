@@ -14,23 +14,12 @@ import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
 
-/**
- * CANVAS SPOTIFY via **Ketvoice API**.
- *
- * Le cookie `sp_dc`, le TOTP Spotify et la résolution de l'ID de piste sont
- * exécutés dans la fonction Supabase. L'application ne reçoit qu'une URL
- * `*.cnvs.mp4` signée, puis la conserve hors ligne dans
- * `filesDir/canvas/{spotifyId}.mp4`.
- *
- * Aucun cookie ni secret Spotify n'est stocké dans l'APK.
- */
 object CanvasRepo {
 
     private const val UA =
         "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Mobile Safari/537.36"
     private const val PREFS = "ketvoice_canvas"
 
-    /** track.id Ketvoice → chemin local du MP4 déjà téléchargé. */
     private val _paths = MutableStateFlow<Map<String, String>>(emptyMap())
     val paths: StateFlow<Map<String, String>> = _paths
 
@@ -38,7 +27,6 @@ object CanvasRepo {
     private var appContext: Context? = null
     private val failed = java.util.concurrent.ConcurrentHashMap<String, Long>()
 
-    /** Conservé pour les écrans qui forçaient l'ancien cache d'authentification. */
     fun resetAuth() {
         failed.clear()
     }
@@ -60,15 +48,9 @@ object CanvasRepo {
         }
     }
 
-    /**
-     * Résout puis télécharge le canvas du morceau (retente après 10 min d'échec).
-     *
-     * [force] autorise le réseau facturé lors d'un téléchargement explicite,
-     * mais ne contourne jamais le réglage global des vidéos Canvas.
-     */
     suspend fun resolve(track: Track, force: Boolean = false) = withContext(Dispatchers.IO) {
         val ctx = appContext ?: return@withContext
-        // Un arrêt global coupe aussi les futurs téléchargements explicites.
+
         if (!AppSettings.animatedArtwork.value) return@withContext
         fun recentlyFailed() = failed[track.id]?.let {
             System.currentTimeMillis() - it < 10 * 60_000L
@@ -82,8 +64,7 @@ object CanvasRepo {
                 val albumSpotifyId = prefs.getString(albumKey, null)
                 var spotifyId = track.spotifyId ?: prefs.getString(track.id, null)
                 var dest: File? = spotifyId?.let { File(canvasDir(ctx), "$it.mp4") }
-                // Album reuse is a fallback, never a replacement for a known
-                // song's own Canvas. Artist-qualified keys avoid collisions.
+
                 if (dest?.exists() != true && spotifyId == null && albumSpotifyId != null) {
                     dest = File(canvasDir(ctx), "$albumSpotifyId.mp4")
                 }
@@ -110,8 +91,7 @@ object CanvasRepo {
                     }
                 }
                 dest?.let {
-                    // Le Canvas peut être partagé par plusieurs titres du même
-                    // album : on mémorise le chemin pour ce titre également.
+
                     prefs.edit().putString(track.id, it.nameWithoutExtension).apply()
                     _paths.value = _paths.value + (track.id to it.absolutePath)
                 }
@@ -121,7 +101,6 @@ object CanvasRepo {
         }
     }
 
-    /** Chemin local déjà disponible pour ce titre, sans réseau. */
     fun localPath(trackId: String): File? {
         val path = _paths.value[trackId] ?: return null
         return File(path).takeIf { it.exists() && it.length() > 10_000 }
@@ -133,7 +112,6 @@ object CanvasRepo {
         return if (album.isBlank()) "album:${track.id}" else "album:$artist:$album"
     }
 
-    /** Diagnostic : vérifie que Ketvoice API résout réellement un canvas. */
     fun testPipeline(): Boolean {
         return try {
             val test = Track(
@@ -149,7 +127,6 @@ object CanvasRepo {
         }
     }
 
-    // ----------------------------------------------------------- fichiers
     private fun canvasDir(context: Context): File =
         File(context.filesDir, "canvas").apply { if (!exists()) mkdirs() }
 
@@ -158,7 +135,7 @@ object CanvasRepo {
             var current = URL(url)
             var c: HttpURLConnection? = null
             var code = 0
-            // Les URLs cnvs.mp4 signées redirigent souvent vers un CDN.
+
             for (hop in 0..5) {
                 c = (current.openConnection() as HttpURLConnection).apply {
                     connectTimeout = 15_000
@@ -189,7 +166,7 @@ object CanvasRepo {
                 tmp.delete()
                 return null
             }
-            // Un MP4 valide commence par une boîte ftyp dans ses premiers octets.
+
             val head = ByteArray(16)
             tmp.inputStream().use { it.read(head) }
             val ftyp = head[4].toInt() == 0x66 && head[5].toInt() == 0x74 &&

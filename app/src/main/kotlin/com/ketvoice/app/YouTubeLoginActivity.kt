@@ -24,7 +24,6 @@ import com.ketvoice.app.theme.KetvoiceTheme
 import com.ketvoice.app.theme.LocalTheme
 import kotlinx.coroutines.launch
 
-/** First-party web session. No password fields, injected login scripts, or JS bridge. */
 class YouTubeLoginActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

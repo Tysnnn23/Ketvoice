@@ -53,16 +53,6 @@ data class PlayerUiState(
     val current: Track? get() = if (index in queue.indices) queue[index] else null
 }
 
-/**
- * Contrôleur unique de lecture : MediaController -> PlaybackService.
- *
- * Stratégie de démarrage rapide :
- *   1. téléchargement local si présent,
- *   2. recherche du match Ultra MAX (MP3) + Last Babe (FLAC) en PARALLÈLE,
- *   3. la lecture démarre dès que le MP3 est prêt (sans attendre le FLAC),
- *   4. si la qualité « Sans perte » est visée et que le FLAC aboutit,
- *      bascule transparente à la position courante.
- */
 object Player {
 
     private var controller: MediaController? = null
@@ -81,8 +71,6 @@ object Player {
     val volume: StateFlow<Float> = _volume
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
-    /** Position courante (230 ms) : consommée uniquement par la barre de temps
-     *  et les paroles, pour éviter de recomposer toute la fenêtre à chaque tic. */
     private val _position = MutableStateFlow(0L)
     val positionMs: StateFlow<Long> = _position
     private val _seekEpoch = MutableStateFlow(0L)
@@ -192,7 +180,6 @@ object Player {
             }
         }, androidx.core.content.ContextCompat.getMainExecutor(context))
 
-        // Tic léger : met à jour uniquement le flux de position.
         scope.launch {
             while (true) {
                 if (controller?.isPlaying == true) positionNow()
@@ -214,13 +201,10 @@ object Player {
         }
     }
 
-    // ------------------------------------------------------------ Qualité
-    /** Réglage qualité courant selon le réseau réellement mesuré. */
     private fun qualitySetting(): String {
         return if (isMetered()) AppSettings.mobileQuality.value else AppSettings.wifiQuality.value
     }
 
-    /** true si on doit monter en FLAC (Last Babe) après le démarrage MP3. */
     private fun wantsLossless(): Boolean = qualitySetting() == "Sans perte"
 
     private fun isMetered(): Boolean {
@@ -233,7 +217,6 @@ object Player {
         return !(wifi && unmetered)
     }
 
-    // ------------------------------------------------------------ Lecture
     fun playTrack(track: Track, queue: List<Track> = listOf(track), startIndex: Int? = null,
                   startPositionMs: Long = 0L, autoPlay: Boolean = true) {
         val c = controller ?: run {
@@ -248,7 +231,7 @@ object Player {
         fallbackAttempts = 0
         c.pause()
         lastEndedKey = null
-        // 1) Correspondance addon déjà présente dans la file : zéro recherche réseau.
+
         val localMatch = if (track.addonId.isNullOrBlank()) {
             MusicApi.addonMatchIn(queue, track)?.takeIf { it.addon == "um" }
         } else null
@@ -262,7 +245,6 @@ object Player {
             )
         } else track
 
-        // 2) Pochette déjà résolue par la recherche : affichage immédiat.
         val cachedCover = ArtworkRepo.coverForTrack(seeded)
         val resolvedTrack = if (cachedCover != null && seeded.coverUrl.isNullOrBlank()) {
             seeded.copy(coverUrl = cachedCover)
@@ -291,13 +273,12 @@ object Player {
         )
         _position.value = startPositionMs.coerceAtLeast(0)
 
-        // Canvas + paroles démarrent sans attendre la résolution audio.
         scope.launch { CanvasRepo.resolve(resolvedTrack) }
         scope.launch { LyricsRepo.load(resolvedTrack) }
         scope.launch { ArtworkRepo.enrich(listOf(resolvedTrack)) }
 
         resolutionJob = scope.launch(Dispatchers.Main) {
-            // Fichier local (MediaStore) : lecture directe, aucune résolution réseau.
+
             if (resolvedTrack.id.startsWith("local:") && resolvedTrack.streamUrl != null) {
                 activeStream = null
                 startItem(c, resolvedTrack, resolvedTrack.streamUrl, startPositionMs.coerceAtLeast(0), desiredPlay)
@@ -344,8 +325,7 @@ object Player {
             val custom = async(Dispatchers.IO) {
                 runCatching { com.ketvoice.app.data.CustomSources.streamForTrack(resolvedTrack) }.getOrNull()
             }
-            // A track discovered through a personal source must not wait on
-            // YouTube. Otherwise YouTube gets a short head start.
+
             val customTrack = resolvedTrack.addon?.startsWith("cs:") == true
             var initial = if (customTrack) withTimeoutOrNull(3500) { custom.await() }
                 else withTimeoutOrNull(1600) { youtube.await() }
@@ -378,16 +358,14 @@ object Player {
                 AudioCache.cacheWhole(track.id, stream)
             }
             if (first.quality == "YouTube Music" && qualitySetting() != "Normal") {
-                // A 128 kb/s MP3 is not an improvement over AAC. Only upgrade
-                // to this lossy fallback when its declared bitrate is higher.
+
                 val lossy = mp3.await()
                 val bitrate = lossy?.quality?.let { Regex("\\d+").find(it)?.value?.toIntOrNull() } ?: 0
                 if (bitrate >= 256) upgrade(lossy)
             }
             if (wantsLossless() && !first.format.contains("flac", true)) upgrade(flac.await())
             if (customTrack) {
-                // Si la source personnalisée a été plus lente que le repli, elle
-                // remplace le flux de secours dès qu'elle est réellement prête.
+
                 val sourceStream = withTimeoutOrNull(9_000) { custom.await() }
                 if (sourceStream != null) upgrade(sourceStream)
             }
@@ -404,7 +382,6 @@ object Player {
         playTrack(tracks[index], tracks, index)
     }
 
-    /** Insère un morceau juste après celui en cours (sans interrompre la lecture). */
     fun playNext(track: Track) {
         val s = _state.value
         if (s.queue.isEmpty()) {
@@ -425,21 +402,18 @@ object Player {
         }
     }
 
-    /** Saute directement à une piste de la file. */
     fun jumpTo(index: Int) {
         val s = _state.value
         if (index !in s.queue.indices) return
         playTrack(s.queue[index], s.queue, index)
     }
 
-    /** Retire une piste ; si c'est la piste courante, on enchaîne proprement. */
     fun removeTrack(trackId: String) {
         val s = _state.value
         val i = s.queue.indexOfFirst { it.id == trackId }
         removeAt(i)
     }
 
-    /** Remove exactly this occurrence, even when the queue contains duplicates. */
     fun removeAt(i: Int) {
         val s = _state.value
         if (i !in s.queue.indices) return
@@ -472,7 +446,6 @@ object Player {
         }
     }
 
-    /** Réordonne la file (glisser la poignée) sans interrompre la lecture. */
     fun moveQueue(from: Int, to: Int) {
         val s = _state.value
         if (from !in s.queue.indices || to !in s.queue.indices || from == to) return
@@ -608,7 +581,6 @@ object Player {
         seekTo(target)
     }
 
-    /** Position immédiate pour le rendu karaoké (sans attendre le tic global). */
     fun currentPositionMs(): Long =
         (controller?.currentPosition ?: _position.value).coerceAtLeast(0L)
 
@@ -619,13 +591,11 @@ object Player {
 
     fun setRepeatOne(on: Boolean) {
         val c = controller ?: return
-        // On gère nous-mêmes la file : OFF permet STATE_ENDED -> next().
-        // REPEAT_MODE_ONE ne sert qu'au vrai mode « répéter le titre ».
+
         c.repeatMode = if (on) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
         _state.value = _state.value.copy(repeatOne = on)
     }
 
-    /** Réglage « Ignorer les silences » : appliqué dans le service (moteur audio). */
     fun setSkipSilence(on: Boolean) {
         AppSettings.skipSilence.value = on
         controller?.sendCustomCommand(

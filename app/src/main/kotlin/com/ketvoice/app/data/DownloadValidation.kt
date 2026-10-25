@@ -1,6 +1,5 @@
 package com.ketvoice.app.data
 
-/** Container signatures, not a MIME guess based on an untrusted extension. */
 internal object DownloadValidation {
     fun complete(actualBytes: Long, expectedBytes: Long): Boolean =
         actualBytes >= 10_000 && (expectedBytes <= 0 || actualBytes == expectedBytes)

@@ -6,7 +6,6 @@ import java.io.StringReader
 import javax.xml.parsers.DocumentBuilderFactory
 import org.xml.sax.InputSource
 
-/** Native TTML timestamps only. No interpolation, generated word times or phonetic splitting. */
 object LyricsFormats {
     fun timeMs(value: String): Long? {
         val v = value.trim()
@@ -77,7 +76,7 @@ object LyricsFormats {
                         for (j in 0 until node.childNodes.length) {
                             val before = text.length
                             visit(node.childNodes.item(j), timedParent || (node.localName == "span" && begin != null))
-                            // Preserve the source's spaces between timed spans.
+
                             if (words.isNotEmpty() && text.length > before &&
                                 node.childNodes.item(j).nodeType == Node.TEXT_NODE
                             ) {
@@ -93,8 +92,7 @@ object LyricsFormats {
                 visit(p)
                 val full = text.toString().trim()
                 val aligned = align(full, words)
-                // Adjacent native timed spans inside one written word are
-                // genuine sub-word segments, not a locally generated split.
+
                 val subWord = aligned.zipWithNext().any { (a, b) ->
                     a.text.lastOrNull()?.isLetter() == true && b.text.firstOrNull()?.isLetter() == true
                 }
@@ -106,7 +104,6 @@ object LyricsFormats {
         }.getOrDefault(emptyList())
     }
 
-    /** Align existing segments to the exact line text, inserting only whitespace/punctuation, never timings. */
     fun align(text: String, segments: List<MusicApi.LyricWord>): List<MusicApi.LyricWord> {
         if (segments.isEmpty()) return emptyList()
         val out = mutableListOf<MusicApi.LyricWord>()

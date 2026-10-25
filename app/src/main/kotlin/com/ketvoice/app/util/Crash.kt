@@ -8,12 +8,6 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-/**
- * Capture tout crash non géré dans un fichier texte des fichiers de l'app
- * (Android/data/com.ketvoice.app/files/logs/). Au lancement suivant,
- * MainActivity lit les rapports en attente et permet de les copier/partager
- * sans PC ni ADB.
- */
 object Crash {
 
     private fun logsDir(ctx: Context): File =
@@ -40,7 +34,6 @@ object Crash {
         }
     }
 
-    /** Rapports en attente, du plus ancien au plus récent. */
     fun pending(context: Context): List<File> =
         runCatching {
             logsDir(context).listFiles { _, name -> name.endsWith(".txt") }?.sortedBy { it.name }?.toList()

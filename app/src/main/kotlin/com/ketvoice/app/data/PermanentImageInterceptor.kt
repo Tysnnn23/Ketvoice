@@ -14,7 +14,6 @@ import java.net.URL
 import java.security.MessageDigest
 import java.util.concurrent.ConcurrentHashMap
 
-/** An archive, not an LRU: covers survive Coil eviction and the song-cache clear action. */
 class PermanentImageInterceptor(context: Context) : Interceptor {
     private val dir = File(context.filesDir, "artwork-permanent").apply { mkdirs() }
     private val locks = ConcurrentHashMap<String, Mutex>()

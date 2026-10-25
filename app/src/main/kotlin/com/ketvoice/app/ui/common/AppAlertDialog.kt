@@ -10,7 +10,6 @@ import androidx.compose.ui.unit.dp
 import com.ketvoice.app.data.DesignChoices
 import com.ketvoice.app.theme.LocalTheme
 
-/** Shared, readable modal finish. The opt-out retains Material's previous surface. */
 @Composable
 fun AppAlertDialog(onDismissRequest: () -> Unit, confirmButton: @Composable () -> Unit,
     modifier: Modifier = Modifier, dismissButton: (@Composable () -> Unit)? = null,

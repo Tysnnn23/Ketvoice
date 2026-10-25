@@ -5,10 +5,6 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.widget.Toast
 
-/**
- * Bascule réelle de l'icône du lanceur via les activity-alias du manifeste.
- * Les états sont conservés par PackageManager : une seule variante active.
- */
 object LauncherIcons {
 
     private val aliases = listOf(

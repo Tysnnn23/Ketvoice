@@ -20,7 +20,6 @@ object ArtworkDepth {
         if (extent <= 0 || !position.isFinite()) 0f else (position / extent * 2f - 1f).coerceIn(-1f, 1f)
 }
 
-/** Observes without consuming: scroll, artwork dismissal and taps still work. */
 fun Modifier.artworkDepth(): Modifier = composed {
     val enabled = AppSettings.artworkDepth.value && !Motion.reduced
     var point by remember { mutableStateOf(Offset.Zero) }
@@ -44,7 +43,7 @@ fun Modifier.artworkDepth(): Modifier = composed {
         translationX = x * 2.dp.toPx()
         translationY = y * 2.dp.toPx()
         cameraDistance = 24.dp.toPx()
-        // A tiny overscan keeps the underlying panel hidden at the edges.
+
         scaleX = if (enabled) 1.015f else 1f
         scaleY = scaleX
     }

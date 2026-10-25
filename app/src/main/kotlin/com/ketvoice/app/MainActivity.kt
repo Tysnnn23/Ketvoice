@@ -43,12 +43,11 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // d'abord : trappeur de crash (avant toute initialisation)
+
         Crash.install(this)
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // réglages chargés AVANT l'init du cache audio / du player
         runCatching { com.ketvoice.app.data.SettingsStore.load(this) }
             .onFailure { android.util.Log.e("KetvoiceSettings", "Could not restore settings", it) }
         runCatching { com.ketvoice.app.data.YouTubeMusicSession.init(this) }
@@ -84,7 +83,7 @@ class MainActivity : ComponentActivity() {
                 onDispose { view.keepScreenOn = false }
             }
             val dark = isSystemInDarkTheme()
-            // AppRoot owns bar contrast, including the always-dark player.
+
             KetvoiceTheme(dark) {
                 CrashReportsDialog()
                 AppRoot()
@@ -99,12 +98,6 @@ class MainActivity : ComponentActivity() {
         handleAuthIntent(intent)
     }
 
-    /**
-     * Email links either point at Supabase's /auth/v1/verify endpoint (the app
-     * can verify the token itself) or at ketvoice://auth (Supabase already
-     * verified it and appended the session). Both open the publisher screen;
-     * the server remains the only authority for publication rights.
-     */
     private fun handleAuthIntent(intent: Intent?) {
         if (intent?.action != Intent.ACTION_VIEW) return
         val uri = intent.data ?: return
@@ -114,8 +107,7 @@ class MainActivity : ComponentActivity() {
         val appLink = uri.scheme == "ketvoice" && uri.host == "auth"
         if (supabaseLink || appLink) {
             AppUi.openPublisherLink(uri.toString())
-            // Do not retain bearer credentials in the Activity's launch Intent
-            // or replay a one-use email link when the Activity is recreated.
+
             intent.data = null
         }
     }
@@ -126,10 +118,6 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-/**
- * Si un crash s'est produit depuis la dernière session : affiche le rapport
- * (copiable en un appui) au lieu de laisser l'utilisateur dans le noir.
- */
 @Composable
 private fun CrashReportsDialog() {
     val activity = androidx.activity.compose.LocalActivity.current ?: return

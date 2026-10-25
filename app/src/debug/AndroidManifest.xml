@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Test host only; keep Compose fixtures attached while requesting orientation. -->
+
     <application>
         <activity android:name="androidx.activity.ComponentActivity"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize" />

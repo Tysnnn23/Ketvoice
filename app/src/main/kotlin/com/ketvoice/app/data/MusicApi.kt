@@ -17,13 +17,6 @@ import java.net.URL
 import java.net.URLEncoder
 import kotlin.math.abs
 
-/**
- * Passerelle réseau réelle de Ketvoice :
- *  - YouTube Music (InnerTube WEB_REMIX) pour le catalogue de base,
- *  - Ketvoice API (Supabase) pour la recherche et le streaming des sources,
- *    ainsi que pour les canvas Spotify,
- *  - LRCLIB pour les paroles synchronisées.
- */
 object MusicApi {
 
     private const val YT_KEY = "AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8"
@@ -32,8 +25,6 @@ object MusicApi {
 
     private var matchPrefs: SharedPreferences? = null
 
-    /** Cache persistant des correspondances addon (id) : le 2e lancement d'un
-     *  titre ne refait aucune recherche, il ne reste que l'URL de flux à obtenir. */
     fun init(context: Context) {
         SearchHistory.init(context)
         LyricsDiskCache.init(context)
@@ -57,7 +48,7 @@ object MusicApi {
     data class LyricLine(
         val timeMs: Long,
         val text: String,
-        /** Segments temporels fournis par la source (YRC/enhanced LRC). Vide = pas de mot-à-mot inventé. */
+
         val words: List<LyricWord> = emptyList(),
         val syllableTimed: Boolean = false,
         val translations: Map<String, String> = emptyMap()
@@ -67,7 +58,7 @@ object MusicApi {
         val available: Boolean,
         val timed: Boolean,
         val lines: Int,
-        /** true uniquement si la source fournit réellement des timings par mot/syllabe. */
+
         val wordTimed: Boolean = false,
         val syllableTimed: Boolean = false,
         val detail: String? = null
@@ -99,13 +90,10 @@ object MusicApi {
         else -> source
     }
 
-    // ---------------------------------------------------------------- cache
     private class CacheEntry(val at: Long, val json: String)
     private const val CACHE_TTL = 6 * 60_000L
     private val httpCache = HashMap<String, CacheEntry>()
 
-    /** GET court-circuité par un cache mémoire (6 min) : les recherches et
-     *  résolutions répétées reviennent instantanément (accélère le streaming). */
     private fun cachedHttp(url: String, headers: Map<String, String> = emptyMap()): String? {
         val key = if (headers.isEmpty()) url else url + "#" + headers.hashCode()
         val now = System.currentTimeMillis()
@@ -125,7 +113,6 @@ object MusicApi {
         return text
     }
 
-    // ---------------------------------------------------------------- HTTP
     private fun http(
         url: String,
         method: String = "GET",
@@ -153,22 +140,18 @@ object MusicApi {
         null
     }
 
-    // ------------------------------------------------------ YouTube Music
     suspend fun searchYtMusic(q: String): List<Track> = withContext(Dispatchers.IO) {
         if (q.isBlank()) return@withContext emptyList()
-        // Use the same WEB_REMIX client as artist/album requests. A mobile
-        // browser UA strips metadata links from otherwise valid song rows.
+
         val fields = JSONObject().put("query", q).put("params", OfficialMusicParser.SONGS_FILTER)
         val raw = YouTubeApi.request("search", fields, authenticated = false)
         val songs = raw?.let { OfficialMusicParser.parse(it.toString(), q) }.orEmpty()
         if (songs.isNotEmpty()) return@withContext songs
-        // Some regions no longer honor the song filter. The unfiltered reply
-        // still has to pass exactly the same official-audio checks.
+
         YouTubeApi.request("search", JSONObject().put("query", q), authenticated = false)
             ?.let { OfficialMusicParser.parse(it.toString(), q) }.orEmpty()
     }
 
-    // ------------------------------------------------------------ Addons
     suspend fun searchAddon(base: String, tag: String, q: String): List<Track> =
         withContext(Dispatchers.IO) {
             if (base.isBlank()) return@withContext emptyList()
@@ -206,8 +189,6 @@ object MusicApi {
         yt.await() + ad.await()
     }
 
-    // ------------------------------------------------------------ Streams
-    /** Direct audio URL, not the YouTube video page. Restricted/unavailable streams fall back to addons. */
     suspend fun youtubeStream(track: Track): StreamInfo? = withContext(Dispatchers.IO) {
         val videoId = track.videoId?.takeIf { track.youtubeCatalogVerified }
             ?: bestMatch(searchYtMusic("${track.title} ${track.artist}"), track)?.videoId
@@ -225,7 +206,7 @@ object MusicApi {
                 .filter { it.optString("mimeType").startsWith("audio/") && it.optString("url").startsWith("https://") }
                 .maxByOrNull { it.optLong("bitrate") } ?: continue
             val url = audio.getString("url")
-            // A player response alone is not proof that its signed audio URL is usable.
+
             var probe: HttpURLConnection? = null
             val usable = try {
                 probe = (URL(url).openConnection() as HttpURLConnection).apply {
@@ -257,10 +238,6 @@ object MusicApi {
         }
     }
 
-    /**
-     * Résout les deux qualités : `fast` (MP3 Ultra MAX) pour démarrer vite,
-     * `best` (FLAC Last Babe) pour la montée en qualité.
-     */
     suspend fun resolve(track: Track): Streams = coroutineScope {
         if (track.addon == "upload" || track.id.startsWith("kv:upload:")) {
             val stream = PublicationApi.stream(track)
@@ -270,9 +247,7 @@ object MusicApi {
         val best = async { flacStream(track) }
         val custom = async { runCatching { CustomSources.streamForTrack(track, forDownload = true) }.getOrNull() }
         val customStream = custom.await()
-        // Une piste issue d'une source .json doit réellement lire cette source :
-        // elle passe avant les addons génériques, qui pourraient renvoyer une
-        // autre version du morceau.
+
         Streams(
             fast = customStream ?: fast.await(),
             best = customStream ?: best.await(),
@@ -301,23 +276,17 @@ object MusicApi {
             }
             candidate to score
         }
-        // Titre ET artiste doivent correspondre : évite de jouer une reprise
-        // ou un homonyme quand l'addon renvoie un résultat approximatif.
+
         return scored.maxByOrNull { it.second }?.takeIf { it.second >= 5 }?.first
     }
 
-    /** Match addon mémorisé : le 2e lancement d'un même titre ne refait
-     *  aucune recherche réseau (démarrage instantané). */
     private val matchCache = HashMap<String, Track?>()
 
-    /** Meilleur match d'un titre dans un addon (utilisé par le lecteur pour
-     *  résoudre MP3/FLAC sans attendre l'autre source). */
     suspend fun bestMatchTrack(base: String, tag: String, want: Track): Track? {
         if (want.addon == tag && !want.addonId.isNullOrBlank()) return want
         val key = "$tag|${normTitle(want.title)}|${normTitle(want.artist.substringBefore(','))}"
         synchronized(matchCache) { if (matchCache.containsKey(key)) return matchCache[key] }
 
-        // Correspondance mémorisée sur disque : aucune recherche au prochain lancement.
         val storeKey = "m:" + key.hashCode()
         val saved = matchPrefs?.getString(storeKey, null)
         if (!saved.isNullOrBlank()) {
@@ -361,8 +330,6 @@ object MusicApi {
         return found
     }
 
-    /** Cherche une correspondance addon DÉJÀ présente dans les résultats affichés :
-     *  la lecture démarre alors sans aucune recherche supplémentaire. */
     fun addonMatchIn(pool: List<Track>, want: Track): Track? {
         if (pool.isEmpty()) return null
         val withId = pool.filter { !it.addonId.isNullOrBlank() && it.id != want.id }
@@ -379,7 +346,6 @@ object MusicApi {
         .replace(Regex("\\s+"), " ")
         .trim()
 
-    // ------------------------------------------------------------- Lyrics
     private class LyricCacheEntry(val at: Long, val result: Pair<String, List<LyricLine>>?)
     private const val LYRIC_TTL = 10 * 60_000L
     private val lyricCache = HashMap<String, LyricCacheEntry>()
@@ -393,14 +359,6 @@ object MusicApi {
         .replace(Regex("\\s+"), " ")
         .trim()
 
-    /**
-     * Paroles multi-sources RÉELLES :
-     *   auto     → LRCLIB puis NetEase Cloud Music puis Lyrics.ovh,
-     *   lrclib   → synchronisées ligne à ligne,
-     *   netease  → Cloud Music (LRC officiel),
-     *   lyricsovh→ texte simple.
-     * Cache mémoire par source (10 min, échecs compris).
-     */
     suspend fun lyrics(
         track: Track,
         forcePlain: Boolean = false,
@@ -435,11 +393,6 @@ object MusicApi {
         result
     }
 
-    /**
-     * Choisit la meilleure version réellement disponible pour un téléchargement :
-     * syllabes > mots > lignes synchronisées > texte. Les sources sont lancées
-     * en parallèle et le résultat le plus complet gagne.
-     */
     suspend fun bestLyrics(track: Track): Triple<String, List<LyricLine>, String>? = coroutineScope {
         val results = mutableListOf<Triple<String, List<LyricLine>, String>>()
         val lock = Any()
@@ -502,10 +455,7 @@ object MusicApi {
                 "Lyrics.ovh" to emptyList()
             }
         }
-        // Auto : les sources partent EN PARALLÈLE. Les paroles publiées dans
-        // Ketvoice API sont une version explicite et passent devant les
-        // sources externes si elles répondent dans une courte fenêtre ; sinon
-        // le chargement normal n'est pas bloqué.
+
         return coroutineScope {
             val kvDef = async(Dispatchers.IO) {
                 try {
@@ -551,7 +501,6 @@ object MusicApi {
         }
     }
 
-    /** Vérifie en parallèle ce que chaque source propose réellement pour ce titre. */
     suspend fun probeProviders(track: Track): Map<String, ProviderStatus> = coroutineScope {
         val providers = lyricSources
         val jobs = providers.map { src ->
@@ -613,9 +562,9 @@ object MusicApi {
                 val synced = o.optString("syncedLyrics").takeUnless { it == "null" }.orEmpty()
                 val plain = o.optString("plainLyrics").takeUnless { it == "null" }.orEmpty()
                 if (!forcePlain && synced.isEmpty() && plain.isEmpty()) continue
-                // refrain : la version synchronisée reste prioritaire…
+
                 if (synced.isEmpty() && !forcePlain) score += 25_000.0
-                // ...mais récompense le matching titre/artiste au-delà de la durée
+
                 if (normTitle(o.optString("trackName")) == wantTitle) score -= 40_000.0
                 val artistName = o.optString("artistName")
                 val candidateTitle = normTitle(o.optString("trackName"))
@@ -644,7 +593,6 @@ object MusicApi {
         }
     }
 
-    // ------------------------------------------------------- NetEase / OVH
     private fun neteaseLyrics(
         track: Track,
         title: String,
@@ -703,8 +651,7 @@ object MusicApi {
         val obj = runCatching { JSONObject(lyricRaw) }.getOrNull()
             ?: return "NetEase Cloud Music" to emptyList()
         val lrc = obj.optJSONObject("lrc")?.optString("lyric").orEmpty()
-        // YRC = timings par mot/syllabe fournis par NetEase. On l'utilise en
-        // priorité ; on ne fabrique jamais de découpage si absent.
+
         val yrc = obj.optJSONObject("yrc")?.optString("lyric").orEmpty()
         var timed = parseYrc(yrc)
         if (timed.isEmpty()) {
@@ -745,8 +692,6 @@ object MusicApi {
         return "Lyrics.ovh" to lines.map { LyricLine(-1L, it) }
     }
 
-    /** Traduction RÉELLE ligne par ligne : Google Translate public puis
-     *  MyMemory en secours (aucun compte requis). */
     suspend fun translate(text: String, target: String = "fr"): String? = withContext(Dispatchers.IO) {
         if (text.isBlank()) return@withContext ""
         val cacheKey = "translation|${AppSettings.translationSource.value}|$target|$text"
@@ -768,7 +713,7 @@ object MusicApi {
             val translated = translateChunk(chunk, target) ?: return@withContext null
             val expectedLines = chunk.split('\n')
             val receivedLines = translated.replace("\r", "").trimEnd('\n').split('\n')
-            // Never let a provider's merged lines shift every subsequent lyric.
+
             val aligned = if (receivedLines.size == expectedLines.size) receivedLines
                 else expectedLines.map { line ->
                     if (line.isBlank()) "" else translateChunk(line, target)?.replace("\n", " ") ?: return@withContext null
@@ -794,7 +739,7 @@ object MusicApi {
     }
 
     private fun translateChunk(chunk: String, target: String): String? {
-        // 1) Google (auto-détection de la langue) — peut être limité.
+
         if (System.currentTimeMillis() >= googleTranslationRetryAt) run {
             val url = "https://translate.googleapis.com/translate_a/single?client=gtx" +
                 "&sl=auto&tl=${enc(target)}&dt=t&q=${enc(chunk)}"
@@ -810,10 +755,10 @@ object MusicApi {
                     if (sb.isNotBlank()) return sb.toString()
                 }
             }
-            // A blocked provider must not add its timeout to every remaining line.
+
             googleTranslationRetryAt = System.currentTimeMillis() + 120_000
         }
-        // 2) MyMemory (API publique, 500 caractères par requête).
+
         val mmUrl = "https://api.mymemory.translated.net/get?q=${enc(chunk)}" +
             "&langpair=${enc("${AppSettings.translationSource.value}|$target")}"
         val raw = translationHttp(mmUrl) ?: return null
@@ -841,10 +786,6 @@ object MusicApi {
         return min * 60_000 + sec * 1_000 + frac
     }
 
-    /**
-     * LRC classique + LRC enrichi. Si la source fournit des balises
-     * `<mm:ss.xx>` par mot/syllabe, on les conserve ; sinon `words` reste vide.
-     */
     internal fun parseLrc(lrc: String): List<LyricLine> {
         val out = mutableListOf<LyricLine>()
         for (raw in lrc.replace("\r", "").lines()) {
@@ -876,11 +817,6 @@ object MusicApi {
         return out.sortedBy { it.timeMs }
     }
 
-    /**
-     * YRC NetEase : `[début_ligne,durée](début_mot,durée,mot)texte…`.
-     * On garde la segmentation exacte du fournisseur (mot ou syllabe) et
-     * aucune timing n'est calculée localement.
-     */
     private fun parseYrc(yrc: String): List<LyricLine> {
         if (yrc.isBlank()) return emptyList()
         val out = mutableListOf<LyricLine>()
@@ -902,7 +838,6 @@ object MusicApi {
         return out.sortedBy { it.timeMs }
     }
 
-    // -------------------------------------------------------------- Utils
     private fun parseDuration(s: String): Long {
         val p = s.split(":").mapNotNull { it.toLongOrNull() }
         return when (p.size) {

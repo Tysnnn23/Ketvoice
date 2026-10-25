@@ -42,10 +42,6 @@ import com.ketvoice.app.ui.common.openTrackSearch
 import com.ketvoice.app.ui.motion.Motion
 import java.util.Locale
 
-/**
- * Téléchargements réels : pistes FLAC/MP3 enregistrées sur l'appareil,
- * jouables sans réseau. Suppression individuelle.
- */
 @Composable
 fun DownloadsScreen() {
     val th = LocalTheme.current
@@ -89,7 +85,6 @@ fun DownloadsScreen() {
             modifier = Modifier.padding(horizontal = 18.dp, vertical = 6.dp)
         )
 
-        // Barre de progression globale (réelle, alimentée par le flux de téléchargement)
         if (busy.isNotEmpty()) {
             Box(
                 Modifier

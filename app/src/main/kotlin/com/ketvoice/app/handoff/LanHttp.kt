@@ -7,8 +7,6 @@ import java.net.InetSocketAddress
 import java.net.Socket
 import java.nio.charset.CodingErrorAction
 
-/** Small bounded HTTP/1.1 codec used only with explicit private-LAN addresses.
- * No general URL support, redirects, compression, cookies, logs or WebView. */
 object LanHttp {
     data class Request(val method: String, val path: String, val body: JSONObject)
     fun readRequest(input: InputStream): Request {

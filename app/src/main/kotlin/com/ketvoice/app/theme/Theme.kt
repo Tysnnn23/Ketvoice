@@ -38,7 +38,6 @@ data class KetTheme(
 
 val LocalTheme = staticCompositionLocalOf<KetTheme> { KetTheme.light() }
 
-/** iOS-like text styles */
 object T {
     val huge = TextStyle(fontWeight = FontWeight.Black, fontSize = 34.sp, letterSpacing = 0.5.sp, lineHeight = 40.sp)
     val hugeTitle = TextStyle(fontWeight = FontWeight.ExtraBold, fontSize = 40.sp, letterSpacing = 0.sp, lineHeight = 44.sp)

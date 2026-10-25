@@ -25,8 +25,6 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 
-/** Hardware-rendered capture regression, plus the actual local-audio permission flow.
- * Emulator fixtures only: no external song, owner session or physical device. */
 class Beta3RegressionTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
     private val context get() = InstrumentationRegistry.getInstrumentation().targetContext
@@ -73,7 +71,7 @@ class Beta3RegressionTest {
                 Box(Modifier.fillMaxSize()) {
                     BackdropCapture(backdrop, Modifier.fillMaxSize()) {
                         inside = LocalBackdropLayer.current != null
-                        // Not manually marked captured: the boundary must protect it.
+
                         GlassPanel(Modifier.size(80.dp), CircleShape, GlassParams.circle()) { }
                     }
                     sibling = LocalBackdropLayer.current === backdrop

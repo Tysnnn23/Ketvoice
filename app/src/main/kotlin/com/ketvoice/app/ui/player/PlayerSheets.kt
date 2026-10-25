@@ -50,12 +50,6 @@ import com.ketvoice.app.ui.common.EBadge
 
 private val noRip: MutableInteractionSource = MutableInteractionSource()
 
-/**
- * Sheets du lecteur (captures 19-20) — ONLY des actions réelles :
- *  - TrackMenuSheet : Lire ensuite (file réelle) + Télécharger (vrai fichier) ;
- *    les fausses options (Rétablir l'original, Convertir en vidéo…) ont été retirées.
- *  - AudioOutputSheet : sortie réelle (appareil + volume) —opaque, en français.
- */
 @Composable
 fun TrackMenuSheet(track: Track, onClose: () -> Unit) {
     val art by ArtworkRepo.covers.collectAsState()
@@ -224,7 +218,7 @@ fun AudioOutputSheet(onClose: () -> Unit) {
             trailing = { Icon(Icons.Filled.Check, null, tint = LocalTheme.current.accent) },
             onClick = onClose
         )
-        // Réglage du volume réel (rail custom, pas de Slider natif)
+
         Box(
             Modifier
                 .fillMaxWidth()

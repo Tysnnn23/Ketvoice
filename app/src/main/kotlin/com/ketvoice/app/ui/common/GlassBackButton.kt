@@ -14,7 +14,6 @@ import com.ketvoice.app.data.AppSettings
 import com.ketvoice.app.glass.GlassPanel
 import com.ketvoice.app.glass.GlassParams
 
-/** Bouton retour en verre liquide, réutilisé par tous les sous-écrans. */
 @Composable
 fun GlassBackButton(onBack: () -> Unit) {
     GlassPanel(
@@ -22,8 +21,7 @@ fun GlassBackButton(onBack: () -> Unit) {
         shape = CircleShape,
         params = GlassParams.circle(dark = false),
         enabled = AppSettings.liquidGlass.value,
-        // Posé dans le contenu capturé (overlay screens) : verre statique pour
-        // éviter la boucle drawBackdrop → crash RenderThread.
+
         captured = true
     ) {
         Box(Modifier.size(52.dp).clickable { onBack() }, contentAlignment = Alignment.Center) {

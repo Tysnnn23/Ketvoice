@@ -9,7 +9,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
-/** Progressive loading: native syllables > native words > lines > plain text. */
 object LyricsRepo {
     data class State(
         val loading: Boolean = false,
@@ -50,8 +49,7 @@ object LyricsRepo {
             _state.value = State(source = "Désactivées", sourceKey = MusicApi.SRC_OFF)
             return
         }
-        // Un titre téléchargé emporte ses meilleures paroles : elles passent
-        // avant toute requête réseau, même en mode hors ligne.
+
         if (!refresh) {
             val local = runCatching { Downloader.localLyrics(track.id) }.getOrNull()
             if (local != null && local.second.isNotEmpty()) {

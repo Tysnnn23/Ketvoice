@@ -13,11 +13,6 @@ data class ArtistPage(
     val listeners: String = ""
 )
 
-/**
- * Catalogue YouTube Music authentifié ou public : recherche d'artistes,
- * pages d'artiste complètes et accueil personnel. Aucune donnée n'est
- * inventée : seuls les objets réellement renvoyés par YouTube sont exposés.
- */
 object YouTubeCatalog {
 
     suspend fun searchArtists(query: String): List<MusicArtist> {
@@ -154,7 +149,6 @@ object YouTubeCatalog {
         }.distinctBy { it.title }.take(10)
     }
 
-    // ---------------------------------------------------------------- rows
     private data class ArtistRow(val artistId: String, val title: JSONObject?, val thumbnail: JSONObject?)
 
     private fun artistRows(raw: JSONObject): List<ArtistRow> =

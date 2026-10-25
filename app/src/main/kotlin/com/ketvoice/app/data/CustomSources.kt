@@ -14,14 +14,6 @@ import java.net.URL
 import java.net.URLEncoder
 import java.security.MessageDigest
 
-/**
- * Sources personnalisées façon BitChord.
- *
- * L'utilisateur ajoute une URL HTTPS terminée par `.json`. Le manifeste peut
- * exposer `baseUrl` + endpoints, ou directement `search` / `stream`.
- * Rien n'est simulé : une source n'apparaît comme active qu'après un
- * téléchargement et un parsing réels de son manifeste.
- */
 data class CustomSource(
     val id: String,
     val manifestUrl: String,
@@ -40,17 +32,16 @@ data class SourceManifest(
     val searchUrl: String,
     val streamUrl: String?,
     val downloadUrl: String?,
-    /** Options déclarées par le manifeste ou ses `settings` BitChord. */
+
     val qualities: List<String>,
-    /** `allowDownloads` du protocole d'addon ; absent = autorisé. */
+
     val downloadsAllowed: Boolean = true
 ) {
     val resolvedSearch: String get() = absolute(searchUrl)
-    // Le protocole d'addon BitChord expose /stream/{id}?quality=… ; la qualité
-    // choisie dans Ketvoice doit réellement partir avec la requête.
+
     val resolvedStream: String? get() = streamUrl?.let(::absolute)
         ?: baseUrl.takeIf { it.isNotBlank() }?.let { absolute("$it/stream/{id}?quality={quality}") }
-    /** Endpoint de téléchargement explicitement déclaré, jamais inventé. */
+
     val downloadEndpoint: String? get() = downloadUrl?.let(::absolute)
     val resolvedDownload: String? get() = downloadEndpoint ?: resolvedStream
 
@@ -81,10 +72,6 @@ object CustomSources {
 
     fun enabledSources(): List<CustomSource> = _sources.value.filter { it.enabled }
 
-    /**
-     * Valide puis enregistre une source. Une URL qui ne répond pas, ne se
-     * parse pas, ou qui n'expose aucun endpoint de recherche est refusée.
-     */
     suspend fun add(manifestUrl: String): Result<CustomSource> = withContext(Dispatchers.IO) {
         val url = manifestUrl.trim()
         if (!isValidManifestUrl(url)) return@withContext Result.failure(
@@ -99,8 +86,7 @@ object CustomSources {
         val id = MessageDigest.getInstance("SHA-1").digest(url.toByteArray())
             .joinToString("") { "%02x".format(it) }.take(12)
         val existing = _sources.value.firstOrNull { it.id == id }
-        // Test réel : une source qui ne répond pas à une recherche ne doit pas
-        // être enregistrée comme active.
+
         val probe = fill(manifest.resolvedSearch, query = "test", id = "",
             quality = negotiateQuality(existing?.quality ?: "high", manifest.qualities))
         val probeRaw = fetchText(probe, timeout = 12_000)
@@ -174,16 +160,12 @@ object CustomSources {
         parseTracks(source, raw)
     }
 
-    /**
-     * Résout un flux réel. Si la piste vient d'une source, son identifiant est
-     * utilisé directement ; sinon la source est interrogée avec titre/artiste.
-     */
     suspend fun streamForTrack(track: Track, forDownload: Boolean = false): MusicApi.StreamInfo? =
         withContext(Dispatchers.IO) {
             val tagged = track.addon?.takeIf { it.startsWith("cs:") }
             val source = if (tagged != null) _sources.value.firstOrNull { it.enabled && "cs:${it.id}" == tagged } else null
             if (source != null) {
-                // Un addon peut interdire le téléchargement de ses flux (allowDownloads: 0).
+
                 val manifest = parseManifest(source.manifestUrl, source.manifestJson)
                 if (forDownload && manifest?.downloadsAllowed == false) return@withContext null
                 stream(source, track, forDownload)?.let { return@withContext it }
@@ -191,7 +173,7 @@ object CustomSources {
             if (track.streamUrl?.startsWith("https://") == true) {
                 return@withContext streamInfo(track.streamUrl, track.downloadUrl, source?.quality ?: "high")
             }
-            // Une piste du catalogue peut aussi être servie par une source ajoutée.
+
             for (candidate in enabledSources()) {
                 val found = search(candidate, "${track.title} ${track.artist.substringBefore(',')}")
                     .bestCatalogMatch(track) ?: continue
@@ -206,8 +188,7 @@ object CustomSources {
             if (forDownload && !manifest.downloadsAllowed) return@withContext null
             val id = track.addonId.orEmpty()
             val qualityParam = negotiateQuality(source.quality, manifest.qualities)
-            // Un endpoint `download` explicite est prioritaire sur le flux de
-            // lecture, mais seulement pour un vrai téléchargement.
+
             if (forDownload) {
                 val downloadTemplate = manifest.downloadEndpoint
                 if (downloadTemplate != null && (id.isNotBlank() || !downloadTemplate.contains("{id}"))) {
@@ -361,7 +342,6 @@ object CustomSources {
         return out
     }
 
-    /** Rend absolu un lien relatif renvoyé par une source, sans accepter HTTP. */
     private fun absoluteLink(value: String, base: String): String? {
         val v = value.trim()
         return when {
@@ -412,7 +392,7 @@ object CustomSources {
             val ct = norm(candidate.title)
             val ca = norm(candidate.artist)
             if (ct.isBlank() || wt.isBlank() || !(ct == wt || ct.contains(wt) || wt.contains(ct))) return@mapNotNull null
-            // Un titre identique par un autre artiste n'est pas le bon morceau.
+
             if (wa.isNotBlank() && !(ca.contains(wa) || wa.contains(ca))) return@mapNotNull null
             var score = if (ct == wt) 5 else 2
             if (wa.isNotBlank() && (ca.contains(wa) || wa.contains(ca))) score += 3
@@ -466,10 +446,6 @@ object CustomSources {
         url.startsWith("https://") && url.substringBefore('?').endsWith(".json", true)
 }
 
-/**
- * Parsing séparé du manifeste pour rester testable sans réseau.
- * Formats acceptés : endpoints plats, objet `endpoints`, ou base + chemins.
- */
 fun parseManifest(manifestUrl: String, raw: String): SourceManifest? {
     val root = runCatching { JSONObject(raw) }.getOrNull() ?: return null
     val endpoints = root.optJSONObject("endpoints") ?: root.optJSONObject("api")?.takeIf {
@@ -552,10 +528,6 @@ fun parseManifest(manifestUrl: String, raw: String): SourceManifest? {
     )
 }
 
-/**
- * Le protocole BitChord déclare parfois `LOSSLESS|HIGH|LOW` et parfois
- * `high|normal|low`. On envoie une valeur réellement proposée par l'addon.
- */
 internal fun negotiateQuality(tier: String, options: List<String>): String {
     val requested = if (tier == "low") "low" else "high"
     if (options.isEmpty()) return requested

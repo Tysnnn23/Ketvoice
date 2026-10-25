@@ -1,6 +1,5 @@
 package com.ketvoice.app.ui.player
 
-/** Playback-derived intro state: no wall-clock countdown, bounce, halo or merge. */
 object LyricsMotion {
     fun showIntro(positionMs: Long, firstLineMs: Long): Boolean = firstLineMs > 0 && positionMs < firstLineMs
     fun litDots(positionMs: Long, firstLineMs: Long): Int = if (firstLineMs <= 0) 3 else

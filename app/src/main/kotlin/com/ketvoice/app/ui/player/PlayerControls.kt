@@ -100,10 +100,6 @@ import java.util.Locale
 
 private val noRipple = MutableInteractionSource()
 
-// ================================================================ Pochette / Canvas
-/**
- * Canvas Spotify réel si disponible, sinon pochette immobile. Aucun zoom de caméra.
- */
 @Composable
 fun ArtworkCanvas(
     track: Track,
@@ -127,8 +123,7 @@ fun ArtworkCanvas(
         AnimatedContent(
             modifier = Modifier.fillMaxSize().then(if (depth) Modifier.artworkDepth() else Modifier),
             targetState = Art(track.id, cover, canvasPath),
-            // La clé inclut le canvas : dès que le MP4 est prêt, le fondu
-            // remplace réellement la pochette fixe par le canvas.
+
             contentKey = { if (it.canvas != null) "${it.id}:video:${it.canvas}" else "${it.id}:art:${it.cover.orEmpty()}" },
             transitionSpec = {
                 fadeIn(tween(Motion.duration())).togetherWith(fadeOut(tween(Motion.duration())))
@@ -177,7 +172,6 @@ fun ArtworkCanvas(
     }
 }
 
-/** Lecture du canvas MP4 local (muet, en boucle) synchronisée avec la lecture. */
 @Composable
 private fun CanvasVideo(path: String, playing: Boolean, modifier: Modifier = Modifier) {
     val context = LocalContext.current
@@ -222,12 +216,6 @@ private fun CanvasVideo(path: String, playing: Boolean, modifier: Modifier = Mod
     )
 }
 
-// ================================================================ Barre de temps
-/**
- * Barre de progression dessinée main (aucun composant natif).
- * L'interpolation (230 ms, linéaire) lisse les tics de position ;
- * glisser règle la position au relâchement.
- */
 @Composable
 fun ScrubBar(
     durationMs: Long,
@@ -328,8 +316,6 @@ fun ScrubBar(
     }
 }
 
-// ================================================================ Rail de volume
-/** Rail de volume dessiné main (pas de Slider natif) : piste ronde + molette. */
 @Composable
 fun VolumeRail(
     value: Float,
@@ -368,7 +354,6 @@ fun VolumeRail(
     }
 }
 
-// ================================================================ Transport
 @Composable
 fun PlayerTransport(
     playing: Boolean,
@@ -469,7 +454,6 @@ private fun TransportButton(onClick: () -> Unit, inner: @Composable () -> Unit) 
     ) { inner() }
 }
 
-// ================================================================ Volume
 @Composable
 fun PlayerVolume(modifier: Modifier = Modifier, compact: Boolean = false) {
     if (AppSettings.hideVolumeBar.value) return
@@ -503,7 +487,6 @@ fun PlayerVolume(modifier: Modifier = Modifier, compact: Boolean = false) {
     }
 }
 
-// ================================================================ Barre du bas
 @Composable
 fun PlayerBottomBar(
     lyricsActive: Boolean = false,
@@ -623,7 +606,6 @@ fun LyricsGlyph(modifier: Modifier = Modifier, tint: Color) {
     }
 }
 
-/** Shuffle / répétition / lecture automatique + bouton file d'attente. */
 @Composable
 fun QueueActionsBar(
     shuffle: Boolean,
@@ -675,7 +657,7 @@ fun QueueActionsBar(
 
 @Composable
 private fun RowScope.QueueSegment(active: Boolean, onClick: () -> Unit, inner: @Composable (Color) -> Unit) {
-    // fond du segment animé (fade d'état au lieu d'un flash sec)
+
     val segAlpha by animateFloatAsState(if (active) 0.20f else 0f, tween(Motion.duration(Motion.FADE)), label = "segBg")
     val accent = com.ketvoice.app.theme.LocalTheme.current.accent
     Box(
@@ -690,8 +672,6 @@ private fun RowScope.QueueSegment(active: Boolean, onClick: () -> Unit, inner: @
     }
 }
 
-// ================================================================ Divers
-/** Petites barres animées « en cours de lecture » de la file d'attente. */
 @Composable
 fun NowPlayingBars(playing: Boolean, modifier: Modifier = Modifier) {
     val transition = rememberInfiniteTransition(label = "bars")
@@ -728,7 +708,6 @@ fun NowPlayingBars(playing: Boolean, modifier: Modifier = Modifier) {
     }
 }
 
-/** Aperçu paroles du lecteur (composant isolé : ne recompose pas le lecteur). */
 @Composable
 fun LyricsPreviewLine(onOpen: () -> Unit) {
     val lyrics by com.ketvoice.app.data.LyricsRepo.state.collectAsState()
@@ -783,7 +762,7 @@ fun formatSecs(ms: Long): String {
 
 @Composable
 fun PlayerSheetScrim(onClose: () -> Unit, content: @Composable () -> Unit) {
-    // Fade animé du voile : 0 → 0.35 en douceur au lieu d'apparaître d'un coup.
+
     val scrimAlpha by animateFloatAsState(
         targetValue = 0.35f,
         animationSpec = tween(Motion.duration(Motion.FADE)),

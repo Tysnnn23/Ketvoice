@@ -46,7 +46,6 @@ object HomeFeed {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val random = Random(System.nanoTime())
 
-    /** Avoid repeating last launch's leading cards when there are alternatives. */
     fun pick(pool: List<Track>, previous: Set<String>, limit: Int, random: Random): List<Track> {
         val unique = pool.distinctBy { it.id }
         return (unique.filterNot { it.id in previous }.shuffled(random) +
@@ -106,7 +105,7 @@ object HomeFeed {
                     ArtworkRepo.enrich(result.flatMap { it.tracks })
                 }
             } catch (_: Exception) {
-                // Keep the already-published offline shelves if an endpoint fails.
+
             } finally { _loading.value = false; refreshYouTube() }
         }
     }

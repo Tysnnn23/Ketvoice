@@ -10,17 +10,17 @@ data class Track(
     val artist: String,
     val album: String,
     val durationMs: Long = 0L,
-    val streamUrl: String? = null,     // branché plus tard (addon)
+    val streamUrl: String? = null,
     val downloadUrl: String? = null,
     val canvasUrl: String? = null,
     val lyricsProvider: String = "LRCLIB",
     val explicit: Boolean = false,
     val coverUrl: String? = null,
-    // --- sources réelles ---
-    val addon: String? = null,         // "um" (Ultra MAX) | "last" (Last Babe)
-    val addonId: String? = null,       // id côté addon (monochrome / deezer)
-    val videoId: String? = null,       // YouTube Music
-    val spotifyId: String? = null,     // pour les canvases
+
+    val addon: String? = null,
+    val addonId: String? = null,
+    val videoId: String? = null,
+    val spotifyId: String? = null,
     val isrc: String? = null,
     val youtubeCatalogVerified: Boolean = false,
     val albumId: String? = null,
@@ -31,7 +31,7 @@ data class Album(
     val id: String,
     val title: String,
     val artist: String,
-    val type: String = "Album",           // Single / EP / Album
+    val type: String = "Album",
     val coverUrl: String? = null,
     val tint: Color = Color(0xFF3A3A3C)
 )
@@ -51,10 +51,8 @@ data class Playlist(
     enum class Kind { NEW, SPOTIFY_IMPORT, LIKED, NORMAL, PODCAST }
 }
 
-/** Cache récentes de recherche */
 data class RecentSearch(val query: String, val kind: String = "Artiste")
 
-/** Secousses de données de démo, calquées sur les captures */
 object MockData {
     val recents = listOf(
         Track("p1", "Pétunias", "Werenoi", "Pétunias", explicit = true),

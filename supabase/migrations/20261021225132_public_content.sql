@@ -1,4 +1,3 @@
--- Public catalog/lyric revisions. Only the verified publisher broker may write.
 create table public.ketvoice_tracks (
   id uuid primary key default gen_random_uuid(),
   title text not null check (length(title) between 1 and 200),
@@ -53,4 +52,3 @@ grant execute on function public.ketvoice_search_catalog(text) to anon, authenti
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('ketvoice-public-media', 'ketvoice-public-media', true, 26214400,
   array['audio/mpeg','audio/mp4','audio/aac','audio/flac','audio/wav','audio/ogg','image/jpeg','image/png','image/webp']);
--- Intentionally NO client INSERT/UPDATE/DELETE policies on storage.objects.

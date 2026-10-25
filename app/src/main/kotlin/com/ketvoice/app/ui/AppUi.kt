@@ -1,18 +1,12 @@
 package com.ketvoice.app.ui
 
-/**
- * État d'interface global de l'app (léger, sans navigation-compose pour garder
- * le Liquide Glass stable sur les transitions).
- */
 object AppUi {
     val HOME = 0
     val EXPLORER = 1
     val LIBRARY = 2
 
-    /** Onglet racine actif (HOME/EXPLORER/LIBRARY) */
     val tab = androidx.compose.runtime.mutableIntStateOf(HOME)
 
-    /** Overlay plein écran au-dessus des onglets (remplace toute la zone de contenu) */
     val NONE = 0
     val SEARCH = 1
     val SETTINGS = 2
@@ -57,10 +51,8 @@ object AppUi {
 
     val overlay = androidx.compose.runtime.mutableIntStateOf(NONE)
 
-    /** Bonus : recherche pré-remplie quand on tape une tuile (genre, mood...). */
     val searchSeed = androidx.compose.runtime.mutableStateOf("")
 
-    /** Lecteur plein écran ouvert */
     val showPlayer = androidx.compose.runtime.mutableStateOf(false)
     val showPublisher = androidx.compose.runtime.mutableStateOf(false)
     val publisherTrack = androidx.compose.runtime.mutableStateOf<com.ketvoice.app.data.Track?>(null)
@@ -81,7 +73,6 @@ object AppUi {
         showPublisher.value = true
     }
 
-    /** Vol de pochette entre le mini-lecteur et le lecteur plein écran. */
     data class CoverFlight(
         val cover: String?,
         val title: String,
@@ -94,16 +85,12 @@ object AppUi {
     val miniCoverBounds = androidx.compose.runtime.mutableStateOf<androidx.compose.ui.geometry.Rect?>(null)
     val coverFlight = androidx.compose.runtime.mutableStateOf<CoverFlight?>(null)
 
-    /** Vue paroles dans le lecteur */
     val showLyrics = androidx.compose.runtime.mutableStateOf(false)
 
-    /** Dialog iOS "Changer de compte" */
     val showAccount = androidx.compose.runtime.mutableStateOf(false)
 
-    /** Bottom bar collapsée (comme iOS quand on scrolle) */
     val bottomCollapsed = androidx.compose.runtime.mutableStateOf(false)
 
-    /** Sheets dans le lecteur */
     val showTrackMenu = androidx.compose.runtime.mutableStateOf(false)
     val trackMenuTrack = androidx.compose.runtime.mutableStateOf<com.ketvoice.app.data.Track?>(null)
     fun selectTab(index: Int) {
@@ -120,7 +107,6 @@ object AppUi {
     val showHandoff = androidx.compose.runtime.mutableStateOf(false)
     val showCapsule = androidx.compose.runtime.mutableStateOf(false)
 
-    /** Sélecteur de source des paroles (feuille du lecteur) */
     val showLyricsSource = androidx.compose.runtime.mutableStateOf(false)
 
     fun closeOverlays() {

@@ -44,7 +44,6 @@ import com.ketvoice.app.ui.common.Icon
 import com.ketvoice.app.ui.common.gradientFor
 import com.ketvoice.app.ui.player.formatSecs
 
-/** Musique locale : liste des fichiers audio de l'appareil (MediaStore). */
 @Composable
 fun LocalMusicScreen() {
     val theme = LocalTheme.current
@@ -98,7 +97,6 @@ fun LocalMusicScreen() {
             return@Column
         }
 
-        // Mosaïque 2x2 des 4 premières pochettes, comme les autres collections
         if (tracks.isNotEmpty()) {
             Box(Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
                 Row(Modifier.size(168.dp).clip(RoundedCornerShape(18.dp))) {

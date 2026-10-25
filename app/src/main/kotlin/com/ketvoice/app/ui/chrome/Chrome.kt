@@ -66,11 +66,6 @@ import com.ketvoice.app.ui.common.Cover
 import com.ketvoice.app.ui.common.EBadge
 import com.ketvoice.app.ui.player.pressScale
 
-/**
- * Chrome flottant iOS 26 : pilule mini-lecteur (avec progression) + capsule
- * d'onglets en verre liquide à sélection glissante + bouton recherche.
- */
-
 private val noRipple: MutableInteractionSource = MutableInteractionSource()
 
 @Composable
@@ -138,7 +133,6 @@ fun MiniPlayerPill(modifier: Modifier = Modifier, onOpen: () -> Unit) {
                 MiniTransportNext()
             }
 
-            // Ligne de progression animée (composant isolé du tic)
             MiniProgressLine(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -148,7 +142,6 @@ fun MiniPlayerPill(modifier: Modifier = Modifier, onOpen: () -> Unit) {
     }
 }
 
-/** Bouton play/pause du mini-lecteur (morphing + appui). */
 @Composable
 private fun MiniTransportButton(playing: Boolean) {
     val th = LocalTheme.current
@@ -180,7 +173,6 @@ private fun MiniTransportButton(playing: Boolean) {
     }
 }
 
-/** Bouton suivant du mini-lecteur (appui). */
 @Composable
 private fun MiniTransportNext() {
     val th = LocalTheme.current
@@ -203,13 +195,12 @@ private fun MiniTransportNext() {
     }
 }
 
-/** Fine ligne de progression sous le mini-lecteur — collecte la position indépendamment. */
 @Composable
 private fun MiniProgressLine(modifier: Modifier = Modifier) {
     val posMs by Player.positionMs.collectAsState()
     val durationMs = Player.state.collectAsState().value.durationMs.coerceAtLeast(1L)
     val fraction = (posMs.toFloat() / durationMs).coerceIn(0f, 1f)
-    // Interpolation linéaire continue : plus aucun saut entre les tics de position.
+
     val smooth by animateFloatAsState(
         targetValue = fraction,
         animationSpec = if (Motion.reduced) androidx.compose.animation.core.snap()
@@ -294,7 +285,7 @@ fun GlassBottomBar(
             enabled = AppSettings.liquidGlass.value
         ) {
             if (!collapsed) {
-                // Sélection glissante : la pilule se déplace d'onglet en onglet.
+
                 val selected = if (held) kotlin.math.round(hover).toInt() else tabs.indexOfFirst { it.index == AppUi.tab.value }.coerceAtLeast(0)
                 val pillX by animateFloatAsState(
                     targetValue = if (held) hover else selected.toFloat(),

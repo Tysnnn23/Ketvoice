@@ -1,6 +1,5 @@
 package com.ketvoice.app.data
 
-/** Ledger for durable capsule files, excluding the shared playback/image cache. */
 class DownloadBudget(val limit: Long) {
     init { require(limit >= 0) }
     var used: Long = 0; private set

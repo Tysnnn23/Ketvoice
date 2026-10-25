@@ -8,7 +8,6 @@ import android.content.res.Configuration
 import android.os.Build
 import android.os.LocaleList
 
-/** Align native app controls with the chosen language, not just Compose labels. */
 object AppLocales {
     fun wrap(base: Context): Context {
         val label=base.getSharedPreferences("ketvoice_settings",Context.MODE_PRIVATE).getString("language","Français")

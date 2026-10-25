@@ -8,7 +8,6 @@ import kotlinx.coroutines.flow.StateFlow
 data class EqualizerStatus(val sessionId: Int = 0, val available: Boolean = false, val applied: Boolean = false,
                            val centersHz: List<Int> = emptyList())
 
-/** PlaybackService owns a native effect on ExoPlayer's *real* audio session. */
 object AudioEqualizer {
     private var effect: Equalizer? = null
     private val _status = MutableStateFlow(EqualizerStatus())

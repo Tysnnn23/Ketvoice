@@ -20,7 +20,6 @@ import coil.compose.AsyncImage
 import com.ketvoice.app.data.LocalPlaylist
 import com.ketvoice.app.ui.common.Text
 
-/** Original import artwork, not an official Spotify logo or an audio preview. */
 @Composable
 fun PlaylistArtwork(playlist: LocalPlaylist?, label: String, modifier: Modifier = Modifier) {
     val imported=playlist==null||playlist.spotifyUrl!=null

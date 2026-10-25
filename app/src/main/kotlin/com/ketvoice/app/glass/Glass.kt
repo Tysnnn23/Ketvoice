@@ -25,24 +25,8 @@ import com.kyant.backdrop.effects.lens
 import com.kyant.backdrop.effects.vibrancy
 import com.kyant.backdrop.highlight.Highlight
 
-/**
- * KETVOICE — LIQUID GLASS via le SDK « Backdrop » de Kyant0
- * (io.github.kyant0:backdrop, Apache-2.0).
- *
- * Pipeline :
- *   1. `rememberGlassBackdrop` capture le fond de l'app dans une couche.
- *   2. `layerBackdrop(backdrop)` sur le contenu : le fond est enregistré à
- *      chaque frame.
- *   3. `GlassPanel` utilise `drawBackdrop` : flou + vibrancy + lentille de
- *      réfraction (AGSL, API 33+) + aberration chromatique + reflet de bord.
- *
- * API 31-32 : flou + teinte (pas de RuntimeShader), rendu propre garanti.
- */
 val LocalBackdropLayer = staticCompositionLocalOf<Backdrop?> { null }
 
-/** Capture content without letting a descendant sample its own render layer.
- * Chrome stays a sibling and keeps the real backdrop, so Liquid Glass remains
- * enabled outside the capture. This also protects new inline glass controls. */
 @Composable
 fun BackdropCapture(backdrop: LayerBackdrop, modifier: Modifier = Modifier,
                     content: @Composable BoxScope.() -> Unit) {
@@ -51,7 +35,6 @@ fun BackdropCapture(backdrop: LayerBackdrop, modifier: Modifier = Modifier,
     }
 }
 
-/** Backdrop racine : fond opaque + contenu de l'app. */
 @Composable
 fun rememberGlassBackdrop(background: Color) = rememberLayerBackdrop {
     drawRect(background)
@@ -83,19 +66,13 @@ data class GlassParams(
     }
 }
 
-/**
- * Panneau en verre liquide : réfracte ce qui est derrière lui.
- * `shape` = forme visuelle ET géométrie de la lentille.
- */
 @Composable
 fun GlassPanel(
     modifier: Modifier = Modifier,
     shape: Shape,
     params: GlassParams,
     enabled: Boolean = true,
-    // Un panneau posé DANS le contenu capturé par layerBackdrop ne doit jamais
-    // lire ce même backdrop (drawBackdrop) : boucle de rétroaction → stack
-    // overflow natif du RenderThread (crash page artiste / réglages).
+
     captured: Boolean = false,
     content: @Composable () -> Unit
 ) {
@@ -136,7 +113,7 @@ fun GlassPanel(
             Box(Modifier.background(Color.Transparent, shape)) { content() }
         }
     } else {
-        // Verre désactivé ou backdrop absent : panneau translucide statique.
+
         Box(modifier = modifier.then(edge).background(surface, shape)) {
             content()
         }

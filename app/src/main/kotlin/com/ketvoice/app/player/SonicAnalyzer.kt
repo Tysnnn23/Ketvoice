@@ -8,7 +8,6 @@ import kotlin.math.sqrt
 
 data class SonicLevels(val low: Float = 0f, val mid: Float = 0f, val high: Float = 0f)
 
-/** Rough spectral energy, not beat/voice identification. Never modifies PCM data. */
 class SonicAnalyzer {
     private var rate = 48000
     private var channels = 2

@@ -15,15 +15,14 @@ object Palette {
     val CardDark = Color(0xFF1C1C1E)
     val HairlineLight = Color(0x14000000)
     val HairlineDark = Color(0x1CFFFFFF)
-    val Accent = Color(0xFFFA2D48)      // Apple Music red — piste active
+    val Accent = Color(0xFFFA2D48)
     val AccentBlue = Color(0xFF007AFF)
-    val Teal = Color(0xFF0E9E8C)        // avatar compte
+    val Teal = Color(0xFF0E9E8C)
     val PurplePink1 = Color(0xFF6A3AB2)
     val PurplePink2 = Color(0xFFE040FB)
     val Danger = Color(0xFFFF3B30)
     val Success = Color(0xFF34C759)
 
-    // Receipt/Replay card gradient
     val Replay1 = Color(0xFF3D1030)
     val Replay2 = Color(0xFF1A0A14)
 }

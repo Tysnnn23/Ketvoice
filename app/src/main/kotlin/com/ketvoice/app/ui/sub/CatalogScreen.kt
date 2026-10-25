@@ -75,7 +75,7 @@ fun CatalogScreen() {
     LaunchedEffect(tracks) {
         try { ArtworkRepo.enrich(tracks) }
         catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
-        catch (_: Exception) { /* Keep the catalog usable if optional artwork fails. */ }
+        catch (_: Exception) {  }
     }
     Column(Modifier.fillMaxSize().background(theme.background).statusBarsPadding()) {
         Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -84,7 +84,7 @@ fun CatalogScreen() {
             Text(page?.title ?: request.title, color = theme.onBackground, fontSize = 24.sp,
                 fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
-        // Mosaïque 2x2 : les 4 premières pochettes de la collection en guise de grande cover
+
         if (tracks.isNotEmpty()) {
             val mosaicCovers = tracks.take(4).map { ArtworkRepo.coverForTrack(it) ?: it.coverUrl }
             Box(Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {

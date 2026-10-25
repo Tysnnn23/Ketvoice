@@ -44,11 +44,6 @@ import com.ketvoice.app.theme.T
 import com.ketvoice.app.ui.AppUi
 import kotlinx.coroutines.launch
 
-/**
- * Écran de gestion des sources personnalisées `.json`.
- * Chaque source est réellement téléchargée, parsée puis testée via son
- * endpoint de recherche avant d'être marquée active.
- */
 @Composable
 fun SourcesScreen() {
     val th = LocalTheme.current

@@ -30,7 +30,6 @@ object PlaylistRules {
     fun entry(track: Track) = PlaylistEntry(title = track.title, artist = track.artist, track = safe(track))
 }
 
-/** Local-only playlists; commit the atomic file before reporting success to the UI. */
 object PlaylistStore {
     private val _lists = MutableStateFlow<List<LocalPlaylist>>(emptyList())
     val lists: StateFlow<List<LocalPlaylist>> = _lists
@@ -48,9 +47,9 @@ object PlaylistStore {
             val rows = gson.fromJson(String(storage.readFully(), Charsets.UTF_8), Array<LocalPlaylist>::class.java).toList()
             require(rows.size <= 100 && rows.all { it.id.isNotBlank() && it.entries.size <= 500 && it.name.isNotBlank() })
             _lists.value = rows
-        }.onFailure { _error.value = true } // Keep corrupt user data intact; never replace it with an empty file.
+        }.onFailure { _error.value = true }
     }
-    /** Clears the in-memory copy only so instrumentation tests can start from disk. */
+
     internal fun resetForTest() { _lists.value = emptyList(); _error.value = false }
     private suspend fun change(block: (List<LocalPlaylist>) -> List<LocalPlaylist>) = withContext(Dispatchers.IO) {
         mutex.withLock {

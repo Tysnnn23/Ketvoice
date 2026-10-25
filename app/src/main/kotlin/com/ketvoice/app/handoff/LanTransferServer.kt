@@ -9,8 +9,6 @@ import java.util.concurrent.Semaphore
 
 data class IncomingHandoff(val id: String, val message: HandoffMessage, val address: String = "")
 
-/** Explicit receiver approval, fresh position after approval, then a ready ACK.
- * Knowing the Wi-Fi password never grants unattended playback control. */
 class LanTransferServer(val boundary: LanBoundary, private val name: String,
     private val onPending: (IncomingHandoff?) -> Unit,
     private val onStart: (IncomingHandoff, Long, Boolean) -> Unit) : AutoCloseable {

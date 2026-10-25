@@ -15,7 +15,6 @@ import org.junit.Rule
 import org.junit.Test
 import java.io.File
 
-/** Local playlist UI only: no sign-in, stream, Spotify request or upload. */
 class PlaylistUiTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
     private val context get() = InstrumentationRegistry.getInstrumentation().targetContext
@@ -87,7 +86,6 @@ class PlaylistUiTest {
     }
 }
 
-/** Mirrors AppRoot: the playlist overlay replaces the library, dialogs stay above. */
 @androidx.compose.runtime.Composable
 private fun LibraryAndPlaylist() {
     if (AppUi.overlay.intValue == AppUi.PLAYLIST) PlaylistScreen()

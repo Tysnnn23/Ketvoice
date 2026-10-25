@@ -7,7 +7,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import java.nio.ByteBuffer
 
-/** Only decoded playback PCM. No microphone permission, recording or uploads. */
 object SonicMeter : TeeAudioProcessor.AudioBufferSink {
     private val analyzer = SonicAnalyzer()
     private val _levels = MutableStateFlow(SonicLevels())

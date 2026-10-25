@@ -11,7 +11,7 @@ object EqualizerProfile {
         "Brillance" to listOf(-1, 0, 1, 3, 4),
         "Rock" to listOf(4, 2, -1, 2, 4))
     fun normalize(gains: List<Int>): List<Int> = List(5) { gains.getOrElse(it) { 0 }.coerceIn(-12, 12) }
-    /** Map five UI anchors to the real vendor's band centers, not a fake DSP. */
+
     fun millibels(frequencyHz: Float, gains: List<Int>, minimum: Int, maximum: Int): Int {
         val safe = normalize(gains)
         val x = frequencyHz.coerceAtLeast(1f)

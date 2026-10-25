@@ -18,12 +18,6 @@ import androidx.media3.session.SessionCommand
 import com.ketvoice.app.MainActivity
 import com.ketvoice.app.data.AppSettings
 
-/**
- * Service de lecture Media3 : ExoPlayer + MediaSession (notification système,
- * lockscreen contrôles automatiques via DefaultMediaNotificationProvider).
- * Commande custom « Ignorer les silences » (absente de MediaController sur
- * Media3 1.6) : le contrôleur l'envoie, le service l'applique à ExoPlayer.
- */
 @UnstableApi
 class PlaybackService : MediaSessionService() {
 
@@ -31,7 +25,7 @@ class PlaybackService : MediaSessionService() {
 
     override fun onCreate() {
         super.onCreate()
-        // A media-button service restart may happen before MainActivity.
+
         com.ketvoice.app.data.SettingsStore.load(applicationContext)
         val renderers = object : DefaultRenderersFactory(this) {
             override fun buildAudioSink(context: android.content.Context, enableFloatOutput: Boolean, enableAudioTrackPlaybackParams: Boolean): AudioSink =

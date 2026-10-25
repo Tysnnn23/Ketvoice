@@ -30,7 +30,6 @@ import com.ketvoice.app.theme.LocalTheme
 import com.ketvoice.app.ui.motion.Motion
 import kotlinx.coroutines.delay
 
-/** No simulated progress: completion is shown only after observing an actual job. */
 @Composable
 fun DownloadCover(track: Track, url: String?, size: Dp, radius: Dp = 9.dp) {
     val busy by Downloader.busy.collectAsState()

@@ -1,12 +1,5 @@
 package com.ketvoice.app.data
 
-/**
- * Langues proposées dans Réglages → Langue de l'application.
- *
- * Le français reste la langue de référence : les textes sources sont écrits
- * en français puis traduits à l'exécution par [AppText]. Les noms natifs sont
- * volontairement affichés dans leur propre écriture.
- */
 enum class AppLanguage(
     val code: String,
     val label: String,

@@ -43,8 +43,6 @@ import com.kyant.backdrop.backdrops.layerBackdrop
 import com.ketvoice.app.ui.motion.Motion
 import com.ketvoice.app.data.DesignChoices
 
-/** Original mobile controls, arranged for the Quest's landscape window.
- * Lyrics/queue never replace or hide the artwork and transport column. */
 @Composable
 internal fun QuestLandscapePlayer(
     state: PlayerUiState, track: Track, cover: String?, canvas: String?, ambience: CoverAmbience,
@@ -56,7 +54,7 @@ internal fun QuestLandscapePlayer(
     val duration = Motion.duration(280)
     CompositionLocalProvider(LocalBackdropLayer provides backdrop) {
         Box(Modifier.fillMaxSize().background(Color.Black).layerBackdrop(backdrop)) {
-            // Bounded gradient rather than a second full-window blurred video.
+
             PlayerSceneBackground(track, canvas, state.isPlaying, cover, ambience, simple = true)
             Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()
                 .padding(horizontal = 28.dp, vertical = 8.dp)) {

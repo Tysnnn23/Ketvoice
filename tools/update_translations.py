@@ -129,7 +129,6 @@ MESSAGES = [
     "Rien ici pour l'instant.\nBranchement des sources à l'étape des URLs.",
 ]
 
-# Collect whole concatenated descriptions, rather than translating fragments.
 LITERAL = r'"(?:[^"\\]|\\.)*"'
 CHAIN = re.compile(LITERAL + r'(?:\s*\+\s*' + LITERAL + r')+')
 for path in SOURCE.rglob('*.kt'):
@@ -205,7 +204,7 @@ def translate(message, language):
             time.sleep(attempt + 1)
 
 for index, (language, table) in enumerate(CATALOG.items()):
-    # Removed prototype: keep the mobile player rather than a Quest dashboard.
+
     for retired in ('Mode cinéma', 'Pochette et Canvas en grand, commandes toujours accessibles', 'KETVOICE · QUEST'):
         table.pop(retired, None)
     for message in dict.fromkeys(MESSAGES):
@@ -215,7 +214,6 @@ for index, (language, table) in enumerate(CATALOG.items()):
             table[message] = translate(message, language)
     print(language, len(table), flush=True)
 
-# Publish the complete catalog at once: a build must not see half-updated languages.
 temporary = ASSET.with_suffix('.json.tmp')
 temporary.write_text(json.dumps(CATALOG, ensure_ascii=False, indent=1) + '\n', encoding='utf-8')
 temporary.replace(ASSET)

@@ -3,7 +3,6 @@ package com.ketvoice.app.data
 import org.json.JSONObject
 import org.json.JSONArray
 
-/** Catalogue evidence, never the words 'official' or 'VEVO' in an uploader title. */
 object OfficialMusicParser {
     const val SONGS_FILTER = "EgWKAQIIAWoKEAkQChAFEAMQBA%3D%3D"
     private fun objects(node: Any?, key: String, out: MutableList<JSONObject>) {
@@ -24,8 +23,7 @@ object OfficialMusicParser {
             fun runs(index: Int) = cols.optJSONObject(index)?.optJSONObject("musicResponsiveListItemFlexColumnRenderer")
                 ?.optJSONObject("text")?.optJSONArray("runs") ?: JSONArray()
             val titleRuns = runs(0)
-            // Read only the row's own play/title endpoint. A menu can contain
-            // unrelated catalogue endpoints and must not certify an upload.
+
             val titleWatch = titleRuns.optJSONObject(0)?.optJSONObject("navigationEndpoint")?.optJSONObject("watchEndpoint")
             val overlayWatch = row.optJSONObject("overlay")?.optJSONObject("musicItemThumbnailOverlayRenderer")
                 ?.optJSONObject("content")?.optJSONObject("musicPlayButtonRenderer")
@@ -70,9 +68,7 @@ object OfficialMusicParser {
                     it.matches(Regex("\\d+:\\d{2}(?::\\d{2})?"))
                 }?.let { time -> duration = time.split(':').fold(0L) { v, part -> v * 60 + part.toLong() } * 1000 }
             }
-            // Mobile WEB_REMIX responses can contain plain metadata text and
-            // expose album/artist links only in the row's own typed actions.
-            // Never use a menu watch endpoint as proof of official audio.
+
             if (artists.isEmpty() || albumId.isBlank()) {
                 val actions = mutableListOf<JSONObject>()
                 objects(row.optJSONObject("menu"), "menuNavigationItemRenderer", actions)
@@ -99,13 +95,12 @@ object OfficialMusicParser {
                     }
                 }
             }
-            // Les « type beats », instrumentales et reprises ne font pas partie
-            // du catalogue officiel de l'artiste même s'ils ont une page album.
+
             val catalogueText = "$title $album".lowercase()
             if (listOf("type beat", "instrumental", "reprod", "prod. by", "made by").any { catalogueText.contains(it) }) {
                 return@mapNotNull null
             }
-            // Missing metadata is not proof of official catalogue membership.
+
             if (title.isBlank() || artists.isEmpty() || !albumId.startsWith("MPRE")) return@mapNotNull null
             val explicit = row.optJSONArray("badges")?.toString()?.contains("MUSIC_EXPLICIT_BADGE") == true
             Track("yt:$video", title, artists.distinct().joinToString(", "), album, duration,

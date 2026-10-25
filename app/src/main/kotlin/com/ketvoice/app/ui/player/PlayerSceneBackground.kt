@@ -13,7 +13,6 @@ import com.ketvoice.app.data.Track
 fun panoramicCanvasActive(canvas: String?): Boolean = AppSettings.panoramicCanvas.value &&
     !AppSettings.sonicCanvas.value && AppSettings.animatedArtwork.value && canvas != null
 
-/** Optional, off by default. Foreground art becomes static to avoid two video decoders. */
 @Composable
 internal fun PlayerSceneBackground(track: Track, canvas: String?, playing: Boolean, cover: String?,
                                    ambience: CoverAmbience, simple: Boolean = false) {

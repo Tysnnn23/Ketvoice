@@ -8,7 +8,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.ketvoice.app.data.AppText
 
-/** Keep accessibility labels in the same language as visible controls. */
 @Composable
 fun Icon(
     imageVector: ImageVector,

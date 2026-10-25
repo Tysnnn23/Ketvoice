@@ -1,6 +1,5 @@
 package com.ketvoice.app.data
 
-/** Exact UI messages and whole-message templates. Captured data stays intact. */
 internal class UiTextDictionary(private val entries: Map<String, String>) {
     private data class Template(val pattern: Regex, val target: String, val arguments: List<String>, val composite: Boolean)
     private val placeholder = Regex("\\{(\\d+)\\}")
@@ -24,7 +23,7 @@ internal class UiTextDictionary(private val entries: Map<String, String>) {
             val values = template.arguments.mapIndexed { index, name -> name to match.groupValues[index + 1] }.toMap()
             return placeholder.replace(template.target) { values[it.groupValues[1]].orEmpty() }
         }
-        // Status labels combine independently translated phrases with bullets.
+
         if (" · " in text) return text.split(" · ").joinToString(" · ") { translate(it) }
         if ('\n' in text) return text.split('\n').joinToString("\n") { translate(it) }
         return text

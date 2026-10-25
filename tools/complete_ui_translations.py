@@ -30,12 +30,12 @@ def request(query,language):
     return ''.join(part[0] for part in data[0] if part and part[0])
 
 def translated(group,language):
-    # Markers are short and alphanumeric so machine translation keeps them verbatim.
+
     query='\n'.join(f'###KV{i}###{text}' for i,text in enumerate(group))
     text=request(query,language)
     markers=list(re.finditer(r'###\s*KV\s*(\d+)\s*###',text))
     if len(markers)!=len(group) or [int(m.group(1)) for m in markers]!=list(range(len(group))):
-        # A merged key can only be recovered one message at a time.
+
         result=[]
         for message in group:
             value=request(message,language).strip()

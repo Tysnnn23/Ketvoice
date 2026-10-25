@@ -1,4 +1,4 @@
-// All Auth, database and Storage traffic is mocked. No real content is changed.
+
 import assert from 'node:assert/strict';
 import {pathToFileURL} from 'node:url';
 let handler;

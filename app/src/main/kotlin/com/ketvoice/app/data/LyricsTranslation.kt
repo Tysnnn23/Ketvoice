@@ -7,7 +7,6 @@ import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 
-/** Return nearby translations first. Each subtitle stays attached to its original line index. */
 object LyricsTranslation {
     suspend fun stream(lines: List<MusicApi.LyricLine>, target: String, active: Int,
                        onLine: (Int, String) -> Unit) = coroutineScope {

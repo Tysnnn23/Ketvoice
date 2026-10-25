@@ -76,7 +76,7 @@ object ExtraLyricsProviders {
                 val candidates = (0 until tracks.length()).mapNotNull { i ->
                     val t = tracks.optJSONObject(i) ?: return@mapNotNull null
                     val provider = t.optString("provider")
-                    // This provider explicitly interpolates LRCLIB word times: reject it.
+
                     if (provider.contains("wordsync", true) || t.optBoolean("estimated", false)) return@mapNotNull null
                     val native = provider in setOf("golyrics_apple_music", "amlyrics_apple_music",
                         "binimum_apple_music", "spicylyrics", "spicylyrics_apple_music", "qq_portato", "kugou_legato")
@@ -99,7 +99,7 @@ object ExtraLyricsProviders {
                     val json = get(source, "$base/lyrics/?artist=$artist&song=$title&timestamps=true&word=true&syllabus=true")
                     val data = json?.optJSONObject("data") ?: json
                     val provider = data?.optString("source").orEmpty()
-                    // Only accept native granular timings from the documented sources.
+
                     timed(data?.optJSONArray("timed_lyrics"), provider in setOf("apple_music", "applemusic", "lrcmux"),
                         data?.optString("sync_level") == "syllable").ifEmpty { plain(data?.optString("lyrics").orEmpty()) }
                 }

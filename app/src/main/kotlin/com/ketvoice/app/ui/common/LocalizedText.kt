@@ -19,13 +19,6 @@ import androidx.compose.ui.unit.TextUnit
 import com.ketvoice.app.data.AppText
 import com.ketvoice.app.data.DesignChoices
 
-/**
- * Même contrat que `Material3.Text`, mais le texte est traduit avant rendu.
- *
- * Les imports `androidx.compose.material3.Text` des écrans sont remplacés par
- * cet import : aucune chaîne utilisateur ne peut ainsi échapper à la langue
- * choisie dans les réglages, y compris les libellés passés par variable.
- */
 @Composable
 fun Text(
     text: String,
@@ -90,8 +83,7 @@ fun Text(
     onTextLayout: (TextLayoutResult) -> Unit = {},
     style: TextStyle = LocalTextStyle.current
 ) {
-    // Les AnnotatedString sont déjà composées (paroles karaoké, titres
-    // enrichis) : on ne tente pas de remplacer leurs fragments.
+
     MaterialText(
         text = text,
         modifier = modifier,

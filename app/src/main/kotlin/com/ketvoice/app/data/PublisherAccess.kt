@@ -3,7 +3,6 @@ package com.ketvoice.app.data
 import java.net.URI
 import java.net.URLDecoder
 
-/** A UI hint is never authorization; the broker verifies every write again. */
 object PublisherAccess {
     const val EMAIL = "konnektsupport@gmail.com"
     const val HOST = "xodklrunqlzyeiqtovgx.supabase.co"
@@ -20,15 +19,13 @@ object PublisherAccess {
         require(url.scheme == "https" && url.host == HOST && url.path == "/auth/v1/verify" &&
             url.userInfo == null && url.port == -1 && url.rawFragment == null) { "Lien invalide" }
         val values = parameters(url.rawQuery.orEmpty())
-        // Supabase verifies email links with token_hash. The token query
-        // parameter of an email link is already the hashed token.
+
         val type = values["type"]?.takeIf { it in setOf("email", "magiclink", "signup") } ?: error("Lien invalide")
         val hash = values["token_hash"] ?: values["token"] ?: error("Lien invalide")
         require(hash.matches(Regex("[A-Za-z0-9_-]{20,200}")))
         return Verification("token_hash", hash, type)
     }
 
-    /** Tokens appended by Supabase to the ketvoice://auth deep link. */
     fun redirect(input: String): Map<String, String> {
         require(input.length <= 16_384) { "Lien invalide" }
         val url = runCatching { URI(input.trim()) }.getOrElse { error("Lien invalide") }

@@ -26,16 +26,6 @@ import java.net.URL
 import java.security.MessageDigest
 import java.util.Locale
 
-/**
- * Téléchargements réels : enregistre le flux choisi (FLAC Last Babe ou
- * MP3 Ultra MAX selon le réglage) dans filesDir/downloads, rejouable HORS LIGNE.
- * Progression exposée (0-100), toast début/fin, repli sur l'autre qualité
- * si le téléchargement échoue, métadonnées JSON à côté du fichier.
- *
- * Chaque téléchargement emporte aussi ses meilleures paroles (JSON + LRC) et
- * le Canvas Spotify lorsqu'il existe. Le Canvas reste dans le cache partagé
- * `filesDir/canvas` afin d'être réutilisé par les autres titres du même album.
- */
 object Downloader {
 
     data class Item(
@@ -58,7 +48,6 @@ object Downloader {
     private val _activeTracks = MutableStateFlow<Map<String, Track>>(emptyMap())
     val activeTracks: StateFlow<Map<String, Track>> = _activeTracks
 
-    /** Progression par id de piste, en pourcentage (0-100). */
     private val _progress = MutableStateFlow<Map<String, Int>>(emptyMap())
     val progress: StateFlow<Map<String, Int>> = _progress
 
@@ -102,8 +91,7 @@ object Downloader {
                     streams?.fast?.let { candidates += it }
                     streams?.best?.let { candidates += it }
                 }
-                // Repli direct : la résolution parallèle peut avoir été coupée
-                // par un addon lent, mais l'autre qualité reste accessible.
+
                 if (candidates.isEmpty() && !publication) {
                     runCatching { MusicApi.addonStream(track, "um") }.getOrNull()?.let { candidates += it }
                     runCatching { MusicApi.flacStream(track) }.getOrNull()?.let { candidates += it }
@@ -123,7 +111,6 @@ object Downloader {
                     dest.delete()
                 }
 
-                // Dernier recours : le flux YouTube Music, sans secret côté APK.
                 if (gotFile == null && !publication) {
                     val yt = withTimeoutOrNull(35_000) { runCatching { MusicApi.youtubeStream(track) }.getOrNull() }
                     if (yt != null) {
@@ -162,8 +149,6 @@ object Downloader {
                     put("downloadedAt", System.currentTimeMillis())
                 }
 
-                // Commit audio first. An optional lyrics/Canvas provider must
-                // never turn a successful audio download into a failed item.
                 val metaFile = File(dir(c), file.nameWithoutExtension + ".json")
                 var metadataSize = 0L
                 fun persistMeta() {
@@ -174,8 +159,6 @@ object Downloader {
                 persistMeta()
                 refresh()
 
-                // Les paroles sont téléchargées AVANT l'écriture finale : le
-                // fichier et ses sidecars apparaissent ensemble.
                 val best = withTimeoutOrNull(30_000) { runCatching { MusicApi.bestLyrics(track) }.getOrNull() }
                 if (best != null && best.second.isNotEmpty()) {
                     val lyricsFile = File(dir(c), file.nameWithoutExtension + ".lyrics.json")
@@ -187,7 +170,7 @@ object Downloader {
                     meta.put("lyricsSourceKey", best.third)
                     meta.put("lyricsLines", best.second.size)
                     meta.put("lyricsTimed", best.second.any { it.timeMs >= 0 })
-                    // Sidecar LRC lisible par les autres lecteurs.
+
                     runCatching {
                         val bytes = toLrc(best.second).toByteArray(Charsets.UTF_8)
                         if (bytes.size <= budget.remaining - 8192 && budget.spend(bytes.size.toLong()))
@@ -205,8 +188,6 @@ object Downloader {
                     }
                 }
 
-                // Le Canvas est indépendant de la qualité audio et reste dans
-                // son cache permanent, réutilisable par les autres titres.
                 if (capsuleLimit == null) withTimeoutOrNull(50_000) { runCatching { CanvasRepo.resolve(track, force = true) } }
                 val canvas = CanvasRepo.localPath(track.id)
                 if (canvas != null) {
@@ -263,7 +244,6 @@ object Downloader {
 
     fun totalBytes(): Long = _items.value.sumOf { it.bytes }
 
-    /** Paroles hors ligne déjà téléchargées avec ce titre. */
     fun localLyrics(trackId: String): Pair<String, List<MusicApi.LyricLine>>? {
         val item = itemFor(trackId) ?: return null
         val sidecar = item.lyricsFile?.takeIf { it.exists() } ?: return null
@@ -524,7 +504,7 @@ object Downloader {
           } catch (_: LimitExceeded) {
               tmp.delete(); return false
           } catch (_: Exception) {
-              // Keep a partial response only for the next Range attempt.
+
           } finally {
                connection?.disconnect()
                connection?.let { connections.remove(id, it) }
@@ -534,7 +514,6 @@ object Downloader {
         return false
     }
 
-    /** Small independent cover file, so a capsule does not depend on an image-cache hit. */
     private fun offlineCover(track: Track, available: Long): ByteArray? {
         val limit = minOf(512 * 1024L, available)
         if (limit < 1024) return null
@@ -578,7 +557,6 @@ object Downloader {
         return null
     }
 
-    /** Évite d'enregistrer une page HTML/JSON d'erreur comme fichier audio. */
     private fun looksLikeAudio(file: File): Boolean {
         val head = ByteArray(16)
         val read = file.inputStream().use { it.read(head) }

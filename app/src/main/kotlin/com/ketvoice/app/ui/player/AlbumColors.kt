@@ -2,7 +2,6 @@ package com.ketvoice.app.ui.player
 
 import kotlin.math.pow
 
-/** Small quantized palette, sampled from decoded artwork, never from track names. */
 object AlbumColors {
     fun dominant(pixels: IntArray): Int? {
         val buckets = mutableMapOf<Int, MutableList<Int>>()

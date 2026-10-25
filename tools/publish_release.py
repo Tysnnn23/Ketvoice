@@ -17,14 +17,11 @@ from verify_apk import verify
 ROOT = Path(__file__).resolve().parents[1]
 REPO = 'Tysnnn23/Ketvoice'
 
-
 def git(*args):
     return subprocess.check_output(['git', *args], cwd=ROOT).decode().strip()
 
-
 def digest(data):
     return hashlib.sha256(data).hexdigest()
-
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -102,7 +99,7 @@ def main():
     if release and not release['draft']:
         raise SystemExit('Public release already exists; refusing to overwrite')
     if not release:
-        # A tag without a release is user work too; do not attach unrelated APKs.
+
         if git('tag', '--list', args.tag):
             raise SystemExit('Tag already exists; use a fresh rebuild tag')
         release = api(f'/repos/{REPO}/releases', 'POST', {
@@ -123,7 +120,7 @@ def main():
             raise SystemExit('Upload size/state mismatch: ' + name)
         if asset.get('digest') and asset['digest'] != 'sha256:' + digest(data):
             raise SystemExit('Remote checksum mismatch: ' + name)
-        # Verify downloaded bytes even when GitHub supplied a digest.
+
         request = urllib.request.Request(asset['url'], headers={
             'Authorization': 'Bearer ' + token, 'Accept': 'application/octet-stream', 'User-Agent': 'Ketvoice-release'})
         with urllib.request.urlopen(request, timeout=300) as response:
@@ -136,7 +133,6 @@ def main():
     if args.publish:
         release = api(f'/repos/{REPO}/releases/{release["id"]}', 'PATCH', {'draft': False, 'make_latest': 'false'})
     print('Published:' if not release['draft'] else 'Draft ready:', release['html_url'])
-
 
 if __name__ == '__main__':
     main()

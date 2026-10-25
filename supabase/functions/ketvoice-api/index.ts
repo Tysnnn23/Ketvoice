@@ -1,16 +1,4 @@
-// Ketvoice API — Supabase Edge Function.
-//
-// The APK never receives the Spotify session cookie or the add-on tokens.
-// They live in Supabase Vault and are read here with the service role.
-//
-// Routes:
-//   GET  /health
-//   GET  /source.json
-//   GET  /search?q=...
-//   GET  /stream?source=um|last&id=...&title=...&artist=...
-//   GET  /canvas?spotifyId=...&title=...&artist=...
-//
-// This file contains no credentials.
+
 
 type Json = Record<string, unknown>;
 
@@ -81,8 +69,6 @@ async function jsonRequest(
   }
 }
 
-// ------------------------------------------------------------------ secrets
-
 const secretCache = new Map<string, { value: string | null; at: number }>();
 
 async function secret(name: string): Promise<string | null> {
@@ -133,8 +119,6 @@ async function addonBases(): Promise<Array<{ tag: string; base: string; label: s
     base: cleanBase(row.base),
   }));
 }
-
-// ------------------------------------------------------------------- helpers
 
 function text(value: unknown): string | null {
   if (typeof value === "string" && value.trim()) return value.trim();
@@ -196,13 +180,11 @@ function inferFormat(url: string): string {
   return "mp3";
 }
 
-// ------------------------------------------------------------------- addons
-
 const searchCache = new Map<string, { at: number; rows: Json[] }>();
 const addonCooldown = new Map<string, number>();
 
 async function searchAddon(tag: string, base: string, query: string): Promise<Json[]> {
-  // A rate-limited add-on must not slow every search for several minutes.
+
   const cooldownUntil = addonCooldown.get(tag) ?? 0;
   if (Date.now() < cooldownUntil) return [];
 
@@ -325,7 +307,7 @@ async function streamAddon(
   try {
     data = JSON.parse(raw);
   } catch {
-    // Some addons answer with a plain URL.
+
   }
   const obj = data && typeof data === "object" ? data as Json : {};
   const nested = (obj.data ?? obj) as Json;
@@ -344,8 +326,6 @@ async function streamAddon(
     (format === "flac" || format === "wav" ? "Sans perte" : "Haute qualité");
   return { url: streamUrl, format, quality, source: tag, addonId };
 }
-
-// ------------------------------------------------------------------ Spotify
 
 type SpotifyToken = { token: string; expiresAt: number };
 let spotifyTokenCache: SpotifyToken | null = null;
@@ -561,8 +541,6 @@ async function resolveCanvas(
   if (!url) return null;
   return { url, spotifyId: id, source: "Ketvoice API" };
 }
-
-// ------------------------------------------------------------------- routes
 
 async function health(): Promise<Response> {
   const [spDc, um, last] = await Promise.all([

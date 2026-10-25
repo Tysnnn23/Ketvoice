@@ -69,7 +69,7 @@ class HandoffProtocolTest {
             assertEquals("approved",call("/status",auth).getString("state"))
             call("/start",start);assertEquals(1,starts.get())
             assertEquals("starting",call("/status",auth).getString("state"))
-            rejected{call("/start",start)} // one-use start, not an unattended remote control
+            rejected{call("/start",start)}
             server.complete(offer.getString("id"),true)
             assertEquals("ready",call("/status",auth).getString("state"))
             rejected{call("/status",JSONObject(auth.toString()).put("receipt","wrong"))}

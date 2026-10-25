@@ -17,12 +17,6 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
 
-/**
- * Pochettes réelles pour les contenus éditoriaux (Accueil) :
- * recherche Deezer publique, matching titre + artiste, résultats mis en cache
- * dans les préférences (une seule requête par piste/album, pour toujours).
- * Aucune clé requise ; les images restent servies par le CDN Deezer.
- */
 object ArtworkRepo {
 
     private const val PREFS = "ketvoice_art"
@@ -78,10 +72,6 @@ object ArtworkRepo {
     }
     fun coverForAlbum(album: Album): String? = _covers.value["a:${album.id}"] ?: album.coverUrl
 
-    /**
-     * Remplace les vignettes YouTube par de vraies pochettes d'album
-     * (Deezer). Appelé dès qu'une recherche affiche des résultats.
-     */
     fun enrich(tracks: List<Track>) {
         val ctx = context ?: return
         val prefs = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -123,7 +113,6 @@ object ArtworkRepo {
         }
     }
 
-    /** Récupère les pochettes manquantes en tâche de fond (une fois par session). */
     fun prefetch(tracks: List<Track>, albums: List<Album>) {
         val ctx = context ?: return
         enrich(tracks)
@@ -182,7 +171,6 @@ object ArtworkRepo {
         return album.optString("cover_xl", album.optString("cover_big")).takeIf { it.startsWith("https://") }
     }
 
-    /** Secours iTunes : couverture d'album officielle, sans clé. */
     private fun searchItunesCover(title: String, artist: String): String? {
         return try {
             val term = URLEncoder.encode("$title $artist".trim(), "UTF-8")

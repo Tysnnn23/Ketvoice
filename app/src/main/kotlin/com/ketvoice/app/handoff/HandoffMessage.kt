@@ -4,7 +4,6 @@ import com.ketvoice.app.data.Track
 import org.json.JSONArray
 import org.json.JSONObject
 
-/** Only catalog metadata crosses the LAN: never stream URLs, files or auth. */
 data class HandoffMessage(val sender: String, val queue: List<Track>, val index: Int,
                           val shuffle: Boolean, val repeatOne: Boolean, val autoplay: Boolean) {
     val current: Track get() = queue[index]
@@ -28,7 +27,7 @@ data class HandoffMessage(val sender: String, val queue: List<Track>, val index:
                 .put("explicit", track.explicit)
         }
         fun decode(json: JSONObject): HandoffMessage {
-            // Unknown top-level fields are rejected rather than forwarding raw objects.
+
             require(json.keys().asSequence().all { it in setOf("sender", "index", "shuffle", "repeatOne", "autoplay", "queue") })
             val sender = clean(json.getString("sender"), 64).also { require(it.isNotBlank()) }
             val rows = json.getJSONArray("queue")
@@ -44,7 +43,7 @@ data class HandoffMessage(val sender: String, val queue: List<Track>, val index:
                 val tag = if (upload) "upload" else id.removePrefix("kv:").substringBefore(':').takeIf { it in setOf("um", "last") }
                 Track(id, title, artist, clean(row.optString("album")), durationMs = duration,
                     explicit = row.optBoolean("explicit"), addon = tag, addonId = if (tag != null) id.substringAfterLast(':') else null)
-                // The receiver resolves the catalog again; no claimed YouTube verification is trusted.
+
             }
             val index = json.getInt("index").also { require(it in tracks.indices) }
             return HandoffMessage(sender, tracks, index, json.optBoolean("shuffle"), json.optBoolean("repeatOne"), json.optBoolean("autoplay", true))

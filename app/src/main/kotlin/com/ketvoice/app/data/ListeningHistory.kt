@@ -5,7 +5,6 @@ import com.google.gson.Gson
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
-/** Actual successful playback, not demo data or merely a tap on a result. */
 object ListeningHistory {
     private val gson = Gson()
     private var prefs: android.content.SharedPreferences? = null

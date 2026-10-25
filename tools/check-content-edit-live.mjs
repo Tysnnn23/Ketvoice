@@ -1,4 +1,4 @@
-// Read-only/unauthenticated checks: never uploads or changes a song.
+
 import {readFileSync} from 'node:fs';
 const source=readFileSync(new URL('../app/src/main/kotlin/com/ketvoice/app/data/KetvoiceApi.kt',import.meta.url),'utf8');
 const key=source.match(/const val ANON_KEY\s*=\s*"([^"]+)"/)?.[1];

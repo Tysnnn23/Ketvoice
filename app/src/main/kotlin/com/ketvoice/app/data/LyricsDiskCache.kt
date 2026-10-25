@@ -6,7 +6,6 @@ import org.json.JSONObject
 import java.io.File
 import java.security.MessageDigest
 
-/** Separate from the audio LRU: never cleared by the song-cache action. */
 object LyricsDiskCache {
     private var dir: File? = null
     fun init(context: Context) { dir = File(context.filesDir, "lyrics-v2").apply { mkdirs() } }

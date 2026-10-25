@@ -5,8 +5,6 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
-/** Lives beyond the player panel while the playback process is running.
- * Not an alarm: process death cancels the timer. No wake lock is acquired. */
 object SleepTimer {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var job: Job? = null

@@ -1,4 +1,4 @@
-// Node 24 harness: no requests reach Supabase and no email is sent.
+
 import assert from 'node:assert/strict';
 import { pathToFileURL } from 'node:url';
 
@@ -26,8 +26,7 @@ globalThis.fetch=async(input,init={})=>{
   if(url.endsWith('/rest/v1/ketvoice_lyrics') && init.method==='POST') {
     if(failLyrics) return Response.json({error:'fixture insert failure'}, {status:500});
     writes.push(JSON.parse(init.body));
-    // PostgREST returns 201 with an empty body for INSERT return=minimal.
-    // Returning 204 here used to hide the real song+lyrics rollback bug.
+
     return headers.get('prefer')==='return=representation' ? Response.json([{id:'revision-id'}],{status:201}) : new Response(null,{status:minimalStatus});
   }
   if(url.includes('/rest/v1/')) return Response.json([]);

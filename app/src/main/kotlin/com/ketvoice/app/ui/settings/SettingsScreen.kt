@@ -71,16 +71,6 @@ import kotlinx.coroutines.launch
 
 private val noRip: MutableInteractionSource = MutableInteractionSource()
 
-/**
- * RÉGLAGES — uniquement des réglages RELIÉS à l'app :
- *  - thème / verre / animations → Glass + transitions,
- *  - qualité Wi-Fi / données mobiles → choix réel du flux (FLAC ↔ MP3),
- *  - ignorer les silences → moteur Media3,
- *  - mode des paroles → LyricsRepo réel,
- *  - canvas → Ketvoice API + test pipeline réel,
- *  - téléchargements → FLAC/MP3 du downloader,
- *  - stockage → taille réelle du cache + purge.
- */
 @Composable
 fun SettingsScreen() {
     val th = LocalTheme.current
@@ -98,7 +88,7 @@ fun SettingsScreen() {
             .fillMaxSize()
             .background(th.background)
     ) {
-        // ---------- En-tête ----------
+
         Row(
             Modifier
                 .fillMaxWidth()
@@ -124,7 +114,6 @@ fun SettingsScreen() {
                 cacheUsedMb.intValue = (AudioCache.sizeBytes(ctx) / 1_048_576L).toInt()
             }
 
-            // ==================================================== YOUTUBE MUSIC
             if (com.ketvoice.app.BuildConfig.IS_QUEST) {
                 Section("QUEST · CONFORT") {
                     SToggle(Icons.Filled.Brightness6, "Garder la fenêtre éveillée",
@@ -181,7 +170,6 @@ fun SettingsScreen() {
                 }
             }
 
-            // ==================================================== LANGUE
             Section("LANGUE DE L'APPLICATION") {
                 val currentLanguage = AppLanguage.fromLabel(AppSettings.language.value)
                 SRow(
@@ -209,7 +197,6 @@ fun SettingsScreen() {
                 }
             }
 
-            // ==================================================== APPARENCE
             Section("DESIGN KETVOICE") {
                 Text("Chaque finition peut être retirée séparément, sans modifier vos playlists ni votre musique.", color = th.secondary)
                 com.ketvoice.app.data.DesignChoices.all.forEach { option ->
@@ -294,7 +281,6 @@ fun SettingsScreen() {
                 }
             }
 
-            // ==================================================== LECTURE
             Section("LECTURE") {
                 SRow(Icons.Filled.Tune, "Égaliseur", sub="Traitement réel de la session audio", value="") { AppUi.showEqualizer.value=true }
                 SRow(Icons.Filled.Wifi, "Transfert sur le même Wi-Fi", sub="Découverte locale et confirmation sur le destinataire", value="") { AppUi.showHandoff.value=true }
@@ -325,7 +311,6 @@ fun SettingsScreen() {
                 ) { Player.setSkipSilence(it); SettingsStore.save() }
             }
 
-            // ==================================================== PAROLES
             Section("PAROLES") {
                 SRow(
                     Icons.Filled.Subtitles, "Source des paroles",
@@ -409,7 +394,6 @@ fun SettingsScreen() {
                 }
             }
 
-            // ==================================================== CANVAS
             Section("KETVOICE API · CANVAS") {
                 SToggle(Icons.Filled.Bolt, "Sonic Canvas", "Fond réactif au signal audio réel, sans microphone. Désactivé avec les animations réduites.",
                     AppSettings.sonicCanvas.value) { AppSettings.sonicCanvas.value = it; SettingsStore.save() }
@@ -481,7 +465,6 @@ fun SettingsScreen() {
                 )
             }
 
-            // ==================================================== TÉLÉCHARGEMENTS
             Section("TÉLÉCHARGEMENTS") {
                 SRow(
                     Icons.Filled.CloudDownload, "Qualité de téléchargement",
@@ -509,7 +492,6 @@ fun SettingsScreen() {
                 ) { AppUi.overlay.value = AppUi.DOWNLOADS }
             }
 
-            // ==================================================== STOCKAGE
             Section("STOCKAGE") {
                 SRow(
                     Icons.Filled.Storage, "Cache des chansons utilisé",
@@ -542,7 +524,6 @@ fun SettingsScreen() {
                 }
             }
 
-            // ==================================================== À PROPOS
             Section("À PROPOS") {
                 SRow(
                     Icons.Filled.Image, "Version",
@@ -582,7 +563,6 @@ fun SettingsScreen() {
     }
 }
 
-// ------------------------------------------------------------- choix réels
 private data class ChoiceOption(val id: String, val label: String, val sub: String = "")
 private data class ChoiceSpec(
     val title: String,
@@ -756,8 +736,6 @@ private fun cycleQuality(current: String): String = when (current) {
     else -> "Sans perte"
 }
 
-// ---------------------------------------------------------------- UI units
-
 @Composable
 private fun Section(header: String, content: @Composable ColumnScope.() -> Unit) {
     val th = LocalTheme.current
@@ -817,7 +795,6 @@ private fun ColumnScope.SRow(
     }
 }
 
-/** Toggle iOS maison (pas de composant natif Material). */
 @Composable
 private fun IosSwitch(checked: Boolean, onChecked: (Boolean) -> Unit) {
     val th = LocalTheme.current

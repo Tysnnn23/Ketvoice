@@ -11,7 +11,6 @@ data class CapsuleState(val tracks: List<Track> = emptyList(), val readyIds: Set
     val minutes: Int = 0, val budgetBytes: Long = 0, val busy: Boolean = false, val attempted: Int = 0,
     val message: String = "")
 
-/** Explicit, sequential preparation. Never evicts or replaces an existing download. */
 object OfflineCapsule {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val _state = MutableStateFlow(CapsuleState())

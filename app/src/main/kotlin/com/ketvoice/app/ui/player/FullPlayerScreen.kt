@@ -71,7 +71,6 @@ import com.ketvoice.app.ui.common.TrackTitle
 
 enum class PlayerPage { ARTWORK, LYRICS, QUEUE }
 
-/** One player shell and one transport: changing pages never remounts the controls. */
 @Composable
 fun FullPlayerScreen(
     modifier: Modifier = Modifier,
@@ -150,7 +149,7 @@ fun FullPlayerScreen(
             return@BoxWithConstraints
         }
         if (adaptivePlayer) {
-            // Swipe horizontal pour fermer le player sur tablette.
+
             var dragX by remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
             Box(Modifier.fillMaxSize().graphicsLayer { translationX = dragX }.pointerInput(Unit) {
                 awaitEachGesture {
@@ -216,8 +215,7 @@ fun FullPlayerScreen(
                         .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
                         .drawWithContent {
                             drawContent()
-                            // Fondu long : la pochette se dissout dans l'ambiance,
-                            // sans bord franc ni ligne visible en bas.
+
                             drawRect(Brush.verticalGradient(
                                 0f to Color.White, .36f to Color.White, .52f to Color.White.copy(alpha = .98f),
                                 .66f to Color.White.copy(alpha = .82f), .79f to Color.White.copy(alpha = .48f),
@@ -251,8 +249,6 @@ fun FullPlayerScreen(
                 }
                 }
 
-                // Dismiss gestures are limited to the handle. No fullscreen
-                // detector can consume taps, seek drags or lyric scrolling.
                 PlayerHandle(Modifier.offset(x = (sceneWidth - 120.dp) / 2).padding(top = topInset), onClose = { close() })
 
                 AnimatedVisibility(
@@ -360,7 +356,7 @@ internal fun PlayerTitle(track: Track, compact: Boolean, cover: String?, sheetAc
                 TrackTitle(track.title, color = Color.White, fontSize = if (compact) 20.sp else 22.sp,
                     selected = true, maxLines = if (compact) 1 else 2)
             }
-            // Nom d'artiste cliquable → ouvre la page artiste
+
             Text(track.artist, localize = false, color = Color.White.copy(alpha = .82f), fontSize = 17.sp, letterSpacing = (-.5).sp,
                 maxLines = 1, overflow = TextOverflow.Ellipsis,
                 modifier = Modifier

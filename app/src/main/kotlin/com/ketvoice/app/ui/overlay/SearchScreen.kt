@@ -58,10 +58,6 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 
-/**
- * RECHERCHE (captures 22-23) : YouTube Music + addons BitChord
- * (Last Babe FLAC / Ultra MAX Deezer), résultats réels jouables.
- */
 @Composable
 fun SearchScreen() {
     val th = LocalTheme.current
@@ -69,7 +65,7 @@ fun SearchScreen() {
     var playlistError by remember { mutableStateOf("") }
     val layout = LocalAdaptiveLayout.current
     var attempt by rememberSaveable { mutableIntStateOf(0) }
-    var segment by rememberSaveable { mutableIntStateOf(0) } // 0 YouTube | 1 Sources | 2 Bibliothèque
+    var segment by rememberSaveable { mutableIntStateOf(0) }
     var query by rememberSaveable { mutableStateOf(AppUi.searchSeed.value) }
     var results by remember { mutableStateOf<List<Track>>(emptyList()) }
     var allResults by remember { mutableStateOf<List<Track>>(emptyList()) }
@@ -91,7 +87,6 @@ fun SearchScreen() {
         focusManager.clearFocus()
     }
 
-    // La graine est consommée une seule fois (tuile genre / album).
     LaunchedEffect(Unit) { AppUi.searchSeed.value = "" }
 
     LaunchedEffect(query, segment, attempt) {
@@ -125,7 +120,7 @@ fun SearchScreen() {
                 artists = foundArtists.await()
                 loading = false
                 results = (results + publications.await()).distinctBy { it.id }
-                // Addon latency must never hold the YouTube catalogue hostage.
+
                 allResults = results + addons.await()
             }
         } else {
@@ -140,11 +135,10 @@ fun SearchScreen() {
             }
         }
         loading = false
-        // Pochettes réelles, y compris pour les sources personnalisées.
+
         if (results.isNotEmpty()) ArtworkRepo.enrich(results)
     }
 
-    // Vraies pochettes d'album (jamais les vignettes YouTube).
     LaunchedEffect(results) { ArtworkRepo.enrich(results) }
 
     Column(
@@ -170,7 +164,6 @@ fun SearchScreen() {
             }
         }
 
-        // Champ de recherche iOS
         Row(
             Modifier
                 .padding(horizontal = 20.dp)
@@ -209,7 +202,6 @@ fun SearchScreen() {
             }
         }
 
-        // Segments
         Row(
             Modifier
                 .padding(horizontal = 20.dp)
@@ -351,8 +343,7 @@ fun SearchScreen() {
                         modifier = Modifier.weight(1f),
                         onClick = {
                             submitSearch()
-                            // Correspondance addon déjà présente dans les résultats :
-                            // le son démarre immédiatement, sans recherche réseau.
+
                             val match = if (track.addonId.isNullOrBlank()) {
                                 MusicApi.addonMatchIn(allResults, track)?.takeIf { it.addon == "um" }
                             } else null
@@ -366,7 +357,7 @@ fun SearchScreen() {
                                 )
                             } else track
                             val queue = results.toMutableList().also { it[index] = playable }
-                            // Pas d'ouverture forcée du lecteur : le mini-lecteur prend le relais.
+
                             val pending=AppUi.playlistResolution.value
                             if(pending==null)Player.playQueue(queue,index) else scope.launch {
                                 try{PlaylistStore.resolve(pending.playlistId,pending.entryId,playable)

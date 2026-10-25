@@ -26,7 +26,6 @@ import com.ketvoice.app.theme.Palette
 import com.ketvoice.app.theme.T
 import java.security.MessageDigest
 
-/** Couverture : image réseau si dispo, sinon dégradé dérivé de la clé. */
 val LocalCovers = staticCompositionLocalOf { listOf<List<Color>>() }
 
 fun gradientFor(key: String): List<Color> {
@@ -75,7 +74,6 @@ fun Cover(
     }
 }
 
-/** Badge "E" explicite (iOS). */
 @Composable
 fun EBadge(modifier: Modifier = Modifier) {
     Box(
@@ -111,7 +109,6 @@ fun SectionTitle(
     }
 }
 
-/** Avatar réel : photo du compte YouTube Music, sinon initiale locale. */
 @Composable
 fun AccountAvatar(initial: String, size: Dp = 40.dp, modifier: Modifier = Modifier) {
     val session = com.ketvoice.app.data.YouTubeMusicSession.profile.collectAsState().value
@@ -147,6 +144,5 @@ fun Chevron(isDark: Boolean) {
         fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
 }
 
-/** pose d'icônes plateforme-ish : simple caractère pour géométrie iOS ("rot"). unused */
 @Composable
 fun GlyphPlaceholder() {}

@@ -40,10 +40,6 @@ import com.ketvoice.app.ui.AppUi
 import com.ketvoice.app.ui.common.Cover
 import com.ketvoice.app.ui.player.formatSecs
 
-/**
- * Page d'artiste réelle : photo, écoute mensuelle, biographie, titres,
- * albums et artistes similaires proviennent de YouTube Music.
- */
 @Composable
 fun ArtistScreen() {
     val request = AppUi.artistRequest.value ?: return
@@ -64,7 +60,7 @@ fun ArtistScreen() {
             page?.let {
                 try { ArtworkRepo.enrich(it.tracks) }
                 catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
-                catch (_: Exception) { /* Optional artwork must not hide a loaded artist. */ }
+                catch (_: Exception) {  }
             }
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
@@ -105,8 +101,7 @@ fun ArtistScreen() {
             else -> LazyColumn(contentPadding = PaddingValues(bottom = 210.dp)) {
                 val data = page!!
                 item {
-                    // Bannière plein écran : photo de l'artiste pleine largeur,
-                    // floutée, avec fondu progressif vers le fond de la page.
+
                     Box(Modifier.fillMaxWidth().height(360.dp)) {
                         if (!data.artist.photo.isNullOrBlank()) {
                             AsyncImage(
@@ -118,7 +113,7 @@ fun ArtistScreen() {
                         } else {
                             Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(theme.card, theme.hairline))))
                         }
-                        // Scrim bas : dégradé sombre pour faire ressortir le nom (style ref)
+
                         Box(Modifier.fillMaxSize().background(
                             Brush.verticalGradient(listOf(
                                 Color.Black.copy(alpha = 0.20f),
@@ -126,11 +121,11 @@ fun ArtistScreen() {
                                 Color.Black.copy(alpha = 0.72f)
                             ))
                         ))
-                        // Fondu haut : sombre pour la lisibilité de la barre de statut
+
                         Box(Modifier.fillMaxWidth().height(90.dp).align(Alignment.TopCenter).background(
                             Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.55f), Color.Transparent))
                         ))
-                        // Nom de l'artiste par-dessus la bannière
+
                         Column(Modifier.align(Alignment.BottomStart).padding(horizontal = 20.dp, vertical = 16.dp)) {
                             Text(data.artist.name, localize = false, color = Color.White, fontSize = 40.sp,
                                 fontWeight = FontWeight.Black, letterSpacing = (-1.2).sp, maxLines = 2,
