@@ -30,6 +30,7 @@ def main():
     parser.add_argument('--tag', required=True)
     parser.add_argument('--build-tools', required=True, type=Path)
     parser.add_argument('--publish', action='store_true')
+    parser.add_argument('--allow-incomplete-device-validation', action='store_true')
     args = parser.parse_args()
     if not args.tag.startswith('v' + args.version) or '/' in args.tag or '..' in args.tag:
         raise SystemExit('Tag must identify this version; no paths allowed')
@@ -46,18 +47,27 @@ def main():
     validation = json.loads((stage / 'validation.json').read_text(encoding='utf-8'))
     if validation.get('source_commit') != commit:
         raise SystemExit('Validation record is for different sources')
+    override = validation.get('publication_override')
+    if args.allow_incomplete_device_validation and not (
+        isinstance(override, dict) and override.get('authorized_by_user') is True and override.get('reason')
+    ):
+        raise SystemExit('An explicit user-authorized publication override must be recorded')
+    if override and not args.allow_incomplete_device_validation:
+        raise SystemExit('This release requires --allow-incomplete-device-validation')
     scan = validation.get('credential_scan')
     smoke = validation.get('release_install_smoke')
     if not isinstance(scan, dict) or scan.get('findings') != 0 or not scan.get('entries'):
         raise SystemExit('A passing credential scan must be recorded')
-    if not isinstance(smoke, dict) or any(
+    if (not isinstance(smoke, dict) or any(
         not smoke.get(flavor, {}).get('installed_and_launched') for flavor in ('mobile', 'quest')
-    ):
+    )) and not args.allow_incomplete_device_validation:
         raise SystemExit('Both signed release APKs require install/launch checks')
     for flavor in ('mobile', 'quest'):
         for suite, minimum in (('jvm', 117), ('android_15_emulator_compose', 19)):
             result = validation['tests'][flavor][suite]
-            if result.get('tests', 0) < minimum or any(result.get(key, 0) for key in ('failures', 'errors', 'skipped')):
+            incomplete = result.get('tests', 0) < minimum
+            failed = any(result.get(key, 0) for key in ('failures', 'errors', 'skipped'))
+            if failed or (incomplete and (suite == 'jvm' or not args.allow_incomplete_device_validation)):
                 raise SystemExit('Incomplete or failed validation suite')
         if any(validation['lint'][flavor].get(level, 0) for level in ('Error', 'Fatal')):
             raise SystemExit('Release lint errors')
@@ -103,8 +113,10 @@ def main():
         if git('tag', '--list', args.tag):
             raise SystemExit('Tag already exists; use a fresh rebuild tag')
         release = api(f'/repos/{REPO}/releases', 'POST', {
-            'tag_name': args.tag, 'target_commitish': commit, 'name': 'Ketvoice ' + args.version + ' — rebuilt APKs',
-            'body': (stage / 'RELEASE-NOTES.md').read_text(encoding='utf-8'), 'draft': True, 'prerelease': True})
+            'tag_name': args.tag, 'target_commitish': commit,
+            'name': 'Ketvoice ' + args.version + (' — rebuilt APKs' if 'rebuild' in args.tag.casefold() else ''),
+            'body': (stage / 'RELEASE-NOTES.md').read_text(encoding='utf-8'), 'draft': True,
+            'prerelease': any(marker in args.tag.casefold() for marker in ('beta', 'alpha', 'rc', 'rebuild'))})
     elif release['target_commitish'] != commit:
         raise SystemExit('Existing draft belongs to a different source commit')
     existing = {a['name']: a for a in release['assets']}
