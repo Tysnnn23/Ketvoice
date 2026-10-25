@@ -7,6 +7,16 @@
 
 ---
 
+## 3.0.3 — ADAPTIVE ARTIST BANNERS (versionCode 28)
+
+- Artist headers now adapt to the source image's measured aspect ratio. Short
+  panoramic banners no longer leave an oversized empty color block beneath them.
+- The image-to-color fade starts at the actual lower edge of the displayed
+  artwork. When a portrait source exists, it takes priority over a wide banner.
+- See [3.0.3 release notes](docs/releases/v3.0.3.md) for validation limits.
+
+---
+
 ## 3.0.2 — ARTIST IMAGE FRAMING (versionCode 27)
 
 - Artist profiles now prefer a wide header image when the catalog provides one.

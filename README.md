@@ -17,15 +17,15 @@
 
 ## Overview
 
-### 3.0.2 — artist image framing
+### 3.0.3 — adaptive artist banners
 
-Artist pages prefer wide header artwork when available and no longer crop square
-portraits to fill the whole screen. The larger header fades into a soft color
-sampled from the image, with the artist name and playback controls below it.
-This update is versionCode 27 for mobile and Quest. Download the signed
-[mobile APK](https://github.com/Tysnnn23/Ketvoice/releases/download/v3.0.2/Ketvoice-3.0.2.apk)
-or [Quest APK](https://github.com/Tysnnn23/Ketvoice/releases/download/v3.0.2/Ketvoice-3.0.2-Quest.apk).
-See the [3.0.2 release notes](docs/releases/v3.0.2.md) for validation limits.
+Artist profiles now adapt the hero to the real image proportions. A panoramic
+banner no longer ends above a large empty surface; a portrait is preferred when
+available. The image fades into a sampled color behind the artist name and
+controls. This update is versionCode 28 for mobile and Quest. Download the
+[mobile APK](https://github.com/Tysnnn23/Ketvoice/releases/download/v3.0.3/Ketvoice-3.0.3.apk)
+or [Quest APK](https://github.com/Tysnnn23/Ketvoice/releases/download/v3.0.3/Ketvoice-3.0.3-Quest.apk).
+See the [3.0.3 release notes](docs/releases/v3.0.3.md) for validation limits.
 
 Ketvoice is an independent Android music client whose visual language is inspired by Apple Music and iOS 26. French is the default interface language; Settings offers 11 languages across the app. It is not affiliated with Apple, YouTube, Spotify or any music provider.
 

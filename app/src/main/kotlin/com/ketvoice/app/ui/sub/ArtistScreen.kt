@@ -99,9 +99,7 @@ fun ArtistScreen() {
     val headerColor by androidx.compose.animation.animateColorAsState(
         lerp(ambience.color, Color.White, .58f), tween(Motion.duration(420)), label = "artist-header-color")
     BoxWithConstraints(Modifier.fillMaxSize().background(theme.background)) {
-    val heroHeight = if (maxWidth > 700.dp) (maxHeight * .88f).coerceAtLeast(450.dp)
-        else (maxHeight * .96f).coerceIn(530.dp, 850.dp)
-    val photoHeight = minOf(maxWidth * 1.12f, heroHeight * .7f)
+    val hero = artistHeroLayout(maxWidth, maxHeight, page?.heroAspectRatio ?: 1f)
     Column(Modifier.fillMaxSize()) {
         when {
             loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -120,26 +118,25 @@ fun ArtistScreen() {
                 val data = page!!
                 item {
 
-                    Box(Modifier.fillMaxWidth().height(heroHeight).background(headerColor)) {
+                    Box(Modifier.fillMaxWidth().height(hero.height).background(headerColor)) {
                         if (!data.artist.photo.isNullOrBlank()) {
                             AsyncImage(
                                 model = data.artist.photo,
                                 contentDescription = data.artist.name,
                                 contentScale = ContentScale.FillWidth,
                                 alignment = Alignment.TopCenter,
-                                modifier = Modifier.fillMaxWidth().height(photoHeight).align(Alignment.TopCenter)
+                                modifier = Modifier.fillMaxWidth().height(hero.photoHeight).align(Alignment.TopCenter)
                             )
                         } else {
-                            Box(Modifier.fillMaxWidth().height(photoHeight)
+                            Box(Modifier.fillMaxWidth().height(hero.photoHeight)
                                 .background(Brush.linearGradient(listOf(theme.card, theme.hairline))))
                         }
 
                         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(
                             0f to Color.Black.copy(alpha = .28f),
-                            .27f to Color.Transparent,
-                            .43f to headerColor.copy(alpha = .08f),
-                            .64f to headerColor.copy(alpha = .88f),
-                            .76f to headerColor
+                            hero.fadeStart to Color.Transparent,
+                            ((hero.fadeStart + hero.fadeEnd) / 2f) to headerColor.copy(alpha = .55f),
+                            hero.fadeEnd to headerColor
                         )))
 
                         Row(Modifier.fillMaxWidth().align(Alignment.TopCenter).statusBarsPadding()

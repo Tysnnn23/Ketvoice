@@ -4,13 +4,15 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 data class MusicArtist(val id: String, val name: String, val photo: String?)
+internal data class ArtistHeaderArtwork(val url: String, val aspectRatio: Float)
 data class ArtistPage(
     val artist: MusicArtist,
     val description: String,
     val tracks: List<Track>,
     val albums: List<Album>,
     val related: List<MusicArtist>,
-    val listeners: String = ""
+    val listeners: String = "",
+    val heroAspectRatio: Float = 1f
 )
 
 object YouTubeCatalog {
@@ -39,7 +41,8 @@ object YouTubeCatalog {
             ?: YouTubeJson.objects(raw, "musicVisualHeaderRenderer").firstOrNull() ?: return null
         val name = YouTubeJson.text(header.optJSONObject("title"))
         if (name.isBlank()) return null
-        val artist = MusicArtist(id, name, artistHeaderImage(header))
+        val hero = artistHeaderArtwork(header)
+        val artist = MusicArtist(id, name, hero?.url)
         val description = YouTubeJson.objects(raw, "musicDescriptionShelfRenderer").firstOrNull()
             ?.let { YouTubeJson.text(it.optJSONObject("description")) }.orEmpty()
         val listeners = YouTubeJson.text(header.optJSONObject("monthlyListenerCount"))
@@ -83,24 +86,35 @@ object YouTubeCatalog {
             }
         }
         return ArtistPage(artist, description, parseRows(raw, officialOnly = true).take(20),
-            releases.distinctBy { it.id }, related.distinctBy { it.id }.take(12), listeners)
+            releases.distinctBy { it.id }, related.distinctBy { it.id }.take(12), listeners,
+            hero?.aspectRatio ?: 1f)
     }
 
-    internal fun artistHeaderImage(header: JSONObject): String? {
-        val candidates = listOf("foregroundThumbnail", "thumbnail")
-            .flatMap { field ->
-                val images = header.optJSONObject(field) ?: return@flatMap emptyList()
-                YouTubeJson.objects(images, "thumbnail") + listOf(images)
+    internal fun artistHeaderArtwork(header: JSONObject): ArtistHeaderArtwork? {
+        fun images(field: String): List<JSONObject> {
+            val source = header.optJSONObject(field) ?: return emptyList()
+            return (YouTubeJson.objects(source, "thumbnail") + source).flatMap { node ->
+                val thumbnails = node.optJSONArray("thumbnails") ?: return@flatMap emptyList()
+                (0 until thumbnails.length()).mapNotNull { thumbnails.optJSONObject(it) }
             }
-        val wide = candidates.flatMap { source ->
-            val thumbnails = source.optJSONArray("thumbnails") ?: return@flatMap emptyList()
-            (0 until thumbnails.length()).mapNotNull { thumbnails.optJSONObject(it) }
-        }.filter { it.optInt("width") >= 600 && it.optInt("width") > it.optInt("height") * 1.25 }
-            .maxByOrNull { it.optInt("width") }
-            ?.optString("url")?.takeIf { it.startsWith("https://") }
-        return wide ?: YouTubeJson.image(header.optJSONObject("thumbnail"))
-            ?: YouTubeJson.image(header.optJSONObject("foregroundThumbnail"))
-            ?: YouTubeJson.image(header.optJSONObject("backgroundThumbnail"))
+        }
+        val images = listOf("foregroundThumbnail", "thumbnail").flatMap(::images)
+            .filter { image ->
+                image.optString("url").startsWith("https://") &&
+                    image.optInt("width") > 0 && image.optInt("height") > 0
+            }
+        val portrait = images.filter { image ->
+            image.optInt("width") >= 400 &&
+                image.optInt("height").toFloat() / image.optInt("width") >= .85f
+        }.maxByOrNull { it.optInt("width") }
+        val selected = portrait ?: images.maxByOrNull { it.optInt("width") }
+            ?: images("backgroundThumbnail").filter { image ->
+                image.optString("url").startsWith("https://") &&
+                    image.optInt("width") > 0 && image.optInt("height") > 0
+            }.maxByOrNull { it.optInt("width") }
+            ?: return null
+        return ArtistHeaderArtwork(selected.optString("url"),
+            selected.optInt("width").toFloat() / selected.optInt("height").coerceAtLeast(1))
     }
 
     suspend fun album(id: String): CatalogPage? {
