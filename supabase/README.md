@@ -5,6 +5,13 @@ The `supabase/functions` directory contains two Edge Functions:
 - `ketvoice-api` brokers music-source search, stream resolution, and Spotify Canvas for the Android app.
 - `ketvoice-content` serves published songs/lyrics and handles restricted publication writes.
 
+Open `admin/ketvoice-admin.html` locally for the owner-only desktop editor.
+The browser uses the public Supabase API key and a short-lived owner session;
+it never contains the service role key. `/admin/sources` in `ketvoice-content`
+manages the server-side `ketvoice_managed_sources` table. `ketvoice-api` reads
+its active rows for every search and stream resolution, then validates and
+fetches their manifests. Expiring manifest URLs must be replaced by the owner.
+
 ## Ketvoice API
 
 It keeps the sensitive provider values out of the APK:

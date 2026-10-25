@@ -28,6 +28,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
@@ -122,6 +123,12 @@ fun ArtistScreen() {
                         if (!data.artist.photo.isNullOrBlank()) {
                             AsyncImage(
                                 model = data.artist.photo,
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize().blur(32.dp)
+                            )
+                            AsyncImage(
+                                model = data.artist.photo,
                                 contentDescription = data.artist.name,
                                 contentScale = ContentScale.FillWidth,
                                 alignment = Alignment.TopCenter,
@@ -135,8 +142,8 @@ fun ArtistScreen() {
                         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(
                             0f to Color.Black.copy(alpha = .28f),
                             hero.fadeStart to Color.Transparent,
-                            ((hero.fadeStart + hero.fadeEnd) / 2f) to headerColor.copy(alpha = .55f),
-                            hero.fadeEnd to headerColor
+                            ((hero.fadeStart + hero.fadeEnd) / 2f) to headerColor.copy(alpha = .4f),
+                            1f to headerColor.copy(alpha = .88f)
                         )))
 
                         Row(Modifier.fillMaxWidth().align(Alignment.TopCenter).statusBarsPadding()

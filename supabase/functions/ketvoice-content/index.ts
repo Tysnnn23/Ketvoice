@@ -1,9 +1,10 @@
+import {manifest,remoteJson,fill} from "../_shared/managed_sources.ts";
 const ADMIN_EMAIL = "konnektsupport@gmail.com";
 const BUCKET = "ketvoice-public-media";
 const MAX_AUDIO = 25 * 1024 * 1024;
 const MAX_COVER = 4 * 1024 * 1024;
 const MAX_LYRICS = 1024 * 1024;
-const CORS = {"access-control-allow-origin":"*", "access-control-allow-headers":"authorization,apikey,content-type,x-ketvoice-admin", "access-control-allow-methods":"GET,POST,OPTIONS"};
+const CORS = {"access-control-allow-origin":"*", "access-control-allow-headers":"authorization,apikey,content-type,x-ketvoice-admin", "access-control-allow-methods":"GET,POST,PATCH,DELETE,OPTIONS"};
 type Row = Record<string, unknown>;
 class HttpError extends Error { constructor(public status: number, message: string) { super(message); } }
 const base = () => Deno.env.get("SUPABASE_URL")!.replace(/\/$/, "");
@@ -85,7 +86,7 @@ function track(row: Row): Row {
     streamURL:publicFile(String(row.audio_path)),format:row.format};
 }
 async function store(path: string, data: Uint8Array, mime: string): Promise<void> {
-  const res = await api(`/storage/v1/object/${BUCKET}/${path}`, {method:"POST",headers:{"Content-Type":mime,"Cache-Control":"31536000","x-upsert":"false"},body:data});
+  const res = await api(`/storage/v1/object/${BUCKET}/${path}`, {method:"POST",headers:{"Content-Type":mime,"Cache-Control":"31536000","x-upsert":"false"},body:new Uint8Array(data)});
   if(!res.ok) throw new HttpError(502,"Impossible de sauvegarder le fichier");
 }
 async function readAudio(file: FormDataEntryValue | null) {
@@ -120,26 +121,29 @@ async function ownedSong(id: string, owner: string): Promise<Row> {
   return rows[0];
 }
 async function revision(row: Row): Promise<string> {
-  const bytes=new TextEncoder().encode(JSON.stringify([row.audio_path,row.cover_path,row.duration_ms]));
+  const bytes=new TextEncoder().encode(JSON.stringify([row.audio_path,row.cover_path,row.duration_ms,row.title,row.artist,row.album]));
   return [...new Uint8Array(await crypto.subtle.digest("SHA-256",bytes))].map(n=>n.toString(16).padStart(2,"0")).join("");
 }
 async function updateSong(req: Request, owner: string): Promise<Response> {
   const bytes=await bounded(req,MAX_AUDIO+MAX_COVER+65536);
-  const form=await new Request(req.url,{method:"POST",headers:{"content-type":req.headers.get("content-type") || ""},body:bytes}).formData();
+  const form=await new Request(req.url,{method:"POST",headers:{"content-type":req.headers.get("content-type") || ""},body:new Uint8Array(bytes)}).formData();
   if([...form.keys()].some(k=>!["metadata","audio","cover"].includes(k)) || ["metadata","audio","cover"].some(k=>form.getAll(k).length>1))
     throw new HttpError(400,"Champs de modification invalides");
   let meta: Row;
   try { meta=JSON.parse(String(form.get("metadata") || "{}")); }
   catch { throw new HttpError(400,"Métadonnées invalides"); }
-  if(!meta || Array.isArray(meta) || typeof meta!=="object" || Object.keys(meta).some(k=>!["trackId","revision","durationMs","rightsConfirmed"].includes(k)))
+  if(!meta || Array.isArray(meta) || typeof meta!=="object" || Object.keys(meta).some(k=>!["trackId","revision","durationMs","rightsConfirmed","title","artist","album"].includes(k)))
     throw new HttpError(400,"Métadonnées invalides");
   if(meta.rightsConfirmed!==true) throw new HttpError(400,"Confirmez vos droits de publication");
   const id=uploadId(meta.trackId), old=await ownedSong(id,owner);
   if(meta.revision!==await revision(old)) throw new HttpError(409,"Ce titre a changé. Rouvrez sa modification.");
-  if(!form.has("audio") && !form.has("cover")) throw new HttpError(400,"Choisissez un nouvel audio ou une nouvelle pochette");
+  if(!form.has("audio") && !form.has("cover") && !["title","artist","album"].some(k=>Object.hasOwn(meta,k))) throw new HttpError(400,"Aucune modification demandée");
   const audio=form.has("audio") ? await readAudio(form.get("audio")) : null;
   const image=await readCover(form.get("cover"));
   const update: Row={};
+  if(Object.hasOwn(meta,"title")) update.title=field(meta.title,"Titre");
+  if(Object.hasOwn(meta,"artist")) update.artist=field(meta.artist,"Artiste");
+  if(Object.hasOwn(meta,"album")) update.album=field(meta.album,"Album",true);
   if(audio) { update.duration_ms=duration(meta.durationMs); update.format=audio.ext; update.bytes=audio.size; }
   const prefix=`${id}/${crypto.randomUUID()}`, uploaded:string[]=[];
   let patchAttempted=false, definitelyUncommitted=false;
@@ -148,7 +152,7 @@ async function updateSong(req: Request, owner: string): Promise<Response> {
     if(image) { const path=`${prefix}/cover.${image.ext}`;await store(path,image.data,image.mime);uploaded.push(path);update.cover_path=path; }
     const coverFilter=old.cover_path ? `eq.${encodeURIComponent(String(old.cover_path))}` : "is.null";
     patchAttempted=true;
-    const result=await database(`ketvoice_tracks?id=eq.${id}&created_by=eq.${encodeURIComponent(owner)}&published=eq.true&audio_path=eq.${encodeURIComponent(String(old.audio_path))}&cover_path=${coverFilter}`,
+    const result=await database(`ketvoice_tracks?id=eq.${id}&created_by=eq.${encodeURIComponent(owner)}&published=eq.true&audio_path=eq.${encodeURIComponent(String(old.audio_path))}&cover_path=${coverFilter}&title=eq.${encodeURIComponent(String(old.title))}&artist=eq.${encodeURIComponent(String(old.artist))}&album=eq.${encodeURIComponent(String(old.album))}`,
       {method:"PATCH",headers:{Prefer:"return=representation"},body:JSON.stringify(update)});
     if(!result.length) { definitelyUncommitted=true;throw new HttpError(409,"Ce titre a changé. Rouvrez sa modification."); }
 
@@ -161,7 +165,7 @@ async function updateSong(req: Request, owner: string): Promise<Response> {
 }
 async function publishSong(req: Request, owner: string): Promise<Response> {
   const bytes = await bounded(req, MAX_AUDIO + MAX_COVER + MAX_LYRICS + 65536);
-  const form = await new Request(req.url,{method:"POST",headers:{"content-type":req.headers.get("content-type") || ""},body:bytes}).formData();
+  const form = await new Request(req.url,{method:"POST",headers:{"content-type":req.headers.get("content-type") || ""},body:new Uint8Array(bytes)}).formData();
   const meta = JSON.parse(String(form.get("metadata") || "{}"));
   if (meta.rightsConfirmed !== true) throw new HttpError(400,"Confirmez vos droits de publication");
   const title=field(meta.title,"Titre"), artist=field(meta.artist,"Artiste"), album=field(meta.album,"Album",true);
@@ -218,6 +222,61 @@ async function publicLyrics(url: URL): Promise<Response> {
   }
   return json({source:"Ketvoice API",versions:rows});
 }
+async function sources(req: Request, owner: string, url: URL): Promise<Response> {
+  if(req.method==="GET") {
+    const rows=await database(`ketvoice_managed_sources?created_by=eq.${encodeURIComponent(owner)}&select=id,name,manifest_url,enabled,updated_at&order=created_at.desc`);
+    return json({sources:rows});
+  }
+  const id=url.searchParams.get("id") || "";
+  if(req.method!=="POST" && !/^[0-9a-f-]{36}$/.test(id)) throw new HttpError(400,"Identifiant invalide");
+  if(req.method==="DELETE") {
+    const rows=await database(`ketvoice_managed_sources?id=eq.${id}&created_by=eq.${encodeURIComponent(owner)}`,
+      {method:"DELETE",headers:{Prefer:"return=representation"}});
+    if(!rows.length) throw new HttpError(404,"Source introuvable");
+    return json({deleted:true});
+  }
+  let data: Row;
+  try {data=JSON.parse(new TextDecoder("utf-8",{fatal:true}).decode(await bounded(req,8192)));}
+  catch(error) {if(error instanceof HttpError) throw error;throw new HttpError(400,"Données invalides");}
+  if(!data || Array.isArray(data) || typeof data!=="object" || Object.keys(data).some(k=>!["name","manifest_url","enabled"].includes(k)))
+    throw new HttpError(400,"Champs invalides");
+  if(req.method!=="POST" && req.method!=="PATCH") throw new HttpError(405,"Méthode invalide");
+  const update: Row={};
+  if(Object.hasOwn(data,"name")) {
+    const name=String(data.name ?? "").trim();
+    if(!name || name.length>100) throw new HttpError(400,"Nom invalide");
+    update.name=name;
+  }
+  if(Object.hasOwn(data,"enabled")) {
+    if(typeof data.enabled!=="boolean") throw new HttpError(400,"État invalide");
+    update.enabled=data.enabled;
+  }
+  if(Object.hasOwn(data,"manifest_url")) {
+    const candidate=String(data.manifest_url ?? "").trim();
+    if(candidate.length>2048) throw new HttpError(400,"URL trop longue");
+    try {
+      const config=await manifest(candidate);
+      const result=await remoteJson(fill(config.search,"query","test"));
+      if(!Array.isArray(result) && (!result || typeof result!=="object" ||
+          !["tracks","results","data","songs","items","streams"].some(k=>
+            Array.isArray((result as Row)[k]) || (result as Row)[k] && typeof (result as Row)[k]==="object")))
+        throw new Error("Recherche invalide");
+    } catch {throw new HttpError(400,"Manifeste ou recherche de test inaccessible");}
+    update.manifest_url=candidate;
+  }
+  if(req.method==="POST") {
+    if(!update.name || !update.manifest_url) throw new HttpError(400,"Nom et manifeste requis");
+    update.created_by=owner;
+    const rows=await database("ketvoice_managed_sources",{method:"POST",headers:{Prefer:"return=representation"},body:JSON.stringify(update)});
+    return json({source:rows[0]},201);
+  }
+  if(!Object.keys(update).length) throw new HttpError(400,"Aucune modification");
+  update.updated_at=new Date().toISOString();
+  const rows=await database(`ketvoice_managed_sources?id=eq.${id}&created_by=eq.${encodeURIComponent(owner)}`,
+    {method:"PATCH",headers:{Prefer:"return=representation"},body:JSON.stringify(update)});
+  if(!rows.length) throw new HttpError(404,"Source introuvable");
+  return json({source:rows[0]});
+}
 Deno.serve(async(req:Request)=>{
   if(req.method==="OPTIONS") return new Response(null,{status:204,headers:CORS});
   const url=new URL(req.url), path=(url.pathname.split("/ketvoice-content")[1] || "/").replace(/\/+$/,"") || "/";
@@ -238,6 +297,7 @@ Deno.serve(async(req:Request)=>{
     if(path.startsWith("/admin/")) {
       const owner=await administrator(req);
       if(req.method==="GET" && path==="/admin/session") return json({allowed:true});
+      if(path==="/admin/sources") return await sources(req,owner,url);
       if(req.method==="GET" && path==="/admin/song") {
         const row=await ownedSong(uploadId(url.searchParams.get("id")),owner);
         return json({track:track(row),revision:await revision(row)});

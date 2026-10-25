@@ -17,6 +17,18 @@
 
 ## Overview
 
+### 3.0.4 — desktop studio and managed sources
+
+Open [`admin/ketvoice-admin.html`](admin/ketvoice-admin.html) on a computer
+to publish your own music and lyrics, edit your imported tracks and covers,
+or manage Ketvoice API manifest sources. Only the verified owner account can
+write; server-side checks remain mandatory. Existing installations fetch
+content and sources on their next API requests. Artist headers now have an
+image-derived backdrop beneath short banners. This is versionCode 29 for
+mobile and Quest. Download the signed [mobile APK](https://github.com/Tysnnn23/Ketvoice/releases/download/v3.0.4/Ketvoice-3.0.4.apk)
+or [Quest APK](https://github.com/Tysnnn23/Ketvoice/releases/download/v3.0.4/Ketvoice-3.0.4-Quest.apk).
+See [3.0.4 release notes](docs/releases/v3.0.4.md).
+
 ### 3.0.3 — adaptive artist banners
 
 Artist profiles now adapt the hero to the real image proportions. A panoramic

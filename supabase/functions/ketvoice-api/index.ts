@@ -120,6 +120,52 @@ async function addonBases(): Promise<Array<{ tag: string; base: string; label: s
   }));
 }
 
+async function managedSources(): Promise<Source[]> {
+  const root = Deno.env.get("SUPABASE_URL")?.replace(/\/$/,"");
+  const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if(!root || !key) return [];
+  const response = await fetch(`${root}/rest/v1/ketvoice_managed_sources?enabled=eq.true&select=id,name,manifest_url,enabled&limit=30`,
+    {headers:{apikey:key,Authorization:`Bearer ${key}`},signal:AbortSignal.timeout(5000)});
+  if(!response.ok) throw new Error("Sources indisponibles");
+  return await response.json();
+}
+
+async function searchManaged(source: Source, query: string): Promise<Json[]> {
+  const config=await manifest(source.manifest_url);
+  const data=await remoteJson(fill(config.search,"query",query));
+  return firstArray(data).map(item=>normaliseTrack("um",item)).filter((item):item is Json=>!!item)
+    .map(item=>({ ...item, id:`kv:um:managed:${source.id}:${item.addonId}`,
+      addonId:`managed:${source.id}:${item.addonId}`,source:"um",sourceLabel:source.name }));
+}
+
+async function streamManaged(source: Source, id: string, title: string, artist: string): Promise<Json | null> {
+  const config=await manifest(source.manifest_url);
+  let trackId=id;
+  if(!trackId && title) {
+    const match=bestAddonMatch(await searchManaged(source,`${title} ${artist}`),title,artist);
+    trackId=String(match?.addonId ?? "").replace(new RegExp(`^managed:${source.id}:`),"");
+  }
+  if(!trackId) return null;
+  const target=await publicUrl(fill(config.stream,"id",trackId));
+  const response=await fetch(target,{redirect:"manual",signal:AbortSignal.timeout(12000)});
+  if(!response.ok || Number(response.headers.get("content-length") || 0)>65536) return null;
+  const raw=(await response.text()).slice(0,65536);
+  let data: unknown=raw;
+  try {data=JSON.parse(raw);} catch {data=raw;}
+  const obj=data && typeof data==="object" ? data as Json : {};
+  const nested=obj.data && typeof obj.data==="object" ? obj.data as Json : {};
+  const options=firstArray(obj.sources ?? obj.streams ?? nested.sources ?? nested.streams);
+  const first=options.find(item=>typeof item==="string" || item && typeof item==="object");
+  const candidate=first && typeof first==="object" ? first as Json : {};
+  const link=text(obj.url ?? obj.stream ?? obj.link ?? obj.audio ?? nested.url ?? nested.stream ??
+    candidate.url ?? candidate.stream ?? candidate.link ?? candidate.audio ??
+    (typeof first==="string" ? first : typeof data==="string" ? data : ""));
+  if(!link) return null;
+  const stream=link.startsWith("/") ? new URL(link,target).toString() : link;
+  if(!stream.startsWith("https://")) return null;
+  return {url:stream,format:text(obj.format ?? nested.format) ?? inferFormat(stream),quality:"Haute qualité",source:`src-${source.id}`,addonId:trackId};
+}
+
 function text(value: unknown): string | null {
   if (typeof value === "string" && value.trim()) return value.trim();
   if (typeof value === "number") return String(value);
@@ -387,7 +433,7 @@ async function totp(key: Uint8Array): Promise<string> {
   view.setUint32(4, counter);
   const cryptoKey = await crypto.subtle.importKey(
     "raw",
-    key,
+    new Uint8Array(key),
     { name: "HMAC", hash: "SHA-1" },
     false,
     ["sign"],
@@ -578,8 +624,11 @@ function sourceManifest(): Response {
 async function searchRoute(url: URL): Promise<Response> {
   const q = (url.searchParams.get("q") ?? "").trim();
   if (q.length < 2) return json({ name: "Ketvoice API", tracks: [] });
-  const bases = await addonBases();
-  const results = await Promise.allSettled(bases.map((item) => searchAddon(item.tag, item.base, q)));
+  const [bases,sources] = await Promise.all([addonBases(),managedSources().catch(()=>[])]);
+  const results = await Promise.allSettled([
+    ...bases.map((item) => searchAddon(item.tag, item.base, q)),
+    ...sources.map((item) => searchManaged(item,q)),
+  ]);
   const tracks = results.flatMap((result) => result.status === "fulfilled" ? result.value : []);
   const unique = new Map<string, Json>();
   for (const track of tracks) {
@@ -594,6 +643,19 @@ async function streamRoute(url: URL): Promise<Response> {
   const id = (url.searchParams.get("id") ?? "").trim();
   const title = (url.searchParams.get("title") ?? "").trim();
   const artist = (url.searchParams.get("artist") ?? "").trim();
+  const managedId=/^managed:([0-9a-f-]{36}):(.*)$/s.exec(id);
+  if(source==="um" && managedId) {
+    const item=(await managedSources()).find(row=>row.id===managedId[1]);
+    if(!item) return json({error:"Source inconnue"},400);
+    const stream=await streamManaged(item,managedId[2],title,artist).catch(()=>null);
+    return stream ? json(stream) : json({error:"Flux indisponible"},404);
+  }
+  if(/^src-[0-9a-f-]{36}$/.test(source)) {
+    const item=(await managedSources()).find(row=>`src-${row.id}`===source);
+    if(!item) return json({error:"Source inconnue"},400);
+    const stream=await streamManaged(item,id,title,artist).catch(()=>null);
+    return stream ? json(stream) : json({error:"Flux indisponible"},404);
+  }
   const item = (await addonBases()).find((row) => row.tag === source);
   if (!item) return json({ error: "Source inconnue" }, 400);
   const stream = await streamAddon(source, item.base, id, title, artist);
@@ -627,3 +689,4 @@ Deno.serve(async (req) => {
     return json({ error: "Erreur interne Ketvoice API" }, 500);
   }
 });
+import {manifest,remoteJson,fill,publicUrl, type Source} from "../_shared/managed_sources.ts";

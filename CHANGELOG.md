@@ -7,6 +7,18 @@
 
 ---
 
+## 3.0.4 — STUDIO, MANAGED SOURCES AND ARTIST BACKDROP (versionCode 29)
+
+- Add a local desktop HTML studio for owner-authenticated publishing, imported
+  song edits, cover replacement, lyrics and managed Ketvoice API sources.
+- The API reloads active managed sources on searches and stream requests;
+  deleting, disabling or changing a source needs no APK installation or alert.
+- Artist pages extend the image into a blurred backdrop beneath the banner,
+  avoiding a blank block when only a short landscape image is available.
+- See [3.0.4 release notes](docs/releases/v3.0.4.md).
+
+---
+
 ## 3.0.3 — ADAPTIVE ARTIST BANNERS (versionCode 28)
 
 - Artist headers now adapt to the source image's measured aspect ratio. Short

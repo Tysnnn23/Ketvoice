@@ -243,6 +243,11 @@ object MusicApi {
             val stream = PublicationApi.stream(track)
             return@coroutineScope Streams(fast = stream, best = stream, artwork = track.coverUrl, album = track.album, durationMs = track.durationMs)
         }
+        if (track.addon?.startsWith("src-") == true) {
+            val stream = addonStream(track, track.addon)
+            return@coroutineScope Streams(fast = stream, best = stream, artwork = track.coverUrl,
+                album = track.album, durationMs = track.durationMs)
+        }
         val fast = async { addonStream(track, "um") }
         val best = async { flacStream(track) }
         val custom = async { runCatching { CustomSources.streamForTrack(track, forDownload = true) }.getOrNull() }

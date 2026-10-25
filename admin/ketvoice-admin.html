@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Ketvoice Studio</title>
+<style>
+:root{font:16px/1.55 system-ui,-apple-system,Segoe UI,sans-serif;color:#f5f3f9;background:#0d0c12}*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 15% 0%,#312443 0,transparent 47%),#0d0c12;min-height:100vh}header,main{max-width:1120px;margin:auto;padding:24px}header{display:flex;align-items:center;justify-content:space-between;gap:20px;border-bottom:1px solid #ffffff18}.brand{font-size:25px;font-weight:800;letter-spacing:-1px}.brand span{color:#dcaaef}.eyebrow{text-transform:uppercase;letter-spacing:.18em;font-size:11px;font-weight:750;color:#bb91d6}h1{font-size:clamp(28px,4vw,46px);line-height:1.1;letter-spacing:-.04em;margin:14px 0 12px}h2{font-size:22px;letter-spacing:-.025em;margin:0 0 18px}h3{margin:0 0 8px}p{color:#b8b2c3;margin:0 0 18px}main{padding-top:48px;padding-bottom:80px}.intro{max-width:730px}.layout{display:grid;grid-template-columns:220px minmax(0,1fr);gap:26px;margin-top:36px}.panel{background:#191720;border:1px solid #ffffff18;border-radius:20px;padding:28px;box-shadow:0 15px 45px #0003}.nav{align-self:start;display:grid;gap:8px}.nav button{text-align:left;background:transparent;color:#bab5c4;border:0;padding:14px;border-radius:12px}.nav button[aria-selected=true]{background:#382746;color:#fff}button{font:inherit;cursor:pointer;border-radius:10px;border:1px solid #ffffff26;padding:11px 17px;background:#322b3e;color:#fff;font-weight:650}button.primary{border:0;background:#d3a1ec;color:#23142e}button:disabled{opacity:.55;cursor:wait}button:hover:not(:disabled){filter:brightness(1.15)}button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid #eac4fb;outline-offset:2px}label{display:block;color:#e6deed;font-size:13px;font-weight:700;margin:17px 0 7px}input,textarea{width:100%;font:inherit;color:#fff;background:#100f16;border:1px solid #514859;border-radius:10px;padding:12px}textarea{min-height:150px;resize:vertical}.row{display:flex;gap:12px;align-items:end;flex-wrap:wrap}.row>div{flex:1;min-width:180px}.row button{flex:none}form button{margin-top:20px}.hint{font-size:13px;color:#9f99ab}.status{min-height:24px;color:#dbc0ef;margin:12px 0}section[hidden],.nav[hidden]{display:none}.card{border:1px solid #ffffff20;border-radius:12px;padding:16px;margin:12px 0;background:#211e2a;overflow-wrap:anywhere}.card strong{display:block}.card small{color:#bcb3c6}.card button{margin:8px 8px 0 0}.danger{color:#ffb5c1}.check{display:flex;gap:9px;align-items:center}.check input{width:auto}.divider{border:0;border-top:1px solid #ffffff18;margin:26px 0}@media(max-width:760px){.layout{grid-template-columns:1fr}.nav{grid-template-columns:repeat(2,1fr)}.panel{padding:20px}header,main{padding-left:18px;padding-right:18px}}
+.layout:has(.nav[hidden]){grid-template-columns:minmax(0,720px)}
+</style>
+</head>
+<body>
+<header><div class="brand">ketvoice<span>.</span> studio</div><div id="identity" class="hint">Session fermée</div></header>
+<main>
+<div class="intro"><div class="eyebrow">Espace de publication privé</div><h1>La musique, à votre rythme.</h1><p>Publiez vos titres, gérez leurs pochettes et paroles, et pilotez les sources de Ketvoice API. Les changements de contenu sont récupérés aux prochaines requêtes, sans notification.</p></div>
+<div class="layout">
+<nav class="nav" id="navigation" aria-label="Sections" hidden><button data-view="publish" aria-selected="true">01 &nbsp; Ajouter</button><button data-view="edit">02 &nbsp; Modifier</button><button data-view="lyrics">03 &nbsp; Paroles</button><button data-view="sources">04 &nbsp; Sources API</button><button id="logout">Déconnexion</button></nav>
+<div>
+<div role="status" aria-live="polite" id="status" class="status"></div>
+<section id="login" class="panel"><h2>Connexion propriétaire</h2><p>Un lien ou un code de connexion est envoyé à l’adresse autorisée. Aucune clé privée n’est enregistrée sur cet ordinateur.</p><button id="send" class="primary">Envoyer le lien de connexion</button><label for="code">Code à 6 chiffres ou lien reçu par e-mail</label><input id="code" autocomplete="one-time-code" placeholder="Collez le code ou le lien"><button id="verify">Se connecter</button><p class="hint" style="margin-top:20px">Si le lien ouvre l’application mobile, copiez son URL ou utilisez le code de l’e-mail. La session de cette page est perdue à sa fermeture.</p></section>
+<section id="publish" class="panel" hidden><h2>Ajouter une musique</h2><p>Uniquement des médias dont vous possédez les droits. Audio 25 Mo maximum ; pochette 4 Mo ; paroles LRC ou TTML 1 Mo.</p><form id="publishForm"><div class="row"><div><label for="newTitle">Titre</label><input id="newTitle" required maxlength="200"></div><div><label for="newArtist">Artiste</label><input id="newArtist" required maxlength="200"></div></div><div class="row"><div><label for="newAlbum">Album</label><input id="newAlbum" maxlength="200"></div><div><label for="newDuration">Durée (secondes)</label><input id="newDuration" type="number" min="0" max="86400" value="0" required></div></div><label for="newAudio">Audio</label><input id="newAudio" type="file" accept=".mp3,.m4a,.aac,.flac,.wav,.ogg,.opus" required><label for="newCover">Pochette (facultatif)</label><input id="newCover" type="file" accept="image/jpeg,image/png,image/webp"><label for="newLyrics">Paroles (facultatif)</label><input id="newLyrics" type="file" accept=".lrc,.ttml"><label class="check"><input id="newRights" type="checkbox" required> Je confirme détenir les droits de publication.</label><button class="primary">Publier la musique</button></form></section>
+<section id="edit" class="panel" hidden><h2>Rechercher et modifier</h2><p>La recherche affiche les titres publiés ; seule une musique importée par votre compte peut être modifiée. Les titres du catalogue général ne sont pas éditables.</p><div class="row"><div><label for="search">Titre ou artiste</label><input id="search" placeholder="Rechercher un titre" maxlength="160"></div><button id="searchButton">Rechercher</button></div><div id="results"></div><form id="editForm" hidden><hr class="divider"><h3 id="editingName"></h3><div class="row"><div><label for="editTitle">Titre</label><input id="editTitle" required maxlength="200"></div><div><label for="editArtist">Artiste</label><input id="editArtist" required maxlength="200"></div></div><label for="editAlbum">Album</label><input id="editAlbum" maxlength="200"><label for="editAudio">Remplacer l’audio (facultatif)</label><input id="editAudio" type="file" accept=".mp3,.m4a,.aac,.flac,.wav,.ogg,.opus"><label for="editCover">Remplacer la pochette (facultatif)</label><input id="editCover" type="file" accept="image/jpeg,image/png,image/webp"><div class="row"><div><label for="editDuration">Durée (secondes, si nouvel audio)</label><input id="editDuration" type="number" min="0" max="86400"></div></div><label class="check"><input id="editRights" type="checkbox" required> Je confirme détenir les droits de publication.</label><button class="primary">Enregistrer les changements</button></form></section>
+<section id="lyrics" class="panel" hidden><h2>Importer des paroles</h2><p>Publiez une version LRC ou TTML pour une musique, y compris un titre du catalogue. Une nouvelle version est ajoutée sans modifier l’audio.</p><form id="lyricsForm"><label for="lyricId">Identifiant du titre</label><input id="lyricId" required maxlength="180" placeholder="Sélectionnez un résultat de la recherche"><div class="row"><div><label for="lyricTitle">Titre</label><input id="lyricTitle" required maxlength="200"></div><div><label for="lyricArtist">Artiste</label><input id="lyricArtist" required maxlength="200"></div></div><label for="lyricFile">Fichier LRC ou TTML</label><input id="lyricFile" type="file" accept=".lrc,.ttml" required><label class="check"><input id="lyricRights" type="checkbox" required> Je confirme détenir les droits de publication.</label><button class="primary">Publier les paroles</button></form></section>
+<section id="sources" class="panel" hidden><h2>Sources Ketvoice API</h2><p>Ajoutez des manifestes HTTPS pour enrichir la recherche de musique. Les sources actives sont relues par l’API à chaque recherche et lecture. Une URL expirée peut être remplacée, désactivée ou supprimée.</p><form id="sourceForm"><label for="sourceName">Nom</label><input id="sourceName" required maxlength="100" placeholder="Nouvelle source"><label for="sourceUrl">URL du manifeste</label><input id="sourceUrl" type="url" required maxlength="2048" placeholder="https://exemple.fr/e/.../manifest.json"><button class="primary">Ajouter la source</button></form><hr class="divider"><h3>Sources configurées</h3><div id="sourceList"></div></section>
+</div></div></main>
+<script>
+(() => {
+  const root='https://xodklrunqlzyeiqtovgx.supabase.co';
+  const key='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhvZGtscnVucWx6eWVpcXRvdmd4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI1ODgzNjgsImV4cCI6MjEwODE2NDM2OH0.V-F8ZhM21Ht1yRV5FXOuZcddufvY8aIW5kclb-F2zao';
+  const email='konnektsupport@gmail.com';
+  const $=id=>document.getElementById(id);
+  let session=null,editable=null;
+  function notice(message,error=false){$('status').textContent=message;$('status').style.color=error?'#ffb5c1':'#dbc0ef';}
+  async function call(path,{method='GET',body,admin=false,auth=false}={}){
+    const headers={apikey:key,Authorization:`Bearer ${key}`};
+    if(admin) headers['x-ketvoice-admin']=session.access_token;
+    if(auth) headers.Authorization=`Bearer ${session.access_token}`;
+    if(body && !(body instanceof FormData)) headers['Content-Type']='application/json';
+    let response;
+    try{response=await fetch(root+path,{method,headers,body:body instanceof FormData?body:body?JSON.stringify(body):undefined,cache:'no-store'});}
+    catch{throw Error('Connexion impossible. Vérifiez votre réseau et réessayez.');}
+    const result=await response.json().catch(()=>({}));
+    if(!response.ok) throw Error(result.error_description||result.msg||result.error||`Erreur ${response.status}`);
+    return result;
+  }
+  async function token(){
+    if(!session) throw Error('Reconnectez-vous.');
+    if(Date.now()<session.expiresAt-60000) return;
+    const next=await call('/auth/v1/token?grant_type=refresh_token',{method:'POST',body:{refresh_token:session.refresh_token}});
+    session={...next,expiresAt:Date.now()+next.expires_in*1000};
+  }
+  async function content(path,options={}){if(options.admin) await token();return call('/functions/v1/ketvoice-content'+path,options);}
+  async function run(button,work){button.disabled=true;notice('Traitement en cours…');try{await work();}catch(error){notice(error.message,true);}finally{button.disabled=false;}}
+  function view(name){for(const section of document.querySelectorAll('main section'))section.hidden=section.id!==name;for(const button of document.querySelectorAll('.nav [data-view]'))button.setAttribute('aria-selected',String(button.dataset.view===name));if(name==='sources') loadSources();}
+  function signedIn(){ $('login').hidden=true;$('navigation').hidden=false;$('identity').textContent=email;view('publish');notice('Connecté au compte propriétaire.');}
+  $('send').onclick=event=>run(event.currentTarget,async()=>{await call('/auth/v1/otp',{method:'POST',body:{email,create_user:false}});notice('E-mail envoyé. Copiez le code ou le lien ici.');});
+  $('verify').onclick=event=>run(event.currentTarget,async()=>{
+    const value=$('code').value.trim();let payload;
+    if(/^\d{6,8}$/.test(value))payload={email,token:value,type:'email'};
+    else{let url;try{url=new URL(value);}catch{throw Error('Code ou lien invalide.');}
+      if(url.protocol!=='https:'||url.host!=='xodklrunqlzyeiqtovgx.supabase.co'||url.pathname!=='/auth/v1/verify')throw Error('Lien de connexion invalide.');
+      const params=new URLSearchParams(url.search);const fragment=new URLSearchParams(url.hash.slice(1));
+      const hash=params.get('token_hash')||params.get('token')||fragment.get('token_hash');
+      if(!hash)throw Error('Ce lien ne contient pas de jeton de vérification. Utilisez le code reçu par e-mail.');
+      const type=params.get('type')||fragment.get('type');
+      if(!/^[A-Za-z0-9_-]{20,200}$/.test(hash)||!['email','magiclink','signup'].includes(type))throw Error('Lien de connexion invalide.');
+      payload={token_hash:hash,type};
+    }
+    const response=await call('/auth/v1/verify',{method:'POST',body:payload});
+    if(!response.access_token||!response.refresh_token)throw Error('La session n’a pas été créée.');
+    session={...response,expiresAt:Date.now()+response.expires_in*1000};
+    try{await content('/admin/session',{admin:true});}catch(error){session=null;throw error;}
+    $('code').value='';signedIn();
+  });
+  $('logout').onclick=async()=>{if(session)await call('/auth/v1/logout',{method:'POST',auth:true}).catch(()=>{});session=null;editable=null;$('navigation').hidden=true;$('identity').textContent='Session fermée';view('login');notice('Déconnecté.');};
+  document.querySelectorAll('.nav [data-view]').forEach(button=>button.onclick=()=>view(button.dataset.view));
+  function file(id){return $(id).files[0]||null;}
+  function formData(meta,entries){const data=new FormData();data.append('metadata',JSON.stringify(meta));for(const [name,input] of entries){const item=file(input);if(item)data.append(name,item,item.name);}return data;}
+  $('publishForm').onsubmit=event=>{event.preventDefault();run(event.submitter,async()=>{
+    const body=formData({title:$('newTitle').value.trim(),artist:$('newArtist').value.trim(),album:$('newAlbum').value.trim(),durationMs:Number($('newDuration').value)*1000,rightsConfirmed:$('newRights').checked},[['audio','newAudio'],['cover','newCover'],['lyrics','newLyrics']]);
+    await content('/admin/song',{method:'POST',body,admin:true});$('publishForm').reset();notice('Musique publiée. Elle apparaîtra aux prochaines recherches.');
+  });};
+  function entry(track){const card=document.createElement('div');card.className='card';const title=document.createElement('strong');title.textContent=`${track.title} — ${track.artist}`;card.append(title);const meta=document.createElement('small');meta.textContent=track.id;card.append(meta);
+    const lyric=document.createElement('button');lyric.textContent='Importer des paroles';lyric.onclick=()=>{$('lyricId').value=track.id;$('lyricTitle').value=track.title;$('lyricArtist').value=track.artist;view('lyrics');};card.append(lyric);
+    if(track.id.startsWith('kv:upload:')){const edit=document.createElement('button');edit.textContent='Modifier mon import';edit.onclick=()=>run(edit,async()=>{const result=await content('/admin/song?id='+encodeURIComponent(track.id),{admin:true});editable=result;$('editingName').textContent=result.track.title;$('editTitle').value=result.track.title;$('editArtist').value=result.track.artist;$('editAlbum').value=result.track.album||'';$('editDuration').value=Number(result.track.durationMs||0)/1000;$('editForm').hidden=false;notice('Titre chargé.');});card.append(edit);}return card;}
+  $('searchButton').onclick=event=>run(event.currentTarget,async()=>{const q=$('search').value.trim();if(q.length<2)throw Error('Entrez au moins deux caractères.');const data=await content('/search?q='+encodeURIComponent(q));$('results').replaceChildren(...data.tracks.map(entry));$('editForm').hidden=true;notice(`${data.tracks.length} résultat(s).`);});
+  $('search').onkeydown=event=>{if(event.key==='Enter'){$('searchButton').click();event.preventDefault();}};
+  $('editForm').onsubmit=event=>{event.preventDefault();run(event.submitter,async()=>{if(!editable)throw Error('Choisissez un titre.');const meta={trackId:editable.track.id,revision:editable.revision,rightsConfirmed:$('editRights').checked,title:$('editTitle').value.trim(),artist:$('editArtist').value.trim(),album:$('editAlbum').value.trim(),durationMs:Number($('editDuration').value)*1000};const result=await content('/admin/song/update',{method:'POST',body:formData(meta,[['audio','editAudio'],['cover','editCover']]),admin:true});editable={track:result.track,revision:result.revision};$('editAudio').value='';$('editCover').value='';$('editRights').checked=false;notice('Musique modifiée. Les prochaines requêtes utiliseront cette version.');});};
+  $('lyricsForm').onsubmit=event=>{event.preventDefault();run(event.submitter,async()=>{const selected=file('lyricFile');if(selected.size>1048576)throw Error('Fichier trop volumineux.');const format=selected.name.toLowerCase().split('.').pop();if(!['lrc','ttml'].includes(format))throw Error('Fichier LRC ou TTML requis.');await content('/admin/lyrics',{method:'POST',admin:true,body:{trackId:$('lyricId').value.trim(),title:$('lyricTitle').value.trim(),artist:$('lyricArtist').value.trim(),durationMs:0,format,content:await selected.text(),rightsConfirmed:$('lyricRights').checked}});$('lyricsForm').reset();notice('Paroles publiées.');});};
+  async function loadSources(){try{const data=await content('/admin/sources',{admin:true});$('sourceList').replaceChildren(...data.sources.map(sourceCard));if(!data.sources.length)$('sourceList').textContent='Aucune source ajoutée.';}catch(error){notice(error.message,true);}}
+  function sourceCard(source){const card=document.createElement('div');card.className='card';const title=document.createElement('strong');title.textContent=source.name+' · '+(source.enabled?'Active':'Désactivée');card.append(title);const url=document.createElement('small');url.textContent=source.manifest_url;card.append(url);
+    const toggle=document.createElement('button');toggle.textContent=source.enabled?'Désactiver':'Activer';toggle.onclick=()=>run(toggle,async()=>{await content('/admin/sources?id='+encodeURIComponent(source.id),{method:'PATCH',admin:true,body:{enabled:!source.enabled}});await loadSources();notice('État de la source modifié.');});card.append(toggle);
+    const edit=document.createElement('button');edit.textContent='Modifier';edit.onclick=()=>{const name=prompt('Nom de la source',source.name);if(name===null)return;const url=prompt('URL du manifeste',source.manifest_url);if(url===null)return;run(edit,async()=>{await content('/admin/sources?id='+encodeURIComponent(source.id),{method:'PATCH',admin:true,body:{name,manifest_url:url}});await loadSources();notice('Source modifiée.');});};card.append(edit);
+    const remove=document.createElement('button');remove.textContent='Supprimer';remove.className='danger';remove.onclick=()=>{if(!confirm(`Supprimer ${source.name} ?`))return;run(remove,async()=>{await content('/admin/sources?id='+encodeURIComponent(source.id),{method:'DELETE',admin:true});await loadSources();notice('Source supprimée.');});};card.append(remove);return card;}
+  $('sourceForm').onsubmit=event=>{event.preventDefault();run(event.submitter,async()=>{await content('/admin/sources',{method:'POST',admin:true,body:{name:$('sourceName').value.trim(),manifest_url:$('sourceUrl').value.trim(),enabled:true}});$('sourceForm').reset();await loadSources();notice('Source ajoutée et testée.');});};
+})();
+</script>
+</body>
+</html>
