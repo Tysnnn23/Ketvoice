@@ -10,15 +10,24 @@ def run(*arguments, timeout=120):
     return subprocess.check_output(["xcrun", "simctl", *arguments], text=True, timeout=timeout).strip()
 
 
-def render(app: Path, output: Path):
-    inventory = json.loads(run("list", "--json"))
+def select_device(inventory):
     runtimes = [runtime for runtime in inventory["runtimes"]
                 if runtime.get("isAvailable") and runtime["identifier"].startswith("com.apple.CoreSimulator.SimRuntime.iOS-")]
     if not runtimes:
         raise RuntimeError("No iOS simulator runtime available")
-    runtime = max(runtimes, key=lambda value: tuple(int(part) for part in value["version"].split(".")))
-    devices = [device for device in inventory["devicetypes"] if device["name"].startswith("iPhone")]
-    preferred = next((device for device in devices if device["name"] == "iPhone 17"), devices[-1])
+    candidates = [(runtime, device) for runtime in runtimes
+                  for device in inventory["devices"].get(runtime["identifier"], [])
+                  if device.get("isAvailable") and device["name"].startswith("iPhone")]
+    if not candidates: raise RuntimeError("No known-compatible iPhone/runtime pair available")
+    runtime, device = max(candidates, key=lambda pair: (
+        pair[1]["name"] == "iPhone 17", tuple(int(part) for part in pair[0]["version"].split("."))))
+    preferred = next(value for value in inventory["devicetypes"] if value["name"] == device["name"])
+    return preferred, runtime
+
+
+def render(app: Path, output: Path):
+    inventory = json.loads(run("list", "--json"))
+    preferred, runtime = select_device(inventory)
     device_id = run("create", "Ketvoice-CI", preferred["identifier"], runtime["identifier"])
     output.mkdir(parents=True, exist_ok=True)
     try:

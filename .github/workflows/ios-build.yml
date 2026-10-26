@@ -51,7 +51,8 @@ jobs:
           python3 IOS/tools/render_simulator.py IOS/.build/simulator/Build/Products/Debug-iphonesimulator/Ketvoice.app IOS/.build/artifacts
       - name: Package unsigned IPA for local re-signing
         run: |
-          python3 tools/scan_release.py IOS/Ketvoice IOS/Resources IOS/.build/iphone/Build/Products/Release-iphoneos/Ketvoice.app
+          python3 tools/scan_release.py IOS/Ketvoice IOS/Resources
+          python3 IOS/tools/scan_ios_bundle.py IOS/.build/iphone/Build/Products/Release-iphoneos/Ketvoice.app
           python3 IOS/tools/package_unsigned.py IOS/.build/iphone/Build/Products/Release-iphoneos/Ketvoice.app IOS/.build/artifacts/Ketvoice-unsigned.ipa
       - uses: actions/upload-artifact@v4
         if: always()

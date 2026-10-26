@@ -10,6 +10,8 @@ from unittest.mock import patch
 import zipfile
 
 from package_unsigned import package
+from audit_binary_strings import inspect, mask_symbol_aq_matches
+from render_simulator import select_device
 from sync_android_resources import RESOURCES, expected, quote
 
 
@@ -93,6 +95,76 @@ class PackagingTests(unittest.TestCase):
         self.info["CFBundleExecutable"] = "../Ketvoice"
         self.save_info()
         with self.assertRaises(ValueError): package(self.app, self.output)
+
+
+class BinaryAuditTests(unittest.TestCase):
+    def inspect_fixture(self, payload):
+        with tempfile.TemporaryDirectory() as directory:
+            file = Path(directory) / "fixture.bin"
+            file.write_bytes(payload)
+            return inspect(file)
+
+    def test_classifies_native_swift_symbol_without_disclosing_value(self):
+        candidate = b"A" + b"Q" + b"a" * 94
+        strings = b"\0_$sNativeSymbol" + candidate + b"\0"
+        header = struct.pack("<8I", 0xFEEDFACF, 0x0100000C, 0, 2, 1, 24, 0, 0)
+        command = struct.pack("<6I", 2, 24, 0, 0, 56, len(strings))
+        report = self.inspect_fixture(header + command + strings)
+        self.assertEqual(len(report["matches"]), 1)
+        self.assertTrue(report["matches"][0]["in_native_swift_symbol"])
+        self.assertNotIn(candidate.decode(), json.dumps(report))
+
+    def test_symbol_mask_does_not_mask_literal_sections(self):
+        candidate = b"A" + b"Q" + b"a" * 94
+        literal = candidate + b"\0"
+        symbols = b"\0_$sNativeSymbol" + candidate + b"\0"
+        header = struct.pack("<8I", 0xFEEDFACF, 0x0100000C, 0, 2, 1, 24, 0, 0)
+        command = struct.pack("<6I", 2, 24, 0, 0, 56 + len(literal), len(symbols))
+        with tempfile.TemporaryDirectory() as directory:
+            file = Path(directory) / "fixture.bin"
+            original = header + command + literal + symbols
+            file.write_bytes(original)
+            masked, count = mask_symbol_aq_matches(file)
+            self.assertEqual(count, 1)
+            self.assertEqual(masked.count(candidate), 1)
+            self.assertEqual(file.read_bytes(), original)
+
+    def test_symbol_mask_never_suppresses_github_token_rules(self):
+        candidate = b"gh" + b"p_" + b"a" * 32
+        symbols = b"\0_$sNativeSymbol" + candidate + b"\0"
+        header = struct.pack("<8I", 0xFEEDFACF, 0x0100000C, 0, 2, 1, 24, 0, 0)
+        command = struct.pack("<6I", 2, 24, 0, 0, 56, len(symbols))
+        with tempfile.TemporaryDirectory() as directory:
+            file = Path(directory) / "fixture.bin"
+            file.write_bytes(header + command + symbols)
+            masked, count = mask_symbol_aq_matches(file)
+            self.assertEqual(count, 0)
+            self.assertIn(candidate, masked)
+
+    def test_literal_outside_symbol_table_is_not_a_swift_symbol(self):
+        header = struct.pack("<8I", 0xFEEDFACF, 0x0100000C, 0, 2, 0, 0, 0, 0)
+        report = self.inspect_fixture(header + b"\0A" + b"Q" + b"b" * 94 + b"\0")
+        self.assertEqual(len(report["matches"]), 1)
+        self.assertFalse(report["matches"][0]["in_native_swift_symbol"])
+
+    def test_non_macho_input_is_rejected(self):
+        with self.assertRaises(ValueError): self.inspect_fixture(b"not a Mach-O file")
+
+
+class SimulatorSelectionTests(unittest.TestCase):
+    def test_selects_known_compatible_pair_not_newest_incompatible_runtime(self):
+        old = "com.apple.CoreSimulator.SimRuntime.iOS-27-0"
+        new = "com.apple.CoreSimulator.SimRuntime.iOS-27-1"
+        inventory = {
+            "runtimes": [{"identifier": old, "version": "27.0", "isAvailable": True},
+                         {"identifier": new, "version": "27.1", "isAvailable": True}],
+            "devices": {old: [{"name": "iPhone 17", "isAvailable": True}],
+                        new: [{"name": "iPhone Duo", "isAvailable": True}]},
+            "devicetypes": [{"name": "iPhone 17", "identifier": "phone17"}, {"name": "iPhone Duo", "identifier": "duo"}],
+        }
+        device, runtime = select_device(inventory)
+        self.assertEqual(device["identifier"], "phone17")
+        self.assertEqual(runtime["identifier"], old)
 
 
 if __name__ == "__main__":
