@@ -225,7 +225,7 @@ fun AppRoot() {
                         AppUi.overlay.value != AppUi.QUEUE &&
                         !AppUi.showPlayer.value
                 ) {
-                    AppUi.overlay.value = AppUi.NONE
+                    AppUi.back()
                 }
 
                 AnimatedVisibility(

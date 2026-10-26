@@ -40,7 +40,7 @@ fun SimpleSubScreens(title: String, subtitle: String = "") {
                     modifier = Modifier
                         .size(30.dp)
                         .clickable(interactionSource = noRip, indication = null) {
-                            AppUi.overlay.value = AppUi.NONE
+                            AppUi.back()
                         }
                 )
                 Spacer(Modifier.width(12.dp))

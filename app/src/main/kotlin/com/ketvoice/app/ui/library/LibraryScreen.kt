@@ -137,7 +137,7 @@ fun LibraryScreen() {
                         cover = downloads.firstOrNull()?.let { ArtworkRepo.coverForTrack(it.track) ?: it.track.coverUrl },
                         tint = Color(0xFF118AB2)
                         , kindIcon = Icons.Filled.Download, artwork = downloads.take(4).map { it.track }
-                    ) { AppUi.overlay.value = AppUi.DOWNLOADS }
+                    ) { AppUi.navigate(AppUi.DOWNLOADS) }
                 }
                 item {
                     LibraryCollectionCard(
@@ -147,7 +147,7 @@ fun LibraryScreen() {
                         cover = null,
                         tint = Color(0xFFF4A261)
                         , kindIcon = Icons.Filled.Folder, artwork = listOf<Track>()
-                    ) { AppUi.overlay.value = AppUi.LOCAL_FILES }
+                    ) { AppUi.navigate(AppUi.LOCAL_FILES) }
                 }
                 item {
                     LibraryCollectionCard(
@@ -184,7 +184,7 @@ fun LibraryScreen() {
                             horizontalAlignment = Alignment.CenterHorizontally,
                             modifier = Modifier.width(82.dp).clickable {
                                 AppUi.searchSeed.value = entry.key
-                                AppUi.overlay.value = AppUi.SEARCH
+                                AppUi.navigate(AppUi.SEARCH)
                             }
                         ) {
                             Cover(
@@ -516,4 +516,3 @@ private fun LibraryTrackRow(track: Track, downloaded: Boolean = false, modifier:
         }
     }
 }
-

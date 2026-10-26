@@ -65,7 +65,7 @@ fun DownloadsScreen() {
                 .padding(start = 14.dp, end = 16.dp, top = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            GlassBackButton { AppUi.overlay.value = AppUi.NONE }
+            GlassBackButton { AppUi.back() }
             Spacer(Modifier.width(12.dp))
             Text("Téléchargements", style = T.hugeTitle, color = th.onBackground, fontSize = 30.sp)
         }
@@ -201,4 +201,3 @@ private fun formatSize(bytes: Long): String {
         String.format(Locale.FRANCE, "%.1f Mo", mo)
     }
 }
-

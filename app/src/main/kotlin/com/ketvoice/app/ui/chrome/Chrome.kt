@@ -378,7 +378,7 @@ fun GlassBottomBar(
             Box(
                 Modifier
                     .fillMaxSize()
-                    .clickable(noRipple, null) { AppUi.overlay.value = AppUi.SEARCH },
+                    .clickable(noRipple, null) { AppUi.navigate(AppUi.SEARCH) },
                 contentAlignment = Alignment.Center
             ) {
                 Icon(

@@ -28,3 +28,9 @@ tools/.translation-batch-cache.json
 tools/ui-messages.json
 tools/ui-messages-missing.json
 tools/__pycache__/
+.DS_Store
+IOS/*.xcodeproj/
+IOS/*.xcworkspace/
+IOS/.build/
+IOS/DerivedData/
+IOS/*.xcconfig

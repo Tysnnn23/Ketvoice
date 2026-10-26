@@ -92,7 +92,7 @@ fun AccountDialog(modifier: Modifier = Modifier) {
                     modifier = Modifier.padding(bottom = 4.dp))
             }
             Text("Réglages de Ketvoice", color = theme.accent, modifier = Modifier.fillMaxWidth().clickable {
-                AppUi.showAccount.value = false; AppUi.showPlayer.value = false; AppUi.overlay.value = AppUi.SETTINGS
+                AppUi.showAccount.value = false; AppUi.navigate(AppUi.SETTINGS)
             }.padding(top = 14.dp, bottom = 8.dp))
         }
     }

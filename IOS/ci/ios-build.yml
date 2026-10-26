@@ -1,0 +1,28 @@
+name: iOS source build (unsigned)
+# Template: requires the repository workflow permission before activation.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["ios-port-*"]
+    paths:
+      - "IOS/**"
+      - ".github/workflows/ios-build.yml"
+
+jobs:
+  compile:
+    runs-on: xcode-27
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate Xcode project
+        run: |
+          brew install xcodegen
+          xcodegen generate --spec IOS/project.yml
+      - name: Compile for iPhone (unsigned; not installable)
+        run: |
+          xcodebuild -project IOS/Ketvoice.xcodeproj -scheme Ketvoice -configuration Debug \
+            -sdk iphoneos -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO build
+      - name: Compile for Simulator (no emulator launch)
+        run: |
+          xcodebuild -project IOS/Ketvoice.xcodeproj -scheme Ketvoice -configuration Debug \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build

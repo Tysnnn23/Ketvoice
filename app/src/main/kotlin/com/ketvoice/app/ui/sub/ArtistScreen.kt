@@ -149,7 +149,7 @@ fun ArtistScreen() {
                         Row(Modifier.fillMaxWidth().align(Alignment.TopCenter).statusBarsPadding()
                             .padding(horizontal = 18.dp, vertical = 18.dp),
                             verticalAlignment = Alignment.CenterVertically) {
-                            GlassBackButton { AppUi.overlay.value = AppUi.NONE }
+                            GlassBackButton { AppUi.back() }
                             Spacer(Modifier.weight(1f))
                             Box(Modifier.size(40.dp).clip(CircleShape).background(Color.Black.copy(alpha = .3f))
                                 .clickable { attempt++ }, contentAlignment = Alignment.Center) {
