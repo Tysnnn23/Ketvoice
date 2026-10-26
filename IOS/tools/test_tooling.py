@@ -6,6 +6,7 @@ import plistlib
 import struct
 import tempfile
 import unittest
+from unittest.mock import patch
 import zipfile
 
 from package_unsigned import package
@@ -65,6 +66,23 @@ class PackagingTests(unittest.TestCase):
     def test_rejects_embedded_signing_profile(self):
         (self.app / "embedded.mobileprovision").write_bytes(b"fixture")
         with self.assertRaises(ValueError): package(self.app, self.output)
+
+    def test_rejects_signing_material_in_nested_resource(self):
+        resources = self.app / "Resources"
+        resources.mkdir()
+        (resources / "accidental.p12").write_bytes(b"fixture")
+        with self.assertRaises(ValueError): package(self.app, self.output)
+
+    def test_allows_system_symlink_outside_bundle(self):
+        with patch.object(Path, "is_symlink", lambda path: path == self.root):
+            self.assertFalse(package(self.app, self.output)["signed"])
+
+    def test_rejects_symlink_directory_inside_bundle(self):
+        resources = self.app / "Resources"
+        resources.mkdir()
+        (resources / "example.json").write_text("{}", encoding="utf-8")
+        with patch.object(Path, "is_symlink", lambda path: path == resources):
+            with self.assertRaises(ValueError): package(self.app, self.output)
 
     def test_refuses_overwrite(self):
         self.output.write_bytes(b"existing user artifact")

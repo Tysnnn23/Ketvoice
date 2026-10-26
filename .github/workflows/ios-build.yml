@@ -44,6 +44,7 @@ jobs:
             -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath IOS/.build/simulator CODE_SIGNING_ALLOWED=NO build
       - name: Package unsigned IPA for local re-signing
         run: |
+          python3 tools/scan_release.py IOS/Ketvoice IOS/Resources IOS/.build/iphone/Build/Products/Release-iphoneos/Ketvoice.app
           python3 IOS/tools/package_unsigned.py IOS/.build/iphone/Build/Products/Release-iphoneos/Ketvoice.app IOS/.build/artifacts/Ketvoice-unsigned.ipa
       - uses: actions/upload-artifact@v4
         with:

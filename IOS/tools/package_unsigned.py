@@ -2,6 +2,7 @@
 import argparse
 import hashlib
 import json
+import os
 from pathlib import Path
 import plistlib
 import struct
@@ -25,8 +26,17 @@ def package(app: Path, output: Path):
     if (app / "_CodeSignature").exists() or (app / "embedded.mobileprovision").exists():
         raise ValueError("Expected unsigned input; signing profiles must not be uploaded")
     files = sorted(file for file in app.rglob("*") if file.is_file())
-    if any(file.is_symlink() or any(parent.is_symlink() for parent in file.parents if parent != app.parent) for file in files):
-        raise ValueError("Symlink input is not supported")
+    if any(file.suffix.lower() in {".mobileprovision", ".p12", ".p8", ".key"} for file in files):
+        raise ValueError("Signing material must never be included in the artifact")
+    for file in files:
+        if file.is_symlink():
+            raise ValueError("Symlink input is not supported")
+        # Check only the bundle: macOS itself has /var -> /private/var ancestors.
+        for parent in file.parents:
+            if parent == app:
+                break
+            if parent.is_symlink():
+                raise ValueError("Symlink input is not supported")
     if output.exists():
         raise FileExistsError("Refusing to overwrite an existing artifact")
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -39,6 +49,9 @@ def package(app: Path, output: Path):
             "sha256": hashlib.sha256(output.read_bytes()).hexdigest(),
             "bundle_id": info["CFBundleIdentifier"],
             "version": info.get("CFBundleShortVersionString"),
+            "source_commit": os.environ.get("GITHUB_SHA"),
+            "sdk": info.get("DTSDKName"),
+            "xcode_build": info.get("DTXcodeBuild"),
             "architecture": "arm64",
             "signed": False,
             "installable_without_resigning": False,
