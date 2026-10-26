@@ -1,5 +1,6 @@
 name: Ketvoice
 options:
+  developmentLanguage: fr
   deploymentTarget:
     iOS: "26.0"
 settings:
@@ -7,21 +8,28 @@ settings:
     PRODUCT_BUNDLE_IDENTIFIER: com.ketvoice.ios
     SWIFT_VERSION: "6.0"
     TARGETED_DEVICE_FAMILY: "1"
-    INFOPLIST_KEY_CFBundleDisplayName: Ketvoice
-    INFOPLIST_KEY_UIBackgroundModes: audio
-    INFOPLIST_KEY_KetvoiceAPIURL: $(KETVOICE_API_URL)
-    INFOPLIST_KEY_KetvoicePublishableKey: $(KETVOICE_PUBLISHABLE_KEY)
+    DEVELOPMENT_LANGUAGE: fr
+    MARKETING_VERSION: "3.0.7"
+    CURRENT_PROJECT_VERSION: "32"
     KETVOICE_API_URL: https://xodklrunqlzyeiqtovgx.supabase.co
     KETVOICE_PUBLISHABLE_KEY: ""
 targets:
   Ketvoice:
     type: application
     platform: iOS
-    sources: [Ketvoice]
+    sources:
+      - path: Ketvoice
+        excludes: [Info.plist]
+      - path: Resources
+        buildPhase: resources
     settings:
       base:
         GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_FILE: Ketvoice/Info.plist
         CODE_SIGNING_ALLOWED: NO
         ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: NO
-    scheme:
-      testTargets: []
+schemes:
+  Ketvoice:
+    build:
+      targets:
+        Ketvoice: all

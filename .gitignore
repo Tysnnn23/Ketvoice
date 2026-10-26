@@ -28,7 +28,11 @@ tools/.translation-batch-cache.json
 tools/ui-messages.json
 tools/ui-messages-missing.json
 tools/__pycache__/
-.DS_Store
+IOS/**/__pycache__/
+*.ipa
+*.mobileprovision
+*.p12
+*.p8
 IOS/*.xcodeproj/
 IOS/*.xcworkspace/
 IOS/.build/

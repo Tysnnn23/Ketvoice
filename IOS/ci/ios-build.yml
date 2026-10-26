@@ -12,17 +12,34 @@ on:
 jobs:
   compile:
     runs-on: xcode-27
+    timeout-minutes: 25
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
+      - name: Check resources shared with Android
+        run: python3 IOS/tools/sync_android_resources.py --check
+      - name: Check packaging safeguards (fixtures, not device tests)
+        run: python3 -m unittest discover -s IOS/tools -p 'test_*.py'
+      - name: Test shared Swift models (no simulator launch)
+        run: swift test --package-path IOS
       - name: Generate Xcode project
         run: |
           brew install xcodegen
           xcodegen generate --spec IOS/project.yml
       - name: Compile for iPhone (unsigned; not installable)
         run: |
-          xcodebuild -project IOS/Ketvoice.xcodeproj -scheme Ketvoice -configuration Debug \
-            -sdk iphoneos -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO build
+          xcodebuild -project IOS/Ketvoice.xcodeproj -scheme Ketvoice -configuration Release \
+            -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath IOS/.build/iphone CODE_SIGNING_ALLOWED=NO build
       - name: Compile for Simulator (no emulator launch)
         run: |
           xcodebuild -project IOS/Ketvoice.xcodeproj -scheme Ketvoice -configuration Debug \
-            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath IOS/.build/simulator CODE_SIGNING_ALLOWED=NO build
+      - name: Package unsigned IPA for local re-signing
+        run: |
+          python3 IOS/tools/package_unsigned.py IOS/.build/iphone/Build/Products/Release-iphoneos/Ketvoice.app IOS/.build/artifacts/Ketvoice-unsigned.ipa
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Ketvoice-iPhone-UNSIGNED-not-installable
+          path: IOS/.build/artifacts/*
+          retention-days: 7

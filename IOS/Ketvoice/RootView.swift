@@ -1,73 +1,67 @@
 import SwiftUI
 
-private enum Palette {
+enum Palette {
     static let background = Color(red: 0.055, green: 0.045, blue: 0.095)
     static let accent = Color(red: 0.82, green: 0.67, blue: 0.98)
 }
 
-@MainActor
-final class MusicLibrary: ObservableObject {
-    @Published private(set) var favorites: [Song] = []
-    private let key = "ketvoice.ios.favorites"
-
-    init() {
-        if let data = UserDefaults.standard.data(forKey: key),
-           let songs = try? JSONDecoder().decode([Song].self, from: data) { favorites = songs }
-    }
-    func contains(_ song: Song) -> Bool { favorites.contains { $0.id == song.id } }
-    func toggle(_ song: Song) {
-        if contains(song) { favorites.removeAll { $0.id == song.id } }
-        else { favorites.insert(song, at: 0) }
-        UserDefaults.standard.set(try? JSONEncoder().encode(favorites), forKey: key)
-    }
-}
-
 struct RootView: View {
     @EnvironmentObject private var player: MusicPlayer
-    @StateObject private var library = MusicLibrary()
+    @EnvironmentObject private var library: MusicLibrary
     @State private var tab = 0
+    @AppStorage("language") private var language = "fr"
 
     var body: some View {
         TabView(selection: $tab) {
-            NavigationStack { HomeView(library: library) }
+            NavigationStack { HomeView(library: library).toolbar { settingsLink } }
                 .tabItem { Label("Accueil", systemImage: "house.fill") }.tag(0)
-            NavigationStack { SearchView(library: library) }
+            NavigationStack { SearchView(library: library).toolbar { settingsLink } }
                 .tabItem { Label("Explorer", systemImage: "magnifyingglass") }.tag(1)
-            NavigationStack { LibraryView(library: library) }
+            NavigationStack { LibraryView(library: library).toolbar { settingsLink } }
                 .tabItem { Label("Bibliothèque", systemImage: "square.stack.fill") }.tag(2)
-            NavigationStack { SettingsView() }
-                .tabItem { Label("Réglages", systemImage: "gearshape.fill") }.tag(3)
         }
         .tint(Palette.accent)
         .safeAreaInset(edge: .bottom) {
             if let song = player.current {
-                Button { player.showPlayer = true } label: {
-                    HStack(spacing: 12) {
-                        Artwork(song: song, size: 44)
-                        VStack(alignment: .leading) {
-                            Text(song.title).fontWeight(.semibold).lineLimit(1)
-                            Text(song.artist).font(.caption).foregroundStyle(.secondary).lineLimit(1)
-                        }
-                        Spacer(minLength: 0)
-                        Button { player.toggle() } label: {
-                            Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
-                                .frame(width: 44, height: 44)
-                        }.accessibilityLabel(player.isPlaying ? "Pause" : "Lecture")
-                    }
-                    .padding(8)
-                    .glassEffect(.regular, in: .rect(cornerRadius: 20))
-                    .padding(.horizontal, 12)
-                    .padding(.bottom, 4)
+                HStack(spacing: 12) {
+                    Button { player.showPlayer = true } label: {
+                        HStack(spacing: 12) {
+                            Artwork(song: song, size: 44)
+                            VStack(alignment: .leading) {
+                                Text(song.title).fontWeight(.semibold).lineLimit(1)
+                                Text(song.artist).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                            }
+                            Spacer(minLength: 0)
+                        }.contentShape(Rectangle())
+                    }.buttonStyle(.plain)
+                    Button { player.toggle() } label: {
+                        if player.buffering { ProgressView().frame(width: 44, height: 44) }
+                        else { Image(systemName: player.isPlaying ? "pause.fill" : "play.fill").frame(width: 44, height: 44) }
+                    }.accessibilityLabel(player.isPlaying ? "Pause" : "Lecture")
                 }
+                .padding(8)
+                .glassEffect(.regular, in: .rect(cornerRadius: 20))
+                .padding(.horizontal, 12).padding(.bottom, 4)
                 .buttonStyle(.plain)
             }
         }
-        .sheet(isPresented: $player.showPlayer) { PlayerView(library: library) }
+        .fullScreenCover(isPresented: $player.showPlayer) { PlayerView(library: library) }
+        .alert("Bibliothèque", isPresented: Binding(get: { library.error != nil }, set: { if !$0 { library.error = nil } })) {
+            Button("OK") { library.error = nil }
+        } message: { Text(library.error ?? "") }
         .background(Palette.background)
+        .environment(\.locale, Locale(identifier: language))
+    }
+
+    private var settingsLink: some ToolbarContent {
+        ToolbarItem(placement: .topBarTrailing) {
+            NavigationLink { SettingsView() } label: { Image(systemName: "gearshape").frame(width: 44, height: 44) }
+                .accessibilityLabel("Réglages")
+        }
     }
 }
 
-private struct Artwork: View {
+struct Artwork: View {
     let song: Song
     let size: CGFloat
 
@@ -86,7 +80,7 @@ private struct Artwork: View {
     }
 }
 
-private struct SongRow: View {
+struct SongRow: View {
     let song: Song
     let action: () -> Void
 
@@ -125,6 +119,7 @@ private struct HomeView: View {
                         guard let index = library.favorites.firstIndex(where: { $0.id == song.id }) else { return }
                         player.play(library.favorites, at: index)
                     }
+                    .contextMenu { SongActions(song: song, library: library) }
                 }
             }.frame(maxWidth: .infinity, alignment: .leading).padding(20)
         }
@@ -151,6 +146,7 @@ private struct SearchView: View {
                 let song = item.element
                 HStack {
                     SongRow(song: song) { player.play(tracks, at: index) }
+                        .contextMenu { SongActions(song: song, library: library) }
                     Button { library.toggle(song) } label: {
                         Image(systemName: library.contains(song) ? "heart.fill" : "heart")
                             .frame(width: 44, height: 44)
@@ -184,22 +180,47 @@ private struct SearchView: View {
 private struct LibraryView: View {
     @EnvironmentObject private var player: MusicPlayer
     @ObservedObject var library: MusicLibrary
+    @State private var creating = false
+    @State private var playlistName = ""
 
     var body: some View {
         List {
+            Section {
+                NavigationLink { DownloadsView(library: library) } label: {
+                    Label("Téléchargements", systemImage: "arrow.down.circle")
+                }
+            }
+            Section("Playlists") {
+                Button { playlistName = ""; creating = true } label: { Label("Créer une playlist", systemImage: "plus") }
+                ForEach(library.playlists) { playlist in
+                    NavigationLink { PlaylistView(id: playlist.id, library: library) } label: {
+                        VStack(alignment: .leading) {
+                            Text(playlist.name)
+                            Text("\(playlist.entries.count) titres").font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
             Section("Favoris") {
                 ForEach(Array(library.favorites.enumerated()), id: \.element.id) { item in
                     let index = item.offset
                     let song = item.element
                     SongRow(song: song) { player.play(library.favorites, at: index) }
+                        .contextMenu { SongActions(song: song, library: library) }
                 }
                 .onDelete { offsets in
-                    for index in offsets { library.toggle(library.favorites[index]) }
+                    let songs = offsets.compactMap { library.favorites.indices.contains($0) ? library.favorites[$0] : nil }
+                    for song in songs { library.toggle(song) }
                 }
             }
         }
         .scrollContentBackground(.hidden).background(Palette.background)
         .navigationTitle("Bibliothèque")
+        .alert("Créer une playlist", isPresented: $creating) {
+            TextField("Nom", text: $playlistName)
+            Button("Créer") { library.createPlaylist(playlistName) }
+            Button("Annuler", role: .cancel) {}
+        }
     }
 }
 
@@ -209,12 +230,17 @@ private struct PlayerView: View {
     @ObservedObject var library: MusicLibrary
     @State private var page = 0
     @State private var lyrics: [LyricLine] = []
+    @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
+    @AppStorage("reduceMotion") private var reduceMotion = false
     private let api = KetvoiceClient()
 
     var body: some View {
         VStack(spacing: 20) {
             HStack {
-                Button { dismiss() } label: { Image(systemName: "chevron.down").frame(width: 44, height: 44) }
+                Button {
+                    if page != 0 { page = 0 } else { dismiss() }
+                } label: { Image(systemName: "chevron.down").frame(width: 44, height: 44) }
+                    .accessibilityLabel("Retour")
                 Spacer()
                 Text("KETVOICE").font(.caption.weight(.bold)).tracking(3)
                 Spacer()
@@ -238,15 +264,18 @@ private struct PlayerView: View {
                                     if lyrics.isEmpty { Text("Paroles indisponibles").foregroundStyle(.secondary) }
                                     ForEach(lyrics) { line in
                                         Text(line.text).font(.title3.weight(line.time <= player.position ? .bold : .regular))
-                                            .foregroundStyle(line.time <= player.position ? .white : .secondary)
+                                            .foregroundStyle(line.time <= player.position ? Color.white : Color.secondary)
                                             .frame(maxWidth: .infinity, alignment: .leading)
                                             .id(line.id)
+                                            .onTapGesture { player.seek(to: line.time) }
                                     }
                                 }.padding()
                             }
                             .onChange(of: player.position) { _, time in
                                 if let active = lyrics.last(where: { $0.time <= time }) {
-                                    withAnimation(.easeInOut(duration: 0.3)) { proxy.scrollTo(active.id, anchor: .center) }
+                                    withAnimation(reduceMotion || systemReduceMotion ? nil : .easeInOut(duration: 0.3)) {
+                                        proxy.scrollTo(active.id, anchor: .center)
+                                    }
                                 }
                             }
                         }
@@ -261,7 +290,12 @@ private struct PlayerView: View {
                     default:
                         VStack(spacing: 20) {
                             Spacer(minLength: 0)
-                            Artwork(song: song, size: min(UIScreen.main.bounds.width - 60, 340))
+                            GeometryReader { geometry in
+                                PlayerArtwork(song: song, isPlaying: player.isPlaying)
+                                    .frame(width: min(geometry.size.width, geometry.size.height),
+                                           height: min(geometry.size.width, geometry.size.height))
+                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            }.aspectRatio(1, contentMode: .fit)
                             Text(song.title).font(.title.bold()).lineLimit(2)
                             Text(song.artist).foregroundStyle(.secondary)
                             Spacer(minLength: 0)
@@ -269,7 +303,8 @@ private struct PlayerView: View {
                     }
                 }.frame(maxHeight: .infinity)
                 if let error = player.error { Text(error).font(.caption).foregroundStyle(.red) }
-                Slider(value: Binding(get: { player.position }, set: { player.seek(to: $0) }), in: 0...max(player.duration, 1))
+                if player.buffering { ProgressView("Chargement…") }
+                Slider(value: Binding(get: { min(player.position, max(player.duration, 1)) }, set: { player.seek(to: $0) }), in: 0...max(player.duration, 1))
                     .accessibilityLabel("Position de lecture")
                 HStack {
                     Text(timeLabel(player.position))
@@ -285,6 +320,29 @@ private struct PlayerView: View {
                     }
                     Button { player.next() } label: { Image(systemName: "forward.end.fill") }
                 }.font(.title2).buttonStyle(.plain)
+                HStack(spacing: 24) {
+                    Button { player.shuffle.toggle() } label: {
+                        Image(systemName: "shuffle").foregroundStyle(player.shuffle ? Palette.accent : .secondary)
+                    }.accessibilityLabel("Lecture aléatoire")
+                    Button {
+                        player.repeatMode = player.repeatMode == .off ? .all : player.repeatMode == .all ? .one : .off
+                    } label: {
+                        Image(systemName: player.repeatMode == .one ? "repeat.1" : "repeat")
+                            .foregroundStyle(player.repeatMode != .off ? Palette.accent : .secondary)
+                    }.accessibilityLabel("Répétition : \(player.repeatMode.rawValue)")
+                    AirPlayButton().frame(width: 44, height: 44).accessibilityLabel("Sortie audio AirPlay")
+                    Menu {
+                        ForEach([15, 30, 45, 60], id: \.self) { minutes in
+                            Button("\(minutes) min") { player.setSleepTimer(minutes: minutes) }
+                        }
+                        Button("Annuler", role: .cancel) { player.setSleepTimer(minutes: nil) }
+                    } label: {
+                        Image(systemName: "moon.zzz").foregroundStyle(player.sleepDeadline == nil ? .secondary : Palette.accent)
+                    }.accessibilityLabel("Minuterie de sommeil")
+                }.buttonStyle(.plain).frame(minHeight: 44)
+                if let deadline = player.sleepDeadline {
+                    Text("Arrêt à \(deadline, style: .time)").font(.caption).foregroundStyle(.secondary)
+                }
             }
         }
         .padding(20).padding(.bottom, 14)
@@ -303,15 +361,26 @@ private struct PlayerView: View {
     }
 }
 
-private struct SettingsView: View {
+struct SettingsView: View {
     @AppStorage("reduceMotion") private var reduceMotion = false
-    @AppStorage("automix") private var automix = false
+    @AppStorage("canvasEnabled") private var canvasEnabled = true
+    @AppStorage("language") private var language = "fr"
 
     var body: some View {
         Form {
-            Section("Interface") { Toggle("Réduire les animations", isOn: $reduceMotion) }
+            Section("Interface") {
+                Picker("Langue de l'application", selection: $language) {
+                    ForEach(["fr", "en", "hi", "ja", "zh", "ru", "it", "es", "de", "pt", "ko"], id: \.self) { code in
+                        Text(Locale(identifier: code).localizedString(forLanguageCode: code) ?? code).tag(code)
+                    }
+                }
+                Toggle("Réduire les animations", isOn: $reduceMotion)
+                Toggle("Spotify Canvas", isOn: $canvasEnabled)
+                Text("Canvas reste muet et s'arrête avec la musique. La réduction des animations désactive la vidéo.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
             Section("Lecture") {
-                Toggle("AutoMix (BETA)", isOn: $automix).disabled(true)
+                Text("AutoMix : portage en cours")
                 Text("La transition à deux flux nécessite encore un portage audio iOS ; ce réglage ne modifie pas la lecture.")
                     .font(.caption).foregroundStyle(.secondary)
             }
