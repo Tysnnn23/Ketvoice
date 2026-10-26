@@ -6,6 +6,10 @@ The `supabase/functions` directory contains two Edge Functions:
 - `ketvoice-content` serves published songs/lyrics and handles restricted publication writes.
 
 Open `admin/ketvoice-admin.html` locally for the owner-only desktop editor.
+The same page is hosted at `https://tysnnn23.github.io/Ketvoice/admin/ketvoice-admin.html`
+as its exact Supabase Auth redirect destination. Studio OTP requests specify
+that URL; mobile requests retain the `ketvoice://auth` destination. The Auth
+site URL remains the mobile URI and both redirect URLs are explicitly allowed.
 The browser uses the public Supabase API key and a short-lived owner session;
 it never contains the service role key. `/admin/sources` in `ketvoice-content`
 manages the server-side `ketvoice_managed_sources` table. `ketvoice-api` reads

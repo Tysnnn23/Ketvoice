@@ -7,6 +7,18 @@
 
 ---
 
+## 3.0.5 — STUDIO EMAIL RETURN (versionCode 30)
+
+- A sign-in link requested from the desktop Studio now returns to the hosted
+  Studio page and signs in there automatically.
+- The mobile app continues to request its own `ketvoice://auth` redirect;
+  its e-mail link flow is unchanged.
+- The Studio still opens from its local HTML shortcut. No changes to music
+  playback, Quest layout or the authorization of publisher actions.
+- See [3.0.5 release notes](docs/releases/v3.0.5.md).
+
+---
+
 ## 3.0.4 — STUDIO, MANAGED SOURCES AND ARTIST BACKDROP (versionCode 29)
 
 - Add a local desktop HTML studio for owner-authenticated publishing, imported

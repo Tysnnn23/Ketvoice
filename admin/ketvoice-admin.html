@@ -18,7 +18,7 @@
 <nav class="nav" id="navigation" aria-label="Sections" hidden><button data-view="publish" aria-selected="true">01 &nbsp; Ajouter</button><button data-view="edit">02 &nbsp; Modifier</button><button data-view="lyrics">03 &nbsp; Paroles</button><button data-view="sources">04 &nbsp; Sources API</button><button id="logout">Déconnexion</button></nav>
 <div>
 <div role="status" aria-live="polite" id="status" class="status"></div>
-<section id="login" class="panel"><h2>Connexion propriétaire</h2><p>Un lien ou un code de connexion est envoyé à l’adresse autorisée. Aucune clé privée n’est enregistrée sur cet ordinateur.</p><button id="send" class="primary">Envoyer le lien de connexion</button><label for="code">Code à 6 chiffres ou lien reçu par e-mail</label><input id="code" autocomplete="one-time-code" placeholder="Collez le code ou le lien"><button id="verify">Se connecter</button><p class="hint" style="margin-top:20px">Si le lien ouvre l’application mobile, copiez son URL ou utilisez le code de l’e-mail. La session de cette page est perdue à sa fermeture.</p></section>
+<section id="login" class="panel"><h2>Connexion propriétaire</h2><p>Demandez un lien depuis cette page : il ouvrira Ketvoice Studio dans votre navigateur. Un lien demandé depuis l’application mobile continuera d’ouvrir l’application mobile.</p><button id="send" class="primary">Recevoir un lien pour le Studio</button><p class="hint" style="margin-top:20px">Ouvrez l’e-mail sur cet ordinateur. La session du Studio est perdue à la fermeture de l’onglet ; aucun secret n’est enregistré sur le disque.</p></section>
 <section id="publish" class="panel" hidden><h2>Ajouter une musique</h2><p>Uniquement des médias dont vous possédez les droits. Audio 25 Mo maximum ; pochette 4 Mo ; paroles LRC ou TTML 1 Mo.</p><form id="publishForm"><div class="row"><div><label for="newTitle">Titre</label><input id="newTitle" required maxlength="200"></div><div><label for="newArtist">Artiste</label><input id="newArtist" required maxlength="200"></div></div><div class="row"><div><label for="newAlbum">Album</label><input id="newAlbum" maxlength="200"></div><div><label for="newDuration">Durée (secondes)</label><input id="newDuration" type="number" min="0" max="86400" value="0" required></div></div><label for="newAudio">Audio</label><input id="newAudio" type="file" accept=".mp3,.m4a,.aac,.flac,.wav,.ogg,.opus" required><label for="newCover">Pochette (facultatif)</label><input id="newCover" type="file" accept="image/jpeg,image/png,image/webp"><label for="newLyrics">Paroles (facultatif)</label><input id="newLyrics" type="file" accept=".lrc,.ttml"><label class="check"><input id="newRights" type="checkbox" required> Je confirme détenir les droits de publication.</label><button class="primary">Publier la musique</button></form></section>
 <section id="edit" class="panel" hidden><h2>Rechercher et modifier</h2><p>La recherche affiche les titres publiés ; seule une musique importée par votre compte peut être modifiée. Les titres du catalogue général ne sont pas éditables.</p><div class="row"><div><label for="search">Titre ou artiste</label><input id="search" placeholder="Rechercher un titre" maxlength="160"></div><button id="searchButton">Rechercher</button></div><div id="results"></div><form id="editForm" hidden><hr class="divider"><h3 id="editingName"></h3><div class="row"><div><label for="editTitle">Titre</label><input id="editTitle" required maxlength="200"></div><div><label for="editArtist">Artiste</label><input id="editArtist" required maxlength="200"></div></div><label for="editAlbum">Album</label><input id="editAlbum" maxlength="200"><label for="editAudio">Remplacer l’audio (facultatif)</label><input id="editAudio" type="file" accept=".mp3,.m4a,.aac,.flac,.wav,.ogg,.opus"><label for="editCover">Remplacer la pochette (facultatif)</label><input id="editCover" type="file" accept="image/jpeg,image/png,image/webp"><div class="row"><div><label for="editDuration">Durée (secondes, si nouvel audio)</label><input id="editDuration" type="number" min="0" max="86400"></div></div><label class="check"><input id="editRights" type="checkbox" required> Je confirme détenir les droits de publication.</label><button class="primary">Enregistrer les changements</button></form></section>
 <section id="lyrics" class="panel" hidden><h2>Importer des paroles</h2><p>Publiez une version LRC ou TTML pour une musique, y compris un titre du catalogue. Une nouvelle version est ajoutée sans modifier l’audio.</p><form id="lyricsForm"><label for="lyricId">Identifiant du titre</label><input id="lyricId" required maxlength="180" placeholder="Sélectionnez un résultat de la recherche"><div class="row"><div><label for="lyricTitle">Titre</label><input id="lyricTitle" required maxlength="200"></div><div><label for="lyricArtist">Artiste</label><input id="lyricArtist" required maxlength="200"></div></div><label for="lyricFile">Fichier LRC ou TTML</label><input id="lyricFile" type="file" accept=".lrc,.ttml" required><label class="check"><input id="lyricRights" type="checkbox" required> Je confirme détenir les droits de publication.</label><button class="primary">Publier les paroles</button></form></section>
@@ -27,6 +27,7 @@
 <script>
 (() => {
   const root='https://xodklrunqlzyeiqtovgx.supabase.co';
+  const studio='https://tysnnn23.github.io/Ketvoice/admin/ketvoice-admin.html';
   const key='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhvZGtscnVucWx6eWVpcXRvdmd4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI1ODgzNjgsImV4cCI6MjEwODE2NDM2OH0.V-F8ZhM21Ht1yRV5FXOuZcddufvY8aIW5kclb-F2zao';
   const email='konnektsupport@gmail.com';
   const $=id=>document.getElementById(id);
@@ -54,25 +55,23 @@
   async function run(button,work){button.disabled=true;notice('Traitement en cours…');try{await work();}catch(error){notice(error.message,true);}finally{button.disabled=false;}}
   function view(name){for(const section of document.querySelectorAll('main section'))section.hidden=section.id!==name;for(const button of document.querySelectorAll('.nav [data-view]'))button.setAttribute('aria-selected',String(button.dataset.view===name));if(name==='sources') loadSources();}
   function signedIn(){ $('login').hidden=true;$('navigation').hidden=false;$('identity').textContent=email;view('publish');notice('Connecté au compte propriétaire.');}
-  $('send').onclick=event=>run(event.currentTarget,async()=>{await call('/auth/v1/otp',{method:'POST',body:{email,create_user:false}});notice('E-mail envoyé. Copiez le code ou le lien ici.');});
-  $('verify').onclick=event=>run(event.currentTarget,async()=>{
-    const value=$('code').value.trim();let payload;
-    if(/^\d{6,8}$/.test(value))payload={email,token:value,type:'email'};
-    else{let url;try{url=new URL(value);}catch{throw Error('Code ou lien invalide.');}
-      if(url.protocol!=='https:'||url.host!=='xodklrunqlzyeiqtovgx.supabase.co'||url.pathname!=='/auth/v1/verify')throw Error('Lien de connexion invalide.');
-      const params=new URLSearchParams(url.search);const fragment=new URLSearchParams(url.hash.slice(1));
-      const hash=params.get('token_hash')||params.get('token')||fragment.get('token_hash');
-      if(!hash)throw Error('Ce lien ne contient pas de jeton de vérification. Utilisez le code reçu par e-mail.');
-      const type=params.get('type')||fragment.get('type');
-      if(!/^[A-Za-z0-9_-]{20,200}$/.test(hash)||!['email','magiclink','signup'].includes(type))throw Error('Lien de connexion invalide.');
-      payload={token_hash:hash,type};
-    }
-    const response=await call('/auth/v1/verify',{method:'POST',body:payload});
-    if(!response.access_token||!response.refresh_token)throw Error('La session n’a pas été créée.');
-    session={...response,expiresAt:Date.now()+response.expires_in*1000};
-    try{await content('/admin/session',{admin:true});}catch(error){session=null;throw error;}
-    $('code').value='';signedIn();
+  $('send').onclick=event=>run(event.currentTarget,async()=>{
+    await call('/auth/v1/otp?redirect_to='+encodeURIComponent(studio),{method:'POST',body:{email,create_user:false}});
+    notice('Lien envoyé. Ouvrez-le dans ce navigateur pour retrouver Ketvoice Studio.');
   });
+  async function acceptRedirect(){
+    if(location.origin!==new URL(studio).origin || location.pathname!==new URL(studio).pathname)return;
+    const values=new URLSearchParams(location.hash.slice(1));
+    if(!values.has('access_token') && !values.has('error'))return;
+    history.replaceState(null,'',location.pathname);
+    if(values.has('error'))throw Error(values.get('error_description')||'Lien expiré ou invalide.');
+    if(values.get('token_type')!=='bearer'||!values.get('refresh_token'))throw Error('Lien invalide.');
+    session={access_token:values.get('access_token'),refresh_token:values.get('refresh_token'),
+      expiresAt:Date.now()+Number(values.get('expires_in')||3600)*1000};
+    try{await content('/admin/session',{admin:true});}catch(error){session=null;throw error;}
+    signedIn();
+  }
+  acceptRedirect().catch(error=>notice(error.message,true));
   $('logout').onclick=async()=>{if(session)await call('/auth/v1/logout',{method:'POST',auth:true}).catch(()=>{});session=null;editable=null;$('navigation').hidden=true;$('identity').textContent='Session fermée';view('login');notice('Déconnecté.');};
   document.querySelectorAll('.nav [data-view]').forEach(button=>button.onclick=()=>view(button.dataset.view));
   function file(id){return $(id).files[0]||null;}

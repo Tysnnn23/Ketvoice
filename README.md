@@ -17,6 +17,17 @@
 
 ## Overview
 
+### 3.0.5 — Studio sign-in returns to the browser
+
+Open [`admin/ketvoice-admin.html`](admin/ketvoice-admin.html) locally, or use the
+[hosted Studio](https://tysnnn23.github.io/Ketvoice/admin/ketvoice-admin.html).
+The sign-in link requested from this page returns to the hosted Studio in the
+browser. Links requested from the mobile app still return to the mobile app.
+This is versionCode 30 for mobile and Quest; the APK music features remain as
+in 3.0.4. Download the signed [mobile APK](https://github.com/Tysnnn23/Ketvoice/releases/download/v3.0.5/Ketvoice-3.0.5.apk)
+or [Quest APK](https://github.com/Tysnnn23/Ketvoice/releases/download/v3.0.5/Ketvoice-3.0.5-Quest.apk).
+See [3.0.5 release notes](docs/releases/v3.0.5.md).
+
 ### 3.0.4 — desktop studio and managed sources
 
 Open [`admin/ketvoice-admin.html`](admin/ketvoice-admin.html) on a computer
