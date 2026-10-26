@@ -55,6 +55,84 @@ function serviceRole(): string {
   return env("SUPABASE_SERVICE_ROLE_KEY");
 }
 
+// ------------------------------------------------------------------ rate limit
+// First layer: per-isolate memory. Second layer: Postgres rolling window so
+// the limit survives across isolate restarts. A Postgres outage fails open.
+
+const ROUTE_LIMITS: Record<string, { limit: number; windowS: number }> = {
+  "/search": { limit: 60, windowS: 60 },
+  "/stream": { limit: 120, windowS: 60 },
+  "/canvas": { limit: 30, windowS: 60 },
+};
+
+const memoryHits = new Map<string, number[]>();
+
+function clientIp(req: Request): string {
+  const forwarded = req.headers.get("x-forwarded-for") ?? "";
+  const first = forwarded.split(",")[0]?.trim();
+  if (first) return first.slice(0, 64);
+  return (req.headers.get("x-real-ip") ?? "unknown").slice(0, 64);
+}
+
+function memoryTake(key: string, limit: number, windowMs: number): boolean {
+  const now = Date.now();
+  const hits = (memoryHits.get(key) ?? []).filter((at) => now - at < windowMs);
+  if (hits.length >= limit) {
+    memoryHits.set(key, hits);
+    return false;
+  }
+  hits.push(now);
+  memoryHits.set(key, hits);
+  if (memoryHits.size > 5_000) {
+    for (const [k, list] of memoryHits) {
+      if (list.every((at) => now - at >= windowMs)) memoryHits.delete(k);
+    }
+  }
+  return true;
+}
+
+async function postgresTake(
+  ip: string,
+  route: string,
+  limit: number,
+  windowS: number,
+): Promise<boolean | null> {
+  const base = supabaseUrl();
+  const key = serviceRole();
+  if (!base || !key) return null;
+  try {
+    const res = await request(
+      `${base}/rest/v1/rpc/ketvoice_api_take`,
+      {
+        method: "POST",
+        headers: {
+          apikey: key,
+          Authorization: `Bearer ${key}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ p_ip: ip, p_route: route, p_limit: limit, p_window_s: windowS }),
+      },
+      3_000,
+    );
+    if (!res.ok) return null;
+    return (await res.json()) === true;
+  } catch {
+    return null;
+  }
+}
+
+async function allow(req: Request, route: string): Promise<Response | null> {
+  const config = ROUTE_LIMITS[route];
+  if (!config) return null;
+  const ip = clientIp(req);
+  if (!memoryTake(`${route}|${ip}`, config.limit, config.windowS * 1_000)) {
+    return json({ error: "Trop de requêtes" }, 429);
+  }
+  const dbAllowed = await postgresTake(ip, route, config.limit, config.windowS);
+  if (dbAllowed === false) return json({ error: "Trop de requêtes" }, 429);
+  return null;
+}
+
 function cleanBase(value: string): string {
   return value.trim().replace(/\/+$/, "");
 }
@@ -597,18 +675,70 @@ function sourceManifest(): Response {
   });
 }
 
+const SEARCH_CACHE_TTL_S = 6 * 3_600;
+
+function cacheKey(query: string): string {
+  return query.toLowerCase().normalize("NFC").replace(/\s+/g, " ").trim().slice(0, 160);
+}
+
+async function searchCacheGet(key: string): Promise<Json[] | null> {
+  const base = supabaseUrl();
+  const role = serviceRole();
+  if (!base || !role) return null;
+  try {
+    const res = await request(
+      `${base}/rest/v1/rpc/ketvoice_search_cache_get`,
+      {
+        method: "POST",
+        headers: { apikey: role, Authorization: `Bearer ${role}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ p_query: key, p_max_age_s: SEARCH_CACHE_TTL_S }),
+      },
+      3_000,
+    );
+    if (!res.ok) return null;
+    const rows = await res.json();
+    return Array.isArray(rows) ? rows as Json[] : null;
+  } catch {
+    return null;
+  }
+}
+
+async function searchCachePut(key: string, tracks: Json[]): Promise<void> {
+  const base = supabaseUrl();
+  const role = serviceRole();
+  if (!base || !role || tracks.length === 0) return;
+  try {
+    await request(
+      `${base}/rest/v1/rpc/ketvoice_search_cache_put`,
+      {
+        method: "POST",
+        headers: { apikey: role, Authorization: `Bearer ${role}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ p_query: key, p_results: tracks }),
+      },
+      3_000,
+    );
+  } catch {
+    // The cache is an optimisation, never a dependency.
+  }
+}
+
 async function searchRoute(url: URL): Promise<Response> {
   const q = (url.searchParams.get("q") ?? "").trim();
   if (q.length < 2) return json({ name: "Ketvoice API", tracks: [] });
+  const key = cacheKey(q);
+  const cached = await searchCacheGet(key);
+  if (cached) return json({ name: "Ketvoice API", tracks: cached, cached: true });
   const bases = await addonBases();
   const results = await Promise.allSettled(bases.map((item) => searchAddon(item.tag, item.base, q)));
   const tracks = results.flatMap((result) => result.status === "fulfilled" ? result.value : []);
   const unique = new Map<string, Json>();
   for (const track of tracks) {
-    const key = String(track.id ?? "");
-    if (key && !unique.has(key)) unique.set(key, track);
+    const id = String(track.id ?? "");
+    if (id && !unique.has(id)) unique.set(id, track);
   }
-  return json({ name: "Ketvoice API", tracks: [...unique.values()] });
+  const rows = [...unique.values()];
+  await searchCachePut(key, rows);
+  return json({ name: "Ketvoice API", tracks: rows });
 }
 
 async function streamRoute(url: URL): Promise<Response> {
@@ -640,9 +770,21 @@ Deno.serve(async (req) => {
   try {
     if (sub === "/health") return await health();
     if (sub === "/source.json") return sourceManifest();
-    if (sub === "/search") return await searchRoute(url);
-    if (sub === "/stream") return await streamRoute(url);
-    if (sub === "/canvas") return await canvasRoute(url);
+    if (sub === "/search") {
+      const limited = await allow(req, "/search");
+      if (limited) return limited;
+      return await searchRoute(url);
+    }
+    if (sub === "/stream") {
+      const limited = await allow(req, "/stream");
+      if (limited) return limited;
+      return await streamRoute(url);
+    }
+    if (sub === "/canvas") {
+      const limited = await allow(req, "/canvas");
+      if (limited) return limited;
+      return await canvasRoute(url);
+    }
     return json({ error: "Not found" }, 404);
   } catch (error) {
     console.error("ketvoice-api", error instanceof Error ? error.name : "unknown");

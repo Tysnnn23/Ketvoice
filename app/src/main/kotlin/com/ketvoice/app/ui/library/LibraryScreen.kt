@@ -44,6 +44,7 @@ import com.ketvoice.app.ui.motion.Motion
 import com.ketvoice.app.ui.motion.collectionEntry
 import com.ketvoice.app.ui.motion.rememberSeenCollections
 import androidx.compose.runtime.saveable.rememberSaveable
+import kotlinx.coroutines.launch
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.TextButton
@@ -65,6 +66,26 @@ fun LibraryScreen() {
     val downloads by Downloader.items.collectAsState()
     val playlists by PlaylistStore.lists.collectAsState()
     val playlistLoadError by PlaylistStore.loadError.collectAsState()
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    var importError by remember { mutableStateOf("") }
+    val playlistFilePicker = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        scope.launch {
+            try {
+                val text = context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
+                    ?: return@launch
+                val parsed = if (text.trimStart().startsWith("{")) PlaylistExchange.parseJson(text)
+                    else PlaylistExchange.parseM3u(text)
+                PlaylistStore.create(parsed.name, parsed.entries, parsed.spotifyUrl)
+                importError = ""
+            } catch (_: Exception) {
+                importError = "Fichier de playlist illisible ou invalide"
+            }
+        }
+    }
     val seen = rememberSeenCollections()
     var albumOrder by rememberSaveable { mutableIntStateOf(0) }
     var sortOpen by remember { mutableStateOf(false) }
@@ -100,6 +121,12 @@ fun LibraryScreen() {
                 }
             }
             if(playlistLoadError)Text("Impossible de lire les playlists enregistrées",color=theme.secondary,modifier=Modifier.padding(18.dp))
+            if(importError.isNotBlank())Text(importError,color=theme.secondary,fontSize=13.sp,modifier=Modifier.padding(horizontal=18.dp))
+            Text("Importer un fichier · .json / .m3u", color = theme.accent, fontSize = 13.sp,
+                modifier = Modifier.padding(start = 18.dp, top = 2.dp).clickable(enabled = !playlistLoadError) {
+                    importError = ""
+                    playlistFilePicker.launch(arrayOf("application/json", "text/*", "audio/x-mpegurl", "audio/mpegurl", "*/*"))
+                })
             if(playlists.isNotEmpty())LazyRow(contentPadding=PaddingValues(18.dp),horizontalArrangement=Arrangement.spacedBy(14.dp)) {
                 items(playlists,key={it.id}){playlist->
                     Column(Modifier.width(layout.collectionSizeDp.dp).clickable{AppUi.openPlaylist(playlist.id)}) {
@@ -109,9 +136,6 @@ fun LibraryScreen() {
                     }
                 }
             }
-        }
-        item {
-            LocalMusicCard(all, downloads.size)
         }
         item {
             SectionHeader("Collections", "Votre bibliothèque")
@@ -137,7 +161,7 @@ fun LibraryScreen() {
                         cover = downloads.firstOrNull()?.let { ArtworkRepo.coverForTrack(it.track) ?: it.track.coverUrl },
                         tint = Color(0xFF118AB2)
                         , kindIcon = Icons.Filled.Download, artwork = downloads.take(4).map { it.track }
-                    ) { AppUi.overlay.value = AppUi.DOWNLOADS }
+                    ) { AppUi.openDownloads() }
                 }
                 item {
                     LibraryCollectionCard(
@@ -147,7 +171,7 @@ fun LibraryScreen() {
                         cover = null,
                         tint = Color(0xFFF4A261)
                         , kindIcon = Icons.Filled.Folder, artwork = listOf<Track>()
-                    ) { AppUi.overlay.value = AppUi.LOCAL_FILES }
+                    ) { AppUi.openLocalFiles() }
                 }
                 item {
                     LibraryCollectionCard(
@@ -161,7 +185,17 @@ fun LibraryScreen() {
                 }
                 item {
                     LibraryCollectionCard(
-                        modifier = Modifier.collectionEntry("all", seen, 3),
+                        modifier = Modifier.collectionEntry("replay", seen, 3),
+                        title = "Replay",
+                        subtitle = "Vos tops d'écoute",
+                        cover = null,
+                        tint = Color(0xFFD81159)
+                        , kindIcon = Icons.Filled.History, artwork = listOf()
+                    ) { AppUi.openReplay() }
+                }
+                item {
+                    LibraryCollectionCard(
+                        modifier = Modifier.collectionEntry("all", seen, 4),
                         title = "Tous les titres",
                         subtitle = "${all.size} titres",
                         cover = all.firstOrNull()?.let { ArtworkRepo.coverForTrack(it) ?: it.coverUrl },
@@ -184,7 +218,7 @@ fun LibraryScreen() {
                             horizontalAlignment = Alignment.CenterHorizontally,
                             modifier = Modifier.width(82.dp).clickable {
                                 AppUi.searchSeed.value = entry.key
-                                AppUi.overlay.value = AppUi.SEARCH
+                                AppUi.openSearch()
                             }
                         ) {
                             Cover(
@@ -333,61 +367,6 @@ private fun LibraryHeader() {
             Spacer(Modifier.width(10.dp))
             AccountAvatar("K", 36.dp, Modifier.clickable { AppUi.showAccount.value = true })
         }
-    }
-}
-
-@Composable
-private fun LocalMusicCard(all: List<Track>, downloads: Int) {
-    val theme = LocalTheme.current
-    val first = all.firstOrNull()
-    val cover = first?.let { ArtworkRepo.coverForTrack(it) ?: it.coverUrl }
-    Row(
-        Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 4.dp)
-            .clip(RoundedCornerShape(20.dp))
-            .background(theme.card)
-            .clickable { AppUi.openCatalog(CatalogRequest("all", "local", "Tous les titres")) }
-            .padding(10.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(Modifier.size(64.dp).clip(RoundedCornerShape(14.dp))) {
-            Cover(first?.title ?: "Musique locale", cover, 64.dp, 14.dp)
-            Box(
-                Modifier.fillMaxSize().background(
-                    Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = .28f)))
-                )
-            )
-            Icon(
-                Icons.Filled.PlayArrow,
-                null,
-                tint = Color.White,
-                modifier = Modifier.align(Alignment.Center).size(28.dp)
-            )
-        }
-        Column(Modifier.weight(1f).padding(start = 13.dp)) {
-            Text(
-                "Musique locale",
-                color = theme.onBackground,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                if (all.isEmpty()) "Tous les titres" else "${all.size} titres · $downloads hors ligne",
-                color = theme.secondary,
-                fontSize = 12.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(top = 3.dp)
-            )
-            Text(
-                "Tout ce que vous avez écouté et téléchargé",
-                color = theme.secondary,
-                fontSize = 11.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(top = 2.dp)
-            )
-        }
-        Text("›", color = theme.secondary, fontSize = 26.sp)
     }
 }
 

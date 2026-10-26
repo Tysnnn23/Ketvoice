@@ -75,7 +75,7 @@ fun ArtistScreen() {
     Column(Modifier.fillMaxSize().background(theme.background).statusBarsPadding()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically) {
-            GlassBackButton { AppUi.overlay.value = AppUi.NONE }
+            GlassBackButton { AppUi.closeOverlay() }
             Spacer(Modifier.width(12.dp))
             Text(artist?.name ?: request.name, localize = false, color = theme.onBackground, fontSize = 20.sp,
                 fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis,

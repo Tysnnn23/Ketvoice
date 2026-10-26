@@ -66,7 +66,7 @@ fun SourcesScreen() {
         Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.AutoMirrored.Filled.ArrowBack, "Retour", tint = th.onBackground,
-                modifier = Modifier.size(30.dp).clickable { AppUi.overlay.value = AppUi.NONE })
+                modifier = Modifier.size(30.dp).clickable { AppUi.closeOverlay() })
             Spacer(Modifier.width(12.dp))
             Text("Sources", color = th.onBackground, fontSize = 22.sp, fontWeight = FontWeight.Bold,
                 modifier = Modifier.weight(1f))

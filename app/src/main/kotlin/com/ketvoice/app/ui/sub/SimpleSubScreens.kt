@@ -41,7 +41,7 @@ fun SimpleSubScreens(title: String, subtitle: String = "") {
                     modifier = Modifier
                         .size(30.dp)
                         .clickable(interactionSource = noRip, indication = null) {
-                            AppUi.overlay.value = AppUi.NONE
+                            AppUi.closeOverlay()
                         }
                 )
                 Spacer(Modifier.width(12.dp))
@@ -81,13 +81,7 @@ fun SubScreensRouter() {
     when (AppUi.overlay.value) {
         AppUi.DOWNLOADS -> DownloadsScreen()
         AppUi.LOCAL_FILES -> LocalMusicScreen()
-        AppUi.REPLAY -> SimpleSubScreens("Replay", "Vos meilleures chansons, artistes, albums et genres")
-        AppUi.EXPORT -> SimpleSubScreens("Exporter les données", "Un fichier JSON de vos réglages et historique")
-        AppUi.IMPORT -> SimpleSubScreens("Importer des données", "Remplace les réglages et l'historique sur cet appareil")
-        AppUi.LANGUAGE -> SimpleSubScreens("Langue de l'application", "Français")
-        AppUi.APP_ICON -> SimpleSubScreens("Icône de l'app")
-        AppUi.CANVAS_CONFIG -> SimpleSubScreens("Configurer Spotify Canvas")
-        AppUi.LYRICS_SOURCES -> SimpleSubScreens("Sources des paroles")
-        else -> SimpleSubScreens("Ketvoice")
+        AppUi.REPLAY -> ReplayScreen()
+        else -> {}
     }
 }

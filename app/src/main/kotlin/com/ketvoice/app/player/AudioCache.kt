@@ -71,9 +71,11 @@ object AudioCache {
         val writer = CacheWriter(source(ctx).createDataSource(), DataSpec.Builder().setUri(stream.url).setKey(key)
             .setPosition(offset).setLength(count).build(), null, null)
         val token = epoch
-        writers["warm:$key"] = writer
+        if (writers.putIfAbsent(key, writer) != null) {
+            return@withContext cache!!.getCachedBytes(key, offset, count) >= minOf(count, 64 * 1024L)
+        }
         try { writer.cache() } catch (_: Exception) { /* EOF on a short file can still be usable. */ }
-        finally { writers.remove("warm:$key", writer) }
+        finally { writers.remove(key, writer) }
         token == epoch && cache!!.getCachedBytes(key, offset, count) >= minOf(count, 64 * 1024L)
     }
 

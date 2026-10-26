@@ -10,6 +10,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
@@ -167,11 +168,26 @@ fun AppRoot() {
                         targetState = AppUi.tab.value to AppUi.overlay.value,
                         contentAlignment = Alignment.Center,
                         transitionSpec = {
-                            (fadeIn(tween(Motion.duration())) + slideInVertically(
-                                tween(Motion.duration(), easing = FastOutSlowInEasing)
-                            ) { fullHeight -> fullHeight / 14 }).togetherWith(
-                                fadeOut(tween(Motion.duration()))
-                            )
+                            // Push : la page suivante entre par la droite.
+                            // Pop : la page précédente revient par la gauche.
+                            // Jump : fondu vertical (onglets, racine).
+                            when (AppUi.navKind.intValue) {
+                                AppUi.NAV_PUSH -> (fadeIn(tween(Motion.duration())) + slideInHorizontally(
+                                    tween(Motion.duration(), easing = FastOutSlowInEasing)
+                                ) { full -> full / 5 }).togetherWith(
+                                    fadeOut(tween(Motion.duration()))
+                                )
+                                AppUi.NAV_POP -> (fadeIn(tween(Motion.duration())) + slideInHorizontally(
+                                    tween(Motion.duration(), easing = FastOutSlowInEasing)
+                                ) { full -> -full / 5 }).togetherWith(
+                                    fadeOut(tween(Motion.duration()))
+                                )
+                                else -> (fadeIn(tween(Motion.duration())) + slideInVertically(
+                                    tween(Motion.duration(), easing = FastOutSlowInEasing)
+                                ) { fullHeight -> fullHeight / 14 }).togetherWith(
+                                    fadeOut(tween(Motion.duration()))
+                                )
+                            }
                         },
                         label = "nav"
                     ) { (tab, overlay) ->
@@ -228,13 +244,13 @@ fun AppRoot() {
                     }
                 }
 
-                // ---- Retour système : ferme d'abord tout overlay ----
+                // ---- Retour système : dépile les overlays, racine sinon ----
                 androidx.activity.compose.BackHandler(
                     enabled = AppUi.overlay.value != AppUi.NONE &&
                         AppUi.overlay.value != AppUi.QUEUE &&
                         !AppUi.showPlayer.value
                 ) {
-                    AppUi.overlay.value = AppUi.NONE
+                    AppUi.closeOverlay()
                 }
 
                 // ---- Lecteur plein écran : glisse depuis le bas ----

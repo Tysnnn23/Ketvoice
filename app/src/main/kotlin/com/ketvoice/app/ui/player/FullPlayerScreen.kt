@@ -150,22 +150,29 @@ fun FullPlayerScreen(
             return@BoxWithConstraints
         }
         if (adaptivePlayer) {
-            // Swipe horizontal pour fermer le player sur tablette.
+            // Swipe horizontal depuis un bord pour fermer le player sur tablette.
+            // Les drags intérieurs (scrub, volume, paroles) ne sont jamais interceptés.
             var dragX by remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
             Box(Modifier.fillMaxSize().graphicsLayer { translationX = dragX }.pointerInput(Unit) {
                 awaitEachGesture {
-                    val down = awaitFirstDown()
+                    val down = awaitFirstDown(pass = PointerEventPass.Initial)
+                    val edge = size.width * 0.09f
+                    if (down.position.x > edge && down.position.x < size.width - edge) return@awaitEachGesture
                     dragX = 0f
                     var total = 0f
+                    var claimed = false
                     while (true) {
-                        val event = awaitPointerEvent()
+                        val event = awaitPointerEvent(PointerEventPass.Initial)
                         val change = event.changes.firstOrNull() ?: break
                         total += change.positionChange().x
-                        dragX = total
+                        if (!claimed && kotlin.math.abs(total) > viewConfiguration.touchSlop * 3f) claimed = true
+                        if (claimed) {
+                            dragX = total
+                            change.consume()
+                        }
                         if (!change.pressed) break
-                        change.consume()
                     }
-                    if (kotlin.math.abs(total) > 380f) close() else dragX = 0f
+                    if (claimed && kotlin.math.abs(total) > 380f) close() else dragX = 0f
                 }
             }) {
                 TabletPlayer(state, track, cover, canvas[track.id], ambience, page,

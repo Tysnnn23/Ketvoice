@@ -19,7 +19,9 @@ import com.ketvoice.app.ui.common.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,6 +42,7 @@ import com.ketvoice.app.ui.common.TrackTitle
 import com.ketvoice.app.ui.common.EmptyState
 import com.ketvoice.app.ui.common.openTrackSearch
 import com.ketvoice.app.ui.motion.Motion
+import kotlinx.coroutines.launch
 import java.util.Locale
 
 /**
@@ -56,6 +59,8 @@ fun DownloadsScreen() {
     val art by ArtworkRepo.covers.collectAsState()
     val total = list.sumOf { it.bytes }
     val shown = (activeTracks.values + list.map { it.track }).distinctBy { it.id }
+    var lastDeleted by remember { mutableStateOf<com.ketvoice.app.data.Track?>(null) }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
 
     Column(
         Modifier
@@ -69,7 +74,7 @@ fun DownloadsScreen() {
                 .padding(start = 14.dp, end = 16.dp, top = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            GlassBackButton { AppUi.overlay.value = AppUi.NONE }
+            GlassBackButton { AppUi.closeOverlay() }
             Spacer(Modifier.width(12.dp))
             Text("Téléchargements", style = T.hugeTitle, color = th.onBackground, fontSize = 30.sp)
         }
@@ -181,7 +186,14 @@ fun DownloadsScreen() {
                                 .clickable(
                                     interactionSource = remember { MutableInteractionSource() },
                                     indication = null
-                                ) { Downloader.delete(item) },
+                                ) {
+                                    Downloader.delete(item)
+                                    lastDeleted = item.track
+                                    scope.launch {
+                                        kotlinx.coroutines.delay(6000)
+                                        if (lastDeleted?.id == item.track.id) lastDeleted = null
+                                    }
+                                },
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
@@ -192,6 +204,22 @@ fun DownloadsScreen() {
                         }
                     }
                 }
+            }
+        }
+        androidx.compose.animation.AnimatedVisibility(visible = lastDeleted != null, enter = androidx.compose.animation.fadeIn(),
+            exit = androidx.compose.animation.fadeOut()) {
+            Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 8.dp)
+                .clip(androidx.compose.foundation.shape.RoundedCornerShape(14.dp))
+                .background(th.card).padding(horizontal = 14.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically) {
+                Text("Téléchargement supprimé", color = th.secondary, fontSize = 13.sp,
+                    modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text("Annuler", color = th.accent, fontWeight = FontWeight.SemiBold, fontSize = 14.sp,
+                    modifier = Modifier.clickable {
+                        val track = lastDeleted
+                        lastDeleted = null
+                        if (track != null) Downloader.download(track)
+                    }.padding(horizontal = 10.dp, vertical = 6.dp))
             }
         }
     }

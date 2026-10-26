@@ -48,7 +48,8 @@ data class PlayerUiState(
     val autoplay: Boolean = true,
     val quality: String = "",
     val playWhenReady: Boolean = false,
-    val buffering: Boolean = false
+    val buffering: Boolean = false,
+    val failed: Boolean = false
 ) {
     val current: Track? get() = if (index in queue.indices) queue[index] else null
 }
@@ -106,7 +107,7 @@ object Player {
             val track = _state.value.current ?: return
             val failed = activeStream
             if (fallbackAttempts++ >= 2) {
-                _state.value = _state.value.copy(isPlaying = false, quality = "Erreur de lecture · réessayez")
+                _state.value = _state.value.copy(isPlaying = false, quality = "Erreur de lecture · réessayez", failed = true)
                 return
             }
             val gen = generation
@@ -123,7 +124,7 @@ object Player {
                     _state.value = _state.value.copy(quality = label(alternative))
                     AudioCache.cacheWhole(track.id, alternative)
                 } else {
-                    _state.value = _state.value.copy(isPlaying = false, quality = "Flux indisponible · réessayez")
+                    _state.value = _state.value.copy(isPlaying = false, quality = "Flux indisponible · réessayez", failed = true)
                 }
             }
         }
@@ -136,6 +137,7 @@ object Player {
                 historyGeneration = generation
             }
             if (isPlaying) _state.value.current?.let { track ->
+                if (recordedListens.size > 500) recordedListens.clear()
                 if (recordedListens.add(track.id)) com.ketvoice.app.data.YouTubeMusicSession.recordListen(track)
             }
             positionNow()
@@ -275,6 +277,7 @@ object Player {
             ?: initialQueue.indexOfFirst { it.id == track.id }.let { if (it >= 0) it else 0 }
         val gen = ++generation
         val prev = _state.value
+        if (initialQueue.map { it.id } != prev.queue.map { it.id }) shuffleRecent.clear()
         _state.value = PlayerUiState(
             queue = initialQueue,
             queueEntryIds = QueueEntryIds.reconcile(prev.queue.map { it.id }, prev.queueEntryIds, initialQueue.map { it.id }),
@@ -329,7 +332,7 @@ object Player {
                 val stream = PublicationApi.stream(resolvedTrack, cached)
                 if (stream == null) {
                     resolving = false
-                    _state.value = _state.value.copy(isPlaying = false, playWhenReady = false, buffering = false, quality = "Aucun flux disponible")
+                    _state.value = _state.value.copy(isPlaying = false, playWhenReady = false, buffering = false, quality = "Aucun flux disponible", failed = true)
                     return@launch
                 }
                 start(stream)
@@ -362,7 +365,7 @@ object Player {
             if (gen != generation) return@launch
             if (initial == null) {
                 resolving = false
-                _state.value = _state.value.copy(isPlaying = false, playWhenReady = false, buffering = false, quality = "Aucun flux disponible")
+                _state.value = _state.value.copy(isPlaying = false, playWhenReady = false, buffering = false, quality = "Aucun flux disponible", failed = true)
                 return@launch
             }
             val first = initial
@@ -534,7 +537,7 @@ object Player {
     fun toggle() {
         val c = controller ?: return
         val state = _state.value
-        if (!state.isPlaying && (state.quality.contains("flux", true) || state.quality.contains("erreur", true))) {
+        if (!state.isPlaying && state.failed) {
             state.current?.let { playTrack(it, state.queue) }
             return
         }
@@ -548,13 +551,19 @@ object Player {
         }
     }
 
+    private val shuffleRecent = ArrayDeque<Int>()
+
     fun next() {
         val s = _state.value
         if (s.queue.isEmpty()) return
         val nextIndex = if (s.shuffle && s.queue.size > 1) {
-            var random = kotlin.random.Random.nextInt(s.queue.size)
-            if (random == s.index) random = (random + 1) % s.queue.size
-            random
+            val recent = shuffleRecent.toSet()
+            var pool = s.queue.indices.filter { it != s.index && it !in recent }
+            if (pool.isEmpty()) pool = s.queue.indices.filter { it != s.index }
+            val chosen = pool.random()
+            shuffleRecent.addLast(chosen)
+            while (shuffleRecent.size > (s.queue.size / 2).coerceAtLeast(1)) shuffleRecent.removeFirst()
+            chosen
         } else {
             if (s.index < s.queue.lastIndex) s.index + 1 else {
                 if (s.autoplay) extendQueue()
@@ -571,7 +580,7 @@ object Player {
             seekTo(0)
             return
         }
-        val previous = (s.index - 1).coerceAtLeast(0)
+        val previous = if (s.index > 0) s.index - 1 else s.queue.lastIndex
         playTrack(s.queue[previous], s.queue, previous)
     }
 

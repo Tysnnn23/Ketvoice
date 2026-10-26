@@ -34,5 +34,5 @@ fun openTrackSearch() {
     AppUi.showPlayer.value = false
     AppUi.showLyrics.value = false
     AppUi.searchSeed.value = ""
-    AppUi.overlay.value = AppUi.SEARCH
+    AppUi.openSearch()
 }

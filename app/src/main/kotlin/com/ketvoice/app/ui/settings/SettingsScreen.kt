@@ -87,11 +87,13 @@ fun SettingsScreen() {
     val ctx = LocalContext.current
     var editSetting by remember { mutableStateOf("") }
     var accentOpen by remember { mutableStateOf(false) }
+    var lyricsDiag by remember { mutableStateOf(false) }
     var choice by remember { mutableStateOf<ChoiceSpec?>(null) }
     val settingsScope = rememberCoroutineScope()
     val youtube by YouTubeMusicSession.profile.collectAsState()
     val publisher by com.ketvoice.app.data.PublisherSession.allowed.collectAsState()
     val customSources by CustomSources.sources.collectAsState()
+    val playerState by Player.state.collectAsState()
 
     Column(
         Modifier
@@ -106,7 +108,7 @@ fun SettingsScreen() {
                 .padding(start = 14.dp, end = 16.dp, top = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            com.ketvoice.app.ui.common.GlassBackButton { AppUi.overlay.value = AppUi.NONE }
+            com.ketvoice.app.ui.common.GlassBackButton { AppUi.closeOverlay() }
             Spacer(Modifier.width(12.dp))
             Text("Réglages", style = T.hugeTitle, color = th.onBackground, fontSize = 30.sp)
         }
@@ -172,7 +174,7 @@ fun SettingsScreen() {
                         SRow(Icons.Filled.Mic, "Importer des lyrics",
                             sub = "Recherchez un titre puis ouvrez son menu ⋯ pour publier un TTML ou LRC", value = "") {
                             AppUi.searchSeed.value = ""
-                            AppUi.overlay.value = AppUi.SEARCH
+                            AppUi.openSearch()
                         }
                         SRow(Icons.Filled.Person, "Déconnecter la publication", sub = "", value = "") {
                             com.ketvoice.app.data.PublisherSession.signOut()
@@ -328,6 +330,11 @@ fun SettingsScreen() {
             // ==================================================== PAROLES
             Section("PAROLES") {
                 SRow(
+                    Icons.Filled.Analytics, "Diagnostic des sources",
+                    sub = "Teste chaque source sur le titre en cours",
+                    value = if (playerState.current == null) "Aucun titre en lecture" else "Tester"
+                ) { lyricsDiag = true }
+                SRow(
                     Icons.Filled.Subtitles, "Source des paroles",
                     sub = "Priorité : syllabes natives, mots, lignes, texte",
                     value = MusicApi.sourceName(AppSettings.lyricsSource.value)
@@ -468,12 +475,12 @@ fun SettingsScreen() {
                     Icons.Filled.Tune, "Ketvoice API",
                     sub = "Recherche, streaming et téléchargements · Supabase",
                     value = "Intégré"
-                ) { AppUi.overlay.value = AppUi.SOURCES }
+                ) { AppUi.openSources() }
                 SRow(
                     Icons.Filled.Tune, "Sources personnalisées",
                     sub = "URLs HTTPS terminées par .json · streaming et téléchargements",
                     value = if (customSources.isEmpty()) "Aucune" else "${customSources.size} source(s)"
-                ) { AppUi.overlay.value = AppUi.SOURCES }
+                ) { AppUi.openSources() }
                 Text(
                     "Ketvoice API protège les identifiants côté Supabase. Aucun cookie Spotify " +
                         "ni jeton d'addon n'est stocké dans l'application.",
@@ -506,7 +513,7 @@ fun SettingsScreen() {
                     Icons.Filled.Image, "Voir la liste",
                     sub = "Pistes enregistrées sur l'appareil",
                     value = ""
-                ) { AppUi.overlay.value = AppUi.DOWNLOADS }
+                ) { AppUi.openDownloads() }
             }
 
             // ==================================================== STOCKAGE
@@ -561,6 +568,8 @@ fun SettingsScreen() {
             )
         }
     }
+
+    if (lyricsDiag) LyricsDiagnosticsDialog(onClose = { lyricsDiag = false })
 
     if (editSetting.isNotBlank()) {
         val state = if (editSetting == "better") AppSettings.betterLyricsKey else AppSettings.lyricaUrl

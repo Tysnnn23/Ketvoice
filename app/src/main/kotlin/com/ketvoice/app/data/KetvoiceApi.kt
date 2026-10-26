@@ -3,6 +3,7 @@ package com.ketvoice.app.data
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.withContext
+import android.os.SystemClock
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.BufferedReader
@@ -36,7 +37,10 @@ object KetvoiceApi {
 
     private fun encode(value: String): String = URLEncoder.encode(value, "UTF-8")
 
+    @Volatile private var retryAt = 0L
+
     private fun get(path: String, readTimeoutMs: Int = 30_000): String? {
+        if (SystemClock.elapsedRealtime() < retryAt) return null
         var connection: HttpURLConnection? = null
         return try {
             connection = (URL(BASE + path).openConnection() as HttpURLConnection).apply {
@@ -49,6 +53,7 @@ object KetvoiceApi {
                 setRequestProperty("Authorization", "Bearer $ANON_KEY")
             }
             val code = connection.responseCode
+            if (code == 429) retryAt = SystemClock.elapsedRealtime() + 60_000L
             val stream = if (code in 200..299) connection.inputStream else connection.errorStream
             val text = stream?.bufferedReader()?.use(BufferedReader::readText)
             if (code in 200..299) text else null

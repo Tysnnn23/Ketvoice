@@ -70,7 +70,7 @@ fun CatalogScreen() {
     LaunchedEffect(tracks) { ArtworkRepo.enrich(tracks) }
     Column(Modifier.fillMaxSize().background(theme.background).statusBarsPadding()) {
         Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            GlassBackButton { AppUi.overlay.value = AppUi.NONE }
+            GlassBackButton { AppUi.closeOverlay() }
             Spacer(Modifier.width(14.dp))
             Text(page?.title ?: request.title, color = theme.onBackground, fontSize = 24.sp,
                 fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)

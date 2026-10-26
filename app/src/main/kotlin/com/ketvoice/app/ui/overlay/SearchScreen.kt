@@ -301,7 +301,7 @@ fun SearchScreen() {
                     2 -> "Essayez un autre titre, artiste ou album parmi vos téléchargements."
                     else -> "Essayez un titre plus court ou le nom de l'artiste. Vérifiez aussi votre connexion."
                 }, if (segment == 1) "Gérer les sources" else "Réessayer") {
-                    if (segment == 1) AppUi.overlay.value = AppUi.SOURCES else attempt++
+                    if (segment == 1) AppUi.pushOverlay(AppUi.SOURCES) else attempt++
                 }
             }
 
@@ -465,7 +465,7 @@ private fun SourcesCard(compact: Boolean = false) {
             Text("Source intégrée · active", color = th.secondary, style = T.caption)
             Spacer(Modifier.weight(1f))
             Text("Gérer", color = th.accent, fontWeight = FontWeight.SemiBold, fontSize = 13.sp,
-                modifier = Modifier.clickable { AppUi.overlay.value = AppUi.SOURCES }
+                modifier = Modifier.clickable { AppUi.pushOverlay(AppUi.SOURCES) }
                     .padding(start = 12.dp, top = 8.dp, bottom = 8.dp))
         }
         Spacer(Modifier.height(10.dp))
