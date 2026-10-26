@@ -7,6 +7,16 @@
 
 ---
 
+## 3.0.7 — NAVIGATION BACK HISTORY (versionCode 32)
+
+- Hardware Back and each in-app back button now restore the previous screen,
+  including artist, album, playlist, settings, downloads and search routes.
+- Opening an artist from the full player restores the player when returning.
+- Switching main tabs intentionally clears navigation history.
+- See [3.0.7 release notes](docs/releases/v3.0.7.md).
+
+---
+
 ## 3.0.6 — AUTOMIX (BETA) (versionCode 31)
 
 - Optional AutoMix blends the current and upcoming songs using two independent

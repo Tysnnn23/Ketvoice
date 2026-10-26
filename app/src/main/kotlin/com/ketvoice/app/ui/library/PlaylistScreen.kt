@@ -49,7 +49,7 @@ fun PlaylistScreen() {
     }}
     Column(Modifier.fillMaxSize().background(th.background).statusBarsPadding()) {
         Row(Modifier.fillMaxWidth().padding(12.dp),verticalAlignment=Alignment.CenterVertically){
-            IconButton(onClick={AppUi.selectTab(AppUi.LIBRARY)}){Icon(Icons.AutoMirrored.Filled.ArrowBack,"Retour",tint=th.onBackground)}
+            IconButton(onClick={AppUi.back()}){Icon(Icons.AutoMirrored.Filled.ArrowBack,"Retour",tint=th.onBackground)}
             Text("Playlist",color=th.onBackground)
         }
         if(playlist==null){EmptyState("Playlist introuvable","Cette collection n'est plus disponible sur cet appareil.","Bibliothèque"){AppUi.selectTab(AppUi.LIBRARY)};return@Column}
@@ -76,7 +76,7 @@ fun PlaylistScreen() {
                 Row(Modifier.fillMaxWidth().clickable(enabled=!busy){
                     if(entry.track!=null) Player.playQueue(playable,playlist.entries.take(index).count{it.track!=null})
                     else {AppUi.playlistResolution.value=AppUi.PlaylistResolution(playlist.id,entry.id)
-                        AppUi.searchSeed.value="${entry.title} ${entry.artist}";AppUi.overlay.intValue=AppUi.SEARCH}
+                        AppUi.searchSeed.value="${entry.title} ${entry.artist}";AppUi.navigate(AppUi.SEARCH)}
                 }.padding(horizontal=18.dp,vertical=10.dp),verticalAlignment=Alignment.CenterVertically){
                     Text("${index+1}",localize=false,color=th.secondary,fontSize=12.sp,modifier=Modifier.width(28.dp))
                     Column(Modifier.weight(1f)){

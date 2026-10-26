@@ -102,7 +102,7 @@ fun SettingsScreen() {
                 .padding(start = 14.dp, end = 16.dp, top = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            com.ketvoice.app.ui.common.GlassBackButton { AppUi.overlay.value = AppUi.NONE }
+            com.ketvoice.app.ui.common.GlassBackButton { AppUi.back() }
             Spacer(Modifier.width(12.dp))
             Text("Réglages", style = T.hugeTitle, color = th.onBackground, fontSize = 30.sp)
         }
@@ -184,7 +184,7 @@ fun SettingsScreen() {
                         SRow(Icons.Filled.Mic, "Importer des lyrics",
                             sub = "Recherchez un titre puis ouvrez son menu ⋯ pour publier un TTML ou LRC", value = "") {
                             AppUi.searchSeed.value = ""
-                            AppUi.overlay.value = AppUi.SEARCH
+                            AppUi.navigate(AppUi.SEARCH)
                         }
                         SRow(Icons.Filled.Person, "Déconnecter la publication", sub = "", value = "") {
                             com.ketvoice.app.data.PublisherSession.signOut()
@@ -478,12 +478,12 @@ fun SettingsScreen() {
                     Icons.Filled.Tune, "Ketvoice API",
                     sub = "Recherche, streaming et téléchargements · Supabase",
                     value = "Intégré"
-                ) { AppUi.overlay.value = AppUi.SOURCES }
+                ) { AppUi.navigate(AppUi.SOURCES) }
                 SRow(
                     Icons.Filled.Tune, "Sources personnalisées",
                     sub = "URLs HTTPS terminées par .json · streaming et téléchargements",
                     value = if (customSources.isEmpty()) "Aucune" else "${customSources.size} source(s)"
-                ) { AppUi.overlay.value = AppUi.SOURCES }
+                ) { AppUi.navigate(AppUi.SOURCES) }
                 Text(
                     "Ketvoice API protège les identifiants côté Supabase. Aucun cookie Spotify " +
                         "ni jeton d'addon n'est stocké dans l'application.",
@@ -515,7 +515,7 @@ fun SettingsScreen() {
                     Icons.Filled.Image, "Voir la liste",
                     sub = "Pistes enregistrées sur l'appareil",
                     value = ""
-                ) { AppUi.overlay.value = AppUi.DOWNLOADS }
+                ) { AppUi.navigate(AppUi.DOWNLOADS) }
             }
 
             Section("STOCKAGE") {

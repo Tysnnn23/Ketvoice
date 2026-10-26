@@ -8,7 +8,7 @@ import com.ketvoice.app.ui.player.PlayerPage
 @Composable
 fun QueueScreen() {
     FullPlayerScreen(initialPage = PlayerPage.QUEUE, onDismiss = {
-        AppUi.overlay.value = AppUi.NONE
+        AppUi.back()
         AppUi.showLyrics.value = false
         AppUi.showPlayer.value = false
     })

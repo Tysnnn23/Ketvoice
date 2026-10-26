@@ -32,24 +32,78 @@ object AppUi {
     val addToPlaylist = androidx.compose.runtime.mutableStateOf<com.ketvoice.app.data.Track?>(null)
     data class PlaylistResolution(val playlistId: String, val entryId: String)
     val playlistResolution = androidx.compose.runtime.mutableStateOf<PlaylistResolution?>(null)
-    fun openPlaylist(id: String) { playlistId.value = id; overlay.intValue = PLAYLIST; showPlayer.value = false; bottomCollapsed.value = false }
+    fun openPlaylist(id: String) { navigate(PLAYLIST, playlist = id) }
     val catalogRequest = androidx.compose.runtime.mutableStateOf<com.ketvoice.app.data.CatalogRequest?>(null)
     fun openCatalog(request: com.ketvoice.app.data.CatalogRequest) {
-        catalogRequest.value = request
-        overlay.intValue = CATALOG
-        bottomCollapsed.value = false
+        navigate(CATALOG, catalog = request)
     }
 
     data class ArtistRequest(val id: String, val name: String)
     val artistRequest = androidx.compose.runtime.mutableStateOf<ArtistRequest?>(null)
     fun openArtist(id: String, name: String) {
         if (!id.startsWith("UC")) return
-        artistRequest.value = ArtistRequest(id, name)
-        overlay.intValue = ARTIST
-        bottomCollapsed.value = false
+        navigate(ARTIST, artist = ArtistRequest(id, name))
     }
 
     val overlay = androidx.compose.runtime.mutableIntStateOf(NONE)
+
+    private data class Destination(
+        val tab: Int,
+        val overlay: Int,
+        val playlist: String?,
+        val catalog: com.ketvoice.app.data.CatalogRequest?,
+        val artist: ArtistRequest?,
+        val player: Boolean,
+        val lyrics: Boolean,
+        val search: String
+    )
+
+    private val history = ArrayDeque<Destination>()
+
+    private fun current() = Destination(tab.intValue, overlay.intValue, playlistId.value,
+        catalogRequest.value, artistRequest.value, showPlayer.value, showLyrics.value, searchSeed.value)
+
+    /** All route changes go through here; the previous screen and its arguments remain intact. */
+    fun navigate(screen: Int, playlist: String? = null,
+                 catalog: com.ketvoice.app.data.CatalogRequest? = null,
+                 artist: ArtistRequest? = null) {
+        require(screen != NONE)
+        val previous = current()
+        val target = previous.copy(overlay = screen, playlist = playlist ?: previous.playlist,
+            catalog = catalog ?: previous.catalog, artist = artist ?: previous.artist,
+            player = false, lyrics = false)
+        if (previous == target) return
+        history.addLast(previous)
+        playlistId.value = target.playlist
+        catalogRequest.value = target.catalog
+        artistRequest.value = target.artist
+        showPlayer.value = false
+        showLyrics.value = false
+        overlay.intValue = screen
+        bottomCollapsed.value = false
+    }
+
+    fun back() {
+        if (showPlayer.value) {
+            showPlayer.value = false
+            showLyrics.value = false
+            return
+        }
+        val previous = if (history.isEmpty()) null else history.removeLast()
+        if (previous == null) {
+            overlay.intValue = NONE
+            showLyrics.value = false
+            return
+        }
+        tab.intValue = previous.tab
+        playlistId.value = previous.playlist
+        catalogRequest.value = previous.catalog
+        artistRequest.value = previous.artist
+        searchSeed.value = previous.search
+        overlay.intValue = previous.overlay
+        showPlayer.value = previous.player
+        showLyrics.value = previous.lyrics
+    }
 
     val searchSeed = androidx.compose.runtime.mutableStateOf("")
 
@@ -94,6 +148,7 @@ object AppUi {
     val showTrackMenu = androidx.compose.runtime.mutableStateOf(false)
     val trackMenuTrack = androidx.compose.runtime.mutableStateOf<com.ketvoice.app.data.Track?>(null)
     fun selectTab(index: Int) {
+        history.clear()
         playlistResolution.value = null
         tab.intValue = index
         overlay.intValue = NONE
@@ -110,6 +165,7 @@ object AppUi {
     val showLyricsSource = androidx.compose.runtime.mutableStateOf(false)
 
     fun closeOverlays() {
+        history.clear()
         overlay.value = NONE
         showPlayer.value = false
         showAccount.value = false

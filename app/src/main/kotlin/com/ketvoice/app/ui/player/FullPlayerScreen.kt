@@ -233,7 +233,6 @@ fun FullPlayerScreen(
                         modifier = Modifier.width(sceneWidth).padding(top = topInset + 32.dp))
                     PlayerTitle(track, false, cover, sheetAction = { sheet = "track" }, onArtist = {
                         track.artistId?.takeIf { it.startsWith("UC") }?.let {
-                            AppUi.showPlayer.value = false
                             AppUi.openArtist(it, track.artist)
                         }
                     },
@@ -249,7 +248,6 @@ fun FullPlayerScreen(
                         navigate(PlayerPage.ARTWORK)
                     }, onArtist = {
                         track.artistId?.takeIf { it.startsWith("UC") }?.let {
-                            AppUi.showPlayer.value = false
                             AppUi.openArtist(it, track.artist)
                         }
                     },
