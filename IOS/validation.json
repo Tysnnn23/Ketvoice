@@ -15,7 +15,7 @@
   "cloud_user_data_sync": false,
   "ipa_built": false,
   "signing": "not-configured",
-  "github_workflow": "template-only; current credential lacks workflow permission",
+  "github_workflow": "activated in .github/workflows/ios-build.yml; first Xcode build pending",
   "limitations": [
     "Source review and Python tooling tests do not validate Swift compilation or app behavior.",
     "No Apple credentials, provisioning profile or physical iPhone session available.",

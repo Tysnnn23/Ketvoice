@@ -1,13 +1,16 @@
 name: iOS source build (unsigned)
-# Template: requires the repository workflow permission before activation.
 
 on:
   workflow_dispatch:
   push:
-    branches: ["ios-port-*"]
+    branches: ["main", "ios-port-*"]
     paths:
       - "IOS/**"
       - ".github/workflows/ios-build.yml"
+
+concurrency:
+  group: ios-build-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   compile:
@@ -17,6 +20,10 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
+      - name: Record toolchain
+        run: |
+          xcodebuild -version
+          swift --version
       - name: Check resources shared with Android
         run: python3 IOS/tools/sync_android_resources.py --check
       - name: Check packaging safeguards (fixtures, not device tests)

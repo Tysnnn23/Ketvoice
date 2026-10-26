@@ -63,17 +63,17 @@ puis lancez `python IOS/tools/check_syntax.py`.
 
 ## Compilation gratuite sans Mac local
 
-Le modèle [iOS source build](ci/ios-build.yml) prévoit un runner macOS
+Le workflow [iOS source build](../.github/workflows/ios-build.yml) utilise un runner macOS
 `xcode-27` de GitHub Actions, gratuit pour le dépôt public. Il doit exécuter
 `swift test --package-path IOS`, compiler pour iPhone et simulateur **sans
 signature ni lancement d'émulateur**, puis produire un IPA **non signé** avec
 SHA-256 et métadonnées. L'empaqueteur refuse un binaire simulateur, une mauvaise
 architecture ou un profil de signature inclus par erreur.
 
-**Blocage actuel :** le jeton GitHub n'a pas le droit `workflow`. Un mainteneur
-autorisé doit copier `IOS/ci/ios-build.yml` vers
-`.github/workflows/ios-build.yml`, puis lancer le workflow. Aucun contournement
-de ce droit n'est effectué ; aucun IPA réel n'a encore été construit.
+Le droit GitHub `workflow` est maintenant disponible et le workflow est activé.
+La première compilation distante est en préparation ; aucun IPA réel n'a encore
+été construit. Aucune identité Apple ni aucun secret de signature n'est envoyé
+au runner.
 
 Sur un Mac disposant de Xcode :
 
