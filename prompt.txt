@@ -1,0 +1,58 @@
+# MASTER PROMPT — KETVOICE UI/UX UPGRADE
+
+Tu dois améliorer Ketvoice en t'appuyant sur les références fournies et sur le code existant.
+
+## 1. Comprendre les références
+
+- **ZIP (173 images) + vidéo 1000080551.mp4** : design et animations à reproduire. Les images sont des frames chronologiques d'une même démonstration.
+- **Vidéo 1000080553.mp4** : état actuel de Ketvoice, montrant ses pages et fonctionnalités.
+
+Compare les références à l'application actuelle avant toute modification.
+
+## 2. Reproduire le design de référence
+
+**Priorité absolue : Liquid Glass et animations.**
+
+- Reproduire le comportement de la barre de navigation : capsules fluides, sélection qui glisse et se transforme naturellement, déformations légères, reflets, transparence et couleurs dynamiques.
+- Le verre doit réagir visuellement au contenu situé derrière lui, avec flou, réfraction simulée et reflets subtils. Éviter les simples gradients statiques.
+- Appliquer le même soin au mini-lecteur et à ses transitions.
+- Améliorer les pages Accueil, Explorer et Bibliothèque en s'inspirant des captures : cartes musicales colorées, compositions propres, hiérarchie visuelle et espacements cohérents.
+- Reproduire le mouvement et les interactions visibles, pas uniquement l'apparence d'une capture.
+- Garder une excellente fluidité, avec prise en charge des écrans 90/120 Hz lorsque possible et réduction des effets coûteux sur les appareils moins puissants.
+
+## 3. Corriger et améliorer Ketvoice
+
+En te basant sur la vidéo complète :
+
+- Uniformiser les textes selon la langue choisie et remplacer les anciennes mentions « Konnekt » par « Ketvoice » lorsqu'elles désignent l'application.
+- Corriger les incohérences visuelles, alignements, dimensions, contrastes et animations brusques.
+- Éviter les chevauchements entre mini-lecteur, navigation, clavier et bottom sheets.
+- Améliorer les états de chargement, d'erreur et de contenu vide sans bloquer inutilement l'interface.
+- Fluidifier l'ouverture et la fermeture du lecteur, la navigation, les recherches et les changements de page.
+- Préserver et fiabiliser les paroles synchronisées, les playlists, la bibliothèque, les téléchargements et AutoMix.
+- Ajouter uniquement les petits raffinements UX justifiés par les références ou par un problème réellement identifié.
+
+## 4. Règles impératives
+
+1. Inspecte d'abord le code et identifie les composants existants à réutiliser.
+2. Ne réécris pas l'application entière.
+3. Ne supprime aucune fonctionnalité existante et ne modifie pas la logique audio sans nécessité.
+4. N'invente ni API, ni dépendance, ni fonctionnalité absente des spécifications.
+5. Respecte l'architecture et les technologies réellement utilisées par le projet.
+6. Préserve la compatibilité Android et iOS lorsqu'elles sont prises en charge.
+7. Implémente de vrais composants interactifs, pas des images imitant l'interface.
+8. Vérifie les résultats, les performances et les régressions après modification.
+
+## 5. Résultat attendu
+
+Un **Ketvoice plus premium, cohérent et fluide**, avec un Liquid Glass et des animations aussi proches que possible de la référence.
+
+Procède par priorité : **navigation + mini-lecteur → cohérence visuelle des pages → corrections UX → tests**.
+
+Modifie directement les fichiers nécessaires, puis fournis un résumé bref des changements, des vérifications réalisées et des éventuelles limitations.
+
+**Important : ne prétends pas avoir reproduit un effet ou testé une fonctionnalité si tu ne l'as pas réellement fait.**
+
+IMPORTANJT 2 : voici l emplacement des reference que  tgu dois  analyser attentivement : "C:\Users\Yanis\Downloads\Ketvoice\SVID_20261026_221116_1_000.zip"
+"C:\Users\Yanis\Downloads\Ketvoice\1000080553.mp4"
+"C:\Users\Yanis\Downloads\Ketvoice\1000080551.mp4"

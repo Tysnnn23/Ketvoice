@@ -3,6 +3,7 @@ package com.ketvoice.app.ui.chrome
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
@@ -13,6 +14,7 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -41,6 +43,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -81,16 +85,47 @@ fun MiniPlayerPill(modifier: Modifier = Modifier, onOpen: () -> Unit) {
     val art by ArtworkRepo.covers.collectAsState()
     val cover = art["t:${current.id}"] ?: current.coverUrl
 
+    val pillShape = RoundedCornerShape(29.dp)
     GlassPanel(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 6.dp)
-            .height(58.dp),
-        shape = RoundedCornerShape(29.dp),
+            .height(58.dp)
+            .shadow(
+                elevation = if (th.isDark) 2.dp else 4.dp,
+                shape = pillShape,
+                spotColor = Color.Black.copy(alpha = 0.14f)
+            )
+            .border(
+                0.75.dp,
+                Brush.verticalGradient(
+                    listOf(
+                        Color.White.copy(alpha = if (th.isDark) 0.38f else 0.7f),
+                        Color.White.copy(alpha = if (th.isDark) 0.08f else 0.22f)
+                    )
+                ),
+                pillShape
+            ),
+        shape = pillShape,
         params = GlassParams.pill(dark = th.isDark),
         enabled = AppSettings.liquidGlass.value
     ) {
         Box(Modifier.fillMaxSize()) {
+            // Reflet spéculaire supérieur Liquid Glass
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .height(16.dp)
+                    .align(Alignment.TopCenter)
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                Color.White.copy(alpha = if (th.isDark) 0.25f else 0.45f),
+                                Color.Transparent
+                            )
+                        )
+                    )
+            )
             Row(
                 Modifier
                     .fillMaxSize()
@@ -304,16 +339,53 @@ fun GlassBottomBar(
                 Box(Modifier.fillMaxSize()) {
                     BoxWithConstraints(Modifier.fillMaxSize()) {
                         val slot = maxWidth / 3
-                        GlassPanel(
+                        // Bulle active Liquid Glass avec reflet prismatique et contraste parfait (Frame 120)
+                        val pillShape = RoundedCornerShape(999.dp)
+                        val chromaticBorder = remember(th.isDark) {
+                            Brush.sweepGradient(
+                                listOf(
+                                    Color(0x4444DDFF),
+                                    Color(0x44FF2299),
+                                    Color(0x44FFAA00),
+                                    Color(0x4400E5FF),
+                                    Color(0x4444DDFF)
+                                )
+                            )
+                        }
+                        Box(
                             modifier = Modifier
                                 .offset(x = slot * pillX + 5.dp)
                                 .size(width = slot - 10.dp, height = heightAnim - 10.dp)
                                 .align(Alignment.CenterStart)
-                                .graphicsLayer { scaleX = bulge; scaleY = bulge },
-                            shape = RoundedCornerShape(999.dp),
-                            params = GlassParams.pill(blur = if (held) 32f else 20f, dark = th.isDark),
-                            enabled = AppSettings.liquidGlass.value
-                        ) { }
+                                .graphicsLayer { scaleX = bulge; scaleY = bulge }
+                                .shadow(
+                                    elevation = if (th.isDark) 0.dp else 3.5.dp,
+                                    shape = pillShape,
+                                    spotColor = Color.Black.copy(alpha = 0.15f)
+                                )
+                                .clip(pillShape)
+                                .background(
+                                    if (th.isDark) Color.White.copy(alpha = 0.22f)
+                                    else Color.White.copy(alpha = 0.88f)
+                                )
+                                .border(1.dp, chromaticBorder, pillShape)
+                        ) {
+                            // Reflet spéculaire au sommet de la capsule
+                            Box(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .height(14.dp)
+                                    .align(Alignment.TopCenter)
+                                    .background(
+                                        Brush.verticalGradient(
+                                            listOf(
+                                                Color.White.copy(alpha = if (th.isDark) 0.35f else 0.55f),
+                                                Color.Transparent
+                                            )
+                                        )
+                                    )
+                            )
+                        }
                     }
                     Row(
                         Modifier
@@ -326,6 +398,16 @@ fun GlassBottomBar(
                                 targetValue = if (isSel) 1.08f else 1f,
                                 animationSpec = spring(dampingRatio = 0.5f, stiffness = 600f),
                                 label = "tabIcon"
+                            )
+                            val targetContentColor = when {
+                                isSel && !th.isDark -> Color(0xFF141414)
+                                isSel && th.isDark -> Color.White
+                                else -> th.onBackground.copy(alpha = 0.52f)
+                            }
+                            val contentColor by animateColorAsState(
+                                targetValue = targetContentColor,
+                                animationSpec = tween(180),
+                                label = "tabColor"
                             )
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -342,7 +424,7 @@ fun GlassBottomBar(
                                 Icon(
                                     tab.icon,
                                     contentDescription = null,
-                                    tint = if (isSel) th.onBackground else th.onBackground.copy(alpha = .62f),
+                                    tint = contentColor,
                                     modifier = Modifier
                                         .size(22.dp)
                                         .graphicsLayerScale(iconScale)
@@ -351,8 +433,8 @@ fun GlassBottomBar(
                                 Text(
                                     tab.label,
                                     fontSize = 10.5.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = if (isSel) th.onBackground else th.onBackground.copy(alpha = .62f)
+                                    fontWeight = if (isSel) FontWeight.Bold else FontWeight.SemiBold,
+                                    color = contentColor
                                 )
                             }
                         }
@@ -379,7 +461,13 @@ fun GlassBottomBar(
         Spacer(Modifier.width(10.dp))
 
         GlassPanel(
-            modifier = Modifier.size(searchSize),
+            modifier = Modifier
+                .size(searchSize)
+                .shadow(
+                    elevation = if (th.isDark) 0.dp else 2.5.dp,
+                    shape = CircleShape,
+                    spotColor = Color.Black.copy(alpha = 0.12f)
+                ),
             shape = CircleShape,
             params = GlassParams.circle(dark = th.isDark),
             enabled = AppSettings.liquidGlass.value
@@ -390,6 +478,22 @@ fun GlassBottomBar(
                     .clickable(noRipple, null) { AppUi.openSearch() },
                 contentAlignment = Alignment.Center
             ) {
+                // Reflet spéculaire supérieur de la lentille circulaire
+                Box(
+                    Modifier
+                        .fillMaxWidth(0.7f)
+                        .height(10.dp)
+                        .align(Alignment.TopCenter)
+                        .clip(CircleShape)
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(
+                                    Color.White.copy(alpha = if (th.isDark) 0.35f else 0.5f),
+                                    Color.Transparent
+                                )
+                            )
+                        )
+                )
                 Icon(
                     Icons.Filled.Search,
                     contentDescription = "Rechercher",

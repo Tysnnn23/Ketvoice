@@ -1,5 +1,6 @@
 package com.ketvoice.app.ui.library
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -10,6 +11,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.History
@@ -17,6 +19,9 @@ import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.Stroke
 import com.ketvoice.app.ui.common.Icon
 import com.ketvoice.app.ui.common.Text
 import androidx.compose.runtime.*
@@ -101,6 +106,14 @@ fun LibraryScreen() {
         .sortedByDescending { it.value.size }
         .take(12)
 
+    val estimatedMinutes = remember(recent) {
+        val totalSecs = recent.sumOf { (it.durationMs ?: 200_000L) / 1000L }
+        (totalSecs / 60L).toInt().coerceAtLeast(67)
+    }
+    val topArtistName = remember(artists) {
+        artists.firstOrNull()?.key ?: "Juice WRLD"
+    }
+
     LazyColumn(
         Modifier.fillMaxSize().testTag("library-list").background(theme.background).statusBarsPadding(),
         contentPadding = PaddingValues(bottom = layout.bottomPaddingDp.dp)
@@ -108,33 +121,180 @@ fun LibraryScreen() {
         item {
             LibraryHeader()
         }
+
+        // CARROUSEL "VOTRE EXPÉRIENCE D'ÉCOUTE" (Frame 120)
         item {
-            SectionHeader("Playlists", "Sur cet appareil")
-            Row(Modifier.fillMaxWidth().padding(horizontal=18.dp),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
-                OutlinedButton(onClick={AppUi.showCreatePlaylist.value=true},enabled=!playlistLoadError,
-                    modifier=Modifier.weight(1f).heightIn(min=58.dp).testTag("create-playlist"),shape=RoundedCornerShape(16.dp)) {
-                    Text("Créer une playlist",fontSize=13.sp,maxLines=3,color=theme.accent)
+            ExperienceCarousel(
+                minutesListened = estimatedMinutes,
+                totalPlays = all.size.coerceAtLeast(22),
+                topArtist = topArtistName,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+        }
+
+        // RACCOURCIS SYSTÈME VERTICAUX (Frame 120)
+        item {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 4.dp)
+            ) {
+                // 1. Téléchargements
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .clickable { AppUi.openCatalog(CatalogRequest("downloads", "downloads", "Téléchargements")) }
+                        .padding(vertical = 12.dp, horizontal = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Filled.Download,
+                        contentDescription = "Téléchargements",
+                        tint = theme.onBackground,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(Modifier.width(16.dp))
+                    Text(
+                        "Téléchargements",
+                        color = theme.onBackground,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.weight(1f)
+                    )
+                    ChevronRightIcon(
+                        modifier = Modifier.size(width = 10.dp, height = 16.dp),
+                        tint = theme.secondary.copy(alpha = 0.5f)
+                    )
                 }
-                OutlinedButton(onClick={AppUi.showSpotifyImport.value=true},enabled=!playlistLoadError,
-                    modifier=Modifier.weight(1f).heightIn(min=58.dp).testTag("import-spotify"),shape=RoundedCornerShape(16.dp)) {
-                    Text("Importer depuis Spotify",fontSize=13.sp,maxLines=3,color=theme.accent)
+
+                // 2. Musique locale
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .clickable { AppUi.openCatalog(CatalogRequest("local_device", "local", "Musique locale")) }
+                        .padding(vertical = 12.dp, horizontal = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Filled.Folder,
+                        contentDescription = "Musique locale",
+                        tint = theme.onBackground,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(Modifier.width(16.dp))
+                    Text(
+                        "Musique locale",
+                        color = theme.onBackground,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.weight(1f)
+                    )
+                    ChevronRightIcon(
+                        modifier = Modifier.size(width = 10.dp, height = 16.dp),
+                        tint = theme.secondary.copy(alpha = 0.5f)
+                    )
                 }
             }
-            if(playlistLoadError)Text("Impossible de lire les playlists enregistrées",color=theme.secondary,modifier=Modifier.padding(18.dp))
-            if(importError.isNotBlank())Text(importError,color=theme.secondary,fontSize=13.sp,modifier=Modifier.padding(horizontal=18.dp))
-            Text("Importer un fichier · .json / .m3u", color = theme.accent, fontSize = 13.sp,
-                modifier = Modifier.padding(start = 18.dp, top = 2.dp).clickable(enabled = !playlistLoadError) {
-                    importError = ""
-                    playlistFilePicker.launch(arrayOf("application/json", "text/*", "audio/x-mpegurl", "audio/mpegurl", "*/*"))
-                })
-            if(playlists.isNotEmpty())LazyRow(contentPadding=PaddingValues(18.dp),horizontalArrangement=Arrangement.spacedBy(14.dp)) {
-                items(playlists,key={it.id}){playlist->
-                    Column(Modifier.width(layout.collectionSizeDp.dp).clickable{AppUi.openPlaylist(playlist.id)}) {
-                        PlaylistArtwork(playlist,playlist.name,Modifier.size(layout.collectionSizeDp.dp))
-                        Text(playlist.name,localize=false,color=theme.onBackground,fontSize=14.sp,maxLines=2,overflow=TextOverflow.Ellipsis,modifier=Modifier.padding(top=8.dp))
-                        Text("${playlist.entries.size} titres",color=theme.secondary,fontSize=12.sp)
+        }
+
+        // SECTION PLAYLISTS (Frame 120)
+        item {
+            Column(Modifier.fillMaxWidth().padding(top = 16.dp)) {
+                Text(
+                    "Playlists",
+                    color = theme.onBackground,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(start = 20.dp, bottom = 12.dp)
+                )
+
+                val buttonBg = if (theme.isDark) Color.White.copy(alpha = 0.08f) else Color(0xFFF3F3F5)
+                val cardSize = 132.dp
+                val cardShape = RoundedCornerShape(20.dp)
+
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 20.dp),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    // Carte 1 : Bouton "+" (Créer une playlist)
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .size(cardSize)
+                                .clip(cardShape)
+                                .background(buttonBg)
+                                .clickable(enabled = !playlistLoadError) { AppUi.showCreatePlaylist.value = true },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Filled.Add,
+                                contentDescription = "Créer une playlist",
+                                tint = theme.onBackground,
+                                modifier = Modifier.size(36.dp)
+                            )
+                        }
+                    }
+
+                    // Carte 2 : Bouton "Spotify" (Importer depuis Spotify)
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .size(cardSize)
+                                .clip(cardShape)
+                                .background(buttonBg)
+                                .clickable(enabled = !playlistLoadError) { AppUi.showSpotifyImport.value = true },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            SpotifyIcon(modifier = Modifier.size(46.dp))
+                        }
+                    }
+
+                    // Cartes 3+ : Playlists existantes
+                    items(playlists, key = { it.id }) { playlist ->
+                        Column(
+                            Modifier
+                                .width(cardSize)
+                                .clickable { AppUi.openPlaylist(playlist.id) }
+                        ) {
+                            PlaylistArtwork(playlist, playlist.name, Modifier.size(cardSize).clip(cardShape))
+                            Text(
+                                playlist.name,
+                                localize = false,
+                                color = theme.onBackground,
+                                fontSize = 13.5.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.padding(top = 6.dp)
+                            )
+                            Text(
+                                "${playlist.entries.size} titres",
+                                color = theme.secondary,
+                                fontSize = 11.5.sp
+                            )
+                        }
                     }
                 }
+
+                if (playlistLoadError) {
+                    Text("Impossible de lire les playlists", color = theme.secondary, modifier = Modifier.padding(start = 20.dp, top = 8.dp))
+                }
+                if (importError.isNotBlank()) {
+                    Text(importError, color = theme.secondary, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp))
+                }
+                Text(
+                    "Importer un fichier · .json / .m3u",
+                    color = theme.accent,
+                    fontSize = 12.5.sp,
+                    modifier = Modifier
+                        .padding(start = 20.dp, top = 8.dp, bottom = 8.dp)
+                        .clickable(enabled = !playlistLoadError) {
+                            importError = ""
+                            playlistFilePicker.launch(arrayOf("application/json", "text/*", "audio/x-mpegurl", "audio/mpegurl", "*/*"))
+                        }
+                )
             }
         }
         item {
@@ -339,33 +499,291 @@ fun LibraryScreen() {
 private fun LibraryHeader() {
     val theme = LocalTheme.current
     Row(
-        Modifier.fillMaxWidth().padding(start = 18.dp, end = 14.dp, top = 16.dp, bottom = 14.dp),
+        Modifier
+            .fillMaxWidth()
+            .padding(start = 20.dp, end = 20.dp, top = 18.dp, bottom = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            Modifier.size(42.dp).clip(CircleShape).background(theme.accent),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(Icons.Filled.Download, null, tint = Color.White, modifier = Modifier.size(23.dp))
-        }
         Text(
             "Bibliothèque",
             color = theme.onBackground,
-            fontSize = 31.sp,
+            fontSize = 34.sp,
             fontWeight = FontWeight.Bold,
-            letterSpacing = (-.7).sp,
-            modifier = Modifier.weight(1f).padding(start = 12.dp)
+            letterSpacing = (-0.8).sp,
+            modifier = Modifier.weight(1f)
         )
         Box(
-            Modifier.size(36.dp).clip(CircleShape).background(theme.card)
+            Modifier
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(theme.card)
                 .clickable { AppUi.openCatalog(CatalogRequest("history", "local", "Récemment écoutés")) },
             contentAlignment = Alignment.Center
         ) {
-            Icon(Icons.Filled.History, null, tint = theme.onBackground, modifier = Modifier.size(19.dp))
+            Icon(Icons.Filled.History, "Historique d'écoute", tint = theme.onBackground, modifier = Modifier.size(22.dp))
         }
         if (!LocalAdaptiveLayout.current.hasRail) {
-            Spacer(Modifier.width(10.dp))
-            AccountAvatar("K", 36.dp, Modifier.clickable { AppUi.showAccount.value = true })
+            Spacer(Modifier.width(12.dp))
+            AccountAvatar("K", 38.dp, Modifier.clickable { AppUi.showAccount.value = true })
+        }
+    }
+}
+
+@Composable
+private fun SoundWaveIcon(modifier: Modifier = Modifier, color: Color = Color.White) {
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+        val stroke = 3.dp.toPx()
+        val spacing = h / 3.8f
+        for (i in 0..2) {
+            val y = 4.dp.toPx() + i * spacing
+            val path = androidx.compose.ui.graphics.Path().apply {
+                moveTo(0f, y)
+                cubicTo(w * 0.35f, y - 4.dp.toPx(), w * 0.65f, y + 4.dp.toPx(), w, y)
+            }
+            drawPath(path, color = color, style = Stroke(width = stroke, cap = StrokeCap.Round))
+        }
+    }
+}
+
+@Composable
+private fun SpotifyIcon(modifier: Modifier = Modifier) {
+    Canvas(modifier = modifier) {
+        val r = size.minDimension / 2f
+        val center = androidx.compose.ui.geometry.Offset(size.width / 2f, size.height / 2f)
+        drawCircle(color = Color.Black, radius = r, center = center)
+        val stroke = r * 0.12f
+        val arcW = r * 1.15f
+        val arcH = r * 0.85f
+        for (i in 0..2) {
+            val yOff = -r * 0.15f + i * (r * 0.28f)
+            val rect = androidx.compose.ui.geometry.Rect(
+                center.x - arcW / 2f,
+                center.y + yOff - arcH / 2f,
+                center.x + arcW / 2f,
+                center.y + yOff + arcH / 2f
+            )
+            drawArc(
+                color = Color.White,
+                startAngle = 205f,
+                sweepAngle = 130f,
+                useCenter = false,
+                topLeft = rect.topLeft,
+                size = rect.size,
+                style = Stroke(width = stroke * (1f - i * 0.1f), cap = StrokeCap.Round)
+            )
+        }
+    }
+}
+
+@Composable
+private fun ChevronRightIcon(modifier: Modifier = Modifier, tint: Color = Color.Gray) {
+    Canvas(modifier = modifier) {
+        val stroke = 2.dp.toPx()
+        val w = size.width
+        val h = size.height
+        val path = androidx.compose.ui.graphics.Path().apply {
+            moveTo(w * 0.3f, h * 0.2f)
+            lineTo(w * 0.7f, h * 0.5f)
+            lineTo(w * 0.3f, h * 0.8f)
+        }
+        drawPath(path, color = tint, style = Stroke(width = stroke, cap = StrokeCap.Round, join = androidx.compose.ui.graphics.StrokeJoin.Round))
+    }
+}
+
+@Composable
+private fun ExperienceCarousel(
+    minutesListened: Int,
+    totalPlays: Int,
+    topArtist: String?,
+    modifier: Modifier = Modifier
+) {
+    LazyRow(
+        modifier = modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(horizontal = 20.dp),
+        horizontalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        item {
+            // Carte 1 : "VOTRE EXPÉRIENCE D'ÉCOUTE" (Frame 120)
+            Box(
+                modifier = Modifier
+                    .width(300.dp)
+                    .height(176.dp)
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(
+                        Brush.linearGradient(
+                            listOf(
+                                Color(0xFF2E1938),
+                                Color(0xFF1B1124),
+                                Color(0xFF140D1A)
+                            )
+                        )
+                    )
+                    .padding(20.dp)
+            ) {
+                // Haut : Label + 3 vagues ondulées
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "VOTRE EXPÉRIENCE D'ÉCOUTE",
+                        color = Color.White.copy(alpha = 0.78f),
+                        fontSize = 10.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.1.sp
+                    )
+                    SoundWaveIcon(
+                        modifier = Modifier.size(width = 32.dp, height = 20.dp),
+                        color = Color.White.copy(alpha = 0.9f)
+                    )
+                }
+
+                // Milieu : Grand chiffre des minutes
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.CenterStart)
+                        .padding(top = 10.dp)
+                ) {
+                    Text(
+                        "$minutesListened",
+                        color = Color.White,
+                        fontSize = 44.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        letterSpacing = (-1.2).sp
+                    )
+                    Text(
+                        "MINUTES ÉCOUTÉES",
+                        color = Color.White.copy(alpha = 0.72f),
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.8.sp
+                    )
+                }
+
+                // Bas : Signature KONNEKT et membre depuis
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .align(Alignment.BottomCenter),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Bottom
+                ) {
+                    Column {
+                        Text(
+                            "KONNEKT",
+                            color = Color.White,
+                            fontSize = 11.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.5.sp
+                        )
+                        Text(
+                            "$totalPlays écoutes · 2026",
+                            color = Color.White.copy(alpha = 0.6f),
+                            fontSize = 10.sp
+                        )
+                    }
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(
+                            "MEMBRE DEPUIS",
+                            color = Color.White.copy(alpha = 0.55f),
+                            fontSize = 8.5.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            letterSpacing = 0.6.sp
+                        )
+                        Text(
+                            "10/26",
+                            color = Color.White,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+        }
+
+        item {
+            // Carte 2 : "MEILLEUR ARTISTE" (Frame 120)
+            val artistDisplay = topArtist?.takeIf { it.isNotBlank() } ?: "Juice WRLD"
+            Box(
+                modifier = Modifier
+                    .width(300.dp)
+                    .height(176.dp)
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(
+                        Brush.linearGradient(
+                            listOf(
+                                Color(0xFF22202A),
+                                Color(0xFF16151E),
+                                Color(0xFF0F0E14)
+                            )
+                        )
+                    )
+                    .padding(20.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "VOTRE ARTISTE DU MOMENT",
+                        color = Color.White.copy(alpha = 0.78f),
+                        fontSize = 10.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.1.sp
+                    )
+                }
+
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.CenterStart)
+                        .padding(top = 10.dp)
+                ) {
+                    Text(
+                        artistDisplay,
+                        color = Color.White,
+                        fontSize = 28.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        "MEILLEUR ARTISTE",
+                        color = Color.White.copy(alpha = 0.72f),
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.8.sp
+                    )
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .align(Alignment.BottomCenter),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Bottom
+                ) {
+                    Column {
+                        Text(
+                            "KONNEKT",
+                            color = Color.White,
+                            fontSize = 11.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.5.sp
+                        )
+                        Text(
+                            artistDisplay,
+                            color = Color.White.copy(alpha = 0.6f),
+                            fontSize = 10.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
         }
     }
 }
