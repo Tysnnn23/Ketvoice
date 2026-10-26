@@ -475,12 +475,12 @@ fun SettingsScreen() {
                     Icons.Filled.Tune, "Ketvoice API",
                     sub = "Recherche, streaming et téléchargements · Supabase",
                     value = "Intégré"
-                ) { AppUi.openSources() }
+                ) { AppUi.pushOverlay(AppUi.SOURCES) }
                 SRow(
                     Icons.Filled.Tune, "Sources personnalisées",
                     sub = "URLs HTTPS terminées par .json · streaming et téléchargements",
                     value = if (customSources.isEmpty()) "Aucune" else "${customSources.size} source(s)"
-                ) { AppUi.openSources() }
+                ) { AppUi.pushOverlay(AppUi.SOURCES) }
                 Text(
                     "Ketvoice API protège les identifiants côté Supabase. Aucun cookie Spotify " +
                         "ni jeton d'addon n'est stocké dans l'application.",
@@ -513,7 +513,7 @@ fun SettingsScreen() {
                     Icons.Filled.Image, "Voir la liste",
                     sub = "Pistes enregistrées sur l'appareil",
                     value = ""
-                ) { AppUi.openDownloads() }
+                ) { AppUi.pushOverlay(AppUi.DOWNLOADS) }
             }
 
             // ==================================================== STOCKAGE

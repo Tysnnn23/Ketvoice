@@ -19,20 +19,20 @@ class AppUiNavigationTest {
     @Test fun returnsThroughNestedRoutesWithTheirArguments() {
         AppUi.selectTab(AppUi.LIBRARY)
         AppUi.openPlaylist("first")
+        AppUi.pushOverlay(AppUi.SEARCH)
         AppUi.searchSeed.value = "titre"
-        AppUi.navigate(AppUi.SEARCH)
         AppUi.openArtist("UC123", "Artiste")
         AppUi.openCatalog(CatalogRequest("album", "album-1", "Album"))
-        AppUi.back()
+        AppUi.closeOverlay()
         assertEquals(AppUi.ARTIST, AppUi.overlay.intValue)
         assertEquals("UC123", AppUi.artistRequest.value?.id)
-        AppUi.back()
+        AppUi.closeOverlay()
         assertEquals(AppUi.SEARCH, AppUi.overlay.intValue)
         assertEquals("titre", AppUi.searchSeed.value)
-        AppUi.back()
+        AppUi.closeOverlay()
         assertEquals(AppUi.PLAYLIST, AppUi.overlay.intValue)
         assertEquals("first", AppUi.playlistId.value)
-        AppUi.back()
+        AppUi.closeOverlay()
         assertEquals(AppUi.NONE, AppUi.overlay.intValue)
         assertEquals(AppUi.LIBRARY, AppUi.tab.intValue)
     }
@@ -40,36 +40,39 @@ class AppUiNavigationTest {
     @Test fun sameKindOfRouteCanReturnToPreviousArtistAndAlbum() {
         AppUi.openArtist("UC1", "A")
         AppUi.openArtist("UC2", "B")
-        AppUi.back()
+        AppUi.closeOverlay()
         assertEquals("UC1", AppUi.artistRequest.value?.id)
         AppUi.openCatalog(CatalogRequest("album", "a", "A"))
         AppUi.openCatalog(CatalogRequest("album", "b", "B"))
-        AppUi.back()
+        AppUi.closeOverlay()
         assertEquals("a", AppUi.catalogRequest.value?.id)
     }
 
-    @Test fun backRestoresPlayerAndNewTabDiscardsOldHistory() {
-        AppUi.showPlayer.value = true
-        AppUi.showLyrics.value = true
+    @Test fun newTabDiscardsOldHistory() {
         AppUi.openArtist("UC1", "A")
-        assertFalse(AppUi.showPlayer.value)
-        AppUi.back()
-        assertEquals(AppUi.NONE, AppUi.overlay.intValue)
-        assertTrue(AppUi.showPlayer.value)
-        assertTrue(AppUi.showLyrics.value)
         AppUi.selectTab(AppUi.EXPLORER)
-        AppUi.navigate(AppUi.SEARCH)
-        AppUi.back()
+        AppUi.openSearch("mot")
+        AppUi.closeOverlay()
+        assertEquals(AppUi.NONE, AppUi.overlay.intValue)
         assertEquals(AppUi.EXPLORER, AppUi.tab.intValue)
+    }
+
+    @Test fun returningFromSettingsNestedScreensRestoresSettings() {
+        AppUi.pushOverlay(AppUi.SETTINGS)
+        AppUi.pushOverlay(AppUi.DOWNLOADS)
+        AppUi.closeOverlay()
+        assertEquals(AppUi.SETTINGS, AppUi.overlay.intValue)
+        AppUi.closeOverlay()
         assertEquals(AppUi.NONE, AppUi.overlay.intValue)
     }
 
-    @Test fun returningFromSettingsNestedDownloadsRestoresSettings() {
-        AppUi.navigate(AppUi.SETTINGS)
-        AppUi.navigate(AppUi.DOWNLOADS)
-        AppUi.back()
-        assertEquals(AppUi.SETTINGS, AppUi.overlay.intValue)
-        AppUi.back()
+    @Test fun openingPlaylistClosesThePlayerAndKeepsQueueState() {
+        AppUi.showPlayer.value = true
+        AppUi.openPlaylist("p1")
+        assertFalse(AppUi.showPlayer.value)
+        assertEquals(AppUi.PLAYLIST, AppUi.overlay.intValue)
+        AppUi.closeOverlay()
         assertEquals(AppUi.NONE, AppUi.overlay.intValue)
+        assertTrue(AppUi.showPlayer.value.not())
     }
 }
