@@ -1,6 +1,7 @@
 """Host-side packaging/resource checks. These do NOT compile or execute Swift/iOS."""
 import hashlib
 import json
+import os
 from pathlib import Path
 import plistlib
 import struct
@@ -12,6 +13,7 @@ import zipfile
 from package_unsigned import package
 from audit_binary_strings import inspect, mask_symbol_aq_matches
 from render_simulator import select_device
+from verify_ipa import verify
 from sync_android_resources import RESOURCES, expected, quote
 
 
@@ -96,6 +98,34 @@ class PackagingTests(unittest.TestCase):
         self.save_info()
         with self.assertRaises(ValueError): package(self.app, self.output)
 
+    def verification_fixture(self):
+        self.info['UIBackgroundModes'] = ['audio']
+        self.save_info()
+        for language in ('fr', 'en', 'hi', 'ja', 'zh', 'ru', 'it', 'es', 'de', 'pt', 'ko'):
+            folder = self.app / f'{language}.lproj'
+            folder.mkdir()
+            (folder / 'Localizable.strings').write_text('"test" = "test";', encoding='utf-8')
+        (self.app / 'PublicCatalog.json').write_bytes((RESOURCES / 'PublicCatalog.json').read_bytes())
+        (self.app / 'PrivacyInfo.xcprivacy').write_bytes(plistlib.dumps({}))
+        with patch.dict(os.environ, {'GITHUB_SHA': 'fixture-source'}):
+            package(self.app, self.output)
+        return self.output.with_suffix('.validation.json')
+
+    def test_downloaded_fixture_verifies_without_installability_claim(self):
+        metadata = self.verification_fixture()
+        result = verify(self.output, metadata, 'fixture-source')
+        self.assertEqual(result['locale_catalogs'], 11)
+        self.assertFalse(result['installable_without_resigning'])
+
+    def test_downloaded_payload_source_mismatch_is_rejected(self):
+        metadata = self.verification_fixture()
+        with self.assertRaises(ValueError): verify(self.output, metadata, 'different-source')
+
+    def test_downloaded_payload_checksum_mismatch_is_rejected(self):
+        metadata = self.verification_fixture()
+        with self.output.open('ab') as output: output.write(b'altered')
+        with self.assertRaises(ValueError): verify(self.output, metadata, 'fixture-source')
+
 
 class BinaryAuditTests(unittest.TestCase):
     def inspect_fixture(self, payload):
@@ -140,6 +170,33 @@ class BinaryAuditTests(unittest.TestCase):
             masked, count = mask_symbol_aq_matches(file)
             self.assertEqual(count, 0)
             self.assertIn(candidate, masked)
+
+    def test_symbol_mask_does_not_reveal_nested_aq_subsequences(self):
+        candidate = b"A" + b"Q" + b"a" * 94 + b"A" + b"Q" + b"b" * 94
+        symbols = b"\0_$sNativeSymbol" + candidate + b"\0"
+        header = struct.pack("<8I", 0xFEEDFACF, 0x0100000C, 0, 2, 1, 24, 0, 0)
+        command = struct.pack("<6I", 2, 24, 0, 0, 56, len(symbols))
+        with tempfile.TemporaryDirectory() as directory:
+            file = Path(directory) / "fixture.bin"
+            original = header + command + symbols
+            file.write_bytes(original)
+            masked, count = mask_symbol_aq_matches(file)
+            self.assertEqual(count, 1)
+            self.assertNotIn(b"A" + b"Q", masked)
+            self.assertEqual(file.read_bytes(), original)
+
+    def test_overlapping_github_detection_survives_aq_mask(self):
+        github = b"gh" + b"p_" + b"a" * 32
+        candidate = b"A" + b"Q" + b"b" * 94 + github
+        symbols = b"\0_$sNativeSymbol" + candidate + b"\0"
+        header = struct.pack("<8I", 0xFEEDFACF, 0x0100000C, 0, 2, 1, 24, 0, 0)
+        command = struct.pack("<6I", 2, 24, 0, 0, 56, len(symbols))
+        with tempfile.TemporaryDirectory() as directory:
+            file = Path(directory) / "fixture.bin"
+            file.write_bytes(header + command + symbols)
+            masked, count = mask_symbol_aq_matches(file)
+            self.assertEqual(count, 1)
+            self.assertIn(github, masked)
 
     def test_literal_outside_symbol_table_is_not_a_swift_symbol(self):
         header = struct.pack("<8I", 0xFEEDFACF, 0x0100000C, 0, 2, 0, 0, 0, 0)

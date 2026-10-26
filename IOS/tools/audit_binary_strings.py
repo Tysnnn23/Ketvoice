@@ -64,8 +64,16 @@ def mask_symbol_aq_matches(path: Path):
     for hit in report['matches']:
         if hit['rule'] == 2 and hit['in_symbol_string_table']:
             position = hit['offset']
-            original[position:position + 2] = b'\0\0'
+            # Mask the complete classified match: removing only its first AQ exposes
+            # later AQ subsequences from the same mangled compiler-generated name.
+            original[position:position + hit['length']] = b'\0' * hit['length']
             ignored += 1
+    # Never hide another credential rule even if it overlaps an AQ mangling hit.
+    untouched = path.read_bytes()
+    protected = [RULES[0], RULES[1], RULES[3], rb'eyJ[A-Za-z0-9_-]+\.eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+']
+    for pattern in protected:
+        for match in re.finditer(pattern, untouched):
+            original[match.start():match.end()] = untouched[match.start():match.end()]
     return bytes(original), ignored
 
 

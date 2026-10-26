@@ -1,6 +1,6 @@
 # Ketvoice iPhone — natif SwiftUI, chantier en cours
 
-Ce dossier contient les **sources d'un portage partiel non compilé**, pas une
+Ce dossier contient les **sources d'un portage partiel compilé**, pas une
 app iPhone validée ni la version Android entière. Parcours implémentés :
 
 - Recherche sur les deux services publics Ketvoice et résolution de flux HTTPS.
@@ -48,11 +48,18 @@ python -m unittest discover -s IOS/tools -p 'test_*.py' -v
 python tools/scan_release.py IOS
 ```
 
-**Effectué sur Windows :** 10 tests Python des ressources et garde-fous
+**Effectué sur Windows :** 24 tests Python des ressources et garde-fous
 d'empaquetage (fixtures, pas un vrai IPA), cohérence des traductions/config,
-parsing du plist et scan de secrets. Les 8 tests Swift de `Tests/` **n'ont pas
-été exécutés**. Aucune compilation SwiftUI/AVFoundation, aucun rendu iOS,
-aucun test audio sur iPhone. Voir `validation.json`.
+parsing du plist et scan de sources. **Sur le runner macOS :** les 8 tests Swift
+de `Tests/` passent et l'application compile pour iPhone et simulateur avec
+Xcode 27.1 / SDK iOS 27.1. L'alerte du scan a été localisée aux noms de symboles
+natifs contenant `AQ` : seule cette règle est neutralisée dans une **copie de
+scan** de la table de symboles Mach-O ; l'exécutable d'origine, ses chaînes
+littérales et les autres détecteurs ne sont pas modifiés. La validation finale
+de l'artefact est en cours. **Rendu :** l'accueil a été lancé sur simulateur
+iPhone 17 / iOS 27.0, puis sa capture a été téléchargée et examinée. Cela ne
+valide pas les parcours, les téléchargements ou l'audio sur iPhone physique.
+Voir `validation.json`.
 Les deux endpoints publics `/health` répondent HTTP 200 depuis Windows avec la
 configuration générée ; ce contrôle ne valide pas le client réseau iOS.
 
@@ -65,15 +72,17 @@ puis lancez `python IOS/tools/check_syntax.py`.
 
 Le workflow [iOS source build](../.github/workflows/ios-build.yml) utilise un runner macOS
 `xcode-27` de GitHub Actions, gratuit pour le dépôt public. Il doit exécuter
-`swift test --package-path IOS`, compiler pour iPhone et simulateur **sans
-signature ni lancement d'émulateur**, puis produire un IPA **non signé** avec
+`swift test --package-path IOS`, compiler pour iPhone **sans signature Apple**
+et pour simulateur avec signature locale ad hoc, puis produire un IPA **non signé** avec
 SHA-256 et métadonnées. L'empaqueteur refuse un binaire simulateur, une mauvaise
 architecture ou un profil de signature inclus par erreur.
 
-Le droit GitHub `workflow` est maintenant disponible et le workflow est activé.
-La première compilation distante est en préparation ; aucun IPA réel n'a encore
-été construit. Aucune identité Apple ni aucun secret de signature n'est envoyé
-au runner.
+Le droit GitHub `workflow` est maintenant disponible et la compilation distante
+fonctionne. Une étape supplémentaire lance uniquement un **simulateur iPhone**
+isolé pour capturer l'accueil ; aucun émulateur Android n'est utilisé. Ce n'est
+pas une validation sur appareil physique. Aucun IPA réel n'a encore passé le
+scan final. Aucune identité Apple ni aucun secret de signature n'est envoyé au
+runner.
 
 Sur un Mac disposant de Xcode :
 
