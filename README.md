@@ -17,15 +17,17 @@
 
 ## Overview
 
-### 3.0.0-Beta4 — Playlists refondues, Replay et navigation
+### 3.1.0 — Playlists refondues, Replay et navigation unifiée
 
-L'écran playlist est repensé : glisser-déposer pour réordonner, export/import
-`.json` / `.m3u`, en-tête avec grande pochette. Le back system dépile les écrans
-(artiste → artiste similaire → retour), Replay affiche les titres et artistes les
-plus écoutés avec compteurs réels, et le proxy Ketvoice API est désormais
-protégé par rate-limit avec cache serveur des recherches. [Mobile](https://github.com/Tysnnn23/Ketvoice/releases/download/v3.0.0-Beta4/Ketvoice-3.0.0-Beta4.apk)
-· [Quest](https://github.com/Tysnnn23/Ketvoice/releases/download/v3.0.0-Beta4/Ketvoice-3.0.0-Beta4-Quest.apk).
-[Notes](https://github.com/Tysnnn23/Ketvoice/releases/tag/v3.0.0-Beta4).
+L'écran playlist est repensé : glisser-déposer, export/import `.json` / `.m3u`.
+Le back system dépile les écrans, Replay affiche vos tops réels, et le proxy
+Ketvoice API est protégé par rate-limit avec cache serveur des recherches.
+Cette version unifie les lignes 3.0.x et 3.0.0-Beta (versionCode 33, installable
+par-dessus v3.0.7 comme par-dessus les Betas). L'AutoMix expérimental de 3.0.6
+n'est pas repris dans cette version unifiée ; les versions 3.0.6/3.0.7 restent
+téléchargeables. [Mobile](https://github.com/Tysnnn23/Ketvoice/releases/download/v3.1.0/Ketvoice-3.1.0.apk)
+· [Quest](https://github.com/Tysnnn23/Ketvoice/releases/download/v3.1.0/Ketvoice-3.1.0-Quest.apk).
+[Notes](https://github.com/Tysnnn23/Ketvoice/releases/tag/v3.1.0).
 
 ### 3.0.6 — AutoMix (BETA)
 
