@@ -7,6 +7,21 @@
 
 ---
 
+## 3.0.6 — AUTOMIX (BETA) (versionCode 31)
+
+- Optional AutoMix blends the current and upcoming songs using two independent
+  Media3 audio decks and a real equal-power crossfade. It is off by default;
+  turning it off cancels any ongoing blend immediately.
+- Off-UI-thread PCM analysis estimates BPM, energy and likely vocal density near
+  transition points. Compatible tempos align beat phases without time-stretching;
+  failed or unavailable analyses fall back to a simple fade.
+- Settings add an AutoMix tab with automatic/custom maximum fade (1–30 seconds)
+  and four performance levels, reduced on modest devices. The player shows a
+  small two-cover progress indicator while tracks overlap.
+- See [3.0.6 release notes](docs/releases/v3.0.6.md) for validation limits.
+
+---
+
 ## 3.0.5 — STUDIO EMAIL RETURN (versionCode 30)
 
 - A sign-in link requested from the desktop Studio now returns to the hosted

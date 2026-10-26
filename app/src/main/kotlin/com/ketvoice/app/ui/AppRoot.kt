@@ -236,7 +236,10 @@ fun AppRoot() {
                         .fillMaxSize()
                         .zIndex(6f)
                 ) {
-                    FullPlayerScreen(modifier = Modifier.fillMaxSize())
+                    Box(Modifier.fillMaxSize()) {
+                        FullPlayerScreen(modifier = Modifier.fillMaxSize())
+                        com.ketvoice.app.ui.player.AutoMixOverlay(Modifier.align(Alignment.TopEnd))
+                    }
                 }
 
                 CoverFlightOverlay()

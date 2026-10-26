@@ -17,6 +17,17 @@
 
 ## Overview
 
+### 3.0.6 — AutoMix (BETA)
+
+Enable AutoMix in Settings → Playback to prepare and blend consecutive songs
+using two audio streams. The optional AutoMix tab adjusts the maximum crossfade
+and analysis performance. Rhythm-aware beat alignment is used when analysis is
+reliable; otherwise playback falls back to a simple fade. It is disabled by
+default and never changes the regular player when off. This is versionCode 31
+for mobile and Quest. Download the signed [mobile APK](https://github.com/Tysnnn23/Ketvoice/releases/download/v3.0.6/Ketvoice-3.0.6.apk)
+or [Quest APK](https://github.com/Tysnnn23/Ketvoice/releases/download/v3.0.6/Ketvoice-3.0.6-Quest.apk).
+See [3.0.6 release notes](docs/releases/v3.0.6.md).
+
 ### 3.0.5 — Studio sign-in returns to the browser
 
 Open [`admin/ketvoice-admin.html`](admin/ketvoice-admin.html) locally, or use the
@@ -52,7 +63,7 @@ See the [3.0.3 release notes](docs/releases/v3.0.3.md) for validation limits.
 
 Ketvoice is an independent Android music client whose visual language is inspired by Apple Music and iOS 26. French is the default interface language; Settings offers 11 languages across the app. It is not affiliated with Apple, YouTube, Spotify or any music provider.
 
-The stable release is **2.12.0** (`versionCode` 21) for both **mobile/tablet** (Android 12+, target SDK 36) and **Quest 3/3S** (minimum SDK 32, target SDK 34, landscape-only window). It adds local playlists, a public-link Spotify playlist import with explicit incompleteness warnings, selected design finishes with individual switches, and a fully audited translation catalog. Owner-only imported-media editing, Canvas controls, Sonic Canvas, offline capsules and single-device Wi-Fi handoff remain. Ketogether group listening is deferred. See [2.12.0 notes](docs/releases/v2.12.0.md).
+The latest release is **3.0.6** (`versionCode` 31) for **mobile/tablet** (Android 12+, target SDK 36) and **Quest 3/3S** (minimum SDK 32, target SDK 34, landscape-only window). AutoMix is an opt-in beta. Local playlists, Studio publishing, Canvas, Sonic Canvas, offline capsules and single-device Wi-Fi handoff remain. Ketogether group listening is deferred.
 
 Music-source search, stream resolution, Spotify Canvas, and published-content lookup go through two Supabase Edge Functions: **Ketvoice API** for sources/Canvas and **Ketvoice Content** for public publications. The APK contains only the project’s public Supabase `anon` key and function URLs. Spotify and source credentials remain in Supabase Vault and are never shipped with the app.
 
@@ -64,7 +75,7 @@ Music-source search, stream resolution, Spotify Canvas, and published-content lo
 
 - **Landscape only, with the mobile style**: original artwork/Canvas, icon controls, Liquid Glass, floating navigation, and lyric animations. In lyrics/queue mode, artwork, title, artist, and transport stay on the left; lyrics or queue fill the right. No giant text-button dashboard, tablet rail, or portrait-phone frame.
 - Pointer hover light on interactive controls, optional lyric sizing, foreground keep-awake, and the sleep timer in the ordinary track ⋯ menu.
-- Download **[Ketvoice-2.12.0-Quest.apk](https://github.com/Tysnnn23/Ketvoice/releases/download/v2.12.0/Ketvoice-2.12.0-Quest.apk)** and follow [Quest installation instructions](docs/QUEST.md). Headset-targeted manifest and arm64 support are included; physical Quest hardware validation is still required. This is a 2D app window, not an immersive VR environment. The same-version **[mobile/tablet 2.12.0 APK](https://github.com/Tysnnn23/Ketvoice/releases/download/v2.12.0/Ketvoice-2.12.0.apk)** is available in the same release.
+- Download **[Ketvoice-3.0.6-Quest.apk](https://github.com/Tysnnn23/Ketvoice/releases/download/v3.0.6/Ketvoice-3.0.6-Quest.apk)** and follow [Quest installation instructions](docs/QUEST.md). Headset-targeted manifest and arm64 support are included; physical Quest hardware validation is still required. This is a 2D app window, not an immersive VR environment. The same-version **[mobile/tablet 3.0.6 APK](https://github.com/Tysnnn23/Ketvoice/releases/download/v3.0.6/Ketvoice-3.0.6.apk)** is available in the same release.
 
 ### Interface
 
@@ -85,6 +96,8 @@ Music-source search, stream resolution, Spotify Canvas, and published-content lo
 ### Playback and storage
 
 - Media3/ExoPlayer playback with a foreground `MediaSessionService`.
+- Optional AutoMix (BETA) dual-deck crossfades with cached offline analysis,
+  configurable maximum fade and device-adaptive performance modes.
 - Native equalizer on the real playback audio session, with five bands, presets, and ±12 dB controls clamped to what the device supports.
 - Same-Wi-Fi handoff to another Ketvoice instance with explicit receiver confirmation; catalog metadata, queue, and position only — no account tokens, files, or private URLs.
 - One motion system with reduced-motion support; lyrics follow and karaoke stay accurate while decorative movement is removed.

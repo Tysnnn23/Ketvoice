@@ -38,6 +38,7 @@ import com.ketvoice.app.ui.common.Icon
 import com.ketvoice.app.ui.common.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.Slider
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,6 +46,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -77,6 +82,7 @@ fun SettingsScreen() {
     val ctx = LocalContext.current
     var editSetting by remember { mutableStateOf("") }
     var accentOpen by remember { mutableStateOf(false) }
+    var autoMixTab by remember { mutableStateOf(false) }
     var choice by remember { mutableStateOf<ChoiceSpec?>(null) }
     val settingsScope = rememberCoroutineScope()
     val youtube by YouTubeMusicSession.profile.collectAsState()
@@ -101,6 +107,21 @@ fun SettingsScreen() {
             Text("Réglages", style = T.hugeTitle, color = th.onBackground, fontSize = 30.sp)
         }
 
+        if (AppSettings.automix.value) {
+            Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp)
+                .clip(RoundedCornerShape(18.dp)).background(th.card).padding(4.dp)) {
+                listOf(false to "Réglages", true to "AutoMix").forEach { (tab, label) ->
+                    Box(Modifier.weight(1f).clip(RoundedCornerShape(14.dp))
+                        .background(if (autoMixTab == tab) th.accent.copy(alpha = .18f) else Color.Transparent)
+                        .semantics { role = Role.Tab; selected = autoMixTab == tab }
+                        .clickable { autoMixTab = tab }.heightIn(min = 48.dp).padding(12.dp), contentAlignment = Alignment.Center) {
+                        Text(label, color = if (autoMixTab == tab) th.accent else th.secondary,
+                            fontWeight = FontWeight.SemiBold)
+                    }
+                }
+            }
+        } else if (autoMixTab) LaunchedEffect(Unit) { autoMixTab = false }
+
         Column(
             Modifier
                 .fillMaxSize()
@@ -113,6 +134,8 @@ fun SettingsScreen() {
             LaunchedEffect(Unit) {
                 cacheUsedMb.intValue = (AudioCache.sizeBytes(ctx) / 1_048_576L).toInt()
             }
+
+            if (!autoMixTab) {
 
             if (com.ketvoice.app.BuildConfig.IS_QUEST) {
                 Section("QUEST · CONFORT") {
@@ -309,6 +332,9 @@ fun SettingsScreen() {
                     "Saute les passages silencieux (moteur audio)",
                     AppSettings.skipSilence.value
                 ) { Player.setSkipSilence(it); SettingsStore.save() }
+                SToggle(Icons.Filled.Tune, "AutoMix (BETA)",
+                    "Transitions audio fluides entre les chansons · désactivé par défaut",
+                    AppSettings.automix.value) { Player.setAutoMix(it) }
             }
 
             Section("PAROLES") {
@@ -540,6 +566,48 @@ fun SettingsScreen() {
                 lineHeight = 17.sp,
                 modifier = Modifier.padding(horizontal = 22.dp, vertical = 16.dp)
             )
+            }
+
+            if (autoMixTab && AppSettings.automix.value) {
+                Section("AUTOMIX (BETA)") {
+                    Text("Analyse du rythme et fondu réel sur deux flux audio. Si l'analyse échoue, un fondu simple prend le relais.",
+                        color = th.secondary, fontSize = 13.sp,
+                        modifier = Modifier.padding(horizontal = 22.dp, vertical = 10.dp))
+                    SRow(Icons.Filled.Tune, "Fondu maximal", sub = "Choisissez la durée maximale des transitions",
+                        value = if (AppSettings.automixAutoFade.value) "Automatique" else "Personnalisé") {
+                        choice = ChoiceSpec("Fondu maximal", "En mode automatique, AutoMix ajuste la durée.",
+                            if (AppSettings.automixAutoFade.value) "auto" else "custom",
+                            listOf(ChoiceOption("auto", "Automatique"), ChoiceOption("custom", "Personnalisé"))) { id ->
+                            AppSettings.automixAutoFade.value = id == "auto"
+                            SettingsStore.save()
+                        }
+                    }
+                    if (!AppSettings.automixAutoFade.value) {
+                        Text("${AppSettings.automixFadeSeconds.value} s", localize = false,
+                            modifier = Modifier.padding(start = 22.dp, top = 12.dp), color = th.onBackground)
+                        Slider(value = AppSettings.automixFadeSeconds.value.toFloat(),
+                            onValueChange = { AppSettings.automixFadeSeconds.value = it.toInt().coerceIn(1, 30) },
+                            onValueChangeFinished = SettingsStore::save,
+                            valueRange = 1f..30f, steps = 28,
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 22.dp))
+                    }
+                    SRow(Icons.Filled.Bolt, "Performance", sub = "Plus le niveau est élevé, plus l'analyse sollicite le processeur",
+                        value = listOf("Basse", "Moyenne", "Standard", "Élevée")[AppSettings.automixPerformance.value]) {
+                        choice = ChoiceSpec("Performance", "Adaptée aux capacités de votre appareil.",
+                            AppSettings.automixPerformance.value.toString(),
+                            listOf(ChoiceOption("0", "Basse", "CPU minimal, fondu simple"),
+                                ChoiceOption("1", "Moyenne", "Analyse légère"),
+                                ChoiceOption("2", "Standard", "Équilibre qualité/performance"),
+                                ChoiceOption("3", "Élevée", "Analyse approfondie et alignement des rythmes"))) { id ->
+                            AppSettings.automixPerformance.value = id.toIntOrNull()?.coerceIn(0, 3) ?: 2
+                            SettingsStore.save()
+                        }
+                    }
+                    Text("Le mode Basse privilégie la batterie. Le rythme est synchronisé lorsque l'analyse est suffisamment fiable, sans accélérer les morceaux.",
+                        color = th.secondary, fontSize = 12.sp,
+                        modifier = Modifier.padding(horizontal = 22.dp, vertical = 14.dp))
+                }
+            }
         }
     }
 
