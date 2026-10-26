@@ -61,7 +61,12 @@ fun KetvoiceTheme(useDark: Boolean? = null, content: @Composable () -> Unit) {
         background=if(isDark)Color(0xFF0C0D12) else Color(0xFFF7F7FA),
         card=if(isDark)Color(0xFF1B1D26) else Color.White,
         secondary=if(isDark)Color(0xFFB6B9C6) else Color(0xFF555A69)) else base
-    androidx.compose.runtime.CompositionLocalProvider(LocalTheme provides th) {
+    androidx.compose.runtime.CompositionLocalProvider(
+        LocalTheme provides th,
+        // Le repère visuel de l'app est la réaction du verre et du contenu,
+        // pas la Ripple Material héritée d'Android.
+        androidx.compose.foundation.LocalIndication provides com.ketvoice.app.theme.NoIndication
+    ) {
         MaterialTheme(
             colorScheme = if (isDark) darkColorScheme(
                 background = th.background,
@@ -88,3 +93,13 @@ private fun Material3Typography() = androidx.compose.material3.Typography(
     headlineLarge = T.hugeTitle, headlineMedium = T.huge, titleLarge = T.h2,
     bodyLarge = T.body, bodyMedium = T.sub, labelLarge = T.chip
 )
+
+/** Aucun retour visuel Material : les interactions vivent dans le verre et le contenu. */
+object NoIndication : androidx.compose.foundation.IndicationNodeFactory {
+    override fun create(interactionSource: androidx.compose.foundation.interaction.InteractionSource):
+        androidx.compose.ui.node.DelegatableNode = EmptyNode()
+    override fun hashCode(): Int = -1
+    override fun equals(other: Any?): Boolean = other === this
+}
+
+private class EmptyNode : androidx.compose.ui.Modifier.Node()

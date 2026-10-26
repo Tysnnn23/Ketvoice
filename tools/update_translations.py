@@ -128,6 +128,31 @@ MESSAGES = [
     'Icône mise à jour — le lanceur peut mettre quelques secondes',
     "Rien ici pour l'instant.\nBranchement des sources à l'étape des URLs.",
 ]
+MESSAGES += [
+    'Glissez ⠿ pour réordonner', 'Actions de la playlist', 'Terminer', "Modifier l'ordre",
+    'Exporter (.json)', 'Exporter (.m3u)', 'Supprimer la playlist', 'Tout lire ensuite',
+    'Télécharger la playlist', 'Tous les titres sont téléchargés ✓', 'Téléchargements lancés',
+    'La liste peut être incomplète : touchez un titre manquant pour le retrouver.',
+    'Importer un fichier · .json / .m3u', 'Fichier de playlist illisible ou invalide',
+    'Téléchargement supprimé', 'Se déconnecter de YouTube Music ?',
+    "La session chiffrée de cet appareil est effacée. Vos playlists et téléchargements Ketvoice sont conservés.",
+    'Pas encore de Replay', "Vos titres les plus écoutés apparaîtront ici dès que vous aurez écouté de la musique.",
+    'Vos artistes', 'Vos titres les plus écoutés', 'écoutes comptées', 'titres écoutés', 'Replay',
+    'Diagnostic des sources', 'Teste chaque source sur le titre en cours', 'Aucun titre en lecture', 'Tester',
+    'Diagnostic des sources de paroles',
+    "Lisez un titre puis relancez le test : chaque source est interrogée sur ce titre.",
+    'Test en cours…', "Le test n'a pas abouti. Vérifiez la connexion.",
+    'lignes · syllabes natives', 'lignes · mots synchronisés', 'lignes · lignes synchronisées', 'lignes · texte simple',
+    'AutoMix', 'Transitions fluides entre les morceaux · fondu analysé sur le rythme',
+    "Analyse du rythme et fondu réel sur deux flux audio. Si l'analyse échoue, un fondu simple prend le relais.",
+    'Fondu maximal', 'Choisissez la durée maximale des transitions', 'Automatique', 'Personnalisé',
+    'En mode automatique, AutoMix ajuste la durée.', 'Performance',
+    "Plus le niveau est élevé, plus l'analyse sollicite le processeur",
+    'Basse', 'Moyenne', 'Standard', 'Élevée', 'Adaptée aux capacités de votre appareil.',
+    'CPU minimal, fondu simple', 'Analyse légère', 'Équilibre qualité/performance',
+    'Analyse approfondie et alignement des rythmes',
+    "Le mode Basse privilégie la batterie. Le rythme est synchronisé lorsque l'analyse est suffisamment fiable, sans accélérer les morceaux.",
+]
 
 LITERAL = r'"(?:[^"\\]|\\.)*"'
 CHAIN = re.compile(LITERAL + r'(?:\s*\+\s*' + LITERAL + r')+')

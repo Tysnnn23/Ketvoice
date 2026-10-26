@@ -5,8 +5,12 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -23,6 +27,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Language
@@ -74,6 +79,7 @@ import kotlin.math.abs
 @Composable
 internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
                         modifier: Modifier = Modifier,
+                        onEmptyTap: () -> Unit = {},
                         fontScale: Float = com.ketvoice.app.ui.quest.QuestLayout.lyricsScale(AppSettings.lyricsTextSize.value)) {
     val lyrics by LyricsRepo.state.collectAsState()
 
@@ -117,15 +123,22 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
             val anchor = -(viewportPx * .18f).toInt()
             val item = list.layoutInfo.visibleItemsInfo.firstOrNull { it.index == targetIndex }
             if (reduced || item == null || active < 0) list.scrollToItem(targetIndex, if (active < 0) 0 else anchor)
-            else list.animateScrollBy((item.offset + anchor).toFloat(), tween(Motion.FOLLOW))
+            else list.animateScrollBy((item.offset + anchor).toFloat(),
+                tween(Motion.duration(560), easing = androidx.compose.animation.core.FastOutSlowInEasing))
         }
         Column(Modifier.fillMaxSize()) {
             if (lyrics.lines.isNotEmpty()) {
-                LazyColumn(state = list, modifier = Modifier.weight(1f).fillMaxWidth().pointerInput(Unit) {
-                    awaitPointerEventScope { while (true) {
-                        if (awaitPointerEvent(PointerEventPass.Initial).type == PointerEventType.Scroll) following = false
-                    } }
-                },
+                LazyColumn(state = list, modifier = Modifier.weight(1f).fillMaxWidth()
+                    .pointerInput(Unit) {
+                        awaitPointerEventScope { while (true) {
+                            if (awaitPointerEvent(PointerEventPass.Initial).type == PointerEventType.Scroll) following = false
+                        } }
+                    }
+                    .pointerInput(Unit) {
+                        // Taps that no lyric line consumed: empty space below
+                        // or around the text brings the transport back.
+                        detectTapGestures(onTap = { onEmptyTap() })
+                    },
                     contentPadding = PaddingValues(top = 22.dp, bottom = 110.dp),
                     verticalArrangement = Arrangement.spacedBy(25.dp)) {
                     if (lyrics.isTimed) item(key = "intro-${track.id}") {
@@ -137,9 +150,19 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
                     run {
                         itemsIndexed(lyrics.lines, key = { i, l -> "$i:${l.timeMs}" }) { index, line ->
                             val current = index == active
+                            val below = index > active
                             val distance = if (active < 0) 1 else abs(index - active)
+                            // Progressive blur: sung lines stay slightly soft, upcoming
+                            // lines sharpen to the active one, then soften again the
+                            // further down they are.
                             val blur = if (reduced || !AppSettings.blurInactiveLyrics.value || current || !lyrics.isTimed) 0.dp
-                                else if (distance <= 1) .3.dp else .8.dp
+                                else if (below) when (distance) {
+                                    1 -> 0.dp
+                                    2 -> .5.dp
+                                    3 -> 1.dp
+                                    4 -> 1.5.dp
+                                    else -> 2.dp
+                                } else if (distance <= 1) .3.dp else .8.dp
                             val entry = remember(index, track.id) { Animatable(if (index in revealed || reduced) 1f else 0f) }
                             LaunchedEffect(index, reduced) {
                                 if (reduced || !revealed.add(index)) entry.snapTo(1f)
@@ -288,11 +311,27 @@ internal fun segmentProgress(now: Long, start: Long, end: Long): Float = when {
 internal fun IntroDots(firstLineMs: Long) {
     val position by Player.positionMs.collectAsState()
     val lit = LyricsMotion.litDots(position, firstLineMs)
-    Row(Modifier.height(32.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+    val pulse = rememberInfiniteTransition(label = "intro-pulse")
+    Row(Modifier.height(32.dp), horizontalArrangement = Arrangement.spacedBy(9.dp), verticalAlignment = Alignment.CenterVertically) {
         repeat(3) { index ->
-            val opacity by animateFloatAsState(if (index < lit) 1f else .3f,
-                tween(Motion.duration(180)), label = "intro-light-$index")
-            Canvas(Modifier.size(12.dp)) { drawCircle(Color.White.copy(alpha = opacity)) }
+            // Each dot breathes on its own phase; lit dots pop brighter and slightly larger.
+            val phase = pulse.animateFloat(
+                initialValue = 0f, targetValue = 1f,
+                animationSpec = infiniteRepeatable(tween(760, delayMillis = index * 130, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                    RepeatMode.Reverse), label = "intro-breath-$index")
+            val glow by animateFloatAsState(if (index < lit) 1f else .3f,
+                tween(Motion.duration(220)), label = "intro-light-$index")
+            val pop by animateFloatAsState(if (index < lit) 1.22f else 1f,
+                spring(dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+                    stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow),
+                label = "intro-pop-$index")
+            val scale = if (Motion.reduced) 1f else pop * (1f + phase.value * .08f)
+            Canvas(Modifier.size(12.dp).graphicsLayer { scaleX = scale; scaleY = scale }) {
+                drawCircle(Color.White.copy(alpha = glow))
+                if (glow > .5f && !Motion.reduced) {
+                    drawCircle(Color.White.copy(alpha = (glow - .5f) * .28f), radius = size.minDimension * .9f)
+                }
+            }
         }
     }
 }

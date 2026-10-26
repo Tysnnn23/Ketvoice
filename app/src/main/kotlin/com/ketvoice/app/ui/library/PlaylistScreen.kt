@@ -14,14 +14,13 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -71,29 +70,9 @@ fun PlaylistScreen() {
             Text(if (editing) "Glissez ⠿ pour réordonner" else "Playlist", color = th.secondary,
                 fontSize = if (com.ketvoice.app.BuildConfig.IS_QUEST) 15.sp else 13.sp)
             Spacer(Modifier.width(10.dp))
-            Box {
-                Box(Modifier.size(38.dp).clip(CircleShape).clickable { menu = true }, contentAlignment = Alignment.Center) {
-                    Icon(Icons.Filled.MoreHoriz, "Actions de la playlist", tint = th.onBackground, modifier = Modifier.size(22.dp))
-                }
-                DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                    val current = playlist
-                    if (current != null) {
-                        DropdownMenuItem(text = { Text("Renommer", color = th.onBackground) }, onClick = {
-                            menu = false; name = current.name; rename = true
-                        })
-                        DropdownMenuItem(text = { Text("Exporter (.json)", color = th.onBackground) }, onClick = {
-                            menu = false
-                            action { PlaylistExchange.exportJson(context, current) }
-                        })
-                        DropdownMenuItem(text = { Text("Exporter (.m3u)", color = th.onBackground) }, onClick = {
-                            menu = false
-                            action { PlaylistExchange.exportM3u(context, current) }
-                        })
-                        DropdownMenuItem(text = { Text("Supprimer", color = MaterialTheme.colorScheme.error) }, onClick = {
-                            menu = false; deleting = true
-                        })
-                    }
-                }
+            Box(Modifier.size(38.dp).clip(CircleShape).clickable(enabled = playlist != null) { menu = true },
+                contentAlignment = Alignment.Center) {
+                Icon(Icons.Filled.MoreHoriz, "Actions de la playlist", tint = th.onBackground, modifier = Modifier.size(22.dp))
             }
         }
         if (playlist == null) {
@@ -105,50 +84,58 @@ fun PlaylistScreen() {
         val playable = playlist.entries.mapNotNull { it.track }
         val seen = rememberSeenCollections()
 
-        Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-            PlaylistArtwork(playlist, playlist.name,
-                Modifier.size(if (com.ketvoice.app.BuildConfig.IS_QUEST) 132.dp else 118.dp)
-                    .collectionEntry("playlist:${playlist.id}", seen, 0))
-            Column(Modifier.weight(1f).padding(start = 16.dp)) {
-                Text(playlist.name, localize = false, color = th.onBackground, fontSize = 27.sp,
-                    fontWeight = FontWeight.Bold, letterSpacing = (-.5).sp, maxLines = 3)
-                Spacer(Modifier.height(5.dp))
-                Text("${playable.size} / ${playlist.entries.size} titres disponibles",
-                    color = th.secondary, fontSize = 14.sp)
-                if (playlist.spotifyUrl != null) Text("Import d'un aperçu public Spotify",
-                    color = th.secondary, fontSize = 12.sp, modifier = Modifier.padding(top = 3.dp))
+        // ---- Hero premium, centré comme une page d'album du lecteur ----
+        Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Spacer(Modifier.height(6.dp))
+            Box {
+                PlaylistArtwork(playlist, playlist.name,
+                    Modifier.size(if (com.ketvoice.app.BuildConfig.IS_QUEST) 156.dp else 136.dp)
+                        .collectionEntry("playlist:${playlist.id}", seen, 0))
+                Box(Modifier.size(if (com.ketvoice.app.BuildConfig.IS_QUEST) 156.dp else 136.dp)
+                    .graphicsLayer { alpha = .22f }.blur(18.dp)) {
+                    PlaylistArtwork(playlist, playlist.name, Modifier.fillMaxSize())
+                }
             }
-        }
-        if (playlist.spotifyUrl != null) Text(
-            "La liste Spotify peut être incomplète. Retrouvez manuellement les titres manquants en les sélectionnant.",
-            color = th.secondary, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 18.dp))
-
-        Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-            Box(Modifier.weight(1f).heightIn(min = 46.dp)
-                .clip(RoundedCornerShape(23.dp)).background(if (playable.isEmpty()) th.card else th.accent)
-                .clickable(enabled = playable.isNotEmpty()) { Player.playQueue(playable) },
-                contentAlignment = Alignment.Center) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Filled.PlayArrow, null, tint = if (playable.isEmpty()) th.secondary else Color.Black,
-                        modifier = Modifier.size(22.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text("Écouter", color = if (playable.isEmpty()) th.secondary else Color.Black,
+            Spacer(Modifier.height(16.dp))
+            Text(playlist.name, localize = false, color = th.onBackground,
+                fontSize = if (com.ketvoice.app.BuildConfig.IS_QUEST) 28.sp else 25.sp,
+                fontWeight = FontWeight.Black, letterSpacing = (-.6).sp,
+                maxLines = 3, overflow = TextOverflow.Ellipsis, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            Spacer(Modifier.height(6.dp))
+            Text(buildString {
+                append("${playable.size} / ${playlist.entries.size} titres disponibles")
+                if (playlist.spotifyUrl != null) append(" · Import Spotify")
+            }, color = th.secondary, fontSize = 13.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            if (playlist.spotifyUrl != null) Text(
+                "La liste peut être incomplète : touchez un titre manquant pour le retrouver.",
+                color = th.secondary, fontSize = 12.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                modifier = Modifier.padding(top = 4.dp))
+            Spacer(Modifier.height(14.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(9.dp), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.weight(1f).heightIn(min = 46.dp)
+                    .clip(RoundedCornerShape(23.dp)).background(if (playable.isEmpty()) th.card else th.accent)
+                    .clickable(enabled = playable.isNotEmpty()) { Player.playQueue(playable) },
+                    contentAlignment = Alignment.Center) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Filled.PlayArrow, null, tint = if (playable.isEmpty()) th.secondary else Color.Black,
+                            modifier = Modifier.size(22.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Écouter", color = if (playable.isEmpty()) th.secondary else Color.Black,
+                            fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                    }
+                }
+                Box(Modifier.weight(1f).heightIn(min = 46.dp)
+                    .clip(RoundedCornerShape(23.dp)).background(th.card)
+                    .clickable(enabled = !busy && playlist.entries.size > 1) { editing = !editing },
+                    contentAlignment = Alignment.Center) {
+                    Text(if (editing) "Terminer" else "Modifier l'ordre", color = th.accent,
                         fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
                 }
             }
-            Box(Modifier.weight(1f).heightIn(min = 46.dp)
-                .clip(RoundedCornerShape(23.dp)).background(th.card)
-                .clickable(enabled = !busy && playlist.entries.size > 1) {
-                    if (editing) {
-                        editing = false
-                    } else editing = true
-                },
-                contentAlignment = Alignment.Center) {
-                Text(if (editing) "Terminer" else "Modifier l'ordre", color = th.accent,
-                    fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
-            }
+            if (error.isNotBlank()) Text(error, color = MaterialTheme.colorScheme.error,
+                fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
+            Spacer(Modifier.height(8.dp))
         }
-        if (error.isNotBlank()) Text(error, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(horizontal = 18.dp))
 
         if (playlist.entries.isEmpty()) {
             EmptyState("Votre playlist est vide", "Ouvrez le menu d'un titre et choisissez Ajouter à une playlist.",
@@ -207,6 +194,28 @@ fun PlaylistScreen() {
             text = { Text("Seule la playlist est supprimée. Vos titres et téléchargements sont conservés.") },
             confirmButton = { TextButton(enabled = !busy, onClick = { action { PlaylistStore.delete(playlist.id); AppUi.closeOverlay() } }) { Text("Supprimer") } },
             dismissButton = { TextButton(onClick = { deleting = false }) { Text("Annuler") } })
+        if (menu) Box(Modifier.fillMaxSize()) {
+            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .45f))
+                .clickable { menu = false })
+            Column(Modifier.align(Alignment.BottomCenter).imePadding().navigationBarsPadding()) {
+                PlaylistMenuSheet(
+                    playlist = playlist,
+                    onClose = { menu = false },
+                    onDownload = {
+                        val pending = playable.filter { Downloader.itemFor(it.id) == null }
+                        pending.forEach { Downloader.download(it) }
+                        android.widget.Toast.makeText(context,
+                            com.ketvoice.app.data.AppText.t("Téléchargements lancés"),
+                            android.widget.Toast.LENGTH_SHORT).show()
+                    },
+                    onPlayNext = { Player.enqueue(playable) },
+                    onRename = { name = playlist.name; rename = true },
+                    onExportJson = { action { PlaylistExchange.exportJson(context, playlist) } },
+                    onExportM3u = { action { PlaylistExchange.exportM3u(context, playlist) } },
+                    onDelete = { deleting = true }
+                )
+            }
+        }
     }
 }
 
@@ -214,15 +223,17 @@ fun PlaylistScreen() {
 private fun PlaylistRow(entry: PlaylistEntry, index: Int, editing: Boolean, busy: Boolean, th: com.ketvoice.app.theme.KetTheme,
                         modifier: Modifier = Modifier, dragHandle: Modifier = Modifier,
                         onPlay: () -> Unit, onRemove: () -> Unit) {
-    Row(modifier.fillMaxWidth().heightIn(min = 62.dp).clickable(enabled = !busy, onClick = onPlay)
+    val cover = entry.track?.let { ArtworkRepo.coverForTrack(it) } ?: entry.track?.coverUrl
+    Row(modifier.fillMaxWidth().heightIn(min = 66.dp).clickable(enabled = !busy, onClick = onPlay)
         .padding(horizontal = 18.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(dragHandle.width(28.dp), contentAlignment = Alignment.Center) {
             if (editing) Icon(Icons.Filled.DragHandle, "Déplacer ${entry.title}",
                 tint = th.secondary, modifier = Modifier.size(20.dp))
             else Text("${index + 1}", localize = false, color = th.secondary, fontSize = 13.sp)
         }
-        Column(Modifier.weight(1f).padding(horizontal = 8.dp)) {
-            TrackTitle(entry.title, th.onBackground, fontSize = 15.sp)
+        Cover(entry.title, cover, 48.dp, 6.dp)
+        Column(Modifier.weight(1f).padding(horizontal = 11.dp)) {
+            TrackTitle(entry.title, th.onBackground, fontSize = 16.sp)
             Text(entry.artist, localize = false, color = th.secondary, fontSize = 13.sp,
                 maxLines = 1, overflow = TextOverflow.Ellipsis)
             if (entry.track == null) Text("Non retrouvé · choisir une version", color = th.accent, fontSize = 12.sp)

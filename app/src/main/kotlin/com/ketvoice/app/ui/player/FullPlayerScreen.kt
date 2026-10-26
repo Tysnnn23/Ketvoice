@@ -275,6 +275,12 @@ fun FullPlayerScreen(
                     Box(Modifier.offset(y = sceneTop).height((sceneEnd - sceneTop).coerceAtLeast(80.dp)).width(sceneWidth)) {
                         if (page == PlayerPage.QUEUE) QueuePane(state, Modifier.fillMaxSize().padding(horizontal = if (wide) 18.dp else margin))
                          else LyricsPane(track, expanded, onSource = { sheet = "sources" },
+                            onEmptyTap = {
+                                if (expanded) {
+                                    expanded = false
+                                    interaction = android.os.SystemClock.uptimeMillis()
+                                }
+                            },
                             modifier = Modifier.fillMaxSize().padding(horizontal = if (wide) 18.dp else margin * .8f),
                             fontScale = com.ketvoice.app.ui.quest.QuestLayout.lyricsScale(AppSettings.lyricsTextSize.value))
                     }
