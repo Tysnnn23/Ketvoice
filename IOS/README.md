@@ -45,10 +45,11 @@ Exécuter depuis la racine :
 ```powershell
 python IOS/tools/sync_android_resources.py --check
 python -m unittest discover -s IOS/tools -p 'test_*.py' -v
-python tools/scan_release.py IOS
+$iosFiles = git ls-files IOS
+python tools/scan_release.py @iosFiles
 ```
 
-**Effectué sur Windows :** 24 tests Python des ressources et garde-fous
+**Effectué sur Windows :** 26 tests Python des ressources et garde-fous
 d'empaquetage (fixtures, pas un vrai IPA), cohérence des traductions/config,
 parsing du plist et scan de sources. **Sur le runner macOS :** les 8 tests Swift
 de `Tests/` passent et l'application compile pour iPhone et simulateur avec
@@ -83,6 +84,12 @@ isolé pour capturer l'accueil ; aucun émulateur Android n'est utilisé. Ce n'e
 pas une validation sur appareil physique. Aucun IPA réel n'a encore passé le
 scan final. Aucune identité Apple ni aucun secret de signature n'est envoyé au
 runner.
+
+Le diagnostic visuel du simulateur est **optionnel et enregistré séparément** :
+un problème de démarrage du simulateur distant ne bloque pas un IPA dont la
+compilation, le scan et la structure ont passé les contrôles. Vérifiez toujours
+`simulator-step-outcome.json` et `simulator-render.json`, pas seulement la couleur
+globale du workflow. Un échec n'est jamais présenté comme un rendu validé.
 
 Sur un Mac disposant de Xcode :
 

@@ -1,7 +1,7 @@
 {
   "status": "partial-port-compiled-artifact-pending",
   "host": "Windows",
-  "host_python_tests": {"tests": 24, "failures": 0, "coverage": "generated resources, packaging safeguards, native scan classification and downloaded-IPA verification using fixtures"},
+  "host_python_tests": {"tests": 26, "failures": 0, "coverage": "generated resources, packaging safeguards, native scan classification, downloaded-IPA verification and simulator error reporting using fixtures"},
   "yaml_parse": "passed; project source/resource entries, scheme and workflow permissions checked with PyYAML 6.0.3",
   "swift_grammar": {"files": 10, "errors": 0, "tool": "tree-sitter 0.26.0 / tree-sitter-swift 0.7.4", "compiler_or_type_check": false},
   "public_api_health": {"ketvoice-api": "HTTP 200, ok=true", "ketvoice-content": "HTTP 200, ok=true", "client": "Windows urllib; not iOS URLSession", "owner_session": false},

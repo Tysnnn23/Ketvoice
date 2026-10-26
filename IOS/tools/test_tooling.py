@@ -12,7 +12,7 @@ import zipfile
 
 from package_unsigned import package
 from audit_binary_strings import inspect, mask_symbol_aq_matches
-from render_simulator import select_device
+from render_simulator import select_device, render
 from verify_ipa import verify
 from sync_android_resources import RESOURCES, expected, quote
 
@@ -222,6 +222,36 @@ class SimulatorSelectionTests(unittest.TestCase):
         device, runtime = select_device(inventory)
         self.assertEqual(device["identifier"], "phone17")
         self.assertEqual(runtime["identifier"], old)
+
+    def test_cleanup_timeout_does_not_hide_original_failure(self):
+        from subprocess import TimeoutExpired
+        outputs = ['{}', 'fixture-device', '', '', RuntimeError('fixture install failure')]
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            with patch('render_simulator.run', side_effect=outputs), \
+                 patch('render_simulator.select_device', return_value=({'identifier': 'phone', 'name': 'iPhone 17'}, {'identifier': 'ios', 'version': '27.0'})), \
+                 patch('render_simulator.subprocess.run', side_effect=TimeoutExpired('cleanup', 30)):
+                with self.assertRaisesRegex(RuntimeError, 'fixture install failure'):
+                    render(Path('Fixture.app'), output)
+            metadata = json.loads((output / 'simulator-render.json').read_text())
+            self.assertEqual(metadata['failed_stage'], 'install')
+            self.assertEqual(metadata['launch'], 'not-validated')
+
+    def test_render_flow_does_not_change_cosmetic_status_bar(self):
+        def command(*arguments, **kwargs):
+            if arguments[0] == 'list': return '{}'
+            if arguments[0] == 'create': return 'fixture-device'
+            if arguments[0] == 'spawn': return '123 0 UIKitApplication:com.ketvoice.ios'
+            return ''
+        with tempfile.TemporaryDirectory() as directory:
+            with patch('render_simulator.run', side_effect=command) as calls, \
+                 patch('render_simulator.select_device', return_value=({'identifier': 'phone', 'name': 'iPhone 17'}, {'identifier': 'ios', 'version': '27.0'})), \
+                 patch('render_simulator.subprocess.run'), patch('render_simulator.time.sleep'):
+                render(Path('Fixture.app'), Path(directory))
+            self.assertFalse(any(call.args[0] == 'status_bar' for call in calls.call_args_list))
+            metadata = json.loads((Path(directory) / 'simulator-render.json').read_text())
+            self.assertEqual(metadata['launch'], 'passed')
+            self.assertFalse(metadata['physical_device'])
 
 
 if __name__ == "__main__":

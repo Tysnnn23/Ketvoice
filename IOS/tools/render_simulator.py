@@ -26,18 +26,24 @@ def select_device(inventory):
 
 
 def render(app: Path, output: Path):
-    inventory = json.loads(run("list", "--json"))
-    preferred, runtime = select_device(inventory)
-    device_id = run("create", "Ketvoice-CI", preferred["identifier"], runtime["identifier"])
     output.mkdir(parents=True, exist_ok=True)
+    device_id = None
+    stage = "inventory"
     try:
+        inventory = json.loads(run("list", "--json"))
+        preferred, runtime = select_device(inventory)
+        stage = "create"
+        device_id = run("create", "Ketvoice-CI", preferred["identifier"], runtime["identifier"])
+        stage = "boot"
         run("boot", device_id)
         run("bootstatus", device_id, "-b", timeout=300)
-        run("status_bar", device_id, "override", "--time", "9:41", "--batteryState", "charged", "--batteryLevel", "100")
+        stage = "install"
         run("install", device_id, str(app))
+        stage = "launch"
         run("launch", device_id, "com.ketvoice.ios")
         # Allow the first SwiftUI frame to be composed after a successful process launch.
         time.sleep(4)
+        stage = "screenshot"
         run("io", device_id, "screenshot", str(output / "iPhone-home.png"))
         processes = run("spawn", device_id, "launchctl", "list")
         alive = any("com.ketvoice.ios" in line and line.split()[0].isdigit()
@@ -50,9 +56,19 @@ def render(app: Path, output: Path):
             "screenshot": "iPhone-home.png", "physical_device": False,
             "audio_validation": False, "navigation_validation": False,
         }, indent=2) + "\n", encoding="utf-8")
+    except Exception as error:
+        (output / "simulator-render.json").write_text(json.dumps({
+            "launch": "not-validated", "failed_stage": stage, "exception": type(error).__name__,
+            "physical_device": False, "audio_validation": False, "navigation_validation": False,
+        }, indent=2) + "\n", encoding="utf-8")
+        raise
     finally:
-        subprocess.run(["xcrun", "simctl", "shutdown", device_id], check=False, timeout=60)
-        subprocess.run(["xcrun", "simctl", "delete", device_id], check=False, timeout=60)
+        if device_id:
+            for action in ("shutdown", "delete"):
+                try:
+                    subprocess.run(["xcrun", "simctl", action, device_id], check=False, timeout=30)
+                except subprocess.TimeoutExpired:
+                    print(f"Simulator cleanup {action} timed out; the ephemeral runner will be disposed.")
 
 
 if __name__ == "__main__":
