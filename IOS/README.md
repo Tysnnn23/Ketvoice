@@ -57,7 +57,9 @@ Xcode 27.1 / SDK iOS 27.1. L'alerte du scan a été localisée aux noms de symbo
 natifs contenant `AQ` : seule cette règle est neutralisée dans une **copie de
 scan** de la table de symboles Mach-O ; l'exécutable d'origine, ses chaînes
 littérales et les autres détecteurs ne sont pas modifiés. La validation finale
-de l'artefact est en cours. **Rendu :** l'accueil a été lancé sur simulateur
+de l'artefact a réussi sur le build [40338181690](https://github.com/Tysnnn23/Ketvoice/actions/runs/40338181690) :
+IPA arm64 téléchargé et revérifié par SHA-256, CRC ZIP, identité du bundle,
+onze catalogues et configuration publique anon. **Rendu :** l'accueil a été lancé sur simulateur
 iPhone 17 / iOS 27.0, puis sa capture a été téléchargée et examinée. Cela ne
 valide pas les parcours, les téléchargements ou l'audio sur iPhone physique.
 Voir `validation.json`.
@@ -81,9 +83,10 @@ architecture ou un profil de signature inclus par erreur.
 Le droit GitHub `workflow` est maintenant disponible et la compilation distante
 fonctionne. Une étape supplémentaire lance uniquement un **simulateur iPhone**
 isolé pour capturer l'accueil ; aucun émulateur Android n'est utilisé. Ce n'est
-pas une validation sur appareil physique. Aucun IPA réel n'a encore passé le
-scan final. Aucune identité Apple ni aucun secret de signature n'est envoyé au
-runner.
+pas une validation sur appareil physique. L'IPA réel a passé le scan final et
+les contrôles de structure ; il reste **non signé** et nécessite une signature
+locale avant installation. Aucune identité Apple ni aucun secret de signature
+n'est envoyé au runner.
 
 Le diagnostic visuel du simulateur est **optionnel et enregistré séparément** :
 un problème de démarrage du simulateur distant ne bloque pas un IPA dont la
