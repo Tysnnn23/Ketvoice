@@ -12,6 +12,8 @@ object ListeningHistory {
     val tracks: StateFlow<List<Track>> = _tracks
     private val _known = MutableStateFlow<List<Track>>(emptyList())
     val knownTracks: StateFlow<List<Track>> = _known
+    private val _playCounts = MutableStateFlow<Map<String, Int>>(emptyMap())
+    val playCounts: StateFlow<Map<String, Int>> = _playCounts
     fun init(context: Context) {
         if (prefs != null) return
         prefs = context.getSharedPreferences("listening-history", Context.MODE_PRIVATE)
@@ -19,6 +21,10 @@ object ListeningHistory {
             .getOrDefault(emptyList())
         _known.value = runCatching { gson.fromJson(prefs!!.getString("known", "[]"), Array<Track>::class.java).toList() }
             .getOrDefault(_tracks.value)
+        _playCounts.value = runCatching {
+            val root = com.google.gson.JsonParser.parseString(prefs!!.getString("counts", "{}"))
+            root.asJsonObject.entrySet().associate { (key, value) -> key to value.asInt }
+        }.getOrDefault(emptyMap())
     }
     @Synchronized fun rememberTrack(track: Track) {
         _known.value = (listOf(track.copy(streamUrl = null, downloadUrl = null)) + _known.value.filterNot { it.id == track.id }).take(400)
@@ -28,7 +34,17 @@ object ListeningHistory {
         val saved = track.copy(streamUrl = null, downloadUrl = null)
         rememberTrack(saved)
         _tracks.value = recentWith(_tracks.value, saved)
-        prefs?.edit()?.putString("tracks", gson.toJson(_tracks.value))?.apply()
+        val counts = _playCounts.value.toMutableMap()
+        counts[track.id] = (counts[track.id] ?: 0) + 1
+        if (counts.size > 550) {
+            counts.entries.sortedByDescending { it.value }.take(500).let { top ->
+                counts.clear()
+                top.forEach { counts[it.key] = it.value }
+            }
+        }
+        _playCounts.value = counts
+        prefs?.edit()?.putString("tracks", gson.toJson(_tracks.value))
+            ?.putString("counts", gson.toJson(counts))?.apply()
     }
     @Synchronized fun replacePublication(track: Track) {
         if (ImportedSong.id(track) == null) return

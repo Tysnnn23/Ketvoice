@@ -76,6 +76,17 @@ object PlaylistStore {
     suspend fun add(id: String, track: Track) { change { rows -> rows.map { if (it.id == id) it.copy(entries = it.entries + PlaylistRules.entry(track)) else it } } }
     suspend fun remove(id: String, entry: String) { change { rows -> rows.map { if (it.id == id) it.copy(entries = it.entries.filterNot { e -> e.id == entry }) else it } } }
     suspend fun move(id: String, from: Int, to: Int) { change { rows -> rows.map { if (it.id == id) it.copy(entries = PlaylistRules.move(it.entries, from, to)) else it } } }
+    suspend fun setOrder(id: String, orderedIds: List<String>) {
+        require(orderedIds.size <= 500)
+        change { rows -> rows.map { row ->
+            if (row.id != id) row else {
+                val byId = row.entries.associateBy { it.id }
+                val reordered = orderedIds.mapNotNull { byId[it] }
+                val rest = row.entries.filter { it.id !in orderedIds.toSet() }
+                row.copy(entries = reordered + rest)
+            }
+        } }
+    }
     suspend fun resolve(id: String, entry: String, track: Track) { change { rows -> rows.map { if (it.id == id)
         it.copy(entries = it.entries.map { e -> if (e.id == entry) e.copy(track = PlaylistRules.safe(track)) else e }) else it } } }
 }

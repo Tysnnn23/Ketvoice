@@ -29,6 +29,7 @@ import com.ketvoice.app.theme.LocalTheme
 import com.ketvoice.app.ui.AppUi
 import kotlinx.coroutines.launch
 
+/** Connexion réelle à YouTube Music, sans compte fabriqué ni profil factice. */
 @Composable
 fun AccountDialog(modifier: Modifier = Modifier) {
     val theme = LocalTheme.current
@@ -36,6 +37,7 @@ fun AccountDialog(modifier: Modifier = Modifier) {
     val profile by YouTubeMusicSession.profile.collectAsState()
     val scope = rememberCoroutineScope()
     var cookieOpen by remember { mutableStateOf(false) }
+    var signOutOpen by remember { mutableStateOf(false) }
     BackHandler { AppUi.showAccount.value = false }
     Box(modifier.fillMaxSize().background(Color.Black.copy(alpha = .45f)).clickable { AppUi.showAccount.value = false }) {
         Column(Modifier.align(androidx.compose.ui.Alignment.TopCenter).widthIn(max = 560.dp)
@@ -74,9 +76,8 @@ fun AccountDialog(modifier: Modifier = Modifier) {
                         AppUi.showAccount.value = false
                     }.padding(vertical = 16.dp))
                 Text("Se déconnecter", color = theme.accent,
-                    modifier = Modifier.fillMaxWidth().clickable {
-                        YouTubeMusicSession.signOut()
-                    }.padding(vertical = 10.dp))
+                    modifier = Modifier.fillMaxWidth().clickable { signOutOpen = true }
+                        .padding(vertical = 10.dp))
             } else {
                 Text("Se connecter avec Google", color = theme.accent, fontWeight = FontWeight.Bold,
                     modifier = Modifier.fillMaxWidth().clickable {
@@ -92,9 +93,24 @@ fun AccountDialog(modifier: Modifier = Modifier) {
                     modifier = Modifier.padding(bottom = 4.dp))
             }
             Text("Réglages de Ketvoice", color = theme.accent, modifier = Modifier.fillMaxWidth().clickable {
-                AppUi.showAccount.value = false; AppUi.navigate(AppUi.SETTINGS)
+                AppUi.showAccount.value = false; AppUi.showPlayer.value = false; AppUi.openSettings()
             }.padding(top = 14.dp, bottom = 8.dp))
         }
+    }
+
+    if (signOutOpen) {
+        androidx.compose.material3.AlertDialog(onDismissRequest = { signOutOpen = false },
+            title = { Text("Se déconnecter de YouTube Music ?") },
+            text = { Text("La session chiffrée de cet appareil est effacée. Vos playlists et téléchargements Ketvoice sont conservés.") },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = {
+                    signOutOpen = false
+                    YouTubeMusicSession.signOut()
+                }) { Text("Se déconnecter") }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { signOutOpen = false }) { Text("Annuler") }
+            })
     }
 
     if (cookieOpen) {

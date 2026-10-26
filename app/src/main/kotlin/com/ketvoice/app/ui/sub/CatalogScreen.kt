@@ -55,15 +55,10 @@ fun CatalogScreen() {
     LaunchedEffect(request, attempt) {
         if (request.kind in listOf("album", "genre")) {
             loading = true
-            try {
-                page = if (request.kind == "album" && request.id.startsWith("MPRE")) {
-                    YouTubeCatalog.album(request.id)
-                } else CatalogRepo.page(request)
-            } catch (cancelled: kotlinx.coroutines.CancellationException) {
-                throw cancelled
-            } catch (_: Exception) {
-                page = null
-            } finally { loading = false }
+            page = if (request.kind == "album" && request.id.startsWith("MPRE")) {
+                YouTubeCatalog.album(request.id)
+            } else CatalogRepo.page(request)
+            loading = false
         }
     }
     val tracks = when (request.kind) {
@@ -72,28 +67,22 @@ fun CatalogScreen() {
         "all" -> (known + recent + downloads.map { it.track }).distinctBy { it.id }
         else -> page?.tracks.orEmpty()
     }
-    LaunchedEffect(tracks) {
-        try { ArtworkRepo.enrich(tracks) }
-        catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
-        catch (_: Exception) {  }
-    }
+    LaunchedEffect(tracks) { ArtworkRepo.enrich(tracks) }
     Column(Modifier.fillMaxSize().background(theme.background).statusBarsPadding()) {
         Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            GlassBackButton { AppUi.back() }
+            GlassBackButton { AppUi.closeOverlay() }
             Spacer(Modifier.width(14.dp))
             Text(page?.title ?: request.title, color = theme.onBackground, fontSize = 24.sp,
                 fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
-
+        // Mosaïque 2x2 : les 4 premières pochettes de la collection en guise de grande cover
         if (tracks.isNotEmpty()) {
             val mosaicCovers = tracks.take(4).map { ArtworkRepo.coverForTrack(it) ?: it.coverUrl }
             Box(Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
                 Row(Modifier.size(168.dp).clip(RoundedCornerShape(18.dp))) {
-                    for (column in 0 until 2) Column(Modifier.weight(1f).fillMaxHeight()) {
-                    for (row in 0 until 2) {
-                        val i = row * 2 + column
+                    for (i in 0 until 4) {
                         val url = mosaicCovers.getOrNull(i)
-                        Box(Modifier.weight(1f).fillMaxWidth().background(
+                        Box(Modifier.weight(1f).fillMaxHeight().background(
                             if (url != null) Brush.linearGradient(listOf(Color.Black, Color.Black)) else Brush.linearGradient(gradientFor(request.id + i))
                         )) {
                             if (url != null) {
@@ -106,7 +95,6 @@ fun CatalogScreen() {
                                     modifier = Modifier.align(Alignment.Center))
                             }
                         }
-                    }
                     }
                 }
             }
@@ -151,3 +139,4 @@ fun CatalogScreen() {
         }
     }
 }
+

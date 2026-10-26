@@ -10,6 +10,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
@@ -40,7 +41,6 @@ import coil.compose.AsyncImage
 import com.ketvoice.app.data.AppSettings
 import com.ketvoice.app.data.ArtworkRepo
 import com.ketvoice.app.glass.LocalBackdropLayer
-import com.ketvoice.app.glass.BackdropCapture
 import com.ketvoice.app.glass.rememberGlassBackdrop
 import com.ketvoice.app.player.Player
 import com.ketvoice.app.theme.KetvoiceTheme
@@ -64,6 +64,11 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import com.ketvoice.app.ui.motion.Motion
 
+/**
+ * Racine de Ketvoice :
+ *   fond capturé (Backdrop SDK) → contenu animé (fondu + glissement)
+ *   → chrome en vrai verre liquide → lecteur plein écran (slide) → dialogs.
+ */
 @Composable
 fun AppRoot() {
     com.ketvoice.app.ui.motion.ObserveSystemMotion()
@@ -71,7 +76,7 @@ fun AppRoot() {
     val useDark = if (themeMode == 1) false else if (themeMode == 2) true else null
     val view = androidx.compose.ui.platform.LocalView.current
     val effectiveDark = useDark ?: isSystemInDarkTheme()
-
+    // Le lecteur / la file d'attente ont toujours un fond noir : icônes système claires.
     val darkSurface = AppUi.showPlayer.value || AppUi.overlay.value == AppUi.QUEUE
 
     androidx.compose.runtime.SideEffect {
@@ -88,11 +93,14 @@ fun AppRoot() {
         val backdrop = rememberGlassBackdrop(th.background)
         val playerState by Player.state.collectAsState()
         val artwork by ArtworkRepo.covers.collectAsState()
-
+        // Un clavier ouvert masque le chrome flottant : sinon le mini-lecteur
+        // et la barre d'onglets se dessinent au-dessus des résultats.
         val density = LocalDensity.current
         val imeVisible = WindowInsets.ime.getBottom(density) > 0
         var wasPlayerVisible by remember { mutableStateOf(AppUi.showPlayer.value) }
 
+        // Ouvre/ferme le lecteur : une copie de la pochette vole entre la
+        // position du lecteur et celle du mini-lecteur, en fondu.
         LaunchedEffect(AppUi.showPlayer.value, playerState.current?.id) {
             val visible = AppUi.showPlayer.value
             if (visible != wasPlayerVisible) {
@@ -104,7 +112,7 @@ fun AppRoot() {
                 val current = playerState.current
                 val mini = AppUi.miniCoverBounds.value
                 val full = if (visible) {
-
+                    // On first open, wait for the artwork's actual layout.
                     snapshotFlow { AppUi.playerCoverBounds.value }.filterNotNull().first()
                 } else AppUi.playerCoverBounds.value
                 if (current != null && mini != null) {
@@ -146,12 +154,12 @@ fun AppRoot() {
         }
         CompositionLocalProvider(LocalBackdropLayer provides backdrop, LocalAdaptiveLayout provides layout) {
             Box(Modifier.fillMaxSize()) {
-
-                BackdropCapture(
-                    backdrop = backdrop,
-                    modifier = Modifier
+                // ---- Contenu principal : capturé par le backdrop, animé à chaque page ----
+                Box(
+                    Modifier
                         .fillMaxSize()
                         .background(th.background)
+                        .layerBackdrop(backdrop)
                 ) {
                     Box(Modifier.fillMaxSize().padding(start = if (queueOverlay) 0.dp else layout.railWidthDp.dp), contentAlignment = Alignment.TopCenter) {
                     Box(Modifier.widthIn(max = pageMaxWidth).fillMaxSize()
@@ -160,11 +168,26 @@ fun AppRoot() {
                         targetState = AppUi.tab.value to AppUi.overlay.value,
                         contentAlignment = Alignment.Center,
                         transitionSpec = {
-                            (fadeIn(tween(Motion.duration())) + slideInVertically(
-                                tween(Motion.duration(), easing = FastOutSlowInEasing)
-                            ) { fullHeight -> fullHeight / 14 }).togetherWith(
-                                fadeOut(tween(Motion.duration()))
-                            )
+                            // Push : la page suivante entre par la droite.
+                            // Pop : la page précédente revient par la gauche.
+                            // Jump : fondu vertical (onglets, racine).
+                            when (AppUi.navKind.intValue) {
+                                AppUi.NAV_PUSH -> (fadeIn(tween(Motion.duration())) + slideInHorizontally(
+                                    tween(Motion.duration(), easing = FastOutSlowInEasing)
+                                ) { full -> full / 5 }).togetherWith(
+                                    fadeOut(tween(Motion.duration()))
+                                )
+                                AppUi.NAV_POP -> (fadeIn(tween(Motion.duration())) + slideInHorizontally(
+                                    tween(Motion.duration(), easing = FastOutSlowInEasing)
+                                ) { full -> -full / 5 }).togetherWith(
+                                    fadeOut(tween(Motion.duration()))
+                                )
+                                else -> (fadeIn(tween(Motion.duration())) + slideInVertically(
+                                    tween(Motion.duration(), easing = FastOutSlowInEasing)
+                                ) { fullHeight -> fullHeight / 14 }).togetherWith(
+                                    fadeOut(tween(Motion.duration()))
+                                )
+                            }
                         },
                         label = "nav"
                     ) { (tab, overlay) ->
@@ -195,6 +218,7 @@ fun AppRoot() {
                     TabletNavigationRail(Modifier.width(layout.railWidthDp.dp).align(Alignment.CenterStart).zIndex(3f))
                 }
 
+                // ---- Chrome flottant en verre ----
                 AnimatedVisibility(
                     visible = AppUi.overlay.value != AppUi.SETTINGS &&
                         AppUi.overlay.value != AppUi.QUEUE &&
@@ -220,14 +244,16 @@ fun AppRoot() {
                     }
                 }
 
+                // ---- Retour système : dépile les overlays, racine sinon ----
                 androidx.activity.compose.BackHandler(
                     enabled = AppUi.overlay.value != AppUi.NONE &&
                         AppUi.overlay.value != AppUi.QUEUE &&
                         !AppUi.showPlayer.value
                 ) {
-                    AppUi.back()
+                    AppUi.closeOverlay()
                 }
 
+                // ---- Lecteur plein écran : glisse depuis le bas ----
                 AnimatedVisibility(
                     visible = AppUi.showPlayer.value,
                     enter = fadeIn(tween(Motion.duration())),
@@ -236,14 +262,13 @@ fun AppRoot() {
                         .fillMaxSize()
                         .zIndex(6f)
                 ) {
-                    Box(Modifier.fillMaxSize()) {
-                        FullPlayerScreen(modifier = Modifier.fillMaxSize())
-                        com.ketvoice.app.ui.player.AutoMixOverlay(Modifier.align(Alignment.TopEnd))
-                    }
+                    FullPlayerScreen(modifier = Modifier.fillMaxSize())
                 }
 
+                // ---- Pochette qui vole entre le lecteur et le mini-lecteur ----
                 CoverFlightOverlay()
 
+                // ---- Dialog compte ----
                 AppUi.trackMenuTrack.value?.let { track ->
                     Box(Modifier.fillMaxSize().zIndex(7f)) {
                         androidx.activity.compose.BackHandler { AppUi.trackMenuTrack.value = null }
@@ -281,7 +306,7 @@ private fun CoverFlightOverlay() {
         AppUi.coverFlight.value = null
     }
     val t = progress.value
-
+    // easeOutBack léger à l'ouverture (overshoot ~4 %), smoothstep à la fermeture.
     val c1 = 1.2588f; val c3 = c1 + 1f
     val eased = if (flight.opening) {
         val x = t - 1f

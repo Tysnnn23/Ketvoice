@@ -12,9 +12,8 @@ android {
         applicationId = "com.ketvoice.app"
         minSdk = 31
         targetSdk = 36
-
-        versionCode = 32
-        versionName = "3.0.7"
+        versionCode = 26
+        versionName = "3.0.0-Beta4"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         resourceConfigurations += listOf("fr", "en", "hi", "ja", "zh", "ru", "it", "es", "de", "pt", "ko")
     }
@@ -30,7 +29,8 @@ android {
             minSdk = 32
             targetSdk = 34
             buildConfigField("boolean", "IS_QUEST", "true")
-
+            // Quest uses arm64; x86_64 permits the same panel build to be
+            // exercised on an Android emulator without shipping 32-bit ABIs.
             ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
         }
     }

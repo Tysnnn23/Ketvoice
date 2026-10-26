@@ -44,6 +44,11 @@ import com.ketvoice.app.theme.T
 import com.ketvoice.app.ui.AppUi
 import kotlinx.coroutines.launch
 
+/**
+ * Écran de gestion des sources personnalisées `.json`.
+ * Chaque source est réellement téléchargée, parsée puis testée via son
+ * endpoint de recherche avant d'être marquée active.
+ */
 @Composable
 fun SourcesScreen() {
     val th = LocalTheme.current
@@ -61,7 +66,7 @@ fun SourcesScreen() {
         Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.AutoMirrored.Filled.ArrowBack, "Retour", tint = th.onBackground,
-                modifier = Modifier.size(30.dp).clickable { AppUi.back() })
+                modifier = Modifier.size(30.dp).clickable { AppUi.closeOverlay() })
             Spacer(Modifier.width(12.dp))
             Text("Sources", color = th.onBackground, fontSize = 22.sp, fontWeight = FontWeight.Bold,
                 modifier = Modifier.weight(1f))

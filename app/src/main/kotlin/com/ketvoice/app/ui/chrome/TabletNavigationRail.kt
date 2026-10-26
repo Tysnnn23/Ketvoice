@@ -49,7 +49,7 @@ fun TabletNavigationRail(modifier: Modifier = Modifier) {
                         .questPointer()
                         .background(if (selected) theme.onBackground.copy(alpha = .12f) else androidx.compose.ui.graphics.Color.Transparent)
                         .clickable {
-                            if (tab == -1) AppUi.navigate(AppUi.SEARCH) else AppUi.selectTab(tab)
+                            if (tab == -1) AppUi.openSearch() else AppUi.selectTab(tab)
                         }.padding(horizontal = 5.dp, vertical = 14.dp)
                     if (layout.expandedRail) Row(itemModifier, verticalAlignment = Alignment.CenterVertically) {
                         Icon(icon, null, tint = if (selected) theme.accent else theme.secondary, modifier = Modifier.size(24.dp))
@@ -68,6 +68,6 @@ fun TabletNavigationRail(modifier: Modifier = Modifier) {
         Icon(Icons.Filled.Settings, "Réglages", tint = theme.secondary,
             modifier = Modifier.size(48.dp).clip(RoundedCornerShape(20.dp))
                 .questPointer()
-                .clickable { AppUi.navigate(AppUi.SETTINGS) }.padding(12.dp))
+                .clickable { AppUi.openSettings() }.padding(12.dp))
     }
 }

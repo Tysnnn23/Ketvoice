@@ -38,7 +38,6 @@ import com.ketvoice.app.ui.common.Icon
 import com.ketvoice.app.ui.common.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
-import androidx.compose.material3.Slider
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,10 +45,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.role
-import androidx.compose.ui.semantics.selected
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -76,25 +71,36 @@ import kotlinx.coroutines.launch
 
 private val noRip: MutableInteractionSource = MutableInteractionSource()
 
+/**
+ * RÉGLAGES — uniquement des réglages RELIÉS à l'app :
+ *  - thème / verre / animations → Glass + transitions,
+ *  - qualité Wi-Fi / données mobiles → choix réel du flux (FLAC ↔ MP3),
+ *  - ignorer les silences → moteur Media3,
+ *  - mode des paroles → LyricsRepo réel,
+ *  - canvas → Ketvoice API + test pipeline réel,
+ *  - téléchargements → FLAC/MP3 du downloader,
+ *  - stockage → taille réelle du cache + purge.
+ */
 @Composable
 fun SettingsScreen() {
     val th = LocalTheme.current
     val ctx = LocalContext.current
     var editSetting by remember { mutableStateOf("") }
     var accentOpen by remember { mutableStateOf(false) }
-    var autoMixTab by remember { mutableStateOf(false) }
+    var lyricsDiag by remember { mutableStateOf(false) }
     var choice by remember { mutableStateOf<ChoiceSpec?>(null) }
     val settingsScope = rememberCoroutineScope()
     val youtube by YouTubeMusicSession.profile.collectAsState()
     val publisher by com.ketvoice.app.data.PublisherSession.allowed.collectAsState()
     val customSources by CustomSources.sources.collectAsState()
+    val playerState by Player.state.collectAsState()
 
     Column(
         Modifier
             .fillMaxSize()
             .background(th.background)
     ) {
-
+        // ---------- En-tête ----------
         Row(
             Modifier
                 .fillMaxWidth()
@@ -102,25 +108,10 @@ fun SettingsScreen() {
                 .padding(start = 14.dp, end = 16.dp, top = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            com.ketvoice.app.ui.common.GlassBackButton { AppUi.back() }
+            com.ketvoice.app.ui.common.GlassBackButton { AppUi.closeOverlay() }
             Spacer(Modifier.width(12.dp))
             Text("Réglages", style = T.hugeTitle, color = th.onBackground, fontSize = 30.sp)
         }
-
-        if (AppSettings.automix.value) {
-            Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp)
-                .clip(RoundedCornerShape(18.dp)).background(th.card).padding(4.dp)) {
-                listOf(false to "Réglages", true to "AutoMix").forEach { (tab, label) ->
-                    Box(Modifier.weight(1f).clip(RoundedCornerShape(14.dp))
-                        .background(if (autoMixTab == tab) th.accent.copy(alpha = .18f) else Color.Transparent)
-                        .semantics { role = Role.Tab; selected = autoMixTab == tab }
-                        .clickable { autoMixTab = tab }.heightIn(min = 48.dp).padding(12.dp), contentAlignment = Alignment.Center) {
-                        Text(label, color = if (autoMixTab == tab) th.accent else th.secondary,
-                            fontWeight = FontWeight.SemiBold)
-                    }
-                }
-            }
-        } else if (autoMixTab) LaunchedEffect(Unit) { autoMixTab = false }
 
         Column(
             Modifier
@@ -135,8 +126,7 @@ fun SettingsScreen() {
                 cacheUsedMb.intValue = (AudioCache.sizeBytes(ctx) / 1_048_576L).toInt()
             }
 
-            if (!autoMixTab) {
-
+            // ==================================================== YOUTUBE MUSIC
             if (com.ketvoice.app.BuildConfig.IS_QUEST) {
                 Section("QUEST · CONFORT") {
                     SToggle(Icons.Filled.Brightness6, "Garder la fenêtre éveillée",
@@ -184,7 +174,7 @@ fun SettingsScreen() {
                         SRow(Icons.Filled.Mic, "Importer des lyrics",
                             sub = "Recherchez un titre puis ouvrez son menu ⋯ pour publier un TTML ou LRC", value = "") {
                             AppUi.searchSeed.value = ""
-                            AppUi.navigate(AppUi.SEARCH)
+                            AppUi.openSearch()
                         }
                         SRow(Icons.Filled.Person, "Déconnecter la publication", sub = "", value = "") {
                             com.ketvoice.app.data.PublisherSession.signOut()
@@ -193,6 +183,7 @@ fun SettingsScreen() {
                 }
             }
 
+            // ==================================================== LANGUE
             Section("LANGUE DE L'APPLICATION") {
                 val currentLanguage = AppLanguage.fromLabel(AppSettings.language.value)
                 SRow(
@@ -220,6 +211,7 @@ fun SettingsScreen() {
                 }
             }
 
+            // ==================================================== APPARENCE
             Section("DESIGN KETVOICE") {
                 Text("Chaque finition peut être retirée séparément, sans modifier vos playlists ni votre musique.", color = th.secondary)
                 com.ketvoice.app.data.DesignChoices.all.forEach { option ->
@@ -304,6 +296,7 @@ fun SettingsScreen() {
                 }
             }
 
+            // ==================================================== LECTURE
             Section("LECTURE") {
                 SRow(Icons.Filled.Tune, "Égaliseur", sub="Traitement réel de la session audio", value="") { AppUi.showEqualizer.value=true }
                 SRow(Icons.Filled.Wifi, "Transfert sur le même Wi-Fi", sub="Découverte locale et confirmation sur le destinataire", value="") { AppUi.showHandoff.value=true }
@@ -332,12 +325,15 @@ fun SettingsScreen() {
                     "Saute les passages silencieux (moteur audio)",
                     AppSettings.skipSilence.value
                 ) { Player.setSkipSilence(it); SettingsStore.save() }
-                SToggle(Icons.Filled.Tune, "AutoMix (BETA)",
-                    "Transitions audio fluides entre les chansons · désactivé par défaut",
-                    AppSettings.automix.value) { Player.setAutoMix(it) }
             }
 
+            // ==================================================== PAROLES
             Section("PAROLES") {
+                SRow(
+                    Icons.Filled.Analytics, "Diagnostic des sources",
+                    sub = "Teste chaque source sur le titre en cours",
+                    value = if (playerState.current == null) "Aucun titre en lecture" else "Tester"
+                ) { lyricsDiag = true }
                 SRow(
                     Icons.Filled.Subtitles, "Source des paroles",
                     sub = "Priorité : syllabes natives, mots, lignes, texte",
@@ -420,6 +416,7 @@ fun SettingsScreen() {
                 }
             }
 
+            // ==================================================== CANVAS
             Section("KETVOICE API · CANVAS") {
                 SToggle(Icons.Filled.Bolt, "Sonic Canvas", "Fond réactif au signal audio réel, sans microphone. Désactivé avec les animations réduites.",
                     AppSettings.sonicCanvas.value) { AppSettings.sonicCanvas.value = it; SettingsStore.save() }
@@ -478,12 +475,12 @@ fun SettingsScreen() {
                     Icons.Filled.Tune, "Ketvoice API",
                     sub = "Recherche, streaming et téléchargements · Supabase",
                     value = "Intégré"
-                ) { AppUi.navigate(AppUi.SOURCES) }
+                ) { AppUi.openSources() }
                 SRow(
                     Icons.Filled.Tune, "Sources personnalisées",
                     sub = "URLs HTTPS terminées par .json · streaming et téléchargements",
                     value = if (customSources.isEmpty()) "Aucune" else "${customSources.size} source(s)"
-                ) { AppUi.navigate(AppUi.SOURCES) }
+                ) { AppUi.openSources() }
                 Text(
                     "Ketvoice API protège les identifiants côté Supabase. Aucun cookie Spotify " +
                         "ni jeton d'addon n'est stocké dans l'application.",
@@ -491,6 +488,7 @@ fun SettingsScreen() {
                 )
             }
 
+            // ==================================================== TÉLÉCHARGEMENTS
             Section("TÉLÉCHARGEMENTS") {
                 SRow(
                     Icons.Filled.CloudDownload, "Qualité de téléchargement",
@@ -515,9 +513,10 @@ fun SettingsScreen() {
                     Icons.Filled.Image, "Voir la liste",
                     sub = "Pistes enregistrées sur l'appareil",
                     value = ""
-                ) { AppUi.navigate(AppUi.DOWNLOADS) }
+                ) { AppUi.openDownloads() }
             }
 
+            // ==================================================== STOCKAGE
             Section("STOCKAGE") {
                 SRow(
                     Icons.Filled.Storage, "Cache des chansons utilisé",
@@ -550,6 +549,7 @@ fun SettingsScreen() {
                 }
             }
 
+            // ==================================================== À PROPOS
             Section("À PROPOS") {
                 SRow(
                     Icons.Filled.Image, "Version",
@@ -566,50 +566,10 @@ fun SettingsScreen() {
                 lineHeight = 17.sp,
                 modifier = Modifier.padding(horizontal = 22.dp, vertical = 16.dp)
             )
-            }
-
-            if (autoMixTab && AppSettings.automix.value) {
-                Section("AUTOMIX (BETA)") {
-                    Text("Analyse du rythme et fondu réel sur deux flux audio. Si l'analyse échoue, un fondu simple prend le relais.",
-                        color = th.secondary, fontSize = 13.sp,
-                        modifier = Modifier.padding(horizontal = 22.dp, vertical = 10.dp))
-                    SRow(Icons.Filled.Tune, "Fondu maximal", sub = "Choisissez la durée maximale des transitions",
-                        value = if (AppSettings.automixAutoFade.value) "Automatique" else "Personnalisé") {
-                        choice = ChoiceSpec("Fondu maximal", "En mode automatique, AutoMix ajuste la durée.",
-                            if (AppSettings.automixAutoFade.value) "auto" else "custom",
-                            listOf(ChoiceOption("auto", "Automatique"), ChoiceOption("custom", "Personnalisé"))) { id ->
-                            AppSettings.automixAutoFade.value = id == "auto"
-                            SettingsStore.save()
-                        }
-                    }
-                    if (!AppSettings.automixAutoFade.value) {
-                        Text("${AppSettings.automixFadeSeconds.value} s", localize = false,
-                            modifier = Modifier.padding(start = 22.dp, top = 12.dp), color = th.onBackground)
-                        Slider(value = AppSettings.automixFadeSeconds.value.toFloat(),
-                            onValueChange = { AppSettings.automixFadeSeconds.value = it.toInt().coerceIn(1, 30) },
-                            onValueChangeFinished = SettingsStore::save,
-                            valueRange = 1f..30f, steps = 28,
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 22.dp))
-                    }
-                    SRow(Icons.Filled.Bolt, "Performance", sub = "Plus le niveau est élevé, plus l'analyse sollicite le processeur",
-                        value = listOf("Basse", "Moyenne", "Standard", "Élevée")[AppSettings.automixPerformance.value]) {
-                        choice = ChoiceSpec("Performance", "Adaptée aux capacités de votre appareil.",
-                            AppSettings.automixPerformance.value.toString(),
-                            listOf(ChoiceOption("0", "Basse", "CPU minimal, fondu simple"),
-                                ChoiceOption("1", "Moyenne", "Analyse légère"),
-                                ChoiceOption("2", "Standard", "Équilibre qualité/performance"),
-                                ChoiceOption("3", "Élevée", "Analyse approfondie et alignement des rythmes"))) { id ->
-                            AppSettings.automixPerformance.value = id.toIntOrNull()?.coerceIn(0, 3) ?: 2
-                            SettingsStore.save()
-                        }
-                    }
-                    Text("Le mode Basse privilégie la batterie. Le rythme est synchronisé lorsque l'analyse est suffisamment fiable, sans accélérer les morceaux.",
-                        color = th.secondary, fontSize = 12.sp,
-                        modifier = Modifier.padding(horizontal = 22.dp, vertical = 14.dp))
-                }
-            }
         }
     }
+
+    if (lyricsDiag) LyricsDiagnosticsDialog(onClose = { lyricsDiag = false })
 
     if (editSetting.isNotBlank()) {
         val state = if (editSetting == "better") AppSettings.betterLyricsKey else AppSettings.lyricaUrl
@@ -631,6 +591,7 @@ fun SettingsScreen() {
     }
 }
 
+// ------------------------------------------------------------- choix réels
 private data class ChoiceOption(val id: String, val label: String, val sub: String = "")
 private data class ChoiceSpec(
     val title: String,
@@ -804,6 +765,8 @@ private fun cycleQuality(current: String): String = when (current) {
     else -> "Sans perte"
 }
 
+// ---------------------------------------------------------------- UI units
+
 @Composable
 private fun Section(header: String, content: @Composable ColumnScope.() -> Unit) {
     val th = LocalTheme.current
@@ -863,6 +826,7 @@ private fun ColumnScope.SRow(
     }
 }
 
+/** Toggle iOS maison (pas de composant natif Material). */
 @Composable
 private fun IosSwitch(checked: Boolean, onChecked: (Boolean) -> Unit) {
     val th = LocalTheme.current

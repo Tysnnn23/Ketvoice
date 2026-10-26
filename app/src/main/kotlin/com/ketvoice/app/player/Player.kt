@@ -22,11 +22,7 @@ import com.ketvoice.app.data.LyricsRepo
 import com.ketvoice.app.data.MusicApi
 import com.ketvoice.app.data.PublicationApi
 import com.ketvoice.app.data.Track
-import com.ketvoice.app.data.SettingsStore
-import androidx.media3.session.SessionCommand
-import androidx.media3.session.SessionResult
-import com.google.common.util.concurrent.Futures
-import com.google.common.util.concurrent.ListenableFuture
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -39,9 +35,6 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.awaitAll
 
 data class PlayerUiState(
     val queue: List<Track> = listOf(),
@@ -55,11 +48,22 @@ data class PlayerUiState(
     val autoplay: Boolean = true,
     val quality: String = "",
     val playWhenReady: Boolean = false,
-    val buffering: Boolean = false
+    val buffering: Boolean = false,
+    val failed: Boolean = false
 ) {
     val current: Track? get() = if (index in queue.indices) queue[index] else null
 }
 
+/**
+ * Contrôleur unique de lecture : MediaController -> PlaybackService.
+ *
+ * Stratégie de démarrage rapide :
+ *   1. téléchargement local si présent,
+ *   2. recherche du match Ultra MAX (MP3) + Last Babe (FLAC) en PARALLÈLE,
+ *   3. la lecture démarre dès que le MP3 est prêt (sans attendre le FLAC),
+ *   4. si la qualité « Sans perte » est visée et que le FLAC aboutit,
+ *      bascule transparente à la position courante.
+ */
 object Player {
 
     private var controller: MediaController? = null
@@ -78,6 +82,8 @@ object Player {
     val volume: StateFlow<Float> = _volume
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
+    /** Position courante (230 ms) : consommée uniquement par la barre de temps
+     *  et les paroles, pour éviter de recomposer toute la fenêtre à chaque tic. */
     private val _position = MutableStateFlow(0L)
     val positionMs: StateFlow<Long> = _position
     private val _seekEpoch = MutableStateFlow(0L)
@@ -89,46 +95,19 @@ object Player {
 
     private var lastEndedKey: Pair<String?, Int>? = null
 
-    private data class MixStream(
-        val info: MusicApi.StreamInfo,
-        val cacheKey: String?,
-        val localPath: String?,
-        val label: String
-    )
-
-    private data class ArmedMix(
-        val index: Int,
-        val track: Track,
-        val stream: MixStream,
-        val source: AutoMixSource,
-        val plan: AutoMixPlan
-    )
-
-    private var armed: ArmedMix? = null
-    private var armJob: Job? = null
-    private var mixing = false
-    private var mixToken = 0L
-    private var mixTransition: AutoMix.Transition? = null
-    private var mixStartedAt = 0L
-    private var mixPositionBase = 0L
-    private var mixFinalizeJob: Job? = null
-    private var armAttemptAt = -12_000L
-
     private val listener = object : Player.Listener {
-        override fun onVolumeChanged(volume: Float) { if (!mixing) _volume.value = volume }
+        override fun onVolumeChanged(volume: Float) { _volume.value = volume }
         override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
             if (!resolving) {
-                if (mixing && !playWhenReady) cancelMix()
                 desiredPlay = controller?.playWhenReady ?: playWhenReady
                 _state.value = _state.value.copy(playWhenReady = desiredPlay)
             }
         }
         override fun onPlayerError(error: PlaybackException) {
-            if (mixing) return
             val track = _state.value.current ?: return
             val failed = activeStream
             if (fallbackAttempts++ >= 2) {
-                _state.value = _state.value.copy(isPlaying = false, quality = "Erreur de lecture · réessayez")
+                _state.value = _state.value.copy(isPlaying = false, quality = "Erreur de lecture · réessayez", failed = true)
                 return
             }
             val gen = generation
@@ -145,20 +124,20 @@ object Player {
                     _state.value = _state.value.copy(quality = label(alternative))
                     AudioCache.cacheWhole(track.id, alternative)
                 } else {
-                    _state.value = _state.value.copy(isPlaying = false, quality = "Flux indisponible · réessayez")
+                    _state.value = _state.value.copy(isPlaying = false, quality = "Flux indisponible · réessayez", failed = true)
                 }
             }
         }
 
         override fun onIsPlayingChanged(isPlaying: Boolean) {
             if (resolving) return
-            if (mixing && !isPlaying) return
             _state.value = _state.value.copy(isPlaying = isPlaying)
             if (isPlaying && historyGeneration != generation) {
                 _state.value.current?.let { com.ketvoice.app.data.ListeningHistory.record(it) }
                 historyGeneration = generation
             }
             if (isPlaying) _state.value.current?.let { track ->
+                if (recordedListens.size > 500) recordedListens.clear()
                 if (recordedListens.add(track.id)) com.ketvoice.app.data.YouTubeMusicSession.recordListen(track)
             }
             positionNow()
@@ -172,7 +151,6 @@ object Player {
             _state.value = _state.value.copy(buffering = playbackState == androidx.media3.common.Player.STATE_BUFFERING)
             positionNow()
             if (playbackState == androidx.media3.common.Player.STATE_ENDED) {
-                if (mixing) return
                 val s = _state.value
                 val key = s.current?.id to s.index
                 if (key != lastEndedKey) {
@@ -199,24 +177,8 @@ object Player {
         com.ketvoice.app.data.HomeFeed.start(context.applicationContext)
         MusicApi.init(context.applicationContext)
         AudioCache.init(context.applicationContext)
-        AutoMixAnalyzer.init(context.applicationContext)
         val token = SessionToken(context, ComponentName(context, PlaybackService::class.java))
-        val builder = MediaController.Builder(context, token)
-        builder.setListener(object : MediaController.Listener {
-            override fun onCustomCommand(
-                controller: MediaController,
-                command: SessionCommand,
-                args: Bundle
-            ): ListenableFuture<SessionResult> {
-                if (command.customAction == AutoMixCommands.EVENT) {
-                    val eventToken = args.getLong(AutoMixCommands.TOKEN, 0L)
-                    val success = args.getBoolean(AutoMixCommands.SUCCESS, false)
-                    scope.launch { finishMix(eventToken, success) }
-                }
-                return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
-            }
-        })
-        val future = builder.buildAsync()
+        val future = MediaController.Builder(context, token).buildAsync()
         future.addListener({
             try {
                 val c = future.get()
@@ -232,11 +194,11 @@ object Player {
             }
         }, androidx.core.content.ContextCompat.getMainExecutor(context))
 
+        // Tic léger : met à jour uniquement le flux de position.
         scope.launch {
             while (true) {
                 if (controller?.isPlaying == true) positionNow()
-                tickAutoMix()
-                delay(if (mixing) 120 else 200)
+                delay(230)
             }
         }
     }
@@ -244,11 +206,6 @@ object Player {
     private fun positionNow() {
         if (resolving) return
         val c = controller ?: return
-        if (mixing) {
-            val estimate = mixPositionBase + (android.os.SystemClock.elapsedRealtime() - mixStartedAt)
-            _position.value = estimate.coerceAtLeast(0L)
-            return
-        }
         val pos = c.currentPosition.coerceAtLeast(0L)
         _position.value = pos
         val dur = if (c.duration > 0) c.duration else _state.value.durationMs
@@ -259,10 +216,13 @@ object Player {
         }
     }
 
+    // ------------------------------------------------------------ Qualité
+    /** Réglage qualité courant selon le réseau réellement mesuré. */
     private fun qualitySetting(): String {
         return if (isMetered()) AppSettings.mobileQuality.value else AppSettings.wifiQuality.value
     }
 
+    /** true si on doit monter en FLAC (Last Babe) après le démarrage MP3. */
     private fun wantsLossless(): Boolean = qualitySetting() == "Sans perte"
 
     private fun isMetered(): Boolean {
@@ -275,6 +235,7 @@ object Player {
         return !(wifi && unmetered)
     }
 
+    // ------------------------------------------------------------ Lecture
     fun playTrack(track: Track, queue: List<Track> = listOf(track), startIndex: Int? = null,
                   startPositionMs: Long = 0L, autoPlay: Boolean = true) {
         val c = controller ?: run {
@@ -283,21 +244,13 @@ object Player {
             return
         }
         resolutionJob?.cancel()
-        cancelMix()
-        if (armed != null || armJob?.isActive == true) {
-            c.sendCustomCommand(SessionCommand(AutoMixCommands.CANCEL, Bundle.EMPTY), Bundle.EMPTY)
-        }
-        armJob?.cancel()
-        armJob = null
-        armAttemptAt = -12_000L
-        armed = null
         resolving = true
         desiredPlay = autoPlay
         activeStream = null
         fallbackAttempts = 0
         c.pause()
         lastEndedKey = null
-
+        // 1) Correspondance addon déjà présente dans la file : zéro recherche réseau.
         val localMatch = if (track.addonId.isNullOrBlank()) {
             MusicApi.addonMatchIn(queue, track)?.takeIf { it.addon == "um" }
         } else null
@@ -311,6 +264,7 @@ object Player {
             )
         } else track
 
+        // 2) Pochette déjà résolue par la recherche : affichage immédiat.
         val cachedCover = ArtworkRepo.coverForTrack(seeded)
         val resolvedTrack = if (cachedCover != null && seeded.coverUrl.isNullOrBlank()) {
             seeded.copy(coverUrl = cachedCover)
@@ -323,6 +277,7 @@ object Player {
             ?: initialQueue.indexOfFirst { it.id == track.id }.let { if (it >= 0) it else 0 }
         val gen = ++generation
         val prev = _state.value
+        if (initialQueue.map { it.id } != prev.queue.map { it.id }) shuffleRecent.clear()
         _state.value = PlayerUiState(
             queue = initialQueue,
             queueEntryIds = QueueEntryIds.reconcile(prev.queue.map { it.id }, prev.queueEntryIds, initialQueue.map { it.id }),
@@ -339,12 +294,13 @@ object Player {
         )
         _position.value = startPositionMs.coerceAtLeast(0)
 
+        // Canvas + paroles démarrent sans attendre la résolution audio.
         scope.launch { CanvasRepo.resolve(resolvedTrack) }
         scope.launch { LyricsRepo.load(resolvedTrack) }
         scope.launch { ArtworkRepo.enrich(listOf(resolvedTrack)) }
 
         resolutionJob = scope.launch(Dispatchers.Main) {
-
+            // Fichier local (MediaStore) : lecture directe, aucune résolution réseau.
             if (resolvedTrack.id.startsWith("local:") && resolvedTrack.streamUrl != null) {
                 activeStream = null
                 startItem(c, resolvedTrack, resolvedTrack.streamUrl, startPositionMs.coerceAtLeast(0), desiredPlay)
@@ -376,7 +332,7 @@ object Player {
                 val stream = PublicationApi.stream(resolvedTrack, cached)
                 if (stream == null) {
                     resolving = false
-                    _state.value = _state.value.copy(isPlaying = false, playWhenReady = false, buffering = false, quality = "Aucun flux disponible")
+                    _state.value = _state.value.copy(isPlaying = false, playWhenReady = false, buffering = false, quality = "Aucun flux disponible", failed = true)
                     return@launch
                 }
                 start(stream)
@@ -391,7 +347,8 @@ object Player {
             val custom = async(Dispatchers.IO) {
                 runCatching { com.ketvoice.app.data.CustomSources.streamForTrack(resolvedTrack) }.getOrNull()
             }
-
+            // A track discovered through a personal source must not wait on
+            // YouTube. Otherwise YouTube gets a short head start.
             val customTrack = resolvedTrack.addon?.startsWith("cs:") == true
             var initial = if (customTrack) withTimeoutOrNull(3500) { custom.await() }
                 else withTimeoutOrNull(1600) { youtube.await() }
@@ -408,7 +365,7 @@ object Player {
             if (gen != generation) return@launch
             if (initial == null) {
                 resolving = false
-                _state.value = _state.value.copy(isPlaying = false, playWhenReady = false, buffering = false, quality = "Aucun flux disponible")
+                _state.value = _state.value.copy(isPlaying = false, playWhenReady = false, buffering = false, quality = "Aucun flux disponible", failed = true)
                 return@launch
             }
             val first = initial
@@ -424,14 +381,16 @@ object Player {
                 AudioCache.cacheWhole(track.id, stream)
             }
             if (first.quality == "YouTube Music" && qualitySetting() != "Normal") {
-
+                // A 128 kb/s MP3 is not an improvement over AAC. Only upgrade
+                // to this lossy fallback when its declared bitrate is higher.
                 val lossy = mp3.await()
                 val bitrate = lossy?.quality?.let { Regex("\\d+").find(it)?.value?.toIntOrNull() } ?: 0
                 if (bitrate >= 256) upgrade(lossy)
             }
             if (wantsLossless() && !first.format.contains("flac", true)) upgrade(flac.await())
             if (customTrack) {
-
+                // Si la source personnalisée a été plus lente que le repli, elle
+                // remplace le flux de secours dès qu'elle est réellement prête.
                 val sourceStream = withTimeoutOrNull(9_000) { custom.await() }
                 if (sourceStream != null) upgrade(sourceStream)
             }
@@ -448,6 +407,7 @@ object Player {
         playTrack(tracks[index], tracks, index)
     }
 
+    /** Insère un morceau juste après celui en cours (sans interrompre la lecture). */
     fun playNext(track: Track) {
         val s = _state.value
         if (s.queue.isEmpty()) {
@@ -468,23 +428,24 @@ object Player {
         }
     }
 
+    /** Saute directement à une piste de la file. */
     fun jumpTo(index: Int) {
         val s = _state.value
         if (index !in s.queue.indices) return
         playTrack(s.queue[index], s.queue, index)
     }
 
+    /** Retire une piste ; si c'est la piste courante, on enchaîne proprement. */
     fun removeTrack(trackId: String) {
         val s = _state.value
         val i = s.queue.indexOfFirst { it.id == trackId }
         removeAt(i)
     }
 
+    /** Remove exactly this occurrence, even when the queue contains duplicates. */
     fun removeAt(i: Int) {
         val s = _state.value
         if (i !in s.queue.indices) return
-        if (mixing) cancelMix()
-        armed = null
         val q = s.queue.toMutableList()
         q.removeAt(i)
         val keys = s.queueEntryIds.toMutableList().apply { if (i in indices) removeAt(i) }
@@ -514,6 +475,7 @@ object Player {
         }
     }
 
+    /** Réordonne la file (glisser la poignée) sans interrompre la lecture. */
     fun moveQueue(from: Int, to: Int) {
         val s = _state.value
         if (from !in s.queue.indices || to !in s.queue.indices || from == to) return
@@ -567,7 +529,6 @@ object Player {
     }
 
     fun pause() {
-        cancelMix()
         desiredPlay = false
         _state.value = _state.value.copy(playWhenReady = false)
         controller?.pause()
@@ -575,9 +536,8 @@ object Player {
 
     fun toggle() {
         val c = controller ?: return
-        if (mixing) cancelMix()
         val state = _state.value
-        if (!state.isPlaying && (state.quality.contains("flux", true) || state.quality.contains("erreur", true))) {
+        if (!state.isPlaying && state.failed) {
             state.current?.let { playTrack(it, state.queue) }
             return
         }
@@ -591,32 +551,24 @@ object Player {
         }
     }
 
+    private val shuffleRecent = ArrayDeque<Int>()
+
     fun next() {
         val s = _state.value
         if (s.queue.isEmpty()) return
         val nextIndex = if (s.shuffle && s.queue.size > 1) {
-            armed?.takeIf { it.track.id != s.current?.id && s.queue.getOrNull(it.index)?.id == it.track.id }?.index ?: run {
-                var random = kotlin.random.Random.nextInt(s.queue.size)
-                if (random == s.index) random = (random + 1) % s.queue.size
-                random
-            }
+            val recent = shuffleRecent.toSet()
+            var pool = s.queue.indices.filter { it != s.index && it !in recent }
+            if (pool.isEmpty()) pool = s.queue.indices.filter { it != s.index }
+            val chosen = pool.random()
+            shuffleRecent.addLast(chosen)
+            while (shuffleRecent.size > (s.queue.size / 2).coerceAtLeast(1)) shuffleRecent.removeFirst()
+            chosen
         } else {
             if (s.index < s.queue.lastIndex) s.index + 1 else {
                 if (s.autoplay) extendQueue()
                 return
             }
-        }
-        if (mixing) {
-            cancelMix()
-            playTrack(s.queue[nextIndex], s.queue, nextIndex)
-            return
-        }
-        val target = armed
-        if (AutoMix.enabled() && !s.repeatOne && target != null && target.index == nextIndex &&
-            s.queue.getOrNull(nextIndex)?.id == target.track.id
-        ) {
-            startMix(target, manual = true)
-            return
         }
         playTrack(s.queue[nextIndex], s.queue, nextIndex)
     }
@@ -624,12 +576,11 @@ object Player {
     fun previous() {
         val c = controller ?: return
         val s = _state.value
-        if (mixing) cancelMix()
         if (c.currentPosition > 3_000 || s.queue.size <= 1) {
             seekTo(0)
             return
         }
-        val previous = (s.index - 1).coerceAtLeast(0)
+        val previous = if (s.index > 0) s.index - 1 else s.queue.lastIndex
         playTrack(s.queue[previous], s.queue, previous)
     }
 
@@ -653,7 +604,6 @@ object Player {
     }
 
     fun seekTo(ms: Long) {
-        if (mixing) cancelMix()
         val position = ms.coerceAtLeast(0L)
         controller?.seekTo(position)
         _position.value = position
@@ -667,30 +617,24 @@ object Player {
         seekTo(target)
     }
 
+    /** Position immédiate pour le rendu karaoké (sans attendre le tic global). */
     fun currentPositionMs(): Long =
         (controller?.currentPosition ?: _position.value).coerceAtLeast(0L)
 
     fun setShuffle(on: Boolean) {
-        if (mixing) cancelMix()
-        armJob?.cancel()
-        armJob = null
-        armed = null
-        armAttemptAt = -12_000L
         controller?.shuffleModeEnabled = on
         _state.value = _state.value.copy(shuffle = on)
     }
 
     fun setRepeatOne(on: Boolean) {
         val c = controller ?: return
-        if (on) {
-            cancelMix()
-            armJob?.cancel()
-            armed = null
-        } else armAttemptAt = -12_000L
+        // On gère nous-mêmes la file : OFF permet STATE_ENDED -> next().
+        // REPEAT_MODE_ONE ne sert qu'au vrai mode « répéter le titre ».
         c.repeatMode = if (on) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
         _state.value = _state.value.copy(repeatOne = on)
     }
 
+    /** Réglage « Ignorer les silences » : appliqué dans le service (moteur audio). */
     fun setSkipSilence(on: Boolean) {
         AppSettings.skipSilence.value = on
         controller?.sendCustomCommand(
@@ -717,326 +661,8 @@ object Player {
         controller?.sendCustomCommand(androidx.media3.session.SessionCommand(PlaybackService.CMD_EQUALIZER, Bundle.EMPTY), Bundle.EMPTY)
     }
 
-    fun setAutoMix(on: Boolean) {
-        AppSettings.automix.value = on
-        SettingsStore.save()
-        if (!on) {
-            cancelMix()
-            controller?.sendCustomCommand(SessionCommand(AutoMixCommands.DISABLE, Bundle.EMPTY), Bundle.EMPTY)
-            armJob?.cancel()
-            armJob = null
-            armed = null
-            AutoMix.clear()
-        } else {
-            armAutoMix()
-        }
-    }
-
-    private fun effectiveDuration(s: PlayerUiState): Long {
-        val fromPlayer = controller?.duration ?: 0L
-        return if (fromPlayer > 0) fromPlayer else s.durationMs
-    }
-
-    private fun nextIndexFor(s: PlayerUiState): Int? {
-        if (s.queue.size < 2 || s.repeatOne) return null
-        if (s.index !in s.queue.indices) return null
-        if (s.shuffle) {
-            return armed?.takeIf { it.track.id != s.current?.id && it.index in s.queue.indices }?.index ?: run {
-                var random = kotlin.random.Random.nextInt(s.queue.size)
-                if (random == s.index) random = (random + 1) % s.queue.size
-                random
-            }
-        }
-        return if (s.index < s.queue.lastIndex) s.index + 1 else null
-    }
-
-    private fun analysisSource(track: Track): AutoMixSource? {
-        Downloader.itemFor(track.id)?.let { return AutoMixSource.Local(it.file.absolutePath) }
-        val localUrl = track.streamUrl
-        if (track.id.startsWith("local:") && localUrl != null) {
-            val uri = Uri.parse(localUrl)
-            if (uri.scheme == "content") return AutoMixSource.ContentUri(localUrl)
-            uri.path?.let { return AutoMixSource.Local(it) }
-        }
-        val stream = activeStream
-        if (stream != null && com.ketvoice.app.data.ImportedSong.id(track) == null) {
-            return AutoMixSource.Remote(stream.url, AudioCache.key(track.id, stream),
-                stream.cacheTag.takeIf { it.isNotBlank() })
-        }
-        val cached = AudioCache.complete(track.id, wantsLossless())
-        if (cached != null) return AutoMixSource.Remote(cached.url, AudioCache.key(track.id, cached),
-            cached.cacheTag.takeIf { it.isNotBlank() })
-        return null
-    }
-
-    private suspend fun resolveMixStream(track: Track): MixStream? = withContext(Dispatchers.IO) { coroutineScope {
-        val localUrl = track.streamUrl
-        if (track.id.startsWith("local:") && localUrl != null) {
-            val uri = Uri.parse(localUrl)
-            if (uri.scheme == "content" || uri.path != null) return@coroutineScope MixStream(
-                MusicApi.StreamInfo(localUrl, "local", "Fichier local"), null,
-                if (uri.scheme == "content") null else uri.path, "Fichier local")
-        }
-        Downloader.itemFor(track.id)?.let { item ->
-            val url = item.file.toURI().toString()
-            return@coroutineScope MixStream(MusicApi.StreamInfo(url, item.format, "Téléchargé"), null,
-                item.file.absolutePath, "Téléchargé · ${item.format}")
-        }
-        AudioCache.complete(track.id, wantsLossless())?.let { cached ->
-            return@coroutineScope MixStream(cached, AudioCache.key(track.id, cached), null, label(cached))
-        }
-        if (track.addon == "upload" || track.id.startsWith("kv:upload:")) {
-            val stream = PublicationApi.stream(track, null) ?: return@coroutineScope null
-            return@coroutineScope MixStream(stream, AudioCache.key(track.id, stream), null, label(stream))
-        }
-        val customTrack = track.addon?.startsWith("cs:") == true
-        val tasks = mutableListOf<kotlinx.coroutines.Deferred<MusicApi.StreamInfo?>>()
-        tasks += async { runCatching { MusicApi.youtubeStream(track) }.getOrNull() }
-        tasks += async { runCatching { MusicApi.addonStream(track, "um") }.getOrNull() }
-        if (wantsLossless()) tasks += async { runCatching { MusicApi.flacStream(track) }.getOrNull() }
-        if (customTrack) tasks += async { runCatching { com.ketvoice.app.data.CustomSources.streamForTrack(track) }.getOrNull() }
-        val stream = withTimeoutOrNull(9_000) {
-            var found: MusicApi.StreamInfo? = null
-            while (found == null && tasks.any { it.isActive }) {
-                val done = withTimeoutOrNull(400) {
-                    kotlinx.coroutines.selects.select {
-                        tasks.filter { it.isActive }.forEach { task -> task.onAwait { it } }
-                    }
-                }
-                if (done != null) found = done
-                else if (tasks.none { it.isActive }) break
-            }
-            found ?: tasks.awaitAll().firstOrNull { it != null }
-        }
-        tasks.forEach { it.cancel() }
-        if (stream == null) return@coroutineScope null
-        MixStream(stream, AudioCache.key(track.id, stream), null, label(stream))
-    } }
-
-    private fun armAutoMix() {
-        if (!AppSettings.automix.value) return
-        val s = _state.value
-        val current = s.current ?: return
-        val index = nextIndexFor(s) ?: return
-        val next = s.queue.getOrNull(index) ?: return
-        if (next.id == current.id) return
-        val gen = generation
-        armJob?.cancel()
-        armAttemptAt = android.os.SystemClock.elapsedRealtime()
-        AutoMix.preparing.value = true
-        armJob = scope.launch {
-            try {
-                val stream = resolveMixStream(next) ?: return@launch
-                val level = AutoMixAnalyzer.effectiveLevel()
-                val headSource = if (stream.localPath != null) AutoMixSource.Local(stream.localPath)
-                    else if (Uri.parse(stream.info.url).scheme == "content") AutoMixSource.ContentUri(stream.info.url)
-                    else AutoMixSource.Remote(stream.info.url, stream.cacheKey,
-                        stream.info.cacheTag.takeIf { it.isNotBlank() })
-                if (gen != generation) return@launch
-                val fallback = AutoMixPlanner.plan(level, AutoMixSettings.maxFadeMs(),
-                    AutoMixSettings.automatic(), null, null, effectiveDuration(s).takeIf { it > 0 } ?: Long.MAX_VALUE / 2)
-                var ready = ArmedMix(index, next, stream, headSource, fallback)
-                armed = ready
-                val prepare = controller?.sendCustomCommand(SessionCommand(AutoMixCommands.PREPARE, Bundle.EMPTY),
-                    mixArgs(ready, fallback.fadeMs, 0, 0, false))
-                if (prepare != null) {
-                    val code = withContext(Dispatchers.IO) { runCatching { prepare.get().resultCode }.getOrNull() }
-                    if (code != SessionResult.RESULT_SUCCESS && gen == generation) armed = null
-                }
-                if (gen != generation || armed == null) return@launch
-                if (level > AutoMixSettings.LOW) {
-                    val tail: AutoMixAnalysis?
-                    val head: AutoMixAnalysis?
-                    if (level <= AutoMixSettings.MEDIUM) {
-                        tail = analysisSource(current)?.let { AutoMixAnalyzer.analyze(current.id, it, level, AutoMixAnalyzer.TAIL) }
-                        head = AutoMixAnalyzer.analyze(next.id, headSource, level, AutoMixAnalyzer.HEAD)
-                    } else {
-                        val tailTask = async(Dispatchers.Default) {
-                            analysisSource(current)?.let { AutoMixAnalyzer.analyze(current.id, it, level, AutoMixAnalyzer.TAIL) }
-                        }
-                        val headTask = async(Dispatchers.Default) {
-                            AutoMixAnalyzer.analyze(next.id, headSource, level, AutoMixAnalyzer.HEAD)
-                        }
-                        tail = tailTask.await()
-                        head = headTask.await()
-                    }
-                    val analyzed = AutoMixPlanner.plan(level, AutoMixSettings.maxFadeMs(), AutoMixSettings.automatic(),
-                        tail, head, effectiveDuration(s).takeIf { it > 0 } ?: Long.MAX_VALUE / 2)
-                    if (gen == generation && armed === ready && !mixing) {
-                        ready = ready.copy(plan = analyzed)
-                        armed = ready
-                    }
-                }
-            } catch (cancelled: kotlinx.coroutines.CancellationException) {
-                throw cancelled
-            } catch (_: Exception) {
-                if (gen == generation) armed = null
-            } finally {
-                AutoMix.preparing.value = false
-            }
-        }
-    }
-
-    private fun tickAutoMix() {
-        if (!AppSettings.automix.value) {
-            if (armed != null) armed = null
-            return
-        }
-        val s = _state.value
-        if (mixing || resolving) return
-        if (controller?.playbackState != Player.STATE_READY) return
-        if (s.current == null || s.queue.size < 2) return
-        if (!s.playWhenReady && !s.isPlaying) return
-        if (armed == null) {
-            if ((armJob == null || armJob?.isActive != true) &&
-                android.os.SystemClock.elapsedRealtime() - armAttemptAt > 12_000L) armAutoMix()
-            return
-        }
-        val target = armed ?: return
-        if (target.track.id == s.current?.id || target.index !in s.queue.indices || s.queue[target.index].id != target.track.id) {
-            armed = null
-            return
-        }
-        if (s.repeatOne) {
-            armed = null
-            return
-        }
-        val duration = effectiveDuration(s)
-        if (duration <= 2_000L) return
-        val position = controller?.currentPosition ?: return
-        if (position < 1_500L) return
-        val remaining = duration - position
-        val trigger = target.plan.leadMs + PRE_MIX_MS
-        if (remaining <= trigger) startMix(target, manual = false)
-    }
-
-    private fun startMix(target: ArmedMix, manual: Boolean): Boolean {
-        val c = controller ?: return false
-        if (mixing) return false
-        val s = _state.value
-        val maxFade = if (manual) minOf(AutoMixSettings.MANUAL_FADE_MS, target.plan.fadeMs) else target.plan.fadeMs
-        val available = if (manual) maxFade else (effectiveDuration(s) - c.currentPosition - 250L)
-        if (available < AutoMixSettings.MIN_FADE_MS) return false
-        val fadeMs = minOf(maxFade, available)
-        val remaining = if (manual) fadeMs else (effectiveDuration(s) - (c.currentPosition.coerceAtLeast(0L)))
-        val delayMs = if (manual) 0L else (remaining - target.plan.leadMs).coerceIn(0L, 3_000L)
-        val token = ++mixToken
-        val transition = AutoMix.Transition(
-            id = token,
-            fromId = s.current?.id.orEmpty(),
-            toId = target.track.id,
-            fromTitle = s.current?.title.orEmpty(),
-            toTitle = target.track.title,
-            fromCover = s.current?.let { ArtworkRepo.covers.value["t:${it.id}"] ?: it.coverUrl },
-            toCover = ArtworkRepo.covers.value["t:${target.track.id}"] ?: target.track.coverUrl,
-            fadeMs = fadeMs + delayMs,
-            startedAt = android.os.SystemClock.elapsedRealtime(),
-            manual = manual,
-            strategy = target.plan.reason
-        )
-        val bundle = mixArgs(target, fadeMs, delayMs, token, manual)
-        mixing = true
-        mixTransition = transition
-        mixStartedAt = android.os.SystemClock.elapsedRealtime()
-        mixPositionBase = c.currentPosition.coerceAtLeast(0L)
-        AutoMix.transition.value = transition
-        val future = c.sendCustomCommand(SessionCommand(AutoMixCommands.MIX, Bundle.EMPTY), bundle)
-        future.addListener({
-            val code = runCatching { future.get().resultCode }.getOrNull()
-            if (code != SessionResult.RESULT_SUCCESS && token == mixToken) scope.launch { finishMix(token, false) }
-        }, androidx.core.content.ContextCompat.getMainExecutor(appContext ?: return true))
-        mixFinalizeJob?.cancel()
-        mixFinalizeJob = scope.launch {
-            delay(delayMs + fadeMs + 2_500L)
-            if (token == mixToken && mixing) finishMix(token, c.currentMediaItem?.mediaId == target.track.id)
-        }
-        return true
-    }
-
-    private fun mixArgs(target: ArmedMix, fadeMs: Long, delayMs: Long, token: Long, manual: Boolean): Bundle = Bundle().apply {
-            putString("url", target.stream.info.url)
-            putString("id", target.track.id)
-            putString("cacheKey", target.stream.cacheKey)
-            putString("title", target.track.title)
-            putString("artist", target.track.artist)
-            putString("album", target.track.album)
-            putString("artwork", ArtworkRepo.covers.value["t:${target.track.id}"] ?: target.track.coverUrl)
-            putLong("startMs", if (manual) 0L else target.plan.incomingStartMs)
-            putLong("fadeMs", fadeMs)
-            putLong("delayMs", delayMs)
-            putFloat("gain", target.plan.incomingGain)
-            putString("curve", if (target.plan.curve == AutoMixCurve.LINEAR) "linear" else "equal")
-            putLong(AutoMixCommands.TOKEN, token)
-        }
-
-    private suspend fun finishMix(token: Long, success: Boolean) {
-        if (token != mixToken) return
-        val transition = mixTransition ?: return
-        mixFinalizeJob?.cancel()
-        mixFinalizeJob = null
-        if (!success) {
-            mixing = false
-            mixTransition = null
-            AutoMix.transition.value = null
-            armed = null
-            _state.value = _state.value.copy(buffering = false)
-            if (controller?.playbackState == Player.STATE_ENDED) next()
-            return
-        }
-        val target = armed
-        val c = controller
-        mixing = false
-        mixTransition = null
-        AutoMix.transition.value = null
-        val s = _state.value
-        val index = if (target != null && s.queue.getOrNull(target.index)?.id == target.track.id) target.index
-        else s.queue.indexOfFirst { it.id == transition.toId }
-        val track = s.queue.getOrNull(index) ?: target?.track ?: return
-        val position = c?.currentPosition?.coerceAtLeast(0L) ?: 0L
-        val generationNow = ++generation
-        fallbackAttempts = 0
-        activeStream = target?.stream?.info
-        _state.value = s.copy(
-            index = index,
-            positionMs = position,
-            durationMs = if (track.durationMs > 0) track.durationMs else s.durationMs,
-            quality = target?.stream?.label ?: s.quality,
-            buffering = false,
-            isPlaying = c?.isPlaying ?: true,
-            playWhenReady = c?.playWhenReady ?: true
-        )
-        _position.value = position
-        historyGeneration = generationNow
-        com.ketvoice.app.data.ListeningHistory.record(track)
-        if (track.id !in recordedListens) {
-            recordedListens.add(track.id)
-            scope.launch(Dispatchers.IO) { com.ketvoice.app.data.YouTubeMusicSession.recordListen(track) }
-        }
-        target?.stream?.info?.let { AudioCache.cacheWhole(track.id, it) }
-        scope.launch(Dispatchers.Main.immediate) {
-            CanvasRepo.resolve(track)
-            LyricsRepo.load(track)
-            ArtworkRepo.enrich(listOf(track))
-        }
-        armed = null
-        armAutoMix()
-    }
-
-    private fun cancelMix() {
-        if (!mixing) return
-        mixToken++
-        mixing = false
-        mixTransition = null
-        mixFinalizeJob?.cancel()
-        mixFinalizeJob = null
-        AutoMix.transition.value = null
-        controller?.sendCustomCommand(SessionCommand(AutoMixCommands.CANCEL, Bundle.EMPTY), Bundle.EMPTY)
-    }
-
     suspend fun awaitReady(trackId: String): Boolean = withTimeoutOrNull(45_000) {
         state.first { it.current?.id == trackId && !it.buffering && controller?.playbackState == Player.STATE_READY }
         true
     } ?: false
-
-    private const val PRE_MIX_MS = 900L
 }

@@ -7,4 +7,3 @@
 - Publishing/editing authorization must be server-enforced for the verified `konnektsupport@gmail.com` account. Media replacement is only for that account's imported publications, never general catalog tracks.
 - Ketogether/group listening is deferred until the user explicitly authorizes it. Do not infer authorization from the existing single-device Wi-Fi handoff.
 - Distinguish emulator and mocked checks from real owner-session, live download and physical Quest validation. Never claim tests that were not performed.
-- Keep `IOS/` aligned with Android fixes where the matching feature exists; document unported counterparts in `IOS/README.md`. Run the Android-to-iOS resource sync/check for catalog and translation changes. Do not treat Python tooling tests as Swift compilation or physical iPhone validation.

@@ -71,6 +71,7 @@ import com.ketvoice.app.ui.common.TrackTitle
 
 enum class PlayerPage { ARTWORK, LYRICS, QUEUE }
 
+/** One player shell and one transport: changing pages never remounts the controls. */
 @Composable
 fun FullPlayerScreen(
     modifier: Modifier = Modifier,
@@ -149,22 +150,29 @@ fun FullPlayerScreen(
             return@BoxWithConstraints
         }
         if (adaptivePlayer) {
-
+            // Swipe horizontal depuis un bord pour fermer le player sur tablette.
+            // Les drags intérieurs (scrub, volume, paroles) ne sont jamais interceptés.
             var dragX by remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
             Box(Modifier.fillMaxSize().graphicsLayer { translationX = dragX }.pointerInput(Unit) {
                 awaitEachGesture {
-                    val down = awaitFirstDown()
+                    val down = awaitFirstDown(pass = PointerEventPass.Initial)
+                    val edge = size.width * 0.09f
+                    if (down.position.x > edge && down.position.x < size.width - edge) return@awaitEachGesture
                     dragX = 0f
                     var total = 0f
+                    var claimed = false
                     while (true) {
-                        val event = awaitPointerEvent()
+                        val event = awaitPointerEvent(PointerEventPass.Initial)
                         val change = event.changes.firstOrNull() ?: break
                         total += change.positionChange().x
-                        dragX = total
+                        if (!claimed && kotlin.math.abs(total) > viewConfiguration.touchSlop * 3f) claimed = true
+                        if (claimed) {
+                            dragX = total
+                            change.consume()
+                        }
                         if (!change.pressed) break
-                        change.consume()
                     }
-                    if (kotlin.math.abs(total) > 380f) close() else dragX = 0f
+                    if (claimed && kotlin.math.abs(total) > 380f) close() else dragX = 0f
                 }
             }) {
                 TabletPlayer(state, track, cover, canvas[track.id], ambience, page,
@@ -215,7 +223,8 @@ fun FullPlayerScreen(
                         .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
                         .drawWithContent {
                             drawContent()
-
+                            // Fondu long : la pochette se dissout dans l'ambiance,
+                            // sans bord franc ni ligne visible en bas.
                             drawRect(Brush.verticalGradient(
                                 0f to Color.White, .36f to Color.White, .52f to Color.White.copy(alpha = .98f),
                                 .66f to Color.White.copy(alpha = .82f), .79f to Color.White.copy(alpha = .48f),
@@ -231,11 +240,7 @@ fun FullPlayerScreen(
                         fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.width(sceneWidth).padding(top = topInset + 32.dp))
-                    PlayerTitle(track, false, cover, sheetAction = { sheet = "track" }, onArtist = {
-                        track.artistId?.takeIf { it.startsWith("UC") }?.let {
-                            AppUi.openArtist(it, track.artist)
-                        }
-                    },
+                    PlayerTitle(track, false, cover, sheetAction = { sheet = "track" },
                         modifier = Modifier.width(sceneWidth).offset(y = if (wide) safeHeight - 66.dp
                             else minOf(safeHeight * .514f, contentBottom - 61.dp)).padding(horizontal = margin))
                 } else {
@@ -246,10 +251,6 @@ fun FullPlayerScreen(
                         } else sheet = "track"
                     }, share = expanded, onCover = {
                         navigate(PlayerPage.ARTWORK)
-                    }, onArtist = {
-                        track.artistId?.takeIf { it.startsWith("UC") }?.let {
-                            AppUi.openArtist(it, track.artist)
-                        }
                     },
                         modifier = Modifier.width(sceneWidth).offset(y = headerTop).padding(horizontal = if (wide) 18.dp else margin)
                             .height(headerHeight).swipeToMini { close() })
@@ -257,6 +258,8 @@ fun FullPlayerScreen(
                 }
                 }
 
+                // Dismiss gestures are limited to the handle. No fullscreen
+                // detector can consume taps, seek drags or lyric scrolling.
                 PlayerHandle(Modifier.offset(x = (sceneWidth - 120.dp) / 2).padding(top = topInset), onClose = { close() })
 
                 AnimatedVisibility(
@@ -339,8 +342,7 @@ private fun PlayerHandle(modifier: Modifier, onClose: () -> Unit) {
 
 @Composable
 internal fun PlayerTitle(track: Track, compact: Boolean, cover: String?, sheetAction: () -> Unit,
-                         modifier: Modifier = Modifier, share: Boolean = false, onCover: () -> Unit = {},
-                         onArtist: () -> Unit = { track.artistId?.let { AppUi.openArtist(it, track.artist) } }) {
+                         modifier: Modifier = Modifier, share: Boolean = false, onCover: () -> Unit = {}) {
     val favorite = track.id in AppSettings.favoriteIds.value
     var favoriteTap by remember(track.id) { mutableIntStateOf(0) }
     val pulse = remember(track.id) { androidx.compose.animation.core.Animatable(1f) }
@@ -365,12 +367,12 @@ internal fun PlayerTitle(track: Track, compact: Boolean, cover: String?, sheetAc
                 TrackTitle(track.title, color = Color.White, fontSize = if (compact) 20.sp else 22.sp,
                     selected = true, maxLines = if (compact) 1 else 2)
             }
-
+            // Nom d'artiste cliquable → ouvre la page artiste
             Text(track.artist, localize = false, color = Color.White.copy(alpha = .82f), fontSize = 17.sp, letterSpacing = (-.5).sp,
                 maxLines = 1, overflow = TextOverflow.Ellipsis,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable(onClick = onArtist)
+                    .clickable { track.artistId?.let { AppUi.openArtist(it, track.artist) } }
                     .semantics { contentDescription = "Ouvrir la page de ${track.artist}" }
             )
         }

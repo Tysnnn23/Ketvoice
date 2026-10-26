@@ -58,6 +58,10 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 
+/**
+ * RECHERCHE (captures 22-23) : YouTube Music + addons BitChord
+ * (Last Babe FLAC / Ultra MAX Deezer), résultats réels jouables.
+ */
 @Composable
 fun SearchScreen() {
     val th = LocalTheme.current
@@ -65,7 +69,7 @@ fun SearchScreen() {
     var playlistError by remember { mutableStateOf("") }
     val layout = LocalAdaptiveLayout.current
     var attempt by rememberSaveable { mutableIntStateOf(0) }
-    var segment by rememberSaveable { mutableIntStateOf(0) }
+    var segment by rememberSaveable { mutableIntStateOf(0) } // 0 YouTube | 1 Sources | 2 Bibliothèque
     var query by rememberSaveable { mutableStateOf(AppUi.searchSeed.value) }
     var results by remember { mutableStateOf<List<Track>>(emptyList()) }
     var allResults by remember { mutableStateOf<List<Track>>(emptyList()) }
@@ -87,7 +91,8 @@ fun SearchScreen() {
         focusManager.clearFocus()
     }
 
-    LaunchedEffect(query) { AppUi.searchSeed.value = query }
+    // La graine est consommée une seule fois (tuile genre / album).
+    LaunchedEffect(Unit) { AppUi.searchSeed.value = "" }
 
     LaunchedEffect(query, segment, attempt) {
         val q = query.trim()
@@ -120,7 +125,7 @@ fun SearchScreen() {
                 artists = foundArtists.await()
                 loading = false
                 results = (results + publications.await()).distinctBy { it.id }
-
+                // Addon latency must never hold the YouTube catalogue hostage.
                 allResults = results + addons.await()
             }
         } else {
@@ -135,10 +140,11 @@ fun SearchScreen() {
             }
         }
         loading = false
-
+        // Pochettes réelles, y compris pour les sources personnalisées.
         if (results.isNotEmpty()) ArtworkRepo.enrich(results)
     }
 
+    // Vraies pochettes d'album (jamais les vignettes YouTube).
     LaunchedEffect(results) { ArtworkRepo.enrich(results) }
 
     Column(
@@ -164,6 +170,7 @@ fun SearchScreen() {
             }
         }
 
+        // Champ de recherche iOS
         Row(
             Modifier
                 .padding(horizontal = 20.dp)
@@ -202,6 +209,7 @@ fun SearchScreen() {
             }
         }
 
+        // Segments
         Row(
             Modifier
                 .padding(horizontal = 20.dp)
@@ -293,7 +301,7 @@ fun SearchScreen() {
                     2 -> "Essayez un autre titre, artiste ou album parmi vos téléchargements."
                     else -> "Essayez un titre plus court ou le nom de l'artiste. Vérifiez aussi votre connexion."
                 }, if (segment == 1) "Gérer les sources" else "Réessayer") {
-                    if (segment == 1) AppUi.navigate(AppUi.SOURCES) else attempt++
+                    if (segment == 1) AppUi.pushOverlay(AppUi.SOURCES) else attempt++
                 }
             }
 
@@ -343,7 +351,8 @@ fun SearchScreen() {
                         modifier = Modifier.weight(1f),
                         onClick = {
                             submitSearch()
-
+                            // Correspondance addon déjà présente dans les résultats :
+                            // le son démarre immédiatement, sans recherche réseau.
                             val match = if (track.addonId.isNullOrBlank()) {
                                 MusicApi.addonMatchIn(allResults, track)?.takeIf { it.addon == "um" }
                             } else null
@@ -357,7 +366,7 @@ fun SearchScreen() {
                                 )
                             } else track
                             val queue = results.toMutableList().also { it[index] = playable }
-
+                            // Pas d'ouverture forcée du lecteur : le mini-lecteur prend le relais.
                             val pending=AppUi.playlistResolution.value
                             if(pending==null)Player.playQueue(queue,index) else scope.launch {
                                 try{PlaylistStore.resolve(pending.playlistId,pending.entryId,playable)
@@ -456,7 +465,7 @@ private fun SourcesCard(compact: Boolean = false) {
             Text("Source intégrée · active", color = th.secondary, style = T.caption)
             Spacer(Modifier.weight(1f))
             Text("Gérer", color = th.accent, fontWeight = FontWeight.SemiBold, fontSize = 13.sp,
-                modifier = Modifier.clickable { AppUi.navigate(AppUi.SOURCES) }
+                modifier = Modifier.clickable { AppUi.pushOverlay(AppUi.SOURCES) }
                     .padding(start = 12.dp, top = 8.dp, bottom = 8.dp))
         }
         Spacer(Modifier.height(10.dp))

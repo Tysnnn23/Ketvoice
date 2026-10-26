@@ -1,4 +1,16 @@
-
+// Ketvoice API — Supabase Edge Function.
+//
+// The APK never receives the Spotify session cookie or the add-on tokens.
+// They live in Supabase Vault and are read here with the service role.
+//
+// Routes:
+//   GET  /health
+//   GET  /source.json
+//   GET  /search?q=...
+//   GET  /stream?source=um|last&id=...&title=...&artist=...
+//   GET  /canvas?spotifyId=...&title=...&artist=...
+//
+// This file contains no credentials.
 
 type Json = Record<string, unknown>;
 
@@ -43,6 +55,84 @@ function serviceRole(): string {
   return env("SUPABASE_SERVICE_ROLE_KEY");
 }
 
+// ------------------------------------------------------------------ rate limit
+// First layer: per-isolate memory. Second layer: Postgres rolling window so
+// the limit survives across isolate restarts. A Postgres outage fails open.
+
+const ROUTE_LIMITS: Record<string, { limit: number; windowS: number }> = {
+  "/search": { limit: 60, windowS: 60 },
+  "/stream": { limit: 120, windowS: 60 },
+  "/canvas": { limit: 30, windowS: 60 },
+};
+
+const memoryHits = new Map<string, number[]>();
+
+function clientIp(req: Request): string {
+  const forwarded = req.headers.get("x-forwarded-for") ?? "";
+  const first = forwarded.split(",")[0]?.trim();
+  if (first) return first.slice(0, 64);
+  return (req.headers.get("x-real-ip") ?? "unknown").slice(0, 64);
+}
+
+function memoryTake(key: string, limit: number, windowMs: number): boolean {
+  const now = Date.now();
+  const hits = (memoryHits.get(key) ?? []).filter((at) => now - at < windowMs);
+  if (hits.length >= limit) {
+    memoryHits.set(key, hits);
+    return false;
+  }
+  hits.push(now);
+  memoryHits.set(key, hits);
+  if (memoryHits.size > 5_000) {
+    for (const [k, list] of memoryHits) {
+      if (list.every((at) => now - at >= windowMs)) memoryHits.delete(k);
+    }
+  }
+  return true;
+}
+
+async function postgresTake(
+  ip: string,
+  route: string,
+  limit: number,
+  windowS: number,
+): Promise<boolean | null> {
+  const base = supabaseUrl();
+  const key = serviceRole();
+  if (!base || !key) return null;
+  try {
+    const res = await request(
+      `${base}/rest/v1/rpc/ketvoice_api_take`,
+      {
+        method: "POST",
+        headers: {
+          apikey: key,
+          Authorization: `Bearer ${key}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ p_ip: ip, p_route: route, p_limit: limit, p_window_s: windowS }),
+      },
+      3_000,
+    );
+    if (!res.ok) return null;
+    return (await res.json()) === true;
+  } catch {
+    return null;
+  }
+}
+
+async function allow(req: Request, route: string): Promise<Response | null> {
+  const config = ROUTE_LIMITS[route];
+  if (!config) return null;
+  const ip = clientIp(req);
+  if (!memoryTake(`${route}|${ip}`, config.limit, config.windowS * 1_000)) {
+    return json({ error: "Trop de requêtes" }, 429);
+  }
+  const dbAllowed = await postgresTake(ip, route, config.limit, config.windowS);
+  if (dbAllowed === false) return json({ error: "Trop de requêtes" }, 429);
+  return null;
+}
+
 function cleanBase(value: string): string {
   return value.trim().replace(/\/+$/, "");
 }
@@ -68,6 +158,8 @@ async function jsonRequest(
     return null;
   }
 }
+
+// ------------------------------------------------------------------ secrets
 
 const secretCache = new Map<string, { value: string | null; at: number }>();
 
@@ -120,51 +212,7 @@ async function addonBases(): Promise<Array<{ tag: string; base: string; label: s
   }));
 }
 
-async function managedSources(): Promise<Source[]> {
-  const root = Deno.env.get("SUPABASE_URL")?.replace(/\/$/,"");
-  const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  if(!root || !key) return [];
-  const response = await fetch(`${root}/rest/v1/ketvoice_managed_sources?enabled=eq.true&select=id,name,manifest_url,enabled&limit=30`,
-    {headers:{apikey:key,Authorization:`Bearer ${key}`},signal:AbortSignal.timeout(5000)});
-  if(!response.ok) throw new Error("Sources indisponibles");
-  return await response.json();
-}
-
-async function searchManaged(source: Source, query: string): Promise<Json[]> {
-  const config=await manifest(source.manifest_url);
-  const data=await remoteJson(fill(config.search,"query",query));
-  return firstArray(data).map(item=>normaliseTrack("um",item)).filter((item):item is Json=>!!item)
-    .map(item=>({ ...item, id:`kv:um:managed:${source.id}:${item.addonId}`,
-      addonId:`managed:${source.id}:${item.addonId}`,source:"um",sourceLabel:source.name }));
-}
-
-async function streamManaged(source: Source, id: string, title: string, artist: string): Promise<Json | null> {
-  const config=await manifest(source.manifest_url);
-  let trackId=id;
-  if(!trackId && title) {
-    const match=bestAddonMatch(await searchManaged(source,`${title} ${artist}`),title,artist);
-    trackId=String(match?.addonId ?? "").replace(new RegExp(`^managed:${source.id}:`),"");
-  }
-  if(!trackId) return null;
-  const target=await publicUrl(fill(config.stream,"id",trackId));
-  const response=await fetch(target,{redirect:"manual",signal:AbortSignal.timeout(12000)});
-  if(!response.ok || Number(response.headers.get("content-length") || 0)>65536) return null;
-  const raw=(await response.text()).slice(0,65536);
-  let data: unknown=raw;
-  try {data=JSON.parse(raw);} catch {data=raw;}
-  const obj=data && typeof data==="object" ? data as Json : {};
-  const nested=obj.data && typeof obj.data==="object" ? obj.data as Json : {};
-  const options=firstArray(obj.sources ?? obj.streams ?? nested.sources ?? nested.streams);
-  const first=options.find(item=>typeof item==="string" || item && typeof item==="object");
-  const candidate=first && typeof first==="object" ? first as Json : {};
-  const link=text(obj.url ?? obj.stream ?? obj.link ?? obj.audio ?? nested.url ?? nested.stream ??
-    candidate.url ?? candidate.stream ?? candidate.link ?? candidate.audio ??
-    (typeof first==="string" ? first : typeof data==="string" ? data : ""));
-  if(!link) return null;
-  const stream=link.startsWith("/") ? new URL(link,target).toString() : link;
-  if(!stream.startsWith("https://")) return null;
-  return {url:stream,format:text(obj.format ?? nested.format) ?? inferFormat(stream),quality:"Haute qualité",source:`src-${source.id}`,addonId:trackId};
-}
+// ------------------------------------------------------------------- helpers
 
 function text(value: unknown): string | null {
   if (typeof value === "string" && value.trim()) return value.trim();
@@ -226,11 +274,13 @@ function inferFormat(url: string): string {
   return "mp3";
 }
 
+// ------------------------------------------------------------------- addons
+
 const searchCache = new Map<string, { at: number; rows: Json[] }>();
 const addonCooldown = new Map<string, number>();
 
 async function searchAddon(tag: string, base: string, query: string): Promise<Json[]> {
-
+  // A rate-limited add-on must not slow every search for several minutes.
   const cooldownUntil = addonCooldown.get(tag) ?? 0;
   if (Date.now() < cooldownUntil) return [];
 
@@ -353,7 +403,7 @@ async function streamAddon(
   try {
     data = JSON.parse(raw);
   } catch {
-
+    // Some addons answer with a plain URL.
   }
   const obj = data && typeof data === "object" ? data as Json : {};
   const nested = (obj.data ?? obj) as Json;
@@ -372,6 +422,8 @@ async function streamAddon(
     (format === "flac" || format === "wav" ? "Sans perte" : "Haute qualité");
   return { url: streamUrl, format, quality, source: tag, addonId };
 }
+
+// ------------------------------------------------------------------ Spotify
 
 type SpotifyToken = { token: string; expiresAt: number };
 let spotifyTokenCache: SpotifyToken | null = null;
@@ -433,7 +485,7 @@ async function totp(key: Uint8Array): Promise<string> {
   view.setUint32(4, counter);
   const cryptoKey = await crypto.subtle.importKey(
     "raw",
-    new Uint8Array(key),
+    key,
     { name: "HMAC", hash: "SHA-1" },
     false,
     ["sign"],
@@ -588,6 +640,8 @@ async function resolveCanvas(
   return { url, spotifyId: id, source: "Ketvoice API" };
 }
 
+// ------------------------------------------------------------------- routes
+
 async function health(): Promise<Response> {
   const [spDc, um, last] = await Promise.all([
     secret("SP_DC"),
@@ -621,21 +675,70 @@ function sourceManifest(): Response {
   });
 }
 
+const SEARCH_CACHE_TTL_S = 6 * 3_600;
+
+function cacheKey(query: string): string {
+  return query.toLowerCase().normalize("NFC").replace(/\s+/g, " ").trim().slice(0, 160);
+}
+
+async function searchCacheGet(key: string): Promise<Json[] | null> {
+  const base = supabaseUrl();
+  const role = serviceRole();
+  if (!base || !role) return null;
+  try {
+    const res = await request(
+      `${base}/rest/v1/rpc/ketvoice_search_cache_get`,
+      {
+        method: "POST",
+        headers: { apikey: role, Authorization: `Bearer ${role}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ p_query: key, p_max_age_s: SEARCH_CACHE_TTL_S }),
+      },
+      3_000,
+    );
+    if (!res.ok) return null;
+    const rows = await res.json();
+    return Array.isArray(rows) ? rows as Json[] : null;
+  } catch {
+    return null;
+  }
+}
+
+async function searchCachePut(key: string, tracks: Json[]): Promise<void> {
+  const base = supabaseUrl();
+  const role = serviceRole();
+  if (!base || !role || tracks.length === 0) return;
+  try {
+    await request(
+      `${base}/rest/v1/rpc/ketvoice_search_cache_put`,
+      {
+        method: "POST",
+        headers: { apikey: role, Authorization: `Bearer ${role}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ p_query: key, p_results: tracks }),
+      },
+      3_000,
+    );
+  } catch {
+    // The cache is an optimisation, never a dependency.
+  }
+}
+
 async function searchRoute(url: URL): Promise<Response> {
   const q = (url.searchParams.get("q") ?? "").trim();
   if (q.length < 2) return json({ name: "Ketvoice API", tracks: [] });
-  const [bases,sources] = await Promise.all([addonBases(),managedSources().catch(()=>[])]);
-  const results = await Promise.allSettled([
-    ...bases.map((item) => searchAddon(item.tag, item.base, q)),
-    ...sources.map((item) => searchManaged(item,q)),
-  ]);
+  const key = cacheKey(q);
+  const cached = await searchCacheGet(key);
+  if (cached) return json({ name: "Ketvoice API", tracks: cached, cached: true });
+  const bases = await addonBases();
+  const results = await Promise.allSettled(bases.map((item) => searchAddon(item.tag, item.base, q)));
   const tracks = results.flatMap((result) => result.status === "fulfilled" ? result.value : []);
   const unique = new Map<string, Json>();
   for (const track of tracks) {
-    const key = String(track.id ?? "");
-    if (key && !unique.has(key)) unique.set(key, track);
+    const id = String(track.id ?? "");
+    if (id && !unique.has(id)) unique.set(id, track);
   }
-  return json({ name: "Ketvoice API", tracks: [...unique.values()] });
+  const rows = [...unique.values()];
+  await searchCachePut(key, rows);
+  return json({ name: "Ketvoice API", tracks: rows });
 }
 
 async function streamRoute(url: URL): Promise<Response> {
@@ -643,19 +746,6 @@ async function streamRoute(url: URL): Promise<Response> {
   const id = (url.searchParams.get("id") ?? "").trim();
   const title = (url.searchParams.get("title") ?? "").trim();
   const artist = (url.searchParams.get("artist") ?? "").trim();
-  const managedId=/^managed:([0-9a-f-]{36}):(.*)$/s.exec(id);
-  if(source==="um" && managedId) {
-    const item=(await managedSources()).find(row=>row.id===managedId[1]);
-    if(!item) return json({error:"Source inconnue"},400);
-    const stream=await streamManaged(item,managedId[2],title,artist).catch(()=>null);
-    return stream ? json(stream) : json({error:"Flux indisponible"},404);
-  }
-  if(/^src-[0-9a-f-]{36}$/.test(source)) {
-    const item=(await managedSources()).find(row=>`src-${row.id}`===source);
-    if(!item) return json({error:"Source inconnue"},400);
-    const stream=await streamManaged(item,id,title,artist).catch(()=>null);
-    return stream ? json(stream) : json({error:"Flux indisponible"},404);
-  }
   const item = (await addonBases()).find((row) => row.tag === source);
   if (!item) return json({ error: "Source inconnue" }, 400);
   const stream = await streamAddon(source, item.base, id, title, artist);
@@ -680,13 +770,24 @@ Deno.serve(async (req) => {
   try {
     if (sub === "/health") return await health();
     if (sub === "/source.json") return sourceManifest();
-    if (sub === "/search") return await searchRoute(url);
-    if (sub === "/stream") return await streamRoute(url);
-    if (sub === "/canvas") return await canvasRoute(url);
+    if (sub === "/search") {
+      const limited = await allow(req, "/search");
+      if (limited) return limited;
+      return await searchRoute(url);
+    }
+    if (sub === "/stream") {
+      const limited = await allow(req, "/stream");
+      if (limited) return limited;
+      return await streamRoute(url);
+    }
+    if (sub === "/canvas") {
+      const limited = await allow(req, "/canvas");
+      if (limited) return limited;
+      return await canvasRoute(url);
+    }
     return json({ error: "Not found" }, 404);
   } catch (error) {
     console.error("ketvoice-api", error instanceof Error ? error.name : "unknown");
     return json({ error: "Erreur interne Ketvoice API" }, 500);
   }
 });
-import {manifest,remoteJson,fill,publicUrl, type Source} from "../_shared/managed_sources.ts";

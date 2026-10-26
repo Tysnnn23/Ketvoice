@@ -1,13 +1,7 @@
 package com.ketvoice.app.ui.sub
 
-import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -15,11 +9,10 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material3.CircularProgressIndicator
 import com.ketvoice.app.ui.common.GlassBackButton
 import com.ketvoice.app.ui.common.Icon
@@ -31,54 +24,44 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.ketvoice.app.data.ArtistPage
-import com.ketvoice.app.data.AppLanguage
-import com.ketvoice.app.data.AppSettings
 import com.ketvoice.app.data.ArtworkRepo
-import com.ketvoice.app.data.MusicApi
 import com.ketvoice.app.data.YouTubeCatalog
 import com.ketvoice.app.player.Player
 import com.ketvoice.app.theme.LocalTheme
 import com.ketvoice.app.ui.AppUi
 import com.ketvoice.app.ui.common.Cover
 import com.ketvoice.app.ui.player.formatSecs
-import com.ketvoice.app.ui.player.rememberCoverAmbience
-import com.ketvoice.app.ui.motion.Motion
 
+/**
+ * Page d'artiste réelle : photo, écoute mensuelle, biographie, titres,
+ * albums et artistes similaires proviennent de YouTube Music.
+ */
 @Composable
 fun ArtistScreen() {
     val request = AppUi.artistRequest.value ?: return
     val theme = LocalTheme.current
     val art by ArtworkRepo.covers.collectAsState()
     val player by Player.state.collectAsState()
-    val context = LocalContext.current
     var page by remember(request.id) { mutableStateOf<ArtistPage?>(null) }
     var loading by remember(request.id) { mutableStateOf(true) }
     var failed by remember(request.id) { mutableStateOf(false) }
     var attempt by remember(request.id) { mutableIntStateOf(0) }
     var expandedBio by remember(request.id) { mutableStateOf(false) }
-    var translatedBio by remember(request.id) { mutableStateOf<String?>(null) }
-    var translatingBio by remember(request.id) { mutableStateOf(false) }
-    val targetLanguage = AppLanguage.fromLabel(AppSettings.language.value)
 
     LaunchedEffect(request.id, attempt) {
         loading = true
         failed = false
         try {
             page = YouTubeCatalog.artist(request.id)
-            page?.let {
-                try { ArtworkRepo.enrich(it.tracks) }
-                catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
-                catch (_: Exception) {  }
-            }
+            page?.let { runCatching { ArtworkRepo.enrich(it.tracks) } }
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -89,19 +72,19 @@ fun ArtistScreen() {
     }
 
     val artist = page?.artist
-    LaunchedEffect(page?.description, targetLanguage) {
-        val description = page?.description.orEmpty()
-        translatedBio = null
-        translatingBio = description.isNotBlank()
-        if (translatingBio) translatedBio = MusicApi.translate(description, targetLanguage.code)
-        translatingBio = false
-    }
-    val ambience = rememberCoverAmbience(artist?.photo)
-    val headerColor by androidx.compose.animation.animateColorAsState(
-        lerp(ambience.color, Color.White, .58f), tween(Motion.duration(420)), label = "artist-header-color")
-    BoxWithConstraints(Modifier.fillMaxSize().background(theme.background)) {
-    val hero = artistHeroLayout(maxWidth, maxHeight, page?.heroAspectRatio ?: 1f)
-    Column(Modifier.fillMaxSize()) {
+    Column(Modifier.fillMaxSize().background(theme.background).statusBarsPadding()) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            GlassBackButton { AppUi.closeOverlay() }
+            Spacer(Modifier.width(12.dp))
+            Text(artist?.name ?: request.name, localize = false, color = theme.onBackground, fontSize = 20.sp,
+                fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f))
+            if (page != null) Box(Modifier.size(38.dp).clickable { attempt++ }, contentAlignment = Alignment.Center) {
+                Icon(Icons.Filled.Refresh, "Actualiser", tint = theme.secondary, modifier = Modifier.size(21.dp))
+            }
+        }
+
         when {
             loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = theme.accent, modifier = Modifier.size(28.dp), strokeWidth = 2.dp)
@@ -118,110 +101,67 @@ fun ArtistScreen() {
             else -> LazyColumn(contentPadding = PaddingValues(bottom = 210.dp)) {
                 val data = page!!
                 item {
-
-                    Box(Modifier.fillMaxWidth().height(hero.height).background(headerColor)) {
+                    // Bannière plein écran : photo de l'artiste pleine largeur,
+                    // floutée, avec fondu progressif vers le fond de la page.
+                    Box(Modifier.fillMaxWidth().height(360.dp)) {
                         if (!data.artist.photo.isNullOrBlank()) {
                             AsyncImage(
                                 model = data.artist.photo,
-                                contentDescription = null,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier.fillMaxSize().blur(32.dp)
-                            )
-                            AsyncImage(
-                                model = data.artist.photo,
                                 contentDescription = data.artist.name,
-                                contentScale = ContentScale.FillWidth,
-                                alignment = Alignment.TopCenter,
-                                modifier = Modifier.fillMaxWidth().height(hero.photoHeight).align(Alignment.TopCenter)
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize()
                             )
                         } else {
-                            Box(Modifier.fillMaxWidth().height(hero.photoHeight)
-                                .background(Brush.linearGradient(listOf(theme.card, theme.hairline))))
+                            Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(theme.card, theme.hairline))))
                         }
-
-                        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(
-                            0f to Color.Black.copy(alpha = .28f),
-                            hero.fadeStart to Color.Transparent,
-                            ((hero.fadeStart + hero.fadeEnd) / 2f) to headerColor.copy(alpha = .4f),
-                            1f to headerColor.copy(alpha = .88f)
-                        )))
-
-                        Row(Modifier.fillMaxWidth().align(Alignment.TopCenter).statusBarsPadding()
-                            .padding(horizontal = 18.dp, vertical = 18.dp),
-                            verticalAlignment = Alignment.CenterVertically) {
-                            GlassBackButton { AppUi.back() }
-                            Spacer(Modifier.weight(1f))
-                            Box(Modifier.size(40.dp).clip(CircleShape).background(Color.Black.copy(alpha = .3f))
-                                .clickable { attempt++ }, contentAlignment = Alignment.Center) {
-                                Icon(Icons.Filled.Refresh, "Actualiser", tint = Color.White, modifier = Modifier.size(21.dp))
-                            }
-                        }
-
-                        Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth()
-                            .padding(horizontal = 22.dp, vertical = 44.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(data.artist.name, localize = false, color = Color.Black, fontSize = 43.sp,
+                        // Scrim bas : dégradé sombre pour faire ressortir le nom (style ref)
+                        Box(Modifier.fillMaxSize().background(
+                            Brush.verticalGradient(listOf(
+                                Color.Black.copy(alpha = 0.20f),
+                                Color.Transparent,
+                                Color.Black.copy(alpha = 0.72f)
+                            ))
+                        ))
+                        // Fondu haut : sombre pour la lisibilité de la barre de statut
+                        Box(Modifier.fillMaxWidth().height(90.dp).align(Alignment.TopCenter).background(
+                            Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.55f), Color.Transparent))
+                        ))
+                        // Nom de l'artiste par-dessus la bannière
+                        Column(Modifier.align(Alignment.BottomStart).padding(horizontal = 20.dp, vertical = 16.dp)) {
+                            Text(data.artist.name, localize = false, color = Color.White, fontSize = 40.sp,
                                 fontWeight = FontWeight.Black, letterSpacing = (-1.2).sp, maxLines = 2,
-                                overflow = TextOverflow.Ellipsis, lineHeight = 48.sp)
-                            Spacer(Modifier.height(24.dp))
-                            if (data.tracks.isNotEmpty()) {
-                                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.Center) {
-                                    Box(Modifier.size(62.dp).clip(CircleShape)
-                                        .background(Color.White.copy(alpha = .22f))
-                                        .clickable {
-                                            Player.playQueue(data.tracks, data.tracks.indices.random())
-                                            Player.setShuffle(true)
-                                        }, contentAlignment = Alignment.Center) {
-                                        Icon(Icons.Filled.Shuffle, "Lecture aléatoire", tint = Color.Black,
-                                            modifier = Modifier.size(25.dp))
-                                    }
-                                    Spacer(Modifier.width(23.dp))
-                                    Box(Modifier.size(86.dp).clip(CircleShape).background(Color.White)
-                                        .clickable { Player.playQueue(data.tracks, 0) }, contentAlignment = Alignment.Center) {
-                                        Icon(Icons.Filled.PlayArrow, "Lecture", tint = Color.Black,
-                                            modifier = Modifier.size(42.dp))
-                                    }
-                                    Spacer(Modifier.width(23.dp))
-                                    Box(Modifier.size(62.dp).clip(CircleShape)
-                                        .background(Color.White.copy(alpha = .22f))
-                                        .clickable {
-                                            val send = Intent(Intent.ACTION_SEND).apply {
-                                                type = "text/plain"
-                                                putExtra(Intent.EXTRA_TEXT, "https://music.youtube.com/channel/${data.artist.id}")
-                                            }
-                                            context.startActivity(Intent.createChooser(send, data.artist.name))
-                                        }, contentAlignment = Alignment.Center) {
-                                        Icon(Icons.Filled.Share, "Partager l'artiste", tint = Color.Black,
-                                            modifier = Modifier.size(25.dp))
-                                    }
-                                }
-                            }
+                                overflow = TextOverflow.Ellipsis, lineHeight = 44.sp)
                             if (data.listeners.isNotBlank()) {
-                                Text(data.listeners, color = Color.Black.copy(alpha = .7f), fontSize = 13.sp,
+                                Text(data.listeners, color = Color.White.copy(alpha = 0.8f), fontSize = 12.sp,
                                     maxLines = 2, overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier.padding(top = 22.dp))
+                                    modifier = Modifier.padding(top = 6.dp))
                             }
-                            Text("Artiste · YouTube Music", color = Color.Black.copy(alpha = .6f), fontSize = 12.sp,
-                                modifier = Modifier.padding(top = 4.dp))
+                            Text("Artiste · YouTube Music", color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp,
+                                modifier = Modifier.padding(top = 3.dp))
                         }
                     }
                 }
-                item { Box(Modifier.fillMaxWidth().height(48.dp).background(
-                    Brush.verticalGradient(listOf(headerColor, theme.background)))) }
                 if (data.description.isNotBlank()) item {
                     Column(Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
-                        AnimatedContent(targetState = translatedBio ?: data.description,
-                            transitionSpec = { fadeIn(tween(Motion.duration(180))).togetherWith(fadeOut(tween(Motion.duration(140)))) },
-                            label = "artist-biography") { biography ->
-                            Text(biography, localize = false, color = theme.secondary, fontSize = 13.5.sp, lineHeight = 19.sp,
-                                maxLines = if (expandedBio) 40 else 4, overflow = TextOverflow.Ellipsis)
-                        }
-                        if (translatingBio) Text("Traduction…", color = theme.secondary, fontSize = 11.sp,
-                            modifier = Modifier.padding(top = 5.dp))
+                        Text(data.description, localize = false, color = theme.secondary, fontSize = 13.5.sp, lineHeight = 19.sp,
+                            maxLines = if (expandedBio) 40 else 4, overflow = TextOverflow.Ellipsis)
                         Text(if (expandedBio) "Réduire" else "Lire plus", color = theme.accent,
                             fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
                             modifier = Modifier.clickable { expandedBio = !expandedBio }.padding(top = 8.dp))
+                    }
+                }
+                if (data.tracks.isNotEmpty()) item {
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.clip(RoundedCornerShape(999.dp)).background(theme.accent)
+                            .clickable { Player.playQueue(data.tracks, 0) }
+                            .padding(horizontal = 22.dp, vertical = 11.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Filled.PlayArrow, null, tint = Color.White, modifier = Modifier.size(19.dp))
+                                Spacer(Modifier.width(7.dp))
+                                Text("Lecture", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
                     }
                 }
                 if (data.tracks.isNotEmpty()) item {
@@ -292,5 +232,5 @@ fun ArtistScreen() {
             }
         }
     }
-    }
 }
+

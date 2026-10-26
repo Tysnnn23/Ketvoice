@@ -1,12 +1,18 @@
 package com.ketvoice.app.ui
 
+/**
+ * État d'interface global de l'app (léger, sans navigation-compose pour garder
+ * le Liquide Glass stable sur les transitions).
+ */
 object AppUi {
     val HOME = 0
     val EXPLORER = 1
     val LIBRARY = 2
 
+    /** Onglet racine actif (HOME/EXPLORER/LIBRARY) */
     val tab = androidx.compose.runtime.mutableIntStateOf(HOME)
 
+    /** Overlay plein écran au-dessus des onglets (remplace toute la zone de contenu) */
     val NONE = 0
     val SEARCH = 1
     val SETTINGS = 2
@@ -32,81 +38,90 @@ object AppUi {
     val addToPlaylist = androidx.compose.runtime.mutableStateOf<com.ketvoice.app.data.Track?>(null)
     data class PlaylistResolution(val playlistId: String, val entryId: String)
     val playlistResolution = androidx.compose.runtime.mutableStateOf<PlaylistResolution?>(null)
-    fun openPlaylist(id: String) { navigate(PLAYLIST, playlist = id) }
+    fun openPlaylist(id: String) {
+        push(OverlayEntry(PLAYLIST, null, null, null, ""))
+        playlistId.value = id
+        showPlayer.value = false
+        bottomCollapsed.value = false
+    }
     val catalogRequest = androidx.compose.runtime.mutableStateOf<com.ketvoice.app.data.CatalogRequest?>(null)
     fun openCatalog(request: com.ketvoice.app.data.CatalogRequest) {
-        navigate(CATALOG, catalog = request)
+        push(OverlayEntry(CATALOG, null, null, null, ""))
+        catalogRequest.value = request
+        bottomCollapsed.value = false
     }
 
     data class ArtistRequest(val id: String, val name: String)
     val artistRequest = androidx.compose.runtime.mutableStateOf<ArtistRequest?>(null)
     fun openArtist(id: String, name: String) {
         if (!id.startsWith("UC")) return
-        navigate(ARTIST, artist = ArtistRequest(id, name))
+        push(OverlayEntry(ARTIST, null, null, null, ""))
+        artistRequest.value = ArtistRequest(id, name)
+        bottomCollapsed.value = false
     }
 
     val overlay = androidx.compose.runtime.mutableIntStateOf(NONE)
 
-    private data class Destination(
-        val tab: Int,
+    /** Pile d'overlays : artiste → artiste similaire, album → artiste, etc. */
+    data class OverlayEntry(
         val overlay: Int,
-        val playlist: String?,
-        val catalog: com.ketvoice.app.data.CatalogRequest?,
-        val artist: ArtistRequest?,
-        val player: Boolean,
-        val lyrics: Boolean,
-        val search: String
+        val playlistId: String?,
+        val catalogRequest: com.ketvoice.app.data.CatalogRequest?,
+        val artistRequest: ArtistRequest?,
+        val searchSeed: String
+    )
+    private val overlayStack = ArrayDeque<OverlayEntry>()
+
+    /** Direction de la dernière navigation : pour la transition AnimatedContent. */
+    val NAV_JUMP = 0
+    val NAV_PUSH = 1
+    val NAV_POP = 2
+    val navKind = androidx.compose.runtime.mutableIntStateOf(NAV_JUMP)
+
+    private fun snapshot(): OverlayEntry = OverlayEntry(
+        overlay.intValue, playlistId.value, catalogRequest.value, artistRequest.value, searchSeed.value
     )
 
-    private val history = ArrayDeque<Destination>()
-
-    private fun current() = Destination(tab.intValue, overlay.intValue, playlistId.value,
-        catalogRequest.value, artistRequest.value, showPlayer.value, showLyrics.value, searchSeed.value)
-
-    /** All route changes go through here; the previous screen and its arguments remain intact. */
-    fun navigate(screen: Int, playlist: String? = null,
-                 catalog: com.ketvoice.app.data.CatalogRequest? = null,
-                 artist: ArtistRequest? = null) {
-        require(screen != NONE)
-        val previous = current()
-        val target = previous.copy(overlay = screen, playlist = playlist ?: previous.playlist,
-            catalog = catalog ?: previous.catalog, artist = artist ?: previous.artist,
-            player = false, lyrics = false)
-        if (previous == target) return
-        history.addLast(previous)
-        playlistId.value = target.playlist
-        catalogRequest.value = target.catalog
-        artistRequest.value = target.artist
-        showPlayer.value = false
-        showLyrics.value = false
-        overlay.intValue = screen
-        bottomCollapsed.value = false
+    private fun restore(entry: OverlayEntry) {
+        playlistId.value = entry.playlistId
+        catalogRequest.value = entry.catalogRequest
+        artistRequest.value = entry.artistRequest
+        searchSeed.value = entry.searchSeed
+        overlay.intValue = entry.overlay
     }
 
-    fun back() {
-        if (showPlayer.value) {
-            showPlayer.value = false
-            showLyrics.value = false
-            return
-        }
-        val previous = if (history.isEmpty()) null else history.removeLast()
-        if (previous == null) {
+    private fun push(entry: OverlayEntry) {
+        navKind.intValue = NAV_PUSH
+        overlayStack.addLast(snapshot())
+        playlistId.value = null
+        catalogRequest.value = null
+        artistRequest.value = null
+        searchSeed.value = ""
+        overlay.intValue = entry.overlay
+    }
+
+    private fun jump(target: Int) {
+        navKind.intValue = NAV_JUMP
+        overlayStack.clear()
+        overlay.intValue = target
+    }
+
+    /** Ouvre un overlay au-dessus du courant : le retour y reviendra. */
+    fun closeOverlay(): Boolean {
+        val previous = overlayStack.removeLastOrNull() ?: run {
+            navKind.intValue = NAV_JUMP
             overlay.intValue = NONE
-            showLyrics.value = false
-            return
+            return false
         }
-        tab.intValue = previous.tab
-        playlistId.value = previous.playlist
-        catalogRequest.value = previous.catalog
-        artistRequest.value = previous.artist
-        searchSeed.value = previous.search
-        overlay.intValue = previous.overlay
-        showPlayer.value = previous.player
-        showLyrics.value = previous.lyrics
+        navKind.intValue = NAV_POP
+        restore(previous)
+        return true
     }
 
+    /** Bonus : recherche pré-remplie quand on tape une tuile (genre, mood...). */
     val searchSeed = androidx.compose.runtime.mutableStateOf("")
 
+    /** Lecteur plein écran ouvert */
     val showPlayer = androidx.compose.runtime.mutableStateOf(false)
     val showPublisher = androidx.compose.runtime.mutableStateOf(false)
     val publisherTrack = androidx.compose.runtime.mutableStateOf<com.ketvoice.app.data.Track?>(null)
@@ -127,6 +142,7 @@ object AppUi {
         showPublisher.value = true
     }
 
+    /** Vol de pochette entre le mini-lecteur et le lecteur plein écran. */
     data class CoverFlight(
         val cover: String?,
         val title: String,
@@ -139,18 +155,22 @@ object AppUi {
     val miniCoverBounds = androidx.compose.runtime.mutableStateOf<androidx.compose.ui.geometry.Rect?>(null)
     val coverFlight = androidx.compose.runtime.mutableStateOf<CoverFlight?>(null)
 
+    /** Vue paroles dans le lecteur */
     val showLyrics = androidx.compose.runtime.mutableStateOf(false)
 
+    /** Dialog iOS "Changer de compte" */
     val showAccount = androidx.compose.runtime.mutableStateOf(false)
 
+    /** Bottom bar collapsée (comme iOS quand on scrolle) */
     val bottomCollapsed = androidx.compose.runtime.mutableStateOf(false)
 
+    /** Sheets dans le lecteur */
     val showTrackMenu = androidx.compose.runtime.mutableStateOf(false)
     val trackMenuTrack = androidx.compose.runtime.mutableStateOf<com.ketvoice.app.data.Track?>(null)
     fun selectTab(index: Int) {
-        history.clear()
         playlistResolution.value = null
         tab.intValue = index
+        overlayStack.clear()
         overlay.intValue = NONE
         showPlayer.value = false
         showLyrics.value = false
@@ -162,10 +182,28 @@ object AppUi {
     val showHandoff = androidx.compose.runtime.mutableStateOf(false)
     val showCapsule = androidx.compose.runtime.mutableStateOf(false)
 
+    /** Sélecteur de source des paroles (feuille du lecteur) */
     val showLyricsSource = androidx.compose.runtime.mutableStateOf(false)
 
+    /** Saut racine : remplace l'overlay courant, la pile est oubliée. */
+    fun openSearch(seed: String = "") { searchSeed.value = seed; jump(SEARCH); bottomCollapsed.value = false }
+    fun openSettings() { jump(SETTINGS); bottomCollapsed.value = false }
+    fun openDownloads() = jump(DOWNLOADS)
+    fun openLocalFiles() = jump(LOCAL_FILES)
+    fun openSources() = jump(SOURCES)
+    fun openReplay() = jump(REPLAY)
+    fun openQueue() = jump(QUEUE)
+
+    /** Ouvre un overlay en gardant le courant dans la pile (retour possible). */
+    fun pushOverlay(target: Int) {
+        navKind.intValue = NAV_PUSH
+        overlayStack.addLast(snapshot())
+        searchSeed.value = ""
+        overlay.intValue = target
+    }
+
     fun closeOverlays() {
-        history.clear()
+        overlayStack.clear()
         overlay.value = NONE
         showPlayer.value = false
         showAccount.value = false
