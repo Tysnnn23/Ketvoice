@@ -15,6 +15,10 @@
   <img alt="Jetpack Compose" src="https://img.shields.io/badge/Jetpack%20Compose-4285F4?logo=jetpackcompose&logoColor=white">
 </p>
 
+<p align="center">
+  <img src="docs/assets/ketvoice-presentation.png" width="960" alt="Ketvoice promotional visual showing the Android music player on a blue background" />
+</p>
+
 ## Overview
 
 ### 3.2.0 — Paroles cinéma, AutoMix complet et playlists premium
