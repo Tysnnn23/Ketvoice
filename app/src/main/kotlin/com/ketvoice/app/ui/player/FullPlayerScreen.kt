@@ -210,7 +210,8 @@ fun FullPlayerScreen(
                     }
                 }
             }) {
-                PlayerSceneBackground(track, canvas[track.id], state.isPlaying, cover, ambience)
+                PlayerSceneBackground(track, canvas[track.id], state.isPlaying, cover, ambience,
+                    plain = page == PlayerPage.LYRICS)
 
                 AnimatedContent(page, transitionSpec = {
                     (fadeIn(tween(Motion.duration())) + slideInVertically(tween(Motion.duration())) { it / 35 })

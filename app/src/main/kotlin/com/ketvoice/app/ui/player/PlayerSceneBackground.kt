@@ -15,9 +15,17 @@ fun panoramicCanvasActive(canvas: String?): Boolean = AppSettings.panoramicCanva
 
 @Composable
 internal fun PlayerSceneBackground(track: Track, canvas: String?, playing: Boolean, cover: String?,
-                                   ambience: CoverAmbience, simple: Boolean = false) {
+                                   ambience: CoverAmbience, simple: Boolean = false, plain: Boolean = false) {
     if (AppSettings.sonicCanvas.value) {
         SonicCanvas(playing, ambience.accent ?: ambience.color)
+    } else if (plain) {
+        // Page paroles : ni Canvas video, ni pochette floutee derriere le texte.
+        // Un visage flou a 90 dp derriere des lignes qui defilent est illisible
+        // et distrait ; on garde seulement la couleur de l'album, assombrie.
+        Box(Modifier.fillMaxSize().background(ambience.color))
+        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(
+            Color.Black.copy(alpha = .82f), ambience.color.copy(alpha = .34f), Color.Black.copy(alpha = .92f)
+        ))))
     } else if (panoramicCanvasActive(canvas)) {
         ArtworkCanvas(track, canvas, playing, Modifier.fillMaxSize())
         Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .72f)))
