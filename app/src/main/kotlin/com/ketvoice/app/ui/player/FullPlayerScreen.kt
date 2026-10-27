@@ -378,7 +378,9 @@ internal fun PlayerTitle(track: Track, compact: Boolean, cover: String?, sheetAc
                 maxLines = 1, overflow = TextOverflow.Ellipsis,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { track.artistId?.let { AppUi.openArtist(it, track.artist) } }
+                    // On n'exige plus un artistId : sans lui le clic ne faisait
+                    // strictement rien. openArtist résout désormais par nom.
+                    .clickable { AppUi.openArtist(track.artistId.orEmpty(), track.artist) }
                     .semantics { contentDescription = "Ouvrir la page de ${track.artist}" }
             )
         }
