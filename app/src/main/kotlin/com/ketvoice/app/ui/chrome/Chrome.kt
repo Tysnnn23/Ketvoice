@@ -51,8 +51,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -274,7 +272,6 @@ fun GlassBottomBar(
     collapsed: Boolean
 ) {
     val th = LocalTheme.current
-    val haptic = LocalHapticFeedback.current
     val focus = androidx.compose.ui.platform.LocalFocusManager.current
     var held by remember { mutableStateOf(false) }
     var hover by remember { mutableFloatStateOf(0f) }
@@ -310,13 +307,10 @@ fun GlassBottomBar(
                 .height(heightAnim)
                 .pointerInput(collapsed) {
                     detectDragGesturesAfterLongPress(
-                        onDragStart = { start -> held = true; hover = lensPosition(start.x, size.width.toFloat())
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress) },
+                        onDragStart = { start -> held = true; hover = lensPosition(start.x, size.width.toFloat()) },
                         onDrag = { change, _ ->
                             change.consume()
-                            val next = lensPosition(change.position.x, size.width.toFloat())
-                            if (kotlin.math.round(next) != kotlin.math.round(hover)) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            hover = next
+                            hover = lensPosition(change.position.x, size.width.toFloat())
                         },
                         onDragEnd = {
                             focus.clearFocus()
@@ -416,7 +410,6 @@ fun GlassBottomBar(
                                     .weight(1f)
                                     .fillMaxHeight()
                                     .clickable(noRipple, null) {
-                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                         focus.clearFocus()
                                         AppUi.selectTab(tab.index)
                                     }

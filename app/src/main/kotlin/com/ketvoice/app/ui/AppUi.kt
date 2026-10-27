@@ -54,9 +54,17 @@ object AppUi {
     data class ArtistRequest(val id: String, val name: String)
     val artistRequest = androidx.compose.runtime.mutableStateOf<ArtistRequest?>(null)
     fun openArtist(id: String, name: String) {
-        if (!id.startsWith("UC")) return
+        // On n'exige plus un channelId YouTube ("UC..." ) : les cartes d'artiste
+        // issues de la recherche ou des métadonnées locales n'en fournissent pas
+        // toujours, et le `return` silencieux faisait échouer l'ouverture sans
+        // aucun retour visuel. On accepte donc tout identifiant exploitable.
+        if (id.isBlank() && name.isBlank()) return
         push(OverlayEntry(ARTIST, null, null, null, ""))
         artistRequest.value = ArtistRequest(id, name)
+        // Le lecteur plein écran est au-dessus des overlays : sans cette ligne,
+        // ouvrir une fiche artiste depuis le lecteur ne montrait rien.
+        showPlayer.value = false
+        showLyrics.value = false
         bottomCollapsed.value = false
     }
 

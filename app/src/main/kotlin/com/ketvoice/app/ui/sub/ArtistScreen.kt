@@ -50,17 +50,31 @@ fun ArtistScreen() {
     val theme = LocalTheme.current
     val art by ArtworkRepo.covers.collectAsState()
     val player by Player.state.collectAsState()
-    var page by remember(request.id) { mutableStateOf<ArtistPage?>(null) }
-    var loading by remember(request.id) { mutableStateOf(true) }
-    var failed by remember(request.id) { mutableStateOf(false) }
-    var attempt by remember(request.id) { mutableIntStateOf(0) }
-    var expandedBio by remember(request.id) { mutableStateOf(false) }
+    var page by remember(request.id, request.name) { mutableStateOf<ArtistPage?>(null) }
+    var loading by remember(request.id, request.name) { mutableStateOf(true) }
+    var failed by remember(request.id, request.name) { mutableStateOf(false) }
+    var attempt by remember(request.id, request.name) { mutableIntStateOf(0) }
+    var expandedBio by remember(request.id, request.name) { mutableStateOf(false) }
 
-    LaunchedEffect(request.id, attempt) {
+    LaunchedEffect(request.id, request.name, attempt) {
         loading = true
         failed = false
         try {
-            page = YouTubeCatalog.artist(request.id)
+            // Un morceau ne porte pas toujours de channelId YouTube ("UC...") :
+            // on retombe alors sur une résolution par nom, sinon la page restait
+            // vide sans explication.
+            val directId = request.id.takeIf { it.matches(Regex("UC[A-Za-z0-9_-]+")) }
+            var resolved = directId?.let { runCatching { YouTubeCatalog.artist(it) }.getOrNull() }
+            if (resolved == null && request.name.isNotBlank()) {
+                val candidates = runCatching { YouTubeCatalog.searchArtists(request.name) }
+                    .getOrDefault(emptyList())
+                // On privilégie une correspondance exacte du nom : sinon une
+                // recherche approximative ouvrait la fiche d'un homonyme.
+                val match = candidates.firstOrNull { it.name.equals(request.name, ignoreCase = true) }
+                    ?: candidates.firstOrNull()
+                if (match != null) resolved = YouTubeCatalog.artist(match.id)
+            }
+            page = resolved
             page?.let { runCatching { ArtworkRepo.enrich(it.tracks) } }
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
