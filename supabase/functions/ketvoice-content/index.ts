@@ -124,6 +124,37 @@ async function revision(row: Row): Promise<string> {
   const bytes=new TextEncoder().encode(JSON.stringify([row.audio_path,row.cover_path,row.duration_ms,row.title,row.artist,row.album]));
   return [...new Uint8Array(await crypto.subtle.digest("SHA-256",bytes))].map(n=>n.toString(16).padStart(2,"0")).join("");
 }
+// Albums are derived from this owner's existing publications. No client-supplied
+// artwork URL/path is accepted, and general-catalog tracks cannot be a source.
+async function albumMetadata(meta: Row, owner: string): Promise<Row | null> {
+  if (!Object.hasOwn(meta,"albumSourceId")) return null;
+  const source=await ownedSong(uploadId(meta.albumSourceId),owner);
+  if (!String(source.album || "").trim()) throw new HttpError(400,"Ce titre n’appartient pas à un album");
+  if (meta.albumRevision!==await revision(source)) throw new HttpError(409,"L’album a changé. Actualisez les albums puis sélectionnez-le à nouveau.");
+  return {artist:source.artist,album:source.album,cover_path:source.cover_path};
+}
+async function ownerAlbums(owner: string): Promise<Response> {
+  const groups=new Map<string, {row:Row,count:number}>();
+  const pageSize=250;
+  // Explicit pagination: the Data API's default row cap must not hide albums.
+  for(let offset=0; ; offset+=pageSize) {
+    const rows=await database(`ketvoice_tracks?created_by=eq.${encodeURIComponent(owner)}&published=eq.true&album=neq.&order=created_at.desc,id.asc&limit=${pageSize}&offset=${offset}`);
+    for(const row of rows) {
+      if(!String(row.album || "").trim()) continue;
+      const identity=JSON.stringify([row.artist,row.album]);
+      const existing=groups.get(identity);
+      if(existing) { existing.count++; if(!existing.row.cover_path && row.cover_path) existing.row=row; }
+      else groups.set(identity,{row,count:1});
+    }
+    if(rows.length<pageSize) break;
+  }
+  const albums=await Promise.all([...groups.values()].map(async({row,count})=>({
+    sourceId:`kv:upload:${row.id}`,revision:await revision(row),artist:row.artist,
+    album:row.album,artworkURL:row.cover_path ? publicFile(String(row.cover_path)) : null,trackCount:count
+  })));
+  albums.sort((a,b)=>String(a.artist).localeCompare(String(b.artist)) || String(a.album).localeCompare(String(b.album)));
+  return json({albums});
+}
 async function updateSong(req: Request, owner: string): Promise<Response> {
   const bytes=await bounded(req,MAX_AUDIO+MAX_COVER+65536);
   const form=await new Request(req.url,{method:"POST",headers:{"content-type":req.headers.get("content-type") || ""},body:new Uint8Array(bytes)}).formData();
@@ -132,18 +163,20 @@ async function updateSong(req: Request, owner: string): Promise<Response> {
   let meta: Row;
   try { meta=JSON.parse(String(form.get("metadata") || "{}")); }
   catch { throw new HttpError(400,"Métadonnées invalides"); }
-  if(!meta || Array.isArray(meta) || typeof meta!=="object" || Object.keys(meta).some(k=>!["trackId","revision","durationMs","rightsConfirmed","title","artist","album"].includes(k)))
+  if(!meta || Array.isArray(meta) || typeof meta!=="object" || Object.keys(meta).some(k=>!["trackId","revision","durationMs","rightsConfirmed","title","artist","album","albumSourceId","albumRevision"].includes(k)))
     throw new HttpError(400,"Métadonnées invalides");
   if(meta.rightsConfirmed!==true) throw new HttpError(400,"Confirmez vos droits de publication");
   const id=uploadId(meta.trackId), old=await ownedSong(id,owner);
   if(meta.revision!==await revision(old)) throw new HttpError(409,"Ce titre a changé. Rouvrez sa modification.");
-  if(!form.has("audio") && !form.has("cover") && !["title","artist","album"].some(k=>Object.hasOwn(meta,k))) throw new HttpError(400,"Aucune modification demandée");
+  if(!form.has("audio") && !form.has("cover") && !["title","artist","album","albumSourceId"].some(k=>Object.hasOwn(meta,k))) throw new HttpError(400,"Aucune modification demandée");
+  const inherited=await albumMetadata(meta,owner);
   const audio=form.has("audio") ? await readAudio(form.get("audio")) : null;
   const image=await readCover(form.get("cover"));
   const update: Row={};
   if(Object.hasOwn(meta,"title")) update.title=field(meta.title,"Titre");
   if(Object.hasOwn(meta,"artist")) update.artist=field(meta.artist,"Artiste");
   if(Object.hasOwn(meta,"album")) update.album=field(meta.album,"Album",true);
+  if(inherited) Object.assign(update,inherited);
   if(audio) { update.duration_ms=duration(meta.durationMs); update.format=audio.ext; update.bytes=audio.size; }
   const prefix=`${id}/${crypto.randomUUID()}`, uploaded:string[]=[];
   let patchAttempted=false, definitelyUncommitted=false;
@@ -168,7 +201,8 @@ async function publishSong(req: Request, owner: string): Promise<Response> {
   const form = await new Request(req.url,{method:"POST",headers:{"content-type":req.headers.get("content-type") || ""},body:new Uint8Array(bytes)}).formData();
   const meta = JSON.parse(String(form.get("metadata") || "{}"));
   if (meta.rightsConfirmed !== true) throw new HttpError(400,"Confirmez vos droits de publication");
-  const title=field(meta.title,"Titre"), artist=field(meta.artist,"Artiste"), album=field(meta.album,"Album",true);
+  const inherited=await albumMetadata(meta,owner);
+  const title=field(meta.title,"Titre"), artist=field(inherited?.artist ?? meta.artist,"Artiste"), album=field(inherited?.album ?? meta.album,"Album",true);
   const durationMs=duration(meta.durationMs);
   const audio=form.get("audio"), cover=form.get("cover"), lyric=form.get("lyrics");
   if (!(audio instanceof File) || !audio.size || audio.size > MAX_AUDIO) throw new HttpError(400,"Audio requis (25 Mo maximum)");
@@ -194,7 +228,7 @@ async function publishSong(req: Request, owner: string): Promise<Response> {
     if(lyric.size>MAX_LYRICS) throw new HttpError(400,"Paroles trop volumineuses");
     words=lyrics(await lyric.text(),lyric.name.split('.').pop());
   }
-  const id=crypto.randomUUID(), audioPath=`${id}/audio.${ext}`, coverPath=image ? `${id}/cover.${imageExt}` : null;
+  const id=crypto.randomUUID(), audioPath=`${id}/audio.${ext}`, coverPath=image ? `${id}/cover.${imageExt}` : inherited?.cover_path ? String(inherited.cover_path) : null;
   const uploaded:string[]=[];
   try {
     await store(audioPath,data,mimes[ext]); uploaded.push(audioPath);
@@ -297,6 +331,7 @@ Deno.serve(async(req:Request)=>{
     if(path.startsWith("/admin/")) {
       const owner=await administrator(req);
       if(req.method==="GET" && path==="/admin/session") return json({allowed:true});
+      if(req.method==="GET" && path==="/admin/albums") return await ownerAlbums(owner);
       if(path==="/admin/sources") return await sources(req,owner,url);
       if(req.method==="GET" && path==="/admin/song") {
         const row=await ownedSong(uploadId(url.searchParams.get("id")),owner);
