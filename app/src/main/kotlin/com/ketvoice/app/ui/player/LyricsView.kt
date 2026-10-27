@@ -231,9 +231,13 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
                                     exit = fadeOut(tween(Motion.duration()))
                                 ) {
                                     translated[index]?.let { subtitle ->
-                                        Text(subtitle, localize = false, color = Color.White.copy(alpha = if (current || !lyrics.isTimed) .82f else .43f),
-                                            fontSize = 16.sp, lineHeight = 22.sp, fontWeight = FontWeight.Medium,
-                                            modifier = Modifier.fillMaxWidth().padding(top = 7.dp))
+                                        SyncedTranslation(
+                                            line = line,
+                                            text = subtitle,
+                                            positionMs = position.value,
+                                            active = current && lyrics.isTimed,
+                                            dimAlpha = if (current || !lyrics.isTimed) .82f else .43f
+                                        )
                                     }
                                 }
                             }

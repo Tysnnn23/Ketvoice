@@ -87,6 +87,7 @@ class MainActivity : ComponentActivity() {
             KetvoiceTheme(dark) {
                 CrashReportsDialog()
                 AppRoot()
+                com.ketvoice.app.ui.update.UpdateHost()
             }
         }
         handleAuthIntent(intent)
