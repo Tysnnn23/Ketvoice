@@ -8,6 +8,8 @@
 <style>
 :root{font:16px/1.55 system-ui,-apple-system,Segoe UI,sans-serif;color:#f5f3f9;background:#0d0c12}*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 15% 0%,#312443 0,transparent 47%),#0d0c12;min-height:100vh}header,main{max-width:1120px;margin:auto;padding:24px}header{display:flex;align-items:center;justify-content:space-between;gap:20px;border-bottom:1px solid #ffffff18}.brand{font-size:25px;font-weight:800;letter-spacing:-1px}.brand span{color:#dcaaef}.eyebrow{text-transform:uppercase;letter-spacing:.18em;font-size:11px;font-weight:750;color:#bb91d6}h1{font-size:clamp(28px,4vw,46px);line-height:1.1;letter-spacing:-.04em;margin:14px 0 12px}h2{font-size:22px;letter-spacing:-.025em;margin:0 0 18px}h3{margin:0 0 8px}p{color:#b8b2c3;margin:0 0 18px}main{padding-top:48px;padding-bottom:80px}.intro{max-width:730px}.layout{display:grid;grid-template-columns:220px minmax(0,1fr);gap:26px;margin-top:36px}.panel{background:#191720;border:1px solid #ffffff18;border-radius:20px;padding:28px;box-shadow:0 15px 45px #0003}.nav{align-self:start;display:grid;gap:8px}.nav button{text-align:left;background:transparent;color:#bab5c4;border:0;padding:14px;border-radius:12px}.nav button[aria-selected=true]{background:#382746;color:#fff}button{font:inherit;cursor:pointer;border-radius:10px;border:1px solid #ffffff26;padding:11px 17px;background:#322b3e;color:#fff;font-weight:650}button.primary{border:0;background:#d3a1ec;color:#23142e}button:disabled{opacity:.55;cursor:wait}button:hover:not(:disabled){filter:brightness(1.15)}button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid #eac4fb;outline-offset:2px}label{display:block;color:#e6deed;font-size:13px;font-weight:700;margin:17px 0 7px}input,textarea{width:100%;font:inherit;color:#fff;background:#100f16;border:1px solid #514859;border-radius:10px;padding:12px}textarea{min-height:150px;resize:vertical}.row{display:flex;gap:12px;align-items:end;flex-wrap:wrap}.row>div{flex:1;min-width:180px}.row button{flex:none}form button{margin-top:20px}.hint{font-size:13px;color:#9f99ab}.status{min-height:24px;color:#dbc0ef;margin:12px 0}section[hidden],.nav[hidden]{display:none}.card{border:1px solid #ffffff20;border-radius:12px;padding:16px;margin:12px 0;background:#211e2a;overflow-wrap:anywhere}.card strong{display:block}.card small{color:#bcb3c6}.card button{margin:8px 8px 0 0}.danger{color:#ffb5c1}.check{display:flex;gap:9px;align-items:center}.check input{width:auto}.divider{border:0;border-top:1px solid #ffffff18;margin:26px 0}@media(max-width:760px){.layout{grid-template-columns:1fr}.nav{grid-template-columns:repeat(2,1fr)}.panel{padding:20px}header,main{padding-left:18px;padding-right:18px}}
 .layout:has(.nav[hidden]){grid-template-columns:minmax(0,720px)}
+form .row{align-items:flex-start}
+select{width:100%;font:inherit;color:#fff;background:#100f16;border:1px solid #514859;border-radius:10px;padding:12px;min-width:0}select:focus-visible{outline:2px solid #eac4fb;outline-offset:2px}.album-picker{margin:0 0 24px;padding:18px;border:1px solid #655073;border-radius:14px}.album-picker legend{font-size:13px;font-weight:750;color:#e6c4f7;padding:0 6px}.album-picker label{margin-top:8px}.album-preview{display:flex;gap:14px;align-items:center;margin-top:16px}.album-preview img{width:72px;height:72px;object-fit:cover;border-radius:10px}.album-preview p{margin:0;font-size:13px}input[readonly]{color:#d8c0e8;border-color:#715585}.hint[role=status]{margin-top:8px}.album-picker button{margin-top:14px;font-size:13px}.album-picker .row>div{min-width:150px}
 </style>
 </head>
 <body>
@@ -54,7 +56,7 @@
   async function content(path,options={}){if(options.admin) await token();return call('/functions/v1/ketvoice-content'+path,options);}
   async function run(button,work){button.disabled=true;notice('Traitement en cours…');try{await work();}catch(error){notice(error.message,true);}finally{button.disabled=false;}}
   function view(name){for(const section of document.querySelectorAll('main section'))section.hidden=section.id!==name;for(const button of document.querySelectorAll('.nav [data-view]'))button.setAttribute('aria-selected',String(button.dataset.view===name));if(name==='sources') loadSources();}
-  function signedIn(){ $('login').hidden=true;$('navigation').hidden=false;$('identity').textContent=email;view('publish');notice('Connecté au compte propriétaire.');}
+  function signedIn(){ $('login').hidden=true;$('navigation').hidden=false;$('identity').textContent=email;view('publish');notice('Connecté au compte propriétaire.');loadAlbums().catch(error=>{for(const prefix of pickers.keys())$(prefix+'AlbumHint').textContent='Albums indisponibles. Utilisez « Actualiser les albums » pour réessayer.';notice(error.message,true);});}
   $('send').onclick=event=>run(event.currentTarget,async()=>{
     await call('/auth/v1/otp?redirect_to='+encodeURIComponent(studio),{method:'POST',body:{email,create_user:false}});
     notice('Lien envoyé. Ouvrez-le dans ce navigateur pour retrouver Ketvoice Studio.');
@@ -72,20 +74,134 @@
     signedIn();
   }
   acceptRedirect().catch(error=>notice(error.message,true));
-  $('logout').onclick=async()=>{if(session)await call('/auth/v1/logout',{method:'POST',auth:true}).catch(()=>{});session=null;editable=null;$('navigation').hidden=true;$('identity').textContent='Session fermée';view('login');notice('Déconnecté.');};
+  $('logout').onclick=async()=>{if(session)await call('/auth/v1/logout',{method:'POST',auth:true}).catch(()=>{});session=null;editable=null;resetEditor('new');resetEditor('edit');albums=[];for(const prefix of pickers.keys()){$(prefix+'AlbumArtist').replaceChildren(option('','Nouvel artiste / saisie libre'));fillAlbumOptions(prefix);} $('navigation').hidden=true;$('identity').textContent='Session fermée';view('login');notice('Déconnecté.');};
   document.querySelectorAll('.nav [data-view]').forEach(button=>button.onclick=()=>view(button.dataset.view));
   function file(id){return $(id).files[0]||null;}
+  let albums=[],albumLoad=null;
+  const pickers=new Map(),durationJobs=new Map();
+  function option(value,text){const node=document.createElement('option');node.value=value;node.textContent=text;return node;}
+  function pickedAlbum(prefix){return albums.find(album=>album.sourceId===$(prefix+'AlbumSource').value);}
+  function albumFields(prefix){const album=pickedAlbum(prefix);return album?{albumSourceId:album.sourceId,albumRevision:album.revision}:{};}
+  function albumPreview(prefix){
+    const album=pickedAlbum(prefix),preview=$(prefix+'AlbumPreview');
+    preview.replaceChildren();
+    if(!album)return;
+    if(album.artworkURL){const image=document.createElement('img');image.src=album.artworkURL;image.alt='Pochette de '+album.album;image.referrerPolicy='no-referrer';preview.append(image);}
+    const text=document.createElement('p');
+    text.textContent=`${album.album} — ${album.artist} · ${album.trackCount} titre(s). `+(file(prefix+'Cover')?'La pochette choisie pour ce titre remplace celle de l’album.':album.artworkURL?'La pochette de l’album sera reprise automatiquement.':'Cet album n’a pas encore de pochette.');
+    preview.append(text);
+  }
+  function clearAlbum(prefix){
+    const state=pickers.get(prefix);
+    if(state.manual){$(prefix+'Artist').value=state.manual.artist;$(prefix+'Album').value=state.manual.album;}
+    state.manual=null;
+    $(prefix+'Artist').readOnly=false;$(prefix+'Album').readOnly=false;
+    $(prefix+'AlbumSource').value='';albumPreview(prefix);
+  }
+  function fillAlbumOptions(prefix){
+    const selected=$(prefix+'AlbumSource').value,artist=$(prefix+'AlbumArtist').value;
+    const choices=albums.filter(album=>album.artist===artist);
+    $(prefix+'AlbumSource').replaceChildren(option('','Nouvel album / saisie libre'),...choices.map(album=>option(album.sourceId,album.album)));
+    if(choices.some(album=>album.sourceId===selected))$(prefix+'AlbumSource').value=selected;
+    else clearAlbum(prefix);
+    $(prefix+'AlbumSource').disabled=!choices.length;
+    albumPreview(prefix);
+  }
+  async function loadAlbums(){
+    if(albumLoad)return albumLoad;
+    albumLoad=(async()=>{
+      const data=await content('/admin/albums',{admin:true});if(!session)return;albums=data.albums;
+      for(const prefix of pickers.keys()){
+        const selected=$(prefix+'AlbumArtist').value;
+        $(prefix+'AlbumArtist').replaceChildren(option('','Nouvel artiste / saisie libre'),...[...new Set(albums.map(album=>album.artist))].map(artist=>option(artist,artist)));
+        $(prefix+'AlbumArtist').value=selected;fillAlbumOptions(prefix);
+        $(prefix+'AlbumHint').textContent=albums.length?'Choisissez un artiste puis un album, ou saisissez un nouvel album ci-dessous.':'Aucun album publié. Publiez un premier titre avec un artiste, un album et une pochette : les suivants pourront les reprendre.';
+      }
+    })();
+    try{await albumLoad;}finally{albumLoad=null;}
+  }
+  function installAlbumPicker(prefix){
+    const form=$(prefix==='new'?'publishForm':'editForm'),box=document.createElement('fieldset');box.className='album-picker';
+    box.innerHTML=`<legend>Album d’un chanteur</legend><div class="row"><div><label for="${prefix}AlbumArtist">Chanteur déjà publié</label><select id="${prefix}AlbumArtist"><option value="">Nouvel artiste / saisie libre</option></select></div><div><label for="${prefix}AlbumSource">Album de ce chanteur</label><select id="${prefix}AlbumSource" disabled><option value="">Nouvel album / saisie libre</option></select></div></div><p id="${prefix}AlbumHint" class="hint" role="status">Chargement des albums de vos publications…</p><div id="${prefix}AlbumPreview" class="album-preview"></div><button type="button" id="${prefix}RefreshAlbums">Actualiser les albums</button>`;
+    form.prepend(box);pickers.set(prefix,{manual:null});
+    $(prefix+'AlbumArtist').onchange=()=>{clearAlbum(prefix);fillAlbumOptions(prefix);if($(prefix+'AlbumArtist').value)$(prefix+'Artist').value=$(prefix+'AlbumArtist').value;};
+    $(prefix+'AlbumSource').onchange=()=>{
+      const album=pickedAlbum(prefix),state=pickers.get(prefix);
+      if(!album){clearAlbum(prefix);return;}
+      if(!state.manual)state.manual={artist:$(prefix+'Artist').value,album:$(prefix+'Album').value};
+      $(prefix+'Artist').value=album.artist;$(prefix+'Album').value=album.album;
+      $(prefix+'Artist').readOnly=true;$(prefix+'Album').readOnly=true;albumPreview(prefix);
+    };
+    $(prefix+'RefreshAlbums').onclick=event=>run(event.currentTarget,async()=>{await loadAlbums();notice('Albums actualisés.');});
+    $(prefix+'Cover').onchange=()=>albumPreview(prefix);
+    const duration=$(prefix+'Duration');duration.step='0.001';duration.removeAttribute('value');
+    duration.setAttribute('aria-describedby',prefix+'DurationHint');
+    const hint=document.createElement('p');hint.id=prefix+'DurationHint';hint.className='hint';hint.setAttribute('role','status');
+    hint.textContent='Durée détectée automatiquement à la sélection de l’audio, modifiable si nécessaire.';duration.after(hint);
+    $(prefix+'Audio').onchange=()=>detectDuration(prefix);
+  }
+  function stopDuration(prefix){
+    const job=durationJobs.get(prefix);if(job)job.cancel();durationJobs.delete(prefix);
+  }
+  function detectDuration(prefix){
+    stopDuration(prefix);
+    const selected=file(prefix+'Audio'),duration=$(prefix+'Duration'),hint=$(prefix+'DurationHint');
+    duration.value='';duration.readOnly=false;
+    if(!selected){if(prefix==='edit'&&editable)duration.value=Number(editable.track.durationMs||0)/1000;hint.textContent='Sélectionnez un audio pour détecter sa durée.';return;}
+    if(selected.size>25*1024*1024){hint.textContent='Audio trop volumineux (25 Mo maximum).';return;}
+    const audio=document.createElement('audio'),url=URL.createObjectURL(selected);
+    let finish,done=false,timer;
+    const promise=new Promise(resolve=>finish=resolve);
+    const settle=(seconds,cancelled=false)=>{
+      if(done)return;done=true;clearTimeout(timer);
+      audio.onloadedmetadata=null;audio.onerror=null;audio.removeAttribute('src');audio.load();URL.revokeObjectURL(url);
+      if(!cancelled && file(prefix+'Audio')===selected){
+        duration.readOnly=false;
+        if(Number.isFinite(seconds)&&seconds>0&&seconds<=86400){duration.value=(Math.round(seconds*1000)/1000).toString();hint.textContent='Durée détectée : '+duration.value+' s.';}
+        else {duration.value='';hint.textContent='Durée illisible dans ce navigateur. Saisissez-la manuellement en secondes.';}
+      }
+      finish();
+    };
+    durationJobs.set(prefix,{promise,cancel:()=>settle(null,true)});
+    duration.readOnly=true;hint.textContent='Analyse de la durée audio…';
+    audio.preload='metadata';audio.onloadedmetadata=()=>settle(audio.duration);audio.onerror=()=>settle(null);
+    timer=setTimeout(()=>settle(null),15000);audio.src=url;
+    return promise;
+  }
+  async function audioDuration(prefix){
+    let job;
+    do {job=durationJobs.get(prefix);await job?.promise;}while(job!==durationJobs.get(prefix));
+    const input=$(prefix+'Duration'),value=Number(input.value);
+    if(!input.value.trim()||!Number.isFinite(value)||value<=0||value>86400)throw Error('Indiquez une durée audio valide en secondes.');
+    return Math.round(value*1000);
+  }
+  function resetEditor(prefix){
+    stopDuration(prefix);clearAlbum(prefix);$(prefix+'AlbumArtist').value='';fillAlbumOptions(prefix);
+    $(prefix+'Audio').value='';$(prefix+'Cover').value='';$(prefix+'Rights').checked=false;
+    $(prefix+'Duration').readOnly=false;
+    $(prefix+'DurationHint').textContent='Durée détectée automatiquement à la sélection de l’audio, modifiable si nécessaire.';
+  }
+  installAlbumPicker('new');installAlbumPicker('edit');
   function formData(meta,entries){const data=new FormData();data.append('metadata',JSON.stringify(meta));for(const [name,input] of entries){const item=file(input);if(item)data.append(name,item,item.name);}return data;}
   $('publishForm').onsubmit=event=>{event.preventDefault();run(event.submitter,async()=>{
-    const body=formData({title:$('newTitle').value.trim(),artist:$('newArtist').value.trim(),album:$('newAlbum').value.trim(),durationMs:Number($('newDuration').value)*1000,rightsConfirmed:$('newRights').checked},[['audio','newAudio'],['cover','newCover'],['lyrics','newLyrics']]);
-    await content('/admin/song',{method:'POST',body,admin:true});$('publishForm').reset();notice('Musique publiée. Elle apparaîtra aux prochaines recherches.');
+    const durationMs=await audioDuration('new');
+    const body=formData({title:$('newTitle').value.trim(),artist:$('newArtist').value.trim(),album:$('newAlbum').value.trim(),durationMs,rightsConfirmed:$('newRights').checked,...albumFields('new')},[['audio','newAudio'],['cover','newCover'],['lyrics','newLyrics']]);
+    await content('/admin/song',{method:'POST',body,admin:true});resetEditor('new');$('publishForm').reset();
+    await loadAlbums().catch(()=>{$('newAlbumHint').textContent='Musique publiée. Actualisez les albums pour la retrouver.';});notice('Musique publiée. Elle apparaîtra aux prochaines recherches.');
   });};
   function entry(track){const card=document.createElement('div');card.className='card';const title=document.createElement('strong');title.textContent=`${track.title} — ${track.artist}`;card.append(title);const meta=document.createElement('small');meta.textContent=track.id;card.append(meta);
     const lyric=document.createElement('button');lyric.textContent='Importer des paroles';lyric.onclick=()=>{$('lyricId').value=track.id;$('lyricTitle').value=track.title;$('lyricArtist').value=track.artist;view('lyrics');};card.append(lyric);
-    if(track.id.startsWith('kv:upload:')){const edit=document.createElement('button');edit.textContent='Modifier mon import';edit.onclick=()=>run(edit,async()=>{const result=await content('/admin/song?id='+encodeURIComponent(track.id),{admin:true});editable=result;$('editingName').textContent=result.track.title;$('editTitle').value=result.track.title;$('editArtist').value=result.track.artist;$('editAlbum').value=result.track.album||'';$('editDuration').value=Number(result.track.durationMs||0)/1000;$('editForm').hidden=false;notice('Titre chargé.');});card.append(edit);}return card;}
+    if(track.id.startsWith('kv:upload:')){const edit=document.createElement('button');edit.textContent='Modifier mon import';edit.onclick=()=>run(edit,async()=>{const result=await content('/admin/song?id='+encodeURIComponent(track.id),{admin:true});resetEditor('edit');editable=result;$('editingName').textContent=result.track.title;$('editTitle').value=result.track.title;$('editArtist').value=result.track.artist;$('editAlbum').value=result.track.album||'';$('editDuration').value=Number(result.track.durationMs||0)/1000;$('editForm').hidden=false;notice('Titre chargé.');});card.append(edit);}return card;}
   $('searchButton').onclick=event=>run(event.currentTarget,async()=>{const q=$('search').value.trim();if(q.length<2)throw Error('Entrez au moins deux caractères.');const data=await content('/search?q='+encodeURIComponent(q));$('results').replaceChildren(...data.tracks.map(entry));$('editForm').hidden=true;notice(`${data.tracks.length} résultat(s).`);});
   $('search').onkeydown=event=>{if(event.key==='Enter'){$('searchButton').click();event.preventDefault();}};
-  $('editForm').onsubmit=event=>{event.preventDefault();run(event.submitter,async()=>{if(!editable)throw Error('Choisissez un titre.');const meta={trackId:editable.track.id,revision:editable.revision,rightsConfirmed:$('editRights').checked,title:$('editTitle').value.trim(),artist:$('editArtist').value.trim(),album:$('editAlbum').value.trim(),durationMs:Number($('editDuration').value)*1000};const result=await content('/admin/song/update',{method:'POST',body:formData(meta,[['audio','editAudio'],['cover','editCover']]),admin:true});editable={track:result.track,revision:result.revision};$('editAudio').value='';$('editCover').value='';$('editRights').checked=false;notice('Musique modifiée. Les prochaines requêtes utiliseront cette version.');});};
+  $('editForm').onsubmit=event=>{event.preventDefault();run(event.submitter,async()=>{
+    if(!editable)throw Error('Choisissez un titre.');
+    const durationMs=file('editAudio')?await audioDuration('edit'):editable.track.durationMs;
+    const meta={trackId:editable.track.id,revision:editable.revision,rightsConfirmed:$('editRights').checked,title:$('editTitle').value.trim(),artist:$('editArtist').value.trim(),album:$('editAlbum').value.trim(),durationMs,...albumFields('edit')};
+    const result=await content('/admin/song/update',{method:'POST',body:formData(meta,[['audio','editAudio'],['cover','editCover']]),admin:true});
+    resetEditor('edit');editable={track:result.track,revision:result.revision};$('editingName').textContent=result.track.title;$('editArtist').value=result.track.artist;$('editAlbum').value=result.track.album||'';$('editDuration').value=Number(result.track.durationMs||0)/1000;
+    await loadAlbums().catch(()=>{$('editAlbumHint').textContent='Musique modifiée. Actualisez les albums pour retrouver les changements.';});notice('Musique modifiée. Les prochaines requêtes utiliseront cette version.');
+  });};
   $('lyricsForm').onsubmit=event=>{event.preventDefault();run(event.submitter,async()=>{const selected=file('lyricFile');if(selected.size>1048576)throw Error('Fichier trop volumineux.');const format=selected.name.toLowerCase().split('.').pop();if(!['lrc','ttml'].includes(format))throw Error('Fichier LRC ou TTML requis.');await content('/admin/lyrics',{method:'POST',admin:true,body:{trackId:$('lyricId').value.trim(),title:$('lyricTitle').value.trim(),artist:$('lyricArtist').value.trim(),durationMs:0,format,content:await selected.text(),rightsConfirmed:$('lyricRights').checked}});$('lyricsForm').reset();notice('Paroles publiées.');});};
   async function loadSources(){try{const data=await content('/admin/sources',{admin:true});$('sourceList').replaceChildren(...data.sources.map(sourceCard));if(!data.sources.length)$('sourceList').textContent='Aucune source ajoutée.';}catch(error){notice(error.message,true);}}
   function sourceCard(source){const card=document.createElement('div');card.className='card';const title=document.createElement('strong');title.textContent=source.name+' · '+(source.enabled?'Active':'Désactivée');card.append(title);const url=document.createElement('small');url.textContent=source.manifest_url;card.append(url);

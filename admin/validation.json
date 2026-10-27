@@ -1,0 +1,50 @@
+{
+  "date": "2026-10-27",
+  "scope": "Studio web: owner publication albums, inherited artist/album/cover, local audio duration detection",
+  "status": "validated-local-backend-deployed-page-pending",
+  "checksums": {
+    "encoding": "UTF-8, CRLF normalized to LF",
+    "algorithm": "SHA-256",
+    "admin/ketvoice-admin.html": "0a52956a58e71f11b8181012fe418f20db6ed4aa0e39d8eae5c7fd4c35e725da",
+    "supabase/functions/ketvoice-content/index.ts": "441d23a8854b59e8ea4b600a0b1899c41205027fc57b49a3ac3b6e4a4fb8a1e4"
+  },
+  "typecheck": {"tool": "Deno 2.5.6 check", "result": "passed"},
+  "api_tests": {"content": 21, "import_editing": 23, "studio_albums": 19, "failures": 0, "network_and_storage": "mocked"},
+  "browser": {
+    "engine": "Chromium via Patchright browser-automation skill",
+    "studio_navigation_and_sources": "passed",
+    "album_inheritance_and_override": "passed",
+    "free_text_and_homonymous_albums": "passed",
+    "audio_duration": "real generated WAV metadata, 2500 ms creation and 1250 ms replacement",
+    "rapid_audio_reselection": "passed",
+    "unreadable_audio_manual_fallback": "passed",
+    "editor_file_and_rights_reset": "passed",
+    "object_urls": {"created": 6, "revoked": 6},
+    "widths": [1280, 390],
+    "horizontal_overflow_at_390px": false,
+    "screenshots_inspected": true,
+    "console_errors": 0,
+    "failed_requests": 0,
+    "owner_session": "mocked",
+    "publications": "mocked"
+  },
+  "deployment": {
+    "function": "ketvoice-content",
+    "function_version": 8,
+    "verify_jwt": true,
+    "backend": "deployed and active",
+    "schema_changes": false,
+    "live_api_checks": {"health": 200, "anonymous_albums": 401, "anonymous_song": 401, "anonymous_update": 401},
+    "hosted_page": "pending main push and download verification"
+  },
+  "limitations": {
+    "real_owner_session": false,
+    "real_publication": false,
+    "physical_mobile_or_quest": false,
+    "android_emulator_used": false,
+    "android_sources_changed_by_this_delivery": false,
+    "new_apks": false,
+    "automix_local_unfinished_work": "preserved separately; not part of this web delivery",
+    "ios": "paused; native owner editor still unported"
+  }
+}

@@ -11,15 +11,17 @@ export default async function run(page) {
     seen.push({path,method:request.method(),redirect:new URL(request.url()).searchParams.get('redirect_to')});
     let response={};
     if(path.endsWith('/admin/session')) response={allowed:true};
+    if(path.endsWith('/admin/albums')) response={albums:[]};
     if(path.endsWith('/admin/sources') && request.method()==='GET') response={sources:[]};
     if(path.endsWith('/admin/sources') && request.method()==='POST') response={source:{id:'12345678-1234-1234-1234-123456789abc'}};
     if(path.endsWith('/search')) response={tracks:[{id:'kv:upload:12345678-1234-1234-1234-123456789abc',title:'Demo',artist:'Owner',album:'Test',durationMs:120000}]};
     if(path.endsWith('/admin/song') && request.method()==='GET') response={track:{id:'kv:upload:12345678-1234-1234-1234-123456789abc',title:'Demo',artist:'Owner',album:'Test',durationMs:120000},revision:'mock'};
     await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(response)});
   });
+  await page.goto('https://tysnnn23.github.io/Ketvoice/admin/ketvoice-admin.html');
   await page.locator('#send').click();
   await page.waitForFunction(()=>document.querySelector('#status').textContent.includes('Lien envoyé'));
-  await page.goto('https://tysnnn23.github.io/Ketvoice/admin/ketvoice-admin.html#access_token=mock-access&refresh_token=mock-refresh&token_type=bearer&expires_in=3600');
+  await page.goto('https://tysnnn23.github.io/Ketvoice/admin/ketvoice-admin.html?qa=auth#access_token=mock-access&refresh_token=mock-refresh&token_type=bearer&expires_in=3600');
   await page.getByRole('button',{name:/02.*Modifier/}).waitFor({state:'visible'});
   await page.getByRole('button',{name:/02.*Modifier/}).click();
   await page.locator('#search').fill('Demo');
