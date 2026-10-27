@@ -1,7 +1,7 @@
 {
   "date": "2026-10-27",
   "scope": "Studio web: owner publication albums, inherited artist/album/cover, local audio duration detection",
-  "status": "validated-local-backend-deployed-page-pending",
+  "status": "validated-web-delivery-deployed",
   "checksums": {
     "encoding": "UTF-8, CRLF normalized to LF",
     "algorithm": "SHA-256",
@@ -33,9 +33,12 @@
     "function_version": 8,
     "verify_jwt": true,
     "backend": "deployed and active",
+    "downloaded_function_sources": "index.ts and managed_sources.ts identical to GitHub commit 7d0b20778118e95fcd27822305110282dc5bfcc9",
     "schema_changes": false,
     "live_api_checks": {"health": 200, "anonymous_albums": 401, "anonymous_song": 401, "anonymous_update": 401},
-    "hosted_page": "pending main push and download verification"
+    "hosted_page": "HTTP 200, downloaded UTF-8/LF SHA-256 matches validated HTML",
+    "github_pages_build": {"commit": "7d0b20778118e95fcd27822305110282dc5bfcc9", "status": "built", "branch": "main"},
+    "live_browser": "login page rendered, screenshot inspected, no console errors or failed requests; no sign-in attempted"
   },
   "limitations": {
     "real_owner_session": false,
