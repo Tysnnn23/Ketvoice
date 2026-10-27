@@ -135,21 +135,43 @@ data class GlassParams(
 
 /** Teinte de surface : dégradé vertical plutôt qu'un aplat, pour éviter l'effet "plastique". */
 private fun surfaceBrush(p: GlassParams): Brush {
-    val top = if (p.dark) Color.Black.copy(alpha = p.tintAlpha + 0.08f)
-    else Color.White.copy(alpha = p.tintAlpha + 0.10f)
-    val mid = if (p.dark) Color.Black.copy(alpha = p.tintAlpha * 0.55f)
-    else Color.White.copy(alpha = p.tintAlpha * 0.45f)
-    val bottom = if (p.dark) Color.Black.copy(alpha = p.tintAlpha + 0.06f)
-    else Color.White.copy(alpha = p.tintAlpha + 0.04f)
-    return Brush.verticalGradient(listOf(top, mid, bottom))
+    // iOS 27 : la teinte n'est pas un voile vertical uniforme. La lumière entre
+    // par le haut-gauche, traverse l'épaisseur et ressort faiblement en bas.
+    // D'où une diagonale à quatre arrêts plutôt qu'un dégradé de haut en bas.
+    val base = if (p.dark) Color.Black else Color.White
+    val hot = base.copy(alpha = (p.tintAlpha + if (p.dark) 0.10f else 0.15f).coerceAtMost(0.92f))
+    val upper = base.copy(alpha = (p.tintAlpha * 0.55f).coerceAtMost(0.92f))
+    val lower = base.copy(alpha = (p.tintAlpha * 0.28f).coerceAtMost(0.92f))
+    val lift = base.copy(alpha = (p.tintAlpha + if (p.dark) 0.05f else 0.03f).coerceAtMost(0.92f))
+    return Brush.linearGradient(listOf(hot, upper, lower, lift))
 }
 
 /** Liseré lumineux : le reflet qui "attrape" la lumière en haut à gauche. */
 private fun rimBrush(p: GlassParams): Brush {
-    val strong = Color.White.copy(alpha = if (p.dark) p.highlightAlpha * 0.55f else p.highlightAlpha)
-    val weak = Color.White.copy(alpha = 0.05f)
-    val medium = Color.White.copy(alpha = if (p.dark) p.highlightAlpha * 0.25f else p.highlightAlpha * 0.30f)
-    return Brush.linearGradient(listOf(strong, weak, medium))
+    // Le reflet d'un vrai verre ne s'éteint pas d'un bord à l'autre : il culmine
+    // en haut-gauche, retombe au milieu, puis se rallume en bas-droite là où la
+    // lumière ressort. Quatre arrêts, pas trois.
+    val peak = Color.White.copy(
+        alpha = (if (p.dark) p.highlightAlpha * 0.72f else p.highlightAlpha).coerceIn(0f, 1f)
+    )
+    val shoulder = Color.White.copy(alpha = peak.alpha * 0.42f)
+    val trough = Color.White.copy(alpha = peak.alpha * 0.07f)
+    val wrap = Color.White.copy(alpha = peak.alpha * 0.30f)
+    return Brush.linearGradient(listOf(peak, shoulder, trough, wrap))
+}
+
+/**
+ * Voile spéculaire : la pellicule "mouillée" qui donne au verre son épaisseur.
+ * Concentré sur le tiers supérieur, il s'éteint avant le milieu pour ne jamais
+ * laver le contenu posé dessus.
+ */
+private fun sheenBrush(p: GlassParams): Brush {
+    val strength = (if (p.dark) 0.09f else 0.15f) * (0.5f + p.highlightIntensity * 0.7f)
+    return Brush.verticalGradient(
+        0.00f to Color.White.copy(alpha = strength.coerceIn(0f, 0.34f)),
+        0.14f to Color.White.copy(alpha = (strength * 0.36f).coerceIn(0f, 0.18f)),
+        0.38f to Color.Transparent
+    )
 }
 
 @Composable
@@ -168,6 +190,7 @@ fun GlassPanel(
 
     val surface = remember(params) { surfaceBrush(params) }
     val rim = remember(params) { rimBrush(params) }
+    val sheen = remember(params) { sheenBrush(params) }
     val edge = if (enabled) Modifier.border(.75.dp, rim, shape) else Modifier
 
     if (dynamic && backdrop != null) {
@@ -205,16 +228,19 @@ fun GlassPanel(
                 },
                 shadow = { if (params.shadow) Shadow.Default else null },
                 innerShadow = { if (params.innerShadow) InnerShadow.Default else null },
-                onDrawSurface = { drawRect(surface) }
+                onDrawSurface = {
+                    drawRect(surface)
+                    drawRect(sheen)
+                }
             )
         ) {
             Box(Modifier.background(Color.Transparent, shape)) { content() }
         }
     } else {
         // Verre STATIQUE : pas d'échantillonnage, donc pas de crash — mais on garde
-        // le dégradé, le liseré et l'épaisseur pour rester cohérent visuellement.
+        // le dégradé, le liseré, le voile spéculaire et l'épaisseur pour rester cohérent.
         Box(modifier = modifier.then(edge).background(surface, shape)) {
-            content()
+            Box(Modifier.background(sheen, shape)) { content() }
         }
     }
 }
