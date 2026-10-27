@@ -39,6 +39,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
@@ -129,6 +132,22 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
         Column(Modifier.fillMaxSize()) {
             if (lyrics.lines.isNotEmpty()) {
                 LazyColumn(state = list, modifier = Modifier.weight(1f).fillMaxWidth()
+                    // Fondu haut/bas : les lignes s'évanouissent dans le fond au lieu
+                    // d'être coupées net par les bords de l'écran.
+                    .drawWithContent {
+                        drawContent()
+                        if (!reduced) {
+                            drawRect(
+                                brush = Brush.verticalGradient(
+                                    0f to Color.Transparent,
+                                    .11f to Color.Black,
+                                    .80f to Color.Black,
+                                    1f to Color.Transparent
+                                ),
+                                blendMode = BlendMode.DstIn
+                            )
+                        }
+                    }
                     .pointerInput(Unit) {
                         awaitPointerEventScope { while (true) {
                             if (awaitPointerEvent(PointerEventPass.Initial).type == PointerEventType.Scroll) following = false
@@ -192,9 +211,20 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
                                 }
                             ) {
                                 if (current && line.words.isNotEmpty()) KaraokeLine(line, Modifier.fillMaxWidth(), fontScale)
-                                else Text(line.text, localize = false, color = lineColor,
-                                    fontSize = (33 * fontScale).sp, lineHeight = (41 * fontScale).sp, letterSpacing = (-.3).sp,
-                                    fontWeight = FontWeight.Black, modifier = Modifier.fillMaxWidth().blur(lineBlur))
+                                else {
+                                    // Halo léger sous la ligne active : elle "respire" au
+                                    // lieu de simplement changer de couleur.
+                                    if (current && lyrics.isTimed && !reduced) {
+                                        Text(line.text, localize = false,
+                                            color = Color.White.copy(alpha = .20f),
+                                            fontSize = (33 * fontScale).sp, lineHeight = (41 * fontScale).sp,
+                                            letterSpacing = (-.3).sp, fontWeight = FontWeight.Black,
+                                            modifier = Modifier.fillMaxWidth().blur(10.dp))
+                                    }
+                                    Text(line.text, localize = false, color = lineColor,
+                                        fontSize = (33 * fontScale).sp, lineHeight = (41 * fontScale).sp, letterSpacing = (-.3).sp,
+                                        fontWeight = FontWeight.Black, modifier = Modifier.fillMaxWidth().blur(lineBlur))
+                                }
                                 AnimatedVisibility(
                                     visible = translationEnabled && translated[index] != null,
                                     enter = fadeIn(tween(Motion.duration())),
