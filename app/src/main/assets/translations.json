@@ -803,7 +803,12 @@
   "lignes · mots synchronisés": "lines · synchronized words",
   "lignes · lignes synchronisées": "lines · synchronized lines",
   "lignes · texte simple": "lines · simple text",
-  "Transitions fluides entre les morceaux · fondu analysé sur le rythme": "Smooth transitions between songs · analyzed fade on beat"
+  "Transitions fluides entre les morceaux · fondu analysé sur le rythme": "Smooth transitions between songs · analyzed fade on beat",
+  "VOTRE EXPÉRIENCE D'ÉCOUTE": "YOUR LISTENING EXPERIENCE",
+  "MINUTES ÉCOUTÉES": "MINUTES LISTENED",
+  "MEMBRE DEPUIS": "MEMBER SINCE",
+  "VOTRE ARTISTE DU MOMENT": "YOUR ARTIST OF THE MOMENT",
+  "MEILLEUR ARTISTE": "BEST ARTIST"
  },
  "hi": {
   "Accueil": "होम",
@@ -1609,7 +1614,12 @@
   "lignes · mots synchronisés": "पंक्तियाँ · समकालिक शब्द",
   "lignes · lignes synchronisées": "पंक्तियाँ · समकालिक पंक्तियाँ",
   "lignes · texte simple": "पंक्तियाँ · सरल पाठ",
-  "Transitions fluides entre les morceaux · fondu analysé sur le rythme": "गानों के बीच सहज बदलाव · बीट पर फीके का विश्लेषण"
+  "Transitions fluides entre les morceaux · fondu analysé sur le rythme": "गानों के बीच सहज बदलाव · बीट पर फीके का विश्लेषण",
+  "VOTRE EXPÉRIENCE D'ÉCOUTE": "आपका सुनने का अनुभव",
+  "MINUTES ÉCOUTÉES": "मिनट सुने गए",
+  "MEMBRE DEPUIS": "से सदस्य",
+  "VOTRE ARTISTE DU MOMENT": "इस समय का आपका कलाकार",
+  "MEILLEUR ARTISTE": "सर्वश्रेष्ठ कलाकार"
  },
  "ja": {
   "Accueil": "ホーム",
@@ -2415,7 +2425,12 @@
   "lignes · mots synchronisés": "セリフ・シンクロワード",
   "lignes · lignes synchronisées": "回線・同期回線",
   "lignes · texte simple": "行・簡単なテキスト",
-  "Transitions fluides entre les morceaux · fondu analysé sur le rythme": "曲間のスムーズな移行・分析されたビート上のフェード"
+  "Transitions fluides entre les morceaux · fondu analysé sur le rythme": "曲間のスムーズな移行・分析されたビート上のフェード",
+  "VOTRE EXPÉRIENCE D'ÉCOUTE": "あなたのリスニング体験",
+  "MINUTES ÉCOUTÉES": "聞いた時間（分）",
+  "MEMBRE DEPUIS": "以来のメンバー",
+  "VOTRE ARTISTE DU MOMENT": "今のあなたのアーティスト",
+  "MEILLEUR ARTISTE": "ベストアーティスト"
  },
  "zh": {
   "Accueil": "首页",
@@ -3221,7 +3236,12 @@
   "lignes · mots synchronisés": "台词·同步词",
   "lignes · lignes synchronisées": "线路 · 同步线路",
   "lignes · texte simple": "线条·简单文字",
-  "Transitions fluides entre les morceaux · fondu analysé sur le rythme": "歌曲之间的平滑过渡·分析节拍上的淡入淡出"
+  "Transitions fluides entre les morceaux · fondu analysé sur le rythme": "歌曲之间的平滑过渡·分析节拍上的淡入淡出",
+  "VOTRE EXPÉRIENCE D'ÉCOUTE": "您的聆听体验",
+  "MINUTES ÉCOUTÉES": "聆听分钟数",
+  "MEMBRE DEPUIS": "会员至今",
+  "VOTRE ARTISTE DU MOMENT": "您当下的艺术家",
+  "MEILLEUR ARTISTE": "最佳艺人"
  },
  "ru": {
   "Accueil": "Главная",
@@ -4027,7 +4047,12 @@
   "lignes · mots synchronisés": "строки · синхронизированные слова",
   "lignes · lignes synchronisées": "линии · синхронизированные линии",
   "lignes · texte simple": "линии · простой текст",
-  "Transitions fluides entre les morceaux · fondu analysé sur le rythme": "Плавные переходы между песнями · анализируется затухание в такт"
+  "Transitions fluides entre les morceaux · fondu analysé sur le rythme": "Плавные переходы между песнями · анализируется затухание в такт",
+  "VOTRE EXPÉRIENCE D'ÉCOUTE": "ВАШ ОПЫТ ПРОСЛУШИВАНИЯ",
+  "MINUTES ÉCOUTÉES": "МИНУТ ПРОСЛУШИВАНИЯ",
+  "MEMBRE DEPUIS": "ЧЛЕН С",
+  "VOTRE ARTISTE DU MOMENT": "ВАШ ХУДОЖНИК НА МОМЕНТ",
+  "MEILLEUR ARTISTE": "ЛУЧШИЙ ХУДОЖНИК"
  },
  "it": {
   "Accueil": "Home",
@@ -4833,7 +4858,12 @@
   "lignes · mots synchronisés": "linee · parole sincronizzate",
   "lignes · lignes synchronisées": "linee · linee sincronizzate",
   "lignes · texte simple": "linee · testo semplice",
-  "Transitions fluides entre les morceaux · fondu analysé sur le rythme": "Transizioni fluide tra i brani · analisi della dissolvenza a ritmo"
+  "Transitions fluides entre les morceaux · fondu analysé sur le rythme": "Transizioni fluide tra i brani · analisi della dissolvenza a ritmo",
+  "VOTRE EXPÉRIENCE D'ÉCOUTE": "LA TUA ESPERIENZA DI ASCOLTO",
+  "MINUTES ÉCOUTÉES": "MINUTI ASCOLTATI",
+  "MEMBRE DEPUIS": "MEMBRO DAL",
+  "VOTRE ARTISTE DU MOMENT": "IL TUO ARTISTA DEL MOMENTO",
+  "MEILLEUR ARTISTE": "MIGLIOR ARTISTA"
  },
  "es": {
   "Accueil": "Inicio",
@@ -5639,7 +5669,12 @@
   "lignes · mots synchronisés": "líneas · palabras sincronizadas",
   "lignes · lignes synchronisées": "líneas · líneas sincronizadas",
   "lignes · texte simple": "líneas · texto simple",
-  "Transitions fluides entre les morceaux · fondu analysé sur le rythme": "Transiciones suaves entre canciones · desvanecimiento analizado en el ritmo"
+  "Transitions fluides entre les morceaux · fondu analysé sur le rythme": "Transiciones suaves entre canciones · desvanecimiento analizado en el ritmo",
+  "VOTRE EXPÉRIENCE D'ÉCOUTE": "TU EXPERIENCIA DE ESCUCHA",
+  "MINUTES ÉCOUTÉES": "MINUTOS ESCUCHADOS",
+  "MEMBRE DEPUIS": "MIEMBRO DESDE",
+  "VOTRE ARTISTE DU MOMENT": "TU ARTISTA DEL MOMENTO",
+  "MEILLEUR ARTISTE": "MEJOR ARTISTA"
  },
  "de": {
   "Accueil": "Start",
@@ -6445,7 +6480,12 @@
   "lignes · mots synchronisés": "Zeilen · synchronisierte Wörter",
   "lignes · lignes synchronisées": "Linien · synchronisierte Linien",
   "lignes · texte simple": "Zeilen · einfacher Text",
-  "Transitions fluides entre les morceaux · fondu analysé sur le rythme": "Sanfte Übergänge zwischen den Songs · Analysiertes Fade-on-Beat"
+  "Transitions fluides entre les morceaux · fondu analysé sur le rythme": "Sanfte Übergänge zwischen den Songs · Analysiertes Fade-on-Beat",
+  "VOTRE EXPÉRIENCE D'ÉCOUTE": "IHR HÖRERLEBNIS",
+  "MINUTES ÉCOUTÉES": "MINUTEN ZUGEHÖRT",
+  "MEMBRE DEPUIS": "MITGLIED SEIT",
+  "VOTRE ARTISTE DU MOMENT": "IHR KÜNSTLER DES MOMENTS",
+  "MEILLEUR ARTISTE": "BESTER KÜNSTLER"
  },
  "pt": {
   "Accueil": "Início",
@@ -7251,7 +7291,12 @@
   "lignes · mots synchronisés": "linhas · palavras sincronizadas",
   "lignes · lignes synchronisées": "linhas · linhas sincronizadas",
   "lignes · texte simple": "linhas · texto simples",
-  "Transitions fluides entre les morceaux · fondu analysé sur le rythme": "Transições suaves entre músicas · fade analisado na batida"
+  "Transitions fluides entre les morceaux · fondu analysé sur le rythme": "Transições suaves entre músicas · fade analisado na batida",
+  "VOTRE EXPÉRIENCE D'ÉCOUTE": "SUA EXPERIÊNCIA DE ESCUTA",
+  "MINUTES ÉCOUTÉES": "MINUTOS ESCUTADOS",
+  "MEMBRE DEPUIS": "MEMBRO DESDE",
+  "VOTRE ARTISTE DU MOMENT": "SEU ARTISTA DO MOMENTO",
+  "MEILLEUR ARTISTE": "MELHOR ARTISTA"
  },
  "ko": {
   "Accueil": "홈",
@@ -8057,6 +8102,11 @@
   "lignes · mots synchronisés": "라인 · 동기화 단어",
   "lignes · lignes synchronisées": "라인 · 동기 라인",
   "lignes · texte simple": "선 · 간단한 텍스트",
-  "Transitions fluides entre les morceaux · fondu analysé sur le rythme": "노래 간의 부드러운 전환 · 비트에 따른 페이드 분석"
+  "Transitions fluides entre les morceaux · fondu analysé sur le rythme": "노래 간의 부드러운 전환 · 비트에 따른 페이드 분석",
+  "VOTRE EXPÉRIENCE D'ÉCOUTE": "귀하의 청취 경험",
+  "MINUTES ÉCOUTÉES": "몇 분 동안 청취함",
+  "MEMBRE DEPUIS": "회원가입일자",
+  "VOTRE ARTISTE DU MOMENT": "당신의 순간의 아티스트",
+  "MEILLEUR ARTISTE": "최고의 아티스트"
  }
 }

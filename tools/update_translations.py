@@ -17,6 +17,8 @@ ASSET = APP / 'src/main/assets/translations.json'
 SOURCE = APP / 'src/main/kotlin/com/ketvoice/app'
 CATALOG = json.loads(ASSET.read_text(encoding='utf-8'))
 MESSAGES = [
+    "VOTRE EXPÉRIENCE D'ÉCOUTE", 'MINUTES ÉCOUTÉES', 'MEMBRE DEPUIS',
+    'VOTRE ARTISTE DU MOMENT', 'MEILLEUR ARTISTE',
     "Modifier l'audio ou la pochette", 'Modifier le titre importé', 'Recharger le titre importé',
     'Modifications enregistrées', 'Enregistrer les modifications',
     "La version hors ligne est inchangée. Supprimez son téléchargement puis téléchargez-la à nouveau pour actualiser l'audio.",

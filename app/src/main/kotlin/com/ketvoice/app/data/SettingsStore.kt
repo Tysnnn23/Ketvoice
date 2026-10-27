@@ -49,6 +49,11 @@ object SettingsStore {
         s.automixAutoFade.value = p.getBoolean("automixAutoFade", true)
         s.automixFadeSeconds.value = p.getInt("automixFadeSeconds", 8).coerceIn(1, 30)
         s.automixPerformance.value = p.getInt("automixPerformance", 2).coerceIn(0, 3)
+        s.firstLaunchAt.value = p.getLong("firstLaunchAt", 0L)
+        if (s.firstLaunchAt.value <= 0L) {
+            s.firstLaunchAt.value = System.currentTimeMillis()
+            p.edit().putLong("firstLaunchAt", s.firstLaunchAt.value).apply()
+        }
         s.equalizerEnabled.value = p.getBoolean("equalizerEnabled", false)
         s.equalizerGains.value = com.ketvoice.app.player.EqualizerProfile.normalize(
             p.getString("equalizerGains", "").orEmpty().split(',').mapNotNull { it.toIntOrNull() })
@@ -129,6 +134,7 @@ object SettingsStore {
             .putBoolean("automixAutoFade", s.automixAutoFade.value)
             .putInt("automixFadeSeconds", s.automixFadeSeconds.value.coerceIn(1, 30))
             .putInt("automixPerformance", s.automixPerformance.value.coerceIn(0, 3))
+            .putLong("firstLaunchAt", s.firstLaunchAt.value)
             .putBoolean("equalizerEnabled", s.equalizerEnabled.value)
             .putString("equalizerGains", s.equalizerGains.value.joinToString(","))
             .putBoolean("wifiHandoffEnabled", s.wifiHandoffEnabled.value)

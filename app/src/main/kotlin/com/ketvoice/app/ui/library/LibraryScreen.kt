@@ -106,12 +106,19 @@ fun LibraryScreen() {
         .sortedByDescending { it.value.size }
         .take(12)
 
-    val estimatedMinutes = remember(recent) {
-        val totalSecs = recent.sumOf { (it.durationMs ?: 200_000L) / 1000L }
-        (totalSecs / 60L).toInt().coerceAtLeast(67)
+    // Statistiques réelles : compteurs d'écoute pondérés par la durée des titres.
+    val playCounts by ListeningHistory.playCounts.collectAsState()
+    val estimatedMinutes = remember(playCounts, known, recent) {
+        val durations = (known + recent).associate { it.id to (it.durationMs.takeIf { d -> d > 0 } ?: 200_000L) }
+        val totalMs = playCounts.entries.sumOf { (id, n) -> (durations[id] ?: 200_000L) * n }
+        (totalMs / 60_000L).toInt()
     }
-    val topArtistName = remember(artists) {
-        artists.firstOrNull()?.key ?: "Juice WRLD"
+    val totalPlays = playCounts.values.sum()
+    val topArtistName = remember(artists) { artists.firstOrNull()?.key }
+    val memberSince = remember {
+        val cal = java.util.Calendar.getInstance()
+        cal.timeInMillis = AppSettings.firstLaunchAt.value
+        "${cal.get(java.util.Calendar.MONTH) + 1}/${cal.get(java.util.Calendar.YEAR) % 100}"
     }
 
     LazyColumn(
@@ -126,8 +133,9 @@ fun LibraryScreen() {
         item {
             ExperienceCarousel(
                 minutesListened = estimatedMinutes,
-                totalPlays = all.size.coerceAtLeast(22),
+                totalPlays = totalPlays,
                 topArtist = topArtistName,
+                memberSince = memberSince,
                 modifier = Modifier.padding(bottom = 16.dp)
             )
         }
@@ -144,7 +152,7 @@ fun LibraryScreen() {
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(12.dp))
-                        .clickable { AppUi.openCatalog(CatalogRequest("downloads", "downloads", "Téléchargements")) }
+                        .clickable { AppUi.openDownloads() }
                         .padding(vertical = 12.dp, horizontal = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -173,7 +181,7 @@ fun LibraryScreen() {
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(12.dp))
-                        .clickable { AppUi.openCatalog(CatalogRequest("local_device", "local", "Musique locale")) }
+                        .clickable { AppUi.openLocalFiles() }
                         .padding(vertical = 12.dp, horizontal = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -597,6 +605,7 @@ private fun ExperienceCarousel(
     minutesListened: Int,
     totalPlays: Int,
     topArtist: String?,
+    memberSince: String,
     modifier: Modifier = Modifier
 ) {
     LazyRow(
@@ -673,14 +682,14 @@ private fun ExperienceCarousel(
                 ) {
                     Column {
                         Text(
-                            "KONNEKT",
+                            "KETVOICE",
                             color = Color.White,
                             fontSize = 11.5.sp,
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 0.5.sp
                         )
                         Text(
-                            "$totalPlays écoutes · 2026",
+                            "$totalPlays écoutes",
                             color = Color.White.copy(alpha = 0.6f),
                             fontSize = 10.sp
                         )
@@ -694,7 +703,7 @@ private fun ExperienceCarousel(
                             letterSpacing = 0.6.sp
                         )
                         Text(
-                            "10/26",
+                            memberSince,
                             color = Color.White,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold
@@ -705,8 +714,8 @@ private fun ExperienceCarousel(
         }
 
         item {
-            // Carte 2 : "MEILLEUR ARTISTE" (Frame 120)
-            val artistDisplay = topArtist?.takeIf { it.isNotBlank() } ?: "Juice WRLD"
+            // Carte 2 : "VOTRE ARTISTE DU MOMENT" — uniquement avec de vraies écoutes.
+            val artistDisplay = topArtist?.takeIf { it.isNotBlank() } ?: return@item
             Box(
                 modifier = Modifier
                     .width(300.dp)
@@ -768,18 +777,16 @@ private fun ExperienceCarousel(
                 ) {
                     Column {
                         Text(
-                            "KONNEKT",
+                            "KETVOICE",
                             color = Color.White,
                             fontSize = 11.5.sp,
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 0.5.sp
                         )
                         Text(
-                            artistDisplay,
+                            "$totalPlays écoutes",
                             color = Color.White.copy(alpha = 0.6f),
-                            fontSize = 10.sp,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                            fontSize = 10.sp
                         )
                     }
                 }

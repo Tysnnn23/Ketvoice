@@ -45,6 +45,7 @@ object AppSettings {
     val automixAutoFade = mutableStateOf(true)
     val automixFadeSeconds = mutableStateOf(8)
     val automixPerformance = mutableStateOf(2)
+    val firstLaunchAt = mutableStateOf(0L)
     val skipSilence = mutableStateOf(false)
     val equalizerEnabled = mutableStateOf(false)
     val equalizerGains = mutableStateOf(listOf(0, 0, 0, 0, 0))
