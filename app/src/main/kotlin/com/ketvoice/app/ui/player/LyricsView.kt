@@ -39,6 +39,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.BlurredEdgeTreatment
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
@@ -219,21 +220,14 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
                             ) {
                                 if (current && line.words.isNotEmpty()) KaraokeLine(line, Modifier.fillMaxWidth(), fontScale)
                                 else {
-                                    // Halo léger sous la ligne active : elle "respire" au
-                                    // lieu de simplement changer de couleur.
-                                    if (current && lyrics.isTimed && !reduced) {
-                                        Text(line.text, localize = false,
-                                            color = Color.White.copy(alpha = .20f),
-                                            fontSize = (33 * fontScale).sp, lineHeight = (41 * fontScale).sp,
-                                            letterSpacing = (-.3).sp, fontWeight = FontWeight.Black,
-                                            modifier = Modifier.fillMaxWidth().blur(10.dp))
-                                    }
+                                    // Une seule couche de texte par ligne : plus aucun halo
+                                    // flou dupliqué au-dessus des paroles.
                                     Text(line.text, localize = false, color = lineColor,
                                         fontSize = (33f * fontScale).sp,
                                         lineHeight = (41f * fontScale).sp,
                                         letterSpacing = (-.3).sp,
                                         fontWeight = FontWeight.Black,
-                                        modifier = Modifier.fillMaxWidth().blur(lineBlur))
+                                        modifier = Modifier.fillMaxWidth().blur(lineBlur, BlurredEdgeTreatment.Unbounded))
                                 }
                                 AnimatedVisibility(
                                     visible = translationEnabled && translated[index] != null,

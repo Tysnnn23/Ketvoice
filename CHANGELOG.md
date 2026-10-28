@@ -7,6 +7,38 @@
 
 ---
 
+# Ketvoice 3.5.0
+
+![Ketvoice 3.5.0](https://github.com/Tysnnn23/Ketvoice/releases/download/v3.5.0/ketvoice-banner.png)
+
+**versionCode 42** — installs over 3.4.3 and every earlier build (same signing certificate).
+
+## Lyrics
+
+- **Before:** a fully blurred copy of the active line appeared above the lyrics. **After:** one sharp layer per line, with the usual progressive fade on neighbouring lines.
+- **Before:** unselected lines looked "basic" and the text jumped when the active line changed. **After:** every line shares the same size and weight; only the colour marks the active line.
+- **Before:** French credits ("Paroles : …", "Compositeur : …") and duplicated lines showed up as ghost lyrics. **After:** they are filtered out.
+
+## Artist page
+
+- **Before:** portrait photos were squeezed into a fixed banner and faces were cropped. **After:** the header follows the real aspect ratio (320–460 dp), anchored to the top, and photos fade in.
+- Similar artists without a photo show the artist's initial.
+
+## Interface
+
+- Player controls use a firm press spring with a small bounce on release (instant with "reduce motion").
+- Official Spotify icon in the Spotify import.
+
+## In-app updates
+
+- **Before:** `3.5.0` and `3.5.0-BETA` compared as equal, so beta testers never received the final release. **After:** a stable build ranks above its own pre-release (covered by 7 unit tests).
+- The check looks at the 10 latest releases (stable and beta); "Later" keeps a green badge next to the profile avatar.
+- Only the APK matching your build (phone or Quest) is offered.
+
+> Versions 3.3.1 to 3.4.3 are documented in their GitHub release notes.
+
+---
+
 # Ketvoice 3.3.0
 
 **versionCode 35** — installs over v3.2.0 and every previous release (same signing certificate).

@@ -117,16 +117,25 @@ fun ArtistScreen() {
                 item {
                     // Bannière plein écran : photo de l'artiste pleine largeur,
                     // floutée, avec fondu progressif vers le fond de la page.
-                    Box(Modifier.fillMaxWidth().height(360.dp)) {
+                    // La hauteur suit le ratio réel de l'image (borné) : une photo
+                    // portrait n'est plus écrasée dans une bannière fixe de 360 dp.
+                    val heroWidth = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp.dp
+                    val heroHeight = (heroWidth / data.heroAspectRatio.coerceIn(.6f, 2f)).coerceIn(320.dp, 460.dp)
+                    Box(Modifier.fillMaxWidth().height(heroHeight)) {
+                        // Fond de repli toujours présent : pas de flash vide pendant le chargement.
+                        Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(theme.card, theme.hairline))))
                         if (!data.artist.photo.isNullOrBlank()) {
                             AsyncImage(
-                                model = data.artist.photo,
+                                model = coil.request.ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
+                                    .data(data.artist.photo)
+                                    .crossfade(380)
+                                    .build(),
                                 contentDescription = data.artist.name,
                                 contentScale = ContentScale.Crop,
+                                // Ancrage en haut : le recadrage garde le visage visible.
+                                alignment = Alignment.TopCenter,
                                 modifier = Modifier.fillMaxSize()
                             )
-                        } else {
-                            Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(theme.card, theme.hairline))))
                         }
                         // Scrim bas : dégradé sombre pour faire ressortir le nom (style ref)
                         Box(Modifier.fillMaxSize().background(
@@ -230,10 +239,19 @@ fun ArtistScreen() {
                         itemsIndexed(data.related, key = { _, a -> a.id }) { _, related ->
                             Column(Modifier.width(104.dp).clickable { AppUi.openArtist(related.id, related.name) },
                                 horizontalAlignment = Alignment.CenterHorizontally) {
-                                Box(Modifier.size(94.dp).clip(CircleShape).background(theme.card)) {
+                                Box(Modifier.size(94.dp).clip(CircleShape).background(theme.card),
+                                    contentAlignment = Alignment.Center) {
+                                    // Initiale en repli : le cercle n'est jamais vide.
+                                    Text(related.name.take(1).uppercase(), localize = false, color = theme.secondary,
+                                        fontSize = 30.sp, fontWeight = FontWeight.Bold)
                                     if (!related.photo.isNullOrBlank()) {
-                                        AsyncImage(model = related.photo, contentDescription = related.name,
-                                            contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                                        AsyncImage(
+                                            model = coil.request.ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
+                                                .data(related.photo).crossfade(300).build(),
+                                            contentDescription = related.name,
+                                            contentScale = ContentScale.Crop,
+                                            alignment = Alignment.TopCenter,
+                                            modifier = Modifier.fillMaxSize())
                                     }
                                 }
                                 Text(related.name, localize = false, color = theme.onBackground, fontSize = 13.sp,

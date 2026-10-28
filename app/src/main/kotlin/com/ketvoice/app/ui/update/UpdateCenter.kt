@@ -92,21 +92,31 @@ object UpdateChecker {
         .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         .getLong(KEY_LAST_CHECK, 0L)
 
-    private fun parts(version: String): List<Int> =
+    /** Numeric core of a version: "v3.5.0-BETA+7" -> [3, 5, 0]. */
+    private fun core(version: String): List<Int> =
         version.trim().removePrefix("v").removePrefix("V")
-            .split('.', '-', '+')
+            .substringBefore('+').substringBefore('-')
+            .split('.')
             .map { it.takeWhile(Char::isDigit).toIntOrNull() ?: 0 }
 
+    /** Pre-release label ("BETA" in "3.5.0-BETA"), or null for a stable version. */
+    private fun preRelease(version: String): String? =
+        version.trim().substringBefore('+').substringAfter('-', "").ifBlank { null }
+
+    /**
+     * True when [remote] should replace [current]. The numeric core decides first;
+     * with an identical core, a stable build is newer than its own pre-release
+     * (3.5.0 > 3.5.0-BETA), so beta users are offered the final release.
+     */
     fun isNewer(remote: String, current: String): Boolean {
-        val a = parts(remote)
-        val b = parts(current)
-        if (a.isEmpty()) return false
+        val a = core(remote)
+        val b = core(current)
         for (i in 0 until maxOf(a.size, b.size)) {
             val x = a.getOrElse(i) { 0 }
             val y = b.getOrElse(i) { 0 }
             if (x != y) return x > y
         }
-        return false
+        return preRelease(remote) == null && preRelease(current) != null
     }
 
     private fun http(url: String): HttpURLConnection =
@@ -214,15 +224,6 @@ object UpdateChecker {
                         apk = a.optString("browser_download_url")
                         size = a.optLong("size")
                         break
-                    }
-                    // Repli : n'importe quel APK plutôt que pas de mise à jour.
-                    if (apk == null) for (i in 0 until assets.length()) {
-                        val a = assets.optJSONObject(i) ?: continue
-                        if (a.optString("name").endsWith(".apk", true)) {
-                            apk = a.optString("browser_download_url")
-                            size = a.optLong("size")
-                            break
-                        }
                     }
                 }
                 val apkUrl = apk ?: return@runCatching null

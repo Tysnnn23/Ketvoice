@@ -749,7 +749,7 @@ fun LyricsPreviewLine(onOpen: () -> Unit) {
 fun Modifier.pressScale(min: Float = 0.86f, isPressed: Boolean): Modifier {
     val s by animateFloatAsState(
         targetValue = if (isPressed && !Motion.reduced) min else 1f,
-        animationSpec = tween(Motion.duration(Motion.PRESS)),
+        animationSpec = Motion.pressSpring(isPressed),
         label = "press"
     )
     return this.graphicsLayer { scaleX = s; scaleY = s }
