@@ -53,6 +53,7 @@ import com.ketvoice.app.data.AppText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.net.HttpURLConnection
@@ -78,11 +79,12 @@ data class UpdateInfo(
 
 object UpdateChecker {
 
-    private const val API = "https://api.github.com/repos/Tysnnn23/Ketvoice/releases/latest"
+    private const val API = "https://api.github.com/repos/Tysnnn23/Ketvoice/releases?per_page=10"
     private const val PREFS = "ketvoice_updates"
     private const val KEY_DISMISSED = "dismissed_tag"
     private const val KEY_LAST_CHECK = "last_check"
     private const val KEY_SKIP = "skipped_tag"
+    private const val KEY_POSTPONED = "postponed_tag"
     internal const val CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000L
 
     /** Dernier auto-check persisté (0 = jamais). */
@@ -184,11 +186,20 @@ object UpdateChecker {
                 if (conn.responseCode != 200) return@runCatching null
                 val raw = conn.inputStream.bufferedReader().use { it.readText() }
                 prefs.edit().putLong(KEY_LAST_CHECK, System.currentTimeMillis()).apply()
-                val json = JSONObject(raw)
+                // /releases/latest exclut les prereleases : pour les voir (versions
+                // BETA), on parcourt les 10 dernières releases et on prend la plus
+                // récente candidate (stable OU prerelease).
+                val arr = JSONArray(raw)
+                if (arr.length() == 0) return@runCatching null
+                val json = (0 until arr.length())
+                    .mapNotNull { arr.optJSONObject(it) }
+                    .firstOrNull { obj ->
+                        val t = obj.optString("tag_name")
+                        t.isNotBlank() && isNewer(t, BuildConfig.VERSION_NAME) &&
+                            t != prefs.getString(KEY_DISMISSED, null) &&
+                            t != prefs.getString(KEY_SKIP, null)
+                    } ?: return@runCatching null
                 val tag = json.optString("tag_name")
-                               if (tag.isBlank() || !isNewer(tag, BuildConfig.VERSION_NAME)) return@runCatching null
-                if (tag == prefs.getString(KEY_DISMISSED, null)) return@runCatching null
-                if (tag == prefs.getString(KEY_SKIP, null)) return@runCatching null
 
                 var apk: String? = null
                 var size = 0L
@@ -234,7 +245,6 @@ object UpdateChecker {
             .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .edit().putString(KEY_DISMISSED, tag).apply()
     }
-
     /** "Passer cette version" : plus de prompt auto pour ce tag (installable manuellement). */
     fun skip(tag: String) {
         com.ketvoice.app.KetvoiceApp.instance
@@ -247,6 +257,19 @@ object UpdateChecker {
             .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .getString(KEY_SKIP, null)
     }
+
+    /** "Plus tard" : report mémorisé -> badge "mise à jour" sur la page d'accueil. */
+    fun postpone(tag: String) {
+        com.ketvoice.app.KetvoiceApp.instance
+            .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit().putString(KEY_POSTPONED, tag).apply()
+    }
+
+    fun postponedTag(): String? =
+        com.ketvoice.app.KetvoiceApp.instance
+            .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getString(KEY_POSTPONED, null)
+            ?.takeIf { it != BuildConfig.VERSION_NAME && isNewer(it, BuildConfig.VERSION_NAME) }
 
     /** Télécharge l'APK dans le cache privé et renvoie le fichier prêt à installer. */
     suspend fun download(context: Context, info: UpdateInfo, onProgress: (Float) -> Unit): File =
@@ -306,19 +329,55 @@ object UpdateChecker {
 fun UpdateHost() {
     var info by remember { mutableStateOf<UpdateInfo?>(null) }
 
-    // Auto-check au lancement, au plus toutes les 6 h. "Passer" est mémorisé.
+    // Au lancement : recharge l'éventuel report "Plus tard" persisté, puis
+    // auto-check au plus toutes les 6 h. "Passer" est mémorisé.
     LaunchedEffect(Unit) {
+        UpdateBadge.postponedTag = UpdateChecker.postponedTag()
         if (System.currentTimeMillis() - UpdateChecker.lastCheckMs() >= UpdateChecker.CHECK_INTERVAL_MS) {
             info = UpdateChecker.check()
         }
     }
 
-    val update = info ?: return
+    // Clic sur le badge "mise à jour" de la page d'accueil : rouvre la popup.
+    LaunchedEffect(UpdateBadge.pendingRequest) {
+        if (UpdateBadge.pendingRequest) {
+            UpdateBadge.pendingRequest = false
+            if (info == null) info = UpdateBadge.lastInfo ?: UpdateChecker.check(force = true)
+        }
+    }
+
+    val update = info
+    if (update == null) {
+        UpdateBadge.available = null
+        return
+    }
+    UpdateBadge.available = update
+    UpdateBadge.lastInfo = update
     UpdateDialog(update, onDismiss = {
-        // Fermer la boîte n'ignore que la session courante (relance auto à la
-        // prochaine session) ; "Passer" est le choix permanent.
+        // "Plus tard" : la popup se ferme, un badge apparaît à côté de la photo
+        // de profil sur la page d'accueil pour rouvrir la popup à la demande.
+        UpdateChecker.postpone(update.tag)
+        UpdateBadge.postponedTag = update.tag
+        UpdateBadge.available = null
         info = null
     })
+}
+
+/**
+ * État global minimal du flux de mise à jour, observé par le badge de la page
+ * d'accueil : [available] tant que la popup est affichée, [postponedTag] dès
+ * que l'utilisateur a cliqué "Plus tard" (le badge reste jusqu'à l'install).
+ */
+object UpdateBadge {
+    var available by mutableStateOf<UpdateInfo?>(null)
+    var postponedTag by mutableStateOf<String?>(null)
+    var pendingRequest by mutableStateOf(false)
+    var lastInfo: UpdateInfo? = null
+
+    /** Appelé par le badge : rouvre la popup (UpdateHost la ré-affiche). */
+    fun requestShow() {
+        pendingRequest = true
+    }
 }
 
 @Composable

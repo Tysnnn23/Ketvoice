@@ -200,11 +200,11 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
                                 label = "lyricColor"
                             )
                             val lineBlur by animateDpAsState(blur, tween(Motion.duration()), label = "lyricBlur")
-                            val lineScale by animateFloatAsState(
-                                targetValue = if (!reduced && current && lyrics.isTimed) 1.012f else 1f,
-                                animationSpec = tween(Motion.duration()),
-                                label = "lyricScale"
-                            )
+                            // Toutes les lignes gardent exactement la même taille et la
+                            // même graisse : seule la couleur distingue la ligne active.
+                            // Aucun changement d'échelle, pour éviter l'effet « lyrics
+                            // basiques » sur les lignes non sélectionnées.
+                            val lineScale = 1f
                             val lineModifier = Modifier.fillMaxWidth().clickable {
                                 if (lyrics.isTimed && line.timeMs >= 0) { Player.seekTo(line.timeMs); following = true }
                             }
@@ -229,10 +229,10 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
                                             modifier = Modifier.fillMaxWidth().blur(10.dp))
                                     }
                                     Text(line.text, localize = false, color = lineColor,
-                                        fontSize = ((if (current || !lyrics.isTimed) 33f else 28.5f) * fontScale).sp,
-                                        lineHeight = ((if (current || !lyrics.isTimed) 41f else 36f) * fontScale).sp,
+                                        fontSize = (33f * fontScale).sp,
+                                        lineHeight = (41f * fontScale).sp,
                                         letterSpacing = (-.3).sp,
-                                        fontWeight = if (current || !lyrics.isTimed) FontWeight.Black else FontWeight.SemiBold,
+                                        fontWeight = FontWeight.Black,
                                         modifier = Modifier.fillMaxWidth().blur(lineBlur))
                                 }
                                 AnimatedVisibility(

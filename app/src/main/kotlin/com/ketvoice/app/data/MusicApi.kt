@@ -779,8 +779,27 @@ object MusicApi {
     private val yrcWordRe = Regex("\\((\\d+),(\\d+),(-?\\d+)\\)(.*?)(?=\\(\\d+,\\d+,-?\\d+\\)|$)")
     private val creditRe = Regex(
         "(?i)^\\s*(?:(?:作词|作曲|编曲|制作人?|录音|混音|母带)|" +
-            "(?:lyrics?|lyricist|composer|producer|arranger|written by|produced by)\\b).*"
+            "(?:lyrics?|lyricist|composer|producer|arranger|written by|produced by)\\b|" +
+            // Crédits francophones : très fréquents sur les morceaux français et
+            // jusqu'ici non filtrés, ce qui créait des « paroles fantômes ».
+            "(?:paroles?|parolier|paroli[èe]re|compositeur|compositrice|interpr[èe]te|" +
+            "auteur|autrice|musique|texte|adaptation|traduction)\\s*(?::|：|de\\b|par\\b|et\\b)|" +
+            "(?:chanson [ée]crite par|paroles de la chanson|avec la participation de)" +
+            ").*"
     )
+
+    // Crédits en français (« Paroles : … », « Compositeur : … », « Mixé par … »).
+    // Certaines sources (LRCLIB, NetEase) les renvoient avec les morceaux français :
+    // ils apparaissaient comme de fausses paroles (« lyrics fantômes »).
+    private val frCreditRe = Regex(
+        "(?i)^\\s*(?:paroles?|auteurs?|compositeurs?|interpr[eè]tes?|musique|arrangements?|" +
+            "mix[eé]e?s?\\s*par|r[eé]alis[eé]e?s?\\s*par|enregistr[eé]e?s?\\s*par|" +
+            "[eé]crit[e]?s?\\s*par|compos[eé]e?s?\\s*par|produit[e]?s?\\s*par|label|[eé]dition|prod)" +
+            "\\s*[:：\\-–—]"
+    )
+
+    private fun isCredit(text: String): Boolean =
+        creditRe.containsMatchIn(text) || frCreditRe.containsMatchIn(text)
 
     private fun lrcTime(groups: List<String>): Long {
         val min = groups[1].toLongOrNull() ?: 0L
@@ -816,10 +835,12 @@ object MusicApi {
             } else {
                 body.replace(lrcWordTagRe, "").trim()
             }
-            if (text.isEmpty() || creditRe.containsMatchIn(text)) continue
+            if (text.isEmpty() || isCredit(text)) continue
             out += LyricLine(time, text, words)
         }
-        return out.sortedBy { it.timeMs }
+        // Déduplication : certaines sources renvoient deux fois la même ligne
+        // (même horodatage + même texte), ce qui affichait des lignes fantômes.
+        return out.distinctBy { it.timeMs to it.text }.sortedBy { it.timeMs }
     }
 
     private fun parseYrc(yrc: String): List<LyricLine> {
@@ -837,10 +858,10 @@ object MusicApi {
             }.toList()
             if (words.isEmpty()) continue
             val text = words.joinToString("") { it.text }.trim()
-            if (text.isEmpty() || creditRe.containsMatchIn(text)) continue
+            if (text.isEmpty() || isCredit(text)) continue
             out += LyricLine(lineStart, text, words)
         }
-        return out.sortedBy { it.timeMs }
+        return out.distinctBy { it.timeMs to it.text }.sortedBy { it.timeMs }
     }
 
     private fun parseDuration(s: String): Long {

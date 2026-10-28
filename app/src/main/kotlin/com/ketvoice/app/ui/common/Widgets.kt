@@ -1,11 +1,15 @@
 package com.ketvoice.app.ui.common
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -113,27 +117,48 @@ fun SectionTitle(
 fun AccountAvatar(initial: String, size: Dp = 40.dp, modifier: Modifier = Modifier) {
     val session = com.ketvoice.app.data.YouTubeMusicSession.profile.collectAsState().value
     val label = if (session.connected && session.name.isNotBlank()) session.name.take(1).uppercase() else initial
-    Box(
-        modifier = modifier
-            .size(size)
-            .clip(CircleShape)
-            .background(Palette.Teal),
-        contentAlignment = Alignment.Center
-    ) {
-        if (session.connected && !session.photo.isNullOrBlank()) {
-            AsyncImage(
-                model = session.photo,
-                contentDescription = session.name,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
-            )
-        } else {
-            Text(
-                label,
-                color = Color.White,
-                fontSize = (size.value * 0.42f).sp,
-                fontWeight = FontWeight.SemiBold
-            )
+    // Badge "mise à jour disponible" : visible quand l'utilisateur a reporté la
+    // popup avec "Plus tard" ; un clic rouvre la popup via UpdateHost.
+    val updateBadge = com.ketvoice.app.ui.update.UpdateBadge.postponedTag
+    Box(modifier = modifier) {
+        Box(
+            modifier = Modifier
+                .size(size)
+                .clip(CircleShape)
+                .background(Palette.Teal),
+            contentAlignment = Alignment.Center
+        ) {
+            if (session.connected && !session.photo.isNullOrBlank()) {
+                AsyncImage(
+                    model = session.photo,
+                    contentDescription = session.name,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+            } else {
+                Text(
+                    label,
+                    color = Color.White,
+                    fontSize = (size.value * 0.42f).sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        }
+        if (updateBadge != null) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .offset(x = 2.dp, y = (-2).dp)
+                    .size(13.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFF30D158))
+                    .border(2.dp, if (LocalTheme.current.isDark) Color(0xFF0B0B0C) else Color.White, CircleShape)
+                    .clickable(
+                        indication = null,
+                        interactionSource = remember { MutableInteractionSource() }
+                    ) { com.ketvoice.app.ui.update.UpdateBadge.requestShow() },
+                contentAlignment = Alignment.Center
+            ) {}
         }
     }
 }

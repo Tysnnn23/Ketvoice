@@ -1,6 +1,7 @@
 package com.ketvoice.app.ui.library
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -24,6 +25,8 @@ import androidx.compose.ui.geometry.Offset
 import kotlin.math.min
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.res.painterResource
+import com.ketvoice.app.R
 import com.ketvoice.app.ui.common.Icon
 import com.ketvoice.app.ui.common.Text
 import androidx.compose.runtime.*
@@ -559,40 +562,12 @@ private fun SoundWaveIcon(modifier: Modifier = Modifier, color: Color = Color.Wh
 
 @Composable
 private fun SpotifyIcon(modifier: Modifier = Modifier) {
-    // Official-style Spotify mark: green disc (#1DB954) + three black arcs bowing upward,
-    // bottom arc the longest & thickest, arcs shorten toward the top.
-    Canvas(modifier = modifier) {
-        val w = size.width
-        val h = size.height
-        val s = min(w, h)
-        val cx = w / 2f
-        val cy = h / 2f
-        val r = s / 2f
-        drawCircle(color = Color(0xFF1DB954), radius = r, center = Offset(cx, cy))
-        val arcs = listOf(
-            Triple(0.20f, 0.34f, 0.085f),
-            Triple(0.02f, 0.40f, 0.105f),
-            Triple(-0.18f, 0.45f, 0.125f)
-        )
-        arcs.forEach { (yOff, halfW, thick) ->
-            val y = cy + yOff * r
-            val path = androidx.compose.ui.graphics.Path().apply {
-                moveTo(cx - halfW * r, y + 0.10f * r)
-                quadraticBezierTo(
-                    cx, y - 0.34f * r,
-                    cx + halfW * r, y + 0.10f * r
-                )
-            }
-            drawPath(
-                path,
-                color = Color(0xFF191414),
-                style = androidx.compose.ui.graphics.drawscope.Stroke(
-                    width = thick * r,
-                    cap = StrokeCap.Round
-                )
-            )
-        }
-    }
+    // Logo Spotify officiel (vector drawable : disque noir + glyphe vert #1DB954).
+    Image(
+        painter = painterResource(R.drawable.ic_spotify_official),
+        contentDescription = "Spotify",
+        modifier = modifier
+    )
 }
 
 @Composable
