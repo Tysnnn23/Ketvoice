@@ -46,6 +46,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
@@ -134,14 +135,20 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
                 LazyColumn(state = list, modifier = Modifier.weight(1f).fillMaxWidth()
                     // Fondu haut/bas : les lignes s'évanouissent dans le fond au lieu
                     // d'être coupées net par les bords de l'écran.
+                    //
+                    // Le masque DstIn exige un calque offscreen : sans
+                    // CompositingStrategy.Offscreen, le GPU dessine le pinceau noir
+                    // par-dessus le contenu au lieu de ne transmettre que son canal
+                    // alpha, et une frange sombre apparaît le long des bords.
+                    .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
                     .drawWithContent {
                         drawContent()
                         if (!reduced) {
                             drawRect(
                                 brush = Brush.verticalGradient(
                                     0f to Color.Transparent,
-                                    .11f to Color.Black,
-                                    .80f to Color.Black,
+                                    .09f to Color.Black,
+                                    .84f to Color.Black,
                                     1f to Color.Transparent
                                 ),
                                 blendMode = BlendMode.DstIn

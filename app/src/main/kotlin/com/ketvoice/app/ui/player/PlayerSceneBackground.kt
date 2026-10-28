@@ -22,10 +22,21 @@ internal fun PlayerSceneBackground(track: Track, canvas: String?, playing: Boole
         // Page paroles : ni Canvas video, ni pochette floutee derriere le texte.
         // Un visage flou a 90 dp derriere des lignes qui defilent est illisible
         // et distrait ; on garde seulement la couleur de l'album, assombrie.
+        //
+        // Pas de bandes noires en haut/bas : le degrade precedent montait a 82 %
+        // puis 92 % de noir, ce qui creait une bordure sombre visible autour du
+        // texte. On reste sur une teinte homogene, juste assez dense pour que le
+        // blanc des paroles garde son contraste, avec un fondu lateral doux.
         Box(Modifier.fillMaxSize().background(ambience.color))
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(
-            Color.Black.copy(alpha = .82f), ambience.color.copy(alpha = .34f), Color.Black.copy(alpha = .92f)
+            Color.Black.copy(alpha = .40f),
+            Color.Black.copy(alpha = .22f),
+            Color.Black.copy(alpha = .46f)
         ))))
+        Box(Modifier.fillMaxSize().background(Brush.radialGradient(
+            colors = listOf(Color.Transparent, Color.Black.copy(alpha = .30f)),
+            radius = 1400f
+        )))
     } else if (panoramicCanvasActive(canvas)) {
         ArtworkCanvas(track, canvas, playing, Modifier.fillMaxSize())
         Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .72f)))

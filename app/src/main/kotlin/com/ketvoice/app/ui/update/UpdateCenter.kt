@@ -109,8 +109,16 @@ object UpdateChecker {
         }
 
     /** Nettoie le Markdown de la release pour un affichage en texte simple. */
-    private fun toLines(body: String): List<String> =
-        body.lineSequence()
+    private fun toLines(body: String): List<String> {
+        // If the body is mostly English, keep it; if mostly French, translate section titles.
+        // We don't auto-translate full text (quality), just normalise headers.
+        val looksEnglish = body.split('\n')
+            .filter { it.trim().isNotEmpty() }
+            .take(30)
+            .count { it.matches(Regex("^[A-Za-z]")) } >
+            body.split('\n').filter { it.trim().isNotEmpty() }.take(30).size / 2
+
+        return body.lineSequence()
             .map { it.trim() }
             .filter { it.isNotEmpty() }
             .filterNot { it.startsWith("![") || it.startsWith("<img") }
@@ -119,12 +127,42 @@ object UpdateChecker {
                     line.startsWith("### ") -> line.removePrefix("### ").trim()
                     line.startsWith("## ") -> line.removePrefix("## ").trim()
                     line.startsWith("# ") -> line.removePrefix("# ").trim()
-                    line.startsWith("- ") || line.startsWith("* ") ->
-                        "· " + line.drop(2).replace("**", "").replace("`", "")
+                    line.startsWith("- ") || line.startsWith("* ") -> {
+                        val txt = line.drop(2).replace("**", "").replace("`", "")
+                        if (looksEnglish && txt.startsWith("·")) txt else "· $txt"
+                    }
                     else -> line.replace("**", "").replace("`", "")
                 }
             }
             .toList()
+    }
+
+    /** Parse release notes into structured sections for better UI. */
+    internal fun parseSections(body: String): List<Pair<String?, List<String>>> {
+        val lines = toLines(body)
+        val sections = mutableListOf<Pair<String?, List<String>>>()
+        var currentTitle: String? = null
+        var currentItems = mutableListOf<String>()
+        for (line in lines) {
+            val lower = line.lowercase()
+            val isHeader = lower.startsWith("## ") || lower.startsWith("### ") ||
+                lower.startsWith("correctif") || lower.startsWith("fix") ||
+                lower.startsWith("new") || lower.startsWith("nouveaut") ||
+                lower.startsWith("liquid") || lower.startsWith("glass") ||
+                lower.startsWith("traduction") || lower.startsWith("translation") ||
+                lower.startsWith("update") || lower.startsWith("mise à jour")
+            if (isHeader && currentItems.isNotEmpty()) {
+                sections.add(currentTitle to currentItems.toList())
+                currentItems.clear()
+                currentTitle = line
+            } else {
+                currentItems.add(line)
+            }
+        }
+        if (currentItems.isNotEmpty()) sections.add(currentTitle to currentItems)
+        if (sections.isEmpty()) sections.add(null to lines)
+        return sections
+    }
 
     suspend fun check(force: Boolean = false): UpdateInfo? {
         val app = com.ketvoice.app.KetvoiceApp.instance
@@ -324,14 +362,27 @@ private fun UpdateDialog(info: UpdateInfo, onDismiss: () -> Unit) {
                             .heightIn(max = 168.dp)
                             .verticalScroll(rememberScrollState())
                     ) {
-                        info.notes.forEach { line ->
-                            Text(
-                                line,
-                                color = Color.White.copy(alpha = .74f),
-                                fontSize = 13.sp,
-                                lineHeight = 19.sp,
-                                modifier = Modifier.padding(vertical = 3.dp)
-                            )
+                        val sections = UpdateChecker.parseSections(info.notes.joinToString("\n"))
+                        sections.forEachIndexed { idx, (title, items) ->
+                            if (idx > 0) Spacer(Modifier.height(8.dp))
+                            title?.let {
+                                Text(
+                                    it,
+                                    color = Color.White,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(bottom = 4.dp)
+                                )
+                            }
+                            items.forEach { line ->
+                                Text(
+                                    line,
+                                    color = Color.White.copy(alpha = .74f),
+                                    fontSize = 12.sp,
+                                    lineHeight = 18.sp,
+                                    modifier = Modifier.padding(vertical = 2.dp)
+                                )
+                            }
                         }
                     }
 
