@@ -7,6 +7,26 @@
 
 ---
 
+# Ketvoice 3.5.1
+
+![Ketvoice 3.5.1](https://github.com/Tysnnn23/Ketvoice/releases/download/v3.5.1/ketvoice-banner.png)
+
+**versionCode 43** — installs over 3.5.0 and every earlier build (same signing certificate).
+
+## Lyrics
+
+- Reworked the three-dot intro: each dot pops in with a springy bounce and a single ripple when it lights, lit dots get a soft halo, and the group drifts gently. Drift, ripple and halo are turned off with "reduce motion".
+- Dots light up progressively during the wait (one at 25%, two at 50%, all three at 75%), so all three are lit before the first line starts.
+
+## Liquid Glass
+
+- Glass surfaces now have a thin dark edge under the light rim, for more definition and depth.
+- Brighter specular highlights and a stronger inner sheen.
+- Dark-mode glass is lighter: the tint is a dark grey instead of pure black.
+- These changes follow the published descriptions of the iOS 27 look (defined edges, lighter dark glass, brighter highlights). It is an approximation built with Compose, not Apple's renderer.
+
+---
+
 # Ketvoice 3.5.0
 
 ![Ketvoice 3.5.0](https://github.com/Tysnnn23/Ketvoice/releases/download/v3.5.0/ketvoice-banner.png)

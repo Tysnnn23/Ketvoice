@@ -16,6 +16,9 @@ class LyricsMotionTest {
         assertEquals(2,LyricsMotion.litDots(6000,9000))
         assertEquals(0,LyricsMotion.litDots(-100,9000))
         assertEquals(3,LyricsMotion.litDots(999999,9000))
+        assertEquals(3,LyricsMotion.litDots(8999,9000))
+        assertEquals(2,LyricsMotion.litDots(4500,9000))
+        assertEquals(1,LyricsMotion.litDots(2250,9000))
     }
     @Test fun introItemDoesNotShiftTheActiveLyricToTheWrongLine() {
         assertEquals(0,LyricsMotion.targetIndex(-1,true))

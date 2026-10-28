@@ -102,8 +102,8 @@ data class GlassParams(
             tintAlpha = if (dark) 0.17f else 0.12f,
             saturation = if (dark) 1.10f else 1.26f,
             exposure = if (dark) 0.02f else 0.06f,
-            highlightAlpha = if (dark) 0.32f else 0.58f,
-            highlightIntensity = if (dark) 0.30f else 0.46f,
+            highlightAlpha = if (dark) 0.38f else 0.64f,
+            highlightIntensity = if (dark) 0.34f else 0.50f,
             dark = dark
         )
 
@@ -114,8 +114,8 @@ data class GlassParams(
             tintAlpha = if (dark) 0.19f else 0.13f,
             saturation = if (dark) 1.12f else 1.30f,
             exposure = if (dark) 0.02f else 0.06f,
-            highlightAlpha = if (dark) 0.34f else 0.64f,
-            highlightIntensity = if (dark) 0.32f else 0.50f,
+            highlightAlpha = if (dark) 0.40f else 0.70f,
+            highlightIntensity = if (dark) 0.36f else 0.54f,
             dark = dark
         )
 
@@ -126,19 +126,20 @@ data class GlassParams(
             tintAlpha = if (dark) 0.24f else 0.17f,
             saturation = if (dark) 1.06f else 1.20f,
             exposure = if (dark) 0.01f else 0.05f,
-            highlightAlpha = if (dark) 0.28f else 0.52f,
-            highlightIntensity = if (dark) 0.26f else 0.42f,
+            highlightAlpha = if (dark) 0.34f else 0.58f,
+            highlightIntensity = if (dark) 0.30f else 0.46f,
             dark = dark
         )
     }
 }
 
-/** Teinte de surface : dégradé vertical plutôt qu'un aplat, pour éviter l'effet "plastique". */
+/** Teinte de surface : dégradé diagonal à quatre arrêts plutôt qu'un aplat, pour éviter l'effet "plastique". */
 private fun surfaceBrush(p: GlassParams): Brush {
-    // iOS 27 : la teinte n'est pas un voile vertical uniforme. La lumière entre
-    // par le haut-gauche, traverse l'épaisseur et ressort faiblement en bas.
-    // D'où une diagonale à quatre arrêts plutôt qu'un dégradé de haut en bas.
-    val base = if (p.dark) Color.Black else Color.White
+    // Choix de design propre à Ketvoice : la lumière entre par le haut-gauche et
+    // ressort faiblement en bas, d'où une diagonale. En mode sombre, la base est
+    // un gris foncé et non du noir pur : le verre sombre d'iOS 27 est décrit comme
+    // plus clair que celui d'iOS 26.
+    val base = if (p.dark) Color(0xFF2A2A30) else Color.White
     val hot = base.copy(alpha = (p.tintAlpha + if (p.dark) 0.10f else 0.15f).coerceAtMost(0.92f))
     val upper = base.copy(alpha = (p.tintAlpha * 0.55f).coerceAtMost(0.92f))
     val lower = base.copy(alpha = (p.tintAlpha * 0.28f).coerceAtMost(0.92f))
@@ -152,7 +153,7 @@ private fun rimBrush(p: GlassParams): Brush {
     // en haut-gauche, retombe au milieu, puis se rallume en bas-droite là où la
     // lumière ressort. Quatre arrêts, pas trois.
     val peak = Color.White.copy(
-        alpha = (if (p.dark) p.highlightAlpha * 0.72f else p.highlightAlpha).coerceIn(0f, 1f)
+        alpha = (if (p.dark) p.highlightAlpha * 0.85f else p.highlightAlpha).coerceIn(0f, 1f)
     )
     val shoulder = Color.White.copy(alpha = peak.alpha * 0.42f)
     val trough = Color.White.copy(alpha = peak.alpha * 0.07f)
@@ -166,7 +167,7 @@ private fun rimBrush(p: GlassParams): Brush {
  * laver le contenu posé dessus.
  */
 private fun sheenBrush(p: GlassParams): Brush {
-    val strength = (if (p.dark) 0.09f else 0.15f) * (0.5f + p.highlightIntensity * 0.7f)
+    val strength = (if (p.dark) 0.12f else 0.18f) * (0.5f + p.highlightIntensity * 0.7f)
     return Brush.verticalGradient(
         0.00f to Color.White.copy(alpha = strength.coerceIn(0f, 0.34f)),
         0.14f to Color.White.copy(alpha = (strength * 0.36f).coerceIn(0f, 0.18f)),
@@ -191,7 +192,13 @@ fun GlassPanel(
     val surface = remember(params) { surfaceBrush(params) }
     val rim = remember(params) { rimBrush(params) }
     val sheen = remember(params) { sheenBrush(params) }
-    val edge = if (enabled) Modifier.border(.75.dp, rim, shape) else Modifier
+    // Bord défini : un fin trait sombre sous le liseré lumineux. iOS 27 ajoute un bord
+    // assombri autour du verre pour la séparation et la profondeur ; ceci en est une
+    // approximation (trait de 1.25 dp, dont ~0.5 dp reste visible sous le liseré de 0.75 dp).
+    val darkEdge = Color.Black.copy(alpha = if (params.dark) 0.34f else 0.16f)
+    val edge = if (enabled) {
+        Modifier.border(1.25.dp, darkEdge, shape).border(.75.dp, rim, shape)
+    } else Modifier
 
     if (dynamic && backdrop != null) {
         Box(
