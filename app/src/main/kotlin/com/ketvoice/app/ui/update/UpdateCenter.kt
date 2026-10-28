@@ -82,6 +82,13 @@ object UpdateChecker {
     private const val PREFS = "ketvoice_updates"
     private const val KEY_DISMISSED = "dismissed_tag"
     private const val KEY_LAST_CHECK = "last_check"
+    private const val KEY_SKIP = "skipped_tag"
+    internal const val CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000L
+
+    /** Dernier auto-check persisté (0 = jamais). */
+    fun lastCheckMs(): Long = com.ketvoice.app.KetvoiceApp.instance
+        .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        .getLong(KEY_LAST_CHECK, 0L)
 
     private fun parts(version: String): List<Int> =
         version.trim().removePrefix("v").removePrefix("V")
@@ -179,8 +186,9 @@ object UpdateChecker {
                 prefs.edit().putLong(KEY_LAST_CHECK, System.currentTimeMillis()).apply()
                 val json = JSONObject(raw)
                 val tag = json.optString("tag_name")
-                if (tag.isBlank() || !isNewer(tag, BuildConfig.VERSION_NAME)) return@runCatching null
+                               if (tag.isBlank() || !isNewer(tag, BuildConfig.VERSION_NAME)) return@runCatching null
                 if (tag == prefs.getString(KEY_DISMISSED, null)) return@runCatching null
+                if (tag == prefs.getString(KEY_SKIP, null)) return@runCatching null
 
                 var apk: String? = null
                 var size = 0L
@@ -225,6 +233,19 @@ object UpdateChecker {
         com.ketvoice.app.KetvoiceApp.instance
             .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .edit().putString(KEY_DISMISSED, tag).apply()
+    }
+
+    /** "Passer cette version" : plus de prompt auto pour ce tag (installable manuellement). */
+    fun skip(tag: String) {
+        com.ketvoice.app.KetvoiceApp.instance
+            .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit().putString(KEY_SKIP, tag).apply()
+    }
+
+    fun isSkipped(tag: String): Boolean {
+        return tag == com.ketvoice.app.KetvoiceApp.instance
+            .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getString(KEY_SKIP, null)
     }
 
     /** Télécharge l'APK dans le cache privé et renvoie le fichier prêt à installer. */
@@ -283,22 +304,21 @@ object UpdateChecker {
 
 @Composable
 fun UpdateHost() {
-    val context = LocalContext.current
     var info by remember { mutableStateOf<UpdateInfo?>(null) }
-    var checking by remember { mutableStateOf(false) }
 
+    // Auto-check au lancement, au plus toutes les 6 h. "Passer" est mémorisé.
     LaunchedEffect(Unit) {
-        checking = true
-        info = UpdateChecker.check()
-        checking = false
+        if (System.currentTimeMillis() - UpdateChecker.lastCheckMs() >= UpdateChecker.CHECK_INTERVAL_MS) {
+            info = UpdateChecker.check()
+        }
     }
 
     val update = info ?: return
     UpdateDialog(update, onDismiss = {
-        UpdateChecker.dismiss(update.tag)
+        // Fermer la boîte n'ignore que la session courante (relance auto à la
+        // prochaine session) ; "Passer" est le choix permanent.
         info = null
     })
-    if (checking) Box(Modifier.size(0.dp))
 }
 
 @Composable
@@ -416,6 +436,20 @@ private fun UpdateDialog(info: UpdateInfo, onDismiss: () -> Unit) {
                         TextButton(onClick = onDismiss, enabled = !downloading) {
                             Text(
                                 AppText.t("Plus tard"),
+                                color = Color.White.copy(alpha = if (downloading) .3f else .62f),
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                        TextButton(
+                            onClick = {
+                                UpdateChecker.skip(info.tag)
+                                onDismiss()
+                            },
+                            enabled = !downloading
+                        ) {
+                            Text(
+                                AppText.t("Passer cette version"),
                                 color = Color.White.copy(alpha = if (downloading) .3f else .62f),
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.SemiBold
