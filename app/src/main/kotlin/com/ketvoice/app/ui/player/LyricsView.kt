@@ -349,26 +349,108 @@ internal fun segmentProgress(now: Long, start: Long, end: Long): Float = when {
 internal fun IntroDots(firstLineMs: Long) {
     val position by Player.positionMs.collectAsState()
     val lit = LyricsMotion.litDots(position, firstLineMs)
-    val pulse = rememberInfiniteTransition(label = "intro-pulse")
-    Row(Modifier.height(32.dp), horizontalArrangement = Arrangement.spacedBy(9.dp), verticalAlignment = Alignment.CenterVertically) {
+    val progress = LyricsMotion.introProgress(position, firstLineMs)
+    
+    // Infinite drift animation for gentle vertical floating motion.
+    val drift = rememberInfiniteTransition(label = "intro-drift")
+    val driftPhase = drift.animateFloat(
+        initialValue = 0f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            tween(2400, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+            RepeatMode.Reverse
+        ),
+        label = "intro-drift-phase"
+    )
+    
+    Row(
+        Modifier
+            .height(40.dp)
+            .graphicsLayer {
+                // Fade in + slide down when intro first appears.
+                alpha = progress.coerceAtMost(1f)
+                translationY = -12f * (1f - progress.coerceAtMost(1f))
+            },
+        horizontalArrangement = Arrangement.spacedBy(13.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         repeat(3) { index ->
-            // Each dot breathes on its own phase; lit dots pop brighter and slightly larger.
-            val phase = pulse.animateFloat(
-                initialValue = 0f, targetValue = 1f,
-                animationSpec = infiniteRepeatable(tween(760, delayMillis = index * 130, easing = androidx.compose.animation.core.FastOutSlowInEasing),
-                    RepeatMode.Reverse), label = "intro-breath-$index")
-            val glow by animateFloatAsState(if (index < lit) 1f else .3f,
-                tween(Motion.duration(220)), label = "intro-light-$index")
-            val pop by animateFloatAsState(if (index < lit) 1.22f else 1f,
-                spring(dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
-                    stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow),
-                label = "intro-pop-$index")
-            val scale = if (Motion.reduced) 1f else pop * (1f + phase.value * .08f)
-            Canvas(Modifier.size(12.dp).graphicsLayer { scaleX = scale; scaleY = scale }) {
-                drawCircle(Color.White.copy(alpha = glow))
-                if (glow > .5f && !Motion.reduced) {
-                    drawCircle(Color.White.copy(alpha = (glow - .5f) * .28f), radius = size.minDimension * .9f)
+            // Each dot appears with elastic spring as its threshold crosses.
+            val visible = index < lit
+            val wasVisible = remember { androidx.compose.runtime.mutableStateOf(false) }
+            LaunchedEffect(visible) { if (visible) wasVisible.value = true }
+            
+            // Emergence animation: scale from 0 to 1 with elastic spring when first lit.
+            val emerge = remember { Animatable(0f) }
+            LaunchedEffect(wasVisible.value) {
+                if (wasVisible.value) {
+                    emerge.animateTo(
+                        targetValue = 1f,
+                        animationSpec = spring(
+                            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioLowBouncy,
+                            stiffness = androidx.compose.animation.core.Spring.StiffnessLow
+                        )
+                    )
                 }
+            }
+            
+            // Pulse animation: when dot becomes lit, send a single wave ripple.
+            val pulse = remember { Animatable(0f) }
+            LaunchedEffect(visible) {
+                if (visible) {
+                    pulse.snapTo(0f)
+                    pulse.animateTo(
+                        targetValue = 1f,
+                        animationSpec = tween(600, easing = androidx.compose.animation.core.FastOutSlowInEasing)
+                    )
+                }
+            }
+            
+            // Brightness: lit = full white, unlit = dim.
+            val alpha by animateFloatAsState(
+                targetValue = if (visible) 1f else 0.25f,
+                animationSpec = tween(Motion.duration(280)),
+                label = "intro-alpha-$index"
+            )
+            
+            // Gentle vertical drift for spatial depth, each dot offset by phase.
+            val driftOffset = if (Motion.reduced) 0f else {
+                val phaseShift = (index / 3f)
+                kotlin.math.sin((driftPhase.value + phaseShift) * kotlin.math.PI.toFloat()) * 3f
+            }
+            
+            val scale = if (Motion.reduced) emerge.value else {
+                // Combine: emergence spring + pulse ripple (peak at 1.15x).
+                val pulseScale = 1f + pulse.value * 0.15f * (1f - pulse.value)
+                emerge.value * pulseScale
+            }
+            
+            Canvas(
+                Modifier
+                    .size(13.dp)
+                    .graphicsLayer {
+                        scaleX = scale
+                        scaleY = scale
+                        translationY = driftOffset
+                    }
+            ) {
+                val radius = size.minDimension / 2f
+                
+                // Draw diffuse halo if lit (progressive fade, larger radius).
+                if (visible && alpha > 0.6f && !Motion.reduced) {
+                    val haloAlpha = (alpha - 0.6f) / 0.4f * 0.22f
+                    drawCircle(
+                        color = Color.White.copy(alpha = haloAlpha),
+                        radius = radius * 2.2f,
+                        center = center
+                    )
+                }
+                
+                // Main dot.
+                drawCircle(
+                    color = Color.White.copy(alpha = alpha),
+                    radius = radius,
+                    center = center
+                )
             }
         }
     }
