@@ -20,6 +20,8 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.geometry.Offset
+import kotlin.math.min
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import com.ketvoice.app.ui.common.Icon
@@ -557,29 +559,37 @@ private fun SoundWaveIcon(modifier: Modifier = Modifier, color: Color = Color.Wh
 
 @Composable
 private fun SpotifyIcon(modifier: Modifier = Modifier) {
+    // Official-style Spotify mark: green disc (#1DB954) + three black arcs bowing upward,
+    // bottom arc the longest & thickest, arcs shorten toward the top.
     Canvas(modifier = modifier) {
-        val r = size.minDimension / 2f
-        val center = androidx.compose.ui.geometry.Offset(size.width / 2f, size.height / 2f)
-        drawCircle(color = Color.Black, radius = r, center = center)
-        val stroke = r * 0.12f
-        val arcW = r * 1.15f
-        val arcH = r * 0.85f
-        for (i in 0..2) {
-            val yOff = -r * 0.15f + i * (r * 0.28f)
-            val rect = androidx.compose.ui.geometry.Rect(
-                center.x - arcW / 2f,
-                center.y + yOff - arcH / 2f,
-                center.x + arcW / 2f,
-                center.y + yOff + arcH / 2f
-            )
-            drawArc(
-                color = Color.White,
-                startAngle = 205f,
-                sweepAngle = 130f,
-                useCenter = false,
-                topLeft = rect.topLeft,
-                size = rect.size,
-                style = Stroke(width = stroke * (1f - i * 0.1f), cap = StrokeCap.Round)
+        val w = size.width
+        val h = size.height
+        val s = min(w, h)
+        val cx = w / 2f
+        val cy = h / 2f
+        val r = s / 2f
+        drawCircle(color = Color(0xFF1DB954), radius = r, center = Offset(cx, cy))
+        val arcs = listOf(
+            Triple(0.20f, 0.34f, 0.085f),
+            Triple(0.02f, 0.40f, 0.105f),
+            Triple(-0.18f, 0.45f, 0.125f)
+        )
+        arcs.forEach { (yOff, halfW, thick) ->
+            val y = cy + yOff * r
+            val path = androidx.compose.ui.graphics.Path().apply {
+                moveTo(cx - halfW * r, y + 0.10f * r)
+                quadraticBezierTo(
+                    cx, y - 0.34f * r,
+                    cx + halfW * r, y + 0.10f * r
+                )
+            }
+            drawPath(
+                path,
+                color = Color(0xFF191414),
+                style = androidx.compose.ui.graphics.drawscope.Stroke(
+                    width = thick * r,
+                    cap = StrokeCap.Round
+                )
             )
         }
     }
