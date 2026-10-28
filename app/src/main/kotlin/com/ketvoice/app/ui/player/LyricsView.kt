@@ -195,7 +195,7 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
                                 else { delay(index.coerceAtMost(5) * 45L); entry.animateTo(1f, tween(Motion.FADE)) }
                             }
                             val lineColor by animateColorAsState(
-                                targetValue = if (current || !lyrics.isTimed) Color.White else Color.White.copy(alpha = .62f),
+                                targetValue = if (current || !lyrics.isTimed) Color.White else Color.White.copy(alpha = .54f),
                                 animationSpec = tween(Motion.duration()),
                                 label = "lyricColor"
                             )
@@ -229,8 +229,11 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
                                             modifier = Modifier.fillMaxWidth().blur(10.dp))
                                     }
                                     Text(line.text, localize = false, color = lineColor,
-                                        fontSize = (33 * fontScale).sp, lineHeight = (41 * fontScale).sp, letterSpacing = (-.3).sp,
-                                        fontWeight = FontWeight.Black, modifier = Modifier.fillMaxWidth().blur(lineBlur))
+                                        fontSize = ((if (current || !lyrics.isTimed) 33f else 28.5f) * fontScale).sp,
+                                        lineHeight = ((if (current || !lyrics.isTimed) 41f else 36f) * fontScale).sp,
+                                        letterSpacing = (-.3).sp,
+                                        fontWeight = if (current || !lyrics.isTimed) FontWeight.Black else FontWeight.SemiBold,
+                                        modifier = Modifier.fillMaxWidth().blur(lineBlur))
                                 }
                                 AnimatedVisibility(
                                     visible = translationEnabled && translated[index] != null,

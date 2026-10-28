@@ -864,11 +864,19 @@ private fun ColumnScope.SRow(
         Modifier
             .fillMaxWidth()
             .clickable(interactionSource = noRip, indication = null) { onClick?.invoke() }
-            .padding(horizontal = 16.dp, vertical = 11.dp),
+            .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(icon, null, tint = th.onBackground, modifier = Modifier.size(24.dp))
-        Spacer(Modifier.width(14.dp))
+        Box(
+            Modifier
+                .size(32.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(th.accent.copy(alpha = 0.15f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(icon, null, tint = th.accent, modifier = Modifier.size(19.dp))
+        }
+        Spacer(Modifier.width(13.dp))
         Column(Modifier.weight(1f)) {
             Text(title, color = th.onBackground, fontSize = 16.sp)
             if (sub.isNotEmpty()) {
@@ -914,8 +922,7 @@ private fun IosSwitch(checked: Boolean, onChecked: (Boolean) -> Unit) {
                 .offset(x = knobAnim)
                 .size(26.dp)
                 .clip(CircleShape)
-                .background(if (checked) Palette.White else Palette.White)
-                .background(if (!checked) Color.White.copy(alpha = 0.95f) else Color.Transparent)
+                .background(if (checked) Palette.White else Color.White.copy(alpha = 0.95f))
         )
     }
 }
@@ -932,11 +939,19 @@ private fun ColumnScope.SToggle(
     Row(
         Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 11.dp),
+            .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(icon, null, tint = th.onBackground, modifier = Modifier.size(24.dp))
-        Spacer(Modifier.width(14.dp))
+        Box(
+            Modifier
+                .size(32.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(th.accent.copy(alpha = 0.15f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(icon, null, tint = th.accent, modifier = Modifier.size(19.dp))
+        }
+        Spacer(Modifier.width(13.dp))
         Column(Modifier.weight(1f)) {
             Text(title, color = th.onBackground, fontSize = 16.sp)
             Text(sub, color = th.secondary, fontSize = 12.5.sp, lineHeight = 16.sp)
