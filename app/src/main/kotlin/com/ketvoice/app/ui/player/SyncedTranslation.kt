@@ -59,7 +59,7 @@ internal fun SyncedTranslation(
     // quand la ligne n'est pas active, elle retombe sur la valeur du flow.
     var now by remember(line) { mutableLongStateOf(positionMs) }
     val playing by remember { Player.state.map { it.isPlaying }.distinctUntilChanged() }.collectAsState(false)
-    LaunchedEffect(line, playing) {
+    LaunchedEffect(line, playing, active) {
         now = Player.currentPositionMs()
         if (playing && active) {
             while (isActive) {

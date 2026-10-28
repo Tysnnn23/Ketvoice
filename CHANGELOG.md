@@ -7,6 +7,21 @@
 
 ---
 
+# Ketvoice 3.5.2
+
+![Ketvoice 3.5.2](https://github.com/Tysnnn23/Ketvoice/releases/download/v3.5.2/ketvoice-banner.png)
+
+**versionCode 44** — installs over 3.5.1 and every earlier build (same signing certificate).
+
+## Lyrics
+
+- **Plain intro dots.** The three-dot intro is now three solid white dots. No halo, no ripple, no drift, no bounce. Each dot simply goes from dim to fully opaque as the intro runs out.
+- **Blurred cover behind the lyrics.** The lyrics page no longer uses a flat colour. It shows the same blurred album cover as the player.
+- **Translation keeps following.** The translated line used to track the song for one line and then stop. Its clock now restarts every time a line becomes the active one.
+- **Translation follows the current line.** The translation slides down from the lyric line when it becomes active and slides back up and fades out when the song moves on. Unsynced lyrics keep showing every translation.
+
+---
+
 # Ketvoice 3.5.1
 
 ![Ketvoice 3.5.1](https://github.com/Tysnnn23/Ketvoice/releases/download/v3.5.1/ketvoice-banner.png)
