@@ -322,15 +322,15 @@ GlassPanel(
         .align(Alignment.CenterStart)
         .graphicsLayer { scaleX = bulge * stretch; scaleY = bulge / (1f + (stretch - 1f) * 0.5f) },
     shape = pillShape,
-    params = GlassParams.pill(blur = 6f, dark = th.isDark).copy(
-        // Lentille active : quasi incolore. Toute teinte > ~0.08 la transforme
-        // en capsule blanche opaque au lieu d'un verre optique.
-        refractionPx = 30f,
-        tintAlpha = if (th.isDark) 0.055f else 0.04f,
-        saturation = if (th.isDark) 1.20f else 1.45f,
-        exposure = 0.025f,
-        highlightAlpha = if (th.isDark) 0.24f else 0.32f,
-        highlightIntensity = if (th.isDark) 0.22f else 0.26f
+    params = GlassParams.pill(blur = 3f, dark = th.isDark).copy(
+        // Lentille active : verre optique qui se lit sur le fond, sans devenir
+        // une capsule blanche. Un vrai verre laisse passer ce qu'il traverse.
+        refractionPx = 34f,
+        tintAlpha = if (th.isDark) 0.115f else 0.085f,
+        saturation = if (th.isDark) 1.26f else 1.52f,
+        exposure = 0.03f,
+        highlightAlpha = if (th.isDark) 0.40f else 0.52f,
+        highlightIntensity = if (th.isDark) 0.30f else 0.36f
     ),
     enabled = AppSettings.liquidGlass.value
 ) {}

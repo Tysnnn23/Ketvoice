@@ -71,7 +71,7 @@ data class GlassParams(
     /** Hauteur de réfraction de la lentille (bord du verre), en px. */
     val refractionPx: Float = 18f,
     /** Opacité de la teinte de surface (le "lait" du verre). */
-    val tintAlpha: Float = 0.06f,
+    val tintAlpha: Float = 0.10f,
     /** Saturation du fond à travers le verre. > 1 = couleurs plus riches. */
     val saturation: Float = 1.22f,
     /** Luminosité additionnelle du fond (colorControls). */
@@ -99,15 +99,17 @@ data class GlassParams(
             cornerRadiusPx = 9999f,
             blurPx = blur,
             refractionPx = 22f,
-            // Verre optique : la teinte "lait" doit rester quasi imperceptible.
-            // Au-delà de ~0.10 le panneau redevient du plastique blanc opaque.
-            tintAlpha = if (dark) 0.055f else 0.045f,
-            saturation = if (dark) 1.18f else 1.42f,
+            // Équilibre du matériau AGSL : assez de "lait" pour que le verre
+            // existe visuellement, assez peu pour que le fond reste lisible à
+            // travers. Sous ~0.06 le verre disparaît ; au-dessus de ~0.16 il
+            // redevient du plastique blanc opaque.
+            tintAlpha = if (dark) 0.105f else 0.085f,
+            saturation = if (dark) 1.22f else 1.38f,
             brightness = 1.0f,
             contrast = 1.0f,
-            exposure = if (dark) 0.015f else 0.03f,
-            highlightAlpha = if (dark) 0.22f else 0.34f,
-            highlightIntensity = if (dark) 0.20f else 0.28f,
+            exposure = if (dark) 0.02f else 0.035f,
+            highlightAlpha = if (dark) 0.34f else 0.50f,
+            highlightIntensity = if (dark) 0.28f else 0.38f,
             dark = dark
         )
 
@@ -115,11 +117,11 @@ data class GlassParams(
             cornerRadiusPx = 9999f,
             blurPx = blur,
             refractionPx = 26f,
-            tintAlpha = if (dark) 0.06f else 0.05f,
-            saturation = if (dark) 1.20f else 1.46f,
-            exposure = if (dark) 0.015f else 0.03f,
-            highlightAlpha = if (dark) 0.24f else 0.38f,
-            highlightIntensity = if (dark) 0.22f else 0.30f,
+            tintAlpha = if (dark) 0.11f else 0.09f,
+            saturation = if (dark) 1.24f else 1.42f,
+            exposure = if (dark) 0.02f else 0.035f,
+            highlightAlpha = if (dark) 0.36f else 0.54f,
+            highlightIntensity = if (dark) 0.30f else 0.40f,
             dark = dark
         )
 
@@ -128,11 +130,11 @@ data class GlassParams(
             blurPx = 30f,
             refractionPx = 24f,
             // Le sheet doit laisser deviner le contenu : fond gris trop opaque = profondeur perdue.
-            tintAlpha = if (dark) 0.10f else 0.075f,
-            saturation = if (dark) 1.06f else 1.20f,
-            exposure = if (dark) 0.01f else 0.05f,
-            highlightAlpha = if (dark) 0.34f else 0.58f,
-            highlightIntensity = if (dark) 0.30f else 0.46f,
+            tintAlpha = if (dark) 0.13f else 0.10f,
+            saturation = if (dark) 1.10f else 1.22f,
+            exposure = if (dark) 0.015f else 0.05f,
+            highlightAlpha = if (dark) 0.34f else 0.56f,
+            highlightIntensity = if (dark) 0.30f else 0.44f,
             dark = dark
         )
     }
@@ -201,15 +203,18 @@ fun GlassPanel(
     val dynamic = backdrop != null && enabled && !captured &&
         !AppSettings.reduceDynamicBlur.value &&
         !AppSettings.highPerformanceMode.value
+    // Vrai verre AGSL (API 33+) : le matériau est calculé par un RuntimeShader
+    // (réfraction + dispersion + teinte + liseré). Les pinceaux de surface et le
+    // Highlight de la lib ne servent plus que de repli pré-33.
+    val agsl = dynamic && GlassShader.isSupported()
 
     val surface = remember(params) { surfaceBrush(params) }
     val rim = remember(params) { rimBrush(params) }
     val sheen = remember(params) { sheenBrush(params) }
-    // Bord défini : un fin trait sombre sous le liseré lumineux. iOS 27 ajoute un bord
-    // assombri autour du verre pour la séparation et la profondeur ; ceci en est une
-    // approximation (trait de 1.25 dp, dont ~0.5 dp reste visible sous le liseré de 0.75 dp).
-    val darkEdge = Color.Black.copy(alpha = if (params.dark) 0.34f else 0.16f)
-    val edge = if (enabled) {
+    val darkEdge = Color.Black.copy(alpha = if (params.dark) 0.30f else 0.14f)
+    // En AGSL, le shader dessine le liseré et le bord sombre : plus de bordure
+    // Compose par-dessus (sinon double contour artificiel).
+    val edge = if (enabled && !agsl) {
         Modifier.border(1.25.dp, darkEdge, shape).border(.75.dp, rim, shape)
     } else Modifier
 
@@ -221,21 +226,29 @@ fun GlassPanel(
                 effects = {
                     vibrancy()
                     if (params.blurPx > 0f) blur(params.blurPx)
-                    if (params.saturation != 1f || params.brightness != 1f || params.contrast != 1f) {
-                        colorControls(params.saturation, params.brightness, params.contrast)
-                    }
-                    if (params.exposure != 0f) exposureAdjustment(params.exposure)
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && params.refractionPx > 0f) {
-                        lens(
-                            refractionHeight = params.refractionPx.coerceIn(0f, 80f),
-                            refractionAmount = (params.refractionPx * 1.55f).coerceIn(0f, 120f),
-                            depthEffect = true,
-                            chromaticAberration = true
-                        )
+                    if (agsl) {
+                        val bounds = size
+                        val realRadii = glassRoundedShapeRadii(
+                            shape, bounds.width, bounds.height, this, layoutDirection
+                        ) ?: glassCornerRadiiOf(params.cornerRadiusPx)
+                        liquidGlass(params, realRadii)
+                    } else {
+                        if (params.saturation != 1f || params.brightness != 1f || params.contrast != 1f) {
+                            colorControls(params.saturation, params.brightness, params.contrast)
+                        }
+                        if (params.exposure != 0f) exposureAdjustment(params.exposure)
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && params.refractionPx > 0f) {
+                            lens(
+                                refractionHeight = params.refractionPx.coerceIn(0f, 80f),
+                                refractionAmount = (params.refractionPx * 1.55f).coerceIn(0f, 120f),
+                                depthEffect = true,
+                                chromaticAberration = true
+                            )
+                        }
                     }
                 },
                 highlight = {
-                    Highlight(
+                    if (agsl) null else Highlight(
                         0.6.dp,
                         14.dp,
                         params.highlightAlpha,
@@ -247,10 +260,12 @@ fun GlassPanel(
                     )
                 },
                 shadow = { if (params.shadow) Shadow.Default else null },
-                innerShadow = { if (params.innerShadow) InnerShadow.Default else null },
+                innerShadow = { if (params.innerShadow && !agsl) InnerShadow.Default else null },
                 onDrawSurface = {
-                    drawRect(surface)
-                    drawRect(sheen)
+                    if (!agsl) {
+                        drawRect(surface)
+                        drawRect(sheen)
+                    }
                 }
             )
         ) {

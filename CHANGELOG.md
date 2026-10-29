@@ -7,6 +7,25 @@
 
 ---
 
+# Ketvoice 3.6.0
+
+**versionCode 46** — installs over 3.5.3 and every earlier build (same signing certificate).
+
+## Liquid Glass
+
+- **Real optical glass again.** The glass tint was dropping to near zero, which made panels read as empty; the white offsets inside the surface gradient were simultaneously pushing every panel back towards opaque plastic. Both are now balanced: the material keeps a visible milky body while the content behind it stays readable through the refraction.
+- **Thin contours.** The extra border drawn on top of the mini-player is gone — the shader already draws its own rim, so the doubled outline had become a thick white frame. The moving tab lens no longer stacks a second edge either.
+- **No artificial reflections.** The manual specular strip inside the mini-player was removed; the shader's own sheen and rim now carry the highlights alone.
+- **No grey sheet.** Bottom sheets use a lighter tint, so the playlist menu shows depth instead of a flat opaque grey slab.
+
+## Chrome layout
+
+- **Slimmer chrome.** The mini-player is 54 dp tall (was 58 dp) and the navigation capsule is 52/58 dp collapsed/expanded (was 58/64 dp), giving roughly 14 dp back to the content.
+- **Sheets are never covered.** The floating mini-player and navigation now hide whenever a bottom sheet or overlay is open — track menu, add-to-playlist, create-playlist, playlist picker, queue and settings. Their options can no longer be masked by the chrome.
+
+---
+
+
 # Ketvoice 3.5.3
 
 **versionCode 45** — installs over 3.5.2 and every earlier build (same signing certificate).
