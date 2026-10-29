@@ -188,6 +188,7 @@ class PlaybackService : MediaSessionService() {
     override fun onDestroy() {
         SonicMeter.observe(false)
         AudioEqualizer.release()
+        com.ketvoice.app.data.ListeningHistory.flushListenedMs()
         if (engineReady()) engine.release()
         mediaSession?.player?.release()
         mediaSession?.release()

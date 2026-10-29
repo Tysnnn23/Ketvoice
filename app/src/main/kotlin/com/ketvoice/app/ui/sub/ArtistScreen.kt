@@ -103,42 +103,19 @@ fun ArtistScreen() {
             else -> LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 210.dp)) {
                 val data = page!!
                 item {
-                    // Bannière plein écran, qui démarre SOUS la barre de statut
-                    // (immersion réelle) : photo de l'artiste pleine largeur,
-                    // fondu progressif vers le fond de la page.
-                    // La hauteur suit le ratio réel de l'image (borné) : une photo
-                    // portrait n'est plus écrasée dans une bannière fixe de 360 dp.
+                    // Bannière immersive : la photo est affichée ENTIÈRE (fit, pas
+                    // de zoom) sur un prolongement flouté d'elle-même, avec deux
+                    // bandes de blur progressif — haut et bas — d'étendue limitée
+                    // et de fondu lisse (shader AGSL, comme la pochette du lecteur).
+                    // La hauteur suit le ratio réel de l'image (borné large).
                     val heroWidth = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp.dp
-                    val heroHeight = (heroWidth / data.heroAspectRatio.coerceIn(.6f, 2f)).coerceIn(340.dp, 500.dp)
+                    val heroHeight = (heroWidth / data.heroAspectRatio.coerceIn(.5f, 2.6f)).coerceIn(320.dp, 560.dp)
                     Box(Modifier.fillMaxWidth().height(heroHeight)) {
-                        // Fond de repli toujours présent : pas de flash vide pendant le chargement.
-                        Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(theme.card, theme.hairline))))
-                        if (!data.artist.photo.isNullOrBlank()) {
-                            AsyncImage(
-                                model = coil.request.ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
-                                    .data(data.artist.photo)
-                                    .crossfade(380)
-                                    .build(),
-                                contentDescription = data.artist.name,
-                                contentScale = ContentScale.Crop,
-                                // Ancrage en haut : le recadrage garde le visage visible.
-                                alignment = Alignment.TopCenter,
-                                modifier = Modifier.fillMaxSize()
-                            )
-                        }
-                        // Scrim bas : dégradé sombre pour faire ressortir le nom (style ref)
-                        Box(Modifier.fillMaxSize().background(
-                            Brush.verticalGradient(listOf(
-                                Color.Black.copy(alpha = 0.20f),
-                                Color.Transparent,
-                                Color.Black.copy(alpha = 0.72f)
-                            ))
-                        ))
-                        // Fondu haut : sombre pour la lisibilité de la barre de statut
-                        Box(Modifier.fillMaxWidth().height(90.dp).align(Alignment.TopCenter).background(
-                            Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.55f), Color.Transparent))
-                        ))
-                        // Nom de l'artiste par-dessus la bannière
+                        ProgressiveBlurPhoto(
+                            photo = data.artist.photo,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                        // Nom de l'artiste par-dessus la bannière (le shader assombrit déjà le bas)
                         Column(Modifier.align(Alignment.BottomStart).padding(horizontal = 20.dp, vertical = 16.dp)) {
                             Text(data.artist.name, localize = false, color = Color.White, fontSize = 40.sp,
                                 fontWeight = FontWeight.Black, letterSpacing = (-1.2).sp, maxLines = 2,

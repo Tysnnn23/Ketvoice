@@ -14,6 +14,13 @@ object ListeningHistory {
     val knownTracks: StateFlow<List<Track>> = _known
     private val _playCounts = MutableStateFlow<Map<String, Int>>(emptyMap())
     val playCounts: StateFlow<Map<String, Int>> = _playCounts
+
+    // Temps d'écoute RÉEL : somme des positions réellement jouées (deltas du
+    // lecteur), pas une estimation plays × durée. Persisté au fil de l'eau.
+    private val _listenedMs = MutableStateFlow(0L)
+    val listenedMs: StateFlow<Long> = _listenedMs
+    private var unflushedMs = 0L
+
     fun init(context: Context) {
         if (prefs != null) return
         prefs = context.getSharedPreferences("listening-history", Context.MODE_PRIVATE)
@@ -25,6 +32,36 @@ object ListeningHistory {
             val root = com.google.gson.JsonParser.parseString(prefs!!.getString("counts", "{}"))
             root.asJsonObject.entrySet().associate { (key, value) -> key to value.asInt }
         }.getOrDefault(emptyMap())
+        _listenedMs.value = prefs!!.getLong("listenedMs", 0L)
+    }
+
+    /**
+     * Ajoute du temps d'écoute réellement joué. Appelé par le lecteur à chaque
+     * tic de position (≈200 ms) ; les sauts (seek, piste suivante) sont ignorés
+     * en amont. Écriture disque limitée : flush dès que ≥ 15 s non persistées.
+     */
+    @Synchronized fun addListenedMs(deltaMs: Long) {
+        if (deltaMs <= 0L) return
+        _listenedMs.value = _listenedMs.value + deltaMs
+        unflushedMs += deltaMs
+        if (unflushedMs >= 15_000L) {
+            prefs?.edit()?.putLong("listenedMs", _listenedMs.value)?.apply()
+            unflushedMs = 0L
+        }
+    }
+
+    /** Flush immédiat (arrêt du service, pause longue). */
+    @Synchronized fun flushListenedMs() {
+        if (unflushedMs > 0L) {
+            prefs?.edit()?.putLong("listenedMs", _listenedMs.value)?.apply()
+            unflushedMs = 0L
+        }
+    }
+
+    @Synchronized fun resetListenedMs() {
+        _listenedMs.value = 0L
+        unflushedMs = 0L
+        prefs?.edit()?.putLong("listenedMs", 0L)?.apply()
     }
     @Synchronized fun rememberTrack(track: Track) {
         _known.value = (listOf(track.copy(streamUrl = null, downloadUrl = null)) + _known.value.filterNot { it.id == track.id }).take(400)

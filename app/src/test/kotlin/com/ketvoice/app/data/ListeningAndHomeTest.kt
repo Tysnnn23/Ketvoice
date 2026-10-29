@@ -7,6 +7,21 @@ import kotlin.random.Random
 class ListeningAndHomeTest {
     private fun song(id: Int) = Track("$id", "Titre $id", "Artiste", "Album")
 
+    @Test fun listenedTimeAccumulatesOnlyRealPlayedDeltas() {
+        ListeningHistory.resetListenedMs()
+        // Deux tics normaux de lecture (≈200 ms chacun) : comptés.
+        ListeningHistory.addListenedMs(200)
+        ListeningHistory.addListenedMs(200)
+        // Seek ou saut de piste : delta nul ou négatif, jamais compté.
+        ListeningHistory.addListenedMs(0)
+        ListeningHistory.addListenedMs(-4_000)
+        assertEquals(400L, ListeningHistory.listenedMs.value)
+        ListeningHistory.flushListenedMs()
+        assertEquals(400L, ListeningHistory.listenedMs.value)
+        ListeningHistory.resetListenedMs()
+        assertEquals(0L, ListeningHistory.listenedMs.value)
+    }
+
     @Test fun actualRecentMovesToFrontWithoutDuplicates() {
         val history = listOf(song(1), song(2), song(3))
         val updated = ListeningHistory.recentWith(history, song(2))

@@ -111,13 +111,19 @@ fun LibraryScreen() {
         .sortedByDescending { it.value.size }
         .take(12)
 
-    // Statistiques réelles : compteurs d'écoute pondérés par la durée des titres.
+    // Statistiques réelles : temps d'écoute RÉELLEMENT joué (deltas de position
+    // du lecteur, persistés) et compteurs d'écoute par titre.
     val playCounts by ListeningHistory.playCounts.collectAsState()
-    val estimatedMinutes = remember(playCounts, known, recent) {
-        val durations = (known + recent).associate { it.id to (it.durationMs.takeIf { d -> d > 0 } ?: 200_000L) }
-        val totalMs = playCounts.entries.sumOf { (id, n) -> (durations[id] ?: 200_000L) * n }
-        (totalMs / 60_000L).toInt()
+    val listenedMs by ListeningHistory.listenedMs.collectAsState()
+    val listenedLabel = remember(listenedMs) {
+        val totalMin = (listenedMs / 60_000L).toInt()
+        if (totalMin >= 60) "${totalMin / 60} h ${"%02d".format(totalMin % 60)}"
+        else "$totalMin"
     }
+    val listenedUnit = remember(listenedMs) {
+        if (listenedMs >= 3_600_000L) "TEMPS D'ÉCOUTE" else "MINUTES ÉCOUTÉES"
+    }
+    val estimatedMinutes = (listenedMs / 60_000L).toInt()
     val totalPlays = playCounts.values.sum()
     val topArtistName = remember(artists) { artists.firstOrNull()?.key }
     val memberSince = remember {
@@ -141,6 +147,8 @@ fun LibraryScreen() {
                 totalPlays = totalPlays,
                 topArtist = topArtistName,
                 memberSince = memberSince,
+                listenedLabel = listenedLabel,
+                listenedUnit = listenedUnit,
                 modifier = Modifier.padding(bottom = 16.dp)
             )
         }
@@ -591,7 +599,9 @@ private fun ExperienceCarousel(
     totalPlays: Int,
     topArtist: String?,
     memberSince: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    listenedLabel: String = "$minutesListened",
+    listenedUnit: String = "MINUTES ÉCOUTÉES"
 ) {
     LazyRow(
         modifier = modifier.fillMaxWidth(),
@@ -642,14 +652,14 @@ private fun ExperienceCarousel(
                         .padding(top = 10.dp)
                 ) {
                     Text(
-                        "$minutesListened",
+                        listenedLabel,
                         color = Color.White,
                         fontSize = 44.sp,
                         fontWeight = FontWeight.ExtraBold,
                         letterSpacing = (-1.2).sp
                     )
                     Text(
-                        "MINUTES ÉCOUTÉES",
+                        listenedUnit,
                         color = Color.White.copy(alpha = 0.72f),
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,

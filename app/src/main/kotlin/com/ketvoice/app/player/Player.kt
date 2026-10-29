@@ -268,6 +268,14 @@ object Player {
             return
         }
         val pos = c.currentPosition.coerceAtLeast(0L)
+        // Temps d'écoute RÉEL : delta de position entre deux tics pendant la
+        // lecture. Un tic normal ≈ 200 ms ; un saut (seek, piste suivante,
+        // buffering) produit un delta hors fenêtre et est ignoré.
+        val delta = pos - lastListenedPosition
+        lastListenedPosition = pos
+        if (delta in 1..2_500L) {
+            com.ketvoice.app.data.ListeningHistory.addListenedMs(delta)
+        }
         _position.value = pos
         val dur = if (c.duration > 0) c.duration else _state.value.durationMs
         if (dur != _state.value.durationMs ||
@@ -276,6 +284,9 @@ object Player {
             _state.value = _state.value.copy(positionMs = pos, durationMs = dur)
         }
     }
+
+    /** Dernière position vue par le tic : base du delta de temps d'écoute réel. */
+    private var lastListenedPosition = 0L
 
     // ------------------------------------------------------------ Qualité
     /** Réglage qualité courant selon le réseau réellement mesuré. */
