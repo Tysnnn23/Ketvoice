@@ -85,7 +85,14 @@ object YouTubeCatalog {
                 }
             }
         }
-        return ArtistPage(artist, description, parseRows(raw, officialOnly = true).take(20),
+        // Les titres de la page artiste ne doivent pas être filtrés sur les
+        // seuls types ATV/OMV : selon l'artiste, la section "Titres populaires"
+        // ne contient que d'autres types et la liste ressortait vide.
+        // La liste « Titres » restait vide sur de nombreux artistes : le filtre
+        // officialOnly ne conserve que les types ATV/OMV, alors que les morceaux
+        // de la section populaire portent souvent un autre type. On ne filtre
+        // donc plus par type ici.
+        return ArtistPage(artist, description, parseRows(raw, officialOnly = false).take(20),
             releases.distinctBy { it.id }, related.distinctBy { it.id }.take(12), listeners,
             hero?.aspectRatio ?: 1f)
     }

@@ -39,6 +39,7 @@ import com.ketvoice.app.theme.LocalTheme
 import com.ketvoice.app.ui.AppUi
 import com.ketvoice.app.ui.common.Cover
 import com.ketvoice.app.ui.player.formatSecs
+import com.ketvoice.app.ui.player.SonicCanvas
 
 /**
  * Page d'artiste réelle : photo, écoute mensuelle, biographie, titres,
@@ -100,7 +101,18 @@ fun ArtistScreen() {
                 Text("Réessayer", color = theme.accent, fontWeight = FontWeight.Bold,
                     modifier = Modifier.clickable { attempt++ }.padding(top = 20.dp, bottom = 12.dp))
             }
-            else -> LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 210.dp)) {
+            else -> {
+            // Le canvas du hero s'efface progressivement dès qu'on descend :
+            // il accompagne l'ouverture de la page mais ne reste pas à l'écran.
+            val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+            val heroFade by remember {
+                derivedStateOf {
+                    if (listState.firstVisibleItemIndex > 0) 0f
+                    else (1f - listState.firstVisibleItemScrollOffset / 520f).coerceIn(0f, 1f)
+                }
+            }
+            LazyColumn(Modifier.fillMaxSize(), state = listState,
+                contentPadding = PaddingValues(bottom = 210.dp)) {
                 val data = page!!
                 item {
                     // Bannière immersive : la photo est affichée ENTIÈRE (fit, pas
@@ -110,11 +122,20 @@ fun ArtistScreen() {
                     // La hauteur suit le ratio réel de l'image (borné large).
                     val heroWidth = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp.dp
                     val heroHeight = (heroWidth / data.heroAspectRatio.coerceIn(.5f, 2.6f)).coerceIn(320.dp, 560.dp)
-                    Box(Modifier.fillMaxWidth().height(heroHeight)) {
-                        ProgressiveBlurPhoto(
-                            photo = data.artist.photo,
-                            modifier = Modifier.fillMaxSize()
-                        )
+                    Box(Modifier.fillMaxWidth().height(heroHeight)
+                        .graphicsLayer { alpha = heroFade }) {
+                        // Plus de cover floutée : le haut de page est porté par le
+                        // canvas animé de l'application (même matière que le
+                        // lecteur), posé sur un fond dégradé pour garder le nom
+                        // de l'artiste lisible.
+                        SonicCanvas(playing = false, color = theme.accent)
+                        Box(Modifier.fillMaxSize().background(
+                            Brush.verticalGradient(listOf(
+                                Color.Black.copy(alpha = 0.15f),
+                                Color.Transparent,
+                                Color.Black.copy(alpha = 0.55f)
+                            ))
+                        ))
                         // Nom de l'artiste par-dessus la bannière (le shader assombrit déjà le bas)
                         Column(Modifier.align(Alignment.BottomStart).padding(horizontal = 20.dp, vertical = 16.dp)) {
                             Text(data.artist.name, localize = false, color = Color.White, fontSize = 40.sp,
@@ -227,6 +248,7 @@ fun ArtistScreen() {
                         }
                     }
                 }
+            }
             }
         }
         // Barre supérieure superposée : retour + actualisation flottent au-dessus

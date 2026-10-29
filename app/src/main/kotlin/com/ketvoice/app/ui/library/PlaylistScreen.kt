@@ -94,68 +94,94 @@ fun PlaylistScreen() {
         val playable = playlist.entries.mapNotNull { it.track }
         val seen = rememberSeenCollections()
 
-        // ---- Hero premium, centré comme une page d'album du lecteur ----
-        Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Spacer(Modifier.height(6.dp))
-            Box {
-                PlaylistArtwork(playlist, playlist.name,
-                    Modifier.size(if (com.ketvoice.app.BuildConfig.IS_QUEST) 156.dp else 136.dp)
-                        .collectionEntry("playlist:${playlist.id}", seen, 0))
-                Box(Modifier.size(if (com.ketvoice.app.BuildConfig.IS_QUEST) 156.dp else 136.dp)
-                    .graphicsLayer { alpha = .22f }.blur(18.dp)) {
-                    PlaylistArtwork(playlist, playlist.name, Modifier.fillMaxSize())
+        // ---- liste qui contient le hero (qui défile) puis les titres ----
+        val list = rememberLazyListState()
+        var dragIndex by remember { mutableIntStateOf(-1) }
+        var dragOffset by remember { mutableFloatStateOf(0f) }
+
+        // Opacité du header : disparaît quand il défile hors du haut de l'écran
+        val headerFade by remember { derivedStateOf {
+            val first = list.firstVisibleItemIndex
+            val offset = list.firstVisibleItemScrollOffset
+            if (first > 0) 0f else 1f - (offset / 400f).coerceIn(0f, 1f)
+        }}
+
+        LazyColumn(
+            Modifier.weight(1f).fillMaxWidth(),
+            state = list,
+            contentPadding = PaddingValues(bottom = LocalAdaptiveLayout.current.bottomPaddingDp.dp)
+        ) {
+            // Premier item = hero premium (couverture, titre, boutons) — défile et s'estompe
+            item {
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .graphicsLayer { alpha = headerFade }
+                        .padding(horizontal = 24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Spacer(Modifier.height(6.dp))
+                    Box {
+                        PlaylistArtwork(playlist, playlist.name,
+                            Modifier.size(if (com.ketvoice.app.BuildConfig.IS_QUEST) 156.dp else 136.dp)
+                                .collectionEntry("playlist:${playlist.id}", seen, 0))
+                        Box(Modifier.size(if (com.ketvoice.app.BuildConfig.IS_QUEST) 156.dp else 136.dp)
+                            .graphicsLayer { alpha = .22f }.blur(18.dp)) {
+                            PlaylistArtwork(playlist, playlist.name, Modifier.fillMaxSize())
+                        }
+                    }
+                    Spacer(Modifier.height(16.dp))
+                    Text(playlist.name, localize = false, color = th.onBackground,
+                        fontSize = if (com.ketvoice.app.BuildConfig.IS_QUEST) 28.sp else 25.sp,
+                        fontWeight = FontWeight.Black, letterSpacing = (-.6).sp,
+                        maxLines = 3, overflow = TextOverflow.Ellipsis, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                    Spacer(Modifier.height(6.dp))
+                    Text(buildString {
+                        append("${playable.size} / ${playlist.entries.size} titres disponibles")
+                        if (playlist.spotifyUrl != null) append(" · Import Spotify")
+                    }, color = th.secondary, fontSize = 13.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                    if (playlist.spotifyUrl != null) Text(
+                        "La liste peut être incomplète : touchez un titre manquant pour le retrouver.",
+                        color = th.secondary, fontSize = 12.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        modifier = Modifier.padding(top = 4.dp))
+                    Spacer(Modifier.height(14.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(9.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.weight(1f).heightIn(min = 46.dp)
+                            .clip(RoundedCornerShape(23.dp)).background(if (playable.isEmpty()) th.card else th.accent)
+                            .clickable(enabled = playable.isNotEmpty()) { Player.playQueue(playable) },
+                            contentAlignment = Alignment.Center) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Filled.PlayArrow, null, tint = if (playable.isEmpty()) th.secondary else Color.Black,
+                                    modifier = Modifier.size(22.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text("Écouter", color = if (playable.isEmpty()) th.secondary else Color.Black,
+                                    fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                            }
+                        }
+                        Box(Modifier.weight(1f).heightIn(min = 46.dp)
+                            .clip(RoundedCornerShape(23.dp)).background(th.card)
+                            .clickable(enabled = !busy && playlist.entries.size > 1) { editing = !editing },
+                            contentAlignment = Alignment.Center) {
+                            Text(if (editing) "Terminer" else "Modifier l'ordre", color = th.accent,
+                                fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                        }
+                    }
+                    if (error.isNotBlank()) Text(error, color = MaterialTheme.colorScheme.error,
+                        fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
+                    Spacer(Modifier.height(8.dp))
                 }
             }
-            Spacer(Modifier.height(16.dp))
-            Text(playlist.name, localize = false, color = th.onBackground,
-                fontSize = if (com.ketvoice.app.BuildConfig.IS_QUEST) 28.sp else 25.sp,
-                fontWeight = FontWeight.Black, letterSpacing = (-.6).sp,
-                maxLines = 3, overflow = TextOverflow.Ellipsis, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-            Spacer(Modifier.height(6.dp))
-            Text(buildString {
-                append("${playable.size} / ${playlist.entries.size} titres disponibles")
-                if (playlist.spotifyUrl != null) append(" · Import Spotify")
-            }, color = th.secondary, fontSize = 13.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-            if (playlist.spotifyUrl != null) Text(
-                "La liste peut être incomplète : touchez un titre manquant pour le retrouver.",
-                color = th.secondary, fontSize = 12.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                modifier = Modifier.padding(top = 4.dp))
-            Spacer(Modifier.height(14.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(9.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.weight(1f).heightIn(min = 46.dp)
-                    .clip(RoundedCornerShape(23.dp)).background(if (playable.isEmpty()) th.card else th.accent)
-                    .clickable(enabled = playable.isNotEmpty()) { Player.playQueue(playable) },
-                    contentAlignment = Alignment.Center) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Filled.PlayArrow, null, tint = if (playable.isEmpty()) th.secondary else Color.Black,
-                            modifier = Modifier.size(22.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text("Écouter", color = if (playable.isEmpty()) th.secondary else Color.Black,
-                            fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+
+            if (playlist.entries.isEmpty()) {
+                // État vide affiché comme premier item
+                item {
+                    Box(Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
+                        EmptyState("Votre playlist est vide",
+                            "Ouvrez le menu d'un titre et choisissez Ajouter à une playlist.",
+                            "Rechercher des titres", onAction = ::openTrackSearch)
                     }
                 }
-                Box(Modifier.weight(1f).heightIn(min = 46.dp)
-                    .clip(RoundedCornerShape(23.dp)).background(th.card)
-                    .clickable(enabled = !busy && playlist.entries.size > 1) { editing = !editing },
-                    contentAlignment = Alignment.Center) {
-                    Text(if (editing) "Terminer" else "Modifier l'ordre", color = th.accent,
-                        fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
-                }
-            }
-            if (error.isNotBlank()) Text(error, color = MaterialTheme.colorScheme.error,
-                fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
-            Spacer(Modifier.height(8.dp))
-        }
-
-        if (playlist.entries.isEmpty()) {
-            EmptyState("Votre playlist est vide", "Ouvrez le menu d'un titre et choisissez Ajouter à une playlist.",
-                "Rechercher des titres", onAction = ::openTrackSearch)
-        } else {
-            val list = rememberLazyListState()
-            var dragIndex by remember { mutableIntStateOf(-1) }
-            var dragOffset by remember { mutableFloatStateOf(0f) }
-            LazyColumn(Modifier.weight(1f).fillMaxWidth(), state = list,
-                contentPadding = PaddingValues(bottom = LocalAdaptiveLayout.current.bottomPaddingDp.dp)) {
+            } else {
                 itemsIndexed(playlist.entries, key = { _, entry -> entry.id }) { index, entry ->
                     val rowModifier = if (index == dragIndex) Modifier.graphicsLayer { translationY = dragOffset } else Modifier
                     PlaylistRow(entry, index, editing, busy, th, rowModifier
@@ -167,10 +193,10 @@ fun PlaylistScreen() {
                                     change.consume()
                                     dragOffset += delta
                                     val infos = list.layoutInfo.visibleItemsInfo
-                                    val origin = infos.firstOrNull { it.index == index } ?: return@detectVerticalDragGestures
+                                    val origin = infos.firstOrNull { it.index == index + 1 } ?: return@detectVerticalDragGestures // +1 car le hero est l'item 0
                                     val center = origin.offset + origin.size / 2f + dragOffset
-                                    val below = infos.firstOrNull { it.index == index + 1 }
-                                    val above = infos.firstOrNull { it.index == index - 1 }
+                                    val below = infos.firstOrNull { it.index == index + 2 }
+                                    val above = infos.firstOrNull { it.index == index }
                                     if (below != null && center > below.offset + below.size / 2f) {
                                         scope.launch { PlaylistStore.move(playlist.id, index, index + 1) }
                                         dragIndex = index + 1

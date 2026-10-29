@@ -7,6 +7,24 @@
 
 ---
 
+# Ketvoice 3.6.2
+
+**versionCode 48** — installs over 3.6.1 and every earlier build (same signing certificate).
+
+### Artist page — songs were missing
+Before → After: on many artists the "Popular tracks" list stayed empty, because the parser only kept YouTube Music rows typed `ATV`/`OMV` and the popular section usually exposes another type. The type filter is no longer applied to that list, so every track of the page is returned.
+
+### Artist page — animated canvas instead of the blurred cover
+Before → After: the top of the artist page was a full-bleed blurred copy of the artist photo, which the user found wrong. The hero is now filled by `SonicCanvas`, the same animated canvas used by the player, layered under a soft vertical gradient that keeps the artist name readable.
+
+### Artist page — the hero no longer stays on screen
+Before → After: the canvas is driven by the scroll state of the list. It fades out over the first 520 px of scrolling and is fully gone as soon as the first item leaves the top, so it introduces the page and then disappears instead of remaining permanent.
+
+### Playlist page — the header scrolled away
+Before → After: the playlist cover, title, description and "Listen" button were siblings placed above the track list, so they stayed pinned forever while scrolling. They are now the first item of the list itself and fade out as they scroll off, while the floating back button stays reachable at all times.
+
+---
+
 # Ketvoice 3.6.1
 
 **versionCode 47** — installs over 3.6.0 and every earlier build (same signing certificate).
