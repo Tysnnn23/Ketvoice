@@ -136,7 +136,11 @@ object YouTubeCatalog {
             artistFallback = artistName, artistIdFallback = artistId, officialOnly = true)
         if (rows.isEmpty()) return null
         val tracks = rows.map { if (it.coverUrl.isNullOrBlank()) it.copy(coverUrl = cover) else it }
-        return CatalogPage(title, artistName, cover, tracks)
+        // Année extraite du sous-titre du header (« Album • Artiste • 2018 ») :
+        // affichée à côté de la pochette sur la page album.
+        val subtitleText = YouTubeJson.text(header.optJSONObject("subtitle"))
+        val releaseDate = Regex("\\b(?:19|20)\\d{2}\\b").find(subtitleText)?.value
+        return CatalogPage(title, artistName, cover, tracks, releaseDate = releaseDate)
     }
 
     suspend fun personalHome(): List<HomeShelf> {

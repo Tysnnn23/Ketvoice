@@ -40,6 +40,7 @@ import androidx.compose.ui.zIndex
 import coil.compose.AsyncImage
 import com.ketvoice.app.data.AppSettings
 import com.ketvoice.app.data.ArtworkRepo
+import com.ketvoice.app.data.Downloader
 import com.ketvoice.app.glass.LocalBackdropLayer
 import com.ketvoice.app.glass.rememberGlassBackdrop
 import com.ketvoice.app.player.Player
@@ -97,6 +98,7 @@ fun AppRoot() {
         // et la barre d'onglets se dessinent au-dessus des résultats.
         val density = LocalDensity.current
         val imeVisible = WindowInsets.ime.getBottom(density) > 0
+        val context = androidx.compose.ui.platform.LocalContext.current
         var wasPlayerVisible by remember { mutableStateOf(AppUi.showPlayer.value) }
 
         // Ouvre/ferme le lecteur : une copie de la pochette vole entre la
@@ -219,11 +221,20 @@ fun AppRoot() {
                 }
 
                 // ---- Chrome flottant en verre ----
+                // Masqué dès qu'une feuille inférieure occupe le bas de l'écran :
+                // le mini-lecteur et la navigation ne doivent jamais recouvrir
+                // les options d'un menu ouvert.
+                val chromeVisible = AppUi.overlay.value != AppUi.SETTINGS &&
+                    AppUi.overlay.value != AppUi.QUEUE &&
+                    !AppUi.showPlayer.value &&
+                    !imeVisible &&
+                    AppUi.trackMenuTrack.value == null &&
+                    AppUi.addToPlaylist.value == null &&
+                    AppUi.playlistMenu.value == null &&
+                    !AppUi.showCreatePlaylist.value &&
+                    AppUi.playlistResolution.value == null
                 AnimatedVisibility(
-                    visible = AppUi.overlay.value != AppUi.SETTINGS &&
-                        AppUi.overlay.value != AppUi.QUEUE &&
-                        !AppUi.showPlayer.value &&
-                        !imeVisible,
+                    visible = chromeVisible,
                     enter = fadeIn(tween(Motion.duration())) + slideInVertically(tween(Motion.duration())) { it / 3 },
                     exit = fadeOut(tween(Motion.duration())) + slideOutVertically(tween(Motion.duration())) { it / 3 },
                     modifier = Modifier
@@ -234,10 +245,10 @@ fun AppRoot() {
                 ) {
                     Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                     Column(Modifier.widthIn(max = if (layout.hasRail) 640.dp else 560.dp).fillMaxWidth()
-                        .imePadding().navigationBarsPadding().padding(bottom = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        .imePadding().navigationBarsPadding().padding(bottom = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         MiniPlayerPill(onOpen = { AppUi.showPlayer.value = true })
                         if (!layout.hasRail) {
-                            Spacer(Modifier.height(10.dp))
+                            Spacer(Modifier.height(8.dp))
                             GlassBottomBar(collapsed = AppUi.bottomCollapsed.value && AppUi.overlay.value == AppUi.NONE)
                         }
                     }
@@ -277,6 +288,47 @@ fun AppRoot() {
                         androidx.activity.compose.BackHandler { AppUi.trackMenuTrack.value = null }
                         com.ketvoice.app.ui.player.PlayerSheetScrim({ AppUi.trackMenuTrack.value = null }) {
                             com.ketvoice.app.ui.player.TrackMenuSheet(track) { AppUi.trackMenuTrack.value = null }
+                        }
+                    }
+                }
+                // ---- Menu d'actions de playlist : même couche que le menu morceau,
+                //      donc au-dessus du chrome flottant (correctif de recouvrement) ----
+                AppUi.playlistMenu.value?.let { request ->
+                    val playlist = request.playlist
+                    Box(Modifier.fillMaxSize().zIndex(7f)) {
+                        androidx.activity.compose.BackHandler { AppUi.playlistMenu.value = null }
+                        com.ketvoice.app.ui.player.PlayerSheetScrim({ AppUi.playlistMenu.value = null }) {
+                            com.ketvoice.app.ui.library.PlaylistMenuSheet(
+                                playlist = playlist,
+                                onClose = { AppUi.playlistMenu.value = null },
+                                onDownload = {
+                                    val pending = playlist.entries.mapNotNull { it.track }
+                                        .filter { Downloader.itemFor(it.id) == null }
+                                    pending.forEach { Downloader.download(it) }
+                                    if (pending.isNotEmpty()) android.widget.Toast.makeText(
+                                        context,
+                                        com.ketvoice.app.data.AppText.t("Téléchargements lancés"),
+                                        android.widget.Toast.LENGTH_SHORT
+                                    ).show()
+                                },
+                                onPlayNext = {
+                                    val playable = playlist.entries.mapNotNull { it.track }
+                                    if (playable.isNotEmpty()) Player.enqueue(playable)
+                                },
+                                onRename = { AppUi.playlistMenu.value = null; request.onRename() },
+                                onExportJson = { AppUi.playlistMenu.value = null; request.onExportJson() },
+                                onExportM3u = { AppUi.playlistMenu.value = null; request.onExportM3u() },
+                                onDelete = { AppUi.playlistMenu.value = null; request.onDelete() }
+                            )
+                        }
+                    }
+                }
+                // ---- Ajouter à une playlist : feuille verre au-dessus du chrome ----
+                AppUi.addToPlaylist.value?.let { track ->
+                    Box(Modifier.fillMaxSize().zIndex(7f)) {
+                        androidx.activity.compose.BackHandler { AppUi.addToPlaylist.value = null }
+                        com.ketvoice.app.ui.player.PlayerSheetScrim({ AppUi.addToPlaylist.value = null }) {
+                            com.ketvoice.app.ui.library.AddToPlaylistSheet(track) { AppUi.addToPlaylist.value = null }
                         }
                     }
                 }

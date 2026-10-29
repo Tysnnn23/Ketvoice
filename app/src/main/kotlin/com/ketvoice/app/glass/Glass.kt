@@ -71,7 +71,7 @@ data class GlassParams(
     /** Hauteur de réfraction de la lentille (bord du verre), en px. */
     val refractionPx: Float = 18f,
     /** Opacité de la teinte de surface (le "lait" du verre). */
-    val tintAlpha: Float = 0.14f,
+    val tintAlpha: Float = 0.06f,
     /** Saturation du fond à travers le verre. > 1 = couleurs plus riches. */
     val saturation: Float = 1.22f,
     /** Luminosité additionnelle du fond (colorControls). */
@@ -98,24 +98,28 @@ data class GlassParams(
         fun pill(blur: Float = 24f, dark: Boolean = false) = GlassParams(
             cornerRadiusPx = 9999f,
             blurPx = blur,
-            refractionPx = 16f,
-            tintAlpha = if (dark) 0.17f else 0.12f,
-            saturation = if (dark) 1.10f else 1.26f,
-            exposure = if (dark) 0.02f else 0.06f,
-            highlightAlpha = if (dark) 0.38f else 0.64f,
-            highlightIntensity = if (dark) 0.34f else 0.50f,
+            refractionPx = 22f,
+            // Verre optique : la teinte "lait" doit rester quasi imperceptible.
+            // Au-delà de ~0.10 le panneau redevient du plastique blanc opaque.
+            tintAlpha = if (dark) 0.055f else 0.045f,
+            saturation = if (dark) 1.18f else 1.42f,
+            brightness = 1.0f,
+            contrast = 1.0f,
+            exposure = if (dark) 0.015f else 0.03f,
+            highlightAlpha = if (dark) 0.22f else 0.34f,
+            highlightIntensity = if (dark) 0.20f else 0.28f,
             dark = dark
         )
 
         fun circle(blur: Float = 24f, dark: Boolean = false) = GlassParams(
             cornerRadiusPx = 9999f,
             blurPx = blur,
-            refractionPx = 20f,
-            tintAlpha = if (dark) 0.19f else 0.13f,
-            saturation = if (dark) 1.12f else 1.30f,
-            exposure = if (dark) 0.02f else 0.06f,
-            highlightAlpha = if (dark) 0.40f else 0.70f,
-            highlightIntensity = if (dark) 0.36f else 0.54f,
+            refractionPx = 26f,
+            tintAlpha = if (dark) 0.06f else 0.05f,
+            saturation = if (dark) 1.20f else 1.46f,
+            exposure = if (dark) 0.015f else 0.03f,
+            highlightAlpha = if (dark) 0.24f else 0.38f,
+            highlightIntensity = if (dark) 0.22f else 0.30f,
             dark = dark
         )
 
@@ -123,7 +127,8 @@ data class GlassParams(
             cornerRadiusPx = radiusPx,
             blurPx = 30f,
             refractionPx = 24f,
-            tintAlpha = if (dark) 0.24f else 0.17f,
+            // Le sheet doit laisser deviner le contenu : fond gris trop opaque = profondeur perdue.
+            tintAlpha = if (dark) 0.10f else 0.075f,
             saturation = if (dark) 1.06f else 1.20f,
             exposure = if (dark) 0.01f else 0.05f,
             highlightAlpha = if (dark) 0.34f else 0.58f,
@@ -140,10 +145,15 @@ private fun surfaceBrush(p: GlassParams): Brush {
     // un gris foncé et non du noir pur : le verre sombre d'iOS 27 est décrit comme
     // plus clair que celui d'iOS 26.
     val base = if (p.dark) Color(0xFF2A2A30) else Color.White
-    val hot = base.copy(alpha = (p.tintAlpha + if (p.dark) 0.10f else 0.15f).coerceAtMost(0.92f))
-    val upper = base.copy(alpha = (p.tintAlpha * 0.55f).coerceAtMost(0.92f))
-    val lower = base.copy(alpha = (p.tintAlpha * 0.28f).coerceAtMost(0.92f))
-    val lift = base.copy(alpha = (p.tintAlpha + if (p.dark) 0.05f else 0.03f).coerceAtMost(0.92f))
+    // Les deltas étaient auparavant de +0.15 / +0.10 : ils écrasaient totalement
+    // `tintAlpha` et transformaient le verre en plastique blanc opaque, quel que
+    // soit le preset. Ils doivent rester une modulation de la teinte, pas un
+    // ajout d'opacité. Plafond volontairement bas (0.35) : au-delà, on perd la
+    // transmission du fond et la réfraction ne se lit plus.
+    val hot = base.copy(alpha = (p.tintAlpha + if (p.dark) 0.045f else 0.055f).coerceAtMost(0.35f))
+    val upper = base.copy(alpha = (p.tintAlpha * 0.60f).coerceAtMost(0.30f))
+    val lower = base.copy(alpha = (p.tintAlpha * 0.25f).coerceAtMost(0.22f))
+    val lift = base.copy(alpha = (p.tintAlpha + if (p.dark) 0.020f else 0.012f).coerceAtMost(0.30f))
     return Brush.linearGradient(listOf(hot, upper, lower, lift))
 }
 
@@ -167,11 +177,14 @@ private fun rimBrush(p: GlassParams): Brush {
  * laver le contenu posé dessus.
  */
 private fun sheenBrush(p: GlassParams): Brush {
-    val strength = (if (p.dark) 0.12f else 0.18f) * (0.5f + p.highlightIntensity * 0.7f)
+    // Le `Highlight` de la lib dessine déjà le reflet spéculaire. Empiler ici un
+    // second voile blanc revient à doubler l'intensité -> voile laiteux opaque.
+    // On le divise par ~4 pour qu'il ne fasse que réchauffer le haut du panneau.
+    val strength = (if (p.dark) 0.030f else 0.045f) * (0.5f + p.highlightIntensity * 0.7f)
     return Brush.verticalGradient(
-        0.00f to Color.White.copy(alpha = strength.coerceIn(0f, 0.34f)),
-        0.14f to Color.White.copy(alpha = (strength * 0.36f).coerceIn(0f, 0.18f)),
-        0.38f to Color.Transparent
+        0.00f to Color.White.copy(alpha = strength.coerceIn(0f, 0.10f)),
+        0.10f to Color.White.copy(alpha = (strength * 0.30f).coerceIn(0f, 0.05f)),
+        0.26f to Color.Transparent
     )
 }
 
@@ -202,7 +215,7 @@ fun GlassPanel(
 
     if (dynamic && backdrop != null) {
         Box(
-            modifier = modifier.then(edge).drawBackdrop(
+            modifier = modifier.drawBackdrop(
                 backdrop = backdrop,
                 shape = { shape },
                 effects = {

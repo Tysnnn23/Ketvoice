@@ -22,7 +22,11 @@ object PlaylistRules {
     fun name(value: String): String = value.trim().also {
         require(it.isNotEmpty() && it.length <= 80 && it.none(Char::isISOControl)) { "Nom de playlist invalide" }
     }
-    fun safe(track: Track): Track = track.copy(streamUrl = null, downloadUrl = null)
+    fun safe(track: Track): Track =
+        // Les morceaux locaux ne vivent que par leur URI de flux (MediaStore ou
+        // SAF) : le retirer rendait la lecture impossible depuis une playlist.
+        if (track.id.startsWith("local:")) track
+        else track.copy(streamUrl = null, downloadUrl = null)
     fun move(entries: List<PlaylistEntry>, from: Int, to: Int): List<PlaylistEntry> {
         if (from !in entries.indices || to !in entries.indices || from == to) return entries
         return entries.toMutableList().apply { add(to, removeAt(from)) }

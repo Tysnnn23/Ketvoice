@@ -388,12 +388,12 @@ internal fun IntroDots(firstLineMs: Long) {
     val lit = LyricsMotion.litDots(position, firstLineMs)
 
     // Plain white dots: no halo, no ripple, no drift.
-    // Positioned on the left side of the screen with slightly tightened spacing.
+    // Anchored to the left edge of the screen, slightly tightened spacing.
     Box(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 34.dp, horizontal = 4.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 34.dp, horizontal = 6.dp),
         contentAlignment = Alignment.CenterStart
     ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             repeat(3) { index ->
                 val alpha by animateFloatAsState(
                     targetValue = if (index < lit) 1f else .28f,

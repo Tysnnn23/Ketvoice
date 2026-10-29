@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.PlayArrow
 import com.ketvoice.app.ui.common.GlassBackButton
 import com.ketvoice.app.ui.common.Icon
 import com.ketvoice.app.ui.common.Text
@@ -18,9 +19,12 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.BlurredEdgeTreatment
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -75,13 +79,27 @@ fun CatalogScreen() {
             Text(page?.title ?: request.title, color = theme.onBackground, fontSize = 24.sp,
                 fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
-        // Mosaïque 2x2 : les 4 premières pochettes de la collection en guise de grande cover
-        if (tracks.isNotEmpty()) {
-            val mosaicCovers = tracks.take(4).map { ArtworkRepo.coverForTrack(it) ?: it.coverUrl }
+        // Header immersif quand la page porte une vraie pochette (albums) : fond
+        // dérivé de la pochette floutée, dégradés vers les bords, titre à côté de
+        // la pochette, artiste + date de sortie, bouton Play.
+        // Le bug « grille de quatre images identiques » disparaît : la mosaïque
+        // n'est utilisée qu'en repli, quand aucune pochette réelle n'existe.
+        val heroCover = page?.cover
+        if (heroCover != null && !loading) {
+            AlbumHero(
+                title = page?.title ?: request.title,
+                subtitle = page?.subtitle.orEmpty(),
+                releaseDate = page?.releaseDate,
+                cover = heroCover,
+                trackCount = tracks.size,
+                onPlay = { if (tracks.isNotEmpty()) Player.playQueue(tracks, 0) }
+            )
+        } else if (tracks.isNotEmpty() && !loading) {
+            // Mosaïque 2x2 en repli : les 4 premières pochettes de la collection.
             Box(Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
                 Row(Modifier.size(168.dp).clip(RoundedCornerShape(18.dp))) {
                     for (i in 0 until 4) {
-                        val url = mosaicCovers.getOrNull(i)
+                        val url = tracks.getOrNull(i)?.let { ArtworkRepo.coverForTrack(it) } ?: tracks.getOrNull(i)?.coverUrl
                         Box(Modifier.weight(1f).fillMaxHeight().background(
                             if (url != null) Brush.linearGradient(listOf(Color.Black, Color.Black)) else Brush.linearGradient(gradientFor(request.id + i))
                         )) {
@@ -115,12 +133,6 @@ fun CatalogScreen() {
         } else LazyVerticalGrid(
             columns = if (LocalAdaptiveLayout.current.hasRail) GridCells.Adaptive(400.dp) else GridCells.Fixed(1),
             contentPadding = PaddingValues(bottom = LocalAdaptiveLayout.current.bottomPaddingDp.dp)) {
-            if (page?.cover != null) item(span = { GridItemSpan(maxLineSpan) }) {
-                Row(Modifier.padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Cover(page!!.title, page!!.cover, 100.dp, 12.dp)
-                    Text(page!!.subtitle, color = theme.secondary, modifier = Modifier.padding(16.dp))
-                }
-            }
             itemsIndexed(tracks, key = { i, t -> "${t.id}:$i" }) { index, track ->
                 val active = player.current?.id == track.id
                 Row(Modifier.fillMaxWidth().clickable { Player.playQueue(tracks, index) }.padding(horizontal = 18.dp, vertical = 7.dp),
@@ -140,3 +152,74 @@ fun CatalogScreen() {
     }
 }
 
+/**
+ * Header d'album : pochette floutée en fond (adaptée aux couleurs de l'album),
+ * pochette nette à gauche avec titre/artiste/date à côté, bouton Play.
+ */
+@Composable
+private fun AlbumHero(
+    title: String,
+    subtitle: String,
+    releaseDate: String?,
+    cover: String,
+    trackCount: Int,
+    onPlay: () -> Unit
+) {
+    val theme = LocalTheme.current
+    Box(Modifier.fillMaxWidth().heightIn(min = 258.dp)) {
+        // Fond : pochette floutée et agrandie — jamais de bord dur.
+        AsyncImage(
+            model = cover, contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer { scaleX = 1.35f; scaleY = 1.35f }
+                .blur(38.dp, BlurredEdgeTreatment.Unbounded)
+        )
+        // Dégradés : raccord haut vers la barre, raccord bas vers la liste.
+        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(
+            theme.background.copy(alpha = .55f), Color.Transparent, Color.Transparent,
+            theme.background.copy(alpha = .72f), theme.background
+        ))))
+        Column(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 10.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Cover(title, cover, 128.dp, 14.dp)
+                Spacer(Modifier.width(16.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(title, localize = false, color = theme.onBackground,
+                        fontSize = 22.sp, fontWeight = FontWeight.Black, letterSpacing = (-.5).sp,
+                        lineHeight = 26.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                    if (subtitle.isNotBlank()) {
+                        Text(subtitle, localize = false, color = theme.secondary, fontSize = 14.sp,
+                            maxLines = 2, overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.padding(top = 5.dp))
+                    }
+                    if (releaseDate != null) {
+                        Text("Sorti en $releaseDate", localize = false, color = theme.secondary,
+                            fontSize = 12.5.sp, modifier = Modifier.padding(top = 3.dp))
+                    }
+                }
+            }
+            Spacer(Modifier.height(16.dp))
+            Row(verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                Box(
+                    Modifier.weight(1f, fill = false)
+                        .clip(RoundedCornerShape(23.dp))
+                        .background(theme.accent)
+                        .clickable(enabled = trackCount > 0, onClick = onPlay)
+                        .padding(horizontal = 26.dp, vertical = 11.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Filled.PlayArrow, null, tint = Color.Black, modifier = Modifier.size(21.dp))
+                        Spacer(Modifier.width(7.dp))
+                        Text("Lecture", color = Color.Black, fontSize = 14.5.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+                Text("$trackCount titres", localize = false, color = theme.secondary,
+                    fontSize = 12.5.sp, modifier = Modifier.padding(start = 6.dp))
+            }
+        }
+    }
+}

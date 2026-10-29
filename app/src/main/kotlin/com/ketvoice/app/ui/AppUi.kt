@@ -36,6 +36,18 @@ object AppUi {
     val showCreatePlaylist = androidx.compose.runtime.mutableStateOf(false)
     val showSpotifyImport = androidx.compose.runtime.mutableStateOf(false)
     val addToPlaylist = androidx.compose.runtime.mutableStateOf<com.ketvoice.app.data.Track?>(null)
+    // Menu d'actions d'une playlist : porté au niveau racine pour que la feuille
+    // se dessine au-dessus du chrome flottant (mini-lecteur + navigation) au lieu
+    // d'être recouverte par lui, et pour hériter du vrai verre dynamique. Les
+    // actions restent la propriété de PlaylistScreen (elles y ont leur contexte).
+    data class PlaylistMenuRequest(
+        val playlist: com.ketvoice.app.data.LocalPlaylist,
+        val onRename: () -> Unit = {},
+        val onExportJson: () -> Unit = {},
+        val onExportM3u: () -> Unit = {},
+        val onDelete: () -> Unit = {}
+    )
+    val playlistMenu = androidx.compose.runtime.mutableStateOf<PlaylistMenuRequest?>(null)
     data class PlaylistResolution(val playlistId: String, val entryId: String)
     val playlistResolution = androidx.compose.runtime.mutableStateOf<PlaylistResolution?>(null)
     fun openPlaylist(id: String) {
@@ -183,6 +195,7 @@ object AppUi {
         showPlayer.value = false
         showLyrics.value = false
         trackMenuTrack.value = null
+        playlistMenu.value = null
         bottomCollapsed.value = false
     }
     val showAudioOutput = androidx.compose.runtime.mutableStateOf(false)
@@ -217,6 +230,7 @@ object AppUi {
         showAccount.value = false
         showTrackMenu.value = false
         trackMenuTrack.value = null
+        playlistMenu.value = null
         showAudioOutput.value = false
         showLyrics.value = false
         showLyricsSource.value = false

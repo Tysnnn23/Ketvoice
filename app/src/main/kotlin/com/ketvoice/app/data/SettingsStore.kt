@@ -66,6 +66,7 @@ object SettingsStore {
         s.questKeepAwake.value = p.getBoolean("questKeepAwake", true)
         s.localMusicFolder.value = p.getString("localMusicFolder", s.localMusicFolder.value)
         s.filterNonAudio.value = p.getBoolean("filterNonAudio", s.filterNonAudio.value)
+        s.localMusicEnrich.value = p.getBoolean("localMusicEnrich", s.localMusicEnrich.value)
         s.cacheBytes.value = p.getLong("cacheBytes", s.cacheBytes.value)
             .coerceIn(500_000_000L, 10_000_000_000L)
 
@@ -145,6 +146,7 @@ object SettingsStore {
             .putBoolean("questKeepAwake", s.questKeepAwake.value)
             .putString("localMusicFolder", s.localMusicFolder.value)
             .putBoolean("filterNonAudio", s.filterNonAudio.value)
+            .putBoolean("localMusicEnrich", s.localMusicEnrich.value)
             .putLong("cacheBytes", s.cacheBytes.value)
             .putBoolean("playNextOnSwipe", s.playNextOnSwipe.value)
             .putBoolean("noRepeatSuggestions", s.noRepeatSuggestions.value)

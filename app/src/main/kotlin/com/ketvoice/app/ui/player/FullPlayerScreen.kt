@@ -91,6 +91,9 @@ fun FullPlayerScreen(
     var touching by remember { mutableStateOf(false) }
     val covers by ArtworkRepo.covers.collectAsState()
     val canvas by CanvasRepo.paths.collectAsState()
+    val canvasExcluded by CanvasRepo.excluded.collectAsState()
+    // Exclusion par morceau (menu •••) : pochette statique uniquement.
+    val canvasPath = canvas[track.id]?.takeIf { track.id !in canvasExcluded }
     val lyrics by LyricsRepo.state.collectAsState()
     val cover = covers["t:${track.id}"] ?: track.coverUrl
     val sampled = rememberCoverAmbience(cover)
@@ -137,7 +140,7 @@ fun FullPlayerScreen(
     MaterialTheme(colorScheme = MaterialTheme.colorScheme.copy(primary = albumAccent, onPrimary = Color.Black)) {
     BoxWithConstraints(modifier.fillMaxSize().background(Color.Black)) {
         if (com.ketvoice.app.BuildConfig.IS_QUEST) {
-            QuestLandscapePlayer(state, track, cover, canvas[track.id], ambience, page,
+            QuestLandscapePlayer(state, track, cover, canvasPath, ambience, page,
                 onPage = ::navigate, onClose = ::close, onTrackMenu = { sheet = "track" },
                 onSources = { sheet = "sources" }, onOutput = { sheet = "audio" })
             if (sheet.isNotBlank()) PlayerSheetScrim({ sheet = "" }) {
@@ -175,7 +178,7 @@ fun FullPlayerScreen(
                     if (claimed && kotlin.math.abs(total) > 380f) close() else dragX = 0f
                 }
             }) {
-                TabletPlayer(state, track, cover, canvas[track.id], ambience, page,
+                TabletPlayer(state, track, cover, canvasPath, ambience, page,
                     onPage = ::navigate, onClose = ::close, onTrackMenu = { sheet = "track" },
                     onSources = { sheet = "sources" }, onOutput = { sheet = "audio" })
             }
@@ -210,7 +213,7 @@ fun FullPlayerScreen(
                     }
                 }
             }) {
-                PlayerSceneBackground(track, canvas[track.id], state.isPlaying, cover, ambience,
+                PlayerSceneBackground(track, canvasPath, state.isPlaying, cover, ambience,
                     plain = false)
 
                 AnimatedContent(page, transitionSpec = {
@@ -232,7 +235,7 @@ fun FullPlayerScreen(
                                 .90f to Color.White.copy(alpha = .16f), 1f to Color.Transparent),
                                 blendMode = BlendMode.DstIn)
                         }.swipeToMini { close() }) {
-                        ArtworkCanvas(track, if (panoramicCanvasActive(canvas[track.id])) null else canvas[track.id], state.isPlaying, Modifier.fillMaxSize(), depth = true)
+                        ArtworkCanvas(track, if (panoramicCanvasActive(canvasPath)) null else canvasPath, state.isPlaying, Modifier.fillMaxSize(), depth = true)
                         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(
                             0f to Color.Black.copy(alpha = .16f), .52f to Color.Transparent,
                             .83f to ambience.color.copy(alpha = .45f), 1f to ambience.color.copy(alpha = .85f))))

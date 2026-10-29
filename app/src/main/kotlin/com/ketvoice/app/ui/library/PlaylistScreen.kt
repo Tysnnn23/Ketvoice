@@ -49,7 +49,6 @@ fun PlaylistScreen() {
     val context = LocalContext.current
     var rename by remember { mutableStateOf(false) }
     var deleting by remember { mutableStateOf(false) }
-    var menu by remember { mutableStateOf(false) }
     var name by remember(playlist?.id) { mutableStateOf(playlist?.name.orEmpty()) }
     var editing by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
@@ -70,7 +69,18 @@ fun PlaylistScreen() {
             Text(if (editing) "Glissez ⠿ pour réordonner" else "Playlist", color = th.secondary,
                 fontSize = if (com.ketvoice.app.BuildConfig.IS_QUEST) 15.sp else 13.sp)
             Spacer(Modifier.width(10.dp))
-            Box(Modifier.size(38.dp).clip(CircleShape).clickable(enabled = playlist != null) { menu = true },
+            Box(Modifier.size(38.dp).clip(CircleShape).clickable(enabled = playlist != null) {
+                // La feuille est rendue par AppRoot (au-dessus du chrome flottant) ;
+                // ici on ne fait que publier la requête avec ses actions.
+                val target = playlist ?: return@clickable
+                AppUi.playlistMenu.value = AppUi.PlaylistMenuRequest(
+                    playlist = target,
+                    onRename = { name = target.name; rename = true },
+                    onExportJson = { action { PlaylistExchange.exportJson(context, target) } },
+                    onExportM3u = { action { PlaylistExchange.exportM3u(context, target) } },
+                    onDelete = { deleting = true }
+                )
+            },
                 contentAlignment = Alignment.Center) {
                 Icon(Icons.Filled.MoreHoriz, "Actions de la playlist", tint = th.onBackground, modifier = Modifier.size(22.dp))
             }
@@ -194,28 +204,8 @@ fun PlaylistScreen() {
             text = { Text("Seule la playlist est supprimée. Vos titres et téléchargements sont conservés.") },
             confirmButton = { TextButton(enabled = !busy, onClick = { action { PlaylistStore.delete(playlist.id); AppUi.closeOverlay() } }) { Text("Supprimer") } },
             dismissButton = { TextButton(onClick = { deleting = false }) { Text("Annuler") } })
-        if (menu) Box(Modifier.fillMaxSize()) {
-            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .45f))
-                .clickable { menu = false })
-            Column(Modifier.align(Alignment.BottomCenter).imePadding().navigationBarsPadding()) {
-                PlaylistMenuSheet(
-                    playlist = playlist,
-                    onClose = { menu = false },
-                    onDownload = {
-                        val pending = playable.filter { Downloader.itemFor(it.id) == null }
-                        pending.forEach { Downloader.download(it) }
-                        android.widget.Toast.makeText(context,
-                            com.ketvoice.app.data.AppText.t("Téléchargements lancés"),
-                            android.widget.Toast.LENGTH_SHORT).show()
-                    },
-                    onPlayNext = { Player.enqueue(playable) },
-                    onRename = { name = playlist.name; rename = true },
-                    onExportJson = { action { PlaylistExchange.exportJson(context, playlist) } },
-                    onExportM3u = { action { PlaylistExchange.exportM3u(context, playlist) } },
-                    onDelete = { deleting = true }
-                )
-            }
-        }
+        // Le menu d'actions est rendu par AppRoot (AppUi.playlistMenu) : il passe
+        // au-dessus du mini-lecteur et de la navigation au lieu d'être masqué.
     }
 }
 

@@ -1,12 +1,17 @@
 package com.ketvoice.app.ui.library
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -14,13 +19,19 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ketvoice.app.data.*
+import com.ketvoice.app.glass.GlassPanel
+import com.ketvoice.app.glass.GlassParams
 import com.ketvoice.app.theme.LocalTheme
 import com.ketvoice.app.ui.AppUi
 import com.ketvoice.app.ui.common.AppAlertDialog
+import com.ketvoice.app.ui.common.Icon
 import com.ketvoice.app.ui.common.Text
 import kotlinx.coroutines.*
 
@@ -30,7 +41,6 @@ private fun userError(failure: Exception): String = if (failure is IllegalArgume
 @Composable
 fun PlaylistDialogs() {
     if (AppUi.showCreatePlaylist.value) CreatePlaylistDialog()
-    else AppUi.addToPlaylist.value?.let { AddPlaylistDialog(it) }
     if (AppUi.showSpotifyImport.value) SpotifyImportDialog { AppUi.showSpotifyImport.value = false }
 }
 
@@ -61,33 +71,85 @@ private fun CreatePlaylistDialog() {
         dismissButton = { TextButton(enabled = !saving, onClick = { AppUi.showCreatePlaylist.value = false }) { Text("Annuler") } })
 }
 
+/**
+ * Feuille « Ajouter à une playlist » : verre liquide, liste des playlists avec
+ * leurs vraies couvertures (mosaïque pour les imports Spotify), création rapide.
+ * Rendue par AppRoot au-dessus du chrome flottant.
+ */
 @Composable
-private fun AddPlaylistDialog(track: Track) {
+fun AddToPlaylistSheet(track: Track, onClose: () -> Unit) {
     val rows by PlaylistStore.lists.collectAsState()
-    val th = LocalTheme.current
     val scope = rememberCoroutineScope()
-    var saving by remember { mutableStateOf(false) }
-    var error by remember { mutableStateOf("") }
-    AppAlertDialog(onDismissRequest = { if (!saving) AppUi.addToPlaylist.value = null },
-        title = { Text("Ajouter à une playlist") }, text = { Column {
-            Text(track.title, localize = false, color = th.onBackground)
-            if (rows.isEmpty()) Text("Créez votre première playlist pour y ajouter ce titre.", color = th.secondary)
-            LazyColumn(Modifier.fillMaxWidth().heightIn(max = 300.dp)) {
-                items(rows,key={it.id}) { list ->
-                    Text(list.name, localize = false, color = th.onBackground, modifier = Modifier.fillMaxWidth()
-                        .clickable(enabled = !saving) {
-                            saving = true
-                            scope.launch {
-                                try { PlaylistStore.add(list.id,track); AppUi.addToPlaylist.value = null }
-                                catch (failure: Exception) { error = userError(failure) }
-                                finally { saving = false }
+    var savingId by remember { mutableStateOf<String?>(null) }
+    val radius = with(androidx.compose.ui.platform.LocalDensity.current) { 28.dp.toPx() }
+    GlassPanel(
+        modifier = Modifier.fillMaxWidth().padding(10.dp),
+        shape = RoundedCornerShape(28.dp),
+        params = GlassParams.sheet(radius, dark = true)
+    ) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .clickable(interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                    indication = null) { }
+        ) {
+            Box(Modifier.fillMaxWidth().padding(top = 8.dp), contentAlignment = Alignment.Center) {
+                Box(Modifier.width(44.dp).height(5.dp).clip(RoundedCornerShape(3.dp))
+                    .background(Color.White.copy(alpha = .35f)))
+            }
+            Text("Ajouter à une playlist", color = Color.White, fontSize = 21.sp,
+                fontWeight = FontWeight.Black, modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp))
+            if (rows.isEmpty()) {
+                Text("Créez votre première playlist pour y ajouter ce titre.",
+                    color = Color.White.copy(alpha = .6f), fontSize = 14.sp,
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
+            } else {
+                LazyColumn(Modifier.fillMaxWidth().heightIn(max = 380.dp)) {
+                    items(rows, key = { it.id }) { list ->
+                        val saving = savingId == list.id
+                        Row(
+                            Modifier.fillMaxWidth()
+                                .clickable(enabled = !saving) {
+                                    savingId = list.id
+                                    scope.launch {
+                                        try { PlaylistStore.add(list.id, track); onClose() }
+                                        finally { savingId = null }
+                                    }
+                                }
+                                .padding(horizontal = 16.dp, vertical = 7.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            PlaylistArtwork(list, list.name, Modifier.size(52.dp))
+                            Spacer(Modifier.width(13.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text(list.name, localize = false, color = Color.White, fontSize = 16.sp,
+                                    fontWeight = FontWeight.SemiBold, maxLines = 1,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                                val available = list.entries.count { it.track != null }
+                                Text("$available / ${list.entries.size} titres disponibles",
+                                    color = Color.White.copy(alpha = .6f), fontSize = 12.5.sp)
                             }
-                        }.padding(vertical = 16.dp))
+                            if (saving) CircularProgressIndicator(
+                                Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
+                        }
+                    }
                 }
             }
-            if (error.isNotBlank()) Text(error,color=MaterialTheme.colorScheme.error)
-        } }, confirmButton = { TextButton(enabled = !saving,onClick={AppUi.showCreatePlaylist.value=true}) { Text("Créer une playlist",color=th.accent) } },
-        dismissButton = { TextButton(enabled = !saving,onClick={AppUi.addToPlaylist.value=null}) { Text("Fermer") } })
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Color.White.copy(alpha = .12f))
+                    .clickable { AppUi.showCreatePlaylist.value = true }
+                    .padding(horizontal = 16.dp, vertical = 13.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(Icons.Filled.Add, null, tint = Color.White, modifier = Modifier.size(22.dp))
+                Spacer(Modifier.width(12.dp))
+                Text("Créer une playlist", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            }
+            Spacer(Modifier.height(10.dp))
+        }
+    }
 }
 
 @Composable

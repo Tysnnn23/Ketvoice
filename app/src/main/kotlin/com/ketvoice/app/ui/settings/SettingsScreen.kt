@@ -22,6 +22,8 @@ import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Mic
@@ -38,6 +40,8 @@ import com.ketvoice.app.ui.common.Icon
 import com.ketvoice.app.ui.common.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -534,6 +538,38 @@ fun SettingsScreen() {
                     sub = "Pistes enregistrées sur l'appareil",
                     value = ""
                 ) { AppUi.pushOverlay(AppUi.DOWNLOADS) }
+            }
+
+            // ==================================================== MUSIQUE LOCALE
+            val localFolderPicker = rememberLauncherForActivityResult(
+                ActivityResultContracts.OpenDocumentTree()
+            ) { uri ->
+                if (uri != null) {
+                    com.ketvoice.app.data.LocalMusic.acceptFolder(ctx, uri)
+                    com.ketvoice.app.data.LocalMusic.scan(ctx)
+                }
+            }
+            val localFolderName = com.ketvoice.app.data.LocalMusic.folderName()
+            Section("MUSIQUE LOCALE") {
+                SRow(
+                    Icons.Filled.Folder, "Dossier de musique locale",
+                    sub = if (localFolderName == null)
+                        "Tous les fichiers audio de l'appareil (MediaStore)"
+                    else "Dossier analysé : $localFolderName",
+                    value = if (localFolderName == null) "Appareil" else ""
+                ) { localFolderPicker.launch(null) }
+                if (localFolderName != null) {
+                    SRow(
+                        Icons.Filled.FolderOpen, "Revenir à tout l'appareil",
+                        sub = "Le scan MediaStore remplace le dossier choisi"
+                    ) {
+                        com.ketvoice.app.data.LocalMusic.clearFolder()
+                        com.ketvoice.app.data.LocalMusic.scan(ctx)
+                    }
+                }
+                SToggle(Icons.Filled.Bolt, "Correspondances musicales",
+                    "Complète artiste, album et pochette des fichiers locaux sans métadonnées. Les métadonnées existantes ne sont jamais remplacées.",
+                    AppSettings.localMusicEnrich.value) { AppSettings.localMusicEnrich.value = it; SettingsStore.save() }
             }
 
             // ==================================================== STOCKAGE

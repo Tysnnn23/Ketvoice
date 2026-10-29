@@ -50,13 +50,12 @@ fun PlaylistMenuSheet(
 ) {
     val playable = playlist.entries.mapNotNull { it.track }
     val radius = with(LocalDensity.current) { 28.dp.toPx() }
-    // Posée dans le contenu capturé par le backdrop : verre statique, sinon
-    // la boucle drawBackdrop fait planter le RenderThread.
+    // Rendue au niveau racine (AppRoot), hors de la couche capturée : le verre est
+    // donc DYNAMIQUE — il échantillonne réellement le contenu derrière la feuille.
     GlassPanel(
         modifier = Modifier.fillMaxWidth().padding(10.dp),
         shape = RoundedCornerShape(28.dp),
-        params = GlassParams.sheet(radius, dark = true),
-        captured = true
+        params = GlassParams.sheet(radius, dark = true)
     ) {
         Column(Modifier.fillMaxWidth().heightIn(max = 650.dp)
             .verticalScroll(rememberScrollState()).clickable(noRip, null) { }) {

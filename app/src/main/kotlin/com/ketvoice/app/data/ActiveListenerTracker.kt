@@ -94,6 +94,10 @@ object ActiveListenerTracker {
                 if (active && track != null) {
                     put("title", track.title.take(120))
                     put("artist", track.artist.take(120))
+                    // Pochette pour l'affichage « Listening Now » du site :
+                    // uniquement une URL http(s) publique, jamais un fichier local.
+                    val cover = track.coverUrl
+                    if (cover != null && cover.startsWith("https://")) put("cover", cover.take(500))
                 }
             }
 

@@ -764,6 +764,7 @@ async function listenerHeartbeat(req: Request): Promise<Response> {
     if (!clientId) return json({ error: "clientId requis" }, 400);
     const title = body.title ? String(body.title).trim().slice(0, 200) : null;
     const artist = body.artist ? String(body.artist).trim().slice(0, 200) : null;
+    const cover = body.cover ? String(body.cover).trim().slice(0, 500) : null;
     const active = body.active !== false;
 
     await request(
@@ -780,6 +781,7 @@ async function listenerHeartbeat(req: Request): Promise<Response> {
           p_title: title,
           p_artist: artist,
           p_active: active,
+          p_cover: cover,
         }),
       },
       4000

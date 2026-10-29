@@ -61,6 +61,8 @@ object AppSettings {
 
     val localMusicFolder = mutableStateOf<String?>(null)
     val filterNonAudio = mutableStateOf(true)
+    // Correspondances musicales en ligne pour les fichiers locaux sans métadonnées.
+    val localMusicEnrich = mutableStateOf(true)
 
     val cacheBytes = mutableStateOf(10_000_000_000L)
 

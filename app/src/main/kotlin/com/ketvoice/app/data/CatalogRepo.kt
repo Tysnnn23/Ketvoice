@@ -9,7 +9,8 @@ import java.net.HttpURLConnection
 
 data class CatalogRequest(val kind: String, val id: String, val title: String)
 data class CatalogGenre(val id: String, val title: String, val cover: String?)
-data class CatalogPage(val title: String, val subtitle: String, val cover: String?, val tracks: List<Track>)
+data class CatalogPage(val title: String, val subtitle: String, val cover: String?, val tracks: List<Track>,
+    val releaseDate: String? = null)
 
 object CatalogRepo {
     private var genreCache: List<CatalogGenre> = emptyList()
@@ -50,7 +51,8 @@ object CatalogRepo {
                     current = if (next.startsWith("https://api.deezer.com/")) get(next.removePrefix("https://api.deezer.com/")) else null
                 }
                 val tracks = parseTracks(all, o, artist)
-                CatalogPage(o.optString("title"), artist?.optString("name").orEmpty(), cover, tracks)
+                CatalogPage(o.optString("title"), artist?.optString("name").orEmpty(), cover, tracks,
+                    releaseDate = o.optString("release_date").takeIf { it.isNotBlank() && it != "null" })
             }
             "genre" -> {
                 val o = get("chart/${request.id}/tracks?limit=60") ?: return@withContext null

@@ -18,6 +18,8 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.Smartphone
 import androidx.compose.material.icons.filled.Equalizer
+import androidx.compose.material.icons.filled.Videocam
+import androidx.compose.material.icons.filled.VideocamOff
 import androidx.compose.material.icons.filled.Wifi
 import com.ketvoice.app.ui.common.Icon
 import com.ketvoice.app.ui.common.Text
@@ -38,6 +40,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ketvoice.app.data.Downloader
 import com.ketvoice.app.data.ArtworkRepo
+import com.ketvoice.app.data.CanvasRepo
+import com.ketvoice.app.data.AppSettings
 import com.ketvoice.app.data.Track
 import com.ketvoice.app.glass.GlassPanel
 import com.ketvoice.app.glass.GlassParams
@@ -134,6 +138,18 @@ fun TrackMenuSheet(track: Track, onClose: () -> Unit) {
         ) {
             if (!downloaded) Downloader.download(track)
             onClose()
+        }
+        // Exclusion du Canvas par morceau : visible uniquement quand les Canvas
+        // vidéo sont activés dans les paramètres. Persisté dans CanvasRepo.
+        if (AppSettings.animatedArtwork.value) {
+            val excluded = CanvasRepo.isExcluded(track.id)
+            MenuItemRow(
+                if (excluded) "Réactiver le Canvas pour ce morceau" else "Exclure ce morceau du Canvas",
+                if (excluded) Icons.Filled.Videocam else Icons.Filled.VideocamOff
+            ) {
+                CanvasRepo.setExcluded(track.id, !excluded)
+                onClose()
+            }
         }
         val publisher by com.ketvoice.app.data.PublisherSession.allowed.collectAsState()
         if (publisher && com.ketvoice.app.data.ImportedSong.id(track) != null) MenuItemRow("Modifier l'audio ou la pochette", Icons.Filled.Download) {

@@ -83,59 +83,36 @@ fun MiniPlayerPill(modifier: Modifier = Modifier, onOpen: () -> Unit) {
     val art by ArtworkRepo.covers.collectAsState()
     val cover = art["t:${current.id}"] ?: current.coverUrl
 
-    val pillShape = RoundedCornerShape(29.dp)
+    // Capsule affinée : moins de hauteur et de marge que les premières versions,
+    // pour un chrome discret qui laisse la place au contenu.
+    val pillShape = RoundedCornerShape(25.dp)
     GlassPanel(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 6.dp)
-            .height(58.dp)
+            .padding(horizontal = 10.dp, vertical = 4.dp)
+            .height(50.dp)
             .shadow(
                 elevation = if (th.isDark) 2.dp else 4.dp,
                 shape = pillShape,
                 spotColor = Color.Black.copy(alpha = 0.14f)
-            )
-            .border(
-                0.75.dp,
-                Brush.verticalGradient(
-                    listOf(
-                        Color.White.copy(alpha = if (th.isDark) 0.38f else 0.7f),
-                        Color.White.copy(alpha = if (th.isDark) 0.08f else 0.22f)
-                    )
-                ),
-                pillShape
             ),
         shape = pillShape,
         params = GlassParams.pill(dark = th.isDark),
         enabled = AppSettings.liquidGlass.value
     ) {
         Box(Modifier.fillMaxSize()) {
-            // Reflet spéculaire supérieur Liquid Glass
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .height(16.dp)
-                    .align(Alignment.TopCenter)
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(
-                                Color.White.copy(alpha = if (th.isDark) 0.25f else 0.45f),
-                                Color.Transparent
-                            )
-                        )
-                    )
-            )
             Row(
                 Modifier
                     .fillMaxSize()
                     .clickable(noRipple, null) { onOpen() }
-                    .padding(start = 6.dp, end = 14.dp),
+                    .padding(start = 6.dp, end = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Cover(
                     current.title,
                     cover,
-                    size = 46.dp,
-                    radius = 9.dp,
+                    size = 42.dp,
+                    radius = 8.dp,
                     modifier = Modifier.onGloballyPositioned {
                         AppUi.miniCoverBounds.value = it.boundsInRoot()
                     }
@@ -150,7 +127,7 @@ fun MiniPlayerPill(modifier: Modifier = Modifier, onOpen: () -> Unit) {
                         Text(
                             current.title,
                             localize = false,
-                            style = T.bodyBold.copy(fontSize = 15.sp),
+                            style = T.bodyBold.copy(fontSize = 14.5.sp),
                             color = th.onBackground,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
@@ -159,15 +136,15 @@ fun MiniPlayerPill(modifier: Modifier = Modifier, onOpen: () -> Unit) {
                     Text(
                         current.artist,
                         localize = false,
-                        style = T.sub.copy(fontSize = 12.5.sp),
+                        style = T.sub.copy(fontSize = 12.sp),
                         color = th.secondary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-                Spacer(Modifier.width(10.dp))
+                Spacer(Modifier.width(8.dp))
                 MiniTransportButton(playing = ps.playWhenReady)
-                Spacer(Modifier.width(16.dp))
+                Spacer(Modifier.width(12.dp))
                 MiniTransportNext()
             }
 
@@ -284,18 +261,18 @@ fun GlassBottomBar(
     )
 
     val widthAnim by animateDpAsState(
-        targetValue = if (collapsed) 190.dp else
-            (androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp - 106).dp.coerceIn(180.dp, 300.dp),
+        targetValue = if (collapsed) 180.dp else
+            (androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp - 100).dp.coerceIn(172.dp, 300.dp),
         animationSpec = spring(dampingRatio = 0.9f, stiffness = 500f),
         label = "tabWidth"
     )
     val heightAnim by animateDpAsState(
-        targetValue = if (collapsed) 58.dp else 64.dp,
+        targetValue = if (collapsed) 48.dp else 53.dp,
         animationSpec = spring(dampingRatio = 0.9f, stiffness = 500f),
         label = "tabHeight"
     )
     val searchSize by animateDpAsState(
-        targetValue = if (collapsed) 58.dp else 64.dp,
+        targetValue = if (collapsed) 48.dp else 53.dp,
         animationSpec = spring(dampingRatio = 0.9f, stiffness = 500f),
         label = "searchSize"
     )
@@ -345,11 +322,15 @@ GlassPanel(
         .align(Alignment.CenterStart)
         .graphicsLayer { scaleX = bulge * stretch; scaleY = bulge / (1f + (stretch - 1f) * 0.5f) },
     shape = pillShape,
-    params = GlassParams.pill(blur = 4f, dark = th.isDark).copy(
-        refractionPx = 24f,
-        tintAlpha = if (th.isDark) 0.10f else 0.20f,
-        saturation = 1.08f,
-        highlightAlpha = if (th.isDark) 0.46f else 0.72f
+    params = GlassParams.pill(blur = 6f, dark = th.isDark).copy(
+        // Lentille active : quasi incolore. Toute teinte > ~0.08 la transforme
+        // en capsule blanche opaque au lieu d'un verre optique.
+        refractionPx = 30f,
+        tintAlpha = if (th.isDark) 0.055f else 0.04f,
+        saturation = if (th.isDark) 1.20f else 1.45f,
+        exposure = 0.025f,
+        highlightAlpha = if (th.isDark) 0.24f else 0.32f,
+        highlightIntensity = if (th.isDark) 0.22f else 0.26f
     ),
     enabled = AppSettings.liquidGlass.value
 ) {}
@@ -392,13 +373,13 @@ GlassPanel(
                                     contentDescription = null,
                                     tint = contentColor,
                                     modifier = Modifier
-                                        .size(22.dp)
+                                        .size(21.dp)
                                         .graphicsLayerScale(iconScale)
                                 )
                                 Spacer(Modifier.height(2.dp))
                                 Text(
                                     tab.label,
-                                    fontSize = 10.5.sp,
+                                    fontSize = 10.sp,
                                     fontWeight = if (isSel) FontWeight.Bold else FontWeight.SemiBold,
                                     color = contentColor
                                 )

@@ -19,9 +19,24 @@ object CanvasRepo {
     private const val UA =
         "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Mobile Safari/537.36"
     private const val PREFS = "ketvoice_canvas"
+    private const val EXCLUDED_KEY = "canvas_excluded_tracks"
 
     private val _paths = MutableStateFlow<Map<String, String>>(emptyMap())
     val paths: StateFlow<Map<String, String>> = _paths
+
+    // Morceaux exclus du Canvas à la demande (menu ••• du lecteur). Persisté :
+    // l'exclusion survit au redémarrage, même si la vidéo est déjà téléchargée.
+    private val _excluded = MutableStateFlow<Set<String>>(emptySet())
+    val excluded: StateFlow<Set<String>> = _excluded
+
+    fun isExcluded(trackId: String): Boolean = trackId in _excluded.value
+
+    fun setExcluded(trackId: String, value: Boolean) {
+        _excluded.value = if (value) _excluded.value + trackId else _excluded.value - trackId
+        val ctx = appContext ?: return
+        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putStringSet(EXCLUDED_KEY, _excluded.value).apply()
+    }
 
     private val mutex = Mutex()
     private var appContext: Context? = null
@@ -36,6 +51,7 @@ object CanvasRepo {
         appContext = context.applicationContext
         runCatching {
             val prefs = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            _excluded.value = prefs.getStringSet(EXCLUDED_KEY, emptySet()).orEmpty().toSet()
             val dir = canvasDir(context.applicationContext)
             val map = mutableMapOf<String, String>()
             prefs.all.forEach { (key, value) ->
@@ -52,6 +68,9 @@ object CanvasRepo {
         val ctx = appContext ?: return@withContext
 
         if (!AppSettings.animatedArtwork.value) return@withContext
+        // Exclusion utilisateur : jamais de Canvas pour ce morceau, ni résolution
+        // ni lecture — seule la pochette statique est affichée.
+        if (track.id in _excluded.value) return@withContext
         fun recentlyFailed() = failed[track.id]?.let {
             System.currentTimeMillis() - it < 10 * 60_000L
         } == true

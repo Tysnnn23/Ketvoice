@@ -86,19 +86,7 @@ fun ArtistScreen() {
     }
 
     val artist = page?.artist
-    Column(Modifier.fillMaxSize().background(theme.background).statusBarsPadding()) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically) {
-            GlassBackButton { AppUi.closeOverlay() }
-            Spacer(Modifier.width(12.dp))
-            Text(artist?.name ?: request.name, localize = false, color = theme.onBackground, fontSize = 20.sp,
-                fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f))
-            if (page != null) Box(Modifier.size(38.dp).clickable { attempt++ }, contentAlignment = Alignment.Center) {
-                Icon(Icons.Filled.Refresh, "Actualiser", tint = theme.secondary, modifier = Modifier.size(21.dp))
-            }
-        }
-
+    Box(Modifier.fillMaxSize().background(theme.background)) {
         when {
             loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = theme.accent, modifier = Modifier.size(28.dp), strokeWidth = 2.dp)
@@ -112,15 +100,16 @@ fun ArtistScreen() {
                 Text("Réessayer", color = theme.accent, fontWeight = FontWeight.Bold,
                     modifier = Modifier.clickable { attempt++ }.padding(top = 20.dp, bottom = 12.dp))
             }
-            else -> LazyColumn(contentPadding = PaddingValues(bottom = 210.dp)) {
+            else -> LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 210.dp)) {
                 val data = page!!
                 item {
-                    // Bannière plein écran : photo de l'artiste pleine largeur,
-                    // floutée, avec fondu progressif vers le fond de la page.
+                    // Bannière plein écran, qui démarre SOUS la barre de statut
+                    // (immersion réelle) : photo de l'artiste pleine largeur,
+                    // fondu progressif vers le fond de la page.
                     // La hauteur suit le ratio réel de l'image (borné) : une photo
                     // portrait n'est plus écrasée dans une bannière fixe de 360 dp.
                     val heroWidth = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp.dp
-                    val heroHeight = (heroWidth / data.heroAspectRatio.coerceIn(.6f, 2f)).coerceIn(320.dp, 460.dp)
+                    val heroHeight = (heroWidth / data.heroAspectRatio.coerceIn(.6f, 2f)).coerceIn(340.dp, 500.dp)
                     Box(Modifier.fillMaxWidth().height(heroHeight)) {
                         // Fond de repli toujours présent : pas de flash vide pendant le chargement.
                         Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(theme.card, theme.hairline))))
@@ -261,6 +250,23 @@ fun ArtistScreen() {
                         }
                     }
                 }
+            }
+        }
+        // Barre supérieure superposée : retour + actualisation flottent au-dessus
+        // du hero (immersion), le nom reste porté par la bannière. En chargement
+        // ou en erreur, le nom d'artiste est affiché pour garder le contexte.
+        Row(Modifier.fillMaxWidth().statusBarsPadding()
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            GlassBackButton { AppUi.closeOverlay() }
+            Spacer(Modifier.width(12.dp))
+            if (page == null) {
+                Text(artist?.name ?: request.name, localize = false, color = theme.onBackground,
+                    fontSize = 20.sp, fontWeight = FontWeight.Bold, maxLines = 1,
+                    overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+            } else Spacer(Modifier.weight(1f))
+            if (page != null) Box(Modifier.size(38.dp).clickable { attempt++ }, contentAlignment = Alignment.Center) {
+                Icon(Icons.Filled.Refresh, "Actualiser", tint = theme.secondary, modifier = Modifier.size(21.dp))
             }
         }
     }
