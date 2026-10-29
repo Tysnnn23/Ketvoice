@@ -753,6 +753,76 @@ async function streamRoute(url: URL): Promise<Response> {
   return json(stream);
 }
 
+
+async function listenerHeartbeat(req: Request): Promise<Response> {
+  const base = supabaseUrl();
+  const role = serviceRole();
+  if (!base || !role) return json({ error: "Backend indisponible" }, 503);
+  try {
+    const body = await req.json().catch(() => ({}));
+    const clientId = String(body.clientId || "").trim().slice(0, 128);
+    if (!clientId) return json({ error: "clientId requis" }, 400);
+    const title = body.title ? String(body.title).trim().slice(0, 200) : null;
+    const artist = body.artist ? String(body.artist).trim().slice(0, 200) : null;
+    const active = body.active !== false;
+
+    await request(
+      `${base}/rest/v1/rpc/ketvoice_listener_heartbeat`,
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          apikey: role,
+          Authorization: `Bearer ${role}`,
+        },
+        body: JSON.stringify({
+          p_client_id: clientId,
+          p_title: title,
+          p_artist: artist,
+          p_active: active,
+        }),
+      },
+      4000
+    );
+    return json({ ok: true, active });
+  } catch (error) {
+    console.error("ketvoice-api heartbeat", error instanceof Error ? `${error.name}: ${error.message}` : "unknown");
+    return json({ ok: false, error: "Heartbeat error" }, 500);
+  }
+}
+
+async function getActiveListeners(url: URL): Promise<Response> {
+  const base = supabaseUrl();
+  const role = serviceRole();
+  const windowSec = Math.min(120, Math.max(15, Number(url.searchParams.get("window") || 50)));
+  if (!base || !role) {
+    return json({ activeListeners: 0, windowSeconds: windowSec, updatedAt: Date.now() });
+  }
+  try {
+    const res = await request(
+      `${base}/rest/v1/rpc/ketvoice_active_listeners_count`,
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          apikey: role,
+          Authorization: `Bearer ${role}`,
+        },
+        body: JSON.stringify({ p_window_seconds: windowSec }),
+      },
+      4000
+    );
+    if (res.status === 200) {
+      const data = await res.json();
+      return json(data);
+    }
+    console.error("ketvoice-api listeners rpc status", res.status);
+  } catch (error) {
+    console.error("ketvoice-api listeners", error instanceof Error ? `${error.name}: ${error.message}` : "unknown");
+  }
+  return json({ activeListeners: 0, windowSeconds: windowSec, updatedAt: Date.now() });
+}
+
 async function canvasRoute(url: URL): Promise<Response> {
   const spotifyId = (url.searchParams.get("spotifyId") ?? "").trim();
   const title = (url.searchParams.get("title") ?? "").trim();
@@ -784,6 +854,12 @@ Deno.serve(async (req) => {
       const limited = await allow(req, "/canvas");
       if (limited) return limited;
       return await canvasRoute(url);
+    }
+    if (sub === "/listeners/heartbeat" && req.method === "POST") {
+      return await listenerHeartbeat(req);
+    }
+    if (sub === "/listeners") {
+      return await getActiveListeners(url);
     }
     return json({ error: "Not found" }, 404);
   } catch (error) {

@@ -16,6 +16,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.ExitTransition
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.DragInteraction
@@ -123,14 +124,16 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
     }
     BoxWithConstraints(modifier) {
         val viewportPx = with(LocalDensity.current) { maxHeight.toPx() }
-        LaunchedEffect(active, following, expanded, lyrics.lines, viewportPx, reduced, seekEpoch) {
+        LaunchedEffect(active, following, expanded, lyrics.lines, viewportPx, reduced, seekEpoch, translationEnabled) {
             if (!following || lyrics.lines.isEmpty()) return@LaunchedEffect
             val targetIndex = LyricsMotion.targetIndex(active, lyrics.isTimed)
             val anchor = -(viewportPx * .18f).toInt()
             val item = list.layoutInfo.visibleItemsInfo.firstOrNull { it.index == targetIndex }
             if (reduced || item == null || active < 0) list.scrollToItem(targetIndex, if (active < 0) 0 else anchor)
-            else list.animateScrollBy((item.offset + anchor).toFloat(),
-                tween(Motion.duration(560), easing = androidx.compose.animation.core.FastOutSlowInEasing))
+            else list.animateScrollBy(
+                (item.offset + anchor).toFloat(),
+                tween(Motion.duration(540), easing = androidx.compose.animation.core.CubicBezierEasing(0.22f, 1f, 0.36f, 1f))
+            )
         }
         Column(Modifier.fillMaxSize()) {
             if (lyrics.lines.isNotEmpty()) {
@@ -230,6 +233,34 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
                                         fontWeight = FontWeight.Black,
                                         modifier = Modifier.fillMaxWidth().blur(lineBlur, BlurredEdgeTreatment.Unbounded))
                                 }
+
+                                // Backs / ad-libs : pour les paroles originales synchronisées (mot ou syllabe),
+                                // les segments entre parenthèses apparaissent avec la même animation d'expansion/fondu
+                                // que les traductions, et disparaissent immédiatement dès le passage à la ligne suivante.
+                                if (line.words.isNotEmpty() && line.text.contains("(") && line.text.contains(")")) {
+                                    val adlibs = remember(line.text) {
+                                        Regex("\\(([^)]+)\\)").findAll(line.text).map { "(${it.groupValues[1]})" }.joinToString(" ")
+                                    }
+                                    if (adlibs.isNotBlank()) {
+                                        AnimatedVisibility(
+                                            visible = current,
+                                            enter = fadeIn(tween(Motion.duration(320))) + expandVertically(tween(Motion.duration(320)), expandFrom = Alignment.Top),
+                                            exit = ExitTransition.None
+                                        ) {
+                                            Text(
+                                                adlibs,
+                                                localize = false,
+                                                color = Color.White.copy(alpha = 0.72f),
+                                                fontSize = (20f * fontScale).sp,
+                                                lineHeight = (26f * fontScale).sp,
+                                                letterSpacing = (-.2).sp,
+                                                fontWeight = FontWeight.Bold,
+                                                modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
+                                            )
+                                        }
+                                    }
+                                }
+
                                 AnimatedVisibility(
                                     visible = translationEnabled && translated[index] != null && (current || !lyrics.isTimed),
                                     enter = fadeIn(tween(Motion.duration(320))) + expandVertically(tween(Motion.duration(320)), expandFrom = Alignment.Top),
@@ -343,7 +374,12 @@ private data class LyricWordMask(val start: Long, val end: Long, val slices: Lis
 internal fun segmentProgress(now: Long, start: Long, end: Long): Float = when {
     now < start -> 0f
     end <= start -> 1f
-    else -> ((now - start).toFloat() / (end - start)).coerceIn(0f, 1f)
+    else -> {
+        val t = ((now - start).toFloat() / (end - start)).coerceIn(0f, 1f)
+        // Courbe smoothstep fluide : élimine les à-coups du word-by-word
+        // pour une glisse continue et naturelle, alignée sur le rendu syllabique.
+        t * t * (3f - 2f * t)
+    }
 }
 
 @Composable
@@ -351,13 +387,13 @@ internal fun IntroDots(firstLineMs: Long) {
     val position by Player.positionMs.collectAsState()
     val lit = LyricsMotion.litDots(position, firstLineMs)
 
-    // Plain white dots: no halo, no ripple, no drift. Only opacity changes, so the
-    // dots stay sharp and high-contrast on any cover colour.
+    // Plain white dots: no halo, no ripple, no drift.
+    // Positioned on the left side of the screen with slightly tightened spacing.
     Box(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 34.dp),
-        contentAlignment = Alignment.Center
+        modifier = Modifier.fillMaxWidth().padding(vertical = 34.dp, horizontal = 4.dp),
+        contentAlignment = Alignment.CenterStart
     ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(19.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             repeat(3) { index ->
                 val alpha by animateFloatAsState(
                     targetValue = if (index < lit) 1f else .28f,

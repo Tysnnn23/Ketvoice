@@ -7,6 +7,23 @@
 
 ---
 
+# Ketvoice 3.5.3
+
+**versionCode 45** — installs over 3.5.2 and every earlier build (same signing certificate).
+
+## Live listeners
+
+- **Real-time listening activity on the website.** The Ketvoice site now shows how many people are listening to music in the app at this moment. The figure refreshes every 30 seconds while the page stays visible.
+- **Completely anonymous.** The app sends a heartbeat every 25 seconds while music plays, using a random session ID generated on the device. No account, no identifiers, no track history leaves the phone — only an optional "now playing" title/artist snippet keeps the counter meaningful.
+- **Stops with playback.** Pausing or stopping music removes the listener within a minute. Closing the app also lets the entry expire, so the counter only reflects people actually listening.
+
+## Backend
+
+- **New API routes.** `POST /listeners/heartbeat` records anonymous playback pings; `GET /listeners` returns the live count for the website. Both are served by the existing Ketvoice API Edge Function.
+- **New migration.** `supabase/migrations/20261029100000_active_listeners.sql` adds the listener table, the heartbeat routine, and the counter routine, locked down to the service role.
+
+---
+
 # Ketvoice 3.5.2
 
 ![Ketvoice 3.5.2](https://github.com/Tysnnn23/Ketvoice/releases/download/v3.5.2/ketvoice-banner.png)

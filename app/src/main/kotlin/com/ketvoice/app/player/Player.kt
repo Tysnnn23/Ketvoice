@@ -168,6 +168,7 @@ object Player {
         override fun onIsPlayingChanged(isPlaying: Boolean) {
             if (resolving || mixing) return
             _state.value = _state.value.copy(isPlaying = isPlaying)
+            com.ketvoice.app.data.ActiveListenerTracker.onPlaybackStateChanged(_state.value.current, isPlaying)
             if (isPlaying && historyGeneration != generation) {
                 _state.value.current?.let { com.ketvoice.app.data.ListeningHistory.record(it) }
                 historyGeneration = generation
@@ -210,6 +211,7 @@ object Player {
         com.ketvoice.app.data.OfflineCapsule.init(context.applicationContext)
         com.ketvoice.app.data.PlaylistStore.init(context.applicationContext)
         com.ketvoice.app.data.ListeningHistory.init(context.applicationContext)
+        com.ketvoice.app.data.ActiveListenerTracker.init(context.applicationContext)
         com.ketvoice.app.data.HomeFeed.start(context.applicationContext)
         MusicApi.init(context.applicationContext)
         AudioCache.init(context.applicationContext)

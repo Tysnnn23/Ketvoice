@@ -333,53 +333,26 @@ fun GlassBottomBar(
                 Box(Modifier.fillMaxSize()) {
                     BoxWithConstraints(Modifier.fillMaxSize()) {
                         val slot = maxWidth / 3
-                        // Bulle active Liquid Glass avec reflet prismatique et contraste parfait (Frame 120)
-                        val pillShape = RoundedCornerShape(999.dp)
-                        val chromaticBorder = remember(th.isDark) {
-                            Brush.sweepGradient(
-                                listOf(
-                                    Color(0x4444DDFF),
-                                    Color(0x44FF2299),
-                                    Color(0x44FFAA00),
-                                    Color(0x4400E5FF),
-                                    Color(0x4444DDFF)
-                                )
-                            )
-                        }
-                        Box(
-                            modifier = Modifier
-                                .offset(x = slot * pillX + 5.dp)
-                                .size(width = slot - 10.dp, height = heightAnim - 10.dp)
-                                .align(Alignment.CenterStart)
-                                .graphicsLayer { scaleX = bulge; scaleY = bulge }
-                                .shadow(
-                                    elevation = if (th.isDark) 0.dp else 3.5.dp,
-                                    shape = pillShape,
-                                    spotColor = Color.Black.copy(alpha = 0.15f)
-                                )
-                                .clip(pillShape)
-                                .background(
-                                    if (th.isDark) Color.White.copy(alpha = 0.22f)
-                                    else Color.White.copy(alpha = 0.88f)
-                                )
-                                .border(1.dp, chromaticBorder, pillShape)
-                        ) {
-                            // Reflet spéculaire au sommet de la capsule
-                            Box(
-                                Modifier
-                                    .fillMaxWidth()
-                                    .height(14.dp)
-                                    .align(Alignment.TopCenter)
-                                    .background(
-                                        Brush.verticalGradient(
-                                            listOf(
-                                                Color.White.copy(alpha = if (th.isDark) 0.35f else 0.55f),
-                                                Color.Transparent
-                                            )
-                                        )
-                                    )
-                            )
-                        }
+// Lentille de verre mobile : un vrai GlassPanel (rÃ©fraction, reflets, ombre),
+// pas une capsule blanche. Elle s'Ã©tire un peu pendant le dÃ©placement puis se stabilise.
+val pillShape = RoundedCornerShape(999.dp)
+val travel = kotlin.math.abs((if (held) hover else selected.toFloat()) - pillX)
+val stretch = 1f + (travel * 0.16f).coerceAtMost(0.2f)
+GlassPanel(
+    modifier = Modifier
+        .offset(x = slot * pillX + 5.dp)
+        .size(width = slot - 10.dp, height = heightAnim - 10.dp)
+        .align(Alignment.CenterStart)
+        .graphicsLayer { scaleX = bulge * stretch; scaleY = bulge / (1f + (stretch - 1f) * 0.5f) },
+    shape = pillShape,
+    params = GlassParams.pill(blur = 4f, dark = th.isDark).copy(
+        refractionPx = 24f,
+        tintAlpha = if (th.isDark) 0.10f else 0.20f,
+        saturation = 1.08f,
+        highlightAlpha = if (th.isDark) 0.46f else 0.72f
+    ),
+    enabled = AppSettings.liquidGlass.value
+) {}
                     }
                     Row(
                         Modifier
