@@ -7,6 +7,18 @@
 
 ---
 
+# Ketvoice 3.6.3
+
+**versionCode 49** — installs over 3.6.2 and every earlier build (same signing certificate).
+
+### Artist page — the hero now owns the whole top of the screen
+Before → After: the banner followed the aspect ratio of the artist photo and topped out around 320–560 dp, so it left dead space at the sides and never felt like a cover. It now takes 58% of the screen height (clamped between 400 and 720 dp) and runs edge to edge, so the animated canvas truly fills the top of the page.
+
+### Artist page — title, artist name and actions live inside the cover
+Before → After: the name and monthly listeners sat under the banner, and playback was only reachable from the separate button above the track list. The cover now carries the artist name, the "Artist · YouTube Music" label, the listener count, plus two actions directly on top of it: **Listen** (plays the artist's tracks) and **Queue** (opens the player queue). Both labels already exist in `translations.json`, so all eleven languages are covered.
+
+---
+
 # Ketvoice 3.6.2
 
 **versionCode 48** — installs over 3.6.1 and every earlier build (same signing certificate).

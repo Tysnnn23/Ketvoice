@@ -120,8 +120,11 @@ fun ArtistScreen() {
                     // bandes de blur progressif — haut et bas — d'étendue limitée
                     // et de fondu lisse (shader AGSL, comme la pochette du lecteur).
                     // La hauteur suit le ratio réel de l'image (borné large).
-                    val heroWidth = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp.dp
-                    val heroHeight = (heroWidth / data.heroAspectRatio.coerceIn(.5f, 2.6f)).coerceIn(320.dp, 560.dp)
+                    // Le hero occupe tout le haut de l'écran : le canvas est plein
+                    // cadre et sert de cover, avec le titre, le nom de l'artiste,
+                    // le bouton lecture et la file d'attente à l'intérieur.
+                    val heroHeight = (androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp.dp * .58f)
+                        .coerceIn(400.dp, 720.dp)
                     Box(Modifier.fillMaxWidth().height(heroHeight)
                         .graphicsLayer { alpha = heroFade }) {
                         // Plus de cover floutée : le haut de page est porté par le
@@ -148,6 +151,30 @@ fun ArtistScreen() {
                             }
                             Text("Artiste · YouTube Music", color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp,
                                 modifier = Modifier.padding(top = 3.dp))
+                            // Actions posées dans la cover : lecture immédiate des titres
+                            // de l'artiste et ouverture de la file d'attente du lecteur.
+                            if (data.tracks.isNotEmpty()) Row(
+                                Modifier.padding(top = 14.dp),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(Modifier.clip(RoundedCornerShape(999.dp)).background(theme.accent)
+                                    .clickable { Player.playQueue(data.tracks, 0) }
+                                    .padding(horizontal = 20.dp, vertical = 10.dp),
+                                    verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Filled.PlayArrow, null, tint = Color.White, modifier = Modifier.size(18.dp))
+                                    Spacer(Modifier.width(6.dp))
+                                    Text("Lecture", color = Color.White, fontSize = 13.5.sp, fontWeight = FontWeight.Bold)
+                                }
+                                Row(Modifier.clip(RoundedCornerShape(999.dp))
+                                    .background(Color.White.copy(alpha = 0.16f))
+                                    .clickable { AppUi.openQueue() }
+                                    .padding(horizontal = 18.dp, vertical = 10.dp),
+                                    verticalAlignment = Alignment.CenterVertically) {
+                                    Text("File d'attente", color = Color.White, fontSize = 13.sp,
+                                        fontWeight = FontWeight.SemiBold)
+                                }
+                            }
                         }
                     }
                 }
