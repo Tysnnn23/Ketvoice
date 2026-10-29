@@ -95,6 +95,23 @@ data class GlassParams(
     val dark: Boolean = false
 ) {
     companion object {
+        /**
+         * Carte de contenu : grand rayon, réfraction discrète. Sert aux groupes
+         * de réglages et aux boutons de l'application, qui étaient jusqu'ici
+         * des aplats opaques alors que le reste de l'interface est en verre.
+         */
+        fun card(radiusPx: Float, dark: Boolean = false) = GlassParams(
+            cornerRadiusPx = radiusPx,
+            blurPx = 26f,
+            refractionPx = 14f,
+            tintAlpha = if (dark) 0.10f else 0.08f,
+            saturation = if (dark) 1.14f else 1.26f,
+            exposure = if (dark) 0.015f else 0.04f,
+            highlightAlpha = if (dark) 0.30f else 0.46f,
+            highlightIntensity = if (dark) 0.26f else 0.34f,
+            dark = dark
+        )
+
         fun pill(blur: Float = 24f, dark: Boolean = false) = GlassParams(
             cornerRadiusPx = 9999f,
             blurPx = blur,

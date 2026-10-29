@@ -1,8 +1,10 @@
 package com.ketvoice.app.ui.chrome
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -10,6 +12,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -45,9 +49,29 @@ fun TabletNavigationRail(modifier: Modifier = Modifier) {
                 items.forEach { (icon, label, tab) ->
                     val selected = if (tab == -1) AppUi.overlay.value == AppUi.SEARCH
                         else AppUi.tab.value == tab && AppUi.overlay.value == AppUi.NONE
+                    // Item sélectionné : fine couche de verre posée sur le panneau,
+                    // pas un aplat opaque. Un GlassPanel imbriqué ne peut pas
+                    // réfracter (le fond est déjà capturé par le parent), donc on
+                    // reproduit la lumière interne : dégradé vertical + liseré.
                     val itemModifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp))
                         .questPointer()
-                        .background(if (selected) theme.onBackground.copy(alpha = .12f) else androidx.compose.ui.graphics.Color.Transparent)
+                        .then(
+                            if (selected) Modifier
+                                .background(
+                                    Brush.verticalGradient(
+                                        listOf(
+                                            Color.White.copy(alpha = if (theme.isDark) 0.17f else 0.34f),
+                                            Color.White.copy(alpha = if (theme.isDark) 0.06f else 0.13f)
+                                        )
+                                    )
+                                )
+                                .border(
+                                    0.6.dp,
+                                    Color.White.copy(alpha = if (theme.isDark) 0.18f else 0.45f),
+                                    RoundedCornerShape(22.dp)
+                                )
+                            else Modifier
+                        )
                         .clickable {
                             if (tab == -1) AppUi.openSearch() else AppUi.selectTab(tab)
                         }.padding(horizontal = 5.dp, vertical = 14.dp)
@@ -65,9 +89,19 @@ fun TabletNavigationRail(modifier: Modifier = Modifier) {
             }
         }
         Spacer(Modifier.weight(1f))
-        Icon(Icons.Filled.Settings, "Réglages", tint = theme.secondary,
-            modifier = Modifier.size(48.dp).clip(RoundedCornerShape(20.dp))
-                .questPointer()
-                .clickable { AppUi.openSettings() }.padding(12.dp))
+        // Réglages : pastille de verre, cohérente avec le reste du chrome.
+        GlassPanel(
+            Modifier.size(48.dp),
+            CircleShape,
+            GlassParams.circle(dark = theme.isDark),
+            enabled = AppSettings.liquidGlass.value
+        ) {
+            Box(
+                Modifier.fillMaxSize().questPointer().clickable { AppUi.openSettings() },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Filled.Settings, "Réglages", tint = theme.secondary, modifier = Modifier.size(24.dp))
+            }
+        }
     }
 }

@@ -226,7 +226,16 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
                                 else {
                                     // Une seule couche de texte par ligne : plus aucun halo
                                     // flou dupliqué au-dessus des paroles.
-                                    Text(line.text, localize = false, color = lineColor,
+                                    // Le texte de base ne doit plus contenir les segments
+                                    // entre parenthèses : ils sont rendus une seule fois,
+                                    // par le bloc ad-libs animé juste en dessous. Les
+                                    // laisser ici produisait le doublon visé.
+                                    val baseText = remember(line.text) {
+                                        Regex("\\([^)]*\\)").replace(line.text, "")
+                                            .replace(Regex("\\s{2,}"), " ")
+                                            .trim()
+                                    }
+                                    if (baseText.isNotBlank()) Text(baseText, localize = false, color = lineColor,
                                         fontSize = (33f * fontScale).sp,
                                         lineHeight = (41f * fontScale).sp,
                                         letterSpacing = (-.3).sp,
@@ -242,8 +251,39 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
                                         Regex("\\(([^)]+)\\)").findAll(line.text).map { "(${it.groupValues[1]})" }.joinToString(" ")
                                     }
                                     if (adlibs.isNotBlank()) {
+                                        // Les backs ne doivent vivre que le temps de leurs
+                                        // propres syllabes. On retrouve leur fenêtre en
+                                        // suivant la profondeur des parenthèses dans le
+                                        // flux de mots synchronisés, puis on l'utilise
+                                        // comme condition d'affichage.
+                                        val adlibWindow = remember(line.words) {
+                                            var depth = 0
+                                            var start = -1L
+                                            var end = -1L
+                                            val sb = StringBuilder()
+                                            line.words.forEach { w ->
+                                                val from = sb.length
+                                                sb.append(w.text)
+                                                for (i in from until sb.length) {
+                                                    when (sb[i]) {
+                                                        '(' -> {
+                                                            depth++
+                                                            if (start < 0) start = w.startMs
+                                                        }
+                                                        ')' -> if (depth > 0) {
+                                                            depth--
+                                                            if (depth == 0) {
+                                                                end = if (w.endMs > 0) w.endMs
+                                                                else w.startMs + 900L
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            if (start >= 0 && end > start) start..end else null
+                                        }
                                         AnimatedVisibility(
-                                            visible = current,
+                                            visible = adlibWindow?.let { position.value in it } ?: current,
                                             enter = fadeIn(tween(Motion.duration(320))) + expandVertically(tween(Motion.duration(320)), expandFrom = Alignment.Top),
                                             exit = ExitTransition.None
                                         ) {

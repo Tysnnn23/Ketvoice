@@ -4,6 +4,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import com.ketvoice.app.ui.common.GlassSlider
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -88,7 +89,7 @@ private fun EqualizerDialog(onClose:()->Unit){
                     Text(if(hz%1000==0) "${hz/1000} kHz" else if(hz>=1000) "${hz/1000f} kHz" else "$hz Hz",localize=false,fontSize=12.sp)
                     Spacer(Modifier.weight(1f));Text("${if(gain>0)"+" else ""}$gain dB",localize=false,fontSize=12.sp)
                 }
-                Slider(value=gain.toFloat(),onValueChange={value->
+                GlassSlider(value=gain.toFloat(),onValueChange={value->
                     AppSettings.equalizerGains.value=AppSettings.equalizerGains.value.toMutableList().apply{set(i,value.toInt())};apply()
                 },onValueChangeFinished={Player.applyEqualizer();SettingsStore.save()},valueRange=-12f..12f,
                     enabled=status.available&&AppSettings.equalizerEnabled.value)

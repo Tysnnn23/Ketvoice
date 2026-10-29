@@ -68,6 +68,8 @@ import com.ketvoice.app.player.AudioCache
 import com.ketvoice.app.player.Player
 import com.ketvoice.app.theme.LocalTheme
 import com.ketvoice.app.theme.Palette
+import com.ketvoice.app.glass.GlassPanel
+import com.ketvoice.app.glass.GlassParams
 import com.ketvoice.app.theme.T
 import com.ketvoice.app.ui.AppUi
 import com.ketvoice.app.util.LauncherIcons
@@ -641,10 +643,10 @@ fun SettingsScreen() {
                     if (!AppSettings.automixAutoFade.value) {
                         Text("${AppSettings.automixFadeSeconds.value} s", localize = false,
                             modifier = Modifier.padding(start = 22.dp, top = 12.dp), color = th.onBackground)
-                        androidx.compose.material3.Slider(value = AppSettings.automixFadeSeconds.value.toFloat(),
+                        com.ketvoice.app.ui.common.GlassSlider(value = AppSettings.automixFadeSeconds.value.toFloat(),
                             onValueChange = { AppSettings.automixFadeSeconds.value = it.toInt().coerceIn(1, 30) },
                             onValueChangeFinished = SettingsStore::save,
-                            valueRange = 1f..30f, steps = 28,
+                            valueRange = 1f..30f,
                             modifier = Modifier.fillMaxWidth().padding(horizontal = 22.dp))
                     }
                     SRow(Icons.Filled.Bolt, "Performance", sub = "Plus le niveau est élevé, plus l'analyse sollicite le processeur",
@@ -876,15 +878,17 @@ private fun Section(header: String, content: @Composable ColumnScope.() -> Unit)
         letterSpacing = 0.7.sp,
         modifier = Modifier.padding(start = 22.dp, top = 22.dp, bottom = 7.dp)
     )
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 14.dp)
-            .clip(RoundedCornerShape(20.dp))
-            .background(th.card)
-            .padding(vertical = 2.dp),
-        content = content
-    )
+    // Groupe de réglages en verre : même matériau que le chrome, pour que les
+    // cartes ne soient plus les seules surfaces opaques de l'application.
+    val radiusDp = 20.dp
+    GlassPanel(
+        Modifier.fillMaxWidth().padding(horizontal = 14.dp),
+        RoundedCornerShape(radiusDp),
+        GlassParams.card(with(androidx.compose.ui.platform.LocalDensity.current) { radiusDp.toPx() }, dark = LocalTheme.current.isDark),
+        enabled = AppSettings.liquidGlass.value
+    ) {
+        Column(Modifier.padding(vertical = 2.dp), content = content)
+    }
 }
 
 @Composable
@@ -1017,18 +1021,13 @@ private fun CacheLimitRow() {
             )
         }
         Spacer(Modifier.height(8.dp))
-        androidx.compose.material3.Slider(
+        com.ketvoice.app.ui.common.GlassSlider(
             value = (AppSettings.cacheBytes.value / AudioCache.STEP.toFloat()).coerceIn(1f, 20f),
             onValueChange = { gb ->
                 AppSettings.cacheBytes.value = kotlin.math.round(gb).toLong().coerceIn(1, 20) * AudioCache.STEP
             },
             onValueChangeFinished = { SettingsStore.save() },
-            valueRange = 1f..20f,
-            steps = 18,
-            colors = androidx.compose.material3.SliderDefaults.colors(
-                thumbColor = th.accent,
-                activeTrackColor = th.accent
-            )
+            valueRange = 1f..20f
         )
         Text(
             "Appliqué immédiatement : les plus anciens fichiers sont retirés au-delà de la limite.",
