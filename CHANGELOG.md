@@ -7,6 +7,20 @@
 
 ---
 
+# Ketvoice 3.6.1
+
+**versionCode 47** — installs over 3.6.0 and every earlier build (same signing certificate).
+
+## Glass outside the player
+
+- **The rest of the app is glass now.** Settings groups were opaque cards sitting next to a glass chrome; they now use the same material (`GlassParams.card`: large radius, 26 px blur, 14 px refraction) so the whole interface reads as one surface. The selected sidebar item is no longer a flat tint but a lit glass layer (vertical highlight plus a 0.6 dp rim), and the settings icon is a circular glass pill instead of a bare icon.
+- **New glass slider.** The Material slider was the last solid control in the app: its opaque track and thumb broke the material. It is replaced by `GlassSlider` — a recessed groove with a light top edge, an accent-filled progress segment and a glass thumb. It now drives the equalizer gain, the automix fade and the cache limit, with the same commit-on-release behaviour.
+
+## Lyrics
+
+- **Ad-libs are no longer duplicated.** Parenthesised segments were rendered twice: once inside the line text and once in the animated block below it. The base line is now stripped of those segments before display, so each back exists exactly once.
+- **Backs appear only on their own syllables.** They used to stay visible for the whole line because the animated block was bound to the line's active state. Their real window is now derived from bracket depth across the synced words, so they appear at their passage and disappear as soon as the next syllable starts, with a fallback to the previous behaviour when no timing is available.
+
 # Ketvoice 3.6.0
 
 **versionCode 46** — installs over 3.5.3 and every earlier build (same signing certificate).
