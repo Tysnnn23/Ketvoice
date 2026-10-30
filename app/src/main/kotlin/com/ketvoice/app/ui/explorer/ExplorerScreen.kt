@@ -58,13 +58,21 @@ fun ExplorerScreen() {
             CircularProgressIndicator(Modifier.size(25.dp), color = theme.accent, strokeWidth = 2.dp)
         } else if (genres.isEmpty()) Text("Catalogue indisponible · Réessayer", color = theme.secondary,
             modifier = Modifier.clickable { attempt++ }.padding(24.dp))
-        else LazyVerticalGrid(if (layout.hasRail) GridCells.Adaptive(220.dp) else GridCells.Fixed(2),
-            contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, layout.bottomPaddingDp.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        else {
+            val gridState = rememberLazyGridState()
+            LaunchedEffect(gridState) {
+                snapshotFlow { gridState.firstVisibleItemIndex }
+                    .collect { AppUi.bottomCollapsed.value = it > 1 }
+            }
+            LazyVerticalGrid(if (layout.hasRail) GridCells.Adaptive(220.dp) else GridCells.Fixed(2),
+                state = gridState,
+                contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, layout.bottomPaddingDp.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             items(genres, key = { it.id }) { genre ->
                 GenreCategoryCard(genre, height = if (layout.hasRail) 150.dp else 112.dp) {
                     AppUi.openCatalog(CatalogRequest("genre", genre.id, genre.title))
                 }
+            }
             }
         }
     }

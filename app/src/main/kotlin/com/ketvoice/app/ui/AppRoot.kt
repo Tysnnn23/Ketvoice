@@ -47,6 +47,7 @@ import com.ketvoice.app.player.Player
 import com.ketvoice.app.theme.KetvoiceTheme
 import com.ketvoice.app.theme.LocalTheme
 import com.ketvoice.app.ui.account.AccountDialog
+import com.ketvoice.app.ui.chrome.FloatingChrome
 import com.ketvoice.app.ui.chrome.GlassBottomBar
 import com.ketvoice.app.ui.chrome.MiniPlayerPill
 import com.ketvoice.app.ui.chrome.TabletNavigationRail
@@ -246,10 +247,16 @@ fun AppRoot() {
                     Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                     Column(Modifier.widthIn(max = if (layout.hasRail) 640.dp else 560.dp).fillMaxWidth()
                         .imePadding().navigationBarsPadding().padding(bottom = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        MiniPlayerPill(onOpen = { AppUi.showPlayer.value = true })
-                        if (!layout.hasRail) {
-                            Spacer(Modifier.height(8.dp))
-                            GlassBottomBar(collapsed = AppUi.bottomCollapsed.value && AppUi.overlay.value == AppUi.NONE)
+                        if (layout.hasRail) {
+                            MiniPlayerPill(onOpen = { AppUi.showPlayer.value = true })
+                        } else {
+                            // Chrome complet : au scroll, le mini-lecteur se condense
+                            // et rejoint la rangée de navigation (accueil + recherche
+                            // interposés). On remonte → retour à la présentation pleine.
+                            FloatingChrome(
+                                collapsed = AppUi.bottomCollapsed.value && AppUi.overlay.value == AppUi.NONE,
+                                onOpenPlayer = { AppUi.showPlayer.value = true }
+                            )
                         }
                     }
                     }
@@ -264,11 +271,14 @@ fun AppRoot() {
                     AppUi.closeOverlay()
                 }
 
-                // ---- Lecteur plein écran : glisse depuis le bas ----
+                // ---- Lecteur plein écran : monte depuis le bas, fermeture
+                //      progressive interne (drag) puis fondu ----
                 AnimatedVisibility(
                     visible = AppUi.showPlayer.value,
-                    enter = fadeIn(tween(Motion.duration())),
-                    exit = fadeOut(tween(Motion.duration())),
+                    enter = slideInVertically(
+                        tween(Motion.duration(340), easing = FastOutSlowInEasing)
+                    ) { it } + fadeIn(tween(Motion.duration(220))),
+                    exit = fadeOut(tween(Motion.duration(140))),
                     modifier = Modifier
                         .fillMaxSize()
                         .zIndex(6f)

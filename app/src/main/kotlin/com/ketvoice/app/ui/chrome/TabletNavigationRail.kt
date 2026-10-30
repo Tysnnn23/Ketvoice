@@ -33,7 +33,7 @@ import com.ketvoice.app.ui.quest.questPointer
 fun TabletNavigationRail(modifier: Modifier = Modifier) {
     val layout = LocalAdaptiveLayout.current
     val theme = LocalTheme.current
-    Column(modifier.fillMaxHeight().statusBarsPadding().navigationBarsPadding().padding(10.dp),
+    Column(modifier.fillMaxHeight().statusBarsPadding().navigationBarsPadding().padding(10.dp).width(80.dp),
         horizontalAlignment = Alignment.CenterHorizontally) {
         AccountAvatar("K", 42.dp, Modifier.padding(vertical = 18.dp).clickable { AppUi.showAccount.value = true })
         Spacer(Modifier.height(16.dp))

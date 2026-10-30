@@ -1037,7 +1037,11 @@ private fun CacheLimitRow() {
         )
         LaunchedEffect(AppSettings.cacheBytes.value) {
             kotlinx.coroutines.delay(200)
-            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { AudioCache.trimTo(ctx, AppSettings.cacheBytes.value) }
+            runCatching {
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    AudioCache.trimTo(ctx, AppSettings.cacheBytes.value)
+                }
+            }
         }
     }
 }

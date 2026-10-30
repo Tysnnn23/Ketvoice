@@ -46,6 +46,7 @@ import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.VolumeDown
+import androidx.compose.material.icons.filled.VolumeOff
 import androidx.compose.material.icons.filled.VolumeUp
 import com.ketvoice.app.ui.common.Icon
 import com.ketvoice.app.ui.common.Text
@@ -465,7 +466,12 @@ fun PlayerVolume(modifier: Modifier = Modifier, compact: Boolean = false) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
-            Icons.Filled.VolumeDown,
+            // Volume natif : l'icône suit le niveau réel du média système.
+            when {
+                volume <= 0.001f -> Icons.Filled.VolumeOff
+                volume < 0.5f -> Icons.Filled.VolumeDown
+                else -> Icons.Filled.VolumeUp
+            },
             null,
             tint = Color.White.copy(alpha = 0.72f),
             modifier = Modifier.size(if (compact) 18.dp else 20.dp)

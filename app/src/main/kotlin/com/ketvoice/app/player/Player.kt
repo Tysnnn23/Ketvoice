@@ -205,6 +205,7 @@ object Player {
         if (connected) return
         connected = true
         appContext = context.applicationContext
+        observeSystemVolume(context.applicationContext)
         CanvasRepo.init(context.applicationContext)
         ArtworkRepo.init(context.applicationContext)
         Downloader.init(context.applicationContext)
@@ -772,12 +773,49 @@ object Player {
         )
     }
 
-    fun setVolume(v: Float) {
-        _volume.value = v.coerceIn(0f, 1f)
-        controller?.volume = _volume.value
+    // ------------------------------------------------------------ Volume natif
+    // Le curseur pilote le volume média SYSTÈME (AudioManager.STREAM_MUSIC) :
+    // mêmes gradations que les boutons physiques, même valeur que le système.
+    // Les fondus AutoMix continuent d'utiliser le volume du contrôleur Media3,
+    // invisible pour l'utilisateur et indépendant du réglage système.
+    private val audioManager: android.media.AudioManager?
+        get() = appContext?.getSystemService(Context.AUDIO_SERVICE) as? android.media.AudioManager
+
+    private var volumeObserver: android.database.ContentObserver? = null
+
+    fun systemVolumeFraction(): Float {
+        val am = audioManager ?: return 1f
+        val max = am.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC).coerceAtLeast(1)
+        return am.getStreamVolume(android.media.AudioManager.STREAM_MUSIC).toFloat() / max
     }
 
-    fun volumeValue(): Float = controller?.volume ?: 1f
+    fun setVolume(v: Float) {
+        val am = audioManager ?: return
+        val max = am.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC)
+        val target = (v.coerceIn(0f, 1f) * max).toInt().coerceIn(0, max)
+        runCatching { am.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, target, 0) }
+        _volume.value = systemVolumeFraction()
+    }
+
+    fun volumeValue(): Float = systemVolumeFraction()
+
+    /** Observe le volume média : les boutons physiques mettent le curseur à jour. */
+    private fun observeSystemVolume(context: Context) {
+        if (volumeObserver != null) return
+        val observer = object : android.database.ContentObserver(android.os.Handler(android.os.Looper.getMainLooper())) {
+            override fun onChange(selfChange: Boolean) {
+                _volume.value = systemVolumeFraction()
+            }
+        }
+        // Observation générale des réglages système : les changements de volume
+        // média y sont publiés, y compris depuis les boutons physiques.
+        runCatching {
+            context.contentResolver.registerContentObserver(android.provider.Settings.System.CONTENT_URI, true, observer)
+        }
+        volumeObserver = observer
+        _volume.value = systemVolumeFraction()
+    }
+
     fun refreshPublication(track: Track) {
         if (com.ketvoice.app.data.ImportedSong.id(track) == null) return
         scope.launch(Dispatchers.Main.immediate) {

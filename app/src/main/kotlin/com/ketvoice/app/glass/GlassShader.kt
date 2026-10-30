@@ -14,11 +14,13 @@ import com.kyant.backdrop.effects.effect
  * (`uniform shader content`, même contrat que la librairie backdrop :
  * `size`, `offset`, `cornerRadii`) et calcule TOUT le matériau par pixel :
  *
- *  - lentille de bord : réfraction par SDF de rectangle arrondi, avec
- *    dispersion chromatique (le rouge plie moins que le bleu) ;
+ *  - lentille de bord : réfraction par SDF de rectangle arrondi, profil
+ *    smoothstep (pas de frontière dure), avec dispersion chromatique ;
  *  - teinte « lait » du verre + saturation et luminosité du fond ;
- *  - liseré lumineux côté lumière, bord assombri côté opposé ;
- *  - voile spéculaire supérieur (sheen).
+ *  - liseré de Fresnel côté lumière + contour capillaire permanent,
+ *    ombre interne douce du côté opposé ;
+ *  - voile spéculaire supérieur (sheen) ;
+ *  - dithering fin : casse le banding des dégradés sur grands panneaux.
  *
  * Injecté via `effect(RenderEffect.createRuntimeShaderEffect(...))` dans la
  * chaîne du backdrop : le verre n'est plus un empilement de pinceaux blancs,
@@ -79,6 +81,12 @@ float4 sampleClamped(float2 p) {
     return float4(content.eval(clamp(p, lo, hi)));
 }
 
+// Hash déterministe : dithering ±1 niveau pour supprimer le banding.
+float dither(float2 coord) {
+    float f = fract(sin(dot(coord, float2(12.9898, 78.233))) * 43758.5453);
+    return f - 0.5;
+}
+
 float4 main(float2 coord) {
     float2 halfSize = size * 0.5;
     float2 centeredCoord = (coord + offset) - halfSize;
@@ -89,14 +97,16 @@ float4 main(float2 coord) {
         return float4(0.0);
     }
 
-    float2 gradRadius = min(radius * 1.5, min(halfSize.x, halfSize.y));
+    float gradRadius = min(radius * 1.5, min(halfSize.x, halfSize.y));
     float2 grad = normalize(gradSdRoundedRect(centeredCoord, halfSize, gradRadius)
         + depthEffect * normalize(centeredCoord + float2(0.001, 0.001)));
 
     float4 color;
     if (-sd < refractionHeight && refractionAmount > 0.0) {
+        // Profil de lentille smoothstep : le pli du bord monte continûment
+        // depuis le coeur du panneau, sans marche visible à l'entrée de lentille.
         float x = 1.0 - -sd / refractionHeight;
-        float d = circleMap(x) * refractionAmount;
+        float d = smoothstep(0.0, 1.0, x) * refractionAmount;
         float2 refracted = coord + d * grad;
         // Dispersion chromatique : le rouge plie moins, le bleu plie plus.
         float2 rCoord = coord + d * (1.0 - dispersion) * grad;
@@ -117,17 +127,24 @@ float4 main(float2 coord) {
     // Teinte « lait » du verre (quasi imperceptible, sinon plastique).
     color.rgb = mix(color.rgb, tint.rgb, tint.a);
 
-    // Liseré : lumineux du côté de la lumière, assombri du côté opposé.
-    float edge = clamp(1.0 + sd / 2.0, 0.0, 1.0);
+    // Épaisseur : lisière lumineuse du côté de la lumière, assombrie du côté
+    // opposé, toutes deux concentrees sur ~2.5px, plus un contour capillaire
+    // permanent qui donne sa definition au panneau sur fond clair comme sombre.
+    float edge = clamp(1.0 + sd / 2.5, 0.0, 1.0);
     edge = edge * edge;
     float facing = dot(grad, lightDir);
     color.rgb += rimLight * edge * max(facing, 0.0);
     color.rgb -= edgeDark * edge * max(-facing, 0.0);
+    float contour = clamp(1.0 + sd / 1.1, 0.0, 1.0);
+    color.rgb += 0.028 * contour;
 
     // Voile spéculaire supérieur : la pellicule « mouillée » du verre.
     float fromTop = clamp((coord.y - offset.y) / max(size.y, 1.0), 0.0, 1.0);
     float topLit = clamp(-grad.y, 0.0, 1.0);
     color.rgb += sheen * pow(1.0 - fromTop, 2.4) * (0.35 + 0.65 * topLit);
+
+    // Dithering sub-pixel : rend les dégradés du verre parfaitement lisses.
+    color.rgb += dither(coord) / 255.0;
 
     return half4(color);
 }
@@ -148,30 +165,33 @@ fun BackdropEffectScope.liquidGlass(
     radii: FloatArray
 ) {
     if (Build.VERSION.SDK_INT < 33) return
-    val shader = obtainRuntimeShader("kv-liquid-glass", GLASS_AGSL)
-    val w = size.width
-    val h = size.height
-    val pad = padding
-    shader.setFloatUniform("size", w, h)
-    shader.setFloatUniform("offset", pad, pad)
-    shader.setFloatUniform("contentSize", w + pad * 2f, h + pad * 2f)
-    shader.setFloatUniform("cornerRadii", radii)
-    shader.setFloatUniform("refractionHeight", params.refractionPx.coerceIn(0f, 90f))
-    shader.setFloatUniform("refractionAmount", (params.refractionPx * 1.45f).coerceIn(0f, 110f))
-    shader.setFloatUniform("dispersion", 0.55f)
-    shader.setFloatUniform("depthEffect", 0.35f)
-    if (params.dark) {
-        shader.setFloatUniform("tint", 0.16f, 0.16f, 0.19f, params.tintAlpha)
-    } else {
-        shader.setFloatUniform("tint", 1f, 1f, 1f, params.tintAlpha)
+    // Un shader invalide ne doit JAMAIS tuer l'app : repli silencieux.
+    val shader = runCatching { obtainRuntimeShader("kv-liquid-glass", GLASS_AGSL) }.getOrNull() ?: return
+    runCatching {
+        val w = size.width
+        val h = size.height
+        val pad = padding
+        shader.setFloatUniform("size", w, h)
+        shader.setFloatUniform("offset", pad, pad)
+        shader.setFloatUniform("contentSize", w + pad * 2f, h + pad * 2f)
+        shader.setFloatUniform("cornerRadii", radii)
+        shader.setFloatUniform("refractionHeight", params.refractionPx.coerceIn(0f, 90f))
+        shader.setFloatUniform("refractionAmount", (params.refractionPx * 1.45f).coerceIn(0f, 110f))
+        shader.setFloatUniform("dispersion", 0.38f)
+        shader.setFloatUniform("depthEffect", 0.35f)
+        if (params.dark) {
+            shader.setFloatUniform("tint", 0.16f, 0.16f, 0.19f, params.tintAlpha)
+        } else {
+            shader.setFloatUniform("tint", 1f, 1f, 1f, params.tintAlpha)
+        }
+        shader.setFloatUniform("saturation", params.saturation)
+        shader.setFloatUniform("brightness", params.brightness * (1f + params.exposure))
+        shader.setFloatUniform("edgeDark", if (params.dark) 0.26f else 0.13f)
+        shader.setFloatUniform("rimLight", params.highlightAlpha * 0.75f)
+        shader.setFloatUniform("sheen", if (params.dark) 0.05f else 0.07f)
+        shader.setFloatUniform("lightDir", -0.7071f, -0.7071f)
+        effect(RenderEffect.createRuntimeShaderEffect(shader, "content"))
     }
-    shader.setFloatUniform("saturation", params.saturation)
-    shader.setFloatUniform("brightness", params.brightness * (1f + params.exposure))
-    shader.setFloatUniform("edgeDark", if (params.dark) 0.30f else 0.15f)
-    shader.setFloatUniform("rimLight", params.highlightAlpha * 0.75f)
-    shader.setFloatUniform("sheen", if (params.dark) 0.05f else 0.075f)
-    shader.setFloatUniform("lightDir", -0.7071f, -0.7071f)
-    effect(RenderEffect.createRuntimeShaderEffect(shader, "content"))
 }
 
 /** Rayons réels de la forme (px). */

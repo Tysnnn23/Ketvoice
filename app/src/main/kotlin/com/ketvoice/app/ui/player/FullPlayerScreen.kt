@@ -6,8 +6,12 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -112,20 +116,12 @@ fun FullPlayerScreen(
         interaction = android.os.SystemClock.uptimeMillis()
         AppUi.showLyrics.value = next == PlayerPage.LYRICS
     }
-    fun close() {
+    fun closeInstant() {
         sheet = ""
         AppUi.showTrackMenu.value = false
         AppUi.showAudioOutput.value = false
         AppUi.showLyricsSource.value = false
         onDismiss()
-    }
-    BackHandler {
-        when {
-            sheet.isNotEmpty() -> sheet = ""
-            expanded -> expanded = false
-            page != PlayerPage.ARTWORK -> navigate(PlayerPage.ARTWORK)
-            else -> close()
-        }
     }
     LaunchedEffect(track.id) { LyricsRepo.load(track) }
     LaunchedEffect(page, sheet, interaction, touching, expanded, lyrics.lines.isNotEmpty(), AppUi.showAccount.value, adaptivePlayer) {
@@ -140,8 +136,9 @@ fun FullPlayerScreen(
     MaterialTheme(colorScheme = MaterialTheme.colorScheme.copy(primary = albumAccent, onPrimary = Color.Black)) {
     BoxWithConstraints(modifier.fillMaxSize().background(Color.Black)) {
         if (com.ketvoice.app.BuildConfig.IS_QUEST) {
+            BackHandler { if (page != PlayerPage.ARTWORK) navigate(PlayerPage.ARTWORK) else closeInstant() }
             QuestLandscapePlayer(state, track, cover, canvasPath, ambience, page,
-                onPage = ::navigate, onClose = ::close, onTrackMenu = { sheet = "track" },
+                onPage = ::navigate, onClose = ::closeInstant, onTrackMenu = { sheet = "track" },
                 onSources = { sheet = "sources" }, onOutput = { sheet = "audio" })
             if (sheet.isNotBlank()) PlayerSheetScrim({ sheet = "" }) {
                 when (sheet) {
@@ -175,13 +172,14 @@ fun FullPlayerScreen(
                         }
                         if (!change.pressed) break
                     }
-                    if (claimed && kotlin.math.abs(total) > 380f) close() else dragX = 0f
+                    if (claimed && kotlin.math.abs(total) > 380f) closeInstant() else dragX = 0f
                 }
             }) {
                 TabletPlayer(state, track, cover, canvasPath, ambience, page,
-                    onPage = ::navigate, onClose = ::close, onTrackMenu = { sheet = "track" },
+                    onPage = ::navigate, onClose = ::closeInstant, onTrackMenu = { sheet = "track" },
                     onSources = { sheet = "sources" }, onOutput = { sheet = "audio" })
             }
+            BackHandler { if (page != PlayerPage.ARTWORK) navigate(PlayerPage.ARTWORK) else closeInstant() }
             if (sheet.isNotBlank()) PlayerSheetScrim({ sheet = "" }) {
                 when (sheet) {
                     "sources" -> LyricsSourceSheet(track, onClose = { sheet = "" })
@@ -203,8 +201,75 @@ fun FullPlayerScreen(
         val headerTop = if (wide) topInset + 20.dp else (safeHeight * .093f).coerceAtLeast(topInset + 35.dp)
         val headerHeight = 58.dp
         val sceneTop = headerTop + headerHeight + 7.dp
+
+        // ---- Fermeture progressive : l'écran entier suit le doigt ----
+        // Translation verticale + fondu + coin supérieur arrondi qui se dessine
+        // au fil du drag (feuille iOS). Relâché bas : rebord spring ; assez bas
+        // ou rapide : glisse hors écran puis fermeture réelle.
+        val dismissOffset = remember { Animatable(0f) }
+        val dismissScope = rememberCoroutineScope()
+        val screenH = with(LocalDensity.current) { maxHeight.toPx() }
+        fun settleDismiss() {
+            dismissScope.launch {
+                if (Motion.reduced) { dismissOffset.snapTo(0f); return@launch }
+                dismissOffset.animateTo(
+                    0f,
+                    spring(dampingRatio = 0.78f, stiffness = 380f)
+                )
+            }
+        }
+        fun completeDismiss() {
+            dismissScope.launch {
+                if (!Motion.reduced) dismissOffset.animateTo(
+                    screenH, tween(Motion.duration(260), easing = FastOutSlowInEasing)
+                )
+                onDismiss()
+                dismissOffset.snapTo(0f)
+            }
+        }
+        fun requestClose() {
+            if (dismissOffset.value > 0f && dismissOffset.isRunning) return
+            completeDismiss()
+        }
+        val dismissDrag = Modifier.playerDismissDrag(
+            dismissOffset = dismissOffset,
+            maxPx = screenH,
+            onSettle = { settleDismiss() },
+            onDismiss = { completeDismiss() }
+        )
+        fun close() {
+            sheet = ""
+            AppUi.showTrackMenu.value = false
+            AppUi.showAudioOutput.value = false
+            AppUi.showLyricsSource.value = false
+            requestClose()
+        }
+        BackHandler {
+            when {
+                sheet.isNotEmpty() -> sheet = ""
+                expanded -> expanded = false
+                page != PlayerPage.ARTWORK -> navigate(PlayerPage.ARTWORK)
+                else -> close()
+            }
+        }
         CompositionLocalProvider(LocalBackdropLayer provides backdrop) {
-            Box(Modifier.fillMaxSize().layerBackdrop(backdrop).pointerInput(Unit) {
+            Box(Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    val p = (dismissOffset.value / screenH).coerceIn(0f, 1f)
+                    translationY = dismissOffset.value
+                    alpha = 1f - p * 0.45f
+                    // Coin de feuille qui se dessine au fil du drag.
+                    if (p > 0.008f && !Motion.reduced) {
+                        val corner = (44f * p.coerceAtMost(1f)).dp.toPx()
+                        shape = RoundedCornerShape(topStart = corner, topEnd = corner)
+                        clip = true
+                    } else if (clip) {
+                        shape = RoundedCornerShape(0.dp)
+                        clip = false
+                    }
+                }
+                .layerBackdrop(backdrop).pointerInput(Unit) {
                 awaitPointerEventScope {
                     while (true) {
                         val event = awaitPointerEvent(PointerEventPass.Initial)
@@ -234,7 +299,7 @@ fun FullPlayerScreen(
                                 .66f to Color.White.copy(alpha = .82f), .79f to Color.White.copy(alpha = .48f),
                                 .90f to Color.White.copy(alpha = .16f), 1f to Color.Transparent),
                                 blendMode = BlendMode.DstIn)
-                        }.swipeToMini { close() }) {
+                        }.then(dismissDrag)) {
                         ArtworkCanvas(track, if (panoramicCanvasActive(canvasPath)) null else canvasPath, state.isPlaying, Modifier.fillMaxSize(), depth = true)
                         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(
                             0f to Color.Black.copy(alpha = .16f), .52f to Color.Transparent,
@@ -250,21 +315,24 @@ fun FullPlayerScreen(
                 } else {
                     PlayerTitle(track, true, cover, sheetAction = {
                         if (expanded) {
-                            val send = Intent(Intent.ACTION_SEND).apply { type = "text/plain"; putExtra(Intent.EXTRA_TEXT, "${track.title} — ${track.artist}") }
-                            context.startActivity(Intent.createChooser(send, "Partager le morceau"))
+                            // Partage réel : lien listen.html → chez un ami avec
+                            // l'app, la lecture démarre ; sans l'app, page web
+                            // avec téléchargement.
+                            com.ketvoice.app.util.ShareLinks.shareTrack(context, track)
                         } else sheet = "track"
                     }, share = expanded, onCover = {
                         navigate(PlayerPage.ARTWORK)
                     },
                         modifier = Modifier.width(sceneWidth).offset(y = headerTop).padding(horizontal = if (wide) 18.dp else margin)
-                            .height(headerHeight).swipeToMini { close() })
+                            .height(headerHeight).then(dismissDrag))
                 }
                 }
                 }
 
                 // Dismiss gestures are limited to the handle. No fullscreen
                 // detector can consume taps, seek drags or lyric scrolling.
-                PlayerHandle(Modifier.offset(x = (sceneWidth - 120.dp) / 2).padding(top = topInset), onClose = { close() })
+                PlayerHandle(Modifier.offset(x = (sceneWidth - 120.dp) / 2).padding(top = topInset),
+                    onClose = { close() }, drag = dismissDrag)
 
                 AnimatedVisibility(
                     visible = page != PlayerPage.ARTWORK,
@@ -337,15 +405,10 @@ fun FullPlayerScreen(
 }
 
 @Composable
-private fun PlayerHandle(modifier: Modifier, onClose: () -> Unit) {
-    val threshold = with(LocalDensity.current) { 72.dp.toPx() }
-    var distance by remember { mutableFloatStateOf(0f) }
-    Box(modifier.width(120.dp).height(30.dp).semantics { contentDescription = com.ketvoice.app.data.AppText.t("Fermer le lecteur") }
-        .clickable(onClick = onClose).pointerInput(Unit) {
-            detectVerticalDragGestures(onVerticalDrag = { change, dy -> change.consume(); distance += dy },
-                onDragStart = { distance = 0f }, onDragEnd = { if (distance > threshold) onClose(); distance = 0f },
-                onDragCancel = { distance = 0f })
-        }, contentAlignment = Alignment.Center) {
+private fun PlayerHandle(modifier: Modifier, onClose: () -> Unit, drag: Modifier = Modifier) {
+    Box(modifier.then(drag).width(120.dp).height(34.dp)
+        .semantics { contentDescription = com.ketvoice.app.data.AppText.t("Fermer le lecteur") }
+        .clickable(onClick = onClose), contentAlignment = Alignment.Center) {
         Box(Modifier.size(40.dp, 5.dp).clip(RoundedCornerShape(4.dp)).background(Color(0xFF989AA6)))
     }
 }
@@ -406,14 +469,37 @@ internal fun PlayerTitle(track: Track, compact: Boolean, cover: String?, sheetAc
     }
 }
 
+/**
+ * Drag vertical de fermeture progressive : suit le doigt via [dismissOffset]
+ * (px, jamais négatif), avec une résistance douce au-delà de 75 % de l'écran.
+ * Relâché court → [onSettle] (rebord spring) ; franchi le seuil → [onDismiss].
+ */
 @Composable
-private fun Modifier.swipeToMini(onDismiss: () -> Unit): Modifier {
+private fun Modifier.playerDismissDrag(
+    dismissOffset: androidx.compose.animation.core.Animatable<Float, *>,
+    maxPx: Float,
+    onSettle: () -> Unit,
+    onDismiss: () -> Unit
+): Modifier {
+    val settle by rememberUpdatedState(onSettle)
     val dismiss by rememberUpdatedState(onDismiss)
-    return pointerInput(Unit) {
-    var distance = 0f
-    detectVerticalDragGestures(onDragStart = { distance = 0f },
-        onVerticalDrag = { change, dy -> change.consume(); distance += dy },
-        onDragEnd = { if (distance > 64.dp.toPx()) dismiss(); distance = 0f },
-        onDragCancel = { distance = 0f })
-}
+    // snapTo/animateTo sont suspendus : les callbacks de drag passent par un scope.
+    val scope = rememberCoroutineScope()
+    return this.pointerInput(maxPx) {
+        detectVerticalDragGestures(
+            onDragStart = { },
+            onVerticalDrag = { change, dy ->
+                change.consume()
+                val next = dismissOffset.value + dy
+                // Résistance : au-delà de 75 % de l'écran, le doigt « appuie ».
+                val resisted = if (next < maxPx * 0.75f) next
+                else maxPx * 0.75f + (next - maxPx * 0.75f) * 0.35f
+                scope.launch { dismissOffset.snapTo(resisted.coerceIn(0f, maxPx)) }
+            },
+            onDragEnd = {
+                if (dismissOffset.value > maxPx * 0.16f) dismiss() else settle()
+            },
+            onDragCancel = { settle() }
+        )
+    }
 }

@@ -55,6 +55,8 @@ import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.drawscope.withTransform
+import androidx.compose.ui.text.drawText
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.SpanStyle
@@ -102,17 +104,20 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
     val seekEpoch by Player.seekEpoch.collectAsState()
     val reduced = Motion.reduced
     var translationEnabled by remember(track.id) { mutableStateOf(false) }
-    var translated by remember(track.id, lyrics.lines) { mutableStateOf<Map<Int, String>>(emptyMap()) }
+    // Map granulaire : chaque ligne ne se recompose que lorsque SA traduction
+    // arrive. Un Map immutable complet invaliderait toutes les lignes visibles
+    // à chaque arrivée — c'était la principale source de lag du suivi traduit.
+    val translated = remember(track.id, lyrics.lines) { mutableStateMapOf<Int, String>() }
     var translating by remember(track.id) { mutableStateOf(false) }
     val target = TranslationLanguages.code(AppSettings.translateLanguage.value)
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     LaunchedEffect(translationEnabled, lyrics.lines, target) {
-        translated = emptyMap()
+        translated.clear()
         if (translationEnabled && lyrics.lines.isNotEmpty()) {
             translating = true
             try {
-                LyricsTranslation.stream(lyrics.lines, target, active) { index, text -> translated = translated + (index to text) }
+                LyricsTranslation.stream(lyrics.lines, target, active) { index, text -> translated[index] = text }
                 if (translated.isEmpty()) Toast.makeText(context, AppText.t("Traduction temporairement indisponible"), Toast.LENGTH_SHORT).show()
             } finally { translating = false }
         }
@@ -282,8 +287,12 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
                                             }
                                             if (start >= 0 && end > start) start..end else null
                                         }
+                                        // Lecture de la position uniquement pour la ligne
+                                        // active : les autres lignes ne recoivent plus le
+                                        // tic de position (200 ms) et ne se recomposent
+                                        // plus — le lag de suivi venait de la.
                                         AnimatedVisibility(
-                                            visible = adlibWindow?.let { position.value in it } ?: current,
+                                            visible = current && (adlibWindow?.let { position.value in it } ?: true),
                                             enter = fadeIn(tween(Motion.duration(320))) + expandVertically(tween(Motion.duration(320)), expandFrom = Alignment.Top),
                                             exit = ExitTransition.None
                                         ) {
@@ -371,15 +380,17 @@ private fun KaraokeLine(line: MusicApi.LyricLine, modifier: Modifier, fontScale:
             val start = offset
             val end = (start + word.text.length).coerceAtMost(line.text.length)
             offset = end
+            var baseline = Float.MIN_VALUE
             val slices = if (start >= end) emptyList() else (0 until measured.lineCount).mapNotNull { row ->
                 val from = maxOf(start, measured.getLineStart(row))
                 val to = minOf(end, measured.getLineEnd(row))
                 if (from < to) {
+                    if (baseline == Float.MIN_VALUE) baseline = measured.getLineBaseline(row)
                     val path = measured.getPathForRange(from, to)
                     LyricMaskSlice(path, path.getBounds(), measured.getBidiRunDirection(from) == ResolvedTextDirection.Rtl)
                 } else null
             }
-            LyricWordMask(word.startMs, word.endMs, slices, slices.sumOf { it.bounds.width.toDouble() }.toFloat())
+            LyricWordMask(word.startMs, word.endMs, word.text, slices, slices.sumOf { it.bounds.width.toDouble() }.toFloat(), baseline)
         }
     }.orEmpty() }
     Box(modifier) {
@@ -389,9 +400,13 @@ private fun KaraokeLine(line: MusicApi.LyricLine, modifier: Modifier, fontScale:
             fontWeight = FontWeight.Black,
             style = androidx.compose.ui.text.TextStyle(shadow = Shadow(Color.White.copy(alpha = .14f), Offset.Zero, 2f)),
             modifier = Modifier.fillMaxWidth().drawWithContent {
-                masks.forEach { word ->
+                // Le mot tenu est dessiné à part (agrandi + halo) : on le retire
+                // de la révélation plate pour ne jamais doubler le tracé.
+                val heldIdx = heldWord(masks, now)?.let { held -> masks.indexOfFirst { it === held.second } } ?: -1
+                masks.forEachIndexed { wi, word ->
+                    if (wi == heldIdx) return@forEachIndexed
                     val progress = segmentProgress(now, word.start, word.end)
-                    if (progress <= 0f) return@forEach
+                    if (progress <= 0f) return@forEachIndexed
                     var remaining = word.width * progress
                     word.slices.forEach { slice ->
                         val bounds = slice.bounds
@@ -405,11 +420,83 @@ private fun KaraokeLine(line: MusicApi.LyricLine, modifier: Modifier, fontScale:
                     }
                 }
             })
+
+        // Mot tenu : quand le chant s'attarde sur un mot révélé (fin de mot
+        // atteinte, suivant pas encore commencé), le mot grossit de 9 % et
+        // prend un halo doux. Fondu entrée/sortie, rien par défaut.
+        if (line.words.isNotEmpty() && masks.isNotEmpty() && !Motion.reduced) {
+            val measurer = androidx.compose.ui.text.rememberTextMeasurer()
+            // Mesure mémoïsée hors snapshot state : la même boucle de dessin
+            // réutilise le TextLayoutResult tant que le mot ne change pas.
+            val measureCache = remember { HashMap<String, androidx.compose.ui.text.TextLayoutResult>() }
+            val heldStyle = androidx.compose.ui.text.TextStyle(
+                color = Color.White,
+                fontSize = (33 * fontScale).sp,
+                fontWeight = FontWeight.Black,
+                letterSpacing = (-.3).sp
+            )
+            Canvas(Modifier.matchParentSize()) {
+                val held = heldWord(masks, now) ?: return@Canvas
+                val (t, word) = held
+                if (t <= 0.01f || word.slices.isEmpty()) return@Canvas
+                val bounds = word.slices.fold(word.slices.first().bounds) { acc, s ->
+                    androidx.compose.ui.geometry.Rect(
+                        left = minOf(acc.left, s.bounds.left),
+                        top = minOf(acc.top, s.bounds.top),
+                        right = maxOf(acc.right, s.bounds.right),
+                        bottom = maxOf(acc.bottom, s.bounds.bottom)
+                    )
+                }
+                val measuredWord = measureCache.getOrPut(word.text) { measurer.measure(word.text, heldStyle) }
+                val topLeft = Offset(bounds.left, word.baseline - measuredWord.firstBaseline)
+                val pivot = Offset(bounds.center.x, word.baseline)
+                val smooth = t * t * (3f - 2f * t)
+                withTransform({
+                    scale(1f + 0.09f * smooth, 1f + 0.09f * smooth, pivot = pivot)
+                }) {
+                    drawText(
+                        textLayoutResult = measuredWord,
+                        color = Color.White,
+                        topLeft = topLeft,
+                        alpha = 0.92f * smooth,
+                        shadow = Shadow(Color.White.copy(alpha = 0.55f * smooth), Offset.Zero, 16f * smooth + 2f)
+                    )
+                }
+            }
+        }
     }
 }
 
+/**
+ * Mot « tenu » à l'instant [now] : le dernier mot commencé, entièrement révélé,
+ * dont le suivant n'a pas encore démarré. Renvoie l'intensité (0..1) et le mot.
+ */
+private fun heldWord(masks: List<LyricWordMask>, now: Long): Pair<Float, LyricWordMask>? {
+    var idx = -1
+    for (i in masks.indices) {
+        if (masks[i].start <= now) idx = i else break
+    }
+    if (idx < 0) return null
+    val word = masks[idx]
+    if (word.slices.isEmpty()) return null
+    val nextStart = masks.getOrNull(idx + 1)?.start ?: (word.end + 1400L)
+    if (now >= nextStart) return null
+    val sinceDone = now - word.end
+    if (sinceDone < 110L) return null
+    val fadeIn = ((sinceDone - 110L) / 520f).coerceIn(0f, 1f)
+    val fadeOut = ((nextStart - now) / 240f).coerceIn(0f, 1f)
+    return minOf(fadeIn, fadeOut) to word
+}
+
 private data class LyricMaskSlice(val path: androidx.compose.ui.graphics.Path, val bounds: androidx.compose.ui.geometry.Rect, val rtl: Boolean)
-private data class LyricWordMask(val start: Long, val end: Long, val slices: List<LyricMaskSlice>, val width: Float)
+private data class LyricWordMask(
+    val start: Long,
+    val end: Long,
+    val text: String,
+    val slices: List<LyricMaskSlice>,
+    val width: Float,
+    val baseline: Float
+)
 
 internal fun segmentProgress(now: Long, start: Long, end: Long): Float = when {
     now < start -> 0f

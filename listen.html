@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Ketvoice — Lecture partagée</title>
+<style>
+  :root { color-scheme: dark; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    min-height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+    font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: radial-gradient(120% 120% at 15% 0%, #1d2b3f 0%, #0b0e14 55%, #07080c 100%);
+    color: #f2f4f8; padding: 24px;
+  }
+  .card {
+    width: 100%; max-width: 430px;
+    background: rgba(255,255,255,0.055);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 28px; padding: 36px 28px 30px;
+    backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+    box-shadow: 0 30px 80px rgba(0,0,0,0.55);
+    text-align: center;
+  }
+  .brand { display: flex; align-items: center; justify-content: center; gap: 9px;
+    font-weight: 700; letter-spacing: 3px; font-size: 12px; color: rgba(242,244,248,0.65); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: #35d0ff;
+    box-shadow: 0 0 14px #35d0ff; }
+  h1 { font-size: 22px; font-weight: 800; margin-top: 26px; line-height: 1.25;
+    overflow-wrap: anywhere; }
+  .artist { margin-top: 7px; font-size: 15px; color: rgba(242,244,248,0.62);
+    overflow-wrap: anywhere; }
+  .status { margin-top: 26px; font-size: 13.5px; color: rgba(242,244,248,0.7);
+    line-height: 1.5; min-height: 40px; }
+  .spinner { width: 26px; height: 26px; margin: 0 auto 14px; border-radius: 50%;
+    border: 2.5px solid rgba(255,255,255,0.14); border-top-color: #35d0ff;
+    animation: spin 0.9s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .actions { margin-top: 22px; display: flex; flex-direction: column; gap: 11px; }
+  .btn { display: block; padding: 14px 18px; border-radius: 999px; font-weight: 700;
+    font-size: 15px; text-decoration: none; transition: transform .15s ease, opacity .15s ease; }
+  .btn:active { transform: scale(0.97); }
+  .primary { background: linear-gradient(120deg, #35d0ff, #5e8bff); color: #04121c; }
+  .ghost { border: 1px solid rgba(255,255,255,0.2); color: #f2f4f8; }
+  .note { margin-top: 20px; font-size: 11.5px; color: rgba(242,244,248,0.4); line-height: 1.5; }
+</style>
+</head>
+<body>
+<main class="card">
+  <div class="brand"><span class="dot"></span> KETVOICE</div>
+  <h1 id="title">Lecture partagée</h1>
+  <p class="artist" id="artist"></p>
+  <div class="status" id="status"><div class="spinner"></div>Ouverture de Ketvoice…</div>
+  <div class="actions" id="actions" hidden>
+    <a class="btn primary" id="open-app" href="#">Ouvrir dans Ketvoice</a>
+    <a class="btn ghost" id="download" href="https://github.com/Tysnnn23/Ketvoice/releases/latest">Télécharger Ketvoice</a>
+  </div>
+  <p class="note">Si la lecture ne s'ouvre pas, installez l'application puis retapez le lien.</p>
+</main>
+<script>
+(function () {
+  var q = new URLSearchParams(location.search);
+  var track = q.get('track') || '';
+  var title = q.get('title') || '';
+  var artist = q.get('artist') || '';
+  var kind = q.get('kind') || 'track';
+  document.title = (title ? title + ' — ' : '') + 'Ketvoice';
+  document.getElementById('title').textContent = title || (kind === 'album' ? 'Album partagé' : 'Lecture partagée');
+  document.getElementById('artist').textContent = artist;
+
+  var noredirect = q.get('noredirect') === '1';
+  var status = document.getElementById('status');
+  var actions = document.getElementById('actions');
+
+  function appUrl() {
+    var params = 'track=' + encodeURIComponent(track) +
+      '&title=' + encodeURIComponent(title) + '&artist=' + encodeURIComponent(artist) +
+      '&kind=' + encodeURIComponent(kind);
+    return 'ketvoice://listen?' + params;
+  }
+
+  function showFallback(message) {
+    status.innerHTML = message;
+    actions.hidden = false;
+    document.getElementById('open-app').href = appUrl();
+  }
+
+  if (!track) {
+    showFallback('Ce lien de partage est incomplet.');
+    return;
+  }
+  if (noredirect) {
+    showFallback('L\'application n\'a pas répondu.<br>Installez Ketvoice pour écouter ce morceau.');
+    return;
+  }
+  // Bascule automatique : l'app installée ouvre le contenu ; sinon le navigateur
+  // revient sur cette page (noredirect=1) avec le bouton de téléchargement.
+  var fallback = location.origin + location.pathname +
+    '?track=' + encodeURIComponent(track) + '&title=' + encodeURIComponent(title) +
+    '&artist=' + encodeURIComponent(artist) + '&kind=' + encodeURIComponent(kind) +
+    '&noredirect=1';
+  var intent = 'intent://listen?track=' + encodeURIComponent(track) +
+    '&title=' + encodeURIComponent(title) + '&artist=' + encodeURIComponent(artist) +
+    '&kind=' + encodeURIComponent(kind) +
+    '#Intent;scheme=ketvoice;package=com.ketvoice.app;S.browser_fallback_url=' +
+    encodeURIComponent(fallback) + ';end';
+  status.innerHTML = '<div class="spinner"></div>Ouverture de Ketvoice…';
+  setTimeout(function () {
+    window.location.replace(intent);
+  }, 350);
+  // Si la bascule n'a pas eu lieu (app absente), Chrome a suivi le fallback.
+  setTimeout(function () {
+    if (!document.hidden) showFallback('L\'application n\'a pas répondu.<br>Installez Ketvoice pour écouter ce morceau.');
+  }, 2600);
+})();
+</script>
+</body>
+</html>

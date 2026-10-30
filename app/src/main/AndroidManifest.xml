@@ -58,6 +58,30 @@
                     android:scheme="ketvoice"
                     android:host="auth" />
             </intent-filter>
+
+            <!-- Partage de morceau : ketvoice://listen?track=... (ouvert aussi
+                 par la page listen.html via une URL intent://). -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="ketvoice"
+                    android:host="listen" />
+            </intent-filter>
+
+            <!-- Lien https de partage ouvert depuis un navigateur sur un
+                 appareil où l'app est installée : la page listen.html reste le
+                 repli web pour tous les autres. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="https"
+                    android:host="tysnnn23.github.io"
+                    android:pathPrefix="/Ketvoice/listen" />
+            </intent-filter>
         </activity>
 
         <activity-alias

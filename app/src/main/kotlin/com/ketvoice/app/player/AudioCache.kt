@@ -41,7 +41,11 @@ object AudioCache {
     @Synchronized fun init(ctx: Context) {
         if (cache != null) return
         context = ctx.applicationContext
-        cache = SimpleCache(File(ctx.filesDir, "songs-v2"), DynamicLru(), StandaloneDatabaseProvider(ctx))
+        // Un disque corrompu ou verrouillé ne doit jamais tuer l'app : le
+        // cache reste null et la lecture continue sans cache.
+        runCatching {
+            cache = SimpleCache(File(ctx.filesDir, "songs-v2"), DynamicLru(), StandaloneDatabaseProvider(ctx))
+        }
     }
     fun key(trackId: String, stream: MusicApi.StreamInfo): String {
         val raw = "$trackId|${stream.cacheTag.ifBlank { stream.url }}"
@@ -49,7 +53,8 @@ object AudioCache {
     }
     private fun source(ctx: Context): CacheDataSource.Factory {
         init(ctx)
-        return CacheDataSource.Factory().setCache(cache!!).setUpstreamDataSourceFactory(
+        val live = cache ?: throw IllegalStateException("audio cache unavailable")
+        return CacheDataSource.Factory().setCache(live).setUpstreamDataSourceFactory(
             DefaultHttpDataSource.Factory().setAllowCrossProtocolRedirects(true)
                 .setConnectTimeoutMs(8000).setReadTimeoutMs(12000)
                 .setUserAgent("Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/124.0 Mobile Safari/537.36")
@@ -125,20 +130,31 @@ object AudioCache {
         File(context.cacheDir, "songs").deleteRecursively()
     }
     fun trimTo(context: Context, maxBytes: Long) {
-        init(context)
-        synchronized(cache!!) {
-            val spans = cache!!.keys.flatMap { cache!!.getCachedSpans(it) }.sortedBy { it.lastTouchTimestamp }
-            for (span in spans) {
-                if (cache!!.cacheSpace <= maxBytes) break
-                runCatching { cache!!.removeSpan(span) }
+        // Jamais d'exception vers l'appelant : un cache corrompu ne doit pas
+        // faire planter l'écran Réglages (l'ouverture appelait ces fonctions
+        // dans une coroutine — une erreur non rattrapée tuait l'app).
+        runCatching {
+            init(context)
+            val cache = cache ?: return
+            synchronized(cache) {
+                val spans = cache.keys.flatMap { cache.getCachedSpans(it) }.sortedBy { it.lastTouchTimestamp }
+                for (span in spans) {
+                    if (cache.cacheSpace <= maxBytes) break
+                    runCatching { cache.removeSpan(span) }
+                }
             }
         }
     }
     fun sizeBytes(context: Context): Long {
-        init(context)
-        val legacy = File(context.cacheDir, "songs").takeIf { it.exists() }
-            ?.walkTopDown()?.filter { it.isFile }?.sumOf { it.length() } ?: 0L
-        return cache!!.cacheSpace + legacy
+        val legacy = runCatching {
+            File(context.cacheDir, "songs").takeIf { it.exists() }
+                ?.walkTopDown()?.filter { it.isFile }?.sumOf { it.length() }
+        }.getOrNull() ?: 0L
+        val live = runCatching {
+            init(context)
+            cache?.cacheSpace ?: 0L
+        }.getOrNull() ?: 0L
+        return live + legacy
     }
 
     private class DynamicLru : CacheEvictor {

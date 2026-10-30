@@ -822,7 +822,11 @@
   "JSON non reconnu": "Unrecognised JSON",
   "Fichiers de cet appareil": "Files on this device",
   "Passer cette version": "Skip this version",
-  "Cette version a été ignorée — réactivez-la depuis les réglages": "This version was skipped — re-enable it from settings"
+  "Cette version a été ignorée — réactivez-la depuis les réglages": "This version was skipped — re-enable it from settings",
+  "Partager l'album": "Share the album",
+  "Sorti en {0}": "Released in {0}",
+  "Lecture partagée : {0}": "Shared playback: {0}",
+  "Morceau partagé introuvable": "Couldn't find the shared track"
  },
  "hi": {
   "Accueil": "होम",
@@ -1647,7 +1651,11 @@
   "JSON non reconnu": "JSON पहचाना नहीं गया",
   "Fichiers de cet appareil": "इस डिवाइस की फ़ाइलें",
   "Passer cette version": "इस संस्करण को छोड़ें",
-  "Cette version a été ignorée — réactivez-la depuis les réglages": "यह संस्करण छोड़ा गया — सेटिंग्स से पुनः सक्षम करें"
+  "Cette version a été ignorée — réactivez-la depuis les réglages": "यह संस्करण छोड़ा गया — सेटिंग्स से पुनः सक्षम करें",
+  "Partager l'album": "एल्बम साझा करें",
+  "Sorti en {0}": "{0} में रिलीज़ हुआ",
+  "Lecture partagée : {0}": "साझा प्लेबैक: {0}",
+  "Morceau partagé introuvable": "साझा किया गया ट्रैक नहीं मिला"
  },
  "ja": {
   "Accueil": "ホーム",
@@ -2472,7 +2480,11 @@
   "JSON non reconnu": "JSON を認識できません",
   "Fichiers de cet appareil": "このデバイスのファイル",
   "Passer cette version": "このバージョンをスキップ",
-  "Cette version a été ignorée — réactivez-la depuis les réglages": "このバージョンはスキップ済み — 設定から再度有効化してください"
+  "Cette version a été ignorée — réactivez-la depuis les réglages": "このバージョンはスキップ済み — 設定から再度有効化してください",
+  "Partager l'album": "アルバムを共有",
+  "Sorti en {0}": "{0}年リリース",
+  "Lecture partagée : {0}": "共有再生: {0}",
+  "Morceau partagé introuvable": "共有された曲が見つかりません"
  },
  "zh": {
   "Accueil": "首页",
@@ -3297,7 +3309,11 @@
   "JSON non reconnu": "无法识别 JSON",
   "Fichiers de cet appareil": "此设备上的文件",
   "Passer cette version": "跳过此版本",
-  "Cette version a été ignorée — réactivez-la depuis les réglages": "该版本已被跳过 — 可在设置中重新启用"
+  "Cette version a été ignorée — réactivez-la depuis les réglages": "该版本已被跳过 — 可在设置中重新启用",
+  "Partager l'album": "分享专辑",
+  "Sorti en {0}": "{0}年发行",
+  "Lecture partagée : {0}": "共享播放：{0}",
+  "Morceau partagé introuvable": "找不到分享的曲目"
  },
  "ru": {
   "Accueil": "Главная",
@@ -4122,7 +4138,11 @@
   "JSON non reconnu": "JSON не распознан",
   "Fichiers de cet appareil": "Файлы на этом устройстве",
   "Passer cette version": "Пропустить эту версию",
-  "Cette version a été ignorée — réactivez-la depuis les réglages": "Эта версия была пропущена — включите её снова в настройках"
+  "Cette version a été ignorée — réactivez-la depuis les réglages": "Эта версия была пропущена — включите её снова в настройках",
+  "Partager l'album": "Поделиться альбомом",
+  "Sorti en {0}": "Вышел в {0}",
+  "Lecture partagée : {0}": "Общее воспроизведение: {0}",
+  "Morceau partagé introuvable": "Общий трек не найден"
  },
  "it": {
   "Accueil": "Home",
@@ -4947,7 +4967,11 @@
   "JSON non reconnu": "JSON non riconosciuto",
   "Fichiers de cet appareil": "File su questo dispositivo",
   "Passer cette version": "Salta questa versione",
-  "Cette version a été ignorée — réactivez-la depuis les réglages": "Questa versione è stata saltata — riattivala dalle impostazioni"
+  "Cette version a été ignorée — réactivez-la depuis les réglages": "Questa versione è stata saltata — riattivala dalle impostazioni",
+  "Partager l'album": "Condividi album",
+  "Sorti en {0}": "Uscito nel {0}",
+  "Lecture partagée : {0}": "Riproduzione condivisa: {0}",
+  "Morceau partagé introuvable": "Brano condiviso non trovato"
  },
  "es": {
   "Accueil": "Inicio",
@@ -5772,7 +5796,11 @@
   "JSON non reconnu": "JSON no reconocido",
   "Fichiers de cet appareil": "Archivos de este dispositivo",
   "Passer cette version": "Omitir esta versión",
-  "Cette version a été ignorée — réactivez-la depuis les réglages": "Esta versión fue omitida — reactiva desde ajustes"
+  "Cette version a été ignorée — réactivez-la depuis les réglages": "Esta versión fue omitida — reactiva desde ajustes",
+  "Partager l'album": "Compartir el álbum",
+  "Sorti en {0}": "Lanzado en {0}",
+  "Lecture partagée : {0}": "Reproducción compartida: {0}",
+  "Morceau partagé introuvable": "No se encontró la pista compartida"
  },
  "de": {
   "Accueil": "Start",
@@ -6597,7 +6625,11 @@
   "JSON non reconnu": "JSON nicht erkannt",
   "Fichiers de cet appareil": "Dateien auf diesem Gerät",
   "Passer cette version": "Diese Version überspringen",
-  "Cette version a été ignorée — réactivez-la depuis les réglages": "Diese Version wurde übersprungen — in den Einstellungen erneut aktivieren"
+  "Cette version a été ignorée — réactivez-la depuis les réglages": "Diese Version wurde übersprungen — in den Einstellungen erneut aktivieren",
+  "Partager l'album": "Album teilen",
+  "Sorti en {0}": "Erschienen {0}",
+  "Lecture partagée : {0}": "Geteilte Wiedergabe: {0}",
+  "Morceau partagé introuvable": "Geteilten Titel nicht gefunden"
  },
  "pt": {
   "Accueil": "Início",
@@ -7422,7 +7454,11 @@
   "JSON non reconnu": "JSON não reconhecido",
   "Fichiers de cet appareil": "Ficheiros neste dispositivo",
   "Passer cette version": "Ignorar esta versão",
-  "Cette version a été ignorée — réactivez-la depuis les réglages": "Esta versão foi ignorada — reative nas configurações"
+  "Cette version a été ignorée — réactivez-la depuis les réglages": "Esta versão foi ignorada — reative nas configurações",
+  "Partager l'album": "Partilhar álbum",
+  "Sorti en {0}": "Lançado em {0}",
+  "Lecture partagée : {0}": "Reprodução partilhada: {0}",
+  "Morceau partagé introuvable": "Faixa partilhada não encontrada"
  },
  "ko": {
   "Accueil": "홈",
@@ -8247,6 +8283,10 @@
   "JSON non reconnu": "JSON을 인식할 수 없음",
   "Fichiers de cet appareil": "이 기기의 파일",
   "Passer cette version": "이 버전 건너뛰기",
-  "Cette version a été ignorée — réactivez-la depuis les réglages": "이 버전은 건너뛰어졌습니다 — 설정에서 다시 활성화하세요"
+  "Cette version a été ignorée — réactivez-la depuis les réglages": "이 버전은 건너뛰어졌습니다 — 설정에서 다시 활성화하세요",
+  "Partager l'album": "앨범 공유",
+  "Sorti en {0}": "{0}년 발매",
+  "Lecture partagée : {0}": "공유 재생: {0}",
+  "Morceau partagé introuvable": "공유된 트랙을 찾을 수 없습니다"
  }
 }

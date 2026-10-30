@@ -132,8 +132,14 @@ fun LibraryScreen() {
         "${cal.get(java.util.Calendar.MONTH) + 1}/${cal.get(java.util.Calendar.YEAR) % 100}"
     }
 
+    val libraryListState = androidx.compose.foundation.lazy.rememberLazyListState()
+    LaunchedEffect(libraryListState) {
+        snapshotFlow { libraryListState.firstVisibleItemIndex }
+            .collect { AppUi.bottomCollapsed.value = it > 1 }
+    }
     LazyColumn(
         Modifier.fillMaxSize().testTag("library-list").background(theme.background).statusBarsPadding(),
+        state = libraryListState,
         contentPadding = PaddingValues(bottom = layout.bottomPaddingDp.dp)
     ) {
         item {

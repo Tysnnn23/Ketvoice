@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.CircularProgressIndicator
@@ -24,7 +25,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -39,7 +39,6 @@ import com.ketvoice.app.theme.LocalTheme
 import com.ketvoice.app.ui.AppUi
 import com.ketvoice.app.ui.common.Cover
 import com.ketvoice.app.ui.player.formatSecs
-import com.ketvoice.app.ui.player.SonicCanvas
 
 /**
  * Page d'artiste réelle : photo, écoute mensuelle, biographie, titres,
@@ -102,44 +101,41 @@ fun ArtistScreen() {
                     modifier = Modifier.clickable { attempt++ }.padding(top = 20.dp, bottom = 12.dp))
             }
             else -> {
-            // Le canvas du hero s'efface progressivement dès qu'on descend :
-            // il accompagne l'ouverture de la page mais ne reste pas à l'écran.
+            // La photo ne disparaît JAMAIS : elle reste à sa place en tête de
+            // page (pas de fondu au scroll, pas de remplacement par le canvas).
+            // Le haut de la page porte le même blur prolongé que le lecteur :
+            // bandes AGSL de fondu progressif sous la barre de statut.
             val listState = androidx.compose.foundation.lazy.rememberLazyListState()
-            val heroFade by remember {
-                derivedStateOf {
-                    if (listState.firstVisibleItemIndex > 0) 0f
-                    else (1f - listState.firstVisibleItemScrollOffset / 520f).coerceIn(0f, 1f)
-                }
-            }
             LazyColumn(Modifier.fillMaxSize(), state = listState,
                 contentPadding = PaddingValues(bottom = 210.dp)) {
                 val data = page!!
                 item {
-                    // Bannière immersive : la photo est affichée ENTIÈRE (fit, pas
-                    // de zoom) sur un prolongement flouté d'elle-même, avec deux
-                    // bandes de blur progressif — haut et bas — d'étendue limitée
-                    // et de fondu lisse (shader AGSL, comme la pochette du lecteur).
-                    // La hauteur suit le ratio réel de l'image (borné large).
-                    // Le hero occupe tout le haut de l'écran : le canvas est plein
-                    // cadre et sert de cover, avec le titre, le nom de l'artiste,
-                    // le bouton lecture et la file d'attente à l'intérieur.
                     val heroHeight = (androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp.dp * .58f)
                         .coerceIn(400.dp, 720.dp)
-                    Box(Modifier.fillMaxWidth().height(heroHeight)
-                        .graphicsLayer { alpha = heroFade }) {
-                        // Plus de cover floutée : le haut de page est porté par le
-                        // canvas animé de l'application (même matière que le
-                        // lecteur), posé sur un fond dégradé pour garder le nom
-                        // de l'artiste lisible.
-                        SonicCanvas(playing = false, color = theme.accent)
-                        Box(Modifier.fillMaxSize().background(
-                            Brush.verticalGradient(listOf(
-                                Color.Black.copy(alpha = 0.15f),
-                                Color.Transparent,
-                                Color.Black.copy(alpha = 0.55f)
-                            ))
-                        ))
-                        // Nom de l'artiste par-dessus la bannière (le shader assombrit déjà le bas)
+                    Box(Modifier.fillMaxWidth().height(heroHeight)) {
+                        if (!data.artist.photo.isNullOrBlank()) {
+                            // Photo affichée ENTIÈRE (fit) sur un prolongement flouté
+                            // d'elle-même, avec la bande de blur progressif en haut
+                            // (shader AGSL, même matière que la pochette du lecteur).
+                            ProgressiveBlurPhoto(
+                                photo = data.artist.photo,
+                                modifier = Modifier.fillMaxSize(),
+                                bandTop = 170.dp,
+                                bandBottom = 230.dp,
+                                topDark = 0.34f,
+                                bottomDark = 0.55f
+                            )
+                        } else {
+                            // Repli : aucun hero photo disponible — dégradé du thème
+                            // avec l'initiale, jamais un bloc vide.
+                            Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(
+                                theme.background, theme.accent.copy(alpha = 0.35f), Color(0xFF101014))))) {
+                                Text(data.artist.name.take(1).uppercase(), localize = false,
+                                    color = Color.White.copy(alpha = 0.22f), fontSize = 150.sp,
+                                    fontWeight = FontWeight.Black, modifier = Modifier.align(Alignment.Center))
+                            }
+                        }
+                        // Nom de l'artiste par-dessus la photo (la bande basse assombrit déjà)
                         Column(Modifier.align(Alignment.BottomStart).padding(horizontal = 20.dp, vertical = 16.dp)) {
                             Text(data.artist.name, localize = false, color = Color.White, fontSize = 40.sp,
                                 fontWeight = FontWeight.Black, letterSpacing = (-1.2).sp, maxLines = 2,
@@ -260,17 +256,21 @@ fun ArtistScreen() {
                                         fontSize = 30.sp, fontWeight = FontWeight.Bold)
                                     if (!related.photo.isNullOrBlank()) {
                                         AsyncImage(
-                                            model = coil.request.ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
-                                                .data(related.photo).crossfade(300).build(),
+                                            model = related.photo,
                                             contentDescription = related.name,
                                             contentScale = ContentScale.Crop,
                                             alignment = Alignment.TopCenter,
-                                            modifier = Modifier.fillMaxSize())
+                                            modifier = Modifier.fillMaxSize()
+                                        )
+                                    } else {
+                                        Icon(Icons.Filled.Person, null,
+                                            tint = theme.accent.copy(alpha = 0.7f),
+                                            modifier = Modifier.size(36.dp))
                                     }
                                 }
-                                Text(related.name, localize = false, color = theme.onBackground, fontSize = 13.sp,
+                                Text(related.name, localize = false, color = theme.onBackground, fontSize = 14.sp,
                                     fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier.padding(top = 7.dp))
+                                    modifier = Modifier.padding(top = 8.dp).width(92.dp))
                             }
                         }
                     }

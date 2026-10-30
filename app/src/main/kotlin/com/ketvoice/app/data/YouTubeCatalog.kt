@@ -37,8 +37,12 @@ object YouTubeCatalog {
     suspend fun artist(id: String): ArtistPage? {
         if (!id.matches(Regex("UC[A-Za-z0-9_-]+"))) return null
         val raw = YouTubeApi.request("browse", JSONObject().put("browseId", id)) ?: return null
+        // Trois familles de headers selon les profils : immersive (standard),
+        // visual (bannière) et responsive (certains profils récents n'ont
+        // qu'eux — sans ce repli, leur fiche entière échouait, photo comprise).
         val header = YouTubeJson.objects(raw, "musicImmersiveHeaderRenderer").firstOrNull()
-            ?: YouTubeJson.objects(raw, "musicVisualHeaderRenderer").firstOrNull() ?: return null
+            ?: YouTubeJson.objects(raw, "musicVisualHeaderRenderer").firstOrNull()
+            ?: YouTubeJson.objects(raw, "musicResponsiveHeaderRenderer").firstOrNull() ?: return null
         val name = YouTubeJson.text(header.optJSONObject("title"))
         if (name.isBlank()) return null
         val hero = artistHeaderArtwork(header)

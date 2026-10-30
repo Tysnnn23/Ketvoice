@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.PlaylistAdd
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Smartphone
 import androidx.compose.material.icons.filled.Equalizer
 import androidx.compose.material.icons.filled.Videocam
@@ -138,6 +139,13 @@ fun TrackMenuSheet(track: Track, onClose: () -> Unit) {
         ) {
             if (!downloaded) Downloader.download(track)
             onClose()
+        }
+        // Partage réel : lien listen.html — l'app du destinataire ouvre le
+        // morceau, un navigateur affiche la page de téléchargement.
+        val shareContext = androidx.compose.ui.platform.LocalContext.current
+        MenuItemRow("Partager", Icons.Filled.Share) {
+            onClose()
+            com.ketvoice.app.util.ShareLinks.shareTrack(shareContext, track)
         }
         // Exclusion du Canvas par morceau : visible uniquement quand les Canvas
         // vidéo sont activés dans les paramètres. Persisté dans CanvasRepo.

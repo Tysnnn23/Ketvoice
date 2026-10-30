@@ -129,6 +129,8 @@ MESSAGES = [
     '« {0} » jouera ensuite',
     'Icône mise à jour — le lanceur peut mettre quelques secondes',
     "Rien ici pour l'instant.\nBranchement des sources à l'étape des URLs.",
+    "Partager l'album", 'Sorti en {0}', 'Lecture partagée : {0}',
+    'Morceau partagé introuvable',
 ]
 MESSAGES += [
     'Glissez ⠿ pour réordonner', 'Actions de la playlist', 'Terminer', "Modifier l'ordre",
@@ -204,6 +206,10 @@ REVIEWED = {
     '{0} titre': ['{0} song', '{0} गाना', '{0}曲', '{0} 首歌曲', '{0} трек', '{0} brano', '{0} canción', '{0} Song', '{0} música', '{0}곡'],
     'Lecture depuis {0}': ['Playing from {0}', '{0} से चल रहा है', '{0}から再生中', '正在播放 {0}', 'Воспроизведение: {0}', 'In riproduzione da {0}', 'Reproduciendo desde {0}', 'Wiedergabe von {0}', 'Reproduzindo de {0}', '{0}에서 재생'],
     '{0} Mo': ['{0} MB'] * 10,
+    "Partager l'album": ['Share the album', 'एल्बम साझा करें', 'アルバムを共有', '分享专辑', 'Поделиться альбомом', 'Condividi album', 'Compartir el álbum', 'Album teilen', 'Partilhar álbum', '앨범 공유'],
+    'Sorti en {0}': ['Released in {0}', '{0} में रिलीज़ हुआ', '{0}年リリース', '{0}年发行', 'Вышел в {0}', 'Uscito nel {0}', 'Lanzado en {0}', 'Erschienen {0}', 'Lançado em {0}', '{0}년 발매'],
+    'Lecture partagée : {0}': ['Shared playback: {0}', 'साझा प्लेबैक: {0}', '共有再生: {0}', '共享播放：{0}', 'Общее воспроизведение: {0}', 'Riproduzione condivisa: {0}', 'Reproducción compartida: {0}', 'Geteilte Wiedergabe: {0}', 'Reprodução partilhada: {0}', '공유 재생: {0}'],
+    'Morceau partagé introuvable': ["Couldn't find the shared track", 'साझा किया गया ट्रैक नहीं मिला', '共有された曲が見つかりません', '找不到分享的曲目', 'Общий трек не найден', 'Brano condiviso non trovato', 'No se encontró la pista compartida', 'Geteilten Titel nicht gefunden', 'Faixa partilhada não encontrada', '공유된 트랙을 찾을 수 없습니다'],
 }
 
 extra = json.loads((ROOT / 'tools/content-feature-translations.json').read_text(encoding='utf-8'))

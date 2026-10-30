@@ -9,12 +9,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.dp
 import com.ketvoice.app.data.AppSettings
+import com.ketvoice.app.theme.LocalTheme
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.LayerBackdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
@@ -60,14 +62,15 @@ fun rememberGlassBackdrop(background: Color) = rememberLayerBackdrop {
 /**
  * Paramètres du matériau « liquid glass ».
  *
- * v2 : tous les champs sont désormais RÉELLEMENT consommés par [GlassPanel].
- * La v1 déclarait bevelPx / falloff / dispersion / tintStrength / grain /
- * materialRegular sans jamais les lire — d'où un rendu plat et sans relief.
+ * v3 : le matériau AGSL fait tout le travail optique (réfraction, dispersion,
+ * liseré de Fresnel, sheen, dithering). Les presets ne règlent que l'équilibre
+ * transmission / lisibilité, avec des teintes volontairement basses : un verre
+ * trop opaque devient du plastique, trop transparent disparaît.
  */
 data class GlassParams(
     val cornerRadiusPx: Float,
     /** Rayon de flou du fond, en px. 0 = pas de flou. */
-    val blurPx: Float = 24f,
+    val blurPx: Float = 28f,
     /** Hauteur de réfraction de la lentille (bord du verre), en px. */
     val refractionPx: Float = 18f,
     /** Opacité de la teinte de surface (le "lait" du verre). */
@@ -102,108 +105,96 @@ data class GlassParams(
          */
         fun card(radiusPx: Float, dark: Boolean = false) = GlassParams(
             cornerRadiusPx = radiusPx,
-            blurPx = 26f,
-            refractionPx = 14f,
-            tintAlpha = if (dark) 0.10f else 0.08f,
-            saturation = if (dark) 1.14f else 1.26f,
+            blurPx = 30f,
+            refractionPx = 16f,
+            tintAlpha = if (dark) 0.11f else 0.075f,
+            saturation = if (dark) 1.10f else 1.22f,
             exposure = if (dark) 0.015f else 0.04f,
-            highlightAlpha = if (dark) 0.30f else 0.46f,
-            highlightIntensity = if (dark) 0.26f else 0.34f,
+            highlightAlpha = if (dark) 0.28f else 0.44f,
+            highlightIntensity = if (dark) 0.24f else 0.32f,
             dark = dark
         )
 
-        fun pill(blur: Float = 24f, dark: Boolean = false) = GlassParams(
+        fun pill(blur: Float = 26f, dark: Boolean = false) = GlassParams(
             cornerRadiusPx = 9999f,
             blurPx = blur,
-            refractionPx = 22f,
+            refractionPx = 24f,
             // Équilibre du matériau AGSL : assez de "lait" pour que le verre
             // existe visuellement, assez peu pour que le fond reste lisible à
             // travers. Sous ~0.06 le verre disparaît ; au-dessus de ~0.16 il
             // redevient du plastique blanc opaque.
-            tintAlpha = if (dark) 0.105f else 0.085f,
-            saturation = if (dark) 1.22f else 1.38f,
+            tintAlpha = if (dark) 0.105f else 0.08f,
+            saturation = if (dark) 1.18f else 1.32f,
             brightness = 1.0f,
             contrast = 1.0f,
             exposure = if (dark) 0.02f else 0.035f,
-            highlightAlpha = if (dark) 0.34f else 0.50f,
-            highlightIntensity = if (dark) 0.28f else 0.38f,
+            highlightAlpha = if (dark) 0.32f else 0.48f,
+            highlightIntensity = if (dark) 0.26f else 0.36f,
             dark = dark
         )
 
-        fun circle(blur: Float = 24f, dark: Boolean = false) = GlassParams(
+        fun circle(blur: Float = 26f, dark: Boolean = false) = GlassParams(
             cornerRadiusPx = 9999f,
             blurPx = blur,
-            refractionPx = 26f,
-            tintAlpha = if (dark) 0.11f else 0.09f,
-            saturation = if (dark) 1.24f else 1.42f,
+            refractionPx = 28f,
+            tintAlpha = if (dark) 0.11f else 0.085f,
+            saturation = if (dark) 1.20f else 1.36f,
             exposure = if (dark) 0.02f else 0.035f,
-            highlightAlpha = if (dark) 0.36f else 0.54f,
-            highlightIntensity = if (dark) 0.30f else 0.40f,
+            highlightAlpha = if (dark) 0.34f else 0.52f,
+            highlightIntensity = if (dark) 0.28f else 0.38f,
             dark = dark
         )
 
         fun sheet(radiusPx: Float, dark: Boolean = false) = GlassParams(
             cornerRadiusPx = radiusPx,
-            blurPx = 30f,
-            refractionPx = 24f,
+            blurPx = 34f,
+            refractionPx = 26f,
             // Le sheet doit laisser deviner le contenu : fond gris trop opaque = profondeur perdue.
-            tintAlpha = if (dark) 0.13f else 0.10f,
-            saturation = if (dark) 1.10f else 1.22f,
+            tintAlpha = if (dark) 0.13f else 0.095f,
+            saturation = if (dark) 1.08f else 1.20f,
             exposure = if (dark) 0.015f else 0.05f,
-            highlightAlpha = if (dark) 0.34f else 0.56f,
-            highlightIntensity = if (dark) 0.30f else 0.44f,
+            highlightAlpha = if (dark) 0.32f else 0.54f,
+            highlightIntensity = if (dark) 0.28f else 0.42f,
             dark = dark
         )
     }
 }
 
-/** Teinte de surface : dégradé diagonal à quatre arrêts plutôt qu'un aplat, pour éviter l'effet "plastique". */
-private fun surfaceBrush(p: GlassParams): Brush {
-    // Choix de design propre à Ketvoice : la lumière entre par le haut-gauche et
-    // ressort faiblement en bas, d'où une diagonale. En mode sombre, la base est
-    // un gris foncé et non du noir pur : le verre sombre d'iOS 27 est décrit comme
-    // plus clair que celui d'iOS 26.
-    val base = if (p.dark) Color(0xFF2A2A30) else Color.White
-    // Les deltas étaient auparavant de +0.15 / +0.10 : ils écrasaient totalement
-    // `tintAlpha` et transformaient le verre en plastique blanc opaque, quel que
-    // soit le preset. Ils doivent rester une modulation de la teinte, pas un
-    // ajout d'opacité. Plafond volontairement bas (0.35) : au-delà, on perd la
-    // transmission du fond et la réfraction ne se lit plus.
-    val hot = base.copy(alpha = (p.tintAlpha + if (p.dark) 0.045f else 0.055f).coerceAtMost(0.35f))
-    val upper = base.copy(alpha = (p.tintAlpha * 0.60f).coerceAtMost(0.30f))
-    val lower = base.copy(alpha = (p.tintAlpha * 0.25f).coerceAtMost(0.22f))
-    val lift = base.copy(alpha = (p.tintAlpha + if (p.dark) 0.020f else 0.012f).coerceAtMost(0.30f))
-    return Brush.linearGradient(listOf(hot, upper, lower, lift))
-}
-
-/** Liseré lumineux : le reflet qui "attrape" la lumière en haut à gauche. */
-private fun rimBrush(p: GlassParams): Brush {
-    // Le reflet d'un vrai verre ne s'éteint pas d'un bord à l'autre : il culmine
-    // en haut-gauche, retombe au milieu, puis se rallume en bas-droite là où la
-    // lumière ressort. Quatre arrêts, pas trois.
-    val peak = Color.White.copy(
-        alpha = (if (p.dark) p.highlightAlpha * 0.85f else p.highlightAlpha).coerceIn(0f, 1f)
-    )
-    val shoulder = Color.White.copy(alpha = peak.alpha * 0.42f)
-    val trough = Color.White.copy(alpha = peak.alpha * 0.07f)
-    val wrap = Color.White.copy(alpha = peak.alpha * 0.30f)
-    return Brush.linearGradient(listOf(peak, shoulder, trough, wrap))
-}
-
 /**
- * Voile spéculaire : la pellicule "mouillée" qui donne au verre son épaisseur.
- * Concentré sur le tiers supérieur, il s'éteint avant le milieu pour ne jamais
- * laver le contenu posé dessus.
+ * Surface du verre STATIQUE (verre désactivé, ou panneaux capturés dans leur
+ * propre couche). Refonte complète : fini l'aplat plastique —
+ *
+ *  - base translucide alignée sur le thème (le contenu derrière teinte à travers) ;
+ *  - dégradé diagonal subtil, lumière haut-gauche ;
+ *  - liseré capillaire lumineux sur le bord haut-gauche, ombre capillaire bas-droite ;
+ *  - voile spéculaire concentré sur le premier tiers.
+ *
+ * Le résultat lit comme un verre dépoli posé sur la page, pas comme un rectangle peint.
  */
-private fun sheenBrush(p: GlassParams): Brush {
-    // Le `Highlight` de la lib dessine déjà le reflet spéculaire. Empiler ici un
-    // second voile blanc revient à doubler l'intensité -> voile laiteux opaque.
-    // On le divise par ~4 pour qu'il ne fasse que réchauffer le haut du panneau.
-    val strength = (if (p.dark) 0.030f else 0.045f) * (0.5f + p.highlightIntensity * 0.7f)
+@Composable
+private fun rememberStaticMaterial(p: GlassParams): Pair<Brush, Brush> {
+    val th = LocalTheme.current
+    return remember(p, th.isDark) {
+        val base = if (p.dark) Color(0xFF232329) else Color.White
+        // Transmission statique : le fond transparaît à ~12-18 %.
+        val body = base.copy(alpha = if (p.dark) 0.84f else 0.88f)
+        val lift = base.copy(alpha = if (p.dark) 0.90f else 0.94f)
+        val surface = Brush.linearGradient(listOf(lift, body, base.copy(alpha = if (p.dark) 0.80f else 0.84f), body))
+        // Liseré capillaire : lumineux haut-gauche (entrée de lumière), sombre bas-droite.
+        val lightHair = Color.White.copy(alpha = if (p.dark) 0.16f else 0.75f)
+        val darkHair = if (p.dark) Color.Black.copy(alpha = 0.42f) else Color.Black.copy(alpha = 0.10f)
+        val hairline = Brush.linearGradient(listOf(lightHair, Color.White.copy(alpha = lightHair.alpha * .25f), darkHair))
+        surface to hairline
+    }
+}
+
+/** Voile spéculaire du verre statique : réchauffe le tiers supérieur, ne le lave jamais. */
+private fun staticSheen(p: GlassParams): Brush {
+    val strength = (if (p.dark) 0.05f else 0.09f) * (0.5f + p.highlightIntensity * 0.7f)
     return Brush.verticalGradient(
-        0.00f to Color.White.copy(alpha = strength.coerceIn(0f, 0.10f)),
-        0.10f to Color.White.copy(alpha = (strength * 0.30f).coerceIn(0f, 0.05f)),
-        0.26f to Color.Transparent
+        0.00f to Color.White.copy(alpha = strength.coerceIn(0f, 0.12f)),
+        0.12f to Color.White.copy(alpha = (strength * 0.30f).coerceIn(0f, 0.05f)),
+        0.30f to Color.Transparent
     )
 }
 
@@ -225,14 +216,15 @@ fun GlassPanel(
     // Highlight de la lib ne servent plus que de repli pré-33.
     val agsl = dynamic && GlassShader.isSupported()
 
-    val surface = remember(params) { surfaceBrush(params) }
-    val rim = remember(params) { rimBrush(params) }
-    val sheen = remember(params) { sheenBrush(params) }
-    val darkEdge = Color.Black.copy(alpha = if (params.dark) 0.30f else 0.14f)
+    val (surface, hairline) = rememberStaticMaterial(params)
+    val sheen = remember(params) { staticSheen(params) }
+    val darkEdge = Color.Black.copy(alpha = if (params.dark) 0.34f else 0.14f)
     // En AGSL, le shader dessine le liseré et le bord sombre : plus de bordure
     // Compose par-dessus (sinon double contour artificiel).
     val edge = if (enabled && !agsl) {
-        Modifier.border(1.25.dp, darkEdge, shape).border(.75.dp, rim, shape)
+        Modifier
+            .border(1.dp, hairline, shape)
+            .border(.5.dp, darkEdge, shape)
     } else Modifier
 
     if (dynamic && backdrop != null) {
@@ -289,8 +281,9 @@ fun GlassPanel(
             Box(Modifier.background(Color.Transparent, shape)) { content() }
         }
     } else {
-        // Verre STATIQUE : pas d'échantillonnage, donc pas de crash — mais on garde
-        // le dégradé, le liseré, le voile spéculaire et l'épaisseur pour rester cohérent.
+        // Verre STATIQUE (désactivé ou capturé) : matériau dépoli premium —
+        // base translucide, liseré capillaire, voile spéculaire. Pas
+        // d'échantillonnage, donc aucun risque de boucle de rendu.
         Box(modifier = modifier.then(edge).background(surface, shape)) {
             Box(Modifier.background(sheen, shape)) { content() }
         }

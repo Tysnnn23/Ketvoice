@@ -12,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Share
 import com.ketvoice.app.ui.common.GlassBackButton
 import com.ketvoice.app.ui.common.Icon
 import com.ketvoice.app.ui.common.Text
@@ -22,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.BlurredEdgeTreatment
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -72,6 +74,10 @@ fun CatalogScreen() {
         else -> page?.tracks.orEmpty()
     }
     LaunchedEffect(tracks) { ArtworkRepo.enrich(tracks) }
+    // Canvas du hero : résolu pour le premier titre quand les Canvas sont actifs.
+    val canvasTrack = tracks.firstOrNull()?.takeIf { AppSettings.animatedArtwork.value }
+    LaunchedEffect(canvasTrack?.id) { canvasTrack?.let { CanvasRepo.resolve(it) } }
+    val shareContext = androidx.compose.ui.platform.LocalContext.current
     Column(Modifier.fillMaxSize().background(theme.background).statusBarsPadding()) {
         Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             GlassBackButton { AppUi.closeOverlay() }
@@ -79,11 +85,9 @@ fun CatalogScreen() {
             Text(page?.title ?: request.title, color = theme.onBackground, fontSize = 24.sp,
                 fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
-        // Header immersif quand la page porte une vraie pochette (albums) : fond
-        // dérivé de la pochette floutée, dégradés vers les bords, titre à côté de
-        // la pochette, artiste + date de sortie, bouton Play.
-        // Le bug « grille de quatre images identiques » disparaît : la mosaïque
-        // n'est utilisée qu'en repli, quand aucune pochette réelle n'existe.
+        // Header immersif quand la page porte une vraie pochette (albums) :
+        // pochette centrée en grand (canvas si dispo), fond flouté plein cadre,
+        // boutons Lecture et Partager. La mosaïque reste le repli sans pochette.
         val heroCover = page?.cover
         if (heroCover != null && !loading) {
             AlbumHero(
@@ -92,7 +96,13 @@ fun CatalogScreen() {
                 releaseDate = page?.releaseDate,
                 cover = heroCover,
                 trackCount = tracks.size,
-                onPlay = { if (tracks.isNotEmpty()) Player.playQueue(tracks, 0) }
+                canvasTrack = canvasTrack,
+                onPlay = { if (tracks.isNotEmpty()) Player.playQueue(tracks, 0) },
+                onShare = {
+                    com.ketvoice.app.util.ShareLinks.shareAlbum(
+                        shareContext, request.id, page?.title ?: request.title, page?.subtitle.orEmpty()
+                    )
+                }
             )
         } else if (tracks.isNotEmpty() && !loading) {
             // Mosaïque 2x2 en repli : les 4 premières pochettes de la collection.
@@ -153,8 +163,9 @@ fun CatalogScreen() {
 }
 
 /**
- * Header d'album : pochette floutée en fond (adaptée aux couleurs de l'album),
- * pochette nette à gauche avec titre/artiste/date à côté, bouton Play.
+ * Header d'album refondu : pochette EN GRAND et CENTRÉE (canvas vidéo si
+ * disponible sur le premier titre), fond flouté plein cadre, titre/artiste/
+ * année centrés, boutons Lecture et Partager côte à côte.
  */
 @Composable
 private fun AlbumHero(
@@ -163,62 +174,93 @@ private fun AlbumHero(
     releaseDate: String?,
     cover: String,
     trackCount: Int,
-    onPlay: () -> Unit
+    canvasTrack: Track?,
+    onPlay: () -> Unit,
+    onShare: () -> Unit
 ) {
     val theme = LocalTheme.current
-    Box(Modifier.fillMaxWidth().heightIn(min = 258.dp)) {
-        // Fond : pochette floutée et agrandie — jamais de bord dur.
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val radius = with(density) { 24.dp.toPx() }
+    Box(Modifier.fillMaxWidth()) {
+        // Fond : pochette floutée et agrandie, aucun bord dur.
         AsyncImage(
             model = cover, contentDescription = null,
             contentScale = ContentScale.Crop,
             modifier = Modifier
-                .fillMaxSize()
-                .graphicsLayer { scaleX = 1.35f; scaleY = 1.35f }
-                .blur(38.dp, BlurredEdgeTreatment.Unbounded)
+                .matchParentSize()
+                .graphicsLayer { scaleX = 1.4f; scaleY = 1.4f }
+                .blur(40.dp, BlurredEdgeTreatment.Unbounded)
         )
         // Dégradés : raccord haut vers la barre, raccord bas vers la liste.
-        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(
-            theme.background.copy(alpha = .55f), Color.Transparent, Color.Transparent,
-            theme.background.copy(alpha = .72f), theme.background
+        Box(Modifier.matchParentSize().background(Brush.verticalGradient(listOf(
+            theme.background.copy(alpha = .6f), Color.Transparent, Color.Transparent,
+            theme.background.copy(alpha = .78f), theme.background
         ))))
-        Column(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 10.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Cover(title, cover, 128.dp, 14.dp)
-                Spacer(Modifier.width(16.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(title, localize = false, color = theme.onBackground,
-                        fontSize = 22.sp, fontWeight = FontWeight.Black, letterSpacing = (-.5).sp,
-                        lineHeight = 26.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
-                    if (subtitle.isNotBlank()) {
-                        Text(subtitle, localize = false, color = theme.secondary, fontSize = 14.sp,
-                            maxLines = 2, overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.padding(top = 5.dp))
-                    }
-                    if (releaseDate != null) {
-                        Text("Sorti en $releaseDate", localize = false, color = theme.secondary,
-                            fontSize = 12.5.sp, modifier = Modifier.padding(top = 3.dp))
-                    }
+        Column(
+            Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 22.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // Canvas vidéo si disponible sur le premier titre, pochette sinon.
+            Box(
+                Modifier
+                    .size(216.dp)
+                    .shadow(18.dp, RoundedCornerShape(24.dp), spotColor = Color.Black.copy(alpha = 0.45f))
+                    .clip(RoundedCornerShape(24.dp))
+            ) {
+                if (canvasTrack != null) {
+                    com.ketvoice.app.ui.player.ArtworkCanvas(
+                        track = canvasTrack,
+                        canvasPath = CanvasRepo.paths.collectAsState().value[canvasTrack.id],
+                        playing = false,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    Cover(title, cover, 216.dp, 24.dp)
                 }
+            }
+            Spacer(Modifier.height(18.dp))
+            Text(title, localize = false, color = theme.onBackground,
+                fontSize = 24.sp, fontWeight = FontWeight.Black, letterSpacing = (-.6).sp,
+                lineHeight = 29.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            val meta = buildList {
+                if (subtitle.isNotBlank()) add(subtitle)
+                if (releaseDate != null) add("Sorti en $releaseDate")
+                add("$trackCount titres")
+            }.joinToString("  ·  ")
+            if (meta.isNotBlank()) {
+                Text(meta, localize = false, color = theme.secondary, fontSize = 13.sp,
+                    maxLines = 2, overflow = TextOverflow.Ellipsis,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    modifier = Modifier.padding(top = 7.dp))
             }
             Spacer(Modifier.height(16.dp))
             Row(verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                Box(
-                    Modifier.weight(1f, fill = false)
+                horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(
+                    Modifier
                         .clip(RoundedCornerShape(23.dp))
                         .background(theme.accent)
                         .clickable(enabled = trackCount > 0, onClick = onPlay)
                         .padding(horizontal = 26.dp, vertical = 11.dp),
-                    contentAlignment = Alignment.Center
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Filled.PlayArrow, null, tint = Color.Black, modifier = Modifier.size(21.dp))
-                        Spacer(Modifier.width(7.dp))
-                        Text("Lecture", color = Color.Black, fontSize = 14.5.sp, fontWeight = FontWeight.Bold)
-                    }
+                    Icon(Icons.Filled.PlayArrow, null, tint = Color.Black, modifier = Modifier.size(21.dp))
+                    Spacer(Modifier.width(7.dp))
+                    Text("Lecture", color = Color.Black, fontSize = 14.5.sp, fontWeight = FontWeight.Bold)
                 }
-                Text("$trackCount titres", localize = false, color = theme.secondary,
-                    fontSize = 12.5.sp, modifier = Modifier.padding(start = 6.dp))
+                Row(
+                    Modifier
+                        .clip(RoundedCornerShape(23.dp))
+                        .background(theme.onBackground.copy(alpha = 0.10f))
+                        .clickable(onClick = onShare)
+                        .padding(horizontal = 22.dp, vertical = 11.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Filled.Share, "Partager", tint = theme.onBackground, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(7.dp))
+                    Text("Partager", color = theme.onBackground, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                }
             }
         }
     }
