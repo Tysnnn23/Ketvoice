@@ -7,6 +7,45 @@
 
 ---
 
+# Ketvoice 3.7.0
+
+**versionCode 50** — installs over 3.6.3 and every earlier build (same signing certificate).
+
+### Liquid Glass, rebuilt — and the disabled mode too
+Before → After: the lens refraction had a visible step where it started, the tint leaned milky and large panels banded. The AGSL shader now raises the lens on a smooth smoothstep profile with softer dispersion, adds a permanent hairline contour and sub-pixel dithering, and every preset is rebalanced so the glass reads as optical material. With glass disabled, panels are no longer flat paint: a frosted translucent body, diagonal light gradient, hairline rim and specular veil.
+
+### The whole chrome collapses together
+Before → After: scrolling down only shrank the tab buttons. The bar is now bigger (60 dp tabs, 54 dp mini-player), and when you scroll the mini player condenses to artwork + transport and joins the navigation row with Home and Search interposed beside it — one slim floating row. Scroll back up and everything returns to the full layout. The collapse now also works on Explorer and Library, not just Home.
+
+### The player closes progressively
+Before → After: closing the full player was instant. Drag the artwork, the title bar or the handle and the whole screen follows your finger, fading and growing a sheet corner; release low or flick and it slides out, release high and it springs back. Back button and handle tap animate the same way. Quest and tablets keep the previous behavior.
+
+### Held-word highlight in karaoke lyrics
+Before → After: nothing marked the word the song was lingering on. On word-by-word and syllable lines, a fully-sung word the singer holds now grows by 9 % with a soft white glow, easing in and out. Reduced motion keeps it off.
+
+### Lyrics tracking is smooth again
+Before → After: every visible lyric line recomposed on each 200 ms position tick because the ad-lib window read the position stream, and every arriving translation invalidated the whole list. Position is now read only by the active line and translations land in a per-line granular map.
+
+### Artist page — the photo is back, and it never leaves
+Before → After: 3.6.3 replaced the artist photo with an animated canvas that faded away on scroll. The photo is restored as the permanent hero — displayed whole over a blurred extension of itself, with the extended progressive blur band under the status bar, exactly like the player. Artist pages without an immersive header no longer fail entirely, and related-artist avatars fall back to a person icon instead of an empty circle.
+
+### Album page — redesigned
+Before → After: the cover sat on the side at 128 dp. It is now the page: 216 dp, centered, with a canvas video when one exists for the album's first track, over a full-bleed blurred backdrop, with centered title, artist, year, track count and **Listen** / **Share** actions.
+
+### Share links that open the app
+Before → After: share sent plain text. The player (lyrics header and ⋯ menu) and the album page now build a real link served by the project's GitHub Pages: a friend with Ketvoice is switched automatically to the app and the shared track starts playing; without the app, the page shows the track and a Download button. The app registers `ketvoice://listen` and the matching https path.
+
+### Native volume control
+Before → After: the slider drove an in-app multiplier. It now drives the real system media volume (`AudioManager` STREAM_MUSIC) — same steps as the hardware buttons, live sync when hardware volume changes, and an icon that follows the level.
+
+### Settings no longer crash on open
+Before → After: a corrupted or locked audio cache could throw inside the Settings screen composition and kill the app. Cache init, size queries and trimming are now failure-proof and degrade to "no cache".
+
+### Fully translated
+Before → After: the new strings (share, shared playback, album actions) ship in the bundled catalogs — 827 strings across the eleven interface languages.
+
+---
+
 # Ketvoice 3.6.3
 
 **versionCode 49** — installs over 3.6.2 and every earlier build (same signing certificate).
