@@ -66,8 +66,8 @@ internal fun ArtistHeader(page: ArtistPage) {
                     Icon(Icons.Filled.PlayArrow, null, tint = onAccent, modifier = Modifier.size(21.dp))
                     Spacer(Modifier.width(6.dp));Text("Lecture", color = onAccent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                 }
-                GlassPanel(Modifier.weight(1f), RoundedCornerShape(16.dp), GlassParams.card(16f,theme.isDark),
-                    enabled = AppSettings.liquidGlass.value, captured = true) {
+                GlassPanel(Modifier.weight(1f), RoundedCornerShape(16.dp), GlassParams.pill(dark = theme.isDark),
+                    enabled = AppSettings.liquidGlass.value) {
                     Box(Modifier.fillMaxWidth().clickable { AppUi.pushOverlay(AppUi.QUEUE) }
                         .heightIn(min = 50.dp).padding(horizontal = 10.dp, vertical = 12.dp), contentAlignment = Alignment.Center) {
                         Text("File d'attente", color = theme.accent, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)

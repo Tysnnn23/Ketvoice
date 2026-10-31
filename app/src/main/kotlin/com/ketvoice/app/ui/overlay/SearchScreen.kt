@@ -160,8 +160,10 @@ fun SearchScreen() {
                 Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 20.dp, vertical = 6.dp),
-                horizontalArrangement = Arrangement.End
+                verticalAlignment = Alignment.CenterVertically
             ) {
+                Text("Rechercher", color = th.onBackground, fontSize = 28.sp, fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
                 AccountAvatar(
                     "K", size = 42.dp, modifier = Modifier.clickable(
                         interactionSource = remember { MutableInteractionSource() },
@@ -170,36 +172,8 @@ fun SearchScreen() {
             }
         }
 
-        // Champ de recherche iOS
-        Row(
-            Modifier
-                .padding(horizontal = 20.dp)
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
-                .background(if (th.isDark) Color(0xFF1C1C1E) else Color(0x19909093))
-                .padding(horizontal = 10.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(Icons.Filled.Search, null, tint = th.secondary, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(8.dp))
-            Box(Modifier.weight(1f)) {
-                if (query.isEmpty()) {
-                    Text("Rechercher un titre ou un artiste…", color = th.secondary, fontSize = 16.sp)
-                }
-                androidx.compose.foundation.text.BasicTextField(
-                    value = query,
-                    onValueChange = { query = it },
-                    textStyle = androidx.compose.ui.text.TextStyle(
-                        color = th.onBackground, fontSize = 17.sp
-                    ),
-                    cursorBrush = androidx.compose.ui.graphics.SolidColor(th.accent),
-                    singleLine = true,
-                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Search),
-                    keyboardActions = androidx.compose.foundation.text.KeyboardActions(onSearch = { submitSearch(true) }),
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 40.dp)
-                )
-            }
-        }
+        com.ketvoice.app.ui.common.CompactSearchField(query, { query = it }, { submitSearch(true) },
+            Modifier.padding(horizontal = 20.dp).align(Alignment.CenterHorizontally))
         Spacer(Modifier.height(14.dp))
         AppUi.playlistResolution.value?.let { pending ->
             Column(Modifier.padding(horizontal=20.dp)) {
@@ -213,6 +187,7 @@ fun SearchScreen() {
         Row(
             Modifier
                 .padding(horizontal = 20.dp)
+                .widthIn(max = 640.dp).fillMaxWidth()
                 .clip(RoundedCornerShape(999.dp))
                 .background(if (th.isDark) Color(0xFF2C2C2E) else Color(0x19909093))
                 .padding(3.dp)
@@ -221,20 +196,22 @@ fun SearchScreen() {
                 val sel = segment == i
                 Box(
                     Modifier
+                        .weight(1f)
                         .clip(RoundedCornerShape(999.dp))
                         .background(if (sel) (if (th.isDark) Palette.White else Palette.DarkGray) else Color.Transparent)
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null
                         ) { segment = i }
-                        .padding(horizontal = 16.dp, vertical = 7.dp),
+                        .heightIn(min = 44.dp).padding(horizontal = 7.dp, vertical = 7.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         label,
                         color = if (sel) (if (th.isDark) Palette.Black else Palette.White) else th.onBackground,
                         fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis
                     )
                 }
             }

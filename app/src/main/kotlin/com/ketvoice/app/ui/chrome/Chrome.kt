@@ -22,6 +22,8 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Home
@@ -55,6 +57,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.semantics.Role
 import com.ketvoice.app.data.AppSettings
 import com.ketvoice.app.data.ArtworkRepo
 import com.ketvoice.app.glass.GlassParams
@@ -189,20 +192,10 @@ private fun MiniPlayerCompact(modifier: Modifier = Modifier, onOpen: () -> Unit)
                     .padding(start = 5.dp, end = 6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Cover(current.title, cover, size = 42.dp, radius = 999.dp)
+                Cover(current.title, cover, size = 38.dp, radius = 999.dp)
                 Spacer(Modifier.width(4.dp))
-                Text(
-                    current.title,
-                    localize = false,
-                    style = T.bodyBold.copy(fontSize = 13.5.sp),
-                    color = th.onBackground,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false)
-                )
-                Spacer(Modifier.width(2.dp))
-                MiniTransportButton(playing = ps.playWhenReady, size = 32.dp)
-                MiniTransportNext(size = 32.dp)
+                Spacer(Modifier.weight(1f))
+                MiniTransportButton(playing = ps.playWhenReady, size = 36.dp)
             }
             MiniProgressLine(
                 modifier = Modifier
@@ -314,13 +307,13 @@ fun FloatingChrome(collapsed: Boolean, onOpenPlayer: () -> Unit) {
     ) { isCollapsed ->
         if (isCollapsed) {
             Row(
-                Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 2.dp),
+                Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 GlassTabCapsule(collapsed = true, modifier = Modifier)
                 MiniPlayerCompact(modifier = Modifier.weight(1f), onOpen = onOpenPlayer)
-                SearchCircleButton(size = 52.dp)
+                SearchCircleButton(size = 48.dp)
             }
         } else {
             Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -339,7 +332,8 @@ fun FloatingChrome(collapsed: Boolean, onOpenPlayer: () -> Unit) {
 @Composable
 private fun SearchCircleButton(size: androidx.compose.ui.unit.Dp) {
     val th = LocalTheme.current
-    GlassPanel(
+    com.ketvoice.app.ui.common.LiquidGlassButton(
+        onClick = { AppUi.openSearch() },
         modifier = Modifier
             .size(size)
             .shadow(
@@ -347,32 +341,13 @@ private fun SearchCircleButton(size: androidx.compose.ui.unit.Dp) {
                 shape = CircleShape,
                 spotColor = Color.Black.copy(alpha = 0.12f)
             ),
-        shape = CircleShape,
-        params = GlassParams.circle(dark = th.isDark),
-        enabled = AppSettings.liquidGlass.value
+        shape = CircleShape
     ) {
         Box(
             Modifier
-                .fillMaxSize()
-                .clickable(noRipple, null) { AppUi.openSearch() },
+                .fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
-            // Reflet spéculaire supérieur de la lentille circulaire
-            Box(
-                Modifier
-                    .fillMaxWidth(0.7f)
-                    .height(10.dp)
-                    .align(Alignment.TopCenter)
-                    .clip(CircleShape)
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(
-                                Color.White.copy(alpha = if (th.isDark) 0.35f else 0.5f),
-                                Color.Transparent
-                            )
-                        )
-                    )
-            )
             Icon(
                 Icons.Filled.Search,
                 contentDescription = "Rechercher",
@@ -385,13 +360,13 @@ private fun SearchCircleButton(size: androidx.compose.ui.unit.Dp) {
 
 /** Capsule d'onglets en verre : pleine (labels + lentille glissante) ou réduite (icônes). */
 @Composable
-private fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier) {
+internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier) {
     val th = LocalTheme.current
     val focus = androidx.compose.ui.platform.LocalFocusManager.current
     var held by remember { mutableStateOf(false) }
     var hover by remember { mutableFloatStateOf(0f) }
-    val bulge by animateFloatAsState(if (held) 1.11f else 1f,
-        spring(dampingRatio = .66f, stiffness = 450f), label = "held-glass")
+    val bulge by animateFloatAsState(if (held && !Motion.reduced) 1.055f else 1f,
+        if (Motion.reduced) androidx.compose.animation.core.snap() else spring(dampingRatio = .82f, stiffness = 500f), label = "held-glass")
     val tabs = listOf(
         TabSpec(Icons.Filled.Home, "Accueil", AppUi.HOME),
         TabSpec(Icons.Filled.GridView, "Explorer", AppUi.EXPLORER),
@@ -399,14 +374,14 @@ private fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier) {
     )
 
     val widthAnim by animateDpAsState(
-        targetValue = if (collapsed) 158.dp else
+        targetValue = if (collapsed) 144.dp else
             (androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp - 110).dp.coerceIn(196.dp, 310.dp),
-        animationSpec = spring(dampingRatio = 0.9f, stiffness = 500f),
+        animationSpec = if (Motion.reduced) androidx.compose.animation.core.snap() else spring(dampingRatio = 0.9f, stiffness = 500f),
         label = "tabWidth"
     )
     val heightAnim by animateDpAsState(
         targetValue = if (collapsed) 52.dp else 60.dp,
-        animationSpec = spring(dampingRatio = 0.9f, stiffness = 500f),
+        animationSpec = if (Motion.reduced) androidx.compose.animation.core.snap() else spring(dampingRatio = 0.9f, stiffness = 500f),
         label = "tabHeight"
     )
 
@@ -436,7 +411,7 @@ private fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier) {
             val selected = if (held) kotlin.math.round(hover).toInt() else tabs.indexOfFirst { it.index == AppUi.tab.value }.coerceAtLeast(0)
             val pillX by animateFloatAsState(
                 targetValue = if (held) hover else selected.toFloat(),
-                animationSpec = spring(dampingRatio = 0.72f, stiffness = 520f),
+                animationSpec = if (Motion.reduced) androidx.compose.animation.core.snap() else spring(dampingRatio = 0.86f, stiffness = 520f),
                 label = "pillX"
             )
             Box(Modifier.fillMaxSize()) {
@@ -447,7 +422,7 @@ private fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier) {
                     // peu pendant le déplacement puis se stabilise.
                     val pillShape = RoundedCornerShape(999.dp)
                     val travel = kotlin.math.abs((if (held) hover else selected.toFloat()) - pillX)
-                    val stretch = 1f + (travel * 0.16f).coerceAtMost(0.2f)
+                    val stretch = if (Motion.reduced) 1f else 1f + (travel * 0.08f).coerceAtMost(0.1f)
                     GlassPanel(
                         modifier = Modifier
                             .offset(x = slot * pillX + 5.dp)
@@ -458,9 +433,10 @@ private fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier) {
                         params = GlassParams.pill(blur = 3f, dark = th.isDark).copy(
                             // Lentille active : verre optique qui se lit sur le fond, sans devenir
                             // une capsule blanche. Un vrai verre laisse passer ce qu'il traverse.
-                            refractionPx = 36f,
-                            tintAlpha = if (th.isDark) 0.115f else 0.08f,
-                            saturation = if (th.isDark) 1.22f else 1.46f,
+                            refractionHeightDp = 14f,
+                            refractionAmountDp = 26f,
+                            tintAlpha = if (th.isDark) 0.055f else 0.025f,
+                            saturation = if (th.isDark) 1.18f else 1.28f,
                             exposure = 0.03f,
                             highlightAlpha = if (th.isDark) 0.40f else 0.50f,
                             highlightIntensity = if (th.isDark) 0.30f else 0.36f
@@ -471,19 +447,19 @@ private fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier) {
                 Row(
                     Modifier
                         .fillMaxSize()
-                        .padding(horizontal = 4.dp)
+                        .padding(horizontal = 4.dp).selectableGroup()
                 ) {
                     tabs.forEach { tab ->
                         val isSel = selected == tab.index
                         val iconScale by animateFloatAsState(
                             targetValue = if (isSel) 1.08f else 1f,
-                            animationSpec = spring(dampingRatio = 0.5f, stiffness = 600f),
+                            animationSpec = if (Motion.reduced) androidx.compose.animation.core.snap() else spring(dampingRatio = 0.8f, stiffness = 600f),
                             label = "tabIcon"
                         )
                         val targetContentColor = when {
                             isSel && !th.isDark -> Color(0xFF141414)
                             isSel && th.isDark -> Color.White
-                            else -> th.onBackground.copy(alpha = 0.52f)
+                            else -> th.onBackground.copy(alpha = 0.76f)
                         }
                         val contentColor by animateColorAsState(
                             targetValue = targetContentColor,
@@ -496,7 +472,7 @@ private fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier) {
                             modifier = Modifier
                                 .weight(1f)
                                 .fillMaxHeight()
-                                .clickable(noRipple, null) {
+                                .selectable(isSel, role = Role.Tab) {
                                     focus.clearFocus()
                                     AppUi.selectTab(tab.index)
                                 }
@@ -514,7 +490,7 @@ private fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier) {
                                 tab.label,
                                 fontSize = 10.5.sp,
                                 fontWeight = if (isSel) FontWeight.Bold else FontWeight.SemiBold,
-                                color = contentColor
+                                color = contentColor, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis
                             )
                         }
                     }
@@ -526,12 +502,12 @@ private fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier) {
                 }
             }
         } else {
-            Row(Modifier.fillMaxSize()) {
+            Row(Modifier.fillMaxSize().selectableGroup()) {
                 tabs.forEach { tab ->
-                    Box(Modifier.weight(1f).fillMaxHeight().clickable(noRipple, null) {
+                    Box(Modifier.weight(1f).fillMaxHeight().selectable(AppUi.tab.value == tab.index, role = Role.Tab) {
                         focus.clearFocus(); AppUi.selectTab(tab.index)
                     }, contentAlignment = Alignment.Center) {
-                        Icon(tab.icon, tab.label, tint = th.onBackground.copy(alpha = if (AppUi.tab.value == tab.index) 1f else .55f), modifier = Modifier.size(25.dp))
+                        Icon(tab.icon, tab.label, tint = th.onBackground.copy(alpha = if (AppUi.tab.value == tab.index) 1f else .76f), modifier = Modifier.size(25.dp))
                     }
                 }
             }

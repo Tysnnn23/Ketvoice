@@ -1,5 +1,9 @@
 {
  "en": {
+  "Apparence": "Appearance",
+  "Canvas": "Canvas",
+  "Stockage": "Storage",
+  "À propos": "About",
   "Accueil": "Home",
   "Accueil personnalisé": "Personalized home",
   "Accueil YouTube Music personnel": "Your YouTube Music home",
@@ -829,6 +833,10 @@
   "Morceau partagé introuvable": "Couldn't find the shared track"
  },
  "hi": {
+  "Apparence": "दिखावट",
+  "Canvas": "Canvas",
+  "Stockage": "संग्रहण",
+  "À propos": "परिचय",
   "Accueil": "होम",
   "Accueil personnalisé": "व्यक्तिगत होम",
   "Accueil YouTube Music personnel": "आपका YouTube Music होम",
@@ -1658,6 +1666,10 @@
   "Morceau partagé introuvable": "साझा किया गया ट्रैक नहीं मिला"
  },
  "ja": {
+  "Apparence": "外観",
+  "Canvas": "Canvas",
+  "Stockage": "ストレージ",
+  "À propos": "このアプリについて",
   "Accueil": "ホーム",
   "Accueil personnalisé": "パーソナライズされたホーム",
   "Accueil YouTube Music personnel": "あなたのYouTube Musicホーム",
@@ -2487,6 +2499,10 @@
   "Morceau partagé introuvable": "共有された曲が見つかりません"
  },
  "zh": {
+  "Apparence": "外观",
+  "Canvas": "Canvas",
+  "Stockage": "存储",
+  "À propos": "关于",
   "Accueil": "首页",
   "Accueil personnalisé": "个性化首页",
   "Accueil YouTube Music personnel": "你的 YouTube Music 首页",
@@ -3316,6 +3332,10 @@
   "Morceau partagé introuvable": "找不到分享的曲目"
  },
  "ru": {
+  "Apparence": "Оформление",
+  "Canvas": "Canvas",
+  "Stockage": "Хранилище",
+  "À propos": "О приложении",
   "Accueil": "Главная",
   "Accueil personnalisé": "Персональная главная",
   "Accueil YouTube Music personnel": "Ваша главная YouTube Music",
@@ -4145,6 +4165,10 @@
   "Morceau partagé introuvable": "Общий трек не найден"
  },
  "it": {
+  "Apparence": "Aspetto",
+  "Canvas": "Canvas",
+  "Stockage": "Archiviazione",
+  "À propos": "Informazioni",
   "Accueil": "Home",
   "Accueil personnalisé": "Home personalizzata",
   "Accueil YouTube Music personnel": "La tua home di YouTube Music",
@@ -4974,6 +4998,10 @@
   "Morceau partagé introuvable": "Brano condiviso non trovato"
  },
  "es": {
+  "Apparence": "Apariencia",
+  "Canvas": "Canvas",
+  "Stockage": "Almacenamiento",
+  "À propos": "Acerca de",
   "Accueil": "Inicio",
   "Accueil personnalisé": "Inicio personalizado",
   "Accueil YouTube Music personnel": "Tu inicio de YouTube Music",
@@ -5803,6 +5831,10 @@
   "Morceau partagé introuvable": "No se encontró la pista compartida"
  },
  "de": {
+  "Apparence": "Erscheinungsbild",
+  "Canvas": "Canvas",
+  "Stockage": "Speicher",
+  "À propos": "Über",
   "Accueil": "Start",
   "Accueil personnalisé": "Personalisierte Startseite",
   "Accueil YouTube Music personnel": "Deine YouTube Music-Startseite",
@@ -6632,6 +6664,10 @@
   "Morceau partagé introuvable": "Geteilten Titel nicht gefunden"
  },
  "pt": {
+  "Apparence": "Aparência",
+  "Canvas": "Canvas",
+  "Stockage": "Armazenamento",
+  "À propos": "Sobre",
   "Accueil": "Início",
   "Accueil personnalisé": "Início personalizado",
   "Accueil YouTube Music personnel": "Seu início do YouTube Music",
@@ -7461,6 +7497,10 @@
   "Morceau partagé introuvable": "Faixa partilhada não encontrada"
  },
  "ko": {
+  "Apparence": "모양",
+  "Canvas": "Canvas",
+  "Stockage": "저장 공간",
+  "À propos": "정보",
   "Accueil": "홈",
   "Accueil personnalisé": "맞춤 홈",
   "Accueil YouTube Music personnel": "내 YouTube Music 홈",

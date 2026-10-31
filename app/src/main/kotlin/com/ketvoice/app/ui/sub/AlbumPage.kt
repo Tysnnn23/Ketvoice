@@ -37,6 +37,9 @@ import coil.compose.AsyncImage
 import com.ketvoice.app.data.*
 import com.ketvoice.app.glass.GlassPanel
 import com.ketvoice.app.glass.GlassParams
+import com.ketvoice.app.glass.BackdropCapture
+import com.ketvoice.app.glass.LocalBackdropLayer
+import com.ketvoice.app.glass.rememberGlassBackdrop
 import com.ketvoice.app.player.Player
 import com.ketvoice.app.theme.LocalTheme
 import com.ketvoice.app.ui.AppUi
@@ -60,7 +63,9 @@ internal fun AlbumPage(request: CatalogRequest, page: CatalogPage?, tracks: List
     val cover = page?.cover ?: tracks.firstOrNull()?.coverUrl
     val top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 66.dp
     val onAccent = if (theme.accent.luminance() > .179f) Color.Black else Color.White
+    val controlsBackdrop = rememberGlassBackdrop(theme.background)
     Box(Modifier.fillMaxSize().background(theme.background)) {
+        BackdropCapture(controlsBackdrop, Modifier.matchParentSize()) {
         // A very restrained cover wash behind the entire page, not a hard-edged hero rectangle.
         if (cover != null && !AppSettings.reduceDynamicBlur.value && !AppSettings.highPerformanceMode.value) AsyncImage(cover, null, contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxWidth().height(620.dp)
@@ -68,6 +73,8 @@ internal fun AlbumPage(request: CatalogRequest, page: CatalogPage?, tracks: List
                 .blur(64.dp, BlurredEdgeTreatment.Unbounded))
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(
             0f to theme.background.copy(alpha = .15f), .65f to theme.background, 1f to theme.background)))
+        }
+        CompositionLocalProvider(LocalBackdropLayer provides controlsBackdrop) {
         LazyColumn(Modifier.fillMaxSize().testTag("album-list"), state = list,
             contentPadding = PaddingValues(top = top, bottom = LocalAdaptiveLayout.current.bottomPaddingDp.dp + 20.dp)) {
             item(key = "album-hero") {
@@ -101,7 +108,7 @@ internal fun AlbumPage(request: CatalogRequest, page: CatalogPage?, tracks: List
                             Spacer(Modifier.width(6.dp));Text("Lecture", color = onAccent, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
                         }
                         GlassPanel(Modifier.weight(1f), RoundedCornerShape(16.dp),
-                            GlassParams.card(16f, theme.isDark), enabled = AppSettings.liquidGlass.value, captured = true) {
+                            GlassParams.pill(dark = theme.isDark), enabled = AppSettings.liquidGlass.value) {
                             Row(Modifier.fillMaxWidth().clickable(enabled = tracks.isNotEmpty()) {
                                 Player.playQueue(tracks.shuffled()); Player.setShuffle(true)
                             }.heightIn(min = 50.dp).padding(horizontal = 14.dp, vertical = 12.dp),
@@ -160,6 +167,7 @@ internal fun AlbumPage(request: CatalogRequest, page: CatalogPage?, tracks: List
                     Icon(Icons.Filled.Share, "Partager", tint = theme.onBackground, modifier = Modifier.size(21.dp))
                 }
             }
+        }
         }
     }
 }

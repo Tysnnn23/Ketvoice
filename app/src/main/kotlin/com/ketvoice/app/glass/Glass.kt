@@ -62,17 +62,21 @@ fun rememberGlassBackdrop(background: Color) = rememberLayerBackdrop {
 /**
  * Paramètres du matériau « liquid glass ».
  *
- * v3 : le matériau AGSL fait tout le travail optique (réfraction, dispersion,
- * liseré de Fresnel, sheen, dithering). Les presets ne règlent que l'équilibre
- * transmission / lisibilité, avec des teintes volontairement basses : un verre
- * trop opaque devient du plastique, trop transparent disparaît.
+ * Les contrôles utilisent une lentille AGSL inspirée de Prismal ; le rôle Panel
+ * reste mat. La réfraction de contrôle est définie en dp, puis bornée à sa taille.
  */
+enum class GlassRole { Control, Panel }
+
 data class GlassParams(
     val cornerRadiusPx: Float,
     /** Rayon de flou du fond, en px. 0 = pas de flou. */
     val blurPx: Float = 28f,
     /** Hauteur de réfraction de la lentille (bord du verre), en px. */
     val refractionPx: Float = 18f,
+    /** Prismal-style edge band and displacement, density-independent. */
+    val refractionHeightDp: Float = 10f,
+    val refractionAmountDp: Float = 20f,
+    val role: GlassRole = GlassRole.Control,
     /** Opacité de la teinte de surface (le "lait" du verre). */
     val tintAlpha: Float = 0.10f,
     /** Saturation du fond à travers le verre. > 1 = couleurs plus riches. */
@@ -99,12 +103,11 @@ data class GlassParams(
 ) {
     companion object {
         /**
-         * Carte de contenu : grand rayon, réfraction discrète. Sert aux groupes
-         * de réglages et aux boutons de l'application, qui étaient jusqu'ici
-         * des aplats opaques alors que le reste de l'interface est en verre.
+         * Carte de contenu mate. Le verre n'est plus un traitement de toute la page.
          */
         fun card(radiusPx: Float, dark: Boolean = false) = GlassParams(
             cornerRadiusPx = radiusPx,
+            role = GlassRole.Panel,
             blurPx = 26f,
             refractionPx = 12f,
             tintAlpha = if (dark) 0.16f else 0.12f,
@@ -123,12 +126,12 @@ data class GlassParams(
             // existe visuellement, assez peu pour que le fond reste lisible à
             // travers. Sous ~0.06 le verre disparaît ; au-dessus de ~0.16 il
             // redevient du plastique blanc opaque.
-            tintAlpha = if (dark) 0.16f else 0.14f,
-            saturation = if (dark) 1.08f else 1.16f,
+            tintAlpha = if (dark) 0.065f else 0.045f,
+            saturation = if (dark) 1.18f else 1.25f,
             brightness = 1.0f,
             contrast = 1.0f,
             exposure = if (dark) 0.01f else 0.02f,
-            highlightAlpha = if (dark) 0.32f else 0.48f,
+            highlightAlpha = if (dark) 0.48f else 0.62f,
             highlightIntensity = if (dark) 0.26f else 0.36f,
             dark = dark
         )
@@ -137,7 +140,7 @@ data class GlassParams(
             cornerRadiusPx = 9999f,
             blurPx = blur,
             refractionPx = 14f,
-            tintAlpha = if (dark) 0.15f else 0.12f,
+            tintAlpha = if (dark) 0.06f else 0.04f,
             saturation = if (dark) 1.10f else 1.15f,
             exposure = if (dark) 0.02f else 0.035f,
             highlightAlpha = if (dark) 0.34f else 0.52f,
@@ -147,6 +150,7 @@ data class GlassParams(
 
         fun sheet(radiusPx: Float, dark: Boolean = false) = GlassParams(
             cornerRadiusPx = radiusPx,
+            role = GlassRole.Panel,
             blurPx = 34f,
             refractionPx = 18f,
             // Le sheet doit laisser deviner le contenu : fond gris trop opaque = profondeur perdue.
@@ -207,6 +211,12 @@ fun GlassPanel(
     captured: Boolean = false,
     content: @Composable () -> Unit
 ) {
+    if (params.role == GlassRole.Panel) {
+        // Glass belongs to controls and navigation, not every content card/menu.
+        val theme = LocalTheme.current
+        Box(modifier.background(theme.card, shape)) { content() }
+        return
+    }
     val backdrop = LocalBackdropLayer.current
     val dynamic = backdrop != null && enabled && !captured &&
         !AppSettings.reduceDynamicBlur.value &&
@@ -215,6 +225,7 @@ fun GlassPanel(
     // (réfraction + dispersion + teinte + liseré). Les pinceaux de surface et le
     // Highlight de la lib ne servent plus que de repli pré-33.
     val agsl = dynamic && GlassShader.isSupported()
+    val renderState = remember { GlassRenderState() }
 
     val (surface, hairline) = rememberStaticMaterial(params)
     val sheen = remember(params) { staticSheen(params) }
@@ -224,7 +235,7 @@ fun GlassPanel(
         Modifier.border(.65.dp, hairline, shape)
     } else Modifier
 
-    if (dynamic && backdrop != null) {
+    if (dynamic) {
         Box(
             modifier = modifier.drawBackdrop(
                 backdrop = backdrop,
@@ -237,7 +248,7 @@ fun GlassPanel(
                         val realRadii = glassRoundedShapeRadii(
                             shape, bounds.width, bounds.height, this, layoutDirection
                         ) ?: glassCornerRadiiOf(params.cornerRadiusPx)
-                        liquidGlass(params, realRadii)
+                        renderState.shaderApplied = liquidGlass(params, realRadii)
                     } else {
                         if (params.saturation != 1f || params.brightness != 1f || params.contrast != 1f) {
                             colorControls(params.saturation, params.brightness, params.contrast)
@@ -268,7 +279,7 @@ fun GlassPanel(
                 shadow = { if (params.shadow) Shadow.Default else null },
                 innerShadow = { if (params.innerShadow && !agsl) InnerShadow.Default else null },
                 onDrawSurface = {
-                    if (!agsl) {
+                    if (!agsl || !renderState.shaderApplied) {
                         drawRect(surface)
                         drawRect(sheen)
                     }
@@ -286,3 +297,5 @@ fun GlassPanel(
         }
     }
 }
+
+private class GlassRenderState(var shaderApplied: Boolean = false)

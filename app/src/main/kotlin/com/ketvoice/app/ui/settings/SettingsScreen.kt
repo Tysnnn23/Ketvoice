@@ -43,6 +43,10 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -94,7 +98,8 @@ fun SettingsScreen() {
     var editSetting by remember { mutableStateOf("") }
     var accentOpen by remember { mutableStateOf(false) }
     var lyricsDiag by remember { mutableStateOf(false) }
-    var autoMixTab by remember { mutableStateOf(false) }
+    var categoryKey by rememberSaveable { mutableStateOf<String?>(null) }
+    val category = SettingsCategory.fromKey(categoryKey)
     var choice by remember { mutableStateOf<ChoiceSpec?>(null) }
     val settingsScope = rememberCoroutineScope()
     val youtube by YouTubeMusicSession.profile.collectAsState()
@@ -102,52 +107,29 @@ fun SettingsScreen() {
     val customSources by CustomSources.sources.collectAsState()
     val playerState by Player.state.collectAsState()
 
-    Column(
-        Modifier
-            .fillMaxSize()
-            .background(th.background)
-    ) {
-        // ---------- En-tête ----------
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .statusBarsPadding()
-                .padding(start = 14.dp, end = 16.dp, top = 10.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            com.ketvoice.app.ui.common.GlassBackButton { AppUi.closeOverlay() }
-            Spacer(Modifier.width(12.dp))
-            Text("Réglages", style = T.hugeTitle, color = th.onBackground, fontSize = 30.sp)
-        }
-
-        if (AppSettings.automix.value) {
-            Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp)
-                .clip(RoundedCornerShape(18.dp)).background(th.card).padding(4.dp)) {
-                listOf(false to "Réglages", true to "AutoMix").forEach { (tab, label) ->
-                    Box(Modifier.weight(1f).clip(RoundedCornerShape(14.dp))
-                        .background(if (autoMixTab == tab) th.accent.copy(alpha = .18f) else Color.Transparent)
-                        .clickable { autoMixTab = tab }.heightIn(min = 48.dp).padding(12.dp), contentAlignment = Alignment.Center) {
-                        Text(label, color = if (autoMixTab == tab) th.accent else th.secondary,
-                            fontWeight = FontWeight.SemiBold)
-                    }
-                }
-            }
-        } else if (autoMixTab) LaunchedEffect(Unit) { autoMixTab = false }
-
+    fun back() { when (category) {
+        SettingsCategory.Design -> categoryKey = SettingsCategory.Appearance.name
+        null -> AppUi.closeOverlay()
+        else -> categoryKey = null
+    } }
+    androidx.activity.compose.BackHandler(enabled = category != null) { back() }
+    SettingsLayout(category, onBack = ::back) {
+        if (category == null) SettingsHome(youtube.connected, youtube.name) { categoryKey = it.name }
+        else key(category) {
         Column(
             Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(bottom = 140.dp)
+                .navigationBarsPadding().padding(bottom = 32.dp)
         ) {
             val testing = remember { mutableStateOf(false) }
             val scope = rememberCoroutineScope()
             val cacheUsedMb = remember { mutableIntStateOf(0) }
-            LaunchedEffect(Unit) {
-                cacheUsedMb.intValue = (AudioCache.sizeBytes(ctx) / 1_048_576L).toInt()
+            if (category == SettingsCategory.Storage) LaunchedEffect(Unit) {
+                cacheUsedMb.intValue = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    (AudioCache.sizeBytes(ctx) / 1_048_576L).toInt()
+                }
             }
-
-            if (!autoMixTab) {
 
             // ==================================================== YOUTUBE MUSIC
             if (com.ketvoice.app.BuildConfig.IS_QUEST) {
@@ -245,6 +227,9 @@ fun SettingsScreen() {
                 }
             }
             Section("APPARENCE") {
+                SRow(Icons.Filled.Tune, "DESIGN KETVOICE", sub = "Chaque finition peut être retirée séparément, sans modifier vos playlists ni votre musique.") {
+                    categoryKey = SettingsCategory.Design.name
+                }
                 SToggle(Icons.Filled.ColorLens, "Couleurs de la pochette", "Accents du lecteur adaptés à l'album, avec contraste renforcé",
                     AppSettings.albumColors.value) { AppSettings.albumColors.value = it; SettingsStore.save() }
                 SToggle(Icons.Filled.Videocam, "Profondeur de pochette", "Mouvement léger au toucher ou au pointeur, sans modifier les gestes",
@@ -255,7 +240,7 @@ fun SettingsScreen() {
                 SToggle(Icons.Filled.Bolt, "Animations réduites", "Atténue les mouvements décoratifs, sans désactiver le karaoké",
                     AppSettings.reduceAnimations.value) { AppSettings.reduceAnimations.value=it;SettingsStore.save() }
                 SRow(Icons.Filled.Subtitles, "Taille des paroles", sub="Lisibilité sans agrandir les boutons",
-                    value=listOf("Standard","Grand","Très grand")[AppSettings.lyricsTextSize.value]) {
+                    value=listOf("Standard","Grand","Très grand")[AppSettings.lyricsTextSize.value.coerceIn(0, 2)]) {
                     AppSettings.lyricsTextSize.value=(AppSettings.lyricsTextSize.value+1)%3;SettingsStore.save()
                 }
                 SRow(
@@ -616,7 +601,7 @@ fun SettingsScreen() {
                 ) {}
             }
 
-            Text(
+            if (category == SettingsCategory.Sources) Text(
                 "Ketvoice API (Supabase) gère les sources et les canvas. " +
                     "Aucun cookie Spotify ni jeton d'addon n'est livré dans l'APK.",
                 color = th.secondary,
@@ -624,9 +609,7 @@ fun SettingsScreen() {
                 lineHeight = 17.sp,
                 modifier = Modifier.padding(horizontal = 22.dp, vertical = 16.dp)
             )
-            }
-
-            if (autoMixTab && AppSettings.automix.value) {
+            if (category == SettingsCategory.Playback && AppSettings.automix.value) {
                 Section("AUTOMIX") {
                     Text("Analyse du rythme et fondu réel sur deux flux audio. Si l'analyse échoue, un fondu simple prend le relais.",
                         color = th.secondary, fontSize = 13.sp,
@@ -650,7 +633,7 @@ fun SettingsScreen() {
                             modifier = Modifier.fillMaxWidth().padding(horizontal = 22.dp))
                     }
                     SRow(Icons.Filled.Bolt, "Performance", sub = "Plus le niveau est élevé, plus l'analyse sollicite le processeur",
-                        value = listOf("Basse", "Moyenne", "Standard", "Élevée")[AppSettings.automixPerformance.value]) {
+                        value = listOf("Basse", "Moyenne", "Standard", "Élevée")[AppSettings.automixPerformance.value.coerceIn(0, 3)]) {
                         choice = ChoiceSpec("Performance", "Adaptée aux capacités de votre appareil.",
                             AppSettings.automixPerformance.value.toString(),
                             listOf(ChoiceOption("0", "Basse", "CPU minimal, fondu simple"),
@@ -666,6 +649,7 @@ fun SettingsScreen() {
                         modifier = Modifier.padding(horizontal = 22.dp, vertical = 14.dp))
                 }
             }
+        }
         }
     }
 
@@ -869,6 +853,8 @@ private fun cycleQuality(current: String): String = when (current) {
 
 @Composable
 private fun Section(header: String, content: @Composable ColumnScope.() -> Unit) {
+    val destination = SettingsCategory.forGroup(header) ?: return
+    if (destination != LocalSettingsCategory.current) return
     val th = LocalTheme.current
     Text(
         header,
@@ -876,19 +862,10 @@ private fun Section(header: String, content: @Composable ColumnScope.() -> Unit)
         fontSize = 12.sp,
         fontWeight = FontWeight.SemiBold,
         letterSpacing = 0.7.sp,
-        modifier = Modifier.padding(start = 22.dp, top = 22.dp, bottom = 7.dp)
+        modifier = Modifier.padding(start = 24.dp, top = 22.dp, bottom = 9.dp)
     )
-    // Groupe de réglages en verre : même matériau que le chrome, pour que les
-    // cartes ne soient plus les seules surfaces opaques de l'application.
-    val radiusDp = 20.dp
-    GlassPanel(
-        Modifier.fillMaxWidth().padding(horizontal = 14.dp),
-        RoundedCornerShape(radiusDp),
-        GlassParams.card(with(androidx.compose.ui.platform.LocalDensity.current) { radiusDp.toPx() }, dark = LocalTheme.current.isDark),
-        enabled = AppSettings.liquidGlass.value
-    ) {
-        Column(Modifier.padding(vertical = 2.dp), content = content)
-    }
+    Column(Modifier.padding(horizontal = 18.dp).fillMaxWidth().clip(RoundedCornerShape(22.dp))
+        .background(th.card).padding(vertical = 4.dp), content = content)
 }
 
 @Composable
@@ -903,8 +880,8 @@ private fun ColumnScope.SRow(
     Row(
         Modifier
             .fillMaxWidth()
-            .clickable(interactionSource = noRip, indication = null) { onClick?.invoke() }
-            .padding(horizontal = 14.dp, vertical = 12.dp),
+            .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier)
+            .heightIn(min = 68.dp).padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
@@ -918,13 +895,14 @@ private fun ColumnScope.SRow(
         }
         Spacer(Modifier.width(13.dp))
         Column(Modifier.weight(1f)) {
-            Text(title, color = th.onBackground, fontSize = 16.sp)
+            Text(title, color = th.onBackground, fontSize = 15.sp, fontWeight = FontWeight.Medium)
             if (sub.isNotEmpty()) {
                 Text(sub, color = th.secondary, fontSize = 12.5.sp, lineHeight = 16.sp)
             }
         }
         if (value.isNotEmpty()) {
-            Text(value, color = th.secondary, fontSize = 14.sp)
+            Text(value, color = th.secondary, fontSize = 12.sp, maxLines = 2,
+                overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 10.dp).widthIn(max = 90.dp))
             if (onClick != null) {
                 Spacer(Modifier.width(6.dp))
                 Text("›", color = th.secondary, fontSize = 18.sp)
@@ -933,37 +911,6 @@ private fun ColumnScope.SRow(
             Spacer(Modifier.width(6.dp))
             Text("›", color = th.secondary, fontSize = 18.sp)
         }
-    }
-}
-
-/** Toggle iOS maison (pas de composant natif Material). */
-@Composable
-private fun IosSwitch(checked: Boolean, onChecked: (Boolean) -> Unit) {
-    val th = LocalTheme.current
-    val bg = if (checked) th.accent else th.hairline
-    val knobAnim by androidx.compose.animation.core.animateDpAsState(
-        targetValue = if (checked) 24.dp else 4.dp,
-        animationSpec = androidx.compose.animation.core.spring(
-            dampingRatio = 0.65f, stiffness = 500f
-        ),
-        label = "knob"
-    )
-    Box(
-        Modifier
-            .width(50.dp)
-            .height(30.dp)
-            .clip(RoundedCornerShape(999.dp))
-            .background(bg)
-            .clickable(noRip, null) { onChecked(!checked) }
-            .padding(2.dp)
-    ) {
-        Box(
-            Modifier
-                .offset(x = knobAnim)
-                .size(26.dp)
-                .clip(CircleShape)
-                .background(if (checked) Palette.White else Color.White.copy(alpha = 0.95f))
-        )
     }
 }
 
@@ -979,7 +926,8 @@ private fun ColumnScope.SToggle(
     Row(
         Modifier
             .fillMaxWidth()
-            .padding(horizontal = 14.dp, vertical = 12.dp),
+            .toggleable(checked, role = Role.Switch, onValueChange = onChecked)
+            .heightIn(min = 72.dp).padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
@@ -993,10 +941,11 @@ private fun ColumnScope.SToggle(
         }
         Spacer(Modifier.width(13.dp))
         Column(Modifier.weight(1f)) {
-            Text(title, color = th.onBackground, fontSize = 16.sp)
+            Text(title, color = th.onBackground, fontSize = 15.sp, fontWeight = FontWeight.Medium)
             Text(sub, color = th.secondary, fontSize = 12.5.sp, lineHeight = 16.sp)
         }
-        IosSwitch(checked = checked, onChecked = onChecked)
+        Spacer(Modifier.width(12.dp))
+        com.ketvoice.app.ui.common.LiquidGlassSwitch(checked, onCheckedChange = null)
     }
 }
 

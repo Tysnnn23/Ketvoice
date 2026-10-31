@@ -21,6 +21,18 @@
 
 ## Overview
 
+### 3.8.0 — Verre ciblé, nouveaux réglages et recherche compacte
+
+Les contrôles et la navigation utilisent une optique adaptée de
+[PrismalAGSL](https://github.com/styropyr0/PrismalAGSL) (MIT) : réfraction du
+fond réel et reflets de bord, sans appliquer le verre à toutes les cartes.
+Les réglages ont un accueil par catégories et des pages dédiées ; la recherche
+reste sur une ligne, même avec une grande police. Tests Android/Skia sur PC
+distincts des essais physiques, non effectués pour cette version.
+[Mobile](https://github.com/Tysnnn23/Ketvoice/releases/download/v3.8.0/Ketvoice-3.8.0.apk)
+· [Quest](https://github.com/Tysnnn23/Ketvoice/releases/download/v3.8.0/Ketvoice-3.8.0-Quest.apk)
+· [Notes et limites](docs/releases/v3.8.0.md).
+
 ### 3.2.0 — Paroles cinéma, AutoMix complet et playlists premium
 
 Les paroles gagnent un flou progressif de profondeur, un défilement plus fluide
@@ -79,7 +91,7 @@ See the [3.0.3 release notes](docs/releases/v3.0.3.md) for validation limits.
 
 Ketvoice is an independent Android music client whose visual language is inspired by Apple Music and iOS 26. French is the default interface language; Settings offers 11 languages across the app. It is not affiliated with Apple, YouTube, Spotify or any music provider.
 
-The latest release is **3.0.7** (`versionCode` 32) for **mobile/tablet** (Android 12+, target SDK 36) and **Quest 3/3S** (minimum SDK 32, target SDK 34, landscape-only window). Back navigation now restores the previous screen. AutoMix remains an opt-in beta. Local playlists, Studio publishing, Canvas, Sonic Canvas, offline capsules and single-device Wi-Fi handoff remain. Ketogether group listening is deferred.
+The latest release is **3.8.0** (`versionCode` 52) for **mobile/tablet** (Android 12+, target SDK 36) and **Quest 3/3S** (minimum SDK 32, target SDK 34, landscape-only window). Settings now uses dedicated categories, with AutoMix controls under Playback. Local playlists, Studio publishing, Canvas, Sonic Canvas, offline capsules and single-device Wi-Fi handoff remain. Ketogether group listening is deferred. Final device/headset validation has not been performed for this version; see the release metadata.
 
 Music-source search, stream resolution, Spotify Canvas, and published-content lookup go through two Supabase Edge Functions: **Ketvoice API** for sources/Canvas and **Ketvoice Content** for public publications. The APK contains only the project’s public Supabase `anon` key and function URLs. Spotify and source credentials remain in Supabase Vault and are never shipped with the app.
 
@@ -91,11 +103,11 @@ Music-source search, stream resolution, Spotify Canvas, and published-content lo
 
 - **Landscape only, with the mobile style**: original artwork/Canvas, icon controls, Liquid Glass, floating navigation, and lyric animations. In lyrics/queue mode, artwork, title, artist, and transport stay on the left; lyrics or queue fill the right. No giant text-button dashboard, tablet rail, or portrait-phone frame.
 - Pointer hover light on interactive controls, optional lyric sizing, foreground keep-awake, and the sleep timer in the ordinary track ⋯ menu.
-- Download **[Ketvoice-3.0.7-Quest.apk](https://github.com/Tysnnn23/Ketvoice/releases/download/v3.0.7/Ketvoice-3.0.7-Quest.apk)** and follow [Quest installation instructions](docs/QUEST.md). Headset-targeted manifest and arm64 support are included; physical Quest hardware validation is still required. This is a 2D app window, not an immersive VR environment. The same-version **[mobile/tablet 3.0.7 APK](https://github.com/Tysnnn23/Ketvoice/releases/download/v3.0.7/Ketvoice-3.0.7.apk)** is available in the same release.
+- Download **[Ketvoice-3.8.0-Quest.apk](https://github.com/Tysnnn23/Ketvoice/releases/download/v3.8.0/Ketvoice-3.8.0-Quest.apk)** and follow [Quest installation instructions](docs/QUEST.md). Headset-targeted manifest and arm64 support are included; physical Quest hardware validation is still required. This is a 2D app window, not an immersive VR environment. The same-version **[mobile/tablet 3.8.0 APK](https://github.com/Tysnnn23/Ketvoice/releases/download/v3.8.0/Ketvoice-3.8.0.apk)** is available in the same release.
 
 ### Interface
 
-- Real Liquid Glass panels powered by the Kyant0 Backdrop SDK, with adaptive tint, refraction, blur, and rim lighting.
+- Liquid Glass controls/navigation use Kyant0 Backdrop with MIT optical primitives adapted from PrismalAGSL; content panels stay matte. Full AGSL refraction requires API 33+, with readable fallbacks on older versions and in reduced-effects modes.
 - Light and dark themes with a user-selectable accent color applied across controls, progress bars, switches, and selection states.
 - Home, Explore, and Library tabs, floating glass navigation, a collapsible mini-player, and animated transitions throughout.
 - Adaptive layouts driven by real window constraints: a glass navigation rail at tablet widths, a reading-width Settings page, multi-column track grids, and a two-pane player with artwork/controls beside lyrics or queue. Short landscape windows keep the phone player instead of squeezing two panes.
@@ -103,7 +115,7 @@ Music-source search, stream resolution, Spotify Canvas, and published-content lo
 - A redesigned Library with local music, collection cards, artists, albums, recent plays, and offline downloads. Collections reflect actual listening history and downloads.
 - Local playlists: create, rename, delete, reorder, remove and play; add a song from its menu. Playlists never leave the device and keep no expiring stream URLs.
 - Spotify playlist import by public link: preview visible titles, confirm that the preview may be incomplete, then match them in Ketvoice. Unmatched titles stay visible and can be resolved by hand; no Spotify sign-in, cookie or audio download is used.
-- Seven selectable design finishes (D1, D2, D3, D4, D5, D7, D8), each with its own switch in Settings → Design Ketvoice.
+- Seven selectable design finishes (D1, D2, D3, D4, D5, D7, D8), each with its own switch in Settings → Appearance → Design Ketvoice.
 - French, English, Hindi, Japanese, Chinese, Russian, Italian, Spanish, German, Portuguese, and Korean interface languages. Song titles, artist names, and original lyrics stay unchanged.
 - Fully custom full-screen player: artwork, canvas, scrubbing, transport controls, volume, queue, lyrics, and bottom sheets.
 - Adjustable launcher icon variants.
@@ -177,7 +189,7 @@ Music-source search, stream resolution, Spotify Canvas, and published-content lo
 
 - Publishing is restricted to the verified **konnektsupport@gmail.com** mailbox. A matching YouTube profile only reveals the entry point; the content broker re-checks the Supabase Auth user and confirmed email on every write, so a forged client request cannot publish.
 - In **2.6.1**, request a new email link and open it on the same device: Supabase redirects to `ketvoice://auth` and Ketvoice checks your access automatically. The original email link can also be pasted into the app. Older localhost links should not be reused. See [publisher login release notes](docs/releases/v2.6.1.md) for mail-client and rate-limit caveats.
-- **Settings → Import a song** accepts MP3, M4A, AAC, FLAC, WAV, OGG, or Opus up to 25 MiB, an optional JPEG/PNG/WebP cover up to 4 MiB, and optional TTML/LRC lyrics up to 1 MiB.
+- **Settings → YouTube Music account → Import a song** (verified publisher only) accepts MP3, M4A, AAC, FLAC, WAV, OGG, or Opus up to 25 MiB, an optional JPEG/PNG/WebP cover up to 4 MiB, and optional TTML/LRC lyrics up to 1 MiB.
 - **Track ⋯ → Import lyrics** searches normally, previews native TTML/LRC timing, and publishes a new public lyrics version without inventing timing.
 - Published songs are returned by normal search and by the Ketvoice API source, and can be played and downloaded like other tracks. Published lyrics add a selectable **Ketvoice API** provider. Auto mode may use that provider when it answers within a short window, then falls back to external providers.
 - The publisher must confirm the rights/public-distribution checkbox. Published audio, covers, and lyrics are public to all users, consume the project’s storage/egress quotas, and can be removed by the project owner.

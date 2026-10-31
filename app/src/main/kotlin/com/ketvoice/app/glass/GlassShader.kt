@@ -26,7 +26,7 @@ import com.kyant.backdrop.effects.effect
  * chaîne du backdrop : le verre n'est plus un empilement de pinceaux blancs,
  * c'est un matériau calculé sur GPU.
  */
-private const val GLASS_AGSL = """
+internal const val GLASS_AGSL = PRISMAL_OPTICS_AGSL + """
 uniform shader content;
 uniform float2 size;
 uniform float2 offset;
@@ -48,10 +48,10 @@ uniform float2 lightDir;
 float radiusAt(float2 coord, float4 radii) {
     if (coord.x >= 0.0) {
         if (coord.y <= 0.0) return radii.y;
-        else return radii.z;
+        else return radii.w;
     } else {
         if (coord.y <= 0.0) return radii.x;
-        else return radii.w;
+        else return radii.z;
     }
 }
 
@@ -106,7 +106,7 @@ float4 main(float2 coord) {
         // Profil de lentille smoothstep : le pli du bord monte continûment
         // depuis le coeur du panneau, sans marche visible à l'entrée de lentille.
         float x = 1.0 - -sd / refractionHeight;
-        float d = smoothstep(0.0, 1.0, x) * refractionAmount;
+        float d = prismalArcLift(x) * refractionAmount;
         float2 refracted = coord + d * grad;
         // Dispersion chromatique : le rouge plie moins, le bleu plie plus.
         float2 rCoord = coord + d * (1.0 - dispersion) * grad;
@@ -130,8 +130,8 @@ float4 main(float2 coord) {
     // A local luminance-adaptive veil preserves the colours without letting black
     // labels disappear over a dark cover (or white labels over a bright cover).
     float veil = materialDark > 0.5
-        ? 0.48 * smoothstep(0.18, 0.85, luma)
-        : 0.40 * (1.0 - smoothstep(0.35, 0.85, luma));
+        ? 0.36 * smoothstep(0.18, 0.85, luma)
+        : 0.30 * (1.0 - smoothstep(0.25, 0.80, luma));
     color.rgb = mix(color.rgb, materialDark > 0.5 ? float3(0.08) : float3(1.0), veil);
 
     // Épaisseur : lisière lumineuse du côté de la lumière, assombrie du côté
@@ -140,7 +140,8 @@ float4 main(float2 coord) {
     float edge = clamp(1.0 + sd / 2.5, 0.0, 1.0);
     edge = edge * edge;
     float facing = dot(grad, lightDir);
-    color.rgb += rimLight * edge * max(facing, 0.0);
+    float specular = prismalSpecular(grad, lightDir, 3.2);
+    color.rgb += rimLight * edge * specular * (facing > 0.0 ? 1.0 : 0.48);
     color.rgb -= edgeDark * edge * max(-facing, 0.0);
     float contour = clamp(1.0 + sd / 1.1, 0.0, 1.0);
     color.rgb += 0.028 * contour;
@@ -170,23 +171,24 @@ object GlassShader {
 fun BackdropEffectScope.liquidGlass(
     params: GlassParams,
     radii: FloatArray
-) {
-    if (Build.VERSION.SDK_INT < 33) return
+): Boolean {
+    if (Build.VERSION.SDK_INT < 33) return false
     // Un shader invalide ne doit JAMAIS tuer l'app : repli silencieux.
-    val shader = runCatching { obtainRuntimeShader("kv-liquid-glass", GLASS_AGSL) }.getOrNull() ?: return
-    runCatching {
+    val shader = runCatching { obtainRuntimeShader("kv-prismal-glass", GLASS_AGSL) }.getOrNull() ?: return false
+    return runCatching {
         val w = size.width
         val h = size.height
         val pad = padding
+        val lens = ControlLens.forControl(minOf(w, h), density, params.refractionHeightDp, params.refractionAmountDp)
         shader.setFloatUniform("size", w, h)
         // Same capture coordinate contract as Backdrop's lens: padding is NEGATIVE.
         shader.setFloatUniform("offset", -pad, -pad)
         shader.setFloatUniform("contentSize", w + pad * 2f, h + pad * 2f)
         shader.setFloatUniform("cornerRadii", radii)
-        shader.setFloatUniform("refractionHeight", params.refractionPx.coerceIn(0f, 90f))
-        shader.setFloatUniform("refractionAmount", -(params.refractionPx * .34f).coerceIn(0f, 12f))
-        shader.setFloatUniform("dispersion", 0.025f)
-        shader.setFloatUniform("depthEffect", 0.12f)
+        shader.setFloatUniform("refractionHeight", lens.heightPx)
+        shader.setFloatUniform("refractionAmount", lens.amountPx)
+        shader.setFloatUniform("dispersion", 0.035f)
+        shader.setFloatUniform("depthEffect", 0f)
         if (params.dark) {
             shader.setFloatUniform("tint", 0.16f, 0.16f, 0.19f, params.tintAlpha)
         } else {
@@ -195,12 +197,13 @@ fun BackdropEffectScope.liquidGlass(
         shader.setFloatUniform("saturation", params.saturation)
         shader.setFloatUniform("brightness", params.brightness * (1f + params.exposure))
         shader.setFloatUniform("edgeDark", if (params.dark) 0.09f else 0.055f)
-        shader.setFloatUniform("rimLight", params.highlightAlpha * 0.45f)
+        shader.setFloatUniform("rimLight", params.highlightAlpha * 0.85f)
         shader.setFloatUniform("sheen", if (params.dark) 0.035f else 0.045f)
         shader.setFloatUniform("materialDark", if (params.dark) 1f else 0f)
         shader.setFloatUniform("lightDir", -0.7071f, -0.7071f)
         effect(RenderEffect.createRuntimeShaderEffect(shader, "content"))
-    }
+        true
+    }.getOrDefault(false)
 }
 
 /** Rayons réels de la forme (px). */
