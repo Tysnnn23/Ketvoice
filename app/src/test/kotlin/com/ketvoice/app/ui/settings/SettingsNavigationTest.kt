@@ -7,7 +7,7 @@ class SettingsNavigationTest {
     @Test fun allExistingGroupsHaveExactlyOneDestination() {
         val groups = listOf("QUEST · CONFORT", "YOUTUBE MUSIC", "PUBLICATIONS KETVOICE API",
             "LANGUE DE L'APPLICATION", "DESIGN KETVOICE", "APPARENCE", "LECTURE", "PAROLES",
-            "KETVOICE API · CANVAS", "SOURCES", "TÉLÉCHARGEMENTS", "MUSIQUE LOCALE", "STOCKAGE", "À PROPOS", "AUTOMIX")
+            "KETVOICE API · CANVAS", "SOURCES", "TÉLÉCHARGEMENTS", "MUSIQUE LOCALE", "STOCKAGE", "À PROPOS")
         assertEquals(groups.toSet(), SettingsCategory.entries.flatMap { it.groups }.toSet())
         groups.forEach { assertEquals(1, SettingsCategory.entries.count { category -> it in category.groups }) }
     }
@@ -19,9 +19,10 @@ class SettingsNavigationTest {
         assertNull(SettingsCategory.fromKey("old-tab"))
         assertNull(SettingsCategory.forGroup("unknown"))
     }
-    @Test fun ownerPublicationAndAutoMixControlsRemainReachable() {
+    @Test fun ownerPublicationAndOrdinaryPlaybackRemainReachable() {
         assertEquals(SettingsCategory.Account, SettingsCategory.forGroup("PUBLICATIONS KETVOICE API"))
-        assertEquals(SettingsCategory.Playback, SettingsCategory.forGroup("AUTOMIX"))
+        assertEquals(SettingsCategory.Playback, SettingsCategory.forGroup("LECTURE"))
+        assertNull(SettingsCategory.forGroup("AUTOMIX"))
     }
     @Test fun designFlagsAreNotMixedIntoTheEverydayAppearancePage() {
         assertEquals(SettingsCategory.Design, SettingsCategory.forGroup("DESIGN KETVOICE"))

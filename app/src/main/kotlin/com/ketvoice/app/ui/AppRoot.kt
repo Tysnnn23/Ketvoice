@@ -289,7 +289,6 @@ fun AppRoot() {
                 ) {
                     Box(Modifier.fillMaxSize()) {
                         FullPlayerScreen(modifier = Modifier.fillMaxSize())
-                        com.ketvoice.app.ui.player.AutoMixOverlay(Modifier.align(Alignment.TopEnd))
                     }
                 }
 

@@ -7,3 +7,5 @@
 - Publishing/editing authorization must be server-enforced for the verified `konnektsupport@gmail.com` account. Media replacement is only for that account's imported publications, never general catalog tracks.
 - Ketogether/group listening is deferred until the user explicitly authorizes it. Do not infer authorization from the existing single-device Wi-Fi handoff.
 - Distinguish emulator and mocked checks from real owner-session, live download and physical Quest validation. Never claim tests that were not performed.
+- Write all new changelog entries and release notes in English. Include the canonical `ketvoice-banner.png` banner from this repository in release presentation.
+- Keep `Tysnnn23/Ketvoice-web` synchronized with app releases: current feature descriptions, latest Mobile/Quest downloads, English release notes and the canonical banner. Preserve its upstream changes and verify the rendered website before claiming web synchronization.

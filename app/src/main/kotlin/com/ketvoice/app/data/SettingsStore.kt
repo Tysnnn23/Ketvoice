@@ -45,10 +45,6 @@ object SettingsStore {
         s.wifiQuality.value = p.getString("wifiQuality", s.wifiQuality.value) ?: "Sans perte"
         s.mobileQuality.value = p.getString("mobileQuality", s.mobileQuality.value) ?: "Élevé"
         s.skipSilence.value = p.getBoolean("skipSilence", s.skipSilence.value)
-        s.automix.value = p.getBoolean("automix", false)
-        s.automixAutoFade.value = p.getBoolean("automixAutoFade", true)
-        s.automixFadeSeconds.value = p.getInt("automixFadeSeconds", 8).coerceIn(1, 30)
-        s.automixPerformance.value = p.getInt("automixPerformance", 2).coerceIn(0, 3)
         s.firstLaunchAt.value = p.getLong("firstLaunchAt", 0L)
         if (s.firstLaunchAt.value <= 0L) {
             s.firstLaunchAt.value = System.currentTimeMillis()
@@ -78,12 +74,20 @@ object SettingsStore {
             .coerceIn(500_000_000L, 10_000_000_000L)
 
         p.edit()
+            .remove("automix")
+            .remove("automixAutoFade")
+            .remove("automixFadeSeconds")
+            .remove("automixPerformance")
             .remove("spDc")
             .remove("canvasUrl")
             .remove("addonLastBabe")
             .remove("addonLosslessBridge")
             .remove("addonUltraMax")
             .apply()
+
+        // Retired analysis cache only; never touch downloaded music or artwork.
+        val retiredAnalysis = java.io.File(context.filesDir, "automix")
+        if (retiredAnalysis.exists()) runCatching { retiredAnalysis.deleteRecursively() }
 
         s.playNextOnSwipe.value = p.getBoolean("playNextOnSwipe", s.playNextOnSwipe.value)
         s.noRepeatSuggestions.value = p.getBoolean("noRepeatSuggestions", s.noRepeatSuggestions.value)
@@ -131,10 +135,6 @@ object SettingsStore {
             .putString("wifiQuality", s.wifiQuality.value)
             .putString("mobileQuality", s.mobileQuality.value)
             .putBoolean("skipSilence", s.skipSilence.value)
-            .putBoolean("automix", s.automix.value)
-            .putBoolean("automixAutoFade", s.automixAutoFade.value)
-            .putInt("automixFadeSeconds", s.automixFadeSeconds.value.coerceIn(1, 30))
-            .putInt("automixPerformance", s.automixPerformance.value.coerceIn(0, 3))
             .putLong("firstLaunchAt", s.firstLaunchAt.value)
             .putBoolean("equalizerEnabled", s.equalizerEnabled.value)
             .putString("equalizerGains", s.equalizerGains.value.joinToString(","))

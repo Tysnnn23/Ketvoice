@@ -11,6 +11,8 @@ import androidx.compose.foundation.background
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.graphics.toPixelMap
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsActions
@@ -40,6 +42,7 @@ import com.ketvoice.app.ui.sub.ArtistHeader
 import com.ketvoice.app.ui.sub.AlbumPage
 import com.ketvoice.app.ui.player.CanvasFocusPlayer
 import com.ketvoice.app.ui.player.LyricsPane
+import com.ketvoice.app.ui.player.PlayerArtworkFrame
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.After
 import org.junit.Assert.*
@@ -73,7 +76,7 @@ class PrismalHostRenderTest {
         (Player.positionMs as MutableStateFlow<Long>).value = 0L
     }
 
-    private fun image(name: String) {
+    private fun image(name: String, verify: (Bitmap) -> Unit = {}) {
         val directory = File("build/host-ui-preview/${com.ketvoice.app.BuildConfig.FLAVOR}").apply { mkdirs() }
         compose.runOnIdle {
             val view = compose.activity.window.decorView
@@ -83,6 +86,7 @@ class PrismalHostRenderTest {
             // the Android Java canvas's hardware-only API guard in this test.
             ReflectionHelpers.setField(canvas, "mAllowHwFeaturesInSwMode", true)
             view.draw(canvas)
+            verify(bitmap)
             File(directory, "$name.png").outputStream().use {
                 bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)
             }
@@ -152,6 +156,29 @@ class PrismalHostRenderTest {
         compose.onNodeWithText("Lecture").assertIsDisplayed()
         compose.onNodeWithText("Aléatoire").assertIsDisplayed()
         image("artist-header-dark-fallback")
+    }
+
+    @Test fun normalCanvasKeepsItsBottomPixelsWhileOnlyCoversFade() {
+        var video by mutableStateOf(true)
+        compose.setContent { KetvoiceTheme(useDark = true) {
+            Box(Modifier.fillMaxSize().background(Color.Black)) {
+                PlayerArtworkFrame(video, Color.Black,
+                    Modifier.padding(top = 60.dp).size(200.dp, 400.dp).testTag("normal-canvas-frame")) {
+                    Box(Modifier.fillMaxSize().background(Color.Cyan))
+                }
+            }
+        } }
+        val frame = compose.onNodeWithTag("normal-canvas-frame")
+        val bounds = frame.fetchSemanticsNode().boundsInRoot
+        val x = bounds.center.x.toInt()
+        val y = (bounds.bottom - 20).toInt()
+        image("normal-canvas-unmasked-host-fixture") {
+            assertTrue("Bottom of the fitted clip must remain opaque", android.graphics.Color.green(it.getPixel(x, y)) > 242)
+        }
+        compose.runOnIdle { video = false }
+        image("normal-cover-dissolve-host-fixture") {
+            assertTrue("Only covers should dissolve into the background", android.graphics.Color.green(it.getPixel(x, y)) < 90)
+        }
     }
 
     @Test fun albumHeroShowsYearTrackCountAndLocalizedTotalDurationOnHost() {

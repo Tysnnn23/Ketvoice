@@ -5,7 +5,7 @@ internal enum class SettingsCategory(val title: String, val groups: Set<String>)
     Account("Compte YouTube Music", setOf("YOUTUBE MUSIC", "PUBLICATIONS KETVOICE API")),
     Appearance("Apparence", setOf("APPARENCE", "LANGUE DE L'APPLICATION", "QUEST · CONFORT")),
     Design("DESIGN KETVOICE", setOf("DESIGN KETVOICE")),
-    Playback("Lecture", setOf("LECTURE", "AUTOMIX")),
+    Playback("Lecture", setOf("LECTURE")),
     Lyrics("Paroles", setOf("PAROLES")),
     Canvas("Canvas", setOf("KETVOICE API · CANVAS")),
     Sources("Sources", setOf("SOURCES")),

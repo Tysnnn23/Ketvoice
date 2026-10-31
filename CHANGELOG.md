@@ -7,6 +7,24 @@
 
 ---
 
+# Ketvoice 3.10.0
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 54** — normal Canvas framing fixed; AutoMix removed completely.
+
+- Canvas no longer inherits the cover's lower fade mask or obscuring overlay.
+  Its regular-player viewport ends before the track title and preserves FIT framing.
+- Removed the second audio deck, analysis/planning engine, transition commands,
+  preparation jobs, overlay, settings and feature labels. Existing analysis cache
+  and preferences are retired without touching music, artwork or playlists.
+- The website follows stable release notes/downloads, removes outdated feature
+  claims and uses the canonical repository banner. New release notes are English.
+- Host tests and browser checks remain distinct from real-device playback.
+  See [release notes and limits](docs/releases/v3.10.0.md).
+
+---
+
 # Ketvoice 3.9.0
 
 **versionCode 53** — refined control glass, artist/album headers, and Canvas framing.

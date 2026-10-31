@@ -311,19 +311,15 @@ fun FullPlayerScreen(
                 }, label = "player-page", modifier = Modifier.fillMaxSize()) { shownPage ->
                 Box(Modifier.fillMaxSize()) {
                 if (shownPage == PlayerPage.ARTWORK) {
-                    Box(Modifier.width(sceneWidth).height(if (wide) safeHeight else safeHeight * .55f)
+                    val inlineCanvas = canvasPath != null && AppSettings.animatedArtwork.value && !panoramicCanvasActive(canvasPath)
+                    val titleTop = if (wide) safeHeight - 66.dp else minOf(safeHeight * .514f, contentBottom - 61.dp)
+                    val artworkTop = if (inlineCanvas) topInset + 56.dp else 0.dp
+                    val artworkHeight = if (inlineCanvas) (titleTop - artworkTop - 16.dp).coerceAtLeast(48.dp)
+                        else if (wide) safeHeight else safeHeight * .55f
+                    PlayerArtworkFrame(inlineCanvas, ambience.color,
+                        Modifier.width(sceneWidth).offset(y = artworkTop).height(artworkHeight)
                         .onGloballyPositioned { AppUi.playerCoverBounds.value = it.boundsInRoot() }
-                        .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
-                        .drawWithContent {
-                            drawContent()
-                            // Fondu long : la pochette se dissout dans l'ambiance,
-                            // sans bord franc ni ligne visible en bas.
-                            drawRect(Brush.verticalGradient(
-                                0f to Color.White, .36f to Color.White, .52f to Color.White.copy(alpha = .98f),
-                                .66f to Color.White.copy(alpha = .82f), .79f to Color.White.copy(alpha = .48f),
-                                .90f to Color.White.copy(alpha = .16f), 1f to Color.Transparent),
-                                blendMode = BlendMode.DstIn)
-                        }.then(dismissDrag).then(if (canvasReady) Modifier.clickable(
+                        .then(dismissDrag).then(if (canvasReady) Modifier.clickable(
                             interactionSource = artInteraction,
                             indication = null,
                             onClickLabel = AppText.t("Voir le Canvas en plein écran")
@@ -333,17 +329,13 @@ fun FullPlayerScreen(
                         ArtworkCanvas(track, if (panoramicCanvasActive(canvasPath)) null else canvasPath,
                             state.isPlaying && !canvasFocus, Modifier.fillMaxSize(), depth = true,
                             onCanvasFailure = { failedCanvas = true })
-                        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(
-                            0f to Color.Black.copy(alpha = .16f), .52f to Color.Transparent,
-                            .83f to ambience.color.copy(alpha = .45f), 1f to ambience.color.copy(alpha = .85f))))
                     }
                     Text("Lecture depuis ${track.artist}", color = Color(0xFFCBCDD6), fontSize = 10.sp,
                         fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.width(sceneWidth).padding(top = topInset + 32.dp))
                     PlayerTitle(track, false, cover, sheetAction = { sheet = "track" },
-                        modifier = Modifier.width(sceneWidth).offset(y = if (wide) safeHeight - 66.dp
-                            else minOf(safeHeight * .514f, contentBottom - 61.dp)).padding(horizontal = margin))
+                        modifier = Modifier.width(sceneWidth).offset(y = titleTop).padding(horizontal = margin))
                 } else {
                     PlayerTitle(track, true, cover, sheetAction = {
                         if (expanded) {
