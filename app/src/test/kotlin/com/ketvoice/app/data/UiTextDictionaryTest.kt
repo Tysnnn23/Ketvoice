@@ -31,7 +31,9 @@ class UiTextDictionaryTest {
         val root = JSONObject(File("src/main/assets/translations.json").readText(Charsets.UTF_8))
         val required = listOf("Voir le Canvas en plein écran", "Quitter le plein écran", "Correspondances musicales",
             "Dossier de musique locale", "Impossible de lire les playlists", "Revenir à tout l'appareil",
-            "MUSIQUE LOCALE", "AUTOMIX", "Choisissez un dossier au-dessus pour élargir la recherche.", "{0} h {1} min")
+            "MUSIQUE LOCALE", "AUTOMIX", "Choisissez un dossier au-dessus pour élargir la recherche.", "{0} h {1} min",
+            "Exclure ce morceau du Canvas", "Réactiver le Canvas pour ce morceau", "Choisir un dossier de musique",
+            "Le scan MediaStore remplace le dossier choisi", "{0} lignes · mots synchronisés", "{0} écoutes")
         AppLanguage.all.filter { it != AppLanguage.FRENCH }.forEach { language ->
             val table = root.getJSONObject(language.code)
             required.forEach { assertTrue("${language.code}: $it", table.has(it) && table.getString(it).isNotBlank()) }

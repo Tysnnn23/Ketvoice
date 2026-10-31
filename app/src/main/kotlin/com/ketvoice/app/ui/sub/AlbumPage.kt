@@ -84,11 +84,12 @@ internal fun AlbumPage(request: CatalogRequest, page: CatalogPage?, tracks: List
                         val edge = (maxWidth - 72.dp).coerceIn(170.dp, 288.dp)
                         // Halo coloré derrière la pochette : donne du relief sans
                         // ajouter de panneau ni de bord visible.
-                        if (!AppSettings.reduceDynamicBlur.value && !AppSettings.highPerformanceMode.value)
-                        Box(Modifier.size(edge + 76.dp).graphicsLayer { alpha = .55f }
-                            .blur(46.dp, BlurredEdgeTreatment.Unbounded)
-                            .background(Brush.radialGradient(listOf(
-                                theme.accent.copy(alpha = .55f), Color.Transparent))))
+                        if (!AppSettings.reduceDynamicBlur.value && !AppSettings.highPerformanceMode.value) {
+                            Box(Modifier.size(edge + 76.dp).graphicsLayer { alpha = .55f }
+                                .blur(46.dp, BlurredEdgeTreatment.Unbounded)
+                                .background(Brush.radialGradient(listOf(
+                                    theme.accent.copy(alpha = .55f), Color.Transparent))))
+                        }
                         Cover(title, cover, edge, 20.dp,
                             Modifier.shadow(22.dp, RoundedCornerShape(20.dp), spotColor = Color.Black.copy(alpha = .30f)))
                     }
