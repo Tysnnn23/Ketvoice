@@ -1,5 +1,11 @@
 {
  "en": {
+  "Vérifier les mises à jour": "Check for updates",
+  "Vérification des mises à jour…": "Checking for updates…",
+  "Application à jour": "The app is up to date",
+  "Impossible de vérifier les mises à jour": "Unable to check for updates",
+  "Installation impossible": "Unable to install the update",
+  "Installer": "Install",
   "Analyse en cours…": "Scanning…",
   "Analyse impossible : dossier inaccessible": "Cannot scan: folder inaccessible",
   "Appareil": "Device",
@@ -873,6 +879,12 @@
   "Morceau partagé introuvable": "Couldn't find the shared track"
  },
  "hi": {
+  "Vérifier les mises à jour": "अपडेट देखें",
+  "Vérification des mises à jour…": "अपडेट की जाँच हो रही है…",
+  "Application à jour": "ऐप अप टू डेट है",
+  "Impossible de vérifier les mises à jour": "अपडेट की जाँच नहीं हो सकी",
+  "Installation impossible": "अपडेट इंस्टॉल नहीं हो सका",
+  "Installer": "इंस्टॉल करें",
   "Analyse en cours…": "स्कैन हो रहा है…",
   "Analyse impossible : dossier inaccessible": "स्कैन नहीं हो सका: फ़ोल्डर उपलब्ध नहीं है",
   "Appareil": "डिवाइस",
@@ -1746,6 +1758,12 @@
   "Morceau partagé introuvable": "साझा किया गया ट्रैक नहीं मिला"
  },
  "ja": {
+  "Vérifier les mises à jour": "アップデートを確認",
+  "Vérification des mises à jour…": "アップデートを確認中…",
+  "Application à jour": "アプリは最新です",
+  "Impossible de vérifier les mises à jour": "アップデートを確認できませんでした",
+  "Installation impossible": "アップデートをインストールできませんでした",
+  "Installer": "インストール",
   "Analyse en cours…": "スキャン中…",
   "Analyse impossible : dossier inaccessible": "スキャンできません：フォルダーにアクセスできません",
   "Appareil": "端末",
@@ -2619,6 +2637,12 @@
   "Morceau partagé introuvable": "共有された曲が見つかりません"
  },
  "zh": {
+  "Vérifier les mises à jour": "检查更新",
+  "Vérification des mises à jour…": "正在检查更新…",
+  "Application à jour": "应用已是最新版本",
+  "Impossible de vérifier les mises à jour": "无法检查更新",
+  "Installation impossible": "无法安装更新",
+  "Installer": "安装",
   "Analyse en cours…": "正在扫描…",
   "Analyse impossible : dossier inaccessible": "无法扫描：文件夹无法访问",
   "Appareil": "设备",
@@ -3492,6 +3516,12 @@
   "Morceau partagé introuvable": "找不到分享的曲目"
  },
  "ru": {
+  "Vérifier les mises à jour": "Проверить обновления",
+  "Vérification des mises à jour…": "Проверка обновлений…",
+  "Application à jour": "Установлена последняя версия",
+  "Impossible de vérifier les mises à jour": "Не удалось проверить обновления",
+  "Installation impossible": "Не удалось установить обновление",
+  "Installer": "Установить",
   "Analyse en cours…": "Сканирование…",
   "Analyse impossible : dossier inaccessible": "Сканирование невозможно: папка недоступна",
   "Appareil": "Устройство",
@@ -4365,6 +4395,12 @@
   "Morceau partagé introuvable": "Общий трек не найден"
  },
  "it": {
+  "Vérifier les mises à jour": "Verifica aggiornamenti",
+  "Vérification des mises à jour…": "Verifica aggiornamenti…",
+  "Application à jour": "L'app è aggiornata",
+  "Impossible de vérifier les mises à jour": "Impossibile verificare gli aggiornamenti",
+  "Installation impossible": "Impossibile installare l'aggiornamento",
+  "Installer": "Installa",
   "Analyse en cours…": "Scansione in corso…",
   "Analyse impossible : dossier inaccessible": "Scansione impossibile: cartella inaccessibile",
   "Appareil": "Dispositivo",
@@ -5238,6 +5274,12 @@
   "Morceau partagé introuvable": "Brano condiviso non trovato"
  },
  "es": {
+  "Vérifier les mises à jour": "Buscar actualizaciones",
+  "Vérification des mises à jour…": "Buscando actualizaciones…",
+  "Application à jour": "La aplicación está actualizada",
+  "Impossible de vérifier les mises à jour": "No se pudieron buscar actualizaciones",
+  "Installation impossible": "No se pudo instalar la actualización",
+  "Installer": "Instalar",
   "Analyse en cours…": "Analizando…",
   "Analyse impossible : dossier inaccessible": "No se puede analizar: carpeta inaccesible",
   "Appareil": "Dispositivo",
@@ -6111,6 +6153,12 @@
   "Morceau partagé introuvable": "No se encontró la pista compartida"
  },
  "de": {
+  "Vérifier les mises à jour": "Nach Updates suchen",
+  "Vérification des mises à jour…": "Updates werden gesucht…",
+  "Application à jour": "Die App ist aktuell",
+  "Impossible de vérifier les mises à jour": "Updates konnten nicht geprüft werden",
+  "Installation impossible": "Update konnte nicht installiert werden",
+  "Installer": "Installieren",
   "Analyse en cours…": "Scan läuft…",
   "Analyse impossible : dossier inaccessible": "Scan nicht möglich: Ordner nicht zugänglich",
   "Appareil": "Gerät",
@@ -6984,6 +7032,12 @@
   "Morceau partagé introuvable": "Geteilten Titel nicht gefunden"
  },
  "pt": {
+  "Vérifier les mises à jour": "Verificar atualizações",
+  "Vérification des mises à jour…": "Verificando atualizações…",
+  "Application à jour": "O aplicativo está atualizado",
+  "Impossible de vérifier les mises à jour": "Não foi possível verificar atualizações",
+  "Installation impossible": "Não foi possível instalar a atualização",
+  "Installer": "Instalar",
   "Analyse en cours…": "Analisando…",
   "Analyse impossible : dossier inaccessible": "Não foi possível analisar: pasta inacessível",
   "Appareil": "Dispositivo",
@@ -7857,6 +7911,12 @@
   "Morceau partagé introuvable": "Faixa partilhada não encontrada"
  },
  "ko": {
+  "Vérifier les mises à jour": "업데이트 확인",
+  "Vérification des mises à jour…": "업데이트 확인 중…",
+  "Application à jour": "최신 버전입니다",
+  "Impossible de vérifier les mises à jour": "업데이트를 확인할 수 없습니다",
+  "Installation impossible": "업데이트를 설치할 수 없습니다",
+  "Installer": "설치",
   "Analyse en cours…": "스캔 중…",
   "Analyse impossible : dossier inaccessible": "스캔할 수 없음: 폴더에 접근할 수 없습니다",
   "Appareil": "기기",

@@ -7,6 +7,24 @@
 
 ---
 
+# Ketvoice 3.10.1
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 55** — in-app update checks, download verification and installer retry fixed.
+
+- Foreground/periodic checks, persisted available releases and immediate checks
+  after app-version changes; failed requests do not throttle future retries.
+- Manual Check for updates in Settings → About, including skipped versions.
+  Update badge requests no longer cancel themselves while awaiting GitHub.
+- Exact-size/SHA-256 download verification, package/version/signing-certificate
+  checks, partial-file cleanup, permission-return continuation and reusable
+  installer actions. Android installation confirmation remains mandatory.
+- English release notes and website feed stay synchronized with the canonical
+  banner. Host/mock tests are distinguished from unperformed real installations.
+
+---
+
 # Ketvoice 3.10.0
 
 ![Ketvoice](ketvoice-banner.png)

@@ -591,6 +591,10 @@ fun SettingsScreen() {
 
             // ==================================================== À PROPOS
             Section("À PROPOS") {
+                SRow(Icons.Filled.Sync, "Vérifier les mises à jour",
+                    sub = if (com.ketvoice.app.ui.update.UpdateBadge.checking) "Vérification des mises à jour…" else "GitHub Releases") {
+                    if (!com.ketvoice.app.ui.update.UpdateBadge.checking) com.ketvoice.app.ui.update.UpdateBadge.requestCheck()
+                }
                 SRow(
                     Icons.Filled.Image, "Version",
                     sub = "YouTube Music · Ketvoice API · canvas · paroles",
