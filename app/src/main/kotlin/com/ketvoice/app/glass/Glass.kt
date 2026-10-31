@@ -105,29 +105,29 @@ data class GlassParams(
          */
         fun card(radiusPx: Float, dark: Boolean = false) = GlassParams(
             cornerRadiusPx = radiusPx,
-            blurPx = 30f,
-            refractionPx = 16f,
-            tintAlpha = if (dark) 0.11f else 0.075f,
-            saturation = if (dark) 1.10f else 1.22f,
+            blurPx = 26f,
+            refractionPx = 12f,
+            tintAlpha = if (dark) 0.16f else 0.12f,
+            saturation = if (dark) 1.06f else 1.12f,
             exposure = if (dark) 0.015f else 0.04f,
             highlightAlpha = if (dark) 0.28f else 0.44f,
             highlightIntensity = if (dark) 0.24f else 0.32f,
             dark = dark
         )
 
-        fun pill(blur: Float = 26f, dark: Boolean = false) = GlassParams(
+        fun pill(blur: Float = 30f, dark: Boolean = false) = GlassParams(
             cornerRadiusPx = 9999f,
             blurPx = blur,
-            refractionPx = 24f,
+            refractionPx = 18f,
             // Équilibre du matériau AGSL : assez de "lait" pour que le verre
             // existe visuellement, assez peu pour que le fond reste lisible à
             // travers. Sous ~0.06 le verre disparaît ; au-dessus de ~0.16 il
             // redevient du plastique blanc opaque.
-            tintAlpha = if (dark) 0.105f else 0.08f,
-            saturation = if (dark) 1.18f else 1.32f,
+            tintAlpha = if (dark) 0.16f else 0.14f,
+            saturation = if (dark) 1.08f else 1.16f,
             brightness = 1.0f,
             contrast = 1.0f,
-            exposure = if (dark) 0.02f else 0.035f,
+            exposure = if (dark) 0.01f else 0.02f,
             highlightAlpha = if (dark) 0.32f else 0.48f,
             highlightIntensity = if (dark) 0.26f else 0.36f,
             dark = dark
@@ -136,9 +136,9 @@ data class GlassParams(
         fun circle(blur: Float = 26f, dark: Boolean = false) = GlassParams(
             cornerRadiusPx = 9999f,
             blurPx = blur,
-            refractionPx = 28f,
-            tintAlpha = if (dark) 0.11f else 0.085f,
-            saturation = if (dark) 1.20f else 1.36f,
+            refractionPx = 14f,
+            tintAlpha = if (dark) 0.15f else 0.12f,
+            saturation = if (dark) 1.10f else 1.15f,
             exposure = if (dark) 0.02f else 0.035f,
             highlightAlpha = if (dark) 0.34f else 0.52f,
             highlightIntensity = if (dark) 0.28f else 0.38f,
@@ -148,10 +148,10 @@ data class GlassParams(
         fun sheet(radiusPx: Float, dark: Boolean = false) = GlassParams(
             cornerRadiusPx = radiusPx,
             blurPx = 34f,
-            refractionPx = 26f,
+            refractionPx = 18f,
             // Le sheet doit laisser deviner le contenu : fond gris trop opaque = profondeur perdue.
-            tintAlpha = if (dark) 0.13f else 0.095f,
-            saturation = if (dark) 1.08f else 1.20f,
+            tintAlpha = if (dark) 0.20f else 0.18f,
+            saturation = if (dark) 1.04f else 1.10f,
             exposure = if (dark) 0.015f else 0.05f,
             highlightAlpha = if (dark) 0.32f else 0.54f,
             highlightIntensity = if (dark) 0.28f else 0.42f,
@@ -178,11 +178,11 @@ private fun rememberStaticMaterial(p: GlassParams): Pair<Brush, Brush> {
         val base = if (p.dark) Color(0xFF232329) else Color.White
         // Transmission statique : le fond transparaît à ~12-18 %.
         val body = base.copy(alpha = if (p.dark) 0.84f else 0.88f)
-        val lift = base.copy(alpha = if (p.dark) 0.90f else 0.94f)
+        val lift = base.copy(alpha = if (p.dark) 0.86f else 0.91f)
         val surface = Brush.linearGradient(listOf(lift, body, base.copy(alpha = if (p.dark) 0.80f else 0.84f), body))
         // Liseré capillaire : lumineux haut-gauche (entrée de lumière), sombre bas-droite.
         val lightHair = Color.White.copy(alpha = if (p.dark) 0.16f else 0.75f)
-        val darkHair = if (p.dark) Color.Black.copy(alpha = 0.42f) else Color.Black.copy(alpha = 0.10f)
+        val darkHair = if (p.dark) Color.Black.copy(alpha = 0.22f) else Color.Black.copy(alpha = 0.08f)
         val hairline = Brush.linearGradient(listOf(lightHair, Color.White.copy(alpha = lightHair.alpha * .25f), darkHair))
         surface to hairline
     }
@@ -218,13 +218,10 @@ fun GlassPanel(
 
     val (surface, hairline) = rememberStaticMaterial(params)
     val sheen = remember(params) { staticSheen(params) }
-    val darkEdge = Color.Black.copy(alpha = if (params.dark) 0.34f else 0.14f)
     // En AGSL, le shader dessine le liseré et le bord sombre : plus de bordure
     // Compose par-dessus (sinon double contour artificiel).
     val edge = if (enabled && !agsl) {
-        Modifier
-            .border(1.dp, hairline, shape)
-            .border(.5.dp, darkEdge, shape)
+        Modifier.border(.65.dp, hairline, shape)
     } else Modifier
 
     if (dynamic && backdrop != null) {

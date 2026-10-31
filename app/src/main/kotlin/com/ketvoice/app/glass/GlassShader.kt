@@ -42,6 +42,7 @@ uniform float brightness;
 uniform float edgeDark;
 uniform float rimLight;
 uniform float sheen;
+uniform float materialDark;
 uniform float2 lightDir;
 
 float radiusAt(float2 coord, float4 radii) {
@@ -64,15 +65,12 @@ float sdRoundedRect(float2 coord, float2 halfSize, float radius) {
 float2 gradSdRoundedRect(float2 coord, float2 halfSize, float radius) {
     float2 cornerCoord = abs(coord) - (halfSize - float2(radius));
     if (cornerCoord.x >= 0.0 || cornerCoord.y >= 0.0) {
-        return sign(coord) * normalize(max(cornerCoord, 0.0));
+        float2 corner = max(cornerCoord, 0.0);
+        return sign(coord) * corner / max(length(corner), 0.001);
     } else {
         float gradX = step(cornerCoord.y, cornerCoord.x);
         return sign(coord) * float2(gradX, 1.0 - gradX);
     }
-}
-
-float circleMap(float x) {
-    return 1.0 - sqrt(1.0 - x * x);
 }
 
 float4 sampleClamped(float2 p) {
@@ -89,8 +87,9 @@ float dither(float2 coord) {
 
 float4 main(float2 coord) {
     float2 halfSize = size * 0.5;
-    float2 centeredCoord = (coord + offset) - halfSize;
-    float radius = min(radiusAt(coord, cornerRadii), min(halfSize.x, halfSize.y));
+    float2 local = coord + offset;
+    float2 centeredCoord = local - halfSize;
+    float radius = min(radiusAt(centeredCoord, cornerRadii), min(halfSize.x, halfSize.y));
 
     float sd = sdRoundedRect(centeredCoord, halfSize, radius);
     if (sd > 0.5) {
@@ -98,11 +97,12 @@ float4 main(float2 coord) {
     }
 
     float gradRadius = min(radius * 1.5, min(halfSize.x, halfSize.y));
-    float2 grad = normalize(gradSdRoundedRect(centeredCoord, halfSize, gradRadius)
-        + depthEffect * normalize(centeredCoord + float2(0.001, 0.001)));
+    float2 radial = centeredCoord / max(length(centeredCoord), 0.001);
+    float2 normal = gradSdRoundedRect(centeredCoord, halfSize, gradRadius) + depthEffect * radial;
+    float2 grad = normal / max(length(normal), 0.001);
 
     float4 color;
-    if (-sd < refractionHeight && refractionAmount > 0.0) {
+    if (-sd < refractionHeight && refractionHeight > 0.0) {
         // Profil de lentille smoothstep : le pli du bord monte continûment
         // depuis le coeur du panneau, sans marche visible à l'entrée de lentille.
         float x = 1.0 - -sd / refractionHeight;
@@ -115,7 +115,7 @@ float4 main(float2 coord) {
             sampleClamped(rCoord).r,
             sampleClamped(refracted).g,
             sampleClamped(bCoord).b,
-            1.0);
+            sampleClamped(refracted).a);
     } else {
         color = sampleClamped(coord);
     }
@@ -126,6 +126,13 @@ float4 main(float2 coord) {
 
     // Teinte « lait » du verre (quasi imperceptible, sinon plastique).
     color.rgb = mix(color.rgb, tint.rgb, tint.a);
+    // Regular glass must remain legible over artwork, not just over a blank page.
+    // A local luminance-adaptive veil preserves the colours without letting black
+    // labels disappear over a dark cover (or white labels over a bright cover).
+    float veil = materialDark > 0.5
+        ? 0.48 * smoothstep(0.18, 0.85, luma)
+        : 0.40 * (1.0 - smoothstep(0.35, 0.85, luma));
+    color.rgb = mix(color.rgb, materialDark > 0.5 ? float3(0.08) : float3(1.0), veil);
 
     // Épaisseur : lisière lumineuse du côté de la lumière, assombrie du côté
     // opposé, toutes deux concentrees sur ~2.5px, plus un contour capillaire
@@ -139,14 +146,14 @@ float4 main(float2 coord) {
     color.rgb += 0.028 * contour;
 
     // Voile spéculaire supérieur : la pellicule « mouillée » du verre.
-    float fromTop = clamp((coord.y - offset.y) / max(size.y, 1.0), 0.0, 1.0);
+    float fromTop = clamp(local.y / max(size.y, 1.0), 0.0, 1.0);
     float topLit = clamp(-grad.y, 0.0, 1.0);
     color.rgb += sheen * pow(1.0 - fromTop, 2.4) * (0.35 + 0.65 * topLit);
 
     // Dithering sub-pixel : rend les dégradés du verre parfaitement lisses.
     color.rgb += dither(coord) / 255.0;
 
-    return half4(color);
+    return half4(clamp(color, 0.0, 1.0));
 }
 """
 
@@ -172,13 +179,14 @@ fun BackdropEffectScope.liquidGlass(
         val h = size.height
         val pad = padding
         shader.setFloatUniform("size", w, h)
-        shader.setFloatUniform("offset", pad, pad)
+        // Same capture coordinate contract as Backdrop's lens: padding is NEGATIVE.
+        shader.setFloatUniform("offset", -pad, -pad)
         shader.setFloatUniform("contentSize", w + pad * 2f, h + pad * 2f)
         shader.setFloatUniform("cornerRadii", radii)
         shader.setFloatUniform("refractionHeight", params.refractionPx.coerceIn(0f, 90f))
-        shader.setFloatUniform("refractionAmount", (params.refractionPx * 1.45f).coerceIn(0f, 110f))
-        shader.setFloatUniform("dispersion", 0.38f)
-        shader.setFloatUniform("depthEffect", 0.35f)
+        shader.setFloatUniform("refractionAmount", -(params.refractionPx * .34f).coerceIn(0f, 12f))
+        shader.setFloatUniform("dispersion", 0.025f)
+        shader.setFloatUniform("depthEffect", 0.12f)
         if (params.dark) {
             shader.setFloatUniform("tint", 0.16f, 0.16f, 0.19f, params.tintAlpha)
         } else {
@@ -186,9 +194,10 @@ fun BackdropEffectScope.liquidGlass(
         }
         shader.setFloatUniform("saturation", params.saturation)
         shader.setFloatUniform("brightness", params.brightness * (1f + params.exposure))
-        shader.setFloatUniform("edgeDark", if (params.dark) 0.26f else 0.13f)
-        shader.setFloatUniform("rimLight", params.highlightAlpha * 0.75f)
-        shader.setFloatUniform("sheen", if (params.dark) 0.05f else 0.07f)
+        shader.setFloatUniform("edgeDark", if (params.dark) 0.09f else 0.055f)
+        shader.setFloatUniform("rimLight", params.highlightAlpha * 0.45f)
+        shader.setFloatUniform("sheen", if (params.dark) 0.035f else 0.045f)
+        shader.setFloatUniform("materialDark", if (params.dark) 1f else 0f)
         shader.setFloatUniform("lightDir", -0.7071f, -0.7071f)
         effect(RenderEffect.createRuntimeShaderEffect(shader, "content"))
     }

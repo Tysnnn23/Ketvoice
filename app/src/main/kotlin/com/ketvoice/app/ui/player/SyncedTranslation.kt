@@ -49,7 +49,6 @@ import kotlinx.coroutines.isActive
 internal fun SyncedTranslation(
     line: MusicApi.LyricLine,
     text: String,
-    positionMs: Long,
     active: Boolean,
     dimAlpha: Float
 ) {
@@ -57,7 +56,8 @@ internal fun SyncedTranslation(
 
     // Position lissée : en lecture, elle suit vsync (fluide) ; en pause ou
     // quand la ligne n'est pas active, elle retombe sur la valeur du flow.
-    var now by remember(line) { mutableLongStateOf(positionMs) }
+    val positionMs by Player.positionMs.collectAsState()
+    var now by remember(line) { mutableLongStateOf(Player.currentPositionMs()) }
     val playing by remember { Player.state.map { it.isPlaying }.distinctUntilChanged() }.collectAsState(false)
     LaunchedEffect(line, playing, active) {
         now = Player.currentPositionMs()

@@ -32,6 +32,7 @@ import com.ketvoice.app.data.AppSettings
 import com.ketvoice.app.data.AppText
 import com.ketvoice.app.data.Track
 import com.ketvoice.app.glass.LocalBackdropLayer
+import com.ketvoice.app.glass.BackdropCapture
 import com.ketvoice.app.glass.rememberGlassBackdrop
 import com.ketvoice.app.player.Player
 import com.ketvoice.app.player.PlayerUiState
@@ -39,7 +40,6 @@ import com.ketvoice.app.ui.AppUi
 import com.ketvoice.app.ui.common.Icon
 import com.ketvoice.app.ui.common.Text
 import com.ketvoice.app.ui.quest.QuestLayout
-import com.kyant.backdrop.backdrops.layerBackdrop
 import com.ketvoice.app.ui.motion.Motion
 import com.ketvoice.app.data.DesignChoices
 
@@ -53,9 +53,11 @@ internal fun QuestLandscapePlayer(
     val companion = page != PlayerPage.ARTWORK
     val duration = Motion.duration(280)
     CompositionLocalProvider(LocalBackdropLayer provides backdrop) {
-        Box(Modifier.fillMaxSize().background(Color.Black).layerBackdrop(backdrop)) {
+        Box(Modifier.fillMaxSize().background(Color.Black)) {
 
-            PlayerSceneBackground(track, canvas, state.isPlaying, cover, ambience, simple = true)
+            BackdropCapture(backdrop, Modifier.matchParentSize()) {
+                PlayerSceneBackground(track, canvas, state.isPlaying, cover, ambience, simple = true)
+            }
             Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()
                 .padding(horizontal = 28.dp, vertical = 8.dp)) {
                 Row(Modifier.fillMaxWidth().height(44.dp), verticalAlignment = Alignment.CenterVertically) {

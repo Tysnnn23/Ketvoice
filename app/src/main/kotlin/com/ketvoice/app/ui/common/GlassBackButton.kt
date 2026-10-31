@@ -16,16 +16,17 @@ import com.ketvoice.app.glass.GlassParams
 
 @Composable
 fun GlassBackButton(onBack: () -> Unit) {
+    val theme = com.ketvoice.app.theme.LocalTheme.current
     GlassPanel(
-        modifier = Modifier.size(52.dp),
+        modifier = Modifier.size(48.dp),
         shape = CircleShape,
-        params = GlassParams.circle(dark = false),
+        params = GlassParams.circle(dark = theme.isDark),
         enabled = AppSettings.liquidGlass.value,
 
         captured = true
     ) {
-        Box(Modifier.size(52.dp).clickable { onBack() }, contentAlignment = Alignment.Center) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, "Retour", modifier = Modifier.size(26.dp))
+        Box(Modifier.size(48.dp).clickable { onBack() }, contentAlignment = Alignment.Center) {
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, "Retour", tint = theme.onBackground, modifier = Modifier.size(24.dp))
         }
     }
 }

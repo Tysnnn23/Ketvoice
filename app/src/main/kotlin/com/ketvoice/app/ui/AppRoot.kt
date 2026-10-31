@@ -29,6 +29,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -158,11 +159,14 @@ fun AppRoot() {
         CompositionLocalProvider(LocalBackdropLayer provides backdrop, LocalAdaptiveLayout provides layout) {
             Box(Modifier.fillMaxSize()) {
                 // ---- Contenu principal : capturé par le backdrop, animé à chaque page ----
-                Box(
+                com.ketvoice.app.glass.BackdropCapture(
+                    backdrop = backdrop,
                     Modifier
                         .fillMaxSize()
                         .background(th.background)
-                        .layerBackdrop(backdrop)
+                        .then(if (AppUi.showPlayer.value || AppUi.showAccount.value || AppUi.showPublisher.value ||
+                            AppUi.trackMenuTrack.value != null || AppUi.playlistMenu.value != null ||
+                            AppUi.addToPlaylist.value != null) Modifier.clearAndSetSemantics { } else Modifier)
                 ) {
                     Box(Modifier.fillMaxSize().padding(start = if (queueOverlay) 0.dp else layout.railWidthDp.dp), contentAlignment = Alignment.TopCenter) {
                     Box(Modifier.widthIn(max = pageMaxWidth).fillMaxSize()

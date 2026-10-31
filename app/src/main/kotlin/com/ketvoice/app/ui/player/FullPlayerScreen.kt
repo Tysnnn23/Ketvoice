@@ -252,7 +252,11 @@ fun FullPlayerScreen(
                 else -> close()
             }
         }
-        CompositionLocalProvider(LocalBackdropLayer provides backdrop) {
+        // BackdropCapture : le contenu du lecteur EST la couche capturée. Les
+        // feuilles internes (sources de paroles, menu ⋯, sortie audio) doivent
+        // donc passer en verre statique — un panneau dynamique qui échantillonne
+        // sa propre couche boucle le RenderThread (stack overflow natif).
+        com.ketvoice.app.glass.BackdropCapture(backdrop) {
             Box(Modifier
                 .fillMaxSize()
                 .graphicsLayer {
@@ -269,7 +273,7 @@ fun FullPlayerScreen(
                         clip = false
                     }
                 }
-                .layerBackdrop(backdrop).pointerInput(Unit) {
+                .pointerInput(Unit) {
                 awaitPointerEventScope {
                     while (true) {
                         val event = awaitPointerEvent(PointerEventPass.Initial)

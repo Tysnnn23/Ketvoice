@@ -227,88 +227,7 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
                                     transformOrigin = TransformOrigin(0f, .5f)
                                 }
                             ) {
-                                if (current && line.words.isNotEmpty()) KaraokeLine(line, Modifier.fillMaxWidth(), fontScale)
-                                else {
-                                    // Une seule couche de texte par ligne : plus aucun halo
-                                    // flou dupliqué au-dessus des paroles.
-                                    // Le texte de base ne doit plus contenir les segments
-                                    // entre parenthèses : ils sont rendus une seule fois,
-                                    // par le bloc ad-libs animé juste en dessous. Les
-                                    // laisser ici produisait le doublon visé.
-                                    val baseText = remember(line.text) {
-                                        Regex("\\([^)]*\\)").replace(line.text, "")
-                                            .replace(Regex("\\s{2,}"), " ")
-                                            .trim()
-                                    }
-                                    if (baseText.isNotBlank()) Text(baseText, localize = false, color = lineColor,
-                                        fontSize = (33f * fontScale).sp,
-                                        lineHeight = (41f * fontScale).sp,
-                                        letterSpacing = (-.3).sp,
-                                        fontWeight = FontWeight.Black,
-                                        modifier = Modifier.fillMaxWidth().blur(lineBlur, BlurredEdgeTreatment.Unbounded))
-                                }
-
-                                // Backs / ad-libs : pour les paroles originales synchronisées (mot ou syllabe),
-                                // les segments entre parenthèses apparaissent avec la même animation d'expansion/fondu
-                                // que les traductions, et disparaissent immédiatement dès le passage à la ligne suivante.
-                                if (line.words.isNotEmpty() && line.text.contains("(") && line.text.contains(")")) {
-                                    val adlibs = remember(line.text) {
-                                        Regex("\\(([^)]+)\\)").findAll(line.text).map { "(${it.groupValues[1]})" }.joinToString(" ")
-                                    }
-                                    if (adlibs.isNotBlank()) {
-                                        // Les backs ne doivent vivre que le temps de leurs
-                                        // propres syllabes. On retrouve leur fenêtre en
-                                        // suivant la profondeur des parenthèses dans le
-                                        // flux de mots synchronisés, puis on l'utilise
-                                        // comme condition d'affichage.
-                                        val adlibWindow = remember(line.words) {
-                                            var depth = 0
-                                            var start = -1L
-                                            var end = -1L
-                                            val sb = StringBuilder()
-                                            line.words.forEach { w ->
-                                                val from = sb.length
-                                                sb.append(w.text)
-                                                for (i in from until sb.length) {
-                                                    when (sb[i]) {
-                                                        '(' -> {
-                                                            depth++
-                                                            if (start < 0) start = w.startMs
-                                                        }
-                                                        ')' -> if (depth > 0) {
-                                                            depth--
-                                                            if (depth == 0) {
-                                                                end = if (w.endMs > 0) w.endMs
-                                                                else w.startMs + 900L
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                            if (start >= 0 && end > start) start..end else null
-                                        }
-                                        // Lecture de la position uniquement pour la ligne
-                                        // active : les autres lignes ne recoivent plus le
-                                        // tic de position (200 ms) et ne se recomposent
-                                        // plus — le lag de suivi venait de la.
-                                        AnimatedVisibility(
-                                            visible = current && (adlibWindow?.let { position.value in it } ?: true),
-                                            enter = fadeIn(tween(Motion.duration(320))) + expandVertically(tween(Motion.duration(320)), expandFrom = Alignment.Top),
-                                            exit = ExitTransition.None
-                                        ) {
-                                            Text(
-                                                adlibs,
-                                                localize = false,
-                                                color = Color.White.copy(alpha = 0.72f),
-                                                fontSize = (20f * fontScale).sp,
-                                                lineHeight = (26f * fontScale).sp,
-                                                letterSpacing = (-.2).sp,
-                                                fontWeight = FontWeight.Bold,
-                                                modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
-                                            )
-                                        }
-                                    }
-                                }
+                                LyricVoices(line, current, lyrics.isTimed, fontScale, lineColor, lineBlur)
 
                                 AnimatedVisibility(
                                     visible = translationEnabled && translated[index] != null && (current || !lyrics.isTimed),
@@ -319,7 +238,6 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
                                         SyncedTranslation(
                                             line = line,
                                             text = subtitle,
-                                            positionMs = position.value,
                                             active = current && lyrics.isTimed,
                                             dimAlpha = if (current || !lyrics.isTimed) .82f else .43f
                                         )
@@ -363,7 +281,41 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
 }
 
 @Composable
-private fun KaraokeLine(line: MusicApi.LyricLine, modifier: Modifier, fontScale: Float = 1f) {
+internal fun LyricVoices(line: MusicApi.LyricLine, active: Boolean, timed: Boolean, fontScale: Float = 1f,
+                         color: Color = Color.White, blur: androidx.compose.ui.unit.Dp = 0.dp) {
+    val voices = remember(line) { LyricsPresentation.split(line) }
+    Column(Modifier.fillMaxWidth()) {
+        if (voices.lead.text.isNotBlank()) {
+            if (active && voices.lead.words.isNotEmpty()) KaraokeLine(voices.lead, Modifier.fillMaxWidth(), fontScale)
+            else Text(voices.lead.text, localize = false, color = color,
+                fontSize = (33f * fontScale).sp, lineHeight = (41f * fontScale).sp,
+                letterSpacing = (-.3).sp, fontWeight = FontWeight.Black,
+                modifier = Modifier.fillMaxWidth().blur(blur, BlurredEdgeTreatment.Unbounded))
+        }
+        // Stable layout: separate each back exactly once, with its own native timing.
+        voices.backs.forEach { BackingVocal(it, active || !timed, fontScale) }
+    }
+}
+
+@Composable
+private fun BackingVocal(line: MusicApi.LyricLine, active: Boolean, fontScale: Float) {
+    val position = if (active) Player.positionMs.collectAsState().value else Long.MIN_VALUE
+    val visible = active && LyricsPresentation.backIsActive(line, position)
+    val opacity by animateFloatAsState(
+        if (visible) 1f else if (active) .30f else .18f,
+        tween(Motion.duration(180)), label = "backing-vocal"
+    )
+    Box(Modifier.fillMaxWidth().padding(top = 7.dp).graphicsLayer { alpha = opacity }) {
+        if (visible && line.words.isNotEmpty()) KaraokeLine(line, Modifier.fillMaxWidth(), fontScale, backing = true)
+        else Text(line.text, localize = false, color = Color.White.copy(alpha = .80f),
+            fontSize = (24f * fontScale).sp, lineHeight = (31f * fontScale).sp,
+            fontWeight = FontWeight.Bold, letterSpacing = (-.2).sp)
+    }
+}
+
+@Composable
+internal fun KaraokeLine(line: MusicApi.LyricLine, modifier: Modifier, fontScale: Float = 1f,
+                         backing: Boolean = false) {
     var now by remember(line) { mutableLongStateOf(Player.currentPositionMs()) }
     val playing by remember { Player.state.map { it.isPlaying }.distinctUntilChanged() }.collectAsState(false)
     val position by Player.positionMs.collectAsState()
@@ -380,33 +332,34 @@ private fun KaraokeLine(line: MusicApi.LyricLine, modifier: Modifier, fontScale:
             val start = offset
             val end = (start + word.text.length).coerceAtMost(line.text.length)
             offset = end
-            var baseline = Float.MIN_VALUE
             val slices = if (start >= end) emptyList() else (0 until measured.lineCount).mapNotNull { row ->
                 val from = maxOf(start, measured.getLineStart(row))
                 val to = minOf(end, measured.getLineEnd(row))
                 if (from < to) {
-                    if (baseline == Float.MIN_VALUE) baseline = measured.getLineBaseline(row)
                     val path = measured.getPathForRange(from, to)
                     LyricMaskSlice(path, path.getBounds(), measured.getBidiRunDirection(from) == ResolvedTextDirection.Rtl)
                 } else null
             }
-            LyricWordMask(word.startMs, word.endMs, word.text, slices, slices.sumOf { it.bounds.width.toDouble() }.toFloat(), baseline)
+            LyricWordMask(word.startMs, word.endMs, slices, slices.sumOf { it.bounds.width.toDouble() }.toFloat())
         }
     }.orEmpty() }
+    val reduced = Motion.reduced
+    val density = LocalDensity.current
+    val glowPx = with(density) { 4.dp.toPx() }
     Box(modifier) {
-        Text(line.text, localize = false, color = Color.White.copy(alpha = .62f), fontSize = (33 * fontScale).sp, lineHeight = (41 * fontScale).sp, letterSpacing = (-.3).sp,
-            fontWeight = FontWeight.Black, onTextLayout = { layout = it }, modifier = Modifier.fillMaxWidth())
-        Text(line.text, localize = false, color = Color.White, fontSize = (33 * fontScale).sp, lineHeight = (41 * fontScale).sp, letterSpacing = (-.3).sp,
-            fontWeight = FontWeight.Black,
-            style = androidx.compose.ui.text.TextStyle(shadow = Shadow(Color.White.copy(alpha = .14f), Offset.Zero, 2f)),
-            modifier = Modifier.fillMaxWidth().drawWithContent {
-                // Le mot tenu est dessiné à part (agrandi + halo) : on le retire
-                // de la révélation plate pour ne jamais doubler le tracé.
-                val heldIdx = heldWord(masks, now)?.let { held -> masks.indexOfFirst { it === held.second } } ?: -1
-                masks.forEachIndexed { wi, word ->
-                    if (wi == heldIdx) return@forEachIndexed
+        // One shaped layout for both the pending glyphs and the sung overlay.
+        // No remeasurement, shifted word copy, scaling or disappearing held glyph.
+        Text(line.text, localize = false, color = Color.White.copy(alpha = if (backing) .36f else .40f),
+            fontSize = ((if (backing) 24 else 33) * fontScale).sp,
+            lineHeight = ((if (backing) 31 else 41) * fontScale).sp,
+            letterSpacing = (-.3).sp, fontWeight = if (backing) FontWeight.Bold else FontWeight.Black,
+            onTextLayout = { layout = it }, modifier = Modifier.fillMaxWidth())
+        Canvas(Modifier.matchParentSize()) {
+                val measured = layout ?: return@Canvas
+                masks.forEach { word ->
                     val progress = segmentProgress(now, word.start, word.end)
-                    if (progress <= 0f) return@forEachIndexed
+                    if (progress <= 0f) return@forEach
+                    val emphasis = LyricsPresentation.sustain(now, word.start, word.end, reduced || backing)
                     var remaining = word.width * progress
                     word.slices.forEach { slice ->
                         val bounds = slice.bounds
@@ -414,88 +367,25 @@ private fun KaraokeLine(line: MusicApi.LyricLine, modifier: Modifier, fontScale:
                         remaining -= bounds.width
                         if (fill > 0f) clipPath(slice.path) {
                             if (slice.rtl) {
-                                clipRect(bounds.right - fill, bounds.top, bounds.right, bounds.bottom) { this@drawWithContent.drawContent() }
-                            } else clipRect(bounds.left, bounds.top, bounds.left + fill, bounds.bottom) { this@drawWithContent.drawContent() }
+                                clipRect(bounds.right - fill, bounds.top, bounds.right, bounds.bottom) {
+                                    drawText(measured, color = Color.White, shadow = Shadow(Color.White.copy(alpha = .24f * emphasis), Offset.Zero, glowPx * emphasis))
+                                }
+                            } else clipRect(bounds.left, bounds.top, bounds.left + fill, bounds.bottom) {
+                                drawText(measured, color = Color.White, shadow = Shadow(Color.White.copy(alpha = .24f * emphasis), Offset.Zero, glowPx * emphasis))
+                            }
                         }
                     }
                 }
-            })
-
-        // Mot tenu : quand le chant s'attarde sur un mot révélé (fin de mot
-        // atteinte, suivant pas encore commencé), le mot grossit de 9 % et
-        // prend un halo doux. Fondu entrée/sortie, rien par défaut.
-        if (line.words.isNotEmpty() && masks.isNotEmpty() && !Motion.reduced) {
-            val measurer = androidx.compose.ui.text.rememberTextMeasurer()
-            // Mesure mémoïsée hors snapshot state : la même boucle de dessin
-            // réutilise le TextLayoutResult tant que le mot ne change pas.
-            val measureCache = remember { HashMap<String, androidx.compose.ui.text.TextLayoutResult>() }
-            val heldStyle = androidx.compose.ui.text.TextStyle(
-                color = Color.White,
-                fontSize = (33 * fontScale).sp,
-                fontWeight = FontWeight.Black,
-                letterSpacing = (-.3).sp
-            )
-            Canvas(Modifier.matchParentSize()) {
-                val held = heldWord(masks, now) ?: return@Canvas
-                val (t, word) = held
-                if (t <= 0.01f || word.slices.isEmpty()) return@Canvas
-                val bounds = word.slices.fold(word.slices.first().bounds) { acc, s ->
-                    androidx.compose.ui.geometry.Rect(
-                        left = minOf(acc.left, s.bounds.left),
-                        top = minOf(acc.top, s.bounds.top),
-                        right = maxOf(acc.right, s.bounds.right),
-                        bottom = maxOf(acc.bottom, s.bounds.bottom)
-                    )
-                }
-                val measuredWord = measureCache.getOrPut(word.text) { measurer.measure(word.text, heldStyle) }
-                val topLeft = Offset(bounds.left, word.baseline - measuredWord.firstBaseline)
-                val pivot = Offset(bounds.center.x, word.baseline)
-                val smooth = t * t * (3f - 2f * t)
-                withTransform({
-                    scale(1f + 0.09f * smooth, 1f + 0.09f * smooth, pivot = pivot)
-                }) {
-                    drawText(
-                        textLayoutResult = measuredWord,
-                        color = Color.White,
-                        topLeft = topLeft,
-                        alpha = 0.92f * smooth,
-                        shadow = Shadow(Color.White.copy(alpha = 0.55f * smooth), Offset.Zero, 16f * smooth + 2f)
-                    )
-                }
-            }
         }
     }
-}
-
-/**
- * Mot « tenu » à l'instant [now] : le dernier mot commencé, entièrement révélé,
- * dont le suivant n'a pas encore démarré. Renvoie l'intensité (0..1) et le mot.
- */
-private fun heldWord(masks: List<LyricWordMask>, now: Long): Pair<Float, LyricWordMask>? {
-    var idx = -1
-    for (i in masks.indices) {
-        if (masks[i].start <= now) idx = i else break
-    }
-    if (idx < 0) return null
-    val word = masks[idx]
-    if (word.slices.isEmpty()) return null
-    val nextStart = masks.getOrNull(idx + 1)?.start ?: (word.end + 1400L)
-    if (now >= nextStart) return null
-    val sinceDone = now - word.end
-    if (sinceDone < 110L) return null
-    val fadeIn = ((sinceDone - 110L) / 520f).coerceIn(0f, 1f)
-    val fadeOut = ((nextStart - now) / 240f).coerceIn(0f, 1f)
-    return minOf(fadeIn, fadeOut) to word
 }
 
 private data class LyricMaskSlice(val path: androidx.compose.ui.graphics.Path, val bounds: androidx.compose.ui.geometry.Rect, val rtl: Boolean)
 private data class LyricWordMask(
     val start: Long,
     val end: Long,
-    val text: String,
     val slices: List<LyricMaskSlice>,
-    val width: Float,
-    val baseline: Float
+    val width: Float
 )
 
 internal fun segmentProgress(now: Long, start: Long, end: Long): Float = when {

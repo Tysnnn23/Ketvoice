@@ -7,12 +7,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.CircularProgressIndicator
 import com.ketvoice.app.ui.common.GlassBackButton
@@ -22,9 +19,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.blur
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -101,79 +95,13 @@ fun ArtistScreen() {
                     modifier = Modifier.clickable { attempt++ }.padding(top = 20.dp, bottom = 12.dp))
             }
             else -> {
-            // La photo ne disparaît JAMAIS : elle reste à sa place en tête de
-            // page (pas de fondu au scroll, pas de remplacement par le canvas).
-            // Le haut de la page porte le même blur prolongé que le lecteur :
-            // bandes AGSL de fondu progressif sous la barre de statut.
+            // La photo et les métadonnées défilent ensemble ; aucun shader
+            // ne recadre ni ne remplace la photo fournie par le catalogue.
             val listState = androidx.compose.foundation.lazy.rememberLazyListState()
             LazyColumn(Modifier.fillMaxSize(), state = listState,
                 contentPadding = PaddingValues(bottom = 210.dp)) {
                 val data = page!!
-                item {
-                    val heroHeight = (androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp.dp * .58f)
-                        .coerceIn(400.dp, 720.dp)
-                    Box(Modifier.fillMaxWidth().height(heroHeight)) {
-                        if (!data.artist.photo.isNullOrBlank()) {
-                            // Photo affichée ENTIÈRE (fit) sur un prolongement flouté
-                            // d'elle-même, avec la bande de blur progressif en haut
-                            // (shader AGSL, même matière que la pochette du lecteur).
-                            ProgressiveBlurPhoto(
-                                photo = data.artist.photo,
-                                modifier = Modifier.fillMaxSize(),
-                                bandTop = 170.dp,
-                                bandBottom = 230.dp,
-                                topDark = 0.34f,
-                                bottomDark = 0.55f
-                            )
-                        } else {
-                            // Repli : aucun hero photo disponible — dégradé du thème
-                            // avec l'initiale, jamais un bloc vide.
-                            Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(
-                                theme.background, theme.accent.copy(alpha = 0.35f), Color(0xFF101014))))) {
-                                Text(data.artist.name.take(1).uppercase(), localize = false,
-                                    color = Color.White.copy(alpha = 0.22f), fontSize = 150.sp,
-                                    fontWeight = FontWeight.Black, modifier = Modifier.align(Alignment.Center))
-                            }
-                        }
-                        // Nom de l'artiste par-dessus la photo (la bande basse assombrit déjà)
-                        Column(Modifier.align(Alignment.BottomStart).padding(horizontal = 20.dp, vertical = 16.dp)) {
-                            Text(data.artist.name, localize = false, color = Color.White, fontSize = 40.sp,
-                                fontWeight = FontWeight.Black, letterSpacing = (-1.2).sp, maxLines = 2,
-                                overflow = TextOverflow.Ellipsis, lineHeight = 44.sp)
-                            if (data.listeners.isNotBlank()) {
-                                Text(data.listeners, color = Color.White.copy(alpha = 0.8f), fontSize = 12.sp,
-                                    maxLines = 2, overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier.padding(top = 6.dp))
-                            }
-                            Text("Artiste · YouTube Music", color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp,
-                                modifier = Modifier.padding(top = 3.dp))
-                            // Actions posées dans la cover : lecture immédiate des titres
-                            // de l'artiste et ouverture de la file d'attente du lecteur.
-                            if (data.tracks.isNotEmpty()) Row(
-                                Modifier.padding(top = 14.dp),
-                                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Row(Modifier.clip(RoundedCornerShape(999.dp)).background(theme.accent)
-                                    .clickable { Player.playQueue(data.tracks, 0) }
-                                    .padding(horizontal = 20.dp, vertical = 10.dp),
-                                    verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Filled.PlayArrow, null, tint = Color.White, modifier = Modifier.size(18.dp))
-                                    Spacer(Modifier.width(6.dp))
-                                    Text("Lecture", color = Color.White, fontSize = 13.5.sp, fontWeight = FontWeight.Bold)
-                                }
-                                Row(Modifier.clip(RoundedCornerShape(999.dp))
-                                    .background(Color.White.copy(alpha = 0.16f))
-                                    .clickable { AppUi.openQueue() }
-                                    .padding(horizontal = 18.dp, vertical = 10.dp),
-                                    verticalAlignment = Alignment.CenterVertically) {
-                                    Text("File d'attente", color = Color.White, fontSize = 13.sp,
-                                        fontWeight = FontWeight.SemiBold)
-                                }
-                            }
-                        }
-                    }
-                }
+                item(key = "artist-header") { ArtistHeader(data) }
                 if (data.description.isNotBlank()) item {
                     Column(Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
                         Text(data.description, localize = false, color = theme.secondary, fontSize = 13.5.sp, lineHeight = 19.sp,
@@ -181,20 +109,6 @@ fun ArtistScreen() {
                         Text(if (expandedBio) "Réduire" else "Lire plus", color = theme.accent,
                             fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
                             modifier = Modifier.clickable { expandedBio = !expandedBio }.padding(top = 8.dp))
-                    }
-                }
-                if (data.tracks.isNotEmpty()) item {
-                    Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically) {
-                        Box(Modifier.clip(RoundedCornerShape(999.dp)).background(theme.accent)
-                            .clickable { Player.playQueue(data.tracks, 0) }
-                            .padding(horizontal = 22.dp, vertical = 11.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Filled.PlayArrow, null, tint = Color.White, modifier = Modifier.size(19.dp))
-                                Spacer(Modifier.width(7.dp))
-                                Text("Lecture", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                            }
-                        }
                     }
                 }
                 if (data.tracks.isNotEmpty()) item {
@@ -217,7 +131,7 @@ fun ArtistScreen() {
                                 overflow = TextOverflow.Ellipsis)
                         }
                         if (track.durationMs > 0) Text(formatSecs(track.durationMs), color = theme.secondary, fontSize = 12.sp)
-                        Box(Modifier.size(34.dp).clickable { AppUi.trackMenuTrack.value = track }, contentAlignment = Alignment.Center) {
+                        Box(Modifier.size(48.dp).clip(CircleShape).clickable { AppUi.trackMenuTrack.value = track }, contentAlignment = Alignment.Center) {
                             Icon(Icons.Filled.MoreVert, "Options", tint = theme.secondary, modifier = Modifier.size(19.dp))
                         }
                     }
@@ -291,10 +205,12 @@ fun ArtistScreen() {
                     fontSize = 20.sp, fontWeight = FontWeight.Bold, maxLines = 1,
                     overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
             } else Spacer(Modifier.weight(1f))
-            if (page != null) Box(Modifier.size(38.dp).clickable { attempt++ }, contentAlignment = Alignment.Center) {
-                Icon(Icons.Filled.Refresh, "Actualiser", tint = theme.secondary, modifier = Modifier.size(21.dp))
+            if (page != null) com.ketvoice.app.glass.GlassPanel(Modifier.size(48.dp), CircleShape,
+                com.ketvoice.app.glass.GlassParams.circle(dark = theme.isDark), captured = true) {
+                Box(Modifier.fillMaxSize().clickable { attempt++ }, contentAlignment = Alignment.Center) {
+                    Icon(Icons.Filled.Refresh, "Actualiser", tint = theme.onBackground, modifier = Modifier.size(21.dp))
+                }
             }
         }
     }
 }
-

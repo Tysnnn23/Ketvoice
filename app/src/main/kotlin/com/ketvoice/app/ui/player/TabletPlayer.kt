@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ketvoice.app.data.Track
 import com.ketvoice.app.glass.LocalBackdropLayer
+import com.ketvoice.app.glass.BackdropCapture
 import com.ketvoice.app.glass.rememberGlassBackdrop
 import com.ketvoice.app.player.Player
 import com.ketvoice.app.player.PlayerUiState
@@ -34,7 +35,6 @@ import com.ketvoice.app.ui.AppUi
 import com.ketvoice.app.ui.adaptive.AdaptiveLayout
 import com.ketvoice.app.ui.common.Icon
 import com.ketvoice.app.ui.common.Text
-import com.kyant.backdrop.backdrops.layerBackdrop
 import com.ketvoice.app.ui.motion.Motion
 import androidx.compose.animation.core.tween
 
@@ -46,10 +46,12 @@ internal fun TabletPlayer(
 ) {
     val backdrop = rememberGlassBackdrop(Color.Black)
     CompositionLocalProvider(LocalBackdropLayer provides backdrop) {
-        BoxWithConstraints(Modifier.fillMaxSize().background(Color.Black).layerBackdrop(backdrop)) {
+        BoxWithConstraints(Modifier.fillMaxSize().background(Color.Black)) {
             val layout = AdaptiveLayout(maxWidth.value, maxHeight.value)
 
-            PlayerSceneBackground(track, canvas, state.isPlaying, cover, ambience, simple = true)
+            BackdropCapture(backdrop, Modifier.matchParentSize()) {
+                PlayerSceneBackground(track, canvas, state.isPlaying, cover, ambience, simple = true)
+            }
             Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()
                 .padding(horizontal = if (maxWidth >= 1000.dp) 40.dp else 24.dp)) {
                 Row(Modifier.fillMaxWidth().height(64.dp), verticalAlignment = Alignment.CenterVertically) {

@@ -61,10 +61,15 @@ fun CatalogScreen() {
     LaunchedEffect(request, attempt) {
         if (request.kind in listOf("album", "genre")) {
             loading = true
-            page = if (request.kind == "album" && request.id.startsWith("MPRE")) {
-                YouTubeCatalog.album(request.id)
-            } else CatalogRepo.page(request)
-            loading = false
+            try {
+                page = if (request.kind == "album" && request.id.startsWith("MPRE")) {
+                    YouTubeCatalog.album(request.id)
+                } else CatalogRepo.page(request)
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                page = null
+            } finally { loading = false }
         }
     }
     val tracks = when (request.kind) {
@@ -74,6 +79,10 @@ fun CatalogScreen() {
         else -> page?.tracks.orEmpty()
     }
     LaunchedEffect(tracks) { ArtworkRepo.enrich(tracks) }
+    if (request.kind == "album") {
+        AlbumPage(request, page, tracks, loading, onRetry = { attempt++ })
+        return
+    }
     // Canvas du hero : résolu pour le premier titre quand les Canvas sont actifs.
     val canvasTrack = tracks.firstOrNull()?.takeIf { AppSettings.animatedArtwork.value }
     LaunchedEffect(canvasTrack?.id) { canvasTrack?.let { CanvasRepo.resolve(it) } }
