@@ -173,7 +173,7 @@ class LyricsGlassRegressionTest {
         slider.performTouchInput { click(centerRight); swipe(centerLeft, centerRight) }
         compose.runOnIdle { assertEquals(0, changes); assertEquals(0, finished) }
     }
-    @Test fun panoramicArtistPhotoStaysVisibleAndQueueReturnsToTheArtist() {
+    @Test fun panoramicArtistPhotoStaysVisibleAndPlaybackActionsRemainAccessible() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val photo = File(context.cacheDir, "qa-panoramic-artist.png")
         val bitmap = Bitmap.createBitmap(1200, 500, Bitmap.Config.ARGB_8888)
@@ -205,10 +205,9 @@ class LyricsGlassRegressionTest {
         compose.runOnIdle { AppSettings.reduceDynamicBlur.value = true }
         image.assertIsDisplayed()
         screenshot("artist-panoramic-reduced-blur")
-        compose.onNodeWithText("File d'attente").performClick()
+        compose.onNodeWithText("Lecture").assertIsDisplayed()
+        compose.onNodeWithText("Aléatoire").assertIsDisplayed()
         compose.runOnIdle {
-            assertEquals(AppUi.QUEUE, AppUi.overlay.intValue)
-            assertTrue(AppUi.closeOverlay())
             assertEquals(AppUi.ARTIST, AppUi.overlay.intValue)
             assertEquals(page.artist.name, AppUi.artistRequest.value?.name)
         }

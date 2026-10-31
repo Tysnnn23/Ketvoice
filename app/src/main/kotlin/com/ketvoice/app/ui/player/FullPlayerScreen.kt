@@ -19,6 +19,7 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -98,6 +99,12 @@ fun FullPlayerScreen(
     val canvasExcluded by CanvasRepo.excluded.collectAsState()
     // Exclusion par morceau (menu •••) : pochette statique uniquement.
     val canvasPath = canvas[track.id]?.takeIf { track.id !in canvasExcluded }
+    // Full-window Canvas keeps only title, artist and time; eligibility uses
+    // the local clip's real proportions, not an assumed 9:16 format.
+    var canvasFocus by remember(track.id, canvasPath) { mutableStateOf(false) }
+    var failedCanvas by remember(canvasPath) { mutableStateOf(false) }
+    val canvasAspect by rememberCanvasAspectRatio(canvasPath.takeIf { AppSettings.animatedArtwork.value })
+    val artInteraction = remember { MutableInteractionSource() }
     val lyrics by LyricsRepo.state.collectAsState()
     val cover = covers["t:${track.id}"] ?: track.coverUrl
     val sampled = rememberCoverAmbience(cover)
@@ -113,6 +120,7 @@ fun FullPlayerScreen(
     fun navigate(next: PlayerPage) {
         page = next
         expanded = false
+        canvasFocus = false
         interaction = android.os.SystemClock.uptimeMillis()
         AppUi.showLyrics.value = next == PlayerPage.LYRICS
     }
@@ -135,11 +143,21 @@ fun FullPlayerScreen(
     CompositionLocalProvider(LocalTheme provides KetTheme.dark().copy(accent = albumAccent, secondary = Color.White.copy(alpha = .78f))) {
     MaterialTheme(colorScheme = MaterialTheme.colorScheme.copy(primary = albumAccent, onPrimary = Color.Black)) {
     BoxWithConstraints(modifier.fillMaxSize().background(Color.Black)) {
+        val canvasReady = canvasPath != null && AppSettings.animatedArtwork.value && !failedCanvas &&
+            CanvasPresentation.canFillScreen(canvasAspect, maxWidth.value / maxHeight.value)
+        LaunchedEffect(canvasReady) { if (!canvasReady) canvasFocus = false }
+        if (canvasFocus && canvasReady) {
+            BackHandler { canvasFocus = false }
+            CanvasFocusPlayer(track, canvasPath, state.isPlaying, state.durationMs,
+                onExit = { canvasFocus = false }, onFailure = { failedCanvas = true; canvasFocus = false })
+            return@BoxWithConstraints
+        }
         if (com.ketvoice.app.BuildConfig.IS_QUEST) {
             BackHandler { if (page != PlayerPage.ARTWORK) navigate(PlayerPage.ARTWORK) else closeInstant() }
             QuestLandscapePlayer(state, track, cover, canvasPath, ambience, page,
                 onPage = ::navigate, onClose = ::closeInstant, onTrackMenu = { sheet = "track" },
-                onSources = { sheet = "sources" }, onOutput = { sheet = "audio" })
+                onSources = { sheet = "sources" }, onOutput = { sheet = "audio" },
+                onCanvas = if (canvasReady) ({ canvasFocus = true }) else null)
             if (sheet.isNotBlank()) PlayerSheetScrim({ sheet = "" }) {
                 when (sheet) {
                     "sources" -> LyricsSourceSheet(track, onClose = { sheet = "" })
@@ -177,7 +195,8 @@ fun FullPlayerScreen(
             }) {
                 TabletPlayer(state, track, cover, canvasPath, ambience, page,
                     onPage = ::navigate, onClose = ::closeInstant, onTrackMenu = { sheet = "track" },
-                    onSources = { sheet = "sources" }, onOutput = { sheet = "audio" })
+                    onSources = { sheet = "sources" }, onOutput = { sheet = "audio" },
+                    onCanvas = if (canvasReady) ({ canvasFocus = true }) else null)
             }
             BackHandler { if (page != PlayerPage.ARTWORK) navigate(PlayerPage.ARTWORK) else closeInstant() }
             if (sheet.isNotBlank()) PlayerSheetScrim({ sheet = "" }) {
@@ -246,6 +265,7 @@ fun FullPlayerScreen(
         }
         BackHandler {
             when {
+                canvasFocus -> canvasFocus = false
                 sheet.isNotEmpty() -> sheet = ""
                 expanded -> expanded = false
                 page != PlayerPage.ARTWORK -> navigate(PlayerPage.ARTWORK)
@@ -282,7 +302,7 @@ fun FullPlayerScreen(
                     }
                 }
             }) {
-                PlayerSceneBackground(track, canvasPath, state.isPlaying, cover, ambience,
+                PlayerSceneBackground(track, canvasPath, state.isPlaying && !canvasFocus, cover, ambience,
                     plain = false)
 
                 AnimatedContent(page, transitionSpec = {
@@ -303,8 +323,16 @@ fun FullPlayerScreen(
                                 .66f to Color.White.copy(alpha = .82f), .79f to Color.White.copy(alpha = .48f),
                                 .90f to Color.White.copy(alpha = .16f), 1f to Color.Transparent),
                                 blendMode = BlendMode.DstIn)
-                        }.then(dismissDrag)) {
-                        ArtworkCanvas(track, if (panoramicCanvasActive(canvasPath)) null else canvasPath, state.isPlaying, Modifier.fillMaxSize(), depth = true)
+                        }.then(dismissDrag).then(if (canvasReady) Modifier.clickable(
+                            interactionSource = artInteraction,
+                            indication = null,
+                            onClickLabel = AppText.t("Voir le Canvas en plein écran")
+                        ) { canvasFocus = true }.semantics {
+                            contentDescription = AppText.t("Voir le Canvas en plein écran")
+                        } else Modifier)) {
+                        ArtworkCanvas(track, if (panoramicCanvasActive(canvasPath)) null else canvasPath,
+                            state.isPlaying && !canvasFocus, Modifier.fillMaxSize(), depth = true,
+                            onCanvasFailure = { failedCanvas = true })
                         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(
                             0f to Color.Black.copy(alpha = .16f), .52f to Color.Transparent,
                             .83f to ambience.color.copy(alpha = .45f), 1f to ambience.color.copy(alpha = .85f))))

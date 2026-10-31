@@ -4,6 +4,7 @@ import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateDpAsState
@@ -122,14 +123,16 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
             } finally { translating = false }
         }
     }
-    LaunchedEffect(track.id) { list.scrollToItem(0); following = true }
+    // One coroutine owns initial placement and follow scrolling. Two concurrent
+    // scrollToItem calls before first layout can race the lazy-list awaiters.
+    LaunchedEffect(track.id) { following = true }
     LaunchedEffect(seekEpoch) { following = true }
     LaunchedEffect(list) {
         list.interactionSource.interactions.collect { if (it is DragInteraction.Start) following = false }
     }
     BoxWithConstraints(modifier) {
         val viewportPx = with(LocalDensity.current) { maxHeight.toPx() }
-        LaunchedEffect(active, following, expanded, lyrics.lines, viewportPx, reduced, seekEpoch, translationEnabled) {
+        LaunchedEffect(track.id, active, following, expanded, lyrics.lines, viewportPx, reduced, seekEpoch, translationEnabled) {
             if (!following || lyrics.lines.isEmpty()) return@LaunchedEffect
             val targetIndex = LyricsMotion.targetIndex(active, lyrics.isTimed)
             val anchor = -(viewportPx * .18f).toInt()
@@ -199,17 +202,23 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
                                     4 -> 1.5.dp
                                     else -> 2.dp
                                 } else if (distance <= 1) .3.dp else .8.dp
-                            val entry = remember(index, track.id) { Animatable(if (index in revealed || reduced) 1f else 0f) }
-                            LaunchedEffect(index, reduced) {
+                            val entry = remember(index, track.id, lyrics.lines) { Animatable(if (index in revealed || reduced) 1f else 0f) }
+                            LaunchedEffect(index, reduced, revealed) {
                                 if (reduced || !revealed.add(index)) entry.snapTo(1f)
-                                else { delay(index.coerceAtMost(5) * 45L); entry.animateTo(1f, tween(Motion.FADE)) }
+                                else {
+                                    // Entrée en cascade courte, puis fondu long en
+                                    // ease-out : la ligne « se pose » au lieu
+                                    // d'apparaître d'un coup.
+                                    delay(index.coerceAtMost(3) * 30L)
+                                    entry.animateTo(1f, tween(420, easing = CubicBezierEasing(.16f, .84f, .28f, 1f)))
+                                }
                             }
                             val lineColor by animateColorAsState(
                                 targetValue = if (current || !lyrics.isTimed) Color.White else Color.White.copy(alpha = .54f),
-                                animationSpec = tween(Motion.duration()),
+                                animationSpec = tween(Motion.duration(320)),
                                 label = "lyricColor"
                             )
-                            val lineBlur by animateDpAsState(blur, tween(Motion.duration()), label = "lyricBlur")
+                            val lineBlur by animateDpAsState(blur, tween(Motion.duration(320)), label = "lyricBlur")
                             // Toutes les lignes gardent exactement la même taille et la
                             // même graisse : seule la couleur distingue la ligne active.
                             // Aucun changement d'échelle, pour éviter l'effet « lyrics
@@ -221,7 +230,7 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
                             Column(
                                  lineModifier.graphicsLayer {
                                     alpha = entry.value
-                                    translationY = if (reduced) 0f else (1f - entry.value) * 8.dp.toPx()
+                                    translationY = if (reduced) 0f else (1f - entry.value) * 16.dp.toPx()
                                     scaleX = lineScale
                                     scaleY = lineScale
                                     transformOrigin = TransformOrigin(0f, .5f)

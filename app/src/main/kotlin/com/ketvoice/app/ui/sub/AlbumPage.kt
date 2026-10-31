@@ -81,25 +81,40 @@ internal fun AlbumPage(request: CatalogRequest, page: CatalogPage?, tracks: List
                 Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally) {
                     BoxWithConstraints(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        val edge = (maxWidth - 60.dp).coerceIn(160.dp, 256.dp)
-                        Cover(title, cover, edge, 18.dp,
-                            Modifier.shadow(18.dp, RoundedCornerShape(18.dp), spotColor = Color.Black.copy(alpha = .23f)))
+                        val edge = (maxWidth - 72.dp).coerceIn(170.dp, 288.dp)
+                        // Halo coloré derrière la pochette : donne du relief sans
+                        // ajouter de panneau ni de bord visible.
+                        if (!AppSettings.reduceDynamicBlur.value && !AppSettings.highPerformanceMode.value)
+                        Box(Modifier.size(edge + 76.dp).graphicsLayer { alpha = .55f }
+                            .blur(46.dp, BlurredEdgeTreatment.Unbounded)
+                            .background(Brush.radialGradient(listOf(
+                                theme.accent.copy(alpha = .55f), Color.Transparent))))
+                        Cover(title, cover, edge, 20.dp,
+                            Modifier.shadow(22.dp, RoundedCornerShape(20.dp), spotColor = Color.Black.copy(alpha = .30f)))
                     }
-                    Spacer(Modifier.height(24.dp))
-                    Text(title, localize = false, color = theme.onBackground, fontSize = 27.sp,
-                        fontWeight = FontWeight.Bold, letterSpacing = (-.7).sp, lineHeight = 32.sp,
+                    Spacer(Modifier.height(26.dp))
+                    Text(title, localize = false, color = theme.onBackground, fontSize = 29.sp,
+                        fontWeight = FontWeight.Bold, letterSpacing = (-.8).sp, lineHeight = 34.sp,
                         textAlign = TextAlign.Center, maxLines = 4, overflow = TextOverflow.Ellipsis)
                     if (artist.isNotBlank()) Text(artist, localize = false, color = theme.accent, fontSize = 17.sp,
                         fontWeight = FontWeight.Medium, textAlign = TextAlign.Center,
                         modifier = Modifier.padding(top = 8.dp).clickable {
                             AppUi.openArtist(tracks.firstOrNull()?.artistId.orEmpty(), artist)
                         }.padding(vertical = 5.dp))
-                    val meta = listOfNotNull(page?.releaseDate?.take(4), AppText.t("${tracks.size} titres")).joinToString("  ·  ")
+                    val totalMs = tracks.sumOf { it.durationMs }
+                    val duration = when {
+                        totalMs <= 0L -> null
+                        totalMs >= 3_600_000L -> AppText.t("${totalMs / 3_600_000L} h ${(totalMs % 3_600_000L) / 60_000L} min")
+                        else -> AppText.t("${(totalMs / 60_000L).coerceAtLeast(1L)} min")
+                    }
+                    val count = AppText.t(if (tracks.size == 1) "1 titre" else "${tracks.size} titres")
+                    val meta = listOfNotNull(page?.releaseDate?.take(4), count, duration)
+                        .joinToString("  ·  ")
                     if (!loading) Text(meta, localize = false, color = theme.secondary, fontSize = 13.sp,
                         modifier = Modifier.padding(top = 4.dp))
                     Spacer(Modifier.height(22.dp))
                     Row(Modifier.widthIn(max = 420.dp).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Row(Modifier.weight(1f).clip(RoundedCornerShape(16.dp))
+                        Row(Modifier.weight(1f).clip(RoundedCornerShape(50))
                             .background(theme.accent.copy(alpha = if (tracks.isEmpty()) .35f else 1f))
                             .clickable(enabled = tracks.isNotEmpty()) { Player.setShuffle(false); Player.playQueue(tracks) }
                             .heightIn(min = 50.dp).padding(horizontal = 14.dp, vertical = 12.dp),
@@ -107,7 +122,7 @@ internal fun AlbumPage(request: CatalogRequest, page: CatalogPage?, tracks: List
                             Icon(Icons.Filled.PlayArrow, null, tint = onAccent, modifier = Modifier.size(21.dp))
                             Spacer(Modifier.width(6.dp));Text("Lecture", color = onAccent, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
                         }
-                        GlassPanel(Modifier.weight(1f), RoundedCornerShape(16.dp),
+                        GlassPanel(Modifier.weight(1f), RoundedCornerShape(50),
                             GlassParams.pill(dark = theme.isDark), enabled = AppSettings.liquidGlass.value) {
                             Row(Modifier.fillMaxWidth().clickable(enabled = tracks.isNotEmpty()) {
                                 Player.playQueue(tracks.shuffled()); Player.setShuffle(true)

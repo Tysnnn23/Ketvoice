@@ -44,6 +44,9 @@ uniform float rimLight;
 uniform float sheen;
 uniform float materialDark;
 uniform float2 lightDir;
+// Densité de l'écran : les largeurs de liseré sont exprimées en dp, sinon le
+// verre paraît « peint » sur les dalles denses et épais sur les autres.
+uniform float pixelScale;
 
 float radiusAt(float2 coord, float4 radii) {
     if (coord.x >= 0.0) {
@@ -135,16 +138,28 @@ float4 main(float2 coord) {
     color.rgb = mix(color.rgb, materialDark > 0.5 ? float3(0.08) : float3(1.0), veil);
 
     // Épaisseur : lisière lumineuse du côté de la lumière, assombrie du côté
-    // opposé, toutes deux concentrees sur ~2.5px, plus un contour capillaire
+    // opposé, toutes deux concentrees sur ~2.5dp, plus un contour capillaire
     // permanent qui donne sa definition au panneau sur fond clair comme sombre.
-    float edge = clamp(1.0 + sd / 2.5, 0.0, 1.0);
+    float px = max(pixelScale, 1.0);
+    float edge = clamp(1.0 + sd / (2.2 * px), 0.0, 1.0);
     edge = edge * edge;
     float facing = dot(grad, lightDir);
     float specular = prismalSpecular(grad, lightDir, 3.2);
-    color.rgb += rimLight * edge * specular * (facing > 0.0 ? 1.0 : 0.48);
-    color.rgb -= edgeDark * edge * max(-facing, 0.0);
-    float contour = clamp(1.0 + sd / 1.1, 0.0, 1.0);
-    color.rgb += 0.028 * contour;
+    // Lumière principale : glint serré sur l'arête éclairée.
+    color.rgb += rimLight * edge * specular;
+    // Rebond : la lumière traverse le bloc et ressort par l'arête opposée.
+    // C'est ce qui distingue un bloc de verre d'un simple contour lumineux.
+    float bounce = prismalSpecular(grad, -lightDir, 2.0);
+    color.rgb += rimLight * 0.34 * edge * bounce;
+    // Épaisseur du bloc : ombre douce et large du côté opposé à la lumière.
+    float thickness = clamp(1.0 + sd / (9.0 * px), 0.0, 1.0);
+    color.rgb -= edgeDark * thickness * max(-facing, 0.0);
+    // Contour capillaire net : la limite du matériau, sur fond clair ou sombre.
+    float contour = clamp(1.0 + sd / (1.2 * px), 0.0, 1.0);
+    color.rgb += 0.05 * contour;
+    // Caustique : la lumière s'accumule juste à l'intérieur de l'arête éclairée.
+    float caustic = (1.0 - smoothstep(0.0, 0.55, -sd / max(refractionHeight, 1.0))) * max(facing, 0.0);
+    color.rgb += rimLight * 0.10 * caustic;
 
     // Voile spéculaire supérieur : la pellicule « mouillée » du verre.
     float fromTop = clamp(local.y / max(size.y, 1.0), 0.0, 1.0);
@@ -201,6 +216,7 @@ fun BackdropEffectScope.liquidGlass(
         shader.setFloatUniform("sheen", if (params.dark) 0.035f else 0.045f)
         shader.setFloatUniform("materialDark", if (params.dark) 1f else 0f)
         shader.setFloatUniform("lightDir", -0.7071f, -0.7071f)
+        shader.setFloatUniform("pixelScale", density)
         effect(RenderEffect.createRuntimeShaderEffect(shader, "content"))
         true
     }.getOrDefault(false)

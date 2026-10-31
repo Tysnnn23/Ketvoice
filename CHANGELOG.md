@@ -7,6 +7,26 @@
 
 ---
 
+# Ketvoice 3.9.0
+
+**versionCode 53** — refined control glass, artist/album headers, and Canvas framing.
+
+- Canvas now fits the regular player instead of zoom-cropping. Fullscreen focus
+  shows only title, artist and time rail, and is available only when at least
+  85% of the source image survives the fill. Missing metadata and decoder errors
+  disable it; portrait clips are not magnified into a landscape Quest window.
+- Density-independent glass rims, opposite-edge light and thickness shading;
+  matte content panels and reduced-effects fallbacks remain unchanged.
+- Artist photo/name hierarchy and pill actions; album cover halo and localized
+  known duration. Lyrics enter with shorter stagger and longer ease-out fades,
+  without changing line size/weight or separate backing vocals.
+- Ten translated dictionaries completed; French remains the default.
+- Host Android/Skia previews and tests are distinct from physical validation.
+  No final device install, real Canvas playback or physical Quest check claimed.
+  See [release notes](docs/releases/v3.9.0.md) and the release validation metadata.
+
+---
+
 # Ketvoice 3.7.0
 
 **versionCode 50** — installs over 3.6.3 and every earlier build (same signing certificate).

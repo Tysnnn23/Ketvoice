@@ -21,11 +21,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ketvoice.app.data.Track
+import com.ketvoice.app.data.AppText
 import com.ketvoice.app.glass.LocalBackdropLayer
 import com.ketvoice.app.glass.BackdropCapture
 import com.ketvoice.app.glass.rememberGlassBackdrop
@@ -42,7 +45,8 @@ import androidx.compose.animation.core.tween
 internal fun TabletPlayer(
     state: PlayerUiState, track: Track, cover: String?, canvas: String?, ambience: CoverAmbience,
     page: PlayerPage, onPage: (PlayerPage) -> Unit, onClose: () -> Unit,
-    onTrackMenu: () -> Unit, onSources: () -> Unit, onOutput: () -> Unit
+    onTrackMenu: () -> Unit, onSources: () -> Unit, onOutput: () -> Unit,
+    onCanvas: (() -> Unit)? = null
 ) {
     val backdrop = rememberGlassBackdrop(Color.Black)
     CompositionLocalProvider(LocalBackdropLayer provides backdrop) {
@@ -67,14 +71,14 @@ internal fun TabletPlayer(
                     if (layout.playerPanes) {
                         Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(32.dp)) {
                             NowPlayingColumn(state, track, cover, canvas, page, bodyHeight,
-                                onPage, onTrackMenu, onOutput, Modifier.weight(.46f).fillMaxHeight())
+                                onPage, onTrackMenu, onOutput, Modifier.weight(.46f).fillMaxHeight(), onCanvas)
                             PlayerCompanionPane(state, track, page, onPage, onSources,
                                 Modifier.weight(.54f).fillMaxHeight())
                         }
                     } else if (page == PlayerPage.ARTWORK) {
                         NowPlayingColumn(state, track, cover, canvas, page, bodyHeight,
                             onPage, onTrackMenu, onOutput,
-                            Modifier.widthIn(max = 500.dp).fillMaxSize().align(Alignment.Center))
+                            Modifier.widthIn(max = 500.dp).fillMaxSize().align(Alignment.Center), onCanvas)
                     } else {
                         Column(Modifier.fillMaxSize()) {
                             PlayerTitle(track, true, cover, onTrackMenu, Modifier.fillMaxWidth(),
@@ -95,7 +99,7 @@ internal fun TabletPlayer(
 private fun NowPlayingColumn(
     state: PlayerUiState, track: Track, cover: String?, canvas: String?, page: PlayerPage,
     availableHeight: Dp, onPage: (PlayerPage) -> Unit, onTrackMenu: () -> Unit,
-    onOutput: () -> Unit, modifier: Modifier
+    onOutput: () -> Unit, modifier: Modifier, onCanvas: (() -> Unit)?
 ) {
     BoxWithConstraints(modifier) {
         val artworkSize = minOf(maxWidth, 420.dp, (availableHeight - 340.dp).coerceAtLeast(100.dp))
@@ -105,6 +109,8 @@ private fun NowPlayingColumn(
             Spacer(Modifier.height(topSpace))
             ArtworkCanvas(track, if (panoramicCanvasActive(canvas)) null else canvas, state.isPlaying,
                 Modifier.size(artworkSize).clip(RoundedCornerShape(24.dp))
+                    .then(if (onCanvas != null) Modifier.clickable(onClick = onCanvas)
+                        .semantics { contentDescription = AppText.t("Voir le Canvas en plein écran") } else Modifier)
                      .onGloballyPositioned { AppUi.playerCoverBounds.value = it.boundsInRoot() }, depth = true)
             Spacer(Modifier.height(24.dp))
             PlayerTitle(track, false, cover, onTrackMenu, Modifier.fillMaxWidth())

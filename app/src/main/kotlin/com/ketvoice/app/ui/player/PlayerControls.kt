@@ -54,6 +54,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.BlurredEdgeTreatment
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -109,7 +110,10 @@ fun ArtworkCanvas(
     modifier: Modifier = Modifier,
     corner: Dp = 0.dp,
     badge: Boolean = false,
-    depth: Boolean = false
+    depth: Boolean = false,
+    /** Plein écran : le Canvas remplit le cadre au lieu d'être contenu. */
+    canvasFill: Boolean = false,
+    onCanvasFailure: () -> Unit = {}
 ) {
     val art by ArtworkRepo.covers.collectAsState()
     val cover = art["t:${track.id}"] ?: track.coverUrl
@@ -122,7 +126,7 @@ fun ArtworkCanvas(
             .background(Brush.linearGradient(gradient))
     ) {
         AnimatedContent(
-            modifier = Modifier.fillMaxSize().then(if (depth) Modifier.artworkDepth() else Modifier),
+            modifier = Modifier.fillMaxSize().then(if (depth && canvasPath == null) Modifier.artworkDepth() else Modifier),
             targetState = Art(track.id, cover, canvasPath),
 
             contentKey = { if (it.canvas != null) "${it.id}:video:${it.canvas}" else "${it.id}:art:${it.cover.orEmpty()}" },
@@ -133,8 +137,30 @@ fun ArtworkCanvas(
         ) { data ->
             Box(Modifier.fillMaxSize()) {
                 when {
-                    data.canvas != null && AppSettings.animatedArtwork.value ->
-                        CanvasVideo(path = data.canvas, playing = playing, modifier = Modifier.fillMaxSize())
+                    data.canvas != null && AppSettings.animatedArtwork.value -> run {
+                        // Un Canvas est un clip vertical 9:16 : le recadrer dans un
+                        // carré coupait les visages ("trop zoomé"). On montre le
+                        // clip entier, et la pochette floutée remplit les marges.
+                        val soft = !Motion.reduced && !AppSettings.reduceDynamicBlur.value && !AppSettings.highPerformanceMode.value
+                        Box(Modifier.fillMaxSize()) {
+                            if (!canvasFill && data.cover != null) {
+                                AsyncImage(
+                                    model = data.cover,
+                                    contentDescription = null,
+                                    modifier = Modifier.fillMaxSize()
+                                        .graphicsLayer { alpha = if (soft) .55f else .35f; scaleX = 1.08f; scaleY = 1.08f }
+                                        .then(if (soft) Modifier.blur(34.dp, BlurredEdgeTreatment.Unbounded) else Modifier),
+                                    contentScale = ContentScale.Crop
+                                )
+                                Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .28f)))
+                            }
+                            CanvasVideo(path = data.canvas, playing = playing,
+                                modifier = Modifier.fillMaxSize(),
+                                resizeMode = if (canvasFill) AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                                    else AspectRatioFrameLayout.RESIZE_MODE_FIT,
+                                onFailure = onCanvasFailure)
+                        }
+                    }
                     data.cover != null ->
                         run {
                             AsyncImage(
@@ -174,7 +200,9 @@ fun ArtworkCanvas(
 }
 
 @Composable
-private fun CanvasVideo(path: String, playing: Boolean, modifier: Modifier = Modifier) {
+private fun CanvasVideo(path: String, playing: Boolean, modifier: Modifier = Modifier,
+                        resizeMode: Int = AspectRatioFrameLayout.RESIZE_MODE_FIT,
+                        onFailure: () -> Unit = {}) {
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     var visible by remember(lifecycle) { mutableStateOf(lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) }
@@ -201,19 +229,27 @@ private fun CanvasVideo(path: String, playing: Boolean, modifier: Modifier = Mod
             }
     }
     LaunchedEffect(playing, visible, exo) { exo.playWhenReady = playing && visible }
+    val latestFailure by rememberUpdatedState(onFailure)
+    DisposableEffect(exo) {
+        val listener = object : androidx.media3.common.Player.Listener {
+            override fun onPlayerError(error: androidx.media3.common.PlaybackException) { latestFailure() }
+        }
+        exo.addListener(listener)
+        onDispose { exo.removeListener(listener) }
+    }
     DisposableEffect(exo) { onDispose { runCatching { exo.release() } } }
     AndroidView(
         factory = { ctx ->
             (LayoutInflater.from(ctx).inflate(R.layout.canvas_view, null) as PlayerView).apply {
                 useController = false
-                resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                this.resizeMode = resizeMode
                 player = exo
             }
         },
         modifier = modifier,
         onReset = null,
         onRelease = { it.player = null },
-        update = { it.player = exo }
+        update = { it.player = exo; it.resizeMode = resizeMode }
     )
 }
 

@@ -9,6 +9,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -47,7 +48,8 @@ import com.ketvoice.app.data.DesignChoices
 internal fun QuestLandscapePlayer(
     state: PlayerUiState, track: Track, cover: String?, canvas: String?, ambience: CoverAmbience,
     page: PlayerPage, onPage: (PlayerPage) -> Unit, onClose: () -> Unit,
-    onTrackMenu: () -> Unit, onSources: () -> Unit, onOutput: () -> Unit
+    onTrackMenu: () -> Unit, onSources: () -> Unit, onOutput: () -> Unit,
+    onCanvas: (() -> Unit)? = null
 ) {
     val backdrop = rememberGlassBackdrop(Color.Black)
     val companion = page != PlayerPage.ARTWORK
@@ -78,7 +80,9 @@ internal fun QuestLandscapePlayer(
                             verticalArrangement = if (companion) Arrangement.Top else Arrangement.Center) {
                             ArtworkCanvas(track, if (panoramicCanvasActive(canvas)) null else canvas, state.isPlaying,
                                 Modifier.size(artworkSize).clip(RoundedCornerShape(24.dp))
-                                    .semantics { contentDescription = AppText.t("Pochette") }
+                                    .then(if (onCanvas != null) Modifier.clickable(onClick = onCanvas) else Modifier)
+                                    .semantics { contentDescription = AppText.t(if (onCanvas != null)
+                                        "Voir le Canvas en plein écran" else "Pochette") }
                                     .onGloballyPositioned { AppUi.playerCoverBounds.value = it.boundsInRoot() }, depth = true)
                             AnimatedVisibility(companion, enter = fadeIn(tween(duration)), exit = fadeOut(tween(duration))) {
                                 Column(Modifier.fillMaxWidth().padding(top = 16.dp)) {

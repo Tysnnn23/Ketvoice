@@ -27,6 +27,20 @@ class UiTextDictionaryTest {
         assertEquals("1 song · 3,4 MB", dictionary.translate("1 titre · 3,4 Mo"))
     }
 
+    @Test fun canvasLocalMusicAndAlbumDurationMessagesExistInEveryLanguage() {
+        val root = JSONObject(File("src/main/assets/translations.json").readText(Charsets.UTF_8))
+        val required = listOf("Voir le Canvas en plein écran", "Quitter le plein écran", "Correspondances musicales",
+            "Dossier de musique locale", "Impossible de lire les playlists", "Revenir à tout l'appareil",
+            "MUSIQUE LOCALE", "AUTOMIX", "Choisissez un dossier au-dessus pour élargir la recherche.", "{0} h {1} min")
+        AppLanguage.all.filter { it != AppLanguage.FRENCH }.forEach { language ->
+            val table = root.getJSONObject(language.code)
+            required.forEach { assertTrue("${language.code}: $it", table.has(it) && table.getString(it).isNotBlank()) }
+            val dictionary = UiTextDictionary(table.keys().asSequence().associateWith { table.getString(it) })
+            val duration = dictionary.translate("2 h 17 min")
+            assertTrue(duration.contains("2")); assertTrue(duration.contains("17"))
+        }
+    }
+
     @Test fun everyLanguageHasTheSameNonemptyMessagesAndValidTemplates() {
         val file = File("src/main/assets/translations.json")
         val root = JSONObject(file.readText(Charsets.UTF_8))
