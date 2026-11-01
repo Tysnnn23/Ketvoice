@@ -78,5 +78,8 @@ class LyricsPresentationTest {
         assertEquals(0f,LyricsPresentation.sustain(0,0,1500,false))
         assertTrue(LyricsPresentation.sustain(700,0,1500,false)>.9f)
         assertTrue(LyricsPresentation.sustain(1480,0,1500,false)<.1f)
+        // Short syllables never glow; a held note does.
+        assertEquals(0f,LyricsPresentation.sustain(300,0,600,false))
+        assertTrue(LyricsPresentation.sustain(350,0,700,false)>.9f)
     }
 }

@@ -7,9 +7,11 @@ self-bot, and never fabricates a linked state.
 ## Application setup
 
 - Application ID: `1566454532890820668` (public, not a secret).
-- OAuth2 redirect registered in the Developer Portal:
-  `discord-1566454532890820668:/authorize/callback`
-- Scopes: `Client::GetDefaultPresenceScopes()` (`openid sdk.social_layer_presence`).
+- OAuth2 redirect **must be registered** in the Developer Portal:
+  `discord-1566454532890820668:/authorize/callback`. On 2026-11-01 the portal had
+  no redirect configured at all, so the account-link page could never return to
+  Ketvoice. Presence through the installed app and the OAuth2 token fallback do
+  not use this redirect.- Scopes: `Client::GetDefaultPresenceScopes()` (`openid sdk.social_layer_presence`).
 - The Android manifest merges the SDK's `com.discord.socialsdk.AuthenticationActivity`
   and adds the `discord-1566454532890820668` scheme so the browser/Discord app can
   return the authorization code to Ketvoice.
@@ -17,10 +19,11 @@ self-bot, and never fabricates a linked state.
 ## Flow
 
 The Discord panel lives in **Settings → Compte**. Presence through the installed
-Discord app is the default path: `Client::Connect` without a token uses the local
-Discord session, and no OAuth page is opened. A connect attempt that does not
-reach `Status::Ready` within 12 seconds now stops with an explicit error instead
-of spinning, and the last SDK log line is shown under the message.
+Discord app is the default path: the button opens the Discord app, waits for it to
+start, then calls `Client::Connect` without a token, which uses the local Discord
+session. No OAuth page is opened. A missing app is reported explicitly, and a
+connect attempt that does not reach `Status::Ready` within 12 seconds stops with
+an explicit error instead of spinning; the last SDK log line is shown under it.
 
 Account linking remains an optional action:
 

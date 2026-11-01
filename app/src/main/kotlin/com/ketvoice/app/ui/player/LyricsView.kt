@@ -420,17 +420,18 @@ internal fun KaraokeLine(line: MusicApi.LyricLine, modifier: Modifier, fontScale
                     val progress = segmentProgress(now, word.start, word.end)
                     if (progress <= 0f) return@forEach
                     val emphasis = LyricsPresentation.sustain(now, word.start, word.end, reduced || backing)
-                    // The old soft halo is back, but only on the active lead line and
-                    // only faintly. A held note (>= 850 ms) is the only thing that gets
-                    // the real bloom and the thick baked-in contour; ordinary words,
-                    // syllables and every other line stay clean.
-                    val glow = if (dim || backing) 0f else (.14f + .46f * emphasis)
+                    // Apple-Music style: the sung fill is plain white; a true glow
+                    // exists only while a held note is sounding (>= 650 ms), and gets
+                    // stronger with its length. Syllable/word lines therefore glow on
+                    // the long notes only, never on ordinary words or whole lines.
+                    val held = ((word.end - word.start) / 1_100f).coerceIn(0f, 1f)
+                    val glow = if (dim || backing) 0f else (.22f + .42f * held) * emphasis
                     val ink = Color.White.copy(alpha = if (dim) .82f else 1f)
                     val halo = Shadow(Color.White.copy(alpha = glow), Offset.Zero,
-                        glowPx * (1f + 1.4f * emphasis))
-                    val edge = Color.White.copy(alpha = .22f + .18f * emphasis)
+                        glowPx * (1f + 1.4f * held))
+                    val edge = Color.White.copy(alpha = (.20f + .20f * held) * emphasis)
                     val contour = if (!dim && !backing && emphasis > .08f)
-                        outlinePx * (.85f + 1.15f * emphasis) else 0f
+                        outlinePx * (.70f + 1.30f * held) else 0f
                     var remaining = word.width * progress
                     word.slices.forEach { slice ->
                         val bounds = slice.bounds

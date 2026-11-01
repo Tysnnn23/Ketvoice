@@ -7,6 +7,23 @@
 
 ---
 
+# Ketvoice 3.13.7
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 66** — held-note-only glow and a Discord button that opens Discord.
+
+- Remove the permanent lyric halo: only notes held 650 ms or longer bloom, in
+  line, word and syllable modes alike, with intensity following the note length.
+- **Activer via l'app Discord** opens the Discord app, waits, then connects; a
+  missing app is reported explicitly and the manifest queries `com.discord`.
+- Show the OAuth2 redirect to register in the advanced Discord section (it was
+  missing from the Developer Portal, which blocked the account-link flow).
+
+Full notes: [3.13.7](docs/releases/v3.13.7.md).
+
+---
+
 # Ketvoice 3.13.6
 
 ![Ketvoice](ketvoice-banner.png)

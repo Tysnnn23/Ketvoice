@@ -99,10 +99,12 @@ internal object LyricsPresentation {
 
     /** Soft emphasis DURING a native long segment, never in an invented post-word gap. */
     fun sustain(now: Long, start: Long, end: Long, reduced: Boolean): Float {
-        if (reduced || end - start < 850L || now !in start until end) return 0f
+        // Apple-Music style: short syllables and ordinary words never glow; a
+        // note must be held to bloom. 650 ms keeps quick speech clean.
+        if (reduced || end - start < 650L || now !in start until end) return 0f
         val duration = (end - start).toFloat()
-        val enter = ((now - start) / (duration * .32f).coerceIn(260f, 600f)).coerceIn(0f, 1f)
-        val exit = ((end - now) / 220f).coerceIn(0f, 1f)
+        val enter = ((now - start) / (duration * .28f).coerceIn(180f, 420f)).coerceIn(0f, 1f)
+        val exit = ((end - now) / 200f).coerceIn(0f, 1f)
         val t = minOf(enter, exit)
         return t * t * (3f - 2f * t)
     }

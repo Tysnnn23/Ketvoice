@@ -40,10 +40,40 @@ internal fun DiscordSettings(modifier: Modifier = Modifier) {
     val discord by Discord.state.collectAsState()
     var advanced by remember { mutableStateOf(false) }
     var token by remember { mutableStateOf("") }
+    var localError by remember { mutableStateOf<String?>(null) }
+    var connectAfterLaunch by remember { mutableStateOf(false) }
+    // Connect() talks to the installed Discord app over IPC: the app must be
+    // running. Open it first, then connect once it had time to start.
+    LaunchedEffect(connectAfterLaunch) {
+        if (connectAfterLaunch) {
+            kotlinx.coroutines.delay(1_400)
+            connectAfterLaunch = false
+            Discord.connect()
+        }
+    }
+
+    fun discordIntent() = context.packageManager.getLaunchIntentForPackage("com.discord")
 
     fun openDiscord() {
-        val launch = context.packageManager.getLaunchIntentForPackage("com.discord")
-        if (launch != null) runCatching { context.startActivity(launch) }
+        val launch = discordIntent()
+        if (launch == null) {
+            localError = "L'app Discord n'est pas installée sur cet appareil."
+        } else {
+            localError = null
+            runCatching { context.startActivity(launch) }
+        }
+    }
+
+    fun enablePresence() {
+        if (Discord.available.not() || discord.busy) return
+        val launch = discordIntent()
+        if (launch == null) {
+            localError = "L'app Discord n'est pas installée sur cet appareil."
+            return
+        }
+        localError = null
+        runCatching { context.startActivity(launch) }
+        connectAfterLaunch = true
     }
 
     Column(modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
@@ -96,10 +126,17 @@ internal fun DiscordSettings(modifier: Modifier = Modifier) {
             Text(if (discord.busy) "Connexion à Discord…" else "Activer via l'app Discord",
                 color = theme.accent, fontSize = 13.sp, fontWeight = FontWeight.Bold,
                 modifier = Modifier.fillMaxWidth().clickable(enabled = !discord.busy) {
-                    Discord.connect()
+                    enablePresence()
                 }.padding(top = 10.dp, bottom = 4.dp))
             Text("Ouvrir l'app Discord", color = theme.accent.copy(alpha = .82f), fontSize = 12.sp,
                 modifier = Modifier.fillMaxWidth().clickable { openDiscord() }.padding(bottom = 4.dp))
+            Text("OAuth2 · redirect à déclarer : discord-1566454532890820668:/authorize/callback",
+                color = theme.secondary, fontSize = 10.sp, lineHeight = 14.sp,
+                modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp))
+            localError?.let {
+                Text(it, color = Color(0xFFFF6B6B), fontSize = 12.sp, lineHeight = 16.sp,
+                    modifier = Modifier.padding(bottom = 4.dp))
+            }
             Text("Connexion par jeton (avancé)", color = theme.secondary, fontSize = 12.sp,
                 modifier = Modifier.fillMaxWidth().clickable { advanced = !advanced }.padding(bottom = 4.dp))
             if (advanced) {

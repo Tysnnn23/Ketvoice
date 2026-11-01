@@ -936,7 +936,9 @@
   "Jeton OAuth2 émis pour l'application Ketvoice. Les jetons d'utilisateur Discord classiques sont refusés par le SDK.": "OAuth2 token issued for the Ketvoice application. Regular Discord user tokens are rejected by the SDK.",
   "Connecter avec ce jeton": "Connect with this token",
   "Cette version a été compilée sans le SDK Discord.": "This build was compiled without the Discord SDK.",
-  "Utilise l'app Discord installée sur cet appareil. Aucun mot de passe Discord n'est demandé ni conservé.": "Uses the Discord app installed on this device. No Discord password is requested or stored."
+  "Utilise l'app Discord installée sur cet appareil. Aucun mot de passe Discord n'est demandé ni conservé.": "Uses the Discord app installed on this device. No Discord password is requested or stored.",
+  "L'app Discord n'est pas installée sur cet appareil.": "The Discord app is not installed on this device.",
+  "OAuth2 · redirect à déclarer : discord-1566454532890820668:/authorize/callback": "OAuth2 · redirect to register: discord-1566454532890820668:/authorize/callback"
  },
  "hi": {
   "Reverb": "रीवर्ब",
@@ -1875,7 +1877,9 @@
   "Jeton OAuth2 émis pour l'application Ketvoice. Les jetons d'utilisateur Discord classiques sont refusés par le SDK.": "Ketvoice ऐप के लिए जारी OAuth2 टोकन। सामान्य Discord उपयोगकर्ता टोकन SDK द्वारा अस्वीकार किए जाते हैं।",
   "Connecter avec ce jeton": "इस टोकन से कनेक्ट करें",
   "Cette version a été compilée sans le SDK Discord.": "यह बिल्ड Discord SDK के बिना बनाया गया है।",
-  "Utilise l'app Discord installée sur cet appareil. Aucun mot de passe Discord n'est demandé ni conservé.": "इस डिवाइस पर इंस्टॉल Discord ऐप का उपयोग करता है। कोई Discord पासवर्ड नहीं मांगा या सहेजा जाता है।"
+  "Utilise l'app Discord installée sur cet appareil. Aucun mot de passe Discord n'est demandé ni conservé.": "इस डिवाइस पर इंस्टॉल Discord ऐप का उपयोग करता है। कोई Discord पासवर्ड नहीं मांगा या सहेजा जाता है।",
+  "L'app Discord n'est pas installée sur cet appareil.": "Discord ऐप इस डिवाइस पर इंस्टॉल नहीं है।",
+  "OAuth2 · redirect à déclarer : discord-1566454532890820668:/authorize/callback": "OAuth2 · पंजीकृत करने हेतु redirect: discord-1566454532890820668:/authorize/callback"
  },
  "ja": {
   "Reverb": "リバーブ",
@@ -2814,7 +2818,9 @@
   "Jeton OAuth2 émis pour l'application Ketvoice. Les jetons d'utilisateur Discord classiques sont refusés par le SDK.": "Ketvoice アプリ用に発行された OAuth2 トークン。通常の Discord ユーザートークンは SDK では拒否されます。",
   "Connecter avec ce jeton": "このトークンで接続",
   "Cette version a été compilée sans le SDK Discord.": "このビルドは Discord SDK なしでコンパイルされています。",
-  "Utilise l'app Discord installée sur cet appareil. Aucun mot de passe Discord n'est demandé ni conservé.": "この端末にインストールされた Discord アプリを使用します。Discord のパスワードは要求も保存もされません。"
+  "Utilise l'app Discord installée sur cet appareil. Aucun mot de passe Discord n'est demandé ni conservé.": "この端末にインストールされた Discord アプリを使用します。Discord のパスワードは要求も保存もされません。",
+  "L'app Discord n'est pas installée sur cet appareil.": "この端末に Discord アプリがインストールされていません。",
+  "OAuth2 · redirect à déclarer : discord-1566454532890820668:/authorize/callback": "OAuth2 · 登録する redirect: discord-1566454532890820668:/authorize/callback"
  },
  "zh": {
   "Reverb": "混响",
@@ -3753,7 +3759,9 @@
   "Jeton OAuth2 émis pour l'application Ketvoice. Les jetons d'utilisateur Discord classiques sont refusés par le SDK.": "为 Ketvoice 应用签发的 OAuth2 令牌。SDK 会拒绝普通 Discord 用户令牌。",
   "Connecter avec ce jeton": "使用此令牌连接",
   "Cette version a été compilée sans le SDK Discord.": "此版本未包含 Discord SDK。",
-  "Utilise l'app Discord installée sur cet appareil. Aucun mot de passe Discord n'est demandé ni conservé.": "使用此设备上安装的 Discord 应用。不会要求或保存 Discord 密码。"
+  "Utilise l'app Discord installée sur cet appareil. Aucun mot de passe Discord n'est demandé ni conservé.": "使用此设备上安装的 Discord 应用。不会要求或保存 Discord 密码。",
+  "L'app Discord n'est pas installée sur cet appareil.": "此设备未安装 Discord 应用。",
+  "OAuth2 · redirect à déclarer : discord-1566454532890820668:/authorize/callback": "OAuth2 · 需注册的 redirect：discord-1566454532890820668:/authorize/callback"
  },
  "ru": {
   "Reverb": "Реверберация",
@@ -4692,7 +4700,9 @@
   "Jeton OAuth2 émis pour l'application Ketvoice. Les jetons d'utilisateur Discord classiques sont refusés par le SDK.": "Токен OAuth2, выданный для приложения Ketvoice. Обычные пользовательские токены Discord SDK отклоняет.",
   "Connecter avec ce jeton": "Подключиться с этим токеном",
   "Cette version a été compilée sans le SDK Discord.": "Эта сборка собрана без Discord SDK.",
-  "Utilise l'app Discord installée sur cet appareil. Aucun mot de passe Discord n'est demandé ni conservé.": "Использует приложение Discord, установленное на устройстве. Пароль Discord не запрашивается и не сохраняется."
+  "Utilise l'app Discord installée sur cet appareil. Aucun mot de passe Discord n'est demandé ni conservé.": "Использует приложение Discord, установленное на устройстве. Пароль Discord не запрашивается и не сохраняется.",
+  "L'app Discord n'est pas installée sur cet appareil.": "Приложение Discord не установлено на этом устройстве.",
+  "OAuth2 · redirect à déclarer : discord-1566454532890820668:/authorize/callback": "OAuth2 · redirect для регистрации: discord-1566454532890820668:/authorize/callback"
  },
  "it": {
   "Reverb": "Riverbero",
@@ -5631,7 +5641,9 @@
   "Jeton OAuth2 émis pour l'application Ketvoice. Les jetons d'utilisateur Discord classiques sont refusés par le SDK.": "Token OAuth2 rilasciato per l'app Ketvoice. I normali token utente Discord sono rifiutati dall'SDK.",
   "Connecter avec ce jeton": "Connetti con questo token",
   "Cette version a été compilée sans le SDK Discord.": "Questa versione è stata compilata senza l'SDK Discord.",
-  "Utilise l'app Discord installée sur cet appareil. Aucun mot de passe Discord n'est demandé ni conservé.": "Usa l'app Discord installata su questo dispositivo. Nessuna password Discord viene richiesta o salvata."
+  "Utilise l'app Discord installée sur cet appareil. Aucun mot de passe Discord n'est demandé ni conservé.": "Usa l'app Discord installata su questo dispositivo. Nessuna password Discord viene richiesta o salvata.",
+  "L'app Discord n'est pas installée sur cet appareil.": "L'app Discord non è installata su questo dispositivo.",
+  "OAuth2 · redirect à déclarer : discord-1566454532890820668:/authorize/callback": "OAuth2 · redirect da registrare: discord-1566454532890820668:/authorize/callback"
  },
  "es": {
   "Reverb": "Reverb",
@@ -6570,7 +6582,9 @@
   "Jeton OAuth2 émis pour l'application Ketvoice. Les jetons d'utilisateur Discord classiques sont refusés par le SDK.": "Token OAuth2 emitido para la app Ketvoice. El SDK rechaza los tokens de usuario normales de Discord.",
   "Connecter avec ce jeton": "Conectar con este token",
   "Cette version a été compilée sans le SDK Discord.": "Esta versión se compiló sin el SDK de Discord.",
-  "Utilise l'app Discord installée sur cet appareil. Aucun mot de passe Discord n'est demandé ni conservé.": "Usa la app de Discord instalada en este dispositivo. No se pide ni se guarda ninguna contraseña de Discord."
+  "Utilise l'app Discord installée sur cet appareil. Aucun mot de passe Discord n'est demandé ni conservé.": "Usa la app de Discord instalada en este dispositivo. No se pide ni se guarda ninguna contraseña de Discord.",
+  "L'app Discord n'est pas installée sur cet appareil.": "La app de Discord no está instalada en este dispositivo.",
+  "OAuth2 · redirect à déclarer : discord-1566454532890820668:/authorize/callback": "OAuth2 · redirect que debes registrar: discord-1566454532890820668:/authorize/callback"
  },
  "de": {
   "Reverb": "Reverb",
@@ -7509,7 +7523,9 @@
   "Jeton OAuth2 émis pour l'application Ketvoice. Les jetons d'utilisateur Discord classiques sont refusés par le SDK.": "OAuth2-Token für die Ketvoice-App. Normale Discord-Benutzertoken werden vom SDK abgelehnt.",
   "Connecter avec ce jeton": "Mit diesem Token verbinden",
   "Cette version a été compilée sans le SDK Discord.": "Diese Version wurde ohne das Discord-SDK kompiliert.",
-  "Utilise l'app Discord installée sur cet appareil. Aucun mot de passe Discord n'est demandé ni conservé.": "Nutzt die auf diesem Gerät installierte Discord-App. Es wird kein Discord-Passwort abgefragt oder gespeichert."
+  "Utilise l'app Discord installée sur cet appareil. Aucun mot de passe Discord n'est demandé ni conservé.": "Nutzt die auf diesem Gerät installierte Discord-App. Es wird kein Discord-Passwort abgefragt oder gespeichert.",
+  "L'app Discord n'est pas installée sur cet appareil.": "Die Discord-App ist auf diesem Gerät nicht installiert.",
+  "OAuth2 · redirect à déclarer : discord-1566454532890820668:/authorize/callback": "OAuth2 · zu registrierender redirect: discord-1566454532890820668:/authorize/callback"
  },
  "pt": {
   "Reverb": "Reverb",
@@ -8448,7 +8464,9 @@
   "Jeton OAuth2 émis pour l'application Ketvoice. Les jetons d'utilisateur Discord classiques sont refusés par le SDK.": "Token OAuth2 emitido para a app Ketvoice. Os tokens de utilizador normais do Discord são recusados pelo SDK.",
   "Connecter avec ce jeton": "Ligar com este token",
   "Cette version a été compilée sans le SDK Discord.": "Esta versão foi compilada sem o SDK Discord.",
-  "Utilise l'app Discord installée sur cet appareil. Aucun mot de passe Discord n'est demandé ni conservé.": "Usa a app Discord instalada neste dispositivo. Nenhuma palavra-passe do Discord é pedida ou guardada."
+  "Utilise l'app Discord installée sur cet appareil. Aucun mot de passe Discord n'est demandé ni conservé.": "Usa a app Discord instalada neste dispositivo. Nenhuma palavra-passe do Discord é pedida ou guardada.",
+  "L'app Discord n'est pas installée sur cet appareil.": "A app Discord não está instalada neste dispositivo.",
+  "OAuth2 · redirect à déclarer : discord-1566454532890820668:/authorize/callback": "OAuth2 · redirect a registar: discord-1566454532890820668:/authorize/callback"
  },
  "ko": {
   "Reverb": "리버브",
@@ -9387,6 +9405,8 @@
   "Jeton OAuth2 émis pour l'application Ketvoice. Les jetons d'utilisateur Discord classiques sont refusés par le SDK.": "Ketvoice 앱용으로 발급된 OAuth2 토큰입니다. 일반 Discord 사용자 토큰은 SDK에서 거부됩니다.",
   "Connecter avec ce jeton": "이 토큰으로 연결",
   "Cette version a été compilée sans le SDK Discord.": "이 빌드는 Discord SDK 없이 컴파일되었습니다.",
-  "Utilise l'app Discord installée sur cet appareil. Aucun mot de passe Discord n'est demandé ni conservé.": "이 기기에 설치된 Discord 앱을 사용합니다. Discord 비밀번호는 요청하거나 저장하지 않습니다."
+  "Utilise l'app Discord installée sur cet appareil. Aucun mot de passe Discord n'est demandé ni conservé.": "이 기기에 설치된 Discord 앱을 사용합니다. Discord 비밀번호는 요청하거나 저장하지 않습니다.",
+  "L'app Discord n'est pas installée sur cet appareil.": "이 기기에 Discord 앱이 설치되어 있지 않습니다.",
+  "OAuth2 · redirect à déclarer : discord-1566454532890820668:/authorize/callback": "OAuth2 · 등록할 redirect: discord-1566454532890820668:/authorize/callback"
  }
 }
