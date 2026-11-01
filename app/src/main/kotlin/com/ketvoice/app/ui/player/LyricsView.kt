@@ -377,9 +377,16 @@ internal fun KaraokeLine(line: MusicApi.LyricLine, modifier: Modifier, fontScale
     LaunchedEffect(position, playing) { if (!playing) now = position }
     var layout by remember(line.text) { mutableStateOf<TextLayoutResult?>(null) }
 
-    val masks = remember(layout, line) { layout?.let { measured ->
+    // Providers do not always ship word text that concatenates back to the line
+    // (extra spaces, CJK segmentation, translated syllables). Re-align it before
+    // computing masks, otherwise the highlight drifts onto the wrong glyphs — the
+    // "buggy foreign lyrics" symptom. If the mapping is impossible, highlight the
+    // whole line instead of lighting random characters.
+    val alignedWords = remember(line) { LyricsPresentation.aligned(line) }
+
+    val masks = remember(layout, line, alignedWords) { layout?.let { measured ->
         var offset = 0
-        line.words.map { word ->
+        alignedWords.map { word ->
             val start = offset
             val end = (start + word.text.length).coerceAtMost(line.text.length)
             offset = end
@@ -396,8 +403,8 @@ internal fun KaraokeLine(line: MusicApi.LyricLine, modifier: Modifier, fontScale
     }.orEmpty() }
     val reduced = Motion.reduced
     val density = LocalDensity.current
-    val glowPx = with(density) { (if (backing) 3.4f else 5.6f).dp.toPx() }
-    val outlinePx = with(density) { if (backing) 0f else .8f.dp.toPx() }
+    val glowPx = with(density) { (if (backing) 3.2f else 5.0f).dp.toPx() }
+    val outlinePx = with(density) { if (backing) 0f else 1.dp.toPx() }
     Box(modifier) {
         // One shaped layout for both the pending glyphs and the sung overlay.
         // No remeasurement, shifted word copy, scaling or disappearing held glyph.
@@ -413,13 +420,17 @@ internal fun KaraokeLine(line: MusicApi.LyricLine, modifier: Modifier, fontScale
                     val progress = segmentProgress(now, word.start, word.end)
                     if (progress <= 0f) return@forEach
                     val emphasis = LyricsPresentation.sustain(now, word.start, word.end, reduced || backing)
-                    // No halo on ordinary glyphs: only sustained notes bloom, and the
-                    // sung edge gets a tight contour instead of lighting the whole line.
-                    val glow = if (dim || backing) 0f else .55f * emphasis
+                    // The old soft halo is back, but only on the active lead line and
+                    // only faintly. A held note (>= 850 ms) is the only thing that gets
+                    // the real bloom and the thick baked-in contour; ordinary words,
+                    // syllables and every other line stay clean.
+                    val glow = if (dim || backing) 0f else (.14f + .46f * emphasis)
                     val ink = Color.White.copy(alpha = if (dim) .82f else 1f)
                     val halo = Shadow(Color.White.copy(alpha = glow), Offset.Zero,
-                        glowPx * (1f + 1.2f * emphasis))
-                    val edge = Color.White.copy(alpha = .30f)
+                        glowPx * (1f + 1.4f * emphasis))
+                    val edge = Color.White.copy(alpha = .22f + .18f * emphasis)
+                    val contour = if (!dim && !backing && emphasis > .08f)
+                        outlinePx * (.85f + 1.15f * emphasis) else 0f
                     var remaining = word.width * progress
                     word.slices.forEach { slice ->
                         val bounds = slice.bounds
@@ -429,11 +440,11 @@ internal fun KaraokeLine(line: MusicApi.LyricLine, modifier: Modifier, fontScale
                             val left = if (slice.rtl) bounds.right - fill else bounds.left
                             val right = if (slice.rtl) bounds.right else bounds.left + fill
                             clipRect(left, bounds.top, right, bounds.bottom) {
-                                if (outlinePx > 0f && !dim && !backing) {
-                                    drawText(measured, color = edge, topLeft = Offset(-outlinePx, 0f))
-                                    drawText(measured, color = edge, topLeft = Offset(outlinePx, 0f))
-                                    drawText(measured, color = edge, topLeft = Offset(0f, -outlinePx))
-                                    drawText(measured, color = edge, topLeft = Offset(0f, outlinePx))
+                                if (contour > 0f) {
+                                    drawText(measured, color = edge, topLeft = Offset(-contour, 0f))
+                                    drawText(measured, color = edge, topLeft = Offset(contour, 0f))
+                                    drawText(measured, color = edge, topLeft = Offset(0f, -contour))
+                                    drawText(measured, color = edge, topLeft = Offset(0f, contour))
                                 }
                                 drawText(measured, color = ink, shadow = halo)
                             }

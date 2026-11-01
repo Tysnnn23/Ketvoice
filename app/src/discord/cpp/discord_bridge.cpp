@@ -48,6 +48,20 @@ void CallStatus(int status) {
   if (attached) g_vm->DetachCurrentThread();
 }
 
+void CallLog(const std::string &message) {
+  bool attached = false;
+  JNIEnv *env = Env(&attached);
+  if (env == nullptr || g_bridge == nullptr) return;
+  jmethodID method = env->GetStaticMethodID(g_bridge, "onLog", "(Ljava/lang/String;)V");
+  if (method != nullptr) {
+    jstring jMessage = env->NewStringUTF(message.c_str());
+    env->CallStaticVoidMethod(g_bridge, method, jMessage);
+    env->DeleteLocalRef(jMessage);
+  }
+  if (env->ExceptionCheck()) env->ExceptionClear();
+  if (attached) g_vm->DetachCurrentThread();
+}
+
 void CallAuth(bool ok, const std::string &message, const std::string &refreshToken) {
   bool attached = false;
   JNIEnv *env = Env(&attached);
@@ -251,11 +265,25 @@ Java_com_ketvoice_app_discord_NativeDiscord_nativeCreate(JNIEnv *env, jobject th
     auto client = std::make_unique<discordpp::Client>();
     client->SetApplicationId(g_app_id);
     client->SetStatusChangedCallback(
-        [](discordpp::Client::Status status, discordpp::Client::Error /*error*/,
-           int32_t /*errorDetail*/) {
+        [](discordpp::Client::Status status, discordpp::Client::Error error,
+           int32_t errorDetail) {
           g_status.store(static_cast<int>(status));
+          if (status != discordpp::Client::Status::Ready &&
+              (error != discordpp::Client::Error::None || errorDetail != 0)) {
+            CallLog(std::string("status=") + discordpp::EnumToString(status) +
+                    " error=" + discordpp::EnumToString(error) +
+                    " detail=" + std::to_string(errorDetail));
+          }
           CallStatus(g_status.load());
         });
+    client->AddLogCallback(
+        [](std::string message, discordpp::LoggingSeverity severity) {
+          if (static_cast<int>(severity) >=
+              static_cast<int>(discordpp::LoggingSeverity::Warning)) {
+            CallLog(message);
+          }
+        },
+        discordpp::LoggingSeverity::Warning);
     g_client = std::move(client);
     return JNI_TRUE;
   } catch (...) {
@@ -323,6 +351,28 @@ Java_com_ketvoice_app_discord_NativeDiscord_nativeExchange(JNIEnv *env, jobject 
   const std::string redirect = ToStd(env, redirectUri);
   if (codeValue.empty() || verifierValue.empty() || redirect.empty()) return JNI_FALSE;
   StartTokenExchange(codeValue, verifierValue, redirect);
+  return JNI_TRUE;
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_ketvoice_app_discord_NativeDiscord_nativeSetToken(JNIEnv *env, jobject /*thiz*/,
+                                                          jstring token) {
+  discordpp::Client *client = ClientPtr();
+  if (client == nullptr) return JNI_FALSE;
+  const std::string value = ToStd(env, token);
+  if (value.empty()) return JNI_FALSE;
+  client->UpdateToken(
+      discordpp::AuthorizationTokenType::Bearer, value,
+      [](discordpp::ClientResult result) {
+        if (!result.Successful()) {
+          CallAuth(false, result.Error(), "");
+          return;
+        }
+        discordpp::Client *target = ClientPtr();
+        if (target == nullptr) return;
+        target->Connect();
+        CallAuth(true, "", "");
+      });
   return JNI_TRUE;
 }
 

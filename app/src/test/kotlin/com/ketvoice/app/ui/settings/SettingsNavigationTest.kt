@@ -5,7 +5,7 @@ import org.junit.Test
 
 class SettingsNavigationTest {
     @Test fun allExistingGroupsHaveExactlyOneDestination() {
-        val groups = listOf("QUEST · CONFORT", "YOUTUBE MUSIC", "PUBLICATIONS KETVOICE API",
+        val groups = listOf("QUEST · CONFORT", "YOUTUBE MUSIC", "DISCORD", "PUBLICATIONS KETVOICE API",
             "LANGUE DE L'APPLICATION", "DESIGN KETVOICE", "APPARENCE", "LECTURE", "PAROLES",
             "KETVOICE API · CANVAS", "SOURCES", "TÉLÉCHARGEMENTS", "MUSIQUE LOCALE", "STOCKAGE", "À PROPOS")
         assertEquals(groups.toSet(), SettingsCategory.entries.flatMap { it.groups }.toSet())

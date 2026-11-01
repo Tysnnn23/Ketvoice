@@ -11,10 +11,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -23,7 +25,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.ketvoice.app.data.AppSettings
-import com.ketvoice.app.data.AppText
 import com.ketvoice.app.data.ArtistPage
 import com.ketvoice.app.data.ArtistSignature
 import com.ketvoice.app.data.ArtistSignatures
@@ -44,34 +45,56 @@ internal fun ArtistHeader(page: ArtistPage) {
     LaunchedEffect(page.artist.name, signatures) {
         signature = if (signatures) ArtistSignatures.find(page.artist.name) else null
     }
+    val photo = page.artist.photo?.takeIf { it.isNotBlank() }
+    val ratio = page.heroAspectRatio.takeIf { it.isFinite() && it > 0f } ?: 1f
+    val wide = ratio > 1.6f
     Column(Modifier.fillMaxWidth()) {
         BoxWithConstraints(Modifier.fillMaxWidth()) {
-            val ratio = page.heroAspectRatio.takeIf { it.isFinite() && it > 0f } ?: 1f
-            val height = (maxWidth * 1.16f).coerceIn(320.dp, 500.dp)
-            Box(Modifier.fillMaxWidth().height(height).clipToBounds()
-                .background(Brush.verticalGradient(listOf(theme.card, theme.background)))) {
-                // Accent halo also fills the sides of very wide source banners.
-                Box(Modifier.fillMaxSize().background(Brush.verticalGradient(
-                    0f to theme.accent.copy(alpha = if (theme.isDark) .20f else .12f),
-                    .48f to Color.Transparent)))
-                if (!page.artist.photo.isNullOrBlank()) {
-                    AsyncImage(page.artist.photo, page.artist.name,
-                        // Wide catalogue banners are not zoomed into an arbitrary face.
-                        contentScale = if (ratio > 1.8f) ContentScale.Fit else ContentScale.Crop,
-                        alignment = Alignment.TopCenter, modifier = Modifier.fillMaxSize())
-                } else Text(page.artist.name.take(1).uppercase(), localize = false,
-                    color = theme.accent.copy(alpha = .55f), fontSize = 120.sp, fontWeight = FontWeight.Bold,
-                    modifier = Modifier.align(Alignment.Center))
+            val height = (maxWidth * (if (wide) .92f else 1.12f)).coerceIn(300.dp, 470.dp)
+            Box(Modifier.fillMaxWidth().height(height).clipToBounds().background(theme.background)) {
+                if (photo != null) {
+                    // Blurred ambience fills the frame, so a wide banner never leaves
+                    // two flat bands beside the artwork.
+                    AsyncImage(photo, null, contentScale = ContentScale.Crop,
+                        alignment = Alignment.Center,
+                        modifier = Modifier.fillMaxSize().blur(42.dp).graphicsLayer { alpha = .58f })
+                    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(
+                        0f to Color.Black.copy(alpha = .22f),
+                        .42f to Color.Transparent,
+                        1f to theme.background.copy(alpha = .30f))))
+                    // Square portraits fill the hero; wide banners are fitted whole
+                    // instead of being zoomed into an arbitrary face crop.
+                    if (wide) {
+                        AsyncImage(photo, page.artist.name, contentScale = ContentScale.Fit,
+                            alignment = Alignment.Center,
+                            modifier = Modifier.fillMaxWidth().height(height * .76f)
+                                .align(Alignment.TopCenter))
+                    } else {
+                        AsyncImage(photo, page.artist.name, contentScale = ContentScale.Crop,
+                            alignment = Alignment.Center,
+                            modifier = Modifier.fillMaxSize())
+                    }
+                } else {
+                    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(
+                        theme.accent.copy(alpha = if (theme.isDark) .22f else .14f),
+                        theme.background))))
+                    Box(Modifier.size(118.dp).clip(RoundedCornerShape(50))
+                        .background(theme.accent.copy(alpha = .16f)).align(Alignment.Center),
+                        contentAlignment = Alignment.Center) {
+                        Text(page.artist.name.take(1).uppercase(), localize = false,
+                            color = theme.accent, fontSize = 52.sp, fontWeight = FontWeight.Black)
+                    }
+                }
                 // Voile supérieur : le bouton retour flottant reste lisible.
                 Box(Modifier.fillMaxWidth().height(96.dp).background(Brush.verticalGradient(
-                    listOf(Color.Black.copy(alpha = .38f), Color.Transparent))))
+                    listOf(Color.Black.copy(alpha = .34f), Color.Transparent))))
                 // Fondu long : la photo se dissout dans la page au lieu de
                 // s'arrêter sur une bande franche.
-                Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(height * .72f)
+                Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(height * .66f)
                     .background(Brush.verticalGradient(
                         0f to Color.Transparent,
-                        .40f to theme.background.copy(alpha = .45f),
-                        .72f to theme.background.copy(alpha = .94f),
+                        .38f to theme.background.copy(alpha = .48f),
+                        .74f to theme.background.copy(alpha = .95f),
                         1f to theme.background)))
                 Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal = 24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally) {

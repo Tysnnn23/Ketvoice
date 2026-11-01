@@ -69,6 +69,27 @@ internal object LyricsPresentation {
         return Voices(project(-1), ranges.indices.map(::project).filter { it.text.isNotBlank() })
     }
 
+    /**
+     * Word text that is guaranteed to reconstruct the line exactly. Foreign
+     * providers often split CJK or add spaces the rendered line does not have;
+     * lighting the raw offsets then colours the wrong characters. When the
+     * mapping is impossible, the whole line becomes one timed segment.
+     */
+    fun aligned(line: MusicApi.LyricLine): List<MusicApi.LyricWord> {
+        val words = line.words
+        if (words.isEmpty()) return emptyList()
+        if (words.joinToString("") { it.text } == line.text) return words
+        val mapped = LyricsFormats.align(line.text, words)
+        if (mapped.isNotEmpty()) return mapped
+        return listOf(
+            MusicApi.LyricWord(
+                words.minOf { it.startMs },
+                line.text,
+                words.maxOf { it.endMs }
+            )
+        )
+    }
+
     fun backIsActive(line: MusicApi.LyricLine, now: Long): Boolean {
         if (line.words.isEmpty()) return true // line-only provider: no invented word timings
         val start = line.words.minOf { it.startMs }

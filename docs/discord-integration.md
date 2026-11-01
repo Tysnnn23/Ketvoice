@@ -16,7 +16,15 @@ self-bot, and never fabricates a linked state.
 
 ## Flow
 
-1. The user opens the account panel and taps **Link my Discord account**.
+The Discord panel lives in **Settings → Compte**. Presence through the installed
+Discord app is the default path: `Client::Connect` without a token uses the local
+Discord session, and no OAuth page is opened. A connect attempt that does not
+reach `Status::Ready` within 12 seconds now stops with an explicit error instead
+of spinning, and the last SDK log line is shown under the message.
+
+Account linking remains an optional action:
+
+1. The user taps **Link my Discord account**.
 2. Ketvoice generates a PKCE verifier, an S256 challenge and a random `state`, then
    opens `https://discord.com/oauth2/authorize` inside its own WebView
    (`DiscordAuthActivity`).
@@ -50,8 +58,16 @@ actually playing:
   stream URL or a local file path.
 - Presence is cleared on pause/stop, unlink and opt-out.
 
-## Source distribution
+## OAuth2 token fallback (advanced)
 
+Settings → Compte also accepts a pasted OAuth2 bearer token via
+`Client::UpdateToken(AuthorizationTokenType::Bearer, …)`, followed by `Connect`.
+Only a token issued for this Discord application works; regular Discord user
+tokens are rejected by the SDK. The token is stored encrypted with the same
+Keystore key, and a token the SDK refuses is deleted instead of being restored on
+every launch. The SDK log line is surfaced in the panel to explain a refusal.
+
+## Source distribution
 The SDK AAR is **not** committed. `app/libs/discord/discord_partner_sdk.aar` is
 ignored by Git and must be copied from the owner's SDK download before building
 with Discord support. Without the AAR the project still builds; the Discord UI is

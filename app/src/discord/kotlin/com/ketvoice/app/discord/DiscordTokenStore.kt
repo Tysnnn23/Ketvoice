@@ -41,8 +41,31 @@ internal class DiscordTokenStore(private val context: Context) {
         String(cipher.doFinal(payload, IV_BYTES, payload.size - IV_BYTES), Charsets.UTF_8)
     }.getOrNull()
 
+    fun saveAccess(token: String) {
+        if (token.isBlank()) return
+        runCatching {
+            val cipher = Cipher.getInstance(TRANSFORMATION)
+            cipher.init(Cipher.ENCRYPT_MODE, secretKey())
+            val payload = cipher.iv + cipher.doFinal(token.toByteArray(Charsets.UTF_8))
+            prefs.edit().putString(ACCESS_KEY, Base64.encodeToString(payload, Base64.NO_WRAP)).apply()
+        }
+    }
+
+    fun loadAccess(): String? = runCatching {
+        val encoded = prefs.getString(ACCESS_KEY, null) ?: return null
+        val payload = Base64.decode(encoded, Base64.NO_WRAP)
+        if (payload.size <= IV_BYTES) return null
+        val cipher = Cipher.getInstance(TRANSFORMATION)
+        cipher.init(Cipher.DECRYPT_MODE, secretKey(), GCMParameterSpec(128, payload, 0, IV_BYTES))
+        String(cipher.doFinal(payload, IV_BYTES, payload.size - IV_BYTES), Charsets.UTF_8)
+    }.getOrNull()
+
+    fun clearAccess() {
+        prefs.edit().remove(ACCESS_KEY).apply()
+    }
+
     fun clear() {
-        prefs.edit().remove(KEY).apply()
+        prefs.edit().remove(KEY).remove(ACCESS_KEY).apply()
     }
 
     private fun secretKey(): SecretKey {
@@ -64,6 +87,7 @@ internal class DiscordTokenStore(private val context: Context) {
         const val ALIAS = "ketvoice.discord.refresh"
         const val TRANSFORMATION = "AES/GCM/NoPadding"
         const val KEY = "refresh"
+        const val ACCESS_KEY = "access"
         const val IV_BYTES = 12
     }
 }

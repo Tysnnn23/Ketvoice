@@ -1,6 +1,7 @@
 package com.ketvoice.app.ui.sub
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -161,7 +162,8 @@ fun ArtistScreen() {
                         itemsIndexed(data.related, key = { _, a -> a.id }) { _, related ->
                             Column(Modifier.width(104.dp).clickable { AppUi.openArtist(related.id, related.name) },
                                 horizontalAlignment = Alignment.CenterHorizontally) {
-                                Box(Modifier.size(94.dp).clip(CircleShape).background(theme.card),
+                                Box(Modifier.size(94.dp).clip(CircleShape).background(theme.card)
+                                    .border(1.dp, theme.onBackground.copy(alpha = .10f), CircleShape),
                                     contentAlignment = Alignment.Center) {
                                     // Initiale en repli : le cercle n'est jamais vide.
                                     Text(related.name.take(1).uppercase(), localize = false, color = theme.secondary,
@@ -171,7 +173,7 @@ fun ArtistScreen() {
                                             model = related.photo,
                                             contentDescription = related.name,
                                             contentScale = ContentScale.Crop,
-                                            alignment = Alignment.TopCenter,
+                                            alignment = Alignment.Center,
                                             modifier = Modifier.fillMaxSize()
                                         )
                                     } else {

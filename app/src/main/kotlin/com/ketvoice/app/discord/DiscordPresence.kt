@@ -74,7 +74,8 @@ data class DiscordState(
     val busy: Boolean = false,
     val ready: Boolean = false,
     val userName: String? = null,
-    val error: String? = null
+    val error: String? = null,
+    val log: String? = null
 )
 
 /**
@@ -85,6 +86,7 @@ interface DiscordController {
     fun attach(activity: Activity)
     fun start()
     fun connect()
+    fun connectWithToken(token: String)
     fun link()
     fun completeAuthorization(uri: android.net.Uri?)
     fun onForeground()
@@ -117,6 +119,7 @@ object Discord {
     fun attach(activity: Activity) = controller?.attach(activity)
     fun start() = controller?.start()
     fun connect() = controller?.connect()
+    fun connectWithToken(token: String) = controller?.connectWithToken(token)
     fun link() = controller?.link()
     fun completeAuthorization(uri: android.net.Uri?) = controller?.completeAuthorization(uri)
     fun onForeground() = controller?.onForeground()

@@ -3,6 +3,7 @@ package com.ketvoice.app.ui.overlay
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
@@ -293,10 +294,18 @@ fun SearchScreen() {
                                 submitSearch()
                                 AppUi.openArtist(artist.id, artist.name)
                             }, horizontalAlignment = Alignment.CenterHorizontally) {
-                                Box(Modifier.size(88.dp).clip(CircleShape).background(th.card)) {
+                                Box(Modifier.size(88.dp).clip(CircleShape).background(th.card)
+                                    .border(1.dp, th.onBackground.copy(alpha = .10f), CircleShape),
+                                    contentAlignment = Alignment.Center) {
+                                    // Never an empty grey disc: the initial is always
+                                    // behind the photo and shows while it loads.
+                                    Text(artist.name.take(1).uppercase(), localize = false,
+                                        color = th.secondary, fontSize = 30.sp,
+                                        fontWeight = FontWeight.Bold)
                                     if (!artist.photo.isNullOrBlank()) {
                                         AsyncImage(model = artist.photo, contentDescription = artist.name,
-                                            contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                                            contentScale = ContentScale.Crop, alignment = Alignment.Center,
+                                            modifier = Modifier.fillMaxSize())
                                     }
                                 }
                                 Text(artist.name, localize = false, color = th.onBackground, fontSize = 13.sp,

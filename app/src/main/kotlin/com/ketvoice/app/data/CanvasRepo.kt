@@ -79,6 +79,27 @@ object CanvasRepo {
             if (localPath(track.id) != null || (!force && recentlyFailed())) return@withLock
             try {
                 val prefs = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                // A canvas published for the album by its owner takes priority:
+                // it is the same file for every track of that album.
+                val published = track.canvasUrl?.takeIf { it.startsWith("https://") }
+                if (published != null) {
+                    val name = "kvpub-" + (track.addonId ?: track.id)
+                        .replace(Regex("[^A-Za-z0-9_-]"), "_").take(72)
+                    val target = File(canvasDir(ctx), "$name.mp4")
+                    if (target.exists() && target.length() > 10_000) {
+                        prefs.edit().putString(track.id, name).apply()
+                        _paths.value = _paths.value + (track.id to target.absolutePath)
+                        return@withLock
+                    }
+                    if (!force && !networkAllowed(ctx)) return@withLock
+                    if (download(published, target) == null) {
+                        failed[track.id] = System.currentTimeMillis()
+                        return@withLock
+                    }
+                    prefs.edit().putString(track.id, name).apply()
+                    _paths.value = _paths.value + (track.id to target.absolutePath)
+                    return@withLock
+                }
                 val albumKey = albumKey(track)
                 val albumSpotifyId = prefs.getString(albumKey, null)
                 var spotifyId = track.spotifyId ?: prefs.getString(track.id, null)

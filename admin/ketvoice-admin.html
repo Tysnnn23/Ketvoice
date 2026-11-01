@@ -88,7 +88,7 @@ select{width:100%;font:inherit;color:#fff;background:#100f16;border:1px solid #5
     if(!album)return;
     if(album.artworkURL){const image=document.createElement('img');image.src=album.artworkURL;image.alt='Pochette de '+album.album;image.referrerPolicy='no-referrer';preview.append(image);}
     const text=document.createElement('p');
-    text.textContent=`${album.album} — ${album.artist} · ${album.trackCount} titre(s). `+(file(prefix+'Cover')?'La pochette choisie pour ce titre remplace celle de l’album.':album.artworkURL?'La pochette de l’album sera reprise automatiquement.':'Cet album n’a pas encore de pochette.');
+    text.textContent=`${album.album} — ${album.artist} · ${album.trackCount} titre(s). `+(file(prefix+'Cover')?'La pochette choisie pour ce titre remplace celle de l’album.':album.artworkURL?'La pochette de l’album sera reprise automatiquement.':'Cet album n’a pas encore de pochette.')+(album.canvasURL?' Un Canvas d’album est publié.':' Aucun Canvas d’album pour le moment.');
     preview.append(text);
   }
   function clearAlbum(prefix){
@@ -124,6 +124,14 @@ select{width:100%;font:inherit;color:#fff;background:#100f16;border:1px solid #5
     const form=$(prefix==='new'?'publishForm':'editForm'),box=document.createElement('fieldset');box.className='album-picker';
     box.innerHTML=`<legend>Album d’un chanteur</legend><div class="row"><div><label for="${prefix}AlbumArtist">Chanteur déjà publié</label><select id="${prefix}AlbumArtist"><option value="">Nouvel artiste / saisie libre</option></select></div><div><label for="${prefix}AlbumSource">Album de ce chanteur</label><select id="${prefix}AlbumSource" disabled><option value="">Nouvel album / saisie libre</option></select></div></div><p id="${prefix}AlbumHint" class="hint" role="status">Chargement des albums de vos publications…</p><div id="${prefix}AlbumPreview" class="album-preview"></div><button type="button" id="${prefix}RefreshAlbums">Actualiser les albums</button>`;
     form.prepend(box);pickers.set(prefix,{manual:null});
+    if(prefix==='edit'){
+      const canvasRow=document.createElement('div');canvasRow.className='row';
+      canvasRow.innerHTML=`<div><label for="editCanvas">Canvas de l’album (MP4, 20 Mo max)</label><input id="editCanvas" type="file" accept="video/mp4"><p class="hint" role="status">Le Canvas est la vidéo jouée derrière les paroles. Un fichier sélectionné remplace celui de l’album ; laissez vide pour ne rien changer.</p></div>`;
+      box.append(canvasRow);
+      const apply=document.createElement('label');apply.className='check';
+      apply.innerHTML=`<input id="editCanvasAlbum" type="checkbox" checked> Appliquer ce Canvas à tous les titres de l’album`;
+      box.append(apply);
+    }
     $(prefix+'AlbumArtist').onchange=()=>{clearAlbum(prefix);fillAlbumOptions(prefix);if($(prefix+'AlbumArtist').value)$(prefix+'Artist').value=$(prefix+'AlbumArtist').value;};
     $(prefix+'AlbumSource').onchange=()=>{
       const album=pickedAlbum(prefix),state=pickers.get(prefix);
@@ -178,6 +186,7 @@ select{width:100%;font:inherit;color:#fff;background:#100f16;border:1px solid #5
   function resetEditor(prefix){
     stopDuration(prefix);clearAlbum(prefix);$(prefix+'AlbumArtist').value='';fillAlbumOptions(prefix);
     $(prefix+'Audio').value='';$(prefix+'Cover').value='';$(prefix+'Rights').checked=false;
+    if($(prefix+'Canvas'))$(prefix+'Canvas').value='';
     $(prefix+'Duration').readOnly=false;
     $(prefix+'DurationHint').textContent='Durée détectée automatiquement à la sélection de l’audio, modifiable si nécessaire.';
   }
@@ -197,8 +206,8 @@ select{width:100%;font:inherit;color:#fff;background:#100f16;border:1px solid #5
   $('editForm').onsubmit=event=>{event.preventDefault();run(event.submitter,async()=>{
     if(!editable)throw Error('Choisissez un titre.');
     const durationMs=file('editAudio')?await audioDuration('edit'):editable.track.durationMs;
-    const meta={trackId:editable.track.id,revision:editable.revision,rightsConfirmed:$('editRights').checked,title:$('editTitle').value.trim(),artist:$('editArtist').value.trim(),album:$('editAlbum').value.trim(),durationMs,...albumFields('edit')};
-    const result=await content('/admin/song/update',{method:'POST',body:formData(meta,[['audio','editAudio'],['cover','editCover']]),admin:true});
+    const meta={trackId:editable.track.id,revision:editable.revision,rightsConfirmed:$('editRights').checked,title:$('editTitle').value.trim(),artist:$('editArtist').value.trim(),album:$('editAlbum').value.trim(),durationMs,applyCanvasToAlbum:$('editCanvasAlbum').checked,...albumFields('edit')};
+    const result=await content('/admin/song/update',{method:'POST',body:formData(meta,[['audio','editAudio'],['cover','editCover'],['canvas','editCanvas']]),admin:true});
     resetEditor('edit');editable={track:result.track,revision:result.revision};$('editingName').textContent=result.track.title;$('editArtist').value=result.track.artist;$('editAlbum').value=result.track.album||'';$('editDuration').value=Number(result.track.durationMs||0)/1000;
     await loadAlbums().catch(()=>{$('editAlbumHint').textContent='Musique modifiée. Actualisez les albums pour retrouver les changements.';});notice('Musique modifiée. Les prochaines requêtes utiliseront cette version.');
   });};

@@ -95,7 +95,16 @@ export function createArtistHandler(deps: Dependencies): (req: Request) => Promi
     if (!deps.providerKey()) return { body: { error: "Artwork temporarily unavailable" }, status: 503 };
     // Reuse the existing service-role-only quota RPC without changing its schema
     // or any publication access. Provider failure never falls through to the app.
-    if (!await deps.quota("artist-logo-minute", 30, 60) || !await deps.quota("artist-logo-musicbrainz", 1, 1))
+    if (!await deps.quota("artist-logo-minute", 55, 60))
+      return { body: { error: "Artwork temporarily unavailable" }, status: 429 };
+    // MusicBrainz allows one request per second per IP. A hard refusal here made
+    // every burst look like "signatures are broken"; pace briefly instead.
+    let spaced = await deps.quota("artist-logo-musicbrainz", 1, 1);
+    if (!spaced) {
+      await new Promise(resolve => setTimeout(resolve, 1_150));
+      spaced = await deps.quota("artist-logo-musicbrainz", 1, 1);
+    }
+    if (!spaced)
       return { body: { error: "Artwork temporarily unavailable" }, status: 429 };
     const mb = new URL("https://musicbrainz.org/ws/2/artist/");
     mb.searchParams.set("query", `artist:"${artist.replace(/[\\"]/g, "\\$&")}"`);
@@ -104,7 +113,7 @@ export function createArtistHandler(deps: Dependencies): (req: Request) => Promi
       Accept: "application/json", "User-Agent": "Ketvoice/3.11.1 (https://github.com/Tysnnn23/Ketvoice)",
     } };
     const mbResponse = await fetcher(mb, options);
-    if (mbResponse.status === 429 || mbResponse.status === 503) { cooldown = now() + 60_000; return { body: { error: "Artwork temporarily unavailable" }, status: 429 }; }
+    if (mbResponse.status === 429 || mbResponse.status === 503) { cooldown = now() + 20_000; return { body: { error: "Artwork temporarily unavailable" }, status: 429 }; }
     if (!mbResponse.ok) return { body: { error: "Artwork temporarily unavailable" }, status: 503 };
     const match = musicBrainzArtist(await readJson(mbResponse), artist);
     if (!match) return { body: { error: "Artist artwork not found", code: "ARTIST_NOT_FOUND" }, status: 404 };
@@ -112,7 +121,7 @@ export function createArtistHandler(deps: Dependencies): (req: Request) => Promi
     endpoint.searchParams.set("api_key", deps.providerKey());
     // A fresh timeout per provider; no credentials in response objects or logs.
     const response = await fetcher(endpoint, { ...options, signal: AbortSignal.timeout(7_000) });
-    if (response.status === 429) { cooldown = now() + 60_000; return { body: { error: "Artwork temporarily unavailable" }, status: 429 }; }
+    if (response.status === 429) { cooldown = now() + 20_000; return { body: { error: "Artwork temporarily unavailable" }, status: 429 }; }
     if (response.status === 404) return { body: { error: "Artist artwork not found" }, status: 404 };
     if (!response.ok) return { body: { error: "Artwork temporarily unavailable" }, status: 503 };
     const url = fanartLogo(await readJson(response), match.id);

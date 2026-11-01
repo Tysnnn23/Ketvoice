@@ -924,7 +924,19 @@
   "Lier mon compte Discord (optionnel)": "Link my Discord account (optional)",
   "Ouvre l'app Discord et connecte-toi, puis réessaie.": "Open the Discord app, sign in, then try again.",
   "Aucun mot de passe Discord n'est stocké. En mode présence, rien n'est conservé sur l'appareil ; la liaison facultative garde uniquement un jeton chiffré.": "No Discord password is stored. Presence mode keeps nothing on the device; optional linking stores only an encrypted token.",
-  "Ouvrir l'app Discord": "Open the Discord app"
+  "Ouvrir l'app Discord": "Open the Discord app",
+  "Indisponible dans cette version": "Unavailable in this build",
+  "En attente de l'app Discord…": "Waiting for the Discord app…",
+  "Présence connectée": "Presence connected",
+  "Affiche le morceau en cours sur ton profil": "Shows the current track on your profile",
+  "Réessayer la connexion": "Retry the connection",
+  "Activer via l'app Discord": "Enable via the Discord app",
+  "Connexion par jeton (avancé)": "Token connection (advanced)",
+  "Jeton OAuth2": "OAuth2 token",
+  "Jeton OAuth2 émis pour l'application Ketvoice. Les jetons d'utilisateur Discord classiques sont refusés par le SDK.": "OAuth2 token issued for the Ketvoice application. Regular Discord user tokens are rejected by the SDK.",
+  "Connecter avec ce jeton": "Connect with this token",
+  "Cette version a été compilée sans le SDK Discord.": "This build was compiled without the Discord SDK.",
+  "Utilise l'app Discord installée sur cet appareil. Aucun mot de passe Discord n'est demandé ni conservé.": "Uses the Discord app installed on this device. No Discord password is requested or stored."
  },
  "hi": {
   "Reverb": "रीवर्ब",
@@ -1851,7 +1863,19 @@
   "Lier mon compte Discord (optionnel)": "मेरा Discord खाता जोड़ें (वैकल्पिक)",
   "Ouvre l'app Discord et connecte-toi, puis réessaie.": "Discord ऐप खोलें, साइन इन करें, फिर पुनः प्रयास करें।",
   "Aucun mot de passe Discord n'est stocké. En mode présence, rien n'est conservé sur l'appareil ; la liaison facultative garde uniquement un jeton chiffré.": "कोई Discord पासवर्ड संग्रहीत नहीं होता। प्रेज़ेंस मोड में डिवाइस पर कुछ भी नहीं रखा जाता; वैकल्पिक लिंक केवल एन्क्रिप्टेड टोकन रखता है।",
-  "Ouvrir l'app Discord": "Discord ऐप खोलें"
+  "Ouvrir l'app Discord": "Discord ऐप खोलें",
+  "Indisponible dans cette version": "इस बिल्ड में उपलब्ध नहीं",
+  "En attente de l'app Discord…": "Discord ऐप की प्रतीक्षा…",
+  "Présence connectée": "प्रेज़ेंस कनेक्टेड",
+  "Affiche le morceau en cours sur ton profil": "आपकी प्रोफ़ाइल पर चालू ट्रैक दिखाता है",
+  "Réessayer la connexion": "कनेक्शन फिर से आज़माएँ",
+  "Activer via l'app Discord": "Discord ऐप से सक्षम करें",
+  "Connexion par jeton (avancé)": "टोकन कनेक्शन (उन्नत)",
+  "Jeton OAuth2": "OAuth2 टोकन",
+  "Jeton OAuth2 émis pour l'application Ketvoice. Les jetons d'utilisateur Discord classiques sont refusés par le SDK.": "Ketvoice ऐप के लिए जारी OAuth2 टोकन। सामान्य Discord उपयोगकर्ता टोकन SDK द्वारा अस्वीकार किए जाते हैं।",
+  "Connecter avec ce jeton": "इस टोकन से कनेक्ट करें",
+  "Cette version a été compilée sans le SDK Discord.": "यह बिल्ड Discord SDK के बिना बनाया गया है।",
+  "Utilise l'app Discord installée sur cet appareil. Aucun mot de passe Discord n'est demandé ni conservé.": "इस डिवाइस पर इंस्टॉल Discord ऐप का उपयोग करता है। कोई Discord पासवर्ड नहीं मांगा या सहेजा जाता है।"
  },
  "ja": {
   "Reverb": "リバーブ",
@@ -2778,7 +2802,19 @@
   "Lier mon compte Discord (optionnel)": "Discord アカウントを連携（任意）",
   "Ouvre l'app Discord et connecte-toi, puis réessaie.": "Discord アプリを開いてサインインし、もう一度お試しください。",
   "Aucun mot de passe Discord n'est stocké. En mode présence, rien n'est conservé sur l'appareil ; la liaison facultative garde uniquement un jeton chiffré.": "Discord のパスワードは保存されません。プレゼンスモードでは端末に何も残りません。任意の連携では暗号化されたトークンのみ保存します。",
-  "Ouvrir l'app Discord": "Discord アプリを開く"
+  "Ouvrir l'app Discord": "Discord アプリを開く",
+  "Indisponible dans cette version": "このビルドでは利用できません",
+  "En attente de l'app Discord…": "Discord アプリを待機中…",
+  "Présence connectée": "プレゼンス接続済み",
+  "Affiche le morceau en cours sur ton profil": "プロフィールに再生中の曲を表示",
+  "Réessayer la connexion": "接続を再試行",
+  "Activer via l'app Discord": "Discord アプリで有効化",
+  "Connexion par jeton (avancé)": "トークン接続（上級）",
+  "Jeton OAuth2": "OAuth2 トークン",
+  "Jeton OAuth2 émis pour l'application Ketvoice. Les jetons d'utilisateur Discord classiques sont refusés par le SDK.": "Ketvoice アプリ用に発行された OAuth2 トークン。通常の Discord ユーザートークンは SDK では拒否されます。",
+  "Connecter avec ce jeton": "このトークンで接続",
+  "Cette version a été compilée sans le SDK Discord.": "このビルドは Discord SDK なしでコンパイルされています。",
+  "Utilise l'app Discord installée sur cet appareil. Aucun mot de passe Discord n'est demandé ni conservé.": "この端末にインストールされた Discord アプリを使用します。Discord のパスワードは要求も保存もされません。"
  },
  "zh": {
   "Reverb": "混响",
@@ -3705,7 +3741,19 @@
   "Lier mon compte Discord (optionnel)": "关联我的 Discord 账户（可选）",
   "Ouvre l'app Discord et connecte-toi, puis réessaie.": "打开 Discord 应用并登录，然后重试。",
   "Aucun mot de passe Discord n'est stocké. En mode présence, rien n'est conservé sur l'appareil ; la liaison facultative garde uniquement un jeton chiffré.": "不会保存 Discord 密码。状态模式下设备上不保留任何内容；可选的关联仅保存加密令牌。",
-  "Ouvrir l'app Discord": "打开 Discord 应用"
+  "Ouvrir l'app Discord": "打开 Discord 应用",
+  "Indisponible dans cette version": "此版本不可用",
+  "En attente de l'app Discord…": "正在等待 Discord 应用…",
+  "Présence connectée": "状态已连接",
+  "Affiche le morceau en cours sur ton profil": "在个人资料中显示当前歌曲",
+  "Réessayer la connexion": "重试连接",
+  "Activer via l'app Discord": "通过 Discord 应用启用",
+  "Connexion par jeton (avancé)": "令牌连接（高级）",
+  "Jeton OAuth2": "OAuth2 令牌",
+  "Jeton OAuth2 émis pour l'application Ketvoice. Les jetons d'utilisateur Discord classiques sont refusés par le SDK.": "为 Ketvoice 应用签发的 OAuth2 令牌。SDK 会拒绝普通 Discord 用户令牌。",
+  "Connecter avec ce jeton": "使用此令牌连接",
+  "Cette version a été compilée sans le SDK Discord.": "此版本未包含 Discord SDK。",
+  "Utilise l'app Discord installée sur cet appareil. Aucun mot de passe Discord n'est demandé ni conservé.": "使用此设备上安装的 Discord 应用。不会要求或保存 Discord 密码。"
  },
  "ru": {
   "Reverb": "Реверберация",
@@ -4632,7 +4680,19 @@
   "Lier mon compte Discord (optionnel)": "Привязать аккаунт Discord (необязательно)",
   "Ouvre l'app Discord et connecte-toi, puis réessaie.": "Откройте приложение Discord, войдите и повторите попытку.",
   "Aucun mot de passe Discord n'est stocké. En mode présence, rien n'est conservé sur l'appareil ; la liaison facultative garde uniquement un jeton chiffré.": "Пароль Discord не сохраняется. В режиме статуса на устройстве ничего не остаётся; необязательная привязка хранит только зашифрованный токен.",
-  "Ouvrir l'app Discord": "Открыть приложение Discord"
+  "Ouvrir l'app Discord": "Открыть приложение Discord",
+  "Indisponible dans cette version": "Недоступно в этой сборке",
+  "En attente de l'app Discord…": "Ожидание приложения Discord…",
+  "Présence connectée": "Присутствие подключено",
+  "Affiche le morceau en cours sur ton profil": "Показывает текущий трек в профиле",
+  "Réessayer la connexion": "Повторить подключение",
+  "Activer via l'app Discord": "Включить через приложение Discord",
+  "Connexion par jeton (avancé)": "Подключение по токену (дополнительно)",
+  "Jeton OAuth2": "Токен OAuth2",
+  "Jeton OAuth2 émis pour l'application Ketvoice. Les jetons d'utilisateur Discord classiques sont refusés par le SDK.": "Токен OAuth2, выданный для приложения Ketvoice. Обычные пользовательские токены Discord SDK отклоняет.",
+  "Connecter avec ce jeton": "Подключиться с этим токеном",
+  "Cette version a été compilée sans le SDK Discord.": "Эта сборка собрана без Discord SDK.",
+  "Utilise l'app Discord installée sur cet appareil. Aucun mot de passe Discord n'est demandé ni conservé.": "Использует приложение Discord, установленное на устройстве. Пароль Discord не запрашивается и не сохраняется."
  },
  "it": {
   "Reverb": "Riverbero",
@@ -5559,7 +5619,19 @@
   "Lier mon compte Discord (optionnel)": "Collega il mio account Discord (facoltativo)",
   "Ouvre l'app Discord et connecte-toi, puis réessaie.": "Apri l'app Discord, accedi e riprova.",
   "Aucun mot de passe Discord n'est stocké. En mode présence, rien n'est conservé sur l'appareil ; la liaison facultative garde uniquement un jeton chiffré.": "Nessuna password Discord viene salvata. In modalità presenza non resta nulla sul dispositivo; il collegamento facoltativo conserva solo un token cifrato.",
-  "Ouvrir l'app Discord": "Apri l'app Discord"
+  "Ouvrir l'app Discord": "Apri l'app Discord",
+  "Indisponible dans cette version": "Non disponibile in questa versione",
+  "En attente de l'app Discord…": "In attesa dell'app Discord…",
+  "Présence connectée": "Presenza connessa",
+  "Affiche le morceau en cours sur ton profil": "Mostra il brano in corso sul profilo",
+  "Réessayer la connexion": "Riprova la connessione",
+  "Activer via l'app Discord": "Attiva tramite l'app Discord",
+  "Connexion par jeton (avancé)": "Connessione tramite token (avanzato)",
+  "Jeton OAuth2": "Token OAuth2",
+  "Jeton OAuth2 émis pour l'application Ketvoice. Les jetons d'utilisateur Discord classiques sont refusés par le SDK.": "Token OAuth2 rilasciato per l'app Ketvoice. I normali token utente Discord sono rifiutati dall'SDK.",
+  "Connecter avec ce jeton": "Connetti con questo token",
+  "Cette version a été compilée sans le SDK Discord.": "Questa versione è stata compilata senza l'SDK Discord.",
+  "Utilise l'app Discord installée sur cet appareil. Aucun mot de passe Discord n'est demandé ni conservé.": "Usa l'app Discord installata su questo dispositivo. Nessuna password Discord viene richiesta o salvata."
  },
  "es": {
   "Reverb": "Reverb",
@@ -6486,7 +6558,19 @@
   "Lier mon compte Discord (optionnel)": "Vincular mi cuenta de Discord (opcional)",
   "Ouvre l'app Discord et connecte-toi, puis réessaie.": "Abre la app de Discord, inicia sesión y vuelve a intentarlo.",
   "Aucun mot de passe Discord n'est stocké. En mode présence, rien n'est conservé sur l'appareil ; la liaison facultative garde uniquement un jeton chiffré.": "No se guarda ninguna contraseña de Discord. El modo presencia no conserva nada en el dispositivo; la vinculación opcional solo guarda un token cifrado.",
-  "Ouvrir l'app Discord": "Abrir la app de Discord"
+  "Ouvrir l'app Discord": "Abrir la app de Discord",
+  "Indisponible dans cette version": "No disponible en esta versión",
+  "En attente de l'app Discord…": "Esperando la app de Discord…",
+  "Présence connectée": "Presencia conectada",
+  "Affiche le morceau en cours sur ton profil": "Muestra la canción actual en tu perfil",
+  "Réessayer la connexion": "Reintentar la conexión",
+  "Activer via l'app Discord": "Activar con la app de Discord",
+  "Connexion par jeton (avancé)": "Conexión por token (avanzado)",
+  "Jeton OAuth2": "Token OAuth2",
+  "Jeton OAuth2 émis pour l'application Ketvoice. Les jetons d'utilisateur Discord classiques sont refusés par le SDK.": "Token OAuth2 emitido para la app Ketvoice. El SDK rechaza los tokens de usuario normales de Discord.",
+  "Connecter avec ce jeton": "Conectar con este token",
+  "Cette version a été compilée sans le SDK Discord.": "Esta versión se compiló sin el SDK de Discord.",
+  "Utilise l'app Discord installée sur cet appareil. Aucun mot de passe Discord n'est demandé ni conservé.": "Usa la app de Discord instalada en este dispositivo. No se pide ni se guarda ninguna contraseña de Discord."
  },
  "de": {
   "Reverb": "Reverb",
@@ -7413,7 +7497,19 @@
   "Lier mon compte Discord (optionnel)": "Discord-Konto verknüpfen (optional)",
   "Ouvre l'app Discord et connecte-toi, puis réessaie.": "Öffne die Discord-App, melde dich an und versuche es erneut.",
   "Aucun mot de passe Discord n'est stocké. En mode présence, rien n'est conservé sur l'appareil ; la liaison facultative garde uniquement un jeton chiffré.": "Es wird kein Discord-Passwort gespeichert. Im Präsenzmodus bleibt nichts auf dem Gerät; die optionale Verknüpfung speichert nur ein verschlüsseltes Token.",
-  "Ouvrir l'app Discord": "Discord-App öffnen"
+  "Ouvrir l'app Discord": "Discord-App öffnen",
+  "Indisponible dans cette version": "In dieser Version nicht verfügbar",
+  "En attente de l'app Discord…": "Warte auf die Discord-App…",
+  "Présence connectée": "Präsenz verbunden",
+  "Affiche le morceau en cours sur ton profil": "Zeigt den aktuellen Titel im Profil",
+  "Réessayer la connexion": "Verbindung erneut versuchen",
+  "Activer via l'app Discord": "Über die Discord-App aktivieren",
+  "Connexion par jeton (avancé)": "Token-Verbindung (erweitert)",
+  "Jeton OAuth2": "OAuth2-Token",
+  "Jeton OAuth2 émis pour l'application Ketvoice. Les jetons d'utilisateur Discord classiques sont refusés par le SDK.": "OAuth2-Token für die Ketvoice-App. Normale Discord-Benutzertoken werden vom SDK abgelehnt.",
+  "Connecter avec ce jeton": "Mit diesem Token verbinden",
+  "Cette version a été compilée sans le SDK Discord.": "Diese Version wurde ohne das Discord-SDK kompiliert.",
+  "Utilise l'app Discord installée sur cet appareil. Aucun mot de passe Discord n'est demandé ni conservé.": "Nutzt die auf diesem Gerät installierte Discord-App. Es wird kein Discord-Passwort abgefragt oder gespeichert."
  },
  "pt": {
   "Reverb": "Reverb",
@@ -8340,7 +8436,19 @@
   "Lier mon compte Discord (optionnel)": "Associar a minha conta Discord (opcional)",
   "Ouvre l'app Discord et connecte-toi, puis réessaie.": "Abre a app Discord, inicia sessão e tenta novamente.",
   "Aucun mot de passe Discord n'est stocké. En mode présence, rien n'est conservé sur l'appareil ; la liaison facultative garde uniquement un jeton chiffré.": "Nenhuma palavra-passe do Discord é guardada. O modo de presença não conserva nada no dispositivo; a associação opcional guarda apenas um token cifrado.",
-  "Ouvrir l'app Discord": "Abrir a app Discord"
+  "Ouvrir l'app Discord": "Abrir a app Discord",
+  "Indisponible dans cette version": "Indisponível nesta versão",
+  "En attente de l'app Discord…": "À espera da app Discord…",
+  "Présence connectée": "Presença ligada",
+  "Affiche le morceau en cours sur ton profil": "Mostra a faixa atual no teu perfil",
+  "Réessayer la connexion": "Tentar novamente",
+  "Activer via l'app Discord": "Ativar com a app Discord",
+  "Connexion par jeton (avancé)": "Ligação por token (avançado)",
+  "Jeton OAuth2": "Token OAuth2",
+  "Jeton OAuth2 émis pour l'application Ketvoice. Les jetons d'utilisateur Discord classiques sont refusés par le SDK.": "Token OAuth2 emitido para a app Ketvoice. Os tokens de utilizador normais do Discord são recusados pelo SDK.",
+  "Connecter avec ce jeton": "Ligar com este token",
+  "Cette version a été compilée sans le SDK Discord.": "Esta versão foi compilada sem o SDK Discord.",
+  "Utilise l'app Discord installée sur cet appareil. Aucun mot de passe Discord n'est demandé ni conservé.": "Usa a app Discord instalada neste dispositivo. Nenhuma palavra-passe do Discord é pedida ou guardada."
  },
  "ko": {
   "Reverb": "리버브",
@@ -9267,6 +9375,18 @@
   "Lier mon compte Discord (optionnel)": "Discord 계정 연결 (선택)",
   "Ouvre l'app Discord et connecte-toi, puis réessaie.": "Discord 앱을 열고 로그인한 뒤 다시 시도하세요.",
   "Aucun mot de passe Discord n'est stocké. En mode présence, rien n'est conservé sur l'appareil ; la liaison facultative garde uniquement un jeton chiffré.": "Discord 비밀번호는 저장되지 않습니다. 프레즌스 모드에서는 기기에 아무것도 남지 않으며, 선택적 연결은 암호화된 토큰만 보관합니다.",
-  "Ouvrir l'app Discord": "Discord 앱 열기"
+  "Ouvrir l'app Discord": "Discord 앱 열기",
+  "Indisponible dans cette version": "이 빌드에서는 사용할 수 없습니다",
+  "En attente de l'app Discord…": "Discord 앱을 기다리는 중…",
+  "Présence connectée": "상태 연결됨",
+  "Affiche le morceau en cours sur ton profil": "프로필에 현재 곡을 표시합니다",
+  "Réessayer la connexion": "연결 다시 시도",
+  "Activer via l'app Discord": "Discord 앱으로 활성화",
+  "Connexion par jeton (avancé)": "토큰 연결(고급)",
+  "Jeton OAuth2": "OAuth2 토큰",
+  "Jeton OAuth2 émis pour l'application Ketvoice. Les jetons d'utilisateur Discord classiques sont refusés par le SDK.": "Ketvoice 앱용으로 발급된 OAuth2 토큰입니다. 일반 Discord 사용자 토큰은 SDK에서 거부됩니다.",
+  "Connecter avec ce jeton": "이 토큰으로 연결",
+  "Cette version a été compilée sans le SDK Discord.": "이 빌드는 Discord SDK 없이 컴파일되었습니다.",
+  "Utilise l'app Discord installée sur cet appareil. Aucun mot de passe Discord n'est demandé ni conservé.": "이 기기에 설치된 Discord 앱을 사용합니다. Discord 비밀번호는 요청하거나 저장하지 않습니다."
  }
 }

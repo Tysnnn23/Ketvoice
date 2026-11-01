@@ -92,62 +92,6 @@ fun AccountDialog(modifier: Modifier = Modifier) {
                     color = theme.secondary, fontSize = 11.5.sp, lineHeight = 16.sp,
                     modifier = Modifier.padding(bottom = 4.dp))
             }
-            val discord by com.ketvoice.app.discord.Discord.state.collectAsState()
-            if (com.ketvoice.app.discord.Discord.available) {
-                Spacer(Modifier.height(20.dp))
-                Text("Discord", color = theme.onBackground, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                if (discord.linked) {
-                    Text(discord.userName ?: "Via l'app Discord", color = theme.accent, fontSize = 14.sp,
-                        modifier = Modifier.padding(top = 6.dp))
-                    Row(Modifier.fillMaxWidth().padding(top = 10.dp),
-                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) {
-                            Text("Afficher ce que j'écoute", color = theme.onBackground, fontSize = 14.sp)
-                            Text("Morceau, artiste et boutons sur votre profil Discord.",
-                                color = theme.secondary, fontSize = 11.5.sp, lineHeight = 16.sp)
-                        }
-                        androidx.compose.material3.Switch(
-                            checked = AppSettings.discordPresence.value,
-                            onCheckedChange = {
-                                AppSettings.discordPresence.value = it
-                                SettingsStore.save()
-                                if (!it) com.ketvoice.app.discord.Discord.clearPresence()
-                            })
-                    }
-                    Text("Déconnecter Discord", color = theme.accent,
-                        modifier = Modifier.fillMaxWidth().clickable {
-                            com.ketvoice.app.discord.Discord.unlink()
-                        }.padding(top = 8.dp, bottom = 4.dp))
-                } else {
-                    Text("Affiche le morceau en cours sur ton profil Discord, avec les boutons de " +
-                        "téléchargement et d'écoute. Utilise l'app Discord installée et connectée.",
-                        color = theme.secondary, fontSize = 12.sp, lineHeight = 17.sp,
-                        modifier = Modifier.padding(top = 4.dp))
-                    Text(if (discord.busy) "Connexion à Discord…" else "Activer la présence Discord",
-                        color = theme.accent, fontWeight = FontWeight.Bold,
-                        modifier = Modifier.fillMaxWidth().clickable(enabled = !discord.busy) {
-                            com.ketvoice.app.discord.Discord.connect()
-                        }.padding(top = 12.dp, bottom = 2.dp))
-                    Text("Lier mon compte Discord (optionnel)", color = theme.accent.copy(alpha = .82f),
-                        fontSize = 12.sp,
-                        modifier = Modifier.fillMaxWidth().clickable(enabled = !discord.busy) {
-                            com.ketvoice.app.discord.Discord.link()
-                        }.padding(bottom = 2.dp))
-                    Text("Ouvrir l'app Discord", color = theme.secondary, fontSize = 12.sp,
-                        modifier = Modifier.fillMaxWidth().clickable {
-                            val launch = context.packageManager.getLaunchIntentForPackage("com.discord")
-                            if (launch != null) runCatching { context.startActivity(launch) }
-                        }.padding(bottom = 6.dp))
-                }
-                discord.error?.let {
-                    Text(it, color = Color(0xFFFF6B6B), fontSize = 12.sp,
-                        modifier = Modifier.padding(bottom = 4.dp))
-                }
-                Text("Aucun mot de passe Discord n'est stocké. En mode présence, rien n'est conservé " +
-                    "sur l'appareil ; la liaison facultative garde uniquement un jeton chiffré.",
-                    color = theme.secondary, fontSize = 11.5.sp,
-                    lineHeight = 16.sp, modifier = Modifier.padding(top = 4.dp))
-            }
             Text("Réglages de Ketvoice", color = theme.accent, modifier = Modifier.fillMaxWidth().clickable {
                 AppUi.showAccount.value = false; AppUi.showPlayer.value = false; AppUi.openSettings()
             }.padding(top = 14.dp, bottom = 8.dp))

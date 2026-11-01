@@ -164,6 +164,10 @@ fun SettingsScreen() {
                 }
             }
 
+            Section("DISCORD") {
+                com.ketvoice.app.ui.account.DiscordSettings()
+            }
+
             if (publisher || (youtube.connected && com.ketvoice.app.data.PublisherAccess.matches(youtube.email))) {
                 Section("PUBLICATIONS KETVOICE API") {
                     if (!publisher) {

@@ -4,6 +4,7 @@ const BUCKET = "ketvoice-public-media";
 const MAX_AUDIO = 25 * 1024 * 1024;
 const MAX_COVER = 4 * 1024 * 1024;
 const MAX_LYRICS = 1024 * 1024;
+const MAX_CANVAS = 20 * 1024 * 1024;
 const CORS = {"access-control-allow-origin":"*", "access-control-allow-headers":"authorization,apikey,content-type,x-ketvoice-admin", "access-control-allow-methods":"GET,POST,PATCH,DELETE,OPTIONS"};
 type Row = Record<string, unknown>;
 class HttpError extends Error { constructor(public status: number, message: string) { super(message); } }
@@ -83,7 +84,19 @@ const publicFile = (path: string) => `${base()}/storage/v1/object/public/${BUCKE
 function track(row: Row): Row {
   return {id:`kv:upload:${row.id}`,addonId:row.id,source:"upload",title:row.title,artist:row.artist,album:row.album,
     durationMs:row.duration_ms,artworkURL:row.cover_path ? publicFile(String(row.cover_path)) : null,
-    streamURL:publicFile(String(row.audio_path)),format:row.format};
+    streamURL:publicFile(String(row.audio_path)),format:row.format,
+    canvasURL:row.canvas_path ? publicFile(String(row.canvas_path)) : null};
+}
+/** Album canvas: an MP4 the app plays behind the lyrics for every track of the album. */
+async function readCanvas(file: FormDataEntryValue | null) {
+  if (file === null) return null;
+  if (!(file instanceof File) || !file.size || file.size > MAX_CANVAS)
+    throw new HttpError(400,"Canvas trop volumineux ou vide (20 Mo maximum)");
+  const data = new Uint8Array(await file.arrayBuffer());
+  const ascii = (a: number, b: number) => new TextDecoder().decode(data.slice(a, b));
+  const valid = data.length > 12 && ascii(4, 8) === "ftyp";
+  if (!valid) throw new HttpError(400,"Canvas MP4 requis");
+  return {data, ext:"mp4", mime:"video/mp4", size:file.size};
 }
 async function store(path: string, data: Uint8Array, mime: string): Promise<void> {
   const res = await api(`/storage/v1/object/${BUCKET}/${path}`, {method:"POST",headers:{"Content-Type":mime,"Cache-Control":"31536000","x-upsert":"false"},body:new Uint8Array(data)});
@@ -121,7 +134,7 @@ async function ownedSong(id: string, owner: string): Promise<Row> {
   return rows[0];
 }
 async function revision(row: Row): Promise<string> {
-  const bytes=new TextEncoder().encode(JSON.stringify([row.audio_path,row.cover_path,row.duration_ms,row.title,row.artist,row.album]));
+  const bytes=new TextEncoder().encode(JSON.stringify([row.audio_path,row.cover_path,row.canvas_path,row.duration_ms,row.title,row.artist,row.album]));
   return [...new Uint8Array(await crypto.subtle.digest("SHA-256",bytes))].map(n=>n.toString(16).padStart(2,"0")).join("");
 }
 // Albums are derived from this owner's existing publications. No client-supplied
@@ -150,28 +163,30 @@ async function ownerAlbums(owner: string): Promise<Response> {
   }
   const albums=await Promise.all([...groups.values()].map(async({row,count})=>({
     sourceId:`kv:upload:${row.id}`,revision:await revision(row),artist:row.artist,
-    album:row.album,artworkURL:row.cover_path ? publicFile(String(row.cover_path)) : null,trackCount:count
+    album:row.album,artworkURL:row.cover_path ? publicFile(String(row.cover_path)) : null,
+    canvasURL:row.canvas_path ? publicFile(String(row.canvas_path)) : null,trackCount:count
   })));
   albums.sort((a,b)=>String(a.artist).localeCompare(String(b.artist)) || String(a.album).localeCompare(String(b.album)));
   return json({albums});
 }
 async function updateSong(req: Request, owner: string): Promise<Response> {
-  const bytes=await bounded(req,MAX_AUDIO+MAX_COVER+65536);
+  const bytes=await bounded(req,MAX_AUDIO+MAX_COVER+MAX_CANVAS+65536);
   const form=await new Request(req.url,{method:"POST",headers:{"content-type":req.headers.get("content-type") || ""},body:new Uint8Array(bytes)}).formData();
-  if([...form.keys()].some(k=>!["metadata","audio","cover"].includes(k)) || ["metadata","audio","cover"].some(k=>form.getAll(k).length>1))
+  if([...form.keys()].some(k=>!["metadata","audio","cover","canvas"].includes(k)) || ["metadata","audio","cover","canvas"].some(k=>form.getAll(k).length>1))
     throw new HttpError(400,"Champs de modification invalides");
   let meta: Row;
   try { meta=JSON.parse(String(form.get("metadata") || "{}")); }
   catch { throw new HttpError(400,"Métadonnées invalides"); }
-  if(!meta || Array.isArray(meta) || typeof meta!=="object" || Object.keys(meta).some(k=>!["trackId","revision","durationMs","rightsConfirmed","title","artist","album","albumSourceId","albumRevision"].includes(k)))
+  if(!meta || Array.isArray(meta) || typeof meta!=="object" || Object.keys(meta).some(k=>!["trackId","revision","durationMs","rightsConfirmed","title","artist","album","albumSourceId","albumRevision","applyCanvasToAlbum"].includes(k)))
     throw new HttpError(400,"Métadonnées invalides");
   if(meta.rightsConfirmed!==true) throw new HttpError(400,"Confirmez vos droits de publication");
   const id=uploadId(meta.trackId), old=await ownedSong(id,owner);
   if(meta.revision!==await revision(old)) throw new HttpError(409,"Ce titre a changé. Rouvrez sa modification.");
-  if(!form.has("audio") && !form.has("cover") && !["title","artist","album","albumSourceId"].some(k=>Object.hasOwn(meta,k))) throw new HttpError(400,"Aucune modification demandée");
+  if(!form.has("audio") && !form.has("cover") && !form.has("canvas") && !["title","artist","album","albumSourceId"].some(k=>Object.hasOwn(meta,k))) throw new HttpError(400,"Aucune modification demandée");
   const inherited=await albumMetadata(meta,owner);
   const audio=form.has("audio") ? await readAudio(form.get("audio")) : null;
   const image=await readCover(form.get("cover"));
+  const canvas=await readCanvas(form.get("canvas"));
   const update: Row={};
   if(Object.hasOwn(meta,"title")) update.title=field(meta.title,"Titre");
   if(Object.hasOwn(meta,"artist")) update.artist=field(meta.artist,"Artiste");
@@ -183,11 +198,18 @@ async function updateSong(req: Request, owner: string): Promise<Response> {
   try {
     if(audio) { const path=`${prefix}/audio.${audio.ext}`;await store(path,audio.data,audio.mime);uploaded.push(path);update.audio_path=path; }
     if(image) { const path=`${prefix}/cover.${image.ext}`;await store(path,image.data,image.mime);uploaded.push(path);update.cover_path=path; }
+    if(canvas) { const path=`${prefix}/canvas.${canvas.ext}`;await store(path,canvas.data,canvas.mime);uploaded.push(path);update.canvas_path=path; }
     const coverFilter=old.cover_path ? `eq.${encodeURIComponent(String(old.cover_path))}` : "is.null";
     patchAttempted=true;
     const result=await database(`ketvoice_tracks?id=eq.${id}&created_by=eq.${encodeURIComponent(owner)}&published=eq.true&audio_path=eq.${encodeURIComponent(String(old.audio_path))}&cover_path=${coverFilter}&title=eq.${encodeURIComponent(String(old.title))}&artist=eq.${encodeURIComponent(String(old.artist))}&album=eq.${encodeURIComponent(String(old.album))}`,
       {method:"PATCH",headers:{Prefer:"return=representation"},body:JSON.stringify(update)});
     if(!result.length) { definitelyUncommitted=true;throw new HttpError(409,"Ce titre a changé. Rouvrez sa modification."); }
+    // Album canvas: one upload applies to every title this owner published for
+    // the same artist and album, so the whole album shares the same video.
+    if(canvas && meta.applyCanvasToAlbum === true && String(result[0].album || "").trim()) {
+      await database(`ketvoice_tracks?created_by=eq.${encodeURIComponent(owner)}&published=eq.true&artist=eq.${encodeURIComponent(String(result[0].artist))}&album=eq.${encodeURIComponent(String(result[0].album))}`,
+        {method:"PATCH",headers:{Prefer:"return=minimal"},body:JSON.stringify({canvas_path:update.canvas_path})});
+    }
 
     return json({published:true,track:track(result[0]),revision:await revision(result[0])});
   } catch(error) {
@@ -197,7 +219,7 @@ async function updateSong(req: Request, owner: string): Promise<Response> {
   }
 }
 async function publishSong(req: Request, owner: string): Promise<Response> {
-  const bytes = await bounded(req, MAX_AUDIO + MAX_COVER + MAX_LYRICS + 65536);
+  const bytes = await bounded(req, MAX_AUDIO + MAX_COVER + MAX_CANVAS + MAX_LYRICS + 65536);
   const form = await new Request(req.url,{method:"POST",headers:{"content-type":req.headers.get("content-type") || ""},body:new Uint8Array(bytes)}).formData();
   const meta = JSON.parse(String(form.get("metadata") || "{}"));
   if (meta.rightsConfirmed !== true) throw new HttpError(400,"Confirmez vos droits de publication");
@@ -205,6 +227,7 @@ async function publishSong(req: Request, owner: string): Promise<Response> {
   const title=field(meta.title,"Titre"), artist=field(inherited?.artist ?? meta.artist,"Artiste"), album=field(inherited?.album ?? meta.album,"Album",true);
   const durationMs=duration(meta.durationMs);
   const audio=form.get("audio"), cover=form.get("cover"), lyric=form.get("lyrics");
+  const canvas=await readCanvas(form.get("canvas"));
   if (!(audio instanceof File) || !audio.size || audio.size > MAX_AUDIO) throw new HttpError(400,"Audio requis (25 Mo maximum)");
   const ext=audio.name.toLowerCase().split('.').pop() || "";
   const mimes: Record<string,string>={mp3:"audio/mpeg",m4a:"audio/mp4",aac:"audio/aac",flac:"audio/flac",wav:"audio/wav",ogg:"audio/ogg",opus:"audio/ogg"};
@@ -233,7 +256,9 @@ async function publishSong(req: Request, owner: string): Promise<Response> {
   try {
     await store(audioPath,data,mimes[ext]); uploaded.push(audioPath);
     if(image && coverPath) {await store(coverPath,image,imageMime);uploaded.push(coverPath);}
-    const rows=await database("ketvoice_tracks",{method:"POST",headers:{Prefer:"return=representation"},body:JSON.stringify({id,title,artist,album,duration_ms:durationMs,audio_path:audioPath,cover_path:coverPath,format:ext,bytes:audio.size,created_by:owner,published:true})});
+    const canvasPath=canvas ? `${id}/canvas.${canvas.ext}` : null;
+    if(canvas && canvasPath) {await store(canvasPath,canvas.data,canvas.mime);uploaded.push(canvasPath);}
+    const rows=await database("ketvoice_tracks",{method:"POST",headers:{Prefer:"return=representation"},body:JSON.stringify({id,title,artist,album,duration_ms:durationMs,audio_path:audioPath,cover_path:coverPath,canvas_path:canvasPath,format:ext,bytes:audio.size,created_by:owner,published:true})});
     if(words) await database("ketvoice_lyrics",{method:"POST",body:JSON.stringify(lyricRow({trackId:`kv:upload:${id}`,title,artist,durationMs},words,owner))});
     return json({track:track(rows[0]),published:true},201);
   } catch(error) {

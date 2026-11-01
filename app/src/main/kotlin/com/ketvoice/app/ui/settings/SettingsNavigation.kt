@@ -2,7 +2,7 @@ package com.ketvoice.app.ui.settings
 
 /** Stable saved keys; every existing settings group has exactly one destination. */
 internal enum class SettingsCategory(val title: String, val groups: Set<String>) {
-    Account("Compte YouTube Music", setOf("YOUTUBE MUSIC", "PUBLICATIONS KETVOICE API")),
+    Account("Compte", setOf("YOUTUBE MUSIC", "DISCORD", "PUBLICATIONS KETVOICE API")),
     Appearance("Apparence", setOf("APPARENCE", "LANGUE DE L'APPLICATION", "QUEST · CONFORT")),
     Design("DESIGN KETVOICE", setOf("DESIGN KETVOICE")),
     Playback("Lecture", setOf("LECTURE")),

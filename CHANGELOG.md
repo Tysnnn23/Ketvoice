@@ -7,6 +7,25 @@
 
 ---
 
+# Ketvoice 3.13.6
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 65** — Discord in Settings, aligned lyric glow and album Canvas.
+
+- Move Discord to Settings → Compte, add an optional OAuth2 token connection and
+  surface the SDK log line when a connect attempt fails.
+- Restore the soft active-line halo and keep the bloom + contour for held notes
+  only; align word masks against the rendered line for foreign scripts.
+- Blurred ambience for artist heroes, no letterbox bands, ringed avatars.
+- Pace MusicBrainz at 1 request/second so artist logos stop returning 429.
+- Studio: album Canvas (MP4) upload applied to every track of the album, played
+  by the app through `canvas_path` / `canvasURL`.
+
+Full notes: [3.13.6](docs/releases/v3.13.6.md).
+
+---
+
 # Ketvoice 3.13.5
 
 ![Ketvoice](ketvoice-banner.png)

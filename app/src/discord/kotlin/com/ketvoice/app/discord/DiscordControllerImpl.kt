@@ -25,7 +25,10 @@ class DiscordControllerImpl : DiscordController {
     @Volatile private var pending: DiscordPresencePayload? = null
     @Volatile private var restoring = false
     @Volatile private var awaitingCode = false
+    @Volatile private var restoringAccess = false
+    private var pendingAccess: String? = null
     private var verifier = ""
+    @Volatile private var discordLog = ""
     private var expectedState = ""
 
     private val main = Handler(Looper.getMainLooper())
@@ -34,6 +37,18 @@ class DiscordControllerImpl : DiscordController {
             clearPending()
             Discord.update {
                 it.copy(busy = false, error = "Délai dépassé. Réessaie la liaison Discord.")
+            }
+            return@Runnable
+        }
+        // A Connect() attempt that never reaches Ready used to leave the panel
+        // spinning forever. Report it instead of pretending something happened.
+        if (Discord.state.value.busy && !ready) {
+            Discord.update {
+                it.copy(
+                    busy = false,
+                    error = "L'app Discord n'a pas répondu. Vérifie qu'elle est installée, " +
+                        "ouverte et connectée, puis réessaie."
+                )
             }
         }
     }
@@ -58,6 +73,21 @@ class DiscordControllerImpl : DiscordController {
     override fun start() {
         if (linked) return
         ensureCreated()
+        val access = tokens?.loadAccess()
+        if (!access.isNullOrBlank()) {
+            linked = true
+            restoring = true
+            restoringAccess = true
+            pendingAccess = null // already persisted; do not overwrite it
+            Discord.update { it.copy(linked = true, busy = true, error = null) }
+            main.removeCallbacks(timeout)
+            main.postDelayed(timeout, CONNECT_TIMEOUT_MS)
+            if (!NativeDiscord.nativeSetToken(access)) {
+                restoringAccess = false
+                Discord.update { it.copy(busy = false, error = "Discord indisponible") }
+            }
+            return
+        }
         val stored = tokens?.load()
         if (stored.isNullOrBlank()) {
             // Presence-only mode resumes silently when the user enabled it.
@@ -94,6 +124,30 @@ class DiscordControllerImpl : DiscordController {
         main.removeCallbacks(timeout)
         main.postDelayed(timeout, CONNECT_TIMEOUT_MS)
         NativeDiscord.nativeConnect()
+    }
+
+    override fun connectWithToken(token: String) {
+        val value = token.trim()
+        if (value.length < 20) {
+            Discord.update { it.copy(error = "Token Discord invalide") }
+            return
+        }
+        val host = activity ?: return
+        runCatching { DiscordSocialSdkInit.setEngineActivity(host) }
+        ensureCreated()
+        if (!created) {
+            Discord.update { it.copy(error = "Discord indisponible") }
+            return
+        }
+        pendingAccess = value
+        restoringAccess = false
+        Discord.update { it.copy(busy = true, error = null) }
+        main.removeCallbacks(timeout)
+        main.postDelayed(timeout, CONNECT_TIMEOUT_MS)
+        if (!NativeDiscord.nativeSetToken(value)) {
+            pendingAccess = null
+            Discord.update { it.copy(busy = false, error = "Discord indisponible") }
+        }
     }
 
     override fun link() {
@@ -260,7 +314,7 @@ class DiscordControllerImpl : DiscordController {
                 it.copy(
                     busy = false,
                     linked = false,
-                    error = "Ouvre l'app Discord et connecte-toi, puis r?essaie."
+                    error = "Ouvre l'app Discord et connecte-toi, puis réessaie."
                 )
             }
             return
@@ -271,20 +325,38 @@ class DiscordControllerImpl : DiscordController {
     private fun handleAuth(ok: Boolean, message: String, refreshToken: String) {
         main.removeCallbacks(timeout)
         if (!ok) {
-            // A transient refresh failure must not throw away a valid link.
+            // A stored access token that the SDK rejects must not be restored on
+            // every launch: drop it and fall back to the local Discord app.
+            val droppedStored = restoringAccess
+            if (restoringAccess) {
+                runCatching { tokens?.clearAccess() }
+                restoringAccess = false
+            }
+            pendingAccess = null
             if (!restoring) linked = false
             restoring = false
             Discord.update { it.copy(linked = linked, busy = false, error = friendly(message)) }
+            if (droppedStored) connect()
             return
         }
         restoring = false
+        restoringAccess = false
         linked = true
+        pendingAccess?.let { tokens?.saveAccess(it) }
+        pendingAccess = null
         if (refreshToken.isNotBlank()) tokens?.save(refreshToken)
         // Linking is an explicit opt-in for presence: the user just granted it.
         com.ketvoice.app.data.AppSettings.discordPresence.value = true
         com.ketvoice.app.data.SettingsStore.save()
         NativeDiscord.nativeConnect()
         Discord.update { it.copy(linked = true, busy = false, error = null) }
+    }
+
+    private fun handleLog(message: String) {
+        val line = message.trim().take(220)
+        if (line.isEmpty()) return
+        discordLog = line
+        Discord.update { it.copy(log = line) }
     }
 
     private fun handlePresence(ok: Boolean, message: String) {
@@ -324,6 +396,10 @@ class DiscordControllerImpl : DiscordController {
 
         internal fun onAuth(ok: Boolean, message: String, refreshToken: String) {
             instance?.handleAuth(ok, message, refreshToken)
+        }
+
+        internal fun onLog(message: String) {
+            instance?.handleLog(message)
         }
 
         internal fun onPresence(ok: Boolean, message: String) {

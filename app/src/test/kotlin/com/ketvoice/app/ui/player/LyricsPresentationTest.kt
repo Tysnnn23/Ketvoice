@@ -50,6 +50,27 @@ class LyricsPresentationTest {
         assertEquals(listOf(0L,900L),result.lead.words.map { it.startMs })
         assertEquals(result.lead.text,result.lead.words.joinToString("") { it.text })
     }
+    @Test fun alignedWordsRebuildForeignLinesInsteadOfLightingWrongGlyphs() {
+        val line = LyricLine(0, "你好 世界", listOf(
+            LyricWord(0, "你好", 400), LyricWord(500, "世界", 900)))
+        val aligned = LyricsPresentation.aligned(line)
+        assertEquals(line.text, aligned.joinToString("") { it.text })
+        assertEquals(listOf(0L, 500L), aligned.map { it.startMs })
+        assertEquals("你好 ", aligned.first().text)
+    }
+    @Test fun impossibleWordMappingFallsBackToTheWholeLine() {
+        val line = LyricLine(0, "Paroles affichées", listOf(
+            LyricWord(100, "unrelated", 900), LyricWord(1000, "tokens", 1800)))
+        val aligned = LyricsPresentation.aligned(line)
+        assertEquals(1, aligned.size)
+        assertEquals(line.text, aligned.single().text)
+        assertEquals(100L, aligned.single().startMs)
+        assertEquals(1800L, aligned.single().endMs)
+    }
+    @Test fun alreadyExactWordTimingsAreUntouched() {
+        val words = listOf(LyricWord(0, "Go ", 500), LyricWord(600, "now", 1200))
+        assertEquals(words, LyricsPresentation.aligned(LyricLine(0, "Go now", words)))
+    }
     @Test fun sustainOnlyUsesTheRealSungWindowAndHonorsReducedMotion() {
         assertEquals(0f,LyricsPresentation.sustain(1600,0,1200,false))
         assertEquals(0f,LyricsPresentation.sustain(300,0,600,false))

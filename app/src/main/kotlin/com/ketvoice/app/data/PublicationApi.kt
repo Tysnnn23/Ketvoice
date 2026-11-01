@@ -69,6 +69,7 @@ object PublicationApi {
         return Track(id, item.optString("title"), item.optString("artist"), item.optString("album"),
             durationMs = item.optLong("durationMs"), streamUrl = stream, downloadUrl = stream,
             coverUrl = item.optString("artworkURL").takeIf { it.startsWith("https://") },
+            canvasUrl = item.optString("canvasURL").takeIf { it.startsWith("https://") },
             addon = "upload", addonId = item.optString("addonId"), lyricsProvider = "Ketvoice API").also(ArtworkRepo::acceptPublication)
     }
 
