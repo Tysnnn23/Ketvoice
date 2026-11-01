@@ -18,11 +18,13 @@ self-bot, and never fabricates a linked state.
 
 1. The user opens the account panel and taps **Link my Discord account**.
 2. Ketvoice generates a PKCE verifier, an S256 challenge and a random `state`, then
-   opens `https://discord.com/oauth2/authorize` in a browser tab.
-3. Discord redirects to `discord-1566454532890820668:/authorize/callback`, which is
-   handled by Ketvoice's own exported `DiscordCallbackActivity` (the SDK helper is
-   not relied on: it could finish without invoking the native callback when the
-   Discord app returned the user directly to Ketvoice).
+   opens `https://discord.com/oauth2/authorize` inside its own WebView
+   (`DiscordAuthActivity`).
+3. Discord redirects to `discord-1566454532890820668:/authorize/callback`. The
+   WebView intercepts that URL before Android has to resolve it, so the browser
+   and Discord app hand-off that silently dropped the code are no longer involved.
+   A `ketvoice://discord?...` bridge and the exported callback activity remain as
+   fallbacks.
 4. Ketvoice checks the scheme, path and `state`, then passes the code, verifier and
    redirect URI to the SDK (`Client::GetToken` → `Client::UpdateToken`).
 5. The access token lasts seven days; the non-expiring refresh token is stored

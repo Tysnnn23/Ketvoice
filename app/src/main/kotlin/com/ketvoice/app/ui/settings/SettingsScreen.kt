@@ -348,6 +348,8 @@ fun SettingsScreen() {
                         SettingsStore.save()
                     }
                 }
+                Text("Si la source sans perte est indisponible, la lecture et le téléchargement basculent automatiquement sur le MP3 le plus rapide.",
+                    color = th.secondary, fontSize = 11.sp, lineHeight = 16.sp, modifier = Modifier.padding(bottom = 8.dp))
                 SToggle(
                     Icons.Filled.Bolt, "Ignorer les silences",
                     "Saute les passages silencieux (moteur audio)",

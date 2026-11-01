@@ -915,7 +915,8 @@
   "Intensité": "Intensity",
   "Taille de la salle": "Room size",
   "Amortissement": "Damping",
-  "Réinitialiser": "Reset"
+  "Réinitialiser": "Reset",
+  "Si la source sans perte est indisponible, la lecture et le téléchargement basculent automatiquement sur le MP3 le plus rapide.": "If the lossless source is unavailable, playback and downloads automatically fall back to the fastest MP3."
  },
  "hi": {
   "Reverb": "रीवर्ब",
@@ -1833,7 +1834,8 @@
   "Intensité": "तीव्रता",
   "Taille de la salle": "कमरे का आकार",
   "Amortissement": "अवमंदन",
-  "Réinitialiser": "रीसेट"
+  "Réinitialiser": "रीसेट",
+  "Si la source sans perte est indisponible, la lecture et le téléchargement basculent automatiquement sur le MP3 le plus rapide.": "यदि लॉसलेस स्रोत उपलब्ध नहीं है, तो प्लेबैक और डाउनलोड स्वतः सबसे तेज़ MP3 पर चले जाते हैं।"
  },
  "ja": {
   "Reverb": "リバーブ",
@@ -2751,7 +2753,8 @@
   "Intensité": "強さ",
   "Taille de la salle": "ルームサイズ",
   "Amortissement": "ダンピング",
-  "Réinitialiser": "リセット"
+  "Réinitialiser": "リセット",
+  "Si la source sans perte est indisponible, la lecture et le téléchargement basculent automatiquement sur le MP3 le plus rapide.": "ロスレス音源が利用できない場合、再生とダウンロードは自動的に最速の MP3 に切り替わります。"
  },
  "zh": {
   "Reverb": "混响",
@@ -3669,7 +3672,8 @@
   "Intensité": "强度",
   "Taille de la salle": "房间大小",
   "Amortissement": "阻尼",
-  "Réinitialiser": "重置"
+  "Réinitialiser": "重置",
+  "Si la source sans perte est indisponible, la lecture et le téléchargement basculent automatiquement sur le MP3 le plus rapide.": "如果无损音源不可用，播放和下载会自动回退到最快的 MP3。"
  },
  "ru": {
   "Reverb": "Реверберация",
@@ -4587,7 +4591,8 @@
   "Intensité": "Интенсивность",
   "Taille de la salle": "Размер помещения",
   "Amortissement": "Демпфирование",
-  "Réinitialiser": "Сбросить"
+  "Réinitialiser": "Сбросить",
+  "Si la source sans perte est indisponible, la lecture et le téléchargement basculent automatiquement sur le MP3 le plus rapide.": "Если источник без потерь недоступен, воспроизведение и загрузка автоматически переключаются на самый быстрый MP3."
  },
  "it": {
   "Reverb": "Riverbero",
@@ -5505,7 +5510,8 @@
   "Intensité": "Intensità",
   "Taille de la salle": "Dimensione stanza",
   "Amortissement": "Smorzamento",
-  "Réinitialiser": "Reimposta"
+  "Réinitialiser": "Reimposta",
+  "Si la source sans perte est indisponible, la lecture et le téléchargement basculent automatiquement sur le MP3 le plus rapide.": "Se la sorgente lossless non è disponibile, riproduzione e download passano automaticamente all'MP3 più veloce."
  },
  "es": {
   "Reverb": "Reverb",
@@ -6423,7 +6429,8 @@
   "Intensité": "Intensidad",
   "Taille de la salle": "Tamaño de la sala",
   "Amortissement": "Amortiguación",
-  "Réinitialiser": "Restablecer"
+  "Réinitialiser": "Restablecer",
+  "Si la source sans perte est indisponible, la lecture et le téléchargement basculent automatiquement sur le MP3 le plus rapide.": "Si la fuente sin pérdidas no está disponible, la reproducción y la descarga pasan automáticamente al MP3 más rápido."
  },
  "de": {
   "Reverb": "Reverb",
@@ -7341,7 +7348,8 @@
   "Intensité": "Intensität",
   "Taille de la salle": "Raumgröße",
   "Amortissement": "Dämpfung",
-  "Réinitialiser": "Zurücksetzen"
+  "Réinitialiser": "Zurücksetzen",
+  "Si la source sans perte est indisponible, la lecture et le téléchargement basculent automatiquement sur le MP3 le plus rapide.": "Ist die Lossless-Quelle nicht verfügbar, wechseln Wiedergabe und Download automatisch zum schnellsten MP3."
  },
  "pt": {
   "Reverb": "Reverb",
@@ -8259,7 +8267,8 @@
   "Intensité": "Intensidade",
   "Taille de la salle": "Tamanho da sala",
   "Amortissement": "Amortecimento",
-  "Réinitialiser": "Repor"
+  "Réinitialiser": "Repor",
+  "Si la source sans perte est indisponible, la lecture et le téléchargement basculent automatiquement sur le MP3 le plus rapide.": "Se a fonte sem perdas não estiver disponível, a reprodução e o download passam automaticamente para o MP3 mais rápido."
  },
  "ko": {
   "Reverb": "리버브",
@@ -9177,6 +9186,7 @@
   "Intensité": "강도",
   "Taille de la salle": "공간 크기",
   "Amortissement": "댐핑",
-  "Réinitialiser": "초기화"
+  "Réinitialiser": "초기화",
+  "Si la source sans perte est indisponible, la lecture et le téléchargement basculent automatiquement sur le MP3 le plus rapide.": "무손실 소스를 사용할 수 없으면 재생과 다운로드가 자동으로 가장 빠른 MP3로 전환됩니다."
  }
 }

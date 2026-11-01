@@ -367,8 +367,11 @@ object Player {
             val customTrack = resolvedTrack.addon?.startsWith("cs:") == true
             val progressive = AppSettings.progressiveQuality.value
             var initial = if (progressive) null else if (customTrack) custom.await()
-                else if (wantsLossless()) flac.await() ?: mp3.await() ?: youtube.await()
-                else mp3.await() ?: youtube.await()
+                else if (wantsLossless()) {
+                    // Never let a stalled/expired lossless probe delay playback.
+                    withTimeoutOrNull(1_500) { flac.await() }
+                        ?: mp3.await() ?: youtube.await() ?: flac.await()
+                } else mp3.await() ?: youtube.await()
             if (initial == null) {
                 val candidates = mutableListOf(youtube, mp3, flac, custom)
                 while (candidates.isNotEmpty() && initial == null) {

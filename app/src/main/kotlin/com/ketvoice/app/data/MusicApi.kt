@@ -225,8 +225,45 @@ object MusicApi {
     suspend fun addonStream(track: Track, tag: String): StreamInfo? =
         KetvoiceApi.stream(track, tag)
 
-    suspend fun flacStream(track: Track): StreamInfo? =
-        addonStream(track, "last")?.takeIf { it.format.contains("flac", true) }
+    private val losslessBackoffUntil = java.util.concurrent.atomic.AtomicLong(0L)
+
+    /**
+     * Lossless is a third-party source that can be expired. Probe the URL before
+     * handing it to ExoPlayer, and stop asking for 15 minutes after a 4xx. The
+     * caller then falls back to the working MP3 instead of failing or glitching.
+     */
+    suspend fun flacStream(track: Track): StreamInfo? {
+        if (System.currentTimeMillis() < losslessBackoffUntil.get()) return null
+        val stream = addonStream(track, "last")?.takeIf { it.format.contains("flac", true) } ?: return null
+        val usable = withContext(Dispatchers.IO) {
+            var probe: HttpURLConnection? = null
+            try {
+                probe = (URL(stream.url).openConnection() as HttpURLConnection).apply {
+                    connectTimeout = 3500
+                    readTimeout = 3500
+                    setRequestProperty("Range", "bytes=0-1")
+                    setRequestProperty("User-Agent", UA)
+                }
+                val code = probe.responseCode
+                val type = probe.contentType.orEmpty().lowercase()
+                val first = probe.inputStream.use { it.read() }
+                val looksAudio = type.startsWith("audio/") || type.contains("flac") ||
+                    type.contains("octet-stream")
+                if (code in 200..299 && first >= 0 && looksAudio) true
+                else {
+                    if (code in listOf(401, 403, 404, 410, 451)) {
+                        losslessBackoffUntil.set(System.currentTimeMillis() + 15 * 60_000)
+                    }
+                    false
+                }
+            } catch (_: Exception) {
+                false
+            } finally {
+                probe?.disconnect()
+            }
+        }
+        return stream.takeIf { usable }
+    }
     suspend fun streamOf(base: String, id: String): StreamInfo? = withContext(Dispatchers.IO) {
         val raw = cachedHttp("$base/stream/${enc(id)}") ?: return@withContext null
         try {

@@ -7,6 +7,25 @@
 
 ---
 
+# Ketvoice 3.13.3
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 62** — Discord consent inside Ketvoice and truthful lossless fallback.
+
+- Run the Discord consent in an in-app WebView and intercept the custom-scheme
+  redirect locally, instead of relying on a browser or the Discord app to hand it
+  back. The 8-second return cancel stays.
+- Probe lossless streams, hide an expired provider for 15 minutes and start the
+  working MP3 without waiting; downloads retry the fast MP3 before YouTube.
+- Explain the automatic MP3 fallback in Settings.
+- The third-party lossless provider remains expired; device validation of the
+  Discord consent is still pending.
+
+Full notes: [3.13.3](docs/releases/v3.13.3.md).
+
+---
+
 # Ketvoice 3.13.2
 
 ![Ketvoice](ketvoice-banner.png)

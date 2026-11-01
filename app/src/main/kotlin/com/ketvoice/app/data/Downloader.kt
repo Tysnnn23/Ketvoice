@@ -115,6 +115,25 @@ object Downloader {
                 }
 
                 if (gotFile == null && !publication) {
+                    // The resolved lossless candidate may be an expired provider.
+                    // Retry the fast MP3 explicitly before falling back to YouTube.
+                    val addon = withTimeoutOrNull(35_000) {
+                        runCatching { MusicApi.addonStream(track, "um") }.getOrNull()
+                    }
+                    if (addon != null) {
+                        val dest = fileFor(c, track.id, extOf(addon))
+                        val urls = listOfNotNull(addon.downloadUrl, addon.url)
+                            .distinct().filter { it.startsWith("https://") }
+                        if (urls.any { fetch(it, dest, track.id, audioLimit) { !isActive } }) {
+                            gotFile = dest
+                            gotStream = addon
+                        } else {
+                            dest.delete()
+                        }
+                    }
+                }
+
+                if (gotFile == null && !publication) {
                     val yt = withTimeoutOrNull(35_000) { runCatching { MusicApi.youtubeStream(track) }.getOrNull() }
                     if (yt != null) {
                         val dest = fileFor(c, track.id, extOf(yt))

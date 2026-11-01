@@ -96,8 +96,11 @@ class DiscordControllerImpl : DiscordController {
 
     override fun completeAuthorization(uri: Uri?) {
         if (uri == null || !awaitingCode) return
-        if (!uri.scheme.equals("discord-${DiscordOAuth.APPLICATION_ID}", ignoreCase = true)) return
-        if (uri.path != "/authorize/callback") return
+        val custom = uri.scheme.equals("discord-${DiscordOAuth.APPLICATION_ID}", ignoreCase = true) &&
+            uri.path == "/authorize/callback"
+        val bridge = uri.scheme.equals("ketvoice", ignoreCase = true) &&
+            uri.host.equals("discord", ignoreCase = true)
+        if (!custom && !bridge) return
         val error = uri.getQueryParameter("error")
         if (!error.isNullOrBlank()) {
             val failure = if (error == "access_denied") "Liaison Discord annulée" else error
@@ -164,19 +167,19 @@ class DiscordControllerImpl : DiscordController {
     }
 
     private fun openAuthorization(context: Activity, url: String) {
-        val https = Uri.parse(url)
-        // Prefer the Discord app: it reuses the signed-in session and delivers the
-        // redirect as an intent, which custom-scheme browser navigations do not.
-        val appUri = Uri.parse(url.replaceFirst("https://discord.com", "discord://action"))
-        if (runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, appUri)) }.isSuccess) return
-        val browser = runCatching {
-            CustomTabsIntent.Builder().setShowTitle(true).build().launchUrl(context, https)
+        // Our own WebView intercepts the custom-scheme redirect before Android has
+        // to resolve it. Browsers and the Discord app can silently drop that
+        // navigation, which is what left the panel stuck.
+        val opened = runCatching {
+            context.startActivity(
+                Intent(context, DiscordAuthActivity::class.java)
+                    .putExtra(DiscordAuthActivity.EXTRA_URL, url)
+            )
         }.isSuccess
-        if (!browser) {
+        if (!opened) {
             runCatching {
-                context.startActivity(
-                    Intent(Intent.ACTION_VIEW, https).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                )
+                CustomTabsIntent.Builder().setShowTitle(true).build()
+                    .launchUrl(context, Uri.parse(url))
             }.onFailure { Log.w(TAG, "No browser available for Discord authorization", it) }
         }
     }
