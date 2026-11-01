@@ -107,11 +107,21 @@ class UiPolishHostTest {
             }
         } }
         compose.onNodeWithText("Reverb").performScrollTo().performClick()
-        compose.onNodeWithContentDescription("Réverbération").performScrollTo()
+        compose.onNodeWithContentDescription("Intensité").performScrollTo()
             .performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.SetProgress) { it(65f) }
         compose.runOnIdle {
             assertEquals(65, AppSettings.reverbAmount.value)
             assertEquals(.65f, com.ketvoice.app.player.ReverbControl.amount, .001f)
+        }
+        compose.onNodeWithContentDescription("Taille de la salle").performScrollTo()
+            .performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.SetProgress) { it(80f) }
+        compose.onNodeWithContentDescription("Amortissement").performScrollTo()
+            .performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.SetProgress) { it(60f) }
+        compose.runOnIdle {
+            assertEquals(80, AppSettings.reverbSize.value)
+            assertEquals(60, AppSettings.reverbDamping.value)
+            assertEquals(.8f, com.ketvoice.app.player.ReverbControl.size, .001f)
+            assertEquals(.6f, com.ketvoice.app.player.ReverbControl.damping, .001f)
         }
         image("player-reverb-controls")
         compose.onNodeWithText("Désactiver").performScrollTo().performClick()
