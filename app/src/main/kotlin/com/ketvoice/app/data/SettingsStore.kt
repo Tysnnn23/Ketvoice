@@ -57,6 +57,7 @@ object SettingsStore {
         s.reverbAmount.value = p.getInt("reverbAmount", 0).coerceIn(0, 100)
         com.ketvoice.app.player.ReverbControl.amount = s.reverbAmount.value / 100f
         s.progressiveQuality.value = p.getBoolean("progressiveQuality", false)
+        s.discordPresence.value = p.getBoolean("discordPresence", false)
         s.equalizerGains.value = com.ketvoice.app.player.EqualizerProfile.normalize(
             p.getString("equalizerGains", "").orEmpty().split(',').mapNotNull { it.toIntOrNull() })
         s.wifiHandoffEnabled.value = p.getBoolean("wifiHandoffEnabled", false)
@@ -147,6 +148,7 @@ object SettingsStore {
             .putBoolean("equalizerEnabled", s.equalizerEnabled.value)
             .putInt("reverbAmount", s.reverbAmount.value.coerceIn(0, 100))
             .putBoolean("progressiveQuality", s.progressiveQuality.value)
+            .putBoolean("discordPresence", s.discordPresence.value)
             .putString("equalizerGains", s.equalizerGains.value.joinToString(","))
             .putBoolean("wifiHandoffEnabled", s.wifiHandoffEnabled.value)
             .putInt("lyricsMode", s.lyricsMode.value)

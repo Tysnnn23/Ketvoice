@@ -97,6 +97,30 @@ fun AppRoot() {
         val backdrop = rememberGlassBackdrop(th.background)
         val playerState by Player.state.collectAsState()
         val artwork by ArtworkRepo.covers.collectAsState()
+
+        // Discord live presence: only while a linked account explicitly opted in.
+        val discord by com.ketvoice.app.discord.Discord.state.collectAsState()
+        LaunchedEffect(
+            playerState.current?.id, playerState.isPlaying, playerState.playWhenReady,
+            discord.linked, com.ketvoice.app.data.AppSettings.discordPresence.value
+        ) {
+            val track = playerState.current
+            val enabled = com.ketvoice.app.data.AppSettings.discordPresence.value
+            if (!discord.linked || !enabled || track == null || !playerState.isPlaying) {
+                com.ketvoice.app.discord.Discord.clearPresence()
+                return@LaunchedEffect
+            }
+            com.ketvoice.app.discord.DiscordPresence.fromTrack(
+                title = track.title,
+                artist = track.artist,
+                coverUrl = artwork["t:${track.id}"] ?: track.coverUrl,
+                playing = true,
+                positionMs = playerState.positionMs,
+                nowMs = System.currentTimeMillis(),
+                listenUrl = com.ketvoice.app.util.ShareLinks.trackUrl(track.id, track.title, track.artist)
+                    .takeUnless { track.id.startsWith("local:") }
+            )?.let(com.ketvoice.app.discord.Discord::setPresence)
+        }
         // Un clavier ouvert masque le chrome flottant : sinon le mini-lecteur
         // et la barre d'onglets se dessinent au-dessus des résultats.
         val density = LocalDensity.current

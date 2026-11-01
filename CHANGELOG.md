@@ -7,6 +7,29 @@
 
 ---
 
+# Ketvoice 3.13.0
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 59** — real Discord account linking and live listening presence.
+
+- Link a Discord account through the official Social SDK with PKCE, no password
+  collection and no simulated linked state. The refresh token is encrypted with an
+  Android Keystore key and can be removed with one tap.
+- Show the playing track, artist, cover and elapsed timer on the linked Discord
+  profile, plus **Download ketvoice** and **Listen now** buttons pointing at the
+  public site and the track's listen page.
+- Presence is opt-in, only while playing, and cleared on pause, stop, unlink or
+  opt-out. Expiring media URLs are never published.
+- The SDK is owner-supplied and stays out of Git; builds without it hide the
+  Discord panel. Voice permissions and the SDK foreground service are excluded.
+- Canvas and reverb from 3.12.1 are unchanged. Hardware OAuth/presence checks are
+  not claimed: no phone, Quest or accelerated emulator was available.
+
+Full notes: [3.13.0](docs/releases/v3.13.0.md).
+
+---
+
 # Ketvoice 3.12.1
 
 ![Ketvoice](ketvoice-banner.png)

@@ -20,6 +20,9 @@ Thumbs.db
 # Local release staging
 release-assets/
 
+# Discord Social SDK, owner-provided and never redistributed through Git
+app/libs/discord/
+
 # Local SDK, emulator images and Gradle distribution
 .tools/
 supabase/.temp/

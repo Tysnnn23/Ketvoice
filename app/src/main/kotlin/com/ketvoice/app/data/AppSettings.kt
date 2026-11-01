@@ -46,6 +46,8 @@ object AppSettings {
     val skipSilence = mutableStateOf(false)
     val equalizerEnabled = mutableStateOf(false)
     val reverbAmount = mutableStateOf(0)
+    /** Opt-in live Discord listening presence. Linking alone never publishes. */
+    val discordPresence = mutableStateOf(false)
     val progressiveQuality = mutableStateOf(false)
     val equalizerGains = mutableStateOf(listOf(0, 0, 0, 0, 0))
     val wifiHandoffEnabled = mutableStateOf(false)

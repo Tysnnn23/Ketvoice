@@ -67,6 +67,11 @@ class MainActivity : ComponentActivity() {
         } catch (_: Exception) {
         }
 
+        runCatching {
+            com.ketvoice.app.discord.Discord.attach(this)
+            com.ketvoice.app.discord.Discord.start()
+        }.onFailure { android.util.Log.w("KetvoiceDiscord", "Discord init failed", it) }
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
             != PackageManager.PERMISSION_GRANTED

@@ -92,6 +92,51 @@ fun AccountDialog(modifier: Modifier = Modifier) {
                     color = theme.secondary, fontSize = 11.5.sp, lineHeight = 16.sp,
                     modifier = Modifier.padding(bottom = 4.dp))
             }
+            val discord by com.ketvoice.app.discord.Discord.state.collectAsState()
+            if (com.ketvoice.app.discord.Discord.available) {
+                Spacer(Modifier.height(20.dp))
+                Text("Discord", color = theme.onBackground, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                if (discord.linked) {
+                    Text(discord.userName ?: "Compte lié", color = theme.accent, fontSize = 14.sp,
+                        modifier = Modifier.padding(top = 6.dp))
+                    Row(Modifier.fillMaxWidth().padding(top = 10.dp),
+                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text("Afficher ce que j'écoute", color = theme.onBackground, fontSize = 14.sp)
+                            Text("Morceau, artiste et boutons sur votre profil Discord.",
+                                color = theme.secondary, fontSize = 11.5.sp, lineHeight = 16.sp)
+                        }
+                        androidx.compose.material3.Switch(
+                            checked = AppSettings.discordPresence.value,
+                            onCheckedChange = {
+                                AppSettings.discordPresence.value = it
+                                SettingsStore.save()
+                                if (!it) com.ketvoice.app.discord.Discord.clearPresence()
+                            })
+                    }
+                    Text("Délier mon compte Discord", color = theme.accent,
+                        modifier = Modifier.fillMaxWidth().clickable {
+                            com.ketvoice.app.discord.Discord.unlink()
+                        }.padding(top = 8.dp, bottom = 4.dp))
+                } else {
+                    Text("Liez votre compte pour afficher le morceau en cours sur votre profil Discord, " +
+                        "avec les boutons de téléchargement et d'écoute.",
+                        color = theme.secondary, fontSize = 12.sp, lineHeight = 17.sp,
+                        modifier = Modifier.padding(top = 4.dp))
+                    Text(if (discord.busy) "Connexion à Discord…" else "Lier mon compte Discord",
+                        color = theme.accent, fontWeight = FontWeight.Bold,
+                        modifier = Modifier.fillMaxWidth().clickable(enabled = !discord.busy) {
+                            com.ketvoice.app.discord.Discord.link()
+                        }.padding(top = 12.dp, bottom = 6.dp))
+                }
+                discord.error?.let {
+                    Text(it, color = Color(0xFFFF6B6B), fontSize = 12.sp,
+                        modifier = Modifier.padding(bottom = 4.dp))
+                }
+                Text("Aucun mot de passe Discord n'est stocké. Seul l'accès de présence est gardé, " +
+                    "chiffré sur cet appareil.", color = theme.secondary, fontSize = 11.5.sp,
+                    lineHeight = 16.sp, modifier = Modifier.padding(top = 4.dp))
+            }
             Text("Réglages de Ketvoice", color = theme.accent, modifier = Modifier.fillMaxWidth().clickable {
                 AppUi.showAccount.value = false; AppUi.showPlayer.value = false; AppUi.openSettings()
             }.padding(top = 14.dp, bottom = 8.dp))

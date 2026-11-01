@@ -17,6 +17,12 @@
         tools:targetApi="33" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
 
+    <!-- Discord presence/linking only; voice permissions and the voice service are not used. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" tools:node="remove" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" tools:node="remove" />
+    <uses-permission android:name="android.permission.BLUETOOTH" tools:node="remove" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" tools:node="remove" />
+
     <application
         android:name=".KetvoiceApp"
         android:allowBackup="false"
@@ -148,6 +154,23 @@
                 <action android:name="androidx.media3.session.MediaSessionService" />
             </intent-filter>
         </service>
+
+        <!-- Discord Social SDK: OAuth redirect back into Ketvoice. -->
+        <activity
+            android:name="com.discord.socialsdk.AuthenticationActivity"
+            android:exported="true"
+            tools:node="merge">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="discord-1566454532890820668" />
+            </intent-filter>
+        </activity>
+
+        <service
+            android:name="com.discord.socialsdk.ForegroundService"
+            tools:node="remove" />
 
         <provider
             android:name="androidx.core.content.FileProvider"

@@ -4,6 +4,12 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
+// The Discord Social SDK is owner-supplied and never redistributed through Git.
+// Without the AAR the app still builds; the Discord integration is compiled out
+// and the account UI stays hidden.
+val discordSdk = file("libs/discord/discord_partner_sdk.aar")
+val discordSdkAvailable = discordSdk.isFile
+
 android {
     namespace = "com.ketvoice.app"
     compileSdk = 36
@@ -12,10 +18,30 @@ android {
         applicationId = "com.ketvoice.app"
         minSdk = 31
         targetSdk = 36
-        versionCode = 58
-        versionName = "3.12.1"
+        versionCode = 59
+        versionName = "3.13.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         resourceConfigurations += listOf("fr", "en", "hi", "ja", "zh", "ru", "it", "es", "de", "pt", "ko")
+        ndkVersion = "27.0.12077973"
+        if (discordSdkAvailable) {
+            // Presence and account linking only need arm64 on phones; Quest keeps
+            // x86_64 for the emulator via its flavor filters.
+            ndk { abiFilters += listOf("arm64-v8a") }
+            externalNativeBuild { cmake { arguments += "-DANDROID_STL=c++_static" } }
+        }
+    }
+
+    if (discordSdkAvailable) {
+        externalNativeBuild {
+            cmake {
+                path = file("src/discord/cpp/CMakeLists.txt")
+                version = "3.22.1"
+            }
+        }
+    }
+
+    if (discordSdkAvailable) {
+        sourceSets["main"].java.srcDir("src/discord/kotlin")
     }
 
     flavorDimensions += "device"
@@ -68,6 +94,7 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+        prefab = discordSdkAvailable
     }
     testOptions {
         unitTests.isIncludeAndroidResources = true
@@ -78,6 +105,10 @@ android {
 }
 
 dependencies {
+    if (discordSdkAvailable) {
+        implementation(files(discordSdk))
+        implementation("androidx.browser:browser:1.8.0")
+    }
     val composeBom = platform("androidx.compose:compose-bom:2025.11.00")
     implementation(composeBom)
 

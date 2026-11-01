@@ -1,43 +1,61 @@
-# Discord presence integration status
+# Discord linking and live presence
 
-Official documentation checked on 2026-11-01:
+Implemented in 3.13.0 with the official **Discord Social SDK 1.10.19337** for
+Android. Ketvoice never asks for a Discord password, never uses a user token or
+self-bot, and never fabricates a linked state.
 
-- [Android support](https://docs.discord.com/developers/discord-social-sdk/core-concepts/mobile.md)
-- [Mobile account linking](https://docs.discord.com/developers/discord-social-sdk/development-guides/account-linking-on-mobile.md)
-- [Presence and buttons](https://docs.discord.com/developers/discord-social-sdk/development-guides/setting-rich-presence.md)
+## Application setup
 
-Discord Social SDK supports Android, linked accounts, listening activities and
-two URL buttons. Android RPC presence without linking requires SDK 1.10+ and a
-signed-in Discord app. It is not a generic REST endpoint that an OAuth `identify`
-token or a bot can use to change a user's presence. User tokens/self-bots must
-never be requested or used.
+- Application ID: `1566454532890820668` (public, not a secret).
+- OAuth2 redirect registered in the Developer Portal:
+  `discord-1566454532890820668:/authorize/callback`
+- Scopes: `Client::GetDefaultPresenceScopes()` (`openid sdk.social_layer_presence`).
+- The Android manifest merges the SDK's `com.discord.socialsdk.AuthenticationActivity`
+  and adds the `discord-1566454532890820668` scheme so the browser/Discord app can
+  return the authorization code to Ketvoice.
 
-## Blocking prerequisites
+## Flow
 
-The owner supplied Application ID `1566454532890820668`; Discord's public RPC
-metadata confirms its name is **Ketvoice**. This public ID is not a secret.
-The redirect to register in OAuth2 is:
+1. The user opens the account panel and taps **Link my Discord account**.
+2. `Client::Authorize` opens Discord (or a Custom Tab) with PKCE. The SDK attaches
+   and validates `state`; Ketvoice supplies only the code challenge.
+3. The returned code is exchanged by `Client::GetToken`, then the access token is
+   installed with `Client::UpdateToken`.
+4. The access token lasts seven days; the non-expiring refresh token is stored
+   encrypted with an Android Keystore AES-GCM key (`ketvoice.discord.refresh`).
+   On startup `Client::RefreshToken` renews the access token.
+5. `Client::Connect` reaches `Status::Ready`; `GetCurrentUserV2` fills the account
+   name shown in Ketvoice.
 
-`discord-1566454532890820668:/authorize/callback`
+## Presence
 
-The Social SDK download page redirects to login in the available browser session.
-SDK activation, accepting its terms, the Android AAR/header download and callback
-registration still require the owner's developer-portal session. Public RPC
-metadata does not establish whether that private SDK configuration is complete.
-Do not fabricate a linked status or publish a non-functional connection button.
-PKCE and OAuth state validation remain mandatory; never embed a client secret in
-the APK. For a confidential client, token exchange stays on the server.
+Only while the user has enabled **Show what I'm listening to** *and* a track is
+actually playing:
 
-## Intended behavior after provisioning
+- `type = Playing`, `details` = track title, `state` = artist (both clamped to
+  Discord's 128-character limit).
+- Large image = HTTPS cover URL when it is at most 300 characters.
+- `timestamps.start` = now − playback position, so Discord counts up correctly.
+- Buttons: **Download ketvoice** → `https://ketvoice.netlify.app/` and
+  **Listen now** → the public `listen.html` track link. Never an expiring media
+  stream URL or a local file path.
+- Presence is cleared on pause/stop, unlink and opt-out.
 
-- Explicit opt-in from Account; clear unlink and presence privacy controls.
-- SDK-managed authentication, protected token storage and cancellation on logout.
-- Publish track/artist/cover and position while actually playing; clear on stop,
-  logout, opt-out and service shutdown. Reconcile seeks and pauses.
-- `Download ketvoice` → `https://ketvoice.netlify.app/`.
-- `Listen now` → the current track's public `ShareLinks` URL, never its expiring
-  media stream URL or a private/local file URL.
-- Confirm both buttons using another Discord account; Discord does not show a
-  user's own presence buttons to that same user.
-- Verify Android and Quest compatibility separately. No such live session test
-  has been performed and the integration is not shipped in 3.12.1.
+## Source distribution
+
+The SDK AAR is **not** committed. `app/libs/discord/discord_partner_sdk.aar` is
+ignored by Git and must be copied from the owner's SDK download before building
+with Discord support. Without the AAR the project still builds; the Discord UI is
+hidden and no presence code is compiled (bridge: `app/src/discord/`).
+
+## Validation status
+
+- JNI bridge compiles and links against the AAR's prefab module (NDK 27, arm64;
+  Quest also builds x86_64).
+- Payload rules (limits, buttons, HTTPS-only assets, elapsed timer, paused → no
+  presence) are covered by host unit tests.
+- **Not validated on hardware**: this environment has no phone, Quest or
+  accelerated emulator, so the real OAuth redirect, Discord-side presence and the
+  two buttons were not observed. Do not describe them as device-tested until an
+  owner-session check is performed with a second Discord account (Discord does not
+  show your own presence buttons to you).
