@@ -171,21 +171,22 @@ class UiPolishHostTest {
         compose.onNodeWithTag("controls").assertIsDisplayed()
     }
 
-    @Test fun fullscreenCanvasTapsToggleChromeRatherThanExitAndCloseStillWorks() {
+    @Test fun fullscreenCanvasAlwaysShowsMetadataAndTappingArtworkReturnsToNormal() {
         AppSettings.animatedArtwork.value = false
         AppSettings.reduceAnimations.value = true
         var exits = 0
         val track = Track("qa:focus", "Canvas title", "QA artist", "QA album", durationMs = 180_000)
         compose.setContent { KetvoiceTheme(useDark = true) {
-            CanvasFocusPlayer(track, "host-static-fallback.mp4", false, track.durationMs, { exits++ }, {})
+            CanvasFocusPlayer(track, "host-static-fallback.mp4", true, track.durationMs, { exits++ }, {})
         } }
+        // Title, artist and duration stay visible without any interaction.
+        compose.onNodeWithText(track.title).assertIsDisplayed()
+        compose.onNodeWithText(track.artist).assertIsDisplayed()
         compose.onNodeWithContentDescription("Quitter le plein écran").assertIsDisplayed()
         compose.onNodeWithTag("canvas-focus-image").performTouchInput { click(center) }
-        compose.onNodeWithContentDescription("Quitter le plein écran").assertDoesNotExist()
-        compose.runOnIdle { assertEquals(0, exits) }
-        compose.onNodeWithTag("canvas-focus-image").performTouchInput { click(center) }
-        compose.onNodeWithText(track.title).assertIsDisplayed()
-        compose.onNodeWithContentDescription("Quitter le plein écran").performClick()
+        compose.runOnIdle { assertEquals(1, exits) }
+        // The scrub row owns its gestures and must never close the Canvas.
+        compose.onNodeWithTag("canvas-focus-seek").performTouchInput { click(center) }
         compose.runOnIdle { assertEquals(1, exits) }
     }
 

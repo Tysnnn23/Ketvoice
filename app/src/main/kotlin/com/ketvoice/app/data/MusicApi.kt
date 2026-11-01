@@ -217,7 +217,17 @@ object MusicApi {
                 }
                 probe.responseCode in 200..299 && probe.inputStream.use { it.read() >= 0 }
             } catch (_: Exception) { false } finally { probe?.disconnect() }
-            if (usable) return@withContext StreamInfo(url, "aac", "YouTube Music", "yt:$videoId:${audio.optInt("itag")}")
+            if (usable) {
+              val mime = audio.optString("mimeType")
+              val format = when {
+                  mime.contains("opus", true) -> "opus"
+                  mime.contains("mp4", true) || mime.contains("aac", true) -> "aac"
+                  else -> "audio"
+              }
+              val kbps = (audio.optLong("bitrate") / 1000).toInt().coerceAtLeast(0)
+              val quality = if (kbps > 0) "$kbps kbps" else "YouTube Music"
+              return@withContext StreamInfo(url, format, quality, "yt:$videoId:${audio.optInt("itag")}")
+          }
         }
         null
     }

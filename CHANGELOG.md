@@ -7,6 +7,27 @@
 
 ---
 
+# Ketvoice 3.13.5
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 64** — word-level glow, stable backs and honest audio quality.
+
+- Restrict the lyric glow to sustained notes with a thin sung-edge contour; no
+  permanent halo on ordinary lines.
+- Keep a backing vocal on screen for its real duration (parent-line window when the
+  provider has no word timings) and only reserve the row 200 ms before it.
+- Ease the translated-line reveal with a per-glyph opacity ramp.
+- Keep title, artist and duration visible in fullscreen; tapping the artwork
+  returns to the normal player.
+- Prefer YouTube's adaptive audio over the broker's 128 kb/s MP3 for High/Lossless
+  and display the real codec/bitrate; downloads do the same.
+- Discord presence keeps the "Open the Discord app" shortcut; still unverified.
+
+Full notes: [3.13.5](docs/releases/v3.13.5.md).
+
+---
+
 # Ketvoice 3.13.4
 
 ![Ketvoice](ketvoice-banner.png)

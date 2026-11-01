@@ -366,11 +366,16 @@ object Player {
             // With it disabled, resolve the requested quality before starting once.
             val customTrack = resolvedTrack.addon?.startsWith("cs:") == true
             val progressive = AppSettings.progressiveQuality.value
+            val highQuality = qualitySetting() != "Normal"
             var initial = if (progressive) null else if (customTrack) custom.await()
                 else if (wantsLossless()) {
                     // Never let a stalled/expired lossless probe delay playback.
+                    // YouTube's best adaptive audio outranks the 128 kb/s MP3.
                     withTimeoutOrNull(1_500) { flac.await() }
-                        ?: mp3.await() ?: youtube.await() ?: flac.await()
+                        ?: withTimeoutOrNull(4_500) { youtube.await() }
+                        ?: mp3.await() ?: flac.await()
+                } else if (highQuality) {
+                    withTimeoutOrNull(4_500) { youtube.await() } ?: mp3.await()
                 } else mp3.await() ?: youtube.await()
             if (initial == null) {
                 val candidates = mutableListOf(youtube, mp3, flac, custom)
@@ -413,12 +418,13 @@ object Player {
                 _state.value = _state.value.copy(quality = label(stream))
                 AudioCache.cacheWhole(track.id, stream)
             }
-            if (first.quality == "YouTube Music" && qualitySetting() != "Normal") {
-                // A 128 kb/s MP3 is not an improvement over AAC. Only upgrade
-                // to this lossy fallback when its declared bitrate is higher.
-                val lossy = mp3.await()
-                val bitrate = lossy?.quality?.let { Regex("\\d+").find(it)?.value?.toIntOrNull() } ?: 0
-                if (bitrate >= 256) upgrade(lossy)
+            if (first.format.contains("mp3", true) && highQuality) {
+                // The broker MP3 is commonly 128 kb/s: prefer YouTube's adaptive
+                // audio when it carries a higher declared bitrate.
+                val better = withTimeoutOrNull(6_000) { youtube.await() }
+                val current = Regex("\\d+").find(first.quality)?.value?.toIntOrNull() ?: 0
+                val candidate = better?.quality?.let { Regex("\\d+").find(it)?.value?.toIntOrNull() } ?: 0
+                if (better != null && candidate > current) upgrade(better)
             }
             if (wantsLossless() && !first.format.contains("flac", true)) upgrade(flac.await())
             if (customTrack) {
@@ -547,10 +553,11 @@ object Player {
     }
 
     private fun label(s: MusicApi.StreamInfo): String = when {
-        s.quality == "YouTube Music" -> "YouTube Music · AAC"
         s.format.contains("flac", true) || s.quality.contains("lossless", true) ->
-            "FLAC · Sans perte"
+            "FLAC \u00b7 Sans perte"
         s.format.contains("mp3", true) -> "MP3 ${s.quality}"
+        s.quality.contains("kbps") -> "${s.format.uppercase()} \u00b7 ${s.quality}"
+        s.quality == "YouTube Music" -> "YouTube Music \u00b7 AAC"
         else -> s.format.ifEmpty { s.quality }
     }
 

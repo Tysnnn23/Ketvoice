@@ -132,6 +132,11 @@ fun AccountDialog(modifier: Modifier = Modifier) {
                         fontSize = 12.sp,
                         modifier = Modifier.fillMaxWidth().clickable(enabled = !discord.busy) {
                             com.ketvoice.app.discord.Discord.link()
+                        }.padding(bottom = 2.dp))
+                    Text("Ouvrir l'app Discord", color = theme.secondary, fontSize = 12.sp,
+                        modifier = Modifier.fillMaxWidth().clickable {
+                            val launch = context.packageManager.getLaunchIntentForPackage("com.discord")
+                            if (launch != null) runCatching { context.startActivity(launch) }
                         }.padding(bottom = 6.dp))
                 }
                 discord.error?.let {

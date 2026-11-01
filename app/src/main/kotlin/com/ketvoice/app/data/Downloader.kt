@@ -85,7 +85,13 @@ object Downloader {
                 val streams = withTimeoutOrNull(75_000) { MusicApi.resolve(track) }
                 val candidates = linkedSetOf<MusicApi.StreamInfo>()
                 if (preferFlac) {
+                    // Lossless first, then YouTube's best adaptive audio, then the
+                    // broker MP3 (commonly 128 kb/s). Never silently settle for the
+                    // lowest quality while a better lossy stream exists.
                     streams?.best?.let { candidates += it }
+                    withTimeoutOrNull(35_000) {
+                        runCatching { MusicApi.youtubeStream(track) }.getOrNull()
+                    }?.let { candidates += it }
                     streams?.fast?.let { candidates += it }
                 } else {
                     streams?.fast?.let { candidates += it }

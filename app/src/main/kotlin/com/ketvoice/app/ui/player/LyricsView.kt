@@ -318,8 +318,9 @@ internal fun LyricVoices(line: MusicApi.LyricLine, active: Boolean, timed: Boole
                 letterSpacing = (-.3).sp, fontWeight = FontWeight.Black,
                 modifier = Modifier.fillMaxWidth().blur(blur, BlurredEdgeTreatment.Unbounded))
         }
+        val leadStart = voices.lead.words.minOfOrNull { it.startMs } ?: line.timeMs
         voices.backs.forEach { back ->
-            BackingVocal(back, active, timed, fontScale, nearActive, position)
+            BackingVocal(back, active, timed, fontScale, nearActive, position, leadStart, leadEnd)
         }
     }
 }
@@ -331,14 +332,24 @@ private fun BackingVocal(
     timed: Boolean,
     fontScale: Float,
     nearActive: Boolean,
-    position: Long
+    position: Long,
+    parentStart: Long,
+    parentEnd: Long
 ) {
-    val start = line.words.minOfOrNull { it.startMs } ?: line.timeMs
-    val end = line.words.maxOfOrNull { it.endMs } ?: line.timeMs
-    // Reserve the extra row only 200 ms before the back starts, and keep it
-    // until it has actually finished even if the next line already began.
+    // Word timings are optional on backs. Without them, follow the parent line
+    // window instead of collapsing to a single instant (which made the row flash).
+    val first = line.words.minOfOrNull { it.startMs }
+    val last = line.words.maxOfOrNull { it.endMs }
+    val start = first ?: parentStart
+    val end = when {
+        last == null -> maxOf(parentEnd, parentStart + 600L)
+        last <= start -> start + 600L
+        else -> last
+    }
+    // Reserve the extra row only 200 ms before the back starts, and keep it until
+    // it has actually finished even if the next line already began.
     val visible = !timed || (nearActive && position != Long.MIN_VALUE &&
-        position >= start - 200L && position <= end + 260L)
+        position >= start - 200L && position <= end + 500L)
     AnimatedVisibility(
         visible = visible,
         enter = fadeIn(tween(180)) + expandVertically(tween(180), expandFrom = Alignment.Top),
@@ -386,6 +397,7 @@ internal fun KaraokeLine(line: MusicApi.LyricLine, modifier: Modifier, fontScale
     val reduced = Motion.reduced
     val density = LocalDensity.current
     val glowPx = with(density) { (if (backing) 3.4f else 5.6f).dp.toPx() }
+    val outlinePx = with(density) { if (backing) 0f else .8f.dp.toPx() }
     Box(modifier) {
         // One shaped layout for both the pending glyphs and the sung overlay.
         // No remeasurement, shifted word copy, scaling or disappearing held glyph.
@@ -401,25 +413,28 @@ internal fun KaraokeLine(line: MusicApi.LyricLine, modifier: Modifier, fontScale
                     val progress = segmentProgress(now, word.start, word.end)
                     if (progress <= 0f) return@forEach
                     val emphasis = LyricsPresentation.sustain(now, word.start, word.end, reduced || backing)
-                    // Two things read as "glow": a permanent soft halo for the active
-                    // line and a wider bloom on sustained words. Both fade together
-                    // so an unfinished previous line still glows while it completes.
-                    val glow = ((if (backing) .16f else .30f) + .42f * emphasis) *
-                        (if (dim) .62f else 1f)
+                    // No halo on ordinary glyphs: only sustained notes bloom, and the
+                    // sung edge gets a tight contour instead of lighting the whole line.
+                    val glow = if (dim || backing) 0f else .55f * emphasis
                     val ink = Color.White.copy(alpha = if (dim) .82f else 1f)
                     val halo = Shadow(Color.White.copy(alpha = glow), Offset.Zero,
-                        glowPx * (1f + 1.5f * emphasis))
+                        glowPx * (1f + 1.2f * emphasis))
+                    val edge = Color.White.copy(alpha = .30f)
                     var remaining = word.width * progress
                     word.slices.forEach { slice ->
                         val bounds = slice.bounds
                         val fill = remaining.coerceIn(0f, bounds.width)
                         remaining -= bounds.width
                         if (fill > 0f) clipPath(slice.path) {
-                            if (slice.rtl) {
-                                clipRect(bounds.right - fill, bounds.top, bounds.right, bounds.bottom) {
-                                    drawText(measured, color = ink, shadow = halo)
+                            val left = if (slice.rtl) bounds.right - fill else bounds.left
+                            val right = if (slice.rtl) bounds.right else bounds.left + fill
+                            clipRect(left, bounds.top, right, bounds.bottom) {
+                                if (outlinePx > 0f && !dim && !backing) {
+                                    drawText(measured, color = edge, topLeft = Offset(-outlinePx, 0f))
+                                    drawText(measured, color = edge, topLeft = Offset(outlinePx, 0f))
+                                    drawText(measured, color = edge, topLeft = Offset(0f, -outlinePx))
+                                    drawText(measured, color = edge, topLeft = Offset(0f, outlinePx))
                                 }
-                            } else clipRect(bounds.left, bounds.top, bounds.left + fill, bounds.bottom) {
                                 drawText(measured, color = ink, shadow = halo)
                             }
                         }

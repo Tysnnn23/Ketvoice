@@ -90,22 +90,50 @@ internal fun SyncedTranslation(
         if (w.endMs > w.startMs) w.endMs else w.startMs + 220L
     } ?: (start + 1L)
     val span = (end - start).coerceAtLeast(1L)
-    val progress = ((now - start).toFloat() / span).coerceIn(0f, 1f)
+    val raw = ((now - start).toFloat() / span).coerceIn(0f, 1f)
+    // Ease the whole sweep so it starts and ends without a visible jerk.
+    val progress = raw * raw * (3f - 2f * raw)
 
     val total = text.length
     val revealed = progress * total
-    val sung = Color.White.copy(alpha = .84f)
-    val pending = Color.White.copy(alpha = .32f)
+    val sungAlpha = .88f
+    val pendingAlpha = .30f
+
+    fun smooth(x: Float): Float {
+        val v = x.coerceIn(0f, 1f)
+        return v * v * (3f - 2f * v)
+    }
 
     val rendered = buildAnnotatedString {
         var i = 0
         while (i < total) {
-            val isSung = i < revealed
-            // Regroupe les caractères voisins de même état pour limiter les spans.
-            var j = i
-            while (j < total && (j < revealed) == isSung) j++
-            val slice = text.substring(i, j)
-            withStyle(SpanStyle(color = if (isSung) sung else pending)) { append(slice) }
+            val at = (revealed - i).coerceIn(0f, 1f)
+            val bucket = when {
+                at >= 1f -> 2
+                at <= 0f -> 0
+                else -> 1
+            }
+            var j = i + 1
+            if (bucket != 1) {
+                while (j < total) {
+                    val next = (revealed - j).coerceIn(0f, 1f)
+                    val nextBucket = when {
+                        next >= 1f -> 2
+                        next <= 0f -> 0
+                        else -> 1
+                    }
+                    if (nextBucket != bucket) break
+                    j++
+                }
+            }
+            val alpha = when (bucket) {
+                2 -> sungAlpha
+                0 -> pendingAlpha
+                else -> pendingAlpha + (sungAlpha - pendingAlpha) * smooth(at)
+            }
+            withStyle(SpanStyle(color = Color.White.copy(alpha = alpha))) {
+                append(text.substring(i, j))
+            }
             i = j
         }
     }
