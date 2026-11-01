@@ -17,13 +17,14 @@ select{width:100%;font:inherit;color:#fff;background:#100f16;border:1px solid #5
 <main>
 <div class="intro"><div class="eyebrow">Espace de publication privé</div><h1>La musique, à votre rythme.</h1><p>Publiez vos titres, gérez leurs pochettes et paroles, et pilotez les sources de Ketvoice API. Les changements de contenu sont récupérés aux prochaines requêtes, sans notification.</p></div>
 <div class="layout">
-<nav class="nav" id="navigation" aria-label="Sections" hidden><button data-view="publish" aria-selected="true">01 &nbsp; Ajouter</button><button data-view="edit">02 &nbsp; Modifier</button><button data-view="lyrics">03 &nbsp; Paroles</button><button data-view="sources">04 &nbsp; Sources API</button><button id="logout">Déconnexion</button></nav>
+<nav class="nav" id="navigation" aria-label="Sections" hidden><button data-view="publish" aria-selected="true">01 &nbsp; Ajouter</button><button data-view="edit">02 &nbsp; Modifier</button><button data-view="lyrics">03 &nbsp; Paroles</button><button data-view="albums">04 &nbsp; Albums</button><button data-view="sources">05 &nbsp; Sources API</button><button id="logout">Déconnexion</button></nav>
 <div>
 <div role="status" aria-live="polite" id="status" class="status"></div>
 <section id="login" class="panel"><h2>Connexion propriétaire</h2><p>Demandez un lien depuis cette page : il ouvrira Ketvoice Studio dans votre navigateur. Un lien demandé depuis l’application mobile continuera d’ouvrir l’application mobile.</p><button id="send" class="primary">Recevoir un lien pour le Studio</button><p class="hint" style="margin-top:20px">Ouvrez l’e-mail sur cet ordinateur. La session du Studio est perdue à la fermeture de l’onglet ; aucun secret n’est enregistré sur le disque.</p></section>
 <section id="publish" class="panel" hidden><h2>Ajouter une musique</h2><p>Uniquement des médias dont vous possédez les droits. Audio 25 Mo maximum ; pochette 4 Mo ; paroles LRC ou TTML 1 Mo.</p><form id="publishForm"><div class="row"><div><label for="newTitle">Titre</label><input id="newTitle" required maxlength="200"></div><div><label for="newArtist">Artiste</label><input id="newArtist" required maxlength="200"></div></div><div class="row"><div><label for="newAlbum">Album</label><input id="newAlbum" maxlength="200"></div><div><label for="newDuration">Durée (secondes)</label><input id="newDuration" type="number" min="0" max="86400" value="0" required></div></div><label for="newAudio">Audio</label><input id="newAudio" type="file" accept=".mp3,.m4a,.aac,.flac,.wav,.ogg,.opus" required><label for="newCover">Pochette (facultatif)</label><input id="newCover" type="file" accept="image/jpeg,image/png,image/webp"><label for="newLyrics">Paroles (facultatif)</label><input id="newLyrics" type="file" accept=".lrc,.ttml"><label class="check"><input id="newRights" type="checkbox" required> Je confirme détenir les droits de publication.</label><button class="primary">Publier la musique</button></form></section>
 <section id="edit" class="panel" hidden><h2>Rechercher et modifier</h2><p>La recherche affiche les titres publiés ; seule une musique importée par votre compte peut être modifiée. Les titres du catalogue général ne sont pas éditables.</p><div class="row"><div><label for="search">Titre ou artiste</label><input id="search" placeholder="Rechercher un titre" maxlength="160"></div><button id="searchButton">Rechercher</button></div><div id="results"></div><form id="editForm" hidden><hr class="divider"><h3 id="editingName"></h3><div class="row"><div><label for="editTitle">Titre</label><input id="editTitle" required maxlength="200"></div><div><label for="editArtist">Artiste</label><input id="editArtist" required maxlength="200"></div></div><label for="editAlbum">Album</label><input id="editAlbum" maxlength="200"><label for="editAudio">Remplacer l’audio (facultatif)</label><input id="editAudio" type="file" accept=".mp3,.m4a,.aac,.flac,.wav,.ogg,.opus"><label for="editCover">Remplacer la pochette (facultatif)</label><input id="editCover" type="file" accept="image/jpeg,image/png,image/webp"><div class="row"><div><label for="editDuration">Durée (secondes, si nouvel audio)</label><input id="editDuration" type="number" min="0" max="86400"></div></div><label class="check"><input id="editRights" type="checkbox" required> Je confirme détenir les droits de publication.</label><button class="primary">Enregistrer les changements</button></form></section>
 <section id="lyrics" class="panel" hidden><h2>Importer des paroles</h2><p>Publiez une version LRC ou TTML pour une musique, y compris un titre du catalogue. Une nouvelle version est ajoutée sans modifier l’audio.</p><form id="lyricsForm"><label for="lyricId">Identifiant du titre</label><input id="lyricId" required maxlength="180" placeholder="Sélectionnez un résultat de la recherche"><div class="row"><div><label for="lyricTitle">Titre</label><input id="lyricTitle" required maxlength="200"></div><div><label for="lyricArtist">Artiste</label><input id="lyricArtist" required maxlength="200"></div></div><label for="lyricFile">Fichier LRC ou TTML</label><input id="lyricFile" type="file" accept=".lrc,.ttml" required><label class="check"><input id="lyricRights" type="checkbox" required> Je confirme détenir les droits de publication.</label><button class="primary">Publier les paroles</button></form></section>
+<section id="albums" class="panel" hidden><h2>Albums</h2><p>Recherchez un album publié, changez son Canvas pour tout l’album ou titre par titre, et ajoutez ou retirez des titres. Le Canvas est la vidéo jouée derrière les paroles dans l’application.</p><div class="row"><div><label for="albumSearch">Rechercher un album ou un artiste</label><input id="albumSearch" placeholder="Nom d’album ou artiste" maxlength="160"></div><button id="albumRefresh" type="button">Actualiser les albums</button></div><div id="albumResults"></div><div id="albumDetail" hidden></div></section>
 <section id="sources" class="panel" hidden><h2>Sources Ketvoice API</h2><p>Ajoutez des manifestes HTTPS pour enrichir la recherche de musique. Les sources actives sont relues par l’API à chaque recherche et lecture. Une URL expirée peut être remplacée, désactivée ou supprimée.</p><form id="sourceForm"><label for="sourceName">Nom</label><input id="sourceName" required maxlength="100" placeholder="Nouvelle source"><label for="sourceUrl">URL du manifeste</label><input id="sourceUrl" type="url" required maxlength="2048" placeholder="https://exemple.fr/e/.../manifest.json"><button class="primary">Ajouter la source</button></form><hr class="divider"><h3>Sources configurées</h3><div id="sourceList"></div></section>
 </div></div></main>
 <script>
@@ -55,7 +56,7 @@ select{width:100%;font:inherit;color:#fff;background:#100f16;border:1px solid #5
   }
   async function content(path,options={}){if(options.admin) await token();return call('/functions/v1/ketvoice-content'+path,options);}
   async function run(button,work){button.disabled=true;notice('Traitement en cours…');try{await work();}catch(error){notice(error.message,true);}finally{button.disabled=false;}}
-  function view(name){for(const section of document.querySelectorAll('main section'))section.hidden=section.id!==name;for(const button of document.querySelectorAll('.nav [data-view]'))button.setAttribute('aria-selected',String(button.dataset.view===name));if(name==='sources') loadSources();}
+  function view(name){for(const section of document.querySelectorAll('main section'))section.hidden=section.id!==name;for(const button of document.querySelectorAll('.nav [data-view]'))button.setAttribute('aria-selected',String(button.dataset.view===name));if(name==='sources') loadSources();if(name==='albums')loadAlbums().then(renderAlbumList).catch(error=>notice(error.message,true));}
   function signedIn(){ $('login').hidden=true;$('navigation').hidden=false;$('identity').textContent=email;view('publish');notice('Connecté au compte propriétaire.');loadAlbums().catch(error=>{for(const prefix of pickers.keys())$(prefix+'AlbumHint').textContent='Albums indisponibles. Utilisez « Actualiser les albums » pour réessayer.';notice(error.message,true);});}
   $('send').onclick=event=>run(event.currentTarget,async()=>{
     await call('/auth/v1/otp?redirect_to='+encodeURIComponent(studio),{method:'POST',body:{email,create_user:false}});
@@ -211,6 +212,100 @@ select{width:100%;font:inherit;color:#fff;background:#100f16;border:1px solid #5
     resetEditor('edit');editable={track:result.track,revision:result.revision};$('editingName').textContent=result.track.title;$('editArtist').value=result.track.artist;$('editAlbum').value=result.track.album||'';$('editDuration').value=Number(result.track.durationMs||0)/1000;
     await loadAlbums().catch(()=>{$('editAlbumHint').textContent='Musique modifiée. Actualisez les albums pour retrouver les changements.';});notice('Musique modifiée. Les prochaines requêtes utiliseront cette version.');
   });};
+  // ---------------------------------------------------------------- Albums
+  let albumDetail=null;
+  function albumCard(album){
+    const card=document.createElement('div');card.className='card';
+    const row=document.createElement('div');row.className='row';
+    if(album.artworkURL){const image=document.createElement('img');image.src=album.artworkURL;image.alt='Pochette de '+album.album;image.referrerPolicy='no-referrer';image.width=72;image.height=72;image.style.objectFit='cover';image.style.borderRadius='12px';row.append(image);}
+    const info=document.createElement('div');
+    const title=document.createElement('strong');title.textContent=album.album;info.append(title);
+    const meta=document.createElement('small');meta.textContent=`${album.artist} · ${album.trackCount} titre(s)`+(album.canvasURL?' · Canvas publié':' · Sans Canvas');info.append(meta);
+    row.append(info);card.append(row);
+    const open=document.createElement('button');open.textContent='Gérer cet album';
+    open.onclick=()=>run(open,async()=>{await openAlbum(album.sourceId);});
+    card.append(open);return card;
+  }
+  function renderAlbumList(){
+    if(!$('albumResults'))return;
+    const query=$('albumSearch').value.trim().toLowerCase();
+    const list=albums.filter(album=>!query||album.album.toLowerCase().includes(query)||album.artist.toLowerCase().includes(query));
+    const box=$('albumResults');box.replaceChildren(...list.map(albumCard));
+    if(!list.length)box.textContent=albums.length?'Aucun album ne correspond à cette recherche.':'Aucun album publié pour le moment.';
+    if(list.length===0&&$('albumDetail'))$('albumDetail').hidden=true;
+  }
+  async function openAlbum(sourceId){
+    const data=await content('/admin/album?sourceId='+encodeURIComponent(sourceId),{admin:true});
+    albumDetail=data;renderAlbumDetail(data);
+  }
+  function albumTrackRow(track,album){
+    const row=document.createElement('div');row.className='card';
+    const info=document.createElement('div');
+    const title=document.createElement('strong');title.textContent=track.title;info.append(title);
+    const meta=document.createElement('small');meta.textContent=track.artist;info.append(meta);
+    row.append(info);
+    const picker=document.createElement('input');picker.type='file';picker.accept='video/mp4';picker.hidden=true;
+    const canvas=document.createElement('button');canvas.textContent='Canvas de ce titre';
+    canvas.onclick=()=>picker.click();
+    picker.onchange=()=>run(canvas,async()=>{
+      const chosen=picker.files[0];if(!chosen)return;
+      await uploadAlbumCanvas(album,chosen,track.id);
+      picker.value='';
+    });
+    row.append(picker,canvas);
+    const remove=document.createElement('button');remove.textContent='Retirer de l’album';remove.className='danger';
+    remove.onclick=()=>run(remove,async()=>{
+      if(!confirm(`Retirer « ${track.title} » de l’album ${album.album} ?`))return;
+      await content('/admin/album/tracks',{method:'POST',admin:true,body:{albumSourceId:album.sourceId,trackId:track.id,action:'remove'}});
+      await loadAlbums();await openAlbum(album.sourceId);notice('Titre retiré de l’album.');
+    });
+    row.append(remove);return row;
+  }
+  function renderAlbumDetail(data){
+    const album=data.album,box=$('albumDetail');box.hidden=false;box.replaceChildren();
+    const heading=document.createElement('h3');heading.textContent=`${album.album} — ${album.artist}`;box.append(heading);
+    const info=document.createElement('p');info.className='hint';
+    info.textContent=`${album.trackCount} titre(s). Canvas : ${album.canvasURL?'publié':'aucun'}.`;
+    box.append(info);
+    const canvasCard=document.createElement('div');canvasCard.className='card';
+    const label=document.createElement('strong');label.textContent='Canvas de tout l’album (MP4, 20 Mo max)';canvasCard.append(label);
+    const hint=document.createElement('p');hint.className='hint';hint.textContent='Remplace la vidéo de tous les titres de l’album. Pour un seul titre, utilisez « Canvas de ce titre » ci-dessous.';
+    canvasCard.append(hint);
+    const picker=document.createElement('input');picker.type='file';picker.accept='video/mp4';picker.id='albumCanvasFile';
+    const save=document.createElement('button');save.className='primary';save.textContent='Enregistrer le Canvas de l’album';
+    save.onclick=()=>run(save,async()=>{const chosen=picker.files[0];if(!chosen)throw Error('Choisissez un fichier MP4.');await uploadAlbumCanvas(album,chosen,null);picker.value='';});
+    canvasCard.append(picker,save);box.append(canvasCard);
+    if(album.canvasURL){const link=document.createElement('a');link.href=album.canvasURL;link.target='_blank';link.rel='noopener';link.textContent='Voir le Canvas actuel';box.append(link);}
+    const tracksTitle=document.createElement('h3');tracksTitle.textContent='Titres de l’album';box.append(tracksTitle);
+    if(!data.tracks.length)box.append(document.createTextNode('Aucun titre.'));
+    for(const track of data.tracks)box.append(albumTrackRow(track,album));
+    const addTitle=document.createElement('h3');addTitle.textContent='Ajouter un titre à cet album';box.append(addTitle);
+    if(!data.candidates.length)box.append(document.createTextNode('Tous vos autres titres sont déjà dans cet album.'));
+    for(const candidate of data.candidates.slice(0,40)){
+      const row=document.createElement('div');row.className='card';
+      const info=document.createElement('div');
+      const title=document.createElement('strong');title.textContent=candidate.title;info.append(title);
+      const meta=document.createElement('small');meta.textContent=`${candidate.artist}${candidate.album?' · '+candidate.album:''}`;info.append(meta);
+      row.append(info);
+      const add=document.createElement('button');add.textContent='Ajouter à l’album';
+      add.onclick=()=>run(add,async()=>{
+        await content('/admin/album/tracks',{method:'POST',admin:true,body:{albumSourceId:album.sourceId,trackId:candidate.id,action:'add'}});
+        await loadAlbums();await openAlbum(album.sourceId);notice('Titre ajouté à l’album.');
+      });
+      row.append(add);box.append(row);
+    }
+  }
+  async function uploadAlbumCanvas(album,file,trackId){
+    if(file.size>20*1024*1024)throw Error('Canvas trop volumineux (20 Mo maximum).');
+    const body=new FormData();
+    body.append('metadata',JSON.stringify(trackId?{albumSourceId:album.sourceId,revision:album.revision,trackId}:{albumSourceId:album.sourceId,revision:album.revision}));
+    body.append('canvas',file,file.name);
+    await content('/admin/album/canvas',{method:'POST',body,admin:true});
+    await loadAlbums();await openAlbum(album.sourceId);
+    notice(trackId?'Canvas du titre enregistré.':'Canvas de l’album enregistré.');
+  }
+  if($('albumSearch'))$('albumSearch').oninput=renderAlbumList;
+  if($('albumRefresh'))$('albumRefresh').onclick=event=>run(event.currentTarget,async()=>{await loadAlbums();renderAlbumList();notice('Albums actualisés.');});
   $('lyricsForm').onsubmit=event=>{event.preventDefault();run(event.submitter,async()=>{const selected=file('lyricFile');if(selected.size>1048576)throw Error('Fichier trop volumineux.');const format=selected.name.toLowerCase().split('.').pop();if(!['lrc','ttml'].includes(format))throw Error('Fichier LRC ou TTML requis.');await content('/admin/lyrics',{method:'POST',admin:true,body:{trackId:$('lyricId').value.trim(),title:$('lyricTitle').value.trim(),artist:$('lyricArtist').value.trim(),durationMs:0,format,content:await selected.text(),rightsConfirmed:$('lyricRights').checked}});$('lyricsForm').reset();notice('Paroles publiées.');});};
   async function loadSources(){try{const data=await content('/admin/sources',{admin:true});$('sourceList').replaceChildren(...data.sources.map(sourceCard));if(!data.sources.length)$('sourceList').textContent='Aucune source ajoutée.';}catch(error){notice(error.message,true);}}
   function sourceCard(source){const card=document.createElement('div');card.className='card';const title=document.createElement('strong');title.textContent=source.name+' · '+(source.enabled?'Active':'Désactivée');card.append(title);const url=document.createElement('small');url.textContent=source.manifest_url;card.append(url);

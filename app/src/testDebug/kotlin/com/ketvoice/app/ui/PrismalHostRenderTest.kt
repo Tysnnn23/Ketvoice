@@ -160,7 +160,7 @@ class PrismalHostRenderTest {
             }
         } }
         compose.onNodeWithText(track.artist).assertIsDisplayed()
-        compose.onNodeWithText("Lecture").assertIsDisplayed()
+        compose.onNodeWithText("Écouter").assertIsDisplayed()
         compose.onNodeWithText("Aléatoire").assertIsDisplayed()
         image("artist-header-dark-fallback")
     }

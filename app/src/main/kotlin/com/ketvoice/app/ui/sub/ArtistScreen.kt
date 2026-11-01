@@ -106,7 +106,7 @@ fun ArtistScreen() {
                     Column(Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
                         Text(data.description, localize = false, color = theme.secondary, fontSize = 13.5.sp, lineHeight = 19.sp,
                             maxLines = if (expandedBio) 40 else 4, overflow = TextOverflow.Ellipsis)
-                        Text(if (expandedBio) "Réduire" else "Lire plus", color = theme.accent,
+                        Text(if (expandedBio) "Afficher moins" else "Lire plus", color = theme.accent,
                             fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
                             modifier = Modifier.clickable { expandedBio = !expandedBio }.padding(top = 8.dp))
                     }

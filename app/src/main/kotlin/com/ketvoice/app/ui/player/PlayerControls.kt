@@ -154,14 +154,8 @@ fun ArtworkCanvas(
                                 contentScale = ContentScale.Crop
                             )
                         }
-                    else -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text(
-                            track.title.take(1).uppercase(),
-                            color = Color.White.copy(alpha = 0.9f),
-                            fontSize = 92.sp,
-                            fontWeight = FontWeight.Black
-                        )
-                    }
+                    else -> Box(Modifier.fillMaxSize().background(
+                        Brush.verticalGradient(listOf(Color.White.copy(alpha = .06f), Color.Transparent))))
                 }
             }
         }

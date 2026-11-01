@@ -267,6 +267,74 @@ async function publishSong(req: Request, owner: string): Promise<Response> {
     throw error;
   }
 }
+async function albumDetail(owner: string, url: URL): Promise<Response> {
+  const source=await ownedSong(uploadId(url.searchParams.get("sourceId")),owner);
+  const artist=String(source.artist ?? ""), album=String(source.album ?? "").trim();
+  if(!album) throw new HttpError(400,"Ce titre n’appartient pas à un album");
+  const rows=await database(`ketvoice_tracks?created_by=eq.${encodeURIComponent(owner)}&published=eq.true&artist=eq.${encodeURIComponent(artist)}&album=eq.${encodeURIComponent(album)}&order=created_at.asc,id.asc&limit=250`);
+  const all=await database(`ketvoice_tracks?created_by=eq.${encodeURIComponent(owner)}&published=eq.true&order=created_at.desc&limit=250`);
+  const candidates=all.filter(row=>String(row.artist ?? "")!==artist || String(row.album ?? "")!==album)
+    .map(row=>({id:`kv:upload:${row.id}`,title:row.title,artist:row.artist,album:row.album,
+      artworkURL:row.cover_path ? publicFile(String(row.cover_path)) : null}));
+  const canvas=rows.find(row=>row.canvas_path)?.canvas_path;
+  return json({album:{sourceId:`kv:upload:${source.id}`,revision:await revision(source),artist,album,
+      artworkURL:source.cover_path ? publicFile(String(source.cover_path)) : null,
+      canvasURL:canvas ? publicFile(String(canvas)) : null,trackCount:rows.length},
+    tracks:rows.map(track),candidates});
+}
+async function albumTracks(req: Request, owner: string): Promise<Response> {
+  const payload=JSON.parse(new TextDecoder("utf-8",{fatal:true}).decode(await bounded(req,65536)));
+  if(!payload || typeof payload!=="object" || Array.isArray(payload)) throw new HttpError(400,"Requête invalide");
+  const action=String(payload.action || "");
+  if(action!=="add" && action!=="remove") throw new HttpError(400,"Action inconnue");
+  const source=await ownedSong(uploadId(payload.albumSourceId),owner);
+  const target=await ownedSong(uploadId(payload.trackId),owner);
+  const album=String(source.album ?? "").trim(), artist=String(source.artist ?? "");
+  if(!album) throw new HttpError(400,"Cet album n’a pas de nom");
+  if(target.id===source.id) throw new HttpError(400,"Choisissez un autre titre");
+  if(action==="remove") {
+    if(String(target.album ?? "")!==album || String(target.artist ?? "")!==artist)
+      throw new HttpError(400,"Ce titre n’appartient pas à cet album");
+    await database(`ketvoice_tracks?id=eq.${target.id}&created_by=eq.${encodeURIComponent(owner)}`,
+      {method:"PATCH",headers:{Prefer:"return=minimal"},body:JSON.stringify({album:""})});
+  } else {
+    const update: Row={artist:source.artist,album:source.album};
+    if(!target.cover_path && source.cover_path) update.cover_path=source.cover_path;
+    await database(`ketvoice_tracks?id=eq.${target.id}&created_by=eq.${encodeURIComponent(owner)}`,
+      {method:"PATCH",headers:{Prefer:"return=minimal"},body:JSON.stringify(update)});
+  }
+  return json({updated:true,action});
+}
+async function albumCanvas(req: Request, owner: string): Promise<Response> {
+  const bytes=await bounded(req,MAX_CANVAS+65536);
+  const form=await new Request(req.url,{method:"POST",headers:{"content-type":req.headers.get("content-type") || ""},body:new Uint8Array(bytes)}).formData();
+  if([...form.keys()].some(k=>!["metadata","canvas"].includes(k)) || form.getAll("canvas").length>1)
+    throw new HttpError(400,"Champs de modification invalides");
+  let meta: Row;
+  try { meta=JSON.parse(String(form.get("metadata") || "{}")); }
+  catch { throw new HttpError(400,"Métadonnées invalides"); }
+  if(!meta || Array.isArray(meta) || typeof meta!=="object" ||
+     Object.keys(meta).some(k=>!["albumSourceId","revision","trackId"].includes(k)))
+    throw new HttpError(400,"Métadonnées invalides");
+  const source=await ownedSong(uploadId(meta.albumSourceId),owner);
+  if(meta.revision!==await revision(source)) throw new HttpError(409,"L’album a changé. Actualisez la liste.");
+  const album=String(source.album ?? "").trim(), artist=String(source.artist ?? "");
+  if(!album) throw new HttpError(400,"Cet album n’a pas de nom");
+  const canvas=await readCanvas(form.get("canvas"));
+  if(!canvas) throw new HttpError(400,"Canvas MP4 requis");
+  // One canvas for the album, or a single track when trackId is supplied.
+  let scope=`ketvoice_tracks?created_by=eq.${encodeURIComponent(owner)}&published=eq.true&artist=eq.${encodeURIComponent(artist)}&album=eq.${encodeURIComponent(album)}`;
+  if(meta.trackId !== undefined && meta.trackId !== null && String(meta.trackId).trim() !== "") {
+    const target=await ownedSong(uploadId(meta.trackId),owner);
+    if(String(target.album ?? "")!==album || String(target.artist ?? "")!==artist)
+      throw new HttpError(400,"Ce titre n’appartient pas à cet album");
+    scope=`ketvoice_tracks?id=eq.${target.id}&created_by=eq.${encodeURIComponent(owner)}`;
+  }
+  const path=`album-${source.id}/${crypto.randomUUID()}/canvas.mp4`;
+  await store(path,canvas.data,canvas.mime);
+  await database(scope,{method:"PATCH",headers:{Prefer:"return=minimal"},body:JSON.stringify({canvas_path:path})});
+  return json({updated:true,canvasURL:publicFile(path)});
+}
 async function publicLyrics(url: URL): Promise<Response> {
   const id=url.searchParams.get("trackId") || "", title=url.searchParams.get("title") || "", artist=url.searchParams.get("artist") || "";
   const select="select=id,track_id,title,artist,format,content,duration_ms,created_at&published=eq.true&order=created_at.desc&limit=10";
@@ -358,6 +426,9 @@ Deno.serve(async(req:Request)=>{
       if(req.method==="GET" && path==="/admin/session") return json({allowed:true});
       if(req.method==="GET" && path==="/admin/albums") return await ownerAlbums(owner);
       if(path==="/admin/sources") return await sources(req,owner,url);
+      if(req.method==="GET" && path==="/admin/album") return await albumDetail(owner,url);
+      if(req.method==="POST" && path==="/admin/album/tracks") return await albumTracks(req,owner);
+      if(req.method==="POST" && path==="/admin/album/canvas") return await albumCanvas(req,owner);
       if(req.method==="GET" && path==="/admin/song") {
         const row=await ownedSong(uploadId(url.searchParams.get("id")),owner);
         return json({track:track(row),revision:await revision(row)});

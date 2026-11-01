@@ -7,6 +7,23 @@
 
 ---
 
+# Ketvoice 3.13.8
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 67** — album management in the Studio and artist-page fixes.
+
+- Studio → Albums: search albums, set a Canvas for the whole album or one track,
+  and add/remove tracks. The app reads the same `canvasURL`.
+- Artist pages: Listen/Écouter, Show less/Afficher moins, translated EP and
+  Compilation; artist-logo rate limiting fixed.
+- Discord opens through several routes and only reports failure if all fail.
+- Removed the oversized first-letter artwork fallback.
+
+Full notes: [3.13.8](docs/releases/v3.13.8.md).
+
+---
+
 # Ketvoice 3.13.7
 
 ![Ketvoice](ketvoice-banner.png)

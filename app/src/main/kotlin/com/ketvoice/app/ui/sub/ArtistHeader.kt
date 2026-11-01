@@ -123,7 +123,7 @@ internal fun ArtistHeader(page: ArtistPage) {
                 horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Filled.PlayArrow, null, tint = onAccent, modifier = Modifier.size(21.dp))
                 Spacer(Modifier.width(6.dp))
-                Text("Lecture", color = onAccent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                Text("Écouter", color = onAccent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
             }
             GlassPanel(Modifier.weight(1f), RoundedCornerShape(50), GlassParams.pill(dark = theme.isDark),
                 enabled = AppSettings.liquidGlass.value) {

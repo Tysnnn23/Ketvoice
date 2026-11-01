@@ -52,27 +52,39 @@ internal fun DiscordSettings(modifier: Modifier = Modifier) {
         }
     }
 
-    fun discordIntent() = context.packageManager.getLaunchIntentForPackage("com.discord")
+    // Discord does not always expose a plain launch intent (Android 11+, work
+    // profiles, non-standard installs). Try the launcher, then its scheme, then a
+    // web hand-off, and only report a failure if every route failed.
+    fun launchDiscord(): Boolean {
+        val pm = context.packageManager
+        val candidates = listOfNotNull(
+            pm.getLaunchIntentForPackage("com.discord"),
+            pm.getLeanbackLaunchIntentForPackage("com.discord"),
+            Intent(Intent.ACTION_VIEW, android.net.Uri.parse("discord://")).setPackage("com.discord"),
+            Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://discord.com/app"))
+        )
+        for (intent in candidates) {
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            if (runCatching { context.startActivity(intent) }.isSuccess) return true
+        }
+        return false
+    }
 
     fun openDiscord() {
-        val launch = discordIntent()
-        if (launch == null) {
-            localError = "L'app Discord n'est pas installée sur cet appareil."
-        } else {
+        if (launchDiscord()) {
             localError = null
-            runCatching { context.startActivity(launch) }
+        } else {
+            localError = "Impossible d'ouvrir Discord sur cet appareil."
         }
     }
 
     fun enablePresence() {
         if (Discord.available.not() || discord.busy) return
-        val launch = discordIntent()
-        if (launch == null) {
-            localError = "L'app Discord n'est pas installée sur cet appareil."
+        if (!launchDiscord()) {
+            localError = "Impossible d'ouvrir Discord sur cet appareil. Vérifie qu'il est installé."
             return
         }
         localError = null
-        runCatching { context.startActivity(launch) }
         connectAfterLaunch = true
     }
 

@@ -938,7 +938,12 @@
   "Cette version a été compilée sans le SDK Discord.": "This build was compiled without the Discord SDK.",
   "Utilise l'app Discord installée sur cet appareil. Aucun mot de passe Discord n'est demandé ni conservé.": "Uses the Discord app installed on this device. No Discord password is requested or stored.",
   "L'app Discord n'est pas installée sur cet appareil.": "The Discord app is not installed on this device.",
-  "OAuth2 · redirect à déclarer : discord-1566454532890820668:/authorize/callback": "OAuth2 · redirect to register: discord-1566454532890820668:/authorize/callback"
+  "OAuth2 · redirect à déclarer : discord-1566454532890820668:/authorize/callback": "OAuth2 · redirect to register: discord-1566454532890820668:/authorize/callback",
+  "Afficher moins": "Show less",
+  "Impossible d'ouvrir Discord sur cet appareil.": "Unable to open Discord on this device.",
+  "Impossible d'ouvrir Discord sur cet appareil. Vérifie qu'il est installé.": "Unable to open Discord on this device. Check that it is installed.",
+  "EP": "EP",
+  "Compilation": "Compilation"
  },
  "hi": {
   "Reverb": "रीवर्ब",
@@ -1879,7 +1884,12 @@
   "Cette version a été compilée sans le SDK Discord.": "यह बिल्ड Discord SDK के बिना बनाया गया है।",
   "Utilise l'app Discord installée sur cet appareil. Aucun mot de passe Discord n'est demandé ni conservé.": "इस डिवाइस पर इंस्टॉल Discord ऐप का उपयोग करता है। कोई Discord पासवर्ड नहीं मांगा या सहेजा जाता है।",
   "L'app Discord n'est pas installée sur cet appareil.": "Discord ऐप इस डिवाइस पर इंस्टॉल नहीं है।",
-  "OAuth2 · redirect à déclarer : discord-1566454532890820668:/authorize/callback": "OAuth2 · पंजीकृत करने हेतु redirect: discord-1566454532890820668:/authorize/callback"
+  "OAuth2 · redirect à déclarer : discord-1566454532890820668:/authorize/callback": "OAuth2 · पंजीकृत करने हेतु redirect: discord-1566454532890820668:/authorize/callback",
+  "Afficher moins": "कम दिखाएँ",
+  "Impossible d'ouvrir Discord sur cet appareil.": "इस डिवाइस पर Discord नहीं खुल सका।",
+  "Impossible d'ouvrir Discord sur cet appareil. Vérifie qu'il est installé.": "इस डिवाइस पर Discord नहीं खुल सका। जाँचें कि यह इंस्टॉल है।",
+  "EP": "EP",
+  "Compilation": "संग्रह"
  },
  "ja": {
   "Reverb": "リバーブ",
@@ -2820,7 +2830,12 @@
   "Cette version a été compilée sans le SDK Discord.": "このビルドは Discord SDK なしでコンパイルされています。",
   "Utilise l'app Discord installée sur cet appareil. Aucun mot de passe Discord n'est demandé ni conservé.": "この端末にインストールされた Discord アプリを使用します。Discord のパスワードは要求も保存もされません。",
   "L'app Discord n'est pas installée sur cet appareil.": "この端末に Discord アプリがインストールされていません。",
-  "OAuth2 · redirect à déclarer : discord-1566454532890820668:/authorize/callback": "OAuth2 · 登録する redirect: discord-1566454532890820668:/authorize/callback"
+  "OAuth2 · redirect à déclarer : discord-1566454532890820668:/authorize/callback": "OAuth2 · 登録する redirect: discord-1566454532890820668:/authorize/callback",
+  "Afficher moins": "表示を減らす",
+  "Impossible d'ouvrir Discord sur cet appareil.": "この端末で Discord を開けません。",
+  "Impossible d'ouvrir Discord sur cet appareil. Vérifie qu'il est installé.": "この端末で Discord を開けません。インストールされているか確認してください。",
+  "EP": "EP",
+  "Compilation": "コンピレーション"
  },
  "zh": {
   "Reverb": "混响",
@@ -3761,7 +3776,12 @@
   "Cette version a été compilée sans le SDK Discord.": "此版本未包含 Discord SDK。",
   "Utilise l'app Discord installée sur cet appareil. Aucun mot de passe Discord n'est demandé ni conservé.": "使用此设备上安装的 Discord 应用。不会要求或保存 Discord 密码。",
   "L'app Discord n'est pas installée sur cet appareil.": "此设备未安装 Discord 应用。",
-  "OAuth2 · redirect à déclarer : discord-1566454532890820668:/authorize/callback": "OAuth2 · 需注册的 redirect：discord-1566454532890820668:/authorize/callback"
+  "OAuth2 · redirect à déclarer : discord-1566454532890820668:/authorize/callback": "OAuth2 · 需注册的 redirect：discord-1566454532890820668:/authorize/callback",
+  "Afficher moins": "收起",
+  "Impossible d'ouvrir Discord sur cet appareil.": "无法在此设备上打开 Discord。",
+  "Impossible d'ouvrir Discord sur cet appareil. Vérifie qu'il est installé.": "无法在此设备上打开 Discord。请确认已安装。",
+  "EP": "EP",
+  "Compilation": "合辑"
  },
  "ru": {
   "Reverb": "Реверберация",
@@ -4702,7 +4722,12 @@
   "Cette version a été compilée sans le SDK Discord.": "Эта сборка собрана без Discord SDK.",
   "Utilise l'app Discord installée sur cet appareil. Aucun mot de passe Discord n'est demandé ni conservé.": "Использует приложение Discord, установленное на устройстве. Пароль Discord не запрашивается и не сохраняется.",
   "L'app Discord n'est pas installée sur cet appareil.": "Приложение Discord не установлено на этом устройстве.",
-  "OAuth2 · redirect à déclarer : discord-1566454532890820668:/authorize/callback": "OAuth2 · redirect для регистрации: discord-1566454532890820668:/authorize/callback"
+  "OAuth2 · redirect à déclarer : discord-1566454532890820668:/authorize/callback": "OAuth2 · redirect для регистрации: discord-1566454532890820668:/authorize/callback",
+  "Afficher moins": "Свернуть",
+  "Impossible d'ouvrir Discord sur cet appareil.": "Не удалось открыть Discord на этом устройстве.",
+  "Impossible d'ouvrir Discord sur cet appareil. Vérifie qu'il est installé.": "Не удалось открыть Discord на этом устройстве. Проверьте, что он установлен.",
+  "EP": "EP",
+  "Compilation": "Сборник"
  },
  "it": {
   "Reverb": "Riverbero",
@@ -5643,7 +5668,12 @@
   "Cette version a été compilée sans le SDK Discord.": "Questa versione è stata compilata senza l'SDK Discord.",
   "Utilise l'app Discord installée sur cet appareil. Aucun mot de passe Discord n'est demandé ni conservé.": "Usa l'app Discord installata su questo dispositivo. Nessuna password Discord viene richiesta o salvata.",
   "L'app Discord n'est pas installée sur cet appareil.": "L'app Discord non è installata su questo dispositivo.",
-  "OAuth2 · redirect à déclarer : discord-1566454532890820668:/authorize/callback": "OAuth2 · redirect da registrare: discord-1566454532890820668:/authorize/callback"
+  "OAuth2 · redirect à déclarer : discord-1566454532890820668:/authorize/callback": "OAuth2 · redirect da registrare: discord-1566454532890820668:/authorize/callback",
+  "Afficher moins": "Mostra meno",
+  "Impossible d'ouvrir Discord sur cet appareil.": "Impossibile aprire Discord su questo dispositivo.",
+  "Impossible d'ouvrir Discord sur cet appareil. Vérifie qu'il est installé.": "Impossibile aprire Discord su questo dispositivo. Verifica che sia installato.",
+  "EP": "EP",
+  "Compilation": "Raccolta"
  },
  "es": {
   "Reverb": "Reverb",
@@ -6584,7 +6614,12 @@
   "Cette version a été compilée sans le SDK Discord.": "Esta versión se compiló sin el SDK de Discord.",
   "Utilise l'app Discord installée sur cet appareil. Aucun mot de passe Discord n'est demandé ni conservé.": "Usa la app de Discord instalada en este dispositivo. No se pide ni se guarda ninguna contraseña de Discord.",
   "L'app Discord n'est pas installée sur cet appareil.": "La app de Discord no está instalada en este dispositivo.",
-  "OAuth2 · redirect à déclarer : discord-1566454532890820668:/authorize/callback": "OAuth2 · redirect que debes registrar: discord-1566454532890820668:/authorize/callback"
+  "OAuth2 · redirect à déclarer : discord-1566454532890820668:/authorize/callback": "OAuth2 · redirect que debes registrar: discord-1566454532890820668:/authorize/callback",
+  "Afficher moins": "Mostrar menos",
+  "Impossible d'ouvrir Discord sur cet appareil.": "No se pudo abrir Discord en este dispositivo.",
+  "Impossible d'ouvrir Discord sur cet appareil. Vérifie qu'il est installé.": "No se pudo abrir Discord en este dispositivo. Comprueba que esté instalado.",
+  "EP": "EP",
+  "Compilation": "Recopilatorio"
  },
  "de": {
   "Reverb": "Reverb",
@@ -7525,7 +7560,12 @@
   "Cette version a été compilée sans le SDK Discord.": "Diese Version wurde ohne das Discord-SDK kompiliert.",
   "Utilise l'app Discord installée sur cet appareil. Aucun mot de passe Discord n'est demandé ni conservé.": "Nutzt die auf diesem Gerät installierte Discord-App. Es wird kein Discord-Passwort abgefragt oder gespeichert.",
   "L'app Discord n'est pas installée sur cet appareil.": "Die Discord-App ist auf diesem Gerät nicht installiert.",
-  "OAuth2 · redirect à déclarer : discord-1566454532890820668:/authorize/callback": "OAuth2 · zu registrierender redirect: discord-1566454532890820668:/authorize/callback"
+  "OAuth2 · redirect à déclarer : discord-1566454532890820668:/authorize/callback": "OAuth2 · zu registrierender redirect: discord-1566454532890820668:/authorize/callback",
+  "Afficher moins": "Weniger anzeigen",
+  "Impossible d'ouvrir Discord sur cet appareil.": "Discord konnte auf diesem Gerät nicht geöffnet werden.",
+  "Impossible d'ouvrir Discord sur cet appareil. Vérifie qu'il est installé.": "Discord konnte auf diesem Gerät nicht geöffnet werden. Prüfe, ob es installiert ist.",
+  "EP": "EP",
+  "Compilation": "Zusammenstellung"
  },
  "pt": {
   "Reverb": "Reverb",
@@ -8466,7 +8506,12 @@
   "Cette version a été compilée sans le SDK Discord.": "Esta versão foi compilada sem o SDK Discord.",
   "Utilise l'app Discord installée sur cet appareil. Aucun mot de passe Discord n'est demandé ni conservé.": "Usa a app Discord instalada neste dispositivo. Nenhuma palavra-passe do Discord é pedida ou guardada.",
   "L'app Discord n'est pas installée sur cet appareil.": "A app Discord não está instalada neste dispositivo.",
-  "OAuth2 · redirect à déclarer : discord-1566454532890820668:/authorize/callback": "OAuth2 · redirect a registar: discord-1566454532890820668:/authorize/callback"
+  "OAuth2 · redirect à déclarer : discord-1566454532890820668:/authorize/callback": "OAuth2 · redirect a registar: discord-1566454532890820668:/authorize/callback",
+  "Afficher moins": "Mostrar menos",
+  "Impossible d'ouvrir Discord sur cet appareil.": "Não foi possível abrir o Discord neste dispositivo.",
+  "Impossible d'ouvrir Discord sur cet appareil. Vérifie qu'il est installé.": "Não foi possível abrir o Discord neste dispositivo. Verifica se está instalado.",
+  "EP": "EP",
+  "Compilation": "Compilação"
  },
  "ko": {
   "Reverb": "리버브",
@@ -9407,6 +9452,11 @@
   "Cette version a été compilée sans le SDK Discord.": "이 빌드는 Discord SDK 없이 컴파일되었습니다.",
   "Utilise l'app Discord installée sur cet appareil. Aucun mot de passe Discord n'est demandé ni conservé.": "이 기기에 설치된 Discord 앱을 사용합니다. Discord 비밀번호는 요청하거나 저장하지 않습니다.",
   "L'app Discord n'est pas installée sur cet appareil.": "이 기기에 Discord 앱이 설치되어 있지 않습니다.",
-  "OAuth2 · redirect à déclarer : discord-1566454532890820668:/authorize/callback": "OAuth2 · 등록할 redirect: discord-1566454532890820668:/authorize/callback"
+  "OAuth2 · redirect à déclarer : discord-1566454532890820668:/authorize/callback": "OAuth2 · 등록할 redirect: discord-1566454532890820668:/authorize/callback",
+  "Afficher moins": "간단히 보기",
+  "Impossible d'ouvrir Discord sur cet appareil.": "이 기기에서 Discord를 열 수 없습니다.",
+  "Impossible d'ouvrir Discord sur cet appareil. Vérifie qu'il est installé.": "이 기기에서 Discord를 열 수 없습니다. 설치되어 있는지 확인하세요.",
+  "EP": "EP",
+  "Compilation": "컴필레이션"
  }
 }
