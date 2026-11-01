@@ -59,7 +59,11 @@ class DiscordControllerImpl : DiscordController {
         if (linked) return
         ensureCreated()
         val stored = tokens?.load()
-        if (stored.isNullOrBlank()) return
+        if (stored.isNullOrBlank()) {
+            // Presence-only mode resumes silently when the user enabled it.
+            if (com.ketvoice.app.data.AppSettings.discordPresence.value) connect()
+            return
+        }
         linked = true
         restoring = true
         Discord.update { it.copy(linked = true, busy = true, error = null) }
@@ -67,6 +71,29 @@ class DiscordControllerImpl : DiscordController {
             restoring = false
             Discord.update { it.copy(busy = false, error = "Discord indisponible") }
         }
+    }
+
+    /**
+     * Presence-only mode: the local Discord app (if installed and signed in)
+     * publishes the activity without any OAuth redirect. This is the reliable
+     * path on Android and needs no account-linking flow.
+     */
+    override fun connect() {
+        val host = activity ?: return
+        val contextReady = runCatching { DiscordSocialSdkInit.setEngineActivity(host) }.isSuccess
+        if (!contextReady) {
+            Discord.update { it.copy(error = "Discord indisponible") }
+            return
+        }
+        ensureCreated()
+        if (!created) {
+            Discord.update { it.copy(error = "Discord indisponible") }
+            return
+        }
+        Discord.update { it.copy(busy = true, error = null) }
+        main.removeCallbacks(timeout)
+        main.postDelayed(timeout, CONNECT_TIMEOUT_MS)
+        NativeDiscord.nativeConnect()
     }
 
     override fun link() {
@@ -138,6 +165,8 @@ class DiscordControllerImpl : DiscordController {
         linked = false
         ready = false
         tokens?.clear()
+        com.ketvoice.app.data.AppSettings.discordPresence.value = false
+        com.ketvoice.app.data.SettingsStore.save()
         runCatching {
             NativeDiscord.nativeClearPresence()
             NativeDiscord.nativeDisconnect()
@@ -211,8 +240,30 @@ class DiscordControllerImpl : DiscordController {
     private fun handleStatus(status: Int) {
         ready = status == STATUS_READY
         if (ready) {
-            if (linked) NativeDiscord.nativeFetchUser()
+            // Unauthenticated presence through the local Discord app still reaches
+            // the user's profile; there is no token to store in that mode.
+            linked = true
+            main.removeCallbacks(timeout)
+            if (tokens?.load().isNullOrBlank()) {
+                // Presence-only mode is an explicit action: remember the opt-in.
+                com.ketvoice.app.data.AppSettings.discordPresence.value = true
+                com.ketvoice.app.data.SettingsStore.save()
+            }
+            NativeDiscord.nativeFetchUser()
             pending?.let { pending = null; send(it) }
+            Discord.update { it.copy(linked = true, busy = false, ready = true, error = null) }
+            return
+        }
+        if (status == STATUS_DISCONNECTED && Discord.state.value.busy && tokens?.load().isNullOrBlank()) {
+            main.removeCallbacks(timeout)
+            Discord.update {
+                it.copy(
+                    busy = false,
+                    linked = false,
+                    error = "Ouvre l'app Discord et connecte-toi, puis r?essaie."
+                )
+            }
+            return
         }
         Discord.update { it.copy(ready = ready) }
     }
@@ -258,9 +309,11 @@ class DiscordControllerImpl : DiscordController {
 
     companion object {
         private const val TAG = "KetvoiceDiscord"
+        private const val STATUS_DISCONNECTED = 0
         private const val STATUS_READY = 3
         private const val TIMEOUT_MS = 180_000L
         private const val RETURN_CANCEL_MS = 8_000L
+        private const val CONNECT_TIMEOUT_MS = 12_000L
 
         @Volatile
         private var instance: DiscordControllerImpl? = null

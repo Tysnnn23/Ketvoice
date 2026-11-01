@@ -238,7 +238,8 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
                                     transformOrigin = TransformOrigin(0f, .5f)
                                 }
                             ) {
-                                LyricVoices(line, current, lyrics.isTimed, fontScale, lineColor, lineBlur)
+                                val nearActive = active < 0 || abs(index - active) <= 1
+                                LyricVoices(line, current, lyrics.isTimed, fontScale, lineColor, lineBlur, nearActive)
 
                                 AnimatedVisibility(
                                     visible = translationEnabled && translated[index] != null && (current || !lyrics.isTimed),
@@ -296,47 +297,65 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
 
 @Composable
 internal fun LyricVoices(line: MusicApi.LyricLine, active: Boolean, timed: Boolean, fontScale: Float = 1f,
-                         color: Color = Color.White, blur: androidx.compose.ui.unit.Dp = 0.dp) {
+                         color: Color = Color.White, blur: androidx.compose.ui.unit.Dp = 0.dp,
+                         nearActive: Boolean = true) {
     val voices = remember(line) { LyricsPresentation.split(line) }
+    // Only the active line and its immediate neighbours need the transport clock.
+    // This keeps the other visible lines cheap while still letting an unfinished
+    // line or back finish after the next one starts.
+    val clock = remember(line, timed, nearActive) {
+        if (timed && nearActive) Player.positionMs else kotlinx.coroutines.flow.flowOf(Long.MIN_VALUE)
+    }
+    val position by clock.collectAsState(Long.MIN_VALUE)
+    val leadEnd = voices.lead.words.maxOfOrNull { it.endMs } ?: line.timeMs
+    val leadSinging = timed && nearActive && position != Long.MIN_VALUE && position < leadEnd + 260
     Column(Modifier.fillMaxWidth()) {
         if (voices.lead.text.isNotBlank()) {
-            if (active && voices.lead.words.isNotEmpty()) KaraokeLine(voices.lead, Modifier.fillMaxWidth(), fontScale)
+            if ((active || leadSinging) && voices.lead.words.isNotEmpty())
+                KaraokeLine(voices.lead, Modifier.fillMaxWidth(), fontScale, dim = !active)
             else Text(voices.lead.text, localize = false, color = color,
                 fontSize = (33f * fontScale).sp, lineHeight = (41f * fontScale).sp,
                 letterSpacing = (-.3).sp, fontWeight = FontWeight.Black,
                 modifier = Modifier.fillMaxWidth().blur(blur, BlurredEdgeTreatment.Unbounded))
         }
-        // Keep measured space so following never jumps as a back fades in/out.
-        voices.backs.forEach { BackingVocal(it, active, timed, fontScale) }
+        voices.backs.forEach { back ->
+            BackingVocal(back, active, timed, fontScale, nearActive, position)
+        }
     }
 }
 
 @Composable
-private fun BackingVocal(line: MusicApi.LyricLine, active: Boolean, timed: Boolean, fontScale: Float) {
-    val position = if (active && timed) Player.positionMs.collectAsState().value else Long.MIN_VALUE
-    val visible = !timed || (active && LyricsPresentation.backIsActive(line, position))
-    val opacity by animateFloatAsState(
-        if (visible) 1f else 0f,
-        tween(Motion.duration(if (visible) 220 else 280)), label = "backing-vocal"
-    )
-    Box(Modifier.fillMaxWidth().padding(top = 7.dp).testTag("backing-vocal")
-        .then(if (!visible) Modifier.clearAndSetSemantics { } else Modifier)
-        .graphicsLayer {
-            alpha = opacity
-            translationY = if (Motion.reduced) 0f else (1f - opacity) * 4.dp.toPx()
-        }) {
-        // Do not replace the glyphs at the start of an exit: finish the fade
-        // with the same karaoke layout, including after a seek/line change.
-        if (timed && line.words.isNotEmpty() && (visible || opacity > 0f)) KaraokeLine(line, Modifier.fillMaxWidth(), fontScale, backing = true)
-        else Text(line.text, localize = false, color = Color.White.copy(alpha = .80f),
-            fontSize = (24f * fontScale).sp, lineHeight = (31f * fontScale).sp,
-            fontWeight = FontWeight.Bold, letterSpacing = (-.2).sp)
+private fun BackingVocal(
+    line: MusicApi.LyricLine,
+    active: Boolean,
+    timed: Boolean,
+    fontScale: Float,
+    nearActive: Boolean,
+    position: Long
+) {
+    val start = line.words.minOfOrNull { it.startMs } ?: line.timeMs
+    val end = line.words.maxOfOrNull { it.endMs } ?: line.timeMs
+    // Reserve the extra row only 200 ms before the back starts, and keep it
+    // until it has actually finished even if the next line already began.
+    val visible = !timed || (nearActive && position != Long.MIN_VALUE &&
+        position >= start - 200L && position <= end + 260L)
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn(tween(180)) + expandVertically(tween(180), expandFrom = Alignment.Top),
+        exit = fadeOut(tween(220)) + shrinkVertically(tween(220), shrinkTowards = Alignment.Top)
+    ) {
+        Box(Modifier.fillMaxWidth().padding(top = 7.dp).testTag("backing-vocal")) {
+            if (timed && line.words.isNotEmpty()) KaraokeLine(line, Modifier.fillMaxWidth(), fontScale, backing = true)
+            else Text(line.text, localize = false, color = Color.White.copy(alpha = .80f),
+                fontSize = (24f * fontScale).sp, lineHeight = (31f * fontScale).sp,
+                fontWeight = FontWeight.Bold, letterSpacing = (-.2).sp)
+        }
     }
 }
 
 @Composable
 internal fun KaraokeLine(line: MusicApi.LyricLine, modifier: Modifier, fontScale: Float = 1f,
-                         backing: Boolean = false) {
+                         backing: Boolean = false, dim: Boolean = false) {
     var now by remember(line) { mutableLongStateOf(Player.currentPositionMs()) }
     val playing by remember { Player.state.map { it.isPlaying }.distinctUntilChanged() }.collectAsState(false)
     val position by Player.positionMs.collectAsState()
@@ -366,11 +385,12 @@ internal fun KaraokeLine(line: MusicApi.LyricLine, modifier: Modifier, fontScale
     }.orEmpty() }
     val reduced = Motion.reduced
     val density = LocalDensity.current
-    val glowPx = with(density) { 4.dp.toPx() }
+    val glowPx = with(density) { (if (backing) 3.4f else 5.6f).dp.toPx() }
     Box(modifier) {
         // One shaped layout for both the pending glyphs and the sung overlay.
         // No remeasurement, shifted word copy, scaling or disappearing held glyph.
-        Text(line.text, localize = false, color = Color.White.copy(alpha = if (backing) .36f else .40f),
+        Text(line.text, localize = false, color = Color.White.copy(
+            alpha = if (backing) .36f else if (dim) .30f else .40f),
             fontSize = ((if (backing) 24 else 33) * fontScale).sp,
             lineHeight = ((if (backing) 31 else 41) * fontScale).sp,
             letterSpacing = (-.3).sp, fontWeight = if (backing) FontWeight.Bold else FontWeight.Black,
@@ -381,6 +401,14 @@ internal fun KaraokeLine(line: MusicApi.LyricLine, modifier: Modifier, fontScale
                     val progress = segmentProgress(now, word.start, word.end)
                     if (progress <= 0f) return@forEach
                     val emphasis = LyricsPresentation.sustain(now, word.start, word.end, reduced || backing)
+                    // Two things read as "glow": a permanent soft halo for the active
+                    // line and a wider bloom on sustained words. Both fade together
+                    // so an unfinished previous line still glows while it completes.
+                    val glow = ((if (backing) .16f else .30f) + .42f * emphasis) *
+                        (if (dim) .62f else 1f)
+                    val ink = Color.White.copy(alpha = if (dim) .82f else 1f)
+                    val halo = Shadow(Color.White.copy(alpha = glow), Offset.Zero,
+                        glowPx * (1f + 1.5f * emphasis))
                     var remaining = word.width * progress
                     word.slices.forEach { slice ->
                         val bounds = slice.bounds
@@ -389,10 +417,10 @@ internal fun KaraokeLine(line: MusicApi.LyricLine, modifier: Modifier, fontScale
                         if (fill > 0f) clipPath(slice.path) {
                             if (slice.rtl) {
                                 clipRect(bounds.right - fill, bounds.top, bounds.right, bounds.bottom) {
-                                    drawText(measured, color = Color.White, shadow = Shadow(Color.White.copy(alpha = .24f * emphasis), Offset.Zero, glowPx * emphasis))
+                                    drawText(measured, color = ink, shadow = halo)
                                 }
                             } else clipRect(bounds.left, bounds.top, bounds.left + fill, bounds.bottom) {
-                                drawText(measured, color = Color.White, shadow = Shadow(Color.White.copy(alpha = .24f * emphasis), Offset.Zero, glowPx * emphasis))
+                                drawText(measured, color = ink, shadow = halo)
                             }
                         }
                     }

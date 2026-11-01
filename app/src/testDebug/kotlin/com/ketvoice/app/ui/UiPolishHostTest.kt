@@ -189,22 +189,29 @@ class UiPolishHostTest {
         compose.runOnIdle { assertEquals(1, exits) }
     }
 
-    @Test fun backingVocalsAreAbsentBeforeTheirTimeAndAfterTheNextLeadWithStableHeight() {
+    @Test fun backingVocalsAppearShortlyBeforeTheirTimeAndFinishAfterTheNextLead() {
         var active by mutableStateOf(true)
         val line = MusicApi.LyricLine(0, "Go (yeah) now", listOf(
             MusicApi.LyricWord(0, "Go ", 700), MusicApi.LyricWord(1000, "(yeah) ", 1800), MusicApi.LyricWord(1900, "now", 2800)))
         @Suppress("UNCHECKED_CAST") val position = Player.positionMs as MutableStateFlow<Long>
+        compose.runOnIdle { position.value = 400 }
         compose.setContent { KetvoiceTheme(useDark = true) {
             Column(Modifier.fillMaxSize().background(Color.Black)) { LyricVoices(line, active, true) }
         } }
-        val height = compose.onNodeWithTag("backing-vocal", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot.height
+        // No space is reserved while the back is still far away.
+        compose.onNodeWithTag("backing-vocal", useUnmergedTree = true).assertDoesNotExist()
         compose.onNodeWithText("yeah").assertDoesNotExist()
-        compose.runOnIdle { position.value = 1100 }
+        // The row appears 200 ms before the back starts.
+        compose.runOnIdle { position.value = 900 }
+        compose.onNodeWithTag("backing-vocal", useUnmergedTree = true).assertExists()
         compose.onNodeWithText("yeah").assertIsDisplayed()
         image("backing-vocal-active")
+        // The next lead starts, but the back is still finishing.
         compose.runOnIdle { active = false; position.value = 2000 }
-        compose.onNodeWithText("yeah").assertDoesNotExist()
-        assertEquals(height, compose.onNodeWithTag("backing-vocal", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot.height)
+        compose.onNodeWithText("yeah").assertIsDisplayed()
+        // Once it has finished, the row collapses again.
+        compose.runOnIdle { position.value = 2400 }
+        compose.onNodeWithTag("backing-vocal", useUnmergedTree = true).assertDoesNotExist()
         image("backing-vocal-next-line-hidden")
     }
 

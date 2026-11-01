@@ -916,7 +916,14 @@
   "Taille de la salle": "Room size",
   "Amortissement": "Damping",
   "Réinitialiser": "Reset",
-  "Si la source sans perte est indisponible, la lecture et le téléchargement basculent automatiquement sur le MP3 le plus rapide.": "If the lossless source is unavailable, playback and downloads automatically fall back to the fastest MP3."
+  "Si la source sans perte est indisponible, la lecture et le téléchargement basculent automatiquement sur le MP3 le plus rapide.": "If the lossless source is unavailable, playback and downloads automatically fall back to the fastest MP3.",
+  "Via l'app Discord": "Via the Discord app",
+  "Déconnecter Discord": "Disconnect Discord",
+  "Affiche le morceau en cours sur ton profil Discord, avec les boutons de téléchargement et d'écoute. Utilise l'app Discord installée et connectée.": "Shows the current track on your Discord profile with download and listen buttons. Uses the installed, signed-in Discord app.",
+  "Activer la présence Discord": "Enable Discord presence",
+  "Lier mon compte Discord (optionnel)": "Link my Discord account (optional)",
+  "Ouvre l'app Discord et connecte-toi, puis réessaie.": "Open the Discord app, sign in, then try again.",
+  "Aucun mot de passe Discord n'est stocké. En mode présence, rien n'est conservé sur l'appareil ; la liaison facultative garde uniquement un jeton chiffré.": "No Discord password is stored. Presence mode keeps nothing on the device; optional linking stores only an encrypted token."
  },
  "hi": {
   "Reverb": "रीवर्ब",
@@ -1835,7 +1842,14 @@
   "Taille de la salle": "कमरे का आकार",
   "Amortissement": "अवमंदन",
   "Réinitialiser": "रीसेट",
-  "Si la source sans perte est indisponible, la lecture et le téléchargement basculent automatiquement sur le MP3 le plus rapide.": "यदि लॉसलेस स्रोत उपलब्ध नहीं है, तो प्लेबैक और डाउनलोड स्वतः सबसे तेज़ MP3 पर चले जाते हैं।"
+  "Si la source sans perte est indisponible, la lecture et le téléchargement basculent automatiquement sur le MP3 le plus rapide.": "यदि लॉसलेस स्रोत उपलब्ध नहीं है, तो प्लेबैक और डाउनलोड स्वतः सबसे तेज़ MP3 पर चले जाते हैं।",
+  "Via l'app Discord": "Discord ऐप के ज़रिए",
+  "Déconnecter Discord": "Discord डिस्कनेक्ट करें",
+  "Affiche le morceau en cours sur ton profil Discord, avec les boutons de téléchargement et d'écoute. Utilise l'app Discord installée et connectée.": "आपकी Discord प्रोफ़ाइल पर डाउनलोड और सुनने के बटन के साथ वर्तमान ट्रैक दिखाता है। इंस्टॉल और साइन-इन Discord ऐप का उपयोग करता है।",
+  "Activer la présence Discord": "Discord प्रेज़ेंस सक्षम करें",
+  "Lier mon compte Discord (optionnel)": "मेरा Discord खाता जोड़ें (वैकल्पिक)",
+  "Ouvre l'app Discord et connecte-toi, puis réessaie.": "Discord ऐप खोलें, साइन इन करें, फिर पुनः प्रयास करें।",
+  "Aucun mot de passe Discord n'est stocké. En mode présence, rien n'est conservé sur l'appareil ; la liaison facultative garde uniquement un jeton chiffré.": "कोई Discord पासवर्ड संग्रहीत नहीं होता। प्रेज़ेंस मोड में डिवाइस पर कुछ भी नहीं रखा जाता; वैकल्पिक लिंक केवल एन्क्रिप्टेड टोकन रखता है।"
  },
  "ja": {
   "Reverb": "リバーブ",
@@ -2754,7 +2768,14 @@
   "Taille de la salle": "ルームサイズ",
   "Amortissement": "ダンピング",
   "Réinitialiser": "リセット",
-  "Si la source sans perte est indisponible, la lecture et le téléchargement basculent automatiquement sur le MP3 le plus rapide.": "ロスレス音源が利用できない場合、再生とダウンロードは自動的に最速の MP3 に切り替わります。"
+  "Si la source sans perte est indisponible, la lecture et le téléchargement basculent automatiquement sur le MP3 le plus rapide.": "ロスレス音源が利用できない場合、再生とダウンロードは自動的に最速の MP3 に切り替わります。",
+  "Via l'app Discord": "Discord アプリ経由",
+  "Déconnecter Discord": "Discord を切断",
+  "Affiche le morceau en cours sur ton profil Discord, avec les boutons de téléchargement et d'écoute. Utilise l'app Discord installée et connectée.": "ダウンロードと再生のボタン付きで再生中の曲を Discord プロフィールに表示します。インストール済みでサインインした Discord アプリを使用します。",
+  "Activer la présence Discord": "Discord のプレゼンスを有効化",
+  "Lier mon compte Discord (optionnel)": "Discord アカウントを連携（任意）",
+  "Ouvre l'app Discord et connecte-toi, puis réessaie.": "Discord アプリを開いてサインインし、もう一度お試しください。",
+  "Aucun mot de passe Discord n'est stocké. En mode présence, rien n'est conservé sur l'appareil ; la liaison facultative garde uniquement un jeton chiffré.": "Discord のパスワードは保存されません。プレゼンスモードでは端末に何も残りません。任意の連携では暗号化されたトークンのみ保存します。"
  },
  "zh": {
   "Reverb": "混响",
@@ -3673,7 +3694,14 @@
   "Taille de la salle": "房间大小",
   "Amortissement": "阻尼",
   "Réinitialiser": "重置",
-  "Si la source sans perte est indisponible, la lecture et le téléchargement basculent automatiquement sur le MP3 le plus rapide.": "如果无损音源不可用，播放和下载会自动回退到最快的 MP3。"
+  "Si la source sans perte est indisponible, la lecture et le téléchargement basculent automatiquement sur le MP3 le plus rapide.": "如果无损音源不可用，播放和下载会自动回退到最快的 MP3。",
+  "Via l'app Discord": "通过 Discord 应用",
+  "Déconnecter Discord": "断开 Discord",
+  "Affiche le morceau en cours sur ton profil Discord, avec les boutons de téléchargement et d'écoute. Utilise l'app Discord installée et connectée.": "在 Discord 个人资料上显示当前曲目，并带有下载和收听按钮。使用已安装并登录的 Discord 应用。",
+  "Activer la présence Discord": "启用 Discord 状态显示",
+  "Lier mon compte Discord (optionnel)": "关联我的 Discord 账户（可选）",
+  "Ouvre l'app Discord et connecte-toi, puis réessaie.": "打开 Discord 应用并登录，然后重试。",
+  "Aucun mot de passe Discord n'est stocké. En mode présence, rien n'est conservé sur l'appareil ; la liaison facultative garde uniquement un jeton chiffré.": "不会保存 Discord 密码。状态模式下设备上不保留任何内容；可选的关联仅保存加密令牌。"
  },
  "ru": {
   "Reverb": "Реверберация",
@@ -4592,7 +4620,14 @@
   "Taille de la salle": "Размер помещения",
   "Amortissement": "Демпфирование",
   "Réinitialiser": "Сбросить",
-  "Si la source sans perte est indisponible, la lecture et le téléchargement basculent automatiquement sur le MP3 le plus rapide.": "Если источник без потерь недоступен, воспроизведение и загрузка автоматически переключаются на самый быстрый MP3."
+  "Si la source sans perte est indisponible, la lecture et le téléchargement basculent automatiquement sur le MP3 le plus rapide.": "Если источник без потерь недоступен, воспроизведение и загрузка автоматически переключаются на самый быстрый MP3.",
+  "Via l'app Discord": "Через приложение Discord",
+  "Déconnecter Discord": "Отключить Discord",
+  "Affiche le morceau en cours sur ton profil Discord, avec les boutons de téléchargement et d'écoute. Utilise l'app Discord installée et connectée.": "Показывает текущий трек в профиле Discord с кнопками загрузки и прослушивания. Использует установленное приложение Discord с выполненным входом.",
+  "Activer la présence Discord": "Включить статус Discord",
+  "Lier mon compte Discord (optionnel)": "Привязать аккаунт Discord (необязательно)",
+  "Ouvre l'app Discord et connecte-toi, puis réessaie.": "Откройте приложение Discord, войдите и повторите попытку.",
+  "Aucun mot de passe Discord n'est stocké. En mode présence, rien n'est conservé sur l'appareil ; la liaison facultative garde uniquement un jeton chiffré.": "Пароль Discord не сохраняется. В режиме статуса на устройстве ничего не остаётся; необязательная привязка хранит только зашифрованный токен."
  },
  "it": {
   "Reverb": "Riverbero",
@@ -5511,7 +5546,14 @@
   "Taille de la salle": "Dimensione stanza",
   "Amortissement": "Smorzamento",
   "Réinitialiser": "Reimposta",
-  "Si la source sans perte est indisponible, la lecture et le téléchargement basculent automatiquement sur le MP3 le plus rapide.": "Se la sorgente lossless non è disponibile, riproduzione e download passano automaticamente all'MP3 più veloce."
+  "Si la source sans perte est indisponible, la lecture et le téléchargement basculent automatiquement sur le MP3 le plus rapide.": "Se la sorgente lossless non è disponibile, riproduzione e download passano automaticamente all'MP3 più veloce.",
+  "Via l'app Discord": "Tramite l'app Discord",
+  "Déconnecter Discord": "Disconnetti Discord",
+  "Affiche le morceau en cours sur ton profil Discord, avec les boutons de téléchargement et d'écoute. Utilise l'app Discord installée et connectée.": "Mostra il brano in riproduzione sul profilo Discord con i pulsanti di download e ascolto. Usa l'app Discord installata e con accesso effettuato.",
+  "Activer la présence Discord": "Attiva la presenza Discord",
+  "Lier mon compte Discord (optionnel)": "Collega il mio account Discord (facoltativo)",
+  "Ouvre l'app Discord et connecte-toi, puis réessaie.": "Apri l'app Discord, accedi e riprova.",
+  "Aucun mot de passe Discord n'est stocké. En mode présence, rien n'est conservé sur l'appareil ; la liaison facultative garde uniquement un jeton chiffré.": "Nessuna password Discord viene salvata. In modalità presenza non resta nulla sul dispositivo; il collegamento facoltativo conserva solo un token cifrato."
  },
  "es": {
   "Reverb": "Reverb",
@@ -6430,7 +6472,14 @@
   "Taille de la salle": "Tamaño de la sala",
   "Amortissement": "Amortiguación",
   "Réinitialiser": "Restablecer",
-  "Si la source sans perte est indisponible, la lecture et le téléchargement basculent automatiquement sur le MP3 le plus rapide.": "Si la fuente sin pérdidas no está disponible, la reproducción y la descarga pasan automáticamente al MP3 más rápido."
+  "Si la source sans perte est indisponible, la lecture et le téléchargement basculent automatiquement sur le MP3 le plus rapide.": "Si la fuente sin pérdidas no está disponible, la reproducción y la descarga pasan automáticamente al MP3 más rápido.",
+  "Via l'app Discord": "Mediante la app de Discord",
+  "Déconnecter Discord": "Desconectar Discord",
+  "Affiche le morceau en cours sur ton profil Discord, avec les boutons de téléchargement et d'écoute. Utilise l'app Discord installée et connectée.": "Muestra la pista actual en tu perfil de Discord con botones de descarga y escucha. Usa la app de Discord instalada y con sesión iniciada.",
+  "Activer la présence Discord": "Activar la presencia de Discord",
+  "Lier mon compte Discord (optionnel)": "Vincular mi cuenta de Discord (opcional)",
+  "Ouvre l'app Discord et connecte-toi, puis réessaie.": "Abre la app de Discord, inicia sesión y vuelve a intentarlo.",
+  "Aucun mot de passe Discord n'est stocké. En mode présence, rien n'est conservé sur l'appareil ; la liaison facultative garde uniquement un jeton chiffré.": "No se guarda ninguna contraseña de Discord. El modo presencia no conserva nada en el dispositivo; la vinculación opcional solo guarda un token cifrado."
  },
  "de": {
   "Reverb": "Reverb",
@@ -7349,7 +7398,14 @@
   "Taille de la salle": "Raumgröße",
   "Amortissement": "Dämpfung",
   "Réinitialiser": "Zurücksetzen",
-  "Si la source sans perte est indisponible, la lecture et le téléchargement basculent automatiquement sur le MP3 le plus rapide.": "Ist die Lossless-Quelle nicht verfügbar, wechseln Wiedergabe und Download automatisch zum schnellsten MP3."
+  "Si la source sans perte est indisponible, la lecture et le téléchargement basculent automatiquement sur le MP3 le plus rapide.": "Ist die Lossless-Quelle nicht verfügbar, wechseln Wiedergabe und Download automatisch zum schnellsten MP3.",
+  "Via l'app Discord": "Über die Discord-App",
+  "Déconnecter Discord": "Discord trennen",
+  "Affiche le morceau en cours sur ton profil Discord, avec les boutons de téléchargement et d'écoute. Utilise l'app Discord installée et connectée.": "Zeigt den aktuellen Titel mit Download- und Anhören-Schaltflächen im Discord-Profil. Nutzt die installierte, angemeldete Discord-App.",
+  "Activer la présence Discord": "Discord-Präsenz aktivieren",
+  "Lier mon compte Discord (optionnel)": "Discord-Konto verknüpfen (optional)",
+  "Ouvre l'app Discord et connecte-toi, puis réessaie.": "Öffne die Discord-App, melde dich an und versuche es erneut.",
+  "Aucun mot de passe Discord n'est stocké. En mode présence, rien n'est conservé sur l'appareil ; la liaison facultative garde uniquement un jeton chiffré.": "Es wird kein Discord-Passwort gespeichert. Im Präsenzmodus bleibt nichts auf dem Gerät; die optionale Verknüpfung speichert nur ein verschlüsseltes Token."
  },
  "pt": {
   "Reverb": "Reverb",
@@ -8268,7 +8324,14 @@
   "Taille de la salle": "Tamanho da sala",
   "Amortissement": "Amortecimento",
   "Réinitialiser": "Repor",
-  "Si la source sans perte est indisponible, la lecture et le téléchargement basculent automatiquement sur le MP3 le plus rapide.": "Se a fonte sem perdas não estiver disponível, a reprodução e o download passam automaticamente para o MP3 mais rápido."
+  "Si la source sans perte est indisponible, la lecture et le téléchargement basculent automatiquement sur le MP3 le plus rapide.": "Se a fonte sem perdas não estiver disponível, a reprodução e o download passam automaticamente para o MP3 mais rápido.",
+  "Via l'app Discord": "Através da app Discord",
+  "Déconnecter Discord": "Desligar o Discord",
+  "Affiche le morceau en cours sur ton profil Discord, avec les boutons de téléchargement et d'écoute. Utilise l'app Discord installée et connectée.": "Mostra a faixa atual no perfil do Discord com botões de transferência e reprodução. Usa a app Discord instalada e com sessão iniciada.",
+  "Activer la présence Discord": "Ativar a presença no Discord",
+  "Lier mon compte Discord (optionnel)": "Associar a minha conta Discord (opcional)",
+  "Ouvre l'app Discord et connecte-toi, puis réessaie.": "Abre a app Discord, inicia sessão e tenta novamente.",
+  "Aucun mot de passe Discord n'est stocké. En mode présence, rien n'est conservé sur l'appareil ; la liaison facultative garde uniquement un jeton chiffré.": "Nenhuma palavra-passe do Discord é guardada. O modo de presença não conserva nada no dispositivo; a associação opcional guarda apenas um token cifrado."
  },
  "ko": {
   "Reverb": "리버브",
@@ -9187,6 +9250,13 @@
   "Taille de la salle": "공간 크기",
   "Amortissement": "댐핑",
   "Réinitialiser": "초기화",
-  "Si la source sans perte est indisponible, la lecture et le téléchargement basculent automatiquement sur le MP3 le plus rapide.": "무손실 소스를 사용할 수 없으면 재생과 다운로드가 자동으로 가장 빠른 MP3로 전환됩니다."
+  "Si la source sans perte est indisponible, la lecture et le téléchargement basculent automatiquement sur le MP3 le plus rapide.": "무손실 소스를 사용할 수 없으면 재생과 다운로드가 자동으로 가장 빠른 MP3로 전환됩니다.",
+  "Via l'app Discord": "Discord 앱 통해",
+  "Déconnecter Discord": "Discord 연결 해제",
+  "Affiche le morceau en cours sur ton profil Discord, avec les boutons de téléchargement et d'écoute. Utilise l'app Discord installée et connectée.": "다운로드 및 듣기 버튼과 함께 현재 곡을 Discord 프로필에 표시합니다. 설치되어 로그인된 Discord 앱을 사용합니다.",
+  "Activer la présence Discord": "Discord 프레즌스 활성화",
+  "Lier mon compte Discord (optionnel)": "Discord 계정 연결 (선택)",
+  "Ouvre l'app Discord et connecte-toi, puis réessaie.": "Discord 앱을 열고 로그인한 뒤 다시 시도하세요.",
+  "Aucun mot de passe Discord n'est stocké. En mode présence, rien n'est conservé sur l'appareil ; la liaison facultative garde uniquement un jeton chiffré.": "Discord 비밀번호는 저장되지 않습니다. 프레즌스 모드에서는 기기에 아무것도 남지 않으며, 선택적 연결은 암호화된 토큰만 보관합니다."
  }
 }

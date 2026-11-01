@@ -7,6 +7,24 @@
 
 ---
 
+# Ketvoice 3.13.4
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 63** — Discord presence without OAuth, fluid lyric overlaps and a glowing equalizer.
+
+- Publish the listening activity through the installed Discord app, without a
+  consent page or redirect, so the connection loop cannot recur. Optional account
+  linking stays available.
+- Show a backing-vocal row only 200 ms before it starts; let unfinished lines and
+  long backs finish while the next line continues.
+- Rework the karaoke glow and add a glowing response curve to the equalizer.
+- Device validation of the Discord presence and lyric motion is still not claimed.
+
+Full notes: [3.13.4](docs/releases/v3.13.4.md).
+
+---
+
 # Ketvoice 3.13.3
 
 ![Ketvoice](ketvoice-banner.png)

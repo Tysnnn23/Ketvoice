@@ -84,6 +84,7 @@ data class DiscordState(
 interface DiscordController {
     fun attach(activity: Activity)
     fun start()
+    fun connect()
     fun link()
     fun completeAuthorization(uri: android.net.Uri?)
     fun onForeground()
@@ -115,6 +116,7 @@ object Discord {
 
     fun attach(activity: Activity) = controller?.attach(activity)
     fun start() = controller?.start()
+    fun connect() = controller?.connect()
     fun link() = controller?.link()
     fun completeAuthorization(uri: android.net.Uri?) = controller?.completeAuthorization(uri)
     fun onForeground() = controller?.onForeground()

@@ -1,5 +1,6 @@
 package com.ketvoice.app.ui.player
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -9,6 +10,11 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -77,6 +83,7 @@ private fun EqualizerDialog(onClose:()->Unit){
                 status.applied -> "Traitement natif actif sur la session audio."
                 else -> "Égaliseur désactivé."
             },fontSize=12.sp,modifier=Modifier.padding(vertical=8.dp))
+            EqualizerCurve(AppSettings.equalizerGains.value)
             FlowRow(horizontalArrangement=Arrangement.spacedBy(6.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
                 EqualizerProfile.presets.forEach{(name,gains)->
                     FilterChip(selected=AppSettings.equalizerGains.value==gains,onClick={AppSettings.equalizerGains.value=gains;Player.applyEqualizer();SettingsStore.save()},
@@ -136,4 +143,33 @@ private fun HandoffDialog(onClose:()->Unit){
             }
             Text("Transfère le catalogue en ligne, la position et jusqu'à 50 titres. Aucun cookie, jeton de compte, fichier local ou URL privée n'est partagé. Confirmation obligatoire sur le destinataire.",fontSize=11.sp)
         }},confirmButton={TextButton(onClick=onClose){Text("Fermer")}})
+}
+
+
+/** Smooth glowing response curve of the five band gains. */
+@Composable
+private fun EqualizerCurve(gains: List<Int>) {
+    val accent = MaterialTheme.colorScheme.primary
+    Canvas(Modifier.fillMaxWidth().height(74.dp).padding(vertical = 6.dp)) {
+        if (gains.isEmpty()) return@Canvas
+        val step = size.width / (gains.size - 1).coerceAtLeast(1)
+        fun point(i: Int): Offset {
+            val normalized = (gains.getOrElse(i) { 0 }.coerceIn(-12, 12) + 12f) / 24f
+            return Offset(i * step, size.height * (.95f - normalized * .9f))
+        }
+        val path = Path().apply {
+            val first = point(0)
+            moveTo(first.x, first.y)
+            for (i in 1 until gains.size) {
+                val previous = point(i - 1)
+                val current = point(i)
+                val middle = (previous.x + current.x) / 2f
+                cubicTo(middle, previous.y, middle, current.y, current.x, current.y)
+            }
+        }
+        drawPath(path, accent.copy(alpha = .16f), style = Stroke(11.dp.toPx(), cap = StrokeCap.Round))
+        drawPath(path, accent.copy(alpha = .42f), style = Stroke(4.5.dp.toPx(), cap = StrokeCap.Round))
+        drawPath(path, Color.White.copy(alpha = .92f), style = Stroke(1.6.dp.toPx(), cap = StrokeCap.Round))
+        for (i in gains.indices) drawCircle(Color.White, 3.dp.toPx(), point(i))
+    }
 }
