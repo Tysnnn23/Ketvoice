@@ -1,6 +1,9 @@
 package com.ketvoice.app.data
 
 internal object DownloadValidation {
+    /** A first request can legitimately return 206 starting at zero. */
+    fun validRange(offset: Long, start: Long?, end: Long?, total: Long?): Boolean =
+        start == offset && end != null && total != null && end >= offset && total > end
     fun complete(actualBytes: Long, expectedBytes: Long): Boolean =
         actualBytes >= 10_000 && (expectedBytes <= 0 || actualBytes == expectedBytes)
 

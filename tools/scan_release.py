@@ -2,6 +2,7 @@
 import argparse
 import base64
 import json
+import os
 import pathlib
 import re
 import sys
@@ -11,6 +12,7 @@ from urllib.parse import urlsplit
 parser = argparse.ArgumentParser()
 parser.add_argument('targets', nargs='+')
 parser.add_argument('--deny-list-json', type=pathlib.Path)
+parser.add_argument('--deny-list-env', help='Name of a private JSON environment variable; values are never printed')
 args = parser.parse_args()
 denied = set()
 
@@ -32,7 +34,15 @@ if args.deny_list_json:
         value.startswith('https://') and urlsplit(value).hostname in public_hosts
     )}
     denied.update(urlsplit(value).hostname for value in list(denied)
-                  if value.startswith('https://') and urlsplit(value).hostname)
+                   if value.startswith('https://') and urlsplit(value).hostname)
+
+if args.deny_list_env:
+    raw = os.environ.get(args.deny_list_env)
+    if not raw:
+        raise SystemExit('Private deny-list environment variable unavailable')
+    private = set(leaves(json.loads(raw)))
+    denied.update(private)
+    denied.update(base64.b64encode(value.encode()).decode() for value in private)
 
 patterns = [
     rb'gh[pousr]_[A-Za-z0-9]{30,}',

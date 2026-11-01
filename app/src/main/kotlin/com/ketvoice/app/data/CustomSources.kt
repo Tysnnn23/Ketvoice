@@ -189,28 +189,26 @@ object CustomSources {
             val id = track.addonId.orEmpty()
             val qualityParam = negotiateQuality(source.quality, manifest.qualities)
 
-            if (forDownload) {
-                val downloadTemplate = manifest.downloadEndpoint
-                if (downloadTemplate != null && (id.isNotBlank() || !downloadTemplate.contains("{id}"))) {
-                    val target = fill(downloadTemplate, query = "", id = id, quality = qualityParam,
-                        title = track.title, artist = track.artist)
-                    if (target.startsWith("https://")) {
-                        return@withContext streamInfo(target, target, source.quality)
-                    }
-                }
+            val downloadTemplate = manifest.downloadEndpoint?.takeIf {
+                forDownload && (id.isNotBlank() || !it.contains("{id}"))
             }
             val direct = track.streamUrl?.takeIf { it.startsWith("https://") }
-            if (direct != null) return@withContext streamInfo(direct, track.downloadUrl, source.quality)
-            val template = manifest.resolvedStream ?: return@withContext null
-            if (id.isBlank()) return@withContext null
+            if (direct != null && downloadTemplate == null) return@withContext streamInfo(direct, track.downloadUrl, source.quality)
+            val template = downloadTemplate ?: manifest.resolvedStream ?: return@withContext null
+            if (id.isBlank() && template.contains("{id}")) return@withContext null
             val url = fill(template, query = "", id = id, quality = qualityParam,
                 title = track.title, artist = track.artist)
-            val raw = fetchText(url, timeout = 12_000) ?: return@withContext null
+            val raw = fetchStreamEndpoint(url) ?: return@withContext null
+            parseStreamResponse(raw, source, forDownload)
+        }
+
+    /** Both stream and download endpoints may answer with JSON, a URL or audio. */
+    internal fun parseStreamResponse(raw: String, source: CustomSource, forDownload: Boolean = false): MusicApi.StreamInfo? {
             val trimmed = raw.trim()
-            if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
-                return@withContext streamInfo(trimmed, null, source.quality)
+            if (trimmed.startsWith("https://")) {
+                return streamInfo(trimmed, if (forDownload) trimmed else null, source.quality)
             }
-            val obj = runCatching { JSONObject(trimmed) }.getOrNull() ?: return@withContext null
+            val obj = runCatching { JSONObject(trimmed) }.getOrNull() ?: return null
             val nested = obj.optJSONObject("data")
             val sources = obj.optJSONArray("sources") ?: nested?.optJSONArray("sources")
                 ?: obj.optJSONArray("streams") ?: nested?.optJSONArray("streams")
@@ -224,12 +222,14 @@ object CustomSources {
                 }
             }
             val rawStream = listOf(
+                if (forDownload) obj.optString("downloadUrl") else "",
+                if (forDownload) nested?.optString("downloadUrl").orEmpty() else "",
                 obj.optString("url"), obj.optString("stream"), obj.optString("link"),
-                obj.optString("audio"), obj.optString("download"),
+                obj.optString("audio"), obj.optString("download"), obj.optString("downloadUrl"),
                 nested?.optString("url").orEmpty(), nested?.optString("stream").orEmpty(),
                 nested?.optString("link").orEmpty(), fromArray.orEmpty()
             ).firstOrNull { it.startsWith("https://") || it.startsWith("/") }
-                ?: return@withContext null
+                ?: return null
             val stream = if (rawStream.startsWith("https://")) rawStream
                 else source.baseUrl.trimEnd('/') + rawStream
             val rawDownload = listOf(
@@ -254,8 +254,43 @@ object CustomSources {
                 } else if (source.quality == "high") "Haute qualité · source personnalisée"
                 else "Qualité économique · source personnalisée"
             }
-            info.copy(format = finalFormat, quality = finalQuality)
-        }
+            return info.copy(format = finalFormat, quality = finalQuality)
+    }
+
+    private fun fetchStreamEndpoint(url: String): String? {
+        var connection: HttpURLConnection? = null
+        return try {
+            if (!url.startsWith("https://")) return null
+            connection = (URL(url).openConnection() as HttpURLConnection).apply {
+                connectTimeout = 12_000; readTimeout = 16_000
+                setRequestProperty("User-Agent", UA)
+                setRequestProperty("Range", "bytes=0-1048575")
+                setRequestProperty("Accept-Encoding", "identity")
+            }
+            if (connection.responseCode !in 200..299 || connection.url.protocol != "https") return null
+            connection.inputStream.use { input ->
+                val head = ByteArray(16)
+                var size = 0
+                while (size < head.size) {
+                    val count = input.read(head, size, head.size - size)
+                    if (count < 0) break
+                    size += count
+                }
+                if (DownloadValidation.audio(head.copyOf(size))) return connection.url.toString()
+                val output = java.io.ByteArrayOutputStream()
+                output.write(head, 0, size)
+                val chunk = ByteArray(8192)
+                while (true) {
+                    val count = input.read(chunk)
+                    if (count < 0) break
+                    if (output.size() + count > 1_048_576) return null
+                    output.write(chunk, 0, count)
+                }
+                output.toString("UTF-8")
+            }
+        } catch (_: Exception) { null }
+        finally { connection?.disconnect() }
+    }
 
     internal fun parseTracks(source: CustomSource, raw: String): List<Track> {
         val root = runCatching { org.json.JSONTokener(raw).nextValue() }.getOrNull() ?: return emptyList()

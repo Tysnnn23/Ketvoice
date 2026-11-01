@@ -150,7 +150,7 @@ private fun HomeRecentRow(track: Track, active: Boolean, onPlay: () -> Unit, onM
     val theme = LocalTheme.current
     val art by ArtworkRepo.covers.collectAsState()
     Row(Modifier.fillMaxWidth().height(59.dp).clickable(onClick = onPlay), verticalAlignment = Alignment.CenterVertically) {
-        Cover(track.title, art["t:${track.id}"] ?: track.coverUrl, 50.dp, 7.dp)
+        com.ketvoice.app.ui.common.DownloadCover(track, art["t:${track.id}"] ?: track.coverUrl, 50.dp, 7.dp)
         Spacer(Modifier.width(13.dp))
         Column(Modifier.weight(1f)) {
             Text(track.title, localize = false, color = if (active) theme.accent else theme.onBackground, fontSize = 15.sp,
@@ -170,7 +170,7 @@ private fun TrackCarousel(tracks: List<Track>, onMenu: (Track) -> Unit) {
     LazyRow(contentPadding = PaddingValues(horizontal = 18.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
         itemsIndexed(tracks, key = { _, t -> t.id }) { i, track ->
             Column(Modifier.width(156.dp).clickable { Player.playQueue(tracks, i) }) {
-                Cover(track.title, art["t:${track.id}"] ?: track.coverUrl, 156.dp, 13.dp)
+                com.ketvoice.app.ui.common.DownloadCover(track, art["t:${track.id}"] ?: track.coverUrl, 156.dp, 13.dp)
                 Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(track.title, localize = false, color = theme.onBackground, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
                         maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))

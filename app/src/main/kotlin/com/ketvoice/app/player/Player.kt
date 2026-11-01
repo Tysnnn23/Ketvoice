@@ -258,6 +258,7 @@ object Player {
             return
         }
         resolutionJob?.cancel()
+        cancelQualityUpgrade()
         resolving = true
         desiredPlay = autoPlay
         activeStream = null
@@ -361,11 +362,13 @@ object Player {
             val custom = async(Dispatchers.IO) {
                 runCatching { com.ketvoice.app.data.CustomSources.streamForTrack(resolvedTrack) }.getOrNull()
             }
-            // A track discovered through a personal source must not wait on
-            // YouTube. Otherwise YouTube gets a short head start.
+            // Progressive mode races available sources without a YouTube head start.
+            // With it disabled, resolve the requested quality before starting once.
             val customTrack = resolvedTrack.addon?.startsWith("cs:") == true
-            var initial = if (customTrack) withTimeoutOrNull(3500) { custom.await() }
-                else withTimeoutOrNull(1600) { youtube.await() }
+            val progressive = AppSettings.progressiveQuality.value
+            var initial = if (progressive) null else if (customTrack) custom.await()
+                else if (wantsLossless()) flac.await() ?: mp3.await() ?: youtube.await()
+                else mp3.await() ?: youtube.await()
             if (initial == null) {
                 val candidates = mutableListOf(youtube, mp3, flac, custom)
                 while (candidates.isNotEmpty() && initial == null) {
@@ -385,13 +388,26 @@ object Player {
             val first = initial
             start(first)
             AudioCache.cacheWhole(track.id, first)
+            var currentStream: MusicApi.StreamInfo = first
             suspend fun upgrade(stream: MusicApi.StreamInfo?) {
-                if (stream == null || stream.url == first.url || gen != generation) return
-                val ready = AudioCache.warm(track.id, stream, c.currentPosition.coerceAtLeast(0), _state.value.durationMs)
-                if (!ready || gen != generation) return
-                val resumeAt = c.currentPosition.coerceAtLeast(0)
-                desiredPlay = c.playWhenReady
-                start(stream, resumeAt)
+                if (!progressive || !AppSettings.progressiveQuality.value || stream == null ||
+                    stream.url == currentStream.url || gen != generation) return
+                val future = c.sendCustomCommand(androidx.media3.session.SessionCommand(PlaybackService.CMD_UPGRADE, Bundle.EMPTY),
+                    Bundle().apply {
+                        putString("id", track.id); putString("url", stream.url)
+                        putString("cacheKey", AudioCache.key(track.id, stream))
+                    })
+                val switched = kotlinx.coroutines.suspendCancellableCoroutine<Boolean> { continuation ->
+                    future.addListener({
+                        if (continuation.isActive) continuation.resumeWith(Result.success(
+                            runCatching { future.get().resultCode == androidx.media3.session.SessionResult.RESULT_SUCCESS }.getOrDefault(false)))
+                    }, androidx.core.content.ContextCompat.getMainExecutor(appContext!!))
+                    continuation.invokeOnCancellation { future.cancel(false) }
+                }
+                if (!switched || gen != generation) return
+                currentStream = stream
+                activeStream = stream
+                _state.value = _state.value.copy(quality = label(stream))
                 AudioCache.cacheWhole(track.id, stream)
             }
             if (first.quality == "YouTube Music" && qualitySetting() != "Normal") {
@@ -559,6 +575,7 @@ object Player {
     }
 
     fun pause() {
+        cancelQualityUpgrade()
         desiredPlay = false
         _state.value = _state.value.copy(playWhenReady = false)
         controller?.pause()
@@ -634,6 +651,7 @@ object Player {
     }
 
     fun seekTo(ms: Long) {
+        cancelQualityUpgrade()
         val position = ms.coerceAtLeast(0L)
         controller?.seekTo(position)
         _position.value = position
@@ -673,6 +691,10 @@ object Player {
             }),
             Bundle.EMPTY
         )
+    }
+
+    private fun cancelQualityUpgrade() {
+        controller?.sendCustomCommand(androidx.media3.session.SessionCommand(PlaybackService.CMD_CANCEL_UPGRADE, Bundle.EMPTY), Bundle.EMPTY)
     }
 
     // ------------------------------------------------------------ Volume natif

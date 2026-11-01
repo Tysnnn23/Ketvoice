@@ -1,9 +1,10 @@
 # Ketvoice API and Ketvoice Content
 
-The `supabase/functions` directory contains two Edge Functions:
+The `supabase/functions` directory contains three Edge Functions:
 
 - `ketvoice-api` brokers music-source search, stream resolution, and Spotify Canvas for the Android app.
 - `ketvoice-content` serves published songs/lyrics and handles restricted publication writes.
+- `ketvoice-artists` resolves artist names to MusicBrainz IDs and brokers Fanart.tv logos without returning its provider credential.
 
 Open `admin/ketvoice-admin.html` locally for the owner-only desktop editor.
 The same page is hosted at `https://tysnnn23.github.io/Ketvoice/admin/ketvoice-admin.html`
@@ -36,7 +37,44 @@ The function source contains no secret values. It reads a named Vault entry thro
 | `GET /stream?source=um\|last&id=...&title=...&artist=...` | Resolves a stream URL; unsupported provider tags are rejected |
 | `GET /canvas?spotifyId=...&title=...&artist=...` | Resolves a Spotify Canvas URL |
 
-All routes return JSON. The function is deployed with `verify_jwt` enabled.
+All routes return JSON. The existing `ketvoice-api` deployment has public gateway
+access for the website listener route; `supabase/config.toml` preserves that
+configuration. `ketvoice-content` and the separate `ketvoice-artists` broker keep
+gateway JWT verification enabled. Publisher authorization remains server-enforced.
+
+## Artist artwork broker
+
+`ketvoice-artists` uses the server-only Edge Function secret `FANART_API_KEY`.
+Set it through Supabase's secret manager, never through app settings, source code,
+build arguments, a public URL or an APK resource. Supabase stores production
+secrets server-side; client encryption/obfuscation is not used as key protection.
+The user does not have to configure this integration in the released app.
+
+- `GET /health` reports configuration as a boolean, never the credential.
+- `GET /logo?artist=...` requires a gateway-verified project bearer token. The
+  Android client sends its existing public project credentials, not a provider
+  secret. The redundant legacy public-key equality check is intentionally avoided.
+- Names are validated, quoted for MusicBrainz and resolved only on a confident
+  exact-name match. Ambiguous results are not guessed. Fanart's `mbid_id` must
+  match the resolved artist; HD logos are preferred, then standard logos.
+- Only HTTPS PNG URLs in the expected `assets.fanart.tv/fanart/` namespace are returned.
+  Fanart may use flat CDN filenames without a MusicBrainz ID; identity is validated
+  against the response's `mbid_id`, not inferred from those filenames.
+  Attribution links contain no credential. These are branded logos, not a claim
+  that every asset is a public-domain handwritten signature.
+- Requests are opt-in in Appearance. Missing artwork keeps the normal name.
+  Original logo colors and transparency are preserved.
+- Bounded JSON reads, no redirects, timeouts, per-IP burst limits, in-flight
+  deduplication, bounded caches and provider backoff limit upstream traffic.
+  Provider budgets reuse the existing service-role-only quota RPC and fail closed
+  on quota-backend failure. Its pre-existing rolling-window RPC is not an atomic
+  global token bucket, so a strict cross-isolate quota guarantee is not claimed.
+- The function never logs provider URLs, keys, raw upstream errors or responses.
+  Existing publication routes, permissions and database schema are unchanged.
+
+Deploy this function explicitly with `supabase functions deploy ketvoice-artists
+--project-ref <project> --use-api`; do not disable JWT verification. Native tests:
+`deno test supabase/functions/ketvoice-artists/handler_test.ts`.
 
 ## Ketvoice Content
 

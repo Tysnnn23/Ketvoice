@@ -227,8 +227,8 @@ fun SettingsScreen() {
                 }
             }
             Section("APPARENCE") {
-                SToggle(Icons.Filled.Image, "Signatures d'artistes",
-                    "Affiche les signatures disponibles sur les profils. Le nom est envoyé au service uniquement si activé.",
+                SToggle(Icons.Filled.Image, "Logos d'artistes",
+                    "Affiche les logos disponibles sur les profils. Le nom est envoyé au service uniquement si activé.",
                     AppSettings.artistSignatures.value) { AppSettings.artistSignatures.value = it; SettingsStore.save() }
                 val refresh = com.ketvoice.app.ui.motion.DisplayRefresh.status
                 SToggle(Icons.Filled.Bolt, "Fluidité 120 Hz",
@@ -322,6 +322,9 @@ fun SettingsScreen() {
 
             // ==================================================== LECTURE
             Section("LECTURE") {
+                SToggle(Icons.Filled.Analytics, "Qualité progressive",
+                    "Démarre au premier flux disponible, puis prépare une meilleure qualité sans arrêter la lecture.",
+                    AppSettings.progressiveQuality.value) { AppSettings.progressiveQuality.value = it; SettingsStore.save() }
                 SRow(Icons.Filled.Tune, "Égaliseur", sub="Traitement réel de la session audio", value="") { AppUi.showEqualizer.value=true }
                 SRow(Icons.Filled.Wifi, "Transfert sur le même Wi-Fi", sub="Découverte locale et confirmation sur le destinataire", value="") { AppUi.showHandoff.value=true }
                 SRow(

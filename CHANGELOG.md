@@ -7,6 +7,31 @@
 
 ---
 
+# Ketvoice 3.12.0
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 57** — legacy Canvas framing, sampled-glass menus, real reverb,
+optional progressive quality and server-protected artist logos.
+
+- Restore the normal artwork-region Canvas and shared dissolve; allow fullscreen
+  only for verified portrait 9:16 clips.
+- Render action sheets outside their sampled backdrop; retain readable fallbacks.
+- Add adjustable PCM room reverb and independently prepared same-track quality
+  upgrades. Keep higher-quality failures from interrupting current playback.
+- Fix JSON-returning custom download endpoints, distinct download links and
+  initial byte-zero HTTP 206 handling; preserve alternate source candidates.
+- Add Home/artist/playlist artwork progress rings and refine collection pages.
+- Broker opt-in Fanart.tv logos using a server-only credential, automatic
+  MusicBrainz resolution, original colors and attributed fallback behavior.
+- External limits: lossless provider access is expired (live HTTP 410); Discord
+  requires a registered application and is not included. Physical audio/video,
+  owner-session and APK upgrade validation are not claimed.
+
+Full notes: [3.12.0](docs/releases/v3.12.0.md).
+
+---
+
 # Ketvoice 3.11.0
 
 ![Ketvoice](ketvoice-banner.png)

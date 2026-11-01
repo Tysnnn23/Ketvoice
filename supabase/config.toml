@@ -1,0 +1,16 @@
+# Preserve the existing public listener broker's deployed gateway configuration.
+[functions.ketvoice-api]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/ketvoice-api/index.ts"
+
+[functions.ketvoice-content]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/ketvoice-content/index.ts"
+
+[functions.ketvoice-artists]
+enabled = true
+verify_jwt = true
+import_map = "./functions/ketvoice-artists/deno.json"
+entrypoint = "./functions/ketvoice-artists/index.ts"

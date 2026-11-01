@@ -158,7 +158,7 @@ class PrismalHostRenderTest {
         image("artist-header-dark-fallback")
     }
 
-    @Test fun normalCanvasKeepsItsBottomPixelsWhileOnlyCoversFade() {
+    @Test fun normalCanvasAndCoverShareTheRestoredLegacyDissolve() {
         var video by mutableStateOf(true)
         compose.setContent { KetvoiceTheme(useDark = true) {
             Box(Modifier.fillMaxSize().background(Color.Black)) {
@@ -172,12 +172,13 @@ class PrismalHostRenderTest {
         val bounds = frame.fetchSemanticsNode().boundsInRoot
         val x = bounds.center.x.toInt()
         val y = (bounds.bottom - 20).toInt()
-        image("normal-canvas-unmasked-host-fixture") {
-            assertTrue("Bottom of the fitted clip must remain opaque", android.graphics.Color.green(it.getPixel(x, y)) > 242)
+        image("normal-canvas-legacy-dissolve-host-fixture") {
+            assertTrue("Legacy Canvas dissolves into the scene", android.graphics.Color.green(it.getPixel(x, y)) < 90)
+            assertTrue("Upper image remains visible", android.graphics.Color.green(it.getPixel(x, bounds.top.toInt() + 100)) > 180)
         }
         compose.runOnIdle { video = false }
         image("normal-cover-dissolve-host-fixture") {
-            assertTrue("Only covers should dissolve into the background", android.graphics.Color.green(it.getPixel(x, y)) < 90)
+            assertTrue("Covers retain the same dissolve", android.graphics.Color.green(it.getPixel(x, y)) < 90)
         }
     }
 

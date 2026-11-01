@@ -7,15 +7,14 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.key
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import kotlin.math.max
-import kotlin.math.min
+import kotlin.math.abs
 
 internal object CanvasPresentation {
-    /** At least 85% of the source image must survive a fill, in either orientation. */
+    /** Portrait 9:16 only, with a tiny allowance for encoded dimension rounding. */
     fun canFillScreen(videoRatio: Float?, screenRatio: Float): Boolean {
         if (videoRatio == null || !videoRatio.isFinite() || videoRatio <= 0f ||
             !screenRatio.isFinite() || screenRatio <= 0f) return false
-        return min(videoRatio, screenRatio) / max(videoRatio, screenRatio) >= .85f
+        return screenRatio < 1f && abs(videoRatio - 9f / 16f) <= .002f
     }
 
     fun aspectRatio(width: Int, height: Int, rotation: Int): Float? {

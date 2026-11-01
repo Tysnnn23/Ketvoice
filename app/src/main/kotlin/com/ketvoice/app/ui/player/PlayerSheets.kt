@@ -36,6 +36,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -146,6 +148,23 @@ fun TrackMenuSheet(track: Track, onClose: () -> Unit) {
         MenuItemRow("Partager", Icons.Filled.Share) {
             onClose()
             com.ketvoice.app.util.ShareLinks.shareTrack(shareContext, track)
+        }
+        var reverbOpen by remember { mutableStateOf(false) }
+        MenuItemRow("Reverb", Icons.Filled.Equalizer) { reverbOpen = !reverbOpen }
+        if (reverbOpen) Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
+            Text("Réverbération", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+            Text("Ajoute une ambiance de salle au signal audio.", color = Color.White.copy(alpha = .72f), fontSize = 12.sp)
+            androidx.compose.material3.Slider(value = AppSettings.reverbAmount.value.toFloat(),
+                valueRange = 0f..100f, onValueChange = {
+                    AppSettings.reverbAmount.value = it.toInt()
+                    com.ketvoice.app.player.ReverbControl.amount = it / 100f
+                }, onValueChangeFinished = { com.ketvoice.app.data.SettingsStore.save() },
+                modifier = Modifier.fillMaxWidth().semantics { contentDescription = com.ketvoice.app.data.AppText.t("Réverbération") })
+            MenuItemRow("Désactiver", Icons.Filled.Close) {
+                AppSettings.reverbAmount.value = 0
+                com.ketvoice.app.player.ReverbControl.amount = 0f
+                com.ketvoice.app.data.SettingsStore.save()
+            }
         }
         // Exclusion du Canvas par morceau : visible uniquement quand les Canvas
         // vidéo sont activés dans les paramètres. Persisté dans CanvasRepo.

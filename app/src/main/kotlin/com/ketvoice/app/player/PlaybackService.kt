@@ -21,12 +21,19 @@ import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.ketvoice.app.MainActivity
 import com.ketvoice.app.data.AppSettings
+import kotlinx.coroutines.*
+import com.google.common.util.concurrent.SettableFuture
+import java.nio.ByteBuffer
 
 @UnstableApi
 class PlaybackService : MediaSessionService() {
 
     private var mediaSession: MediaSession? = null
     private lateinit var player: ExoPlayer
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private var upgradeJob: Job? = null
+    private var playbackRevision = 0L
+    private var stopping = false
 
     override fun onCreate() {
         super.onCreate()
@@ -47,6 +54,8 @@ class PlaybackService : MediaSessionService() {
                     val commands = MediaSession.ConnectionResult.DEFAULT_SESSION_COMMANDS.buildUpon()
                         .add(SessionCommand(CMD_SKIP_SILENCE, Bundle.EMPTY))
                         .add(SessionCommand(CMD_EQUALIZER, Bundle.EMPTY))
+                        .add(SessionCommand(CMD_UPGRADE, Bundle.EMPTY))
+                        .add(SessionCommand(CMD_CANCEL_UPGRADE, Bundle.EMPTY))
                         .build()
                     return MediaSession.ConnectionResult.AcceptedResultBuilder(session)
                         .setAvailableSessionCommands(commands).build()
@@ -59,6 +68,11 @@ class PlaybackService : MediaSessionService() {
                 ): ListenableFuture<SessionResult> {
                     if (controller.packageName != packageName) return Futures.immediateFuture(
                         SessionResult(SessionError.ERROR_PERMISSION_DENIED))
+                    if (command.customAction == CMD_CANCEL_UPGRADE) {
+                        upgradeJob?.cancel()
+                        return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
+                    }
+                    if (command.customAction == CMD_UPGRADE) return prepareUpgrade(args)
                     if (command.customAction != CMD_SKIP_SILENCE && command.customAction != CMD_EQUALIZER)
                         return Futures.immediateFuture(SessionResult(SessionError.ERROR_NOT_SUPPORTED))
                     if (command.customAction == CMD_SKIP_SILENCE) {
@@ -74,12 +88,28 @@ class PlaybackService : MediaSessionService() {
         mediaSession = session
     }
 
-    private fun buildPlayer(): ExoPlayer {
+    private fun buildPlayer(standby: Boolean = false): ExoPlayer {
+        lateinit var owner: ExoPlayer
+        val meter = object : TeeAudioProcessor.AudioBufferSink {
+            private var rate = 0
+            private var channels = 0
+            private var encoding = 0
+            private var promoted = false
+            override fun flush(sampleRateHz: Int, channelCount: Int, encoding: Int) {
+                rate = sampleRateHz; channels = channelCount; this.encoding = encoding
+                promoted = false
+            }
+            override fun handleBuffer(buffer: ByteBuffer) {
+                if (!::player.isInitialized || owner !== player) return
+                if (!promoted) { SonicMeter.flush(rate, channels, encoding); promoted = true }
+                SonicMeter.handleBuffer(buffer)
+            }
+        }
         val renderers = object : DefaultRenderersFactory(this) {
             override fun buildAudioSink(context: android.content.Context, enableFloatOutput: Boolean, enableAudioTrackPlaybackParams: Boolean): AudioSink =
-                DefaultAudioSink.Builder(context).setEnableFloatOutput(enableFloatOutput)
+                DefaultAudioSink.Builder(context).setEnableFloatOutput(false)
                     .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
-                    .setAudioProcessors(arrayOf(TeeAudioProcessor(SonicMeter))).build()
+                    .setAudioProcessors(arrayOf(ReverbAudioProcessor(), TeeAudioProcessor(meter))).build()
         }
         val player = ExoPlayer.Builder(this, renderers)
             .setMediaSourceFactory(DefaultMediaSourceFactory(AudioCache.factory(this)))
@@ -93,34 +123,134 @@ class PlaybackService : MediaSessionService() {
                     .setUsage(C.USAGE_MEDIA)
                     .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
                     .build(),
-                true
+                !standby
             )
             .setHandleAudioBecomingNoisy(true)
             .setWakeMode(C.WAKE_MODE_NETWORK)
             .build()
+        owner = player
         player.skipSilenceEnabled = AppSettings.skipSilence.value
         player.addListener(object : androidx.media3.common.Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
-                if (!isPlaying) SonicMeter.reset()
+                if (owner === this@PlaybackService.player && !isPlaying) SonicMeter.reset()
             }
             override fun onPositionDiscontinuity(
                 oldPosition: androidx.media3.common.Player.PositionInfo,
                 newPosition: androidx.media3.common.Player.PositionInfo,
                 reason: Int
             ) {
-                SonicMeter.reset()
+                if (owner === this@PlaybackService.player) {
+                    playbackRevision++
+                    SonicMeter.reset()
+                }
             }
             override fun onAudioSessionIdChanged(audioSessionId: Int) {
-                if (audioSessionId > 0) AudioEqualizer.bind(audioSessionId)
+                if (owner === this@PlaybackService.player && audioSessionId > 0) AudioEqualizer.bind(audioSessionId)
             }
         })
         return player
+    }
+
+    /** Prepare and decode in isolation. A failed/late candidate never replaces live audio.
+     * This is a same-recording quality handoff, never a transition between songs. */
+    private fun prepareUpgrade(args: Bundle): ListenableFuture<SessionResult> {
+        upgradeJob?.cancel()
+        val result = SettableFuture.create<SessionResult>()
+        val old = player
+        val expectedId = args.getString("id")
+        val url = args.getString("url").orEmpty()
+        if (old.currentMediaItem?.mediaId != expectedId || !url.startsWith("https://") || !AppSettings.progressiveQuality.value)
+            return Futures.immediateFuture(SessionResult(SessionError.ERROR_BAD_VALUE))
+        val revision = playbackRevision
+        val originalVolume = old.volume
+        upgradeJob = serviceScope.launch {
+            var candidate: ExoPlayer? = null
+            var success = false
+            var promoted = false
+            try {
+                success = withTimeoutOrNull(15_000) {
+                    val next = buildPlayer(standby = true)
+                    candidate = next
+                    next.volume = 0f
+                    next.playbackParameters = old.playbackParameters
+                    next.skipSilenceEnabled = old.skipSilenceEnabled
+                    val item = old.currentMediaItem!!.buildUpon().setUri(url)
+                        .setCustomCacheKey(args.getString("cacheKey")).build()
+                    next.setMediaItem(item, old.currentPosition)
+                    next.prepare()
+                    fun valid() = player === old && playbackRevision == revision &&
+                        old.currentMediaItem?.mediaId == expectedId && old.playerError == null &&
+                        AppSettings.progressiveQuality.value
+                    while (next.playbackState != androidx.media3.common.Player.STATE_READY) {
+                        if (!valid() || next.playerError != null) return@withTimeoutOrNull false
+                        delay(20)
+                    }
+                    if (!QualityHandoff.compatible(old.duration, next.duration, old.currentPosition)) return@withTimeoutOrNull false
+                    // Muted pre-roll uses a separate decoder; seek/buffering never touches old.
+                    var aligned = false
+                    for (attempt in 0..2) {
+                        if (!valid()) return@withTimeoutOrNull false
+                        next.seekTo(old.currentPosition)
+                        next.playWhenReady = old.isPlaying
+                        delay(120)
+                        while (next.playbackState != androidx.media3.common.Player.STATE_READY) {
+                            if (!valid() || next.playerError != null) return@withTimeoutOrNull false
+                            delay(20)
+                        }
+                        if (QualityHandoff.aligned(old.currentPosition, next.currentPosition)) { aligned = true; break }
+                    }
+                    if (!aligned || !valid() || (old.playWhenReady && (!old.isPlaying || !next.isPlaying))) return@withTimeoutOrNull false
+                    val volume = old.volume
+                    // Short amplitude ramps suppress clicks without mixing different recordings.
+                    for (step in 1..4) {
+                        if (!valid()) return@withTimeoutOrNull false
+                        old.volume = volume * (1f - step / 4f)
+                        delay(10)
+                    }
+                    if (!valid() || !QualityHandoff.aligned(old.currentPosition, next.currentPosition)) return@withTimeoutOrNull false
+                    next.repeatMode = old.repeatMode
+                    next.shuffleModeEnabled = old.shuffleModeEnabled
+                    next.skipSilenceEnabled = old.skipSilenceEnabled
+                    val resume = old.playWhenReady
+                    val attributes = old.audioAttributes
+                    player = next
+                    mediaSession?.setPlayer(next)
+                    promoted = true
+                    old.setAudioAttributes(attributes, false)
+                    old.pause()
+                    next.setAudioAttributes(attributes, true)
+                    next.playWhenReady = resume
+                    AudioEqualizer.bind(next.audioSessionId)
+                    old.release()
+                    // Once promoted, complete the tiny ramp even if preparation is cancelled.
+                    withContext(NonCancellable) {
+                        for (step in 1..4) {
+                            if (player !== next || stopping) break
+                            next.volume = volume * step / 4f
+                            delay(10)
+                        }
+                    }
+                    true
+                } == true
+            } catch (_: CancellationException) {
+                // New track/seek/stop cancels the candidate, not the audible player.
+            } catch (_: Exception) {
+                // A provider/decoder failure is not a playback failure.
+            } finally {
+                if (candidate !== player) candidate?.release()
+                if (player === old && !stopping) old.volume = originalVolume
+                result.set(SessionResult(if (success || promoted) SessionResult.RESULT_SUCCESS else SessionError.ERROR_UNKNOWN))
+            }
+        }
+        return result
     }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? =
         mediaSession
 
     override fun onDestroy() {
+        stopping = true
+        serviceScope.cancel()
         SonicMeter.observe(false)
         AudioEqualizer.release()
         com.ketvoice.app.data.ListeningHistory.flushListenedMs()
@@ -133,5 +263,7 @@ class PlaybackService : MediaSessionService() {
     companion object {
         const val CMD_SKIP_SILENCE = "ketvoice.set_skip_silence"
         const val CMD_EQUALIZER = "ketvoice.apply_equalizer"
+        const val CMD_UPGRADE = "ketvoice.prepare_quality_upgrade"
+        const val CMD_CANCEL_UPGRADE = "ketvoice.cancel_quality_upgrade"
     }
 }

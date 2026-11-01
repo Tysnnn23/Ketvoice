@@ -23,7 +23,6 @@ import coil.compose.AsyncImage
 import coil.compose.AsyncImagePainter
 import coil.request.ImageRequest
 import coil.size.Size
-import coil.decode.SvgDecoder
 import coil.transform.Transformation
 import com.ketvoice.app.data.ArtistSignature
 import com.ketvoice.app.theme.LocalTheme
@@ -48,17 +47,18 @@ internal fun ArtistIdentity(name: String, signature: ArtistSignature?) {
                     ImageRequest.Builder(context).data(signature.url).crossfade(false)
                         .setHeader("User-Agent", "Ketvoice/${com.ketvoice.app.BuildConfig.VERSION_NAME} (https://github.com/Tysnnn23/Ketvoice)")
                         .apply {
-                            if (signature.format == "svg") decoderFactory(SvgDecoder.Factory())
-                            else transformations(SignatureInk)
+                            if (signature.monochrome) transformations(SignatureInk)
                         }.build()
                 }
                 AsyncImage(request, name, contentScale = ContentScale.Fit,
-                    colorFilter = ColorFilter.tint(theme.onBackground),
+                    // Preserve multi-tone branded logos; a uniform tint can
+                    // turn outlined/filled lettering into a solid rectangle.
+                    colorFilter = if (signature.monochrome) ColorFilter.tint(theme.onBackground) else null,
                     onState = { loaded = it is AsyncImagePainter.State.Success },
                     modifier = Modifier.fillMaxWidth().height(112.dp).graphicsLayer { alpha = blend })
             }
         }
-        if (loaded && signature != null) Text(com.ketvoice.app.data.AppText.t("Signature d'artiste") + " · ${signature.license}", localize = false,
+        if (loaded && signature != null) Text(com.ketvoice.app.data.AppText.t("Visuel d'artiste") + " · ${signature.attribution}", localize = false,
             color = theme.secondary, fontSize = 10.sp,
             modifier = Modifier.clickable {
                 runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(signature.source))) }

@@ -45,6 +45,8 @@ object AppSettings {
     val firstLaunchAt = mutableStateOf(0L)
     val skipSilence = mutableStateOf(false)
     val equalizerEnabled = mutableStateOf(false)
+    val reverbAmount = mutableStateOf(0)
+    val progressiveQuality = mutableStateOf(false)
     val equalizerGains = mutableStateOf(listOf(0, 0, 0, 0, 0))
     val wifiHandoffEnabled = mutableStateOf(false)
     val spatialAudio = mutableStateOf(false)

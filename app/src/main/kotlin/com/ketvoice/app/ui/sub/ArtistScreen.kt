@@ -120,12 +120,11 @@ fun ArtistScreen() {
                         .padding(horizontal = 20.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text("${index + 1}", color = theme.secondary, fontSize = 13.sp,
                             modifier = Modifier.width(24.dp))
-                        Cover(track.title, art["t:${track.id}"] ?: track.coverUrl, 50.dp, 7.dp)
+                        com.ketvoice.app.ui.common.DownloadCover(track, art["t:${track.id}"] ?: track.coverUrl, 50.dp, 7.dp)
                         Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
-                            Text(track.title, localize = false, color = if (active) theme.accent else theme.onBackground,
-                                fontSize = 16.sp, fontWeight = FontWeight.SemiBold, maxLines = 1,
-                                overflow = TextOverflow.Ellipsis)
+                            com.ketvoice.app.ui.common.TrackTitle(track.title,
+                                color = if (active) theme.accent else theme.onBackground, selected = active)
                             Text(track.artist, localize = false, color = theme.secondary, fontSize = 12.5.sp, maxLines = 1,
                                 overflow = TextOverflow.Ellipsis)
                         }

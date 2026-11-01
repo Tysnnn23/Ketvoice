@@ -102,8 +102,7 @@ fun FullPlayerScreen(
     val canvasExcluded by CanvasRepo.excluded.collectAsState()
     // Exclusion par morceau (menu •••) : pochette statique uniquement.
     val canvasPath = canvas[track.id]?.takeIf { track.id !in canvasExcluded }
-    // Full-window Canvas keeps only title, artist and time; eligibility uses
-    // the local clip's real proportions, not an assumed 9:16 format.
+    // Only a verified portrait 9:16 clip can enter the full-window mode.
     var canvasFocus by remember(track.id, canvasPath) { mutableStateOf(false) }
     var failedCanvas by remember(canvasPath) { mutableStateOf(false) }
     val canvasAspect by rememberCanvasAspectRatio(canvasPath.takeIf { AppSettings.animatedArtwork.value })
@@ -167,10 +166,13 @@ fun FullPlayerScreen(
         }
         if (com.ketvoice.app.BuildConfig.IS_QUEST) {
             BackHandler { if (page != PlayerPage.ARTWORK) navigate(PlayerPage.ARTWORK) else closeInstant() }
+            com.ketvoice.app.glass.BackdropCapture(backdrop, Modifier.fillMaxSize()) {
             QuestLandscapePlayer(if (canvasFocus) state.copy(isPlaying = false) else state, track, cover, canvasPath, ambience, page,
                 onPage = ::navigate, onClose = ::closeInstant, onTrackMenu = { sheet = "track" },
                 onSources = { sheet = "sources" }, onOutput = { sheet = "audio" },
                 onCanvas = if (canvasReady) ({ canvasFocus = true }) else null)
+            }
+            CompositionLocalProvider(LocalBackdropLayer provides backdrop) {
             if (sheet.isNotBlank()) PlayerSheetScrim({ sheet = "" }) {
                 when (sheet) {
                     "sources" -> LyricsSourceSheet(track, onClose = { sheet = "" })
@@ -178,12 +180,14 @@ fun FullPlayerScreen(
                     else -> AudioOutputSheet { sheet = "" }
                 }
             }
+            }
             return@BoxWithConstraints
         }
         if (adaptivePlayer) {
             // Swipe horizontal depuis un bord pour fermer le player sur tablette.
             // Les drags intérieurs (scrub, volume, paroles) ne sont jamais interceptés.
             var dragX by remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
+            com.ketvoice.app.glass.BackdropCapture(backdrop, Modifier.fillMaxSize()) {
             Box(Modifier.fillMaxSize().graphicsLayer { translationX = dragX }.pointerInput(Unit) {
                 awaitEachGesture {
                     val down = awaitFirstDown(pass = PointerEventPass.Initial)
@@ -211,13 +215,16 @@ fun FullPlayerScreen(
                     onSources = { sheet = "sources" }, onOutput = { sheet = "audio" },
                     onCanvas = if (canvasReady) ({ canvasFocus = true }) else null)
             }
+            }
             BackHandler { if (page != PlayerPage.ARTWORK) navigate(PlayerPage.ARTWORK) else closeInstant() }
+            CompositionLocalProvider(LocalBackdropLayer provides backdrop) {
             if (sheet.isNotBlank()) PlayerSheetScrim({ sheet = "" }) {
                 when (sheet) {
                     "sources" -> LyricsSourceSheet(track, onClose = { sheet = "" })
                     "track" -> TrackMenuSheet(track) { sheet = "" }
                     else -> AudioOutputSheet { sheet = "" }
                 }
+            }
             }
             return@BoxWithConstraints
         }
@@ -285,10 +292,7 @@ fun FullPlayerScreen(
                 else -> close()
             }
         }
-        // BackdropCapture : le contenu du lecteur EST la couche capturée. Les
-        // feuilles internes (sources de paroles, menu ⋯, sortie audio) doivent
-        // donc passer en verre statique — un panneau dynamique qui échantillonne
-        // sa propre couche boucle le RenderThread (stack overflow natif).
+        // Capture only the scene; sheets are siblings, never part of their own backdrop.
         com.ketvoice.app.glass.BackdropCapture(backdrop) {
             Box(Modifier
                 .fillMaxSize()
@@ -326,11 +330,9 @@ fun FullPlayerScreen(
                 if (shownPage == PlayerPage.ARTWORK) {
                     val inlineCanvas = canvasPath != null && AppSettings.animatedArtwork.value && !panoramicCanvasActive(canvasPath)
                     val titleTop = if (wide) safeHeight - 66.dp else minOf(safeHeight * .514f, contentBottom - 61.dp)
-                    val artworkTop = if (inlineCanvas) topInset + 56.dp else 0.dp
-                    val artworkHeight = if (inlineCanvas) (titleTop - artworkTop - 16.dp).coerceAtLeast(48.dp)
-                        else if (wide) safeHeight else safeHeight * .55f
+                    val artworkHeight = if (wide) safeHeight else safeHeight * .55f
                     PlayerArtworkFrame(inlineCanvas, ambience.color,
-                        Modifier.width(sceneWidth).offset(y = artworkTop).height(artworkHeight)
+                        Modifier.width(sceneWidth).height(artworkHeight)
                         .onGloballyPositioned { AppUi.playerCoverBounds.value = it.boundsInRoot() }
                         .then(dismissDrag).then(if (canvasReady) Modifier.clickable(
                             interactionSource = artInteraction,
@@ -427,6 +429,8 @@ fun FullPlayerScreen(
                     }
                 }
             }
+        }
+        CompositionLocalProvider(LocalBackdropLayer provides backdrop) {
             AnimatedContent(sheet, transitionSpec = { fadeIn(tween(Motion.duration())).togetherWith(fadeOut(tween(Motion.duration()))) }, label = "player-sheet") { selected ->
                 if (selected.isNotBlank()) PlayerSheetScrim({ sheet = "" }) {
                     when (selected) {

@@ -4,9 +4,10 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class CanvasPresentationTest {
-    @Test fun matchingPortraitAndLandscapeClipsCanFillScreen() {
+    @Test fun onlyNineBySixteenPortraitClipsCanEnterFullscreen() {
         assertTrue(CanvasPresentation.canFillScreen(9f / 16f, 9f / 16f))
-        assertTrue(CanvasPresentation.canFillScreen(16f / 9f, 16f / 9f))
+        assertFalse(CanvasPresentation.canFillScreen(16f / 9f, 16f / 9f))
+        assertTrue(CanvasPresentation.canFillScreen(9f / 16f, 9f / 20f))
     }
 
     @Test fun portraitClipCannotBeMagnifiedIntoLandscapeOrSquare() {
@@ -15,12 +16,12 @@ class CanvasPresentationTest {
         assertFalse(CanvasPresentation.canFillScreen(1f, 9f / 16f))
     }
 
-    @Test fun fullscreenRequiresAtLeastEightyFivePercentOfTheSource() {
-        assertTrue(CanvasPresentation.canFillScreen(1f, .85f))
-        assertFalse(CanvasPresentation.canFillScreen(1f, .849f))
-        assertTrue(CanvasPresentation.canFillScreen(.85f, 1f))
-        assertFalse(CanvasPresentation.canFillScreen(.849f, 1f))
-        assertFalse(CanvasPresentation.canFillScreen(9f / 16f, 9f / 20f))
+    @Test fun squareAndOtherPortraitFormatsNeverQualifyEvenOnAMatchingScreen() {
+        for (ratio in listOf(1f, .85f, 3f / 4f, 2f / 3f, 9f / 20f, 10f / 16f))
+            assertFalse(CanvasPresentation.canFillScreen(ratio, ratio))
+        assertTrue(CanvasPresentation.canFillScreen(540f / 960f, .45f))
+        assertTrue(CanvasPresentation.canFillScreen(576f / 1024f, .45f))
+        assertFalse(CanvasPresentation.canFillScreen(.57f, .45f))
     }
 
     @Test fun unavailableAndInvalidDimensionsNeverEnableFullscreen() {

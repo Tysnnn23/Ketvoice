@@ -97,6 +97,7 @@ internal fun AlbumPage(request: CatalogRequest, page: CatalogPage?, tracks: List
                     Text(title, localize = false, color = theme.onBackground, fontSize = 29.sp,
                         fontWeight = FontWeight.Bold, letterSpacing = (-.8).sp, lineHeight = 34.sp,
                         textAlign = TextAlign.Center, maxLines = 4, overflow = TextOverflow.Ellipsis)
+                    if (tracks.any { it.explicit }) EBadge(Modifier.padding(top = 8.dp))
                     if (artist.isNotBlank()) Text(artist, localize = false, color = theme.accent, fontSize = 17.sp,
                         fontWeight = FontWeight.Medium, textAlign = TextAlign.Center,
                         modifier = Modifier.padding(top = 8.dp).clickable {

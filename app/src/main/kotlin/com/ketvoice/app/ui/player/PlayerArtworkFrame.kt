@@ -12,11 +12,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 
-/** Cover fading must never erase the lower half of a fitted Canvas video. */
+/** Legacy artwork scene: the video and still artwork share the same bottom dissolve. */
 @Composable
 internal fun PlayerArtworkFrame(video: Boolean, ambience: Color, modifier: Modifier = Modifier,
                                 content: @Composable () -> Unit) {
-    val coverFade = if (video) Modifier else Modifier
+    val coverFade = Modifier
         .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
         .drawWithContent {
             drawContent()
@@ -27,7 +27,7 @@ internal fun PlayerArtworkFrame(video: Boolean, ambience: Color, modifier: Modif
         }
     Box(modifier.then(coverFade)) {
         content()
-        if (!video) Box(Modifier.fillMaxSize().background(Brush.verticalGradient(
+        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(
             0f to Color.Black.copy(alpha = .16f), .52f to Color.Transparent,
             .83f to ambience.copy(alpha = .45f), 1f to ambience.copy(alpha = .85f))))
     }

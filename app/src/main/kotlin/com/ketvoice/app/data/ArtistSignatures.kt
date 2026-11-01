@@ -12,31 +12,34 @@ import java.net.URL
 import java.net.URLEncoder
 import java.util.Locale
 
-internal data class ArtistSignature(val url: String, val format: String, val source: String, val license: String)
+internal data class ArtistSignature(val url: String, val format: String, val source: String,
+                                    val attribution: String, val monochrome: Boolean = true)
 
-/** Public-domain assets only; artist names leave the device only after opt-in. */
+/** Opt-in artist identity artwork. Provider credentials never leave the broker. */
 internal object ArtistSignatures {
-    private const val BASE = "https://proud-cascade-1654.de.deplexo.com"
+    private val base = KetvoiceApi.BASE.substringBeforeLast('/') + "/ketvoice-artists"
     private data class Entry(val signature: ArtistSignature?, val expires: Long)
     private val cache = linkedMapOf<String, Entry>()
     private val lock = Mutex()
     private fun name(value: String) = value.trim().lowercase(Locale.ROOT).replace(Regex("\\s+"), " ")
 
     suspend fun find(artist: String): ArtistSignature? {
-        if (!AppSettings.artistSignatures.value || artist.isBlank()) return null
+        if (!AppSettings.artistSignatures.value || artist.isBlank() || artist.length > 160) return null
         return lock.withLock {
             val key = name(artist)
             cache[key]?.takeIf { it.expires > System.currentTimeMillis() }?.let { return@withLock it.signature }
             var lifetime = 10 * 60_000L
             val result = try {
                 withContext(Dispatchers.IO) {
-                    val connection = URL("$BASE/v1/signatures?artist=${URLEncoder.encode(artist.trim(), "UTF-8")}")
+                    val connection = URL("$base/logo?artist=${URLEncoder.encode(artist.trim(), "UTF-8")}")
                         .openConnection() as HttpURLConnection
                     try {
-                        connection.connectTimeout = 6_000
-                        connection.readTimeout = 6_000
+                        connection.connectTimeout = 10_000
+                        connection.readTimeout = 18_000
                         connection.instanceFollowRedirects = false
                         connection.setRequestProperty("Accept", "application/json")
+                        connection.setRequestProperty("apikey", KetvoiceApi.ANON_KEY)
+                        connection.setRequestProperty("Authorization", "Bearer ${KetvoiceApi.ANON_KEY}")
                         connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/124.0 Mobile Safari/537.36")
                         when (connection.responseCode) {
                             404 -> null
@@ -67,27 +70,19 @@ internal object ArtistSignatures {
         }
     }
 
-    /** The actual v1 service schema. Do not infer identity or licensing from filenames. */
+    /** Strict broker schema: branded logos are not labelled as public-domain handwriting. */
     internal fun parse(root: JSONObject, artist: String): ArtistSignature? {
-        if (name(root.optJSONObject("artist")?.optString("name").orEmpty()) != name(artist)) return null
-        val values = root.optJSONArray("signatures") ?: return null
-        val allowed = setOf("PD-signature", "CC0", "CC0-1.0", "Public domain")
-        return (0 until values.length()).mapNotNull { index ->
-            val item = values.optJSONObject(index) ?: return@mapNotNull null
-            if (name(item.optJSONObject("artist")?.optString("name").orEmpty()) != name(artist)) return@mapNotNull null
-            val license = item.optJSONObject("license") ?: return@mapNotNull null
-            val label = license.optString("name")
-            if (license.optString("status") != "known" || label !in allowed) return@mapNotNull null
-            val asset = item.optJSONObject("asset") ?: return@mapNotNull null
-            val format = asset.optString("format").lowercase(Locale.ROOT)
-            if (format !in setOf("svg", "png", "webp")) return@mapNotNull null
-            val uri = runCatching { URI(asset.optString("url")) }.getOrNull() ?: return@mapNotNull null
-            if (uri.scheme != "https" || uri.host != "upload.wikimedia.org" || uri.rawUserInfo != null || uri.port !in setOf(-1, 443)) return@mapNotNull null
-            val source = item.optJSONObject("source")?.optString("url").orEmpty()
-            val attribution = runCatching { URI(source) }.getOrNull()
-            if (attribution?.scheme != "https" || attribution.host != "commons.wikimedia.org" || attribution.rawUserInfo != null ||
-                attribution.port !in setOf(-1, 443)) return@mapNotNull null
-            ArtistSignature(uri.toASCIIString(), format, source, label)
-        }.sortedBy { if (it.format == "svg") 0 else 1 }.firstOrNull()
+        if (name(root.optString("artist")) != name(artist)) return null
+        val mbid = root.optString("mbid").lowercase(Locale.ROOT)
+        if (!Regex("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}").matches(mbid)) return null
+        val logo = root.optJSONObject("logo") ?: return null
+        if (logo.optString("kind") != "logo" || logo.optString("provider") != "fanart.tv" || logo.optString("format") != "png") return null
+        val uri = runCatching { URI(logo.optString("url")) }.getOrNull() ?: return null
+        if (uri.scheme != "https" || uri.host != "assets.fanart.tv" || uri.rawUserInfo != null ||
+            uri.port !in setOf(-1, 443) || uri.rawQuery != null || uri.rawFragment != null ||
+            !uri.path.startsWith("/fanart/") || !uri.path.endsWith(".png")) return null
+        val source = "https://fanart.tv/artist/$mbid/"
+        if (logo.optString("source") != source) return null
+        return ArtistSignature(uri.toASCIIString(), "png", source, "fanart.tv", monochrome = false)
     }
 }

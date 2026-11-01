@@ -154,21 +154,11 @@ fun ArtworkCanvas(
                                 )
                                 Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .28f)))
                             }
-                            if (canvasFill) CanvasVideo(path = data.canvas, playing = playing,
-                                modifier = Modifier.fillMaxSize(), resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM,
+                            CanvasVideo(path = data.canvas, playing = playing,
+                                modifier = Modifier.fillMaxSize(),
+                                resizeMode = if (canvasFill) AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                                    else AspectRatioFrameLayout.RESIZE_MODE_FIT,
                                 onFailure = onCanvasFailure)
-                            else {
-                                val aspect by rememberCanvasAspectRatio(data.canvas)
-                                BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                    val ratio = aspect ?: (9f / 16f)
-                                    val width = minOf((maxWidth - 32.dp).coerceAtLeast(1.dp), maxHeight * ratio)
-                                    // Clip the video itself, not the letterboxed parent.
-                                    // White/light clips no longer end in a hard rectangular slab.
-                                    CanvasVideo(path = data.canvas, playing = playing,
-                                        modifier = Modifier.size(width, width / ratio).clip(RoundedCornerShape(16.dp)),
-                                        resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT, onFailure = onCanvasFailure)
-                                }
-                            }
                         }
                     }
                     data.cover != null ->

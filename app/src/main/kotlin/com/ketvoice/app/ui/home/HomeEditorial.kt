@@ -35,7 +35,7 @@ internal fun HomeEditorial(tracks: List<Track>) {
                 Text(track.artist,localize=false,color=th.secondary,fontSize=13.sp,maxLines=2)
                 Text("Écouter",color=th.accent,fontSize=14.sp,fontWeight=FontWeight.SemiBold,modifier=Modifier.padding(vertical=8.dp))
             }
-            Cover(track.title,ArtworkRepo.coverForTrack(track),112.dp,16.dp)
+            com.ketvoice.app.ui.common.DownloadCover(track,ArtworkRepo.coverForTrack(track),112.dp,16.dp)
         }
     }
 }

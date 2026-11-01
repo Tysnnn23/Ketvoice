@@ -54,6 +54,9 @@ object SettingsStore {
             p.edit().putLong("firstLaunchAt", s.firstLaunchAt.value).apply()
         }
         s.equalizerEnabled.value = p.getBoolean("equalizerEnabled", false)
+        s.reverbAmount.value = p.getInt("reverbAmount", 0).coerceIn(0, 100)
+        com.ketvoice.app.player.ReverbControl.amount = s.reverbAmount.value / 100f
+        s.progressiveQuality.value = p.getBoolean("progressiveQuality", false)
         s.equalizerGains.value = com.ketvoice.app.player.EqualizerProfile.normalize(
             p.getString("equalizerGains", "").orEmpty().split(',').mapNotNull { it.toIntOrNull() })
         s.wifiHandoffEnabled.value = p.getBoolean("wifiHandoffEnabled", false)
@@ -142,6 +145,8 @@ object SettingsStore {
             .putBoolean("skipSilence", s.skipSilence.value)
             .putLong("firstLaunchAt", s.firstLaunchAt.value)
             .putBoolean("equalizerEnabled", s.equalizerEnabled.value)
+            .putInt("reverbAmount", s.reverbAmount.value.coerceIn(0, 100))
+            .putBoolean("progressiveQuality", s.progressiveQuality.value)
             .putString("equalizerGains", s.equalizerGains.value.joinToString(","))
             .putBoolean("wifiHandoffEnabled", s.wifiHandoffEnabled.value)
             .putInt("lyricsMode", s.lyricsMode.value)

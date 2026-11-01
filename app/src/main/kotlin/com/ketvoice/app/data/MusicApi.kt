@@ -41,7 +41,8 @@ object MusicApi {
         val best: StreamInfo? = null,
         val artwork: String? = null,
         val album: String? = null,
-        val durationMs: Long = 0L
+        val durationMs: Long = 0L,
+        val alternatives: List<StreamInfo> = emptyList()
     )
     data class LyricWord(val startMs: Long, val text: String, val endMs: Long = -1L)
 
@@ -252,13 +253,15 @@ object MusicApi {
         val best = async { flacStream(track) }
         val custom = async { runCatching { CustomSources.streamForTrack(track, forDownload = true) }.getOrNull() }
         val customStream = custom.await()
+        val candidates = listOfNotNull(customStream, fast.await(), best.await()).distinctBy { it.url }
 
         Streams(
             fast = customStream ?: fast.await(),
-            best = customStream ?: best.await(),
+            best = candidates.maxByOrNull(StreamQuality::rank),
             artwork = track.coverUrl,
             album = track.album,
-            durationMs = track.durationMs
+            durationMs = track.durationMs,
+            alternatives = candidates
         )
     }
 

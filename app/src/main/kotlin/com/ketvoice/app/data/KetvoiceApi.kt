@@ -107,8 +107,8 @@ object KetvoiceApi {
                 url = url,
                 format = root.optString("format").ifBlank { "mp3" },
                 quality = root.optString("quality").ifBlank { "Haute qualité" },
-                cacheTag = "kv:$tag:$addonId",
-                downloadUrl = url
+                cacheTag = "kv:$tag:${root.optString("addonId").ifBlank { addonId }}:${root.optString("format")}",
+                downloadUrl = root.optString("downloadUrl").takeIf { it.startsWith("https://") } ?: url
             )
         }
 

@@ -45,6 +45,10 @@ class UiPolishHostTest {
         AppSettings.animatedArtwork.value = true
         AppSettings.artistSignatures.value = false
         AppSettings.highRefreshRate.value = false
+        AppSettings.reverbAmount.value = 0
+        com.ketvoice.app.player.ReverbControl.amount = 0f
+        (Downloader.busy as MutableStateFlow<Set<String>>).value = emptySet()
+        (Downloader.progress as MutableStateFlow<Map<String, Int>>).value = emptyMap()
         @Suppress("UNCHECKED_CAST")
         (Player.positionMs as MutableStateFlow<Long>).value = 0
     }
@@ -68,7 +72,7 @@ class UiPolishHostTest {
         AppSettings.reduceAnimations.value = true
         compose.setContent { KetvoiceTheme(useDark = true) { com.ketvoice.app.ui.settings.SettingsScreen() } }
         compose.onNodeWithTag("settings-category-Appearance").performClick()
-        compose.onNodeWithText("Signatures d'artistes").assertIsDisplayed()
+        compose.onNodeWithText("Logos d'artistes").assertIsDisplayed()
         compose.onNodeWithText("Fluidité 120 Hz").assertIsDisplayed()
         image("settings-appearance-charcoal")
     }
@@ -86,6 +90,39 @@ class UiPolishHostTest {
             val color = bitmap.getPixel(200, 865)
             assertTrue("Dark explicit sheet must not inherit white card", android.graphics.Color.red(color) < 60)
         }
+    }
+
+    @Test fun playerReverbControlsChangeTheActualAudioControlAndCanBeDisabled() {
+        AppSettings.reduceAnimations.value = true
+        compose.setContent { KetvoiceTheme(useDark = true) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
+                TrackMenuSheet(Track("qa:reverb", "Reverb track", "QA artist", "Album"), {})
+            }
+        } }
+        compose.onNodeWithText("Reverb").performScrollTo().performClick()
+        compose.onNodeWithContentDescription("Réverbération").performScrollTo()
+            .performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.SetProgress) { it(65f) }
+        compose.runOnIdle {
+            assertEquals(65, AppSettings.reverbAmount.value)
+            assertEquals(.65f, com.ketvoice.app.player.ReverbControl.amount, .001f)
+        }
+        image("player-reverb-controls")
+        compose.onNodeWithText("Désactiver").performScrollTo().performClick()
+        compose.runOnIdle { assertEquals(0f, com.ketvoice.app.player.ReverbControl.amount, 0f) }
+    }
+
+    @Test fun artworkProgressRingTracksTheRealDownloaderState() {
+        val track = Track("qa:ring", "Progress", "QA artist", "Album")
+        (Downloader.busy as MutableStateFlow<Set<String>>).value = setOf(track.id)
+        (Downloader.progress as MutableStateFlow<Map<String, Int>>).value = mapOf(track.id to 42)
+        compose.setContent { KetvoiceTheme(useDark = true) {
+            com.ketvoice.app.ui.common.DownloadCover(track, null, 156.dp)
+        } }
+        compose.onNode(SemanticsMatcher.expectValue(androidx.compose.ui.semantics.SemanticsProperties.ProgressBarRangeInfo,
+            androidx.compose.ui.semantics.ProgressBarRangeInfo(.42f, 0f..1f))).assertIsDisplayed()
+        image("home-cover-download-ring")
+        compose.runOnIdle { (Downloader.busy as MutableStateFlow<Set<String>>).value = emptySet() }
+        compose.onNode(SemanticsMatcher.keyIsDefined(androidx.compose.ui.semantics.SemanticsProperties.ProgressBarRangeInfo)).assertDoesNotExist()
     }
 
     @Test fun controlExitHasIntermediateOpacityAndRemainsMountedUntilItFinishes() {
@@ -154,18 +191,28 @@ class UiPolishHostTest {
         image("backing-vocal-next-line-hidden")
     }
 
-    @Test fun svgSignatureDecodesAndItsFallbackNameNeverLeavesABlankHero() {
-        val file = File(compose.activity.cacheDir, "qa-signature.svg").apply {
-            writeText("""<svg xmlns="http://www.w3.org/2000/svg" width="400" height="100"><path d="M20 70L70 20L95 75L145 25L160 70L210 30L230 70L300 30L330 70L380 40" stroke="black" stroke-width="8" fill="none"/></svg>""")
+    @Test fun pngLogoDecodesAndItsFallbackNameNeverLeavesABlankHero() {
+        val file = File(compose.activity.cacheDir, "qa-artist-logo.png")
+        val fixture = Bitmap.createBitmap(400, 100, Bitmap.Config.ARGB_8888)
+        Canvas(fixture).apply {
+            val paint = android.graphics.Paint().apply { color = android.graphics.Color.RED }
+            drawRect(20f, 30f, 170f, 80f, paint)
+            paint.color = android.graphics.Color.WHITE
+            drawRect(210f, 30f, 380f, 80f, paint)
         }
+        file.outputStream().use { fixture.compress(Bitmap.CompressFormat.PNG, 100, it) }
+        fixture.recycle()
         compose.setContent { KetvoiceTheme(useDark = true) {
             Column(Modifier.fillMaxSize().background(Color(0xFF0B0D10)).padding(top = 100.dp)) {
-                ArtistIdentity("QA artist", ArtistSignature(file.toURI().toString(), "svg", "https://commons.wikimedia.org/", "PD-signature"))
+                ArtistIdentity("QA artist", ArtistSignature(file.toURI().toString(), "png", "https://fanart.tv/", "fanart.tv", monochrome = false))
             }
         } }
-        compose.waitUntil(10_000) { compose.onAllNodesWithText("Signature d'artiste · PD-signature").fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(10_000) { compose.onAllNodesWithText("Visuel d'artiste · fanart.tv").fetchSemanticsNodes().isNotEmpty() }
         compose.mainClock.advanceTimeBy(400)
-        image("artist-signature-svg-fixture")
+        image("artist-logo-png-fixture") { bitmap ->
+            val pixel = bitmap.getPixel(75, 150)
+            assertTrue("Brand red must not be replaced by a flat white mask", android.graphics.Color.red(pixel) > 200 && android.graphics.Color.green(pixel) < 60)
+        }
         file.delete()
     }
 

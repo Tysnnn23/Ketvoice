@@ -91,6 +91,9 @@ object Downloader {
                     streams?.fast?.let { candidates += it }
                     streams?.best?.let { candidates += it }
                 }
+                streams?.alternatives?.let { extra ->
+                    candidates += if (preferFlac) extra.sortedByDescending(StreamQuality::rank) else extra
+                }
 
                 if (candidates.isEmpty() && !publication) {
                     runCatching { MusicApi.addonStream(track, "um") }.getOrNull()?.let { candidates += it }
@@ -458,14 +461,16 @@ object Downloader {
             }
             val range = c.getHeaderField("Content-Range")
                 ?.let { Regex("bytes (\\d+)-(\\d+)/(\\d+)").matchEntire(it) }
-            val resumed = responseCode == 206 && offset > 0L &&
-                range?.groupValues?.get(1)?.toLongOrNull() == offset
-            if (responseCode == 206 && !resumed) {
+            val ranged = responseCode == 206 && DownloadValidation.validRange(offset,
+                range?.groupValues?.get(1)?.toLongOrNull(), range?.groupValues?.get(2)?.toLongOrNull(),
+                range?.groupValues?.get(3)?.toLongOrNull())
+            val resumed = ranged && offset > 0L
+            if (responseCode == 206 && !ranged) {
                 tmp.delete()
                 return@repeat
             }
             validator = c.getHeaderField("ETag") ?: c.getHeaderField("Last-Modified")
-            val total = if (resumed) range!!.groupValues[3].toLong() else c.contentLengthLong
+            val total = if (ranged) range!!.groupValues[3].toLong() else c.contentLengthLong
             if (total > limit) { tmp.delete(); return false }
             val buf = ByteArray(128 * 1024)
             var written = if (resumed) offset else 0L

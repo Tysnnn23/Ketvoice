@@ -66,7 +66,7 @@ fun rememberGlassBackdrop(background: Color) = rememberLayerBackdrop {
  * Les contrôles utilisent une lentille AGSL inspirée de Prismal ; le rôle Panel
  * reste mat. La réfraction de contrôle est définie en dp, puis bornée à sa taille.
  */
-enum class GlassRole { Control, Panel }
+enum class GlassRole { Control, Panel, Sheet }
 
 data class GlassParams(
     val cornerRadiusPx: Float,
@@ -151,11 +151,11 @@ data class GlassParams(
 
         fun sheet(radiusPx: Float, dark: Boolean = false) = GlassParams(
             cornerRadiusPx = radiusPx,
-            role = GlassRole.Panel,
+            role = GlassRole.Sheet,
             blurPx = 34f,
             refractionPx = 18f,
             // Le sheet doit laisser deviner le contenu : fond gris trop opaque = profondeur perdue.
-            tintAlpha = if (dark) 0.20f else 0.18f,
+            tintAlpha = if (dark) 0.52f else 0.22f,
             saturation = if (dark) 1.04f else 1.10f,
             exposure = if (dark) 0.015f else 0.05f,
             highlightAlpha = if (dark) 0.32f else 0.54f,
@@ -182,9 +182,10 @@ private fun rememberStaticMaterial(p: GlassParams): Pair<Brush, Brush> {
     return remember(p, th.isDark) {
         val base = if (p.dark) Color(0xFF232329) else Color.White
         // Transmission statique : le fond transparaît à ~12-18 %.
-        val body = base.copy(alpha = if (p.dark) 0.84f else 0.88f)
-        val lift = base.copy(alpha = if (p.dark) 0.86f else 0.91f)
-        val surface = Brush.linearGradient(listOf(lift, body, base.copy(alpha = if (p.dark) 0.80f else 0.84f), body))
+        val sheet = p.role == GlassRole.Sheet
+        val body = base.copy(alpha = if (sheet) .97f else if (p.dark) 0.84f else 0.88f)
+        val lift = base.copy(alpha = if (sheet) .98f else if (p.dark) 0.86f else 0.91f)
+        val surface = Brush.linearGradient(listOf(lift, body, base.copy(alpha = if (sheet) .96f else if (p.dark) 0.80f else 0.84f), body))
         // Liseré capillaire : lumineux haut-gauche (entrée de lumière), sombre bas-droite.
         val lightHair = Color.White.copy(alpha = if (p.dark) 0.16f else 0.75f)
         val darkHair = if (p.dark) Color.Black.copy(alpha = 0.22f) else Color.Black.copy(alpha = 0.08f)
@@ -224,8 +225,12 @@ fun GlassPanel(
         }
         return
     }
+    val theme = LocalTheme.current
+    val glassTheme = if (params.dark && !theme.isDark)
+        com.ketvoice.app.theme.KetTheme.dark().copy(accent = theme.accent) else theme
+    CompositionLocalProvider(LocalTheme provides glassTheme) {
     val backdrop = LocalBackdropLayer.current
-    val dynamic = backdrop != null && enabled && !captured &&
+    val dynamic = backdrop != null && enabled && AppSettings.liquidGlass.value && !captured &&
         !AppSettings.reduceDynamicBlur.value &&
         !AppSettings.highPerformanceMode.value
     // Vrai verre AGSL (API 33+) : le matériau est calculé par un RuntimeShader
@@ -302,6 +307,7 @@ fun GlassPanel(
         Box(modifier = modifier.then(edge).background(surface, shape)) {
             Box(Modifier.background(sheen, shape)) { content() }
         }
+    }
     }
 }
 
