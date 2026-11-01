@@ -122,6 +122,14 @@ class DiscordControllerImpl : DiscordController {
         }
     }
 
+    override fun onForeground() {
+        // Returning from Discord without a code must not spin forever.
+        if (awaitingCode) {
+            main.removeCallbacks(timeout)
+            main.postDelayed(timeout, RETURN_CANCEL_MS)
+        }
+    }
+
     override fun unlink() {
         clearPending()
         linked = false
@@ -156,13 +164,19 @@ class DiscordControllerImpl : DiscordController {
     }
 
     private fun openAuthorization(context: Activity, url: String) {
-        val uri = Uri.parse(url)
-        val opened = runCatching {
-            CustomTabsIntent.Builder().setShowTitle(true).build().launchUrl(context, uri)
+        val https = Uri.parse(url)
+        // Prefer the Discord app: it reuses the signed-in session and delivers the
+        // redirect as an intent, which custom-scheme browser navigations do not.
+        val appUri = Uri.parse(url.replaceFirst("https://discord.com", "discord://action"))
+        if (runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, appUri)) }.isSuccess) return
+        val browser = runCatching {
+            CustomTabsIntent.Builder().setShowTitle(true).build().launchUrl(context, https)
         }.isSuccess
-        if (!opened) {
+        if (!browser) {
             runCatching {
-                context.startActivity(Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                context.startActivity(
+                    Intent(Intent.ACTION_VIEW, https).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                )
             }.onFailure { Log.w(TAG, "No browser available for Discord authorization", it) }
         }
     }
@@ -243,6 +257,7 @@ class DiscordControllerImpl : DiscordController {
         private const val TAG = "KetvoiceDiscord"
         private const val STATUS_READY = 3
         private const val TIMEOUT_MS = 180_000L
+        private const val RETURN_CANCEL_MS = 8_000L
 
         @Volatile
         private var instance: DiscordControllerImpl? = null

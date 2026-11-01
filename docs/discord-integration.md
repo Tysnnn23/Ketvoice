@@ -29,7 +29,10 @@ self-bot, and never fabricates a linked state.
    encrypted with an Android Keystore AES-GCM key (`ketvoice.discord.refresh`).
    On startup `Client::RefreshToken` renews the access token.
 6. `Client::Connect` reaches `Status::Ready`; `GetCurrentUserV2` fills the account
-   name shown in Ketvoice. A three-minute timeout clears a stalled attempt.
+   name shown in Ketvoice. Returning to Ketvoice without a code cancels the
+   pending link after 8 seconds, and an absolute three-minute timeout covers the
+   rest. The Discord app is tried first (it reuses the signed-in session and
+   delivers the redirect as an intent); the browser is the fallback.
 
 ## Presence
 

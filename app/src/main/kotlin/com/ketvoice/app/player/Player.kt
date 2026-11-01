@@ -697,13 +697,25 @@ object Player {
         controller?.sendCustomCommand(androidx.media3.session.SessionCommand(PlaybackService.CMD_CANCEL_UPGRADE, Bundle.EMPTY), Bundle.EMPTY)
     }
 
-    fun setReverbAmount(amount: Int) {
+    fun setReverb(amount: Int, size: Int, damping: Int) {
         val percent = amount.coerceIn(0, 100)
+        val room = size.coerceIn(0, 100)
+        val damp = damping.coerceIn(0, 100)
         AppSettings.reverbAmount.value = percent
+        AppSettings.reverbSize.value = room
+        AppSettings.reverbDamping.value = damp
         ReverbControl.amount = percent / 100f
+        ReverbControl.size = room / 100f
+        ReverbControl.damping = damp / 100f
         controller?.sendCustomCommand(androidx.media3.session.SessionCommand(PlaybackService.CMD_REVERB, Bundle.EMPTY),
-            Bundle().apply { putInt("amount", percent) })
+            Bundle().apply {
+                putInt("amount", percent)
+                putInt("size", room)
+                putInt("damping", damp)
+            })
     }
+
+    fun setReverbAmount(amount: Int) = setReverb(amount, AppSettings.reverbSize.value, AppSettings.reverbDamping.value)
 
     // ------------------------------------------------------------ Volume natif
     // Le curseur pilote le volume média SYSTÈME (AudioManager.STREAM_MUSIC) :

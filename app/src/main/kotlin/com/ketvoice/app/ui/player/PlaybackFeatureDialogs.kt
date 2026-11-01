@@ -83,6 +83,16 @@ private fun EqualizerDialog(onClose:()->Unit){
                         label={Text(name,fontSize=12.sp)})
                 }
             }
+            Row(Modifier.fillMaxWidth().padding(top=4.dp),verticalAlignment=Alignment.CenterVertically){
+                Text(if(status.centersHz.isEmpty()) "Bandes natives : détection en cours"
+                     else "${status.centersHz.size} bandes natives · ${status.centersHz.joinToString(" · ") { if (it>=1000) "${it/1000} kHz" else "$it Hz" }}",
+                     localize=false,fontSize=11.sp,modifier=Modifier.weight(1f))
+                Text("Réinitialiser", color=MaterialTheme.colorScheme.primary, fontSize=12.sp,
+                    modifier=Modifier.clickable{
+                        AppSettings.equalizerGains.value=listOf(0,0,0,0,0)
+                        Player.applyEqualizer();SettingsStore.save()
+                    })
+            }
             EqualizerProfile.frequencies.forEachIndexed{i,hz->
                 val gain=AppSettings.equalizerGains.value[i]
                 Row(Modifier.fillMaxWidth().padding(top=8.dp)){

@@ -23,13 +23,15 @@ internal class ReverbAudioProcessor(private val onProcessed: () -> Unit = {}) : 
         val output = replaceOutputBuffer(inputBuffer.remaining())
         val room = engine
         val amount = ReverbControl.amount
+        val size = ReverbControl.size
+        val damping = ReverbControl.damping
         if (room == null) output.put(inputBuffer)
         else {
             if (inputBuffer.hasRemaining()) onProcessed()
             var channel = 0
             while (inputBuffer.remaining() >= 2) {
                 val value = inputBuffer.short
-                val result = room.sample(value / 32768f, channel, amount)
+                val result = room.sample(value / 32768f, channel, amount, size, damping)
                 output.putShort((result * 32768f).toInt().coerceIn(-32768, 32767).toShort())
                 channel = (channel + 1) % inputAudioFormat.channelCount
             }

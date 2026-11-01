@@ -19,6 +19,8 @@ import androidx.compose.material.icons.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Smartphone
 import androidx.compose.material.icons.filled.Equalizer
+import androidx.compose.material.icons.filled.RestartAlt
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.filled.VideocamOff
 import androidx.compose.material.icons.filled.Wifi
@@ -149,6 +151,9 @@ fun TrackMenuSheet(track: Track, onClose: () -> Unit) {
             onClose()
             com.ketvoice.app.util.ShareLinks.shareTrack(shareContext, track)
         }
+        MenuItemRow("Égaliseur", Icons.Filled.Tune) {
+            onClose(); com.ketvoice.app.ui.AppUi.showEqualizer.value = true
+        }
         var reverbOpen by remember { mutableStateOf(false) }
         MenuItemRow("Reverb", Icons.Filled.Equalizer) { reverbOpen = !reverbOpen }
         if (reverbOpen) Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
@@ -159,17 +164,26 @@ fun TrackMenuSheet(track: Track, onClose: () -> Unit) {
                 }
             }
             Text("Réverbération", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-            Text("Ajoute une ambiance de salle au signal audio.", color = Color.White.copy(alpha = .72f), fontSize = 12.sp)
+            Text("Ambiance de salle réglable, traitée dans le flux audio.",
+                color = Color.White.copy(alpha = .72f), fontSize = 12.sp)
             if (AppSettings.reverbAmount.value > 0) Text(
                 if (processing) "Traitement audio actif" else "En attente du flux audio",
                 color = Color.White.copy(alpha = .72f), fontSize = 12.sp)
-            androidx.compose.material3.Slider(value = AppSettings.reverbAmount.value.toFloat(),
-                valueRange = 0f..100f, onValueChange = {
-                    Player.setReverbAmount(it.toInt())
-                }, onValueChangeFinished = { com.ketvoice.app.data.SettingsStore.save() },
-                modifier = Modifier.fillMaxWidth().semantics { contentDescription = com.ketvoice.app.data.AppText.t("Réverbération") })
+            ReverbSlider("Intensité", AppSettings.reverbAmount.value, { amount ->
+                Player.setReverb(amount, AppSettings.reverbSize.value, AppSettings.reverbDamping.value)
+            })
+            ReverbSlider("Taille de la salle", AppSettings.reverbSize.value, { size ->
+                Player.setReverb(AppSettings.reverbAmount.value.coerceAtLeast(30), size, AppSettings.reverbDamping.value)
+            })
+            ReverbSlider("Amortissement", AppSettings.reverbDamping.value, { damping ->
+                Player.setReverb(AppSettings.reverbAmount.value.coerceAtLeast(30), AppSettings.reverbSize.value, damping)
+            })
+            MenuItemRow("Réinitialiser", Icons.Filled.RestartAlt) {
+                Player.setReverb(35, 50, 35)
+                com.ketvoice.app.data.SettingsStore.save()
+            }
             MenuItemRow("Désactiver", Icons.Filled.Close) {
-                Player.setReverbAmount(0)
+                Player.setReverb(0, AppSettings.reverbSize.value, AppSettings.reverbDamping.value)
                 com.ketvoice.app.data.SettingsStore.save()
             }
         }
@@ -209,6 +223,24 @@ fun TrackMenuSheet(track: Track, onClose: () -> Unit) {
         Spacer(Modifier.height(10.dp))
         }
     }
+}
+
+@Composable
+private fun ReverbSlider(label: String, value: Int, onChange: (Int) -> Unit) {
+    Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(label, color = Color.White.copy(alpha = .82f), fontSize = 12.sp)
+        Spacer(Modifier.weight(1f))
+        Text("$value%", localize = false, color = Color.White.copy(alpha = .82f), fontSize = 12.sp)
+    }
+    androidx.compose.material3.Slider(
+        value = value.toFloat(),
+        valueRange = 0f..100f,
+        onValueChange = { onChange(it.toInt()) },
+        onValueChangeFinished = { com.ketvoice.app.data.SettingsStore.save() },
+        modifier = Modifier.fillMaxWidth().semantics {
+            contentDescription = com.ketvoice.app.data.AppText.t(label)
+        }
+    )
 }
 
 @Composable

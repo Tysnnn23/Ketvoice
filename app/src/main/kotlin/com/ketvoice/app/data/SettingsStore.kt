@@ -55,7 +55,11 @@ object SettingsStore {
         }
         s.equalizerEnabled.value = p.getBoolean("equalizerEnabled", false)
         s.reverbAmount.value = p.getInt("reverbAmount", 0).coerceIn(0, 100)
+        s.reverbSize.value = p.getInt("reverbSize", 50).coerceIn(0, 100)
+        s.reverbDamping.value = p.getInt("reverbDamping", 35).coerceIn(0, 100)
         com.ketvoice.app.player.ReverbControl.amount = s.reverbAmount.value / 100f
+        com.ketvoice.app.player.ReverbControl.size = s.reverbSize.value / 100f
+        com.ketvoice.app.player.ReverbControl.damping = s.reverbDamping.value / 100f
         s.progressiveQuality.value = p.getBoolean("progressiveQuality", false)
         s.discordPresence.value = p.getBoolean("discordPresence", false)
         s.equalizerGains.value = com.ketvoice.app.player.EqualizerProfile.normalize(
@@ -150,6 +154,8 @@ object SettingsStore {
             .putLong("firstLaunchAt", s.firstLaunchAt.value)
             .putBoolean("equalizerEnabled", s.equalizerEnabled.value)
             .putInt("reverbAmount", s.reverbAmount.value.coerceIn(0, 100))
+            .putInt("reverbSize", s.reverbSize.value.coerceIn(0, 100))
+            .putInt("reverbDamping", s.reverbDamping.value.coerceIn(0, 100))
             .putBoolean("progressiveQuality", s.progressiveQuality.value)
             .putBoolean("discordPresence", s.discordPresence.value)
             .putString("equalizerGains", s.equalizerGains.value.joinToString(","))

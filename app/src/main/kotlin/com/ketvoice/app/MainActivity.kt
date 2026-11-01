@@ -106,6 +106,11 @@ class MainActivity : ComponentActivity() {
         handleAuthIntent(intent)
     }
 
+    override fun onResume() {
+        super.onResume()
+        runCatching { com.ketvoice.app.discord.Discord.onForeground() }
+    }
+
     private fun handleAuthIntent(intent: Intent?) {
         if (intent?.action != Intent.ACTION_VIEW) return
         val uri = intent.data ?: return

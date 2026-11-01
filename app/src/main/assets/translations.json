@@ -910,7 +910,12 @@
   "Liaison Discord annulée": "Discord linking canceled",
   "Délai dépassé. Réessaie la liaison Discord.": "Timeout. Try linking Discord again.",
   "Réponse Discord invalide. Réessaie.": "Invalid Discord response. Try again.",
-  "Échec de l'échange du jeton. Vérifie que « Client public » est activé dans le portail Discord.": "Token exchange failed. Check that “Public Client” is enabled in the Discord portal."
+  "Échec de l'échange du jeton. Vérifie que « Client public » est activé dans le portail Discord.": "Token exchange failed. Check that “Public Client” is enabled in the Discord portal.",
+  "Ambiance de salle réglable, traitée dans le flux audio.": "Adjustable room ambience processed in the audio path.",
+  "Intensité": "Intensity",
+  "Taille de la salle": "Room size",
+  "Amortissement": "Damping",
+  "Réinitialiser": "Reset"
  },
  "hi": {
   "Reverb": "रीवर्ब",
@@ -1823,7 +1828,12 @@
   "Liaison Discord annulée": "Discord लिंक रद्द किया गया",
   "Délai dépassé. Réessaie la liaison Discord.": "समय समाप्त। Discord को फिर से जोड़ने का प्रयास करें।",
   "Réponse Discord invalide. Réessaie.": "Discord से अमान्य प्रतिक्रिया। फिर से प्रयास करें।",
-  "Échec de l'échange du jeton. Vérifie que « Client public » est activé dans le portail Discord.": "टोकन एक्सचेंज विफल। जाँचें कि Discord पोर्टल में “Public Client” सक्षम है।"
+  "Échec de l'échange du jeton. Vérifie que « Client public » est activé dans le portail Discord.": "टोकन एक्सचेंज विफल। जाँचें कि Discord पोर्टल में “Public Client” सक्षम है।",
+  "Ambiance de salle réglable, traitée dans le flux audio.": "ऑडियो स्ट्रीम में संसाधित समायोज्य कमरे की गूँज।",
+  "Intensité": "तीव्रता",
+  "Taille de la salle": "कमरे का आकार",
+  "Amortissement": "अवमंदन",
+  "Réinitialiser": "रीसेट"
  },
  "ja": {
   "Reverb": "リバーブ",
@@ -2736,7 +2746,12 @@
   "Liaison Discord annulée": "Discord の連携をキャンセルしました",
   "Délai dépassé. Réessaie la liaison Discord.": "タイムアウトしました。Discord の連携をやり直してください。",
   "Réponse Discord invalide. Réessaie.": "Discord からの応答が無効です。もう一度お試しください。",
-  "Échec de l'échange du jeton. Vérifie que « Client public » est activé dans le portail Discord.": "トークン交換に失敗しました。Discord ポータルで「Public Client」が有効か確認してください。"
+  "Échec de l'échange du jeton. Vérifie que « Client public » est activé dans le portail Discord.": "トークン交換に失敗しました。Discord ポータルで「Public Client」が有効か確認してください。",
+  "Ambiance de salle réglable, traitée dans le flux audio.": "音声処理される調整可能なルーム感。",
+  "Intensité": "強さ",
+  "Taille de la salle": "ルームサイズ",
+  "Amortissement": "ダンピング",
+  "Réinitialiser": "リセット"
  },
  "zh": {
   "Reverb": "混响",
@@ -3649,7 +3664,12 @@
   "Liaison Discord annulée": "Discord 关联已取消",
   "Délai dépassé. Réessaie la liaison Discord.": "已超时。请重新关联 Discord。",
   "Réponse Discord invalide. Réessaie.": "Discord 响应无效。请重试。",
-  "Échec de l'échange du jeton. Vérifie que « Client public » est activé dans le portail Discord.": "令牌交换失败。请检查 Discord 开发者门户中是否已启用“Public Client”。"
+  "Échec de l'échange du jeton. Vérifie que « Client public » est activé dans le portail Discord.": "令牌交换失败。请检查 Discord 开发者门户中是否已启用“Public Client”。",
+  "Ambiance de salle réglable, traitée dans le flux audio.": "在音频流中处理的可调房间氛围。",
+  "Intensité": "强度",
+  "Taille de la salle": "房间大小",
+  "Amortissement": "阻尼",
+  "Réinitialiser": "重置"
  },
  "ru": {
   "Reverb": "Реверберация",
@@ -4562,7 +4582,12 @@
   "Liaison Discord annulée": "Привязка Discord отменена",
   "Délai dépassé. Réessaie la liaison Discord.": "Время ожидания истекло. Повторите привязку Discord.",
   "Réponse Discord invalide. Réessaie.": "Недопустимый ответ Discord. Повторите попытку.",
-  "Échec de l'échange du jeton. Vérifie que « Client public » est activé dans le portail Discord.": "Не удалось обменять токен. Проверьте, что в портале Discord включён «Public Client»."
+  "Échec de l'échange du jeton. Vérifie que « Client public » est activé dans le portail Discord.": "Не удалось обменять токен. Проверьте, что в портале Discord включён «Public Client».",
+  "Ambiance de salle réglable, traitée dans le flux audio.": "Регулируемая атмосфера помещения в аудиопотоке.",
+  "Intensité": "Интенсивность",
+  "Taille de la salle": "Размер помещения",
+  "Amortissement": "Демпфирование",
+  "Réinitialiser": "Сбросить"
  },
  "it": {
   "Reverb": "Riverbero",
@@ -5475,7 +5500,12 @@
   "Liaison Discord annulée": "Collegamento a Discord annullato",
   "Délai dépassé. Réessaie la liaison Discord.": "Tempo scaduto. Riprova il collegamento a Discord.",
   "Réponse Discord invalide. Réessaie.": "Risposta di Discord non valida. Riprova.",
-  "Échec de l'échange du jeton. Vérifie que « Client public » est activé dans le portail Discord.": "Scambio del token non riuscito. Verifica che «Public Client» sia attivo nel portale Discord."
+  "Échec de l'échange du jeton. Vérifie que « Client public » est activé dans le portail Discord.": "Scambio del token non riuscito. Verifica che «Public Client» sia attivo nel portale Discord.",
+  "Ambiance de salle réglable, traitée dans le flux audio.": "Ambienza regolabile elaborata nel flusso audio.",
+  "Intensité": "Intensità",
+  "Taille de la salle": "Dimensione stanza",
+  "Amortissement": "Smorzamento",
+  "Réinitialiser": "Reimposta"
  },
  "es": {
   "Reverb": "Reverb",
@@ -6388,7 +6418,12 @@
   "Liaison Discord annulée": "Vinculación de Discord cancelada",
   "Délai dépassé. Réessaie la liaison Discord.": "Se agotó el tiempo. Vuelve a vincular Discord.",
   "Réponse Discord invalide. Réessaie.": "Respuesta de Discord no válida. Inténtalo de nuevo.",
-  "Échec de l'échange du jeton. Vérifie que « Client public » est activé dans le portail Discord.": "No se pudo intercambiar el token. Comprueba que «Public Client» esté activado en el portal de Discord."
+  "Échec de l'échange du jeton. Vérifie que « Client public » est activé dans le portail Discord.": "No se pudo intercambiar el token. Comprueba que «Public Client» esté activado en el portal de Discord.",
+  "Ambiance de salle réglable, traitée dans le flux audio.": "Ambiente ajustable procesado en el flujo de audio.",
+  "Intensité": "Intensidad",
+  "Taille de la salle": "Tamaño de la sala",
+  "Amortissement": "Amortiguación",
+  "Réinitialiser": "Restablecer"
  },
  "de": {
   "Reverb": "Reverb",
@@ -7301,7 +7336,12 @@
   "Liaison Discord annulée": "Discord-Verknüpfung abgebrochen",
   "Délai dépassé. Réessaie la liaison Discord.": "Zeitüberschreitung. Verknüpfe Discord erneut.",
   "Réponse Discord invalide. Réessaie.": "Ungültige Antwort von Discord. Versuche es erneut.",
-  "Échec de l'échange du jeton. Vérifie que « Client public » est activé dans le portail Discord.": "Token-Austausch fehlgeschlagen. Prüfe, ob „Public Client“ im Discord-Portal aktiviert ist."
+  "Échec de l'échange du jeton. Vérifie que « Client public » est activé dans le portail Discord.": "Token-Austausch fehlgeschlagen. Prüfe, ob „Public Client“ im Discord-Portal aktiviert ist.",
+  "Ambiance de salle réglable, traitée dans le flux audio.": "Einstellbare Raumatmosphäre im Audiopfad.",
+  "Intensité": "Intensität",
+  "Taille de la salle": "Raumgröße",
+  "Amortissement": "Dämpfung",
+  "Réinitialiser": "Zurücksetzen"
  },
  "pt": {
   "Reverb": "Reverb",
@@ -8214,7 +8254,12 @@
   "Liaison Discord annulée": "Associação ao Discord cancelada",
   "Délai dépassé. Réessaie la liaison Discord.": "Tempo esgotado. Volta a associar o Discord.",
   "Réponse Discord invalide. Réessaie.": "Resposta do Discord inválida. Tenta novamente.",
-  "Échec de l'échange du jeton. Vérifie que « Client public » est activé dans le portail Discord.": "Falha ao trocar o token. Verifica se «Public Client» está ativado no portal do Discord."
+  "Échec de l'échange du jeton. Vérifie que « Client public » est activé dans le portail Discord.": "Falha ao trocar o token. Verifica se «Public Client» está ativado no portal do Discord.",
+  "Ambiance de salle réglable, traitée dans le flux audio.": "Ambiente ajustável processado no fluxo de áudio.",
+  "Intensité": "Intensidade",
+  "Taille de la salle": "Tamanho da sala",
+  "Amortissement": "Amortecimento",
+  "Réinitialiser": "Repor"
  },
  "ko": {
   "Reverb": "리버브",
@@ -9127,6 +9172,11 @@
   "Liaison Discord annulée": "Discord 연결이 취소되었습니다",
   "Délai dépassé. Réessaie la liaison Discord.": "시간이 초과되었습니다. Discord 연결을 다시 시도하세요.",
   "Réponse Discord invalide. Réessaie.": "Discord 응답이 올바르지 않습니다. 다시 시도하세요.",
-  "Échec de l'échange du jeton. Vérifie que « Client public » est activé dans le portail Discord.": "토큰 교환에 실패했습니다. Discord 포털에서 'Public Client'가 사용 설정되어 있는지 확인하세요."
+  "Échec de l'échange du jeton. Vérifie que « Client public » est activé dans le portail Discord.": "토큰 교환에 실패했습니다. Discord 포털에서 'Public Client'가 사용 설정되어 있는지 확인하세요.",
+  "Ambiance de salle réglable, traitée dans le flux audio.": "오디오 경로에서 처리되는 조절 가능한 공간감.",
+  "Intensité": "강도",
+  "Taille de la salle": "공간 크기",
+  "Amortissement": "댐핑",
+  "Réinitialiser": "초기화"
  }
 }

@@ -75,9 +75,15 @@ class PlaybackService : MediaSessionService() {
                     }
                     if (command.customAction == CMD_UPGRADE) return prepareUpgrade(args)
                     if (command.customAction == CMD_REVERB) {
-                        val amount = args.getInt("amount").coerceIn(0, 100)
+                        val amount = args.getInt("amount", AppSettings.reverbAmount.value).coerceIn(0, 100)
+                        val size = args.getInt("size", AppSettings.reverbSize.value).coerceIn(0, 100)
+                        val damping = args.getInt("damping", AppSettings.reverbDamping.value).coerceIn(0, 100)
                         AppSettings.reverbAmount.value = amount
+                        AppSettings.reverbSize.value = size
+                        AppSettings.reverbDamping.value = damping
                         ReverbControl.amount = amount / 100f
+                        ReverbControl.size = size / 100f
+                        ReverbControl.damping = damping / 100f
                         return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
                     }
                     if (command.customAction != CMD_SKIP_SILENCE && command.customAction != CMD_EQUALIZER)

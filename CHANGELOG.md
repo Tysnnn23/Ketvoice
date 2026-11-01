@@ -7,6 +7,25 @@
 
 ---
 
+# Ketvoice 3.13.2
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 61** — Discord return handling, restored equalizer and a rebuilt reverb.
+
+- Cancel a pending Discord link 8 seconds after returning without a code; try the
+  Discord app before the browser and keep the explicit timeout/state errors.
+- Put the equalizer back in the track three-dot menu, show the device's native
+  bands and add a Reset action.
+- Rebuild Reverb as a Freeverb-style room with pre-delay, eight combs, four
+  all-pass diffusers and adjustable room size/damping.
+- Device validation of the Discord hand-off and the audio effects is still not
+  claimed.
+
+Full notes: [3.13.2](docs/releases/v3.13.2.md).
+
+---
+
 # Ketvoice 3.13.1
 
 ![Ketvoice](ketvoice-banner.png)
