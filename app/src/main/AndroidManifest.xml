@@ -155,11 +155,14 @@
             </intent-filter>
         </service>
 
-        <!-- Discord Social SDK: OAuth redirect back into Ketvoice. -->
+        <!-- Discord OAuth2 + PKCE redirect handled by Ketvoice itself. -->
         <activity
-            android:name="com.discord.socialsdk.AuthenticationActivity"
+            android:name=".discord.DiscordCallbackActivity"
             android:exported="true"
-            tools:node="merge">
+            android:launchMode="singleTask"
+            android:noHistory="true"
+            android:excludeFromRecents="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />

@@ -7,6 +7,25 @@
 
 ---
 
+# Ketvoice 3.13.1
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 60** — Discord redirect fix and system-language default.
+
+- Receive the Discord OAuth redirect in Ketvoice's own activity, run the PKCE
+  browser flow locally, check `state` and hand the code to the SDK for exchange.
+  This fixes the panel hanging on "Connecting to Discord…".
+- Add a three-minute timeout and clear errors for cancellation, invalid responses,
+  timeouts and `invalid_client` (public-client setting).
+- Start in the system language when supported, English otherwise; keep an explicit
+  Settings choice. French is no longer forced for new installs.
+- Device validation of the Discord flow is still not claimed.
+
+Full notes: [3.13.1](docs/releases/v3.13.1.md).
+
+---
+
 # Ketvoice 3.13.0
 
 ![Ketvoice](ketvoice-banner.png)

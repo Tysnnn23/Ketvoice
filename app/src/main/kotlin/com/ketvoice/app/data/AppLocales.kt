@@ -10,9 +10,11 @@ import android.os.LocaleList
 
 object AppLocales {
     fun wrap(base: Context): Context {
-        val label=base.getSharedPreferences("ketvoice_settings",Context.MODE_PRIVATE).getString("language","Français")
-        val locale=LocaleList.forLanguageTags(AppLanguage.fromLabel(label).code)
-        val config=Configuration(base.resources.configuration).apply { setLocales(locale) }
+        val stored = base.getSharedPreferences("ketvoice_settings", Context.MODE_PRIVATE)
+            .getString("language", null)
+        val language = stored?.let(AppLanguage::fromLabel) ?: AppLanguage.systemDefault()
+        val locale = LocaleList.forLanguageTags(language.code)
+        val config = Configuration(base.resources.configuration).apply { setLocales(locale) }
         return base.createConfigurationContext(config)
     }
     fun apply(context: Context, language: AppLanguage) {

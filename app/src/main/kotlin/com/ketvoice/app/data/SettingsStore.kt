@@ -104,7 +104,10 @@ object SettingsStore {
         s.hideStatusBarInPlayer.value = p.getBoolean("hideStatusBarInPlayer", s.hideStatusBarInPlayer.value)
         s.showQueueHistory.value = p.getBoolean("showQueueHistory", s.showQueueHistory.value)
         s.hideTitleStatus.value = p.getBoolean("hideTitleStatus", s.hideTitleStatus.value)
-        s.language.value = p.getString("language", s.language.value) ?: "Français"
+        s.languageChosen.value = p.getBoolean("languageChosen", false)
+        s.language.value = if (s.languageChosen.value)
+            p.getString("language", AppLanguage.systemDefault().label) ?: AppLanguage.systemDefault().label
+        else AppLanguage.systemDefault().label
         s.lastfmGenres.value = p.getBoolean("lastfmGenres", s.lastfmGenres.value)
         s.smartAudioAlignment.value = p.getBoolean("smartAudioAlignment", s.smartAudioAlignment.value)
         s.techStats.value = p.getBoolean("techStats", s.techStats.value)
@@ -168,6 +171,7 @@ object SettingsStore {
             .putBoolean("showQueueHistory", s.showQueueHistory.value)
             .putBoolean("hideTitleStatus", s.hideTitleStatus.value)
             .putString("language", s.language.value)
+            .putBoolean("languageChosen", s.languageChosen.value)
             .putBoolean("lastfmGenres", s.lastfmGenres.value)
             .putBoolean("smartAudioAlignment", s.smartAudioAlignment.value)
             .putBoolean("techStats", s.techStats.value)

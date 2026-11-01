@@ -1,15 +1,20 @@
 ﻿package com.ketvoice.app.discord
 
 import android.app.Activity
+import android.content.Intent
+import android.net.Uri
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
+import androidx.browser.customtabs.CustomTabsIntent
 import com.discord.socialsdk.DiscordSocialSdkInit
 import com.ketvoice.app.KetvoiceApp
 
 /**
  * Real account linking and live listening presence through the official Discord
- * Social SDK. The controller is instantiated by reflection from the main source
- * set, so builds without the owner-supplied AAR simply report the feature as
- * unavailable instead of shipping a broken button.
+ * Social SDK. Ketvoice runs the OAuth2 + PKCE browser flow itself so the redirect
+ * is guaranteed to return to [DiscordCallbackActivity]; the SDK only exchanges the
+ * code, refreshes the token and owns the presence connection.
  */
 class DiscordControllerImpl : DiscordController {
 
@@ -19,6 +24,19 @@ class DiscordControllerImpl : DiscordController {
     @Volatile private var ready = false
     @Volatile private var pending: DiscordPresencePayload? = null
     @Volatile private var restoring = false
+    @Volatile private var awaitingCode = false
+    private var verifier = ""
+    private var expectedState = ""
+
+    private val main = Handler(Looper.getMainLooper())
+    private val timeout = Runnable {
+        if (awaitingCode) {
+            clearPending()
+            Discord.update {
+                it.copy(busy = false, error = "Délai dépassé. Réessaie la liaison Discord.")
+            }
+        }
+    }
 
     private val tokens: DiscordTokenStore? by lazy {
         runCatching { KetvoiceApp.instance?.let(::DiscordTokenStore) }.getOrNull()
@@ -67,14 +85,45 @@ class DiscordControllerImpl : DiscordController {
             Discord.update { it.copy(busy = false, error = "Discord indisponible") }
             return
         }
+        verifier = DiscordOAuth.newVerifier()
+        expectedState = DiscordOAuth.newState()
+        awaitingCode = true
         Discord.update { it.copy(busy = true, error = null) }
-        if (!NativeDiscord.nativeAuthorize(null)) {
+        main.removeCallbacks(timeout)
+        main.postDelayed(timeout, TIMEOUT_MS)
+        openAuthorization(host, DiscordOAuth.authorizeUrl(expectedState, DiscordOAuth.challenge(verifier)))
+    }
+
+    override fun completeAuthorization(uri: Uri?) {
+        if (uri == null || !awaitingCode) return
+        if (!uri.scheme.equals("discord-${DiscordOAuth.APPLICATION_ID}", ignoreCase = true)) return
+        if (uri.path != "/authorize/callback") return
+        val error = uri.getQueryParameter("error")
+        if (!error.isNullOrBlank()) {
+            val failure = if (error == "access_denied") "Liaison Discord annulée" else error
+            clearPending()
+            Discord.update { it.copy(busy = false, error = failure) }
+            return
+        }
+        val state = uri.getQueryParameter("state")
+        val code = uri.getQueryParameter("code")
+        if (state != expectedState || code.isNullOrBlank()) {
+            clearPending()
+            Discord.update { it.copy(busy = false, error = "Réponse Discord invalide. Réessaie.") }
+            return
+        }
+        val pendingVerifier = verifier
+        // Keep the timeout running until the token exchange reports back.
+        awaitingCode = false
+        verifier = ""
+        expectedState = ""
+        if (!NativeDiscord.nativeExchange(code, pendingVerifier, DiscordOAuth.REDIRECT_URI)) {
             Discord.update { it.copy(busy = false, error = "Discord indisponible") }
         }
     }
 
     override fun unlink() {
-        pending = null
+        clearPending()
         linked = false
         ready = false
         tokens?.clear()
@@ -99,6 +148,25 @@ class DiscordControllerImpl : DiscordController {
         runCatching { NativeDiscord.nativeClearPresence() }
     }
 
+    private fun clearPending() {
+        awaitingCode = false
+        verifier = ""
+        expectedState = ""
+        main.removeCallbacks(timeout)
+    }
+
+    private fun openAuthorization(context: Activity, url: String) {
+        val uri = Uri.parse(url)
+        val opened = runCatching {
+            CustomTabsIntent.Builder().setShowTitle(true).build().launchUrl(context, uri)
+        }.isSuccess
+        if (!opened) {
+            runCatching {
+                context.startActivity(Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            }.onFailure { Log.w(TAG, "No browser available for Discord authorization", it) }
+        }
+    }
+
     private fun send(payload: DiscordPresencePayload) {
         val buttons = payload.buttons
         val fields = arrayOf(
@@ -119,7 +187,7 @@ class DiscordControllerImpl : DiscordController {
     private fun ensureCreated() {
         if (created) return
         created = runCatching {
-            NativeDiscord.nativeCreate(APP_ID)
+            NativeDiscord.nativeCreate(DiscordOAuth.APPLICATION_ID)
         }.onFailure { Log.w(TAG, "Discord client creation failed", it) }.getOrDefault(false)
     }
 
@@ -133,6 +201,7 @@ class DiscordControllerImpl : DiscordController {
     }
 
     private fun handleAuth(ok: Boolean, message: String, refreshToken: String) {
+        main.removeCallbacks(timeout)
         if (!ok) {
             // A transient refresh failure must not throw away a valid link.
             if (!restoring) linked = false
@@ -164,13 +233,16 @@ class DiscordControllerImpl : DiscordController {
         message.isBlank() -> "La liaison Discord a échoué"
         message.contains("canceled", ignoreCase = true) ||
             message.contains("cancelled", ignoreCase = true) -> "Liaison Discord annulée"
+        message.contains("invalid_client", ignoreCase = true) ||
+            message.contains("Invalid client", ignoreCase = true) ->
+            "Échec de l'échange du jeton. Vérifie que « Client public » est activé dans le portail Discord."
         else -> message
     }
 
     companion object {
         private const val TAG = "KetvoiceDiscord"
-        private const val APP_ID = 1566454532890820668L
         private const val STATUS_READY = 3
+        private const val TIMEOUT_MS = 180_000L
 
         @Volatile
         private var instance: DiscordControllerImpl? = null

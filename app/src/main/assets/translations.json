@@ -907,7 +907,10 @@
   "Discord indisponible": "Discord unavailable",
   "Ouvrez à nouveau Ketvoice pour lier Discord": "Open Ketvoice again to link Discord",
   "La liaison Discord a échoué": "Discord linking failed",
-  "Liaison Discord annulée": "Discord linking canceled"
+  "Liaison Discord annulée": "Discord linking canceled",
+  "Délai dépassé. Réessaie la liaison Discord.": "Timeout. Try linking Discord again.",
+  "Réponse Discord invalide. Réessaie.": "Invalid Discord response. Try again.",
+  "Échec de l'échange du jeton. Vérifie que « Client public » est activé dans le portail Discord.": "Token exchange failed. Check that “Public Client” is enabled in the Discord portal."
  },
  "hi": {
   "Reverb": "रीवर्ब",
@@ -1817,7 +1820,10 @@
   "Discord indisponible": "Discord उपलब्ध नहीं है",
   "Ouvrez à nouveau Ketvoice pour lier Discord": "Discord जोड़ने के लिए Ketvoice फिर से खोलें",
   "La liaison Discord a échoué": "Discord लिंक नहीं हो सका",
-  "Liaison Discord annulée": "Discord लिंक रद्द किया गया"
+  "Liaison Discord annulée": "Discord लिंक रद्द किया गया",
+  "Délai dépassé. Réessaie la liaison Discord.": "समय समाप्त। Discord को फिर से जोड़ने का प्रयास करें।",
+  "Réponse Discord invalide. Réessaie.": "Discord से अमान्य प्रतिक्रिया। फिर से प्रयास करें।",
+  "Échec de l'échange du jeton. Vérifie que « Client public » est activé dans le portail Discord.": "टोकन एक्सचेंज विफल। जाँचें कि Discord पोर्टल में “Public Client” सक्षम है।"
  },
  "ja": {
   "Reverb": "リバーブ",
@@ -2727,7 +2733,10 @@
   "Discord indisponible": "Discord を利用できません",
   "Ouvrez à nouveau Ketvoice pour lier Discord": "Discord を連携するには Ketvoice を開き直してください",
   "La liaison Discord a échoué": "Discord の連携に失敗しました",
-  "Liaison Discord annulée": "Discord の連携をキャンセルしました"
+  "Liaison Discord annulée": "Discord の連携をキャンセルしました",
+  "Délai dépassé. Réessaie la liaison Discord.": "タイムアウトしました。Discord の連携をやり直してください。",
+  "Réponse Discord invalide. Réessaie.": "Discord からの応答が無効です。もう一度お試しください。",
+  "Échec de l'échange du jeton. Vérifie que « Client public » est activé dans le portail Discord.": "トークン交換に失敗しました。Discord ポータルで「Public Client」が有効か確認してください。"
  },
  "zh": {
   "Reverb": "混响",
@@ -3637,7 +3646,10 @@
   "Discord indisponible": "Discord 不可用",
   "Ouvrez à nouveau Ketvoice pour lier Discord": "请重新打开 Ketvoice 以关联 Discord",
   "La liaison Discord a échoué": "Discord 关联失败",
-  "Liaison Discord annulée": "Discord 关联已取消"
+  "Liaison Discord annulée": "Discord 关联已取消",
+  "Délai dépassé. Réessaie la liaison Discord.": "已超时。请重新关联 Discord。",
+  "Réponse Discord invalide. Réessaie.": "Discord 响应无效。请重试。",
+  "Échec de l'échange du jeton. Vérifie que « Client public » est activé dans le portail Discord.": "令牌交换失败。请检查 Discord 开发者门户中是否已启用“Public Client”。"
  },
  "ru": {
   "Reverb": "Реверберация",
@@ -4547,7 +4559,10 @@
   "Discord indisponible": "Discord недоступен",
   "Ouvrez à nouveau Ketvoice pour lier Discord": "Откройте Ketvoice снова, чтобы привязать Discord",
   "La liaison Discord a échoué": "Не удалось привязать Discord",
-  "Liaison Discord annulée": "Привязка Discord отменена"
+  "Liaison Discord annulée": "Привязка Discord отменена",
+  "Délai dépassé. Réessaie la liaison Discord.": "Время ожидания истекло. Повторите привязку Discord.",
+  "Réponse Discord invalide. Réessaie.": "Недопустимый ответ Discord. Повторите попытку.",
+  "Échec de l'échange du jeton. Vérifie que « Client public » est activé dans le portail Discord.": "Не удалось обменять токен. Проверьте, что в портале Discord включён «Public Client»."
  },
  "it": {
   "Reverb": "Riverbero",
@@ -5457,7 +5472,10 @@
   "Discord indisponible": "Discord non disponibile",
   "Ouvrez à nouveau Ketvoice pour lier Discord": "Riapri Ketvoice per collegare Discord",
   "La liaison Discord a échoué": "Collegamento a Discord non riuscito",
-  "Liaison Discord annulée": "Collegamento a Discord annullato"
+  "Liaison Discord annulée": "Collegamento a Discord annullato",
+  "Délai dépassé. Réessaie la liaison Discord.": "Tempo scaduto. Riprova il collegamento a Discord.",
+  "Réponse Discord invalide. Réessaie.": "Risposta di Discord non valida. Riprova.",
+  "Échec de l'échange du jeton. Vérifie que « Client public » est activé dans le portail Discord.": "Scambio del token non riuscito. Verifica che «Public Client» sia attivo nel portale Discord."
  },
  "es": {
   "Reverb": "Reverb",
@@ -6367,7 +6385,10 @@
   "Discord indisponible": "Discord no disponible",
   "Ouvrez à nouveau Ketvoice pour lier Discord": "Vuelve a abrir Ketvoice para vincular Discord",
   "La liaison Discord a échoué": "No se pudo vincular Discord",
-  "Liaison Discord annulée": "Vinculación de Discord cancelada"
+  "Liaison Discord annulée": "Vinculación de Discord cancelada",
+  "Délai dépassé. Réessaie la liaison Discord.": "Se agotó el tiempo. Vuelve a vincular Discord.",
+  "Réponse Discord invalide. Réessaie.": "Respuesta de Discord no válida. Inténtalo de nuevo.",
+  "Échec de l'échange du jeton. Vérifie que « Client public » est activé dans le portail Discord.": "No se pudo intercambiar el token. Comprueba que «Public Client» esté activado en el portal de Discord."
  },
  "de": {
   "Reverb": "Reverb",
@@ -7277,7 +7298,10 @@
   "Discord indisponible": "Discord nicht verfügbar",
   "Ouvrez à nouveau Ketvoice pour lier Discord": "Öffne Ketvoice erneut, um Discord zu verknüpfen",
   "La liaison Discord a échoué": "Discord-Verknüpfung fehlgeschlagen",
-  "Liaison Discord annulée": "Discord-Verknüpfung abgebrochen"
+  "Liaison Discord annulée": "Discord-Verknüpfung abgebrochen",
+  "Délai dépassé. Réessaie la liaison Discord.": "Zeitüberschreitung. Verknüpfe Discord erneut.",
+  "Réponse Discord invalide. Réessaie.": "Ungültige Antwort von Discord. Versuche es erneut.",
+  "Échec de l'échange du jeton. Vérifie que « Client public » est activé dans le portail Discord.": "Token-Austausch fehlgeschlagen. Prüfe, ob „Public Client“ im Discord-Portal aktiviert ist."
  },
  "pt": {
   "Reverb": "Reverb",
@@ -8187,7 +8211,10 @@
   "Discord indisponible": "Discord indisponível",
   "Ouvrez à nouveau Ketvoice pour lier Discord": "Reabra o Ketvoice para associar o Discord",
   "La liaison Discord a échoué": "Falha ao associar o Discord",
-  "Liaison Discord annulée": "Associação ao Discord cancelada"
+  "Liaison Discord annulée": "Associação ao Discord cancelada",
+  "Délai dépassé. Réessaie la liaison Discord.": "Tempo esgotado. Volta a associar o Discord.",
+  "Réponse Discord invalide. Réessaie.": "Resposta do Discord inválida. Tenta novamente.",
+  "Échec de l'échange du jeton. Vérifie que « Client public » est activé dans le portail Discord.": "Falha ao trocar o token. Verifica se «Public Client» está ativado no portal do Discord."
  },
  "ko": {
   "Reverb": "리버브",
@@ -9097,6 +9124,9 @@
   "Discord indisponible": "Discord를 사용할 수 없음",
   "Ouvrez à nouveau Ketvoice pour lier Discord": "Discord를 연결하려면 Ketvoice를 다시 여세요",
   "La liaison Discord a échoué": "Discord 연결에 실패했습니다",
-  "Liaison Discord annulée": "Discord 연결이 취소되었습니다"
+  "Liaison Discord annulée": "Discord 연결이 취소되었습니다",
+  "Délai dépassé. Réessaie la liaison Discord.": "시간이 초과되었습니다. Discord 연결을 다시 시도하세요.",
+  "Réponse Discord invalide. Réessaie.": "Discord 응답이 올바르지 않습니다. 다시 시도하세요.",
+  "Échec de l'échange du jeton. Vérifie que « Client public » est activé dans le portail Discord.": "토큰 교환에 실패했습니다. Discord 포털에서 'Public Client'가 사용 설정되어 있는지 확인하세요."
  }
 }

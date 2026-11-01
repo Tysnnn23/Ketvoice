@@ -21,6 +21,17 @@ enum class AppLanguage(
     companion object {
         val all: List<AppLanguage> = entries
 
+        fun fromCode(code: String?): AppLanguage? {
+            val value = code?.trim().orEmpty()
+            if (value.isEmpty()) return null
+            val primary = value.substringBefore('-').substringBefore('_')
+            return all.firstOrNull { it.code.equals(primary, true) || it.code.equals(value, true) }
+        }
+
+        /** System UI language when Ketvoice supports it, otherwise English. */
+        fun systemDefault(): AppLanguage =
+            fromCode(java.util.Locale.getDefault().language) ?: ENGLISH
+
         fun fromLabel(label: String?): AppLanguage {
             val value = label?.trim().orEmpty()
             return all.firstOrNull {
@@ -28,7 +39,7 @@ enum class AppLanguage(
                     it.nativeName.equals(value, true) ||
                     it.englishName.equals(value, true) ||
                     it.code.equals(value, true)
-            } ?: FRENCH
+            } ?: ENGLISH
         }
     }
 }

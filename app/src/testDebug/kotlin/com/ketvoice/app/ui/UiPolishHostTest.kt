@@ -40,6 +40,13 @@ import java.io.File
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class UiPolishHostTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
+    @org.junit.Before fun pinFrenchForReadableAssertions() {
+        // The app now follows the system language; host tests assert French copy.
+        java.util.Locale.setDefault(java.util.Locale.FRANCE)
+        AppSettings.languageChosen.value = true
+        AppSettings.language.value = com.ketvoice.app.data.AppLanguage.FRENCH.label
+    }
+
     @After fun reset() {
         AppSettings.reduceAnimations.value = false
         AppSettings.animatedArtwork.value = true

@@ -209,6 +209,7 @@ fun SettingsScreen() {
                             )
                         }
                     ) { id ->
+                        AppSettings.languageChosen.value = true
                         AppSettings.language.value = id
                         SettingsStore.save()
                         com.ketvoice.app.data.AppLocales.apply(ctx, AppLanguage.fromLabel(id))

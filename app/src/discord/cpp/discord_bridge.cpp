@@ -313,6 +313,19 @@ Java_com_ketvoice_app_discord_NativeDiscord_nativeRestore(JNIEnv *env, jobject /
   return JNI_TRUE;
 }
 
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_ketvoice_app_discord_NativeDiscord_nativeExchange(JNIEnv *env, jobject /*thiz*/,
+                                                          jstring code, jstring verifier,
+                                                          jstring redirectUri) {
+  if (ClientPtr() == nullptr) return JNI_FALSE;
+  const std::string codeValue = ToStd(env, code);
+  const std::string verifierValue = ToStd(env, verifier);
+  const std::string redirect = ToStd(env, redirectUri);
+  if (codeValue.empty() || verifierValue.empty() || redirect.empty()) return JNI_FALSE;
+  StartTokenExchange(codeValue, verifierValue, redirect);
+  return JNI_TRUE;
+}
+
 extern "C" JNIEXPORT void JNICALL
 Java_com_ketvoice_app_discord_NativeDiscord_nativeConnect(JNIEnv * /*env*/, jobject /*thiz*/) {
   discordpp::Client *client = ClientPtr();

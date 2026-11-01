@@ -32,6 +32,10 @@ class UpdateUiHostTest {
         UpdateFeed.DOWNLOAD_PREFIX + "v99.0.0/Ketvoice-99.0.0.apk", "https://github.com/Tysnnn23/Ketvoice/releases", "2026-11-01", 123)
 
     @Before @After fun reset() {
+        java.util.Locale.setDefault(java.util.Locale.FRANCE)
+        com.ketvoice.app.data.AppSettings.languageChosen.value = true
+        com.ketvoice.app.data.AppSettings.language.value =
+            com.ketvoice.app.data.AppLanguage.FRENCH.label
         UpdateBadge.pendingRequest = 0; UpdateBadge.handledRequest = 0; UpdateBadge.forceRefresh = false
         UpdateBadge.checking = false; UpdateBadge.lastInfo = null; UpdateBadge.available = null; UpdateBadge.postponedTag = null
     }

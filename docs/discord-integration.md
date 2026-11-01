@@ -17,15 +17,19 @@ self-bot, and never fabricates a linked state.
 ## Flow
 
 1. The user opens the account panel and taps **Link my Discord account**.
-2. `Client::Authorize` opens Discord (or a Custom Tab) with PKCE. The SDK attaches
-   and validates `state`; Ketvoice supplies only the code challenge.
-3. The returned code is exchanged by `Client::GetToken`, then the access token is
-   installed with `Client::UpdateToken`.
-4. The access token lasts seven days; the non-expiring refresh token is stored
+2. Ketvoice generates a PKCE verifier, an S256 challenge and a random `state`, then
+   opens `https://discord.com/oauth2/authorize` in a browser tab.
+3. Discord redirects to `discord-1566454532890820668:/authorize/callback`, which is
+   handled by Ketvoice's own exported `DiscordCallbackActivity` (the SDK helper is
+   not relied on: it could finish without invoking the native callback when the
+   Discord app returned the user directly to Ketvoice).
+4. Ketvoice checks the scheme, path and `state`, then passes the code, verifier and
+   redirect URI to the SDK (`Client::GetToken` → `Client::UpdateToken`).
+5. The access token lasts seven days; the non-expiring refresh token is stored
    encrypted with an Android Keystore AES-GCM key (`ketvoice.discord.refresh`).
    On startup `Client::RefreshToken` renews the access token.
-5. `Client::Connect` reaches `Status::Ready`; `GetCurrentUserV2` fills the account
-   name shown in Ketvoice.
+6. `Client::Connect` reaches `Status::Ready`; `GetCurrentUserV2` fills the account
+   name shown in Ketvoice. A three-minute timeout clears a stalled attempt.
 
 ## Presence
 

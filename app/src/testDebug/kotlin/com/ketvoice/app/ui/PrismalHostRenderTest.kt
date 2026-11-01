@@ -62,6 +62,13 @@ import java.io.File
 class PrismalHostRenderTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
 
+    @org.junit.Before fun pinFrenchForReadableAssertions() {
+        // The app now follows the system language; host tests assert French copy.
+        java.util.Locale.setDefault(java.util.Locale.FRANCE)
+        AppSettings.languageChosen.value = true
+        AppSettings.language.value = com.ketvoice.app.data.AppLanguage.FRENCH.label
+    }
+
     @After fun reset() {
         AppUi.closeOverlays()
         AppSettings.reduceAnimations.value = false
