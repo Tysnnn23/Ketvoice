@@ -54,6 +54,7 @@ class PlaybackService : MediaSessionService() {
                     val commands = MediaSession.ConnectionResult.DEFAULT_SESSION_COMMANDS.buildUpon()
                         .add(SessionCommand(CMD_SKIP_SILENCE, Bundle.EMPTY))
                         .add(SessionCommand(CMD_EQUALIZER, Bundle.EMPTY))
+                        .add(SessionCommand(CMD_REVERB, Bundle.EMPTY))
                         .add(SessionCommand(CMD_UPGRADE, Bundle.EMPTY))
                         .add(SessionCommand(CMD_CANCEL_UPGRADE, Bundle.EMPTY))
                         .build()
@@ -73,6 +74,12 @@ class PlaybackService : MediaSessionService() {
                         return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
                     }
                     if (command.customAction == CMD_UPGRADE) return prepareUpgrade(args)
+                    if (command.customAction == CMD_REVERB) {
+                        val amount = args.getInt("amount").coerceIn(0, 100)
+                        AppSettings.reverbAmount.value = amount
+                        ReverbControl.amount = amount / 100f
+                        return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
+                    }
                     if (command.customAction != CMD_SKIP_SILENCE && command.customAction != CMD_EQUALIZER)
                         return Futures.immediateFuture(SessionResult(SessionError.ERROR_NOT_SUPPORTED))
                     if (command.customAction == CMD_SKIP_SILENCE) {
@@ -107,9 +114,11 @@ class PlaybackService : MediaSessionService() {
         }
         val renderers = object : DefaultRenderersFactory(this) {
             override fun buildAudioSink(context: android.content.Context, enableFloatOutput: Boolean, enableAudioTrackPlaybackParams: Boolean): AudioSink =
-                DefaultAudioSink.Builder(context).setEnableFloatOutput(false)
+                ProcessingAudioSink(DefaultAudioSink.Builder(context).setEnableFloatOutput(false)
                     .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
-                    .setAudioProcessors(arrayOf(ReverbAudioProcessor(), TeeAudioProcessor(meter))).build()
+                    .setAudioProcessors(arrayOf(ReverbAudioProcessor {
+                        if (::player.isInitialized && owner === this@PlaybackService.player) ReverbControl.notePcm()
+                    }, TeeAudioProcessor(meter))).build())
         }
         val player = ExoPlayer.Builder(this, renderers)
             .setMediaSourceFactory(DefaultMediaSourceFactory(AudioCache.factory(this)))
@@ -263,6 +272,7 @@ class PlaybackService : MediaSessionService() {
     companion object {
         const val CMD_SKIP_SILENCE = "ketvoice.set_skip_silence"
         const val CMD_EQUALIZER = "ketvoice.apply_equalizer"
+        const val CMD_REVERB = "ketvoice.set_reverb"
         const val CMD_UPGRADE = "ketvoice.prepare_quality_upgrade"
         const val CMD_CANCEL_UPGRADE = "ketvoice.cancel_quality_upgrade"
     }

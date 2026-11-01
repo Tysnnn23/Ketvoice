@@ -4,6 +4,9 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class CanvasPresentationTest {
+    @Test fun normalCanvasUsesTheBannerEraEdgeToEdgeZoomNotLetterboxedFit() {
+        assertEquals(androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM, CanvasPresentation.NORMAL_RESIZE_MODE)
+    }
     @Test fun onlyNineBySixteenPortraitClipsCanEnterFullscreen() {
         assertTrue(CanvasPresentation.canFillScreen(9f / 16f, 9f / 16f))
         assertFalse(CanvasPresentation.canFillScreen(16f / 9f, 16f / 9f))

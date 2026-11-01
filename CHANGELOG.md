@@ -7,6 +7,29 @@
 
 ---
 
+# Ketvoice 3.12.1
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 58** — banner-era Canvas framing, audible reverb and optical
+navigation glass.
+
+- Fill the normal artwork region edge to edge again: no more wide side bands
+  around the Canvas, with the blurred scene ambience kept behind it.
+- Force decoded PCM playback so device passthrough/offload cannot bypass Reverb,
+  deepen the room and show whether audio is actually being processed.
+- Give the navigation bar and player pill a dedicated optical glass material and
+  sample the player footer from its own backdrop layer.
+- Register the Ketvoice Discord application and document its redirect. Account
+  linking and live presence remain blocked on the owner-only Social SDK download;
+  no fake linked state or non-functional button is shipped.
+- Physical audio/video, accelerated-emulator, Discord linking and APK upgrade
+  validation are not claimed.
+
+Full notes: [3.12.1](docs/releases/v3.12.1.md).
+
+---
+
 # Ketvoice 3.12.0
 
 ![Ketvoice](ketvoice-banner.png)

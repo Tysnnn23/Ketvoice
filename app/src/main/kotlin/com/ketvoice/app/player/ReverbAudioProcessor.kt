@@ -8,7 +8,7 @@ import java.nio.ByteBuffer
 
 /** Runs in the actual Media3 PCM path, independent of vendor audiofx support. */
 @UnstableApi
-internal class ReverbAudioProcessor : BaseAudioProcessor() {
+internal class ReverbAudioProcessor(private val onProcessed: () -> Unit = {}) : BaseAudioProcessor() {
     private var engine: ReverbEngine? = null
     override fun onConfigure(inputAudioFormat: AudioProcessor.AudioFormat): AudioProcessor.AudioFormat {
         if (inputAudioFormat.encoding != C.ENCODING_PCM_16BIT || inputAudioFormat.channelCount !in 1..2)
@@ -25,6 +25,7 @@ internal class ReverbAudioProcessor : BaseAudioProcessor() {
         val amount = ReverbControl.amount
         if (room == null) output.put(inputBuffer)
         else {
+            if (inputBuffer.hasRemaining()) onProcessed()
             var channel = 0
             while (inputBuffer.remaining() >= 2) {
                 val value = inputBuffer.short

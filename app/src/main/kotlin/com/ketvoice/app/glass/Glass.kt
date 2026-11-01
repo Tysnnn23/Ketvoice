@@ -149,6 +149,13 @@ data class GlassParams(
             dark = dark
         )
 
+        /** Navigation is optical glass, not heavily frosted content material. */
+        fun navigation(dark: Boolean = false) = pill(blur = 10f, dark = dark).copy(
+            refractionHeightDp = 12f, refractionAmountDp = 24f,
+            tintAlpha = if (dark) .055f else .035f,
+            saturation = 1.16f, highlightAlpha = if (dark) .48f else .58f
+        )
+
         fun sheet(radiusPx: Float, dark: Boolean = false) = GlassParams(
             cornerRadiusPx = radiusPx,
             role = GlassRole.Sheet,

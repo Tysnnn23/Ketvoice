@@ -697,6 +697,14 @@ object Player {
         controller?.sendCustomCommand(androidx.media3.session.SessionCommand(PlaybackService.CMD_CANCEL_UPGRADE, Bundle.EMPTY), Bundle.EMPTY)
     }
 
+    fun setReverbAmount(amount: Int) {
+        val percent = amount.coerceIn(0, 100)
+        AppSettings.reverbAmount.value = percent
+        ReverbControl.amount = percent / 100f
+        controller?.sendCustomCommand(androidx.media3.session.SessionCommand(PlaybackService.CMD_REVERB, Bundle.EMPTY),
+            Bundle().apply { putInt("amount", percent) })
+    }
+
     // ------------------------------------------------------------ Volume natif
     // Le curseur pilote le volume média SYSTÈME (AudioManager.STREAM_MUSIC) :
     // mêmes gradations que les boutons physiques, même valeur que le système.

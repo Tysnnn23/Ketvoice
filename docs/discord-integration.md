@@ -14,11 +14,19 @@ never be requested or used.
 
 ## Blocking prerequisites
 
-No Ketvoice Discord Application ID or enabled Social SDK application has been
-provided or found in the project. Registering an application and accepting SDK
-terms needs the owner's Discord developer account. Account linking also requires
-the registered `discord-APP_ID:/authorize/callback` redirect and PKCE/state
-validation. Do not fabricate a linked status or publish a non-functional button.
+The owner supplied Application ID `1566454532890820668`; Discord's public RPC
+metadata confirms its name is **Ketvoice**. This public ID is not a secret.
+The redirect to register in OAuth2 is:
+
+`discord-1566454532890820668:/authorize/callback`
+
+The Social SDK download page redirects to login in the available browser session.
+SDK activation, accepting its terms, the Android AAR/header download and callback
+registration still require the owner's developer-portal session. Public RPC
+metadata does not establish whether that private SDK configuration is complete.
+Do not fabricate a linked status or publish a non-functional connection button.
+PKCE and OAuth state validation remain mandatory; never embed a client secret in
+the APK. For a confidential client, token exchange stays on the server.
 
 ## Intended behavior after provisioning
 
@@ -32,4 +40,4 @@ validation. Do not fabricate a linked status or publish a non-functional button.
 - Confirm both buttons using another Discord account; Discord does not show a
   user's own presence buttons to that same user.
 - Verify Android and Quest compatibility separately. No such live session test
-  has been performed and the integration is not shipped in 3.12.0.
+  has been performed and the integration is not shipped in 3.12.1.

@@ -10,6 +10,15 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class ReverbAudioProcessorTest {
+    @Test fun diagnosticIsOnlyRaisedAfterActualPcmInput() {
+        var processed = 0
+        val processor = ReverbAudioProcessor { processed++ }
+        processor.configure(AudioProcessor.AudioFormat(48000, 2, C.ENCODING_PCM_16BIT))
+        processor.flush()
+        assertEquals(0, processed)
+        processor.queueInput(ByteBuffer.allocateDirect(1920).order(ByteOrder.nativeOrder()))
+        assertEquals(1, processed)
+    }
     @After fun reset() { ReverbControl.amount = 0f }
     @Test fun pcmPipelinePreservesFramesAndDisabledSamplesExactly() {
         val processor = ReverbAudioProcessor()

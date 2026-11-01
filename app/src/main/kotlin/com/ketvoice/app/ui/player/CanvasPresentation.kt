@@ -1,3 +1,5 @@
+@file:androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
+
 package com.ketvoice.app.ui.player
 
 import android.media.MediaMetadataRetriever
@@ -10,6 +12,8 @@ import kotlinx.coroutines.withContext
 import kotlin.math.abs
 
 internal object CanvasPresentation {
+    /** Banner-era artwork framing; eligibility and viewport define fullscreen, not FIT. */
+    const val NORMAL_RESIZE_MODE = androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM
     /** Portrait 9:16 only, with a tiny allowance for encoded dimension rounding. */
     fun canFillScreen(videoRatio: Float?, screenRatio: Float): Boolean {
         if (videoRatio == null || !videoRatio.isFinite() || videoRatio <= 0f ||

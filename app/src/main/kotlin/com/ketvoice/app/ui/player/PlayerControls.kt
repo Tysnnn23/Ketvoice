@@ -53,8 +53,6 @@ import com.ketvoice.app.ui.common.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
-import androidx.compose.ui.draw.BlurredEdgeTreatment
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -81,13 +79,14 @@ import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import coil.compose.AsyncImage
 import com.ketvoice.app.R
 import com.ketvoice.app.data.AppSettings
 import com.ketvoice.app.data.ArtworkRepo
 import com.ketvoice.app.data.Track
+import com.ketvoice.app.glass.GlassPanel
+import com.ketvoice.app.glass.GlassParams
 import com.ketvoice.app.player.Player
 import com.ketvoice.app.ui.common.gradientFor
 import com.ketvoice.app.ui.quest.questPointer
@@ -111,8 +110,6 @@ fun ArtworkCanvas(
     corner: Dp = 0.dp,
     badge: Boolean = false,
     depth: Boolean = false,
-    /** Plein écran : le Canvas remplit le cadre au lieu d'être contenu. */
-    canvasFill: Boolean = false,
     onCanvasFailure: () -> Unit = {}
 ) {
     val art by ArtworkRepo.covers.collectAsState()
@@ -138,26 +135,13 @@ fun ArtworkCanvas(
             Box(Modifier.fillMaxSize()) {
                 when {
                     data.canvas != null && AppSettings.animatedArtwork.value -> run {
-                        // Un Canvas est un clip vertical 9:16 : le recadrer dans un
-                        // carré coupait les visages ("trop zoomé"). On montre le
-                        // clip entier, et la pochette floutée remplit les marges.
-                        val soft = !Motion.reduced && !AppSettings.reduceDynamicBlur.value && !AppSettings.highPerformanceMode.value
+                        // Match the banner-era player: edge-to-edge video in the
+                        // artwork region, blending into the separate blurred scene.
+                        // FIT introduced the unwanted side bars in normal mode.
                         Box(Modifier.fillMaxSize()) {
-                            if (!canvasFill && data.cover != null) {
-                                AsyncImage(
-                                    model = data.cover,
-                                    contentDescription = null,
-                                    modifier = Modifier.fillMaxSize()
-                                        .graphicsLayer { alpha = if (soft) .55f else .35f; scaleX = 1.08f; scaleY = 1.08f }
-                                        .then(if (soft) Modifier.blur(34.dp, BlurredEdgeTreatment.Unbounded) else Modifier),
-                                    contentScale = ContentScale.Crop
-                                )
-                                Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .28f)))
-                            }
                             CanvasVideo(path = data.canvas, playing = playing,
                                 modifier = Modifier.fillMaxSize(),
-                                resizeMode = if (canvasFill) AspectRatioFrameLayout.RESIZE_MODE_ZOOM
-                                    else AspectRatioFrameLayout.RESIZE_MODE_FIT,
+                                resizeMode = CanvasPresentation.NORMAL_RESIZE_MODE,
                                 onFailure = onCanvasFailure)
                         }
                     }
@@ -201,7 +185,7 @@ fun ArtworkCanvas(
 
 @Composable
 private fun CanvasVideo(path: String, playing: Boolean, modifier: Modifier = Modifier,
-                        resizeMode: Int = AspectRatioFrameLayout.RESIZE_MODE_FIT,
+                        resizeMode: Int = CanvasPresentation.NORMAL_RESIZE_MODE,
                         onFailure: () -> Unit = {}) {
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -331,10 +315,11 @@ fun ScrubBar(
                 cap = StrokeCap.Round
             )
             if (shown > 0.001f) {
+                val end = x.coerceAtLeast(barH / 2f)
                 drawLine(
                     fillColor,
                     Offset(0f, y),
-                    Offset(x.coerceAtLeast(barH / 2f), y),
+                    Offset(end, y),
                     strokeWidth = barH,
                     cap = StrokeCap.Round
                 )
@@ -548,14 +533,9 @@ fun PlayerBottomBar(
             LyricsGlyph(Modifier.size(25.dp).semantics { contentDescription = com.ketvoice.app.data.AppText.t("Paroles") }, tint)
         }
         Spacer(Modifier.weight(1f))
-        Row(
-            Modifier
-                .height(46.dp)
-                .width(140.dp)
-                .clip(RoundedCornerShape(999.dp))
-                .background(Color.White.copy(alpha = 0.17f)),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        GlassPanel(Modifier.height(46.dp).width(140.dp), RoundedCornerShape(999.dp),
+            GlassParams.navigation(dark = true), enabled = AppSettings.liquidGlass.value) {
+        Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
             Box(
                 Modifier
                     .weight(1f)
@@ -585,6 +565,7 @@ fun PlayerBottomBar(
                     modifier = Modifier.size(22.dp)
                 )
             }
+        }
         }
         Spacer(Modifier.weight(1f))
         SmallCircleButton(onClick = onQueue, active = false, transparent = true) { tint ->
@@ -660,14 +641,9 @@ fun QueueActionsBar(
     modifier: Modifier = Modifier
 ) {
     Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Row(
-            Modifier
-                .weight(1f)
-                .height(46.dp)
-                .clip(RoundedCornerShape(999.dp))
-                .background(Color.White.copy(alpha = 0.16f)),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        GlassPanel(Modifier.weight(1f).height(46.dp), RoundedCornerShape(999.dp),
+            GlassParams.navigation(dark = true), enabled = AppSettings.liquidGlass.value) {
+        Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
             QueueSegment(shuffle, onShuffle) {
                 Icon(Icons.Filled.Shuffle, "Aléatoire", tint = it, modifier = Modifier.size(23.dp))
             }
@@ -682,6 +658,7 @@ fun QueueActionsBar(
             QueueSegment(autoplay, onAutoplay) {
                 Icon(Icons.Filled.AllInclusive, "Lecture automatique", tint = it, modifier = Modifier.size(25.dp))
             }
+        }
         }
         Spacer(Modifier.width(62.dp))
         Box(

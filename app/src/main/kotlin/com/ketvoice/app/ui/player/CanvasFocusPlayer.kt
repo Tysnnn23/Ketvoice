@@ -55,7 +55,7 @@ internal fun CanvasFocusPlayer(track: Track, path: String, playing: Boolean, dur
             interactionSource = remember { MutableInteractionSource() }, indication = null,
             onClickLabel = AppText.t("Afficher ou masquer les commandes"), onClick = { chrome = !chrome }
         ).testTag("canvas-focus-image")) {
-            ArtworkCanvas(track, path, playing, Modifier.fillMaxSize(), canvasFill = true,
+            ArtworkCanvas(track, path, playing, Modifier.fillMaxSize(),
                 onCanvasFailure = onFailure)
             Box(Modifier.fillMaxSize().graphicsLayer { alpha = veil }.background(Brush.verticalGradient(
                 0f to Color.Black.copy(alpha = .35f), .16f to Color.Transparent,

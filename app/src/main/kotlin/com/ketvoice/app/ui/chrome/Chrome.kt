@@ -403,7 +403,7 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier) 
                     }, onDragCancel = { held = false })
             },
         shape = RoundedCornerShape(30.dp),
-        params = GlassParams.pill(dark = th.isDark),
+        params = GlassParams.navigation(dark = th.isDark),
         enabled = AppSettings.liquidGlass.value
     ) {
         if (!collapsed) {

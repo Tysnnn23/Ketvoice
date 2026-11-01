@@ -118,6 +118,7 @@ fun FullPlayerScreen(
         tween(Motion.duration(420)), label = "album-accent")
     val context = LocalContext.current
     val backdrop = rememberGlassBackdrop(Color.Black)
+    val controlsBackdrop = rememberGlassBackdrop(Color.Black)
     val adaptivePlayer = LocalAdaptiveLayout.current.adaptivePlayer
     fun navigate(next: PlayerPage) {
         page = next
@@ -319,8 +320,12 @@ fun FullPlayerScreen(
                     }
                 }
             }) {
-                PlayerSceneBackground(track, canvasPath, state.isPlaying && !canvasFocus, cover, ambience,
-                    plain = false)
+                // The footer samples only this background sibling, never the
+                // enclosing full-scene layer which also captures the footer.
+                com.ketvoice.app.glass.BackdropCapture(controlsBackdrop, Modifier.matchParentSize()) {
+                    PlayerSceneBackground(track, canvasPath, state.isPlaying && !canvasFocus, cover, ambience,
+                        plain = false)
+                }
 
                 AnimatedContent(page, transitionSpec = {
                     (fadeIn(tween(Motion.duration())) + slideInVertically(tween(Motion.duration())) { it / 35 })
@@ -398,6 +403,7 @@ fun FullPlayerScreen(
                     }
                 }
 
+                CompositionLocalProvider(LocalBackdropLayer provides controlsBackdrop) {
                 PlayerChrome(!expanded, Modifier.align(if (wide) Alignment.BottomEnd else Alignment.BottomCenter).padding(bottom = bottomInset)) {
                     Column(Modifier
                         .height(lowerHeight).width(controlsWidth).padding(horizontal = if (wide) 20.dp else margin)) {
@@ -427,6 +433,7 @@ fun FullPlayerScreen(
                         Text(if (com.ketvoice.app.BuildConfig.IS_QUEST) "Ce casque" else "Ce téléphone", color = Color(0xFF777984), fontSize = 10.sp,
                             fontWeight = FontWeight.SemiBold, modifier = Modifier.align(Alignment.CenterHorizontally).padding(top = 18.dp, bottom = 19.dp))
                     }
+                }
                 }
             }
         }

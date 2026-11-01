@@ -1,6 +1,8 @@
 {
  "en": {
   "Reverb": "Reverb",
+  "Traitement audio actif": "Audio processing active",
+  "En attente du flux audio": "Waiting for audio input",
   "Réverbération": "Reverberation",
   "Ajoute une ambiance de salle au signal audio.": "Adds room ambience to the audio signal.",
   "Qualité progressive": "Progressive quality",
@@ -896,6 +898,8 @@
  },
  "hi": {
   "Reverb": "रीवर्ब",
+  "Traitement audio actif": "ऑडियो प्रोसेसिंग सक्रिय",
+  "En attente du flux audio": "ऑडियो इनपुट की प्रतीक्षा है",
   "Réverbération": "प्रतिध्वनि",
   "Ajoute une ambiance de salle au signal audio.": "ऑडियो में कमरे जैसा गूँज प्रभाव जोड़ता है।",
   "Qualité progressive": "प्रगतिशील गुणवत्ता",
@@ -1791,6 +1795,8 @@
  },
  "ja": {
   "Reverb": "リバーブ",
+  "Traitement audio actif": "音声処理が有効です",
+  "En attente du flux audio": "音声入力を待っています",
   "Réverbération": "残響",
   "Ajoute une ambiance de salle au signal audio.": "音声に部屋の響きを加えます。",
   "Qualité progressive": "段階的な音質向上",
@@ -2686,6 +2692,8 @@
  },
  "zh": {
   "Reverb": "混响",
+  "Traitement audio actif": "音频处理已启用",
+  "En attente du flux audio": "正在等待音频输入",
   "Réverbération": "混响效果",
   "Ajoute une ambiance de salle au signal audio.": "为音频添加房间混响效果。",
   "Qualité progressive": "渐进音质",
@@ -3581,6 +3589,8 @@
  },
  "ru": {
   "Reverb": "Реверберация",
+  "Traitement audio actif": "Обработка звука активна",
+  "En attente du flux audio": "Ожидание аудиопотока",
   "Réverbération": "Реверберация звука",
   "Ajoute une ambiance de salle au signal audio.": "Добавляет аудиосигналу акустику помещения.",
   "Qualité progressive": "Постепенное улучшение качества",
@@ -4476,6 +4486,8 @@
  },
  "it": {
   "Reverb": "Riverbero",
+  "Traitement audio actif": "Elaborazione audio attiva",
+  "En attente du flux audio": "In attesa del flusso audio",
   "Réverbération": "Riverberazione",
   "Ajoute une ambiance de salle au signal audio.": "Aggiunge l'acustica di una sala al segnale audio.",
   "Qualité progressive": "Qualità progressiva",
@@ -5371,6 +5383,8 @@
  },
  "es": {
   "Reverb": "Reverb",
+  "Traitement audio actif": "Procesamiento de audio activo",
+  "En attente du flux audio": "Esperando la entrada de audio",
   "Réverbération": "Reverberación",
   "Ajoute une ambiance de salle au signal audio.": "Añade un ambiente de sala a la señal de audio.",
   "Qualité progressive": "Calidad progresiva",
@@ -6266,6 +6280,8 @@
  },
  "de": {
   "Reverb": "Reverb",
+  "Traitement audio actif": "Audioverarbeitung aktiv",
+  "En attente du flux audio": "Warten auf Audiodaten",
   "Réverbération": "Nachhall",
   "Ajoute une ambiance de salle au signal audio.": "Fügt dem Audiosignal einen räumlichen Nachhall hinzu.",
   "Qualité progressive": "Schrittweise Klangqualität",
@@ -7161,6 +7177,8 @@
  },
  "pt": {
   "Reverb": "Reverb",
+  "Traitement audio actif": "Processamento de áudio ativo",
+  "En attente du flux audio": "A aguardar o fluxo de áudio",
   "Réverbération": "Reverberação",
   "Ajoute une ambiance de salle au signal audio.": "Adiciona a acústica de uma sala ao sinal de áudio.",
   "Qualité progressive": "Qualidade progressiva",
@@ -8056,6 +8074,8 @@
  },
  "ko": {
   "Reverb": "리버브",
+  "Traitement audio actif": "오디오 처리 활성",
+  "En attente du flux audio": "오디오 입력 대기 중",
   "Réverbération": "잔향 효과",
   "Ajoute une ambiance de salle au signal audio.": "오디오 신호에 실내 잔향을 더합니다.",
   "Qualité progressive": "점진적 음질 향상",
