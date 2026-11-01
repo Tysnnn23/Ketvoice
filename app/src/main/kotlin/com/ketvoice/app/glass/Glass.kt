@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import com.ketvoice.app.data.AppSettings
 import com.ketvoice.app.theme.LocalTheme
@@ -214,7 +215,13 @@ fun GlassPanel(
     if (params.role == GlassRole.Panel) {
         // Glass belongs to controls and navigation, not every content card/menu.
         val theme = LocalTheme.current
-        Box(modifier.background(theme.card, shape)) { content() }
+        // A dark player menu can be opened above a light page. Its explicit
+        // material, not the page underneath, must own the content contrast.
+        val panelTheme = if (params.dark && !theme.isDark)
+            com.ketvoice.app.theme.KetTheme.dark().copy(accent = theme.accent) else theme
+        CompositionLocalProvider(LocalTheme provides panelTheme) {
+            Box(modifier.clip(shape).background(panelTheme.card, shape)) { content() }
+        }
         return
     }
     val backdrop = LocalBackdropLayer.current

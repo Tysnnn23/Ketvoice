@@ -12,8 +12,8 @@ android {
         applicationId = "com.ketvoice.app"
         minSdk = 31
         targetSdk = 36
-        versionCode = 55
-        versionName = "3.10.1"
+        versionCode = 56
+        versionName = "3.11.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         resourceConfigurations += listOf("fr", "en", "hi", "ja", "zh", "ru", "it", "es", "de", "pt", "ko")
     }
@@ -106,6 +106,7 @@ dependencies {
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
     implementation("io.coil-kt:coil-compose:2.7.0")
+    implementation("io.coil-kt:coil-svg:2.7.0")
     implementation("com.google.code.gson:gson:2.11.0")
     implementation("io.github.kyant0:backdrop:1.0.0-rc02")
     implementation("androidx.media3:media3-datasource:1.6.1")

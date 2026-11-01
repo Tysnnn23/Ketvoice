@@ -52,6 +52,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.SemanticsPropertyKey
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -63,6 +66,8 @@ import com.ketvoice.app.BuildConfig
 import com.ketvoice.app.data.AppText
 import kotlinx.coroutines.launch
 import java.io.File
+
+internal val ReleaseBannerLoaded = SemanticsPropertyKey<Boolean>("ReleaseBannerLoaded")
 
 /**
  * Mise à jour depuis les releases GitHub.
@@ -81,9 +86,23 @@ data class UpdateInfo(
     val sha256: String? = null
 ) {
     fun versionLabel(): String = tag.removePrefix("v").removePrefix("V")
+    fun bannerUrl(): String? = UpdateChecker.releaseBanner(notes.joinToString("\n"))
 }
 
 object UpdateChecker {
+    internal const val CANONICAL_BANNER = "https://raw.githubusercontent.com/Tysnnn23/Ketvoice/main/ketvoice-banner.png"
+
+    /** Only trusted repository images; never load arbitrary release-body URLs. */
+    internal fun releaseBanner(body: String): String? = Regex("!\\[[^\\]]*]\\((https://[^\\s)]+)\\)")
+        .findAll(body).mapNotNull { match ->
+            val value = match.groupValues[1].replace("https://github.com/Tysnnn23/Ketvoice/blob/",
+                "https://raw.githubusercontent.com/Tysnnn23/Ketvoice/")
+            val uri = runCatching { java.net.URI(value) }.getOrNull() ?: return@mapNotNull null
+            val trusted = (uri.host == "raw.githubusercontent.com" && uri.path.startsWith("/Tysnnn23/Ketvoice/")) ||
+                (uri.host == "github.com" && uri.path.startsWith("/Tysnnn23/Ketvoice/releases/download/"))
+            value.takeIf { trusted && uri.scheme == "https" && uri.rawUserInfo == null && uri.port in setOf(-1, 443) &&
+                uri.path.lowercase().let { path -> listOf(".png", ".jpg", ".jpeg", ".webp").any { path.endsWith(it) } } }
+        }.firstOrNull()
 
     private const val PREFS = "ketvoice_updates"
     private const val KEY_DISMISSED = "dismissed_tag"
@@ -364,10 +383,15 @@ internal fun UpdateDialog(info: UpdateInfo, onDismiss: () -> Unit, onSkip: () ->
                 .padding(horizontal = 20.dp, vertical = 24.dp)
         ) {
             Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
-                Box(Modifier.fillMaxWidth().height(190.dp).clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))) {
+                val banner = info.bannerUrl()
+                var bannerLoaded by remember(banner) { mutableStateOf(false) }
+                if (banner != null) Box(Modifier.fillMaxWidth().height(190.dp).testTag("release-banner")
+                    .semantics { this[ReleaseBannerLoaded] = bannerLoaded }
+                    .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))) {
                     AsyncImage(
-                        model = "file:///android_asset/release_banner.png",
+                        model = if (banner == UpdateChecker.CANONICAL_BANNER) "file:///android_asset/release_banner.png" else banner,
                         contentDescription = null,
+                        onSuccess = { bannerLoaded = true },
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxWidth().height(190.dp)
                     )
@@ -380,6 +404,7 @@ internal fun UpdateDialog(info: UpdateInfo, onDismiss: () -> Unit, onSkip: () ->
                         )
                     )
                 }
+                else Spacer(Modifier.height(24.dp))
 
                 Column(Modifier.padding(horizontal = 22.dp)) {
                     Text(

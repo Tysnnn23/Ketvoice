@@ -95,8 +95,7 @@ fun ArtistScreen() {
                     modifier = Modifier.clickable { attempt++ }.padding(top = 20.dp, bottom = 12.dp))
             }
             else -> {
-            // La photo et les métadonnées défilent ensemble ; aucun shader
-            // ne recadre ni ne remplace la photo fournie par le catalogue.
+            // Portrait and metadata scroll as one; wide source banners stay fitted.
             val listState = androidx.compose.foundation.lazy.rememberLazyListState()
             LazyColumn(Modifier.fillMaxSize(), state = listState,
                 contentPadding = PaddingValues(bottom = 210.dp)) {

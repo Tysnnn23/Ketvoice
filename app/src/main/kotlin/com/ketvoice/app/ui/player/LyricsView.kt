@@ -72,6 +72,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.platform.testTag
 import com.ketvoice.app.data.*
 import com.ketvoice.app.glass.GlassPanel
 import com.ketvoice.app.glass.GlassParams
@@ -268,7 +270,9 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
                     }
                 }
             }
-            if (!expanded) {
+            AnimatedVisibility(!expanded,
+                enter = fadeIn(tween(Motion.duration(280))) + expandVertically(tween(Motion.duration(360))),
+                exit = fadeOut(tween(Motion.duration(220))) + shrinkVertically(tween(Motion.duration(300)))) {
                 Row(Modifier.fillMaxWidth().height(48.dp), verticalAlignment = Alignment.CenterVertically) {
                     SmallCircleButton(onSource, size = 36.dp) { Icon(Icons.Filled.Language, "Sources des paroles", tint = it, modifier = Modifier.size(21.dp)) }
                     Spacer(Modifier.weight(1f))
@@ -281,7 +285,8 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
                         else Icon(Icons.Filled.Translate, "Traduire les paroles", tint = it, modifier = Modifier.size(21.dp))
                     }
                 }
-            } else if (!following && lyrics.isTimed) {
+            }
+            if (expanded && !following && lyrics.isTimed) {
                 Text("Reprendre le suivi", color = Color.White, fontSize = if (com.ketvoice.app.BuildConfig.IS_QUEST) 14.sp else 12.sp,
                     modifier = Modifier.align(Alignment.CenterHorizontally).clickable { following = true }.padding(12.dp))
             }
@@ -301,21 +306,28 @@ internal fun LyricVoices(line: MusicApi.LyricLine, active: Boolean, timed: Boole
                 letterSpacing = (-.3).sp, fontWeight = FontWeight.Black,
                 modifier = Modifier.fillMaxWidth().blur(blur, BlurredEdgeTreatment.Unbounded))
         }
-        // Stable layout: separate each back exactly once, with its own native timing.
-        voices.backs.forEach { BackingVocal(it, active || !timed, fontScale) }
+        // Keep measured space so following never jumps as a back fades in/out.
+        voices.backs.forEach { BackingVocal(it, active, timed, fontScale) }
     }
 }
 
 @Composable
-private fun BackingVocal(line: MusicApi.LyricLine, active: Boolean, fontScale: Float) {
-    val position = if (active) Player.positionMs.collectAsState().value else Long.MIN_VALUE
-    val visible = active && LyricsPresentation.backIsActive(line, position)
+private fun BackingVocal(line: MusicApi.LyricLine, active: Boolean, timed: Boolean, fontScale: Float) {
+    val position = if (active && timed) Player.positionMs.collectAsState().value else Long.MIN_VALUE
+    val visible = !timed || (active && LyricsPresentation.backIsActive(line, position))
     val opacity by animateFloatAsState(
-        if (visible) 1f else if (active) .30f else .18f,
-        tween(Motion.duration(180)), label = "backing-vocal"
+        if (visible) 1f else 0f,
+        tween(Motion.duration(if (visible) 220 else 280)), label = "backing-vocal"
     )
-    Box(Modifier.fillMaxWidth().padding(top = 7.dp).graphicsLayer { alpha = opacity }) {
-        if (visible && line.words.isNotEmpty()) KaraokeLine(line, Modifier.fillMaxWidth(), fontScale, backing = true)
+    Box(Modifier.fillMaxWidth().padding(top = 7.dp).testTag("backing-vocal")
+        .then(if (!visible) Modifier.clearAndSetSemantics { } else Modifier)
+        .graphicsLayer {
+            alpha = opacity
+            translationY = if (Motion.reduced) 0f else (1f - opacity) * 4.dp.toPx()
+        }) {
+        // Do not replace the glyphs at the start of an exit: finish the fade
+        // with the same karaoke layout, including after a seek/line change.
+        if (timed && line.words.isNotEmpty() && (visible || opacity > 0f)) KaraokeLine(line, Modifier.fillMaxWidth(), fontScale, backing = true)
         else Text(line.text, localize = false, color = Color.White.copy(alpha = .80f),
             fontSize = (24f * fontScale).sp, lineHeight = (31f * fontScale).sp,
             fontWeight = FontWeight.Bold, letterSpacing = (-.2).sp)

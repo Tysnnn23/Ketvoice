@@ -8,6 +8,7 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
@@ -58,9 +59,9 @@ fun KetvoiceTheme(useDark: Boolean? = null, content: @Composable () -> Unit) {
     val accent = Color(com.ketvoice.app.data.AppSettings.accentArgb.value.toInt())
     val base = (if (isDark) KetTheme.dark() else KetTheme.light()).copy(accent = accent)
     val th = if (com.ketvoice.app.data.DesignChoices.enabled("D1")) base.copy(
-        background=if(isDark)Color(0xFF0C0D12) else Color(0xFFF7F7FA),
-        card=if(isDark)Color(0xFF1B1D26) else Color.White,
-        secondary=if(isDark)Color(0xFFB6B9C6) else Color(0xFF555A69)) else base
+        background=if(isDark)Palette.BackgroundDark else Color(0xFFF7F7FA),
+        card=if(isDark)Palette.CardDark else Color.White,
+        secondary=if(isDark)Palette.SecondaryTextDark else Color(0xFF555A69)) else base
     androidx.compose.runtime.CompositionLocalProvider(
         LocalTheme provides th,
         // Le repère visuel de l'app est la réaction du verre et du contenu,
@@ -73,6 +74,15 @@ fun KetvoiceTheme(useDark: Boolean? = null, content: @Composable () -> Unit) {
                 onBackground = Palette.White,
                 surface = th.card,
                 primary = accent,
+                onPrimary = if (accent.luminance() > .179f) Color.Black else Color.White,
+                surfaceContainerLowest = th.background,
+                surfaceContainerLow = Color(0xFF13171C),
+                surfaceContainer = th.card,
+                surfaceContainerHigh = Color(0xFF242A32),
+                surfaceContainerHighest = Color(0xFF303741),
+                surfaceTint = Color.Transparent,
+                outline = Color(0xFF717B89),
+                outlineVariant = Color(0xFF353D48),
                 onSurface = Palette.White,
                 onSurfaceVariant = Palette.SecondaryTextDark
             ) else lightColorScheme(

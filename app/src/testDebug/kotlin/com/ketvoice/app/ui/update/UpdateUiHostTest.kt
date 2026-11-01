@@ -28,7 +28,7 @@ import org.robolectric.Shadows.shadowOf
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class UpdateUiHostTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
-    private val candidate = UpdateInfo("v99.0.0", "Ketvoice QA update", listOf("## Automatic updates", "A host fixture."),
+    private val candidate = UpdateInfo("v99.0.0", "Ketvoice QA update", listOf("![Ketvoice](${UpdateChecker.CANONICAL_BANNER})", "## Automatic updates", "A host fixture."),
         UpdateFeed.DOWNLOAD_PREFIX + "v99.0.0/Ketvoice-99.0.0.apk", "https://github.com/Tysnnn23/Ketvoice/releases", "2026-11-01", 123)
 
     @Before @After fun reset() {
@@ -37,7 +37,9 @@ class UpdateUiHostTest {
     }
 
     private fun bannerReady() {
-        compose.waitUntil(10_000) { !compose.activity.imageLoader.memoryCache?.keys.isNullOrEmpty() }
+        compose.waitUntil(10_000) {
+            compose.onAllNodesWithTag("release-banner").fetchSemanticsNodes().any { it.config[ReleaseBannerLoaded] }
+        }
         compose.mainClock.advanceTimeBy(500)
     }
 
@@ -48,11 +50,39 @@ class UpdateUiHostTest {
             val canvas = Canvas(bitmap)
             ReflectionHelpers.setField(canvas, "mAllowHwFeaturesInSwMode", true)
             view.draw(canvas)
+            val banner = compose.onNodeWithTag("release-banner").fetchSemanticsNode().boundsInRoot
+            var pictured = 0
+            for (y in (banner.top.toInt() + 10) until (banner.bottom.toInt() - 10) step 3)
+                for (x in (banner.left.toInt() + 25) until (banner.right.toInt() - 25) step 3) {
+                    val pixel = bitmap.getPixel(x.coerceIn(0, bitmap.width - 1), y.coerceIn(0, bitmap.height - 1))
+                    if (pixel != android.graphics.Color.rgb(20, 21, 26)) pictured++
+                }
+            assertTrue("Banner must paint actual image pixels", pictured > 200)
             val file = File("build/host-ui-preview/${com.ketvoice.app.BuildConfig.FLAVOR}/update-dialog-host.png")
             file.parentFile?.mkdirs()
             file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
             bitmap.recycle()
         }
+    }
+
+    @Test fun foregroundAutoCheckShowsNotesAndReleaseBannerWithoutAManualRequest() {
+        var checks = 0
+        compose.setContent { KetvoiceTheme(useDark = true) {
+            UpdateHost(check = { manual -> assertFalse(manual); checks++; candidate }, cached = { null })
+        } }
+        compose.onNodeWithText(candidate.name).assertIsDisplayed()
+        compose.onNodeWithText("Automatic updates").assertIsDisplayed()
+        compose.onNodeWithTag("release-banner").assertIsDisplayed()
+        bannerReady()
+        compose.runOnIdle { assertTrue(checks > 0) }
+    }
+
+    @Test fun releaseWithoutAnImageDoesNotInventABanner() {
+        compose.setContent { KetvoiceTheme(useDark = true) {
+            UpdateDialog(candidate.copy(notes = listOf("## Changes", "A release without a banner.")), {}, {})
+        } }
+        compose.onNodeWithText("Changes").assertIsDisplayed()
+        compose.onNodeWithTag("release-banner").assertDoesNotExist()
     }
 
     @Test fun manualRequestIsNotCancelledWhenItsRequestIsConsumed() {

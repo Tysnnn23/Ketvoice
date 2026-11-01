@@ -10,6 +10,7 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import androidx.compose.animation.fadeIn
@@ -72,6 +73,8 @@ import androidx.compose.animation.animateColorAsState
 import com.ketvoice.app.theme.LocalTheme
 import com.ketvoice.app.theme.KetTheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.ui.graphics.luminance
 import com.ketvoice.app.ui.common.TrackTitle
 
 enum class PlayerPage { ARTWORK, LYRICS, QUEUE }
@@ -141,20 +144,30 @@ fun FullPlayerScreen(
     }
 
     CompositionLocalProvider(LocalTheme provides KetTheme.dark().copy(accent = albumAccent, secondary = Color.White.copy(alpha = .78f))) {
-    MaterialTheme(colorScheme = MaterialTheme.colorScheme.copy(primary = albumAccent, onPrimary = Color.Black)) {
+    MaterialTheme(colorScheme = darkColorScheme(primary = albumAccent,
+        onPrimary = if (albumAccent.luminance() > .179f) Color.Black else Color.White,
+        background = com.ketvoice.app.theme.Palette.BackgroundDark,
+        surface = com.ketvoice.app.theme.Palette.CardDark, onSurface = Color.White,
+        onSurfaceVariant = com.ketvoice.app.theme.Palette.SecondaryTextDark,
+        surfaceTint = Color.Transparent)) {
     BoxWithConstraints(modifier.fillMaxSize().background(Color.Black)) {
         val canvasReady = canvasPath != null && AppSettings.animatedArtwork.value && !failedCanvas &&
             CanvasPresentation.canFillScreen(canvasAspect, maxWidth.value / maxHeight.value)
         LaunchedEffect(canvasReady) { if (!canvasReady) canvasFocus = false }
-        if (canvasFocus && canvasReady) {
+        AnimatedContent(canvasFocus && canvasReady, transitionSpec = {
+            fadeIn(tween(Motion.duration(300))).togetherWith(fadeOut(tween(Motion.duration(220))))
+                .using(androidx.compose.animation.SizeTransform(clip = false))
+        }, modifier = Modifier.fillMaxSize(), label = "canvas-focus-transition") { focus ->
+        BoxWithConstraints(Modifier.fillMaxSize()) {
+        if (focus) {
             BackHandler { canvasFocus = false }
-            CanvasFocusPlayer(track, canvasPath, state.isPlaying, state.durationMs,
+            CanvasFocusPlayer(track, canvasPath!!, state.isPlaying && canvasFocus, state.durationMs,
                 onExit = { canvasFocus = false }, onFailure = { failedCanvas = true; canvasFocus = false })
             return@BoxWithConstraints
         }
         if (com.ketvoice.app.BuildConfig.IS_QUEST) {
             BackHandler { if (page != PlayerPage.ARTWORK) navigate(PlayerPage.ARTWORK) else closeInstant() }
-            QuestLandscapePlayer(state, track, cover, canvasPath, ambience, page,
+            QuestLandscapePlayer(if (canvasFocus) state.copy(isPlaying = false) else state, track, cover, canvasPath, ambience, page,
                 onPage = ::navigate, onClose = ::closeInstant, onTrackMenu = { sheet = "track" },
                 onSources = { sheet = "sources" }, onOutput = { sheet = "audio" },
                 onCanvas = if (canvasReady) ({ canvasFocus = true }) else null)
@@ -193,7 +206,7 @@ fun FullPlayerScreen(
                     if (claimed && kotlin.math.abs(total) > 380f) closeInstant() else dragX = 0f
                 }
             }) {
-                TabletPlayer(state, track, cover, canvasPath, ambience, page,
+                TabletPlayer(if (canvasFocus) state.copy(isPlaying = false) else state, track, cover, canvasPath, ambience, page,
                     onPage = ::navigate, onClose = ::closeInstant, onTrackMenu = { sheet = "track" },
                     onSources = { sheet = "sources" }, onOutput = { sheet = "audio" },
                     onCanvas = if (canvasReady) ({ canvasFocus = true }) else null)
@@ -326,7 +339,7 @@ fun FullPlayerScreen(
                         ) { canvasFocus = true }.semantics {
                             contentDescription = AppText.t("Voir le Canvas en plein écran")
                         } else Modifier)) {
-                        ArtworkCanvas(track, if (panoramicCanvasActive(canvasPath)) null else canvasPath,
+                        ArtworkCanvas(track, if (canvasFocus || panoramicCanvasActive(canvasPath)) null else canvasPath,
                             state.isPlaying && !canvasFocus, Modifier.fillMaxSize(), depth = true,
                             onCanvasFailure = { failedCanvas = true })
                     }
@@ -367,7 +380,8 @@ fun FullPlayerScreen(
                         slideOutVertically(tween(Motion.duration())) { it / 10 } +
                         scaleOut(targetScale = if(Motion.reduced) 1f else .98f, animationSpec = tween(Motion.duration()))
                 ) {
-                    val sceneEnd = if (expanded || wide) safeHeight - 12.dp else contentBottom
+                    val sceneEnd by animateDpAsState(if (expanded || wide) safeHeight - 12.dp else contentBottom,
+                        tween(Motion.duration(360), easing = androidx.compose.animation.core.CubicBezierEasing(.22f, 1f, .36f, 1f)), label = "lyrics-viewport")
                     Box(Modifier.offset(y = sceneTop).height((sceneEnd - sceneTop).coerceAtLeast(80.dp)).width(sceneWidth)) {
                         if (page == PlayerPage.QUEUE) QueuePane(state, Modifier.fillMaxSize().padding(horizontal = if (wide) 18.dp else margin))
                          else LyricsPane(track, expanded, onSource = { sheet = "sources" },
@@ -382,8 +396,8 @@ fun FullPlayerScreen(
                     }
                 }
 
-                if (!expanded) {
-                    Column(Modifier.align(if (wide) Alignment.BottomEnd else Alignment.BottomCenter).padding(bottom = bottomInset)
+                PlayerChrome(!expanded, Modifier.align(if (wide) Alignment.BottomEnd else Alignment.BottomCenter).padding(bottom = bottomInset)) {
+                    Column(Modifier
                         .height(lowerHeight).width(controlsWidth).padding(horizontal = if (wide) 20.dp else margin)) {
                         Box(Modifier.height(34.dp).fillMaxWidth(), contentAlignment = Alignment.CenterStart) {
                             if (page == PlayerPage.LYRICS) {
@@ -423,6 +437,8 @@ fun FullPlayerScreen(
                 }
             }
         }
+    }
+    }
     }
     }
     }

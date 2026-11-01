@@ -7,6 +7,28 @@
 
 ---
 
+# Ketvoice 3.11.0
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 56** — player motion, dark-theme readability and portrait-led artist profiles.
+
+- Fix white-on-white player action sheets above light pages; refine charcoal
+  surfaces, secondary-text contrast, system-bar spacing and fitted Canvas edges.
+- Animate fullscreen Canvas chrome, lyrics transport/viewport changes and menus;
+  retain reduced-motion support and independent seeking/exit gestures.
+- Add optional public-domain artist signatures in Appearance, disabled by
+  default with attribution and a normal-name fallback. No silent network opt-in.
+- Request a real native 120 Hz display mode on compatible phones at the current
+  resolution, respecting lifecycle, battery saver and Android policy. Report
+  the current rate separately; this is not a guaranteed 120 FPS benchmark.
+- Show backing vocals only in their timed window, fading out at the next line
+  without moving the measured layout. AutoMix stays removed.
+- Keep automatic update prompts with release notes and trusted release banners.
+  See release metadata for host/mock, external image-rate-limit and device limits.
+
+---
+
 # Ketvoice 3.10.1
 
 ![Ketvoice](ketvoice-banner.png)

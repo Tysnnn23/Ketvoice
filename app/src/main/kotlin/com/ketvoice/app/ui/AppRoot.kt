@@ -75,6 +75,7 @@ import com.ketvoice.app.ui.motion.Motion
 @Composable
 fun AppRoot() {
     com.ketvoice.app.ui.motion.ObserveSystemMotion()
+    com.ketvoice.app.ui.motion.ObserveDisplayRefresh()
     val themeMode = AppSettings.themeMode.value
     val useDark = if (themeMode == 1) false else if (themeMode == 2) true else null
     val view = androidx.compose.ui.platform.LocalView.current
@@ -296,8 +297,11 @@ fun AppRoot() {
                 CoverFlightOverlay()
 
                 // ---- Dialog compte ----
-                AppUi.trackMenuTrack.value?.let { track ->
-                    Box(Modifier.fillMaxSize().zIndex(7f)) {
+                AnimatedContent(AppUi.trackMenuTrack.value,
+                    modifier = Modifier.fillMaxSize().zIndex(7f),
+                    transitionSpec = { fadeIn(tween(Motion.duration(240))).togetherWith(fadeOut(tween(Motion.duration(220)))) },
+                    label = "global-track-menu") { track ->
+                    if (track != null) Box(Modifier.fillMaxSize()) {
                         androidx.activity.compose.BackHandler { AppUi.trackMenuTrack.value = null }
                         com.ketvoice.app.ui.player.PlayerSheetScrim({ AppUi.trackMenuTrack.value = null }) {
                             com.ketvoice.app.ui.player.TrackMenuSheet(track) { AppUi.trackMenuTrack.value = null }

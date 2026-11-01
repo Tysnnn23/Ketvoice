@@ -29,7 +29,10 @@ object SettingsStore {
         s.albumColors.value = p.getBoolean("albumColors", true)
         s.artworkDepth.value = p.getBoolean("artworkDepth", true)
         s.canvasWithMobileData.value = p.getBoolean("canvasWithMobileData", s.canvasWithMobileData.value)
-        s.artistSignatures.value = p.getBoolean("artistSignatures", s.artistSignatures.value)
+        // The old unused flag was saved as true without any consent screen.
+        // A new key makes the network-backed feature genuinely opt-in.
+        s.artistSignatures.value = p.getBoolean("artistSignaturesOptIn", false)
+        s.highRefreshRate.value = p.getBoolean("highRefreshRate", false)
         s.syncedLyrics.value = p.getBoolean("syncedLyrics", s.syncedLyrics.value)
         s.blurInactiveLyrics.value = p.getBoolean("blurInactiveLyrics", s.blurInactiveLyrics.value)
         s.lyricsSource.value = p.getString("lyricsSource", s.lyricsSource.value) ?: "auto"
@@ -74,6 +77,7 @@ object SettingsStore {
             .coerceIn(500_000_000L, 10_000_000_000L)
 
         p.edit()
+            .remove("artistSignatures")
             .remove("automix")
             .remove("automixAutoFade")
             .remove("automixFadeSeconds")
@@ -123,7 +127,8 @@ object SettingsStore {
             .putBoolean("artworkDepth", s.artworkDepth.value)
             .putInt("lyricsTextSize", s.lyricsTextSize.value)
             .putBoolean("canvasWithMobileData", s.canvasWithMobileData.value)
-            .putBoolean("artistSignatures", s.artistSignatures.value)
+            .putBoolean("artistSignaturesOptIn", s.artistSignatures.value)
+            .putBoolean("highRefreshRate", s.highRefreshRate.value)
             .putBoolean("syncedLyrics", s.syncedLyrics.value)
             .putBoolean("blurInactiveLyrics", s.blurInactiveLyrics.value)
             .putString("lyricsSource", s.lyricsSource.value)

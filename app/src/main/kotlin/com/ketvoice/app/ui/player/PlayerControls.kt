@@ -154,11 +154,21 @@ fun ArtworkCanvas(
                                 )
                                 Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .28f)))
                             }
-                            CanvasVideo(path = data.canvas, playing = playing,
-                                modifier = Modifier.fillMaxSize(),
-                                resizeMode = if (canvasFill) AspectRatioFrameLayout.RESIZE_MODE_ZOOM
-                                    else AspectRatioFrameLayout.RESIZE_MODE_FIT,
+                            if (canvasFill) CanvasVideo(path = data.canvas, playing = playing,
+                                modifier = Modifier.fillMaxSize(), resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM,
                                 onFailure = onCanvasFailure)
+                            else {
+                                val aspect by rememberCanvasAspectRatio(data.canvas)
+                                BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    val ratio = aspect ?: (9f / 16f)
+                                    val width = minOf((maxWidth - 32.dp).coerceAtLeast(1.dp), maxHeight * ratio)
+                                    // Clip the video itself, not the letterboxed parent.
+                                    // White/light clips no longer end in a hard rectangular slab.
+                                    CanvasVideo(path = data.canvas, playing = playing,
+                                        modifier = Modifier.size(width, width / ratio).clip(RoundedCornerShape(16.dp)),
+                                        resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT, onFailure = onCanvasFailure)
+                                }
+                            }
                         }
                     }
                     data.cover != null ->
@@ -805,22 +815,26 @@ fun formatSecs(ms: Long): String {
 @Composable
 fun PlayerSheetScrim(onClose: () -> Unit, content: @Composable () -> Unit) {
 
-    val scrimAlpha by animateFloatAsState(
-        targetValue = 0.35f,
-        animationSpec = tween(Motion.duration(Motion.FADE)),
-        label = "scrim"
-    )
+    val appear = remember { androidx.compose.animation.core.Animatable(if (Motion.reduced) 1f else 0f) }
+    LaunchedEffect(Unit) {
+        appear.animateTo(1f, tween(Motion.duration(320), easing = androidx.compose.animation.core.CubicBezierEasing(.22f, 1f, .36f, 1f)))
+    }
     Box(
         Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = scrimAlpha))
+            .background(Color.Black.copy(alpha = .35f * appear.value))
             .clickable(noRipple, null) { onClose() }
     ) {
         Box(
             Modifier
                 .align(Alignment.BottomCenter)
+                .statusBarsPadding().navigationBarsPadding()
                 .widthIn(max = 560.dp)
                 .fillMaxWidth()
+                .graphicsLayer {
+                    alpha = appear.value
+                    translationY = if (Motion.reduced) 0f else (1f - appear.value) * 24.dp.toPx()
+                }
                 .clickable(noRipple, null) { },
         ) { content() }
     }

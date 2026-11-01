@@ -227,6 +227,22 @@ fun SettingsScreen() {
                 }
             }
             Section("APPARENCE") {
+                SToggle(Icons.Filled.Image, "Signatures d'artistes",
+                    "Affiche les signatures disponibles sur les profils. Le nom est envoyé au service uniquement si activé.",
+                    AppSettings.artistSignatures.value) { AppSettings.artistSignatures.value = it; SettingsStore.save() }
+                val refresh = com.ketvoice.app.ui.motion.DisplayRefresh.status
+                SToggle(Icons.Filled.Bolt, "Fluidité 120 Hz",
+                    when {
+                        com.ketvoice.app.BuildConfig.IS_QUEST -> "Le casque conserve la fréquence gérée par Quest."
+                        refresh.powerSaving -> "Demande suspendue en économie d'énergie."
+                        !refresh.supported -> "Aucun mode 120 Hz compatible annoncé par cet écran."
+                        refresh.requested -> "120 Hz demandé à Android ; la fréquence reste gérée par le système."
+                        else -> "Demande le mode 120 Hz natif, sans changer la résolution. Consomme davantage de batterie."
+                    }, AppSettings.highRefreshRate.value) { AppSettings.highRefreshRate.value = it; SettingsStore.save() }
+                if (refresh.actualHz > 0f) Text(
+                    com.ketvoice.app.data.AppText.t("Fréquence de l'écran") + " : " + kotlin.math.round(refresh.actualHz).toInt() + " Hz",
+                    localize = false, color = th.secondary, fontSize = 12.sp,
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp))
                 SRow(Icons.Filled.Tune, "DESIGN KETVOICE", sub = "Chaque finition peut être retirée séparément, sans modifier vos playlists ni votre musique.") {
                     categoryKey = SettingsCategory.Design.name
                 }

@@ -8,6 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -24,6 +25,8 @@ import coil.compose.AsyncImage
 import com.ketvoice.app.data.AppSettings
 import com.ketvoice.app.data.AppText
 import com.ketvoice.app.data.ArtistPage
+import com.ketvoice.app.data.ArtistSignature
+import com.ketvoice.app.data.ArtistSignatures
 import com.ketvoice.app.glass.GlassPanel
 import com.ketvoice.app.glass.GlassParams
 import com.ketvoice.app.player.Player
@@ -31,32 +34,31 @@ import com.ketvoice.app.theme.LocalTheme
 import com.ketvoice.app.ui.common.Icon
 import com.ketvoice.app.ui.common.Text
 
-/**
- * Bannière d'artiste immersive : photo aux proportions naturelles (jamais
- * agrandie ni recadrée sur le visage), fondu long vers la page, puis le nom et
- * les actions posés dans ce fondu. Les deux boutons sont ceux qu'on utilise
- * vraiment sur une fiche artiste : lecture et aléatoire.
- */
+/** Portrait-led hero only; the app's navigation and catalogue remain unchanged. */
 @Composable
 internal fun ArtistHeader(page: ArtistPage) {
     val theme = LocalTheme.current
     val onAccent = if (theme.accent.luminance() > .179f) Color.Black else Color.White
-    Column(Modifier.fillMaxWidth().statusBarsPadding()) {
+    val signatures = AppSettings.artistSignatures.value
+    var signature by remember(page.artist.name, signatures) { mutableStateOf<ArtistSignature?>(null) }
+    LaunchedEffect(page.artist.name, signatures) {
+        signature = if (signatures) ArtistSignatures.find(page.artist.name) else null
+    }
+    Column(Modifier.fillMaxWidth()) {
         BoxWithConstraints(Modifier.fillMaxWidth()) {
             val ratio = page.heroAspectRatio.takeIf { it.isFinite() && it > 0f } ?: 1f
-            // Hauteur naturelle de la bannière, bornée pour que le nom reste
-            // lisible même sur une photo très panoramique.
-            val height = (maxWidth / ratio.coerceIn(.6f, 4f)).coerceIn(220.dp, 430.dp)
+            val height = (maxWidth * 1.16f).coerceIn(320.dp, 500.dp)
             Box(Modifier.fillMaxWidth().height(height).clipToBounds()
                 .background(Brush.verticalGradient(listOf(theme.card, theme.background)))) {
-                // Halo d'accent : donne de la profondeur derrière la photo sans
-                // jamais l'agrandir ni la recadrer.
+                // Accent halo also fills the sides of very wide source banners.
                 Box(Modifier.fillMaxSize().background(Brush.verticalGradient(
                     0f to theme.accent.copy(alpha = if (theme.isDark) .20f else .12f),
                     .48f to Color.Transparent)))
                 if (!page.artist.photo.isNullOrBlank()) {
-                    AsyncImage(page.artist.photo, page.artist.name, contentScale = ContentScale.Fit,
-                        modifier = Modifier.fillMaxSize())
+                    AsyncImage(page.artist.photo, page.artist.name,
+                        // Wide catalogue banners are not zoomed into an arbitrary face.
+                        contentScale = if (ratio > 1.8f) ContentScale.Fit else ContentScale.Crop,
+                        alignment = Alignment.TopCenter, modifier = Modifier.fillMaxSize())
                 } else Text(page.artist.name.take(1).uppercase(), localize = false,
                     color = theme.accent.copy(alpha = .55f), fontSize = 120.sp, fontWeight = FontWeight.Bold,
                     modifier = Modifier.align(Alignment.Center))
@@ -65,24 +67,20 @@ internal fun ArtistHeader(page: ArtistPage) {
                     listOf(Color.Black.copy(alpha = .38f), Color.Transparent))))
                 // Fondu long : la photo se dissout dans la page au lieu de
                 // s'arrêter sur une bande franche.
-                Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(height * .62f)
+                Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(height * .72f)
                     .background(Brush.verticalGradient(
                         0f to Color.Transparent,
-                        .42f to theme.background.copy(alpha = .55f),
-                        .74f to theme.background.copy(alpha = .92f),
+                        .40f to theme.background.copy(alpha = .45f),
+                        .72f to theme.background.copy(alpha = .94f),
                         1f to theme.background)))
+                Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal = 24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally) {
+                    ArtistIdentity(page.artist.name, signature.takeIf { signatures })
+                }
             }
         }
-        // Le bloc texte mord sur le fondu : la photo et le nom forment un seul
-        // ensemble au lieu de deux blocs empilés.
-        Column(Modifier.fillMaxWidth().offset(y = (-20).dp).padding(horizontal = 24.dp)) {
-            Text(AppText.t("Artiste").uppercase(), color = theme.accent, fontSize = 10.sp,
-                fontWeight = FontWeight.Bold, letterSpacing = 1.8.sp)
-            Text(page.artist.name, localize = false, color = theme.onBackground, fontSize = 38.sp,
-                lineHeight = 43.sp, fontWeight = FontWeight.Bold, letterSpacing = (-1.2).sp,
-                maxLines = 2, overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(top = 4.dp))
-            Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Row(Modifier.padding(top = 8.dp, bottom = 18.dp), verticalAlignment = Alignment.CenterVertically) {
                 if (page.listeners.isNotBlank()) {
                     Text(page.listeners, localize = false, color = theme.secondary, fontSize = 12.5.sp,
                         maxLines = 1, overflow = TextOverflow.Ellipsis,
