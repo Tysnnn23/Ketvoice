@@ -35,6 +35,71 @@ export function logoUrl(raw: unknown, mbid: string): string | null {
     return url.href;
   } catch { return null; }
 }
+/** Same CDN rules, but portraits and backgrounds may be JPEG/WebP. */
+export function artUrl(raw: unknown, mbid: string): string | null {
+  if (typeof raw !== "string") return null;
+  try {
+    const url = new URL(raw);
+    if (url.hostname !== "assets.fanart.tv" || !["http:", "https:"].includes(url.protocol) ||
+      url.username || url.password || url.port || url.search || url.hash ||
+      !MBID.test(mbid) || !url.pathname.startsWith("/fanart/") ||
+      !/\.(png|jpe?g|webp)$/i.test(url.pathname)) return null;
+    url.protocol = "https:";
+    return url.href;
+  } catch { return null; }
+}
+const best = (value: unknown, category: string, mbid: string, kind: string) => {
+  const root = object(value);
+  if (!Array.isArray(root[category])) return null;
+  const assets = (root[category] as unknown[]).map(object)
+    .sort((a, b) => Number(b.likes || 0) - Number(a.likes || 0));
+  for (const asset of assets) {
+    const url = artUrl(asset.url, mbid);
+    if (url) return { url, kind, provider: "fanart.tv" };
+  }
+  return null;
+};
+/** Fanart portraits are square and HD; backgrounds are wide. */
+export function fanartArtwork(value: unknown, id: string) {
+  const photo = best(value, "artistthumb", id, "portrait");
+  const background = best(value, "artistbackground", id, "background");
+  const banner = best(value, "musicbanner", id, "banner");
+  return { photo: photo ?? banner, background, banner };
+}
+/** P109 signature from Wikidata, resolved through the exact MusicBrainz relation. */
+export async function wikidataSignature(
+  fetcher: typeof fetch, id: string, userAgent: string, signal: AbortSignal
+): Promise<{ url: string; kind: string; provider: string; source: string } | null> {
+  const mb = new URL(`https://musicbrainz.org/ws/2/artist/${id}`);
+  mb.searchParams.set("inc", "url-rels");
+  mb.searchParams.set("fmt", "json");
+  const rel = await fetcher(mb, { redirect: "error", signal, headers: { Accept: "application/json", "User-Agent": userAgent } });
+  if (!rel.ok) return null;
+  const body = object(await rel.json());
+  const wikidata = (Array.isArray(body.relations) ? body.relations as unknown[] : [])
+    .map(object)
+    .filter(row => row.type === "wikidata")
+    .map(row => String(object(row.url).resource ?? ""))
+    .find(value => /^https:\/\/www\.wikidata\.org\/wiki\/Q\d+$/.test(value));
+  if (!wikidata) return null;
+  const qid = wikidata.split("/").pop()!;
+  const entity = new URL(`https://www.wikidata.org/wiki/Special:EntityData/${qid}.json`);
+  const res = await fetcher(entity, { redirect: "error", signal, headers: { Accept: "application/json", "User-Agent": userAgent } });
+  if (!res.ok) return null;
+  const data = object(await res.json());
+  const claim = object(object(object(data.entities)[qid]).claims);
+  const rows = Array.isArray(claim.P109) ? claim.P109 as unknown[] : [];
+  for (const row of rows) {
+    const value = object(object(object(row).mainsnak).datavalue).value;
+    const file = typeof value === "string" ? value : "";
+    if (!file || file.length > 240 || /[\u0000-\u001f]/.test(file)) continue;
+    const url = new URL("https://commons.wikimedia.org/wiki/Special:FilePath/" + encodeURIComponent(file));
+    url.searchParams.set("width", "900");
+    return { url: url.href, kind: "signature", provider: "wikimedia-commons",
+      source: `https://www.wikidata.org/wiki/${qid}` };
+  }
+  return null;
+}
 
 export function musicBrainzArtist(value: unknown, requested: string): { id: string; name: string } | null {
   const root = object(value);
@@ -90,7 +155,7 @@ export function createArtistHandler(deps: Dependencies): (req: Request) => Promi
   const hits = new Map<string, number[]>();
   let cooldown = 0;
 
-  async function lookup(artist: string): Promise<{ body: unknown; status: number }> {
+  async function lookup(artist: string, withSignature = false): Promise<{ body: unknown; status: number }> {
     if (now() < cooldown) return { body: { error: "Artwork temporarily unavailable" }, status: 429 };
     if (!deps.providerKey()) return { body: { error: "Artwork temporarily unavailable" }, status: 503 };
     // Reuse the existing service-role-only quota RPC without changing its schema
@@ -124,11 +189,23 @@ export function createArtistHandler(deps: Dependencies): (req: Request) => Promi
     if (response.status === 429) { cooldown = now() + 20_000; return { body: { error: "Artwork temporarily unavailable" }, status: 429 }; }
     if (response.status === 404) return { body: { error: "Artist artwork not found" }, status: 404 };
     if (!response.ok) return { body: { error: "Artwork temporarily unavailable" }, status: 503 };
-    const url = fanartLogo(await readJson(response), match.id);
-    if (!url) return { body: { error: "Artist artwork not found", code: "LOGO_NOT_FOUND" }, status: 404 };
-    return { status: 200, body: { artist, mbid: match.id, logo: {
-      url, format: "png", kind: "logo", provider: "fanart.tv", source: `https://fanart.tv/artist/${match.id}/`,
-    } } };
+    const fanart = await readJson(response);
+    const url = fanartLogo(fanart, match.id);
+    const art = fanartArtwork(fanart, match.id);
+    let signature: unknown = null;
+    if (withSignature) {
+      const ua = "Ketvoice/3.13.9 (https://github.com/Tysnnn23/Ketvoice)";
+      // Wikidata needs a second, separately paced MusicBrainz call.
+      if (await deps.quota("artist-logo-musicbrainz", 1, 1)) {
+        signature = await wikidataSignature(fetcher, match.id, ua, AbortSignal.timeout(7_000)).catch(() => null);
+      }
+    }
+    if (!url && !art.photo && !signature)
+      return { body: { error: "Artist artwork not found", code: "LOGO_NOT_FOUND" }, status: 404 };
+    return { status: 200, body: { artist, mbid: match.id,
+      logo: url ? { url, format: "png", kind: "logo", provider: "fanart.tv", source: `https://fanart.tv/artist/${match.id}/` } : null,
+      photo: art.photo, background: art.background, banner: art.banner,
+      signature } };
   }
 
   return async (req: Request): Promise<Response> => {
@@ -143,18 +220,19 @@ export function createArtistHandler(deps: Dependencies): (req: Request) => Promi
     if (url.pathname.endsWith("/health")) return reply({ ok: true, configured: Boolean(deps.providerKey()), version: "3.11.1" });
     if (!url.pathname.endsWith("/logo")) return reply({ error: "Not found" }, 404);
     const artist = (url.searchParams.get("artist") ?? "").trim();
+    const withSignature = url.searchParams.get("signature") === "1";
     if (artist.length < 2 || artist.length > 160 || /[\p{C}]/u.test(artist)) return reply({ error: "Invalid artist" }, 400);
     const ip = (req.headers.get("x-forwarded-for")?.split(",")[0] ?? "unknown").trim().slice(0, 64);
     const recent = (hits.get(ip) ?? []).filter(time => now() - time < 60_000);
     if (recent.length >= 12) return reply({ error: "Too many requests" }, 429, true);
     recent.push(now()); hits.set(ip, recent);
     if (hits.size > 1024) hits.delete(hits.keys().next().value!);
-    const key = normalize(artist);
+    const key = normalize(artist) + (withSignature ? "|signature" : "");
     const cached = cache.get(key);
     if (cached && cached.expires > now()) return reply(cached.body, cached.status);
     try {
       let task = pending.get(key);
-      if (!task) { task = lookup(artist); pending.set(key, task); }
+      if (!task) { task = lookup(artist, withSignature); pending.set(key, task); }
       const result = await task;
       if (result.status === 200 || result.status === 404) {
         if (cache.size >= 256) cache.delete(cache.keys().next().value!);

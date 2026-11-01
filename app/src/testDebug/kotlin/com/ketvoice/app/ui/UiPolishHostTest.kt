@@ -79,7 +79,7 @@ class UiPolishHostTest {
         AppSettings.reduceAnimations.value = true
         compose.setContent { KetvoiceTheme(useDark = true) { com.ketvoice.app.ui.settings.SettingsScreen() } }
         compose.onNodeWithTag("settings-category-Appearance").performClick()
-        compose.onNodeWithText("Logos d'artistes").assertIsDisplayed()
+        compose.onNodeWithText("Signatures et logos d'artistes").assertIsDisplayed()
         compose.onNodeWithText("Fluidité 120 Hz").assertIsDisplayed()
         image("settings-appearance-charcoal")
     }

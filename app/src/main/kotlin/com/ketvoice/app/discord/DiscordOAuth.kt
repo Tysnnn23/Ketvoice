@@ -11,7 +11,7 @@ import java.util.Base64
  */
 object DiscordOAuth {
     const val APPLICATION_ID = 1566454532890820668L
-    const val REDIRECT_URI = "discord-1566454532890820668:/authorize/callback"
+    const val REDIRECT_URI = "https://ketvoice.netlify.app/discord.html"
     const val SCOPES = "openid sdk.social_layer_presence"
 
     private fun base64Url(bytes: ByteArray): String =

@@ -7,6 +7,23 @@
 
 ---
 
+# Ketvoice 3.13.9
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 68** — HD artist artwork, authentic signatures and a softer glow.
+
+- Artist pages resolve HD Fanart portraits/backgrounds by MusicBrainz identity and
+  use Wikidata signatures when they exist; long gradient, crossfade, no invention.
+- Lyric glow only above 1.05 s, with a diffuse halo, inner light, 1.07× growth and
+  a luminous sweep; no contour.
+- Discord OAuth now uses the HTTPS bridge URL
+  `https://ketvoice.netlify.app/discord.html`, which must be registered in the portal.
+
+Full notes: [3.13.9](docs/releases/v3.13.9.md).
+
+---
+
 # Ketvoice 3.13.8
 
 ![Ketvoice](ketvoice-banner.png)

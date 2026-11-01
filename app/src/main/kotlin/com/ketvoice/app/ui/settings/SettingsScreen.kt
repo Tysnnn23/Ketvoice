@@ -232,8 +232,11 @@ fun SettingsScreen() {
                 }
             }
             Section("APPARENCE") {
-                SToggle(Icons.Filled.Image, "Logos d'artistes",
-                    "Affiche les logos disponibles sur les profils. Le nom est envoyé au service uniquement si activé.",
+                SToggle(Icons.Filled.Image, "Photos d'artiste HD",
+                    "Portrait ou fond haute résolution quand il existe. Aucune photo de remplacement inventée.",
+                    AppSettings.artistPhotos.value) { AppSettings.artistPhotos.value = it; SettingsStore.save() }
+                SToggle(Icons.Filled.Image, "Signatures et logos d'artistes",
+                    "Signature authentique (Wikidata) sinon logo transparent. Le nom est envoyé au service uniquement si activé.",
                     AppSettings.artistSignatures.value) { AppSettings.artistSignatures.value = it; SettingsStore.save() }
                 val refresh = com.ketvoice.app.ui.motion.DisplayRefresh.status
                 SToggle(Icons.Filled.Bolt, "Fluidité 120 Hz",

@@ -181,7 +181,10 @@ class DiscordControllerImpl : DiscordController {
             uri.path == "/authorize/callback"
         val bridge = uri.scheme.equals("ketvoice", ignoreCase = true) &&
             uri.host.equals("discord", ignoreCase = true)
-        if (!custom && !bridge) return
+        val https = uri.scheme.equals("https", ignoreCase = true) &&
+            uri.host.equals("ketvoice.netlify.app", ignoreCase = true) &&
+            uri.path == "/discord.html"
+        if (!custom && !bridge && !https) return
         val error = uri.getQueryParameter("error")
         if (!error.isNullOrBlank()) {
             val failure = if (error == "access_denied") "Liaison Discord annulée" else error

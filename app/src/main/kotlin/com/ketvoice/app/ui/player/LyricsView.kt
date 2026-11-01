@@ -420,34 +420,46 @@ internal fun KaraokeLine(line: MusicApi.LyricLine, modifier: Modifier, fontScale
                     val progress = segmentProgress(now, word.start, word.end)
                     if (progress <= 0f) return@forEach
                     val emphasis = LyricsPresentation.sustain(now, word.start, word.end, reduced || backing)
-                    // Apple-Music style: the sung fill is plain white; a true glow
-                    // exists only while a held note is sounding (>= 650 ms), and gets
-                    // stronger with its length. Syllable/word lines therefore glow on
-                    // the long notes only, never on ordinary words or whole lines.
-                    val held = ((word.end - word.start) / 1_100f).coerceIn(0f, 1f)
-                    val glow = if (dim || backing) 0f else (.22f + .42f * held) * emphasis
+                    // Apple-Music style: the sung fill is plain white; only a clearly
+                    // held note (>= 1.05 s) emits a soft, diffuse light. No contour.
+                    val held = ((word.end - word.start) / 1_400f).coerceIn(0f, 1f)
+                    val organic = if (emphasis > 0f)
+                        1f + .05f * kotlin.math.sin((now + word.start) / 240f) else 1f
+                    val sweep = if (emphasis > 0f)
+                        .78f + .22f * kotlin.math.sin(progress * Math.PI.toFloat()) else 1f
+                    val glow = if (dim || backing) 0f else (.10f + .16f * held) * emphasis * sweep * organic
+                    val inner = if (dim || backing) 0f else .08f * emphasis * organic
                     val ink = Color.White.copy(alpha = if (dim) .82f else 1f)
-                    val halo = Shadow(Color.White.copy(alpha = glow), Offset.Zero,
-                        glowPx * (1f + 1.4f * held))
-                    val edge = Color.White.copy(alpha = (.20f + .20f * held) * emphasis)
-                    val contour = if (!dim && !backing && emphasis > .08f)
-                        outlinePx * (.70f + 1.30f * held) else 0f
+                    // Wide, low-alpha shadows read as emitted light rather than a
+                    // neon outline; only long notes pay for the extra draws.
+                    val outer = Shadow(Color.White.copy(alpha = glow), Offset.Zero, glowPx * 2.4f)
+                    val innerHalo = Shadow(Color.White.copy(alpha = glow * .9f + inner), Offset.Zero, glowPx * 1.25f)
+                    val scale = 1f + .07f * emphasis
                     var remaining = word.width * progress
                     word.slices.forEach { slice ->
                         val bounds = slice.bounds
                         val fill = remaining.coerceIn(0f, bounds.width)
                         remaining -= bounds.width
-                        if (fill > 0f) clipPath(slice.path) {
+                        if (fill > 0f) {
                             val left = if (slice.rtl) bounds.right - fill else bounds.left
                             val right = if (slice.rtl) bounds.right else bounds.left + fill
-                            clipRect(left, bounds.top, right, bounds.bottom) {
-                                if (contour > 0f) {
-                                    drawText(measured, color = edge, topLeft = Offset(-contour, 0f))
-                                    drawText(measured, color = edge, topLeft = Offset(contour, 0f))
-                                    drawText(measured, color = edge, topLeft = Offset(0f, -contour))
-                                    drawText(measured, color = edge, topLeft = Offset(0f, contour))
+                            if (emphasis > 0f) {
+                                withTransform({
+                                    scale(scale, scale, pivot = Offset(bounds.center.x, bounds.center.y))
+                                }) {
+                                    clipPath(slice.path) {
+                                        clipRect(left, bounds.top, right, bounds.bottom) {
+                                            drawText(measured, color = ink.copy(alpha = .55f), shadow = outer)
+                                            drawText(measured, color = ink, shadow = innerHalo)
+                                        }
+                                    }
                                 }
-                                drawText(measured, color = ink, shadow = halo)
+                            } else {
+                                clipPath(slice.path) {
+                                    clipRect(left, bounds.top, right, bounds.bottom) {
+                                        drawText(measured, color = ink)
+                                    }
+                                }
                             }
                         }
                     }

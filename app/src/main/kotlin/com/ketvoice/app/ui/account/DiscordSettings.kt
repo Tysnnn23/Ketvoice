@@ -142,7 +142,7 @@ internal fun DiscordSettings(modifier: Modifier = Modifier) {
                 }.padding(top = 10.dp, bottom = 4.dp))
             Text("Ouvrir l'app Discord", color = theme.accent.copy(alpha = .82f), fontSize = 12.sp,
                 modifier = Modifier.fillMaxWidth().clickable { openDiscord() }.padding(bottom = 4.dp))
-            Text("OAuth2 · redirect à déclarer : discord-1566454532890820668:/authorize/callback",
+            Text("OAuth2 · redirect à déclarer : https://ketvoice.netlify.app/discord.html",
                 color = theme.secondary, fontSize = 10.sp, lineHeight = 14.sp,
                 modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp))
             localError?.let {

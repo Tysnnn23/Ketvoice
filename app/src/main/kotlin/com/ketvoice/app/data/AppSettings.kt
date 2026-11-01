@@ -21,6 +21,7 @@ object AppSettings {
     val systemReduceMotion = mutableStateOf(false)
     val canvasWithMobileData = mutableStateOf(false)
     val artistSignatures = mutableStateOf(false)
+    val artistPhotos = mutableStateOf(true)
     val highRefreshRate = mutableStateOf(false)
     val syncedLyrics = mutableStateOf(true)
     val blurInactiveLyrics = mutableStateOf(true)

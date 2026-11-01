@@ -8,10 +8,10 @@ self-bot, and never fabricates a linked state.
 
 - Application ID: `1566454532890820668` (public, not a secret).
 - OAuth2 redirect **must be registered** in the Developer Portal:
-  `discord-1566454532890820668:/authorize/callback`. On 2026-11-01 the portal had
+  `https://ketvoice.netlify.app/discord.html` (HTTPS, forwarded to `ketvoice://discord`). On 2026-11-01 the portal had
   no redirect configured at all, so the account-link page could never return to
-  Ketvoice. Presence through the installed app and the OAuth2 token fallback do
-  not use this redirect.- Scopes: `Client::GetDefaultPresenceScopes()` (`openid sdk.social_layer_presence`).
+  Ketvoice. The HTTPS page removes the custom-scheme restriction; the in-app
+  WebView also completes directly when the bridge URL carries `code`/`error`.- Scopes: `Client::GetDefaultPresenceScopes()` (`openid sdk.social_layer_presence`).
 - The Android manifest merges the SDK's `com.discord.socialsdk.AuthenticationActivity`
   and adds the `discord-1566454532890820668` scheme so the browser/Discord app can
   return the authorization code to Ketvoice.

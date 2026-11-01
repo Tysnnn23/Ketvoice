@@ -943,7 +943,12 @@
   "Impossible d'ouvrir Discord sur cet appareil.": "Unable to open Discord on this device.",
   "Impossible d'ouvrir Discord sur cet appareil. Vérifie qu'il est installé.": "Unable to open Discord on this device. Check that it is installed.",
   "EP": "EP",
-  "Compilation": "Compilation"
+  "Compilation": "Compilation",
+  "Photos d'artiste HD": "HD artist photos",
+  "Portrait ou fond haute résolution quand il existe. Aucune photo de remplacement inventée.": "High-resolution portrait or background when one exists. No substitute photo is invented.",
+  "Signatures et logos d'artistes": "Artist signatures and logos",
+  "Signature authentique (Wikidata) sinon logo transparent. Le nom est envoyé au service uniquement si activé.": "Authentic signature (Wikidata) otherwise a transparent logo. The name is sent to the service only when enabled.",
+  "OAuth2 · redirect à déclarer : https://ketvoice.netlify.app/discord.html": "OAuth2 · redirect to register: https://ketvoice.netlify.app/discord.html"
  },
  "hi": {
   "Reverb": "रीवर्ब",
@@ -1889,7 +1894,12 @@
   "Impossible d'ouvrir Discord sur cet appareil.": "इस डिवाइस पर Discord नहीं खुल सका।",
   "Impossible d'ouvrir Discord sur cet appareil. Vérifie qu'il est installé.": "इस डिवाइस पर Discord नहीं खुल सका। जाँचें कि यह इंस्टॉल है।",
   "EP": "EP",
-  "Compilation": "संग्रह"
+  "Compilation": "संग्रह",
+  "Photos d'artiste HD": "HD कलाकार फ़ोटो",
+  "Portrait ou fond haute résolution quand il existe. Aucune photo de remplacement inventée.": "जब उपलब्ध हो तो उच्च-रिज़ॉल्यूशन पोर्ट्रेट या बैकग्राउंड। कोई नकली फ़ोटो नहीं बनाई जाती।",
+  "Signatures et logos d'artistes": "कलाकार हस्ताक्षर और लोगो",
+  "Signature authentique (Wikidata) sinon logo transparent. Le nom est envoyé au service uniquement si activé.": "प्रामाणिक हस्ताक्षर (Wikidata) नहीं तो पारदर्शी लोगो। सक्षम होने पर ही नाम सेवा को भेजा जाता है।",
+  "OAuth2 · redirect à déclarer : https://ketvoice.netlify.app/discord.html": "OAuth2 · पंजीकृत करने हेतु redirect: https://ketvoice.netlify.app/discord.html"
  },
  "ja": {
   "Reverb": "リバーブ",
@@ -2835,7 +2845,12 @@
   "Impossible d'ouvrir Discord sur cet appareil.": "この端末で Discord を開けません。",
   "Impossible d'ouvrir Discord sur cet appareil. Vérifie qu'il est installé.": "この端末で Discord を開けません。インストールされているか確認してください。",
   "EP": "EP",
-  "Compilation": "コンピレーション"
+  "Compilation": "コンピレーション",
+  "Photos d'artiste HD": "高画質アーティスト写真",
+  "Portrait ou fond haute résolution quand il existe. Aucune photo de remplacement inventée.": "存在する場合は高解像度のポートレートまたは背景。代わりの写真を捏造しません。",
+  "Signatures et logos d'artistes": "アーティストの署名とロゴ",
+  "Signature authentique (Wikidata) sinon logo transparent. Le nom est envoyé au service uniquement si activé.": "本物の署名（Wikidata）、なければ透過ロゴ。有効時のみ名前をサービスに送信します。",
+  "OAuth2 · redirect à déclarer : https://ketvoice.netlify.app/discord.html": "OAuth2 · 登録する redirect: https://ketvoice.netlify.app/discord.html"
  },
  "zh": {
   "Reverb": "混响",
@@ -3781,7 +3796,12 @@
   "Impossible d'ouvrir Discord sur cet appareil.": "无法在此设备上打开 Discord。",
   "Impossible d'ouvrir Discord sur cet appareil. Vérifie qu'il est installé.": "无法在此设备上打开 Discord。请确认已安装。",
   "EP": "EP",
-  "Compilation": "合辑"
+  "Compilation": "合辑",
+  "Photos d'artiste HD": "高清艺术家照片",
+  "Portrait ou fond haute résolution quand il existe. Aucune photo de remplacement inventée.": "存在时使用高分辨率肖像或背景。不会伪造替代照片。",
+  "Signatures et logos d'artistes": "艺术家签名和标志",
+  "Signature authentique (Wikidata) sinon logo transparent. Le nom est envoyé au service uniquement si activé.": "真实签名（Wikidata），否则使用透明标志。仅在启用时才会将名称发送到服务。",
+  "OAuth2 · redirect à déclarer : https://ketvoice.netlify.app/discord.html": "OAuth2 · 需注册的 redirect：https://ketvoice.netlify.app/discord.html"
  },
  "ru": {
   "Reverb": "Реверберация",
@@ -4727,7 +4747,12 @@
   "Impossible d'ouvrir Discord sur cet appareil.": "Не удалось открыть Discord на этом устройстве.",
   "Impossible d'ouvrir Discord sur cet appareil. Vérifie qu'il est installé.": "Не удалось открыть Discord на этом устройстве. Проверьте, что он установлен.",
   "EP": "EP",
-  "Compilation": "Сборник"
+  "Compilation": "Сборник",
+  "Photos d'artiste HD": "HD-фото артистов",
+  "Portrait ou fond haute résolution quand il existe. Aucune photo de remplacement inventée.": "Портрет или фон в высоком разрешении, если он существует. Поддельные фото не создаются.",
+  "Signatures et logos d'artistes": "Подписи и логотипы артистов",
+  "Signature authentique (Wikidata) sinon logo transparent. Le nom est envoyé au service uniquement si activé.": "Подлинная подпись (Wikidata) или прозрачный логотип. Имя отправляется службе только при включении.",
+  "OAuth2 · redirect à déclarer : https://ketvoice.netlify.app/discord.html": "OAuth2 · redirect для регистрации: https://ketvoice.netlify.app/discord.html"
  },
  "it": {
   "Reverb": "Riverbero",
@@ -5673,7 +5698,12 @@
   "Impossible d'ouvrir Discord sur cet appareil.": "Impossibile aprire Discord su questo dispositivo.",
   "Impossible d'ouvrir Discord sur cet appareil. Vérifie qu'il est installé.": "Impossibile aprire Discord su questo dispositivo. Verifica che sia installato.",
   "EP": "EP",
-  "Compilation": "Raccolta"
+  "Compilation": "Raccolta",
+  "Photos d'artiste HD": "Foto artista HD",
+  "Portrait ou fond haute résolution quand il existe. Aucune photo de remplacement inventée.": "Ritratto o sfondo ad alta risoluzione quando esiste. Nessuna foto sostitutiva inventata.",
+  "Signatures et logos d'artistes": "Firme e loghi degli artisti",
+  "Signature authentique (Wikidata) sinon logo transparent. Le nom est envoyé au service uniquement si activé.": "Firma autentica (Wikidata) altrimenti logo trasparente. Il nome viene inviato al servizio solo se attivo.",
+  "OAuth2 · redirect à déclarer : https://ketvoice.netlify.app/discord.html": "OAuth2 · redirect da registrare: https://ketvoice.netlify.app/discord.html"
  },
  "es": {
   "Reverb": "Reverb",
@@ -6619,7 +6649,12 @@
   "Impossible d'ouvrir Discord sur cet appareil.": "No se pudo abrir Discord en este dispositivo.",
   "Impossible d'ouvrir Discord sur cet appareil. Vérifie qu'il est installé.": "No se pudo abrir Discord en este dispositivo. Comprueba que esté instalado.",
   "EP": "EP",
-  "Compilation": "Recopilatorio"
+  "Compilation": "Recopilatorio",
+  "Photos d'artiste HD": "Fotos de artista en HD",
+  "Portrait ou fond haute résolution quand il existe. Aucune photo de remplacement inventée.": "Retrato o fondo de alta resolución cuando existe. No se inventa ninguna foto sustituta.",
+  "Signatures et logos d'artistes": "Firmas y logos de artistas",
+  "Signature authentique (Wikidata) sinon logo transparent. Le nom est envoyé au service uniquement si activé.": "Firma auténtica (Wikidata) o, si no, un logo transparente. El nombre se envía al servicio solo si está activado.",
+  "OAuth2 · redirect à déclarer : https://ketvoice.netlify.app/discord.html": "OAuth2 · redirect que debes registrar: https://ketvoice.netlify.app/discord.html"
  },
  "de": {
   "Reverb": "Reverb",
@@ -7565,7 +7600,12 @@
   "Impossible d'ouvrir Discord sur cet appareil.": "Discord konnte auf diesem Gerät nicht geöffnet werden.",
   "Impossible d'ouvrir Discord sur cet appareil. Vérifie qu'il est installé.": "Discord konnte auf diesem Gerät nicht geöffnet werden. Prüfe, ob es installiert ist.",
   "EP": "EP",
-  "Compilation": "Zusammenstellung"
+  "Compilation": "Zusammenstellung",
+  "Photos d'artiste HD": "HD-Künstlerfotos",
+  "Portrait ou fond haute résolution quand il existe. Aucune photo de remplacement inventée.": "Hochauflösendes Porträt oder Hintergrundbild, wenn vorhanden. Es werden keine Ersatzfotos erfunden.",
+  "Signatures et logos d'artistes": "Künstler-Signaturen und Logos",
+  "Signature authentique (Wikidata) sinon logo transparent. Le nom est envoyé au service uniquement si activé.": "Echte Signatur (Wikidata), sonst ein transparentes Logo. Der Name wird nur bei Aktivierung an den Dienst gesendet.",
+  "OAuth2 · redirect à déclarer : https://ketvoice.netlify.app/discord.html": "OAuth2 · zu registrierender redirect: https://ketvoice.netlify.app/discord.html"
  },
  "pt": {
   "Reverb": "Reverb",
@@ -8511,7 +8551,12 @@
   "Impossible d'ouvrir Discord sur cet appareil.": "Não foi possível abrir o Discord neste dispositivo.",
   "Impossible d'ouvrir Discord sur cet appareil. Vérifie qu'il est installé.": "Não foi possível abrir o Discord neste dispositivo. Verifica se está instalado.",
   "EP": "EP",
-  "Compilation": "Compilação"
+  "Compilation": "Compilação",
+  "Photos d'artiste HD": "Fotos de artista HD",
+  "Portrait ou fond haute résolution quand il existe. Aucune photo de remplacement inventée.": "Retrato ou fundo de alta resolução quando existe. Nenhuma foto substituta é inventada.",
+  "Signatures et logos d'artistes": "Assinaturas e logótipos de artistas",
+  "Signature authentique (Wikidata) sinon logo transparent. Le nom est envoyé au service uniquement si activé.": "Assinatura autêntica (Wikidata) ou, caso contrário, logótipo transparente. O nome só é enviado ao serviço quando ativado.",
+  "OAuth2 · redirect à déclarer : https://ketvoice.netlify.app/discord.html": "OAuth2 · redirect a registar: https://ketvoice.netlify.app/discord.html"
  },
  "ko": {
   "Reverb": "리버브",
@@ -9457,6 +9502,11 @@
   "Impossible d'ouvrir Discord sur cet appareil.": "이 기기에서 Discord를 열 수 없습니다.",
   "Impossible d'ouvrir Discord sur cet appareil. Vérifie qu'il est installé.": "이 기기에서 Discord를 열 수 없습니다. 설치되어 있는지 확인하세요.",
   "EP": "EP",
-  "Compilation": "컴필레이션"
+  "Compilation": "컴필레이션",
+  "Photos d'artiste HD": "HD 아티스트 사진",
+  "Portrait ou fond haute résolution quand il existe. Aucune photo de remplacement inventée.": "있을 경우 고해상도 초상화 또는 배경. 대체 사진을 만들어내지 않습니다.",
+  "Signatures et logos d'artistes": "아티스트 서명 및 로고",
+  "Signature authentique (Wikidata) sinon logo transparent. Le nom est envoyé au service uniquement si activé.": "실제 서명(Wikidata), 없으면 투명 로고. 활성화한 경우에만 이름을 서비스로 보냅니다.",
+  "OAuth2 · redirect à déclarer : https://ketvoice.netlify.app/discord.html": "OAuth2 · 등록할 redirect: https://ketvoice.netlify.app/discord.html"
  }
 }

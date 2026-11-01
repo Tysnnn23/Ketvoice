@@ -32,6 +32,7 @@ object SettingsStore {
         // The old unused flag was saved as true without any consent screen.
         // A new key makes the network-backed feature genuinely opt-in.
         s.artistSignatures.value = p.getBoolean("artistSignaturesOptIn", false)
+        s.artistPhotos.value = p.getBoolean("artistPhotos", true)
         s.highRefreshRate.value = p.getBoolean("highRefreshRate", false)
         s.syncedLyrics.value = p.getBoolean("syncedLyrics", s.syncedLyrics.value)
         s.blurInactiveLyrics.value = p.getBoolean("blurInactiveLyrics", s.blurInactiveLyrics.value)
@@ -139,6 +140,7 @@ object SettingsStore {
             .putInt("lyricsTextSize", s.lyricsTextSize.value)
             .putBoolean("canvasWithMobileData", s.canvasWithMobileData.value)
             .putBoolean("artistSignaturesOptIn", s.artistSignatures.value)
+            .putBoolean("artistPhotos", s.artistPhotos.value)
             .putBoolean("highRefreshRate", s.highRefreshRate.value)
             .putBoolean("syncedLyrics", s.syncedLyrics.value)
             .putBoolean("blurInactiveLyrics", s.blurInactiveLyrics.value)

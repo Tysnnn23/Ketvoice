@@ -19,12 +19,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.ketvoice.app.data.AppSettings
+import com.ketvoice.app.data.ArtistArtwork
 import com.ketvoice.app.data.ArtistPage
 import com.ketvoice.app.data.ArtistSignature
 import com.ketvoice.app.data.ArtistSignatures
@@ -39,38 +42,49 @@ import com.ketvoice.app.ui.common.Text
 @Composable
 internal fun ArtistHeader(page: ArtistPage) {
     val theme = LocalTheme.current
+    val context = LocalContext.current
     val onAccent = if (theme.accent.luminance() > .179f) Color.Black else Color.White
     val signatures = AppSettings.artistSignatures.value
-    var signature by remember(page.artist.name, signatures) { mutableStateOf<ArtistSignature?>(null) }
-    LaunchedEffect(page.artist.name, signatures) {
-        signature = if (signatures) ArtistSignatures.find(page.artist.name) else null
+    val photos = AppSettings.artistPhotos.value
+    var artwork by remember(page.artist.name, signatures, photos) { mutableStateOf(ArtistArtwork()) }
+    LaunchedEffect(page.artist.name, signatures, photos) {
+        artwork = if (photos || signatures) {
+            ArtistSignatures.artwork(page.artist.name, includeSignature = signatures)
+        } else ArtistArtwork()
     }
-    val photo = page.artist.photo?.takeIf { it.isNotBlank() }
+    val sourcePhoto = page.artist.photo?.takeIf { it.isNotBlank() }
+    val hero = artwork.hero ?: sourcePhoto
     val ratio = page.heroAspectRatio.takeIf { it.isFinite() && it > 0f } ?: 1f
     val wide = ratio > 1.6f
+    val heroRequest = remember(hero) {
+        ImageRequest.Builder(context).data(hero).crossfade(220).build()
+    }
+    val ambienceRequest = remember(hero) {
+        ImageRequest.Builder(context).data(hero).crossfade(220).build()
+    }
     Column(Modifier.fillMaxWidth()) {
         BoxWithConstraints(Modifier.fillMaxWidth()) {
-            val height = (maxWidth * (if (wide) .92f else 1.12f)).coerceIn(300.dp, 470.dp)
+            val height = (maxWidth * (if (wide) .95f else 1.15f)).coerceIn(320.dp, 500.dp)
             Box(Modifier.fillMaxWidth().height(height).clipToBounds().background(theme.background)) {
-                if (photo != null) {
+                if (hero != null) {
                     // Blurred ambience fills the frame, so a wide banner never leaves
                     // two flat bands beside the artwork.
-                    AsyncImage(photo, null, contentScale = ContentScale.Crop,
+                    AsyncImage(ambienceRequest, null, contentScale = ContentScale.Crop,
                         alignment = Alignment.Center,
                         modifier = Modifier.fillMaxSize().blur(42.dp).graphicsLayer { alpha = .58f })
                     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(
-                        0f to Color.Black.copy(alpha = .22f),
-                        .42f to Color.Transparent,
+                        0f to Color.Black.copy(alpha = .24f),
+                        .40f to Color.Transparent,
                         1f to theme.background.copy(alpha = .30f))))
-                    // Square portraits fill the hero; wide banners are fitted whole
-                    // instead of being zoomed into an arbitrary face crop.
+                    // Square portraits fill the hero instead of being zoomed into a
+                    // random face crop; wide banners are fitted whole.
                     if (wide) {
-                        AsyncImage(photo, page.artist.name, contentScale = ContentScale.Fit,
+                        AsyncImage(heroRequest, page.artist.name, contentScale = ContentScale.Fit,
                             alignment = Alignment.Center,
-                            modifier = Modifier.fillMaxWidth().height(height * .76f)
+                            modifier = Modifier.fillMaxWidth().height(height * .80f)
                                 .align(Alignment.TopCenter))
                     } else {
-                        AsyncImage(photo, page.artist.name, contentScale = ContentScale.Crop,
+                        AsyncImage(heroRequest, page.artist.name, contentScale = ContentScale.Crop,
                             alignment = Alignment.Center,
                             modifier = Modifier.fillMaxSize())
                     }
@@ -88,17 +102,18 @@ internal fun ArtistHeader(page: ArtistPage) {
                 // Voile supérieur : le bouton retour flottant reste lisible.
                 Box(Modifier.fillMaxWidth().height(96.dp).background(Brush.verticalGradient(
                     listOf(Color.Black.copy(alpha = .34f), Color.Transparent))))
-                // Fondu long : la photo se dissout dans la page au lieu de
-                // s'arrêter sur une bande franche.
-                Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(height * .66f)
+                // Long fade into the page, Apple Music style: no hard edge.
+                Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(height * .70f)
                     .background(Brush.verticalGradient(
                         0f to Color.Transparent,
-                        .38f to theme.background.copy(alpha = .48f),
-                        .74f to theme.background.copy(alpha = .95f),
+                        .30f to theme.background.copy(alpha = .35f),
+                        .62f to theme.background.copy(alpha = .90f),
+                        .86f to theme.background,
                         1f to theme.background)))
+                val drawn: ArtistSignature? = artwork.signature ?: artwork.logo
                 Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal = 24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally) {
-                    ArtistIdentity(page.artist.name, signature.takeIf { signatures })
+                    ArtistIdentity(page.artist.name, drawn)
                 }
             }
         }

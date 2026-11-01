@@ -37,7 +37,7 @@ class DiscordOAuthTest {
         assertTrue(url.contains("code_challenge=challenge456"))
         assertTrue(url.contains("code_challenge_method=S256"))
         assertTrue(url.contains("state=state123"))
-        assertTrue(url.contains("redirect_uri=discord-1566454532890820668%3A%2Fauthorize%2Fcallback"))
+        assertTrue(url.contains("redirect_uri=https%3A%2F%2Fketvoice.netlify.app%2Fdiscord.html"))
         assertTrue(url.contains("scope=openid%20sdk.social_layer_presence"))
     }
 }

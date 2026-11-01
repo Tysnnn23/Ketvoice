@@ -119,7 +119,10 @@ class DiscordAuthActivity : Activity() {
 
     private fun handle(uri: Uri): Boolean {
         val url = uri.toString()
-        if (url.startsWith("discord-${DiscordOAuth.APPLICATION_ID}")) {
+        val isBridge = url.startsWith(DiscordOAuth.REDIRECT_URI) &&
+            (uri.getQueryParameter("code") != null || uri.getQueryParameter("error") != null)
+        if (isBridge || url.startsWith("discord-${DiscordOAuth.APPLICATION_ID}") ||
+            url.startsWith("ketvoice://discord")) {
             Discord.completeAuthorization(uri)
             finish()
             return true
