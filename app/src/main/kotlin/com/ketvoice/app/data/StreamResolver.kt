@@ -19,7 +19,8 @@ internal object StreamResolver {
     data class Candidate(val sourceId: String, val priority: Int, val stream: MusicApi.StreamInfo)
 
     fun sources(track: Track, download: Boolean, lossless: Boolean): List<Source> =
-        SourcePriority.entries().filter { it.enabled }.mapNotNull { entry ->
+        SourcePriority.entries(if (download) SourcePriority.Mode.DOWNLOAD else SourcePriority.Mode.PLAYBACK)
+            .filter { it.enabled }.mapNotNull { entry ->
             when (entry.id) {
                 "api:um" -> Source(entry.id) { MusicApi.addonStream(track, "um") }
                 "api:last" -> if (lossless) Source(entry.id) { MusicApi.flacStream(track) } else null
@@ -36,6 +37,26 @@ internal object StreamResolver {
             val stream = source.resolve() ?: return@Source null
             if (stream.url in excluded) null else StreamProbe.verified(stream, download)
         } }, race)
+
+    /**
+     * Quality-aware pick for downloads: wait at most [windowMs] for every offered
+     * source, then keep the highest declared quality. Never returns a 128 kbps MP3
+     * while a FLAC/AAC candidate was already available.
+     */
+    internal fun best(collected: List<Candidate>): Candidate? =
+        collected.maxWithOrNull(compareBy<Candidate> { StreamQuality.rank(it.stream) }.thenByDescending { it.priority })
+
+    /** Stops as soon as every source answered, or after [windowMs], then keeps the best. */
+    suspend fun bestWithin(candidates: Flow<Candidate>, windowMs: Long): Candidate? = coroutineScope {
+        val collected = mutableListOf<Candidate>()
+        val done = kotlinx.coroutines.CompletableDeferred<Unit>()
+        val job = launch {
+            try { candidates.collect { collected += it } } finally { done.complete(Unit) }
+        }
+        withTimeoutOrNull(windowMs) { done.await() }
+        job.cancel()
+        best(collected)
+    }
 
     internal fun resolve(sources: List<Source>, race: Boolean, timeoutMs: Long = 14_000,
                          qualityWindowMs: Long = 80): Flow<Candidate> = flow {

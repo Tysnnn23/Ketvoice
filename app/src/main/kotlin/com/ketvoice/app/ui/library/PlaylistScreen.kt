@@ -103,13 +103,19 @@ fun PlaylistScreen() {
         }
         val playable = playlist.entries.mapNotNull { it.track }
 
-        // The hero is outside the scrolling track list. Never derive its opacity
-        // from that list: doing so hides a fixed element but leaves its space.
+        // The hero scrolls with the tracks (like the album page) and never fades:
+        // a fixed header left a reserved empty area when the list scrolled.
         var dragIndex by remember { mutableIntStateOf(-1) }
         var dragOffset by remember { mutableFloatStateOf(0f) }
         var dragMovePending by remember { mutableStateOf(false) }
 
-            PlaylistHeaderLayout(compactHeader, artwork = {
+        LazyColumn(
+            Modifier.weight(1f).fillMaxWidth().testTag("playlist-tracks"),
+            state = list,
+            contentPadding = PaddingValues(bottom = LocalAdaptiveLayout.current.bottomPaddingDp.dp)
+        ) {
+            item(key = "playlist-hero") {
+                PlaylistHeaderLayout(compactHeader, artwork = {
                 BoxWithConstraints(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                     val edge = if (compactHeader) 104.dp else (maxWidth * .68f).coerceIn(156.dp, 256.dp)
                     if (!AppSettings.reduceDynamicBlur.value && !AppSettings.highPerformanceMode.value) Box(Modifier.size(edge + 24.dp)
@@ -167,12 +173,8 @@ fun PlaylistScreen() {
                     fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
                 Spacer(Modifier.height(8.dp))
             })
+            }
 
-        LazyColumn(
-            Modifier.weight(1f).fillMaxWidth().testTag("playlist-tracks"),
-            state = list,
-            contentPadding = PaddingValues(bottom = LocalAdaptiveLayout.current.bottomPaddingDp.dp)
-        ) {
             if (playlist.entries.isEmpty()) {
                 // État vide affiché comme premier item
                 item {
@@ -197,10 +199,11 @@ fun PlaylistScreen() {
                                     if (dragMovePending) return@detectVerticalDragGestures
                                     val index = currentIndex
                                     val infos = list.layoutInfo.visibleItemsInfo
-                                    val origin = infos.firstOrNull { it.index == index } ?: return@detectVerticalDragGestures
+                                    // Index 0 is the scrolling hero.
+                                    val origin = infos.firstOrNull { it.index == index + 1 } ?: return@detectVerticalDragGestures
                                     val center = origin.offset + origin.size / 2f + dragOffset
-                                    val below = infos.firstOrNull { it.index == index + 1 }
-                                    val above = infos.firstOrNull { it.index == index - 1 }
+                                    val below = infos.firstOrNull { it.index == index + 2 }
+                                    val above = infos.firstOrNull { it.index == index }
                                     if (below != null && center > below.offset + below.size / 2f) {
                                         dragMovePending = true
                                         scope.launch { try { PlaylistStore.move(playlist.id, index, index + 1) } catch (_: Exception) { error = "Impossible d'enregistrer la playlist" } finally { dragMovePending = false } }

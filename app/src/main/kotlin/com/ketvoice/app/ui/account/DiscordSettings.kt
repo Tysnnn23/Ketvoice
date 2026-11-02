@@ -41,16 +41,6 @@ internal fun DiscordSettings(modifier: Modifier = Modifier) {
     var advanced by remember { mutableStateOf(false) }
     var token by remember { mutableStateOf("") }
     var localError by remember { mutableStateOf<String?>(null) }
-    var connectAfterLaunch by remember { mutableStateOf(false) }
-    // Connect() talks to the installed Discord app over IPC: the app must be
-    // running. Open it first, then connect once it had time to start.
-    LaunchedEffect(connectAfterLaunch) {
-        if (connectAfterLaunch) {
-            kotlinx.coroutines.delay(1_400)
-            connectAfterLaunch = false
-            Discord.connect()
-        }
-    }
 
     // Discord does not always expose a plain launch intent (Android 11+, work
     // profiles, non-standard installs). Try the launcher, then its scheme, then a
@@ -78,14 +68,19 @@ internal fun DiscordSettings(modifier: Modifier = Modifier) {
         }
     }
 
-    fun enablePresence() {
-        if (Discord.available.not() || discord.busy) return
-        if (!launchDiscord()) {
-            localError = "Impossible d'ouvrir Discord sur cet appareil. Vérifie qu'il est installé."
+    /**
+     * The account is authorised inside Ketvoice's own WebView. The native SDK
+     * connect() path relied on Discord being installed and reaching IPC, which
+     * failed on most devices, so the WebView link is now the only account path.
+     */
+    fun connectInWebView() {
+        if (discord.busy) return
+        localError = null
+        if (!Discord.available) {
+            localError = "Cette version a été compilée sans le module Discord."
             return
         }
-        localError = null
-        connectAfterLaunch = true
+        Discord.link()
     }
 
     Column(modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
@@ -127,26 +122,21 @@ internal fun DiscordSettings(modifier: Modifier = Modifier) {
             }
             Text("Déconnecter Discord", color = theme.accent, fontSize = 13.sp,
                 modifier = Modifier.fillMaxWidth().clickable { Discord.unlink() }.padding(top = 8.dp, bottom = 2.dp))
-            Text("Réessayer la connexion", color = theme.accent.copy(alpha = .82f), fontSize = 12.sp,
+            Text("Rouvrir la connexion Discord", color = theme.accent.copy(alpha = .82f), fontSize = 12.sp,
                 modifier = Modifier.fillMaxWidth().clickable(enabled = !discord.busy) {
-                    Discord.connect()
+                    connectInWebView()
                 }.padding(bottom = 4.dp))
         } else if (Discord.available) {
-            Text("Utilise l'app Discord installée sur cet appareil. Aucun mot de passe Discord " +
-                "n'est demandé ni conservé.", color = theme.secondary, fontSize = 11.5.sp,
-                lineHeight = 16.sp, modifier = Modifier.padding(top = 8.dp))
-            Text(if (discord.busy) "Connexion à Discord…" else "Activer via l'app Discord",
-                color = theme.accent, fontSize = 13.sp, fontWeight = FontWeight.Bold,
+            Text("Se connecter avec Discord", color = theme.accent, fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
                 modifier = Modifier.fillMaxWidth().clickable(enabled = !discord.busy) {
-                    enablePresence()
+                    connectInWebView()
                 }.padding(top = 10.dp, bottom = 4.dp))
+            Text("La connexion s'ouvre dans une fenêtre Ketvoice (WebView) : aucun mot de passe " +
+                "Discord n'est demandé ni conservé par l'application.", color = theme.secondary,
+                fontSize = 11.sp, lineHeight = 15.sp, modifier = Modifier.padding(bottom = 4.dp))
             Text("Ouvrir l'app Discord", color = theme.accent.copy(alpha = .82f), fontSize = 12.sp,
                 modifier = Modifier.fillMaxWidth().clickable { openDiscord() }.padding(bottom = 4.dp))
-            Text("Lier mon compte Discord (optionnel)", color = theme.accent.copy(alpha = .82f),
-                fontSize = 12.sp,
-                modifier = Modifier.fillMaxWidth().clickable(enabled = !discord.busy) {
-                    Discord.link()
-                }.padding(bottom = 4.dp))
             Text("OAuth2 · redirect à déclarer : https://ketvoice.netlify.app/discord.html",
                 color = theme.secondary, fontSize = 10.sp, lineHeight = 14.sp,
                 modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp))

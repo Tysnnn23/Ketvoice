@@ -16,9 +16,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.isActive
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.flow.flowOf
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -84,23 +82,32 @@ object Downloader {
                 val publication = track.addon == "upload" || track.id.startsWith("kv:upload:")
                 var gotFile: File? = null
                 var gotStream: MusicApi.StreamInfo? = null
-                val candidates = if (publication) {
-                    val stream = PublicationApi.stream(track)?.let { StreamProbe.verified(it, forDownload = true) }
-                    flowOf(stream?.let { StreamResolver.Candidate("publication", 0, it) })
-                } else StreamResolver.candidates(track, download = true, lossless = preferFlac,
-                    race = AppSettings.progressiveQuality.value)
-                // Start transferring as soon as a verified source wins, not after
-                // all sources (including stalled/expired ones) finish resolving.
-                candidates.firstOrNull { resolved ->
-                    val candidate = resolved?.stream ?: return@firstOrNull false
+                val mode = AppSettings.downloadQualityMode.value
+                val resolved = if (publication) {
+                    PublicationApi.stream(track)
+                        ?.let { StreamProbe.verified(it, forDownload = true) }
+                        ?.let { StreamResolver.Candidate("publication", 0, it) }
+                } else {
+                    // Quality modes need every candidate in parallel even when
+                    // progressive playback is off; otherwise the first source
+                    // (usually 128 kb/s MP3) would be the only choice.
+                    val window = when (mode) { 0 -> 12_000L; 1 -> 5_000L; else -> 0L }
+                    val flow = StreamResolver.candidates(track, download = true, lossless = preferFlac,
+                        race = window > 0L || AppSettings.progressiveQuality.value)
+                    // 0 = lossless: wait for FLAC; 1 = high quality: keep the best
+                    // compressed stream (AAC/Opus usually beat the 128 kb/s MP3);
+                    // 2 = fast: first working source, no waiting.
+                    if (window == 0L) flow.firstOrNull() else StreamResolver.bestWithin(flow, window)
+                }
+                if (resolved != null) {
+                    val candidate = resolved.stream
                     val dest = fileFor(c, track.id, extOf(candidate))
                     val urls = listOfNotNull(candidate.downloadUrl, candidate.url)
                         .distinct().filter { it.startsWith("https://") }
                     if (urls.any { fetch(it, dest, track.id, audioLimit) { !isActive } }) {
                         gotFile = dest
                         gotStream = candidate
-                        true
-                    } else { dest.delete(); false }
+                    } else dest.delete()
                 }
 
                 val file = gotFile

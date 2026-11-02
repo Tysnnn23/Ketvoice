@@ -26,6 +26,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.ketvoice.app.data.ArtistCache
 import com.ketvoice.app.data.ArtistPage
 import com.ketvoice.app.data.ArtworkRepo
 import com.ketvoice.app.data.YouTubeCatalog
@@ -54,7 +55,13 @@ fun ArtistScreen() {
     LaunchedEffect(request.id, request.name, attempt) {
         loading = true
         failed = false
-        try {
+        // Disk + memory cache first: a previously opened artist renders at once.
+        val cached = ArtistCache.get(request.id, request.name)
+        if (cached != null) {
+            page = cached
+            loading = false
+        }
+        runCatching {
             // Un morceau ne porte pas toujours de channelId YouTube ("UC...") :
             // on retombe alors sur une résolution par nom, sinon la page restait
             // vide sans explication.
@@ -69,14 +76,14 @@ fun ArtistScreen() {
                     ?: candidates.firstOrNull()
                 if (match != null) resolved = YouTubeCatalog.artist(match.id)
             }
-            page = resolved
-            page?.let { runCatching { ArtworkRepo.enrich(it.tracks) } }
-        } catch (e: kotlinx.coroutines.CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            page = null
-        }
-        failed = page == null
+            if (resolved == null && cached == null) ArtistCache.put(request.id, request.name, null)
+            if (resolved != null) {
+                ArtistCache.put(request.id, request.name, resolved)
+                page = resolved
+                runCatching { ArtworkRepo.enrich(resolved.tracks) }
+            }
+        }.onFailure { if (cached == null) page = null }
+        if (page == null) failed = true
         loading = false
     }
 

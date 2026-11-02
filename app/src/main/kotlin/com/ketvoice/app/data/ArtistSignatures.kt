@@ -1,11 +1,13 @@
 package com.ketvoice.app.data
 
+import android.content.Context
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
+import java.io.File
 import java.net.HttpURLConnection
 import java.net.URI
 import java.net.URL
@@ -34,7 +36,41 @@ internal object ArtistSignatures {
     private fun name(value: String) = value.trim().lowercase(Locale.ROOT).replace(Regex("\\s+"), " ")
 
     private data class ArtEntry(val artwork: ArtistArtwork, val expires: Long)
-    private val artCache = linkedMapOf<String, ArtEntry>()
+    // Access-ordered LRU: frequently opened artists stay warm.
+    private val artCache = object : LinkedHashMap<String, ArtEntry>(64, .75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, ArtEntry>?) = size > 256
+    }
+    private var disk: File? = null
+
+    fun init(context: Context) {
+        if (disk != null) return
+        val target = File(context.applicationContext.filesDir, "artist-artwork-v1.json")
+        disk = target
+        runCatching {
+            if (!target.isFile || target.length() > 4 * 1024 * 1024) return@runCatching
+            val root = JSONObject(target.readText(Charsets.UTF_8))
+            val now = System.currentTimeMillis()
+            root.keys().forEach { key ->
+                val entry = root.optJSONObject(key) ?: return@forEach
+                if (entry.optLong("expires") <= now) return@forEach
+                artCache[key] = ArtEntry(ArtworkCodec.decode(entry.optJSONObject("art")), entry.optLong("expires"))
+            }
+        }
+    }
+
+    private suspend fun persist() = withContext(Dispatchers.IO) {
+        val target = disk ?: return@withContext
+        runCatching {
+            val root = JSONObject()
+            artCache.forEach { (key, entry) ->
+                root.put(key, JSONObject().put("expires", entry.expires).put("art", ArtworkCodec.encode(entry.artwork)))
+            }
+            val atomic = android.util.AtomicFile(target)
+            val out = atomic.startWrite()
+            try { out.write(root.toString().toByteArray(Charsets.UTF_8)); atomic.finishWrite(out) }
+            catch (failure: Exception) { atomic.failWrite(out); throw failure }
+        }
+    }
 
     suspend fun find(artist: String): ArtistSignature? = artwork(artist).logo
 
@@ -66,8 +102,8 @@ internal object ArtistSignatures {
             catch (_: Exception) { lifetime = 60_000L; ArtistArtwork() }
             if (result.hero != null || result.logo != null || result.signature != null)
                 lifetime = 12 * 60 * 60_000L
-            if (artCache.size >= 128) artCache.remove(artCache.keys.first())
             artCache[key] = ArtEntry(result, System.currentTimeMillis() + lifetime)
+            persist()
             result
         }
     }
@@ -80,8 +116,9 @@ internal object ArtistSignatures {
         val connection = URL("$base/logo?artist=${URLEncoder.encode(artist.trim(), "UTF-8")}$suffix")
             .openConnection() as HttpURLConnection
         return try {
-            connection.connectTimeout = 10_000
-            connection.readTimeout = 18_000
+            // A cached broker answer is fast; a cold one must not freeze the page.
+            connection.connectTimeout = 6_000
+            connection.readTimeout = 10_000
             connection.instanceFollowRedirects = false
             connection.setRequestProperty("Accept", "application/json")
             connection.setRequestProperty("apikey", KetvoiceApi.ANON_KEY)
@@ -201,5 +238,39 @@ internal object ArtistSignatures {
         val source = "https://fanart.tv/artist/$mbid/"
         if (logo.optString("source") != source) return null
         return ArtistSignature(uri.toASCIIString(), "png", source, "fanart.tv", monochrome = false)
+    }
+}
+
+/** Persisted form of [ArtistArtwork]; URLs are re-validated by the broker schema. */
+internal object ArtworkCodec {
+    fun encode(art: ArtistArtwork): JSONObject = JSONObject().apply {
+        put("photo", art.photo ?: "")
+        put("background", art.background ?: "")
+        art.signature?.let { put("signature", sig(it)) }
+        art.logo?.let { put("logo", sig(it)) }
+    }
+
+    fun decode(value: JSONObject?): ArtistArtwork {
+        value ?: return ArtistArtwork()
+        fun https(key: String) = value.optString(key).takeIf { it.startsWith("https://") }
+        return ArtistArtwork(
+            photo = https("photo"),
+            background = https("background"),
+            signature = read(value.optJSONObject("signature")),
+            logo = read(value.optJSONObject("logo"))
+        )
+    }
+
+    private fun sig(value: ArtistSignature): JSONObject = JSONObject().apply {
+        put("url", value.url); put("format", value.format); put("source", value.source)
+        put("attribution", value.attribution); put("monochrome", value.monochrome)
+    }
+
+    private fun read(value: JSONObject?): ArtistSignature? {
+        value ?: return null
+        val url = value.optString("url")
+        if (!url.startsWith("https://")) return null
+        return ArtistSignature(url, value.optString("format"), value.optString("source"),
+            value.optString("attribution"), value.optBoolean("monochrome", true))
     }
 }

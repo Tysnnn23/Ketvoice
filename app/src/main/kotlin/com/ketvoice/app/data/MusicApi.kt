@@ -28,6 +28,8 @@ object MusicApi {
     fun init(context: Context) {
         ProviderConfig.init(context)
         SourcePriority.init(context)
+        ArtistCache.init(context)
+        ArtistSignatures.init(context)
         SearchHistory.init(context)
         LyricsDiskCache.init(context)
         if (matchPrefs == null) {

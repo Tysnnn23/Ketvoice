@@ -381,7 +381,14 @@ object Player {
                     }, androidx.core.content.ContextCompat.getMainExecutor(appContext!!))
                     continuation.invokeOnCancellation { future.cancel(false) }
                 }
-                if (!switched || gen != generation) return
+                if (!switched || gen != generation) {
+                    if (gen != generation) return
+                    // A rejected custom command must not disable progressive quality:
+                    // restart the same item at the same position with the better URL.
+                    val position = c.currentPosition.coerceAtLeast(0)
+                    activeStream = stream
+                    startItem(c, track, stream.url, position, desiredPlay, AudioCache.key(track.id, stream))
+                }
                 currentStream = stream
                 activeStream = stream
                 _state.value = _state.value.copy(quality = label(stream))
@@ -392,8 +399,12 @@ object Player {
                 if (gen != generation) throw kotlinx.coroutines.CancellationException()
                 if (currentStream == null) {
                     currentStream = candidate.stream
+                    // Playback starts on the first real audio byte; ExoPlayer keeps
+                    // filling its buffer while the rest of the file and the next two
+                    // queue items are prepared in the background.
                     start(candidate.stream)
                     AudioCache.cacheWhole(track.id, candidate.stream)
+                    prefetchNext(gen, resolvedTrack)
                 } else upgrade(candidate.stream)
             }
             if (currentStream == null && gen == generation) {
@@ -403,8 +414,34 @@ object Player {
         }
     }
 
-    fun playQueue(tracks: List<Track>, start: Int = 0) {
-        if (tracks.isEmpty()) return
+    /**
+     * Warms the next two queue items after playback actually started: their stream
+     * is resolved and its bytes enter the audio cache, so the transition is instant.
+     * Only on an unmetered network unless the user already enabled progressive
+     * quality for metered data.
+     */
+    private fun prefetchNext(gen: Int, current: Track) {
+        if (!AppSettings.progressiveQuality.value && isMetered()) return
+        val state = _state.value
+        val upcoming = (1..2).mapNotNull { offset -> state.queue.getOrNull(state.index + offset) }
+            .filter { it.id != current.id && !it.id.startsWith("local:") }
+        if (upcoming.isEmpty()) return
+        scope.launch(Dispatchers.IO) {
+            for (item in upcoming) {
+                if (gen != generation) return@launch
+                if (AudioCache.complete(item.id, wantsLossless()) != null) continue
+                runCatching {
+                    StreamResolver.candidates(item, download = false, lossless = wantsLossless(), race = true)
+                        .firstOrNull()
+                }.getOrNull()?.let { candidate ->
+                    AudioCache.cacheWhole(item.id, candidate.stream)
+                    if (gen == generation) runCatching { ArtworkRepo.enrich(listOf(item)) }
+                }
+            }
+        }
+    }
+
+    fun playQueue(tracks: List<Track>, start: Int = 0) {        if (tracks.isEmpty()) return
         val index = start.coerceIn(tracks.indices)
         playTrack(tracks[index], tracks, index)
     }

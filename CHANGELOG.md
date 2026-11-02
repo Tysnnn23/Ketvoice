@@ -7,6 +7,23 @@
 
 ---
 
+# Ketvoice 3.16.0
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 72** — scrolling playlist header, WebView Discord, artist disk cache, real download quality.
+
+- Playlist cover/title scroll away like the album page, with no pinned header and no blank block.
+- Discord connection is the in-app WebView only; the broken native path is removed.
+- Artist pages, photos, backgrounds and signatures are cached on disk (24 h) and load instantly.
+- Downloads keep the best real quality: FLAC, best compressed stream, or fastest, chosen by detected audio.
+- Progressive switch has a restart fallback; the next two tracks are prefetched after playback starts.
+- Playback and download now have separate source order and enable/disable lists.
+
+Full notes and limits: [3.16.0](docs/releases/v3.16.0.md).
+
+---
+
 # Ketvoice 3.15.0
 
 ![Ketvoice](ketvoice-banner.png)

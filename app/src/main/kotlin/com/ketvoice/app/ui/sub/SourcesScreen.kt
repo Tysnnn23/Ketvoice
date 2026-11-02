@@ -59,9 +59,10 @@ import kotlinx.coroutines.launch
 fun SourcesScreen() {
     val th = LocalTheme.current
     val sources by CustomSources.sources.collectAsState()
-    val order by SourcePriority.order.collectAsState()
-    val disabled by SourcePriority.disabled.collectAsState()
-    val entries = remember(order, disabled, sources) { SourcePriority.entries() }
+    var mode by remember { mutableStateOf(SourcePriority.Mode.PLAYBACK) }
+    val order by SourcePriority.orderFlow(mode).collectAsState()
+    val disabled by SourcePriority.disabledFlow(mode).collectAsState()
+    val entries = remember(order, disabled, sources, mode) { SourcePriority.entries(mode) }
     val scope = rememberCoroutineScope()
     var showAdd by remember { mutableStateOf(false) }
     var qualityFor by remember { mutableStateOf<CustomSource?>(null) }
@@ -115,6 +116,18 @@ fun SourcesScreen() {
                     }
                 )
                 Spacer(Modifier.height(18.dp))
+                Row(Modifier.fillMaxWidth().padding(bottom = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf(SourcePriority.Mode.PLAYBACK to "Lecture", SourcePriority.Mode.DOWNLOAD to "Téléchargement").forEach { (value, label) ->
+                        val selected = mode == value
+                        Text(label, color = if (selected) Color.White else th.secondary, fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.clip(RoundedCornerShape(999.dp))
+                                .background(if (selected) th.accent else th.card)
+                                .clickable { mode = value }.padding(horizontal = 14.dp, vertical = 9.dp))
+                    }
+                }
+                Text("Ordre ${if (mode == SourcePriority.Mode.PLAYBACK) "de lecture" else "de téléchargement"} : glissez les poignées, activez ou désactivez chaque source. Chaque mode garde son propre ordre.",
+                    color = th.secondary, style = T.caption, lineHeight = 16.sp, modifier = Modifier.padding(bottom = 12.dp))
             }
             if (sources.isEmpty()) {
                 item {
@@ -141,16 +154,21 @@ fun SourcesScreen() {
                     IntegratedSourceCard(
                         entry,
                         position,
-                        onMove = { SourcePriority.move(entry.id, it) },
-                        onToggle = { SourcePriority.setEnabled(entry.id, !entry.enabled) }
+                        onMove = { SourcePriority.move(entry.id, it, mode) },
+                        onToggle = { SourcePriority.setEnabled(entry.id, !entry.enabled, mode) }
                     )
                 } else {
                     SourceCard(
                         source = source,
                         position = position,
-                        onMove = { delta -> SourcePriority.move(entry.id, delta) },
+                        checked = entry.enabled,
+                        onMove = { delta -> SourcePriority.move(entry.id, delta, mode) },
                         refreshing = refreshing == source.id,
-                        onToggle = { CustomSources.setEnabled(source.id, !source.enabled) },
+                        onToggle = {
+                            val target = !entry.enabled
+                            if (target && !source.enabled) CustomSources.setEnabled(source.id, true)
+                            SourcePriority.setEnabled("cs:${source.id}", target, mode)
+                        },
                         onQuality = { qualityFor = source },
                         onRefresh = {
                             refreshing = source.id
@@ -313,6 +331,7 @@ private fun KetvoiceApiCard(
 private fun SourceCard(
     source: CustomSource,
     position: Int,
+    checked: Boolean = true,
     onMove: (Int) -> Unit,
     refreshing: Boolean,
     onToggle: () -> Unit,
@@ -350,7 +369,7 @@ private fun SourceCard(
                     .getOrDefault(source.manifestUrl),
                     color = th.secondary, style = T.caption, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            CustomSwitch(checked = source.enabled, onToggle = onToggle)
+            CustomSwitch(checked = checked, onToggle = onToggle)
         }
         if (source.error != null) {
             Text(source.error, color = Color(0xFFFF3B30), style = T.caption,

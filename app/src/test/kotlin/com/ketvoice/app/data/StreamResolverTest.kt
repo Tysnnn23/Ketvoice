@@ -64,6 +64,21 @@ class StreamResolverTest {
         assertFalse("Ordered mode must stop after the first usable source", reachedSecond)
     }
 
+    @Test fun qualityDownloadModeCollectsEverySourceEvenWhenOrderedIsOff() = runBlocking {
+        val sources = listOf(
+            StreamResolver.Source("api:um") { stream("https://a/MP3") },
+            StreamResolver.Source("youtube") { stream("https://a/AAC", "aac", "192 kbps") },
+            StreamResolver.Source("api:last") { stream("https://a/FLAC", "flac", "Sans perte") }
+        )
+        // Progressive playback off would stop at the first source…
+        val ordered = StreamResolver.resolve(sources, race = false).toList()
+        assertEquals(1, ordered.size)
+        // …but a quality download races every source and keeps the best.
+        val raced = StreamResolver.resolve(sources, race = true)
+        val best = StreamResolver.bestWithin(raced, 2_000)
+        assertEquals("flac", best?.stream?.format)
+    }
+
     @Test fun sourceOrderReconciliationPreservesUserOrderAndAddsNewSources() {
         assertEquals(listOf("youtube", "api:um", "cs:new"),
             SourcePriority.reconcile(listOf("youtube", "api:um", "cs:gone"), listOf("api:um", "youtube", "cs:new")))

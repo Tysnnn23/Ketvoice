@@ -186,27 +186,35 @@ class PrismalHostRenderTest {
         AppUi.playlistId.value = playlist.id
     }
 
-    @Test fun playlistHeaderAndCoverRemainOpaqueAtTheSameCoordinatesAfterScrolling() {
+    @Test fun playlistHeaderScrollsAwayWithoutLeavingABlankHeaderArea() {
         playlistFixture()
         compose.setContent { KetvoiceTheme(useDark = true) { PlaylistScreen() } }
-        val header = compose.onNodeWithTag("playlist-header").fetchSemanticsNode().boundsInRoot
         val cover = compose.onNodeWithTag("playlist-cover").fetchSemanticsNode().boundsInRoot
         var before = IntArray(0)
-        image("playlist-fixed-before-scroll") { bitmap ->
+        image("playlist-scroll-before") { bitmap ->
             before = IntArray(80 * 80); bitmap.getPixels(before, 0, 80, cover.left.toInt() + 10, cover.top.toInt() + 10, 80, 80)
         }
         compose.onNodeWithTag("playlist-tracks").performScrollToIndex(25)
         compose.onNodeWithText("Titre 25").assertIsDisplayed()
-        assertEquals(header, compose.onNodeWithTag("playlist-header").assertIsDisplayed().fetchSemanticsNode().boundsInRoot)
-        assertEquals(cover, compose.onNodeWithTag("playlist-cover").assertIsDisplayed().fetchSemanticsNode().boundsInRoot)
-        image("playlist-fixed-after-scroll") { bitmap ->
+        // The hero is a normal list item now: it scrolls out of the viewport.
+        assertEquals("The header must not stay pinned on screen",
+            0, compose.onAllNodesWithTag("playlist-cover").fetchSemanticsNodes().size)
+        // And it does not reserve empty space at the top: the first visible row
+        // starts right under the top bar, not hundreds of pixels lower.
+        val listTop = compose.onNodeWithTag("playlist-tracks").fetchSemanticsNode().boundsInRoot.top
+        val rowTop = compose.onNodeWithText("Titre 25").fetchSemanticsNode().boundsInRoot.top
+        assertTrue("No blank header area may remain, rowTop=$rowTop listTop=$listTop", rowTop < listTop + 200f)
+        image("playlist-scroll-after")
+        compose.onNodeWithTag("playlist-tracks").performScrollToIndex(0)
+        compose.onNodeWithTag("playlist-cover").assertIsDisplayed()
+        image("playlist-scroll-restored") { bitmap ->
             val after = IntArray(80 * 80); bitmap.getPixels(after, 0, 80, cover.left.toInt() + 10, cover.top.toInt() + 10, 80, 80)
-            assertArrayEquals("Scrolling must not fade the fixed artwork", before, after)
+            assertArrayEquals("Returning to the top restores the same artwork", before, after)
         }
     }
 
     @Test @Config(qualifiers = "w900dp-h480dp-mdpi")
-    fun shortLandscapePlaylistKeepsArtworkActionsAndAScrollableList() {
+    fun shortLandscapePlaylistScrollsItsHeaderAndKeepsTheListUsable() {
         playlistFixture()
         compose.setContent { KetvoiceTheme(useDark = true) { PlaylistScreen() } }
         compose.onNodeWithText("Modifier l'ordre").assertIsDisplayed()
@@ -214,8 +222,8 @@ class PrismalHostRenderTest {
         assertTrue(compose.onNodeWithTag("playlist-tracks").fetchSemanticsNode().boundsInRoot.height > 100f)
         compose.onNodeWithTag("playlist-tracks").performScrollToIndex(25)
         compose.onNodeWithText("Titre 25").assertIsDisplayed()
-        compose.onNodeWithTag("playlist-cover").assertIsDisplayed()
-        image("playlist-fixed-short-landscape")
+        assertEquals(0, compose.onAllNodesWithTag("playlist-cover").fetchSemanticsNodes().size)
+        image("playlist-scroll-short-landscape")
     }
 
     @Test fun playlistDragMovesTheFirstTrackWithoutAHeaderIndexOffset() {

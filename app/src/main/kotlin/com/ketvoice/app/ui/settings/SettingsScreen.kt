@@ -529,20 +529,24 @@ fun SettingsScreen() {
             Section("TÉLÉCHARGEMENTS") {
                 SRow(
                     Icons.Filled.CloudDownload, "Qualité de téléchargement",
-                    sub = "Les fichiers restent hors ligne dans l'app",
-                    value = if (AppSettings.downloadQualityMode.value == 0)
-                        "FLAC · sans perte" else "MP3 · rapide"
+                    sub = "Le fichier réellement obtenu, pas seulement le réglage",
+                    value = when (AppSettings.downloadQualityMode.value) {
+                        0 -> "FLAC · sans perte"
+                        1 -> "Haute qualité"
+                        else -> "Rapide"
+                    }
                 ) {
                     choice = ChoiceSpec(
                         "Qualité de téléchargement",
-                        "Le repli sur l'autre qualité reste automatique si le flux échoue.",
+                        "FLAC attend la meilleure source sans perte. Haute qualité garde le meilleur flux compressé réel (AAC/Opus/MP3) au lieu du premier MP3 128 kb/s. Rapide prend la première source lisible. Le repli reste automatique.",
                         AppSettings.downloadQualityMode.value.toString(),
                         listOf(
                             ChoiceOption("0", "FLAC · sans perte", "Fichier plus lourd (~35 Mo)"),
-                            ChoiceOption("1", "MP3 · rapide", "Téléchargement plus léger (~2 Mo)")
+                            ChoiceOption("1", "Haute qualité", "Meilleur débit compressé disponible"),
+                            ChoiceOption("2", "Rapide", "Première source lisible")
                         )
                     ) { id ->
-                        AppSettings.downloadQualityMode.value = id.toIntOrNull() ?: 0
+                        AppSettings.downloadQualityMode.value = id.toIntOrNull() ?: 1
                         SettingsStore.save()
                     }
                 }
