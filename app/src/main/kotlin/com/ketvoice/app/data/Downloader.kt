@@ -17,6 +17,8 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.take
+import kotlinx.coroutines.flow.toList
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -83,10 +85,10 @@ object Downloader {
                 var gotFile: File? = null
                 var gotStream: MusicApi.StreamInfo? = null
                 val mode = AppSettings.downloadQualityMode.value
-                val resolved = if (publication) {
+                val resolved: List<StreamResolver.Candidate> = if (publication) {
                     PublicationApi.stream(track)
-                        ?.let { StreamProbe.verified(it, forDownload = true) }
-                        ?.let { StreamResolver.Candidate("publication", 0, it) }
+                        ?.let { listOf(StreamResolver.Candidate("publication", 0, it)) }
+                        .orEmpty()
                 } else {
                     // Quality modes need every candidate in parallel even when
                     // progressive playback is off; otherwise the first source
@@ -94,20 +96,36 @@ object Downloader {
                     val window = when (mode) { 0 -> 12_000L; 1 -> 5_000L; else -> 0L }
                     val flow = StreamResolver.candidates(track, download = true, lossless = preferFlac,
                         race = window > 0L || AppSettings.progressiveQuality.value)
-                    // 0 = lossless: wait for FLAC; 1 = high quality: keep the best
-                    // compressed stream (AAC/Opus usually beat the 128 kb/s MP3);
-                    // 2 = fast: first working source, no waiting.
-                    if (window == 0L) flow.firstOrNull() else StreamResolver.bestWithin(flow, window)
+                    if (window == 0L) flow.take(1).toList() else StreamResolver.collectWithin(flow, window)
                 }
-                if (resolved != null) {
-                    val candidate = resolved.stream
+                // Try the best verified candidate first, then the next ones: one
+                // failing URL must never end the download.
+                for (resolvedCandidate in resolved) {
+                    val candidate = resolvedCandidate.stream
                     val dest = fileFor(c, track.id, extOf(candidate))
                     val urls = listOfNotNull(candidate.downloadUrl, candidate.url)
                         .distinct().filter { it.startsWith("https://") }
                     if (urls.any { fetch(it, dest, track.id, audioLimit) { !isActive } }) {
                         gotFile = dest
                         gotStream = candidate
-                    } else dest.delete()
+                        break
+                    }
+                    dest.delete()
+                }
+                if (gotFile == null && !publication) {
+                    // Last-resort fallback to the previous custom-source path.
+                    val legacy = withTimeoutOrNull(20_000) {
+                        runCatching { CustomSources.streamForTrack(track, forDownload = true) }.getOrNull()
+                    }
+                    if (legacy != null) {
+                        val dest = fileFor(c, track.id, extOf(legacy))
+                        val urls = listOfNotNull(legacy.downloadUrl, legacy.url)
+                            .distinct().filter { it.startsWith("https://") }
+                        if (urls.any { fetch(it, dest, track.id, audioLimit) { !isActive } }) {
+                            gotFile = dest
+                            gotStream = legacy
+                        } else dest.delete()
+                    }
                 }
 
                 val file = gotFile

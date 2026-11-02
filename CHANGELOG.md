@@ -7,6 +7,22 @@
 
 ---
 
+# Ketvoice 3.16.1
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 73** — streaming and downloads restored.
+
+- No pre-request consumes one-shot stream URLs any more; the provider URL goes straight to the player.
+- Downloads try every enabled source in cascade, best quality first, then the legacy custom-source path.
+- Resolution has a 25 s budget with explicit failure labels instead of infinite loading.
+- All-disabled sources now say so; custom sources are initialised with the player.
+- Verification is advisory: only 401/404/410/451 or an HTML/JSON body count as unavailable.
+
+Full notes: [3.16.1](docs/releases/v3.16.1.md).
+
+---
+
 # Ketvoice 3.16.0
 
 ![Ketvoice](ketvoice-banner.png)

@@ -186,6 +186,7 @@ object Player {
         com.ketvoice.app.data.ActiveListenerTracker.init(context.applicationContext)
         com.ketvoice.app.data.HomeFeed.start(context.applicationContext)
         MusicApi.init(context.applicationContext)
+        com.ketvoice.app.data.CustomSources.init(context.applicationContext)
         AudioCache.init(context.applicationContext)
         val token = SessionToken(context, ComponentName(context, PlaybackService::class.java))
         val future = MediaController.Builder(context, token).buildAsync()
@@ -395,19 +396,57 @@ object Player {
                 AudioCache.cacheWhole(track.id, stream)
             }
             val candidates = StreamResolver.candidates(resolvedTrack, download = false, lossless = wantsLossless(), race = progressive)
-            (if (progressive) candidates else candidates.take(1)).collect { candidate ->
-                if (gen != generation) throw kotlinx.coroutines.CancellationException()
-                if (currentStream == null) {
-                    currentStream = candidate.stream
-                    // Playback starts on the first real audio byte; ExoPlayer keeps
-                    // filling its buffer while the rest of the file and the next two
-                    // queue items are prepared in the background.
-                    start(candidate.stream)
-                    AudioCache.cacheWhole(track.id, candidate.stream)
-                    prefetchNext(gen, resolvedTrack)
-                } else upgrade(candidate.stream)
+            if (StreamResolver.sources(resolvedTrack, download = false, lossless = wantsLossless()).isEmpty()) {
+                resolving = false
+                _state.value = _state.value.copy(isPlaying = false, playWhenReady = false, buffering = false,
+                    quality = "Aucune source activée · ouvrez Sources", failed = true)
+                return@launch
+            }
+            // Hard budget: a stalled provider must never leave an endless spinner.
+            val collected = try {
+                withTimeoutOrNull(25_000) {
+                    (if (progressive) candidates else candidates.take(1)).collect { candidate ->
+                        if (gen != generation) throw kotlinx.coroutines.CancellationException()
+                        if (currentStream == null) {
+                            currentStream = candidate.stream
+                            // Playback starts on the first real audio byte; ExoPlayer keeps
+                            // filling its buffer while the rest of the file and the next two
+                            // queue items are prepared in the background.
+                            start(candidate.stream)
+                            AudioCache.cacheWhole(track.id, candidate.stream)
+                            prefetchNext(gen, resolvedTrack)
+                        } else upgrade(candidate.stream)
+                    }
+                    true
+                }
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                if (currentStream == null && gen == generation) {
+                    resolving = false
+                    _state.value = _state.value.copy(isPlaying = false, playWhenReady = false, buffering = false,
+                        quality = "Lecture impossible · réessayez", failed = true)
+                }
+                return@launch
+            }
+            if (collected == null && currentStream == null && gen == generation) {
+                resolving = false
+                _state.value = _state.value.copy(isPlaying = false, playWhenReady = false, buffering = false,
+                    quality = "Flux lent · réessayez", failed = true)
+                return@launch
             }
             if (currentStream == null && gen == generation) {
+                // Last-resort fallback: the previous custom-source path, so a
+                // manifest that works outside the resolver is never blocked here.
+                val legacy = withTimeoutOrNull(15_000) {
+                    runCatching { com.ketvoice.app.data.CustomSources.streamForTrack(resolvedTrack) }.getOrNull()
+                }
+                if (legacy != null && gen == generation) {
+                    currentStream = legacy
+                    start(legacy)
+                    AudioCache.cacheWhole(track.id, legacy)
+                    return@launch
+                }
                 resolving = false
                 _state.value = _state.value.copy(isPlaying = false, playWhenReady = false, buffering = false, quality = "Aucun flux disponible", failed = true)
             }

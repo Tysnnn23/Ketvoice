@@ -31,23 +31,26 @@ internal object StreamResolver {
             }
         }
 
+    /**
+     * Candidates are returned exactly as the provider answered: no extra HTTP
+     * request is made before playback. A pre-request can consume a one-shot CDN
+     * token and leave ExoPlayer buffering forever, so verification happens later
+     * by the player or by the downloader's own byte check.
+     */
     fun candidates(track: Track, download: Boolean, lossless: Boolean, race: Boolean,
                    excluded: Set<String> = emptySet()): Flow<Candidate> = resolve(
         sources(track, download, lossless).map { source -> Source(source.id) {
-            val stream = source.resolve() ?: return@Source null
-            if (stream.url in excluded) null else StreamProbe.verified(stream, download)
+            source.resolve()?.takeIf { it.url !in excluded }
         } }, race)
 
-    /**
-     * Quality-aware pick for downloads: wait at most [windowMs] for every offered
-     * source, then keep the highest declared quality. Never returns a 128 kbps MP3
-     * while a FLAC/AAC candidate was already available.
-     */
-    internal fun best(collected: List<Candidate>): Candidate? =
-        collected.maxWithOrNull(compareBy<Candidate> { StreamQuality.rank(it.stream) }.thenByDescending { it.priority })
+    /** Ranks candidates by real quality, best first, keeping the source priority on ties. */
+    internal fun ranked(collected: List<Candidate>): List<Candidate> =
+        collected.sortedWith(compareByDescending<Candidate> { StreamQuality.rank(it.stream) }.thenBy { it.priority })
 
-    /** Stops as soon as every source answered, or after [windowMs], then keeps the best. */
-    suspend fun bestWithin(candidates: Flow<Candidate>, windowMs: Long): Candidate? = coroutineScope {
+    internal fun best(collected: List<Candidate>): Candidate? = ranked(collected).firstOrNull()
+
+    /** Stops as soon as every source answered, or after [windowMs], then ranks them. */
+    suspend fun collectWithin(candidates: Flow<Candidate>, windowMs: Long): List<Candidate> = coroutineScope {
         val collected = mutableListOf<Candidate>()
         val done = kotlinx.coroutines.CompletableDeferred<Unit>()
         val job = launch {
@@ -55,8 +58,11 @@ internal object StreamResolver {
         }
         withTimeoutOrNull(windowMs) { done.await() }
         job.cancel()
-        best(collected)
+        ranked(collected)
     }
+
+    suspend fun bestWithin(candidates: Flow<Candidate>, windowMs: Long): Candidate? =
+        collectWithin(candidates, windowMs).firstOrNull()
 
     internal fun resolve(sources: List<Source>, race: Boolean, timeoutMs: Long = 14_000,
                          qualityWindowMs: Long = 80): Flow<Candidate> = flow {
