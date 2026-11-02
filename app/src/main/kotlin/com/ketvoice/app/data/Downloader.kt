@@ -17,6 +17,8 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.flowOf
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -53,6 +55,7 @@ object Downloader {
 
     private var ctx: Context? = null
     private val connections = java.util.concurrent.ConcurrentHashMap<String, HttpURLConnection>()
+    private val jobs = java.util.concurrent.ConcurrentHashMap<String, Job>()
 
     fun init(context: Context) {
         if (ctx != null) return
@@ -68,92 +71,41 @@ object Downloader {
             toast("Déjà téléchargé")
             return null
         }
-        if (track.id in _busy.value) {
-            toast("Téléchargement déjà en cours…")
-            return null
-        }
+        jobs[track.id]?.let { return it }
         _busy.update { it + track.id }
         _activeTracks.update { it + (track.id to track) }
         _progress.update { it + (track.id to 0) }
         toast("Téléchargement de « ${track.title} »…")
-        return scope.launch {
+        val job = scope.launch {
             try {
                 val budget = DownloadBudget(capsuleLimit ?: Long.MAX_VALUE)
                 val audioLimit = if (capsuleLimit == null) Long.MAX_VALUE else (capsuleLimit - minOf(1_048_576L, capsuleLimit / 4)).coerceAtLeast(0)
                 val preferFlac = capsuleLimit == null && AppSettings.downloadQualityMode.value == 0
                 val publication = track.addon == "upload" || track.id.startsWith("kv:upload:")
-                val streams = withTimeoutOrNull(75_000) { MusicApi.resolve(track) }
-                val candidates = linkedSetOf<MusicApi.StreamInfo>()
-                if (preferFlac) {
-                    // Lossless first, then YouTube's best adaptive audio, then the
-                    // broker MP3 (commonly 128 kb/s). Never silently settle for the
-                    // lowest quality while a better lossy stream exists.
-                    streams?.best?.let { candidates += it }
-                    withTimeoutOrNull(35_000) {
-                        runCatching { MusicApi.youtubeStream(track) }.getOrNull()
-                    }?.let { candidates += it }
-                    streams?.fast?.let { candidates += it }
-                } else {
-                    streams?.fast?.let { candidates += it }
-                    streams?.best?.let { candidates += it }
-                }
-                streams?.alternatives?.let { extra ->
-                    candidates += if (preferFlac) extra.sortedByDescending(StreamQuality::rank) else extra
-                }
-
-                if (candidates.isEmpty() && !publication) {
-                    runCatching { MusicApi.addonStream(track, "um") }.getOrNull()?.let { candidates += it }
-                    runCatching { MusicApi.flacStream(track) }.getOrNull()?.let { candidates += it }
-                }
-
                 var gotFile: File? = null
                 var gotStream: MusicApi.StreamInfo? = null
-                for (candidate in candidates) {
+                val candidates = if (publication) {
+                    val stream = PublicationApi.stream(track)?.let { StreamProbe.verified(it, forDownload = true) }
+                    flowOf(stream?.let { StreamResolver.Candidate("publication", 0, it) })
+                } else StreamResolver.candidates(track, download = true, lossless = preferFlac,
+                    race = AppSettings.progressiveQuality.value)
+                // Start transferring as soon as a verified source wins, not after
+                // all sources (including stalled/expired ones) finish resolving.
+                candidates.firstOrNull { resolved ->
+                    val candidate = resolved?.stream ?: return@firstOrNull false
                     val dest = fileFor(c, track.id, extOf(candidate))
                     val urls = listOfNotNull(candidate.downloadUrl, candidate.url)
                         .distinct().filter { it.startsWith("https://") }
                     if (urls.any { fetch(it, dest, track.id, audioLimit) { !isActive } }) {
                         gotFile = dest
                         gotStream = candidate
-                        break
-                    }
-                    dest.delete()
-                }
-
-                if (gotFile == null && !publication) {
-                    // The resolved lossless candidate may be an expired provider.
-                    // Retry the fast MP3 explicitly before falling back to YouTube.
-                    val addon = withTimeoutOrNull(35_000) {
-                        runCatching { MusicApi.addonStream(track, "um") }.getOrNull()
-                    }
-                    if (addon != null) {
-                        val dest = fileFor(c, track.id, extOf(addon))
-                        val urls = listOfNotNull(addon.downloadUrl, addon.url)
-                            .distinct().filter { it.startsWith("https://") }
-                        if (urls.any { fetch(it, dest, track.id, audioLimit) { !isActive } }) {
-                            gotFile = dest
-                            gotStream = addon
-                        } else {
-                            dest.delete()
-                        }
-                    }
-                }
-
-                if (gotFile == null && !publication) {
-                    val yt = withTimeoutOrNull(35_000) { runCatching { MusicApi.youtubeStream(track) }.getOrNull() }
-                    if (yt != null) {
-                        val dest = fileFor(c, track.id, extOf(yt))
-                        if (fetch(yt.url, dest, track.id, audioLimit) { !isActive }) {
-                            gotFile = dest
-                            gotStream = yt
-                        } else {
-                            dest.delete()
-                        }
-                    }
+                        true
+                    } else { dest.delete(); false }
                 }
 
                 val file = gotFile
-                if (file == null || gotStream == null) {
+                val selected = gotStream
+                if (file == null || selected == null) {
                     toast("Échec du téléchargement (aucun flux lisible)")
                     return@launch
                 }
@@ -170,9 +122,9 @@ object Downloader {
                     put("artistId", track.artistId ?: "")
                     put("spotifyId", track.spotifyId ?: "")
                     put("coverUrl", ArtworkRepo.coverForTrack(track) ?: track.coverUrl ?: "")
-                    put("format", displayFormat(file, gotStream))
-                    put("quality", gotStream.quality)
-                    put("source", gotStream.quality)
+                    put("format", displayFormat(file, selected))
+                    put("quality", selected.quality)
+                    put("source", selected.quality)
                     put("file", file.name)
                     put("downloadedAt", System.currentTimeMillis())
                 }
@@ -235,16 +187,16 @@ object Downloader {
                 _progress.update { it - track.id }
                 _busy.update { it - track.id }
                 _activeTracks.update { it - track.id }
+                jobs.remove(track.id)
             }
         }
+        jobs[track.id] = job
+        return job
     }
 
     suspend fun prepareCapsuleTrack(track: Track, limit: Long): Boolean {
         if (itemFor(track.id) != null) return true
-        if (track.id in busy.value) {
-            busy.first { track.id !in it }
-            return itemFor(track.id) != null
-        }
+        jobs[track.id]?.let { it.join(); return itemFor(track.id) != null }
         val job = download(track, limit) ?: return itemFor(track.id) != null
         try { job.join() }
         catch (cancelled: CancellationException) { job.cancel(); connections[track.id]?.disconnect(); throw cancelled }

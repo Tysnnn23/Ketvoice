@@ -44,6 +44,7 @@ import androidx.compose.ui.window.Dialog
 import com.ketvoice.app.data.CustomSource
 import com.ketvoice.app.data.CustomSources
 import com.ketvoice.app.data.KetvoiceApi
+import com.ketvoice.app.data.SourcePriority
 import com.ketvoice.app.theme.LocalTheme
 import com.ketvoice.app.theme.T
 import com.ketvoice.app.ui.AppUi
@@ -58,6 +59,9 @@ import kotlinx.coroutines.launch
 fun SourcesScreen() {
     val th = LocalTheme.current
     val sources by CustomSources.sources.collectAsState()
+    val order by SourcePriority.order.collectAsState()
+    val disabled by SourcePriority.disabled.collectAsState()
+    val entries = remember(order, disabled, sources) { SourcePriority.entries() }
     val scope = rememberCoroutineScope()
     var showAdd by remember { mutableStateOf(false) }
     var qualityFor by remember { mutableStateOf<CustomSource?>(null) }
@@ -83,8 +87,10 @@ fun SourcesScreen() {
         LazyColumn(contentPadding = PaddingValues(start = 18.dp, end = 18.dp, bottom = 160.dp)) {
             item {
                 Text(
-                    "Ketvoice API est la source intégrée : recherche, streaming et canvas passent par Supabase, " +
-                        "sans cookie ni jeton dans l'application. Vous pouvez aussi ajouter des manifestes .json.",
+                    "Glissez les poignées pour définir la priorité de lecture et de téléchargement. " +
+                        "Sans qualité progressive : la première source disponible dans cet ordre. " +
+                        "En progressif : recherches parallèles, premier flux audio validé, puis amélioration de la lecture si une meilleure qualité arrive. " +
+                        "Pour du sans perte, placez « sans perte » avant le MP3 : l'ordre l'emporte sur le réglage de qualité.",
                     color = th.secondary, style = T.sub, lineHeight = 18.sp,
                     modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
                 )
@@ -129,25 +135,35 @@ fun SourcesScreen() {
                     }
                 }
             }
-            itemsIndexed(sources, key = { _, it -> it.id }) { position, source ->
-                SourceCard(
-                    source = source,
-                    position = position,
-                    onMove = { delta -> CustomSources.move(source.id, delta) },
-                    refreshing = refreshing == source.id,
-                    onToggle = { CustomSources.setEnabled(source.id, !source.enabled) },
-                    onQuality = { qualityFor = source },
-                    onRefresh = {
-                        refreshing = source.id
-                        scope.launch {
-                            val result = CustomSources.refresh(source.id)
-                            refreshing = null
-                            flash = if (result.isSuccess) "« ${result.getOrNull()?.name} » est à jour."
-                            else "Échec du test : ${result.exceptionOrNull()?.message ?: "manifeste invalide"}"
-                        }
-                    },
-                    onDelete = { deleteFor = source }
-                )
+            itemsIndexed(entries, key = { _, it -> it.id }) { position, entry ->
+                val source = sources.firstOrNull { "cs:${it.id}" == entry.id }
+                if (source == null) {
+                    IntegratedSourceCard(
+                        entry,
+                        position,
+                        onMove = { SourcePriority.move(entry.id, it) },
+                        onToggle = { SourcePriority.setEnabled(entry.id, !entry.enabled) }
+                    )
+                } else {
+                    SourceCard(
+                        source = source,
+                        position = position,
+                        onMove = { delta -> SourcePriority.move(entry.id, delta) },
+                        refreshing = refreshing == source.id,
+                        onToggle = { CustomSources.setEnabled(source.id, !source.enabled) },
+                        onQuality = { qualityFor = source },
+                        onRefresh = {
+                            refreshing = source.id
+                            scope.launch {
+                                val result = CustomSources.refresh(source.id)
+                                refreshing = null
+                                flash = if (result.isSuccess) "« ${result.getOrNull()?.name} » est à jour."
+                                else "Échec du test : ${result.exceptionOrNull()?.message ?: "manifeste invalide"}"
+                            }
+                        },
+                        onDelete = { deleteFor = source }
+                    )
+                }
                 Spacer(Modifier.height(12.dp))
             }
             item {
@@ -223,6 +239,28 @@ fun SourcesScreen() {
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun IntegratedSourceCard(entry: SourcePriority.Entry, position: Int, onMove: (Int) -> Unit, onToggle: () -> Unit) {
+    val th = LocalTheme.current
+    var dragged by remember(entry.id) { mutableFloatStateOf(0f) }
+    val step = with(LocalDensity.current) { 70.dp.toPx() }
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(th.card).padding(14.dp),
+        verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(44.dp).pointerInput(entry.id) {
+            detectDragGestures(onDragEnd = { dragged = 0f }, onDragCancel = { dragged = 0f }) { change, amount ->
+                change.consume(); dragged += amount.y
+                while (dragged > step) { onMove(1); dragged -= step }
+                while (dragged < -step) { onMove(-1); dragged += step }
+            }
+        }, contentAlignment = Alignment.Center) { Icon(Icons.Filled.DragHandle, "Réordonner la source", tint = th.secondary) }
+        Column(Modifier.weight(1f).padding(horizontal = 8.dp)) {
+            Text(entry.name, localize = false, color = th.onBackground, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+            Text("Priorité ${position + 1}", color = th.secondary, style = T.caption)
+        }
+        CustomSwitch(checked = entry.enabled, onToggle = onToggle)
     }
 }
 

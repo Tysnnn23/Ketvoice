@@ -126,9 +126,8 @@ object YouTubeApi {
         require(endpoint.matches(Regex("[a-z_]+(?:/[a-z_]+)?")))
         val body = JSONObject(fields.toString()).put("context", JSONObject().put("client", JSONObject()
             .put("clientName", "WEB_REMIX").put("clientVersion", "1.20241014.01.00").put("hl", "fr").put("gl", "FR")))
-        var c: HttpURLConnection? = null
         try {
-            c = URL("https://music.youtube.com/youtubei/v1/$endpoint").openConnection() as HttpURLConnection
+            CancellableConnection.use({ URL("https://music.youtube.com/youtubei/v1/$endpoint").openConnection() as HttpURLConnection }) { c ->
             c.requestMethod = "POST"; c.doOutput = true; c.instanceFollowRedirects = false
             c.connectTimeout = 7000; c.readTimeout = 12000
             c.setRequestProperty("User-Agent", "Mozilla/5.0")
@@ -137,7 +136,8 @@ object YouTubeApi {
             if (authenticated) YouTubeMusicSession.headers(cookieOverride).forEach { (k, v) -> c.setRequestProperty(k, v) }
             c.outputStream.use { it.write(body.toString().toByteArray()) }
             if (c.responseCode in 200..299) JSONObject(c.inputStream.bufferedReader().use { it.readText() }) else null
-        } catch (_: Exception) { null } finally { c?.disconnect() }
+            }
+        } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled } catch (_: Exception) { null }
     }
 }
 

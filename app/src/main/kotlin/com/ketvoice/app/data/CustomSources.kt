@@ -61,6 +61,7 @@ object CustomSources {
     private var prefs: android.content.SharedPreferences? = null
 
     fun init(context: Context) {
+        SourcePriority.init(context)
         if (prefs != null) return
         val p = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         prefs = p
@@ -196,6 +197,15 @@ object CustomSources {
             null
         }
 
+    internal suspend fun streamFrom(source: CustomSource, wanted: Track, forDownload: Boolean): MusicApi.StreamInfo? {
+        if (!source.enabled) return null
+        val manifest = parseManifest(source.manifestUrl, source.manifestJson) ?: return null
+        if (forDownload && !manifest.downloadsAllowed) return null
+        val match = if (wanted.addon == "cs:${source.id}") wanted
+            else search(source, "${wanted.title} ${wanted.artist.substringBefore(',')}").bestCatalogMatch(wanted) ?: return null
+        return stream(source, match, forDownload)
+    }
+
     private suspend fun stream(source: CustomSource, track: Track, forDownload: Boolean): MusicApi.StreamInfo? =
         withContext(Dispatchers.IO) {
             val manifest = parseManifest(source.manifestUrl, source.manifestJson) ?: return@withContext null
@@ -271,17 +281,17 @@ object CustomSources {
             return info.copy(format = finalFormat, quality = finalQuality)
     }
 
-    private fun fetchStreamEndpoint(url: String): String? {
-        var connection: HttpURLConnection? = null
+    private suspend fun fetchStreamEndpoint(url: String): String? {
         return try {
             if (!url.startsWith("https://")) return null
-            connection = (URL(url).openConnection() as HttpURLConnection).apply {
+            CancellableConnection.use({ URL(url).openConnection() as HttpURLConnection }) { connection ->
+            connection.apply {
                 connectTimeout = 12_000; readTimeout = 16_000
                 setRequestProperty("User-Agent", UA)
                 setRequestProperty("Range", "bytes=0-1048575")
                 setRequestProperty("Accept-Encoding", "identity")
             }
-            if (connection.responseCode !in 200..299 || connection.url.protocol != "https") return null
+            if (connection.responseCode !in 200..299 || connection.url.protocol != "https") return@use null
             connection.inputStream.use { input ->
                 val head = ByteArray(16)
                 var size = 0
@@ -290,20 +300,20 @@ object CustomSources {
                     if (count < 0) break
                     size += count
                 }
-                if (DownloadValidation.audio(head.copyOf(size))) return connection.url.toString()
+                if (DownloadValidation.audio(head.copyOf(size))) return@use connection.url.toString()
                 val output = java.io.ByteArrayOutputStream()
                 output.write(head, 0, size)
                 val chunk = ByteArray(8192)
                 while (true) {
                     val count = input.read(chunk)
                     if (count < 0) break
-                    if (output.size() + count > 1_048_576) return null
+                    if (output.size() + count > 1_048_576) return@use null
                     output.write(chunk, 0, count)
                 }
                 output.toString("UTF-8")
             }
-        } catch (_: Exception) { null }
-        finally { connection?.disconnect() }
+            }
+        } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled } catch (_: Exception) { null }
     }
 
     internal fun parseTracks(source: CustomSource, raw: String): List<Track> {
@@ -472,10 +482,10 @@ object CustomSources {
 
     private fun enc(s: String): String = URLEncoder.encode(s, "UTF-8")
 
-    private fun fetchText(url: String, timeout: Int = 10_000): String? {
-        var c: HttpURLConnection? = null
+    private suspend fun fetchText(url: String, timeout: Int = 10_000): String? {
         return try {
-            c = (URL(url).openConnection() as HttpURLConnection).apply {
+            CancellableConnection.use({ URL(url).openConnection() as HttpURLConnection }) { c ->
+            c.apply {
                 connectTimeout = timeout
                 readTimeout = timeout + 4_000
                 instanceFollowRedirects = true
@@ -484,10 +494,9 @@ object CustomSources {
             }
             if (c.responseCode !in 200..299) null
             else c.inputStream.bufferedReader().use { it.readText() }.takeIf { it.length < 2_000_000 }
-        } catch (_: Exception) {
+            }
+        } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled } catch (_: Exception) {
             null
-        } finally {
-            c?.disconnect()
         }
     }
 

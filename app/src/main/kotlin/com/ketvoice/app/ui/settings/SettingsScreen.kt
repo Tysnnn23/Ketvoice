@@ -331,7 +331,7 @@ fun SettingsScreen() {
             // ==================================================== LECTURE
             Section("LECTURE") {
                 SToggle(Icons.Filled.Analytics, "Qualité progressive",
-                    "Démarre au premier flux disponible, puis prépare une meilleure qualité sans arrêter la lecture.",
+                    "Activé : les sources sont interrogées en parallèle, le premier flux audio réellement valide démarre, puis une meilleure qualité prend le relais sans couper la lecture. Désactivé : la première source disponible dans l'ordre des Sources est utilisée.",
                     AppSettings.progressiveQuality.value) { AppSettings.progressiveQuality.value = it; SettingsStore.save() }
                 SRow(Icons.Filled.Tune, "Égaliseur", sub="Traitement réel de la session audio", value="") { AppUi.showEqualizer.value=true }
                 SRow(Icons.Filled.Wifi, "Transfert sur le même Wi-Fi", sub="Découverte locale et confirmation sur le destinataire", value="") { AppUi.showHandoff.value=true }

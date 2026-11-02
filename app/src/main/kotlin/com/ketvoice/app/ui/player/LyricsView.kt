@@ -51,7 +51,6 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
-import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.drawscope.clipPath
@@ -308,7 +307,7 @@ internal fun LyricVoices(line: MusicApi.LyricLine, active: Boolean, timed: Boole
     }
     val position by clock.collectAsState(Long.MIN_VALUE)
     val leadEnd = voices.lead.words.maxOfOrNull { it.endMs } ?: line.timeMs
-    val leadSinging = timed && nearActive && position != Long.MIN_VALUE && position < leadEnd + 260
+    val leadSinging = timed && nearActive && position != Long.MIN_VALUE && position < leadEnd + LyricsPresentation.GLOW_EXIT_MS + 50
     Column(Modifier.fillMaxWidth()) {
         if (voices.lead.text.isNotBlank()) {
             if ((active || leadSinging) && voices.lead.words.isNotEmpty())
@@ -367,14 +366,13 @@ private fun BackingVocal(
 @Composable
 internal fun KaraokeLine(line: MusicApi.LyricLine, modifier: Modifier, fontScale: Float = 1f,
                          backing: Boolean = false, dim: Boolean = false) {
-    var now by remember(line) { mutableLongStateOf(Player.currentPositionMs()) }
+    val clock = remember(line) { mutableLongStateOf(Player.currentPositionMs()) }
     val playing by remember { Player.state.map { it.isPlaying }.distinctUntilChanged() }.collectAsState(false)
-    val position by Player.positionMs.collectAsState()
     LaunchedEffect(line, playing) {
-        now = Player.currentPositionMs()
-        if (playing) while (true) { withFrameNanos { now = Player.currentPositionMs() } }
+        clock.longValue = Player.currentPositionMs()
+        if (playing) while (true) { withFrameNanos { clock.longValue = Player.currentPositionMs() } }
+        else Player.positionMs.collect { clock.longValue = it }
     }
-    LaunchedEffect(position, playing) { if (!playing) now = position }
     var layout by remember(line.text) { mutableStateOf<TextLayoutResult?>(null) }
 
     // Providers do not always ship word text that concatenates back to the line
@@ -395,17 +393,25 @@ internal fun KaraokeLine(line: MusicApi.LyricLine, modifier: Modifier, fontScale
                 val to = minOf(end, measured.getLineEnd(row))
                 if (from < to) {
                     val path = measured.getPathForRange(from, to)
-                    LyricMaskSlice(path, path.getBounds(), measured.getBidiRunDirection(from) == ResolvedTextDirection.Rtl)
+                    LyricMaskSlice(path, path.getBounds(), measured.getBidiRunDirection(from) == ResolvedTextDirection.Rtl,
+                        row, measured.getLineTop(row))
                 } else null
             }
-            LyricWordMask(word.startMs, word.endMs, slices, slices.sumOf { it.bounds.width.toDouble() }.toFloat())
+            LyricWordMask(word.startMs, word.endMs, slices, slices.sumOf { it.bounds.width.toDouble() }.toFloat(),
+                word.text.trim(), slices.minOfOrNull { it.bounds.left } ?: 0f, slices.firstOrNull()?.lineTop ?: 0f)
         }
     }.orEmpty() }
-    val reduced = Motion.reduced
-    val density = LocalDensity.current
-    val glowPx = with(density) { (if (backing) 3.2f else 5.0f).dp.toPx() }
-    val outlinePx = with(density) { if (backing) 0f else 1.dp.toPx() }
+    val reduced = Motion.reduced || AppSettings.highPerformanceMode.value
     Box(modifier) {
+        if (!reduced) layout?.let { measured ->
+            masks.filter { it.end - it.start >= LyricsPresentation.HOLD_THRESHOLD_MS }.forEach { mask ->
+                key(mask.start, mask.end) {
+                    WordGlow(mask, clock, fontScale,
+                        strength = if (backing) .45f else if (dim) .72f else 1f,
+                        modifier = Modifier.matchParentSize())
+                }
+            }
+        }
         // One shaped layout for both the pending glyphs and the sung overlay.
         // No remeasurement, shifted word copy, scaling or disappearing held glyph.
         Text(line.text, localize = false, color = Color.White.copy(
@@ -416,25 +422,13 @@ internal fun KaraokeLine(line: MusicApi.LyricLine, modifier: Modifier, fontScale
             onTextLayout = { layout = it }, modifier = Modifier.fillMaxWidth())
         Canvas(Modifier.matchParentSize()) {
                 val measured = layout ?: return@Canvas
+                val now = clock.longValue // draw invalidation only: no composition or shaping per frame
                 masks.forEach { word ->
                     val progress = segmentProgress(now, word.start, word.end)
                     if (progress <= 0f) return@forEach
-                    val emphasis = LyricsPresentation.sustain(now, word.start, word.end, reduced || backing)
-                    // Apple-Music style: the sung fill is plain white; only a clearly
-                    // held note (>= 1.05 s) emits a soft, diffuse light. No contour.
-                    val held = ((word.end - word.start) / 1_400f).coerceIn(0f, 1f)
-                    val organic = if (emphasis > 0f)
-                        1f + .05f * kotlin.math.sin((now + word.start) / 240f) else 1f
-                    val sweep = if (emphasis > 0f)
-                        .78f + .22f * kotlin.math.sin(progress * Math.PI.toFloat()) else 1f
-                    val glow = if (dim || backing) 0f else (.10f + .16f * held) * emphasis * sweep * organic
-                    val inner = if (dim || backing) 0f else .08f * emphasis * organic
+                    val emphasis = LyricsPresentation.sustain(now, word.start, word.end, reduced)
                     val ink = Color.White.copy(alpha = if (dim) .82f else 1f)
-                    // Wide, low-alpha shadows read as emitted light rather than a
-                    // neon outline; only long notes pay for the extra draws.
-                    val outer = Shadow(Color.White.copy(alpha = glow), Offset.Zero, glowPx * 2.4f)
-                    val innerHalo = Shadow(Color.White.copy(alpha = glow * .9f + inner), Offset.Zero, glowPx * 1.25f)
-                    val scale = 1f + .07f * emphasis
+                    val scale = 1f + .025f * emphasis
                     var remaining = word.width * progress
                     word.slices.forEach { slice ->
                         val bounds = slice.bounds
@@ -449,8 +443,7 @@ internal fun KaraokeLine(line: MusicApi.LyricLine, modifier: Modifier, fontScale
                                 }) {
                                     clipPath(slice.path) {
                                         clipRect(left, bounds.top, right, bounds.bottom) {
-                                            drawText(measured, color = ink.copy(alpha = .55f), shadow = outer)
-                                            drawText(measured, color = ink, shadow = innerHalo)
+                                            drawText(measured, color = ink)
                                         }
                                     }
                                 }
@@ -468,13 +461,48 @@ internal fun KaraokeLine(line: MusicApi.LyricLine, modifier: Modifier, fontScale
     }
 }
 
-private data class LyricMaskSlice(val path: androidx.compose.ui.graphics.Path, val bounds: androidx.compose.ui.geometry.Rect, val rtl: Boolean)
-private data class LyricWordMask(
+internal data class LyricMaskSlice(val path: androidx.compose.ui.graphics.Path, val bounds: androidx.compose.ui.geometry.Rect, val rtl: Boolean,
+                                   val row: Int = 0, val lineTop: Float = 0f)
+internal data class LyricWordMask(
     val start: Long,
     val end: Long,
     val slices: List<LyricMaskSlice>,
-    val width: Float
+    val width: Float,
+    val text: String = "",
+    val left: Float = 0f,
+    val top: Float = 0f
 )
+
+/**
+ * Apple-Music-like sustained glow: a real blurred copy of the word's glyphs at
+ * two diffusion scales, lit only after 820 ms of *sung audio*, breathing during
+ * the hold and fading after the word ends. Blur acts on glyph alpha, so the light
+ * spreads outside the letters instead of a hard textShadow or a static blur.
+ * Never composed for short syllables, so unsung words cost nothing.
+ */
+@Composable
+private fun WordGlow(word: LyricWordMask, clock: State<Long>, fontScale: Float, strength: Float,
+                     modifier: Modifier = Modifier) {
+    val now = clock.value
+    val envelope = LyricsPresentation.sustain(now, word.start, word.end, false)
+    if (envelope <= 0f || word.text.isBlank()) return
+    val growth = LyricsPresentation.diffusion(now, word.start, word.end)
+    val breath = LyricsPresentation.breath(now, word.start)
+    val alpha = envelope * breath * strength
+    val density = LocalDensity.current
+    Box(modifier.testTag("word-glow")) {
+        listOf(
+            (4f + 5f * growth) to (alpha * (.17f + .04f * growth)),
+            (12f + 13f * growth) to (alpha * (.13f + .04f * growth))
+        ).forEach { (radius, value) ->
+            Text(word.text, localize = false, color = Color.White.copy(alpha = value.coerceIn(0f, .55f)),
+                fontSize = (33f * fontScale).sp, lineHeight = (41f * fontScale).sp,
+                letterSpacing = (-.3).sp, fontWeight = FontWeight.Black, maxLines = 1, softWrap = false,
+                modifier = Modifier.offset(x = with(density) { word.left.toDp() }, y = with(density) { word.top.toDp() })
+                    .blur(radius.dp, BlurredEdgeTreatment.Unbounded))
+        }
+    }
+}
 
 internal fun segmentProgress(now: Long, start: Long, end: Long): Float = when {
     now < start -> 0f

@@ -27,6 +27,7 @@ object MusicApi {
 
     fun init(context: Context) {
         ProviderConfig.init(context)
+        SourcePriority.init(context)
         SearchHistory.init(context)
         LyricsDiskCache.init(context)
         if (matchPrefs == null) {
@@ -201,7 +202,13 @@ object MusicApi {
             val payload = JSONObject().put("videoId", videoId).put("contentCheckOk", true).put("racyCheckOk", true)
                 .put("context", JSONObject().put("client", JSONObject().put("clientName", name)
                     .put("clientVersion", version).put("hl", "fr").put("gl", "FR"))).toString()
-            val raw = http("https://www.youtube.com/youtubei/v1/player", "POST", payload) ?: continue
+            val raw = try { CancellableConnection.use({ URL("https://www.youtube.com/youtubei/v1/player").openConnection() as HttpURLConnection }) { c ->
+                c.requestMethod = "POST"; c.doOutput = true; c.instanceFollowRedirects = false
+                c.connectTimeout = 6000; c.readTimeout = 8000
+                c.setRequestProperty("User-Agent", UA); c.setRequestProperty("Content-Type", "application/json")
+                c.outputStream.use { it.write(payload.toByteArray(Charsets.UTF_8)) }
+                if (c.responseCode in 200..299) c.inputStream.bufferedReader().use { it.readText() } else null
+            } } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled } catch (_: Exception) { null } ?: continue
             val obj = runCatching { JSONObject(raw) }.getOrNull() ?: continue
             if (obj.optJSONObject("playabilityStatus")?.optString("status") != "OK") continue
             val formats = obj.optJSONObject("streamingData")?.optJSONArray("adaptiveFormats") ?: continue
@@ -210,16 +217,8 @@ object MusicApi {
                 .maxByOrNull { it.optLong("bitrate") } ?: continue
             val url = audio.getString("url")
 
-            var probe: HttpURLConnection? = null
-            val usable = try {
-                probe = (URL(url).openConnection() as HttpURLConnection).apply {
-                    connectTimeout = 4000; readTimeout = 4000
-                    setRequestProperty("Range", "bytes=0-1023")
-                    setRequestProperty("User-Agent", UA)
-                }
-                probe.responseCode in 200..299 && probe.inputStream.use { it.read() >= 0 }
-            } catch (_: Exception) { false } finally { probe?.disconnect() }
-            if (usable) {
+            // StreamResolver performs one common, cancellable audio-byte probe.
+            run {
               val mime = audio.optString("mimeType")
               val format = when {
                   mime.contains("opus", true) -> "opus"
@@ -237,45 +236,8 @@ object MusicApi {
     suspend fun addonStream(track: Track, tag: String): StreamInfo? =
         KetvoiceApi.stream(track, tag)
 
-    private val losslessBackoffUntil = java.util.concurrent.atomic.AtomicLong(0L)
-
-    /**
-     * Lossless is a third-party source that can be expired. Probe the URL before
-     * handing it to ExoPlayer, and stop asking for 15 minutes after a 4xx. The
-     * caller then falls back to the working MP3 instead of failing or glitching.
-     */
-    suspend fun flacStream(track: Track): StreamInfo? {
-        if (System.currentTimeMillis() < losslessBackoffUntil.get()) return null
-        val stream = addonStream(track, "last")?.takeIf { it.format.contains("flac", true) } ?: return null
-        val usable = withContext(Dispatchers.IO) {
-            var probe: HttpURLConnection? = null
-            try {
-                probe = (URL(stream.url).openConnection() as HttpURLConnection).apply {
-                    connectTimeout = 3500
-                    readTimeout = 3500
-                    setRequestProperty("Range", "bytes=0-1")
-                    setRequestProperty("User-Agent", UA)
-                }
-                val code = probe.responseCode
-                val type = probe.contentType.orEmpty().lowercase()
-                val first = probe.inputStream.use { it.read() }
-                val looksAudio = type.startsWith("audio/") || type.contains("flac") ||
-                    type.contains("octet-stream")
-                if (code in 200..299 && first >= 0 && looksAudio) true
-                else {
-                    if (code in listOf(401, 403, 404, 410, 451)) {
-                        losslessBackoffUntil.set(System.currentTimeMillis() + 15 * 60_000)
-                    }
-                    false
-                }
-            } catch (_: Exception) {
-                false
-            } finally {
-                probe?.disconnect()
-            }
-        }
-        return stream.takeIf { usable }
-    }
+    suspend fun flacStream(track: Track): StreamInfo? = addonStream(track, "last")
+        ?.takeIf { it.format.contains("flac", true) || it.format.contains("wav", true) }
     suspend fun streamOf(base: String, id: String): StreamInfo? = withContext(Dispatchers.IO) {
         val raw = cachedHttp("$base/stream/${enc(id)}") ?: return@withContext null
         try {

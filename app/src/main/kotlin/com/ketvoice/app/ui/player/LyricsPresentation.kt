@@ -97,16 +97,24 @@ internal object LyricsPresentation {
         return now >= start && (end <= start || now < end)
     }
 
-    /** Soft emphasis DURING a native long segment, never in an invented post-word gap. */
+    const val HOLD_THRESHOLD_MS = 820L
+    const val GLOW_ENTER_MS = 300L
+    const val GLOW_EXIT_MS = 375L
+
+    /** Audio-clock envelope: no light before 820 ms actually elapsed, never a wall-clock timer. */
     fun sustain(now: Long, start: Long, end: Long, reduced: Boolean): Float {
-        // Apple-Music style: only clearly prolonged notes bloom. Rap syllables
-        // usually last 150-450 ms, so an 870 ms window keeps them clean while
-        // held notes still light up. The glow then follows the real duration.
-        if (reduced || end - start < 870L || now !in start until end) return 0f
-        val duration = (end - start).toFloat()
-        val enter = ((now - start) / (duration * .28f).coerceIn(180f, 420f)).coerceIn(0f, 1f)
-        val exit = ((end - now) / 200f).coerceIn(0f, 1f)
-        val t = minOf(enter, exit)
-        return t * t * (3f - 2f * t)
+        if (reduced || end - start < HOLD_THRESHOLD_MS || now < start + HOLD_THRESHOLD_MS || now >= end + GLOW_EXIT_MS) return 0f
+        val enter = smooth(((minOf(now, end) - start - HOLD_THRESHOLD_MS).toFloat() / GLOW_ENTER_MS).coerceIn(0f, 1f))
+        val exit = 1f - smooth(((now - end).toFloat() / GLOW_EXIT_MS).coerceIn(0f, 1f))
+        return enter * exit
     }
+
+    /** Diffusion grows with the elapsed sung hold (not the declared length or a static shadow). */
+    fun diffusion(now: Long, start: Long, end: Long): Float =
+        smooth(((minOf(now, end) - start - HOLD_THRESHOLD_MS).toFloat() / 2400f).coerceIn(0f, 1f))
+
+    fun breath(now: Long, start: Long): Float =
+        .97f + .03f * kotlin.math.sin((now - start).coerceAtLeast(0) * (2.0 * Math.PI / 2600.0)).toFloat()
+
+    private fun smooth(t: Float) = t * t * (3f - 2f * t)
 }

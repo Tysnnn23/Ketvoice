@@ -7,6 +7,22 @@
 
 ---
 
+# Ketvoice 3.15.0
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 71** — Apple Music sustained glow and a real source-ordered stream engine.
+
+- Glow threshold 820 ms of sung audio, two-scale glyph blur, 300 ms in, breathing, 375 ms out.
+- One persisted source priority for streaming and downloads; first verified audio wins.
+- Progressive mode starts the first stream immediately and upgrades without interruption.
+- Every stream and download URL is probed for real audio bytes; cancelled sources stop.
+- Lossless provider still fails upstream and is skipped; French default and 11 languages kept.
+
+Full notes and limits: [3.15.0](docs/releases/v3.15.0.md).
+
+---
+
 # Ketvoice 3.14.1
 
 ![Ketvoice](ketvoice-banner.png)

@@ -29,11 +29,12 @@ object KetvoiceApi {
 
     @Volatile private var retryAt = 0L
 
-    private fun get(path: String, readTimeoutMs: Int = 30_000): String? {
+    private suspend fun get(path: String, readTimeoutMs: Int = 30_000): String? {
         if (SystemClock.elapsedRealtime() < retryAt) return null
-        var connection: HttpURLConnection? = null
         return try {
-            connection = (URL(BASE + path).openConnection() as HttpURLConnection).apply {
+            CancellableConnection.use({ URL(BASE + path).openConnection() as HttpURLConnection }) { connection ->
+            connection.apply {
+                instanceFollowRedirects = false
                 requestMethod = "GET"
                 connectTimeout = 12_000
                 readTimeout = readTimeoutMs
@@ -47,14 +48,13 @@ object KetvoiceApi {
             val stream = if (code in 200..299) connection.inputStream else connection.errorStream
             val text = stream?.bufferedReader()?.use(BufferedReader::readText)
             if (code in 200..299) text else null
-        } catch (_: Exception) {
+            }
+        } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled } catch (_: Exception) {
             null
-        } finally {
-            connection?.disconnect()
         }
     }
 
-    private fun getJson(path: String, readTimeoutMs: Int = 30_000): JSONObject? =
+    private suspend fun getJson(path: String, readTimeoutMs: Int = 30_000): JSONObject? =
         get(path, readTimeoutMs)?.let { raw -> runCatching { JSONObject(raw) }.getOrNull() }
 
     suspend fun health(): Boolean = withContext(Dispatchers.IO) {

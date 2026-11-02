@@ -22,6 +22,9 @@ import com.ketvoice.app.data.LyricsRepo
 import com.ketvoice.app.data.MusicApi
 import com.ketvoice.app.data.PublicationApi
 import com.ketvoice.app.data.Track
+import com.ketvoice.app.data.StreamResolver
+import com.ketvoice.app.data.StreamQuality
+import com.ketvoice.app.data.SourcePriority
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -30,11 +33,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.async
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.take
+import kotlinx.coroutines.flow.collect
 
 data class PlayerUiState(
     val queue: List<Track> = listOf(),
@@ -76,6 +79,7 @@ object Player {
     private var desiredPlay = true
     private var activeStream: MusicApi.StreamInfo? = null
     private var fallbackAttempts = 0
+    private val failedStreamUrls = mutableSetOf<String>()
     private var historyGeneration = -1
     private var resolving = false
 
@@ -106,16 +110,19 @@ object Player {
         override fun onPlayerError(error: PlaybackException) {
             val track = _state.value.current ?: return
             val failed = activeStream
-            if (fallbackAttempts++ >= 2) {
+            failed?.url?.let { failedStreamUrls += it }
+            if (fallbackAttempts++ >= SourcePriority.entries().count { it.enabled }.coerceAtLeast(1)) {
                 _state.value = _state.value.copy(isPlaying = false, quality = "Erreur de lecture · réessayez", failed = true)
                 return
             }
             val gen = generation
             val pos = controller?.currentPosition?.coerceAtLeast(0) ?: 0L
-            scope.launch {
+            resolutionJob?.cancel()
+            resolutionJob = scope.launch {
                 val alternative = withTimeoutOrNull(25_000) {
-                    if (failed?.format?.contains("flac", true) == true) MusicApi.addonStream(track, "um")
-                    else MusicApi.flacStream(track) ?: MusicApi.addonStream(track, "um")
+                    if (track.id.startsWith("kv:upload:") || track.addon == "upload") null
+                    else StreamResolver.candidates(track, download = false, lossless = wantsLossless(),
+                        race = AppSettings.progressiveQuality.value, excluded = failedStreamUrls.toSet()).firstOrNull()?.stream
                 }
                 if (gen != generation) return@launch
                 if (alternative != null && alternative.url != failed?.url) {
@@ -263,6 +270,7 @@ object Player {
         desiredPlay = autoPlay
         activeStream = null
         fallbackAttempts = 0
+        failedStreamUrls.clear()
         c.pause()
         lastEndedKey = null
         // 1) Correspondance addon déjà présente dans la file : zéro recherche réseau.
@@ -354,52 +362,13 @@ object Player {
                 AudioCache.cacheWhole(track.id, stream)
                 return@launch
             }
-            val youtube = async(Dispatchers.IO) { runCatching { MusicApi.youtubeStream(resolvedTrack) }.getOrNull() }
-            val mp3 = async(Dispatchers.IO) { runCatching { MusicApi.addonStream(resolvedTrack, "um") }.getOrNull() }
-            val flac = async(Dispatchers.IO) {
-                if (wantsLossless()) runCatching { MusicApi.flacStream(resolvedTrack) }.getOrNull() else null
-            }
-            val custom = async(Dispatchers.IO) {
-                runCatching { com.ketvoice.app.data.CustomSources.streamForTrack(resolvedTrack) }.getOrNull()
-            }
-            // Progressive mode races available sources without a YouTube head start.
-            // With it disabled, resolve the requested quality before starting once.
-            val customTrack = resolvedTrack.addon?.startsWith("cs:") == true
             val progressive = AppSettings.progressiveQuality.value
             val highQuality = qualitySetting() != "Normal"
-            var initial = if (progressive) null else if (customTrack) custom.await()
-                else if (wantsLossless()) {
-                    // Never let a stalled/expired lossless probe delay playback.
-                    // YouTube's best adaptive audio outranks the 128 kb/s MP3.
-                    withTimeoutOrNull(1_500) { flac.await() }
-                        ?: withTimeoutOrNull(4_500) { youtube.await() }
-                        ?: mp3.await() ?: flac.await()
-                } else if (highQuality) {
-                    withTimeoutOrNull(4_500) { youtube.await() } ?: mp3.await()
-                } else mp3.await() ?: youtube.await()
-            if (initial == null) {
-                val candidates = mutableListOf(youtube, mp3, flac, custom)
-                while (candidates.isNotEmpty() && initial == null) {
-                    val (done, result) = select {
-                        candidates.forEach { d -> d.onAwait { d to it } }
-                    }
-                    candidates.remove(done)
-                    initial = result
-                }
-            }
-            if (gen != generation) return@launch
-            if (initial == null) {
-                resolving = false
-                _state.value = _state.value.copy(isPlaying = false, playWhenReady = false, buffering = false, quality = "Aucun flux disponible", failed = true)
-                return@launch
-            }
-            val first = initial
-            start(first)
-            AudioCache.cacheWhole(track.id, first)
-            var currentStream: MusicApi.StreamInfo = first
-            suspend fun upgrade(stream: MusicApi.StreamInfo?) {
-                if (!progressive || !AppSettings.progressiveQuality.value || stream == null ||
-                    stream.url == currentStream.url || gen != generation) return
+            var currentStream: MusicApi.StreamInfo? = null
+            suspend fun upgrade(stream: MusicApi.StreamInfo) {
+                if (!progressive || !highQuality || !AppSettings.progressiveQuality.value ||
+                    stream.url == currentStream?.url || gen != generation ||
+                    StreamQuality.rank(stream) <= (currentStream?.let(StreamQuality::rank) ?: 0)) return
                 val future = c.sendCustomCommand(androidx.media3.session.SessionCommand(PlaybackService.CMD_UPGRADE, Bundle.EMPTY),
                     Bundle().apply {
                         putString("id", track.id); putString("url", stream.url)
@@ -418,25 +387,19 @@ object Player {
                 _state.value = _state.value.copy(quality = label(stream))
                 AudioCache.cacheWhole(track.id, stream)
             }
-            if (first.format.contains("mp3", true) && highQuality) {
-                // The broker MP3 is commonly 128 kb/s: prefer YouTube's adaptive
-                // audio when it carries a higher declared bitrate.
-                val better = withTimeoutOrNull(6_000) { youtube.await() }
-                val current = Regex("\\d+").find(first.quality)?.value?.toIntOrNull() ?: 0
-                val candidate = better?.quality?.let { Regex("\\d+").find(it)?.value?.toIntOrNull() } ?: 0
-                if (better != null && candidate > current) upgrade(better)
+            val candidates = StreamResolver.candidates(resolvedTrack, download = false, lossless = wantsLossless(), race = progressive)
+            (if (progressive) candidates else candidates.take(1)).collect { candidate ->
+                if (gen != generation) throw kotlinx.coroutines.CancellationException()
+                if (currentStream == null) {
+                    currentStream = candidate.stream
+                    start(candidate.stream)
+                    AudioCache.cacheWhole(track.id, candidate.stream)
+                } else upgrade(candidate.stream)
             }
-            if (wantsLossless() && !first.format.contains("flac", true)) upgrade(flac.await())
-            if (customTrack) {
-                // Si la source personnalisée a été plus lente que le repli, elle
-                // remplace le flux de secours dès qu'elle est réellement prête.
-                val sourceStream = withTimeoutOrNull(9_000) { custom.await() }
-                if (sourceStream != null) upgrade(sourceStream)
+            if (currentStream == null && gen == generation) {
+                resolving = false
+                _state.value = _state.value.copy(isPlaying = false, playWhenReady = false, buffering = false, quality = "Aucun flux disponible", failed = true)
             }
-            youtube.cancel()
-            mp3.cancel()
-            flac.cancel()
-            custom.cancel()
         }
     }
 

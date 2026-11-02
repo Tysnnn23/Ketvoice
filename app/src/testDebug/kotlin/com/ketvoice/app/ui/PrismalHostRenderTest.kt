@@ -11,6 +11,8 @@ import androidx.compose.foundation.background
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.BlurredEdgeTreatment
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
@@ -46,6 +48,7 @@ import com.ketvoice.app.ui.sub.ArtistHeader
 import com.ketvoice.app.ui.sub.AlbumPage
 import com.ketvoice.app.ui.player.CanvasFocusPlayer
 import com.ketvoice.app.ui.player.LyricsPane
+import com.ketvoice.app.ui.player.KaraokeLine
 import com.ketvoice.app.ui.player.PlayerArtworkFrame
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.After
@@ -228,6 +231,56 @@ class PrismalHostRenderTest {
         }
         compose.waitUntil(5000) { PlaylistStore.lists.value.first().entries.first().id == "entry:1" }
         assertEquals("entry:0", PlaylistStore.lists.value.first().entries[1].id)
+    }
+
+    @Test fun hostRenderingCannotValidateRenderEffectBlur() {
+        // Regression note: Robolectric's native Skia does NOT composite RenderEffect
+        // blur, so host pixels cannot validate a bloom. Device validation is required.
+        compose.setContent { KetvoiceTheme(useDark = true) {
+            Box(Modifier.fillMaxSize().background(Color.Black)) {
+                Box(Modifier.offset(x = 20.dp, y = 40.dp).size(80.dp).background(Color.White)
+                    .blur(12.dp, BlurredEdgeTreatment.Unbounded))
+            }
+        } }
+        compose.waitForIdle()
+        image("blur-probe") { bitmap ->
+            val inside = android.graphics.Color.red(bitmap.getPixel(28, 48))
+            val bleed = android.graphics.Color.red(bitmap.getPixel(28, 32))
+            println("blur-probe inside=$inside bleed=$bleed")
+            assertTrue("Sharp content is drawn on host", inside > 240)
+            assertEquals("Documented limitation: host blur is not a device result", 0, bleed)
+        }
+    }
+
+    @Test fun onlyWordsHeldLongerThan820msComposeTheGlow() {
+        AppSettings.reduceAnimations.value = false
+        AppSettings.highPerformanceMode.value = false
+        val line = MusicApi.LyricLine(0, "Hold", listOf(MusicApi.LyricWord(0, "Hold", 3_000)))
+        @Suppress("UNCHECKED_CAST")
+        val position = Player.positionMs as MutableStateFlow<Long>
+        position.value = 500L
+        compose.setContent { KetvoiceTheme(useDark = true) {
+            Box(Modifier.fillMaxSize().background(Color.Black)) {
+                Box(Modifier.padding(top = 220.dp, start = 24.dp, end = 24.dp).fillMaxWidth()) {
+                    KaraokeLine(line, Modifier.fillMaxWidth(), 1f)
+                }
+            }
+        } }
+        compose.onNodeWithText("Hold").assertIsDisplayed()
+        assertEquals("Before 820 ms the sustained halo does not exist", 0, compose.onAllNodesWithTag("word-glow").fetchSemanticsNodes().size)
+        compose.runOnIdle { position.value = 1_500L }
+        compose.waitForIdle()
+        assertEquals("A held word gets one glow layer", 1, compose.onAllNodesWithTag("word-glow").fetchSemanticsNodes().size)
+        image("lyrics-apple-glow-held") { bitmap ->
+            // Geometry is real; the blur itself cannot be measured on host (see probe).
+            assertTrue("Lit glyphs are present", android.graphics.Color.red(bitmap.getPixel(40, 232)) > 0)
+        }
+        compose.runOnIdle { position.value = 3_200L }
+        compose.waitForIdle()
+        assertTrue("After the word ends the halo begins to fade", compose.onAllNodesWithTag("word-glow").fetchSemanticsNodes().size <= 1)
+        compose.runOnIdle { position.value = 3_500L }
+        compose.waitForIdle()
+        assertEquals("The halo is fully gone after the fade window", 0, compose.onAllNodesWithTag("word-glow").fetchSemanticsNodes().size)
     }
 
     @Test fun normalCanvasAndCoverShareTheRestoredLegacyDissolve() {
