@@ -7,6 +7,19 @@
 
 ---
 
+# Ketvoice 3.17.1
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 75** — collection header scrolls like the playlist and album pages.
+
+- Liked songs, recently played and all tracks now scroll their header away instead of pinning it.
+- No functional change from 3.17.0 otherwise: artist hero, refresh/share, Discord linking, progressive playback.
+
+Full notes: [3.17.1](docs/releases/v3.17.1.md).
+
+---
+
 # Ketvoice 3.17.0
 
 ![Ketvoice](ketvoice-banner.png)

@@ -92,30 +92,6 @@ fun CatalogScreen() {
             Text(page?.title ?: request.title, color = theme.onBackground, fontSize = 24.sp,
                 fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
-        // Header of the collection now matches the playlist/album presentation.
-        CollectionHero(
-            title = request.title,
-            subtitle = buildString {
-                append("${tracks.size} titre${if (tracks.size > 1) "s" else ""}")
-                val minutes = tracks.sumOf { it.durationMs } / 60_000
-                if (minutes > 0) append(" · $minutes min")
-                when (request.kind) {
-                    "favorites" -> append(" · Vos favoris")
-                    "history" -> append(" · Écoutés récemment")
-                    "downloads" -> append(" · Hors ligne")
-                }
-            },
-            covers = tracks.take(4).map { ArtworkRepo.coverForTrack(it) ?: it.coverUrl },
-            seed = request.id + request.kind,
-            onPlay = { if (tracks.isNotEmpty()) { Player.setShuffle(false); Player.playQueue(tracks, 0) } },
-            onShuffle = { if (tracks.isNotEmpty()) { Player.playQueue(tracks.shuffled()); Player.setShuffle(true) } },
-            onShare = { com.ketvoice.app.util.ShareLinks.shareCollection(shareContext, request.kind, request.title, tracks.size) },
-            onRefresh = {
-                ArtworkRepo.invalidate(tracks)
-                ArtworkRepo.enrich(tracks)
-                attempt++
-            }
-        )
         if (loading) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator(color = theme.accent, modifier = Modifier.size(26.dp), strokeWidth = 2.dp)
         } else if (tracks.isEmpty()) {
@@ -132,6 +108,32 @@ fun CatalogScreen() {
         } else LazyVerticalGrid(
             columns = if (LocalAdaptiveLayout.current.hasRail) GridCells.Adaptive(400.dp) else GridCells.Fixed(1),
             contentPadding = PaddingValues(bottom = LocalAdaptiveLayout.current.bottomPaddingDp.dp)) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                // Header of the collection now matches the playlist/album presentation.
+                CollectionHero(
+                    title = request.title,
+                    subtitle = buildString {
+                        append("${tracks.size} titre${if (tracks.size > 1) "s" else ""}")
+                        val minutes = tracks.sumOf { it.durationMs } / 60_000
+                        if (minutes > 0) append(" · $minutes min")
+                        when (request.kind) {
+                            "favorites" -> append(" · Vos favoris")
+                            "history" -> append(" · Écoutés récemment")
+                            "downloads" -> append(" · Hors ligne")
+                        }
+                    },
+                    covers = tracks.take(4).map { ArtworkRepo.coverForTrack(it) ?: it.coverUrl },
+                    seed = request.id + request.kind,
+                    onPlay = { if (tracks.isNotEmpty()) { Player.setShuffle(false); Player.playQueue(tracks, 0) } },
+                    onShuffle = { if (tracks.isNotEmpty()) { Player.playQueue(tracks.shuffled()); Player.setShuffle(true) } },
+                    onShare = { com.ketvoice.app.util.ShareLinks.shareCollection(shareContext, request.kind, request.title, tracks.size) },
+                    onRefresh = {
+                        ArtworkRepo.invalidate(tracks)
+                        ArtworkRepo.enrich(tracks)
+                        attempt++
+                    }
+                )
+            }
             itemsIndexed(tracks, key = { i, t -> "${t.id}:$i" }) { index, track ->
                 val active = player.current?.id == track.id
                 Row(Modifier.fillMaxWidth().clickable { Player.playQueue(tracks, index) }.padding(horizontal = 18.dp, vertical = 7.dp),
