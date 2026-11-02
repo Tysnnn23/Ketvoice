@@ -7,6 +7,23 @@
 
 ---
 
+# Ketvoice 3.14.0
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 69** — dashboard Studio, source priority, fixed playlist header.
+
+- Glow threshold 870 ms; soft halo and 1.07× growth unchanged.
+- Playlist artwork stays fixed; the bottom bar condenses after 24 px of scroll.
+- Drag-handle priority for custom sources (app) and Studio sources (saved order).
+- Ketvoice Studio dashboard: sidebar, account, pink/black theme, remembered PC
+  session.
+- Discord account link is directly visible and opens the WebView OAuth.
+
+Full notes: [3.14.0](docs/releases/v3.14.0.md).
+
+---
+
 # Ketvoice 3.13.9
 
 ![Ketvoice](ketvoice-banner.png)

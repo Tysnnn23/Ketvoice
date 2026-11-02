@@ -142,6 +142,11 @@ internal fun DiscordSettings(modifier: Modifier = Modifier) {
                 }.padding(top = 10.dp, bottom = 4.dp))
             Text("Ouvrir l'app Discord", color = theme.accent.copy(alpha = .82f), fontSize = 12.sp,
                 modifier = Modifier.fillMaxWidth().clickable { openDiscord() }.padding(bottom = 4.dp))
+            Text("Lier mon compte Discord (optionnel)", color = theme.accent.copy(alpha = .82f),
+                fontSize = 12.sp,
+                modifier = Modifier.fillMaxWidth().clickable(enabled = !discord.busy) {
+                    Discord.link()
+                }.padding(bottom = 4.dp))
             Text("OAuth2 · redirect à déclarer : https://ketvoice.netlify.app/discord.html",
                 color = theme.secondary, fontSize = 10.sp, lineHeight = 14.sp,
                 modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp))
@@ -174,11 +179,7 @@ internal fun DiscordSettings(modifier: Modifier = Modifier) {
                         Discord.connectWithToken(token)
                         token = ""
                     }.padding(top = 6.dp, bottom = 2.dp))
-                Text("Lier mon compte Discord (optionnel)", color = theme.accent.copy(alpha = .82f),
-                    fontSize = 12.sp,
-                    modifier = Modifier.fillMaxWidth().clickable(enabled = !discord.busy) {
-                        Discord.link()
-                    }.padding(top = 4.dp, bottom = 2.dp))
+
             }
         } else {
             Text("Cette version a été compilée sans le SDK Discord.", color = theme.secondary,

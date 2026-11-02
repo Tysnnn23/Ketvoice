@@ -100,9 +100,9 @@ internal object LyricsPresentation {
     /** Soft emphasis DURING a native long segment, never in an invented post-word gap. */
     fun sustain(now: Long, start: Long, end: Long, reduced: Boolean): Float {
         // Apple-Music style: only clearly prolonged notes bloom. Rap syllables
-        // usually last 150-450 ms, so a one-second window keeps them clean while
+        // usually last 150-450 ms, so an 870 ms window keeps them clean while
         // held notes still light up. The glow then follows the real duration.
-        if (reduced || end - start < 1_050L || now !in start until end) return 0f
+        if (reduced || end - start < 870L || now !in start until end) return 0f
         val duration = (end - start).toFloat()
         val enter = ((now - start) / (duration * .28f).coerceIn(180f, 420f)).coerceIn(0f, 1f)
         val exit = ((end - now) / 200f).coerceIn(0f, 1f)

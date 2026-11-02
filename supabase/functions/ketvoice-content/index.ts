@@ -351,7 +351,7 @@ async function publicLyrics(url: URL): Promise<Response> {
 }
 async function sources(req: Request, owner: string, url: URL): Promise<Response> {
   if(req.method==="GET") {
-    const rows=await database(`ketvoice_managed_sources?created_by=eq.${encodeURIComponent(owner)}&select=id,name,manifest_url,enabled,updated_at&order=created_at.desc`);
+    const rows=await database(`ketvoice_managed_sources?created_by=eq.${encodeURIComponent(owner)}&select=id,name,manifest_url,enabled,sort_order,updated_at&order=sort_order.asc,created_at.asc`);
     return json({sources:rows});
   }
   const id=url.searchParams.get("id") || "";
@@ -365,7 +365,7 @@ async function sources(req: Request, owner: string, url: URL): Promise<Response>
   let data: Row;
   try {data=JSON.parse(new TextDecoder("utf-8",{fatal:true}).decode(await bounded(req,8192)));}
   catch(error) {if(error instanceof HttpError) throw error;throw new HttpError(400,"Données invalides");}
-  if(!data || Array.isArray(data) || typeof data!=="object" || Object.keys(data).some(k=>!["name","manifest_url","enabled"].includes(k)))
+  if(!data || Array.isArray(data) || typeof data!=="object" || Object.keys(data).some(k=>!["name","manifest_url","enabled","sort_order"].includes(k)))
     throw new HttpError(400,"Champs invalides");
   if(req.method!=="POST" && req.method!=="PATCH") throw new HttpError(405,"Méthode invalide");
   const update: Row={};
@@ -377,6 +377,11 @@ async function sources(req: Request, owner: string, url: URL): Promise<Response>
   if(Object.hasOwn(data,"enabled")) {
     if(typeof data.enabled!=="boolean") throw new HttpError(400,"État invalide");
     update.enabled=data.enabled;
+  }
+  if(Object.hasOwn(data,"sort_order")) {
+    const order=Number(data.sort_order);
+    if(!Number.isSafeInteger(order) || order<0 || order>9999) throw new HttpError(400,"Ordre invalide");
+    update.sort_order=order;
   }
   if(Object.hasOwn(data,"manifest_url")) {
     const candidate=String(data.manifest_url ?? "").trim();

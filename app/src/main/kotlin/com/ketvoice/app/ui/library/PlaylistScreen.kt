@@ -114,78 +114,78 @@ fun PlaylistScreen() {
             if (first > 0) 0f else 1f - (offset / 400f).coerceIn(0f, 1f)
         }}
 
+
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .graphicsLayer { alpha = headerFade }
+                    .padding(horizontal = 24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Spacer(Modifier.height(6.dp))
+                BoxWithConstraints(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    val edge = if (com.ketvoice.app.BuildConfig.IS_QUEST) 180.dp else (maxWidth * .68f).coerceIn(156.dp, 256.dp)
+                    if (!AppSettings.reduceDynamicBlur.value && !AppSettings.highPerformanceMode.value) Box(Modifier.size(edge + 24.dp)
+                         .graphicsLayer { alpha = .22f }.blur(18.dp)) {
+                         PlaylistArtwork(playlist, playlist.name, Modifier.fillMaxSize())
+                    }
+                    PlaylistArtwork(playlist, playlist.name,
+                        Modifier.size(edge).collectionEntry("playlist:${playlist.id}", seen, 0))
+                }
+                Spacer(Modifier.height(16.dp))
+                Text(playlist.name, localize = false, color = th.onBackground,
+                    fontSize = if (com.ketvoice.app.BuildConfig.IS_QUEST) 28.sp else 25.sp,
+                    fontWeight = FontWeight.Black, letterSpacing = (-.6).sp,
+                    maxLines = 3, overflow = TextOverflow.Ellipsis, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                Spacer(Modifier.height(6.dp))
+                Text(buildString {
+                    append("${playable.size} / ${playlist.entries.size} titres disponibles")
+                    if (playlist.spotifyUrl != null) append(" · Import Spotify")
+                }, color = th.secondary, fontSize = 13.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                val totalMinutes = playable.sumOf { it.durationMs } / 60_000
+                if (totalMinutes > 0) Text("$totalMinutes min", color = th.secondary, fontSize = 12.sp,
+                    modifier = Modifier.padding(top = 5.dp))
+                if (playlist.spotifyUrl != null) Text(
+                    "La liste peut être incomplète : touchez un titre manquant pour le retrouver.",
+                    color = th.secondary, fontSize = 12.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    modifier = Modifier.padding(top = 4.dp))
+                Spacer(Modifier.height(14.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(9.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.weight(1f).heightIn(min = 46.dp)
+                        .clip(RoundedCornerShape(23.dp)).background(if (playable.isEmpty()) th.card else th.accent)
+                        .clickable(enabled = playable.isNotEmpty()) { Player.playQueue(playable) },
+                        contentAlignment = Alignment.Center) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                             Icon(Icons.Filled.PlayArrow, null, tint = if (playable.isEmpty()) th.secondary else onAccent,
+                                modifier = Modifier.size(22.dp))
+                            Spacer(Modifier.width(6.dp))
+                             Text("Écouter", color = if (playable.isEmpty()) th.secondary else onAccent,
+                                fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                        }
+                    }
+                    Box(Modifier.weight(1f).heightIn(min = 46.dp)
+                        .clip(RoundedCornerShape(23.dp)).background(th.card)
+                        .clickable(enabled = !busy && playlist.entries.size > 1) { editing = !editing },
+                        contentAlignment = Alignment.Center) {
+                        Text(if (editing) "Terminer" else "Modifier l'ordre", color = th.accent,
+                            fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                    }
+                }
+                Text("Aléatoire", color = th.accent, fontWeight = FontWeight.SemiBold, fontSize = 14.sp,
+                    modifier = Modifier.clickable(enabled = playable.isNotEmpty() && !editing) {
+                        Player.playQueue(playable.shuffled()); Player.setShuffle(true)
+                    }.padding(14.dp))
+                if (error.isNotBlank()) Text(error, color = MaterialTheme.colorScheme.error,
+                    fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
+                Spacer(Modifier.height(8.dp))
+            }
+
         LazyColumn(
             Modifier.weight(1f).fillMaxWidth(),
             state = list,
             contentPadding = PaddingValues(bottom = LocalAdaptiveLayout.current.bottomPaddingDp.dp)
         ) {
             // Premier item = hero premium (couverture, titre, boutons) — défile et s'estompe
-            item {
-                Column(
-                    Modifier
-                        .fillMaxWidth()
-                        .graphicsLayer { alpha = headerFade }
-                        .padding(horizontal = 24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Spacer(Modifier.height(6.dp))
-                    BoxWithConstraints(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        val edge = if (com.ketvoice.app.BuildConfig.IS_QUEST) 180.dp else (maxWidth * .68f).coerceIn(156.dp, 256.dp)
-                        if (!AppSettings.reduceDynamicBlur.value && !AppSettings.highPerformanceMode.value) Box(Modifier.size(edge + 24.dp)
-                             .graphicsLayer { alpha = .22f }.blur(18.dp)) {
-                             PlaylistArtwork(playlist, playlist.name, Modifier.fillMaxSize())
-                        }
-                        PlaylistArtwork(playlist, playlist.name,
-                            Modifier.size(edge).collectionEntry("playlist:${playlist.id}", seen, 0))
-                    }
-                    Spacer(Modifier.height(16.dp))
-                    Text(playlist.name, localize = false, color = th.onBackground,
-                        fontSize = if (com.ketvoice.app.BuildConfig.IS_QUEST) 28.sp else 25.sp,
-                        fontWeight = FontWeight.Black, letterSpacing = (-.6).sp,
-                        maxLines = 3, overflow = TextOverflow.Ellipsis, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-                    Spacer(Modifier.height(6.dp))
-                    Text(buildString {
-                        append("${playable.size} / ${playlist.entries.size} titres disponibles")
-                        if (playlist.spotifyUrl != null) append(" · Import Spotify")
-                    }, color = th.secondary, fontSize = 13.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-                    val totalMinutes = playable.sumOf { it.durationMs } / 60_000
-                    if (totalMinutes > 0) Text("$totalMinutes min", color = th.secondary, fontSize = 12.sp,
-                        modifier = Modifier.padding(top = 5.dp))
-                    if (playlist.spotifyUrl != null) Text(
-                        "La liste peut être incomplète : touchez un titre manquant pour le retrouver.",
-                        color = th.secondary, fontSize = 12.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                        modifier = Modifier.padding(top = 4.dp))
-                    Spacer(Modifier.height(14.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(9.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Box(Modifier.weight(1f).heightIn(min = 46.dp)
-                            .clip(RoundedCornerShape(23.dp)).background(if (playable.isEmpty()) th.card else th.accent)
-                            .clickable(enabled = playable.isNotEmpty()) { Player.playQueue(playable) },
-                            contentAlignment = Alignment.Center) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                 Icon(Icons.Filled.PlayArrow, null, tint = if (playable.isEmpty()) th.secondary else onAccent,
-                                    modifier = Modifier.size(22.dp))
-                                Spacer(Modifier.width(6.dp))
-                                 Text("Écouter", color = if (playable.isEmpty()) th.secondary else onAccent,
-                                    fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
-                            }
-                        }
-                        Box(Modifier.weight(1f).heightIn(min = 46.dp)
-                            .clip(RoundedCornerShape(23.dp)).background(th.card)
-                            .clickable(enabled = !busy && playlist.entries.size > 1) { editing = !editing },
-                            contentAlignment = Alignment.Center) {
-                            Text(if (editing) "Terminer" else "Modifier l'ordre", color = th.accent,
-                                fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
-                        }
-                    }
-                    Text("Aléatoire", color = th.accent, fontWeight = FontWeight.SemiBold, fontSize = 14.sp,
-                        modifier = Modifier.clickable(enabled = playable.isNotEmpty() && !editing) {
-                            Player.playQueue(playable.shuffled()); Player.setShuffle(true)
-                        }.padding(14.dp))
-                    if (error.isNotBlank()) Text(error, color = MaterialTheme.colorScheme.error,
-                        fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
-                    Spacer(Modifier.height(8.dp))
-                }
-            }
 
             if (playlist.entries.isEmpty()) {
                 // État vide affiché comme premier item

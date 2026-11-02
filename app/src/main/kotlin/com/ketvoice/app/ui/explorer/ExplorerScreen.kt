@@ -61,8 +61,8 @@ fun ExplorerScreen() {
         else {
             val gridState = rememberLazyGridState()
             LaunchedEffect(gridState) {
-                snapshotFlow { gridState.firstVisibleItemIndex }
-                    .collect { AppUi.bottomCollapsed.value = it > 1 }
+                snapshotFlow { gridState.firstVisibleItemIndex to gridState.firstVisibleItemScrollOffset }
+                    .collect { (index, offset) -> AppUi.bottomCollapsed.value = index > 0 || offset > 24 }
             }
             LazyVerticalGrid(if (layout.hasRail) GridCells.Adaptive(220.dp) else GridCells.Fixed(2),
                 state = gridState,

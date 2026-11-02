@@ -134,8 +134,8 @@ fun LibraryScreen() {
 
     val libraryListState = androidx.compose.foundation.lazy.rememberLazyListState()
     LaunchedEffect(libraryListState) {
-        snapshotFlow { libraryListState.firstVisibleItemIndex }
-            .collect { AppUi.bottomCollapsed.value = it > 1 }
+        snapshotFlow { libraryListState.firstVisibleItemIndex to libraryListState.firstVisibleItemScrollOffset }
+            .collect { (index, offset) -> AppUi.bottomCollapsed.value = index > 0 || offset > 24 }
     }
     LazyColumn(
         Modifier.fillMaxSize().testTag("library-list").background(theme.background).statusBarsPadding(),

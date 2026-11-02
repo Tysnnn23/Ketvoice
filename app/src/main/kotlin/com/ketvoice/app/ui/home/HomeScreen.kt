@@ -55,7 +55,8 @@ fun HomeScreen() {
     LaunchedEffect(Unit) { HomeFeed.start(context) }
     LaunchedEffect(recent) { ArtworkRepo.enrich(recent.take(20)) }
     LaunchedEffect(state) {
-        snapshotFlow { state.firstVisibleItemIndex }.collect { AppUi.bottomCollapsed.value = it > 1 }
+        snapshotFlow { state.firstVisibleItemIndex to state.firstVisibleItemScrollOffset }
+            .collect { (index, offset) -> AppUi.bottomCollapsed.value = index > 0 || offset > 24 }
     }
     Box(Modifier.fillMaxSize().background(theme.background)) {
         LazyColumn(state = state, modifier = Modifier.fillMaxSize().statusBarsPadding(),

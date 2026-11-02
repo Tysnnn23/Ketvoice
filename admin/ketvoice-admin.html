@@ -6,27 +6,104 @@
 <meta name="color-scheme" content="dark">
 <title>Ketvoice Studio</title>
 <style>
-:root{font:16px/1.55 system-ui,-apple-system,Segoe UI,sans-serif;color:#f5f3f9;background:#0d0c12}*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 15% 0%,#312443 0,transparent 47%),#0d0c12;min-height:100vh}header,main{max-width:1120px;margin:auto;padding:24px}header{display:flex;align-items:center;justify-content:space-between;gap:20px;border-bottom:1px solid #ffffff18}.brand{font-size:25px;font-weight:800;letter-spacing:-1px}.brand span{color:#dcaaef}.eyebrow{text-transform:uppercase;letter-spacing:.18em;font-size:11px;font-weight:750;color:#bb91d6}h1{font-size:clamp(28px,4vw,46px);line-height:1.1;letter-spacing:-.04em;margin:14px 0 12px}h2{font-size:22px;letter-spacing:-.025em;margin:0 0 18px}h3{margin:0 0 8px}p{color:#b8b2c3;margin:0 0 18px}main{padding-top:48px;padding-bottom:80px}.intro{max-width:730px}.layout{display:grid;grid-template-columns:220px minmax(0,1fr);gap:26px;margin-top:36px}.panel{background:#191720;border:1px solid #ffffff18;border-radius:20px;padding:28px;box-shadow:0 15px 45px #0003}.nav{align-self:start;display:grid;gap:8px}.nav button{text-align:left;background:transparent;color:#bab5c4;border:0;padding:14px;border-radius:12px}.nav button[aria-selected=true]{background:#382746;color:#fff}button{font:inherit;cursor:pointer;border-radius:10px;border:1px solid #ffffff26;padding:11px 17px;background:#322b3e;color:#fff;font-weight:650}button.primary{border:0;background:#d3a1ec;color:#23142e}button:disabled{opacity:.55;cursor:wait}button:hover:not(:disabled){filter:brightness(1.15)}button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid #eac4fb;outline-offset:2px}label{display:block;color:#e6deed;font-size:13px;font-weight:700;margin:17px 0 7px}input,textarea{width:100%;font:inherit;color:#fff;background:#100f16;border:1px solid #514859;border-radius:10px;padding:12px}textarea{min-height:150px;resize:vertical}.row{display:flex;gap:12px;align-items:end;flex-wrap:wrap}.row>div{flex:1;min-width:180px}.row button{flex:none}form button{margin-top:20px}.hint{font-size:13px;color:#9f99ab}.status{min-height:24px;color:#dbc0ef;margin:12px 0}section[hidden],.nav[hidden]{display:none}.card{border:1px solid #ffffff20;border-radius:12px;padding:16px;margin:12px 0;background:#211e2a;overflow-wrap:anywhere}.card strong{display:block}.card small{color:#bcb3c6}.card button{margin:8px 8px 0 0}.danger{color:#ffb5c1}.check{display:flex;gap:9px;align-items:center}.check input{width:auto}.divider{border:0;border-top:1px solid #ffffff18;margin:26px 0}@media(max-width:760px){.layout{grid-template-columns:1fr}.nav{grid-template-columns:repeat(2,1fr)}.panel{padding:20px}header,main{padding-left:18px;padding-right:18px}}
-.layout:has(.nav[hidden]){grid-template-columns:minmax(0,720px)}
-form .row{align-items:flex-start}
-select{width:100%;font:inherit;color:#fff;background:#100f16;border:1px solid #514859;border-radius:10px;padding:12px;min-width:0}select:focus-visible{outline:2px solid #eac4fb;outline-offset:2px}.album-picker{margin:0 0 24px;padding:18px;border:1px solid #655073;border-radius:14px}.album-picker legend{font-size:13px;font-weight:750;color:#e6c4f7;padding:0 6px}.album-picker label{margin-top:8px}.album-preview{display:flex;gap:14px;align-items:center;margin-top:16px}.album-preview img{width:72px;height:72px;object-fit:cover;border-radius:10px}.album-preview p{margin:0;font-size:13px}input[readonly]{color:#d8c0e8;border-color:#715585}.hint[role=status]{margin-top:8px}.album-picker button{margin-top:14px;font-size:13px}.album-picker .row>div{min-width:150px}
+:root{
+  --pink:#ff4d8d; --pink-soft:#ff86b3; --bg:#0a0a0d; --panel:#141419; --panel2:#1b1b22;
+  --line:#ffffff14; --text:#f6f5f8; --muted:#a5a2ae; --ok:#37d67a; --danger:#ff5c6c;
+  font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  color:var(--text); background:var(--bg); color-scheme:dark;
+}
+*{box-sizing:border-box} html,body{height:100%}
+body{margin:0;background:radial-gradient(1000px 600px at 12% -10%,#3a1428 0,transparent 60%),radial-gradient(900px 500px at 100% 0,#191024 0,transparent 55%),var(--bg)}
+.app{display:grid;grid-template-columns:264px minmax(0,1fr);min-height:100vh}
+.sidebar{position:sticky;top:0;height:100vh;padding:26px 18px;border-right:1px solid var(--line);background:#0c0c10e6;backdrop-filter:blur(20px);display:flex;flex-direction:column;gap:22px}
+.brand{font-size:23px;font-weight:850;letter-spacing:-.8px;text-decoration:none;color:var(--text)}
+.brand span{color:var(--pink)} .brand em{font-style:normal;color:var(--muted);font-weight:600;font-size:12px;letter-spacing:.14em;text-transform:uppercase;display:block;margin-top:4px}
+.who{display:flex;align-items:center;gap:11px;padding:12px;border-radius:16px;background:var(--panel);border:1px solid var(--line)}
+.avatar{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,var(--pink),#9d4dff);font-weight:800;color:#fff}
+.who strong{display:block;font-size:13px} .who small{display:block;color:var(--muted);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:150px}
+.nav{display:grid;gap:5px}
+.nav button{appearance:none;text-align:left;background:transparent;border:0;color:var(--muted);padding:12px 13px;border-radius:12px;font-weight:650;font-size:14px;display:flex;align-items:center;gap:10px}
+.nav button:before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.55}
+.nav button:hover{background:#ffffff0a;color:var(--text)}
+.nav button[aria-selected=true]{background:linear-gradient(90deg,#ff4d8d26,#ff4d8d0a);color:#fff;box-shadow:inset 0 0 0 1px #ff4d8d40}
+.nav button[aria-selected=true]:before{background:var(--pink);opacity:1;box-shadow:0 0 12px var(--pink)}
+.nav #logout{margin-top:8px;color:var(--muted);border-top:1px solid var(--line);border-radius:0;padding-top:16px}
+.sidefoot{margin-top:auto;font-size:11.5px;color:var(--muted);display:flex;align-items:center;gap:8px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 10px #37d67a99}
+.main{padding:30px clamp(18px,4vw,54px) 90px;max-width:1180px;width:100%}
+.topbar{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:22px;padding-bottom:18px;border-bottom:1px solid var(--line)}
+.topbar h1{font-size:clamp(24px,3vw,34px);margin:4px 0 0;letter-spacing:-.04em}
+.eyebrow{text-transform:uppercase;letter-spacing:.18em;font-size:10.5px;font-weight:800;color:var(--pink-soft)}
+.topactions{display:flex;align-items:center;gap:10px}
+.intro{display:none}
+.status{min-height:22px;margin:0 0 14px;font-size:13px;color:var(--pink-soft)}
+.panel{background:linear-gradient(180deg,#17171d,#121216);border:1px solid var(--line);border-radius:22px;padding:26px;box-shadow:0 20px 60px #0004;margin-bottom:18px}
+h2{font-size:20px;margin:0 0 14px;letter-spacing:-.03em}
+h3{font-size:15px;margin:18px 0 8px}
+p{color:var(--muted);margin:0 0 16px}
+.hint{color:var(--muted);font-size:12px}
+label{display:block;font-size:12px;font-weight:650;color:#d9d7e0;margin:12px 0 6px}
+input,select,textarea{width:100%;background:#0d0d11;color:var(--text);border:1px solid #ffffff1f;border-radius:12px;padding:11px 13px;font:inherit;font-size:14px}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--pink);box-shadow:0 0 0 3px #ff4d8d26}
+input[type=file]{padding:9px;background:#101015}
+input[type=checkbox]{width:auto;accent-color:var(--pink)}
+button{font:inherit;cursor:pointer;border-radius:11px;border:1px solid #ffffff24;padding:10px 16px;background:#23232c;color:#fff;font-weight:650;transition:transform .12s ease,background .15s}
+button:hover{background:#2c2c37} button:active{transform:scale(.98)} button:disabled{opacity:.5;cursor:default}
+button.primary{border:0;background:linear-gradient(135deg,var(--pink),#ff7bb0);color:#1a0710;box-shadow:0 10px 30px #ff4d8d40}
+button.ghost{background:transparent;border-color:var(--line)}
+button.danger{border-color:#ff5c6c55;color:#ffc2c8;background:#ff5c6c14}
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.check{display:flex;align-items:center;gap:9px;margin:14px 0;color:var(--muted);font-size:13px}
+.card{background:#101015;border:1px solid var(--line);border-radius:16px;padding:15px;margin-top:10px;display:flex;flex-wrap:wrap;align-items:center;gap:12px}
+.card strong{display:block;font-size:14px} .card small{display:block;color:var(--muted);font-size:12px;word-break:break-all}
+.card .drag{cursor:grab;color:var(--muted);font-size:18px;letter-spacing:-2px;user-select:none;padding:0 6px 0 0}
+.card.dragging{opacity:.45} .card.drop{border-color:var(--pink);box-shadow:0 0 0 2px #ff4d8d33}
+.album-picker{border:1px dashed #ffffff26;border-radius:16px;padding:14px;margin:0 0 16px}
+.album-picker legend{padding:0 8px;color:var(--pink-soft);font-size:12px;font-weight:700}
+.album-preview{display:flex;gap:12px;align-items:center;margin-top:10px;flex-wrap:wrap}
+.album-preview img{width:72px;height:72px;object-fit:cover;border-radius:12px}
+.divider{border:0;border-top:1px solid var(--line);margin:20px 0}
+a{color:var(--pink-soft)}
+[hidden]{display:none!important}
+@media (max-width:880px){
+  .app{grid-template-columns:1fr}
+  .sidebar{position:static;height:auto;flex-direction:row;align-items:center;flex-wrap:wrap;padding:14px 16px;gap:12px}
+  .sidebar .who{order:3;flex:1 1 100%;margin-top:4px}
+  .nav{flex-direction:row;overflow-x:auto;order:2;flex:1 1 100%}
+  .nav button{white-space:nowrap;padding:9px 12px}
+  .nav button:before{display:none}
+  .nav #logout{margin:0;border:0;padding-top:9px}
+  .sidefoot{display:none}
+  .main{padding:22px 16px 70px}
+  .topbar{flex-wrap:wrap}
+}
 </style>
 </head>
 <body>
-<header><div class="brand">ketvoice<span>.</span> studio</div><div id="identity" class="hint">Session fermée</div></header>
-<main>
-<div class="intro"><div class="eyebrow">Espace de publication privé</div><h1>La musique, à votre rythme.</h1><p>Publiez vos titres, gérez leurs pochettes et paroles, et pilotez les sources de Ketvoice API. Les changements de contenu sont récupérés aux prochaines requêtes, sans notification.</p></div>
-<div class="layout">
-<nav class="nav" id="navigation" aria-label="Sections" hidden><button data-view="publish" aria-selected="true">01 &nbsp; Ajouter</button><button data-view="edit">02 &nbsp; Modifier</button><button data-view="lyrics">03 &nbsp; Paroles</button><button data-view="albums">04 &nbsp; Albums</button><button data-view="sources">05 &nbsp; Sources API</button><button id="logout">Déconnexion</button></nav>
-<div>
-<div role="status" aria-live="polite" id="status" class="status"></div>
-<section id="login" class="panel"><h2>Connexion propriétaire</h2><p>Demandez un lien depuis cette page : il ouvrira Ketvoice Studio dans votre navigateur. Un lien demandé depuis l’application mobile continuera d’ouvrir l’application mobile.</p><button id="send" class="primary">Recevoir un lien pour le Studio</button><p class="hint" style="margin-top:20px">Ouvrez l’e-mail sur cet ordinateur. La session du Studio est perdue à la fermeture de l’onglet ; aucun secret n’est enregistré sur le disque.</p></section>
+<div class="app">
+<aside class="sidebar">
+  <a class="brand" href="#" onclick="return false">ketvoice<span>.</span><em>studio</em></a>
+  <div class="who"><span class="avatar">K</span><div><strong>Propriétaire</strong><small id="identity">Session fermée</small></div></div>
+  <nav class="nav" id="navigation" aria-label="Sections" hidden>
+    <button data-view="publish" aria-selected="true">Publier</button>
+    <button data-view="edit">Titres</button>
+    <button data-view="lyrics">Paroles</button>
+    <button data-view="albums">Albums</button>
+    <button data-view="sources">Sources API</button>
+    <button id="logout">Déconnexion</button>
+  </nav>
+  <div class="sidefoot"><span class="dot"></span> API et stockage connectés</div>
+</aside>
+<main class="main">
+  <header class="topbar"><div><div class="eyebrow">Ketvoice Studio</div><h1>Dashboard</h1></div><div class="topactions"><span class="hint" id="today"></span></div></header>
+  <div role="status" aria-live="polite" id="status" class="status"></div>
+<section id="login" class="panel"><h2>Connexion propriétaire</h2><p>Demandez un lien depuis cette page : il ouvrira Ketvoice Studio dans votre navigateur. Un lien demandé depuis l’application mobile continuera d’ouvrir l’application mobile.</p><button id="send" class="primary">Recevoir un lien pour le Studio</button><label class="check"><input id="remember" type="checkbox" checked> Se souvenir de ce PC</label><p class="hint" style="margin-top:20px">Ouvrez l’e-mail sur cet ordinateur. La session du Studio est perdue à la fermeture de l’onglet ; aucun secret n’est enregistré sur le disque.</p></section>
 <section id="publish" class="panel" hidden><h2>Ajouter une musique</h2><p>Uniquement des médias dont vous possédez les droits. Audio 25 Mo maximum ; pochette 4 Mo ; paroles LRC ou TTML 1 Mo.</p><form id="publishForm"><div class="row"><div><label for="newTitle">Titre</label><input id="newTitle" required maxlength="200"></div><div><label for="newArtist">Artiste</label><input id="newArtist" required maxlength="200"></div></div><div class="row"><div><label for="newAlbum">Album</label><input id="newAlbum" maxlength="200"></div><div><label for="newDuration">Durée (secondes)</label><input id="newDuration" type="number" min="0" max="86400" value="0" required></div></div><label for="newAudio">Audio</label><input id="newAudio" type="file" accept=".mp3,.m4a,.aac,.flac,.wav,.ogg,.opus" required><label for="newCover">Pochette (facultatif)</label><input id="newCover" type="file" accept="image/jpeg,image/png,image/webp"><label for="newLyrics">Paroles (facultatif)</label><input id="newLyrics" type="file" accept=".lrc,.ttml"><label class="check"><input id="newRights" type="checkbox" required> Je confirme détenir les droits de publication.</label><button class="primary">Publier la musique</button></form></section>
 <section id="edit" class="panel" hidden><h2>Rechercher et modifier</h2><p>La recherche affiche les titres publiés ; seule une musique importée par votre compte peut être modifiée. Les titres du catalogue général ne sont pas éditables.</p><div class="row"><div><label for="search">Titre ou artiste</label><input id="search" placeholder="Rechercher un titre" maxlength="160"></div><button id="searchButton">Rechercher</button></div><div id="results"></div><form id="editForm" hidden><hr class="divider"><h3 id="editingName"></h3><div class="row"><div><label for="editTitle">Titre</label><input id="editTitle" required maxlength="200"></div><div><label for="editArtist">Artiste</label><input id="editArtist" required maxlength="200"></div></div><label for="editAlbum">Album</label><input id="editAlbum" maxlength="200"><label for="editAudio">Remplacer l’audio (facultatif)</label><input id="editAudio" type="file" accept=".mp3,.m4a,.aac,.flac,.wav,.ogg,.opus"><label for="editCover">Remplacer la pochette (facultatif)</label><input id="editCover" type="file" accept="image/jpeg,image/png,image/webp"><div class="row"><div><label for="editDuration">Durée (secondes, si nouvel audio)</label><input id="editDuration" type="number" min="0" max="86400"></div></div><label class="check"><input id="editRights" type="checkbox" required> Je confirme détenir les droits de publication.</label><button class="primary">Enregistrer les changements</button></form></section>
 <section id="lyrics" class="panel" hidden><h2>Importer des paroles</h2><p>Publiez une version LRC ou TTML pour une musique, y compris un titre du catalogue. Une nouvelle version est ajoutée sans modifier l’audio.</p><form id="lyricsForm"><label for="lyricId">Identifiant du titre</label><input id="lyricId" required maxlength="180" placeholder="Sélectionnez un résultat de la recherche"><div class="row"><div><label for="lyricTitle">Titre</label><input id="lyricTitle" required maxlength="200"></div><div><label for="lyricArtist">Artiste</label><input id="lyricArtist" required maxlength="200"></div></div><label for="lyricFile">Fichier LRC ou TTML</label><input id="lyricFile" type="file" accept=".lrc,.ttml" required><label class="check"><input id="lyricRights" type="checkbox" required> Je confirme détenir les droits de publication.</label><button class="primary">Publier les paroles</button></form></section>
 <section id="albums" class="panel" hidden><h2>Albums</h2><p>Recherchez un album publié, changez son Canvas pour tout l’album ou titre par titre, et ajoutez ou retirez des titres. Le Canvas est la vidéo jouée derrière les paroles dans l’application.</p><div class="row"><div><label for="albumSearch">Rechercher un album ou un artiste</label><input id="albumSearch" placeholder="Nom d’album ou artiste" maxlength="160"></div><button id="albumRefresh" type="button">Actualiser les albums</button></div><div id="albumResults"></div><div id="albumDetail" hidden></div></section>
 <section id="sources" class="panel" hidden><h2>Sources Ketvoice API</h2><p>Ajoutez des manifestes HTTPS pour enrichir la recherche de musique. Les sources actives sont relues par l’API à chaque recherche et lecture. Une URL expirée peut être remplacée, désactivée ou supprimée.</p><form id="sourceForm"><label for="sourceName">Nom</label><input id="sourceName" required maxlength="100" placeholder="Nouvelle source"><label for="sourceUrl">URL du manifeste</label><input id="sourceUrl" type="url" required maxlength="2048" placeholder="https://exemple.fr/e/.../manifest.json"><button class="primary">Ajouter la source</button></form><hr class="divider"><h3>Sources configurées</h3><div id="sourceList"></div></section>
-</div></div></main>
+</main></div>
 <script>
 (() => {
   const root='https://xodklrunqlzyeiqtovgx.supabase.co';
@@ -72,11 +149,25 @@ select{width:100%;font:inherit;color:#fff;background:#100f16;border:1px solid #5
     session={access_token:values.get('access_token'),refresh_token:values.get('refresh_token'),
       expiresAt:Date.now()+Number(values.get('expires_in')||3600)*1000};
     try{await content('/admin/session',{admin:true});}catch(error){session=null;throw error;}
+    saveSession();
     signedIn();
   }
-  acceptRedirect().catch(error=>notice(error.message,true));
-  $('logout').onclick=async()=>{if(session)await call('/auth/v1/logout',{method:'POST',auth:true}).catch(()=>{});session=null;editable=null;resetEditor('new');resetEditor('edit');albums=[];for(const prefix of pickers.keys()){$(prefix+'AlbumArtist').replaceChildren(option('','Nouvel artiste / saisie libre'));fillAlbumOptions(prefix);} $('navigation').hidden=true;$('identity').textContent='Session fermée';view('login');notice('Déconnecté.');};
+  const SESSION_KEY='kv-studio-session';
+  function saveSession(){try{if(session&&$('remember')&&$('remember').checked)localStorage.setItem(SESSION_KEY,JSON.stringify(session));else localStorage.removeItem(SESSION_KEY);}catch{}}
+  function clearSession(){try{localStorage.removeItem(SESSION_KEY);}catch{}}
+  async function restoreSession(){
+    if(location.hash.includes('access_token'))return;
+    let stored=null;try{stored=JSON.parse(localStorage.getItem(SESSION_KEY)||'null');}catch{}
+    if(!stored||!stored.refresh_token)return;
+    session=stored;
+    try{await content('/admin/session',{admin:true});}
+    catch{try{await token();await content('/admin/session',{admin:true});}catch{session=null;clearSession();return;}}
+    signedIn();notice('Session restaurée sur ce PC.');
+  }
+  acceptRedirect().then(restoreSession).catch(error=>notice(error.message,true));
+  $('logout').onclick=async()=>{if(session)await call('/auth/v1/logout',{method:'POST',auth:true}).catch(()=>{});session=null;editable=null;resetEditor('new');resetEditor('edit');albums=[];for(const prefix of pickers.keys()){$(prefix+'AlbumArtist').replaceChildren(option('','Nouvel artiste / saisie libre'));fillAlbumOptions(prefix);} $('navigation').hidden=true;clearSession();$('identity').textContent='Session fermée';view('login');notice('Déconnecté.');};
   document.querySelectorAll('.nav [data-view]').forEach(button=>button.onclick=()=>view(button.dataset.view));
+  $('today').textContent=new Intl.DateTimeFormat('fr-FR',{weekday:'long',day:'numeric',month:'long'}).format(new Date());
   function file(id){return $(id).files[0]||null;}
   let albums=[],albumLoad=null;
   const pickers=new Map(),durationJobs=new Map();
@@ -307,10 +398,31 @@ select{width:100%;font:inherit;color:#fff;background:#100f16;border:1px solid #5
   if($('albumSearch'))$('albumSearch').oninput=renderAlbumList;
   if($('albumRefresh'))$('albumRefresh').onclick=event=>run(event.currentTarget,async()=>{await loadAlbums();renderAlbumList();notice('Albums actualisés.');});
   $('lyricsForm').onsubmit=event=>{event.preventDefault();run(event.submitter,async()=>{const selected=file('lyricFile');if(selected.size>1048576)throw Error('Fichier trop volumineux.');const format=selected.name.toLowerCase().split('.').pop();if(!['lrc','ttml'].includes(format))throw Error('Fichier LRC ou TTML requis.');await content('/admin/lyrics',{method:'POST',admin:true,body:{trackId:$('lyricId').value.trim(),title:$('lyricTitle').value.trim(),artist:$('lyricArtist').value.trim(),durationMs:0,format,content:await selected.text(),rightsConfirmed:$('lyricRights').checked}});$('lyricsForm').reset();notice('Paroles publiées.');});};
+  let dragSource=null;
+  async function moveSource(fromId,toId){
+    if(!fromId||fromId===toId)return;
+    const cards=[...document.querySelectorAll('#sourceList .card')];
+    const from=cards.findIndex(node=>node.dataset.id===fromId),to=cards.findIndex(node=>node.dataset.id===toId);
+    if(from<0||to<0)return;
+    const list=$('sourceList'),node=cards[from];
+    if(from<to)list.insertBefore(node,cards[to].nextSibling);else list.insertBefore(node,cards[to]);
+    const ids=[...list.querySelectorAll('.card')].map(item=>item.dataset.id);
+    try{
+      for(let index=0;index<ids.length;index++)await content('/admin/sources?id='+encodeURIComponent(ids[index]),{method:'PATCH',admin:true,body:{sort_order:index}});
+      notice('Priorité des sources enregistrée.');
+    }catch(error){notice(error.message,true);await loadSources();}
+  }
   async function loadSources(){try{const data=await content('/admin/sources',{admin:true});$('sourceList').replaceChildren(...data.sources.map(sourceCard));if(!data.sources.length)$('sourceList').textContent='Aucune source ajoutée.';}catch(error){notice(error.message,true);}}
   function sourceCard(source){const card=document.createElement('div');card.className='card';const title=document.createElement('strong');title.textContent=source.name+' · '+(source.enabled?'Active':'Désactivée');card.append(title);const url=document.createElement('small');url.textContent=source.manifest_url;card.append(url);
     const toggle=document.createElement('button');toggle.textContent=source.enabled?'Désactiver':'Activer';toggle.onclick=()=>run(toggle,async()=>{await content('/admin/sources?id='+encodeURIComponent(source.id),{method:'PATCH',admin:true,body:{enabled:!source.enabled}});await loadSources();notice('État de la source modifié.');});card.append(toggle);
     const edit=document.createElement('button');edit.textContent='Modifier';edit.onclick=()=>{const name=prompt('Nom de la source',source.name);if(name===null)return;const url=prompt('URL du manifeste',source.manifest_url);if(url===null)return;run(edit,async()=>{await content('/admin/sources?id='+encodeURIComponent(source.id),{method:'PATCH',admin:true,body:{name,manifest_url:url}});await loadSources();notice('Source modifiée.');});};card.append(edit);
+    card.draggable=true;card.dataset.id=source.id;card.title='Glissez pour changer la priorité';
+    const handle=document.createElement('span');handle.className='drag';handle.textContent='⠿';handle.setAttribute('aria-hidden','true');card.prepend(handle);
+    card.ondragstart=event=>{dragSource=source.id;card.classList.add('dragging');event.dataTransfer.effectAllowed='move';};
+    card.ondragend=()=>{dragSource=null;card.classList.remove('dragging');document.querySelectorAll('#sourceList .drop').forEach(node=>node.classList.remove('drop'));};
+    card.ondragover=event=>{if(!dragSource||dragSource===source.id)return;event.preventDefault();card.classList.add('drop');};
+    card.ondragleave=()=>card.classList.remove('drop');
+    card.ondrop=event=>{event.preventDefault();card.classList.remove('drop');moveSource(dragSource,source.id);};
     const remove=document.createElement('button');remove.textContent='Supprimer';remove.className='danger';remove.onclick=()=>{if(!confirm(`Supprimer ${source.name} ?`))return;run(remove,async()=>{await content('/admin/sources?id='+encodeURIComponent(source.id),{method:'DELETE',admin:true});await loadSources();notice('Source supprimée.');});};card.append(remove);return card;}
   $('sourceForm').onsubmit=event=>{event.preventDefault();run(event.submitter,async()=>{await content('/admin/sources',{method:'POST',admin:true,body:{name:$('sourceName').value.trim(),manifest_url:$('sourceUrl').value.trim(),enabled:true}});$('sourceForm').reset();await loadSources();notice('Source ajoutée et testée.');});};
 })();

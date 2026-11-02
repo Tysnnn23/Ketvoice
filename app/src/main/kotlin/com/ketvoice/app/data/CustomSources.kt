@@ -122,6 +122,20 @@ object CustomSources {
         persist()
     }
 
+    /** Moves a source up (-1) or down (+1); the list order is the priority order. */
+    fun move(id: String, delta: Int) {
+        if (delta == 0) return
+        val list = _sources.value.toMutableList()
+        val from = list.indexOfFirst { it.id == id }
+        if (from < 0) return
+        val to = (from + delta).coerceIn(0, list.lastIndex)
+        if (to == from) return
+        val item = list.removeAt(from)
+        list.add(to, item)
+        _sources.value = list
+        persist()
+    }
+
     suspend fun refresh(id: String): Result<CustomSource> = withContext(Dispatchers.IO) {
         val current = _sources.value.firstOrNull { it.id == id }
             ?: return@withContext Result.failure(IllegalStateException("Source absente"))

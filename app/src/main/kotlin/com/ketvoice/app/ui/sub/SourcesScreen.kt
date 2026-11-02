@@ -4,10 +4,12 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -18,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.CircularProgressIndicator
@@ -28,6 +31,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -124,9 +129,11 @@ fun SourcesScreen() {
                     }
                 }
             }
-            items(sources, key = { it.id }) { source ->
+            itemsIndexed(sources, key = { _, it -> it.id }) { position, source ->
                 SourceCard(
                     source = source,
+                    position = position,
+                    onMove = { delta -> CustomSources.move(source.id, delta) },
                     refreshing = refreshing == source.id,
                     onToggle = { CustomSources.setEnabled(source.id, !source.enabled) },
                     onQuality = { qualityFor = source },
@@ -267,6 +274,8 @@ private fun KetvoiceApiCard(
 @Composable
 private fun SourceCard(
     source: CustomSource,
+    position: Int,
+    onMove: (Int) -> Unit,
     refreshing: Boolean,
     onToggle: () -> Unit,
     onQuality: () -> Unit,
@@ -274,8 +283,23 @@ private fun SourceCard(
     onDelete: () -> Unit
 ) {
     val th = LocalTheme.current
+    var dragged by remember(source.id) { mutableFloatStateOf(0f) }
+    val step = with(LocalDensity.current) { 58.dp.toPx() }
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(th.card).padding(14.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Filled.DragHandle, "Réordonner la source", tint = th.secondary,
+                modifier = Modifier.size(24.dp).padding(end = 6.dp).pointerInput(source.id) {
+                    detectDragGestures(
+                        onDragEnd = { dragged = 0f },
+                        onDragCancel = { dragged = 0f },
+                        onDrag = { change, amount ->
+                            change.consume()
+                            dragged += amount.y
+                            while (dragged > step) { onMove(1); dragged -= step }
+                            while (dragged < -step) { onMove(-1); dragged += step }
+                        }
+                    )
+                })
             Box(Modifier.size(42.dp).clip(CircleShape).background(th.accent.copy(alpha = .12f)),
                 contentAlignment = Alignment.Center) {
                 Icon(Icons.Filled.Tune, null, tint = th.accent, modifier = Modifier.size(21.dp))
@@ -284,7 +308,8 @@ private fun SourceCard(
             Column(Modifier.weight(1f)) {
                 Text(source.name, color = th.onBackground, fontSize = 16.sp, fontWeight = FontWeight.SemiBold,
                     maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(runCatching { java.net.URL(source.manifestUrl).host }.getOrDefault(source.manifestUrl),
+                Text("Priorité ${position + 1} · " + runCatching { java.net.URL(source.manifestUrl).host }
+                    .getOrDefault(source.manifestUrl),
                     color = th.secondary, style = T.caption, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             CustomSwitch(checked = source.enabled, onToggle = onToggle)
