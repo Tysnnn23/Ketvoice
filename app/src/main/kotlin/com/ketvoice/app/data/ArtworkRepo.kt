@@ -51,6 +51,19 @@ object ArtworkRepo {
     }
 
     fun coverForTrack(track: Track): String? = _covers.value["t:${track.id}"] ?: track.coverUrl
+
+    /** Forces a fresh artwork lookup for these tracks (manual refresh). */
+    fun invalidate(tracks: List<Track>) {
+        val ctx = context ?: return
+        val prefs = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val editor = prefs.edit()
+        val keys = tracks.map { "t:${it.id}" }.filter { prefs.contains(it) }
+        keys.forEach { editor.remove(it) }
+        editor.apply()
+        _covers.update { it - keys.toSet() }
+        synchronized(inFlight) { tracks.forEach { inFlight.remove(it.id) } }
+        failedAt.keys.removeAll(tracks.map { it.id }.toSet())
+    }
     fun acceptOfflineCover(id: String, file: java.io.File) {
         val value = android.net.Uri.fromFile(file).toString()
         context?.getSharedPreferences(PREFS, Context.MODE_PRIVATE)?.edit()?.putString("t:$id", value)?.apply()

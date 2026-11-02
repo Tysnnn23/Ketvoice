@@ -12,11 +12,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.CircularProgressIndicator
 import com.ketvoice.app.ui.common.GlassBackButton
 import com.ketvoice.app.ui.common.Icon
 import com.ketvoice.app.ui.common.Text
 import androidx.compose.runtime.*
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -26,8 +28,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.ketvoice.app.data.Album
 import com.ketvoice.app.data.ArtistCache
 import com.ketvoice.app.data.ArtistPage
+import com.ketvoice.app.data.ArtistSignatures
 import com.ketvoice.app.data.ArtworkRepo
 import com.ketvoice.app.data.YouTubeCatalog
 import com.ketvoice.app.player.Player
@@ -51,6 +55,8 @@ fun ArtistScreen() {
     var failed by remember(request.id, request.name) { mutableStateOf(false) }
     var attempt by remember(request.id, request.name) { mutableIntStateOf(0) }
     var expandedBio by remember(request.id, request.name) { mutableStateOf(false) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(request.id, request.name, attempt) {
         loading = true
@@ -214,8 +220,27 @@ fun ArtistScreen() {
             } else Spacer(Modifier.weight(1f))
             if (page != null) com.ketvoice.app.glass.GlassPanel(Modifier.size(48.dp), CircleShape,
                 com.ketvoice.app.glass.GlassParams.circle(dark = theme.isDark), captured = true) {
-                Box(Modifier.fillMaxSize().clickable { attempt++ }, contentAlignment = Alignment.Center) {
-                    Icon(Icons.Filled.Refresh, "Actualiser", tint = theme.onBackground, modifier = Modifier.size(21.dp))
+                Box(Modifier.fillMaxSize().clickable {
+                    // Full reload: drop the cached page and artwork for this artist,
+                    // then fetch the current server version.
+                    scope.launch {
+                        ArtistCache.invalidate(request.id, request.name)
+                        ArtistSignatures.invalidate(request.name)
+                        attempt++
+                    }
+                }, contentAlignment = Alignment.Center) {
+                    Icon(Icons.Filled.Refresh, "Actualiser la page et le cache", tint = theme.onBackground, modifier = Modifier.size(21.dp))
+                }
+            }
+            if (page != null) {
+                Spacer(Modifier.width(8.dp))
+                com.ketvoice.app.glass.GlassPanel(Modifier.size(48.dp), CircleShape,
+                    com.ketvoice.app.glass.GlassParams.circle(dark = theme.isDark), captured = true) {
+                    Box(Modifier.fillMaxSize().clickable {
+                        page?.let { com.ketvoice.app.util.ShareLinks.shareArtist(context, it.artist.id, it.artist.name) }
+                    }, contentAlignment = Alignment.Center) {
+                        Icon(Icons.Filled.Share, "Partager l'artiste", tint = theme.onBackground, modifier = Modifier.size(20.dp))
+                    }
                 }
             }
         }

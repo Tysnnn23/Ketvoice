@@ -111,6 +111,14 @@ internal object ArtistSignatures {
     /** Kept for the existing settings screen and tests. */
     suspend fun fetchLogo(artist: String): ArtistSignature? = find(artist)
 
+    /** Drops the cached portrait/background/signature so the next open refetches. */
+    suspend fun invalidate(artist: String) = lock.withLock {
+        val clean = name(artist)
+        artCache.keys.filter { it.startsWith(clean) }.forEach { artCache.remove(it) }
+        cache.keys.filter { it == clean }.forEach { cache.remove(it) }
+        persist()
+    }
+
     private fun request(artist: String, signature: Boolean): ArtistArtwork {
         val suffix = if (signature) "&signature=1" else ""
         val connection = URL("$base/logo?artist=${URLEncoder.encode(artist.trim(), "UTF-8")}$suffix")

@@ -7,6 +7,22 @@
 
 ---
 
+# Ketvoice 3.17.0
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 74** — artist hero without edges, real refresh/share, unified collections and working Discord link.
+
+- Artist hero: full-bleed smart scale, no side seams; refresh clears the cached page/artwork; new share button with a real channel link.
+- Playlists, albums and collections share real links.
+- Liked songs, recent, all tracks and downloads use the playlist/album presentation.
+- Discord: persisted PKCE state + direct token exchange, so returning from authorization actually links the account.
+- Progressive playback keeps its position-preserving quality fallback and two-track prefetch.
+
+Full notes and limits: [3.17.0](docs/releases/v3.17.0.md).
+
+---
+
 # Ketvoice 3.16.1
 
 ![Ketvoice](ketvoice-banner.png)

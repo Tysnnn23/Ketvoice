@@ -57,6 +57,18 @@ object ArtistCache {
 
     suspend fun clear() = lock.withLock { memory.clear(); save() }
 
+    /** Drops one artist (and every alias that resolves to it) before a full reload. */
+    suspend fun invalidate(id: String?, name: String) = lock.withLock {
+        load()
+        val key = key(id, name)
+        val page = memory[key]?.page
+        memory.remove(key)
+        page?.artist?.id?.let { memory.remove("id:$it") }
+        memory.keys.filter { it.startsWith("name:") && page != null && it.endsWith(name.trim().lowercase(Locale.ROOT)) }
+            .forEach { memory.remove(it) }
+        save()
+    }
+
     internal fun encode(page: ArtistPage?): JSONObject {
         val root = JSONObject()
         if (page == null) return root.put("missing", true)

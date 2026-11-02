@@ -84,8 +84,6 @@ fun CatalogScreen() {
         return
     }
     // Canvas du hero : résolu pour le premier titre quand les Canvas sont actifs.
-    val canvasTrack = tracks.firstOrNull()?.takeIf { AppSettings.animatedArtwork.value }
-    LaunchedEffect(canvasTrack?.id) { canvasTrack?.let { CanvasRepo.resolve(it) } }
     val shareContext = androidx.compose.ui.platform.LocalContext.current
     Column(Modifier.fillMaxSize().background(theme.background).statusBarsPadding()) {
         Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -94,48 +92,30 @@ fun CatalogScreen() {
             Text(page?.title ?: request.title, color = theme.onBackground, fontSize = 24.sp,
                 fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
-        // Header immersif quand la page porte une vraie pochette (albums) :
-        // pochette centrée en grand (canvas si dispo), fond flouté plein cadre,
-        // boutons Lecture et Partager. La mosaïque reste le repli sans pochette.
-        val heroCover = page?.cover
-        if (heroCover != null && !loading) {
-            AlbumHero(
-                title = page?.title ?: request.title,
-                subtitle = page?.subtitle.orEmpty(),
-                releaseDate = page?.releaseDate,
-                cover = heroCover,
-                trackCount = tracks.size,
-                canvasTrack = canvasTrack,
-                onPlay = { if (tracks.isNotEmpty()) Player.playQueue(tracks, 0) },
-                onShare = {
-                    com.ketvoice.app.util.ShareLinks.shareAlbum(
-                        shareContext, request.id, page?.title ?: request.title, page?.subtitle.orEmpty()
-                    )
+        // Header of the collection now matches the playlist/album presentation.
+        CollectionHero(
+            title = request.title,
+            subtitle = buildString {
+                append("${tracks.size} titre${if (tracks.size > 1) "s" else ""}")
+                val minutes = tracks.sumOf { it.durationMs } / 60_000
+                if (minutes > 0) append(" · $minutes min")
+                when (request.kind) {
+                    "favorites" -> append(" · Vos favoris")
+                    "history" -> append(" · Écoutés récemment")
+                    "downloads" -> append(" · Hors ligne")
                 }
-            )
-        } else if (tracks.isNotEmpty() && !loading) {
-            // Mosaïque 2x2 en repli : les 4 premières pochettes de la collection.
-            Box(Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
-                Row(Modifier.size(168.dp).clip(RoundedCornerShape(18.dp))) {
-                    for (i in 0 until 4) {
-                        val url = tracks.getOrNull(i)?.let { ArtworkRepo.coverForTrack(it) } ?: tracks.getOrNull(i)?.coverUrl
-                        Box(Modifier.weight(1f).fillMaxHeight().background(
-                            if (url != null) Brush.linearGradient(listOf(Color.Black, Color.Black)) else Brush.linearGradient(gradientFor(request.id + i))
-                        )) {
-                            if (url != null) {
-                                AsyncImage(model = url, contentDescription = null,
-                                    contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-                            } else {
-                                Text(tracks.getOrNull(i)?.title?.take(1)?.uppercase() ?: "♪",
-                                    localize = false, color = Color.White.copy(alpha = 0.85f),
-                                    fontSize = 26.sp, fontWeight = FontWeight.Black,
-                                    modifier = Modifier.align(Alignment.Center))
-                            }
-                        }
-                    }
-                }
+            },
+            covers = tracks.take(4).map { ArtworkRepo.coverForTrack(it) ?: it.coverUrl },
+            seed = request.id + request.kind,
+            onPlay = { if (tracks.isNotEmpty()) { Player.setShuffle(false); Player.playQueue(tracks, 0) } },
+            onShuffle = { if (tracks.isNotEmpty()) { Player.playQueue(tracks.shuffled()); Player.setShuffle(true) } },
+            onShare = { com.ketvoice.app.util.ShareLinks.shareCollection(shareContext, request.kind, request.title, tracks.size) },
+            onRefresh = {
+                ArtworkRepo.invalidate(tracks)
+                ArtworkRepo.enrich(tracks)
+                attempt++
             }
-        }
+        )
         if (loading) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator(color = theme.accent, modifier = Modifier.size(26.dp), strokeWidth = 2.dp)
         } else if (tracks.isEmpty()) {
@@ -176,101 +156,3 @@ fun CatalogScreen() {
  * disponible sur le premier titre), fond flouté plein cadre, titre/artiste/
  * année centrés, boutons Lecture et Partager côte à côte.
  */
-@Composable
-private fun AlbumHero(
-    title: String,
-    subtitle: String,
-    releaseDate: String?,
-    cover: String,
-    trackCount: Int,
-    canvasTrack: Track?,
-    onPlay: () -> Unit,
-    onShare: () -> Unit
-) {
-    val theme = LocalTheme.current
-    val density = androidx.compose.ui.platform.LocalDensity.current
-    val radius = with(density) { 24.dp.toPx() }
-    Box(Modifier.fillMaxWidth()) {
-        // Fond : pochette floutée et agrandie, aucun bord dur.
-        AsyncImage(
-            model = cover, contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier
-                .matchParentSize()
-                .graphicsLayer { scaleX = 1.4f; scaleY = 1.4f }
-                .blur(40.dp, BlurredEdgeTreatment.Unbounded)
-        )
-        // Dégradés : raccord haut vers la barre, raccord bas vers la liste.
-        Box(Modifier.matchParentSize().background(Brush.verticalGradient(listOf(
-            theme.background.copy(alpha = .6f), Color.Transparent, Color.Transparent,
-            theme.background.copy(alpha = .78f), theme.background
-        ))))
-        Column(
-            Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 22.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            // Canvas vidéo si disponible sur le premier titre, pochette sinon.
-            Box(
-                Modifier
-                    .size(216.dp)
-                    .shadow(18.dp, RoundedCornerShape(24.dp), spotColor = Color.Black.copy(alpha = 0.45f))
-                    .clip(RoundedCornerShape(24.dp))
-            ) {
-                if (canvasTrack != null) {
-                    com.ketvoice.app.ui.player.ArtworkCanvas(
-                        track = canvasTrack,
-                        canvasPath = CanvasRepo.paths.collectAsState().value[canvasTrack.id],
-                        playing = false,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                } else {
-                    Cover(title, cover, 216.dp, 24.dp)
-                }
-            }
-            Spacer(Modifier.height(18.dp))
-            Text(title, localize = false, color = theme.onBackground,
-                fontSize = 24.sp, fontWeight = FontWeight.Black, letterSpacing = (-.6).sp,
-                lineHeight = 29.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-            val meta = buildList {
-                if (subtitle.isNotBlank()) add(subtitle)
-                if (releaseDate != null) add("Sorti en $releaseDate")
-                add("$trackCount titres")
-            }.joinToString("  ·  ")
-            if (meta.isNotBlank()) {
-                Text(meta, localize = false, color = theme.secondary, fontSize = 13.sp,
-                    maxLines = 2, overflow = TextOverflow.Ellipsis,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                    modifier = Modifier.padding(top = 7.dp))
-            }
-            Spacer(Modifier.height(16.dp))
-            Row(verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Row(
-                    Modifier
-                        .clip(RoundedCornerShape(23.dp))
-                        .background(theme.accent)
-                        .clickable(enabled = trackCount > 0, onClick = onPlay)
-                        .padding(horizontal = 26.dp, vertical = 11.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(Icons.Filled.PlayArrow, null, tint = Color.Black, modifier = Modifier.size(21.dp))
-                    Spacer(Modifier.width(7.dp))
-                    Text("Lecture", color = Color.Black, fontSize = 14.5.sp, fontWeight = FontWeight.Bold)
-                }
-                Row(
-                    Modifier
-                        .clip(RoundedCornerShape(23.dp))
-                        .background(theme.onBackground.copy(alpha = 0.10f))
-                        .clickable(onClick = onShare)
-                        .padding(horizontal = 22.dp, vertical = 11.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(Icons.Filled.Share, "Partager", tint = theme.onBackground, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(7.dp))
-                    Text("Partager", color = theme.onBackground, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                }
-            }
-        }
-    }
-}

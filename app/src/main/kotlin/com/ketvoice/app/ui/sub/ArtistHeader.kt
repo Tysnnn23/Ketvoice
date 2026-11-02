@@ -78,16 +78,19 @@ internal fun ArtistHeader(page: ArtistPage) {
                         1f to theme.background.copy(alpha = .30f))))
                     // Square portraits fill the hero instead of being zoomed into a
                     // random face crop; wide banners are fitted whole.
-                    if (wide) {
-                        AsyncImage(heroRequest, page.artist.name, contentScale = ContentScale.Fit,
-                            alignment = Alignment.Center,
-                            modifier = Modifier.fillMaxWidth().height(height * .80f)
-                                .align(Alignment.TopCenter))
-                    } else {
-                        AsyncImage(heroRequest, page.artist.name, contentScale = ContentScale.Crop,
-                            alignment = Alignment.Center,
-                            modifier = Modifier.fillMaxSize())
-                    }
+                    // Intelligent full-bleed scale: the artwork always covers the whole
+                    // hero, so no vertical "end of image" line can appear at the sides.
+                    // A slight overscan hides any residual seam from odd aspect ratios.
+                    AsyncImage(heroRequest, page.artist.name, contentScale = ContentScale.Crop,
+                        alignment = Alignment.TopCenter,
+                        modifier = Modifier.fillMaxSize().graphicsLayer { scaleX = 1.06f; scaleY = 1.06f })
+                    // Side feathers dissolve the last pixels into the ambience instead
+                    // of a hard rectangle edge.
+                    Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(
+                        0f to theme.background.copy(alpha = if (theme.isDark) .55f else .35f),
+                        .10f to Color.Transparent,
+                        .90f to Color.Transparent,
+                        1f to theme.background.copy(alpha = if (theme.isDark) .55f else .35f))))
                 } else {
                     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(
                         theme.accent.copy(alpha = if (theme.isDark) .22f else .14f),

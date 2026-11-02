@@ -54,10 +54,69 @@ object ShareLinks {
         val send = Intent(Intent.ACTION_SEND).apply {
             type = "text/plain"
             putExtra(Intent.EXTRA_TITLE, title)
-            putExtra(Intent.EXTRA_TEXT, "$title — $artist\n${albumUrl(id, title, artist)}")
+            putExtra(Intent.EXTRA_TEXT, "$title — $artist\n${albumPageUrl(id, title, artist)}")
         }
         runCatching {
             context.startActivity(Intent.createChooser(send, com.ketvoice.app.data.AppText.t("Partager l'album")))
+        }
+    }
+
+    /**
+     * A real, openable page for an artist: its YouTube Music channel when the id
+     * is known, otherwise an artist search on the same service.
+     */
+    fun artistUrl(id: String?, name: String): String =
+        if (!id.isNullOrBlank() && id.matches(Regex("UC[A-Za-z0-9_-]{10,}")))
+            "https://music.youtube.com/channel/$id"
+        else "https://music.youtube.com/search?q=" + enc(name)
+
+    fun shareArtist(context: Context, id: String?, name: String) {
+        val send = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TITLE, name)
+            putExtra(Intent.EXTRA_TEXT, "$name\n${artistUrl(id, name)}")
+        }
+        runCatching {
+            context.startActivity(Intent.createChooser(send, com.ketvoice.app.data.AppText.t("Partager l'artiste")))
+        }
+    }
+
+    /** A real YouTube Music page for a catalogue album, or the Ketvoice page otherwise. */
+    fun albumPageUrl(id: String, title: String, artist: String): String =
+        if (id.startsWith("MPRE")) "https://music.youtube.com/browse/$id" else albumUrl(id, title, artist)
+
+    fun playlistUrl(id: String, name: String): String = buildString {
+        append(LISTEN_PAGE)
+        append("?playlist="); append(enc(id))
+        append("&name="); append(enc(name))
+    }
+
+    fun sharePlaylist(context: Context, id: String, name: String, count: Int) {
+        val send = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TITLE, name)
+            putExtra(Intent.EXTRA_TEXT, "$name · $count titres\n${playlistUrl(id, name)}")
+        }
+        runCatching {
+            context.startActivity(Intent.createChooser(send, com.ketvoice.app.data.AppText.t("Partager la playlist")))
+        }
+    }
+
+    /** Liked songs / recent / all / downloads: one stable Ketvoice page per section. */
+    fun collectionUrl(kind: String, title: String): String = buildString {
+        append(LISTEN_PAGE)
+        append("?collection="); append(enc(kind))
+        append("&name="); append(enc(title))
+    }
+
+    fun shareCollection(context: Context, kind: String, title: String, count: Int) {
+        val send = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TITLE, title)
+            putExtra(Intent.EXTRA_TEXT, "$title · $count titres\n${collectionUrl(kind, title)}")
+        }
+        runCatching {
+            context.startActivity(Intent.createChooser(send, com.ketvoice.app.data.AppText.t("Partager")))
         }
     }
 

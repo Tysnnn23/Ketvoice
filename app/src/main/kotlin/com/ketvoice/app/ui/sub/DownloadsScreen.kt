@@ -8,6 +8,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -61,6 +62,7 @@ fun DownloadsScreen() {
     val shown = (activeTracks.values + list.map { it.track }).distinctBy { it.id }
     var lastDeleted by remember { mutableStateOf<com.ketvoice.app.data.Track?>(null) }
     val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val context = androidx.compose.ui.platform.LocalContext.current
 
     Column(
         Modifier
@@ -83,16 +85,6 @@ fun DownloadsScreen() {
         androidx.compose.material3.TextButton(onClick = { AppUi.showCapsule.value = true }, modifier = Modifier.padding(horizontal = 14.dp)) {
             Text("Préparer une capsule hors ligne", color = th.accent)
         }
-        Text(
-            buildString {
-                append("${list.size} titre${if (list.size > 1) "s" else ""}")
-                if (total > 0) append(" · ${formatSize(total)}")
-                if (busy.isNotEmpty()) append(" · ${busy.size} en cours ($percent %)")
-            },
-            style = T.sub,
-            color = th.secondary,
-            modifier = Modifier.padding(horizontal = 18.dp, vertical = 6.dp)
-        )
 
         // Barre de progression globale (réelle, alimentée par le flux de téléchargement)
         if (busy.isNotEmpty()) {
@@ -125,6 +117,26 @@ fun DownloadsScreen() {
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 6.dp, bottom = LocalAdaptiveLayout.current.bottomPaddingDp.dp)
             ) {
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    val downloaded = list.map { it.track }
+                    CollectionHero(
+                        title = "Téléchargements",
+                        subtitle = buildString {
+                            append("${list.size} titre${if (list.size > 1) "s" else ""}")
+                            if (total > 0) append(" · ${formatSize(total)}")
+                            append(" · Hors ligne")
+                            if (busy.isNotEmpty()) append(" · ${busy.size} en cours ($percent %)")
+                        },
+                        covers = downloaded.take(4).map { ArtworkRepo.coverForTrack(it) ?: it.coverUrl },
+                        seed = "downloads",
+                        onPlay = { if (downloaded.isNotEmpty()) { Player.setShuffle(false); Player.playQueue(downloaded, 0) } },
+                        onShuffle = { if (downloaded.isNotEmpty()) { Player.playQueue(downloaded.shuffled()); Player.setShuffle(true) } },
+                        onShare = {
+                            com.ketvoice.app.util.ShareLinks.shareCollection(
+                                context, "downloads", "Téléchargements", downloaded.size)
+                        }
+                    )
+                }
                 items(count = shown.size, key = { shown[it].id }) { index ->
                     val track = shown[index]
                     val item = list.firstOrNull { it.track.id == track.id }

@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -79,6 +80,14 @@ fun PlaylistScreen() {
                 modifier = Modifier.weight(1f).padding(horizontal = 14.dp),
                 fontSize = if (com.ketvoice.app.BuildConfig.IS_QUEST) 15.sp else 13.sp)
             Spacer(Modifier.width(10.dp))
+            Box(Modifier.size(38.dp).clip(CircleShape).clickable(enabled = playlist != null) {
+                playlist?.let { target ->
+                    com.ketvoice.app.util.ShareLinks.sharePlaylist(context, target.id, target.name, target.entries.size)
+                }
+            }, contentAlignment = Alignment.Center) {
+                Icon(Icons.Filled.Share, "Partager la playlist", tint = th.onBackground, modifier = Modifier.size(20.dp))
+            }
+            Spacer(Modifier.width(4.dp))
             Box(Modifier.size(38.dp).clip(CircleShape).clickable(enabled = playlist != null) {
                 // La feuille est rendue par AppRoot (au-dessus du chrome flottant) ;
                 // ici on ne fait que publier la requête avec ses actions.

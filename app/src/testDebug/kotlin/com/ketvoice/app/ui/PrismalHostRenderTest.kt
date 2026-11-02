@@ -8,6 +8,7 @@ import android.graphics.RuntimeShader
 import android.graphics.Shader
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asAndroidBitmap
@@ -289,6 +290,37 @@ class PrismalHostRenderTest {
         compose.runOnIdle { position.value = 3_500L }
         compose.waitForIdle()
         assertEquals("The halo is fully gone after the fade window", 0, compose.onAllNodesWithTag("word-glow").fetchSemanticsNodes().size)
+    }
+
+    @Test fun collectionHeroMatchesThePlaylistPresentation() {
+        AppSettings.reduceAnimations.value = true
+        var played = false
+        var shared = false
+        var refreshed = false
+        compose.setContent { KetvoiceTheme(useDark = true) {
+            Box(Modifier.fillMaxSize().background(LocalTheme.current.background)) {
+                Box(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState())) {
+                    com.ketvoice.app.ui.sub.CollectionHero(
+                        title = "Récemment écoutés",
+                        subtitle = "12 titres · 48 min · Écoutés récemment",
+                        covers = listOf(null, null, null, null),
+                        seed = "history",
+                        onPlay = { played = true },
+                        onShuffle = {},
+                        onShare = { shared = true },
+                        onRefresh = { refreshed = true }
+                    )
+                }
+            }
+        } }
+        compose.onNodeWithText("Récemment écoutés").assertIsDisplayed()
+        compose.onNodeWithText("Écouter").assertIsDisplayed()
+        compose.onNodeWithText("Aléatoire").assertIsDisplayed()
+        compose.onNodeWithText("Partager").performClick()
+        compose.onNodeWithText("Actualiser").performClick()
+        compose.onNodeWithText("Récemment écoutés").performClick()
+        compose.runOnIdle { assertTrue(shared); assertTrue(refreshed) }
+        image("collection-hero")
     }
 
     @Test fun normalCanvasAndCoverShareTheRestoredLegacyDissolve() {

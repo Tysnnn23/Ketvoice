@@ -56,6 +56,9 @@ class DiscordControllerImpl : DiscordController {
     private val tokens: DiscordTokenStore? by lazy {
         runCatching { KetvoiceApp.instance?.let(::DiscordTokenStore) }.getOrNull()
     }
+    private val pendingOAuth: DiscordPendingStore? by lazy {
+        runCatching { KetvoiceApp.instance?.let(::DiscordPendingStore) }.getOrNull()
+    }
 
     init {
         instance = this
@@ -169,6 +172,8 @@ class DiscordControllerImpl : DiscordController {
         verifier = DiscordOAuth.newVerifier()
         expectedState = DiscordOAuth.newState()
         awaitingCode = true
+        // Survives a process restart while the browser/WebView is in front.
+        pendingOAuth?.save(expectedState, verifier)
         Discord.update { it.copy(busy = true, error = null) }
         main.removeCallbacks(timeout)
         main.postDelayed(timeout, TIMEOUT_MS)
@@ -176,37 +181,58 @@ class DiscordControllerImpl : DiscordController {
     }
 
     override fun completeAuthorization(uri: Uri?) {
-        if (uri == null || !awaitingCode) return
-        val custom = uri.scheme.equals("discord-${DiscordOAuth.APPLICATION_ID}", ignoreCase = true) &&
-            uri.path == "/authorize/callback"
-        val bridge = uri.scheme.equals("ketvoice", ignoreCase = true) &&
-            uri.host.equals("discord", ignoreCase = true)
-        val https = uri.scheme.equals("https", ignoreCase = true) &&
-            uri.host.equals("ketvoice.netlify.app", ignoreCase = true) &&
-            uri.path == "/discord.html"
-        if (!custom && !bridge && !https) return
-        val error = uri.getQueryParameter("error")
-        if (!error.isNullOrBlank()) {
-            val failure = if (error == "access_denied") "Liaison Discord annulée" else error
-            clearPending()
-            Discord.update { it.copy(busy = false, error = failure) }
-            return
+        // Recover an authorization that was in flight when Android recreated us.
+        if (!awaitingCode) {
+            val store = pendingOAuth
+            if (store != null && store.fresh()) {
+                expectedState = store.state().orEmpty()
+                verifier = store.verifier().orEmpty()
+                awaitingCode = expectedState.isNotBlank() && verifier.isNotBlank()
+            }
         }
-        val state = uri.getQueryParameter("state")
-        val code = uri.getQueryParameter("code")
-        if (state != expectedState || code.isNullOrBlank()) {
+        if (uri == null || !awaitingCode) return
+        val redirect = DiscordOAuth.redirect(uri.toString(), expectedState)
+        val code = redirect?.code
+        val pendingVerifier = verifier
+        if (code.isNullOrBlank()) {
             clearPending()
+            pendingOAuth?.clear()
             Discord.update { it.copy(busy = false, error = "Réponse Discord invalide. Réessaie.") }
             return
         }
-        val pendingVerifier = verifier
-        // Keep the timeout running until the token exchange reports back.
         awaitingCode = false
-        verifier = ""
-        expectedState = ""
-        if (!NativeDiscord.nativeExchange(code, pendingVerifier, DiscordOAuth.REDIRECT_URI)) {
-            Discord.update { it.copy(busy = false, error = "Discord indisponible") }
-        }
+        Discord.update { it.copy(busy = true, error = null) }
+        // Exchange on a worker: the Activity must not block on the network.
+        Thread({
+            val tokens = DiscordOAuth.exchange(code, pendingVerifier)
+            main.post {
+                verifier = ""
+                expectedState = ""
+                pendingOAuth?.clear()
+                if (tokens != null) {
+                    linked = true
+                    restoring = false
+                    pendingAccess = tokens.access
+                    runCatching { this.tokens?.save(tokens.refresh) }
+                    runCatching { this.tokens?.saveAccess(tokens.access) }
+                    com.ketvoice.app.data.AppSettings.discordPresence.value = true
+                    com.ketvoice.app.data.SettingsStore.save()
+                    main.removeCallbacks(timeout)
+                    Discord.update { it.copy(linked = true, busy = true, error = null) }
+                    if (!runCatching { NativeDiscord.nativeSetToken(tokens.access) }.getOrDefault(false)) {
+                        // The account is linked even when the SDK cannot start here.
+                        Discord.update { it.copy(linked = true, busy = false,
+                            error = "Compte lié. Ouvre l'app Discord pour publier l'écoute.") }
+                    }
+                } else if (!runCatching {
+                        NativeDiscord.nativeExchange(code, pendingVerifier, DiscordOAuth.REDIRECT_URI)
+                    }.getOrDefault(false)) {
+                    main.removeCallbacks(timeout)
+                    Discord.update { it.copy(busy = false,
+                        error = "Échec de l'échange du jeton Discord. Vérifie le redirect et le mode client public.") }
+                }
+            }
+        }, "discord-token-exchange").start()
     }
 
     override fun onForeground() {
