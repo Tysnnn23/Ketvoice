@@ -63,13 +63,16 @@ button.danger{border-color:#ff5c6c55;color:#ffc2c8;background:#ff5c6c14}
 .album-preview{display:flex;gap:12px;align-items:center;margin-top:10px;flex-wrap:wrap}
 .album-preview img{width:72px;height:72px;object-fit:cover;border-radius:12px}
 .divider{border:0;border-top:1px solid var(--line);margin:20px 0}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:20px 0}.metric{padding:18px;border:1px solid var(--line);border-radius:16px;background:#0d0d11}.metric strong{font-size:28px;display:block}.metric small,.badge{color:var(--muted);font-size:12px}.badge{display:inline-block;border:1px solid var(--line);padding:3px 9px;border-radius:99px}.badge.editable{color:#ffb5d1;border-color:#ff4d8d55}.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin:14px 0}.toolbar>div{flex:1;min-width:170px}.provider{display:block;margin:12px 0;padding:18px;border:1px solid var(--line);border-radius:16px;background:#101015}.provider h3{margin:0}.provider p{margin:8px 0}.provider input[readonly]{color:var(--muted)}.catalogue-image{width:64px;height:64px;border-radius:12px;object-fit:cover}.result-info{flex:1;min-width:160px}.detail{border-left:3px solid var(--pink);padding:16px;margin-top:20px;background:#ff4d8d08}.nav{overflow-y:auto}button:focus-visible,a:focus-visible{outline:2px solid var(--pink-soft);outline-offset:3px}@media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
 a{color:var(--pink-soft)}
+.provider small{overflow-wrap:anywhere}.main,.panel{min-width:0}
+.settings-actions{position:sticky;top:12px;z-index:2;display:flex;flex-wrap:wrap;gap:10px;padding:12px;background:#141419f2;border:1px solid var(--line);border-radius:14px;backdrop-filter:blur(12px)}
 [hidden]{display:none!important}
 @media (max-width:880px){
-  .app{grid-template-columns:1fr}
-  .sidebar{position:static;height:auto;flex-direction:row;align-items:center;flex-wrap:wrap;padding:14px 16px;gap:12px}
+  .app{grid-template-columns:minmax(0,1fr)}
+  .sidebar{position:static;height:auto;flex-direction:row;align-items:center;flex-wrap:wrap;padding:14px 16px;gap:12px;min-width:0}
   .sidebar .who{order:3;flex:1 1 100%;margin-top:4px}
-  .nav{flex-direction:row;overflow-x:auto;order:2;flex:1 1 100%}
+  .nav{display:flex;flex-direction:row;overflow-x:auto;order:2;flex:1 1 100%;min-width:0}
   .nav button{white-space:nowrap;padding:9px 12px}
   .nav button:before{display:none}
   .nav #logout{margin:0;border:0;padding-top:9px}
@@ -85,24 +88,30 @@ a{color:var(--pink-soft)}
   <a class="brand" href="#" onclick="return false">ketvoice<span>.</span><em>studio</em></a>
   <div class="who"><span class="avatar">K</span><div><strong>Propriétaire</strong><small id="identity">Session fermée</small></div></div>
   <nav class="nav" id="navigation" aria-label="Sections" hidden>
-    <button data-view="publish" aria-selected="true">Publier</button>
+    <button data-view="overview" aria-selected="true">Vue d’ensemble</button>
+    <button data-view="catalogue">Catalogue de l’app</button>
+    <button data-view="providers">API par catégorie</button>
+    <button data-view="publish">Publier</button>
     <button data-view="edit">Titres</button>
     <button data-view="lyrics">Paroles</button>
     <button data-view="albums">Albums</button>
     <button data-view="sources">Sources API</button>
     <button id="logout">Déconnexion</button>
   </nav>
-  <div class="sidefoot"><span class="dot"></span> API et stockage connectés</div>
+   <div class="sidefoot">Administration privée · autorisation serveur</div>
 </aside>
 <main class="main">
   <header class="topbar"><div><div class="eyebrow">Ketvoice Studio</div><h1>Dashboard</h1></div><div class="topactions"><span class="hint" id="today"></span></div></header>
   <div role="status" aria-live="polite" id="status" class="status"></div>
-<section id="login" class="panel"><h2>Connexion propriétaire</h2><p>Demandez un lien depuis cette page : il ouvrira Ketvoice Studio dans votre navigateur. Un lien demandé depuis l’application mobile continuera d’ouvrir l’application mobile.</p><button id="send" class="primary">Recevoir un lien pour le Studio</button><label class="check"><input id="remember" type="checkbox" checked> Se souvenir de ce PC</label><p class="hint" style="margin-top:20px">Ouvrez l’e-mail sur cet ordinateur. La session du Studio est perdue à la fermeture de l’onglet ; aucun secret n’est enregistré sur le disque.</p></section>
+<section id="login" class="panel"><h2>Connexion propriétaire</h2><p>Demandez un lien depuis cette page : il ouvrira Ketvoice Studio dans votre navigateur. Un lien demandé depuis l’application mobile continuera d’ouvrir l’application mobile.</p><button id="send" class="primary">Recevoir un lien pour le Studio</button><label class="check"><input id="remember" type="checkbox" checked> Se souvenir de ce PC</label><p class="hint" style="margin-top:20px">Sur un PC personnel uniquement : cette option conserve les jetons de session dans le stockage local du navigateur. La déconnexion les efface. Sans cette option, la session reste uniquement en mémoire dans l’onglet.</p></section>
+<section id="overview" class="panel" hidden><div class="eyebrow">Pilotage</div><h2>Votre espace de contrôle</h2><p>Catalogue de l’app, publications et services : chaque action indique sa portée réelle. Les comptes, clés privées et services protégés ne peuvent pas être redirigés depuis ce navigateur.</p><div class="metrics"><div class="metric"><strong id="activeCount">—</strong><small>Écoutes anonymes actives · 90 s</small></div><div class="metric"><strong id="providerCount">—</strong><small>Services répertoriés</small></div><div class="metric"><strong id="adapterCount">—</strong><small>Adaptateurs publics configurables</small></div><div class="metric"><strong id="albumCount">—</strong><small>Albums de vos publications</small></div></div><button id="overviewRefresh">Actualiser les indicateurs</button><p class="hint" id="overviewTime"></p><h3>Ce qui est modifiable</h3><p>Vos imports : titre, artiste, album, audio, pochette et Canvas. Catalogue général : consultation et publication de paroles autorisées, sans remplacement des médias. API publiques : activation et base compatible ; services protégés : inventaire et explication du déploiement nécessaire.</p></section>
+<section id="catalogue" class="panel" hidden><div class="eyebrow">Connecté au catalogue</div><h2>Explorer la musique de Ketvoice</h2><p>Recherche réelle dans YouTube Music, Ketvoice API et les publications — les mêmes catalogues que l’app. Un résultat ne garantit pas que son flux soit disponible.</p><form id="catalogueForm" class="toolbar"><div><label for="catalogueQuery">Titre, album ou artiste</label><input id="catalogueQuery" required minlength="2" maxlength="160" placeholder="Ex. Eminem, Recovery…"></div><div><label for="catalogueKind">Type de résultat</label><select id="catalogueKind"><option value="track">Titres</option><option value="album">Albums</option><option value="artist">Artistes</option></select></div><button class="primary">Rechercher</button></form><p id="catalogueState" class="hint" role="status">Lancez une recherche pour afficher le catalogue.</p><div id="catalogueResults"></div><div id="catalogueDetail" class="detail" hidden></div></section>
+<section id="providers" class="panel" hidden><div class="eyebrow">Infrastructure</div><h2>Toutes les API, par catégorie</h2><p>Les bases éditables exigent le même contrat JSON que le fournisseur d’origine. Elles sont validées côté serveur et récupérées par la nouvelle app au démarrage puis toutes les 5 minutes. Les médias déjà en cache ne sont pas effacés. Aucun état « disponible » n’est déduit d’une simple activation.</p><div class="toolbar"><div><label for="providerQuery">Filtrer les services</label><input id="providerQuery" type="search" placeholder="Canvas, paroles, photo…"></div><div><label for="providerCategory">Catégorie</label><select id="providerCategory"><option value="">Toutes les catégories</option></select></div><button id="providerRefresh" type="button">Actualiser</button></div><p class="hint" id="providerState" role="status"></p><div id="providerList"></div><button id="providerSave" class="primary" disabled>Enregistrer les réglages</button><button id="providerReset" type="button">Préparer les valeurs par défaut</button></section>
 <section id="publish" class="panel" hidden><h2>Ajouter une musique</h2><p>Uniquement des médias dont vous possédez les droits. Audio 25 Mo maximum ; pochette 4 Mo ; paroles LRC ou TTML 1 Mo.</p><form id="publishForm"><div class="row"><div><label for="newTitle">Titre</label><input id="newTitle" required maxlength="200"></div><div><label for="newArtist">Artiste</label><input id="newArtist" required maxlength="200"></div></div><div class="row"><div><label for="newAlbum">Album</label><input id="newAlbum" maxlength="200"></div><div><label for="newDuration">Durée (secondes)</label><input id="newDuration" type="number" min="0" max="86400" value="0" required></div></div><label for="newAudio">Audio</label><input id="newAudio" type="file" accept=".mp3,.m4a,.aac,.flac,.wav,.ogg,.opus" required><label for="newCover">Pochette (facultatif)</label><input id="newCover" type="file" accept="image/jpeg,image/png,image/webp"><label for="newLyrics">Paroles (facultatif)</label><input id="newLyrics" type="file" accept=".lrc,.ttml"><label class="check"><input id="newRights" type="checkbox" required> Je confirme détenir les droits de publication.</label><button class="primary">Publier la musique</button></form></section>
 <section id="edit" class="panel" hidden><h2>Rechercher et modifier</h2><p>La recherche affiche les titres publiés ; seule une musique importée par votre compte peut être modifiée. Les titres du catalogue général ne sont pas éditables.</p><div class="row"><div><label for="search">Titre ou artiste</label><input id="search" placeholder="Rechercher un titre" maxlength="160"></div><button id="searchButton">Rechercher</button></div><div id="results"></div><form id="editForm" hidden><hr class="divider"><h3 id="editingName"></h3><div class="row"><div><label for="editTitle">Titre</label><input id="editTitle" required maxlength="200"></div><div><label for="editArtist">Artiste</label><input id="editArtist" required maxlength="200"></div></div><label for="editAlbum">Album</label><input id="editAlbum" maxlength="200"><label for="editAudio">Remplacer l’audio (facultatif)</label><input id="editAudio" type="file" accept=".mp3,.m4a,.aac,.flac,.wav,.ogg,.opus"><label for="editCover">Remplacer la pochette (facultatif)</label><input id="editCover" type="file" accept="image/jpeg,image/png,image/webp"><div class="row"><div><label for="editDuration">Durée (secondes, si nouvel audio)</label><input id="editDuration" type="number" min="0" max="86400"></div></div><label class="check"><input id="editRights" type="checkbox" required> Je confirme détenir les droits de publication.</label><button class="primary">Enregistrer les changements</button></form></section>
 <section id="lyrics" class="panel" hidden><h2>Importer des paroles</h2><p>Publiez une version LRC ou TTML pour une musique, y compris un titre du catalogue. Une nouvelle version est ajoutée sans modifier l’audio.</p><form id="lyricsForm"><label for="lyricId">Identifiant du titre</label><input id="lyricId" required maxlength="180" placeholder="Sélectionnez un résultat de la recherche"><div class="row"><div><label for="lyricTitle">Titre</label><input id="lyricTitle" required maxlength="200"></div><div><label for="lyricArtist">Artiste</label><input id="lyricArtist" required maxlength="200"></div></div><label for="lyricFile">Fichier LRC ou TTML</label><input id="lyricFile" type="file" accept=".lrc,.ttml" required><label class="check"><input id="lyricRights" type="checkbox" required> Je confirme détenir les droits de publication.</label><button class="primary">Publier les paroles</button></form></section>
 <section id="albums" class="panel" hidden><h2>Albums</h2><p>Recherchez un album publié, changez son Canvas pour tout l’album ou titre par titre, et ajoutez ou retirez des titres. Le Canvas est la vidéo jouée derrière les paroles dans l’application.</p><div class="row"><div><label for="albumSearch">Rechercher un album ou un artiste</label><input id="albumSearch" placeholder="Nom d’album ou artiste" maxlength="160"></div><button id="albumRefresh" type="button">Actualiser les albums</button></div><div id="albumResults"></div><div id="albumDetail" hidden></div></section>
-<section id="sources" class="panel" hidden><h2>Sources Ketvoice API</h2><p>Ajoutez des manifestes HTTPS pour enrichir la recherche de musique. Les sources actives sont relues par l’API à chaque recherche et lecture. Une URL expirée peut être remplacée, désactivée ou supprimée.</p><form id="sourceForm"><label for="sourceName">Nom</label><input id="sourceName" required maxlength="100" placeholder="Nouvelle source"><label for="sourceUrl">URL du manifeste</label><input id="sourceUrl" type="url" required maxlength="2048" placeholder="https://exemple.fr/e/.../manifest.json"><button class="primary">Ajouter la source</button></form><hr class="divider"><h3>Sources configurées</h3><div id="sourceList"></div></section>
+<section id="sources" class="panel" hidden><h2>Manifestes de sources</h2><p>Ces manifestes HTTPS sont testés puis enregistrés dans le Studio. Le courtier actuel ne les utilise pas automatiquement : pour les utiliser immédiatement, ajoutez-les dans Sources personnalisées sur chaque appareil. L’ordre ci-dessous est un ordre de gestion, pas une priorité globale de lecture. Pour les services intégrés réellement pilotables à distance, utilisez « API par catégorie ».</p><form id="sourceForm"><label for="sourceName">Nom</label><input id="sourceName" required maxlength="100" placeholder="Nouvelle source"><label for="sourceUrl">URL du manifeste</label><input id="sourceUrl" type="url" required maxlength="2048" placeholder="https://exemple.fr/e/.../manifest.json"><button class="primary">Tester et enregistrer le manifeste</button></form><hr class="divider"><h3>Manifestes enregistrés</h3><div id="sourceList"></div></section>
 </main></div>
 <script>
 (() => {
@@ -125,16 +134,18 @@ a{color:var(--pink-soft)}
     if(!response.ok) throw Error(result.error_description||result.msg||result.error||`Erreur ${response.status}`);
     return result;
   }
+  let refreshJob=null;
   async function token(){
     if(!session) throw Error('Reconnectez-vous.');
     if(Date.now()<session.expiresAt-60000) return;
-    const next=await call('/auth/v1/token?grant_type=refresh_token',{method:'POST',body:{refresh_token:session.refresh_token}});
-    session={...next,expiresAt:Date.now()+next.expires_in*1000};
+    if(refreshJob)return refreshJob;
+    refreshJob=(async()=>{const previous=session;const next=await call('/auth/v1/token?grant_type=refresh_token',{method:'POST',body:{refresh_token:previous.refresh_token}});if(session!==previous)return;session={...next,expiresAt:Date.now()+next.expires_in*1000};saveSession();})();
+    try{await refreshJob;}finally{refreshJob=null;}
   }
   async function content(path,options={}){if(options.admin) await token();return call('/functions/v1/ketvoice-content'+path,options);}
-  async function run(button,work){button.disabled=true;notice('Traitement en cours…');try{await work();}catch(error){notice(error.message,true);}finally{button.disabled=false;}}
-  function view(name){for(const section of document.querySelectorAll('main section'))section.hidden=section.id!==name;for(const button of document.querySelectorAll('.nav [data-view]'))button.setAttribute('aria-selected',String(button.dataset.view===name));if(name==='sources') loadSources();if(name==='albums')loadAlbums().then(renderAlbumList).catch(error=>notice(error.message,true));}
-  function signedIn(){ $('login').hidden=true;$('navigation').hidden=false;$('identity').textContent=email;view('publish');notice('Connecté au compte propriétaire.');loadAlbums().catch(error=>{for(const prefix of pickers.keys())$(prefix+'AlbumHint').textContent='Albums indisponibles. Utilisez « Actualiser les albums » pour réessayer.';notice(error.message,true);});}
+  async function run(button,work){button.disabled=true;notice('Traitement en cours…');try{await work();if($('status').textContent==='Traitement en cours…')notice('Terminé.');}catch(error){notice(error.message,true);}finally{button.disabled=false;}}
+  function view(name){for(const section of document.querySelectorAll('main section'))section.hidden=section.id!==name;for(const button of document.querySelectorAll('.nav [data-view]'))button.setAttribute('aria-selected',String(button.dataset.view===name));document.querySelector('.topbar h1').textContent=({overview:'Vue d’ensemble',catalogue:'Catalogue',providers:'API par catégorie',publish:'Publier',edit:'Mes titres',lyrics:'Paroles',albums:'Mes albums',sources:'Sources personnalisées',login:'Connexion'})[name]||'Studio';if(name==='sources') loadSources();if(name==='providers'&&!providerData)loadProviders().catch(error=>notice(error.message,true));if(name==='overview')loadOverview().catch(error=>notice(error.message,true));if(name==='albums')loadAlbums().then(renderAlbumList).catch(error=>notice(error.message,true));}
+  function signedIn(){ $('login').hidden=true;$('navigation').hidden=false;$('identity').textContent=email;view('overview');notice('Connecté au compte propriétaire.');loadAlbums().catch(error=>{for(const prefix of pickers.keys())$(prefix+'AlbumHint').textContent='Albums indisponibles. Utilisez « Actualiser les albums » pour réessayer.';notice(error.message,true);});}
   $('send').onclick=event=>run(event.currentTarget,async()=>{
     await call('/auth/v1/otp?redirect_to='+encodeURIComponent(studio),{method:'POST',body:{email,create_user:false}});
     notice('Lien envoyé. Ouvrez-le dans ce navigateur pour retrouver Ketvoice Studio.');
@@ -153,6 +164,8 @@ a{color:var(--pink-soft)}
     signedIn();
   }
   const SESSION_KEY='kv-studio-session';
+  try{$('remember').checked=localStorage.getItem('kv-studio-remember')!=='false';}catch{}
+  $('remember').onchange=()=>{try{localStorage.setItem('kv-studio-remember',String($('remember').checked));}catch{}saveSession();};
   function saveSession(){try{if(session&&$('remember')&&$('remember').checked)localStorage.setItem(SESSION_KEY,JSON.stringify(session));else localStorage.removeItem(SESSION_KEY);}catch{}}
   function clearSession(){try{localStorage.removeItem(SESSION_KEY);}catch{}}
   async function restoreSession(){
@@ -292,7 +305,7 @@ a{color:var(--pink-soft)}
   });};
   function entry(track){const card=document.createElement('div');card.className='card';const title=document.createElement('strong');title.textContent=`${track.title} — ${track.artist}`;card.append(title);const meta=document.createElement('small');meta.textContent=track.id;card.append(meta);
     const lyric=document.createElement('button');lyric.textContent='Importer des paroles';lyric.onclick=()=>{$('lyricId').value=track.id;$('lyricTitle').value=track.title;$('lyricArtist').value=track.artist;view('lyrics');};card.append(lyric);
-    if(track.id.startsWith('kv:upload:')){const edit=document.createElement('button');edit.textContent='Modifier mon import';edit.onclick=()=>run(edit,async()=>{const result=await content('/admin/song?id='+encodeURIComponent(track.id),{admin:true});resetEditor('edit');editable=result;$('editingName').textContent=result.track.title;$('editTitle').value=result.track.title;$('editArtist').value=result.track.artist;$('editAlbum').value=result.track.album||'';$('editDuration').value=Number(result.track.durationMs||0)/1000;$('editForm').hidden=false;notice('Titre chargé.');});card.append(edit);}return card;}
+    if(track.id.startsWith('kv:upload:')&&track.editable!==false){const edit=document.createElement('button');edit.textContent='Modifier mon import';edit.onclick=()=>run(edit,async()=>{const result=await content('/admin/song?id='+encodeURIComponent(track.id),{admin:true});view('edit');resetEditor('edit');editable=result;$('editingName').textContent=result.track.title;$('editTitle').value=result.track.title;$('editArtist').value=result.track.artist;$('editAlbum').value=result.track.album||'';$('editDuration').value=Number(result.track.durationMs||0)/1000;$('editForm').hidden=false;notice('Titre chargé.');});card.append(edit);}return card;}
   $('searchButton').onclick=event=>run(event.currentTarget,async()=>{const q=$('search').value.trim();if(q.length<2)throw Error('Entrez au moins deux caractères.');const data=await content('/search?q='+encodeURIComponent(q));$('results').replaceChildren(...data.tracks.map(entry));$('editForm').hidden=true;notice(`${data.tracks.length} résultat(s).`);});
   $('search').onkeydown=event=>{if(event.key==='Enter'){$('searchButton').click();event.preventDefault();}};
   $('editForm').onsubmit=event=>{event.preventDefault();run(event.submitter,async()=>{
@@ -398,6 +411,83 @@ a{color:var(--pink-soft)}
   if($('albumSearch'))$('albumSearch').oninput=renderAlbumList;
   if($('albumRefresh'))$('albumRefresh').onclick=event=>run(event.currentTarget,async()=>{await loadAlbums();renderAlbumList();notice('Albums actualisés.');});
   $('lyricsForm').onsubmit=event=>{event.preventDefault();run(event.submitter,async()=>{const selected=file('lyricFile');if(selected.size>1048576)throw Error('Fichier trop volumineux.');const format=selected.name.toLowerCase().split('.').pop();if(!['lrc','ttml'].includes(format))throw Error('Fichier LRC ou TTML requis.');await content('/admin/lyrics',{method:'POST',admin:true,body:{trackId:$('lyricId').value.trim(),title:$('lyricTitle').value.trim(),artist:$('lyricArtist').value.trim(),durationMs:0,format,content:await selected.text(),rightsConfirmed:$('lyricRights').checked}});$('lyricsForm').reset();notice('Paroles publiées.');});};
+  // Shared registry: drafts survive filtering; no protected endpoint is editable.
+  let providerData=null,providerDraft=new Map(),providerDirty=false;
+  const providerActions=document.createElement('div');providerActions.className='settings-actions';providerActions.append($('providerSave'),$('providerReset'));$('providerList').before(providerActions);
+  async function loadProviders(){
+    const data=await content('/admin/providers',{admin:true});if(!session)return;
+    providerData=data;providerDraft=new Map(data.providers.filter(p=>p.editable||p.toggle).map(p=>{const rule=data.rules.find(r=>r.id===p.id);return [p.id,rule||{id:p.id,enabled:true,base:p.base}];}));
+    providerDirty=false;$('providerSave').disabled=true;
+    const selected=$('providerCategory').value;
+    $('providerCategory').replaceChildren(option('','Toutes les catégories'),...[...new Set(data.providers.map(p=>p.category))].map(c=>option(c,c)));
+    $('providerCategory').value=selected;renderProviders();
+  }
+  function renderProviders(){
+    if(!providerData)return;
+    const query=$('providerQuery').value.toLocaleLowerCase(),category=$('providerCategory').value,box=$('providerList');box.replaceChildren();
+    const filtered=providerData.providers.filter(p=>(!category||p.category===category)&&`${p.name} ${p.note} ${p.category}`.toLocaleLowerCase().includes(query)).sort((a,b)=>a.category.localeCompare(b.category,'fr'));
+    let previous='';
+    for(const p of filtered){
+      if(previous!==p.category){const h=document.createElement('h3');h.textContent=p.category;box.append(h);previous=p.category;}
+      const card=document.createElement('div');card.className='provider';
+      const title=document.createElement('h3');title.textContent=p.name;
+      const badge=document.createElement('span');badge.className='badge'+(p.editable||p.toggle?' editable':'');badge.textContent=p.editable?'Base publique modifiable':p.toggle?'Activation app':'Protégé · déploiement';
+      const note=document.createElement('p');note.className='hint';note.textContent=p.note;card.append(title,badge,note);
+      if(p.editable||p.toggle){
+        const draft=providerDraft.get(p.id),label=document.createElement('label');label.className='check';
+        const enabled=document.createElement('input');enabled.type='checkbox';enabled.checked=draft.enabled;enabled.onchange=()=>{draft.enabled=enabled.checked;dirtyProviders();};label.append(enabled,document.createTextNode('Activé pour les nouvelles requêtes de l’app'));card.append(label);
+        if(p.editable){const label=document.createElement('label');label.textContent='Base HTTPS compatible';label.htmlFor='provider-'+p.id;const input=document.createElement('input');input.id=label.htmlFor;input.type='url';input.maxLength=512;input.value=draft.base;input.oninput=()=>{draft.base=input.value.trim();dirtyProviders();};card.append(label,input);}
+      }else if(p.base){const url=document.createElement('small');url.textContent=p.base;card.append(url);}
+      box.append(card);
+    }
+    $('providerState').textContent=`${filtered.length} / ${providerData.providers.length} services · configuration ${providerData.updated_at?new Date(providerData.updated_at).toLocaleString('fr-FR'):'par défaut'}`+(providerDirty?' · modifications non enregistrées':'');
+  }
+  function dirtyProviders(){providerDirty=true;$('providerSave').disabled=false;$('providerState').textContent='Modifications non enregistrées. Cliquez sur Enregistrer pour les appliquer.';}
+  $('providerQuery').oninput=renderProviders;$('providerCategory').onchange=renderProviders;
+  $('providerRefresh').onclick=e=>run(e.currentTarget,async()=>{if(providerDirty&&!confirm('Abandonner le brouillon et recharger ?'))return;await loadProviders();});
+  $('providerReset').onclick=()=>{if(!providerData)return;for(const p of providerData.providers)if(p.editable||p.toggle)providerDraft.set(p.id,{id:p.id,enabled:true,base:p.base});dirtyProviders();renderProviders();};
+  $('providerSave').onclick=e=>run(e.currentTarget,async()=>{
+    const rules=[...providerDraft.values()].filter(rule=>{const def=providerData.providers.find(p=>p.id===rule.id);return !rule.enabled||rule.base!==def.base;});
+    const data=await content('/admin/providers',{method:'PUT',admin:true,body:{revision:providerData.revision,rules}});
+    providerData=data;providerDirty=false;renderProviders();notice('Configuration enregistrée. Récupération au démarrage ou sous 5 minutes sur la nouvelle app.');
+  }).then(()=>{$('providerSave').disabled=!providerDirty;});
+  async function loadOverview(){
+    const [config,,listeners]=await Promise.all([content('/admin/providers',{admin:true}),loadAlbums(),call('/functions/v1/ketvoice-api/listeners?window=90').catch(()=>null)]);if(!session)return;
+    $('activeCount').textContent=listeners?.activeListeners??'Indisponible';$('providerCount').textContent=config.providers.length;
+    $('adapterCount').textContent=config.providers.filter(p=>p.editable).length;$('albumCount').textContent=albums.length;
+    $('overviewTime').textContent='Dernière actualisation : '+new Date().toLocaleTimeString('fr-FR')+'. Les écoutes ne sont pas des comptes identifiés.';
+  }
+  $('overviewRefresh').onclick=e=>run(e.currentTarget,loadOverview);
+  let catalogueJob=0;
+  async function catalogueSearch(){
+    const job=++catalogueJob,q=$('catalogueQuery').value.trim(),kind=$('catalogueKind').value;
+    if(q.length<2)throw Error('Entrez au moins deux caractères.');
+    $('catalogueState').textContent='Recherche dans les catalogues…';$('catalogueDetail').hidden=true;
+    const data=await content('/admin/catalogue?q='+encodeURIComponent(q)+'&kind='+kind,{admin:true});if(job!==catalogueJob||!session)return;
+    $('catalogueResults').replaceChildren(...data.results.map(catalogueCard));
+    $('catalogueState').textContent=`${data.results.length} résultat(s). `+(data.warnings||[]).join(' ')+(data.results.length?'':' Essayez un nom plus précis ou un autre type.');
+  }
+  $('catalogueForm').onsubmit=e=>{e.preventDefault();run(e.submitter,catalogueSearch);};
+  function catalogueCard(item){
+    const card=document.createElement('div');card.className='card';
+    if(typeof item.artworkURL==='string'&&item.artworkURL.startsWith('https://')){const img=document.createElement('img');img.className='catalogue-image';img.src=item.artworkURL;img.alt='';img.loading='lazy';img.referrerPolicy='no-referrer';card.append(img);}
+    const info=document.createElement('div');info.className='result-info';const title=document.createElement('strong');title.textContent=item.title;const artist=document.createElement('small');artist.textContent=[item.artist,item.album,item.source].filter(Boolean).join(' · ');const badge=document.createElement('span');badge.className='badge'+(item.editable?' editable':'');badge.textContent=item.editable?'Votre publication':'Catalogue · médias protégés';info.append(title,artist,badge);card.append(info);
+    const open=document.createElement('button');open.textContent=item.kind==='track'?'Détails et actions':'Voir les titres';open.onclick=()=>run(open,async()=>{
+      const box=$('catalogueDetail');box.hidden=false;box.replaceChildren();const h=document.createElement('h3');h.textContent=item.title;box.append(h);
+      const id=document.createElement('p');id.className='hint';id.textContent=item.id;box.append(id);
+      if(item.kind==='track'){box.append(entry(item));const p=document.createElement('p');p.className='hint';p.textContent=item.editable?'Les modifications s’appliquent à votre publication.':'Audio, pochette et Canvas du catalogue non remplaçables. Vous pouvez publier des paroles dont vous avez les droits.';box.append(p);}
+      else if(item.sourceId){
+        if(item.kind==='album'&&item.editable){view('albums');await openAlbum(item.sourceId);}
+        else {$('catalogueQuery').value=item.artist||item.title;$('catalogueKind').value='track';await catalogueSearch();}
+      }else{
+        const data=await content('/admin/catalogue/detail?id='+encodeURIComponent(item.id)+'&kind='+item.kind,{admin:true});
+        const items=[...(data.tracks||[]),...(data.albums||[])];box.append(...items.map(catalogueCard));if(!items.length)box.append(document.createTextNode('Aucun titre exposé par ce fournisseur pour cette fiche. Recherchez le nom dans Titres.'));
+      }
+    });card.append(open);
+    if(typeof item.url==='string'&&item.url.startsWith('https://music.youtube.com/')){const a=document.createElement('a');a.href=item.url;a.target='_blank';a.rel='noopener noreferrer';a.textContent='Source';card.append(a);}
+    return card;
+  }
+  window.addEventListener('beforeunload',event=>{if(providerDirty){event.preventDefault();event.returnValue='';}});
   let dragSource=null;
   async function moveSource(fromId,toId){
     if(!fromId||fromId===toId)return;
@@ -409,7 +499,7 @@ a{color:var(--pink-soft)}
     const ids=[...list.querySelectorAll('.card')].map(item=>item.dataset.id);
     try{
       for(let index=0;index<ids.length;index++)await content('/admin/sources?id='+encodeURIComponent(ids[index]),{method:'PATCH',admin:true,body:{sort_order:index}});
-      notice('Priorité des sources enregistrée.');
+      notice('Ordre de gestion des manifestes enregistré.');
     }catch(error){notice(error.message,true);await loadSources();}
   }
   async function loadSources(){try{const data=await content('/admin/sources',{admin:true});$('sourceList').replaceChildren(...data.sources.map(sourceCard));if(!data.sources.length)$('sourceList').textContent='Aucune source ajoutée.';}catch(error){notice(error.message,true);}}

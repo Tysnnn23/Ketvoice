@@ -37,6 +37,10 @@ import com.ketvoice.app.data.CatalogPage
 import com.ketvoice.app.data.CatalogRequest
 import com.ketvoice.app.data.LyricsRepo
 import com.ketvoice.app.data.MusicApi
+import com.ketvoice.app.data.PlaylistStore
+import com.ketvoice.app.data.LocalPlaylist
+import com.ketvoice.app.data.PlaylistEntry
+import com.ketvoice.app.ui.library.PlaylistScreen
 import com.ketvoice.app.theme.LocalTheme
 import com.ketvoice.app.ui.sub.ArtistHeader
 import com.ketvoice.app.ui.sub.AlbumPage
@@ -70,6 +74,7 @@ class PrismalHostRenderTest {
     }
 
     @After fun reset() {
+        PlaylistStore.resetForTest()
         AppUi.closeOverlays()
         AppSettings.reduceAnimations.value = false
         AppSettings.reduceDynamicBlur.value = false
@@ -163,6 +168,66 @@ class PrismalHostRenderTest {
         compose.onNodeWithText("Écouter").assertIsDisplayed()
         compose.onNodeWithText("Aléatoire").assertIsDisplayed()
         image("artist-header-dark-fallback")
+    }
+
+    private fun playlistFixture() {
+        AppSettings.reduceAnimations.value = true
+        AppSettings.reduceDynamicBlur.value = true
+        PlaylistStore.resetForTest()
+        kotlinx.coroutines.runBlocking { PlaylistStore.init(compose.activity) }
+        val playlist = LocalPlaylist(id = "qa:fixed-playlist", name = "Playlist fixe", entries = (0..49).map {
+            PlaylistEntry(id = "entry:$it", title = "Titre $it", artist = "Artiste QA")
+        })
+        @Suppress("UNCHECKED_CAST")
+        (PlaylistStore.lists as MutableStateFlow<List<LocalPlaylist>>).value = listOf(playlist)
+        AppUi.playlistId.value = playlist.id
+    }
+
+    @Test fun playlistHeaderAndCoverRemainOpaqueAtTheSameCoordinatesAfterScrolling() {
+        playlistFixture()
+        compose.setContent { KetvoiceTheme(useDark = true) { PlaylistScreen() } }
+        val header = compose.onNodeWithTag("playlist-header").fetchSemanticsNode().boundsInRoot
+        val cover = compose.onNodeWithTag("playlist-cover").fetchSemanticsNode().boundsInRoot
+        var before = IntArray(0)
+        image("playlist-fixed-before-scroll") { bitmap ->
+            before = IntArray(80 * 80); bitmap.getPixels(before, 0, 80, cover.left.toInt() + 10, cover.top.toInt() + 10, 80, 80)
+        }
+        compose.onNodeWithTag("playlist-tracks").performScrollToIndex(25)
+        compose.onNodeWithText("Titre 25").assertIsDisplayed()
+        assertEquals(header, compose.onNodeWithTag("playlist-header").assertIsDisplayed().fetchSemanticsNode().boundsInRoot)
+        assertEquals(cover, compose.onNodeWithTag("playlist-cover").assertIsDisplayed().fetchSemanticsNode().boundsInRoot)
+        image("playlist-fixed-after-scroll") { bitmap ->
+            val after = IntArray(80 * 80); bitmap.getPixels(after, 0, 80, cover.left.toInt() + 10, cover.top.toInt() + 10, 80, 80)
+            assertArrayEquals("Scrolling must not fade the fixed artwork", before, after)
+        }
+    }
+
+    @Test @Config(qualifiers = "w900dp-h480dp-mdpi")
+    fun shortLandscapePlaylistKeepsArtworkActionsAndAScrollableList() {
+        playlistFixture()
+        compose.setContent { KetvoiceTheme(useDark = true) { PlaylistScreen() } }
+        compose.onNodeWithText("Modifier l'ordre").assertIsDisplayed()
+        compose.onNodeWithTag("playlist-cover").assertIsDisplayed()
+        assertTrue(compose.onNodeWithTag("playlist-tracks").fetchSemanticsNode().boundsInRoot.height > 100f)
+        compose.onNodeWithTag("playlist-tracks").performScrollToIndex(25)
+        compose.onNodeWithText("Titre 25").assertIsDisplayed()
+        compose.onNodeWithTag("playlist-cover").assertIsDisplayed()
+        image("playlist-fixed-short-landscape")
+    }
+
+    @Test fun playlistDragMovesTheFirstTrackWithoutAHeaderIndexOffset() {
+        playlistFixture()
+        compose.setContent { KetvoiceTheme(useDark = true) { PlaylistScreen() } }
+        compose.onNodeWithText("Modifier l'ordre").performClick()
+        val first = compose.onNodeWithContentDescription("Déplacer Titre 0", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+        val second = compose.onNodeWithContentDescription("Déplacer Titre 1", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+        val step = second.center.y - first.center.y
+        compose.onNodeWithContentDescription("Déplacer Titre 0", useUnmergedTree = true).performTouchInput {
+            down(center); moveBy(androidx.compose.ui.geometry.Offset(0f, 12f));
+            moveBy(androidx.compose.ui.geometry.Offset(0f, step * 1.25f), 300); up()
+        }
+        compose.waitUntil(5000) { PlaylistStore.lists.value.first().entries.first().id == "entry:1" }
+        assertEquals("entry:0", PlaylistStore.lists.value.first().entries[1].id)
     }
 
     @Test fun normalCanvasAndCoverShareTheRestoredLegacyDissolve() {

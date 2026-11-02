@@ -17,7 +17,7 @@ object CatalogRepo {
     private fun get(path: String): JSONObject? {
         var c: HttpURLConnection? = null
         return try {
-            c = URL("https://api.deezer.com/$path").openConnection() as HttpURLConnection
+            c = URL(ProviderConfig.publicUrl("https://api.deezer.com/$path") ?: return null).openConnection() as HttpURLConnection
             c.connectTimeout = 6000; c.readTimeout = 10000
             if (c.responseCode in 200..299) JSONObject(c.inputStream.bufferedReader().use { it.readText() }) else null
         } catch (_: Exception) { null } finally { c?.disconnect() }

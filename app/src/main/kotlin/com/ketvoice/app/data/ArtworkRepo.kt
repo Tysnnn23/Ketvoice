@@ -204,7 +204,7 @@ object ArtworkRepo {
     }
 
     private fun fetch(url: String): String? = try {
-        val c = (URL(url).openConnection() as HttpURLConnection).apply {
+        val c = (URL(ProviderConfig.publicUrl(url) ?: error("Provider disabled")).openConnection() as HttpURLConnection).apply {
             connectTimeout = 10_000
             readTimeout = 14_000
             setRequestProperty("User-Agent", UA)

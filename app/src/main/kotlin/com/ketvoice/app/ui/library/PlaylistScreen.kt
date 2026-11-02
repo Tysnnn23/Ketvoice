@@ -28,6 +28,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -38,8 +39,6 @@ import com.ketvoice.app.theme.LocalTheme
 import com.ketvoice.app.ui.AppUi
 import com.ketvoice.app.ui.adaptive.LocalAdaptiveLayout
 import com.ketvoice.app.ui.common.*
-import com.ketvoice.app.ui.motion.collectionEntry
-import com.ketvoice.app.ui.motion.rememberSeenCollections
 import kotlinx.coroutines.launch
 
 @Composable
@@ -68,7 +67,9 @@ fun PlaylistScreen() {
         }
     }
 
-    Column(Modifier.fillMaxSize().background(th.background).statusBarsPadding()) {
+    BoxWithConstraints(Modifier.fillMaxSize().background(th.background).statusBarsPadding()) {
+    val compactHeader = maxHeight < 600.dp
+    Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             GlassBackButton { if (editing) editing = false else AppUi.closeOverlay() }
             Text(if (editing) com.ketvoice.app.data.AppText.t("Glissez ⠿ pour réordonner")
@@ -101,42 +102,29 @@ fun PlaylistScreen() {
             return@Column
         }
         val playable = playlist.entries.mapNotNull { it.track }
-        val seen = rememberSeenCollections()
 
-        // ---- liste qui contient le hero (qui défile) puis les titres ----
+        // The hero is outside the scrolling track list. Never derive its opacity
+        // from that list: doing so hides a fixed element but leaves its space.
         var dragIndex by remember { mutableIntStateOf(-1) }
         var dragOffset by remember { mutableFloatStateOf(0f) }
+        var dragMovePending by remember { mutableStateOf(false) }
 
-        // Opacité du header : disparaît quand il défile hors du haut de l'écran
-        val headerFade by remember { derivedStateOf {
-            val first = list.firstVisibleItemIndex
-            val offset = list.firstVisibleItemScrollOffset
-            if (first > 0) 0f else 1f - (offset / 400f).coerceIn(0f, 1f)
-        }}
-
-
-            Column(
-                Modifier
-                    .fillMaxWidth()
-                    .graphicsLayer { alpha = headerFade }
-                    .padding(horizontal = 24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Spacer(Modifier.height(6.dp))
+            PlaylistHeaderLayout(compactHeader, artwork = {
                 BoxWithConstraints(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    val edge = if (com.ketvoice.app.BuildConfig.IS_QUEST) 180.dp else (maxWidth * .68f).coerceIn(156.dp, 256.dp)
+                    val edge = if (compactHeader) 104.dp else (maxWidth * .68f).coerceIn(156.dp, 256.dp)
                     if (!AppSettings.reduceDynamicBlur.value && !AppSettings.highPerformanceMode.value) Box(Modifier.size(edge + 24.dp)
                          .graphicsLayer { alpha = .22f }.blur(18.dp)) {
                          PlaylistArtwork(playlist, playlist.name, Modifier.fillMaxSize())
                     }
                     PlaylistArtwork(playlist, playlist.name,
-                        Modifier.size(edge).collectionEntry("playlist:${playlist.id}", seen, 0))
+                        Modifier.size(edge).testTag("playlist-cover"))
                 }
-                Spacer(Modifier.height(16.dp))
+            }, details = {
+                Spacer(Modifier.height(if (compactHeader) 0.dp else 16.dp))
                 Text(playlist.name, localize = false, color = th.onBackground,
-                    fontSize = if (com.ketvoice.app.BuildConfig.IS_QUEST) 28.sp else 25.sp,
+                    fontSize = if (compactHeader) 20.sp else 25.sp,
                     fontWeight = FontWeight.Black, letterSpacing = (-.6).sp,
-                    maxLines = 3, overflow = TextOverflow.Ellipsis, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                     maxLines = if (compactHeader) 2 else 3, overflow = TextOverflow.Ellipsis, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                 Spacer(Modifier.height(6.dp))
                 Text(buildString {
                     append("${playable.size} / ${playlist.entries.size} titres disponibles")
@@ -149,7 +137,7 @@ fun PlaylistScreen() {
                     "La liste peut être incomplète : touchez un titre manquant pour le retrouver.",
                     color = th.secondary, fontSize = 12.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                     modifier = Modifier.padding(top = 4.dp))
-                Spacer(Modifier.height(14.dp))
+                Spacer(Modifier.height(if (compactHeader) 8.dp else 14.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(9.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.weight(1f).heightIn(min = 46.dp)
                         .clip(RoundedCornerShape(23.dp)).background(if (playable.isEmpty()) th.card else th.accent)
@@ -174,19 +162,17 @@ fun PlaylistScreen() {
                 Text("Aléatoire", color = th.accent, fontWeight = FontWeight.SemiBold, fontSize = 14.sp,
                     modifier = Modifier.clickable(enabled = playable.isNotEmpty() && !editing) {
                         Player.playQueue(playable.shuffled()); Player.setShuffle(true)
-                    }.padding(14.dp))
+                    }.padding(if (compactHeader) 6.dp else 14.dp))
                 if (error.isNotBlank()) Text(error, color = MaterialTheme.colorScheme.error,
                     fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
                 Spacer(Modifier.height(8.dp))
-            }
+            })
 
         LazyColumn(
-            Modifier.weight(1f).fillMaxWidth(),
+            Modifier.weight(1f).fillMaxWidth().testTag("playlist-tracks"),
             state = list,
             contentPadding = PaddingValues(bottom = LocalAdaptiveLayout.current.bottomPaddingDp.dp)
         ) {
-            // Premier item = hero premium (couverture, titre, boutons) — défile et s'estompe
-
             if (playlist.entries.isEmpty()) {
                 // État vide affiché comme premier item
                 item {
@@ -198,26 +184,31 @@ fun PlaylistScreen() {
                 }
             } else {
                 itemsIndexed(playlist.entries, key = { _, entry -> entry.id }) { index, entry ->
+                    val currentIndex by rememberUpdatedState(index)
                     val rowModifier = if (index == dragIndex) Modifier.graphicsLayer { translationY = dragOffset } else Modifier
                     PlaylistRow(entry, index, editing, busy, th, rowModifier
                         .then(if (com.ketvoice.app.BuildConfig.IS_QUEST || !editing) Modifier else Modifier.animateItem()),
                         dragHandle = if (!editing) Modifier else Modifier.pointerInput(entry.id) {
                             detectVerticalDragGestures(
-                                onDragStart = { dragOffset = 0f; dragIndex = index },
+                                onDragStart = { dragOffset = 0f; dragIndex = currentIndex },
                                 onVerticalDrag = { change, delta ->
                                     change.consume()
                                     dragOffset += delta
+                                    if (dragMovePending) return@detectVerticalDragGestures
+                                    val index = currentIndex
                                     val infos = list.layoutInfo.visibleItemsInfo
-                                    val origin = infos.firstOrNull { it.index == index + 1 } ?: return@detectVerticalDragGestures // +1 car le hero est l'item 0
+                                    val origin = infos.firstOrNull { it.index == index } ?: return@detectVerticalDragGestures
                                     val center = origin.offset + origin.size / 2f + dragOffset
-                                    val below = infos.firstOrNull { it.index == index + 2 }
-                                    val above = infos.firstOrNull { it.index == index }
+                                    val below = infos.firstOrNull { it.index == index + 1 }
+                                    val above = infos.firstOrNull { it.index == index - 1 }
                                     if (below != null && center > below.offset + below.size / 2f) {
-                                        scope.launch { PlaylistStore.move(playlist.id, index, index + 1) }
+                                        dragMovePending = true
+                                        scope.launch { try { PlaylistStore.move(playlist.id, index, index + 1) } catch (_: Exception) { error = "Impossible d'enregistrer la playlist" } finally { dragMovePending = false } }
                                         dragIndex = index + 1
                                         dragOffset -= below.size
                                     } else if (above != null && center < above.offset + above.size / 2f) {
-                                        scope.launch { PlaylistStore.move(playlist.id, index, index - 1) }
+                                        dragMovePending = true
+                                        scope.launch { try { PlaylistStore.move(playlist.id, index, index - 1) } catch (_: Exception) { error = "Impossible d'enregistrer la playlist" } finally { dragMovePending = false } }
                                         dragIndex = index - 1
                                         dragOffset += above.size
                                     }
@@ -248,6 +239,17 @@ fun PlaylistScreen() {
             dismissButton = { TextButton(onClick = { deleting = false }) { Text("Annuler") } })
         // Le menu d'actions est rendu par AppRoot (AppUi.playlistMenu) : il passe
         // au-dessus du mini-lecteur et de la navigation au lieu d'être masqué.
+    }
+    }
+}
+
+@Composable
+private fun PlaylistHeaderLayout(compact: Boolean, artwork: @Composable () -> Unit, details: @Composable () -> Unit) {
+    Box(Modifier.fillMaxWidth().testTag("playlist-header").padding(horizontal = if (compact) 16.dp else 24.dp, vertical = 6.dp)) {
+        if (compact) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            Box(Modifier.width(104.dp)) { artwork() }
+            Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) { details() }
+        } else Column(horizontalAlignment = Alignment.CenterHorizontally) { artwork(); details() }
     }
 }
 

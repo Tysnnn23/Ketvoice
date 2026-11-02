@@ -88,7 +88,7 @@ object KetvoiceApi {
 
     suspend fun stream(track: Track, tag: String): MusicApi.StreamInfo? =
         withContext(Dispatchers.IO) {
-
+            if (!ProviderConfig.enabled("stream-$tag")) return@withContext null
             val addonId = if (track.addon == tag) track.addonId.orEmpty() else ""
             val path = buildString {
                 append("/stream?source=")

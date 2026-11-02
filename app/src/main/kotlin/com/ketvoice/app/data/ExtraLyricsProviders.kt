@@ -14,11 +14,13 @@ object ExtraLyricsProviders {
     private fun get(source: String, url: String): JSONObject? {
         var c: HttpURLConnection? = null
         return try {
-            c = (URL(url).openConnection() as HttpURLConnection).apply {
+            val resolved = ProviderConfig.publicUrl(url) ?: return null
+            c = (URL(resolved).openConnection() as HttpURLConnection).apply {
+                instanceFollowRedirects = false
                 connectTimeout = 5000
                 readTimeout = 25000
                 setRequestProperty("User-Agent", "Ketvoice/2.0")
-                if (source == MusicApi.SRC_BETTER && AppSettings.betterLyricsKey.value.isNotBlank()) {
+                if (source == MusicApi.SRC_BETTER && resolved == url && AppSettings.betterLyricsKey.value.isNotBlank()) {
                     setRequestProperty("X-API-Key", AppSettings.betterLyricsKey.value.trim())
                 }
             }
@@ -53,7 +55,7 @@ object ExtraLyricsProviders {
                 } else {
                     var c: HttpURLConnection? = null
                     try {
-                        c = URL("https://lrc.red/s/$isrc.ttml").openConnection() as HttpURLConnection
+                        c = URL(ProviderConfig.publicUrl("https://lrc.red/s/$isrc.ttml") ?: return label to emptyList()).openConnection() as HttpURLConnection
                         c.connectTimeout = 6000; c.readTimeout = 15000
                         c.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/124.0 Mobile Safari/537.36")
                         if (c.responseCode in 200..299) LyricsFormats.ttml(c.inputStream.bufferedReader().use { it.readText() })

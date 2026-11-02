@@ -7,6 +7,22 @@
 
 ---
 
+# Ketvoice 3.14.1
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 70** — fixed playlist opacity and a connected Studio control dashboard.
+
+- Keep the playlist header opaque, adapt it to short landscape windows and fix drag indices.
+- Add real track/album/artist catalogue search, browsable album/artist tracks and clear owner-editing permissions.
+- Categorize 30 integrations; wire ten public adapter bases and two app streaming switches to validated, cached remote configuration.
+- Add overview metrics, draft/conflict handling and reliable remembered-session refresh.
+- Preserve the 870 ms glow, French default, 11 interface languages and landscape 2D Quest presentation.
+
+Full notes and validation limits: [3.14.1](docs/releases/v3.14.1.md).
+
+---
+
 # Ketvoice 3.14.0
 
 ![Ketvoice](ketvoice-banner.png)

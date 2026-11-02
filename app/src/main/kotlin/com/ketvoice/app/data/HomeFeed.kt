@@ -113,7 +113,7 @@ object HomeFeed {
     private fun search(query: String): List<Track> {
         var c: HttpURLConnection? = null
         return try {
-            c = URL("https://api.deezer.com/search?q=${URLEncoder.encode(query, "UTF-8")}&limit=35")
+            c = URL(ProviderConfig.publicUrl("https://api.deezer.com/search?q=${URLEncoder.encode(query, "UTF-8")}&limit=35") ?: return emptyList())
                 .openConnection() as HttpURLConnection
             c.connectTimeout = 6000; c.readTimeout = 9000
             if (c.responseCode !in 200..299) return emptyList()

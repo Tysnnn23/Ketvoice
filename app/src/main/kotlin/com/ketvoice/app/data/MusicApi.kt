@@ -26,6 +26,7 @@ object MusicApi {
     private var matchPrefs: SharedPreferences? = null
 
     fun init(context: Context) {
+        ProviderConfig.init(context)
         SearchHistory.init(context)
         LyricsDiskCache.init(context)
         if (matchPrefs == null) {
@@ -96,7 +97,8 @@ object MusicApi {
     private val httpCache = HashMap<String, CacheEntry>()
 
     private fun cachedHttp(url: String, headers: Map<String, String> = emptyMap()): String? {
-        val key = if (headers.isEmpty()) url else url + "#" + headers.hashCode()
+        val resolved = ProviderConfig.publicUrl(url) ?: return null
+        val key = if (headers.isEmpty()) resolved else resolved + "#" + headers.hashCode()
         val now = System.currentTimeMillis()
         synchronized(httpCache) {
             httpCache[key]?.let { e -> if (now - e.at < CACHE_TTL) return e.json }
@@ -120,7 +122,7 @@ object MusicApi {
         body: String? = null,
         headers: Map<String, String> = emptyMap()
     ): String? = try {
-        val c = (URL(url).openConnection() as HttpURLConnection).apply {
+        val c = (URL(ProviderConfig.publicUrl(url) ?: error("Provider disabled")).openConnection() as HttpURLConnection).apply {
             requestMethod = method
             connectTimeout = 12_000
             readTimeout = 16_000
