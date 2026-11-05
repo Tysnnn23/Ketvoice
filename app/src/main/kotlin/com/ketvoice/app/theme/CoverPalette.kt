@@ -9,6 +9,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import coil.request.ImageRequest
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.Dispatchers
@@ -45,7 +46,7 @@ object CoverPalette {
         val small = Bitmap.createScaledBitmap(bitmap, w, h, true)
 
         // Bucket colours into a 4x4x4 grid and track weighted "vividness" per bucket.
-        data class Bucket(val r: Int, val g: Int, val b: Int, var weight: Float, var count: Int)
+        data class Bucket(var r: Int, var g: Int, var b: Int, var weight: Float, var count: Int)
         val buckets = HashMap<Int, Bucket>()
         val px = IntArray(w * h)
         small.getPixels(px, 0, w, 0, 0, w, h)

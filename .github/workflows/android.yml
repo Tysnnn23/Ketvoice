@@ -51,6 +51,18 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x ./gradlew
 
+      # The release build signs with a "sideload" config that falls back to the
+      # debug keystore at ~/.android/debug.keystore. CI runners don't have it, so
+      # generate one matching the alias/passwords the fallback expects.
+      - name: Provide fallback debug keystore
+        run: |
+          mkdir -p "$HOME/.android"
+          keytool -genkeypair -v \
+            -keystore "$HOME/.android/debug.keystore" \
+            -storepass android -keypass android \
+            -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 \
+            -dname "CN=Android Debug,O=Android,C=US"
+
       - name: Compile (assemble mobile + quest release)
         run: ./gradlew :app:assembleMobileRelease :app:assembleQuestRelease --stacktrace
 
