@@ -7,6 +7,25 @@
 
 ---
 
+# Ketvoice 3.18.0
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 76** — a design-system pass that unifies shadows, motion, contrast and responsive layout into shared primitives.
+
+- **Shadows & reflections:** one elevation ladder (card 1 dp → button 4 dp → pill 8 dp → sheet 16 dp) drives every glass shadow; static glass now casts a real drop shadow instead of reading as a flat rectangle; the shader gains a diagonal specular band and a bottom-right bounce halo (Android 13+).
+- **Coherent animations:** a single `Motion` object now holds the duration scale, easing curves, springs and elevation steps; the legacy API is preserved so nothing breaks; reduce-motion still collapses everything to instant.
+- **Automatic contrast:** new helpers pick ink and tint from the real backdrop luminance (with a WCAG 4.5:1 check), keeping labels readable over album art in light and dark.
+- **Screen adaptation:** Material3 window tiers, up to three track columns, 720 dp reading cap and 16→32 dp gutters; short landscape windows get a tighter bottom pad.
+- **Dark & light:** per-theme elevation alpha and role-aware static glass.
+- No functional change to playback, sources, Discord or publications.
+
+Committed as a design-system change without an APK; compilation and on-device checks remain required before publication.
+
+Full notes: [3.18.0](docs/releases/v3.18.0.md).
+
+---
+
 # Ketvoice 3.17.1
 
 ![Ketvoice](ketvoice-banner.png)
