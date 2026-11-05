@@ -41,3 +41,8 @@ IOS/*.xcworkspace/
 IOS/.build/
 IOS/DerivedData/
 IOS/*.xcconfig
+
+# local agent/tool artifacts
+.agents/
+.utim_tmp/
+.git-credentials

@@ -165,6 +165,17 @@ float4 main(float2 coord) {
     float fromTop = clamp(local.y / max(size.y, 1.0), 0.0, 1.0);
     float topLit = clamp(-grad.y, 0.0, 1.0);
     color.rgb += sheen * pow(1.0 - fromTop, 2.4) * (0.35 + 0.65 * topLit);
+    // Bande spéculaire diagonale : la lumière glisse du coin haut-gauche vers
+    // le centre, ce qui casse l'aplat vertical et lit comme une vraie dalle
+    // de verre inclinée. Très localisée pour ne pas laver le panneau.
+    float2 normUV = local / float2(max(size.x, 1.0), max(size.y, 1.0));
+    float diag = normUV.x + normUV.y;
+    float specularBand = 1.0 - smoothstep(0.0, 0.55, abs(diag - 0.42));
+    color.rgb += sheen * 0.6 * specularBand * (0.4 + 0.6 * topLit);
+    // Reflet de fond : léger éclaircissement bas-droit (lumière rebondie).
+    float2 backUV = float2(1.0 - normUV.x, 1.0 - normUV.y);
+    float bounceHalo = 1.0 - smoothstep(0.0, 0.7, length(backUV - float2(0.05)));
+    color.rgb += sheen * 0.22 * bounceHalo;
 
     // Dithering sub-pixel : rend les dégradés du verre parfaitement lisses.
     color.rgb += dither(coord) / 255.0;

@@ -15,6 +15,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.unit.dp
 import com.ketvoice.app.data.AppSettings
 import com.ketvoice.app.theme.LocalTheme
@@ -98,6 +99,10 @@ data class GlassParams(
     val highlightFalloff: Float = 0.65f,
     /** Ombre portée douce sous le panneau (profondeur). */
     val shadow: Boolean = true,
+    /** Hauteur d'ombre portée (dp) : plus grand = panneau plus « décollé ». */
+    val elevationDp: Float = 8f,
+    /** Opacité de l'ombre portée. Plus élevée en sombre pour détacher le verre. */
+    val shadowAlpha: Float = 0.18f,
     /** Ombre interne : donne l'épaisseur du bloc de verre. */
     val innerShadow: Boolean = true,
     val dark: Boolean = false
@@ -116,6 +121,9 @@ data class GlassParams(
             exposure = if (dark) 0.015f else 0.04f,
             highlightAlpha = if (dark) 0.28f else 0.44f,
             highlightIntensity = if (dark) 0.24f else 0.32f,
+            // Matte content card: sits almost flat on the page (e0..e1).
+            elevationDp = 1f,
+            shadowAlpha = if (dark) 0.22f else 0.10f,
             dark = dark
         )
 
@@ -134,6 +142,9 @@ data class GlassParams(
             exposure = if (dark) 0.01f else 0.02f,
             highlightAlpha = if (dark) 0.48f else 0.62f,
             highlightIntensity = if (dark) 0.26f else 0.36f,
+            // Floating control: clearly lifted above content (e3).
+            elevationDp = 8f,
+            shadowAlpha = if (dark) 0.30f else 0.16f,
             dark = dark
         )
 
@@ -146,6 +157,9 @@ data class GlassParams(
             exposure = if (dark) 0.02f else 0.035f,
             highlightAlpha = if (dark) 0.34f else 0.52f,
             highlightIntensity = if (dark) 0.28f else 0.38f,
+            // Round button: small lift (e2).
+            elevationDp = 4f,
+            shadowAlpha = if (dark) 0.26f else 0.14f,
             dark = dark
         )
 
@@ -167,6 +181,9 @@ data class GlassParams(
             exposure = if (dark) 0.015f else 0.05f,
             highlightAlpha = if (dark) 0.32f else 0.54f,
             highlightIntensity = if (dark) 0.28f else 0.42f,
+            // Bottom sheet: highest lift so it reads as an overlay above the page (e4).
+            elevationDp = 16f,
+            shadowAlpha = if (dark) 0.40f else 0.20f,
             dark = dark
         )
     }
@@ -309,9 +326,13 @@ fun GlassPanel(
         }
     } else {
         // Verre STATIQUE (désactivé ou capturé) : matériau dépoli premium —
-        // base translucide, liseré capillaire, voile spéculaire. Pas
-        // d'échantillonnage, donc aucun risque de boucle de rendu.
-        Box(modifier = modifier.then(edge).background(surface, shape)) {
+        // base translucide, liseré capillaire, voile spéculaire, ombre portée
+        // douce (sinon le verre flotte sans profondeur). Pas d'échantillonnage,
+        // donc aucun risque de boucle de rendu.
+        val dropShadow = if (params.shadow) {
+            Modifier.dropShadow(shape, elevation = params.elevationDp, alpha = params.shadowAlpha, dark = params.dark)
+        } else Modifier
+        Box(modifier = modifier.then(dropShadow).then(edge).background(surface, shape)) {
             Box(Modifier.background(sheen, shape)) { content() }
         }
     }
@@ -319,3 +340,24 @@ fun GlassPanel(
 }
 
 private class GlassRenderState(var shaderApplied: Boolean = false)
+
+/**
+ * Soft, theme-aware drop shadow used by STATIC glass (glass disabled or captured).
+ * The dynamic (drawBackdrop) path gets its shadow from the backdrop library; the
+ * static path had none, which made disabled-glass panels read as painted rectangles.
+ * The blur radius is intentionally wider than the offset so the shadow reads as a
+ * diffuse lift rather than a hard stamp, and dark mode uses a slightly deeper
+ * alpha so frosted panels still detach from a near-black page.
+ */
+private fun Modifier.dropShadow(shape: Shape, elevation: Float, alpha: Float, dark: Boolean): Modifier {
+    val e = elevation.coerceIn(0f, 32f)
+    if (e <= 0f) return this
+    val a = (if (dark) alpha * 1.35f else alpha).coerceIn(0f, 0.5f)
+    return this.shadow(
+        elevation = e.dp,
+        shape = shape,
+        clip = false,
+        ambientColor = Color.Black.copy(alpha = a * 0.6f),
+        spotColor = Color.Black.copy(alpha = a)
+    )
+}
