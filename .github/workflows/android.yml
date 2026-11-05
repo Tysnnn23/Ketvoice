@@ -51,17 +51,31 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x ./gradlew
 
-      # The release build signs with a "sideload" config that falls back to the
-      # debug keystore at ~/.android/debug.keystore. CI runners don't have it, so
-      # generate one matching the alias/passwords the fallback expects.
-      - name: Provide fallback debug keystore
+      # Signing material for the "sideload" signingConfig, in priority order:
+      #   1) KETVOICE_KEYSTORE_B64 secret — the STABLE project keystore (base64)
+      #   2) fallback debug keystore generated on the fly (UNSTABLE — causes
+      #      "app conflicts with an existing package" installs on devices)
+      # Using the stable secret makes every APK installable over the previous
+      # one, which is exactly what we want for our own sideload releases.
+      - name: Provide signing keystore
+        env:
+          KETVOICE_KEYSTORE_B64: ${{ secrets.KETVOICE_KEYSTORE_B64 }}
         run: |
           mkdir -p "$HOME/.android"
-          keytool -genkeypair -v \
-            -keystore "$HOME/.android/debug.keystore" \
-            -storepass android -keypass android \
-            -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 \
-            -dname "CN=Android Debug,O=Android,C=US"
+          if [ -n "$KETVOICE_KEYSTORE_B64" ]; then
+            echo "Decoding stable release keystore from secret."
+            printf '%s' "$KETVOICE_KEYSTORE_B64" | base64 -d > "$HOME/.android/ketvoice-release.jks"
+            echo "KETVOICE_KEYSTORE=$HOME/.android/ketvoice-release.jks" >> "$GITHUB_ENV"
+          else
+            echo "::warning::KETVOICE_KEYSTORE_B64 secret not set — falling back to a"
+            echo "::warning::fresh debug keystore. APKs will NOT install over an"
+            echo "::warning::existing build (signature mismatch). See docs/SIGNING.md."
+            keytool -genkeypair -v \
+              -keystore "$HOME/.android/debug.keystore" \
+              -storepass android -keypass android \
+              -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 \
+              -dname "CN=Android Debug,O=Android,C=US"
+          fi
 
       - name: Compile (assemble mobile + quest release)
         run: ./gradlew :app:assembleMobileRelease :app:assembleQuestRelease --stacktrace
@@ -82,9 +96,17 @@ jobs:
 
       - name: Attach APKs to GitHub Release (on tag)
         if: startsWith(github.ref, 'refs/tags/v')
+        # softprops/action-gh-release occasionally returns a transient HttpError
+        # while fetching the release ("Unexpected error fetching GitHub release").
+        # The APKs are still uploaded as build artifacts above, so a failure here
+        # must not turn the whole pipeline red.
+        continue-on-error: true
         uses: softprops/action-gh-release@v2
         with:
           files: |
             app/build/outputs/apk/mobile/release/*.apk
             app/build/outputs/apk/quest/release/*.apk
           fail_on_unmatched_files: false
+          overwrite_files: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

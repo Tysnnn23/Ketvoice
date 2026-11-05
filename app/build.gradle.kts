@@ -1,3 +1,9 @@
+import java.io.File
+import java.util.Base64
+
+import java.io.File
+import java.util.Base64
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -63,14 +69,34 @@ android {
 
     signingConfigs {
         create("sideload") {
+            // Priority order for the signing material:
+            //  1) KETVOICE_KEYSTORE_B64 — base64 keystore body (GitHub secret, CI)
+            //  2) KETVOICE_KEYSTORE     — path to a keystore file (local dev)
+            //  3) fallback              — the well-known debug keystore
+            // A stable keystore is what prevents "app conflicts with an existing
+            // package" — every CI run must sign with the SAME key.
+            val b64 = providers.environmentVariable("KETVOICE_KEYSTORE_B64").orNull
             val customStore = providers.environmentVariable("KETVOICE_KEYSTORE").orNull
-            storeFile = file(customStore ?: "${System.getProperty("user.home")}/.android/debug.keystore")
-            storePassword = if (customStore == null) "android" else
-                providers.environmentVariable("KETVOICE_STORE_PASSWORD").orNull
-            keyAlias = if (customStore == null) "androiddebugkey" else
-                providers.environmentVariable("KETVOICE_KEY_ALIAS").orNull
-            keyPassword = if (customStore == null) "android" else
-                providers.environmentVariable("KETVOICE_KEY_PASSWORD").orNull
+
+            val resolvedStoreFile = when {
+                !b64.isNullOrBlank() -> {
+                    val decoded = File(layout.buildDirectory.asFile.get(), "signing/ketvoice-release.jks")
+                    decoded.parentFile.mkdirs()
+                    decoded.writeBytes(Base64.getDecoder().decode(b64.trim()))
+                    decoded
+                }
+                !customStore.isNullOrBlank() -> file(customStore)
+                else -> file("${System.getProperty("user.home")}/.android/debug.keystore")
+            }
+            val usingFallback = b64.isNullOrBlank() && customStore.isNullOrBlank()
+
+            storeFile = resolvedStoreFile
+            storePassword = if (usingFallback) "android"
+                else providers.environmentVariable("KETVOICE_STORE_PASSWORD").orNull
+            keyAlias = if (usingFallback) "androiddebugkey"
+                else (providers.environmentVariable("KETVOICE_KEY_ALIAS").orNull ?: "ketvoice")
+            keyPassword = if (usingFallback) "android"
+                else providers.environmentVariable("KETVOICE_KEY_PASSWORD").orNull
         }
     }
     buildTypes {
