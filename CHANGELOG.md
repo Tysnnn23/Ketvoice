@@ -7,6 +7,21 @@
 
 ---
 
+# Ketvoice 3.19.0
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 77** — dynamic colour from cover art, a Wrapped-style recap screen, and CI that builds the APKs.
+
+- **Dynamic colour:** the theme accent now follows the now-playing artwork (cached per URL, opt-in via Album colours, clamped for legibility).
+- **Ton récap:** new Wrapped-style stats screen — total time, plays, artists, most-replayed and top tracks, all offline from existing history, with a shareable recap line.
+- **CI:** GitHub Actions workflow compiles, tests, lints, uploads APKs as artifacts and attaches them to the GitHub Release on `v*` tags.
+- Additive changes; Gradle build and device checks are delegated to CI.
+
+Full notes: [3.19.0](docs/releases/v3.19.0.md).
+
+---
+
 # Ketvoice 3.18.0
 
 ![Ketvoice](ketvoice-banner.png)

@@ -33,6 +33,7 @@ object ListeningHistory {
             root.asJsonObject.entrySet().associate { (key, value) -> key to value.asInt }
         }.getOrDefault(emptyMap())
         _listenedMs.value = prefs!!.getLong("listenedMs", 0L)
+        runCatching { ListeningStats.refresh() }
     }
 
     /**
@@ -82,6 +83,8 @@ object ListeningHistory {
         _playCounts.value = counts
         prefs?.edit()?.putString("tracks", gson.toJson(_tracks.value))
             ?.putString("counts", gson.toJson(counts))?.apply()
+        // Keep the recap projection warm so the stats screen opens instantly.
+        runCatching { ListeningStats.refresh() }
     }
     @Synchronized fun replacePublication(track: Track) {
         if (ImportedSong.id(track) == null) return

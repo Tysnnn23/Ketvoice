@@ -53,10 +53,14 @@ object T {
 }
 
 @Composable
-fun KetvoiceTheme(useDark: Boolean? = null, content: @Composable () -> Unit) {
+fun KetvoiceTheme(
+    useDark: Boolean? = null,
+    dynamicAccent: Color? = null,
+    content: @Composable () -> Unit
+) {
     val sysDark = isSystemInDarkTheme()
     val isDark = useDark ?: sysDark
-    val accent = Color(com.ketvoice.app.data.AppSettings.accentArgb.value.toInt())
+    val accent = dynamicAccent ?: Color(com.ketvoice.app.data.AppSettings.accentArgb.value.toInt())
     val base = (if (isDark) KetTheme.dark() else KetTheme.light()).copy(accent = accent)
     val th = if (com.ketvoice.app.data.DesignChoices.enabled("D1")) base.copy(
         background=if(isDark)Palette.BackgroundDark else Color(0xFFF7F7FA),

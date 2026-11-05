@@ -91,7 +91,16 @@ fun AppRoot() {
         controller.isAppearanceLightNavigationBars = !(effectiveDark || darkSurface)
     }
 
-    KetvoiceTheme(useDark = useDark) {
+    // Dynamic accent from the currently-playing artwork (opt-in via Album colours).
+    // Computed above the theme so the whole UI breathes with the music.
+    val playingForAccent by Player.state.collectAsState()
+    val dynamicAccent = if (com.ketvoice.app.data.AppSettings.albumColors.value) {
+        val t = playingForAccent.current
+        val url = t?.let { ArtworkRepo.coverForTrack(it) }
+        com.ketvoice.app.theme.rememberCoverAccent(url)?.first
+    } else null
+
+    KetvoiceTheme(useDark = useDark, dynamicAccent = dynamicAccent) {
         com.ketvoice.app.ui.player.PlaybackFeatureDialogs()
         val th = LocalTheme.current
         val backdrop = rememberGlassBackdrop(th.background)
