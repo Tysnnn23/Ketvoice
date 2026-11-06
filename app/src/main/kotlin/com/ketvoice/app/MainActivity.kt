@@ -12,7 +12,12 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -20,12 +25,14 @@ import com.ketvoice.app.ui.common.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.sp
@@ -35,6 +42,7 @@ import com.ketvoice.app.player.Player
 import com.ketvoice.app.theme.KetvoiceTheme
 import com.ketvoice.app.ui.AppRoot
 import com.ketvoice.app.ui.AppUi
+import com.ketvoice.app.ui.SplashBrand
 import com.ketvoice.app.util.Crash
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
@@ -92,9 +100,22 @@ class MainActivity : ComponentActivity() {
             val dark = isSystemInDarkTheme()
 
             KetvoiceTheme(dark) {
-                CrashReportsDialog()
-                AppRoot()
-                com.ketvoice.app.ui.update.UpdateHost()
+                var splash by remember { mutableStateOf(true) }
+                LaunchedEffect(Unit) {
+                    kotlinx.coroutines.delay(950)
+                    splash = false
+                }
+                Box(Modifier.fillMaxSize()) {
+                    CrashReportsDialog()
+                    AppRoot()
+                    com.ketvoice.app.ui.update.UpdateHost()
+                    AnimatedVisibility(
+                        visible = splash,
+                        exit = fadeOut(tween(360))
+                    ) {
+                        SplashBrand(Modifier.fillMaxSize())
+                    }
+                }
             }
         }
         handleAuthIntent(intent)

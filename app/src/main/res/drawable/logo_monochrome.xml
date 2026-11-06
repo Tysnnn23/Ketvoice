@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Monochrome layer for Android 13+ themed icons. Single-colour alpha mask:
+     the system tints it to match the user's wallpaper palette. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:pathData="M39,29 L39,79"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="21"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M52,54 L76,30"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="21"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M52,57 L76,81"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="21"
+        android:strokeLineCap="round" />
+</vector>

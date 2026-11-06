@@ -110,6 +110,7 @@ fun ArtworkCanvas(
     corner: Dp = 0.dp,
     badge: Boolean = false,
     depth: Boolean = false,
+    forceCanvas: Boolean = false,
     onCanvasFailure: () -> Unit = {}
 ) {
     val art by ArtworkRepo.covers.collectAsState()
@@ -134,7 +135,7 @@ fun ArtworkCanvas(
         ) { data ->
             Box(Modifier.fillMaxSize()) {
                 when {
-                    data.canvas != null && AppSettings.animatedArtwork.value -> run {
+                    data.canvas != null && (forceCanvas || AppSettings.animatedArtwork.value) -> run {
                         // Match the banner-era player: edge-to-edge video in the
                         // artwork region, blending into the separate blurred scene.
                         // FIT introduced the unwanted side bars in normal mode.
@@ -159,7 +160,7 @@ fun ArtworkCanvas(
                 }
             }
         }
-        if (badge && canvasPath != null && AppSettings.animatedArtwork.value) {
+        if (badge && canvasPath != null && (forceCanvas || AppSettings.animatedArtwork.value)) {
             Text(
                 "CANVAS",
                 color = Color.White,

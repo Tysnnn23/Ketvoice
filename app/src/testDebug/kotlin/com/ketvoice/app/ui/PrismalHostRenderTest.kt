@@ -323,6 +323,31 @@ class PrismalHostRenderTest {
         image("collection-hero")
     }
 
+    @Test fun splashBrandSettlesOnTheMarkAndWordmark() {
+        compose.setContent { KetvoiceTheme(useDark = false) { SplashBrand(Modifier.fillMaxSize()) } }
+        compose.mainClock.advanceTimeBy(1_800)
+        compose.onNodeWithTag("splash-brand").assertExists()
+        compose.onNodeWithText("Ketvoice").assertExists()
+        image("splash-brand")
+    }
+
+    @Test fun albumHeroRunsEdgeToEdgeInsteadOfASquareCard() {
+        AppSettings.reduceAnimations.value = true
+        AppSettings.albumHeroCanvas.value = true
+        val track = Track("qa:album-hero", "QA title", "QA artist", "QA album", durationMs = 180_000)
+        compose.setContent { KetvoiceTheme(useDark = true) {
+            AlbumPage(CatalogRequest("album", "qa:album-hero", "QA album"),
+                CatalogPage("QA album", "QA artist", null, listOf(track), "2026-11-07"),
+                listOf(track), false, {})
+        } }
+        val hero = compose.onNodeWithTag("album-hero-visual").fetchSemanticsNode().boundsInRoot
+        val width = compose.activity.window.decorView.width.toFloat()
+        assertEquals("The artwork must start at the left edge", 0f, hero.left, 1f)
+        assertTrue("The artwork must reach the right edge (hero=${hero.width}, screen=$width)",
+            hero.width >= width - 1f)
+        image("album-hero-full-bleed")
+    }
+
     @Test fun normalCanvasAndCoverShareTheRestoredLegacyDissolve() {
         var video by mutableStateOf(true)
         compose.setContent { KetvoiceTheme(useDark = true) {

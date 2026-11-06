@@ -14,6 +14,8 @@ object AppSettings {
     val fullArtwork = mutableStateOf(false)
     val classicGradient = mutableStateOf(false)
     val animatedArtwork = mutableStateOf(true)
+    /** Album/collection pages may show the album Canvas instead of the cover. */
+    val albumHeroCanvas = mutableStateOf(true)
     val panoramicCanvas = mutableStateOf(false)
     val sonicCanvas = mutableStateOf(false)
     val albumColors = mutableStateOf(true)

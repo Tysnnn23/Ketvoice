@@ -1,8 +1,6 @@
 import java.io.File
 import java.util.Base64
 
-import java.io.File
-import java.util.Base64
 
 plugins {
     id("com.android.application")
@@ -24,8 +22,8 @@ android {
         applicationId = "com.ketvoice.app"
         minSdk = 31
         targetSdk = 36
-        versionCode = 77
-        versionName = "3.19.0"
+        versionCode = 78
+        versionName = "4.0.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         resourceConfigurations += listOf("fr", "en", "hi", "ja", "zh", "ru", "it", "es", "de", "pt", "ko")
         ndkVersion = "27.0.12077973"

@@ -7,6 +7,22 @@
 
 ---
 
+# Ketvoice 4.0.1
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 78** — full-bleed album page with Canvas/cover, build and signing fixes.
+
+- Album artwork now runs edge to edge with the album colour over the top of the page.
+- New Apparence switch: album Canvas on pages, independent from the player Canvas.
+- Android 13 themed (monochrome) launcher icon and an animated launch splash.
+- Fixed duplicated Gradle imports that broke `main`, and the CI cannot publish debug-key APKs any more.
+- Discord panel gains a copyable diagnostic journal.
+
+Full notes and limits: [4.0.1](docs/releases/v4.0.1.md).
+
+---
+
 # Ketvoice 3.19.0
 
 ![Ketvoice](ketvoice-banner.png)

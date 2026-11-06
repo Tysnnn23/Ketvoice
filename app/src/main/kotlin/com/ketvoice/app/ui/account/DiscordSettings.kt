@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.sp
 import com.ketvoice.app.data.AppSettings
 import com.ketvoice.app.data.SettingsStore
 import com.ketvoice.app.discord.Discord
+import com.ketvoice.app.discord.DiscordOAuth
 import com.ketvoice.app.theme.LocalTheme
 import com.ketvoice.app.ui.common.Text
 
@@ -39,6 +40,7 @@ internal fun DiscordSettings(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val discord by Discord.state.collectAsState()
     var advanced by remember { mutableStateOf(false) }
+    var diagnostics by remember { mutableStateOf(false) }
     var token by remember { mutableStateOf("") }
     var localError by remember { mutableStateOf<String?>(null) }
 
@@ -179,6 +181,42 @@ internal fun DiscordSettings(modifier: Modifier = Modifier) {
         discord.error?.let {
             Text(it, color = Color(0xFFFF6B6B), fontSize = 12.sp, lineHeight = 16.sp,
                 modifier = Modifier.padding(top = 8.dp))
+        }
+        if (Discord.available) {
+            Text(if (diagnostics) "Masquer le diagnostic" else "Diagnostic Discord",
+                color = theme.secondary, fontSize = 12.sp,
+                modifier = Modifier.fillMaxWidth().clickable { diagnostics = !diagnostics }
+                    .padding(top = 10.dp, bottom = 4.dp))
+            if (diagnostics) {
+                val report = buildString {
+                    appendLine("Ketvoice · Discord")
+                    appendLine("lié=" + discord.linked + " prêt=" + discord.ready + " occupé=" + discord.busy)
+                    appendLine("utilisateur=" + (discord.userName ?: "-"))
+                    appendLine("erreur=" + (discord.error ?: "-"))
+                    appendLine("journal=" + (discord.log ?: "-"))
+                    appendLine("redirect=" + DiscordOAuth.REDIRECT_URI)
+                    append("scope=" + DiscordOAuth.SCOPES)
+                }
+                Text(report, color = theme.secondary, fontSize = 10.5.sp,
+                    fontFamily = FontFamily.Monospace, lineHeight = 14.sp,
+                    modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
+                        .background(theme.card).padding(12.dp))
+                Row(Modifier.fillMaxWidth().padding(top = 6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Text("Copier le journal", color = theme.accent, fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.clickable {
+                            val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE)
+                                as? android.content.ClipboardManager
+                            clipboard?.setPrimaryClip(android.content.ClipData.newPlainText("Ketvoice Discord", report))
+                            localError = "Journal copié."
+                        }.padding(vertical = 4.dp))
+                    Text("Relancer la connexion", color = theme.accent, fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.clickable(enabled = !discord.busy) { connectInWebView() }
+                            .padding(vertical = 4.dp))
+                }
+            }
         }
         discord.log?.takeIf { discord.error != null || advanced }?.let {
             Text("Journal SDK · $it", color = theme.secondary, fontSize = 10.sp,

@@ -254,6 +254,9 @@ fun SettingsScreen() {
                 SRow(Icons.Filled.Tune, "DESIGN KETVOICE", sub = "Chaque finition peut être retirée séparément, sans modifier vos playlists ni votre musique.") {
                     categoryKey = SettingsCategory.Design.name
                 }
+                SToggle(Icons.Filled.Videocam, "Canvas sur les pages d'album",
+                    "Affiche la vidéo de l'album à la place de la pochette, en plein cadre. Indépendant du Canvas du lecteur.",
+                    AppSettings.albumHeroCanvas.value) { AppSettings.albumHeroCanvas.value = it; SettingsStore.save() }
                 SToggle(Icons.Filled.ColorLens, "Couleurs de la pochette", "Accents du lecteur adaptés à l'album, avec contraste renforcé",
                     AppSettings.albumColors.value) { AppSettings.albumColors.value = it; SettingsStore.save() }
                 SToggle(Icons.Filled.Videocam, "Profondeur de pochette", "Mouvement léger au toucher ou au pointeur, sans modifier les gestes",
