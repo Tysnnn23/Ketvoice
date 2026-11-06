@@ -58,6 +58,7 @@ jobs:
       # Using the stable secret makes every APK installable over the previous
       # one, which is exactly what we want for our own sideload releases.
       - name: Provide signing keystore
+        id: keystore
         env:
           KETVOICE_KEYSTORE_B64: ${{ secrets.KETVOICE_KEYSTORE_B64 }}
         run: |
@@ -66,6 +67,7 @@ jobs:
             echo "Decoding stable release keystore from secret."
             printf '%s' "$KETVOICE_KEYSTORE_B64" | base64 -d > "$HOME/.android/ketvoice-release.jks"
             echo "KETVOICE_KEYSTORE=$HOME/.android/ketvoice-release.jks" >> "$GITHUB_ENV"
+            echo "stable=true" >> "$GITHUB_OUTPUT"
           else
             echo "::warning::KETVOICE_KEYSTORE_B64 secret not set — falling back to a"
             echo "::warning::fresh debug keystore. APKs will NOT install over an"
@@ -75,6 +77,7 @@ jobs:
               -storepass android -keypass android \
               -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 \
               -dname "CN=Android Debug,O=Android,C=US"
+            echo "stable=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Compile (assemble mobile + quest release)
@@ -95,7 +98,10 @@ jobs:
           if-no-files-found: warn
 
       - name: Attach APKs to GitHub Release (on tag)
-        if: startsWith(github.ref, 'refs/tags/v')
+        # Never publish APKs signed by the throwaway CI debug key: they cannot
+        # install over an existing Ketvoice and show up as a package conflict.
+        # Without the stable keystore the release simply keeps no APK asset.
+        if: startsWith(github.ref, 'refs/tags/v') && steps.keystore.outputs.stable == 'true'
         # softprops/action-gh-release occasionally returns a transient HttpError
         # while fetching the release ("Unexpected error fetching GitHub release").
         # The APKs are still uploaded as build artifacts above, so a failure here
@@ -107,6 +113,5 @@ jobs:
             app/build/outputs/apk/mobile/release/*.apk
             app/build/outputs/apk/quest/release/*.apk
           fail_on_unmatched_files: false
-          overwrite_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
