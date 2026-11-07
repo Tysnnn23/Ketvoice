@@ -174,7 +174,10 @@ class PlaybackService : MediaSessionService() {
         val old = player
         val expectedId = args.getString("id")
         val url = args.getString("url").orEmpty()
-        if (old.currentMediaItem?.mediaId != expectedId || !url.startsWith("https://") || !AppSettings.progressiveQuality.value)
+        // The user's progressive-quality switch only decides whether a better stream
+        // is fetched at all (Player.kt). Once one is offered, the silent handoff is
+        // always allowed: it is what turns a fast start into lossless playback.
+        if (old.currentMediaItem?.mediaId != expectedId || !url.startsWith("https://"))
             return Futures.immediateFuture(SessionResult(SessionError.ERROR_BAD_VALUE))
         val revision = playbackRevision
         val originalVolume = old.volume
@@ -194,8 +197,7 @@ class PlaybackService : MediaSessionService() {
                     next.setMediaItem(item, old.currentPosition)
                     next.prepare()
                     fun valid() = player === old && playbackRevision == revision &&
-                        old.currentMediaItem?.mediaId == expectedId && old.playerError == null &&
-                        AppSettings.progressiveQuality.value
+                        old.currentMediaItem?.mediaId == expectedId && old.playerError == null
                     while (next.playbackState != androidx.media3.common.Player.STATE_READY) {
                         if (!valid() || next.playerError != null) return@withTimeoutOrNull false
                         delay(20)

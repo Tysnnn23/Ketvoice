@@ -69,6 +69,9 @@ data class PlayerUiState(
  */
 object Player {
 
+    /** Wall-clock budget for the whole parallel resolution pass. */
+    private const val TOTAL_RESOLVE_BUDGET_MS = 25_000L
+
     private var controller: MediaController? = null
     private data class PendingPlay(val track: Track, val queue: List<Track>, val index: Int?, val position: Long, val playing: Boolean)
     private var pendingPlay: PendingPlay? = null
@@ -122,7 +125,7 @@ object Player {
                 val alternative = withTimeoutOrNull(25_000) {
                     if (track.id.startsWith("kv:upload:") || track.addon == "upload") null
                     else StreamResolver.candidates(track, download = false, lossless = wantsLossless(),
-                        race = AppSettings.progressiveQuality.value, excluded = failedStreamUrls.toSet()).firstOrNull()?.stream
+                        race = true, excluded = failedStreamUrls.toSet()).firstOrNull()?.stream
                 }
                 if (gen != generation) return@launch
                 if (alternative != null && alternative.url != failed?.url) {
@@ -363,12 +366,14 @@ object Player {
                 AudioCache.cacheWhole(track.id, stream)
                 return@launch
             }
-            val progressive = AppSettings.progressiveQuality.value
+            // Sources are always raced: the first usable stream starts audio within
+            // [FIRST_BYTE_BUDGET_MS], then better streams keep arriving and upgrade
+            // the live item in the background. Quality preference no longer gates
+            // the start of playback, only whether an upgrade is allowed.
             val highQuality = qualitySetting() != "Normal"
             var currentStream: MusicApi.StreamInfo? = null
             suspend fun upgrade(stream: MusicApi.StreamInfo) {
-                if (!progressive || !highQuality || !AppSettings.progressiveQuality.value ||
-                    stream.url == currentStream?.url || gen != generation ||
+                if (!highQuality || stream.url == currentStream?.url || gen != generation ||
                     StreamQuality.rank(stream) <= (currentStream?.let(StreamQuality::rank) ?: 0)) return
                 val future = c.sendCustomCommand(androidx.media3.session.SessionCommand(PlaybackService.CMD_UPGRADE, Bundle.EMPTY),
                     Bundle().apply {
@@ -395,7 +400,7 @@ object Player {
                 _state.value = _state.value.copy(quality = label(stream))
                 AudioCache.cacheWhole(track.id, stream)
             }
-            val candidates = StreamResolver.candidates(resolvedTrack, download = false, lossless = wantsLossless(), race = progressive)
+            val candidates = StreamResolver.candidates(resolvedTrack, download = false, lossless = wantsLossless(), race = true)
             if (StreamResolver.sources(resolvedTrack, download = false, lossless = wantsLossless()).isEmpty()) {
                 resolving = false
                 _state.value = _state.value.copy(isPlaying = false, playWhenReady = false, buffering = false,
@@ -403,9 +408,11 @@ object Player {
                 return@launch
             }
             // Hard budget: a stalled provider must never leave an endless spinner.
+            // Audio starts on the very first candidate; the remaining sources keep
+            // resolving in the same window so a better stream can still upgrade it.
             val collected = try {
-                withTimeoutOrNull(25_000) {
-                    (if (progressive) candidates else candidates.take(1)).collect { candidate ->
+                withTimeoutOrNull(TOTAL_RESOLVE_BUDGET_MS) {
+                    candidates.collect { candidate ->
                         if (gen != generation) throw kotlinx.coroutines.CancellationException()
                         if (currentStream == null) {
                             currentStream = candidate.stream
@@ -456,11 +463,10 @@ object Player {
     /**
      * Warms the next two queue items after playback actually started: their stream
      * is resolved and its bytes enter the audio cache, so the transition is instant.
-     * Only on an unmetered network unless the user already enabled progressive
-     * quality for metered data.
+     * Resolution race is always on, so the warm-up is never blocked by a safe-mode
+     * setting; only the byte caching honours a metered connection.
      */
     private fun prefetchNext(gen: Int, current: Track) {
-        if (!AppSettings.progressiveQuality.value && isMetered()) return
         val state = _state.value
         val upcoming = (1..2).mapNotNull { offset -> state.queue.getOrNull(state.index + offset) }
             .filter { it.id != current.id && !it.id.startsWith("local:") }
@@ -473,7 +479,7 @@ object Player {
                     StreamResolver.candidates(item, download = false, lossless = wantsLossless(), race = true)
                         .firstOrNull()
                 }.getOrNull()?.let { candidate ->
-                    AudioCache.cacheWhole(item.id, candidate.stream)
+                    if (!isMetered()) AudioCache.cacheWhole(item.id, candidate.stream)
                     if (gen == generation) runCatching { ArtworkRepo.enrich(listOf(item)) }
                 }
             }

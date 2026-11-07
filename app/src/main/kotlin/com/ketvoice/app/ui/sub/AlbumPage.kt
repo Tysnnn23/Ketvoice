@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.BlurredEdgeTreatment
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -87,34 +88,64 @@ internal fun AlbumPage(request: CatalogRequest, page: CatalogPage?, tracks: List
                 }
                 val canvasPath = canvasTrack?.let { paths[it.id] }
                 Column(Modifier.fillMaxWidth()) {
-                    // Full-bleed artwork: Canvas when available and enabled, cover
-                    // otherwise. No square card, no side margins.
+                    // ---- Full-bleed hero -------------------------------------------------
+                    // The artwork is edge-to-edge and runs UNDER the status bar: the whole
+                    // surface bleeds, only the content below it is inset. A parallax pull
+                    // and a steady zoom keep it alive without any hard-edged rectangle,
+                    // and the album colour washes the top instead of framing it.
                     BoxWithConstraints(Modifier.fillMaxWidth()) {
-                        val heroHeight = (maxWidth * .92f).coerceIn(240.dp, 420.dp)
-                        Box(Modifier.fillMaxWidth().height(heroHeight).testTag("album-hero-visual")) {
-                            when {
-                                canvasEnabled && canvasTrack != null && canvasPath != null ->
-                                    com.ketvoice.app.ui.player.ArtworkCanvas(
-                                        track = canvasTrack, canvasPath = canvasPath, playing = true,
-                                        forceCanvas = true, modifier = Modifier.fillMaxSize())
-                                cover != null -> AsyncImage(cover, null, contentScale = ContentScale.Crop,
-                                    modifier = Modifier.fillMaxSize())
-                                else -> Box(Modifier.fillMaxSize().background(
-                                    Brush.linearGradient(gradientFor(request.id))))
+                        val heroHeight = (maxWidth * 1.06f).coerceIn(300.dp, 480.dp)
+                        // Parallax: the artwork lags behind the scroll and keeps overscan
+                        // above so the top edge never uncovers when pulled down.
+                        val pull by remember { derivedStateOf {
+                            if (list.firstVisibleItemIndex == 0)
+                                list.firstVisibleItemScrollOffset.toFloat().coerceAtLeast(0f) else 0f
+                        } }
+                        Box(Modifier.fillMaxWidth().height(heroHeight + top).clipToBounds()
+                            .testTag("album-hero-visual")) {
+                            Box(
+                                Modifier.fillMaxWidth()
+                                    .height(heroHeight + top + 48.dp).offset(y = (-top) - (pull * .45f).dp)
+                                    .graphicsLayer {
+                                        // Gentle engagement zoom: 1.00 -> 1.06 as the hero is revealed.
+                                        val z = 1.02f + (pull / 4_000f).coerceIn(0f, .05f)
+                                        scaleX = z; scaleY = z
+                                    }
+                            ) {
+                                when {
+                                    canvasEnabled && canvasTrack != null && canvasPath != null ->
+                                        com.ketvoice.app.ui.player.ArtworkCanvas(
+                                            track = canvasTrack, canvasPath = canvasPath, playing = true,
+                                            forceCanvas = true, modifier = Modifier.fillMaxSize())
+                                    cover != null -> AsyncImage(cover, null, contentScale = ContentScale.Crop,
+                                        modifier = Modifier.fillMaxSize())
+                                    else -> Box(Modifier.fillMaxSize().background(
+                                        Brush.linearGradient(gradientFor(request.id))))
+                                }
                             }
-                            // The album colour breathes over the top of the page.
+                            // Colour wash: the album hue sits on the visual and fades out,
+                            // never as a bar or a card edge.
                             Box(Modifier.matchParentSize().background(Brush.verticalGradient(
-                                0f to theme.accent.copy(alpha = .55f),
-                                .30f to theme.accent.copy(alpha = .20f),
-                                .62f to Color.Transparent,
-                                1f to theme.background)))
-                            Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(heroHeight * .42f)
-                                .background(Brush.verticalGradient(listOf(Color.Transparent, theme.background))))
+                                0f to theme.accent.copy(alpha = .38f),
+                                .45f to Color.Transparent,
+                                1f to Color.Transparent)))
+                            // Long, soft dissolve into the page. Two overlapping stops avoid
+                            // the visible "seam" a short 2-stop gradient leaves on photos.
+                            Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth()
+                                .height(heroHeight * .62f).background(Brush.verticalGradient(
+                                    0f to Color.Transparent,
+                                    .42f to theme.background.copy(alpha = .55f),
+                                    .74f to theme.background.copy(alpha = .92f),
+                                    1f to theme.background)))
+                            // Scrim behind the floating top bar so its icons stay legible.
+                            Box(Modifier.align(Alignment.TopCenter).fillMaxWidth().height(top + 56.dp)
+                                .background(Brush.verticalGradient(listOf(
+                                    Color.Black.copy(alpha = .38f), Color.Transparent))))
                         }
                     }
                     Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp),
                         horizontalAlignment = Alignment.CenterHorizontally) {
-                        Spacer(Modifier.height(16.dp))
+                        Spacer(Modifier.height(14.dp))
                         Text(title, localize = false, color = theme.onBackground, fontSize = 29.sp,
                             fontWeight = FontWeight.Bold, letterSpacing = (-.8).sp, lineHeight = 34.sp,
                             textAlign = TextAlign.Center, maxLines = 4, overflow = TextOverflow.Ellipsis)
