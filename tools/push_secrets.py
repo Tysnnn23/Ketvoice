@@ -1,28 +1,28 @@
 #!/usr/bin/env python3
 """Upload the Ketvoice signing secrets to GitHub Actions, libsodium-sealed.
 
-GitHub stores Actions secrets encrypted with a per-repository X25519 public key
-(libsodium sealed box). This script:
-
-  1. fetches the repo public key from the REST API,
-  2. seals each value with PyNaCl's `SealedBox`,
-  3. PUTs the base64 ciphertext back to the secrets endpoint.
+GitHub encrypts Actions secrets with a libsodium sealed box against a
+per-repository X25519 public key. This script fetches that key, seals each
+value with the pure-Python implementation in tools/sodium_seal.py (no PyNaCl
+required — Termux has no wheel), then PUTs the base64 ciphertext.
 
 Secrets written:
   KETVOICE_KEYSTORE_B64    base64 of release.keystore
   KETVOICE_STORE_PASSWORD  keystore password
-  KETVOICE_KEY_PASSWORD    key password (same value here)
+  KETVOICE_KEY_PASSWORD    key password
   KETVOICE_KEY_ALIAS       'ketvoice'
 
 Usage:
-    python3 tools/push_secrets.py <owner/repo> <token> <creds_file> <keystore>
+    GITHUB_TOKEN=... python3 tools/push_secrets.py <owner/repo>
 """
 import base64
 import json
+import os
 import sys
 import urllib.request
 
-from nacl import encoding, public
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import sodium_seal
 
 API = "https://api.github.com"
 
@@ -39,45 +39,47 @@ def request(url: str, token: str, method: str = "GET", body=None):
         return json.loads(raw) if raw else {}
 
 
-def encrypt(public_key_b64: str, value: str) -> str:
-    pk = public.PublicKey(public_key_b64.encode(), encoding.Base64Encoder())
-    sealed = public.SealedBox(pk).encrypt(value.encode())
-    return base64.b64encode(sealed).decode()
-
-
 def main() -> int:
-    if len(sys.argv) != 5:
-        print(__doc__)
+    repo = sys.argv[1] if len(sys.argv) > 1 else "Tysnnn23/Ketvoice"
+    token = os.environ.get("GITHUB_TOKEN")
+    if not token:
+        print("GITHUB_TOKEN is not set", file=sys.stderr)
         return 2
-    repo, token, creds_file, keystore_path = sys.argv[1:5]
+
+    here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    keystore = os.path.join(here, "release.keystore")
+    creds_file = os.path.join(here, ".keystore-creds")
 
     creds = {}
-    for line in open(creds_file):
-        line = line.strip()
-        if line and "=" in line:
-            k, v = line.split("=", 1)
-            creds[k] = v
-
-    keystore_b64 = base64.b64encode(open(keystore_path, "rb").read()).decode()
+    with open(creds_file) as fh:
+        for line in fh:
+            line = line.strip()
+            if line and "=" in line:
+                k, v = line.split("=", 1)
+                creds[k] = v
 
     payload = {
-        "KETVOICE_KEYSTORE_B64": keystore_b64,
+        "KETVOICE_KEYSTORE_B64": base64.b64encode(open(keystore, "rb").read()).decode(),
         "KETVOICE_STORE_PASSWORD": creds["STOREPASS"],
         "KETVOICE_KEY_PASSWORD": creds["KEYPASS"],
         "KETVOICE_KEY_ALIAS": "ketvoice",
     }
 
-    print(f"repo: {repo}")
     key = request(f"{API}/repos/{repo}/actions/secrets/public-key", token)
+    # The repo-level endpoint returns {"key_id", "key"}; the older/org form
+    # used "public_key". Accept either so the script survives API drift.
     key_id = key["key_id"]
-    print(f"repo public key: {key_id}")
+    public_key = base64.b64decode(key.get("key") or key.get("public_key"))
+    print(f"repo {repo}  key_id {key_id}  x25519 key {len(public_key)} bytes")
 
     for name, value in payload.items():
-        sealed = encrypt(key["public_key"], value)
+        sealed = sodium_seal.seal(public_key, value.encode())
         request(f"{API}/repos/{repo}/actions/secrets/{name}", token,
-                method="PUT", body={"encrypted_value": sealed, "key_id": key_id})
-        preview = f"{value[:8]}...({len(value)} chars)" if len(value) > 20 else value
-        print(f"  set {name:26} {preview}")
+                method="PUT",
+                body={"encrypted_value": base64.b64encode(sealed).decode(),
+                      "key_id": key_id})
+        shown = value if name.endswith("ALIAS") else f"<{len(value)} bytes>"
+        print(f"  set {name:24} {shown}")
 
     print("\nall secrets uploaded")
     return 0
