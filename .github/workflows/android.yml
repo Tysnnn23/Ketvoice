@@ -81,6 +81,10 @@ jobs:
           fi
 
       - name: Compile (assemble mobile + quest release)
+        env:
+          KETVOICE_STORE_PASSWORD: ${{ secrets.KETVOICE_STORE_PASSWORD }}
+          KETVOICE_KEY_PASSWORD: ${{ secrets.KETVOICE_KEY_PASSWORD }}
+          KETVOICE_KEY_ALIAS: ${{ secrets.KETVOICE_KEY_ALIAS }}
         run: ./gradlew :app:assembleMobileRelease :app:assembleQuestRelease --stacktrace
 
       - name: Unit tests (best effort)

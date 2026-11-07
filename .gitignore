@@ -46,3 +46,12 @@ IOS/*.xcconfig
 .agents/
 .utim_tmp/
 .git-credentials
+
+# signing material — NEVER commit; the keystore lives in the GitHub secret
+# KETVOICE_KEYSTORE_B64 and its passwords in KETVOICE_STORE/KEY_PASSWORD.
+*.keystore
+*.jks
+*.keystore.b64
+.keystore-creds
+release.keystore*
+
