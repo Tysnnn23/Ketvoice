@@ -7,6 +7,22 @@
 
 ---
 
+# Ketvoice 4.1.0
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 79** — instant playback: every source races for the first stream, better quality lands in the background.
+
+- Playback no longer waits for the slowest provider: all enabled sources are queried in parallel and the first usable stream starts the music.
+- The lossless/high-bitrate stream keeps loading behind the current one and swaps seamlessly at the same position, without an audible gap.
+- The next two queue tracks are resolved ahead of time, so skipping and auto-advance feel immediate.
+- The "qualité progressive" switch now only decides whether a better stream is fetched — it no longer blocks fast starts or the seamless upgrade.
+- Fixed the album page not compiling: the full-bleed hero used `clipToBounds()` without importing it.
+
+Full notes and limits: [4.1.0](docs/releases/v4.1.0.md).
+
+---
+
 # Ketvoice 4.0.1
 
 ![Ketvoice](ketvoice-banner.png)
