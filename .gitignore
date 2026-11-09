@@ -55,3 +55,6 @@ IOS/*.xcconfig
 .keystore-creds
 release.keystore*
 
+# Local code-only architecture index (configuration remains versioned).
+graphify-out/
+

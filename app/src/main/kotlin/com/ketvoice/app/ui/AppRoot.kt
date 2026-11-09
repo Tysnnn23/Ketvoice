@@ -135,45 +135,6 @@ fun AppRoot() {
         val density = LocalDensity.current
         val imeVisible = WindowInsets.ime.getBottom(density) > 0
         val context = androidx.compose.ui.platform.LocalContext.current
-        var wasPlayerVisible by remember { mutableStateOf(AppUi.showPlayer.value) }
-
-        // Ouvre/ferme le lecteur : une copie de la pochette vole entre la
-        // position du lecteur et celle du mini-lecteur, en fondu.
-        LaunchedEffect(AppUi.showPlayer.value, playerState.current?.id) {
-            val visible = AppUi.showPlayer.value
-            if (visible != wasPlayerVisible) {
-                wasPlayerVisible = visible
-                if (Motion.reduced) {
-                    AppUi.coverFlight.value = null
-                    return@LaunchedEffect
-                }
-                val current = playerState.current
-                val mini = AppUi.miniCoverBounds.value
-                val full = if (visible) {
-                    // On first open, wait for the artwork's actual layout.
-                    snapshotFlow { AppUi.playerCoverBounds.value }.filterNotNull().first()
-                } else AppUi.playerCoverBounds.value
-                if (current != null && mini != null) {
-                    if (visible && full != null) {
-                        AppUi.coverFlight.value = AppUi.CoverFlight(
-                            cover = artwork["t:${current.id}"] ?: current.coverUrl,
-                            title = current.title,
-                            from = mini,
-                            to = full,
-                            opening = true
-                        )
-                    } else if (!visible && full != null) {
-                        AppUi.coverFlight.value = AppUi.CoverFlight(
-                            cover = artwork["t:${current.id}"] ?: current.coverUrl,
-                            title = current.title,
-                            from = full,
-                            to = mini,
-                            opening = false
-                        )
-                    }
-                }
-            }
-        }
 
         BoxWithConstraints(Modifier.fillMaxSize()) {
         val quest = com.ketvoice.app.BuildConfig.IS_QUEST
@@ -311,15 +272,10 @@ fun AppRoot() {
 
                 // ---- Lecteur plein écran : monte depuis le bas, fermeture
                 //      progressive interne (drag) puis fondu ----
-                AnimatedVisibility(
+                com.ketvoice.app.ui.player.PlayerPresentation(
                     visible = AppUi.showPlayer.value,
-                    enter = slideInVertically(
-                        tween(Motion.duration(340), easing = FastOutSlowInEasing)
-                    ) { it } + fadeIn(tween(Motion.duration(220))),
-                    exit = fadeOut(tween(Motion.duration(140))),
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .zIndex(6f)
+                    origin = AppUi.miniPlayerBounds.value,
+                    modifier = Modifier.fillMaxSize().zIndex(6f)
                 ) {
                     Box(Modifier.fillMaxSize()) {
                         FullPlayerScreen(modifier = Modifier.fillMaxSize())
@@ -327,9 +283,11 @@ fun AppRoot() {
                 }
 
                 // ---- Pochette qui vole entre le lecteur et le mini-lecteur ----
-                CoverFlightOverlay()
 
                 // ---- Dialog compte ----
+                androidx.compose.material3.SnackbarHost(
+                    com.ketvoice.app.ui.common.TrackActionFeedback.snackbar,
+                    Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 150.dp).zIndex(12f))
                 AnimatedContent(AppUi.trackMenuTrack.value,
                     modifier = Modifier.fillMaxSize().zIndex(7f),
                     transitionSpec = { fadeIn(tween(Motion.duration(240))).togetherWith(fadeOut(tween(Motion.duration(220)))) },

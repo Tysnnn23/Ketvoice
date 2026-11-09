@@ -375,6 +375,7 @@ fun SearchScreen() {
 @Composable
 private fun SearchResultRow(track: Track, cover: String?, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val th = LocalTheme.current
+    com.ketvoice.app.ui.common.SwipeTrackActions(track) {
     Row(
         modifier
             .fillMaxWidth()
@@ -426,6 +427,7 @@ private fun SearchResultRow(track: Track, cover: String?, modifier: Modifier = M
                     th.accent.copy(alpha = 0.12f) else th.card)
                 .padding(horizontal = 6.dp, vertical = 3.dp)
         )
+    }
     }
 }
 

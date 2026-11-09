@@ -76,8 +76,8 @@ data class GlassParams(
     /** Hauteur de réfraction de la lentille (bord du verre), en px. */
     val refractionPx: Float = 18f,
     /** Prismal-style edge band and displacement, density-independent. */
-    val refractionHeightDp: Float = 10f,
-    val refractionAmountDp: Float = 20f,
+    val refractionHeightDp: Float = 5f,
+    val refractionAmountDp: Float = 10f,
     val role: GlassRole = GlassRole.Control,
     /** Opacité de la teinte de surface (le "lait" du verre). */
     val tintAlpha: Float = 0.10f,
@@ -127,7 +127,7 @@ data class GlassParams(
             dark = dark
         )
 
-        fun pill(blur: Float = 30f, dark: Boolean = false) = GlassParams(
+        fun pill(blur: Float = 14f, dark: Boolean = false) = GlassParams(
             cornerRadiusPx = 9999f,
             blurPx = blur,
             refractionPx = 18f,
@@ -140,7 +140,7 @@ data class GlassParams(
             brightness = 1.0f,
             contrast = 1.0f,
             exposure = if (dark) 0.01f else 0.02f,
-            highlightAlpha = if (dark) 0.48f else 0.62f,
+            highlightAlpha = if (dark) 0.30f else 0.36f,
             highlightIntensity = if (dark) 0.26f else 0.36f,
             // Floating control: clearly lifted above content (e3).
             elevationDp = 8f,
@@ -148,7 +148,7 @@ data class GlassParams(
             dark = dark
         )
 
-        fun circle(blur: Float = 26f, dark: Boolean = false) = GlassParams(
+        fun circle(blur: Float = 12f, dark: Boolean = false) = GlassParams(
             cornerRadiusPx = 9999f,
             blurPx = blur,
             refractionPx = 14f,
@@ -165,9 +165,9 @@ data class GlassParams(
 
         /** Navigation is optical glass, not heavily frosted content material. */
         fun navigation(dark: Boolean = false) = pill(blur = 10f, dark = dark).copy(
-            refractionHeightDp = 12f, refractionAmountDp = 24f,
             tintAlpha = if (dark) .055f else .035f,
-            saturation = 1.16f, highlightAlpha = if (dark) .48f else .58f
+            saturation = 1.08f, highlightAlpha = if (dark) .30f else .36f,
+            refractionHeightDp = 5f, refractionAmountDp = 10f
         )
 
         fun sheet(radiusPx: Float, dark: Boolean = false) = GlassParams(
@@ -201,15 +201,15 @@ data class GlassParams(
  * Le résultat lit comme un verre dépoli posé sur la page, pas comme un rectangle peint.
  */
 @Composable
-private fun rememberStaticMaterial(p: GlassParams): Pair<Brush, Brush> {
+private fun rememberStaticMaterial(p: GlassParams, opaque: Boolean = false): Pair<Brush, Brush> {
     val th = LocalTheme.current
-    return remember(p, th.isDark) {
+    return remember(p, th.isDark, opaque) {
         val base = if (p.dark) Color(0xFF232329) else Color.White
         // Transmission statique : le fond transparaît à ~12-18 %.
         val sheet = p.role == GlassRole.Sheet
-        val body = base.copy(alpha = if (sheet) .97f else if (p.dark) 0.84f else 0.88f)
-        val lift = base.copy(alpha = if (sheet) .98f else if (p.dark) 0.86f else 0.91f)
-        val surface = Brush.linearGradient(listOf(lift, body, base.copy(alpha = if (sheet) .96f else if (p.dark) 0.80f else 0.84f), body))
+        val body = base.copy(alpha = if (opaque) 1f else if (sheet) .97f else if (p.dark) 0.84f else 0.88f)
+        val lift = base.copy(alpha = if (opaque) 1f else if (sheet) .98f else if (p.dark) 0.86f else 0.91f)
+        val surface = Brush.linearGradient(listOf(lift, body, base.copy(alpha = if (opaque) 1f else if (sheet) .96f else if (p.dark) 0.80f else 0.84f), body))
         // Liseré capillaire : lumineux haut-gauche (entrée de lumière), sombre bas-droite.
         val lightHair = Color.White.copy(alpha = if (p.dark) 0.16f else 0.75f)
         val darkHair = if (p.dark) Color.Black.copy(alpha = 0.22f) else Color.Black.copy(alpha = 0.08f)
@@ -235,8 +235,15 @@ fun GlassPanel(
     params: GlassParams,
     enabled: Boolean = true,
     captured: Boolean = false,
+    styleOverride: Int? = null,
     content: @Composable () -> Unit
 ) {
+    val style = styleOverride ?: AppSettings.glassStyle.value
+    val params = when (style) {
+        1 -> params.copy(blurPx = maxOf(params.blurPx, 32f), tintAlpha = if (params.dark) .16f else .12f,
+            refractionHeightDp = 4f, refractionAmountDp = 6f)
+        else -> params
+    }
     if (params.role == GlassRole.Panel) {
         // Glass belongs to controls and navigation, not every content card/menu.
         val theme = LocalTheme.current
@@ -254,7 +261,7 @@ fun GlassPanel(
         com.ketvoice.app.theme.KetTheme.dark().copy(accent = theme.accent) else theme
     CompositionLocalProvider(LocalTheme provides glassTheme) {
     val backdrop = LocalBackdropLayer.current
-    val dynamic = backdrop != null && enabled && AppSettings.liquidGlass.value && !captured &&
+    val dynamic = backdrop != null && enabled && AppSettings.liquidGlass.value && !captured && style != 2 &&
         !AppSettings.reduceDynamicBlur.value &&
         !AppSettings.highPerformanceMode.value
     // Vrai verre AGSL (API 33+) : le matériau est calculé par un RuntimeShader
@@ -263,7 +270,7 @@ fun GlassPanel(
     val agsl = dynamic && GlassShader.isSupported()
     val renderState = remember { GlassRenderState() }
 
-    val (surface, hairline) = rememberStaticMaterial(params)
+    val (surface, hairline) = rememberStaticMaterial(params, opaque = style == 2)
     val sheen = remember(params) { staticSheen(params) }
     // En AGSL, le shader dessine le liseré et le bord sombre : plus de bordure
     // Compose par-dessus (sinon double contour artificiel).

@@ -400,16 +400,7 @@ fun PlayerTransport(
                 .clickable(playSrc, null) { onToggle() },
             contentAlignment = Alignment.Center
         ) {
-            AnimatedContent(
-                targetState = playing,
-                transitionSpec = {
-                    (fadeIn(tween(Motion.duration(Motion.PRESS))) + scaleIn(initialScale = if(Motion.reduced) 1f else .85f, animationSpec = tween(Motion.duration())))
-                        .togetherWith(fadeOut(tween(Motion.duration(Motion.PRESS))) + scaleOut(targetScale = if(Motion.reduced) 1f else .85f, animationSpec = tween(Motion.duration())))
-                },
-                label = "playpause"
-            ) { p ->
-                TransportGlyph(if (p) "pause" else "play", Modifier.size(46.dp))
-            }
+            MorphingTransportGlyph(playing, Modifier.size(46.dp))
         }
         TransportButton(onNext) {
             TransportGlyph("next", Modifier.size(48.dp))

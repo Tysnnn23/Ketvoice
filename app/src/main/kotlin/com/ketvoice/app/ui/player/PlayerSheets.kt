@@ -15,6 +15,8 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Smartphone
@@ -67,7 +69,7 @@ fun TrackMenuSheet(track: Track, onClose: () -> Unit) {
     GlassPanel(
         modifier = Modifier.fillMaxWidth().padding(10.dp),
         shape = RoundedCornerShape(28.dp),
-        params = GlassParams.sheet(radius, dark = true)
+        params = GlassParams.card(radius, dark = true)
     ) {
         Column(
             Modifier
@@ -125,24 +127,26 @@ fun TrackMenuSheet(track: Track, onClose: () -> Unit) {
             Spacer(Modifier.width(10.dp))
             Icon(
                 Icons.Filled.Close, null, tint = Color.White.copy(alpha = 0.7f),
-                modifier = Modifier.clickable(noRip, null) { onClose() }
+                modifier = Modifier.size(48.dp).clickable(noRip, null) { onClose() }.padding(12.dp)
             )
         }
 
-        MenuItemRow("Lire ensuite", Icons.Filled.PlaylistAdd) {
-            Player.playNext(track)
-            onClose()
+        val downloaded = Downloader.itemFor(track.id) != null
+        val favorite = track.id in AppSettings.favoriteIds.value
+        Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            QuickTrackAction(if (favorite) "Favori" else "Favoris", if (favorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                Modifier.weight(1f)) {
+                AppSettings.favoriteIds.value = if (favorite) AppSettings.favoriteIds.value - track.id else AppSettings.favoriteIds.value + track.id
+                com.ketvoice.app.data.SettingsStore.save()
+            }
+            QuickTrackAction("Lire ensuite", Icons.Filled.PlaylistAdd, Modifier.weight(1f)) {
+                Player.playNext(track); onClose()
+            }
+            QuickTrackAction(if (downloaded) "Téléchargé ✓" else "Télécharger", if (downloaded) Icons.Filled.Check else Icons.Filled.Download,
+                Modifier.weight(1f)) { if (!downloaded) Downloader.download(track); onClose() }
         }
         MenuItemRow("Ajouter à une playlist", Icons.Filled.PlaylistAdd) {
             onClose(); com.ketvoice.app.ui.AppUi.addToPlaylist.value = track
-        }
-        val downloaded = Downloader.itemFor(track.id) != null
-        MenuItemRow(
-            if (downloaded) "Téléchargé ✓" else "Télécharger",
-            Icons.Filled.Download
-        ) {
-            if (!downloaded) Downloader.download(track)
-            onClose()
         }
         // Partage réel : lien listen.html — l'app du destinataire ouvre le
         // morceau, un navigateur affiche la page de téléchargement.

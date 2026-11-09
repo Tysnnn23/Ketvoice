@@ -8,6 +8,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -83,7 +84,7 @@ import com.ketvoice.app.ui.player.pressScale
 private val noRipple: MutableInteractionSource = MutableInteractionSource()
 
 @Composable
-fun MiniPlayerPill(modifier: Modifier = Modifier, onOpen: () -> Unit) {
+fun MiniPlayerPill(modifier: Modifier = Modifier, compact: Boolean = false, onOpen: () -> Unit) {
     val ps = Player.state.collectAsState().value
     val th = LocalTheme.current
     val current = ps.current ?: return
@@ -96,6 +97,7 @@ fun MiniPlayerPill(modifier: Modifier = Modifier, onOpen: () -> Unit) {
             .fillMaxWidth()
             .padding(horizontal = 10.dp, vertical = 4.dp)
             .height(54.dp)
+            .onGloballyPositioned { AppUi.miniPlayerBounds.value = it.boundsInRoot() }
             .shadow(
                 elevation = if (th.isDark) 2.dp else 4.dp,
                 shape = pillShape,
@@ -122,8 +124,9 @@ fun MiniPlayerPill(modifier: Modifier = Modifier, onOpen: () -> Unit) {
                         AppUi.miniCoverBounds.value = it.boundsInRoot()
                     }
                 )
-                Spacer(Modifier.width(11.dp))
+                Spacer(Modifier.width(if (compact) 4.dp else 11.dp))
                 Column(Modifier.weight(1f)) {
+                if (!compact) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         if (current.explicit) {
                             EBadge()
@@ -147,10 +150,13 @@ fun MiniPlayerPill(modifier: Modifier = Modifier, onOpen: () -> Unit) {
                         overflow = TextOverflow.Ellipsis
                     )
                 }
+                }
                 Spacer(Modifier.width(8.dp))
                 MiniTransportButton(playing = ps.playWhenReady)
-                Spacer(Modifier.width(12.dp))
-                MiniTransportNext()
+                if (!compact) {
+                    Spacer(Modifier.width(12.dp))
+                    MiniTransportNext()
+                }
             }
 
             // Ligne de progression animée (composant isolé du tic)
@@ -220,21 +226,7 @@ private fun MiniTransportButton(playing: Boolean, size: androidx.compose.ui.unit
             .clickable(src, null) { Player.toggle() },
         contentAlignment = Alignment.Center
     ) {
-        AnimatedContent(
-            targetState = playing,
-            transitionSpec = {
-                (fadeIn(tween(110)) + scaleIn(initialScale = 0.72f, animationSpec = tween(180)))
-                    .togetherWith(fadeOut(tween(80)) + scaleOut(targetScale = 0.72f, animationSpec = tween(150)))
-            },
-            label = "miniPlay"
-        ) { p ->
-            Icon(
-                if (p) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                if (p) "Pause" else "Lecture",
-                tint = th.onBackground,
-                modifier = Modifier.size(size * 0.85f)
-            )
-        }
+        com.ketvoice.app.ui.player.MorphingTransportGlyph(playing, Modifier.size(size * .78f), th.onBackground)
     }
 }
 
@@ -297,44 +289,35 @@ private data class TabSpec(val icon: ImageVector, val label: String, val index: 
  */
 @Composable
 fun FloatingChrome(collapsed: Boolean, onOpenPlayer: () -> Unit) {
-    AnimatedContent(
-        targetState = collapsed,
-        transitionSpec = {
-            (fadeIn(tween(Motion.duration(240))) + scaleIn(initialScale = if (Motion.reduced) 1f else 0.96f, animationSpec = tween(Motion.duration(280))))
-                .togetherWith(fadeOut(tween(Motion.duration(160))) + scaleOut(targetScale = if (Motion.reduced) 1f else 0.97f, animationSpec = tween(Motion.duration(200))))
-        },
-        label = "chrome-collapse"
-    ) { isCollapsed ->
-        if (isCollapsed) {
-            Row(
-                Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                GlassTabCapsule(collapsed = true, modifier = Modifier)
-                MiniPlayerCompact(modifier = Modifier.weight(1f), onOpen = onOpenPlayer)
-                SearchCircleButton(size = 48.dp)
-            }
-        } else {
-            Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                MiniPlayerPill(onOpen = onOpenPlayer)
-                Spacer(Modifier.height(6.dp))
-                Row(Modifier.padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    GlassTabCapsule(collapsed = false, modifier = Modifier.weight(1f, fill = false))
-                    Spacer(Modifier.width(10.dp))
-                    SearchCircleButton(size = 60.dp)
-                }
-            }
+    val compact = collapsed && androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 380
+    // A single set of controls keeps its identity throughout the container transform.
+    val fraction by animateFloatAsState(if (compact) 1f else 0f,
+        tween(Motion.duration(320), easing = FastOutSlowInEasing), label = "chrome-morph")
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val width = maxWidth
+        val f = fraction
+        val hasTrack = Player.state.collectAsState().value.current != null
+        val fullHeight = if (hasTrack) 126.dp else 64.dp
+        val height = fullHeight + (58.dp - fullHeight) * f
+        val miniWidth = maxWidth + ((maxWidth - 218.dp).coerceAtLeast(100.dp) - maxWidth) * f
+        val miniX = 158.dp * f
+        val navigationY = if (hasTrack) 66.dp * (1f - f) else 0.dp
+        Box(Modifier.fillMaxWidth().height(height)) {
+            GlassTabCapsule(compact, Modifier.offset(x = 12.dp, y = navigationY))
+            if (hasTrack) MiniPlayerPill(
+                Modifier.offset(x = miniX).width(miniWidth), compact = f > .65f, onOpen = onOpenPlayer)
+            SearchCircleButton(size = 60.dp - 12.dp * f,
+                modifier = Modifier.offset(x = width - 76.dp + 16.dp * f, y = navigationY))
         }
     }
 }
 
 @Composable
-private fun SearchCircleButton(size: androidx.compose.ui.unit.Dp) {
+private fun SearchCircleButton(size: androidx.compose.ui.unit.Dp, modifier: Modifier = Modifier) {
     val th = LocalTheme.current
     com.ketvoice.app.ui.common.LiquidGlassButton(
         onClick = { AppUi.openSearch() },
-        modifier = Modifier
+        modifier = modifier
             .size(size)
             .shadow(
                 elevation = if (th.isDark) 0.dp else 2.5.dp,

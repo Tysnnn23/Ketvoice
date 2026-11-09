@@ -9,6 +9,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Share
@@ -53,7 +54,7 @@ import com.ketvoice.app.util.ShareLinks
 @Composable
 internal fun AlbumPage(request: CatalogRequest, page: CatalogPage?, tracks: List<Track>, loading: Boolean,
                        onRetry: () -> Unit) {
-    val theme = LocalTheme.current
+    val baseTheme = LocalTheme.current
     val list = rememberLazyListState()
     val collapsed by remember { derivedStateOf { list.firstVisibleItemIndex > 0 } }
     val current by Player.state.collectAsState()
@@ -62,22 +63,18 @@ internal fun AlbumPage(request: CatalogRequest, page: CatalogPage?, tracks: List
     val title = page?.title ?: request.title
     val artist = page?.subtitle.orEmpty()
     val cover = page?.cover ?: tracks.firstOrNull()?.coverUrl
+    val albumAccent = com.ketvoice.app.theme.rememberCoverAccent(cover)?.first
+    val theme = baseTheme.copy(accent = if (AppSettings.albumColors.value) albumAccent ?: baseTheme.accent else baseTheme.accent)
     val top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 66.dp
     val onAccent = if (theme.accent.luminance() > .179f) Color.Black else Color.White
     val controlsBackdrop = rememberGlassBackdrop(theme.background)
     Box(Modifier.fillMaxSize().background(theme.background)) {
-        BackdropCapture(controlsBackdrop, Modifier.matchParentSize()) {
-        // A very restrained cover wash behind the entire page, not a hard-edged hero rectangle.
-        if (cover != null && !AppSettings.reduceDynamicBlur.value && !AppSettings.highPerformanceMode.value) AsyncImage(cover, null, contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxWidth().height(620.dp)
-                .graphicsLayer { alpha = if (theme.isDark) .20f else .12f; scaleX = 1.15f; scaleY = 1.15f }
-                .blur(64.dp, BlurredEdgeTreatment.Unbounded))
-        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(
-            0f to theme.background.copy(alpha = .15f), .65f to theme.background, 1f to theme.background)))
-        }
-        CompositionLocalProvider(LocalBackdropLayer provides controlsBackdrop) {
+        CompositionLocalProvider(LocalBackdropLayer provides controlsBackdrop, LocalTheme provides theme) {
+        // Capture the scrolling artwork, not a disconnected blurred background.
+        // Inline controls use static material to avoid sampling themselves.
+        BackdropCapture(controlsBackdrop, Modifier.fillMaxSize()) {
         LazyColumn(Modifier.fillMaxSize().testTag("album-list"), state = list,
-            contentPadding = PaddingValues(top = top, bottom = LocalAdaptiveLayout.current.bottomPaddingDp.dp + 20.dp)) {
+            contentPadding = PaddingValues(bottom = LocalAdaptiveLayout.current.bottomPaddingDp.dp + 20.dp)) {
             item(key = "album-hero") {
                 val canvasTrack = tracks.firstOrNull()
                 val canvasEnabled = AppSettings.albumHeroCanvas.value &&
@@ -105,17 +102,17 @@ internal fun AlbumPage(request: CatalogRequest, page: CatalogPage?, tracks: List
                             .testTag("album-hero-visual")) {
                             Box(
                                 Modifier.fillMaxWidth()
-                                    .height(heroHeight + top + 48.dp).offset(y = (-top) - (pull * .45f).dp)
-                                    .graphicsLayer {
-                                        // Gentle engagement zoom: 1.00 -> 1.06 as the hero is revealed.
-                                        val z = 1.02f + (pull / 4_000f).coerceIn(0f, .05f)
-                                        scaleX = z; scaleY = z
+                                     .height(heroHeight + top)
+                                     .graphicsLayer {
+                                         // px stay px: never convert scroll pixels to dp.
+                                         translationY = if (com.ketvoice.app.ui.motion.Motion.reduced) 0f else pull * .18f
+                                         scaleX = 1.025f; scaleY = 1.025f
                                     }
                             ) {
                                 when {
                                     canvasEnabled && canvasTrack != null && canvasPath != null ->
                                         com.ketvoice.app.ui.player.ArtworkCanvas(
-                                            track = canvasTrack, canvasPath = canvasPath, playing = true,
+                                             track = canvasTrack, canvasPath = canvasPath, playing = list.firstVisibleItemIndex == 0,
                                             forceCanvas = true, modifier = Modifier.fillMaxSize())
                                     cover != null -> AsyncImage(cover, null, contentScale = ContentScale.Crop,
                                         modifier = Modifier.fillMaxSize())
@@ -123,26 +120,20 @@ internal fun AlbumPage(request: CatalogRequest, page: CatalogPage?, tracks: List
                                         Brush.linearGradient(gradientFor(request.id))))
                                 }
                             }
-                            // Colour wash: the album hue sits on the visual and fades out,
-                            // never as a bar or a card edge.
+                            // A restrained local hue at the top. Never bleach the artwork.
                             Box(Modifier.matchParentSize().background(Brush.verticalGradient(
-                                0f to theme.accent.copy(alpha = .38f),
-                                .45f to Color.Transparent,
+                                0f to theme.accent.copy(alpha = .12f),
+                                .24f to Color.Transparent,
                                 1f to Color.Transparent)))
-                            // Long, soft dissolve into the page. Two overlapping stops avoid
-                            // the visible "seam" a short 2-stop gradient leaves on photos.
-                            Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth()
-                                .height(heroHeight * .62f).background(Brush.verticalGradient(
-                                    0f to Color.Transparent,
-                                    .42f to theme.background.copy(alpha = .55f),
-                                    .74f to theme.background.copy(alpha = .92f),
-                                    1f to theme.background)))
                             // Scrim behind the floating top bar so its icons stay legible.
                             Box(Modifier.align(Alignment.TopCenter).fillMaxWidth().height(top + 56.dp)
                                 .background(Brush.verticalGradient(listOf(
                                     Color.Black.copy(alpha = .38f), Color.Transparent))))
                         }
                     }
+                    // Colour belongs below the image, not in an opaque white veil over it.
+                    Box(Modifier.fillMaxWidth().height(24.dp).background(Brush.verticalGradient(
+                        listOf(theme.accent.copy(alpha = .12f), Color.Transparent))))
                     Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp),
                         horizontalAlignment = Alignment.CenterHorizontally) {
                         Spacer(Modifier.height(14.dp))
@@ -177,7 +168,7 @@ internal fun AlbumPage(request: CatalogRequest, page: CatalogPage?, tracks: List
                                 Spacer(Modifier.width(6.dp));Text("Lecture", color = onAccent, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
                             }
                             GlassPanel(Modifier.weight(1f), RoundedCornerShape(50),
-                                GlassParams.pill(dark = theme.isDark), enabled = AppSettings.liquidGlass.value) {
+                                GlassParams.pill(dark = theme.isDark), enabled = AppSettings.liquidGlass.value, captured = true) {
                                 Row(Modifier.fillMaxWidth().clickable(enabled = tracks.isNotEmpty()) {
                                     Player.playQueue(tracks.shuffled()); Player.setShuffle(true)
                                 }.heightIn(min = 50.dp).padding(horizontal = 14.dp, vertical = 12.dp),
@@ -198,6 +189,7 @@ internal fun AlbumPage(request: CatalogRequest, page: CatalogPage?, tracks: List
                 EmptyState("Catalogue indisponible", "Vérifiez votre connexion, puis réessayez.", "Réessayer", onAction = onRetry)
             }
             itemsIndexed(tracks, key = { index, track -> "${track.id}:$index" }) { index, track ->
+                com.ketvoice.app.ui.common.SwipeTrackActions(track) {
                 Column(Modifier.fillMaxWidth()) {
                     Row(Modifier.fillMaxWidth().clickable { Player.playQueue(tracks, index) }
                         .padding(start = 18.dp, end = 8.dp, top = 10.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -222,17 +214,22 @@ internal fun AlbumPage(request: CatalogRequest, page: CatalogPage?, tracks: List
                     Box(Modifier.padding(start = 100.dp, end = 20.dp).fillMaxWidth().height(.5.dp)
                         .background(theme.onBackground.copy(alpha = .07f)))
                 }
+                }
             }
         }
-        Row(Modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(
-            theme.background.copy(alpha = .94f), theme.background.copy(alpha = if (collapsed) .85f else 0f))))
+        }
+        Row(Modifier.fillMaxWidth().background(if (collapsed) theme.background.copy(alpha = .96f) else Color.Transparent)
             .statusBarsPadding().padding(horizontal = 12.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
-            GlassBackButton { AppUi.closeOverlay() }
+            GlassPanel(Modifier.size(48.dp), CircleShape, GlassParams.circle(dark = theme.isDark)) {
+                Box(Modifier.fillMaxSize().clickable { AppUi.closeOverlay() }, contentAlignment = Alignment.Center) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, "Retour", tint = theme.onBackground)
+                }
+            }
             Text(if (collapsed) title else "", localize = false, color = theme.onBackground,
                 fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f).padding(horizontal = 14.dp))
             GlassPanel(Modifier.size(48.dp), CircleShape, GlassParams.circle(dark = theme.isDark),
-                enabled = AppSettings.liquidGlass.value, captured = true) {
+                enabled = AppSettings.liquidGlass.value) {
                 Box(Modifier.fillMaxSize().clickable { ShareLinks.shareAlbum(context, request.id, title, artist) }, contentAlignment = Alignment.Center) {
                     Icon(Icons.Filled.Share, "Partager", tint = theme.onBackground, modifier = Modifier.size(21.dp))
                 }

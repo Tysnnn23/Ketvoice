@@ -1,0 +1,77 @@
+# Qoder and community skill packages
+.qoder/
+.agents/
+.claude/
+.codex/
+.opencode/
+skills-lock.json
+node_modules/
+
+# Vendor SDKs, local tools, caches and temporary directories
+DiscordSocialSdk-1.10.19337/
+.tools/
+.freebuff/
+.utim_tmp/
+.gradle/
+.kotlin/
+release-assets/
+ref_frames/
+photo website (DO NOT PUSH GIT)/
+Ketvoice-Liquid-Glass-V4-Source/
+
+# Generated Android, Gradle, Python and native build output
+**/build/
+**/.gradle/
+**/__pycache__/
+*.class
+*.dex
+*.flat
+*.apk
+*.aab
+*.ap_
+*.jar
+*.aar
+*.so
+*.dll
+*.dylib
+*.lib
+*.dbg
+*.kef
+*.kw
+*.pyc
+
+# Media, screenshots and archives
+*.mp4
+*.mov
+*.webm
+*.mkv
+*.avi
+*.m4v
+*.mp3
+*.wav
+*.m4a
+*.ogg
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+*.ico
+*.zip
+
+# Large generated or duplicated web/design bundles
+Ketvoice-Liquid-Glass-V4.html
+*.min.js
+app/src/main/assets/translations.json
+tools/content-feature-translations.json
+
+# Credential-handling and one-off release scripts kept out of the graph
+tools/check_cred.ps1
+tools/cred_test.ps1
+tools/get_token.ps1
+tools/publish_363.ps1
+tools/*cred*
+tools/*token*
+
+# Logs
+*.log

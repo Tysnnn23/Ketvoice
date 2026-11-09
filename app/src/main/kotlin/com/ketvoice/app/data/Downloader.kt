@@ -16,6 +16,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
@@ -52,10 +53,49 @@ object Downloader {
 
     private val _progress = MutableStateFlow<Map<String, Int>>(emptyMap())
     val progress: StateFlow<Map<String, Int>> = _progress
+    private val _tasks = MutableStateFlow<Map<String, DownloadTask>>(emptyMap())
+    val tasks: StateFlow<Map<String, DownloadTask>> = _tasks
+    private val paused = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+
+    fun pause(id: String) {
+        if (id !in _busy.value) return
+        paused.add(id)
+        task(id) { it.copy(phase = DownloadPhase.Paused) }
+    }
+    fun resume(id: String) { paused.remove(id) }
+    fun cancel(id: String) {
+        task(id) { it.copy(phase = DownloadPhase.Cancelled) }
+        paused.remove(id)
+        jobs[id]?.cancel()
+        connections.remove(id)?.disconnect()
+    }
+    private fun task(id: String, change: (DownloadTask) -> DownloadTask) {
+        _tasks.update { it + (id to change(it[id] ?: DownloadTask())) }
+    }
+    private fun wifiConnected(): Boolean {
+        val cm = ctx?.getSystemService(Context.CONNECTIVITY_SERVICE) as? android.net.ConnectivityManager ?: return false
+        val caps = cm.getNetworkCapabilities(cm.activeNetwork) ?: return false
+        return caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI) &&
+            caps.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET)
+    }
+    private suspend fun awaitTransfer(id: String, phase: DownloadPhase) {
+        while (true) {
+            kotlinx.coroutines.currentCoroutineContext().ensureActive()
+            val waiting = when {
+                id in paused -> DownloadPhase.Paused
+                AppSettings.downloadsWifiOnly.value && !wifiConnected() -> DownloadPhase.WaitingWifi
+                else -> null
+            }
+            if (_tasks.value[id]?.phase != (waiting ?: phase)) task(id) { it.copy(phase = waiting ?: phase) }
+            if (waiting == null) return
+            kotlinx.coroutines.delay(200)
+        }
+    }
 
     private var ctx: Context? = null
     private val connections = java.util.concurrent.ConcurrentHashMap<String, HttpURLConnection>()
     private val jobs = java.util.concurrent.ConcurrentHashMap<String, Job>()
+    internal var openAudioConnection: (URL) -> HttpURLConnection = { it.openConnection() as HttpURLConnection }
 
     fun init(context: Context) {
         if (ctx != null) return
@@ -75,9 +115,12 @@ object Downloader {
         _busy.update { it + track.id }
         _activeTracks.update { it + (track.id to track) }
         _progress.update { it + (track.id to 0) }
+        paused.remove(track.id)
+        task(track.id) { DownloadTask() }
         toast("Téléchargement de « ${track.title} »…")
-        val job = scope.launch {
+        val job = scope.launch(start = kotlinx.coroutines.CoroutineStart.LAZY) {
             try {
+                awaitTransfer(track.id, DownloadPhase.Resolving)
                 val budget = DownloadBudget(capsuleLimit ?: Long.MAX_VALUE)
                 val audioLimit = if (capsuleLimit == null) Long.MAX_VALUE else (capsuleLimit - minOf(1_048_576L, capsuleLimit / 4)).coerceAtLeast(0)
                 val preferFlac = capsuleLimit == null && AppSettings.downloadQualityMode.value == 0
@@ -131,12 +174,14 @@ object Downloader {
                 val file = gotFile
                 val selected = gotStream
                 if (file == null || selected == null) {
+                    task(track.id) { it.copy(phase = DownloadPhase.Failed) }
                     toast("Échec du téléchargement (aucun flux lisible)")
                     return@launch
                 }
 
                 check(budget.spend(file.length())) { "Budget de la capsule atteint" }
                 _progress.value = _progress.value + (track.id to 99)
+                task(track.id) { it.copy(phase = DownloadPhase.Finalizing) }
                 val meta = JSONObject().apply {
                     put("id", track.id)
                     put("title", track.title)
@@ -204,18 +249,23 @@ object Downloader {
                 _progress.value = _progress.value + (track.id to 100)
                 refresh()
                 toast("« ${track.title} » téléchargé")
+                task(track.id) { it.copy(phase = DownloadPhase.Complete) }
             } catch (cancelled: CancellationException) {
+                task(track.id) { it.copy(phase = DownloadPhase.Cancelled) }
                 throw cancelled
             } catch (_: Exception) {
+                task(track.id) { it.copy(phase = DownloadPhase.Failed) }
                 toast("Échec du téléchargement")
             } finally {
                 _progress.update { it - track.id }
                 _busy.update { it - track.id }
-                _activeTracks.update { it - track.id }
+                if (_tasks.value[track.id]?.phase == DownloadPhase.Complete) _activeTracks.update { it - track.id }
+                paused.remove(track.id)
                 jobs.remove(track.id)
             }
         }
         jobs[track.id] = job
+        job.start()
         return job
     }
 
@@ -421,21 +471,23 @@ object Downloader {
         catch (failure: Exception) { atomic.failWrite(out); throw failure }
     }
 
-    private fun fetch(url: String, dest: File, id: String, limit: Long = Long.MAX_VALUE, cancelled: () -> Boolean = { false }): Boolean {
+    internal suspend fun fetch(url: String, dest: File, id: String, limit: Long = Long.MAX_VALUE, cancelled: () -> Boolean = { false }): Boolean {
         val tmp = File(dest.parentFile, dest.name + ".part")
         tmp.delete()
         var validator: String? = null
+        try {
         repeat(3) {
+          awaitTransfer(id, DownloadPhase.Transferring)
           if (cancelled()) { tmp.delete(); throw CancellationException() }
           var connection: HttpURLConnection? = null
           try {
             var current = URL(url)
-            val offset = tmp.takeIf { it.exists() }?.length() ?: 0L
+            val offset = tmp.takeIf { it.exists() && validator != null }?.length() ?: 0L
             var responseCode = 0
             for (hop in 0..5) {
                 if (cancelled()) throw CancellationException()
                 if (current.protocol != "https") return false
-                connection = (current.openConnection() as HttpURLConnection).apply {
+                connection = openAudioConnection(current).apply {
                     connectTimeout = 15_000
                     readTimeout = 90_000
                     instanceFollowRedirects = false
@@ -471,8 +523,14 @@ object Downloader {
                 tmp.delete()
                 return@repeat
             }
-            validator = c.getHeaderField("ETag") ?: c.getHeaderField("Last-Modified")
+            val incomingValidator = c.getHeaderField("ETag")?.takeUnless { it.startsWith("W/") } ?: c.getHeaderField("Last-Modified")
+            if (resumed && validator != null && incomingValidator != null && validator != incomingValidator) {
+                tmp.delete(); validator = null
+                return@repeat
+            }
+            validator = incomingValidator
             val total = if (ranged) range!!.groupValues[3].toLong() else c.contentLengthLong
+            task(id) { it.copy(total = total.takeIf { it > 0 }, restarted = it.restarted || (offset > 0 && !resumed)) }
             if (total > limit) { tmp.delete(); return false }
             val buf = ByteArray(128 * 1024)
             var written = if (resumed) offset else 0L
@@ -480,6 +538,7 @@ object Downloader {
             c.inputStream.use { input ->
                 FileOutputStream(tmp, resumed).use { out ->
                     while (true) {
+                        awaitTransfer(id, DownloadPhase.Transferring)
                         if (cancelled()) throw CancellationException()
                         val n = input.read(buf)
                         if (n < 0) break
@@ -487,10 +546,13 @@ object Downloader {
                         out.write(buf, 0, n)
                         written += n
                         val now = System.currentTimeMillis()
-                        if (total > 0 && now - lastTick > 200) {
+                        if (now - lastTick > 200) {
                             lastTick = now
-                            val percent = (written * 98 / total).toInt().coerceIn(0, 98)
-                            _progress.update { it + (id to percent) }
+                            if (total > 0) {
+                                val percent = (written * 98 / total).toInt().coerceIn(0, 98)
+                                _progress.update { it + (id to percent) }
+                            }
+                            task(id) { it.copy(bytes = written) }
                         }
                     }
                 }
@@ -519,6 +581,10 @@ object Downloader {
         }
         tmp.delete()
         return false
+        } catch (cancelled: CancellationException) {
+            tmp.delete()
+            throw cancelled
+        }
     }
 
     private fun offlineCover(track: Track, available: Long): ByteArray? {

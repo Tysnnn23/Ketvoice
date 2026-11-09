@@ -57,6 +57,7 @@ fun DownloadsScreen() {
     val busy by Downloader.busy.collectAsState()
     val progress by Downloader.progress.collectAsState()
     val activeTracks by Downloader.activeTracks.collectAsState()
+    val tasks by Downloader.tasks.collectAsState()
     val art by ArtworkRepo.covers.collectAsState()
     val total = list.sumOf { it.bytes }
     val shown = (activeTracks.values + list.map { it.track }).distinctBy { it.id }
@@ -189,6 +190,7 @@ fun DownloadsScreen() {
                                     overflow = TextOverflow.Ellipsis
                                 )
                             }
+                            DownloadTaskControls(track, tasks[track.id], track.id in busy)
                         }
                         Spacer(Modifier.width(8.dp))
                         if (item != null) Box(
@@ -246,4 +248,3 @@ private fun formatSize(bytes: Long): String {
         String.format(Locale.FRANCE, "%.1f Mo", mo)
     }
 }
-

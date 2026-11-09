@@ -133,8 +133,8 @@ float4 main(float2 coord) {
     // A local luminance-adaptive veil preserves the colours without letting black
     // labels disappear over a dark cover (or white labels over a bright cover).
     float veil = materialDark > 0.5
-        ? 0.36 * smoothstep(0.18, 0.85, luma)
-        : 0.30 * (1.0 - smoothstep(0.25, 0.80, luma));
+        ? 0.58 * smoothstep(0.18, 0.85, luma)
+        : 0.52 * (1.0 - smoothstep(0.25, 0.80, luma));
     color.rgb = mix(color.rgb, materialDark > 0.5 ? float3(0.08) : float3(1.0), veil);
 
     // Épaisseur : lisière lumineuse du côté de la lumière, assombrie du côté
@@ -156,7 +156,7 @@ float4 main(float2 coord) {
     color.rgb -= edgeDark * thickness * max(-facing, 0.0);
     // Contour capillaire net : la limite du matériau, sur fond clair ou sombre.
     float contour = clamp(1.0 + sd / (1.2 * px), 0.0, 1.0);
-    color.rgb += 0.05 * contour;
+    color.rgb += 0.018 * contour;
     // Caustique : la lumière s'accumule juste à l'intérieur de l'arête éclairée.
     float caustic = (1.0 - smoothstep(0.0, 0.55, -sd / max(refractionHeight, 1.0))) * max(facing, 0.0);
     color.rgb += rimLight * 0.10 * caustic;
@@ -213,7 +213,7 @@ fun BackdropEffectScope.liquidGlass(
         shader.setFloatUniform("cornerRadii", radii)
         shader.setFloatUniform("refractionHeight", lens.heightPx)
         shader.setFloatUniform("refractionAmount", lens.amountPx)
-        shader.setFloatUniform("dispersion", 0.035f)
+        shader.setFloatUniform("dispersion", 0.012f)
         shader.setFloatUniform("depthEffect", 0f)
         if (params.dark) {
             shader.setFloatUniform("tint", 0.16f, 0.16f, 0.19f, params.tintAlpha)
@@ -224,7 +224,7 @@ fun BackdropEffectScope.liquidGlass(
         shader.setFloatUniform("brightness", params.brightness * (1f + params.exposure))
         shader.setFloatUniform("edgeDark", if (params.dark) 0.09f else 0.055f)
         shader.setFloatUniform("rimLight", params.highlightAlpha * 0.85f)
-        shader.setFloatUniform("sheen", if (params.dark) 0.035f else 0.045f)
+        shader.setFloatUniform("sheen", if (params.dark) 0.018f else 0.022f)
         shader.setFloatUniform("materialDark", if (params.dark) 1f else 0f)
         shader.setFloatUniform("lightDir", -0.7071f, -0.7071f)
         shader.setFloatUniform("pixelScale", density)

@@ -19,6 +19,9 @@ object AppText {
                     .bufferedReader(Charsets.UTF_8)
                     .use { it.readText() }
                 val root = JSONObject(raw)
+                val visual = JSONObject(context.applicationContext.assets.open("visual-refresh-translations.json")
+                    .bufferedReader(Charsets.UTF_8).use { it.readText() })
+                val visualKeys = visual.getJSONArray("keys")
                 AppLanguage.all.forEach { language ->
                     if (language == AppLanguage.FRENCH) return@forEach
                     val obj = root.optJSONObject(language.code) ?: return@forEach
@@ -27,6 +30,9 @@ object AppText {
                         val value = obj.optString(key)
                         if (value.isNotBlank()) map[key] = value
                     }
+                    val extra = visual.getJSONObject("translations").getJSONArray(language.code)
+                    check(extra.length() == visualKeys.length()) { "Incomplete visual refresh translations" }
+                    for (index in 0 until visualKeys.length()) map[visualKeys.getString(index)] = extra.getString(index)
                     if (map.isNotEmpty()) dictionaries[language.code] = UiTextDictionary(map)
                 }
             }.onFailure { android.util.Log.e("KetvoiceText", "Could not load bundled translations", it) }

@@ -13,6 +13,28 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
 class AppearanceSettingsHostTest {
+    @Test fun glassStatsAndWifiChoicesSurviveReload() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        SettingsStore.load(context)
+        try {
+            AppSettings.glassStyle.value = 2
+            AppSettings.techStats.value = true
+            AppSettings.downloadsWifiOnly.value = true
+            SettingsStore.save()
+            AppSettings.glassStyle.value = 0
+            AppSettings.techStats.value = false
+            AppSettings.downloadsWifiOnly.value = false
+            SettingsStore.load(context)
+            assertEquals(2, AppSettings.glassStyle.value)
+            assertTrue(AppSettings.techStats.value)
+            assertTrue(AppSettings.downloadsWifiOnly.value)
+        } finally {
+            AppSettings.glassStyle.value = 0
+            AppSettings.techStats.value = false
+            AppSettings.downloadsWifiOnly.value = false
+            SettingsStore.save()
+        }
+    }
     @After fun reset() { AppSettings.artistSignatures.value = false; AppSettings.highRefreshRate.value = false }
     @Test fun unusedLegacySignatureFlagCannotEnableNetworkWithoutConsent() {
         val context = ApplicationProvider.getApplicationContext<Context>()

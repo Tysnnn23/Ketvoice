@@ -52,7 +52,10 @@ data class PlayerUiState(
     val quality: String = "",
     val playWhenReady: Boolean = false,
     val buffering: Boolean = false,
-    val failed: Boolean = false
+    val failed: Boolean = false,
+    val audioSource: String = "",
+    val searchingBetter: Boolean = false,
+    val audioFallback: Boolean = false
 ) {
     val current: Track? get() = if (index in queue.indices) queue[index] else null
 }
@@ -101,6 +104,19 @@ object Player {
     private val _state = MutableStateFlow(PlayerUiState())
     val state: StateFlow<PlayerUiState> = _state
 
+    /** Decoder-selected format only. Provider labels are not proof of lossless audio. */
+    fun decodedAudioInfo(): String {
+        val group = controller?.currentTracks?.groups?.firstOrNull {
+            it.type == androidx.media3.common.C.TRACK_TYPE_AUDIO && it.isSelected
+        } ?: return "Format audio en attente"
+        val index = (0 until group.length).firstOrNull { group.isTrackSelected(it) } ?: return "Format audio en attente"
+        val format = group.getTrackFormat(index)
+        return listOfNotNull(format.sampleMimeType,
+            format.sampleRate.takeIf { it > 0 }?.let { "$it Hz" },
+            format.bitrate.takeIf { it > 0 }?.let { "${it / 1000} kb/s" },
+            format.channelCount.takeIf { it > 0 }?.let { "$it ch" }).joinToString(" · ")
+    }
+
     private var lastEndedKey: Pair<String?, Int>? = null
 
     private val listener = object : Player.Listener {
@@ -111,6 +127,7 @@ object Player {
             }
         }
         override fun onPlayerError(error: PlaybackException) {
+            _state.value = _state.value.copy(audioFallback = true)
             val track = _state.value.current ?: return
             val failed = activeStream
             failed?.url?.let { failedStreamUrls += it }
@@ -331,7 +348,7 @@ object Player {
             if (resolvedTrack.id.startsWith("local:") && resolvedTrack.streamUrl != null) {
                 activeStream = null
                 startItem(c, resolvedTrack, resolvedTrack.streamUrl, startPositionMs.coerceAtLeast(0), desiredPlay)
-                _state.value = _state.value.copy(quality = "Fichier local", buffering = false)
+                _state.value = _state.value.copy(quality = "Fichier local", buffering = false, audioSource = "Fichier local")
                 resolving = false
                 return@launch
             }
@@ -339,7 +356,7 @@ object Player {
             if (local != null) {
                 activeStream = null
                 startItem(c, resolvedTrack, local.file.toURI().toString(), startPositionMs.coerceAtLeast(0), desiredPlay)
-                _state.value = _state.value.copy(quality = "Téléchargé · ${local.format}")
+                _state.value = _state.value.copy(quality = "Téléchargé · ${local.format}", audioSource = "Téléchargé")
                 return@launch
             }
 
@@ -352,7 +369,7 @@ object Player {
             }
             if (cached != null && com.ketvoice.app.data.ImportedSong.id(resolvedTrack) == null) {
                 start(cached)
-                _state.value = _state.value.copy(quality = "En cache · ${label(cached)}")
+                _state.value = _state.value.copy(quality = "En cache · ${label(cached)}", audioSource = "En cache")
                 return@launch
             }
             if (resolvedTrack.addon == "upload" || resolvedTrack.id.startsWith("kv:upload:")) {
@@ -363,6 +380,7 @@ object Player {
                     return@launch
                 }
                 start(stream)
+                _state.value = _state.value.copy(audioSource = "Publication Ketvoice")
                 AudioCache.cacheWhole(track.id, stream)
                 return@launch
             }
@@ -371,6 +389,10 @@ object Player {
             // the live item in the background. Quality preference no longer gates
             // the start of playback, only whether an upgrade is allowed.
             val highQuality = qualitySetting() != "Normal"
+            _state.value = _state.value.copy(searchingBetter = highQuality)
+            kotlinx.coroutines.currentCoroutineContext()[Job]?.invokeOnCompletion {
+                if (gen == generation) _state.value = _state.value.copy(searchingBetter = false)
+            }
             var currentStream: MusicApi.StreamInfo? = null
             suspend fun upgrade(stream: MusicApi.StreamInfo) {
                 if (!highQuality || stream.url == currentStream?.url || gen != generation ||
@@ -414,6 +436,14 @@ object Player {
                 withTimeoutOrNull(TOTAL_RESOLVE_BUDGET_MS) {
                     candidates.collect { candidate ->
                         if (gen != generation) throw kotlinx.coroutines.CancellationException()
+                        if (currentStream == null || (highQuality && StreamQuality.rank(candidate.stream) > StreamQuality.rank(currentStream!!))) {
+                            _state.value = _state.value.copy(audioSource = when (candidate.sourceId) {
+                                "api:um" -> "Ultra MAX"
+                                "api:last" -> "Last Babe"
+                                "youtube" -> "YouTube Music"
+                                else -> "Source personnalisée"
+                            })
+                        }
                         if (currentStream == null) {
                             currentStream = candidate.stream
                             // Playback starts on the first real audio byte; ExoPlayer keeps
@@ -526,6 +556,22 @@ object Player {
             keys.add(java.util.UUID.randomUUID().toString())
         }
         _state.value = s.copy(queue = q, queueEntryIds = keys)
+    }
+
+    /** Return the inserted occurrence, not a track id (duplicates are valid). */
+    fun queueWithUndo(track: Track, next: Boolean): String? {
+        val before = _state.value.queueEntryIds.toSet()
+        if (next) playNext(track) else enqueue(listOf(track))
+        return _state.value.queueEntryIds.firstOrNull { it !in before }
+    }
+
+    fun undoQueuedEntry(entryId: String): Boolean {
+        val s = _state.value
+        val at = s.queueEntryIds.indexOf(entryId)
+        // Undo must never stop a title the listener has since started.
+        if (at < 0 || at == s.index) return false
+        removeAt(at)
+        return true
     }
 
     /** Saute directement à une piste de la file. */

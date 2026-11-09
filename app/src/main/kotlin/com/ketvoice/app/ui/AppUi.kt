@@ -173,6 +173,7 @@ object AppUi {
     )
     val playerCoverBounds = androidx.compose.runtime.mutableStateOf<androidx.compose.ui.geometry.Rect?>(null)
     val miniCoverBounds = androidx.compose.runtime.mutableStateOf<androidx.compose.ui.geometry.Rect?>(null)
+    val miniPlayerBounds = androidx.compose.runtime.mutableStateOf<androidx.compose.ui.geometry.Rect?>(null)
     val coverFlight = androidx.compose.runtime.mutableStateOf<CoverFlight?>(null)
 
     /** Vue paroles dans le lecteur */

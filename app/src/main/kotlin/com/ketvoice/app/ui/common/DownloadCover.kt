@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -35,6 +37,8 @@ fun DownloadCover(track: Track, url: String?, size: Dp, radius: Dp = 9.dp) {
     val busy by Downloader.busy.collectAsState()
     val progress by Downloader.progress.collectAsState()
     val saved by Downloader.items.collectAsState()
+    val tasks by Downloader.tasks.collectAsState()
+    val phase = tasks[track.id]?.phase
     val active = track.id in busy
     val downloaded = saved.any { it.track.id == track.id }
     var observedJob by remember(track.id) { mutableStateOf(active) }
@@ -59,6 +63,11 @@ fun DownloadCover(track: Track, url: String?, size: Dp, radius: Dp = 9.dp) {
                 val stroke = Stroke(3.dp.toPx(), cap = StrokeCap.Round)
                 drawArc(Color.White.copy(alpha = .30f), -90f, 360f, false, style = stroke)
                 drawArc(accent, -90f, 360f * fraction, false, style = stroke)
+            }
+            if (phase == com.ketvoice.app.data.DownloadPhase.Paused || phase == com.ketvoice.app.data.DownloadPhase.WaitingWifi) {
+                Icon(if (phase == com.ketvoice.app.data.DownloadPhase.Paused) Icons.Filled.Pause else Icons.Filled.Wifi,
+                    if (phase == com.ketvoice.app.data.DownloadPhase.Paused) "En pause" else "En attente du Wi-Fi",
+                    tint = Color.White, modifier = Modifier.align(Alignment.Center).size(size * .28f))
             }
         }
         AnimatedVisibility(visible = complete, modifier = Modifier.align(Alignment.BottomEnd),

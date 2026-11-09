@@ -16,6 +16,9 @@ object AppSettings {
     val animatedArtwork = mutableStateOf(true)
     /** Album/collection pages may show the album Canvas instead of the cover. */
     val albumHeroCanvas = mutableStateOf(true)
+    /** 0 clear optical glass, 1 frosted, 2 opaque accessibility material. */
+    val glassStyle = mutableStateOf(0)
+    val downloadsWifiOnly = mutableStateOf(false)
     val panoramicCanvas = mutableStateOf(false)
     val sonicCanvas = mutableStateOf(false)
     val albumColors = mutableStateOf(true)

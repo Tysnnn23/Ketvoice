@@ -29,8 +29,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreHoriz
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.StarBorder
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Share
 import com.ketvoice.app.ui.common.Icon
 import com.ketvoice.app.ui.common.Text
@@ -246,7 +246,8 @@ fun FullPlayerScreen(
         // Translation verticale + fondu + coin supérieur arrondi qui se dessine
         // au fil du drag (feuille iOS). Relâché bas : rebord spring ; assez bas
         // ou rapide : glisse hors écran puis fermeture réelle.
-        val dismissOffset = remember { Animatable(0f) }
+        val presentationOffset = LocalPlayerDismissOffset.current
+        val dismissOffset = presentationOffset ?: remember { Animatable(0f) }
         val dismissScope = rememberCoroutineScope()
         val screenH = with(LocalDensity.current) { maxHeight.toPx() }
         fun settleDismiss() {
@@ -260,11 +261,11 @@ fun FullPlayerScreen(
         }
         fun completeDismiss() {
             dismissScope.launch {
-                if (!Motion.reduced) dismissOffset.animateTo(
+                if (presentationOffset == null && !Motion.reduced) dismissOffset.animateTo(
                     screenH, tween(Motion.duration(260), easing = FastOutSlowInEasing)
                 )
-                onDismiss()
-                dismissOffset.snapTo(0f)
+                closeInstant()
+                if (presentationOffset == null) dismissOffset.snapTo(0f)
             }
         }
         fun requestClose() {
@@ -299,10 +300,10 @@ fun FullPlayerScreen(
                 .fillMaxSize()
                 .graphicsLayer {
                     val p = (dismissOffset.value / screenH).coerceIn(0f, 1f)
-                    translationY = dismissOffset.value
-                    alpha = 1f - p * 0.45f
+                    translationY = if (presentationOffset == null) dismissOffset.value else 0f
+                    alpha = if (presentationOffset == null) 1f - p * 0.45f else 1f
                     // Coin de feuille qui se dessine au fil du drag.
-                    if (p > 0.008f && !Motion.reduced) {
+                    if (presentationOffset == null && p > 0.008f && !Motion.reduced) {
                         val corner = (44f * p.coerceAtMost(1f)).dp.toPx()
                         shape = RoundedCornerShape(topStart = corner, topEnd = corner)
                         clip = true
@@ -415,6 +416,7 @@ fun FullPlayerScreen(
                             } else LyricsPreviewLine { navigate(PlayerPage.LYRICS) }
                         }
                         ScrubBar(state.durationMs, Modifier.fillMaxWidth(), onSeek = Player::seekTo)
+                        AudioStatsInfo(Modifier.fillMaxWidth())
                         Box(Modifier.weight(1f).fillMaxWidth()) {
                             PlayerTransport(state.playWhenReady, Modifier.fillMaxSize(), Player::previous, Player::toggle, Player::next)
                             if (state.buffering) Text("Chargement…", color = Color.White.copy(alpha = .42f), fontSize = 10.sp,
@@ -508,7 +510,7 @@ internal fun PlayerTitle(track: Track, compact: Boolean, cover: String?, sheetAc
             AppSettings.favoriteIds.value = if (favorite) AppSettings.favoriteIds.value - track.id else AppSettings.favoriteIds.value + track.id
             SettingsStore.save()
         }, active = favorite, size = 36.dp) {
-            Icon(if (favorite) Icons.Filled.Star else Icons.Filled.StarBorder,
+            Icon(if (favorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
                 if (favorite) "Retirer des favoris" else "Ajouter aux favoris", tint = starColor,
                 modifier = Modifier.size(23.dp).graphicsLayer { scaleX = pulse.value; scaleY = pulse.value })
         }

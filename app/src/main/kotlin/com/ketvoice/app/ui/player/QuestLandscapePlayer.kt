@@ -126,6 +126,7 @@ private fun QuestMobileControls(
     PlayerTitle(track, false, cover, onTrackMenu, Modifier.fillMaxWidth())
     Spacer(Modifier.height(10.dp))
     ScrubBar(state.durationMs, Modifier.fillMaxWidth(), onSeek = Player::seekTo)
+    AudioStatsInfo(Modifier.fillMaxWidth())
     PlayerTransport(state.playWhenReady, Modifier.fillMaxWidth().height(88.dp), Player::previous, Player::toggle, Player::next)
     PlayerVolume(Modifier.fillMaxWidth(), compact = true)
     Spacer(Modifier.height(8.dp))

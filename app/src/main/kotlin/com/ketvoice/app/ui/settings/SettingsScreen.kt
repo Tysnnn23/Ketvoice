@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Person
@@ -93,6 +94,8 @@ private val noRip: MutableInteractionSource = MutableInteractionSource()
  */
 @Composable
 fun SettingsScreen() {
+    var glassPreview by remember { mutableStateOf(false) }
+    if (glassPreview) GlassAppearancePreview { glassPreview = false }
     val th = LocalTheme.current
     val ctx = LocalContext.current
     var editSetting by remember { mutableStateOf("") }
@@ -232,6 +235,15 @@ fun SettingsScreen() {
                 }
             }
             Section("APPARENCE") {
+                SRow(Icons.Filled.Brightness6, "Aperçu du verre", sub = "Comparer Clair, Dépoli et Opaque avant d'appliquer") {
+                    glassPreview = true
+                }
+                SToggle(Icons.Filled.Info, "Stats info", "Informations audio réelles, uniquement dans le lecteur", AppSettings.techStats.value) {
+                    AppSettings.techStats.value = it; SettingsStore.save()
+                }
+                SToggle(Icons.Filled.Wifi, "Téléchargements en Wi-Fi uniquement", "Les transferts attendent une connexion Wi-Fi", AppSettings.downloadsWifiOnly.value) {
+                    AppSettings.downloadsWifiOnly.value = it; SettingsStore.save()
+                }
                 SToggle(Icons.Filled.Image, "Photos d'artiste HD",
                     "Portrait ou fond haute résolution quand il existe. Aucune photo de remplacement inventée.",
                     AppSettings.artistPhotos.value) { AppSettings.artistPhotos.value = it; SettingsStore.save() }

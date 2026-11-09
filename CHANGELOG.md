@@ -7,6 +7,27 @@
 
 ---
 
+# Ketvoice 4.2.0
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 80** — album artwork, a single reversible player reveal, glass
+appearance preview, optional Stats info, safe queue shortcuts and download controls.
+
+- Album images start at the top edge with no large white overlay; colour is local
+  to the album being viewed.
+- Replaced competing player/cover animations with a single rounded-surface reveal.
+- Clear/Frosted/Opaque preview, restrained optical controls, matte track menus,
+  animated play/pause glyph and a resizing mini-player.
+- Optional decoder-derived Stats info in the player only, off by default.
+- Album/search swipe queue actions with occurrence-specific Undo.
+- In-process pause/resume/cancel/retry, validated HTTP Range recovery, optional
+  Wi-Fi gate and real remaining-byte information for downloads.
+
+Full notes and explicit validation limits: [4.2.0](docs/releases/v4.2.0.md).
+
+---
+
 # Ketvoice 4.1.0
 
 ![Ketvoice](ketvoice-banner.png)
