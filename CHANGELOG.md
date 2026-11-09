@@ -7,6 +7,31 @@
 
 ---
 
+# Ketvoice 4.3.0
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 81** — coordinated navigation, artist/album reveals and a guarded
+native Bit-Perfect PCM path on compatible Android 14+ USB outputs.
+
+- Sliding glass navigation lens, elastic icon/label feedback and directional tab
+  motion, with saved tab/scroll state.
+- Detail pages open from the selected card and close toward its saved origin.
+  Outgoing pages keep their own immutable request during rapid navigation.
+- Artist header parallax, continuous top-bar collapse, staggered identity/actions
+  and a loading skeleton. Album artwork reveals progressively and dissolves into
+  its local colour without painting a broad white veil over the image.
+- Optional Bit-Perfect setting uses Android's advertised BIT_PERFECT mixer contract
+  and a native PCM AudioTrack. Active requires live route/format/ownership checks;
+  refusals, unsupported outputs and incompatible formats fall back transparently.
+- App DSP, EQ, skip-silence and progressive handoff are bypassed while requested;
+  preferences are retained for standard mode. Optional player Stats info stays off
+  by default. No proprietary USB driver or unverifiable hardware guarantee.
+
+Full notes and explicit host/hardware validation limits: [4.3.0](docs/releases/v4.3.0.md).
+
+---
+
 # Ketvoice 4.2.0
 
 ![Ketvoice](ketvoice-banner.png)

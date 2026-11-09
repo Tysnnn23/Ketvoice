@@ -10,7 +10,6 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
@@ -166,51 +165,26 @@ fun AppRoot() {
                     Box(Modifier.fillMaxSize().padding(start = if (queueOverlay) 0.dp else layout.railWidthDp.dp), contentAlignment = Alignment.TopCenter) {
                     Box(Modifier.widthIn(max = pageMaxWidth).fillMaxSize()
                         .padding(horizontal = if (layout.hasRail && !queueOverlay) 16.dp else 0.dp)) {
-                    AnimatedContent(
-                        targetState = AppUi.tab.value to AppUi.overlay.value,
-                        contentAlignment = Alignment.Center,
-                        transitionSpec = {
-                            // Push : la page suivante entre par la droite.
-                            // Pop : la page précédente revient par la gauche.
-                            // Jump : fondu vertical (onglets, racine).
-                            when (AppUi.navKind.intValue) {
-                                AppUi.NAV_PUSH -> (fadeIn(tween(Motion.duration())) + slideInHorizontally(
-                                    tween(Motion.duration(), easing = FastOutSlowInEasing)
-                                ) { full -> full / 5 }).togetherWith(
-                                    fadeOut(tween(Motion.duration()))
-                                )
-                                AppUi.NAV_POP -> (fadeIn(tween(Motion.duration())) + slideInHorizontally(
-                                    tween(Motion.duration(), easing = FastOutSlowInEasing)
-                                ) { full -> -full / 5 }).togetherWith(
-                                    fadeOut(tween(Motion.duration()))
-                                )
-                                else -> (fadeIn(tween(Motion.duration())) + slideInVertically(
-                                    tween(Motion.duration(), easing = FastOutSlowInEasing)
-                                ) { fullHeight -> fullHeight / 14 }).togetherWith(
-                                    fadeOut(tween(Motion.duration()))
-                                )
+                    NavigationPresentation(AppUi.tab.value to AppUi.snapshot()) { tab, entry ->
+                        val overlay = entry.overlay
+                            if (overlay == AppUi.NONE) {
+                                when (tab) {
+                                    AppUi.HOME -> HomeScreen()
+                                    AppUi.EXPLORER -> ExplorerScreen()
+                                    else -> LibraryScreen()
+                                }
+                            } else {
+                                when (overlay) {
+                                    AppUi.SEARCH -> SearchScreen()
+                                    AppUi.SETTINGS -> SettingsScreen()
+                                    AppUi.QUEUE -> QueueScreen()
+                                    AppUi.CATALOG -> com.ketvoice.app.ui.sub.CatalogScreen(entry.catalogRequest)
+                                    AppUi.ARTIST -> com.ketvoice.app.ui.sub.ArtistScreen(entry.artistRequest)
+                                    AppUi.PLAYLIST -> com.ketvoice.app.ui.library.PlaylistScreen()
+                                    AppUi.SOURCES -> com.ketvoice.app.ui.sub.SourcesScreen()
+                                    else -> SubScreensRouter()
+                                }
                             }
-                        },
-                        label = "nav"
-                    ) { (tab, overlay) ->
-                        if (overlay == AppUi.NONE) {
-                            when (tab) {
-                                AppUi.HOME -> HomeScreen()
-                                AppUi.EXPLORER -> ExplorerScreen()
-                                else -> LibraryScreen()
-                            }
-                        } else {
-                            when (overlay) {
-                                AppUi.SEARCH -> SearchScreen()
-                                AppUi.SETTINGS -> SettingsScreen()
-                                AppUi.QUEUE -> QueueScreen()
-                                AppUi.CATALOG -> com.ketvoice.app.ui.sub.CatalogScreen()
-                                AppUi.ARTIST -> com.ketvoice.app.ui.sub.ArtistScreen()
-                                AppUi.PLAYLIST -> com.ketvoice.app.ui.library.PlaylistScreen()
-                                AppUi.SOURCES -> com.ketvoice.app.ui.sub.SourcesScreen()
-                                else -> SubScreensRouter()
-                            }
-                        }
                     }
                     }
                     }

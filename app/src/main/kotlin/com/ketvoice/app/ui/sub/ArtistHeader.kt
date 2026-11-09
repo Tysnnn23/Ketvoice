@@ -37,10 +37,12 @@ import com.ketvoice.app.player.Player
 import com.ketvoice.app.theme.LocalTheme
 import com.ketvoice.app.ui.common.Icon
 import com.ketvoice.app.ui.common.Text
+import com.ketvoice.app.ui.motion.Motion
+import com.ketvoice.app.ui.motion.StaggeredReveal
 
 /** Portrait-led hero only; the app's navigation and catalogue remain unchanged. */
 @Composable
-internal fun ArtistHeader(page: ArtistPage) {
+internal fun ArtistHeader(page: ArtistPage, collapse: () -> Float = { 0f }) {
     val theme = LocalTheme.current
     val context = LocalContext.current
     val onAccent = if (theme.accent.luminance() > .179f) Color.Black else Color.White
@@ -56,11 +58,11 @@ internal fun ArtistHeader(page: ArtistPage) {
     val hero = artwork.hero ?: sourcePhoto
     val ratio = page.heroAspectRatio.takeIf { it.isFinite() && it > 0f } ?: 1f
     val wide = ratio > 1.6f
-    val heroRequest = remember(hero) {
-        ImageRequest.Builder(context).data(hero).crossfade(220).build()
+    val heroRequest = remember(hero, Motion.reduced) {
+        ImageRequest.Builder(context).data(hero).crossfade(Motion.duration(280)).build()
     }
-    val ambienceRequest = remember(hero) {
-        ImageRequest.Builder(context).data(hero).crossfade(220).build()
+    val ambienceRequest = remember(hero, Motion.reduced) {
+        ImageRequest.Builder(context).data(hero).crossfade(Motion.duration(280)).build()
     }
     Column(Modifier.fillMaxWidth()) {
         BoxWithConstraints(Modifier.fillMaxWidth()) {
@@ -68,10 +70,15 @@ internal fun ArtistHeader(page: ArtistPage) {
             Box(Modifier.fillMaxWidth().height(height).clipToBounds().background(theme.background)) {
                 if (hero != null) {
                     // Blurred ambience fills the frame, so a wide banner never leaves
-                    // two flat bands beside the artwork.
+                    // two flat bands beside the artwork. It lags slightly behind the
+                    // scroll so the compaction reads as depth, not a hard cut.
                     AsyncImage(ambienceRequest, null, contentScale = ContentScale.Crop,
                         alignment = Alignment.Center,
-                        modifier = Modifier.fillMaxSize().blur(42.dp).graphicsLayer { alpha = .58f })
+                        modifier = Modifier.fillMaxSize().blur(42.dp).graphicsLayer {
+                            val c = collapse().coerceIn(0f, 1f)
+                            alpha = .58f * (1f - c * .35f)
+                            translationY = if (Motion.reduced) 0f else c * size.height * .10f
+                        })
                     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(
                         0f to Color.Black.copy(alpha = .24f),
                         .40f to Color.Transparent,
@@ -83,7 +90,12 @@ internal fun ArtistHeader(page: ArtistPage) {
                     // A slight overscan hides any residual seam from odd aspect ratios.
                     AsyncImage(heroRequest, page.artist.name, contentScale = ContentScale.Crop,
                         alignment = Alignment.TopCenter,
-                        modifier = Modifier.fillMaxSize().graphicsLayer { scaleX = 1.06f; scaleY = 1.06f })
+                        modifier = Modifier.fillMaxSize().graphicsLayer {
+                            val c = collapse().coerceIn(0f, 1f)
+                            scaleX = 1.06f; scaleY = 1.06f
+                            translationY = if (Motion.reduced) 0f else c * size.height * .07f
+                            alpha = 1f - c * .18f
+                        })
                     // Side feathers dissolve the last pixels into the ambience instead
                     // of a hard rectangle edge.
                     Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(
@@ -116,12 +128,14 @@ internal fun ArtistHeader(page: ArtistPage) {
                 val drawn: ArtistSignature? = artwork.signature ?: artwork.logo
                 Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal = 24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally) {
-                    ArtistIdentity(page.artist.name, drawn)
+                    StaggeredReveal(order = 0) { ArtistIdentity(page.artist.name, drawn) }
                 }
             }
         }
-        Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Row(Modifier.padding(top = 8.dp, bottom = 18.dp), verticalAlignment = Alignment.CenterVertically) {
+        StaggeredReveal(order = 1, modifier = Modifier.fillMaxWidth()) {
+            Row(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp)
+                .padding(bottom = 10.dp), verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center) {
                 if (page.listeners.isNotBlank()) {
                     Text(page.listeners, localize = false, color = theme.secondary, fontSize = 12.5.sp,
                         maxLines = 1, overflow = TextOverflow.Ellipsis,
@@ -131,7 +145,8 @@ internal fun ArtistHeader(page: ArtistPage) {
                 Text("YouTube Music", color = theme.secondary, fontSize = 12.5.sp, maxLines = 1)
             }
         }
-        if (page.tracks.isNotEmpty()) Row(
+        if (page.tracks.isNotEmpty()) StaggeredReveal(order = 2, modifier = Modifier.fillMaxWidth()) {
+        Row(
             Modifier.fillMaxWidth().padding(start = 24.dp, end = 24.dp, top = 2.dp, bottom = 18.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
@@ -155,6 +170,7 @@ internal fun ArtistHeader(page: ArtistPage) {
                     Text("Aléatoire", color = theme.accent, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                 }
             }
+        }
         }
     }
 }

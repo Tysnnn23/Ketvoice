@@ -388,14 +388,14 @@ object Player {
             // [FIRST_BYTE_BUDGET_MS], then better streams keep arriving and upgrade
             // the live item in the background. Quality preference no longer gates
             // the start of playback, only whether an upgrade is allowed.
-            val highQuality = qualitySetting() != "Normal"
+            val highQuality = qualitySetting() != "Normal" && !AppSettings.bitPerfect.value
             _state.value = _state.value.copy(searchingBetter = highQuality)
             kotlinx.coroutines.currentCoroutineContext()[Job]?.invokeOnCompletion {
                 if (gen == generation) _state.value = _state.value.copy(searchingBetter = false)
             }
             var currentStream: MusicApi.StreamInfo? = null
             suspend fun upgrade(stream: MusicApi.StreamInfo) {
-                if (!highQuality || stream.url == currentStream?.url || gen != generation ||
+                if (AppSettings.bitPerfect.value || !highQuality || stream.url == currentStream?.url || gen != generation ||
                     StreamQuality.rank(stream) <= (currentStream?.let(StreamQuality::rank) ?: 0)) return
                 val future = c.sendCustomCommand(androidx.media3.session.SessionCommand(PlaybackService.CMD_UPGRADE, Bundle.EMPTY),
                     Bundle().apply {
@@ -796,6 +796,43 @@ object Player {
 
     private fun cancelQualityUpgrade() {
         controller?.sendCustomCommand(androidx.media3.session.SessionCommand(PlaybackService.CMD_CANCEL_UPGRADE, Bundle.EMPTY), Bundle.EMPTY)
+    }
+
+    /**
+     * Enables the verified native PCM path. The service rebuilds its player so
+     * the exact sink is installed before the next buffer; the status is never
+     * set to Active here, only after the sink has confirmed the real route.
+     */
+    fun setBitPerfect(enabled: Boolean) {
+        if (AppSettings.bitPerfect.value == enabled) return
+        AppSettings.bitPerfect.value = enabled
+        if (enabled) {
+            cancelQualityUpgrade()
+            _state.value = _state.value.copy(searchingBetter = false)
+        }
+        if (enabled && android.os.Build.VERSION.SDK_INT < 34) {
+            BitPerfectState.report(
+                ExactAudioStatus(ExactAudioPhase.Unavailable, "Android 14 et un mixeur compatible sont requis")
+            )
+        } else if (enabled) {
+            BitPerfectState.report(
+                ExactAudioStatus(ExactAudioPhase.Pending, "Vérification du chemin audio…")
+            )
+        } else {
+            BitPerfectState.reset()
+        }
+        val c = controller ?: run {
+            if (enabled && android.os.Build.VERSION.SDK_INT >= 34) {
+                BitPerfectState.report(
+                    ExactAudioStatus(ExactAudioPhase.Pending, "En attente de lecture")
+                )
+            }
+            return
+        }
+        c.sendCustomCommand(
+            androidx.media3.session.SessionCommand(PlaybackService.CMD_BIT_PERFECT, Bundle.EMPTY),
+            Bundle().apply { putBoolean("enabled", enabled) }
+        )
     }
 
     fun setReverb(amount: Int, size: Int, damping: Int) {

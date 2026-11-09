@@ -119,6 +119,7 @@ object SettingsStore {
         s.lastfmGenres.value = p.getBoolean("lastfmGenres", s.lastfmGenres.value)
         s.smartAudioAlignment.value = p.getBoolean("smartAudioAlignment", s.smartAudioAlignment.value)
         s.techStats.value = p.getBoolean("techStats", s.techStats.value)
+        s.bitPerfect.value = p.getBoolean("bitPerfect", false)
         s.appIconVariant.value = p.getInt("appIconVariant", s.appIconVariant.value)
     }
 
@@ -189,6 +190,7 @@ object SettingsStore {
             .putBoolean("lastfmGenres", s.lastfmGenres.value)
             .putBoolean("smartAudioAlignment", s.smartAudioAlignment.value)
             .putBoolean("techStats", s.techStats.value)
+            .putBoolean("bitPerfect", s.bitPerfect.value)
             .putInt("appIconVariant", s.appIconVariant.value)
             .also { editor -> DesignChoices.all.forEach { editor.putBoolean("design212_${it.code}", DesignChoices.enabled(it.code)) } }
             .apply()

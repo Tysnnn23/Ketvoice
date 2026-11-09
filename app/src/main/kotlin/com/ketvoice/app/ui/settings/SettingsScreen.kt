@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material.icons.filled.HighQuality
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Language
@@ -70,6 +71,8 @@ import com.ketvoice.app.data.SettingsStore
 import com.ketvoice.app.data.TranslationLanguages
 import com.ketvoice.app.data.YouTubeMusicSession
 import com.ketvoice.app.player.AudioCache
+import com.ketvoice.app.player.BitPerfectState
+import com.ketvoice.app.player.ExactAudioPhase
 import com.ketvoice.app.player.Player
 import com.ketvoice.app.theme.LocalTheme
 import com.ketvoice.app.theme.Palette
@@ -78,6 +81,7 @@ import com.ketvoice.app.glass.GlassParams
 import com.ketvoice.app.theme.T
 import com.ketvoice.app.ui.AppUi
 import com.ketvoice.app.util.LauncherIcons
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 private val noRip: MutableInteractionSource = MutableInteractionSource()
@@ -348,6 +352,12 @@ fun SettingsScreen() {
                 SToggle(Icons.Filled.Analytics, "Qualité progressive",
                     "Activé : les sources sont interrogées en parallèle, le premier flux audio réellement valide démarre, puis une meilleure qualité prend le relais sans couper la lecture. Désactivé : la première source disponible dans l'ordre des Sources est utilisée.",
                     AppSettings.progressiveQuality.value) { AppSettings.progressiveQuality.value = it; SettingsStore.save() }
+                SToggle(
+                    Icons.Filled.HighQuality, "Bit-Perfect",
+                    "Envoie le PCM décodé au mixeur sans rééchantillonnage ni traitement de l'app, lorsque Android et la sortie le permettent. Égaliseur, réverbération et ignorance des silences sont alors désactivés.",
+                    AppSettings.bitPerfect.value
+                ) { Player.setBitPerfect(it); SettingsStore.save() }
+                BitPerfectPanel()
                 SRow(Icons.Filled.Tune, "Égaliseur", sub="Traitement réel de la session audio", value="") { AppUi.showEqualizer.value=true }
                 SRow(Icons.Filled.Wifi, "Transfert sur le même Wi-Fi", sub="Découverte locale et confirmation sur le destinataire", value="") { AppUi.showHandoff.value=true }
                 SRow(
@@ -955,6 +965,70 @@ private fun ColumnScope.SToggle(
         }
         Spacer(Modifier.width(12.dp))
         com.ketvoice.app.ui.common.LiquidGlassSwitch(checked, onCheckedChange = null)
+    }
+}
+
+/**
+ * Status card for the exact path. The dot never turns green from a preference:
+ * the sink promotes it to Active only after Android confirms the mixer and route.
+ */
+@Composable
+private fun ColumnScope.BitPerfectPanel() {
+    if (!AppSettings.bitPerfect.value) return
+    val th = LocalTheme.current
+    val status by BitPerfectState.status.collectAsState()
+    val trackId = Player.state.collectAsState().value.current?.id
+    val decoded by produceState("", trackId) {
+        while (true) {
+            value = Player.decodedAudioInfo()
+            delay(1000)
+        }
+    }
+    val dot = when (status.phase) {
+        ExactAudioPhase.Active -> Color(0xFF34C759)
+        ExactAudioPhase.Pending -> th.accent
+        ExactAudioPhase.Unavailable -> Color(0xFFFF9F0A)
+        ExactAudioPhase.Standard -> th.secondary
+    }
+    val headline = when (status.phase) {
+        ExactAudioPhase.Active -> "Bit-Perfect actif · confirmé par Android"
+        ExactAudioPhase.Pending -> status.reason
+        ExactAudioPhase.Unavailable -> "Chemin exact indisponible"
+        ExactAudioPhase.Standard -> "Sortie standard"
+    }
+    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(8.dp).clip(CircleShape).background(dot))
+            Spacer(Modifier.width(8.dp))
+            Text(headline, color = th.onBackground, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+        }
+        if (status.phase == ExactAudioPhase.Unavailable && status.reason.isNotBlank()) {
+            Text("Sortie standard", color = th.secondary, fontSize = 12.sp,
+                modifier = Modifier.padding(start = 16.dp, top = 4.dp))
+            Text(status.reason, localize = false, color = th.secondary, fontSize = 12.sp, lineHeight = 16.sp,
+                modifier = Modifier.padding(start = 16.dp, top = 4.dp))
+        }
+        status.source?.let {
+            Text("${com.ketvoice.app.data.AppText.t("PCM décodé")} · ${it.describe()}", localize = false,
+                color = th.secondary, fontSize = 12.sp, modifier = Modifier.padding(start = 16.dp, top = 4.dp))
+        }
+        status.output?.let {
+            Text("${com.ketvoice.app.data.AppText.t("Sortie négociée")} · ${it.describe()}", localize = false,
+                color = th.secondary, fontSize = 12.sp, modifier = Modifier.padding(start = 16.dp, top = 2.dp))
+        }
+        if (status.device.isNotBlank()) {
+            Text("${com.ketvoice.app.data.AppText.t("Périphérique")} · ${status.device}", localize = false,
+                color = th.secondary, fontSize = 12.sp, modifier = Modifier.padding(start = 16.dp, top = 2.dp))
+        }
+        if (decoded.isNotBlank()) {
+            Text("${com.ketvoice.app.data.AppText.t("Source")} · $decoded", localize = false,
+                color = th.secondary, fontSize = 12.sp, modifier = Modifier.padding(start = 16.dp, top = 2.dp))
+        }
+        Text(
+            "Android 14+ requis. Le volume système reste géré par Android ; l'app ne revendique le mode exact qu'après confirmation du mixeur et de la sortie.",
+            color = th.secondary, fontSize = 11.sp, lineHeight = 15.sp,
+            modifier = Modifier.padding(start = 16.dp, top = 7.dp)
+        )
     }
 }
 

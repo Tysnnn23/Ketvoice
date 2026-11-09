@@ -88,5 +88,6 @@ object AppSettings {
     val lastfmGenres = mutableStateOf(true)
     val smartAudioAlignment = mutableStateOf(true)
     val techStats = mutableStateOf(false)
+    val bitPerfect = mutableStateOf(false)
     val appIconVariant = mutableStateOf(1)
 }

@@ -34,12 +34,36 @@ class PlaybackService : MediaSessionService() {
     private var upgradeJob: Job? = null
     private var playbackRevision = 0L
     private var stopping = false
+    private val audioDevices = object : android.media.AudioDeviceCallback() {
+        override fun onAudioDevicesAdded(addedDevices: Array<out android.media.AudioDeviceInfo>) {
+            // Re-negotiate when a wired/USB output appears, but never tear down
+            // an idle player that has nothing to re-prepare.
+            if (AppSettings.bitPerfect.value && ::player.isInitialized && player.currentMediaItem != null &&
+                addedDevices.any { it.isSink && it.isExactOutput() }) {
+                rebuildAudioMode()
+            }
+        }
+
+        override fun onAudioDevicesRemoved(removedDevices: Array<out android.media.AudioDeviceInfo>) {
+            if (AppSettings.bitPerfect.value && ::player.isInitialized &&
+                removedDevices.any { it.isSink && it.isExactOutput() }) {
+                // Never unexpectedly continue on the loudspeaker after a DAC unplug.
+                player.pause()
+                if (player.currentMediaItem != null) rebuildAudioMode()
+            }
+        }
+    }
+
+    private fun android.media.AudioDeviceInfo.isExactOutput(): Boolean = type in intArrayOf(
+        android.media.AudioDeviceInfo.TYPE_USB_DEVICE, android.media.AudioDeviceInfo.TYPE_USB_HEADSET,
+        android.media.AudioDeviceInfo.TYPE_WIRED_HEADPHONES, android.media.AudioDeviceInfo.TYPE_WIRED_HEADSET)
 
     override fun onCreate() {
         super.onCreate()
 
         com.ketvoice.app.data.SettingsStore.load(applicationContext)
         player = buildPlayer()
+        getSystemService(android.media.AudioManager::class.java).registerAudioDeviceCallback(audioDevices, android.os.Handler(mainLooper))
         val session = MediaSession.Builder(this, player)
             .setSessionActivity(
                 PendingIntent.getActivity(
@@ -57,6 +81,7 @@ class PlaybackService : MediaSessionService() {
                         .add(SessionCommand(CMD_REVERB, Bundle.EMPTY))
                         .add(SessionCommand(CMD_UPGRADE, Bundle.EMPTY))
                         .add(SessionCommand(CMD_CANCEL_UPGRADE, Bundle.EMPTY))
+                        .add(SessionCommand(CMD_BIT_PERFECT, Bundle.EMPTY))
                         .build()
                     return MediaSession.ConnectionResult.AcceptedResultBuilder(session)
                         .setAvailableSessionCommands(commands).build()
@@ -69,6 +94,11 @@ class PlaybackService : MediaSessionService() {
                 ): ListenableFuture<SessionResult> {
                     if (controller.packageName != packageName) return Futures.immediateFuture(
                         SessionResult(SessionError.ERROR_PERMISSION_DENIED))
+                    if (command.customAction == CMD_BIT_PERFECT) {
+                        AppSettings.bitPerfect.value = args.getBoolean("enabled", false)
+                        rebuildAudioMode()
+                        return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
+                    }
                     if (command.customAction == CMD_CANCEL_UPGRADE) {
                         upgradeJob?.cancel()
                         return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
@@ -81,7 +111,7 @@ class PlaybackService : MediaSessionService() {
                         AppSettings.reverbAmount.value = amount
                         AppSettings.reverbSize.value = size
                         AppSettings.reverbDamping.value = damping
-                        ReverbControl.amount = amount / 100f
+                        ReverbControl.amount = if (AppSettings.bitPerfect.value) 0f else amount / 100f
                         ReverbControl.size = size / 100f
                         ReverbControl.damping = damping / 100f
                         return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
@@ -90,7 +120,7 @@ class PlaybackService : MediaSessionService() {
                         return Futures.immediateFuture(SessionResult(SessionError.ERROR_NOT_SUPPORTED))
                     if (command.customAction == CMD_SKIP_SILENCE) {
                         val on = args.getBoolean("on", false)
-                        player.skipSilenceEnabled = on
+                        player.skipSilenceEnabled = on && !AppSettings.bitPerfect.value
                         AppSettings.skipSilence.value = on
                     }
                     if (command.customAction == CMD_EQUALIZER) AudioEqualizer.apply()
@@ -102,6 +132,9 @@ class PlaybackService : MediaSessionService() {
     }
 
     private fun buildPlayer(standby: Boolean = false): ExoPlayer {
+        val exactRequested = AppSettings.bitPerfect.value
+        if (exactRequested) { AudioEqualizer.release(); ReverbControl.amount = 0f }
+        else ReverbControl.amount = AppSettings.reverbAmount.value / 100f
         lateinit var owner: ExoPlayer
         val meter = object : TeeAudioProcessor.AudioBufferSink {
             private var rate = 0
@@ -119,12 +152,16 @@ class PlaybackService : MediaSessionService() {
             }
         }
         val renderers = object : DefaultRenderersFactory(this) {
-            override fun buildAudioSink(context: android.content.Context, enableFloatOutput: Boolean, enableAudioTrackPlaybackParams: Boolean): AudioSink =
-                ProcessingAudioSink(DefaultAudioSink.Builder(context).setEnableFloatOutput(false)
+            override fun buildAudioSink(context: android.content.Context, enableFloatOutput: Boolean, enableAudioTrackPlaybackParams: Boolean): AudioSink {
+                val fallback = ProcessingAudioSink(DefaultAudioSink.Builder(context).setEnableFloatOutput(false)
                     .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
-                    .setAudioProcessors(arrayOf(ReverbAudioProcessor {
+                    .setAudioProcessors(if (exactRequested) emptyArray() else arrayOf(ReverbAudioProcessor {
                         if (::player.isInitialized && owner === this@PlaybackService.player) ReverbControl.notePcm()
                     }, TeeAudioProcessor(meter))).build())
+                if (exactRequested && android.os.Build.VERSION.SDK_INT >= 34) return BitPerfectAudioSink(context, fallback)
+                if (exactRequested) BitPerfectState.report(ExactAudioStatus(ExactAudioPhase.Unavailable, "Android 14 et un mixeur compatible sont requis"))
+                return fallback
+            }
         }
         val player = ExoPlayer.Builder(this, renderers)
             .setMediaSourceFactory(DefaultMediaSourceFactory(AudioCache.factory(this)))
@@ -144,7 +181,7 @@ class PlaybackService : MediaSessionService() {
             .setWakeMode(C.WAKE_MODE_NETWORK)
             .build()
         owner = player
-        player.skipSilenceEnabled = AppSettings.skipSilence.value
+        player.skipSilenceEnabled = AppSettings.skipSilence.value && !exactRequested
         player.addListener(object : androidx.media3.common.Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 if (owner === this@PlaybackService.player && !isPlaying) SonicMeter.reset()
@@ -166,9 +203,35 @@ class PlaybackService : MediaSessionService() {
         return player
     }
 
+    private fun rebuildAudioMode() {
+        if (!::player.isInitialized || stopping) return
+        upgradeJob?.cancel()
+        val old = player
+        val item = old.currentMediaItem
+        val position = old.currentPosition.coerceAtLeast(0)
+        val play = old.playWhenReady
+        val repeat = old.repeatMode
+        old.pause()
+        BitPerfectState.report(
+            ExactAudioStatus(
+                if (AppSettings.bitPerfect.value) ExactAudioPhase.Pending else ExactAudioPhase.Standard,
+                if (AppSettings.bitPerfect.value) "Vérification du chemin audio…" else "Sortie standard"
+            )
+        )
+        player = buildPlayer()
+        // Media3 player gain stays at unity in both modes: the user-facing volume
+        // is the system media stream, which the app never converts to PCM gain.
+        player.volume = 1f
+        player.repeatMode = repeat
+        mediaSession?.setPlayer(player)
+        old.release()
+        if (item != null) { player.setMediaItem(item, position); player.prepare(); player.playWhenReady = play }
+    }
+
     /** Prepare and decode in isolation. A failed/late candidate never replaces live audio.
      * This is a same-recording quality handoff, never a transition between songs. */
     private fun prepareUpgrade(args: Bundle): ListenableFuture<SessionResult> {
+        if (AppSettings.bitPerfect.value) return Futures.immediateFuture(SessionResult(SessionError.ERROR_NOT_SUPPORTED))
         upgradeJob?.cancel()
         val result = SettableFuture.create<SessionResult>()
         val old = player
@@ -267,6 +330,8 @@ class PlaybackService : MediaSessionService() {
 
     override fun onDestroy() {
         stopping = true
+        getSystemService(android.media.AudioManager::class.java).unregisterAudioDeviceCallback(audioDevices)
+        BitPerfectState.report(ExactAudioStatus())
         serviceScope.cancel()
         SonicMeter.observe(false)
         AudioEqualizer.release()
@@ -283,5 +348,6 @@ class PlaybackService : MediaSessionService() {
         const val CMD_REVERB = "ketvoice.set_reverb"
         const val CMD_UPGRADE = "ketvoice.prepare_quality_upgrade"
         const val CMD_CANCEL_UPGRADE = "ketvoice.cancel_quality_upgrade"
+        const val CMD_BIT_PERFECT = "ketvoice.bit_perfect"
     }
 }

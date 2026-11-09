@@ -43,6 +43,7 @@ class VisualRefreshHostTest {
         AppSettings.reduceAnimations.value = true
     }
     @After fun reset() {
+        AppUi.selectTab(AppUi.HOME)
         state.value = PlayerUiState()
         AppSettings.reduceAnimations.value = false
         AppSettings.techStats.value = false
@@ -77,6 +78,79 @@ class VisualRefreshHostTest {
         val b = image("album-edge-light-no-white-veil")
         val sample = b.getPixel(200, (bounds.height * .82f).toInt())
         assertTrue("Lower image must not be washed white", android.graphics.Color.red(sample) < 220 || android.graphics.Color.blue(sample) < 220)
+    }
+
+    @Test fun albumLoadingAndScrollKeepOneSurface() {
+        var loading by mutableStateOf(true)
+        val tracks = List(30) { Track("qa:scroll:$it", "Track $it", "Artist", "Album") }
+        compose.setContent { KetvoiceTheme(useDark = true) {
+            AlbumPage(CatalogRequest("album", "qa:scroll", "Scroll album"),
+                if (loading) null else CatalogPage("Scroll album", "Artist", null, tracks, "2026"),
+                if (loading) emptyList() else tracks, loading, {})
+        } }
+        compose.onNodeWithTag("album-hero-visual").assertExists()
+        image("album-loading-dark")
+        compose.runOnIdle { loading = false }
+        compose.onNodeWithTag("album-list").performScrollToIndex(15)
+        compose.onNodeWithText("Track 14").assertExists()
+        image("album-scroll-dark")
+    }
+
+    @Test fun navigationRetainsOutgoingRequestsAndSurvivesRapidBackReversal() {
+        AppSettings.reduceAnimations.value = false
+        AppUi.selectTab(AppUi.HOME)
+        compose.mainClock.autoAdvance = false
+        fun advance(ms: Long) {
+            compose.mainClock.advanceTimeByFrame()
+            compose.waitForIdle()
+            compose.mainClock.advanceTimeBy(ms)
+            compose.waitForIdle()
+        }
+        compose.setContent { KetvoiceTheme(useDark = true) {
+            NavigationPresentation(AppUi.tab.intValue to AppUi.snapshot()) { _, entry ->
+                Box(Modifier.fillMaxSize().background(Color(0xFF202020))) {
+                    com.ketvoice.app.ui.common.Text(entry.artistRequest?.name ?: entry.catalogRequest?.title ?: "Root fixture")
+                }
+            }
+        } }
+        compose.runOnIdle { AppUi.openArtist("a", "Artist A", Rect(20f, 200f, 160f, 340f)) }
+        advance(800)
+        assertTrue("Initial artist missing; route=${AppUi.snapshot()}\n${compose.onRoot().printToString()}",
+            compose.onAllNodesWithText("Artist A", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty())
+        compose.runOnIdle { AppUi.openArtist("b", "Artist B", Rect(200f, 400f, 300f, 500f)) }
+        advance(32)
+        assertTrue("Outgoing request missing; reduced=${com.ketvoice.app.ui.motion.Motion.reduced}\n${compose.onRoot().printToString()}",
+            compose.onAllNodesWithText("Artist A", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty())
+        compose.onNodeWithText("Artist B").assertExists()
+        compose.runOnIdle { AppUi.closeOverlay() }
+        advance(80)
+        compose.runOnIdle { AppUi.openCatalog(CatalogRequest("album", "c", "Album C"), Rect(12f, 300f, 160f, 450f)) }
+        advance(80)
+        compose.runOnIdle { AppUi.closeOverlay() }
+        advance(1200)
+        compose.onNodeWithText("Artist A").assertExists()
+        compose.onNodeWithText("Album C").assertDoesNotExist()
+        compose.runOnIdle { AppUi.closeOverlay() }
+        advance(1200)
+        compose.onNodeWithText("Root fixture").assertExists()
+    }
+
+    @Test fun tabScrollPositionSurvivesNavigationAndReducedMotion() {
+        AppUi.selectTab(AppUi.HOME)
+        compose.setContent { KetvoiceTheme(useDark = false) {
+            NavigationPresentation(AppUi.tab.intValue to AppUi.snapshot()) { tab, _ ->
+                val list = androidx.compose.foundation.lazy.rememberLazyListState()
+                androidx.compose.foundation.lazy.LazyColumn(Modifier.fillMaxSize().testTag("tab-list:$tab"), state = list) {
+                    items(100) { row -> com.ketvoice.app.ui.common.Text("Tab $tab row $row", modifier = Modifier.height(48.dp)) }
+                }
+            }
+        } }
+        compose.onNodeWithTag("tab-list:0").performScrollToIndex(35)
+        compose.runOnIdle { AppUi.selectTab(AppUi.EXPLORER) }
+        compose.onNodeWithTag("tab-list:1").performScrollToIndex(12)
+        compose.runOnIdle { AppUi.selectTab(AppUi.HOME) }
+        compose.onNodeWithText("Tab 0 row 35").assertIsDisplayed()
+        compose.onNodeWithText("Tab 0 row 0").assertDoesNotExist()
     }
 
     @Test fun presentationIsReversibleAndUncomposesAfterClosing() {

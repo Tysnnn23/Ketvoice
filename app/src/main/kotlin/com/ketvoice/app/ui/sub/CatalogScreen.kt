@@ -47,8 +47,8 @@ import com.ketvoice.app.ui.common.EmptyState
 import com.ketvoice.app.ui.common.openTrackSearch
 
 @Composable
-fun CatalogScreen() {
-    val request = AppUi.catalogRequest.value ?: return
+fun CatalogScreen(request: CatalogRequest? = AppUi.catalogRequest.value) {
+    request ?: return
     val theme = LocalTheme.current
     val recent by ListeningHistory.tracks.collectAsState()
     val known by ListeningHistory.knownTracks.collectAsState()

@@ -13,6 +13,7 @@ object AudioEqualizer {
     private val _status = MutableStateFlow(EqualizerStatus())
     val status: StateFlow<EqualizerStatus> = _status
     fun bind(sessionId: Int) {
+        if (AppSettings.bitPerfect.value) { release(); return }
         if (sessionId <= 0) { release(); return }
         if (_status.value.sessionId == sessionId && effect != null) return
         release()
@@ -29,6 +30,7 @@ object AudioEqualizer {
         }
     }
     fun apply() {
+        if (AppSettings.bitPerfect.value) { release(); return }
         val eq = effect ?: return
         try {
             val range = eq.bandLevelRange

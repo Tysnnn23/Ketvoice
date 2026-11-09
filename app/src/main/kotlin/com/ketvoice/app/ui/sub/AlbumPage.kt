@@ -14,17 +14,19 @@ import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Shuffle
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.*
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.BlurredEdgeTreatment
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
@@ -48,6 +50,8 @@ import com.ketvoice.app.ui.AppUi
 import com.ketvoice.app.ui.adaptive.LocalAdaptiveLayout
 import com.ketvoice.app.ui.common.*
 import com.ketvoice.app.ui.player.formatSecs
+import com.ketvoice.app.ui.motion.Motion
+import com.ketvoice.app.ui.motion.StaggeredReveal
 import com.ketvoice.app.util.ShareLinks
 
 /** One scrolling surface: artwork, metadata and tracks never form disconnected panels. */
@@ -56,7 +60,11 @@ internal fun AlbumPage(request: CatalogRequest, page: CatalogPage?, tracks: List
                        onRetry: () -> Unit) {
     val baseTheme = LocalTheme.current
     val list = rememberLazyListState()
-    val collapsed by remember { derivedStateOf { list.firstVisibleItemIndex > 0 } }
+    val collapse = remember { derivedStateOf {
+        val hero = list.layoutInfo.visibleItemsInfo.firstOrNull { it.key == "album-hero" }
+        if (hero == null) if (list.firstVisibleItemIndex > 0) 1f else 0f
+        else ((-hero.offset).toFloat() / (hero.size * .68f).coerceAtLeast(1f)).coerceIn(0f, 1f)
+    } }
     val current by Player.state.collectAsState()
     val artwork by ArtworkRepo.covers.collectAsState()
     val context = LocalContext.current
@@ -64,10 +72,17 @@ internal fun AlbumPage(request: CatalogRequest, page: CatalogPage?, tracks: List
     val artist = page?.subtitle.orEmpty()
     val cover = page?.cover ?: tracks.firstOrNull()?.coverUrl
     val albumAccent = com.ketvoice.app.theme.rememberCoverAccent(cover)?.first
+    val heroTone = albumAccent ?: gradientFor(request.id).last()
     val theme = baseTheme.copy(accent = if (AppSettings.albumColors.value) albumAccent ?: baseTheme.accent else baseTheme.accent)
     val top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 66.dp
     val onAccent = if (theme.accent.luminance() > .179f) Color.Black else Color.White
     val controlsBackdrop = rememberGlassBackdrop(theme.background)
+    var imageReady by remember(cover) { mutableStateOf(false) }
+    val imageAlpha by animateFloatAsState(if (imageReady) 1f else 0f,
+        tween(Motion.duration(320)), label = "albumArtworkReveal")
+    val imageRequest = remember(context, cover, Motion.reduced) {
+        coil.request.ImageRequest.Builder(context).data(cover).crossfade(false).build()
+    }
     Box(Modifier.fillMaxSize().background(theme.background)) {
         CompositionLocalProvider(LocalBackdropLayer provides controlsBackdrop, LocalTheme provides theme) {
         // Capture the scrolling artwork, not a disconnected blurred background.
@@ -99,6 +114,8 @@ internal fun AlbumPage(request: CatalogRequest, page: CatalogPage?, tracks: List
                                 list.firstVisibleItemScrollOffset.toFloat().coerceAtLeast(0f) else 0f
                         } }
                         Box(Modifier.fillMaxWidth().height(heroHeight + top).clipToBounds()
+                            .background(Brush.verticalGradient(listOf(
+                                heroTone.copy(alpha = .42f), heroTone.copy(alpha = .16f))))
                             .testTag("album-hero-visual")) {
                             Box(
                                 Modifier.fillMaxWidth()
@@ -106,23 +123,33 @@ internal fun AlbumPage(request: CatalogRequest, page: CatalogPage?, tracks: List
                                      .graphicsLayer {
                                          // px stay px: never convert scroll pixels to dp.
                                          translationY = if (com.ketvoice.app.ui.motion.Motion.reduced) 0f else pull * .18f
-                                         scaleX = 1.025f; scaleY = 1.025f
-                                    }
+                                          scaleX = 1.025f; scaleY = 1.025f
+                                          compositingStrategy = CompositingStrategy.Offscreen
+                                     }
+                                     .drawWithCache {
+                                         val dissolve = Brush.verticalGradient(
+                                             0f to Color.White, .76f to Color.White, 1f to Color.Transparent)
+                                         onDrawWithContent {
+                                             drawContent()
+                                             drawRect(dissolve, blendMode = BlendMode.DstIn)
+                                         }
+                                     }
                             ) {
                                 when {
                                     canvasEnabled && canvasTrack != null && canvasPath != null ->
                                         com.ketvoice.app.ui.player.ArtworkCanvas(
                                              track = canvasTrack, canvasPath = canvasPath, playing = list.firstVisibleItemIndex == 0,
                                             forceCanvas = true, modifier = Modifier.fillMaxSize())
-                                    cover != null -> AsyncImage(cover, null, contentScale = ContentScale.Crop,
-                                        modifier = Modifier.fillMaxSize())
+                                    cover != null -> AsyncImage(imageRequest, null, contentScale = ContentScale.Crop,
+                                        onSuccess = { imageReady = true },
+                                        modifier = Modifier.fillMaxSize().graphicsLayer { alpha = imageAlpha })
                                     else -> Box(Modifier.fillMaxSize().background(
                                         Brush.linearGradient(gradientFor(request.id))))
                                 }
                             }
                             // A restrained local hue at the top. Never bleach the artwork.
                             Box(Modifier.matchParentSize().background(Brush.verticalGradient(
-                                0f to theme.accent.copy(alpha = .12f),
+                                 0f to heroTone.copy(alpha = .12f),
                                 .24f to Color.Transparent,
                                 1f to Color.Transparent)))
                             // Scrim behind the floating top bar so its icons stay legible.
@@ -131,9 +158,11 @@ internal fun AlbumPage(request: CatalogRequest, page: CatalogPage?, tracks: List
                                     Color.Black.copy(alpha = .38f), Color.Transparent))))
                         }
                     }
-                    // Colour belongs below the image, not in an opaque white veil over it.
-                    Box(Modifier.fillMaxWidth().height(24.dp).background(Brush.verticalGradient(
-                        listOf(theme.accent.copy(alpha = .12f), Color.Transparent))))
+                    // The artwork itself dissolves into this local colour, never
+                    // into a white overlay. The tint then quietly meets the page.
+                    Box(Modifier.fillMaxWidth().height(32.dp).background(Brush.verticalGradient(
+                        listOf(heroTone.copy(alpha = .16f), Color.Transparent))))
+                    StaggeredReveal(order = 0, modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp),
                         horizontalAlignment = Alignment.CenterHorizontally) {
                         Spacer(Modifier.height(14.dp))
@@ -158,7 +187,8 @@ internal fun AlbumPage(request: CatalogRequest, page: CatalogPage?, tracks: List
                         if (!loading) Text(meta, localize = false, color = theme.secondary, fontSize = 13.sp,
                             modifier = Modifier.padding(top = 4.dp))
                         Spacer(Modifier.height(22.dp))
-                        Row(Modifier.widthIn(max = 420.dp).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        StaggeredReveal(order = 2, modifier = Modifier.widthIn(max = 420.dp).fillMaxWidth()) {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             Row(Modifier.weight(1f).clip(RoundedCornerShape(50))
                                 .background(theme.accent.copy(alpha = if (tracks.isEmpty()) .35f else 1f))
                                 .clickable(enabled = tracks.isNotEmpty()) { Player.setShuffle(false); Player.playQueue(tracks) }
@@ -178,17 +208,20 @@ internal fun AlbumPage(request: CatalogRequest, page: CatalogPage?, tracks: List
                                 }
                             }
                         }
+                        }
                         Spacer(Modifier.height(18.dp))
+                    }
                     }
                 }
             }
-            if (loading) item { Box(Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(Modifier.size(26.dp), color = theme.accent, strokeWidth = 2.dp)
-            } }
+            if (loading) items(5, key = { "album-loading:$it" }) {
+                CatalogSkeletonRow()
+            }
             else if (tracks.isEmpty()) item {
                 EmptyState("Catalogue indisponible", "Vérifiez votre connexion, puis réessayez.", "Réessayer", onAction = onRetry)
             }
             itemsIndexed(tracks, key = { index, track -> "${track.id}:$index" }) { index, track ->
+                Box(Modifier.animateItem()) {
                 com.ketvoice.app.ui.common.SwipeTrackActions(track) {
                 Column(Modifier.fillMaxWidth()) {
                     Row(Modifier.fillMaxWidth().clickable { Player.playQueue(tracks, index) }
@@ -215,19 +248,20 @@ internal fun AlbumPage(request: CatalogRequest, page: CatalogPage?, tracks: List
                         .background(theme.onBackground.copy(alpha = .07f)))
                 }
                 }
+                }
             }
         }
         }
-        Row(Modifier.fillMaxWidth().background(if (collapsed) theme.background.copy(alpha = .96f) else Color.Transparent)
+        Row(Modifier.fillMaxWidth().drawBehind { drawRect(theme.background.copy(alpha = .96f * collapse.value)) }
             .statusBarsPadding().padding(horizontal = 12.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
             GlassPanel(Modifier.size(48.dp), CircleShape, GlassParams.circle(dark = theme.isDark)) {
                 Box(Modifier.fillMaxSize().clickable { AppUi.closeOverlay() }, contentAlignment = Alignment.Center) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, "Retour", tint = theme.onBackground)
                 }
             }
-            Text(if (collapsed) title else "", localize = false, color = theme.onBackground,
+            Text(title, localize = false, color = theme.onBackground,
                 fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f).padding(horizontal = 14.dp))
+                modifier = Modifier.weight(1f).padding(horizontal = 14.dp).graphicsLayer { alpha = collapse.value })
             GlassPanel(Modifier.size(48.dp), CircleShape, GlassParams.circle(dark = theme.isDark),
                 enabled = AppSettings.liquidGlass.value) {
                 Box(Modifier.fillMaxSize().clickable { ShareLinks.shareAlbum(context, request.id, title, artist) }, contentAlignment = Alignment.Center) {

@@ -1,5 +1,8 @@
 package com.ketvoice.app.ui.home
 
+import com.ketvoice.app.ui.motion.captureRevealOrigin
+import com.ketvoice.app.ui.motion.rememberRevealOrigin
+
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -114,7 +117,10 @@ fun HomeScreen() {
                     modifier = Modifier.padding(start = 18.dp, top = 28.dp, bottom = 12.dp))
                 LazyRow(contentPadding = PaddingValues(horizontal = 18.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                     itemsIndexed(albums, key = { _, album -> album.id }) { _, album ->
-                        Column(Modifier.width(156.dp).clickable { AppUi.openCatalog(CatalogRequest("album", album.id, album.title)) }) {
+                        val origin = rememberRevealOrigin()
+                        Column(Modifier.width(156.dp).captureRevealOrigin(origin).clickable {
+                            AppUi.openCatalog(CatalogRequest("album", album.id, album.title), origin.value)
+                        }) {
                             Cover(album.title, album.coverUrl, 156.dp, 13.dp)
                             Text(album.title, localize = false, color = theme.onBackground, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
                                 maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))

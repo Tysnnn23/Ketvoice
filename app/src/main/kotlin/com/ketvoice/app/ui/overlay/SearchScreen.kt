@@ -1,5 +1,8 @@
 package com.ketvoice.app.ui.overlay
 
+import com.ketvoice.app.ui.motion.captureRevealOrigin
+import com.ketvoice.app.ui.motion.rememberRevealOrigin
+
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
@@ -290,9 +293,10 @@ fun SearchScreen() {
                     LazyRow(contentPadding = PaddingValues(horizontal = 20.dp),
                         horizontalArrangement = Arrangement.spacedBy(18.dp)) {
                         itemsIndexed(artists, key = { _, a -> a.id }) { _, artist ->
-                            Column(Modifier.width(96.dp).clickable {
+                            val origin = rememberRevealOrigin()
+                            Column(Modifier.width(96.dp).captureRevealOrigin(origin).clickable {
                                 submitSearch()
-                                AppUi.openArtist(artist.id, artist.name)
+                                AppUi.openArtist(artist.id, artist.name, origin.value)
                             }, horizontalAlignment = Alignment.CenterHorizontally) {
                                 Box(Modifier.size(88.dp).clip(CircleShape).background(th.card)
                                     .border(1.dp, th.onBackground.copy(alpha = .10f), CircleShape),

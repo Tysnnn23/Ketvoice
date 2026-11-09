@@ -57,15 +57,27 @@ object AppUi {
         bottomCollapsed.value = false
     }
     val catalogRequest = androidx.compose.runtime.mutableStateOf<com.ketvoice.app.data.CatalogRequest?>(null)
-    fun openCatalog(request: com.ketvoice.app.data.CatalogRequest) {
+
+    /** Bounds of the card that opened a detail page, for an origin-aware reveal. */
+    val revealOrigin = androidx.compose.runtime.mutableStateOf<androidx.compose.ui.geometry.Rect?>(null)
+
+    fun openCatalog(
+        request: com.ketvoice.app.data.CatalogRequest,
+        origin: androidx.compose.ui.geometry.Rect? = null
+    ) {
         push(OverlayEntry(CATALOG, null, null, null, ""))
         catalogRequest.value = request
+        revealOrigin.value = origin
         bottomCollapsed.value = false
     }
 
     data class ArtistRequest(val id: String, val name: String)
     val artistRequest = androidx.compose.runtime.mutableStateOf<ArtistRequest?>(null)
-    fun openArtist(id: String, name: String) {
+    fun openArtist(
+        id: String,
+        name: String,
+        origin: androidx.compose.ui.geometry.Rect? = null
+    ) {
         // On n'exige plus un channelId YouTube ("UC..." ) : les cartes d'artiste
         // issues de la recherche ou des métadonnées locales n'en fournissent pas
         // toujours, et le `return` silencieux faisait échouer l'ouverture sans
@@ -73,6 +85,7 @@ object AppUi {
         if (id.isBlank() && name.isBlank()) return
         push(OverlayEntry(ARTIST, null, null, null, ""))
         artistRequest.value = ArtistRequest(id, name)
+        revealOrigin.value = origin
         // Le lecteur plein écran est au-dessus des overlays : sans cette ligne,
         // ouvrir une fiche artiste depuis le lecteur ne montrait rien.
         showPlayer.value = false
@@ -88,7 +101,8 @@ object AppUi {
         val playlistId: String?,
         val catalogRequest: com.ketvoice.app.data.CatalogRequest?,
         val artistRequest: ArtistRequest?,
-        val searchSeed: String
+        val searchSeed: String,
+        val origin: androidx.compose.ui.geometry.Rect? = null
     )
     private val overlayStack = ArrayDeque<OverlayEntry>()
 
@@ -98,8 +112,9 @@ object AppUi {
     val NAV_POP = 2
     val navKind = androidx.compose.runtime.mutableIntStateOf(NAV_JUMP)
 
-    private fun snapshot(): OverlayEntry = OverlayEntry(
-        overlay.intValue, playlistId.value, catalogRequest.value, artistRequest.value, searchSeed.value
+    fun snapshot(): OverlayEntry = OverlayEntry(
+        overlay.intValue, playlistId.value, catalogRequest.value, artistRequest.value, searchSeed.value,
+        revealOrigin.value
     )
 
     private fun restore(entry: OverlayEntry) {
@@ -107,6 +122,7 @@ object AppUi {
         catalogRequest.value = entry.catalogRequest
         artistRequest.value = entry.artistRequest
         searchSeed.value = entry.searchSeed
+        revealOrigin.value = entry.origin
         overlay.intValue = entry.overlay
     }
 
@@ -116,6 +132,7 @@ object AppUi {
         playlistId.value = null
         catalogRequest.value = null
         artistRequest.value = null
+        revealOrigin.value = null
         searchSeed.value = ""
         overlay.intValue = entry.overlay
     }
@@ -190,6 +207,7 @@ object AppUi {
     val trackMenuTrack = androidx.compose.runtime.mutableStateOf<com.ketvoice.app.data.Track?>(null)
     fun selectTab(index: Int) {
         playlistResolution.value = null
+        revealOrigin.value = null
         tab.intValue = index
         overlayStack.clear()
         overlay.intValue = NONE

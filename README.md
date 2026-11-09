@@ -21,6 +21,17 @@
 
 ## Overview
 
+### 4.3.0 — connected motion and guarded Bit-Perfect playback
+
+Origin-aware artist/album transitions, saved tab scroll state, collapsing headers,
+progressive album artwork and discreet loading skeletons. Optional Bit-Perfect uses
+Android 14+'s compatible USB mixer contract, with native decoded-PCM writes and honest
+standard fallback; it is not a hardware guarantee. Audio **Stats info** stays optional
+and off by default. No physical phone, DAC or Quest validation is claimed.
+[Mobile](https://github.com/Tysnnn23/Ketvoice/releases/download/v4.3.0/Ketvoice-4.3.0.apk)
+· [Quest](https://github.com/Tysnnn23/Ketvoice/releases/download/v4.3.0/Ketvoice-4.3.0-Quest.apk)
+· [Release notes and validation limits](docs/releases/v4.3.0.md).
+
 ### 3.11.0 — smoother playback and artist portraits
 
 Readable dark action sheets, a refined charcoal theme, continuous Canvas/lyrics
@@ -123,7 +134,7 @@ See the [3.0.3 release notes](docs/releases/v3.0.3.md) for validation limits.
 
 Ketvoice is an independent Android music client whose visual language is inspired by Apple Music and iOS 26. French is the default interface language; Settings offers 11 languages across the app. It is not affiliated with Apple, YouTube, Spotify or any music provider.
 
-The latest release is **3.11.0** (`versionCode` 56) for **mobile/tablet** (Android 12+, target SDK 36) and **Quest 3/3S** (minimum SDK 32, target SDK 34, landscape-only window). Canvas/lyrics controls transition smoothly, timed backs hide outside their turn, dark menus retain contrast, and artist profiles offer optional signatures. Native 120 Hz requests are available on compatible phones and remain subject to Android policy. Automatic update popups and AutoMix removal remain. Local playlists, Studio publishing, Canvas, Sonic Canvas, offline capsules and single-device Wi-Fi handoff remain. Ketogether group listening is deferred. Final device/headset validation has not been performed for this version; see the release metadata.
+The latest release is **4.3.0** (`versionCode` 81) for **mobile/tablet** (Android 12+, target SDK 36) and **Quest 3/3S** (minimum SDK 32, target SDK 34, landscape-only 2D window). Artist/album transitions preserve navigation state; optional Bit-Perfect uses Android 14+'s compatible USB mixer contract with standard fallback. Native refresh-rate requests remain subject to Android policy, without a measured FPS guarantee. Local playlists, Studio publishing, Canvas, Sonic Canvas in standard mode, offline capsules and single-device Wi-Fi handoff remain. Ketogether group listening is deferred. Physical device/DAC/headset validation has not been performed; see the release metadata.
 
 Music-source search, stream resolution, Spotify Canvas, and published-content lookup go through two Supabase Edge Functions: **Ketvoice API** for sources/Canvas and **Ketvoice Content** for public publications. The APK contains only the project’s public Supabase `anon` key and function URLs. Spotify and source credentials remain in Supabase Vault and are never shipped with the app.
 
@@ -135,7 +146,7 @@ Music-source search, stream resolution, Spotify Canvas, and published-content lo
 
 - **Landscape only, with the mobile style**: original artwork/Canvas, icon controls, Liquid Glass, floating navigation, and lyric animations. In lyrics/queue mode, artwork, title, artist, and transport stay on the left; lyrics or queue fill the right. No giant text-button dashboard, tablet rail, or portrait-phone frame.
 - Pointer hover light on interactive controls, optional lyric sizing, foreground keep-awake, and the sleep timer in the ordinary track ⋯ menu.
-- Download **[Ketvoice-3.11.0-Quest.apk](https://github.com/Tysnnn23/Ketvoice/releases/download/v3.11.0/Ketvoice-3.11.0-Quest.apk)** and follow [Quest installation instructions](docs/QUEST.md). Headset-targeted manifest and arm64 support are included; physical Quest hardware validation is still required. This is a 2D app window, not an immersive VR environment. The same-version **[mobile/tablet 3.11.0 APK](https://github.com/Tysnnn23/Ketvoice/releases/download/v3.11.0/Ketvoice-3.11.0.apk)** is available in the same release.
+- Download **[Ketvoice-4.3.0-Quest.apk](https://github.com/Tysnnn23/Ketvoice/releases/download/v4.3.0/Ketvoice-4.3.0-Quest.apk)** and follow [Quest installation instructions](docs/QUEST.md). Headset-targeted manifest and arm64 support are included; physical Quest hardware validation is still required. This is a 2D app window, not an immersive VR environment. The same-version **[mobile/tablet 4.3.0 APK](https://github.com/Tysnnn23/Ketvoice/releases/download/v4.3.0/Ketvoice-4.3.0.apk)** is available in the same release.
 
 ### Interface
 

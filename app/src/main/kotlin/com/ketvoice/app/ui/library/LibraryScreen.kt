@@ -1,5 +1,8 @@
 package com.ketvoice.app.ui.library
 
+import com.ketvoice.app.ui.motion.captureRevealOrigin
+import com.ketvoice.app.ui.motion.rememberRevealOrigin
+
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -452,11 +455,12 @@ fun LibraryScreen() {
                      horizontalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     itemsIndexed(albums, key = { _, track -> track.albumId!! }) { index, track ->
+                        val origin = rememberRevealOrigin()
                          Column(
                             Modifier.then(if (Motion.reduced) Modifier else Modifier.animateItem())
                                 .collectionEntry("album:${track.albumId}", seen, index)
-                                .width(layout.collectionSizeDp.dp).clickable {
-                                AppUi.openCatalog(CatalogRequest("album", track.albumId!!, track.album))
+                                .width(layout.collectionSizeDp.dp).captureRevealOrigin(origin).clickable {
+                                AppUi.openCatalog(CatalogRequest("album", track.albumId!!, track.album), origin.value)
                             }
                         ) {
                             Cover(track.album, track.coverUrl, layout.collectionSizeDp.dp, 12.dp)
@@ -921,4 +925,3 @@ private fun LibraryTrackRow(track: Track, downloaded: Boolean = false, modifier:
         }
     }
 }
-

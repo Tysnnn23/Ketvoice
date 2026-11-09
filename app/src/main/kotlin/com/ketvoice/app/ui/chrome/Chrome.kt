@@ -405,13 +405,16 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier) 
                     // peu pendant le déplacement puis se stabilise.
                     val pillShape = RoundedCornerShape(999.dp)
                     val travel = kotlin.math.abs((if (held) hover else selected.toFloat()) - pillX)
-                    val stretch = if (Motion.reduced) 1f else 1f + (travel * 0.08f).coerceAtMost(0.1f)
+                    // Liquid travel: the lens stretches along the motion and
+                    // squashes slightly across it, then settles back to a pill.
+                    val stretchX = if (Motion.reduced) 1f else 1f + (travel * 0.15f).coerceAtMost(0.15f)
+                    val stretchY = if (Motion.reduced) 1f else 1f - (travel * 0.045f).coerceAtMost(0.045f)
                     GlassPanel(
                         modifier = Modifier
                             .offset(x = slot * pillX + 5.dp)
                             .size(width = slot - 10.dp, height = heightAnim - 10.dp)
                             .align(Alignment.CenterStart)
-                            .graphicsLayer { scaleX = bulge * stretch; scaleY = bulge / (1f + (stretch - 1f) * 0.5f) },
+                            .graphicsLayer { scaleX = bulge * stretchX; scaleY = bulge * stretchY },
                         shape = pillShape,
                         params = GlassParams.pill(blur = 3f, dark = th.isDark).copy(
                             // Lentille active : verre optique qui se lit sur le fond, sans devenir
@@ -434,10 +437,34 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier) 
                 ) {
                     tabs.forEach { tab ->
                         val isSel = selected == tab.index
+                        val tabSource = remember(tab.index) { MutableInteractionSource() }
+                        val pressed by tabSource.collectIsPressedAsState()
+                        val press by animateFloatAsState(
+                            targetValue = if (pressed) 0.93f else 1f,
+                            animationSpec = Motion.pressSpring(pressed),
+                            label = "tabPress"
+                        )
                         val iconScale by animateFloatAsState(
-                            targetValue = if (isSel) 1.08f else 1f,
-                            animationSpec = if (Motion.reduced) androidx.compose.animation.core.snap() else spring(dampingRatio = 0.8f, stiffness = 600f),
+                            targetValue = if (isSel) 1.07f else 1f,
+                            animationSpec = if (Motion.reduced) androidx.compose.animation.core.snap() else spring(dampingRatio = 0.78f, stiffness = 620f),
                             label = "tabIcon"
+                        )
+                        val iconAlpha by animateFloatAsState(
+                            targetValue = if (isSel) 1f else 0.66f,
+                            animationSpec = tween(190),
+                            label = "tabIconAlpha"
+                        )
+                        val lift by animateFloatAsState(
+                            targetValue = if (isSel) 1.2f else 0f,
+                            animationSpec = if (Motion.reduced) androidx.compose.animation.core.snap() else spring(dampingRatio = 0.8f, stiffness = 600f),
+                            label = "tabLift"
+                        )
+                        // Weight morphs numerically: no bold/semibold swap that
+                        // would reflow the label in one frame.
+                        val weight by animateFloatAsState(
+                            targetValue = if (isSel) 700f else 500f,
+                            animationSpec = if (Motion.reduced) androidx.compose.animation.core.snap() else spring(dampingRatio = 0.9f, stiffness = 520f),
+                            label = "tabWeight"
                         )
                         val targetContentColor = when {
                             isSel && !th.isDark -> Color(0xFF141414)
@@ -455,7 +482,8 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier) 
                             modifier = Modifier
                                 .weight(1f)
                                 .fillMaxHeight()
-                                .selectable(isSel, role = Role.Tab) {
+                                .graphicsLayer { scaleX = press; scaleY = press }
+                                .selectable(isSel, tabSource, null, role = Role.Tab) {
                                     focus.clearFocus()
                                     AppUi.selectTab(tab.index)
                                 }
@@ -463,17 +491,22 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier) 
                             Icon(
                                 tab.icon,
                                 contentDescription = tab.label,
-                                tint = contentColor,
+                                tint = contentColor.copy(alpha = iconAlpha),
                                 modifier = Modifier
                                     .size(23.dp)
-                                    .graphicsLayerScale(iconScale)
+                                    .graphicsLayer {
+                                        scaleX = iconScale
+                                        scaleY = iconScale
+                                        translationY = -lift * density
+                                    }
                             )
                             Spacer(Modifier.height(3.dp))
                             Text(
                                 tab.label,
                                 fontSize = 10.5.sp,
-                                fontWeight = if (isSel) FontWeight.Bold else FontWeight.SemiBold,
-                                color = contentColor, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis
+                                fontWeight = FontWeight(weight.toInt().coerceIn(100, 900)),
+                                color = contentColor.copy(alpha = iconAlpha),
+                                maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis
                             )
                         }
                     }
@@ -485,12 +518,64 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier) 
                 }
             }
         } else {
-            Row(Modifier.fillMaxSize().selectableGroup()) {
-                tabs.forEach { tab ->
-                    Box(Modifier.weight(1f).fillMaxHeight().selectable(AppUi.tab.value == tab.index, role = Role.Tab) {
-                        focus.clearFocus(); AppUi.selectTab(tab.index)
-                    }, contentAlignment = Alignment.Center) {
-                        Icon(tab.icon, tab.label, tint = th.onBackground.copy(alpha = if (AppUi.tab.value == tab.index) 1f else .76f), modifier = Modifier.size(25.dp))
+            val selected = tabs.indexOfFirst { it.index == AppUi.tab.value }.coerceAtLeast(0)
+            val pos by animateFloatAsState(
+                targetValue = selected.toFloat(),
+                animationSpec = if (Motion.reduced) androidx.compose.animation.core.snap()
+                else spring(dampingRatio = 0.86f, stiffness = 520f),
+                label = "compactLens"
+            )
+            BoxWithConstraints(Modifier.fillMaxSize()) {
+                val slot = maxWidth / 3
+                // The same lens language survives the collapsed state instead of
+                // turning into three static icons.
+                GlassPanel(
+                    Modifier
+                        .offset(x = slot * pos + 5.dp)
+                        .size(width = slot - 10.dp, height = heightAnim - 14.dp)
+                        .align(Alignment.CenterStart),
+                    RoundedCornerShape(999.dp),
+                    GlassParams.pill(blur = 3f, dark = th.isDark).copy(
+                        refractionHeightDp = 12f,
+                        refractionAmountDp = 20f,
+                        tintAlpha = if (th.isDark) 0.05f else 0.02f,
+                        saturation = if (th.isDark) 1.16f else 1.24f,
+                        highlightAlpha = if (th.isDark) 0.36f else 0.46f
+                    ),
+                    enabled = AppSettings.liquidGlass.value
+                ) {}
+                Row(Modifier.fillMaxSize().selectableGroup()) {
+                    tabs.forEach { tab ->
+                        val isSel = AppUi.tab.value == tab.index
+                        val tabSource = remember(tab.index) { MutableInteractionSource() }
+                        val pressed by tabSource.collectIsPressedAsState()
+                        val scale by animateFloatAsState(
+                            targetValue = when {
+                                pressed -> 0.9f
+                                isSel -> 1.06f
+                                else -> 1f
+                            },
+                            animationSpec = Motion.pressSpring(pressed),
+                            label = "compactIcon"
+                        )
+                        val alpha by animateFloatAsState(
+                            targetValue = if (isSel) 1f else 0.68f,
+                            animationSpec = tween(180),
+                            label = "compactAlpha"
+                        )
+                        Box(Modifier.weight(1f).fillMaxHeight()
+                            .selectable(isSel, tabSource, null, role = Role.Tab) {
+                                focus.clearFocus(); AppUi.selectTab(tab.index)
+                            }, contentAlignment = Alignment.Center) {
+                            Icon(
+                                tab.icon, tab.label,
+                                tint = th.onBackground.copy(alpha = alpha),
+                                modifier = Modifier.size(25.dp).graphicsLayer {
+                                    scaleX = scale
+                                    scaleY = scale
+                                }
+                            )
+                        }
                     }
                 }
             }

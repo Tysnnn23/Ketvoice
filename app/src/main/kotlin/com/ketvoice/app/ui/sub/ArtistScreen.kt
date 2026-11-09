@@ -1,5 +1,10 @@
 package com.ketvoice.app.ui.sub
 
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -13,7 +18,6 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.material3.CircularProgressIndicator
 import com.ketvoice.app.ui.common.GlassBackButton
 import com.ketvoice.app.ui.common.Icon
 import com.ketvoice.app.ui.common.Text
@@ -22,6 +26,7 @@ import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -38,6 +43,9 @@ import com.ketvoice.app.player.Player
 import com.ketvoice.app.theme.LocalTheme
 import com.ketvoice.app.ui.AppUi
 import com.ketvoice.app.ui.common.Cover
+import com.ketvoice.app.ui.motion.Motion
+import com.ketvoice.app.ui.motion.captureRevealOrigin
+import com.ketvoice.app.ui.motion.rememberRevealOrigin
 import com.ketvoice.app.ui.player.formatSecs
 
 /**
@@ -45,12 +53,16 @@ import com.ketvoice.app.ui.player.formatSecs
  * albums et artistes similaires proviennent de YouTube Music.
  */
 @Composable
-fun ArtistScreen() {
-    val request = AppUi.artistRequest.value ?: return
-    val theme = LocalTheme.current
+fun ArtistScreen(request: AppUi.ArtistRequest? = AppUi.artistRequest.value) {
+    request ?: return
+    val baseTheme = LocalTheme.current
     val art by ArtworkRepo.covers.collectAsState()
     val player by Player.state.collectAsState()
     var page by remember(request.id, request.name) { mutableStateOf<ArtistPage?>(null) }
+    val accent = com.ketvoice.app.theme.rememberCoverAccent(page?.artist?.photo)?.first
+    val theme = baseTheme.copy(
+        accent = if (com.ketvoice.app.data.AppSettings.albumColors.value) accent ?: baseTheme.accent else baseTheme.accent
+    )
     var loading by remember(request.id, request.name) { mutableStateOf(true) }
     var failed by remember(request.id, request.name) { mutableStateOf(false) }
     var attempt by remember(request.id, request.name) { mutableIntStateOf(0) }
@@ -94,11 +106,25 @@ fun ArtistScreen() {
     }
 
     val artist = page?.artist
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    // Collapse is read from the real header bounds, so a fling, a restored back
+    // stack or an instant jump all produce the same top-bar state, no jump.
+    val collapse = remember {
+        derivedStateOf {
+            val header = listState.layoutInfo.visibleItemsInfo
+                .firstOrNull { it.key == "artist-header" }
+            if (header == null) if (listState.firstVisibleItemIndex > 0) 1f else 0f
+            else {
+                val scrolled = (-header.offset).toFloat()
+                val span = (header.size * 0.55f).coerceAtLeast(1f)
+                (scrolled / span).coerceIn(0f, 1f)
+            }
+        }
+    }
+    CompositionLocalProvider(LocalTheme provides theme) {
     Box(Modifier.fillMaxSize().background(theme.background)) {
         when {
-            loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = theme.accent, modifier = Modifier.size(28.dp), strokeWidth = 2.dp)
-            }
+            loading -> ArtistSkeleton(theme)
             failed || page == null -> Column(Modifier.fillMaxSize().padding(28.dp),
                 verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("Cette page d'artiste n'a pas pu être chargée.", color = theme.onBackground,
@@ -110,11 +136,10 @@ fun ArtistScreen() {
             }
             else -> {
             // Portrait and metadata scroll as one; wide source banners stay fitted.
-            val listState = androidx.compose.foundation.lazy.rememberLazyListState()
             LazyColumn(Modifier.fillMaxSize(), state = listState,
                 contentPadding = PaddingValues(bottom = 210.dp)) {
                 val data = page!!
-                item(key = "artist-header") { ArtistHeader(data) }
+                item(key = "artist-header") { ArtistHeader(data) { collapse.value } }
                 if (data.description.isNotBlank()) item {
                     Column(Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
                         Text(data.description, localize = false, color = theme.secondary, fontSize = 13.5.sp, lineHeight = 19.sp,
@@ -130,7 +155,8 @@ fun ArtistScreen() {
                 }
                 itemsIndexed(data.tracks, key = { i, t -> "${t.id}:$i" }) { index, track ->
                     val active = player.current?.id == track.id
-                    Row(Modifier.fillMaxWidth().clickable { Player.playQueue(data.tracks, index) }
+                    Row(Modifier.fillMaxWidth().animateItem()
+                        .clickable { Player.playQueue(data.tracks, index) }
                         .padding(horizontal = 20.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text("${index + 1}", color = theme.secondary, fontSize = 13.sp,
                             modifier = Modifier.width(24.dp))
@@ -154,8 +180,9 @@ fun ArtistScreen() {
                     LazyRow(contentPadding = PaddingValues(horizontal = 20.dp),
                         horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                         itemsIndexed(data.albums, key = { _, a -> a.id }) { _, album ->
-                            Column(Modifier.width(150.dp).clickable {
-                                AppUi.openCatalog(com.ketvoice.app.data.CatalogRequest("album", album.id, album.title))
+                            val origin = rememberRevealOrigin()
+                            Column(Modifier.width(150.dp).captureRevealOrigin(origin).clickable {
+                                AppUi.openCatalog(com.ketvoice.app.data.CatalogRequest("album", album.id, album.title), origin.value)
                             }) {
                                 Cover(album.title, art["a:${album.id}"] ?: album.coverUrl, 150.dp, 12.dp)
                                 Text(album.title, localize = false, color = theme.onBackground, fontSize = 14.sp,
@@ -173,7 +200,8 @@ fun ArtistScreen() {
                     LazyRow(contentPadding = PaddingValues(horizontal = 20.dp),
                         horizontalArrangement = Arrangement.spacedBy(18.dp)) {
                         itemsIndexed(data.related, key = { _, a -> a.id }) { _, related ->
-                            Column(Modifier.width(104.dp).clickable { AppUi.openArtist(related.id, related.name) },
+                            val origin = rememberRevealOrigin()
+                            Column(Modifier.width(104.dp).captureRevealOrigin(origin).clickable { AppUi.openArtist(related.id, related.name, origin.value) },
                                 horizontalAlignment = Alignment.CenterHorizontally) {
                                 Box(Modifier.size(94.dp).clip(CircleShape).background(theme.card)
                                     .border(1.dp, theme.onBackground.copy(alpha = .10f), CircleShape),
@@ -205,6 +233,16 @@ fun ArtistScreen() {
             }
             }
         }
+        // The top bar only gains a surface and a title once the hero has moved
+        // away, so the immersive first frame stays untouched.
+        Box(
+            Modifier.fillMaxWidth().height(118.dp).align(Alignment.TopCenter)
+                .graphicsLayer { alpha = collapse.value }.background(
+                androidx.compose.ui.graphics.Brush.verticalGradient(
+                    listOf(theme.background.copy(alpha = 0.94f), androidx.compose.ui.graphics.Color.Transparent)
+                )
+            )
+        )
         // Barre supérieure superposée : retour + actualisation flottent au-dessus
         // du hero (immersion), le nom reste porté par la bannière. En chargement
         // ou en erreur, le nom d'artiste est affiché pour garder le contexte.
@@ -213,11 +251,10 @@ fun ArtistScreen() {
             verticalAlignment = Alignment.CenterVertically) {
             GlassBackButton { AppUi.closeOverlay() }
             Spacer(Modifier.width(12.dp))
-            if (page == null) {
-                Text(artist?.name ?: request.name, localize = false, color = theme.onBackground,
-                    fontSize = 20.sp, fontWeight = FontWeight.Bold, maxLines = 1,
-                    overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-            } else Spacer(Modifier.weight(1f))
+            Text(artist?.name ?: request.name, localize = false, color = theme.onBackground,
+                fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f).graphicsLayer { alpha = if (page == null) 1f else collapse.value })
             if (page != null) com.ketvoice.app.glass.GlassPanel(Modifier.size(48.dp), CircleShape,
                 com.ketvoice.app.glass.GlassParams.circle(dark = theme.isDark), captured = true) {
                 Box(Modifier.fillMaxSize().clickable {
@@ -241,6 +278,50 @@ fun ArtistScreen() {
                     }, contentAlignment = Alignment.Center) {
                         Icon(Icons.Filled.Share, "Partager l'artiste", tint = theme.onBackground, modifier = Modifier.size(20.dp))
                     }
+                }
+            }
+        }
+    }
+    }
+}
+
+/**
+ * Loading state that mirrors the real layout instead of a spinner, so the page
+ * does not flash from an empty centre to a full hero.
+ */
+@Composable
+private fun ArtistSkeleton(theme: com.ketvoice.app.theme.KetTheme) {
+    val pulse = rememberInfiniteTransition(label = "artistSkeleton")
+    val alpha by if (Motion.reduced) {
+        remember { androidx.compose.runtime.mutableFloatStateOf(0.5f) }
+    } else {
+        pulse.animateFloat(
+            initialValue = 0.35f,
+            targetValue = 0.62f,
+            animationSpec = infiniteRepeatable(tween(1100), RepeatMode.Reverse),
+            label = "artistSkeletonAlpha"
+        )
+    }
+    Column(Modifier.fillMaxSize()) {
+        Box(Modifier.fillMaxWidth().height(330.dp)
+            .background(theme.card.copy(alpha = alpha)))
+        Box(Modifier.padding(start = 24.dp, top = 20.dp).width(190.dp).height(18.dp)
+            .clip(androidx.compose.foundation.shape.RoundedCornerShape(9.dp))
+            .background(theme.card.copy(alpha = alpha)))
+        repeat(6) { index ->
+            Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 9.dp),
+                verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(50.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(7.dp))
+                    .background(theme.card.copy(alpha = alpha)))
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Box(Modifier.fillMaxWidth(if (index % 2 == 0) 0.72f else 0.54f).height(13.dp)
+                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(6.dp))
+                        .background(theme.card.copy(alpha = alpha)))
+                    Spacer(Modifier.height(7.dp))
+                    Box(Modifier.fillMaxWidth(0.34f).height(10.dp)
+                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(5.dp))
+                        .background(theme.card.copy(alpha = alpha * 0.8f)))
                 }
             }
         }
