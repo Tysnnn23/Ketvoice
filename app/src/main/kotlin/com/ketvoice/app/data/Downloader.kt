@@ -57,17 +57,80 @@ object Downloader {
     val tasks: StateFlow<Map<String, DownloadTask>> = _tasks
     private val paused = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
 
+    /** Downloads that must survive process death; mirrored to `download-queue.json`. */
+    private val queueLock = Any()
+    @Volatile private var queue: List<QueuedDownload> = emptyList()
+
     fun pause(id: String) {
         if (id !in _busy.value) return
         paused.add(id)
         task(id) { it.copy(phase = DownloadPhase.Paused) }
+        ctx?.let { c -> mutateQueue(c) { DownloadQueue.withState(it, id, QueueState.Paused) } }
     }
-    fun resume(id: String) { paused.remove(id) }
+
+    fun resume(id: String) {
+        paused.remove(id)
+        val c = ctx ?: return
+        mutateQueue(c) { DownloadQueue.withState(it, id, QueueState.Pending) }
+        // A download restored from disk has no live coroutine: start one.
+        if (jobs[id] == null) {
+            val track = _activeTracks.value[id] ?: DownloadQueue.find(queue, id)?.track ?: return
+            start(track, capsuleLimit = null, announce = false)
+        }
+    }
+
     fun cancel(id: String) {
         task(id) { it.copy(phase = DownloadPhase.Cancelled) }
         paused.remove(id)
-        jobs[id]?.cancel()
+        val job = jobs.remove(id)
         connections.remove(id)?.disconnect()
+        job?.cancel()
+        // A restored entry has no live coroutine, so nothing will run the
+        // `finally` block that normally releases its busy slot.
+        if (job == null) {
+            _progress.update { it - id }
+            _busy.update { it - id }
+            _activeTracks.update { it - id }
+        }
+        ctx?.let { c -> mutateQueue(c) { DownloadQueue.remove(it, id) } }
+    }
+
+    /** Queued downloads, newest last; exposed for diagnostics and tests. */
+    val queued: List<QueuedDownload> get() = queue
+
+    private fun queueFile(c: Context) = File(c.filesDir, "download-queue.json")
+
+    private fun mutateQueue(c: Context, change: (List<QueuedDownload>) -> List<QueuedDownload>) {
+        synchronized(queueLock) {
+            val next = change(queue)
+            if (next == queue) return
+            queue = next
+            runCatching {
+                writeAtomic(queueFile(c), DownloadQueue.encode(next).toByteArray(Charsets.UTF_8))
+            }
+        }
+    }
+
+    private fun restoreQueue(c: Context) {
+        val restored = DownloadQueue.decode(runCatching { queueFile(c).readText(Charsets.UTF_8) }.getOrNull())
+        val onDisk = _items.value.map { it.track.id }.toSet()
+        val surviving = DownloadQueue.pending(restored, onDisk)
+        synchronized(queueLock) {
+            queue = surviving
+            if (surviving != restored) runCatching {
+                writeAtomic(queueFile(c), DownloadQueue.encode(surviving).toByteArray(Charsets.UTF_8))
+            }
+        }
+        surviving.forEach { entry ->
+            val id = entry.track.id
+            if (jobs.containsKey(id)) return@forEach
+            _activeTracks.update { it + (id to entry.track) }
+            task(id) { DownloadTask(phase = DownloadQueue.phaseFor(entry.state)) }
+            if (!DownloadQueue.countsAsBusy(entry.state)) return@forEach
+            _busy.update { it + id }
+            _progress.update { it + (id to 0) }
+            if (DownloadQueue.startsImmediately(entry.state)) start(entry.track, capsuleLimit = null, announce = false)
+        }
     }
     private fun task(id: String, change: (DownloadTask) -> DownloadTask) {
         _tasks.update { it + (id to change(it[id] ?: DownloadTask())) }
@@ -101,6 +164,7 @@ object Downloader {
         if (ctx != null) return
         ctx = context.applicationContext
         refresh()
+        restoreQueue(context.applicationContext)
     }
 
     fun itemFor(trackId: String): Item? = _items.value.firstOrNull { it.track.id == trackId }
@@ -112,12 +176,19 @@ object Downloader {
             return null
         }
         jobs[track.id]?.let { return it }
+        // Capsule preparation is a transient bundle, not a user download.
+        if (capsuleLimit == null) mutateQueue(c) { DownloadQueue.withEntry(it, track) }
+        return start(track, capsuleLimit, announce = true)
+    }
+
+    @Synchronized private fun start(track: Track, capsuleLimit: Long?, announce: Boolean): Job? {
+        val c = ctx ?: return null
         _busy.update { it + track.id }
         _activeTracks.update { it + (track.id to track) }
         _progress.update { it + (track.id to 0) }
         paused.remove(track.id)
         task(track.id) { DownloadTask() }
-        toast("Téléchargement de « ${track.title} »…")
+        if (announce) toast("Téléchargement de « ${track.title} »…")
         val job = scope.launch(start = kotlinx.coroutines.CoroutineStart.LAZY) {
             try {
                 awaitTransfer(track.id, DownloadPhase.Resolving)
@@ -262,6 +333,17 @@ object Downloader {
                 if (_tasks.value[track.id]?.phase == DownloadPhase.Complete) _activeTracks.update { it - track.id }
                 paused.remove(track.id)
                 jobs.remove(track.id)
+                // Keep the on-disk queue in step with what really happened:
+                // finished or cancelled downloads leave it, failures stay
+                // visible so they can be retried after a restart.
+                val context = ctx
+                if (context != null) {
+                    when (_tasks.value[track.id]?.phase) {
+                        DownloadPhase.Complete -> mutateQueue(context) { DownloadQueue.remove(it, track.id) }
+                        DownloadPhase.Failed -> mutateQueue(context) { DownloadQueue.withState(it, track.id, QueueState.Failed) }
+                        else -> mutateQueue(context) { DownloadQueue.remove(it, track.id) }
+                    }
+                }
             }
         }
         jobs[track.id] = job
@@ -294,6 +376,7 @@ object Downloader {
             File(item.file.parentFile, "$stem.cover.jpg").delete()
             ArtworkRepo.removeOfflineCover(item.track.id)
         }
+        ctx?.let { c -> mutateQueue(c) { DownloadQueue.remove(it, item.track.id) } }
         refresh()
     }
 
