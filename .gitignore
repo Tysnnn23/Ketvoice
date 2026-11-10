@@ -58,3 +58,4 @@ release.keystore*
 # Local code-only architecture index (configuration remains versioned).
 graphify-out/
 
+tools/machine-translations.proposal.json

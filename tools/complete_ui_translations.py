@@ -1,8 +1,15 @@
-"""Maintainer tool: batch only audited public labels; write all language tables atomically."""
+"""Maintainer tool: draft missing public labels with the public Google endpoint.
+
+The output is a starting point, never shippable as-is: it mangles homographs
+(Reprendre -> Lebenslauf), prefixes some languages with '#', and drops tone.
+Write it to a proposal file, translate by hand, then run
+`python tools/audit_ui_texts.py --check`. Pass --apply only after review.
+"""
 import ast
 import json
 import pathlib
 import re
+import sys
 import time
 import urllib.parse
 import urllib.request
@@ -63,7 +70,14 @@ for language,table in tables.items():
     for message in missing:table[message]=saved[message]
     print(language,len(table),flush=True)
 assert all(set(t)==set(tables['en']) for t in tables.values())
-temporary=asset.with_suffix('.json.tmp')
-temporary.write_text(json.dumps(tables,ensure_ascii=False,indent=1)+'\n',encoding='utf-8')
-temporary.replace(asset)
-print('All audited messages bundled in every language.')
+proposal=ROOT/'tools/machine-translations.proposal.json'
+proposal.write_text(json.dumps(tables,ensure_ascii=False,indent=1)+'\n',encoding='utf-8')
+print('Wrote',proposal.relative_to(ROOT),'with',len(tables['en']),'messages per language.')
+print('Review it by hand; machine output is normally not shippable.')
+if '--apply' in sys.argv[1:]:
+    temporary=asset.with_suffix('.json.tmp')
+    temporary.write_text(json.dumps(tables,ensure_ascii=False,indent=1)+'\n',encoding='utf-8')
+    temporary.replace(asset)
+    print('Applied machine output to',asset.relative_to(ROOT),'- only do this after a full human review.')
+else:
+    print('Nothing applied. Re-run with --apply to replace the bundled catalog.')

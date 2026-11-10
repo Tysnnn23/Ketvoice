@@ -130,6 +130,11 @@ jobs:
       - name: Unit tests (best effort)
         run: ./gradlew :app:testMobileReleaseUnitTest --stacktrace || true
 
+      # Fails when a user-facing string exists only in French. Strings that are
+      # not user text belong in tools/ui-text-ignored.json with a reason.
+      - name: Audit UI translations
+        run: python3 tools/audit_ui_texts.py --check
+
       - name: Lint
         run: ./gradlew :app:lintMobileRelease --stacktrace || true
 

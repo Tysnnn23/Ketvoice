@@ -1,7 +1,14 @@
-"""Extract public UI source messages/templates, never runtime user data or credentials."""
+"""Extract public UI source messages/templates, never runtime user data or credentials.
+
+Run with --check to fail when a user-facing message has no bundled English
+translation. Strings that the scanner picks up but that are not user text
+(cache keys, HTTP headers, animation tags, file patterns) must be listed in
+tools/ui-text-ignored.json so the gap stays visible and reviewed.
+"""
 import json
 import pathlib
 import re
+import sys
 
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 SOURCE=ROOT/'app/src/main/kotlin/com/ketvoice/app'
@@ -53,7 +60,15 @@ def ui_message(value):
     literal=re.sub(r'\{\d+}', '',v)
     return len(re.findall(r'[^\W\d_]',literal))>=2
 
+def ignored():
+    path=ROOT/'tools/ui-text-ignored.json'
+    if not path.exists():return {}
+    data=json.loads(path.read_text(encoding='utf-8'))
+    assert isinstance(data,dict),'tools/ui-text-ignored.json must map message -> reason'
+    return data
+
 def main():
+    check='--check' in sys.argv[1:]
     paths=list((SOURCE/'ui').rglob('*.kt'))+[SOURCE/'MainActivity.kt',SOURCE/'YouTubeLoginActivity.kt']
     paths += [SOURCE/'data'/name for name in ['DesignChoices.kt','Playlists.kt','SpotifyPlaylistImport.kt','OfflineCapsule.kt','CapsulePlan.kt','ImportedLyrics.kt']]
     found=set()
@@ -64,7 +79,20 @@ def main():
     print('Audited',len(paths),'UI/message files;',len(found),'public messages/templates.')
     catalog=json.loads((ROOT/'app/src/main/assets/translations.json').read_text(encoding='utf-8'))
     missing=sorted(found-set(catalog['en']))
-    print('Missing from bundled English catalog:',len(missing))
+    skip=ignored()
+    unaccounted=[m for m in missing if m not in skip]
+    stale=sorted(set(skip)&set(catalog['en']))
+    print('Missing from bundled English catalog:',len(missing),
+          f'({len(unaccounted)} unaccounted, {len(missing)-len(unaccounted)} non-UI in tools/ui-text-ignored.json)')
     (ROOT/'tools/ui-messages-missing.json').write_text(json.dumps(missing,ensure_ascii=False,indent=1)+'\n',encoding='utf-8')
+    if stale:
+        print('Stale ui-text-ignored.json entries (now translated, remove them):',len(stale))
+        for message in stale:print('  ',repr(message))
+    if unaccounted:
+        print('Untranslated user-facing messages:')
+        for message in unaccounted[:40]:print('  ',repr(message))
+    if check and (unaccounted or stale):
+        return 1
+    return 0
 
-if __name__=='__main__':main()
+if __name__=='__main__':sys.exit(main())
