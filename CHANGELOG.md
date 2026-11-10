@@ -7,6 +7,31 @@
 
 ---
 
+# Ketvoice 4.3.1
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 82** — the 116 user-facing strings that only existed in French are
+now translated into all ten other languages, CI refuses to let that gap reopen,
+and paused downloads survive an app restart.
+
+- Every non-French table now covers playback and source ordering, the Bit-Perfect
+  status panel, download queue and Wi-Fi states, updater errors, Discord
+  diagnostics, the listening recap and share actions. Placeholders, brand names
+  and units are preserved, so composed labels still reorder arguments per language.
+- `tools/audit_ui_texts.py --check` fails when a user-facing string has no bundled
+  translation and when an allowlist entry goes stale; CI runs it on every push.
+- The machine-translation helper now drafts into a proposal file instead of
+  overwriting the catalog, because its output is not shippable.
+- Download queue entries are persisted: paused stays paused after a process kill,
+  pending restarts by itself, failed stays visible without holding a busy slot.
+- Every APK is signed with the same pinned certificate, so updates install over
+  the previous version. The keystore and each built APK are verified in CI.
+
+Full notes and explicit host/hardware validation limits: [4.3.1](docs/releases/v4.3.1.md).
+
+---
+
 # Ketvoice 4.3.0
 
 ![Ketvoice](ketvoice-banner.png)
