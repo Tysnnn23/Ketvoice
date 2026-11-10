@@ -80,7 +80,10 @@ android {
                 !b64.isNullOrBlank() -> {
                     val decoded = File(layout.buildDirectory.asFile.get(), "signing/ketvoice-release.jks")
                     decoded.parentFile.mkdirs()
-                    decoded.writeBytes(Base64.getDecoder().decode(b64.trim()))
+                    // Secrets are often pasted with line wrapping; the strict
+                    // decoder throws on any whitespace, so strip it first.
+                    val body = b64.filterNot { it.isWhitespace() }
+                    decoded.writeBytes(Base64.getDecoder().decode(body))
                     decoded
                 }
                 !customStore.isNullOrBlank() -> file(customStore)

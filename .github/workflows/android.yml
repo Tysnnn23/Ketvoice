@@ -65,7 +65,14 @@ jobs:
           mkdir -p "$HOME/.android"
           if [ -n "$KETVOICE_KEYSTORE_B64" ]; then
             echo "Decoding stable release keystore from secret."
-            printf '%s' "$KETVOICE_KEYSTORE_B64" | base64 -d > "$HOME/.android/ketvoice-release.jks"
+            # Secrets are often copy-pasted with line wrapping; base64 -d stops
+            # at the first invalid byte and silently yields a truncated store.
+            if ! printf '%s' "$KETVOICE_KEYSTORE_B64" \
+                 | tr -d '[:space:]' \
+                 | base64 -d > "$HOME/.android/ketvoice-release.jks" 2>/dev/null; then
+              echo "::error::KETVOICE_KEYSTORE_B64 is not valid base64."
+              exit 1
+            fi
             echo "KETVOICE_KEYSTORE=$HOME/.android/ketvoice-release.jks" >> "$GITHUB_ENV"
             echo "stable=true" >> "$GITHUB_OUTPUT"
           else
@@ -80,6 +87,39 @@ jobs:
             echo "stable=false" >> "$GITHUB_OUTPUT"
           fi
 
+      # Fail here, with an actionable message, instead of inside
+      # `:app:packageQuestRelease`, where Keytool only reports
+      # "DerInputStream.getLength(): lengthTag=109, too big" and the cause
+      # (a corrupt secret) is invisible in the log.
+      - name: Validate signing keystore
+        if: steps.keystore.outputs.stable == 'true'
+        env:
+          KETVOICE_STORE_PASSWORD: ${{ secrets.KETVOICE_STORE_PASSWORD }}
+          KETVOICE_KEY_ALIAS: ${{ secrets.KETVOICE_KEY_ALIAS }}
+          EXPECTED_CERT_SHA256: ${{ vars.KETVOICE_CERT_SHA256 || 'ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9' }}
+        run: |
+          set -euo pipefail
+          ks="${KETVOICE_KEYSTORE:-$HOME/.android/ketvoice-release.jks}"
+          alias="${KETVOICE_KEY_ALIAS:-androiddebugkey}"
+          storepass="${KETVOICE_STORE_PASSWORD:-android}"
+          echo "keystore: $ks ($(stat -c %s "$ks") bytes), alias: $alias"
+          if ! keytool -list -keystore "$ks" -storepass "$storepass" -alias "$alias" > /dev/null 2>"$RUNNER_TEMP/keytool.err"; then
+            sed -n '1,20p' "$RUNNER_TEMP/keytool.err"
+            echo "::error::KETVOICE_KEYSTORE_B64 does not decode into a keystore Keytool can read."
+            echo "::error::Re-upload it with tools/push_secrets.py using the keystore that signs the published APKs. See docs/SIGNING.md."
+            exit 1
+          fi
+          # apksigner reports the SHA-256 of the DER certificate, which is also
+          # sha256sum of keytool -exportcert: the exact same value, but locale
+          # independent (Keytool localises its fingerprint labels).
+          cert_sha=$(keytool -exportcert -keystore "$ks" -storepass "$storepass" -alias "$alias" 2>/dev/null | sha256sum | cut -d' ' -f1)
+          echo "keystore certificate SHA-256: $cert_sha"
+          if [ -n "$EXPECTED_CERT_SHA256" ] && [ "$cert_sha" != "$EXPECTED_CERT_SHA256" ]; then
+            echo "::error::Keystore certificate $cert_sha != expected $EXPECTED_CERT_SHA256."
+            echo "::error::Either the secret holds the wrong keystore, or the pin must move to the new identity (breaks in-place updates)."
+            exit 1
+          fi
+
       - name: Compile (assemble mobile + quest release)
         env:
           KETVOICE_STORE_PASSWORD: ${{ secrets.KETVOICE_STORE_PASSWORD }}
@@ -92,6 +132,36 @@ jobs:
 
       - name: Lint
         run: ./gradlew :app:lintMobileRelease --stacktrace || true
+
+      # The keystore preflight proves the secret is readable; this proves the
+      # APKs on disk really carry the release identity before anything is
+      # attached to a release.
+      - name: Verify APK signatures
+        if: steps.keystore.outputs.stable == 'true'
+        env:
+          EXPECTED_CERT_SHA256: ${{ vars.KETVOICE_CERT_SHA256 || 'ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9' }}
+        run: |
+          set -euo pipefail
+          apksigner_bin=$(find "${ANDROID_HOME}/build-tools" -name apksigner -type f | sort -V | tail -1)
+          echo "apksigner: $apksigner_bin"
+          count=0
+          status=0
+          while IFS= read -r apk; do
+            count=$((count + 1))
+            digest=$("$apksigner_bin" verify --print-certs "$apk" \
+              | sed -n 's/^Signer #1 certificate SHA-256 digest: //p' | head -1)
+            if [ "$digest" = "$EXPECTED_CERT_SHA256" ]; then
+              echo "ok   $apk -> $digest"
+            else
+              echo "::error file=$apk::signed by ${digest:-<no signer>}, expected $EXPECTED_CERT_SHA256"
+              status=1
+            fi
+          done < <(find app/build/outputs/apk -name '*.apk' | sort)
+          if [ "$count" -eq 0 ]; then
+            echo "::error::No APK found to verify."
+            status=1
+          fi
+          exit "$status"
 
       - name: Upload APKs (unsigned build artifacts)
         uses: actions/upload-artifact@v4
