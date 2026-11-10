@@ -141,19 +141,38 @@ jobs:
         env:
           EXPECTED_CERT_SHA256: ${{ vars.KETVOICE_CERT_SHA256 || 'ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9' }}
         run: |
-          set -euo pipefail
-          apksigner_bin=$(find "${ANDROID_HOME}/build-tools" -name apksigner -type f | sort -V | tail -1)
+          set -uo pipefail
+          # Pick the newest apksigner that actually runs: a build-tools release
+          # newer than the runner's JDK exits without printing anything.
+          apksigner_bin=""
+          while IFS= read -r candidate; do
+            if "$candidate" version > /dev/null 2>&1; then
+              apksigner_bin="$candidate"
+              break
+            fi
+            echo "::warning::$candidate is not runnable on this JDK, trying an older one"
+          done < <(find "${ANDROID_HOME}/build-tools" -maxdepth 2 -name apksigner -type f | sort -Vr)
+          if [ -z "$apksigner_bin" ]; then
+            echo "::error::No runnable apksigner under $ANDROID_HOME/build-tools."
+            exit 1
+          fi
           echo "apksigner: $apksigner_bin"
+          expected=$(printf '%s' "$EXPECTED_CERT_SHA256" | tr 'A-F' 'a-f')
           count=0
           status=0
           while IFS= read -r apk; do
             count=$((count + 1))
-            digest=$("$apksigner_bin" verify --print-certs "$apk" \
-              | sed -n 's/^Signer #1 certificate SHA-256 digest: //p' | head -1)
-            if [ "$digest" = "$EXPECTED_CERT_SHA256" ]; then
+            out=$("$apksigner_bin" verify --print-certs "$apk" 2>&1 || true)
+            # The certificate SHA-256 is the first 64-hex token in the report
+            # (the SHA-1 and MD5 digests follow it). Parsing one token instead
+            # of the label keeps this working across build-tools wordings.
+            digest=$(printf '%s\n' "$out" | tr -d ':' | grep -oiE '[0-9a-f]{64}' | head -1 | tr 'A-F' 'a-f')
+            if [ -n "$digest" ] && [ "$digest" = "$expected" ]; then
               echo "ok   $apk -> $digest"
             else
-              echo "::error file=$apk::signed by ${digest:-<no signer>}, expected $EXPECTED_CERT_SHA256"
+              echo "--- apksigner report for $apk ---"
+              printf '%s\n' "$out" | head -20
+              echo "::error file=$apk::signed by ${digest:-unknown}, expected $expected"
               status=1
             fi
           done < <(find app/build/outputs/apk -name '*.apk' | sort)
