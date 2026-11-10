@@ -58,23 +58,22 @@ object Downloader {
     private val paused = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
 
     /** Downloads that must survive process death; mirrored to `download-queue.json`. */
-    private val queueLock = Any()
-    @Volatile private var queue: List<QueuedDownload> = emptyList()
+    @Volatile private var queueStore: DownloadQueueStore? = null
 
     fun pause(id: String) {
         if (id !in _busy.value) return
         paused.add(id)
         task(id) { it.copy(phase = DownloadPhase.Paused) }
-        ctx?.let { c -> mutateQueue(c) { DownloadQueue.withState(it, id, QueueState.Paused) } }
+        ctx?.let { c -> updateQueue(c) { DownloadQueue.withState(it, id, QueueState.Paused) } }
     }
 
     fun resume(id: String) {
         paused.remove(id)
         val c = ctx ?: return
-        mutateQueue(c) { DownloadQueue.withState(it, id, QueueState.Pending) }
+        updateQueue(c) { DownloadQueue.withState(it, id, QueueState.Pending) }
         // A download restored from disk has no live coroutine: start one.
         if (jobs[id] == null) {
-            val track = _activeTracks.value[id] ?: DownloadQueue.find(queue, id)?.track ?: return
+            val track = _activeTracks.value[id] ?: DownloadQueue.find(queued, id)?.track ?: return
             start(track, capsuleLimit = null, announce = false)
         }
     }
@@ -92,35 +91,26 @@ object Downloader {
             _busy.update { it - id }
             _activeTracks.update { it - id }
         }
-        ctx?.let { c -> mutateQueue(c) { DownloadQueue.remove(it, id) } }
+        ctx?.let { c -> updateQueue(c) { DownloadQueue.remove(it, id) } }
     }
 
     /** Queued downloads, newest last; exposed for diagnostics and tests. */
-    val queued: List<QueuedDownload> get() = queue
+    val queued: List<QueuedDownload> get() = queueStore?.entries ?: emptyList()
 
-    private fun queueFile(c: Context) = File(c.filesDir, "download-queue.json")
-
-    private fun mutateQueue(c: Context, change: (List<QueuedDownload>) -> List<QueuedDownload>) {
-        synchronized(queueLock) {
-            val next = change(queue)
-            if (next == queue) return
-            queue = next
-            runCatching {
-                writeAtomic(queueFile(c), DownloadQueue.encode(next).toByteArray(Charsets.UTF_8))
-            }
+    private fun storeFor(c: Context): DownloadQueueStore =
+        queueStore ?: synchronized(this) {
+            queueStore ?: DownloadQueueStore(File(c.filesDir, QUEUE_FILE)) { file, bytes ->
+                // The store owns the queue rules; the app keeps AtomicFile's fsync.
+                writeAtomic(file, bytes)
+            }.also { queueStore = it }
         }
+
+    private fun updateQueue(c: Context, change: (List<QueuedDownload>) -> List<QueuedDownload>) {
+        storeFor(c).mutate(change)
     }
 
     private fun restoreQueue(c: Context) {
-        val restored = DownloadQueue.decode(runCatching { queueFile(c).readText(Charsets.UTF_8) }.getOrNull())
-        val onDisk = _items.value.map { it.track.id }.toSet()
-        val surviving = DownloadQueue.pending(restored, onDisk)
-        synchronized(queueLock) {
-            queue = surviving
-            if (surviving != restored) runCatching {
-                writeAtomic(queueFile(c), DownloadQueue.encode(surviving).toByteArray(Charsets.UTF_8))
-            }
-        }
+        val surviving = storeFor(c).load(_items.value.map { it.track.id }.toSet())
         surviving.forEach { entry ->
             val id = entry.track.id
             if (jobs.containsKey(id)) return@forEach
@@ -132,6 +122,8 @@ object Downloader {
             if (DownloadQueue.startsImmediately(entry.state)) start(entry.track, capsuleLimit = null, announce = false)
         }
     }
+
+    private const val QUEUE_FILE = "download-queue.json"
     private fun task(id: String, change: (DownloadTask) -> DownloadTask) {
         _tasks.update { it + (id to change(it[id] ?: DownloadTask())) }
     }
@@ -177,7 +169,7 @@ object Downloader {
         }
         jobs[track.id]?.let { return it }
         // Capsule preparation is a transient bundle, not a user download.
-        if (capsuleLimit == null) mutateQueue(c) { DownloadQueue.withEntry(it, track) }
+        if (capsuleLimit == null) updateQueue(c) { DownloadQueue.withEntry(it, track) }
         return start(track, capsuleLimit, announce = true)
     }
 
@@ -339,9 +331,9 @@ object Downloader {
                 val context = ctx
                 if (context != null) {
                     when (_tasks.value[track.id]?.phase) {
-                        DownloadPhase.Complete -> mutateQueue(context) { DownloadQueue.remove(it, track.id) }
-                        DownloadPhase.Failed -> mutateQueue(context) { DownloadQueue.withState(it, track.id, QueueState.Failed) }
-                        else -> mutateQueue(context) { DownloadQueue.remove(it, track.id) }
+                        DownloadPhase.Complete -> updateQueue(context) { DownloadQueue.remove(it, track.id) }
+                        DownloadPhase.Failed -> updateQueue(context) { DownloadQueue.withState(it, track.id, QueueState.Failed) }
+                        else -> updateQueue(context) { DownloadQueue.remove(it, track.id) }
                     }
                 }
             }
@@ -376,7 +368,7 @@ object Downloader {
             File(item.file.parentFile, "$stem.cover.jpg").delete()
             ArtworkRepo.removeOfflineCover(item.track.id)
         }
-        ctx?.let { c -> mutateQueue(c) { DownloadQueue.remove(it, item.track.id) } }
+        ctx?.let { c -> updateQueue(c) { DownloadQueue.remove(it, item.track.id) } }
         refresh()
     }
 

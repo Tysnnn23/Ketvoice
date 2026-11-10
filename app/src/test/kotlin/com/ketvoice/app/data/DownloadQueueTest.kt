@@ -108,7 +108,8 @@ class DownloadQueueTest {
             DownloadQueue.pending(queue, setOf("a", "c")).map { it.track.id })
     }
 
-    @Test fun unknownStateFallsBackToPending() {        assertEquals(QueueState.Pending, QueueState.parse("weird"))
+    @Test fun unknownStateFallsBackToPending() {
+        assertEquals(QueueState.Pending, QueueState.parse("weird"))
         assertEquals(QueueState.Pending, QueueState.parse(null))
         assertEquals(QueueState.Paused, QueueState.parse("paused"))
         assertEquals(QueueState.Failed, QueueState.parse("FAILED"))

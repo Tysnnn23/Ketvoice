@@ -2,6 +2,7 @@ package com.ketvoice.app.data
 
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.File
 
 /**
  * Where a queued download stands between two app launches.
@@ -159,5 +160,72 @@ object DownloadQueue {
         val row = raw ?: return null
         val track = trackFromJson(row.optJSONObject("track")) ?: return null
         return QueuedDownload(track, QueueState.parse(row.optString("state")), row.optLong("addedAt"))
+    }
+}
+
+/**
+ * Durable home of the download queue.
+ *
+ * Owns the in-memory list and its file, so `Downloader` only decides *what*
+ * changes instead of repeating the read/prune/write dance for every transition.
+ * The physical write is injected: the app passes `AtomicFile` (fsync + rename),
+ * host tests pass a counter or a throwing writer.
+ */
+class DownloadQueueStore(
+    private val file: File,
+    private val writer: (File, ByteArray) -> Unit = ::replaceWithRename
+) {
+
+    @Volatile
+    var entries: List<QueuedDownload> = emptyList()
+        private set
+
+    /**
+     * Reads the queue and drops entries whose track is already on disk
+     * (finished while the app was not running). The file is rewritten when the
+     * prune changed it, so the stale rows cannot come back on the next launch.
+     *
+     * A missing, unreadable or corrupt file yields an empty queue instead of
+     * failing the launch.
+     */
+    fun load(downloadedIds: Set<String> = emptySet()): List<QueuedDownload> {
+        val raw = runCatching { file.takeIf { it.isFile }?.readText(Charsets.UTF_8) }.getOrNull()
+        val restored = DownloadQueue.decode(raw)
+        val surviving = DownloadQueue.pending(restored, downloadedIds)
+        synchronized(this) {
+            entries = surviving
+            if (surviving != restored) persist(surviving)
+        }
+        return surviving
+    }
+
+    /** Applies a transition and persists it; a no-op change writes nothing. */
+    fun mutate(change: (List<QueuedDownload>) -> List<QueuedDownload>): List<QueuedDownload> =
+        synchronized(this) {
+            val next = change(entries)
+            if (next == entries) entries else {
+                entries = next
+                persist(next)
+                next
+            }
+        }
+
+    private fun persist(list: List<QueuedDownload>) {
+        // A failed write must never propagate: the queue is a convenience, the
+        // running download is not.
+        runCatching { writer(file, DownloadQueue.encode(list).toByteArray(Charsets.UTF_8)) }
+    }
+
+    private companion object {
+        /** Plain-JVM fallback used by host tests: temp file + rename. */
+        fun replaceWithRename(file: File, bytes: ByteArray) {
+            val temp = File(file.absoluteFile.parentFile, file.name + ".tmp")
+            temp.writeBytes(bytes)
+            if (file.exists() && !file.delete()) throw java.io.IOException("cannot replace $file")
+            if (!temp.renameTo(file)) {
+                temp.copyTo(file, overwrite = true)
+                temp.delete()
+            }
+        }
     }
 }
