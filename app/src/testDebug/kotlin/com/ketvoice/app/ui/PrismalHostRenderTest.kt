@@ -247,6 +247,22 @@ class PrismalHostRenderTest {
         assertEquals("entry:0", PlaylistStore.lists.value.first().entries[1].id)
     }
 
+    @Test fun playlistRenameAndDeleteSheetsPreserveDataWhenCancelled() {
+        playlistFixture()
+        compose.setContent { KetvoiceTheme(useDark = false) { PlaylistScreen() } }
+        val original = PlaylistStore.lists.value.single()
+        compose.onNodeWithContentDescription("Actions de la playlist").performClick()
+        compose.runOnIdle { AppUi.playlistMenu.value!!.onRename(); AppUi.playlistMenu.value = null }
+        compose.onNodeWithContentDescription("Nom de la playlist").assertIsDisplayed().performTextReplacement("New name")
+        compose.onNodeWithText("Annuler").performClick()
+        assertEquals(original, PlaylistStore.lists.value.single())
+        compose.onNodeWithContentDescription("Actions de la playlist").performClick()
+        compose.runOnIdle { AppUi.playlistMenu.value!!.onDelete(); AppUi.playlistMenu.value = null }
+        compose.onNodeWithText("Supprimer cette playlist ?").assertIsDisplayed()
+        compose.onNodeWithText("Annuler").performClick()
+        assertEquals("Cancelling must never delete playlist data", original, PlaylistStore.lists.value.single())
+    }
+
     @Test fun hostRenderingCannotValidateRenderEffectBlur() {
         // Regression note: Robolectric's native Skia does NOT composite RenderEffect
         // blur, so host pixels cannot validate a bloom. Device validation is required.

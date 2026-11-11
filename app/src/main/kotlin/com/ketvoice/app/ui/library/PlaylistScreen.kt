@@ -17,29 +17,36 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.TextButton
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ketvoice.app.data.*
 import com.ketvoice.app.player.Player
 import com.ketvoice.app.theme.LocalTheme
+import com.ketvoice.app.theme.DesignTokens
 import com.ketvoice.app.ui.AppUi
 import com.ketvoice.app.ui.adaptive.LocalAdaptiveLayout
 import com.ketvoice.app.ui.common.*
+import com.ketvoice.app.ui.settings.SettingsAction
+import com.ketvoice.app.ui.settings.SettingsSheet
 import kotlinx.coroutines.launch
 
 @Composable
@@ -57,7 +64,16 @@ fun PlaylistScreen() {
     var error by remember { mutableStateOf("") }
     val player by Player.state.collectAsState()
     val list = rememberLazyListState()
-    val collapsed by remember { derivedStateOf { list.firstVisibleItemIndex > 0 } }
+    val collapse by remember { derivedStateOf {
+        val hero = list.layoutInfo.visibleItemsInfo.firstOrNull { it.key == "playlist-hero" }
+        if (hero == null) if (list.firstVisibleItemIndex > 0) 1f else 0f
+        else ((-hero.offset).toFloat() / (hero.size * .75f).coerceAtLeast(1f)).coerceIn(0f, 1f)
+    } }
+    val covers by ArtworkRepo.covers.collectAsState()
+    val firstTrack = playlist?.entries?.firstNotNullOfOrNull { it.track }
+    val heroCover = playlist?.coverUrl ?: firstTrack?.let { covers["t:${it.id}"] ?: it.coverUrl }
+    val sampledAccent = com.ketvoice.app.theme.rememberCoverAccent(if (AppSettings.albumColors.value) heroCover else null)?.first
+    val heroTone = sampledAccent ?: th.accent
     val onAccent = if (th.accent.luminance() > .179f) Color.Black else Color.White
 
     fun action(block: suspend () -> Unit) {
@@ -73,25 +89,34 @@ fun PlaylistScreen() {
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             GlassBackButton { if (editing) editing = false else AppUi.closeOverlay() }
-            Text(if (editing) com.ketvoice.app.data.AppText.t("Glissez ⠿ pour réordonner")
-                else if (collapsed) playlist?.name.orEmpty() else com.ketvoice.app.data.AppText.t("Playlist"),
-                localize = false, color = if (collapsed) th.onBackground else th.secondary,
-                maxLines = 1, overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f).padding(horizontal = 14.dp),
-                fontSize = if (com.ketvoice.app.BuildConfig.IS_QUEST) 15.sp else 13.sp)
+            val genericTitle = com.ketvoice.app.data.AppText.t("Playlist")
+            val editingTitle = com.ketvoice.app.data.AppText.t("Glissez ⠿ pour réordonner")
+            val accessibleTitle = if (editing) editingTitle else if (collapse >= .5f) playlist?.name.orEmpty() else genericTitle
+            Box(Modifier.weight(1f).padding(horizontal = 14.dp).semantics { contentDescription = accessibleTitle }) {
+                if (editing) Text(editingTitle, localize = false, color = th.onBackground, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    fontSize = if (com.ketvoice.app.BuildConfig.IS_QUEST) 15.sp else 13.sp, modifier = Modifier.clearAndSetSemantics {})
+                else {
+                    Text(genericTitle, localize = false, color = th.secondary, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        fontSize = if (com.ketvoice.app.BuildConfig.IS_QUEST) 15.sp else 13.sp,
+                        modifier = Modifier.clearAndSetSemantics {}.graphicsLayer { alpha = 1f - collapse })
+                    Text(playlist?.name.orEmpty(), localize = false, color = th.onBackground, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        fontSize = if (com.ketvoice.app.BuildConfig.IS_QUEST) 15.sp else 13.sp,
+                        modifier = Modifier.clearAndSetSemantics {}.graphicsLayer { alpha = collapse })
+                }
+            }
             Spacer(Modifier.width(10.dp))
-            Box(Modifier.size(38.dp).clip(CircleShape).clickable(enabled = playlist != null) {
+            LiquidGlassButton(onClick = {
                 playlist?.let { target ->
                     com.ketvoice.app.util.ShareLinks.sharePlaylist(context, target.id, target.name, target.entries.size)
                 }
-            }, contentAlignment = Alignment.Center) {
+            }, modifier = Modifier.size(DesignTokens.Space.touch), enabled = playlist != null) {
                 Icon(Icons.Filled.Share, "Partager la playlist", tint = th.onBackground, modifier = Modifier.size(20.dp))
             }
             Spacer(Modifier.width(4.dp))
-            Box(Modifier.size(38.dp).clip(CircleShape).clickable(enabled = playlist != null) {
+            LiquidGlassButton(onClick = {
                 // La feuille est rendue par AppRoot (au-dessus du chrome flottant) ;
                 // ici on ne fait que publier la requête avec ses actions.
-                val target = playlist ?: return@clickable
+                val target = playlist ?: return@LiquidGlassButton
                 AppUi.playlistMenu.value = AppUi.PlaylistMenuRequest(
                     playlist = target,
                     onRename = { name = target.name; rename = true },
@@ -99,8 +124,7 @@ fun PlaylistScreen() {
                     onExportM3u = { action { PlaylistExchange.exportM3u(context, target) } },
                     onDelete = { deleting = true }
                 )
-            },
-                contentAlignment = Alignment.Center) {
+            }, modifier = Modifier.size(DesignTokens.Space.touch), enabled = playlist != null) {
                 Icon(Icons.Filled.MoreHoriz, "Actions de la playlist", tint = th.onBackground, modifier = Modifier.size(22.dp))
             }
         }
@@ -124,13 +148,9 @@ fun PlaylistScreen() {
             contentPadding = PaddingValues(bottom = LocalAdaptiveLayout.current.bottomPaddingDp.dp)
         ) {
             item(key = "playlist-hero") {
-                PlaylistHeaderLayout(compactHeader, artwork = {
+                PlaylistHeaderLayout(compactHeader, heroTone, artwork = {
                 BoxWithConstraints(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                     val edge = if (compactHeader) 104.dp else (maxWidth * .68f).coerceIn(156.dp, 256.dp)
-                    if (!AppSettings.reduceDynamicBlur.value && !AppSettings.highPerformanceMode.value) Box(Modifier.size(edge + 24.dp)
-                         .graphicsLayer { alpha = .22f }.blur(18.dp)) {
-                         PlaylistArtwork(playlist, playlist.name, Modifier.fillMaxSize())
-                    }
                     PlaylistArtwork(playlist, playlist.name,
                         Modifier.size(edge).testTag("playlist-cover"))
                 }
@@ -241,14 +261,34 @@ fun PlaylistScreen() {
                 }
             }
         }
-        if (rename) AppAlertDialog(onDismissRequest = { if (!busy) rename = false }, title = { Text("Renommer la playlist") },
-            text = { OutlinedTextField(name, { name = it.take(80) }, label = { Text("Nom de la playlist") }, singleLine = true) },
-            confirmButton = { TextButton(enabled = !busy && name.isNotBlank(), onClick = { action { PlaylistStore.rename(playlist.id, name); rename = false } }) { Text("Enregistrer") } },
-            dismissButton = { TextButton(onClick = { rename = false }) { Text("Annuler") } })
-        if (deleting) AppAlertDialog(onDismissRequest = { if (!busy) deleting = false }, title = { Text("Supprimer cette playlist ?") },
-            text = { Text("Seule la playlist est supprimée. Vos titres et téléchargements sont conservés.") },
-            confirmButton = { TextButton(enabled = !busy, onClick = { action { PlaylistStore.delete(playlist.id); AppUi.closeOverlay() } }) { Text("Supprimer") } },
-            dismissButton = { TextButton(onClick = { deleting = false }) { Text("Annuler") } })
+        if (rename) SettingsSheet(onDismiss = { if (!busy) rename = false }) {
+            Column(Modifier.fillMaxWidth().padding(20.dp)) {
+                Text("Renommer la playlist", color = th.onBackground, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Text("Nom de la playlist", color = th.secondary, fontSize = 12.sp, modifier = Modifier.padding(top = 12.dp, bottom = 6.dp))
+                val label = AppText.t("Nom de la playlist")
+                BasicTextField(name, { name = it.take(80) }, singleLine = true,
+                    textStyle = TextStyle(color = th.onBackground, fontSize = 16.sp), cursorBrush = SolidColor(th.accent),
+                    modifier = Modifier.fillMaxWidth().semantics { contentDescription = label }.clip(RoundedCornerShape(12.dp))
+                        .background(th.onBackground.copy(alpha = .07f)).heightIn(min = 48.dp).padding(12.dp))
+                Row(Modifier.fillMaxWidth().padding(top = 14.dp), horizontalArrangement = Arrangement.End) {
+                    SettingsAction("Annuler", { rename = false }, enabled = !busy)
+                    SettingsAction("Enregistrer", { action { PlaylistStore.rename(playlist.id, name); rename = false } },
+                        enabled = !busy && name.isNotBlank(), primary = true)
+                }
+            }
+        }
+        if (deleting) SettingsSheet(onDismiss = { if (!busy) deleting = false }) {
+            Column(Modifier.fillMaxWidth().padding(20.dp)) {
+                Text("Supprimer cette playlist ?", color = th.onBackground, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Text("Seule la playlist est supprimée. Vos titres et téléchargements sont conservés.",
+                    color = th.secondary, modifier = Modifier.padding(top = 12.dp))
+                Row(Modifier.fillMaxWidth().padding(top = 14.dp), horizontalArrangement = Arrangement.End) {
+                    SettingsAction("Annuler", { deleting = false }, enabled = !busy)
+                    SettingsAction("Supprimer", { action { PlaylistStore.delete(playlist.id); AppUi.closeOverlay() } },
+                        enabled = !busy, primary = true)
+                }
+            }
+        }
         // Le menu d'actions est rendu par AppRoot (AppUi.playlistMenu) : il passe
         // au-dessus du mini-lecteur et de la navigation au lieu d'être masqué.
     }
@@ -256,8 +296,10 @@ fun PlaylistScreen() {
 }
 
 @Composable
-private fun PlaylistHeaderLayout(compact: Boolean, artwork: @Composable () -> Unit, details: @Composable () -> Unit) {
-    Box(Modifier.fillMaxWidth().testTag("playlist-header").padding(horizontal = if (compact) 16.dp else 24.dp, vertical = 6.dp)) {
+private fun PlaylistHeaderLayout(compact: Boolean, tone: Color, artwork: @Composable () -> Unit, details: @Composable () -> Unit) {
+    Box(Modifier.fillMaxWidth().testTag("playlist-header")
+        .background(Brush.verticalGradient(listOf(tone.copy(alpha = .12f), Color.Transparent)))
+        .padding(horizontal = if (compact) 16.dp else 24.dp, vertical = 6.dp)) {
         if (compact) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             Box(Modifier.width(104.dp)) { artwork() }
             Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) { details() }
@@ -272,7 +314,7 @@ private fun PlaylistRow(entry: PlaylistEntry, index: Int, editing: Boolean, busy
     val cover = entry.track?.let { ArtworkRepo.coverForTrack(it) } ?: entry.track?.coverUrl
     Row(modifier.fillMaxWidth().heightIn(min = 66.dp).clickable(enabled = !busy, onClick = onPlay)
         .padding(horizontal = 18.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(dragHandle.width(28.dp), contentAlignment = Alignment.Center) {
+        Box(dragHandle.width(if (editing) 48.dp else 28.dp).heightIn(min = 48.dp), contentAlignment = Alignment.Center) {
             if (editing) Icon(Icons.Filled.DragHandle, "Déplacer ${entry.title}",
                 tint = th.secondary, modifier = Modifier.size(20.dp))
             else Text("${index + 1}", localize = false, color = th.secondary, fontSize = 13.sp)

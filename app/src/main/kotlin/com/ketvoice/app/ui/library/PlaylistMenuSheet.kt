@@ -73,8 +73,10 @@ fun PlaylistMenuSheet(
                         color = Color.White.copy(alpha = .78f), fontSize = 13.sp)
                 }
                 Spacer(Modifier.width(10.dp))
-                Icon(Icons.Filled.Close, null, tint = Color.White.copy(alpha = .7f),
-                    modifier = Modifier.clickable(noRip, null) { onClose() })
+                Box(Modifier.size(48.dp).clip(RoundedCornerShape(50)).clickable(noRip, null) { onClose() },
+                    contentAlignment = Alignment.Center) {
+                    Icon(Icons.Filled.Close, "Fermer", tint = Color.White.copy(alpha = .7f), modifier = Modifier.size(20.dp))
+                }
             }
             if (playable.isNotEmpty()) {
                 PlaylistMenuRow("Tout lire ensuite", Icons.Filled.PlaylistAdd) { onPlayNext(); onClose() }
@@ -105,7 +107,7 @@ private fun PlaylistMenuRow(
 ) {
     Row(Modifier.fillMaxWidth()
         .clickable(noRip, null, enabled = enabled) { onClick() }
-        .padding(horizontal = 20.dp, vertical = 13.dp),
+        .heightIn(min = 48.dp).padding(horizontal = 20.dp, vertical = 13.dp),
         verticalAlignment = Alignment.CenterVertically) {
         Icon(icon, null, tint = if (enabled) tint else Color.White.copy(alpha = .4f), modifier = Modifier.size(25.dp))
         Spacer(Modifier.width(18.dp))

@@ -29,6 +29,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -141,7 +142,10 @@ internal fun AlbumPage(request: CatalogRequest, page: CatalogPage?, tracks: List
                  Text(title, localize = false, color = theme.onBackground, fontSize = 15.sp,
                     fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
                      modifier = Modifier.weight(1f).padding(horizontal = 14.dp).graphicsLayer { alpha = collapse.value })
-                if (collapse.value >= .98f && tracks.isNotEmpty()) CollectionQuickActions(tracks)
+                if (tracks.isNotEmpty()) Row(Modifier.graphicsLayer { alpha = collapse.value }
+                    .then(if (collapse.value < .98f) Modifier.clearAndSetSemantics {} else Modifier)) {
+                    CollectionQuickActions(tracks, enabled = collapse.value >= .98f)
+                }
                 LiquidGlassButton({ ShareLinks.shareAlbum(context, request.id, title, artist) }, Modifier.size(48.dp)) {
                     Icon(Icons.Filled.Share, "Partager", tint = theme.onBackground, modifier = Modifier.size(21.dp))
                 }
