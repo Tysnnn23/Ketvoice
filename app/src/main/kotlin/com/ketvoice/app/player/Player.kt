@@ -6,10 +6,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
-import android.net.Uri
 import android.os.Bundle
-import androidx.media3.common.MediaItem
-import androidx.media3.common.MediaMetadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
@@ -73,21 +70,28 @@ data class PlayerUiState(
 object Player {
 
     /** Wall-clock budget for the whole parallel resolution pass. */
-    private const val TOTAL_RESOLVE_BUDGET_MS = 25_000L
+    private const val TOTAL_RESOLVE_BUDGET_MS = 40_000L
 
     private var controller: MediaController? = null
     private data class PendingPlay(val track: Track, val queue: List<Track>, val index: Int?, val position: Long, val playing: Boolean)
     private var pendingPlay: PendingPlay? = null
     private var connected = false
+    private var keepAliveJob: Job? = null
     private var appContext: Context? = null
     private var generation = 0
     private var resolutionJob: Job? = null
     private var desiredPlay = true
     private var activeStream: MusicApi.StreamInfo? = null
+    private var activeSourceId: String? = null
     private var fallbackAttempts = 0
     private val failedStreamUrls = mutableSetOf<String>()
+    private val failedSourceIds = mutableSetOf<String>()
+    private var refreshedExpiredStream = false
     private var historyGeneration = -1
     private var resolving = false
+    private var resolveStartedAt = 0L
+    private data class PrefetchedDash(val candidate: StreamResolver.Candidate, val at: Long)
+    private val prefetchedDash = java.util.concurrent.ConcurrentHashMap<String, PrefetchedDash>()
 
     private val _volume = MutableStateFlow(1f)
     val volume: StateFlow<Float> = _volume
@@ -121,37 +125,60 @@ object Player {
 
     private val listener = object : Player.Listener {
         override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
-            if (!resolving) {
+            if (!resolving && !_state.value.failed) {
                 desiredPlay = controller?.playWhenReady ?: playWhenReady
                 _state.value = _state.value.copy(playWhenReady = desiredPlay)
             }
         }
         override fun onPlayerError(error: PlaybackException) {
-            _state.value = _state.value.copy(audioFallback = true)
             val track = _state.value.current ?: return
             val failed = activeStream
+            val sourceId = activeSourceId
             failed?.url?.let { failedStreamUrls += it }
+            sourceId?.let { failedSourceIds += it }
+            resolving = true
+            _state.value = _state.value.copy(audioFallback = true, isPlaying = false, buffering = true, failed = false)
+            resolutionJob?.cancel()
+            cancelQualityUpgrade()
             if (fallbackAttempts++ >= SourcePriority.entries().count { it.enabled }.coerceAtLeast(1)) {
-                _state.value = _state.value.copy(isPlaying = false, quality = "Erreur de lecture · réessayez", failed = true)
+                resolving = false
+                _state.value = _state.value.copy(isPlaying = false, buffering = false, playWhenReady = false,
+                    quality = "Erreur de lecture · réessayez", failed = true)
                 return
             }
             val gen = generation
             val pos = controller?.currentPosition?.coerceAtLeast(0) ?: 0L
-            resolutionJob?.cancel()
             resolutionJob = scope.launch {
-                val alternative = withTimeoutOrNull(25_000) {
+                val status = generateSequence(error as Throwable?) { it.cause }
+                    .filterIsInstance<androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException>()
+                    .firstOrNull()?.responseCode
+                val refresh = if (!refreshedExpiredStream && status in setOf(401, 403) && sourceId != null) {
+                    refreshedExpiredStream = true
+                    try {
+                        withTimeoutOrNull(14_000) {
+                            StreamResolver.sources(track, download = false, lossless = wantsLossless())
+                                .firstOrNull { it.id == sourceId }?.resolve?.invoke()
+                        }
+                    } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+                    catch (_: Exception) { null }
+                } else null
+                val alternative = refresh?.let { StreamResolver.Candidate(sourceId!!, 0, it) } ?: withTimeoutOrNull(25_000) {
                     if (track.id.startsWith("kv:upload:") || track.addon == "upload") null
                     else StreamResolver.candidates(track, download = false, lossless = wantsLossless(),
-                        race = true, excluded = failedStreamUrls.toSet()).firstOrNull()?.stream
+                        race = true, excluded = failedStreamUrls.toSet(), excludedSources = failedSourceIds.toSet()).firstOrNull()
                 }
                 if (gen != generation) return@launch
-                if (alternative != null && alternative.url != failed?.url) {
-                    activeStream = alternative
-                    startItem(controller ?: return@launch, track, alternative.url, pos, desiredPlay, AudioCache.key(track.id, alternative))
-                    _state.value = _state.value.copy(quality = label(alternative))
-                    AudioCache.cacheWhole(track.id, alternative)
+                if (alternative != null) {
+                    val stream = alternative.stream
+                    activeStream = stream
+                    activeSourceId = alternative.sourceId
+                    startItem(controller ?: return@launch, track, stream.url, pos, desiredPlay, AudioCache.key(track.id, stream), stream)
+                    _state.value = _state.value.copy(quality = label(stream), audioSource = sourceLabel(alternative.sourceId))
+                    AudioCache.cacheWhole(track.id, stream)
                 } else {
-                    _state.value = _state.value.copy(isPlaying = false, quality = "Flux indisponible · réessayez", failed = true)
+                    resolving = false
+                    _state.value = _state.value.copy(isPlaying = false, buffering = false, playWhenReady = false,
+                        quality = "Flux indisponible · réessayez", failed = true)
                 }
             }
         }
@@ -161,6 +188,7 @@ object Player {
             _state.value = _state.value.copy(isPlaying = isPlaying)
             com.ketvoice.app.data.ActiveListenerTracker.onPlaybackStateChanged(_state.value.current, isPlaying)
             if (isPlaying && historyGeneration != generation) {
+                android.util.Log.i("KetvoicePlayback", "playing_state_ms=${android.os.SystemClock.elapsedRealtime() - resolveStartedAt}")
                 _state.value.current?.let { com.ketvoice.app.data.ListeningHistory.record(it) }
                 historyGeneration = generation
             }
@@ -207,6 +235,7 @@ object Player {
         com.ketvoice.app.data.HomeFeed.start(context.applicationContext)
         MusicApi.init(context.applicationContext)
         com.ketvoice.app.data.CustomSources.init(context.applicationContext)
+        if (keepAliveJob?.isActive != true) keepAliveJob = com.ketvoice.app.data.LosslessKeepAlive.start(scope)
         AudioCache.init(context.applicationContext)
         val token = SessionToken(context, ComponentName(context, PlaybackService::class.java))
         val future = MediaController.Builder(context, token).buildAsync()
@@ -286,12 +315,16 @@ object Player {
             return
         }
         resolutionJob?.cancel()
+        resolveStartedAt = android.os.SystemClock.elapsedRealtime()
         cancelQualityUpgrade()
         resolving = true
         desiredPlay = autoPlay
         activeStream = null
+        activeSourceId = null
         fallbackAttempts = 0
         failedStreamUrls.clear()
+        failedSourceIds.clear()
+        refreshedExpiredStream = false
         c.pause()
         lastEndedKey = null
         // 1) Correspondance addon déjà présente dans la file : zéro recherche réseau.
@@ -361,15 +394,26 @@ object Player {
             }
 
             val cached = AudioCache.complete(track.id, wantsLossless())
-            fun start(stream: MusicApi.StreamInfo, position: Long = startPositionMs.coerceAtLeast(0)) {
+            fun start(stream: MusicApi.StreamInfo, position: Long = startPositionMs.coerceAtLeast(0), sourceId: String? = null) {
                 val latest = _state.value.current ?: resolvedTrack
                 activeStream = stream
-                startItem(c, latest, stream.url, position, desiredPlay, AudioCache.key(track.id, stream))
+                activeSourceId = sourceId
+                startItem(c, latest, stream.url, position, desiredPlay, AudioCache.key(track.id, stream), stream)
                 _state.value = _state.value.copy(quality = label(stream), isPlaying = c.isPlaying)
             }
             if (cached != null && com.ketvoice.app.data.ImportedSong.id(resolvedTrack) == null) {
                 start(cached)
                 _state.value = _state.value.copy(quality = "En cache · ${label(cached)}", audioSource = "En cache")
+                return@launch
+            }
+            val prefetched = prefetchedDash.remove(track.id)?.takeIf {
+                android.os.SystemClock.elapsedRealtime() - it.at in 0..60_000 &&
+                    SourcePriority.entries().any { entry -> entry.id == it.candidate.sourceId && entry.enabled }
+            }?.candidate
+            if (prefetched != null && com.ketvoice.app.data.ImportedSong.id(resolvedTrack) == null) {
+                start(prefetched.stream, sourceId = prefetched.sourceId)
+                _state.value = _state.value.copy(audioSource = sourceLabel(prefetched.sourceId))
+                prefetchNext(gen, resolvedTrack)
                 return@launch
             }
             if (resolvedTrack.addon == "upload" || resolvedTrack.id.startsWith("kv:upload:")) {
@@ -394,13 +438,15 @@ object Player {
                 if (gen == generation) _state.value = _state.value.copy(searchingBetter = false)
             }
             var currentStream: MusicApi.StreamInfo? = null
-            suspend fun upgrade(stream: MusicApi.StreamInfo) {
+            suspend fun upgrade(stream: MusicApi.StreamInfo, sourceId: String) {
                 if (AppSettings.bitPerfect.value || !highQuality || stream.url == currentStream?.url || gen != generation ||
                     StreamQuality.rank(stream) <= (currentStream?.let(StreamQuality::rank) ?: 0)) return
                 val future = c.sendCustomCommand(androidx.media3.session.SessionCommand(PlaybackService.CMD_UPGRADE, Bundle.EMPTY),
                     Bundle().apply {
                         putString("id", track.id); putString("url", stream.url)
-                        putString("cacheKey", AudioCache.key(track.id, stream))
+                        putString("cacheKey", if (stream.isDash) null else AudioCache.key(track.id, stream))
+                        putString("mimeType", if (stream.isDash) androidx.media3.common.MimeTypes.APPLICATION_MPD
+                            else stream.mimeType?.substringBefore(';')?.trim())
                     })
                 val switched = kotlinx.coroutines.suspendCancellableCoroutine<Boolean> { continuation ->
                     future.addListener({
@@ -410,16 +456,13 @@ object Player {
                     continuation.invokeOnCancellation { future.cancel(false) }
                 }
                 if (!switched || gen != generation) {
-                    if (gen != generation) return
-                    // A rejected custom command must not disable progressive quality:
-                    // restart the same item at the same position with the better URL.
-                    val position = c.currentPosition.coerceAtLeast(0)
-                    activeStream = stream
-                    startItem(c, track, stream.url, position, desiredPlay, AudioCache.key(track.id, stream))
+                    // A failed standby decoder must never interrupt the audible stream.
+                    return
                 }
                 currentStream = stream
                 activeStream = stream
-                _state.value = _state.value.copy(quality = label(stream))
+                activeSourceId = sourceId
+                _state.value = _state.value.copy(quality = label(stream), audioSource = sourceLabel(sourceId))
                 AudioCache.cacheWhole(track.id, stream)
             }
             val candidates = StreamResolver.candidates(resolvedTrack, download = false, lossless = wantsLossless(), race = true)
@@ -436,23 +479,17 @@ object Player {
                 withTimeoutOrNull(TOTAL_RESOLVE_BUDGET_MS) {
                     candidates.collect { candidate ->
                         if (gen != generation) throw kotlinx.coroutines.CancellationException()
-                        if (currentStream == null || (highQuality && StreamQuality.rank(candidate.stream) > StreamQuality.rank(currentStream!!))) {
-                            _state.value = _state.value.copy(audioSource = when (candidate.sourceId) {
-                                "api:um" -> "Ultra MAX"
-                                "api:last" -> "Last Babe"
-                                "youtube" -> "YouTube Music"
-                                else -> "Source personnalisée"
-                            })
-                        }
                         if (currentStream == null) {
+                            android.util.Log.i("KetvoicePlayback", "resolution_ms=${android.os.SystemClock.elapsedRealtime() - resolveStartedAt}")
                             currentStream = candidate.stream
+                            _state.value = _state.value.copy(audioSource = sourceLabel(candidate.sourceId))
                             // Playback starts on the first real audio byte; ExoPlayer keeps
                             // filling its buffer while the rest of the file and the next two
                             // queue items are prepared in the background.
-                            start(candidate.stream)
+                            start(candidate.stream, sourceId = candidate.sourceId)
                             AudioCache.cacheWhole(track.id, candidate.stream)
                             prefetchNext(gen, resolvedTrack)
-                        } else upgrade(candidate.stream)
+                        } else upgrade(candidate.stream, candidate.sourceId)
                     }
                     true
                 }
@@ -509,7 +546,10 @@ object Player {
                     StreamResolver.candidates(item, download = false, lossless = wantsLossless(), race = true)
                         .firstOrNull()
                 }.getOrNull()?.let { candidate ->
-                    if (!isMetered()) AudioCache.cacheWhole(item.id, candidate.stream)
+                    if (candidate.stream.isDash && com.ketvoice.app.data.CustomSources.reusableManifestUrl(candidate.stream.url)) {
+                        if (prefetchedDash.size >= 10) prefetchedDash.clear()
+                        if (gen == generation) prefetchedDash[item.id] = PrefetchedDash(candidate, android.os.SystemClock.elapsedRealtime())
+                    } else if (!isMetered()) AudioCache.cacheWhole(item.id, candidate.stream)
                     if (gen == generation) runCatching { ArtworkRepo.enrich(listOf(item)) }
                 }
             }
@@ -644,7 +684,7 @@ object Player {
     }
 
     private fun label(s: MusicApi.StreamInfo): String = when {
-        s.format.contains("flac", true) || s.quality.contains("lossless", true) ->
+        s.format.contains("flac", true) || s.codec?.contains("flac", true) == true || s.quality.contains("lossless", true) ->
             "FLAC \u00b7 Sans perte"
         s.format.contains("mp3", true) -> "MP3 ${s.quality}"
         s.quality.contains("kbps") -> "${s.format.uppercase()} \u00b7 ${s.quality}"
@@ -652,22 +692,18 @@ object Player {
         else -> s.format.ifEmpty { s.quality }
     }
 
+    private fun sourceLabel(id: String): String = when (id) {
+        "api:um" -> "Ultra MAX"
+        "api:last" -> "Last Babe"
+        "youtube" -> "YouTube Music"
+        else -> "Source personnalisée"
+    }
+
     private val recordedListens = java.util.Collections.synchronizedSet(mutableSetOf<String>())
 
-    private fun startItem(c: MediaController, t: Track, url: String, pos: Long, autoPlay: Boolean = true, cacheKey: String? = null) {
-        val item = MediaItem.Builder()
-            .setUri(url)
-            .setMediaId(t.id)
-            .setCustomCacheKey(cacheKey)
-            .setMediaMetadata(
-                MediaMetadata.Builder()
-                    .setTitle(t.title)
-                    .setArtist(t.artist)
-                    .setAlbumTitle(t.album)
-                    .setArtworkUri(t.coverUrl?.let { Uri.parse(it) })
-                    .build()
-            )
-            .build()
+    private fun startItem(c: MediaController, t: Track, url: String, pos: Long, autoPlay: Boolean = true,
+                          cacheKey: String? = null, stream: MusicApi.StreamInfo? = null) {
+        val item = playbackMediaItem(t, url, cacheKey, stream)
         if (pos > 0) c.setMediaItem(item, pos) else c.setMediaItem(item)
         c.prepare()
         c.playWhenReady = autoPlay
@@ -683,8 +719,13 @@ object Player {
     }
 
     fun toggle() {
-        val c = controller ?: return
         val state = _state.value
+        if (resolving) {
+            desiredPlay = !state.playWhenReady
+            _state.value = state.copy(playWhenReady = desiredPlay)
+            return
+        }
+        val c = controller ?: return
         if (!state.isPlaying && state.failed) {
             state.current?.let { playTrack(it, state.queue) }
             return

@@ -135,4 +135,5 @@ private fun QuestMobileControls(
         onOutput = onOutput, onProfile = { AppUi.showAccount.value = true },
         onQueue = { onPage(if (page == PlayerPage.QUEUE) PlayerPage.ARTWORK else PlayerPage.QUEUE) })
     if (state.buffering) Text("Chargement…", color = Color.White.copy(alpha = .8f), fontSize = 13.sp)
+    else if (state.failed) Text(state.quality, color = Color.White, fontSize = 13.sp)
 }

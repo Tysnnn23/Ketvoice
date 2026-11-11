@@ -11,7 +11,6 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.audio.DefaultAudioSink
 import androidx.media3.exoplayer.audio.TeeAudioProcessor
-import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import androidx.media3.session.SessionCommand
@@ -60,6 +59,7 @@ class PlaybackService : MediaSessionService() {
 
     override fun onCreate() {
         super.onCreate()
+        androidx.media3.common.util.Log.setLogger(SafeMedia3Logger)
 
         com.ketvoice.app.data.SettingsStore.load(applicationContext)
         player = buildPlayer()
@@ -164,7 +164,7 @@ class PlaybackService : MediaSessionService() {
             }
         }
         val player = ExoPlayer.Builder(this, renderers)
-            .setMediaSourceFactory(DefaultMediaSourceFactory(AudioCache.factory(this)))
+            .setMediaSourceFactory(playbackMediaSourceFactory(this))
             .setLoadControl(
                 androidx.media3.exoplayer.DefaultLoadControl.Builder()
                     .setBufferDurationsMs(20_000, 60_000, 500, 1_200)
@@ -182,6 +182,30 @@ class PlaybackService : MediaSessionService() {
             .build()
         owner = player
         player.skipSilenceEnabled = AppSettings.skipSilence.value && !exactRequested
+        player.addAnalyticsListener(object : androidx.media3.exoplayer.analytics.AnalyticsListener {
+            private var manifestReported = false
+            private var mediaReported = false
+            override fun onMediaItemTransition(eventTime: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime,
+                                               mediaItem: androidx.media3.common.MediaItem?, reason: Int) {
+                manifestReported = false
+                mediaReported = false
+            }
+            override fun onLoadCompleted(eventTime: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime,
+                                         loadEventInfo: androidx.media3.exoplayer.source.LoadEventInfo,
+                                         mediaLoadData: androidx.media3.exoplayer.source.MediaLoadData) {
+                if (!this@PlaybackService::player.isInitialized || owner !== this@PlaybackService.player) return
+                when (mediaLoadData.dataType) {
+                    C.DATA_TYPE_MANIFEST -> if (!manifestReported) {
+                        manifestReported = true
+                        android.util.Log.i("KetvoicePlayback", "manifest_load_ms=${loadEventInfo.loadDurationMs}")
+                    }
+                    C.DATA_TYPE_MEDIA -> if (!mediaReported) {
+                        mediaReported = true
+                        android.util.Log.i("KetvoicePlayback", "first_media_load_ms=${loadEventInfo.loadDurationMs}")
+                    }
+                }
+            }
+        })
         player.addListener(object : androidx.media3.common.Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 if (owner === this@PlaybackService.player && !isPlaying) SonicMeter.reset()
@@ -255,7 +279,7 @@ class PlaybackService : MediaSessionService() {
                     next.volume = 0f
                     next.playbackParameters = old.playbackParameters
                     next.skipSilenceEnabled = old.skipSilenceEnabled
-                    val item = old.currentMediaItem!!.buildUpon().setUri(url)
+                    val item = old.currentMediaItem!!.buildUpon().setUri(url).setMimeType(args.getString("mimeType"))
                         .setCustomCacheKey(args.getString("cacheKey")).build()
                     next.setMediaItem(item, old.currentPosition)
                     next.prepare()

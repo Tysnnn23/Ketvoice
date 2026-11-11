@@ -421,6 +421,8 @@ fun FullPlayerScreen(
                             PlayerTransport(state.playWhenReady, Modifier.fillMaxSize(), Player::previous, Player::toggle, Player::next)
                             if (state.buffering) Text("Chargement…", color = Color.White.copy(alpha = .42f), fontSize = 10.sp,
                                 modifier = Modifier.align(Alignment.BottomCenter))
+                            else if (state.failed) Text(state.quality, color = Color.White, fontSize = 12.sp,
+                                modifier = Modifier.align(Alignment.BottomCenter))
                         }
                         PlayerVolume(Modifier.fillMaxWidth(), compact = true)
                         Spacer(Modifier.height(8.dp))

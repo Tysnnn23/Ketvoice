@@ -7,6 +7,25 @@
 
 ---
 
+# Ketvoice 4.6.1
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 87** — lossless/Tidal playback repair, with the addon as the primary
+high-quality source and a periodic keep-alive for the free hosted services.
+
+- Parse `dash`, `flac`, `aac` and direct stream answers, including MIME type and codec.
+- Build a DASH `MediaSource` for extensionless manifests instead of a progressive one.
+- Keep the requested play state during resolution; no full re-resolution on each Play tap.
+- Surface real errors instead of an endless spinner, and recover an expired signed URL once.
+- Fall back across providers, then across the addon's own Qobuz and Tidal results.
+- Add the Lossless addon once, first in the playback order, without overriding your choices.
+- Ping the addon while the process is alive, about every ten minutes; Android can defer this.
+
+Full notes and validation limits: [4.6.1](docs/releases/v4.6.1.md).
+
+---
+
 # Ketvoice 4.6.0
 
 ![Ketvoice](ketvoice-banner.png)

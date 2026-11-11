@@ -40,6 +40,14 @@ object SourcePriority {
     internal fun reconcile(saved: List<String>, available: List<String>): List<String> =
         (saved.filter { it in available } + available).distinct()
 
+    internal fun promotePlaybackOnce(id: String) {
+        val p = prefs ?: return
+        if (p.getBoolean("lossless_promoted_v1", false)) return
+        val next = listOf(id) + playbackOrder.value.filterNot { it == id }
+        playbackOrder.value = next
+        p.edit().putString("order", JSONArray(next).toString()).putBoolean("lossless_promoted_v1", true).apply()
+    }
+
     fun entries(mode: Mode = Mode.PLAYBACK): List<Entry> {
         val custom = CustomSources.sources.value
         val available = builtin + custom.map { "cs:${it.id}" }

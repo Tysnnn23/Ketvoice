@@ -55,23 +55,45 @@ data class SourceManifest(
 object CustomSources {
     private const val PREFS = "ketvoice_custom_sources"
     private const val UA = "Ketvoice/2.3 (Android)"
+    internal const val LOSSLESS_MANIFEST = "https://ketvoice-lossless.onrender.com/manifest.json"
+    private const val LOSSLESS_DEFAULT = """{"name":"Ketvoice Lossless","resources":["search","stream"],"settings":[{"key":"quality","options":[{"value":"lossless"},{"value":"high"},{"value":"low"}]}]}"""
+    private val reusableManifest = Regex("https://ketvoice-lossless\\.onrender\\.com/tidal-mpd/[0-9]+\\?quality=(low|high|lossless)")
+    internal fun reusableManifestUrl(url: String): Boolean = reusableManifest.matches(url)
+    internal var openStreamConnection: (URL) -> HttpURLConnection = { it.openConnection() as HttpURLConnection }
+    @Volatile private var fastSearchSupported = true
 
     private val _sources = MutableStateFlow<List<CustomSource>>(emptyList())
     val sources: StateFlow<List<CustomSource>> = _sources
     private var prefs: android.content.SharedPreferences? = null
+    private val losslessMatches = ArrayDeque<Pair<Long, Track>>()
 
     fun init(context: Context) {
         SourcePriority.init(context)
         if (prefs != null) return
         val p = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         prefs = p
-        val arr = runCatching { JSONArray(p.getString("items", "[]")) }.getOrDefault(JSONArray())
+        val arr = runCatching { JSONArray(p.getString("items", "[]")) }.getOrNull() ?: return
         _sources.value = (0 until arr.length()).mapNotNull { i ->
             runCatching { fromJson(arr.getJSONObject(i)) }.getOrNull()
+        }
+        if (!p.getBoolean("lossless_added_v1", false)) {
+            val existing = _sources.value.firstOrNull { it.manifestUrl == LOSSLESS_MANIFEST }
+            val id = existing?.id ?: MessageDigest.getInstance("SHA-1").digest(LOSSLESS_MANIFEST.toByteArray())
+                .joinToString("") { "%02x".format(it) }.take(12)
+            if (existing == null) {
+                _sources.value = _sources.value + CustomSource(id, LOSSLESS_MANIFEST, "Ketvoice Lossless",
+                    "https://ketvoice-lossless.onrender.com", quality = "high", manifestJson = LOSSLESS_DEFAULT)
+                persist()
+            }
+            SourcePriority.promotePlaybackOnce("cs:$id")
+            p.edit().putBoolean("lossless_added_v1", true).apply()
         }
     }
 
     fun enabledSources(): List<CustomSource> = _sources.value.filter { it.enabled }
+
+    private fun requestedQuality(source: CustomSource): String =
+        if (source.manifestUrl == LOSSLESS_MANIFEST && source.quality == "high") "lossless" else source.quality
 
     suspend fun add(manifestUrl: String): Result<CustomSource> = withContext(Dispatchers.IO) {
         val url = manifestUrl.trim()
@@ -167,12 +189,29 @@ object CustomSources {
         enabledSources().map { source -> async(Dispatchers.IO) { search(source, query) } }.flatMap { it.await() }
     }
 
-    suspend fun search(source: CustomSource, query: String): List<Track> = withContext(Dispatchers.IO) {
+    suspend fun search(source: CustomSource, query: String, fast: Boolean = false): List<Track> = withContext(Dispatchers.IO) {
         val manifest = parseManifest(source.manifestUrl, source.manifestJson) ?: return@withContext emptyList()
-        val quality = negotiateQuality(source.quality, manifest.qualities)
+        val quality = negotiateQuality(requestedQuality(source), manifest.qualities)
         val url = fill(manifest.resolvedSearch, query = query, id = "", quality = quality)
-        val raw = fetchText(url) ?: return@withContext emptyList()
-        parseTracks(source, raw)
+        val fastUrl = if (fast && fastSearchSupported && source.manifestUrl == LOSSLESS_MANIFEST)
+            fill("${source.baseUrl}/search/fast?q={query}&quality={quality}", query, "", quality) else null
+        // The deployed aggregate search has been observed taking 24.5 s; it runs
+        // concurrently with other providers and the optional fast endpoint avoids it.
+        val timeout = if (source.manifestUrl == LOSSLESS_MANIFEST && fastUrl == null) 25_000 else 10_000
+        val raw = fetchText(fastUrl ?: url, timeout) ?: run {
+            // A server without /search/fast must not cost an extra request on every track.
+            if (fastUrl != null) fastSearchSupported = false
+            return@withContext emptyList()
+        }
+        val tracks = parseTracks(source, raw)
+        if (source.manifestUrl == LOSSLESS_MANIFEST) synchronized(losslessMatches) {
+            val now = System.currentTimeMillis()
+            tracks.filter { !it.addonId.isNullOrBlank() && it.streamUrl == null }.forEach {
+                losslessMatches.addLast(now to it.copy(downloadUrl = null))
+            }
+            while (losslessMatches.size > 200) losslessMatches.removeFirst()
+        }
+        tracks
     }
 
     suspend fun streamForTrack(track: Track, forDownload: Boolean = false): MusicApi.StreamInfo? =
@@ -201,9 +240,22 @@ object CustomSources {
         if (!source.enabled) return null
         val manifest = parseManifest(source.manifestUrl, source.manifestJson) ?: return null
         if (forDownload && !manifest.downloadsAllowed) return null
-        val match = if (wanted.addon == "cs:${source.id}") wanted
-            else search(source, "${wanted.title} ${wanted.artist.substringBefore(',')}").bestCatalogMatch(wanted) ?: return null
-        return stream(source, match, forDownload)
+        val tried = mutableSetOf<String>()
+        if (wanted.addon == "cs:${source.id}") {
+            tried += wanted.addonId ?: wanted.id
+            stream(source, wanted, forDownload)?.let { return it }
+        }
+        val cached = if (source.manifestUrl == LOSSLESS_MANIFEST) synchronized(losslessMatches) {
+            val cutoff = System.currentTimeMillis() - 30 * 60_000L
+            losslessMatches.filter { it.first >= cutoff && it.second.addon == "cs:${source.id}" }.map { it.second }
+        } else emptyList()
+        suspend fun attempt(tracks: List<Track>) = resolveCatalogMatches(wanted, tracks, tried) { stream(source, it, forDownload) }
+        attempt(cached)?.let { return it }
+        val query = "${wanted.title} ${wanted.artist.substringBefore(',')}"
+        val fast = source.manifestUrl == LOSSLESS_MANIFEST
+        attempt(search(source, query, fast = fast))?.let { return it }
+        if (fast && tried.size < 4) attempt(search(source, query))?.let { return it }
+        return null
     }
 
     private suspend fun stream(source: CustomSource, track: Track, forDownload: Boolean): MusicApi.StreamInfo? =
@@ -211,7 +263,7 @@ object CustomSources {
             val manifest = parseManifest(source.manifestUrl, source.manifestJson) ?: return@withContext null
             if (forDownload && !manifest.downloadsAllowed) return@withContext null
             val id = track.addonId.orEmpty()
-            val qualityParam = negotiateQuality(source.quality, manifest.qualities)
+            val qualityParam = negotiateQuality(requestedQuality(source), manifest.qualities)
 
             val downloadTemplate = manifest.downloadEndpoint?.takeIf {
                 forDownload && (id.isNotBlank() || !it.contains("{id}"))
@@ -234,6 +286,7 @@ object CustomSources {
             }
             val obj = runCatching { JSONObject(trimmed) }.getOrNull() ?: return null
             val nested = obj.optJSONObject("data")
+            if (obj.optBoolean("encrypted", false) || nested?.optBoolean("encrypted", false) == true) return null
             val sources = obj.optJSONArray("sources") ?: nested?.optJSONArray("sources")
                 ?: obj.optJSONArray("streams") ?: nested?.optJSONArray("streams")
             val fromArray = sources?.let { arr ->
@@ -270,21 +323,26 @@ object CustomSources {
             val quality = firstString(obj, "quality", "streamQuality", "audioQuality")
                 ?: firstString(nested, "quality", "streamQuality", "audioQuality")
                 ?: ""
+            val mimeType = firstString(obj, "mimeType", "mime_type", "contentType")
+                ?: firstString(nested, "mimeType", "mime_type", "contentType")
+            val codec = firstString(obj, "codec", "fileCodec") ?: firstString(nested, "codec", "fileCodec")
+            val manifest = firstString(obj, "manifest") ?: firstString(nested, "manifest")
             val info = streamInfo(stream, download, source.quality)
-            val finalFormat = format.ifBlank { info.format }
+            val finalFormat = if (manifest.equals("dash", true) || mimeType?.substringBefore(';')?.trim().equals("application/dash+xml", true)) "dash"
+                else format.ifBlank { info.format }
             val finalQuality = quality.ifBlank {
                 if (finalFormat.lowercase().contains("flac") || finalFormat.lowercase().contains("wav")) {
                     "Sans perte · ${if (source.quality == "high") "haute" else "économique"}"
                 } else if (source.quality == "high") "Haute qualité · source personnalisée"
                 else "Qualité économique · source personnalisée"
             }
-            return info.copy(format = finalFormat, quality = finalQuality)
+            return info.copy(format = finalFormat, quality = finalQuality, mimeType = mimeType, codec = codec)
     }
 
-    private suspend fun fetchStreamEndpoint(url: String): String? {
+    internal suspend fun fetchStreamEndpoint(url: String): String? {
         return try {
             if (!url.startsWith("https://")) return null
-            CancellableConnection.use({ URL(url).openConnection() as HttpURLConnection }) { connection ->
+            CancellableConnection.use({ openStreamConnection(URL(url)) }) { connection ->
             connection.apply {
                 connectTimeout = 12_000; readTimeout = 16_000
                 setRequestProperty("User-Agent", UA)
@@ -367,6 +425,7 @@ object CustomSources {
     private fun streamInfo(url: String, download: String?, qualitySetting: String): MusicApi.StreamInfo {
         val lower = (download ?: url).lowercase()
         val format = when {
+            url.substringBefore('?').endsWith(".mpd", true) -> "dash"
             lower.contains(".flac") || lower.contains("flac") -> "flac"
             lower.contains(".wav") -> "wav"
             lower.contains(".m4a") || lower.contains("aac") -> "aac"
@@ -439,7 +498,21 @@ object CustomSources {
         return null
     }
 
-    private fun List<Track>.bestCatalogMatch(want: Track): Track? {
+    private fun List<Track>.bestCatalogMatch(want: Track): Track? = catalogMatches(want).firstOrNull()
+
+    internal suspend fun resolveCatalogMatches(want: Track, tracks: List<Track>, tried: MutableSet<String>,
+                                               resolve: suspend (Track) -> MusicApi.StreamInfo?): MusicApi.StreamInfo? {
+        val ranked = tracks.catalogMatches(want)
+        val providersFirst = ranked.distinctBy { (it.addonId ?: it.id).substringBefore(':') }
+        for (candidate in providersFirst) {
+            if (tried.size >= 4) break
+            if (!tried.add(candidate.addonId ?: candidate.id)) continue
+            resolve(candidate)?.let { return it }
+        }
+        return null
+    }
+
+    private fun List<Track>.catalogMatches(want: Track): List<Track> {
         fun norm(s: String) = java.text.Normalizer.normalize(s.lowercase(), java.text.Normalizer.Form.NFD)
             .replace(Regex("\\p{M}"), "")
             .replace(Regex("\\([^)]*\\)|\\[[^]]*]"), " ")
@@ -456,7 +529,7 @@ object CustomSources {
             var score = if (ct == wt) 5 else 2
             if (wa.isNotBlank() && (ca.contains(wa) || wa.contains(ca))) score += 3
             candidate to score
-        }.maxByOrNull { it.second }?.takeIf { it.second >= 5 }?.first
+        }.filter { it.second >= 5 }.sortedByDescending { it.second }.map { it.first }
     }
 
     private fun persist() {
@@ -587,6 +660,7 @@ fun parseManifest(manifestUrl: String, raw: String): SourceManifest? {
 }
 
 internal fun negotiateQuality(tier: String, options: List<String>): String {
+    if (tier == "lossless") options.firstOrNull { it.equals("lossless", ignoreCase = true) }?.let { return it }
     val requested = if (tier == "low") "low" else "high"
     if (options.isEmpty()) return requested
     options.firstOrNull { it.equals(requested, ignoreCase = true) }?.let { return it }

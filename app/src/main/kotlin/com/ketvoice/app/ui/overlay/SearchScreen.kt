@@ -416,6 +416,8 @@ private fun SearchResultRow(track: Track, cover: String?, modifier: Modifier = M
         val custom = track.addon?.startsWith("cs:") == true
         val ketvoice = track.addon in setOf("um", "last", "upload")
         val badge = when {
+            custom && track.addonId?.startsWith("tidal:", true) == true -> "TIDAL"
+            custom && track.addonId?.startsWith("qobuz:", true) == true -> "Qobuz"
             custom -> "SRC"
             ketvoice -> "API"
             else -> "YT"

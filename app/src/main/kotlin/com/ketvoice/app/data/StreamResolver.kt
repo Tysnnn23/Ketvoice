@@ -15,7 +15,7 @@ import kotlinx.coroutines.withTimeoutOrNull
  * candidates immediately and keeps resolving alternatives without holding up audio.
  */
 internal object StreamResolver {
-    data class Source(val id: String, val resolve: suspend () -> MusicApi.StreamInfo?)
+    data class Source(val id: String, val timeoutMs: Long? = null, val resolve: suspend () -> MusicApi.StreamInfo?)
     data class Candidate(val sourceId: String, val priority: Int, val stream: MusicApi.StreamInfo)
 
     fun sources(track: Track, download: Boolean, lossless: Boolean): List<Source> =
@@ -26,7 +26,9 @@ internal object StreamResolver {
                 "api:last" -> if (lossless) Source(entry.id) { MusicApi.flacStream(track) } else null
                 "youtube" -> Source(entry.id) { MusicApi.youtubeStream(track) }
                 else -> CustomSources.sources.value.firstOrNull { "cs:${it.id}" == entry.id }?.let { source ->
-                    Source(entry.id) { CustomSources.streamFrom(source, track, download) }
+                    Source(entry.id, timeoutMs = if (source.manifestUrl == CustomSources.LOSSLESS_MANIFEST) 35_000L else null) {
+                        CustomSources.streamFrom(source, track, download)
+                    }
                 }
             }
         }
@@ -38,8 +40,8 @@ internal object StreamResolver {
      * by the player or by the downloader's own byte check.
      */
     fun candidates(track: Track, download: Boolean, lossless: Boolean, race: Boolean,
-                   excluded: Set<String> = emptySet()): Flow<Candidate> = resolve(
-        sources(track, download, lossless).map { source -> Source(source.id) {
+                    excluded: Set<String> = emptySet(), excludedSources: Set<String> = emptySet()): Flow<Candidate> = resolve(
+        sources(track, download, lossless).filterNot { it.id in excludedSources }.map { source -> Source(source.id, source.timeoutMs) {
             source.resolve()?.takeIf { it.url !in excluded }
         } }, race)
 
@@ -67,7 +69,7 @@ internal object StreamResolver {
     internal fun resolve(sources: List<Source>, race: Boolean, timeoutMs: Long = 14_000,
                          qualityWindowMs: Long = 80): Flow<Candidate> = flow {
         suspend fun attempt(source: Source): MusicApi.StreamInfo? = try {
-            withTimeoutOrNull(timeoutMs) { source.resolve() }
+            withTimeoutOrNull(source.timeoutMs ?: timeoutMs) { source.resolve() }
         } catch (cancelled: CancellationException) { throw cancelled }
         catch (_: Exception) { null }
         if (!race) {

@@ -97,6 +97,13 @@ class CustomSourcesTest {
         assertEquals("low", negotiateQuality("low", emptyList()))
         assertEquals("320 kbps", negotiateQuality("high", listOf("128 kbps", "320 kbps")))
         assertEquals("128 kbps", negotiateQuality("low", listOf("128 kbps", "320 kbps")))
+        assertEquals("lossless", negotiateQuality("lossless", listOf("high", "lossless", "low")))
+    }
+
+    @Test fun onlyTheStableUnsignedLosslessProxyCanBeReusedForPrefetch() {
+        assertTrue(CustomSources.reusableManifestUrl("https://ketvoice-lossless.onrender.com/tidal-mpd/573293?quality=low"))
+        assertFalse(CustomSources.reusableManifestUrl("https://ketvoice-lossless.onrender.com/tidal-mpd/573293?quality=low&token=fixture"))
+        assertFalse(CustomSources.reusableManifestUrl("https://cdn.example/audio.mpd?signature=fixture"))
     }
 
     @Test

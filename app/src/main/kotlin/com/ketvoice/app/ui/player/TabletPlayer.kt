@@ -124,6 +124,7 @@ private fun NowPlayingColumn(
                 onLyrics = { onPage(PlayerPage.LYRICS) }, onOutput = onOutput,
                 onProfile = { AppUi.showAccount.value = true }, onQueue = { onPage(PlayerPage.QUEUE) })
             if (state.buffering) Text("Chargement…", color = Color.White.copy(alpha = .6f), fontSize = 12.sp)
+            else if (state.failed) Text(state.quality, color = Color.White, fontSize = 12.sp)
             Spacer(Modifier.height(16.dp))
         }
     }

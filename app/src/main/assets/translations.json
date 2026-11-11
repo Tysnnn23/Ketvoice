@@ -1080,7 +1080,9 @@
   "Aucun album": "No albums",
   "Les titres sans album restent disponibles dans Titres.": "Songs without an album remain available under Songs.",
   "Transparence du verre": "Glass transparency",
-  "Teinté": "Tinted"
+  "Teinté": "Tinted",
+  "TIDAL": "TIDAL",
+  "Qobuz": "Qobuz"
  },
  "hi": {
   "Reverb": "रीवर्ब",
@@ -2163,7 +2165,9 @@
   "Aucun album": "कोई एल्बम नहीं",
   "Les titres sans album restent disponibles dans Titres.": "बिना एल्बम वाले गाने, गाने अनुभाग में उपलब्ध रहते हैं।",
   "Transparence du verre": "ग्लास पारदर्शिता",
-  "Teinté": "रंगीन"
+  "Teinté": "रंगीन",
+  "TIDAL": "TIDAL",
+  "Qobuz": "Qobuz"
  },
  "ja": {
   "Reverb": "リバーブ",
@@ -3246,7 +3250,9 @@
   "Aucun album": "アルバムはありません",
   "Les titres sans album restent disponibles dans Titres.": "アルバムのない曲は「曲」から引き続き利用できます。",
   "Transparence du verre": "ガラスの透明度",
-  "Teinté": "色付き"
+  "Teinté": "色付き",
+  "TIDAL": "TIDAL",
+  "Qobuz": "Qobuz"
  },
  "zh": {
   "Reverb": "混响",
@@ -4329,7 +4335,9 @@
   "Aucun album": "暂无专辑",
   "Les titres sans album restent disponibles dans Titres.": "没有专辑信息的歌曲仍可在「歌曲」中找到。",
   "Transparence du verre": "玻璃透明度",
-  "Teinté": "有色"
+  "Teinté": "有色",
+  "TIDAL": "TIDAL",
+  "Qobuz": "Qobuz"
  },
  "ru": {
   "Reverb": "Реверберация",
@@ -5412,7 +5420,9 @@
   "Aucun album": "Нет альбомов",
   "Les titres sans album restent disponibles dans Titres.": "Треки без альбома остаются доступны в разделе «Треки».",
   "Transparence du verre": "Прозрачность стекла",
-  "Teinté": "Тонированное"
+  "Teinté": "Тонированное",
+  "TIDAL": "TIDAL",
+  "Qobuz": "Qobuz"
  },
  "it": {
   "Reverb": "Riverbero",
@@ -6495,7 +6505,9 @@
   "Aucun album": "Nessun album",
   "Les titres sans album restent disponibles dans Titres.": "I brani senza album restano disponibili in Brani.",
   "Transparence du verre": "Trasparenza del vetro",
-  "Teinté": "Colorato"
+  "Teinté": "Colorato",
+  "TIDAL": "TIDAL",
+  "Qobuz": "Qobuz"
  },
  "es": {
   "Reverb": "Reverb",
@@ -7578,7 +7590,9 @@
   "Aucun album": "No hay álbumes",
   "Les titres sans album restent disponibles dans Titres.": "Las canciones sin álbum siguen disponibles en Canciones.",
   "Transparence du verre": "Transparencia del cristal",
-  "Teinté": "Tintado"
+  "Teinté": "Tintado",
+  "TIDAL": "TIDAL",
+  "Qobuz": "Qobuz"
  },
  "de": {
   "Reverb": "Reverb",
@@ -8661,7 +8675,9 @@
   "Aucun album": "Keine Alben",
   "Les titres sans album restent disponibles dans Titres.": "Titel ohne Album bleiben unter Titel verfügbar.",
   "Transparence du verre": "Glastransparenz",
-  "Teinté": "Getönt"
+  "Teinté": "Getönt",
+  "TIDAL": "TIDAL",
+  "Qobuz": "Qobuz"
  },
  "pt": {
   "Reverb": "Reverb",
@@ -9744,7 +9760,9 @@
   "Aucun album": "Nenhum álbum",
   "Les titres sans album restent disponibles dans Titres.": "As faixas sem álbum continuam disponíveis em Faixas.",
   "Transparence du verre": "Transparência do vidro",
-  "Teinté": "Tingido"
+  "Teinté": "Tingido",
+  "TIDAL": "TIDAL",
+  "Qobuz": "Qobuz"
  },
  "ko": {
   "Reverb": "리버브",
@@ -10827,6 +10845,8 @@
   "Aucun album": "앨범 없음",
   "Les titres sans album restent disponibles dans Titres.": "앨범 정보가 없는 곡도 곡 목록에서 계속 이용할 수 있습니다.",
   "Transparence du verre": "유리 투명도",
-  "Teinté": "색조"
+  "Teinté": "색조",
+  "TIDAL": "TIDAL",
+  "Qobuz": "Qobuz"
  }
 }

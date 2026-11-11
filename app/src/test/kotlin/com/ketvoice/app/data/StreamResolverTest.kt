@@ -1,6 +1,8 @@
 package com.ketvoice.app.data
 
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
@@ -34,6 +36,28 @@ class StreamResolverTest {
         assertTrue("Progressive audio must not wait for the slow source", System.currentTimeMillis() - started < 2_000)
     }
 
+    @Test fun measuredSlowSourceCanArriveLaterWithoutDelayingTheFirstStream() = runBlocking {
+        val release = CompletableDeferred<Unit>()
+        val first = CompletableDeferred<Unit>()
+        val sources = listOf(
+            StreamResolver.Source("lossless", timeoutMs = 2_000) { release.await(); stream("https://a/FLAC", "flac", "lossless") },
+            StreamResolver.Source("fast") { stream("https://a/FAST") }
+        )
+        val arrivals = mutableListOf<String>()
+        val job = launch {
+            StreamResolver.resolve(sources, race = true, timeoutMs = 80, qualityWindowMs = 0).collect {
+                arrivals += it.sourceId
+                first.complete(Unit)
+            }
+        }
+        withTimeout(1_000) { first.await() }
+        assertEquals(listOf("fast"), arrivals)
+        delay(120)
+        release.complete(Unit)
+        withTimeout(1_000) { job.join() }
+        assertEquals(listOf("fast", "lossless"), arrivals)
+    }
+
     @Test fun aFailingSourceIsSkippedAndTheNextOrderedSourceWins() = runBlocking {
         val sources = listOf(
             StreamResolver.Source("expired") { error("expired provider") },
@@ -41,6 +65,20 @@ class StreamResolverTest {
             StreamResolver.Source("working") { stream("https://a/WORKING") }
         )
         assertEquals("WORKING", StreamResolver.resolve(sources, race = false).toList().single().stream.url.substringAfterLast('/'))
+    }
+
+    @Test fun addonTriesTidalWhenItsMatchingQobuzResultFails() = runBlocking {
+        val wanted = Track("yt:fixture", "Without Me", "Eminem", "Album")
+        val qobuz = wanted.copy(id = "qobuz", addonId = "qobuz:1")
+        val tidal = wanted.copy(id = "tidal", addonId = "tidal:573293")
+        val attempts = mutableListOf<String>()
+        val qobuzAlternatives = (2..6).map { qobuz.copy(id = "qobuz$it", addonId = "qobuz:$it") }
+        val result = CustomSources.resolveCatalogMatches(wanted, listOf(qobuz) + qobuzAlternatives + tidal, mutableSetOf()) { track ->
+            attempts += track.addonId!!
+            if (track.addonId!!.startsWith("tidal:")) stream("https://cdn.example/manifest", "dash", "lossless") else null
+        }
+        assertEquals(listOf("qobuz:1", "tidal:573293"), attempts)
+        assertTrue(result!!.isDash)
     }
 
     @Test fun aHangingSourceIsBoundedInsteadOfBlockingPlaybackForever() = runBlocking {

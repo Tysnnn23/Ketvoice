@@ -39,7 +39,11 @@ object MusicApi {
     }
 
     data class StreamInfo(val url: String, val format: String, val quality: String,
-                          val cacheTag: String = "", val downloadUrl: String? = null)
+                          val cacheTag: String = "", val downloadUrl: String? = null,
+                          val mimeType: String? = null, val codec: String? = null) {
+        val isDash: Boolean get() = mimeType?.substringBefore(';')?.trim().equals("application/dash+xml", true) ||
+            format.equals("dash", true) || url.substringBefore('?').endsWith(".mpd", true)
+    }
     data class Streams(
         val fast: StreamInfo? = null,
         val best: StreamInfo? = null,

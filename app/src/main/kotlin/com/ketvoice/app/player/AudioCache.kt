@@ -54,19 +54,23 @@ object AudioCache {
     private fun source(ctx: Context): CacheDataSource.Factory {
         init(ctx)
         val live = cache ?: throw IllegalStateException("audio cache unavailable")
-        return CacheDataSource.Factory().setCache(live).setUpstreamDataSourceFactory(
-            DefaultHttpDataSource.Factory().setAllowCrossProtocolRedirects(true)
-                .setConnectTimeoutMs(8000).setReadTimeoutMs(12000)
-                .setUserAgent("Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/124.0 Mobile Safari/537.36")
-        ).setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
+        return CacheDataSource.Factory().setCache(live).setUpstreamDataSourceFactory(http())
+            .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
     }
+    private fun http() = DefaultHttpDataSource.Factory().setAllowCrossProtocolRedirects(true)
+        .setConnectTimeoutMs(8000).setReadTimeoutMs(12000)
+        .setUserAgent("Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/124.0 Mobile Safari/537.36")
+    fun networkFactory(context: Context): DataSource.Factory = DefaultDataSource.Factory(context, http())
     // File/content URIs must use their local data source, not HTTP or a second
     // copy in the streaming cache. Only network URIs reach CacheDataSource.
-    fun factory(context: Context): DataSource.Factory = DefaultDataSource.Factory(context, source(context))
+    fun factory(context: Context): DataSource.Factory =
+        runCatching { DefaultDataSource.Factory(context, source(context)) }.getOrElse { networkFactory(context) }
 
     /** Cache a real initial audio block before switching quality. */
     suspend fun warm(trackId: String, stream: MusicApi.StreamInfo, positionMs: Long = 0, durationMs: Long = 0): Boolean = withContext(Dispatchers.IO) {
+        if (stream.isDash) return@withContext false
         val ctx = context ?: return@withContext false
+        if (cache == null) return@withContext false
         val key = key(trackId, stream)
         val length = ContentMetadata.getContentLength(cache!!.getContentMetadata(key))
         // Approximate the byte region only for prefetch; the media engine performs the real seek.
@@ -86,7 +90,10 @@ object AudioCache {
 
     /** Finish caching the song in the background, bounded by the user's LRU budget. */
     fun cacheWhole(trackId: String, stream: MusicApi.StreamInfo) {
+        // A DASH manifest is not a complete audio file; Media3 caches its segments separately.
+        if (stream.isDash) return
         val ctx = context ?: return
+        if (cache == null) return
         val key = key(trackId, stream)
         val token = epoch
         scope.launch {
@@ -113,8 +120,8 @@ object AudioCache {
                 val j = org.json.JSONObject(prefs.getString("$trackId|$tier", null) ?: return@runCatching null)
                 val key = j.getString("key")
                 val length = ContentMetadata.getContentLength(cache!!.getContentMetadata(key))
-                if (length > 0 && cache!!.isCached(key, 0, length)) MusicApi.StreamInfo(j.getString("url"),
-                    j.getString("format"), j.getString("quality"), j.getString("tag")) else null
+                val info = MusicApi.StreamInfo(j.getString("url"), j.getString("format"), j.getString("quality"), j.getString("tag"))
+                if (!info.isDash && length > 0 && cache!!.isCached(key, 0, length)) info else null
             }.getOrNull()
             if (s != null) return s
         }
