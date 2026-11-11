@@ -14,6 +14,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.ketvoice.app.data.AppSettings
+import com.ketvoice.app.theme.DesignTokens
 
 /**
  * Single source of truth for every duration, curve, spring and elevation.
@@ -31,10 +32,10 @@ object Motion {
 
     /* ── Premium duration scale (ms) ── */
     const val INSTANT = 0
-    const val FAST = 150     // micro-interaction: chips, ripple close
-    const val NORMAL = 250   // standard panel / nav swap
-    const val MEDIUM = 350   // sheet enter, modal open
-    const val SLOW = 500     // full-screen morph, player open
+    const val FAST = DesignTokens.Motion.FAST_MS
+    const val NORMAL = DesignTokens.Motion.NORMAL_MS
+    const val MEDIUM = DesignTokens.Motion.MEDIUM_MS
+    const val SLOW = DesignTokens.Motion.SLOW_MS
     const val EPILOGUE = 700 // long reveals: lyrics intro, carousel sweep
 
     /* ── Easing curves ── */
@@ -57,8 +58,8 @@ object Motion {
      */
     fun pressSpring(pressed: Boolean): FiniteAnimationSpec<Float> = when {
         reduced -> snap()
-        pressed -> spring(dampingRatio = 0.9f, stiffness = 900f)
-        else -> spring(dampingRatio = 0.5f, stiffness = 420f)
+        pressed -> spring(dampingRatio = DesignTokens.Motion.PRESS_DAMPING, stiffness = DesignTokens.Motion.PRESS_STIFFNESS)
+        else -> spring(dampingRatio = DesignTokens.Motion.RELEASE_DAMPING, stiffness = DesignTokens.Motion.RELEASE_STIFFNESS)
     }
 
     /* ── Named springs ── */
@@ -81,12 +82,12 @@ object Motion {
     fun slowMs(): Int = duration(SLOW)
 
     /* ── Elevation scale (dp) — one ladder for every shadow in the app ── */
-    val ELEVATION_FLAT get() = 0.dp      // on-surface content
-    val ELEVATION_CARD get() = 1.dp      // card resting on surface
-    val ELEVATION_RAISED get() = 4.dp    // nav rail, mini-player
-    val ELEVATION_FLOATING get() = 8.dp  // FAB pill, bottom sheet
-    val ELEVATION_OVERLAY get() = 16.dp  // full player, modal
-    val ELEVATION_SYSTEM get() = 24.dp   // system dialog
+    val ELEVATION_FLAT get() = DesignTokens.Elevation.flat
+    val ELEVATION_CARD get() = DesignTokens.Elevation.card
+    val ELEVATION_RAISED get() = DesignTokens.Elevation.raised
+    val ELEVATION_FLOATING get() = DesignTokens.Elevation.floating
+    val ELEVATION_OVERLAY get() = DesignTokens.Elevation.overlay
+    val ELEVATION_SYSTEM get() = DesignTokens.Elevation.system
 }
 
 @Composable

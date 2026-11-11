@@ -3,19 +3,19 @@ package com.ketvoice.app.theme
 import androidx.compose.ui.graphics.Color
 
 object Palette {
-    val White = Color(0xFFFFFFFF)
-    val Black = Color(0xFF000000)
+    val White = DesignTokens.Color.white
+    val Black = DesignTokens.Color.black
     val DarkGray = Color(0xFF1C1C1E)
     val DarkGray2 = Color(0xFF2C2C2E)
-    val BackgroundLight = Color(0xFFFFFFFF)
-    val BackgroundDark = Color(0xFF0B0D10)
-    val SecondaryTextLight = Color(0xFF8E8E92)
-    val SecondaryTextDark = Color(0xFFB4BAC4)
-    val CardLight = Color(0xFFF2F2F7)
-    val CardDark = Color(0xFF191D23)
-    val HairlineLight = Color(0x14000000)
-    val HairlineDark = Color(0x24FFFFFF)
-    val Accent = Color(0xFFFA2D48)
+    val BackgroundLight = DesignTokens.Color.backgroundLight
+    val BackgroundDark = DesignTokens.Color.backgroundDark
+    val SecondaryTextLight = DesignTokens.Color.secondaryLight
+    val SecondaryTextDark = DesignTokens.Color.secondaryDark
+    val CardLight = DesignTokens.Color.surfaceLight
+    val CardDark = DesignTokens.Color.surfaceDark
+    val HairlineLight = DesignTokens.Color.separatorLight
+    val HairlineDark = DesignTokens.Color.separatorDark
+    val Accent = DesignTokens.Color.accent
     val AccentBlue = Color(0xFF007AFF)
     val Teal = Color(0xFF0E9E8C)
     val PurplePink1 = Color(0xFF6A3AB2)

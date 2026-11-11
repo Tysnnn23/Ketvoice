@@ -1,6 +1,8 @@
 package com.ketvoice.app.glass
 
 import android.os.Build
+import android.app.ActivityManager
+import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
@@ -16,9 +18,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.ketvoice.app.data.AppSettings
 import com.ketvoice.app.theme.LocalTheme
+import com.ketvoice.app.theme.DesignTokens
+import com.ketvoice.app.ui.motion.Motion
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.LayerBackdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
@@ -76,8 +81,8 @@ data class GlassParams(
     /** Hauteur de réfraction de la lentille (bord du verre), en px. */
     val refractionPx: Float = 18f,
     /** Prismal-style edge band and displacement, density-independent. */
-    val refractionHeightDp: Float = 3.5f,
-    val refractionAmountDp: Float = 6f,
+    val refractionHeightDp: Float = DesignTokens.Glass.EDGE_HEIGHT_DP,
+    val refractionAmountDp: Float = DesignTokens.Glass.EDGE_AMOUNT_DP,
     val role: GlassRole = GlassRole.Control,
     /** Opacité de la teinte de surface (le "lait" du verre). */
     val tintAlpha: Float = 0.10f,
@@ -127,7 +132,7 @@ data class GlassParams(
             dark = dark
         )
 
-        fun pill(blur: Float = 8f, dark: Boolean = false) = GlassParams(
+        fun pill(blur: Float = DesignTokens.Glass.CONTROL_BLUR_PX, dark: Boolean = false) = GlassParams(
             cornerRadiusPx = 9999f,
             blurPx = blur,
             refractionPx = 18f,
@@ -148,7 +153,7 @@ data class GlassParams(
             dark = dark
         )
 
-        fun circle(blur: Float = 6f, dark: Boolean = false) = GlassParams(
+        fun circle(blur: Float = DesignTokens.Glass.CIRCLE_BLUR_PX, dark: Boolean = false) = GlassParams(
             cornerRadiusPx = 9999f,
             blurPx = blur,
             refractionPx = 14f,
@@ -164,10 +169,11 @@ data class GlassParams(
         )
 
         /** Navigation is optical glass, not heavily frosted content material. */
-        fun navigation(dark: Boolean = false) = pill(blur = 7f, dark = dark).copy(
+        fun navigation(dark: Boolean = false) = pill(blur = DesignTokens.Glass.NAVIGATION_BLUR_PX, dark = dark).copy(
             tintAlpha = if (dark) .055f else .035f,
             saturation = 1.08f, highlightAlpha = if (dark) .30f else .36f,
-            refractionHeightDp = 4f, refractionAmountDp = 7f
+            refractionHeightDp = DesignTokens.Glass.NAVIGATION_EDGE_HEIGHT_DP,
+            refractionAmountDp = DesignTokens.Glass.NAVIGATION_EDGE_AMOUNT_DP
         )
 
         /** The moving selection shares one material in expanded and compact navigation. */
@@ -267,13 +273,18 @@ fun GlassPanel(
         com.ketvoice.app.theme.KetTheme.dark().copy(accent = theme.accent) else theme
     CompositionLocalProvider(LocalTheme provides glassTheme) {
     val backdrop = LocalBackdropLayer.current
-    val dynamic = backdrop != null && enabled && AppSettings.liquidGlass.value && !captured && style != 2 &&
-        !AppSettings.reduceDynamicBlur.value &&
-        !AppSettings.highPerformanceMode.value
+    val context = LocalContext.current
+    val lowMemory = remember(context) {
+        runCatching { (context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager)?.isLowRamDevice == true }.getOrDefault(false)
+    }
+    val mode = glassRenderMode(Build.VERSION.SDK_INT, backdrop != null, enabled && AppSettings.liquidGlass.value,
+        captured, style == 2, AppSettings.reduceDynamicBlur.value, AppSettings.highPerformanceMode.value,
+        lowMemory, Motion.reduced)
+    val dynamic = mode != GlassRenderMode.Static
     // Vrai verre AGSL (API 33+) : le matériau est calculé par un RuntimeShader
     // (réfraction + dispersion + teinte + liseré). Les pinceaux de surface et le
     // Highlight de la lib ne servent plus que de repli pré-33.
-    val agsl = dynamic && GlassShader.isSupported()
+    val agsl = mode == GlassRenderMode.Optical
     val renderState = remember { GlassRenderState() }
 
     val (surface, hairline) = rememberStaticMaterial(params, opaque = style == 2)
@@ -284,7 +295,7 @@ fun GlassPanel(
         Modifier.border(.5.dp, hairline, shape)
     } else Modifier
 
-    if (dynamic) {
+    if (dynamic && backdrop != null) {
         Box(
             modifier = modifier.drawBackdrop(
                 backdrop = backdrop,
@@ -292,7 +303,9 @@ fun GlassPanel(
                 effects = {
                     // The shader owns saturation: stacking vibrancy here overcooks cover colours.
                     if (!agsl) vibrancy()
-                    if (params.blurPx > 0f) blur(params.blurPx)
+                    val blurAmount = if (mode == GlassRenderMode.Blur && (lowMemory || Motion.reduced))
+                        minOf(params.blurPx, DesignTokens.Glass.LOW_COST_BLUR_PX) else params.blurPx
+                    if (blurAmount > 0f) blur(blurAmount)
                     if (agsl) {
                         val bounds = size
                         val realRadii = glassRoundedShapeRadii(
@@ -315,10 +328,10 @@ fun GlassPanel(
                     }
                 },
                 highlight = {
-                    if (agsl) null else Highlight(
+                    if (agsl && renderState.shaderApplied) null else Highlight(
                         0.6.dp,
                         14.dp,
-                        params.highlightAlpha,
+                        minOf(params.highlightAlpha, DesignTokens.Glass.FALLBACK_HIGHLIGHT),
                         HighlightStyle.Default(
                             params.highlightIntensity,
                             params.highlightAngle,
@@ -330,7 +343,10 @@ fun GlassPanel(
                 innerShadow = { if (params.innerShadow && !agsl) InnerShadow.Default else null },
                 onDrawSurface = {
                     if (!agsl || !renderState.shaderApplied) {
-                        drawRect(surface)
+                        // The captured backdrop remains visible; this veil is only as strong as
+                        // needed for readable dark/light glyphs on an opposite-luminance cover.
+                        drawRect(if (params.dark) Color.Black.copy(alpha = DesignTokens.Glass.FALLBACK_DARK_TINT)
+                            else Color.White.copy(alpha = DesignTokens.Glass.FALLBACK_LIGHT_TINT))
                         drawRect(sheen)
                     }
                 }

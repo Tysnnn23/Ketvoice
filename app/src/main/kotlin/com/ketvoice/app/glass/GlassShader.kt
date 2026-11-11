@@ -6,6 +6,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Outline
 import com.kyant.backdrop.BackdropEffectScope
 import com.kyant.backdrop.effects.effect
+import com.ketvoice.app.theme.DesignTokens
 
 /**
  * Vrai Liquid Glass en shader AGSL (Android Graphics Shading Language).
@@ -219,7 +220,7 @@ fun BackdropEffectScope.liquidGlass(
         shader.setFloatUniform("cornerRadii", radii)
         shader.setFloatUniform("refractionHeight", lens.heightPx)
         shader.setFloatUniform("refractionAmount", lens.amountPx)
-        shader.setFloatUniform("dispersion", 0.006f)
+        shader.setFloatUniform("dispersion", DesignTokens.Glass.DISPERSION)
         shader.setFloatUniform("depthEffect", 0f)
         if (params.dark) {
             shader.setFloatUniform("tint", 0.16f, 0.16f, 0.19f, params.tintAlpha)

@@ -40,16 +40,16 @@ data class KetTheme(
 val LocalTheme = staticCompositionLocalOf<KetTheme> { KetTheme.light() }
 
 object T {
-    val huge = TextStyle(fontWeight = FontWeight.Black, fontSize = 34.sp, letterSpacing = 0.5.sp, lineHeight = 40.sp)
-    val hugeTitle = TextStyle(fontWeight = FontWeight.ExtraBold, fontSize = 40.sp, letterSpacing = 0.sp, lineHeight = 44.sp)
-    val h2 = TextStyle(fontWeight = FontWeight.Bold, fontSize = 22.sp)
-    val section = TextStyle(fontWeight = FontWeight.Bold, fontSize = 20.sp)
-    val body = TextStyle(fontWeight = FontWeight.Normal, fontSize = 16.sp)
-    val bodyBold = TextStyle(fontWeight = FontWeight.Bold, fontSize = 16.sp)
-    val sub = TextStyle(fontWeight = FontWeight.Normal, fontSize = 13.sp, lineHeight = 18.sp)
-    val caption = TextStyle(fontWeight = FontWeight.Normal, fontSize = 12.sp)
-    val chip = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-    val lyrics = TextStyle(fontWeight = FontWeight.Bold, fontSize = 21.sp, lineHeight = 30.sp)
+    val huge = DesignTokens.Typography.display
+    val hugeTitle = DesignTokens.Typography.largeTitle
+    val h2 = DesignTokens.Typography.title
+    val section = DesignTokens.Typography.section
+    val body = DesignTokens.Typography.body
+    val bodyBold = DesignTokens.Typography.bodyBold
+    val sub = DesignTokens.Typography.supporting
+    val caption = DesignTokens.Typography.caption
+    val chip = DesignTokens.Typography.label
+    val lyrics = DesignTokens.Typography.lyrics
 }
 
 @Composable
