@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -96,6 +97,46 @@ class UiPolishHostTest {
         image("track-menu-light-page-fixed") { bitmap ->
             val color = bitmap.getPixel(200, 865)
             assertTrue("Dark explicit sheet must not inherit white card", android.graphics.Color.red(color) < 60)
+        }
+    }
+
+    @Test fun playerSheetKeepsItsActionsAccessibleAndOnlyDismissesFromOutside() {
+        AppSettings.reduceAnimations.value = true
+        var dismissed = false
+        var clicked = false
+        compose.setContent { KetvoiceTheme(useDark = true) {
+            PlayerSheetScrim({ dismissed = true }) {
+                Column(Modifier.fillMaxWidth().height(160.dp).background(Color.DarkGray).testTag("sheet-fixture")) {
+                    Text("Action fixture", modifier = Modifier.clickable { clicked = true }.padding(16.dp))
+                    Box(Modifier.fillMaxWidth().height(80.dp).testTag("sheet-blank"))
+                }
+            }
+        } }
+        compose.onNodeWithText("Action fixture").performClick()
+        assertTrue(clicked)
+        assertFalse(dismissed)
+        compose.onNodeWithTag("sheet-blank").performTouchInput { click(center) }
+        assertFalse("A tap on the sheet surface must not dismiss it", dismissed)
+        compose.onNodeWithContentDescription("Fermer").performClick()
+        assertTrue(dismissed)
+    }
+
+    @Test fun reducedMotionStopsPlayingBarsInsteadOfRunningAnInvisibleLoop() {
+        AppSettings.reduceAnimations.value = true
+        compose.mainClock.autoAdvance = false
+        compose.setContent { KetvoiceTheme(useDark = true) {
+            Box(Modifier.fillMaxSize().background(Color.Black)) { NowPlayingBars(true, Modifier.padding(20.dp)) }
+        } }
+        var before = IntArray(0)
+        image("playing-bars-reduced-before") { bitmap ->
+            before = IntArray(bitmap.width * bitmap.height)
+            bitmap.getPixels(before, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
+        }
+        compose.mainClock.advanceTimeBy(1200)
+        image("playing-bars-reduced-after") { bitmap ->
+            val after = IntArray(bitmap.width * bitmap.height)
+            bitmap.getPixels(after, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
+            assertArrayEquals("Reduced motion must keep bars static", before, after)
         }
     }
 

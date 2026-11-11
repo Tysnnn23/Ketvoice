@@ -5,6 +5,7 @@ import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -40,6 +41,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
@@ -69,14 +71,14 @@ fun TrackMenuSheet(track: Track, onClose: () -> Unit) {
     GlassPanel(
         modifier = Modifier.fillMaxWidth().padding(10.dp),
         shape = RoundedCornerShape(28.dp),
-        params = GlassParams.card(radius, dark = true)
+        params = GlassParams.sheet(radius, dark = true)
     ) {
         Column(
             Modifier
                 .fillMaxWidth()
                 .heightIn(max = 650.dp)
                 .verticalScroll(rememberScrollState())
-                .clickable(noRip, null) { }
+                .pointerInput(Unit) { detectTapGestures {} }
         ) {
         Box(
             Modifier
@@ -126,7 +128,7 @@ fun TrackMenuSheet(track: Track, onClose: () -> Unit) {
             }
             Spacer(Modifier.width(10.dp))
             Icon(
-                Icons.Filled.Close, null, tint = Color.White.copy(alpha = 0.7f),
+                Icons.Filled.Close, "Fermer", tint = Color.White.copy(alpha = 0.7f),
                 modifier = Modifier.size(48.dp).clickable(noRip, null) { onClose() }.padding(12.dp)
             )
         }
@@ -236,7 +238,7 @@ private fun ReverbSlider(label: String, value: Int, onChange: (Int) -> Unit) {
         Spacer(Modifier.weight(1f))
         Text("$value%", localize = false, color = Color.White.copy(alpha = .82f), fontSize = 12.sp)
     }
-    androidx.compose.material3.Slider(
+    com.ketvoice.app.ui.common.GlassSlider(
         value = value.toFloat(),
         valueRange = 0f..100f,
         onValueChange = { onChange(it.toInt()) },
@@ -278,7 +280,7 @@ fun AudioOutputSheet(onClose: () -> Unit) {
         Column(
             Modifier
                 .fillMaxWidth()
-                .clickable(noRip, null) { }
+                .pointerInput(Unit) { detectTapGestures {} }
         ) {
         Box(Modifier.fillMaxWidth().padding(top = 8.dp), contentAlignment = Alignment.Center) {
             Box(

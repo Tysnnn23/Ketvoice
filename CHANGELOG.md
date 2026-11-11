@@ -7,6 +7,24 @@
 
 ---
 
+# Ketvoice 4.6.0
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 86** — native glass refinements, adaptive settings and a
+continuous saved glass-tint control.
+
+- Centralize visual tokens and explicitly select AGSL, blur or static fallbacks.
+- Keep the separate floating navigation and cover-first player, with improved
+  compact sizing, touch targets and reduced-motion behaviour.
+- Add live, persistent tint adjustment and adaptive settings/playlist sheets.
+- Refine album/playlist header collapse, artist controls and Explorer contrast.
+- Preserve clean synchronized lyrics, Canvas, audio functionality and Quest layout.
+
+Full notes and validation limits: [4.6.0](docs/releases/v4.6.0.md).
+
+---
+
 # Ketvoice 4.5.1
 
 ![Ketvoice](ketvoice-banner.png)

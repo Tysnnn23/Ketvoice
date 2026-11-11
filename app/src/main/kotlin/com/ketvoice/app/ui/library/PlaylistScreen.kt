@@ -91,17 +91,18 @@ fun PlaylistScreen() {
             GlassBackButton { if (editing) editing = false else AppUi.closeOverlay() }
             val genericTitle = com.ketvoice.app.data.AppText.t("Playlist")
             val editingTitle = com.ketvoice.app.data.AppText.t("Glissez ⠿ pour réordonner")
-            val accessibleTitle = if (editing) editingTitle else if (collapse >= .5f) playlist?.name.orEmpty() else genericTitle
-            Box(Modifier.weight(1f).padding(horizontal = 14.dp).semantics { contentDescription = accessibleTitle }) {
+            Box(Modifier.weight(1f).padding(horizontal = 14.dp)) {
                 if (editing) Text(editingTitle, localize = false, color = th.onBackground, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    fontSize = if (com.ketvoice.app.BuildConfig.IS_QUEST) 15.sp else 13.sp, modifier = Modifier.clearAndSetSemantics {})
+                    fontSize = if (com.ketvoice.app.BuildConfig.IS_QUEST) 15.sp else 13.sp)
                 else {
                     Text(genericTitle, localize = false, color = th.secondary, maxLines = 1, overflow = TextOverflow.Ellipsis,
                         fontSize = if (com.ketvoice.app.BuildConfig.IS_QUEST) 15.sp else 13.sp,
-                        modifier = Modifier.clearAndSetSemantics {}.graphicsLayer { alpha = 1f - collapse })
+                        modifier = Modifier.then(if (collapse >= .5f) Modifier.clearAndSetSemantics {} else Modifier)
+                            .graphicsLayer { alpha = 1f - collapse })
                     Text(playlist?.name.orEmpty(), localize = false, color = th.onBackground, maxLines = 1, overflow = TextOverflow.Ellipsis,
                         fontSize = if (com.ketvoice.app.BuildConfig.IS_QUEST) 15.sp else 13.sp,
-                        modifier = Modifier.clearAndSetSemantics {}.graphicsLayer { alpha = collapse })
+                        modifier = Modifier.then(if (collapse < .5f) Modifier.clearAndSetSemantics {} else Modifier)
+                            .graphicsLayer { alpha = collapse })
                 }
             }
             Spacer(Modifier.width(10.dp))

@@ -519,7 +519,7 @@ fun PlayerBottomBar(
             LyricsGlyph(Modifier.size(25.dp).semantics { contentDescription = com.ketvoice.app.data.AppText.t("Paroles") }, tint)
         }
         Spacer(Modifier.weight(1f))
-        GlassPanel(Modifier.height(46.dp).width(140.dp), RoundedCornerShape(999.dp),
+        GlassPanel(Modifier.height(48.dp).width(140.dp), RoundedCornerShape(999.dp),
             GlassParams.navigation(dark = true), enabled = AppSettings.liquidGlass.value) {
         Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
             Box(
@@ -627,7 +627,7 @@ fun QueueActionsBar(
     modifier: Modifier = Modifier
 ) {
     Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        GlassPanel(Modifier.weight(1f).height(46.dp), RoundedCornerShape(999.dp),
+        GlassPanel(Modifier.weight(1f).height(48.dp), RoundedCornerShape(999.dp),
             GlassParams.navigation(dark = true), enabled = AppSettings.liquidGlass.value) {
         Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
             QueueSegment(shuffle, onShuffle) {
@@ -649,13 +649,13 @@ fun QueueActionsBar(
         Spacer(Modifier.width(62.dp))
         Box(
             Modifier
-                .size(46.dp)
+                .size(48.dp)
                 .clip(CircleShape)
                 .background(Color.White.copy(alpha = 0.18f))
                 .clickable(noRipple, null) { onQueue() },
             contentAlignment = Alignment.Center
         ) {
-            QueueGlyph(Modifier.size(27.dp))
+            QueueGlyph(Modifier.size(27.dp).semantics { contentDescription = com.ketvoice.app.data.AppText.t("Fermer") })
         }
     }
 }
@@ -679,6 +679,10 @@ private fun RowScope.QueueSegment(active: Boolean, onClick: () -> Unit, inner: @
 
 @Composable
 fun NowPlayingBars(playing: Boolean, modifier: Modifier = Modifier) {
+    if (!playing || Motion.reduced) {
+        NowPlayingBarsCanvas(.55f, .50f, .45f, .40f, modifier)
+        return
+    }
     val transition = rememberInfiniteTransition(label = "bars")
     val a by transition.animateFloat(
         0.25f, 1f,
@@ -696,12 +700,16 @@ fun NowPlayingBars(playing: Boolean, modifier: Modifier = Modifier) {
         0.75f, 0.3f,
         infiniteRepeatable(tween(540, easing = LinearEasing), RepeatMode.Reverse), label = "d"
     )
+    NowPlayingBarsCanvas(a, b, c, d, modifier)
+}
+
+@Composable
+private fun NowPlayingBarsCanvas(a: Float, b: Float, c: Float, d: Float, modifier: Modifier) {
     Canvas(modifier.size(width = 26.dp, height = 22.dp)) {
-        val values = listOf(a, b, c, d)
         val gap = size.width / 5.2f
         val barW = 2.6.dp.toPx()
-        values.forEachIndexed { i, v ->
-            val h = if (playing) size.height * v else size.height * (0.55f - i * 0.05f)
+        repeat(4) { i ->
+            val h = size.height * when (i) { 0 -> a; 1 -> b; 2 -> c; else -> d }
             drawLine(
                 Color.White,
                 Offset(gap * (i + 1), size.height - h / 2f),
@@ -776,8 +784,10 @@ fun PlayerSheetScrim(onClose: () -> Unit, content: @Composable () -> Unit) {
         Modifier
             .fillMaxSize()
             .background(Color.Black.copy(alpha = .35f * appear.value))
-            .clickable(noRipple, null) { onClose() }
     ) {
+        val closeLabel = com.ketvoice.app.data.AppText.t("Fermer")
+        Box(Modifier.matchParentSize().semantics { contentDescription = closeLabel }
+            .clickable(noRipple, null) { onClose() })
         Box(
             Modifier
                 .align(Alignment.BottomCenter)
@@ -788,7 +798,7 @@ fun PlayerSheetScrim(onClose: () -> Unit, content: @Composable () -> Unit) {
                     alpha = appear.value
                     translationY = if (Motion.reduced) 0f else (1f - appear.value) * 24.dp.toPx()
                 }
-                .clickable(noRipple, null) { },
+                .pointerInput(Unit) { detectTapGestures {} },
         ) { content() }
     }
 }

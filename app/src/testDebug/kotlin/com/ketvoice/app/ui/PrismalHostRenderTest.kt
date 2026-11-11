@@ -253,6 +253,7 @@ class PrismalHostRenderTest {
     @Test fun playlistHeaderScrollsAwayWithoutLeavingABlankHeaderArea() {
         playlistFixture()
         compose.setContent { KetvoiceTheme(useDark = true) { PlaylistScreen() } }
+        compose.onNodeWithText("Playlist").assertExists()
         val cover = compose.onNodeWithTag("playlist-cover").fetchSemanticsNode().boundsInRoot
         var before = IntArray(0)
         image("playlist-scroll-before") { bitmap ->
@@ -260,6 +261,7 @@ class PrismalHostRenderTest {
         }
         compose.onNodeWithTag("playlist-tracks").performScrollToIndex(25)
         compose.onNodeWithText("Titre 25").assertIsDisplayed()
+        compose.onNodeWithText("Playlist fixe").assertExists()
         // The hero is a normal list item now: it scrolls out of the viewport.
         assertEquals("The header must not stay pinned on screen",
             0, compose.onAllNodesWithTag("playlist-cover").fetchSemanticsNodes().size)
