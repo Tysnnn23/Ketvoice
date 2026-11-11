@@ -21,17 +21,18 @@
 
 ## Overview
 
-### 4.5.1 — previous navigation and player restored
+### 4.6.0 — native glass and adaptive settings
 
-Previous navigation and player layout restored. The mini-player, tab capsule and
-search have separate surfaces again. The phone title/actions return below the
-artwork, without the added top page selector. Clean synchronized lyrics remain
-unchanged, with no scaled or diffused word copies. Playlist pins, local albums,
-selection, offline filters and confirmed deletion are retained. French remains the
-default among eleven languages. Physical phone/Quest and GPU checks are not claimed.
-[Mobile](https://github.com/Tysnnn23/Ketvoice/releases/download/v4.5.1/Ketvoice-4.5.1.apk)
-· [Quest](https://github.com/Tysnnn23/Ketvoice/releases/download/v4.5.1/Ketvoice-4.5.1-Quest.apk)
-· [Release notes and validation limits](docs/releases/v4.5.1.md).
+A continuous glass tint updates the preview and persists after reopening. Native
+AGSL remains on Android 13+; older, low-memory and reduced-motion paths have
+explicit fallbacks. The previous separate navigation and cover-first player remain,
+along with clean synchronized lyrics. Album, playlist, artist and Explorer details
+have been refined without changing audio or provider APIs. Eleven interface
+languages remain available with existing language-selection behaviour unchanged.
+Device calibration and some secondary Material dialogs remain open limitations.
+[Mobile](https://github.com/Tysnnn23/Ketvoice/releases/download/v4.6.0/Ketvoice-4.6.0.apk)
+· [Quest](https://github.com/Tysnnn23/Ketvoice/releases/download/v4.6.0/Ketvoice-4.6.0-Quest.apk)
+· [Release notes and validation limits](docs/releases/v4.6.0.md).
 
 ### 3.11.0 — smoother playback and artist portraits
 
@@ -135,7 +136,7 @@ See the [3.0.3 release notes](docs/releases/v3.0.3.md) for validation limits.
 
 Ketvoice is an independent Android music client whose visual language is inspired by Apple Music and iOS 26. French is the default interface language; Settings offers 11 languages across the app. It is not affiliated with Apple, YouTube, Spotify or any music provider.
 
-The latest release is **4.5.1** (`versionCode` 85) for **mobile/tablet** (Android 12+, target SDK 36) and **Quest 3/3S** (minimum SDK 32, target SDK 34, landscape-only 2D window). The previous navigation and player presentation are restored. Clean karaoke, pinned playlists, local album views and confirmed multi-file deletion are retained; a paused download queue survives a process kill. French remains the default among eleven interface languages. Artist/album transitions preserve navigation state; optional Bit-Perfect uses Android 14+'s compatible USB mixer contract with standard fallback. Native refresh-rate requests remain subject to Android policy, without a measured FPS guarantee. Local playlists, Studio publishing, Canvas, Sonic Canvas in standard mode, offline capsules and single-device Wi-Fi handoff remain. Ketogether group listening is deferred. Physical device/DAC/headset validation has not been performed; see the release metadata.
+The latest release is **4.6.0** (`versionCode` 86) for **mobile/tablet** (Android 12+, target SDK 36) and **Quest 3/3S** (minimum SDK 32, target SDK 34, landscape-only 2D window). Glass tint has a continuous persisted control, while the separate navigation and cover-first player remain. Clean karaoke, pinned playlists, local album views and confirmed multi-file deletion are retained; a paused download queue survives a process kill. Eleven interface languages remain available with existing language-selection behaviour unchanged. Artist/album transitions preserve navigation state; optional Bit-Perfect uses Android 14+'s compatible USB mixer contract with standard fallback. Native refresh-rate requests remain subject to Android policy, without a measured FPS guarantee. Local playlists, Studio publishing, Canvas, Sonic Canvas in standard mode, offline capsules and single-device Wi-Fi handoff remain. Ketogether group listening is deferred. Physical device/DAC/headset validation has not been performed; see the release metadata.
 
 Music-source search, stream resolution, Spotify Canvas, and published-content lookup go through two Supabase Edge Functions: **Ketvoice API** for sources/Canvas and **Ketvoice Content** for public publications. The APK contains only the project’s public Supabase `anon` key and function URLs. Spotify and source credentials remain in Supabase Vault and are never shipped with the app.
 
@@ -147,7 +148,7 @@ Music-source search, stream resolution, Spotify Canvas, and published-content lo
 
 - **Landscape only, with the mobile style**: original artwork/Canvas, icon controls, Liquid Glass, floating navigation, and lyric animations. In lyrics/queue mode, artwork, title, artist, and transport stay on the left; lyrics or queue fill the right. No giant text-button dashboard, tablet rail, or portrait-phone frame.
 - Pointer hover light on interactive controls, optional lyric sizing, foreground keep-awake, and the sleep timer in the ordinary track ⋯ menu.
-- Download **[Ketvoice-4.5.1-Quest.apk](https://github.com/Tysnnn23/Ketvoice/releases/download/v4.5.1/Ketvoice-4.5.1-Quest.apk)** and follow [Quest installation instructions](docs/QUEST.md). Headset-targeted manifest and arm64 support are included; physical Quest hardware validation is still required. This is a 2D app window, not an immersive VR environment. The same-version **[mobile/tablet 4.5.1 APK](https://github.com/Tysnnn23/Ketvoice/releases/download/v4.5.1/Ketvoice-4.5.1.apk)** is available in the same release.
+- Download **[Ketvoice-4.6.0-Quest.apk](https://github.com/Tysnnn23/Ketvoice/releases/download/v4.6.0/Ketvoice-4.6.0-Quest.apk)** and follow [Quest installation instructions](docs/QUEST.md). Headset-targeted manifest and arm64 support are included; physical Quest hardware validation is still required. This is a 2D app window, not an immersive VR environment. The same-version **[mobile/tablet 4.6.0 APK](https://github.com/Tysnnn23/Ketvoice/releases/download/v4.6.0/Ketvoice-4.6.0.apk)** is available in the same release.
 
 ### Interface
 
