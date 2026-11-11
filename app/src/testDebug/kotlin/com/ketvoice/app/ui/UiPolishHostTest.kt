@@ -55,6 +55,11 @@ class UiPolishHostTest {
         AppSettings.highRefreshRate.value = false
         AppSettings.reverbAmount.value = 0
         com.ketvoice.app.player.ReverbControl.amount = 0f
+        AppSettings.equalizerEnabled.value = false
+        AppSettings.wifiHandoffEnabled.value = false
+        AppUi.showEqualizer.value = false
+        AppUi.showHandoff.value = false
+        (com.ketvoice.app.handoff.WifiHandoff.pending as MutableStateFlow<com.ketvoice.app.handoff.IncomingHandoff?>).value = null
         (Downloader.busy as MutableStateFlow<Set<String>>).value = emptySet()
         (Downloader.progress as MutableStateFlow<Map<String, Int>>).value = emptyMap()
         @Suppress("UNCHECKED_CAST")
@@ -167,6 +172,38 @@ class UiPolishHostTest {
         image("player-reverb-controls")
         compose.onNodeWithText("Désactiver").performScrollTo().performClick()
         compose.runOnIdle { assertEquals(0f, com.ketvoice.app.player.ReverbControl.amount, 0f) }
+    }
+
+    @Test fun equalizerSheetKeepsTheExistingToggleAndCloseBehaviour() {
+        AppSettings.reduceAnimations.value = true
+        AppSettings.equalizerEnabled.value = false
+        AppUi.showEqualizer.value = true
+        compose.setContent { KetvoiceTheme(useDark = false) { PlaybackFeatureDialogs() } }
+        compose.onNodeWithText("Égaliseur").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Activer l'égaliseur").performClick()
+        assertTrue(AppSettings.equalizerEnabled.value)
+        compose.onNodeWithText("Fermer").performScrollTo().performClick()
+        assertFalse(AppUi.showEqualizer.value)
+    }
+
+    @Test fun incomingTransferStillRequiresExplicitConsent() {
+        AppSettings.reduceAnimations.value = true
+        AppSettings.wifiHandoffEnabled.value = false
+        val current = Track("kv:um:consent", "Current", "Artist", "Album")
+        val incoming = Track("kv:um:incoming", "Incoming", "Artist", "Album")
+        val player = Player.state as MutableStateFlow<com.ketvoice.app.player.PlayerUiState>
+        val prior = player.value
+        player.value = com.ketvoice.app.player.PlayerUiState(queue = listOf(current), index = 0)
+        val pending = com.ketvoice.app.handoff.WifiHandoff.pending as MutableStateFlow<com.ketvoice.app.handoff.IncomingHandoff?>
+        pending.value = com.ketvoice.app.handoff.IncomingHandoff("fixture", com.ketvoice.app.handoff.HandoffMessage(
+            "Test device", listOf(incoming), 0, shuffle = false, repeatOne = false, autoplay = false), "192.168.1.2")
+        try {
+            compose.setContent { KetvoiceTheme(useDark = false) { PlaybackFeatureDialogs() } }
+            compose.onNodeWithText("Reprendre la lecture ici ?").assertIsDisplayed()
+            compose.onNodeWithText("Accepter").assertIsDisplayed()
+            compose.onNodeWithText("Refuser").assertIsDisplayed()
+            assertEquals("Displaying a request must not start the incoming track", current, player.value.current)
+        } finally { pending.value = null; player.value = prior }
     }
 
     @Test fun artworkProgressRingTracksTheRealDownloaderState() {

@@ -15,7 +15,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 import com.ketvoice.app.data.MusicApi
 import com.ketvoice.app.player.Player
 import com.ketvoice.app.theme.LocalTheme
@@ -35,9 +34,8 @@ fun LyricsDiagnosticsDialog(onClose: () -> Unit) {
         results = runCatching { MusicApi.probeProviders(target) }.getOrNull()
         probing = false
     }
-    Dialog(onDismissRequest = onClose) {
-        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(th.background)
-            .padding(20.dp).verticalScroll(rememberScrollState())) {
+    SettingsSheet(onDismiss = onClose) {
+        Column(Modifier.fillMaxWidth().heightIn(max = 650.dp).verticalScroll(rememberScrollState()).padding(20.dp)) {
             Text("Diagnostic des sources de paroles", color = th.onBackground, fontSize = 19.sp, fontWeight = FontWeight.Bold)
             Text(
                 if (track == null) "Lisez un titre puis relancez le test : chaque source est interrogée sur ce titre."
@@ -71,8 +69,7 @@ fun LyricsDiagnosticsDialog(onClose: () -> Unit) {
                     }
                 }
             }
-            Text("Fermer", color = th.accent, fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.align(Alignment.End).clickable(onClick = onClose).padding(top = 12.dp))
+            Box(Modifier.align(Alignment.End).padding(top = 12.dp)) { SettingsAction("Fermer", onClose, primary = true) }
         }
     }
 }

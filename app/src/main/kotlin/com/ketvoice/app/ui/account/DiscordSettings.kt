@@ -7,27 +7,31 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Switch
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.ketvoice.app.data.AppSettings
 import com.ketvoice.app.data.SettingsStore
 import com.ketvoice.app.discord.Discord
 import com.ketvoice.app.discord.DiscordOAuth
 import com.ketvoice.app.theme.LocalTheme
 import com.ketvoice.app.ui.common.Text
+import com.ketvoice.app.ui.common.LiquidGlassSwitch
 
 /**
  * Discord lives in Settings → Account. Presence through the installed Discord app
@@ -114,13 +118,14 @@ internal fun DiscordSettings(modifier: Modifier = Modifier) {
                     Text("Morceau, artiste et boutons sur votre profil Discord.",
                         color = theme.secondary, fontSize = 11.5.sp, lineHeight = 16.sp)
                 }
-                Switch(
+                val label = com.ketvoice.app.data.AppText.t("Afficher ce que j'écoute")
+                LiquidGlassSwitch(
                     checked = AppSettings.discordPresence.value,
                     onCheckedChange = {
                         AppSettings.discordPresence.value = it
                         SettingsStore.save()
                         if (!it) Discord.clearPresence()
-                    })
+                    }, modifier = Modifier.semantics { contentDescription = label })
             }
             Text("Déconnecter Discord", color = theme.accent, fontSize = 13.sp,
                 modifier = Modifier.fillMaxWidth().clickable { Discord.unlink() }.padding(top = 8.dp, bottom = 2.dp))
@@ -149,17 +154,19 @@ internal fun DiscordSettings(modifier: Modifier = Modifier) {
             Text("Connexion par jeton (avancé)", color = theme.secondary, fontSize = 12.sp,
                 modifier = Modifier.fillMaxWidth().clickable { advanced = !advanced }.padding(bottom = 4.dp))
             if (advanced) {
-                OutlinedTextField(
+                Text("Jeton OAuth2", color = theme.secondary, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+                val label = com.ketvoice.app.data.AppText.t("Jeton OAuth2")
+                BasicTextField(
                     value = token,
                     onValueChange = { token = it.trim().take(512) },
-                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-                    label = { Text("Jeton OAuth2", fontSize = 12.sp) },
+                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp).semantics { contentDescription = label }
+                        .clip(RoundedCornerShape(12.dp)).background(theme.onBackground.copy(alpha = .07f))
+                        .heightIn(min = 48.dp).padding(12.dp),
                     singleLine = true,
-                    textStyle = androidx.compose.ui.text.TextStyle(fontSize = 13.sp,
-                        fontFamily = FontFamily.Monospace),
+                    textStyle = TextStyle(color = theme.onBackground, fontSize = 13.sp, fontFamily = FontFamily.Monospace),
+                    cursorBrush = SolidColor(theme.accent),
                     visualTransformation = PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                    shape = RoundedCornerShape(12.dp)
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
                 )
                 Text("Jeton OAuth2 émis pour l'application Ketvoice. Les jetons d'utilisateur " +
                     "Discord classiques sont refusés par le SDK.",
