@@ -35,6 +35,13 @@ import androidx.compose.ui.semantics.setProgress
 import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.unit.dp
 import com.ketvoice.app.data.AppSettings
 import com.ketvoice.app.glass.GlassPanel
@@ -65,6 +72,7 @@ fun GlassSlider(
     LaunchedEffect(fraction, dragging) { if (!dragging) dragFraction = fraction }
     var widthPx by remember { mutableStateOf(0) }
     val density = LocalDensity.current
+    val direction = LocalLayoutDirection.current
     val thumb = 22.dp
 
     Box(
@@ -81,11 +89,24 @@ fun GlassSlider(
                     }
                 }
             }
+            .onKeyEvent { event ->
+                val sign = when (event.key) {
+                    Key.DirectionLeft -> if (direction == LayoutDirection.Rtl) 1f else -1f
+                    Key.DirectionRight -> if (direction == LayoutDirection.Rtl) -1f else 1f
+                    else -> 0f
+                }
+                if (!enabled || event.type != KeyEventType.KeyDown || sign == 0f) false else {
+                    change((valueRange.start + fraction * span + sign * span * .05f).coerceIn(valueRange))
+                    finished()
+                    true
+                }
+            }
             .focusable(enabled)
             .pointerInput(enabled, widthPx, valueRange) {
                 if (enabled) detectTapGestures { point ->
                     val travel = (widthPx - thumb.toPx()).coerceAtLeast(1f)
-                    val next = ((point.x - thumb.toPx() / 2f) / travel).coerceIn(0f, 1f)
+                    val physical = ((point.x - thumb.toPx() / 2f) / travel).coerceIn(0f, 1f)
+                    val next = if (direction == LayoutDirection.Rtl) 1f - physical else physical
                     dragFraction = next; change(valueRange.start + next * span); finished()
                 }
             }
@@ -97,7 +118,8 @@ fun GlassSlider(
                 state = rememberDraggableState { delta ->
                     if (widthPx > 0) {
                         val travel = (widthPx - with(density) { thumb.toPx() }).coerceAtLeast(1f)
-                        dragFraction = (dragFraction + delta / travel).coerceIn(0f, 1f)
+                        val logicalDelta = if (direction == LayoutDirection.Rtl) -delta else delta
+                        dragFraction = (dragFraction + logicalDelta / travel).coerceIn(0f, 1f)
                         change(valueRange.start + dragFraction * span)
                     }
                 }

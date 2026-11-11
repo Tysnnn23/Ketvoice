@@ -18,6 +18,8 @@ object AppSettings {
     val albumHeroCanvas = mutableStateOf(true)
     /** 0 clear optical glass, 1 frosted, 2 opaque accessibility material. */
     val glassStyle = mutableStateOf(0)
+    /** Continuous additional glass tint, zero preserves the existing material. */
+    val glassTint = mutableStateOf(0f)
     val downloadsWifiOnly = mutableStateOf(false)
     val panoramicCanvas = mutableStateOf(false)
     val sonicCanvas = mutableStateOf(false)

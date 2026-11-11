@@ -10,6 +10,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -40,22 +41,24 @@ import androidx.compose.material.icons.filled.Vibration
 import androidx.compose.material.icons.filled.Wifi
 import com.ketvoice.app.ui.common.Icon
 import com.ketvoice.app.ui.common.Text
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -754,19 +757,21 @@ private fun qualityChoice(title: String, current: String, onSelect: (String) -> 
 @Composable
 private fun ChoiceDialog(spec: ChoiceSpec, onDismiss: () -> Unit) {
     val th = LocalTheme.current
-    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
-        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(th.background)
-            .padding(vertical = 18.dp)) {
+    SettingsSheet(onDismiss = onDismiss) {
+        Column(Modifier.fillMaxWidth().heightIn(max = 650.dp).verticalScroll(rememberScrollState()).padding(vertical = 18.dp)) {
+            Box(Modifier.align(Alignment.CenterHorizontally).width(40.dp).height(4.dp)
+                .clip(RoundedCornerShape(50)).background(th.secondary.copy(alpha = .4f)))
+            Spacer(Modifier.height(12.dp))
             Text(spec.title, color = th.onBackground, fontSize = 20.sp, fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(horizontal = 20.dp))
             Text(spec.subtitle, color = th.secondary, fontSize = 12.5.sp, lineHeight = 17.sp,
                 modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 10.dp))
-            Column(Modifier.heightIn(max = 430.dp).verticalScroll(rememberScrollState())) {
+            Column {
                 spec.options.forEach { option ->
-                    Row(Modifier.fillMaxWidth().clickable(noRip, null) {
+                    Row(Modifier.fillMaxWidth().clickable(noRip, null, role = Role.Button) {
                         spec.onSelect(option.id)
                         onDismiss()
-                    }.padding(horizontal = 20.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    }.heightIn(min = 48.dp).padding(horizontal = 20.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Text(option.label, localize = spec.title != "Langue de l'application", color = th.onBackground, fontSize = 16.sp)
                             if (option.sub.isNotBlank()) Text(option.sub, color = th.secondary,
@@ -787,9 +792,9 @@ private fun AccentDialog(onClose: () -> Unit) {
     val th = LocalTheme.current
     var hex by remember { mutableStateOf("#%06X".format(AppSettings.accentArgb.value and 0xFFFFFF)) }
     var error by remember { mutableStateOf<String?>(null) }
-    androidx.compose.ui.window.Dialog(onDismissRequest = onClose) {
-        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(th.background)
-            .padding(20.dp)) {
+    val hexLabel = com.ketvoice.app.data.AppText.t("Code hexadécimal")
+    SettingsSheet(onDismiss = onClose) {
+        Column(Modifier.fillMaxWidth().heightIn(max = 650.dp).verticalScroll(rememberScrollState()).padding(20.dp)) {
             Text("Couleur d'accent", color = th.onBackground, fontSize = 20.sp, fontWeight = FontWeight.Bold)
             Text("Appliquée à la timeline, au scrub, aux contrôles et à la progression.",
                 color = th.secondary, fontSize = 12.5.sp, lineHeight = 17.sp,
@@ -813,19 +818,15 @@ private fun AccentDialog(onClose: () -> Unit) {
             }
             Spacer(Modifier.height(12.dp))
             Text("Code hexadécimal", color = th.secondary, fontSize = 12.sp)
-            TextField(hex, { hex = it; error = null }, singleLine = true,
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = th.card, unfocusedContainerColor = th.card,
-                    focusedTextColor = th.onBackground, unfocusedTextColor = th.onBackground,
-                    cursorColor = th.accent
-                ), modifier = Modifier.fillMaxWidth().padding(top = 6.dp))
+            BasicTextField(hex, { hex = it; error = null }, singleLine = true,
+                textStyle = TextStyle(color = th.onBackground, fontSize = 16.sp), cursorBrush = SolidColor(th.accent),
+                modifier = Modifier.fillMaxWidth().padding(top = 6.dp).semantics { contentDescription = hexLabel }.clip(RoundedCornerShape(12.dp))
+                    .background(th.onBackground.copy(alpha = .07f)).heightIn(min = 48.dp).padding(12.dp))
             if (error != null) Text(error.orEmpty(), color = Color(0xFFFF3B30), fontSize = 12.sp,
                 modifier = Modifier.padding(top = 5.dp))
             Row(Modifier.fillMaxWidth().padding(top = 14.dp), horizontalArrangement = Arrangement.End) {
-                Text("Fermer", color = th.secondary, fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.clickable(noRip, null) { onClose() }.padding(10.dp))
-                Text("Appliquer", color = th.accent, fontWeight = FontWeight.Bold,
-                    modifier = Modifier.clickable(noRip, null) {
+                SettingsAction("Fermer", onClose)
+                SettingsAction("Appliquer", {
                         val clean = hex.trim().removePrefix("#")
                         if (!clean.matches(Regex("[0-9A-Fa-f]{6}"))) {
                             error = "Entrez 6 caractères hexadécimaux, par exemple #0A84FF"
@@ -835,7 +836,7 @@ private fun AccentDialog(onClose: () -> Unit) {
                             SettingsStore.save()
                             onClose()
                         }
-                    }.padding(10.dp))
+                    }, primary = true)
             }
         }
     }
@@ -846,17 +847,20 @@ private fun ConfigValueDialog(title: String, initial: String, secret: Boolean, o
     val th = LocalTheme.current
     var value by remember(title) { mutableStateOf(initial) }
     val valid = secret || value.isBlank() || value.startsWith("https://")
-    androidx.compose.ui.window.Dialog(onDismissRequest = onClose) {
-        Column(Modifier.clip(RoundedCornerShape(24.dp)).background(th.card).padding(20.dp)) {
+    val inputLabel = com.ketvoice.app.data.AppText.t(title)
+    SettingsSheet(onDismiss = onClose) {
+        Column(Modifier.fillMaxWidth().heightIn(max = 650.dp).verticalScroll(rememberScrollState()).padding(20.dp)) {
             Text(title, color = th.onBackground, fontSize = 20.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(12.dp))
-            TextField(value, { value = it }, singleLine = true,
+            BasicTextField(value, { value = it }, singleLine = true,
                 visualTransformation = if (secret) PasswordVisualTransformation() else VisualTransformation.None,
-                modifier = Modifier.fillMaxWidth())
+                textStyle = TextStyle(color = th.onBackground, fontSize = 16.sp), cursorBrush = SolidColor(th.accent),
+                modifier = Modifier.fillMaxWidth().semantics { contentDescription = inputLabel }.clip(RoundedCornerShape(12.dp)).background(th.onBackground.copy(alpha = .07f))
+                    .heightIn(min = 48.dp).padding(12.dp))
             if (!valid) Text("Une URL HTTPS est requise", color = th.accent, fontSize = 12.sp)
             Row(Modifier.fillMaxWidth().padding(top = 16.dp), horizontalArrangement = Arrangement.End) {
-                Text("Annuler", color = th.secondary, modifier = Modifier.clickable { onClose() }.padding(12.dp))
-                Text("Enregistrer", color = th.accent, modifier = Modifier.clickable(enabled = valid) { onSave(value); onClose() }.padding(12.dp))
+                SettingsAction("Annuler", onClose)
+                SettingsAction("Enregistrer", { onSave(value); onClose() }, enabled = valid, primary = true)
             }
         }
     }

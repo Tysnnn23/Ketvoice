@@ -1078,7 +1078,9 @@
   "Tout sélectionner": "Select all",
   "Impossible de supprimer certains fichiers.": "Some files could not be deleted.",
   "Aucun album": "No albums",
-  "Les titres sans album restent disponibles dans Titres.": "Songs without an album remain available under Songs."
+  "Les titres sans album restent disponibles dans Titres.": "Songs without an album remain available under Songs.",
+  "Transparence du verre": "Glass transparency",
+  "Teinté": "Tinted"
  },
  "hi": {
   "Reverb": "रीवर्ब",
@@ -2159,7 +2161,9 @@
   "Tout sélectionner": "सभी चुनें",
   "Impossible de supprimer certains fichiers.": "कुछ फ़ाइलें हटाई नहीं जा सकीं।",
   "Aucun album": "कोई एल्बम नहीं",
-  "Les titres sans album restent disponibles dans Titres.": "बिना एल्बम वाले गाने, गाने अनुभाग में उपलब्ध रहते हैं।"
+  "Les titres sans album restent disponibles dans Titres.": "बिना एल्बम वाले गाने, गाने अनुभाग में उपलब्ध रहते हैं।",
+  "Transparence du verre": "ग्लास पारदर्शिता",
+  "Teinté": "रंगीन"
  },
  "ja": {
   "Reverb": "リバーブ",
@@ -3240,7 +3244,9 @@
   "Tout sélectionner": "すべて選択",
   "Impossible de supprimer certains fichiers.": "削除できなかったファイルがあります。",
   "Aucun album": "アルバムはありません",
-  "Les titres sans album restent disponibles dans Titres.": "アルバムのない曲は「曲」から引き続き利用できます。"
+  "Les titres sans album restent disponibles dans Titres.": "アルバムのない曲は「曲」から引き続き利用できます。",
+  "Transparence du verre": "ガラスの透明度",
+  "Teinté": "色付き"
  },
  "zh": {
   "Reverb": "混响",
@@ -4321,7 +4327,9 @@
   "Tout sélectionner": "全选",
   "Impossible de supprimer certains fichiers.": "部分文件无法删除。",
   "Aucun album": "暂无专辑",
-  "Les titres sans album restent disponibles dans Titres.": "没有专辑信息的歌曲仍可在「歌曲」中找到。"
+  "Les titres sans album restent disponibles dans Titres.": "没有专辑信息的歌曲仍可在「歌曲」中找到。",
+  "Transparence du verre": "玻璃透明度",
+  "Teinté": "有色"
  },
  "ru": {
   "Reverb": "Реверберация",
@@ -5402,7 +5410,9 @@
   "Tout sélectionner": "Выбрать всё",
   "Impossible de supprimer certains fichiers.": "Некоторые файлы не удалось удалить.",
   "Aucun album": "Нет альбомов",
-  "Les titres sans album restent disponibles dans Titres.": "Треки без альбома остаются доступны в разделе «Треки»."
+  "Les titres sans album restent disponibles dans Titres.": "Треки без альбома остаются доступны в разделе «Треки».",
+  "Transparence du verre": "Прозрачность стекла",
+  "Teinté": "Тонированное"
  },
  "it": {
   "Reverb": "Riverbero",
@@ -6483,7 +6493,9 @@
   "Tout sélectionner": "Seleziona tutto",
   "Impossible de supprimer certains fichiers.": "Impossibile eliminare alcuni file.",
   "Aucun album": "Nessun album",
-  "Les titres sans album restent disponibles dans Titres.": "I brani senza album restano disponibili in Brani."
+  "Les titres sans album restent disponibles dans Titres.": "I brani senza album restano disponibili in Brani.",
+  "Transparence du verre": "Trasparenza del vetro",
+  "Teinté": "Colorato"
  },
  "es": {
   "Reverb": "Reverb",
@@ -7564,7 +7576,9 @@
   "Tout sélectionner": "Seleccionar todo",
   "Impossible de supprimer certains fichiers.": "No se pudieron eliminar algunos archivos.",
   "Aucun album": "No hay álbumes",
-  "Les titres sans album restent disponibles dans Titres.": "Las canciones sin álbum siguen disponibles en Canciones."
+  "Les titres sans album restent disponibles dans Titres.": "Las canciones sin álbum siguen disponibles en Canciones.",
+  "Transparence du verre": "Transparencia del cristal",
+  "Teinté": "Tintado"
  },
  "de": {
   "Reverb": "Reverb",
@@ -8645,7 +8659,9 @@
   "Tout sélectionner": "Alle auswählen",
   "Impossible de supprimer certains fichiers.": "Einige Dateien konnten nicht gelöscht werden.",
   "Aucun album": "Keine Alben",
-  "Les titres sans album restent disponibles dans Titres.": "Titel ohne Album bleiben unter Titel verfügbar."
+  "Les titres sans album restent disponibles dans Titres.": "Titel ohne Album bleiben unter Titel verfügbar.",
+  "Transparence du verre": "Glastransparenz",
+  "Teinté": "Getönt"
  },
  "pt": {
   "Reverb": "Reverb",
@@ -9726,7 +9742,9 @@
   "Tout sélectionner": "Selecionar tudo",
   "Impossible de supprimer certains fichiers.": "Não foi possível excluir alguns arquivos.",
   "Aucun album": "Nenhum álbum",
-  "Les titres sans album restent disponibles dans Titres.": "As faixas sem álbum continuam disponíveis em Faixas."
+  "Les titres sans album restent disponibles dans Titres.": "As faixas sem álbum continuam disponíveis em Faixas.",
+  "Transparence du verre": "Transparência do vidro",
+  "Teinté": "Tingido"
  },
  "ko": {
   "Reverb": "리버브",
@@ -10807,6 +10825,8 @@
   "Tout sélectionner": "모두 선택",
   "Impossible de supprimer certains fichiers.": "일부 파일을 삭제할 수 없습니다.",
   "Aucun album": "앨범 없음",
-  "Les titres sans album restent disponibles dans Titres.": "앨범 정보가 없는 곡도 곡 목록에서 계속 이용할 수 있습니다."
+  "Les titres sans album restent disponibles dans Titres.": "앨범 정보가 없는 곡도 곡 목록에서 계속 이용할 수 있습니다.",
+  "Transparence du verre": "유리 투명도",
+  "Teinté": "색조"
  }
 }

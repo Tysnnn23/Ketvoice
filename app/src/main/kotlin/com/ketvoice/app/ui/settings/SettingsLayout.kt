@@ -103,7 +103,10 @@ private fun SettingsCategoryGroup(categories: List<SettingsCategory>, onCategory
             Row(Modifier.fillMaxWidth().testTag("settings-category-${category.name}")
                 .clickable(role = Role.Button) { onCategory(category) }.heightIn(min = 70.dp)
                 .padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(category.icon(), null, tint = theme.accent, modifier = Modifier.size(23.dp))
+                Box(Modifier.size(34.dp).clip(RoundedCornerShape(10.dp)).background(theme.accent.copy(alpha = .12f)),
+                    contentAlignment = Alignment.Center) {
+                    Icon(category.icon(), null, tint = theme.accent, modifier = Modifier.size(20.dp))
+                }
                 Column(Modifier.weight(1f).padding(horizontal = 16.dp)) {
                     Text(category.title, color = theme.onBackground, fontSize = 16.sp, fontWeight = FontWeight.Medium)
                     val summary = when (category) {
@@ -122,7 +125,7 @@ private fun SettingsCategoryGroup(categories: List<SettingsCategory>, onCategory
                 }
                 Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = theme.secondary, modifier = Modifier.size(20.dp))
             }
-            if (index != categories.lastIndex) Box(Modifier.padding(start = 55.dp, end = 16.dp)
+            if (index != categories.lastIndex) Box(Modifier.padding(start = 66.dp, end = 16.dp)
                 .fillMaxWidth().height(.5.dp).background(theme.onBackground.copy(alpha = .07f)))
         }
     }

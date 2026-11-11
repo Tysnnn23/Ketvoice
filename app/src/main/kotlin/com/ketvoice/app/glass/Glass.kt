@@ -213,15 +213,16 @@ data class GlassParams(
  * Le résultat lit comme un verre dépoli posé sur la page, pas comme un rectangle peint.
  */
 @Composable
-private fun rememberStaticMaterial(p: GlassParams, opaque: Boolean = false): Pair<Brush, Brush> {
+private fun rememberStaticMaterial(p: GlassParams, opaque: Boolean = false, tint: Float = 0f): Pair<Brush, Brush> {
     val th = LocalTheme.current
-    return remember(p, th.isDark, opaque) {
+    return remember(p, th.isDark, opaque, tint) {
         val base = if (p.dark) Color(0xFF232329) else Color.White
         // Transmission statique : le fond transparaît à ~12-18 %.
         val sheet = p.role == GlassRole.Sheet
-        val body = base.copy(alpha = if (opaque) 1f else if (sheet) .97f else if (p.dark) 0.84f else 0.88f)
-        val lift = base.copy(alpha = if (opaque) 1f else if (sheet) .98f else if (p.dark) 0.86f else 0.91f)
-        val surface = Brush.linearGradient(listOf(lift, body, base.copy(alpha = if (opaque) 1f else if (sheet) .96f else if (p.dark) 0.80f else 0.84f), body))
+        fun opacity(value: Float) = if (opaque) 1f else (value + GlassTuning.sanitize(tint) * .08f).coerceAtMost(.98f)
+        val body = base.copy(alpha = opacity(if (sheet) .97f else if (p.dark) .84f else .88f))
+        val lift = base.copy(alpha = opacity(if (sheet) .98f else if (p.dark) .86f else .91f))
+        val surface = Brush.linearGradient(listOf(lift, body, base.copy(alpha = opacity(if (sheet) .96f else if (p.dark) .80f else .84f)), body))
         // Liseré capillaire : lumineux haut-gauche (entrée de lumière), sombre bas-droite.
         val lightHair = Color.White.copy(alpha = if (p.dark) 0.14f else 0.32f)
         val darkHair = if (p.dark) Color.Black.copy(alpha = 0.22f) else Color.Black.copy(alpha = 0.08f)
@@ -251,23 +252,25 @@ fun GlassPanel(
     content: @Composable () -> Unit
 ) {
     val style = styleOverride ?: AppSettings.glassStyle.value
-    val params = when (style) {
+    val styledParams = when (style) {
         1 -> params.copy(blurPx = maxOf(params.blurPx, 26f), tintAlpha = if (params.dark) .16f else .12f,
             refractionHeightDp = 3f, refractionAmountDp = 4f)
         else -> params
     }
-    if (params.role == GlassRole.Panel) {
+    if (styledParams.role == GlassRole.Panel) {
         // Glass belongs to controls and navigation, not every content card/menu.
         val theme = LocalTheme.current
         // A dark player menu can be opened above a light page. Its explicit
         // material, not the page underneath, must own the content contrast.
-        val panelTheme = if (params.dark && !theme.isDark)
+        val panelTheme = if (styledParams.dark && !theme.isDark)
             com.ketvoice.app.theme.KetTheme.dark().copy(accent = theme.accent) else theme
         CompositionLocalProvider(LocalTheme provides panelTheme) {
             Box(modifier.clip(shape).background(panelTheme.card, shape)) { content() }
         }
         return
     }
+    val tint = GlassTuning.sanitize(AppSettings.glassTint.value)
+    val params = styledParams.copy(tintAlpha = GlassTuning.opticalTint(styledParams.tintAlpha, tint, styledParams.dark))
     val theme = LocalTheme.current
     val glassTheme = if (params.dark && !theme.isDark)
         com.ketvoice.app.theme.KetTheme.dark().copy(accent = theme.accent) else theme
@@ -287,7 +290,7 @@ fun GlassPanel(
     val agsl = mode == GlassRenderMode.Optical
     val renderState = remember { GlassRenderState() }
 
-    val (surface, hairline) = rememberStaticMaterial(params, opaque = style == 2)
+    val (surface, hairline) = rememberStaticMaterial(params, opaque = style == 2, tint = tint)
     val sheen = remember(params) { staticSheen(params) }
     // En AGSL, le shader dessine le liseré et le bord sombre : plus de bordure
     // Compose par-dessus (sinon double contour artificiel).
@@ -345,8 +348,8 @@ fun GlassPanel(
                     if (!agsl || !renderState.shaderApplied) {
                         // The captured backdrop remains visible; this veil is only as strong as
                         // needed for readable dark/light glyphs on an opposite-luminance cover.
-                        drawRect(if (params.dark) Color.Black.copy(alpha = DesignTokens.Glass.FALLBACK_DARK_TINT)
-                            else Color.White.copy(alpha = DesignTokens.Glass.FALLBACK_LIGHT_TINT))
+                        drawRect(if (params.dark) Color.Black.copy(alpha = GlassTuning.fallbackTint(tint, true))
+                            else Color.White.copy(alpha = GlassTuning.fallbackTint(tint, false)))
                         drawRect(sheen)
                     }
                 }
