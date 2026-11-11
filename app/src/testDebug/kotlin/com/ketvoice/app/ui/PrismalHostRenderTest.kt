@@ -78,12 +78,15 @@ class PrismalHostRenderTest {
     }
 
     @After fun reset() {
+        coil.Coil.reset()
         PlaylistStore.resetForTest()
         AppUi.closeOverlays()
         AppSettings.reduceAnimations.value = false
         AppSettings.reduceDynamicBlur.value = false
         AppSettings.highPerformanceMode.value = false
         AppSettings.animatedArtwork.value = true
+        AppSettings.artistPhotos.value = true
+        AppSettings.artistSignatures.value = false
         @Suppress("UNCHECKED_CAST")
         (Player.state as MutableStateFlow<PlayerUiState>).value = PlayerUiState()
         @Suppress("UNCHECKED_CAST")
@@ -177,6 +180,61 @@ class PrismalHostRenderTest {
         compose.onNodeWithText("Écouter").assertIsDisplayed()
         compose.onNodeWithText("Aléatoire").assertIsDisplayed()
         image("artist-header-dark-fallback")
+    }
+
+    @Test fun artistPortraitFixtureKeepsIdentityAndActionsOnOneSurface() {
+        AppSettings.reduceAnimations.value = true
+        AppSettings.artistPhotos.value = false
+        AppSettings.artistSignatures.value = false
+        val fixture = File("../ketvoice-banner.png")
+        assertTrue(fixture.isFile)
+        val drawable = android.graphics.drawable.BitmapDrawable(compose.activity.resources, android.graphics.BitmapFactory.decodeFile(fixture.absolutePath))
+        val requests = java.util.concurrent.atomic.AtomicInteger()
+        coil.Coil.setImageLoader(coil.ImageLoader.Builder(compose.activity).components {
+            add(coil.intercept.Interceptor { chain ->
+                requests.incrementAndGet()
+                coil.request.SuccessResult(drawable, chain.request, coil.decode.DataSource.MEMORY)
+            })
+        }.build())
+        val track = Track("qa:artist-image", "QA title", "Artiste", "Album")
+        compose.setContent { KetvoiceTheme(useDark = false) {
+            ArtistHeader(ArtistPage(MusicArtist("qa:artist-image", "Artiste", "fixture:image"), "", listOf(track),
+                emptyList(), emptyList(), "", 1f))
+        } }
+        compose.waitUntil(10_000) { requests.get() > 0 }
+        compose.onNodeWithText("Artiste").assertIsDisplayed()
+        compose.onNodeWithText("Écouter").assertIsDisplayed()
+        image("artist-portrait-light-host-fixture")
+    }
+
+    @Test @Config(qualifiers = "w320dp-h900dp-mdpi")
+    fun explorerCategoryNamesRemainReadableAndClickableAtLargeFontScale() {
+        var chosen = ""
+        compose.setContent { KetvoiceTheme(useDark = true) {
+            CompositionLocalProvider(LocalDensity provides Density(1f, 1.4f)) {
+                androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
+                    com.ketvoice.app.ui.explorer.categoryColumns(false, 1.4f), Modifier.width(320.dp),
+                    contentPadding = PaddingValues(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    val names = listOf("Hip-hop et nouvelles tendances", "Découvertes internationales")
+                    items(names.size) { index ->
+                        val name = names[index]
+                        com.ketvoice.app.ui.explorer.GenreCategoryCard(
+                            com.ketvoice.app.data.CatalogGenre("fixture:$index", name, null), 120.dp) { chosen = name }
+                    }
+                }
+            }
+        } }
+        compose.onNodeWithText("Hip-hop et nouvelles tendances").assertIsDisplayed().performClick()
+        assertEquals("Hip-hop et nouvelles tendances", chosen)
+        compose.onNodeWithText("Découvertes internationales").assertIsDisplayed()
+        val layouts = mutableListOf<TextLayoutResult>()
+        compose.onNodeWithText("Découvertes internationales", useUnmergedTree = true)
+            .performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(layouts) }
+        val layout = layouts.single()
+        val split = layout.layoutInput.text.text.indexOf("internationales")
+        assertTrue("The last word must stay on one line at large font size",
+            (0 until layout.lineCount).any { row -> layout.getLineStart(row) <= split && layout.getLineEnd(row) >= split + "internationales".length })
+        image("explorer-categories-320dp-large-font")
     }
 
     private fun playlistFixture() {

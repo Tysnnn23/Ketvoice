@@ -11,18 +11,19 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorMatrix
-import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.ketvoice.app.data.*
 import com.ketvoice.app.theme.LocalTheme
+import com.ketvoice.app.theme.DesignTokens
 import com.ketvoice.app.ui.AppUi
 import com.ketvoice.app.ui.adaptive.LocalAdaptiveLayout
 import com.ketvoice.app.ui.common.AccountAvatar
@@ -36,9 +37,14 @@ private val categoryTints = listOf(
     Color(0xFF4C6FD4), Color(0xFF8E5FC0)
 )
 
-private fun tintFor(id: String, title: String): Color {
+internal fun categoryColumns(hasRail: Boolean, fontScale: Float): GridCells = when {
+    hasRail || fontScale >= 1.2f -> GridCells.Adaptive(220.dp)
+    else -> GridCells.Fixed(2)
+}
+
+internal fun tintFor(id: String, title: String): Color {
     val seed = (id + title).fold(0) { acc, c -> acc * 31 + c.code }
-    return categoryTints[((seed % categoryTints.size) + categoryTints.size) % categoryTints.size]
+    return Color.Black.copy(alpha = .50f).compositeOver(categoryTints[((seed % categoryTints.size) + categoryTints.size) % categoryTints.size])
 }
 
 @Composable
@@ -52,7 +58,8 @@ fun ExplorerScreen() {
     Column(Modifier.fillMaxSize().background(theme.background).statusBarsPadding()) {
         Row(Modifier.fillMaxWidth().padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
             Text("Explorer", color = theme.onBackground, fontSize = 32.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-            if (!layout.hasRail) AccountAvatar("K", 36.dp, Modifier.clickable { AppUi.showAccount.value = true })
+            if (!layout.hasRail) Box(Modifier.size(DesignTokens.Space.touch).clickable { AppUi.showAccount.value = true },
+                contentAlignment = Alignment.Center) { AccountAvatar("K", 36.dp) }
         }
         if (loading) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator(Modifier.size(25.dp), color = theme.accent, strokeWidth = 2.dp)
@@ -64,7 +71,7 @@ fun ExplorerScreen() {
                 snapshotFlow { gridState.firstVisibleItemIndex to gridState.firstVisibleItemScrollOffset }
                     .collect { (index, offset) -> AppUi.bottomCollapsed.value = index > 0 || offset > 24 }
             }
-            LazyVerticalGrid(if (layout.hasRail) GridCells.Adaptive(220.dp) else GridCells.Fixed(2),
+            LazyVerticalGrid(categoryColumns(layout.hasRail, LocalDensity.current.fontScale),
                 state = gridState,
                 contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, layout.bottomPaddingDp.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -78,9 +85,9 @@ fun ExplorerScreen() {
     }
 }
 
-/** Carte de catégorie : bande de teinte pleine à gauche, pochette fondue dans la teinte à droite. */
+/** Matte category tile with an actual image when available; no backdrop blur. */
 @Composable
-private fun GenreCategoryCard(genre: CatalogGenre, height: androidx.compose.ui.unit.Dp, onClick: () -> Unit) {
+internal fun GenreCategoryCard(genre: CatalogGenre, height: androidx.compose.ui.unit.Dp, onClick: () -> Unit) {
     val tint = tintFor(genre.id, genre.title)
     Box(
         Modifier.fillMaxWidth().height(height)
@@ -88,34 +95,13 @@ private fun GenreCategoryCard(genre: CatalogGenre, height: androidx.compose.ui.u
             .background(tint)
             .clickable(onClick = onClick)
     ) {
-        Row(Modifier.fillMaxSize()) {
-            // Bande pleine : le titre vit ici, comme sur la référence.
-            Box(Modifier.fillMaxHeight().weight(.34f)) {
-                Text(
-                    genre.title,
-                    color = Color.White,
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.Bold,
-                    lineHeight = 21.sp,
-                    maxLines = 3,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.align(Alignment.TopStart).padding(12.dp)
-                )
-            }
-            // Pochette teintée : monochrome fondu dans la couleur de la carte.
-            Box(Modifier.fillMaxHeight().weight(.66f)) {
-                if (genre.cover != null) {
-                    AsyncImage(
-                        genre.cover, null,
-                        Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop,
-                        colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply {
-                            setToSaturation(0f)
-                        })
-                    )
-                    Box(Modifier.fillMaxSize().background(tint.copy(alpha = .62f)))
-                }
-            }
+        if (genre.cover != null) {
+            AsyncImage(genre.cover, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+            // Even a white image remains dark enough for white category text.
+            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .62f)))
         }
+        Text(genre.title, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold,
+            lineHeight = 22.sp, maxLines = 3, overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(14.dp))
     }
 }

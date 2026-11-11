@@ -1,4 +1,5 @@
 {
+ "home-shelf:{0}:{1}": "stable lazy-list shelf identity, not user-facing copy",
  "id:{0}": "local album identity key, not user-facing copy",
  "offline-album:{0}": "stable lazy-grid album identity, not user-facing copy",
  " occupé=": "structured log field, never shown in the UI",

@@ -32,6 +32,7 @@ import com.ketvoice.app.R
 import com.ketvoice.app.data.*
 import com.ketvoice.app.player.Player
 import com.ketvoice.app.theme.LocalTheme
+import com.ketvoice.app.theme.DesignTokens
 import com.ketvoice.app.ui.AppUi
 import com.ketvoice.app.ui.adaptive.LocalAdaptiveLayout
 import com.ketvoice.app.ui.common.AccountAvatar
@@ -75,7 +76,8 @@ fun HomeScreen() {
             item {
                 if (!layout.hasRail && !DesignChoices.enabled("D1")) {
                     Box(Modifier.fillMaxWidth().padding(horizontal = 18.dp)) {
-                        AccountAvatar("K", 36.dp, Modifier.align(Alignment.TopEnd).clickable { AppUi.showAccount.value = true })
+                        Box(Modifier.align(Alignment.TopEnd).size(DesignTokens.Space.touch).clickable { AppUi.showAccount.value = true },
+                            contentAlignment = Alignment.Center) { AccountAvatar("K", 36.dp) }
                     }
                 }
                 Column(Modifier.padding(horizontal = 18.dp)) {
@@ -83,7 +85,8 @@ fun HomeScreen() {
                         Image(painterResource(R.drawable.logo_clean),"Ketvoice",Modifier.size(30.dp),contentScale=ContentScale.Fit)
                         Text("KETVOICE",localize=false,color=theme.onBackground,fontSize=13.sp,fontWeight=FontWeight.Bold,
                             letterSpacing=2.sp,modifier=Modifier.weight(1f).padding(start=10.dp))
-                        if(!layout.hasRail)AccountAvatar("K",36.dp,Modifier.clickable{AppUi.showAccount.value=true})
+                        if (!layout.hasRail) Box(Modifier.size(DesignTokens.Space.touch).clickable { AppUi.showAccount.value = true },
+                            contentAlignment = Alignment.Center) { AccountAvatar("K", 36.dp) }
                     } else Image(painterResource(R.drawable.logo_clean), "Ketvoice",
                         Modifier.height(48.dp).width(48.dp), contentScale = ContentScale.Fit)
                     Text("Écouter maintenant", color = theme.onBackground, fontSize = if (layout.hasRail) 40.sp else 30.sp, fontWeight = FontWeight.Black,
@@ -145,9 +148,9 @@ fun HomeScreen() {
                     }
                 }
             }
-            shelfRows.forEach { (shelf, shown) ->
+            shelfRows.forEachIndexed { shelfIndex, (shelf, shown) ->
                 if(shown.isNotEmpty()) {
-                item(key = shelf.title) {
+                item(key = "home-shelf:$shelfIndex:${shelf.title}") {
                     Column(Modifier.padding(start = 18.dp, end = 18.dp, top = 28.dp, bottom = 12.dp)) {
                         Text(shelf.title, color = theme.onBackground, fontSize = 19.sp, fontWeight = FontWeight.Bold)
                         Text(shelf.subtitle, color = theme.secondary, fontSize = 12.sp, modifier = Modifier.padding(top = 3.dp))
@@ -171,7 +174,7 @@ fun HomeScreen() {
 private fun HomeRecentRow(track: Track, active: Boolean, onPlay: () -> Unit, onMenu: () -> Unit) {
     val theme = LocalTheme.current
     val art by ArtworkRepo.covers.collectAsState()
-    Row(Modifier.fillMaxWidth().height(59.dp).clickable(onClick = onPlay), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().heightIn(min = 64.dp).clickable(onClick = onPlay).padding(vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
         com.ketvoice.app.ui.common.DownloadCover(track, art["t:${track.id}"] ?: track.coverUrl, 50.dp, 7.dp)
         Spacer(Modifier.width(13.dp))
         Column(Modifier.weight(1f)) {
@@ -196,8 +199,9 @@ private fun TrackCarousel(tracks: List<Track>, onMenu: (Track) -> Unit) {
                 Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(track.title, localize = false, color = theme.onBackground, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
                         maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                    Icon(Icons.Filled.MoreVert, "Options de ${track.title}", tint = theme.secondary,
-                        modifier = Modifier.size(22.dp).clickable { onMenu(track) })
+                    Box(Modifier.size(DesignTokens.Space.touch).clickable { onMenu(track) }, contentAlignment = Alignment.Center) {
+                        Icon(Icons.Filled.MoreVert, "Options de ${track.title}", tint = theme.secondary, modifier = Modifier.size(22.dp))
+                    }
                 }
                 Text(track.artist, localize = false, color = theme.secondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }

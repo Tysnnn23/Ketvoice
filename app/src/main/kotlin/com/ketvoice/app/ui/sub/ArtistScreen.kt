@@ -26,6 +26,7 @@ import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -255,7 +256,12 @@ fun ArtistScreen(request: AppUi.ArtistRequest? = AppUi.artistRequest.value) {
                 fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                  modifier = Modifier.weight(1f).graphicsLayer { alpha = if (page == null) 1f else collapse.value })
-            if (collapse.value >= .98f && page?.tracks?.isNotEmpty() == true) com.ketvoice.app.ui.common.CollectionQuickActions(page!!.tracks)
+            page?.tracks?.takeIf { it.isNotEmpty() }?.let { tracks ->
+                Row(Modifier.graphicsLayer { alpha = collapse.value }
+                    .then(if (collapse.value < .98f) Modifier.clearAndSetSemantics {} else Modifier)) {
+                    com.ketvoice.app.ui.common.CollectionQuickActions(tracks, enabled = collapse.value >= .98f)
+                }
+            }
             if (page != null) com.ketvoice.app.glass.GlassPanel(Modifier.size(48.dp), CircleShape,
                 com.ketvoice.app.glass.GlassParams.circle(dark = theme.isDark), captured = true) {
                 Box(Modifier.fillMaxSize().clickable {
