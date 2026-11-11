@@ -67,7 +67,7 @@ fun rememberGlassBackdrop(background: Color) = rememberLayerBackdrop {
  * Les contrôles utilisent une lentille AGSL inspirée de Prismal ; le rôle Panel
  * reste mat. La réfraction de contrôle est définie en dp, puis bornée à sa taille.
  */
-enum class GlassRole { Control, Panel, Sheet, Inline }
+enum class GlassRole { Control, Panel, Sheet }
 
 data class GlassParams(
     val cornerRadiusPx: Float,
@@ -244,10 +244,6 @@ fun GlassPanel(
     styleOverride: Int? = null,
     content: @Composable () -> Unit
 ) {
-    if (params.role == GlassRole.Inline) {
-        Box(modifier.clip(shape)) { content() }
-        return
-    }
     val style = styleOverride ?: AppSettings.glassStyle.value
     val params = when (style) {
         1 -> params.copy(blurPx = maxOf(params.blurPx, 26f), tintAlpha = if (params.dark) .16f else .12f,

@@ -178,16 +178,16 @@ class UnifiedExperienceHostTest {
         assertTrue(directory.exists())
     }
 
-    @Test fun aSharedChromeRetainsTransportAndNavigationInBothStates() {
+    @Test fun restoredNavigationRetainsTransportAndSeparateControlsInBothStates() {
         player.value = PlayerUiState(queue = listOf(track("chrome")), index = 0)
         var compact by mutableStateOf(false)
         compose.setContent { KetvoiceTheme(useDark = false) { FloatingChrome(compact, {}) } }
         compose.onNodeWithContentDescription("Accueil").assertIsDisplayed()
-        image("unified-dock-expanded-light")
+        image("navigation-restored-expanded-light")
         compose.runOnIdle { compact = true }
         compose.onNodeWithContentDescription("Rechercher").assertIsDisplayed()
         compose.onNodeWithContentDescription("Lecture").assertIsDisplayed()
-        image("unified-dock-compact-light")
+        image("navigation-restored-compact-light")
     }
 
     @Test fun pressureChangesTheMaterialWithoutChangingTheGlyphBounds() {
@@ -205,16 +205,15 @@ class UnifiedExperienceHostTest {
         compose.onNodeWithTag("pressure").performTouchInput { up() }
     }
 
-    @Test fun phonePlayerKeepsTheTransportAnchoredAcrossItsThreePages() {
+    @Test fun restoredPhonePlayerPutsItsTitleBelowArtworkWithoutTheAddedTopTabs() {
         if (com.ketvoice.app.BuildConfig.IS_QUEST) return // Quest keeps its existing two-pane placement.
         player.value = PlayerUiState(queue = listOf(track("player")), index = 0, durationMs = 180_000L)
         compose.setContent { KetvoiceTheme(useDark = true) { FullPlayerScreen(onDismiss = {}) } }
-        val before = compose.onNodeWithTag("player-transport").fetchSemanticsNode().boundsInRoot
-        compose.onNode(hasText("File d'attente") and hasAnyAncestor(hasTestTag("player-tabs"))).performClick()
-        assertEquals(before, compose.onNodeWithTag("player-transport").fetchSemanticsNode().boundsInRoot)
-        compose.onNode(hasText("Paroles") and hasAnyAncestor(hasTestTag("player-tabs"))).performClick()
-        assertEquals(before, compose.onNodeWithTag("player-transport").fetchSemanticsNode().boundsInRoot)
-        image("player-unified-lyrics-dark")
+        compose.onNodeWithTag("player-tabs").assertDoesNotExist()
+        val title = compose.onNodeWithText("Titre player", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+        assertTrue("The track title belongs below the artwork, not in the added top header", title.top > 350f)
+        compose.onNodeWithContentDescription("Paroles").assertIsDisplayed()
+        image("player-restored-artwork-dark")
     }
 
     @Test fun adaptiveGlassKeepsPrimaryLabelsReadableOverOppositeLuminanceBackdrops() {

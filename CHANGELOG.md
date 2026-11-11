@@ -7,6 +7,23 @@
 
 ---
 
+# Ketvoice 4.5.1
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 85** — restore the previous navigation and music-player layout,
+without reverting the clean lyrics or the personal-library improvements.
+
+- Bring back separate mini-player, tab capsule and search surfaces.
+- Return the phone title/actions below the artwork and remove the added top page
+  selector on phone, tablet and Quest.
+- Keep clean synchronized lyrics, pins, local albums, offline selection/filters
+  and confirmed deletion from 4.5.0.
+
+Full notes and validation limits: [4.5.1](docs/releases/v4.5.1.md).
+
+---
+
 # Ketvoice 4.5.0
 
 ![Ketvoice](ketvoice-banner.png)

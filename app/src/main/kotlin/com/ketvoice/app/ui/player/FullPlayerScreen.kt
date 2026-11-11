@@ -52,8 +52,6 @@ import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.testTag
-import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -240,11 +238,9 @@ fun FullPlayerScreen(
         val sceneWidth = if (wide && !expanded) maxWidth - controlsWidth else maxWidth
         val lowerHeight = if (wide) (safeHeight - topInset - 6.dp) else (safeHeight * .405f).coerceAtLeast(300.dp)
         val contentBottom = safeHeight - lowerHeight
-        val headerTop = topInset + if (wide) 20.dp else 32.dp
+        val headerTop = if (wide) topInset + 20.dp else (safeHeight * .093f).coerceAtLeast(topInset + 35.dp)
         val headerHeight = 58.dp
-        val selectorHeight by animateDpAsState(if (expanded) 0.dp else 58.dp, tween(Motion.duration(240)), label = "player-selector-space")
-        val sceneTop = headerTop + headerHeight + selectorHeight + 8.dp
-        val companionState = rememberSaveableStateHolder()
+        val sceneTop = headerTop + headerHeight + 7.dp
 
         // ---- Fermeture progressive : l'écran entier suit le doigt ----
         // Translation verticale + fondu + coin supérieur arrondi qui se dessine
@@ -339,7 +335,8 @@ fun FullPlayerScreen(
                 Box(Modifier.fillMaxSize()) {
                 if (shownPage == PlayerPage.ARTWORK) {
                     val inlineCanvas = canvasPath != null && AppSettings.animatedArtwork.value && !panoramicCanvasActive(canvasPath)
-                    val artworkHeight = if (wide) safeHeight else contentBottom + 20.dp
+                    val titleTop = if (wide) safeHeight - 66.dp else minOf(safeHeight * .514f, contentBottom - 61.dp)
+                    val artworkHeight = if (wide) safeHeight else safeHeight * .55f
                     PlayerArtworkFrame(inlineCanvas, ambience.color,
                         Modifier.width(sceneWidth).height(artworkHeight)
                         .onGloballyPositioned { AppUi.playerCoverBounds.value = it.boundsInRoot() }
@@ -354,12 +351,13 @@ fun FullPlayerScreen(
                             state.isPlaying && !canvasFocus, Modifier.fillMaxSize(), depth = true,
                             onCanvasFailure = { failedCanvas = true })
                     }
-                    Box(Modifier.width(sceneWidth).height(artworkHeight).background(Brush.verticalGradient(
-                        0f to Color.Black.copy(alpha = .78f), .30f to Color.Black.copy(alpha = .68f), .65f to Color.Transparent, 1f to Color.Transparent)))
-                }
-                }
-                }
-                    // One identity/header for all three pages, just like the transport below.
+                    Text("Lecture depuis ${track.artist}", color = Color(0xFFCBCDD6), fontSize = 10.sp,
+                        fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.width(sceneWidth).padding(top = topInset + 32.dp))
+                    PlayerTitle(track, false, cover, sheetAction = { sheet = "track" },
+                        modifier = Modifier.width(sceneWidth).offset(y = titleTop).padding(horizontal = margin))
+                } else {
                     PlayerTitle(track, true, cover, sheetAction = {
                         if (expanded) {
                             // Partage réel : lien listen.html → chez un ami avec
@@ -372,9 +370,8 @@ fun FullPlayerScreen(
                     },
                         modifier = Modifier.width(sceneWidth).offset(y = headerTop).padding(horizontal = if (wide) 18.dp else margin)
                             .height(headerHeight).then(dismissDrag))
-                CompositionLocalProvider(LocalBackdropLayer provides controlsBackdrop) {
-                    if (!expanded) PlayerPageSelector(page, ::navigate,
-                        Modifier.offset(y = headerTop + headerHeight + 8.dp).width(sceneWidth).padding(horizontal = margin))
+                }
+                }
                 }
 
                 // Dismiss gestures are limited to the handle. No fullscreen
@@ -394,8 +391,7 @@ fun FullPlayerScreen(
                     val sceneEnd by animateDpAsState(if (expanded || wide) safeHeight - 12.dp else contentBottom,
                         tween(Motion.duration(360), easing = androidx.compose.animation.core.CubicBezierEasing(.22f, 1f, .36f, 1f)), label = "lyrics-viewport")
                     Box(Modifier.offset(y = sceneTop).height((sceneEnd - sceneTop).coerceAtLeast(80.dp)).width(sceneWidth)) {
-                         companionState.SaveableStateProvider(page.name) {
-                         if (page == PlayerPage.QUEUE) QueuePane(state, Modifier.fillMaxSize().padding(horizontal = if (wide) 18.dp else margin))
+                        if (page == PlayerPage.QUEUE) QueuePane(state, Modifier.fillMaxSize().padding(horizontal = if (wide) 18.dp else margin))
                          else LyricsPane(track, expanded, onSource = { sheet = "sources" },
                             onEmptyTap = {
                                 if (expanded) {
@@ -404,8 +400,7 @@ fun FullPlayerScreen(
                                 }
                             },
                             modifier = Modifier.fillMaxSize().padding(horizontal = if (wide) 18.dp else margin * .8f),
-                             fontScale = com.ketvoice.app.ui.quest.QuestLayout.lyricsScale(AppSettings.lyricsTextSize.value))
-                         }
+                            fontScale = com.ketvoice.app.ui.quest.QuestLayout.lyricsScale(AppSettings.lyricsTextSize.value))
                     }
                 }
 
@@ -422,14 +417,13 @@ fun FullPlayerScreen(
                         }
                         ScrubBar(state.durationMs, Modifier.fillMaxWidth(), onSeek = Player::seekTo)
                         AudioStatsInfo(Modifier.fillMaxWidth())
-                        Box(Modifier.weight(1f).fillMaxWidth().testTag("player-transport")) {
+                        Box(Modifier.weight(1f).fillMaxWidth()) {
                             PlayerTransport(state.playWhenReady, Modifier.fillMaxSize(), Player::previous, Player::toggle, Player::next)
                             if (state.buffering) Text("Chargement…", color = Color.White.copy(alpha = .42f), fontSize = 10.sp,
                                 modifier = Modifier.align(Alignment.BottomCenter))
                         }
                         PlayerVolume(Modifier.fillMaxWidth(), compact = true)
                         Spacer(Modifier.height(8.dp))
-                        Box(Modifier.fillMaxWidth().height(52.dp)) {
                         if (page == PlayerPage.QUEUE) QueueActionsBar(state.shuffle, state.repeatOne, state.autoplay,
                             { Player.setShuffle(!state.shuffle) }, { Player.setRepeatOne(!state.repeatOne) },
                             { Player.setAutoplay(!state.autoplay) }, { navigate(PlayerPage.ARTWORK) })
@@ -437,8 +431,7 @@ fun FullPlayerScreen(
                             onLyrics = { navigate(if (page == PlayerPage.LYRICS) PlayerPage.ARTWORK else PlayerPage.LYRICS) },
                             onOutput = { sheet = "audio" },
                             onProfile = { AppUi.showAccount.value = true },
-                             onQueue = { navigate(PlayerPage.QUEUE) })
-                        }
+                            onQueue = { navigate(PlayerPage.QUEUE) })
                         Text(if (com.ketvoice.app.BuildConfig.IS_QUEST) "Ce casque" else "Ce téléphone", color = Color(0xFF777984), fontSize = 10.sp,
                             fontWeight = FontWeight.SemiBold, modifier = Modifier.align(Alignment.CenterHorizontally).padding(top = 18.dp, bottom = 19.dp))
                     }

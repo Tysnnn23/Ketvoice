@@ -63,7 +63,6 @@ import com.ketvoice.app.data.AppSettings
 import com.ketvoice.app.data.ArtworkRepo
 import com.ketvoice.app.glass.GlassParams
 import com.ketvoice.app.glass.GlassPanel
-import com.ketvoice.app.glass.GlassRole
 import com.ketvoice.app.player.Player
 import com.ketvoice.app.theme.LocalTheme
 import com.ketvoice.app.theme.T
@@ -85,7 +84,7 @@ import com.ketvoice.app.ui.player.pressScale
 private val noRipple: MutableInteractionSource = MutableInteractionSource()
 
 @Composable
-fun MiniPlayerPill(modifier: Modifier = Modifier, compact: Boolean = false, embedded: Boolean = false, onOpen: () -> Unit) {
+fun MiniPlayerPill(modifier: Modifier = Modifier, compact: Boolean = false, onOpen: () -> Unit) {
     val ps = Player.state.collectAsState().value
     val th = LocalTheme.current
     val current = ps.current ?: return
@@ -100,12 +99,12 @@ fun MiniPlayerPill(modifier: Modifier = Modifier, compact: Boolean = false, embe
             .height(54.dp)
             .onGloballyPositioned { AppUi.miniPlayerBounds.value = it.boundsInRoot() }
             .shadow(
-                elevation = if (embedded) 0.dp else if (th.isDark) 2.dp else 4.dp,
+                elevation = if (th.isDark) 2.dp else 4.dp,
                 shape = pillShape,
                 spotColor = Color.Black.copy(alpha = 0.14f)
             ),
         shape = pillShape,
-        params = GlassParams.pill(dark = th.isDark).let { if (embedded) it.copy(role = GlassRole.Inline) else it },
+        params = GlassParams.pill(dark = th.isDark),
         enabled = AppSettings.liquidGlass.value
     ) {
         Box(Modifier.fillMaxSize()) {
@@ -290,43 +289,32 @@ private data class TabSpec(val icon: ImageVector, val label: String, val index: 
  */
 @Composable
 fun FloatingChrome(collapsed: Boolean, onOpenPlayer: () -> Unit) {
-    val theme = LocalTheme.current
-    BoxWithConstraints(Modifier.fillMaxWidth().padding(horizontal = 10.dp)) {
-        val compact = collapsed && maxWidth >= 360.dp
-        // One mounted set of controls; only the shared enclosure changes bounds.
-        val fraction by animateFloatAsState(if (compact) 1f else 0f,
-            tween(Motion.duration(320), easing = FastOutSlowInEasing), label = "chrome-morph")
+    val compact = collapsed && androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 380
+    // A single set of controls keeps its identity throughout the container transform.
+    val fraction by animateFloatAsState(if (compact) 1f else 0f,
+        tween(Motion.duration(320), easing = FastOutSlowInEasing), label = "chrome-morph")
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
         val width = maxWidth
         val f = fraction
         val hasTrack = Player.state.collectAsState().value.current != null
         val fullHeight = if (hasTrack) 126.dp else 64.dp
         val height = fullHeight + (58.dp - fullHeight) * f
-        val miniWidth = maxWidth + ((maxWidth - 208.dp).coerceAtLeast(100.dp) - maxWidth) * f
-        val miniX = 148.dp * f
+        val miniWidth = maxWidth + ((maxWidth - 218.dp).coerceAtLeast(100.dp) - maxWidth) * f
+        val miniX = 158.dp * f
         val navigationY = if (hasTrack) 66.dp * (1f - f) else 0.dp
-        GlassPanel(Modifier.fillMaxWidth().height(height), RoundedCornerShape(32.dp), GlassParams.navigation(theme.isDark)) {
-        Box(Modifier.fillMaxSize()) {
-            GlassTabCapsule(compact, Modifier.offset(x = 4.dp, y = navigationY), embedded = true)
+        Box(Modifier.fillMaxWidth().height(height)) {
+            GlassTabCapsule(compact, Modifier.offset(x = 12.dp, y = navigationY))
             if (hasTrack) MiniPlayerPill(
-                Modifier.offset(x = miniX).width(miniWidth), compact = f > .65f, embedded = true, onOpen = onOpenPlayer)
+                Modifier.offset(x = miniX).width(miniWidth), compact = f > .65f, onOpen = onOpenPlayer)
             SearchCircleButton(size = 60.dp - 12.dp * f,
-                modifier = Modifier.offset(x = width - 64.dp + 12.dp * f, y = navigationY), embedded = true)
-            if (hasTrack) Box(Modifier.padding(horizontal = 18.dp).offset(y = 64.dp).fillMaxWidth().height(.5.dp)
-                .graphicsLayer { alpha = 1f - f }.background(theme.onBackground.copy(alpha = .10f)))
-        }
+                modifier = Modifier.offset(x = width - 76.dp + 16.dp * f, y = navigationY))
         }
     }
 }
 
 @Composable
-private fun SearchCircleButton(size: androidx.compose.ui.unit.Dp, modifier: Modifier = Modifier, embedded: Boolean = false) {
+private fun SearchCircleButton(size: androidx.compose.ui.unit.Dp, modifier: Modifier = Modifier) {
     val th = LocalTheme.current
-    if (embedded) {
-        androidx.compose.material3.IconButton(onClick = { AppUi.openSearch() }, modifier = modifier.size(size)) {
-            Icon(Icons.Filled.Search, "Rechercher", tint = th.onBackground, modifier = Modifier.size(24.dp))
-        }
-        return
-    }
     com.ketvoice.app.ui.common.LiquidGlassButton(
         onClick = { AppUi.openSearch() },
         modifier = modifier
@@ -355,7 +343,7 @@ private fun SearchCircleButton(size: androidx.compose.ui.unit.Dp, modifier: Modi
 
 /** Capsule d'onglets en verre : pleine (labels + lentille glissante) ou réduite (icônes). */
 @Composable
-internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier, embedded: Boolean = false) {
+internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier) {
     val th = LocalTheme.current
     val focus = androidx.compose.ui.platform.LocalFocusManager.current
     var held by remember { mutableStateOf(false) }
@@ -398,7 +386,7 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier, 
                     }, onDragCancel = { held = false })
             },
         shape = RoundedCornerShape(30.dp),
-        params = GlassParams.navigation(dark = th.isDark).let { if (embedded) it.copy(role = GlassRole.Inline) else it },
+        params = GlassParams.navigation(dark = th.isDark),
         enabled = AppSettings.liquidGlass.value
     ) {
         if (!collapsed) {
