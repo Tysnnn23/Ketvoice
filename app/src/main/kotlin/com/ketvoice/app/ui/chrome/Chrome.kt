@@ -58,6 +58,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.semantics.Role
 import com.ketvoice.app.data.AppSettings
 import com.ketvoice.app.data.ArtworkRepo
@@ -66,6 +67,7 @@ import com.ketvoice.app.glass.GlassPanel
 import com.ketvoice.app.player.Player
 import com.ketvoice.app.theme.LocalTheme
 import com.ketvoice.app.theme.T
+import com.ketvoice.app.theme.DesignTokens
 import com.ketvoice.app.ui.AppUi
 import com.ketvoice.app.ui.common.Cover
 import com.ketvoice.app.ui.common.EBadge
@@ -151,10 +153,10 @@ fun MiniPlayerPill(modifier: Modifier = Modifier, compact: Boolean = false, onOp
                     )
                 }
                 }
-                Spacer(Modifier.width(8.dp))
+                Spacer(Modifier.width(4.dp))
                 MiniTransportButton(playing = ps.playWhenReady)
                 if (!compact) {
-                    Spacer(Modifier.width(12.dp))
+                    Spacer(Modifier.width(2.dp))
                     MiniTransportNext()
                 }
             }
@@ -214,7 +216,7 @@ private fun MiniPlayerCompact(modifier: Modifier = Modifier, onOpen: () -> Unit)
 
 /** Bouton play/pause du mini-lecteur (morphing + appui). */
 @Composable
-private fun MiniTransportButton(playing: Boolean, size: androidx.compose.ui.unit.Dp = 36.dp) {
+private fun MiniTransportButton(playing: Boolean, size: androidx.compose.ui.unit.Dp = DesignTokens.Space.touch) {
     val th = LocalTheme.current
     val src = remember { MutableInteractionSource() }
     val pressed by src.collectIsPressedAsState()
@@ -226,13 +228,13 @@ private fun MiniTransportButton(playing: Boolean, size: androidx.compose.ui.unit
             .clickable(src, null) { Player.toggle() },
         contentAlignment = Alignment.Center
     ) {
-        com.ketvoice.app.ui.player.MorphingTransportGlyph(playing, Modifier.size(size * .78f), th.onBackground)
+        com.ketvoice.app.ui.player.MorphingTransportGlyph(playing, Modifier.size(28.dp), th.onBackground)
     }
 }
 
 /** Bouton suivant du mini-lecteur (appui). */
 @Composable
-private fun MiniTransportNext(size: androidx.compose.ui.unit.Dp = 36.dp) {
+private fun MiniTransportNext(size: androidx.compose.ui.unit.Dp = DesignTokens.Space.touch) {
     val th = LocalTheme.current
     val src = remember { MutableInteractionSource() }
     val pressed by src.collectIsPressedAsState()
@@ -248,7 +250,7 @@ private fun MiniTransportNext(size: androidx.compose.ui.unit.Dp = 36.dp) {
             Icons.Filled.SkipNext,
             contentDescription = "Suivant",
             tint = th.onBackground,
-            modifier = Modifier.size(size * 0.79f)
+            modifier = Modifier.size(28.dp)
         )
     }
 }
@@ -289,11 +291,13 @@ private data class TabSpec(val icon: ImageVector, val label: String, val index: 
  */
 @Composable
 fun FloatingChrome(collapsed: Boolean, onOpenPlayer: () -> Unit) {
-    val compact = collapsed && androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 380
-    // A single set of controls keeps its identity throughout the container transform.
-    val fraction by animateFloatAsState(if (compact) 1f else 0f,
-        tween(Motion.duration(320), easing = FastOutSlowInEasing), label = "chrome-morph")
     BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val compact = collapsed && maxWidth >= 380.dp
+        // Base compactness on the actual pane, not the device's full window width.
+        val fraction by animateFloatAsState(if (compact) 1f else 0f,
+            if (Motion.reduced) androidx.compose.animation.core.snap() else spring(
+                dampingRatio = DesignTokens.Motion.CHROME_DAMPING,
+                stiffness = DesignTokens.Motion.CHROME_STIFFNESS), label = "chrome-morph")
         val width = maxWidth
         val f = fraction
         val hasTrack = Player.state.collectAsState().value.current != null
@@ -303,7 +307,7 @@ fun FloatingChrome(collapsed: Boolean, onOpenPlayer: () -> Unit) {
         val miniX = 158.dp * f
         val navigationY = if (hasTrack) 66.dp * (1f - f) else 0.dp
         Box(Modifier.fillMaxWidth().height(height)) {
-            GlassTabCapsule(compact, Modifier.offset(x = 12.dp, y = navigationY))
+            GlassTabCapsule(compact, Modifier.offset(x = 12.dp, y = navigationY), availableWidth = width)
             if (hasTrack) MiniPlayerPill(
                 Modifier.offset(x = miniX).width(miniWidth), compact = f > .65f, onOpen = onOpenPlayer)
             SearchCircleButton(size = 60.dp - 12.dp * f,
@@ -343,7 +347,8 @@ private fun SearchCircleButton(size: androidx.compose.ui.unit.Dp, modifier: Modi
 
 /** Capsule d'onglets en verre : pleine (labels + lentille glissante) ou réduite (icônes). */
 @Composable
-internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier) {
+internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier,
+                             availableWidth: Dp = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp.dp) {
     val th = LocalTheme.current
     val focus = androidx.compose.ui.platform.LocalFocusManager.current
     var held by remember { mutableStateOf(false) }
@@ -357,14 +362,15 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier) 
     )
 
     val widthAnim by animateDpAsState(
-        targetValue = if (collapsed) 144.dp else
-            (androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp - 110).dp.coerceIn(196.dp, 310.dp),
-        animationSpec = if (Motion.reduced) androidx.compose.animation.core.snap() else spring(dampingRatio = 0.9f, stiffness = 500f),
+        targetValue = if (collapsed) 144.dp else (availableWidth - 92.dp).coerceIn(144.dp, 310.dp),
+        animationSpec = if (Motion.reduced) androidx.compose.animation.core.snap() else spring(
+            dampingRatio = DesignTokens.Motion.CHROME_DAMPING, stiffness = DesignTokens.Motion.CHROME_STIFFNESS),
         label = "tabWidth"
     )
     val heightAnim by animateDpAsState(
         targetValue = if (collapsed) 52.dp else 60.dp,
-        animationSpec = if (Motion.reduced) androidx.compose.animation.core.snap() else spring(dampingRatio = 0.9f, stiffness = 500f),
+        animationSpec = if (Motion.reduced) androidx.compose.animation.core.snap() else spring(
+            dampingRatio = DesignTokens.Motion.CHROME_DAMPING, stiffness = DesignTokens.Motion.CHROME_STIFFNESS),
         label = "tabHeight"
     )
 

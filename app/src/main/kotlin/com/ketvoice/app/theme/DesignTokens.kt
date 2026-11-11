@@ -75,6 +75,8 @@ object DesignTokens {
         const val RELEASE_DAMPING = .5f
         const val PRESS_STIFFNESS = 900f
         const val RELEASE_STIFFNESS = 420f
+        const val CHROME_DAMPING = .88f
+        const val CHROME_STIFFNESS = 460f
     }
 
     object Elevation {

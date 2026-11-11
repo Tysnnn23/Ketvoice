@@ -154,7 +154,12 @@ class PrismalHostRenderTest {
         } }
         val play = compose.onNodeWithContentDescription("Lecture").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
         val search = compose.onNodeWithContentDescription("Rechercher").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
-        assertTrue("Mini-player transport must not overlap search", play.right <= search.left)
+        assertFalse("Mini-player transport must not overlap search", play.overlaps(search))
+        val libraryTab = compose.onNode(hasAnyDescendant(hasContentDescription("Bibliothèque")) and hasClickAction(), useUnmergedTree = true)
+            .assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+        assertTrue("Navigation must use the actual 320dp pane rather than the full device width", libraryTab.right <= search.left)
+        assertTrue("The library tab remains at least a 48dp touch target", libraryTab.width >= 48f && libraryTab.height >= 48f)
+        assertTrue("The mini-player transport remains at least a 48dp touch target", play.width >= 48f && play.height >= 48f)
         compose.onNodeWithContentDescription("Explorer").performClick()
         compose.runOnIdle { assertEquals(AppUi.EXPLORER, AppUi.tab.intValue) }
         image("condensed-navigation-320dp")
