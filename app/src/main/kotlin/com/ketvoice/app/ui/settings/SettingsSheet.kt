@@ -43,9 +43,10 @@ internal fun SettingsSheet(onDismiss: () -> Unit, content: @Composable ColumnSco
 }
 
 @Composable
-internal fun SettingsAction(label: String, onClick: () -> Unit, enabled: Boolean = true, primary: Boolean = false) {
+internal fun SettingsAction(label: String, onClick: () -> Unit, enabled: Boolean = true, primary: Boolean = false,
+                            modifier: Modifier = Modifier) {
     val theme = LocalTheme.current
-    Box(Modifier.heightIn(min = DesignTokens.Space.touch).clickable(enabled = enabled, role = Role.Button, onClick = onClick)
+    Box(modifier.heightIn(min = DesignTokens.Space.touch).clickable(enabled = enabled, role = Role.Button, onClick = onClick)
         .padding(horizontal = 14.dp), contentAlignment = Alignment.Center) {
         Text(label, color = (if (primary) theme.accent else theme.secondary).copy(alpha = if (enabled) 1f else .45f),
             fontWeight = if (primary) FontWeight.SemiBold else FontWeight.Medium)

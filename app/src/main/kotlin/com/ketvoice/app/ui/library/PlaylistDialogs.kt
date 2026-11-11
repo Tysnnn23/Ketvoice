@@ -6,22 +6,26 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -30,7 +34,8 @@ import com.ketvoice.app.glass.GlassPanel
 import com.ketvoice.app.glass.GlassParams
 import com.ketvoice.app.theme.LocalTheme
 import com.ketvoice.app.ui.AppUi
-import com.ketvoice.app.ui.common.AppAlertDialog
+import com.ketvoice.app.ui.settings.SettingsSheet
+import com.ketvoice.app.ui.settings.SettingsAction
 import com.ketvoice.app.ui.common.Icon
 import com.ketvoice.app.ui.common.Text
 import kotlinx.coroutines.*
@@ -51,24 +56,43 @@ private fun CreatePlaylistDialog() {
     var name by remember { mutableStateOf("") }
     var error by remember { mutableStateOf("") }
     var saving by remember { mutableStateOf(false) }
-    AppAlertDialog(onDismissRequest = { if (!saving) AppUi.showCreatePlaylist.value = false },
-        title = { Text("Créer une playlist") }, text = { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            OutlinedTextField(name, { name = it.take(80) }, label = { Text("Nom de la playlist") }, singleLine = true,
-                enabled = !saving, modifier = Modifier.fillMaxWidth().testTag("playlist-name"))
+    SettingsSheet(onDismiss = { if (!saving) AppUi.showCreatePlaylist.value = false }) {
+        Column(Modifier.fillMaxWidth().heightIn(max = 650.dp).verticalScroll(rememberScrollState()).padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text("Créer une playlist", color = th.onBackground, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            SettingsTextInput(name, { name = it.take(80) }, "Nom de la playlist", !saving, Modifier.testTag("playlist-name"))
             if (error.isNotBlank()) Text(error, color = MaterialTheme.colorScheme.error)
-        } }, confirmButton = { TextButton(enabled = !saving && name.isNotBlank(), onClick = {
-            saving = true; error = ""
-            scope.launch {
-                try {
-                    val entries = AppUi.addToPlaylist.value?.let { listOf(PlaylistRules.entry(it)) }.orEmpty()
-                    val id = PlaylistStore.create(name,entries)
-                    AppUi.addToPlaylist.value = null; AppUi.showCreatePlaylist.value = false; AppUi.openPlaylist(id)
-                } catch (cancelled: CancellationException) { throw cancelled }
-                catch (failure: Exception) { error = userError(failure) }
-                finally { saving = false }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                SettingsAction("Annuler", { AppUi.showCreatePlaylist.value = false }, enabled = !saving)
+                SettingsAction("Créer", {
+                    saving = true; error = ""
+                    scope.launch {
+                        try {
+                            val entries = AppUi.addToPlaylist.value?.let { listOf(PlaylistRules.entry(it)) }.orEmpty()
+                            val id = PlaylistStore.create(name,entries)
+                            AppUi.addToPlaylist.value = null; AppUi.showCreatePlaylist.value = false; AppUi.openPlaylist(id)
+                        } catch (cancelled: CancellationException) { throw cancelled }
+                        catch (failure: Exception) { error = userError(failure) }
+                        finally { saving = false }
+                    }
+                }, enabled = !saving && name.isNotBlank(), primary = true, modifier = Modifier.testTag("create-confirm"))
             }
-        }, modifier = Modifier.testTag("create-confirm")) { Text("Créer", color = th.accent) } },
-        dismissButton = { TextButton(enabled = !saving, onClick = { AppUi.showCreatePlaylist.value = false }) { Text("Annuler") } })
+        }
+    }
+}
+
+@Composable
+private fun SettingsTextInput(value: String, onChange: (String) -> Unit, label: String, enabled: Boolean,
+                              modifier: Modifier = Modifier) {
+    val theme = LocalTheme.current
+    val accessible = AppText.t(label)
+    Column(Modifier.fillMaxWidth()) {
+        Text(label, color = theme.secondary, fontSize = 12.sp, modifier = Modifier.padding(bottom = 6.dp))
+        BasicTextField(value, onChange, enabled = enabled, singleLine = true,
+            textStyle = TextStyle(color = theme.onBackground, fontSize = 16.sp), cursorBrush = SolidColor(theme.accent),
+            modifier = modifier.fillMaxWidth().semantics { contentDescription = accessible }.clip(RoundedCornerShape(12.dp))
+                .background(theme.onBackground.copy(alpha = .07f)).heightIn(min = 48.dp).padding(12.dp))
+    }
 }
 
 /**
@@ -170,21 +194,28 @@ fun SpotifyImportDialog(onClose: () -> Unit) {
         operation=scope.launch { try { block() } catch(cancelled:CancellationException){throw cancelled}
             catch(failure:Exception){error=userError(failure)} finally{busy=false} }
     }
-    AppAlertDialog(onDismissRequest={operation?.cancel();onClose()}, title={Text("Importer depuis Spotify")},
-        text={Column(Modifier.fillMaxWidth().heightIn(max=420.dp)
-            .verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(12.dp)){
+    SettingsSheet(onDismiss={operation?.cancel();onClose()}) {
+        Column(Modifier.fillMaxWidth().heightIn(max=650.dp)
+            .verticalScroll(rememberScrollState()).padding(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
+            Text("Importer depuis Spotify",color=th.onBackground,fontSize=20.sp,fontWeight=FontWeight.Bold)
             PlaylistArtwork(null, "Spotify", Modifier.size(100.dp))
             Text("Import par lien public, sans connexion Spotify. Aucun fichier audio Spotify n'est téléchargé.",color=th.secondary)
-            OutlinedTextField(link,{link=it.take(2000);preview=null;entries=emptyList();acknowledged=false},
-                label={Text("Lien public Spotify")},enabled=!busy,singleLine=true,modifier=Modifier.fillMaxWidth().testTag("spotify-link"))
-            TextButton(enabled=!busy&&link.isNotBlank(),onClick={run{preview=SpotifyPlaylistImport.preview(link);entries=emptyList();progress=0}}){Text("Charger l'aperçu",color=th.accent)}
+            SettingsTextInput(link,{link=it.take(2000);preview=null;entries=emptyList();acknowledged=false},
+                "Lien public Spotify",!busy,Modifier.testTag("spotify-link"))
+            SettingsAction("Charger l'aperçu", {run{preview=SpotifyPlaylistImport.preview(link);entries=emptyList();progress=0}},
+                enabled=!busy&&link.isNotBlank(),primary=true)
             preview?.let { source ->
                 Text(source.name,localize=false,color=th.onBackground)
                 Text("${source.entries.size} titres visibles dans l'aperçu public",color=th.secondary)
                 Text("Spotify ne garantit pas que cet aperçu contient toute la playlist. Les titres privés ou absents ne sont pas inventés.",color=th.secondary)
-                Row(verticalAlignment=Alignment.CenterVertically){Checkbox(acknowledged,{acknowledged=it},enabled=!busy)
+                Row(Modifier.fillMaxWidth().toggleable(acknowledged,enabled=!busy,role=Role.Checkbox){acknowledged=it}
+                    .heightIn(min=48.dp),verticalAlignment=Alignment.CenterVertically){
+                    Box(Modifier.size(24.dp).clip(RoundedCornerShape(7.dp)).background(if(acknowledged)th.accent else th.onBackground.copy(alpha=.12f)),
+                        contentAlignment=Alignment.Center){ if(acknowledged) Text("✓",color=Color.White,fontWeight=FontWeight.Bold) }
+                    Spacer(Modifier.width(10.dp))
                     Text("J'accepte d'importer cet aperçu, qui peut être incomplet",modifier=Modifier.weight(1f))}
-                TextButton(enabled=!busy,onClick={run{entries=SpotifyPlaylistImport.resolve(source){progress=it}}}){Text("Retrouver les titres dans Ketvoice",color=th.accent)}
+                SettingsAction("Retrouver les titres dans Ketvoice", {run{entries=SpotifyPlaylistImport.resolve(source){progress=it}}},
+                    enabled=!busy,primary=true)
                 if(busy)Text("$progress / ${source.entries.size} recherches terminées",color=th.secondary)
                 if(entries.isNotEmpty()) {
                     Text("${entries.count{it.track!=null}} / ${entries.size} titres disponibles",color=th.accent)
@@ -197,10 +228,14 @@ fun SpotifyImportDialog(onClose: () -> Unit) {
             }
             if(busy)LinearProgressIndicator(modifier=Modifier.fillMaxWidth())
             if(error.isNotBlank())Text(error,color=MaterialTheme.colorScheme.error)
-        }}, confirmButton={TextButton(enabled=!busy&&acknowledged&&entries.isNotEmpty(),onClick={run{
-            val source=preview ?: return@run
-            val id=PlaylistStore.create(source.name,entries,source.url,source.cover)
-            onClose();AppUi.openPlaylist(id)
-        }}){Text("Créer avec les titres affichés",color=th.accent)}},
-        dismissButton={TextButton(onClick={operation?.cancel();onClose()}){Text(if(busy)"Annuler" else "Fermer")}})
+            Column(Modifier.fillMaxWidth(), horizontalAlignment=Alignment.End) {
+                SettingsAction("Créer avec les titres affichés", {run{
+                    val source=preview ?: return@run
+                    val id=PlaylistStore.create(source.name,entries,source.url,source.cover)
+                    onClose();AppUi.openPlaylist(id)
+                }}, enabled=!busy&&acknowledged&&entries.isNotEmpty(),primary=true)
+                SettingsAction(if(busy)"Annuler" else "Fermer", {operation?.cancel();onClose()})
+            }
+        }
+    }
 }

@@ -79,6 +79,9 @@ class UnifiedExperienceHostTest {
         player.value = PlayerUiState(); position.value = 0L
         AppSettings.reduceAnimations.value = false
         AppSettings.animatedArtwork.value = true
+        AppUi.showCreatePlaylist.value = false
+        AppUi.showSpotifyImport.value = false
+        AppUi.addToPlaylist.value = null
         AppUi.closeOverlays()
         AppUi.selectTab(AppUi.HOME)
     }
@@ -141,6 +144,30 @@ class UnifiedExperienceHostTest {
         assertTrue("The pin must survive the modeled atomic write", disk.getJSONObject(0).getBoolean("pinned"))
         compose.onNodeWithTag("library-list").performScrollToNode(hasText("Épinglés"))
         image("library-pinned-light")
+    }
+
+    @Test fun createPlaylistSheetRetainsValidationAndTheOriginalSaveFlow() {
+        AppUi.showCreatePlaylist.value = true
+        compose.setContent { KetvoiceTheme(useDark = false) { com.ketvoice.app.ui.library.PlaylistDialogs() } }
+        compose.onNodeWithTag("create-confirm").assertIsNotEnabled()
+        compose.onNodeWithTag("playlist-name").performTextInput("Playlist fixture")
+        compose.onNodeWithTag("create-confirm").assertIsEnabled().performClick()
+        compose.waitUntil(5000) { PlaylistStore.lists.value.any { it.name == "Playlist fixture" } }
+        assertEquals("Playlist fixture", PlaylistStore.lists.value.single().name)
+        assertFalse(AppUi.showCreatePlaylist.value)
+        assertEquals(AppUi.PLAYLIST, AppUi.overlay.value)
+    }
+
+    @Test fun spotifySheetDoesNotAllowImportWithoutPreviewAndExplicitAcknowledgement() {
+        AppUi.showSpotifyImport.value = true
+        compose.setContent { KetvoiceTheme(useDark = true) { com.ketvoice.app.ui.library.PlaylistDialogs() } }
+        compose.onNodeWithText("Créer avec les titres affichés").performScrollTo().assertIsNotEnabled()
+        compose.onNodeWithTag("spotify-link").performScrollTo().performTextInput("https://open.spotify.com/playlist/fixture")
+        compose.onNodeWithText("Charger l'aperçu").assertIsEnabled()
+        compose.onNodeWithText("Créer avec les titres affichés").performScrollTo().assertIsNotEnabled()
+        compose.onNodeWithText("Fermer").performScrollTo().performClick()
+        assertFalse(AppUi.showSpotifyImport.value)
+        assertTrue("No preview request or playlist creation was performed", PlaylistStore.lists.value.isEmpty())
     }
 
     @Test fun localAlbumViewDoesNotNeedACatalogueIdAndCanReturnToSongs() {
