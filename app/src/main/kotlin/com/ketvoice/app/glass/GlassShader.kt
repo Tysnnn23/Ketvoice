@@ -141,7 +141,7 @@ float4 main(float2 coord) {
     // opposé, toutes deux concentrees sur ~2.5dp, plus un contour capillaire
     // permanent qui donne sa definition au panneau sur fond clair comme sombre.
     float px = max(pixelScale, 1.0);
-    float edge = clamp(1.0 + sd / (2.2 * px), 0.0, 1.0);
+    float edge = clamp(1.0 + sd / (1.1 * px), 0.0, 1.0);
     edge = edge * edge;
     float facing = dot(grad, lightDir);
     float specular = prismalSpecular(grad, lightDir, 3.2);
@@ -152,11 +152,11 @@ float4 main(float2 coord) {
     float bounce = prismalSpecular(grad, -lightDir, 2.0);
     color.rgb += rimLight * 0.34 * edge * bounce;
     // Épaisseur du bloc : ombre douce et large du côté opposé à la lumière.
-    float thickness = clamp(1.0 + sd / (9.0 * px), 0.0, 1.0);
+    float thickness = clamp(1.0 + sd / (4.0 * px), 0.0, 1.0);
     color.rgb -= edgeDark * thickness * max(-facing, 0.0);
     // Contour capillaire net : la limite du matériau, sur fond clair ou sombre.
-    float contour = clamp(1.0 + sd / (1.2 * px), 0.0, 1.0);
-    color.rgb += 0.018 * contour;
+    float contour = clamp(1.0 + sd / (0.65 * px), 0.0, 1.0);
+    color.rgb += 0.012 * contour;
     // Caustique : la lumière s'accumule juste à l'intérieur de l'arête éclairée.
     float caustic = (1.0 - smoothstep(0.0, 0.55, -sd / max(refractionHeight, 1.0))) * max(facing, 0.0);
     color.rgb += rimLight * 0.10 * caustic;
@@ -165,17 +165,7 @@ float4 main(float2 coord) {
     float fromTop = clamp(local.y / max(size.y, 1.0), 0.0, 1.0);
     float topLit = clamp(-grad.y, 0.0, 1.0);
     color.rgb += sheen * pow(1.0 - fromTop, 2.4) * (0.35 + 0.65 * topLit);
-    // Bande spéculaire diagonale : la lumière glisse du coin haut-gauche vers
-    // le centre, ce qui casse l'aplat vertical et lit comme une vraie dalle
-    // de verre inclinée. Très localisée pour ne pas laver le panneau.
-    float2 normUV = local / float2(max(size.x, 1.0), max(size.y, 1.0));
-    float diag = normUV.x + normUV.y;
-    float specularBand = 1.0 - smoothstep(0.0, 0.55, abs(diag - 0.42));
-    color.rgb += sheen * 0.6 * specularBand * (0.4 + 0.6 * topLit);
-    // Reflet de fond : léger éclaircissement bas-droit (lumière rebondie).
-    float2 backUV = float2(1.0 - normUV.x, 1.0 - normUV.y);
-    float bounceHalo = 1.0 - smoothstep(0.0, 0.7, length(backUV - float2(0.05)));
-    color.rgb += sheen * 0.22 * bounceHalo;
+    // Keep the centre optically quiet; no painted diagonal streak or corner halo.
 
     // Dithering sub-pixel : rend les dégradés du verre parfaitement lisses.
     color.rgb += dither(coord) / 255.0;
@@ -213,7 +203,7 @@ fun BackdropEffectScope.liquidGlass(
         shader.setFloatUniform("cornerRadii", radii)
         shader.setFloatUniform("refractionHeight", lens.heightPx)
         shader.setFloatUniform("refractionAmount", lens.amountPx)
-        shader.setFloatUniform("dispersion", 0.012f)
+        shader.setFloatUniform("dispersion", 0.006f)
         shader.setFloatUniform("depthEffect", 0f)
         if (params.dark) {
             shader.setFloatUniform("tint", 0.16f, 0.16f, 0.19f, params.tintAlpha)

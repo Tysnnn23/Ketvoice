@@ -76,8 +76,8 @@ data class GlassParams(
     /** Hauteur de réfraction de la lentille (bord du verre), en px. */
     val refractionPx: Float = 18f,
     /** Prismal-style edge band and displacement, density-independent. */
-    val refractionHeightDp: Float = 5f,
-    val refractionAmountDp: Float = 10f,
+    val refractionHeightDp: Float = 3.5f,
+    val refractionAmountDp: Float = 6f,
     val role: GlassRole = GlassRole.Control,
     /** Opacité de la teinte de surface (le "lait" du verre). */
     val tintAlpha: Float = 0.10f,
@@ -127,7 +127,7 @@ data class GlassParams(
             dark = dark
         )
 
-        fun pill(blur: Float = 14f, dark: Boolean = false) = GlassParams(
+        fun pill(blur: Float = 8f, dark: Boolean = false) = GlassParams(
             cornerRadiusPx = 9999f,
             blurPx = blur,
             refractionPx = 18f,
@@ -136,27 +136,27 @@ data class GlassParams(
             // travers. Sous ~0.06 le verre disparaît ; au-dessus de ~0.16 il
             // redevient du plastique blanc opaque.
             tintAlpha = if (dark) 0.065f else 0.045f,
-            saturation = if (dark) 1.18f else 1.25f,
+            saturation = 1.08f,
             brightness = 1.0f,
             contrast = 1.0f,
             exposure = if (dark) 0.01f else 0.02f,
-            highlightAlpha = if (dark) 0.30f else 0.36f,
-            highlightIntensity = if (dark) 0.26f else 0.36f,
+            highlightAlpha = if (dark) 0.26f else 0.30f,
+            highlightIntensity = 0.24f,
             // Floating control: clearly lifted above content (e3).
             elevationDp = 8f,
             shadowAlpha = if (dark) 0.30f else 0.16f,
             dark = dark
         )
 
-        fun circle(blur: Float = 12f, dark: Boolean = false) = GlassParams(
+        fun circle(blur: Float = 6f, dark: Boolean = false) = GlassParams(
             cornerRadiusPx = 9999f,
             blurPx = blur,
             refractionPx = 14f,
             tintAlpha = if (dark) 0.06f else 0.04f,
-            saturation = if (dark) 1.10f else 1.15f,
+            saturation = 1.06f,
             exposure = if (dark) 0.02f else 0.035f,
-            highlightAlpha = if (dark) 0.34f else 0.52f,
-            highlightIntensity = if (dark) 0.28f else 0.38f,
+            highlightAlpha = if (dark) 0.28f else 0.34f,
+            highlightIntensity = 0.26f,
             // Round button: small lift (e2).
             elevationDp = 4f,
             shadowAlpha = if (dark) 0.26f else 0.14f,
@@ -164,10 +164,16 @@ data class GlassParams(
         )
 
         /** Navigation is optical glass, not heavily frosted content material. */
-        fun navigation(dark: Boolean = false) = pill(blur = 10f, dark = dark).copy(
+        fun navigation(dark: Boolean = false) = pill(blur = 7f, dark = dark).copy(
             tintAlpha = if (dark) .055f else .035f,
             saturation = 1.08f, highlightAlpha = if (dark) .30f else .36f,
-            refractionHeightDp = 5f, refractionAmountDp = 10f
+            refractionHeightDp = 4f, refractionAmountDp = 7f
+        )
+
+        /** The moving selection shares one material in expanded and compact navigation. */
+        fun selection(dark: Boolean = false) = navigation(dark).copy(
+            blurPx = 3f, tintAlpha = if (dark) .06f else .035f,
+            highlightAlpha = if (dark) .36f else .42f
         )
 
         fun sheet(radiusPx: Float, dark: Boolean = false) = GlassParams(
@@ -211,7 +217,7 @@ private fun rememberStaticMaterial(p: GlassParams, opaque: Boolean = false): Pai
         val lift = base.copy(alpha = if (opaque) 1f else if (sheet) .98f else if (p.dark) 0.86f else 0.91f)
         val surface = Brush.linearGradient(listOf(lift, body, base.copy(alpha = if (opaque) 1f else if (sheet) .96f else if (p.dark) 0.80f else 0.84f), body))
         // Liseré capillaire : lumineux haut-gauche (entrée de lumière), sombre bas-droite.
-        val lightHair = Color.White.copy(alpha = if (p.dark) 0.16f else 0.75f)
+        val lightHair = Color.White.copy(alpha = if (p.dark) 0.14f else 0.32f)
         val darkHair = if (p.dark) Color.Black.copy(alpha = 0.22f) else Color.Black.copy(alpha = 0.08f)
         val hairline = Brush.linearGradient(listOf(lightHair, Color.White.copy(alpha = lightHair.alpha * .25f), darkHair))
         surface to hairline
@@ -240,8 +246,8 @@ fun GlassPanel(
 ) {
     val style = styleOverride ?: AppSettings.glassStyle.value
     val params = when (style) {
-        1 -> params.copy(blurPx = maxOf(params.blurPx, 32f), tintAlpha = if (params.dark) .16f else .12f,
-            refractionHeightDp = 4f, refractionAmountDp = 6f)
+        1 -> params.copy(blurPx = maxOf(params.blurPx, 26f), tintAlpha = if (params.dark) .16f else .12f,
+            refractionHeightDp = 3f, refractionAmountDp = 4f)
         else -> params
     }
     if (params.role == GlassRole.Panel) {
@@ -275,7 +281,7 @@ fun GlassPanel(
     // En AGSL, le shader dessine le liseré et le bord sombre : plus de bordure
     // Compose par-dessus (sinon double contour artificiel).
     val edge = if (enabled && !agsl) {
-        Modifier.border(.65.dp, hairline, shape)
+        Modifier.border(.5.dp, hairline, shape)
     } else Modifier
 
     if (dynamic) {
@@ -284,7 +290,8 @@ fun GlassPanel(
                 backdrop = backdrop,
                 shape = { shape },
                 effects = {
-                    vibrancy()
+                    // The shader owns saturation: stacking vibrancy here overcooks cover colours.
+                    if (!agsl) vibrancy()
                     if (params.blurPx > 0f) blur(params.blurPx)
                     if (agsl) {
                         val bounds = size
@@ -339,7 +346,7 @@ fun GlassPanel(
         val dropShadow = if (params.shadow) {
             Modifier.dropShadow(shape, elevation = params.elevationDp, alpha = params.shadowAlpha, dark = params.dark)
         } else Modifier
-        Box(modifier = modifier.then(dropShadow).then(edge).background(surface, shape)) {
+        Box(modifier = modifier.then(dropShadow).then(edge).clip(shape).background(surface, shape)) {
             Box(Modifier.background(sheen, shape)) { content() }
         }
     }

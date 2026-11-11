@@ -7,6 +7,29 @@
 
 ---
 
+# Ketvoice 4.4.0
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 83** — refined optical controls, a rebuilt offline library, and a
+more compact, adaptive album page.
+
+- Glass has less blur and edge distortion, one shared navigation-lens material,
+  and a quieter centre without painted diagonal streaks. Static clipping and
+  reduced-motion colour transitions are corrected.
+- Downloads separate transfers from saved files, add local title/artist/album
+  search and honest byte progress, and confirm deletion instead of presenting a
+  false Undo that re-downloads the track.
+- Album artwork stays full-bleed on phones. The identity is left-aligned, actions
+  adapt to large fonts, landscape places identity beside artwork, and numbered
+  rows no longer repeat the cover. Canvas and queue gestures remain.
+- Software-host validation is explicitly distinguished from real GPU/device,
+  Quest, DAC, FPS and live-provider checks.
+
+Full notes and validation limits: [4.4.0](docs/releases/v4.4.0.md).
+
+---
+
 # Ketvoice 4.3.1
 
 ![Ketvoice](ketvoice-banner.png)

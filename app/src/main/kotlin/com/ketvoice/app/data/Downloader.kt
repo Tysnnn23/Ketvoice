@@ -322,7 +322,8 @@ object Downloader {
             } finally {
                 _progress.update { it - track.id }
                 _busy.update { it - track.id }
-                if (_tasks.value[track.id]?.phase == DownloadPhase.Complete) _activeTracks.update { it - track.id }
+                if (_tasks.value[track.id]?.phase in setOf(DownloadPhase.Complete, DownloadPhase.Cancelled))
+                    _activeTracks.update { it - track.id }
                 paused.remove(track.id)
                 jobs.remove(track.id)
                 // Keep the on-disk queue in step with what really happened:

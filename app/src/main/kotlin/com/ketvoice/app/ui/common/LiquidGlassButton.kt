@@ -37,9 +37,9 @@ fun LiquidGlassButton(
     val theme = LocalTheme.current
     val interactions = remember { MutableInteractionSource() }
     val pressed by interactions.collectIsPressedAsState()
-    val scale by animateFloatAsState(if (pressed && !Motion.reduced) 1.035f else 1f,
+    val scale by animateFloatAsState(if (pressed && !Motion.reduced) .96f else 1f,
         Motion.pressSpring(pressed), label = "glass-button-press")
-    GlassPanel(modifier.graphicsLayer { scaleX = scale; scaleY = scale }, shape,
+    GlassPanel(modifier.graphicsLayer { scaleX = scale; scaleY = scale; alpha = if (enabled) 1f else .45f }, shape,
         GlassParams.circle(dark = theme.isDark), enabled = AppSettings.liquidGlass.value) {
         Box(Modifier.fillMaxSize().clip(shape)
             .clickable(interactions, null, enabled = enabled, role = Role.Button, onClick = onClick),

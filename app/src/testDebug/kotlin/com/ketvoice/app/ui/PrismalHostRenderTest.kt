@@ -470,6 +470,7 @@ class PrismalHostRenderTest {
         val flat = render(0f)
         assertEquals(0, android.graphics.Color.alpha(glass.getPixel(20, 20)))
         assertEquals(255, android.graphics.Color.alpha(glass.getPixel(180, 50)))
+        assertEquals("Edge displacement must not warp the control's centre", flat.getPixel(180, 50), glass.getPixel(180, 50))
         var shifted = 0
         // A single checkerboard scanline can land on the same periodic tile after
         // refraction. Compare an edge band instead of assuming one pixel phase.

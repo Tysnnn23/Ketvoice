@@ -416,17 +416,7 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier) 
                             .align(Alignment.CenterStart)
                             .graphicsLayer { scaleX = bulge * stretchX; scaleY = bulge * stretchY },
                         shape = pillShape,
-                        params = GlassParams.pill(blur = 3f, dark = th.isDark).copy(
-                            // Lentille active : verre optique qui se lit sur le fond, sans devenir
-                            // une capsule blanche. Un vrai verre laisse passer ce qu'il traverse.
-                            refractionHeightDp = 14f,
-                            refractionAmountDp = 26f,
-                            tintAlpha = if (th.isDark) 0.055f else 0.025f,
-                            saturation = if (th.isDark) 1.18f else 1.28f,
-                            exposure = 0.03f,
-                            highlightAlpha = if (th.isDark) 0.40f else 0.50f,
-                            highlightIntensity = if (th.isDark) 0.30f else 0.36f
-                        ),
+                        params = GlassParams.selection(dark = th.isDark),
                         enabled = AppSettings.liquidGlass.value
                     ) {}
                 }
@@ -451,7 +441,7 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier) 
                         )
                         val iconAlpha by animateFloatAsState(
                             targetValue = if (isSel) 1f else 0.66f,
-                            animationSpec = tween(190),
+                            animationSpec = tween(Motion.duration(190)),
                             label = "tabIconAlpha"
                         )
                         val lift by animateFloatAsState(
@@ -473,7 +463,7 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier) 
                         }
                         val contentColor by animateColorAsState(
                             targetValue = targetContentColor,
-                            animationSpec = tween(180),
+                            animationSpec = tween(Motion.duration(180)),
                             label = "tabColor"
                         )
                         Column(
@@ -535,13 +525,7 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier) 
                         .size(width = slot - 10.dp, height = heightAnim - 14.dp)
                         .align(Alignment.CenterStart),
                     RoundedCornerShape(999.dp),
-                    GlassParams.pill(blur = 3f, dark = th.isDark).copy(
-                        refractionHeightDp = 12f,
-                        refractionAmountDp = 20f,
-                        tintAlpha = if (th.isDark) 0.05f else 0.02f,
-                        saturation = if (th.isDark) 1.16f else 1.24f,
-                        highlightAlpha = if (th.isDark) 0.36f else 0.46f
-                    ),
+                    GlassParams.selection(dark = th.isDark),
                     enabled = AppSettings.liquidGlass.value
                 ) {}
                 Row(Modifier.fillMaxSize().selectableGroup()) {
@@ -560,7 +544,7 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier) 
                         )
                         val alpha by animateFloatAsState(
                             targetValue = if (isSel) 1f else 0.68f,
-                            animationSpec = tween(180),
+                            animationSpec = tween(Motion.duration(180)),
                             label = "compactAlpha"
                         )
                         Box(Modifier.weight(1f).fillMaxHeight()

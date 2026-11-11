@@ -1,250 +1,187 @@
 package com.ketvoice.app.ui.sub
 
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.DownloadDone
-import com.ketvoice.app.ui.common.GlassBackButton
-import com.ketvoice.app.ui.common.Icon
-import com.ketvoice.app.ui.common.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Shuffle
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.ketvoice.app.data.ArtworkRepo
-import com.ketvoice.app.data.Downloader
+import com.ketvoice.app.data.*
 import com.ketvoice.app.player.Player
 import com.ketvoice.app.theme.LocalTheme
-import com.ketvoice.app.theme.T
 import com.ketvoice.app.ui.AppUi
 import com.ketvoice.app.ui.adaptive.LocalAdaptiveLayout
-import com.ketvoice.app.ui.common.Cover
-import com.ketvoice.app.ui.common.DownloadCover
-import com.ketvoice.app.ui.common.TrackTitle
-import com.ketvoice.app.ui.common.EmptyState
-import com.ketvoice.app.ui.common.openTrackSearch
+import com.ketvoice.app.ui.common.*
 import com.ketvoice.app.ui.motion.Motion
-import kotlinx.coroutines.launch
-import java.util.Locale
 
-/**
- * Téléchargements réels : pistes FLAC/MP3 enregistrées sur l'appareil,
- * jouables sans réseau. Suppression individuelle.
- */
+/** Transfers are not playable files. Keep the two collections separate. */
 @Composable
 fun DownloadsScreen() {
-    val th = LocalTheme.current
-    val list by Downloader.items.collectAsState()
-    val busy by Downloader.busy.collectAsState()
-    val progress by Downloader.progress.collectAsState()
-    val activeTracks by Downloader.activeTracks.collectAsState()
+    val theme = LocalTheme.current
+    val saved by Downloader.items.collectAsState()
+    val active by Downloader.activeTracks.collectAsState()
     val tasks by Downloader.tasks.collectAsState()
-    val art by ArtworkRepo.covers.collectAsState()
-    val total = list.sumOf { it.bytes }
-    val shown = (activeTracks.values + list.map { it.track }).distinctBy { it.id }
-    var lastDeleted by remember { mutableStateOf<com.ketvoice.app.data.Track?>(null) }
-    val scope = androidx.compose.runtime.rememberCoroutineScope()
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val busy by Downloader.busy.collectAsState()
+    val artwork by ArtworkRepo.covers.collectAsState()
+    val player by Player.state.collectAsState()
+    var query by rememberSaveable { mutableStateOf("") }
+    var deleteId by rememberSaveable { mutableStateOf<String?>(null) }
+    val keyboard = LocalSoftwareKeyboardController.current
+    val context = LocalContext.current
+    val sections = remember(saved, active, tasks, query) { downloadSections(saved, active.values, tasks, query) }
+    val adaptive = LocalAdaptiveLayout.current
+    val total = remember(saved) { saved.sumOf { it.bytes } }
 
-    Column(
-        Modifier
-            .fillMaxSize()
-            .background(th.background)
-    ) {
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .statusBarsPadding()
-                .padding(start = 14.dp, end = 16.dp, top = 10.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+    Column(Modifier.fillMaxSize().background(theme.background)) {
+        Row(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically) {
             GlassBackButton { AppUi.closeOverlay() }
-            Spacer(Modifier.width(12.dp))
-            Text("Téléchargements", style = T.hugeTitle, color = th.onBackground, fontSize = 30.sp)
+            Text("Téléchargements", fontSize = 22.sp, fontWeight = FontWeight.Bold,
+                color = theme.onBackground, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(start = 12.dp).weight(1f))
         }
-
-        val percent = if (progress.isNotEmpty()) progress.values.average().toInt() else 0
-        androidx.compose.material3.TextButton(onClick = { AppUi.showCapsule.value = true }, modifier = Modifier.padding(horizontal = 14.dp)) {
-            Text("Préparer une capsule hors ligne", color = th.accent)
-        }
-
-        // Barre de progression globale (réelle, alimentée par le flux de téléchargement)
-        if (busy.isNotEmpty()) {
-            Box(
-                Modifier
-                    .padding(horizontal = 18.dp, vertical = 2.dp)
-                    .fillMaxWidth()
-                    .height(4.dp)
-                    .clip(androidx.compose.foundation.shape.RoundedCornerShape(3.dp))
-                    .background(th.hairline)
-            ) {
-                Box(
-                    Modifier
-                        .fillMaxHeight()
-                        .fillMaxWidth((percent / 100f).coerceIn(0.02f, 1f))
-                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(3.dp))
-                        .background(th.accent)
-                )
-            }
-            Spacer(Modifier.height(4.dp))
-        }
-
-        if (shown.isEmpty()) {
-            EmptyState("Aucun téléchargement", "Pour écouter hors ligne, ouvrez le menu d'un titre puis choisissez Télécharger.",
-                "Rechercher des titres", onAction = ::openTrackSearch)
-        } else {
-            val tracks = list.map { it.track }
-            LazyVerticalGrid(
-                columns = if (LocalAdaptiveLayout.current.hasRail) GridCells.Adaptive(400.dp) else GridCells.Fixed(1),
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 6.dp, bottom = LocalAdaptiveLayout.current.bottomPaddingDp.dp)
-            ) {
-                item(span = { GridItemSpan(maxLineSpan) }) {
-                    val downloaded = list.map { it.track }
-                    CollectionHero(
-                        title = "Téléchargements",
-                        subtitle = buildString {
-                            append("${list.size} titre${if (list.size > 1) "s" else ""}")
-                            if (total > 0) append(" · ${formatSize(total)}")
-                            append(" · Hors ligne")
-                            if (busy.isNotEmpty()) append(" · ${busy.size} en cours ($percent %)")
-                        },
-                        covers = downloaded.take(4).map { ArtworkRepo.coverForTrack(it) ?: it.coverUrl },
-                        seed = "downloads",
-                        onPlay = { if (downloaded.isNotEmpty()) { Player.setShuffle(false); Player.playQueue(downloaded, 0) } },
-                        onShuffle = { if (downloaded.isNotEmpty()) { Player.playQueue(downloaded.shuffled()); Player.setShuffle(true) } },
-                        onShare = {
-                            com.ketvoice.app.util.ShareLinks.shareCollection(
-                                context, "downloads", "Téléchargements", downloaded.size)
+        LazyVerticalGrid(columns = GridCells.Adaptive(360.dp),
+            modifier = Modifier.weight(1f).testTag("downloads-list"),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = adaptive.bottomPaddingDp.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            item(span = { GridItemSpan(maxLineSpan) }, key = "summary") {
+                Column(Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.size(56.dp).clip(RoundedCornerShape(18.dp)).background(theme.accent.copy(alpha = .10f)),
+                            contentAlignment = Alignment.Center) {
+                            Icon(Icons.Filled.DownloadDone, null, tint = theme.accent, modifier = Modifier.size(28.dp))
                         }
-                    )
+                        Column(Modifier.padding(start = 14.dp).weight(1f)) {
+                            Text("Disponibles hors ligne", color = theme.onBackground,
+                                fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                            Text(AppText.t(if (saved.size == 1) "1 titre" else "${saved.size} titres") +
+                                " · " + android.text.format.Formatter.formatShortFileSize(context, total),
+                                localize = false, color = theme.secondary, fontSize = 13.sp)
+                        }
+                    }
+                    if (saved.isNotEmpty()) Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        val foreground = if (theme.accent.luminance() > .179f) Color.Black else Color.White
+                        Row(Modifier.weight(1f).clip(RoundedCornerShape(18.dp)).background(theme.accent)
+                            .clickable(role = Role.Button) { Player.setShuffle(false); Player.playQueue(saved.map { it.track }) }
+                            .heightIn(min = 52.dp).padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+                            Icon(Icons.Filled.PlayArrow, null, tint = foreground)
+                            Text("Lecture", color = foreground, fontWeight = FontWeight.SemiBold)
+                        }
+                        Row(Modifier.weight(1f).clip(RoundedCornerShape(18.dp)).background(theme.card)
+                            .clickable(role = Role.Button) { Player.playQueue(saved.map { it.track }.shuffled()); Player.setShuffle(true) }
+                            .heightIn(min = 52.dp).padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+                            Icon(Icons.Filled.Shuffle, null, tint = theme.accent, modifier = Modifier.size(20.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("Aléatoire", color = theme.accent, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                    TextButton(onClick = { AppUi.showCapsule.value = true }, contentPadding = PaddingValues(0.dp)) {
+                        Text("Préparer une capsule hors ligne", color = theme.accent)
+                    }
+                    if (saved.isNotEmpty() || active.isNotEmpty()) {
+                        CompactSearchField(query, { query = it }, { keyboard?.hide() }, Modifier.testTag("downloads-search"))
+                    }
                 }
-                items(count = shown.size, key = { shown[it].id }) { index ->
-                    val track = shown[index]
-                    val item = list.firstOrNull { it.track.id == track.id }
-                    Row(
-                        Modifier
-                            .then(if (Motion.reduced) Modifier else Modifier.animateItem())
-                            .fillMaxWidth()
-                            .clip(androidx.compose.foundation.shape.RoundedCornerShape(14.dp))
-                             .clickable(
-                                enabled = item != null,
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null
-                            ) {
-                                Player.playQueue(tracks, tracks.indexOfFirst { it.id == track.id }.coerceAtLeast(0))
+            }
+            if (sections.transfers.isNotEmpty()) {
+                item(span = { GridItemSpan(maxLineSpan) }, key = "transfers-heading") { DownloadSectionTitle("Transferts", sections.transfers.size) }
+                items(sections.transfers, key = { it.id }, span = { GridItemSpan(maxLineSpan) }) { track ->
+                    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(theme.card)
+                        .padding(16.dp).testTag("transfer-download")) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Cover(track.title, artwork["t:${track.id}"] ?: track.coverUrl, 48.dp, 10.dp)
+                            Column(Modifier.padding(start = 12.dp).weight(1f)) {
+                                TrackTitle(track.title, color = theme.onBackground)
+                                Text(track.artist, localize = false, color = theme.secondary, fontSize = 13.sp,
+                                    maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
-                            .padding(horizontal = 6.dp, vertical = 7.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        DownloadCover(
-                            track,
-                            art["t:${track.id}"] ?: track.coverUrl,
-                            size = 56.dp,
-                            radius = 9.dp
-                        )
-                        Spacer(Modifier.width(12.dp))
-                        Column(Modifier.weight(1f)) {
-                            TrackTitle(track.title, color = th.onBackground)
-                            Text(
-                                if (item != null) "${track.artist} · ${item.format} · ${formatSize(item.bytes)}" else track.artist,
-                                localize = false,
-                                color = th.secondary,
-                                style = T.sub,
-                                fontSize = if (com.ketvoice.app.BuildConfig.IS_QUEST) 14.sp else 13.sp,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            if (track.id in busy) Text(
-                                if ((progress[track.id] ?: 0) >= 99) "Audio enregistré · finalisation…"
-                                else "Téléchargement en cours · ${progress[track.id] ?: 0} %", color = th.accent,
-                                fontSize = if (com.ketvoice.app.BuildConfig.IS_QUEST) 14.sp else 12.sp)
-                            if (item != null && (item.hasLyrics || item.hasCanvas)) {
-                                Text(
-                                    listOfNotNull(
-                                        if (item.hasLyrics) "Paroles enregistrées" else null,
-                                        if (item.hasCanvas) "Canvas enregistré" else null
-                                    ).joinToString(" · "),
-                                    color = th.accent,
-                                    fontSize = if (com.ketvoice.app.BuildConfig.IS_QUEST) 13.sp else 11.sp,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-                            DownloadTaskControls(track, tasks[track.id], track.id in busy)
                         }
-                        Spacer(Modifier.width(8.dp))
-                        if (item != null) Box(
-                            Modifier
-                                .size(38.dp)
-                                .clip(CircleShape)
-                                .clickable(
-                                    interactionSource = remember { MutableInteractionSource() },
-                                    indication = null
-                                ) {
-                                    Downloader.delete(item)
-                                    lastDeleted = item.track
-                                    scope.launch {
-                                        kotlinx.coroutines.delay(6000)
-                                        if (lastDeleted?.id == item.track.id) lastDeleted = null
-                                    }
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                Icons.Filled.Delete, "Supprimer le téléchargement",
-                                tint = th.secondary,
-                                modifier = Modifier.size(20.dp)
-                            )
+                        Spacer(Modifier.height(10.dp))
+                        DownloadTaskControls(track, tasks[track.id], track.id in busy)
+                    }
+                }
+            }
+            if (sections.saved.isNotEmpty()) {
+                item(span = { GridItemSpan(maxLineSpan) }, key = "saved-heading") { DownloadSectionTitle("Titres", sections.saved.size) }
+                items(sections.saved, key = { it.track.id }) { item ->
+                    val track = item.track
+                    Row(Modifier.then(if (Motion.reduced) Modifier else Modifier.animateItem())
+                        .fillMaxWidth().clip(RoundedCornerShape(18.dp))
+                        .background(if (player.current?.id == track.id) theme.accent.copy(alpha = .07f) else theme.card)
+                        .clickable(role = Role.Button) {
+                            val tracks = sections.saved.map { it.track }
+                            Player.setShuffle(false)
+                            Player.playQueue(tracks, tracks.indexOfFirst { it.id == track.id }.coerceAtLeast(0))
+                        }.padding(start = 10.dp, end = 2.dp, top = 10.dp, bottom = 10.dp).testTag("saved-download"),
+                        verticalAlignment = Alignment.CenterVertically) {
+                        Cover(track.title, artwork["t:${track.id}"] ?: track.coverUrl, 52.dp, 10.dp)
+                        Column(Modifier.padding(start = 12.dp).weight(1f)) {
+                            TrackTitle(track.title, color = if (player.current?.id == track.id) theme.accent else theme.onBackground)
+                            Text(track.artist, localize = false, color = theme.secondary, fontSize = 13.sp,
+                                maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text("${item.format} · ${android.text.format.Formatter.formatShortFileSize(context, item.bytes)}",
+                                localize = false, color = theme.secondary, fontSize = 12.sp,
+                                maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            val extras = listOfNotNull(if (item.hasLyrics) AppText.t("Paroles enregistrées") else null,
+                                if (item.hasCanvas) AppText.t("Canvas enregistré") else null)
+                            if (extras.isNotEmpty()) Text(extras.joinToString(" · "), localize = false,
+                                color = theme.accent, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                        IconButton(onClick = { deleteId = track.id }, modifier = Modifier.size(48.dp).testTag("download-delete")) {
+                            Icon(Icons.Filled.DeleteOutline, "Supprimer le téléchargement", tint = theme.secondary, modifier = Modifier.size(21.dp))
                         }
                     }
                 }
             }
-        }
-        androidx.compose.animation.AnimatedVisibility(visible = lastDeleted != null, enter = androidx.compose.animation.fadeIn(),
-            exit = androidx.compose.animation.fadeOut()) {
-            Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 8.dp)
-                .clip(androidx.compose.foundation.shape.RoundedCornerShape(14.dp))
-                .background(th.card).padding(horizontal = 14.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically) {
-                Text("Téléchargement supprimé", color = th.secondary, fontSize = 13.sp,
-                    modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text("Annuler", color = th.accent, fontWeight = FontWeight.SemiBold, fontSize = 14.sp,
-                    modifier = Modifier.clickable {
-                        val track = lastDeleted
-                        lastDeleted = null
-                        if (track != null) Downloader.download(track)
-                    }.padding(horizontal = 10.dp, vertical = 6.dp))
+            if (sections.saved.isEmpty() && sections.transfers.isEmpty()) item(span = { GridItemSpan(maxLineSpan) }, key = "empty") {
+                if (query.isNotBlank()) EmptyState("Aucun résultat", "Essayez un autre titre ou artiste.", "Effacer", onAction = { query = "" })
+                else EmptyState("Aucun téléchargement", "Pour écouter hors ligne, ouvrez le menu d'un titre puis choisissez Télécharger.",
+                    "Rechercher des titres", onAction = ::openTrackSearch)
             }
         }
     }
+    saved.firstOrNull { it.track.id == deleteId }?.let { item ->
+        AlertDialog(onDismissRequest = { deleteId = null }, containerColor = theme.card,
+            title = { Text("Supprimer le téléchargement", color = theme.onBackground) },
+            text = { Text(item.track.title, localize = false, color = theme.secondary) },
+            confirmButton = { TextButton(onClick = { deleteId = null; Downloader.delete(item) }) { Text("Supprimer", color = theme.accent) } },
+            dismissButton = { TextButton(onClick = { deleteId = null }) { Text("Annuler", color = theme.secondary) } })
+    }
 }
 
-private fun formatSize(bytes: Long): String {
-    if (bytes <= 0) return "0 Mo"
-    val mo = bytes / 1_048_576.0
-    return if (mo >= 1000) {
-        String.format(Locale.FRANCE, "%.1f Go", mo / 1024.0)
-    } else {
-        String.format(Locale.FRANCE, "%.1f Mo", mo)
+@Composable
+private fun DownloadSectionTitle(title: String, count: Int) {
+    val theme = LocalTheme.current
+    Row(Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(title, color = theme.onBackground, fontWeight = FontWeight.Bold, fontSize = 19.sp, modifier = Modifier.weight(1f))
+        Text(count.toString(), localize = false, color = theme.secondary, fontSize = 13.sp)
     }
 }

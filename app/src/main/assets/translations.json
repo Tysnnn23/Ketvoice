@@ -1064,7 +1064,11 @@
   "{0} Ko restants": "{0} KB remaining",
   "{0} bandes natives · {1}": "{0} native bands · {1}",
   "{0} lectures": "{0} plays",
-  "Écoute quelques titres et ton récap apparaîtra ici.": "Listen to a few tracks and your recap will appear here."
+  "Écoute quelques titres et ton récap apparaîtra ici.": "Listen to a few tracks and your recap will appear here.",
+  "Disponibles hors ligne": "Available offline",
+  "Transferts": "Transfers",
+  "Aucun résultat": "No results",
+  "Essayez un autre titre ou artiste.": "Try another title or artist."
  },
  "hi": {
   "Reverb": "रीवर्ब",
@@ -2131,7 +2135,11 @@
   "{0} Ko restants": "{0} KB शेष",
   "{0} bandes natives · {1}": "{0} नेटिव बैंड · {1}",
   "{0} lectures": "{0} बार सुना",
-  "Écoute quelques titres et ton récap apparaîtra ici.": "कुछ ट्रैक सुनें और आपका सारांश यहाँ दिखाई देगा।"
+  "Écoute quelques titres et ton récap apparaîtra ici.": "कुछ ट्रैक सुनें और आपका सारांश यहाँ दिखाई देगा।",
+  "Disponibles hors ligne": "ऑफ़लाइन उपलब्ध",
+  "Transferts": "स्थानांतरण",
+  "Aucun résultat": "कोई परिणाम नहीं",
+  "Essayez un autre titre ou artiste.": "कोई दूसरा शीर्षक या कलाकार खोजें।"
  },
  "ja": {
   "Reverb": "リバーブ",
@@ -3198,7 +3206,11 @@
   "{0} Ko restants": "残り {0} KB",
   "{0} bandes natives · {1}": "{0} ネイティブ帯域 · {1}",
   "{0} lectures": "{0} 回再生",
-  "Écoute quelques titres et ton récap apparaîtra ici.": "数曲聴くと、ここにまとめが表示されます。"
+  "Écoute quelques titres et ton récap apparaîtra ici.": "数曲聴くと、ここにまとめが表示されます。",
+  "Disponibles hors ligne": "オフラインで再生可能",
+  "Transferts": "転送",
+  "Aucun résultat": "結果がありません",
+  "Essayez un autre titre ou artiste.": "別の曲名やアーティストで検索してください。"
  },
  "zh": {
   "Reverb": "混响",
@@ -4265,7 +4277,11 @@
   "{0} Ko restants": "剩余 {0} KB",
   "{0} bandes natives · {1}": "{0} 个原生频段 · {1}",
   "{0} lectures": "播放 {0} 次",
-  "Écoute quelques titres et ton récap apparaîtra ici.": "听几首歌后，你的回顾会显示在这里。"
+  "Écoute quelques titres et ton récap apparaîtra ici.": "听几首歌后，你的回顾会显示在这里。",
+  "Disponibles hors ligne": "可离线播放",
+  "Transferts": "传输",
+  "Aucun résultat": "无搜索结果",
+  "Essayez un autre titre ou artiste.": "请尝试其他歌名或艺人。"
  },
  "ru": {
   "Reverb": "Реверберация",
@@ -5332,7 +5348,11 @@
   "{0} Ko restants": "Осталось {0} КБ",
   "{0} bandes natives · {1}": "{0} нативных полос · {1}",
   "{0} lectures": "{0} прослушиваний",
-  "Écoute quelques titres et ton récap apparaîtra ici.": "Послушай несколько треков — и здесь появится твоя сводка."
+  "Écoute quelques titres et ton récap apparaîtra ici.": "Послушай несколько треков — и здесь появится твоя сводка.",
+  "Disponibles hors ligne": "Доступно офлайн",
+  "Transferts": "Передачи",
+  "Aucun résultat": "Нет результатов",
+  "Essayez un autre titre ou artiste.": "Попробуйте другое название или исполнителя."
  },
  "it": {
   "Reverb": "Riverbero",
@@ -6399,7 +6419,11 @@
   "{0} Ko restants": "{0} KB rimanenti",
   "{0} bandes natives · {1}": "{0} bande native · {1}",
   "{0} lectures": "{0} ascolti",
-  "Écoute quelques titres et ton récap apparaîtra ici.": "Ascolta qualche brano e il tuo riepilogo apparirà qui."
+  "Écoute quelques titres et ton récap apparaîtra ici.": "Ascolta qualche brano e il tuo riepilogo apparirà qui.",
+  "Disponibles hors ligne": "Disponibili offline",
+  "Transferts": "Trasferimenti",
+  "Aucun résultat": "Nessun risultato",
+  "Essayez un autre titre ou artiste.": "Prova un altro titolo o artista."
  },
  "es": {
   "Reverb": "Reverb",
@@ -7466,7 +7490,11 @@
   "{0} Ko restants": "{0} KB restantes",
   "{0} bandes natives · {1}": "{0} bandas nativas · {1}",
   "{0} lectures": "{0} reproducciones",
-  "Écoute quelques titres et ton récap apparaîtra ici.": "Escucha algunas canciones y tu resumen aparecerá aquí."
+  "Écoute quelques titres et ton récap apparaîtra ici.": "Escucha algunas canciones y tu resumen aparecerá aquí.",
+  "Disponibles hors ligne": "Disponibles sin conexión",
+  "Transferts": "Transferencias",
+  "Aucun résultat": "Sin resultados",
+  "Essayez un autre titre ou artiste.": "Prueba otro título o artista."
  },
  "de": {
   "Reverb": "Reverb",
@@ -8533,7 +8561,11 @@
   "{0} Ko restants": "{0} KB verbleibend",
   "{0} bandes natives · {1}": "{0} native Bänder · {1}",
   "{0} lectures": "{0} Wiedergaben",
-  "Écoute quelques titres et ton récap apparaîtra ici.": "Höre ein paar Titel und dein Rückblick erscheint hier."
+  "Écoute quelques titres et ton récap apparaîtra ici.": "Höre ein paar Titel und dein Rückblick erscheint hier.",
+  "Disponibles hors ligne": "Offline verfügbar",
+  "Transferts": "Übertragungen",
+  "Aucun résultat": "Keine Ergebnisse",
+  "Essayez un autre titre ou artiste.": "Versuche einen anderen Titel oder Künstler."
  },
  "pt": {
   "Reverb": "Reverb",
@@ -9600,7 +9632,11 @@
   "{0} Ko restants": "{0} KB restantes",
   "{0} bandes natives · {1}": "{0} bandas nativas · {1}",
   "{0} lectures": "{0} reproduções",
-  "Écoute quelques titres et ton récap apparaîtra ici.": "Ouça algumas faixas e seu resumo aparecerá aqui."
+  "Écoute quelques titres et ton récap apparaîtra ici.": "Ouça algumas faixas e seu resumo aparecerá aqui.",
+  "Disponibles hors ligne": "Disponíveis offline",
+  "Transferts": "Transferências",
+  "Aucun résultat": "Nenhum resultado",
+  "Essayez un autre titre ou artiste.": "Tente outro título ou artista."
  },
  "ko": {
   "Reverb": "리버브",
@@ -10667,6 +10703,10 @@
   "{0} Ko restants": "{0}KB 남음",
   "{0} bandes natives · {1}": "네이티브 대역 {0}개 · {1}",
   "{0} lectures": "{0}회 재생",
-  "Écoute quelques titres et ton récap apparaîtra ici.": "몇 곡을 들으면 여기에 요약이 표시됩니다."
+  "Écoute quelques titres et ton récap apparaîtra ici.": "몇 곡을 들으면 여기에 요약이 표시됩니다.",
+  "Disponibles hors ligne": "오프라인 재생 가능",
+  "Transferts": "전송",
+  "Aucun résultat": "검색 결과 없음",
+  "Essayez un autre titre ou artiste.": "다른 곡명이나 아티스트를 검색해 보세요."
  }
 }
