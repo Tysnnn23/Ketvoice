@@ -155,7 +155,7 @@ fun ArtistScreen(request: AppUi.ArtistRequest? = AppUi.artistRequest.value) {
                 }
                 itemsIndexed(data.tracks, key = { i, t -> "${t.id}:$i" }) { index, track ->
                     val active = player.current?.id == track.id
-                    Row(Modifier.fillMaxWidth().animateItem()
+                    Row(Modifier.fillMaxWidth().then(if (Motion.reduced) Modifier else Modifier.animateItem())
                         .clickable { Player.playQueue(data.tracks, index) }
                         .padding(horizontal = 20.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text("${index + 1}", color = theme.secondary, fontSize = 13.sp,
@@ -254,7 +254,8 @@ fun ArtistScreen(request: AppUi.ArtistRequest? = AppUi.artistRequest.value) {
             Text(artist?.name ?: request.name, localize = false, color = theme.onBackground,
                 fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f).graphicsLayer { alpha = if (page == null) 1f else collapse.value })
+                 modifier = Modifier.weight(1f).graphicsLayer { alpha = if (page == null) 1f else collapse.value })
+            if (collapse.value >= .98f && page?.tracks?.isNotEmpty() == true) com.ketvoice.app.ui.common.CollectionQuickActions(page!!.tracks)
             if (page != null) com.ketvoice.app.glass.GlassPanel(Modifier.size(48.dp), CircleShape,
                 com.ketvoice.app.glass.GlassParams.circle(dark = theme.isDark), captured = true) {
                 Box(Modifier.fillMaxSize().clickable {

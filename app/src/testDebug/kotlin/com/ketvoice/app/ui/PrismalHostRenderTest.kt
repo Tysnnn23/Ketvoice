@@ -261,7 +261,7 @@ class PrismalHostRenderTest {
         }
     }
 
-    @Test fun onlyWordsHeldLongerThan820msComposeTheGlow() {
+    @Test fun heldWordsRemainSingleShapedTextWithoutGlowOrScaledCopies() {
         AppSettings.reduceAnimations.value = false
         AppSettings.highPerformanceMode.value = false
         val line = MusicApi.LyricLine(0, "Hold", listOf(MusicApi.LyricWord(0, "Hold", 3_000)))
@@ -276,20 +276,20 @@ class PrismalHostRenderTest {
             }
         } }
         compose.onNodeWithText("Hold").assertIsDisplayed()
-        assertEquals("Before 820 ms the sustained halo does not exist", 0, compose.onAllNodesWithTag("word-glow").fetchSemanticsNodes().size)
+        compose.onAllNodesWithText("Hold").assertCountEquals(1)
         compose.runOnIdle { position.value = 1_500L }
         compose.waitForIdle()
-        assertEquals("A held word gets one glow layer", 1, compose.onAllNodesWithTag("word-glow").fetchSemanticsNodes().size)
-        image("lyrics-apple-glow-held") { bitmap ->
-            // Geometry is real; the blur itself cannot be measured on host (see probe).
+        assertEquals("Held words must not compose blurred copies", 0, compose.onAllNodesWithTag("word-glow").fetchSemanticsNodes().size)
+        compose.onAllNodesWithText("Hold").assertCountEquals(1)
+        image("lyrics-clean-held-word") { bitmap ->
             assertTrue("Lit glyphs are present", android.graphics.Color.red(bitmap.getPixel(40, 232)) > 0)
         }
         compose.runOnIdle { position.value = 3_200L }
         compose.waitForIdle()
-        assertTrue("After the word ends the halo begins to fade", compose.onAllNodesWithTag("word-glow").fetchSemanticsNodes().size <= 1)
+        assertEquals(0, compose.onAllNodesWithTag("word-glow").fetchSemanticsNodes().size)
         compose.runOnIdle { position.value = 3_500L }
         compose.waitForIdle()
-        assertEquals("The halo is fully gone after the fade window", 0, compose.onAllNodesWithTag("word-glow").fetchSemanticsNodes().size)
+        assertEquals("No delayed duplicate may appear after the word", 0, compose.onAllNodesWithTag("word-glow").fetchSemanticsNodes().size)
     }
 
     @Test fun collectionHeroMatchesThePlaylistPresentation() {

@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
@@ -20,6 +21,8 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.layout.onSizeChanged
 import com.ketvoice.app.data.AppSettings
 import com.ketvoice.app.glass.*
 import com.ketvoice.app.theme.LocalTheme
@@ -37,11 +40,26 @@ fun LiquidGlassButton(
     val theme = LocalTheme.current
     val interactions = remember { MutableInteractionSource() }
     val pressed by interactions.collectIsPressedAsState()
-    val scale by animateFloatAsState(if (pressed && !Motion.reduced) .96f else 1f,
+    var bounds by remember { mutableStateOf(IntSize.Zero) }
+    var reflection by remember { mutableFloatStateOf(45f) }
+    LaunchedEffect(interactions) {
+        interactions.interactions.collect { event ->
+            reflection = if (event is PressInteraction.Press) {
+                val x = bounds.width / 2f - event.pressPosition.x
+                val y = bounds.height / 2f - event.pressPosition.y
+                if (x * x + y * y < 1f) 45f else Math.toDegrees(kotlin.math.atan2(y, x).toDouble()).toFloat()
+            } else 45f
+        }
+    }
+    val light by animateFloatAsState(if (Motion.reduced) 45f else reflection,
+        Motion.pressSpring(pressed), label = "glass-button-light")
+    val scale by animateFloatAsState(if (pressed && !Motion.reduced) .97f else 1f,
         Motion.pressSpring(pressed), label = "glass-button-press")
-    GlassPanel(modifier.graphicsLayer { scaleX = scale; scaleY = scale; alpha = if (enabled) 1f else .45f }, shape,
-        GlassParams.circle(dark = theme.isDark), enabled = AppSettings.liquidGlass.value) {
-        Box(Modifier.fillMaxSize().clip(shape)
+    Box(modifier.onSizeChanged { bounds = it }) {
+        GlassPanel(Modifier.matchParentSize().graphicsLayer { scaleX = scale; scaleY = scale }, shape,
+            GlassParams.circle(dark = theme.isDark).copy(highlightAngle = light), enabled = AppSettings.liquidGlass.value) {}
+        // The surface reacts to pressure; glyphs and the 48dp hit target stay stable.
+        Box(Modifier.fillMaxSize().clip(shape).graphicsLayer { alpha = if (enabled) 1f else .45f }
             .clickable(interactions, null, enabled = enabled, role = Role.Button, onClick = onClick),
             contentAlignment = Alignment.Center, content = content)
     }

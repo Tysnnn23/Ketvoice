@@ -359,18 +359,21 @@ object Downloader {
             .sumOf { File(item.file.parentFile, stem + it).takeIf { it.exists() }?.length() ?: 0L }
     }
 
-    fun delete(item: Item) {
-        runCatching {
-            item.file.delete()
+    fun delete(item: Item): Boolean {
+        val removed = runCatching {
+            if (item.file.exists() && !item.file.delete()) return@runCatching false
             val stem = item.file.nameWithoutExtension
             File(item.file.parentFile, "$stem.json").delete()
             File(item.file.parentFile, "$stem.lyrics.json").delete()
             File(item.file.parentFile, "$stem.lrc").delete()
             File(item.file.parentFile, "$stem.cover.jpg").delete()
             ArtworkRepo.removeOfflineCover(item.track.id)
-        }
+            true
+        }.getOrDefault(false)
+        if (!removed) { toast("Impossible de supprimer certains fichiers."); return false }
         ctx?.let { c -> updateQueue(c) { DownloadQueue.remove(it, item.track.id) } }
         refresh()
+        return true
     }
 
     fun totalBytes(): Long = _items.value.sumOf { it.bytes }

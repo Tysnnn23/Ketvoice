@@ -66,8 +66,9 @@ internal fun QuestLandscapePlayer(
                     SmallCircleButton(onClose, size = 36.dp, transparent = true) {
                         Icon(Icons.Filled.KeyboardArrowDown, "Fermer le lecteur", tint = it, modifier = Modifier.size(26.dp))
                     }
-                    Text("Lecture en cours", color = Color.White.copy(alpha = .80f), fontSize = 14.sp,
-                        modifier = Modifier.padding(start = 8.dp))
+                     Text("Lecture en cours", color = Color.White.copy(alpha = .80f), fontSize = 14.sp,
+                        modifier = Modifier.padding(start = 8.dp).weight(1f))
+                     PlayerPageSelector(page, onPage, Modifier.widthIn(max = 400.dp).weight(1.5f))
                 }
                 Row(Modifier.weight(1f).fillMaxWidth().padding(top = 12.dp, bottom = 12.dp),
                     horizontalArrangement = Arrangement.spacedBy(if(DesignChoices.enabled("D8"))24.dp else 40.dp)) {

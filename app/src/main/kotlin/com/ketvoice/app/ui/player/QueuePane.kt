@@ -88,7 +88,7 @@ private fun QueueRow(track: Track, cover: String?, modifier: Modifier = Modifier
                      onPlay: () -> Unit, onRemove: () -> Unit) {
     Row(modifier.fillMaxWidth().heightIn(min = 64.dp).clickable(onClick = onPlay).padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         if (!current) {
-            Box(handle.width(26.dp).fillMaxHeight(), contentAlignment = Alignment.CenterStart) {
+            Box(handle.width(48.dp).height(56.dp), contentAlignment = Alignment.Center) {
                 Icon(Icons.Filled.DragHandle, "Déplacer ce titre", tint = Color(0xFF85858C), modifier = Modifier.size(18.dp))
             }
         }

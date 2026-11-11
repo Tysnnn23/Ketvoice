@@ -1,4 +1,6 @@
 {
+ "id:{0}": "local album identity key, not user-facing copy",
+ "offline-album:{0}": "stable lazy-grid album identity, not user-facing copy",
  " occupé=": "structured log field, never shown in the UI",
  " prêt=": "structured log field, never shown in the UI",
  "-Quest": "Kotlin expression or markup fragment captured by the scanner, not user text",

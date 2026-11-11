@@ -84,7 +84,7 @@ class LibraryRedesignHostTest {
         tasks.value = mapOf(paused.id to DownloadTask(DownloadPhase.Paused, 40_000, 100_000))
         compose.setContent { KetvoiceTheme(useDark = true) { DownloadsScreen() } }
         compose.onNodeWithTag("transfer-download").assertExists()
-        compose.onAllNodesWithText("En pause").assertCountEquals(1)
+        compose.onAllNodes(hasText("En pause") and hasAnyAncestor(hasTestTag("transfer-download"))).assertCountEquals(1)
         compose.onNodeWithText("Une piste hors ligne").performScrollTo().assertIsDisplayed()
         compose.onAllNodesWithTag("saved-download").assertCountEquals(1)
         image("downloads-redesign-dark")

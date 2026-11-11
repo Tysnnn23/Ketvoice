@@ -38,6 +38,7 @@ import com.ketvoice.app.ui.common.AccountAvatar
 import com.ketvoice.app.ui.common.Cover
 import com.ketvoice.app.ui.player.PlayerSheetScrim
 import com.ketvoice.app.ui.player.TrackMenuSheet
+import com.ketvoice.app.ui.library.PlaylistShelf
 
 @Composable
 fun HomeScreen() {
@@ -51,10 +52,17 @@ fun HomeScreen() {
     val origin by HomeFeed.origin.collectAsState()
     val youtube by YouTubeMusicSession.profile.collectAsState()
     val player by Player.state.collectAsState()
+    val playlists by PlaylistStore.lists.collectAsState()
     var grid by remember { mutableStateOf(false) }
     val layout = LocalAdaptiveLayout.current
     val pageWidth = layout.recentPageWidthDp.dp
     val featured = shelves.firstOrNull { it.tracks.isNotEmpty() }?.tracks ?: recent.take(6)
+    val leadId = player.current?.id ?: recent.firstOrNull()?.id ?: featured.firstOrNull()?.id
+    val shelfRows = remember(shelves, leadId) {
+        val seen = mutableSetOf<String>().apply { leadId?.let(::add) }
+        shelves.map { shelf -> shelf to shelf.tracks.filter { seen.add(it.id) } }
+            .filter { it.second.isNotEmpty() }.take(3)
+    }
     LaunchedEffect(Unit) { HomeFeed.start(context) }
     LaunchedEffect(recent) { ArtworkRepo.enrich(recent.take(20)) }
     LaunchedEffect(state) {
@@ -86,12 +94,20 @@ fun HomeScreen() {
                     }
                 }
             }
-            if(DesignChoices.enabled("D2")&&featured.isNotEmpty())item(key="editorial"){HomeEditorial(featured)}
+            if (player.current != null || recent.isNotEmpty()) item(key = "editorial") {
+                HomeEditorial(if (player.current != null) player.queue else recent, resume = true)
+            } else if (featured.isNotEmpty()) item(key = "editorial") { HomeEditorial(featured) }
+            if (playlists.any { it.pinned }) item(key = "pinned") {
+                Text("Épinglés", color = theme.onBackground, fontSize = 22.sp, fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(start = 18.dp, top = 20.dp, bottom = 12.dp))
+                PlaylistShelf(playlists.filter { it.pinned })
+            }
             item {
                 Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp).padding(bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text("Récents", color = theme.onBackground, fontSize = 16.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                    Icon(Icons.Filled.GridView, "Changer la présentation des récents", tint = theme.secondary,
-                        modifier = Modifier.size(26.dp).clickable { grid = !grid })
+                    androidx.compose.material3.IconButton(onClick = { grid = !grid }, modifier = Modifier.size(48.dp)) {
+                        Icon(Icons.Filled.GridView, "Changer la présentation des récents", tint = theme.secondary, modifier = Modifier.size(22.dp))
+                    }
                 }
             }
             if (recent.isEmpty()) item {
@@ -129,8 +145,7 @@ fun HomeScreen() {
                     }
                 }
             }
-            shelves.forEach { shelf ->
-                val shown=if(DesignChoices.enabled("D2"))shelf.tracks.filterNot{it.id==featured.firstOrNull()?.id} else shelf.tracks
+            shelfRows.forEach { (shelf, shown) ->
                 if(shown.isNotEmpty()) {
                 item(key = shelf.title) {
                     Column(Modifier.padding(start = 18.dp, end = 18.dp, top = 28.dp, bottom = 12.dp)) {
@@ -164,7 +179,7 @@ private fun HomeRecentRow(track: Track, active: Boolean, onPlay: () -> Unit, onM
                 fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(track.artist, localize = false, color = theme.secondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
-        Box(Modifier.size(38.dp).clickable(onClick = onMenu), contentAlignment = Alignment.Center) {
+        Box(Modifier.size(48.dp).clickable(onClick = onMenu), contentAlignment = Alignment.Center) {
             Icon(Icons.Filled.MoreVert, "Options de ${track.title}", tint = theme.secondary, modifier = Modifier.size(21.dp))
         }
     }

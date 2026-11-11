@@ -307,7 +307,7 @@ internal fun LyricVoices(line: MusicApi.LyricLine, active: Boolean, timed: Boole
     }
     val position by clock.collectAsState(Long.MIN_VALUE)
     val leadEnd = voices.lead.words.maxOfOrNull { it.endMs } ?: line.timeMs
-    val leadSinging = timed && nearActive && position != Long.MIN_VALUE && position < leadEnd + LyricsPresentation.GLOW_EXIT_MS + 50
+    val leadSinging = timed && nearActive && position != Long.MIN_VALUE && position < leadEnd + LyricsPresentation.LEAD_TAIL_MS
     Column(Modifier.fillMaxWidth()) {
         if (voices.lead.text.isNotBlank()) {
             if ((active || leadSinging) && voices.lead.words.isNotEmpty())
@@ -393,25 +393,13 @@ internal fun KaraokeLine(line: MusicApi.LyricLine, modifier: Modifier, fontScale
                 val to = minOf(end, measured.getLineEnd(row))
                 if (from < to) {
                     val path = measured.getPathForRange(from, to)
-                    LyricMaskSlice(path, path.getBounds(), measured.getBidiRunDirection(from) == ResolvedTextDirection.Rtl,
-                        row, measured.getLineTop(row))
+                    LyricMaskSlice(path, path.getBounds(), measured.getBidiRunDirection(from) == ResolvedTextDirection.Rtl)
                 } else null
             }
-            LyricWordMask(word.startMs, word.endMs, slices, slices.sumOf { it.bounds.width.toDouble() }.toFloat(),
-                word.text.trim(), slices.minOfOrNull { it.bounds.left } ?: 0f, slices.firstOrNull()?.lineTop ?: 0f)
+            LyricWordMask(word.startMs, word.endMs, slices, slices.sumOf { it.bounds.width.toDouble() }.toFloat())
         }
     }.orEmpty() }
-    val reduced = Motion.reduced || AppSettings.highPerformanceMode.value
     Box(modifier) {
-        if (!reduced) layout?.let { measured ->
-            masks.filter { it.end - it.start >= LyricsPresentation.HOLD_THRESHOLD_MS }.forEach { mask ->
-                key(mask.start, mask.end) {
-                    WordGlow(mask, clock, fontScale,
-                        strength = if (backing) .45f else if (dim) .72f else 1f,
-                        modifier = Modifier.matchParentSize())
-                }
-            }
-        }
         // One shaped layout for both the pending glyphs and the sung overlay.
         // No remeasurement, shifted word copy, scaling or disappearing held glyph.
         Text(line.text, localize = false, color = Color.White.copy(
@@ -421,88 +409,40 @@ internal fun KaraokeLine(line: MusicApi.LyricLine, modifier: Modifier, fontScale
             letterSpacing = (-.3).sp, fontWeight = if (backing) FontWeight.Bold else FontWeight.Black,
             onTextLayout = { layout = it }, modifier = Modifier.fillMaxWidth())
         Canvas(Modifier.matchParentSize()) {
-                val measured = layout ?: return@Canvas
-                val now = clock.longValue // draw invalidation only: no composition or shaping per frame
-                masks.forEach { word ->
-                    val progress = segmentProgress(now, word.start, word.end)
-                    if (progress <= 0f) return@forEach
-                    val emphasis = LyricsPresentation.sustain(now, word.start, word.end, reduced)
-                    val ink = Color.White.copy(alpha = if (dim) .82f else 1f)
-                    val scale = 1f + .025f * emphasis
-                    var remaining = word.width * progress
-                    word.slices.forEach { slice ->
-                        val bounds = slice.bounds
-                        val fill = remaining.coerceIn(0f, bounds.width)
-                        remaining -= bounds.width
-                        if (fill > 0f) {
-                            val left = if (slice.rtl) bounds.right - fill else bounds.left
-                            val right = if (slice.rtl) bounds.right else bounds.left + fill
-                            if (emphasis > 0f) {
-                                withTransform({
-                                    scale(scale, scale, pivot = Offset(bounds.center.x, bounds.center.y))
-                                }) {
-                                    clipPath(slice.path) {
-                                        clipRect(left, bounds.top, right, bounds.bottom) {
-                                            drawText(measured, color = ink)
-                                        }
-                                    }
-                                }
-                            } else {
-                                clipPath(slice.path) {
-                                    clipRect(left, bounds.top, right, bounds.bottom) {
-                                        drawText(measured, color = ink)
-                                    }
-                                }
+            val measured = layout ?: return@Canvas
+            val now = clock.longValue // draw invalidation only: no composition or shaping per frame
+            masks.forEach { word ->
+                val progress = segmentProgress(now, word.start, word.end)
+                if (progress <= 0f) return@forEach
+                val ink = Color.White.copy(alpha = if (dim) .82f else 1f)
+                var remaining = word.width * progress
+                word.slices.forEach { slice ->
+                    val bounds = slice.bounds
+                    val fill = remaining.coerceIn(0f, bounds.width)
+                    remaining -= bounds.width
+                    if (fill > 0f) {
+                        val left = if (slice.rtl) bounds.right - fill else bounds.left
+                        val right = if (slice.rtl) bounds.right else bounds.left + fill
+                        clipPath(slice.path) {
+                            clipRect(left, bounds.top, right, bounds.bottom) {
+                                drawText(measured, color = ink)
                             }
                         }
                     }
                 }
+            }
         }
     }
 }
 
-internal data class LyricMaskSlice(val path: androidx.compose.ui.graphics.Path, val bounds: androidx.compose.ui.geometry.Rect, val rtl: Boolean,
-                                   val row: Int = 0, val lineTop: Float = 0f)
+internal data class LyricMaskSlice(val path: androidx.compose.ui.graphics.Path, val bounds: androidx.compose.ui.geometry.Rect, val rtl: Boolean)
 internal data class LyricWordMask(
     val start: Long,
     val end: Long,
     val slices: List<LyricMaskSlice>,
-    val width: Float,
-    val text: String = "",
-    val left: Float = 0f,
-    val top: Float = 0f
+    val width: Float
 )
 
-/**
- * Apple-Music-like sustained glow: a real blurred copy of the word's glyphs at
- * two diffusion scales, lit only after 820 ms of *sung audio*, breathing during
- * the hold and fading after the word ends. Blur acts on glyph alpha, so the light
- * spreads outside the letters instead of a hard textShadow or a static blur.
- * Never composed for short syllables, so unsung words cost nothing.
- */
-@Composable
-private fun WordGlow(word: LyricWordMask, clock: State<Long>, fontScale: Float, strength: Float,
-                     modifier: Modifier = Modifier) {
-    val now = clock.value
-    val envelope = LyricsPresentation.sustain(now, word.start, word.end, false)
-    if (envelope <= 0f || word.text.isBlank()) return
-    val growth = LyricsPresentation.diffusion(now, word.start, word.end)
-    val breath = LyricsPresentation.breath(now, word.start)
-    val alpha = envelope * breath * strength
-    val density = LocalDensity.current
-    Box(modifier.testTag("word-glow")) {
-        listOf(
-            (4f + 5f * growth) to (alpha * (.17f + .04f * growth)),
-            (12f + 13f * growth) to (alpha * (.13f + .04f * growth))
-        ).forEach { (radius, value) ->
-            Text(word.text, localize = false, color = Color.White.copy(alpha = value.coerceIn(0f, .55f)),
-                fontSize = (33f * fontScale).sp, lineHeight = (41f * fontScale).sp,
-                letterSpacing = (-.3).sp, fontWeight = FontWeight.Black, maxLines = 1, softWrap = false,
-                modifier = Modifier.offset(x = with(density) { word.left.toDp() }, y = with(density) { word.top.toDp() })
-                    .blur(radius.dp, BlurredEdgeTreatment.Unbounded))
-        }
-    }
-}
 
 internal fun segmentProgress(now: Long, start: Long, end: Long): Float = when {
     now < start -> 0f

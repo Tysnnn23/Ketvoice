@@ -88,6 +88,15 @@ float dither(float2 coord) {
     return f - 0.5;
 }
 
+float3 toLinear(float3 c) {
+    return mix(c / 12.92, pow((c + 0.055) / 1.055, float3(2.4)), step(float3(0.04045), c));
+}
+
+float3 toDisplay(float3 c) {
+    return mix(c * 12.92, 1.055 * pow(max(c, 0.0), float3(1.0 / 2.4)) - 0.055,
+        step(float3(0.0031308), c));
+}
+
 float4 main(float2 coord) {
     float2 halfSize = size * 0.5;
     float2 local = coord + offset;
@@ -132,10 +141,17 @@ float4 main(float2 coord) {
     // Regular glass must remain legible over artwork, not just over a blank page.
     // A local luminance-adaptive veil preserves the colours without letting black
     // labels disappear over a dark cover (or white labels over a bright cover).
-    float veil = materialDark > 0.5
-        ? 0.58 * smoothstep(0.18, 0.85, luma)
-        : 0.52 * (1.0 - smoothstep(0.25, 0.80, luma));
-    color.rgb = mix(color.rgb, materialDark > 0.5 ? float3(0.08) : float3(1.0), veil);
+    // Change only the light needed for legibility, in linear colour space.
+    // Already-readable cover colours pass through instead of acquiring a grey veil.
+    float3 linear = toLinear(clamp(color.rgb, 0.0, 1.0));
+    float luminance = dot(linear, float3(0.2126, 0.7152, 0.0722));
+    if (materialDark > 0.5) {
+        linear *= min(1.0, 0.12 / max(luminance, 0.001));
+    } else {
+        float lift = max(0.0, (0.48 - luminance) / max(1.0 - luminance, 0.001));
+        linear = mix(linear, float3(1.0), lift);
+    }
+    color.rgb = toDisplay(linear);
 
     // Épaisseur : lisière lumineuse du côté de la lumière, assombrie du côté
     // opposé, toutes deux concentrees sur ~2.5dp, plus un contour capillaire
@@ -216,7 +232,8 @@ fun BackdropEffectScope.liquidGlass(
         shader.setFloatUniform("rimLight", params.highlightAlpha * 0.85f)
         shader.setFloatUniform("sheen", if (params.dark) 0.018f else 0.022f)
         shader.setFloatUniform("materialDark", if (params.dark) 1f else 0f)
-        shader.setFloatUniform("lightDir", -0.7071f, -0.7071f)
+        val angle = Math.toRadians(params.highlightAngle.toDouble())
+        shader.setFloatUniform("lightDir", -kotlin.math.cos(angle).toFloat(), -kotlin.math.sin(angle).toFloat())
         shader.setFloatUniform("pixelScale", density)
         effect(RenderEffect.createRuntimeShaderEffect(shader, "content"))
         true

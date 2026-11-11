@@ -7,6 +7,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Shuffle
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -37,6 +38,7 @@ import com.ketvoice.app.player.Player
 import com.ketvoice.app.theme.LocalTheme
 import com.ketvoice.app.ui.common.Icon
 import com.ketvoice.app.ui.common.Text
+import com.ketvoice.app.ui.common.CollectionPlaybackActions
 import com.ketvoice.app.ui.motion.Motion
 import com.ketvoice.app.ui.motion.StaggeredReveal
 
@@ -61,28 +63,11 @@ internal fun ArtistHeader(page: ArtistPage, collapse: () -> Float = { 0f }) {
     val heroRequest = remember(hero, Motion.reduced) {
         ImageRequest.Builder(context).data(hero).crossfade(Motion.duration(280)).build()
     }
-    val ambienceRequest = remember(hero, Motion.reduced) {
-        ImageRequest.Builder(context).data(hero).crossfade(Motion.duration(280)).build()
-    }
     Column(Modifier.fillMaxWidth()) {
         BoxWithConstraints(Modifier.fillMaxWidth()) {
-            val height = (maxWidth * (if (wide) .95f else 1.15f)).coerceIn(320.dp, 500.dp)
+            val height = (maxWidth * (if (wide) .65f else .80f)).coerceIn(230.dp, 380.dp)
             Box(Modifier.fillMaxWidth().height(height).clipToBounds().background(theme.background)) {
                 if (hero != null) {
-                    // Blurred ambience fills the frame, so a wide banner never leaves
-                    // two flat bands beside the artwork. It lags slightly behind the
-                    // scroll so the compaction reads as depth, not a hard cut.
-                    AsyncImage(ambienceRequest, null, contentScale = ContentScale.Crop,
-                        alignment = Alignment.Center,
-                        modifier = Modifier.fillMaxSize().blur(42.dp).graphicsLayer {
-                            val c = collapse().coerceIn(0f, 1f)
-                            alpha = .58f * (1f - c * .35f)
-                            translationY = if (Motion.reduced) 0f else c * size.height * .10f
-                        })
-                    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(
-                        0f to Color.Black.copy(alpha = .24f),
-                        .40f to Color.Transparent,
-                        1f to theme.background.copy(alpha = .30f))))
                     // Square portraits fill the hero instead of being zoomed into a
                     // random face crop; wide banners are fitted whole.
                     // Intelligent full-bleed scale: the artwork always covers the whole
@@ -92,17 +77,10 @@ internal fun ArtistHeader(page: ArtistPage, collapse: () -> Float = { 0f }) {
                         alignment = Alignment.TopCenter,
                         modifier = Modifier.fillMaxSize().graphicsLayer {
                             val c = collapse().coerceIn(0f, 1f)
-                            scaleX = 1.06f; scaleY = 1.06f
+                             scaleX = 1.02f; scaleY = 1.02f
                             translationY = if (Motion.reduced) 0f else c * size.height * .07f
                             alpha = 1f - c * .18f
                         })
-                    // Side feathers dissolve the last pixels into the ambience instead
-                    // of a hard rectangle edge.
-                    Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(
-                        0f to theme.background.copy(alpha = if (theme.isDark) .55f else .35f),
-                        .10f to Color.Transparent,
-                        .90f to Color.Transparent,
-                        1f to theme.background.copy(alpha = if (theme.isDark) .55f else .35f))))
                 } else {
                     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(
                         theme.accent.copy(alpha = if (theme.isDark) .22f else .14f),
@@ -110,32 +88,29 @@ internal fun ArtistHeader(page: ArtistPage, collapse: () -> Float = { 0f }) {
                     Box(Modifier.size(118.dp).clip(RoundedCornerShape(50))
                         .background(theme.accent.copy(alpha = .16f)).align(Alignment.Center),
                         contentAlignment = Alignment.Center) {
-                        Text(page.artist.name.take(1).uppercase(), localize = false,
-                            color = theme.accent, fontSize = 52.sp, fontWeight = FontWeight.Black)
+                        Icon(Icons.Filled.Person, null, tint = theme.accent, modifier = Modifier.size(64.dp))
                     }
                 }
                 // Voile supérieur : le bouton retour flottant reste lisible.
                 Box(Modifier.fillMaxWidth().height(96.dp).background(Brush.verticalGradient(
                     listOf(Color.Black.copy(alpha = .34f), Color.Transparent))))
                 // Long fade into the page, Apple Music style: no hard edge.
-                Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(height * .70f)
+                Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(height * .26f)
                     .background(Brush.verticalGradient(
                         0f to Color.Transparent,
-                        .30f to theme.background.copy(alpha = .35f),
-                        .62f to theme.background.copy(alpha = .90f),
-                        .86f to theme.background,
+                        .30f to theme.background.copy(alpha = .12f),
+                        .62f to theme.background.copy(alpha = .45f),
+                        .94f to theme.background,
                         1f to theme.background)))
-                val drawn: ArtistSignature? = artwork.signature ?: artwork.logo
-                Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal = 24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally) {
-                    StaggeredReveal(order = 0) { ArtistIdentity(page.artist.name, drawn) }
-                }
             }
+        }
+        Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(top = 16.dp)) {
+            StaggeredReveal(order = 0) { ArtistIdentity(page.artist.name, artwork.signature ?: artwork.logo, startAligned = true) }
         }
         StaggeredReveal(order = 1, modifier = Modifier.fillMaxWidth()) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp)
                 .padding(bottom = 10.dp), verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center) {
+                horizontalArrangement = Arrangement.Start) {
                 if (page.listeners.isNotBlank()) {
                     Text(page.listeners, localize = false, color = theme.secondary, fontSize = 12.5.sp,
                         maxLines = 1, overflow = TextOverflow.Ellipsis,
@@ -146,31 +121,7 @@ internal fun ArtistHeader(page: ArtistPage, collapse: () -> Float = { 0f }) {
             }
         }
         if (page.tracks.isNotEmpty()) StaggeredReveal(order = 2, modifier = Modifier.fillMaxWidth()) {
-        Row(
-            Modifier.fillMaxWidth().padding(start = 24.dp, end = 24.dp, top = 2.dp, bottom = 18.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Row(Modifier.weight(1f).clip(RoundedCornerShape(50)).background(theme.accent)
-                .clickable { Player.setShuffle(false); Player.playQueue(page.tracks) }.heightIn(min = 50.dp)
-                .padding(horizontal = 14.dp, vertical = 12.dp),
-                horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Filled.PlayArrow, null, tint = onAccent, modifier = Modifier.size(21.dp))
-                Spacer(Modifier.width(6.dp))
-                Text("Écouter", color = onAccent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-            }
-            GlassPanel(Modifier.weight(1f), RoundedCornerShape(50), GlassParams.pill(dark = theme.isDark),
-                enabled = AppSettings.liquidGlass.value) {
-                Row(Modifier.fillMaxWidth().clickable {
-                    Player.playQueue(page.tracks.shuffled())
-                    Player.setShuffle(true)
-                }.heightIn(min = 50.dp).padding(horizontal = 10.dp, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Filled.Shuffle, null, tint = theme.accent, modifier = Modifier.size(20.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text("Aléatoire", color = theme.accent, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                }
-            }
-        }
+        CollectionPlaybackActions(page.tracks, Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 18.dp), label = "Écouter")
         }
     }
 }

@@ -16,7 +16,7 @@ data class PlaylistEntry(val id: String = UUID.randomUUID().toString(), val titl
     val artist: String, val spotifyId: String? = null, val track: Track? = null)
 data class LocalPlaylist(val id: String = UUID.randomUUID().toString(), val name: String,
     val entries: List<PlaylistEntry> = emptyList(), val spotifyUrl: String? = null,
-    val coverUrl: String? = null, val createdAt: Long = System.currentTimeMillis())
+    val coverUrl: String? = null, val createdAt: Long = System.currentTimeMillis(), val pinned: Boolean = false)
 
 object PlaylistRules {
     fun name(value: String): String = value.trim().also {
@@ -54,7 +54,7 @@ object PlaylistStore {
         }.onFailure { _error.value = true }
     }
 
-    internal fun resetForTest() { _lists.value = emptyList(); _error.value = false }
+    internal fun resetForTest() { _lists.value = emptyList(); _error.value = false; file = null }
     private suspend fun change(block: (List<LocalPlaylist>) -> List<LocalPlaylist>) = withContext(Dispatchers.IO) {
         mutex.withLock {
             check(!_error.value) { "Impossible de lire les playlists enregistrées" }
@@ -64,7 +64,11 @@ object PlaylistStore {
             val bytes = gson.toJson(next).toByteArray(Charsets.UTF_8)
             require(bytes.size <= 16 * 1024 * 1024) { "Limite de playlists atteinte" }
             val out = storage.startWrite()
-            try { out.write(bytes); storage.finishWrite(out) }
+            try {
+                out.write(bytes); storage.finishWrite(out)
+                // AtomicFile can log a failed rename without throwing; never announce an unpersisted change.
+                check(storage.readFully().contentEquals(bytes)) { "Stockage des playlists indisponible" }
+            }
             catch (failure: Exception) { storage.failWrite(out); throw failure }
             _lists.value = next
         }
@@ -77,6 +81,7 @@ object PlaylistStore {
     }
     suspend fun rename(id: String, value: String) { val name = PlaylistRules.name(value); change { rows -> rows.map { if (it.id == id) it.copy(name = name) else it } } }
     suspend fun delete(id: String) { change { rows -> rows.filterNot { it.id == id } } }
+    suspend fun pin(id: String, pinned: Boolean) { change { rows -> rows.map { if (it.id == id) it.copy(pinned = pinned) else it } } }
     suspend fun add(id: String, track: Track) { change { rows -> rows.map { if (it.id == id) it.copy(entries = it.entries + PlaylistRules.entry(track)) else it } } }
     suspend fun remove(id: String, entry: String) { change { rows -> rows.map { if (it.id == id) it.copy(entries = it.entries.filterNot { e -> e.id == entry }) else it } } }
     suspend fun move(id: String, from: Int, to: Int) { change { rows -> rows.map { if (it.id == id) it.copy(entries = PlaylistRules.move(it.entries, from, to)) else it } } }

@@ -9,3 +9,11 @@
 - Distinguish emulator and mocked checks from real owner-session, live download and physical Quest validation. Never claim tests that were not performed.
 - Write all new changelog entries and release notes in English. Include the canonical `ketvoice-banner.png` banner from this repository in release presentation.
 - Keep `Tysnnn23/Ketvoice-web` synchronized with app releases: current feature descriptions, latest Mobile/Quest downloads, English release notes and the canonical banner. Preserve its upstream changes and verify the rendered website before claiming web synchronization.
+
+## Cost-aware code work
+
+- Reuse the existing code-only graph in `graphify-out/` before architecture or impact searches. Prefer `graphify explain` or seeded, depth-limited queries, then read only the relevant source sections. Do not dump the complete graph into context.
+- Update the code graph after code changes with `graphify update .`. Preserve `.graphifyrc` and `.graphifyignore`. Do not run paid semantic/document/image extraction without explicit approval.
+- Reuse skills and evidence already loaded in the conversation; do not repeatedly reload long instructions or repeat unchanged investigations.
+- During iteration run targeted tests; run the complete validation once the requested change is ready. Do not publish a new release for each small intermediate edit.
+- Do not claim a percentage or monetary saving without real usage measurements. Never trade away data-loss guards, accessibility or final validation to save tokens.

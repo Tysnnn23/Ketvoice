@@ -138,9 +138,10 @@ internal fun AlbumPage(request: CatalogRequest, page: CatalogPage?, tracks: List
                 LiquidGlassButton({ AppUi.closeOverlay() }, Modifier.size(48.dp)) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, "Retour", tint = theme.onBackground)
                 }
-                Text(title, localize = false, color = theme.onBackground, fontSize = 15.sp,
+                 Text(title, localize = false, color = theme.onBackground, fontSize = 15.sp,
                     fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f).padding(horizontal = 14.dp).graphicsLayer { alpha = collapse.value })
+                     modifier = Modifier.weight(1f).padding(horizontal = 14.dp).graphicsLayer { alpha = collapse.value })
+                if (collapse.value >= .98f && tracks.isNotEmpty()) CollectionQuickActions(tracks)
                 LiquidGlassButton({ ShareLinks.shareAlbum(context, request.id, title, artist) }, Modifier.size(48.dp)) {
                     Icon(Icons.Filled.Share, "Partager", tint = theme.onBackground, modifier = Modifier.size(21.dp))
                 }
@@ -209,33 +210,8 @@ private fun AlbumIdentity(title: String, artist: String, date: String?, tracks: 
             if (tracks.any { it.explicit }) EBadge()
             if (!loading) Text(listOfNotNull(date?.take(4), count, duration).joinToString("  ·  "),
                 localize = false, color = theme.secondary, fontSize = 13.sp)
-            val largeFont = LocalDensity.current.fontScale >= 1.2f
-            BoxWithConstraints(Modifier.padding(top = 12.dp, bottom = 8.dp).widthIn(max = 520.dp).fillMaxWidth()) {
-            FlowRow(Modifier.fillMaxWidth(), maxItemsInEachRow = if (largeFont && maxWidth < 340.dp) 1 else 2,
-                horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Row(Modifier.weight(1f).clip(RoundedCornerShape(18.dp))
-                    .background(theme.accent.copy(alpha = if (tracks.isEmpty()) .35f else 1f))
-                    .clickable(enabled = !loading && tracks.isNotEmpty(), role = Role.Button) { Player.setShuffle(false); Player.playQueue(tracks) }
-                    .heightIn(min = 52.dp).padding(horizontal = 12.dp, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Filled.PlayArrow, null, tint = foreground, modifier = Modifier.size(22.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text("Lecture", color = foreground, fontWeight = FontWeight.SemiBold, fontSize = 15.sp,
-                        maxLines = 1, overflow = TextOverflow.Ellipsis)
-                }
-                GlassPanel(Modifier.weight(1f), RoundedCornerShape(18.dp), GlassParams.pill(dark = theme.isDark), captured = true) {
-                    Row(Modifier.fillMaxWidth().clickable(enabled = !loading && tracks.isNotEmpty(), role = Role.Button) {
-                        Player.playQueue(tracks.shuffled()); Player.setShuffle(true)
-                    }.heightIn(min = 52.dp).padding(horizontal = 12.dp, vertical = 12.dp),
-                        horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Filled.Shuffle, null, tint = theme.accent, modifier = Modifier.size(20.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text("Aléatoire", color = theme.accent, fontWeight = FontWeight.SemiBold, fontSize = 15.sp,
-                            maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    }
-                }
-            }
-            }
+            CollectionPlaybackActions(tracks, Modifier.padding(top = 12.dp, bottom = 8.dp).widthIn(max = 520.dp).fillMaxWidth(),
+                enabled = !loading && tracks.isNotEmpty())
         }
     }
 }

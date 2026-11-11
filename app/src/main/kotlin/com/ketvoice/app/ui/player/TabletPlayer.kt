@@ -63,7 +63,8 @@ internal fun TabletPlayer(
                         Icon(Icons.Filled.KeyboardArrowDown, "Fermer le lecteur", tint = Color.White, modifier = Modifier.size(28.dp))
                     }
                     Text("Lecture en cours", color = Color.White.copy(alpha = .7f), fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 16.dp))
+                        fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 16.dp).weight(1f))
+                    PlayerPageSelector(page, onPage, Modifier.widthIn(max = 380.dp).weight(1.5f))
                 }
                 BoxWithConstraints(Modifier.weight(1f).widthIn(max = 1200.dp).fillMaxWidth()
                     .align(Alignment.CenterHorizontally).padding(bottom = 20.dp)) {

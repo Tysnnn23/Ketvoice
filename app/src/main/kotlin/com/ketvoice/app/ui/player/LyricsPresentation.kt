@@ -97,24 +97,5 @@ internal object LyricsPresentation {
         return now >= start && (end <= start || now < end)
     }
 
-    const val HOLD_THRESHOLD_MS = 820L
-    const val GLOW_ENTER_MS = 300L
-    const val GLOW_EXIT_MS = 375L
-
-    /** Audio-clock envelope: no light before 820 ms actually elapsed, never a wall-clock timer. */
-    fun sustain(now: Long, start: Long, end: Long, reduced: Boolean): Float {
-        if (reduced || end - start < HOLD_THRESHOLD_MS || now < start + HOLD_THRESHOLD_MS || now >= end + GLOW_EXIT_MS) return 0f
-        val enter = smooth(((minOf(now, end) - start - HOLD_THRESHOLD_MS).toFloat() / GLOW_ENTER_MS).coerceIn(0f, 1f))
-        val exit = 1f - smooth(((now - end).toFloat() / GLOW_EXIT_MS).coerceIn(0f, 1f))
-        return enter * exit
-    }
-
-    /** Diffusion grows with the elapsed sung hold (not the declared length or a static shadow). */
-    fun diffusion(now: Long, start: Long, end: Long): Float =
-        smooth(((minOf(now, end) - start - HOLD_THRESHOLD_MS).toFloat() / 2400f).coerceIn(0f, 1f))
-
-    fun breath(now: Long, start: Long): Float =
-        .97f + .03f * kotlin.math.sin((now - start).coerceAtLeast(0) * (2.0 * Math.PI / 2600.0)).toFloat()
-
-    private fun smooth(t: Float) = t * t * (3f - 2f * t)
+    const val LEAD_TAIL_MS = 425L
 }

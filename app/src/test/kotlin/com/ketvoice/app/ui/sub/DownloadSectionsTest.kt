@@ -38,4 +38,17 @@ class DownloadSectionsTest {
         assertEquals(listOf("b", "a"), sections.saved.map { it.track.id })
         assertEquals(listOf("c", "d"), sections.transfers.map { it.id })
     }
+
+    @Test fun filtersKeepPausedAndFailedWorkSeparateFromPlayableFiles() {
+        val phases = listOf(DownloadPhase.Paused, DownloadPhase.Failed, DownloadPhase.WaitingWifi, DownloadPhase.Transferring)
+        val active = phases.map { track(it.name) }
+        val tasks = phases.associate { it.name to DownloadTask(it) }
+        fun sections(filter: DownloadFilter) = downloadSections(listOf(item("saved")), active, tasks, "", filter)
+        assertEquals(1, sections(DownloadFilter.Offline).saved.size)
+        assertTrue(sections(DownloadFilter.Offline).transfers.isEmpty())
+        assertEquals(listOf("Paused"), sections(DownloadFilter.Paused).transfers.map { it.id })
+        assertEquals(listOf("Failed"), sections(DownloadFilter.Failed).transfers.map { it.id })
+        assertTrue(sections(DownloadFilter.Active).saved.isEmpty())
+        assertEquals(listOf("WaitingWifi", "Transferring"), sections(DownloadFilter.Active).transfers.map { it.id })
+    }
 }

@@ -30,17 +30,18 @@ import com.ketvoice.app.ui.common.Text
 import com.ketvoice.app.ui.motion.Motion
 
 @Composable
-internal fun ArtistIdentity(name: String, signature: ArtistSignature?) {
+internal fun ArtistIdentity(name: String, signature: ArtistSignature?, startAligned: Boolean = false) {
     val theme = LocalTheme.current
     val context = LocalContext.current
     var loaded by remember(signature?.url) { mutableStateOf(false) }
     val blend by animateFloatAsState(if (loaded) 1f else 0f, tween(Motion.duration(300)), label = "artist-signature")
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(Modifier.fillMaxWidth().heightIn(min = 112.dp), contentAlignment = Alignment.Center) {
+    Column(horizontalAlignment = if (startAligned) Alignment.Start else Alignment.CenterHorizontally) {
+        Box(Modifier.fillMaxWidth().heightIn(min = if (signature != null) 112.dp else 0.dp),
+            contentAlignment = if (startAligned) Alignment.CenterStart else Alignment.Center) {
             val titleSize = when { name.length > 40 -> 30; name.length > 24 -> 36; else -> 44 }
             Text(name, localize = false, color = theme.onBackground, fontSize = titleSize.sp,
                 lineHeight = (titleSize + 4).sp, fontWeight = FontWeight.Black, letterSpacing = (-1.0).sp,
-                textAlign = TextAlign.Center, maxLines = 3, overflow = TextOverflow.Ellipsis,
+                textAlign = if (startAligned) TextAlign.Start else TextAlign.Center, maxLines = 3, overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.fillMaxWidth().graphicsLayer { alpha = 1f - blend })
             if (signature != null) {
                 val request = remember(signature) {

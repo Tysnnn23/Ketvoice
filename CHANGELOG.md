@@ -7,6 +7,26 @@
 
 ---
 
+# Ketvoice 4.5.0
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 84** — unified glass navigation, clean karaoke and a library built
+around local listening, pinned playlists and offline albums.
+
+- Remove scaled and diffused word copies without removing karaoke progression.
+- Combine floating navigation/mini-player/search into one material enclosure;
+  pressure changes the reflection and surface, not the glyphs.
+- Anchor the phone player's identity and transport across explicit page choices.
+- Add compact scrolled playback actions and a shorter, clearer artist identity.
+- Add persistent playlist pins, local album grouping, library views and selection.
+- Add offline state filters, album presentation and confirmed batch deletion.
+- Lead Home with local Resume listening and pins, without extra feed requests.
+
+Full notes and honest host/device validation limits: [4.5.0](docs/releases/v4.5.0.md).
+
+---
+
 # Ketvoice 4.4.0
 
 ![Ketvoice](ketvoice-banner.png)

@@ -1068,7 +1068,17 @@
   "Disponibles hors ligne": "Available offline",
   "Transferts": "Transfers",
   "Aucun résultat": "No results",
-  "Essayez un autre titre ou artiste.": "Try another title or artist."
+  "Essayez un autre titre ou artiste.": "Try another title or artist.",
+  "Épinglés": "Pinned",
+  "Épingler": "Pin",
+  "Désépingler": "Unpin",
+  "Reprendre l'écoute": "Resume listening",
+  "Sélectionner": "Select",
+  "Tout": "All",
+  "Tout sélectionner": "Select all",
+  "Impossible de supprimer certains fichiers.": "Some files could not be deleted.",
+  "Aucun album": "No albums",
+  "Les titres sans album restent disponibles dans Titres.": "Songs without an album remain available under Songs."
  },
  "hi": {
   "Reverb": "रीवर्ब",
@@ -2139,7 +2149,17 @@
   "Disponibles hors ligne": "ऑफ़लाइन उपलब्ध",
   "Transferts": "स्थानांतरण",
   "Aucun résultat": "कोई परिणाम नहीं",
-  "Essayez un autre titre ou artiste.": "कोई दूसरा शीर्षक या कलाकार खोजें।"
+  "Essayez un autre titre ou artiste.": "कोई दूसरा शीर्षक या कलाकार खोजें।",
+  "Épinglés": "पिन किए गए",
+  "Épingler": "पिन करें",
+  "Désépingler": "पिन हटाएँ",
+  "Reprendre l'écoute": "सुनना जारी रखें",
+  "Sélectionner": "चुनें",
+  "Tout": "सभी",
+  "Tout sélectionner": "सभी चुनें",
+  "Impossible de supprimer certains fichiers.": "कुछ फ़ाइलें हटाई नहीं जा सकीं।",
+  "Aucun album": "कोई एल्बम नहीं",
+  "Les titres sans album restent disponibles dans Titres.": "बिना एल्बम वाले गाने, गाने अनुभाग में उपलब्ध रहते हैं।"
  },
  "ja": {
   "Reverb": "リバーブ",
@@ -3210,7 +3230,17 @@
   "Disponibles hors ligne": "オフラインで再生可能",
   "Transferts": "転送",
   "Aucun résultat": "結果がありません",
-  "Essayez un autre titre ou artiste.": "別の曲名やアーティストで検索してください。"
+  "Essayez un autre titre ou artiste.": "別の曲名やアーティストで検索してください。",
+  "Épinglés": "固定済み",
+  "Épingler": "固定する",
+  "Désépingler": "固定を解除",
+  "Reprendre l'écoute": "続きを聴く",
+  "Sélectionner": "選択",
+  "Tout": "すべて",
+  "Tout sélectionner": "すべて選択",
+  "Impossible de supprimer certains fichiers.": "削除できなかったファイルがあります。",
+  "Aucun album": "アルバムはありません",
+  "Les titres sans album restent disponibles dans Titres.": "アルバムのない曲は「曲」から引き続き利用できます。"
  },
  "zh": {
   "Reverb": "混响",
@@ -4281,7 +4311,17 @@
   "Disponibles hors ligne": "可离线播放",
   "Transferts": "传输",
   "Aucun résultat": "无搜索结果",
-  "Essayez un autre titre ou artiste.": "请尝试其他歌名或艺人。"
+  "Essayez un autre titre ou artiste.": "请尝试其他歌名或艺人。",
+  "Épinglés": "已置顶",
+  "Épingler": "置顶",
+  "Désépingler": "取消置顶",
+  "Reprendre l'écoute": "继续收听",
+  "Sélectionner": "选择",
+  "Tout": "全部",
+  "Tout sélectionner": "全选",
+  "Impossible de supprimer certains fichiers.": "部分文件无法删除。",
+  "Aucun album": "暂无专辑",
+  "Les titres sans album restent disponibles dans Titres.": "没有专辑信息的歌曲仍可在「歌曲」中找到。"
  },
  "ru": {
   "Reverb": "Реверберация",
@@ -5352,7 +5392,17 @@
   "Disponibles hors ligne": "Доступно офлайн",
   "Transferts": "Передачи",
   "Aucun résultat": "Нет результатов",
-  "Essayez un autre titre ou artiste.": "Попробуйте другое название или исполнителя."
+  "Essayez un autre titre ou artiste.": "Попробуйте другое название или исполнителя.",
+  "Épinglés": "Закреплённые",
+  "Épingler": "Закрепить",
+  "Désépingler": "Открепить",
+  "Reprendre l'écoute": "Продолжить прослушивание",
+  "Sélectionner": "Выбрать",
+  "Tout": "Все",
+  "Tout sélectionner": "Выбрать всё",
+  "Impossible de supprimer certains fichiers.": "Некоторые файлы не удалось удалить.",
+  "Aucun album": "Нет альбомов",
+  "Les titres sans album restent disponibles dans Titres.": "Треки без альбома остаются доступны в разделе «Треки»."
  },
  "it": {
   "Reverb": "Riverbero",
@@ -6423,7 +6473,17 @@
   "Disponibles hors ligne": "Disponibili offline",
   "Transferts": "Trasferimenti",
   "Aucun résultat": "Nessun risultato",
-  "Essayez un autre titre ou artiste.": "Prova un altro titolo o artista."
+  "Essayez un autre titre ou artiste.": "Prova un altro titolo o artista.",
+  "Épinglés": "Fissati",
+  "Épingler": "Fissa",
+  "Désépingler": "Rimuovi dai fissati",
+  "Reprendre l'écoute": "Riprendi l'ascolto",
+  "Sélectionner": "Seleziona",
+  "Tout": "Tutti",
+  "Tout sélectionner": "Seleziona tutto",
+  "Impossible de supprimer certains fichiers.": "Impossibile eliminare alcuni file.",
+  "Aucun album": "Nessun album",
+  "Les titres sans album restent disponibles dans Titres.": "I brani senza album restano disponibili in Brani."
  },
  "es": {
   "Reverb": "Reverb",
@@ -7494,7 +7554,17 @@
   "Disponibles hors ligne": "Disponibles sin conexión",
   "Transferts": "Transferencias",
   "Aucun résultat": "Sin resultados",
-  "Essayez un autre titre ou artiste.": "Prueba otro título o artista."
+  "Essayez un autre titre ou artiste.": "Prueba otro título o artista.",
+  "Épinglés": "Fijados",
+  "Épingler": "Fijar",
+  "Désépingler": "Desfijar",
+  "Reprendre l'écoute": "Continuar escuchando",
+  "Sélectionner": "Seleccionar",
+  "Tout": "Todo",
+  "Tout sélectionner": "Seleccionar todo",
+  "Impossible de supprimer certains fichiers.": "No se pudieron eliminar algunos archivos.",
+  "Aucun album": "No hay álbumes",
+  "Les titres sans album restent disponibles dans Titres.": "Las canciones sin álbum siguen disponibles en Canciones."
  },
  "de": {
   "Reverb": "Reverb",
@@ -8565,7 +8635,17 @@
   "Disponibles hors ligne": "Offline verfügbar",
   "Transferts": "Übertragungen",
   "Aucun résultat": "Keine Ergebnisse",
-  "Essayez un autre titre ou artiste.": "Versuche einen anderen Titel oder Künstler."
+  "Essayez un autre titre ou artiste.": "Versuche einen anderen Titel oder Künstler.",
+  "Épinglés": "Angeheftet",
+  "Épingler": "Anheften",
+  "Désépingler": "Lösen",
+  "Reprendre l'écoute": "Weiterhören",
+  "Sélectionner": "Auswählen",
+  "Tout": "Alle",
+  "Tout sélectionner": "Alle auswählen",
+  "Impossible de supprimer certains fichiers.": "Einige Dateien konnten nicht gelöscht werden.",
+  "Aucun album": "Keine Alben",
+  "Les titres sans album restent disponibles dans Titres.": "Titel ohne Album bleiben unter Titel verfügbar."
  },
  "pt": {
   "Reverb": "Reverb",
@@ -9636,7 +9716,17 @@
   "Disponibles hors ligne": "Disponíveis offline",
   "Transferts": "Transferências",
   "Aucun résultat": "Nenhum resultado",
-  "Essayez un autre titre ou artiste.": "Tente outro título ou artista."
+  "Essayez un autre titre ou artiste.": "Tente outro título ou artista.",
+  "Épinglés": "Fixados",
+  "Épingler": "Fixar",
+  "Désépingler": "Desafixar",
+  "Reprendre l'écoute": "Continuar ouvindo",
+  "Sélectionner": "Selecionar",
+  "Tout": "Tudo",
+  "Tout sélectionner": "Selecionar tudo",
+  "Impossible de supprimer certains fichiers.": "Não foi possível excluir alguns arquivos.",
+  "Aucun album": "Nenhum álbum",
+  "Les titres sans album restent disponibles dans Titres.": "As faixas sem álbum continuam disponíveis em Faixas."
  },
  "ko": {
   "Reverb": "리버브",
@@ -10707,6 +10797,16 @@
   "Disponibles hors ligne": "오프라인 재생 가능",
   "Transferts": "전송",
   "Aucun résultat": "검색 결과 없음",
-  "Essayez un autre titre ou artiste.": "다른 곡명이나 아티스트를 검색해 보세요."
+  "Essayez un autre titre ou artiste.": "다른 곡명이나 아티스트를 검색해 보세요.",
+  "Épinglés": "고정됨",
+  "Épingler": "고정",
+  "Désépingler": "고정 해제",
+  "Reprendre l'écoute": "이어서 듣기",
+  "Sélectionner": "선택",
+  "Tout": "전체",
+  "Tout sélectionner": "모두 선택",
+  "Impossible de supprimer certains fichiers.": "일부 파일을 삭제할 수 없습니다.",
+  "Aucun album": "앨범 없음",
+  "Les titres sans album restent disponibles dans Titres.": "앨범 정보가 없는 곡도 곡 목록에서 계속 이용할 수 있습니다."
  }
 }
