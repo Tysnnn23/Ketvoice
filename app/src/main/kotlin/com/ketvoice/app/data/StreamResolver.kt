@@ -62,6 +62,10 @@ internal object StreamResolver {
     internal fun shouldRace(race: Boolean, download: Boolean, selected: String?, available: List<String>): Boolean =
         race && (download || selected == null || selected !in available)
 
+    internal fun useCachedImmediately(progressive: Boolean, lossless: Boolean, online: Boolean,
+                                      hasLosslessSource: Boolean, cached: MusicApi.StreamInfo): Boolean =
+        progressive || !lossless || !online || !hasLosslessSource || StreamQuality.rank(cached) >= 10_000
+
     /** Stops as soon as every source answered, or after [windowMs], then ranks them. */
     suspend fun collectWithin(candidates: Flow<Candidate>, windowMs: Long): List<Candidate> = coroutineScope {
         val collected = mutableListOf<Candidate>()

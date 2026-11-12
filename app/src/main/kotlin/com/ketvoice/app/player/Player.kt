@@ -450,6 +450,9 @@ object Player {
             }
 
             val cached = AudioCache.complete(track.id, wantsLossless())
+            val waitForLossless = cached != null && !StreamResolver.useCachedImmediately(
+                AppSettings.progressiveQuality.value, wantsLossless(), hasInternet(),
+                SourcePriority.entries().any { it.enabled && (it.id == "api:last" || it.id.startsWith("cs:")) }, cached)
             fun start(stream: MusicApi.StreamInfo, position: Long = startPositionMs.coerceAtLeast(0), sourceId: String? = null) {
                 val latest = _state.value.current ?: resolvedTrack
                 activeStream = stream
@@ -458,7 +461,7 @@ object Player {
                 _state.value = _state.value.copy(quality = label(stream), isPlaying = c.isPlaying)
             }
             fun fallbackOffline(): Boolean {
-                if (!explicit) return false
+                if (!explicit && !waitForLossless) return false
                 if (local != null) {
                     startDownloaded(c, resolvedTrack, local, startPositionMs.coerceAtLeast(0), desiredPlay)
                     _state.value = _state.value.copy(quality = "Téléchargé · ${local.format}", audioSource = "Téléchargé", audioFallback = true)
@@ -471,7 +474,7 @@ object Player {
                 }
                 return false
             }
-            if (cached != null && !explicit && com.ketvoice.app.data.ImportedSong.id(resolvedTrack) == null) {
+            if (cached != null && !explicit && !waitForLossless && com.ketvoice.app.data.ImportedSong.id(resolvedTrack) == null) {
                 start(cached)
                 _state.value = _state.value.copy(quality = "En cache · ${label(cached)}", audioSource = "En cache")
                 return@launch
@@ -540,6 +543,7 @@ object Player {
             }
             val candidates = StreamResolver.candidates(resolvedTrack, download = false, lossless = wantsLossless(), race = progressive)
             if (StreamResolver.sources(resolvedTrack, download = false, lossless = wantsLossless()).isEmpty()) {
+                if (fallbackOffline()) return@launch
                 resolving = false
                 _state.value = _state.value.copy(isPlaying = false, playWhenReady = false, buffering = false,
                     quality = "Aucune source activée · ouvrez Sources", failed = true)

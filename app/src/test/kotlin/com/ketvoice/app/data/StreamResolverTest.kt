@@ -137,6 +137,16 @@ class StreamResolverTest {
         assertFalse(StreamResolver.shouldRace(false, false, null, available))
     }
 
+    @Test fun losslessPriorityDoesNotImmediatelyUseLossyCacheWhileOnline() {
+        val mp3 = stream("https://a/MP3")
+        val flac = stream("https://a/FLAC", "flac", "lossless")
+        assertFalse(StreamResolver.useCachedImmediately(false, true, true, true, mp3))
+        assertTrue(StreamResolver.useCachedImmediately(true, true, true, true, mp3))
+        assertTrue(StreamResolver.useCachedImmediately(false, true, false, true, mp3))
+        assertTrue(StreamResolver.useCachedImmediately(false, true, true, false, mp3))
+        assertTrue(StreamResolver.useCachedImmediately(false, true, true, true, flac))
+    }
+
     @Test fun explicitYoutubeChoiceMovesThatEnabledSourceAheadOfSavedOrder() {
         val oldOrder = SourcePriority.playbackOrder.value
         val oldDisabled = SourcePriority.playbackDisabled.value
