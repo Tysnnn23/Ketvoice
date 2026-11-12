@@ -182,17 +182,26 @@ fun SettingsScreen() {
 
             // ==================================================== LANGUE
             Section("LANGUE DE L'APPLICATION") {
+                val systemId = "system"
                 val currentLanguage = AppLanguage.fromLabel(AppSettings.language.value)
+                val followingSystem = !AppSettings.languageChosen.value
                 SRow(
                     KetIcons.Globe, "Langue de l'application",
-                    sub = "Traduit toute l'interface, pas seulement les réglages",
-                    value = currentLanguage.nativeName
+                    sub = "Suit la langue du téléphone tant que tu n'en choisis pas une",
+                    value = if (followingSystem) "Système · ${currentLanguage.nativeName}"
+                    else currentLanguage.nativeName
                 ) {
                     choice = ChoiceSpec(
                         "Langue de l'application",
                         "Choisissez la langue de tous les écrans de Ketvoice.",
-                        currentLanguage.label,
-                        AppLanguage.all.map { language ->
+                        if (followingSystem) systemId else currentLanguage.label,
+                        listOf(
+                            ChoiceOption(
+                                systemId,
+                                "Langue du système",
+                                "Suit le téléphone · ${com.ketvoice.app.data.AppLocales.systemLanguage().nativeName}"
+                            )
+                        ) + AppLanguage.all.map { language ->
                             ChoiceOption(
                                 language.label,
                                 language.nativeName,
@@ -201,10 +210,19 @@ fun SettingsScreen() {
                             )
                         }
                     ) { id ->
-                        AppSettings.languageChosen.value = true
-                        AppSettings.language.value = id
+                        if (id == systemId) {
+                            AppSettings.languageChosen.value = false
+                            AppSettings.language.value =
+                                com.ketvoice.app.data.AppLocales.systemLanguage().label
+                        } else {
+                            AppSettings.languageChosen.value = true
+                            AppSettings.language.value = id
+                        }
                         SettingsStore.save()
-                        com.ketvoice.app.data.AppLocales.apply(ctx, AppLanguage.fromLabel(id))
+                        com.ketvoice.app.data.AppLocales.apply(
+                            ctx,
+                            if (AppSettings.languageChosen.value) AppLanguage.fromLabel(id) else null
+                        )
                     }
                 }
             }

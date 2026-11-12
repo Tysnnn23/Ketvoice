@@ -91,6 +91,7 @@ interface DiscordController {
     fun completeAuthorization(uri: android.net.Uri?)
     fun onForeground()
     fun unlink()
+    fun authenticated(): Boolean
     fun setPresence(payload: DiscordPresencePayload)
     fun clearPresence()
 }
@@ -124,6 +125,7 @@ object Discord {
     fun completeAuthorization(uri: android.net.Uri?) = controller?.completeAuthorization(uri)
     fun onForeground() = controller?.onForeground()
     fun unlink() = controller?.unlink()
+    fun authenticated(): Boolean = controller?.authenticated() == true
     fun setPresence(payload: DiscordPresencePayload) = controller?.setPresence(payload)
     fun clearPresence() = controller?.clearPresence()
 }

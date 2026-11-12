@@ -25,6 +25,11 @@ class DiscordAuthActivity : Activity() {
     private lateinit var web: WebView
     private lateinit var status: TextView
     private var authorizeUrl = ""
+    private var completed = false
+
+    override fun attachBaseContext(newBase: android.content.Context) {
+        super.attachBaseContext(com.ketvoice.app.data.AppLocales.wrap(newBase))
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -61,6 +66,13 @@ class DiscordAuthActivity : Activity() {
                 }
             }
         }
+        val terminate = TextView(this).apply {
+            text = "Terminer"
+            setTextColor(Color.WHITE)
+            textSize = 13f
+            setPadding(dp(10), dp(10), dp(10), dp(10))
+            setOnClickListener { recoverFromPage() }
+        }
         val close = Button(this).apply {
             text = "✕"
             setBackgroundColor(Color.TRANSPARENT)
@@ -70,6 +82,7 @@ class DiscordAuthActivity : Activity() {
         }
         bar.addView(title, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         bar.addView(browser, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(44)))
+        bar.addView(terminate, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(44)))
         bar.addView(close, LinearLayout.LayoutParams(dp(48), dp(44)))
 
         status = TextView(this).apply {
@@ -93,11 +106,23 @@ class DiscordAuthActivity : Activity() {
                     request: WebResourceRequest
                 ): Boolean = handle(request.url)
 
+                // Some WebViews do not call shouldOverrideUrlLoading for a
+                // JavaScript custom-scheme navigation. The bridge page carries
+                // code/state in its own URL, so read it once the page loads.
+                override fun onPageFinished(view: WebView, url: String?) {
+                    if (!url.isNullOrBlank()) handle(Uri.parse(url))
+                }
+
+                override fun doUpdateVisitedHistory(view: WebView, url: String?, isReload: Boolean) {
+                    if (!url.isNullOrBlank()) handle(Uri.parse(url))
+                }
+
                 override fun onReceivedError(
                     view: WebView,
                     request: WebResourceRequest,
                     error: WebResourceError
                 ) {
+                    if (request.isForMainFrame && handle(request.url)) return
                     if (request.isForMainFrame) fail(error.description?.toString().orEmpty())
                 }
             }
@@ -118,11 +143,13 @@ class DiscordAuthActivity : Activity() {
     }
 
     private fun handle(uri: Uri): Boolean {
+        if (completed) return true
         val url = uri.toString()
         val isBridge = url.startsWith(DiscordOAuth.REDIRECT_URI) &&
             (uri.getQueryParameter("code") != null || uri.getQueryParameter("error") != null)
         if (isBridge || url.startsWith("discord-${DiscordOAuth.APPLICATION_ID}") ||
             url.startsWith("ketvoice://discord")) {
+            completed = true
             Discord.completeAuthorization(uri)
             finish()
             return true
@@ -133,6 +160,13 @@ class DiscordAuthActivity : Activity() {
             return true
         }
         return false
+    }
+
+    /** The user can finish manually when a redirect was blocked by the WebView. */
+    private fun recoverFromPage() {
+        val current = if (::web.isInitialized) web.url else null
+        if (!current.isNullOrBlank() && handle(Uri.parse(current))) return
+        status.text = "Aucun code Discord reçu. Reviens dans Ketvoice et relance la liaison."
     }
 
     private fun fail(message: String) {

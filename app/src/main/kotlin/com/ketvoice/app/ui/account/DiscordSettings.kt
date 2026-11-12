@@ -96,9 +96,10 @@ internal fun DiscordSettings(modifier: Modifier = Modifier) {
                 Text(
                     when {
                         !Discord.available -> "Indisponible dans cette version"
+                        discord.busy && discord.linked -> "Compte lié · connexion de la présence…"
                         discord.busy -> "En attente de l'app Discord…"
-                        discord.ready -> discord.userName ?: "Présence connectée"
-                        discord.linked -> discord.userName ?: "Compte lié"
+                        discord.ready -> discord.userName ?: "Présence active"
+                        discord.linked -> "Compte lié · présence inactive"
                         else -> "Affiche le morceau en cours sur ton profil"
                     },
                     color = theme.secondary, fontSize = 12.sp, lineHeight = 16.sp
@@ -106,7 +107,8 @@ internal fun DiscordSettings(modifier: Modifier = Modifier) {
             }
             when {
                 discord.busy -> CircularProgressIndicator(Modifier.size(18.dp), color = theme.accent, strokeWidth = 2.dp)
-                discord.ready || discord.linked -> Box(Modifier.size(9.dp).clip(CircleShape).background(Color(0xFF34C759)))
+                discord.ready -> Box(Modifier.size(9.dp).clip(CircleShape).background(Color(0xFF34C759)))
+                discord.linked -> Box(Modifier.size(9.dp).clip(CircleShape).background(Color(0xFFFFB020)))
                 else -> Box(Modifier.size(9.dp).clip(CircleShape).background(theme.secondary.copy(alpha = .45f)))
             }
         }
@@ -129,6 +131,19 @@ internal fun DiscordSettings(modifier: Modifier = Modifier) {
             }
             Text("Déconnecter Discord", color = theme.accent, fontSize = 13.sp,
                 modifier = Modifier.fillMaxWidth().clickable { Discord.unlink() }.padding(top = 8.dp, bottom = 2.dp))
+            if (!discord.ready) {
+                Text(
+                    if (discord.busy) "La présence s'active dès que Discord répond."
+                    else "La présence n'est pas active : ouvre l'app Discord, vérifie que tu y es " +
+                        "connecté, puis réessaie.",
+                    color = theme.secondary, fontSize = 11.sp, lineHeight = 15.sp,
+                    modifier = Modifier.padding(top = 2.dp, bottom = 2.dp)
+                )
+                Text("Vérifier la présence maintenant", color = theme.accent.copy(alpha = .82f), fontSize = 12.sp,
+                    modifier = Modifier.fillMaxWidth().clickable(enabled = !discord.busy) {
+                        Discord.onForeground()
+                    }.padding(bottom = 4.dp))
+            }
             Text("Rouvrir la connexion Discord", color = theme.accent.copy(alpha = .82f), fontSize = 12.sp,
                 modifier = Modifier.fillMaxWidth().clickable(enabled = !discord.busy) {
                     connectInWebView()
@@ -198,6 +213,7 @@ internal fun DiscordSettings(modifier: Modifier = Modifier) {
                 val report = buildString {
                     appendLine("Ketvoice · Discord")
                     appendLine("lié=" + discord.linked + " prêt=" + discord.ready + " occupé=" + discord.busy)
+                    appendLine("authentifié=" + Discord.authenticated())
                     appendLine("utilisateur=" + (discord.userName ?: "-"))
                     appendLine("erreur=" + (discord.error ?: "-"))
                     appendLine("journal=" + (discord.log ?: "-"))

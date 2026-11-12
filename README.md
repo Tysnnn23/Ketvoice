@@ -21,6 +21,19 @@
 
 ## Overview
 
+### 4.8.1 — device language and Discord recovery
+
+Ketvoice now starts in the phone's language when it is one of the eleven supported
+languages, and Settings offers a System language entry to return to that behaviour.
+Discord linking no longer stays on "waiting for the Discord app": the connection has
+a deadline, retries with backoff, shows the account and the presence separately, reads
+the authorization code from the bridge page itself and publishes presence as
+Listening. A real owner-session Discord check and physical-device validation remain
+open.
+[Mobile](https://github.com/Tysnnn23/Ketvoice/releases/download/v4.8.1/Ketvoice-4.8.1.apk)
+· [Quest](https://github.com/Tysnnn23/Ketvoice/releases/download/v4.8.1/Ketvoice-4.8.1-Quest.apk)
+· [Release notes and validation limits](docs/releases/v4.8.1.md).
+
 ### 4.8.0 — playback recovery and personal library
 
 Resume a saved queue and position without automatic playback, receive search results
@@ -168,9 +181,9 @@ controls. This update is versionCode 28 for mobile and Quest. Download the
 or [Quest APK](https://github.com/Tysnnn23/Ketvoice/releases/download/v3.0.3/Ketvoice-3.0.3-Quest.apk).
 See the [3.0.3 release notes](docs/releases/v3.0.3.md) for validation limits.
 
-Ketvoice is an independent Android music client whose visual language is inspired by Apple Music and iOS 26. French is the default interface language; Settings offers 11 languages across the app. It is not affiliated with Apple, YouTube, Spotify or any music provider.
+Ketvoice is an independent Android music client whose visual language is inspired by Apple Music and iOS 26. On first launch the interface follows the device language when it is one of the eleven supported languages (otherwise English); Settings offers those languages plus an explicit System language entry. It is not affiliated with Apple, YouTube, Spotify or any music provider.
 
-The latest release is **4.8.0** (`versionCode` 89) for **mobile/tablet** (Android 12+, target SDK 36) and **Quest 3/3S** (minimum SDK 32, target SDK 34, landscape-only 2D window). It adds paused session restoration, progressive multi-source search, explicit provider choices, lyric timing adjustment and personal backup preview. Ordered and progressive playback modes now follow their settings. Existing glass, navigation, clean karaoke, Canvas, playlists and optional Bit-Perfect remain. Offline DASH is restricted to explicitly authorized unprotected supported streams; the current Lossless manifest does not declare permission. Eleven interface languages remain available. Discord support is included, but physical phone/Quest playback, real Discord authorization and USB bit-exact output have not been validated; see the release metadata. Group listening remains deferred.
+The latest release is **4.8.1** (`versionCode` 90) for **mobile/tablet** (Android 12+, target SDK 36) and **Quest 3/3S** (minimum SDK 32, target SDK 34, landscape-only 2D window). It starts in the device language and fixes the stuck Discord "waiting for the Discord app" state with a bounded connection, retries, separate account/presence status and Listening presence. All 4.8.0 session restoration, progressive search, provider choices, lyric timing and personal backup behaviour remains. Existing glass, navigation, clean karaoke, Canvas, playlists and optional Bit-Perfect remain. Offline DASH is restricted to explicitly authorized unprotected supported streams; the current Lossless manifest does not declare permission. Eleven interface languages remain available. Discord support is included, but physical phone/Quest playback, the real Discord authorization round-trip and USB bit-exact output have not been validated; see the release metadata. Group listening remains deferred.
 
 Music-source search, stream resolution, Spotify Canvas, and published-content lookup go through two Supabase Edge Functions: **Ketvoice API** for sources/Canvas and **Ketvoice Content** for public publications. The APK contains only the project’s public Supabase `anon` key and function URLs. Spotify and source credentials remain in Supabase Vault and are never shipped with the app.
 
@@ -182,7 +195,7 @@ Music-source search, stream resolution, Spotify Canvas, and published-content lo
 
 - **Landscape only, with the mobile style**: original artwork/Canvas, icon controls, Liquid Glass, floating navigation, and lyric animations. In lyrics/queue mode, artwork, title, artist, and transport stay on the left; lyrics or queue fill the right. No giant text-button dashboard, tablet rail, or portrait-phone frame.
 - Pointer hover light on interactive controls, optional lyric sizing, foreground keep-awake, and the sleep timer in the ordinary track ⋯ menu.
-- Download **[Ketvoice-4.8.0-Quest.apk](https://github.com/Tysnnn23/Ketvoice/releases/download/v4.8.0/Ketvoice-4.8.0-Quest.apk)** and follow [Quest installation instructions](docs/QUEST.md). Headset-targeted manifest and arm64 support are included; physical Quest hardware validation is still required. This is a 2D app window, not an immersive VR environment. The same-version **[mobile/tablet 4.8.0 APK](https://github.com/Tysnnn23/Ketvoice/releases/download/v4.8.0/Ketvoice-4.8.0.apk)** is available in the same release.
+- Download **[Ketvoice-4.8.1-Quest.apk](https://github.com/Tysnnn23/Ketvoice/releases/download/v4.8.1/Ketvoice-4.8.1-Quest.apk)** and follow [Quest installation instructions](docs/QUEST.md). Headset-targeted manifest and arm64 support are included; physical Quest hardware validation is still required. This is a 2D app window, not an immersive VR environment. The same-version **[mobile/tablet 4.8.1 APK](https://github.com/Tysnnn23/Ketvoice/releases/download/v4.8.1/Ketvoice-4.8.1.apk)** is available in the same release.
 
 ### Interface
 

@@ -2,8 +2,26 @@
 
 <p align="center">
   <strong>Every public version, explained as a before → after story.</strong><br>
-  Eleven interface languages, French by default. These release notes are in English.
+  Eleven interface languages, following the device language on first launch. These release notes are in English.
 </p>
+
+---
+
+# Ketvoice 4.8.1
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 90** — the device language is now the default, and Discord linking
+no longer stays stuck on "waiting for the Discord app".
+
+- Start in the phone's language (Spanish, German, Portuguese, …) instead of French, with an explicit **System language** entry in Settings.
+- Clear a previously pinned per-app locale so a later system-language change is picked up.
+- End the endless Discord "waiting" state with a bounded connection deadline and visible account-vs-presence status.
+- Retry the Discord presence connection with backoff and re-send the current track once the SDK is ready.
+- Recover the OAuth code from the WebView page itself and publish presence as **Listening** rather than Playing.
+- Initialise the Discord SDK context when the callback activity cold-starts the app.
+
+Full notes and validation limits: [4.8.1](docs/releases/v4.8.1.md).
 
 ---
 

@@ -58,6 +58,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
+        runCatching { com.ketvoice.app.data.AppLocales.sync(this) }
         runCatching { com.ketvoice.app.data.SettingsStore.load(this) }
             .onFailure { android.util.Log.e("KetvoiceSettings", "Could not restore settings", it) }
         runCatching { com.ketvoice.app.data.YouTubeMusicSession.init(this) }

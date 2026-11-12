@@ -110,7 +110,7 @@ fun AppRoot() {
         val discord by com.ketvoice.app.discord.Discord.state.collectAsState()
         LaunchedEffect(
             playerState.current?.id, playerState.isPlaying, playerState.playWhenReady,
-            discord.linked, com.ketvoice.app.data.AppSettings.discordPresence.value
+            discord.linked, discord.ready, com.ketvoice.app.data.AppSettings.discordPresence.value
         ) {
             val track = playerState.current
             val enabled = com.ketvoice.app.data.AppSettings.discordPresence.value

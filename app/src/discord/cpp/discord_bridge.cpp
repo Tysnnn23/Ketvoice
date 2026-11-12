@@ -186,7 +186,8 @@ void RequestAuthorization(const std::string &scopes) {
 void ApplyPresence(discordpp::Client *client, const std::vector<std::string> &fields,
                    jlong startEpochMs) {
   discordpp::Activity activity;
-  activity.SetType(discordpp::ActivityTypes::Playing);
+  // A music app should surface as "Listening to ..." instead of "Playing ...".
+  activity.SetType(discordpp::ActivityTypes::Listening);
   if (fields.size() > 0 && !fields[0].empty()) activity.SetDetails(fields[0]);
   if (fields.size() > 1 && !fields[1].empty()) activity.SetState(fields[1]);
 

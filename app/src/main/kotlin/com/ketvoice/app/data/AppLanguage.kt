@@ -29,8 +29,8 @@ enum class AppLanguage(
         }
 
         /** System UI language when Ketvoice supports it, otherwise English. */
-        fun systemDefault(): AppLanguage =
-            fromCode(java.util.Locale.getDefault().language) ?: ENGLISH
+        fun systemDefault(locale: java.util.Locale = java.util.Locale.getDefault()): AppLanguage =
+            fromCode(locale.language) ?: ENGLISH
 
         fun fromLabel(label: String?): AppLanguage {
             val value = label?.trim().orEmpty()

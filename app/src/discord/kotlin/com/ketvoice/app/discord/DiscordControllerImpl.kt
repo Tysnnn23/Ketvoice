@@ -32,6 +32,8 @@ class DiscordControllerImpl : DiscordController {
     private var expectedState = ""
 
     private val main = Handler(Looper.getMainLooper())
+    @Volatile private var retries = 0
+
     private val timeout = Runnable {
         if (awaitingCode) {
             clearPending()
@@ -51,6 +53,48 @@ class DiscordControllerImpl : DiscordController {
                 )
             }
         }
+    }
+
+    /**
+     * A linked account whose SDK connection never reaches Ready used to keep
+     * `busy` true with no deadline, which is the endless "waiting for the Discord
+     * app" state. This deadline turns it into an explicit, retryable state.
+     */
+    private val presenceTimeout = Runnable {
+        if (!linked || ready) return@Runnable
+        Discord.update {
+            it.copy(
+                busy = false,
+                error = "Compte lié, mais la présence Discord n'est pas active. " +
+                    "Ouvre l'app Discord, vérifie que tu y es connecté, puis réessaie."
+            )
+        }
+        scheduleReconnect()
+    }
+
+    private val reconnect = Runnable {
+        if (!linked || ready || activity == null) return@Runnable
+        NativeDiscord.nativeConnect()
+        armPresenceTimeout()
+    }
+
+    private fun armPresenceTimeout() {
+        main.removeCallbacks(presenceTimeout)
+        main.postDelayed(presenceTimeout, READY_TIMEOUT_MS)
+    }
+
+    /** Backs off quickly, then stops instead of draining the battery. */
+    private fun scheduleReconnect() {
+        main.removeCallbacks(reconnect)
+        if (!linked || ready) return
+        val delay = when (retries) {
+            0 -> 15_000L
+            1 -> 45_000L
+            2 -> 90_000L
+            else -> return
+        }
+        retries++
+        main.postDelayed(reconnect, delay)
     }
 
     private val tokens: DiscordTokenStore? by lazy {
@@ -82,11 +126,13 @@ class DiscordControllerImpl : DiscordController {
             restoring = true
             restoringAccess = true
             pendingAccess = null // already persisted; do not overwrite it
-            Discord.update { it.copy(linked = true, busy = true, error = null) }
+            retries = 0
+            Discord.update { it.copy(linked = true, busy = true, ready = false, error = null) }
             main.removeCallbacks(timeout)
-            main.postDelayed(timeout, CONNECT_TIMEOUT_MS)
+            armPresenceTimeout()
             if (!NativeDiscord.nativeSetToken(access)) {
                 restoringAccess = false
+                main.removeCallbacks(presenceTimeout)
                 Discord.update { it.copy(busy = false, error = "Discord indisponible") }
             }
             return
@@ -99,9 +145,12 @@ class DiscordControllerImpl : DiscordController {
         }
         linked = true
         restoring = true
-        Discord.update { it.copy(linked = true, busy = true, error = null) }
+        retries = 0
+        Discord.update { it.copy(linked = true, busy = true, ready = false, error = null) }
+        armPresenceTimeout()
         if (!NativeDiscord.nativeRestore(stored)) {
             restoring = false
+            main.removeCallbacks(presenceTimeout)
             Discord.update { it.copy(busy = false, error = "Discord indisponible") }
         }
     }
@@ -124,8 +173,9 @@ class DiscordControllerImpl : DiscordController {
             return
         }
         Discord.update { it.copy(busy = true, error = null) }
+        retries = 0
         main.removeCallbacks(timeout)
-        main.postDelayed(timeout, CONNECT_TIMEOUT_MS)
+        armPresenceTimeout()
         NativeDiscord.nativeConnect()
     }
 
@@ -144,11 +194,13 @@ class DiscordControllerImpl : DiscordController {
         }
         pendingAccess = value
         restoringAccess = false
+        retries = 0
         Discord.update { it.copy(busy = true, error = null) }
         main.removeCallbacks(timeout)
-        main.postDelayed(timeout, CONNECT_TIMEOUT_MS)
+        armPresenceTimeout()
         if (!NativeDiscord.nativeSetToken(value)) {
             pendingAccess = null
+            main.removeCallbacks(presenceTimeout)
             Discord.update { it.copy(busy = false, error = "Discord indisponible") }
         }
     }
@@ -172,9 +224,12 @@ class DiscordControllerImpl : DiscordController {
         verifier = DiscordOAuth.newVerifier()
         expectedState = DiscordOAuth.newState()
         awaitingCode = true
+        retries = 0
         // Survives a process restart while the browser/WebView is in front.
         pendingOAuth?.save(expectedState, verifier)
         Discord.update { it.copy(busy = true, error = null) }
+        main.removeCallbacks(presenceTimeout)
+        main.removeCallbacks(reconnect)
         main.removeCallbacks(timeout)
         main.postDelayed(timeout, TIMEOUT_MS)
         openAuthorization(host, DiscordOAuth.authorizeUrl(expectedState, DiscordOAuth.challenge(verifier)))
@@ -197,6 +252,7 @@ class DiscordControllerImpl : DiscordController {
         if (code.isNullOrBlank()) {
             clearPending()
             pendingOAuth?.clear()
+            main.removeCallbacks(presenceTimeout)
             Discord.update { it.copy(busy = false, error = "Réponse Discord invalide. Réessaie.") }
             return
         }
@@ -212,24 +268,33 @@ class DiscordControllerImpl : DiscordController {
                 if (tokens != null) {
                     linked = true
                     restoring = false
+                    retries = 0
                     pendingAccess = tokens.access
                     runCatching { this.tokens?.save(tokens.refresh) }
                     runCatching { this.tokens?.saveAccess(tokens.access) }
                     com.ketvoice.app.data.AppSettings.discordPresence.value = true
                     com.ketvoice.app.data.SettingsStore.save()
                     main.removeCallbacks(timeout)
-                    Discord.update { it.copy(linked = true, busy = true, error = null) }
+                    Discord.update { it.copy(linked = true, busy = true, ready = false, error = null) }
+                    // The token exchange is ours, so the SDK can still refuse the
+                    // connection silently. Never leave `busy` without a deadline.
+                    armPresenceTimeout()
                     if (!runCatching { NativeDiscord.nativeSetToken(tokens.access) }.getOrDefault(false)) {
                         // The account is linked even when the SDK cannot start here.
-                        Discord.update { it.copy(linked = true, busy = false,
+                        main.removeCallbacks(presenceTimeout)
+                        Discord.update { it.copy(linked = true, busy = false, ready = false,
                             error = "Compte lié. Ouvre l'app Discord pour publier l'écoute.") }
                     }
                 } else if (!runCatching {
                         NativeDiscord.nativeExchange(code, pendingVerifier, DiscordOAuth.REDIRECT_URI)
                     }.getOrDefault(false)) {
                     main.removeCallbacks(timeout)
+                    main.removeCallbacks(presenceTimeout)
                     Discord.update { it.copy(busy = false,
                         error = "Échec de l'échange du jeton Discord. Vérifie le redirect et le mode client public.") }
+                } else {
+                    // The SDK owns the exchange now; keep a deadline too.
+                    armPresenceTimeout()
                 }
             }
         }, "discord-token-exchange").start()
@@ -240,6 +305,12 @@ class DiscordControllerImpl : DiscordController {
         if (awaitingCode) {
             main.removeCallbacks(timeout)
             main.postDelayed(timeout, RETURN_CANCEL_MS)
+            return
+        }
+        // A stored token restored in the background may never have connected.
+        if (linked && !ready && !Discord.state.value.busy) {
+            retries = 0
+            connect()
         }
     }
 
@@ -247,6 +318,9 @@ class DiscordControllerImpl : DiscordController {
         clearPending()
         linked = false
         ready = false
+        retries = 0
+        main.removeCallbacks(presenceTimeout)
+        main.removeCallbacks(reconnect)
         tokens?.clear()
         com.ketvoice.app.data.AppSettings.discordPresence.value = false
         com.ketvoice.app.data.SettingsStore.save()
@@ -256,6 +330,9 @@ class DiscordControllerImpl : DiscordController {
         }
         Discord.update { DiscordState(available = true) }
     }
+
+    override fun authenticated(): Boolean =
+        runCatching { NativeDiscord.nativeIsAuthenticated() }.getOrDefault(false)
 
     override fun setPresence(payload: DiscordPresencePayload) {
         if (!linked) return
@@ -321,12 +398,16 @@ class DiscordControllerImpl : DiscordController {
     }
 
     private fun handleStatus(status: Int) {
+        val wasReady = ready
         ready = status == STATUS_READY
         if (ready) {
             // Unauthenticated presence through the local Discord app still reaches
             // the user's profile; there is no token to store in that mode.
             linked = true
+            retries = 0
             main.removeCallbacks(timeout)
+            main.removeCallbacks(presenceTimeout)
+            main.removeCallbacks(reconnect)
             if (tokens?.load().isNullOrBlank()) {
                 // Presence-only mode is an explicit action: remember the opt-in.
                 com.ketvoice.app.data.AppSettings.discordPresence.value = true
@@ -339,6 +420,7 @@ class DiscordControllerImpl : DiscordController {
         }
         if (status == STATUS_DISCONNECTED && Discord.state.value.busy && tokens?.load().isNullOrBlank()) {
             main.removeCallbacks(timeout)
+            main.removeCallbacks(presenceTimeout)
             Discord.update {
                 it.copy(
                     busy = false,
@@ -348,7 +430,14 @@ class DiscordControllerImpl : DiscordController {
             }
             return
         }
-        Discord.update { it.copy(ready = ready) }
+        if (wasReady && linked) {
+            // A ready presence that drops must retry instead of freezing the UI.
+            Discord.update { it.copy(ready = false, busy = true) }
+            armPresenceTimeout()
+            scheduleReconnect()
+        } else {
+            Discord.update { it.copy(ready = false) }
+        }
     }
 
     private fun handleAuth(ok: Boolean, message: String, refreshToken: String) {
@@ -364,6 +453,7 @@ class DiscordControllerImpl : DiscordController {
             pendingAccess = null
             if (!restoring) linked = false
             restoring = false
+            main.removeCallbacks(presenceTimeout)
             Discord.update { it.copy(linked = linked, busy = false, error = friendly(message)) }
             if (droppedStored) connect()
             return
@@ -371,14 +461,17 @@ class DiscordControllerImpl : DiscordController {
         restoring = false
         restoringAccess = false
         linked = true
+        retries = 0
         pendingAccess?.let { tokens?.saveAccess(it) }
         pendingAccess = null
         if (refreshToken.isNotBlank()) tokens?.save(refreshToken)
         // Linking is an explicit opt-in for presence: the user just granted it.
         com.ketvoice.app.data.AppSettings.discordPresence.value = true
         com.ketvoice.app.data.SettingsStore.save()
+        // Authentication succeeded, but presence only works once status is Ready.
+        armPresenceTimeout()
         NativeDiscord.nativeConnect()
-        Discord.update { it.copy(linked = true, busy = false, error = null) }
+        Discord.update { it.copy(linked = true, busy = true, ready = false, error = null) }
     }
 
     private fun handleLog(message: String) {
@@ -414,7 +507,7 @@ class DiscordControllerImpl : DiscordController {
         private const val STATUS_READY = 3
         private const val TIMEOUT_MS = 180_000L
         private const val RETURN_CANCEL_MS = 8_000L
-        private const val CONNECT_TIMEOUT_MS = 12_000L
+        private const val READY_TIMEOUT_MS = 25_000L
 
         @Volatile
         private var instance: DiscordControllerImpl? = null

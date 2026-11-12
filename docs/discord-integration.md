@@ -34,8 +34,10 @@ Account linking remains an optional action:
 3. Discord redirects to `discord-1566454532890820668:/authorize/callback`. The
    WebView intercepts that URL before Android has to resolve it, so the browser
    and Discord app hand-off that silently dropped the code are no longer involved.
+   The bridge page is also read from the WebView's own URL once it loads, and a
+   **Terminer** action recovers the code when a custom-scheme navigation was blocked.
    A `ketvoice://discord?...` bridge and the exported callback activity remain as
-   fallbacks.
+   fallbacks; the callback activity initialises the SDK engine context first.
 4. Ketvoice checks the scheme, path and `state`, then passes the code, verifier and
    redirect URI to the SDK (`Client::GetToken` → `Client::UpdateToken`).
 5. The access token lasts seven days; the non-expiring refresh token is stored
@@ -47,12 +49,28 @@ Account linking remains an optional action:
    rest. The Discord app is tried first (it reuses the signed-in session and
    delivers the redirect as an intent); the browser is the fallback.
 
+## Connection state
+
+Linking and presence are reported separately:
+
+- **Linked** means a token was obtained. It does not prove that the SDK accepted it
+  or that Discord is receiving the activity.
+- **Ready** is the only state in which `UpdateRichPresence` is sent. A linked account
+  that never becomes ready shows an amber indicator and "Compte lié · présence
+  inactive" instead of a green dot.
+- The connection has a 25-second deadline. If it is missed, the panel reports the
+  failure and retries with backoff (15 s, 45 s, 90 s) instead of spinning forever.
+  Returning to the foreground retries immediately, and the current track is re-sent
+  as soon as the SDK becomes ready.
+- The diagnostic panel exposes linked/ready/busy, whether the SDK reports the session
+  as authenticated, the last SDK log line and the redirect/scope values.
+
 ## Presence
 
 Only while the user has enabled **Show what I'm listening to** *and* a track is
 actually playing:
 
-- `type = Playing`, `details` = track title, `state` = artist (both clamped to
+- `type = Listening`, `details` = track title, `state` = artist (both clamped to
   Discord's 128-character limit).
 - Large image = HTTPS cover URL when it is at most 300 characters.
 - `timestamps.start` = now − playback position, so Discord counts up correctly.
@@ -87,3 +105,8 @@ hidden and no presence code is compiled (bridge: `app/src/discord/`).
   two buttons were not observed. Do not describe them as device-tested until an
   owner-session check is performed with a second Discord account (Discord does not
   show your own presence buttons to you).
+- 4.8.1 removes the unbounded "waiting for the Discord app" state reported on a real
+  phone, adds explicit account/presence states and retries, and recovers the code
+  from the bridge page. The next owner-session test should confirm that the account
+  reaches Ready and that the activity appears on another Discord client; the
+  diagnostic panel is the supported way to capture a failure.

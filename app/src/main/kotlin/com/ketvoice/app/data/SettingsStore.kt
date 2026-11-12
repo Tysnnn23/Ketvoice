@@ -115,8 +115,8 @@ object SettingsStore {
         s.hideTitleStatus.value = p.getBoolean("hideTitleStatus", s.hideTitleStatus.value)
         s.languageChosen.value = p.getBoolean("languageChosen", false)
         s.language.value = if (s.languageChosen.value)
-            p.getString("language", AppLanguage.systemDefault().label) ?: AppLanguage.systemDefault().label
-        else AppLanguage.systemDefault().label
+            p.getString("language", AppLocales.systemLanguage().label) ?: AppLocales.systemLanguage().label
+        else AppLocales.systemLanguage().label
         s.lastfmGenres.value = p.getBoolean("lastfmGenres", s.lastfmGenres.value)
         s.smartAudioAlignment.value = p.getBoolean("smartAudioAlignment", s.smartAudioAlignment.value)
         s.techStats.value = p.getBoolean("techStats", s.techStats.value)

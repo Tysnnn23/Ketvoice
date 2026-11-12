@@ -84,7 +84,7 @@ object AppSettings {
     val hideStatusBarInPlayer = mutableStateOf(false)
     val showQueueHistory = mutableStateOf(false)
     val hideTitleStatus = mutableStateOf(false)
-    val language = mutableStateOf(AppLanguage.systemDefault().label)
+    val language = mutableStateOf(AppLocales.systemLanguage().label)
     /** False until the user explicitly picks a language: follow the system one. */
     val languageChosen = mutableStateOf(false)
     val lastfmGenres = mutableStateOf(true)
