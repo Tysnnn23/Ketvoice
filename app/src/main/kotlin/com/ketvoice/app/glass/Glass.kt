@@ -110,7 +110,8 @@ data class GlassParams(
     val shadowAlpha: Float = 0.18f,
     /** Ombre interne : donne l'épaisseur du bloc de verre. */
     val innerShadow: Boolean = true,
-    val dark: Boolean = false
+    val dark: Boolean = false,
+    val opticalPressure: Float = 0f
 ) {
     companion object {
         /**
@@ -188,7 +189,7 @@ data class GlassParams(
             blurPx = 34f,
             refractionPx = 18f,
             // Le sheet doit laisser deviner le contenu : fond gris trop opaque = profondeur perdue.
-            tintAlpha = if (dark) 0.52f else 0.22f,
+            tintAlpha = if (dark) 0.12f else 0.08f,
             saturation = if (dark) 1.04f else 1.10f,
             exposure = if (dark) 0.015f else 0.05f,
             highlightAlpha = if (dark) 0.32f else 0.54f,
@@ -220,11 +221,12 @@ private fun rememberStaticMaterial(p: GlassParams, opaque: Boolean = false, tint
         // Transmission statique : le fond transparaît à ~12-18 %.
         val sheet = p.role == GlassRole.Sheet
         fun opacity(value: Float) = if (opaque) 1f else (value + GlassTuning.sanitize(tint) * .08f).coerceAtMost(.98f)
-        val body = base.copy(alpha = opacity(if (sheet) .97f else if (p.dark) .84f else .88f))
-        val lift = base.copy(alpha = opacity(if (sheet) .98f else if (p.dark) .86f else .91f))
-        val surface = Brush.linearGradient(listOf(lift, body, base.copy(alpha = opacity(if (sheet) .96f else if (p.dark) .80f else .84f)), body))
+        val body = base.copy(alpha = opacity(if (sheet) .94f else if (p.dark) .64f else .70f))
+        val lift = base.copy(alpha = opacity(if (sheet) .96f else if (p.dark) .68f else .74f))
+        val surface = Brush.linearGradient(listOf(lift, body,
+            base.copy(alpha = opacity(if (sheet) .94f else if (p.dark) .62f else .68f)), body))
         // Liseré capillaire : lumineux haut-gauche (entrée de lumière), sombre bas-droite.
-        val lightHair = Color.White.copy(alpha = if (p.dark) 0.14f else 0.32f)
+        val lightHair = Color.White.copy(alpha = if (p.dark) 0.10f else 0.16f)
         val darkHair = if (p.dark) Color.Black.copy(alpha = 0.22f) else Color.Black.copy(alpha = 0.08f)
         val hairline = Brush.linearGradient(listOf(lightHair, Color.White.copy(alpha = lightHair.alpha * .25f), darkHair))
         surface to hairline
@@ -233,7 +235,7 @@ private fun rememberStaticMaterial(p: GlassParams, opaque: Boolean = false, tint
 
 /** Voile spéculaire du verre statique : réchauffe le tiers supérieur, ne le lave jamais. */
 private fun staticSheen(p: GlassParams): Brush {
-    val strength = (if (p.dark) 0.05f else 0.09f) * (0.5f + p.highlightIntensity * 0.7f)
+    val strength = (if (p.dark) 0.025f else 0.035f) * (0.5f + p.highlightIntensity * 0.7f)
     return Brush.verticalGradient(
         0.00f to Color.White.copy(alpha = strength.coerceIn(0f, 0.12f)),
         0.12f to Color.White.copy(alpha = (strength * 0.30f).coerceIn(0f, 0.05f)),

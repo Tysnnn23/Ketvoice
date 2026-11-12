@@ -3,6 +3,9 @@
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
@@ -12,33 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Analytics
-import androidx.compose.material.icons.filled.BluetoothAudio
-import androidx.compose.material.icons.filled.Bolt
-import androidx.compose.material.icons.filled.Brightness6
-import androidx.compose.material.icons.filled.CleaningServices
-import androidx.compose.material.icons.filled.CloudDownload
-import androidx.compose.material.icons.filled.ColorLens
-import androidx.compose.material.icons.filled.DarkMode
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Folder
-import androidx.compose.material.icons.filled.FolderOpen
-import androidx.compose.material.icons.filled.HighQuality
-import androidx.compose.material.icons.filled.Image
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Language
-import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.PlayCircle
-import androidx.compose.material.icons.filled.Storage
-import androidx.compose.material.icons.filled.Subtitles
-import androidx.compose.material.icons.filled.Sync
-import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material.icons.filled.Videocam
-import androidx.compose.material.icons.filled.Vibration
-import androidx.compose.material.icons.filled.Wifi
+import com.ketvoice.app.ui.common.KetIcons
 import com.ketvoice.app.ui.common.Icon
 import com.ketvoice.app.ui.common.Text
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -130,7 +107,7 @@ fun SettingsScreen() {
             Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .navigationBarsPadding().padding(bottom = 32.dp)
+                .navigationBarsPadding().padding(top = LocalSettingsTopInset.current, bottom = 32.dp)
         ) {
             val testing = remember { mutableStateOf(false) }
             val scope = rememberCoroutineScope()
@@ -144,14 +121,14 @@ fun SettingsScreen() {
             // ==================================================== YOUTUBE MUSIC
             if (com.ketvoice.app.BuildConfig.IS_QUEST) {
                 Section("QUEST · CONFORT") {
-                    SToggle(Icons.Filled.Brightness6, "Garder la fenêtre éveillée",
+                    SToggle(KetIcons.Appearance, "Garder la fenêtre éveillée",
                         "Pendant la lecture au premier plan uniquement",
                         AppSettings.questKeepAwake.value) { AppSettings.questKeepAwake.value = it; SettingsStore.save() }
                 }
             }
             Section("YOUTUBE MUSIC") {
                 SRow(
-                    Icons.Filled.PlayCircle, "Compte YouTube Music",
+                    KetIcons.Play, "Compte YouTube Music",
                     sub = when {
                         youtube.connected -> "${youtube.name} · session validée"
                         else -> "Connexion web pour l'historique et l'accueil personnel"
@@ -159,12 +136,12 @@ fun SettingsScreen() {
                     value = if (youtube.connected) "Connecté" else "Se connecter"
                 ) { AppUi.showAccount.value = true }
                 SToggle(
-                    Icons.Filled.Sync, "Synchroniser les écoutes",
+                    KetIcons.Refresh, "Synchroniser les écoutes",
                     "Une écoute n'est validée que si YouTube l'accepte",
                     AppSettings.syncYouTubeHistory.value
                 ) { AppSettings.syncYouTubeHistory.value = it; SettingsStore.save() }
                 SToggle(
-                    Icons.Filled.PlayCircle, "Accueil personnalisé",
+                    KetIcons.Play, "Accueil personnalisé",
                     "Remplace les sélections locales par votre accueil YouTube Music",
                     AppSettings.personalizedYouTubeHome.value
                 ) {
@@ -181,21 +158,21 @@ fun SettingsScreen() {
             if (publisher || (youtube.connected && com.ketvoice.app.data.PublisherAccess.matches(youtube.email))) {
                 Section("PUBLICATIONS KETVOICE API") {
                     if (!publisher) {
-                        SRow(Icons.Filled.CloudDownload, "Vérifier mon accès",
+                        SRow(KetIcons.Download, "Vérifier mon accès",
                             sub = "Confirmez votre adresse par un lien de connexion à usage unique", value = "") {
                             AppUi.openPublisher()
                         }
                     } else {
-                        SRow(Icons.Filled.CloudDownload, "Importer un son",
+                        SRow(KetIcons.Download, "Importer un son",
                             sub = "Publier un fichier audio, sa pochette et ses paroles pour tous", value = "") {
                             AppUi.openPublisher()
                         }
-                        SRow(Icons.Filled.Mic, "Importer des lyrics",
+                        SRow(KetIcons.Lyrics, "Importer des lyrics",
                             sub = "Recherchez un titre puis ouvrez son menu ⋯ pour publier un TTML ou LRC", value = "") {
                             AppUi.searchSeed.value = ""
                             AppUi.openSearch()
                         }
-                        SRow(Icons.Filled.Person, "Déconnecter la publication", sub = "", value = "") {
+                        SRow(KetIcons.Account, "Déconnecter la publication", sub = "", value = "") {
                             com.ketvoice.app.data.PublisherSession.signOut()
                         }
                     }
@@ -206,7 +183,7 @@ fun SettingsScreen() {
             Section("LANGUE DE L'APPLICATION") {
                 val currentLanguage = AppLanguage.fromLabel(AppSettings.language.value)
                 SRow(
-                    Icons.Filled.Language, "Langue de l'application",
+                    KetIcons.Globe, "Langue de l'application",
                     sub = "Traduit toute l'interface, pas seulement les réglages",
                     value = currentLanguage.nativeName
                 ) {
@@ -235,30 +212,30 @@ fun SettingsScreen() {
             Section("DESIGN KETVOICE") {
                 Text("Chaque finition peut être retirée séparément, sans modifier vos playlists ni votre musique.", color = th.secondary)
                 com.ketvoice.app.data.DesignChoices.all.forEach { option ->
-                    SToggle(Icons.Filled.Tune, option.title, "Revenir à la présentation précédente en désactivant cette option",
+                    SToggle(KetIcons.Sliders, option.title, "Revenir à la présentation précédente en désactivant cette option",
                         com.ketvoice.app.data.DesignChoices.enabled(option.code)) {
                         com.ketvoice.app.data.DesignChoices.set(option.code, it); SettingsStore.save()
                     }
                 }
             }
             Section("APPARENCE") {
-                SRow(Icons.Filled.Brightness6, "Aperçu du verre", sub = "Comparer Clair, Dépoli et Opaque avant d'appliquer") {
+                SRow(KetIcons.Appearance, "Aperçu du verre", sub = "Comparer Clair, Dépoli et Opaque avant d'appliquer") {
                     glassPreview = true
                 }
-                SToggle(Icons.Filled.Info, "Stats info", "Informations audio réelles, uniquement dans le lecteur", AppSettings.techStats.value) {
+                SToggle(KetIcons.Info, "Stats info", "Informations audio réelles, uniquement dans le lecteur", AppSettings.techStats.value) {
                     AppSettings.techStats.value = it; SettingsStore.save()
                 }
-                SToggle(Icons.Filled.Wifi, "Téléchargements en Wi-Fi uniquement", "Les transferts attendent une connexion Wi-Fi", AppSettings.downloadsWifiOnly.value) {
+                SToggle(KetIcons.Wifi, "Téléchargements en Wi-Fi uniquement", "Les transferts attendent une connexion Wi-Fi", AppSettings.downloadsWifiOnly.value) {
                     AppSettings.downloadsWifiOnly.value = it; SettingsStore.save()
                 }
-                SToggle(Icons.Filled.Image, "Photos d'artiste HD",
+                SToggle(KetIcons.Album, "Photos d'artiste HD",
                     "Portrait ou fond haute résolution quand il existe. Aucune photo de remplacement inventée.",
                     AppSettings.artistPhotos.value) { AppSettings.artistPhotos.value = it; SettingsStore.save() }
-                SToggle(Icons.Filled.Image, "Signatures et logos d'artistes",
+                SToggle(KetIcons.Album, "Signatures et logos d'artistes",
                     "Signature authentique (Wikidata) sinon logo transparent. Le nom est envoyé au service uniquement si activé.",
                     AppSettings.artistSignatures.value) { AppSettings.artistSignatures.value = it; SettingsStore.save() }
                 val refresh = com.ketvoice.app.ui.motion.DisplayRefresh.status
-                SToggle(Icons.Filled.Bolt, "Fluidité 120 Hz",
+                SToggle(KetIcons.Sliders, "Fluidité 120 Hz",
                     when {
                         com.ketvoice.app.BuildConfig.IS_QUEST -> "Le casque conserve la fréquence gérée par Quest."
                         refresh.powerSaving -> "Demande suspendue en économie d'énergie."
@@ -270,27 +247,27 @@ fun SettingsScreen() {
                     com.ketvoice.app.data.AppText.t("Fréquence de l'écran") + " : " + kotlin.math.round(refresh.actualHz).toInt() + " Hz",
                     localize = false, color = th.secondary, fontSize = 12.sp,
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp))
-                SRow(Icons.Filled.Tune, "DESIGN KETVOICE", sub = "Chaque finition peut être retirée séparément, sans modifier vos playlists ni votre musique.") {
+                SRow(KetIcons.Sliders, "DESIGN KETVOICE", sub = "Chaque finition peut être retirée séparément, sans modifier vos playlists ni votre musique.") {
                     categoryKey = SettingsCategory.Design.name
                 }
-                SToggle(Icons.Filled.Videocam, "Canvas sur les pages d'album",
+                SToggle(KetIcons.Canvas, "Canvas sur les pages d'album",
                     "Affiche la vidéo de l'album à la place de la pochette, en plein cadre. Indépendant du Canvas du lecteur.",
                     AppSettings.albumHeroCanvas.value) { AppSettings.albumHeroCanvas.value = it; SettingsStore.save() }
-                SToggle(Icons.Filled.ColorLens, "Couleurs de la pochette", "Accents du lecteur adaptés à l'album, avec contraste renforcé",
+                SToggle(KetIcons.Appearance, "Couleurs de la pochette", "Accents du lecteur adaptés à l'album, avec contraste renforcé",
                     AppSettings.albumColors.value) { AppSettings.albumColors.value = it; SettingsStore.save() }
-                SToggle(Icons.Filled.Videocam, "Profondeur de pochette", "Mouvement léger au toucher ou au pointeur, sans modifier les gestes",
+                SToggle(KetIcons.Canvas, "Profondeur de pochette", "Mouvement léger au toucher ou au pointeur, sans modifier les gestes",
                     AppSettings.artworkDepth.value) { AppSettings.artworkDepth.value = it; SettingsStore.save() }
-                SToggle(Icons.Filled.Videocam, "Canvas panoramique",
+                SToggle(KetIcons.Canvas, "Canvas panoramique",
                     "Optionnel : Canvas en fond assombri, pochette fixe pour éviter un double décodage",
                     AppSettings.panoramicCanvas.value) { AppSettings.panoramicCanvas.value=it;SettingsStore.save() }
-                SToggle(Icons.Filled.Bolt, "Animations réduites", "Atténue les mouvements décoratifs, sans désactiver le karaoké",
+                SToggle(KetIcons.Sliders, "Animations réduites", "Atténue les mouvements décoratifs, sans désactiver le karaoké",
                     AppSettings.reduceAnimations.value) { AppSettings.reduceAnimations.value=it;SettingsStore.save() }
-                SRow(Icons.Filled.Subtitles, "Taille des paroles", sub="Lisibilité sans agrandir les boutons",
+                SRow(KetIcons.Lyrics, "Taille des paroles", sub="Lisibilité sans agrandir les boutons",
                     value=listOf("Standard","Grand","Très grand")[AppSettings.lyricsTextSize.value.coerceIn(0, 2)]) {
                     AppSettings.lyricsTextSize.value=(AppSettings.lyricsTextSize.value+1)%3;SettingsStore.save()
                 }
                 SRow(
-                    Icons.Filled.DarkMode, "Thème",
+                    KetIcons.Moon, "Thème",
                     sub = "S'applique immédiatement à toute l'app",
                     value = themeLabel(AppSettings.themeMode.value)
                 ) {
@@ -308,27 +285,27 @@ fun SettingsScreen() {
                     }
                 }
                 SRow(
-                    Icons.Filled.ColorLens, "Couleur d'accent",
+                    KetIcons.Appearance, "Couleur d'accent",
                     sub = "Barre de lecture, scrub, boutons et progression",
                     value = accentLabel(AppSettings.accentArgb.value)
                 ) { accentOpen = true }
                 SToggle(
-                    Icons.Filled.Brightness6, "Verre liquide",
+                    KetIcons.Appearance, "Verre liquide",
                     "Flou, réfraction et reflets sur l'interface",
                     AppSettings.liquidGlass.value
                 ) { AppSettings.liquidGlass.value = it; SettingsStore.save() }
                 SToggle(
-                    Icons.Filled.Bolt, "Mode performance",
+                    KetIcons.Sliders, "Mode performance",
                     "Allège les effets de verre sur les appareils modestes",
                     AppSettings.highPerformanceMode.value
                 ) { AppSettings.highPerformanceMode.value = it; SettingsStore.save() }
                 SToggle(
-                    Icons.Filled.Brightness6, "Flou dynamique",
+                    KetIcons.Appearance, "Flou dynamique",
                     "Réfraction en temps réel derrière les panneaux",
                     !AppSettings.reduceDynamicBlur.value
                 ) { AppSettings.reduceDynamicBlur.value = !it; SettingsStore.save() }
                 SRow(
-                    Icons.Filled.Image, "Icône de l'app",
+                    KetIcons.Album, "Icône de l'app",
                     sub = "Change réellement l'icône du lanceur",
                     value = appIconLabel(AppSettings.appIconVariant.value)
                 ) {
@@ -352,19 +329,19 @@ fun SettingsScreen() {
 
             // ==================================================== LECTURE
             Section("LECTURE") {
-                SToggle(Icons.Filled.Analytics, "Qualité progressive",
+                SToggle(KetIcons.Audio, "Qualité progressive",
                     "Activé : les sources sont interrogées en parallèle, le premier flux audio réellement valide démarre, puis une meilleure qualité prend le relais sans couper la lecture. Désactivé : la première source disponible dans l'ordre des Sources est utilisée.",
                     AppSettings.progressiveQuality.value) { AppSettings.progressiveQuality.value = it; SettingsStore.save() }
                 SToggle(
-                    Icons.Filled.HighQuality, "Bit-Perfect",
+                    KetIcons.Shield, "Bit-Perfect",
                     "Envoie le PCM décodé au mixeur sans rééchantillonnage ni traitement de l'app, lorsque Android et la sortie le permettent. Égaliseur, réverbération et ignorance des silences sont alors désactivés.",
                     AppSettings.bitPerfect.value
                 ) { Player.setBitPerfect(it); SettingsStore.save() }
                 BitPerfectPanel()
-                SRow(Icons.Filled.Tune, "Égaliseur", sub="Traitement réel de la session audio", value="") { AppUi.showEqualizer.value=true }
-                SRow(Icons.Filled.Wifi, "Transfert sur le même Wi-Fi", sub="Découverte locale et confirmation sur le destinataire", value="") { AppUi.showHandoff.value=true }
+                SRow(KetIcons.Sliders, "Égaliseur", sub="Traitement réel de la session audio", value="") { AppUi.showEqualizer.value=true }
+                SRow(KetIcons.Wifi, "Transfert sur le même Wi-Fi", sub="Découverte locale et confirmation sur le destinataire", value="") { AppUi.showHandoff.value=true }
                 SRow(
-                    Icons.Filled.Analytics, "Qualité en Wi-Fi",
+                    KetIcons.Audio, "Qualité en Wi-Fi",
                     sub = "Sans perte = FLAC, sinon MP3 rapide",
                     value = AppSettings.wifiQuality.value
                 ) {
@@ -374,7 +351,7 @@ fun SettingsScreen() {
                     }
                 }
                 SRow(
-                    Icons.Filled.Wifi, "Qualité en données mobiles",
+                    KetIcons.Wifi, "Qualité en données mobiles",
                     sub = "Appliquée quand le réseau est facturé",
                     value = AppSettings.mobileQuality.value
                 ) {
@@ -386,7 +363,7 @@ fun SettingsScreen() {
                 Text("Si la source sans perte est indisponible, la lecture et le téléchargement basculent automatiquement sur le MP3 le plus rapide.",
                     color = th.secondary, fontSize = 11.sp, lineHeight = 16.sp, modifier = Modifier.padding(bottom = 8.dp))
                 SToggle(
-                    Icons.Filled.Bolt, "Ignorer les silences",
+                    KetIcons.Sliders, "Ignorer les silences",
                     "Saute les passages silencieux (moteur audio)",
                     AppSettings.skipSilence.value
                 ) { Player.setSkipSilence(it); SettingsStore.save() }
@@ -395,12 +372,12 @@ fun SettingsScreen() {
             // ==================================================== PAROLES
             Section("PAROLES") {
                 SRow(
-                    Icons.Filled.Analytics, "Diagnostic des sources",
+                    KetIcons.Audio, "Diagnostic des sources",
                     sub = "Teste chaque source sur le titre en cours",
                     value = if (playerState.current == null) "Aucun titre en lecture" else "Tester"
                 ) { lyricsDiag = true }
                 SRow(
-                    Icons.Filled.Subtitles, "Source des paroles",
+                    KetIcons.Lyrics, "Source des paroles",
                     sub = "Priorité : syllabes natives, mots, lignes, texte",
                     value = MusicApi.sourceName(AppSettings.lyricsSource.value)
                 ) {
@@ -420,7 +397,7 @@ fun SettingsScreen() {
                     }
                 }
                 SRow(
-                    Icons.Filled.Subtitles, "Mode des paroles",
+                    KetIcons.Lyrics, "Mode des paroles",
                     sub = "Syllabes ou mots seulement si la source les fournit",
                     value = lyricsModeLabel(AppSettings.lyricsMode.value)
                 ) {
@@ -439,21 +416,21 @@ fun SettingsScreen() {
                     }
                 }
                 SToggle(
-                    Icons.Filled.Mic, "Flouter les paroles inactives",
+                    KetIcons.Lyrics, "Flouter les paroles inactives",
                     "Les lignes suivantes restent estompées",
                     AppSettings.blurInactiveLyrics.value
                 ) { AppSettings.blurInactiveLyrics.value = it; SettingsStore.save() }
-                SRow(Icons.Filled.Subtitles, "Clé BetterLyrics (facultative)",
+                SRow(KetIcons.Lyrics, "Clé BetterLyrics (facultative)",
                     sub = "Cache public ; certaines recherches exigent une clé",
                     value = if (AppSettings.betterLyricsKey.value.isBlank()) "Non définie" else "Définie"
                 ) { editSetting = "better" }
-                SRow(Icons.Filled.Subtitles, "Instance Lyrica", sub = "URL HTTPS de votre serveur Lyrica",
+                SRow(KetIcons.Lyrics, "Instance Lyrica", sub = "URL HTTPS de votre serveur Lyrica",
                     value = if (AppSettings.lyricaUrl.value.isBlank()) "À configurer" else "Configurée"
                 ) { editSetting = "lyrica" }
-                SRow(Icons.Filled.Subtitles, "lrc.red", sub = "Source intégrée · recherche de paroles par ISRC") {
+                SRow(KetIcons.Lyrics, "lrc.red", sub = "Source intégrée · recherche de paroles par ISRC") {
                     runCatching { ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://lrc.red"))) }
                 }
-                SRow(Icons.Filled.Subtitles, "Langue d'origine (traduction)",
+                SRow(KetIcons.Lyrics, "Langue d'origine (traduction)",
                     sub = "Utilisée par le service de secours MyMemory",
                     value = TranslationLanguages.name(AppSettings.translationSource.value)
                 ) {
@@ -466,7 +443,7 @@ fun SettingsScreen() {
                         SettingsStore.save()
                     }
                 }
-                SRow(Icons.Filled.Subtitles, "Langue de traduction", sub = "Traduction réelle, sans timing par syllabe",
+                SRow(KetIcons.Lyrics, "Langue de traduction", sub = "Traduction réelle, sans timing par syllabe",
                     value = TranslationLanguages.name(AppSettings.translateLanguage.value)
                 ) {
                     val current = TranslationLanguages.code(AppSettings.translateLanguage.value)
@@ -483,15 +460,15 @@ fun SettingsScreen() {
 
             // ==================================================== CANVAS
             Section("KETVOICE API · CANVAS") {
-                SToggle(Icons.Filled.Bolt, "Sonic Canvas", "Fond réactif au signal audio réel, sans microphone. Désactivé avec les animations réduites.",
+                SToggle(KetIcons.Sliders, "Sonic Canvas", "Fond réactif au signal audio réel, sans microphone. Désactivé avec les animations réduites.",
                     AppSettings.sonicCanvas.value) { AppSettings.sonicCanvas.value = it; SettingsStore.save() }
                 SRow(
-                    Icons.Filled.Videocam, "Ketvoice API",
+                    KetIcons.Canvas, "Ketvoice API",
                     sub = "Canvas Spotify résolu et authentifié côté Supabase",
                     value = "Intégré"
                 ) {}
                 SToggle(
-                    Icons.Filled.Videocam, "Activer les Canvas vidéo",
+                    KetIcons.Canvas, "Activer les Canvas vidéo",
                     "Coupe les vidéos et leurs téléchargements. Sonic Canvas possède son propre réglage.",
                     AppSettings.animatedArtwork.value
                 ) {
@@ -502,7 +479,7 @@ fun SettingsScreen() {
                     }
                 }
                 SToggle(
-                    Icons.Filled.Wifi, "Canvas en données mobiles",
+                    KetIcons.Wifi, "Canvas en données mobiles",
                     "Autorise le téléchargement des canvas hors Wi-Fi",
                     AppSettings.canvasWithMobileData.value
                 ) {
@@ -513,7 +490,7 @@ fun SettingsScreen() {
                     }
                 }
                 SRow(
-                    Icons.Filled.Bolt, "Tester le canvas",
+                    KetIcons.Sliders, "Tester le canvas",
                     sub = if (testing.value) "Test en cours…" else "Vérifie le pipeline Ketvoice API",
                     value = ""
                 ) {
@@ -537,12 +514,12 @@ fun SettingsScreen() {
 
             Section("SOURCES") {
                 SRow(
-                    Icons.Filled.Tune, "Ketvoice API",
+                    KetIcons.Sliders, "Ketvoice API",
                     sub = "Recherche, streaming et téléchargements · Supabase",
                     value = "Intégré"
                 ) { AppUi.pushOverlay(AppUi.SOURCES) }
                 SRow(
-                    Icons.Filled.Tune, "Sources personnalisées",
+                    KetIcons.Sliders, "Sources personnalisées",
                     sub = "URLs HTTPS terminées par .json · streaming et téléchargements",
                     value = if (customSources.isEmpty()) "Aucune" else "${customSources.size} source(s)"
                 ) { AppUi.pushOverlay(AppUi.SOURCES) }
@@ -556,7 +533,7 @@ fun SettingsScreen() {
             // ==================================================== TÉLÉCHARGEMENTS
             Section("TÉLÉCHARGEMENTS") {
                 SRow(
-                    Icons.Filled.CloudDownload, "Qualité de téléchargement",
+                    KetIcons.Download, "Qualité de téléchargement",
                     sub = "Le fichier réellement obtenu, pas seulement le réglage",
                     value = when (AppSettings.downloadQualityMode.value) {
                         0 -> "FLAC · sans perte"
@@ -579,7 +556,7 @@ fun SettingsScreen() {
                     }
                 }
                 SRow(
-                    Icons.Filled.Image, "Voir la liste",
+                    KetIcons.Album, "Voir la liste",
                     sub = "Pistes enregistrées sur l'appareil",
                     value = ""
                 ) { AppUi.pushOverlay(AppUi.DOWNLOADS) }
@@ -597,7 +574,7 @@ fun SettingsScreen() {
             val localFolderName = com.ketvoice.app.data.LocalMusic.folderName()
             Section("MUSIQUE LOCALE") {
                 SRow(
-                    Icons.Filled.Folder, "Dossier de musique locale",
+                    KetIcons.Folder, "Dossier de musique locale",
                     sub = if (localFolderName == null)
                         "Tous les fichiers audio de l'appareil (MediaStore)"
                     else "Dossier analysé : $localFolderName",
@@ -605,14 +582,14 @@ fun SettingsScreen() {
                 ) { localFolderPicker.launch(null) }
                 if (localFolderName != null) {
                     SRow(
-                        Icons.Filled.FolderOpen, "Revenir à tout l'appareil",
+                        KetIcons.Folder, "Revenir à tout l'appareil",
                         sub = "Le scan MediaStore remplace le dossier choisi"
                     ) {
                         com.ketvoice.app.data.LocalMusic.clearFolder()
                         com.ketvoice.app.data.LocalMusic.scan(ctx)
                     }
                 }
-                SToggle(Icons.Filled.Bolt, "Correspondances musicales",
+                SToggle(KetIcons.Sliders, "Correspondances musicales",
                     "Complète artiste, album et pochette des fichiers locaux sans métadonnées. Les métadonnées existantes ne sont jamais remplacées.",
                     AppSettings.localMusicEnrich.value) { AppSettings.localMusicEnrich.value = it; SettingsStore.save() }
             }
@@ -620,13 +597,13 @@ fun SettingsScreen() {
             // ==================================================== STOCKAGE
             Section("STOCKAGE") {
                 SRow(
-                    Icons.Filled.Storage, "Cache des chansons utilisé",
+                    KetIcons.Storage, "Cache des chansons utilisé",
                     sub = "Le cache accélère les relectures",
                     value = "${cacheUsedMb.intValue} Mo"
                 ) {}
                 CacheLimitRow()
                 SRow(
-                    Icons.Filled.Delete, "Vider le cache des chansons",
+                    KetIcons.Trash, "Vider le cache des chansons",
                     sub = "Les paroles et canvas téléchargés restent"
                 ) {
                     scope.launch {
@@ -636,7 +613,7 @@ fun SettingsScreen() {
                     }
                 }
                 SRow(
-                    Icons.Filled.Image, "Vider le cache des images",
+                    KetIcons.Album, "Vider le cache des images",
                     sub = "Pochettes et photos d'artistes re-téléchargées à la demande"
                 ) {
                     scope.launch {
@@ -652,12 +629,12 @@ fun SettingsScreen() {
 
             // ==================================================== À PROPOS
             Section("À PROPOS") {
-                SRow(Icons.Filled.Sync, "Vérifier les mises à jour",
+                SRow(KetIcons.Refresh, "Vérifier les mises à jour",
                     sub = if (com.ketvoice.app.ui.update.UpdateBadge.checking) "Vérification des mises à jour…" else "GitHub Releases") {
                     if (!com.ketvoice.app.ui.update.UpdateBadge.checking) com.ketvoice.app.ui.update.UpdateBadge.requestCheck()
                 }
                 SRow(
-                    Icons.Filled.Image, "Version",
+                    KetIcons.Album, "Version",
                     sub = "YouTube Music · Ketvoice API · canvas · paroles",
                     value = com.ketvoice.app.BuildConfig.VERSION_NAME + if (com.ketvoice.app.BuildConfig.IS_QUEST) " · Quest" else ""
                 ) {}
@@ -758,31 +735,32 @@ private fun qualityChoice(title: String, current: String, onSelect: (String) -> 
 private fun ChoiceDialog(spec: ChoiceSpec, onDismiss: () -> Unit) {
     val th = LocalTheme.current
     SettingsSheet(onDismiss = onDismiss) {
-        Column(Modifier.fillMaxWidth().heightIn(max = 650.dp).verticalScroll(rememberScrollState()).padding(vertical = 18.dp)) {
-            Box(Modifier.align(Alignment.CenterHorizontally).width(40.dp).height(4.dp)
-                .clip(RoundedCornerShape(50)).background(th.secondary.copy(alpha = .4f)))
-            Spacer(Modifier.height(12.dp))
-            Text(spec.title, color = th.onBackground, fontSize = 20.sp, fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(horizontal = 20.dp))
-            Text(spec.subtitle, color = th.secondary, fontSize = 12.5.sp, lineHeight = 17.sp,
-                modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 10.dp))
-            Column {
-                spec.options.forEach { option ->
-                    Row(Modifier.fillMaxWidth().clickable(noRip, null, role = Role.Button) {
-                        spec.onSelect(option.id)
-                        onDismiss()
-                    }.heightIn(min = 48.dp).padding(horizontal = 20.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) {
-                            Text(option.label, localize = spec.title != "Langue de l'application", color = th.onBackground, fontSize = 16.sp)
+        Column(Modifier.fillMaxWidth().heightIn(max = 650.dp).verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp, vertical = 16.dp)) {
+            SettingsSheetHeader(spec.title, spec.subtitle, onDismiss)
+            Spacer(Modifier.height(18.dp))
+            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp))
+                .background(th.onBackground.copy(alpha = .035f)).selectableGroup()) {
+                spec.options.forEachIndexed { index, option ->
+                    Row(Modifier.fillMaxWidth().selectable(option.id == spec.selectedId,
+                        role = Role.RadioButton, onClick = { spec.onSelect(option.id); onDismiss() })
+                        .heightIn(min = 56.dp).padding(horizontal = 16.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f).padding(end = 14.dp)) {
+                            Text(option.label, localize = spec.title != "Langue de l'application", color = th.onBackground,
+                                fontSize = 15.5.sp, fontWeight = if (option.id == spec.selectedId) FontWeight.SemiBold else FontWeight.Normal,
+                                lineHeight = 22.sp)
                             if (option.sub.isNotBlank()) Text(option.sub, color = th.secondary,
-                                fontSize = 12.sp, lineHeight = 16.sp)
+                                fontSize = 13.sp, lineHeight = 18.sp, modifier = Modifier.padding(top = 3.dp))
                         }
-                        if (option.id == spec.selectedId) {
-                            Text("✓", color = th.accent, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                        }
+                        if (option.id == spec.selectedId) Icon(KetIcons.Check, null, tint = th.onBackground, modifier = Modifier.size(20.dp))
+                        else Spacer(Modifier.size(20.dp))
                     }
+                    if (index != spec.options.lastIndex) Box(Modifier.padding(horizontal = 16.dp).fillMaxWidth().height(.5.dp)
+                        .background(th.onBackground.copy(alpha = .065f)))
                 }
             }
+            Spacer(Modifier.height(8.dp))
         }
     }
 }
@@ -795,24 +773,27 @@ private fun AccentDialog(onClose: () -> Unit) {
     val hexLabel = com.ketvoice.app.data.AppText.t("Code hexadécimal")
     SettingsSheet(onDismiss = onClose) {
         Column(Modifier.fillMaxWidth().heightIn(max = 650.dp).verticalScroll(rememberScrollState()).padding(20.dp)) {
-            Text("Couleur d'accent", color = th.onBackground, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-            Text("Appliquée à la timeline, au scrub, aux contrôles et à la progression.",
-                color = th.secondary, fontSize = 12.5.sp, lineHeight = 17.sp,
-                modifier = Modifier.padding(top = 4.dp, bottom = 14.dp))
-            accentPalette.chunked(5).forEach { row ->
-                Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                    row.forEach { (_, argb) ->
-                        Box(Modifier.weight(1f).aspectRatio(1f).clip(CircleShape)
-                            .background(Color(argb.toInt()))
-                            .clickable(noRip, null) {
-                                AppSettings.accentArgb.value = argb
-                                SettingsStore.save()
-                                onClose()
-                            }, contentAlignment = Alignment.Center) {
-                            if (argb == AppSettings.accentArgb.value) {
-                                Text("✓", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            SettingsSheetHeader("Couleur d'accent",
+                "Appliquée à la timeline, au scrub, aux contrôles et à la progression.", onClose)
+            Spacer(Modifier.height(18.dp))
+            Column(Modifier.selectableGroup()) {
+                accentPalette.chunked(4).forEach { row ->
+                    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        row.forEach { (label, argb) ->
+                            Column(Modifier.weight(1f).clip(RoundedCornerShape(14.dp))
+                                .selectable(argb == AppSettings.accentArgb.value, role = Role.RadioButton,
+                                    onClick = { AppSettings.accentArgb.value = argb; SettingsStore.save(); onClose() })
+                                .heightIn(min = 72.dp).padding(vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                Box(Modifier.size(32.dp).clip(CircleShape).background(Color(argb.toInt())), contentAlignment = Alignment.Center) {
+                                    if (argb == AppSettings.accentArgb.value) Icon(KetIcons.Check, null,
+                                        tint = if (argb == 0xFFFFCC00L || argb == 0xFF34C759L || argb == 0xFF00C7BEL) Color.Black else Color.White,
+                                        modifier = Modifier.size(18.dp))
+                                }
+                                Text(label, color = th.secondary, fontSize = 12.sp, lineHeight = 16.sp,
+                                    modifier = Modifier.padding(top = 6.dp))
                             }
                         }
+                        repeat(4 - row.size) { Spacer(Modifier.weight(1f)) }
                     }
                 }
             }
@@ -850,8 +831,8 @@ private fun ConfigValueDialog(title: String, initial: String, secret: Boolean, o
     val inputLabel = com.ketvoice.app.data.AppText.t(title)
     SettingsSheet(onDismiss = onClose) {
         Column(Modifier.fillMaxWidth().heightIn(max = 650.dp).verticalScroll(rememberScrollState()).padding(20.dp)) {
-            Text(title, color = th.onBackground, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(12.dp))
+            SettingsSheetHeader(title, onClose = onClose)
+            Spacer(Modifier.height(18.dp))
             BasicTextField(value, { value = it }, singleLine = true,
                 visualTransformation = if (secret) PasswordVisualTransformation() else VisualTransformation.None,
                 textStyle = TextStyle(color = th.onBackground, fontSize = 16.sp), cursorBrush = SolidColor(th.accent),
@@ -879,16 +860,11 @@ private fun Section(header: String, content: @Composable ColumnScope.() -> Unit)
     val destination = SettingsCategory.forGroup(header) ?: return
     if (destination != LocalSettingsCategory.current) return
     val th = LocalTheme.current
-    Text(
-        header,
-        color = th.secondary,
-        fontSize = 12.sp,
-        fontWeight = FontWeight.SemiBold,
-        letterSpacing = 0.7.sp,
-        modifier = Modifier.padding(start = 24.dp, top = 22.dp, bottom = 9.dp)
-    )
-    Column(Modifier.padding(horizontal = 18.dp).fillMaxWidth().clip(RoundedCornerShape(22.dp))
-        .background(th.card).padding(vertical = 4.dp), content = content)
+    SettingsGroupHeading(header, Modifier.padding(horizontal = 20.dp))
+    val shape = RoundedCornerShape(20.dp)
+    Column(Modifier.padding(horizontal = 20.dp).fillMaxWidth().clip(shape)
+        .background(th.card).border(.5.dp, th.onBackground.copy(alpha = .055f), shape)
+        .padding(vertical = 3.dp), content = content)
 }
 
 @Composable
@@ -901,40 +877,23 @@ private fun ColumnScope.SRow(
 ) {
     val th = LocalTheme.current
     Row(
-        Modifier
-            .fillMaxWidth()
+        Modifier.fillMaxWidth()
             .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier)
-            .heightIn(min = 68.dp).padding(horizontal = 16.dp, vertical = 14.dp),
+            .heightIn(min = 72.dp).padding(horizontal = 20.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            Modifier
-                .size(32.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(th.accent.copy(alpha = 0.15f)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(icon, null, tint = th.accent, modifier = Modifier.size(19.dp))
+        Icon(icon, null, tint = th.onBackground.copy(alpha = .74f), modifier = Modifier.size(21.dp))
+        Column(Modifier.weight(1f).padding(start = 18.dp, end = 12.dp)) {
+            Text(title, color = th.onBackground, fontSize = 15.5.sp, lineHeight = 22.sp, fontWeight = FontWeight.Medium)
+            if (sub.isNotEmpty()) Text(sub, color = th.secondary, fontSize = 13.sp, lineHeight = 18.sp,
+                modifier = Modifier.padding(top = 3.dp))
+            if (value.isNotEmpty()) Text(value, color = th.onBackground.copy(alpha = .76f), fontSize = 13.sp,
+                lineHeight = 18.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(top = 5.dp))
         }
-        Spacer(Modifier.width(13.dp))
-        Column(Modifier.weight(1f)) {
-            Text(title, color = th.onBackground, fontSize = 15.sp, fontWeight = FontWeight.Medium)
-            if (sub.isNotEmpty()) {
-                Text(sub, color = th.secondary, fontSize = 12.5.sp, lineHeight = 16.sp)
-            }
-        }
-        if (value.isNotEmpty()) {
-            Text(value, color = th.secondary, fontSize = 12.sp, maxLines = 2,
-                overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 10.dp).widthIn(max = 90.dp))
-            if (onClick != null) {
-                Spacer(Modifier.width(6.dp))
-                Text("›", color = th.secondary, fontSize = 18.sp)
-            }
-        } else if (onClick != null) {
-            Spacer(Modifier.width(6.dp))
-            Text("›", color = th.secondary, fontSize = 18.sp)
-        }
+        if (onClick != null) Icon(KetIcons.ChevronRight, null, tint = th.secondary.copy(alpha = .8f),
+            modifier = Modifier.size(17.dp))
     }
+    SettingsCellDivider()
 }
 
 @Composable
@@ -947,29 +906,18 @@ private fun ColumnScope.SToggle(
 ) {
     val th = LocalTheme.current
     Row(
-        Modifier
-            .fillMaxWidth()
-            .toggleable(checked, role = Role.Switch, onValueChange = onChecked)
-            .heightIn(min = 72.dp).padding(horizontal = 16.dp, vertical = 14.dp),
+        Modifier.fillMaxWidth().toggleable(checked, role = Role.Switch, onValueChange = onChecked)
+            .heightIn(min = 76.dp).padding(horizontal = 20.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            Modifier
-                .size(32.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(th.accent.copy(alpha = 0.15f)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(icon, null, tint = th.accent, modifier = Modifier.size(19.dp))
+        Icon(icon, null, tint = th.onBackground.copy(alpha = .74f), modifier = Modifier.size(21.dp))
+        Column(Modifier.weight(1f).padding(start = 18.dp, end = 14.dp)) {
+            Text(title, color = th.onBackground, fontSize = 15.5.sp, lineHeight = 22.sp, fontWeight = FontWeight.Medium)
+            Text(sub, color = th.secondary, fontSize = 13.sp, lineHeight = 18.sp, modifier = Modifier.padding(top = 3.dp))
         }
-        Spacer(Modifier.width(13.dp))
-        Column(Modifier.weight(1f)) {
-            Text(title, color = th.onBackground, fontSize = 15.sp, fontWeight = FontWeight.Medium)
-            Text(sub, color = th.secondary, fontSize = 12.5.sp, lineHeight = 16.sp)
-        }
-        Spacer(Modifier.width(12.dp))
         com.ketvoice.app.ui.common.LiquidGlassSwitch(checked, onCheckedChange = null)
     }
+    SettingsCellDivider()
 }
 
 /**
@@ -1043,18 +991,19 @@ private fun CacheLimitRow() {
     Column(
         Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 11.dp)
+            .padding(horizontal = 20.dp, vertical = 16.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Filled.Storage, null, tint = th.onBackground, modifier = Modifier.size(23.dp))
-            Spacer(Modifier.width(14.dp))
-            Text("Limite du cache des chansons", color = th.onBackground, fontSize = 16.sp, modifier = Modifier.weight(1f))
-            Text(
-                if (AppSettings.cacheBytes.value < 1_000_000_000L) "500 Mo"
-                else String.format(java.util.Locale.FRANCE, "%.1f Go", AppSettings.cacheBytes.value / 1_000_000_000.0),
-                color = th.secondary,
-                fontSize = 14.sp
-            )
+            Icon(KetIcons.Storage, null, tint = th.onBackground.copy(alpha = .74f), modifier = Modifier.size(21.dp))
+            Column(Modifier.weight(1f).padding(start = 18.dp)) {
+                Text("Limite du cache des chansons", color = th.onBackground, fontSize = 15.5.sp,
+                    lineHeight = 22.sp, fontWeight = FontWeight.Medium)
+                Text(
+                    if (AppSettings.cacheBytes.value < 1_000_000_000L) "500 Mo"
+                    else String.format(java.util.Locale.FRANCE, "%.1f Go", AppSettings.cacheBytes.value / 1_000_000_000.0),
+                    color = th.secondary, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp)
+                )
+            }
         }
         Spacer(Modifier.height(8.dp))
         com.ketvoice.app.ui.common.GlassSlider(
@@ -1063,7 +1012,10 @@ private fun CacheLimitRow() {
                 AppSettings.cacheBytes.value = kotlin.math.round(gb).toLong().coerceIn(1, 20) * AudioCache.STEP
             },
             onValueChangeFinished = { SettingsStore.save() },
-            valueRange = 1f..20f
+            valueRange = 1f..20f,
+            modifier = Modifier.heightIn(min = 48.dp).semantics {
+                contentDescription = com.ketvoice.app.data.AppText.t("Limite du cache des chansons")
+            }
         )
         Text(
             "Appliqué immédiatement : les plus anciens fichiers sont retirés au-delà de la limite.",

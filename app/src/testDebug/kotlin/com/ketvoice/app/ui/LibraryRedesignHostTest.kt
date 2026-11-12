@@ -8,6 +8,9 @@ import androidx.activity.ComponentActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.*
@@ -141,6 +144,42 @@ class LibraryRedesignHostTest {
         compose.setContent { KetvoiceTheme(useDark = true) { DownloadsScreen() } }
         compose.onNodeWithText("Reprendre").assertIsDisplayed()
         compose.onNodeWithText("Annuler").assertIsDisplayed()
+    }
+
+    @Test fun libraryFiltersPreserveTracksAndOpenWorkingShortcuts() {
+        val recent = ListeningHistory.tracks as MutableStateFlow<List<Track>>
+        val known = ListeningHistory.knownTracks as MutableStateFlow<List<Track>>
+        val priorRecent = recent.value
+        val priorKnown = known.value
+        recent.value = listOf(track("library", "Piste personnelle"))
+        known.value = emptyList()
+        try {
+            compose.setContent { KetvoiceTheme(useDark = false) { com.ketvoice.app.ui.library.LibraryScreen() } }
+            compose.onNodeWithContentDescription("Compte").assertIsDisplayed()
+            compose.onNodeWithContentDescription("Créer une playlist").performClick()
+            assertTrue(AppUi.showCreatePlaylist.value)
+            compose.runOnIdle { AppUi.showCreatePlaylist.value = false }
+            image("library-optical-light")
+            compose.onNode(hasText("Titres") and hasClickAction()).performClick().assertIsSelected()
+            compose.onNodeWithText("Piste personnelle").performScrollTo().assertIsDisplayed()
+            compose.onNode(hasSetTextAction()).performTextInput("introuvable")
+            compose.onNodeWithText("Piste personnelle").assertDoesNotExist()
+            assertEquals(1, recent.value.size)
+        } finally {
+            recent.value = priorRecent
+            known.value = priorKnown
+        }
+    }
+
+    @Test fun collectionFiltersExposeSelectionAndKeepReadableTargets() {
+        var chosen by androidx.compose.runtime.mutableStateOf(false)
+        compose.setContent { KetvoiceTheme(useDark = true) {
+            androidx.compose.foundation.layout.Row {
+                com.ketvoice.app.ui.common.CollectionFilter("Albums", chosen, { chosen = true })
+            }
+        } }
+        compose.onNodeWithText("Albums").assertIsNotSelected().assertHeightIsAtLeast(48.dp)
+        compose.onNodeWithText("Albums").performClick().assertIsSelected()
     }
 
     @Test fun decodedArtworkFixturePreservesTheFullBleedLayout() {

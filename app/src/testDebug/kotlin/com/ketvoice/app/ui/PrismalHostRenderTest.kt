@@ -117,6 +117,9 @@ class PrismalHostRenderTest {
         AppSettings.reduceAnimations.value = true
         compose.setContent { KetvoiceTheme(useDark = false) { SettingsScreen() } }
         compose.onNodeWithTag("settings-home").assertIsDisplayed()
+        val backBounds = compose.onNodeWithContentDescription("Retour").fetchSemanticsNode().boundsInRoot
+        val accountBounds = compose.onNodeWithText("Compte YouTube Music").fetchSemanticsNode().boundsInRoot
+        assertTrue("Measured floating header cannot overlap the first settings cell", accountBounds.top >= backBounds.bottom)
         image("settings-home")
         compose.onNodeWithTag("settings-category-Appearance").performClick()
         compose.onNodeWithText("Thème").performScrollTo().assertIsDisplayed()
@@ -461,8 +464,8 @@ class PrismalHostRenderTest {
                 CatalogPage("Un album au titre très long", "QA artist", null, listOf(track), "2026-10-31"),
                 listOf(track), false, {})
         } }
-        compose.onNodeWithText("2026  ·  1 titre  ·  1 h 17 min").assertIsDisplayed()
-        compose.onNodeWithText("Lecture").assertIsDisplayed()
+        compose.onNodeWithText("2026-10-31  ·  1 titre  ·  1 h 17 min").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Lecture").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Aléatoire").assertIsDisplayed()
         image("album-header-light")
     }
@@ -521,7 +524,7 @@ class PrismalHostRenderTest {
                 else android.graphics.Color.rgb(225, 130, 100)
             canvas.drawRect(x.toFloat(), y.toFloat(), x + 8f, y + 8f, paint)
         }
-        fun render(amount: Float): Bitmap {
+        fun render(amount: Float, pressure: Float = 0f): Bitmap {
         val shader = RuntimeShader(GLASS_AGSL)
         shader.setInputShader("content", BitmapShader(source, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP))
         shader.setFloatUniform("size", 320f, 60f)
@@ -541,6 +544,7 @@ class PrismalHostRenderTest {
         shader.setFloatUniform("materialDark", 0f)
         shader.setFloatUniform("lightDir", -.7071f, -.7071f)
         shader.setFloatUniform("pixelScale", 1f)
+        shader.setFloatUniform("opticalPressure", pressure)
             val bitmap = Bitmap.createBitmap(360, 100, Bitmap.Config.ARGB_8888)
             val target = Canvas(bitmap)
             ReflectionHelpers.setField(target, "mAllowHwFeaturesInSwMode", true)
@@ -549,6 +553,7 @@ class PrismalHostRenderTest {
         }
         val glass = render(24f)
         val flat = render(0f)
+        val pressed = render(24f, 1f)
         assertEquals(0, android.graphics.Color.alpha(glass.getPixel(20, 20)))
         assertEquals(255, android.graphics.Color.alpha(glass.getPixel(180, 50)))
         assertEquals("Edge displacement must not warp the control's centre", flat.getPixel(180, 50), glass.getPixel(180, 50))
@@ -560,6 +565,11 @@ class PrismalHostRenderTest {
         File(directory, "prismal-optical-grid.png").outputStream().use { glass.compress(Bitmap.CompressFormat.PNG, 100, it) }
         File(directory, "prismal-flat-grid.png").outputStream().use { flat.compress(Bitmap.CompressFormat.PNG, 100, it) }
         assertTrue("Edge refraction must move the sampled source, not just tint it (shifted=$shifted)", shifted > 500)
-        source.recycle(); glass.recycle(); flat.recycle()
+        var pressureShifted = 0
+        for (y in 21..26) for (x in 70..280) if (glass.getPixel(x, y) != pressed.getPixel(x, y)) pressureShifted++
+        assertTrue("Pressure must deform sampled edge pixels", pressureShifted > 100)
+        assertEquals("Pressure keeps centre pixels calm", glass.getPixel(180, 50), pressed.getPixel(180, 50))
+        File(directory, "optical-pressure-grid.png").outputStream().use { pressed.compress(Bitmap.CompressFormat.PNG, 100, it) }
+        source.recycle(); glass.recycle(); flat.recycle(); pressed.recycle()
     }
 }

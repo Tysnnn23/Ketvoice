@@ -1,7 +1,6 @@
 package com.ketvoice.app.ui.common
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
@@ -13,8 +12,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -25,8 +24,6 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.semantics
@@ -126,49 +123,28 @@ fun GlassSlider(
             ),
         contentAlignment = Alignment.CenterStart
     ) {
-        // Rainure : verre en creux (lumière en haut, ombre portée en bas).
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .height(8.dp)
-                .clip(RoundedCornerShape(999.dp))
-                .background(
-                    Brush.verticalGradient(
-                        listOf(
-                            Color.White.copy(alpha = if (theme.isDark) 0.10f else 0.42f),
-                            Color.White.copy(alpha = if (theme.isDark) 0.05f else 0.20f)
-                        )
-                    )
-                )
-                .border(
-                    0.6.dp,
-                    Color.White.copy(alpha = if (theme.isDark) 0.16f else 0.55f),
-                    RoundedCornerShape(999.dp)
-                )
-        )
-        // Partie parcourue : accent légèrement dégradé pour éviter l'aplat.
-        Box(
-            Modifier
-                .fillMaxWidth(fraction)
-                .height(8.dp)
-                .clip(RoundedCornerShape(999.dp))
-                .background(
-                    Brush.horizontalGradient(
-                        listOf(theme.accent.copy(alpha = 0.82f), theme.accent)
-                    )
-                )
-        )
-        // Pouce : petite lentille de verre posée sur la piste.
+        val displayedFraction = if (dragging) dragFraction else fraction
+        val track = com.ketvoice.app.glass.rememberGlassBackdrop(theme.card)
+        val pressure by androidx.compose.animation.core.animateFloatAsState(
+            if (dragging && !com.ketvoice.app.ui.motion.Motion.reduced) 1f else 0f,
+            com.ketvoice.app.ui.motion.Motion.pressSpring(dragging), label = "slider-pressure")
+        com.ketvoice.app.glass.BackdropCapture(track, Modifier.matchParentSize()) {
+            Box(Modifier.align(Alignment.Center).fillMaxWidth().height(5.dp)
+                .clip(CircleShape).background(theme.onBackground.copy(alpha = .12f)))
+            Box(Modifier.align(Alignment.CenterStart).fillMaxWidth(displayedFraction).height(5.dp)
+                .clip(CircleShape).background(theme.accent))
+        }
         val travel = with(density) {
             (widthPx.toFloat() - thumb.toPx()).coerceAtLeast(0f).toDp()
         }
-        GlassPanel(
-            Modifier
-                .size(thumb)
-                .offset(x = travel * fraction),
-            CircleShape,
-            GlassParams.circle(dark = theme.isDark),
-            enabled = AppSettings.liquidGlass.value
-        ) {}
+        androidx.compose.runtime.CompositionLocalProvider(com.ketvoice.app.glass.LocalBackdropLayer provides track) {
+            GlassPanel(
+                Modifier.offset(x = travel * displayedFraction).size(thumb),
+                CircleShape,
+                GlassParams.circle(dark = theme.isDark).copy(blurPx = 2f, tintAlpha = .16f,
+                    opticalPressure = pressure),
+                enabled = AppSettings.liquidGlass.value
+            ) {}
+        }
     }
 }

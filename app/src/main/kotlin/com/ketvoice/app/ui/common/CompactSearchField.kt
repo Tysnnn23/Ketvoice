@@ -6,9 +6,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -35,7 +32,7 @@ internal fun CompactSearchField(query: String, onQueryChange: (String) -> Unit, 
         decorationBox = { input ->
             Row(Modifier.heightIn(min = 52.dp).padding(start = 16.dp, end = if (query.isEmpty()) 16.dp else 2.dp),
                 verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Filled.Search, null, tint = theme.secondary, modifier = Modifier.size(20.dp))
+                Icon(KetIcons.Search, null, tint = theme.secondary, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(10.dp))
                 Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
                     if (query.isEmpty()) Text("Rechercher un titre ou un artiste…", color = theme.secondary,
@@ -43,7 +40,7 @@ internal fun CompactSearchField(query: String, onQueryChange: (String) -> Unit, 
                     input()
                 }
                 if (query.isNotEmpty()) IconButton(onClick = { onQueryChange("") }, modifier = Modifier.size(48.dp)) {
-                    Icon(Icons.Filled.Close, "Effacer", tint = theme.secondary, modifier = Modifier.size(18.dp))
+                    Icon(KetIcons.Close, "Effacer", tint = theme.secondary, modifier = Modifier.size(18.dp))
                 }
             }
         })

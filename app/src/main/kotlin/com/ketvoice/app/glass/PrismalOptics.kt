@@ -13,6 +13,6 @@ float prismalArcLift(float x) {
 }
 
 float prismalSpecular(float2 normal, float2 light, float falloff) {
-    return pow(abs(dot(normal, light)), falloff);
+    return pow(max(dot(normal, light), 0.0), falloff);
 }
 """

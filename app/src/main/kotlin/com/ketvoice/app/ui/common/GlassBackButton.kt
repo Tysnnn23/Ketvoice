@@ -2,8 +2,6 @@ package com.ketvoice.app.ui.common
 
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -16,6 +14,6 @@ fun GlassBackButton(onBack: () -> Unit) {
         modifier = Modifier.size(48.dp),
         shape = CircleShape,
     ) {
-        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Retour", tint = theme.onBackground, modifier = Modifier.size(24.dp))
+        Icon(KetIcons.ArrowLeft, "Retour", tint = theme.onBackground, modifier = Modifier.size(24.dp))
     }
 }

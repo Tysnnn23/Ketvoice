@@ -268,6 +268,7 @@ class UnifiedExperienceHostTest {
             shader.setFloatUniform("edgeDark", .055f); shader.setFloatUniform("rimLight", .3f); shader.setFloatUniform("sheen", .02f)
             shader.setFloatUniform("materialDark", if (dark) 1f else 0f)
             shader.setFloatUniform("lightDir", -.7071f, -.7071f); shader.setFloatUniform("pixelScale", 1f)
+            shader.setFloatUniform("opticalPressure", 0f)
             val cell = Bitmap.createBitmap(120, 80, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(cell)
             ReflectionHelpers.setField(canvas, "mAllowHwFeaturesInSwMode", true)

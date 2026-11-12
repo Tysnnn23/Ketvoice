@@ -4,9 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -34,7 +31,7 @@ internal fun CollectionPlaybackActions(tracks: List<Track>, modifier: Modifier =
         FlowRow(Modifier.fillMaxWidth(), maxItemsInEachRow = if (largeFont && maxWidth < 340.dp) 1 else 2,
             horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             listOf(false, true).forEach { shuffle ->
-                val shape = RoundedCornerShape(18.dp)
+                val shape = RoundedCornerShape(28.dp)
                 Row(Modifier.weight(1f).clip(shape)
                     .background(if (shuffle) theme.onBackground.copy(alpha = .07f) else theme.accent.copy(alpha = if (enabled) 1f else .35f))
                     .clickable(enabled = enabled, role = Role.Button) {
@@ -44,7 +41,7 @@ internal fun CollectionPlaybackActions(tracks: List<Track>, modifier: Modifier =
                     }.heightIn(min = 52.dp).padding(horizontal = 12.dp, vertical = 12.dp),
                     horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                     val ink = if (shuffle) theme.accent else foreground
-                    Icon(if (shuffle) Icons.Filled.Shuffle else Icons.Filled.PlayArrow, null, tint = ink, modifier = Modifier.size(22.dp))
+                    Icon(if (shuffle) KetIcons.Shuffle else KetIcons.Play, null, tint = ink, modifier = Modifier.size(22.dp))
                     Spacer(Modifier.width(6.dp))
                     Text(if (shuffle) "Aléatoire" else label, color = ink, fontWeight = FontWeight.SemiBold,
                         fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -58,9 +55,9 @@ internal fun CollectionPlaybackActions(tracks: List<Track>, modifier: Modifier =
 internal fun CollectionQuickActions(tracks: List<Track>, enabled: Boolean = true) {
     val theme = LocalTheme.current
     LiquidGlassButton({ Player.setShuffle(false); Player.playQueue(tracks) }, Modifier.size(48.dp), enabled = enabled) {
-        Icon(Icons.Filled.PlayArrow, "Lecture", tint = theme.accent)
+        Icon(KetIcons.Play, "Lecture", tint = theme.accent)
     }
     LiquidGlassButton({ Player.setShuffle(false); Player.playQueue(tracks.shuffled()); Player.setShuffle(true) }, Modifier.size(48.dp), enabled = enabled) {
-        Icon(Icons.Filled.Shuffle, "Aléatoire", tint = theme.accent, modifier = Modifier.size(20.dp))
+        Icon(KetIcons.Shuffle, "Aléatoire", tint = theme.accent, modifier = Modifier.size(20.dp))
     }
 }

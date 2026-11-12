@@ -2,6 +2,11 @@ package com.ketvoice.app.ui.settings
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.ui.semantics.Role
+import com.ketvoice.app.ui.common.Icon
+import com.ketvoice.app.ui.common.KetIcons
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -45,9 +50,7 @@ internal fun GlassAppearancePreview(onClose: () -> Unit) {
     SettingsSheet(onDismiss = ::cancel) {
         Column(Modifier.fillMaxWidth().heightIn(max = 650.dp).verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp, vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Box(Modifier.align(Alignment.CenterHorizontally).width(40.dp).height(4.dp)
-                .clip(RoundedCornerShape(50)).background(theme.secondary.copy(alpha = .4f)))
-            Text("Aperçu du verre", color = theme.onBackground, fontSize = 21.sp, fontWeight = FontWeight.Bold)
+            SettingsSheetHeader("Aperçu du verre", "Comparer Clair, Dépoli et Opaque avant d'appliquer", ::cancel)
             Box(Modifier.fillMaxWidth().height(180.dp).clip(RoundedCornerShape(20.dp))) {
                 BackdropCapture(backdrop, Modifier.matchParentSize()) {
                     AsyncImage(cover ?: com.ketvoice.app.R.drawable.logo_main, null,
@@ -56,8 +59,13 @@ internal fun GlassAppearancePreview(onClose: () -> Unit) {
                 CompositionLocalProvider(LocalBackdropLayer provides backdrop) {
                     GlassPanel(Modifier.align(Alignment.BottomCenter).padding(14.dp).fillMaxWidth().testTag("glass-preview-sample"),
                         RoundedCornerShape(28.dp), GlassParams.pill(dark = theme.isDark), styleOverride = choice) {
-                        Text("Lecture · Aléatoire", color = theme.onBackground,
-                            modifier = Modifier.padding(horizontal = 18.dp, vertical = 16.dp))
+                        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically) {
+                            Icon(KetIcons.Play, null, tint = theme.onBackground, modifier = Modifier.size(20.dp))
+                            Text("Lecture · Aléatoire", color = theme.onBackground, fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f).padding(horizontal = 12.dp))
+                            Icon(KetIcons.Shuffle, null, tint = theme.onBackground, modifier = Modifier.size(20.dp))
+                        }
                     }
                 }
             }
@@ -72,11 +80,18 @@ internal fun GlassAppearancePreview(onClose: () -> Unit) {
                 Text("Clair", color = theme.secondary, fontSize = 12.sp)
                 Text("Teinté", color = theme.secondary, fontSize = 12.sp)
             }
-            listOf("Clair", "Dépoli", "Opaque").forEachIndexed { index, label ->
-                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).clickable { choice = index }
-                    .heightIn(min = 48.dp).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(label, color = theme.onBackground, modifier = Modifier.weight(1f))
-                    if (choice == index) Text("✓", color = theme.accent, fontSize = 18.sp)
+            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp))
+                .background(theme.onBackground.copy(alpha = .035f)).selectableGroup()) {
+                listOf("Clair", "Dépoli", "Opaque").forEachIndexed { index, label ->
+                    Row(Modifier.fillMaxWidth().selectable(choice == index, role = Role.RadioButton, onClick = { choice = index })
+                        .heightIn(min = 56.dp).padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(when (index) { 0 -> KetIcons.Sun; 1 -> KetIcons.Appearance; else -> KetIcons.Moon }, null,
+                            tint = theme.secondary, modifier = Modifier.size(20.dp))
+                        Text(label, color = theme.onBackground, fontSize = 15.sp,
+                            fontWeight = if (choice == index) FontWeight.SemiBold else FontWeight.Normal,
+                            modifier = Modifier.weight(1f).padding(horizontal = 14.dp))
+                        if (choice == index) Icon(KetIcons.Check, null, tint = theme.onBackground, modifier = Modifier.size(20.dp))
+                    }
                 }
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {

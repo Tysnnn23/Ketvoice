@@ -21,6 +21,16 @@
 
 ## Overview
 
+### 4.7.0 — optical glass and collection redesign
+
+Pressure-reactive AGSL refraction, directional edge reflections and independently
+captured slider tracks accompany redesigned Library, Downloads, Album and Settings
+screens. Cohesive outline icons, matte grouped content and floating glass actions
+preserve the restored navigation/player arrangement and all existing audio behavior.
+[Mobile](https://github.com/Tysnnn23/Ketvoice/releases/download/v4.7.0/Ketvoice-4.7.0.apk)
+· [Quest](https://github.com/Tysnnn23/Ketvoice/releases/download/v4.7.0/Ketvoice-4.7.0-Quest.apk)
+· [Release notes and validation limits](docs/releases/v4.7.0.md).
+
 ### 4.6.1 — lossless and Tidal playback repair
 
 DASH/native FLAC answers are now parsed and played as DASH, including manifests

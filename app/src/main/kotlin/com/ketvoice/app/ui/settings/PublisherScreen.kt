@@ -12,8 +12,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
+import com.ketvoice.app.ui.common.KetIcons
+import androidx.compose.ui.semantics.Role
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -167,7 +167,7 @@ fun PublisherScreen(target: Track?, onClose: () -> Unit) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text(if (editMode) "Modifier le titre importé" else if (target == null) "Importer un son" else "Importer des lyrics", color = theme.onBackground,
                     fontSize = 27.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                Icon(Icons.Filled.Close, "Fermer", tint = theme.secondary,
+                Icon(KetIcons.Close, "Fermer", tint = theme.secondary,
                     modifier = Modifier.size(48.dp).clip(RoundedCornerShape(24.dp)).clickable(enabled = !busy, onClick = onClose).padding(12.dp))
             }
             if (!allowed) {
@@ -264,10 +264,9 @@ fun PublisherScreen(target: Track?, onClose: () -> Unit) {
 @Composable
 private fun PublishButton(label: String, enabled: Boolean, quiet: Boolean = false, onClick: () -> Unit) {
     val theme = LocalTheme.current
-    val background = if (quiet) theme.card.copy(alpha = .55f)
-        else theme.accent.copy(alpha = if (enabled) 1f else .3f)
-    Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(background)
-        .clickable(enabled = enabled, onClick = onClick).padding(horizontal = 18.dp, vertical = 16.dp), contentAlignment = Alignment.Center) {
+    val background = if (quiet) theme.card else theme.accent.copy(alpha = if (enabled) 1f else .3f)
+    Box(Modifier.fillMaxWidth().heightIn(min = 48.dp).clip(RoundedCornerShape(14.dp)).background(background)
+        .clickable(enabled = enabled, role = Role.Button, onClick = onClick).padding(horizontal = 18.dp, vertical = 16.dp), contentAlignment = Alignment.Center) {
         Text(label, color = if (quiet) theme.secondary else Color.White, fontWeight = FontWeight.SemiBold)
     }
 }

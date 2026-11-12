@@ -36,12 +36,10 @@ fun LyricsDiagnosticsDialog(onClose: () -> Unit) {
     }
     SettingsSheet(onDismiss = onClose) {
         Column(Modifier.fillMaxWidth().heightIn(max = 650.dp).verticalScroll(rememberScrollState()).padding(20.dp)) {
-            Text("Diagnostic des sources de paroles", color = th.onBackground, fontSize = 19.sp, fontWeight = FontWeight.Bold)
-            Text(
+            SettingsSheetHeader("Diagnostic des sources de paroles",
                 if (track == null) "Lisez un titre puis relancez le test : chaque source est interrogée sur ce titre."
-                else "Chaque source est interrogée sur « ${track.title} — ${track.artist} ».",
-                color = th.secondary, fontSize = 12.sp, lineHeight = 17.sp,
-                modifier = Modifier.padding(top = 5.dp, bottom = 12.dp))
+                else "Chaque source est interrogée sur « ${track.title} — ${track.artist} ».", onClose)
+            Spacer(Modifier.height(18.dp))
             if (probing) {
                 Text("Test en cours…", color = th.accent, fontSize = 13.sp,
                     modifier = Modifier.padding(vertical = 18.dp))

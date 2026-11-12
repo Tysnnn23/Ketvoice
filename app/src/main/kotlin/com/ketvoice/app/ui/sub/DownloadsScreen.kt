@@ -10,15 +10,9 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.DeleteOutline
-import androidx.compose.material.icons.filled.DownloadDone
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Checkbox
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -35,6 +29,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.ketvoice.app.ui.common.Icon
+import com.ketvoice.app.ui.common.Text
 import com.ketvoice.app.data.*
 import com.ketvoice.app.player.Player
 import com.ketvoice.app.theme.LocalTheme
@@ -80,36 +76,31 @@ fun DownloadsScreen() {
     val adaptive = LocalAdaptiveLayout.current
     val total = remember(saved) { saved.sumOf { it.bytes } }
 
-    Column(Modifier.fillMaxSize().background(theme.background)) {
-        Row(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically) {
-            GlassBackButton { AppUi.closeOverlay() }
-            Text("Téléchargements", fontSize = 22.sp, fontWeight = FontWeight.Bold,
-                color = theme.onBackground, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(start = 12.dp).weight(1f))
-            if (saved.isNotEmpty()) TextButton(onClick = { selecting = !selecting; selected = emptyList() }) {
-                Text(if (selecting) "Annuler" else "Sélectionner", color = theme.accent, fontSize = 12.sp)
-            }
-        }
+    val backdrop = com.ketvoice.app.glass.rememberGlassBackdrop(theme.background)
+    Box(Modifier.fillMaxSize().background(theme.background)) {
+    com.ketvoice.app.glass.BackdropCapture(backdrop, Modifier.fillMaxSize()) {
         LazyVerticalGrid(columns = GridCells.Adaptive(360.dp),
-            modifier = Modifier.weight(1f).testTag("downloads-list"),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = adaptive.bottomPaddingDp.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            modifier = Modifier.fillMaxSize().testTag("downloads-list"),
+            contentPadding = PaddingValues(start = 22.dp, end = 22.dp, top = 82.dp,
+                bottom = adaptive.bottomPaddingDp.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             item(span = { GridItemSpan(maxLineSpan) }, key = "summary") {
                 Column(Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(Modifier.size(56.dp).clip(RoundedCornerShape(18.dp)).background(theme.accent.copy(alpha = .10f)),
-                            contentAlignment = Alignment.Center) {
-                            Icon(Icons.Filled.DownloadDone, null, tint = theme.accent, modifier = Modifier.size(28.dp))
-                        }
-                        Column(Modifier.padding(start = 14.dp).weight(1f)) {
-                            Text("Disponibles hors ligne", color = theme.onBackground,
-                                fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                            Text(AppText.t(if (saved.size == 1) "1 titre" else "${saved.size} titres") +
-                                " · " + android.text.format.Formatter.formatShortFileSize(context, total),
+                    Text("Téléchargements", color = theme.onBackground, fontSize = 36.sp,
+                        fontWeight = FontWeight.Bold, letterSpacing = (-1).sp)
+                    Text("Disponibles hors ligne", color = theme.secondary, fontSize = 15.sp)
+                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(theme.card)
+                        .padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(KetIcons.Download, null, tint = theme.accent, modifier = Modifier.size(28.dp))
+                        Column(Modifier.padding(start = 16.dp).weight(1f)) {
+                            Text(AppText.t(if (saved.size == 1) "1 titre" else "${saved.size} titres"),
+                                localize = false, color = theme.onBackground, fontSize = 23.sp,
+                                fontWeight = FontWeight.SemiBold)
+                            Text(android.text.format.Formatter.formatShortFileSize(context, total),
                                 localize = false, color = theme.secondary, fontSize = 13.sp)
                         }
+                        Icon(KetIcons.Check, null, tint = theme.secondary, modifier = Modifier.size(22.dp))
                     }
                     if (saved.isNotEmpty()) CollectionPlaybackActions(saved.map { it.track }, Modifier.fillMaxWidth())
                     TextButton(onClick = { AppUi.showCapsule.value = true }, contentPadding = PaddingValues(0.dp)) {
@@ -119,8 +110,9 @@ fun DownloadsScreen() {
                         CompactSearchField(query, { query = it }, { keyboard?.hide() }, Modifier.testTag("downloads-search"))
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             items(DownloadFilter.entries) { option ->
-                                FilterChip(selected = filter == option, onClick = { filterName = option.name; albumKey = null },
-                                    label = { Text(option.label, color = if (filter == option) theme.accent else theme.secondary) }, modifier = Modifier.heightIn(min = 48.dp))
+                                CollectionFilter(option.label, filter == option, {
+                                    filterName = option.name; albumKey = null
+                                })
                             }
                         }
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -128,7 +120,7 @@ fun DownloadsScreen() {
                             if (chosen != null) TextButton(onClick = { albumKey = null }) { Text("Albums", color = theme.accent) }
                             if (selecting) {
                                 TextButton(onClick = { selected = sections.saved.map { it.track.id } }) { Text("Tout sélectionner", color = theme.accent) }
-                                IconButton(onClick = { deleteIds = selected }, enabled = selected.isNotEmpty()) { Icon(Icons.Filled.DeleteOutline, "Supprimer", tint = theme.accent) }
+                                IconButton(onClick = { deleteIds = selected }, enabled = selected.isNotEmpty()) { Icon(KetIcons.Trash, "Supprimer", tint = theme.accent) }
                                 Text(selected.size.toString(), localize = false, color = theme.secondary)
                             }
                         }
@@ -177,7 +169,7 @@ fun DownloadsScreen() {
                     val track = item.track
                     Row(Modifier.then(if (Motion.reduced) Modifier else Modifier.animateItem())
                         .fillMaxWidth().clip(RoundedCornerShape(18.dp))
-                        .background(if (player.current?.id == track.id) theme.accent.copy(alpha = .07f) else theme.card)
+                        .background(if (player.current?.id == track.id) theme.accent.copy(alpha = .07f) else Color.Transparent)
                         .clickable(role = if (selecting) Role.Checkbox else Role.Button) {
                             if (selecting) { selected = if (track.id in selected) selected - track.id else selected + track.id; return@clickable }
                             val tracks = sections.saved.map { it.track }
@@ -200,7 +192,7 @@ fun DownloadsScreen() {
                                 color = theme.accent, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                         if (!selecting) IconButton(onClick = { deleteIds = listOf(track.id) }, modifier = Modifier.size(48.dp).testTag("download-delete")) {
-                            Icon(Icons.Filled.DeleteOutline, "Supprimer le téléchargement", tint = theme.secondary, modifier = Modifier.size(21.dp))
+                            Icon(KetIcons.Trash, "Supprimer le téléchargement", tint = theme.secondary, modifier = Modifier.size(21.dp))
                         }
                     }
                 }
@@ -215,6 +207,19 @@ fun DownloadsScreen() {
                     "Rechercher des titres", onAction = ::openTrackSearch)
             }
         }
+    }
+    CompositionLocalProvider(com.ketvoice.app.glass.LocalBackdropLayer provides backdrop) {
+        Row(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 18.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            GlassBackButton { AppUi.closeOverlay() }
+            Spacer(Modifier.weight(1f))
+            if (saved.isNotEmpty()) LiquidGlassButton({ selecting = !selecting; selected = emptyList() },
+                Modifier.widthIn(min = 48.dp).height(48.dp), shape = RoundedCornerShape(24.dp)) {
+                Text(if (selecting) "Annuler" else "Sélectionner", color = theme.onBackground,
+                    fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 18.dp))
+            }
+        }
+    }
     }
     if (deleteItems.isNotEmpty()) {
         AlertDialog(onDismissRequest = { if (!deleting) deleteIds = emptyList() }, containerColor = theme.card,

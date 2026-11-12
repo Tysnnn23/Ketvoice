@@ -45,6 +45,7 @@ uniform float rimLight;
 uniform float sheen;
 uniform float materialDark;
 uniform float2 lightDir;
+uniform float opticalPressure;
 // Densité de l'écran : les largeurs de liseré sont exprimées en dp, sinon le
 // verre paraît « peint » sur les dalles denses et épais sur les autres.
 uniform float pixelScale;
@@ -111,7 +112,9 @@ float4 main(float2 coord) {
 
     float gradRadius = min(radius * 1.5, min(halfSize.x, halfSize.y));
     float2 radial = centeredCoord / max(length(centeredCoord), 0.001);
-    float2 normal = gradSdRoundedRect(centeredCoord, halfSize, gradRadius) + depthEffect * radial;
+    float pressure = clamp(opticalPressure, 0.0, 1.0);
+    float2 normal = gradSdRoundedRect(centeredCoord, halfSize, gradRadius) +
+        (depthEffect + pressure * 0.12) * radial;
     float2 grad = normal / max(length(normal), 0.001);
 
     float4 color;
@@ -119,7 +122,7 @@ float4 main(float2 coord) {
         // Profil de lentille smoothstep : le pli du bord monte continûment
         // depuis le coeur du panneau, sans marche visible à l'entrée de lentille.
         float x = 1.0 - -sd / refractionHeight;
-        float d = prismalArcLift(x) * refractionAmount;
+        float d = prismalArcLift(x) * refractionAmount * (1.0 + pressure * 0.18);
         float2 refracted = coord + d * grad;
         // Dispersion chromatique : le rouge plie moins, le bleu plie plus.
         float2 rCoord = coord + d * (1.0 - dispersion) * grad;
@@ -173,15 +176,16 @@ float4 main(float2 coord) {
     color.rgb -= edgeDark * thickness * max(-facing, 0.0);
     // Contour capillaire net : la limite du matériau, sur fond clair ou sombre.
     float contour = clamp(1.0 + sd / (0.65 * px), 0.0, 1.0);
-    color.rgb += 0.012 * contour;
-    // Caustique : la lumière s'accumule juste à l'intérieur de l'arête éclairée.
-    float caustic = (1.0 - smoothstep(0.0, 0.55, -sd / max(refractionHeight, 1.0))) * max(facing, 0.0);
-    color.rgb += rimLight * 0.10 * caustic;
+    color.rgb -= edgeDark * 0.16 * contour;
+    float causticDepth = -sd / max(refractionHeight, 1.0);
+    float caustic = smoothstep(0.0, 0.12, causticDepth) *
+        (1.0 - smoothstep(0.12, 0.55, causticDepth)) * max(facing, 0.0);
+    color.rgb += rimLight * (0.12 + pressure * 0.04) * caustic;
 
     // Voile spéculaire supérieur : la pellicule « mouillée » du verre.
     float fromTop = clamp(local.y / max(size.y, 1.0), 0.0, 1.0);
     float topLit = clamp(-grad.y, 0.0, 1.0);
-    color.rgb += sheen * pow(1.0 - fromTop, 2.4) * (0.35 + 0.65 * topLit);
+    color.rgb += sheen * pow(1.0 - fromTop, 2.4) * topLit * thickness;
     // Keep the centre optically quiet; no painted diagonal streak or corner halo.
 
     // Dithering sub-pixel : rend les dégradés du verre parfaitement lisses.
@@ -236,6 +240,9 @@ fun BackdropEffectScope.liquidGlass(
         val angle = Math.toRadians(params.highlightAngle.toDouble())
         shader.setFloatUniform("lightDir", -kotlin.math.cos(angle).toFloat(), -kotlin.math.sin(angle).toFloat())
         shader.setFloatUniform("pixelScale", density)
+        shader.setFloatUniform("opticalPressure", params.opticalPressure.let {
+            if (it.isFinite()) it.coerceIn(0f, 1f) else 0f
+        })
         effect(RenderEffect.createRuntimeShaderEffect(shader, "content"))
         true
     }.getOrDefault(false)

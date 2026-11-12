@@ -7,6 +7,24 @@
 
 ---
 
+# Ketvoice 4.7.0
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 88** — optical glass with pressure-responsive refraction and a
+visible redesign of Library, Downloads, Album and Settings.
+
+- Replace symmetric bright rims with directional reflection and quieter depth shading.
+- Animate glass pressure without shrinking glyphs or accessible touch targets.
+- Refract independent slider tracks instead of rendering static painted thumbs.
+- Use cohesive outline icons, editorial titles, clean filters and matte grouped content.
+- Preserve offline progress, confirmations, playlist actions and restored navigation/player.
+- Integrate album artwork with an image-derived surface and genuinely captured floating controls.
+
+Full notes and validation boundaries: [4.7.0](docs/releases/v4.7.0.md).
+
+---
+
 # Ketvoice 4.6.1
 
 ![Ketvoice](ketvoice-banner.png)

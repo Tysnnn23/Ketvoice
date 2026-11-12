@@ -43,6 +43,7 @@ class VisualRefreshHostTest {
         AppSettings.reduceAnimations.value = true
     }
     @After fun reset() {
+        coil.Coil.reset()
         AppUi.selectTab(AppUi.HOME)
         state.value = PlayerUiState()
         AppSettings.reduceAnimations.value = false
@@ -67,10 +68,20 @@ class VisualRefreshHostTest {
     }
 
     @Test fun albumStartsAtWindowTopInLightModeWithoutBleachingItsLowerHalf() {
+        val fixture = Bitmap.createBitmap(400, 400, Bitmap.Config.ARGB_8888).apply {
+            eraseColor(android.graphics.Color.rgb(35, 75, 130))
+        }
+        val drawable = android.graphics.drawable.BitmapDrawable(compose.activity.resources, fixture)
+        coil.Coil.setImageLoader(coil.ImageLoader.Builder(compose.activity).components {
+            add(coil.intercept.Interceptor { chain ->
+                coil.request.SuccessResult(drawable, chain.request, coil.decode.DataSource.MEMORY)
+            })
+        }.build())
         val track = Track("qa:visual", "Fixture", "Artist", "Album")
         compose.setContent { KetvoiceTheme(useDark = false) {
-            AlbumPage(CatalogRequest("album", "qa:visual", "Album"), CatalogPage("Album", "Artist", null, listOf(track), "2026"), listOf(track), false, {})
+            AlbumPage(CatalogRequest("album", "qa:visual", "Album"), CatalogPage("Album", "Artist", "fixture:blue-cover", listOf(track), "2026"), listOf(track), false, {})
         } }
+        compose.waitUntil(10_000) { compose.onAllNodesWithTag("album-artwork-loaded").fetchSemanticsNodes().isNotEmpty() }
         val bounds = compose.onNodeWithTag("album-hero-visual").fetchSemanticsNode().boundsInRoot
         assertEquals(0f, bounds.top, 1f)
         assertEquals(0f, bounds.left, 1f)

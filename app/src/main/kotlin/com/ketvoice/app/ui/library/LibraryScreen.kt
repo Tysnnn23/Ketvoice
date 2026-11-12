@@ -81,20 +81,25 @@ fun LibraryScreen() {
     fun pin(playlist: LocalPlaylist) { scope.launch {
         runCatching { PlaylistStore.pin(playlist.id, !playlist.pinned) }.onFailure { error = "Impossible de lire les playlists" }
     } }
-    LazyColumn(Modifier.fillMaxSize().background(theme.background).statusBarsPadding().testTag("library-list"), state = list,
-        contentPadding = PaddingValues(bottom = LocalAdaptiveLayout.current.bottomPaddingDp.dp)) {
+    val backdrop = com.ketvoice.app.glass.rememberGlassBackdrop(theme.background)
+    Box(Modifier.fillMaxSize().background(theme.background)) {
+    com.ketvoice.app.glass.BackdropCapture(backdrop, Modifier.fillMaxSize()) {
+    LazyColumn(Modifier.fillMaxSize().statusBarsPadding().testTag("library-list"), state = list,
+        contentPadding = PaddingValues(top = 70.dp, bottom = LocalAdaptiveLayout.current.bottomPaddingDp.dp)) {
         item(key = "header") {
-            Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 18.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("Bibliothèque", color = theme.onBackground, fontSize = 32.sp, fontWeight = FontWeight.Bold,
-                    letterSpacing = (-1).sp, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                IconButton(onClick = { AppUi.showAccount.value = true }) { Icon(Icons.Filled.AccountCircle, "Compte", tint = theme.secondary) }
+            Column(Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 14.dp)) {
+                Text("Bibliothèque", color = theme.onBackground, fontSize = 38.sp, fontWeight = FontWeight.Bold,
+                    letterSpacing = (-1.2).sp)
+                Text(AppText.t(if (all.size == 1) "1 titre" else "${all.size} titres") + " · " +
+                    AppText.t("Playlists") + " " + playlists.size, localize = false, color = theme.secondary,
+                    fontSize = 14.sp, modifier = Modifier.padding(top = 5.dp, bottom = 18.dp))
+                CompactSearchField(query, { query = it }, {}, Modifier.testTag("library-search"))
             }
-            CompactSearchField(query, { query = it }, {}, Modifier.padding(horizontal = 18.dp).testTag("library-search"))
-            LazyRow(contentPadding = PaddingValues(horizontal = 18.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            LazyRow(contentPadding = PaddingValues(horizontal = 22.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 itemsIndexed(listOf("Tout", "Playlists", "Albums", "Titres", "Artistes")) { index, label ->
-                    FilterChip(selected = view == index, onClick = { view = index; album = null; selecting = false; selected = emptyList() },
-                        label = { Text(label, color = if (view == index) theme.accent else theme.secondary) },
-                        modifier = Modifier.padding(vertical = 8.dp).heightIn(min = 48.dp))
+                    CollectionFilter(label, view == index, {
+                        view = index; album = null; selecting = false; selected = emptyList()
+                    }, Modifier.padding(bottom = 10.dp))
                 }
             }
         }
@@ -108,15 +113,12 @@ fun LibraryScreen() {
         }
         if (view == 0 && query.isBlank() && chosen == null) {
             item(key = "shortcuts") {
-                Column(Modifier.padding(horizontal = 18.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        LibraryShortcut("Favoris", Icons.Filled.Favorite, Modifier.weight(1f)) { AppUi.openCatalog(CatalogRequest("favorites", "local", "Favoris")) }
-                        LibraryShortcut("Téléchargements", Icons.Filled.Download, Modifier.weight(1f)) { AppUi.openDownloads() }
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        LibraryShortcut("Musique locale", Icons.Filled.Folder, Modifier.weight(1f)) { AppUi.openLocalFiles() }
-                        LibraryShortcut("Replay", Icons.Filled.History, Modifier.weight(1f)) { AppUi.openReplay() }
-                    }
+                Column(Modifier.padding(horizontal = 22.dp, vertical = 12.dp)
+                    .clip(RoundedCornerShape(24.dp)).background(theme.card)) {
+                    LibraryShortcut("Favoris", KetIcons.Heart, Modifier.fillMaxWidth()) { AppUi.openCatalog(CatalogRequest("favorites", "local", "Favoris")) }
+                    LibraryShortcut("Téléchargements", KetIcons.Download, Modifier.fillMaxWidth()) { AppUi.openDownloads() }
+                    LibraryShortcut("Musique locale", KetIcons.Folder, Modifier.fillMaxWidth()) { AppUi.openLocalFiles() }
+                    LibraryShortcut("Replay", KetIcons.Clock, Modifier.fillMaxWidth()) { AppUi.openReplay() }
                 }
             }
             if (playlists.any { it.pinned }) item(key = "pinned") {
@@ -195,7 +197,7 @@ fun LibraryScreen() {
                 }
                 if (selecting) Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                     TextButton(onClick = { selected = shown.map { it.id } }) { Text("Tout sélectionner", color = theme.accent) }
-                    IconButton(onClick = { Player.playQueue(selectedTracks) }, enabled = selectedTracks.isNotEmpty()) { Icon(Icons.Filled.PlayArrow, "Lecture", tint = theme.accent) }
+                    IconButton(onClick = { Player.playQueue(selectedTracks) }, enabled = selectedTracks.isNotEmpty()) { Icon(KetIcons.Play, "Lecture", tint = theme.accent) }
                     IconButton(onClick = { Player.enqueue(selectedTracks); selected = emptyList(); selecting = false }, enabled = selectedTracks.isNotEmpty()) {
                         Icon(Icons.Filled.QueueMusic, "Ajouter à la file", tint = theme.accent)
                     }
@@ -203,7 +205,8 @@ fun LibraryScreen() {
                 }
             }
             items(shown, key = { it.id }) { track ->
-                Row(Modifier.fillMaxWidth().clickable {
+                Row(Modifier.then(if (com.ketvoice.app.ui.motion.Motion.reduced) Modifier else Modifier.animateItem())
+                    .fillMaxWidth().clickable {
                     if (selecting) selected = if (track.id in selected) selected - track.id else selected + track.id
                     else Player.playQueue(shown, shown.indexOfFirst { it.id == track.id })
                 }.padding(horizontal = 18.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -213,7 +216,7 @@ fun LibraryScreen() {
                         TrackTitle(track.title, color = theme.onBackground)
                         Text(track.artist, localize = false, color = theme.secondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
-                    if (!selecting) IconButton(onClick = { AppUi.trackMenuTrack.value = track }) { Icon(Icons.Filled.MoreHoriz, "Options", tint = theme.secondary) }
+                    if (!selecting) IconButton(onClick = { AppUi.trackMenuTrack.value = track }) { Icon(KetIcons.More, "Options", tint = theme.secondary) }
                 }
             }
         }
@@ -223,6 +226,20 @@ fun LibraryScreen() {
         else if (query.isNotBlank() && shown.isEmpty() && playlists.none { it.name.contains(query.trim(), true) }) item {
             EmptyState("Aucun résultat", "Essayez un autre titre ou artiste.", "Effacer", onAction = { query = "" })
         }
+    }
+    }
+    CompositionLocalProvider(com.ketvoice.app.glass.LocalBackdropLayer provides backdrop) {
+        Row(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 20.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.End) {
+            LiquidGlassButton({ AppUi.showCreatePlaylist.value = true }, Modifier.size(48.dp), enabled = !loadError) {
+                Icon(KetIcons.Plus, "Créer une playlist", tint = theme.onBackground)
+            }
+            Spacer(Modifier.width(10.dp))
+            LiquidGlassButton({ AppUi.showAccount.value = true }, Modifier.size(48.dp)) {
+                Icon(KetIcons.Account, "Compte", tint = theme.onBackground)
+            }
+        }
+    }
     }
 }
 
@@ -256,10 +273,11 @@ private fun LibrarySection(title: String) {
 @Composable
 private fun LibraryShortcut(title: String, icon: androidx.compose.ui.graphics.vector.ImageVector, modifier: Modifier, onClick: () -> Unit) {
     val theme = LocalTheme.current
-    Row(modifier.clip(RoundedCornerShape(18.dp)).background(theme.card).clickable(role = Role.Button, onClick = onClick)
-        .heightIn(min = 64.dp).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-        Icon(icon, null, tint = theme.accent, modifier = Modifier.size(22.dp))
-        Text(title, color = theme.onBackground, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
-            maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 10.dp))
+    Row(modifier.clickable(role = Role.Button, onClick = onClick)
+        .heightIn(min = 62.dp).padding(horizontal = 18.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+        Icon(icon, null, tint = theme.accent, modifier = Modifier.size(24.dp))
+        Text(title, color = theme.onBackground, fontSize = 16.sp, fontWeight = FontWeight.Medium,
+            maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(start = 16.dp, end = 8.dp))
+        Icon(KetIcons.ChevronRight, null, tint = theme.secondary, modifier = Modifier.size(18.dp))
     }
 }
