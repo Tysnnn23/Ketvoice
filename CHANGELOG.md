@@ -7,6 +7,24 @@
 
 ---
 
+# Ketvoice 4.8.0
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 89** — playback recovery, progressive search and personal-library improvements.
+
+- Respect ordered or progressive source selection, with safer lossless cache fallback.
+- Restore the queue and last saved position without automatically starting playback.
+- Show search results as providers answer, group confident matches and offer source choices.
+- Add portable personal backups with a preview and non-destructive playlist merging.
+- Add per-track lyric timing adjustments and a more locally personalized Home.
+- Support restricted, explicitly authorized unprotected FLAC DASH downloads in a separate cache.
+- Keep Discord support in the signed release APKs; device and live-session validation remain open.
+
+Full notes and validation limits: [4.8.0](docs/releases/v4.8.0.md).
+
+---
+
 # Ketvoice 4.7.0
 
 ![Ketvoice](ketvoice-banner.png)
