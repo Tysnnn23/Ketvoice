@@ -11,6 +11,7 @@ internal object NativeDiscord {
     }
 
     external fun nativeCreate(appId: Long): Boolean
+    external fun nativeReset(): Boolean
     external fun nativeDestroy()
     external fun nativeAuthorize(scopes: String?): Boolean
     external fun nativeExchange(code: String, verifier: String, redirectUri: String): Boolean

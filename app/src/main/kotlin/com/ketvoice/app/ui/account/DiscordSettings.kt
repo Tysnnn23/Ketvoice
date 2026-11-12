@@ -96,6 +96,9 @@ internal fun DiscordSettings(modifier: Modifier = Modifier) {
                 Text(
                     when {
                         !Discord.available -> "Indisponible dans cette version"
+                        discord.presenceOnly && (discord.presenceActive || discord.ready) ->
+                            "Présence active · via l'app Discord"
+                        discord.presenceOnly -> "Présence via l'app Discord"
                         discord.busy && discord.linked -> "Compte lié · connexion de la présence…"
                         discord.busy -> "En attente de l'app Discord…"
                         discord.ready -> discord.userName ?: "Présence active"
@@ -107,13 +110,44 @@ internal fun DiscordSettings(modifier: Modifier = Modifier) {
             }
             when {
                 discord.busy -> CircularProgressIndicator(Modifier.size(18.dp), color = theme.accent, strokeWidth = 2.dp)
-                discord.ready -> Box(Modifier.size(9.dp).clip(CircleShape).background(Color(0xFF34C759)))
-                discord.linked -> Box(Modifier.size(9.dp).clip(CircleShape).background(Color(0xFFFFB020)))
+                discord.presenceActive || discord.ready -> Box(Modifier.size(9.dp).clip(CircleShape).background(Color(0xFF34C759)))
+                discord.presenceOnly || discord.linked -> Box(Modifier.size(9.dp).clip(CircleShape).background(Color(0xFFFFB020)))
                 else -> Box(Modifier.size(9.dp).clip(CircleShape).background(theme.secondary.copy(alpha = .45f)))
             }
         }
 
-        if (Discord.available && discord.linked) {
+        if (Discord.available && discord.presenceOnly) {
+            Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Afficher ce que j'écoute", color = theme.onBackground, fontSize = 14.sp)
+                    Text("Morceau, artiste et boutons sur votre profil Discord.",
+                        color = theme.secondary, fontSize = 11.5.sp, lineHeight = 16.sp)
+                }
+                val label = com.ketvoice.app.data.AppText.t("Afficher ce que j'écoute")
+                LiquidGlassSwitch(
+                    checked = AppSettings.discordPresence.value,
+                    onCheckedChange = {
+                        AppSettings.discordPresence.value = it
+                        SettingsStore.save()
+                        if (!it) Discord.clearPresence()
+                    }, modifier = Modifier.semantics { contentDescription = label })
+            }
+            Text("Sans compte lié : l'app Discord doit être installée, ouverte et connectée. " +
+                "La présence apparaît dès qu'un morceau joue et se retire en pause.",
+                color = theme.secondary, fontSize = 11.sp, lineHeight = 15.sp,
+                modifier = Modifier.padding(top = 6.dp, bottom = 2.dp))
+            discord.presenceError?.let {
+                Text("Discord n'a pas accepté la mise à jour : $it",
+                    color = Color(0xFFFF6B6B), fontSize = 11.5.sp, lineHeight = 16.sp,
+                    modifier = Modifier.padding(bottom = 4.dp))
+            }
+            Text("Réessayer la présence", color = theme.accent.copy(alpha = .82f), fontSize = 12.sp,
+                modifier = Modifier.fillMaxWidth().clickable { Discord.enablePresenceOnly() }
+                    .padding(bottom = 4.dp))
+            Text("Désactiver la présence via l'app Discord", color = theme.accent.copy(alpha = .82f), fontSize = 12.sp,
+                modifier = Modifier.fillMaxWidth().clickable { Discord.disablePresenceOnly() }
+                    .padding(bottom = 4.dp))
+        } else if (Discord.available && discord.linked) {
             Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text("Afficher ce que j'écoute", color = theme.onBackground, fontSize = 14.sp)
@@ -141,19 +175,31 @@ internal fun DiscordSettings(modifier: Modifier = Modifier) {
                 )
                 Text("Vérifier la présence maintenant", color = theme.accent.copy(alpha = .82f), fontSize = 12.sp,
                     modifier = Modifier.fillMaxWidth().clickable(enabled = !discord.busy) {
-                        Discord.onForeground()
-                    }.padding(bottom = 4.dp))
+                        Discord.connect()
+                    }.padding(bottom = 2.dp))
+                Text("Utiliser la présence via l'app Discord", color = theme.accent, fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.fillMaxWidth().clickable { Discord.enablePresenceOnly() }
+                        .padding(bottom = 4.dp))
             }
             Text("Rouvrir la connexion Discord", color = theme.accent.copy(alpha = .82f), fontSize = 12.sp,
                 modifier = Modifier.fillMaxWidth().clickable(enabled = !discord.busy) {
                     connectInWebView()
                 }.padding(bottom = 4.dp))
         } else if (Discord.available) {
-            Text("Se connecter avec Discord", color = theme.accent, fontSize = 13.sp,
+            Text("Afficher via l'app Discord", color = theme.accent, fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.fillMaxWidth().clickable(enabled = !discord.busy) {
-                    connectInWebView()
+                    Discord.enablePresenceOnly()
                 }.padding(top = 10.dp, bottom = 4.dp))
+            Text("Sans lier de compte : l'app Discord doit être installée, ouverte et connectée. " +
+                "La présence est publiée par l'app Discord elle-même (RPC) et ne dépend pas " +
+                "de la connexion au compte.", color = theme.secondary,
+                fontSize = 11.sp, lineHeight = 15.sp, modifier = Modifier.padding(bottom = 6.dp))
+            Text("Ou lier mon compte Discord (avancé)", color = theme.accent.copy(alpha = .82f), fontSize = 12.sp,
+                modifier = Modifier.fillMaxWidth().clickable(enabled = !discord.busy) {
+                    connectInWebView()
+                }.padding(bottom = 4.dp))
             Text("La connexion s'ouvre dans une fenêtre Ketvoice (WebView) : aucun mot de passe " +
                 "Discord n'est demandé ni conservé par l'application.", color = theme.secondary,
                 fontSize = 11.sp, lineHeight = 15.sp, modifier = Modifier.padding(bottom = 4.dp))
@@ -213,6 +259,8 @@ internal fun DiscordSettings(modifier: Modifier = Modifier) {
                 val report = buildString {
                     appendLine("Ketvoice · Discord")
                     appendLine("lié=" + discord.linked + " prêt=" + discord.ready + " occupé=" + discord.busy)
+                    appendLine("mode=" + if (discord.presenceOnly) "app-discord-rpc" else "compte")
+                    appendLine("présence=" + discord.presenceActive + " erreur-présence=" + (discord.presenceError ?: "-"))
                     appendLine("authentifié=" + Discord.authenticated())
                     appendLine("utilisateur=" + (discord.userName ?: "-"))
                     appendLine("erreur=" + (discord.error ?: "-"))

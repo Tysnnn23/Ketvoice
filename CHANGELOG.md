@@ -7,6 +7,23 @@
 
 ---
 
+# Ketvoice 4.8.2
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 91** — Discord presence now goes through the installed Discord app
+over RPC, without account linking or a gateway connection.
+
+- Publish Discord presence without OAuth: the SDK talks to the installed, signed-in Discord app (Android RPC) and no longer waits for a `Ready` gateway state.
+- Add **Afficher via l'app Discord** as the primary Discord action, with a visible success/error result per presence update.
+- Keep account linking as an advanced option; the gateway loop is bounded and never restarts on foreground.
+- Show the track title in the Discord status line and keep the **Listening** activity type.
+- Report the presence mode, last result and SDK log in the diagnostic panel.
+
+Full notes and validation limits: [4.8.2](docs/releases/v4.8.2.md).
+
+---
+
 # Ketvoice 4.8.1
 
 ![Ketvoice](ketvoice-banner.png)

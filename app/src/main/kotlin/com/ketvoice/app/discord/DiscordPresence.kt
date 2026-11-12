@@ -75,7 +75,11 @@ data class DiscordState(
     val ready: Boolean = false,
     val userName: String? = null,
     val error: String? = null,
-    val log: String? = null
+    val log: String? = null,
+    /** Presence through the installed Discord app over RPC, no account linking. */
+    val presenceOnly: Boolean = false,
+    val presenceActive: Boolean = false,
+    val presenceError: String? = null
 )
 
 /**
@@ -92,6 +96,8 @@ interface DiscordController {
     fun onForeground()
     fun unlink()
     fun authenticated(): Boolean
+    fun enablePresenceOnly()
+    fun disablePresenceOnly()
     fun setPresence(payload: DiscordPresencePayload)
     fun clearPresence()
 }
@@ -126,6 +132,8 @@ object Discord {
     fun onForeground() = controller?.onForeground()
     fun unlink() = controller?.unlink()
     fun authenticated(): Boolean = controller?.authenticated() == true
+    fun enablePresenceOnly() = controller?.enablePresenceOnly()
+    fun disablePresenceOnly() = controller?.disablePresenceOnly()
     fun setPresence(payload: DiscordPresencePayload) = controller?.setPresence(payload)
     fun clearPresence() = controller?.clearPresence()
 }

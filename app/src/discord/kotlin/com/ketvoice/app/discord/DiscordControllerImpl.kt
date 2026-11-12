@@ -21,6 +21,8 @@ class DiscordControllerImpl : DiscordController {
     private var activity: Activity? = null
     @Volatile private var created = false
     @Volatile private var linked = false
+    @Volatile private var presenceOnly = false
+    @Volatile private var connectFailed = false
     @Volatile private var ready = false
     @Volatile private var pending: DiscordPresencePayload? = null
     @Volatile private var restoring = false
@@ -91,7 +93,16 @@ class DiscordControllerImpl : DiscordController {
             0 -> 15_000L
             1 -> 45_000L
             2 -> 90_000L
-            else -> return
+            else -> {
+                connectFailed = true
+                Discord.update {
+                    it.copy(
+                        busy = false,
+                        error = "La connexion au compte Discord échoue. Utilise « Afficher via l'app Discord » : cette présence ne dépend pas du compte."
+                    )
+                }
+                return
+            }
         }
         retries++
         main.postDelayed(reconnect, delay)
@@ -118,41 +129,58 @@ class DiscordControllerImpl : DiscordController {
     }
 
     override fun start() {
-        if (linked) return
+        if (linked || presenceOnly) return
         ensureCreated()
-        val access = tokens?.loadAccess()
-        if (!access.isNullOrBlank()) {
-            linked = true
-            restoring = true
-            restoringAccess = true
-            pendingAccess = null // already persisted; do not overwrite it
-            retries = 0
-            Discord.update { it.copy(linked = true, busy = true, ready = false, error = null) }
-            main.removeCallbacks(timeout)
-            armPresenceTimeout()
-            if (!NativeDiscord.nativeSetToken(access)) {
-                restoringAccess = false
-                main.removeCallbacks(presenceTimeout)
-                Discord.update { it.copy(busy = false, error = "Discord indisponible") }
-            }
-            return
+        if (com.ketvoice.app.data.AppSettings.discordPresence.value) {
+            // Presence does not need an account: publish through the installed
+            // Discord app over RPC instead of restoring a gateway token. The
+            // gateway path used to retry forever when it never became Ready.
+            enablePresenceOnly()
         }
-        val stored = tokens?.load()
-        if (stored.isNullOrBlank()) {
-            // Presence-only mode resumes silently when the user enabled it.
-            if (com.ketvoice.app.data.AppSettings.discordPresence.value) connect()
-            return
-        }
-        linked = true
-        restoring = true
+    }
+
+    /**
+     * Rich Presence over RPC: a bare client that only knows the application ID.
+     * The SDK talks to the installed, signed-in Discord app, so no OAuth token,
+     * no `Connect()` and no `Ready` state are involved.
+     */
+    override fun enablePresenceOnly() {
+        ensureCreated()
+        presenceOnly = true
+        linked = false
+        ready = false
+        busyClear()
         retries = 0
-        Discord.update { it.copy(linked = true, busy = true, ready = false, error = null) }
-        armPresenceTimeout()
-        if (!NativeDiscord.nativeRestore(stored)) {
-            restoring = false
-            main.removeCallbacks(presenceTimeout)
-            Discord.update { it.copy(busy = false, error = "Discord indisponible") }
+        connectFailed = false
+        clearPending()
+        main.removeCallbacks(presenceTimeout)
+        main.removeCallbacks(reconnect)
+        val reset = created && runCatching { NativeDiscord.nativeReset() }.getOrDefault(false)
+        created = reset
+        if (!created) ensureCreated()
+        com.ketvoice.app.data.AppSettings.discordPresence.value = true
+        com.ketvoice.app.data.SettingsStore.save()
+        Discord.update {
+            it.copy(linked = false, busy = false, ready = false, presenceOnly = true,
+                presenceActive = false, presenceError = null, error = null)
         }
+        pending?.let { pending = null; send(it) }
+    }
+
+    override fun disablePresenceOnly() {
+        presenceOnly = false
+        busyClear()
+        pending = null
+        runCatching { NativeDiscord.nativeClearPresence() }
+        com.ketvoice.app.data.AppSettings.discordPresence.value = false
+        com.ketvoice.app.data.SettingsStore.save()
+        Discord.update {
+            it.copy(presenceOnly = false, presenceActive = false, presenceError = null)
+        }
+    }
+
+    private fun busyClear() {
+        Discord.update { it.copy(busy = false) }
     }
 
     /**
@@ -172,8 +200,13 @@ class DiscordControllerImpl : DiscordController {
             Discord.update { it.copy(error = "Discord indisponible") }
             return
         }
-        Discord.update { it.copy(busy = true, error = null) }
+        Discord.update {
+            it.copy(busy = true, error = null, presenceOnly = false,
+                presenceActive = false, presenceError = null)
+        }
         retries = 0
+        connectFailed = false
+        presenceOnly = false
         main.removeCallbacks(timeout)
         armPresenceTimeout()
         NativeDiscord.nativeConnect()
@@ -195,7 +228,12 @@ class DiscordControllerImpl : DiscordController {
         pendingAccess = value
         restoringAccess = false
         retries = 0
-        Discord.update { it.copy(busy = true, error = null) }
+        connectFailed = false
+        presenceOnly = false
+        Discord.update {
+            it.copy(busy = true, error = null, presenceOnly = false,
+                presenceActive = false, presenceError = null)
+        }
         main.removeCallbacks(timeout)
         armPresenceTimeout()
         if (!NativeDiscord.nativeSetToken(value)) {
@@ -225,9 +263,14 @@ class DiscordControllerImpl : DiscordController {
         expectedState = DiscordOAuth.newState()
         awaitingCode = true
         retries = 0
+        connectFailed = false
+        presenceOnly = false
         // Survives a process restart while the browser/WebView is in front.
         pendingOAuth?.save(expectedState, verifier)
-        Discord.update { it.copy(busy = true, error = null) }
+        Discord.update {
+            it.copy(busy = true, error = null, presenceOnly = false,
+                presenceActive = false, presenceError = null)
+        }
         main.removeCallbacks(presenceTimeout)
         main.removeCallbacks(reconnect)
         main.removeCallbacks(timeout)
@@ -305,18 +348,16 @@ class DiscordControllerImpl : DiscordController {
         if (awaitingCode) {
             main.removeCallbacks(timeout)
             main.postDelayed(timeout, RETURN_CANCEL_MS)
-            return
         }
-        // A stored token restored in the background may never have connected.
-        if (linked && !ready && !Discord.state.value.busy) {
-            retries = 0
-            connect()
-        }
+        // No automatic Connect() retry: a linked gateway that never becomes
+        // Ready used to restart on every foreground. Presence now uses RPC.
     }
 
     override fun unlink() {
         clearPending()
         linked = false
+        presenceOnly = false
+        connectFailed = false
         ready = false
         retries = 0
         main.removeCallbacks(presenceTimeout)
@@ -335,6 +376,13 @@ class DiscordControllerImpl : DiscordController {
         runCatching { NativeDiscord.nativeIsAuthenticated() }.getOrDefault(false)
 
     override fun setPresence(payload: DiscordPresencePayload) {
+        // RPC presence goes straight to the installed Discord app: there is no
+        // account, no gateway status and therefore no Ready state to wait for.
+        if (presenceOnly) {
+            pending = null
+            send(payload)
+            return
+        }
         if (!linked) return
         if (!ready) {
             pending = payload
@@ -398,6 +446,8 @@ class DiscordControllerImpl : DiscordController {
     }
 
     private fun handleStatus(status: Int) {
+        // In RPC mode there is deliberately no gateway connection or Ready state.
+        if (presenceOnly) return
         val wasReady = ready
         ready = status == STATUS_READY
         if (ready) {
@@ -441,6 +491,7 @@ class DiscordControllerImpl : DiscordController {
     }
 
     private fun handleAuth(ok: Boolean, message: String, refreshToken: String) {
+        if (presenceOnly) return
         main.removeCallbacks(timeout)
         if (!ok) {
             // A stored access token that the SDK rejects must not be restored on
@@ -483,6 +534,14 @@ class DiscordControllerImpl : DiscordController {
 
     private fun handlePresence(ok: Boolean, message: String) {
         if (!ok) Log.w(TAG, "Presence update rejected: $message")
+        val detail = message.trim().take(180).ifBlank { null }
+        Discord.update {
+            it.copy(
+                presenceActive = ok,
+                presenceError = if (ok) null
+                else (detail ?: "Discord n'a pas accepté la présence")
+            )
+        }
     }
 
     private fun handleUser(id: Long, username: String, displayName: String) {

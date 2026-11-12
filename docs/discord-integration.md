@@ -49,7 +49,17 @@ Account linking remains an optional action:
    rest. The Discord app is tried first (it reuses the signed-in session and
    delivers the redirect as an intent); the browser is the fallback.
 
-## Connection state
+## Presence without authentication (default)
+
+Android supports Rich Presence through the installed Discord app over RPC (Social
+SDK 1.10+). Ketvoice creates a bare client that only knows the application ID and
+calls `UpdateRichPresence` without `Connect()`, an OAuth token or a `Ready` status.
+The Discord app must be installed, open and signed in. This is the primary action in
+**Settings → Compte → Afficher via l'app Discord**; every update reports its SDK
+result. Account linking remains an advanced option for account features, but it is
+no longer required for the listening status.
+
+## Connection state (linked account mode)
 
 Linking and presence are reported separately:
 
@@ -71,7 +81,8 @@ Only while the user has enabled **Show what I'm listening to** *and* a track is
 actually playing:
 
 - `type = Listening`, `details` = track title, `state` = artist (both clamped to
-  Discord's 128-character limit).
+  Discord's 128-character limit). `StatusDisplayType = Details` makes the status
+  line show the track instead of only the application name.
 - Large image = HTTPS cover URL when it is at most 300 characters.
 - `timestamps.start` = now − playback position, so Discord counts up correctly.
 - Buttons: **Download ketvoice** → `https://ketvoice.netlify.app/` and

@@ -188,6 +188,8 @@ void ApplyPresence(discordpp::Client *client, const std::vector<std::string> &fi
   discordpp::Activity activity;
   // A music app should surface as "Listening to ..." instead of "Playing ...".
   activity.SetType(discordpp::ActivityTypes::Listening);
+  // Show the track in the status line rather than only the application name.
+  activity.SetStatusDisplayType(discordpp::StatusDisplayTypes::Details);
   if (fields.size() > 0 && !fields[0].empty()) activity.SetDetails(fields[0]);
   if (fields.size() > 1 && !fields[1].empty()) activity.SetState(fields[1]);
 
@@ -247,21 +249,11 @@ extern "C" JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void * /*reserved*/) {
   return JNI_VERSION_1_6;
 }
 
-extern "C" JNIEXPORT jboolean JNICALL
-Java_com_ketvoice_app_discord_NativeDiscord_nativeCreate(JNIEnv *env, jobject thiz,
-                                                        jlong appId) {
-  // Cache the bridge class from a call that runs on the app class loader; native
-  // callback threads have no context loader and cannot FindClass it themselves.
-  if (g_bridge == nullptr && thiz != nullptr) {
-    jclass local = env->GetObjectClass(thiz);
-    if (local != nullptr) {
-      g_bridge = static_cast<jclass>(env->NewGlobalRef(local));
-      env->DeleteLocalRef(local);
-    }
-  }
-  std::lock_guard<std::mutex> lock(g_mutex);
-  if (g_client != nullptr) return JNI_TRUE;
-  g_app_id = static_cast<uint64_t>(appId);
+namespace {
+
+// Assumes g_mutex is held and g_app_id is set. Used by nativeCreate and by
+// nativeReset, which discards an authenticated client before RPC presence.
+bool CreateClientLocked() {
   try {
     auto client = std::make_unique<discordpp::Client>();
     client->SetApplicationId(g_app_id);
@@ -286,11 +278,56 @@ Java_com_ketvoice_app_discord_NativeDiscord_nativeCreate(JNIEnv *env, jobject th
         },
         discordpp::LoggingSeverity::Warning);
     g_client = std::move(client);
-    return JNI_TRUE;
+    return true;
   } catch (...) {
     LOGE("Discord client creation failed");
-    return JNI_FALSE;
+    return false;
   }
+}
+
+}  // namespace
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_ketvoice_app_discord_NativeDiscord_nativeCreate(JNIEnv *env, jobject thiz,
+                                                        jlong appId) {
+  // Cache the bridge class from a call that runs on the app class loader; native
+  // callback threads have no context loader and cannot FindClass it themselves.
+  if (g_bridge == nullptr && thiz != nullptr) {
+    jclass local = env->GetObjectClass(thiz);
+    if (local != nullptr) {
+      g_bridge = static_cast<jclass>(env->NewGlobalRef(local));
+      env->DeleteLocalRef(local);
+    }
+  }
+  std::lock_guard<std::mutex> lock(g_mutex);
+  if (g_client != nullptr) return JNI_TRUE;
+  g_app_id = static_cast<uint64_t>(appId);
+  return CreateClientLocked() ? JNI_TRUE : JNI_FALSE;
+}
+
+/**
+ * Drops the authenticated client and recreates a bare one that only knows the
+ * application ID. Rich Presence then goes through the installed Discord app
+ * over RPC, which works without a token or a Ready gateway connection.
+ */
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_ketvoice_app_discord_NativeDiscord_nativeReset(JNIEnv *env, jobject thiz) {
+  if (g_bridge == nullptr && thiz != nullptr) {
+    jclass local = env->GetObjectClass(thiz);
+    if (local != nullptr) {
+      g_bridge = static_cast<jclass>(env->NewGlobalRef(local));
+      env->DeleteLocalRef(local);
+    }
+  }
+  std::lock_guard<std::mutex> lock(g_mutex);
+  if (g_client != nullptr) {
+    g_client->ClearRichPresence();
+    g_client->Disconnect();
+    g_client.reset();
+  }
+  g_status.store(0);
+  if (g_app_id == 0) return JNI_FALSE;
+  return CreateClientLocked() ? JNI_TRUE : JNI_FALSE;
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -397,9 +434,9 @@ Java_com_ketvoice_app_discord_NativeDiscord_nativeSetPresence(JNIEnv *env, jobje
                                                              jobjectArray values,
                                                              jlong startEpochMs) {
   discordpp::Client *client = ClientPtr();
-  if (client == nullptr || g_status.load() != static_cast<int>(discordpp::Client::Status::Ready)) {
-    return JNI_FALSE;
-  }
+  // Rich Presence does not require an authenticated/Ready client on Android:
+  // without Connect() the SDK talks to the installed Discord app over RPC.
+  if (client == nullptr) return JNI_FALSE;
   std::vector<std::string> fields;
   const jsize count = values == nullptr ? 0 : env->GetArrayLength(values);
   fields.reserve(static_cast<size_t>(count));

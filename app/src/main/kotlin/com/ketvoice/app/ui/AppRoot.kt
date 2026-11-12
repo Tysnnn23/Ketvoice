@@ -110,11 +110,13 @@ fun AppRoot() {
         val discord by com.ketvoice.app.discord.Discord.state.collectAsState()
         LaunchedEffect(
             playerState.current?.id, playerState.isPlaying, playerState.playWhenReady,
-            discord.linked, discord.ready, com.ketvoice.app.data.AppSettings.discordPresence.value
+            discord.linked, discord.presenceOnly, discord.ready,
+            com.ketvoice.app.data.AppSettings.discordPresence.value
         ) {
             val track = playerState.current
             val enabled = com.ketvoice.app.data.AppSettings.discordPresence.value
-            if (!discord.linked || !enabled || track == null || !playerState.isPlaying) {
+            val canPublish = discord.linked || discord.presenceOnly
+            if (!canPublish || !enabled || track == null || !playerState.isPlaying) {
                 com.ketvoice.app.discord.Discord.clearPresence()
                 return@LaunchedEffect
             }
