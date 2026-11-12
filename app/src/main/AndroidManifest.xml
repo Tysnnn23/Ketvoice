@@ -189,9 +189,11 @@
             </intent-filter>
         </activity>
 
+        <!-- This optional SDK service is removed from every merged manifest. -->
         <service
             android:name="com.discord.socialsdk.ForegroundService"
-            tools:node="remove" />
+            tools:node="remove"
+            tools:ignore="MissingClass" />
 
         <provider
             android:name="androidx.core.content.FileProvider"

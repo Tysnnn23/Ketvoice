@@ -4,6 +4,11 @@ This branch builds on 4.7.0 and is not a published release. It keeps the existin
 application ID and version so it can be tested as an update only when the signing
 certificate matches the installed app.
 
+The GitHub-hosted test APKs do not contain the owner-supplied Discord SDK and do
+not offer Discord integration, as explicitly selected for this test build. Locally,
+`-PketvoiceWithoutDiscord=true` exercises the same SDK-free configuration without
+moving or deleting the owner's SDK.
+
 ## What to test
 
 - Source order is respected when progressive quality is disabled. Progressive

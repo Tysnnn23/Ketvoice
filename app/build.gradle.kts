@@ -12,7 +12,8 @@ plugins {
 // Without the AAR the app still builds; the Discord integration is compiled out
 // and the account UI stays hidden.
 val discordSdk = file("libs/discord/discord_partner_sdk.aar")
-val discordSdkAvailable = discordSdk.isFile
+val discordSdkAvailable = discordSdk.isFile &&
+    !providers.gradleProperty("ketvoiceWithoutDiscord").map { it.equals("true", ignoreCase = true) }.getOrElse(false)
 
 android {
     namespace = "com.ketvoice.app"
