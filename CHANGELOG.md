@@ -7,6 +7,23 @@
 
 ---
 
+# Ketvoice 4.8.3
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 92** — while you scroll, the floating chrome becomes one glass row:
+Home on the left, a smaller mini-player in the middle and Search on the right.
+
+- Collapse the three-tab capsule into a single liquid-glass Home button when a page is scrolled.
+- Shrink the mini-player continuously between Home and Search: smaller cover, lower pill, faded text, 48 dp transport targets.
+- Keep the same spring for the capsule, the mini-player and the Search button so the row morphs as one piece.
+- Scroll back up to restore the full mini-player above the navigation and the three tabs.
+- Keep the Discord RPC presence and the 4.8.1 device-language behaviour.
+
+Full notes and validation limits: [4.8.3](docs/releases/v4.8.3.md).
+
+---
+
 # Ketvoice 4.8.2
 
 ![Ketvoice](ketvoice-banner.png)

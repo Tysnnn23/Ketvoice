@@ -86,7 +86,15 @@ import com.ketvoice.app.ui.player.pressScale
 private val noRipple: MutableInteractionSource = MutableInteractionSource()
 
 @Composable
-fun MiniPlayerPill(modifier: Modifier = Modifier, compact: Boolean = false, onOpen: () -> Unit) {
+fun MiniPlayerPill(
+    modifier: Modifier = Modifier,
+    compact: Boolean = false,
+    height: Dp = 54.dp,
+    coverSize: Dp = 44.dp,
+    playSize: Dp = DesignTokens.Space.touch,
+    labelAlpha: Float = 1f,
+    onOpen: () -> Unit
+) {
     val ps = Player.state.collectAsState().value
     val th = LocalTheme.current
     val current = ps.current ?: return
@@ -98,7 +106,7 @@ fun MiniPlayerPill(modifier: Modifier = Modifier, compact: Boolean = false, onOp
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 10.dp, vertical = 4.dp)
-            .height(54.dp)
+            .height(height)
             .onGloballyPositioned { AppUi.miniPlayerBounds.value = it.boundsInRoot() }
             .shadow(
                 elevation = if (th.isDark) 2.dp else 4.dp,
@@ -120,15 +128,16 @@ fun MiniPlayerPill(modifier: Modifier = Modifier, compact: Boolean = false, onOp
                 Cover(
                     current.title,
                     cover,
-                    size = 44.dp,
-                    radius = 9.dp,
+                    size = coverSize,
+                    radius = if (compact) 999.dp else 9.dp,
                     modifier = Modifier.onGloballyPositioned {
                         AppUi.miniCoverBounds.value = it.boundsInRoot()
                     }
                 )
                 Spacer(Modifier.width(if (compact) 4.dp else 11.dp))
-                Column(Modifier.weight(1f)) {
-                if (!compact) {
+                Column(
+                    Modifier.weight(1f).graphicsLayer { alpha = labelAlpha }
+                ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         if (current.explicit) {
                             EBadge()
@@ -152,13 +161,10 @@ fun MiniPlayerPill(modifier: Modifier = Modifier, compact: Boolean = false, onOp
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-                }
                 Spacer(Modifier.width(4.dp))
-                MiniTransportButton(playing = ps.playWhenReady)
-                if (!compact) {
-                    Spacer(Modifier.width(2.dp))
-                    MiniTransportNext()
-                }
+                MiniTransportButton(playing = ps.playWhenReady, size = playSize)
+                Spacer(Modifier.width(2.dp))
+                MiniTransportNext()
             }
 
             // Ligne de progression animée (composant isolé du tic)
@@ -303,15 +309,25 @@ fun FloatingChrome(collapsed: Boolean, onOpenPlayer: () -> Unit) {
         val hasTrack = Player.state.collectAsState().value.current != null
         val fullHeight = if (hasTrack) 126.dp else 64.dp
         val height = fullHeight + (58.dp - fullHeight) * f
-        val miniWidth = maxWidth + ((maxWidth - 218.dp).coerceAtLeast(100.dp) - maxWidth) * f
-        val miniX = 158.dp * f
+        // Replié : Accueil (52 dp) + 8 dp + mini-lecteur + 8 dp + Recherche (52 dp).
+        val miniWidth = maxWidth - 144.dp * f
+        val miniX = 72.dp * f
+        val miniHeight = 54.dp - 6.dp * f
+        val coverSize = 44.dp - 12.dp * f
+        val labelAlpha = (1f - f * 1.8f).coerceIn(0f, 1f)
         val navigationY = if (hasTrack) 66.dp * (1f - f) else 0.dp
         Box(Modifier.fillMaxWidth().height(height)) {
-            GlassTabCapsule(compact, Modifier.offset(x = 12.dp, y = navigationY), availableWidth = width)
+            GlassTabCapsule(compact, Modifier.offset(x = 12.dp, y = navigationY),
+                availableWidth = width, homeOnly = compact)
             if (hasTrack) MiniPlayerPill(
-                Modifier.offset(x = miniX).width(miniWidth), compact = f > .65f, onOpen = onOpenPlayer)
-            SearchCircleButton(size = 60.dp - 12.dp * f,
-                modifier = Modifier.offset(x = width - 76.dp + 16.dp * f, y = navigationY))
+                Modifier.offset(x = miniX).width(miniWidth),
+                compact = f > .65f,
+                height = miniHeight,
+                coverSize = coverSize,
+                labelAlpha = labelAlpha,
+                onOpen = onOpenPlayer)
+            SearchCircleButton(size = 60.dp - 8.dp * f,
+                modifier = Modifier.offset(x = width - 76.dp + 12.dp * f, y = navigationY))
         }
     }
 }
@@ -348,7 +364,8 @@ private fun SearchCircleButton(size: androidx.compose.ui.unit.Dp, modifier: Modi
 /** Capsule d'onglets en verre : pleine (labels + lentille glissante) ou réduite (icônes). */
 @Composable
 internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier,
-                             availableWidth: Dp = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp.dp) {
+                             availableWidth: Dp = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp.dp,
+                             homeOnly: Boolean = false) {
     val th = LocalTheme.current
     val focus = androidx.compose.ui.platform.LocalFocusManager.current
     var held by remember { mutableStateOf(false) }
@@ -362,13 +379,17 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier,
     )
 
     val widthAnim by animateDpAsState(
-        targetValue = if (collapsed) 144.dp else (availableWidth - 92.dp).coerceIn(144.dp, 310.dp),
+        targetValue = when {
+            homeOnly -> 52.dp
+            collapsed -> 144.dp
+            else -> (availableWidth - 92.dp).coerceIn(144.dp, 310.dp)
+        },
         animationSpec = if (Motion.reduced) androidx.compose.animation.core.snap() else spring(
             dampingRatio = DesignTokens.Motion.CHROME_DAMPING, stiffness = DesignTokens.Motion.CHROME_STIFFNESS),
         label = "tabWidth"
     )
     val heightAnim by animateDpAsState(
-        targetValue = if (collapsed) 52.dp else 60.dp,
+        targetValue = if (homeOnly || collapsed) 52.dp else 60.dp,
         animationSpec = if (Motion.reduced) androidx.compose.animation.core.snap() else spring(
             dampingRatio = DesignTokens.Motion.CHROME_DAMPING, stiffness = DesignTokens.Motion.CHROME_STIFFNESS),
         label = "tabHeight"
@@ -378,7 +399,8 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier,
         modifier = modifier
             .width(widthAnim)
             .height(heightAnim)
-            .pointerInput(collapsed) {
+            .pointerInput(collapsed, homeOnly) {
+                if (homeOnly) return@pointerInput
                 detectDragGesturesAfterLongPress(
                     onDragStart = { start -> held = true; hover = lensPosition(start.x, size.width.toFloat()) },
                     onDrag = { change, _ ->
@@ -395,7 +417,33 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier,
         params = GlassParams.navigation(dark = th.isDark),
         enabled = AppSettings.liquidGlass.value
     ) {
-        if (!collapsed) {
+        if (homeOnly) {
+            // Replié : la capsule entière devient un bouton Accueil en verre.
+            val src = remember { MutableInteractionSource() }
+            val pressed by src.collectIsPressedAsState()
+            val press by animateFloatAsState(
+                targetValue = if (pressed) 0.94f else 1f,
+                animationSpec = Motion.pressSpring(pressed),
+                label = "homePress"
+            )
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .graphicsLayer { scaleX = press; scaleY = press }
+                    .clickable(interactionSource = src, indication = null, role = Role.Button) {
+                        focus.clearFocus()
+                        AppUi.selectTab(AppUi.HOME)
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Filled.Home,
+                    contentDescription = "Accueil",
+                    tint = th.onBackground,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+        } else if (!collapsed) {
             // Sélection glissante : la pilule se déplace d'onglet en onglet.
             val selected = if (held) kotlin.math.round(hover).toInt() else tabs.indexOfFirst { it.index == AppUi.tab.value }.coerceAtLeast(0)
             val pillX by animateFloatAsState(

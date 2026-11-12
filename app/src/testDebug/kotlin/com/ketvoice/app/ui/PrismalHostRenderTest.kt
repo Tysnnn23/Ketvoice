@@ -171,6 +171,30 @@ class PrismalHostRenderTest {
         image("condensed-navigation-320dp")
     }
 
+    @Test fun collapsedChromeDocksTheMiniPlayerBetweenHomeAndSearch() {
+        AppSettings.reduceAnimations.value = true
+        AppUi.selectTab(AppUi.HOME)
+        @Suppress("UNCHECKED_CAST")
+        (Player.state as MutableStateFlow<PlayerUiState>).value = PlayerUiState(
+            queue = listOf(Track("qa:dock", "QA dock title", "QA artist", "QA album")), index = 0)
+        compose.setContent { KetvoiceTheme(useDark = false) {
+            Box(Modifier.fillMaxSize()) { FloatingChrome(true, {}) }
+        } }
+        val home = compose.onNodeWithContentDescription("Accueil").assertIsDisplayed()
+            .fetchSemanticsNode().boundsInRoot
+        val play = compose.onNodeWithContentDescription("Lecture").assertIsDisplayed()
+            .fetchSemanticsNode().boundsInRoot
+        val search = compose.onNodeWithContentDescription("Rechercher").assertIsDisplayed()
+            .fetchSemanticsNode().boundsInRoot
+        assertTrue("Accueil remains left of the mini-player", home.right <= play.left)
+        assertTrue("The mini-player remains left of search", play.right <= search.left)
+        assertTrue("The transport keeps a 48dp touch target", play.width >= 48f && play.height >= 48f)
+        assertFalse(home.overlaps(play))
+        assertFalse(play.overlaps(search))
+        compose.onNodeWithContentDescription("Bibliothèque").assertDoesNotExist()
+        image("collapsed-chrome-home-mini-search")
+    }
+
     @Test fun artistHeaderKeepsLongNamesAndBothActionsReadableOnHost() {
         val track = Track("qa:artist", "QA title", "Un artiste au nom particulièrement long", "Album")
         compose.setContent { KetvoiceTheme(useDark = true) {
