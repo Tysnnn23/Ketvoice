@@ -149,7 +149,7 @@ class PrismalHostRenderTest {
         compose.runOnIdle { assertEquals("", query) }
     }
 
-    @Test fun condensedNavigationFitsA320DpViewportWithARealMiniPlayerLayout() {
+    @Test fun collapsedChromeFitsA320DpViewportWithHomeMiniAndSearch() {
         AppSettings.reduceAnimations.value = true
         AppUi.selectTab(AppUi.HOME)
         @Suppress("UNCHECKED_CAST")
@@ -158,16 +158,19 @@ class PrismalHostRenderTest {
         compose.setContent { KetvoiceTheme(useDark = false) {
             Box(Modifier.width(320.dp)) { FloatingChrome(true, {}) }
         } }
-        val play = compose.onNodeWithContentDescription("Lecture").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
-        val search = compose.onNodeWithContentDescription("Rechercher").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
-        assertFalse("Mini-player transport must not overlap search", play.overlaps(search))
-        val libraryTab = compose.onNode(hasAnyDescendant(hasContentDescription("Bibliothèque")) and hasClickAction(), useUnmergedTree = true)
-            .assertIsDisplayed().fetchSemanticsNode().boundsInRoot
-        assertTrue("Navigation must use the actual 320dp pane rather than the full device width", libraryTab.right <= search.left)
-        assertTrue("The library tab remains at least a 48dp touch target", libraryTab.width >= 48f && libraryTab.height >= 48f)
+        val home = compose.onNodeWithContentDescription("Accueil").assertIsDisplayed()
+            .fetchSemanticsNode().boundsInRoot
+        val play = compose.onNodeWithContentDescription("Lecture").assertIsDisplayed()
+            .fetchSemanticsNode().boundsInRoot
+        val search = compose.onNodeWithContentDescription("Rechercher").assertIsDisplayed()
+            .fetchSemanticsNode().boundsInRoot
+        assertTrue("Home stays left of the mini-player", home.right <= play.left)
+        assertTrue("The mini-player stays left of search", play.right <= search.left)
+        assertTrue("Navigation must use the actual 320dp pane", search.right <= 320f)
         assertTrue("The mini-player transport remains at least a 48dp touch target", play.width >= 48f && play.height >= 48f)
-        compose.onNodeWithContentDescription("Explorer").performClick()
-        compose.runOnIdle { assertEquals(AppUi.EXPLORER, AppUi.tab.intValue) }
+        assertFalse("The transport must not overlap search", play.overlaps(search))
+        compose.onNodeWithContentDescription("Bibliothèque").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Explorer").assertDoesNotExist()
         image("condensed-navigation-320dp")
     }
 

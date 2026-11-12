@@ -7,6 +7,24 @@
 
 ---
 
+# Ketvoice 4.8.4
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 93** — the collapsed Home / mini-player / Search row now triggers on
+320–379 dp phones too.
+
+- Lower the collapse threshold from 380 dp to 320 dp. Many phones report a 360 dp
+  logical width, so the previous threshold silently disabled the whole animation.
+- Keep the 48 dp transport targets, the 52 dp Home/Search circles and the shrinking
+  mini-player at 320 dp.
+- Update the host regression test to assert the new row at 320 dp instead of the
+  removed three tabs.
+
+Full notes and validation limits: [4.8.4](docs/releases/v4.8.4.md).
+
+---
+
 # Ketvoice 4.8.3
 
 ![Ketvoice](ketvoice-banner.png)

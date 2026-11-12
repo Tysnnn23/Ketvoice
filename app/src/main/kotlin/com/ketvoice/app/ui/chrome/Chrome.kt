@@ -298,7 +298,9 @@ private data class TabSpec(val icon: ImageVector, val label: String, val index: 
 @Composable
 fun FloatingChrome(collapsed: Boolean, onOpenPlayer: () -> Unit) {
     BoxWithConstraints(Modifier.fillMaxWidth()) {
-        val compact = collapsed && maxWidth >= 380.dp
+        // Le repli Accueil + mini + Recherche tient dès 320 dp (52+8+176+8+52+24).
+        // L'ancien seuil de 380 dp empêchait l'animation sur les téléphones 360 dp.
+        val compact = collapsed && maxWidth >= 320.dp
         // Base compactness on the actual pane, not the device's full window width.
         val fraction by animateFloatAsState(if (compact) 1f else 0f,
             if (Motion.reduced) androidx.compose.animation.core.snap() else spring(
