@@ -31,6 +31,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -43,6 +44,7 @@ import com.ketvoice.app.data.Downloader
 import com.ketvoice.app.data.MusicApi
 import com.ketvoice.app.data.PublicationApi
 import com.ketvoice.app.data.Track
+import com.ketvoice.app.data.SearchGroups
 import com.ketvoice.app.data.PlaylistStore
 import com.ketvoice.app.data.YouTubeCatalog
 import com.ketvoice.app.data.YouTubeMusicSession
@@ -58,8 +60,9 @@ import com.ketvoice.app.ui.common.DownloadCover
 import com.ketvoice.app.ui.common.TrackTitle
 import com.ketvoice.app.ui.common.EmptyState
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.async
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 /**
@@ -73,7 +76,7 @@ fun SearchScreen() {
     var playlistError by remember { mutableStateOf("") }
     val layout = LocalAdaptiveLayout.current
     var attempt by rememberSaveable { mutableIntStateOf(0) }
-    var segment by rememberSaveable { mutableIntStateOf(0) } // 0 YouTube | 1 Sources | 2 Bibliothèque
+    var segment by rememberSaveable { mutableIntStateOf(0) } // 0 Tout | 1 Sources | 2 Bibliothèque
     var query by rememberSaveable { mutableStateOf(AppUi.searchSeed.value) }
     var results by remember { mutableStateOf<List<Track>>(emptyList()) }
     var allResults by remember { mutableStateOf<List<Track>>(emptyList()) }
@@ -98,7 +101,7 @@ fun SearchScreen() {
     // La graine est consommée une seule fois (tuile genre / album).
     LaunchedEffect(Unit) { AppUi.searchSeed.value = "" }
 
-    LaunchedEffect(query, segment, attempt) {
+    LaunchedEffect(query, segment, attempt, customSources) {
         val q = query.trim()
         if (q.length < 2) {
             results = emptyList()
@@ -108,6 +111,9 @@ fun SearchScreen() {
             return@LaunchedEffect
         }
         loading = true
+        results = emptyList()
+        allResults = emptyList()
+        artists = emptyList()
         delay(220)
         val needle = q.lowercase()
         if (segment == 2) {
@@ -118,38 +124,51 @@ fun SearchScreen() {
             }
             allResults = results
             artists = emptyList()
-        } else if (segment == 0) {
-            coroutineScope {
-                val yt = async { MusicApi.searchYtMusic(q) }
-                val foundArtists = async { YouTubeCatalog.searchArtists(q) }
-                val publications = async { PublicationApi.search(q) }
-                val addons = async { MusicApi.searchAddons(q) }
-                results = yt.await()
-                allResults = results
-                artists = foundArtists.await()
-                loading = false
-                results = (results + publications.await()).distinctBy { it.id }
-                // Addon latency must never hold the YouTube catalogue hostage.
-                allResults = results + addons.await()
-            }
         } else {
-            results = emptyList()
-            allResults = emptyList()
-            artists = emptyList()
             coroutineScope {
-                val custom = async { CustomSources.searchAll(q) }
-                val ketvoice = async { MusicApi.searchAddons(q) }
-                results = custom.await() + ketvoice.await()
-                allResults = results
+                val searches = mutableListOf<suspend () -> List<Track>>()
+                if (segment == 0) {
+                    searches += { MusicApi.searchYtMusic(q) }
+                    searches += { PublicationApi.search(q) }
+                }
+                searches += { MusicApi.searchAddons(q) }
+                customSources.filter { it.enabled }.forEach { source -> searches += { CustomSources.search(source, q) } }
+                var remaining = if (segment == 0) 2 else 1
+                suspend fun finish() {
+                    if (kotlinx.coroutines.currentCoroutineContext().isActive) {
+                        remaining--
+                        if (remaining == 0) loading = false
+                    }
+                }
+                launch {
+                    try {
+                        SearchGroups.collectProgressively(searches) { tracks ->
+                            results = tracks
+                            allResults = tracks
+                            loading = false
+                        }
+                    } finally { finish() }
+                }
+                if (segment == 0) launch {
+                    try {
+                        artists = YouTubeCatalog.searchArtists(q)
+                        if (artists.isNotEmpty()) loading = false
+                    } catch (cancelled: CancellationException) { throw cancelled }
+                    catch (_: Exception) { /* Tracks remain available. */ }
+                    finally {
+                        finish()
+                    }
+                }
             }
         }
         loading = false
-        // Pochettes réelles, y compris pour les sources personnalisées.
-        if (results.isNotEmpty()) ArtworkRepo.enrich(results)
     }
 
     // Vraies pochettes d'album (jamais les vignettes YouTube).
     LaunchedEffect(results) { ArtworkRepo.enrich(results) }
+    val grouped = remember(results, segment) {
+        if (segment == 2) results.map { SearchGroups.Group(listOf(it)) } else SearchGroups.group(results)
+    }
 
     Column(
         Modifier
@@ -196,7 +215,7 @@ fun SearchScreen() {
                 .background(if (th.isDark) Color(0xFF2C2C2E) else Color(0x19909093))
                 .padding(3.dp)
         ) {
-            listOf("YouTube", "Sources", "Bibliothèque").forEachIndexed { i, label ->
+            listOf("Tout", "Sources", "Bibliothèque").forEachIndexed { i, label ->
                 val sel = segment == i
                 Box(
                     Modifier
@@ -331,39 +350,39 @@ fun SearchScreen() {
                     if (results.isEmpty()) Text("Catalogue indisponible · Réessayer", color = th.secondary,
                         modifier = Modifier.clickable { attempt++ }.padding(horizontal = 20.dp, vertical = 16.dp))
                 }
-                results.chunked(layout.trackColumns).forEachIndexed { rowIndex, row ->
+                grouped.chunked(layout.trackColumns).forEachIndexed { rowIndex, row ->
                     Row(Modifier.fillMaxWidth()) {
-                    row.forEachIndexed { column, track ->
+                    row.forEachIndexed { column, group ->
                     val index = rowIndex * layout.trackColumns + column
+                    val track = group.primary
+                    fun choose(chosen: Track, explicit: Boolean) {
+                        submitSearch()
+                        val selection = if (explicit) SearchGroups.sourceId(chosen)?.let { chosen.copy(sourceOverride = it) } ?: chosen else chosen
+                        val match = if (!explicit && selection.addonId.isNullOrBlank()) {
+                            MusicApi.addonMatchIn(allResults, selection)?.takeIf { it.addon == "um" }
+                        } else null
+                        val playable = if (match?.addonId != null) {
+                            selection.copy(addon = "um", addonId = match.addonId,
+                                coverUrl = selection.coverUrl ?: match.coverUrl,
+                                album = selection.album.ifBlank { match.album },
+                                durationMs = if (selection.durationMs > 0) selection.durationMs else match.durationMs)
+                        } else selection
+                        val queue = grouped.map { it.primary }.toMutableList().also { it[index] = playable }
+                        val pending = AppUi.playlistResolution.value
+                        if (pending == null) Player.playQueue(queue, index) else scope.launch {
+                            try {
+                                PlaylistStore.resolve(pending.playlistId, pending.entryId, playable)
+                                AppUi.playlistResolution.value = null
+                                AppUi.openPlaylist(pending.playlistId)
+                            } catch (_: Exception) { playlistError = "Impossible d'enregistrer la playlist" }
+                        }
+                    }
                     SearchResultRow(
                         track = track,
+                        variants = group.tracks,
                         cover = art["t:${track.id}"] ?: track.coverUrl,
                         modifier = Modifier.weight(1f),
-                        onClick = {
-                            submitSearch()
-                            // Correspondance addon déjà présente dans les résultats :
-                            // le son démarre immédiatement, sans recherche réseau.
-                            val match = if (track.addonId.isNullOrBlank()) {
-                                MusicApi.addonMatchIn(allResults, track)?.takeIf { it.addon == "um" }
-                            } else null
-                            val playable = if (match?.addonId != null) {
-                                track.copy(
-                                    addon = "um",
-                                    addonId = match.addonId,
-                                    coverUrl = track.coverUrl ?: match.coverUrl,
-                                    album = track.album.ifBlank { match.album },
-                                    durationMs = if (track.durationMs > 0) track.durationMs else match.durationMs
-                                )
-                            } else track
-                            val queue = results.toMutableList().also { it[index] = playable }
-                            // Pas d'ouverture forcée du lecteur : le mini-lecteur prend le relais.
-                            val pending=AppUi.playlistResolution.value
-                            if(pending==null)Player.playQueue(queue,index) else scope.launch {
-                                try{PlaylistStore.resolve(pending.playlistId,pending.entryId,playable)
-                                    AppUi.playlistResolution.value=null;AppUi.openPlaylist(pending.playlistId)}
-                                catch(_:Exception){playlistError="Impossible d'enregistrer la playlist"}
-                            }
-                        }
+                        onClick = { choose(track, false) }, onVariant = { choose(it, true) }
                     )
                     }
                     if (row.size < layout.trackColumns) Spacer(Modifier.weight(1f))
@@ -376,12 +395,15 @@ fun SearchScreen() {
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun SearchResultRow(track: Track, cover: String?, modifier: Modifier = Modifier, onClick: () -> Unit) {
+internal fun SearchResultRow(track: Track, variants: List<Track>, cover: String?, modifier: Modifier = Modifier,
+                             onClick: () -> Unit, onVariant: (Track) -> Unit) {
     val th = LocalTheme.current
-    com.ketvoice.app.ui.common.SwipeTrackActions(track) {
+    com.ketvoice.app.ui.common.SwipeTrackActions(track, modifier) {
+    Column(Modifier.fillMaxWidth()) {
     Row(
-        modifier
+        Modifier
             .fillMaxWidth()
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
@@ -433,6 +455,17 @@ private fun SearchResultRow(track: Track, cover: String?, modifier: Modifier = M
                     th.accent.copy(alpha = 0.12f) else th.card)
                 .padding(horizontal = 6.dp, vertical = 3.dp)
         )
+    }
+    if (variants.size > 1) {
+        FlowRow(Modifier.fillMaxWidth().padding(start = 84.dp, end = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            variants.filter { SearchGroups.sourceId(it) != null }.forEach { option ->
+                Text(SearchGroups.sourceName(option), localize = false, color = th.accent, fontSize = 12.sp,
+                    modifier = Modifier.clip(RoundedCornerShape(12.dp)).clickable(role = Role.Button) { onVariant(option) }
+                        .heightIn(min = 48.dp).wrapContentHeight().padding(horizontal = 12.dp))
+            }
+        }
+    }
     }
     }
 }

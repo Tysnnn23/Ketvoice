@@ -46,6 +46,9 @@ internal fun AudioStatsInfo(modifier: Modifier = Modifier) {
         }
         if (state.searchingBetter) Text("Recherche d'une meilleure qualité…", color = LocalTheme.current.secondary, fontSize = 10.sp)
         if (state.audioFallback) Text("Repli après une erreur de flux", color = LocalTheme.current.secondary, fontSize = 10.sp)
+        state.audioFallbackHttpStatus?.let { status ->
+            Text("HTTP $status", localize = false, color = LocalTheme.current.secondary, fontSize = 10.sp)
+        }
         if (state.failed) Text(state.quality, color = LocalTheme.current.secondary, fontSize = 10.sp)
     }
 }

@@ -127,16 +127,19 @@ jobs:
           KETVOICE_KEY_ALIAS: ${{ secrets.KETVOICE_KEY_ALIAS }}
         run: ./gradlew :app:assembleMobileRelease :app:assembleQuestRelease --stacktrace
 
-      - name: Unit tests (best effort)
-        run: ./gradlew :app:testMobileReleaseUnitTest --stacktrace || true
+      - name: Unit tests (Mobile and Quest)
+        run: >-
+          ./gradlew :app:testMobileDebugUnitTest :app:testQuestDebugUnitTest
+          :app:testMobileReleaseUnitTest :app:testQuestReleaseUnitTest
+          --stacktrace --max-workers=2
 
       # Fails when a user-facing string exists only in French. Strings that are
       # not user text belong in tools/ui-text-ignored.json with a reason.
       - name: Audit UI translations
         run: python3 tools/audit_ui_texts.py --check
 
-      - name: Lint
-        run: ./gradlew :app:lintMobileRelease --stacktrace || true
+      - name: Lint (Mobile and Quest)
+        run: ./gradlew :app:lintMobileRelease :app:lintQuestRelease --stacktrace --max-workers=2
 
       # The keystore preflight proves the secret is readable; this proves the
       # APKs on disk really carry the release identity before anything is

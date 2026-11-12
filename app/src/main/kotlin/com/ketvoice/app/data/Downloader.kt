@@ -1,7 +1,10 @@
+@file:androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
+
 package com.ketvoice.app.data
 
 import android.content.Context
 import android.net.Uri
+import android.os.StatFs
 import android.os.Handler
 import android.os.Looper
 import android.widget.Toast
@@ -28,6 +31,8 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.security.MessageDigest
 import java.util.Locale
+import androidx.media3.exoplayer.dash.offline.DashDownloader
+import com.ketvoice.app.player.OfflineDashStore
 
 object Downloader {
 
@@ -39,7 +44,8 @@ object Downloader {
         val lyricsFile: File? = null,
         val canvasFile: File? = null,
         val hasLyrics: Boolean = false,
-        val hasCanvas: Boolean = false
+        val hasCanvas: Boolean = false,
+        val dashManifestUrl: String? = null
     )
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -63,6 +69,7 @@ object Downloader {
     fun pause(id: String) {
         if (id !in _busy.value) return
         paused.add(id)
+        activeDash[id]?.cancel()
         task(id) { it.copy(phase = DownloadPhase.Paused) }
         ctx?.let { c -> updateQueue(c) { DownloadQueue.withState(it, id, QueueState.Paused) } }
     }
@@ -82,6 +89,7 @@ object Downloader {
         task(id) { it.copy(phase = DownloadPhase.Cancelled) }
         paused.remove(id)
         val job = jobs.remove(id)
+        activeDash[id]?.cancel()
         connections.remove(id)?.disconnect()
         job?.cancel()
         // A restored entry has no live coroutine, so nothing will run the
@@ -90,6 +98,11 @@ object Downloader {
             _progress.update { it - id }
             _busy.update { it - id }
             _activeTracks.update { it - id }
+            ctx?.let { context ->
+                if (itemFor(id) == null && File(context.filesDir, "downloads-dash-v1").exists()) scope.launch {
+                    runCatching { OfflineDashStore.get(context).remove(id) }
+                }
+            }
         }
         ctx?.let { c -> updateQueue(c) { DownloadQueue.remove(it, id) } }
     }
@@ -150,6 +163,7 @@ object Downloader {
     private var ctx: Context? = null
     private val connections = java.util.concurrent.ConcurrentHashMap<String, HttpURLConnection>()
     private val jobs = java.util.concurrent.ConcurrentHashMap<String, Job>()
+    private val activeDash = java.util.concurrent.ConcurrentHashMap<String, DashDownloader>()
     internal var openAudioConnection: (URL) -> HttpURLConnection = { it.openConnection() as HttpURLConnection }
 
     fun init(context: Context) {
@@ -175,6 +189,17 @@ object Downloader {
 
     @Synchronized private fun start(track: Track, capsuleLimit: Long?, announce: Boolean): Job? {
         val c = ctx ?: return null
+        // A damaged or unreadable existing entry must never be overwritten by a retry.
+        val stem = key(track.id)
+        val damagedMetadata = File(dir(c), "$stem.json").exists() && itemFor(track.id) == null
+        val orphanAudio = listOf("flac", "mp3", "m4a", "opus", "wav").any { File(dir(c), "$stem.$it").exists() } && itemFor(track.id) == null
+        if (damagedMetadata || orphanAudio) {
+            task(track.id) { it.copy(phase = DownloadPhase.Failed) }
+            _busy.update { it - track.id }
+            if (capsuleLimit == null) updateQueue(c) { DownloadQueue.withState(it, track.id, QueueState.Failed) }
+            if (announce) toast("Téléchargement existant illisible : aucun fichier remplacé")
+            return null
+        }
         _busy.update { it + track.id }
         _activeTracks.update { it + (track.id to track) }
         _progress.update { it + (track.id to 0) }
@@ -190,6 +215,42 @@ object Downloader {
                 val publication = track.addon == "upload" || track.id.startsWith("kv:upload:")
                 var gotFile: File? = null
                 var gotStream: MusicApi.StreamInfo? = null
+                var gotDashUrl: String? = null
+                var gotDashBytes = 0L
+                var dashPermissionMissing = false
+                suspend fun tryCandidate(candidate: MusicApi.StreamInfo): Boolean {
+                    if (candidate.isDash) {
+                        val direct = candidate.downloadUrl?.takeIf { it != candidate.url && it.startsWith("https://") }
+                        if (direct != null) {
+                            val directStream = candidate.copy(url = direct, format = "", mimeType = null)
+                            val dest = fileFor(c, track.id, extOf(directStream))
+                            if (fetch(direct, dest, track.id, audioLimit) { !isActive }) {
+                                gotFile = dest; gotStream = directStream; return true
+                            }
+                            dest.delete()
+                        }
+                        if (!candidate.dashDownloadAllowed) {
+                            dashPermissionMissing = true
+                            return false
+                        }
+                        if (!CustomSources.reusableManifestUrl(candidate.url)) return false
+                        val bytes = fetchDash(c, track.id, candidate.url, audioLimit) { !isActive } ?: return false
+                        val marker = fileFor(c, track.id, "mpd")
+                        if (marker.exists()) {
+                            if (marker.length() > 64 || marker.readText(Charsets.US_ASCII) != "KETVOICE_DASH_OFFLINE_V1") return false
+                        } else writeAtomic(marker, "KETVOICE_DASH_OFFLINE_V1".toByteArray(Charsets.US_ASCII))
+                        gotFile = marker; gotStream = candidate; gotDashUrl = candidate.url; gotDashBytes = bytes
+                        return true
+                    }
+                    val dest = fileFor(c, track.id, extOf(candidate))
+                    val urls = listOfNotNull(candidate.downloadUrl, candidate.url)
+                        .distinct().filter { it.startsWith("https://") }
+                    if (urls.any { fetch(it, dest, track.id, audioLimit) { !isActive } }) {
+                        gotFile = dest; gotStream = candidate; return true
+                    }
+                    dest.delete()
+                    return false
+                }
                 val mode = AppSettings.downloadQualityMode.value
                 val resolved: List<StreamResolver.Candidate> = if (publication) {
                     PublicationApi.stream(track)
@@ -207,16 +268,7 @@ object Downloader {
                 // Try the best verified candidate first, then the next ones: one
                 // failing URL must never end the download.
                 for (resolvedCandidate in resolved) {
-                    val candidate = resolvedCandidate.stream
-                    val dest = fileFor(c, track.id, extOf(candidate))
-                    val urls = listOfNotNull(candidate.downloadUrl, candidate.url)
-                        .distinct().filter { it.startsWith("https://") }
-                    if (urls.any { fetch(it, dest, track.id, audioLimit) { !isActive } }) {
-                        gotFile = dest
-                        gotStream = candidate
-                        break
-                    }
-                    dest.delete()
+                    if (tryCandidate(resolvedCandidate.stream)) break
                 }
                 if (gotFile == null && !publication) {
                     // Last-resort fallback to the previous custom-source path.
@@ -224,13 +276,7 @@ object Downloader {
                         runCatching { CustomSources.streamForTrack(track, forDownload = true) }.getOrNull()
                     }
                     if (legacy != null) {
-                        val dest = fileFor(c, track.id, extOf(legacy))
-                        val urls = listOfNotNull(legacy.downloadUrl, legacy.url)
-                            .distinct().filter { it.startsWith("https://") }
-                        if (urls.any { fetch(it, dest, track.id, audioLimit) { !isActive } }) {
-                            gotFile = dest
-                            gotStream = legacy
-                        } else dest.delete()
+                        tryCandidate(legacy)
                     }
                 }
 
@@ -238,11 +284,12 @@ object Downloader {
                 val selected = gotStream
                 if (file == null || selected == null) {
                     task(track.id) { it.copy(phase = DownloadPhase.Failed) }
-                    toast("Échec du téléchargement (aucun flux lisible)")
+                    toast(if (dashPermissionMissing) "Autorisation de téléchargement non déclarée par la source"
+                        else "Échec du téléchargement (aucun flux lisible)")
                     return@launch
                 }
 
-                check(budget.spend(file.length())) { "Budget de la capsule atteint" }
+                check(budget.spend(if (gotDashUrl != null) gotDashBytes + file.length() else file.length())) { "Budget de la capsule atteint" }
                 _progress.value = _progress.value + (track.id to 99)
                 task(track.id) { it.copy(phase = DownloadPhase.Finalizing) }
                 val meta = JSONObject().apply {
@@ -255,10 +302,11 @@ object Downloader {
                     put("artistId", track.artistId ?: "")
                     put("spotifyId", track.spotifyId ?: "")
                     put("coverUrl", ArtworkRepo.coverForTrack(track) ?: track.coverUrl ?: "")
-                    put("format", displayFormat(file, selected))
+                    put("format", if (gotDashUrl != null) "DASH · FLAC" else displayFormat(file, selected))
                     put("quality", selected.quality)
                     put("source", selected.quality)
                     put("file", file.name)
+                    if (gotDashUrl != null) put("dashManifestUrl", gotDashUrl)
                     put("downloadedAt", System.currentTimeMillis())
                 }
 
@@ -331,6 +379,10 @@ object Downloader {
                 // visible so they can be retried after a restart.
                 val context = ctx
                 if (context != null) {
+                    if (_tasks.value[track.id]?.phase == DownloadPhase.Cancelled && itemFor(track.id) == null &&
+                        File(context.filesDir, "downloads-dash-v1").exists()) {
+                        runCatching { OfflineDashStore.get(context).remove(track.id) }
+                    }
                     when (_tasks.value[track.id]?.phase) {
                         DownloadPhase.Complete -> updateQueue(context) { DownloadQueue.remove(it, track.id) }
                         DownloadPhase.Failed -> updateQueue(context) { DownloadQueue.withState(it, track.id, QueueState.Failed) }
@@ -344,6 +396,59 @@ object Downloader {
         return job
     }
 
+    internal suspend fun fetchDash(context: Context, id: String, manifestUrl: String, limit: Long,
+                                   cancelled: () -> Boolean): Long? {
+        val store = try { OfflineDashStore.get(context) } catch (_: Exception) { return null }
+        while (true) {
+            awaitTransfer(id, DownloadPhase.Transferring)
+            if (cancelled()) throw CancellationException()
+            val downloader = try {
+                store.downloader(id, manifestUrl)
+            } catch (_: Exception) { return null }
+            activeDash[id] = downloader
+            val exceeded = java.util.concurrent.atomic.AtomicBoolean(false)
+            val lastDiskCheck = java.util.concurrent.atomic.AtomicLong(0L)
+            val monitor = CoroutineScope(kotlinx.coroutines.currentCoroutineContext()).launch(Dispatchers.IO) {
+                while (isActive) {
+                    if (id in paused || (AppSettings.downloadsWifiOnly.value && !wifiConnected())) downloader.cancel()
+                    kotlinx.coroutines.delay(250)
+                }
+            }
+            try {
+                downloader.download { contentLength, downloaded, percent ->
+                    task(id) { it.copy(phase = DownloadPhase.Transferring, bytes = downloaded,
+                        total = contentLength.takeIf { length -> length > 0 }) }
+                    if (percent.isFinite() && percent >= 0f) _progress.update { it + (id to percent.toInt().coerceIn(0, 98)) }
+                    val now = android.os.SystemClock.elapsedRealtime()
+                    val checkDisk = now - lastDiskCheck.get() >= 1_000 && lastDiskCheck.getAndSet(now) != now
+                    val lowDisk = checkDisk && runCatching { StatFs(context.filesDir.path).availableBytes < 64L * 1024 * 1024 }.getOrDefault(true)
+                    if (downloaded > limit || contentLength > limit || lowDisk) exceeded.set(true)
+                    if (cancelled() || id in paused || (AppSettings.downloadsWifiOnly.value && !wifiConnected()) || exceeded.get())
+                        downloader.cancel()
+                }
+                if (cancelled()) throw CancellationException()
+                if (exceeded.get()) return null
+                if (id in paused || (AppSettings.downloadsWifiOnly.value && !wifiConnected())) continue
+                store.verify(id, manifestUrl)
+                val bytes = store.verifyOnce(id, manifestUrl)
+                return bytes.takeIf { it <= limit }
+            } catch (cancelledException: CancellationException) {
+                if (cancelled() || !kotlinx.coroutines.currentCoroutineContext().isActive) throw cancelledException
+                if (exceeded.get()) return null
+                if (id in paused || (AppSettings.downloadsWifiOnly.value && !wifiConnected())) continue
+                return null
+            } catch (_: Exception) {
+                if (cancelled()) throw CancellationException()
+                if (exceeded.get()) return null
+                if (id in paused || (AppSettings.downloadsWifiOnly.value && !wifiConnected())) continue
+                return null
+            } finally {
+                monitor.cancel()
+                activeDash.remove(id, downloader)
+            }
+        }
+    }
+
     suspend fun prepareCapsuleTrack(track: Track, limit: Long): Boolean {
         if (itemFor(track.id) != null) return true
         jobs[track.id]?.let { it.join(); return itemFor(track.id) != null }
@@ -355,12 +460,18 @@ object Downloader {
 
     fun storedBytes(item: Item): Long {
         val stem = item.file.nameWithoutExtension
-        return item.file.length() + listOf(".json", ".lyrics.json", ".lrc", ".cover.jpg")
+        return (if (item.dashManifestUrl != null) item.bytes else item.file.length()) + listOf(".json", ".lyrics.json", ".lrc", ".cover.jpg")
             .sumOf { File(item.file.parentFile, stem + it).takeIf { it.exists() }?.length() ?: 0L }
     }
 
     fun delete(item: Item): Boolean {
         val removed = runCatching {
+            if (item.dashManifestUrl != null) {
+                val context = ctx ?: return@runCatching false
+                val cache = OfflineDashStore.get(context)
+                cache.remove(item.track.id)
+                if (cache.size(item.track.id) != 0L) return@runCatching false
+            }
             if (item.file.exists() && !item.file.delete()) return@runCatching false
             val stem = item.file.nameWithoutExtension
             File(item.file.parentFile, "$stem.json").delete()
@@ -504,7 +615,18 @@ object Downloader {
             runCatching {
                 val o = JSONObject(metaFile.readText(Charsets.UTF_8))
                 val file = File(dir, o.optString("file"))
-                if (!file.exists() || file.length() < 10_000) return@runCatching
+                val id = o.getString("id")
+                val rawDash = o.optString("dashManifestUrl").takeIf { it.isNotBlank() }
+                val dash = rawDash?.takeIf(CustomSources::reusableManifestUrl)
+                if (rawDash != null && dash == null) return@runCatching
+                val dashBytes = if (dash != null) {
+                    if (file.name != fileFor(c, id, "mpd").name || !file.isFile || file.length() > 64 ||
+                        file.readText(Charsets.US_ASCII) != "KETVOICE_DASH_OFFLINE_V1") return@runCatching
+                    runCatching { OfflineDashStore.get(c).verifyOnce(id, dash) }.getOrNull() ?: return@runCatching
+                } else {
+                    if (!file.exists() || file.length() < 10_000) return@runCatching
+                    0L
+                }
                 val coverFile = File(dir, file.nameWithoutExtension + ".cover.jpg").takeIf { it.isFile && it.length() > 0 }
                 val cover = coverFile?.let { Uri.fromFile(it).toString() } ?: o.optString("coverUrl").takeIf { it.isNotEmpty() }
                 val lyricsFile = o.optString("lyricsFile").takeIf { it.isNotEmpty() }?.let { File(dir, it) }
@@ -513,7 +635,7 @@ object Downloader {
                     ?: o.optString("canvasSpotifyId").takeIf { it.isNotEmpty() }
                         ?.let { File(c.filesDir, "canvas/$it.mp4") }
                 val track = Track(
-                    id = o.getString("id"),
+                    id = id,
                     title = o.getString("title"),
                     artist = o.getString("artist"),
                     album = o.optString("album"),
@@ -521,7 +643,7 @@ object Downloader {
                     albumId = o.optString("albumId").takeIf { it.isNotBlank() },
                     artistId = o.optString("artistId").takeIf { it.isNotBlank() },
                     spotifyId = o.optString("canvasSpotifyId", o.optString("spotifyId")).takeIf { it.isNotBlank() },
-                    streamUrl = Uri.fromFile(file).toString(),
+                    streamUrl = if (dash == null) Uri.fromFile(file).toString() else null,
                     lyricsProvider = o.optString("lyricsSource", "LRCLIB"),
                     coverUrl = cover
                 )
@@ -530,11 +652,12 @@ object Downloader {
                     track = track,
                     file = file,
                     format = o.optString("format", "MP3"),
-                    bytes = file.length(),
+                    bytes = file.length() + dashBytes,
                     lyricsFile = lyricsFile?.takeIf { it.exists() && it.length() > 0 },
                     canvasFile = canvasFile?.takeIf { it.exists() && it.length() > 10_000 },
                     hasLyrics = lyricsFile?.let { it.exists() && it.length() > 0 } == true,
-                    hasCanvas = canvasFile?.let { it.exists() && it.length() > 10_000 } == true
+                    hasCanvas = canvasFile?.let { it.exists() && it.length() > 10_000 } == true,
+                    dashManifestUrl = dash
                 )
             }
         }

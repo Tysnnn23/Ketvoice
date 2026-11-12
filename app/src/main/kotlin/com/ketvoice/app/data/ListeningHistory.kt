@@ -97,4 +97,36 @@ object ListeningHistory {
         (listOf(track) + previous.filterNot {
             it.id == track.id || (it.title.equals(track.title, true) && it.artist.equals(track.artist, true))
         }).take(80)
+
+    /** Import is idempotent and keeps existing entries/counts when they conflict. */
+    @Synchronized internal fun mergeBackup(recent: List<Track>, known: List<Track>, counts: Map<String, Int>, listenedMs: Long) {
+        val p = prefs ?: error("Listening history unavailable")
+        // Do not replace unreadable existing history with an apparently empty import.
+        for (key in listOf("tracks", "known")) {
+            p.getString(key, null)?.let { requireNotNull(gson.fromJson(it, Array<Track>::class.java)) }
+        }
+        p.getString("counts", null)?.let {
+            val root = com.google.gson.JsonParser.parseString(it)
+            require(root.isJsonObject && root.asJsonObject.entrySet().all { entry ->
+                runCatching { entry.value.asInt >= 0 }.getOrDefault(false)
+            })
+        }
+        val existingRecent = _tracks.value.map { it.id }.toSet()
+        val nextRecent = _tracks.value + recent.filterNot { it.id in existingRecent }.distinctBy { it.id }
+            .take((80 - _tracks.value.size).coerceAtLeast(0))
+        val existingKnown = _known.value.map { it.id }.toSet()
+        val nextKnown = _known.value + (known + nextRecent).filterNot { it.id in existingKnown }.distinctBy { it.id }
+            .take((400 - _known.value.size).coerceAtLeast(0))
+        val nextCounts = _playCounts.value + counts.filterKeys { it !in _playCounts.value }.entries
+            .take((550 - _playCounts.value.size).coerceAtLeast(0)).associate { it.key to it.value }
+        val nextTime = maxOf(_listenedMs.value, listenedMs)
+        check(p.edit().putString("tracks", gson.toJson(nextRecent)).putString("known", gson.toJson(nextKnown))
+            .putString("counts", gson.toJson(nextCounts)).putLong("listenedMs", nextTime).commit())
+        _tracks.value = nextRecent
+        _known.value = nextKnown
+        _playCounts.value = nextCounts
+        _listenedMs.value = nextTime
+        unflushedMs = 0L
+        runCatching { ListeningStats.refresh() }
+    }
 }

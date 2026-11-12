@@ -121,4 +121,35 @@ class StreamResolverTest {
         assertEquals(listOf("youtube", "api:um", "cs:new"),
             SourcePriority.reconcile(listOf("youtube", "api:um", "cs:gone"), listOf("api:um", "youtube", "cs:new")))
     }
+
+    @Test fun prefetchedStreamCannotBypassTheOrderedMode() {
+        assertFalse(StreamResolver.canUsePrefetched(false, "lossless", "youtube"))
+        assertTrue(StreamResolver.canUsePrefetched(false, "lossless", "lossless"))
+        assertTrue(StreamResolver.canUsePrefetched(true, "lossless", "youtube"))
+        assertFalse(StreamResolver.canUsePrefetched(false, null, "youtube"))
+    }
+
+    @Test fun explicitAvailableSourceIsTriedBeforeTheProgressiveRace() {
+        val available = listOf("youtube", "cs:lossless")
+        assertFalse(StreamResolver.shouldRace(true, false, "cs:lossless", available))
+        assertTrue(StreamResolver.shouldRace(true, false, "cs:removed", available))
+        assertTrue(StreamResolver.shouldRace(true, true, "cs:lossless", available))
+        assertFalse(StreamResolver.shouldRace(false, false, null, available))
+    }
+
+    @Test fun explicitYoutubeChoiceMovesThatEnabledSourceAheadOfSavedOrder() {
+        val oldOrder = SourcePriority.playbackOrder.value
+        val oldDisabled = SourcePriority.playbackDisabled.value
+        try {
+            SourcePriority.playbackOrder.value = listOf("api:um", "youtube")
+            SourcePriority.playbackDisabled.value = emptySet()
+            val track = Track("yt:fixture", "Song", "Artist", "Album", sourceOverride = "youtube")
+            assertEquals("youtube", StreamResolver.sources(track, download = false, lossless = false).first().id)
+            SourcePriority.playbackDisabled.value = setOf("youtube")
+            assertFalse(StreamResolver.sources(track, download = false, lossless = false).any { it.id == "youtube" })
+        } finally {
+            SourcePriority.playbackOrder.value = oldOrder
+            SourcePriority.playbackDisabled.value = oldDisabled
+        }
+    }
 }

@@ -24,7 +24,9 @@ data class Track(
     val isrc: String? = null,
     val youtubeCatalogVerified: Boolean = false,
     val albumId: String? = null,
-    val artistId: String? = null
+    val artistId: String? = null,
+    /** Set only when the listener explicitly chooses a search-result source. */
+    val sourceOverride: String? = null
 )
 
 data class Album(

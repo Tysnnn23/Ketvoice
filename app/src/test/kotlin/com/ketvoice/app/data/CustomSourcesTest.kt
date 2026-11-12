@@ -89,6 +89,7 @@ class CustomSourcesTest {
         assertEquals("high", negotiateQuality("high", manifest.qualities))
         assertEquals("normal", negotiateQuality("low", manifest.qualities))
         assertTrue(manifest.downloadsAllowed)
+        assertFalse(manifest.explicitDownloadPermission)
     }
 
     @Test
@@ -114,6 +115,14 @@ class CustomSourcesTest {
         )
         assertNotNull(manifest)
         assertFalse(manifest!!.downloadsAllowed)
+        assertFalse(manifest.explicitDownloadPermission)
+    }
+
+    @Test fun adaptiveDownloadRequiresAnExplicitSourcePermission() {
+        val allowed = parseManifest("https://example.com/source.json", """{"name":"X","allowDownloads":true}""")!!
+        val implicit = parseManifest("https://example.com/source.json", """{"name":"X"}""")!!
+        assertTrue(allowed.explicitDownloadPermission)
+        assertFalse(implicit.explicitDownloadPermission)
     }
 
     @Test

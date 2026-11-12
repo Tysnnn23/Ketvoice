@@ -725,7 +725,11 @@ private fun NowPlayingBarsCanvas(a: Float, b: Float, c: Float, d: Float, modifie
 fun LyricsPreviewLine(onOpen: () -> Unit) {
     val lyrics by com.ketvoice.app.data.LyricsRepo.state.collectAsState()
     val posMs by Player.positionMs.collectAsState()
-    val activeText = lyrics.activeText(posMs)
+    val playback by Player.state.collectAsState()
+    val offsets by com.ketvoice.app.data.LyricsOffsets.values.collectAsState()
+    val offsetKey = remember(playback.current?.id) { playback.current?.id?.let(com.ketvoice.app.data.LyricsOffsets::key) }
+    val offset = offsetKey?.let { offsets[it] } ?: 0
+    val activeText = lyrics.activeText(com.ketvoice.app.data.LyricsOffsets.adjustedPosition(posMs, offset))
     val text = activeText
         ?: if (AppSettings.lyricsMode.value == 2 || AppSettings.lyricsSource.value == "off")
             "Paroles désactivées"

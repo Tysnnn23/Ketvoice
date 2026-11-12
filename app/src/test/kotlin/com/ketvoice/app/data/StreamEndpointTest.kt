@@ -42,6 +42,28 @@ class StreamEndpointTest {
         assertTrue(CustomSources.parseStreamResponse(raw, source)!!.isDash)
     }
 
+    @Test fun actualMatchedProviderIsRetainedWithoutStoringSignedUrlsInTheLabel() = runBlocking {
+        CustomSources.openStreamConnection = { url -> FakeConnection(url, 200,
+            """{"url":"https://source.example/tidal-mpd/42","format":"dash","codec":"flac","mimeType":"application/dash+xml"}""") }
+        val configured = source.copy(manifestJson = """{"name":"Test","search":"/search?q={query}","stream":"/stream/{id}"}""")
+        val track = Track("cs:test:tidal:42", "Song", "Artist", "Album", addon = "cs:test", addonId = "tidal:42")
+        val stream = CustomSources.streamFrom(configured, track, forDownload = false)!!
+        assertEquals("TIDAL", stream.provider)
+    }
+
+    @Test fun dashDownloadIsEnabledOnlyWhenTheManifestExplicitlyAllowsIt() = runBlocking {
+        CustomSources.openStreamConnection = { url -> FakeConnection(url, 200,
+            """{"url":"https://source.example/tidal-mpd/42","format":"dash","mimeType":"application/dash+xml"}""") }
+        val base = """{"name":"Test","search":"/search?q={query}","stream":"/stream/{id}"}"""
+        val track = Track("cs:test:tidal:42", "Song", "Artist", "Album", addon = "cs:test", addonId = "tidal:42")
+        val implicit = source.copy(manifestJson = base)
+        val allowed = source.copy(manifestJson = base.dropLast(1) + ",\"allowDownloads\":true}")
+        val denied = source.copy(manifestJson = base.dropLast(1) + ",\"allowDownloads\":false}")
+        assertFalse(CustomSources.streamFrom(implicit, track, forDownload = true)!!.dashDownloadAllowed)
+        assertTrue(CustomSources.streamFrom(allowed, track, forDownload = true)!!.dashDownloadAllowed)
+        assertNull(CustomSources.streamFrom(denied, track, forDownload = true))
+    }
+
     private class FakeConnection(url: URL, private val status: Int, private val body: String) : HttpURLConnection(url) {
         override fun getResponseCode() = status
         override fun getInputStream() = ByteArrayInputStream(body.toByteArray())

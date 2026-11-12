@@ -119,6 +119,7 @@ object DownloadQueue {
         track.isrc?.let { put("isrc", it) }
         track.albumId?.let { put("albumId", it) }
         track.artistId?.let { put("artistId", it) }
+        track.sourceOverride?.let { put("sourceOverride", it) }
     }
 
     internal fun trackFromJson(raw: JSONObject?): Track? {
@@ -146,7 +147,8 @@ object DownloadQueue {
             isrc = text("isrc"),
             youtubeCatalogVerified = raw.optBoolean("youtubeCatalogVerified"),
             albumId = text("albumId"),
-            artistId = text("artistId")
+            artistId = text("artistId"),
+            sourceOverride = text("sourceOverride")
         )
     }
 

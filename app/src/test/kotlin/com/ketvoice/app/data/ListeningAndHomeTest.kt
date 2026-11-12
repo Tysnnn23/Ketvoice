@@ -52,6 +52,23 @@ class ListeningAndHomeTest {
         assertEquals(pool.toSet(), selected.toSet())
     }
 
+    @Test fun personalizationPrefersFreshTracksFromFamiliarArtists() {
+        val recent = Track("old", "Old song", "Fav artist", "Album")
+        val familiar = Track("new", "New song", "Fav artist", "Album")
+        val other = Track("other", "Other song", "Other artist", "Album")
+        val alternate = recent.copy(id = "another-provider")
+        val ranked = HomeFeed.personalizedPick(listOf(alternate, other, familiar), emptySet(), listOf(recent),
+            emptyList(), 3, Random(5))
+        assertEquals("new", ranked.first().id)
+        assertEquals("another-provider", ranked.last().id)
+    }
+
+    @Test fun personalizationStillFillsASmallOfflinePool() {
+        val track = song(1)
+        assertEquals(listOf(track), HomeFeed.personalizedPick(listOf(track), setOf(track.id), listOf(track),
+            emptyList(), 12, Random(1)))
+    }
+
     @Test fun lyricTimelineMovesForwardAndBackwardOnSeek() {
         val state = LyricsRepo.State(lines = listOf(MusicApi.LyricLine(1000, "A"), MusicApi.LyricLine(2000, "B"), MusicApi.LyricLine(3000, "C")))
         assertEquals(-1, state.indexAt(0))

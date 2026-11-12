@@ -90,7 +90,7 @@ internal fun SyncedTranslation(
         if (w.endMs > w.startMs) w.endMs else w.startMs + 220L
     } ?: (start + 1L)
     val span = (end - start).coerceAtLeast(1L)
-    val raw = ((now - start).toFloat() / span).coerceIn(0f, 1f)
+    val raw = ((com.ketvoice.app.data.LyricsOffsets.adjustedPosition(now, LocalLyricsOffset.current) - start).toFloat() / span).coerceIn(0f, 1f)
     // Ease the whole sweep so it starts and ends without a visible jerk.
     val progress = raw * raw * (3f - 2f * raw)
 

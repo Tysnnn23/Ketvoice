@@ -72,6 +72,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.platform.testTag
 import com.ketvoice.app.data.*
 import com.ketvoice.app.glass.GlassPanel
@@ -87,18 +88,22 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
+internal val LocalLyricsOffset = staticCompositionLocalOf { 0 }
+
 @Composable
 internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
                         modifier: Modifier = Modifier,
                         onEmptyTap: () -> Unit = {},
                         fontScale: Float = com.ketvoice.app.ui.quest.QuestLayout.lyricsScale(AppSettings.lyricsTextSize.value)) {
     val lyrics by LyricsRepo.state.collectAsState()
+    val offsets by LyricsOffsets.values.collectAsState()
+    val offsetMs = offsets[remember(track.id) { LyricsOffsets.key(track.id) }] ?: 0
 
     val position = Player.positionMs.collectAsState()
-    val active by remember(lyrics) { derivedStateOf { lyrics.indexAt(position.value) } }
+    val active by remember(lyrics, offsetMs) { derivedStateOf { lyrics.indexAt(LyricsOffsets.adjustedPosition(position.value, offsetMs)) } }
     val firstLineMs = remember(lyrics.lines) { lyrics.lines.firstOrNull { it.timeMs >= 0 }?.timeMs ?: 0L }
-    val intro by remember(firstLineMs, lyrics.isTimed) { derivedStateOf {
-        lyrics.isTimed && LyricsMotion.showIntro(position.value, firstLineMs)
+    val intro by remember(firstLineMs, lyrics.isTimed, offsetMs) { derivedStateOf {
+        lyrics.isTimed && LyricsMotion.showIntro(LyricsOffsets.adjustedPosition(position.value, offsetMs), firstLineMs)
     } }
     val list = rememberLazyListState()
     var following by remember(track.id) { mutableStateOf(true) }
@@ -131,6 +136,7 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
     LaunchedEffect(list) {
         list.interactionSource.interactions.collect { if (it is DragInteraction.Start) following = false }
     }
+    CompositionLocalProvider(LocalLyricsOffset provides offsetMs) {
     BoxWithConstraints(modifier) {
         val viewportPx = with(LocalDensity.current) { maxHeight.toPx() }
         LaunchedEffect(track.id, active, following, expanded, lyrics.lines, viewportPx, reduced, seekEpoch, translationEnabled) {
@@ -226,7 +232,7 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
                             // basiques » sur les lignes non sélectionnées.
                             val lineScale = 1f
                             val lineModifier = Modifier.fillMaxWidth().clickable {
-                                if (lyrics.isTimed && line.timeMs >= 0) { Player.seekTo(line.timeMs); following = true }
+                                if (lyrics.isTimed && line.timeMs >= 0) { Player.seekTo(LyricsOffsets.seekPosition(line.timeMs, offsetMs)); following = true }
                             }
                             Column(
                                  lineModifier.graphicsLayer {
@@ -292,6 +298,7 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
             }
         }
     }
+    }
 }
 
 @Composable
@@ -305,7 +312,9 @@ internal fun LyricVoices(line: MusicApi.LyricLine, active: Boolean, timed: Boole
     val clock = remember(line, timed, nearActive) {
         if (timed && nearActive) Player.positionMs else kotlinx.coroutines.flow.flowOf(Long.MIN_VALUE)
     }
-    val position by clock.collectAsState(Long.MIN_VALUE)
+    val rawPosition by clock.collectAsState(Long.MIN_VALUE)
+    val offset = LocalLyricsOffset.current
+    val position = if (rawPosition == Long.MIN_VALUE) rawPosition else LyricsOffsets.adjustedPosition(rawPosition, offset)
     val leadEnd = voices.lead.words.maxOfOrNull { it.endMs } ?: line.timeMs
     val leadSinging = timed && nearActive && position != Long.MIN_VALUE && position < leadEnd + LyricsPresentation.LEAD_TAIL_MS
     Column(Modifier.fillMaxWidth()) {
@@ -367,6 +376,7 @@ private fun BackingVocal(
 internal fun KaraokeLine(line: MusicApi.LyricLine, modifier: Modifier, fontScale: Float = 1f,
                          backing: Boolean = false, dim: Boolean = false) {
     val clock = remember(line) { mutableLongStateOf(Player.currentPositionMs()) }
+    val offset = LocalLyricsOffset.current
     val playing by remember { Player.state.map { it.isPlaying }.distinctUntilChanged() }.collectAsState(false)
     LaunchedEffect(line, playing) {
         clock.longValue = Player.currentPositionMs()
@@ -410,7 +420,7 @@ internal fun KaraokeLine(line: MusicApi.LyricLine, modifier: Modifier, fontScale
             onTextLayout = { layout = it }, modifier = Modifier.fillMaxWidth())
         Canvas(Modifier.matchParentSize()) {
             val measured = layout ?: return@Canvas
-            val now = clock.longValue // draw invalidation only: no composition or shaping per frame
+            val now = LyricsOffsets.adjustedPosition(clock.longValue, offset)
             masks.forEach { word ->
                 val progress = segmentProgress(now, word.start, word.end)
                 if (progress <= 0f) return@forEach
@@ -458,7 +468,7 @@ internal fun segmentProgress(now: Long, start: Long, end: Long): Float = when {
 @Composable
 internal fun IntroDots(firstLineMs: Long) {
     val position by Player.positionMs.collectAsState()
-    val lit = LyricsMotion.litDots(position, firstLineMs)
+    val lit = LyricsMotion.litDots(LyricsOffsets.adjustedPosition(position, LocalLyricsOffset.current), firstLineMs)
 
     // Plain white dots: no halo, no ripple, no drift.
     // Anchored to the left edge of the screen, slightly tightened spacing.
@@ -487,6 +497,10 @@ internal fun IntroDots(firstLineMs: Long) {
 
 @Composable
 internal fun LyricsSourceSheet(track: Track, onClose: () -> Unit) {
+    val context = LocalContext.current
+    LaunchedEffect(context) { LyricsOffsets.init(context) }
+    val offsets by LyricsOffsets.values.collectAsState()
+    val offset = offsets[remember(track.id) { LyricsOffsets.key(track.id) }] ?: 0
     var results by remember(track.id) { mutableStateOf<Map<String, MusicApi.ProviderStatus>>(emptyMap()) }
     LaunchedEffect(track.id) {
         coroutineScope {
@@ -504,6 +518,20 @@ internal fun LyricsSourceSheet(track: Track, onClose: () -> Unit) {
             Text("Sources des paroles", color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.Bold)
             Text("Syllabes natives → mots natifs → lignes → texte", color = Color.White.copy(alpha = .78f), fontSize = if (com.ketvoice.app.BuildConfig.IS_QUEST) 14.sp else 12.sp,
                 modifier = Modifier.padding(top = 5.dp, bottom = 12.dp))
+            Text("Décalage des paroles", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text("Retarder", color = Color.White, modifier = Modifier.clickable(role = Role.Button) {
+                    LyricsOffsets.set(track.id, offset - 100)
+                }.heightIn(min = 48.dp).wrapContentHeight().padding(horizontal = 8.dp))
+                Text("${if (offset > 0) "+" else ""}$offset ms", localize = false, color = Color.White,
+                    modifier = Modifier.weight(1f), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                Text("Avancer", color = Color.White, modifier = Modifier.clickable(role = Role.Button) {
+                    LyricsOffsets.set(track.id, offset + 100)
+                }.heightIn(min = 48.dp).wrapContentHeight().padding(horizontal = 8.dp))
+            }
+            Text("Réinitialiser", color = Color.White.copy(alpha = .78f), modifier = Modifier
+                .clickable(role = Role.Button) { LyricsOffsets.set(track.id, 0) }.heightIn(min = 48.dp)
+                .wrapContentHeight().padding(horizontal = 8.dp))
             (listOf(MusicApi.SRC_AUTO) + MusicApi.lyricSources + MusicApi.SRC_OFF).forEach { source ->
                 val status = results[source]
                 val selected = AppSettings.lyricsSource.value == source

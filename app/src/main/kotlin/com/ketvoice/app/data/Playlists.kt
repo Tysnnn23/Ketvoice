@@ -98,4 +98,15 @@ object PlaylistStore {
     }
     suspend fun resolve(id: String, entry: String, track: Track) { change { rows -> rows.map { if (it.id == id)
         it.copy(entries = it.entries.map { e -> if (e.id == entry) e.copy(track = PlaylistRules.safe(track)) else e }) else it } } }
+
+    /** Restore only missing identities; never replace a playlist edited on this device. */
+    internal suspend fun mergeBackup(incoming: List<LocalPlaylist>) {
+        change { rows ->
+            val existing = rows.map { it.id }.toSet()
+            rows + incoming.filterNot { it.id in existing }.map { playlist ->
+                playlist.copy(name = PlaylistRules.name(playlist.name),
+                    entries = playlist.entries.map { it.copy(track = it.track?.let(PlaylistRules::safe)) })
+            }
+        }
+    }
 }

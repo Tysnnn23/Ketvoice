@@ -35,7 +35,8 @@ data class SourceManifest(
 
     val qualities: List<String>,
 
-    val downloadsAllowed: Boolean = true
+    val downloadsAllowed: Boolean = true,
+    val explicitDownloadPermission: Boolean = false
 ) {
     val resolvedSearch: String get() = absolute(searchUrl)
 
@@ -269,13 +270,21 @@ object CustomSources {
                 forDownload && (id.isNotBlank() || !it.contains("{id}"))
             }
             val direct = track.streamUrl?.takeIf { it.startsWith("https://") }
+            val provider = when (track.addonId?.substringBefore(':')?.lowercase()) {
+                "tidal" -> "TIDAL"
+                "qobuz" -> "Qobuz"
+                "amazon" -> "Amazon"
+                else -> null
+            }
             if (direct != null && downloadTemplate == null) return@withContext streamInfo(direct, track.downloadUrl, source.quality)
+                .copy(provider = provider, dashDownloadAllowed = forDownload && manifest.explicitDownloadPermission)
             val template = downloadTemplate ?: manifest.resolvedStream ?: return@withContext null
             if (id.isBlank() && template.contains("{id}")) return@withContext null
             val url = fill(template, query = "", id = id, quality = qualityParam,
                 title = track.title, artist = track.artist)
             val raw = fetchStreamEndpoint(url) ?: return@withContext null
-            parseStreamResponse(raw, source, forDownload)
+            parseStreamResponse(raw, source, forDownload)?.copy(provider = provider,
+                dashDownloadAllowed = forDownload && manifest.explicitDownloadPermission)
         }
 
     /** Both stream and download endpoints may answer with JSON, a URL or audio. */
@@ -648,6 +657,12 @@ fun parseManifest(manifestUrl: String, raw: String): SourceManifest? {
         is String -> allow.lowercase() !in setOf("0", "false", "no", "off")
         else -> true
     }
+    val explicitDownloadPermission = when (val allow = root.opt("allowDownloads")) {
+        is Boolean -> allow
+        is Number -> allow.toDouble() == 1.0
+        is String -> allow.lowercase() in setOf("1", "true", "yes", "on")
+        else -> false
+    }
     return SourceManifest(
         name = name,
         baseUrl = base,
@@ -655,7 +670,8 @@ fun parseManifest(manifestUrl: String, raw: String): SourceManifest? {
         streamUrl = endpoint("stream", "streamUrl", "stream_url", "play", "audio", "song"),
         downloadUrl = endpoint("download", "downloadUrl", "download_url", "file"),
         qualities = qualities,
-        downloadsAllowed = downloadsAllowed
+        downloadsAllowed = downloadsAllowed,
+        explicitDownloadPermission = explicitDownloadPermission
     )
 }
 

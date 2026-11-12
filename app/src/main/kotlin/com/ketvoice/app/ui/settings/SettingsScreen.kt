@@ -85,6 +85,7 @@ fun SettingsScreen() {
     var editSetting by remember { mutableStateOf("") }
     var accentOpen by remember { mutableStateOf(false) }
     var lyricsDiag by remember { mutableStateOf(false) }
+    var backupOpen by rememberSaveable { mutableStateOf(false) }
     var categoryKey by rememberSaveable { mutableStateOf<String?>(null) }
     val category = SettingsCategory.fromKey(categoryKey)
     var choice by remember { mutableStateOf<ChoiceSpec?>(null) }
@@ -602,6 +603,7 @@ fun SettingsScreen() {
                     value = "${cacheUsedMb.intValue} Mo"
                 ) {}
                 CacheLimitRow()
+                SRow(KetIcons.Storage, "Sauvegarde personnelle", sub = "Playlists, favoris et réglages") { backupOpen = true }
                 SRow(
                     KetIcons.Trash, "Vider le cache des chansons",
                     sub = "Les paroles et canvas téléchargés restent"
@@ -653,6 +655,7 @@ fun SettingsScreen() {
     }
 
     if (lyricsDiag) LyricsDiagnosticsDialog(onClose = { lyricsDiag = false })
+    if (backupOpen) PersonalBackupSheet(onClose = { backupOpen = false })
 
     if (editSetting.isNotBlank()) {
         val state = if (editSetting == "better") AppSettings.betterLyricsKey else AppSettings.lyricaUrl

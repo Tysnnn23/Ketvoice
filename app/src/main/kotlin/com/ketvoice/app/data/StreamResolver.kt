@@ -20,10 +20,13 @@ internal object StreamResolver {
 
     fun sources(track: Track, download: Boolean, lossless: Boolean): List<Source> =
         SourcePriority.entries(if (download) SourcePriority.Mode.DOWNLOAD else SourcePriority.Mode.PLAYBACK)
-            .filter { it.enabled }.mapNotNull { entry ->
+            .filter { it.enabled }
+            .sortedBy { if (!download && it.id == track.sourceOverride) 0 else 1 }
+            .mapNotNull { entry ->
             when (entry.id) {
                 "api:um" -> Source(entry.id) { MusicApi.addonStream(track, "um") }
-                "api:last" -> if (lossless) Source(entry.id) { MusicApi.flacStream(track) } else null
+                "api:last" -> if (lossless || (!download && track.sourceOverride == entry.id))
+                    Source(entry.id) { MusicApi.flacStream(track) } else null
                 "youtube" -> Source(entry.id) { MusicApi.youtubeStream(track) }
                 else -> CustomSources.sources.value.firstOrNull { "cs:${it.id}" == entry.id }?.let { source ->
                     Source(entry.id, timeoutMs = if (source.manifestUrl == CustomSources.LOSSLESS_MANIFEST) 35_000L else null) {
@@ -40,16 +43,24 @@ internal object StreamResolver {
      * by the player or by the downloader's own byte check.
      */
     fun candidates(track: Track, download: Boolean, lossless: Boolean, race: Boolean,
-                    excluded: Set<String> = emptySet(), excludedSources: Set<String> = emptySet()): Flow<Candidate> = resolve(
-        sources(track, download, lossless).filterNot { it.id in excludedSources }.map { source -> Source(source.id, source.timeoutMs) {
+                    excluded: Set<String> = emptySet(), excludedSources: Set<String> = emptySet()): Flow<Candidate> {
+        val available = sources(track, download, lossless).filterNot { it.id in excludedSources }
+        return resolve(available.map { source -> Source(source.id, source.timeoutMs) {
             source.resolve()?.takeIf { it.url !in excluded }
-        } }, race)
+        } }, shouldRace(race, download, track.sourceOverride, available.map { it.id }))
+    }
 
     /** Ranks candidates by real quality, best first, keeping the source priority on ties. */
     internal fun ranked(collected: List<Candidate>): List<Candidate> =
         collected.sortedWith(compareByDescending<Candidate> { StreamQuality.rank(it.stream) }.thenBy { it.priority })
 
     internal fun best(collected: List<Candidate>): Candidate? = ranked(collected).firstOrNull()
+
+    internal fun canUsePrefetched(race: Boolean, firstSource: String?, candidateSource: String): Boolean =
+        race || firstSource == candidateSource
+
+    internal fun shouldRace(race: Boolean, download: Boolean, selected: String?, available: List<String>): Boolean =
+        race && (download || selected == null || selected !in available)
 
     /** Stops as soon as every source answered, or after [windowMs], then ranks them. */
     suspend fun collectWithin(candidates: Flow<Candidate>, windowMs: Long): List<Candidate> = coroutineScope {

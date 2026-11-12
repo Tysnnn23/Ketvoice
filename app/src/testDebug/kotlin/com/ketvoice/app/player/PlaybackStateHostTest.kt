@@ -28,6 +28,10 @@ class PlaybackStateHostTest {
     private var oldAttempts = 0
     private var oldStream: Any? = null
     private var oldSource: Any? = null
+    private var oldPendingPlay: Any? = null
+    private var oldRestored = false
+    private var oldConnected = false
+    private var oldPosition = 0L
 
     @Before fun setup() {
         original = state.value
@@ -38,6 +42,10 @@ class PlaybackStateHostTest {
         oldAttempts = field("fallbackAttempts").getInt(Player)
         oldStream = field("activeStream").get(Player)
         oldSource = field("activeSourceId").get(Player)
+        oldPendingPlay = field("pendingPlay").get(Player)
+        oldRestored = field("restoredSessionPending").getBoolean(Player)
+        oldConnected = field("connected").getBoolean(Player)
+        oldPosition = Player.positionMs.value
         field("controller").set(Player, null)
         state.value = PlayerUiState(playWhenReady = true, buffering = true)
         field("desiredPlay").setBoolean(Player, true)
@@ -54,6 +62,10 @@ class PlaybackStateHostTest {
         field("fallbackAttempts").setInt(Player, oldAttempts)
         field("activeStream").set(Player, oldStream)
         field("activeSourceId").set(Player, oldSource)
+        field("pendingPlay").set(Player, oldPendingPlay)
+        field("restoredSessionPending").setBoolean(Player, oldRestored)
+        field("connected").setBoolean(Player, oldConnected)
+        (Player.positionMs as MutableStateFlow<Long>).value = oldPosition
     }
 
     @Test fun playPauseDuringResolutionOnlyChangesIntentWithoutRestartingResolution() {
@@ -98,5 +110,24 @@ class PlaybackStateHostTest {
         assertEquals("Erreur de lecture · réessayez", state.value.quality)
         listener.onPlayWhenReadyChanged(true, MediaPlayer.PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST)
         assertFalse("A late controller callback must not hide the terminal error", state.value.playWhenReady)
+    }
+
+    @Test fun restoredQueueWaitsForPlayAndResolvesAtTheSavedPosition() {
+        val track = Track("fixture", "Title", "Artist", "Album")
+        state.value = PlayerUiState(queue = listOf(track), queueEntryIds = listOf("entry"), index = 0,
+            positionMs = 42_000, playWhenReady = false)
+        (Player.positionMs as MutableStateFlow<Long>).value = 42_000
+        field("resolving").setBoolean(Player, false)
+        field("restoredSessionPending").setBoolean(Player, true)
+        field("connected").setBoolean(Player, true)
+        field("pendingPlay").set(Player, null)
+        assertFalse(state.value.playWhenReady)
+        Player.toggle()
+        val pending = requireNotNull(field("pendingPlay").get(Player))
+        val position = pending.javaClass.getDeclaredField("position").apply { isAccessible = true }.getLong(pending)
+        val playing = pending.javaClass.getDeclaredField("playing").apply { isAccessible = true }.getBoolean(pending)
+        assertEquals(42_000L, position)
+        assertTrue(playing)
+        assertFalse(field("restoredSessionPending").getBoolean(Player))
     }
 }
