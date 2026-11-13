@@ -1,5 +1,6 @@
 # Ketvoice project workflow
 
+- Autonomy: do not ask the user for permission before making changes. Proceed directly with edits, tests, commits, pushes and releases that the workflow below already calls for. Ask first only for actions with a very serious impact (danger ≥ 8/10), for example: irreversible data loss, deleting or overwriting published releases/tags, force-pushing or rewriting shared history, rotating or exposing signing keys/credentials, weakening server-enforced authorization, or deleting user accounts/catalog data.
 - User preference: after completing and validating requested app changes, commit and push the sources to GitHub `main` and publish the corresponding version with both signed mobile and Quest APKs, notes, checksums and validation metadata. Do not wait for another "push" request. If validation, authorization or publication is blocked, report the blocker instead of claiming publication.
 - Preserve concurrent user changes and upstream commits. Never force-push or overwrite an existing published release/tag. Keep old releases intact; historical APKs 1.2.0–2.3.0 must not be published.
 - SDKs, emulator images, caches, signing keys and credentials do not belong in Git. Stage installable APKs as GitHub release assets, not Git blobs. Verify uploaded downloads against local SHA-256 hashes.
