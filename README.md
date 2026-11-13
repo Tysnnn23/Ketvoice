@@ -29,7 +29,9 @@ Clear ↔ Tinted slider, highlights that follow device tilt, a touch glow and a
 scroll-edge fade. The Discord bridge now pumps the SDK callbacks it never received,
 **Ignorer les silences** works again, track details on the website are opt-in, and
 the lyrics, artwork and Canvas caches are bounded.
-[Release notes and validation limits](docs/releases/v4.9.0.md).
+[Mobile](https://github.com/Tysnnn23/Ketvoice/releases/download/v4.9.0/Ketvoice-4.9.0.apk)
+· [Quest](https://github.com/Tysnnn23/Ketvoice/releases/download/v4.9.0/Ketvoice-4.9.0-Quest.apk)
+· [Release notes](docs/releases/v4.9.0.md).
 
 ### 4.8.4 — collapsed chrome now works on 320–379 dp phones
 

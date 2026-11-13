@@ -1,0 +1,157 @@
+{
+  "schema": 8,
+  "version": "4.9.0",
+  "versionCode": 94,
+  "source_commit": "3aaa943d60b0f4c2f670adefa15f265afaa4d3f5",
+  "created_at": "2026-11-13T21:15:08.579710+00:00",
+  "build_origin": {
+    "kind": "github_actions_with_owner_discord_sdk",
+    "workflow": "android.yml",
+    "run_id": 43507175910,
+    "artifact": {
+      "id": 14078150372,
+      "sha256": "0c95b27ad2e3795b244efd0357000f93f48a550e4a4c5fa68dd34284ca1ed4f0"
+    },
+    "gradle": "assembleMobileRelease assembleQuestRelease",
+    "note": "Signed by CI with the pinned keystore secret; the Discord Social SDK AAR matched its pinned SHA-256."
+  },
+  "local_validation": {
+    "result": "debug JVM/Robolectric suites for both flavors, debug builds, release lint and the UI text audit passed in a cloud container without the Discord SDK",
+    "commands": [
+      "testMobileDebugUnitTest",
+      "testQuestDebugUnitTest",
+      "assembleMobileDebug",
+      "assembleQuestDebug",
+      "lintMobileRelease",
+      "lintQuestRelease",
+      "tools/audit_ui_texts.py --check"
+    ],
+    "ci_validation": "run 43507175910: release builds, debug and release unit tests for both flavors, UI text audit, lint, APK signature pin and Discord bridge packaging passed",
+    "liquid27_host_render_test": "Liquid27RenderHostTest compiles the AGSL with host Skia and evaluates it in software"
+  },
+  "tests": {
+    "mobile": {
+      "jvm": {
+        "tests": 487,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "android_15_emulator_compose": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "quest": {
+      "jvm": {
+        "tests": 486,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "android_15_emulator_compose": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    }
+  },
+  "lint": {
+    "mobile": {
+      "Warning": 165,
+      "Hint": 15
+    },
+    "quest": {
+      "Warning": 167,
+      "Hint": 15
+    }
+  },
+  "apks": [
+    {
+      "name": "Ketvoice-4.9.0.apk",
+      "sha256": "89188f80d202f1afc50bf46323a9a68973b9c8e061aaccd9723262987dcf5e90",
+      "bytes": 69389498,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "4.9.0",
+      "versionCode": 94,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-4.9.0-Quest.apk",
+      "sha256": "c8a06ae70b3dc246979146c68a835b4cf558b13bf08ffad477ef238b1c5fe303",
+      "bytes": 79439608,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "4.9.0",
+      "versionCode": 94,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    }
+  ],
+  "discord": {
+    "sdk_present_in_ci_build": true,
+    "sdk_sha256_pinned": true,
+    "bridge_and_native_libraries_verified": true,
+    "callback_pump": "discordpp::RunCallbacks() every 50 ms on the main thread",
+    "presence_mode": "unauthenticated_rpc_through_installed_discord_app"
+  },
+  "credential_scan": {
+    "entries": 1533,
+    "findings": 0,
+    "raw_pattern_findings": 1,
+    "scope": "tracked sources and APK archive entries",
+    "kind": "credential_patterns",
+    "explicit_private_provider_key_deny_list": false,
+    "triage": [
+      {
+        "file": "Ketvoice-Liquid-Glass-V4.html",
+        "classification": "embedded_image_false_positive",
+        "all_hits_inside_image_data_uris": true,
+        "rescanned_without_image_payloads": true
+      }
+    ]
+  },
+  "release_install_smoke": {
+    "mobile": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "quest": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    }
+  },
+  "publication_override": {
+    "authorized_by_user": true,
+    "authorized_at": "2026-11-13T21:15:08.579710+00:00",
+    "user_statement": "J'autorise la publication de la 4.9.0 sans test sur téléphone ni sur Quest",
+    "reason": "The owner explicitly authorized publishing 4.9.0 without phone or Quest testing.",
+    "scope": "physical device installation, real Liquid 27 GPU rendering and tilt, real Discord presence and Quest hardware validation for 4.9.0"
+  },
+  "not_validated": [
+    "physical phone or Quest installation, rendering and audible playback",
+    "real on-device Liquid 27 refraction, blur, tilt highlights and touch glow",
+    "real Discord RPC presence and callback delivery on a device",
+    "ketvoice-api heartbeat changes (function not deployed)",
+    "owner-session publishing"
+  ],
+  "known_limitations": [
+    "Liquid 27 is a close reproduction of publicly described behaviour, not Apple's renderer.",
+    "The liquid merging of separate glass elements is not implemented.",
+    "The signing certificate is the existing public Android debug identity, not a private production key."
+  ],
+  "canonical_banner_sha256": "47f6793088983f7d4e6bd1aeaa2cbd8b7cdc2a8f91271e3b2839daea81da0436"
+}

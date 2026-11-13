@@ -1,0 +1,115 @@
+name: Publish release
+
+# Publishes the exact, already-verified APKs of a green "Android CI" run. Text
+# metadata (notes, validation record, checksums) lives in release-metadata/<tag>/.
+# Mirrors tools/publish_release.py: checksums, APK verification, draft first,
+# upload then re-download comparison, and never overwriting a public release.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag, e.g. v4.9.0"
+        required: true
+      run_id:
+        description: "Green Android CI run whose ketvoice-apks artifact is published"
+        required: true
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download the verified CI artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ketvoice-apks
+          run-id: ${{ inputs.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: artifact
+
+      - name: Stage and verify the release payload
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          case "$TAG" in v[0-9]*.[0-9]*.[0-9]*) ;; *) echo "::error::Bad tag $TAG"; exit 1;; esac
+          version="${TAG#v}"
+          meta="release-metadata/$TAG"
+          stage="stage"
+          mkdir -p "$stage"
+          cp artifact/mobile/release/*.apk "$stage/Ketvoice-$version.apk"
+          cp artifact/quest/release/*.apk "$stage/Ketvoice-$version-Quest.apk"
+          cp "$meta/RELEASE-NOTES.md" "$meta/validation.json" "$meta/SHA256SUMS.txt" "$stage/"
+          cd "$stage"
+          # The checksum list must cover exactly the payload, and every file must match it.
+          expected=$(printf '%s\n' "Ketvoice-$version.apk" "Ketvoice-$version-Quest.apk" RELEASE-NOTES.md validation.json | sort)
+          listed=$(cut -d' ' -f3- SHA256SUMS.txt | sort)
+          [ "$expected" = "$listed" ] || { echo "::error::SHA256SUMS.txt does not cover exactly the payload"; exit 1; }
+          sha256sum -c SHA256SUMS.txt
+          python3 - "$version" <<'EOF'
+          import json, sys
+          v = json.load(open("validation.json"))
+          assert v["version"] == sys.argv[1], "validation record is for another version"
+          o = v.get("publication_override")
+          if o is not None:
+              assert o.get("authorized_by_user") is True and o.get("reason"), "override not authorized"
+          assert v["credential_scan"]["findings"] == 0, "credential scan not clean"
+          print("validation record ok for", v["version"], "source", v["source_commit"])
+          EOF
+
+      - name: Verify APK identity
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          version="${TAG#v}"
+          bt=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          code=$(python3 -c "import json;print(json.load(open('stage/validation.json'))['versionCode'])")
+          python3 - "$bt" "$version" "$code" <<'EOF'
+          import json, sys
+          from pathlib import Path
+          sys.path.insert(0, "tools")
+          from verify_apk import verify
+          bt, version, code = Path(sys.argv[1]), sys.argv[2], int(sys.argv[3])
+          record = {a["name"]: a for a in json.load(open("stage/validation.json"))["apks"]}
+          for name, quest in ((f"Ketvoice-{version}.apk", False), (f"Ketvoice-{version}-Quest.apk", True)):
+              checked = verify(Path("stage") / name, bt, version, code, quest=quest)
+              assert checked == record[name], f"{name} no longer matches its validation record"
+              print("verified", name)
+          EOF
+
+      - name: Create draft, upload, re-download, publish
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          version="${TAG#v}"
+          if gh release view "$TAG" --json isDraft -q .isDraft 2>/dev/null | grep -q false; then
+            echo "::error::Public release $TAG already exists; refusing to overwrite."
+            exit 1
+          fi
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "::error::A draft $TAG already exists; delete it or use a fresh tag."
+            exit 1
+          fi
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
+            echo "::error::Tag $TAG already exists."
+            exit 1
+          fi
+          source=$(python3 -c "import json;print(json.load(open('stage/validation.json'))['source_commit'])")
+          cd stage
+          gh release create "$TAG" --draft --target "$source" --title "Ketvoice $version" \
+            --notes-file RELEASE-NOTES.md \
+            "Ketvoice-$version.apk" "Ketvoice-$version-Quest.apk" RELEASE-NOTES.md validation.json SHA256SUMS.txt
+          mkdir -p ../check
+          gh release download "$TAG" --dir ../check
+          (cd ../check && sha256sum -c ../stage/SHA256SUMS.txt)
+          gh release edit "$TAG" --draft=false --latest
+          echo "Published $TAG with verified downloads."

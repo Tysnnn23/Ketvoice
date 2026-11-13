@@ -32,7 +32,7 @@ reliability fixes.
 - Translate the 4.8.1–4.8.2 Discord and language strings, so the UI text audit
   passes again.
 
-Full notes and validation limits: [4.9.0](docs/releases/v4.9.0.md).
+Full notes: [4.9.0](docs/releases/v4.9.0.md).
 
 ---
 
