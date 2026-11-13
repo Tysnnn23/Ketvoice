@@ -18,6 +18,10 @@ import com.ketvoice.app.ui.common.Icon
 import com.ketvoice.app.ui.common.Text
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.*
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.platform.testTag
+import kotlinx.coroutines.launch
+import com.ketvoice.app.ui.common.TrackActionFeedback
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.BlurredEdgeTreatment
@@ -56,13 +60,16 @@ fun CatalogScreen(request: CatalogRequest? = AppUi.catalogRequest.value) {
     val art by ArtworkRepo.covers.collectAsState()
     val player by Player.state.collectAsState()
     var page by remember(request) { mutableStateOf<CatalogPage?>(null) }
-    var loading by remember(request) { mutableStateOf(request.kind in listOf("album", "genre")) }
+    var loading by remember(request) { mutableStateOf(request.kind in listOf("album", "genre", "mix")) }
     var attempt by remember { mutableIntStateOf(0) }
     LaunchedEffect(request, attempt) {
-        if (request.kind in listOf("album", "genre")) {
+        if (request.kind in listOf("album", "genre", "mix")) {
             loading = true
             try {
-                page = if (request.kind == "album" && request.id.startsWith("MPRE")) {
+                page = if (request.kind == "mix") {
+                    // A personal mix: built from the listening history, completed by the catalogue.
+                    PersonalMixes.tracks(request.id)?.let { CatalogPage(request.title, "", it.firstOrNull()?.coverUrl, it) }
+                } else if (request.kind == "album" && request.id.startsWith("MPRE")) {
                     YouTubeCatalog.album(request.id)
                 } else CatalogRepo.page(request)
             } catch (cancelled: kotlinx.coroutines.CancellationException) {
@@ -85,6 +92,7 @@ fun CatalogScreen(request: CatalogRequest? = AppUi.catalogRequest.value) {
     }
     // Canvas du hero : résolu pour le premier titre quand les Canvas sont actifs.
     val shareContext = androidx.compose.ui.platform.LocalContext.current
+    val saveScope = rememberCoroutineScope()
     Column(Modifier.fillMaxSize().background(theme.background).statusBarsPadding()) {
         Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             GlassBackButton { AppUi.closeOverlay() }
@@ -95,12 +103,12 @@ fun CatalogScreen(request: CatalogRequest? = AppUi.catalogRequest.value) {
         if (loading) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator(color = theme.accent, modifier = Modifier.size(26.dp), strokeWidth = 2.dp)
         } else if (tracks.isEmpty()) {
-            val remote = request.kind in listOf("album", "genre")
+            val remote = request.kind in listOf("album", "genre", "mix")
             EmptyState(if (remote) "Catalogue indisponible" else "Aucun titre dans cette collection.",
                 when (request.kind) {
                     "favorites" -> "Ajoutez des titres avec l'étoile du lecteur pour les retrouver ici."
                     "history" -> "Vos titres écoutés apparaîtront ici. Lancez une première écoute."
-                    "album", "genre" -> "Vérifiez votre connexion, puis réessayez."
+                    "album", "genre", "mix" -> "Vérifiez votre connexion, puis réessayez."
                     else -> "Écoutez un titre pour commencer votre collection."
                 }, if (remote) "Réessayer" else "Rechercher des titres") {
                     if (remote) attempt++ else openTrackSearch()
@@ -120,6 +128,7 @@ fun CatalogScreen(request: CatalogRequest? = AppUi.catalogRequest.value) {
                             "favorites" -> append(" · Vos favoris")
                             "history" -> append(" · Écoutés récemment")
                             "downloads" -> append(" · Hors ligne")
+                            "mix" -> append(" · Fait pour vous")
                         }
                     },
                     covers = tracks.take(4).map { ArtworkRepo.coverForTrack(it) ?: it.coverUrl },
@@ -133,6 +142,22 @@ fun CatalogScreen(request: CatalogRequest? = AppUi.catalogRequest.value) {
                         attempt++
                     }
                 )
+            }
+            if (request.kind == "mix") item(span = { GridItemSpan(maxLineSpan) }) {
+                // A mix changes with the listening history; saving it keeps this exact selection.
+                TextButton(onClick = {
+                    saveScope.launch {
+                        val saved = runCatching {
+                            PlaylistStore.create(request.title.take(80), tracks.map(PlaylistRules::entry),
+                                cover = tracks.firstOrNull()?.let { ArtworkRepo.coverForTrack(it) ?: it.coverUrl })
+                        }.isSuccess
+                        TrackActionFeedback.snackbar.currentSnackbarData?.dismiss()
+                        TrackActionFeedback.snackbar.showSnackbar(AppText.t(
+                            if (saved) "Playlist enregistrée dans la bibliothèque" else "Impossible d'enregistrer la playlist"))
+                    }
+                }, modifier = Modifier.padding(horizontal = 10.dp).testTag("mix-save")) {
+                    Text("Enregistrer comme playlist", color = theme.accent, fontWeight = FontWeight.SemiBold)
+                }
             }
             itemsIndexed(tracks, key = { i, t -> "${t.id}:$i" }) { index, track ->
                 val active = player.current?.id == track.id

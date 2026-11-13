@@ -58,6 +58,8 @@ fun HomeScreen() {
     var grid by remember { mutableStateOf(false) }
     val layout = LocalAdaptiveLayout.current
     val pageWidth = layout.recentPageWidthDp.dp
+    // Read once per visit: the title must not flip while the page is open.
+    val greeting = remember { homeGreeting(java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)) }
     val featured = shelves.firstOrNull { it.tracks.isNotEmpty() }?.tracks ?: recent.take(6)
     val leadId = player.current?.id ?: recent.firstOrNull()?.id ?: featured.firstOrNull()?.id
     val shelfRows = remember(shelves, leadId) {
@@ -90,7 +92,7 @@ fun HomeScreen() {
                             contentAlignment = Alignment.Center) { AccountAvatar("K", 36.dp) }
                     } else Image(painterResource(R.drawable.logo_clean), "Ketvoice",
                         Modifier.height(48.dp).width(48.dp), contentScale = ContentScale.Fit)
-                    Text("Écouter maintenant", color = theme.onBackground, fontSize = if (layout.hasRail) 40.sp else 30.sp, fontWeight = FontWeight.Black,
+                    Text(greeting, color = theme.onBackground, fontSize = if (layout.hasRail) 40.sp else 30.sp, fontWeight = FontWeight.Black,
                         letterSpacing = (-1).sp, maxLines = 2, modifier = Modifier.padding(top = 14.dp).asHeading())
                     Row(Modifier.padding(top=3.dp,bottom=22.dp)) {
                         Text(origin,color=theme.secondary,fontSize=12.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
@@ -98,6 +100,8 @@ fun HomeScreen() {
                     }
                 }
             }
+            // Shortcuts to what already exists on this device.
+            item(key = "shortcuts") { HomeShortcuts(Modifier.padding(bottom = 10.dp)) }
             if (player.current != null || recent.isNotEmpty()) item(key = "editorial") {
                 HomeEditorial(if (player.current != null) player.queue else recent, resume = true)
             } else if (featured.isNotEmpty()) item(key = "editorial") { HomeEditorial(featured) }
@@ -106,6 +110,8 @@ fun HomeScreen() {
                     modifier = Modifier.padding(start = 18.dp, top = 20.dp, bottom = 12.dp).asHeading())
                 PlaylistShelf(playlists.filter { it.pinned })
             }
+            // Personal mixes appear once enough music has been played, and rotate at each launch.
+            item(key = "mixes") { HomeMixes(Modifier.padding(bottom = 22.dp)) }
             item {
                 Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp).padding(bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text("Récents", color = theme.onBackground, fontSize = 16.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f).asHeading())
@@ -132,32 +138,36 @@ fun HomeScreen() {
             } else item {
                 TrackCarousel(recent.take(20), onMenu = { AppUi.trackMenuTrack.value = it })
             }
-            if (albums.isNotEmpty()) item {
-                Text("Albums du catalogue", color = theme.onBackground, fontSize = 19.sp, fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(start = 18.dp, top = 28.dp, bottom = 12.dp))
-                LazyRow(contentPadding = PaddingValues(horizontal = 18.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                    itemsIndexed(albums, key = { _, album -> album.id }) { _, album ->
-                        val origin = rememberRevealOrigin()
-                        Column(Modifier.width(156.dp).captureRevealOrigin(origin).clickable {
-                            AppUi.openCatalog(CatalogRequest("album", album.id, album.title), origin.value)
-                        }) {
-                            Cover(album.title, album.coverUrl, 156.dp, 13.dp)
-                            Text(album.title, localize = false, color = theme.onBackground, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
-                                maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))
-                            Text(album.artist, localize = false, color = theme.secondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            // The first personal shelf always leads; the album row and the other shelves
+            // take turns from one launch to the next, and never move while browsing.
+            homeBlockOrder(PersonalMixes.sessionSeed, shelfRows.size, albums.isNotEmpty()).forEach { block ->
+                when (block) {
+                    HomeBlock.Albums -> if (albums.isNotEmpty()) item(key = "home-albums") {
+                        Text("Albums du catalogue", color = theme.onBackground, fontSize = 19.sp, fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(start = 18.dp, top = 28.dp, bottom = 12.dp))
+                        LazyRow(contentPadding = PaddingValues(horizontal = 18.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                            itemsIndexed(albums, key = { _, album -> album.id }) { _, album ->
+                                val origin = rememberRevealOrigin()
+                                Column(Modifier.width(156.dp).captureRevealOrigin(origin).clickable {
+                                    AppUi.openCatalog(CatalogRequest("album", album.id, album.title), origin.value)
+                                }) {
+                                    Cover(album.title, album.coverUrl, 156.dp, 13.dp)
+                                    Text(album.title, localize = false, color = theme.onBackground, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
+                                        maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))
+                                    Text(album.artist, localize = false, color = theme.secondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                }
+                            }
                         }
                     }
-                }
-            }
-            shelfRows.forEachIndexed { shelfIndex, (shelf, shown) ->
-                if(shown.isNotEmpty()) {
-                item(key = "home-shelf:$shelfIndex:${shelf.title}") {
-                    Column(Modifier.padding(start = 18.dp, end = 18.dp, top = 28.dp, bottom = 12.dp)) {
-                        Text(shelf.title, color = theme.onBackground, fontSize = 19.sp, fontWeight = FontWeight.Bold)
-                        Text(shelf.subtitle, color = theme.secondary, fontSize = 12.sp, modifier = Modifier.padding(top = 3.dp))
+                    else -> shelfRows.getOrNull(block.ordinal - 1)?.let { (shelf, shown) ->
+                        if (shown.isNotEmpty()) item(key = "home-shelf:${block.ordinal - 1}:${shelf.title}") {
+                            Column(Modifier.padding(start = 18.dp, end = 18.dp, top = 28.dp, bottom = 12.dp)) {
+                                Text(shelf.title, color = theme.onBackground, fontSize = 19.sp, fontWeight = FontWeight.Bold)
+                                Text(shelf.subtitle, color = theme.secondary, fontSize = 12.sp, modifier = Modifier.padding(top = 3.dp))
+                            }
+                            TrackCarousel(shown, onMenu = { AppUi.trackMenuTrack.value = it })
+                        }
                     }
-                    TrackCarousel(shown, onMenu = { AppUi.trackMenuTrack.value = it })
-                }
                 }
             }
             if (shelves.isEmpty()) item {

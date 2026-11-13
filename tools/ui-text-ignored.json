@@ -93,5 +93,9 @@
  "lensLead": "Compose animation label, not user-facing copy",
  "lensTrail": "Compose animation label, not user-facing copy",
  "playlistId": "saved navigation JSON key, not user-facing copy",
- "searchSeed": "saved navigation JSON key, not user-facing copy"
+ "searchSeed": "saved navigation JSON key, not user-facing copy",
+ "AIFF": "audio codec name, identical in every language",
+ "ALAC": "audio codec name, identical in every language",
+ "WAV": "audio codec name, identical in every language",
+ "offline-artist:{0}": "stable lazy-grid artist identity, not user-facing copy"
 }

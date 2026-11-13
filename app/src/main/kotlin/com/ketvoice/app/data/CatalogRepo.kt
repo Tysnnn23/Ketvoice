@@ -61,6 +61,25 @@ object CatalogRepo {
             else -> null
         }
     }
+    private fun artistId(name: String): String? {
+        if (name.isBlank()) return null
+        val found = get("search/artist?q=${java.net.URLEncoder.encode(name.take(80), "UTF-8")}&limit=1")
+            ?.optJSONArray("data")?.optJSONObject(0) ?: return null
+        return found.optString("id").takeIf { it.isNotBlank() && it.all(Char::isDigit) }
+    }
+
+    /** The artist's most listened tracks in the public catalogue; empty when unavailable. */
+    suspend fun artistTop(name: String): List<Track> = withContext(Dispatchers.IO) {
+        val id = artistId(name) ?: return@withContext emptyList()
+        parseTracks(get("artist/$id/top?limit=30")?.optJSONArray("data"))
+    }
+
+    /** Tracks by artists in the same style, from the catalogue's artist radio; empty when unavailable. */
+    suspend fun artistRadio(name: String): List<Track> = withContext(Dispatchers.IO) {
+        val id = artistId(name) ?: return@withContext emptyList()
+        parseTracks(get("artist/$id/radio")?.optJSONArray("data"))
+    }
+
     internal fun parseTracks(data: JSONArray?, release: JSONObject? = null, artist: JSONObject? = null): List<Track> {
         if (data == null) return emptyList()
         return (0 until data.length()).mapNotNull { i ->

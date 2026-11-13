@@ -7,6 +7,23 @@
 
 ---
 
+# Ketvoice 4.11.0
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 96** — a more personal Home, mixes from your listening, redesigned Downloads.
+
+- Home greets by time of day, offers shortcuts to what exists on the device, and
+  varies the order of its secondary shelves at each launch.
+- After ten plays, up to four personal mixes: artist mix, "in the style of", on
+  repeat and rediscover. A mix can be saved as a playlist.
+- Downloads: summary card with play time, lossless share and free space; Titles,
+  Albums and Artists views; sorting; format badges.
+
+Full notes: [4.11.0](docs/releases/v4.11.0.md).
+
+---
+
 # Ketvoice 4.10.0
 
 ![Ketvoice](ketvoice-banner.png)

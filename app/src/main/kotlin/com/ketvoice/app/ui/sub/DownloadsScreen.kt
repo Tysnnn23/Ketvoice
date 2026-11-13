@@ -20,6 +20,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -58,74 +61,90 @@ fun DownloadsScreen() {
     var deleteIds by rememberSaveable { mutableStateOf(listOf<String>()) }
     var selecting by rememberSaveable { mutableStateOf(false) }
     var selected by rememberSaveable { mutableStateOf(listOf<String>()) }
-    var albumView by rememberSaveable { mutableStateOf(false) }
+    // 0 = titles, 1 = albums, 2 = artists
+    var view by rememberSaveable { mutableIntStateOf(0) }
     var albumKey by rememberSaveable { mutableStateOf<String?>(null) }
+    var artistKey by rememberSaveable { mutableStateOf<String?>(null) }
     var filterName by rememberSaveable { mutableStateOf(DownloadFilter.All.name) }
+    var sortName by rememberSaveable { mutableStateOf(DownloadSort.Recent.name) }
     var deleting by remember { mutableStateOf(false) }
     var deleteError by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val keyboard = LocalSoftwareKeyboardController.current
     val context = LocalContext.current
-    val filter = DownloadFilter.entries.firstOrNull { it.name == filterName } ?: DownloadFilter.All
+    // Transfer states only matter while something is being transferred.
+    val filter = if (active.isEmpty()) DownloadFilter.All
+        else DownloadFilter.entries.firstOrNull { it.name == filterName } ?: DownloadFilter.All
+    val sort = DownloadSort.entries.firstOrNull { it.name == sortName } ?: DownloadSort.Recent
     val base = remember(saved, active, tasks, query, filter) { downloadSections(saved, active.values, tasks, query, filter) }
     val groups = remember(base.saved) { localAlbums(base.saved.map { it.track }) }
+    val artists = remember(base.saved) { downloadArtists(base.saved) }
     val chosen = groups.firstOrNull { it.key == albumKey }
-    val sections = if (chosen == null) base else base.copy(saved = base.saved.filter { item -> chosen.tracks.any { it.id == item.track.id } }, transfers = emptyList())
+    val chosenArtist = artists.firstOrNull { it.key == artistKey }
+    val narrowed = when {
+        chosen != null -> base.copy(saved = base.saved.filter { item -> chosen.tracks.any { it.id == item.track.id } }, transfers = emptyList())
+        chosenArtist != null -> base.copy(saved = chosenArtist.items, transfers = emptyList())
+        else -> base
+    }
+    val sections = remember(narrowed, sort) { narrowed.copy(saved = sortDownloads(narrowed.saved, sort)) }
     val deleteItems = saved.filter { it.track.id in deleteIds }
     LaunchedEffect(saved) { selected = selected.filter { id -> saved.any { it.track.id == id } } }
     val adaptive = LocalAdaptiveLayout.current
-    val total = remember(saved) { saved.sumOf { it.bytes } }
+    val summary = remember(saved) { downloadSummary(saved) }
+    val freeBytes = remember(saved) { runCatching { android.os.StatFs(context.filesDir.path).availableBytes }.getOrDefault(0L) }
+    fun size(bytes: Long) = android.text.format.Formatter.formatShortFileSize(context, bytes)
+    val showTitles = view == 0 || chosen != null || chosenArtist != null
 
     val backdrop = com.ketvoice.app.glass.rememberGlassBackdrop(theme.background)
     Box(Modifier.fillMaxSize().background(theme.background)) {
     com.ketvoice.app.glass.BackdropCapture(backdrop, Modifier.fillMaxSize()) {
         LazyVerticalGrid(columns = GridCells.Adaptive(360.dp),
             modifier = Modifier.fillMaxSize().testTag("downloads-list"),
-            contentPadding = PaddingValues(start = 22.dp, end = 22.dp, top = 82.dp,
+            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 82.dp,
                 bottom = adaptive.bottomPaddingDp.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             item(span = { GridItemSpan(maxLineSpan) }, key = "summary") {
                 Column(Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("Téléchargements", color = theme.onBackground, fontSize = 36.sp,
-                        fontWeight = FontWeight.Bold, letterSpacing = (-1).sp)
-                    Text("Disponibles hors ligne", color = theme.secondary, fontSize = 15.sp)
-                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(theme.card)
-                        .padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(KetIcons.Download, null, tint = theme.accent, modifier = Modifier.size(28.dp))
-                        Column(Modifier.padding(start = 16.dp).weight(1f)) {
-                            Text(AppText.t(if (saved.size == 1) "1 titre" else "${saved.size} titres"),
-                                localize = false, color = theme.onBackground, fontSize = 23.sp,
-                                fontWeight = FontWeight.SemiBold)
-                            Text(android.text.format.Formatter.formatShortFileSize(context, total),
-                                localize = false, color = theme.secondary, fontSize = 13.sp)
-                        }
-                        Icon(KetIcons.Check, null, tint = theme.secondary, modifier = Modifier.size(22.dp))
-                    }
+                    verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("Téléchargements", color = theme.onBackground, fontSize = 34.sp,
+                        fontWeight = FontWeight.Bold, letterSpacing = (-1).sp, modifier = Modifier.asHeading())
+                    DownloadSummaryCard(summary, freeBytes, ::size) { AppUi.showCapsule.value = true }
                     if (saved.isNotEmpty()) CollectionPlaybackActions(saved.map { it.track }, Modifier.fillMaxWidth())
-                    TextButton(onClick = { AppUi.showCapsule.value = true }, contentPadding = PaddingValues(0.dp)) {
-                        Text("Préparer une capsule hors ligne", color = theme.accent)
-                    }
                     if (saved.isNotEmpty() || active.isNotEmpty()) {
                         CompactSearchField(query, { query = it }, { keyboard?.hide() }, Modifier.testTag("downloads-search"))
-                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (saved.isNotEmpty()) DownloadViewSwitch(view) { view = it; albumKey = null; artistKey = null }
+                        if (active.isNotEmpty()) LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             items(DownloadFilter.entries) { option ->
                                 CollectionFilter(option.label, filter == option, {
-                                    filterName = option.name; albumKey = null
+                                    filterName = option.name; albumKey = null; artistKey = null
                                 })
                             }
                         }
-                        FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            TextButton(onClick = { albumView = !albumView; albumKey = null }) { Text(if (albumView) "Titres" else "Albums", color = theme.accent) }
-                            if (chosen != null) TextButton(onClick = { albumKey = null }) { Text("Albums", color = theme.accent) }
-                            if (selecting) {
-                                TextButton(onClick = { selected = sections.saved.map { it.track.id } }) { Text("Tout sélectionner", color = theme.accent) }
-                                IconButton(onClick = { deleteIds = selected }, enabled = selected.isNotEmpty()) { Icon(KetIcons.Trash, "Supprimer", tint = theme.accent) }
-                                Text(selected.size.toString(), localize = false, color = theme.secondary)
+                        if (showTitles && sections.saved.size > 1) LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically, modifier = Modifier.testTag("downloads-sort")) {
+                            item { Text("Trier", color = theme.secondary, fontSize = 13.sp, modifier = Modifier.padding(end = 2.dp)) }
+                            items(DownloadSort.entries) { option ->
+                                CollectionFilter(option.label, sort == option, { sortName = option.name })
                             }
                         }
+                        if (selecting) FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()
+                                .clip(RoundedCornerShape(18.dp)).background(theme.accent.copy(alpha = .08f)).padding(horizontal = 8.dp)) {
+                            TextButton(onClick = { selected = sections.saved.map { it.track.id } }) { Text("Tout sélectionner", color = theme.accent) }
+                            IconButton(onClick = { deleteIds = selected }, enabled = selected.isNotEmpty()) { Icon(KetIcons.Trash, "Supprimer", tint = theme.accent) }
+                            Text(selected.size.toString(), localize = false, color = theme.secondary,
+                                modifier = Modifier.align(Alignment.CenterVertically))
+                        }
                     }
-                    if (chosen != null) Text(chosen.title, localize = false, color = theme.onBackground, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                    val crumb = chosen?.title ?: chosenArtist?.name
+                    if (crumb != null) Row(verticalAlignment = Alignment.CenterVertically) {
+                        TextButton(onClick = { albumKey = null; artistKey = null }, contentPadding = PaddingValues(end = 10.dp)) {
+                            Icon(KetIcons.ArrowLeft, null, tint = theme.accent, modifier = Modifier.size(18.dp))
+                            Text(if (chosen != null) "Albums" else "Artistes", color = theme.accent, modifier = Modifier.padding(start = 6.dp))
+                        }
+                        Text(crumb, localize = false, color = theme.onBackground, fontSize = 22.sp, fontWeight = FontWeight.Bold,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
                     if (deleteError) Text("Impossible de supprimer certains fichiers.", color = theme.secondary)
                 }
             }
@@ -148,61 +167,73 @@ fun DownloadsScreen() {
                 }
             }
             if (sections.saved.isNotEmpty()) {
-                item(span = { GridItemSpan(maxLineSpan) }, key = "saved-heading") { DownloadSectionTitle("Titres", sections.saved.size) }
-                if (albumView && chosen == null) items(groups, key = { "offline-album:${it.key}" }) { group ->
-                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(theme.card).clickable {
-                        if (selecting) {
-                            val ids = group.tracks.map { it.id }
-                            selected = if (ids.all { it in selected }) selected - ids.toSet() else (selected + ids).distinct()
-                        } else albumKey = group.key
-                    }.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                        if (selecting) Checkbox(group.tracks.all { it.id in selected }, onCheckedChange = null)
-                        Cover(group.title, ArtworkRepo.coverForTrack(group.tracks.first()) ?: group.tracks.first().coverUrl, 64.dp, 12.dp)
-                        Column(Modifier.weight(1f).padding(start = 12.dp)) {
-                            Text(group.title, localize = false, color = theme.onBackground, fontSize = 17.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                            Text(group.artist, localize = false, color = theme.secondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(if (group.tracks.size == 1) "1 titre" else "${group.tracks.size} titres", color = theme.secondary, fontSize = 12.sp)
-                        }
+                item(span = { GridItemSpan(maxLineSpan) }, key = "saved-heading") {
+                    DownloadSectionTitle(when { showTitles -> "Titres"; view == 1 -> "Albums"; else -> "Artistes" },
+                        when { showTitles -> sections.saved.size; view == 1 -> groups.size; else -> artists.size })
+                }
+                if (view == 1 && chosen == null) items(groups, key = { "offline-album:${it.key}" }) { group ->
+                    val ids = group.tracks.map { it.id }
+                    DownloadGroupRow(
+                        title = group.title, subtitle = group.artist,
+                        meta = AppText.t(if (ids.size == 1) "1 titre" else "${ids.size} titres") + " · " +
+                            size(base.saved.filter { it.track.id in ids }.sumOf { it.bytes }),
+                        cover = ArtworkRepo.coverForTrack(group.tracks.first()) ?: group.tracks.first().coverUrl,
+                        round = false, checked = if (selecting) ids.all { it in selected } else null) {
+                        if (selecting) selected = if (ids.all { it in selected }) selected - ids.toSet() else (selected + ids).distinct()
+                        else albumKey = group.key
+                    }
+                }
+                else if (view == 2 && chosenArtist == null) items(artists, key = { "offline-artist:${it.key}" }) { artist ->
+                    val ids = artist.items.map { it.track.id }
+                    DownloadGroupRow(
+                        title = artist.name, subtitle = null,
+                        meta = AppText.t(if (ids.size == 1) "1 titre" else "${ids.size} titres") + " · " + size(artist.bytes),
+                        cover = artist.items.first().track.let { ArtworkRepo.coverForTrack(it) ?: it.coverUrl },
+                        round = true, checked = if (selecting) ids.all { it in selected } else null) {
+                        if (selecting) selected = if (ids.all { it in selected }) selected - ids.toSet() else (selected + ids).distinct()
+                        else artistKey = artist.key
                     }
                 }
                 else items(sections.saved, key = { it.track.id }) { item ->
                     val track = item.track
+                    val current = player.current?.id == track.id
                     Row(Modifier.then(if (Motion.reduced) Modifier else Modifier.animateItem())
                         .fillMaxWidth().clip(RoundedCornerShape(18.dp))
-                        .background(if (player.current?.id == track.id) theme.accent.copy(alpha = .07f) else Color.Transparent)
+                        .background(if (current) theme.accent.copy(alpha = .08f) else Color.Transparent)
                         .clickable(role = if (selecting) Role.Checkbox else Role.Button) {
                             if (selecting) { selected = if (track.id in selected) selected - track.id else selected + track.id; return@clickable }
                             val tracks = sections.saved.map { it.track }
                             Player.setShuffle(false)
                             Player.playQueue(tracks, tracks.indexOfFirst { it.id == track.id }.coerceAtLeast(0))
-                        }.padding(start = 10.dp, end = 2.dp, top = 10.dp, bottom = 10.dp).testTag("saved-download"),
+                        }.padding(start = 8.dp, end = 2.dp, top = 8.dp, bottom = 8.dp).testTag("saved-download"),
                         verticalAlignment = Alignment.CenterVertically) {
                         if (selecting) Checkbox(track.id in selected, onCheckedChange = null)
-                        Cover(track.title, artwork["t:${track.id}"] ?: track.coverUrl, 52.dp, 10.dp)
-                        Column(Modifier.padding(start = 12.dp).weight(1f)) {
-                            TrackTitle(track.title, color = if (player.current?.id == track.id) theme.accent else theme.onBackground)
+                        Cover(track.title, artwork["t:${track.id}"] ?: track.coverUrl, 56.dp, 12.dp)
+                        Column(Modifier.padding(start = 12.dp).weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            TrackTitle(track.title, color = if (current) theme.accent else theme.onBackground)
                             Text(track.artist, localize = false, color = theme.secondary, fontSize = 13.sp,
                                 maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text("${item.format} · ${android.text.format.Formatter.formatShortFileSize(context, item.bytes)}",
-                                localize = false, color = theme.secondary, fontSize = 12.sp,
-                                maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            val extras = listOfNotNull(if (item.hasLyrics) AppText.t("Paroles enregistrées") else null,
-                                if (item.hasCanvas) AppText.t("Canvas enregistré") else null)
-                            if (extras.isNotEmpty()) Text(extras.joinToString(" · "), localize = false,
-                                color = theme.accent, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                QualityBadge(item.format)
+                                Text(size(item.bytes), localize = false, color = theme.secondary, fontSize = 12.sp, maxLines = 1)
+                                if (item.hasLyrics) Icon(KetIcons.Lyrics, "Paroles enregistrées", tint = theme.secondary,
+                                    modifier = Modifier.size(14.dp))
+                                if (item.hasCanvas) Icon(KetIcons.Canvas, "Canvas enregistré", tint = theme.secondary,
+                                    modifier = Modifier.size(14.dp))
+                            }
                         }
                         if (!selecting) IconButton(onClick = { deleteIds = listOf(track.id) }, modifier = Modifier.size(48.dp).testTag("download-delete")) {
-                            Icon(KetIcons.Trash, "Supprimer le téléchargement", tint = theme.secondary, modifier = Modifier.size(21.dp))
+                            Icon(KetIcons.Trash, "Supprimer le téléchargement", tint = theme.secondary, modifier = Modifier.size(20.dp))
                         }
                     }
                 }
-                if (albumView && chosen == null && groups.isEmpty()) item(span = { GridItemSpan(maxLineSpan) }, key = "no-albums") {
-                    EmptyState("Aucun album", "Les titres sans album restent disponibles dans Titres.", "Titres", onAction = { albumView = false })
+                if (view == 1 && chosen == null && groups.isEmpty()) item(span = { GridItemSpan(maxLineSpan) }, key = "no-albums") {
+                    EmptyState("Aucun album", "Les titres sans album restent disponibles dans Titres.", "Titres", onAction = { view = 0 })
                 }
             }
             if (sections.saved.isEmpty() && sections.transfers.isEmpty()) item(span = { GridItemSpan(maxLineSpan) }, key = "empty") {
                 if (query.isNotBlank() || filter != DownloadFilter.All) EmptyState("Aucun résultat", "Essayez un autre titre ou artiste.", "Effacer",
-                    onAction = { query = ""; filterName = DownloadFilter.All.name; albumKey = null })
+                    onAction = { query = ""; filterName = DownloadFilter.All.name; albumKey = null; artistKey = null })
                 else EmptyState("Aucun téléchargement", "Pour écouter hors ligne, ouvrez le menu d'un titre puis choisissez Télécharger.",
                     "Rechercher des titres", onAction = ::openTrackSearch)
             }
@@ -248,4 +279,105 @@ private fun DownloadSectionTitle(title: String, count: Int) {
         Text(title, color = theme.onBackground, fontWeight = FontWeight.Bold, fontSize = 19.sp, modifier = Modifier.weight(1f))
         Text(count.toString(), localize = false, color = theme.secondary, fontSize = 13.sp)
     }
+}
+
+/** How much is saved, how long it plays, how much of it is lossless and what room is left. */
+@Composable
+private fun DownloadSummaryCard(summary: DownloadSummary, freeBytes: Long, size: (Long) -> String, onCapsule: () -> Unit) {
+    val theme = LocalTheme.current
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp))
+        .background(Brush.linearGradient(listOf(theme.accent.copy(alpha = .18f), theme.card)))
+        .padding(start = 20.dp, end = 20.dp, top = 18.dp, bottom = 8.dp).testTag("downloads-summary"),
+        verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(AppText.t(if (summary.count == 1) "1 titre" else "${summary.count} titres"),
+                    localize = false, color = theme.onBackground, fontSize = 28.sp, fontWeight = FontWeight.Bold,
+                    letterSpacing = (-.5).sp)
+                Text(listOf(size(summary.bytes), playtimeLabel(summary.durationMs)).filter { it.isNotBlank() }.joinToString(" · "),
+                    localize = false, color = theme.secondary, fontSize = 14.sp)
+            }
+            Box(Modifier.size(48.dp).clip(RoundedCornerShape(24.dp)).background(theme.accent.copy(alpha = .16f)),
+                contentAlignment = Alignment.Center) {
+                Icon(KetIcons.Download, null, tint = theme.accent, modifier = Modifier.size(24.dp))
+            }
+        }
+        if (summary.count > 0) {
+            // One bar for the saved bytes: the lossless share in the accent colour.
+            Row(Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)).background(theme.onBackground.copy(alpha = .10f))) {
+                if (summary.losslessShare > 0f) Box(Modifier.fillMaxHeight().fillMaxWidth(summary.losslessShare).background(theme.accent))
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                Legend(theme.accent, AppText.t("Sans perte") + " " + summary.lossless)
+                Legend(theme.onBackground.copy(alpha = .28f), AppText.t("Compressé") + " " + (summary.count - summary.lossless))
+            }
+        }
+        if (freeBytes > 0L) Text(AppText.t("Espace libre sur l'appareil") + " : " + size(freeBytes),
+            localize = false, color = theme.secondary, fontSize = 12.sp)
+        // The offline capsule belongs with storage: one quiet action inside the card.
+        Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).clip(RoundedCornerShape(14.dp))
+            .clickable(role = Role.Button, onClick = onCapsule), verticalAlignment = Alignment.CenterVertically) {
+            Icon(KetIcons.Storage, null, tint = theme.accent, modifier = Modifier.size(18.dp))
+            Text("Préparer une capsule hors ligne", color = theme.accent, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.weight(1f).padding(start = 10.dp))
+            Icon(KetIcons.ChevronRight, null, tint = theme.accent, modifier = Modifier.size(16.dp))
+        }
+    }
+}
+
+@Composable
+private fun Legend(color: Color, label: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(8.dp).clip(RoundedCornerShape(4.dp)).background(color))
+        Text(label, localize = false, color = LocalTheme.current.secondary, fontSize = 12.sp, modifier = Modifier.padding(start = 6.dp))
+    }
+}
+
+/** Titles, albums or artists: one segmented control instead of scattered text links. */
+@Composable
+private fun DownloadViewSwitch(view: Int, onView: (Int) -> Unit) {
+    val theme = LocalTheme.current
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(theme.card).padding(4.dp).selectableGroup()
+        .testTag("downloads-view")) {
+        listOf("Titres", "Albums", "Artistes").forEachIndexed { index, label ->
+            val selected = view == index
+            Box(Modifier.weight(1f).heightIn(min = 44.dp).clip(RoundedCornerShape(12.dp))
+                .background(if (selected) theme.onBackground.copy(alpha = .10f) else Color.Transparent)
+                .selectable(selected, role = Role.Tab) { onView(index) }, contentAlignment = Alignment.Center) {
+                Text(label, color = if (selected) theme.onBackground else theme.secondary, fontSize = 14.sp,
+                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium, maxLines = 1)
+            }
+        }
+    }
+}
+
+@Composable
+private fun DownloadGroupRow(title: String, subtitle: String?, meta: String, cover: String?, round: Boolean,
+                             checked: Boolean?, onClick: () -> Unit) {
+    val theme = LocalTheme.current
+    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp).clip(RoundedCornerShape(20.dp)).background(theme.card)
+        .clickable(role = if (checked != null) Role.Checkbox else Role.Button, onClick = onClick).padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically) {
+        if (checked != null) Checkbox(checked, onCheckedChange = null)
+        Cover(title, cover, 68.dp, if (round) 34.dp else 14.dp)
+        Column(Modifier.weight(1f).padding(start = 14.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(title, localize = false, color = theme.onBackground, fontSize = 16.sp, fontWeight = FontWeight.Bold,
+                maxLines = 2, overflow = TextOverflow.Ellipsis)
+            if (!subtitle.isNullOrBlank()) Text(subtitle, localize = false, color = theme.secondary, fontSize = 13.sp,
+                maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(meta, localize = false, color = theme.secondary, fontSize = 12.sp, maxLines = 1)
+        }
+        if (checked == null) Icon(KetIcons.ChevronRight, null, tint = theme.secondary, modifier = Modifier.size(18.dp))
+    }
+}
+
+/** The real stored format; lossless files stand out in the accent colour. */
+@Composable
+private fun QualityBadge(format: String) {
+    val theme = LocalTheme.current
+    val lossless = isLosslessFormat(format)
+    val tone = if (lossless) theme.accent else theme.secondary
+    Text(formatBadge(format), localize = false, color = tone,
+        fontSize = 10.sp, fontWeight = FontWeight.Bold, maxLines = 1,
+        modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(tone.copy(alpha = .14f)).padding(horizontal = 6.dp, vertical = 2.dp))
 }

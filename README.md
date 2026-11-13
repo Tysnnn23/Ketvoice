@@ -21,6 +21,17 @@
 
 ## Overview
 
+### 4.11.0 — personal Home, mixes and redesigned Downloads
+
+Home now greets by time of day, offers shortcuts to what is on the device and varies
+its secondary shelves at each launch. After ten plays it proposes up to four mixes
+built from your listening (artist, similar style, on repeat, rediscover), each of
+which can be saved as a playlist. Downloads gains a summary card, Titles/Albums/
+Artists views, sorting and format badges.
+[Mobile](https://github.com/Tysnnn23/Ketvoice/releases/download/v4.11.0/Ketvoice-4.11.0.apk)
+· [Quest](https://github.com/Tysnnn23/Ketvoice/releases/download/v4.11.0/Ketvoice-4.11.0-Quest.apk)
+· [Release notes](docs/releases/v4.11.0.md).
+
 ### 4.10.0 — motion, droplet glass, widget and accessibility
 
 The player artwork now grows out of the mini-player cover, Android 14+ gets
