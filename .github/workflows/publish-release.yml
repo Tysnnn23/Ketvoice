@@ -25,6 +25,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # Recent build-tools need a recent JDK; on the default JDK apksigner prints nothing.
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Install build-tools 36.0.0
+        run: |
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          [ -x "$SDKMANAGER" ] || SDKMANAGER="$ANDROID_HOME/cmdline-tools/bin/sdkmanager"
+          yes | "$SDKMANAGER" --licenses > /dev/null 2>&1 || true
+          "$SDKMANAGER" "build-tools;36.0.0" > /dev/null
+
       - name: Download the verified CI artifact
         uses: actions/download-artifact@v4
         with:
@@ -69,7 +83,8 @@ jobs:
         run: |
           set -euo pipefail
           version="${TAG#v}"
-          bt=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          bt="$ANDROID_HOME/build-tools/36.0.0"
+          "$bt/apksigner" version
           code=$(python3 -c "import json;print(json.load(open('stage/validation.json'))['versionCode'])")
           python3 - "$bt" "$version" "$code" <<'EOF'
           import json, sys
