@@ -21,6 +21,18 @@
 
 ## Overview
 
+### 4.10.0 — motion, droplet glass, widget and accessibility
+
+The player artwork now grows out of the mini-player cover, Android 14+ gets
+predictive back, and scrolled tabs show a compact glass title. In Liquid 27, Home,
+the mini-player and Search merge and split like droplets; the glass takes a light
+tint from the cover and a slow colour mesh moves behind the player. A home-screen
+widget, a tabletop layout for flip-style phones, haptics and screen-reader
+improvements complete the release.
+[Mobile](https://github.com/Tysnnn23/Ketvoice/releases/download/v4.10.0/Ketvoice-4.10.0.apk)
+· [Quest](https://github.com/Tysnnn23/Ketvoice/releases/download/v4.10.0/Ketvoice-4.10.0-Quest.apk)
+· [Release notes](docs/releases/v4.10.0.md).
+
 ### 4.9.0 — Liquid 27 glass, Discord callbacks and privacy fixes
 
 A fourth glass style, **Liquid 27**, joins Clair, Dépoli and Opaque. It has

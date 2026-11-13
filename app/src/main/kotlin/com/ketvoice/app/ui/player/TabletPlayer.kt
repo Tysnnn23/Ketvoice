@@ -111,7 +111,7 @@ private fun NowPlayingColumn(
                 Modifier.size(artworkSize).clip(RoundedCornerShape(24.dp))
                     .then(if (onCanvas != null) Modifier.clickable(onClick = onCanvas)
                         .semantics { contentDescription = AppText.t("Voir le Canvas en plein écran") } else Modifier)
-                     .onGloballyPositioned { AppUi.playerCoverBounds.value = it.boundsInRoot() }, depth = true)
+                     , depth = true)
             Spacer(Modifier.height(24.dp))
             PlayerTitle(track, false, cover, onTrackMenu, Modifier.fillMaxWidth())
             Spacer(Modifier.height(12.dp))

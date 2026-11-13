@@ -60,10 +60,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import com.ketvoice.app.data.AppSettings
 import com.ketvoice.app.data.ArtworkRepo
 import com.ketvoice.app.glass.GlassParams
 import com.ketvoice.app.glass.GlassPanel
+import com.ketvoice.app.ui.motion.Haptics
 import com.ketvoice.app.player.Player
 import com.ketvoice.app.theme.LocalTheme
 import com.ketvoice.app.theme.T
@@ -149,7 +152,9 @@ fun MiniPlayerPill(
                             style = T.bodyBold.copy(fontSize = 15.sp),
                             color = th.onBackground,
                             maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                            overflow = TextOverflow.Ellipsis,
+                            // Screen readers announce the new title when the track changes.
+                            modifier = Modifier.semantics { liveRegion = androidx.compose.ui.semantics.LiveRegionMode.Polite }
                         )
                     }
                     Text(
@@ -226,12 +231,13 @@ private fun MiniTransportButton(playing: Boolean, size: androidx.compose.ui.unit
     val th = LocalTheme.current
     val src = remember { MutableInteractionSource() }
     val pressed by src.collectIsPressedAsState()
+    val haptic = com.ketvoice.app.ui.motion.rememberHaptics()
     Box(
         Modifier
             .pressScale(min = 0.82f, isPressed = pressed)
             .size(size)
             .clip(CircleShape)
-            .clickable(src, null) { Player.toggle() },
+            .clickable(src, null) { haptic(Haptics.Kind.Press); Player.toggle() },
         contentAlignment = Alignment.Center
     ) {
         com.ketvoice.app.ui.player.MorphingTransportGlyph(playing, Modifier.size(28.dp), th.onBackground)
@@ -244,12 +250,13 @@ private fun MiniTransportNext(size: androidx.compose.ui.unit.Dp = DesignTokens.S
     val th = LocalTheme.current
     val src = remember { MutableInteractionSource() }
     val pressed by src.collectIsPressedAsState()
+    val haptic = com.ketvoice.app.ui.motion.rememberHaptics()
     Box(
         Modifier
             .pressScale(min = 0.82f, isPressed = pressed)
             .size(size)
             .clip(CircleShape)
-            .clickable(src, null) { Player.next() },
+            .clickable(src, null) { haptic(Haptics.Kind.Press); Player.next() },
         contentAlignment = Alignment.Center
     ) {
         Icon(
@@ -318,7 +325,15 @@ fun FloatingChrome(collapsed: Boolean, onOpenPlayer: () -> Unit) {
         val coverSize = 44.dp - 12.dp * f
         val labelAlpha = (1f - f * 1.8f).coerceIn(0f, 1f)
         val navigationY = if (hasTrack) 66.dp * (1f - f) else 0.dp
+        // Liquid 27: Home, the mini-player and Search are one glass body. At rest they
+        // are separate; while the chrome morphs they pull liquid bridges and merge like
+        // droplets, then split again. Other styles and fallbacks keep three panels.
+        val fusion = com.ketvoice.app.glass.rememberGlassFusion()
+        val fuseReach = with(androidx.compose.ui.platform.LocalDensity.current) { 26.dp.toPx() }
+        fusion.strengthPx = if (Motion.reduced) 0f else com.ketvoice.app.glass.fusionStrength(f, fuseReach)
         Box(Modifier.fillMaxWidth().height(height)) {
+            com.ketvoice.app.glass.GlassFusionLayer(fusion, LocalTheme.current.isDark, Modifier.matchParentSize())
+            androidx.compose.runtime.CompositionLocalProvider(com.ketvoice.app.glass.LocalGlassFusion provides fusion) {
             GlassTabCapsule(compact, Modifier.offset(x = 12.dp, y = navigationY),
                 availableWidth = width, homeOnly = compact)
             if (hasTrack) MiniPlayerPill(
@@ -330,6 +345,7 @@ fun FloatingChrome(collapsed: Boolean, onOpenPlayer: () -> Unit) {
                 onOpen = onOpenPlayer)
             SearchCircleButton(size = 60.dp - 8.dp * f,
                 modifier = Modifier.offset(x = width - 76.dp + 12.dp * f, y = navigationY))
+            }
         }
     }
 }
@@ -370,6 +386,7 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier,
                              homeOnly: Boolean = false) {
     val th = LocalTheme.current
     val focus = androidx.compose.ui.platform.LocalFocusManager.current
+    val haptic = com.ketvoice.app.ui.motion.rememberHaptics()
     var held by remember { mutableStateOf(false) }
     var hover by remember { mutableFloatStateOf(0f) }
     val bulge by animateFloatAsState(if (held && !Motion.reduced) 1.055f else 1f,
@@ -411,6 +428,7 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier,
                     },
                     onDragEnd = {
                         focus.clearFocus()
+                        haptic(Haptics.Kind.Tick)
                         AppUi.selectTab(kotlin.math.round(hover).toInt().coerceIn(0, 2))
                         held = false
                     }, onDragCancel = { held = false })
@@ -434,6 +452,7 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier,
                     .graphicsLayer { scaleX = press; scaleY = press }
                     .clickable(interactionSource = src, indication = null, role = Role.Button) {
                         focus.clearFocus()
+                        haptic(Haptics.Kind.Tick)
                         AppUi.selectTab(AppUi.HOME)
                     },
                 contentAlignment = Alignment.Center
@@ -448,10 +467,19 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier,
         } else if (!collapsed) {
             // Sélection glissante : la pilule se déplace d'onglet en onglet.
             val selected = if (held) kotlin.math.round(hover).toInt() else tabs.indexOfFirst { it.index == AppUi.tab.value }.coerceAtLeast(0)
-            val pillX by animateFloatAsState(
-                targetValue = if (held) hover else selected.toFloat(),
-                animationSpec = if (Motion.reduced) androidx.compose.animation.core.snap() else spring(dampingRatio = 0.86f, stiffness = 520f),
-                label = "pillX"
+            // Droplet lens: the edge facing the destination leaves first on a stiff spring,
+            // the other edge follows on a softer one, so the lens stretches like a drop
+            // pulled between two tabs and then gathers itself at the destination.
+            val lensTarget = if (held) hover else selected.toFloat()
+            val lensLead by animateFloatAsState(
+                targetValue = lensTarget,
+                animationSpec = if (Motion.reduced) androidx.compose.animation.core.snap() else spring(dampingRatio = 0.82f, stiffness = 900f),
+                label = "lensLead"
+            )
+            val lensTrail by animateFloatAsState(
+                targetValue = lensTarget,
+                animationSpec = if (Motion.reduced) androidx.compose.animation.core.snap() else spring(dampingRatio = 0.9f, stiffness = 330f),
+                label = "lensTrail"
             )
             Box(Modifier.fillMaxSize()) {
                 BoxWithConstraints(Modifier.fillMaxSize()) {
@@ -460,17 +488,13 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier,
                     // reflets, ombre), pas une capsule blanche. Elle s'étire un
                     // peu pendant le déplacement puis se stabilise.
                     val pillShape = RoundedCornerShape(999.dp)
-                    val travel = kotlin.math.abs((if (held) hover else selected.toFloat()) - pillX)
-                    // Liquid travel: the lens stretches along the motion and
-                    // squashes slightly across it, then settles back to a pill.
-                    val stretchX = if (Motion.reduced) 1f else 1f + (travel * 0.15f).coerceAtMost(0.15f)
-                    val stretchY = if (Motion.reduced) 1f else 1f - (travel * 0.045f).coerceAtMost(0.045f)
+                    val lens = dropLens(lensLead, lensTrail)
                     GlassPanel(
                         modifier = Modifier
-                            .offset(x = slot * pillX + 5.dp)
-                            .size(width = slot - 10.dp, height = heightAnim - 10.dp)
+                            .offset(x = slot * lens.start + 5.dp)
+                            .size(width = slot * lens.span - 10.dp, height = heightAnim - 10.dp)
                             .align(Alignment.CenterStart)
-                            .graphicsLayer { scaleX = bulge * stretchX; scaleY = bulge * stretchY },
+                            .graphicsLayer { scaleX = bulge; scaleY = bulge * lens.squash },
                         shape = pillShape,
                         params = GlassParams.selection(dark = th.isDark),
                         enabled = AppSettings.liquidGlass.value
@@ -531,6 +555,7 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier,
                                 .graphicsLayer { scaleX = press; scaleY = press }
                                 .selectable(isSel, tabSource, null, role = Role.Tab) {
                                     focus.clearFocus()
+                                    if (!isSel) haptic(Haptics.Kind.Tick)
                                     AppUi.selectTab(tab.index)
                                 }
                         ) {
@@ -605,7 +630,7 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier,
                         )
                         Box(Modifier.weight(1f).fillMaxHeight()
                             .selectable(isSel, tabSource, null, role = Role.Tab) {
-                                focus.clearFocus(); AppUi.selectTab(tab.index)
+                                focus.clearFocus(); if (!isSel) haptic(Haptics.Kind.Tick); AppUi.selectTab(tab.index)
                             }, contentAlignment = Alignment.Center) {
                             Icon(
                                 tab.icon, tab.label,
@@ -645,3 +670,17 @@ private fun Modifier.graphicsLayerScale(scale: Float): Modifier =
             scaleY = scale
         }
     )
+
+/** Droplet lens geometry, in tab slots: where it starts, how many slots it spans, and its squash. */
+internal data class DropLens(val start: Float, val span: Float, val squash: Float)
+
+/**
+ * The lens spans from its slower edge to its faster edge plus one slot. At rest both edges
+ * agree and it is exactly one slot wide; mid-flight it is longer and slightly thinner.
+ */
+internal fun dropLens(lead: Float, trail: Float): DropLens {
+    val a = if (lead.isFinite()) lead else 0f
+    val b = if (trail.isFinite()) trail else a
+    val stretch = kotlin.math.abs(a - b).coerceAtMost(1.2f)
+    return DropLens(minOf(a, b), 1f + stretch, 1f - (stretch * .1f).coerceAtMost(.08f))
+}

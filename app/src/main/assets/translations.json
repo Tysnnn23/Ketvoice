@@ -1139,7 +1139,13 @@
   "Suit le téléphone · {0}": "Follows the phone · {0}",
   "Système · {0}": "System · {0}",
   "Utiliser la présence via l'app Discord": "Use presence via the Discord app",
-  "Vérifier la présence maintenant": "Check presence now"
+  "Vérifier la présence maintenant": "Check presence now",
+  "Verre teinté par la pochette": "Cover-tinted glass",
+  "La couleur dominante de la pochette colore légèrement le verre, sans réduire la lisibilité": "The cover's dominant colour lightly tints the glass, without reducing legibility",
+  "Fond animé du lecteur": "Animated player background",
+  "Dégradé lent aux couleurs de la pochette derrière le lecteur, qui suit doucement la musique": "A slow gradient in the cover's colours behind the player, gently following the music",
+  "Retours haptiques": "Haptic feedback",
+  "Légère vibration sur le verre, les onglets et la barre de lecture": "A light vibration on glass controls, tabs and the seek bar"
  },
  "hi": {
   "Reverb": "रीवर्ब",
@@ -2281,7 +2287,13 @@
   "Suit le téléphone · {0}": "फ़ोन के अनुसार · {0}",
   "Système · {0}": "सिस्टम · {0}",
   "Utiliser la présence via l'app Discord": "Discord ऐप के ज़रिए प्रेज़ेंस उपयोग करें",
-  "Vérifier la présence maintenant": "अभी प्रेज़ेंस जाँचें"
+  "Vérifier la présence maintenant": "अभी प्रेज़ेंस जाँचें",
+  "Verre teinté par la pochette": "कवर के रंग का ग्लास",
+  "La couleur dominante de la pochette colore légèrement le verre, sans réduire la lisibilité": "कवर का मुख्य रंग ग्लास को हल्का रंग देता है, पठनीयता कम किए बिना",
+  "Fond animé du lecteur": "प्लेयर की एनिमेटेड पृष्ठभूमि",
+  "Dégradé lent aux couleurs de la pochette derrière le lecteur, qui suit doucement la musique": "प्लेयर के पीछे कवर के रंगों का धीमा ग्रेडिएंट, जो संगीत के साथ हल्के से चलता है",
+  "Retours haptiques": "हैप्टिक फ़ीडबैक",
+  "Légère vibration sur le verre, les onglets et la barre de lecture": "ग्लास कंट्रोल, टैब और सीक बार पर हल्का कंपन"
  },
  "ja": {
   "Reverb": "リバーブ",
@@ -3423,7 +3435,13 @@
   "Suit le téléphone · {0}": "スマートフォンに従う · {0}",
   "Système · {0}": "システム · {0}",
   "Utiliser la présence via l'app Discord": "Discord アプリ経由のプレゼンスを使用",
-  "Vérifier la présence maintenant": "今すぐプレゼンスを確認"
+  "Vérifier la présence maintenant": "今すぐプレゼンスを確認",
+  "Verre teinté par la pochette": "ジャケットの色に染まるガラス",
+  "La couleur dominante de la pochette colore légèrement le verre, sans réduire la lisibilité": "ジャケットの主な色がガラスをほんのり染めます。読みやすさは保たれます",
+  "Fond animé du lecteur": "プレーヤーのアニメーション背景",
+  "Dégradé lent aux couleurs de la pochette derrière le lecteur, qui suit doucement la musique": "プレーヤーの背後でジャケットの色がゆっくり動くグラデーション。音楽にやさしく反応します",
+  "Retours haptiques": "触覚フィードバック",
+  "Légère vibration sur le verre, les onglets et la barre de lecture": "ガラスのコントロール、タブ、シークバーで軽く振動します"
  },
  "zh": {
   "Reverb": "混响",
@@ -4565,7 +4583,13 @@
   "Suit le téléphone · {0}": "跟随手机 · {0}",
   "Système · {0}": "系统 · {0}",
   "Utiliser la présence via l'app Discord": "使用通过 Discord 应用显示的状态",
-  "Vérifier la présence maintenant": "立即检查状态"
+  "Vérifier la présence maintenant": "立即检查状态",
+  "Verre teinté par la pochette": "封面染色玻璃",
+  "La couleur dominante de la pochette colore légèrement le verre, sans réduire la lisibilité": "封面的主色会轻微染色玻璃，不影响可读性",
+  "Fond animé du lecteur": "播放器动态背景",
+  "Dégradé lent aux couleurs de la pochette derrière le lecteur, qui suit doucement la musique": "播放器后方以封面颜色缓慢流动的渐变，随音乐轻柔变化",
+  "Retours haptiques": "触感反馈",
+  "Légère vibration sur le verre, les onglets et la barre de lecture": "在玻璃控件、标签页和进度条上轻微振动"
  },
  "ru": {
   "Reverb": "Реверберация",
@@ -5707,7 +5731,13 @@
   "Suit le téléphone · {0}": "Как на телефоне · {0}",
   "Système · {0}": "Система · {0}",
   "Utiliser la présence via l'app Discord": "Использовать статус через приложение Discord",
-  "Vérifier la présence maintenant": "Проверить статус сейчас"
+  "Vérifier la présence maintenant": "Проверить статус сейчас",
+  "Verre teinté par la pochette": "Стекло в цвет обложки",
+  "La couleur dominante de la pochette colore légèrement le verre, sans réduire la lisibilité": "Основной цвет обложки слегка окрашивает стекло, не снижая читаемость",
+  "Fond animé du lecteur": "Анимированный фон плеера",
+  "Dégradé lent aux couleurs de la pochette derrière le lecteur, qui suit doucement la musique": "Медленный градиент в цветах обложки за плеером, мягко следующий за музыкой",
+  "Retours haptiques": "Тактильный отклик",
+  "Légère vibration sur le verre, les onglets et la barre de lecture": "Лёгкая вибрация на стеклянных элементах, вкладках и полосе перемотки"
  },
  "it": {
   "Reverb": "Riverbero",
@@ -6849,7 +6879,13 @@
   "Suit le téléphone · {0}": "Segue il telefono · {0}",
   "Système · {0}": "Sistema · {0}",
   "Utiliser la présence via l'app Discord": "Usa la presenza tramite l'app Discord",
-  "Vérifier la présence maintenant": "Verifica ora la presenza"
+  "Vérifier la présence maintenant": "Verifica ora la presenza",
+  "Verre teinté par la pochette": "Vetro tinto dalla copertina",
+  "La couleur dominante de la pochette colore légèrement le verre, sans réduire la lisibilité": "Il colore dominante della copertina tinge leggermente il vetro, senza ridurre la leggibilità",
+  "Fond animé du lecteur": "Sfondo animato del player",
+  "Dégradé lent aux couleurs de la pochette derrière le lecteur, qui suit doucement la musique": "Una sfumatura lenta nei colori della copertina dietro il player, che segue dolcemente la musica",
+  "Retours haptiques": "Feedback aptico",
+  "Légère vibration sur le verre, les onglets et la barre de lecture": "Una leggera vibrazione sui controlli in vetro, sulle schede e sulla barra di avanzamento"
  },
  "es": {
   "Reverb": "Reverb",
@@ -7991,7 +8027,13 @@
   "Suit le téléphone · {0}": "Sigue el teléfono · {0}",
   "Système · {0}": "Sistema · {0}",
   "Utiliser la présence via l'app Discord": "Usar la presencia mediante la app de Discord",
-  "Vérifier la présence maintenant": "Comprobar la presencia ahora"
+  "Vérifier la présence maintenant": "Comprobar la presencia ahora",
+  "Verre teinté par la pochette": "Cristal teñido por la portada",
+  "La couleur dominante de la pochette colore légèrement le verre, sans réduire la lisibilité": "El color dominante de la portada tiñe ligeramente el cristal, sin reducir la legibilidad",
+  "Fond animé du lecteur": "Fondo animado del reproductor",
+  "Dégradé lent aux couleurs de la pochette derrière le lecteur, qui suit doucement la musique": "Un degradado lento con los colores de la portada detrás del reproductor, que sigue suavemente la música",
+  "Retours haptiques": "Respuesta háptica",
+  "Légère vibration sur le verre, les onglets et la barre de lecture": "Una ligera vibración en los controles de cristal, las pestañas y la barra de progreso"
  },
  "de": {
   "Reverb": "Reverb",
@@ -9133,7 +9175,13 @@
   "Suit le téléphone · {0}": "Folgt dem Telefon · {0}",
   "Système · {0}": "System · {0}",
   "Utiliser la présence via l'app Discord": "Präsenz über die Discord-App verwenden",
-  "Vérifier la présence maintenant": "Präsenz jetzt prüfen"
+  "Vérifier la présence maintenant": "Präsenz jetzt prüfen",
+  "Verre teinté par la pochette": "Vom Cover getöntes Glas",
+  "La couleur dominante de la pochette colore légèrement le verre, sans réduire la lisibilité": "Die dominante Farbe des Covers tönt das Glas leicht, ohne die Lesbarkeit zu verringern",
+  "Fond animé du lecteur": "Animierter Player-Hintergrund",
+  "Dégradé lent aux couleurs de la pochette derrière le lecteur, qui suit doucement la musique": "Ein langsamer Verlauf in den Farben des Covers hinter dem Player, der sanft der Musik folgt",
+  "Retours haptiques": "Haptisches Feedback",
+  "Légère vibration sur le verre, les onglets et la barre de lecture": "Eine leichte Vibration bei Glas-Bedienelementen, Tabs und der Suchleiste"
  },
  "pt": {
   "Reverb": "Reverb",
@@ -10275,7 +10323,13 @@
   "Suit le téléphone · {0}": "Segue o celular · {0}",
   "Système · {0}": "Sistema · {0}",
   "Utiliser la présence via l'app Discord": "Usar a presença pelo app do Discord",
-  "Vérifier la présence maintenant": "Verificar a presença agora"
+  "Vérifier la présence maintenant": "Verificar a presença agora",
+  "Verre teinté par la pochette": "Vidro tingido pela capa",
+  "La couleur dominante de la pochette colore légèrement le verre, sans réduire la lisibilité": "A cor dominante da capa tinge levemente o vidro, sem reduzir a legibilidade",
+  "Fond animé du lecteur": "Fundo animado do player",
+  "Dégradé lent aux couleurs de la pochette derrière le lecteur, qui suit doucement la musique": "Um degradê lento nas cores da capa atrás do player, que acompanha suavemente a música",
+  "Retours haptiques": "Resposta háptica",
+  "Légère vibration sur le verre, les onglets et la barre de lecture": "Uma leve vibração nos controles de vidro, nas abas e na barra de progresso"
  },
  "ko": {
   "Reverb": "리버브",
@@ -11417,6 +11471,12 @@
   "Suit le téléphone · {0}": "휴대폰 따름 · {0}",
   "Système · {0}": "시스템 · {0}",
   "Utiliser la présence via l'app Discord": "Discord 앱을 통한 프레즌스 사용",
-  "Vérifier la présence maintenant": "지금 프레즌스 확인"
+  "Vérifier la présence maintenant": "지금 프레즌스 확인",
+  "Verre teinté par la pochette": "커버 색으로 물드는 글래스",
+  "La couleur dominante de la pochette colore légèrement le verre, sans réduire la lisibilité": "커버의 주요 색상이 글래스를 은은하게 물들이며, 가독성은 유지됩니다",
+  "Fond animé du lecteur": "플레이어 애니메이션 배경",
+  "Dégradé lent aux couleurs de la pochette derrière le lecteur, qui suit doucement la musique": "플레이어 뒤에서 커버 색상으로 천천히 움직이는 그라데이션이 음악을 부드럽게 따라갑니다",
+  "Retours haptiques": "햅틱 피드백",
+  "Légère vibration sur le verre, les onglets et la barre de lecture": "글래스 컨트롤, 탭, 탐색 바에서 가볍게 진동합니다"
  }
 }

@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
     <uses-feature android:name="android.hardware.faketouch" android:required="false" />
@@ -13,5 +14,7 @@
             <meta-data android:name="com.oculus.vrshell.free_resizing_limits" android:value="960,1920,600,1200" />
             <meta-data android:name="com.oculus.vrshell.free_resizing_lock_aspect_ratio" android:value="true" />
         </activity>
+        <!-- Horizon OS has no home-screen widgets. -->
+        <receiver android:name=".widget.NowPlayingWidgetReceiver" tools:node="remove" />
     </application>
 </manifest>

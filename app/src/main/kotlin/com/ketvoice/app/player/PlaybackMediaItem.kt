@@ -22,7 +22,9 @@ internal fun playbackMediaItem(track: Track, url: String, cacheKey: String?, str
         .setMimeType(if (stream?.isDash == true) MimeTypes.APPLICATION_MPD else stream?.mimeType?.substringBefore(';')?.trim())
         .setCustomCacheKey(if (stream?.isDash == true) null else cacheKey)
         .setMediaMetadata(MediaMetadata.Builder().setTitle(track.title).setArtist(track.artist)
-            .setAlbumTitle(track.album).setArtworkUri(track.coverUrl?.let(Uri::parse))
+            .setAlbumTitle(track.album)
+            // Same artwork as the app (the enriched cover when known) for the notification and lock screen.
+            .setArtworkUri((com.ketvoice.app.data.ArtworkRepo.coverForTrack(track) ?: track.coverUrl)?.let(Uri::parse))
             .setExtras(if (offlineDash) Bundle().apply { putBoolean(OFFLINE_DASH_EXTRA, true) } else null).build())
         .build()
 

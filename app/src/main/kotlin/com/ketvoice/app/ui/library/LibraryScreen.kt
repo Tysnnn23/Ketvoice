@@ -1,5 +1,6 @@
 package com.ketvoice.app.ui.library
 
+import com.ketvoice.app.ui.common.asHeading
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -89,7 +90,7 @@ fun LibraryScreen() {
         item(key = "header") {
             Column(Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 14.dp)) {
                 Text("Bibliothèque", color = theme.onBackground, fontSize = 38.sp, fontWeight = FontWeight.Bold,
-                    letterSpacing = (-1.2).sp)
+                    letterSpacing = (-1.2).sp, modifier = Modifier.asHeading())
                 Text(AppText.t(if (all.size == 1) "1 titre" else "${all.size} titres") + " · " +
                     AppText.t("Playlists") + " " + playlists.size, localize = false, color = theme.secondary,
                     fontSize = 14.sp, modifier = Modifier.padding(top = 5.dp, bottom = 18.dp))

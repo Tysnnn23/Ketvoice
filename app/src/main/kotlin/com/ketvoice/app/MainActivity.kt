@@ -48,6 +48,10 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
+    private companion object {
+        const val STATE_NAVIGATION = "ketvoice.navigation"
+    }
+
     override fun attachBaseContext(newBase: android.content.Context) {
         super.attachBaseContext(com.ketvoice.app.data.AppLocales.wrap(newBase))
     }
@@ -57,6 +61,9 @@ class MainActivity : ComponentActivity() {
         Crash.install(this)
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        // After Android reclaimed the process, come back to the page the user was on.
+        if (savedInstanceState != null) com.ketvoice.app.ui.AppUi.restoreNavigationOnce(savedInstanceState.getString(STATE_NAVIGATION))
+        else com.ketvoice.app.ui.AppUi.markNavigationFresh()
 
         runCatching { com.ketvoice.app.data.AppLocales.sync(this) }
         runCatching { com.ketvoice.app.data.SettingsStore.load(this) }
@@ -120,6 +127,11 @@ class MainActivity : ComponentActivity() {
             }
         }
         handleAuthIntent(intent)
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putString(STATE_NAVIGATION, com.ketvoice.app.ui.AppUi.saveNavigation())
     }
 
     override fun onNewIntent(intent: Intent) {

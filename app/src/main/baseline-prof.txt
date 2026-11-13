@@ -1,0 +1,34 @@
+# Ketvoice startup and first-scroll profile.
+#
+# Hand-written rules (not captured from a device run): they ask ART to compile ahead
+# of time the code that every launch and the first scroll go through, instead of
+# interpreting it. Compose, Media3 and Coil ship their own profiles; this file only
+# covers Ketvoice's packages. H = hot, S = startup, P = post-startup.
+HSPLcom/ketvoice/app/KetvoiceApp;->**(**)**
+HSPLcom/ketvoice/app/MainActivity;->**(**)**
+HSPLcom/ketvoice/app/MainActivityKt;->**(**)**
+HSPLcom/ketvoice/app/ui/AppRootKt;->**(**)**
+HSPLcom/ketvoice/app/ui/AppUi;->**(**)**
+HSPLcom/ketvoice/app/ui/NavigationPresentationKt;->**(**)**
+HSPLcom/ketvoice/app/ui/home/**;->**(**)**
+HSPLcom/ketvoice/app/ui/chrome/**;->**(**)**
+HSPLcom/ketvoice/app/ui/common/**;->**(**)**
+HSPLcom/ketvoice/app/ui/motion/**;->**(**)**
+HSPLcom/ketvoice/app/ui/adaptive/**;->**(**)**
+HSPLcom/ketvoice/app/glass/**;->**(**)**
+HSPLcom/ketvoice/app/theme/**;->**(**)**
+HSPLcom/ketvoice/app/data/AppSettings;->**(**)**
+HSPLcom/ketvoice/app/data/SettingsStore;->**(**)**
+HSPLcom/ketvoice/app/data/AppText;->**(**)**
+HSPLcom/ketvoice/app/data/UiTextDictionary;->**(**)**
+HSPLcom/ketvoice/app/data/ArtworkRepo;->**(**)**
+HSPLcom/ketvoice/app/player/Player;->**(**)**
+HPLcom/ketvoice/app/ui/player/**;->**(**)**
+HPLcom/ketvoice/app/ui/library/**;->**(**)**
+HPLcom/ketvoice/app/ui/explorer/**;->**(**)**
+HPLcom/ketvoice/app/ui/overlay/**;->**(**)**
+Lcom/ketvoice/app/KetvoiceApp;
+Lcom/ketvoice/app/MainActivity;
+Lcom/ketvoice/app/ui/**;
+Lcom/ketvoice/app/glass/**;
+Lcom/ketvoice/app/theme/**;

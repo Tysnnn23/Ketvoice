@@ -96,7 +96,9 @@ fun ObserveSystemMotion() {
     DisposableEffect(resolver) {
         fun refresh() {
             AppSettings.systemReduceMotion.value = runCatching {
-                Settings.Global.getFloat(resolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
+                systemMotionReduced(
+                    Settings.Global.getFloat(resolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f),
+                    Settings.Global.getFloat(resolver, Settings.Global.TRANSITION_ANIMATION_SCALE, 1f))
             }.getOrDefault(false)
         }
         val observer = object : ContentObserver(Handler(Looper.getMainLooper())) {
@@ -104,6 +106,14 @@ fun ObserveSystemMotion() {
         }
         refresh()
         runCatching { resolver.registerContentObserver(Settings.Global.getUriFor(Settings.Global.ANIMATOR_DURATION_SCALE), false, observer) }
+        runCatching { resolver.registerContentObserver(Settings.Global.getUriFor(Settings.Global.TRANSITION_ANIMATION_SCALE), false, observer) }
         onDispose { runCatching { resolver.unregisterContentObserver(observer) } }
     }
 }
+
+/**
+ * "Remove animations" in Accessibility sets every scale to 0, but Developer options can
+ * switch off either one alone. Someone who disabled transitions wants no page or sheet motion.
+ */
+internal fun systemMotionReduced(animatorScale: Float, transitionScale: Float): Boolean =
+    animatorScale == 0f || transitionScale == 0f

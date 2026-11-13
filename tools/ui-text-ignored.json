@@ -89,5 +89,9 @@
  "authentifié=": "Discord diagnostics key copied into a support report, not user-facing copy",
  "mode=": "Discord diagnostics key copied into a support report, not user-facing copy",
  "présence=": "Discord diagnostics key copied into a support report, not user-facing copy",
- "homePress": "Compose animation label, not user-facing copy"
+ "homePress": "Compose animation label, not user-facing copy",
+ "lensLead": "Compose animation label, not user-facing copy",
+ "lensTrail": "Compose animation label, not user-facing copy",
+ "playlistId": "saved navigation JSON key, not user-facing copy",
+ "searchSeed": "saved navigation JSON key, not user-facing copy"
 }

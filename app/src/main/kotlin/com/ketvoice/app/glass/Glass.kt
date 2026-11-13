@@ -29,6 +29,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import kotlinx.coroutines.launch
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -265,6 +267,26 @@ fun GlassPanel(
     styleOverride: Int? = null,
     content: @Composable () -> Unit
 ) {
+    // A fusion host is consumed by the first panel on a branch: nested panels (a
+    // selection lens inside a capsule) keep their own glass.
+    val fusion = LocalGlassFusion.current
+    if (fusion == null) GlassPanelBody(modifier, shape, params, enabled, captured, styleOverride, null, content)
+    else CompositionLocalProvider(LocalGlassFusion provides null) {
+        GlassPanelBody(modifier, shape, params, enabled, captured, styleOverride, fusion, content)
+    }
+}
+
+@Composable
+private fun GlassPanelBody(
+    modifier: Modifier,
+    shape: Shape,
+    params: GlassParams,
+    enabled: Boolean,
+    captured: Boolean,
+    styleOverride: Int?,
+    fusion: GlassFusion?,
+    content: @Composable () -> Unit
+) {
     val style = styleOverride ?: AppSettings.glassStyle.value
     val liquid27 = style == GlassStyles.LIQUID_27
     val styledParams = when (style) {
@@ -295,12 +317,28 @@ fun GlassPanel(
     CompositionLocalProvider(LocalTheme provides glassTheme) {
     val backdrop = LocalBackdropLayer.current
     val context = LocalContext.current
-    val lowMemory = remember(context) {
-        runCatching { (context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager)?.isLowRamDevice == true }.getOrDefault(false)
-    }
+    val lowMemory = remember(context) { isLowRamDevice(context) }
     val mode = glassRenderMode(Build.VERSION.SDK_INT, backdrop != null, enabled && AppSettings.liquidGlass.value,
         captured, style == 2, AppSettings.reduceDynamicBlur.value, AppSettings.highPerformanceMode.value,
         lowMemory, Motion.reduced)
+    if (fusion != null) {
+        val key = remember { Any() }
+        androidx.compose.runtime.DisposableEffect(fusion, key) { onDispose { fusion.forget(key) } }
+        if (fusion.active && liquid27 && styleOverride == null && enabled && mode == GlassRenderMode.Optical) {
+            // Fused: this control only reports where it is. The single Liquid 27 body
+            // drawn by GlassFusionLayer is its glass.
+            val density = androidx.compose.ui.platform.LocalDensity.current
+            val direction = androidx.compose.ui.platform.LocalLayoutDirection.current
+            Box(modifier.onGloballyPositioned { coordinates ->
+                val bounds = coordinates.boundsInRoot()
+                val radius = glassRoundedShapeRadii(shape, bounds.width, bounds.height, density, direction)?.maxOrNull()
+                    ?: params.cornerRadiusPx
+                fusion.report(key, bounds, radius.coerceIn(0f, minOf(bounds.width, bounds.height) / 2f))
+            }.clip(shape)) { content() }
+            return@CompositionLocalProvider
+        }
+        androidx.compose.runtime.SideEffect { fusion.forget(key) }
+    }
     val dynamic = mode != GlassRenderMode.Static
     // Vrai verre AGSL (API 33+) : le matériau est calculé par un RuntimeShader
     // (réfraction + dispersion + teinte + liseré). Les pinceaux de surface et le

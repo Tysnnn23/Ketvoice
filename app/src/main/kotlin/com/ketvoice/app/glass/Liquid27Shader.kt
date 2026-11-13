@@ -22,12 +22,11 @@ import com.ketvoice.app.theme.DesignTokens
  *  - crisp two-sided rim (lit edge + bounce on the opposite edge), no thickness shadow;
  *  - light direction follows device tilt (uniform), touch adds a local glow and lens pressure.
  */
-internal const val LIQUID27_AGSL = """
+/** Uniforms and helpers shared by the single-shape and the fused Liquid 27 passes. */
+internal const val LIQUID27_COMMON = """
 uniform shader content;
-uniform float2 size;
 uniform float2 offset;
 uniform float2 contentSize;
-uniform float4 cornerRadii;
 uniform float lensHeight;
 uniform float lensAmount;
 uniform float dispersion;
@@ -39,16 +38,6 @@ uniform float2 lightDir;
 uniform float rimLight;
 uniform float pixelScale;
 uniform float3 touch;
-
-float radiusAt(float2 coord, float4 radii) {
-    if (coord.x >= 0.0) {
-        if (coord.y <= 0.0) return radii.y;
-        else return radii.w;
-    } else {
-        if (coord.y <= 0.0) return radii.x;
-        else return radii.z;
-    }
-}
 
 // Continuous corner: a superellipse (n = 2.6) whose radius is widened so the curve
 // starts earlier along the edge but never leaves the circular clip of the shape.
@@ -75,27 +64,56 @@ float lumaOf(float3 c) { return dot(c, float3(0.2126, 0.7152, 0.0722)); }
 float dither(float2 coord) {
     return fract(sin(dot(coord, float2(12.9898, 78.233))) * 43758.5453) - 0.5;
 }
+"""
 
-float4 main(float2 coord) {
+/** One rounded shape filling the pass: `sceneSd` is its distance, `sceneBox` its centre and half-size. */
+internal const val LIQUID27_SINGLE_SCENE = """
+uniform float2 size;
+uniform float4 cornerRadii;
+
+float radiusAt(float2 coord, float4 radii) {
+    if (coord.x >= 0.0) {
+        if (coord.y <= 0.0) return radii.y;
+        else return radii.w;
+    } else {
+        if (coord.y <= 0.0) return radii.x;
+        else return radii.z;
+    }
+}
+
+float sceneSd(float2 local) {
     float2 halfSize = size * 0.5;
-    float2 local = coord + offset;
     float2 p = local - halfSize;
     float radius = min(radiusAt(p, cornerRadii), min(halfSize.x, halfSize.y));
-    float sd = sdShape(p, halfSize, radius);
+    return sdShape(p, halfSize, radius);
+}
+
+float4 sceneBox(float2 local) { return float4(size * 0.5, size * 0.5); }
+"""
+
+/** The material itself. It only knows the scene through `sceneSd` and `sceneBox`. */
+internal const val LIQUID27_MATERIAL = """
+float4 main(float2 coord) {
+    float2 local = coord + offset;
+    float sd = sceneSd(local);
     if (sd > 0.5) return float4(0.0);
 
-    // Numerical normal: identical refraction strength on edges and corners.
+    // Numerical normal: identical refraction strength on edges, corners and liquid bridges.
     float e = 1.0;
-    float2 g = float2(sdShape(p + float2(e, 0.0), halfSize, radius) - sdShape(p - float2(e, 0.0), halfSize, radius),
-                      sdShape(p + float2(0.0, e), halfSize, radius) - sdShape(p - float2(0.0, e), halfSize, radius));
+    float2 g = float2(sceneSd(local + float2(e, 0.0)) - sceneSd(local - float2(e, 0.0)),
+                      sceneSd(local + float2(0.0, e)) - sceneSd(local - float2(0.0, e)));
     float2 n = g / max(length(g), 0.0001);
+
+    float4 box = sceneBox(local);
+    float2 p = local - box.xy;
+    float2 halfSize = box.zw;
 
     float px = max(pixelScale, 1.0);
     float press = clamp(touch.z, 0.0, 1.0);
     float depth = -sd;
 
     // Slight magnification of the whole body (the glass is a thick convex slab).
-    float minSide = max(min(size.x, size.y), 1.0);
+    float minSide = max(min(halfSize.x, halfSize.y) * 2.0, 1.0);
     float magnify = 0.012 + press * 0.01;
     float2 body = coord - p * magnify;
 
@@ -166,6 +184,8 @@ float4 main(float2 coord) {
 }
 """
 
+internal const val LIQUID27_AGSL = LIQUID27_COMMON + LIQUID27_SINGLE_SCENE + LIQUID27_MATERIAL
+
 /** Uniform values for one Liquid 27 pass. */
 internal data class Liquid27Light(val lightX: Float, val lightY: Float, val touchX: Float, val touchY: Float, val press: Float)
 
@@ -191,20 +211,27 @@ internal fun BackdropEffectScope.liquid27Glass(params: GlassParams, radii: Float
 @androidx.annotation.RequiresApi(33)
 internal fun applyLiquid27Uniforms(shader: android.graphics.RuntimeShader, w: Float, h: Float, pad: Float, density: Float,
                                    params: GlassParams, radii: FloatArray, frost: Float, light: Liquid27Light) {
-    // Uniform refraction: a wider band than the Prismal controls, still bounded by the control.
-    val lens = ControlLens.forControl(minOf(w, h), density, params.refractionHeightDp * 2.2f, params.refractionAmountDp * 1.6f)
     shader.setFloatUniform("size", w, h)
+    shader.setFloatUniform("cornerRadii", radii)
+    applyLiquid27Material(shader, w, h, minOf(w, h), pad, density, params, frost, light)
+}
+
+/** Material uniforms common to the single-shape and fused passes; [lensEdgePx] bounds the lens band. */
+@androidx.annotation.RequiresApi(33)
+internal fun applyLiquid27Material(shader: android.graphics.RuntimeShader, w: Float, h: Float, lensEdgePx: Float, pad: Float,
+                                   density: Float, params: GlassParams, frost: Float, light: Liquid27Light) {
+    // Uniform refraction: a wider band than the Prismal controls, still bounded by the control.
+    val lens = ControlLens.forControl(lensEdgePx, density, params.refractionHeightDp * 2.2f, params.refractionAmountDp * 1.6f)
     // Same capture coordinate contract as the Prismal pass: padding is negative.
     shader.setFloatUniform("offset", -pad, -pad)
     shader.setFloatUniform("contentSize", w + pad * 2f, h + pad * 2f)
-    shader.setFloatUniform("cornerRadii", radii)
     shader.setFloatUniform("lensHeight", lens.heightPx)
     shader.setFloatUniform("lensAmount", lens.amountPx)
     shader.setFloatUniform("dispersion", DesignTokens.Glass.DISPERSION * 1.5f)
     shader.setFloatUniform("frost", GlassTuning.sanitize(frost))
-    // Lighter dark material than the other styles.
-    if (params.dark) shader.setFloatUniform("milk", .24f, .24f, .27f, .10f)
-    else shader.setFloatUniform("milk", 1f, 1f, 1f, .06f)
+    // Lighter dark material than the other styles; the cover may tint it slightly.
+    val milk = GlassTint.milk(params.dark)
+    shader.setFloatUniform("milk", milk[0], milk[1], milk[2], if (params.dark) .10f else .06f)
     shader.setFloatUniform("saturation", if (params.dark) 1.18f else 1.24f)
     shader.setFloatUniform("materialDark", if (params.dark) 1f else 0f)
     shader.setFloatUniform("lightDir", light.lightX, light.lightY)

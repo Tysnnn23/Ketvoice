@@ -43,9 +43,13 @@ internal fun rememberCoverAmbience(url: String?): CoverAmbience {
 }
 
 @Composable
-internal fun AmbientArtwork(url: String?, ambience: CoverAmbience) {
+internal fun AmbientArtwork(url: String?, ambience: CoverAmbience, playing: Boolean = false) {
     Box(Modifier.fillMaxSize().background(ambience.color)) {
         if (url != null) AsyncImage(url, null, Modifier.fillMaxSize().blur(90.dp), contentScale = ContentScale.Crop, alpha = .88f)
+        // Slow mesh of the cover's colours over the blurred artwork, under the veil.
+        MeshBackdrop(remember(ambience.color, ambience.accent, url) {
+            meshColors(ambience.color, ambience.accent, com.ketvoice.app.theme.CoverPalette.cached(url))
+        }, playing)
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(
             Color.Black.copy(alpha = ambience.veil),
             ambience.color.copy(alpha = .40f),

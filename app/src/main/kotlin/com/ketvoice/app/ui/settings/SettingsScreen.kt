@@ -271,6 +271,15 @@ fun SettingsScreen() {
                     AppSettings.albumHeroCanvas.value) { AppSettings.albumHeroCanvas.value = it; SettingsStore.save() }
                 SToggle(KetIcons.Appearance, "Couleurs de la pochette", "Accents du lecteur adaptés à l'album, avec contraste renforcé",
                     AppSettings.albumColors.value) { AppSettings.albumColors.value = it; SettingsStore.save() }
+                SToggle(KetIcons.Appearance, "Verre teinté par la pochette",
+                    "La couleur dominante de la pochette colore légèrement le verre, sans réduire la lisibilité",
+                    AppSettings.coverTintedGlass.value) { AppSettings.coverTintedGlass.value = it; SettingsStore.save() }
+                SToggle(KetIcons.Canvas, "Fond animé du lecteur",
+                    "Dégradé lent aux couleurs de la pochette derrière le lecteur, qui suit doucement la musique",
+                    AppSettings.meshBackground.value) { AppSettings.meshBackground.value = it; SettingsStore.save() }
+                if (!com.ketvoice.app.BuildConfig.IS_QUEST) SToggle(KetIcons.Sliders, "Retours haptiques",
+                    "Légère vibration sur le verre, les onglets et la barre de lecture",
+                    AppSettings.haptics.value) { AppSettings.haptics.value = it; SettingsStore.save() }
                 SToggle(KetIcons.Canvas, "Profondeur de pochette", "Mouvement léger au toucher ou au pointeur, sans modifier les gestes",
                     AppSettings.artworkDepth.value) { AppSettings.artworkDepth.value = it; SettingsStore.save() }
                 SToggle(KetIcons.Canvas, "Canvas panoramique",

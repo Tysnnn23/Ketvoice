@@ -23,8 +23,8 @@ android {
         applicationId = "com.ketvoice.app"
         minSdk = 31
         targetSdk = 36
-        versionCode = 94
-        versionName = "4.9.0"
+        versionCode = 95
+        versionName = "4.10.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         resourceConfigurations += listOf("fr", "en", "hi", "ja", "zh", "ru", "it", "es", "de", "pt", "ko")
         ndkVersion = "27.0.12077973"
@@ -148,6 +148,10 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.9.0")
     implementation("androidx.navigation:navigation-compose:2.8.9")
     implementation("androidx.datastore:datastore-preferences:1.1.4")
+    // Fold posture (tabletop player), home-screen widget, and startup profile installation for sideloads.
+    implementation("androidx.window:window:1.3.0")
+    implementation("androidx.glance:glance-appwidget:1.1.1")
+    implementation("androidx.profileinstaller:profileinstaller:1.4.1")
 
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")

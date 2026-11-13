@@ -1,5 +1,6 @@
 package com.ketvoice.app.ui.home
 
+import com.ketvoice.app.ui.common.asHeading
 import com.ketvoice.app.ui.motion.captureRevealOrigin
 import com.ketvoice.app.ui.motion.rememberRevealOrigin
 
@@ -90,7 +91,7 @@ fun HomeScreen() {
                     } else Image(painterResource(R.drawable.logo_clean), "Ketvoice",
                         Modifier.height(48.dp).width(48.dp), contentScale = ContentScale.Fit)
                     Text("Écouter maintenant", color = theme.onBackground, fontSize = if (layout.hasRail) 40.sp else 30.sp, fontWeight = FontWeight.Black,
-                        letterSpacing = (-1).sp, maxLines = 2, modifier = Modifier.padding(top = 14.dp))
+                        letterSpacing = (-1).sp, maxLines = 2, modifier = Modifier.padding(top = 14.dp).asHeading())
                     Row(Modifier.padding(top=3.dp,bottom=22.dp)) {
                         Text(origin,color=theme.secondary,fontSize=12.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
                         if(youtube.connected)Text(" · ${youtube.name}",localize=false,color=theme.secondary,fontSize=12.sp,maxLines=1)
@@ -102,12 +103,12 @@ fun HomeScreen() {
             } else if (featured.isNotEmpty()) item(key = "editorial") { HomeEditorial(featured) }
             if (playlists.any { it.pinned }) item(key = "pinned") {
                 Text("Épinglés", color = theme.onBackground, fontSize = 22.sp, fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(start = 18.dp, top = 20.dp, bottom = 12.dp))
+                    modifier = Modifier.padding(start = 18.dp, top = 20.dp, bottom = 12.dp).asHeading())
                 PlaylistShelf(playlists.filter { it.pinned })
             }
             item {
                 Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp).padding(bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text("Récents", color = theme.onBackground, fontSize = 16.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                    Text("Récents", color = theme.onBackground, fontSize = 16.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f).asHeading())
                     androidx.compose.material3.IconButton(onClick = { grid = !grid }, modifier = Modifier.size(48.dp)) {
                         Icon(Icons.Filled.GridView, "Changer la présentation des récents", tint = theme.secondary, modifier = Modifier.size(22.dp))
                     }

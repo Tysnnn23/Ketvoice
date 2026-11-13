@@ -19,6 +19,8 @@ class KetvoiceApp : Application(), ImageLoaderFactory {
         super.onCreate()
         instance = this
         com.ketvoice.app.data.AppText.init(this)
+        // Keeps a placed home-screen widget in step with playback (no work when none is placed).
+        if (!BuildConfig.IS_QUEST) runCatching { com.ketvoice.app.widget.NowPlayingWidgetUpdater.start(this) }
         // Bound the re-fetchable caches once per process, off the main thread and after startup.
         Thread({
             runCatching { Thread.sleep(20_000); com.ketvoice.app.data.DiskBudget.trimAll(this) }

@@ -226,11 +226,10 @@ fun BackdropEffectScope.liquidGlass(
         shader.setFloatUniform("refractionAmount", lens.amountPx)
         shader.setFloatUniform("dispersion", DesignTokens.Glass.DISPERSION)
         shader.setFloatUniform("depthEffect", 0f)
-        if (params.dark) {
-            shader.setFloatUniform("tint", 0.16f, 0.16f, 0.19f, params.tintAlpha)
-        } else {
-            shader.setFloatUniform("tint", 1f, 1f, 1f, params.tintAlpha)
-        }
+        val tint = GlassTint.tinted(if (params.dark) floatArrayOf(.16f, .16f, .19f) else floatArrayOf(1f, 1f, 1f),
+            GlassTint.cover.value, params.dark, com.ketvoice.app.data.AppSettings.coverTintedGlass.value,
+            GlassTint.strength.floatValue)
+        shader.setFloatUniform("tint", tint[0], tint[1], tint[2], params.tintAlpha)
         shader.setFloatUniform("saturation", params.saturation)
         shader.setFloatUniform("brightness", params.brightness * (1f + params.exposure))
         shader.setFloatUniform("edgeDark", if (params.dark) 0.09f else 0.055f)

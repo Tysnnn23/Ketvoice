@@ -155,6 +155,78 @@ object AppUi {
         return true
     }
 
+    /* ── Navigation that survives process death ── */
+
+    private var navigationRestoreDone = false
+
+    /** The tab and the overlay stack as JSON, without transient reveal origins. */
+    fun saveNavigation(): String {
+        val entries = org.json.JSONArray()
+        (overlayStack.toList() + snapshot()).takeLast(MAX_SAVED_ENTRIES).forEach { entry ->
+            entries.put(org.json.JSONObject().apply {
+                put("overlay", entry.overlay)
+                entry.playlistId?.let { put("playlistId", it) }
+                entry.catalogRequest?.let { put("catalog", org.json.JSONObject().put("kind", it.kind).put("id", it.id).put("title", it.title)) }
+                entry.artistRequest?.let { put("artist", org.json.JSONObject().put("id", it.id).put("name", it.name)) }
+                put("searchSeed", entry.searchSeed)
+            })
+        }
+        return org.json.JSONObject().put("version", 1).put("tab", tab.intValue).put("entries", entries).toString()
+    }
+
+    /** Parsed, validated navigation: entries that cannot be shown again are dropped. */
+    internal fun parseNavigation(json: String?): Pair<Int, List<OverlayEntry>>? = runCatching {
+        val root = org.json.JSONObject(json ?: return null)
+        if (root.optInt("version") != 1) return null
+        val savedTab = root.optInt("tab", HOME).takeIf { it in HOME..LIBRARY } ?: HOME
+        val array = root.optJSONArray("entries") ?: return savedTab to emptyList()
+        val entries = (0 until minOf(array.length(), MAX_SAVED_ENTRIES)).mapNotNull { index ->
+            val item = array.optJSONObject(index) ?: return@mapNotNull null
+            val catalog = item.optJSONObject("catalog")?.let {
+                com.ketvoice.app.data.CatalogRequest(it.optString("kind"), it.optString("id"), it.optString("title"))
+            }?.takeIf { it.kind.isNotBlank() && it.id.isNotBlank() }
+            val artist = item.optJSONObject("artist")?.let { ArtistRequest(it.optString("id"), it.optString("name")) }
+                ?.takeIf { it.id.isNotBlank() || it.name.isNotBlank() }
+            val playlist = item.optString("playlistId").takeIf { it.isNotBlank() }
+            val entry = OverlayEntry(item.optInt("overlay", NONE), playlist, catalog, artist,
+                item.optString("searchSeed").take(200))
+            when (entry.overlay) {
+                NONE, SEARCH, SETTINGS, DOWNLOADS, LOCAL_FILES, ADDONS_SEARCH, LYRICS_SOURCES, REPLAY, EXPORT, IMPORT,
+                LANGUAGE, APP_ICON, CANVAS_CONFIG, lyricsSourcesList, SOURCES -> entry
+                PLAYLIST -> entry.takeIf { playlist != null }
+                CATALOG -> entry.takeIf { catalog != null }
+                ARTIST -> entry.takeIf { artist != null }
+                // The queue needs a live player session; never reopen it blindly.
+                else -> null
+            }
+        }
+        savedTab to entries
+    }.getOrNull()
+
+    /**
+     * Restores a saved navigation once per process, and only over a pristine state:
+     * an activity recreated in a living process already has the real one.
+     */
+    fun restoreNavigationOnce(json: String?) {
+        if (navigationRestoreDone) return
+        navigationRestoreDone = true
+        if (tab.intValue != HOME || overlay.intValue != NONE || overlayStack.isNotEmpty()) return
+        val (savedTab, entries) = parseNavigation(json) ?: return
+        tab.intValue = savedTab
+        val current = entries.lastOrNull() ?: return
+        overlayStack.clear()
+        entries.dropLast(1).filter { it.overlay != NONE || overlayStack.isEmpty() }.forEach(overlayStack::addLast)
+        navKind.intValue = NAV_JUMP
+        restore(current)
+    }
+
+    internal fun resetNavigationRestoreForTests() { navigationRestoreDone = false }
+
+    /** A cold launch has nothing to restore later in this process. */
+    fun markNavigationFresh() { navigationRestoreDone = true }
+
+    private const val MAX_SAVED_ENTRIES = 12
+
     /** Bonus : recherche pré-remplie quand on tape une tuile (genre, mood...). */
     val searchSeed = androidx.compose.runtime.mutableStateOf("")
 
@@ -179,19 +251,8 @@ object AppUi {
         showPublisher.value = true
     }
 
-    /** Vol de pochette entre le mini-lecteur et le lecteur plein écran. */
-    data class CoverFlight(
-        val cover: String?,
-        val title: String,
-        val from: androidx.compose.ui.geometry.Rect,
-        val to: androidx.compose.ui.geometry.Rect,
-        val opening: Boolean,
-        val token: Long = System.nanoTime()
-    )
-    val playerCoverBounds = androidx.compose.runtime.mutableStateOf<androidx.compose.ui.geometry.Rect?>(null)
     val miniCoverBounds = androidx.compose.runtime.mutableStateOf<androidx.compose.ui.geometry.Rect?>(null)
     val miniPlayerBounds = androidx.compose.runtime.mutableStateOf<androidx.compose.ui.geometry.Rect?>(null)
-    val coverFlight = androidx.compose.runtime.mutableStateOf<CoverFlight?>(null)
 
     /** Vue paroles dans le lecteur */
     val showLyrics = androidx.compose.runtime.mutableStateOf(false)

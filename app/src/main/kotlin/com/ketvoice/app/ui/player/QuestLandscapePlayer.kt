@@ -83,7 +83,7 @@ internal fun QuestLandscapePlayer(
                                     .then(if (onCanvas != null) Modifier.clickable(onClick = onCanvas) else Modifier)
                                     .semantics { contentDescription = AppText.t(if (onCanvas != null)
                                         "Voir le Canvas en plein écran" else "Pochette") }
-                                    .onGloballyPositioned { AppUi.playerCoverBounds.value = it.boundsInRoot() }, depth = true)
+                                    , depth = true)
                             AnimatedVisibility(companion, enter = fadeIn(tween(duration)), exit = fadeOut(tween(duration))) {
                                 Column(Modifier.fillMaxWidth().padding(top = 16.dp)) {
                                     QuestMobileControls(state, track, cover, page, onPage, onTrackMenu, onOutput)

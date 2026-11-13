@@ -58,6 +58,12 @@ object AppSettings {
     val reverbDamping = mutableStateOf(35)
     /** Opt-in live Discord listening presence. Linking alone never publishes. */
     val discordPresence = mutableStateOf(false)
+    /** Light touch feedback on glass controls, tab changes and released sliders. */
+    val haptics = mutableStateOf(true)
+    /** Animated colour mesh behind the full player. */
+    val meshBackground = mutableStateOf(true)
+    /** The dominant cover colour lightly tints the optical glass. */
+    val coverTintedGlass = mutableStateOf(true)
     /** Opt-in: the website's "Listening now" shows the title, artist and cover. The count itself is anonymous. */
     val shareNowPlaying = mutableStateOf(false)
     val progressiveQuality = mutableStateOf(false)

@@ -73,6 +73,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.AudioAttributes
@@ -249,6 +250,7 @@ fun ScrubBar(
     var dragFraction by remember(trackId) { mutableStateOf<Float?>(null) }
     val anim = remember(trackId) { Animatable(0f) }
     val dragScope = rememberCoroutineScope()
+    val haptic = com.ketvoice.app.ui.motion.rememberHaptics()
     val fraction = (posMs.toFloat() / dur).coerceIn(0f, 1f)
     val seekEpoch by Player.seekEpoch.collectAsState()
     var lastSeek by remember(trackId) { mutableLongStateOf(seekEpoch) }
@@ -291,6 +293,7 @@ fun ScrubBar(
                             dragFraction = null
                             if (f != null && durationMs > 0) {
                                 dragScope.launch { anim.snapTo(f) }
+                                haptic(com.ketvoice.app.ui.motion.Haptics.Kind.Tick)
                                 latestSeek((f * dur).toLong())
                             }
                         },
@@ -392,12 +395,15 @@ fun PlayerTransport(
         }
         val playSrc = remember { MutableInteractionSource() }
         val playPressed by playSrc.collectIsPressedAsState()
+        val transportHaptic = com.ketvoice.app.ui.motion.rememberHaptics()
+        val playbackStateLabel = com.ketvoice.app.data.AppText.t(if (playing) "Lecture en cours" else "En pause")
         Box(
             Modifier
                 .pressScale(min = 0.88f, isPressed = playPressed)
                 .size(74.dp)
                 .clip(CircleShape)
-                .clickable(playSrc, null) { onToggle() },
+                .semantics { stateDescription = playbackStateLabel }
+                .clickable(playSrc, null, role = androidx.compose.ui.semantics.Role.Button) { transportHaptic(com.ketvoice.app.ui.motion.Haptics.Kind.Press); onToggle() },
             contentAlignment = Alignment.Center
         ) {
             MorphingTransportGlyph(playing, Modifier.size(46.dp))

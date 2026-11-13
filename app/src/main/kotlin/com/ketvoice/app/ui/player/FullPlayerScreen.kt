@@ -236,7 +236,16 @@ fun FullPlayerScreen(
         val wide = maxWidth > maxHeight
         val controlsWidth = if (wide) maxWidth * .48f else maxWidth
         val sceneWidth = if (wide && !expanded) maxWidth - controlsWidth else maxWidth
-        val lowerHeight = if (wide) (safeHeight - topInset - 6.dp) else (safeHeight * .405f).coerceAtLeast(300.dp)
+        // Tabletop (a flip-style phone half-opened on a table): the scene stays above the
+        // hinge and the controls below it, so nothing important sits on the fold.
+        val tabletop = if (wide) null else com.ketvoice.app.ui.adaptive.rememberTabletop()?.let { fold ->
+            with(LocalDensity.current) {
+                com.ketvoice.app.ui.adaptive.tabletopSplit(fold.hingeTopPx.toDp().value, fold.hingeBottomPx.toDp().value,
+                    maxHeight.value, bottomInset.value)
+            }
+        }
+        val lowerHeight = if (wide) (safeHeight - topInset - 6.dp) else tabletop?.controlsHeightDp?.dp
+            ?: (safeHeight * .405f).coerceAtLeast(300.dp)
         val contentBottom = safeHeight - lowerHeight
         val headerTop = if (wide) topInset + 20.dp else (safeHeight * .093f).coerceAtLeast(topInset + 35.dp)
         val headerHeight = 58.dp
@@ -247,6 +256,7 @@ fun FullPlayerScreen(
         // au fil du drag (feuille iOS). Relâché bas : rebord spring ; assez bas
         // ou rapide : glisse hors écran puis fermeture réelle.
         val presentationOffset = LocalPlayerDismissOffset.current
+        val revealProgress = LocalPlayerReveal.current
         val dismissOffset = presentationOffset ?: remember { Animatable(0f) }
         val dismissScope = rememberCoroutineScope()
         val screenH = with(LocalDensity.current) { maxHeight.toPx() }
@@ -285,13 +295,24 @@ fun FullPlayerScreen(
             AppUi.showLyricsSource.value = false
             requestClose()
         }
-        BackHandler {
-            when {
-                canvasFocus -> canvasFocus = false
-                sheet.isNotEmpty() -> sheet = ""
-                expanded -> expanded = false
-                page != PlayerPage.ARTWORK -> navigate(PlayerPage.ARTWORK)
-                else -> close()
+        // Predictive back (Android 14+): while the gesture is held, the player follows it
+        // toward the mini-player on the shared reveal timeline; releasing commits or cancels.
+        androidx.activity.compose.PredictiveBackHandler { events ->
+            val closes = !canvasFocus && sheet.isEmpty() && !expanded && page == PlayerPage.ARTWORK
+            try {
+                events.collect { event ->
+                    if (closes && !Motion.reduced) dismissOffset.snapTo(predictiveBackTravel(event.progress, screenH))
+                }
+                when {
+                    canvasFocus -> canvasFocus = false
+                    sheet.isNotEmpty() -> sheet = ""
+                    expanded -> expanded = false
+                    page != PlayerPage.ARTWORK -> navigate(PlayerPage.ARTWORK)
+                    else -> close()
+                }
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                if (closes) settleDismiss()
+                throw cancelled
             }
         }
         // Capture only the scene; sheets are siblings, never part of their own backdrop.
@@ -335,11 +356,18 @@ fun FullPlayerScreen(
                 Box(Modifier.fillMaxSize()) {
                 if (shownPage == PlayerPage.ARTWORK) {
                     val inlineCanvas = canvasPath != null && AppSettings.animatedArtwork.value && !panoramicCanvasActive(canvasPath)
-                    val titleTop = if (wide) safeHeight - 66.dp else minOf(safeHeight * .514f, contentBottom - 61.dp)
-                    val artworkHeight = if (wide) safeHeight else safeHeight * .55f
+                    val titleTop = if (wide) safeHeight - 66.dp else tabletop?.let { it.sceneHeightDp.dp - 66.dp }
+                        ?: minOf(safeHeight * .514f, contentBottom - 61.dp)
+                    val artworkHeight = if (wide) safeHeight else tabletop?.sceneHeightDp?.dp ?: (safeHeight * .55f)
                     PlayerArtworkFrame(inlineCanvas, ambience.color,
                         Modifier.width(sceneWidth).height(artworkHeight)
-                        .onGloballyPositioned { AppUi.playerCoverBounds.value = it.boundsInRoot() }
+                        // Shared element: the artwork grows out of the mini-player cover on the
+                        // reveal timeline, and returns to it during a dismissal or a back gesture.
+                        .graphicsLayer {
+                            val morph = sharedCoverMorph(AppUi.miniCoverBounds.value, size.width, size.height, revealProgress())
+                            scaleX = morph.scale; scaleY = morph.scale
+                            translationX = morph.translationX; translationY = morph.translationY
+                        }
                         .then(dismissDrag).then(if (canvasReady) Modifier.clickable(
                             interactionSource = artInteraction,
                             indication = null,
@@ -405,7 +433,12 @@ fun FullPlayerScreen(
                 }
 
                 CompositionLocalProvider(LocalBackdropLayer provides controlsBackdrop) {
-                PlayerChrome(!expanded, Modifier.align(if (wide) Alignment.BottomEnd else Alignment.BottomCenter).padding(bottom = bottomInset)) {
+                PlayerChrome(!expanded, Modifier.align(if (wide) Alignment.BottomEnd else Alignment.BottomCenter).padding(bottom = bottomInset)
+                    .graphicsLayer {
+                        val rise = controlsReveal(revealProgress())
+                        alpha = rise
+                        translationY = (1f - rise) * 28.dp.toPx()
+                    }) {
                     Column(Modifier
                         .height(lowerHeight).width(controlsWidth).padding(horizontal = if (wide) 20.dp else margin)) {
                         Box(Modifier.height(34.dp).fillMaxWidth(), contentAlignment = Alignment.CenterStart) {
@@ -473,6 +506,7 @@ internal fun PlayerTitle(track: Track, compact: Boolean, cover: String?, sheetAc
                          modifier: Modifier = Modifier, share: Boolean = false, onCover: () -> Unit = {}) {
     val favorite = track.id in AppSettings.favoriteIds.value
     var favoriteTap by remember(track.id) { mutableIntStateOf(0) }
+    val favoriteHaptic = com.ketvoice.app.ui.motion.rememberHaptics()
     val pulse = remember(track.id) { androidx.compose.animation.core.Animatable(1f) }
     val starColor by animateColorAsState(if (favorite) com.ketvoice.app.theme.LocalTheme.current.accent else Color(0xFFCED2E3),
         tween(Motion.duration()), label = "favorite-color")
@@ -509,6 +543,7 @@ internal fun PlayerTitle(track: Track, compact: Boolean, cover: String?, sheetAc
         Spacer(Modifier.width(8.dp))
         SmallCircleButton({
             favoriteTap++
+            if (!favorite) favoriteHaptic(com.ketvoice.app.ui.motion.Haptics.Kind.Confirm)
             AppSettings.favoriteIds.value = if (favorite) AppSettings.favoriteIds.value - track.id else AppSettings.favoriteIds.value + track.id
             SettingsStore.save()
         }, active = favorite, size = 36.dp) {

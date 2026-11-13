@@ -42,8 +42,10 @@ fun LiquidGlassButton(
     val pressed by interactions.collectIsPressedAsState()
     var bounds by remember { mutableStateOf(IntSize.Zero) }
     var reflection by remember { mutableFloatStateOf(45f) }
+    val haptic = com.ketvoice.app.ui.motion.rememberHaptics()
     LaunchedEffect(interactions) {
         interactions.interactions.collect { event ->
+            if (event is PressInteraction.Press) haptic(com.ketvoice.app.ui.motion.Haptics.Kind.Press)
             reflection = if (event is PressInteraction.Press) {
                 val x = bounds.width / 2f - event.pressPosition.x
                 val y = bounds.height / 2f - event.pressPosition.y

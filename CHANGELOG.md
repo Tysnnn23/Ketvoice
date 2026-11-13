@@ -7,6 +7,26 @@
 
 ---
 
+# Ketvoice 4.10.0
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 95** — a design release: motion, Liquid Glass, formats and accessibility.
+
+- The player artwork grows out of the mini-player cover; predictive back on Android
+  14+; a compact glass title on scrolled tabs; light haptics; a bundled startup profile.
+- Liquid 27 droplet fusion: Home, the mini-player and Search merge and split like
+  droplets while the chrome morphs. Droplet tab lens, cover-tinted glass and an
+  animated mesh behind the player.
+- A home-screen widget, a tabletop layout for flip-style phones, and the enriched
+  cover on the notification and lock screen.
+- Headings, play state and track-change announcements for screen readers; reduced
+  motion follows the system transition scale; navigation survives process death.
+
+Full notes: [4.10.0](docs/releases/v4.10.0.md).
+
+---
+
 # Ketvoice 4.9.0
 
 ![Ketvoice](ketvoice-banner.png)

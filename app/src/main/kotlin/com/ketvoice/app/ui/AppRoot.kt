@@ -29,6 +29,10 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -64,6 +68,7 @@ import com.ketvoice.app.ui.sub.SubScreensRouter
 import com.kyant.backdrop.backdrops.layerBackdrop
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import com.ketvoice.app.ui.motion.Motion
 
 /**
@@ -103,12 +108,18 @@ fun AppRoot() {
         com.ketvoice.app.theme.rememberCoverAccent(url)?.first
     } else null
 
+    // The playing cover lightly tints the optical glass (independent of the accent option).
+    com.ketvoice.app.glass.ObserveCoverTint(playingForAccent.current?.let { ArtworkRepo.coverForTrack(it) })
+
     KetvoiceTheme(useDark = useDark, dynamicAccent = dynamicAccent) {
         com.ketvoice.app.ui.player.PlaybackFeatureDialogs()
         val th = LocalTheme.current
         val backdrop = rememberGlassBackdrop(th.background)
         val playerState by Player.state.collectAsState()
         val artwork by ArtworkRepo.covers.collectAsState()
+        val backProgress = remember { androidx.compose.animation.core.Animatable(0f) }
+        val backEdgeRight = remember { androidx.compose.runtime.mutableStateOf(false) }
+        val backScope = androidx.compose.runtime.rememberCoroutineScope()
 
         // Discord live presence: only while a linked account explicitly opted in.
         val discord by com.ketvoice.app.discord.Discord.state.collectAsState()
@@ -170,7 +181,17 @@ fun AppRoot() {
                 ) {
                     Box(Modifier.fillMaxSize().padding(start = if (queueOverlay) 0.dp else layout.railWidthDp.dp), contentAlignment = Alignment.TopCenter) {
                     Box(Modifier.widthIn(max = pageMaxWidth).fillMaxSize()
-                        .padding(horizontal = if (layout.hasRail && !queueOverlay) 16.dp else 0.dp)) {
+                        .padding(horizontal = if (layout.hasRail && !queueOverlay) 16.dp else 0.dp)
+                        .graphicsLayer {
+                            val p = backProgress.value
+                            if (p > 0f) {
+                                val transform = predictiveBackPage(p, backEdgeRight.value, 28.dp.toPx())
+                                scaleX = transform.scale; scaleY = transform.scale
+                                translationX = transform.translationX
+                                shape = RoundedCornerShape((24.dp.toPx() * p).coerceAtLeast(0f))
+                                clip = true
+                            }
+                        }) {
                     val liquid27 = AppSettings.glassStyle.value == com.ketvoice.app.glass.GlassStyles.LIQUID_27 &&
                         AppSettings.liquidGlass.value
                     NavigationPresentation(AppUi.tab.value to AppUi.snapshot()) { tab, entry ->
@@ -199,6 +220,18 @@ fun AppRoot() {
                     }
                     }
                 }
+
+                // ---- Titre compact : quand la page d'un onglet défile, son grand titre
+                //      se réduit en une capsule de verre centrée sous la barre d'état ----
+                CompactTabTitle(
+                    title = when (AppUi.tab.value) {
+                        AppUi.HOME -> "Écouter maintenant"
+                        AppUi.EXPLORER -> "Explorer"
+                        else -> "Bibliothèque"
+                    },
+                    visible = AppUi.overlay.value == AppUi.NONE && AppUi.bottomCollapsed.value &&
+                        !AppUi.showPlayer.value && !imeVisible,
+                    modifier = Modifier.align(Alignment.TopCenter).padding(start = layout.railWidthDp.dp).zIndex(3f))
 
                 if (layout.hasRail && AppUi.overlay.value != AppUi.QUEUE) {
                     TabletNavigationRail(Modifier.width(layout.railWidthDp.dp).align(Alignment.CenterStart).zIndex(3f))
@@ -246,12 +279,26 @@ fun AppRoot() {
                 }
 
                 // ---- Retour système : dépile les overlays, racine sinon ----
-                androidx.activity.compose.BackHandler(
+                androidx.activity.compose.PredictiveBackHandler(
                     enabled = AppUi.overlay.value != AppUi.NONE &&
                         AppUi.overlay.value != AppUi.QUEUE &&
                         !AppUi.showPlayer.value
-                ) {
-                    AppUi.closeOverlay()
+                ) { events ->
+                    // Predictive back (Android 14+): the page shrinks under the finger and
+                    // slides away from the swiped edge, then closes or springs back.
+                    try {
+                        events.collect { event ->
+                            if (!Motion.reduced) {
+                                backEdgeRight.value = event.swipeEdge == androidx.activity.BackEventCompat.EDGE_RIGHT
+                                backProgress.snapTo(event.progress.coerceIn(0f, 1f))
+                            }
+                        }
+                        AppUi.closeOverlay()
+                        backScope.launch { backProgress.animateTo(0f, tween(Motion.duration(220), easing = Motion.EASE_STANDARD)) }
+                    } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                        backScope.launch { backProgress.animateTo(0f, Motion.gentleSpring()) }
+                        throw cancelled
+                    }
                 }
 
                 // ---- Lecteur plein écran : monte depuis le bas, fermeture
@@ -265,8 +312,6 @@ fun AppRoot() {
                         FullPlayerScreen(modifier = Modifier.fillMaxSize())
                     }
                 }
-
-                // ---- Pochette qui vole entre le lecteur et le mini-lecteur ----
 
                 // ---- Dialog compte ----
                 androidx.compose.material3.SnackbarHost(
@@ -340,57 +385,6 @@ fun AppRoot() {
     }
 }
 
-@Composable
-private fun CoverFlightOverlay() {
-    val flight = AppUi.coverFlight.value ?: return
-    val density = LocalDensity.current
-    val progress = remember(flight.token) { Animatable(0f) }
-    LaunchedEffect(flight.token) {
-        progress.animateTo(
-            targetValue = 1f,
-            animationSpec = tween(Motion.duration(if (flight.opening) 380 else 320), easing = FastOutSlowInEasing)
-        )
-        AppUi.coverFlight.value = null
-    }
-    val t = progress.value
-    // easeOutBack léger à l'ouverture (overshoot ~4 %), smoothstep à la fermeture.
-    val c1 = 1.2588f; val c3 = c1 + 1f
-    val eased = if (flight.opening) {
-        val x = t - 1f
-        1f + c3 * x * x * x + c1 * x * x
-    } else t * t * (3f - 2f * t)
-    fun lerp(a: Float, b: Float): Float = a + (b - a) * eased
-    val left = lerp(flight.from.left, flight.to.left)
-    val top = lerp(flight.from.top, flight.to.top)
-    val width = lerp(flight.from.width, flight.to.width).coerceAtLeast(1f)
-    val height = lerp(flight.from.height, flight.to.height).coerceAtLeast(1f)
-    val fade = if (t < .68f) 1f else (1f - (t - .68f) / .32f).coerceIn(0f, 1f)
-    Box(
-        Modifier
-            .offset(x = with(density) { left.toDp() }, y = with(density) { top.toDp() })
-            .size(width = with(density) { width.toDp() }, height = with(density) { height.toDp() })
-            .graphicsLayer { alpha = fade }
-            .clip(RoundedCornerShape(12.dp))
-            .zIndex(6.5f)
-    ) {
-        val cover = flight.cover
-        if (cover != null) {
-            AsyncImage(
-                model = cover,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
-            )
-        } else {
-            Box(
-                Modifier.fillMaxSize().background(
-                    Brush.linearGradient(listOf(Color(0xFF5E5CE6), Color(0xFFBF5AF2), Color(0xFF2C2C2E)))
-                )
-            )
-        }
-    }
-}
-
 /**
  * Liquid 27 scroll-edge effect: content softly fades under the status bar and the
  * floating chrome. Drawn inside the captured layer, so the glass refracts the faded
@@ -408,5 +402,40 @@ private fun Liquid27ScrollEdges(modifier: Modifier, bottom: Boolean) {
             .background(androidx.compose.ui.graphics.Brush.verticalGradient(
                 listOf(background.copy(alpha = 0f), background.copy(alpha = .62f))))
             .navigationBarsPadding().height(132.dp))
+    }
+}
+
+internal data class BackPageTransform(val scale: Float, val translationX: Float)
+
+/** Page transform while a system back gesture is held: at most 8 % smaller, sliding away from the swiped edge. */
+internal fun predictiveBackPage(progress: Float, fromRightEdge: Boolean, travelPx: Float): BackPageTransform {
+    val p = if (progress.isFinite()) progress.coerceIn(0f, 1f) else 0f
+    return BackPageTransform(1f - .08f * p, (if (fromRightEdge) -1f else 1f) * travelPx * p)
+}
+
+/**
+ * Compact title of a scrolled tab page. Real glass (it sits outside the captured
+ * content layer), announced as a heading, and it never takes touches from the list.
+ */
+@Composable
+private fun CompactTabTitle(title: String, visible: Boolean, modifier: Modifier = Modifier) {
+    val theme = LocalTheme.current
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn(tween(Motion.duration(200))) + slideInVertically(tween(Motion.duration(260), easing = Motion.EASE_DECELERATE)) { -it / 2 },
+        exit = fadeOut(tween(Motion.duration(160))) + slideOutVertically(tween(Motion.duration(200), easing = Motion.EASE_ACCELERATE)) { -it / 2 },
+        modifier = modifier
+    ) {
+        com.ketvoice.app.glass.GlassPanel(
+            Modifier.statusBarsPadding().padding(top = 6.dp).testTag("compact-tab-title"),
+            RoundedCornerShape(50),
+            com.ketvoice.app.glass.GlassParams.navigation(dark = theme.isDark),
+            enabled = AppSettings.liquidGlass.value
+        ) {
+            com.ketvoice.app.ui.common.Text(title, color = theme.onBackground, fontSize = 15.sp,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, maxLines = 1,
+                modifier = Modifier.padding(horizontal = 18.dp, vertical = 9.dp)
+                    .semantics { heading() })
+        }
     }
 }

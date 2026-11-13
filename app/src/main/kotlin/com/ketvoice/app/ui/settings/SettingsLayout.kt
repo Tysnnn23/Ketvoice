@@ -1,5 +1,7 @@
 package com.ketvoice.app.ui.settings
 
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -106,7 +108,8 @@ internal fun SettingsHome(connected: Boolean, name: String, onCategory: (Setting
 internal fun SettingsGroupHeading(title: String, modifier: Modifier = Modifier) {
     val theme = LocalTheme.current
     Text(title, color = theme.secondary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
-        lineHeight = 18.sp, modifier = modifier.padding(start = 4.dp, end = 4.dp, top = 24.dp, bottom = 10.dp))
+        lineHeight = 18.sp, modifier = modifier.padding(start = 4.dp, end = 4.dp, top = 24.dp, bottom = 10.dp)
+            .semantics { heading() })
 }
 
 @Composable
