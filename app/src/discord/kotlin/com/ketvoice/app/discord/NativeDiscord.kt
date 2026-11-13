@@ -23,6 +23,8 @@ internal object NativeDiscord {
     external fun nativeClearPresence()
     external fun nativeFetchUser()
     external fun nativeIsAuthenticated(): Boolean
+    /** Delivers queued SDK callbacks on the calling (main) thread. Never call it under a native lock. */
+    external fun nativeRunCallbacks()
 
     /** 0 disconnected, 1 connecting, 2 connected, 3 ready, 4 reconnecting, 5 disconnecting, 6 http wait. */
     @JvmStatic

@@ -63,6 +63,8 @@ const ROUTE_LIMITS: Record<string, { limit: number; windowS: number }> = {
   "/search": { limit: 60, windowS: 60 },
   "/stream": { limit: 120, windowS: 60 },
   "/canvas": { limit: 30, windowS: 60 },
+  // The app beats every 25 s; a pause/resume burst stays well below this.
+  "/listeners/heartbeat": { limit: 12, windowS: 60 },
 };
 
 const memoryHits = new Map<string, number[]>();
@@ -761,10 +763,12 @@ async function listenerHeartbeat(req: Request): Promise<Response> {
   try {
     const body = await req.json().catch(() => ({}));
     const clientId = String(body.clientId || "").trim().slice(0, 128);
-    if (!clientId) return json({ error: "clientId requis" }, 400);
-    const title = body.title ? String(body.title).trim().slice(0, 200) : null;
-    const artist = body.artist ? String(body.artist).trim().slice(0, 200) : null;
-    const cover = body.cover ? String(body.cover).trim().slice(0, 500) : null;
+    if (!/^[A-Za-z0-9-]{8,128}$/.test(clientId)) return json({ error: "clientId requis" }, 400);
+    // The website renders these values: strip control/bidi characters and accept
+    // only plain public HTTPS cover URLs.
+    const title = listenerText(body.title);
+    const artist = listenerText(body.artist);
+    const cover = listenerCover(body.cover);
     const active = body.active !== false;
 
     await request(
@@ -791,6 +795,32 @@ async function listenerHeartbeat(req: Request): Promise<Response> {
     console.error("ketvoice-api heartbeat", error instanceof Error ? `${error.name}: ${error.message}` : "unknown");
     return json({ ok: false, error: "Heartbeat error" }, 500);
   }
+}
+
+function listenerText(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const clean = value.replace(/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2066-\u2069]/g, "").trim().slice(0, 200);
+  return clean || null;
+}
+
+function listenerCover(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const candidate = value.trim();
+  if (candidate.length > 500 || !/^https:\/\/[^\s"'<>\\]+$/.test(candidate)) return null;
+  try {
+    const parsed = new URL(candidate);
+    return parsed.protocol === "https:" && !parsed.username && !parsed.password ? parsed.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
+/** The anon key is public, but requiring it keeps casual scripted writes out. */
+function hasAppKey(req: Request): boolean {
+  const expected = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+  if (!expected) return true;
+  const sent = req.headers.get("apikey") ?? (req.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "");
+  return sent === expected;
 }
 
 async function getActiveListeners(url: URL): Promise<Response> {
@@ -858,6 +888,9 @@ Deno.serve(async (req) => {
       return await canvasRoute(url);
     }
     if (sub === "/listeners/heartbeat" && req.method === "POST") {
+      if (!hasAppKey(req)) return json({ error: "Clé manquante" }, 401);
+      const limited = await allow(req, "/listeners/heartbeat");
+      if (limited) return limited;
       return await listenerHeartbeat(req);
     }
     if (sub === "/listeners") {

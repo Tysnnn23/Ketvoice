@@ -18,6 +18,18 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
+import kotlinx.coroutines.launch
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.ketvoice.app.data.AppSettings
@@ -254,9 +266,13 @@ fun GlassPanel(
     content: @Composable () -> Unit
 ) {
     val style = styleOverride ?: AppSettings.glassStyle.value
+    val liquid27 = style == GlassStyles.LIQUID_27
     val styledParams = when (style) {
         1 -> params.copy(blurPx = maxOf(params.blurPx, 26f), tintAlpha = if (params.dark) .16f else .12f,
             refractionHeightDp = 3f, refractionAmountDp = 4f)
+        // Defined borders replace drop and inner shadows; the blur follows Clear ↔ Tinted.
+        GlassStyles.LIQUID_27 -> params.copy(shadow = false, innerShadow = false,
+            blurPx = liquid27BlurPx(AppSettings.glassTint.value, params.role))
         else -> params
     }
     if (styledParams.role == GlassRole.Panel) {
@@ -297,12 +313,32 @@ fun GlassPanel(
     // En AGSL, le shader dessine le liseré et le bord sombre : plus de bordure
     // Compose par-dessus (sinon double contour artificiel).
     val edge = if (enabled && !agsl) {
-        Modifier.border(.5.dp, hairline, shape)
+        // Liquid 27 fallbacks keep the defined border that replaces the drop shadow.
+        if (liquid27) Modifier.border(.75.dp, liquid27Hairline(params.dark), shape)
+        else Modifier.border(.5.dp, hairline, shape)
+    } else Modifier
+    // Liquid 27 touch response: observed (never consumed) so every control keeps its gestures.
+    val touch = remember { Liquid27Touch() }
+    val pressScope = rememberCoroutineScope()
+    val touchLight = if (liquid27 && agsl && params.role == GlassRole.Control && !Motion.reduced) {
+        Modifier.pointerInput(Unit) {
+            awaitEachGesture {
+                val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                touch.position = down.position
+                pressScope.launch { touch.press.animateTo(1f, spring(dampingRatio = .72f, stiffness = 620f)) }
+                while (true) {
+                    val change = awaitPointerEvent(PointerEventPass.Initial).changes.firstOrNull { it.id == down.id } ?: break
+                    if (!change.pressed) break
+                    touch.position = change.position
+                }
+                pressScope.launch { touch.press.animateTo(0f, spring(dampingRatio = .58f, stiffness = 280f)) }
+            }
+        }
     } else Modifier
 
     if (dynamic && backdrop != null) {
         Box(
-            modifier = modifier.drawBackdrop(
+            modifier = modifier.then(touchLight).drawBackdrop(
                 backdrop = backdrop,
                 shape = { shape },
                 effects = {
@@ -316,7 +352,10 @@ fun GlassPanel(
                         val realRadii = glassRoundedShapeRadii(
                             shape, bounds.width, bounds.height, this, layoutDirection
                         ) ?: glassCornerRadiiOf(params.cornerRadiusPx)
-                        renderState.shaderApplied = liquidGlass(params, realRadii)
+                        renderState.shaderApplied = if (liquid27) {
+                            liquid27Glass(params, realRadii, tint,
+                                liquid27Light(touch.position.x, touch.position.y, touch.press.value))
+                        } else liquidGlass(params, realRadii)
                     } else {
                         if (params.saturation != 1f || params.brightness != 1f || params.contrast != 1f) {
                             colorControls(params.saturation, params.brightness, params.contrast)
@@ -375,6 +414,27 @@ fun GlassPanel(
 }
 
 private class GlassRenderState(var shaderApplied: Boolean = false)
+
+/** Values read in the draw phase only, so touches and tilt never recompose the panel. */
+private class Liquid27Touch {
+    var position by mutableStateOf(Offset.Zero)
+    val press = Animatable(0f)
+}
+
+/** Liquid 27 fallback border: lit top edge, faint opposite edge, no shadow. */
+private fun liquid27Hairline(dark: Boolean): Brush = Brush.linearGradient(listOf(
+    Color.White.copy(alpha = if (dark) .30f else .70f),
+    Color.White.copy(alpha = if (dark) .06f else .18f),
+    Color.White.copy(alpha = if (dark) .16f else .42f)))
+
+/** Persisted values of `AppSettings.glassStyle`. */
+object GlassStyles {
+    const val CLEAR = 0
+    const val FROSTED = 1
+    const val OPAQUE = 2
+    const val LIQUID_27 = 3
+    const val MAX = LIQUID_27
+}
 
 /**
  * Soft, theme-aware drop shadow used by STATIC glass (glass disabled or captured).

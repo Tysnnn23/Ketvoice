@@ -48,9 +48,11 @@ internal fun GlassAppearancePreview(onClose: () -> Unit) {
         onClose()
     }
     SettingsSheet(onDismiss = ::cancel) {
-        Column(Modifier.fillMaxWidth().heightIn(max = 650.dp).verticalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp, vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            SettingsSheetHeader("Aperçu du verre", "Comparer Clair, Dépoli et Opaque avant d'appliquer", ::cancel)
+        // Annuler / Appliquer stay pinned under the scrollable preview, always reachable.
+        Column(Modifier.fillMaxWidth().heightIn(max = 650.dp)) {
+        Column(Modifier.fillMaxWidth().weight(1f, fill = false).verticalScroll(rememberScrollState())
+            .padding(start = 20.dp, end = 20.dp, top = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            SettingsSheetHeader("Aperçu du verre", "Comparer Clair, Dépoli, Opaque et Liquid 27 avant d'appliquer", ::cancel)
             Box(Modifier.fillMaxWidth().height(180.dp).clip(RoundedCornerShape(20.dp))) {
                 BackdropCapture(backdrop, Modifier.matchParentSize()) {
                     AsyncImage(cover ?: com.ketvoice.app.R.drawable.logo_main, null,
@@ -82,19 +84,29 @@ internal fun GlassAppearancePreview(onClose: () -> Unit) {
             }
             Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp))
                 .background(theme.onBackground.copy(alpha = .035f)).selectableGroup()) {
-                listOf("Clair", "Dépoli", "Opaque").forEachIndexed { index, label ->
-                    Row(Modifier.fillMaxWidth().selectable(choice == index, role = Role.RadioButton, onClick = { choice = index })
+                listOf("Clair", "Dépoli", "Opaque", "Liquid 27").forEachIndexed { index, label ->
+                    Row(Modifier.fillMaxWidth().selectable(choice == index, role = Role.RadioButton, onClick = {
+                        // Liquid 27 starts at the reference default: the slider midpoint.
+                        if (index == GlassStyles.LIQUID_27 && choice != index && AppSettings.glassTint.value == initialTint &&
+                            AppSettings.glassStyle.value != GlassStyles.LIQUID_27) AppSettings.glassTint.value = .5f
+                        choice = index
+                    }).testTag("glass-style-$index")
                         .heightIn(min = 56.dp).padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(when (index) { 0 -> KetIcons.Sun; 1 -> KetIcons.Appearance; else -> KetIcons.Moon }, null,
+                        Icon(when (index) { 0 -> KetIcons.Sun; 1 -> KetIcons.Appearance; 2 -> KetIcons.Moon; else -> KetIcons.Sliders }, null,
                             tint = theme.secondary, modifier = Modifier.size(20.dp))
-                        Text(label, color = theme.onBackground, fontSize = 15.sp,
-                            fontWeight = if (choice == index) FontWeight.SemiBold else FontWeight.Normal,
-                            modifier = Modifier.weight(1f).padding(horizontal = 14.dp))
+                        Column(Modifier.weight(1f).padding(horizontal = 14.dp)) {
+                            Text(label, color = theme.onBackground, fontSize = 15.sp,
+                                fontWeight = if (choice == index) FontWeight.SemiBold else FontWeight.Normal)
+                            if (index == GlassStyles.LIQUID_27) Text("Réfraction uniforme, bords nets, reflets qui suivent l'inclinaison",
+                                color = theme.secondary, fontSize = 12.sp)
+                        }
                         if (choice == index) Icon(KetIcons.Check, null, tint = theme.onBackground, modifier = Modifier.size(20.dp))
                     }
                 }
             }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+        }
+            Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 6.dp, bottom = 16.dp),
+                horizontalArrangement = Arrangement.End) {
                 SettingsAction("Annuler", ::cancel)
                 SettingsAction("Appliquer", { AppSettings.glassStyle.value = choice; SettingsStore.save(); onClose() }, primary = true)
             }

@@ -51,6 +51,42 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x ./gradlew
 
+      # Discord presence is compiled only when the owner-supplied Social SDK AAR is
+      # present. It is never committed: CI downloads it from a private URL kept in
+      # secrets and refuses any file whose SHA-256 does not match the pinned value.
+      # Without the secret (forks, pull requests) the build stays Discord-free.
+      - name: Provide Discord Social SDK (optional)
+        env:
+          DISCORD_AAR_URL: ${{ secrets.KETVOICE_DISCORD_AAR_URL }}
+          DISCORD_AAR_TOKEN: ${{ secrets.KETVOICE_DISCORD_AAR_TOKEN }}
+          DISCORD_AAR_SHA256: ${{ vars.KETVOICE_DISCORD_AAR_SHA256 }}
+        run: |
+          if [ -z "$DISCORD_AAR_URL" ]; then
+            echo "::warning::KETVOICE_DISCORD_AAR_URL is not set: these APKs are built without Discord presence."
+            exit 0
+          fi
+          if [ -z "$DISCORD_AAR_SHA256" ]; then
+            echo "::error::Set the KETVOICE_DISCORD_AAR_SHA256 repository variable to the expected SHA-256 of the AAR."
+            exit 1
+          fi
+          mkdir -p app/libs/discord
+          auth=()
+          if [ -n "$DISCORD_AAR_TOKEN" ]; then
+            auth=(-H "Authorization: Bearer $DISCORD_AAR_TOKEN" -H "Accept: application/octet-stream")
+          fi
+          curl -fsSL --retry 3 "${auth[@]}" -o app/libs/discord/discord_partner_sdk.aar "$DISCORD_AAR_URL"
+          actual=$(sha256sum app/libs/discord/discord_partner_sdk.aar | cut -d' ' -f1)
+          if [ "$actual" != "$(echo "$DISCORD_AAR_SHA256" | tr 'A-F' 'a-f' | tr -d '[:space:]')" ]; then
+            rm -f app/libs/discord/discord_partner_sdk.aar
+            echo "::error::Discord SDK checksum mismatch ($actual)."
+            exit 1
+          fi
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          [ -x "$SDKMANAGER" ] || SDKMANAGER="$ANDROID_HOME/cmdline-tools/bin/sdkmanager"
+          "$SDKMANAGER" "ndk;27.0.12077973" "cmake;3.22.1" > /dev/null
+          echo "KETVOICE_EXPECT_DISCORD=1" >> "$GITHUB_ENV"
+          echo "Discord Social SDK provided and verified."
+
       # Signing material for the "sideload" signingConfig, in priority order:
       #   1) KETVOICE_KEYSTORE_B64 secret — the STABLE project keystore (base64)
       #   2) fallback debug keystore generated on the fly (UNSTABLE — causes
@@ -189,6 +225,17 @@ jobs:
             status=1
           fi
           exit "$status"
+
+      - name: Verify Discord bridge is packaged
+        if: env.KETVOICE_EXPECT_DISCORD == '1'
+        run: |
+          for apk in app/build/outputs/apk/*/release/*.apk; do
+            if ! unzip -l "$apk" | grep -q "lib/arm64-v8a/libdiscordbridge.so"; then
+              echo "::error::$apk does not contain the Discord bridge."
+              exit 1
+            fi
+            echo "$apk contains the Discord bridge."
+          done
 
       - name: Upload verified APK artifacts
         uses: actions/upload-artifact@v4

@@ -16,6 +16,7 @@ object LyricsDiskCache {
     @Synchronized
     fun read(key: String): Pair<String, List<MusicApi.LyricLine>>? = runCatching {
         val f = file(key)?.takeIf { it.exists() } ?: return null
+        DiskBudget.touch(f)
         val o = JSONObject(f.readText())
         val a = o.getJSONArray("lines")
         o.getString("source") to (0 until a.length()).map { i ->

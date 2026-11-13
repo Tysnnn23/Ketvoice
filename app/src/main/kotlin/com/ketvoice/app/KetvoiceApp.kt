@@ -19,6 +19,10 @@ class KetvoiceApp : Application(), ImageLoaderFactory {
         super.onCreate()
         instance = this
         com.ketvoice.app.data.AppText.init(this)
+        // Bound the re-fetchable caches once per process, off the main thread and after startup.
+        Thread({
+            runCatching { Thread.sleep(20_000); com.ketvoice.app.data.DiskBudget.trimAll(this) }
+        }, "ketvoice-disk-budget").apply { isDaemon = true; priority = Thread.MIN_PRIORITY }.start()
     }
 
     override fun newImageLoader(): ImageLoader {

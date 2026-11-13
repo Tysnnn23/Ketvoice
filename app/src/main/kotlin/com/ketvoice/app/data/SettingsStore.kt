@@ -25,7 +25,7 @@ object SettingsStore {
         s.classicGradient.value = p.getBoolean("classicGradient", s.classicGradient.value)
         s.animatedArtwork.value = p.getBoolean("animatedArtwork", s.animatedArtwork.value)
         s.albumHeroCanvas.value = p.getBoolean("albumHeroCanvas", true)
-        s.glassStyle.value = p.getInt("glassStyle", 0).coerceIn(0, 2)
+        s.glassStyle.value = p.getInt("glassStyle", 0).coerceIn(0, com.ketvoice.app.glass.GlassStyles.MAX)
         s.glassTint.value = com.ketvoice.app.glass.GlassTuning.sanitize(runCatching { p.getFloat("glassTint", 0f) }.getOrDefault(0f))
         s.downloadsWifiOnly.value = p.getBoolean("downloadsWifiOnly", false)
         s.panoramicCanvas.value = p.getBoolean("panoramicCanvas", false)
@@ -67,6 +67,7 @@ object SettingsStore {
         com.ketvoice.app.player.ReverbControl.damping = s.reverbDamping.value / 100f
         s.progressiveQuality.value = p.getBoolean("progressiveQuality", false)
         s.discordPresence.value = p.getBoolean("discordPresence", false)
+        s.shareNowPlaying.value = p.getBoolean("shareNowPlaying", false)
         s.equalizerGains.value = com.ketvoice.app.player.EqualizerProfile.normalize(
             p.getString("equalizerGains", "").orEmpty().split(',').mapNotNull { it.toIntOrNull() })
         s.wifiHandoffEnabled.value = p.getBoolean("wifiHandoffEnabled", false)
@@ -169,6 +170,7 @@ object SettingsStore {
             .putInt("reverbDamping", s.reverbDamping.value.coerceIn(0, 100))
             .putBoolean("progressiveQuality", s.progressiveQuality.value)
             .putBoolean("discordPresence", s.discordPresence.value)
+            .putBoolean("shareNowPlaying", s.shareNowPlaying.value)
             .putString("equalizerGains", s.equalizerGains.value.joinToString(","))
             .putBoolean("wifiHandoffEnabled", s.wifiHandoffEnabled.value)
             .putInt("lyricsMode", s.lyricsMode.value)

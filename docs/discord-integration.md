@@ -105,6 +105,25 @@ ignored by Git and must be copied from the owner's SDK download before building
 with Discord support. Without the AAR the project still builds; the Discord UI is
 hidden and no presence code is compiled (bridge: `app/src/discord/`).
 
+CI can build Discord-enabled APKs without committing the SDK. Store a private
+download URL for the AAR in the `KETVOICE_DISCORD_AAR_URL` secret (plus
+`KETVOICE_DISCORD_AAR_TOKEN` when the URL needs a bearer token, for example a
+private GitHub release asset API URL) and its SHA-256 in the
+`KETVOICE_DISCORD_AAR_SHA256` repository variable. The workflow downloads it,
+rejects a checksum mismatch, installs NDK 27 and CMake 3.22.1, and fails if a
+release APK does not contain `libdiscordbridge.so`. Without the secret the build
+stays Discord-free and logs a warning.
+
+## Callback pump
+
+The Social SDK queues every status, authorization, log and presence result until
+the host calls `discordpp::RunCallbacks()`. Ketvoice is not a game loop, so the
+controller pumps it every 50 ms on the main thread while a client exists
+(`NativeDiscord.nativeRunCallbacks`). Before this pump no callback was ever
+delivered, which is why presence results and the linked account's Ready state were
+never observed. The pump does not hold the bridge mutex, because callbacks re-enter
+Kotlin and may call the other native entry points.
+
 ## Validation status
 
 - JNI bridge compiles and links against the AAR's prefab module (NDK 27, arm64;

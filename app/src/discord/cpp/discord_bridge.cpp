@@ -330,6 +330,16 @@ Java_com_ketvoice_app_discord_NativeDiscord_nativeReset(JNIEnv *env, jobject thi
   return CreateClientLocked() ? JNI_TRUE : JNI_FALSE;
 }
 
+/**
+ * The SDK queues every status, auth, log and presence result until the host
+ * calls RunCallbacks(). It is pumped from the Android main thread. It must not
+ * hold g_mutex: callbacks re-enter Kotlin, which may call the other entry points.
+ */
+extern "C" JNIEXPORT void JNICALL
+Java_com_ketvoice_app_discord_NativeDiscord_nativeRunCallbacks(JNIEnv * /*env*/, jobject /*thiz*/) {
+  discordpp::RunCallbacks();
+}
+
 extern "C" JNIEXPORT void JNICALL
 Java_com_ketvoice_app_discord_NativeDiscord_nativeDestroy(JNIEnv * /*env*/, jobject /*thiz*/) {
   std::lock_guard<std::mutex> lock(g_mutex);

@@ -93,7 +93,7 @@ object DiscordOAuth {
                 connectTimeout = 12_000; readTimeout = 15_000
                 setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
                 setRequestProperty("Accept", "application/json")
-                setRequestProperty("User-Agent", "Ketvoice/3.17 (Android)")
+                setRequestProperty("User-Agent", "Ketvoice/${com.ketvoice.app.BuildConfig.VERSION_NAME} (Android)")
             }
             connection.outputStream.use { it.write(body.toByteArray(Charsets.US_ASCII)) }
             val status = connection.responseCode

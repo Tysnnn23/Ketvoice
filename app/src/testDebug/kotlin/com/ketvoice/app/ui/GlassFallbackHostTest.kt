@@ -36,6 +36,7 @@ class GlassFallbackHostTest {
         AppSettings.reduceDynamicBlur.value = false
         AppSettings.highPerformanceMode.value = false
         AppSettings.glassTint.value = 0f
+        AppSettings.glassStyle.value = 0
     }
 
     @Test fun backdropControlStaysUsableAcrossApiFallbackAndReducedMotion() {
@@ -63,6 +64,30 @@ class GlassFallbackHostTest {
         compose.onNodeWithText("Control fixture").assertIsDisplayed().performClick()
         compose.runOnIdle { AppSettings.highPerformanceMode.value = true }
         compose.onNodeWithText("Control fixture").assertIsDisplayed().performClick()
+        assertEquals(3, pressed)
+    }
+
+    /** The Liquid 27 touch light observes pointers; it must never steal the control's own click. */
+    @Test fun liquid27ControlKeepsItsClicksAcrossFallbacks() {
+        var pressed by mutableIntStateOf(0)
+        AppSettings.glassStyle.value = GlassStyles.LIQUID_27
+        AppSettings.glassTint.value = .5f
+        compose.setContent { KetvoiceTheme(useDark = true) {
+            val backdrop = rememberGlassBackdrop(Color.Magenta)
+            Box(Modifier.fillMaxSize()) {
+                BackdropCapture(backdrop, Modifier.fillMaxSize()) { Box(Modifier.fillMaxSize().background(Color.Magenta)) }
+                CompositionLocalProvider(LocalBackdropLayer provides backdrop) {
+                    GlassPanel(Modifier.width(200.dp), RoundedCornerShape(24.dp), GlassParams.pill(dark = true)) {
+                        Text("Liquid fixture", modifier = Modifier.clickable { pressed++ }.padding(16.dp))
+                    }
+                }
+            }
+        } }
+        compose.onNodeWithText("Liquid fixture").assertIsDisplayed().performClick()
+        compose.runOnIdle { AppSettings.reduceAnimations.value = true }
+        compose.onNodeWithText("Liquid fixture").assertIsDisplayed().performClick()
+        compose.runOnIdle { AppSettings.reduceAnimations.value = false; AppSettings.liquidGlass.value = false }
+        compose.onNodeWithText("Liquid fixture").assertIsDisplayed().performClick()
         assertEquals(3, pressed)
     }
 }

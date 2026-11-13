@@ -28,7 +28,7 @@ class PermanentImageInterceptor(context: Context) : Interceptor {
         val local = withContext(Dispatchers.IO) {
             locks.getOrPut(key) { Mutex() }.withLock {
                 val dest = File(dir, key)
-                if (dest.isFile && dest.length() > 0) return@withLock dest
+                if (dest.isFile && dest.length() > 0) return@withLock dest.also { DiskBudget.touch(it) }
                 var c: HttpURLConnection? = null
                 val tmp = File(dir, "$key.part")
                 try {

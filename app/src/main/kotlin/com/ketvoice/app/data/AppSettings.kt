@@ -58,6 +58,8 @@ object AppSettings {
     val reverbDamping = mutableStateOf(35)
     /** Opt-in live Discord listening presence. Linking alone never publishes. */
     val discordPresence = mutableStateOf(false)
+    /** Opt-in: the website's "Listening now" shows the title, artist and cover. The count itself is anonymous. */
+    val shareNowPlaying = mutableStateOf(false)
     val progressiveQuality = mutableStateOf(false)
     val equalizerGains = mutableStateOf(listOf(0, 0, 0, 0, 0))
     val wifiHandoffEnabled = mutableStateOf(false)

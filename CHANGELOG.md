@@ -7,6 +7,35 @@
 
 ---
 
+# Ketvoice 4.9.0
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 94** — a fourth glass style, Liquid 27, plus Discord, privacy and
+reliability fixes.
+
+- Add **Liquid 27**, a fourth glass style next to Clair, Dépoli and Opaque. It is
+  modelled on the publicly described 2026 Liquid Glass refinements: continuous
+  corners, uniform edge refraction, defined borders instead of drop shadows, a
+  lighter dark material, a Clear ↔ Tinted slider that starts at its midpoint,
+  highlights that follow device tilt, a touch glow and a scroll-edge fade under
+  the bars. The other three styles are unchanged.
+- Fix Discord callbacks: the Social SDK only delivers results from
+  `RunCallbacks()`, which was never called. Presence results and the linked
+  account's Ready state can now arrive.
+- Fix **Ignorer les silences**, which could never be turned on.
+- Make track details on the website's "Listening now" opt-in; the listener count
+  stays anonymous.
+- Bound the lyrics, artwork and Canvas caches without touching files that
+  downloads use.
+- Rate-limit and sanitize the listener heartbeat on the server.
+- Translate the 4.8.1–4.8.2 Discord and language strings, so the UI text audit
+  passes again.
+
+Full notes and validation limits: [4.9.0](docs/releases/v4.9.0.md).
+
+---
+
 # Ketvoice 4.8.4
 
 ![Ketvoice](ketvoice-banner.png)

@@ -503,7 +503,7 @@ internal fun PlayerTitle(track: Track, compact: Boolean, cover: String?, sheetAc
                     // On n'exige plus un artistId : sans lui le clic ne faisait
                     // strictement rien. openArtist résout désormais par nom.
                     .clickable { AppUi.openArtist(track.artistId.orEmpty(), track.artist) }
-                    .semantics { contentDescription = "Ouvrir la page de ${track.artist}" }
+                    .semantics { contentDescription = com.ketvoice.app.data.AppText.t("Ouvrir la page de ${track.artist}") }
             )
         }
         Spacer(Modifier.width(8.dp))

@@ -36,6 +36,26 @@ class DiscordControllerImpl : DiscordController {
     private val main = Handler(Looper.getMainLooper())
     @Volatile private var retries = 0
 
+    /**
+     * The Social SDK only delivers status, auth and presence results from
+     * `discordpp::RunCallbacks()`. Without this pump on the main thread no callback
+     * ever fired, so presence results and the Ready state were never observed.
+     */
+    private val pump = object : Runnable {
+        override fun run() {
+            if (!created) return
+            runCatching { NativeDiscord.nativeRunCallbacks() }
+                .onFailure { Log.w(TAG, "Discord callbacks failed", it) }
+            main.postDelayed(this, PUMP_INTERVAL_MS)
+        }
+    }
+
+    private fun startPump() {
+        if (!created) return
+        main.removeCallbacks(pump)
+        main.post(pump)
+    }
+
     private val timeout = Runnable {
         if (awaitingCode) {
             clearPending()
@@ -157,7 +177,7 @@ class DiscordControllerImpl : DiscordController {
         main.removeCallbacks(reconnect)
         val reset = created && runCatching { NativeDiscord.nativeReset() }.getOrDefault(false)
         created = reset
-        if (!created) ensureCreated()
+        if (!created) ensureCreated() else startPump()
         com.ketvoice.app.data.AppSettings.discordPresence.value = true
         com.ketvoice.app.data.SettingsStore.save()
         Discord.update {
@@ -443,6 +463,7 @@ class DiscordControllerImpl : DiscordController {
         created = runCatching {
             NativeDiscord.nativeCreate(DiscordOAuth.APPLICATION_ID)
         }.onFailure { Log.w(TAG, "Discord client creation failed", it) }.getOrDefault(false)
+        startPump()
     }
 
     private fun handleStatus(status: Int) {
@@ -567,6 +588,7 @@ class DiscordControllerImpl : DiscordController {
         private const val TIMEOUT_MS = 180_000L
         private const val RETURN_CANCEL_MS = 8_000L
         private const val READY_TIMEOUT_MS = 25_000L
+        private const val PUMP_INTERVAL_MS = 50L
 
         @Volatile
         private var instance: DiscordControllerImpl? = null

@@ -132,8 +132,7 @@ internal fun DiscordSettings(modifier: Modifier = Modifier) {
                         if (!it) Discord.clearPresence()
                     }, modifier = Modifier.semantics { contentDescription = label })
             }
-            Text("Sans compte lié : l'app Discord doit être installée, ouverte et connectée. " +
-                "La présence apparaît dès qu'un morceau joue et se retire en pause.",
+            Text("Sans compte lié : l'app Discord doit être installée, ouverte et connectée. La présence apparaît dès qu'un morceau joue et se retire en pause.",
                 color = theme.secondary, fontSize = 11.sp, lineHeight = 15.sp,
                 modifier = Modifier.padding(top = 6.dp, bottom = 2.dp))
             discord.presenceError?.let {
@@ -168,8 +167,7 @@ internal fun DiscordSettings(modifier: Modifier = Modifier) {
             if (!discord.ready) {
                 Text(
                     if (discord.busy) "La présence s'active dès que Discord répond."
-                    else "La présence n'est pas active : ouvre l'app Discord, vérifie que tu y es " +
-                        "connecté, puis réessaie.",
+                    else "La présence n'est pas active : ouvre l'app Discord, vérifie que tu y es connecté, puis réessaie.",
                     color = theme.secondary, fontSize = 11.sp, lineHeight = 15.sp,
                     modifier = Modifier.padding(top = 2.dp, bottom = 2.dp)
                 )
@@ -192,9 +190,7 @@ internal fun DiscordSettings(modifier: Modifier = Modifier) {
                 modifier = Modifier.fillMaxWidth().clickable(enabled = !discord.busy) {
                     Discord.enablePresenceOnly()
                 }.padding(top = 10.dp, bottom = 4.dp))
-            Text("Sans lier de compte : l'app Discord doit être installée, ouverte et connectée. " +
-                "La présence est publiée par l'app Discord elle-même (RPC) et ne dépend pas " +
-                "de la connexion au compte.", color = theme.secondary,
+            Text("Sans lier de compte : l'app Discord doit être installée, ouverte et connectée. La présence est publiée par l'app Discord elle-même (RPC) et ne dépend pas de la connexion au compte.", color = theme.secondary,
                 fontSize = 11.sp, lineHeight = 15.sp, modifier = Modifier.padding(bottom = 6.dp))
             Text("Ou lier mon compte Discord (avancé)", color = theme.accent.copy(alpha = .82f), fontSize = 12.sp,
                 modifier = Modifier.fillMaxWidth().clickable(enabled = !discord.busy) {

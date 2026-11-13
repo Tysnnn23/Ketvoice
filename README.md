@@ -21,6 +21,16 @@
 
 ## Overview
 
+### 4.9.0 — Liquid 27 glass, Discord callbacks and privacy fixes
+
+A fourth glass style, **Liquid 27**, joins Clair, Dépoli and Opaque. It has
+continuous corners, uniform edge refraction, defined borders instead of shadows, a
+Clear ↔ Tinted slider, highlights that follow device tilt, a touch glow and a
+scroll-edge fade. The Discord bridge now pumps the SDK callbacks it never received,
+**Ignorer les silences** works again, track details on the website are opt-in, and
+the lyrics, artwork and Canvas caches are bounded.
+[Release notes and validation limits](docs/releases/v4.9.0.md).
+
 ### 4.8.4 — collapsed chrome now works on 320–379 dp phones
 
 The collapse animation was gated on a 380 dp minimum width, so many 360 dp phones

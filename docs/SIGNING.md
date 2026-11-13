@@ -15,11 +15,12 @@ runs and local release builds.
 
 1. Generate the stable keystore once:
    - Go to **Actions → Generate Signed Keystore → Run workflow**.
-   - Open the finished run, copy the block between
-     `-----BEGIN BASE64 KEYSTORE-----` and `-----END BASE64 KEYSTORE-----`.
+   - Download the run's `ketvoice-release-keystore` artifact (kept for one day)
+     and open `ketvoice-release.jks.b64`. The keystore is no longer printed in
+     the job log, which anyone with read access can see.
 2. Add it as a repository secret:
    - **Settings → Secrets and variables → Actions → New repository secret**
-   - Name: `KETVOICE_KEYSTORE_B64` — Value: the base64 blob from step 1.
+   - Name: `KETVOICE_KEYSTORE_B64` — Value: the content of `ketvoice-release.jks.b64`.
 3. Add the matching passwords/alias secrets (only if you changed the defaults):
    - `KETVOICE_STORE_PASSWORD` (default `ketvoice2026`)
    - `KETVOICE_KEY_ALIAS` (default `ketvoice`)

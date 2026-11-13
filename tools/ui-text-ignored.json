@@ -83,5 +83,11 @@
  "Storage": "cached ImageVector debug name in KetIcons, never user-facing text",
  "Sun": "cached ImageVector debug name in KetIcons, never user-facing text",
  "Trash": "cached ImageVector debug name in KetIcons, never user-facing text",
- "Wifi": "cached ImageVector debug name in KetIcons, never user-facing text"
+ "Wifi": "cached ImageVector debug name in KetIcons, never user-facing text",
+ "glass-style-{0}": "Compose test tag for the glass style rows, not user-facing copy",
+ " erreur-présence=": "Discord diagnostics key copied into a support report, not user-facing copy",
+ "authentifié=": "Discord diagnostics key copied into a support report, not user-facing copy",
+ "mode=": "Discord diagnostics key copied into a support report, not user-facing copy",
+ "présence=": "Discord diagnostics key copied into a support report, not user-facing copy",
+ "homePress": "Compose animation label, not user-facing copy"
 }

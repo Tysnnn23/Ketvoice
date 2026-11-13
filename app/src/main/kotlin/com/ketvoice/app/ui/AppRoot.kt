@@ -75,6 +75,10 @@ import com.ketvoice.app.ui.motion.Motion
 fun AppRoot() {
     com.ketvoice.app.ui.motion.ObserveSystemMotion()
     com.ketvoice.app.ui.motion.ObserveDisplayRefresh()
+    // Liquid 27 highlights follow device tilt; never on Quest or with reduced motion.
+    com.ketvoice.app.glass.ObserveGlassTilt(
+        AppSettings.glassStyle.value == com.ketvoice.app.glass.GlassStyles.LIQUID_27 &&
+            AppSettings.liquidGlass.value && !Motion.reduced && !com.ketvoice.app.BuildConfig.IS_QUEST)
     val themeMode = AppSettings.themeMode.value
     val useDark = if (themeMode == 1) false else if (themeMode == 2) true else null
     val view = androidx.compose.ui.platform.LocalView.current
@@ -167,6 +171,8 @@ fun AppRoot() {
                     Box(Modifier.fillMaxSize().padding(start = if (queueOverlay) 0.dp else layout.railWidthDp.dp), contentAlignment = Alignment.TopCenter) {
                     Box(Modifier.widthIn(max = pageMaxWidth).fillMaxSize()
                         .padding(horizontal = if (layout.hasRail && !queueOverlay) 16.dp else 0.dp)) {
+                    val liquid27 = AppSettings.glassStyle.value == com.ketvoice.app.glass.GlassStyles.LIQUID_27 &&
+                        AppSettings.liquidGlass.value
                     NavigationPresentation(AppUi.tab.value to AppUi.snapshot()) { tab, entry ->
                         val overlay = entry.overlay
                             if (overlay == AppUi.NONE) {
@@ -188,6 +194,8 @@ fun AppRoot() {
                                 }
                             }
                     }
+                    if (liquid27) Liquid27ScrollEdges(Modifier.matchParentSize(),
+                        bottom = AppUi.overlay.value != AppUi.SETTINGS && AppUi.overlay.value != AppUi.QUEUE)
                     }
                     }
                 }
@@ -380,5 +388,25 @@ private fun CoverFlightOverlay() {
                 )
             )
         }
+    }
+}
+
+/**
+ * Liquid 27 scroll-edge effect: content softly fades under the status bar and the
+ * floating chrome. Drawn inside the captured layer, so the glass refracts the faded
+ * content exactly like the reference material. Purely visual and never focusable.
+ */
+@Composable
+private fun Liquid27ScrollEdges(modifier: Modifier, bottom: Boolean) {
+    val background = LocalTheme.current.background
+    Box(modifier) {
+        Box(Modifier.align(Alignment.TopCenter).fillMaxWidth()
+            .background(androidx.compose.ui.graphics.Brush.verticalGradient(
+                listOf(background.copy(alpha = .82f), background.copy(alpha = 0f))))
+            .statusBarsPadding().height(28.dp))
+        if (bottom) Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth()
+            .background(androidx.compose.ui.graphics.Brush.verticalGradient(
+                listOf(background.copy(alpha = 0f), background.copy(alpha = .62f))))
+            .navigationBarsPadding().height(132.dp))
     }
 }

@@ -42,6 +42,11 @@ object CanvasRepo {
     private var appContext: Context? = null
     private val failed = java.util.concurrent.ConcurrentHashMap<String, Long>()
 
+    /** Forgets cached paths whose file was removed by the disk budget; they resolve again on demand. */
+    fun dropMissing() {
+        _paths.value = _paths.value.filterValues { File(it).isFile }
+    }
+
     fun resetAuth() {
         failed.clear()
     }

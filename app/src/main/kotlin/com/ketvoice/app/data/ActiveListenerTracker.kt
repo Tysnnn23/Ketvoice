@@ -91,7 +91,8 @@ object ActiveListenerTracker {
             val body = JSONObject().apply {
                 put("clientId", cid)
                 put("active", active)
-                if (active && track != null) {
+                // Track details only with explicit consent; the count stays anonymous.
+                if (active && track != null && AppSettings.shareNowPlaying.value) {
                     put("title", track.title.take(120))
                     put("artist", track.artist.take(120))
                     // Pochette pour l'affichage « Listening Now » du site :

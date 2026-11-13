@@ -238,14 +238,11 @@ fun SettingsScreen() {
                 }
             }
             Section("APPARENCE") {
-                SRow(KetIcons.Appearance, "Aperçu du verre", sub = "Comparer Clair, Dépoli et Opaque avant d'appliquer") {
+                SRow(KetIcons.Appearance, "Aperçu du verre", sub = "Comparer Clair, Dépoli, Opaque et Liquid 27 avant d'appliquer") {
                     glassPreview = true
                 }
                 SToggle(KetIcons.Info, "Stats info", "Informations audio réelles, uniquement dans le lecteur", AppSettings.techStats.value) {
                     AppSettings.techStats.value = it; SettingsStore.save()
-                }
-                SToggle(KetIcons.Wifi, "Téléchargements en Wi-Fi uniquement", "Les transferts attendent une connexion Wi-Fi", AppSettings.downloadsWifiOnly.value) {
-                    AppSettings.downloadsWifiOnly.value = it; SettingsStore.save()
                 }
                 SToggle(KetIcons.Album, "Photos d'artiste HD",
                     "Portrait ou fond haute résolution quand il existe. Aucune photo de remplacement inventée.",
@@ -348,6 +345,9 @@ fun SettingsScreen() {
 
             // ==================================================== LECTURE
             Section("LECTURE") {
+                SToggle(KetIcons.Globe, "Partager le titre en cours sur le site",
+                    "Le compteur d'auditeurs reste anonyme ; le titre, l'artiste et la pochette ne sont envoyés qu'avec ton accord",
+                    AppSettings.shareNowPlaying.value) { AppSettings.shareNowPlaying.value = it; SettingsStore.save() }
                 SToggle(KetIcons.Audio, "Qualité progressive",
                     "Activé : les sources sont interrogées en parallèle, le premier flux audio réellement valide démarre, puis une meilleure qualité prend le relais sans couper la lecture. Désactivé : la première source disponible dans l'ordre des Sources est utilisée.",
                     AppSettings.progressiveQuality.value) { AppSettings.progressiveQuality.value = it; SettingsStore.save() }
@@ -551,6 +551,9 @@ fun SettingsScreen() {
 
             // ==================================================== TÉLÉCHARGEMENTS
             Section("TÉLÉCHARGEMENTS") {
+                SToggle(KetIcons.Wifi, "Téléchargements en Wi-Fi uniquement", "Les transferts attendent une connexion Wi-Fi", AppSettings.downloadsWifiOnly.value) {
+                    AppSettings.downloadsWifiOnly.value = it; SettingsStore.save()
+                }
                 SRow(
                     KetIcons.Download, "Qualité de téléchargement",
                     sub = "Le fichier réellement obtenu, pas seulement le réglage",

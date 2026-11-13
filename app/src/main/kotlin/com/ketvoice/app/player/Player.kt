@@ -927,10 +927,9 @@ object Player {
     fun setSkipSilence(on: Boolean) {
         AppSettings.skipSilence.value = on
         controller?.sendCustomCommand(
-            androidx.media3.session.SessionCommand(PlaybackService.CMD_SKIP_SILENCE, Bundle().apply {
-                putBoolean("on", on)
-            }),
-            Bundle.EMPTY
+            androidx.media3.session.SessionCommand(PlaybackService.CMD_SKIP_SILENCE, Bundle.EMPTY),
+            // The service reads the command arguments; extras were never forwarded there.
+            Bundle().apply { putBoolean("on", on) }
         )
     }
 

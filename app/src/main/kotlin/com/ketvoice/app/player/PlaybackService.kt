@@ -119,7 +119,7 @@ class PlaybackService : MediaSessionService() {
                     if (command.customAction != CMD_SKIP_SILENCE && command.customAction != CMD_EQUALIZER)
                         return Futures.immediateFuture(SessionResult(SessionError.ERROR_NOT_SUPPORTED))
                     if (command.customAction == CMD_SKIP_SILENCE) {
-                        val on = args.getBoolean("on", false)
+                        val on = skipSilenceRequested(args, command.customExtras)
                         player.skipSilenceEnabled = on && !AppSettings.bitPerfect.value
                         AppSettings.skipSilence.value = on
                     }
@@ -375,3 +375,7 @@ class PlaybackService : MediaSessionService() {
         const val CMD_BIT_PERFECT = "ketvoice.bit_perfect"
     }
 }
+
+/** Arguments carry the value; older controllers put it in the command extras. */
+internal fun skipSilenceRequested(args: android.os.Bundle, extras: android.os.Bundle): Boolean =
+    if (args.containsKey("on")) args.getBoolean("on", false) else extras.getBoolean("on", false)
