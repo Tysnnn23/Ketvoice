@@ -815,14 +815,6 @@ function listenerCover(value: unknown): string | null {
   }
 }
 
-/** The anon key is public, but requiring it keeps casual scripted writes out. */
-function hasAppKey(req: Request): boolean {
-  const expected = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
-  if (!expected) return true;
-  const sent = req.headers.get("apikey") ?? (req.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "");
-  return sent === expected;
-}
-
 async function getActiveListeners(url: URL): Promise<Response> {
   const base = supabaseUrl();
   const role = serviceRole();
@@ -888,7 +880,6 @@ Deno.serve(async (req) => {
       return await canvasRoute(url);
     }
     if (sub === "/listeners/heartbeat" && req.method === "POST") {
-      if (!hasAppKey(req)) return json({ error: "Clé manquante" }, 401);
       const limited = await allow(req, "/listeners/heartbeat");
       if (limited) return limited;
       return await listenerHeartbeat(req);
