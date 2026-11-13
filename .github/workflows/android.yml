@@ -90,10 +90,18 @@ jobs:
             echo "Resolved the .aar asset of the GitHub release."
           fi
           code=$(curl -sSL --retry 3 "${auth[@]}" -o app/libs/discord/discord_partner_sdk.aar -w '%{http_code}' "$url" || true)
+          # The contents and blob APIs (a file stored in a private repo) refuse octet-stream with 415
+          # and serve the raw bytes with the GitHub raw media type instead.
+          if [ "$code" = "415" ] && [ "$host" = "api.github.com" ]; then
+            code=$(curl -sSL --retry 3 ${DISCORD_AAR_TOKEN:+-H "Authorization: Bearer $DISCORD_AAR_TOKEN"} \
+              -H "Accept: application/vnd.github.raw" -o app/libs/discord/discord_partner_sdk.aar -w '%{http_code}' "$url" || true)
+            echo "Retried with the GitHub raw media type: HTTP $code."
+          fi
           if [ "$code" != "200" ]; then
             kind="other URL"
             echo "$url" | grep -q '/releases/assets/' && kind="GitHub release asset API URL"
             echo "$url" | grep -q '/releases/download/' && kind="GitHub browser download URL (private repos need the asset API URL)"
+            echo "$url" | grep -q '/contents/' && kind="GitHub contents API URL"
             echo "::error::Discord SDK download failed: HTTP $code from $host ($kind)."
             echo "::error::Expected: https://api.github.com/repos/<owner>/<repo>/releases/assets/<id> with a token that can read it, or a direct public file URL."
             exit 1
