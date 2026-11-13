@@ -74,7 +74,30 @@ jobs:
           if [ -n "$DISCORD_AAR_TOKEN" ]; then
             auth=(-H "Authorization: Bearer $DISCORD_AAR_TOKEN" -H "Accept: application/octet-stream")
           fi
-          curl -fsSL --retry 3 "${auth[@]}" -o app/libs/discord/discord_partner_sdk.aar "$DISCORD_AAR_URL"
+          url="$DISCORD_AAR_URL"
+          host=$(echo "$url" | sed -E 's#^[a-z]+://([^/]+).*#\1#')
+          # A GitHub *release* API URL (…/releases/<id>, …/releases/tags/<tag>, …/releases/latest)
+          # is not the file: resolve the .aar asset of that release first.
+          if echo "$url" | grep -Eq '^https://api\.github\.com/repos/[^/]+/[^/]+/releases/(latest|tags/[^/]+|[0-9]+)/?$'; then
+            meta=$(curl -fsSL --retry 3 ${DISCORD_AAR_TOKEN:+-H "Authorization: Bearer $DISCORD_AAR_TOKEN"} \
+              -H "Accept: application/vnd.github+json" "$url")
+            asset=$(echo "$meta" | python3 -c 'import json,sys; a=[x["url"] for x in json.load(sys.stdin).get("assets",[]) if x["name"].endswith(".aar")]; print(a[0] if a else "")')
+            if [ -z "$asset" ]; then
+              echo "::error::The GitHub release behind KETVOICE_DISCORD_AAR_URL has no .aar asset."
+              exit 1
+            fi
+            url="$asset"
+            echo "Resolved the .aar asset of the GitHub release."
+          fi
+          code=$(curl -sSL --retry 3 "${auth[@]}" -o app/libs/discord/discord_partner_sdk.aar -w '%{http_code}' "$url" || true)
+          if [ "$code" != "200" ]; then
+            kind="other URL"
+            echo "$url" | grep -q '/releases/assets/' && kind="GitHub release asset API URL"
+            echo "$url" | grep -q '/releases/download/' && kind="GitHub browser download URL (private repos need the asset API URL)"
+            echo "::error::Discord SDK download failed: HTTP $code from $host ($kind)."
+            echo "::error::Expected: https://api.github.com/repos/<owner>/<repo>/releases/assets/<id> with a token that can read it, or a direct public file URL."
+            exit 1
+          fi
           actual=$(sha256sum app/libs/discord/discord_partner_sdk.aar | cut -d' ' -f1)
           if [ "$actual" != "$(echo "$DISCORD_AAR_SHA256" | tr 'A-F' 'a-f' | tr -d '[:space:]')" ]; then
             rm -f app/libs/discord/discord_partner_sdk.aar
