@@ -1,0 +1,177 @@
+{
+  "schema": 8,
+  "version": "4.10.0",
+  "versionCode": 95,
+  "source_commit": "46b3cf205546a356f9a3a1ed0bc7d2db5945c4bb",
+  "created_at": "2026-11-13T22:36:15.629763+00:00",
+  "build_origin": {
+    "kind": "github_actions_with_owner_discord_sdk",
+    "workflow": "android.yml",
+    "run_id": 43517534293,
+    "artifact": {
+      "id": 14082281366,
+      "sha256": "ba7e60d5dc65c541954e03bf2946c82f5bb548ef1929cf89525b24620bda54a4"
+    },
+    "gradle": "assembleMobileRelease assembleQuestRelease",
+    "note": "Signed by CI with the pinned keystore secret; the Discord Social SDK AAR matched its pinned SHA-256."
+  },
+  "local_validation": {
+    "result": "debug JVM/Robolectric suites for both flavors, debug builds, release lint, release ART profile compilation and the UI text audit passed in a cloud container without the Discord SDK",
+    "commands": [
+      "testMobileDebugUnitTest",
+      "testQuestDebugUnitTest",
+      "assembleMobileDebug",
+      "assembleQuestDebug",
+      "lintMobileRelease",
+      "lintQuestRelease",
+      "compileMobileReleaseArtProfile",
+      "tools/audit_ui_texts.py --check"
+    ],
+    "ci_validation": "run 43517534293: release builds, debug and release unit tests for both flavors, UI text audit, lint, APK signature pin and Discord bridge packaging passed",
+    "host_render_tests": [
+      "Liquid27RenderHostTest",
+      "Liquid27FusionRenderHostTest",
+      "MeshRenderHostTest",
+      "FusedChromeHostTest"
+    ]
+  },
+  "tests": {
+    "mobile": {
+      "jvm": {
+        "tests": 521,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "android_15_emulator_compose": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "quest": {
+      "jvm": {
+        "tests": 520,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "android_15_emulator_compose": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    }
+  },
+  "lint": {
+    "mobile": {
+      "Warning": 169,
+      "Hint": 16
+    },
+    "quest": {
+      "Warning": 171,
+      "Hint": 16
+    }
+  },
+  "apks": [
+    {
+      "name": "Ketvoice-4.10.0.apk",
+      "sha256": "b52a6736637f1051a4e28cee0e6dd8abed6d37efafb9fa27be247bcded0c000d",
+      "bytes": 72428656,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "4.10.0",
+      "versionCode": 95,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-4.10.0-Quest.apk",
+      "sha256": "e41de77e67fe5c6612a50922c2433434fa55f3872e69f4b61c22c71687fbf5c3",
+      "bytes": 82478638,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "4.10.0",
+      "versionCode": 95,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    }
+  ],
+  "packaging": {
+    "discord_bridge_in_both_apks": true,
+    "baseline_profile_in_both_apks": true,
+    "widget_receiver": {
+      "mobile": true,
+      "quest": false
+    }
+  },
+  "discord": {
+    "sdk_present_in_ci_build": true,
+    "sdk_sha256_pinned": true,
+    "bridge_and_native_libraries_verified": true,
+    "presence_mode": "unauthenticated_rpc_through_installed_discord_app"
+  },
+  "credential_scan": {
+    "entries": 3243,
+    "findings": 0,
+    "raw_pattern_findings": 1,
+    "scope": "tracked sources and APK archive entries",
+    "kind": "credential_patterns",
+    "explicit_private_provider_key_deny_list": false,
+    "triage": [
+      {
+        "file": "Ketvoice-Liquid-Glass-V4.html",
+        "classification": "embedded_image_false_positive",
+        "all_hits_inside_image_data_uris": true,
+        "rescanned_without_image_payloads": true
+      }
+    ]
+  },
+  "release_install_smoke": {
+    "mobile": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "quest": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    }
+  },
+  "publication_override": {
+    "authorized_by_user": true,
+    "authorized_at": "2026-11-13T22:36:15.629763+00:00",
+    "user_statement": "J'autorise.",
+    "in_reply_to": "A request to authorize publishing 4.10.0 without phone or Quest testing.",
+    "reason": "The owner explicitly authorized publishing 4.10.0 without phone or Quest testing.",
+    "scope": "physical device installation and all on-device behaviour of 4.10.0"
+  },
+  "not_validated": [
+    "physical phone or Quest installation, rendering and audible playback",
+    "on-device shared artwork transition, predictive back animation and haptics",
+    "on-device Liquid 27 droplet fusion, cover tint and mesh background (GPU rendering, frame rate)",
+    "home-screen widget on a launcher",
+    "tabletop posture on a foldable",
+    "screen-reader announcements with TalkBack",
+    "navigation restore after a real process death",
+    "effect of the hand-written baseline profile (not measured)",
+    "real Discord presence on a device"
+  ],
+  "known_limitations": [
+    "The baseline profile is hand-written, not captured from a device run.",
+    "Tabletop layout covers the phone player only; large foldables use the tablet player.",
+    "The widget is a frosted card; RemoteViews cannot render the optical glass.",
+    "Droplet fusion applies to the Liquid 27 optical mode only.",
+    "The signing certificate is the existing public Android debug identity, not a private production key."
+  ],
+  "canonical_banner_sha256": "47f6793088983f7d4e6bd1aeaa2cbd8b7cdc2a8f91271e3b2839daea81da0436"
+}
