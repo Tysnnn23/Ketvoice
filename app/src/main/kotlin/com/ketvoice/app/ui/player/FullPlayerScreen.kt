@@ -101,7 +101,7 @@ fun FullPlayerScreen(
     val canvas by CanvasRepo.paths.collectAsState()
     val canvasExcluded by CanvasRepo.excluded.collectAsState()
     // Exclusion par morceau (menu •••) : pochette statique uniquement.
-    val canvasPath = canvas[track.id]?.takeIf { track.id !in canvasExcluded }
+    val canvasPath = canvas[track.id]?.takeIf { track.id !in canvasExcluded && !com.ketvoice.app.data.MediaOverrides.canvasDisabled(track) }
     // Only a verified portrait 9:16 clip can enter the full-window mode.
     var canvasFocus by remember(track.id, canvasPath) { mutableStateOf(false) }
     var failedCanvas by remember(canvasPath) { mutableStateOf(false) }

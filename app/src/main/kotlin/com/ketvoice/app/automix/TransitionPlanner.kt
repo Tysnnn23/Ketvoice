@@ -35,17 +35,19 @@ internal data class MixContext(
     val repeatOne: Boolean = false,
     val stopAfterCurrent: Boolean = false,
     val exactAudio: Boolean = false,
-    val skipSilence: Boolean = false
+    val skipSilence: Boolean = false,
+    /** The listener wants the titles of an album mixed too. */
+    val albumsMixed: Boolean = true
 )
 
 /** 0 = discreet, 1 = balanced, 2 = DJ. */
 internal data class MixSettings(val intensity: Int = 1) {
     /** How far the incoming title may be sped up or slowed down to follow the outgoing one. */
     val tempoRange: Float get() = when (intensity) { 0 -> .04f; 2 -> .12f; else -> .08f }
-    val beatCounts: IntArray get() = when (intensity) { 0 -> intArrayOf(16, 8); else -> intArrayOf(32, 16, 8) }
-    val crossfadeMs: Long get() = when (intensity) { 0 -> 4_000L; 2 -> 8_000L; else -> 6_000L }
+    val beatCounts: IntArray get() = when (intensity) { 0 -> intArrayOf(16, 8); 2 -> intArrayOf(64, 32, 16, 8); else -> intArrayOf(32, 16, 8) }
+    val crossfadeMs: Long get() = when (intensity) { 0 -> 4_000L; 2 -> 12_000L; else -> 8_000L }
     /** How much of an instrumental ending may be skipped to mix earlier. */
-    val skippableOutroMs: Long get() = when (intensity) { 0 -> 0L; 2 -> 90_000L; else -> 12_000L }
+    val skippableOutroMs: Long get() = when (intensity) { 0 -> 0L; 2 -> 90_000L; else -> 25_000L }
 }
 
 internal data class MixPlan(
@@ -80,7 +82,7 @@ internal object TransitionPlanner {
         if (context.exactAudio) return MixPlan(MixKind.None, reason = "exact audio")
         if (context.repeatOne) return MixPlan(MixKind.None, reason = "repeat one")
         if (context.stopAfterCurrent) return MixPlan(MixKind.None, reason = "sleep timer")
-        if (context.sameAlbumInOrder) return MixPlan(MixKind.None, reason = "album in order")
+        if (context.sameAlbumInOrder && !context.albumsMixed) return MixPlan(MixKind.None, reason = "album in order")
         if (out.durationMs < MIN_TITLE_MS || incoming.durationMs < MIN_TITLE_MS) return MixPlan(MixKind.None, reason = "short title")
 
         val a = out.analysis
@@ -93,6 +95,9 @@ internal object TransitionPlanner {
                 gain = 1f, reason = "no analysis"), out, incoming)
         }
 
+        // An album whose titles run into each other (no silence after one, a full-level start for the
+        // next) is one piece of music: mixing over its joins would only cover them.
+        if (context.sameAlbumInOrder && gapless(out.durationMs, a, b)) return MixPlan(MixKind.None, reason = "gapless album")
         val gain = 10f.pow((a.loudnessDb - b.loudnessDb) / 20f).coerceIn(.5f, 1f)
         // A fade is almost silent in its last quarter: the incoming title must be in before that.
         val end = if (a.fadeOut) min(a.soundEndMs, a.fallMs + (a.soundEndMs - a.fallMs) * 3 / 4) else a.soundEndMs
@@ -137,7 +142,7 @@ internal object TransitionPlanner {
             val overlap = (count * beat).roundToLong()
             val latest = end - overlap
             // The mix starts once the singing is over; without lyrics, where the level drops.
-            val earliest = max(a.startMs + a.beatMs.toLong(), sungUntil ?: if (a.fallMs < latest) a.fallMs else latest)
+            val earliest = max(a.startMs + a.beatMs.toLong(), sungUntil ?: a.fallMs)
             if (earliest > latest) continue
             // The incoming voice should arrive once the outgoing title is mostly gone.
             if (sungFrom != null && sungUntil == null) {
@@ -165,6 +170,14 @@ internal object TransitionPlanner {
                 swapMs = swap.roundToLong(), gain = gain, beatMs = beat, reason = "$count beats")
         }
         return null
+    }
+
+    /** True when the end of one title and the start of the next leave no gap at all. */
+    internal fun gapless(outDurationMs: Long, a: SegmentAnalysis, b: SegmentAnalysis): Boolean {
+        val trailingSilence = outDurationMs - a.soundEndMs
+        val abruptEnd = a.hardEnding && !a.fadeOut && trailingSilence < 200L
+        val immediateStart = b.soundStartMs - b.startMs < 120L && b.riseMs - b.soundStartMs < 500L
+        return abruptEnd && immediateStart
     }
 
     /** Which beat of its bar (0..3) [positionMs] is, for a title whose bars are known. */

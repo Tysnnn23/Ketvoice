@@ -207,4 +207,52 @@ class StudioAndHomeHostTest {
             compose.onNodeWithText("Annuler").assertIsDisplayed()
         } finally { repo.value = before }
     }
+
+    @Test fun anAlbumsTitlesCanBeTickedToSwitchTheirCanvasOffOrChangeIt() {
+        val tracks = listOf(Track("yt:1", "One More Time", "Daft Punk", "Discovery"), Track("yt:2", "Aerodynamic", "Daft Punk", "Discovery"),
+            Track("yt:3", "Digital Love", "Daft Punk", "Discovery"))
+        val target = VisualTarget.album("Discovery", "Daft Punk", null, tracks.first(), tracks)!!
+        MediaOverrides.replaceForTest(listOf(MediaOverride("track", "aerodynamic|daft punk", canvasOff = true),
+            MediaOverride("track", "digital love|daft punk", canvas = "https://cdn.example/own.mp4")))
+        compose.setContent { KetvoiceTheme(useDark = true) {
+            val scope = rememberCoroutineScope()
+            val state = androidx.compose.runtime.remember { StudioState(StudioFiles(compose.activity), scope) }
+            androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.background(com.ketvoice.app.theme.LocalTheme.current.background)) {
+                StudioVisuals(state, listOf(target))
+            }
+        } }
+        compose.onNodeWithTag("studio-title-canvas").performScrollTo().assertIsDisplayed()
+        compose.onAllNodesWithTag("studio-title-row").assertCountEquals(3)
+        compose.onNodeWithText("Canvas désactivé").assertExists(); compose.onNodeWithText("Canvas personnalisé").assertExists()
+        compose.onNodeWithText("Aucun titre choisi : l'action vise tout l'album.").assertExists()
+        image("studio-title-canvas")
+        // Nothing can be sent before the rights are confirmed.
+        compose.onNodeWithTag("studio-title-off").performScrollTo().assertIsNotEnabled()
+        compose.onNodeWithTag("studio-rights").performScrollTo().performClick()
+        compose.onNodeWithTag("studio-title-off").assertIsEnabled(); compose.onNodeWithTag("studio-title-restore").assertIsEnabled()
+        // Applying a Canvas needs one to be chosen first.
+        compose.onNodeWithTag("studio-title-apply").assertIsNotEnabled()
+        compose.onAllNodesWithTag("studio-title-row")[0].performScrollTo().performClick()
+        compose.onAllNodesWithTag("studio-title-row")[2].performClick()
+        compose.onNodeWithText("2 titres choisis").assertExists()
+        compose.onNodeWithTag("studio-title-none").performScrollTo().performClick()
+        compose.onNodeWithText("Aucun titre choisi : l'action vise tout l'album.").assertExists()
+        compose.onNodeWithTag("studio-title-all").performScrollTo().performClick()
+        compose.onNodeWithText("3 titres choisis").assertExists()
+        // Each title also has its own switch.
+        compose.onNodeWithTag("studio-canvas-off").performScrollTo().assertIsEnabled()
+    }
+
+    @Test fun theTitlesOfAnAlbumAreOnlyOfferedForAnAlbumWithTitles() {
+        val track = Track("yt:1", "One More Time", "Daft Punk", "Discovery")
+        compose.setContent { KetvoiceTheme(useDark = true) {
+            val scope = rememberCoroutineScope()
+            val state = androidx.compose.runtime.remember { StudioState(StudioFiles(compose.activity), scope) }
+            StudioVisuals(state, listOf(VisualTarget.track(track)!!, VisualTarget.album("Discovery", "Daft Punk", null, track)!!))
+        } }
+        compose.onAllNodesWithTag("studio-title-canvas").assertCountEquals(0)
+        compose.onNodeWithTag("studio-canvas-off").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("studio-visuals-kind").onChildren().filterToOne(hasText("Album")).performClick()
+        compose.onAllNodesWithTag("studio-title-canvas").assertCountEquals(0)
+    }
 }

@@ -38,6 +38,8 @@ object AppSettings {
     val automix = mutableStateOf(false)
     /** 0 = discreet, 1 = balanced, 2 = DJ. */
     val automixIntensity = mutableStateOf(1)
+    /** Titles of an album played in order are mixed too (unless the album has no gap to mix over). */
+    val automixAlbums = mutableStateOf(true)
     val lyricsSource = mutableStateOf("auto")
     val betterLyricsKey = mutableStateOf("")
     val lyricaUrl = mutableStateOf("")

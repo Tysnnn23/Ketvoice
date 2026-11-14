@@ -34,4 +34,16 @@ class SignatureArchiveTest {
         assertNull(ArtistSignatures.parseArchive(root, "Daft Punk"))
         assertNull(ArtistSignatures.parseArchive(JSONObject("{}"), "Daft Punk"))
     }
+
+    @Test fun possessivesNotesAndNumbersDoNotHideAnArtistsOwnFile() {
+        assertEquals("eminem", ArtistSignatures.signatureStem("Eminem's_signature"))
+        assertEquals("eminem", ArtistSignatures.signatureStem("Eminem%27s_signature"))
+        assertEquals("travis scott", ArtistSignatures.signatureStem("Travis_Scott_signature_01"))
+        assertEquals("booba", ArtistSignatures.signatureStem("Signature_booba"))
+        assertEquals("bedri hamza", ArtistSignatures.signatureStem("Bedri_Hamza_(nënshkrim)"))
+        val root = JSONObject("""{"signatures":[${wiki("Eminem%27s_signature.svg")}]}""")
+        assertEquals("https://commons.wikimedia.org/wiki/Special:FilePath/Eminem%27s_signature.svg?width=800",
+            ArtistSignatures.parseArchive(root, "Eminem")!!.url)
+        assertNull("Another Hamza is not Hamza", ArtistSignatures.parseArchive(JSONObject("""{"signatures":[${wiki("Bedri_Hamza_signature.svg")}]}"""), "Hamza"))
+    }
 }

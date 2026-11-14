@@ -109,6 +109,29 @@ class AutomixHostTest {
         compose.onNodeWithText("Troisième").assertIsDisplayed()
     }
 
+    @Test fun theQueueSaysWhyAutomixIsNotMixing() {
+        val status = Automix::class.java.getDeclaredField("_status").apply { isAccessible = true }.get(Automix) as MutableStateFlow<String>
+        player.value = PlayerUiState(queue = listOf(track("a", "Premier"), track("b", "Deuxième")), queueEntryIds = listOf("k0", "k1"), index = 0)
+        AppSettings.automix.value = true
+        try {
+            status.value = "Pas de mix · titre répété"
+            compose.setContent { KetvoiceTheme(useDark = true) {
+                Box(Modifier.fillMaxSize().background(Color(0xFF14141A)).padding(18.dp)) {
+                    val state by Player.state.collectAsState(); QueuePane(state, Modifier.fillMaxSize())
+                }
+            } }
+            compose.onNodeWithTag("automix-status").assertIsDisplayed()
+            compose.onNodeWithText("Pas de mix · titre répété").assertIsDisplayed()
+            image("automix-queue-status")
+            status.value = "Mix prévu dans 31 s · calé sur le tempo"
+            compose.onNodeWithText("Mix prévu dans 31 s · calé sur le tempo").assertIsDisplayed()
+            // Switched off: no status is shown, whatever was left in it.
+            compose.onNodeWithTag("automix-toggle").performClick()
+            compose.waitForIdle()
+            compose.onAllNodesWithTag("automix-status").assertCountEquals(0)
+        } finally { status.value = ""; AppSettings.automix.value = false }
+    }
+
     @Test fun aMixShowsOnTheArtworkAndAboveTheProgressBar() {
         val from = track("a", "Sortant"); val to = track("b", "Entrant")
         player.value = PlayerUiState(queue = listOf(from, to), queueEntryIds = listOf("k0", "k1"), index = 0, isPlaying = true,

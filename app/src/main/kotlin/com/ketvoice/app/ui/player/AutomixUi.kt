@@ -155,6 +155,15 @@ internal fun AutomixToggle(modifier: Modifier = Modifier, size: Dp = 52.dp, onCh
     }
 }
 
+/** What Automix is doing, or why it is not mixing: the line that tells a listener why nothing happens. */
+@Composable
+internal fun AutomixStatusLine(modifier: Modifier = Modifier, color: Color = Color.White.copy(alpha = .72f), fontSize: androidx.compose.ui.unit.TextUnit = 12.sp) {
+    val text by Automix.status.collectAsState()
+    if (text.isBlank() || !AppSettings.automix.value) return
+    Text(text, color = color, fontSize = fontSize, lineHeight = fontSize * 1.3f, maxLines = 2, overflow = TextOverflow.Ellipsis,
+        modifier = modifier.testTag("automix-status"))
+}
+
 /** "Mix en cours" over the artwork while two titles play together. */
 @Composable
 internal fun MixBadge(modifier: Modifier = Modifier) {

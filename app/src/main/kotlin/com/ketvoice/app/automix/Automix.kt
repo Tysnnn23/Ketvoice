@@ -65,7 +65,10 @@ internal object Automix {
                   val kind: MixKind = MixKind.None, val startedAt: Long = 0L, val durationMs: Long = 0L,
                   val promoted: Boolean = false, val bpm: Float = 0f)
 
-    private const val PREP_LEAD_MS = 75_000L
+    /** The next title is resolved and read this long before the end of the current one, so that it is loaded well before any mix starts. */
+    private const val PREP_LEAD_MS = 150_000L
+    private const val MAX_ATTEMPTS = 3
+    private const val RETRY_MS = 6_000L
     private const val OUTRO_WINDOW_MS = 45_000L
     private const val INTRO_WINDOW_MS = 40_000L
     private const val ANALYSIS_SPEED = 8f
@@ -73,6 +76,20 @@ internal object Automix {
 
     private val _ui = MutableStateFlow(Ui())
     val ui: StateFlow<Ui> = _ui
+
+    /**
+     * What Automix is doing or why it is not mixing, in the words shown to the listener (French
+     * literals, translated where they are shown). Empty while Automix is off.
+     */
+    private val _status = MutableStateFlow("")
+    val status: StateFlow<String> = _status
+    private fun say(text: String) {
+        if (_status.value == text) return
+        _status.value = text
+        android.util.Log.i("KetvoiceAutomix", text)
+    }
+    private val retryAt = HashMap<String, Long>()
+    private val attempts = HashMap<String, Int>()
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var host: AutomixHost? = null
@@ -161,29 +178,42 @@ internal object Automix {
         while (true) {
             delay(250)
             val target = host ?: continue
-            if (!AppSettings.automix.value) { if (job != null || session != null) cancel(); continue }
+            if (!AppSettings.automix.value) { if (job != null || session != null) cancel(); say(""); continue }
             if (job?.isActive == true) continue
             val state = Player.state.value
-            if (!state.isPlaying || state.failed) continue
-            val current = state.current ?: continue
-            val next = Player.automixNext() ?: continue
+            val current = state.current
+            if (current == null || state.failed) { say("Automix actif"); continue }
+            val next = Player.automixNext()
+            if (next == null) { say("Pas de mix · dernier titre de la file"); continue }
             val key = "${state.queueEntryIds.getOrNull(state.index)}>${next.entryId}#${Player.playbackEpoch}"
+            // Why nothing will happen is said at once, long before the end of the title.
+            blocker(state, current, next, target)?.let { say("Pas de mix · $it"); continue }
             if (key in settled) continue
+            if (!state.isPlaying) continue
             val main = target.main
             val duration = main.duration
             val position = main.currentPosition
-            if (duration <= 0 || position < 8_000 || duration - position > PREP_LEAD_MS) continue
-            if (settled.size > 48) settled.clear()
+            if (duration <= 0 || position < 8_000 || duration - position > PREP_LEAD_MS) {
+                say(if (duration > 0) "Automix actif · le mix du titre suivant se prépare avant la fin de celui-ci" else "Automix actif")
+                continue
+            }
+            if (retryAt[key]?.let { SystemClock.elapsedRealtime() < it } == true) continue
+            if (settled.size > 48) { settled.clear(); attempts.clear(); retryAt.clear() }
             if (duration - position < 3_500) { settled += key; continue }
+            val count = (attempts[key] ?: 0) + 1
+            attempts[key] = count
             val fresh = Session(target, main, next)
             session = fresh
             job = scope.launch {
                 try {
-                    if (transition(fresh, current, duration)) settled += key
+                    if (transition(fresh, current, duration, key)) settled += key
+                    else if (retryAt[key] != null && count >= MAX_ATTEMPTS) { settled += key; say("Pas de mix · titre suivant indisponible") }
                 } catch (cancelled: CancellationException) {
                     throw cancelled
-                } catch (_: Exception) {
+                } catch (failure: Exception) {
+                    android.util.Log.w("KetvoiceAutomix", "transition failed: ${failure.javaClass.simpleName}")
                     settled += key
+                    say("Pas de mix · le titre suivant n'a pas pu être préparé")
                 } finally {
                     fresh.close()
                     if (session === fresh) { session = null; if (_ui.value.phase != Phase.Idle) _ui.value = Ui() }
@@ -196,8 +226,41 @@ internal object Automix {
         MediaOverrides.normalize(a.album) == MediaOverrides.normalize(b.album) &&
         MediaOverrides.normalize(MediaOverrides.mainArtist(a.artist)) == MediaOverrides.normalize(MediaOverrides.mainArtist(b.artist))
 
+    private fun kindLabel(kind: MixKind): String = when (kind) {
+        MixKind.Beatmatch -> "calé sur le tempo"
+        MixKind.Crossfade -> "fondu enchaîné"
+        MixKind.Trim -> "enchaînement sans silence"
+        MixKind.None -> "sans mix"
+    }
+
+    /** The transition is given up for this pair: say why, and do not try again. */
+    private fun skip(reason: String): Boolean {
+        say("Pas de mix · " + when (reason) {
+            "album in order" -> "album joué dans l'ordre"
+            "gapless album" -> "album sans blanc entre les titres"
+            "short title" -> "titre suivant trop court"
+            "repeat one" -> "titre répété"
+            "sleep timer" -> "minuterie active"
+            "exact audio" -> "sortie bit-perfect"
+            "late" -> "trop tard pour préparer le mix"
+            "deck" -> "le titre suivant n'a pas pu être lu"
+            else -> "les deux titres ne s'enchaînent pas"
+        })
+        return true
+    }
+
+    /** What rules a mix out whatever the music is, in the words of the status line, or null. */
+    private fun blocker(state: com.ketvoice.app.player.PlayerUiState, current: Track, next: Player.NextEntry, h: AutomixHost): String? = when {
+        h.exact || AppSettings.bitPerfect.value -> "sortie bit-perfect"
+        state.repeatOne -> "titre répété"
+        SleepTimer.endOfTrack.value || SleepTimer.remainingSeconds.value in 1..180 -> "minuterie active"
+        !AppSettings.automixAlbums.value && !state.shuffle && sameAlbum(current, next.track) -> "album joué dans l'ordre"
+        next.track.durationMs in 1 until 30_000L -> "titre suivant trop court"
+        else -> null
+    }
+
     /** True when this pair is done with (mixed, or not to be mixed); false to try again while time remains. */
-    private suspend fun transition(s: Session, current: Track, duration: Long): Boolean {
+    private suspend fun transition(s: Session, current: Track, duration: Long, key: String): Boolean {
         val h = s.host
         val main = s.main
         val next = s.next
@@ -210,29 +273,33 @@ internal object Automix {
             repeatOne = state.repeatOne,
             stopAfterCurrent = SleepTimer.endOfTrack.value || SleepTimer.remainingSeconds.value in 1..180,
             exactAudio = h.exact || AppSettings.bitPerfect.value,
-            skipSilence = AppSettings.skipSilence.value)
+            skipSilence = AppSettings.skipSilence.value,
+            albumsMixed = AppSettings.automixAlbums.value)
         val settings = MixSettings(AppSettings.automixIntensity.value)
         val nextDuration = next.track.durationMs.takeIf { it > 0 } ?: 600_000L
         // The context alone may already say that these two titles simply follow each other.
-        if (!TransitionPlanner.plan(MixFacts(duration), MixFacts(nextDuration), context, settings).mixes) return true
+        TransitionPlanner.plan(MixFacts(duration), MixFacts(nextDuration), context, settings).let { first ->
+            if (!first.mixes && first.reason != "gapless album") return skip(first.reason)
+        }
 
         _ui.value = Ui(Phase.Preparing, current, next.track)
+        say("Préparation du titre suivant…")
         Player.warmForAutomix(next.track)
-        val waitUntil = SystemClock.elapsedRealtime() + 14_000L
-        var source = Player.deckSource(next.track)
-        while (source == null) {
-            if (!valid()) return false
-            if (SystemClock.elapsedRealtime() > waitUntil) return true
-            delay(300)
-            source = Player.deckSource(next.track)
+        // The next title is resolved now (or taken from what was prefetched): it is loaded long before any mix starts.
+        val source = Player.resolveDeckSource(next.track)
+        if (!valid()) return false
+        if (source == null) {
+            retryAt[key] = SystemClock.elapsedRealtime() + RETRY_MS
+            say("Titre suivant indisponible · nouvel essai dans quelques secondes")
+            return false
         }
         s.source = source
-        val item = main.currentMediaItem ?: return true
+        val item = main.currentMediaItem ?: return skip("audio")
         val nextItem = playbackMediaItem(next.track, source.url, source.cacheKey, source.stream, source.offlineDash)
-        val mainControl = h.control(main) ?: return true
+        val mainControl = h.control(main) ?: return skip("audio")
         val deck = h.standby()
         s.deck = deck
-        val control = h.control(deck) ?: return true
+        val control = h.control(deck) ?: return skip("audio")
 
         val voice = scope.async(Dispatchers.IO) { withTimeoutOrNull(6_000L) { runCatching { firstVoice(next.track) }.getOrNull() } }
         val clock = scope.async { clockConfirmed(main, mainControl) }
@@ -257,17 +324,17 @@ internal object Automix {
         fun planFor(beats: Boolean): MixPlan = TransitionPlanner.plan(
             if (beats) out else out.copy(analysis = outro?.copy(confidence = 0f)), incoming, context, settings)
         var plan = planFor(beats = clockOk)
-        if (!plan.mixes) return true
+        if (!plan.mixes) return skip(plan.reason)
 
         fun preRollOf(p: MixPlan) = if (p.kind == MixKind.Beatmatch) min(2_500.0, p.inMs / p.rate.toDouble()).toLong() else min(400L, p.inMs)
         // Too late for a beat mix (a seek near the end, a slow network): the simpler transition at the very end may still fit.
         if (plan.kind == MixKind.Beatmatch && main.currentPosition > plan.outMs - preRollOf(plan) - 1_800L) {
             plan = planFor(beats = false)
-            if (!plan.mixes) return true
+            if (!plan.mixes) return skip(plan.reason)
         }
         val preRoll = preRollOf(plan)
         val startOut = plan.outMs - preRoll
-        if (main.currentPosition > startOut - 1_200L) return true
+        if (main.currentPosition > startOut - 1_200L) return skip("late")
         s.plan = plan
 
         deck.volume = 0f
@@ -278,14 +345,14 @@ internal object Automix {
         val readyBy = SystemClock.elapsedRealtime() + 10_000L
         while (deck.playbackState != androidx.media3.common.Player.STATE_READY) {
             if (!valid() || deck.playerError != null) return deck.playerError != null
-            if (SystemClock.elapsedRealtime() > readyBy || main.currentPosition > startOut - 300L) return true
+            if (SystemClock.elapsedRealtime() > readyBy || main.currentPosition > startOut - 300L) return skip("late")
             delay(30)
         }
         // Levels and filters tied to the music need the processors of both decks in the sound path.
         s.precise = clockOk && control.active && mainControl.active
         if (!s.precise && plan.kind == MixKind.Beatmatch) {
             plan = planFor(beats = false)
-            if (!plan.mixes || main.currentPosition > plan.outMs - 1_200L) return true
+            if (!plan.mixes || main.currentPosition > plan.outMs - 1_200L) return skip(plan.reason.ifBlank { "late" })
             s.plan = plan
             deck.playbackParameters = PlaybackParameters.DEFAULT
             deck.seekTo((plan.inMs - min(400L, plan.inMs)).coerceAtLeast(0L))
@@ -300,15 +367,18 @@ internal object Automix {
         // Wait for the place in the outgoing title where the incoming one starts.
         while (true) {
             // A next title that cannot play is not tried again and again: the usual end takes over.
-            if (deck.playerError != null) return true
+            if (deck.playerError != null) return skip("deck")
             if (!valid()) return false
             val position = main.currentPosition
             if (main.playbackState == androidx.media3.common.Player.STATE_ENDED) return true
-            if (position > plan.outMs + 300L) return true
+            if (position > plan.outMs + 300L) return skip("late")
             if (position >= finalStart) break
+            val seconds = ((finalStart - position) / 1000L).coerceAtLeast(0L)
+            say("Mix prévu dans $seconds s · ${kindLabel(plan.kind)}")
             delay(if (finalStart - position > 500L) 80L else 6L)
         }
 
+        say("Mix en cours")
         s.baseVolume = main.volume
         if (s.precise) deck.volume = s.baseVolume
         deck.play()

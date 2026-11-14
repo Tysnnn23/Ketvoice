@@ -21,6 +21,15 @@
 
 ## Overview
 
+### 5.1.0 — Automix that explains itself
+
+Automix now mixes albums too (a setting, on by default), says in the queue and in Settings what
+it is doing or why it is not mixing, prepares the next title two and a half minutes ahead and
+mixes more boldly; artist signatures are shown even when the artwork service is busy.
+[Mobile](https://github.com/Tysnnn23/Ketvoice/releases/download/v5.1.0/Ketvoice-5.1.0.apk)
+· [Quest](https://github.com/Tysnnn23/Ketvoice/releases/download/v5.1.0/Ketvoice-5.1.0-Quest.apk)
+· [Release notes](docs/releases/v5.1.0.md).
+
 ### 5.0.0 — Automix
 
 Titles flow into each other like a mix: the next title comes in at the same tempo, beats

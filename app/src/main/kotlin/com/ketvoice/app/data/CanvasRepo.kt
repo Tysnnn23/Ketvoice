@@ -73,6 +73,11 @@ object CanvasRepo {
         val ctx = appContext ?: return@withContext
 
         if (!AppSettings.animatedArtwork.value) return@withContext
+        // Switched off by the owner for this title or its album: nothing is looked up or downloaded.
+        if (MediaOverrides.canvasDisabled(track)) {
+            _paths.value = _paths.value - track.id
+            return@withContext
+        }
         // Exclusion utilisateur : jamais de Canvas pour ce morceau, ni résolution
         // ni lecture — seule la pochette statique est affichée.
         if (track.id in _excluded.value) return@withContext
@@ -159,6 +164,10 @@ object CanvasRepo {
 
     private fun sha(value: String): String = java.security.MessageDigest.getInstance("SHA-256")
         .digest(value.toByteArray(Charsets.UTF_8)).take(12).joinToString("") { "%02x".format(it) }
+
+    /** The Canvas to show for [track]: none while the owner has switched it off for this title or its album. */
+    fun pathFor(track: Track): String? =
+        if (MediaOverrides.canvasDisabled(track)) null else _paths.value[track.id]
 
     fun localPath(trackId: String): File? {
         val path = _paths.value[trackId] ?: return null

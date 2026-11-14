@@ -369,6 +369,27 @@ object Player {
         prefetchNext(generation, current, listOf(track), margin = 100_000L)
     }
 
+    /**
+     * [deckSource], and when nothing is ready yet the title is resolved right now, the way a normal
+     * start would resolve it: Automix does not wait for a prefetch that may never come.
+     */
+    internal suspend fun resolveDeckSource(track: Track): DeckSource? {
+        deckSource(track)?.let { return it }
+        if (track.sourceOverride != null) return null
+        if (track.addon == "upload" || track.id.startsWith("kv:upload:")) {
+            val stream = withTimeoutOrNull(20_000) { runCatching { PublicationApi.stream(track, null) }.getOrNull() } ?: return null
+            return DeckSource(stream.url, AudioCache.key(track.id, stream), stream, false, label(stream), "Publication Ketvoice", null)
+        }
+        if (!hasInternet()) return null
+        val candidate = withTimeoutOrNull(25_000) {
+            runCatching {
+                StreamResolver.candidates(track, download = false, lossless = wantsLossless(), race = AppSettings.progressiveQuality.value).firstOrNull()
+            }.getOrNull()
+        } ?: return null
+        return DeckSource(candidate.stream.url, if (candidate.stream.isDash) null else AudioCache.key(track.id, candidate.stream),
+            candidate.stream, false, label(candidate.stream), sourceLabel(candidate.sourceId, candidate.stream), candidate.sourceId)
+    }
+
     internal fun deckSource(track: Track): DeckSource? {
         if (track.id.startsWith("local:")) return track.streamUrl?.let { DeckSource(it, null, null, false, "Fichier local", "Fichier local", null) }
         // A source the listener picked by hand is resolved by the usual path.

@@ -421,7 +421,11 @@ fun SettingsScreen() {
                             ChoiceOption("2", "DJ", "Mix dès la fin du chant, tempos à 12 % près"))
                     ) { id -> AppSettings.automixIntensity.value = id.toIntOrNull()?.coerceIn(0, 2) ?: 1; SettingsStore.save() }
                 }
-                Text("Les albums écoutés dans l'ordre, la répétition d'un titre, la minuterie et la sortie bit-perfect ne sont jamais mixés. Sans tempo régulier, un simple fondu remplace le mix.",
+                SToggle(KetIcons.Album, "Mixer aussi les albums",
+                    "Les titres d'un album écouté dans l'ordre sont mixés aussi, sauf si l'album n'a aucun blanc entre ses titres.",
+                    AppSettings.automixAlbums.value) { AppSettings.automixAlbums.value = it; SettingsStore.save() }
+                com.ketvoice.app.ui.player.AutomixStatusLine(Modifier.padding(horizontal = 16.dp, vertical = 6.dp), th.secondary, 12.sp)
+                Text("La répétition d'un titre, la minuterie et la sortie bit-perfect ne sont jamais mixées. Sans tempo régulier, un simple fondu remplace le mix.",
                     color = th.secondary, fontSize = 11.sp, lineHeight = 16.sp, modifier = Modifier.padding(bottom = 8.dp))
             }
 

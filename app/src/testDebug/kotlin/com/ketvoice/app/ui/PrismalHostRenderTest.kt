@@ -566,6 +566,41 @@ class PrismalHostRenderTest {
         }
     }
 
+    @Test fun aFramingThatReachesPastWhatTheHeroShowsLeavesNoEmptyBand() {
+        AppSettings.reduceAnimations.value = true
+        warmCover()
+        val track = Track("qa:album-reach", "QA title", "QA artist", "QA album", durationMs = 180_000)
+        try {
+            // A band near the top of a square cover, a mirror and a slight turn: all of it lies outside
+            // the band a plain "cover the hero" shows, and the corners are pulled in by the turn.
+            com.ketvoice.app.data.MediaOverrides.replaceForTest(listOf(com.ketvoice.app.data.MediaOverride("album", "qa album|qa artist",
+                frame = com.ketvoice.app.data.Frame(cx = .05f, cy = -.28f, w = .7f, h = .28f, rotation = 6f, flip = true))))
+            compose.setContent { KetvoiceTheme(useDark = true) {
+                AlbumPage(CatalogRequest("album", "qa:album-reach", "QA album"),
+                    CatalogPage("QA album", "QA artist", "fixture:warm-cover", listOf(track), "2026"), listOf(track), false, {})
+            } }
+            compose.waitUntil(10_000) { compose.onAllNodesWithTag("album-artwork-loaded").fetchSemanticsNodes().isNotEmpty() }
+            compose.waitForIdle()
+            val hero = compose.onNodeWithTag("album-hero-visual").fetchSemanticsNode().boundsInRoot
+            image("album-framing-reach") { shot ->
+                // Inside the hero, away from the top scrim and the bottom dissolve, every edge is picture, not page.
+                val y = (hero.top + hero.height * .45f).toInt()
+                for (x in listOf(4, shot.width / 4, shot.width / 2, shot.width * 3 / 4, shot.width - 5)) {
+                    val p = shot.getPixel(x, y)
+                    assertTrue("picture at ($x,$y), not an empty band (r=${android.graphics.Color.red(p)}, b=${android.graphics.Color.blue(p)})",
+                        android.graphics.Color.red(p) > android.graphics.Color.blue(p) + 12)
+                }
+                for (fraction in listOf(.18f, .6f)) {
+                    val row = (hero.top + hero.height * fraction).toInt()
+                    for (x in listOf(2, shot.width - 3)) {
+                        val p = shot.getPixel(x, row)
+                        assertTrue("edge at ($x,$row)", android.graphics.Color.red(p) > android.graphics.Color.blue(p) + 12)
+                    }
+                }
+            }
+        } finally { com.ketvoice.app.data.MediaOverrides.replaceForTest(emptyList()) }
+    }
+
     @Test @Config(qualifiers = "w600dp-h800dp-mdpi")
     fun aWidePhoneWindowShowsTheWholeCoverInsteadOfABandOfIt() {
         AppSettings.reduceAnimations.value = true

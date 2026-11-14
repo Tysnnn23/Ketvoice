@@ -92,8 +92,12 @@ class UiPolishHostTest {
             assertTrue(AppSettings.automix.value)
             compose.onNodeWithText("Intensité du mix").performScrollTo().assertIsDisplayed()
             compose.onNodeWithText("Équilibré").assertIsDisplayed()
+            AppSettings.automixAlbums.value = true
+            compose.onNodeWithText("Mixer aussi les albums").performScrollTo().assertIsDisplayed().performClick()
+            compose.waitForIdle()
+            assertFalse("The album switch is on by default and turns off", AppSettings.automixAlbums.value)
             image("settings-automix")
-        } finally { AppSettings.automix.value = false; com.ketvoice.app.data.SettingsStore.save() }
+        } finally { AppSettings.automix.value = false; AppSettings.automixAlbums.value = true; com.ketvoice.app.data.SettingsStore.save() }
     }
 
     @Test fun darkAppearanceOptionsKeepNativeDarkSurfacesAndReadableLabels() {

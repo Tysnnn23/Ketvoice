@@ -2,6 +2,8 @@ package com.ketvoice.app.data
 
 import android.content.Context
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -85,27 +87,33 @@ internal object ArtistSignatures {
         val signatures = includeSignature && AppSettings.artistSignatures.value
         if ((!photos && !signatures) || artist.isBlank() || artist.length > 160) return ArtistArtwork()
         return lock.withLock {
-            val key = name(artist) + if (signatures) "|sig2" else "|photo"
+            val key = name(artist) + if (signatures) "|sig3" else "|photo"
             artCache[key]?.takeIf { it.expires > System.currentTimeMillis() }?.let { return@withLock it.artwork }
             var lifetime = 10 * 60_000L
-            val result = try {
-                val fetched = withContext(Dispatchers.IO) { request(artist, signatures) }
-                // Respect each consent independently: the broker returns everything
-                // it knows, the app only keeps what the user allowed.
-                // No authenticated signature from the broker: ask the public signature
-                // archive, which only answers with a file named after this very artist.
-                val signature = fetched.signature ?: if (signatures)
-                    runCatching { withContext(Dispatchers.IO) { requestArchive(artist) } }.getOrNull() else null
-                fetched.copy(
-                    photo = fetched.photo.takeIf { photos },
-                    background = fetched.background.takeIf { photos },
-                    signature = signature.takeIf { signatures },
-                    logo = fetched.logo.takeIf { signatures }
-                )
-            } catch (cancelled: CancellationException) { throw cancelled }
-            catch (_: Exception) { lifetime = 60_000L; ArtistArtwork() }
+            // The two services are asked side by side and judged apart: the broker is often
+            // rate-limited (429), and that must never cost the signature of the archive.
+            val (broker, archive) = coroutineScope {
+                val fromBroker = async(Dispatchers.IO) {
+                    try { request(artist, signatures) } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { null }
+                }
+                val fromArchive = async(Dispatchers.IO) {
+                    if (!signatures) null
+                    else try { requestArchive(artist) } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { null }
+                }
+                fromBroker.await() to fromArchive.await()
+            }
+            if (broker == null) lifetime = 60_000L
+            val base = broker ?: ArtistArtwork()
+            // Respect each consent independently: the broker returns everything it knows, the app
+            // only keeps what the user allowed. A handwritten signature comes before a logo.
+            val result = base.copy(
+                photo = base.photo.takeIf { photos },
+                background = base.background.takeIf { photos },
+                signature = (base.signature ?: archive).takeIf { signatures },
+                logo = base.logo.takeIf { signatures }
+            )
             if (result.hero != null || result.logo != null || result.signature != null)
-                lifetime = 12 * 60 * 60_000L
+                lifetime = if (broker == null) 3 * 60_000L else 12 * 60 * 60_000L
             artCache[key] = ArtEntry(result, System.currentTimeMillis() + lifetime)
             persist()
             result
@@ -166,6 +174,7 @@ internal object ArtistSignatures {
             connection.readTimeout = 10_000
             connection.instanceFollowRedirects = false
             connection.setRequestProperty("Accept", "application/json")
+            connection.setRequestProperty("User-Agent", "Ketvoice/${com.ketvoice.app.BuildConfig.VERSION_NAME} (Android)")
             if (connection.responseCode != 200) return null
             val bytes = connection.inputStream.use { input ->
                 val output = java.io.ByteArrayOutputStream()
@@ -184,6 +193,14 @@ internal object ArtistSignatures {
 
     private fun words(value: String): String = java.text.Normalizer.normalize(value, java.text.Normalizer.Form.NFD)
         .replace(Regex("\\p{M}+"), "").lowercase(Locale.ROOT).replace(Regex("[^\\p{L}\\p{N}]+"), " ").trim()
+
+    /** What a Commons file name says about whose signature it is: no possessive, no note in brackets, no "signature". */
+    internal fun signatureStem(name: String): String {
+        val decoded = runCatching { java.net.URLDecoder.decode(name, "UTF-8") }.getOrDefault(name)
+        val bare = decoded.replace(Regex("\\([^)]*\\)"), " ").replace(Regex("(?i)['’]s(?![\\p{L}\\p{N}])"), "")
+        val noise = setOf("sig", "signature", "signatures", "signatur", "autograph", "autographe", "firma", "assinatura", "handwritten", "unterschrift", "original")
+        return words(bare).split(' ').filterNot { it in noise || it.all(Char::isDigit) }.joinToString(" ")
+    }
 
     /**
      * The first signature of the archive's answer whose file is named after the artist
@@ -214,10 +231,9 @@ internal object ArtistSignatures {
                     if (page.scheme != "https" || page.host != "commons.wikimedia.org" || !page.path.startsWith("/wiki/File:")) continue
                     val fileName = page.path.removePrefix("/wiki/File:")
                     if (fileName.isBlank() || fileName.contains('/') || !Regex("(?i).*\\.(svg|png)$").matches(fileName)) continue
-                    val stem = words(fileName.substringBeforeLast('.')).split(' ')
-                        .filterNot { it in setOf("sig", "signature", "signatur", "autograph", "firma", "assinatura") }.joinToString(" ")
+                    val stem = signatureStem(fileName.substringBeforeLast('.'))
                     if (stem != wanted) continue
-                    return ArtistSignature("https://commons.wikimedia.org/wiki/Special:FilePath/$fileName?width=800", "image",
+                    return ArtistSignature("https://commons.wikimedia.org/wiki/Special:FilePath/${page.rawPath.removePrefix("/wiki/File:")}?width=800", "image",
                         page.toASCIIString(), listOf("Wikimedia Commons", license).filter { it.isNotBlank() }.joinToString(" · "))
                 }
             }

@@ -52,8 +52,8 @@ internal fun visualKindLabel(kind: String): String = when (kind) {
 
 /** What saving would send: new files, and the originals to bring back. */
 internal data class VisualChange(val cover: File? = null, val canvas: File? = null, val hero: File? = null,
-                                 val restore: Set<String> = emptySet()) {
-    val isEmpty: Boolean get() = cover == null && canvas == null && hero == null && restore.isEmpty()
+                                 val restore: Set<String> = emptySet(), val canvasOff: Boolean? = null) {
+    val isEmpty: Boolean get() = cover == null && canvas == null && hero == null && restore.isEmpty() && canvasOff == null
 }
 
 /**
@@ -108,16 +108,24 @@ private fun VisualEditor(state: StudioState, target: VisualTarget) {
             state("cover", change.cover), saved?.cover != null && "cover" !in change.restore, state.busy, "studio-visual-portrait",
             onPick = { pickCover.launch(IMAGE_TYPES) }, onRestore = { restore("cover") })
     } else {
-        val canvasShown = change.canvas?.absolutePath ?: saved?.canvas.takeIf { "canvas" !in change.restore }
+        val canvasOff = change.canvasOff ?: (saved?.canvasOff == true && "canvas" !in change.restore)
+        val canvasShown = if (canvasOff) null else change.canvas?.absolutePath ?: saved?.canvas.takeIf { "canvas" !in change.restore }
         Box(Modifier.fillMaxWidth().padding(vertical = 6.dp), contentAlignment = Alignment.Center) {
             StudioPreview(target.sample?.title ?: target.title, target.subtitle, coverShown, canvasShown)
         }
         VisualPart(KetIcons.Album, "Pochette", if (target.kind == MediaOverrides.ALBUM) "Pour l'album et chacun de ses titres" else "Pour ce titre",
             state("cover", change.cover), saved?.cover != null && "cover" !in change.restore, state.busy, "studio-visual-cover",
             onPick = { pickCover.launch(IMAGE_TYPES) }, onRestore = { restore("cover") })
-        CanvasEditor(state, change.canvas, onChosen = { file -> change.canvas?.delete(); change = change.copy(canvas = file, restore = change.restore - "canvas") },
-            published = saved?.canvas != null && "canvas" !in change.restore,
-            onRemove = { restore("canvas") }, removeEnabled = true)
+        CanvasEditor(state, change.canvas, onChosen = { file -> change.canvas?.delete(); change = change.copy(canvas = file, restore = change.restore - "canvas", canvasOff = null) },
+            published = saved?.canvas != null && "canvas" !in change.restore && !canvasOff,
+            onRemove = { change = change.copy(restore = change.restore + "canvas", canvasOff = null) }, removeEnabled = true)
+        // The Canvas of this title or album can be switched off: nothing plays behind it, whatever the catalogue offers.
+        GlassCapsuleButton(if (canvasOff) "Réactiver le Canvas" else "Désactiver le Canvas", null, {
+            change.canvas?.delete()
+            change = if (canvasOff) change.copy(canvas = null, canvasOff = false, restore = change.restore - "canvas")
+                else change.copy(canvas = null, canvasOff = true, restore = change.restore - "canvas")
+        }, Modifier.fillMaxWidth(), enabled = !state.busy, tag = "studio-canvas-off", minHeight = 48.dp)
+        if (target.kind == MediaOverrides.ALBUM && target.tracks.isNotEmpty()) StudioTitleCanvas(state, target, rights)
     }
     Text("Le catalogue d'origine reste intact : rétablissez l'original quand vous voulez.", color = theme.secondary, fontSize = 12.sp)
     RightsRow(rights, !state.busy) { rights = it }
@@ -125,10 +133,10 @@ private fun VisualEditor(state: StudioState, target: VisualTarget) {
         val sending = change
         state.run {
             PublicationApi.saveOverride(target.kind, target.key, target.label, sending.cover, sending.canvas, sending.hero,
-                sending.restore.toList(), state::onProgress)
+                sending.restore.toList(), state::onProgress, canvasOff = sending.canvasOff)
             listOfNotNull(sending.cover, sending.canvas, sending.hero).forEach { it.delete() }
             change = VisualChange()
-            state.info = if (sending.restore.isNotEmpty() && sending.cover == null && sending.canvas == null && sending.hero == null)
+            state.info = if (sending.restore.isNotEmpty() && sending.cover == null && sending.canvas == null && sending.hero == null && sending.canvasOff == null)
                 "Original rétabli" else "Visuels enregistrés"
         }
     }, Modifier.fillMaxWidth(), prominent = true, enabled = !state.busy && rights && !change.isEmpty,

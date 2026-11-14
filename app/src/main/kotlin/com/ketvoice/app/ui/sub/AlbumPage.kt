@@ -12,6 +12,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
+import kotlin.math.roundToInt
 import androidx.compose.foundation.border
 import androidx.compose.material.icons.filled.Crop
 import kotlinx.coroutines.launch
@@ -101,7 +102,7 @@ internal fun AlbumPage(request: CatalogRequest, page: CatalogPage?, tracks: List
     // The Canvas the hero plays, when this listener has it on: what the framing screen works on.
     val heroCanvasOn = AppSettings.albumHeroCanvas.value && !Motion.reduced && !AppSettings.highPerformanceMode.value
     val canvasPaths by CanvasRepo.paths.collectAsState()
-    val heroCanvas = tracks.firstOrNull()?.let { canvasPaths[it.id] }.takeIf { heroCanvasOn }
+    val heroCanvas = tracks.firstOrNull()?.takeIf { !com.ketvoice.app.data.MediaOverrides.canvasDisabled(it) }?.let { canvasPaths[it.id] }.takeIf { heroCanvasOn }
     val configuration = androidx.compose.ui.platform.LocalConfiguration.current
     val pageBoxAspect = configuration.screenWidthDp.coerceAtLeast(1) /
         AlbumPresentation.heroHeight(configuration.screenWidthDp.toFloat(), configuration.screenHeightDp.toFloat())
@@ -168,7 +169,7 @@ internal fun AlbumPage(request: CatalogRequest, page: CatalogPage?, tracks: List
                     com.ketvoice.app.ui.common.PadAction(KetIcons.Appearance, "Modifier les visuels", "album-visuals") {
                         val original = page?.cover?.takeIf { it.isNotBlank() } ?: tracks.firstOrNull()?.let { art["t:${it.id}"] ?: it.coverUrl }
                         val main = com.ketvoice.app.data.MediaOverrides.mainArtist(artist)
-                        AppUi.openVisuals(listOf(com.ketvoice.app.data.VisualTarget.album(title, main, original, tracks.firstOrNull()),
+                        AppUi.openVisuals(listOf(com.ketvoice.app.data.VisualTarget.album(title, main, original, tracks.firstOrNull(), tracks),
                             com.ketvoice.app.data.VisualTarget.artist(main, null)))
                     }.takeIf { owner },
                     com.ketvoice.app.ui.common.PadAction(androidx.compose.material.icons.Icons.Filled.Crop, "Cadrer l'image", "album-framing",
@@ -281,23 +282,21 @@ private fun BoxScope.AlbumArtwork(cover: String?, track: Track?, frame: com.ketv
     val canvasEnabled = AppSettings.albumHeroCanvas.value && !Motion.reduced && !AppSettings.highPerformanceMode.value
     val paths by CanvasRepo.paths.collectAsState()
     LaunchedEffect(track?.id, canvasEnabled) { if (canvasEnabled && track != null) CanvasRepo.resolve(track) }
-    val canvas = track?.let { paths[it.id] }
+    val canvas = track?.takeIf { !com.ketvoice.app.data.MediaOverrides.canvasDisabled(it) }?.let { paths[it.id] }
     val video = canvasEnabled && track != null && canvas != null
     // Width over height of what is drawn, once known; a Canvas is upright and a cover square until then.
     var aspect by remember(cover, canvas, video) { mutableFloatStateOf(0f) }
-    // The owner's framing: the chosen rectangle of the picture fills the hero. It is brought
-    // back onto the picture first, since a cover and a Canvas do not have the same shape.
-    val framing = if (frame == null) Modifier else Modifier.graphicsLayer {
-        val shape = if (aspect > 0f) aspect else if (video) 9f / 16f else 1f
-        val layer = Framing.layer(Framing.contain(frame, shape), size.width, size.height, shape)
-        scaleX = layer.scaleX; scaleY = layer.scaleY; rotationZ = layer.rotation
-        translationX = layer.translationX; translationY = layer.translationY
-    }
+    // The owner's framing: the chosen rectangle of the picture fills the hero. The whole picture is
+    // drawn at its own size, centred, and then moved: a picture cropped to the hero first would
+    // leave empty bands wherever the rectangle reaches past what the hero shows.
+    val shape = if (aspect > 0f) aspect else if (video) 9f / 16f else 1f
+    val framing = if (frame == null) Modifier.fillMaxSize()
+        else Modifier.fillMaxSize().framedPicture(frame, shape) { if (video) 1f else alpha }
     if (cover == null || failed) Icon(KetIcons.Album, null, tint = theme.secondary.copy(alpha = .32f),
         modifier = Modifier.fillMaxSize(.42f).align(Alignment.Center))
     when {
         video -> com.ketvoice.app.ui.player.ArtworkCanvas(
-            track!!, canvas, playing = true, forceCanvas = true, modifier = Modifier.fillMaxSize().then(framing),
+            track!!, canvas, playing = true, forceCanvas = true, modifier = framing,
             onMediaAspect = { aspect = it })
         cover != null -> AsyncImage(image, null, contentScale = ContentScale.Crop,
             onSuccess = { loaded ->
@@ -305,7 +304,7 @@ private fun BoxScope.AlbumArtwork(cover: String?, track: Track?, frame: com.ketv
                 val size = loaded.painter.intrinsicSize
                 if (size.width > 0f && size.height > 0f) aspect = size.width / size.height
             }, onError = { failed = true },
-            modifier = Modifier.fillMaxSize().then(framing).graphicsLayer { this.alpha = alpha }
+            modifier = (if (frame == null) framing.graphicsLayer { this.alpha = alpha } else framing)
                 .testTag(if (ready) "album-artwork-loaded" else "album-artwork-loading"))
     }
 }
@@ -402,3 +401,23 @@ private fun AlbumFramingBar(busy: Boolean, error: String, hasPublished: Boolean,
         }
     }
 }
+
+/**
+ * Draws the picture at the size it has when it simply covers the box, whatever the box crops,
+ * then moves it so that the rectangle of [frame] fills the box.
+ */
+private fun Modifier.framedPicture(frame: com.ketvoice.app.data.Frame, aspect: Float, alpha: () -> Float = { 1f }): Modifier =
+    layout { measurable, constraints ->
+        val boxWidth = constraints.maxWidth; val boxHeight = constraints.maxHeight
+        val width = Framing.baseWidth(boxWidth.toFloat(), boxHeight.toFloat(), aspect).roundToInt().coerceIn(1, 8_192)
+        val height = (width / aspect).roundToInt().coerceIn(1, 8_192)
+        val placeable = measurable.measure(androidx.compose.ui.unit.Constraints.fixed(width, height))
+        val layer = Framing.layer(Framing.contain(frame, aspect), boxWidth.toFloat(), boxHeight.toFloat(), aspect)
+        layout(boxWidth, boxHeight) {
+            placeable.placeWithLayer((boxWidth - width) / 2, (boxHeight - height) / 2) {
+                scaleX = layer.scaleX; scaleY = layer.scaleY; rotationZ = layer.rotation
+                translationX = layer.translationX; translationY = layer.translationY
+                this.alpha = alpha()
+            }
+        }
+    }

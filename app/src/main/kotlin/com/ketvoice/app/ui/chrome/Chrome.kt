@@ -142,7 +142,7 @@ fun MiniPlayerPill(
             ) {
                 // The cover comes alive as its Canvas when the title has one and motion is welcome.
                 val canvases by com.ketvoice.app.data.CanvasRepo.paths.collectAsState()
-                val canvas = canvases[current.id]?.takeIf {
+                val canvas = canvases[current.id]?.takeIf { !com.ketvoice.app.data.MediaOverrides.canvasDisabled(current) }?.takeIf {
                     AppSettings.animatedArtwork.value && !Motion.reduced && !AppSettings.highPerformanceMode.value
                 }
                 val coverPlace = Modifier.onGloballyPositioned { AppUi.miniCoverBounds.value = it.boundsInRoot() }

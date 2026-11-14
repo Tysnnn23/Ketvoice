@@ -185,8 +185,11 @@ internal fun QueuePane(state: PlayerUiState, modifier: Modifier = Modifier, show
         }
     }
         // Automix: titles are mixed into each other at the end, like a DJ would.
-        AutomixToggle(Modifier.align(Alignment.BottomStart).padding(bottom = 10.dp)) { on ->
-            announce(if (on) "Automix activé : les titres s'enchaînent comme dans un mix" else "Automix désactivé")
+        Row(Modifier.align(Alignment.BottomStart).padding(bottom = 10.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            AutomixToggle { on ->
+                announce(if (on) "Automix activé : les titres s'enchaînent comme dans un mix" else "Automix désactivé")
+            }
+            AutomixStatusLine(Modifier.padding(start = 12.dp, end = 4.dp).weight(1f))
         }
     }
 }

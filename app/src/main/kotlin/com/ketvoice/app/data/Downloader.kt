@@ -350,7 +350,7 @@ object Downloader {
                 }
 
                 if (capsuleLimit == null) withTimeoutOrNull(50_000) { runCatching { CanvasRepo.resolve(track, force = true) } }
-                val canvas = CanvasRepo.localPath(track.id)
+                val canvas = if (MediaOverrides.canvasDisabled(track)) null else CanvasRepo.localPath(track.id)
                 if (canvas != null) {
                     meta.put("canvasFile", canvas.absolutePath)
                     meta.put("canvasSpotifyId", canvas.nameWithoutExtension)

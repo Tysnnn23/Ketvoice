@@ -7,6 +7,20 @@
 
 ---
 
+# Ketvoice 5.1.0
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 107** — Automix that explains itself; signatures that show up.
+
+- Automix mixes albums too (setting, on by default; gapless albums stay untouched), shows a status
+  line in the queue and in Settings, prepares the next title 150 s ahead and retries, mixes longer.
+- Artist signatures no longer depend on the busy artwork service.
+
+Full notes: [5.1.0](docs/releases/v5.1.0.md).
+
+---
+
 # Ketvoice 5.0.0
 
 ![Ketvoice](ketvoice-banner.png)

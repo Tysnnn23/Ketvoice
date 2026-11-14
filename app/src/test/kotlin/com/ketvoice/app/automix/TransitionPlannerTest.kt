@@ -25,7 +25,9 @@ class TransitionPlannerTest {
     }
 
     @Test fun someListeningIsNeverMixed() {
-        assertEquals(MixKind.None, plan(outro(), intro(), MixContext(sameAlbumInOrder = true)).kind)
+        assertEquals("Albums are left alone only when the listener says so", MixKind.None,
+            plan(outro(), intro(), MixContext(sameAlbumInOrder = true, albumsMixed = false)).kind)
+        assertEquals("...and mixed by default", MixKind.Beatmatch, plan(outro(), intro(), MixContext(sameAlbumInOrder = true), sungUntil = 170_000).kind)
         assertEquals(MixKind.None, plan(outro(), intro(), MixContext(repeatOne = true)).kind)
         assertEquals(MixKind.None, plan(outro(), intro(), MixContext(stopAfterCurrent = true)).kind)
         assertEquals(MixKind.None, plan(outro(), intro(), MixContext(exactAudio = true)).kind)
@@ -85,8 +87,9 @@ class TransitionPlannerTest {
         val dj = plan(outro(120f), intro(120f), intensity = 2, sungUntil = 160_000)
         assertEquals("Discreet plays the ending to its last bar", 199_000L, discreet.outMs + discreet.overlapMs)
         assertEquals("16 beats at most when discreet", 8_000L, discreet.overlapMs)
-        assertTrue("Balanced skips a little", balanced.outMs + balanced.overlapMs in 186_000..188_000)
+        assertTrue("Balanced skips up to 25 s of an instrumental ending", balanced.outMs + balanced.overlapMs in 173_000..176_500)
         assertTrue("DJ mixes as soon as the singing is over", dj.outMs in 160_300..161_000)
+        assertEquals("DJ mixes over 64 beats", 32_000L, dj.overlapMs)
     }
 
     @Test fun withoutLyricsTheMixWaitsForTheOutro() {
@@ -114,14 +117,14 @@ class TransitionPlannerTest {
         val plan = plan(outro(0f, fall = 187_000, end = 199_000, fade = true, confidence = 0f), intro(0f, confidence = 0f))
         assertEquals(MixKind.Crossfade, plan.kind)
         assertEquals("The incoming title is fully in before the last, silent quarter of the fade", 196_000L, plan.outMs + plan.overlapMs)
-        assertEquals(6_000L, plan.overlapMs)
+        assertEquals("The fade is only 12 s long: the crossfade keeps to it", 8_000L, plan.overlapMs)
         assertEquals(300L, plan.inMs)
         assertEquals("no steady beat", plan.reason)
     }
 
     @Test fun twoVoicesDoNotOverlapForLong() {
         val calm = plan(outro(0f, confidence = 0f), intro(0f, confidence = 0f), intensity = 2, sungUntil = 180_000, sungFrom = 600)
-        assertEquals("The ending is instrumental: the long fade stays", 8_000L, calm.overlapMs)
+        assertEquals("The ending is instrumental: the long fade stays", 12_000L, calm.overlapMs)
         val clash = plan(outro(0f, confidence = 0f), intro(0f, confidence = 0f), intensity = 2, sungUntil = 198_000, sungFrom = 600)
         assertEquals(2_500L, clash.overlapMs)
     }
@@ -142,7 +145,7 @@ class TransitionPlannerTest {
     @Test fun withoutAnalysisAShortCrossfadeStillWorks() {
         val plan = plan(null, null)
         assertEquals(MixKind.Crossfade, plan.kind)
-        assertEquals(4_000L, plan.overlapMs)
+        assertEquals(5_333L, plan.overlapMs)
         assertEquals(0L, plan.inMs)
         assertEquals(duration - 250, plan.outMs + plan.overlapMs)
         assertEquals(MixKind.Crossfade, plan(outro(), null).kind)
@@ -163,5 +166,24 @@ class TransitionPlannerTest {
         assertEquals("Never past the end", 101_000L, Vocals.endMs(plain, 101_000))
         assertNull(Vocals.startMs(listOf(MusicApi.LyricLine(-1, "plain text"))))
         assertNull(Vocals.endMs(emptyList(), 1))
+    }
+
+    @Test fun anAlbumWithNoGapBetweenItsTitlesIsLeftAlone() {
+        val abrupt = outro(120f, hard = true, end = 199_900)
+        val immediate = intro(120f, start = 20, rise = 200)
+        val joined = plan(abrupt, immediate, MixContext(sameAlbumInOrder = true))
+        assertEquals(MixKind.None, joined.kind); assertEquals("gapless album", joined.reason)
+        // The same two titles in a playlist, not as neighbours of an album, are mixed as any others.
+        assertNotEquals(MixKind.None, plan(abrupt, immediate, MixContext(sameAlbumInOrder = false), sungUntil = 190_000).kind)
+        // An album whose titles are separated by a little silence is mixed.
+        assertNotEquals(MixKind.None, plan(outro(120f, hard = true, end = 197_000), intro(), MixContext(sameAlbumInOrder = true)).kind)
+    }
+
+    @Test fun withoutLyricsALongMixNeverStartsBeforeTheOutro() {
+        // 64 beats (32 s) would start in the body of the title: the planner goes down to a count that fits the outro.
+        val plan = plan(outro(120f, fall = 181_000), intro(120f), intensity = 2)
+        assertEquals(MixKind.Beatmatch, plan.kind)
+        assertTrue("starts in the outro (${plan.outMs})", plan.outMs >= 181_000)
+        assertEquals(16_000L, plan.overlapMs)
     }
 }

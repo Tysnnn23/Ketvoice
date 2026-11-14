@@ -41,7 +41,9 @@ data class MediaOverride(
     val canvas: String? = null,
     val hero: String? = null,
     val updatedAt: String = "",
-    val frame: Frame? = null
+    val frame: Frame? = null,
+    /** The owner switched the Canvas off for this title or album. */
+    val canvasOff: Boolean = false
 ) {
     val id: String get() = "$kind:$key"
 }
@@ -109,10 +111,26 @@ object MediaOverrides {
         return track(track)?.cover ?: get(ALBUM, albumKeyFor(track))?.cover ?: fallback
     }
 
-    /** A Canvas chosen for the title, else for its album. */
+    /** A Canvas chosen for the title, else for its album; none when the title's own override switched it off. */
     fun canvas(track: Track): String? {
         if (state.value.isEmpty()) return null
-        return track(track)?.canvas ?: get(ALBUM, albumKeyFor(track))?.canvas
+        val own = track(track)
+        if (own?.canvas != null) return own.canvas
+        if (own?.canvasOff == true) return null
+        return get(ALBUM, albumKeyFor(track))?.canvas
+    }
+
+    /**
+     * The owner switched this title's Canvas off, or its album's: nothing plays behind it, whatever
+     * the catalogue offers. A Canvas chosen for the title itself wins over an album that is off.
+     */
+    fun canvasDisabled(track: Track): Boolean {
+        if (state.value.isEmpty()) return false
+        val own = track(track)
+        if (own?.canvas != null) return false
+        if (own?.canvasOff == true) return true
+        val album = get(ALBUM, albumKeyFor(track))
+        return album != null && album.canvas == null && album.canvasOff
     }
 
     fun albumCover(title: String, artist: String, fallback: String?): String? =
@@ -152,8 +170,8 @@ object MediaOverrides {
                 f.optDouble("rotation", 0.0).toFloat(), f.optBoolean("flip", false)).clamped()
         }
         val item = MediaOverride(kind, key, row.optString("label"), url("coverURL"), url("canvasURL"), url("heroURL"),
-            row.optString("updatedAt"), frame)
-        return item.takeIf { it.cover != null || it.canvas != null || it.hero != null || it.frame != null }
+            row.optString("updatedAt"), frame, row.optBoolean("canvasOff", false))
+        return item.takeIf { it.cover != null || it.canvas != null || it.hero != null || it.frame != null || it.canvasOff }
     }
 
     internal fun encode(items: Collection<MediaOverride>): String = JSONObject().put("overrides", JSONArray().apply {
@@ -161,6 +179,7 @@ object MediaOverrides {
             put(JSONObject().put("kind", o.kind).put("key", o.key).put("label", o.label)
                 .put("coverURL", o.cover ?: JSONObject.NULL).put("canvasURL", o.canvas ?: JSONObject.NULL)
                 .put("heroURL", o.hero ?: JSONObject.NULL).put("updatedAt", o.updatedAt)
+                .put("canvasOff", o.canvasOff)
                 .put("frame", o.frame?.let(::frameJson) ?: JSONObject.NULL))
         }
     }).toString()
@@ -194,7 +213,7 @@ object MediaOverrides {
         val before = state.value
         state.value = next
         context?.getSharedPreferences(PREFS, Context.MODE_PRIVATE)?.edit()?.putString("json", encode(next.values))?.apply()
-        if (before.values.map { it.canvas } != next.values.map { it.canvas }) {
+        if (before.values.map { it.canvas to it.canvasOff } != next.values.map { it.canvas to it.canvasOff }) {
             com.ketvoice.app.player.Player.state.value.current?.let { scope.launch { CanvasRepo.resolve(it) } }
         }
     }
@@ -203,6 +222,12 @@ object MediaOverrides {
     internal fun accept(kind: String, key: String, saved: MediaOverride?) {
         val id = "$kind:$key"
         set(if (saved == null) state.value - id else state.value + (id to saved))
+    }
+
+    /** What the owner just saved for several items: the ones the server no longer lists have no override left. */
+    internal fun acceptMany(kind: String, keys: List<String>, saved: List<MediaOverride>) {
+        val kept = saved.filter { it.kind == kind }.associateBy { it.id }
+        set(state.value - keys.map { "$kind:$it" }.toSet() + kept)
     }
 
     /** For tests and previews. */
@@ -222,14 +247,16 @@ data class VisualTarget(
     val title: String,
     val subtitle: String,
     val cover: String?,
-    val sample: Track? = null
+    val sample: Track? = null,
+    /** The titles of an album, to choose among when changing their Canvas. */
+    val tracks: List<Track> = emptyList()
 ) {
     companion object {
         fun track(track: Track, cover: String? = track.coverUrl): VisualTarget? = MediaOverrides.keyFor(track)?.let {
             VisualTarget(MediaOverrides.TRACK, it, track.title, track.artist, cover, track)
         }
-        fun album(title: String, artist: String, cover: String?, sample: Track? = null): VisualTarget? =
-            MediaOverrides.albumKey(title, artist)?.let { VisualTarget(MediaOverrides.ALBUM, it, title, artist, cover, sample) }
+        fun album(title: String, artist: String, cover: String?, sample: Track? = null, tracks: List<Track> = emptyList()): VisualTarget? =
+            MediaOverrides.albumKey(title, artist)?.let { VisualTarget(MediaOverrides.ALBUM, it, title, artist, cover, sample, tracks) }
         fun artist(name: String, photo: String?): VisualTarget? =
             MediaOverrides.artistKey(name)?.let { VisualTarget(MediaOverrides.ARTIST, it, name, "", photo) }
         /** An override already saved, reopened from the Studio list. */
