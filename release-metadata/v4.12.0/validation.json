@@ -1,0 +1,166 @@
+{
+  "schema": 8,
+  "version": "4.12.0",
+  "versionCode": 97,
+  "source_commit": "c86035df8aa1bc6024ee7775b95580e8d3f9ae97",
+  "created_at": "2026-11-14T02:18:47.089725+00:00",
+  "build_origin": {
+    "kind": "github_actions_with_owner_discord_sdk",
+    "workflow": "android.yml",
+    "run_id": 43541728825,
+    "artifact": {
+      "id": 14092149731,
+      "sha256": "b0d47c5ff151ceae4a72140e711aebe98b9c858e18bf596fc704ab90a1ed03e4"
+    },
+    "gradle": "assembleMobileRelease assembleQuestRelease",
+    "note": "Signed by CI with the pinned keystore secret; the Discord Social SDK AAR matched its pinned SHA-256."
+  },
+  "local_validation": {
+    "result": "debug JVM/Robolectric suites for both flavors, release lint and the UI text audit passed in a cloud container without the Discord SDK",
+    "commands": [
+      "testMobileDebugUnitTest",
+      "testQuestDebugUnitTest",
+      "lintMobileRelease",
+      "lintQuestRelease",
+      "tools/audit_ui_texts.py --check"
+    ],
+    "ci_validation": "run 43541728825: release builds, debug and release unit tests for both flavors, UI text audit, lint, APK signature pin and Discord bridge packaging passed",
+    "after_last_full_local_run": "two small edits (Explorer scroll anchor, one localized label) were followed by the Quest compile, targeted host tests and the UI text audit locally; the complete suites then ran in CI on the published commit",
+    "code_review": {
+      "kind": "author's own re-read of the playback diff; no independent review",
+      "findings_fixed": 5
+    },
+    "host_previews": "queue, local music, Replay and catalogue shelves rendered in software on the host and inspected"
+  },
+  "tests": {
+    "mobile": {
+      "jvm": {
+        "tests": 603,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "android_15_emulator_compose": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "quest": {
+      "jvm": {
+        "tests": 602,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "android_15_emulator_compose": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    }
+  },
+  "lint": {
+    "mobile": {
+      "Warning": 169,
+      "Hint": 16
+    },
+    "quest": {
+      "Warning": 171,
+      "Hint": 16
+    }
+  },
+  "apks": [
+    {
+      "name": "Ketvoice-4.12.0.apk",
+      "sha256": "09ef410942459a2943ae8f62cb2aed43718beda4983736756bb44a7b6930bcf9",
+      "bytes": 72765276,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "4.12.0",
+      "versionCode": 97,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-4.12.0-Quest.apk",
+      "sha256": "9b44424336245b40db0ef388cbcaff7e0a51cb387d931daa916844bdb1c31e69",
+      "bytes": 82798874,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "4.12.0",
+      "versionCode": 97,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    }
+  ],
+  "discord": {
+    "sdk_present_in_ci_build": true,
+    "sdk_sha256_pinned": true,
+    "bridge_and_native_libraries_verified": true,
+    "presence_mode": "unauthenticated_rpc_through_installed_discord_app"
+  },
+  "credential_scan": {
+    "entries": 3272,
+    "findings": 0,
+    "raw_pattern_findings": 1,
+    "scope": "tracked sources and APK archive entries",
+    "kind": "credential_patterns",
+    "explicit_private_provider_key_deny_list": false,
+    "triage": [
+      {
+        "file": "Ketvoice-Liquid-Glass-V4.html",
+        "classification": "embedded_image_false_positive",
+        "all_hits_inside_image_data_uris": true,
+        "rescanned_without_image_payloads": true
+      }
+    ]
+  },
+  "release_install_smoke": {
+    "mobile": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "quest": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    }
+  },
+  "publication_override": {
+    "authorized_by_user": true,
+    "authorized_at": "2026-11-14T02:18:47.089725+00:00",
+    "user_statement": "J'autorise et fait tout sauf la 3",
+    "in_reply_to": "A request to authorize publishing 4.12.0 without phone or Quest testing.",
+    "note": "The request was shown as text and as a question; the owner answered with a typed message that repeats the wording used for 4.11.0.",
+    "reason": "The owner explicitly authorized publishing 4.12.0 without phone or Quest testing.",
+    "scope": "physical device installation and all on-device behaviour of 4.12.0"
+  },
+  "not_validated": [
+    "physical phone or Quest installation, rendering and audible playback",
+    "next and previous from the media notification, the lock screen, a headset or Bluetooth device (the session bridge is covered by host tests with a fake engine only)",
+    "audible behaviour of visible shuffle, previous from history, repeat queue and the sleep timer fade and end-of-title stop",
+    "that the next title starts sooner after being resolved before the end, on a real network",
+    "swipe gestures on the mini-player, the artwork, the queue and title rows with real touch input",
+    "the audio permission dialog of Local music and a scan of a real device library",
+    "the live public catalogue: chart shelves in Explorer and the Albums shelf in Search (response parsing is tested with fixtures)",
+    "independent code review of this diff"
+  ],
+  "known_limitations": [
+    "Gapless playback and crossfade are not implemented: the engine holds one title at a time.",
+    "A queue restored from a handoff or from a session saved before 4.12.0 with shuffle on has no remembered order: turning shuffle off leaves it as is.",
+    "Next or Previous from a headset while the app process has just been started by the system does nothing until the saved session is loaded.",
+    "The end-of-title sleep mode applies to whichever title is playing when it ends.",
+    "The signing certificate is the existing public Android debug identity, not a private production key."
+  ],
+  "canonical_banner_sha256": "47f6793088983f7d4e6bd1aeaa2cbd8b7cdc2a8f91271e3b2839daea81da0436"
+}
