@@ -21,6 +21,13 @@
 
 ## Overview
 
+### 4.14.2 — a navigation morph you can follow
+
+The droplet morph of the navigation bar is 17 % slower than its original speed.
+[Mobile](https://github.com/Tysnnn23/Ketvoice/releases/download/v4.14.2/Ketvoice-4.14.2.apk)
+· [Quest](https://github.com/Tysnnn23/Ketvoice/releases/download/v4.14.2/Ketvoice-4.14.2-Quest.apk)
+· [Release notes](docs/releases/v4.14.2.md).
+
 ### 4.14.1 — the artist page takes its colour from the portrait
 
 The portrait fills the top of the artist page again and dissolves, without a line,

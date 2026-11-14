@@ -7,6 +7,17 @@
 
 ---
 
+# Ketvoice 4.14.2
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 101** — the droplet morph of the navigation bar is 17 % slower than its
+original speed, instead of 3 %.
+
+Full notes: [4.14.2](docs/releases/v4.14.2.md).
+
+---
+
 # Ketvoice 4.14.1
 
 ![Ketvoice](ketvoice-banner.png)

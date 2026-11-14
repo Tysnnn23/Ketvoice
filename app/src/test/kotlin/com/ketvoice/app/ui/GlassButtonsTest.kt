@@ -31,9 +31,9 @@ class GlassButtonsTest {
         assertEquals(Color.White, onAccent(Color(0xFF0A2540)))
     }
 
-    @Test fun navigationMorphIsThreePercentSlowerThanBefore() {
+    @Test fun navigationMorphIsSeventeenPercentSlowerThanTheOriginal() {
         // A spring's duration scales with 1 / sqrt(stiffness): 460 was the original value.
         val slower = kotlin.math.sqrt(460f / DesignTokens.Motion.CHROME_STIFFNESS)
-        assertEquals(1.03f, slower, .0005f)
+        assertEquals(1.17f, slower, .0005f)
     }
 }
