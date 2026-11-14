@@ -1,5 +1,6 @@
 package com.ketvoice.app.ui.library
 
+import com.ketvoice.app.ui.common.trackRowClick
 import com.ketvoice.app.ui.common.asHeading
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -206,11 +207,13 @@ fun LibraryScreen() {
                 }
             }
             items(shown, key = { it.id }) { track ->
-                Row(Modifier.then(if (com.ketvoice.app.ui.motion.Motion.reduced) Modifier else Modifier.animateItem())
-                    .fillMaxWidth().clickable {
-                    if (selecting) selected = if (track.id in selected) selected - track.id else selected + track.id
-                    else Player.playQueue(shown, shown.indexOfFirst { it.id == track.id })
-                }.padding(horizontal = 18.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                com.ketvoice.app.ui.common.SwipeTrackActions(track,
+                    if (com.ketvoice.app.ui.motion.Motion.reduced) Modifier else Modifier.animateItem(), enabled = !selecting) {
+                Row(Modifier.fillMaxWidth().then(
+                    if (selecting) Modifier.clickable(role = androidx.compose.ui.semantics.Role.Checkbox) {
+                        selected = if (track.id in selected) selected - track.id else selected + track.id
+                    } else Modifier.trackRowClick(track) { Player.playQueue(shown, shown.indexOfFirst { it.id == track.id }) }
+                ).padding(horizontal = 18.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     if (selecting) Checkbox(track.id in selected, onCheckedChange = null)
                     DownloadCover(track, ArtworkRepo.coverForTrack(track) ?: track.coverUrl, 48.dp, 10.dp)
                     Column(Modifier.weight(1f).padding(start = 12.dp)) {
@@ -218,6 +221,7 @@ fun LibraryScreen() {
                         Text(track.artist, localize = false, color = theme.secondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                     if (!selecting) IconButton(onClick = { AppUi.trackMenuTrack.value = track }) { Icon(KetIcons.More, "Options", tint = theme.secondary) }
+                }
                 }
             }
         }

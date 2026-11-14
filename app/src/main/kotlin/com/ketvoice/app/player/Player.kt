@@ -54,7 +54,11 @@ data class PlayerUiState(
     val audioSource: String = "",
     val searchingBetter: Boolean = false,
     val audioFallback: Boolean = false,
-    val audioFallbackHttpStatus: Int? = null
+    val audioFallbackHttpStatus: Int? = null,
+    /** Replays the whole queue from its first entry once the last one ends. */
+    val repeatAll: Boolean = false,
+    /** Entry ids in the order the queue had before shuffle; empty while not shuffled. */
+    val linearOrder: List<String> = emptyList()
 ) {
     val current: Track? get() = if (index in queue.indices) queue[index] else null
 }
@@ -73,9 +77,14 @@ object Player {
 
     /** Wall-clock budget for the whole parallel resolution pass. */
     private const val TOTAL_RESOLVE_BUDGET_MS = 40_000L
+    /** The next entry is resolved again when the current track has this long left. */
+    private const val WARM_NEXT_WINDOW_MS = 25_000L
 
     private var controller: MediaController? = null
-    private data class PendingPlay(val track: Track, val queue: List<Track>, val index: Int?, val position: Long, val playing: Boolean)
+    /** How a play request relates to the queue order already on screen. */
+    private enum class QueueOrigin { External, Keep, Internal }
+    private data class PendingPlay(val track: Track, val queue: List<Track>, val index: Int?, val position: Long,
+                                   val playing: Boolean, val origin: QueueOrigin, val shuffledFrom: List<Track>?)
     private var pendingPlay: PendingPlay? = null
     private var connected = false
     private var keepAliveJob: Job? = null
@@ -94,8 +103,12 @@ object Player {
     private var historyGeneration = -1
     private var resolving = false
     private var resolveStartedAt = 0L
-    private data class PrefetchedDash(val candidate: StreamResolver.Candidate, val at: Long)
-    private val prefetchedDash = java.util.concurrent.ConcurrentHashMap<String, PrefetchedDash>()
+    private data class Prefetched(val candidate: StreamResolver.Candidate, val at: Long)
+    /** Streams resolved ahead of time for upcoming entries, by track id. */
+    private val prefetched = java.util.concurrent.ConcurrentHashMap<String, Prefetched>()
+    /** Entry already warmed for the end of the current track. */
+    private var warmedNextEntry: String? = null
+    private val history = PlayHistory()
 
     private val _volume = MutableStateFlow(1f)
     val volume: StateFlow<Float> = _volume
@@ -219,10 +232,12 @@ object Player {
                 val key = s.current?.id to s.index
                 if (key != lastEndedKey) {
                     lastEndedKey = key
-                    if (s.repeatOne) { seekTo(0L); controller?.play() }
-                    else if (s.index < s.queue.lastIndex) next()
-                    else if (s.autoplay) extendQueue()
-                    else _state.value = s.copy(isPlaying = false, playWhenReady = false)
+                    if (SleepTimer.consumeEndOfTrack()) {
+                        // The timer asked for silence after this title: stay on the next one, paused.
+                        val step = QueueSteps.next(s.queue.size, s.index, repeatOne = false, s.repeatAll, autoplay = false, ended = true)
+                        if (step is QueueStep.Jump) startPlayback(s.queue[step.index], s.queue, step.index, 0L, false, QueueOrigin.Internal)
+                        else { desiredPlay = false; _state.value = s.copy(isPlaying = false, playWhenReady = false) }
+                    } else advance(ended = true)
                 }
             }
         }
@@ -274,7 +289,8 @@ object Player {
                 c.volume = 1f
                 pendingPlay?.let { pending ->
                     pendingPlay = null
-                    playTrack(pending.track, pending.queue, pending.index, pending.position, pending.playing)
+                    startPlayback(pending.track, pending.queue, pending.index, pending.position, pending.playing,
+                        pending.origin, pending.shuffledFrom)
                 }
             } catch (_: Exception) {
                 connected = false
@@ -304,6 +320,7 @@ object Player {
         }
         _position.value = pos
         val dur = if (c.duration > 0) c.duration else _state.value.durationMs
+        if (dur > 0 && dur - pos in 1..WARM_NEXT_WINDOW_MS && c.isPlaying) warmNextEntry()
         if (dur != _state.value.durationMs ||
             kotlin.math.abs(pos - _state.value.positionMs) > 3_500L
         ) {
@@ -360,11 +377,28 @@ object Player {
     }
 
     // ------------------------------------------------------------ Lecture
+    /**
+     * Plays [track] inside [queue]. With shuffle on, a queue the player does not have
+     * yet is shuffled around the chosen track; [keepOrder] plays it exactly as given
+     * (a session received from another device).
+     */
     fun playTrack(track: Track, queue: List<Track> = listOf(track), startIndex: Int? = null,
-                  startPositionMs: Long = 0L, autoPlay: Boolean = true) {
+                  startPositionMs: Long = 0L, autoPlay: Boolean = true, keepOrder: Boolean = false) =
+        startPlayback(track, queue, startIndex, startPositionMs, autoPlay,
+            if (keepOrder) QueueOrigin.Keep else QueueOrigin.External)
+
+    /** Plays [tracks] in a random order; turning shuffle off restores the given order. */
+    fun playShuffled(tracks: List<Track>) {
+        if (tracks.isEmpty()) return
+        val order = tracks.shuffled()
+        startPlayback(order.first(), order, 0, 0L, true, QueueOrigin.External, shuffledFrom = tracks)
+    }
+
+    private fun startPlayback(track: Track, queue: List<Track>, startIndex: Int?, startPositionMs: Long, autoPlay: Boolean,
+                              origin: QueueOrigin, shuffledFrom: List<Track>? = null, fromPrevious: Boolean = false) {
         restoredSessionPending = false
         val c = controller ?: run {
-            pendingPlay = PendingPlay(track, queue, startIndex, startPositionMs, autoPlay)
+            pendingPlay = PendingPlay(track, queue, startIndex, startPositionMs, autoPlay, origin, shuffledFrom)
             appContext?.let { if (!connected) connect(it) }
             return
         }
@@ -408,18 +442,35 @@ object Player {
             ?: initialQueue.indexOfFirst { it.id == track.id }.let { if (it >= 0) it else 0 }
         val gen = ++generation
         val prev = _state.value
-        if (initialQueue.map { it.id } != prev.queue.map { it.id }) shuffleRecent.clear()
+        val queueIds = initialQueue.map { it.id }
+        val sameQueue = queueIds == prev.queue.map { it.id }
+        val reconciled = QueueEntryIds.reconcile(prev.queue.map { it.id }, prev.queueEntryIds, queueIds)
+        // Visible shuffle: the queue itself carries the playing order.
+        val ordered = when {
+            shuffledFrom != null ->
+                QueueOrder.Result(initialQueue, reconciled, idx, QueueOrder.linearOf(shuffledFrom, initialQueue, reconciled))
+            origin == QueueOrigin.Internal || sameQueue ->
+                QueueOrder.Result(initialQueue, reconciled, idx, QueueOrder.syncLinear(prev.linearOrder, reconciled))
+            origin == QueueOrigin.External && prev.shuffle -> QueueOrder.shuffle(initialQueue, reconciled, idx)
+            else -> QueueOrder.Result(initialQueue, reconciled, idx, emptyList())
+        }
+        val leaving = prev.queueEntryIds.getOrNull(prev.index)
+        if (origin == QueueOrigin.External && !sameQueue) history.clear()
+        else if (!fromPrevious && leaving != null && leaving != ordered.entryIds.getOrNull(ordered.index)) history.push(leaving)
+        warmedNextEntry = null
         _state.value = PlayerUiState(
-            queue = initialQueue,
-            queueEntryIds = QueueEntryIds.reconcile(prev.queue.map { it.id }, prev.queueEntryIds, initialQueue.map { it.id }),
-            index = idx,
+            queue = ordered.queue,
+            queueEntryIds = ordered.entryIds,
+            index = ordered.index,
             isPlaying = false,
             playWhenReady = autoPlay,
             positionMs = startPositionMs.coerceAtLeast(0),
             buffering = true,
-            shuffle = prev.shuffle,
+            shuffle = prev.shuffle || shuffledFrom != null,
             repeatOne = prev.repeatOne,
+            repeatAll = prev.repeatAll,
             autoplay = prev.autoplay,
+            linearOrder = ordered.linearOrder,
             quality = "Connexion…",
             durationMs = resolvedTrack.durationMs
         )
@@ -479,19 +530,26 @@ object Player {
                 _state.value = _state.value.copy(quality = "En cache · ${label(cached)}", audioSource = "En cache")
                 return@launch
             }
-            val prefetched = prefetchedDash.remove(track.id)?.takeIf {
-                android.os.SystemClock.elapsedRealtime() - it.at in 0..60_000 &&
+            val ahead = prefetched.remove(track.id)?.takeIf {
+                StreamResolver.prefetchedFresh(it.candidate.stream.isDash, android.os.SystemClock.elapsedRealtime() - it.at) &&
                     SourcePriority.entries().any { entry -> entry.id == it.candidate.sourceId && entry.enabled } &&
                     StreamResolver.canUsePrefetched(AppSettings.progressiveQuality.value,
                         StreamResolver.sources(resolvedTrack, download = false, lossless = wantsLossless()).firstOrNull()?.id,
                         it.candidate.sourceId)
             }?.candidate
-            if (prefetched != null && (!explicit || prefetched.sourceId == resolvedTrack.sourceOverride) &&
+            // A stream resolved ahead of time starts at once. Outside DASH it is only the
+            // first candidate, so the better sources are still collected below.
+            var seededStream: MusicApi.StreamInfo? = null
+            if (ahead != null && (!explicit || ahead.sourceId == resolvedTrack.sourceOverride) &&
                 com.ketvoice.app.data.ImportedSong.id(resolvedTrack) == null) {
-                start(prefetched.stream, sourceId = prefetched.sourceId)
-                _state.value = _state.value.copy(audioSource = sourceLabel(prefetched.sourceId, prefetched.stream))
+                start(ahead.stream, sourceId = ahead.sourceId)
+                _state.value = _state.value.copy(audioSource = sourceLabel(ahead.sourceId, ahead.stream))
+                if (!ahead.stream.isDash) AudioCache.cacheWhole(track.id, ahead.stream)
                 prefetchNext(gen, resolvedTrack)
-                return@launch
+                val keepLooking = !ahead.stream.isDash && AppSettings.progressiveQuality.value &&
+                    qualitySetting() != "Normal" && !AppSettings.bitPerfect.value
+                if (!keepLooking) return@launch
+                seededStream = ahead.stream
             }
             if (resolvedTrack.addon == "upload" || resolvedTrack.id.startsWith("kv:upload:")) {
                 val stream = PublicationApi.stream(resolvedTrack, cached)
@@ -513,7 +571,7 @@ object Player {
             kotlinx.coroutines.currentCoroutineContext()[Job]?.invokeOnCompletion {
                 if (gen == generation) _state.value = _state.value.copy(searchingBetter = false)
             }
-            var currentStream: MusicApi.StreamInfo? = null
+            var currentStream: MusicApi.StreamInfo? = seededStream
             suspend fun upgrade(stream: MusicApi.StreamInfo, sourceId: String) {
                 if (AppSettings.bitPerfect.value || !highQuality || stream.url == currentStream?.url || gen != generation ||
                     StreamQuality.rank(stream) <= (currentStream?.let(StreamQuality::rank) ?: 0)) return
@@ -612,31 +670,52 @@ object Player {
      * is resolved and its bytes enter the audio cache, so the transition is instant.
      * Resolution follows the user's source mode; byte caching honours metered connections.
      */
-    private fun prefetchNext(gen: Int, current: Track) {
+    private fun prefetchNext(gen: Int, current: Track, targets: List<Track>? = null, margin: Long = 0L) {
         val state = _state.value
-        val upcoming = (1..2).mapNotNull { offset -> state.queue.getOrNull(state.index + offset) }
-            .filter { it.id != current.id && !it.id.startsWith("local:") }
+        val upcoming = (targets ?: (1..2).mapNotNull { offset -> state.queue.getOrNull(state.index + offset) })
+            .filter { it.id != current.id && !it.id.startsWith("local:") && Downloader.itemFor(it.id) == null }
         if (upcoming.isEmpty()) return
         scope.launch(Dispatchers.IO) {
             for (item in upcoming) {
                 if (gen != generation) return@launch
                 if (AudioCache.complete(item.id, wantsLossless()) != null) continue
+                // Still valid when the track ends: no second resolution.
+                if (prefetched[item.id]?.let { StreamResolver.prefetchedFresh(it.candidate.stream.isDash,
+                        android.os.SystemClock.elapsedRealtime() - it.at + margin) } == true) continue
                 runCatching {
                     StreamResolver.candidates(item, download = false, lossless = wantsLossless(),
                         race = AppSettings.progressiveQuality.value)
                         .firstOrNull()
                 }.getOrNull()?.let { candidate ->
-                    if (candidate.stream.isDash && com.ketvoice.app.data.CustomSources.reusableManifestUrl(candidate.stream.url)) {
-                        if (prefetchedDash.size >= 10) prefetchedDash.clear()
-                        if (gen == generation) prefetchedDash[item.id] = PrefetchedDash(candidate, android.os.SystemClock.elapsedRealtime())
-                    } else if (!isMetered()) AudioCache.cacheWhole(item.id, candidate.stream)
+                    val reusableDash = candidate.stream.isDash &&
+                        com.ketvoice.app.data.CustomSources.reusableManifestUrl(candidate.stream.url)
+                    if ((reusableDash || !candidate.stream.isDash) && gen == generation) {
+                        if (prefetched.size >= 10) prefetched.clear()
+                        prefetched[item.id] = Prefetched(candidate, android.os.SystemClock.elapsedRealtime())
+                    }
+                    if (!reusableDash && !isMetered()) AudioCache.cacheWhole(item.id, candidate.stream)
                     if (gen == generation) runCatching { ArtworkRepo.enrich(listOf(item)) }
                 }
             }
         }
     }
 
-    fun playQueue(tracks: List<Track>, start: Int = 0) {        if (tracks.isEmpty()) return
+    /**
+     * In the last seconds of a track, what plays next is resolved (again if the first
+     * resolution is too old), so the transition does not wait for the network.
+     */
+    private fun warmNextEntry() {
+        val s = _state.value
+        val step = QueueSteps.next(s.queue.size, s.index, s.repeatOne, s.repeatAll, autoplay = false, ended = true)
+        val target = (step as? QueueStep.Jump)?.index ?: return
+        val key = s.queueEntryIds.getOrNull(target) ?: return
+        if (key == warmedNextEntry) return
+        warmedNextEntry = key
+        prefetchNext(generation, s.current ?: return, listOf(s.queue[target]), margin = WARM_NEXT_WINDOW_MS + 5_000L)
+    }
+
+    fun playQueue(tracks: List<Track>, start: Int = 0) {
+        if (tracks.isEmpty()) return
         val index = start.coerceIn(tracks.indices)
         playTrack(tracks[index], tracks, index)
     }
@@ -652,7 +731,8 @@ object Player {
         q.add(insertAt, track)
         val keys = s.queueEntryIds.toMutableList()
         keys.add(insertAt.coerceAtMost(keys.size), java.util.UUID.randomUUID().toString())
-        _state.value = _state.value.copy(queue = q, queueEntryIds = keys)
+        _state.value = _state.value.copy(queue = q, queueEntryIds = keys,
+            linearOrder = QueueOrder.syncLinear(s.linearOrder, keys, afterKey = s.queueEntryIds.getOrNull(s.index)))
         appContext?.let {
             android.widget.Toast.makeText(
                 it, com.ketvoice.app.data.AppText.t("« ${track.title} » jouera ensuite"),
@@ -675,7 +755,7 @@ object Player {
             q.add(track)
             keys.add(java.util.UUID.randomUUID().toString())
         }
-        _state.value = s.copy(queue = q, queueEntryIds = keys)
+        _state.value = s.copy(queue = q, queueEntryIds = keys, linearOrder = QueueOrder.syncLinear(s.linearOrder, keys))
     }
 
     /** Return the inserted occurrence, not a track id (duplicates are valid). */
@@ -698,7 +778,7 @@ object Player {
     fun jumpTo(index: Int) {
         val s = _state.value
         if (index !in s.queue.indices) return
-        playTrack(s.queue[index], s.queue, index)
+        startPlayback(s.queue[index], s.queue, index, 0L, true, QueueOrigin.Internal)
     }
 
     /** Retire une piste ; si c'est la piste courante, on enchaîne proprement. */
@@ -721,25 +801,62 @@ object Player {
             resolutionJob?.cancel()
             desiredPlay = false
             controller?.stop()
+            history.clear()
             _state.value = PlayerUiState(
                 shuffle = s.shuffle,
                 repeatOne = s.repeatOne,
+                repeatAll = s.repeatAll,
                 autoplay = s.autoplay
             )
             _position.value = 0L
             return
         }
+        val linear = QueueOrder.syncLinear(s.linearOrder, keys)
         if (i == s.index) {
             val nextIndex = i.coerceAtMost(q.lastIndex)
-            _state.value = s.copy(queue = q, queueEntryIds = keys, index = nextIndex)
-            playTrack(q[nextIndex], q, nextIndex)
+            _state.value = s.copy(queue = q, queueEntryIds = keys, index = nextIndex, linearOrder = linear)
+            startPlayback(q[nextIndex], q, nextIndex, 0L, true, QueueOrigin.Internal)
         } else {
             _state.value = s.copy(
                 queue = q,
                 queueEntryIds = keys,
-                index = if (i < s.index) (s.index - 1).coerceAtLeast(0) else s.index
+                index = if (i < s.index) (s.index - 1).coerceAtLeast(0) else s.index,
+                linearOrder = linear
             )
         }
+    }
+
+    /** Keeps the current title and drops everything else from the queue. */
+    fun clearUpcoming() {
+        val s = _state.value
+        val track = s.current ?: return
+        val key = s.queueEntryIds.getOrNull(s.index) ?: return
+        if (s.queue.size <= 1) return
+        history.clear()
+        warmedNextEntry = null
+        _state.value = s.copy(queue = listOf(track), queueEntryIds = listOf(key), index = 0, linearOrder = emptyList())
+    }
+
+    /** Puts back a queue the listener just cleared, as long as the same title is still current. */
+    fun restoreQueue(queue: List<Track>, entryIds: List<String>, index: Int, linearOrder: List<String>): Boolean {
+        val s = _state.value
+        val key = s.queueEntryIds.getOrNull(s.index) ?: return false
+        if (s.queue.size != 1 || entryIds.getOrNull(index) != key || queue.size != entryIds.size) return false
+        _state.value = s.copy(queue = queue, queueEntryIds = entryIds, index = index, linearOrder = linearOrder)
+        return true
+    }
+
+    /** Re-inserts an entry the listener just swiped away. */
+    fun insertAt(position: Int, track: Track): String? {
+        val s = _state.value
+        if (s.queue.isEmpty()) return null
+        val at = position.coerceIn(0, s.queue.size)
+        val key = java.util.UUID.randomUUID().toString()
+        val q = s.queue.toMutableList().apply { add(at, track) }
+        val keys = s.queueEntryIds.toMutableList().apply { add(at.coerceAtMost(size), key) }
+        _state.value = s.copy(queue = q, queueEntryIds = keys, index = if (at <= s.index) s.index + 1 else s.index,
+            linearOrder = QueueOrder.syncLinear(s.linearOrder, keys))
+        return key
     }
 
     /** Réordonne la file (glisser la poignée) sans interrompre la lecture. */
@@ -757,6 +874,7 @@ object Player {
             from > s.index && to <= s.index -> s.index + 1
             else -> s.index
         }
+        warmedNextEntry = null
         _state.value = s.copy(queue = q, queueEntryIds = keys, index = newIndex)
     }
 
@@ -816,7 +934,7 @@ object Player {
         val state = _state.value
         if (restoredSessionPending) {
             val track = state.current ?: return
-            playTrack(track, state.queue, state.index, _position.value, autoPlay = true)
+            startPlayback(track, state.queue, state.index, _position.value, true, QueueOrigin.Internal)
             return
         }
         if (resolving) {
@@ -826,7 +944,7 @@ object Player {
         }
         val c = controller ?: return
         if (!state.isPlaying && state.failed) {
-            state.current?.let { playTrack(it, state.queue) }
+            state.current?.let { startPlayback(it, state.queue, state.index, 0L, true, QueueOrigin.Internal) }
             return
         }
         desiredPlay = !_state.value.playWhenReady
@@ -839,37 +957,38 @@ object Player {
         }
     }
 
-    private val shuffleRecent = ArrayDeque<Int>()
+    fun next() = advance(ended = false)
 
-    fun next() {
+    /** One rule for a manual skip and for the end of a track. */
+    private fun advance(ended: Boolean) {
         val s = _state.value
-        if (s.queue.isEmpty()) return
-        val nextIndex = if (s.shuffle && s.queue.size > 1) {
-            val recent = shuffleRecent.toSet()
-            var pool = s.queue.indices.filter { it != s.index && it !in recent }
-            if (pool.isEmpty()) pool = s.queue.indices.filter { it != s.index }
-            val chosen = pool.random()
-            shuffleRecent.addLast(chosen)
-            while (shuffleRecent.size > (s.queue.size / 2).coerceAtLeast(1)) shuffleRecent.removeFirst()
-            chosen
-        } else {
-            if (s.index < s.queue.lastIndex) s.index + 1 else {
-                if (s.autoplay) extendQueue()
-                return
-            }
+        when (val step = QueueSteps.next(s.queue.size, s.index, s.repeatOne, s.repeatAll, s.autoplay, ended)) {
+            is QueueStep.Jump -> startPlayback(s.queue[step.index], s.queue, step.index, 0L, true, QueueOrigin.Internal)
+            // The same title ends again later: its end must be handled again.
+            QueueStep.Replay -> { lastEndedKey = null; seekTo(0L); controller?.play() }
+            QueueStep.Extend -> extendQueue()
+            QueueStep.Stop -> if (ended) _state.value = s.copy(isPlaying = false, playWhenReady = false)
         }
-        playTrack(s.queue[nextIndex], s.queue, nextIndex)
     }
 
+    /**
+     * Restarts the title after its first seconds; otherwise returns to the title the
+     * listener really came from, then to the one before it in the queue.
+     */
     fun previous() {
         val c = controller ?: return
         val s = _state.value
-        if (c.currentPosition > 3_000 || s.queue.size <= 1) {
+        if (s.queue.isEmpty()) return
+        if (c.currentPosition > 3_000) {
             seekTo(0)
             return
         }
-        val previous = if (s.index > 0) s.index - 1 else s.queue.lastIndex
-        playTrack(s.queue[previous], s.queue, previous)
+        val target = history.popInto(s.queueEntryIds, s.index) ?: QueueSteps.previous(s.queue.size, s.index, s.repeatAll)
+        if (target == null) {
+            seekTo(0)
+            return
+        }
+        startPlayback(s.queue[target], s.queue, target, 0L, true, QueueOrigin.Internal, fromPrevious = true)
     }
 
     private var extending = false
@@ -885,7 +1004,10 @@ object Player {
                     s.queue.none { it.id == candidate.id || (it.title.equals(candidate.title, true) && it.artist.equals(candidate.artist, true)) }
                 }.take(8)
                 if (gen != generation) return@launch
-                if (related.isNotEmpty()) playQueue(_state.value.queue + related, _state.value.queue.size)
+                if (related.isNotEmpty()) {
+                    val grown = _state.value.queue + related
+                    startPlayback(grown[_state.value.queue.size], grown, _state.value.queue.size, 0L, true, QueueOrigin.Internal)
+                }
                 else _state.value = _state.value.copy(isPlaying = false, playWhenReady = false, buffering = false)
             } finally { extending = false }
         }
@@ -910,17 +1032,58 @@ object Player {
     fun currentPositionMs(): Long =
         (controller?.currentPosition ?: _position.value).coerceAtLeast(0L)
 
+    /**
+     * Visible shuffle: turning it on moves the current title first and shuffles every
+     * other entry of the queue; turning it off puts the queue back in its order.
+     */
     fun setShuffle(on: Boolean) {
         controller?.shuffleModeEnabled = on
-        _state.value = _state.value.copy(shuffle = on)
+        val s = _state.value
+        if (on == s.shuffle) return
+        if (s.queue.isEmpty()) {
+            _state.value = s.copy(shuffle = on, linearOrder = emptyList())
+            return
+        }
+        val order = if (on) QueueOrder.shuffle(s.queue, s.queueEntryIds, s.index)
+            else QueueOrder.restore(s.queue, s.queueEntryIds, s.index, s.linearOrder)
+        warmedNextEntry = null
+        _state.value = s.copy(shuffle = on, queue = order.queue, queueEntryIds = order.entryIds, index = order.index,
+            linearOrder = order.linearOrder)
+        // The new order has another next title: warm it, as at the start of a track.
+        if (controller != null && !resolving) s.current?.let { prefetchNext(generation, it) }
     }
 
-    fun setRepeatOne(on: Boolean) {
-        val c = controller ?: return
+    /** Sets the modes of a session received as is, without reordering its queue. */
+    fun adoptModes(shuffle: Boolean, repeatOne: Boolean, autoplay: Boolean) {
+        controller?.shuffleModeEnabled = shuffle
+        _state.value = _state.value.copy(shuffle = shuffle, autoplay = autoplay, linearOrder = emptyList())
+        setRepeat(all = false, one = repeatOne)
+    }
+
+    fun setRepeatOne(on: Boolean) = setRepeat(all = false, one = on)
+
+    /** Off, then the whole queue, then the current title. */
+    fun cycleRepeat() {
+        val s = _state.value
+        when {
+            s.repeatOne -> setRepeat(all = false, one = false)
+            s.repeatAll -> setRepeat(all = false, one = true)
+            else -> setRepeat(all = true, one = false)
+        }
+    }
+
+    private fun setRepeat(all: Boolean, one: Boolean) {
         // On gère nous-mêmes la file : OFF permet STATE_ENDED -> next().
         // REPEAT_MODE_ONE ne sert qu'au vrai mode « répéter le titre ».
-        c.repeatMode = if (on) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
-        _state.value = _state.value.copy(repeatOne = on)
+        controller?.repeatMode = if (one) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
+        warmedNextEntry = null
+        _state.value = _state.value.copy(repeatOne = one, repeatAll = all && !one)
+    }
+
+    /** Playback gain for the sleep timer's fade; the user's volume stays the system stream. */
+    internal fun setFadeGain(gain: Float) {
+        if (AppSettings.bitPerfect.value) return
+        controller?.volume = gain.coerceIn(0f, 1f)
     }
 
     /** Réglage « Ignorer les silences » : appliqué dans le service (moteur audio). */

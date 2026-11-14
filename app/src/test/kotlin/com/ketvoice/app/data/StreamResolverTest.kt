@@ -122,6 +122,16 @@ class StreamResolverTest {
             SourcePriority.reconcile(listOf("youtube", "api:um", "cs:gone"), listOf("api:um", "youtube", "cs:new")))
     }
 
+    @Test fun aStreamResolvedAheadStaysUsableForMinutesAndAManifestForOne() {
+        assertTrue(StreamResolver.prefetchedFresh(isDash = false, ageMs = 0))
+        assertTrue(StreamResolver.prefetchedFresh(isDash = false, ageMs = 240_000))
+        assertFalse(StreamResolver.prefetchedFresh(isDash = false, ageMs = 240_001))
+        assertTrue(StreamResolver.prefetchedFresh(isDash = true, ageMs = 60_000))
+        assertFalse(StreamResolver.prefetchedFresh(isDash = true, ageMs = 60_001))
+        // A clock that went backwards never validates a stale stream.
+        assertFalse(StreamResolver.prefetchedFresh(isDash = false, ageMs = -1))
+    }
+
     @Test fun prefetchedStreamCannotBypassTheOrderedMode() {
         assertFalse(StreamResolver.canUsePrefetched(false, "lossless", "youtube"))
         assertTrue(StreamResolver.canUsePrefetched(false, "lossless", "lossless"))

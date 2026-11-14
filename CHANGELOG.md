@@ -7,6 +7,28 @@
 
 ---
 
+# Ketvoice 4.12.0
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 97** — skip from anywhere, a visible and editable queue, four screens brought up to date.
+
+- Next and Previous now work from the notification, the lock screen and headset or
+  Bluetooth buttons. Shuffle reorders the visible queue and is undone when turned
+  off; Previous returns to the title you came from; repeat cycles off, queue, title.
+- The next title is resolved before the current one ends. Sleep timer on phones,
+  with a fade-out or "at the end of the song". Swipe the mini-player or the artwork
+  to change title.
+- Queue: live reordering, swipe to remove with Undo, Clear and Save as playlist.
+- The same swipe and long-press gestures in every list of titles.
+- Replay shows real listening time; Local music asks for its permission and gains
+  search, sorting and Albums/Artists views; Search gains an Albums shelf and a real
+  Library scope; Explorer shows the catalogue chart.
+
+Full notes: [4.12.0](docs/releases/v4.12.0.md).
+
+---
+
 # Ketvoice 4.11.0
 
 ![Ketvoice](ketvoice-banner.png)

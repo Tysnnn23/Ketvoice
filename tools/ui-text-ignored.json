@@ -97,5 +97,14 @@
  "AIFF": "audio codec name, identical in every language",
  "ALAC": "audio codec name, identical in every language",
  "WAV": "audio codec name, identical in every language",
- "offline-artist:{0}": "stable lazy-grid artist identity, not user-facing copy"
+ "offline-artist:{0}": "stable lazy-grid artist identity, not user-facing copy",
+ "< 1 min": "duration below one minute: symbol, digit and the universal minute abbreviation",
+ "<unknown>": "placeholder written by the system media library for untagged files, matched not shown",
+ "LOCAL": "source badge like SRC/API/YT, identical in every language",
+ "album inconnu": "placeholder album tag matched to leave untagged files out of groups, not shown",
+ "artiste inconnu": "placeholder artist tag matched to leave untagged files out of groups, not shown",
+ "unknown album": "placeholder album tag matched to leave untagged files out of groups, not shown",
+ "unknown artist": "placeholder artist tag matched to leave untagged files out of groups, not shown",
+ "d MMM": "date format pattern, not user-facing copy",
+ "group:{0}:{1}": "stable lazy-list group identity, not user-facing copy"
 }

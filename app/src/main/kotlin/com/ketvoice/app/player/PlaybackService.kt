@@ -64,7 +64,7 @@ class PlaybackService : MediaSessionService() {
         com.ketvoice.app.data.SettingsStore.load(applicationContext)
         player = buildPlayer()
         getSystemService(android.media.AudioManager::class.java).registerAudioDeviceCallback(audioDevices, android.os.Handler(mainLooper))
-        val session = MediaSession.Builder(this, player)
+        val session = MediaSession.Builder(this, sessionPlayer(player))
             .setSessionActivity(
                 PendingIntent.getActivity(
                     this, 0,
@@ -130,6 +130,16 @@ class PlaybackService : MediaSessionService() {
             .build()
         mediaSession = session
     }
+
+    /**
+     * What the session exposes for an engine: the same player plus "next" and
+     * "previous", which belong to the app queue. The service shares the app process,
+     * so the queue is reached directly; it is connected first for a cold start from
+     * a headset or the notification.
+     */
+    private fun sessionPlayer(engine: ExoPlayer): androidx.media3.common.Player = QueueBridgePlayer(engine,
+        onNext = { Player.connect(applicationContext); Player.next() },
+        onPrevious = { Player.connect(applicationContext); Player.previous() })
 
     private fun buildPlayer(standby: Boolean = false): ExoPlayer {
         val exactRequested = AppSettings.bitPerfect.value
@@ -247,7 +257,7 @@ class PlaybackService : MediaSessionService() {
         // is the system media stream, which the app never converts to PCM gain.
         player.volume = 1f
         player.repeatMode = repeat
-        mediaSession?.setPlayer(player)
+        mediaSession?.setPlayer(sessionPlayer(player))
         old.release()
         if (item != null) { player.setMediaItem(item, position); player.prepare(); player.playWhenReady = play }
     }
@@ -318,7 +328,7 @@ class PlaybackService : MediaSessionService() {
                     val resume = old.playWhenReady
                     val attributes = old.audioAttributes
                     player = next
-                    mediaSession?.setPlayer(next)
+                    mediaSession?.setPlayer(sessionPlayer(next))
                     promoted = true
                     old.setAudioAttributes(attributes, false)
                     old.pause()

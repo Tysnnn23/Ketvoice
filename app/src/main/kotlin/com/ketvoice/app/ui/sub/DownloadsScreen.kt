@@ -1,5 +1,7 @@
 package com.ketvoice.app.ui.sub
 
+import com.ketvoice.app.ui.common.trackRowClick
+import com.ketvoice.app.ui.common.SwipeTrackActions
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -197,15 +199,17 @@ fun DownloadsScreen() {
                 else items(sections.saved, key = { it.track.id }) { item ->
                     val track = item.track
                     val current = player.current?.id == track.id
-                    Row(Modifier.then(if (Motion.reduced) Modifier else Modifier.animateItem())
+                    SwipeTrackActions(track, if (Motion.reduced) Modifier else Modifier.animateItem(), enabled = !selecting) {
+                    Row(Modifier
                         .fillMaxWidth().clip(RoundedCornerShape(18.dp))
                         .background(if (current) theme.accent.copy(alpha = .08f) else Color.Transparent)
-                        .clickable(role = if (selecting) Role.Checkbox else Role.Button) {
-                            if (selecting) { selected = if (track.id in selected) selected - track.id else selected + track.id; return@clickable }
+                        .then(if (selecting) Modifier.clickable(role = Role.Checkbox) {
+                            selected = if (track.id in selected) selected - track.id else selected + track.id
+                        } else Modifier.trackRowClick(track) {
                             val tracks = sections.saved.map { it.track }
                             Player.setShuffle(false)
                             Player.playQueue(tracks, tracks.indexOfFirst { it.id == track.id }.coerceAtLeast(0))
-                        }.padding(start = 8.dp, end = 2.dp, top = 8.dp, bottom = 8.dp).testTag("saved-download"),
+                        }).padding(start = 8.dp, end = 2.dp, top = 8.dp, bottom = 8.dp).testTag("saved-download"),
                         verticalAlignment = Alignment.CenterVertically) {
                         if (selecting) Checkbox(track.id in selected, onCheckedChange = null)
                         Cover(track.title, artwork["t:${track.id}"] ?: track.coverUrl, 56.dp, 12.dp)
@@ -225,6 +229,7 @@ fun DownloadsScreen() {
                         if (!selecting) IconButton(onClick = { deleteIds = listOf(track.id) }, modifier = Modifier.size(48.dp).testTag("download-delete")) {
                             Icon(KetIcons.Trash, "Supprimer le téléchargement", tint = theme.secondary, modifier = Modifier.size(20.dp))
                         }
+                    }
                     }
                 }
                 if (view == 1 && chosen == null && groups.isEmpty()) item(span = { GridItemSpan(maxLineSpan) }, key = "no-albums") {
@@ -335,10 +340,10 @@ private fun Legend(color: Color, label: String) {
 
 /** Titles, albums or artists: one segmented control instead of scattered text links. */
 @Composable
-private fun DownloadViewSwitch(view: Int, onView: (Int) -> Unit) {
+internal fun DownloadViewSwitch(view: Int, tag: String = "downloads-view", onView: (Int) -> Unit) {
     val theme = LocalTheme.current
     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(theme.card).padding(4.dp).selectableGroup()
-        .testTag("downloads-view")) {
+        .testTag(tag)) {
         listOf("Titres", "Albums", "Artistes").forEachIndexed { index, label ->
             val selected = view == index
             Box(Modifier.weight(1f).heightIn(min = 44.dp).clip(RoundedCornerShape(12.dp))
@@ -352,7 +357,7 @@ private fun DownloadViewSwitch(view: Int, onView: (Int) -> Unit) {
 }
 
 @Composable
-private fun DownloadGroupRow(title: String, subtitle: String?, meta: String, cover: String?, round: Boolean,
+internal fun DownloadGroupRow(title: String, subtitle: String?, meta: String, cover: String?, round: Boolean,
                              checked: Boolean?, onClick: () -> Unit) {
     val theme = LocalTheme.current
     Row(Modifier.fillMaxWidth().padding(vertical = 4.dp).clip(RoundedCornerShape(20.dp)).background(theme.card)

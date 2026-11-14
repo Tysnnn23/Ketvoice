@@ -1,5 +1,6 @@
 package com.ketvoice.app.ui.sub
 
+import com.ketvoice.app.ui.common.trackRowClick
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -125,7 +126,7 @@ internal fun AlbumPage(request: CatalogRequest, page: CatalogPage?, tracks: List
                             Player.setShuffle(false); Player.playQueue(tracks)
                         }
                         AlbumGlassAction(KetIcons.Shuffle, "Aléatoire", enabled = !loading && collapse.value >= .98f) {
-                            Player.setShuffle(false); Player.playQueue(tracks.shuffled()); Player.setShuffle(true)
+                            Player.playShuffled(tracks)
                         }
                     }
                 }
@@ -289,7 +290,7 @@ private fun AlbumPlaybackActions(tracks: List<Track>, savedIds: Set<String>, loa
                     Player.setShuffle(false); Player.playQueue(tracks)
                 }
                 AlbumGlassLabel(KetIcons.Shuffle, "Aléatoire", Modifier.weight(1f), enabled) {
-                    Player.setShuffle(false); Player.playQueue(tracks.shuffled()); Player.setShuffle(true)
+                    Player.playShuffled(tracks)
                 }
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -366,7 +367,7 @@ private fun AlbumTrackRow(track: Track, index: Int, active: Boolean, downloaded:
         tween(Motion.duration(180)), label = "album-track-state")
     Row(Modifier.fillMaxWidth().heightIn(min = 76.dp)
         .background(if (active) theme.accent.copy(alpha = .065f) else Color.Transparent)
-        .clickable(role = Role.Button, onClick = onPlay)
+        .trackRowClick(track, onClick = onPlay)
         .padding(start = 20.dp, end = 8.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.width(28.dp), contentAlignment = Alignment.Center) {
             if (active) Icon(KetIcons.Music, null, tint = ink, modifier = Modifier.size(20.dp))

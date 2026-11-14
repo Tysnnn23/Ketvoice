@@ -1,5 +1,6 @@
 package com.ketvoice.app.ui.library
 
+import com.ketvoice.app.ui.common.trackRowClick
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
@@ -197,7 +198,7 @@ fun PlaylistScreen() {
                 }
                 Text("Aléatoire", color = th.accent, fontWeight = FontWeight.SemiBold, fontSize = 14.sp,
                     modifier = Modifier.clickable(enabled = playable.isNotEmpty() && !editing) {
-                        Player.playQueue(playable.shuffled()); Player.setShuffle(true)
+                        Player.playShuffled(playable)
                     }.padding(if (compactHeader) 6.dp else 14.dp))
                 if (error.isNotBlank()) Text(error, color = MaterialTheme.colorScheme.error,
                     fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
@@ -313,7 +314,12 @@ private fun PlaylistRow(entry: PlaylistEntry, index: Int, editing: Boolean, busy
                         modifier: Modifier = Modifier, dragHandle: Modifier = Modifier,
                         onPlay: () -> Unit, onRemove: () -> Unit, active: Boolean = false) {
     val cover = entry.track?.let { ArtworkRepo.coverForTrack(it) } ?: entry.track?.coverUrl
-    Row(modifier.fillMaxWidth().heightIn(min = 66.dp).clickable(enabled = !busy, onClick = onPlay)
+    val track = entry.track
+    val row: @Composable () -> Unit = {
+    Row(Modifier.fillMaxWidth().heightIn(min = 66.dp)
+        // Outside editing a resolved title behaves like every other list: tap, long-press, swipe.
+        .then(if (!editing && track != null) Modifier.trackRowClick(track, enabled = !busy, onClick = onPlay)
+            else Modifier.clickable(enabled = !busy, onClick = onPlay))
         .padding(horizontal = 18.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(dragHandle.width(if (editing) 48.dp else 28.dp).heightIn(min = 48.dp), contentAlignment = Alignment.Center) {
             if (editing) Icon(Icons.Filled.DragHandle, "Déplacer ${entry.title}",
@@ -337,4 +343,7 @@ private fun PlaylistRow(entry: PlaylistEntry, index: Int, editing: Boolean, busy
                 tint = th.secondary, modifier = Modifier.size(20.dp))
         }
     }
+    }
+    if (!editing && track != null) com.ketvoice.app.ui.common.SwipeTrackActions(track, modifier, enabled = !busy) { row() }
+    else Box(modifier) { row() }
 }

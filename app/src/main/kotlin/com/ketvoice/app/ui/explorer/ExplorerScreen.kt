@@ -55,7 +55,10 @@ fun ExplorerScreen() {
     var genres by remember { mutableStateOf<List<CatalogGenre>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
     var attempt by remember { mutableIntStateOf(0) }
+    var chart by remember { mutableStateOf<CatalogChart?>(null) }
     LaunchedEffect(attempt) { loading = true; genres = CatalogRepo.genres(); loading = false }
+    // The chart loads beside the genres and never blocks them.
+    LaunchedEffect(attempt) { chart = CatalogRepo.chart() }
     Column(Modifier.fillMaxSize().background(theme.background).statusBarsPadding()) {
         Row(Modifier.fillMaxWidth().padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
             Text("Explorer", color = theme.onBackground, fontSize = 32.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f).asHeading())
@@ -72,10 +75,37 @@ fun ExplorerScreen() {
                 snapshotFlow { gridState.firstVisibleItemIndex to gridState.firstVisibleItemScrollOffset }
                     .collect { (index, offset) -> AppUi.bottomCollapsed.value = index > 0 || offset > 24 }
             }
+            // The chart arrives after the genres and is inserted above them. A grid that
+            // was resting at its top must show it, not stay anchored on the first genre.
+            LaunchedEffect(chart != null) {
+                if (chart != null && !gridState.isScrollInProgress && gridState.firstVisibleItemScrollOffset == 0 &&
+                    gridState.firstVisibleItemIndex <= 4) gridState.scrollToItem(0)
+            }
             LazyVerticalGrid(categoryColumns(layout.hasRail, LocalDensity.current.fontScale),
                 state = gridState,
                 contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, layout.bottomPaddingDp.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            chart?.let { now ->
+                if (now.tracks.isNotEmpty()) item(key = "chart-tracks", span = { GridItemSpan(maxLineSpan) }) {
+                    Column {
+                        ShelfHeading("Titres du moment")
+                        ChartTracksShelf(now.tracks)
+                    }
+                }
+                if (now.albums.isNotEmpty()) item(key = "chart-albums", span = { GridItemSpan(maxLineSpan) }) {
+                    Column {
+                        ShelfHeading("Albums du moment")
+                        AlbumShelf(now.albums)
+                    }
+                }
+                if (now.artists.isNotEmpty()) item(key = "chart-artists", span = { GridItemSpan(maxLineSpan) }) {
+                    Column {
+                        ShelfHeading("Artistes du moment")
+                        ArtistShelf(now.artists)
+                    }
+                }
+                item(key = "genres-heading", span = { GridItemSpan(maxLineSpan) }) { ShelfHeading("Genres") }
+            }
             items(genres, key = { it.id }) { genre ->
                 GenreCategoryCard(genre, height = if (layout.hasRail) 150.dp else 112.dp) {
                     AppUi.openCatalog(CatalogRequest("genre", genre.id, genre.title))

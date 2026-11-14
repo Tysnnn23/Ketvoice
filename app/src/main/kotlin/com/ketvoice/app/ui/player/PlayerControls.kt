@@ -626,6 +626,7 @@ fun QueueActionsBar(
     shuffle: Boolean,
     repeatOne: Boolean,
     autoplay: Boolean,
+    repeatAll: Boolean,
     onShuffle: () -> Unit,
     onRepeat: () -> Unit,
     onAutoplay: () -> Unit,
@@ -639,10 +640,11 @@ fun QueueActionsBar(
             QueueSegment(shuffle, onShuffle) {
                 Icon(Icons.Filled.Shuffle, "Aléatoire", tint = it, modifier = Modifier.size(23.dp))
             }
-            QueueSegment(repeatOne, onRepeat) {
+            // Off, the whole queue, then the current title.
+            QueueSegment(repeatOne || repeatAll, onRepeat) {
                 Icon(
                     if (repeatOne) Icons.Filled.RepeatOne else Icons.Filled.Repeat,
-                    if (repeatOne) "Répéter le titre" else "Répéter",
+                    repeatLabel(repeatOne, repeatAll),
                     tint = it,
                     modifier = Modifier.size(24.dp)
                 )
@@ -664,6 +666,13 @@ fun QueueActionsBar(
             QueueGlyph(Modifier.size(27.dp).semantics { contentDescription = com.ketvoice.app.data.AppText.t("Fermer") })
         }
     }
+}
+
+/** Spoken name of the repeat control for its three states. */
+internal fun repeatLabel(repeatOne: Boolean, repeatAll: Boolean): String = when {
+    repeatOne -> "Répéter le titre"
+    repeatAll -> "Répéter la file"
+    else -> "Répéter"
 }
 
 @Composable

@@ -61,6 +61,9 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.customActions
+import com.ketvoice.app.ui.player.trackSwipe
+import com.ketvoice.app.ui.player.trackSwipeContent
 import androidx.compose.ui.semantics.semantics
 import com.ketvoice.app.data.AppSettings
 import com.ketvoice.app.data.ArtworkRepo
@@ -105,6 +108,8 @@ fun MiniPlayerPill(
     val cover = art["t:${current.id}"] ?: current.coverUrl
 
     val pillShape = RoundedCornerShape(27.dp)
+    // Swipe the pill sideways to change track; the collapsed pill is too small for it.
+    val swipe = com.ketvoice.app.ui.player.rememberTrackSwipe()
     GlassPanel(
         modifier = modifier
             .fillMaxWidth()
@@ -124,6 +129,12 @@ fun MiniPlayerPill(
             Row(
                 Modifier
                     .fillMaxSize()
+                    .then(if (compact) Modifier else Modifier.trackSwipe(swipe))
+                    .semantics {
+                        customActions = listOf(
+                            androidx.compose.ui.semantics.CustomAccessibilityAction(com.ketvoice.app.data.AppText.t("Suivant")) { Player.next(); true },
+                            androidx.compose.ui.semantics.CustomAccessibilityAction(com.ketvoice.app.data.AppText.t("Précédent")) { Player.previous(); true })
+                    }
                     .clickable(noRipple, null) { onOpen() }
                     .padding(start = 6.dp, end = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -140,6 +151,7 @@ fun MiniPlayerPill(
                 Spacer(Modifier.width(if (compact) 4.dp else 11.dp))
                 Column(
                     Modifier.weight(1f).graphicsLayer { alpha = labelAlpha }
+                        .trackSwipeContent(swipe, travel = .55f)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         if (current.explicit) {

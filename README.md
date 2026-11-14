@@ -21,6 +21,21 @@
 
 ## Overview
 
+### 4.12.0 — skip from anywhere, a visible queue and refreshed screens
+
+Next and Previous now work from the notification, the lock screen and headset or
+Bluetooth buttons. Shuffle reorders the visible queue, Previous returns to the title
+you came from, and repeat cycles through off, queue and title. The queue reorders
+live, removes with a swipe and Undo, and can be cleared or saved as a playlist. A
+sleep timer reaches phones, and a swipe on the mini-player or the artwork changes
+title. Every list of titles shares the same swipe and long-press gestures. Replay
+shows real listening time, Local music asks for its permission and gains search,
+sorting and Albums/Artists views, Search gains an Albums shelf and a real Library
+scope, and Explorer opens on the catalogue chart.
+[Mobile](https://github.com/Tysnnn23/Ketvoice/releases/download/v4.12.0/Ketvoice-4.12.0.apk)
+· [Quest](https://github.com/Tysnnn23/Ketvoice/releases/download/v4.12.0/Ketvoice-4.12.0-Quest.apk)
+· [Release notes](docs/releases/v4.12.0.md).
+
 ### 4.11.0 — personal Home, mixes and redesigned Downloads
 
 Home now greets by time of day, offers shortcuts to what is on the device and varies

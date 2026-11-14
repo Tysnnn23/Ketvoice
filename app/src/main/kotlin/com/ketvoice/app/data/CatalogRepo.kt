@@ -11,9 +11,17 @@ data class CatalogRequest(val kind: String, val id: String, val title: String)
 data class CatalogGenre(val id: String, val title: String, val cover: String?)
 data class CatalogPage(val title: String, val subtitle: String, val cover: String?, val tracks: List<Track>,
     val releaseDate: String? = null)
+data class CatalogAlbum(val id: String, val title: String, val artist: String, val cover: String?)
+data class CatalogArtist(val id: String, val name: String, val picture: String?)
+/** What the public catalogue lists as most played right now. */
+data class CatalogChart(val tracks: List<Track>, val albums: List<CatalogAlbum>, val artists: List<CatalogArtist>) {
+    val isEmpty: Boolean get() = tracks.isEmpty() && albums.isEmpty() && artists.isEmpty()
+}
 
 object CatalogRepo {
     private var genreCache: List<CatalogGenre> = emptyList()
+    private var chartCache: Pair<Long, CatalogChart>? = null
+    private const val CHART_TTL_MS = 30 * 60_000L
     private fun get(path: String): JSONObject? {
         var c: HttpURLConnection? = null
         return try {
@@ -61,6 +69,46 @@ object CatalogRepo {
             else -> null
         }
     }
+    /** Albums of the public catalogue matching [query]; empty when unavailable. */
+    suspend fun searchAlbums(query: String): List<CatalogAlbum> = withContext(Dispatchers.IO) {
+        val term = query.trim().take(80)
+        if (term.length < 2) return@withContext emptyList()
+        parseAlbums(get("search/album?q=${java.net.URLEncoder.encode(term, "UTF-8")}&limit=12")?.optJSONArray("data"))
+    }
+
+    /** The catalogue's current chart, kept for half an hour; null when it cannot be read. */
+    suspend fun chart(nowMs: Long = System.currentTimeMillis()): CatalogChart? = withContext(Dispatchers.IO) {
+        chartCache?.takeIf { nowMs - it.first in 0..CHART_TTL_MS }?.let { return@withContext it.second }
+        val root = get("chart/0?limit=20") ?: return@withContext null
+        val chart = CatalogChart(parseTracks(root.optJSONObject("tracks")?.optJSONArray("data")),
+            parseAlbums(root.optJSONObject("albums")?.optJSONArray("data")),
+            parseArtists(root.optJSONObject("artists")?.optJSONArray("data")))
+        if (chart.isEmpty) null else chart.also { chartCache = nowMs to it }
+    }
+
+    private fun image(o: JSONObject, vararg names: String): String? =
+        names.firstNotNullOfOrNull { name -> o.optString(name).takeIf { it.startsWith("https://") } }
+
+    internal fun parseAlbums(data: JSONArray?): List<CatalogAlbum> {
+        if (data == null) return emptyList()
+        return (0 until data.length()).mapNotNull { i ->
+            val o = data.optJSONObject(i) ?: return@mapNotNull null
+            val id = o.optString("id").takeIf { it.isNotBlank() && it.all(Char::isDigit) } ?: return@mapNotNull null
+            val title = o.optString("title").takeIf { it.isNotBlank() } ?: return@mapNotNull null
+            CatalogAlbum(id, title, o.optJSONObject("artist")?.optString("name").orEmpty(), image(o, "cover_xl", "cover_big", "cover_medium"))
+        }.distinctBy { it.id }
+    }
+
+    internal fun parseArtists(data: JSONArray?): List<CatalogArtist> {
+        if (data == null) return emptyList()
+        return (0 until data.length()).mapNotNull { i ->
+            val o = data.optJSONObject(i) ?: return@mapNotNull null
+            val id = o.optString("id").takeIf { it.isNotBlank() && it.all(Char::isDigit) } ?: return@mapNotNull null
+            val name = o.optString("name").takeIf { it.isNotBlank() } ?: return@mapNotNull null
+            CatalogArtist(id, name, image(o, "picture_xl", "picture_big", "picture_medium"))
+        }.distinctBy { it.id }
+    }
+
     internal fun sameArtistName(a: String, b: String): Boolean {
         fun plain(value: String) = java.text.Normalizer.normalize(value, java.text.Normalizer.Form.NFD)
             .replace(Regex("\\p{M}+"), "").lowercase().filter(Char::isLetterOrDigit)

@@ -14,11 +14,12 @@ import java.io.File
 
 internal data class PlaybackSnapshot(
     val queue: List<Track>, val entryIds: List<String>, val index: Int, val positionMs: Long,
-    val shuffle: Boolean, val repeatOne: Boolean, val autoplay: Boolean
+    val shuffle: Boolean, val repeatOne: Boolean, val autoplay: Boolean,
+    val repeatAll: Boolean = false, val linearOrder: List<String> = emptyList()
 ) {
     fun toPlayerState(): PlayerUiState = PlayerUiState(queue = queue, queueEntryIds = entryIds, index = index,
         positionMs = positionMs, durationMs = queue[index].durationMs, shuffle = shuffle,
-        repeatOne = repeatOne, autoplay = autoplay)
+        repeatOne = repeatOne, autoplay = autoplay, repeatAll = repeatAll, linearOrder = linearOrder)
 }
 
 internal object PlaybackSessionCodec {
@@ -54,6 +55,8 @@ internal object PlaybackSessionCodec {
         val bytes = JSONObject().put("version", 1).put("queue", rows).put("index", state.index)
             .put("positionMs", positionMs.coerceAtLeast(0)).put("shuffle", state.shuffle)
             .put("repeatOne", state.repeatOne).put("autoplay", state.autoplay)
+            .put("repeatAll", state.repeatAll && !state.repeatOne)
+            .apply { if (state.shuffle && state.linearOrder.isNotEmpty()) put("linearOrder", JSONArray(state.linearOrder)) }
             .toString().toByteArray(Charsets.UTF_8)
         require(bytes.size <= MAX_BYTES)
         return bytes
@@ -78,8 +81,14 @@ internal object PlaybackSessionCodec {
         require(index in tracks.indices)
         val entryIds = if (ids.all { it.isNotBlank() } && ids.distinct().size == ids.size) ids
             else QueueEntryIds.reconcile(emptyList(), emptyList(), tracks.map { it.id })
+        val shuffle = root.optBoolean("shuffle")
+        val repeatOne = root.optBoolean("repeatOne")
+        // The remembered order is only trusted when it names exactly the saved entries.
+        val linear = root.optJSONArray("linearOrder")?.let { rows -> List(rows.length()) { rows.optString(it) } }
+            ?.takeIf { shuffle && entryIds === ids && it.size == ids.size && it.toSet() == ids.toSet() }.orEmpty()
         return PlaybackSnapshot(tracks, entryIds, index, root.optLong("positionMs").coerceAtLeast(0),
-            root.optBoolean("shuffle"), root.optBoolean("repeatOne"), root.optBoolean("autoplay", true))
+            shuffle, repeatOne, root.optBoolean("autoplay", true),
+            repeatAll = root.optBoolean("repeatAll") && !repeatOne, linearOrder = linear)
     }
 }
 

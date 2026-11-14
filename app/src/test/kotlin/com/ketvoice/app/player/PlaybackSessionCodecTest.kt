@@ -41,4 +41,44 @@ class PlaybackSessionCodecTest {
         val bytes = PlaybackSessionCodec.encode(PlayerUiState(queue = listOf(track), index = 5), 0)
         assertThrows(Exception::class.java) { PlaybackSessionCodec.decode(bytes) }
     }
+
+    @Test fun repeatAllAndTheOrderBeforeShuffleSurviveARestart() {
+        val tracks = listOf("a", "b", "c").map { Track(it, "Song $it", "Artist", "Album") }
+        val state = PlayerUiState(queue = tracks, queueEntryIds = listOf("k2", "k0", "k1"), index = 0, shuffle = true,
+            repeatAll = true, linearOrder = listOf("k0", "k1", "k2"))
+        val snapshot = PlaybackSessionCodec.decode(PlaybackSessionCodec.encode(state, 0))!!
+        assertTrue(snapshot.repeatAll)
+        assertEquals(listOf("k0", "k1", "k2"), snapshot.linearOrder)
+        val restored = snapshot.toPlayerState()
+        assertTrue(restored.repeatAll)
+        assertEquals(listOf("k0", "k1", "k2"), restored.linearOrder)
+    }
+
+    @Test fun anOrderThatDoesNotNameTheSavedEntriesIsDropped() {
+        val tracks = listOf("a", "b").map { Track(it, "Song $it", "Artist", "Album") }
+        val stale = PlayerUiState(queue = tracks, queueEntryIds = listOf("k0", "k1"), index = 0, shuffle = true,
+            linearOrder = listOf("k0", "other"))
+        assertTrue(PlaybackSessionCodec.decode(PlaybackSessionCodec.encode(stale, 0))!!.linearOrder.isEmpty())
+        // Without shuffle there is nothing to restore, so nothing is written.
+        val linear = PlayerUiState(queue = tracks, queueEntryIds = listOf("k0", "k1"), index = 0, shuffle = false,
+            linearOrder = listOf("k0", "k1"))
+        assertFalse(String(PlaybackSessionCodec.encode(linear, 0)).contains("linearOrder"))
+    }
+
+    @Test fun sessionsSavedBeforeRepeatAllStillLoad() {
+        val legacy = """{"version":1,"queue":[{"track":{"id":"a","title":"Song","artist":"Artist","album":"Album"},"entryId":"k0"}],
+            "index":0,"positionMs":10,"shuffle":true,"repeatOne":true,"autoplay":false}""".toByteArray()
+        val snapshot = PlaybackSessionCodec.decode(legacy)!!
+        assertFalse(snapshot.repeatAll)
+        assertTrue(snapshot.repeatOne)
+        assertTrue(snapshot.linearOrder.isEmpty())
+    }
+
+    @Test fun repeatOneWinsOverRepeatAll() {
+        val track = Track("a", "Song", "Artist", "Album")
+        val both = PlayerUiState(queue = listOf(track), queueEntryIds = listOf("k0"), index = 0, repeatOne = true, repeatAll = true)
+        val snapshot = PlaybackSessionCodec.decode(PlaybackSessionCodec.encode(both, 0))!!
+        assertTrue(snapshot.repeatOne)
+        assertFalse(snapshot.repeatAll)
+    }
 }

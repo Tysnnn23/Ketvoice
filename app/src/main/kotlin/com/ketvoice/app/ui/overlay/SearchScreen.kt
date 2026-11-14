@@ -59,6 +59,7 @@ import com.ketvoice.app.ui.common.Cover
 import com.ketvoice.app.ui.common.DownloadCover
 import com.ketvoice.app.ui.common.TrackTitle
 import com.ketvoice.app.ui.common.EmptyState
+import com.ketvoice.app.ui.common.trackRowClick
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.coroutineScope
@@ -81,6 +82,9 @@ fun SearchScreen() {
     var results by remember { mutableStateOf<List<Track>>(emptyList()) }
     var allResults by remember { mutableStateOf<List<Track>>(emptyList()) }
     var artists by remember { mutableStateOf<List<MusicArtist>>(emptyList()) }
+    var albums by remember { mutableStateOf<List<com.ketvoice.app.data.CatalogAlbum>>(emptyList()) }
+    var playlists by remember { mutableStateOf<List<com.ketvoice.app.data.LocalPlaylist>>(emptyList()) }
+    var shownSegment by remember { mutableIntStateOf(segment) }
     var loading by remember { mutableStateOf(false) }
     val art by ArtworkRepo.covers.collectAsState()
     val customSources by CustomSources.sources.collectAsState()
@@ -103,28 +107,33 @@ fun SearchScreen() {
 
     LaunchedEffect(query, segment, attempt, customSources) {
         val q = query.trim()
-        if (q.length < 2) {
+        fun clear() {
             results = emptyList()
             allResults = emptyList()
             artists = emptyList()
+            albums = emptyList()
+            playlists = emptyList()
+        }
+        if (q.length < 2) {
+            clear()
             loading = false
             return@LaunchedEffect
         }
         loading = true
-        results = emptyList()
-        allResults = emptyList()
-        artists = emptyList()
+        // Results of the previous query stay on screen until the new ones arrive: typing
+        // no longer blanks the page at every letter. Another scope starts from nothing.
+        if (segment != shownSegment) { clear(); shownSegment = segment }
         delay(220)
-        val needle = q.lowercase()
         if (segment == 2) {
-            results = Downloader.items.value.map { it.track }.filter {
-                it.title.lowercase().contains(needle) ||
-                    it.artist.lowercase().contains(needle) ||
-                    it.album.lowercase().contains(needle)
-            }
+            val lists = PlaylistStore.lists.value
+            results = com.ketvoice.app.data.LibrarySearch.tracks(q, Downloader.items.value.map { it.track }, lists,
+                com.ketvoice.app.data.LocalMusic.tracks.value, com.ketvoice.app.data.ListeningHistory.knownTracks.value)
             allResults = results
+            playlists = com.ketvoice.app.data.LibrarySearch.playlists(q, lists)
             artists = emptyList()
+            albums = emptyList()
         } else {
+            var gotTracks = false
             coroutineScope {
                 val searches = mutableListOf<suspend () -> List<Track>>()
                 if (segment == 0) {
@@ -133,33 +142,32 @@ fun SearchScreen() {
                 }
                 searches += { MusicApi.searchAddons(q) }
                 customSources.filter { it.enabled }.forEach { source -> searches += { CustomSources.search(source, q) } }
-                var remaining = if (segment == 0) 2 else 1
-                suspend fun finish() {
-                    if (kotlinx.coroutines.currentCoroutineContext().isActive) {
-                        remaining--
-                        if (remaining == 0) loading = false
-                    }
-                }
+                playlists = emptyList()
                 launch {
-                    try {
-                        SearchGroups.collectProgressively(searches) { tracks ->
-                            results = tracks
-                            allResults = tracks
-                            loading = false
-                        }
-                    } finally { finish() }
-                }
-                if (segment == 0) launch {
-                    try {
-                        artists = YouTubeCatalog.searchArtists(q)
-                        if (artists.isNotEmpty()) loading = false
-                    } catch (cancelled: CancellationException) { throw cancelled }
-                    catch (_: Exception) { /* Tracks remain available. */ }
-                    finally {
-                        finish()
+                    SearchGroups.collectProgressively(searches) { tracks ->
+                        gotTracks = true
+                        results = tracks
+                        allResults = tracks
                     }
+                }
+                if (segment == 0) {
+                    launch {
+                        artists = try { YouTubeCatalog.searchArtists(q) }
+                            catch (cancelled: CancellationException) { throw cancelled }
+                            catch (_: Exception) { emptyList() /* Tracks remain available. */ }
+                    }
+                    launch {
+                        albums = try { com.ketvoice.app.data.CatalogRepo.searchAlbums(q) }
+                            catch (cancelled: CancellationException) { throw cancelled }
+                            catch (_: Exception) { emptyList() }
+                    }
+                } else {
+                    artists = emptyList()
+                    albums = emptyList()
                 }
             }
+            // Nothing came back for this query: the previous titles must not stay.
+            if (!gotTracks) { results = emptyList(); allResults = emptyList() }
         }
         loading = false
     }
@@ -254,7 +262,7 @@ fun SearchScreen() {
                     )
                     Spacer(Modifier.height(6.dp))
                     if (recentQueries.isEmpty()) Text(
-                        if (segment == 2) "Recherchez dans vos téléchargements."
+                        if (segment == 2) "Recherchez dans vos téléchargements, playlists, fichiers locaux et titres écoutés."
                         else "Vos recherches apparaîtront ici.",
                         color = th.secondary,
                         modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp)
@@ -284,7 +292,7 @@ fun SearchScreen() {
                 }
             }
 
-            loading -> {
+            loading && results.isEmpty() && artists.isEmpty() && albums.isEmpty() && playlists.isEmpty() -> {
                 Box(
                     Modifier
                         .fillMaxWidth()
@@ -295,10 +303,10 @@ fun SearchScreen() {
                 }
             }
 
-            results.isEmpty() && artists.isEmpty() -> {
+            results.isEmpty() && artists.isEmpty() && albums.isEmpty() && playlists.isEmpty() -> {
                 EmptyState("Aucun résultat pour « $query »", when (segment) {
                     1 -> "Vérifiez que vos sources sont activées et accessibles."
-                    2 -> "Essayez un autre titre, artiste ou album parmi vos téléchargements."
+                    2 -> "Essayez un autre titre, artiste ou album de votre bibliothèque."
                     else -> "Essayez un titre plus court ou le nom de l'artiste. Vérifiez aussi votre connexion."
                 }, if (segment == 1) "Gérer les sources" else "Réessayer") {
                     if (segment == 1) AppUi.pushOverlay(AppUi.SOURCES) else attempt++
@@ -306,6 +314,9 @@ fun SearchScreen() {
             }
 
             else -> {
+                // A quiet line while a new query is still loading over the previous results.
+                if (loading) androidx.compose.material3.LinearProgressIndicator(
+                    Modifier.fillMaxWidth().padding(horizontal = 20.dp).height(2.dp), color = th.accent, trackColor = Color.Transparent)
                 if (artists.isNotEmpty()) {
                     Text("Artistes", style = T.section, color = th.onBackground,
                         modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp))
@@ -340,10 +351,38 @@ fun SearchScreen() {
                     }
                     Spacer(Modifier.height(16.dp))
                 }
+                if (albums.isNotEmpty()) {
+                    Text("Albums", style = T.section, color = th.onBackground,
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp))
+                    com.ketvoice.app.ui.explorer.AlbumShelf(albums, edge = 20.dp) { album ->
+                        submitSearch()
+                        AppUi.openCatalog(com.ketvoice.app.data.CatalogRequest("album", album.id, album.title))
+                    }
+                    Spacer(Modifier.height(16.dp))
+                }
+                if (playlists.isNotEmpty()) {
+                    Text("Playlists", style = T.section, color = th.onBackground,
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp))
+                    playlists.forEach { playlist ->
+                        Row(Modifier.fillMaxWidth().clickable(role = Role.Button) { submitSearch(); AppUi.openPlaylist(playlist.id) }
+                            .padding(horizontal = 20.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Cover(playlist.name, playlist.coverUrl, 52.dp, 8.dp)
+                            Column(Modifier.weight(1f).padding(start = 12.dp)) {
+                                Text(playlist.name, localize = false, color = th.onBackground, fontSize = 16.sp,
+                                    fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(if (playlist.entries.size == 1) "1 titre" else "${playlist.entries.size} titres",
+                                    color = th.secondary, fontSize = 13.sp, maxLines = 1)
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(10.dp))
+                }
                 if (segment == 1) {
                     SourcesCard(compact = true)
                     Spacer(Modifier.height(6.dp))
                 }
+                if (segment == 2 && results.isNotEmpty()) Text("Titres", style = T.section, color = th.onBackground,
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp))
                 if (segment == 0) {
                     Text("Titres", style = T.section, color = th.onBackground,
                         modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp))
@@ -405,10 +444,7 @@ internal fun SearchResultRow(track: Track, variants: List<Track>, cover: String?
     Row(
         Modifier
             .fillMaxWidth()
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null
-            ) { onClick() }
+            .trackRowClick(track) { onClick() }
             .padding(horizontal = 20.dp, vertical = 7.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -442,6 +478,7 @@ internal fun SearchResultRow(track: Track, variants: List<Track>, cover: String?
             custom && track.addonId?.startsWith("qobuz:", true) == true -> "Qobuz"
             custom -> "SRC"
             ketvoice -> "API"
+            track.id.startsWith("local:") -> "LOCAL"
             else -> "YT"
         }
         Text(

@@ -1,5 +1,7 @@
 package com.ketvoice.app.ui.sub
 
+import com.ketvoice.app.ui.common.trackRowClick
+import com.ketvoice.app.ui.common.SwipeTrackActions
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -140,7 +142,7 @@ fun CatalogScreen(request: CatalogRequest? = AppUi.catalogRequest.value) {
                     covers = tracks.take(4).map { ArtworkRepo.coverForTrack(it) ?: it.coverUrl },
                     seed = request.id + request.kind,
                     onPlay = { if (tracks.isNotEmpty()) { Player.setShuffle(false); Player.playQueue(tracks, 0) } },
-                    onShuffle = { if (tracks.isNotEmpty()) { Player.playQueue(tracks.shuffled()); Player.setShuffle(true) } },
+                    onShuffle = { if (tracks.isNotEmpty()) { Player.playShuffled(tracks) } },
                     onShare = { com.ketvoice.app.util.ShareLinks.shareCollection(shareContext, request.kind, request.title, tracks.size) },
                     onRefresh = {
                         ArtworkRepo.invalidate(tracks)
@@ -172,7 +174,8 @@ fun CatalogScreen(request: CatalogRequest? = AppUi.catalogRequest.value) {
             }
             itemsIndexed(tracks, key = { i, t -> "${t.id}:$i" }) { index, track ->
                 val active = player.current?.id == track.id
-                Row(Modifier.fillMaxWidth().clickable { Player.playQueue(tracks, index) }.padding(horizontal = 18.dp, vertical = 7.dp),
+                SwipeTrackActions(track) {
+                Row(Modifier.fillMaxWidth().trackRowClick(track) { Player.playQueue(tracks, index) }.padding(horizontal = 18.dp, vertical = 7.dp),
                     verticalAlignment = Alignment.CenterVertically) {
                     DownloadCover(track, art["t:${track.id}"] ?: track.coverUrl, 52.dp, 8.dp)
                     Spacer(Modifier.width(12.dp))
@@ -180,9 +183,14 @@ fun CatalogScreen(request: CatalogRequest? = AppUi.catalogRequest.value) {
                         TrackTitle(track.title, color = if (active) theme.accent else theme.onBackground, selected = active)
                         Text(track.artist, localize = false, color = theme.secondary, fontSize = if (com.ketvoice.app.BuildConfig.IS_QUEST) 14.sp else 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
-                    if (track.durationMs > 0) Text(formatSecs(track.durationMs), localize = false, color = theme.secondary, fontSize = if (com.ketvoice.app.BuildConfig.IS_QUEST) 14.sp else 12.sp)
-                    Icon(Icons.Filled.MoreVert, "Options", tint = theme.secondary,
-                        modifier = Modifier.size(36.dp).clickable { AppUi.trackMenuTrack.value = track }.padding(6.dp))
+                    if (active) com.ketvoice.app.ui.player.NowPlayingBars(player.isPlaying, Modifier.padding(horizontal = 6.dp))
+                    else if (track.durationMs > 0) Text(formatSecs(track.durationMs), localize = false, color = theme.secondary, fontSize = if (com.ketvoice.app.BuildConfig.IS_QUEST) 14.sp else 12.sp)
+                    Box(Modifier.size(48.dp).clip(androidx.compose.foundation.shape.CircleShape)
+                        .clickable(role = androidx.compose.ui.semantics.Role.Button) { AppUi.trackMenuTrack.value = track },
+                        contentAlignment = Alignment.Center) {
+                        Icon(Icons.Filled.MoreVert, "Options", tint = theme.secondary, modifier = Modifier.size(22.dp))
+                    }
+                }
                 }
             }
         }

@@ -150,7 +150,7 @@ private fun PlayerCompanionPane(
         Spacer(Modifier.height(18.dp))
         AnimatedContent(page == PlayerPage.QUEUE, transitionSpec = { fadeIn(tween(Motion.duration())).togetherWith(fadeOut(tween(Motion.duration()))) },
             label = "tablet-companion", modifier = Modifier.weight(1f).fillMaxWidth()) { queue ->
-            if (queue) QueuePane(state, Modifier.fillMaxSize())
+            if (queue) QueuePane(state, Modifier.fillMaxSize(), showModes = true)
             else LyricsPane(track, expanded = false, onSource = onSources, modifier = Modifier.fillMaxSize())
         }
     }

@@ -35,9 +35,8 @@ internal fun CollectionPlaybackActions(tracks: List<Track>, modifier: Modifier =
                 Row(Modifier.weight(1f).clip(shape)
                     .background(if (shuffle) theme.onBackground.copy(alpha = .07f) else theme.accent.copy(alpha = if (enabled) 1f else .35f))
                     .clickable(enabled = enabled, role = Role.Button) {
-                        Player.setShuffle(false)
-                        Player.playQueue(if (shuffle) tracks.shuffled() else tracks)
-                        if (shuffle) Player.setShuffle(true)
+                        if (shuffle) Player.playShuffled(tracks)
+                        else { Player.setShuffle(false); Player.playQueue(tracks) }
                     }.heightIn(min = 52.dp).padding(horizontal = 12.dp, vertical = 12.dp),
                     horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                     val ink = if (shuffle) theme.accent else foreground
@@ -57,7 +56,7 @@ internal fun CollectionQuickActions(tracks: List<Track>, enabled: Boolean = true
     LiquidGlassButton({ Player.setShuffle(false); Player.playQueue(tracks) }, Modifier.size(48.dp), enabled = enabled) {
         Icon(KetIcons.Play, "Lecture", tint = theme.accent)
     }
-    LiquidGlassButton({ Player.setShuffle(false); Player.playQueue(tracks.shuffled()); Player.setShuffle(true) }, Modifier.size(48.dp), enabled = enabled) {
+    LiquidGlassButton({ Player.playShuffled(tracks) }, Modifier.size(48.dp), enabled = enabled) {
         Icon(KetIcons.Shuffle, "Aléatoire", tint = theme.accent, modifier = Modifier.size(20.dp))
     }
 }

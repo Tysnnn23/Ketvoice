@@ -214,14 +214,28 @@ fun TrackMenuSheet(track: Track, onClose: () -> Unit) {
             onClose()
             com.ketvoice.app.ui.AppUi.openPublisher(track)
         }
-        if (com.ketvoice.app.BuildConfig.IS_QUEST) {
+        run {
             val remaining by SleepTimer.remainingSeconds.collectAsState()
+            val afterTrack by SleepTimer.endOfTrack.collectAsState()
             var timerOpen by remember { mutableStateOf(false) }
-            MenuItemRow(if (remaining > 0) "Pause dans ${(remaining + 59) / 60} min" else "Minuterie",
-                Icons.Filled.Bedtime) { timerOpen = !timerOpen }
-            if (timerOpen) listOf(15, 30, 60, 0).forEach { minutes ->
-                MenuItemRow(if (minutes == 0) "Annuler la minuterie" else "Pause dans $minutes min", Icons.Filled.Bedtime) {
-                    SleepTimer.set(minutes)
+            MenuItemRow(when {
+                afterTrack -> "Pause à la fin du titre"
+                remaining > 0 -> "Pause dans ${(remaining + 59) / 60} min"
+                else -> "Minuterie"
+            }, Icons.Filled.Bedtime) { timerOpen = !timerOpen }
+            if (timerOpen) {
+                MenuItemRow("À la fin du titre", Icons.Filled.Bedtime) {
+                    SleepTimer.stopAfterTrack()
+                    onClose()
+                }
+                SleepTimer.CHOICES.forEach { minutes ->
+                    MenuItemRow("Pause dans $minutes min", Icons.Filled.Bedtime) {
+                        SleepTimer.set(minutes)
+                        onClose()
+                    }
+                }
+                if (afterTrack || remaining > 0) MenuItemRow("Annuler la minuterie", Icons.Filled.Bedtime) {
+                    SleepTimer.cancel()
                     onClose()
                 }
             }

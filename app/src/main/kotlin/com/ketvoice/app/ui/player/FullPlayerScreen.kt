@@ -359,6 +359,8 @@ fun FullPlayerScreen(
                     val titleTop = if (wide) safeHeight - 66.dp else tabletop?.let { it.sceneHeightDp.dp - 66.dp }
                         ?: minOf(safeHeight * .514f, contentBottom - 61.dp)
                     val artworkHeight = if (wide) safeHeight else tabletop?.sceneHeightDp?.dp ?: (safeHeight * .55f)
+                    // Swipe the artwork sideways to change track; a vertical drag still closes the player.
+                    val trackSwipe = rememberTrackSwipe()
                     PlayerArtworkFrame(inlineCanvas, ambience.color,
                         Modifier.width(sceneWidth).height(artworkHeight)
                         // Shared element: the artwork grows out of the mini-player cover on the
@@ -368,7 +370,7 @@ fun FullPlayerScreen(
                             scaleX = morph.scale; scaleY = morph.scale
                             translationX = morph.translationX; translationY = morph.translationY
                         }
-                        .then(dismissDrag).then(if (canvasReady) Modifier.clickable(
+                        .then(dismissDrag).trackSwipe(trackSwipe, threshold = 84.dp).then(if (canvasReady) Modifier.clickable(
                             interactionSource = artInteraction,
                             indication = null,
                             onClickLabel = AppText.t("Voir le Canvas en plein écran")
@@ -376,7 +378,7 @@ fun FullPlayerScreen(
                             contentDescription = AppText.t("Voir le Canvas en plein écran")
                         } else Modifier)) {
                         ArtworkCanvas(track, if (canvasFocus || panoramicCanvasActive(canvasPath)) null else canvasPath,
-                            state.isPlaying && !canvasFocus, Modifier.fillMaxSize(), depth = true,
+                            state.isPlaying && !canvasFocus, Modifier.fillMaxSize().trackSwipeContent(trackSwipe), depth = true,
                             onCanvasFailure = { failedCanvas = true })
                     }
                     Text("Lecture depuis ${track.artist}", color = Color(0xFFCBCDD6), fontSize = 10.sp,
@@ -459,8 +461,8 @@ fun FullPlayerScreen(
                         }
                         PlayerVolume(Modifier.fillMaxWidth(), compact = true)
                         Spacer(Modifier.height(8.dp))
-                        if (page == PlayerPage.QUEUE) QueueActionsBar(state.shuffle, state.repeatOne, state.autoplay,
-                            { Player.setShuffle(!state.shuffle) }, { Player.setRepeatOne(!state.repeatOne) },
+                        if (page == PlayerPage.QUEUE) QueueActionsBar(state.shuffle, state.repeatOne, state.autoplay, state.repeatAll,
+                            { Player.setShuffle(!state.shuffle) }, { Player.cycleRepeat() },
                             { Player.setAutoplay(!state.autoplay) }, { navigate(PlayerPage.ARTWORK) })
                         else PlayerBottomBar(page == PlayerPage.LYRICS,
                             onLyrics = { navigate(if (page == PlayerPage.LYRICS) PlayerPage.ARTWORK else PlayerPage.LYRICS) },

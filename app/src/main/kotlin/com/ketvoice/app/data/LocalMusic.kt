@@ -37,6 +37,9 @@ object LocalMusic {
     val failed = _failed.asStateFlow()
     private val _source = MutableStateFlow("")
     val source = _source.asStateFlow()
+    private val _needsPermission = MutableStateFlow(false)
+    /** True when the whole-device scan is waiting for the audio permission. */
+    val needsPermission = _needsPermission.asStateFlow()
 
     val permission: String get() = if (android.os.Build.VERSION.SDK_INT >= 33)
         android.Manifest.permission.READ_MEDIA_AUDIO else android.Manifest.permission.READ_EXTERNAL_STORAGE
@@ -54,6 +57,15 @@ object LocalMusic {
     fun scan(context: Context) {
         if (_scanning.value) return
         val tree = AppSettings.localMusicFolder.value
+        // A chosen folder carries its own grant; the whole device needs the audio permission.
+        if (tree == null && !hasPermission(context)) {
+            _needsPermission.value = true
+            _tracks.value = emptyList()
+            _scanned.value = false
+            _failed.value = false
+            return
+        }
+        _needsPermission.value = false
         _scanning.value = true
         _failed.value = false
         CoroutineScope(Dispatchers.IO).launch {

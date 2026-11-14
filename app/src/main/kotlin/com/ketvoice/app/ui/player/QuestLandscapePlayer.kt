@@ -106,7 +106,7 @@ internal fun QuestLandscapePlayer(
                                 .border(.6.dp,Color.White.copy(alpha=.08f),RoundedCornerShape(20.dp)).padding(14.dp) else Modifier)) {
                             if (shown == PlayerPage.LYRICS) Text("Paroles", color = Color.White.copy(alpha = .7f),
                                 fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 8.dp))
-                            if (shown == PlayerPage.QUEUE) QueuePane(state, Modifier.weight(1f).fillMaxWidth())
+                            if (shown == PlayerPage.QUEUE) QueuePane(state, Modifier.weight(1f).fillMaxWidth(), showModes = true)
                             else LyricsPane(track, expanded = false, onSource = onSources,
                                 modifier = Modifier.weight(1f).fillMaxWidth(),
                                 fontScale = QuestLayout.lyricsScale(AppSettings.questLyricsSize.value))

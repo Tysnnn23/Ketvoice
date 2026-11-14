@@ -89,7 +89,7 @@ internal fun HomeShortcuts(modifier: Modifier = Modifier) {
     LazyRow(modifier.testTag("home-shortcuts"), contentPadding = PaddingValues(horizontal = 18.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         if (known.size >= 4) item {
-            Shortcut(KetIcons.Shuffle, "Lecture aléatoire") { Player.playQueue(known.shuffled()); Player.setShuffle(true) }
+            Shortcut(KetIcons.Shuffle, "Lecture aléatoire") { Player.playShuffled(known) }
         }
         if (favoriteTracks.isNotEmpty()) item {
             Shortcut(KetIcons.Heart, "Favoris") { AppUi.openCatalog(CatalogRequest("favorites", "favorites", "Favoris")) }

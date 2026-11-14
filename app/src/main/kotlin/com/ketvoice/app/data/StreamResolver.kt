@@ -59,6 +59,10 @@ internal object StreamResolver {
     internal fun canUsePrefetched(race: Boolean, firstSource: String?, candidateSource: String): Boolean =
         race || firstSource == candidateSource
 
+    /** A reusable DASH manifest is short-lived; a resolved file URL stays valid for minutes. */
+    internal fun prefetchedFresh(isDash: Boolean, ageMs: Long): Boolean =
+        ageMs in 0..(if (isDash) 60_000L else 240_000L)
+
     internal fun shouldRace(race: Boolean, download: Boolean, selected: String?, available: List<String>): Boolean =
         race && (download || selected == null || selected !in available)
 

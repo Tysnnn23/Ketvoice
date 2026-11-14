@@ -81,8 +81,8 @@ object WifiHandoff {
                     if(epoch!=generation)return@launch
                     val ready=runCatching {
                         val message=offer.message
-                        Player.playTrack(message.current,message.queue,message.index,position,playing)
-                        Player.setShuffle(message.shuffle);Player.setRepeatOne(message.repeatOne);Player.setAutoplay(message.autoplay)
+                        Player.playTrack(message.current,message.queue,message.index,position,playing,keepOrder=true)
+                        Player.adoptModes(message.shuffle,message.repeatOne,message.autoplay)
                         Player.awaitReady(message.current.id)
                     }.getOrDefault(false)
                     if(epoch==generation){
