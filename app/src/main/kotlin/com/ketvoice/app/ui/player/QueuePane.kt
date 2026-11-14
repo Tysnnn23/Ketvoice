@@ -120,7 +120,8 @@ internal fun QueuePane(state: PlayerUiState, modifier: Modifier = Modifier, show
         }
     }
 
-    Column(modifier) {
+    Box(modifier) {
+    Column(Modifier.fillMaxSize()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("File d'attente", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold, letterSpacing = (-.6).sp,
                 maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).asHeading())
@@ -140,7 +141,7 @@ internal fun QueuePane(state: PlayerUiState, modifier: Modifier = Modifier, show
         Text("À suivre depuis : ${track.artist}", color = Color(0xFFB7B7BD), fontSize = 14.sp,
             fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
         Spacer(Modifier.height(9.dp))
-        LazyColumn(Modifier.weight(1f).fillMaxWidth().testTag("queue-list"), state = list, contentPadding = PaddingValues(bottom = 18.dp)) {
+        LazyColumn(Modifier.weight(1f).fillMaxWidth().testTag("queue-list"), state = list, contentPadding = PaddingValues(bottom = 78.dp)) {
             itemsIndexed(upcoming, key = { i, t -> state.queueEntryIds.getOrNull(state.index + 1 + i) ?: "${t.id}:${state.index + 1 + i}" }) { i, t ->
                 val index = state.index + 1 + i
                 val key = state.queueEntryIds.getOrNull(index) ?: "${t.id}:$index"
@@ -181,6 +182,11 @@ internal fun QueuePane(state: PlayerUiState, modifier: Modifier = Modifier, show
                 EmptyState("Aucun autre titre dans la file", "Choisissez un titre puis utilisez Lire ensuite pour préparer la suite.",
                     "Ajouter des titres", onAction = ::openTrackSearch)
             }
+        }
+    }
+        // Automix: titles are mixed into each other at the end, like a DJ would.
+        AutomixToggle(Modifier.align(Alignment.BottomStart).padding(bottom = 10.dp)) { on ->
+            announce(if (on) "Automix activé : les titres s'enchaînent comme dans un mix" else "Automix désactivé")
         }
     }
 }

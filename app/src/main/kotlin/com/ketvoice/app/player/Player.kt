@@ -230,6 +230,10 @@ object Player {
             if (playbackState == androidx.media3.common.Player.STATE_ENDED) {
                 val s = _state.value
                 val key = s.current?.id to s.index
+                // Right after a mixed hand-over, an end can only be the previous title's, reported late.
+                if (awaitingDeck != null || android.os.SystemClock.elapsedRealtime() - adoptedAt < 1_500L) return
+                // The next title already plays, mixed in: Automix hands over instead of loading it again.
+                if (key != lastEndedKey && com.ketvoice.app.automix.Automix.takeOverEnd()) return
                 if (key != lastEndedKey) {
                     lastEndedKey = key
                     if (SleepTimer.consumeEndOfTrack()) {
@@ -310,6 +314,11 @@ object Player {
     private fun positionNow() {
         if (resolving) return
         val c = controller ?: return
+        // After a mixed hand-over the controller still describes the previous deck for a moment.
+        awaitingDeck?.let { expected ->
+            if (c.currentMediaItem?.mediaId != expected) return
+            awaitingDeck = null
+        }
         val pos = c.currentPosition.coerceAtLeast(0L)
         // Temps d'écoute RÉEL : delta de position entre deux tics pendant la
         // lecture. Un tic normal ≈ 200 ms ; un saut (seek, piste suivante,
@@ -331,6 +340,100 @@ object Player {
 
     /** Dernière position vue par le tic : base du delta de temps d'écoute réel. */
     private var lastListenedPosition = 0L
+
+    // ---------------------------------------------------------------- Automix
+
+    /** Media id the controller must report before its position is trusted again. */
+    private var awaitingDeck: String? = null
+    /** When the queue last moved to a title that was already playing (SystemClock.elapsedRealtime). */
+    private var adoptedAt = -10_000L
+
+    /** The queue entry that plays when the current title ends. */
+    internal class NextEntry(val index: Int, val track: Track, val entryId: String)
+
+    /** How to load a title on a deck without asking the network: what [startPlayback] would use first. */
+    internal class DeckSource(val url: String, val cacheKey: String?, val stream: MusicApi.StreamInfo?, val offlineDash: Boolean,
+                              val quality: String, val audioSource: String, val sourceId: String?)
+
+    internal fun automixNext(): NextEntry? {
+        val s = _state.value
+        val step = QueueSteps.next(s.queue.size, s.index, s.repeatOne, s.repeatAll, autoplay = false, ended = true)
+        val target = (step as? QueueStep.Jump)?.index ?: return null
+        if (target == s.index) return null
+        return NextEntry(target, s.queue[target], s.queueEntryIds.getOrNull(target) ?: return null)
+    }
+
+    /** Resolves the next title early enough for Automix to read and prepare it. */
+    internal fun warmForAutomix(track: Track) {
+        val current = _state.value.current ?: return
+        prefetchNext(generation, current, listOf(track), margin = 100_000L)
+    }
+
+    internal fun deckSource(track: Track): DeckSource? {
+        if (track.id.startsWith("local:")) return track.streamUrl?.let { DeckSource(it, null, null, false, "Fichier local", "Fichier local", null) }
+        // A source the listener picked by hand is resolved by the usual path.
+        if (track.sourceOverride != null) return null
+        Downloader.itemFor(track.id)?.let { item ->
+            val dash = item.dashManifestUrl?.let {
+                MusicApi.StreamInfo(it, "dash", "Sans perte", mimeType = androidx.media3.common.MimeTypes.APPLICATION_MPD, codec = "flac")
+            }
+            return DeckSource(item.dashManifestUrl ?: item.file.toURI().toString(), null, dash, item.dashManifestUrl != null,
+                "Téléchargé · ${item.format}", "Téléchargé", null)
+        }
+        if (com.ketvoice.app.data.ImportedSong.id(track) == null) AudioCache.complete(track.id, wantsLossless())?.let { cached ->
+            return DeckSource(cached.url, AudioCache.key(track.id, cached), cached, false, "En cache · ${label(cached)}", "En cache", null)
+        }
+        val ahead = prefetched[track.id]?.takeIf {
+            // Still valid for the whole transition, not only for its start.
+            StreamResolver.prefetchedFresh(it.candidate.stream.isDash, android.os.SystemClock.elapsedRealtime() - it.at + 20_000L) &&
+                SourcePriority.entries().any { entry -> entry.id == it.candidate.sourceId && entry.enabled }
+        }?.candidate ?: return null
+        return DeckSource(ahead.stream.url, if (ahead.stream.isDash) null else AudioCache.key(track.id, ahead.stream), ahead.stream, false,
+            label(ahead.stream), sourceLabel(ahead.sourceId, ahead.stream), ahead.sourceId)
+    }
+
+    /**
+     * The next title is already playing on the deck that just became the session's: the
+     * queue moves to it without loading anything.
+     */
+    internal fun adoptAutomixed(next: NextEntry, source: DeckSource) {
+        val s = _state.value
+        val target = s.queueEntryIds.indexOf(next.entryId).takeIf { it >= 0 } ?: next.index
+        val track = s.queue.getOrNull(target) ?: return
+        s.queueEntryIds.getOrNull(s.index)?.let { history.push(it) }
+        resolutionJob?.cancel()
+        generation++
+        resolving = false
+        desiredPlay = true
+        activeStream = source.stream
+        activeSourceId = source.sourceId
+        fallbackAttempts = 0
+        failedStreamUrls.clear()
+        failedSourceIds.clear()
+        refreshedExpiredStream = false
+        lastEndedKey = null
+        warmedNextEntry = null
+        prefetched.remove(track.id)
+        awaitingDeck = track.id
+        adoptedAt = android.os.SystemClock.elapsedRealtime()
+        // The incoming title is a few seconds in already; the exact position follows with the controller.
+        _position.value = 0L
+        lastListenedPosition = 0L
+        _state.value = s.copy(index = target, isPlaying = true, playWhenReady = true, positionMs = 0L,
+            durationMs = track.durationMs, buffering = false, failed = false, quality = source.quality,
+            audioSource = source.audioSource, searchingBetter = false, audioFallback = false, audioFallbackHttpStatus = null)
+        _seekEpoch.value++
+        com.ketvoice.app.data.ListeningHistory.rememberTrack(track)
+        com.ketvoice.app.data.ListeningHistory.record(track)
+        historyGeneration = generation
+        if (recordedListens.size > 500) recordedListens.clear()
+        if (recordedListens.add(track.id)) com.ketvoice.app.data.YouTubeMusicSession.recordListen(track)
+        com.ketvoice.app.data.ActiveListenerTracker.onPlaybackStateChanged(track, true)
+        scope.launch { CanvasRepo.resolve(track) }
+        scope.launch { LyricsRepo.load(track) }
+        scope.launch { ArtworkRepo.enrich(listOf(track)) }
+        prefetchNext(generation, track)
+    }
 
     private fun tryOfflineFallback(track: Track, position: Long, failed: MusicApi.StreamInfo?): Boolean {
         if (failed == null) return false
@@ -398,6 +501,9 @@ object Player {
     private fun startPlayback(track: Track, queue: List<Track>, startIndex: Int?, startPositionMs: Long, autoPlay: Boolean,
                               origin: QueueOrigin, shuffledFrom: List<Track>? = null, fromPrevious: Boolean = false) {
         restoredSessionPending = false
+        // Whatever the listener chooses takes over from a transition in progress.
+        com.ketvoice.app.automix.Automix.cancel()
+        awaitingDeck = null
         val c = controller ?: run {
             pendingPlay = PendingPlay(track, queue, startIndex, startPositionMs, autoPlay, origin, shuffledFrom)
             appContext?.let { if (!connected) connect(it) }
@@ -1016,6 +1122,7 @@ object Player {
 
     fun seekTo(ms: Long) {
         cancelQualityUpgrade()
+        com.ketvoice.app.automix.Automix.cancel()
         val position = ms.coerceAtLeast(0L)
         controller?.seekTo(position)
         _position.value = position
@@ -1031,7 +1138,7 @@ object Player {
 
     /** Position immédiate pour le rendu karaoké (sans attendre le tic global). */
     fun currentPositionMs(): Long =
-        (controller?.currentPosition ?: _position.value).coerceAtLeast(0L)
+        (if (awaitingDeck != null) _position.value else controller?.currentPosition ?: _position.value).coerceAtLeast(0L)
 
     /**
      * Visible shuffle: turning it on moves the current title first and shuffles every

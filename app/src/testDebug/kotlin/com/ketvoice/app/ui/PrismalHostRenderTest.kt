@@ -519,30 +519,47 @@ class PrismalHostRenderTest {
         }
     }
 
-    @Test fun theOwnerFramesTheAlbumArtworkOnThePageItself() {
+    @Test fun theOwnerFramesTheAlbumArtworkInAFullScreenEditorThenPreviewsThePage() {
         AppSettings.reduceAnimations.value = true
         warmCover()
         val allowed = com.ketvoice.app.data.PublisherSession::class.java.getDeclaredField("_allowed").apply { isAccessible = true }
             .get(com.ketvoice.app.data.PublisherSession) as kotlinx.coroutines.flow.MutableStateFlow<Boolean>
         val track = Track("qa:album-frame", "QA title", "QA artist", "QA album", durationMs = 180_000)
         try {
+            // A published framing: a wide band of the cover, so the hero is lower than the default one.
             com.ketvoice.app.data.MediaOverrides.replaceForTest(listOf(com.ketvoice.app.data.MediaOverride("album", "qa album|qa artist",
-                frame = com.ketvoice.app.data.Frame(1.5f, .1f, 0f))))
+                frame = com.ketvoice.app.data.Frame(w = 1f, h = .5f))))
             allowed.value = true
             compose.setContent { KetvoiceTheme(useDark = true) {
                 AlbumPage(CatalogRequest("album", "qa:album-frame", "QA album"),
                     CatalogPage("QA album", "QA artist", "fixture:warm-cover", listOf(track), "2026"), listOf(track), false, {})
             } }
             compose.waitUntil(10_000) { compose.onAllNodesWithTag("album-artwork-loaded").fetchSemanticsNodes().isNotEmpty() }
+            val hero = compose.onNodeWithTag("album-hero-visual").fetchSemanticsNode().boundsInRoot
+            assertEquals("The hero takes the shape of the framed band", 200f, hero.height, 2f)
+            // The three actions of the owner sit in one capsule.
+            val pad = compose.onNodeWithTag("album-actions").fetchSemanticsNode().boundsInRoot
+            for (tag in listOf("album-visuals", "album-framing", "album-share")) {
+                val bounds = compose.onNodeWithTag(tag).assertHasClickAction().fetchSemanticsNode().boundsInRoot
+                assertTrue("$tag is inside the capsule", bounds.left >= pad.left - 1f && bounds.right <= pad.right + 1f)
+            }
             compose.onNodeWithTag("album-framing").performClick()
+            compose.onNodeWithTag("framing-editor").assertIsDisplayed()
+            compose.onNodeWithTag("framing-square").performClick()
+            compose.onNodeWithTag("framing-done").performClick()
+            // Back on the real page, with the draft shown and not yet published.
+            compose.onAllNodesWithTag("framing-editor").assertCountEquals(0)
             compose.onNodeWithTag("album-framing-bar").assertIsDisplayed()
-            compose.onNodeWithText("150 %").assertExists()
-            compose.onNodeWithTag("album-framing-surface").performTouchInput { swipeLeft() }
-            image("album-framing-dark")
-            compose.onNodeWithTag("album-framing-reset").performClick()
-            compose.onNodeWithText("100 %").assertExists()
+            val square = compose.onNodeWithTag("album-hero-visual").fetchSemanticsNode().boundsInRoot
+            assertEquals("A square rectangle makes a square hero", square.width, square.height, 2f)
+            image("album-framing-preview-dark")
+            compose.onNodeWithTag("album-framing-default").assertHasClickAction()
+            compose.onNodeWithTag("album-framing-edit").performClick()
+            compose.onNodeWithTag("framing-editor").assertIsDisplayed()
+            compose.onNodeWithTag("framing-cancel").performClick()
             compose.onNodeWithTag("album-framing-cancel").performClick()
             compose.onAllNodesWithTag("album-framing-bar").assertCountEquals(0)
+            assertEquals(200f, compose.onNodeWithTag("album-hero-visual").fetchSemanticsNode().boundsInRoot.height, 2f)
         } finally {
             allowed.value = false
             com.ketvoice.app.data.MediaOverrides.replaceForTest(emptyList())

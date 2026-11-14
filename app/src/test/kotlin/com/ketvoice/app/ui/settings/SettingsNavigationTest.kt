@@ -6,7 +6,7 @@ import org.junit.Test
 class SettingsNavigationTest {
     @Test fun allExistingGroupsHaveExactlyOneDestination() {
         val groups = listOf("QUEST · CONFORT", "YOUTUBE MUSIC", "DISCORD", "PUBLICATIONS KETVOICE API",
-            "LANGUE DE L'APPLICATION", "DESIGN KETVOICE", "APPARENCE", "LECTURE", "PAROLES",
+            "LANGUE DE L'APPLICATION", "DESIGN KETVOICE", "APPARENCE", "LECTURE", "AUTOMIX", "PAROLES",
             "KETVOICE API · CANVAS", "SOURCES", "TÉLÉCHARGEMENTS", "MUSIQUE LOCALE", "STOCKAGE", "À PROPOS")
         assertEquals(groups.toSet(), SettingsCategory.entries.flatMap { it.groups }.toSet())
         groups.forEach { assertEquals(1, SettingsCategory.entries.count { category -> it in category.groups }) }
@@ -22,7 +22,8 @@ class SettingsNavigationTest {
     @Test fun ownerPublicationAndOrdinaryPlaybackRemainReachable() {
         assertEquals(SettingsCategory.Account, SettingsCategory.forGroup("PUBLICATIONS KETVOICE API"))
         assertEquals(SettingsCategory.Playback, SettingsCategory.forGroup("LECTURE"))
-        assertNull(SettingsCategory.forGroup("AUTOMIX"))
+        // Automix is back (5.0, owner request): its switch sits with playback.
+        assertEquals(SettingsCategory.Playback, SettingsCategory.forGroup("AUTOMIX"))
     }
     @Test fun designFlagsAreNotMixedIntoTheEverydayAppearancePage() {
         assertEquals(SettingsCategory.Design, SettingsCategory.forGroup("DESIGN KETVOICE"))

@@ -114,7 +114,9 @@ fun ArtworkCanvas(
     badge: Boolean = false,
     depth: Boolean = false,
     forceCanvas: Boolean = false,
-    onCanvasFailure: () -> Unit = {}
+    onCanvasFailure: () -> Unit = {},
+    /** Told the width over height of the picture or video once it is known. */
+    onMediaAspect: ((Float) -> Unit)? = null
 ) {
     val art by ArtworkRepo.covers.collectAsState()
     val cover = com.ketvoice.app.data.MediaOverrides.cover(track, art["t:${track.id}"] ?: track.coverUrl)
@@ -146,7 +148,7 @@ fun ArtworkCanvas(
                             CanvasVideo(path = data.canvas, playing = playing,
                                 modifier = Modifier.fillMaxSize(),
                                 resizeMode = CanvasPresentation.NORMAL_RESIZE_MODE,
-                                onFailure = onCanvasFailure)
+                                onFailure = onCanvasFailure, onAspect = onMediaAspect)
                         }
                     }
                     data.cover != null ->
@@ -155,7 +157,11 @@ fun ArtworkCanvas(
                                 model = data.cover,
                                 contentDescription = null,
                                 modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Crop
+                                contentScale = ContentScale.Crop,
+                                onSuccess = { loaded ->
+                                    val size = loaded.painter.intrinsicSize
+                                    if (onMediaAspect != null && size.width > 0f && size.height > 0f) onMediaAspect(size.width / size.height)
+                                }
                             )
                         }
                     else -> Box(Modifier.fillMaxSize().background(
@@ -163,6 +169,8 @@ fun ArtworkCanvas(
                 }
             }
         }
+        // While this title is being mixed with another, the other cover dissolves over it.
+        MixArtworkOverlay(track)
         if (badge && canvasPath != null && (forceCanvas || AppSettings.animatedArtwork.value)) {
             Text(
                 "CANVAS",
@@ -184,7 +192,7 @@ fun ArtworkCanvas(
 @Composable
 private fun CanvasVideo(path: String, playing: Boolean, modifier: Modifier = Modifier,
                         resizeMode: Int = CanvasPresentation.NORMAL_RESIZE_MODE,
-                        onFailure: () -> Unit = {}) {
+                        onFailure: () -> Unit = {}, onAspect: ((Float) -> Unit)? = null) {
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     var visible by remember(lifecycle) { mutableStateOf(lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) }
@@ -213,9 +221,14 @@ private fun CanvasVideo(path: String, playing: Boolean, modifier: Modifier = Mod
     }
     LaunchedEffect(playing, visible, exo) { exo.playWhenReady = playing && visible }
     val latestFailure by rememberUpdatedState(onFailure)
+    val latestAspect by rememberUpdatedState(onAspect)
     DisposableEffect(exo) {
         val listener = object : androidx.media3.common.Player.Listener {
             override fun onPlayerError(error: androidx.media3.common.PlaybackException) { latestFailure() }
+            override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) {
+                if (videoSize.width > 0 && videoSize.height > 0)
+                    latestAspect?.invoke(videoSize.width * videoSize.pixelWidthHeightRatio / videoSize.height)
+            }
         }
         exo.addListener(listener)
         onDispose { exo.removeListener(listener) }
@@ -275,6 +288,8 @@ fun ScrubBar(
     }
 
     val shown = (dragFraction ?: anim.value).coerceIn(0f, 1f)
+    // During a mix a second, finer line runs above the bar: the transition's own progress.
+    val mix = rememberMixProgress()
     // The bar swells under the finger and settles back with a small bounce once released.
     val thickness by androidx.compose.animation.core.animateFloatAsState(
         if (dragFraction != null) 1f else 0f,
@@ -335,6 +350,14 @@ fun ScrubBar(
             }
             if (thickness > .02f) {
                 drawCircle(Color.White, radius = 7.dp.toPx() * thickness.coerceIn(0f, 1.2f), center = Offset(x, y))
+            }
+            mix.value?.let { progress ->
+                val lineY = y - 8.dp.toPx()
+                // It fades in and out at the ends of the mix instead of popping.
+                val presence = (progress / .08f).coerceAtMost(1f) * ((1f - progress) / .08f).coerceIn(0f, 1f)
+                drawLine(Color.White.copy(alpha = .16f * presence), Offset(0f, lineY), Offset(w, lineY), strokeWidth = 2.dp.toPx(), cap = StrokeCap.Round)
+                if (progress > .002f) drawLine(Color.White.copy(alpha = .9f * presence), Offset(0f, lineY), Offset(w * progress, lineY),
+                    strokeWidth = 2.dp.toPx(), cap = StrokeCap.Round)
             }
         }
         if (showTimes) {

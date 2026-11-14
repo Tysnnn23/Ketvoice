@@ -34,6 +34,10 @@ object AppSettings {
     val blurInactiveLyrics = mutableStateOf(true)
     /** 0: Ketvoice lyrics; 1: Cascade, large lines that follow the song in a staggered wave. */
     val lyricsStyle = mutableStateOf(0)
+    /** Titles are mixed into each other at the end, like a DJ; off by default. */
+    val automix = mutableStateOf(false)
+    /** 0 = discreet, 1 = balanced, 2 = DJ. */
+    val automixIntensity = mutableStateOf(1)
     val lyricsSource = mutableStateOf("auto")
     val betterLyricsKey = mutableStateOf("")
     val lyricaUrl = mutableStateOf("")

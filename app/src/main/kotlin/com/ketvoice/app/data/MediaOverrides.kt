@@ -13,17 +13,23 @@ import java.text.Normalizer
 import java.util.Locale
 
 /**
- * How an album's hero artwork is framed for everyone: [scale] 1–3 and offsets −1…1, as
- * fractions of the visible frame (positive x moves the picture right, positive y down).
+ * How an album's hero artwork (cover or Canvas) is framed for everyone: the picture may
+ * be mirrored and turned, and a rectangle of it is what the page shows.
+ *
+ * Lengths are in widths of the picture. [cx], [cy] place the centre of the rectangle
+ * from the centre of the picture, as seen on screen once mirrored and turned; [w], [h]
+ * are its size. [rotation] is in degrees, clockwise.
  */
-data class Frame(val scale: Float = 1f, val x: Float = 0f, val y: Float = 0f) {
+data class Frame(val cx: Float = 0f, val cy: Float = 0f, val w: Float = 1f, val h: Float = 1f,
+                 val rotation: Float = 0f, val flip: Boolean = false) {
     /** The same framing kept inside what the server accepts. */
-    fun clamped(): Frame = Frame(scale.coerceIn(1f, 3f), x.coerceIn(-1f, 1f), y.coerceIn(-1f, 1f))
-    /** The furthest the picture may move at this zoom without showing an edge. */
-    fun limit(): Float = ((scale - 1f) / 2f).coerceAtLeast(0f)
-    /** Offsets kept so no empty edge appears. */
-    fun covered(): Frame = clamped().let { f -> f.copy(x = f.x.coerceIn(-f.limit(), f.limit()), y = f.y.coerceIn(-f.limit(), f.limit())) }
-    val isIdentity: Boolean get() = scale == 1f && x == 0f && y == 0f
+    fun clamped(): Frame = Frame(cx.coerceIn(-2f, 2f), cy.coerceIn(-2f, 2f), w.coerceIn(MIN_SIDE, 3f), h.coerceIn(MIN_SIDE, 3f),
+        (((rotation + 180f) % 360f + 360f) % 360f - 180f), flip)
+
+    /** Width over height of what the page shows. */
+    val aspect: Float get() = w / h
+
+    companion object { const val MIN_SIDE = .05f }
 }
 
 /** A visual the verified owner chose for a catalogue title, album or artist. */
@@ -138,9 +144,12 @@ object MediaOverrides {
         fun url(name: String) = row.optString(name).takeIf { !row.isNull(name) && it.startsWith("https://") }
         val kind = row.optString("kind").takeIf { it in setOf(TRACK, ALBUM, ARTIST) } ?: return null
         val key = row.optString("key").takeIf { it.isNotBlank() && it.length <= 160 } ?: return null
+        // Older framings (a zoom and an offset) carry no rectangle and are left out.
         val frame = row.optJSONObject("frame")?.let { f ->
-            val scale = f.optDouble("scale", Double.NaN).toFloat()
-            if (scale.isNaN()) null else Frame(scale, f.optDouble("x", 0.0).toFloat(), f.optDouble("y", 0.0).toFloat()).covered()
+            val w = f.optDouble("w", Double.NaN).toFloat(); val h = f.optDouble("h", Double.NaN).toFloat()
+            if (w.isNaN() || h.isNaN() || w <= 0f || h <= 0f) null
+            else Frame(f.optDouble("cx", 0.0).toFloat(), f.optDouble("cy", 0.0).toFloat(), w, h,
+                f.optDouble("rotation", 0.0).toFloat(), f.optBoolean("flip", false)).clamped()
         }
         val item = MediaOverride(kind, key, row.optString("label"), url("coverURL"), url("canvasURL"), url("heroURL"),
             row.optString("updatedAt"), frame)
@@ -152,9 +161,14 @@ object MediaOverrides {
             put(JSONObject().put("kind", o.kind).put("key", o.key).put("label", o.label)
                 .put("coverURL", o.cover ?: JSONObject.NULL).put("canvasURL", o.canvas ?: JSONObject.NULL)
                 .put("heroURL", o.hero ?: JSONObject.NULL).put("updatedAt", o.updatedAt)
-                .put("frame", o.frame?.let { JSONObject().put("scale", it.scale.toDouble()).put("x", it.x.toDouble()).put("y", it.y.toDouble()) } ?: JSONObject.NULL))
+                .put("frame", o.frame?.let(::frameJson) ?: JSONObject.NULL))
         }
     }).toString()
+
+    internal fun frameJson(frame: Frame): JSONObject = frame.clamped().let {
+        JSONObject().put("cx", it.cx.toDouble()).put("cy", it.cy.toDouble()).put("w", it.w.toDouble()).put("h", it.h.toDouble())
+            .put("rotation", it.rotation.toDouble()).put("flip", it.flip)
+    }
 
     fun init(ctx: Context) {
         if (context != null) return

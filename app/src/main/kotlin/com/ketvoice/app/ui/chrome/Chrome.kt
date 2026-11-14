@@ -149,13 +149,11 @@ fun MiniPlayerPill(
                 if (canvas != null) Box(coverPlace.size(coverSize).clip(RoundedCornerShape(if (compact) 999.dp else 9.dp))
                     .testTag("mini-canvas")) {
                     com.ketvoice.app.ui.player.ArtworkCanvas(current.copy(coverUrl = cover), canvas, ps.isPlaying, Modifier.fillMaxSize())
-                } else Cover(
-                    current.title,
-                    cover,
-                    size = coverSize,
-                    radius = if (compact) 999.dp else 9.dp,
-                    modifier = coverPlace
-                )
+                } else Box(coverPlace.size(coverSize).clip(RoundedCornerShape(if (compact) 999.dp else 9.dp))) {
+                    Cover(current.title, cover, size = coverSize, radius = if (compact) 999.dp else 9.dp)
+                    // The mini-player shows the mix too: the next cover dissolves over this one.
+                    com.ketvoice.app.ui.player.MixArtworkOverlay(current)
+                }
                 Spacer(Modifier.width(if (compact) 4.dp else 11.dp))
                 Column(
                     Modifier.weight(1f).graphicsLayer { alpha = labelAlpha }

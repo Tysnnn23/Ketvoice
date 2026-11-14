@@ -21,6 +21,16 @@
 
 ## Overview
 
+### 5.0.0 — Automix
+
+Titles flow into each other like a mix: the next title comes in at the same tempo, beats
+aligned, the bass handed over on a beat, and never over a sung line. A crossfade takes
+over when two titles do not share a tempo, and albums played in order are left untouched.
+Turn it on from the queue or from Settings.
+[Mobile](https://github.com/Tysnnn23/Ketvoice/releases/download/v5.0.0/Ketvoice-5.0.0.apk)
+· [Quest](https://github.com/Tysnnn23/Ketvoice/releases/download/v5.0.0/Ketvoice-5.0.0-Quest.apk)
+· [Release notes](docs/releases/v5.0.0.md).
+
 ### 4.17.0 — smoother lyrics and glass that catches the light
 
 Share a moment works again from lyrics, sung lines stay white, Cascade glides, the

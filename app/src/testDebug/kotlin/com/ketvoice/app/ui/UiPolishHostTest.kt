@@ -81,6 +81,21 @@ class UiPolishHostTest {
         }
     }
 
+    @Test fun automixIsSwitchedOnFromThePlaybackSettings() {
+        AppSettings.reduceAnimations.value = true
+        AppSettings.automix.value = false
+        try {
+            compose.setContent { KetvoiceTheme(useDark = true) { com.ketvoice.app.ui.settings.SettingsScreen() } }
+            compose.onNodeWithTag("settings-category-Playback").performClick()
+            compose.onNodeWithText("Automix").performScrollTo().assertIsDisplayed().performClick()
+            compose.waitForIdle()
+            assertTrue(AppSettings.automix.value)
+            compose.onNodeWithText("Intensité du mix").performScrollTo().assertIsDisplayed()
+            compose.onNodeWithText("Équilibré").assertIsDisplayed()
+            image("settings-automix")
+        } finally { AppSettings.automix.value = false; com.ketvoice.app.data.SettingsStore.save() }
+    }
+
     @Test fun darkAppearanceOptionsKeepNativeDarkSurfacesAndReadableLabels() {
         AppSettings.reduceAnimations.value = true
         compose.setContent { KetvoiceTheme(useDark = true) { com.ketvoice.app.ui.settings.SettingsScreen() } }

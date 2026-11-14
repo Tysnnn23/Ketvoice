@@ -30,5 +30,15 @@ class RetiredMixingMigrationTest {
         assertEquals("keep", music.readText())
         assertTrue(prefs.getBoolean("skipSilence", false))
         music.delete()
+        // The switch of the retired AutoMix never turns the Automix of 5.0 on: that one has its own, kept across launches.
+        assertFalse(AppSettings.automix.value)
+        AppSettings.automix.value = true
+        SettingsStore.save()
+        AppSettings.automix.value = false
+        SettingsStore.load(context)
+        assertTrue(AppSettings.automix.value)
+        assertFalse(prefs.contains("automix"))
+        AppSettings.automix.value = false
+        SettingsStore.save()
     }
 }

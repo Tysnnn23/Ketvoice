@@ -406,6 +406,25 @@ fun SettingsScreen() {
                 ) { Player.setSkipSilence(it); SettingsStore.save() }
             }
 
+            // ==================================================== AUTOMIX
+            Section("AUTOMIX") {
+                SToggle(KetIcons.Shuffle, "Automix",
+                    "La fin d'un titre se mêle au début du suivant, comme dans un mix : tempos accordés, basses échangées, paroles jamais coupées.",
+                    AppSettings.automix.value) { AppSettings.automix.value = it; SettingsStore.save() }
+                SRow(KetIcons.Sliders, "Intensité du mix",
+                    sub = "Longueur des transitions et écart de tempo accepté",
+                    value = when (AppSettings.automixIntensity.value) { 0 -> "Discret"; 2 -> "DJ"; else -> "Équilibré" }) {
+                    choice = ChoiceSpec("Intensité du mix", "S'applique dès la prochaine transition.",
+                        AppSettings.automixIntensity.value.toString(), listOf(
+                            ChoiceOption("0", "Discret", "Transitions courtes, le titre joue jusqu'au bout, tempos très proches seulement"),
+                            ChoiceOption("1", "Équilibré", "Jusqu'à 16 secondes de mix, tempos à 8 % près"),
+                            ChoiceOption("2", "DJ", "Mix dès la fin du chant, tempos à 12 % près"))
+                    ) { id -> AppSettings.automixIntensity.value = id.toIntOrNull()?.coerceIn(0, 2) ?: 1; SettingsStore.save() }
+                }
+                Text("Les albums écoutés dans l'ordre, la répétition d'un titre, la minuterie et la sortie bit-perfect ne sont jamais mixés. Sans tempo régulier, un simple fondu remplace le mix.",
+                    color = th.secondary, fontSize = 11.sp, lineHeight = 16.sp, modifier = Modifier.padding(bottom = 8.dp))
+            }
+
             // ==================================================== PAROLES
             Section("PAROLES") {
                 SRow(

@@ -7,6 +7,23 @@
 
 ---
 
+# Ketvoice 5.0.0
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 106** — Automix: titles flow into each other like a mix.
+
+- Automix (off by default; queue button or Settings): tempo-matched, beat-aligned mixes
+  with a bass hand-over, a crossfade when tempos differ, silence removal after a hard
+  ending; lyrics-aware; albums in order, repeat, sleep timer and bit-perfect never mixed.
+- Three intensities, a "Mixing" badge, covers dissolving into each other, a second
+  progress line, the same in the mini-player.
+- Album and artist pages: actions in one glass capsule.
+
+Full notes: [5.0.0](docs/releases/v5.0.0.md).
+
+---
+
 # Ketvoice 4.17.0
 
 ![Ketvoice](ketvoice-banner.png)

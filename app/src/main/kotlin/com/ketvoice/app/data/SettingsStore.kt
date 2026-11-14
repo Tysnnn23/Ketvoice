@@ -41,6 +41,9 @@ object SettingsStore {
         s.syncedLyrics.value = p.getBoolean("syncedLyrics", s.syncedLyrics.value)
         s.blurInactiveLyrics.value = p.getBoolean("blurInactiveLyrics", s.blurInactiveLyrics.value)
         s.lyricsStyle.value = p.getInt("lyricsStyle", s.lyricsStyle.value).coerceIn(0, 1)
+        // "automix" was the switch of the AutoMix retired in 3.10: it stays retired and never turns this one on.
+        s.automix.value = p.getBoolean("automixOn", s.automix.value)
+        s.automixIntensity.value = p.getInt("automixIntensity", s.automixIntensity.value).coerceIn(0, 2)
         s.lyricsSource.value = p.getString("lyricsSource", s.lyricsSource.value) ?: "auto"
         if (s.lyricsSource.value !in MusicApi.lyricSources + listOf("auto", "off")) {
             s.lyricsSource.value = "auto"
@@ -159,6 +162,8 @@ object SettingsStore {
             .putBoolean("syncedLyrics", s.syncedLyrics.value)
             .putBoolean("blurInactiveLyrics", s.blurInactiveLyrics.value)
             .putInt("lyricsStyle", s.lyricsStyle.value)
+            .putBoolean("automixOn", s.automix.value)
+            .putInt("automixIntensity", s.automixIntensity.value)
             .putString("lyricsSource", s.lyricsSource.value)
             .putStringSet("favoriteIds", s.favoriteIds.value)
             .putString("translateLanguage", s.translateLanguage.value)

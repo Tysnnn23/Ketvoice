@@ -1,0 +1,141 @@
+package com.ketvoice.app.automix
+
+import org.junit.Assert.*
+import org.junit.Test
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
+import kotlin.math.PI
+import kotlin.math.abs
+import kotlin.math.log10
+import kotlin.math.sin
+import kotlin.math.sqrt
+
+class DeckDspTest {
+    private val beat = MixPlan(MixKind.Beatmatch, outMs = 180_000, inMs = 500, overlapMs = 16_000, rate = .96f,
+        swapMs = 188_000, gain = .8f, beatMs = 500f)
+    private val fade = MixPlan(MixKind.Crossfade, outMs = 190_000, inMs = 300, overlapMs = 6_000, gain = .9f)
+
+    private fun tone(hz: Double, rate: Int, seconds: Float, channels: Int = 1, amplitude: Float = .5f): ByteBuffer {
+        val frames = (rate * seconds).toInt()
+        val buffer = ByteBuffer.allocate(frames * 2 * channels).order(ByteOrder.LITTLE_ENDIAN)
+        for (i in 0 until frames) repeat(channels) { c ->
+            buffer.putShort((sin(2 * PI * hz * i / rate) * amplitude * 32767 * (if (c == 1) -1 else 1)).toInt().toShort())
+        }
+        buffer.flip(); return buffer
+    }
+    private fun run(dsp: DeckDsp, input: ByteBuffer, startUs: Long, automation: DeckAutomation?): ShortArray {
+        val output = ByteBuffer.allocate(input.remaining()).order(ByteOrder.LITTLE_ENDIAN)
+        dsp.process(input, output, startUs, automation)
+        output.flip()
+        return ShortArray(output.remaining() / 2) { output.short }
+    }
+    private fun rms(samples: ShortArray, from: Int = 0): Double {
+        var sum = 0.0
+        for (i in from until samples.size) sum += samples[i].toDouble() * samples[i]
+        return sqrt(sum / (samples.size - from))
+    }
+    private fun db(ratio: Double) = 20 * log10(ratio)
+
+    @Test fun aCurveIsFlatOutsideItsPointsAndStraightBetweenThem() {
+        val curve = Curve(longArrayOf(1_000, 2_000, 4_000), floatArrayOf(0f, 1f, .5f))
+        assertEquals(0f, curve.at(0), 0f); assertEquals(0f, curve.at(1_000), 0f)
+        assertEquals(.5f, curve.at(1_500), 1e-6f); assertEquals(1f, curve.at(2_000), 1e-6f)
+        assertEquals(.75f, curve.at(3_000), 1e-6f); assertEquals(.5f, curve.at(9_000), 0f)
+        // Asked out of order too.
+        assertEquals(.25f, curve.at(1_250), 1e-6f); assertEquals(.625f, curve.at(3_500), 1e-6f); assertEquals(.1f, curve.at(1_100), 1e-6f)
+        assertEquals(4_000L, curve.endUs)
+    }
+
+    @Test fun aCrossfadeHandsTheSoundOverWithoutAHoleOrAnOverload() {
+        val out = DeckAutomation.outgoing(fade); val into = DeckAutomation.incoming(fade)
+        assertEquals(1f, out.gain.at(189_000_000), 0f); assertEquals(1f, out.gain.at(190_000_000), 1e-4f)
+        assertEquals(0f, out.gain.at(196_000_000), 1e-4f); assertEquals(0f, out.gain.at(199_000_000), 1e-6f)
+        assertEquals(0f, into.gain.at(0), 0f); assertEquals(0f, into.gain.at(300_000), 1e-4f)
+        assertEquals("The incoming title is held at its matched level", .9f, into.gain.at(6_300_000), 1e-3f)
+        assertEquals("and comes back to its own level afterwards", 1f, into.gain.at(6_300_000 + 8_000_000), 1e-4f)
+        for (step in 0..60) {
+            val a = out.gain.at(190_000_000L + step * 100_000L)
+            val b = into.gain.at(300_000L + step * 100_000L) / .9f
+            assertTrue("never past full scale by more than 2 dB (${a + b})", a + b <= 1.26f)
+            assertTrue("never a hole (${a * a + b * b})", a * a + b * b >= .68f)
+        }
+        assertEquals("No bass filter in a plain crossfade", 0f, out.highPassHz.at(193_000_000), 0f)
+        assertEquals(0f, into.highPassHz.at(3_000_000), 0f)
+    }
+
+    @Test fun inABeatMixTheBassChangesHandsOnTheBeat() {
+        val out = DeckAutomation.outgoing(beat); val into = DeckAutomation.incoming(beat)
+        // Positions in the incoming title run 0.96 times as fast as the outgoing clock.
+        fun inAt(outMs: Long) = ((500 + (outMs - 180_000) * .96) * 1000).toLong()
+        assertEquals(1f, out.gain.at(180_000_000), 1e-3f)
+        assertEquals(.72f, out.gain.at(188_000_000), 2e-3f)
+        assertEquals(0f, out.gain.at(196_000_000), 1e-3f)
+        assertEquals(0f, into.gain.at(inAt(180_000)), 1e-3f)
+        assertEquals(.72f * .8f, into.gain.at(inAt(188_000)), 3e-3f)
+        assertEquals(.8f, into.gain.at(inAt(196_000)), 2e-3f)
+        assertEquals(1f, into.gain.at(inAt(196_000) + 8_000_000), 1e-3f)
+        // Before the swap the outgoing title keeps its bass and the incoming one has none; after, the reverse.
+        assertEquals(0f, out.highPassHz.at(187_000_000), 0f)
+        assertEquals(DeckAutomation.BASS_HZ, into.highPassHz.at(inAt(187_000)), .5f)
+        assertEquals(DeckAutomation.BASS_HZ, out.highPassHz.at(189_000_000), .5f)
+        assertEquals(0f, into.highPassHz.at(inAt(189_000)), 0f)
+        val middle = out.highPassHz.at(188_000_000)
+        assertTrue("The filters cross during one beat around the swap ($middle)", middle > 60f && middle < 150f)
+        assertEquals(middle, into.highPassHz.at(inAt(188_000)), 6f)
+        assertTrue(out.endUs >= 196_000_000 && into.endUs >= inAt(196_000) + 8_000_000 - 1_000)
+    }
+
+    @Test fun withoutAutomationTheSoundIsUntouched() {
+        val dsp = DeckDsp(44_100, 2)
+        val input = tone(440.0, 44_100, .1f, 2)
+        val expected = ShortArray(input.remaining() / 2) { input.duplicate().order(ByteOrder.LITTLE_ENDIAN).getShort(it * 2) }
+        assertArrayEquals(expected, run(dsp, input, 5_000_000, null))
+        assertTrue(run(dsp, tone(440.0, 44_100, .1f, 2), 0, DeckAutomation.MUTE).all { it.toInt() == 0 })
+    }
+
+    @Test fun theLevelMovesWithoutSteps() {
+        val dsp = DeckDsp(48_000, 1)
+        val automation = DeckAutomation(Curve(longArrayOf(0, 1_000_000), floatArrayOf(0f, 1f)), Curve.flat(0f))
+        val constant = ByteBuffer.allocate(48_000 * 2).order(ByteOrder.LITTLE_ENDIAN).apply { repeat(48_000) { putShort(20_000) }; flip() }
+        // In two pieces, as buffers arrive.
+        val first = constant.duplicate().order(ByteOrder.LITTLE_ENDIAN).apply { limit(30_000) }.slice()
+        val second = constant.duplicate().order(ByteOrder.LITTLE_ENDIAN).apply { position(30_000) }.slice()
+        val samples = run(dsp, first, 0, automation) + run(dsp, second, 15_000 * 1_000_000L / 48_000, automation)
+        assertEquals(48_000, samples.size)
+        assertTrue(samples.first() < 30); assertEquals(20_000.0, samples.last().toDouble(), 30.0)
+        assertEquals(10_000.0, samples[24_000].toDouble(), 40.0)
+        for (i in 1 until samples.size) assertTrue("step at $i", abs(samples[i] - samples[i - 1]) <= 2)
+    }
+
+    @Test fun theHighPassTakesTheBassAndLeavesTheRest() {
+        val automation = DeckAutomation(Curve.flat(1f), Curve.flat(DeckAutomation.BASS_HZ))
+        val rate = 44_100
+        val skip = rate / 5
+        val bass = rms(run(DeckDsp(rate, 1), tone(60.0, rate, 1f), 0, automation), skip) / rms(run(DeckDsp(rate, 1), tone(60.0, rate, 1f), 0, null), skip)
+        val middle = rms(run(DeckDsp(rate, 1), tone(1_000.0, rate, 1f), 0, automation), skip) / rms(run(DeckDsp(rate, 1), tone(1_000.0, rate, 1f), 0, null), skip)
+        val edge = rms(run(DeckDsp(rate, 1), tone(300.0, rate, 1f), 0, automation), skip) / rms(run(DeckDsp(rate, 1), tone(300.0, rate, 1f), 0, null), skip)
+        assertTrue("60 Hz is taken away (${db(bass)} dB)", db(bass) < -24)
+        assertEquals("1 kHz passes", 0.0, db(middle), .4)
+        assertEquals("-3 dB at the cut-off", -3.0, db(edge), .6)
+        // Two channels keep their own filter memory: opposite signals stay opposite.
+        val stereo = run(DeckDsp(rate, 2), tone(1_000.0, rate, .2f, 2), 0, automation)
+        for (i in 2_000 until stereo.size step 2) assertTrue(abs(stereo[i] + stereo[i + 1]) <= 2)
+    }
+
+    @Test fun theIncomingTitleIsNudgedBackInTime() {
+        // Exactly where it should be: the outgoing title is 3 s into the mix, the incoming one 3 s × 0.96 into its part.
+        assertEquals(0.0, DeckSync.errorMs(beat, 183_000, 500 + 2_880), 1e-3)
+        assertEquals("48 ms of the title ahead is 50 ms on the clock", 50.0, DeckSync.errorMs(beat, 183_000, 500 + 2_880 + 48), 1e-3)
+        assertEquals(-100.0, DeckSync.errorMs(beat, 183_100, 500 + 2_880), 1e-3)
+        assertEquals("A few milliseconds are left alone", .96f, DeckSync.speed(.96f, 3.0, audible = false), 0f)
+        assertTrue("Ahead: slower", DeckSync.speed(.96f, 30.0, audible = false) < .96f)
+        assertTrue("Behind: faster", DeckSync.speed(.96f, -30.0, audible = false) > .96f)
+        assertEquals("Never more than 4 %", .96f * .96f, DeckSync.speed(.96f, 900.0, audible = false), .002f)
+        assertEquals("While heard, small errors are not chased", 1f, DeckSync.speed(1f, 10.0, audible = true), 0f)
+        assertTrue(DeckSync.speed(1f, 30.0, audible = true) > DeckSync.speed(1f, 30.0, audible = false))
+        assertEquals(listOf(1f), DeckSync.glide(1.001f))
+        val glide = DeckSync.glide(.92f)
+        assertEquals(16, glide.size); assertEquals(1f, glide.last(), 0f)
+        assertTrue(glide.zipWithNext().all { (a, b) -> b >= a && b - a < .012f })
+    }
+}

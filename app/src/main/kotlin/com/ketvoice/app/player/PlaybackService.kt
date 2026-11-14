@@ -33,6 +33,40 @@ class PlaybackService : MediaSessionService() {
     private var upgradeJob: Job? = null
     private var playbackRevision = 0L
     private var stopping = false
+    /** Level, filter and analysis tap of each deck's sound path (absent in exact mode). */
+    private val decks = java.util.WeakHashMap<ExoPlayer, com.ketvoice.app.automix.DeckControl>()
+    private val released = java.util.Collections.newSetFromMap(java.util.WeakHashMap<ExoPlayer, Boolean>())
+    private val automixHost = object : com.ketvoice.app.automix.AutomixHost {
+        override val main: ExoPlayer get() = player
+        override val exact: Boolean get() = AppSettings.bitPerfect.value
+        override fun control(deck: ExoPlayer) = decks[deck]
+        override fun standby(): ExoPlayer = buildPlayer(standby = true).also { deck ->
+            deck.volume = 0f
+            // One audio session for both decks: the equalizer shapes the mix, not one deck then the other.
+            if (player.audioSessionId > 0) runCatching { deck.audioSessionId = player.audioSessionId }
+        }
+        override fun promote(next: ExoPlayer): ExoPlayer {
+            val old = player
+            upgradeJob?.cancel()
+            next.repeatMode = old.repeatMode
+            next.shuffleModeEnabled = old.shuffleModeEnabled
+            val attributes = old.audioAttributes
+            player = next
+            mediaSession?.setPlayer(sessionPlayer(next))
+            // The outgoing deck keeps playing its fade; audio focus and headset events follow the new one.
+            old.setAudioAttributes(attributes, false)
+            next.setAudioAttributes(attributes, true)
+            if (next.audioSessionId > 0) AudioEqualizer.bind(next.audioSessionId)
+            playbackRevision++
+            return old
+        }
+        override fun release(deck: ExoPlayer) {
+            if (deck === player || !released.add(deck)) return
+            decks.remove(deck)
+            runCatching { deck.stop() }
+            runCatching { deck.release() }
+        }
+    }
     private val audioDevices = object : android.media.AudioDeviceCallback() {
         override fun onAudioDevicesAdded(addedDevices: Array<out android.media.AudioDeviceInfo>) {
             // Re-negotiate when a wired/USB output appears, but never tear down
@@ -129,6 +163,8 @@ class PlaybackService : MediaSessionService() {
             })
             .build()
         mediaSession = session
+        com.ketvoice.app.automix.AnalysisStore.init(applicationContext)
+        com.ketvoice.app.automix.Automix.attach(automixHost)
     }
 
     /**
@@ -146,6 +182,7 @@ class PlaybackService : MediaSessionService() {
         if (exactRequested) { AudioEqualizer.release(); ReverbControl.amount = 0f }
         else ReverbControl.amount = AppSettings.reverbAmount.value / 100f
         lateinit var owner: ExoPlayer
+        val deck = com.ketvoice.app.automix.DeckControl()
         val meter = object : TeeAudioProcessor.AudioBufferSink {
             private var rate = 0
             private var channels = 0
@@ -165,9 +202,10 @@ class PlaybackService : MediaSessionService() {
             override fun buildAudioSink(context: android.content.Context, enableFloatOutput: Boolean, enableAudioTrackPlaybackParams: Boolean): AudioSink {
                 val fallback = ProcessingAudioSink(DefaultAudioSink.Builder(context).setEnableFloatOutput(false)
                     .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
-                    .setAudioProcessors(if (exactRequested) emptyArray() else arrayOf(ReverbAudioProcessor {
+                    .setAudioProcessors(if (exactRequested) emptyArray() else arrayOf(
+                        com.ketvoice.app.automix.DeckMixProcessor(deck), ReverbAudioProcessor {
                         if (::player.isInitialized && owner === this@PlaybackService.player) ReverbControl.notePcm()
-                    }, TeeAudioProcessor(meter))).build())
+                    }, TeeAudioProcessor(meter))).build(), if (exactRequested) null else deck)
                 if (exactRequested && android.os.Build.VERSION.SDK_INT >= 34) return BitPerfectAudioSink(context, fallback)
                 if (exactRequested) BitPerfectState.report(ExactAudioStatus(ExactAudioPhase.Unavailable, "Android 14 et un mixeur compatible sont requis"))
                 return fallback
@@ -191,6 +229,7 @@ class PlaybackService : MediaSessionService() {
             .setWakeMode(C.WAKE_MODE_NETWORK)
             .build()
         owner = player
+        if (!exactRequested) decks[player] = deck
         player.skipSilenceEnabled = AppSettings.skipSilence.value && !exactRequested
         player.addAnalyticsListener(object : androidx.media3.exoplayer.analytics.AnalyticsListener {
             private var manifestReported = false
@@ -239,6 +278,7 @@ class PlaybackService : MediaSessionService() {
 
     private fun rebuildAudioMode() {
         if (!::player.isInitialized || stopping) return
+        com.ketvoice.app.automix.Automix.cancel()
         upgradeJob?.cancel()
         val old = player
         val item = old.currentMediaItem
@@ -266,6 +306,8 @@ class PlaybackService : MediaSessionService() {
      * This is a same-recording quality handoff, never a transition between songs. */
     private fun prepareUpgrade(args: Bundle): ListenableFuture<SessionResult> {
         if (AppSettings.bitPerfect.value) return Futures.immediateFuture(SessionResult(SessionError.ERROR_NOT_SUPPORTED))
+        // Two titles are being mixed: no deck is swapped for a better stream in the middle of it.
+        if (com.ketvoice.app.automix.Automix.mixing) return Futures.immediateFuture(SessionResult(SessionError.ERROR_INVALID_STATE))
         upgradeJob?.cancel()
         val result = SettableFuture.create<SessionResult>()
         val old = player
@@ -364,6 +406,7 @@ class PlaybackService : MediaSessionService() {
 
     override fun onDestroy() {
         stopping = true
+        com.ketvoice.app.automix.Automix.detach(automixHost)
         getSystemService(android.media.AudioManager::class.java).unregisterAudioDeviceCallback(audioDevices)
         BitPerfectState.report(ExactAudioStatus())
         serviceScope.cancel()

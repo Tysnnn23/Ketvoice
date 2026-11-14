@@ -259,42 +259,25 @@ fun ArtistScreen(request: AppUi.ArtistRequest? = AppUi.artistRequest.value) {
                     com.ketvoice.app.ui.common.CollectionQuickActions(tracks, enabled = collapse.value >= .98f)
                 }
             }
-            if (page != null) com.ketvoice.app.glass.GlassPanel(Modifier.size(48.dp), CircleShape,
-                com.ketvoice.app.glass.GlassParams.circle(dark = theme.isDark), captured = true) {
-                Box(Modifier.fillMaxSize().clickable {
-                    // Full reload: drop the cached page and artwork for this artist,
-                    // then fetch the current server version.
-                    scope.launch {
-                        ArtistCache.invalidate(request.id, request.name)
-                        ArtistSignatures.invalidate(request.name)
-                        attempt++
-                    }
-                }, contentAlignment = Alignment.Center) {
-                    Icon(Icons.Filled.Refresh, "Actualiser la page et le cache", tint = theme.onBackground, modifier = Modifier.size(21.dp))
-                }
-            }
+            // Refresh, visuals (verified owner) and share live in one capsule of glass.
             val publisher by com.ketvoice.app.data.PublisherSession.allowed.collectAsState()
-            if (page != null && publisher) {
-                Spacer(Modifier.width(8.dp))
-                com.ketvoice.app.glass.GlassPanel(Modifier.size(48.dp), CircleShape,
-                    com.ketvoice.app.glass.GlassParams.circle(dark = theme.isDark), captured = true) {
-                    Box(Modifier.fillMaxSize().testTag("artist-visuals").clickable(role = androidx.compose.ui.semantics.Role.Button) {
-                        page?.let { AppUi.openVisuals(listOf(com.ketvoice.app.data.VisualTarget.artist(it.artist.name, it.artist.photo))) }
-                    }, contentAlignment = Alignment.Center) {
-                        Icon(com.ketvoice.app.ui.common.KetIcons.Appearance, "Modifier les visuels", tint = theme.onBackground, modifier = Modifier.size(20.dp))
-                    }
-                }
-            }
-            if (page != null) {
-                Spacer(Modifier.width(8.dp))
-                com.ketvoice.app.glass.GlassPanel(Modifier.size(48.dp), CircleShape,
-                    com.ketvoice.app.glass.GlassParams.circle(dark = theme.isDark), captured = true) {
-                    Box(Modifier.fillMaxSize().clickable {
-                        page?.let { com.ketvoice.app.util.ShareLinks.shareArtist(context, it.artist.id, it.artist.name) }
-                    }, contentAlignment = Alignment.Center) {
-                        Icon(Icons.Filled.Share, "Partager l'artiste", tint = theme.onBackground, modifier = Modifier.size(20.dp))
-                    }
-                }
+            page?.let { shown ->
+                com.ketvoice.app.ui.common.GlassButtonPad(listOfNotNull(
+                    com.ketvoice.app.ui.common.PadAction(com.ketvoice.app.ui.common.KetIcons.Refresh, "Actualiser la page et le cache", "artist-refresh") {
+                        // Full reload: drop the cached page and artwork for this artist,
+                        // then fetch the current server version.
+                        scope.launch {
+                            ArtistCache.invalidate(request.id, request.name)
+                            ArtistSignatures.invalidate(request.name)
+                            attempt++
+                        }
+                    },
+                    com.ketvoice.app.ui.common.PadAction(com.ketvoice.app.ui.common.KetIcons.Appearance, "Modifier les visuels", "artist-visuals") {
+                        AppUi.openVisuals(listOf(com.ketvoice.app.data.VisualTarget.artist(shown.artist.name, shown.artist.photo)))
+                    }.takeIf { publisher },
+                    com.ketvoice.app.ui.common.PadAction(com.ketvoice.app.ui.common.KetIcons.Share, "Partager l'artiste", "artist-share") {
+                        com.ketvoice.app.util.ShareLinks.shareArtist(context, shown.artist.id, shown.artist.name)
+                    }), captured = true, tag = "artist-actions")
             }
         }
     }

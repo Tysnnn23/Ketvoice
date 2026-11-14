@@ -196,3 +196,32 @@ internal fun CollectionAmbient(cover: String?, modifier: Modifier = Modifier, st
         CompositionLocalProvider(LocalBackdropLayer provides backdrop) { content() }
     }
 }
+
+/** One of the icons of a [GlassButtonPad]. */
+internal class PadAction(val icon: ImageVector, val label: String, val tag: String? = null, val enabled: Boolean = true,
+                         val onClick: () -> Unit)
+
+/**
+ * Several actions in one capsule of glass, side by side with nothing between them: one
+ * object to look at instead of a row of separate bubbles. Each icon keeps a full touch target.
+ */
+@Composable
+internal fun GlassButtonPad(actions: List<PadAction>, modifier: Modifier = Modifier, height: Dp = 48.dp, captured: Boolean = false,
+                            tag: String? = null) {
+    if (actions.isEmpty()) return
+    val theme = LocalTheme.current
+    val haptic = rememberHaptics()
+    GlassPanel(modifier.then(if (tag != null) Modifier.testTag(tag) else Modifier), RoundedCornerShape(999.dp),
+        GlassParams.pill(dark = theme.isDark), captured = captured) {
+        Row(Modifier.padding(horizontal = if (actions.size > 1) 3.dp else 0.dp), verticalAlignment = Alignment.CenterVertically) {
+            actions.forEach { action ->
+                Box(Modifier.size(width = if (actions.size > 1) 44.dp else height, height = height).clip(RoundedCornerShape(999.dp))
+                    .clickable(enabled = action.enabled, role = Role.Button) { haptic(Haptics.Kind.Press); action.onClick() }
+                    .then(if (action.tag != null) Modifier.testTag(action.tag) else Modifier), contentAlignment = Alignment.Center) {
+                    Icon(action.icon, action.label, tint = theme.onBackground.copy(alpha = if (action.enabled) 1f else .38f),
+                        modifier = Modifier.size(22.dp))
+                }
+            }
+        }
+    }
+}
