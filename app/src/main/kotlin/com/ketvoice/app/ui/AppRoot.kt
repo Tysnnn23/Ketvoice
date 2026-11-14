@@ -139,7 +139,7 @@ fun AppRoot() {
             com.ketvoice.app.discord.DiscordPresence.fromTrack(
                 title = track.title,
                 artist = track.artist,
-                coverUrl = artwork["t:${track.id}"] ?: track.coverUrl,
+                coverUrl = com.ketvoice.app.data.MediaOverrides.cover(track, artwork["t:${track.id}"] ?: track.coverUrl),
                 playing = true,
                 positionMs = playerState.positionMs,
                 nowMs = System.currentTimeMillis(),

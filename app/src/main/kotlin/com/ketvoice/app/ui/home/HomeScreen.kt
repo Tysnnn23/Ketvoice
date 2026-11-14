@@ -171,7 +171,7 @@ fun HomeScreen() {
                                 Column(Modifier.width(156.dp).captureRevealOrigin(origin).clickable {
                                     AppUi.openCatalog(CatalogRequest("album", album.id, album.title), origin.value)
                                 }) {
-                                    Cover(album.title, album.coverUrl, 156.dp, 13.dp)
+                                    Cover(album.title, com.ketvoice.app.data.MediaOverrides.albumCover(album.title, album.artist, album.coverUrl), 156.dp, 13.dp)
                                     Text(album.title, localize = false, color = theme.onBackground, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
                                         maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))
                                     Text(album.artist, localize = false, color = theme.secondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -206,7 +206,7 @@ private fun HomeRecentRow(track: Track, active: Boolean, onPlay: () -> Unit, onM
     val theme = LocalTheme.current
     val art by ArtworkRepo.covers.collectAsState()
     Row(Modifier.fillMaxWidth().heightIn(min = 64.dp).clickable(onClick = onPlay).padding(vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
-        com.ketvoice.app.ui.common.DownloadCover(track, art["t:${track.id}"] ?: track.coverUrl, 50.dp, 7.dp)
+        com.ketvoice.app.ui.common.DownloadCover(track, com.ketvoice.app.data.MediaOverrides.cover(track, art["t:${track.id}"] ?: track.coverUrl), 50.dp, 7.dp)
         Spacer(Modifier.width(13.dp))
         Column(Modifier.weight(1f)) {
             Text(track.title, localize = false, color = if (active) theme.accent else theme.onBackground, fontSize = 15.sp,
@@ -226,7 +226,7 @@ private fun TrackCarousel(tracks: List<Track>, onMenu: (Track) -> Unit) {
     LazyRow(contentPadding = PaddingValues(horizontal = 18.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
         itemsIndexed(tracks, key = { _, t -> t.id }) { i, track ->
             Column(Modifier.width(156.dp).clickable { Player.playQueue(tracks, i) }) {
-                com.ketvoice.app.ui.common.DownloadCover(track, art["t:${track.id}"] ?: track.coverUrl, 156.dp, 13.dp)
+                com.ketvoice.app.ui.common.DownloadCover(track, com.ketvoice.app.data.MediaOverrides.cover(track, art["t:${track.id}"] ?: track.coverUrl), 156.dp, 13.dp)
                 Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(track.title, localize = false, color = theme.onBackground, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
                         maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))

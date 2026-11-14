@@ -62,7 +62,8 @@ internal fun AlbumPage(request: CatalogRequest, page: CatalogPage?, tracks: List
     val context = LocalContext.current
     val title = page?.title ?: request.title
     val artist = page?.subtitle?.takeIf { it.isNotBlank() } ?: tracks.firstOrNull()?.artist.orEmpty()
-    val cover = page?.cover?.takeIf { it.isNotBlank() } ?: tracks.firstOrNull()?.let { art["t:${it.id}"] ?: it.coverUrl }
+    val cover = com.ketvoice.app.data.MediaOverrides.albumCover(title, artist, page?.cover?.takeIf { it.isNotBlank() }
+        ?: tracks.firstOrNull()?.let { com.ketvoice.app.data.MediaOverrides.cover(it, art["t:${it.id}"] ?: it.coverUrl) })
     val accent = com.ketvoice.app.theme.rememberCoverAccent(cover)?.first
     // Like the artist page: the page takes its colour from the cover, and the cover dissolves into it.
     val pageTint by androidx.compose.animation.animateColorAsState(
@@ -115,6 +116,18 @@ internal fun AlbumPage(request: CatalogRequest, page: CatalogPage?, tracks: List
             CollectionTopBar(title, collapse.value, { AppUi.closeOverlay() },
                 onPlay = if (tracks.isNotEmpty() && !loading) ({ Player.setShuffle(false); Player.playQueue(tracks) }) else null,
                 titleTag = "album-collapsed-title") {
+                val publisher by com.ketvoice.app.data.PublisherSession.allowed.collectAsState()
+                if (publisher && title.isNotBlank() && artist.isNotBlank()) {
+                    LiquidGlassButton({
+                        val original = page?.cover?.takeIf { it.isNotBlank() } ?: tracks.firstOrNull()?.let { art["t:${it.id}"] ?: it.coverUrl }
+                        val main = com.ketvoice.app.data.MediaOverrides.mainArtist(artist)
+                        AppUi.openVisuals(listOf(com.ketvoice.app.data.VisualTarget.album(title, main, original, tracks.firstOrNull()),
+                            com.ketvoice.app.data.VisualTarget.artist(main, null)))
+                    }, Modifier.size(48.dp).testTag("album-visuals")) {
+                        Icon(KetIcons.Appearance, "Modifier les visuels", tint = theme.onBackground)
+                    }
+                    Spacer(Modifier.width(8.dp))
+                }
                 LiquidGlassButton({ ShareLinks.shareAlbum(context, request.id, title, artist) }, Modifier.size(48.dp)) {
                     Icon(KetIcons.Share, "Partager", tint = theme.onBackground)
                 }

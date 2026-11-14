@@ -106,7 +106,7 @@ fun MiniPlayerPill(
     val th = LocalTheme.current
     val current = ps.current ?: return
     val art by ArtworkRepo.covers.collectAsState()
-    val cover = art["t:${current.id}"] ?: current.coverUrl
+    val cover = com.ketvoice.app.data.MediaOverrides.cover(current, art["t:${current.id}"] ?: current.coverUrl)
 
     val pillShape = RoundedCornerShape(27.dp)
     // Swipe the pill sideways to change track; the collapsed pill is too small for it.
@@ -209,7 +209,7 @@ private fun MiniPlayerCompact(modifier: Modifier = Modifier, onOpen: () -> Unit)
     val th = LocalTheme.current
     val current = ps.current ?: return
     val art by ArtworkRepo.covers.collectAsState()
-    val cover = art["t:${current.id}"] ?: current.coverUrl
+    val cover = com.ketvoice.app.data.MediaOverrides.cover(current, art["t:${current.id}"] ?: current.coverUrl)
     val pillShape = RoundedCornerShape(999.dp)
     GlassPanel(
         modifier = modifier

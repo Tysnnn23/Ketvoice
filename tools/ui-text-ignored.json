@@ -105,5 +105,7 @@
  "unknown album": "placeholder album tag matched to leave untagged files out of groups, not shown",
  "unknown artist": "placeholder artist tag matched to leave untagged files out of groups, not shown",
  "d MMM": "date format pattern, not user-facing copy",
- "group:{0}:{1}": "stable lazy-list group identity, not user-facing copy"
+ "group:{0}:{1}": "stable lazy-list group identity, not user-facing copy",
+ "{0}-pick": "test tag of a Studio visual's choose button, not user-facing copy",
+ "{0}-restore": "test tag of a Studio visual's restore button, not user-facing copy"
 }

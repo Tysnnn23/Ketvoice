@@ -175,7 +175,7 @@ internal fun HomeReleasesShelf(releases: List<CatalogAlbum>, modifier: Modifier 
                 Column(Modifier.width(156.dp).clip(RoundedCornerShape(14.dp)).clickable(role = Role.Button) {
                     AppUi.openCatalog(CatalogRequest("album", album.id, album.title))
                 }.padding(bottom = 4.dp)) {
-                    Cover(album.title, album.cover, 156.dp, 13.dp)
+                    Cover(album.title, com.ketvoice.app.data.MediaOverrides.albumCover(album.title, album.artist, album.cover), 156.dp, 13.dp)
                     Text(album.title, localize = false, color = theme.onBackground, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
                         maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))
                     Text(listOfNotNull(album.artist, album.releaseDate?.take(4)).joinToString(" · "), localize = false,

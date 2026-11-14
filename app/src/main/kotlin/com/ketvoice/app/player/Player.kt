@@ -250,6 +250,7 @@ object Player {
         observeSystemVolume(context.applicationContext)
         CanvasRepo.init(context.applicationContext)
         ArtworkRepo.init(context.applicationContext)
+        com.ketvoice.app.data.MediaOverrides.init(context.applicationContext)
         Downloader.init(context.applicationContext)
         com.ketvoice.app.data.OfflineCapsule.init(context.applicationContext)
         com.ketvoice.app.data.PlaylistStore.init(context.applicationContext)

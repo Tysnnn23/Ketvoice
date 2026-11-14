@@ -21,6 +21,14 @@
 
 ## Overview
 
+### 4.16.1 — curated artwork everywhere
+
+Refreshed covers, Canvas and artist photos chosen by Ketvoice now appear across the
+app, from the player and the widget to album and artist pages, without an app update.
+[Mobile](https://github.com/Tysnnn23/Ketvoice/releases/download/v4.16.1/Ketvoice-4.16.1.apk)
+· [Quest](https://github.com/Tysnnn23/Ketvoice/releases/download/v4.16.1/Ketvoice-4.16.1-Quest.apk)
+· [Release notes](docs/releases/v4.16.1.md).
+
 ### 4.16.0 — a more personal Home and moments to share
 
 Home opens on a For you card that changes with what you were doing and the time of

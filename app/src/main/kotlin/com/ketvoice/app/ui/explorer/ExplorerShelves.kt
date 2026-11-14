@@ -60,7 +60,7 @@ internal fun ChartTracksShelf(tracks: List<Track>, modifier: Modifier = Modifier
             Column(Modifier.width(132.dp).clip(shelfCard).trackRowClick(track) { Player.playQueue(tracks, index) }
                 .padding(bottom = 4.dp)) {
                 Box {
-                    Cover(track.title, art["t:${track.id}"] ?: track.coverUrl, 132.dp, 14.dp)
+                    Cover(track.title, com.ketvoice.app.data.MediaOverrides.cover(track, art["t:${track.id}"] ?: track.coverUrl), 132.dp, 14.dp)
                     Text("${index + 1}", localize = false, color = androidx.compose.ui.graphics.Color.White, fontSize = 13.sp,
                         fontWeight = FontWeight.Bold, modifier = Modifier.padding(8.dp).clip(RoundedCornerShape(8.dp))
                             .background(androidx.compose.ui.graphics.Color.Black.copy(alpha = .55f)).padding(horizontal = 7.dp, vertical = 2.dp))
@@ -83,7 +83,7 @@ internal fun AlbumShelf(albums: List<CatalogAlbum>, modifier: Modifier = Modifie
         items(albums, key = { it.id }) { album ->
             Column(Modifier.width(132.dp).clip(shelfCard).clickable(role = Role.Button) { onOpen(album) }
                 .padding(bottom = 4.dp)) {
-                Cover(album.title, album.cover, 132.dp, 14.dp)
+                Cover(album.title, com.ketvoice.app.data.MediaOverrides.albumCover(album.title, album.artist, album.cover), 132.dp, 14.dp)
                 Text(album.title, localize = false, color = theme.onBackground, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
                     maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))
                 Text(album.artist, localize = false, color = theme.secondary, fontSize = 12.sp,
@@ -107,7 +107,8 @@ internal fun ArtistShelf(artists: List<CatalogArtist>, modifier: Modifier = Modi
                     // The initial stays behind the photo while it loads.
                     Text(artist.name.take(1).uppercase(), localize = false, color = theme.secondary, fontSize = 30.sp,
                         fontWeight = FontWeight.Bold)
-                    if (artist.picture != null) AsyncImage(model = artist.picture, contentDescription = null,
+                    val picture = com.ketvoice.app.data.MediaOverrides.artistPhoto(artist.name, artist.picture)
+                    if (picture != null) AsyncImage(model = picture, contentDescription = null,
                         contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
                 }
                 Text(artist.name, localize = false, color = theme.onBackground, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,

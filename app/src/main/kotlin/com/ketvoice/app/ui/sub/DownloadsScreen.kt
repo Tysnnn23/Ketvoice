@@ -119,12 +119,12 @@ fun DownloadsScreen() {
                 val recent = remember(saved) { saved.sortedByDescending { it.file.lastModified() }.take(4).map { it.track } }
                 Column(Modifier.fillMaxWidth()) {
                 com.ketvoice.app.ui.common.CollectionHero(
-                    recent.firstOrNull()?.let { artwork["t:${it.id}"] ?: it.coverUrl }, 82.dp, AppText.t("Téléchargements"),
+                    recent.firstOrNull()?.let { com.ketvoice.app.data.MediaOverrides.cover(it, artwork["t:${it.id}"] ?: it.coverUrl) }, 82.dp, AppText.t("Téléchargements"),
                     meta = listOf(AppText.t(if (summary.count == 1) "1 titre" else "${summary.count} titres"),
                         size(summary.bytes).takeIf { summary.count > 0 }.orEmpty(), playtimeLabel(summary.durationMs))
                         .filter { it.isNotBlank() }.joinToString(" · "),
                     artworkTag = "downloads-mosaic", artworkSide = 132.dp, bleed = 20.dp,
-                    artwork = { DownloadMosaic(recent.map { it.title to (artwork["t:${it.id}"] ?: it.coverUrl) }) }) {
+                    artwork = { DownloadMosaic(recent.map { it.title to (com.ketvoice.app.data.MediaOverrides.cover(it, artwork["t:${it.id}"] ?: it.coverUrl)) }) }) {
                     if (saved.isNotEmpty()) com.ketvoice.app.ui.common.CollectionActionPair(
                         { Player.setShuffle(false); Player.playQueue(saved.map { it.track }) },
                         { Player.playShuffled(saved.map { it.track }) }, Modifier.widthIn(max = 560.dp), minHeight = 52.dp)
@@ -177,7 +177,7 @@ fun DownloadsScreen() {
                     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(theme.card)
                         .padding(16.dp).testTag("transfer-download")) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Cover(track.title, artwork["t:${track.id}"] ?: track.coverUrl, 48.dp, 10.dp)
+                            Cover(track.title, com.ketvoice.app.data.MediaOverrides.cover(track, artwork["t:${track.id}"] ?: track.coverUrl), 48.dp, 10.dp)
                             Column(Modifier.padding(start = 12.dp).weight(1f)) {
                                 TrackTitle(track.title, color = theme.onBackground)
                                 Text(track.artist, localize = false, color = theme.secondary, fontSize = 13.sp,
@@ -233,7 +233,7 @@ fun DownloadsScreen() {
                         }).padding(start = 8.dp, end = 2.dp, top = 8.dp, bottom = 8.dp).testTag("saved-download"),
                         verticalAlignment = Alignment.CenterVertically) {
                         if (selecting) Checkbox(track.id in selected, onCheckedChange = null)
-                        Cover(track.title, artwork["t:${track.id}"] ?: track.coverUrl, 56.dp, 12.dp)
+                        Cover(track.title, com.ketvoice.app.data.MediaOverrides.cover(track, artwork["t:${track.id}"] ?: track.coverUrl), 56.dp, 12.dp)
                         Column(Modifier.padding(start = 12.dp).weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                             TrackTitle(track.title, color = if (current) theme.accent else theme.onBackground)
                             Text(track.artist, localize = false, color = theme.secondary, fontSize = 13.sp,

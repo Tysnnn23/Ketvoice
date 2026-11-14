@@ -40,7 +40,7 @@ internal fun GlassAppearancePreview(onClose: () -> Unit) {
     val theme = LocalTheme.current
     val state by Player.state.collectAsState()
     val covers by ArtworkRepo.covers.collectAsState()
-    val cover = state.current?.let { covers["t:${it.id}"] ?: it.coverUrl }
+    val cover = state.current?.let { com.ketvoice.app.data.MediaOverrides.cover(it, covers["t:${it.id}"] ?: it.coverUrl) }
     val backdrop = rememberGlassBackdrop(theme.background)
     fun cancel() {
         AppSettings.glassTint.value = initialTint

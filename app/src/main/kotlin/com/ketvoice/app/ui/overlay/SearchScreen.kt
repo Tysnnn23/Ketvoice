@@ -306,8 +306,9 @@ fun SearchScreen() {
                                     Text(artist.name.take(1).uppercase(), localize = false,
                                         color = th.secondary, fontSize = 30.sp,
                                         fontWeight = FontWeight.Bold)
-                                    if (!artist.photo.isNullOrBlank()) {
-                                        AsyncImage(model = artist.photo, contentDescription = artist.name,
+                                    val artistPhoto = com.ketvoice.app.data.MediaOverrides.artistPhoto(artist.name, artist.photo)
+                                    if (!artistPhoto.isNullOrBlank()) {
+                                        AsyncImage(model = artistPhoto, contentDescription = artist.name,
                                             contentScale = ContentScale.Crop, alignment = Alignment.Center,
                                             modifier = Modifier.fillMaxSize())
                                     }
@@ -389,7 +390,7 @@ fun SearchScreen() {
                     SearchResultRow(
                         track = track,
                         variants = group.tracks,
-                        cover = art["t:${track.id}"] ?: track.coverUrl,
+                        cover = com.ketvoice.app.data.MediaOverrides.cover(track, art["t:${track.id}"] ?: track.coverUrl),
                         modifier = Modifier.weight(1f),
                         onClick = { choose(track, false) }, onVariant = { choose(it, true) }
                     )

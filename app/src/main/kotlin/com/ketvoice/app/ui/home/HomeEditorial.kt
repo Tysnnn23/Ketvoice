@@ -42,7 +42,7 @@ internal fun HomeEditorial(tracks: List<Track>, resume: Boolean = false) {
                 AppUi.showPlayer.value = true
             }.padding(18.dp), verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(18.dp)) {
-            Cover(track.title, covers["t:${track.id}"] ?: track.coverUrl, 116.dp, 18.dp)
+            Cover(track.title, com.ketvoice.app.data.MediaOverrides.cover(track, covers["t:${track.id}"] ?: track.coverUrl), 116.dp, 18.dp)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(track.title, localize = false, color = theme.onBackground, fontSize = 23.sp,
                     lineHeight = 27.sp, fontWeight = FontWeight.Bold, maxLines = 3, overflow = TextOverflow.Ellipsis)

@@ -79,6 +79,17 @@ object CanvasRepo {
         fun recentlyFailed() = failed[track.id]?.let {
             System.currentTimeMillis() - it < 10 * 60_000L
         } == true
+        // A Canvas the owner chose for this title or its album replaces the catalogue's.
+        // Its file name follows the URL, so a new choice is fetched and a restored
+        // original resolves again from the catalogue.
+        val curated = MediaOverrides.canvas(track)
+        val curatedName = curated?.let { "kvov-" + sha(it) }
+        val currentName = _paths.value[track.id]?.let { File(it).nameWithoutExtension }
+        if (currentName != null && currentName.startsWith("kvov-") && currentName != curatedName) {
+            _paths.value = _paths.value - track.id
+            ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().remove(track.id).apply()
+        }
+        if (curatedName != null && currentName != curatedName) failed.remove(track.id)
         if (localPath(track.id) != null || (!force && recentlyFailed())) return@withContext
         mutex.withLock {
             if (localPath(track.id) != null || (!force && recentlyFailed())) return@withLock
@@ -86,10 +97,10 @@ object CanvasRepo {
                 val prefs = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
                 // A canvas published for the album by its owner takes priority:
                 // it is the same file for every track of that album.
-                val published = track.canvasUrl?.takeIf { it.startsWith("https://") }
+                val published = curated ?: track.canvasUrl?.takeIf { it.startsWith("https://") }
                 if (published != null) {
-                    val name = "kvpub-" + (track.addonId ?: track.id)
-                        .replace(Regex("[^A-Za-z0-9_-]"), "_").take(72)
+                    val name = curatedName ?: ("kvpub-" + (track.addonId ?: track.id)
+                        .replace(Regex("[^A-Za-z0-9_-]"), "_").take(72))
                     val target = File(canvasDir(ctx), "$name.mp4")
                     if (target.exists() && target.length() > 10_000) {
                         prefs.edit().putString(track.id, name).apply()
@@ -145,6 +156,9 @@ object CanvasRepo {
             }
         }
     }
+
+    private fun sha(value: String): String = java.security.MessageDigest.getInstance("SHA-256")
+        .digest(value.toByteArray(Charsets.UTF_8)).take(12).joinToString("") { "%02x".format(it) }
 
     fun localPath(trackId: String): File? {
         val path = _paths.value[trackId] ?: return null

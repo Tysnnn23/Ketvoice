@@ -63,10 +63,12 @@ internal sealed interface StudioRoute {
     data class Song(val track: Track) : StudioRoute
     data class Album(val artist: String, val album: String) : StudioRoute
     data class Lyrics(val track: Track) : StudioRoute
+    data class Visuals(val targets: List<VisualTarget>) : StudioRoute
 }
 
 /** The first page of the Studio for what opened it. */
-internal fun studioStart(target: Track?, edit: Boolean): StudioRoute = when {
+internal fun studioStart(target: Track?, edit: Boolean, visuals: List<VisualTarget> = emptyList()): StudioRoute = when {
+    visuals.isNotEmpty() -> StudioRoute.Visuals(visuals)
     target == null -> StudioRoute.Home
     edit && ImportedSong.id(target) != null -> StudioRoute.Song(target)
     else -> StudioRoute.Lyrics(target)
@@ -116,7 +118,7 @@ fun PublisherScreen(target: Track?, onClose: () -> Unit) {
     val restoring by PublisherSession.restoring.collectAsState()
     val state = remember { StudioState(StudioFiles(context), scope) }
     DisposableEffect(state) { onDispose { state.files.clear() } }
-    val start = remember { studioStart(target, AppUi.editImportedSong.value) }
+    val start = remember { studioStart(target, AppUi.editImportedSong.value, AppUi.publisherVisuals.value) }
     val stack = remember { mutableStateListOf(start) }
     val route = stack.last()
     fun back() { if (state.busy) return; if (stack.size > 1) stack.removeAt(stack.lastIndex) else onClose() }
@@ -149,7 +151,8 @@ fun PublisherScreen(target: Track?, onClose: () -> Unit) {
                     }, label = "studio-route") { shown ->
                         when (shown) {
                             StudioRoute.Home -> StudioHome(state, onNew = { open(StudioRoute.New) },
-                                onSong = { open(StudioRoute.Song(it)) }, onAlbum = { open(StudioRoute.Album(it.artist, it.album)) })
+                                onSong = { open(StudioRoute.Song(it)) }, onAlbum = { open(StudioRoute.Album(it.artist, it.album)) },
+                                onVisual = { open(StudioRoute.Visuals(listOf(it))) })
                             StudioRoute.New -> StudioNewTitle(state, onDone = { published ->
                                 stack.clear(); stack.add(StudioRoute.Home); state.reload()
                                 if (published != null) stack.add(StudioRoute.Song(published))
@@ -157,6 +160,7 @@ fun PublisherScreen(target: Track?, onClose: () -> Unit) {
                             is StudioRoute.Song -> StudioSong(state, shown.track) { state.reload() }
                             is StudioRoute.Album -> StudioAlbumPage(state, shown.artist, shown.album, onSong = { open(StudioRoute.Song(it)) })
                             is StudioRoute.Lyrics -> StudioLyrics(state, shown.track)
+                            is StudioRoute.Visuals -> StudioVisuals(state, shown.targets)
                         }
                     }
                 }
@@ -204,7 +208,7 @@ internal fun studioFieldColors(): TextFieldColors {
 }
 
 @Composable
-private fun StudioTitle(title: String, subtitle: String? = null) {
+internal fun StudioTitle(title: String, subtitle: String? = null) {
     val theme = LocalTheme.current
     Column(Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
         Text(title, color = theme.onBackground, fontSize = 32.sp, fontWeight = FontWeight.Bold, letterSpacing = (-.8).sp,
@@ -243,7 +247,8 @@ private fun StudioSignIn(state: StudioState) {
 // ------------------------------------------------------------------ home
 
 @Composable
-private fun StudioHome(state: StudioState, onNew: () -> Unit, onSong: (Track) -> Unit, onAlbum: (StudioAlbum) -> Unit) {
+private fun StudioHome(state: StudioState, onNew: () -> Unit, onSong: (Track) -> Unit, onAlbum: (StudioAlbum) -> Unit,
+                       onVisual: (VisualTarget) -> Unit = {}) {
     val theme = LocalTheme.current
     var view by rememberSaveableInt()
     val songs = state.songs
@@ -258,9 +263,10 @@ private fun StudioHome(state: StudioState, onNew: () -> Unit, onSong: (Track) ->
                 tag = "studio-new", minHeight = 58.dp)
         }
         item(key = "view") {
-            GlassSegmentedControl(listOf("Titres", "Albums"), view, { view = it }, Modifier.padding(vertical = 8.dp), tag = "studio-view")
+            GlassSegmentedControl(listOf("Titres", "Albums", "Visuels"), view, { view = it }, Modifier.padding(vertical = 8.dp), tag = "studio-view")
         }
         when {
+            view == 2 -> item(key = "visuals") { StudioVisualList(onVisual) }
             songs == null -> item(key = "loading") {
                 GlassCapsuleButton("Actualiser", KetIcons.Refresh, { state.reload() }, Modifier.fillMaxWidth(), enabled = !state.busy)
             }
@@ -317,7 +323,7 @@ private fun StudioSongRow(track: Track, checked: Boolean? = null, onClick: () ->
 }
 
 @Composable
-private fun StudioChip(label: String) {
+internal fun StudioChip(label: String) {
     val theme = LocalTheme.current
     Text(label, color = theme.accent, fontSize = 10.sp, fontWeight = FontWeight.Bold, maxLines = 1,
         modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(theme.accent.copy(alpha = .12f)).padding(horizontal = 6.dp, vertical = 2.dp))
@@ -349,7 +355,7 @@ internal fun StudioPreview(title: String, artist: String, cover: Any?, canvas: S
 
 /** One part of a title (audio, cover, Canvas, lyrics) with its state and its action. */
 @Composable
-private fun StudioPart(icon: androidx.compose.ui.graphics.vector.ImageVector, title: String, value: String, action: String,
+internal fun StudioPart(icon: androidx.compose.ui.graphics.vector.ImageVector, title: String, value: String, action: String,
                        enabled: Boolean, tag: String, onClick: () -> Unit, trailing: (@Composable () -> Unit)? = null) {
     val theme = LocalTheme.current
     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(theme.card).padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
@@ -367,7 +373,7 @@ private fun StudioPart(icon: androidx.compose.ui.graphics.vector.ImageVector, ti
 }
 
 @Composable
-private fun RightsRow(checked: Boolean, enabled: Boolean, onChange: (Boolean) -> Unit) {
+internal fun RightsRow(checked: Boolean, enabled: Boolean, onChange: (Boolean) -> Unit) {
     val theme = LocalTheme.current
     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
         .clickable(enabled = enabled, role = Role.Checkbox) { onChange(!checked) }.padding(vertical = 4.dp).testTag("studio-rights"),
@@ -390,13 +396,13 @@ private fun audioPicker(state: StudioState, onFile: (File, StudioFiles.AudioTags
     }
 
 @Composable
-private fun coverPicker(state: StudioState, onFile: (File) -> Unit) =
+internal fun coverPicker(state: StudioState, onFile: (File) -> Unit) =
     rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) state.run { onFile(state.files.copy(uri, 4L * 1024 * 1024, setOf("png", "jpg", "jpeg", "webp"))) }
     }
 
 private val AUDIO_TYPES = arrayOf("audio/*", "application/octet-stream")
-private val IMAGE_TYPES = arrayOf("image/jpeg", "image/png", "image/webp")
+internal val IMAGE_TYPES = arrayOf("image/jpeg", "image/png", "image/webp")
 
 // ------------------------------------------------------------------ new title, three steps
 

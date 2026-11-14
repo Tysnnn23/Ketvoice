@@ -2,6 +2,7 @@ package com.ketvoice.app.ui
 
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.foundation.background
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import com.ketvoice.app.data.*
@@ -14,6 +15,7 @@ import com.ketvoice.app.ui.studio.CanvasEditor
 import com.ketvoice.app.ui.studio.PublisherScreen
 import com.ketvoice.app.ui.studio.StudioFiles
 import com.ketvoice.app.ui.studio.StudioState
+import com.ketvoice.app.ui.studio.StudioVisuals
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.*
 import org.junit.Assert.*
@@ -53,6 +55,7 @@ class StudioAndHomeHostTest {
         flow<Map<String, DayStat>>(ListeningHistory, "_days").value = emptyMap()
         (ListeningHistory.knownTracks as MutableStateFlow<List<Track>>).value = emptyList()
         AppUi.editImportedSong.value = false
+        MediaOverrides.replaceForTest(emptyList())
         playerField("controller").set(Player, oldController)
     }
 
@@ -153,5 +156,36 @@ class StudioAndHomeHostTest {
         compose.onNodeWithTag("home-week").assertIsDisplayed()
         compose.onNodeWithText("2 h 00 min").assertIsDisplayed()
         compose.onNodeWithText("Nova").assertIsDisplayed()
+    }
+
+    @Test fun visualsOfACatalogueTitleCanBeChangedAndRestored() {
+        val track = Track("yt:abc", "One More Time", "Daft Punk", "Discovery")
+        val targets = listOfNotNull(VisualTarget.track(track), VisualTarget.album("Discovery", "Daft Punk", null, track),
+            VisualTarget.artist("Daft Punk", null))
+        MediaOverrides.replaceForTest(listOf(MediaOverride("album", "discovery|daft punk", "Discovery — Daft Punk", cover = "https://cdn.example/a.jpg")))
+        compose.setContent { KetvoiceTheme(useDark = true) {
+            val scope = rememberCoroutineScope()
+            val state = androidx.compose.runtime.remember { StudioState(StudioFiles(compose.activity), scope) }
+            androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.background(com.ketvoice.app.theme.LocalTheme.current.background)) {
+                StudioVisuals(state, targets)
+            }
+        } }
+        image("studio-visuals-title")
+        compose.onNodeWithText("Original du catalogue").assertExists()
+        compose.onNodeWithTag("studio-visual-save").assertIsNotEnabled()
+        compose.onNodeWithTag("studio-visuals-kind").onChildren().filterToOne(hasText("Album")).performClick()
+        compose.onNodeWithText("Personnalisé").assertExists()
+        compose.onNodeWithTag("studio-visual-cover-restore").performScrollTo().performClick()
+        compose.onNodeWithText("Original rétabli à l'envoi").assertExists()
+        compose.onNodeWithTag("studio-visual-save").performScrollTo().assertIsNotEnabled()
+        compose.onNodeWithTag("studio-rights").performScrollTo().performClick()
+        compose.onNodeWithTag("studio-visual-save").assertIsEnabled()
+        compose.onNodeWithTag("studio-visual-restore-all").assertExists()
+        compose.onNodeWithTag("studio-visuals-kind").performScrollTo()
+        compose.onNodeWithTag("studio-visuals-kind").onChildren().filterToOne(hasText("Artiste")).performClick()
+        image("studio-visuals-artist")
+        compose.onNodeWithText("Photo de l'artiste").assertExists()
+        compose.onNodeWithText("Portrait").assertExists()
+        compose.onNodeWithTag("studio-artist-preview").assertExists()
     }
 }

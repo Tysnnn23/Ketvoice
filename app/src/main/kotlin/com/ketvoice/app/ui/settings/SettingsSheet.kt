@@ -37,7 +37,7 @@ internal fun SettingsSheet(onDismiss: () -> Unit, content: @Composable ColumnSco
     val theme = LocalTheme.current
     val player by Player.state.collectAsState()
     val covers by ArtworkRepo.covers.collectAsState()
-    val cover = player.current?.let { covers["t:${it.id}"] ?: it.coverUrl }
+    val cover = player.current?.let { com.ketvoice.app.data.MediaOverrides.cover(it, covers["t:${it.id}"] ?: it.coverUrl) }
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
         val backdrop = rememberGlassBackdrop(theme.background)
         BoxWithConstraints(Modifier.fillMaxSize()) {

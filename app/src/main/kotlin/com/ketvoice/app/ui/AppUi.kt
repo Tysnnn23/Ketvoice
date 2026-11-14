@@ -239,14 +239,26 @@ object AppUi {
     val publisherTrack = androidx.compose.runtime.mutableStateOf<com.ketvoice.app.data.Track?>(null)
     val publisherLink = androidx.compose.runtime.mutableStateOf<String?>(null)
     val editImportedSong = androidx.compose.runtime.mutableStateOf(false)
+    /** Catalogue items whose cover, Canvas or photo the owner is about to change; the first opens. */
+    val publisherVisuals = androidx.compose.runtime.mutableStateOf<List<com.ketvoice.app.data.VisualTarget>>(emptyList())
+    fun openVisuals(targets: List<com.ketvoice.app.data.VisualTarget?>) {
+        val shown = targets.filterNotNull()
+        if (shown.isEmpty()) return
+        editImportedSong.value = false
+        publisherTrack.value = null
+        publisherVisuals.value = shown
+        trackMenuTrack.value = null
+        showPublisher.value = true
+    }
     fun openPublisher(track: com.ketvoice.app.data.Track? = null, edit: Boolean = false) {
         if (edit && com.ketvoice.app.data.ImportedSong.id(track) == null) return
+        publisherVisuals.value = emptyList()
         editImportedSong.value = edit
         publisherTrack.value = track
         showPublisher.value = true
     }
     fun openPublisherLink(link: String) {
-        if (!showPublisher.value) { publisherTrack.value = null; editImportedSong.value = false }
+        if (!showPublisher.value) { publisherTrack.value = null; editImportedSong.value = false; publisherVisuals.value = emptyList() }
         publisherLink.value = link
         showPlayer.value = false
         showAccount.value = false

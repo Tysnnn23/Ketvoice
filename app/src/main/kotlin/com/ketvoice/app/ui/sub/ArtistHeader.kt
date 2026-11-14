@@ -66,8 +66,11 @@ internal fun ArtistHeader(page: ArtistPage, collapse: () -> Float = { 0f }, onTo
         } else ArtistArtwork()
     }
     val sourcePhoto = page.artist.photo?.takeIf { it.isNotBlank() }
-    val hero = artwork.hero ?: sourcePhoto
-    val ratio = page.heroAspectRatio.takeIf { it.isFinite() && it > 0f } ?: 1f
+    // A photo the owner chose for this artist comes first; its shape is read once it loads.
+    val curated = com.ketvoice.app.data.MediaOverrides.artistHero(page.artist.name)
+    val hero = curated ?: artwork.hero ?: sourcePhoto
+    var curatedRatio by remember(curated) { mutableStateOf<Float?>(null) }
+    val ratio = (if (curated != null) curatedRatio else page.heroAspectRatio)?.takeIf { it.isFinite() && it > 0f } ?: 1f
     val wide = ratio > 1.6f
     val heroRequest = remember(hero, Motion.reduced) {
         ImageRequest.Builder(context).data(hero).crossfade(Motion.duration(280)).build()
@@ -82,6 +85,9 @@ internal fun ArtistHeader(page: ArtistPage, collapse: () -> Float = { 0f }, onTo
             Box(Modifier.fillMaxWidth().height(height).clipToBounds().testTag("artist-portrait")) {
                 if (hero != null) {
                     AsyncImage(heroRequest, page.artist.name, contentScale = ContentScale.Crop, alignment = Alignment.TopCenter,
+                        onSuccess = { result ->
+                            if (curated != null) result.painter.intrinsicSize.takeIf { it.height > 0f }?.let { curatedRatio = it.width / it.height }
+                        },
                         modifier = Modifier.fillMaxSize().graphicsLayer {
                             val c = collapse().coerceIn(0f, 1f)
                             // A slight overscan hides any seam; the photo drifts a little as the page scrolls.

@@ -50,7 +50,7 @@ object ArtworkRepo {
         _covers.value = map
     }
 
-    fun coverForTrack(track: Track): String? = _covers.value["t:${track.id}"] ?: track.coverUrl
+    fun coverForTrack(track: Track): String? = MediaOverrides.cover(track, _covers.value["t:${track.id}"] ?: track.coverUrl)
 
     /** Forces a fresh artwork lookup for these tracks (manual refresh). */
     fun invalidate(tracks: List<Track>) {
@@ -83,7 +83,7 @@ object ArtworkRepo {
         if (cover != null) { editor?.putString(key, cover)?.apply(); _covers.update { it + (key to cover) } }
         else { editor?.remove(key)?.apply(); _covers.update { it - key } }
     }
-    fun coverForAlbum(album: Album): String? = _covers.value["a:${album.id}"] ?: album.coverUrl
+    fun coverForAlbum(album: Album): String? = MediaOverrides.albumCover(album.title, album.artist, _covers.value["a:${album.id}"] ?: album.coverUrl)
 
     fun enrich(tracks: List<Track>) {
         val ctx = context ?: return

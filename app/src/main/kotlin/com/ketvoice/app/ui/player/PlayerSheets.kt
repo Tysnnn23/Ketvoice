@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.PlaylistAdd
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Smartphone
 import androidx.compose.material.icons.filled.Equalizer
@@ -68,7 +69,7 @@ private val noRip: MutableInteractionSource = MutableInteractionSource()
 @Composable
 fun TrackMenuSheet(track: Track, onClose: () -> Unit) {
     val art by ArtworkRepo.covers.collectAsState()
-    val cover = art["t:${track.id}"] ?: track.coverUrl
+    val cover = com.ketvoice.app.data.MediaOverrides.cover(track, art["t:${track.id}"] ?: track.coverUrl)
     val radius = with(LocalDensity.current) { 28.dp.toPx() }
     GlassPanel(
         modifier = Modifier.fillMaxWidth().padding(10.dp),
@@ -233,6 +234,16 @@ fun TrackMenuSheet(track: Track, onClose: () -> Unit) {
         if (publisher && com.ketvoice.app.data.ImportedSong.id(track) == null) MenuItemRow("Importer des lyrics", Icons.Filled.PlaylistAdd) {
             onClose()
             com.ketvoice.app.ui.AppUi.openPublisher(track)
+        }
+        // Catalogue titles: the owner can lay their own cover, Canvas or artist photo over
+        // the catalogue's, for the title, its album or its artist, and restore them later.
+        if (publisher && com.ketvoice.app.data.ImportedSong.id(track) == null) MenuItemRow("Modifier les visuels", Icons.Filled.Image) {
+            onClose()
+            val original = art["t:${track.id}"] ?: track.coverUrl
+            com.ketvoice.app.ui.AppUi.openVisuals(listOf(
+                com.ketvoice.app.data.VisualTarget.track(track, original),
+                track.album.takeIf { it.isNotBlank() }?.let { com.ketvoice.app.data.VisualTarget.album(it, com.ketvoice.app.data.MediaOverrides.mainArtist(track.artist), original, track) },
+                com.ketvoice.app.data.VisualTarget.artist(com.ketvoice.app.data.MediaOverrides.mainArtist(track.artist), null)))
         }
         run {
             val remaining by SleepTimer.remainingSeconds.collectAsState()

@@ -178,6 +178,34 @@ object PublicationApi {
         return tracks
     }
 
+    /** Every owner-curated catalogue visual, as the raw JSON the app caches. */
+    suspend fun overrides(): String? = withContext(Dispatchers.IO) {
+        val c = connection("$BASE/overrides", "GET")
+        c.readTimeout = 15_000
+        try {
+            if (c.responseCode !in 200..299) null
+            else c.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }.takeIf { it.length < 4_000_000 }
+        } catch (_: Exception) { null } finally { c.disconnect() }
+    }
+
+    /**
+     * Replaces the cover, Canvas or artist photo of a catalogue item ([MediaOverrides]),
+     * or restores the original ones listed in [restore]. Returns what is now applied,
+     * null once nothing is left (the catalogue's own visuals are back).
+     */
+    suspend fun saveOverride(kind: String, key: String, label: String, cover: File? = null, canvas: File? = null,
+                             hero: File? = null, restore: List<String> = emptyList(),
+                             onProgress: (Int) -> Unit = {}): MediaOverride? {
+        require(cover != null || canvas != null || hero != null || restore.isNotEmpty())
+        val meta = JSONObject().put("kind", kind).put("key", key).put("label", label.take(300)).put("rightsConfirmed", true)
+        if (restore.isNotEmpty()) meta.put("remove", JSONArray(restore.distinct()))
+        val result = multipart("/admin/override", meta,
+            listOfNotNull(cover?.let { "cover" to it }, canvas?.let { "canvas" to it }, hero?.let { "hero" to it }), onProgress)
+        val saved = result.optJSONObject("override")?.let(MediaOverrides::decodeRow)
+        MediaOverrides.accept(kind, key, saved)
+        return saved
+    }
+
     /** The rest of the app sees a changed publication at once: history, queue and player. */
     private fun refreshed(tracks: List<Track>) = tracks.forEach { updated ->
         ListeningHistory.replacePublication(updated)

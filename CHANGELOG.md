@@ -7,6 +7,20 @@
 
 ---
 
+# Ketvoice 4.16.1
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 104** — curated artwork everywhere.
+
+- Refreshed covers, Canvas and artist photos chosen by Ketvoice appear across the app:
+  player, mini-player, lists, search, Home, album and artist pages, lock screen, widget.
+- An album's artwork applies to its titles; artist pages fit a wide photo to its shape.
+
+Full notes: [4.16.1](docs/releases/v4.16.1.md).
+
+---
+
 # Ketvoice 4.16.0
 
 ![Ketvoice](ketvoice-banner.png)

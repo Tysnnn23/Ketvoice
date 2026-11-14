@@ -44,6 +44,7 @@ import com.ketvoice.app.data.YouTubeCatalog
 import com.ketvoice.app.player.Player
 import com.ketvoice.app.theme.LocalTheme
 import com.ketvoice.app.ui.AppUi
+import androidx.compose.ui.platform.testTag
 import com.ketvoice.app.ui.common.Cover
 import com.ketvoice.app.ui.motion.Motion
 import com.ketvoice.app.ui.motion.captureRevealOrigin
@@ -166,7 +167,7 @@ fun ArtistScreen(request: AppUi.ArtistRequest? = AppUi.artistRequest.value) {
                 itemsIndexed(data.tracks, key = { i, t -> "${t.id}:$i" }) { index, track ->
                     val active = player.current?.id == track.id
                     com.ketvoice.app.ui.common.SwipeTrackActions(track, if (Motion.reduced) Modifier else Modifier.animateItem()) {
-                        com.ketvoice.app.ui.common.TrackRow(track, art["t:${track.id}"] ?: track.coverUrl, active, player.isPlaying,
+                        com.ketvoice.app.ui.common.TrackRow(track, com.ketvoice.app.data.MediaOverrides.cover(track, art["t:${track.id}"] ?: track.coverUrl), active, player.isPlaying,
                             { Player.playQueue(data.tracks, index) }, rank = index + 1)
                     }
                 }
@@ -180,7 +181,7 @@ fun ArtistScreen(request: AppUi.ArtistRequest? = AppUi.artistRequest.value) {
                             Column(Modifier.width(150.dp).captureRevealOrigin(origin).clickable {
                                 AppUi.openCatalog(com.ketvoice.app.data.CatalogRequest("album", album.id, album.title), origin.value)
                             }) {
-                                Cover(album.title, art["a:${album.id}"] ?: album.coverUrl, 150.dp, 12.dp)
+                                Cover(album.title, com.ketvoice.app.data.MediaOverrides.albumCover(album.title, album.artist, art["a:${album.id}"] ?: album.coverUrl), 150.dp, 12.dp)
                                 Text(album.title, localize = false, color = theme.onBackground, fontSize = 14.sp,
                                     fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
                                     modifier = Modifier.padding(top = 7.dp))
@@ -205,9 +206,10 @@ fun ArtistScreen(request: AppUi.ArtistRequest? = AppUi.artistRequest.value) {
                                     // Initiale en repli : le cercle n'est jamais vide.
                                     Text(related.name.take(1).uppercase(), localize = false, color = theme.secondary,
                                         fontSize = 30.sp, fontWeight = FontWeight.Bold)
-                                    if (!related.photo.isNullOrBlank()) {
+                                    val relatedPhoto = com.ketvoice.app.data.MediaOverrides.artistPhoto(related.name, related.photo)
+                                    if (!relatedPhoto.isNullOrBlank()) {
                                         AsyncImage(
-                                            model = related.photo,
+                                            model = relatedPhoto,
                                             contentDescription = related.name,
                                             contentScale = ContentScale.Crop,
                                             alignment = Alignment.Center,
@@ -269,6 +271,18 @@ fun ArtistScreen(request: AppUi.ArtistRequest? = AppUi.artistRequest.value) {
                     }
                 }, contentAlignment = Alignment.Center) {
                     Icon(Icons.Filled.Refresh, "Actualiser la page et le cache", tint = theme.onBackground, modifier = Modifier.size(21.dp))
+                }
+            }
+            val publisher by com.ketvoice.app.data.PublisherSession.allowed.collectAsState()
+            if (page != null && publisher) {
+                Spacer(Modifier.width(8.dp))
+                com.ketvoice.app.glass.GlassPanel(Modifier.size(48.dp), CircleShape,
+                    com.ketvoice.app.glass.GlassParams.circle(dark = theme.isDark), captured = true) {
+                    Box(Modifier.fillMaxSize().testTag("artist-visuals").clickable(role = androidx.compose.ui.semantics.Role.Button) {
+                        page?.let { AppUi.openVisuals(listOf(com.ketvoice.app.data.VisualTarget.artist(it.artist.name, it.artist.photo))) }
+                    }, contentAlignment = Alignment.Center) {
+                        Icon(com.ketvoice.app.ui.common.KetIcons.Appearance, "Modifier les visuels", tint = theme.onBackground, modifier = Modifier.size(20.dp))
+                    }
                 }
             }
             if (page != null) {

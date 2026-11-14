@@ -117,7 +117,7 @@ fun ArtworkCanvas(
     onCanvasFailure: () -> Unit = {}
 ) {
     val art by ArtworkRepo.covers.collectAsState()
-    val cover = art["t:${track.id}"] ?: track.coverUrl
+    val cover = com.ketvoice.app.data.MediaOverrides.cover(track, art["t:${track.id}"] ?: track.coverUrl)
     val gradient = remember(track.id) { gradientFor(track.id) }
     data class Art(val id: String, val cover: String?, val canvas: String?)
 

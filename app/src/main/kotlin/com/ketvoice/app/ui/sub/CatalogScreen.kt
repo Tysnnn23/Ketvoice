@@ -175,7 +175,7 @@ fun CatalogScreen(request: CatalogRequest? = AppUi.catalogRequest.value) {
             itemsIndexed(tracks, key = { i, t -> "${t.id}:$i" }) { index, track ->
                 val active = player.current?.id == track.id
                 SwipeTrackActions(track) {
-                    com.ketvoice.app.ui.common.TrackRow(track, art["t:${track.id}"] ?: track.coverUrl, active, player.isPlaying,
+                    com.ketvoice.app.ui.common.TrackRow(track, com.ketvoice.app.data.MediaOverrides.cover(track, art["t:${track.id}"] ?: track.coverUrl), active, player.isPlaying,
                         { Player.playQueue(tracks, index) })
                 }
             }

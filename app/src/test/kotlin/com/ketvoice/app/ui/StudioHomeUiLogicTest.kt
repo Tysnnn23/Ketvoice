@@ -100,4 +100,14 @@ class StudioHomeUiLogicTest {
         assertEquals(4, coverGridColumns(800f))
         assertEquals(6, coverGridColumns(3000f))
     }
+
+    @Test fun visualsOpenFirstAndOfferTheRightParts() {
+        val target = com.ketvoice.app.data.VisualTarget.artist("Daft Punk", null)!!
+        assertEquals(StudioRoute.Visuals(listOf(target)), studioStart(null, false, listOf(target)))
+        assertEquals(StudioRoute.Home, studioStart(null, false, emptyList()))
+        assertEquals(listOf("hero", "cover"), com.ketvoice.app.ui.studio.visualFields("artist"))
+        assertEquals(listOf("cover", "canvas"), com.ketvoice.app.ui.studio.visualFields("album"))
+        assertTrue(com.ketvoice.app.ui.studio.VisualChange().isEmpty)
+        assertFalse(com.ketvoice.app.ui.studio.VisualChange(restore = setOf("cover")).isEmpty)
+    }
 }

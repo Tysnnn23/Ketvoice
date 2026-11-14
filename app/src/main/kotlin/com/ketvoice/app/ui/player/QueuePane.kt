@@ -134,7 +134,7 @@ internal fun QueuePane(state: PlayerUiState, modifier: Modifier = Modifier, show
         Spacer(Modifier.height(if (showModes) 12.dp else 17.dp))
         Text("Lecture en cours", color = Color.White.copy(alpha = .78f), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
         Spacer(Modifier.height(10.dp))
-        QueueRow(track, art["t:${track.id}"] ?: track.coverUrl, current = true, playing = state.isPlaying,
+        QueueRow(track, com.ketvoice.app.data.MediaOverrides.cover(track, art["t:${track.id}"] ?: track.coverUrl), current = true, playing = state.isPlaying,
             onPlay = { }, onRemove = { Player.removeAt(state.index) })
         Spacer(Modifier.height(16.dp))
         Text("À suivre depuis : ${track.artist}", color = Color(0xFFB7B7BD), fontSize = 14.sp,
@@ -147,7 +147,7 @@ internal fun QueuePane(state: PlayerUiState, modifier: Modifier = Modifier, show
                 val dragging = draggingKey == key
                 val canMoveUp = i > 0
                 val canMoveDown = i < upcoming.lastIndex
-                QueueRow(t, art["t:${t.id}"] ?: t.coverUrl, modifier = Modifier
+                QueueRow(t, com.ketvoice.app.data.MediaOverrides.cover(t, art["t:${t.id}"] ?: t.coverUrl), modifier = Modifier
                     // The dragged row follows the finger; its neighbours glide out of the way.
                     .then(if (Motion.reduced || dragging) Modifier else Modifier.animateItem())
                     .zIndex(if (dragging) 1f else 0f)

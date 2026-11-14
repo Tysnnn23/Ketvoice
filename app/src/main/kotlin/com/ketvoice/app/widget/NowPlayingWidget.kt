@@ -215,7 +215,7 @@ internal object NowPlayingWidgetUpdater {
             combine(Player.state, ArtworkRepo.covers) { player, covers ->
                 val track = player.current
                 Key(track?.id, track?.title.orEmpty(), track?.artist.orEmpty(), player.playWhenReady && track != null,
-                    track?.let { covers["t:${it.id}"] ?: it.coverUrl })
+                    track?.let { com.ketvoice.app.data.MediaOverrides.cover(it, covers["t:${it.id}"] ?: it.coverUrl) })
             }.distinctUntilChanged().collectLatest { key ->
                 val placed = runCatching {
                     GlanceAppWidgetManager(app).getGlanceIds(NowPlayingWidget::class.java).isNotEmpty()

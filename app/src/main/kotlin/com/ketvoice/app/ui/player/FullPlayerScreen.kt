@@ -108,7 +108,7 @@ fun FullPlayerScreen(
     val canvasAspect by rememberCanvasAspectRatio(canvasPath.takeIf { AppSettings.animatedArtwork.value })
     val artInteraction = remember { MutableInteractionSource() }
     val lyrics by LyricsRepo.state.collectAsState()
-    val cover = covers["t:${track.id}"] ?: track.coverUrl
+    val cover = com.ketvoice.app.data.MediaOverrides.cover(track, covers["t:${track.id}"] ?: track.coverUrl)
     val sampled = rememberCoverAmbience(cover)
     val ambientColor by animateColorAsState(sampled.color, tween(Motion.duration(420)), label = "album-background")
     val ambience = sampled.copy(color = ambientColor)

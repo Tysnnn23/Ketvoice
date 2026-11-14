@@ -73,7 +73,7 @@ fun PlaylistScreen() {
     } }
     val covers by ArtworkRepo.covers.collectAsState()
     val firstTrack = playlist?.entries?.firstNotNullOfOrNull { it.track }
-    val heroCover = playlist?.coverUrl ?: firstTrack?.let { covers["t:${it.id}"] ?: it.coverUrl }
+    val heroCover = playlist?.coverUrl ?: firstTrack?.let { com.ketvoice.app.data.MediaOverrides.cover(it, covers["t:${it.id}"] ?: it.coverUrl) }
     val sampledAccent = com.ketvoice.app.theme.rememberCoverAccent(if (AppSettings.albumColors.value) heroCover else null)?.first
     val heroTone = sampledAccent ?: th.accent
     val onAccent = if (th.accent.luminance() > .179f) Color.Black else Color.White
