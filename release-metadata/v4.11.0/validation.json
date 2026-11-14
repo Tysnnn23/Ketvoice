@@ -1,0 +1,168 @@
+{
+  "schema": 8,
+  "version": "4.11.0",
+  "versionCode": 96,
+  "source_commit": "dced11dfab0d74a9052230a5ec7e661aa8f21458",
+  "created_at": "2026-11-14T00:56:19.549862+00:00",
+  "build_origin": {
+    "kind": "github_actions_with_owner_discord_sdk",
+    "workflow": "android.yml",
+    "run_id": 43536267170,
+    "artifact": {
+      "id": 14090780462,
+      "sha256": "bfdb766afc61a3a34bed79b76545ef4bf063d1c95dce6511adcb7c744ba41f7a"
+    },
+    "gradle": "assembleMobileRelease assembleQuestRelease",
+    "note": "Signed by CI with the pinned keystore secret; the Discord Social SDK AAR matched its pinned SHA-256."
+  },
+  "local_validation": {
+    "result": "debug JVM/Robolectric suites for both flavors, release lint and the UI text audit passed in a cloud container without the Discord SDK",
+    "commands": [
+      "testMobileDebugUnitTest",
+      "testQuestDebugUnitTest",
+      "lintMobileRelease",
+      "lintQuestRelease",
+      "tools/audit_ui_texts.py --check"
+    ],
+    "ci_validation": "run 43536267170: release builds, debug and release unit tests for both flavors, UI text audit, lint, APK signature pin and Discord bridge packaging passed",
+    "code_review": {
+      "kind": "multi-agent read-only review, interrupted by a usage limit",
+      "dimensions_completed": [
+        "mixes-logic",
+        "home-ui"
+      ],
+      "dimensions_not_run": [
+        "downloads-ui",
+        "i18n-a11y",
+        "fresh-eyes"
+      ],
+      "findings_checked_by_hand_and_fixed": 9
+    }
+  },
+  "tests": {
+    "mobile": {
+      "jvm": {
+        "tests": 544,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "android_15_emulator_compose": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "quest": {
+      "jvm": {
+        "tests": 543,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "android_15_emulator_compose": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    }
+  },
+  "lint": {
+    "mobile": {
+      "Warning": 169,
+      "Hint": 15
+    },
+    "quest": {
+      "Warning": 171,
+      "Hint": 15
+    }
+  },
+  "apks": [
+    {
+      "name": "Ketvoice-4.11.0.apk",
+      "sha256": "ebb3db44627c65412ef6622b4016b89702d256aa155a43dcf6202e9373174aff",
+      "bytes": 72547328,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "4.11.0",
+      "versionCode": 96,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-4.11.0-Quest.apk",
+      "sha256": "ad0d41381453e283ff759aff2d5eee2e83260e9ecf5d06f819a625c4b749a050",
+      "bytes": 82597314,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "4.11.0",
+      "versionCode": 96,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    }
+  ],
+  "discord": {
+    "sdk_present_in_ci_build": true,
+    "sdk_sha256_pinned": true,
+    "bridge_and_native_libraries_verified": true,
+    "presence_mode": "unauthenticated_rpc_through_installed_discord_app"
+  },
+  "credential_scan": {
+    "entries": 3253,
+    "findings": 0,
+    "raw_pattern_findings": 1,
+    "scope": "tracked sources and APK archive entries",
+    "kind": "credential_patterns",
+    "explicit_private_provider_key_deny_list": false,
+    "triage": [
+      {
+        "file": "Ketvoice-Liquid-Glass-V4.html",
+        "classification": "embedded_image_false_positive",
+        "all_hits_inside_image_data_uris": true,
+        "rescanned_without_image_payloads": true
+      }
+    ]
+  },
+  "release_install_smoke": {
+    "mobile": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "quest": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    }
+  },
+  "publication_override": {
+    "authorized_by_user": true,
+    "authorized_at": "2026-11-14T00:56:19.549862+00:00",
+    "user_statement": "J'autorise et fait tout sauf la 3",
+    "in_reply_to": "A request to authorize publishing 4.11.0 without phone or Quest testing.",
+    "reason": "The owner explicitly authorized publishing 4.11.0 without phone or Quest testing.",
+    "scope": "physical device installation and all on-device behaviour of 4.11.0"
+  },
+  "not_validated": [
+    "physical phone or Quest installation, rendering and audible playback",
+    "personal mixes against a real listening history and the live public catalogue (artist top, artist radio)",
+    "Home greeting, shortcuts and per-launch shelf order on a device",
+    "redesigned Downloads screen with a real offline library",
+    "downloads-ui, translations/accessibility and whole-diff code review (not run)"
+  ],
+  "known_limitations": [
+    "Artist and style mixes need a connection when opened.",
+    "A style mix is proposed only for artists already known from the public catalogue.",
+    "The listening history has no dates: 'rediscover' means not among the thirty most recent tracks.",
+    "The signing certificate is the existing public Android debug identity, not a private production key."
+  ],
+  "canonical_banner_sha256": "47f6793088983f7d4e6bd1aeaa2cbd8b7cdc2a8f91271e3b2839daea81da0436"
+}
