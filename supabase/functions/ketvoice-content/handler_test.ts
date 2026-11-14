@@ -87,3 +87,76 @@ Deno.test("selection media only touches titles the owner published and stores th
     if(previous===undefined)Deno.env.delete("SUPABASE_URL");else Deno.env.set("SUPABASE_URL",previous);
   }
 });
+
+Deno.test("catalogue overrides: public list is readable, writes need the owner",async()=>{
+  const original=globalThis.fetch;
+  const previous=Deno.env.get("SUPABASE_URL");
+  Deno.env.set("SUPABASE_URL","https://project.example.com");
+  globalThis.fetch=async(input)=>{
+    const url=String(input);
+    if(url.includes("/rest/v1/ketvoice_media_overrides"))return Response.json([{kind:"artist",key:"daft punk",label:"Daft Punk",cover_path:null,canvas_path:null,hero_path:"x/hero.jpg",updated_at:"2026-11-14"}]);
+    throw new Error("Unexpected external request "+url);
+  };
+  try{
+    const list=await handler(new Request("https://example.com/ketvoice-content/overrides"));
+    assert(list.status===200);assert(list.headers.get("cache-control")?.includes("public"));
+    const body=await list.json();assert(body.overrides[0].heroURL.endsWith("/ketvoice-public-media/x/hero.jpg"));assert(body.overrides[0].coverURL===null);
+    const write=await handler(new Request("https://example.com/ketvoice-content/admin/override",{method:"POST",body:new FormData()}));
+    assert(write.status===401);
+  }finally{globalThis.fetch=original;if(previous===undefined)Deno.env.delete("SUPABASE_URL");else Deno.env.set("SUPABASE_URL",previous);}
+});
+Deno.test("catalogue overrides validate keys and fields, merge, and restore by deleting",async()=>{
+  const original=globalThis.fetch;
+  const previous=Deno.env.get("SUPABASE_URL");
+  Deno.env.set("SUPABASE_URL","https://project.example.com");
+  const user={id:"owner",email:"konnektsupport@gmail.com",email_confirmed_at:"2026-01-01",is_anonymous:false};
+  let row=null as Record<string,unknown>|null;let stored=0,removedFiles:string[]=[];
+  globalThis.fetch=async(input,init)=>{
+    const url=String(input);
+    if(url.endsWith("/auth/v1/user"))return Response.json(user);
+    if(url.includes("/storage/v1/object/ketvoice-public-media/")){stored++;return new Response("{}");}
+    if(url.endsWith("/storage/v1/object/ketvoice-public-media")&&init?.method==="DELETE"){removedFiles.push(...JSON.parse(String(init.body)).prefixes);return new Response("{}");}
+    if(url.includes("/rest/v1/ketvoice_media_overrides")){
+      if(init?.method==="POST"){assert(url.includes("on_conflict=kind,key"));row=JSON.parse(String(init.body));return Response.json([row]);}
+      if(init?.method==="DELETE"){row=null;return new Response("");}
+      return Response.json(row?[row]:[]);
+    }
+    throw new Error("Unexpected external request "+url);
+  };
+  const cur=()=>row;
+  const jpeg=new Uint8Array([255,216,255,224,0,16,74,70,73,70,0,1]);
+  const mp4=new Uint8Array([0,0,0,24,102,116,121,112,105,115,111,109,0,0,0,0]);
+  const request=(meta:unknown,files:Record<string,Uint8Array>={})=>{
+    const form=new FormData();form.set("metadata",JSON.stringify(meta));
+    for(const [name,data] of Object.entries(files))form.set(name,new File([data],name));
+    return new Request("https://example.com/ketvoice-content/admin/override",{method:"POST",headers:{"x-ketvoice-admin":"fixture-only"},body:form});
+  };
+  const album={kind:"album",key:"discovery|daft punk",label:"Discovery",rightsConfirmed:true};
+  try{
+    assert((await handler(request({...album,rightsConfirmed:false},{cover:jpeg}))).status===400);
+    assert((await handler(request({...album,key:"Discovery|Daft Punk"},{cover:jpeg}))).status===400);
+    assert((await handler(request({...album,key:"discovery"},{cover:jpeg}))).status===400);
+    assert((await handler(request({...album,kind:"playlist"},{cover:jpeg}))).status===400);
+    assert((await handler(request(album,{hero:jpeg}))).status===400);
+    assert((await handler(request(album))).status===400);
+    assert(stored===0);
+    const first=await handler(request(album,{cover:jpeg}));
+    assert(first.status===200);assert(stored===1);assert(String(cur()?.cover_path).endsWith("/cover.jpg"));
+    const cover=cur()?.cover_path;
+    const second=await handler(request(album,{canvas:mp4}));
+    assert(second.status===200);assert(cur()?.cover_path===cover);assert(String(cur()?.canvas_path).endsWith("/canvas.mp4"));
+    assert((await handler(request({...album,remove:["cover"]},{cover:jpeg}))).status===400);
+    assert((await handler(request({...album,remove:["hero"]}))).status===400);
+    const third=await handler(request({...album,remove:["cover"]}));
+    assert(third.status===200);assert(cur()?.cover_path===null);assert(removedFiles.includes(String(cover)));
+    const last=await handler(request({...album,remove:["canvas"]}));
+    assert(last.status===200);assert(cur()===null);assert((await last.json()).restored===true);
+    const artist=await handler(request({kind:"artist",key:"daft punk",rightsConfirmed:true},{hero:jpeg}));
+    assert(artist.status===200);assert(String(cur()?.hero_path).endsWith("/hero.jpg"));
+    assert((await handler(request({kind:"artist",key:"daft punk",rightsConfirmed:true},{canvas:mp4}))).status===400);
+    assert((await handler(request({kind:"track",key:"one more time|daft punk",rightsConfirmed:true},{canvas:new Uint8Array(32)}))).status===400);
+  } finally {
+    globalThis.fetch=original;
+    if(previous===undefined)Deno.env.delete("SUPABASE_URL");else Deno.env.set("SUPABASE_URL",previous);
+  }
+});

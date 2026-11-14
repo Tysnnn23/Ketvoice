@@ -388,6 +388,93 @@ async function selectionMedia(req: Request, owner: string): Promise<Response> {
     throw error;
   }
 }
+const MAX_HERO = 8 * 1024 * 1024;
+const OVERRIDE_KINDS = ["track","album","artist"];
+const OVERRIDE_FIELDS: Record<string,string[]> = {track:["cover","canvas"],album:["cover","canvas"],artist:["cover","hero"]};
+const overrideColumn = (field: string) => `${field}_path`;
+function overrideKey(kind: unknown, value: unknown): {kind:string,key:string} {
+  const type=String(kind ?? "");
+  if(!OVERRIDE_KINDS.includes(type)) throw new HttpError(400,"Type d'élément invalide");
+  const text=String(value ?? "");
+  // The app sends the normalised key it looks items up with: letters, digits, single
+  // spaces, and one "|" between title and artist for titles and albums.
+  const parts=text.split("|"), expected=type==="artist" ? 1 : 2;
+  if(!text || text.length>160 || text!==text.toLowerCase() || parts.length!==expected || parts.some(part=>!/^[\p{L}\p{N}]+(?: [\p{L}\p{N}]+)*$/u.test(part)))
+    throw new HttpError(400,"Clé d'élément invalide");
+  return {kind:type,key:text};
+}
+function overrideView(row: Row): Row {
+  const url=(value: unknown)=>value ? publicFile(String(value)) : null;
+  return {kind:row.kind,key:row.key,label:row.label ?? "",coverURL:url(row.cover_path),canvasURL:url(row.canvas_path),
+    heroURL:url(row.hero_path),updatedAt:row.updated_at};
+}
+async function readHero(file: FormDataEntryValue | null) {
+  if(file === null) return null;
+  if(file instanceof File && file.size>MAX_HERO) throw new HttpError(400,"Photo trop volumineuse (8 Mo maximum)");
+  if(!(file instanceof File) || !file.size) throw new HttpError(400,"Photo vide");
+  const data=new Uint8Array(await file.arrayBuffer()), h=new TextDecoder().decode(data.slice(0,12));
+  if(data[0]===255 && data[1]===216 && data[2]===255) return {data,ext:"jpg",mime:"image/jpeg"};
+  if(data[0]===137 && h.slice(1,4)==="PNG") return {data,ext:"png",mime:"image/png"};
+  if(h.startsWith("RIFF") && h.slice(8,12)==="WEBP") return {data,ext:"webp",mime:"image/webp"};
+  throw new HttpError(400,"Photo JPEG, PNG ou WebP requise");
+}
+/** Every owner-curated catalogue visual, public and cacheable: the app applies them over the catalogue's own. */
+async function publicOverrides(): Promise<Response> {
+  const rows=await database("ketvoice_media_overrides?select=kind,key,label,cover_path,canvas_path,hero_path,updated_at&order=updated_at.desc&limit=5000");
+  return new Response(JSON.stringify({overrides:rows.map(overrideView)}),{status:200,headers:{...CORS,
+    "content-type":"application/json; charset=utf-8","cache-control":"public, max-age=120"}});
+}
+/**
+ * Replaces or restores the cover, Canvas or artist photo of a catalogue title, album
+ * or artist. Only the verified owner reaches this; the original catalogue data is never
+ * touched, so "restore" just forgets the override.
+ */
+async function catalogueOverride(req: Request, owner: string): Promise<Response> {
+  const bytes=await bounded(req,MAX_COVER+MAX_CANVAS+MAX_HERO+65536);
+  const form=await new Request(req.url,{method:"POST",headers:{"content-type":req.headers.get("content-type") || ""},body:new Uint8Array(bytes)}).formData();
+  const names=["metadata","cover","canvas","hero"];
+  if([...form.keys()].some(k=>!names.includes(k)) || names.some(k=>form.getAll(k).length>1)) throw new HttpError(400,"Champs de modification invalides");
+  let meta: Row;
+  try { meta=JSON.parse(String(form.get("metadata") || "{}")); }
+  catch { throw new HttpError(400,"Métadonnées invalides"); }
+  if(!meta || Array.isArray(meta) || typeof meta!=="object" || Object.keys(meta).some(k=>!["kind","key","label","rightsConfirmed","remove"].includes(k)))
+    throw new HttpError(400,"Métadonnées invalides");
+  if(meta.rightsConfirmed!==true) throw new HttpError(400,"Confirmez vos droits sur ces visuels");
+  const {kind,key:itemKey}=overrideKey(meta.kind,meta.key);
+  const label=String(meta.label ?? "").trim().slice(0,300);
+  const allowed=OVERRIDE_FIELDS[kind];
+  const remove=meta.remove===undefined ? [] : meta.remove;
+  if(!Array.isArray(remove) || remove.some(f=>!allowed.includes(String(f)))) throw new HttpError(400,"Retrait invalide");
+  const files: Record<string,{data:Uint8Array,ext:string,mime:string}|null>={
+    cover:await readCover(form.get("cover")),canvas:await readCanvas(form.get("canvas")),hero:await readHero(form.get("hero"))};
+  for(const field of names.slice(1)) if(files[field] && !allowed.includes(field)) throw new HttpError(400,"Ce visuel ne s'applique pas à cet élément");
+  if(remove.some(f=>files[String(f)])) throw new HttpError(400,"Choisissez entre remplacer et rétablir");
+  if(!remove.length && !allowed.some(f=>files[f])) throw new HttpError(400,"Aucune modification demandée");
+  const scope=`ketvoice_media_overrides?kind=eq.${kind}&key=eq.${encodeURIComponent(itemKey)}`;
+  const current=(await database(`${scope}&limit=1`))[0] ?? {};
+  const prefix=`catalogue-${kind}-${crypto.randomUUID()}`, uploaded: string[]=[], next: Row={};
+  for(const field of allowed) next[overrideColumn(field)]=current[overrideColumn(field)] ?? null;
+  try {
+    for(const field of allowed) {
+      const file=files[field];
+      if(file) { const path=`${prefix}/${field}.${file.ext}`;await store(path,file.data,file.mime);uploaded.push(path);next[overrideColumn(field)]=path; }
+    }
+    for(const field of remove) next[overrideColumn(String(field))]=null;
+    const replaced=allowed.map(f=>current[overrideColumn(f)]).filter(p=>p && !Object.values(next).includes(p)).map(String);
+    let row: Row | null=null;
+    if(allowed.every(f=>!next[overrideColumn(f)])) await database(scope,{method:"DELETE"});
+    else {
+      const body={kind,key:itemKey,label:label || String(current.label ?? ""),...next,updated_by:owner,updated_at:new Date().toISOString()};
+      row=(await database("ketvoice_media_overrides?on_conflict=kind,key",{method:"POST",
+        headers:{Prefer:"resolution=merge-duplicates,return=representation"},body:JSON.stringify(body)}))[0] ?? body;
+    }
+    if(replaced.length) await api(`/storage/v1/object/${BUCKET}`,{method:"DELETE",body:JSON.stringify({prefixes:replaced})}).catch(()=>{});
+    return json({override:row ? overrideView(row) : null,restored:row===null});
+  } catch(error) {
+    if(uploaded.length) await api(`/storage/v1/object/${BUCKET}`,{method:"DELETE",body:JSON.stringify({prefixes:uploaded})}).catch(()=>{});
+    throw error;
+  }
+}
 async function publicLyrics(url: URL): Promise<Response> {
   const id=url.searchParams.get("trackId") || "", title=url.searchParams.get("title") || "", artist=url.searchParams.get("artist") || "";
   const select="select=id,track_id,title,artist,format,content,duration_ms,created_at&published=eq.true&order=created_at.desc&limit=10";
@@ -500,6 +587,7 @@ export async function handler(req:Request): Promise<Response> {
       return json({tracks:rows.map(track)});
     }
     if(req.method==="GET" && path==="/lyrics") return await publicLyrics(url);
+    if(req.method==="GET" && path==="/overrides") return await publicOverrides();
     if(path.startsWith("/admin/")) {
       const owner=await administrator(req);
       if(req.method==="GET" && path==="/admin/session") return json({allowed:true});
@@ -522,6 +610,7 @@ export async function handler(req:Request): Promise<Response> {
       if(req.method==="GET" && path==="/admin/albums") return await ownerAlbums(owner);
       if(req.method==="GET" && path==="/admin/songs") return await ownerSongs(owner);
       if(req.method==="POST" && path==="/admin/media") return await selectionMedia(req,owner);
+      if(req.method==="POST" && path==="/admin/override") return await catalogueOverride(req,owner);
       if(path==="/admin/sources") return await sources(req,owner,url);
       if(req.method==="GET" && path==="/admin/album") return await albumDetail(owner,url);
       if(req.method==="POST" && path==="/admin/album/tracks") return await albumTracks(req,owner);
