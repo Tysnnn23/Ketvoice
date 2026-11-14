@@ -1,0 +1,181 @@
+{
+  "schema": 8,
+  "version": "4.17.0",
+  "versionCode": 105,
+  "source_commit": "571aa52d9fe1604556bd80fd3e5cb47904bc066d",
+  "created_at": "2026-11-14T20:22:22.731586+00:00",
+  "build_origin": {
+    "kind": "github_actions_with_owner_discord_sdk",
+    "workflow": "android.yml",
+    "run_id": 43630987102,
+    "artifact": {
+      "id": 14128875162,
+      "sha256": "ec86ce8c40b3c3eefac9489257deecbf5387a41c5b585940b97a1c0d25e0e917"
+    },
+    "gradle": "assembleMobileRelease assembleQuestRelease",
+    "note": "Signed by CI with the pinned keystore secret; the Discord Social SDK AAR matched its pinned SHA-256."
+  },
+  "local_validation": {
+    "result": "debug JVM/Robolectric suites for both flavors, release lint and the UI text audit passed in a cloud container without the Discord SDK",
+    "commands": [
+      "testMobileDebugUnitTest",
+      "testQuestDebugUnitTest",
+      "lintMobileRelease",
+      "lintQuestRelease",
+      "tools/audit_ui_texts.py --check"
+    ],
+    "ci_validation": "run 43630987102: release builds, debug and release unit tests for both flavors, UI text audit, lint, APK signature pin and Discord bridge packaging passed",
+    "code_review": {
+      "kind": "author's own re-read; no independent review"
+    },
+    "host_previews": "lyrics moment bar (Share beside Cancel), album framing mode and the glass grids rendered in software on the host and inspected",
+    "after_last_full_local_run": "one settings description was reworded with its ten translations after the last complete local run; both flavors were recompiled, the UI text audit and the settings host test were rerun locally, and the complete suites then ran in CI on the published commit"
+  },
+  "server": {
+    "function": "ketvoice-content",
+    "deployed_version": 19,
+    "deployment": "a one-line entrypoint importing supabase/functions/ketvoice-content/handler.ts from commit 2532ea3fc45e49a06ac8b9f4149c865df0be6cfc on raw.githubusercontent.com, bundled at deploy time",
+    "database_migration": "20261114190000_media_override_framing.sql applied (frame_scale, frame_x, frame_y on ketvoice_media_overrides, with range checks)",
+    "changed_routes": [
+      "GET /overrides now returns frame",
+      "POST /admin/override accepts frame for albums (verified owner only)"
+    ],
+    "tests": "handler_test.ts: 7 Deno tests pass locally, including framing validation, rounding, album-only scope and removal",
+    "live_check": "/health 200, /overrides 200, /admin/override 401 without an owner session after deployment"
+  },
+  "tests": {
+    "mobile": {
+      "jvm": {
+        "tests": 657,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "android_15_emulator_compose": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "quest": {
+      "jvm": {
+        "tests": 656,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "android_15_emulator_compose": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    }
+  },
+  "lint": {
+    "mobile": {
+      "Warning": 180,
+      "Hint": 18
+    },
+    "quest": {
+      "Warning": 182,
+      "Hint": 18
+    }
+  },
+  "apks": [
+    {
+      "name": "Ketvoice-4.17.0.apk",
+      "sha256": "da10c8a4fd3007f28f19fbe86dae94d4ac0ca91223578bf8c980651a3f5d56bb",
+      "bytes": 73234920,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "4.17.0",
+      "versionCode": 105,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-4.17.0-Quest.apk",
+      "sha256": "99c76a62efaeae27149ea3e5effd1ee339f2ca30bfea99886173cfceeef1d5c1",
+      "bytes": 83268518,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "4.17.0",
+      "versionCode": 105,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    }
+  ],
+  "discord": {
+    "sdk_present_in_ci_build": true,
+    "sdk_sha256_pinned": true,
+    "bridge_and_native_libraries_verified": true,
+    "presence_mode": "unauthenticated_rpc_through_installed_discord_app"
+  },
+  "credential_scan": {
+    "entries": 3326,
+    "findings": 0,
+    "raw_pattern_findings": 1,
+    "scope": "tracked sources and APK archive entries",
+    "kind": "credential_patterns",
+    "explicit_private_provider_key_deny_list": false,
+    "triage": [
+      {
+        "file": "Ketvoice-Liquid-Glass-V4.html",
+        "classification": "embedded_image_false_positive",
+        "all_hits_inside_image_data_uris": true,
+        "rescanned_without_image_payloads": true
+      }
+    ]
+  },
+  "release_install_smoke": {
+    "mobile": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "quest": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    }
+  },
+  "publication_override": {
+    "authorized_by_user": true,
+    "authorized_at": "2026-11-14T20:22:22.731586+00:00",
+    "kind": "standing_authorization",
+    "user_statement": "J'autorise TOUT devient maintenant une règle.",
+    "user_statement_date": "2026-11-14",
+    "in_reply_to": "The question whether versions may be published without phone or Quest testing without asking again for each version.",
+    "recorded_in": "AGENTS.md (commit aeeda8e)",
+    "reason": "The owner made publishing validated versions without phone or Quest testing a standing rule.",
+    "scope": "physical device installation and all on-device behaviour of 4.17.0"
+  },
+  "not_validated": [
+    "physical phone or Quest installation, rendering and touch behaviour",
+    "the Liquid Glass bevel highlight and Fresnel edge as perceived on a device (AGSL passes ran only in host software rendering)",
+    "the iOS-style page push, the returning floating bar and the smoother Cascade as perceived on a device",
+    "sharing a Moment card to a real story app after the Share button fix",
+    "artist signatures from the public archive on live artist pages (parser tested on recorded answers; one live request per artist checked by hand for two artists)",
+    "album framing end to end with the owner account: pinch, drag, publish and what listeners then see (no owner session in this environment)",
+    "independent code review of this diff"
+  ],
+  "owner_section_changes": [
+    "Album framing: on an album page the verified account can zoom and move the hero cover or Canvas and publish that framing for every listener (a zoom slider with pinch and drag; a full crop screen is planned for 5.0.0).",
+    "The framing is stored with the album's override (frame_scale, frame_x, frame_y) and never changes catalogue data."
+  ],
+  "known_limitations": [
+    "Owner-section changes are deliberately not mentioned in the public release notes (owner preference).",
+    "A signature from the public archive is shown only when its file is named after the exact artist; others keep the plain name.",
+    "The archive marks its signatures as unverified; the attribution line under the signature names the source and licence.",
+    "The signing certificate is the existing public Android debug identity, not a private production key."
+  ],
+  "canonical_banner_sha256": "47f6793088983f7d4e6bd1aeaa2cbd8b7cdc2a8f91271e3b2839daea81da0436"
+}
