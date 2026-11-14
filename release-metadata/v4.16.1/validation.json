@@ -1,0 +1,178 @@
+{
+  "schema": 8,
+  "version": "4.16.1",
+  "versionCode": 104,
+  "source_commit": "4c94677b28e4d8f1333659b66a0ea575dec006b8",
+  "created_at": "2026-11-14T17:47:24.293044+00:00",
+  "build_origin": {
+    "kind": "github_actions_with_owner_discord_sdk",
+    "workflow": "android.yml",
+    "run_id": 43620455225,
+    "artifact": {
+      "id": 14124700147,
+      "sha256": "b880b9e27b5899b66ecca1040e71993d7f8af2dd0e4cb6ca547abc8f037ec8b8"
+    },
+    "gradle": "assembleMobileRelease assembleQuestRelease",
+    "note": "Signed by CI with the pinned keystore secret; the Discord Social SDK AAR matched its pinned SHA-256."
+  },
+  "local_validation": {
+    "result": "debug JVM/Robolectric suites for both flavors, release lint and the UI text audit passed in a cloud container without the Discord SDK",
+    "commands": [
+      "testMobileDebugUnitTest",
+      "testQuestDebugUnitTest",
+      "lintMobileRelease",
+      "lintQuestRelease",
+      "tools/audit_ui_texts.py --check"
+    ],
+    "ci_validation": "run 43620455225: release builds, debug and release unit tests for both flavors, UI text audit, lint, APK signature pin and Discord bridge packaging passed",
+    "code_review": {
+      "kind": "author's own re-read; no independent review"
+    },
+    "host_previews": "Studio visuals page (title, album and artist tabs, restore state) rendered in software on the host and inspected",
+    "after_last_full_local_run": "no source change after the last complete local run; only release notes, README and CHANGELOG were written before the commit"
+  },
+  "server": {
+    "function": "ketvoice-content",
+    "deployed_version": 18,
+    "deployment": "a one-line entrypoint importing supabase/functions/ketvoice-content/handler.ts from commit c595c666f047409824c53e8f93fb7b974d74bd09 on raw.githubusercontent.com, bundled at deploy time",
+    "database_migration": "20261114170000_media_overrides.sql applied (ketvoice_media_overrides, RLS enabled, anon and authenticated revoked)",
+    "new_routes": [
+      "GET /overrides (public)",
+      "POST /admin/override (verified owner only)"
+    ],
+    "tests": "handler_test.ts: 7 Deno tests pass locally (public list, owner-only write, key and field validation, merge, restore by delete, replaced files removed)",
+    "live_check": "/health 200, /overrides 200 with an empty list, /admin/override 401 without an owner session after deployment"
+  },
+  "tests": {
+    "mobile": {
+      "jvm": {
+        "tests": 650,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "android_15_emulator_compose": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "quest": {
+      "jvm": {
+        "tests": 649,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "android_15_emulator_compose": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    }
+  },
+  "lint": {
+    "mobile": {
+      "Warning": 180,
+      "Hint": 18
+    },
+    "quest": {
+      "Warning": 182,
+      "Hint": 18
+    }
+  },
+  "apks": [
+    {
+      "name": "Ketvoice-4.16.1.apk",
+      "sha256": "ae33713b904718b7f012b4f0bf3e1115f356753fd3d69ce29799762a8b9bcd8b",
+      "bytes": 73200548,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "4.16.1",
+      "versionCode": 104,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-4.16.1-Quest.apk",
+      "sha256": "9cab20d84974319e097143ffc0d306a20ff664da9b0d7356c0b0a1bb2f1c4c28",
+      "bytes": 83234146,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "4.16.1",
+      "versionCode": 104,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    }
+  ],
+  "discord": {
+    "sdk_present_in_ci_build": true,
+    "sdk_sha256_pinned": true,
+    "bridge_and_native_libraries_verified": true,
+    "presence_mode": "unauthenticated_rpc_through_installed_discord_app"
+  },
+  "credential_scan": {
+    "entries": 3318,
+    "findings": 0,
+    "raw_pattern_findings": 1,
+    "scope": "tracked sources and APK archive entries",
+    "kind": "credential_patterns",
+    "explicit_private_provider_key_deny_list": false,
+    "triage": [
+      {
+        "file": "Ketvoice-Liquid-Glass-V4.html",
+        "classification": "embedded_image_false_positive",
+        "all_hits_inside_image_data_uris": true,
+        "rescanned_without_image_payloads": true
+      }
+    ]
+  },
+  "release_install_smoke": {
+    "mobile": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "quest": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    }
+  },
+  "publication_override": {
+    "authorized_by_user": true,
+    "authorized_at": "2026-11-14T17:47:24.293044+00:00",
+    "kind": "standing_authorization",
+    "user_statement": "J'autorise TOUT devient maintenant une règle.",
+    "user_statement_date": "2026-11-14",
+    "in_reply_to": "The question whether versions may be published without phone or Quest testing without asking again for each version.",
+    "recorded_in": "AGENTS.md (commit aeeda8e)",
+    "reason": "The owner made publishing validated versions without phone or Quest testing a standing rule.",
+    "scope": "physical device installation and all on-device behaviour of 4.16.1"
+  },
+  "not_validated": [
+    "physical phone or Quest installation, rendering and touch behaviour",
+    "catalogue visual overrides end to end with the owner account: choosing a cover, Canvas or artist photo for a catalogue title, album or artist, saving, and restoring the original (no owner session in this environment)",
+    "an override reaching a listener's device within the 15-minute refresh, and offline display of an override cover",
+    "independent code review of this diff"
+  ],
+  "owner_section_changes": [
+    "Studio Visuals: the verified account can replace or restore the cover and Canvas of catalogue titles and albums, and the photo and portrait of catalogue artists (title menu, album page, artist page, Studio home).",
+    "Overrides are stored apart from the catalogue (ketvoice_media_overrides) and never modify or delete catalogue data."
+  ],
+  "known_limitations": [
+    "Owner-section changes are deliberately not mentioned in the public release notes (owner preference).",
+    "Overrides are matched by normalised title, album and main-artist names, so a differently spelled release of the same title is not covered.",
+    "A Canvas link is downloaded by the device, then sent; the server never fetches a link it is given.",
+    "The signing certificate is the existing public Android debug identity, not a private production key."
+  ],
+  "canonical_banner_sha256": "47f6793088983f7d4e6bd1aeaa2cbd8b7cdc2a8f91271e3b2839daea81da0436"
+}
