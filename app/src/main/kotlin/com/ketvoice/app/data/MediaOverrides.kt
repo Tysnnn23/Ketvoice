@@ -12,6 +12,20 @@ import org.json.JSONObject
 import java.text.Normalizer
 import java.util.Locale
 
+/**
+ * How an album's hero artwork is framed for everyone: [scale] 1–3 and offsets −1…1, as
+ * fractions of the visible frame (positive x moves the picture right, positive y down).
+ */
+data class Frame(val scale: Float = 1f, val x: Float = 0f, val y: Float = 0f) {
+    /** The same framing kept inside what the server accepts. */
+    fun clamped(): Frame = Frame(scale.coerceIn(1f, 3f), x.coerceIn(-1f, 1f), y.coerceIn(-1f, 1f))
+    /** The furthest the picture may move at this zoom without showing an edge. */
+    fun limit(): Float = ((scale - 1f) / 2f).coerceAtLeast(0f)
+    /** Offsets kept so no empty edge appears. */
+    fun covered(): Frame = clamped().let { f -> f.copy(x = f.x.coerceIn(-f.limit(), f.limit()), y = f.y.coerceIn(-f.limit(), f.limit())) }
+    val isIdentity: Boolean get() = scale == 1f && x == 0f && y == 0f
+}
+
 /** A visual the verified owner chose for a catalogue title, album or artist. */
 data class MediaOverride(
     val kind: String,
@@ -20,7 +34,8 @@ data class MediaOverride(
     val cover: String? = null,
     val canvas: String? = null,
     val hero: String? = null,
-    val updatedAt: String = ""
+    val updatedAt: String = "",
+    val frame: Frame? = null
 ) {
     val id: String get() = "$kind:$key"
 }
@@ -101,6 +116,9 @@ object MediaOverrides {
     fun artistPhoto(name: String, fallback: String?): String? =
         if (state.value.isEmpty()) fallback else artist(name)?.let { it.cover ?: it.hero } ?: fallback
 
+    /** How the owner framed this album's hero artwork, if they did. */
+    fun albumFrame(title: String, artist: String): Frame? = if (state.value.isEmpty()) null else album(title, artist)?.frame
+
     /** Wide photo at the top of the artist page. */
     fun artistHero(name: String): String? = artist(name)?.let { it.hero ?: it.cover }
 
@@ -120,16 +138,21 @@ object MediaOverrides {
         fun url(name: String) = row.optString(name).takeIf { !row.isNull(name) && it.startsWith("https://") }
         val kind = row.optString("kind").takeIf { it in setOf(TRACK, ALBUM, ARTIST) } ?: return null
         val key = row.optString("key").takeIf { it.isNotBlank() && it.length <= 160 } ?: return null
+        val frame = row.optJSONObject("frame")?.let { f ->
+            val scale = f.optDouble("scale", Double.NaN).toFloat()
+            if (scale.isNaN()) null else Frame(scale, f.optDouble("x", 0.0).toFloat(), f.optDouble("y", 0.0).toFloat()).covered()
+        }
         val item = MediaOverride(kind, key, row.optString("label"), url("coverURL"), url("canvasURL"), url("heroURL"),
-            row.optString("updatedAt"))
-        return item.takeIf { it.cover != null || it.canvas != null || it.hero != null }
+            row.optString("updatedAt"), frame)
+        return item.takeIf { it.cover != null || it.canvas != null || it.hero != null || it.frame != null }
     }
 
     internal fun encode(items: Collection<MediaOverride>): String = JSONObject().put("overrides", JSONArray().apply {
         items.forEach { o ->
             put(JSONObject().put("kind", o.kind).put("key", o.key).put("label", o.label)
                 .put("coverURL", o.cover ?: JSONObject.NULL).put("canvasURL", o.canvas ?: JSONObject.NULL)
-                .put("heroURL", o.hero ?: JSONObject.NULL).put("updatedAt", o.updatedAt))
+                .put("heroURL", o.hero ?: JSONObject.NULL).put("updatedAt", o.updatedAt)
+                .put("frame", o.frame?.let { JSONObject().put("scale", it.scale.toDouble()).put("x", it.x.toDouble()).put("y", it.y.toDouble()) } ?: JSONObject.NULL))
         }
     }).toString()
 

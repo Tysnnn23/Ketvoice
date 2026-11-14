@@ -21,6 +21,15 @@
 
 ## Overview
 
+### 4.17.0 — smoother lyrics and glass that catches the light
+
+Share a moment works again from lyrics, sung lines stay white, Cascade glides, the
+floating bar returns on a small scroll up, pages push like on iOS, Liquid Glass gains a
+soft bevel highlight, the album page is tighter, and more artists show a signature.
+[Mobile](https://github.com/Tysnnn23/Ketvoice/releases/download/v4.17.0/Ketvoice-4.17.0.apk)
+· [Quest](https://github.com/Tysnnn23/Ketvoice/releases/download/v4.17.0/Ketvoice-4.17.0-Quest.apk)
+· [Release notes](docs/releases/v4.17.0.md).
+
 ### 4.16.1 — curated artwork everywhere
 
 Refreshed covers, Canvas and artist photos chosen by Ketvoice now appear across the

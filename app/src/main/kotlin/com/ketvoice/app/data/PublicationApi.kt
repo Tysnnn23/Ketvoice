@@ -195,9 +195,10 @@ object PublicationApi {
      */
     suspend fun saveOverride(kind: String, key: String, label: String, cover: File? = null, canvas: File? = null,
                              hero: File? = null, restore: List<String> = emptyList(),
-                             onProgress: (Int) -> Unit = {}): MediaOverride? {
-        require(cover != null || canvas != null || hero != null || restore.isNotEmpty())
+                             onProgress: (Int) -> Unit = {}, frame: Frame? = null): MediaOverride? {
+        require(cover != null || canvas != null || hero != null || restore.isNotEmpty() || frame != null)
         val meta = JSONObject().put("kind", kind).put("key", key).put("label", label.take(300)).put("rightsConfirmed", true)
+        frame?.clamped()?.let { meta.put("frame", JSONObject().put("scale", it.scale.toDouble()).put("x", it.x.toDouble()).put("y", it.y.toDouble())) }
         if (restore.isNotEmpty()) meta.put("remove", JSONArray(restore.distinct()))
         val result = multipart("/admin/override", meta,
             listOfNotNull(cover?.let { "cover" to it }, canvas?.let { "canvas" to it }, hero?.let { "hero" to it }), onProgress)

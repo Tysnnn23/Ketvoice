@@ -40,6 +40,7 @@ import java.io.File
 /** Names of the visuals each kind of catalogue item can take, as the server knows them. */
 internal fun visualFields(kind: String): List<String> = when (kind) {
     MediaOverrides.ARTIST -> listOf("hero", "cover")
+    MediaOverrides.ALBUM -> listOf("cover", "canvas", "frame")
     else -> listOf("cover", "canvas")
 }
 

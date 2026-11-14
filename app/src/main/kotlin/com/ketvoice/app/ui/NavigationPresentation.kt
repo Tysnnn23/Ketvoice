@@ -63,10 +63,18 @@ internal fun NavigationPresentation(
                             .togetherWith(fadeOut(tween(260)))
                     }
                 } else {
-                    val direction = if (closing) -1 else 1
-                    (fadeIn(tween(Motion.duration())) +
-                        slideInHorizontally(tween(Motion.duration(), easing = Motion.EASE_STANDARD)) { direction * it / 5 })
-                        .togetherWith(fadeOut(tween(Motion.duration())))
+                    // A push as on iOS: the new page slides in from the edge on a critically damped
+                    // spring while the page underneath recedes a little and dims; back reverses it,
+                    // with the leaving page kept on top.
+                    val push = spring<IntOffset>(dampingRatio = 1f, stiffness = 420f, visibilityThreshold = IntOffset(1, 1))
+                    if (closing) {
+                        (slideInHorizontally(push) { -it / 4 } + fadeIn(tween(Motion.duration(280)), initialAlpha = .55f))
+                            .togetherWith(slideOutHorizontally(push) { it } + fadeOut(tween(Motion.duration(320)), targetAlpha = .9f))
+                            .apply { targetContentZIndex = -1f }
+                    } else {
+                        (slideInHorizontally(push) { it } + fadeIn(tween(Motion.duration(160)), initialAlpha = .9f))
+                            .togetherWith(slideOutHorizontally(push) { -it / 4 } + fadeOut(tween(Motion.duration(320)), targetAlpha = .55f))
+                    }
                 }
             },
             label = "nav"

@@ -257,7 +257,7 @@ fun SettingsScreen() {
                     "Portrait ou fond haute résolution quand il existe. Aucune photo de remplacement inventée.",
                     AppSettings.artistPhotos.value) { AppSettings.artistPhotos.value = it; SettingsStore.save() }
                 SToggle(KetIcons.Album, "Signatures et logos d'artistes",
-                    "Signature authentique (Wikidata) sinon logo transparent. Le nom est envoyé au service uniquement si activé.",
+                    "Signature authentique (Wikidata), sinon archive publique de signatures, sinon logo transparent. Le nom est envoyé à ces services uniquement si activé.",
                     AppSettings.artistSignatures.value) { AppSettings.artistSignatures.value = it; SettingsStore.save() }
                 val refresh = com.ketvoice.app.ui.motion.DisplayRefresh.status
                 SToggle(KetIcons.Sliders, "Fluidité 120 Hz",

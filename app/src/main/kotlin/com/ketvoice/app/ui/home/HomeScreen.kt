@@ -82,8 +82,9 @@ fun HomeScreen() {
     val learned = HomeLearning.scores
     LaunchedEffect(recent) { ArtworkRepo.enrich(recent.take(20)) }
     LaunchedEffect(state) {
+        val fold = com.ketvoice.app.ui.chrome.ChromeCollapse()
         snapshotFlow { state.firstVisibleItemIndex to state.firstVisibleItemScrollOffset }
-            .collect { (index, offset) -> AppUi.bottomCollapsed.value = index > 0 || offset > 24 }
+            .collect { (index, offset) -> AppUi.bottomCollapsed.value = fold.update(index, offset) }
     }
     Box(Modifier.fillMaxSize().background(theme.background)) {
         LazyColumn(state = state, modifier = Modifier.fillMaxSize().statusBarsPadding(),

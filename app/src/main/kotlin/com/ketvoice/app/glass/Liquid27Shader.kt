@@ -114,7 +114,7 @@ float4 main(float2 coord) {
 
     // Slight magnification of the whole body (the glass is a thick convex slab).
     float minSide = max(min(halfSize.x, halfSize.y) * 2.0, 1.0);
-    float magnify = 0.012 + press * 0.01;
+    float magnify = 0.018 + press * 0.012;
     float2 body = coord - p * magnify;
 
     float4 color;
@@ -167,6 +167,12 @@ float4 main(float2 coord) {
     color.rgb += rimLight * rim * (lit + bounce * 0.55);
     float contour = clamp(1.0 + sd / (0.6 * px), 0.0, 1.0);
     color.rgb = mix(color.rgb, materialDark > 0.5 ? float3(1.0) : float3(0.0), contour * 0.07);
+    // Specular sheen: a broad, soft highlight across the bevel facing the light, the way
+    // a thick glass edge catches it, fading towards the flat centre.
+    float bevel = lensHeight > 0.0 ? 1.0 - smoothstep(0.0, lensHeight * 1.15, depth) : 0.0;
+    color.rgb += rimLight * 0.30 * bevel * pow(max(facing, 0.0), 3.0);
+    // Fresnel: every edge reflects a little more than the centre, whatever the light.
+    color.rgb = mix(color.rgb, float3(1.0), bevel * bevel * 0.045);
     // Inner glow just inside the lit rim: the glass edge catching light.
     float inner = smoothstep(0.0, 3.0 * px, depth) * (1.0 - smoothstep(3.0 * px, 9.0 * px, depth));
     color.rgb += rimLight * 0.16 * inner * max(facing, 0.0);

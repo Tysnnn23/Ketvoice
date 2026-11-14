@@ -67,8 +67,9 @@ fun LibraryScreen() {
     val list = rememberLazyListState()
     LaunchedEffect(all) { selected = selected.filter { id -> all.any { it.id == id } } }
     LaunchedEffect(list) {
+        val fold = com.ketvoice.app.ui.chrome.ChromeCollapse()
         snapshotFlow { list.firstVisibleItemIndex to list.firstVisibleItemScrollOffset }
-            .collect { (index, offset) -> AppUi.bottomCollapsed.value = index > 0 || offset > 24 }
+            .collect { (index, offset) -> AppUi.bottomCollapsed.value = fold.update(index, offset) }
     }
     val importFile = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) scope.launch {

@@ -182,6 +182,13 @@ float4 main(float2 coord) {
         (1.0 - smoothstep(0.12, 0.55, causticDepth)) * max(facing, 0.0);
     color.rgb += rimLight * (0.12 + pressure * 0.04) * caustic;
 
+    // Large reflet de biseau, comme sur iOS : toute la pente du bord tournée vers la
+    // lumière s'éclaire doucement, puis s'efface vers le centre plat.
+    float bevel = refractionHeight > 0.0 ? 1.0 - smoothstep(0.0, refractionHeight * 1.2, -sd) : 0.0;
+    color.rgb += rimLight * 0.22 * bevel * pow(max(facing, 0.0), 3.0);
+    // Fresnel : chaque bord réfléchit un peu plus que le centre, quelle que soit la lumière.
+    color.rgb = mix(color.rgb, float3(1.0), bevel * bevel * 0.035);
+
     // Voile spéculaire supérieur : la pellicule « mouillée » du verre.
     float fromTop = clamp(local.y / max(size.y, 1.0), 0.0, 1.0);
     float topLit = clamp(-grad.y, 0.0, 1.0);

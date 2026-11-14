@@ -188,4 +188,23 @@ class StudioAndHomeHostTest {
         compose.onNodeWithText("Portrait").assertExists()
         compose.onNodeWithTag("studio-artist-preview").assertExists()
     }
+
+    @Test fun aLongPressOnLyricsOffersShareBesideCancel() {
+        val repo = flow<LyricsRepo.State>(LyricsRepo, "_state")
+        val before = repo.value
+        repo.value = LyricsRepo.State(lines = listOf(MusicApi.LyricLine(0, "First line of the song"),
+            MusicApi.LyricLine(4000, "Second line, sung now"), MusicApi.LyricLine(8000, "Third line")), source = "Test")
+        try {
+            compose.setContent { KetvoiceTheme(useDark = false) {
+                androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.background(androidx.compose.ui.graphics.Color(0xFF202030))) {
+                    com.ketvoice.app.ui.player.LyricsPane(Track("yt:l", "Song", "Artist", "Album"), expanded = false, onSource = {})
+                }
+            } }
+            compose.onNodeWithText("Second line, sung now").performTouchInput { longClick() }
+            compose.waitForIdle()
+            image("lyrics-moment-bar")
+            compose.onNodeWithTag("moment-share").assertIsDisplayed()
+            compose.onNodeWithText("Annuler").assertIsDisplayed()
+        } finally { repo.value = before }
+    }
 }

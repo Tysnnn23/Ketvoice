@@ -227,7 +227,8 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
                             }
                             val cascade = AppSettings.lyricsStyle.value == 1
                             val lineColor by animateColorAsState(
-                                targetValue = if (current || !lyrics.isTimed) Color.White
+                                // Lines already sung stay white; only what is still to come is dimmed.
+                                targetValue = if (current || !lyrics.isTimed || LyricsCascade.sung(index, active)) Color.White
                                     else Color.White.copy(alpha = if (cascade) LyricsCascade.INACTIVE_ALPHA else .54f),
                                 animationSpec = tween(Motion.duration(320)),
                                 label = "lyricColor"
@@ -241,13 +242,15 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
                             // little and catch up in a wave, each a few milliseconds after the one above.
                             val lineScale by animateFloatAsState(
                                 if (cascade && lyrics.isTimed && !current && !reduced) LyricsCascade.INACTIVE_SCALE else 1f,
-                                androidx.compose.animation.core.spring(dampingRatio = .82f, stiffness = 260f), label = "lyricScale")
+                                androidx.compose.animation.core.spring(dampingRatio = 1f, stiffness = 170f), label = "lyricScale")
                             val wave = remember(index, track.id) { Animatable(0f) }
                             LaunchedEffect(active, cascade, reduced) {
-                                if (!cascade || reduced || active < 0 || index < active) { wave.snapTo(0f); return@LaunchedEffect }
-                                wave.snapTo(LyricsCascade.waveStartDp(index - active))
+                                if (!cascade || reduced || active < 0 || index < active) { wave.animateTo(0f, tween(Motion.duration(260))); return@LaunchedEffect }
+                                // The lines below hold back a little, then glide into place one after
+                                // the other: a smooth ease-out, no overshoot and no jump.
+                                wave.snapTo(maxOf(wave.value, LyricsCascade.waveStartDp(index - active)))
                                 delay(LyricsCascade.waveDelayMs(index - active))
-                                wave.animateTo(0f, androidx.compose.animation.core.spring(dampingRatio = .74f, stiffness = 210f))
+                                wave.animateTo(0f, tween(LyricsCascade.WAVE_MS, easing = LyricsCascade.GLIDE))
                             }
                             val held = index in moment
                             val lineModifier = Modifier.fillMaxWidth()
@@ -342,7 +345,7 @@ private fun MomentBar(track: Track, lines: List<String>, onClose: () -> Unit) {
     val accent = com.ketvoice.app.theme.rememberCoverAccent(cover)?.first
     Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp).testTag("moment-bar"),
         horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-        com.ketvoice.app.ui.common.GlassCapsuleButton("Partager ce moment", com.ketvoice.app.ui.common.KetIcons.Share, {
+        com.ketvoice.app.ui.common.GlassCapsuleButton("Partager", com.ketvoice.app.ui.common.KetIcons.Share, {
             if (!busy) { busy = true
                 scope.launch {
                     try {
@@ -352,8 +355,10 @@ private fun MomentBar(track: Track, lines: List<String>, onClose: () -> Unit) {
                     } catch (_: Exception) { } finally { busy = false }
                 }
             }
-        }, Modifier.weight(1f), prominent = true, enabled = !busy, tag = "moment-share", minHeight = 48.dp)
-        com.ketvoice.app.ui.common.GlassCapsuleButton("Annuler", null, onClose, minHeight = 48.dp)
+        }, Modifier.weight(1.7f), prominent = true, enabled = !busy, tag = "moment-share", minHeight = 48.dp)
+        // Both buttons get a share of the row: a capsule fills the width it is given, so a
+        // Cancel without a weight used to take the whole row and hide Share.
+        com.ketvoice.app.ui.common.GlassCapsuleButton("Annuler", null, onClose, Modifier.weight(1f), minHeight = 48.dp, tag = "moment-cancel")
     }
 }
 

@@ -72,8 +72,9 @@ fun ExplorerScreen() {
         else {
             val gridState = rememberLazyGridState()
             LaunchedEffect(gridState) {
+                val fold = com.ketvoice.app.ui.chrome.ChromeCollapse()
                 snapshotFlow { gridState.firstVisibleItemIndex to gridState.firstVisibleItemScrollOffset }
-                    .collect { (index, offset) -> AppUi.bottomCollapsed.value = index > 0 || offset > 24 }
+                    .collect { (index, offset) -> AppUi.bottomCollapsed.value = fold.update(index, offset) }
             }
             // The chart arrives after the genres and is inserted above them. A grid that
             // was resting at its top must show it, not stay anchored on the first genre.

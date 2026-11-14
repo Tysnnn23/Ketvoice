@@ -7,6 +7,20 @@
 
 ---
 
+# Ketvoice 4.17.0
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 105** — smoother lyrics and glass that catches the light.
+
+- Lyrics: Share sits beside Cancel again; sung lines stay white; Cascade glides smoothly.
+- Navigation: the floating bar returns on a small scroll up; pages push like on iOS.
+- Look: a bevel highlight on Liquid Glass, a tighter album page, more artist signatures.
+
+Full notes: [4.17.0](docs/releases/v4.17.0.md).
+
+---
+
 # Ketvoice 4.16.1
 
 ![Ketvoice](ketvoice-banner.png)

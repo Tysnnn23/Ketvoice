@@ -22,8 +22,12 @@ object LyricsMotion {
 internal object LyricsCascade {
     const val INACTIVE_ALPHA = .32f
     const val INACTIVE_SCALE = .955f
-    /** Lines further below start lower, up to five lines away. */
-    fun waveStartDp(distance: Int): Float = 10f * distance.coerceIn(0, 5)
+    /** Lines further below start a little lower, up to four lines away. */
+    fun waveStartDp(distance: Int): Float = 6f * distance.coerceIn(0, 4)
     /** Each line follows the one above after a short delay, so the block moves like a wave. */
-    fun waveDelayMs(distance: Int): Long = 38L * distance.coerceIn(0, 6)
+    fun waveDelayMs(distance: Int): Long = 26L * distance.coerceIn(0, 5)
+    const val WAVE_MS = 560
+    val GLIDE = androidx.compose.animation.core.CubicBezierEasing(.2f, .8f, .2f, 1f)
+    /** A line before the one being sung has been sung. */
+    fun sung(index: Int, active: Int): Boolean = active >= 0 && index < active
 }

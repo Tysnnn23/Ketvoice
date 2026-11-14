@@ -519,6 +519,36 @@ class PrismalHostRenderTest {
         }
     }
 
+    @Test fun theOwnerFramesTheAlbumArtworkOnThePageItself() {
+        AppSettings.reduceAnimations.value = true
+        warmCover()
+        val allowed = com.ketvoice.app.data.PublisherSession::class.java.getDeclaredField("_allowed").apply { isAccessible = true }
+            .get(com.ketvoice.app.data.PublisherSession) as kotlinx.coroutines.flow.MutableStateFlow<Boolean>
+        val track = Track("qa:album-frame", "QA title", "QA artist", "QA album", durationMs = 180_000)
+        try {
+            com.ketvoice.app.data.MediaOverrides.replaceForTest(listOf(com.ketvoice.app.data.MediaOverride("album", "qa album|qa artist",
+                frame = com.ketvoice.app.data.Frame(1.5f, .1f, 0f))))
+            allowed.value = true
+            compose.setContent { KetvoiceTheme(useDark = true) {
+                AlbumPage(CatalogRequest("album", "qa:album-frame", "QA album"),
+                    CatalogPage("QA album", "QA artist", "fixture:warm-cover", listOf(track), "2026"), listOf(track), false, {})
+            } }
+            compose.waitUntil(10_000) { compose.onAllNodesWithTag("album-artwork-loaded").fetchSemanticsNodes().isNotEmpty() }
+            compose.onNodeWithTag("album-framing").performClick()
+            compose.onNodeWithTag("album-framing-bar").assertIsDisplayed()
+            compose.onNodeWithText("150 %").assertExists()
+            compose.onNodeWithTag("album-framing-surface").performTouchInput { swipeLeft() }
+            image("album-framing-dark")
+            compose.onNodeWithTag("album-framing-reset").performClick()
+            compose.onNodeWithText("100 %").assertExists()
+            compose.onNodeWithTag("album-framing-cancel").performClick()
+            compose.onAllNodesWithTag("album-framing-bar").assertCountEquals(0)
+        } finally {
+            allowed.value = false
+            com.ketvoice.app.data.MediaOverrides.replaceForTest(emptyList())
+        }
+    }
+
     @Test @Config(qualifiers = "w600dp-h800dp-mdpi")
     fun aWidePhoneWindowShowsTheWholeCoverInsteadOfABandOfIt() {
         AppSettings.reduceAnimations.value = true

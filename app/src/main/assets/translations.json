@@ -947,7 +947,6 @@
   "Photos d'artiste HD": "HD artist photos",
   "Portrait ou fond haute résolution quand il existe. Aucune photo de remplacement inventée.": "High-resolution portrait or background when one exists. No substitute photo is invented.",
   "Signatures et logos d'artistes": "Artist signatures and logos",
-  "Signature authentique (Wikidata) sinon logo transparent. Le nom est envoyé au service uniquement si activé.": "Authentic signature (Wikidata) otherwise a transparent logo. The name is sent to the service only when enabled.",
   "OAuth2 · redirect à déclarer : https://ketvoice.netlify.app/discord.html": "OAuth2 · redirect to register: https://ketvoice.netlify.app/discord.html",
   " Hz": " Hz",
   " · Hors ligne": "· Offline",
@@ -1313,7 +1312,12 @@
   "Rond, dans les listes et la recherche · 4 Mo maximum": "Round, in lists and search · 4 MB max",
   "Rétablir": "Restore",
   "Tout rétablir": "Restore all",
-  "Visuels enregistrés": "Visuals saved"
+  "Visuels enregistrés": "Visuals saved",
+  "Cadrage de l'album": "Album framing",
+  "Cadrer l'image": "Frame the image",
+  "Envoi…": "Sending…",
+  "Pincez et faites glisser l'image. Ce cadrage s'affiche pour tout le monde.": "Pinch and drag the image. This framing is shown to everyone.",
+  "Signature authentique (Wikidata), sinon archive publique de signatures, sinon logo transparent. Le nom est envoyé à ces services uniquement si activé.": "Authentic signature (Wikidata), otherwise the public signature archive, otherwise a transparent logo. The name is sent to these services only when enabled."
  },
  "hi": {
   "Reverb": "रीवर्ब",
@@ -2263,7 +2267,6 @@
   "Photos d'artiste HD": "HD कलाकार फ़ोटो",
   "Portrait ou fond haute résolution quand il existe. Aucune photo de remplacement inventée.": "जब उपलब्ध हो तो उच्च-रिज़ॉल्यूशन पोर्ट्रेट या बैकग्राउंड। कोई नकली फ़ोटो नहीं बनाई जाती।",
   "Signatures et logos d'artistes": "कलाकार हस्ताक्षर और लोगो",
-  "Signature authentique (Wikidata) sinon logo transparent. Le nom est envoyé au service uniquement si activé.": "प्रामाणिक हस्ताक्षर (Wikidata) नहीं तो पारदर्शी लोगो। सक्षम होने पर ही नाम सेवा को भेजा जाता है।",
   "OAuth2 · redirect à déclarer : https://ketvoice.netlify.app/discord.html": "OAuth2 · पंजीकृत करने हेतु redirect: https://ketvoice.netlify.app/discord.html",
   " Hz": " Hz",
   " · Hors ligne": "· ऑफ़लाइन",
@@ -2629,7 +2632,12 @@
   "Rond, dans les listes et la recherche · 4 Mo maximum": "गोल, सूचियों और खोज में · अधिकतम 4 MB",
   "Rétablir": "पुनर्स्थापित करें",
   "Tout rétablir": "सब पुनर्स्थापित करें",
-  "Visuels enregistrés": "विज़ुअल सहेजे गए"
+  "Visuels enregistrés": "विज़ुअल सहेजे गए",
+  "Cadrage de l'album": "एल्बम फ़्रेमिंग",
+  "Cadrer l'image": "छवि फ़्रेम करें",
+  "Envoi…": "भेजा जा रहा है…",
+  "Pincez et faites glisser l'image. Ce cadrage s'affiche pour tout le monde.": "छवि को पिंच करें और खींचें। यह फ़्रेमिंग सभी को दिखती है।",
+  "Signature authentique (Wikidata), sinon archive publique de signatures, sinon logo transparent. Le nom est envoyé à ces services uniquement si activé.": "प्रामाणिक हस्ताक्षर (Wikidata), अन्यथा सार्वजनिक हस्ताक्षर संग्रह, अन्यथा पारदर्शी लोगो। नाम इन सेवाओं को केवल सक्षम होने पर भेजा जाता है।"
  },
  "ja": {
   "Reverb": "リバーブ",
@@ -3579,7 +3587,6 @@
   "Photos d'artiste HD": "高画質アーティスト写真",
   "Portrait ou fond haute résolution quand il existe. Aucune photo de remplacement inventée.": "存在する場合は高解像度のポートレートまたは背景。代わりの写真を捏造しません。",
   "Signatures et logos d'artistes": "アーティストの署名とロゴ",
-  "Signature authentique (Wikidata) sinon logo transparent. Le nom est envoyé au service uniquement si activé.": "本物の署名（Wikidata）、なければ透過ロゴ。有効時のみ名前をサービスに送信します。",
   "OAuth2 · redirect à déclarer : https://ketvoice.netlify.app/discord.html": "OAuth2 · 登録する redirect: https://ketvoice.netlify.app/discord.html",
   " Hz": " Hz",
   " · Hors ligne": "· オフライン",
@@ -3945,7 +3952,12 @@
   "Rond, dans les listes et la recherche · 4 Mo maximum": "円形、リストと検索に表示 · 最大 4 MB",
   "Rétablir": "元に戻す",
   "Tout rétablir": "すべて元に戻す",
-  "Visuels enregistrés": "ビジュアルを保存しました"
+  "Visuels enregistrés": "ビジュアルを保存しました",
+  "Cadrage de l'album": "アルバムの表示範囲",
+  "Cadrer l'image": "画像の表示範囲を調整",
+  "Envoi…": "送信中…",
+  "Pincez et faites glisser l'image. Ce cadrage s'affiche pour tout le monde.": "画像をピンチ・ドラッグしてください。この表示範囲は全員に表示されます。",
+  "Signature authentique (Wikidata), sinon archive publique de signatures, sinon logo transparent. Le nom est envoyé à ces services uniquement si activé.": "本物のサイン（Wikidata）、なければ公開サインアーカイブ、それもなければ透過ロゴ。有効にした場合のみ名前がこれらのサービスに送信されます。"
  },
  "zh": {
   "Reverb": "混响",
@@ -4895,7 +4907,6 @@
   "Photos d'artiste HD": "高清艺术家照片",
   "Portrait ou fond haute résolution quand il existe. Aucune photo de remplacement inventée.": "存在时使用高分辨率肖像或背景。不会伪造替代照片。",
   "Signatures et logos d'artistes": "艺术家签名和标志",
-  "Signature authentique (Wikidata) sinon logo transparent. Le nom est envoyé au service uniquement si activé.": "真实签名（Wikidata），否则使用透明标志。仅在启用时才会将名称发送到服务。",
   "OAuth2 · redirect à déclarer : https://ketvoice.netlify.app/discord.html": "OAuth2 · 需注册的 redirect：https://ketvoice.netlify.app/discord.html",
   " Hz": " Hz",
   " · Hors ligne": "· 离线",
@@ -5261,7 +5272,12 @@
   "Rond, dans les listes et la recherche · 4 Mo maximum": "圆形，用于列表和搜索 · 最大 4 MB",
   "Rétablir": "恢复",
   "Tout rétablir": "全部恢复",
-  "Visuels enregistrés": "视觉素材已保存"
+  "Visuels enregistrés": "视觉素材已保存",
+  "Cadrage de l'album": "专辑取景",
+  "Cadrer l'image": "调整图片取景",
+  "Envoi…": "正在发送…",
+  "Pincez et faites glisser l'image. Ce cadrage s'affiche pour tout le monde.": "双指缩放并拖动图片。此取景对所有人可见。",
+  "Signature authentique (Wikidata), sinon archive publique de signatures, sinon logo transparent. Le nom est envoyé à ces services uniquement si activé.": "真实签名（Wikidata），否则使用公开签名档案，再否则使用透明标志。仅在启用时才会将名称发送到这些服务。"
  },
  "ru": {
   "Reverb": "Реверберация",
@@ -6211,7 +6227,6 @@
   "Photos d'artiste HD": "HD-фото артистов",
   "Portrait ou fond haute résolution quand il existe. Aucune photo de remplacement inventée.": "Портрет или фон в высоком разрешении, если он существует. Поддельные фото не создаются.",
   "Signatures et logos d'artistes": "Подписи и логотипы артистов",
-  "Signature authentique (Wikidata) sinon logo transparent. Le nom est envoyé au service uniquement si activé.": "Подлинная подпись (Wikidata) или прозрачный логотип. Имя отправляется службе только при включении.",
   "OAuth2 · redirect à déclarer : https://ketvoice.netlify.app/discord.html": "OAuth2 · redirect для регистрации: https://ketvoice.netlify.app/discord.html",
   " Hz": " Гц",
   " · Hors ligne": "· Не в сети",
@@ -6577,7 +6592,12 @@
   "Rond, dans les listes et la recherche · 4 Mo maximum": "Круглый, в списках и поиске · до 4 МБ",
   "Rétablir": "Восстановить",
   "Tout rétablir": "Восстановить всё",
-  "Visuels enregistrés": "Оформление сохранено"
+  "Visuels enregistrés": "Оформление сохранено",
+  "Cadrage de l'album": "Кадрирование альбома",
+  "Cadrer l'image": "Кадрировать изображение",
+  "Envoi…": "Отправка…",
+  "Pincez et faites glisser l'image. Ce cadrage s'affiche pour tout le monde.": "Сведите пальцы и перетащите изображение. Это кадрирование увидят все.",
+  "Signature authentique (Wikidata), sinon archive publique de signatures, sinon logo transparent. Le nom est envoyé à ces services uniquement si activé.": "Подлинная подпись (Wikidata), иначе публичный архив подписей, иначе прозрачный логотип. Имя отправляется этим сервисам только при включении."
  },
  "it": {
   "Reverb": "Riverbero",
@@ -7527,7 +7547,6 @@
   "Photos d'artiste HD": "Foto artista HD",
   "Portrait ou fond haute résolution quand il existe. Aucune photo de remplacement inventée.": "Ritratto o sfondo ad alta risoluzione quando esiste. Nessuna foto sostitutiva inventata.",
   "Signatures et logos d'artistes": "Firme e loghi degli artisti",
-  "Signature authentique (Wikidata) sinon logo transparent. Le nom est envoyé au service uniquement si activé.": "Firma autentica (Wikidata) altrimenti logo trasparente. Il nome viene inviato al servizio solo se attivo.",
   "OAuth2 · redirect à déclarer : https://ketvoice.netlify.app/discord.html": "OAuth2 · redirect da registrare: https://ketvoice.netlify.app/discord.html",
   " Hz": " Hz",
   " · Hors ligne": "· Offline",
@@ -7893,7 +7912,12 @@
   "Rond, dans les listes et la recherche · 4 Mo maximum": "Rotondo, negli elenchi e nella ricerca · max 4 MB",
   "Rétablir": "Ripristina",
   "Tout rétablir": "Ripristina tutto",
-  "Visuels enregistrés": "Grafica salvata"
+  "Visuels enregistrés": "Grafica salvata",
+  "Cadrage de l'album": "Inquadratura dell'album",
+  "Cadrer l'image": "Inquadra l'immagine",
+  "Envoi…": "Invio…",
+  "Pincez et faites glisser l'image. Ce cadrage s'affiche pour tout le monde.": "Pizzica e trascina l'immagine. Questa inquadratura è visibile a tutti.",
+  "Signature authentique (Wikidata), sinon archive publique de signatures, sinon logo transparent. Le nom est envoyé à ces services uniquement si activé.": "Firma autentica (Wikidata), altrimenti l'archivio pubblico di firme, altrimenti un logo trasparente. Il nome viene inviato a questi servizi solo se attivato."
  },
  "es": {
   "Reverb": "Reverb",
@@ -8843,7 +8867,6 @@
   "Photos d'artiste HD": "Fotos de artista en HD",
   "Portrait ou fond haute résolution quand il existe. Aucune photo de remplacement inventée.": "Retrato o fondo de alta resolución cuando existe. No se inventa ninguna foto sustituta.",
   "Signatures et logos d'artistes": "Firmas y logos de artistas",
-  "Signature authentique (Wikidata) sinon logo transparent. Le nom est envoyé au service uniquement si activé.": "Firma auténtica (Wikidata) o, si no, un logo transparente. El nombre se envía al servicio solo si está activado.",
   "OAuth2 · redirect à déclarer : https://ketvoice.netlify.app/discord.html": "OAuth2 · redirect que debes registrar: https://ketvoice.netlify.app/discord.html",
   " Hz": " Hz",
   " · Hors ligne": "· Sin conexión",
@@ -9209,7 +9232,12 @@
   "Rond, dans les listes et la recherche · 4 Mo maximum": "Redondo, en listas y búsqueda · máx. 4 MB",
   "Rétablir": "Restaurar",
   "Tout rétablir": "Restaurar todo",
-  "Visuels enregistrés": "Visuales guardados"
+  "Visuels enregistrés": "Visuales guardados",
+  "Cadrage de l'album": "Encuadre del álbum",
+  "Cadrer l'image": "Encuadrar la imagen",
+  "Envoi…": "Enviando…",
+  "Pincez et faites glisser l'image. Ce cadrage s'affiche pour tout le monde.": "Pellizca y arrastra la imagen. Este encuadre lo verán todos.",
+  "Signature authentique (Wikidata), sinon archive publique de signatures, sinon logo transparent. Le nom est envoyé à ces services uniquement si activé.": "Firma auténtica (Wikidata); si no, el archivo público de firmas; si no, un logotipo transparente. El nombre solo se envía a estos servicios si está activado."
  },
  "de": {
   "Reverb": "Reverb",
@@ -10159,7 +10187,6 @@
   "Photos d'artiste HD": "HD-Künstlerfotos",
   "Portrait ou fond haute résolution quand il existe. Aucune photo de remplacement inventée.": "Hochauflösendes Porträt oder Hintergrundbild, wenn vorhanden. Es werden keine Ersatzfotos erfunden.",
   "Signatures et logos d'artistes": "Künstler-Signaturen und Logos",
-  "Signature authentique (Wikidata) sinon logo transparent. Le nom est envoyé au service uniquement si activé.": "Echte Signatur (Wikidata), sonst ein transparentes Logo. Der Name wird nur bei Aktivierung an den Dienst gesendet.",
   "OAuth2 · redirect à déclarer : https://ketvoice.netlify.app/discord.html": "OAuth2 · zu registrierender redirect: https://ketvoice.netlify.app/discord.html",
   " Hz": " Hz",
   " · Hors ligne": "· Offline",
@@ -10525,7 +10552,12 @@
   "Rond, dans les listes et la recherche · 4 Mo maximum": "Rund, in Listen und der Suche · max. 4 MB",
   "Rétablir": "Wiederherstellen",
   "Tout rétablir": "Alles wiederherstellen",
-  "Visuels enregistrés": "Visuals gespeichert"
+  "Visuels enregistrés": "Visuals gespeichert",
+  "Cadrage de l'album": "Albumausschnitt",
+  "Cadrer l'image": "Bildausschnitt festlegen",
+  "Envoi…": "Wird gesendet…",
+  "Pincez et faites glisser l'image. Ce cadrage s'affiche pour tout le monde.": "Bild mit zwei Fingern zoomen und verschieben. Dieser Ausschnitt ist für alle sichtbar.",
+  "Signature authentique (Wikidata), sinon archive publique de signatures, sinon logo transparent. Le nom est envoyé à ces services uniquement si activé.": "Echte Signatur (Wikidata), sonst das öffentliche Signaturarchiv, sonst ein transparentes Logo. Der Name wird nur bei Aktivierung an diese Dienste gesendet."
  },
  "pt": {
   "Reverb": "Reverb",
@@ -11475,7 +11507,6 @@
   "Photos d'artiste HD": "Fotos de artista HD",
   "Portrait ou fond haute résolution quand il existe. Aucune photo de remplacement inventée.": "Retrato ou fundo de alta resolução quando existe. Nenhuma foto substituta é inventada.",
   "Signatures et logos d'artistes": "Assinaturas e logótipos de artistas",
-  "Signature authentique (Wikidata) sinon logo transparent. Le nom est envoyé au service uniquement si activé.": "Assinatura autêntica (Wikidata) ou, caso contrário, logótipo transparente. O nome só é enviado ao serviço quando ativado.",
   "OAuth2 · redirect à déclarer : https://ketvoice.netlify.app/discord.html": "OAuth2 · redirect a registar: https://ketvoice.netlify.app/discord.html",
   " Hz": " Hz",
   " · Hors ligne": "· Offline",
@@ -11841,7 +11872,12 @@
   "Rond, dans les listes et la recherche · 4 Mo maximum": "Redondo, em listas e na pesquisa · máx. 4 MB",
   "Rétablir": "Restaurar",
   "Tout rétablir": "Restaurar tudo",
-  "Visuels enregistrés": "Visuais guardados"
+  "Visuels enregistrés": "Visuais guardados",
+  "Cadrage de l'album": "Enquadramento do álbum",
+  "Cadrer l'image": "Enquadrar a imagem",
+  "Envoi…": "A enviar…",
+  "Pincez et faites glisser l'image. Ce cadrage s'affiche pour tout le monde.": "Aperte e arraste a imagem. Este enquadramento é visto por todos.",
+  "Signature authentique (Wikidata), sinon archive publique de signatures, sinon logo transparent. Le nom est envoyé à ces services uniquement si activé.": "Assinatura autêntica (Wikidata), senão o arquivo público de assinaturas, senão um logótipo transparente. O nome só é enviado a estes serviços se ativado."
  },
  "ko": {
   "Reverb": "리버브",
@@ -12791,7 +12827,6 @@
   "Photos d'artiste HD": "HD 아티스트 사진",
   "Portrait ou fond haute résolution quand il existe. Aucune photo de remplacement inventée.": "있을 경우 고해상도 초상화 또는 배경. 대체 사진을 만들어내지 않습니다.",
   "Signatures et logos d'artistes": "아티스트 서명 및 로고",
-  "Signature authentique (Wikidata) sinon logo transparent. Le nom est envoyé au service uniquement si activé.": "실제 서명(Wikidata), 없으면 투명 로고. 활성화한 경우에만 이름을 서비스로 보냅니다.",
   "OAuth2 · redirect à déclarer : https://ketvoice.netlify.app/discord.html": "OAuth2 · 등록할 redirect: https://ketvoice.netlify.app/discord.html",
   " Hz": " Hz",
   " · Hors ligne": "· 오프라인",
@@ -13157,6 +13192,11 @@
   "Rond, dans les listes et la recherche · 4 Mo maximum": "원형, 목록과 검색에 표시 · 최대 4MB",
   "Rétablir": "복원",
   "Tout rétablir": "모두 복원",
-  "Visuels enregistrés": "비주얼이 저장됨"
+  "Visuels enregistrés": "비주얼이 저장됨",
+  "Cadrage de l'album": "앨범 프레이밍",
+  "Cadrer l'image": "이미지 프레이밍",
+  "Envoi…": "보내는 중…",
+  "Pincez et faites glisser l'image. Ce cadrage s'affiche pour tout le monde.": "이미지를 핀치하고 드래그하세요. 이 프레이밍은 모두에게 표시됩니다.",
+  "Signature authentique (Wikidata), sinon archive publique de signatures, sinon logo transparent. Le nom est envoyé à ces services uniquement si activé.": "진짜 서명(Wikidata), 없으면 공개 서명 아카이브, 그것도 없으면 투명 로고. 이름은 활성화한 경우에만 이 서비스들로 전송됩니다."
  }
 }

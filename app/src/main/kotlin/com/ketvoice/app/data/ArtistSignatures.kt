@@ -85,17 +85,21 @@ internal object ArtistSignatures {
         val signatures = includeSignature && AppSettings.artistSignatures.value
         if ((!photos && !signatures) || artist.isBlank() || artist.length > 160) return ArtistArtwork()
         return lock.withLock {
-            val key = name(artist) + if (signatures) "|sig" else "|photo"
+            val key = name(artist) + if (signatures) "|sig2" else "|photo"
             artCache[key]?.takeIf { it.expires > System.currentTimeMillis() }?.let { return@withLock it.artwork }
             var lifetime = 10 * 60_000L
             val result = try {
                 val fetched = withContext(Dispatchers.IO) { request(artist, signatures) }
                 // Respect each consent independently: the broker returns everything
                 // it knows, the app only keeps what the user allowed.
+                // No authenticated signature from the broker: ask the public signature
+                // archive, which only answers with a file named after this very artist.
+                val signature = fetched.signature ?: if (signatures)
+                    runCatching { withContext(Dispatchers.IO) { requestArchive(artist) } }.getOrNull() else null
                 fetched.copy(
                     photo = fetched.photo.takeIf { photos },
                     background = fetched.background.takeIf { photos },
-                    signature = fetched.signature.takeIf { signatures },
+                    signature = signature.takeIf { signatures },
                     logo = fetched.logo.takeIf { signatures }
                 )
             } catch (cancelled: CancellationException) { throw cancelled }
@@ -151,6 +155,74 @@ internal object ArtistSignatures {
                 else -> throw java.io.IOException("Artwork service unavailable")
             }
         } finally { connection.disconnect() }
+    }
+
+    private const val ARCHIVE = "https://artistsignature.velixir.run/v1/signatures"
+
+    private fun requestArchive(artist: String): ArtistSignature? {
+        val connection = URL("$ARCHIVE?artist=${URLEncoder.encode(artist.trim(), "UTF-8")}").openConnection() as HttpURLConnection
+        return try {
+            connection.connectTimeout = 6_000
+            connection.readTimeout = 10_000
+            connection.instanceFollowRedirects = false
+            connection.setRequestProperty("Accept", "application/json")
+            if (connection.responseCode != 200) return null
+            val bytes = connection.inputStream.use { input ->
+                val output = java.io.ByteArrayOutputStream()
+                val buffer = ByteArray(8192)
+                while (true) {
+                    val count = input.read(buffer)
+                    if (count < 0) break
+                    require(output.size() + count <= 256 * 1024) { "Oversized signature response" }
+                    output.write(buffer, 0, count)
+                }
+                output.toByteArray()
+            }
+            parseArchive(JSONObject(bytes.toString(Charsets.UTF_8)), artist)
+        } finally { connection.disconnect() }
+    }
+
+    private fun words(value: String): String = java.text.Normalizer.normalize(value, java.text.Normalizer.Form.NFD)
+        .replace(Regex("\\p{M}+"), "").lowercase(Locale.ROOT).replace(Regex("[^\\p{L}\\p{N}]+"), " ").trim()
+
+    /**
+     * The first signature of the archive's answer whose file is named after the artist
+     * alone ("Drake_sig.svg" for Drake, never "Francis_Drake_Signature.svg"). Wikimedia
+     * files are read through Commons' own PNG rendering, so SVG signatures display too.
+     */
+    internal fun parseArchive(root: JSONObject, artist: String): ArtistSignature? {
+        val wanted = words(artist).takeIf { it.isNotEmpty() } ?: return null
+        val items = root.optJSONArray("signatures") ?: return null
+        for (i in 0 until items.length()) {
+            val item = items.optJSONObject(i) ?: continue
+            val asset = item.optJSONObject("asset") ?: continue
+            val source = item.optJSONObject("source") ?: continue
+            val license = item.optJSONObject("license")?.optString("name").orEmpty()
+            when (source.optString("provider")) {
+                "signature_archive" -> {
+                    val uri = runCatching { URI(asset.optString("url")) }.getOrNull() ?: continue
+                    if (uri.scheme != "https" || uri.host != "raw.githubusercontent.com" || uri.rawUserInfo != null ||
+                        uri.rawQuery != null || !uri.path.startsWith("/itsmeadarsh2008/signature-archive/") ||
+                        !Regex("(?i).*\\.(png|webp)$").matches(uri.path)) continue
+                    val file = words(uri.path.substringAfterLast('/').substringBeforeLast('.'))
+                    if (file != wanted) continue
+                    return ArtistSignature(uri.toASCIIString(), "image", source.optString("url"),
+                        listOf("Signature Archive", license).filter { it.isNotBlank() }.joinToString(" · "))
+                }
+                "wikimedia_commons" -> {
+                    val page = runCatching { URI(source.optString("url")) }.getOrNull() ?: continue
+                    if (page.scheme != "https" || page.host != "commons.wikimedia.org" || !page.path.startsWith("/wiki/File:")) continue
+                    val fileName = page.path.removePrefix("/wiki/File:")
+                    if (fileName.isBlank() || fileName.contains('/') || !Regex("(?i).*\\.(svg|png)$").matches(fileName)) continue
+                    val stem = words(fileName.substringBeforeLast('.')).split(' ')
+                        .filterNot { it in setOf("sig", "signature", "signatur", "autograph", "firma", "assinatura") }.joinToString(" ")
+                    if (stem != wanted) continue
+                    return ArtistSignature("https://commons.wikimedia.org/wiki/Special:FilePath/$fileName?width=800", "image",
+                        page.toASCIIString(), listOf("Wikimedia Commons", license).filter { it.isNotBlank() }.joinToString(" · "))
+                }
+            }
+        }
+        return null
     }
 
     internal fun parseArtwork(root: JSONObject, artist: String): ArtistArtwork {
