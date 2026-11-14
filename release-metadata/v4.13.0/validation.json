@@ -1,0 +1,164 @@
+{
+  "schema": 8,
+  "version": "4.13.0",
+  "versionCode": 98,
+  "source_commit": "26bdfde6b5e5aa652ac8117d442e3920269deece",
+  "created_at": "2026-11-14T12:12:34.038613+00:00",
+  "build_origin": {
+    "kind": "github_actions_with_owner_discord_sdk",
+    "workflow": "android.yml",
+    "run_id": 43591953714,
+    "artifact": {
+      "id": 14112912235,
+      "sha256": "9057a8610624f63b52989df5e509da7b3988af8f16e3efed0e03d8668b92eb2b"
+    },
+    "gradle": "assembleMobileRelease assembleQuestRelease",
+    "note": "Signed by CI with the pinned keystore secret; the Discord Social SDK AAR matched its pinned SHA-256."
+  },
+  "local_validation": {
+    "result": "debug JVM/Robolectric suites for both flavors, release lint and the UI text audit passed in a cloud container without the Discord SDK",
+    "commands": [
+      "testMobileDebugUnitTest",
+      "testQuestDebugUnitTest",
+      "lintMobileRelease",
+      "lintQuestRelease",
+      "tools/audit_ui_texts.py --check"
+    ],
+    "ci_validation": "run 43591953714: release builds, debug and release unit tests for both flavors, UI text audit, lint, APK signature pin and Discord bridge packaging passed",
+    "code_review": {
+      "kind": "author's own re-read; no independent review"
+    },
+    "host_previews": "album, artist, playlist, Downloads and the button kit in Liquid 27 rendered in software on the host and inspected; the host renderer does not show optical refraction or the cover blur as a device does"
+  },
+  "tests": {
+    "mobile": {
+      "jvm": {
+        "tests": 608,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "android_15_emulator_compose": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "quest": {
+      "jvm": {
+        "tests": 607,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "android_15_emulator_compose": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    }
+  },
+  "lint": {
+    "mobile": {
+      "Warning": 169,
+      "Hint": 16
+    },
+    "quest": {
+      "Warning": 171,
+      "Hint": 16
+    }
+  },
+  "apks": [
+    {
+      "name": "Ketvoice-4.13.0.apk",
+      "sha256": "53e668639003679259da007689a35757743f8c5a6470d329cd51a5745c22241d",
+      "bytes": 72781660,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "4.13.0",
+      "versionCode": 98,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-4.13.0-Quest.apk",
+      "sha256": "754d019ebe6de8f1372a76cc6650aa7dc4339ecdac935cef89be0d359000cc78",
+      "bytes": 82831646,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "4.13.0",
+      "versionCode": 98,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    }
+  ],
+  "discord": {
+    "sdk_present_in_ci_build": true,
+    "sdk_sha256_pinned": true,
+    "bridge_and_native_libraries_verified": true,
+    "presence_mode": "unauthenticated_rpc_through_installed_discord_app"
+  },
+  "credential_scan": {
+    "entries": 3278,
+    "findings": 0,
+    "raw_pattern_findings": 1,
+    "scope": "tracked sources and APK archive entries",
+    "kind": "credential_patterns",
+    "explicit_private_provider_key_deny_list": false,
+    "triage": [
+      {
+        "file": "Ketvoice-Liquid-Glass-V4.html",
+        "classification": "embedded_image_false_positive",
+        "all_hits_inside_image_data_uris": true,
+        "rescanned_without_image_payloads": true
+      }
+    ]
+  },
+  "release_install_smoke": {
+    "mobile": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "quest": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    }
+  },
+  "publication_override": {
+    "authorized_by_user": true,
+    "authorized_at": "2026-11-14T12:12:34.038613+00:00",
+    "kind": "standing_authorization",
+    "user_statement": "J'autorise TOUT devient maintenant une règle.",
+    "user_statement_date": "2026-11-14",
+    "in_reply_to": "The question whether versions may be published without phone or Quest testing without asking again for each version.",
+    "recorded_in": "AGENTS.md (commit aeeda8e)",
+    "reason": "The owner made publishing validated versions without phone or Quest testing a standing rule.",
+    "scope": "physical device installation and all on-device behaviour of 4.13.0"
+  },
+  "not_validated": [
+    "physical phone or Quest installation, rendering and touch behaviour",
+    "the optical look of the new glass buttons in each glass style on a device (refraction, rim light, tint)",
+    "the Liquid 27 press: swell, bounce and rim light following the finger",
+    "the cover glow behind playlist, artist and Downloads headers with real artwork (strength, legibility, performance while scrolling)",
+    "the 3 % slower navigation morph as perceived on a device",
+    "independent code review of this diff"
+  ],
+  "known_limitations": [
+    "The Liquid 27 buttons reproduce the documented behaviour of interactive Liquid Glass; Apple does not publish its values, so they are not pixel-identical.",
+    "The four collection pages share buttons and a cover glow but keep their own layouts; a deeper redesign is proposed, not done.",
+    "A 3 % change of speed is at the edge of what can be perceived.",
+    "The cover glow is replaced by a plain gradient in performance mode or when a collection has no cover.",
+    "The signing certificate is the existing public Android debug identity, not a private production key."
+  ],
+  "canonical_banner_sha256": "47f6793088983f7d4e6bd1aeaa2cbd8b7cdc2a8f91271e3b2839daea81da0436"
+}
