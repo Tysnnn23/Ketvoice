@@ -405,7 +405,8 @@ function overrideKey(kind: unknown, value: unknown): {kind:string,key:string} {
 }
 function overrideView(row: Row): Row {
   const url=(value: unknown)=>value ? publicFile(String(value)) : null;
-  const frame=row.frame_scale==null ? null : {scale:Number(row.frame_scale),x:Number(row.frame_x ?? 0),y:Number(row.frame_y ?? 0)};
+  // scale, x and y keep the app versions that knew a zoom-and-offset framing on an untouched picture.
+  const frame=row.frame && typeof row.frame==="object" ? {...(row.frame as Row),scale:1,x:0,y:0} : null;
   return {kind:row.kind,key:row.key,label:row.label ?? "",coverURL:url(row.cover_path),canvasURL:url(row.canvas_path),
     heroURL:url(row.hero_path),frame,updatedAt:row.updated_at};
 }
@@ -419,18 +420,23 @@ async function readHero(file: FormDataEntryValue | null) {
   if(h.startsWith("RIFF") && h.slice(8,12)==="WEBP") return {data,ext:"webp",mime:"image/webp"};
   throw new HttpError(400,"Photo JPEG, PNG ou WebP requise");
 }
-/** Zoom 1–3 and offsets −1…1 (fractions of the frame), rounded so a nudge is not a new value. */
-function overrideFrame(value: unknown): {scale:number,x:number,y:number} {
-  if(!value || typeof value!=="object" || Array.isArray(value) || Object.keys(value).some(k=>!["scale","x","y"].includes(k)))
+/**
+ * A rectangle of the picture, in widths of the picture: its centre from the picture's
+ * centre (cx, cy), its size (w, h), a turn in degrees and a mirror. Rounded so that a
+ * nudge is not a new value.
+ */
+function overrideFrame(value: unknown): Row {
+  if(!value || typeof value!=="object" || Array.isArray(value) || Object.keys(value).some(k=>!["cx","cy","w","h","rotation","flip"].includes(k)))
     throw new HttpError(400,"Cadrage invalide");
-  const v=value as Row, scale=Number(v.scale), x=Number(v.x ?? 0), y=Number(v.y ?? 0);
-  if(![scale,x,y].every(Number.isFinite) || scale<1 || scale>3 || Math.abs(x)>1 || Math.abs(y)>1) throw new HttpError(400,"Cadrage invalide");
-  const round=(n: number)=>Math.round(n*1000)/1000;
-  return {scale:round(scale),x:round(x),y:round(y)};
+  const v=value as Row, cx=Number(v.cx ?? 0), cy=Number(v.cy ?? 0), w=Number(v.w), h=Number(v.h), rotation=Number(v.rotation ?? 0);
+  if(![cx,cy,w,h,rotation].every(Number.isFinite) || Math.abs(cx)>2 || Math.abs(cy)>2 || w<0.05 || w>3 || h<0.05 || h>3 ||
+    Math.abs(rotation)>180 || (v.flip!==undefined && typeof v.flip!=="boolean")) throw new HttpError(400,"Cadrage invalide");
+  const round=(n: number)=>Math.round(n*10000)/10000;
+  return {cx:round(cx),cy:round(cy),w:round(w),h:round(h),rotation:Math.round(rotation*100)/100,flip:v.flip===true};
 }
 /** Every owner-curated catalogue visual, public and cacheable: the app applies them over the catalogue's own. */
 async function publicOverrides(): Promise<Response> {
-  const rows=await database("ketvoice_media_overrides?select=kind,key,label,cover_path,canvas_path,hero_path,frame_scale,frame_x,frame_y,updated_at&order=updated_at.desc&limit=5000");
+  const rows=await database("ketvoice_media_overrides?select=kind,key,label,cover_path,canvas_path,hero_path,frame,updated_at&order=updated_at.desc&limit=5000");
   return new Response(JSON.stringify({overrides:rows.map(overrideView)}),{status:200,headers:{...CORS,
     "content-type":"application/json; charset=utf-8","cache-control":"public, max-age=120"}});
 }
@@ -468,9 +474,7 @@ async function catalogueOverride(req: Request, owner: string): Promise<Response>
   const current=(await database(`${scope}&limit=1`))[0] ?? {};
   const prefix=`catalogue-${kind}-${crypto.randomUUID()}`, uploaded: string[]=[], next: Row={};
   for(const field of allowed) next[overrideColumn(field)]=current[overrideColumn(field)] ?? null;
-  const framing: Row=frame ? {frame_scale:frame.scale,frame_x:frame.x,frame_y:frame.y}
-    : remove.includes("frame") || !framable ? {frame_scale:null,frame_x:null,frame_y:null}
-    : {frame_scale:current.frame_scale ?? null,frame_x:current.frame_x ?? null,frame_y:current.frame_y ?? null};
+  const framing: Row={frame:frame ? frame : remove.includes("frame") || !framable ? null : current.frame ?? null};
   try {
     for(const field of allowed) {
       const file=files[field];
@@ -479,7 +483,7 @@ async function catalogueOverride(req: Request, owner: string): Promise<Response>
     for(const field of remove) if(field!=="frame") next[overrideColumn(String(field))]=null;
     const replaced=allowed.map(f=>current[overrideColumn(f)]).filter(p=>p && !Object.values(next).includes(p)).map(String);
     let row: Row | null=null;
-    if(allowed.every(f=>!next[overrideColumn(f)]) && framing.frame_scale==null) await database(scope,{method:"DELETE"});
+    if(allowed.every(f=>!next[overrideColumn(f)]) && framing.frame==null) await database(scope,{method:"DELETE"});
     else {
       const body={kind,key:itemKey,label:label || String(current.label ?? ""),...next,...framing,updated_by:owner,updated_at:new Date().toISOString()};
       row=(await database("ketvoice_media_overrides?on_conflict=kind,key",{method:"POST",
