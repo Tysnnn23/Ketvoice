@@ -151,7 +151,16 @@ Deno.test("catalogue overrides validate keys and fields, merge, and restore by d
     assert(third.status===200);assert(cur()?.cover_path===null);assert(removedFiles.includes(String(cover)));
     const last=await handler(request({...album,remove:["canvas"]}));
     assert(last.status===200);assert(cur()===null);assert((await last.json()).restored===true);
+    const framed=await handler(request({...album,frame:{scale:1.4,x:-0.2,y:0.1234}}));
+    assert(framed.status===200);assert(cur()?.frame_scale===1.4);assert(cur()?.frame_y===0.123);assert(cur()?.cover_path==null);
+    assert((await framed.json()).override.frame.scale===1.4);
+    assert((await handler(request({...album,frame:{scale:5,x:0,y:0}}))).status===400);
+    assert((await handler(request({...album,frame:{scale:1.2,x:0,y:0,z:1}}))).status===400);
+    assert((await handler(request({...album,frame:{scale:1.2},remove:["frame"]}))).status===400);
+    const unframed=await handler(request({...album,remove:["frame"]}));
+    assert(unframed.status===200);assert(cur()===null);
     const artist=await handler(request({kind:"artist",key:"daft punk",rightsConfirmed:true},{hero:jpeg}));
+    assert((await handler(request({kind:"artist",key:"daft punk",rightsConfirmed:true,frame:{scale:1.2,x:0,y:0}}))).status===400);
     assert(artist.status===200);assert(String(cur()?.hero_path).endsWith("/hero.jpg"));
     assert((await handler(request({kind:"artist",key:"daft punk",rightsConfirmed:true},{canvas:mp4}))).status===400);
     assert((await handler(request({kind:"track",key:"one more time|daft punk",rightsConfirmed:true},{canvas:new Uint8Array(32)}))).status===400);
