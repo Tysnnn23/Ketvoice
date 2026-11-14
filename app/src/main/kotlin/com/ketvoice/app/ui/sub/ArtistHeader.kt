@@ -1,5 +1,6 @@
 package com.ketvoice.app.ui.sub
 
+import androidx.compose.ui.platform.testTag
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -43,8 +44,16 @@ import com.ketvoice.app.ui.motion.Motion
 import com.ketvoice.app.ui.motion.StaggeredReveal
 
 /** Portrait-led hero only; the app's navigation and catalogue remain unchanged. */
+/**
+ * The colour a whole artist page takes from the portrait: the page background pulled
+ * towards the portrait's dominant colour. Light pages become a pastel of it, dark
+ * pages a deep shade; without a colour the page keeps its own background.
+ */
+internal fun artistPageTint(background: Color, tone: Color?, dark: Boolean): Color =
+    if (tone == null) background else androidx.compose.ui.graphics.lerp(background, tone, if (dark) .30f else .38f)
+
 @Composable
-internal fun ArtistHeader(page: ArtistPage, collapse: () -> Float = { 0f }) {
+internal fun ArtistHeader(page: ArtistPage, collapse: () -> Float = { 0f }, onTone: (Color?) -> Unit = {}) {
     val theme = LocalTheme.current
     val context = LocalContext.current
     val onAccent = if (theme.accent.luminance() > .179f) Color.Black else Color.White
@@ -63,22 +72,58 @@ internal fun ArtistHeader(page: ArtistPage, collapse: () -> Float = { 0f }) {
     val heroRequest = remember(hero, Motion.reduced) {
         ImageRequest.Builder(context).data(hero).crossfade(Motion.duration(280)).build()
     }
-    // The shared collection header: the portrait floats, round, over its own blurred colours.
-    val top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 64.dp
-    com.ketvoice.app.ui.common.CollectionHero(hero, top, page.artist.name,
-        meta = listOf(page.listeners, "YouTube Music").filter { it.isNotBlank() }.joinToString(" · "),
-        round = true, artworkTag = "artist-portrait",
-        titleSlot = { centred -> ArtistIdentity(page.artist.name, artwork.signature ?: artwork.logo, startAligned = !centred) },
-        artwork = {
-            // The glyph stays behind the photo: never an empty disc while it loads.
-            Box(Modifier.fillMaxSize().background(theme.accent.copy(alpha = .16f)), contentAlignment = Alignment.Center) {
-                Icon(Icons.Filled.Person, null, tint = theme.accent, modifier = Modifier.fillMaxSize(.5f))
+    // The portrait fills the top of the page and dissolves into the page colour, which the
+    // page itself takes from the portrait: photo and page read as one surface.
+    val tone = com.ketvoice.app.theme.rememberCoverAccent(hero)?.first
+    LaunchedEffect(tone) { onTone(tone) }
+    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+            val height = (maxWidth * (if (wide) .62f else .96f)).coerceIn(260.dp, 460.dp)
+            Box(Modifier.fillMaxWidth().height(height).clipToBounds().testTag("artist-portrait")) {
+                if (hero != null) {
+                    AsyncImage(heroRequest, page.artist.name, contentScale = ContentScale.Crop, alignment = Alignment.TopCenter,
+                        modifier = Modifier.fillMaxSize().graphicsLayer {
+                            val c = collapse().coerceIn(0f, 1f)
+                            // A slight overscan hides any seam; the photo drifts a little as the page scrolls.
+                            scaleX = 1.02f; scaleY = 1.02f
+                            translationY = if (Motion.reduced) 0f else c * size.height * .07f
+                        })
+                } else {
+                    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(
+                        theme.accent.copy(alpha = if (theme.isDark) .26f else .18f), theme.background))))
+                    Box(Modifier.size(118.dp).clip(RoundedCornerShape(50)).background(theme.accent.copy(alpha = .16f))
+                        .align(Alignment.Center), contentAlignment = Alignment.Center) {
+                        Icon(Icons.Filled.Person, null, tint = theme.accent, modifier = Modifier.size(64.dp))
+                    }
+                }
+                // The floating back button stays readable over a bright photo.
+                Box(Modifier.fillMaxWidth().height(96.dp).background(Brush.verticalGradient(
+                    listOf(Color.Black.copy(alpha = .30f), Color.Transparent))))
+                // A long dissolve into the page colour: no line where the photo ends.
+                Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(height * .52f).background(
+                    Brush.verticalGradient(
+                        0f to Color.Transparent,
+                        .22f to theme.background.copy(alpha = .10f),
+                        .50f to theme.background.copy(alpha = .46f),
+                        .78f to theme.background.copy(alpha = .86f),
+                        1f to theme.background)))
             }
-            if (hero != null) AsyncImage(heroRequest, page.artist.name, contentScale = ContentScale.Crop,
-                alignment = Alignment.TopCenter, modifier = Modifier.fillMaxSize())
-        }) {
-        if (page.tracks.isNotEmpty()) com.ketvoice.app.ui.common.CollectionActionPair(
-            { Player.setShuffle(false); Player.playQueue(page.tracks) }, { Player.playShuffled(page.tracks) },
-            Modifier.widthIn(max = 560.dp), playLabel = "Écouter", playTag = "artist-play", shuffleTag = "artist-shuffle")
+        }
+        Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            StaggeredReveal(order = 0) { ArtistIdentity(page.artist.name, artwork.signature ?: artwork.logo, startAligned = false) }
+            val meta = listOf(page.listeners, "YouTube Music").filter { it.isNotBlank() }.joinToString(" · ")
+            StaggeredReveal(order = 1) {
+                Text(meta, localize = false, color = theme.secondary, fontSize = 12.5.sp, maxLines = 1,
+                    overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp, bottom = 14.dp))
+            }
+            if (page.tracks.isNotEmpty()) StaggeredReveal(order = 2, modifier = Modifier.fillMaxWidth()) {
+                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    com.ketvoice.app.ui.common.CollectionActionPair(
+                        { Player.setShuffle(false); Player.playQueue(page.tracks) }, { Player.playShuffled(page.tracks) },
+                        Modifier.widthIn(max = 560.dp), playLabel = "Écouter", playTag = "artist-play", shuffleTag = "artist-shuffle")
+                }
+            }
+            Spacer(Modifier.height(18.dp))
+        }
     }
 }

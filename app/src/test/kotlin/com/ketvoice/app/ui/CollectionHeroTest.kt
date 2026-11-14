@@ -53,4 +53,20 @@ class CollectionHeroTest {
         assertEquals("FLAC", savedFormatBadge("DASH · FLAC"))
         assertEquals("MP3", savedFormatBadge("MP3 · Haute qualité"))
     }
+
+    @Test fun anArtistPageIsPulledTowardsThePortraitColour() {
+        val light = androidx.compose.ui.graphics.Color.White
+        val dark = androidx.compose.ui.graphics.Color.Black
+        val red = androidx.compose.ui.graphics.Color(1f, 0f, 0f)
+        assertEquals("Without a colour the page keeps its background", light, com.ketvoice.app.ui.sub.artistPageTint(light, null, dark = false))
+        // Colours are blended perceptually, so only the direction and the range are asserted.
+        val pastel = com.ketvoice.app.ui.sub.artistPageTint(light, red, dark = false)
+        assertTrue("A light page leans towards the portrait", pastel.red > pastel.green + .15f && pastel.red > pastel.blue + .15f)
+        assertTrue("and stays a pastel, bright enough for dark text", pastel.green > .55f && pastel.red > .9f)
+        val deep = com.ketvoice.app.ui.sub.artistPageTint(dark, red, dark = true)
+        assertTrue("A dark page leans towards the portrait", deep.red > deep.green + .1f && deep.red > deep.blue + .1f)
+        assertTrue("and stays dark enough for light text", deep.red < .55f && deep.green < .2f)
+        assertTrue("A dark page takes less of the colour than a light one",
+            com.ketvoice.app.ui.sub.artistPageTint(light, red, dark = true).green > pastel.green)
+    }
 }

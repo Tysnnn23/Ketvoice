@@ -7,6 +7,20 @@
 
 ---
 
+# Ketvoice 4.14.1
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 100** — the artist page takes its colour from the portrait.
+
+- The portrait fills the top of the artist page again and dissolves, without a line,
+  into a colour taken from the photo.
+- That colour tints the whole page: a pastel on a light theme, a deep shade on a dark one.
+
+Full notes: [4.14.1](docs/releases/v4.14.1.md).
+
+---
+
 # Ketvoice 4.14.0
 
 ![Ketvoice](ketvoice-banner.png)

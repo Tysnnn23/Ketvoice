@@ -62,7 +62,15 @@ fun ArtistScreen(request: AppUi.ArtistRequest? = AppUi.artistRequest.value) {
     val player by Player.state.collectAsState()
     var page by remember(request.id, request.name) { mutableStateOf<ArtistPage?>(null) }
     val accent = com.ketvoice.app.theme.rememberCoverAccent(page?.artist?.photo)?.first
+    // The page takes its colour from the portrait: the header reports it once it is known.
+    var portraitTone by remember(request) { mutableStateOf<androidx.compose.ui.graphics.Color?>(null) }
+    val pageTint by androidx.compose.animation.animateColorAsState(
+        artistPageTint(baseTheme.background,
+            portraitTone.takeIf { com.ketvoice.app.data.AppSettings.albumColors.value }, baseTheme.isDark),
+        androidx.compose.animation.core.tween(Motion.duration(520)), label = "artist-page-tint")
     val theme = baseTheme.copy(
+        background = pageTint,
+        card = androidx.compose.ui.graphics.lerp(pageTint, baseTheme.onBackground, if (baseTheme.isDark) .08f else .05f),
         accent = if (com.ketvoice.app.data.AppSettings.albumColors.value) accent ?: baseTheme.accent else baseTheme.accent
     )
     var loading by remember(request.id, request.name) { mutableStateOf(true) }
@@ -141,7 +149,7 @@ fun ArtistScreen(request: AppUi.ArtistRequest? = AppUi.artistRequest.value) {
             LazyColumn(Modifier.fillMaxSize(), state = listState,
                 contentPadding = PaddingValues(bottom = 210.dp)) {
                 val data = page!!
-                item(key = "artist-header") { ArtistHeader(data) { collapse.value } }
+                item(key = "artist-header") { ArtistHeader(data, { collapse.value }) { portraitTone = it } }
                 if (data.description.isNotBlank()) item {
                     Column(Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
                         Text(data.description, localize = false, color = theme.secondary, fontSize = 13.5.sp, lineHeight = 19.sp,

@@ -212,6 +212,50 @@ class PrismalHostRenderTest {
         image("artist-header-dark-fallback")
     }
 
+    @Test fun artistPageTakesItsColourFromThePortrait() {
+        AppSettings.reduceAnimations.value = true
+        AppSettings.artistPhotos.value = false
+        AppSettings.artistSignatures.value = false
+        // A warm portrait: red above, a darker red below.
+        val bitmap = android.graphics.Bitmap.createBitmap(120, 120, android.graphics.Bitmap.Config.ARGB_8888)
+        for (x in 0 until 120) for (y in 0 until 120) bitmap.setPixel(x, y, android.graphics.Color.rgb(200 - y / 2, 40 + x / 6, 60))
+        val drawable = android.graphics.drawable.BitmapDrawable(compose.activity.resources, bitmap)
+        coil.Coil.setImageLoader(coil.ImageLoader.Builder(compose.activity).components {
+            add(coil.intercept.Interceptor { chain -> coil.request.SuccessResult(drawable, chain.request, coil.decode.DataSource.MEMORY) })
+        }.build())
+        val track = Track("qa:artist-tint", "QA title", "Nova", "Album")
+        var reported: androidx.compose.ui.graphics.Color? = null
+        compose.setContent { KetvoiceTheme(useDark = false) {
+            val base = LocalTheme.current
+            var tone by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<androidx.compose.ui.graphics.Color?>(null) }
+            val tinted = base.copy(background = com.ketvoice.app.ui.sub.artistPageTint(base.background, tone, base.isDark))
+            androidx.compose.runtime.CompositionLocalProvider(LocalTheme provides tinted) {
+                Box(Modifier.fillMaxSize().background(tinted.background)) {
+                    ArtistHeader(ArtistPage(MusicArtist("qa:artist-tint", "Nova", "fixture:warm-portrait"), "", listOf(track),
+                        emptyList(), emptyList(), "", 1f), onTone = { tone = it; reported = it })
+                }
+            }
+        } }
+        compose.waitUntil(10_000) { reported != null }
+        compose.waitForIdle()
+        val portrait = compose.onNodeWithTag("artist-portrait").fetchSemanticsNode().boundsInRoot
+        val width = compose.activity.window.decorView.width.toFloat()
+        assertEquals("The portrait starts at the left edge", 0f, portrait.left, 1f)
+        assertTrue("The portrait reaches the right edge", portrait.width >= width - 1f)
+        compose.onNodeWithText("Nova").assertIsDisplayed()
+        compose.onNodeWithText("Écouter").assertIsDisplayed()
+        image("artist-page-tint-light") { shot ->
+            // Below the portrait the page is no longer the plain light background: it carries the portrait's red.
+            val page = shot.getPixel(20, (portrait.bottom + 40f).toInt().coerceAtMost(shot.height - 1))
+            assertTrue("The page is tinted warm (r=${android.graphics.Color.red(page)}, b=${android.graphics.Color.blue(page)})",
+                android.graphics.Color.red(page) > android.graphics.Color.blue(page) + 12)
+            // And the photo's last rows have already dissolved into that same colour: no line.
+            val seam = shot.getPixel(20, (portrait.bottom - 2f).toInt())
+            assertTrue("No visible seam where the portrait ends",
+                kotlin.math.abs(android.graphics.Color.red(seam) - android.graphics.Color.red(page)) <= 6)
+        }
+    }
+
     @Test fun artistPortraitFixtureKeepsIdentityAndActionsOnOneSurface() {
         AppSettings.reduceAnimations.value = true
         AppSettings.artistPhotos.value = false

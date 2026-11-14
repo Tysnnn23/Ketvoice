@@ -21,6 +21,14 @@
 
 ## Overview
 
+### 4.14.1 — the artist page takes its colour from the portrait
+
+The portrait fills the top of the artist page again and dissolves, without a line,
+into a colour taken from the photo; that colour tints the whole page.
+[Mobile](https://github.com/Tysnnn23/Ketvoice/releases/download/v4.14.1/Ketvoice-4.14.1.apk)
+· [Quest](https://github.com/Tysnnn23/Ketvoice/releases/download/v4.14.1/Ketvoice-4.14.1-Quest.apk)
+· [Release notes](docs/releases/v4.14.1.md).
+
 ### 4.14.0 — one layout for album, playlist, artist and Downloads
 
 The four collection pages share one header: the cover's colours blurred edge to edge,
