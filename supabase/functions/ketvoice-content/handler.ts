@@ -408,7 +408,7 @@ function overrideView(row: Row): Row {
   // scale, x and y keep the app versions that knew a zoom-and-offset framing on an untouched picture.
   const frame=row.frame && typeof row.frame==="object" ? {...(row.frame as Row),scale:1,x:0,y:0} : null;
   return {kind:row.kind,key:row.key,label:row.label ?? "",coverURL:url(row.cover_path),canvasURL:url(row.canvas_path),
-    heroURL:url(row.hero_path),frame,updatedAt:row.updated_at};
+    heroURL:url(row.hero_path),canvasOff:row.canvas_off===true,frame,updatedAt:row.updated_at};
 }
 async function readHero(file: FormDataEntryValue | null) {
   if(file === null) return null;
@@ -436,14 +436,23 @@ function overrideFrame(value: unknown): Row {
 }
 /** Every owner-curated catalogue visual, public and cacheable: the app applies them over the catalogue's own. */
 async function publicOverrides(): Promise<Response> {
-  const rows=await database("ketvoice_media_overrides?select=kind,key,label,cover_path,canvas_path,hero_path,frame,updated_at&order=updated_at.desc&limit=5000");
+  const rows=await database("ketvoice_media_overrides?select=kind,key,label,cover_path,canvas_path,hero_path,canvas_off,frame,updated_at&order=updated_at.desc&limit=5000");
   return new Response(JSON.stringify({overrides:rows.map(overrideView)}),{status:200,headers:{...CORS,
     "content-type":"application/json; charset=utf-8","cache-control":"public, max-age=120"}});
 }
+const MAX_OVERRIDE_ITEMS = 80;
+const quotedKeys = (keys: string[]) => encodeURIComponent(`(${keys.map(k=>`"${k}"`).join(",")})`);
+/** True while a stored file is still named by any override row. */
+async function referenced(path: string): Promise<boolean> {
+  const rows=await database(`ketvoice_media_overrides?select=key&or=${encodeURIComponent(`(cover_path.eq.${path},canvas_path.eq.${path},hero_path.eq.${path})`)}&limit=1`);
+  return rows.length>0;
+}
 /**
- * Replaces or restores the cover, Canvas or artist photo of a catalogue title, album
- * or artist. Only the verified owner reaches this; the original catalogue data is never
- * touched, so "restore" just forgets the override.
+ * Replaces or restores the cover, Canvas or artist photo of catalogue titles, albums or
+ * artists, switches a title's or an album's Canvas off, or frames an album's hero. One
+ * request may carry up to 80 items of one kind (a selection of titles): the files are
+ * stored once and every item points at them. Only the verified owner reaches this; the
+ * original catalogue data is never touched, so "restore" just forgets the override.
  */
 async function catalogueOverride(req: Request, owner: string): Promise<Response> {
   const bytes=await bounded(req,MAX_COVER+MAX_CANVAS+MAX_HERO+65536);
@@ -453,44 +462,76 @@ async function catalogueOverride(req: Request, owner: string): Promise<Response>
   let meta: Row;
   try { meta=JSON.parse(String(form.get("metadata") || "{}")); }
   catch { throw new HttpError(400,"Métadonnées invalides"); }
-  if(!meta || Array.isArray(meta) || typeof meta!=="object" || Object.keys(meta).some(k=>!["kind","key","label","rightsConfirmed","remove","frame"].includes(k)))
+  if(!meta || Array.isArray(meta) || typeof meta!=="object" || Object.keys(meta).some(k=>!["kind","key","label","items","rightsConfirmed","remove","frame","canvasOff"].includes(k)))
     throw new HttpError(400,"Métadonnées invalides");
   if(meta.rightsConfirmed!==true) throw new HttpError(400,"Confirmez vos droits sur ces visuels");
-  const {kind,key:itemKey}=overrideKey(meta.kind,meta.key);
-  const label=String(meta.label ?? "").trim().slice(0,300);
+  const firstItem=Array.isArray(meta.items) ? (meta.items[0] as Row | undefined) : undefined;
+  const kind=overrideKey(meta.kind,meta.key ?? firstItem?.key).kind;
+  let wanted: {key:string,label:string}[];
+  if(meta.items!==undefined) {
+    if(meta.key!==undefined || meta.label!==undefined) throw new HttpError(400,"Choisissez entre un élément et une liste");
+    if(!Array.isArray(meta.items) || !meta.items.length || meta.items.length>MAX_OVERRIDE_ITEMS) throw new HttpError(400,`Choisissez entre 1 et ${MAX_OVERRIDE_ITEMS} éléments`);
+    wanted=meta.items.map((item: Row)=>{
+      if(!item || typeof item!=="object" || Object.keys(item).some(k=>!["key","label"].includes(k))) throw new HttpError(400,"Élément invalide");
+      return {key:overrideKey(kind,item.key).key,label:String(item.label ?? "").trim().slice(0,300)};
+    });
+  } else wanted=[{key:overrideKey(kind,meta.key).key,label:String(meta.label ?? "").trim().slice(0,300)}];
+  const unique=new Map<string,{key:string,label:string}>();
+  for(const item of wanted) if(!unique.has(item.key)) unique.set(item.key,item);
+  const targets=[...unique.values()];
   const allowed=OVERRIDE_FIELDS[kind];
+  const hasCanvas=allowed.includes("canvas");
   const remove=meta.remove===undefined ? [] : meta.remove;
   const framable=kind==="album";
   if(!Array.isArray(remove) || remove.some(f=>!(allowed.includes(String(f)) || (framable && f==="frame")))) throw new HttpError(400,"Retrait invalide");
   const frame=meta.frame===undefined ? null : overrideFrame(meta.frame);
   if(frame && !framable) throw new HttpError(400,"Ce cadrage ne s'applique qu'aux albums");
+  if(frame && targets.length>1) throw new HttpError(400,"Un cadrage ne s'applique qu'à un album à la fois");
   if(frame && remove.includes("frame")) throw new HttpError(400,"Choisissez entre recadrer et rétablir");
+  if(meta.canvasOff!==undefined && (typeof meta.canvasOff!=="boolean" || !hasCanvas)) throw new HttpError(400,"Canvas désactivable pour les titres et les albums seulement");
   const files: Record<string,{data:Uint8Array,ext:string,mime:string}|null>={
     cover:await readCover(form.get("cover")),canvas:await readCanvas(form.get("canvas")),hero:await readHero(form.get("hero"))};
   for(const field of names.slice(1)) if(files[field] && !allowed.includes(field)) throw new HttpError(400,"Ce visuel ne s'applique pas à cet élément");
   if(remove.some(f=>files[String(f)])) throw new HttpError(400,"Choisissez entre remplacer et rétablir");
-  if(!remove.length && !frame && !allowed.some(f=>files[f])) throw new HttpError(400,"Aucune modification demandée");
-  const scope=`ketvoice_media_overrides?kind=eq.${kind}&key=eq.${encodeURIComponent(itemKey)}`;
-  const current=(await database(`${scope}&limit=1`))[0] ?? {};
-  const prefix=`catalogue-${kind}-${crypto.randomUUID()}`, uploaded: string[]=[], next: Row={};
-  for(const field of allowed) next[overrideColumn(field)]=current[overrideColumn(field)] ?? null;
-  const framing: Row={frame:frame ? frame : remove.includes("frame") || !framable ? null : current.frame ?? null};
+  if(meta.canvasOff===true && (files.canvas || remove.includes("canvas"))) throw new HttpError(400,"Choisissez entre désactiver, remplacer et rétablir le Canvas");
+  if(!remove.length && !frame && meta.canvasOff===undefined && !allowed.some(f=>files[f])) throw new HttpError(400,"Aucune modification demandée");
+  const keys=targets.map(t=>t.key);
+  const currentRows=await database(`ketvoice_media_overrides?kind=eq.${kind}&key=in.${quotedKeys(keys)}&limit=${MAX_OVERRIDE_ITEMS}`);
+  const current=new Map<string,Row>(currentRows.map(row=>[String(row.key),row]));
+  const prefix=`catalogue-${kind}-${crypto.randomUUID()}`, uploaded: string[]=[], fresh: Row={};
   try {
     for(const field of allowed) {
       const file=files[field];
-      if(file) { const path=`${prefix}/${field}.${file.ext}`;await store(path,file.data,file.mime);uploaded.push(path);next[overrideColumn(field)]=path; }
+      if(file) { const path=`${prefix}/${field}.${file.ext}`;await store(path,file.data,file.mime);uploaded.push(path);fresh[overrideColumn(field)]=path; }
     }
-    for(const field of remove) if(field!=="frame") next[overrideColumn(String(field))]=null;
-    const replaced=allowed.map(f=>current[overrideColumn(f)]).filter(p=>p && !Object.values(next).includes(p)).map(String);
-    let row: Row | null=null;
-    if(allowed.every(f=>!next[overrideColumn(f)]) && framing.frame==null) await database(scope,{method:"DELETE"});
-    else {
-      const body={kind,key:itemKey,label:label || String(current.label ?? ""),...next,...framing,updated_by:owner,updated_at:new Date().toISOString()};
-      row=(await database("ketvoice_media_overrides?on_conflict=kind,key",{method:"POST",
-        headers:{Prefer:"resolution=merge-duplicates,return=representation"},body:JSON.stringify(body)}))[0] ?? body;
+    const now=new Date().toISOString(), write: Row[]=[], drop: string[]=[], replaced=new Set<string>();
+    for(const target of targets) {
+      const before=current.get(target.key) ?? {};
+      const next: Row={};
+      for(const field of allowed) next[overrideColumn(field)]=before[overrideColumn(field)] ?? null;
+      Object.assign(next,fresh);
+      for(const field of remove) if(field!=="frame") next[overrideColumn(String(field))]=null;
+      let off=before.canvas_off===true;
+      if(hasCanvas) {
+        if(meta.canvasOff===true) { off=true; next.canvas_path=null; }
+        else if(meta.canvasOff===false) off=false;
+        if(files.canvas || remove.includes("canvas")) off=false;
+      }
+      const framing=frame ? frame : remove.includes("frame") || !framable ? null : before.frame ?? null;
+      for(const field of allowed) { const old=before[overrideColumn(field)]; if(old && old!==next[overrideColumn(field)]) replaced.add(String(old)); }
+      if(allowed.every(f=>!next[overrideColumn(f)]) && framing==null && !off) { if(current.has(target.key)) drop.push(target.key); continue; }
+      write.push({kind,key:target.key,label:target.label || String(before.label ?? ""),...next,canvas_off:off,frame:framing,updated_by:owner,updated_at:now});
     }
-    if(replaced.length) await api(`/storage/v1/object/${BUCKET}`,{method:"DELETE",body:JSON.stringify({prefixes:replaced})}).catch(()=>{});
-    return json({override:row ? overrideView(row) : null,restored:row===null});
+    let rows: Row[]=[];
+    if(write.length) rows=await database("ketvoice_media_overrides?on_conflict=kind,key",{method:"POST",
+      headers:{Prefer:"resolution=merge-duplicates,return=representation"},body:JSON.stringify(write)});
+    if(drop.length) await database(`ketvoice_media_overrides?kind=eq.${kind}&key=in.${quotedKeys(drop)}`,{method:"DELETE"});
+    // A file other rows still use stays; the rest is cleaned up.
+    const gone: string[]=[];
+    for(const path of replaced) if(!(await referenced(path))) gone.push(path);
+    if(gone.length) await api(`/storage/v1/object/${BUCKET}`,{method:"DELETE",body:JSON.stringify({prefixes:gone})}).catch(()=>{});
+    const views=(rows.length ? rows : write).map(overrideView);
+    return json({override:views[0] ?? null,overrides:views,restored:!write.length,removed:drop});
   } catch(error) {
     if(uploaded.length) await api(`/storage/v1/object/${BUCKET}`,{method:"DELETE",body:JSON.stringify({prefixes:uploaded})}).catch(()=>{});
     throw error;
