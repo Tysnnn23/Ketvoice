@@ -1,0 +1,207 @@
+{
+  "schema": 8,
+  "version": "5.0.0",
+  "versionCode": 106,
+  "source_commit": "3a180aa8d22d85fd2a93f8149d2d1bed2e095d55",
+  "created_at": "2026-11-14T22:20:02.491190+00:00",
+  "build_origin": {
+    "kind": "github_actions_with_owner_discord_sdk",
+    "workflow": "android.yml",
+    "run_id": 43646635331,
+    "artifact": {
+      "id": 14134870091,
+      "sha256": "1d37f6b54f6978d3d7382d38517988158b8a5198f95dd41e8dc9cd1dc1ac20dd"
+    },
+    "gradle": "assembleMobileRelease assembleQuestRelease",
+    "note": "Signed by CI with the pinned keystore secret; the Discord Social SDK AAR matched its pinned SHA-256."
+  },
+  "local_validation": {
+    "result": "debug JVM/Robolectric suites for both flavors, release lint and the UI text audit passed in a cloud container without the Discord SDK",
+    "commands": [
+      "testMobileDebugUnitTest",
+      "testQuestDebugUnitTest",
+      "lintMobileRelease",
+      "lintQuestRelease",
+      "tools/audit_ui_texts.py --check"
+    ],
+    "ci_validation": "run 43646635331: release builds, debug and release unit tests for both flavors, UI text audit, lint, APK signature pin and Discord bridge packaging passed",
+    "code_review": {
+      "kind": "author's own re-read; no independent review"
+    },
+    "host_previews": "Automix switch in the queue, the Mixing badge with the second progress line, the Automix settings, the framing editor and the framing preview on the album page rendered in software on the host and inspected",
+    "after_last_full_local_run": "no source change after the last complete local run; one sentence of the release notes was reworded"
+  },
+  "server": {
+    "function": "ketvoice-content",
+    "deployed_version": 20,
+    "deployment": "a one-line entrypoint importing supabase/functions/ketvoice-content/handler.ts from commit 9949922c5041b4e2d4ccd4d5581dc0738d4a4835 on raw.githubusercontent.com, bundled at deploy time",
+    "database_migrations": [
+      "20261114210000_media_override_frame_rect.sql applied (frame jsonb on ketvoice_media_overrides)",
+      "20261114200000_enable_rls_service_tables.sql applied (row level security on ketvoice_api_hits, ketvoice_search_cache, ketvoice_active_listeners, which no client role could reach before either)"
+    ],
+    "changed_routes": [
+      "GET /overrides returns frame as {cx, cy, w, h, rotation, flip}",
+      "POST /admin/override accepts that frame for albums (verified owner only)"
+    ],
+    "tests": "handler_test.ts: 7 Deno tests pass locally, including the rectangle framing's validation, rounding, album-only scope and removal",
+    "live_check": "/health 200, /overrides 200, /admin/override 401 without an owner session after deployment; ketvoice-api /health, /listeners and /search 200 after the RLS change"
+  },
+  "tests": {
+    "mobile": {
+      "jvm": {
+        "tests": 714,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "android_15_emulator_compose": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "quest": {
+      "jvm": {
+        "tests": 713,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "android_15_emulator_compose": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    }
+  },
+  "lint": {
+    "mobile": {
+      "Warning": 183,
+      "Hint": 19
+    },
+    "quest": {
+      "Warning": 185,
+      "Hint": 19
+    }
+  },
+  "apks": [
+    {
+      "name": "Ketvoice-5.0.0.apk",
+      "sha256": "b5c38dc2b83394ab0c557689e9d4cdf8a19479104166b9a3e35f84bb97f268d3",
+      "bytes": 73439740,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "5.0.0",
+      "versionCode": 106,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-5.0.0-Quest.apk",
+      "sha256": "9ceb0eedb9be004a974e805ef03158fd4238f069b764f1087d244557b6be96b1",
+      "bytes": 83489722,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "5.0.0",
+      "versionCode": 106,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    }
+  ],
+  "discord": {
+    "sdk_present_in_ci_build": true,
+    "sdk_sha256_pinned": true,
+    "bridge_and_native_libraries_verified": true,
+    "presence_mode": "unauthenticated_rpc_through_installed_discord_app"
+  },
+  "credential_scan": {
+    "entries": 3349,
+    "findings": 0,
+    "raw_pattern_findings": 1,
+    "scope": "tracked sources and APK archive entries",
+    "kind": "credential_patterns",
+    "explicit_private_provider_key_deny_list": false,
+    "triage": [
+      {
+        "file": "Ketvoice-Liquid-Glass-V4.html",
+        "classification": "embedded_image_false_positive",
+        "all_hits_inside_image_data_uris": true,
+        "rescanned_without_image_payloads": true
+      }
+    ]
+  },
+  "release_install_smoke": {
+    "mobile": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "quest": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    }
+  },
+  "publication_override": {
+    "authorized_by_user": true,
+    "authorized_at": "2026-11-14T22:20:02.491190+00:00",
+    "kind": "standing_authorization",
+    "user_statement": "J'autorise TOUT devient maintenant une règle.",
+    "user_statement_date": "2026-11-14",
+    "in_reply_to": "The question whether versions may be published without phone or Quest testing without asking again for each version.",
+    "recorded_in": "AGENTS.md (commit aeeda8e)",
+    "reason": "The owner made publishing validated versions without phone or Quest testing a standing rule.",
+    "scope": "physical device installation and all on-device behaviour of 5.0.0"
+  },
+  "automix": {
+    "tested_on_host": [
+      "tempo, beat positions, bar detection, intro/outro/fade/hard-ending detection and loudness on synthetic audio with known values (BeatAnalysisTest)",
+      "the transition planner on hand-built analyses: contexts never mixed, beat mix, crossfade, silence trim, lyrics-aware limits, intensities (TransitionPlannerTest)",
+      "level curves, the bass hand-over filter, sample-by-sample level moves and the tempo nudging rule (DeckDspTest)",
+      "the per-deck processor inside Media3's own processor contract: pass-through, flush on an unsupported format, position-tied levels, the analysis tap (DeckMixProcessorTest)",
+      "the queue switch, the Mixing badge and artwork dissolve, the settings section (host UI tests)"
+    ],
+    "never_run_with_real_audio": [
+      "the two-deck engine: the silent fast reading of the two titles, the incoming deck's start, the tempo lock between decks, the hand-over of the media session and the glide back to the title's own tempo have not been executed against real audio output on any device or emulator",
+      "how a mix sounds: no transition was listened to; beat alignment, the bass hand-over and level matching are designed and unit-tested, not heard",
+      "tempo and beat detection on real music (only synthetic material was analysed)",
+      "battery, CPU and data use of the analysis and of two decks playing together",
+      "behaviour with Bluetooth output latency, audio focus changes, calls and headset removal during a mix"
+    ],
+    "safeguards": [
+      "off by default; with the switch off the only additions to the sound path are a pass-through processor and a position sample in the audio sink",
+      "any seek, title change, error, missing analysis or lack of time gives up the transition and the title ends as before",
+      "if the player's internal clock cannot be confirmed against positions at run time, only a plain crossfade on the decks' volume is used",
+      "a failure inside the level/filter code drops the transition and passes the sound through"
+    ]
+  },
+  "not_validated": [
+    "physical phone or Quest installation, rendering and touch behaviour",
+    "Automix with real audio on any device or emulator (see the automix section): it has only been unit-tested and rendered on the host",
+    "the capsule of page actions, the framing editor's gestures (drag, pinch, angle wheel) and the framing preview as perceived on a device",
+    "album framing end to end with the owner account: publishing a rectangle, a turn and a mirror, and what listeners then see on a cover and on a Canvas (no owner session in this environment)",
+    "independent code review of this diff"
+  ],
+  "owner_section_changes": [
+    "Album framing is now a full-screen editor in the manner of a photo editor: a rectangle with handles and a grid of thirds over the cover or Canvas, an angle wheel, a quarter turn, a mirror, the shapes Custom / Original / 1:1, cancel and done; the real page then shows the draft before it is published.",
+    "The framing is stored as {cx, cy, w, h, rotation, flip}; the album hero takes the rectangle's shape within what a page allows. The zoom-and-offset framing of 4.17.0 is no longer read or accepted (none had been published).",
+    "The owner's Visuals and Framing actions share one capsule with Share on album pages; Visuals shares the artist page's capsule."
+  ],
+  "known_limitations": [
+    "Owner-section changes are deliberately not mentioned in the public release notes (owner preference).",
+    "Automix needs the next title to be playable without a new resolution (downloaded, cached, local or resolved ahead); otherwise the title ends as before.",
+    "Automix does not mix into titles added by Autoplay at the end of the queue, nor a title whose source was chosen by hand.",
+    "A stream started by Automix is not upgraded to a better quality afterwards for that title.",
+    "A framing made on a Canvas is brought back onto the cover's own shape for listeners who see the cover, so the two can differ slightly.",
+    "The signing certificate is the existing public Android debug identity, not a private production key."
+  ],
+  "canonical_banner_sha256": "47f6793088983f7d4e6bd1aeaa2cbd8b7cdc2a8f91271e3b2839daea81da0436"
+}
