@@ -79,7 +79,8 @@ class LibraryRedesignHostTest {
         }
     }
 
-    @Test fun transfersAndSavedFilesHaveSeparateRowsAndOneStatusEach() {
+    @Test @Config(qualifiers = "w400dp-h1500dp-mdpi")
+    fun transfersAndSavedFilesHaveSeparateRowsAndOneStatusEach() {
         val paused = track("pause", "Un transfert en pause")
         saved.value = listOf(file(track("saved", "Une piste hors ligne")))
         active.value = mapOf(paused.id to paused, saved.value.single().track.id to saved.value.single().track)
@@ -182,7 +183,7 @@ class LibraryRedesignHostTest {
         compose.onNodeWithText("Albums").performClick().assertIsSelected()
     }
 
-    @Test fun decodedArtworkFixturePreservesTheFullBleedLayout() {
+    @Test fun decodedArtworkFixtureFloatsAsACentredSquare() {
         val cover = File("../ketvoice-banner.png")
         assertTrue("Use the repository's canonical image as a local software fixture", cover.isFile)
         // Supply a decoded drawable: Windows paths are not Android file URIs.
@@ -200,8 +201,9 @@ class LibraryRedesignHostTest {
         } }
         compose.waitUntil(10_000) { compose.onAllNodesWithTag("album-artwork-loaded").fetchSemanticsNodes().isNotEmpty() }
         val art = compose.onNodeWithTag("album-hero-visual").fetchSemanticsNode().boundsInRoot
-        assertEquals(0f, art.left, 1f)
-        assertEquals(400f, art.width, 1f)
+        assertEquals("The artwork floats centred", 400f / 2f, (art.left + art.right) / 2f, 1.5f)
+        assertEquals("The artwork is a square", art.width, art.height, 1f)
+        assertTrue("The artwork is large without filling the width", art.width in 160f..400f * .8f)
         image("album-redesign-local-artwork-light")
     }
 

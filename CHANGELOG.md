@@ -7,6 +7,24 @@
 
 ---
 
+# Ketvoice 4.14.0
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 99** — one layout for album, playlist, artist and Downloads.
+
+- A shared header: the cover's colours blurred edge to edge, the artwork floating
+  over them, the name centred, Play and Shuffle as a pair.
+- A glass title bar with a Play button once the header has scrolled away.
+- Liquid 27: Play and Shuffle are one body of glass that bridges when pressed; menus
+  grow out of the place that opened them; selectors use a sliding lens of glass.
+- The menu of a title starts with five round glass buttons.
+- One row for a title in catalogue, artist, Local music and Replay lists.
+
+Full notes: [4.14.0](docs/releases/v4.14.0.md).
+
+---
+
 # Ketvoice 4.13.0
 
 ![Ketvoice](ketvoice-banner.png)

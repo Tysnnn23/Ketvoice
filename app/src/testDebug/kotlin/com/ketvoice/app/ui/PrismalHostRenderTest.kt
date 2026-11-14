@@ -442,7 +442,7 @@ class PrismalHostRenderTest {
         image("splash-brand")
     }
 
-    @Test fun albumHeroRunsEdgeToEdgeInsteadOfASquareCard() {
+    @Test fun albumArtworkFloatsAsACentredSquareOverItsColours() {
         AppSettings.reduceAnimations.value = true
         AppSettings.albumHeroCanvas.value = true
         val track = Track("qa:album-hero", "QA title", "QA artist", "QA album", durationMs = 180_000)
@@ -453,9 +453,9 @@ class PrismalHostRenderTest {
         } }
         val hero = compose.onNodeWithTag("album-hero-visual").fetchSemanticsNode().boundsInRoot
         val width = compose.activity.window.decorView.width.toFloat()
-        assertEquals("The artwork must start at the left edge", 0f, hero.left, 1f)
-        assertTrue("The artwork must reach the right edge (hero=${hero.width}, screen=$width)",
-            hero.width >= width - 1f)
+        assertEquals("The artwork floats centred", width / 2f, (hero.left + hero.right) / 2f, 1.5f)
+        assertEquals("The artwork is a square", hero.width, hero.height, 1f)
+        assertTrue("The artwork is large without filling the width", hero.width in 160f..width * .8f)
         image("album-hero-full-bleed")
     }
 

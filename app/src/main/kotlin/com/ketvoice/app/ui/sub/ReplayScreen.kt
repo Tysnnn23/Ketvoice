@@ -171,23 +171,12 @@ fun ReplayScreen() {
                         val track = pair.first
                         val active = player.current?.id == track.id
                         SwipeTrackActions(track) {
-                            Row(Modifier.fillMaxWidth().trackRowClick(track) {
-                                Player.playQueue(topTracks.map { it.first }, index)
-                            }.padding(horizontal = 18.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Text("${index + 1}", localize = false, color = th.secondary, fontSize = 13.sp, modifier = Modifier.width(26.dp))
-                                val cover = ArtworkRepo.coverForTrack(track) ?: track.coverUrl
-                                Cover(track.title, cover, 50.dp, 9.dp)
-                                Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
-                                    TrackTitle(track.title, th.onBackground, selected = active, fontSize = 15.sp)
-                                    Text(track.artist, localize = false, color = th.secondary, fontSize = 13.sp,
-                                        maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                }
-                                if (active) NowPlayingBars(player.isPlaying, Modifier.padding(end = 10.dp))
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Filled.MusicNote, null, tint = th.accent, modifier = Modifier.size(13.dp))
-                                    Spacer(Modifier.width(4.dp))
-                                    Text("${pair.second}", localize = false, color = th.accent, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                                }
+                            com.ketvoice.app.ui.common.TrackRow(track, ArtworkRepo.coverForTrack(track) ?: track.coverUrl, active,
+                                player.isPlaying, { Player.playQueue(topTracks.map { it.first }, index) }, rank = index + 1) {
+                                // The number of counted plays replaces the duration here.
+                                Icon(Icons.Filled.MusicNote, null, tint = th.accent, modifier = Modifier.size(13.dp))
+                                Spacer(Modifier.width(4.dp))
+                                Text("${pair.second}", localize = false, color = th.accent, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                             }
                         }
                     }

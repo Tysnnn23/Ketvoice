@@ -1,5 +1,8 @@
 package com.ketvoice.app.ui.common
 
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.border
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -94,7 +97,11 @@ internal fun SwipeTrackActions(track: Track, modifier: Modifier = Modifier, enab
         if (shift != 0f) {
             val progress = swipeProgress(shift, threshold)
             val next = shift > 0f
-            Row(Modifier.matchParentSize().background(theme.accent.copy(alpha = .08f + .14f * progress)).padding(horizontal = 16.dp),
+            // What the swipe uncovers is a capsule of tinted glass, not a flat band.
+            Row(Modifier.matchParentSize().padding(horizontal = 8.dp, vertical = 3.dp).clip(RoundedCornerShape(18.dp))
+                .background(theme.accent.copy(alpha = .10f + .16f * progress))
+                .border(.8.dp, theme.accent.copy(alpha = .18f + .30f * progress), RoundedCornerShape(18.dp))
+                .padding(horizontal = 14.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = if (next) Arrangement.Start else Arrangement.End) {
                 Icon(if (next) Icons.AutoMirrored.Filled.PlaylistPlay else Icons.AutoMirrored.Filled.PlaylistAdd, null,

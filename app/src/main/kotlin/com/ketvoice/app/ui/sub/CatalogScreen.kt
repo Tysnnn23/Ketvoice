@@ -175,22 +175,8 @@ fun CatalogScreen(request: CatalogRequest? = AppUi.catalogRequest.value) {
             itemsIndexed(tracks, key = { i, t -> "${t.id}:$i" }) { index, track ->
                 val active = player.current?.id == track.id
                 SwipeTrackActions(track) {
-                Row(Modifier.fillMaxWidth().trackRowClick(track) { Player.playQueue(tracks, index) }.padding(horizontal = 18.dp, vertical = 7.dp),
-                    verticalAlignment = Alignment.CenterVertically) {
-                    DownloadCover(track, art["t:${track.id}"] ?: track.coverUrl, 52.dp, 8.dp)
-                    Spacer(Modifier.width(12.dp))
-                    Column(Modifier.weight(1f)) {
-                        TrackTitle(track.title, color = if (active) theme.accent else theme.onBackground, selected = active)
-                        Text(track.artist, localize = false, color = theme.secondary, fontSize = if (com.ketvoice.app.BuildConfig.IS_QUEST) 14.sp else 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    }
-                    if (active) com.ketvoice.app.ui.player.NowPlayingBars(player.isPlaying, Modifier.padding(horizontal = 6.dp))
-                    else if (track.durationMs > 0) Text(formatSecs(track.durationMs), localize = false, color = theme.secondary, fontSize = if (com.ketvoice.app.BuildConfig.IS_QUEST) 14.sp else 12.sp)
-                    Box(Modifier.size(48.dp).clip(androidx.compose.foundation.shape.CircleShape)
-                        .clickable(role = androidx.compose.ui.semantics.Role.Button) { AppUi.trackMenuTrack.value = track },
-                        contentAlignment = Alignment.Center) {
-                        Icon(Icons.Filled.MoreVert, "Options", tint = theme.secondary, modifier = Modifier.size(22.dp))
-                    }
-                }
+                    com.ketvoice.app.ui.common.TrackRow(track, art["t:${track.id}"] ?: track.coverUrl, active, player.isPlaying,
+                        { Player.playQueue(tracks, index) })
                 }
             }
         }

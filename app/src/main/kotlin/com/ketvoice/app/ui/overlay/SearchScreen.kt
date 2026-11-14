@@ -214,39 +214,9 @@ fun SearchScreen() {
             }
         }
 
-        // Segments
-        Row(
-            Modifier
-                .padding(horizontal = 20.dp)
-                .widthIn(max = 640.dp).fillMaxWidth()
-                .clip(RoundedCornerShape(999.dp))
-                .background(if (th.isDark) Color(0xFF2C2C2E) else Color(0x19909093))
-                .padding(3.dp)
-        ) {
-            listOf("Tout", "Sources", "Bibliothèque").forEachIndexed { i, label ->
-                val sel = segment == i
-                Box(
-                    Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(999.dp))
-                        .background(if (sel) (if (th.isDark) Palette.White else Palette.DarkGray) else Color.Transparent)
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null
-                        ) { segment = i }
-                        .heightIn(min = 44.dp).padding(horizontal = 7.dp, vertical = 7.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        label,
-                        color = if (sel) (if (th.isDark) Palette.Black else Palette.White) else th.onBackground,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1, overflow = TextOverflow.Ellipsis
-                    )
-                }
-            }
-        }
+        // Segments : la même lentille de verre glissante que les autres sélecteurs.
+        com.ketvoice.app.ui.common.GlassSegmentedControl(listOf("Tout", "Sources", "Bibliothèque"), segment, { segment = it },
+            Modifier.padding(horizontal = 20.dp).widthIn(max = 640.dp).align(Alignment.CenterHorizontally), tag = "search-scope")
         Spacer(Modifier.height(18.dp))
 
         when {

@@ -104,25 +104,34 @@ fun DownloadsScreen() {
 
     val backdrop = com.ketvoice.app.glass.rememberGlassBackdrop(theme.background)
     Box(Modifier.fillMaxSize().background(theme.background)) {
+    val grid = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
+    // 0 while the header is in view, 1 once it has scrolled away: drives the floating title.
+    val collapse by remember { androidx.compose.runtime.derivedStateOf {
+        if (grid.firstVisibleItemIndex > 0) 1f else (grid.firstVisibleItemScrollOffset / 520f).coerceIn(0f, 1f)
+    } }
     com.ketvoice.app.glass.BackdropCapture(backdrop, Modifier.fillMaxSize()) {
-        LazyVerticalGrid(columns = GridCells.Adaptive(360.dp),
+        LazyVerticalGrid(columns = GridCells.Adaptive(360.dp), state = grid,
             modifier = Modifier.fillMaxSize().testTag("downloads-list"),
-            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 82.dp,
-                bottom = adaptive.bottomPaddingDp.dp),
+            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = adaptive.bottomPaddingDp.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             item(span = { GridItemSpan(maxLineSpan) }, key = "summary") {
-                // The most recent cover glows behind the header, edge to edge.
-                val recent = remember(saved) { saved.sortedByDescending { it.file.lastModified() }.take(3).map { it.track } }
-                com.ketvoice.app.ui.common.CollectionAmbient(
-                    recent.firstOrNull()?.let { artwork["t:${it.id}"] ?: it.coverUrl }, Modifier.fillMaxWidth(),
-                    strength = .8f, glow = true, bleed = 20.dp) {
-                Column(Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 8.dp),
+                // The shared collection header: the latest covers as a mosaic over their own colours.
+                val recent = remember(saved) { saved.sortedByDescending { it.file.lastModified() }.take(4).map { it.track } }
+                Column(Modifier.fillMaxWidth()) {
+                com.ketvoice.app.ui.common.CollectionHero(
+                    recent.firstOrNull()?.let { artwork["t:${it.id}"] ?: it.coverUrl }, 82.dp, AppText.t("Téléchargements"),
+                    meta = listOf(AppText.t(if (summary.count == 1) "1 titre" else "${summary.count} titres"),
+                        size(summary.bytes).takeIf { summary.count > 0 }.orEmpty(), playtimeLabel(summary.durationMs))
+                        .filter { it.isNotBlank() }.joinToString(" · "),
+                    artworkTag = "downloads-mosaic", artworkSide = 132.dp, bleed = 20.dp,
+                    artwork = { DownloadMosaic(recent.map { it.title to (artwork["t:${it.id}"] ?: it.coverUrl) }) }) {
+                    if (saved.isNotEmpty()) com.ketvoice.app.ui.common.CollectionActionPair(
+                        { Player.setShuffle(false); Player.playQueue(saved.map { it.track }) },
+                        { Player.playShuffled(saved.map { it.track }) }, Modifier.widthIn(max = 560.dp), minHeight = 52.dp)
+                }
+                Column(Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("Téléchargements", color = theme.onBackground, fontSize = 34.sp,
-                        fontWeight = FontWeight.Bold, letterSpacing = (-1).sp, modifier = Modifier.asHeading())
-                    DownloadSummaryCard(summary, freeBytes, ::size,
-                        recent.map { it.title to (artwork["t:${it.id}"] ?: it.coverUrl) }) { AppUi.showCapsule.value = true }
-                    if (saved.isNotEmpty()) CollectionPlaybackActions(saved.map { it.track }, Modifier.fillMaxWidth())
+                    DownloadSummaryCard(summary, freeBytes, ::size) { AppUi.showCapsule.value = true }
                     if (saved.isNotEmpty() || active.isNotEmpty()) {
                         CompactSearchField(query, { query = it }, { keyboard?.hide() }, Modifier.testTag("downloads-search"))
                         if (saved.isNotEmpty()) DownloadViewSwitch(view) { view = it; albumKey = null; artistKey = null }
@@ -257,10 +266,9 @@ fun DownloadsScreen() {
         }
     }
     CompositionLocalProvider(com.ketvoice.app.glass.LocalBackdropLayer provides backdrop) {
-        Row(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 18.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically) {
-            GlassBackButton { AppUi.closeOverlay() }
-            Spacer(Modifier.weight(1f))
+        com.ketvoice.app.ui.common.CollectionTopBar(AppText.t("Téléchargements"), collapse, { AppUi.closeOverlay() },
+            onPlay = if (saved.isNotEmpty() && !selecting) ({ Player.setShuffle(false); Player.playQueue(saved.map { it.track }) }) else null,
+            titleTag = "downloads-collapsed-title") {
             if (saved.isNotEmpty()) LiquidGlassButton({ selecting = !selecting; selected = emptyList() },
                 Modifier.widthIn(min = 48.dp).height(48.dp), shape = RoundedCornerShape(24.dp)) {
                 Text(if (selecting) "Annuler" else "Sélectionner", color = theme.onBackground,
@@ -300,38 +308,14 @@ private fun DownloadSectionTitle(title: String, count: Int) {
 
 /** How much is saved, how long it plays, how much of it is lossless and what room is left. */
 @Composable
-private fun DownloadSummaryCard(summary: DownloadSummary, freeBytes: Long, size: (Long) -> String,
-                                covers: List<Pair<String, String?>> = emptyList(), onCapsule: () -> Unit) {
+private fun DownloadSummaryCard(summary: DownloadSummary, freeBytes: Long, size: (Long) -> String, onCapsule: () -> Unit) {
     val theme = LocalTheme.current
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp))
         .background(Brush.linearGradient(listOf(theme.accent.copy(alpha = .18f), theme.card.copy(alpha = .86f))))
         .border(.8.dp, Brush.verticalGradient(listOf(theme.onBackground.copy(alpha = .14f), theme.onBackground.copy(alpha = .03f))),
             RoundedCornerShape(28.dp))
-        .padding(start = 20.dp, end = 20.dp, top = 18.dp, bottom = 8.dp).testTag("downloads-summary"),
+        .padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 4.dp).testTag("downloads-summary"),
         verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text(AppText.t(if (summary.count == 1) "1 titre" else "${summary.count} titres"),
-                    localize = false, color = theme.onBackground, fontSize = 28.sp, fontWeight = FontWeight.Bold,
-                    letterSpacing = (-.5).sp)
-                Text(listOf(size(summary.bytes), playtimeLabel(summary.durationMs)).filter { it.isNotBlank() }.joinToString(" · "),
-                    localize = false, color = theme.secondary, fontSize = 14.sp)
-            }
-            // What is saved, shown: the latest covers fanned like records. An empty library keeps the glyph.
-            if (covers.isEmpty()) Box(Modifier.size(48.dp).clip(RoundedCornerShape(24.dp)).background(theme.accent.copy(alpha = .16f)),
-                contentAlignment = Alignment.Center) {
-                Icon(KetIcons.Download, null, tint = theme.accent, modifier = Modifier.size(24.dp))
-            } else Box(Modifier.width((52 + 26 * (covers.size - 1)).dp).height(60.dp).testTag("downloads-covers")) {
-                covers.forEachIndexed { index, (title, url) ->
-                    val tilt = (index - (covers.size - 1) / 2f) * 7f
-                    Box(Modifier.align(Alignment.CenterStart).offset(x = (26 * index).dp).zIndex(index.toFloat())
-                        .graphicsLayer { rotationZ = if (Motion.reduced) 0f else tilt }
-                        .shadow(6.dp, RoundedCornerShape(11.dp))) {
-                        Cover(title, url, 52.dp, 11.dp)
-                    }
-                }
-            }
-        }
         if (summary.count > 0) {
             // One bar for the saved bytes: the lossless share in the accent colour.
             Row(Modifier.fillMaxWidth().height(10.dp).clip(RoundedCornerShape(5.dp)).background(theme.onBackground.copy(alpha = .10f))) {
@@ -366,18 +350,24 @@ private fun Legend(color: Color, label: String) {
 }
 
 /** Titles, albums or artists: one segmented control instead of scattered text links. */
+/** Titles, albums or artists: one segmented control whose selection is a sliding lens of glass. */
 @Composable
 internal fun DownloadViewSwitch(view: Int, tag: String = "downloads-view", onView: (Int) -> Unit) {
+    com.ketvoice.app.ui.common.GlassSegmentedControl(listOf("Titres", "Albums", "Artistes"), view, onView, tag = tag)
+}
+
+/** Up to four covers as a 2 × 2 mosaic; fewer than four show the latest one alone. */
+@Composable
+private fun BoxScope.DownloadMosaic(covers: List<Pair<String, String?>>) {
     val theme = LocalTheme.current
-    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(theme.card).padding(4.dp).selectableGroup()
-        .testTag(tag)) {
-        listOf("Titres", "Albums", "Artistes").forEachIndexed { index, label ->
-            val selected = view == index
-            Box(Modifier.weight(1f).heightIn(min = 44.dp).clip(RoundedCornerShape(12.dp))
-                .background(if (selected) theme.onBackground.copy(alpha = .10f) else Color.Transparent)
-                .selectable(selected, role = Role.Tab) { onView(index) }, contentAlignment = Alignment.Center) {
-                Text(label, color = if (selected) theme.onBackground else theme.secondary, fontSize = 14.sp,
-                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium, maxLines = 1)
+    when {
+        covers.isEmpty() -> Icon(KetIcons.Download, null, tint = theme.accent, modifier = Modifier.fillMaxSize(.4f))
+        covers.size < 4 -> Cover(covers.first().first, covers.first().second, 132.dp, 0.dp, Modifier.fillMaxSize())
+        else -> Column(Modifier.fillMaxSize()) {
+            covers.take(4).chunked(2).forEach { pair ->
+                Row(Modifier.weight(1f).fillMaxWidth()) {
+                    pair.forEach { (title, url) -> Box(Modifier.weight(1f).fillMaxHeight()) { Cover(title, url, 66.dp, 0.dp, Modifier.fillMaxSize()) } }
+                }
             }
         }
     }

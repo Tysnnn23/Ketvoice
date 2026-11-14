@@ -158,25 +158,8 @@ fun ArtistScreen(request: AppUi.ArtistRequest? = AppUi.artistRequest.value) {
                 itemsIndexed(data.tracks, key = { i, t -> "${t.id}:$i" }) { index, track ->
                     val active = player.current?.id == track.id
                     com.ketvoice.app.ui.common.SwipeTrackActions(track, if (Motion.reduced) Modifier else Modifier.animateItem()) {
-                    Row(Modifier.fillMaxWidth()
-                        .trackRowClick(track) { Player.playQueue(data.tracks, index) }
-                        .padding(horizontal = 20.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text("${index + 1}", color = theme.secondary, fontSize = 13.sp,
-                            modifier = Modifier.width(24.dp))
-                        com.ketvoice.app.ui.common.DownloadCover(track, art["t:${track.id}"] ?: track.coverUrl, 50.dp, 7.dp)
-                        Spacer(Modifier.width(12.dp))
-                        Column(Modifier.weight(1f)) {
-                            com.ketvoice.app.ui.common.TrackTitle(track.title,
-                                color = if (active) theme.accent else theme.onBackground, selected = active)
-                            Text(track.artist, localize = false, color = theme.secondary, fontSize = 12.5.sp, maxLines = 1,
-                                overflow = TextOverflow.Ellipsis)
-                        }
-                        if (active) com.ketvoice.app.ui.player.NowPlayingBars(player.isPlaying, Modifier.padding(horizontal = 6.dp))
-                        else if (track.durationMs > 0) Text(formatSecs(track.durationMs), localize = false, color = theme.secondary, fontSize = 12.sp)
-                        Box(Modifier.size(48.dp).clip(CircleShape).clickable { AppUi.trackMenuTrack.value = track }, contentAlignment = Alignment.Center) {
-                            Icon(Icons.Filled.MoreVert, "Options", tint = theme.secondary, modifier = Modifier.size(19.dp))
-                        }
-                    }
+                        com.ketvoice.app.ui.common.TrackRow(track, art["t:${track.id}"] ?: track.coverUrl, active, player.isPlaying,
+                            { Player.playQueue(data.tracks, index) }, rank = index + 1)
                     }
                 }
                 if (data.albums.isNotEmpty()) item {

@@ -2,6 +2,8 @@
 
 package com.ketvoice.app.ui.player
 
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import android.net.Uri
 import android.os.Build
 import android.view.LayoutInflater
@@ -792,6 +794,21 @@ fun formatSecs(ms: Long): String {
     return String.format(Locale.US, "%d:%02d", s / 60, s % 60)
 }
 
+/** Scale of a sheet while it appears: it starts a little smaller, never from a dot. */
+internal fun sheetEntryScale(progress: Float): Float = .82f + .18f * (if (progress.isFinite()) progress.coerceIn(0f, 1f) else 1f)
+
+/**
+ * The point a sheet grows from: where the listener last touched, expressed in the
+ * sheet's own proportions. Without a known touch, or before the sheet is measured,
+ * it grows from its bottom centre.
+ */
+internal fun sheetOrigin(touch: androidx.compose.ui.geometry.Offset?, bounds: androidx.compose.ui.geometry.Rect): androidx.compose.ui.graphics.TransformOrigin {
+    if (touch == null || bounds.width <= 0f || bounds.height <= 0f || !touch.x.isFinite() || !touch.y.isFinite())
+        return androidx.compose.ui.graphics.TransformOrigin(.5f, 1f)
+    return androidx.compose.ui.graphics.TransformOrigin(
+        ((touch.x - bounds.left) / bounds.width).coerceIn(-1f, 2f), ((touch.y - bounds.top) / bounds.height).coerceIn(-1f, 2f))
+}
+
 @Composable
 fun PlayerSheetScrim(onClose: () -> Unit, content: @Composable () -> Unit) {
 
@@ -799,6 +816,8 @@ fun PlayerSheetScrim(onClose: () -> Unit, content: @Composable () -> Unit) {
     LaunchedEffect(Unit) {
         appear.animateTo(1f, tween(Motion.duration(320), easing = androidx.compose.animation.core.CubicBezierEasing(.22f, 1f, .36f, 1f)))
     }
+    val touch = remember { com.ketvoice.app.ui.AppUi.lastTouch }
+    var sheetBounds by remember { mutableStateOf(androidx.compose.ui.geometry.Rect.Zero) }
     Box(
         Modifier
             .fillMaxSize()
@@ -813,9 +832,16 @@ fun PlayerSheetScrim(onClose: () -> Unit, content: @Composable () -> Unit) {
                 .statusBarsPadding().navigationBarsPadding()
                 .widthIn(max = 560.dp)
                 .fillMaxWidth()
+                .onGloballyPositioned { sheetBounds = it.boundsInRoot() }
                 .graphicsLayer {
                     alpha = appear.value
-                    translationY = if (Motion.reduced) 0f else (1f - appear.value) * 24.dp.toPx()
+                    if (!Motion.reduced) {
+                        // The sheet grows out of the button that opened it, then settles in place.
+                        val scale = sheetEntryScale(appear.value)
+                        scaleX = scale; scaleY = scale
+                        transformOrigin = sheetOrigin(touch, sheetBounds)
+                        translationY = (1f - appear.value) * 12.dp.toPx()
+                    }
                 }
                 .pointerInput(Unit) { detectTapGestures {} },
         ) { content() }

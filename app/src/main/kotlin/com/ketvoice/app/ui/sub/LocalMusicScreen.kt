@@ -234,7 +234,8 @@ fun LocalMusicScreen() {
                     itemsIndexed(shown, key = { _, t -> t.id }) { index, track ->
                         val active = player.current?.id == track.id
                         SwipeTrackActions(track, if (Motion.reduced) Modifier else Modifier.animateItem()) {
-                            LocalTrackRow(track, active, player.isPlaying) { Player.playQueue(shown, index) }
+                            com.ketvoice.app.ui.common.TrackRow(track, track.coverUrl, active, player.isPlaying,
+                                { Player.playQueue(shown, index) }, Modifier.testTag("local-track"))
                         }
                     }
                     if (shown.isEmpty()) item(key = "no-match") {
@@ -258,42 +259,6 @@ private fun LocalNotice(title: String, text: String, action: String, tag: String
         Box(Modifier.heightIn(min = 48.dp).clip(RoundedCornerShape(999.dp)).background(theme.accent)
             .clickable(role = Role.Button, onClick = onAction).padding(horizontal = 22.dp), contentAlignment = Alignment.Center) {
             Text(action, color = if (theme.isDark) Color.Black else Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-        }
-    }
-}
-
-@Composable
-private fun LocalTrackRow(track: Track, active: Boolean, playing: Boolean, onPlay: () -> Unit) {
-    val theme = LocalTheme.current
-    Row(Modifier.fillMaxWidth().trackRowClick(track, onClick = onPlay).padding(start = 18.dp, end = 6.dp, top = 7.dp, bottom = 7.dp)
-        .testTag("local-track"), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(52.dp).clip(RoundedCornerShape(8.dp)).background(Brush.linearGradient(gradientFor(track.id)))) {
-            if (track.coverUrl != null) {
-                AsyncImage(model = track.coverUrl, contentDescription = null,
-                    contentScale = ContentScale.Crop, modifier = Modifier.size(52.dp))
-            } else {
-                Text(track.title.take(1).uppercase(), localize = false,
-                    color = Color.White.copy(alpha = 0.85f), fontSize = 20.sp,
-                    fontWeight = FontWeight.Black, modifier = Modifier.align(Alignment.Center))
-            }
-        }
-        Spacer(Modifier.width(12.dp))
-        Column(Modifier.weight(1f)) {
-            Text(track.title, localize = false,
-                color = if (active) theme.accent else theme.onBackground,
-                fontSize = 15.sp, fontWeight = FontWeight.Medium,
-                maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(track.artist, localize = false, color = theme.secondary,
-                fontSize = if (com.ketvoice.app.BuildConfig.IS_QUEST) 14.sp else 13.sp,
-                maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
-        if (active) NowPlayingBars(playing, Modifier.padding(horizontal = 8.dp))
-        else if (track.durationMs > 0) Text(formatSecs(track.durationMs), localize = false,
-            color = theme.secondary,
-            fontSize = if (com.ketvoice.app.BuildConfig.IS_QUEST) 14.sp else 12.sp)
-        Box(Modifier.size(48.dp).clip(CircleShape).clickable(role = Role.Button) { AppUi.trackMenuTrack.value = track },
-            contentAlignment = Alignment.Center) {
-            Icon(Icons.Filled.MoreVert, "Options", tint = theme.secondary, modifier = Modifier.size(22.dp))
         }
     }
 }

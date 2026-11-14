@@ -21,6 +21,19 @@
 
 ## Overview
 
+### 4.14.0 — one layout for album, playlist, artist and Downloads
+
+The four collection pages share one header: the cover's colours blurred edge to edge,
+the artwork floating over them, the name centred, then Play and Shuffle as a pair. A
+glass title bar with a Play button follows you down the list. In Liquid 27 the two
+buttons are one body of glass that bridges when pressed, menus grow out of the place
+that opened them, and selectors use a sliding lens. The menu of a title starts with
+five round glass buttons, and catalogue, artist, Local music and Replay lists draw a
+title with the same row.
+[Mobile](https://github.com/Tysnnn23/Ketvoice/releases/download/v4.14.0/Ketvoice-4.14.0.apk)
+· [Quest](https://github.com/Tysnnn23/Ketvoice/releases/download/v4.14.0/Ketvoice-4.14.0-Quest.apk)
+· [Release notes](docs/releases/v4.14.0.md).
+
 ### 4.13.0 — one set of glass buttons and cover colours behind headers
 
 Every collection now uses the same two buttons: a prominent capsule tinted with the

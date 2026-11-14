@@ -86,12 +86,12 @@ internal fun GlassCapsuleButton(
     prominent: Boolean = false,
     enabled: Boolean = true,
     tag: String? = null,
-    minHeight: Dp = 56.dp
+    minHeight: Dp = 56.dp,
+    interactions: MutableInteractionSource = remember { MutableInteractionSource() }
 ) {
     val theme = LocalTheme.current
     val shape = RoundedCornerShape(999.dp)
     val liquid27 = isLiquid27Glass()
-    val interactions = remember { MutableInteractionSource() }
     val pressed by interactions.collectIsPressedAsState()
     val haptic = rememberHaptics()
     var bounds by remember { mutableStateOf(IntSize.Zero) }
@@ -169,13 +169,19 @@ internal fun CollectionAmbient(cover: String?, modifier: Modifier = Modifier, st
     val theme = LocalTheme.current
     val backdrop = rememberGlassBackdrop(theme.background)
     val showImage = cover != null && !AppSettings.highPerformanceMode.value
+    val context = androidx.compose.ui.platform.LocalContext.current
+    // A few dozen pixels stretched over the header: soft by construction and cheap to decode.
+    val request = remember(context, cover) {
+        coil.request.ImageRequest.Builder(context).data(cover).size(40).crossfade(false).build()
+    }
     Box(modifier) {
         BackdropCapture(backdrop, Modifier.matchParentSize().bleedHorizontally(bleed).testTag("collection-ambient")) {
-            if (showImage) AsyncImage(cover, null, contentScale = ContentScale.Crop,
+            if (showImage) AsyncImage(request, null, contentScale = ContentScale.Crop,
+                filterQuality = androidx.compose.ui.graphics.FilterQuality.Low,
                 modifier = Modifier.matchParentSize().graphicsLayer {
                     // Larger than the header so the blur never shows a hard edge.
                     scaleX = 1.35f; scaleY = 1.35f
-                    alpha = (if (theme.isDark) .62f else .46f) * strength.coerceIn(0f, 1f)
+                    alpha = (if (theme.isDark) .62f else .40f) * strength.coerceIn(0f, 1f)
                 }.blur(56.dp))
             else Box(Modifier.matchParentSize().background(
                 Brush.verticalGradient(listOf(theme.accent.copy(alpha = .16f * strength.coerceIn(0f, 1f)), Color.Transparent))))
@@ -183,8 +189,8 @@ internal fun CollectionAmbient(cover: String?, modifier: Modifier = Modifier, st
             // A glow also starts from the page colour, for a header that begins below other content.
             Box(Modifier.matchParentSize().background(Brush.verticalGradient(
                 0f to theme.background.copy(alpha = if (glow) 1f else .10f),
-                .34f to theme.background.copy(alpha = if (glow) .42f else .38f),
-                .58f to theme.background.copy(alpha = .55f),
+                .34f to theme.background.copy(alpha = if (glow) .42f else .40f),
+                .58f to theme.background.copy(alpha = .62f),
                 1f to theme.background)))
         }
         CompositionLocalProvider(LocalBackdropLayer provides backdrop) { content() }

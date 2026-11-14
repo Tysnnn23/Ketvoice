@@ -58,6 +58,9 @@ object AppUi {
     }
     val catalogRequest = androidx.compose.runtime.mutableStateOf<com.ketvoice.app.data.CatalogRequest?>(null)
 
+    /** Where the listener last touched the app, in root pixels: menus grow out of that place. Not state: never recomposes. */
+    @Volatile var lastTouch: androidx.compose.ui.geometry.Offset? = null
+
     /** Bounds of the card that opened a detail page, for an origin-aware reveal. */
     val revealOrigin = androidx.compose.runtime.mutableStateOf<androidx.compose.ui.geometry.Rect?>(null)
 

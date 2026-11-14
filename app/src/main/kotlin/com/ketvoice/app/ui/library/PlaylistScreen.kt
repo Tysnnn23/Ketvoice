@@ -108,6 +108,17 @@ fun PlaylistScreen() {
                 }
             }
             Spacer(Modifier.width(10.dp))
+            val quickTracks = playlist?.entries?.mapNotNull { it.track }.orEmpty()
+            if (quickTracks.isNotEmpty() && !editing && collapse > 0f) {
+                Box(Modifier.graphicsLayer { alpha = collapse }
+                    .then(if (collapse < .98f) Modifier.clearAndSetSemantics {} else Modifier)) {
+                    LiquidGlassButton({ Player.playQueue(quickTracks) }, Modifier.size(DesignTokens.Space.touch),
+                        enabled = collapse >= .98f) {
+                        Icon(KetIcons.Play, "Écouter", tint = th.accent, modifier = Modifier.size(22.dp))
+                    }
+                }
+                Spacer(Modifier.width(4.dp))
+            }
             LiquidGlassButton(onClick = {
                 playlist?.let { target ->
                     com.ketvoice.app.util.ShareLinks.sharePlaylist(context, target.id, target.name, target.entries.size)
@@ -151,52 +162,32 @@ fun PlaylistScreen() {
             contentPadding = PaddingValues(bottom = LocalAdaptiveLayout.current.bottomPaddingDp.dp)
         ) {
             item(key = "playlist-hero") {
-                PlaylistHeaderLayout(compactHeader, heroTone,
-                    cover = heroCover,
-                    artwork = {
-                BoxWithConstraints(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    val edge = if (compactHeader) 104.dp else (maxWidth * .68f).coerceIn(156.dp, 256.dp)
-                    PlaylistArtwork(playlist, playlist.name,
-                        Modifier.size(edge).shadow(if (compactHeader) 8.dp else 22.dp, RoundedCornerShape(22.dp),
-                            ambientColor = Color.Black.copy(alpha = .35f), spotColor = Color.Black.copy(alpha = .45f))
-                            .testTag("playlist-cover"))
-                }
-            }, details = {
-                Spacer(Modifier.height(if (compactHeader) 0.dp else 16.dp))
-                Text(playlist.name, localize = false, color = th.onBackground,
-                    fontSize = if (compactHeader) 20.sp else 25.sp,
-                    fontWeight = FontWeight.Black, letterSpacing = (-.6).sp,
-                     maxLines = if (compactHeader) 2 else 3, overflow = TextOverflow.Ellipsis, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-                Spacer(Modifier.height(6.dp))
-                Text(buildString {
-                    append("${playable.size} / ${playlist.entries.size} titres disponibles")
-                    if (playlist.spotifyUrl != null) append(" · Import Spotify")
-                }, color = th.secondary, fontSize = 13.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                 val totalMinutes = playable.sumOf { it.durationMs } / 60_000
-                if (totalMinutes > 0) Text("$totalMinutes min", color = th.secondary, fontSize = 12.sp,
-                    modifier = Modifier.padding(top = 5.dp))
-                if (playlist.spotifyUrl != null) Text(
-                    "La liste peut être incomplète : touchez un titre manquant pour le retrouver.",
-                    color = th.secondary, fontSize = 12.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                    modifier = Modifier.padding(top = 4.dp))
-                Spacer(Modifier.height(if (compactHeader) 8.dp else 14.dp))
-                // Play and Shuffle lead, as on every collection; reordering is a quieter third action.
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                    com.ketvoice.app.ui.common.GlassCapsuleButton("Écouter", KetIcons.Play, { Player.playQueue(playable) },
-                        Modifier.weight(1f), prominent = true, enabled = playable.isNotEmpty() && !editing,
-                        tag = "playlist-play", minHeight = if (compactHeader) 48.dp else 54.dp)
-                    com.ketvoice.app.ui.common.GlassCapsuleButton("Aléatoire", KetIcons.Shuffle, { Player.playShuffled(playable) },
-                        Modifier.weight(1f), enabled = playable.isNotEmpty() && !editing,
-                        tag = "playlist-shuffle", minHeight = if (compactHeader) 48.dp else 54.dp)
+                // The shared collection header; a short window puts the cover beside the text.
+                com.ketvoice.app.ui.common.CollectionHero(heroCover, 0.dp, playlist.name,
+                    Modifier.testTag("playlist-header"),
+                    meta = listOfNotNull(
+                        com.ketvoice.app.data.AppText.t("${playable.size} / ${playlist.entries.size} titres disponibles"),
+                        if (totalMinutes > 0) com.ketvoice.app.data.AppText.t("$totalMinutes min") else null,
+                        if (playlist.spotifyUrl != null) com.ketvoice.app.data.AppText.t("Import Spotify") else null
+                    ).joinToString(" · "),
+                    beside = compactHeader, artworkTag = "playlist-cover", artworkSide = if (compactHeader) 104.dp else null,
+                    artwork = { PlaylistArtwork(playlist, playlist.name, Modifier.fillMaxSize()) }) {
+                    if (playlist.spotifyUrl != null) Text(
+                        "La liste peut être incomplète : touchez un titre manquant pour le retrouver.",
+                        color = th.secondary, fontSize = 12.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        modifier = Modifier.padding(bottom = 6.dp))
+                    // Play and Shuffle lead, as on every collection; reordering is a quieter third action.
+                    com.ketvoice.app.ui.common.CollectionActionPair({ Player.playQueue(playable) }, { Player.playShuffled(playable) },
+                        Modifier.widthIn(max = 560.dp), playLabel = "Écouter", enabled = playable.isNotEmpty() && !editing,
+                        playTag = "playlist-play", shuffleTag = "playlist-shuffle", minHeight = if (compactHeader) 48.dp else 54.dp)
+                    Spacer(Modifier.height(if (compactHeader) 6.dp else 10.dp))
+                    com.ketvoice.app.ui.common.GlassCapsuleButton(if (editing) "Terminer" else "Modifier l'ordre", null,
+                        { editing = !editing }, Modifier.widthIn(max = 240.dp), enabled = !busy && playlist.entries.size > 1,
+                        tag = "playlist-reorder", minHeight = 44.dp)
+                    if (error.isNotBlank()) Text(error, color = MaterialTheme.colorScheme.error,
+                        fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
                 }
-                Spacer(Modifier.height(if (compactHeader) 6.dp else 10.dp))
-                com.ketvoice.app.ui.common.GlassCapsuleButton(if (editing) "Terminer" else "Modifier l'ordre", null,
-                    { editing = !editing }, Modifier.widthIn(max = 240.dp), enabled = !busy && playlist.entries.size > 1,
-                    tag = "playlist-reorder", minHeight = 44.dp)
-                if (error.isNotBlank()) Text(error, color = MaterialTheme.colorScheme.error,
-                    fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
-                Spacer(Modifier.height(8.dp))
-            })
             }
 
             if (playlist.entries.isEmpty()) {
@@ -287,21 +278,6 @@ fun PlaylistScreen() {
         // Le menu d'actions est rendu par AppRoot (AppUi.playlistMenu) : il passe
         // au-dessus du mini-lecteur et de la navigation au lieu d'être masqué.
     }
-    }
-}
-
-@Composable
-private fun PlaylistHeaderLayout(compact: Boolean, tone: Color, cover: String?, artwork: @Composable () -> Unit,
-                                 details: @Composable () -> Unit) {
-    // The cover's colours spread behind the header and feed the glass buttons placed on it.
-    com.ketvoice.app.ui.common.CollectionAmbient(cover, Modifier.fillMaxWidth().testTag("playlist-header")
-        .background(Brush.verticalGradient(listOf(tone.copy(alpha = .12f), Color.Transparent)))) {
-        Box(Modifier.fillMaxWidth().padding(horizontal = if (compact) 16.dp else 24.dp, vertical = if (compact) 6.dp else 12.dp)) {
-            if (compact) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                Box(Modifier.width(104.dp)) { artwork() }
-                Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) { details() }
-            } else Column(horizontalAlignment = Alignment.CenterHorizontally) { artwork(); details() }
-        }
     }
 }
 

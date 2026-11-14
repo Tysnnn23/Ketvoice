@@ -82,11 +82,13 @@ class HomeAndDownloadsHostTest {
         file(track("2", "Alpha", "Abel"), "MP3 · Haute qualité", 8_388_608, age = 3000),
         file(track("3", "Charlie", "Abel"), "DASH · FLAC", 41_943_040, age = 2000))
 
-    @Test fun downloadsShowASummaryAndSortTheSameFiles() {
+    @Test @Config(qualifiers = "w400dp-h1500dp-mdpi")
+    fun downloadsShowASummaryAndSortTheSameFiles() {
         saved.value = library()
         compose.setContent { KetvoiceTheme(useDark = true) { DownloadsScreen() } }
         compose.onNodeWithTag("downloads-summary").assertIsDisplayed()
-        compose.onNodeWithText("3 titres").assertIsDisplayed()
+        compose.onNodeWithText("3 titres", substring = true).assertIsDisplayed()
+        compose.onNodeWithTag("downloads-mosaic").assertIsDisplayed()
         compose.onNodeWithText("Sans perte 2").assertIsDisplayed()
         compose.onNodeWithText("Compressé 1").assertIsDisplayed()
         fun order() = listOf("Alpha", "Bravo", "Charlie").sortedBy {

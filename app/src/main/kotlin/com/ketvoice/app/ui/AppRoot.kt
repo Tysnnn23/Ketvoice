@@ -1,5 +1,6 @@
 package com.ketvoice.app.ui
 
+import androidx.compose.ui.input.pointer.pointerInput
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.AnimatedContent
@@ -168,7 +169,15 @@ fun AppRoot() {
             else -> 1280.dp
         }
         CompositionLocalProvider(LocalBackdropLayer provides backdrop, LocalAdaptiveLayout provides layout) {
-            Box(Modifier.fillMaxSize()) {
+            // Every touch is noted, never consumed: a menu opened by it grows out of that place.
+            Box(Modifier.fillMaxSize().pointerInput(Unit) {
+                awaitPointerEventScope {
+                    while (true) {
+                        val event = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                        event.changes.firstOrNull { it.pressed && !it.previousPressed }?.let { AppUi.lastTouch = it.position }
+                    }
+                }
+            }) {
                 // ---- Contenu principal : capturé par le backdrop, animé à chaque page ----
                 com.ketvoice.app.glass.BackdropCapture(
                     backdrop = backdrop,

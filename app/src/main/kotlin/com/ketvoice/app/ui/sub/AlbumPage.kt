@@ -1,5 +1,7 @@
 package com.ketvoice.app.ui.sub
 
+import com.ketvoice.app.ui.common.CollectionTopBar
+import com.ketvoice.app.ui.common.CollectionHero
 import com.ketvoice.app.ui.common.trackRowClick
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -81,8 +83,7 @@ internal fun AlbumPage(request: CatalogRequest, page: CatalogPage?, tracks: List
                 LazyColumn(Modifier.fillMaxSize().testTag("album-list"), state = list,
                     contentPadding = PaddingValues(bottom = LocalAdaptiveLayout.current.bottomPaddingDp.dp + 20.dp)) {
                     item(key = "album-hero") {
-                        AlbumHero(title, artist, page?.releaseDate, cover, accent ?: theme.accent,
-                            tracks, savedIds, loading, top, scroll, refresh)
+                        AlbumHero(title, artist, page?.releaseDate, cover, tracks, savedIds, loading, top, refresh)
                     }
                     if (loading) items(5, key = { "album-loading:$it" }) { CatalogSkeletonRow() }
                     else if (tracks.isEmpty()) item {
@@ -102,34 +103,9 @@ internal fun AlbumPage(request: CatalogRequest, page: CatalogPage?, tracks: List
                 }
             }
             // Floating controls sample the scrolled page, not an opaque full-width header band.
-            Row(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                LiquidGlassButton({ AppUi.closeOverlay() }, Modifier.size(48.dp)) {
-                    Icon(KetIcons.ArrowLeft, "Retour", tint = theme.onBackground)
-                }
-                Box(Modifier.weight(1f)) {
-                    if (collapse.value > 0f) {
-                        GlassPanel(Modifier.fillMaxWidth().graphicsLayer { alpha = collapse.value }
-                            .testTag("album-collapsed-title"), RoundedCornerShape(24.dp), GlassParams.pill(dark = theme.isDark)) {
-                            Text(title, localize = false, color = theme.onBackground, fontSize = 15.sp,
-                                fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
-                                    .wrapContentHeight(Alignment.CenterVertically).padding(horizontal = 16.dp, vertical = 8.dp))
-                        }
-                    }
-                }
-                if (tracks.isNotEmpty()) {
-                    Row(Modifier.graphicsLayer { alpha = collapse.value }
-                        .then(if (collapse.value < .98f) Modifier.clearAndSetSemantics {} else Modifier),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        AlbumGlassAction(KetIcons.Play, "Lecture", enabled = !loading && collapse.value >= .98f) {
-                            Player.setShuffle(false); Player.playQueue(tracks)
-                        }
-                        AlbumGlassAction(KetIcons.Shuffle, "Aléatoire", enabled = !loading && collapse.value >= .98f) {
-                            Player.playShuffled(tracks)
-                        }
-                    }
-                }
+            CollectionTopBar(title, collapse.value, { AppUi.closeOverlay() },
+                onPlay = if (tracks.isNotEmpty() && !loading) ({ Player.setShuffle(false); Player.playQueue(tracks) }) else null,
+                titleTag = "album-collapsed-title") {
                 LiquidGlassButton({ ShareLinks.shareAlbum(context, request.id, title, artist) }, Modifier.size(48.dp)) {
                     Icon(KetIcons.Share, "Partager", tint = theme.onBackground)
                 }
@@ -138,60 +114,36 @@ internal fun AlbumPage(request: CatalogRequest, page: CatalogPage?, tracks: List
     }
 }
 
+/** The shared collection header: blurred cover, floating artwork, centred identity. */
 @Composable
-private fun AlbumHero(title: String, artist: String, date: String?, cover: String?, tone: Color,
+private fun AlbumHero(title: String, artist: String, date: String?, cover: String?,
                       tracks: List<Track>, savedIds: Set<String>, loading: Boolean,
-                      top: androidx.compose.ui.unit.Dp, scroll: State<Float>, onRefresh: () -> Unit) {
-    val theme = LocalTheme.current
+                      top: androidx.compose.ui.unit.Dp, onRefresh: () -> Unit) {
     val density = LocalDensity.current
-    val targetSurface = lerp(theme.background, tone, if (theme.isDark) .18f else .11f)
-    val surface by androidx.compose.animation.animateColorAsState(targetSurface,
-        tween(Motion.duration(420), easing = Motion.EASE_STANDARD), label = "album-colour-continuation")
-    val heroBackdrop = rememberGlassBackdrop(theme.background)
+    val total = remember(tracks) { tracks.sumOf { it.durationMs.coerceAtLeast(0L) } }
+    val duration = when {
+        total <= 0L -> null
+        total >= 3_600_000L -> AppText.t("${total / 3_600_000L} h ${(total % 3_600_000L) / 60_000L} min")
+        else -> AppText.t("${(total / 60_000L).coerceAtLeast(1L)} min")
+    }
+    val count = AppText.t(if (tracks.size == 1) "1 titre" else "${tracks.size} titres")
     BoxWithConstraints(Modifier.fillMaxWidth()) {
-        val wide = AlbumPresentation.sideBySide(maxWidth.value, density.fontScale)
-        val artworkHeight = (maxWidth * .88f).coerceIn(260.dp, 380.dp) + top
-        Box(Modifier.fillMaxWidth()) {
-            // Only artwork and colour integration enter this local source. Text/actions are siblings.
-            BackdropCapture(heroBackdrop, Modifier.matchParentSize().testTag("album-hero-backdrop")) {
-                if (wide) {
-                    Row(Modifier.fillMaxSize()) {
-                        AlbumArtwork(cover, tracks.firstOrNull(), surface,
-                            Modifier.weight(.44f).fillMaxHeight(), scroll, wide = true)
-                        Box(Modifier.weight(.56f).fillMaxHeight().background(
-                            Brush.verticalGradient(0f to surface, .35f to surface, 1f to theme.background)))
-                    }
-                } else {
-                    Column(Modifier.fillMaxSize()) {
-                        AlbumArtwork(cover, tracks.firstOrNull(), surface,
-                            Modifier.fillMaxWidth().height(artworkHeight), scroll)
-                        Box(Modifier.fillMaxWidth().weight(1f).background(
-                            Brush.verticalGradient(0f to surface, .38f to surface, 1f to theme.background)))
-                    }
-                }
-            }
-            CompositionLocalProvider(LocalBackdropLayer provides heroBackdrop) {
-                if (wide) {
-                    Row(Modifier.fillMaxWidth().heightIn(min = top + 320.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Spacer(Modifier.weight(.44f))
-                        AlbumIdentity(title, artist, date, tracks, savedIds, loading, onRefresh,
-                            Modifier.weight(.56f).padding(top = top, bottom = 48.dp))
-                    }
-                } else {
-                    Column(Modifier.fillMaxWidth()) {
-                        Spacer(Modifier.height(artworkHeight - 12.dp))
-                        AlbumIdentity(title, artist, date, tracks, savedIds, loading, onRefresh,
-                            Modifier.padding(bottom = 20.dp))
-                    }
-                }
-            }
+        val beside = AlbumPresentation.sideBySide(maxWidth.value, density.fontScale)
+        val stacked = maxWidth < 320.dp && density.fontScale >= 1.2f
+        CollectionHero(cover, top, title, eyebrow = "Album", titleTag = "album-title",
+            subtitle = artist.takeIf { it.isNotBlank() },
+            onSubtitle = { AppUi.openArtist(tracks.firstOrNull()?.artistId.orEmpty(), artist) },
+            meta = if (loading) null else listOfNotNull(date?.takeIf { it.isNotBlank() }, count, duration).joinToString("  ·  "),
+            explicit = !loading && tracks.any { it.explicit }, beside = beside, artworkTag = "album-hero-visual",
+            artwork = { AlbumArtwork(cover, tracks.firstOrNull()) }) {
+            AlbumPlaybackActions(tracks, savedIds, loading, stacked, onRefresh, Modifier.widthIn(max = 560.dp).fillMaxWidth())
         }
     }
 }
 
+/** The cover, or its Canvas when the listener enabled it, inside the floating frame. */
 @Composable
-private fun AlbumArtwork(cover: String?, track: Track?, surface: Color, modifier: Modifier,
-                         scroll: State<Float>, wide: Boolean = false) {
+private fun BoxScope.AlbumArtwork(cover: String?, track: Track?) {
     val theme = LocalTheme.current
     val context = LocalContext.current
     var ready by remember(cover) { mutableStateOf(false) }
@@ -203,109 +155,39 @@ private fun AlbumArtwork(cover: String?, track: Track?, surface: Color, modifier
     val paths by CanvasRepo.paths.collectAsState()
     LaunchedEffect(track?.id, canvasEnabled) { if (canvasEnabled && track != null) CanvasRepo.resolve(track) }
     val canvas = track?.let { paths[it.id] }
-    Box(modifier.clipToBounds().background(surface).testTag("album-hero-visual")) {
-        Box(Modifier.fillMaxSize().graphicsLayer {
-            translationY = AlbumPresentation.artworkTranslation(scroll.value, size.height, Motion.reduced)
-        }) {
-            if (cover == null || failed) Icon(KetIcons.Album, null, tint = theme.secondary.copy(alpha = .32f),
-                modifier = Modifier.size(80.dp).align(Alignment.Center))
-            when {
-                canvasEnabled && track != null && canvas != null -> com.ketvoice.app.ui.player.ArtworkCanvas(
-                    track, canvas, playing = true, forceCanvas = true, modifier = Modifier.fillMaxSize())
-                cover != null -> AsyncImage(image, null, contentScale = ContentScale.Crop,
-                    onSuccess = { ready = true; failed = false }, onError = { failed = true },
-                    modifier = Modifier.fillMaxSize().graphicsLayer { this.alpha = alpha }
-                        .testTag(if (ready) "album-artwork-loaded" else "album-artwork-loading"))
-            }
-        }
-        // A single image-colour transition, with zero slope at either end: no white fog or alpha mask.
-        Box(Modifier.matchParentSize().drawWithCache {
-            val bottom = Brush.verticalGradient(*(0..16).map { step ->
-                val p = step / 16f
-                (.64f + .36f * p) to (if (wide) theme.background else surface)
-                    .copy(alpha = AlbumPresentation.smoothProgress(p))
-            }.toTypedArray())
-            val edge = if (wide) Brush.horizontalGradient(*(0..16).map { step ->
-                val p = step / 16f
-                (.78f + .22f * p) to surface.copy(alpha = AlbumPresentation.smoothProgress(p))
-            }.toTypedArray()) else null
-            onDrawBehind {
-                edge?.let { drawRect(it) }
-                drawRect(bottom)
-            }
-        })
+    if (cover == null || failed) Icon(KetIcons.Album, null, tint = theme.secondary.copy(alpha = .32f),
+        modifier = Modifier.fillMaxSize(.42f).align(Alignment.Center))
+    when {
+        canvasEnabled && track != null && canvas != null -> com.ketvoice.app.ui.player.ArtworkCanvas(
+            track, canvas, playing = true, forceCanvas = true, modifier = Modifier.fillMaxSize())
+        cover != null -> AsyncImage(image, null, contentScale = ContentScale.Crop,
+            onSuccess = { ready = true; failed = false }, onError = { failed = true },
+            modifier = Modifier.fillMaxSize().graphicsLayer { this.alpha = alpha }
+                .testTag(if (ready) "album-artwork-loaded" else "album-artwork-loading"))
     }
 }
 
 @Composable
-@OptIn(ExperimentalLayoutApi::class)
-private fun AlbumIdentity(title: String, artist: String, date: String?, tracks: List<Track>, savedIds: Set<String>,
-                          loading: Boolean, onRefresh: () -> Unit, modifier: Modifier = Modifier) {
-    val theme = LocalTheme.current
-    val total = remember(tracks) { tracks.sumOf { it.durationMs.coerceAtLeast(0L) } }
-    val duration = when {
-        total <= 0L -> null
-        total >= 3_600_000L -> AppText.t("${total / 3_600_000L} h ${(total % 3_600_000L) / 60_000L} min")
-        else -> AppText.t("${(total / 60_000L).coerceAtLeast(1L)} min")
-    }
-    val count = AppText.t(if (tracks.size == 1) "1 titre" else "${tracks.size} titres")
-    StaggeredReveal(order = 0, modifier = modifier.fillMaxWidth()) {
-        Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text("Album", color = theme.secondary, fontSize = 12.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp)
-            Text(title, localize = false, color = theme.onBackground, fontSize = 36.sp,
-                fontWeight = FontWeight.Bold, letterSpacing = (-1).sp, lineHeight = 42.sp,
-                modifier = Modifier.testTag("album-title"))
-            if (artist.isNotBlank()) Text(artist, localize = false, color = theme.onBackground,
-                fontSize = 17.sp, fontWeight = FontWeight.Medium, lineHeight = 23.sp,
-                modifier = Modifier.clickable(role = Role.Button) { AppUi.openArtist(tracks.firstOrNull()?.artistId.orEmpty(), artist) }
-                    .heightIn(min = 48.dp).wrapContentHeight(Alignment.CenterVertically).padding(vertical = 6.dp))
-            if (!loading) {
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp),
-                    modifier = Modifier.testTag("album-metadata")) {
-                    Text(listOfNotNull(date?.takeIf { it.isNotBlank() }, count, duration).joinToString("  ·  "),
-                        localize = false, color = theme.secondary, fontSize = 13.sp, lineHeight = 19.sp)
-                    if (tracks.any { it.explicit }) EBadge()
-                }
-            }
-            AlbumPlaybackActions(tracks, savedIds, loading, onRefresh,
-                Modifier.padding(top = 12.dp, bottom = 12.dp).widthIn(max = 560.dp).fillMaxWidth())
-        }
-    }
-}
-
-@Composable
-@OptIn(ExperimentalLayoutApi::class)
-private fun AlbumPlaybackActions(tracks: List<Track>, savedIds: Set<String>, loading: Boolean,
+private fun AlbumPlaybackActions(tracks: List<Track>, savedIds: Set<String>, loading: Boolean, stacked: Boolean,
                                  onRefresh: () -> Unit, modifier: Modifier = Modifier) {
     val theme = LocalTheme.current
     val enabled = !loading && tracks.isNotEmpty()
     val missing = remember(tracks, savedIds) { tracks.distinctBy { it.id }.filter { it.id !in savedIds && !it.id.startsWith("local:") } }
-    BoxWithConstraints(modifier) {
-        val stacked = maxWidth < 320.dp && LocalDensity.current.fontScale >= 1.2f
-        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            FlowRow(Modifier.fillMaxWidth(), maxItemsInEachRow = if (stacked) 1 else 2,
-                horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                // The same pair as every other collection: prominent Play, glass Shuffle.
-                com.ketvoice.app.ui.common.GlassCapsuleButton("Lecture", KetIcons.Play,
-                    { Player.setShuffle(false); Player.playQueue(tracks) }, Modifier.weight(1f),
-                    prominent = true, enabled = enabled, tag = "album-play", minHeight = 60.dp)
-                com.ketvoice.app.ui.common.GlassCapsuleButton("Aléatoire", KetIcons.Shuffle,
-                    { Player.playShuffled(tracks) }, Modifier.weight(1f),
-                    enabled = enabled, tag = "album-shuffle", minHeight = 60.dp)
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        com.ketvoice.app.ui.common.CollectionActionPair({ Player.setShuffle(false); Player.playQueue(tracks) },
+            { Player.playShuffled(tracks) }, enabled = enabled, playTag = "album-play", shuffleTag = "album-shuffle",
+            stacked = stacked)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            AlbumGlassAction(if (missing.isEmpty() && enabled) KetIcons.Check else KetIcons.Download,
+                if (missing.isEmpty() && enabled) "Téléchargé" else "Télécharger",
+                enabled = enabled && missing.isNotEmpty(), tag = "album-download") {
+                missing.forEach { Downloader.download(it) }
             }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically) {
-                AlbumGlassAction(if (missing.isEmpty() && enabled) KetIcons.Check else KetIcons.Download,
-                    if (missing.isEmpty() && enabled) "Téléchargé" else "Télécharger",
-                    enabled = enabled && missing.isNotEmpty(), tag = "album-download") {
-                    missing.forEach { Downloader.download(it) }
-                }
-                AlbumGlassAction(KetIcons.Refresh, "Actualiser", enabled = !loading, tag = "album-refresh", onClick = onRefresh)
-                Spacer(Modifier.weight(1f))
-                Text("Titres", color = theme.secondary, fontSize = 12.sp, fontWeight = FontWeight.Medium)
-                Text(tracks.size.toString(), localize = false, color = theme.secondary, fontSize = 12.sp)
-            }
+            AlbumGlassAction(KetIcons.Refresh, "Actualiser", enabled = !loading, tag = "album-refresh", onClick = onRefresh)
+            Spacer(Modifier.weight(1f))
+            Text("Titres", color = theme.secondary, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+            Text(tracks.size.toString(), localize = false, color = theme.secondary, fontSize = 12.sp)
         }
     }
 }

@@ -1,5 +1,6 @@
 package com.ketvoice.app.ui.player
 
+import androidx.compose.material.icons.automirrored.filled.PlaylistPlay
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
@@ -135,27 +136,31 @@ fun TrackMenuSheet(track: Track, onClose: () -> Unit) {
 
         val downloaded = Downloader.itemFor(track.id) != null
         val favorite = track.id in AppSettings.favoriteIds.value
-        Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        val shareContext = androidx.compose.ui.platform.LocalContext.current
+        // The actions used most, one touch away: round glass buttons above the list.
+        Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
             QuickTrackAction(if (favorite) "Favori" else "Favoris", if (favorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                Modifier.weight(1f)) {
+                Modifier.weight(1f), active = favorite) {
                 AppSettings.favoriteIds.value = if (favorite) AppSettings.favoriteIds.value - track.id else AppSettings.favoriteIds.value + track.id
                 com.ketvoice.app.data.SettingsStore.save()
             }
-            QuickTrackAction("Lire ensuite", Icons.Filled.PlaylistAdd, Modifier.weight(1f)) {
+            QuickTrackAction("Lire ensuite", Icons.AutoMirrored.Filled.PlaylistPlay, Modifier.weight(1f)) {
                 Player.playNext(track); onClose()
             }
+            QuickTrackAction("Ajouter à la file", Icons.Filled.PlaylistAdd, Modifier.weight(1f)) {
+                Player.enqueue(listOf(track)); onClose()
+            }
             QuickTrackAction(if (downloaded) "Téléchargé ✓" else "Télécharger", if (downloaded) Icons.Filled.Check else Icons.Filled.Download,
-                Modifier.weight(1f)) { if (!downloaded) Downloader.download(track); onClose() }
+                Modifier.weight(1f), active = downloaded) { if (!downloaded) Downloader.download(track); onClose() }
+            // Partage réel : lien listen.html — l'app du destinataire ouvre le
+            // morceau, un navigateur affiche la page de téléchargement.
+            QuickTrackAction("Partager", Icons.Filled.Share, Modifier.weight(1f)) {
+                onClose()
+                com.ketvoice.app.util.ShareLinks.shareTrack(shareContext, track)
+            }
         }
         MenuItemRow("Ajouter à une playlist", Icons.Filled.PlaylistAdd) {
             onClose(); com.ketvoice.app.ui.AppUi.addToPlaylist.value = track
-        }
-        // Partage réel : lien listen.html — l'app du destinataire ouvre le
-        // morceau, un navigateur affiche la page de téléchargement.
-        val shareContext = androidx.compose.ui.platform.LocalContext.current
-        MenuItemRow("Partager", Icons.Filled.Share) {
-            onClose()
-            com.ketvoice.app.util.ShareLinks.shareTrack(shareContext, track)
         }
         MenuItemRow("Égaliseur", Icons.Filled.Tune) {
             onClose(); com.ketvoice.app.ui.AppUi.showEqualizer.value = true

@@ -67,7 +67,7 @@ class VisualRefreshHostTest {
         return bitmap
     }
 
-    @Test fun albumStartsAtWindowTopInLightModeWithoutBleachingItsLowerHalf() {
+    @Test fun albumArtworkFloatsCentredInLightModeWithoutBleachingItsLowerHalf() {
         val fixture = Bitmap.createBitmap(400, 400, Bitmap.Config.ARGB_8888).apply {
             eraseColor(android.graphics.Color.rgb(35, 75, 130))
         }
@@ -83,11 +83,11 @@ class VisualRefreshHostTest {
         } }
         compose.waitUntil(10_000) { compose.onAllNodesWithTag("album-artwork-loaded").fetchSemanticsNodes().isNotEmpty() }
         val bounds = compose.onNodeWithTag("album-hero-visual").fetchSemanticsNode().boundsInRoot
-        assertEquals(0f, bounds.top, 1f)
-        assertEquals(0f, bounds.left, 1f)
-        assertEquals(400f, bounds.width, 1f)
+        assertEquals("The artwork floats centred", 400f / 2f, (bounds.left + bounds.right) / 2f, 1.5f)
+        assertEquals("The artwork is a square", bounds.width, bounds.height, 1f)
+        assertTrue("The artwork is large without filling the width", bounds.width in 160f..400f * .8f)
         val b = image("album-edge-light-no-white-veil")
-        val sample = b.getPixel(200, (bounds.height * .82f).toInt())
+        val sample = b.getPixel(200, (bounds.top + bounds.height * .82f).toInt())
         assertTrue("Lower image must not be washed white", android.graphics.Color.red(sample) < 220 || android.graphics.Color.blue(sample) < 220)
     }
 
