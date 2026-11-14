@@ -1,0 +1,162 @@
+{
+  "schema": 8,
+  "version": "4.14.1",
+  "versionCode": 100,
+  "source_commit": "11dfc9c8ca78e0d1299bbadfd1f0f6498fed6b8b",
+  "created_at": "2026-11-14T13:37:16.786061+00:00",
+  "build_origin": {
+    "kind": "github_actions_with_owner_discord_sdk",
+    "workflow": "android.yml",
+    "run_id": 43599809423,
+    "artifact": {
+      "id": 14115374862,
+      "sha256": "2c17f1f7061d2f5c74c7a09cffd043dc428397131ef5322b9264a046dfc82bed"
+    },
+    "gradle": "assembleMobileRelease assembleQuestRelease",
+    "note": "Signed by CI with the pinned keystore secret; the Discord Social SDK AAR matched its pinned SHA-256."
+  },
+  "local_validation": {
+    "result": "debug JVM/Robolectric suites for both flavors, release lint and the UI text audit passed in a cloud container without the Discord SDK",
+    "commands": [
+      "testMobileDebugUnitTest",
+      "testQuestDebugUnitTest",
+      "lintMobileRelease",
+      "lintQuestRelease",
+      "tools/audit_ui_texts.py --check"
+    ],
+    "ci_validation": "run 43599809423: release builds, debug and release unit tests for both flavors, UI text audit, lint, APK signature pin and Discord bridge packaging passed",
+    "code_review": {
+      "kind": "author's own re-read; no independent review"
+    },
+    "host_previews": "album, artist, playlist, Downloads and the button kit in Liquid 27 rendered in software on the host and inspected; the host renderer does not show optical refraction or the cover blur as a device does"
+  },
+  "tests": {
+    "mobile": {
+      "jvm": {
+        "tests": 615,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "android_15_emulator_compose": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "quest": {
+      "jvm": {
+        "tests": 614,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "android_15_emulator_compose": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    }
+  },
+  "lint": {
+    "mobile": {
+      "Warning": 170,
+      "Hint": 16
+    },
+    "quest": {
+      "Warning": 172,
+      "Hint": 16
+    }
+  },
+  "apks": [
+    {
+      "name": "Ketvoice-4.14.1.apk",
+      "sha256": "a783c58e21feb82e4fe16871448fecfbb7abd30a72b6f280d064f75427614af3",
+      "bytes": 72798044,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "4.14.1",
+      "versionCode": 100,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-4.14.1-Quest.apk",
+      "sha256": "41843ee28e49d232e7d7b96561e2efd467de6377aa032faa1c3b9339aebe5b74",
+      "bytes": 82831642,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "4.14.1",
+      "versionCode": 100,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    }
+  ],
+  "discord": {
+    "sdk_present_in_ci_build": true,
+    "sdk_sha256_pinned": true,
+    "bridge_and_native_libraries_verified": true,
+    "presence_mode": "unauthenticated_rpc_through_installed_discord_app"
+  },
+  "credential_scan": {
+    "entries": 3289,
+    "findings": 0,
+    "raw_pattern_findings": 1,
+    "scope": "tracked sources and APK archive entries",
+    "kind": "credential_patterns",
+    "explicit_private_provider_key_deny_list": false,
+    "triage": [
+      {
+        "file": "Ketvoice-Liquid-Glass-V4.html",
+        "classification": "embedded_image_false_positive",
+        "all_hits_inside_image_data_uris": true,
+        "rescanned_without_image_payloads": true
+      }
+    ]
+  },
+  "release_install_smoke": {
+    "mobile": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "quest": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    }
+  },
+  "publication_override": {
+    "authorized_by_user": true,
+    "authorized_at": "2026-11-14T13:37:16.786061+00:00",
+    "kind": "standing_authorization",
+    "user_statement": "J'autorise TOUT devient maintenant une règle.",
+    "user_statement_date": "2026-11-14",
+    "in_reply_to": "The question whether versions may be published without phone or Quest testing without asking again for each version.",
+    "recorded_in": "AGENTS.md (commit aeeda8e)",
+    "reason": "The owner made publishing validated versions without phone or Quest testing a standing rule.",
+    "scope": "physical device installation and all on-device behaviour of 4.14.1"
+  },
+  "not_validated": [
+    "physical phone or Quest installation, rendering and touch behaviour",
+    "the artist page with real portraits: the colour extracted from them, the dissolve, and text contrast on the tinted page in both themes",
+    "wide banners and artists without a photo on a device",
+    "everything listed as not validated for 4.14.0, which this version builds on",
+    "independent code review of this diff"
+  ],
+  "known_limitations": [
+    "The page colour is the portrait's dominant accent blended into the theme background; it is not sampled from the bottom edge of the photo, so a photo whose lower part has another colour dissolves into the dominant one.",
+    "A greyscale portrait gives no colour: the page keeps its plain background.",
+    "The tint is off when the album colours setting is off.",
+    "The signing certificate is the existing public Android debug identity, not a private production key."
+  ],
+  "canonical_banner_sha256": "47f6793088983f7d4e6bd1aeaa2cbd8b7cdc2a8f91271e3b2839daea81da0436"
+}
