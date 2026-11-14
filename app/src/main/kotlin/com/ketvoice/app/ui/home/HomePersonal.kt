@@ -49,18 +49,25 @@ internal fun homeGreeting(hour: Int): String = when (hour.mod(24)) {
 }
 
 /** Secondary Home blocks whose order may change between launches. */
-internal enum class HomeBlock { Albums, Shelf0, Shelf1, Shelf2 }
+internal enum class HomeBlock { Albums, Shelf0, Shelf1, Shelf2, Releases }
+
+/** The key a block is learned under (see HomeLearning). */
+internal val HomeBlock.learningKey: String get() = "block:" + name.lowercase()
 
 /**
  * Order of the blocks under "Recent" for one launch. The first personal shelf always
- * leads so Home stays recognisable; the album row and the other shelves take turns.
- * The same [seed] always gives the same order, so nothing moves while browsing.
+ * leads so Home stays recognisable. The other blocks follow what the listener opens
+ * most ([scores]); blocks never opened take turns from one launch to the next. The same
+ * [seed] and scores always give the same order, so nothing moves while browsing.
  */
-internal fun homeBlockOrder(seed: Long, shelfCount: Int, hasAlbums: Boolean): List<HomeBlock> {
+internal fun homeBlockOrder(seed: Long, shelfCount: Int, hasAlbums: Boolean, hasReleases: Boolean = false,
+                            scores: Map<String, Double> = emptyMap()): List<HomeBlock> {
     val shelves = listOf(HomeBlock.Shelf0, HomeBlock.Shelf1, HomeBlock.Shelf2).take(shelfCount.coerceIn(0, 3))
     val lead = shelves.take(1)
-    val rest = (shelves.drop(1) + if (hasAlbums) listOf(HomeBlock.Albums) else emptyList()).shuffled(Random(seed))
-    return lead + rest
+    val rest = (shelves.drop(1) + (if (hasAlbums) listOf(HomeBlock.Albums) else emptyList()) +
+        (if (hasReleases) listOf(HomeBlock.Releases) else emptyList())).shuffled(Random(seed))
+    // A stable sort: blocks with the same score keep the order of this launch.
+    return lead + rest.sortedByDescending { scores[it.learningKey] ?: 0.0 }
 }
 
 internal fun mixTitle(card: MixCard): String = when (card.kind) {
@@ -129,10 +136,7 @@ internal fun HomeMixes(modifier: Modifier = Modifier) {
     if (cards.isEmpty()) return
     val theme = LocalTheme.current
     Column(modifier.testTag("home-mixes")) {
-        Column(Modifier.padding(start = 18.dp, end = 18.dp, top = 22.dp, bottom = 12.dp)) {
-            Text("Vos mix", color = theme.onBackground, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.asHeading())
-            Text("Composés d'après vos écoutes", color = theme.secondary, fontSize = 12.sp, modifier = Modifier.padding(top = 3.dp))
-        }
+        EditorialHeader("Vos mix", subtitle = "Composés d'après vos écoutes")
         LazyRow(contentPadding = PaddingValues(horizontal = 18.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             items(cards, key = { it.id }) { card -> MixTile(card) }
         }

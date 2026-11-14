@@ -110,3 +110,6 @@ internal fun PlayerPresentation(visible: Boolean, origin: Rect?, modifier: Modif
         }
     }
 }
+
+/** Scale of the player artwork for a pause amount in 0..1: full size playing, 88 % paused. */
+internal fun pausedArtworkScale(paused: Float): Float = 1f - .12f * (if (paused.isFinite()) paused.coerceIn(-.2f, 1.2f) else 0f)

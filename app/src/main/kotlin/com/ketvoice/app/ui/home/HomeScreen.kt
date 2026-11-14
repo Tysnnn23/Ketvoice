@@ -71,7 +71,15 @@ fun HomeScreen() {
         shelves.map { shelf -> shelf to shelf.tracks.filter { seen.add(it.id) } }
             .filter { it.second.isNotEmpty() }.take(3)
     }
-    LaunchedEffect(Unit) { HomeFeed.start(context) }
+    LaunchedEffect(Unit) { HomeFeed.start(context); HomeLearning.init(context) }
+    // New releases of the artists played most: loaded beside the page, never blocking it.
+    val known by ListeningHistory.knownTracks.collectAsState()
+    val counts by ListeningHistory.playCounts.collectAsState()
+    var releases by remember { mutableStateOf<List<CatalogAlbum>>(emptyList()) }
+    LaunchedEffect(known.size / 10, counts.size / 10) {
+        releases = runCatching { HomeReleases.load(known, counts, AppSettings.favoriteIds.value) }.getOrDefault(emptyList())
+    }
+    val learned = HomeLearning.scores
     LaunchedEffect(recent) { ArtworkRepo.enrich(recent.take(20)) }
     LaunchedEffect(state) {
         snapshotFlow { state.firstVisibleItemIndex to state.firstVisibleItemScrollOffset }
@@ -106,19 +114,24 @@ fun HomeScreen() {
             }
             // Shortcuts to what already exists on this device.
             item(key = "shortcuts") { HomeShortcuts(Modifier.padding(bottom = 10.dp)) }
-            if (player.current != null || recent.isNotEmpty()) item(key = "editorial") {
-                HomeEditorial(if (player.current != null) player.queue else recent, resume = true)
-            } else if (featured.isNotEmpty()) item(key = "editorial") { HomeEditorial(featured) }
+            // "For you": a paused title, a fresh release or the mix of the hour; else the former card.
+            item(key = "for-you") {
+                HomeForYou(hour, releases) {
+                    if (player.current != null || recent.isNotEmpty()) HomeEditorial(if (player.current != null) player.queue else recent, resume = true)
+                    else if (featured.isNotEmpty()) HomeEditorial(featured)
+                }
+            }
             if (playlists.any { it.pinned }) item(key = "pinned") {
-                Text("Épinglés", color = theme.onBackground, fontSize = 22.sp, fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(start = 18.dp, top = 20.dp, bottom = 12.dp).asHeading())
+                EditorialHeader("Épinglés", onMore = { AppUi.selectTab(AppUi.LIBRARY) })
                 PlaylistShelf(playlists.filter { it.pinned })
             }
             // Personal mixes appear once enough music has been played, and rotate at each launch.
-            item(key = "mixes") { HomeMixes(Modifier.padding(bottom = 22.dp)) }
-            item {
-                Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp).padding(bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text("Récents", color = theme.onBackground, fontSize = 16.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f).asHeading())
+            item(key = "mixes") { HomeMixes(Modifier.padding(bottom = 6.dp)) }
+            item(key = "week") { HomeWeekCard() }
+            item(key = "recent-heading") {
+                EditorialHeader("Récents", onMore = if (recent.isNotEmpty()) ({
+                    AppUi.openCatalog(CatalogRequest("history", "history", "Historique"))
+                }) else null) {
                     androidx.compose.material3.IconButton(onClick = { grid = !grid }, modifier = Modifier.size(48.dp)) {
                         Icon(Icons.Filled.GridView, "Changer la présentation des récents", tint = theme.secondary, modifier = Modifier.size(22.dp))
                     }
@@ -144,11 +157,14 @@ fun HomeScreen() {
             }
             // The first personal shelf always leads; the album row and the other shelves
             // take turns from one launch to the next, and never move while browsing.
-            homeBlockOrder(PersonalMixes.sessionSeed, shelfRows.size, albums.isNotEmpty()).forEach { block ->
+            homeBlockOrder(PersonalMixes.sessionSeed, shelfRows.size, albums.isNotEmpty(), releases.isNotEmpty(), learned).forEach { block ->
                 when (block) {
+                    HomeBlock.Releases -> item(key = "home-releases") {
+                        HomeReleasesShelf(releases, Modifier.learnsOpens(block.learningKey))
+                    }
                     HomeBlock.Albums -> if (albums.isNotEmpty()) item(key = "home-albums") {
-                        Text("Albums du catalogue", color = theme.onBackground, fontSize = 19.sp, fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(start = 18.dp, top = 28.dp, bottom = 12.dp))
+                        Column(Modifier.learnsOpens(block.learningKey)) {
+                        EditorialHeader("Albums du catalogue", onMore = { AppUi.selectTab(AppUi.EXPLORER) })
                         LazyRow(contentPadding = PaddingValues(horizontal = 18.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                             itemsIndexed(albums, key = { _, album -> album.id }) { _, album ->
                                 val origin = rememberRevealOrigin()
@@ -162,14 +178,14 @@ fun HomeScreen() {
                                 }
                             }
                         }
+                        }
                     }
                     else -> shelfRows.getOrNull(block.ordinal - 1)?.let { (shelf, shown) ->
                         if (shown.isNotEmpty()) item(key = "home-shelf:${block.ordinal - 1}:${shelf.title}") {
-                            Column(Modifier.padding(start = 18.dp, end = 18.dp, top = 28.dp, bottom = 12.dp)) {
-                                Text(shelf.title, color = theme.onBackground, fontSize = 19.sp, fontWeight = FontWeight.Bold)
-                                Text(shelf.subtitle, color = theme.secondary, fontSize = 12.sp, modifier = Modifier.padding(top = 3.dp))
+                            Column(Modifier.learnsOpens(block.learningKey)) {
+                                EditorialHeader(shelf.title, subtitle = shelf.subtitle)
+                                TrackCarousel(shown, onMenu = { AppUi.trackMenuTrack.value = it })
                             }
-                            TrackCarousel(shown, onMenu = { AppUi.trackMenuTrack.value = it })
                         }
                     }
                 }

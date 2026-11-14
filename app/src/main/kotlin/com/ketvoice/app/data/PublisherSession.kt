@@ -11,6 +11,9 @@ import org.json.JSONObject
 object PublisherSession {
     private val _allowed = MutableStateFlow(false)
     val allowed: StateFlow<Boolean> = _allowed
+    private val _restoring = MutableStateFlow(false)
+    /** True while a remembered session is being renewed: the Studio waits instead of asking to sign in. */
+    val restoring: StateFlow<Boolean> = _restoring
     private var store: SecureSessionStore? = null
     private var access = ""
     private var refresh = ""
@@ -22,7 +25,10 @@ object PublisherSession {
         if (store != null) return
         store = SecureSessionStore(context.applicationContext)
         refresh = store?.get("publisher-refresh").orEmpty()
-        if (refresh.isNotBlank()) scope.launch { runCatching { token() } }
+        if (refresh.isNotBlank()) {
+            _restoring.value = true
+            scope.launch { try { runCatching { token() } } finally { _restoring.value = false } }
+        }
     }
 
     suspend fun sendLink() = withContext(Dispatchers.IO) {
@@ -74,8 +80,13 @@ object PublisherSession {
             require(refresh.isNotBlank()) { "Connexion administrateur requise" }
             try {
                 accept(PublicationApi.auth("/token?grant_type=refresh_token", JSONObject().put("refresh_token", refresh)))
+            } catch (error: java.io.IOException) {
+                // No network: the remembered session is kept and tried again next time.
+                throw error
             } catch (error: Exception) {
                 _allowed.value = false
+                // The server refused this session (expired or revoked): it is forgotten.
+                if (PublisherAccess.rejectedSession(error.message)) { refresh = ""; store?.remove("publisher-refresh") }
                 throw error
             }
         }

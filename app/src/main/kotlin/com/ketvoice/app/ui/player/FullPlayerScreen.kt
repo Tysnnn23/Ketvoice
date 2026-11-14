@@ -361,14 +361,26 @@ fun FullPlayerScreen(
                     val artworkHeight = if (wide) safeHeight else tabletop?.sceneHeightDp?.dp ?: (safeHeight * .55f)
                     // Swipe the artwork sideways to change track; a vertical drag still closes the player.
                     val trackSwipe = rememberTrackSwipe()
+                    val pauseShrink = remember { androidx.compose.animation.core.Animatable(if (state.playWhenReady) 0f else 1f) }
+                    LaunchedEffect(state.playWhenReady, Motion.reduced) {
+                        val target = if (state.playWhenReady || Motion.reduced) 0f else 1f
+                        if (Motion.reduced) pauseShrink.snapTo(target)
+                        else pauseShrink.animateTo(target, androidx.compose.animation.core.spring(dampingRatio = .62f, stiffness = 260f))
+                    }
                     PlayerArtworkFrame(inlineCanvas, ambience.color,
                         Modifier.width(sceneWidth).height(artworkHeight)
                         // Shared element: the artwork grows out of the mini-player cover on the
                         // reveal timeline, and returns to it during a dismissal or a back gesture.
                         .graphicsLayer {
                             val morph = sharedCoverMorph(AppUi.miniCoverBounds.value, size.width, size.height, revealProgress())
-                            scaleX = morph.scale; scaleY = morph.scale
+                            // Paused, the artwork steps back with a small bounce; playing, it comes forward again.
+                            val rest = pausedArtworkScale(pauseShrink.value)
+                            scaleX = morph.scale * rest; scaleY = morph.scale * rest
                             translationX = morph.translationX; translationY = morph.translationY
+                            if (pauseShrink.value > .01f) {
+                                shape = androidx.compose.foundation.shape.RoundedCornerShape((28f * pauseShrink.value.coerceIn(0f, 1f)).dp)
+                                clip = true
+                            }
                         }
                         .then(dismissDrag).trackSwipe(trackSwipe, threshold = 84.dp).then(if (canvasReady) Modifier.clickable(
                             interactionSource = artInteraction,

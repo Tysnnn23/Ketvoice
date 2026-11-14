@@ -337,6 +337,57 @@ async function albumCanvas(req: Request, owner: string): Promise<Response> {
   await database(scope,{method:"PATCH",headers:{Prefer:"return=minimal"},body:JSON.stringify({canvas_path:path})});
   return json({updated:true,canvasURL:publicFile(path)});
 }
+/** Every title this owner published, newest first, for the Studio list. */
+async function ownerSongs(owner: string): Promise<Response> {
+  const pageSize=250, rows: Row[]=[];
+  // Explicit pagination: the Data API's default row cap must not hide titles.
+  for(let offset=0; offset<2000; offset+=pageSize) {
+    const page=await database(`ketvoice_tracks?created_by=eq.${encodeURIComponent(owner)}&published=eq.true&order=created_at.desc,id.asc&limit=${pageSize}&offset=${offset}`);
+    rows.push(...page);
+    if(page.length<pageSize) break;
+  }
+  return json({songs:await Promise.all(rows.map(async row=>({track:track(row),revision:await revision(row)})))});
+}
+/**
+ * One cover and/or one canvas for a selection of this owner's titles (one title, a
+ * hand-picked set, or a whole album), or the canvas removed from them. Files are
+ * stored once; every id must be a title this owner published.
+ */
+async function selectionMedia(req: Request, owner: string): Promise<Response> {
+  const bytes=await bounded(req,MAX_COVER+MAX_CANVAS+65536);
+  const form=await new Request(req.url,{method:"POST",headers:{"content-type":req.headers.get("content-type") || ""},body:new Uint8Array(bytes)}).formData();
+  if([...form.keys()].some(k=>!["metadata","cover","canvas"].includes(k)) || ["metadata","cover","canvas"].some(k=>form.getAll(k).length>1))
+    throw new HttpError(400,"Champs de modification invalides");
+  let meta: Row;
+  try { meta=JSON.parse(String(form.get("metadata") || "{}")); }
+  catch { throw new HttpError(400,"Métadonnées invalides"); }
+  if(!meta || Array.isArray(meta) || typeof meta!=="object" || Object.keys(meta).some(k=>!["trackIds","rightsConfirmed","removeCanvas"].includes(k)))
+    throw new HttpError(400,"Métadonnées invalides");
+  if(meta.rightsConfirmed!==true) throw new HttpError(400,"Confirmez vos droits de publication");
+  if(!Array.isArray(meta.trackIds) || !meta.trackIds.length || meta.trackIds.length>250) throw new HttpError(400,"Choisissez entre 1 et 250 titres");
+  const ids=[...new Set(meta.trackIds.map(uploadId))];
+  const remove=meta.removeCanvas===true;
+  const image=await readCover(form.get("cover"));
+  const canvas=await readCanvas(form.get("canvas"));
+  if(remove && canvas) throw new HttpError(400,"Choisissez entre remplacer et retirer le Canvas");
+  if(!image && !canvas && !remove) throw new HttpError(400,"Aucune modification demandée");
+  const scope=`ketvoice_tracks?id=in.(${ids.join(",")})&created_by=eq.${encodeURIComponent(owner)}&published=eq.true`;
+  const owned=await database(`${scope}&select=id`);
+  if(owned.length!==ids.length) throw new HttpError(404,"Titre importé introuvable pour ce compte");
+  const prefix=`selection-${crypto.randomUUID()}`, uploaded: string[]=[], update: Row={};
+  try {
+    if(image) { const path=`${prefix}/cover.${image.ext}`;await store(path,image.data,image.mime);uploaded.push(path);update.cover_path=path; }
+    if(canvas) { const path=`${prefix}/canvas.${canvas.ext}`;await store(path,canvas.data,canvas.mime);uploaded.push(path);update.canvas_path=path; }
+    if(remove) update.canvas_path=null;
+    const rows=await database(scope,{method:"PATCH",headers:{Prefer:"return=representation"},body:JSON.stringify(update)});
+    return json({updated:rows.length,tracks:rows.map(track),
+      coverURL:update.cover_path ? publicFile(String(update.cover_path)) : null,
+      canvasURL:update.canvas_path ? publicFile(String(update.canvas_path)) : null});
+  } catch(error) {
+    if(uploaded.length) await api(`/storage/v1/object/${BUCKET}`,{method:"DELETE",body:JSON.stringify({prefixes:uploaded})}).catch(()=>{});
+    throw error;
+  }
+}
 async function publicLyrics(url: URL): Promise<Response> {
   const id=url.searchParams.get("trackId") || "", title=url.searchParams.get("title") || "", artist=url.searchParams.get("artist") || "";
   const select="select=id,track_id,title,artist,format,content,duration_ms,created_at&published=eq.true&order=created_at.desc&limit=10";
@@ -469,6 +520,8 @@ export async function handler(req:Request): Promise<Response> {
         return json(result);
       }
       if(req.method==="GET" && path==="/admin/albums") return await ownerAlbums(owner);
+      if(req.method==="GET" && path==="/admin/songs") return await ownerSongs(owner);
+      if(req.method==="POST" && path==="/admin/media") return await selectionMedia(req,owner);
       if(path==="/admin/sources") return await sources(req,owner,url);
       if(req.method==="GET" && path==="/admin/album") return await albumDetail(owner,url);
       if(req.method==="POST" && path==="/admin/album/tracks") return await albumTracks(req,owner);

@@ -383,7 +383,7 @@ fun AppRoot() {
                 }
                 if (AppUi.showPublisher.value) {
                     Box(Modifier.fillMaxSize().zIndex(9f)) {
-                        com.ketvoice.app.ui.settings.PublisherScreen(AppUi.publisherTrack.value) {
+                        com.ketvoice.app.ui.studio.PublisherScreen(AppUi.publisherTrack.value) {
                             AppUi.showPublisher.value = false
                         }
                     }

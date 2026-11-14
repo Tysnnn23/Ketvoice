@@ -11,7 +11,7 @@ data class CatalogRequest(val kind: String, val id: String, val title: String)
 data class CatalogGenre(val id: String, val title: String, val cover: String?)
 data class CatalogPage(val title: String, val subtitle: String, val cover: String?, val tracks: List<Track>,
     val releaseDate: String? = null)
-data class CatalogAlbum(val id: String, val title: String, val artist: String, val cover: String?)
+data class CatalogAlbum(val id: String, val title: String, val artist: String, val cover: String?, val releaseDate: String? = null)
 data class CatalogArtist(val id: String, val name: String, val picture: String?)
 /** What the public catalogue lists as most played right now. */
 data class CatalogChart(val tracks: List<Track>, val albums: List<CatalogAlbum>, val artists: List<CatalogArtist>) {
@@ -95,7 +95,8 @@ object CatalogRepo {
             val o = data.optJSONObject(i) ?: return@mapNotNull null
             val id = o.optString("id").takeIf { it.isNotBlank() && it.all(Char::isDigit) } ?: return@mapNotNull null
             val title = o.optString("title").takeIf { it.isNotBlank() } ?: return@mapNotNull null
-            CatalogAlbum(id, title, o.optJSONObject("artist")?.optString("name").orEmpty(), image(o, "cover_xl", "cover_big", "cover_medium"))
+            CatalogAlbum(id, title, o.optJSONObject("artist")?.optString("name").orEmpty(), image(o, "cover_xl", "cover_big", "cover_medium"),
+                o.optString("release_date").takeIf { Regex("\\d{4}-\\d{2}-\\d{2}").matches(it) })
         }.distinctBy { it.id }
     }
 
@@ -137,6 +138,14 @@ object CatalogRepo {
     suspend fun artistTop(name: String, knownId: String? = null): List<Track> = withContext(Dispatchers.IO) {
         val id = artistId(name, knownId) ?: return@withContext emptyList()
         parseTracks(get("artist/$id/top?limit=30")?.optJSONArray("data"))
+    }
+
+    /** The artist's albums and singles, newest first, named with the artist; empty when unavailable. */
+    suspend fun artistReleases(name: String, knownId: String? = null): List<CatalogAlbum> = withContext(Dispatchers.IO) {
+        val id = artistId(name, knownId) ?: return@withContext emptyList()
+        parseAlbums(get("artist/$id/albums?limit=12")?.optJSONArray("data"))
+            .map { if (it.artist.isBlank()) it.copy(artist = name) else it }
+            .sortedByDescending { it.releaseDate.orEmpty() }
     }
 
     /** Tracks by artists in the same style, from the catalogue's artist radio; empty when unavailable. */

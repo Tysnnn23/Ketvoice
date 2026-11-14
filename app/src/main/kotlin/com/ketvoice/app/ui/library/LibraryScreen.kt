@@ -137,7 +137,8 @@ fun LibraryScreen() {
                     TextButton(onClick = { AppUi.showCreatePlaylist.value = true }, enabled = !loadError) { Text("Créer une playlist", color = theme.accent) }
                     TextButton(onClick = { AppUi.showSpotifyImport.value = true }, enabled = !loadError) { Text("Importer depuis Spotify", color = theme.accent) }
                 }
-                if (rows.isNotEmpty()) PlaylistShelf(rows, if (loadError) null else ::pin)
+                // The Playlists view shows a grid of large covers; "All" keeps a row.
+                if (rows.isNotEmpty()) { if (view == 1) PlaylistGrid(rows, if (loadError) null else ::pin) else PlaylistShelf(rows, if (loadError) null else ::pin) }
                 TextButton(onClick = { importFile.launch(arrayOf("application/json", "text/*", "audio/x-mpegurl", "audio/mpegurl", "*/*")) },
                     enabled = !loadError, modifier = Modifier.padding(horizontal = 14.dp)) { Text("Importer un fichier · .json / .m3u", color = theme.accent) }
                 if (loadError || error.isNotBlank()) Text(if (error.isNotBlank()) error else "Impossible de lire les playlists",
@@ -156,7 +157,14 @@ fun LibraryScreen() {
                         }
                     }
                 }
-                LazyRow(Modifier.testTag("library-albums"), contentPadding = PaddingValues(horizontal = 18.dp),
+                if (view == 2) CoverGrid(rows, Modifier.testTag("library-albums")) { group, side ->
+                    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).clickable(role = Role.Button) { album = group.key }) {
+                        Cover(group.title, ArtworkRepo.coverForTrack(group.tracks.first()) ?: group.tracks.first().coverUrl, side, 18.dp)
+                        Text(group.title, localize = false, color = theme.onBackground, fontWeight = FontWeight.SemiBold,
+                            fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))
+                        Text(group.artist, localize = false, color = theme.secondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                } else LazyRow(Modifier.testTag("library-albums"), contentPadding = PaddingValues(horizontal = 18.dp),
                     horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                     items(rows, key = { it.key }) { group ->
                         Column(Modifier.width(148.dp).clickable(role = Role.Button) { album = group.key }) {
@@ -264,6 +272,47 @@ internal fun PlaylistShelf(rows: List<LocalPlaylist>, onPin: ((LocalPlaylist) ->
                     }
                 }
                 Text(if (playlist.entries.size == 1) "1 titre" else "${playlist.entries.size} titres", color = theme.secondary, fontSize = 12.sp)
+            }
+        }
+    }
+}
+
+/** Number of columns of a cover grid for a pane [widthDp] wide: two on a phone, more on wider panes. */
+internal fun coverGridColumns(widthDp: Float): Int = ((widthDp - 36f + 14f) / (170f + 14f)).toInt().coerceIn(2, 6)
+
+/** Large covers in a grid, Apple Music style: each cell is told the side its cover must take. */
+@Composable
+internal fun <T> CoverGrid(rows: List<T>, modifier: Modifier = Modifier, cell: @Composable (T, androidx.compose.ui.unit.Dp) -> Unit) {
+    BoxWithConstraints(modifier.fillMaxWidth().padding(horizontal = 18.dp)) {
+        val columns = coverGridColumns(maxWidth.value + 36f)
+        val side = (maxWidth - 14.dp * (columns - 1)) / columns
+        Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
+            rows.chunked(columns).forEach { line ->
+                Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                    line.forEach { item -> Box(Modifier.width(side)) { cell(item, side) } }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+internal fun PlaylistGrid(rows: List<LocalPlaylist>, onPin: ((LocalPlaylist) -> Unit)? = null) {
+    val theme = LocalTheme.current
+    CoverGrid(rows, Modifier.testTag("library-playlist-grid")) { playlist, side ->
+        Column(Modifier.fillMaxWidth()) {
+            PlaylistArtwork(playlist, playlist.name, Modifier.size(side).clip(RoundedCornerShape(18.dp))
+                .clickable(role = Role.Button) { AppUi.openPlaylist(playlist.id) })
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f).padding(top = 8.dp)) {
+                    Text(playlist.name, localize = false, color = theme.onBackground, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(if (playlist.entries.size == 1) "1 titre" else "${playlist.entries.size} titres", color = theme.secondary, fontSize = 12.sp)
+                }
+                if (onPin != null) IconButton(onClick = { onPin(playlist) }, modifier = Modifier.size(48.dp)) {
+                    Icon(Icons.Filled.PushPin, if (playlist.pinned) "Désépingler" else "Épingler",
+                        tint = if (playlist.pinned) theme.accent else theme.secondary, modifier = Modifier.size(18.dp))
+                }
             }
         }
     }

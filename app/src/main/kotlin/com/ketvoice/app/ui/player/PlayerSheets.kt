@@ -1,5 +1,6 @@
 package com.ketvoice.app.ui.player
 
+import kotlinx.coroutines.launch
 import androidx.compose.material.icons.automirrored.filled.PlaylistPlay
 import android.os.Build
 import androidx.annotation.RequiresApi
@@ -162,6 +163,20 @@ fun TrackMenuSheet(track: Track, onClose: () -> Unit) {
         MenuItemRow("Ajouter à une playlist", Icons.Filled.PlaylistAdd) {
             onClose(); com.ketvoice.app.ui.AppUi.addToPlaylist.value = track
         }
+        // A story card of the line being sung (if this title is playing), else of the title alone.
+        val momentScope = androidx.compose.runtime.rememberCoroutineScope()
+        val momentAccent = com.ketvoice.app.theme.rememberCoverAccent(cover)?.first
+        MenuItemRow("Partager un moment", Icons.Filled.Share) {
+            val lines = com.ketvoice.app.util.MomentCard.currentLine(track)
+            momentScope.launch {
+                runCatching {
+                    val file = com.ketvoice.app.util.MomentCard.render(shareContext, track, lines,
+                        momentAccent?.let { c -> android.graphics.Color.argb((c.alpha * 255).toInt(), (c.red * 255).toInt(), (c.green * 255).toInt(), (c.blue * 255).toInt()) })
+                    com.ketvoice.app.util.MomentCard.share(shareContext, file, track)
+                }
+                onClose()
+            }
+        }
         MenuItemRow("Égaliseur", Icons.Filled.Tune) {
             onClose(); com.ketvoice.app.ui.AppUi.showEqualizer.value = true
         }
@@ -211,11 +226,11 @@ fun TrackMenuSheet(track: Track, onClose: () -> Unit) {
             }
         }
         val publisher by com.ketvoice.app.data.PublisherSession.allowed.collectAsState()
-        if (publisher && com.ketvoice.app.data.ImportedSong.id(track) != null) MenuItemRow("Modifier l'audio ou la pochette", Icons.Filled.Download) {
+        if (publisher && com.ketvoice.app.data.ImportedSong.id(track) != null) MenuItemRow("Modifier dans Studio", Icons.Filled.Tune) {
             onClose()
             com.ketvoice.app.ui.AppUi.openPublisher(track, edit = true)
         }
-        if (publisher) MenuItemRow("Importer des lyrics", Icons.Filled.PlaylistAdd) {
+        if (publisher && com.ketvoice.app.data.ImportedSong.id(track) == null) MenuItemRow("Importer des lyrics", Icons.Filled.PlaylistAdd) {
             onClose()
             com.ketvoice.app.ui.AppUi.openPublisher(track)
         }

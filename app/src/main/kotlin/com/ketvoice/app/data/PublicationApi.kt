@@ -127,26 +127,76 @@ object PublicationApi {
         } finally { c.disconnect() }
     }
 
+    /** What can change on a published title; null keeps the current value. */
+    data class SongInfo(val title: String? = null, val artist: String? = null, val album: String? = null)
+
     suspend fun updateSong(wanted: EditableSong, audio: File?, cover: File?, durationMs: Long,
-                           onProgress: (Int) -> Unit): Track {
+                           onProgress: (Int) -> Unit, canvas: File? = null, info: SongInfo = SongInfo()): Track {
         require(ImportedSong.id(wanted.track) != null)
-        require(audio != null || cover != null)
+        require(audio != null || cover != null || canvas != null || info != SongInfo())
         val body = JSONObject().put("trackId", wanted.track.id).put("revision", wanted.revision)
             .put("rightsConfirmed", true).put("durationMs", durationMs)
-        val updated = upload("/admin/song/update", body, audio, cover, null, onProgress)
-        ListeningHistory.replacePublication(updated)
-        com.ketvoice.app.player.Player.refreshPublication(updated)
+        info.title?.let { body.put("title", it) }
+        info.artist?.let { body.put("artist", it) }
+        info.album?.let { body.put("album", it) }
+        val updated = upload("/admin/song/update", body, audio, cover, null, onProgress, canvas)
+        refreshed(listOf(updated))
         return updated
     }
 
-    suspend fun publishSong(track: Track, audio: File, cover: File?, lyrics: File?, onProgress: (Int) -> Unit): Track =
-        upload("/admin/song", metadata(track).put("rightsConfirmed", true), audio, cover, lyrics, onProgress)
+    suspend fun publishSong(track: Track, audio: File, cover: File?, lyrics: File?, onProgress: (Int) -> Unit,
+                            canvas: File? = null): Track =
+        upload("/admin/song", metadata(track).put("rightsConfirmed", true), audio, cover, lyrics, onProgress, canvas)
 
-    private suspend fun upload(path: String, meta: JSONObject, audio: File?, cover: File?, lyrics: File?, onProgress: (Int) -> Unit): Track = withContext(Dispatchers.IO) {
+    /** Every title this account published, newest first, each with the revision its edits need. */
+    suspend fun songs(): List<EditableSong> = withContext(Dispatchers.IO) {
+        val c = connection("$BASE/admin/songs", "GET", PublisherSession.token())
+        try {
+            val rows = response(c).optJSONArray("songs") ?: JSONArray()
+            (0 until rows.length()).mapNotNull { index ->
+                val row = rows.optJSONObject(index) ?: return@mapNotNull null
+                val song = row.optJSONObject("track")?.let(::track) ?: return@mapNotNull null
+                EditableSong(song, row.optString("revision"))
+            }
+        } finally { c.disconnect() }
+    }
+
+    /**
+     * One cover and/or one Canvas for several of this account's titles at once (one title,
+     * a selection or a whole album), or the Canvas removed from them.
+     */
+    suspend fun applyMedia(trackIds: List<String>, cover: File?, canvas: File?, removeCanvas: Boolean = false,
+                           onProgress: (Int) -> Unit = {}): List<Track> {
+        require(trackIds.isNotEmpty() && trackIds.all { ImportedSong.id(Track(it, "", "", "")) != null })
+        require(cover != null || canvas != null || removeCanvas)
+        val meta = JSONObject().put("trackIds", JSONArray(trackIds.distinct())).put("rightsConfirmed", true)
+        if (removeCanvas) meta.put("removeCanvas", true)
+        val result = multipart("/admin/media", meta, listOfNotNull(cover?.let { "cover" to it }, canvas?.let { "canvas" to it }), onProgress)
+        val rows = result.optJSONArray("tracks") ?: JSONArray()
+        val tracks = (0 until rows.length()).mapNotNull { rows.optJSONObject(it)?.let(::track) }
+        refreshed(tracks)
+        return tracks
+    }
+
+    /** The rest of the app sees a changed publication at once: history, queue and player. */
+    private fun refreshed(tracks: List<Track>) = tracks.forEach { updated ->
+        ListeningHistory.replacePublication(updated)
+        com.ketvoice.app.player.Player.refreshPublication(updated)
+    }
+
+    private suspend fun upload(path: String, meta: JSONObject, audio: File?, cover: File?, lyrics: File?, onProgress: (Int) -> Unit,
+                               canvas: File? = null): Track {
+        val files = listOfNotNull(audio?.let { "audio" to it }, cover?.let { "cover" to it }, lyrics?.let { "lyrics" to it },
+            canvas?.let { "canvas" to it })
+        val result = multipart(path, meta, files, onProgress)
+        require(result.optBoolean("published")) { "Publication impossible" }
+        return track(result.getJSONObject("track")) ?: error("Réponse de publication invalide")
+    }
+
+    private suspend fun multipart(path: String, meta: JSONObject, files: List<Pair<String, File>>, onProgress: (Int) -> Unit): JSONObject = withContext(Dispatchers.IO) {
         val token = PublisherSession.token()
         val boundary = "Ketvoice${UUID.randomUUID()}"
         val c = connection("$BASE$path", "POST", token)
-        val files = listOfNotNull(audio?.let { "audio" to it }, cover?.let { "cover" to it }, lyrics?.let { "lyrics" to it })
         val total = files.sumOf { it.second.length() }.coerceAtLeast(1)
         var sent = 0L
         try {
@@ -171,9 +221,8 @@ object PublicationApi {
                 write("--$boundary--\r\n")
             }
             val result = response(c)
-            require(result.optBoolean("published")) { "Publication impossible" }
             onProgress(100)
-            track(result.getJSONObject("track")) ?: error("Réponse de publication invalide")
+            result
         } finally { c.disconnect() }
     }
 }

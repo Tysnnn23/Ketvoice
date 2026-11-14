@@ -20,6 +20,10 @@ object ListeningHistory {
     private val _listenedMs = MutableStateFlow(0L)
     val listenedMs: StateFlow<Long> = _listenedMs
     private var unflushedMs = 0L
+    private val _days = MutableStateFlow<Map<String, DayStat>>(emptyMap())
+    /** Listening of the last two weeks, per day: what "your week" is made of. */
+    internal val days: StateFlow<Map<String, DayStat>> = _days
+    private fun today() = java.time.LocalDate.now()
 
     fun init(context: Context) {
         if (prefs != null) return
@@ -33,6 +37,7 @@ object ListeningHistory {
             root.asJsonObject.entrySet().associate { (key, value) -> key to value.asInt }
         }.getOrDefault(emptyMap())
         _listenedMs.value = prefs!!.getLong("listenedMs", 0L)
+        _days.value = ListeningWeek.trim(ListeningWeek.decode(prefs!!.getString("days", null)), today())
         runCatching { ListeningStats.refresh() }
     }
 
@@ -44,9 +49,10 @@ object ListeningHistory {
     @Synchronized fun addListenedMs(deltaMs: Long) {
         if (deltaMs <= 0L) return
         _listenedMs.value = _listenedMs.value + deltaMs
+        _days.value = ListeningWeek.addTime(_days.value, today(), deltaMs)
         unflushedMs += deltaMs
         if (unflushedMs >= 15_000L) {
-            prefs?.edit()?.putLong("listenedMs", _listenedMs.value)?.apply()
+            prefs?.edit()?.putLong("listenedMs", _listenedMs.value)?.putString("days", ListeningWeek.encode(_days.value))?.apply()
             unflushedMs = 0L
         }
     }
@@ -54,7 +60,7 @@ object ListeningHistory {
     /** Flush immédiat (arrêt du service, pause longue). */
     @Synchronized fun flushListenedMs() {
         if (unflushedMs > 0L) {
-            prefs?.edit()?.putLong("listenedMs", _listenedMs.value)?.apply()
+            prefs?.edit()?.putLong("listenedMs", _listenedMs.value)?.putString("days", ListeningWeek.encode(_days.value))?.apply()
             unflushedMs = 0L
         }
     }
@@ -81,8 +87,9 @@ object ListeningHistory {
             }
         }
         _playCounts.value = counts
+        _days.value = ListeningWeek.addPlay(_days.value, today(), track.id)
         prefs?.edit()?.putString("tracks", gson.toJson(_tracks.value))
-            ?.putString("counts", gson.toJson(counts))?.apply()
+            ?.putString("counts", gson.toJson(counts))?.putString("days", ListeningWeek.encode(_days.value))?.apply()
         // Keep the recap projection warm so the stats screen opens instantly.
         runCatching { ListeningStats.refresh() }
     }

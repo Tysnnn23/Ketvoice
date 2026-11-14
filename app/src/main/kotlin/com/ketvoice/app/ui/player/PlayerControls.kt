@@ -206,7 +206,8 @@ private fun CanvasVideo(path: String, playing: Boolean, modifier: Modifier = Mod
             .apply {
                 volume = 0f
                 repeatMode = androidx.media3.common.Player.REPEAT_MODE_ONE
-                setMediaItem(MediaItem.fromUri(Uri.fromFile(File(path))))
+                // A published Canvas plays from its public HTTPS address; a cached or chosen one from its file.
+                setMediaItem(MediaItem.fromUri(if (path.startsWith("https://")) Uri.parse(path) else Uri.fromFile(File(path))))
                 prepare()
             }
     }
@@ -234,6 +235,9 @@ private fun CanvasVideo(path: String, playing: Boolean, modifier: Modifier = Mod
         update = { it.player = exo; it.resizeMode = resizeMode }
     )
 }
+
+/** Height of the progress bar: 5 dp at rest, 12 dp under the finger (the spring may overshoot a little). */
+internal fun scrubThicknessDp(progress: Float): Float = 5f + 7f * (if (progress.isFinite()) progress.coerceIn(-.2f, 1.3f) else 0f)
 
 @Composable
 fun ScrubBar(
@@ -271,6 +275,11 @@ fun ScrubBar(
     }
 
     val shown = (dragFraction ?: anim.value).coerceIn(0f, 1f)
+    // The bar swells under the finger and settles back with a small bounce once released.
+    val thickness by androidx.compose.animation.core.animateFloatAsState(
+        if (dragFraction != null) 1f else 0f,
+        if (Motion.reduced) androidx.compose.animation.core.snap()
+        else androidx.compose.animation.core.spring(dampingRatio = .55f, stiffness = 420f), label = "scrub-thickness")
 
     Column(modifier = modifier.fillMaxWidth()) {
         Canvas(
@@ -303,7 +312,7 @@ fun ScrubBar(
                     )
                 }
         ) {
-            val barH = if (dragFraction != null) 8.dp.toPx() else 6.dp.toPx()
+            val barH = scrubThicknessDp(thickness).dp.toPx()
             val y = size.height / 2f
             val w = size.width
             val x = w * shown
@@ -324,8 +333,8 @@ fun ScrubBar(
                     cap = StrokeCap.Round
                 )
             }
-            if (dragFraction != null) {
-                drawCircle(Color.White, radius = 7.dp.toPx(), center = Offset(x, y))
+            if (thickness > .02f) {
+                drawCircle(Color.White, radius = 7.dp.toPx() * thickness.coerceIn(0f, 1.2f), center = Offset(x, y))
             }
         }
         if (showTimes) {

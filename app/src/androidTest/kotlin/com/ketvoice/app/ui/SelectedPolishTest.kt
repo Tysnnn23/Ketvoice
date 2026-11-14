@@ -23,7 +23,7 @@ import com.ketvoice.app.ui.common.DownloadCover
 import com.ketvoice.app.ui.library.LibraryScreen
 import com.ketvoice.app.ui.player.*
 import com.ketvoice.app.ui.sub.CapsuleDialog
-import com.ketvoice.app.ui.settings.PublisherScreen
+import com.ketvoice.app.ui.studio.PublisherScreen
 import com.ketvoice.app.player.SonicMeter
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.After
@@ -186,17 +186,17 @@ class SelectedPolishTest {
         val imported = qa.copy(id = "kv:upload:11111111-1111-4111-8111-111111111111", addon = "upload")
         var selected by mutableStateOf(imported)
         compose.setContent { KetvoiceTheme(useDark = true) { TrackMenuSheet(selected) {} } }
-        compose.onNodeWithText("Modifier l'audio ou la pochette").assertExists()
+        compose.onNodeWithText("Modifier dans Studio").assertExists()
         compose.runOnIdle { selected = qa.copy(id = "yt:abcdefghijk") }
-        compose.onNodeWithText("Modifier l'audio ou la pochette").assertDoesNotExist()
+        compose.onNodeWithText("Modifier dans Studio").assertDoesNotExist()
     }
 
     @Test fun editingScreenRequiresVerifiedPublisherBeforeFilesCanBeSubmitted() {
         AppUi.editImportedSong.value = true
         val imported = qa.copy(id = "kv:upload:11111111-1111-4111-8111-111111111111", addon = "upload")
         compose.setContent { KetvoiceTheme(useDark = true) { PublisherScreen(imported) {} } }
-        compose.onNodeWithText("Vérification du compte de publication").assertExists()
-        compose.onNodeWithText("Enregistrer les modifications").assertDoesNotExist()
+        compose.onNodeWithText("Connexion").assertExists()
+        compose.onNodeWithTag("studio-save").assertDoesNotExist()
     }
 
     @Test fun capsuleRequiresAnExplicitPreviewAndPreparation() {

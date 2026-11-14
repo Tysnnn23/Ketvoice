@@ -9,6 +9,12 @@ object PublisherAccess {
     const val REDIRECT_URL = "ketvoice://auth"
     fun matches(email: String): Boolean = email.trim().equals(EMAIL, ignoreCase = true)
 
+    /** True when the server refused a remembered session, not when the network failed. */
+    fun rejectedSession(message: String?): Boolean {
+        val text = message.orEmpty().lowercase()
+        return "refresh token" in text || "ne peut pas publier" in text || "invalid_grant" in text
+    }
+
     data class Verification(val key: String, val value: String, val type: String)
 
     fun verification(input: String): Verification {

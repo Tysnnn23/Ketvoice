@@ -157,15 +157,15 @@ fun SettingsScreen() {
             }
 
             if (publisher || (youtube.connected && com.ketvoice.app.data.PublisherAccess.matches(youtube.email))) {
-                Section("PUBLICATIONS KETVOICE API") {
+                Section("STUDIO") {
                     if (!publisher) {
-                        SRow(KetIcons.Download, "Vérifier mon accès",
-                            sub = "Confirmez votre adresse par un lien de connexion à usage unique", value = "") {
+                        SRow(KetIcons.Download, "Ouvrir le Studio",
+                            sub = "Connexion par un lien à usage unique, mémorisée sur cet appareil", value = "") {
                             AppUi.openPublisher()
                         }
                     } else {
-                        SRow(KetIcons.Download, "Importer un son",
-                            sub = "Publier un fichier audio, sa pochette et ses paroles pour tous", value = "") {
+                        SRow(KetIcons.Download, "Ouvrir le Studio",
+                            sub = "Vos titres, pochettes, Canvas, paroles et albums", value = "") {
                             AppUi.openPublisher()
                         }
                         SRow(KetIcons.Lyrics, "Importer des lyrics",
@@ -240,6 +240,15 @@ fun SettingsScreen() {
             Section("APPARENCE") {
                 SRow(KetIcons.Appearance, "Aperçu du verre", sub = "Comparer Clair, Dépoli, Opaque et Liquid 27 avant d'appliquer") {
                     glassPreview = true
+                }
+                SRow(KetIcons.Lyrics, "Style des paroles",
+                    sub = "Ketvoice, ou Cascade : grandes lignes qui suivent la chanson en vague",
+                    value = if (AppSettings.lyricsStyle.value == 1) "Cascade" else "Ketvoice") {
+                    choice = ChoiceSpec("Style des paroles", "S'applique au lecteur et au plein écran des paroles.",
+                        AppSettings.lyricsStyle.value.toString(), listOf(
+                            ChoiceOption("0", "Ketvoice", "Toutes les lignes à la même taille, la ligne chantée éclairée"),
+                            ChoiceOption("1", "Cascade", "Ligne chantée seule en avant, les autres en retrait suivent en vague"))
+                    ) { id -> AppSettings.lyricsStyle.value = id.toIntOrNull()?.coerceIn(0, 1) ?: 0; SettingsStore.save() }
                 }
                 SToggle(KetIcons.Info, "Stats info", "Informations audio réelles, uniquement dans le lecteur", AppSettings.techStats.value) {
                     AppSettings.techStats.value = it; SettingsStore.save()

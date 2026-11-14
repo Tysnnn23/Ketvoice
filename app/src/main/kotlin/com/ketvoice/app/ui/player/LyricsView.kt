@@ -1,5 +1,7 @@
 package com.ketvoice.app.ui.player
 
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.foundation.combinedClickable
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
@@ -96,6 +98,9 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
                         onEmptyTap: () -> Unit = {},
                         fontScale: Float = com.ketvoice.app.ui.quest.QuestLayout.lyricsScale(AppSettings.lyricsTextSize.value)) {
     val lyrics by LyricsRepo.state.collectAsState()
+    // Lines held for a "Moment" card: a long-press starts the selection, a tap extends it.
+    var moment by remember(track.id) { mutableStateOf(listOf<Int>()) }
+    val momentHaptic = com.ketvoice.app.ui.motion.rememberHaptics()
     val offsets by LyricsOffsets.values.collectAsState()
     val offsetMs = offsets[remember(track.id) { LyricsOffsets.key(track.id) }] ?: 0
 
@@ -220,8 +225,10 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
                                     entry.animateTo(1f, tween(420, easing = CubicBezierEasing(.16f, .84f, .28f, 1f)))
                                 }
                             }
+                            val cascade = AppSettings.lyricsStyle.value == 1
                             val lineColor by animateColorAsState(
-                                targetValue = if (current || !lyrics.isTimed) Color.White else Color.White.copy(alpha = .54f),
+                                targetValue = if (current || !lyrics.isTimed) Color.White
+                                    else Color.White.copy(alpha = if (cascade) LyricsCascade.INACTIVE_ALPHA else .54f),
                                 animationSpec = tween(Motion.duration(320)),
                                 label = "lyricColor"
                             )
@@ -230,14 +237,33 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
                             // même graisse : seule la couleur distingue la ligne active.
                             // Aucun changement d'échelle, pour éviter l'effet « lyrics
                             // basiques » sur les lignes non sélectionnées.
-                            val lineScale = 1f
-                            val lineModifier = Modifier.fillMaxWidth().clickable {
-                                if (lyrics.isTimed && line.timeMs >= 0) { Player.seekTo(LyricsOffsets.seekPosition(line.timeMs, offsetMs)); following = true }
+                            // Cascade: the sung line alone stands forward; the others step back a
+                            // little and catch up in a wave, each a few milliseconds after the one above.
+                            val lineScale by animateFloatAsState(
+                                if (cascade && lyrics.isTimed && !current && !reduced) LyricsCascade.INACTIVE_SCALE else 1f,
+                                androidx.compose.animation.core.spring(dampingRatio = .82f, stiffness = 260f), label = "lyricScale")
+                            val wave = remember(index, track.id) { Animatable(0f) }
+                            LaunchedEffect(active, cascade, reduced) {
+                                if (!cascade || reduced || active < 0 || index < active) { wave.snapTo(0f); return@LaunchedEffect }
+                                wave.snapTo(LyricsCascade.waveStartDp(index - active))
+                                delay(LyricsCascade.waveDelayMs(index - active))
+                                wave.animateTo(0f, androidx.compose.animation.core.spring(dampingRatio = .74f, stiffness = 210f))
                             }
+                            val held = index in moment
+                            val lineModifier = Modifier.fillMaxWidth()
+                                .then(if (held) Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(14.dp))
+                                    .background(Color.White.copy(alpha = .14f)) else Modifier)
+                                .momentClickable(onClick = {
+                                    if (moment.isNotEmpty()) moment = com.ketvoice.app.util.MomentCard.toggle(moment, index)
+                                    else if (lyrics.isTimed && line.timeMs >= 0) { Player.seekTo(LyricsOffsets.seekPosition(line.timeMs, offsetMs)); following = true }
+                                }, onLongClick = {
+                                    momentHaptic(com.ketvoice.app.ui.motion.Haptics.Kind.Tick)
+                                    moment = com.ketvoice.app.util.MomentCard.toggle(moment, index)
+                                })
                             Column(
                                  lineModifier.graphicsLayer {
                                     alpha = entry.value
-                                    translationY = if (reduced) 0f else (1f - entry.value) * 16.dp.toPx()
+                                    translationY = if (reduced) 0f else (1f - entry.value) * 16.dp.toPx() + wave.value.dp.toPx()
                                     scaleX = lineScale
                                     scaleY = lineScale
                                     transformOrigin = TransformOrigin(0f, .5f)
@@ -292,12 +318,42 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
                     }
                 }
             }
-            if (expanded && !following && lyrics.isTimed) {
+            if (moment.isNotEmpty()) MomentBar(track, moment.mapNotNull { lyrics.lines.getOrNull(it)?.text }) { moment = emptyList() }
+            else if (expanded && !following && lyrics.isTimed) {
                 Text("Reprendre le suivi", color = Color.White, fontSize = if (com.ketvoice.app.BuildConfig.IS_QUEST) 14.sp else 12.sp,
                     modifier = Modifier.align(Alignment.CenterHorizontally).clickable { following = true }.padding(12.dp))
             }
         }
     }
+    }
+}
+
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+private fun Modifier.momentClickable(onClick: () -> Unit, onLongClick: () -> Unit): Modifier =
+    combinedClickable(onClick = onClick, onLongClick = onLongClick, onLongClickLabel = com.ketvoice.app.data.AppText.t("Partager ce moment"))
+
+/** The selected lines become a card for a story, shared with a link to the title. */
+@Composable
+private fun MomentBar(track: Track, lines: List<String>, onClose: () -> Unit) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val scope = rememberCoroutineScope()
+    var busy by remember { mutableStateOf(false) }
+    val cover = com.ketvoice.app.data.ArtworkRepo.coverForTrack(track) ?: track.coverUrl
+    val accent = com.ketvoice.app.theme.rememberCoverAccent(cover)?.first
+    Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp).testTag("moment-bar"),
+        horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+        com.ketvoice.app.ui.common.GlassCapsuleButton("Partager ce moment", com.ketvoice.app.ui.common.KetIcons.Share, {
+            if (!busy) { busy = true
+                scope.launch {
+                    try {
+                        val file = com.ketvoice.app.util.MomentCard.render(context, track, lines, accent?.toArgb())
+                        com.ketvoice.app.util.MomentCard.share(context, file, track)
+                        onClose()
+                    } catch (_: Exception) { } finally { busy = false }
+                }
+            }
+        }, Modifier.weight(1f), prominent = true, enabled = !busy, tag = "moment-share", minHeight = 48.dp)
+        com.ketvoice.app.ui.common.GlassCapsuleButton("Annuler", null, onClose, minHeight = 48.dp)
     }
 }
 

@@ -40,6 +40,7 @@ object SettingsStore {
         s.highRefreshRate.value = p.getBoolean("highRefreshRate", false)
         s.syncedLyrics.value = p.getBoolean("syncedLyrics", s.syncedLyrics.value)
         s.blurInactiveLyrics.value = p.getBoolean("blurInactiveLyrics", s.blurInactiveLyrics.value)
+        s.lyricsStyle.value = p.getInt("lyricsStyle", s.lyricsStyle.value).coerceIn(0, 1)
         s.lyricsSource.value = p.getString("lyricsSource", s.lyricsSource.value) ?: "auto"
         if (s.lyricsSource.value !in MusicApi.lyricSources + listOf("auto", "off")) {
             s.lyricsSource.value = "auto"
@@ -157,6 +158,7 @@ object SettingsStore {
             .putBoolean("highRefreshRate", s.highRefreshRate.value)
             .putBoolean("syncedLyrics", s.syncedLyrics.value)
             .putBoolean("blurInactiveLyrics", s.blurInactiveLyrics.value)
+            .putInt("lyricsStyle", s.lyricsStyle.value)
             .putString("lyricsSource", s.lyricsSource.value)
             .putStringSet("favoriteIds", s.favoriteIds.value)
             .putString("translateLanguage", s.translateLanguage.value)

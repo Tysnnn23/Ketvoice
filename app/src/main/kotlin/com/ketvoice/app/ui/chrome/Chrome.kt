@@ -1,5 +1,6 @@
 package com.ketvoice.app.ui.chrome
 
+import androidx.compose.ui.platform.testTag
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.AnimatedContent
@@ -139,14 +140,21 @@ fun MiniPlayerPill(
                     .padding(start = 6.dp, end = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Cover(
+                // The cover comes alive as its Canvas when the title has one and motion is welcome.
+                val canvases by com.ketvoice.app.data.CanvasRepo.paths.collectAsState()
+                val canvas = canvases[current.id]?.takeIf {
+                    AppSettings.animatedArtwork.value && !Motion.reduced && !AppSettings.highPerformanceMode.value
+                }
+                val coverPlace = Modifier.onGloballyPositioned { AppUi.miniCoverBounds.value = it.boundsInRoot() }
+                if (canvas != null) Box(coverPlace.size(coverSize).clip(RoundedCornerShape(if (compact) 999.dp else 9.dp))
+                    .testTag("mini-canvas")) {
+                    com.ketvoice.app.ui.player.ArtworkCanvas(current.copy(coverUrl = cover), canvas, ps.isPlaying, Modifier.fillMaxSize())
+                } else Cover(
                     current.title,
                     cover,
                     size = coverSize,
                     radius = if (compact) 999.dp else 9.dp,
-                    modifier = Modifier.onGloballyPositioned {
-                        AppUi.miniCoverBounds.value = it.boundsInRoot()
-                    }
+                    modifier = coverPlace
                 )
                 Spacer(Modifier.width(if (compact) 4.dp else 11.dp))
                 Column(
@@ -293,16 +301,20 @@ private fun MiniProgressLine(modifier: Modifier = Modifier) {
         else tween(durationMillis = 500, easing = androidx.compose.animation.core.LinearEasing),
         label = "miniProgress"
     )
+    // A hairline inset from the pill's edges: a faint track and the accent filling it.
     Box(
         modifier
-            .height(3.dp)
-            .background(Color.Transparent)
+            .padding(start = 18.dp, end = 18.dp, bottom = 3.dp)
+            .height(2.5.dp)
+            .clip(RoundedCornerShape(2.dp))
+            .background(LocalTheme.current.onBackground.copy(alpha = .10f))
+            .testTag("mini-progress")
     ) {
         Box(
             Modifier
                 .fillMaxHeight()
                 .fillMaxWidth(smooth)
-                .clip(RoundedCornerShape(topEnd = 2.dp, bottomEnd = 2.dp))
+                .clip(RoundedCornerShape(2.dp))
                 .background(LocalTheme.current.accent)
         )
     }

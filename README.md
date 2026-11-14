@@ -21,6 +21,17 @@
 
 ## Overview
 
+### 4.16.0 — a more personal Home and moments to share
+
+Home opens on a For you card that changes with what you were doing and the time of
+day, shows new releases from your artists and your week, and moves the shelves you
+open most to the top. The artwork steps back when you pause, the progress bar swells
+under the finger, the mini-player plays the Canvas, lyrics gain a Cascade style, and a
+long-press on lyrics makes a card to share in a story.
+[Mobile](https://github.com/Tysnnn23/Ketvoice/releases/download/v4.16.0/Ketvoice-4.16.0.apk)
+· [Quest](https://github.com/Tysnnn23/Ketvoice/releases/download/v4.16.0/Ketvoice-4.16.0-Quest.apk)
+· [Release notes](docs/releases/v4.16.0.md).
+
 ### 4.15.0 — the album page takes its colour from the cover
 
 Like the artist page, the album page opens on its cover or Canvas, which dissolves

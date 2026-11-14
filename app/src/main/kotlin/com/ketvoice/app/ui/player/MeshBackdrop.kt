@@ -115,8 +115,9 @@ internal fun MeshBackdrop(colors: List<Color>, playing: Boolean, modifier: Modif
                     // Half-rate updates: the fields move slowly, and the glass above re-samples on each change.
                     frame++
                     if (frame % 2 == 0) {
-                        time.floatValue += ((now - last) / 1_000_000_000f).coerceIn(0f, .1f) * 2f
-                        energy.floatValue += (levels.low.coerceIn(0f, 1f) - energy.floatValue) * .18f
+                        // A slower clock and a gentler response to the bass: the colours drift, they never pulse.
+                        time.floatValue += ((now - last) / 1_000_000_000f).coerceIn(0f, .1f) * 1.3f
+                        energy.floatValue += (levels.low.coerceIn(0f, 1f) * .75f - energy.floatValue) * .10f
                         SonicMeter.expire()
                     }
                 }

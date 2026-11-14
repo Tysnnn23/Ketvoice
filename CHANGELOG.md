@@ -7,6 +7,23 @@
 
 ---
 
+# Ketvoice 4.16.0
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 103** — a more personal Home, a more polished player, moments to share.
+
+- Home: a For you card (resume, new release, mix of the hour), new releases from your
+  artists, your week, and shelves that move with what you open.
+- Player: the artwork steps back when paused, the progress bar swells under the finger,
+  a calmer background; the mini-player plays the Canvas and shows a fine progress line.
+- Lyrics: a Cascade style in Appearance, and Share a moment as a story card.
+- Library: playlists and albums as a grid of large covers.
+
+Full notes: [4.16.0](docs/releases/v4.16.0.md).
+
+---
+
 # Ketvoice 4.15.0
 
 ![Ketvoice](ketvoice-banner.png)

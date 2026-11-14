@@ -32,6 +32,8 @@ object AppSettings {
     val highRefreshRate = mutableStateOf(false)
     val syncedLyrics = mutableStateOf(true)
     val blurInactiveLyrics = mutableStateOf(true)
+    /** 0: Ketvoice lyrics; 1: Cascade, large lines that follow the song in a staggered wave. */
+    val lyricsStyle = mutableStateOf(0)
     val lyricsSource = mutableStateOf("auto")
     val betterLyricsKey = mutableStateOf("")
     val lyricaUrl = mutableStateOf("")
