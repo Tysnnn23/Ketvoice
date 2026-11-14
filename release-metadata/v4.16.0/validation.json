@@ -1,0 +1,178 @@
+{
+  "schema": 8,
+  "version": "4.16.0",
+  "versionCode": 103,
+  "source_commit": "f90ffdb4b46a04f018afe6b38da958e5e406be21",
+  "created_at": "2026-11-14T15:56:59.650275+00:00",
+  "build_origin": {
+    "kind": "github_actions_with_owner_discord_sdk",
+    "workflow": "android.yml",
+    "run_id": 43609317944,
+    "artifact": {
+      "id": 14118559893,
+      "sha256": "6c8d491a75d23ff4770857ea81643b7aeb2a21174e8e085022e5de2d783b0ca0"
+    },
+    "gradle": "assembleMobileRelease assembleQuestRelease",
+    "note": "Signed by CI with the pinned keystore secret; the Discord Social SDK AAR matched its pinned SHA-256."
+  },
+  "local_validation": {
+    "result": "debug JVM/Robolectric suites for both flavors, release lint and the UI text audit passed in a cloud container without the Discord SDK",
+    "commands": [
+      "testMobileDebugUnitTest",
+      "testQuestDebugUnitTest",
+      "lintMobileRelease",
+      "lintQuestRelease",
+      "tools/audit_ui_texts.py --check"
+    ],
+    "ci_validation": "run 43609317944: release builds, debug and release unit tests for both flavors, UI text audit, lint, APK signature pin and Discord bridge packaging passed",
+    "code_review": {
+      "kind": "author's own re-read; no independent review"
+    },
+    "host_previews": "Studio sign-in, Canvas editor checks, For you resume card and week card rendered in software on the host and inspected",
+    "after_last_full_local_run": "one lint fix (InputStream.readNBytes replaced for API 31) was followed by lint, both debug assemblies and the targeted Studio tests locally; the complete suites then ran in CI on the published commit"
+  },
+  "server": {
+    "function": "ketvoice-content",
+    "deployed_version": 17,
+    "deployment": "a one-line entrypoint importing supabase/functions/ketvoice-content/handler.ts from commit f90ffdb4b46a04f018afe6b38da958e5e406be21 on raw.githubusercontent.com, bundled at deploy time",
+    "new_routes": [
+      "GET /admin/songs",
+      "POST /admin/media"
+    ],
+    "tests": "handler_test.ts: 5 Deno tests pass locally (owner-only routes, selection media ownership, single storage write, canvas removal, non-MP4 refusal)",
+    "live_check": "/health 200 and /admin/songs, /admin/media 401 without an owner session after deployment"
+  },
+  "tests": {
+    "mobile": {
+      "jvm": {
+        "tests": 642,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "android_15_emulator_compose": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "quest": {
+      "jvm": {
+        "tests": 641,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "android_15_emulator_compose": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    }
+  },
+  "lint": {
+    "mobile": {
+      "Warning": 176,
+      "Hint": 18
+    },
+    "quest": {
+      "Warning": 178,
+      "Hint": 18
+    }
+  },
+  "apks": [
+    {
+      "name": "Ketvoice-4.16.0.apk",
+      "sha256": "0bb4efd8a85ac315f541a7483468fe32d25847f1fafbbbe47d42f42f67c8fa26",
+      "bytes": 73114156,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "4.16.0",
+      "versionCode": 103,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-4.16.0-Quest.apk",
+      "sha256": "cc68cce88d0f3fb202d714b90da205750b813137d95ae06cd9223f2aa4da2a3a",
+      "bytes": 83147754,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "4.16.0",
+      "versionCode": 103,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    }
+  ],
+  "discord": {
+    "sdk_present_in_ci_build": true,
+    "sdk_sha256_pinned": true,
+    "bridge_and_native_libraries_verified": true,
+    "presence_mode": "unauthenticated_rpc_through_installed_discord_app"
+  },
+  "credential_scan": {
+    "entries": 3310,
+    "findings": 0,
+    "raw_pattern_findings": 1,
+    "scope": "tracked sources and APK archive entries",
+    "kind": "credential_patterns",
+    "explicit_private_provider_key_deny_list": false,
+    "triage": [
+      {
+        "file": "Ketvoice-Liquid-Glass-V4.html",
+        "classification": "embedded_image_false_positive",
+        "all_hits_inside_image_data_uris": true,
+        "rescanned_without_image_payloads": true
+      }
+    ]
+  },
+  "release_install_smoke": {
+    "mobile": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "quest": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    }
+  },
+  "publication_override": {
+    "authorized_by_user": true,
+    "authorized_at": "2026-11-14T15:56:59.650275+00:00",
+    "kind": "standing_authorization",
+    "user_statement": "J'autorise TOUT devient maintenant une règle.",
+    "user_statement_date": "2026-11-14",
+    "in_reply_to": "The question whether versions may be published without phone or Quest testing without asking again for each version.",
+    "recorded_in": "AGENTS.md (commit aeeda8e)",
+    "reason": "The owner made publishing validated versions without phone or Quest testing a standing rule.",
+    "scope": "physical device installation and all on-device behaviour of 4.16.0"
+  },
+  "not_validated": [
+    "physical phone or Quest installation, rendering and touch behaviour",
+    "the publishing Studio end to end with the owner account: sign-in, listing, three-step publishing, title and album edits, Canvas from a file, a video link, an API link and a Spotify link, Canvas removal (no owner session in this environment)",
+    "the remembered Studio session across restarts and network loss on a device",
+    "Moment cards rendered and shared to a real story app",
+    "For you, new releases (live catalogue), your week and learned shelf order on a device over several days",
+    "Cascade lyrics, the artwork pause animation, the scrub bar and the mini-player Canvas as perceived on a device",
+    "independent code review of this diff"
+  ],
+  "known_limitations": [
+    "Studio changes are deliberately not mentioned in the public release notes (owner preference).",
+    "Moment cards are still images; no video card is generated.",
+    "Your week starts counting with this version: earlier listening has no dates.",
+    "Studio shows no play counts: the server keeps none.",
+    "A Canvas link is downloaded by the device, then sent; the server never fetches a link it is given.",
+    "The signing certificate is the existing public Android debug identity, not a private production key."
+  ],
+  "canonical_banner_sha256": "47f6793088983f7d4e6bd1aeaa2cbd8b7cdc2a8f91271e3b2839daea81da0436"
+}
