@@ -61,22 +61,39 @@ object CatalogRepo {
             else -> null
         }
     }
-    private fun artistId(name: String): String? {
-        if (name.isBlank()) return null
-        val found = get("search/artist?q=${java.net.URLEncoder.encode(name.take(80), "UTF-8")}&limit=1")
-            ?.optJSONArray("data")?.optJSONObject(0) ?: return null
-        return found.optString("id").takeIf { it.isNotBlank() && it.all(Char::isDigit) }
+    internal fun sameArtistName(a: String, b: String): Boolean {
+        fun plain(value: String) = java.text.Normalizer.normalize(value, java.text.Normalizer.Form.NFD)
+            .replace(Regex("\\p{M}+"), "").lowercase().filter(Char::isLetterOrDigit)
+        return plain(a).isNotEmpty() && plain(a) == plain(b)
     }
 
-    /** The artist's most listened tracks in the public catalogue; empty when unavailable. */
-    suspend fun artistTop(name: String): List<Track> = withContext(Dispatchers.IO) {
-        val id = artistId(name) ?: return@withContext emptyList()
+    /**
+     * The catalogue id of an artist. A search hit is accepted only when its name is the
+     * requested name: the first hit of a homonym or of a loosely related artist would
+     * fill a mix with someone else's music.
+     */
+    private fun artistId(name: String, knownId: String?): String? {
+        knownId?.takeIf { it.isNotBlank() && it.all(Char::isDigit) }?.let { return it }
+        if (name.isBlank()) return null
+        val hits = get("search/artist?q=${java.net.URLEncoder.encode(name.take(80), "UTF-8")}&limit=5")
+            ?.optJSONArray("data") ?: return null
+        for (index in 0 until hits.length()) {
+            val hit = hits.optJSONObject(index) ?: continue
+            val id = hit.optString("id")
+            if (id.isNotBlank() && id.all(Char::isDigit) && sameArtistName(hit.optString("name"), name)) return id
+        }
+        return null
+    }
+
+    /** The artist's most listened tracks in the public catalogue; empty when unavailable or unknown there. */
+    suspend fun artistTop(name: String, knownId: String? = null): List<Track> = withContext(Dispatchers.IO) {
+        val id = artistId(name, knownId) ?: return@withContext emptyList()
         parseTracks(get("artist/$id/top?limit=30")?.optJSONArray("data"))
     }
 
     /** Tracks by artists in the same style, from the catalogue's artist radio; empty when unavailable. */
-    suspend fun artistRadio(name: String): List<Track> = withContext(Dispatchers.IO) {
-        val id = artistId(name) ?: return@withContext emptyList()
+    suspend fun artistRadio(name: String, knownId: String? = null): List<Track> = withContext(Dispatchers.IO) {
+        val id = artistId(name, knownId) ?: return@withContext emptyList()
         parseTracks(get("artist/$id/radio")?.optJSONArray("data"))
     }
 

@@ -81,10 +81,11 @@ internal fun mixSubtitle(card: MixCard): String = when (card.kind) {
 @Composable
 internal fun HomeShortcuts(modifier: Modifier = Modifier) {
     val known by ListeningHistory.knownTracks.collectAsState()
+    val recent by ListeningHistory.tracks.collectAsState()
     val downloads by Downloader.items.collectAsState()
     val favorites = AppSettings.favoriteIds.value
     val favoriteTracks = remember(known, favorites) { known.filter { it.id in favorites } }
-    if (known.isEmpty() && downloads.isEmpty()) return
+    if (known.isEmpty() && recent.isEmpty() && downloads.isEmpty()) return
     LazyRow(modifier.testTag("home-shortcuts"), contentPadding = PaddingValues(horizontal = 18.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         if (known.size >= 4) item {
@@ -96,7 +97,8 @@ internal fun HomeShortcuts(modifier: Modifier = Modifier) {
         if (downloads.isNotEmpty()) item {
             Shortcut(KetIcons.Download, "Hors ligne") { AppUi.openDownloads() }
         }
-        if (known.isNotEmpty()) item {
+        // Gated on the very list the history page shows.
+        if (recent.isNotEmpty()) item {
             Shortcut(KetIcons.Clock, "Historique") { AppUi.openCatalog(CatalogRequest("history", "history", "Historique")) }
         }
     }

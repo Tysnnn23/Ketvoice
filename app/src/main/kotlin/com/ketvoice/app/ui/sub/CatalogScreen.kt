@@ -93,6 +93,12 @@ fun CatalogScreen(request: CatalogRequest? = AppUi.catalogRequest.value) {
     // Canvas du hero : résolu pour le premier titre quand les Canvas sont actifs.
     val shareContext = androidx.compose.ui.platform.LocalContext.current
     val saveScope = rememberCoroutineScope()
+    var saving by remember(request) { mutableStateOf(false) }
+    var savedAsPlaylist by remember(request) { mutableStateOf(false) }
+    // Local collections and mixes are named by the app, in French: show and save them in the
+    // interface language. A genre or an album keeps the name the catalogue gave it.
+    val appNamed = request.kind in listOf("favorites", "history", "all", "mix")
+    val shownTitle = if (appNamed) AppText.t(request.title) else request.title
     Column(Modifier.fillMaxSize().background(theme.background).statusBarsPadding()) {
         Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             GlassBackButton { AppUi.closeOverlay() }
@@ -119,8 +125,8 @@ fun CatalogScreen(request: CatalogRequest? = AppUi.catalogRequest.value) {
             item(span = { GridItemSpan(maxLineSpan) }) {
                 // Header of the collection now matches the playlist/album presentation.
                 CollectionHero(
-                    title = request.title,
-                    subtitle = buildString {
+                    title = shownTitle,
+                    subtitle = AppText.t(buildString {
                         append("${tracks.size} titre${if (tracks.size > 1) "s" else ""}")
                         val minutes = tracks.sumOf { it.durationMs } / 60_000
                         if (minutes > 0) append(" · $minutes min")
@@ -130,7 +136,7 @@ fun CatalogScreen(request: CatalogRequest? = AppUi.catalogRequest.value) {
                             "downloads" -> append(" · Hors ligne")
                             "mix" -> append(" · Fait pour vous")
                         }
-                    },
+                    }),
                     covers = tracks.take(4).map { ArtworkRepo.coverForTrack(it) ?: it.coverUrl },
                     seed = request.id + request.kind,
                     onPlay = { if (tracks.isNotEmpty()) { Player.setShuffle(false); Player.playQueue(tracks, 0) } },
@@ -145,18 +151,23 @@ fun CatalogScreen(request: CatalogRequest? = AppUi.catalogRequest.value) {
             }
             if (request.kind == "mix") item(span = { GridItemSpan(maxLineSpan) }) {
                 // A mix changes with the listening history; saving it keeps this exact selection.
-                TextButton(onClick = {
+                TextButton(enabled = !saving && !savedAsPlaylist, onClick = {
+                    // One playlist per mix page: a second tap must not create a copy.
+                    saving = true
                     saveScope.launch {
                         val saved = runCatching {
-                            PlaylistStore.create(request.title.take(80), tracks.map(PlaylistRules::entry),
+                            PlaylistStore.create(shownTitle.take(80), tracks.map(PlaylistRules::entry),
                                 cover = tracks.firstOrNull()?.let { ArtworkRepo.coverForTrack(it) ?: it.coverUrl })
                         }.isSuccess
+                        savedAsPlaylist = saved
+                        saving = false
                         TrackActionFeedback.snackbar.currentSnackbarData?.dismiss()
                         TrackActionFeedback.snackbar.showSnackbar(AppText.t(
                             if (saved) "Playlist enregistrée dans la bibliothèque" else "Impossible d'enregistrer la playlist"))
                     }
                 }, modifier = Modifier.padding(horizontal = 10.dp).testTag("mix-save")) {
-                    Text("Enregistrer comme playlist", color = theme.accent, fontWeight = FontWeight.SemiBold)
+                    Text(if (savedAsPlaylist) "Playlist enregistrée dans la bibliothèque" else "Enregistrer comme playlist",
+                        color = if (savedAsPlaylist) theme.secondary else theme.accent, fontWeight = FontWeight.SemiBold)
                 }
             }
             itemsIndexed(tracks, key = { i, t -> "${t.id}:$i" }) { index, track ->

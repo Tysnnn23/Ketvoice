@@ -58,8 +58,12 @@ fun HomeScreen() {
     var grid by remember { mutableStateOf(false) }
     val layout = LocalAdaptiveLayout.current
     val pageWidth = layout.recentPageWidthDp.dp
-    // Read once per visit: the title must not flip while the page is open.
-    val greeting = remember { homeGreeting(java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)) }
+    // Read when the app comes back to the foreground: the title follows the day without
+    // ever flipping while the page is being looked at.
+    fun hourNow() = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
+    var hour by remember { mutableIntStateOf(hourNow()) }
+    androidx.lifecycle.compose.LifecycleResumeEffect(Unit) { hour = hourNow(); onPauseOrDispose { } }
+    val greeting = homeGreeting(hour)
     val featured = shelves.firstOrNull { it.tracks.isNotEmpty() }?.tracks ?: recent.take(6)
     val leadId = player.current?.id ?: recent.firstOrNull()?.id ?: featured.firstOrNull()?.id
     val shelfRows = remember(shelves, leadId) {
