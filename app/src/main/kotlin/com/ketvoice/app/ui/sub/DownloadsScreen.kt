@@ -1,5 +1,10 @@
 package com.ketvoice.app.ui.sub
 
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.zIndex
+import androidx.compose.ui.draw.shadow
+import androidx.compose.foundation.border
 import com.ketvoice.app.ui.common.trackRowClick
 import com.ketvoice.app.ui.common.SwipeTrackActions
 import androidx.compose.foundation.background
@@ -106,11 +111,17 @@ fun DownloadsScreen() {
                 bottom = adaptive.bottomPaddingDp.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             item(span = { GridItemSpan(maxLineSpan) }, key = "summary") {
+                // The most recent cover glows behind the header, edge to edge.
+                val recent = remember(saved) { saved.sortedByDescending { it.file.lastModified() }.take(3).map { it.track } }
+                com.ketvoice.app.ui.common.CollectionAmbient(
+                    recent.firstOrNull()?.let { artwork["t:${it.id}"] ?: it.coverUrl }, Modifier.fillMaxWidth(),
+                    strength = .8f, glow = true, bleed = 20.dp) {
                 Column(Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text("Téléchargements", color = theme.onBackground, fontSize = 34.sp,
                         fontWeight = FontWeight.Bold, letterSpacing = (-1).sp, modifier = Modifier.asHeading())
-                    DownloadSummaryCard(summary, freeBytes, ::size) { AppUi.showCapsule.value = true }
+                    DownloadSummaryCard(summary, freeBytes, ::size,
+                        recent.map { it.title to (artwork["t:${it.id}"] ?: it.coverUrl) }) { AppUi.showCapsule.value = true }
                     if (saved.isNotEmpty()) CollectionPlaybackActions(saved.map { it.track }, Modifier.fillMaxWidth())
                     if (saved.isNotEmpty() || active.isNotEmpty()) {
                         CompactSearchField(query, { query = it }, { keyboard?.hide() }, Modifier.testTag("downloads-search"))
@@ -148,6 +159,7 @@ fun DownloadsScreen() {
                             maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                     if (deleteError) Text("Impossible de supprimer certains fichiers.", color = theme.secondary)
+                }
                 }
             }
             if (sections.transfers.isNotEmpty()) {
@@ -288,10 +300,13 @@ private fun DownloadSectionTitle(title: String, count: Int) {
 
 /** How much is saved, how long it plays, how much of it is lossless and what room is left. */
 @Composable
-private fun DownloadSummaryCard(summary: DownloadSummary, freeBytes: Long, size: (Long) -> String, onCapsule: () -> Unit) {
+private fun DownloadSummaryCard(summary: DownloadSummary, freeBytes: Long, size: (Long) -> String,
+                                covers: List<Pair<String, String?>> = emptyList(), onCapsule: () -> Unit) {
     val theme = LocalTheme.current
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp))
-        .background(Brush.linearGradient(listOf(theme.accent.copy(alpha = .18f), theme.card)))
+        .background(Brush.linearGradient(listOf(theme.accent.copy(alpha = .18f), theme.card.copy(alpha = .86f))))
+        .border(.8.dp, Brush.verticalGradient(listOf(theme.onBackground.copy(alpha = .14f), theme.onBackground.copy(alpha = .03f))),
+            RoundedCornerShape(28.dp))
         .padding(start = 20.dp, end = 20.dp, top = 18.dp, bottom = 8.dp).testTag("downloads-summary"),
         verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -302,15 +317,27 @@ private fun DownloadSummaryCard(summary: DownloadSummary, freeBytes: Long, size:
                 Text(listOf(size(summary.bytes), playtimeLabel(summary.durationMs)).filter { it.isNotBlank() }.joinToString(" · "),
                     localize = false, color = theme.secondary, fontSize = 14.sp)
             }
-            Box(Modifier.size(48.dp).clip(RoundedCornerShape(24.dp)).background(theme.accent.copy(alpha = .16f)),
+            // What is saved, shown: the latest covers fanned like records. An empty library keeps the glyph.
+            if (covers.isEmpty()) Box(Modifier.size(48.dp).clip(RoundedCornerShape(24.dp)).background(theme.accent.copy(alpha = .16f)),
                 contentAlignment = Alignment.Center) {
                 Icon(KetIcons.Download, null, tint = theme.accent, modifier = Modifier.size(24.dp))
+            } else Box(Modifier.width((52 + 26 * (covers.size - 1)).dp).height(60.dp).testTag("downloads-covers")) {
+                covers.forEachIndexed { index, (title, url) ->
+                    val tilt = (index - (covers.size - 1) / 2f) * 7f
+                    Box(Modifier.align(Alignment.CenterStart).offset(x = (26 * index).dp).zIndex(index.toFloat())
+                        .graphicsLayer { rotationZ = if (Motion.reduced) 0f else tilt }
+                        .shadow(6.dp, RoundedCornerShape(11.dp))) {
+                        Cover(title, url, 52.dp, 11.dp)
+                    }
+                }
             }
         }
         if (summary.count > 0) {
             // One bar for the saved bytes: the lossless share in the accent colour.
-            Row(Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)).background(theme.onBackground.copy(alpha = .10f))) {
-                if (summary.losslessShare > 0f) Box(Modifier.fillMaxHeight().fillMaxWidth(summary.losslessShare).background(theme.accent))
+            Row(Modifier.fillMaxWidth().height(10.dp).clip(RoundedCornerShape(5.dp)).background(theme.onBackground.copy(alpha = .10f))) {
+                if (summary.losslessShare > 0f) Box(Modifier.fillMaxHeight().fillMaxWidth(summary.losslessShare)
+                    .clip(RoundedCornerShape(5.dp))
+                    .background(Brush.horizontalGradient(listOf(theme.accent.copy(alpha = .78f), theme.accent))))
             }
             Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
                 Legend(theme.accent, AppText.t("Sans perte") + " " + summary.lossless)

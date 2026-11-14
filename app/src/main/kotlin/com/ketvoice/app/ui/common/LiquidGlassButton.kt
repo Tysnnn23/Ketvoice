@@ -55,17 +55,22 @@ fun LiquidGlassButton(
     }
     val light by animateFloatAsState(if (Motion.reduced) 45f else reflection,
         Motion.pressSpring(pressed), label = "glass-button-light")
+    val liquid27 = isLiquid27Glass()
     val pressure by animateFloatAsState(if (pressed && !Motion.reduced) 1f else 0f,
-        Motion.pressSpring(pressed), label = "glass-button-pressure")
-    val scale = 1f - pressure * .035f
+        glassPressSpec(pressed, liquid27), label = "glass-button-pressure")
+    val (scaleWidth, scaleHeight) = glassPressScale(pressure, liquid27)
     Box(modifier.onSizeChanged { bounds = it }) {
         GlassPanel(Modifier.matchParentSize().graphicsLayer {
-            scaleX = scale
-            scaleY = 1f - pressure * .018f
+            scaleX = scaleWidth
+            scaleY = scaleHeight
         }, shape, GlassParams.circle(dark = theme.isDark).copy(
             highlightAngle = light, opticalPressure = pressure), enabled = AppSettings.liquidGlass.value) {}
-        // The surface reacts to pressure; glyphs and the 48dp hit target stay stable.
-        Box(Modifier.fillMaxSize().clip(shape).graphicsLayer { alpha = if (enabled) 1f else .45f }
+        // The 48dp hit target stays stable. In Liquid 27 the glyph rides the glass as it
+        // swells; in the other styles only the surface gives way.
+        Box(Modifier.fillMaxSize().clip(shape).graphicsLayer {
+            alpha = if (enabled) 1f else .45f
+            if (liquid27) { scaleX = scaleWidth; scaleY = scaleHeight }
+        }
             .clickable(interactions, null, enabled = enabled, role = Role.Button, onClick = onClick),
             contentAlignment = Alignment.Center, content = content)
     }

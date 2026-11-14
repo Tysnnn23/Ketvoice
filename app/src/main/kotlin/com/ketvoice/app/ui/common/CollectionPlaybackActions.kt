@@ -20,32 +20,22 @@ import com.ketvoice.app.data.Track
 import com.ketvoice.app.player.Player
 import com.ketvoice.app.theme.LocalTheme
 
+/**
+ * The pair every collection starts with: play it, or shuffle it. The main action is
+ * the prominent button; both are glass capsules of the same height.
+ */
 @Composable
 @OptIn(ExperimentalLayoutApi::class)
 internal fun CollectionPlaybackActions(tracks: List<Track>, modifier: Modifier = Modifier,
                                        label: String = "Lecture", enabled: Boolean = tracks.isNotEmpty()) {
-    val theme = LocalTheme.current
-    val foreground = if (theme.accent.luminance() > .179f) Color.Black else Color.White
     val largeFont = LocalDensity.current.fontScale >= 1.2f
     BoxWithConstraints(modifier) {
         FlowRow(Modifier.fillMaxWidth(), maxItemsInEachRow = if (largeFont && maxWidth < 340.dp) 1 else 2,
             horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            listOf(false, true).forEach { shuffle ->
-                val shape = RoundedCornerShape(28.dp)
-                Row(Modifier.weight(1f).clip(shape)
-                    .background(if (shuffle) theme.onBackground.copy(alpha = .07f) else theme.accent.copy(alpha = if (enabled) 1f else .35f))
-                    .clickable(enabled = enabled, role = Role.Button) {
-                        if (shuffle) Player.playShuffled(tracks)
-                        else { Player.setShuffle(false); Player.playQueue(tracks) }
-                    }.heightIn(min = 52.dp).padding(horizontal = 12.dp, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                    val ink = if (shuffle) theme.accent else foreground
-                    Icon(if (shuffle) KetIcons.Shuffle else KetIcons.Play, null, tint = ink, modifier = Modifier.size(22.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text(if (shuffle) "Aléatoire" else label, color = ink, fontWeight = FontWeight.SemiBold,
-                        fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                }
-            }
+            GlassCapsuleButton(label, KetIcons.Play, { Player.setShuffle(false); Player.playQueue(tracks) },
+                Modifier.weight(1f), prominent = true, enabled = enabled, minHeight = 52.dp)
+            GlassCapsuleButton("Aléatoire", KetIcons.Shuffle, { Player.playShuffled(tracks) },
+                Modifier.weight(1f), enabled = enabled, minHeight = 52.dp)
         }
     }
 }

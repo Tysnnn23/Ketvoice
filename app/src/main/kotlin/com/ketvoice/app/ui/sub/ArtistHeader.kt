@@ -104,6 +104,10 @@ internal fun ArtistHeader(page: ArtistPage, collapse: () -> Float = { 0f }) {
                         1f to theme.background)))
             }
         }
+        // The portrait's colours continue as a glow under the name and the actions,
+        // and give the glass buttons something to refract.
+        com.ketvoice.app.ui.common.CollectionAmbient(hero, Modifier.fillMaxWidth(), strength = .85f, glow = true) {
+        Column(Modifier.fillMaxWidth()) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(top = 16.dp)) {
             StaggeredReveal(order = 0) { ArtistIdentity(page.artist.name, artwork.signature ?: artwork.logo, startAligned = true) }
         }
@@ -122,6 +126,8 @@ internal fun ArtistHeader(page: ArtistPage, collapse: () -> Float = { 0f }) {
         }
         if (page.tracks.isNotEmpty()) StaggeredReveal(order = 2, modifier = Modifier.fillMaxWidth()) {
         CollectionPlaybackActions(page.tracks, Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 18.dp), label = "Écouter")
+        }
+        }
         }
     }
 }

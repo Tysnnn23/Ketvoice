@@ -3,6 +3,8 @@ package com.ketvoice.app.ui
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.unit.dp
@@ -246,6 +248,52 @@ class QueueAndBrowseHostTest {
         compose.onNodeWithText("Orion").performClick()
         compose.waitForIdle()
         assertEquals("7", AppUi.artistRequest.value?.id)
+    }
+
+    @Test fun collectionHeaderCarriesTheProminentAndTheGlassButtonOverItsCoverColours() {
+        val previous = AppSettings.glassStyle.value
+        AppSettings.glassStyle.value = com.ketvoice.app.glass.GlassStyles.LIQUID_27
+        try {
+            // A local cover: warm on the left, cold on the right.
+            val cover = java.io.File(compose.activity.cacheDir, "ambient-fixture.png").apply {
+                val bitmap = android.graphics.Bitmap.createBitmap(64, 64, android.graphics.Bitmap.Config.ARGB_8888)
+                for (x in 0 until 64) for (y in 0 until 64) bitmap.setPixel(x, y,
+                    android.graphics.Color.rgb(255 - x * 3, 60 + y * 2, 40 + x * 3))
+                outputStream().use { bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+            }
+            var played = 0
+            compose.setContent {
+                KetvoiceTheme(useDark = true) {
+                    androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.fillMaxSize()
+                        .background(com.ketvoice.app.theme.LocalTheme.current.background)) {
+                        com.ketvoice.app.ui.common.CollectionAmbient(cover.absolutePath,
+                            androidx.compose.ui.Modifier.fillMaxWidth()) {
+                            androidx.compose.foundation.layout.Column(androidx.compose.ui.Modifier.padding(24.dp)) {
+                                androidx.compose.foundation.layout.Spacer(androidx.compose.ui.Modifier.height(220.dp))
+                                androidx.compose.foundation.layout.Row(
+                                    horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp)) {
+                                    com.ketvoice.app.ui.common.GlassCapsuleButton("Lecture", com.ketvoice.app.ui.common.KetIcons.Play,
+                                        { played++ }, androidx.compose.ui.Modifier.weight(1f), prominent = true, tag = "kit-play")
+                                    com.ketvoice.app.ui.common.GlassCapsuleButton("Aléatoire", com.ketvoice.app.ui.common.KetIcons.Shuffle,
+                                        { }, androidx.compose.ui.Modifier.weight(1f), tag = "kit-shuffle")
+                                }
+                                androidx.compose.foundation.layout.Spacer(androidx.compose.ui.Modifier.height(40.dp))
+                            }
+                        }
+                    }
+                }
+            }
+            Thread.sleep(700)
+            image("collection-kit-liquid27")
+            compose.onNodeWithTag("collection-ambient").assertExists()
+            val play = compose.onNodeWithTag("kit-play").fetchSemanticsNode().boundsInRoot
+            val shuffle = compose.onNodeWithTag("kit-shuffle").fetchSemanticsNode().boundsInRoot
+            assertEquals("Both buttons share one height", play.height, shuffle.height, 1f)
+            assertTrue("Touch targets are at least 48dp", play.height >= 48f)
+            compose.onNodeWithTag("kit-play").performClick()
+            compose.waitForIdle()
+            assertEquals(1, played)
+        } finally { AppSettings.glassStyle.value = previous }
     }
 }
 

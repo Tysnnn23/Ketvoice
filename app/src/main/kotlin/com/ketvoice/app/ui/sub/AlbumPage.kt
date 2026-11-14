@@ -286,12 +286,13 @@ private fun AlbumPlaybackActions(tracks: List<Track>, savedIds: Set<String>, loa
         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
             FlowRow(Modifier.fillMaxWidth(), maxItemsInEachRow = if (stacked) 1 else 2,
                 horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                AlbumPlayButton(Modifier.weight(1f), enabled) {
-                    Player.setShuffle(false); Player.playQueue(tracks)
-                }
-                AlbumGlassLabel(KetIcons.Shuffle, "Aléatoire", Modifier.weight(1f), enabled) {
-                    Player.playShuffled(tracks)
-                }
+                // The same pair as every other collection: prominent Play, glass Shuffle.
+                com.ketvoice.app.ui.common.GlassCapsuleButton("Lecture", KetIcons.Play,
+                    { Player.setShuffle(false); Player.playQueue(tracks) }, Modifier.weight(1f),
+                    prominent = true, enabled = enabled, tag = "album-play", minHeight = 60.dp)
+                com.ketvoice.app.ui.common.GlassCapsuleButton("Aléatoire", KetIcons.Shuffle,
+                    { Player.playShuffled(tracks) }, Modifier.weight(1f),
+                    enabled = enabled, tag = "album-shuffle", minHeight = 60.dp)
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically) {
@@ -305,48 +306,6 @@ private fun AlbumPlaybackActions(tracks: List<Track>, savedIds: Set<String>, loa
                 Text("Titres", color = theme.secondary, fontSize = 12.sp, fontWeight = FontWeight.Medium)
                 Text(tracks.size.toString(), localize = false, color = theme.secondary, fontSize = 12.sp)
             }
-        }
-    }
-}
-
-@Composable
-private fun AlbumPlayButton(modifier: Modifier, enabled: Boolean, onClick: () -> Unit) {
-    val theme = LocalTheme.current
-    val foreground = if (theme.accent.luminance() > .179f) Color.Black else Color.White
-    val interactions = remember { MutableInteractionSource() }
-    val pressed by interactions.collectIsPressedAsState()
-    val scale by animateFloatAsState(if (pressed && !Motion.reduced) .975f else 1f,
-        Motion.pressSpring(pressed), label = "album-play-press")
-    Row(modifier.heightIn(min = 60.dp).graphicsLayer { scaleX = scale; scaleY = scale }
-        .clip(RoundedCornerShape(30.dp)).background(theme.accent.copy(alpha = if (enabled) 1f else .35f))
-        .clickable(interactions, null, enabled = enabled, role = Role.Button, onClick = onClick)
-        .padding(horizontal = 18.dp, vertical = 16.dp).testTag("album-play"),
-        horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-        Icon(KetIcons.Play, null, tint = foreground, modifier = Modifier.size(24.dp))
-        Spacer(Modifier.width(8.dp))
-        Text("Lecture", color = foreground, fontSize = 15.sp, fontWeight = FontWeight.SemiBold,
-            maxLines = 1, overflow = TextOverflow.Ellipsis)
-    }
-}
-
-@Composable
-private fun AlbumGlassLabel(icon: ImageVector, label: String, modifier: Modifier, enabled: Boolean, onClick: () -> Unit) {
-    val theme = LocalTheme.current
-    val interactions = remember { MutableInteractionSource() }
-    val pressed by interactions.collectIsPressedAsState()
-    val scale by animateFloatAsState(if (pressed && !Motion.reduced) .975f else 1f,
-        Motion.pressSpring(pressed), label = "album-secondary-press")
-    Box(modifier) {
-        GlassPanel(Modifier.matchParentSize().graphicsLayer { scaleX = scale; scaleY = scale },
-            RoundedCornerShape(30.dp), GlassParams.pill(dark = theme.isDark)) {}
-        Row(Modifier.fillMaxWidth().heightIn(min = 60.dp).clip(RoundedCornerShape(30.dp))
-            .clickable(interactions, null, enabled = enabled, role = Role.Button, onClick = onClick)
-            .graphicsLayer { alpha = if (enabled) 1f else .45f }.padding(horizontal = 16.dp, vertical = 16.dp)
-            .testTag("album-shuffle"), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-            Icon(icon, null, tint = theme.onBackground, modifier = Modifier.size(24.dp))
-            Spacer(Modifier.width(8.dp))
-            Text(label, color = theme.onBackground, fontSize = 15.sp, fontWeight = FontWeight.SemiBold,
-                maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }
@@ -370,7 +329,8 @@ private fun AlbumTrackRow(track: Track, index: Int, active: Boolean, downloaded:
         .trackRowClick(track, onClick = onPlay)
         .padding(start = 20.dp, end = 8.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.width(28.dp), contentAlignment = Alignment.Center) {
-            if (active) Icon(KetIcons.Music, null, tint = ink, modifier = Modifier.size(20.dp))
+            if (active) com.ketvoice.app.ui.player.NowPlayingBars(
+                com.ketvoice.app.player.Player.state.collectAsState().value.isPlaying)
             else Text("${index + 1}", localize = false, color = theme.secondary, fontSize = 13.sp, textAlign = TextAlign.Center)
         }
         Column(Modifier.weight(1f).padding(start = 16.dp, top = 6.dp, bottom = 6.dp),

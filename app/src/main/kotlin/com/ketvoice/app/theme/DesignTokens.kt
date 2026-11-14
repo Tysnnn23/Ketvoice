@@ -76,7 +76,9 @@ object DesignTokens {
         const val PRESS_STIFFNESS = 900f
         const val RELEASE_STIFFNESS = 420f
         const val CHROME_DAMPING = .88f
-        const val CHROME_STIFFNESS = 460f
+        // 3 % slower than the original 460: a spring's duration scales with 1/sqrt(stiffness),
+        // so 460 / 1.03² keeps the same movement and lets the droplet split be seen.
+        const val CHROME_STIFFNESS = 433.6f
     }
 
     object Elevation {

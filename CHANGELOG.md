@@ -7,6 +7,24 @@
 
 ---
 
+# Ketvoice 4.13.0
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 98** — one set of glass buttons, cover colours behind collection headers.
+
+- A prominent, accent-tinted glass button for the main action and plain glass
+  capsules for the others, shared by album, playlist, artist, Downloads, Library,
+  Local music and Replay.
+- In Liquid 27, glass buttons swell under the finger and settle with a small bounce.
+- Playlist, artist and Downloads headers glow with the colours of their cover;
+  Downloads shows the latest covers in its summary card.
+- The droplet morph of the navigation bar is 3 % slower.
+
+Full notes: [4.13.0](docs/releases/v4.13.0.md).
+
+---
+
 # Ketvoice 4.12.0
 
 ![Ketvoice](ketvoice-banner.png)

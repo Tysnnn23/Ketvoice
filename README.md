@@ -21,6 +21,17 @@
 
 ## Overview
 
+### 4.13.0 — one set of glass buttons and cover colours behind headers
+
+Every collection now uses the same two buttons: a prominent capsule tinted with the
+accent colour for the main action, and plain glass capsules for the others. In Liquid
+27 they swell under the finger and settle with a small bounce. Playlist, artist and
+Downloads headers glow with the colours of their cover, playlists lead with Play and
+Shuffle like albums, and the droplet morph of the navigation bar is 3 % slower.
+[Mobile](https://github.com/Tysnnn23/Ketvoice/releases/download/v4.13.0/Ketvoice-4.13.0.apk)
+· [Quest](https://github.com/Tysnnn23/Ketvoice/releases/download/v4.13.0/Ketvoice-4.13.0-Quest.apk)
+· [Release notes](docs/releases/v4.13.0.md).
+
 ### 4.12.0 — skip from anywhere, a visible queue and refreshed screens
 
 Next and Previous now work from the notification, the lock screen and headset or
