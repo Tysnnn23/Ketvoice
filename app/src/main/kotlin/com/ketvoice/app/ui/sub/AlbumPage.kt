@@ -1,5 +1,7 @@
 package com.ketvoice.app.ui.sub
 
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.draw.blur
 import com.ketvoice.app.ui.common.CollectionTopBar
 import com.ketvoice.app.ui.common.CollectionHero
 import com.ketvoice.app.ui.common.trackRowClick
@@ -62,7 +64,14 @@ internal fun AlbumPage(request: CatalogRequest, page: CatalogPage?, tracks: List
     val artist = page?.subtitle?.takeIf { it.isNotBlank() } ?: tracks.firstOrNull()?.artist.orEmpty()
     val cover = page?.cover?.takeIf { it.isNotBlank() } ?: tracks.firstOrNull()?.let { art["t:${it.id}"] ?: it.coverUrl }
     val accent = com.ketvoice.app.theme.rememberCoverAccent(cover)?.first
-    val theme = baseTheme.copy(accent = if (AppSettings.albumColors.value) accent ?: baseTheme.accent else baseTheme.accent)
+    // Like the artist page: the page takes its colour from the cover, and the cover dissolves into it.
+    val pageTint by androidx.compose.animation.animateColorAsState(
+        artistPageTint(baseTheme.background, accent.takeIf { AppSettings.albumColors.value }, baseTheme.isDark),
+        tween(Motion.duration(520)), label = "album-page-tint")
+    val theme = baseTheme.copy(
+        background = pageTint,
+        card = androidx.compose.ui.graphics.lerp(pageTint, baseTheme.onBackground, if (baseTheme.isDark) .08f else .05f),
+        accent = if (AppSettings.albumColors.value) accent ?: baseTheme.accent else baseTheme.accent)
     val top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 64.dp
     val collapse = remember { derivedStateOf {
         val hero = list.layoutInfo.visibleItemsInfo.firstOrNull { it.key == "album-hero" }
@@ -120,6 +129,7 @@ private fun AlbumHero(title: String, artist: String, date: String?, cover: Strin
                       tracks: List<Track>, savedIds: Set<String>, loading: Boolean,
                       top: androidx.compose.ui.unit.Dp, onRefresh: () -> Unit) {
     val density = LocalDensity.current
+    val context = LocalContext.current
     val total = remember(tracks) { tracks.sumOf { it.durationMs.coerceAtLeast(0L) } }
     val duration = when {
         total <= 0L -> null
@@ -130,13 +140,62 @@ private fun AlbumHero(title: String, artist: String, date: String?, cover: Strin
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         val beside = AlbumPresentation.sideBySide(maxWidth.value, density.fontScale)
         val stacked = maxWidth < 320.dp && density.fontScale >= 1.2f
-        CollectionHero(cover, top, title, eyebrow = "Album", titleTag = "album-title",
+        val meta = if (loading) null else listOfNotNull(date?.takeIf { it.isNotBlank() }, count, duration).joinToString("  ·  ")
+        // A wide pane keeps the artwork beside the text; a phone opens on the artwork itself.
+        if (beside) CollectionHero(cover, top, title, eyebrow = "Album", titleTag = "album-title",
             subtitle = artist.takeIf { it.isNotBlank() },
             onSubtitle = { AppUi.openArtist(tracks.firstOrNull()?.artistId.orEmpty(), artist) },
-            meta = if (loading) null else listOfNotNull(date?.takeIf { it.isNotBlank() }, count, duration).joinToString("  ·  "),
-            explicit = !loading && tracks.any { it.explicit }, beside = beside, artworkTag = "album-hero-visual",
+            meta = meta, explicit = !loading && tracks.any { it.explicit }, beside = true, artworkTag = "album-hero-visual",
             artwork = { AlbumArtwork(cover, tracks.firstOrNull()) }) {
             AlbumPlaybackActions(tracks, savedIds, loading, stacked, onRefresh, Modifier.widthIn(max = 560.dp).fillMaxWidth())
+        } else {
+            val theme = LocalTheme.current
+            val window = androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp.toFloat()
+            val height = AlbumPresentation.heroHeight(maxWidth.value, window).dp
+            val whole = AlbumPresentation.showsWholeCover(maxWidth.value, height.value)
+            Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                Box(Modifier.fillMaxWidth().height(height).clipToBounds().testTag("album-hero-visual")) {
+                    if (whole) {
+                        // Too wide for a square: the cover stays whole over a soft, enlarged copy of itself.
+                        if (cover != null) AsyncImage(remember(cover) {
+                            coil.request.ImageRequest.Builder(context).data(cover).size(40).crossfade(false).build()
+                        }, null, contentScale = ContentScale.Crop, filterQuality = androidx.compose.ui.graphics.FilterQuality.Low,
+                            modifier = Modifier.fillMaxSize().graphicsLayer { scaleX = 1.2f; scaleY = 1.2f; alpha = .75f }
+                                .blur(40.dp))
+                        Box(Modifier.size(height).align(Alignment.Center)) { AlbumArtwork(cover, tracks.firstOrNull()) }
+                    } else AlbumArtwork(cover, tracks.firstOrNull())
+                    // The floating buttons stay readable over a bright cover.
+                    Box(Modifier.fillMaxWidth().height(96.dp).background(Brush.verticalGradient(
+                        listOf(Color.Black.copy(alpha = .28f), Color.Transparent))))
+                    // A long dissolve into the page colour: no line where the cover ends.
+                    Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(height * .46f).background(
+                        Brush.verticalGradient(
+                            0f to Color.Transparent,
+                            .24f to theme.background.copy(alpha = .10f),
+                            .52f to theme.background.copy(alpha = .46f),
+                            .80f to theme.background.copy(alpha = .86f),
+                            1f to theme.background)))
+                }
+                Column(Modifier.fillMaxWidth().padding(start = 24.dp, end = 24.dp, bottom = 16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("Album", color = theme.secondary, fontSize = 12.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp)
+                    Text(title, localize = false, color = theme.onBackground, fontSize = 28.sp, fontWeight = FontWeight.Bold,
+                        letterSpacing = (-.7).sp, lineHeight = 34.sp, maxLines = 3, overflow = TextOverflow.Ellipsis,
+                        textAlign = TextAlign.Center, modifier = Modifier.testTag("album-title"))
+                    if (artist.isNotBlank()) Text(artist, localize = false, color = theme.accent, fontSize = 17.sp,
+                        fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center,
+                        modifier = Modifier.clip(RoundedCornerShape(12.dp))
+                            .clickable(role = Role.Button) { AppUi.openArtist(tracks.firstOrNull()?.artistId.orEmpty(), artist) }
+                            .heightIn(min = 48.dp).wrapContentHeight(Alignment.CenterVertically).padding(horizontal = 8.dp))
+                    if (!meta.isNullOrBlank()) Row(verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.testTag("album-metadata")) {
+                        Text(meta, localize = false, color = theme.secondary, fontSize = 13.sp, lineHeight = 19.sp, textAlign = TextAlign.Center)
+                        if (tracks.any { it.explicit }) EBadge()
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    AlbumPlaybackActions(tracks, savedIds, loading, stacked, onRefresh, Modifier.widthIn(max = 560.dp).fillMaxWidth())
+                }
+            }
         }
     }
 }

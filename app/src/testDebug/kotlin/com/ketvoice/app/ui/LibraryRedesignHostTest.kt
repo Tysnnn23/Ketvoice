@@ -183,7 +183,7 @@ class LibraryRedesignHostTest {
         compose.onNodeWithText("Albums").performClick().assertIsSelected()
     }
 
-    @Test fun decodedArtworkFixtureFloatsAsACentredSquare() {
+    @Test fun decodedArtworkFixtureFillsTheWidthWithoutBeingOversized() {
         val cover = File("../ketvoice-banner.png")
         assertTrue("Use the repository's canonical image as a local software fixture", cover.isFile)
         // Supply a decoded drawable: Windows paths are not Android file URIs.
@@ -201,9 +201,9 @@ class LibraryRedesignHostTest {
         } }
         compose.waitUntil(10_000) { compose.onAllNodesWithTag("album-artwork-loaded").fetchSemanticsNodes().isNotEmpty() }
         val art = compose.onNodeWithTag("album-hero-visual").fetchSemanticsNode().boundsInRoot
-        assertEquals("The artwork floats centred", 400f / 2f, (art.left + art.right) / 2f, 1.5f)
-        assertEquals("The artwork is a square", art.width, art.height, 1f)
-        assertTrue("The artwork is large without filling the width", art.width in 160f..400f * .8f)
+        assertEquals("The artwork starts at the left edge", 0f, art.left, 1f)
+        assertTrue("The artwork reaches the right edge", art.width >= 400f - 1f)
+        assertTrue("The artwork is never oversized", art.height <= 421f)
         image("album-redesign-local-artwork-light")
     }
 

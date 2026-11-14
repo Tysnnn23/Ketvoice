@@ -486,7 +486,60 @@ class PrismalHostRenderTest {
         image("splash-brand")
     }
 
-    @Test fun albumArtworkFloatsAsACentredSquareOverItsColours() {
+    private fun warmCover() {
+        // A warm cover: red above, a darker red below.
+        val bitmap = android.graphics.Bitmap.createBitmap(120, 120, android.graphics.Bitmap.Config.ARGB_8888)
+        for (x in 0 until 120) for (y in 0 until 120) bitmap.setPixel(x, y, android.graphics.Color.rgb(200 - y / 2, 40 + x / 6, 60))
+        val drawable = android.graphics.drawable.BitmapDrawable(compose.activity.resources, bitmap)
+        coil.Coil.setImageLoader(coil.ImageLoader.Builder(compose.activity).components {
+            add(coil.intercept.Interceptor { chain -> coil.request.SuccessResult(drawable, chain.request, coil.decode.DataSource.MEMORY) })
+        }.build())
+    }
+
+    @Test fun albumPageTakesItsColourFromTheCoverAndTheCoverDissolvesIntoIt() {
+        AppSettings.reduceAnimations.value = true
+        AppSettings.albumColors.value = true
+        warmCover()
+        val track = Track("qa:album-tint", "QA title", "QA artist", "QA album", durationMs = 180_000)
+        compose.setContent { KetvoiceTheme(useDark = false) {
+            AlbumPage(CatalogRequest("album", "qa:album-tint", "QA album"),
+                CatalogPage("QA album", "QA artist", "fixture:warm-cover", listOf(track), "2026"), listOf(track), false, {})
+        } }
+        compose.waitUntil(10_000) { compose.onAllNodesWithTag("album-artwork-loaded").fetchSemanticsNodes().isNotEmpty() }
+        compose.waitForIdle()
+        val hero = compose.onNodeWithTag("album-hero-visual").fetchSemanticsNode().boundsInRoot
+        compose.onNodeWithText("Lecture").assertIsDisplayed()
+        image("album-page-tint-light") { shot ->
+            val page = shot.getPixel(20, (hero.bottom + 30f).toInt().coerceAtMost(shot.height - 1))
+            assertTrue("The page is tinted warm (r=${android.graphics.Color.red(page)}, b=${android.graphics.Color.blue(page)})",
+                android.graphics.Color.red(page) > android.graphics.Color.blue(page) + 12)
+            val seam = shot.getPixel(20, (hero.bottom - 2f).toInt())
+            assertTrue("No visible seam where the cover ends",
+                kotlin.math.abs(android.graphics.Color.red(seam) - android.graphics.Color.red(page)) <= 6)
+        }
+    }
+
+    @Test @Config(qualifiers = "w600dp-h800dp-mdpi")
+    fun aWidePhoneWindowShowsTheWholeCoverInsteadOfABandOfIt() {
+        AppSettings.reduceAnimations.value = true
+        warmCover()
+        val track = Track("qa:album-whole", "QA title", "QA artist", "QA album", durationMs = 180_000)
+        compose.setContent { KetvoiceTheme(useDark = true) {
+            AlbumPage(CatalogRequest("album", "qa:album-whole", "QA album"),
+                CatalogPage("QA album", "QA artist", "fixture:warm-cover", listOf(track), "2026"), listOf(track), false, {})
+        } }
+        compose.waitUntil(10_000) { compose.onAllNodesWithTag("album-artwork-loaded").fetchSemanticsNodes().isNotEmpty() }
+        val hero = compose.onNodeWithTag("album-hero-visual").fetchSemanticsNode().boundsInRoot
+        val cover = compose.onNodeWithTag("album-artwork-loaded").fetchSemanticsNode().boundsInRoot
+        assertEquals("The header still spans the window", 600f, hero.width, 1f)
+        assertTrue("and is capped by the window height", hero.height <= 800f * .46f + 1f)
+        assertEquals("The cover itself stays a whole square", cover.width, cover.height, 1f)
+        assertEquals("centred in the header", 300f, (cover.left + cover.right) / 2f, 1.5f)
+        compose.onNodeWithText("Lecture").assertIsDisplayed()
+        image("album-whole-cover-wide-dark")
+    }
+
+    @Test fun albumArtworkFillsTheWidthWithoutBeingOversized() {
         AppSettings.reduceAnimations.value = true
         AppSettings.albumHeroCanvas.value = true
         val track = Track("qa:album-hero", "QA title", "QA artist", "QA album", durationMs = 180_000)
@@ -497,9 +550,9 @@ class PrismalHostRenderTest {
         } }
         val hero = compose.onNodeWithTag("album-hero-visual").fetchSemanticsNode().boundsInRoot
         val width = compose.activity.window.decorView.width.toFloat()
-        assertEquals("The artwork floats centred", width / 2f, (hero.left + hero.right) / 2f, 1.5f)
-        assertEquals("The artwork is a square", hero.width, hero.height, 1f)
-        assertTrue("The artwork is large without filling the width", hero.width in 160f..width * .8f)
+        assertEquals("The artwork starts at the left edge", 0f, hero.left, 1f)
+        assertTrue("The artwork reaches the right edge", hero.width >= width - 1f)
+        assertTrue("The artwork is never oversized", hero.height <= 421f)
         image("album-hero-full-bleed")
     }
 

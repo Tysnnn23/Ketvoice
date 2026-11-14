@@ -43,4 +43,18 @@ class AlbumPresentationTest {
         assertFalse(AlbumPresentation.sideBySide(720f, 1.4f))
         assertFalse(AlbumPresentation.sideBySide(900f, 2f))
     }
+
+    @Test fun artworkIsTheFullSquareWhenTheWindowAllowsItAndNeverOversized() {
+        assertEquals("A phone shows the whole square cover", 400f, AlbumPresentation.heroHeight(400f, 900f), 0f)
+        assertEquals("A short phone keeps the title on the first screen", 340.4f, AlbumPresentation.heroHeight(360f, 740f), .1f)
+        assertEquals("Never taller than 420 dp", 420f, AlbumPresentation.heroHeight(700f, 1400f), 0f)
+        assertEquals("Never a thin strip", 220f, AlbumPresentation.heroHeight(700f, 320f), 0f)
+    }
+
+    @Test fun aCoverThatWouldBeCutToABandIsShownWhole() {
+        assertFalse(AlbumPresentation.showsWholeCover(400f, 400f))
+        assertFalse(AlbumPresentation.showsWholeCover(360f, 340f))
+        assertTrue(AlbumPresentation.showsWholeCover(600f, 368f))
+        assertFalse(AlbumPresentation.showsWholeCover(600f, 0f))
+    }
 }

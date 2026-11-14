@@ -21,6 +21,15 @@
 
 ## Overview
 
+### 4.15.0 — the album page takes its colour from the cover
+
+Like the artist page, the album page opens on its cover or Canvas, which dissolves
+into a colour taken from it; that colour tints the whole page. The artwork is sized to
+the window and never cut to a band.
+[Mobile](https://github.com/Tysnnn23/Ketvoice/releases/download/v4.15.0/Ketvoice-4.15.0.apk)
+· [Quest](https://github.com/Tysnnn23/Ketvoice/releases/download/v4.15.0/Ketvoice-4.15.0-Quest.apk)
+· [Release notes](docs/releases/v4.15.0.md).
+
 ### 4.14.2 — a navigation morph you can follow
 
 The droplet morph of the navigation bar is 17 % slower than its original speed.

@@ -7,6 +7,21 @@
 
 ---
 
+# Ketvoice 4.15.0
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 102** — the album page takes the effect of the artist page.
+
+- The cover or its Canvas fills the top of the album page and dissolves into a colour
+  taken from the cover, which tints the whole page.
+- The artwork is sized to the window (at most 46 % of its height and 420 dp) and is
+  shown whole, over a soft copy of itself, where filling the width would cut it.
+
+Full notes: [4.15.0](docs/releases/v4.15.0.md).
+
+---
+
 # Ketvoice 4.14.2
 
 ![Ketvoice](ketvoice-banner.png)
