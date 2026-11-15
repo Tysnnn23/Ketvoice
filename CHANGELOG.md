@@ -7,6 +7,20 @@
 
 ---
 
+# Ketvoice 5.8.1
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 116** — Playback and smoothness restored, new Liquid Glass app icon.
+
+- The R8-optimised release build of 5.8.0 is withdrawn (titles could stop starting and the app could stutter).
+- Page card transition reads its animation in the layer only; the lyrics index is not rewritten for lyrics already indexed.
+- New Liquid Glass app icon: an iridescent glass "K" on black.
+
+Full notes: [5.8.1](docs/releases/v5.8.1.md).
+
+---
+
 # Ketvoice 5.8.0
 
 ![Ketvoice](ketvoice-banner.png)

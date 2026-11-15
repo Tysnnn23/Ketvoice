@@ -50,6 +50,8 @@ object LyricsSearch {
         val text = normalize(lines.joinToString(" ") { it.text }).take(MAX_TEXT)
         if (text.length < 20) return
         synchronized(this) {
+            // Already the newest with the same words (lyrics shown again from the cache): nothing to write.
+            if (entries.entries.lastOrNull()?.let { it.key == track.id && it.value.text == text } == true) return
             entries.remove(track.id)
             entries[track.id] = Indexed(track, text)
             while (entries.size > LIMIT) entries.remove(entries.keys.first())

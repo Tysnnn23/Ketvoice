@@ -85,12 +85,14 @@ internal fun NavigationPresentation(
             // A page opened from a cover grows out of it as a card: its corners round off while it is
             // small and straighten as it fills the screen; closing it folds it back into the card.
             val card = entry.isArtworkDetail() && !Motion.reduced
-            val opened by transition.animateFloat(transitionSpec = { spring(dampingRatio = .92f, stiffness = 430f) }, label = "page-card") {
+            // Read in the layer only: the opening never recomposes the page, one frame after another.
+            val opened = transition.animateFloat(transitionSpec = { spring(dampingRatio = .92f, stiffness = 430f) }, label = "page-card") {
                 if (it == EnterExitState.Visible) 1f else 0f
             }
-            val radius = with(androidx.compose.ui.platform.LocalDensity.current) { PageCard.radius(opened).dp.toPx() }
             androidx.compose.foundation.layout.Box(if (!card) Modifier else Modifier.graphicsLayer {
+                val radius = PageCard.radius(opened.value).dp.toPx()
                 if (radius > .5f) { shape = androidx.compose.foundation.shape.RoundedCornerShape(radius); clip = true }
+                else clip = false
             }) {
                 states.SaveableStateProvider(navigationPageKey(tab, entry)) { content(tab, entry) }
             }

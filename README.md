@@ -21,6 +21,14 @@
 
 ## Overview
 
+### 5.8.1 — Playback restored, a new icon
+
+Titles start again, downloaded or streamed, and the app is smooth again: the optimised build of 5.8.0
+is withdrawn, every feature kept. New Liquid Glass app icon: an iridescent glass "K" on black.
+[Mobile](https://github.com/Tysnnn23/Ketvoice/releases/download/v5.8.1/Ketvoice-5.8.1.apk)
+· [Quest](https://github.com/Tysnnn23/Ketvoice/releases/download/v5.8.1/Ketvoice-5.8.1-Quest.apk)
+· [Release notes](docs/releases/v5.8.1.md).
+
 ### 5.8.0 — Faster, without cuts, search by lyrics
 
 The release is now built with Android's optimiser for a faster interface, and Ketvoice leaves the

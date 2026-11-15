@@ -23,8 +23,8 @@ android {
         applicationId = "com.ketvoice.app"
         minSdk = 31
         targetSdk = 36
-        versionCode = 115
-        versionName = "5.8.0"
+        versionCode = 116
+        versionName = "5.8.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         resourceConfigurations += listOf("fr", "en", "hi", "ja", "zh", "ru", "it", "es", "de", "pt", "ko")
         ndkVersion = "27.0.12077973"
@@ -108,8 +108,9 @@ android {
         }
         release {
             signingConfig = signingConfigs.getByName("sideload")
-            // R8 on the libraries (Compose above all): the app's own code is kept whole (see proguard-rules.pro).
-            isMinifyEnabled = true
+            // No R8: the optimised build of 5.8.0 was never run on a device and the owner found playback
+            // broken in it. proguard-rules.pro stays for a later attempt, only once a device has run it.
+            isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }

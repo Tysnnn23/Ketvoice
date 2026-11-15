@@ -134,9 +134,10 @@ class Ket27HostTest {
         icon.setBounds(0, 0, 432, 432); icon.draw(Canvas(bitmap))
         val file = File("build/host-ui-preview/${com.ketvoice.app.BuildConfig.FLAVOR}/app-icon-liquid-glass.png")
         file.parentFile?.mkdirs(); file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
-        // The coloured ground in a corner, the light glass of the K in the middle of its stem.
-        val corner = bitmap.getPixel(70, 70); val stem = bitmap.getPixel((432 * 42.5 / 108).toInt(), 216)
-        assertTrue("coloured ground", android.graphics.Color.red(corner) > 150 && android.graphics.Color.green(corner) < 150 && android.graphics.Color.blue(corner) > 150)
-        assertTrue("glass is lighter than the ground", android.graphics.Color.green(stem) > android.graphics.Color.green(corner) + 60)
+        // The owner's glass K on its black ground: dark corners, light glass in the middle of the stem.
+        val corner = bitmap.getPixel(20, 20)
+        val lightOnStem = (80 until 200).count { android.graphics.Color.green(bitmap.getPixel(it, 216)) > 120 }
+        assertTrue("black ground", android.graphics.Color.red(corner) < 20 && android.graphics.Color.green(corner) < 20 && android.graphics.Color.blue(corner) < 20)
+        assertTrue("the glass catches light across the stem", lightOnStem > 20)
     }
 }
