@@ -1,0 +1,214 @@
+{
+  "schema": 8,
+  "version": "5.1.0",
+  "versionCode": 107,
+  "source_commit": "6f819fbe0887a936f13defc3396ef9a814140864",
+  "created_at": "2026-11-15T08:18:16.302864+00:00",
+  "build_origin": {
+    "kind": "github_actions_with_owner_discord_sdk",
+    "workflow": "android.yml",
+    "run_id": 43651835433,
+    "artifact": {
+      "id": 14136617688,
+      "sha256": "1d37f6b54f6978d3d7382d38517988158b8a5198f95dd41e8dc9cd1dc1ac20dd"
+    },
+    "gradle": "assembleMobileRelease assembleQuestRelease",
+    "note": "Signed by CI with the pinned keystore secret; the Discord Social SDK AAR matched its pinned SHA-256."
+  },
+  "local_validation": {
+    "result": "debug JVM/Robolectric suites for both flavors, release lint and the UI text audit passed in a cloud container without the Discord SDK",
+    "commands": [
+      "testMobileDebugUnitTest",
+      "testQuestDebugUnitTest",
+      "lintMobileRelease",
+      "lintQuestRelease",
+      "tools/audit_ui_texts.py --check"
+    ],
+    "ci_validation": "run 43651835433: release builds, debug and release unit tests for both flavors, UI text audit, lint, APK signature pin and Discord bridge packaging passed",
+    "code_review": {
+      "kind": "author's own re-read; no independent review"
+    },
+    "host_previews": "Automix status line in the queue and the Automix settings, the framed album hero (no empty band with a framing that reaches past the cropped hero), and the Studio title selection for an album rendered in software on the host and inspected",
+    "after_last_full_local_run": "no source change after the last complete local run"
+  },
+  "server": {
+    "function": "ketvoice-content",
+    "deployed_version": 21,
+    "deployment": "a one-line entrypoint importing supabase/functions/ketvoice-content/handler.ts from commit 0e2a40087dac17d43c85f82288fe39f01f4dd53b on raw.githubusercontent.com, bundled at deploy time",
+    "database_migrations": [
+      "20261114220000_media_override_canvas_off.sql applied (canvas_off on ketvoice_media_overrides)"
+    ],
+    "changed_routes": [
+      "POST /admin/override accepts items (up to 80 titles of one kind, files stored once) and canvasOff (titles and albums), verified owner only; GET /overrides returns canvasOff"
+    ],
+    "tests": "handler_test.ts: 8 Deno tests pass locally, including a selection of titles sharing one file, canvas switched off, a file kept while another row uses it, and refusals",
+    "live_check": "/health 200, /overrides 200, /admin/override 401 without an owner session after deployment"
+  },
+  "tests": {
+    "mobile": {
+      "jvm": {
+        "tests": 724,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "android_15_emulator_compose": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "quest": {
+      "jvm": {
+        "tests": 723,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "android_15_emulator_compose": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    }
+  },
+  "lint": {
+    "mobile": {
+      "Warning": 183,
+      "Hint": 19
+    },
+    "quest": {
+      "Warning": 185,
+      "Hint": 19
+    }
+  },
+  "apks": [
+    {
+      "name": "Ketvoice-5.1.0.apk",
+      "sha256": "2f6c2f47251f3f0101244d4ce9f60ec5b054da9a58b2c3b4d68172a503c202db",
+      "bytes": 73496332,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "5.1.0",
+      "versionCode": 107,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-5.1.0-Quest.apk",
+      "sha256": "43cee0069a1db65ea61d256070fd61bf7fdce7e42fcd58a090103b3bd068c043",
+      "bytes": 83529930,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "5.1.0",
+      "versionCode": 107,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    }
+  ],
+  "discord": {
+    "sdk_present_in_ci_build": true,
+    "sdk_sha256_pinned": true,
+    "bridge_and_native_libraries_verified": true,
+    "presence_mode": "unauthenticated_rpc_through_installed_discord_app"
+  },
+  "credential_scan": {
+    "entries": 3356,
+    "findings": 0,
+    "raw_pattern_findings": 1,
+    "scope": "tracked sources and APK archive entries",
+    "kind": "credential_patterns",
+    "explicit_private_provider_key_deny_list": false,
+    "triage": [
+      {
+        "file": "Ketvoice-Liquid-Glass-V4.html",
+        "classification": "embedded_image_false_positive",
+        "all_hits_inside_image_data_uris": true,
+        "rescanned_without_image_payloads": true
+      }
+    ]
+  },
+  "release_install_smoke": {
+    "mobile": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "quest": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    }
+  },
+  "publication_override": {
+    "authorized_by_user": true,
+    "authorized_at": "2026-11-15T08:18:16.302864+00:00",
+    "kind": "standing_authorization",
+    "user_statement": "J'autorise TOUT devient maintenant une règle.",
+    "user_statement_date": "2026-11-14",
+    "in_reply_to": "The question whether versions may be published without phone or Quest testing without asking again for each version.",
+    "recorded_in": "AGENTS.md (commit aeeda8e)",
+    "reason": "The owner made publishing validated versions without phone or Quest testing a standing rule.",
+    "scope": "physical device installation and all on-device behaviour of 5.1.0"
+  },
+  "automix": {
+    "reported_by_owner": "Automix did nothing on the device (owner, 2026-11-14, with two screenshots of an album page). It could not be reproduced here: no audio device or emulator is available.",
+    "likely_cause_addressed": [
+      "albums played in order were never mixed (the owner was on an album page): they now are by default, with a setting, except albums whose titles run together with no gap",
+      "a single failed attempt gave up the pair for good: the next title is now resolved on the spot and tried again up to three times",
+      "preparation started 75 s before the end: it now starts 150 s before, so the next title is loaded long before any mix",
+      "no feedback: a status line in the queue and in Settings now says what Automix is doing or exactly why it is not mixing"
+    ],
+    "tested_on_host": [
+      "tempo, beat positions, bar detection, intro/outro/fade/hard-ending detection and loudness on synthetic audio with known values (BeatAnalysisTest)",
+      "the transition planner on hand-built analyses, including albums, gapless albums and the new longer mixes (TransitionPlannerTest)",
+      "level curves, the bass hand-over filter and the tempo nudging rule (DeckDspTest); the per-deck processor (DeckMixProcessorTest)",
+      "the status line translated in the ten languages, the queue switch and status line, the settings (host tests)"
+    ],
+    "never_run_with_real_audio": [
+      "the two-deck engine has still not been executed against real audio output on any device or emulator: the silent fast reading of both titles, the incoming deck's start, the tempo lock, the session hand-over",
+      "how a mix sounds: no transition was listened to",
+      "tempo and beat detection on real music (only synthetic material was analysed)",
+      "whether the status line now explains the owner's case: it was built to be read and reported back"
+    ],
+    "safeguards": [
+      "off by default; any seek, title change, error, missing analysis or lack of time gives up the transition and the title ends as before",
+      "if the player's internal clock cannot be confirmed against positions at run time, only a plain crossfade on the decks' volume is used"
+    ]
+  },
+  "artist_signatures": {
+    "reported_by_owner": "Signatures did not show (owner, 2026-11-14).",
+    "cause_found": "the artwork service of the app answers 429 'temporarily unavailable' to most artists; the signature archive was only asked after it succeeded, so a 429 lost the signature. A possessive file name (\"Eminem's signature\") was also refused.",
+    "fix": "both services are asked side by side and judged apart; possessives, numbers and notes in brackets are ignored when matching a file to an artist",
+    "checked_live_by_hand": "artistsignature.velixir.run answers for Eminem, Juice WRLD, Travis Scott, Booba, Ninho, Daft Punk and Drake and returns 404 for Werenoi, PNL and Stromae; the app was not run on a device",
+    "limits": "an artist the archive does not know keeps the plain name; homonyms are refused unless the file is named after the artist alone"
+  },
+  "not_validated": [
+    "physical phone or Quest installation, rendering and touch behaviour",
+    "Automix with real audio on any device or emulator (see the automix section)",
+    "artist signatures on a device with the setting on",
+    "the album framing on a device after the fix for empty bands (rendered on the host with a framing that reaches past the cropped hero)",
+    "the Studio title selection and the Canvas off / restore / apply actions end to end with the owner account (no owner session in this environment); the server routes are tested with a fake project",
+    "independent code review of this diff"
+  ],
+  "owner_section_changes": [
+    "Album framing: the whole picture is now drawn and moved, so no empty band appears when the rectangle reaches past what the hero shows (reported with two screenshots, 2026-11-14).",
+    "Studio Visuals: a Canvas can be switched off (or back on) for a title or an album; for an album, its titles are listed with check boxes and the Canvas can be switched off, restored to the catalogue's own, or replaced for the ticked titles at once (none ticked: the whole album).",
+    "Server: POST /admin/override takes up to 80 titles in one request (the file is stored once) and canvasOff; an overridden file is deleted only when no other row still names it."
+  ],
+  "known_limitations": [
+    "Owner-section changes are deliberately not mentioned in the public release notes (owner preference).",
+    "Automix needs the next title to be playable without a new resolution or one that succeeds in time; otherwise it says so and the title ends as before.",
+    "Automix does not mix into titles added by Autoplay at the end of the queue, nor a title whose source was chosen by hand.",
+    "The signing certificate is the existing public Android debug identity, not a private production key."
+  ],
+  "canonical_banner_sha256": "47f6793088983f7d4e6bd1aeaa2cbd8b7cdc2a8f91271e3b2839daea81da0436"
+}
