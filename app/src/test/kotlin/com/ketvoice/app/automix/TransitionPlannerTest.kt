@@ -9,9 +9,9 @@ class TransitionPlannerTest {
     private val duration = 200_000L
     /** Last 45 s of a 200 s title at [bpm], beats on the second, with an outro from [fall]. */
     private fun outro(bpm: Float = 120f, fall: Long = 185_000, end: Long = 199_000, fade: Boolean = false, hard: Boolean = false,
-                      confidence: Float = .9f, bar: Int = -1, loudness: Float = -14f, key: Int = MusicalKey.UNREAD) =
+                      confidence: Float = .9f, bar: Int = -1, loudness: Float = -14f, key: Int = MusicalKey.UNREAD, phrase: Double = -1.0) =
         SegmentAnalysis(155_000, 45_000, bpm, 155_000.0, confidence, bar, loudness, 155_000, end, 155_000,
-            if (hard) end else fall, fade, hard, key, if (key >= 0) .8f else 0f)
+            if (hard) end else fall, fade, hard, key, if (key >= 0) .8f else 0f, phrase)
     private fun intro(bpm: Float = 120f, start: Long = 300, rise: Long = 8_000, confidence: Float = .9f, bar: Int = -1,
                       loudness: Float = -14f, key: Int = MusicalKey.UNREAD) =
         SegmentAnalysis(0, 40_000, bpm, 500.0, confidence, bar, loudness, start, 40_000, rise, 40_000, key = key,
@@ -97,6 +97,39 @@ class TransitionPlannerTest {
         val dj = plan(outro(120f, hard = true), intro(150f), intensity = 2, sungUntil = 180_000)
         assertEquals(MixKind.Echo, dj.kind)
         assertEquals("the echo takes the place of the last four beats", 197_000L, dj.outMs)
+    }
+
+    @Test fun aMixStartsWhereAPhraseOfTheOutgoingTitleStarts() {
+        // Phrases every 16 s from 171 s; without phrases the mix would start at 167 s.
+        val plain = plan(outro(120f, bar = 0), intro(120f, bar = 0), sungUntil = 165_000)
+        assertEquals(167_000L, plain.outMs); assertFalse(plain.onPhrase)
+        val phrased = plan(outro(120f, bar = 0, phrase = 171_000.0), intro(120f, bar = 0), sungUntil = 165_000)
+        assertEquals(MixKind.Beatmatch, phrased.kind)
+        assertEquals(171_000L, phrased.outMs); assertTrue(phrased.onPhrase)
+        assertEquals("32 beats still", 16_000L, phrased.overlapMs)
+        // Never before the singing is over, nor so late that the overlap leaves the title.
+        val tooLate = plan(outro(120f, bar = 0, phrase = 187_000.0), intro(120f, bar = 0), sungUntil = 165_000)
+        assertTrue(tooLate.outMs + tooLate.overlapMs <= 199_000); assertTrue(tooLate.outMs >= 165_300)
+        // An echo leaves on the phrase boundary just before the end of the body.
+        val echo = plan(outro(120f, bar = 0, phrase = 167_000.0), intro(150f), sungUntil = 165_000)
+        assertEquals(MixKind.Echo, echo.kind); assertEquals(183_000L, echo.outMs); assertTrue(echo.onPhrase)
+        // The incoming title enters on its downbeat when that is its next beat.
+        assertEquals(500L, plan(outro(120f, bar = 0), intro(120f, bar = 0), sungUntil = 165_000).inMs)
+        assertEquals("a downbeat three beats later is not waited for", 500L, plan(outro(120f, bar = 0), intro(120f, bar = 3), sungUntil = 165_000).inMs)
+        assertEquals(1_000L, plan(outro(120f, bar = 0), intro(120f, bar = 1), sungUntil = 165_000).inMs)
+    }
+
+    @Test fun aTitleOnRepeatIsMixedIntoItsOwnStart() {
+        assertEquals("without the setting, repeat is left alone", MixKind.None, plan(outro(120f), intro(120f), MixContext(repeatOne = true)).kind)
+        val loop = plan(outro(120f), intro(120f), MixContext(repeatOne = true, loop = true), sungUntil = 170_000)
+        assertEquals(MixKind.Beatmatch, loop.kind)
+        assertTrue(loop.loop); assertEquals(1f, loop.rate, 0f)
+        assertEquals("a title over itself overlaps for 16 beats at most", 8_000L, loop.overlapMs)
+        assertEquals("en boucle · calé sur le tempo", MixWords.describe(loop))
+        assertEquals("calé sur le tempo", MixWords.describe(loop.copy(loop = false)))
+        // A loop that ends on a last note restarts on the beat after it.
+        val hard = plan(outro(120f, hard = true), intro(120f), MixContext(repeatOne = true, loop = true))
+        assertEquals(MixKind.Trim, hard.kind); assertTrue(hard.loop && hard.onBeat)
     }
 
     @Test fun keysThatClashAreNotLeftToOverlapForLong() {
@@ -277,5 +310,35 @@ class TransitionPlannerTest {
         assertEquals(MixKind.Beatmatch, plan.kind)
         assertTrue("starts in the outro (${plan.outMs})", plan.outMs >= 181_000)
         assertEquals(16_000L, plan.overlapMs)
+    }
+
+    @Test fun theListenerCanAskForOneStyleOfTransition() {
+        fun styled(style: MixStyle, a: SegmentAnalysis = outro(120f), b: SegmentAnalysis = intro(120f), sung: Long? = 170_000) =
+            TransitionPlanner.plan(MixFacts(duration, a, vocalEndMs = sung), MixFacts(duration, b), MixContext(), MixSettings(1, style))
+        assertEquals(MixKind.Beatmatch, styled(MixStyle.Auto).kind)
+        assertEquals(MixKind.Beatmatch, styled(MixStyle.Tempo).kind)
+        // Matched to the tempo never leaves on an echo: a crossing of filters when the tempos are too far apart.
+        assertEquals(MixKind.Filter, styled(MixStyle.Tempo, b = intro(150f)).kind)
+        assertEquals(MixKind.Echo, styled(MixStyle.Echo).kind)
+        assertEquals(MixKind.Filter, styled(MixStyle.Filters).kind)
+        assertEquals("filters, even for music without a beat", MixKind.Filter,
+            styled(MixStyle.Filters, outro(0f, confidence = 0f), intro(0f, confidence = 0f), null).kind)
+        assertEquals(MixKind.Crossfade, styled(MixStyle.Fade).kind)
+        // An echo needs a beat: without one, the automatic choice is made.
+        assertEquals(MixKind.Wash, styled(MixStyle.Echo, outro(0f, confidence = 0f), intro(0f, confidence = 0f), null).kind)
+        // Whatever the style, a last note is never covered and singing is never mixed over.
+        assertEquals(MixKind.Trim, styled(MixStyle.Fade, a = outro(120f, hard = true)).kind)
+        assertTrue(styled(MixStyle.Echo, sung = 196_000).let { it.kind != MixKind.Echo })
+        assertEquals(MixStyle.Auto, MixStyle.of(9)); assertEquals(MixStyle.Fade, MixStyle.of(4))
+    }
+
+    @Test fun theMomentTheBassChangesHandsIsKnownForTheStrip() {
+        val blend = plan(outro(120f), intro(120f), sungUntil = 170_000)
+        val share = MixWords.swapShare(blend)
+        assertEquals((blend.swapMs - blend.outMs).toFloat() / blend.overlapMs, share, 1e-4f)
+        assertTrue(share in .4f..0.6f)
+        assertEquals(0f, MixWords.swapShare(plan(outro(120f), intro(150f), sungUntil = 170_000)), 0f)
+        assertEquals(-1f, MixWords.swapShare(plan(outro(0f, confidence = 0f), intro(0f, confidence = 0f))), 0f)
+        assertEquals(-1f, MixWords.swapShare(MixPlan(MixKind.None)), 0f)
     }
 }

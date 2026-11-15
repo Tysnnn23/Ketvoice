@@ -83,10 +83,13 @@ class DeckDspTest {
         assertTrue(out.highPassHz.at(192_000_000) in 400f..900f)
         assertEquals(1_100f, out.highPassHz.at(196_000_000), 2f)
         assertEquals("...and no low-pass in this colour", 0f, out.lowPassHz.at(192_000_000), 0f)
-        // The incoming title opens up from 2.2 kHz while it rises, and is wide open well before the swap.
-        assertEquals(2_200f, into.lowPassHz.at(0), 1f)
-        assertTrue(into.lowPassHz.at(inAt(183_000)) in 2_300f..17_000f)
-        assertEquals(0f, into.lowPassHz.at(inAt(187_000)), 0f)
+        // The incoming title comes in highs first, then mids, and its bass on the swap.
+        assertEquals(1_400f, into.highPassHz.at(0), 1f)
+        assertTrue(into.highPassHz.at(inAt(182_000)) in 320f..1_380f)
+        assertEquals(DeckAutomation.BASS_HZ, into.highPassHz.at(inAt(186_000)), 1f)
+        assertEquals("no low-pass on the incoming title", 0f, into.lowPassHz.at(inAt(183_000)), 0f)
+        var before = Float.MAX_VALUE
+        for (ms in 180_000L..189_000L step 100) { val hz = into.highPassHz.at(inAt(ms)).let { if (it == 0f) 0f else it }; assertTrue(hz <= before + .01f); before = hz }
         val middle = out.highPassHz.at(188_000_000)
         assertTrue("The filters cross during one beat around the swap ($middle)", middle > 60f && middle < 150f)
         assertEquals(middle, into.highPassHz.at(inAt(188_000)), 6f)

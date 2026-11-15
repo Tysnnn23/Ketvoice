@@ -149,10 +149,12 @@ class AutomixHostTest {
         (Player.positionMs as MutableStateFlow<Long>).value = 188_000L
         compose.mainClock.autoAdvance = false
         mixUi.value = Automix.Ui(Automix.Phase.Mixing, from, to, MixKind.Beatmatch,
-            startedAt = android.os.SystemClock.elapsedRealtime() - 3_000, durationMs = 12_000, bpm = 120f)
+            startedAt = android.os.SystemClock.elapsedRealtime() - 3_000, durationMs = 12_000, bpm = 120f,
+            swapAt = .5f, measures = "124 → 128 BPM · 8A → 9A")
         compose.setContent { KetvoiceTheme(useDark = true) {
             Column(Modifier.fillMaxSize().background(Color(0xFF14141A)).padding(18.dp)) {
                 ArtworkCanvas(from, null, playing = true, modifier = Modifier.size(320.dp), corner = 18.dp)
+                com.ketvoice.app.ui.player.MixStrip(Modifier.fillMaxWidth().padding(top = 16.dp))
                 ScrubBar(200_000, Modifier.fillMaxWidth().padding(top = 24.dp), onSeek = {})
                 // A title that is not part of the mix shows nothing of it.
                 ArtworkCanvas(track("z", "Autre"), null, playing = false, modifier = Modifier.size(120.dp))
@@ -163,6 +165,8 @@ class AutomixHostTest {
         compose.onNodeWithTag("mix-badge").assertExists()
         compose.onNodeWithText("Mix en cours").assertExists()
         compose.onNodeWithText(" · Entrant").assertExists()
+        compose.onNodeWithTag("mix-strip").assertExists()
+        compose.onNodeWithText("124 → 128 BPM · 8A → 9A").assertExists()
         image("automix-mixing")
         // After the hand-over the roles swap: the incoming title is shown, the outgoing one dissolves away.
         mixUi.value = mixUi.value.copy(promoted = true)
@@ -171,6 +175,44 @@ class AutomixHostTest {
         mixUi.value = Automix.Ui()
         compose.mainClock.advanceTimeBy(64)
         compose.onAllNodesWithTag("mix-badge").assertCountEquals(0)
+        compose.onAllNodesWithTag("mix-strip").assertCountEquals(0)
+    }
+
+    @Test fun severalTitlesOfTheQueueAreChosenThenRemovedOrPlayedNext() {
+        val titles = listOf(track("a", "Premier"), track("b", "Deuxième"), track("c", "Troisième"), track("d", "Quatrième"), track("e", "Cinquième"))
+        player.value = PlayerUiState(queue = titles, queueEntryIds = listOf("k0", "k1", "k2", "k3", "k4"), index = 0)
+        compose.setContent { KetvoiceTheme(useDark = true) {
+            Box(Modifier.fillMaxSize().background(Color(0xFF14141A)).padding(18.dp)) {
+                val state by Player.state.collectAsState(); QueuePane(state, Modifier.fillMaxSize())
+            }
+        } }
+        compose.onAllNodesWithTag("queue-row-check", useUnmergedTree = true).assertCountEquals(0)
+        // A long press starts choosing, with that title chosen.
+        compose.onNodeWithText("Troisième").performTouchInput { longClick() }
+        compose.waitForIdle()
+        compose.onAllNodesWithTag("queue-row-check", useUnmergedTree = true).assertCountEquals(4)
+        compose.onNodeWithText("1 titre choisi").assertIsDisplayed()
+        compose.onNodeWithText("Cinquième").performClick()
+        compose.onNodeWithText("2 titres choisis").assertIsDisplayed()
+        image("queue-selection")
+        // Played next: they move right after the title playing, in their order.
+        compose.onNodeWithTag("queue-selection-next").performClick()
+        compose.waitForIdle()
+        assertEquals(listOf("k0", "k2", "k4", "k1", "k3"), Player.state.value.queueEntryIds)
+        compose.onAllNodesWithTag("queue-row-check", useUnmergedTree = true).assertCountEquals(0)
+        // Chosen again, all at once, then removed.
+        compose.onNodeWithTag("queue-select").performClick()
+        compose.onNodeWithTag("queue-select-all").performClick()
+        compose.onNodeWithText("4 titres choisis").assertIsDisplayed()
+        compose.onNodeWithTag("queue-selection-remove").performClick()
+        compose.waitForIdle()
+        assertEquals(listOf("k0"), Player.state.value.queueEntryIds)
+        // Back closes the selection without changing anything.
+        player.value = PlayerUiState(queue = titles, queueEntryIds = listOf("k0", "k1", "k2", "k3", "k4"), index = 0)
+        compose.onNodeWithTag("queue-select").performClick()
+        compose.onNodeWithTag("queue-select-done").performClick()
+        compose.onAllNodesWithTag("queue-row-check", useUnmergedTree = true).assertCountEquals(0)
+        assertEquals(5, Player.state.value.queue.size)
     }
 
     @Test fun theFramingScreenWorksLikeAPhotoEditor() {

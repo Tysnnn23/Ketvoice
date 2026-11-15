@@ -186,8 +186,9 @@ float4 main(float2 coord) {
     // lumière s'éclaire doucement, puis s'efface vers le centre plat.
     float bevel = refractionHeight > 0.0 ? 1.0 - smoothstep(0.0, refractionHeight * 1.2, -sd) : 0.0;
     color.rgb += rimLight * 0.22 * bevel * pow(max(facing, 0.0), 3.0);
-    // Fresnel : chaque bord réfléchit un peu plus que le centre, quelle que soit la lumière.
-    color.rgb = mix(color.rgb, float3(1.0), bevel * bevel * 0.035);
+    // Fresnel (Schlick) : plus le bord est vu de biais, plus il reflète, quelle que soit la lumière.
+    float across = refractionHeight > 0.0 ? clamp(1.0 + sd / refractionHeight, 0.0, 1.0) : 0.0;
+    color.rgb = mix(color.rgb, float3(1.0), prismalFresnel(across) * 0.22);
 
     // Voile spéculaire supérieur : la pellicule « mouillée » du verre.
     float fromTop = clamp(local.y / max(size.y, 1.0), 0.0, 1.0);
@@ -230,7 +231,8 @@ fun BackdropEffectScope.liquidGlass(
         shader.setFloatUniform("contentSize", w + pad * 2f, h + pad * 2f)
         shader.setFloatUniform("cornerRadii", radii)
         shader.setFloatUniform("refractionHeight", lens.heightPx)
-        shader.setFloatUniform("refractionAmount", lens.amountPx)
+        // Materialize: the glass forms by bending the light in, not by fading in.
+        shader.setFloatUniform("refractionAmount", lens.amountPx * params.materialize.coerceIn(0f, 1f))
         shader.setFloatUniform("dispersion", DesignTokens.Glass.DISPERSION)
         shader.setFloatUniform("depthEffect", 0f)
         val tint = GlassTint.tinted(if (params.dark) floatArrayOf(.16f, .16f, .19f) else floatArrayOf(1f, 1f, 1f),
@@ -240,7 +242,7 @@ fun BackdropEffectScope.liquidGlass(
         shader.setFloatUniform("saturation", params.saturation)
         shader.setFloatUniform("brightness", params.brightness * (1f + params.exposure))
         shader.setFloatUniform("edgeDark", if (params.dark) 0.09f else 0.055f)
-        shader.setFloatUniform("rimLight", params.highlightAlpha * 0.85f)
+        shader.setFloatUniform("rimLight", params.highlightAlpha * 0.85f * params.materialize.coerceIn(0f, 1f))
         shader.setFloatUniform("sheen", if (params.dark) 0.018f else 0.022f)
         shader.setFloatUniform("materialDark", if (params.dark) 1f else 0f)
         val angle = Math.toRadians(params.highlightAngle.toDouble())

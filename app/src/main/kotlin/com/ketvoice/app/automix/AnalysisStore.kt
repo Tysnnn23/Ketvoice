@@ -123,7 +123,7 @@ internal object AnalysisStore {
         .put("s", a.startMs).put("l", a.lengthMs).put("b", a.bpm.toDouble()).put("p", a.beatAtMs).put("c", a.confidence.toDouble())
         .put("r", a.barOffset).put("d", a.loudnessDb.toDouble()).put("ss", a.soundStartMs).put("se", a.soundEndMs)
         .put("ri", a.riseMs).put("fa", a.fallMs).put("fo", a.fadeOut).put("he", a.hardEnding)
-        .put("k", a.key).put("ks", a.keyStrength.toDouble())
+        .put("k", a.key).put("ks", a.keyStrength.toDouble()).put("ph", a.phraseAtMs)
 
     internal fun decode(o: JSONObject?): SegmentAnalysis? {
         o ?: return null
@@ -137,6 +137,7 @@ internal object AnalysisStore {
             o.optLong("ss", start).coerceIn(start, end), o.optLong("se", end).coerceIn(start, end),
             o.optLong("ri", start).coerceIn(start, end), o.optLong("fa", end).coerceIn(start, end),
             o.optBoolean("fo"), o.optBoolean("he"),
-            o.optInt("k", MusicalKey.UNREAD).coerceIn(MusicalKey.UNREAD, 23), o.optDouble("ks", 0.0).toFloat().coerceIn(0f, 1f))
+            o.optInt("k", MusicalKey.UNREAD).coerceIn(MusicalKey.UNREAD, 23), o.optDouble("ks", 0.0).toFloat().coerceIn(0f, 1f),
+            o.optDouble("ph", -1.0).takeIf { it.isFinite() && it >= 0.0 && it <= end } ?: -1.0)
     }
 }

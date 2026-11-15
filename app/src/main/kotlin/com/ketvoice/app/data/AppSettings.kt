@@ -42,6 +42,14 @@ object AppSettings {
     val automixAlbums = mutableStateOf(true)
     /** How much of the processor Ketmix's analysis may take: 0 = light, 1 = balanced, 2 = maximum. */
     val ketmixAnalysis = mutableStateOf(1)
+    /** A title on repeat is mixed into itself at each loop instead of starting again after a silence. */
+    val ketmixLoops = mutableStateOf(true)
+    /** Shuffle keeps titles heard recently for later and does not put two titles of an artist in a row. */
+    val smartShuffle = mutableStateOf(true)
+    /** Ketmix transition style: 0 = automatic, 1 = matched to the tempo, 2 = echo, 3 = filters, 4 = fade. */
+    val ketmixStyle = mutableStateOf(0)
+    /** A light vibration when the bass passes from one title to the next (app in front only). */
+    val ketmixHaptics = mutableStateOf(false)
     val lyricsSource = mutableStateOf("auto")
     val betterLyricsKey = mutableStateOf("")
     val lyricaUrl = mutableStateOf("")

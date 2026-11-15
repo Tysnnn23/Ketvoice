@@ -121,7 +121,9 @@ float4 main(float2 coord) {
     if (depth < lensHeight && lensHeight > 0.0) {
         // Circular height map: bend rises smoothly to the rim, constant all around.
         float x = 1.0 - depth / lensHeight;
-        float bend = (1.0 - sqrt(max(1.0 - x * x, 0.0))) * lensAmount * (1.0 + press * 0.22);
+        // Squircle bezel: the bend leaves the flat centre gently and rises sharply at the rim.
+        float x2 = x * x;
+        float bend = (1.0 - pow(max(1.0 - x2 * x2, 0.0), 0.25)) * lensAmount * (1.0 + press * 0.22);
         float2 r = body + n * bend * (1.0 - dispersion);
         float2 gC = body + n * bend;
         float2 b = body + n * bend * (1.0 + dispersion);
@@ -171,8 +173,10 @@ float4 main(float2 coord) {
     // a thick glass edge catches it, fading towards the flat centre.
     float bevel = lensHeight > 0.0 ? 1.0 - smoothstep(0.0, lensHeight * 1.15, depth) : 0.0;
     color.rgb += rimLight * 0.30 * bevel * pow(max(facing, 0.0), 3.0);
-    // Fresnel: every edge reflects a little more than the centre, whatever the light.
-    color.rgb = mix(color.rgb, float3(1.0), bevel * bevel * 0.045);
+    // Fresnel (Schlick, F0 = 0.04): the more edge-on the surface, the more it reflects, whatever the light.
+    float across = lensHeight > 0.0 ? clamp(1.0 - depth / lensHeight, 0.0, 1.0) : 0.0;
+    float across2 = across * across;
+    color.rgb = mix(color.rgb, float3(1.0), 0.96 * across2 * across2 * across * 0.26);
     // Inner glow just inside the lit rim: the glass edge catching light.
     float inner = smoothstep(0.0, 3.0 * px, depth) * (1.0 - smoothstep(3.0 * px, 9.0 * px, depth));
     color.rgb += rimLight * 0.16 * inner * max(facing, 0.0);
@@ -232,7 +236,8 @@ internal fun applyLiquid27Material(shader: android.graphics.RuntimeShader, w: Fl
     shader.setFloatUniform("offset", -pad, -pad)
     shader.setFloatUniform("contentSize", w + pad * 2f, h + pad * 2f)
     shader.setFloatUniform("lensHeight", lens.heightPx)
-    shader.setFloatUniform("lensAmount", lens.amountPx)
+    // Materialize: the glass forms by bending the light in, not by fading in.
+    shader.setFloatUniform("lensAmount", lens.amountPx * params.materialize.coerceIn(0f, 1f))
     shader.setFloatUniform("dispersion", DesignTokens.Glass.DISPERSION * 1.5f)
     shader.setFloatUniform("frost", GlassTuning.sanitize(frost))
     // Lighter dark material than the other styles; the cover may tint it slightly.
@@ -241,7 +246,7 @@ internal fun applyLiquid27Material(shader: android.graphics.RuntimeShader, w: Fl
     shader.setFloatUniform("saturation", if (params.dark) 1.18f else 1.24f)
     shader.setFloatUniform("materialDark", if (params.dark) 1f else 0f)
     shader.setFloatUniform("lightDir", light.lightX, light.lightY)
-    shader.setFloatUniform("rimLight", if (params.dark) .34f else .46f)
+    shader.setFloatUniform("rimLight", (if (params.dark) .34f else .46f) * params.materialize.coerceIn(0f, 1f))
     shader.setFloatUniform("pixelScale", density)
     shader.setFloatUniform("touch", light.touchX, light.touchY, light.press.let { if (it.isFinite()) it.coerceIn(0f, 1f) else 0f })
 }

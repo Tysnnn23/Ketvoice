@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -92,6 +93,20 @@ internal object MixVisuals {
         val beat = 60_000f / bpm
         val phase = (elapsedMs % beat.toLong().coerceAtLeast(1L)) / beat
         return (.5f + .5f * cos(2.0 * PI * phase).toFloat()).coerceIn(0f, 1f)
+    }
+
+    /**
+     * Height (0..1) of bar [index] of [count] in the mix strip. The outgoing title (top) fades
+     * along the strip and the incoming one (bottom) grows, with a texture of their own so that
+     * the two read as two pieces of music; [pulse] makes them breathe with the beat.
+     */
+    fun stripLevel(index: Int, count: Int, outgoing: Boolean, pulse: Float = .5f): Float {
+        if (count <= 1) return 0f
+        val x = (index.toFloat() / (count - 1)).coerceIn(0f, 1f)
+        val envelope = if (outgoing) 1f - smooth(x) else smooth(x)
+        val seed = index * (if (outgoing) 12.9898 else 78.233)
+        val texture = .45f + .55f * (.5f + .5f * kotlin.math.sin(seed).toFloat())
+        return (envelope * texture * (.85f + .3f * pulse)).coerceIn(0f, 1f)
     }
 
     /** How far the two rings of the glyph overlap: apart when idle, merged at the hand-over. */
@@ -211,6 +226,63 @@ internal fun AutomixStatusLine(modifier: Modifier = Modifier, color: Color = Col
     Row(modifier.testTag("automix-status"), verticalAlignment = Alignment.CenterVertically) {
         if (glyph) AutomixGlyph(LocalTheme.current.accent, Modifier.padding(end = 7.dp).size(18.dp))
         Text(text, color = color, fontSize = fontSize, lineHeight = fontSize * 1.25f, maxLines = 2, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+/**
+ * The mix as it happens, above the progress bar: the outgoing title's bars on top fade out
+ * while the incoming title's grow underneath, a playhead walks across, and the moment the
+ * bass changes hands is marked. What was measured (tempo, key) sits at its end.
+ * The bars are drawn from the plan, not read from the audio.
+ */
+@Composable
+internal fun MixStrip(modifier: Modifier = Modifier) {
+    val ui by Automix.ui.collectAsState()
+    if (ui.phase != Automix.Phase.Mixing) return
+    val progress by rememberMixProgress()
+    val pulse = remember { mutableFloatStateOf(.5f) }
+    LaunchedEffect(ui.bpm, Motion.reduced) {
+        if (Motion.reduced) { pulse.floatValue = .5f; return@LaunchedEffect }
+        val origin = SystemClock.elapsedRealtime()
+        while (true) withFrameMillis { pulse.floatValue = MixVisuals.pulse(SystemClock.elapsedRealtime() - origin, ui.bpm) }
+    }
+    val accent = LocalTheme.current.accent
+    Row(modifier.testTag("mix-strip"), verticalAlignment = Alignment.CenterVertically) {
+        AutomixGlyph(accent, Modifier.size(18.dp), overlap = if (Motion.reduced) .6f else MixVisuals.ringOverlap(progress))
+        Canvas(Modifier.padding(horizontal = 8.dp).weight(1f).height(24.dp)) {
+            val count = 36
+            val gap = size.width / count
+            val bar = (gap * .5f).coerceAtLeast(1.5f)
+            val middle = size.height / 2f
+            val p = progress ?: 0f
+            for (i in 0 until count) {
+                val x = gap * (i + .5f)
+                val played = x / size.width <= p
+                val top = MixVisuals.stripLevel(i, count, outgoing = true, pulse = pulse.floatValue) * (middle - 1.5f)
+                val bottom = MixVisuals.stripLevel(i, count, outgoing = false, pulse = pulse.floatValue) * (middle - 1.5f)
+                drawLine(Color.White.copy(alpha = if (played) .9f else .35f), Offset(x, middle - 1f), Offset(x, middle - 1f - top), bar,
+                    androidx.compose.ui.graphics.StrokeCap.Round)
+                drawLine(accent.copy(alpha = if (played) 1f else .4f), Offset(x, middle + 1f), Offset(x, middle + 1f + bottom), bar,
+                    androidx.compose.ui.graphics.StrokeCap.Round)
+            }
+            if (ui.swapAt >= 0f) {
+                val sx = size.width * ui.swapAt
+                drawLine(accent, Offset(sx, 0f), Offset(sx, size.height), 1.5.dp.toPx())
+            }
+            val px = size.width * p
+            drawLine(Color.White, Offset(px, 0f), Offset(px, size.height), 2.dp.toPx(), androidx.compose.ui.graphics.StrokeCap.Round)
+        }
+        if (ui.measures.isNotBlank()) Text(ui.measures, localize = false, color = Color.White.copy(alpha = .78f), fontSize = 11.sp,
+            maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 150.dp))
+    }
+}
+
+/** A light vibration when the bass changes hands, when the listener asked for it and the app is in front. */
+@Composable
+internal fun KetmixSwapHaptics() {
+    val haptic = rememberHaptics()
+    LaunchedEffect(Unit) {
+        Automix.swaps.collect { if (AppSettings.ketmixHaptics.value && AppSettings.automix.value) haptic(Haptics.Kind.Confirm) }
     }
 }
 

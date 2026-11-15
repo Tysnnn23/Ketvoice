@@ -76,16 +76,26 @@ fun LiquidGlassButton(
     }
 }
 
-/** The thumb samples a DIFFERENT layer containing only its track, never itself. */
+/**
+ * The thumb samples a DIFFERENT layer containing only its track, never itself. As on iOS 26,
+ * the thumb turns into a clear lens while the finger is on it: it widens towards the middle,
+ * bends the track more, and settles back into its solid form when released.
+ */
 @Composable
 internal fun LiquidGlassSwitch(checked: Boolean, onCheckedChange: ((Boolean) -> Unit)?, modifier: Modifier = Modifier) {
     val theme = LocalTheme.current
     val track = rememberGlassBackdrop(theme.card)
+    val interactions = remember { MutableInteractionSource() }
+    val pressed by interactions.collectIsPressedAsState()
+    val lens by animateFloatAsState(if (pressed && !Motion.reduced) 1f else 0f,
+        if (Motion.reduced) androidx.compose.animation.core.snap() else
+            androidx.compose.animation.core.spring(dampingRatio = GlassMotion.RELEASE_DAMPING, stiffness = 520f), label = "glass-switch-lens")
     val x by androidx.compose.animation.core.animateDpAsState(if (checked) 23.dp else 3.dp,
         if (Motion.reduced) androidx.compose.animation.core.snap() else
             androidx.compose.animation.core.spring(dampingRatio = .82f, stiffness = 650f), label = "glass-switch")
     Box(modifier.width(56.dp).height(48.dp)
-        .then(if (onCheckedChange != null) Modifier.toggleable(checked, role = Role.Switch, onValueChange = onCheckedChange) else Modifier),
+        .then(if (onCheckedChange != null) Modifier.toggleable(checked, interactions, null, role = Role.Switch,
+            onValueChange = onCheckedChange) else Modifier),
         contentAlignment = Alignment.Center) {
         Box(Modifier.width(56.dp).height(32.dp)) {
             BackdropCapture(track, Modifier.fillMaxSize()) {
@@ -94,12 +104,24 @@ internal fun LiquidGlassSwitch(checked: Boolean, onCheckedChange: ((Boolean) -> 
                     else listOf(theme.onBackground.copy(alpha = .12f), theme.onBackground.copy(alpha = .22f)))))
             }
             CompositionLocalProvider(LocalBackdropLayer provides track) {
-                GlassPanel(Modifier.offset { IntOffset(x.roundToPx(), 2.dp.roundToPx()) }.size(30.dp, 28.dp), RoundedCornerShape(14.dp),
-                    GlassParams.circle(dark = theme.isDark).copy(blurPx = 2f,
-                        refractionHeightDp = 6f, refractionAmountDp = 8f, tintAlpha = .18f,
+                val grow = LiquidSwitchLens.size(lens)
+                GlassPanel(Modifier.offset { IntOffset((x - (if (checked) grow.width else 0.dp)).roundToPx(),
+                    (2.dp - grow.height / 2).roundToPx()) }.size(30.dp + grow.width, 28.dp + grow.height),
+                    RoundedCornerShape(14.dp + grow.height / 2),
+                    GlassParams.circle(dark = theme.isDark).copy(blurPx = 2f * (1f - lens),
+                        refractionHeightDp = 6f + 4f * lens, refractionAmountDp = 8f + 8f * lens,
+                        tintAlpha = LiquidSwitchLens.tint(lens), opticalPressure = lens,
                         shadow = false, innerShadow = false),
                     enabled = AppSettings.liquidGlass.value) {}
             }
         }
     }
+}
+
+/** The switch thumb as a lens: how much it grows and how clear it gets, for a press of 0..1. */
+internal object LiquidSwitchLens {
+    data class Growth(val width: androidx.compose.ui.unit.Dp, val height: androidx.compose.ui.unit.Dp)
+    fun size(lens: Float): Growth { val l = lens.coerceIn(0f, 1.2f); return Growth((10f * l).dp, (6f * l).dp) }
+    /** Solid enough to read as a thumb at rest, nearly clear while touched. */
+    fun tint(lens: Float): Float = (.18f - .13f * lens.coerceIn(0f, 1f)).coerceAtLeast(.04f)
 }

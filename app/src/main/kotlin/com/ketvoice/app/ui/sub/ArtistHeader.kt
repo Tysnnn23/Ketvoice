@@ -49,8 +49,32 @@ import com.ketvoice.app.ui.motion.StaggeredReveal
  * towards the portrait's dominant colour. Light pages become a pastel of it, dark
  * pages a deep shade; without a colour the page keeps its own background.
  */
-internal fun artistPageTint(background: Color, tone: Color?, dark: Boolean): Color =
-    if (tone == null) background else androidx.compose.ui.graphics.lerp(background, tone, if (dark) .30f else .38f)
+internal fun artistPageTint(background: Color, tone: Color?, dark: Boolean): Color {
+    if (tone == null) return background
+    val tinted = androidx.compose.ui.graphics.lerp(background, tone, if (dark) .30f else .38f)
+    // A dark page, not a light page shown with dark controls, is held down at night.
+    return if (dark && background.luminance() < .2f) PageTint.nightCap(tinted) else tinted
+}
+
+/**
+ * Colours of pages taken from a cover or a Canvas. Dark, a bright cover must not light the
+ * whole screen at night (the complaint against Apple Music's adaptive pages in iOS 26.4):
+ * the page keeps its hue but never goes above a dim level.
+ */
+internal object PageTint {
+    /** Relative luminance a dark page never exceeds, about that of #333333. */
+    const val NIGHT_MAX_LUMINANCE = .033f
+
+    fun nightCap(color: Color): Color {
+        val luminance = color.luminance()
+        if (luminance <= NIGHT_MAX_LUMINANCE) return color
+        // Luminance follows the components roughly to the power 2.2: scale them back by its root.
+        val factor = Math.pow((NIGHT_MAX_LUMINANCE / luminance).toDouble(), 1 / 2.2).toFloat()
+        val scaled = Color(color.red * factor, color.green * factor, color.blue * factor, color.alpha)
+        // One more small step where the curve's approximation leaves it just above.
+        return if (scaled.luminance() <= NIGHT_MAX_LUMINANCE * 1.02f) scaled else Color(scaled.red * .97f, scaled.green * .97f, scaled.blue * .97f, scaled.alpha)
+    }
+}
 
 @Composable
 internal fun ArtistHeader(page: ArtistPage, collapse: () -> Float = { 0f }, onTone: (Color?) -> Unit = {}) {

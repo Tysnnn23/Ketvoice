@@ -40,7 +40,12 @@ internal data class SegmentAnalysis(
     val hardEnding: Boolean = false,
     /** See [MusicalKey]: 0..23, [MusicalKey.NONE] when the music does not say, [MusicalKey.UNREAD] when it was not looked for. */
     val key: Int = MusicalKey.UNREAD,
-    val keyStrength: Float = 0f
+    val keyStrength: Float = 0f,
+    /**
+     * Start of a phrase: a first beat of a bar from which the music changes every
+     * [PHRASE_BARS] bars (a part comes in or drops out); -1 when no such grid stands out.
+     */
+    val phraseAtMs: Double = -1.0
 ) {
     val beatMs: Float get() = if (bpm > 0f) 60_000f / bpm else 0f
     val hasBeat: Boolean get() = bpm > 0f && confidence >= MIN_CONFIDENCE
@@ -52,6 +57,21 @@ internal data class SegmentAnalysis(
         return beatAtMs + ceil((positionMs - beatAtMs) / period - 1e-6) * period
     }
 
+    val hasPhrases: Boolean get() = phraseAtMs >= 0.0 && bpm > 0f && barOffset >= 0
+
+    /** Length of a phrase on this title's grid. */
+    val phraseMs: Double get() = beatMs.toDouble() * 4 * PHRASE_BARS
+
+    /** The phrase starts between [fromMs] and [untilMs], earliest first. */
+    fun phraseStarts(fromMs: Double, untilMs: Double): List<Double> {
+        if (!hasPhrases || untilMs < fromMs) return emptyList()
+        val period = phraseMs
+        var at = phraseAtMs + kotlin.math.ceil((fromMs - phraseAtMs) / period - 1e-6) * period
+        val found = ArrayList<Double>()
+        while (at <= untilMs + 1e-6 && found.size < 64) { found += at; at += period }
+        return found
+    }
+
     /** The first beat of a bar at or after [positionMs]; a plain beat when bars are unknown. */
     fun barAtOrAfter(positionMs: Double): Double {
         if (bpm <= 0f || barOffset < 0) return beatAtOrAfter(positionMs)
@@ -60,7 +80,11 @@ internal data class SegmentAnalysis(
         return first + ceil((positionMs - first) / bar - 1e-6) * bar
     }
 
-    companion object { const val MIN_CONFIDENCE = .45f }
+    companion object {
+        const val MIN_CONFIDENCE = .45f
+        /** Pop, dance and hip-hop are built on phrases of eight bars. */
+        const val PHRASE_BARS = 8
+    }
 }
 
 internal object BeatAnalysis {
@@ -92,8 +116,46 @@ internal object BeatAnalysis {
             soundEndMs = ms(shape.soundEnd.toFloat()).coerceAtMost(startMs + lengthMs),
             riseMs = ms(shape.rise.toFloat()).coerceAtLeast(startMs),
             fallMs = ms(shape.fall.toFloat()).coerceAtMost(startMs + lengthMs),
-            fadeOut = shape.fadeOut, hardEnding = shape.hardEnding, key = key, keyStrength = keyStrength)
+            fadeOut = shape.fadeOut, hardEnding = shape.hardEnding, key = key, keyStrength = keyStrength,
+            phraseAtMs = tempo?.takeIf { it.barOffset >= 0 && it.confidence >= SegmentAnalysis.MIN_CONFIDENCE }
+                ?.let { phrase(envelope, it) }?.let { startMs + envelope.timeOf(it) * 1000.0 } ?: -1.0)
     }
+
+    /**
+     * Where the phrases start, as a frame: the bar of each group of eight where the level
+     * and the spectrum change the most, when one of the eight positions clearly stands out.
+     */
+    internal fun phrase(envelope: OnsetEnvelope, tempo: Tempo): Float? {
+        val bar = tempo.periodFrames * 4f
+        val first = tempo.phaseFrames + tempo.barOffset * tempo.periodFrames
+        val bars = ((envelope.size - 1 - first) / bar).toInt()
+        if (bars < SegmentAnalysis.PHRASE_BARS + 4) return null
+        // Level and spectral activity of each bar.
+        val level = DoubleArray(bars); val activity = DoubleArray(bars)
+        for (i in 0 until bars) {
+            val from = (first + i * bar).toInt().coerceAtLeast(0)
+            val until = (first + (i + 1) * bar).toInt().coerceAtMost(envelope.size)
+            var power = 0.0; var flux = 0.0
+            for (f in from until until) { power += envelope.level[f]; flux += envelope.flux[f] }
+            val n = (until - from).coerceAtLeast(1)
+            level[i] = 10.0 * log10(power / n + 1e-12); activity[i] = flux / n
+        }
+        val meanActivity = activity.average().coerceAtLeast(1e-9)
+        // How much each bar differs from the one before: a part coming in or dropping out.
+        val change = DoubleArray(bars)
+        for (i in 1 until bars) change[i] = abs(level[i] - level[i - 1]) / 3.0 + abs(activity[i] - activity[i - 1]) / meanActivity
+        val score = DoubleArray(SegmentAnalysis.PHRASE_BARS)
+        val counts = IntArray(SegmentAnalysis.PHRASE_BARS)
+        for (i in 1 until bars) { score[i % SegmentAnalysis.PHRASE_BARS] += change[i]; counts[i % SegmentAnalysis.PHRASE_BARS]++ }
+        for (p in score.indices) score[p] /= counts[p].coerceAtLeast(1)
+        val best = score.indices.maxByOrNull { score[it] } ?: return null
+        val others = score.indices.filter { it != best }.map { score[it] }.average()
+        // A grid that never changes has no phrases to tell, however its rounding errors compare.
+        if (score[best] < PHRASE_MIN_CHANGE || (others > 1e-9 && score[best] / others < PHRASE_CONTRAST)) return null
+        return first + best * bar
+    }
+    private const val PHRASE_CONTRAST = 1.6
+    private const val PHRASE_MIN_CHANGE = .25
 
     /** A tempo that is not the same in both halves of the stretch loses the confidence long mixes need. */
     private fun steadied(whole: Tempo, envelope: OnsetEnvelope): Tempo {
@@ -202,7 +264,9 @@ internal object BeatAnalysis {
                 var beat = 0; var position = phase
                 while (position < n - 1) { sums[beat % 4] += at(bass, position); beat++; position += period }
                 val order = sums.indices.sortedByDescending { sums[it] }
-                val barOffset = if (beat >= 16 && sums[order[0]] > 0f && (sums[order[0]] - sums[order[1]]) / sums[order[0]] >= .18f) order[0] else -1
+                val barOffset = if (beat >= 16 && sums[order[0]] > 0f && (sums[order[0]] - sums[order[1]]) / sums[order[0]] >= .18f) order[0]
+                    // No bass that tells the bars apart: the first beat of a bar is where the sound changes most from one beat to the next.
+                    else if (beat >= 16) downbeatByChange(envelope, period, phase) else -1
                 chosen = Tempo(fps * 60f / period, period, phase, confidence, barOffset)
             }
         }
@@ -210,6 +274,36 @@ internal object BeatAnalysis {
     }
 
     private val RELATIVES = floatArrayOf(1f, 2f, .5f, 1.5f, 2f / 3f, 4f / 3f, .75f)
+
+    /**
+     * After Davies and Plumbley (2006): the spectrum and level of each beat compared with the
+     * beat before, folded over the four positions of a bar; the position where most comes in is
+     * the first beat. -1 when no position stands out.
+     */
+    internal fun downbeatByChange(envelope: OnsetEnvelope, period: Float, phase: Float): Int {
+        val beats = ((envelope.size - 1 - phase) / period).toInt()
+        if (beats < 16) return -1
+        val level = DoubleArray(beats); val activity = DoubleArray(beats)
+        for (i in 0 until beats) {
+            val from = (phase + i * period).toInt().coerceAtLeast(0)
+            val until = (phase + (i + 1) * period).toInt().coerceAtMost(envelope.size)
+            var power = 0.0; var flux = 0.0
+            for (f in from until until) { power += envelope.level[f]; flux += envelope.flux[f] }
+            val n = (until - from).coerceAtLeast(1)
+            level[i] = 10.0 * log10(power / n + 1e-12); activity[i] = flux / n
+        }
+        val meanActivity = activity.average().coerceAtLeast(1e-9)
+        val sums = DoubleArray(4); val counts = IntArray(4)
+        for (i in 1 until beats) {
+            // What comes in counts, not what dies away: a crash on the one would otherwise mark the two as well.
+            sums[i % 4] += max(0.0, level[i] - level[i - 1]) / 3.0 + max(0.0, activity[i] - activity[i - 1]) / meanActivity
+            counts[i % 4]++
+        }
+        for (k in 0 until 4) sums[k] /= counts[k].coerceAtLeast(1)
+        val best = sums.indices.maxByOrNull { sums[it] } ?: return -1
+        val others = sums.indices.filter { it != best }.map { sums[it] }.average()
+        return if (sums[best] >= .2 && others > 1e-9 && sums[best] / others >= 1.35) best else -1
+    }
 
     /** Frames where an attack stands out: local maxima above a quarter of the strong ones. */
     private fun peaks(onsets: FloatArray): IntArray {

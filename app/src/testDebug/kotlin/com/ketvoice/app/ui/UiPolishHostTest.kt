@@ -110,8 +110,23 @@ class UiPolishHostTest {
             compose.onNodeWithText("Maximale").performClick()
             compose.waitForIdle()
             assertEquals(2, AppSettings.ketmixAnalysis.value)
+            // The style of transition, the loop and the vibration.
+            compose.onNodeWithText("Style de transition").performScrollTo().assertIsDisplayed()
+            compose.onNodeWithText("Automatique").assertIsDisplayed()
+            compose.onNodeWithText("Style de transition").performClick()
+            compose.waitForIdle()
+            compose.onNodeWithText("Écho").performClick()
+            compose.waitForIdle()
+            assertEquals(2, AppSettings.ketmixStyle.value)
+            compose.onNodeWithText("Mixer aussi un titre en boucle").performScrollTo().assertIsDisplayed()
+            assertTrue(AppSettings.ketmixLoops.value)
+            compose.onNodeWithText("Vibrer à l'échange des basses").performScrollTo().assertIsDisplayed().performClick()
+            compose.waitForIdle()
+            assertTrue(AppSettings.ketmixHaptics.value)
+            image("settings-ketmix-options")
         } finally {
             AppSettings.automix.value = false; AppSettings.automixAlbums.value = true; AppSettings.ketmixAnalysis.value = 1
+            AppSettings.ketmixStyle.value = 0; AppSettings.ketmixHaptics.value = false; AppSettings.ketmixLoops.value = true
             com.ketvoice.app.data.SettingsStore.save()
         }
     }

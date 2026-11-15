@@ -208,4 +208,52 @@ class BeatAnalysisTest {
         val strict = BeatAnalysis.analyze(drifting, 0, thorough = true)
         assertTrue("half the confidence at most (${loose.confidence} -> ${strict.confidence})", strict.confidence <= loose.confidence * .5f + 1e-6f)
     }
+
+    @Test fun phrasesAreFoundWhereAPartComesInOrDropsOut() {
+        val rate = 22_050
+        val seconds = 52f
+        // 120 BPM, bars of two seconds; a chord comes in at bar 2, drops out at bar 10, comes back at bar 18.
+        val groove = Synth.groove(rate, seconds, 120f)
+        for (i in groove.indices) {
+            val bar = (i / rate.toFloat() / 2f).toInt()
+            if (bar >= 2 && ((bar - 2) / 8) % 2 == 0) {
+                val t = i / rate.toFloat()
+                groove[i] += .22f * kotlin.math.sin(2 * Math.PI * 523.25 * t).toFloat() + .16f * kotlin.math.sin(2 * Math.PI * 659.25 * t).toFloat()
+            }
+        }
+        val analysis = BeatAnalysis.analyze(Synth.envelope(groove, rate), startMs = 100_000)
+        assertTrue("bars known (${analysis.barOffset})", analysis.barOffset >= 0)
+        assertTrue("phrases found", analysis.hasPhrases)
+        assertEquals(16_000.0, analysis.phraseMs, 20.0)
+        val offset = Math.floorMod(Math.round(analysis.phraseAtMs - 104_000.0), 16_000L)
+        assertTrue("on bar 2 of the grid, every eight bars ($offset ms)", offset < 60 || offset > 16_000 - 60)
+        val starts = analysis.phraseStarts(110_000.0, 140_000.0)
+        assertEquals(2, starts.size)
+        assertEquals(analysis.phraseMs, starts[1] - starts[0], 1e-6)
+        // Kept and found again.
+        assertEquals(analysis.phraseAtMs, AnalysisStore.decode(org.json.JSONObject(AnalysisStore.encode(analysis).toString()))!!.phraseAtMs, 1e-6)
+        // The same groove that never changes has no phrases to tell.
+        assertFalse(BeatAnalysis.analyze(Synth.envelope(Synth.groove(rate, seconds, 120f), rate), startMs = 0).hasPhrases)
+    }
+
+    @Test fun withoutABassAccentTheBarsAreFoundWhereTheSoundChanges() {
+        val rate = 22_050
+        // Every kick is equal; a cymbal crash opens each bar of four beats (bars start at 0.25 s, then every 2 s).
+        val groove = Synth.groove(rate, 36f, 120f, firstBeatAt = .25f, accentBar = false)
+        val random = kotlin.random.Random(11)
+        var bar = .25f
+        while (bar < 36f) {
+            val start = (bar * rate).toInt()
+            for (i in 0 until (rate * .35f).toInt()) {
+                val at = start + i; if (at >= groove.size) break
+                groove[at] += .35f * (random.nextFloat() * 2 - 1) * kotlin.math.exp(-i / (rate * .09f))
+            }
+            bar += 2f
+        }
+        val analysis = BeatAnalysis.analyze(Synth.envelope(groove, rate), startMs = 0)
+        assertTrue("bars found (${analysis.barOffset})", analysis.barOffset >= 0)
+        val firstBar = analysis.barAtOrAfter(0.0)
+        val offset = Math.floorMod(Math.round(firstBar - 250.0), 2_000L)
+        assertTrue("on the crashes ($offset ms)", offset < 40 || offset > 2_000 - 40)
+    }
 }

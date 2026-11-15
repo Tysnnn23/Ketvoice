@@ -101,6 +101,7 @@ fun FullPlayerScreen(
     val canvas by CanvasRepo.paths.collectAsState()
     val canvasExcluded by CanvasRepo.excluded.collectAsState()
     // Exclusion par morceau (menu •••) : pochette statique uniquement.
+    val mixing = com.ketvoice.app.automix.Automix.ui.collectAsState().value.phase == com.ketvoice.app.automix.Automix.Phase.Mixing
     val canvasPath = canvas[track.id]?.takeIf { track.id !in canvasExcluded && !com.ketvoice.app.data.MediaOverrides.canvasHiddenInPlayer(track) }
     // How the owner framed this album's artwork for the player (or for its page, which the player follows).
     val artworkFrame = com.ketvoice.app.data.MediaOverrides.playerFrame(track)
@@ -462,6 +463,9 @@ fun FullPlayerScreen(
                                 Text("${lyrics.source.ifBlank { "Recherche des paroles…" }} · ${lyrics.syncDescription()}", color = Color(0xFFB5B5C0), fontSize = 12.sp,
                                     maxLines = 1, overflow = TextOverflow.Ellipsis,
                                     modifier = Modifier.clickable { sheet = "sources" })
+                            } else if (mixing) {
+                                // While two titles play together, the mix itself takes this line.
+                                MixStrip(Modifier.fillMaxWidth())
                             } else if (page == PlayerPage.QUEUE && AppSettings.automix.value) {
                                 // On the queue this line says what Ketmix prepares; it never covers the list.
                                 AutomixStatusLine(Modifier.fillMaxWidth(), fontSize = 12.sp, glyph = true)

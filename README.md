@@ -21,6 +21,17 @@
 
 ## Overview
 
+### 5.3.0 — Ketmix on the phrase, glass that forms
+
+Ketmix now starts its mixes where the music turns a page (every eight bars), brings the next
+title in highs first, then mids, then bass, mixes a title on repeat into its own start, lets you
+choose the transition style and shows the mix as it happens. Liquid Glass gains a squircle bezel (Liquid 27),
+a true Fresnel edge, glass that forms by bending the light, calmer springs and switches that turn
+into lenses. Several queue titles can be selected at once, and shuffle repeats less.
+[Mobile](https://github.com/Tysnnn23/Ketvoice/releases/download/v5.3.0/Ketvoice-5.3.0.apk)
+· [Quest](https://github.com/Tysnnn23/Ketvoice/releases/download/v5.3.0/Ketvoice-5.3.0-Quest.apk)
+· [Release notes](docs/releases/v5.3.0.md).
+
 ### 5.2.0 — Ketmix (beta), a new dark theme, a new Home
 
 Automix becomes Ketmix and stops at nothing less than a real transition: both titles in time

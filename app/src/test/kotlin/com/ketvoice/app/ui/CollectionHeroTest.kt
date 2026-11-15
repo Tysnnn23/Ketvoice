@@ -7,6 +7,7 @@ import com.ketvoice.app.ui.common.heroEntryScale
 import com.ketvoice.app.ui.common.savedFormatBadge
 import com.ketvoice.app.ui.player.sheetEntryScale
 import com.ketvoice.app.ui.player.sheetOrigin
+import androidx.compose.ui.graphics.luminance
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -68,5 +69,21 @@ class CollectionHeroTest {
         assertTrue("and stays dark enough for light text", deep.red < .55f && deep.green < .2f)
         assertTrue("A dark page takes less of the colour than a light one",
             com.ketvoice.app.ui.sub.artistPageTint(light, red, dark = true).green > pastel.green)
+    }
+
+    @Test fun aDarkPageNeverLightsUpTheScreenAtNight() {
+        val night = androidx.compose.ui.graphics.Color(0xFF050507)
+        for (tone in listOf(androidx.compose.ui.graphics.Color(1f, .9f, .2f), androidx.compose.ui.graphics.Color(.9f, .95f, 1f),
+                androidx.compose.ui.graphics.Color(1f, .3f, .6f), androidx.compose.ui.graphics.Color(.2f, .9f, .4f))) {
+            val page = com.ketvoice.app.ui.sub.artistPageTint(night, tone, dark = true)
+            assertTrue("$tone gives ${page.luminance()}", page.luminance() <= com.ketvoice.app.ui.sub.PageTint.NIGHT_MAX_LUMINANCE * 1.03f)
+            // The hue stays: the strongest component of the colour is still the strongest of the page.
+            val strongest = listOf(tone.red, tone.green, tone.blue).indexOf(maxOf(tone.red, tone.green, tone.blue))
+            val pageStrongest = listOf(page.red, page.green, page.blue).indexOf(maxOf(page.red, page.green, page.blue))
+            assertEquals(strongest, pageStrongest)
+        }
+        // A colour already dim enough is left exactly as it was.
+        val dim = androidx.compose.ui.graphics.Color(.12f, .05f, .08f)
+        assertEquals(dim, com.ketvoice.app.ui.sub.PageTint.nightCap(dim))
     }
 }

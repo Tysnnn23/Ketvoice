@@ -42,6 +42,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
+import androidx.compose.ui.semantics.selected
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.foundation.border
+import androidx.compose.foundation.combinedClickable
 import com.ketvoice.app.data.AppText
 import com.ketvoice.app.data.ArtworkRepo
 import com.ketvoice.app.data.PlaylistRules
@@ -72,6 +76,17 @@ internal fun queueDragStep(offset: Float, aboveSize: Int?, belowSize: Int?): Int
     else -> 0
 }
 
+/** What a selection of queue entries becomes: the entries in queue order, after the title playing. */
+internal object QueueSelection {
+    /** The selected entries, upcoming only, in the order of the queue. */
+    fun ordered(entryIds: List<String>, current: Int, chosen: Set<String>): List<String> =
+        entryIds.filterIndexed { i, key -> i > current && key in chosen }
+
+    /** Positions to remove, last first, so that removing one does not move the others. */
+    fun removals(entryIds: List<String>, current: Int, chosen: Set<String>): List<Int> =
+        entryIds.indices.filter { it > current && entryIds[it] in chosen }.sortedDescending()
+}
+
 /** Name of the playlist a saved queue becomes. */
 internal fun savedQueueName(label: String, date: java.time.LocalDate, locale: java.util.Locale): String =
     "$label · ${date.format(java.time.format.DateTimeFormatter.ofPattern("d MMM", locale))}".take(80)
@@ -87,6 +102,11 @@ internal fun QueuePane(state: PlayerUiState, modifier: Modifier = Modifier, show
     var draggingKey by remember { mutableStateOf<String?>(null) }
     var dragOffset by remember { mutableFloatStateOf(0f) }
     var saving by remember { mutableStateOf(false) }
+    // Several titles at once: a long press starts the selection, a tap adds or removes a title.
+    var selecting by remember { mutableStateOf(false) }
+    var chosen by remember { mutableStateOf(setOf<String>()) }
+    LaunchedEffect(state.queueEntryIds) { chosen = chosen.intersect(state.queueEntryIds.toSet()) }
+    androidx.activity.compose.BackHandler(enabled = selecting) { selecting = false; chosen = emptySet() }
 
     fun announce(message: String, undo: (() -> Unit)? = null) {
         scope.launch {
@@ -104,6 +124,30 @@ internal fun QueuePane(state: PlayerUiState, modifier: Modifier = Modifier, show
         val before = Player.state.value
         Player.clearUpcoming()
         announce("File vidée") { Player.restoreQueue(before.queue, before.queueEntryIds, before.index, before.linearOrder) }
+    }
+    fun removeChosen() {
+        val before = Player.state.value
+        val positions = QueueSelection.removals(before.queueEntryIds, before.index, chosen)
+        if (positions.isEmpty()) return
+        positions.forEach { Player.removeAt(it) }
+        selecting = false; chosen = emptySet()
+        announce(if (positions.size == 1) "1 titre retiré de la file" else "${positions.size} titres retirés de la file") {
+            Player.restoreQueue(before.queue, before.queueEntryIds, before.index, before.linearOrder)
+        }
+    }
+    fun playChosenNext() {
+        val start = Player.state.value
+        var target = start.index + 1
+        for (key in QueueSelection.ordered(start.queueEntryIds, start.index, chosen)) {
+            val from = Player.state.value.queueEntryIds.indexOf(key)
+            if (from >= 0 && from != target) Player.moveQueue(from, target)
+            target++
+        }
+        val count = chosen.size
+        selecting = false; chosen = emptySet()
+        announce(if (count == 1) "1 titre sera lu ensuite" else "$count titres seront lus ensuite") {
+            Player.restoreQueue(start.queue, start.queueEntryIds, start.index, start.linearOrder)
+        }
     }
     fun save() {
         val tracks = Player.state.value.queue
@@ -124,8 +168,17 @@ internal fun QueuePane(state: PlayerUiState, modifier: Modifier = Modifier, show
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("File d'attente", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold, letterSpacing = (-.6).sp,
                 maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).asHeading())
-            if (state.queue.size > 1) QueueAction("Enregistrer", enabled = !saving, tag = "queue-save", onClick = ::save)
-            if (upcoming.isNotEmpty()) QueueAction("Vider", tag = "queue-clear", onClick = ::clear)
+            if (selecting) {
+                val all = state.queueEntryIds.drop(state.index + 1).toSet()
+                QueueAction(if (chosen.size == all.size && all.isNotEmpty()) "Aucun" else "Tout", tag = "queue-select-all") {
+                    chosen = if (chosen.size == all.size) emptySet() else all
+                }
+                QueueAction("Terminé", tag = "queue-select-done") { selecting = false; chosen = emptySet() }
+            } else {
+                if (upcoming.size > 1) QueueAction("Sélectionner", tag = "queue-select") { selecting = true }
+                if (state.queue.size > 1) QueueAction("Enregistrer", enabled = !saving, tag = "queue-save", onClick = ::save)
+                if (upcoming.isNotEmpty()) QueueAction("Vider", tag = "queue-clear", onClick = ::clear)
+            }
         }
         if (showModes) {
             Spacer(Modifier.height(10.dp))
@@ -177,11 +230,24 @@ internal fun QueuePane(state: PlayerUiState, modifier: Modifier = Modifier, show
                             },
                             onDragEnd = { draggingKey = null; dragOffset = 0f },
                             onDragCancel = { draggingKey = null; dragOffset = 0f })
-                    }, swipeKey = key, onPlay = { Player.jumpTo(index) }, onRemove = { remove(index, t) })
+                    }, swipeKey = key.takeIf { !selecting }, selected = if (selecting) key in chosen else null,
+                    onLongPress = { if (!selecting) { selecting = true; chosen = setOf(key); haptic(Haptics.Kind.Tick) } },
+                    onPlay = { if (selecting) chosen = if (key in chosen) chosen - key else chosen + key else Player.jumpTo(index) },
+                    onRemove = { remove(index, t) })
             }
             if (upcoming.isEmpty()) item {
                 EmptyState("Aucun autre titre dans la file", "Choisissez un titre puis utilisez Lire ensuite pour préparer la suite.",
                     "Ajouter des titres", onAction = ::openTrackSearch)
+            }
+        }
+        // What can be done with the chosen titles, under the list.
+        androidx.compose.animation.AnimatedVisibility(selecting) {
+            Row(Modifier.fillMaxWidth().padding(top = 8.dp).clip(RoundedCornerShape(18.dp)).background(Color.White.copy(alpha = .10f))
+                .padding(horizontal = 6.dp).testTag("queue-selection-bar"), verticalAlignment = Alignment.CenterVertically) {
+                Text(if (chosen.size == 1) "1 titre choisi" else "${chosen.size} titres choisis", color = Color.White.copy(alpha = .78f),
+                    fontSize = 13.sp, maxLines = 1, modifier = Modifier.weight(1f).padding(start = 10.dp))
+                QueueAction("Lire ensuite", enabled = chosen.isNotEmpty(), tag = "queue-selection-next", onClick = ::playChosenNext)
+                QueueAction("Retirer", enabled = chosen.isNotEmpty(), tag = "queue-selection-remove", onClick = ::removeChosen)
             }
         }
     }
@@ -243,9 +309,11 @@ private fun QueueMode(icon: ImageVector, label: String, active: Boolean, onClick
     }
 }
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun QueueRow(track: Track, cover: String?, modifier: Modifier = Modifier, current: Boolean = false,
                      playing: Boolean = false, handle: Modifier = Modifier, swipeKey: String? = null,
+                     selected: Boolean? = null, onLongPress: (() -> Unit)? = null,
                      onPlay: () -> Unit, onRemove: () -> Unit) {
     val scope = rememberCoroutineScope()
     val swipe = remember(swipeKey) { Animatable(0f) }
@@ -271,8 +339,19 @@ private fun QueueRow(track: Track, cover: String?, modifier: Modifier = Modifier
             translationX = if (Motion.reduced) 0f else swipe.value
             alpha = 1f - (kotlin.math.abs(swipe.value) / (threshold * 2.2f)).coerceIn(0f, .7f)
         }
-        .clickable(onClick = onPlay).padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-        if (!current) {
+        .then(if (selected != null) Modifier.semantics { this.selected = selected } else Modifier)
+        .combinedClickable(onLongClick = onLongPress, onClick = onPlay).padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        if (selected != null) {
+            // While choosing, the handle gives way to a check mark.
+            val accent = LocalTheme.current.accent
+            Box(Modifier.width(48.dp).height(56.dp).testTag("queue-row-check"), contentAlignment = Alignment.Center) {
+                Box(Modifier.size(22.dp).clip(CircleShape)
+                    .background(if (selected) accent else Color.Transparent)
+                    .border(1.6.dp, if (selected) accent else Color.White.copy(alpha = .5f), CircleShape), contentAlignment = Alignment.Center) {
+                    if (selected) Icon(Icons.Filled.Check, null, tint = Color.White, modifier = Modifier.size(15.dp))
+                }
+            }
+        } else if (!current) {
             Box(handle.width(48.dp).height(56.dp), contentAlignment = Alignment.Center) {
                 Icon(Icons.Filled.DragHandle, "Déplacer ce titre", tint = Color(0xFF85858C), modifier = Modifier.size(18.dp))
             }

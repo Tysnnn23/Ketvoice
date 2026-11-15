@@ -63,7 +63,11 @@ internal object Automix {
     /** What the interface shows. [startedAt] is on the SystemClock.elapsedRealtime clock. */
     data class Ui(val phase: Phase = Phase.Idle, val from: Track? = null, val to: Track? = null,
                   val kind: MixKind = MixKind.None, val startedAt: Long = 0L, val durationMs: Long = 0L,
-                  val promoted: Boolean = false, val bpm: Float = 0f)
+                  val promoted: Boolean = false, val bpm: Float = 0f,
+                  /** Share of the mix at which the bass changes hands; -1 when it does not. */
+                  val swapAt: Float = -1f,
+                  /** What was measured of the two titles ("124 → 128 BPM · 8A → 9A"). */
+                  val measures: String = "")
 
     /** The next title is resolved and read this long before the end of the current one, so that it is loaded well before any mix starts. */
     private const val PREP_LEAD_MS = 150_000L
@@ -79,6 +83,10 @@ internal object Automix {
      * What Ketmix is doing or why it is not mixing, in the words shown to the listener (French
      * literals, translated where they are shown). Empty while Ketmix is off.
      */
+    /** The bass changed hands (or the cut fell): the moment a listener can feel. */
+    private val _swaps = kotlinx.coroutines.flow.MutableSharedFlow<Unit>(extraBufferCapacity = 4)
+    val swaps: kotlinx.coroutines.flow.SharedFlow<Unit> = _swaps
+
     private val _status = MutableStateFlow("")
     val status: StateFlow<String> = _status
     private fun say(text: String) {
@@ -109,6 +117,8 @@ internal object Automix {
         var baseVolume = 1f
         var source: Player.DeckSource? = null
         var closed = false
+        /** A title on repeat: its own looping is held off during the mix and given back afterwards. */
+        var repeatBefore: Int? = null
 
         /** Leaves a single deck playing, untouched by any level, filter or speed of the transition. */
         fun close() {
@@ -124,6 +134,7 @@ internal object Automix {
                 }
             } else {
                 host.control(main)?.reset()
+                repeatBefore?.let { mode -> runCatching { main.repeatMode = mode } }
                 // The outgoing title may have been led towards the tempo of the next one: it gets its own back.
                 if (started) runCatching { main.volume = baseVolume; main.playbackParameters = PlaybackParameters.DEFAULT }
                 if (incoming != null) { host.control(incoming)?.reset(); host.release(incoming) }
@@ -170,6 +181,8 @@ internal object Automix {
         val deck = current.deck ?: return
         val source = current.source ?: return
         current.host.promote(deck)
+        // The title on repeat keeps looping on the deck that now plays it.
+        current.repeatBefore?.let { mode -> runCatching { deck.repeatMode = mode } }
         current.promoted = true
         Player.adoptAutomixed(current.next, source)
         _ui.value = _ui.value.copy(promoted = true)
@@ -246,9 +259,9 @@ internal object Automix {
     /** What rules a mix out whatever the music is, in the words of the status line, or null. */
     private fun blocker(state: com.ketvoice.app.player.PlayerUiState, current: Track, next: Player.NextEntry, h: AutomixHost): String? = when {
         h.exact || AppSettings.bitPerfect.value -> "sortie bit-perfect"
-        state.repeatOne -> "titre répété"
+        state.repeatOne && !AppSettings.ketmixLoops.value -> "titre répété"
         SleepTimer.endOfTrack.value || SleepTimer.remainingSeconds.value in 1..180 -> "minuterie active"
-        !AppSettings.automixAlbums.value && !state.shuffle && sameAlbum(current, next.track) -> "album joué dans l'ordre"
+        !state.repeatOne && !AppSettings.automixAlbums.value && !state.shuffle && sameAlbum(current, next.track) -> "album joué dans l'ordre"
         next.track.durationMs in 1 until 30_000L -> "titre suivant trop court"
         else -> null
     }
@@ -263,13 +276,14 @@ internal object Automix {
             Player.automixNext()?.entryId == next.entryId && main.playerError == null && !s.closed
         val state = Player.state.value
         val context = MixContext(
-            sameAlbumInOrder = !state.shuffle && sameAlbum(current, next.track),
+            sameAlbumInOrder = !state.repeatOne && !state.shuffle && sameAlbum(current, next.track),
             repeatOne = state.repeatOne,
+            loop = state.repeatOne && AppSettings.ketmixLoops.value && next.track.id == current.id,
             stopAfterCurrent = SleepTimer.endOfTrack.value || SleepTimer.remainingSeconds.value in 1..180,
             exactAudio = h.exact || AppSettings.bitPerfect.value,
             skipSilence = AppSettings.skipSilence.value,
             albumsMixed = AppSettings.automixAlbums.value)
-        val settings = MixSettings(AppSettings.automixIntensity.value)
+        val settings = MixSettings(AppSettings.automixIntensity.value, MixStyle.of(AppSettings.ketmixStyle.value))
         val depth = AnalysisDepth.of(AppSettings.ketmixAnalysis.value)
         val nextDuration = next.track.durationMs.takeIf { it > 0 } ?: 600_000L
         // The context alone may already say that these two titles simply follow each other.
@@ -359,6 +373,11 @@ internal object Automix {
         // Both automations are tied to positions in their title, so they are set ahead of time: the
         // sound a deck has already buffered when the mix starts then carries its level too.
         if (s.precise) { control.automation = DeckAutomation.incoming(plan); mainControl.automation = DeckAutomation.outgoing(plan) }
+        // On repeat the player would jump back to the start by itself: for this loop the mix does it instead.
+        if (plan.loop && main.repeatMode != androidx.media3.common.Player.REPEAT_MODE_OFF) {
+            s.repeatBefore = main.repeatMode
+            main.repeatMode = androidx.media3.common.Player.REPEAT_MODE_OFF
+        }
         _ui.value = Ui(Phase.Ready, current, next.track, plan.kind, bpm = outro?.bpm ?: 0f)
 
         // Wait for the place in the outgoing title where the incoming one starts.
@@ -371,18 +390,18 @@ internal object Automix {
             if (position > plan.outMs + 300L) return skip("late")
             if (position >= finalStart) break
             val seconds = ((finalStart - position) / 1000L).coerceAtLeast(0L)
-            say("Mix prévu dans $seconds s · ${MixWords.label(plan)}" + MixWords.measures(plan).let { if (it.isEmpty()) "" else " · $it" })
+            say("Mix prévu dans $seconds s · ${MixWords.describe(plan)}" + MixWords.measures(plan).let { if (it.isEmpty()) "" else " · $it" })
             delay(if (finalStart - position > 500L) 80L else 6L)
         }
 
-        say("Mix en cours · ${MixWords.label(plan)}")
+        say("Mix en cours · ${MixWords.describe(plan)}")
         if (plan.kind == MixKind.Beatmatch || plan.kind == MixKind.Filter) lastVariant = plan.variant
         s.baseVolume = main.volume
         if (s.precise) deck.volume = s.baseVolume
         deck.play()
         s.started = true
         _ui.value = Ui(Phase.Mixing, current, next.track, plan.kind, SystemClock.elapsedRealtime() + finalPreRoll, plan.overlapMs,
-            bpm = outro?.bpm ?: 0f)
+            bpm = outro?.bpm ?: 0f, swapAt = MixWords.swapShare(plan), measures = MixWords.measures(plan))
         mix(s, plan, epoch)
         return true
     }
@@ -409,6 +428,9 @@ internal object Automix {
         var lead = 1f
         var leadAt = 0L
         var reseeked = false
+        // The moment the bass changes hands, on the outgoing title's clock.
+        val swapMoment = MixWords.swapShare(plan).takeIf { it >= 0f }?.let { plan.outMs + (plan.overlapMs * it).toLong() }
+        var swapped = false
         while (true) {
             delay(40)
             if (host !== h || s.closed) return
@@ -420,6 +442,7 @@ internal object Automix {
             if (!heard.playWhenReady) continue
             val outPosition = main.currentPosition
             val inPosition = deck.currentPosition
+            if (!swapped && swapMoment != null && outPosition >= swapMoment) { swapped = true; _swaps.tryEmit(Unit) }
             val ended = main.playbackState == androidx.media3.common.Player.STATE_ENDED ||
                 main.playbackState == androidx.media3.common.Player.STATE_IDLE
             if (deck.playerError != null && !s.promoted) return

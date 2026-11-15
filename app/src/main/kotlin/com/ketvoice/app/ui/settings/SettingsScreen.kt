@@ -363,6 +363,9 @@ fun SettingsScreen() {
 
             // ==================================================== LECTURE
             Section("LECTURE") {
+                SToggle(KetIcons.Shuffle, "Aléatoire avec moins de répétitions",
+                    "Le mode aléatoire garde pour plus tard les titres écoutés récemment et n'enchaîne pas deux titres du même artiste quand il peut l'éviter.",
+                    AppSettings.smartShuffle.value) { AppSettings.smartShuffle.value = it; SettingsStore.save() }
                 SToggle(KetIcons.Globe, "Partager le titre en cours sur le site",
                     "Le compteur d'auditeurs reste anonyme ; le titre, l'artiste et la pochette ne sont envoyés qu'avec ton accord",
                     AppSettings.shareNowPlaying.value) { AppSettings.shareNowPlaying.value = it; SettingsStore.save() }
@@ -431,11 +434,29 @@ fun SettingsScreen() {
                             ChoiceOption("2", "Maximale", "75 secondes par titre, tonalité et tenue du tempo vérifiée : les mix les plus longs et les plus sûrs"))
                     ) { id -> AppSettings.ketmixAnalysis.value = id.toIntOrNull()?.coerceIn(0, 2) ?: 1; SettingsStore.save() }
                 }
+                SRow(KetIcons.Shuffle, "Style de transition",
+                    sub = "Comment un titre passe au suivant",
+                    value = when (AppSettings.ketmixStyle.value) { 1 -> "Calé sur le tempo"; 2 -> "Écho"; 3 -> "Filtres"; 4 -> "Fondu"; else -> "Automatique" }) {
+                    choice = ChoiceSpec("Style de transition", "Ketmix garde toujours le chant intact et repasse à un autre style quand celui-ci ne convient pas aux deux titres.",
+                        AppSettings.ketmixStyle.value.toString(), listOf(
+                            ChoiceOption("0", "Automatique", "Ketmix choisit pour chaque paire de titres, d'après ce qu'il a mesuré"),
+                            ChoiceOption("1", "Calé sur le tempo", "Les deux titres en rythme et les basses échangées sur un temps ; jamais d'écho"),
+                            ChoiceOption("2", "Écho", "Le dernier temps résonne en écho, le titre suivant part sur ce temps"),
+                            ChoiceOption("3", "Filtres", "Les deux titres se croisent par leurs fréquences : l'un s'amincit, l'autre s'ouvre"),
+                            ChoiceOption("4", "Fondu", "Un fondu enchaîné, sans effet"))
+                    ) { id -> AppSettings.ketmixStyle.value = id.toIntOrNull()?.coerceIn(0, 4) ?: 0; SettingsStore.save() }
+                }
                 SToggle(KetIcons.Album, "Mixer aussi les albums",
                     "Les titres d'un album écouté dans l'ordre sont mixés aussi, sauf si l'album n'a aucun blanc entre ses titres.",
                     AppSettings.automixAlbums.value) { AppSettings.automixAlbums.value = it; SettingsStore.save() }
+                SToggle(KetIcons.Audio, "Vibrer à l'échange des basses",
+                    "Une petite vibration au moment où la basse passe d'un titre à l'autre, quand l'app est à l'écran.",
+                    AppSettings.ketmixHaptics.value) { AppSettings.ketmixHaptics.value = it; SettingsStore.save() }
+                SToggle(KetIcons.Refresh, "Mixer aussi un titre en boucle",
+                    "Quand un titre est répété, sa fin se mêle à son propre début, sur le temps, au lieu de repartir après un blanc.",
+                    AppSettings.ketmixLoops.value) { AppSettings.ketmixLoops.value = it; SettingsStore.save() }
                 com.ketvoice.app.ui.player.AutomixStatusLine(Modifier.padding(horizontal = 16.dp, vertical = 6.dp), th.secondary, 12.sp)
-                Text("Ketmix est en bêta. La répétition d'un titre, la minuterie et la sortie bit-perfect ne sont jamais mixées. Une dernière note n'est jamais couverte : le titre suivant part juste après, sur le temps.",
+                Text("Ketmix est en bêta. La minuterie et la sortie bit-perfect ne sont jamais mixées. Une dernière note n'est jamais couverte : le titre suivant part juste après, sur le temps.",
                     color = th.secondary, fontSize = 11.sp, lineHeight = 16.sp, modifier = Modifier.padding(bottom = 8.dp))
             }
 

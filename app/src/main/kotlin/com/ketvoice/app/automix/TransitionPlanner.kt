@@ -39,6 +39,8 @@ internal data class MixFacts(
 internal data class MixContext(
     val sameAlbumInOrder: Boolean = false,
     val repeatOne: Boolean = false,
+    /** The title on repeat is mixed into its own start (see [AppSettings.ketmixLoops]). */
+    val loop: Boolean = false,
     val stopAfterCurrent: Boolean = false,
     val exactAudio: Boolean = false,
     val skipSilence: Boolean = false,
@@ -52,8 +54,13 @@ internal data class MixContext(
     val beats: Boolean = true
 )
 
+/** The transition the listener prefers; [Auto] lets Ketmix choose for each pair of titles. */
+internal enum class MixStyle { Auto, Tempo, Echo, Filters, Fade;
+    companion object { fun of(setting: Int): MixStyle = values().getOrElse(setting) { Auto } }
+}
+
 /** 0 = discreet, 1 = balanced, 2 = DJ. */
-internal data class MixSettings(val intensity: Int = 1) {
+internal data class MixSettings(val intensity: Int = 1, val style: MixStyle = MixStyle.Auto) {
     /**
      * How far apart two tempos may be for the titles to be played in time. Listeners hear a
      * change of speed from about 5 %; each title is only stretched while it is the quiet one.
@@ -99,7 +106,11 @@ internal data class MixPlan(
     val fromBpm: Float = 0f,
     val toBpm: Float = 0f,
     val fromKey: Int = MusicalKey.UNREAD,
-    val toKey: Int = MusicalKey.UNREAD
+    val toKey: Int = MusicalKey.UNREAD,
+    /** The title mixes into its own start: it is on repeat. */
+    val loop: Boolean = false,
+    /** The mix starts where a phrase of the outgoing title starts. */
+    val onPhrase: Boolean = false
 ) {
     val mixes: Boolean get() = kind != MixKind.None
     /** Position in the incoming title once the outgoing one is gone. */
@@ -117,7 +128,7 @@ internal object TransitionPlanner {
 
     fun plan(out: MixFacts, incoming: MixFacts, context: MixContext, settings: MixSettings = MixSettings()): MixPlan {
         if (context.exactAudio) return MixPlan(MixKind.None, reason = "exact audio")
-        if (context.repeatOne) return MixPlan(MixKind.None, reason = "repeat one")
+        if (context.repeatOne && !context.loop) return MixPlan(MixKind.None, reason = "repeat one")
         if (context.stopAfterCurrent) return MixPlan(MixKind.None, reason = "sleep timer")
         if (context.sameAlbumInOrder && !context.albumsMixed) return MixPlan(MixKind.None, reason = "album in order")
         if (out.durationMs < MIN_TITLE_MS || incoming.durationMs < MIN_TITLE_MS) return MixPlan(MixKind.None, reason = "short title")
@@ -144,21 +155,24 @@ internal object TransitionPlanner {
         val variant = if (context.lastVariant == 0) 1 else 0
         val beats = context.effects && context.beats && !context.skipSilence
         fun measured(plan: MixPlan) = checked(plan.copy(fromBpm = if (a.hasBeat) a.bpm else 0f, toBpm = if (b.hasBeat) b.bpm else 0f,
-            fromKey = a.key, toKey = b.key), out, incoming)
+            fromKey = a.key, toKey = b.key, loop = context.loop), out, incoming)
 
+        // A plain fade was asked for: the same lengths and care for the singing, no effect.
+        if (settings.style == MixStyle.Fade) return plan(out, incoming, context.copy(effects = false), settings.copy(style = MixStyle.Auto))
         // 1. Both in time, the bass changing hands: the finest transition, when the tempos allow it.
-        if (beats && a.hasBeat && b.hasBeat) {
+        if (beats && a.hasBeat && b.hasBeat && settings.style != MixStyle.Echo && settings.style != MixStyle.Filters) {
             val rate = BeatAnalysis.foldedRatio(a.bpm, b.bpm)
             if (abs(rate - 1f) <= settings.tempoRange) {
-                beatmatch(a, b, out, incoming, settings, rate, gain, end, start, sungUntil, clash, variant)
+                beatmatch(a, b, out, incoming, settings, rate, gain, end, start, sungUntil, clash, variant, context.loop)
                     ?.let { blend -> measured(blend).takeIf { it.mixes }?.let { return it } }
             }
         }
         // 2. A last note at full level is left alone: the next title starts right after it, on the beat when there is one.
         val fullEnding = a.hardEnding && !a.fadeOut
         if (fullEnding && !(settings.cutsFullEndings && beats && a.hasBeat)) return measured(trim(a, b, out, end, start, gain, beats))
-        // 3. A way out on the beat that needs no common tempo.
-        if (beats && settings.echo && a.hasBeat && !a.fadeOut) {
+        // 3. A way out on the beat that needs no common tempo (asked for, or left to Ketmix).
+        val echoAllowed = settings.style == MixStyle.Echo || (settings.style == MixStyle.Auto && settings.echo)
+        if (beats && echoAllowed && a.hasBeat && !a.fadeOut) {
             echo(a, b, settings, end, start, sungUntil, gain)?.let { cut -> measured(cut).takeIf { it.mixes }?.let { return it } }
         }
         if (fullEnding) return measured(trim(a, b, out, end, start, gain, beats))
@@ -177,7 +191,7 @@ internal object TransitionPlanner {
         if (!context.effects) return measured(MixPlan(MixKind.Crossfade, outMs = end - fade, inMs = start, overlapMs = fade, gain = gain, reason = reason))
         // While the title dies away by itself its level is left alone; ours only closes the end.
         val hold = if (end - fade >= a.fallMs - 400L) .55f else .2f
-        val kind = if (!a.hasBeat && !a.fadeOut) MixKind.Wash else MixKind.Filter
+        val kind = if (!a.hasBeat && !a.fadeOut && settings.style != MixStyle.Filters) MixKind.Wash else MixKind.Filter
         return measured(MixPlan(kind, outMs = end - fade, inMs = start, overlapMs = fade, gain = gain, reason = reason,
             variant = variant, clash = clash, hold = hold))
     }
@@ -218,21 +232,29 @@ internal object TransitionPlanner {
         var outMs = if (a.barOffset >= 0) lastAtOrBefore(a.beatAtMs + a.barOffset * a.beatMs.toDouble(), a.beatMs * 4.0) else -1.0
         if (outMs < earliest) outMs = lastAtOrBefore(a.beatAtMs, a.beatMs.toDouble())
         if (outMs < earliest) return null
+        // A phrase boundary up to four bars before is a better place to leave than any bar.
+        val phrase = a.phraseStarts(maxOf(earliest.toDouble(), latest - beat * 16.0), latest.toDouble()).lastOrNull()
+        if (phrase != null) outMs = phrase
         // What is left out after the cut is counted against what this setting may skip.
         if (end - outMs.roundToLong() > ring + max(settings.skippableOutroMs, 4_500L)) return null
         val inMs = (if (b.hasBeat) b.beatAtOrAfter(start - 20.0).roundToLong() else start).coerceAtLeast(0L)
         return MixPlan(MixKind.Echo, outMs = outMs.roundToLong(), inMs = inMs, overlapMs = min(ring, end - outMs.roundToLong()),
-            gain = gain, beatMs = beat, reason = "echo")
+            gain = gain, beatMs = beat, reason = "echo", onPhrase = phrase != null)
     }
 
     private fun beatmatch(a: SegmentAnalysis, b: SegmentAnalysis, out: MixFacts, incoming: MixFacts, settings: MixSettings,
-                          rate: Float, gain: Float, end: Long, start: Long, sungUntil: Long?, clash: Boolean, variant: Int): MixPlan? {
+                          rate: Float, gain: Float, end: Long, start: Long, sungUntil: Long?, clash: Boolean, variant: Int,
+                          loop: Boolean = false): MixPlan? {
         val beat = pulse(a)
-        // The incoming title enters on its first beat.
-        val inMs = b.beatAtOrAfter(start - 20.0).roundToLong().coerceAtLeast(0L)
+        // The incoming title enters on its first beat, or on its first downbeat when that is the next beat.
+        val firstBeat = b.beatAtOrAfter(start - 20.0)
+        val firstBar = if (b.barOffset >= 0) b.barAtOrAfter(start - 20.0) else firstBeat
+        val inMs = (if (firstBar - firstBeat <= b.beatMs * 1.05) firstBar else firstBeat).roundToLong().coerceAtLeast(0L)
         val sungFrom = incoming.vocalStartMs
         // Keys that do not go together are not left to rub against each other for long.
-        val counts = if (clash) settings.beatCounts.filter { it <= 16 }.toIntArray() else settings.beatCounts
+        // Keys that clash are not left to rub for long; a title over its own start neither, since the
+        // same instruments slightly apart in time colour each other (comb filtering).
+        val counts = if (clash || loop) settings.beatCounts.filter { it <= 16 }.toIntArray() else settings.beatCounts
         for ((index, count) in counts.withIndex()) {
             val overlap = (count * beat).roundToLong()
             val latest = end - overlap
@@ -249,8 +271,12 @@ internal object TransitionPlanner {
             var outMs = a.beatAtOrAfter(target)
             if (outMs > latest) outMs = a.beatAtOrAfter(latest.toDouble()) - a.beatMs
             if (outMs < earliest - a.beatMs / 2 || outMs > latest + 1) continue
+            // The start of a phrase of the outgoing title, when one is within reach, is where a DJ begins:
+            // the incoming title then arrives as the music turns a page, not in the middle of a sentence.
+            val phrase = a.phraseStarts(earliest - a.beatMs / 2.0, latest + 1.0).minByOrNull { abs(it - target) }
+            if (phrase != null) outMs = phrase
             // First beats of bars meet when both titles let their bars be told apart.
-            if (a.barOffset >= 0 && b.barOffset >= 0) {
+            else if (a.barOffset >= 0 && b.barOffset >= 0) {
                 val inBar = barIndex(b, inMs.toDouble())
                 var candidate = outMs
                 for (shift in 0 until 4) {
@@ -262,7 +288,8 @@ internal object TransitionPlanner {
             val middle = outMs + overlap / 2.0
             val swap = a.beatAtOrAfter(middle - a.beatMs / 2.0)
             return MixPlan(MixKind.Beatmatch, outMs = outMs.roundToLong(), inMs = inMs, overlapMs = overlap, rate = rate,
-                swapMs = swap.roundToLong(), gain = gain, beatMs = beat, reason = "$count beats", variant = variant, clash = clash)
+                swapMs = swap.roundToLong(), gain = gain, beatMs = beat, reason = "$count beats", variant = variant, clash = clash,
+                onPhrase = phrase != null)
         }
         return null
     }
@@ -294,6 +321,9 @@ internal object TransitionPlanner {
 
 /** The words a transition is told in (French literals, translated where they are shown). */
 internal object MixWords {
+    /** What the status line says of a plan: the kind, and "en boucle" for a title mixed into itself. */
+    fun describe(plan: MixPlan): String = if (plan.loop) "en boucle · ${label(plan)}" else label(plan)
+
     fun label(plan: MixPlan): String = when (plan.kind) {
         MixKind.Beatmatch -> "calé sur le tempo"
         MixKind.Echo -> "sortie en écho"
@@ -302,6 +332,14 @@ internal object MixWords {
         MixKind.Crossfade -> "fondu enchaîné"
         MixKind.Trim -> if (plan.onBeat) "enchaîné sur le temps" else "enchaînement sans silence"
         MixKind.None -> "sans mix"
+    }
+
+    /** Share of the overlap at which the bass changes hands, or the cut falls; -1 when nothing of the kind happens. */
+    fun swapShare(plan: MixPlan): Float = when {
+        plan.overlapMs <= 0L -> -1f
+        plan.kind == MixKind.Beatmatch && plan.swapMs >= 0 -> ((plan.swapMs - plan.outMs).toFloat() / plan.overlapMs).coerceIn(0f, 1f)
+        plan.kind == MixKind.Echo || plan.kind == MixKind.Trim -> 0f
+        else -> -1f
     }
 
     /** What was measured of the two titles, for the listener who wants to know why a mix sounds the way it does. */

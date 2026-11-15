@@ -66,7 +66,7 @@ internal const val GLASS_SWELL = .045f
 
 /** Fast under the finger; on release Liquid 27 overshoots once before it rests. */
 internal fun glassPressSpec(pressed: Boolean, liquid27: Boolean): FiniteAnimationSpec<Float> =
-    if (liquid27 && !pressed && !Motion.reduced) spring(dampingRatio = .52f, stiffness = 420f)
+    if (liquid27 && !pressed && !Motion.reduced) spring(dampingRatio = com.ketvoice.app.glass.GlassMotion.RELEASE_DAMPING, stiffness = 420f)
     else Motion.pressSpring(pressed)
 
 /** Text and glyph colour that stays readable on the accent colour. */

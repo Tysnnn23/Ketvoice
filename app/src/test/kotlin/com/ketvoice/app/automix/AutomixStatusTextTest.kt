@@ -22,7 +22,7 @@ class AutomixStatusTextTest {
         "Préparation du titre suivant…", "Titre suivant indisponible · nouvel essai dans quelques secondes",
         "Mix prévu dans 42 s · calé sur le tempo", "Mix prévu dans 7 s · fondu enchaîné", "Mix prévu dans 0 s · enchaînement sans silence",
         "Mix prévu dans 12 s · sortie en écho", "Mix prévu dans 9 s · croisement de filtres", "Mix prévu dans 3 s · dissolution",
-        "Mix prévu dans 1 s · enchaîné sur le temps", "Mix en cours · calé sur le tempo", "Mix en cours · sortie en écho", "Mix en cours")
+        "Mix prévu dans 1 s · enchaîné sur le temps", "Mix prévu dans 20 s · en boucle · calé sur le tempo", "Mix en cours · calé sur le tempo", "Mix en cours · sortie en écho", "Mix en cours")
 
     /** Every kind of transition has its own words, and what was measured follows them untouched. */
     @Test fun everyKindOfTransitionIsNamedAndItsMeasuresAreShown() {

@@ -7,6 +7,23 @@
 
 ---
 
+# Ketvoice 5.3.0
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 109** — Ketmix on the phrase and on repeat; Liquid Glass that forms and settles; queue selection.
+
+- Ketmix: mixes start on eight-bar phrases, better bar detection, highs-mids-bass blends, titles on
+  repeat mixed into themselves, a transition style setting, an animated mix strip, an optional
+  vibration on the bass swap.
+- Liquid Glass: squircle bezel (Liquid 27), Schlick Fresnel, materialising glass, calmer springs, lens switches,
+  readable scroll edges in every style.
+- Queue multi-select (play next, remove), shuffle with fewer repeats, night-dimmed coloured pages.
+
+Full notes: [5.3.0](docs/releases/v5.3.0.md).
+
+---
+
 # Ketvoice 5.2.0
 
 ![Ketvoice](ketvoice-banner.png)

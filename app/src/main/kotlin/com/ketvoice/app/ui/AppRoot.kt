@@ -154,6 +154,7 @@ fun AppRoot() {
         val imeVisible = WindowInsets.ime.getBottom(density) > 0
         val context = androidx.compose.ui.platform.LocalContext.current
 
+        com.ketvoice.app.ui.player.KetmixSwapHaptics()
         BoxWithConstraints(Modifier.fillMaxSize()) {
         val quest = com.ketvoice.app.BuildConfig.IS_QUEST
         val questLayout = com.ketvoice.app.ui.quest.QuestLayout(maxWidth.value, maxHeight.value)
@@ -225,7 +226,8 @@ fun AppRoot() {
                                 }
                             }
                     }
-                    if (liquid27) Liquid27ScrollEdges(Modifier.matchParentSize(),
+                    // Every glass style keeps what scrolls under the bars readable (iOS 27's scroll-edge effect).
+                    if (AppSettings.liquidGlass.value || liquid27) ScrollEdges(Modifier.matchParentSize(),
                         bottom = AppUi.overlay.value != AppUi.SETTINGS && AppUi.overlay.value != AppUi.QUEUE)
                     }
                     }
@@ -400,19 +402,36 @@ fun AppRoot() {
  * floating chrome. Drawn inside the captured layer, so the glass refracts the faded
  * content exactly like the reference material. Purely visual and never focusable.
  */
+/**
+ * The scroll edges: where content passes under the status bar and under the floating bar,
+ * the page colour rises over it with an eased curve (a straight ramp shows a visible line
+ * where it ends). Glass over busy content was the first complaint against iOS 26; iOS 27
+ * answered with this uniform scroll-edge treatment.
+ */
 @Composable
-private fun Liquid27ScrollEdges(modifier: Modifier, bottom: Boolean) {
+private fun ScrollEdges(modifier: Modifier, bottom: Boolean) {
     val background = LocalTheme.current.background
-    Box(modifier) {
+    Box(modifier.testTag("scroll-edges")) {
         Box(Modifier.align(Alignment.TopCenter).fillMaxWidth()
             .background(androidx.compose.ui.graphics.Brush.verticalGradient(
-                listOf(background.copy(alpha = .82f), background.copy(alpha = 0f))))
-            .statusBarsPadding().height(28.dp))
+                *ScrollEdge.stops(ScrollEdge.TOP_ALPHA, fromEdge = true).map { (at, alpha) -> at to background.copy(alpha = alpha) }.toTypedArray()))
+            .statusBarsPadding().height(30.dp))
         if (bottom) Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth()
             .background(androidx.compose.ui.graphics.Brush.verticalGradient(
-                listOf(background.copy(alpha = 0f), background.copy(alpha = .62f))))
-            .navigationBarsPadding().height(132.dp))
+                *ScrollEdge.stops(ScrollEdge.BOTTOM_ALPHA, fromEdge = false).map { (at, alpha) -> at to background.copy(alpha = alpha) }.toTypedArray()))
+            .navigationBarsPadding().height(140.dp))
     }
+}
+
+/** The curve of the scroll edges, apart so it can be checked without a screen. */
+internal object ScrollEdge {
+    const val TOP_ALPHA = .86f
+    const val BOTTOM_ALPHA = .72f
+    /** Cover at [t] (0 at the screen edge, 1 where the edge ends): an ease-out that lands flat. */
+    fun cover(t: Float, strongest: Float): Float { val u = 1f - t.coerceIn(0f, 1f); return strongest * u * u * (3f - 2f * u) }
+    /** Gradient stops from top to bottom; [fromEdge] when the screen edge is at the top. */
+    fun stops(strongest: Float, fromEdge: Boolean, count: Int = 12): List<Pair<Float, Float>> =
+        (0..count).map { i -> val at = i.toFloat() / count; at to cover(if (fromEdge) at else 1f - at, strongest) }
 }
 
 internal data class BackPageTransform(val scale: Float, val translationX: Float)

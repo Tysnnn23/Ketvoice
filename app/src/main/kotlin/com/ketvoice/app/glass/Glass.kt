@@ -125,7 +125,9 @@ data class GlassParams(
     /** Ombre interne : donne l'épaisseur du bloc de verre. */
     val innerShadow: Boolean = true,
     val dark: Boolean = false,
-    val opticalPressure: Float = 0f
+    val opticalPressure: Float = 0f,
+    /** 0 while the glass forms, 1 once it is there: scales its refraction and its rim light. */
+    val materialize: Float = 1f
 ) {
     companion object {
         /**
@@ -345,6 +347,12 @@ private fun GlassPanelBody(
     // Highlight de la lib ne servent plus que de repli pré-33.
     val agsl = mode == GlassRenderMode.Optical
     val renderState = remember { GlassRenderState() }
+    // Liquid Glass materializes: on its first frame a panel bends nothing, then the lens forms
+    // over half a second (Apple's "smooth" spring: 0.5 s, no bounce). Read in the draw phase only.
+    val formed = remember { Animatable(if (Motion.reduced || !agsl) 1f else 0f) }
+    androidx.compose.runtime.LaunchedEffect(formed) {
+        if (formed.value < 1f) formed.animateTo(1f, spring(dampingRatio = 1f, stiffness = GlassMotion.MATERIALIZE_STIFFNESS))
+    }
 
     val (surface, hairline) = rememberStaticMaterial(params, opaque = style == 2, tint = tint)
     val sheen = remember(params) { staticSheen(params) }
@@ -369,7 +377,7 @@ private fun GlassPanelBody(
                     if (!change.pressed) break
                     touch.position = change.position
                 }
-                pressScope.launch { touch.press.animateTo(0f, spring(dampingRatio = .58f, stiffness = 280f)) }
+                pressScope.launch { touch.press.animateTo(0f, spring(dampingRatio = GlassMotion.RELEASE_DAMPING, stiffness = 280f)) }
             }
         }
     } else Modifier
@@ -390,10 +398,11 @@ private fun GlassPanelBody(
                         val realRadii = glassRoundedShapeRadii(
                             shape, bounds.width, bounds.height, this, layoutDirection
                         ) ?: glassCornerRadiiOf(params.cornerRadiusPx)
+                        val forming = params.copy(materialize = formed.value)
                         renderState.shaderApplied = if (liquid27) {
-                            liquid27Glass(params, realRadii, tint,
+                            liquid27Glass(forming, realRadii, tint,
                                 liquid27Light(touch.position.x, touch.position.y, touch.press.value))
-                        } else liquidGlass(params, realRadii)
+                        } else liquidGlass(forming, realRadii)
                     } else {
                         if (params.saturation != 1f || params.brightness != 1f || params.contrast != 1f) {
                             colorControls(params.saturation, params.brightness, params.contrast)
@@ -452,6 +461,22 @@ private fun GlassPanelBody(
 }
 
 private class GlassRenderState(var shaderApplied: Boolean = false)
+
+/**
+ * Motion of the glass. Reviews of iOS 26 singled out "jelly" controls that wobble: a
+ * release settles with one small overshoot (damping .68, about Apple's "snappy" bounce of
+ * .15–.3), never a series of them.
+ */
+object GlassMotion {
+    /** Apple's "smooth" spring: 0.5 s response, no bounce (stiffness (2π / 0.5)² ≈ 158). */
+    const val MATERIALIZE_STIFFNESS = 158f
+    const val RELEASE_DAMPING = .68f
+    /** How much one overshoot of a spring of this damping ratio carries past its target. */
+    fun overshoot(dampingRatio: Float): Float {
+        val z = dampingRatio.coerceIn(0f, .999f)
+        return kotlin.math.exp(-Math.PI * z / kotlin.math.sqrt(1.0 - z * z)).toFloat()
+    }
+}
 
 /** Values read in the draw phase only, so touches and tilt never recompose the panel. */
 private class Liquid27Touch {

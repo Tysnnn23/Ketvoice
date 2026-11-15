@@ -88,6 +88,8 @@ internal class DeckAutomation(
         private const val POWER = 1.47f
         private const val SETTLE_US = 8_000_000L
         private const val SWEEP_Q = 1.05f
+        /** Where the highs of an incoming title start: above it, only cymbals and air. */
+        private const val HIGHS_HZ = 1_400f
 
         val MUTE = DeckAutomation(Curve.flat(0f), Curve.flat(0f))
 
@@ -174,10 +176,16 @@ internal class DeckAutomation(
                 Curve.shaped(swap - half, swap + half, 16) { sweep(BASS_HZ, OPEN_HZ, it) },
                 point(swap + half + 1, 0f))
             if (plan.variant != 0) return DeckAutomation(gain, bass)
-            // Variant 0: its top end opens little by little, so that it grows out of the outgoing title.
-            val opened = start + (swap - start) * 3 / 4
-            val top = Curve.join(point(0L, 2_200f), Curve.shaped(start, opened, 16) { sweep(2_200f, TOP_HZ, it) }, point(opened + 1, 0f))
-            return DeckAutomation(gain, bass, top, resonance = SWEEP_Q)
+            // Variant 0, the way DJs bring a title in: its highs first, then its mids, and its bass
+            // last, on the swap. The high-pass comes down from the top of the mids to the bass line.
+            val mids = (start + (swap - start) * 3 / 5).coerceAtMost(swap - half - 1)
+            val layered = Curve.join(
+                point(0L, HIGHS_HZ),
+                Curve.shaped(start, mids, 16) { sweep(HIGHS_HZ, BASS_HZ, it) },
+                point(swap - half, BASS_HZ),
+                Curve.shaped(swap - half, swap + half, 16) { sweep(BASS_HZ, OPEN_HZ, it) },
+                point(swap + half + 1, 0f))
+            return DeckAutomation(gain, layered, resonance = SWEEP_Q)
         }
 
         /**

@@ -357,6 +357,12 @@ object Player {
 
     internal fun automixNext(): NextEntry? {
         val s = _state.value
+        // A title on repeat comes back as its own next title: Ketmix may mix its end into its start.
+        if (s.repeatOne) {
+            if (!AppSettings.ketmixLoops.value) return null
+            val current = s.current ?: return null
+            return NextEntry(s.index, current, s.queueEntryIds.getOrNull(s.index) ?: return null)
+        }
         val step = QueueSteps.next(s.queue.size, s.index, s.repeatOne, s.repeatAll, autoplay = false, ended = true)
         val target = (step as? QueueStep.Jump)?.index ?: return null
         if (target == s.index) return null
@@ -421,7 +427,8 @@ object Player {
         val s = _state.value
         val target = s.queueEntryIds.indexOf(next.entryId).takeIf { it >= 0 } ?: next.index
         val track = s.queue.getOrNull(target) ?: return
-        s.queueEntryIds.getOrNull(s.index)?.let { history.push(it) }
+        // A title looping into itself is not a step back in the history.
+        if (target != s.index) s.queueEntryIds.getOrNull(s.index)?.let { history.push(it) }
         resolutionJob?.cancel()
         generation++
         resolving = false
@@ -515,7 +522,9 @@ object Player {
     /** Plays [tracks] in a random order; turning shuffle off restores the given order. */
     fun playShuffled(tracks: List<Track>) {
         if (tracks.isEmpty()) return
-        val order = tracks.shuffled()
+        val shuffled = tracks.shuffled()
+        val order = if (AppSettings.smartShuffle.value) QueueOrder.spread(shuffled, QueueOrder::artistKey, { it.id in recentlyHeard() })
+            else shuffled
         startPlayback(order.first(), order, 0, 0L, true, QueueOrigin.External, shuffledFrom = tracks)
     }
 
@@ -1173,7 +1182,8 @@ object Player {
             _state.value = s.copy(shuffle = on, linearOrder = emptyList())
             return
         }
-        val order = if (on) QueueOrder.shuffle(s.queue, s.queueEntryIds, s.index)
+        val order = if (on) QueueOrder.shuffle(s.queue, s.queueEntryIds, s.index,
+                recent = recentlyHeard(), spread = AppSettings.smartShuffle.value)
             else QueueOrder.restore(s.queue, s.queueEntryIds, s.index, s.linearOrder)
         warmedNextEntry = null
         _state.value = s.copy(shuffle = on, queue = order.queue, queueEntryIds = order.entryIds, index = order.index,
@@ -1181,6 +1191,11 @@ object Player {
         // The new order has another next title: warm it, as at the start of a track.
         if (controller != null && !resolving) s.current?.let { prefetchNext(generation, it) }
     }
+
+    /** The titles heard last, which a shuffle with fewer repeats keeps for later. */
+    private fun recentlyHeard(): Set<String> =
+        com.ketvoice.app.data.ListeningHistory.tracks.value.take(RECENT_FOR_SHUFFLE).mapTo(HashSet()) { it.id }
+    private const val RECENT_FOR_SHUFFLE = 25
 
     /** Sets the modes of a session received as is, without reordering its queue. */
     fun adoptModes(shuffle: Boolean, repeatOne: Boolean, autoplay: Boolean) {

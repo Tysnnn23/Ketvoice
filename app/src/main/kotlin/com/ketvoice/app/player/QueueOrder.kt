@@ -20,11 +20,37 @@ internal object QueueOrder {
      * [Result.linearOrder] remembers the order before the shuffle.
      */
     fun shuffle(queue: List<Track>, entryIds: List<String>, index: Int,
-                random: kotlin.random.Random = kotlin.random.Random.Default): Result {
+                random: kotlin.random.Random = kotlin.random.Random.Default,
+                recent: Set<String> = emptySet(), spread: Boolean = false): Result {
         val keys = keysFor(queue, entryIds)
         if (queue.size < 2 || index !in queue.indices) return Result(queue, keys, index, keys)
-        val order = listOf(index) + queue.indices.filter { it != index }.shuffled(random)
+        val rest = queue.indices.filter { it != index }.shuffled(random)
+        val order = listOf(index) + if (spread) spread(rest, { artistKey(queue[it]) }, { queue[it].id in recent }, artistKey(queue[index])) else rest
         return Result(order.map { queue[it] }, order.map { keys[it] }, 0, keys)
+    }
+
+    /** The first credited artist, the way two titles are told to be "by the same artist". */
+    fun artistKey(track: Track): String =
+        com.ketvoice.app.data.MediaOverrides.normalize(com.ketvoice.app.data.MediaOverrides.mainArtist(track.artist))
+
+    /**
+     * Shuffle with fewer repeats: titles heard recently move towards the end (in their shuffled
+     * order), and no two titles of the same artist follow each other where another can be put
+     * between them. [items] is an order already shuffled; [first] is the artist playing before it.
+     */
+    fun <T> spread(items: List<T>, artistOf: (T) -> String, recent: (T) -> Boolean, first: String? = null): List<T> {
+        val (heard, fresh) = items.partition(recent)
+        val pending = ArrayList(fresh + heard)
+        val result = ArrayList<T>(items.size)
+        var previous = first
+        while (pending.isNotEmpty()) {
+            // The first title in line whose artist differs from the last one placed; the first title when all are the same artist.
+            val at = pending.indexOfFirst { previous.isNullOrEmpty() || artistOf(it) != previous }.takeIf { it >= 0 } ?: 0
+            val next = pending.removeAt(at)
+            result += next
+            previous = artistOf(next)
+        }
+        return result
     }
 
     /**
