@@ -81,13 +81,15 @@ class UiPolishHostTest {
         }
     }
 
-    @Test fun automixIsSwitchedOnFromThePlaybackSettings() {
+    @Test fun ketmixIsSwitchedOnAndTunedFromThePlaybackSettings() {
         AppSettings.reduceAnimations.value = true
         AppSettings.automix.value = false
+        AppSettings.ketmixAnalysis.value = 1
         try {
             compose.setContent { KetvoiceTheme(useDark = true) { com.ketvoice.app.ui.settings.SettingsScreen() } }
             compose.onNodeWithTag("settings-category-Playback").performClick()
-            compose.onNodeWithText("Automix").performScrollTo().assertIsDisplayed().performClick()
+            compose.onNodeWithText("KETMIX (BÊTA)").performScrollTo().assertIsDisplayed()
+            compose.onNodeWithText("Ketmix").performScrollTo().assertIsDisplayed().performClick()
             compose.waitForIdle()
             assertTrue(AppSettings.automix.value)
             compose.onNodeWithText("Intensité du mix").performScrollTo().assertIsDisplayed()
@@ -96,8 +98,22 @@ class UiPolishHostTest {
             compose.onNodeWithText("Mixer aussi les albums").performScrollTo().assertIsDisplayed().performClick()
             compose.waitForIdle()
             assertFalse("The album switch is on by default and turns off", AppSettings.automixAlbums.value)
-            image("settings-automix")
-        } finally { AppSettings.automix.value = false; AppSettings.automixAlbums.value = true; com.ketvoice.app.data.SettingsStore.save() }
+            // Three settings for how much of the processor the analysis takes; balanced unless chosen otherwise.
+            compose.onNodeWithText("Analyse des titres").performScrollTo().assertIsDisplayed()
+            compose.onNodeWithText("Équilibrée").assertIsDisplayed()
+            image("settings-ketmix")
+            compose.onNodeWithText("Analyse des titres").performClick()
+            compose.waitForIdle()
+            compose.onNodeWithText("Légère").assertIsDisplayed()
+            compose.onNodeWithText("Tempo, temps et niveaux sur 30 secondes : le moins de batterie").assertIsDisplayed()
+            image("settings-ketmix-analysis")
+            compose.onNodeWithText("Maximale").performClick()
+            compose.waitForIdle()
+            assertEquals(2, AppSettings.ketmixAnalysis.value)
+        } finally {
+            AppSettings.automix.value = false; AppSettings.automixAlbums.value = true; AppSettings.ketmixAnalysis.value = 1
+            com.ketvoice.app.data.SettingsStore.save()
+        }
     }
 
     @Test fun darkAppearanceOptionsKeepNativeDarkSurfacesAndReadableLabels() {

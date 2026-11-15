@@ -73,8 +73,8 @@ object CanvasRepo {
         val ctx = appContext ?: return@withContext
 
         if (!AppSettings.animatedArtwork.value) return@withContext
-        // Switched off by the owner for this title or its album: nothing is looked up or downloaded.
-        if (MediaOverrides.canvasDisabled(track)) {
+        // Switched off by the owner for this title or its album, on the page and in the player: nothing is looked up or downloaded.
+        if (MediaOverrides.canvasUnused(track)) {
             _paths.value = _paths.value - track.id
             return@withContext
         }

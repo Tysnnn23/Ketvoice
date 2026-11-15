@@ -32,6 +32,20 @@ internal object AlbumPresentation {
      */
     fun showsWholeCover(widthDp: Float, heightDp: Float): Boolean = heightDp > 0f && widthDp / heightDp > 1.35f
 
+    /**
+     * The colour an album page takes: that of the Canvas while one plays in its hero (the
+     * cover's until a frame of the Canvas has been read), that of the cover otherwise.
+     */
+    fun <T> pageAccent(canvasShown: Boolean, canvasAccent: T?, coverAccent: T?): T? =
+        if (canvasShown) canvasAccent ?: coverAccent else coverAccent
+
+    /**
+     * Width over height of the artwork in the music player on a window of this size: the full
+     * width over 55 % of the height on a phone, a square on a wide or lying window.
+     */
+    fun playerArtworkAspect(widthDp: Float, heightDp: Float): Float =
+        if (widthDp >= 720f || widthDp >= heightDp || heightDp <= 0f) 1f else (widthDp / (heightDp * .55f)).coerceIn(.5f, 1.6f)
+
     fun sideBySide(widthDp: Float, fontScale: Float): Boolean =
         widthDp >= 720f && widthDp / fontScale.coerceAtLeast(1f) >= 540f
 }

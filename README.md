@@ -21,6 +21,18 @@
 
 ## Overview
 
+### 5.2.0 — Ketmix (beta), a new dark theme, a new Home
+
+Automix becomes Ketmix and stops at nothing less than a real transition: both titles in time
+with tempos that meet during the mix, an echo out when they cannot share one, a crossing of
+filters over an ending that fades, a dissolve for music without a beat, a cut on the beat after
+a last note. It reads the key of each title, shows what it measured, and has three settings for
+how much of the phone it may use. The dark theme is new (a neutral near-black, pages lit by the
+accent colour) and Home is rebuilt around a lead card, tiles and the week in seven bars.
+[Mobile](https://github.com/Tysnnn23/Ketvoice/releases/download/v5.2.0/Ketvoice-5.2.0.apk)
+· [Quest](https://github.com/Tysnnn23/Ketvoice/releases/download/v5.2.0/Ketvoice-5.2.0-Quest.apk)
+· [Release notes](docs/releases/v5.2.0.md).
+
 ### 5.1.0 — Automix that explains itself
 
 Automix now mixes albums too (a setting, on by default), says in the queue and in Settings what

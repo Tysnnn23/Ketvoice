@@ -1,5 +1,6 @@
 package com.ketvoice.app.ui.sub
 
+import com.ketvoice.app.theme.pageBackground
 import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.zIndex
@@ -103,7 +104,7 @@ fun DownloadsScreen() {
     val showTitles = view == 0 || chosen != null || chosenArtist != null
 
     val backdrop = com.ketvoice.app.glass.rememberGlassBackdrop(theme.background)
-    Box(Modifier.fillMaxSize().background(theme.background)) {
+    Box(Modifier.fillMaxSize().pageBackground(theme)) {
     val grid = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
     // 0 while the header is in view, 1 once it has scrolled away: drives the floating title.
     val collapse by remember { androidx.compose.runtime.derivedStateOf {

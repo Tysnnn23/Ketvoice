@@ -406,26 +406,36 @@ fun SettingsScreen() {
                 ) { Player.setSkipSilence(it); SettingsStore.save() }
             }
 
-            // ==================================================== AUTOMIX
-            Section("AUTOMIX") {
-                SToggle(KetIcons.Shuffle, "Automix",
-                    "La fin d'un titre se mêle au début du suivant, comme dans un mix : tempos accordés, basses échangées, paroles jamais coupées.",
+            // ==================================================== KETMIX
+            Section("KETMIX (BÊTA)") {
+                SToggle(KetIcons.Shuffle, "Ketmix",
+                    "La fin d'un titre se mêle au début du suivant, comme le ferait un DJ : tempos accordés, basses échangées, écho, filtres ou réverbération selon les deux titres. Le chant n'est jamais coupé.",
                     AppSettings.automix.value) { AppSettings.automix.value = it; SettingsStore.save() }
                 SRow(KetIcons.Sliders, "Intensité du mix",
                     sub = "Longueur des transitions et écart de tempo accepté",
                     value = when (AppSettings.automixIntensity.value) { 0 -> "Discret"; 2 -> "DJ"; else -> "Équilibré" }) {
                     choice = ChoiceSpec("Intensité du mix", "S'applique dès la prochaine transition.",
                         AppSettings.automixIntensity.value.toString(), listOf(
-                            ChoiceOption("0", "Discret", "Transitions courtes, le titre joue jusqu'au bout, tempos très proches seulement"),
-                            ChoiceOption("1", "Équilibré", "Jusqu'à 16 secondes de mix, tempos à 8 % près"),
-                            ChoiceOption("2", "DJ", "Mix dès la fin du chant, tempos à 12 % près"))
+                            ChoiceOption("0", "Discret", "Chaque titre joue jusqu'au bout, transitions courtes, tempos à 4 % près, pas d'écho"),
+                            ChoiceOption("1", "Équilibré", "Jusqu'à 16 secondes de mix après le chant, tempos à 6 % près"),
+                            ChoiceOption("2", "DJ", "Mix dès la fin du chant, transitions longues, tempos à 8 % près"))
                     ) { id -> AppSettings.automixIntensity.value = id.toIntOrNull()?.coerceIn(0, 2) ?: 1; SettingsStore.save() }
+                }
+                SRow(KetIcons.Audio, "Analyse des titres",
+                    sub = "Part du processeur du téléphone consacrée à l'écoute des titres avant un mix",
+                    value = when (AppSettings.ketmixAnalysis.value) { 0 -> "Légère"; 2 -> "Maximale"; else -> "Équilibrée" }) {
+                    choice = ChoiceSpec("Analyse des titres", "Les titres déjà analysés sont relus si le nouveau réglage en demande plus.",
+                        AppSettings.ketmixAnalysis.value.toString(), listOf(
+                            ChoiceOption("0", "Légère", "Tempo, temps et niveaux sur 30 secondes : le moins de batterie"),
+                            ChoiceOption("1", "Équilibrée", "45 secondes par titre et sa tonalité : deux tonalités qui jurent ne se chevauchent pas longtemps"),
+                            ChoiceOption("2", "Maximale", "75 secondes par titre, tonalité et tenue du tempo vérifiée : les mix les plus longs et les plus sûrs"))
+                    ) { id -> AppSettings.ketmixAnalysis.value = id.toIntOrNull()?.coerceIn(0, 2) ?: 1; SettingsStore.save() }
                 }
                 SToggle(KetIcons.Album, "Mixer aussi les albums",
                     "Les titres d'un album écouté dans l'ordre sont mixés aussi, sauf si l'album n'a aucun blanc entre ses titres.",
                     AppSettings.automixAlbums.value) { AppSettings.automixAlbums.value = it; SettingsStore.save() }
                 com.ketvoice.app.ui.player.AutomixStatusLine(Modifier.padding(horizontal = 16.dp, vertical = 6.dp), th.secondary, 12.sp)
-                Text("La répétition d'un titre, la minuterie et la sortie bit-perfect ne sont jamais mixées. Sans tempo régulier, un simple fondu remplace le mix.",
+                Text("Ketmix est en bêta. La répétition d'un titre, la minuterie et la sortie bit-perfect ne sont jamais mixées. Une dernière note n'est jamais couverte : le titre suivant part juste après, sur le temps.",
                     color = th.secondary, fontSize = 11.sp, lineHeight = 16.sp, modifier = Modifier.padding(bottom = 8.dp))
             }
 

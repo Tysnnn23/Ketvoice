@@ -77,6 +77,47 @@ class MediaOverridesTest {
         assertNull(VisualTarget.album("", "Daft Punk", null))
     }
 
+    @Test fun theMusicPlayerFollowsThePageUnlessItHasItsOwnSay() {
+        val one = Track("yt:1", "One More Time", "Daft Punk", "Discovery")
+        val two = Track("yt:2", "Aerodynamic", "Daft Punk", "Discovery")
+        val page = Frame(.1f, 0f, .8f, .5f)
+        val player = Frame(0f, .1f, .5f, .6f)
+        // Nothing decided: the Canvas shows, nothing is framed.
+        MediaOverrides.replaceForTest(emptyList())
+        assertFalse(MediaOverrides.canvasHiddenInPlayer(one)); assertNull(MediaOverrides.playerFrame(one))
+        // The page is framed and its Canvas off: the player does the same.
+        MediaOverrides.replaceForTest(listOf(MediaOverride("album", "discovery|daft punk", frame = page, canvasOff = true)))
+        assertTrue(MediaOverrides.canvasHiddenInPlayer(one)); assertEquals(page, MediaOverrides.playerFrame(two))
+        assertTrue("Nobody shows it: it is not fetched", MediaOverrides.canvasUnused(one))
+        // The player gets its own framing and keeps its Canvas: the page is unchanged.
+        MediaOverrides.replaceForTest(listOf(MediaOverride("album", "discovery|daft punk", frame = page, canvasOff = true,
+            playerFrame = player, playerCanvas = true)))
+        assertEquals(player, MediaOverrides.playerFrame(one)); assertEquals(page, MediaOverrides.albumFrame("Discovery", "Daft Punk"))
+        assertFalse(MediaOverrides.canvasHiddenInPlayer(one)); assertTrue(MediaOverrides.canvasDisabled(one))
+        assertFalse("The player shows it: it is fetched", MediaOverrides.canvasUnused(one))
+        // Hidden in the player only, for one title: the page and the other titles keep it.
+        MediaOverrides.replaceForTest(listOf(MediaOverride("track", "one more time|daft punk", playerCanvas = false)))
+        assertTrue(MediaOverrides.canvasHiddenInPlayer(one)); assertFalse(MediaOverrides.canvasDisabled(one))
+        assertFalse(MediaOverrides.canvasHiddenInPlayer(two)); assertFalse(MediaOverrides.canvasUnused(one))
+        // A title's own say wins over its album's.
+        MediaOverrides.replaceForTest(listOf(MediaOverride("album", "discovery|daft punk", playerCanvas = false),
+            MediaOverride("track", "aerodynamic|daft punk", playerCanvas = true)))
+        assertTrue(MediaOverrides.canvasHiddenInPlayer(one)); assertFalse(MediaOverrides.canvasHiddenInPlayer(two))
+        // What the server sends is read, kept by the cache, and a row with only a player setting is not dropped.
+        val text = """{"overrides":[
+            {"kind":"album","key":"discovery|daft punk","player":{"frame":{"cx":0,"cy":0.1,"w":0.5,"h":0.6,"rotation":0,"flip":false},"canvas":"off"}},
+            {"kind":"track","key":"a|b","player":{"frame":null,"canvas":"on"}},
+            {"kind":"track","key":"c|d","player":{"frame":null,"canvas":null}},
+            {"kind":"track","key":"e|f","player":null,"canvasOff":true}]}"""
+        val decoded = MediaOverrides.decode(text)
+        assertEquals(setOf("album:discovery|daft punk", "track:a|b", "track:e|f"), decoded.keys)
+        assertEquals(player, decoded["album:discovery|daft punk"]!!.playerFrame); assertEquals(false, decoded["album:discovery|daft punk"]!!.playerCanvas)
+        assertEquals(true, decoded["track:a|b"]!!.playerCanvas); assertNull(decoded["track:a|b"]!!.playerFrame)
+        assertNull(decoded["track:e|f"]!!.playerCanvas)
+        assertEquals(decoded, MediaOverrides.decode(MediaOverrides.encode(decoded.values)))
+        MediaOverrides.replaceForTest(emptyList())
+    }
+
     @Test fun aCanvasSwitchedOffBeatsTheCatalogueAndAnAlbumThatIsOff() {
         val one = Track("yt:1", "One More Time", "Daft Punk", "Discovery")
         val two = Track("yt:2", "Aerodynamic", "Daft Punk", "Discovery")

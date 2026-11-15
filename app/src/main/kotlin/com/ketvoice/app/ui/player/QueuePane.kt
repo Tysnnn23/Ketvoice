@@ -120,8 +120,7 @@ internal fun QueuePane(state: PlayerUiState, modifier: Modifier = Modifier, show
         }
     }
 
-    Box(modifier) {
-    Column(Modifier.fillMaxSize()) {
+    Column(modifier) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("File d'attente", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold, letterSpacing = (-.6).sp,
                 maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).asHeading())
@@ -131,6 +130,8 @@ internal fun QueuePane(state: PlayerUiState, modifier: Modifier = Modifier, show
         if (showModes) {
             Spacer(Modifier.height(10.dp))
             QueueModes(state)
+            // What Ketmix is about to do, right under its switch.
+            AutomixStatusLine(Modifier.padding(top = 8.dp).fillMaxWidth())
         }
         Spacer(Modifier.height(if (showModes) 12.dp else 17.dp))
         Text("Lecture en cours", color = Color.White.copy(alpha = .78f), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
@@ -141,7 +142,7 @@ internal fun QueuePane(state: PlayerUiState, modifier: Modifier = Modifier, show
         Text("À suivre depuis : ${track.artist}", color = Color(0xFFB7B7BD), fontSize = 14.sp,
             fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
         Spacer(Modifier.height(9.dp))
-        LazyColumn(Modifier.weight(1f).fillMaxWidth().testTag("queue-list"), state = list, contentPadding = PaddingValues(bottom = 78.dp)) {
+        LazyColumn(Modifier.weight(1f).fillMaxWidth().testTag("queue-list"), state = list, contentPadding = PaddingValues(bottom = 12.dp)) {
             itemsIndexed(upcoming, key = { i, t -> state.queueEntryIds.getOrNull(state.index + 1 + i) ?: "${t.id}:${state.index + 1 + i}" }) { i, t ->
                 val index = state.index + 1 + i
                 val key = state.queueEntryIds.getOrNull(index) ?: "${t.id}:$index"
@@ -184,14 +185,6 @@ internal fun QueuePane(state: PlayerUiState, modifier: Modifier = Modifier, show
             }
         }
     }
-        // Automix: titles are mixed into each other at the end, like a DJ would.
-        Row(Modifier.align(Alignment.BottomStart).padding(bottom = 10.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            AutomixToggle { on ->
-                announce(if (on) "Automix activé : les titres s'enchaînent comme dans un mix" else "Automix désactivé")
-            }
-            AutomixStatusLine(Modifier.padding(start = 12.dp, end = 4.dp).weight(1f))
-        }
-    }
 }
 
 /**
@@ -232,6 +225,7 @@ private fun QueueAction(label: String, enabled: Boolean = true, tag: String, onC
 @Composable
 private fun QueueModes(state: PlayerUiState) {
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.testTag("queue-modes")) {
+        AutomixToggle()
         QueueMode(Icons.Filled.Shuffle, "Aléatoire", state.shuffle) { Player.setShuffle(!state.shuffle) }
         QueueMode(if (state.repeatOne) Icons.Filled.RepeatOne else Icons.Filled.Repeat,
             repeatLabel(state.repeatOne, state.repeatAll), state.repeatOne || state.repeatAll) { Player.cycleRepeat() }

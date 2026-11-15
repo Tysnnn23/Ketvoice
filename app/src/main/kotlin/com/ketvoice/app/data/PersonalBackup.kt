@@ -26,7 +26,7 @@ internal object PersonalBackup {
         "haptics", "coverTintedGlass", "meshBackground", "automixOn", "automixAlbums")
     private val integers = mapOf("themeMode" to 0..2, "glassStyle" to 0..com.ketvoice.app.glass.GlassStyles.MAX, "lyricsTextSize" to 0..2,
         "reverbAmount" to 0..100, "reverbSize" to 0..100, "reverbDamping" to 0..100,
-        "lyricsMode" to 0..2, "lyricsStyle" to 0..1, "automixIntensity" to 0..2, "downloadQualityMode" to 0..2, "appIconVariant" to 0..3)
+        "lyricsMode" to 0..2, "lyricsStyle" to 0..1, "automixIntensity" to 0..2, "ketmixAnalysis" to 0..2, "downloadQualityMode" to 0..2, "appIconVariant" to 0..3)
     private val longs = setOf("accentArgb", "cacheBytes")
     private val strings = setOf("lyricsSource", "translateLanguage", "translationSource", "wifiQuality",
         "mobileQuality", "equalizerGains", "language")

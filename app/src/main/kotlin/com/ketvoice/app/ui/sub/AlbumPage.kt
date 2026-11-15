@@ -72,8 +72,16 @@ internal fun AlbumPage(request: CatalogRequest, page: CatalogPage?, tracks: List
     val artist = page?.subtitle?.takeIf { it.isNotBlank() } ?: tracks.firstOrNull()?.artist.orEmpty()
     val cover = com.ketvoice.app.data.MediaOverrides.albumCover(title, artist, page?.cover?.takeIf { it.isNotBlank() }
         ?: tracks.firstOrNull()?.let { com.ketvoice.app.data.MediaOverrides.cover(it, art["t:${it.id}"] ?: it.coverUrl) })
-    val accent = com.ketvoice.app.theme.rememberCoverAccent(cover)?.first
-    // Like the artist page: the page takes its colour from the cover, and the cover dissolves into it.
+    // The Canvas the hero plays, when this listener has it on: what the framing screen works on.
+    val heroCanvasOn = AppSettings.albumHeroCanvas.value && !Motion.reduced && !AppSettings.highPerformanceMode.value
+    val canvasPaths by CanvasRepo.paths.collectAsState()
+    val heroCanvas = tracks.firstOrNull()?.takeIf { !com.ketvoice.app.data.MediaOverrides.canvasDisabled(it) }?.let { canvasPaths[it.id] }.takeIf { heroCanvasOn }
+    // The page takes its colour from what its hero shows: the Canvas while one plays there (the
+    // cover's until a frame of it is read), the cover as soon as the Canvas is off or gone.
+    val coverAccent = com.ketvoice.app.theme.rememberCoverAccent(cover)?.first
+    val canvasAccent = com.ketvoice.app.theme.rememberCanvasAccent(heroCanvas)?.first
+    val accent = AlbumPresentation.pageAccent(heroCanvas != null, canvasAccent, coverAccent)
+    // Like the artist page: the page takes its colour from its artwork, and the artwork dissolves into it.
     val pageTint by androidx.compose.animation.animateColorAsState(
         artistPageTint(baseTheme.background, accent.takeIf { AppSettings.albumColors.value }, baseTheme.isDark),
         tween(Motion.duration(520)), label = "album-page-tint")
@@ -94,18 +102,21 @@ internal fun AlbumPage(request: CatalogRequest, page: CatalogPage?, tracks: List
     val mainArtist = com.ketvoice.app.data.MediaOverrides.mainArtist(artist)
     val savedFrame = com.ketvoice.app.data.MediaOverrides.albumFrame(title, mainArtist)
     var draft by remember(title, artist) { mutableStateOf<com.ketvoice.app.data.Frame?>(null) }
+    // The player's own framing of this album: published, and the draft while it waits to be.
+    val savedPlayerFrame = com.ketvoice.app.data.MediaOverrides.album(title, mainArtist)?.playerFrame
+    var playerDraft by remember(title, artist) { mutableStateOf<com.ketvoice.app.data.Frame?>(null) }
+    var framingMode by remember(title, artist) { mutableStateOf(FramingScope.Page) }
     var framingOpen by remember(title, artist) { mutableStateOf(false) }
     var framingBusy by remember { mutableStateOf(false) }
     var framingError by remember { mutableStateOf("") }
     val framingScope = rememberCoroutineScope()
-    androidx.activity.compose.BackHandler(enabled = draft != null && !framingOpen) { if (!framingBusy) draft = null }
-    // The Canvas the hero plays, when this listener has it on: what the framing screen works on.
-    val heroCanvasOn = AppSettings.albumHeroCanvas.value && !Motion.reduced && !AppSettings.highPerformanceMode.value
-    val canvasPaths by CanvasRepo.paths.collectAsState()
-    val heroCanvas = tracks.firstOrNull()?.takeIf { !com.ketvoice.app.data.MediaOverrides.canvasDisabled(it) }?.let { canvasPaths[it.id] }.takeIf { heroCanvasOn }
+    androidx.activity.compose.BackHandler(enabled = (draft != null || playerDraft != null) && !framingOpen) {
+        if (!framingBusy) { draft = null; playerDraft = null }
+    }
     val configuration = androidx.compose.ui.platform.LocalConfiguration.current
     val pageBoxAspect = configuration.screenWidthDp.coerceAtLeast(1) /
         AlbumPresentation.heroHeight(configuration.screenWidthDp.toFloat(), configuration.screenHeightDp.toFloat())
+    val playerBoxAspect = AlbumPresentation.playerArtworkAspect(configuration.screenWidthDp.toFloat(), configuration.screenHeightDp.toFloat())
     val refresh = {
         ArtworkRepo.invalidate(tracks)
         ArtworkRepo.enrich(tracks)
@@ -138,24 +149,33 @@ internal fun AlbumPage(request: CatalogRequest, page: CatalogPage?, tracks: List
                 }
             }
             // After the framing screen: the real page shows the draft, and the owner publishes it or not.
-            draft?.let { current ->
+            (draft ?: playerDraft)?.let { current ->
+                // One draft at a time: the page's, shown on the page itself, or the player's.
+                val forPlayer = draft == null
                 fun send(restore: Boolean) {
                     val target = com.ketvoice.app.data.MediaOverrides.albumKey(title, mainArtist) ?: return
                     framingBusy = true; framingError = ""
                     framingScope.launch {
                         try {
-                            if (restore) com.ketvoice.app.data.PublicationApi.saveOverride(
-                                com.ketvoice.app.data.MediaOverrides.ALBUM, target, "$title — $mainArtist", restore = listOf("frame"))
-                            else com.ketvoice.app.data.PublicationApi.saveOverride(com.ketvoice.app.data.MediaOverrides.ALBUM, target,
-                                "$title — $mainArtist", frame = current)
-                            draft = null
+                            val api = com.ketvoice.app.data.PublicationApi
+                            val label = "$title — $mainArtist"
+                            when {
+                                forPlayer -> api.saveOverride(com.ketvoice.app.data.MediaOverrides.ALBUM, target, label,
+                                    player = if (restore) com.ketvoice.app.data.PublicationApi.PlayerChange(followFrame = true)
+                                        else com.ketvoice.app.data.PublicationApi.PlayerChange(frame = current))
+                                restore -> api.saveOverride(com.ketvoice.app.data.MediaOverrides.ALBUM, target, label, restore = listOf("frame"))
+                                else -> api.saveOverride(com.ketvoice.app.data.MediaOverrides.ALBUM, target, label, frame = current)
+                            }
+                            draft = null; playerDraft = null
                         } catch (failure: Exception) {
                             framingError = failure.message?.take(200) ?: "Publication impossible"
                         } finally { framingBusy = false }
                     }
                 }
-                if (!framingOpen) AlbumFramingBar(framingBusy, framingError, savedFrame != null, Modifier.align(Alignment.BottomCenter),
-                    onEdit = { framingOpen = true }, onCancel = { draft = null }, onDefault = { send(restore = true) },
+                if (!framingOpen) AlbumFramingBar(framingBusy, framingError, if (forPlayer) savedPlayerFrame != null else savedFrame != null,
+                    Modifier.align(Alignment.BottomCenter), forPlayer = forPlayer,
+                    onEdit = { framingMode = if (forPlayer) FramingScope.Player else FramingScope.Page; framingOpen = true },
+                    onCancel = { draft = null; playerDraft = null }, onDefault = { send(restore = true) },
                     onPublish = { send(restore = false) })
             }
             // Floating controls sample the scrolled page, not an opaque full-width header band.
@@ -173,7 +193,7 @@ internal fun AlbumPage(request: CatalogRequest, page: CatalogPage?, tracks: List
                             com.ketvoice.app.data.VisualTarget.artist(main, null)))
                     }.takeIf { owner },
                     com.ketvoice.app.ui.common.PadAction(androidx.compose.material.icons.Icons.Filled.Crop, "Cadrer l'image", "album-framing",
-                        enabled = !framingBusy) { framingError = ""; framingOpen = true }.takeIf { owner },
+                        enabled = !framingBusy) { framingError = ""; framingMode = FramingScope.Page; framingOpen = true }.takeIf { owner },
                     com.ketvoice.app.ui.common.PadAction(KetIcons.Share, "Partager", "album-share") {
                         ShareLinks.shareAlbum(context, request.id, title, artist)
                     }), tag = "album-actions")
@@ -182,7 +202,9 @@ internal fun AlbumPage(request: CatalogRequest, page: CatalogPage?, tracks: List
             if (framingOpen) androidx.compose.ui.window.Dialog({ framingOpen = false },
                 androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
                 FramingEditor(tracks.firstOrNull(), cover, heroCanvas, draft ?: savedFrame, pageBoxAspect,
-                    onCancel = { framingOpen = false }, onDone = { draft = it; framingOpen = false })
+                    onCancel = { framingOpen = false }, onDone = { draft = it; playerDraft = null; framingOpen = false },
+                    playerInitial = playerDraft ?: savedPlayerFrame, playerBoxAspect = playerBoxAspect, startScope = framingMode,
+                    onPlayerDone = { playerDraft = it; draft = null; framingOpen = false })
             }
         }
     }
@@ -375,8 +397,8 @@ private fun Modifier.pullUp(by: androidx.compose.ui.unit.Dp): Modifier = layout 
 
 /** Over the real album page showing a framing that is not published yet: retouch it, drop it or publish it. */
 @Composable
-private fun AlbumFramingBar(busy: Boolean, error: String, hasPublished: Boolean, modifier: Modifier, onEdit: () -> Unit,
-                            onCancel: () -> Unit, onDefault: () -> Unit, onPublish: () -> Unit) {
+private fun AlbumFramingBar(busy: Boolean, error: String, hasPublished: Boolean, modifier: Modifier, forPlayer: Boolean = false,
+                            onEdit: () -> Unit, onCancel: () -> Unit, onDefault: () -> Unit, onPublish: () -> Unit) {
     val theme = LocalTheme.current
     // A solid sheet: its glass buttons sample the page behind it, so the sheet itself is not glass.
     Box(modifier.navigationBarsPadding().padding(12.dp).widthIn(max = 560.dp).fillMaxWidth()
@@ -384,8 +406,10 @@ private fun AlbumFramingBar(busy: Boolean, error: String, hasPublished: Boolean,
         .border(.8.dp, theme.onBackground.copy(alpha = .10f), RoundedCornerShape(28.dp))
         .testTag("album-framing-bar")) {
         Column(Modifier.padding(horizontal = 18.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Aperçu du cadrage", color = theme.onBackground, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-            Text("Voici la page telle que tout le monde la verra une fois le cadrage publié.", color = theme.secondary, fontSize = 12.sp)
+            Text(if (forPlayer) "Cadrage du lecteur" else "Aperçu du cadrage", color = theme.onBackground, fontSize = 16.sp,
+                fontWeight = FontWeight.Bold, modifier = Modifier.testTag("album-framing-heading"))
+            Text(if (forPlayer) "Une fois publié, le lecteur affichera ce cadrage pour les titres de cet album. La page d'album ne change pas."
+                else "Voici la page telle que tout le monde la verra une fois le cadrage publié.", color = theme.secondary, fontSize = 12.sp)
             if (error.isNotBlank()) Text(error, localize = false, color = androidx.compose.material3.MaterialTheme.colorScheme.error, fontSize = 12.sp)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 com.ketvoice.app.ui.common.GlassCapsuleButton("Annuler", null, onCancel, Modifier.weight(1f), enabled = !busy,
@@ -395,29 +419,9 @@ private fun AlbumFramingBar(busy: Boolean, error: String, hasPublished: Boolean,
                 com.ketvoice.app.ui.common.GlassCapsuleButton(if (busy) "Envoi…" else "Publier", null, onPublish, Modifier.weight(1f),
                     prominent = true, enabled = !busy, tag = "album-framing-publish", minHeight = 48.dp)
             }
-            if (hasPublished) Text("Revenir à l'affichage par défaut", color = theme.accent, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
+            if (hasPublished) Text(if (forPlayer) "Suivre le cadrage de la page d'album" else "Revenir à l'affichage par défaut", color = theme.accent, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.clip(RoundedCornerShape(12.dp)).clickable(enabled = !busy, role = Role.Button, onClick = onDefault)
                     .heightIn(min = 44.dp).wrapContentHeight(Alignment.CenterVertically).padding(horizontal = 6.dp).testTag("album-framing-default"))
         }
     }
 }
-
-/**
- * Draws the picture at the size it has when it simply covers the box, whatever the box crops,
- * then moves it so that the rectangle of [frame] fills the box.
- */
-private fun Modifier.framedPicture(frame: com.ketvoice.app.data.Frame, aspect: Float, alpha: () -> Float = { 1f }): Modifier =
-    layout { measurable, constraints ->
-        val boxWidth = constraints.maxWidth; val boxHeight = constraints.maxHeight
-        val width = Framing.baseWidth(boxWidth.toFloat(), boxHeight.toFloat(), aspect).roundToInt().coerceIn(1, 8_192)
-        val height = (width / aspect).roundToInt().coerceIn(1, 8_192)
-        val placeable = measurable.measure(androidx.compose.ui.unit.Constraints.fixed(width, height))
-        val layer = Framing.layer(Framing.contain(frame, aspect), boxWidth.toFloat(), boxHeight.toFloat(), aspect)
-        layout(boxWidth, boxHeight) {
-            placeable.placeWithLayer((boxWidth - width) / 2, (boxHeight - height) / 2) {
-                scaleX = layer.scaleX; scaleY = layer.scaleY; rotationZ = layer.rotation
-                translationX = layer.translationX; translationY = layer.translationY
-                this.alpha = alpha()
-            }
-        }
-    }

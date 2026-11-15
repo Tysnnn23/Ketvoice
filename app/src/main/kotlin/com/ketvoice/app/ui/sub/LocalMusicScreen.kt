@@ -1,5 +1,6 @@
 package com.ketvoice.app.ui.sub
 
+import com.ketvoice.app.theme.pageBackground
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -109,7 +110,7 @@ fun LocalMusicScreen() {
     val shown = remember(matching, sort, group) { sortLocal(group?.tracks ?: matching, sort) }
     val showTitles = view == 0 || group != null
 
-    Column(Modifier.fillMaxSize().background(theme.background).statusBarsPadding()) {
+    Column(Modifier.fillMaxSize().pageBackground(theme).statusBarsPadding()) {
         Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             GlassBackButton { AppUi.closeOverlay() }
             Spacer(Modifier.width(14.dp))

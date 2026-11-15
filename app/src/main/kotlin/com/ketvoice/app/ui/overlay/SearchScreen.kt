@@ -1,5 +1,6 @@
 package com.ketvoice.app.ui.overlay
 
+import com.ketvoice.app.theme.pageBackground
 import com.ketvoice.app.ui.motion.captureRevealOrigin
 import com.ketvoice.app.ui.motion.rememberRevealOrigin
 
@@ -181,7 +182,7 @@ fun SearchScreen() {
     Column(
         Modifier
             .fillMaxSize()
-            .background(th.background)
+            .pageBackground(th)
             .verticalScroll(rememberScrollState())
             .statusBarsPadding()
             .padding(top = 12.dp)

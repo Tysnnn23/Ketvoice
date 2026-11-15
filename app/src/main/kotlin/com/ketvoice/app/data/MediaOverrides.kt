@@ -43,7 +43,11 @@ data class MediaOverride(
     val updatedAt: String = "",
     val frame: Frame? = null,
     /** The owner switched the Canvas off for this title or album. */
-    val canvasOff: Boolean = false
+    val canvasOff: Boolean = false,
+    /** How the music player alone frames this album's artwork; null = as the album page does. */
+    val playerFrame: Frame? = null,
+    /** The Canvas in the music player alone: true = shown, false = hidden, null = as the album page does. */
+    val playerCanvas: Boolean? = null
 ) {
     val id: String get() = "$kind:$key"
 }
@@ -133,6 +137,26 @@ object MediaOverrides {
         return album != null && album.canvas == null && album.canvasOff
     }
 
+    /**
+     * The music player's own say on the Canvas of this title, else of its album; without one
+     * the player does what the album page does.
+     */
+    fun canvasHiddenInPlayer(track: Track): Boolean {
+        if (state.value.isEmpty()) return false
+        val choice = track(track)?.playerCanvas ?: get(ALBUM, albumKeyFor(track))?.playerCanvas
+        return if (choice != null) !choice else canvasDisabled(track)
+    }
+
+    /** Nothing shows this title's Canvas, neither the album page nor the player: it is not even fetched. */
+    fun canvasUnused(track: Track): Boolean = canvasDisabled(track) && canvasHiddenInPlayer(track)
+
+    /** How the music player frames the artwork of this title: its own framing of the album, else the album page's. */
+    fun playerFrame(track: Track): Frame? {
+        if (state.value.isEmpty()) return null
+        val album = get(ALBUM, albumKeyFor(track)) ?: return null
+        return album.playerFrame ?: album.frame
+    }
+
     fun albumCover(title: String, artist: String, fallback: String?): String? =
         if (state.value.isEmpty()) fallback else album(title, artist)?.cover ?: fallback
 
@@ -163,15 +187,20 @@ object MediaOverrides {
         val kind = row.optString("kind").takeIf { it in setOf(TRACK, ALBUM, ARTIST) } ?: return null
         val key = row.optString("key").takeIf { it.isNotBlank() && it.length <= 160 } ?: return null
         // Older framings (a zoom and an offset) carry no rectangle and are left out.
-        val frame = row.optJSONObject("frame")?.let { f ->
+        fun rectangle(f: JSONObject?): Frame? {
+            f ?: return null
             val w = f.optDouble("w", Double.NaN).toFloat(); val h = f.optDouble("h", Double.NaN).toFloat()
-            if (w.isNaN() || h.isNaN() || w <= 0f || h <= 0f) null
+            return if (w.isNaN() || h.isNaN() || w <= 0f || h <= 0f) null
             else Frame(f.optDouble("cx", 0.0).toFloat(), f.optDouble("cy", 0.0).toFloat(), w, h,
                 f.optDouble("rotation", 0.0).toFloat(), f.optBoolean("flip", false)).clamped()
         }
+        val player = row.optJSONObject("player")
+        val playerCanvas = when (player?.optString("canvas")) { "on" -> true; "off" -> false; else -> null }
         val item = MediaOverride(kind, key, row.optString("label"), url("coverURL"), url("canvasURL"), url("heroURL"),
-            row.optString("updatedAt"), frame, row.optBoolean("canvasOff", false))
-        return item.takeIf { it.cover != null || it.canvas != null || it.hero != null || it.frame != null || it.canvasOff }
+            row.optString("updatedAt"), rectangle(row.optJSONObject("frame")), row.optBoolean("canvasOff", false),
+            rectangle(player?.optJSONObject("frame")), playerCanvas)
+        return item.takeIf { it.cover != null || it.canvas != null || it.hero != null || it.frame != null || it.canvasOff ||
+            it.playerFrame != null || it.playerCanvas != null }
     }
 
     internal fun encode(items: Collection<MediaOverride>): String = JSONObject().put("overrides", JSONArray().apply {
@@ -180,7 +209,10 @@ object MediaOverrides {
                 .put("coverURL", o.cover ?: JSONObject.NULL).put("canvasURL", o.canvas ?: JSONObject.NULL)
                 .put("heroURL", o.hero ?: JSONObject.NULL).put("updatedAt", o.updatedAt)
                 .put("canvasOff", o.canvasOff)
-                .put("frame", o.frame?.let(::frameJson) ?: JSONObject.NULL))
+                .put("frame", o.frame?.let(::frameJson) ?: JSONObject.NULL)
+                .put("player", if (o.playerFrame == null && o.playerCanvas == null) JSONObject.NULL else JSONObject()
+                    .put("frame", o.playerFrame?.let(::frameJson) ?: JSONObject.NULL)
+                    .put("canvas", o.playerCanvas?.let { if (it) "on" else "off" } ?: JSONObject.NULL)))
         }
     }).toString()
 
@@ -213,7 +245,7 @@ object MediaOverrides {
         val before = state.value
         state.value = next
         context?.getSharedPreferences(PREFS, Context.MODE_PRIVATE)?.edit()?.putString("json", encode(next.values))?.apply()
-        if (before.values.map { it.canvas to it.canvasOff } != next.values.map { it.canvas to it.canvasOff }) {
+        if (before.values.map { Triple(it.canvas, it.canvasOff, it.playerCanvas) } != next.values.map { Triple(it.canvas, it.canvasOff, it.playerCanvas) }) {
             com.ketvoice.app.player.Player.state.value.current?.let { scope.launch { CanvasRepo.resolve(it) } }
         }
     }

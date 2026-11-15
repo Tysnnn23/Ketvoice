@@ -101,7 +101,9 @@ fun FullPlayerScreen(
     val canvas by CanvasRepo.paths.collectAsState()
     val canvasExcluded by CanvasRepo.excluded.collectAsState()
     // Exclusion par morceau (menu •••) : pochette statique uniquement.
-    val canvasPath = canvas[track.id]?.takeIf { track.id !in canvasExcluded && !com.ketvoice.app.data.MediaOverrides.canvasDisabled(track) }
+    val canvasPath = canvas[track.id]?.takeIf { track.id !in canvasExcluded && !com.ketvoice.app.data.MediaOverrides.canvasHiddenInPlayer(track) }
+    // How the owner framed this album's artwork for the player (or for its page, which the player follows).
+    val artworkFrame = com.ketvoice.app.data.MediaOverrides.playerFrame(track)
     // Only a verified portrait 9:16 clip can enter the full-window mode.
     var canvasFocus by remember(track.id, canvasPath) { mutableStateOf(false) }
     var failedCanvas by remember(canvasPath) { mutableStateOf(false) }
@@ -391,7 +393,7 @@ fun FullPlayerScreen(
                         } else Modifier)) {
                         ArtworkCanvas(track, if (canvasFocus || panoramicCanvasActive(canvasPath)) null else canvasPath,
                             state.isPlaying && !canvasFocus, Modifier.fillMaxSize().trackSwipeContent(trackSwipe), depth = true,
-                            onCanvasFailure = { failedCanvas = true })
+                            onCanvasFailure = { failedCanvas = true }, frame = artworkFrame)
                     }
                     Text("Lecture depuis ${track.artist}", color = Color(0xFFCBCDD6), fontSize = 10.sp,
                         fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis,
@@ -460,6 +462,9 @@ fun FullPlayerScreen(
                                 Text("${lyrics.source.ifBlank { "Recherche des paroles…" }} · ${lyrics.syncDescription()}", color = Color(0xFFB5B5C0), fontSize = 12.sp,
                                     maxLines = 1, overflow = TextOverflow.Ellipsis,
                                     modifier = Modifier.clickable { sheet = "sources" })
+                            } else if (page == PlayerPage.QUEUE && AppSettings.automix.value) {
+                                // On the queue this line says what Ketmix prepares; it never covers the list.
+                                AutomixStatusLine(Modifier.fillMaxWidth(), fontSize = 12.sp, glyph = true)
                             } else LyricsPreviewLine { navigate(PlayerPage.LYRICS) }
                         }
                         ScrubBar(state.durationMs, Modifier.fillMaxWidth(), onSeek = Player::seekTo)

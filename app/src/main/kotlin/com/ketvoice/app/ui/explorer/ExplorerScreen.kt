@@ -1,5 +1,6 @@
 package com.ketvoice.app.ui.explorer
 
+import com.ketvoice.app.theme.pageBackground
 import com.ketvoice.app.ui.common.asHeading
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -59,7 +60,7 @@ fun ExplorerScreen() {
     LaunchedEffect(attempt) { loading = true; genres = CatalogRepo.genres(); loading = false }
     // The chart loads beside the genres and never blocks them.
     LaunchedEffect(attempt) { chart = CatalogRepo.chart() }
-    Column(Modifier.fillMaxSize().background(theme.background).statusBarsPadding()) {
+    Column(Modifier.fillMaxSize().pageBackground(theme).statusBarsPadding()) {
         Row(Modifier.fillMaxWidth().padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
             Text("Explorer", color = theme.onBackground, fontSize = 32.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f).asHeading())
             if (!layout.hasRail) Box(Modifier.size(DesignTokens.Space.touch).clickable { AppUi.showAccount.value = true },

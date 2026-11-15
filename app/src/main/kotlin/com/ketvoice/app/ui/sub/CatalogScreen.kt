@@ -1,5 +1,6 @@
 package com.ketvoice.app.ui.sub
 
+import com.ketvoice.app.theme.pageBackground
 import com.ketvoice.app.ui.common.trackRowClick
 import com.ketvoice.app.ui.common.SwipeTrackActions
 import androidx.compose.foundation.background
@@ -101,7 +102,7 @@ fun CatalogScreen(request: CatalogRequest? = AppUi.catalogRequest.value) {
     // interface language. A genre or an album keeps the name the catalogue gave it.
     val appNamed = request.kind in listOf("favorites", "history", "all", "mix")
     val shownTitle = if (appNamed) AppText.t(request.title) else request.title
-    Column(Modifier.fillMaxSize().background(theme.background).statusBarsPadding()) {
+    Column(Modifier.fillMaxSize().pageBackground(theme).statusBarsPadding()) {
         Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             GlassBackButton { AppUi.closeOverlay() }
             Spacer(Modifier.width(14.dp))

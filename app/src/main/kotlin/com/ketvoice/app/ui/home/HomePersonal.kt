@@ -1,6 +1,7 @@
 package com.ketvoice.app.ui.home
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -23,6 +24,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ketvoice.app.data.AppSettings
+import com.ketvoice.app.data.AppText
 import com.ketvoice.app.data.CatalogRequest
 import com.ketvoice.app.data.Downloader
 import com.ketvoice.app.data.ListeningHistory
@@ -93,32 +95,51 @@ internal fun HomeShortcuts(modifier: Modifier = Modifier) {
     val favorites = AppSettings.favoriteIds.value
     val favoriteTracks = remember(known, favorites) { known.filter { it.id in favorites } }
     if (known.isEmpty() && recent.isEmpty() && downloads.isEmpty()) return
-    LazyRow(modifier.testTag("home-shortcuts"), contentPadding = PaddingValues(horizontal = 18.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        if (known.size >= 4) item {
-            Shortcut(KetIcons.Shuffle, "Lecture aléatoire") { Player.playShuffled(known) }
-        }
-        if (favoriteTracks.isNotEmpty()) item {
-            Shortcut(KetIcons.Heart, "Favoris") { AppUi.openCatalog(CatalogRequest("favorites", "favorites", "Favoris")) }
-        }
-        if (downloads.isNotEmpty()) item {
-            Shortcut(KetIcons.Download, "Hors ligne") { AppUi.openDownloads() }
-        }
+    fun count(n: Int) = AppText.t(if (n == 1) "1 titre" else "$n titres")
+    val tiles = buildList {
+        if (known.size >= 4) add(ShortcutTile(KetIcons.Shuffle, "Aléatoire", count(known.size)) { Player.playShuffled(known) })
+        if (favoriteTracks.isNotEmpty()) add(ShortcutTile(KetIcons.Heart, "Favoris", count(favoriteTracks.size)) {
+            AppUi.openCatalog(CatalogRequest("favorites", "favorites", "Favoris"))
+        })
+        if (downloads.isNotEmpty()) add(ShortcutTile(KetIcons.Download, "Hors ligne", count(downloads.size)) { AppUi.openDownloads() })
         // Gated on the very list the history page shows.
-        if (recent.isNotEmpty()) item {
-            Shortcut(KetIcons.Clock, "Historique") { AppUi.openCatalog(CatalogRequest("history", "history", "Historique")) }
+        if (recent.isNotEmpty()) add(ShortcutTile(KetIcons.Clock, "Historique", count(recent.size)) {
+            AppUi.openCatalog(CatalogRequest("history", "history", "Historique"))
+        })
+    }
+    if (tiles.isEmpty()) return
+    BoxWithConstraints(modifier.fillMaxWidth().padding(horizontal = 18.dp).testTag("home-shortcuts")) {
+        // Two side by side on a phone, all four in a row on a wide window.
+        val perRow = if (maxWidth >= 640.dp) 4 else 2
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            tiles.chunked(perRow).forEach { row ->
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    row.forEach { Shortcut(it, Modifier.weight(1f)) }
+                    repeat(perRow - row.size) { Spacer(Modifier.weight(1f)) }
+                }
+            }
         }
     }
 }
 
+private class ShortcutTile(val icon: ImageVector, val label: String, val caption: String, val onClick: () -> Unit)
+
+/** A shortcut as a tile: its sign on a patch of the accent, its name, and how much is behind it. */
 @Composable
-private fun Shortcut(icon: ImageVector, label: String, onClick: () -> Unit) {
+private fun Shortcut(tile: ShortcutTile, modifier: Modifier) {
     val theme = LocalTheme.current
-    Row(Modifier.heightIn(min = 48.dp).clip(RoundedCornerShape(24.dp)).background(theme.card)
-        .clickable(role = Role.Button, onClick = onClick).padding(horizontal = 16.dp),
-        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Icon(icon, null, tint = theme.accent, modifier = Modifier.size(18.dp))
-        Text(label, color = theme.onBackground, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+    val shape = RoundedCornerShape(18.dp)
+    Row(modifier.heightIn(min = 62.dp).clip(shape).background(theme.card)
+        .border(1.dp, theme.onBackground.copy(alpha = if (theme.isDark) .06f else .04f), shape)
+        .clickable(role = Role.Button, onClick = tile.onClick).padding(horizontal = 12.dp, vertical = 10.dp).testTag("home-shortcut"),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(11.dp)) {
+        Box(Modifier.size(38.dp).clip(RoundedCornerShape(12.dp)).background(theme.accent.copy(alpha = .16f)), contentAlignment = Alignment.Center) {
+            Icon(tile.icon, null, tint = theme.accent, modifier = Modifier.size(19.dp))
+        }
+        Column(Modifier.weight(1f)) {
+            Text(tile.label, color = theme.onBackground, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(tile.caption, localize = false, color = theme.secondary, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
     }
 }
 
@@ -148,10 +169,10 @@ private fun MixTile(card: MixCard) {
     val theme = LocalTheme.current
     val origin = rememberRevealOrigin()
     val title = mixTitle(card)
-    Column(Modifier.width(164.dp).captureRevealOrigin(origin).clickable(role = Role.Button) {
+    Column(Modifier.width(168.dp).captureRevealOrigin(origin).clickable(role = Role.Button) {
         AppUi.openCatalog(CatalogRequest("mix", card.id, title), origin.value)
     }.testTag("home-mix")) {
-        Box(Modifier.size(164.dp).clip(RoundedCornerShape(22.dp)).background(
+        Box(Modifier.size(168.dp).clip(RoundedCornerShape(24.dp)).background(
             Brush.linearGradient(listOf(theme.accent.copy(alpha = .55f), theme.card)))) {
             MixCollage(card.covers)
             // A soft floor so the label stays readable on any artwork.

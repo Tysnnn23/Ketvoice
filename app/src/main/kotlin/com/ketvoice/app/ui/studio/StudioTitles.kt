@@ -12,6 +12,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -37,6 +39,14 @@ internal fun canvasMark(track: Track): String? {
     }
 }
 
+/** What the owner decided for the music player alone, in a word for the title's row. */
+internal fun playerCanvasMark(track: Track): String? =
+    when (MediaOverrides.track(track)?.playerCanvas ?: MediaOverrides.get(MediaOverrides.ALBUM, MediaOverrides.albumKeyFor(track))?.playerCanvas) {
+        true -> "Affiché dans le lecteur"
+        false -> "Masqué dans le lecteur"
+        null -> null
+    }
+
 /** The titles that an action reaches: the ones ticked, or every title of the album when none is. */
 internal fun canvasTargets(tracks: List<Track>, selected: Set<String>): List<Track> =
     (if (selected.isEmpty()) tracks else tracks.filter { it.id in selected }).distinctBy { MediaOverrides.keyFor(it) }
@@ -51,6 +61,8 @@ internal fun StudioTitleCanvas(state: StudioState, target: VisualTarget, rights:
     val theme = LocalTheme.current
     var selected by remember(target.key) { mutableStateOf(setOf<String>()) }
     var canvas by remember(target.key) { mutableStateOf<File?>(null) }
+    // Two modes: what everyone sees on the album page (the player follows it), or the music player alone.
+    var playerOnly by remember(target.key) { mutableStateOf(false) }
     val tracks = target.tracks
     val reached = canvasTargets(tracks, selected)
     val wholeAlbum = selected.isEmpty()
@@ -63,6 +75,12 @@ internal fun StudioTitleCanvas(state: StudioState, target: VisualTarget, rights:
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(theme.card).padding(16.dp).testTag("studio-title-canvas"),
         verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text("Canvas des titres", color = theme.onBackground, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.testTag("studio-canvas-scope")) {
+            ScopeChip("Page d'album", !playerOnly, "studio-canvas-scope-page") { playerOnly = false }
+            ScopeChip("Lecteur", playerOnly, "studio-canvas-scope-player") { playerOnly = true }
+        }
+        Text(if (playerOnly) "Ne change que ce que montre le lecteur : la page d'album reste comme elle est."
+            else "Change la page d'album ; le lecteur la suit, sauf s'il a son propre réglage.", color = theme.secondary, fontSize = 12.sp)
         Text(if (wholeAlbum) "Aucun titre choisi : l'action vise tout l'album."
             else if (selected.size == 1) "1 titre choisi" else "${selected.size} titres choisis", color = theme.secondary, fontSize = 12.sp,
             modifier = Modifier.testTag("studio-title-count"))
@@ -83,11 +101,29 @@ internal fun StudioTitleCanvas(state: StudioState, target: VisualTarget, rights:
                 Text("${index + 1}", localize = false, color = theme.secondary, fontSize = 12.sp, modifier = Modifier.width(22.dp))
                 Text(track.title, localize = false, color = theme.onBackground, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f))
-                canvasMark(track)?.let { StudioChip(it) }
+                (if (playerOnly) playerCanvasMark(track) else canvasMark(track))?.let { StudioChip(it) }
             }
         }
-        CanvasEditor(state, canvas, onChosen = { file -> canvas?.delete(); canvas = file })
         val enabled = !state.busy && rights && (reached.isNotEmpty() || wholeAlbum)
+        if (playerOnly) {
+            fun player(done: String, change: PublicationApi.PlayerChange) = run(done) { items ->
+                if (wholeAlbum) PublicationApi.saveOverride(MediaOverrides.ALBUM, target.key, target.label, player = change)
+                else PublicationApi.saveOverrides(MediaOverrides.TRACK, items, player = change)
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                GlassCapsuleButton("Masquer le Canvas dans le lecteur", null, {
+                    player("Canvas masqué dans le lecteur", PublicationApi.PlayerChange(canvas = false))
+                }, Modifier.fillMaxWidth(), enabled = enabled, tag = "studio-player-off", minHeight = 48.dp)
+                GlassCapsuleButton("Afficher le Canvas dans le lecteur", null, {
+                    player("Canvas affiché dans le lecteur", PublicationApi.PlayerChange(canvas = true))
+                }, Modifier.fillMaxWidth(), enabled = enabled, tag = "studio-player-on", minHeight = 48.dp)
+                GlassCapsuleButton("Suivre la page d'album", KetIcons.Refresh, {
+                    player("Le lecteur suit la page d'album", PublicationApi.PlayerChange(followCanvas = true))
+                }, Modifier.fillMaxWidth(), enabled = enabled, tag = "studio-player-follow", minHeight = 48.dp)
+            }
+            return@Column
+        }
+        CanvasEditor(state, canvas, onChosen = { file -> canvas?.delete(); canvas = file })
         GlassCapsuleButton("Appliquer le Canvas choisi", null, {
             val file = canvas ?: return@GlassCapsuleButton
             run("Canvas appliqué") { items ->
@@ -110,5 +146,20 @@ internal fun StudioTitleCanvas(state: StudioState, target: VisualTarget, rights:
                 }
             }, Modifier.fillMaxWidth(), enabled = enabled, tag = "studio-title-restore", minHeight = 48.dp)
         }
+    }
+}
+
+/** One of the two modes of the Canvas actions. */
+@Composable
+private fun ScopeChip(label: String, selected: Boolean, tag: String, onClick: () -> Unit) {
+    val theme = LocalTheme.current
+    val state = AppText.t(if (selected) "Sélectionné" else "Non sélectionné")
+    Box(Modifier.clip(RoundedCornerShape(999.dp))
+        .background(if (selected) theme.accent.copy(alpha = .20f) else theme.onBackground.copy(alpha = .07f))
+        .clickable(role = Role.Tab, onClick = onClick)
+        .semantics { stateDescription = state }
+        .heightIn(min = 44.dp).padding(horizontal = 16.dp).testTag(tag), contentAlignment = Alignment.Center) {
+        Text(label, color = if (selected) theme.accent else theme.onBackground, fontSize = 13.sp,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium, maxLines = 1)
     }
 }

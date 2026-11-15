@@ -1,6 +1,10 @@
 package com.ketvoice.app.theme
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
@@ -38,6 +42,39 @@ data class KetTheme(
 }
 
 val LocalTheme = staticCompositionLocalOf<KetTheme> { KetTheme.light() }
+
+/** How strong the glow of a dark page is at its brightest, as a share of the accent. */
+internal object PageGlow {
+    const val MAIN = .16f
+    const val SIDE = .07f
+    /** The colour of the second, smaller glow: the accent a third of the way round the wheel, so the page is not one colour. */
+    fun companion(accent: Color): Color {
+        val hsv = FloatArray(3)
+        android.graphics.Color.colorToHSV(android.graphics.Color.argb(255, (accent.red * 255).toInt(), (accent.green * 255).toInt(),
+            (accent.blue * 255).toInt()), hsv)
+        hsv[0] = (hsv[0] + 250f) % 360f
+        hsv[1] = (hsv[1] * .85f).coerceIn(0f, 1f)
+        return Color(android.graphics.Color.HSVToColor(hsv))
+    }
+}
+
+/**
+ * The background of a page. Light, it is the plain page colour. Dark, the page is lit from
+ * above by two soft glows of the accent that stay in place while the content scrolls: depth
+ * without a single line, and the colour of the app (or of the cover being played) on every
+ * screen. Two gradients drawn behind the content; nothing is animated.
+ */
+fun androidx.compose.ui.Modifier.pageBackground(theme: KetTheme): androidx.compose.ui.Modifier =
+    if (!theme.isDark) background(theme.background) else drawBehind {
+        drawRect(theme.background)
+        val reach = maxOf(size.width, size.height * .5f)
+        drawRect(Brush.radialGradient(
+            0f to theme.accent.copy(alpha = PageGlow.MAIN), .45f to theme.accent.copy(alpha = PageGlow.MAIN * .3f), 1f to Color.Transparent,
+            center = Offset(size.width * .12f, -size.height * .04f), radius = reach * 1.05f))
+        drawRect(Brush.radialGradient(
+            0f to PageGlow.companion(theme.accent).copy(alpha = PageGlow.SIDE), 1f to Color.Transparent,
+            center = Offset(size.width * 1.02f, size.height * .10f), radius = reach * .8f))
+    }
 
 object T {
     val huge = DesignTokens.Typography.display
@@ -80,13 +117,13 @@ fun KetvoiceTheme(
                 primary = accent,
                 onPrimary = if (accent.luminance() > .179f) Color.Black else Color.White,
                 surfaceContainerLowest = th.background,
-                surfaceContainerLow = Color(0xFF13171C),
+                surfaceContainerLow = DesignTokens.Color.sunkenDark,
                 surfaceContainer = th.card,
-                surfaceContainerHigh = Color(0xFF242A32),
-                surfaceContainerHighest = Color(0xFF303741),
+                surfaceContainerHigh = DesignTokens.Color.raisedDark,
+                surfaceContainerHighest = DesignTokens.Color.highestDark,
                 surfaceTint = Color.Transparent,
-                outline = Color(0xFF717B89),
-                outlineVariant = Color(0xFF353D48),
+                outline = DesignTokens.Color.outlineDark,
+                outlineVariant = DesignTokens.Color.outlineSoftDark,
                 onSurface = Palette.White,
                 onSurfaceVariant = Palette.SecondaryTextDark
             ) else lightColorScheme(

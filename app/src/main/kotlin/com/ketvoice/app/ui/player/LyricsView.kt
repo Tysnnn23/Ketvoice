@@ -194,7 +194,7 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
                     verticalArrangement = Arrangement.spacedBy(25.dp)) {
                     if (lyrics.isTimed) item(key = "intro-${track.id}") {
 
-                        Box(Modifier.height(if (firstLineMs > 0) 32.dp else 0.dp)) {
+                        Box(Modifier.height(if (firstLineMs > 0) 36.dp else 0.dp)) {
                             if (intro) IntroDots(firstLineMs)
                         }
                     }
@@ -526,32 +526,48 @@ internal fun segmentProgress(now: Long, start: Long, end: Long): Float = when {
     }
 }
 
+/**
+ * The wait before the first line: three dots that fill one after the other, breathe while
+ * they wait, then swell and vanish as the line arrives. Position and clock are read while
+ * drawing only, so the dots move on every frame without recomposing the lyrics.
+ */
 @Composable
 internal fun IntroDots(firstLineMs: Long) {
-    val position by Player.positionMs.collectAsState()
-    val lit = LyricsMotion.litDots(LyricsOffsets.adjustedPosition(position, LocalLyricsOffset.current), firstLineMs)
-
-    // Plain white dots: no halo, no ripple, no drift.
-    // Anchored to the left edge of the screen, slightly tightened spacing.
-    Box(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 34.dp, horizontal = 6.dp),
-        contentAlignment = Alignment.CenterStart
-    ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            repeat(3) { index ->
-                val alpha by animateFloatAsState(
-                    targetValue = if (index < lit) 1f else .28f,
-                    animationSpec = tween(Motion.duration(380)),
-                    label = "intro-dot-$index"
-                )
-                Canvas(modifier = Modifier.size(12.dp)) {
-                    drawCircle(
-                        color = Color.White.copy(alpha = alpha),
-                        radius = 6.dp.toPx(),
-                        center = Offset(size.width / 2f, size.height / 2f)
-                    )
-                }
-            }
+    val offset = LocalLyricsOffset.current
+    val reduced = Motion.reduced
+    val shown = remember { mutableLongStateOf(LyricsOffsets.adjustedPosition(Player.positionMs.value, offset)) }
+    val clock = remember { mutableLongStateOf(0L) }
+    LaunchedEffect(offset, reduced) {
+        var anchor = Player.positionMs.value
+        var anchorAt = -1L
+        var origin = -1L
+        while (true) withFrameMillis { now ->
+            if (origin < 0) origin = now
+            val position = Player.positionMs.value
+            if (position != anchor || anchorAt < 0) { anchor = position; anchorAt = now }
+            // Between two position reports the title keeps playing: the fill does not move in steps.
+            val ahead = if (!reduced && Player.state.value.isPlaying) (now - anchorAt).coerceIn(0L, 500L) else 0L
+            shown.longValue = LyricsOffsets.adjustedPosition(anchor + ahead, offset)
+            clock.longValue = now - origin
+        }
+    }
+    Canvas(Modifier.padding(start = 6.dp).size(width = 68.dp, height = 36.dp).testTag("intro-dots")) {
+        val position = shown.longValue
+        val elapsed = clock.longValue
+        val exit = if (reduced) 0f else LyricsMotion.dotExit(position, firstLineMs)
+        val enter = if (reduced) 1f else LyricsMotion.enter(elapsed)
+        val group = if (reduced) 1f else LyricsMotion.exitScale(exit) * (.6f + .4f * enter)
+        val fade = LyricsMotion.exitAlpha(exit) * enter
+        val radius = 6.dp.toPx()
+        val gap = 20.dp.toPx()
+        val middle = Offset(radius * 1.3f + gap, size.height / 2f)
+        for (index in 0 until 3) {
+            val fill = if (reduced) (if (index < LyricsMotion.litDots(position, firstLineMs)) 1f else 0f)
+                else LyricsMotion.dotFill(index, position, firstLineMs)
+            val breath = if (reduced) 1f else LyricsMotion.breath(elapsed, index)
+            drawCircle(Color.White.copy(alpha = ((.26f + .74f * fill) * fade).coerceIn(0f, 1f)),
+                radius * group * breath * (.84f + .16f * fill),
+                Offset(middle.x + (index - 1) * gap * group, middle.y))
         }
     }
 }

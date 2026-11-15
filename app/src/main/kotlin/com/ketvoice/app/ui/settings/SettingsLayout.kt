@@ -1,5 +1,6 @@
 package com.ketvoice.app.ui.settings
 
+import com.ketvoice.app.theme.pageBackground
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.background
@@ -39,7 +40,7 @@ internal fun SettingsLayout(category: SettingsCategory?, onBack: () -> Unit, con
     var headerHeight by remember(category) { mutableIntStateOf(0) }
     val inset = with(density) { headerHeight.toDp() }.coerceAtLeast(
         WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 72.dp)
-    Box(Modifier.fillMaxSize().background(theme.background), contentAlignment = Alignment.TopCenter) {
+    Box(Modifier.fillMaxSize().pageBackground(theme), contentAlignment = Alignment.TopCenter) {
         CompositionLocalProvider(LocalSettingsCategory provides category, LocalSettingsTopInset provides inset) {
             BackdropCapture(background, Modifier.widthIn(max = 840.dp).fillMaxSize()) {
                 content()

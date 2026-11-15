@@ -3,6 +3,7 @@ package com.ketvoice.app.ui
 import com.ketvoice.app.data.Frame
 import com.ketvoice.app.data.MediaOverride
 import com.ketvoice.app.data.MediaOverrides
+import com.ketvoice.app.ui.sub.AlbumPresentation
 import com.ketvoice.app.ui.sub.Framing
 import org.junit.Assert.*
 import org.junit.Test
@@ -119,6 +120,69 @@ class FramingTest {
         near(square.w, square.h); near(.6f, square.w); near(-.25f, square.cx - square.w / 2f); near(-.25f, square.cy - square.h / 2f)
         val fromEdge = Framing.drag(frame, Framing.Grab(0, -1), 0f, -.1f, 1f, square = true)
         near(.6f, fromEdge.w); near(.6f, fromEdge.h); near(0f, fromEdge.cx); near(.25f, fromEdge.cy + fromEdge.h / 2f)
+    }
+
+    @Test fun thePlayersRectangleKeepsTheShapeOfItsArtwork() {
+        val box = .85f
+        // A wide rectangle made for the page, as the player's artwork crops it: the largest part of that shape, same centre.
+        val wide = Frame(.1f, -.05f, .8f, .4f)
+        val shaped = Framing.shaped(wide, box, 1f)
+        assertEquals(box, shaped.aspect, 1e-3f)
+        assertEquals(.4f, shaped.h, 1e-3f); assertEquals(.34f, shaped.w, 1e-3f)
+        assertEquals(.1f, shaped.cx, 1e-3f); assertEquals(-.05f, shaped.cy, 1e-3f)
+        // A tall one keeps its width instead.
+        assertEquals(.3f, Framing.shaped(Frame(0f, 0f, .3f, .9f), box, 1f).w, 1e-3f)
+        assertTrue(Framing.fits(Framing.shaped(Frame(.4f, .4f, .5f, .5f), box, 1f), 1f))
+        // Dragging an edge or a corner changes both sides together; the shape never moves.
+        var frame = Framing.default(9f / 16f, box)
+        assertEquals(box, frame.aspect, 1e-3f)
+        for ((grab, dx, dy) in listOf(Triple(Framing.Grab(1, 0), -.1f, 0f), Triple(Framing.Grab(0, 1), 0f, -.12f),
+            Triple(Framing.Grab(-1, -1), .05f, .08f), Triple(Framing.Grab(1, 1), -.2f, .01f))) {
+            val next = Framing.drag(frame, grab, dx, dy, 9f / 16f, box)
+            assertEquals("$grab", box, next.aspect, 1e-3f)
+            assertTrue(Framing.fits(next, 9f / 16f))
+            assertTrue("$grab changed something", next != frame)
+            frame = next
+        }
+        // The right edge pulled in by 0.1: the left edge stays where it was.
+        val before = Framing.default(1f, box)
+        val pulled = Framing.drag(before, Framing.Grab(1, 0), -.1f, 0f, 1f, box)
+        assertEquals(before.w - .1f, pulled.w, 1e-4f)
+        assertEquals(before.cx - before.w / 2f, pulled.cx - pulled.w / 2f, 1e-4f)
+        // The square of the page's tools is the same lock with a shape of one.
+        assertEquals(Framing.drag(Frame(w = .5f, h = .5f), Framing.Grab(1, 1), .1f, .06f, 1f, square = true),
+            Framing.drag(Frame(w = .5f, h = .5f), Framing.Grab(1, 1), .1f, .06f, 1f, 1f))
+        // Moving it is free.
+        assertEquals(.05f, Framing.drag(Frame(w = .4f, h = .4f / box), Framing.Grab(0, 0), .05f, 0f, 1f, box).cx, 1e-5f)
+    }
+
+    @Test fun anAlbumPageTakesTheColourOfWhatItsHeroShows() {
+        // The Canvas plays: its colour; until a frame of it is read, the cover's rather than none.
+        assertEquals("canvas", AlbumPresentation.pageAccent(true, "canvas", "cover"))
+        assertEquals("cover", AlbumPresentation.pageAccent(true, null, "cover"))
+        // The Canvas is off, or was removed: the cover's, whatever was read of a Canvas before.
+        assertEquals("cover", AlbumPresentation.pageAccent(false, "canvas", "cover"))
+        assertNull(AlbumPresentation.pageAccent(false, "canvas", null))
+        // The player's artwork: the width over 55 % of the height on a phone, a square on a wide or lying window.
+        assertEquals(400f / (900f * .55f), AlbumPresentation.playerArtworkAspect(400f, 900f), 1e-4f)
+        assertEquals(1f, AlbumPresentation.playerArtworkAspect(1280f, 800f), 0f)
+        assertEquals(1f, AlbumPresentation.playerArtworkAspect(800f, 1280f), 0f)
+        assertEquals(1f, AlbumPresentation.playerArtworkAspect(400f, 0f), 0f)
+    }
+
+    @Test fun aWeekIsSevenBarsAndRecentTitlesFillTheWidth() {
+        val today = java.time.LocalDate.of(2026, 11, 15)
+        var days = com.ketvoice.app.data.ListeningWeek.addTime(emptyMap(), today, 3_000L)
+        days = com.ketvoice.app.data.ListeningWeek.addTime(days, today.minusDays(2), 9_000L)
+        days = com.ketvoice.app.data.ListeningWeek.addTime(days, today.minusDays(8), 99_000L)
+        // Oldest first, today last; a day outside the week is not part of it.
+        assertArrayEquals(longArrayOf(0, 0, 0, 0, 9_000, 0, 3_000), com.ketvoice.app.data.ListeningWeek.daily(days, today))
+        assertEquals(1f, com.ketvoice.app.data.ListeningWeek.barShare(9_000, 9_000), 0f)
+        assertEquals(.4f, com.ketvoice.app.data.ListeningWeek.barShare(3_000, 9_000), 1e-4f)
+        assertEquals("A day without music keeps a stub", .1f, com.ketvoice.app.data.ListeningWeek.barShare(0, 9_000), 0f)
+        assertEquals(.1f, com.ketvoice.app.data.ListeningWeek.barShare(0, 0), 0f)
+        assertEquals(2, com.ketvoice.app.ui.home.recentColumns(364f)); assertEquals(2, com.ketvoice.app.ui.home.recentColumns(200f))
+        assertEquals(3, com.ketvoice.app.ui.home.recentColumns(600f)); assertEquals(4, com.ketvoice.app.ui.home.recentColumns(1400f))
     }
 
     @Test fun twoFingersGrowAndShrinkAroundTheCentre() {

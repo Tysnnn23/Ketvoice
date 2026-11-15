@@ -59,6 +59,14 @@ internal object ListeningWeek {
         return WeekSummary(week.sumOf { it.ms }, plays.values.sum(), topTrack, topArtist)
     }
 
+    /** Listening time of each of the last seven days, oldest first, [today] last. */
+    fun daily(days: Map<String, DayStat>, today: LocalDate): LongArray =
+        LongArray(7) { index -> days[key(today.minusDays((6 - index).toLong()))]?.ms?.coerceAtLeast(0L) ?: 0L }
+
+    /** Height of a day's bar as a share of the tallest: a day without music keeps a stub, so the week reads as seven days. */
+    fun barShare(ms: Long, longest: Long): Float =
+        if (longest <= 0L) .1f else (.1f + .9f * (ms.coerceIn(0L, longest).toFloat() / longest)).coerceIn(.1f, 1f)
+
     fun encode(days: Map<String, DayStat>): String = JSONObject().apply {
         days.forEach { (k, stat) -> put(k, JSONObject().put("ms", stat.ms).put("plays", JSONObject(stat.plays))) }
     }.toString()

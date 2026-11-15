@@ -1,5 +1,6 @@
 package com.ketvoice.app.ui.sub
 
+import com.ketvoice.app.theme.pageBackground
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -84,7 +85,7 @@ fun ReplayScreen() {
     var saving by remember { mutableStateOf(false) }
     var saved by remember { mutableStateOf(false) }
 
-    Column(Modifier.fillMaxSize().background(th.background).statusBarsPadding()) {
+    Column(Modifier.fillMaxSize().pageBackground(th).statusBarsPadding()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             GlassBackButton { AppUi.closeOverlay() }
             Spacer(Modifier.width(12.dp))

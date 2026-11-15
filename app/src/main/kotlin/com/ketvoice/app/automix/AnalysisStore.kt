@@ -6,7 +6,8 @@ import java.io.File
 import java.nio.ByteBuffer
 
 /** Feeds the sound of a deck played silently and fast into an [OnsetTracker], between two positions of a title. */
-internal class AnalysisTap(private val fromUs: Long, private val untilUs: Long) : PcmTap {
+internal class AnalysisTap(private val fromUs: Long, private val untilUs: Long, private val withKey: Boolean = false,
+                           private val thorough: Boolean = false) : PcmTap {
     private var tracker: OnsetTracker? = null
     private var firstUs = 0L
     private var expectedUs = 0L
@@ -22,7 +23,7 @@ internal class AnalysisTap(private val fromUs: Long, private val untilUs: Long) 
         var current = tracker
         // A jump (the seek that starts the reading, or a rebuffer) starts the reading again.
         if (current == null || sampleRate != rate || kotlin.math.abs(positionUs - expectedUs) > 40_000L) {
-            current = OnsetTracker(sampleRate, channels)
+            current = OnsetTracker(sampleRate, channels, withKey)
             tracker = current; rate = sampleRate; firstUs = positionUs
         }
         current.accept16(buffer)
@@ -36,7 +37,29 @@ internal class AnalysisTap(private val fromUs: Long, private val untilUs: Long) 
         val read = tracker ?: return null
         // A reading that does not start where it was asked to is not trusted with positions.
         if (read.frames / read.fps < 6f || kotlin.math.abs(firstUs - fromUs) > 6_000_000L) return null
-        return BeatAnalysis.analyze(read.snapshot(), firstUs / 1000L)
+        return BeatAnalysis.analyze(read.snapshot(), firstUs / 1000L, thorough)
+    }
+}
+
+/**
+ * How much of the phone's processor the analysis of a title may take. The three settings
+ * read more or less of each title and look for more or less in it.
+ */
+internal enum class AnalysisDepth(val outroMs: Long, val introMs: Long, val key: Boolean, val thorough: Boolean) {
+    /** Tempo, beats and levels on short stretches: the least work, the least battery. */
+    Light(30_000L, 24_000L, key = false, thorough = false),
+    /** Longer stretches and the key of each title, so that keys that clash are not left to overlap. */
+    Balanced(45_000L, 40_000L, key = true, thorough = false),
+    /** The longest stretches, the key, and a check that the tempo holds: long mixes, on titles that allow them. */
+    Maximum(75_000L, 60_000L, key = true, thorough = true);
+
+    fun satisfiedBy(analysis: SegmentAnalysis, windowMs: Long, durationMs: Long): Boolean {
+        val wanted = if (durationMs > 0) minOf(windowMs, durationMs) else windowMs
+        return analysis.lengthMs >= wanted - 6_000L && (!key || analysis.key != MusicalKey.UNREAD)
+    }
+
+    companion object {
+        fun of(setting: Int): AnalysisDepth = when (setting) { 0 -> Light; 2 -> Maximum; else -> Balanced }
     }
 }
 
@@ -66,8 +89,14 @@ internal object AnalysisStore {
 
     private fun key(trackId: String, durationMs: Long, intro: Boolean) = "${if (intro) "i" else "o"}|${durationMs / 1000}|$trackId"
 
-    @Synchronized fun intro(trackId: String, durationMs: Long): SegmentAnalysis? = entries[key(trackId, durationMs, true)]
-    @Synchronized fun outro(trackId: String, durationMs: Long): SegmentAnalysis? = entries[key(trackId, durationMs, false)]
+    /**
+     * What was kept of a title's start or end, when it is as much as [depth] asks for: a
+     * stretch read by a lighter setting is read again rather than trusted for a finer mix.
+     */
+    @Synchronized fun intro(trackId: String, durationMs: Long, depth: AnalysisDepth = AnalysisDepth.Light): SegmentAnalysis? =
+        entries[key(trackId, durationMs, true)]?.takeIf { depth.satisfiedBy(it, depth.introMs, durationMs) }
+    @Synchronized fun outro(trackId: String, durationMs: Long, depth: AnalysisDepth = AnalysisDepth.Light): SegmentAnalysis? =
+        entries[key(trackId, durationMs, false)]?.takeIf { depth.satisfiedBy(it, depth.outroMs, durationMs) }
 
     @Synchronized fun put(trackId: String, durationMs: Long, intro: Boolean, analysis: SegmentAnalysis) {
         entries[key(trackId, durationMs, intro)] = analysis
@@ -94,6 +123,7 @@ internal object AnalysisStore {
         .put("s", a.startMs).put("l", a.lengthMs).put("b", a.bpm.toDouble()).put("p", a.beatAtMs).put("c", a.confidence.toDouble())
         .put("r", a.barOffset).put("d", a.loudnessDb.toDouble()).put("ss", a.soundStartMs).put("se", a.soundEndMs)
         .put("ri", a.riseMs).put("fa", a.fallMs).put("fo", a.fadeOut).put("he", a.hardEnding)
+        .put("k", a.key).put("ks", a.keyStrength.toDouble())
 
     internal fun decode(o: JSONObject?): SegmentAnalysis? {
         o ?: return null
@@ -106,6 +136,7 @@ internal object AnalysisStore {
             o.optInt("r", -1).coerceIn(-1, 3), o.optDouble("d", -90.0).toFloat(),
             o.optLong("ss", start).coerceIn(start, end), o.optLong("se", end).coerceIn(start, end),
             o.optLong("ri", start).coerceIn(start, end), o.optLong("fa", end).coerceIn(start, end),
-            o.optBoolean("fo"), o.optBoolean("he"))
+            o.optBoolean("fo"), o.optBoolean("he"),
+            o.optInt("k", MusicalKey.UNREAD).coerceIn(MusicalKey.UNREAD, 23), o.optDouble("ks", 0.0).toFloat().coerceIn(0f, 1f))
     }
 }

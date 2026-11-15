@@ -40,6 +40,8 @@ object AppSettings {
     val automixIntensity = mutableStateOf(1)
     /** Titles of an album played in order are mixed too (unless the album has no gap to mix over). */
     val automixAlbums = mutableStateOf(true)
+    /** How much of the processor Ketmix's analysis may take: 0 = light, 1 = balanced, 2 = maximum. */
+    val ketmixAnalysis = mutableStateOf(1)
     val lyricsSource = mutableStateOf("auto")
     val betterLyricsKey = mutableStateOf("")
     val lyricaUrl = mutableStateOf("")

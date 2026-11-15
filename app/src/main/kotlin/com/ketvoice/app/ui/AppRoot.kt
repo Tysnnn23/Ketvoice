@@ -1,5 +1,6 @@
 package com.ketvoice.app.ui
 
+import com.ketvoice.app.theme.pageBackground
 import androidx.compose.ui.input.pointer.pointerInput
 import android.os.Build
 import androidx.annotation.RequiresApi
@@ -183,7 +184,7 @@ fun AppRoot() {
                     backdrop = backdrop,
                     Modifier
                         .fillMaxSize()
-                        .background(th.background)
+                        .pageBackground(th)
                         .then(if (AppUi.showPlayer.value || AppUi.showAccount.value || AppUi.showPublisher.value ||
                             AppUi.trackMenuTrack.value != null || AppUi.playlistMenu.value != null ||
                             AppUi.addToPlaylist.value != null) Modifier.clearAndSetSemantics { } else Modifier)

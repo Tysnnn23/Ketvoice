@@ -1,5 +1,6 @@
 package com.ketvoice.app.ui.sub
 
+import com.ketvoice.app.theme.pageBackground
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
@@ -31,7 +32,7 @@ fun SimpleSubScreens(title: String, subtitle: String = "") {
     Column(
         Modifier
             .fillMaxSize()
-            .background(th.background)
+            .pageBackground(th)
     ) {
         Box(Modifier.padding(top = 48.dp, start = 14.dp, end = 16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {

@@ -192,4 +192,20 @@ class BeatAnalysisTest {
         assertEquals(n / 2f, magnitudes[37], 1f)
         assertTrue(magnitudes.filterIndexed { i, _ -> abs(i - 37) > 1 }.all { it < 1f })
     }
+
+    @Test fun aTempoThatDoesNotHoldIsNotTrustedForLongMixes() {
+        val rate = 22_050
+        // Steady: the thorough reading agrees with the plain one.
+        val steady = Synth.envelope(Synth.groove(rate, 40f, 120f), rate)
+        val plain = BeatAnalysis.analyze(steady, 0)
+        val checked = BeatAnalysis.analyze(steady, 0, thorough = true)
+        assertTrue(plain.hasBeat)
+        assertEquals(plain.confidence, checked.confidence, 0f)
+        assertEquals(plain.bpm, checked.bpm, 0f)
+        // A band that speeds up by 5 % half-way: each half has a clear tempo, but not the same one.
+        val drifting = Synth.envelope(Synth.groove(rate, 20f, 120f) + Synth.groove(rate, 20f, 126f), rate)
+        val loose = BeatAnalysis.analyze(drifting, 0)
+        val strict = BeatAnalysis.analyze(drifting, 0, thorough = true)
+        assertTrue("half the confidence at most (${loose.confidence} -> ${strict.confidence})", strict.confidence <= loose.confidence * .5f + 1e-6f)
+    }
 }

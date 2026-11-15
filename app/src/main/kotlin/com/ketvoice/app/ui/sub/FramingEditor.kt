@@ -36,6 +36,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -55,32 +56,72 @@ import kotlin.math.roundToInt
 /** How the rectangle may be shaped in the editor. */
 internal enum class FramingShape { Custom, Original, Square }
 
+/** What a framing is for: the album page everyone sees, or the music player alone. */
+internal enum class FramingScope { Page, Player }
+
 /**
  * Full-screen framing of an album's hero picture or Canvas, in the manner of a photo
  * editor: the whole picture on a dark stage, a rectangle with handles and a grid of
  * thirds over it, an angle wheel, a quarter turn, a mirror, three shapes, cancel and done.
  * What is inside the rectangle is what the album page will show.
+ *
+ * With [onPlayerDone] the screen has two modes: the album page, and the music player alone.
+ * In the player's mode the rectangle keeps the shape of the player's artwork ([playerBoxAspect]):
+ * what it holds is exactly what the player will show, and the album page is left as it is.
  */
 @Composable
 internal fun FramingEditor(track: Track?, cover: String?, canvas: String?, initial: Frame?, pageBoxAspect: Float,
-                           onCancel: () -> Unit, onDone: (Frame) -> Unit) {
+                           onCancel: () -> Unit, onDone: (Frame) -> Unit,
+                           playerInitial: Frame? = null, playerBoxAspect: Float = 1f, startScope: FramingScope = FramingScope.Page,
+                           onPlayerDone: ((Frame) -> Unit)? = null) {
     val accent = LocalTheme.current.accent
     val haptic = rememberHaptics()
     val density = LocalDensity.current
     // A Canvas is upright, a cover square, until the real picture says otherwise.
     var aspect by remember { mutableFloatStateOf(if (canvas != null) 9f / 16f else 1f) }
-    var frame by remember { mutableStateOf(initial?.let { Framing.contain(it, aspect) } ?: Framing.default(aspect, pageBoxAspect)) }
+    var scope by remember { mutableStateOf(if (onPlayerDone != null) startScope else FramingScope.Page) }
+    // What each mode shows before anything is changed: the page's own framing, and for the player
+    // its own, else the page's as the player's artwork crops it, else the plain picture.
+    fun starting(of: FramingScope, shapeOfPicture: Float): Frame = when (of) {
+        FramingScope.Page -> initial?.let { Framing.contain(it, shapeOfPicture) } ?: Framing.default(shapeOfPicture, pageBoxAspect)
+        FramingScope.Player -> (playerInitial ?: initial)?.let { Framing.shaped(it, playerBoxAspect, shapeOfPicture) }
+            ?: Framing.default(shapeOfPicture, playerBoxAspect)
+    }
+    fun startsTouched(of: FramingScope) = if (of == FramingScope.Page) initial != null else playerInitial != null
+    var frame by remember { mutableStateOf(starting(scope, aspect)) }
     var shape by remember { mutableStateOf(FramingShape.Custom) }
-    var touched by remember { mutableStateOf(initial != null) }
+    var touched by remember { mutableStateOf(startsTouched(scope)) }
+    // The other mode's rectangle waits here while this one is worked on.
+    var parked by remember { mutableStateOf<Frame?>(null) }
+    var parkedTouched by remember { mutableStateOf(false) }
+    val locked: Float? = if (scope == FramingScope.Player) playerBoxAspect else null
     fun measured(value: Float) {
         if (!value.isFinite() || value <= 0f || kotlin.math.abs(value - aspect) < .005f) return
         aspect = value
-        // Until the owner changes something, the rectangle is what the page shows for this picture.
-        frame = if (touched) Framing.contain(frame, value) else Framing.default(value, pageBoxAspect)
+        // Until the owner changes something, the rectangle is what is shown for this picture.
+        frame = when {
+            !touched -> starting(scope, value)
+            scope == FramingScope.Player -> Framing.shaped(frame, playerBoxAspect, value)
+            else -> Framing.contain(frame, value)
+        }
+        parked = parked?.takeIf { parkedTouched }?.let { Framing.contain(it, value) }
+    }
+    fun switchTo(next: FramingScope) {
+        if (next == scope) return
+        val coming = parked ?: starting(next, aspect)
+        val comingTouched = if (parked != null) parkedTouched else startsTouched(next)
+        parked = frame; parkedTouched = touched
+        scope = next; frame = coming; touched = comingTouched; shape = FramingShape.Custom
+        haptic(Haptics.Kind.Tick)
     }
     BackHandler(onBack = onCancel)
 
     Column(Modifier.fillMaxSize().background(Color.Black).statusBarsPadding().navigationBarsPadding().testTag("framing-editor")) {
+        if (onPlayerDone != null) Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)) {
+            FramingScopeChip("Page d'album", scope == FramingScope.Page, accent, "framing-scope-page") { switchTo(FramingScope.Page) }
+            FramingScopeChip("Lecteur", scope == FramingScope.Player, accent, "framing-scope-player") { switchTo(FramingScope.Player) }
+        }
         BoxWithConstraints(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp)) {
             val stageWidth = with(density) { maxWidth.toPx() }
             val stageHeight = with(density) { maxHeight.toPx() }
@@ -100,6 +141,7 @@ internal fun FramingEditor(track: Track?, cover: String?, canvas: String?, initi
             }
             val latestFrame by rememberUpdatedState(frame)
             val latestShape by rememberUpdatedState(shape)
+            val latestLocked by rememberUpdatedState(locked)
             val latestUnit by rememberUpdatedState(unit)
             val latestAspect by rememberUpdatedState(aspect)
             val reach = with(density) { 30.dp.toPx() }
@@ -127,7 +169,8 @@ internal fun FramingEditor(track: Track?, cover: String?, canvas: String?, initi
                             spread = 0f
                             val position = pressed[0].position
                             if (grab != null) next = Framing.drag(next, grab, (position.x - previous.x) / latestUnit,
-                                (position.y - previous.y) / latestUnit, latestAspect, latestShape == FramingShape.Square)
+                                (position.y - previous.y) / latestUnit, latestAspect,
+                                latestLocked ?: if (latestShape == FramingShape.Square) 1f else null)
                             previous = position
                         }
                         if (next != latestFrame) {
@@ -178,13 +221,25 @@ internal fun FramingEditor(track: Track?, cover: String?, canvas: String?, initi
             Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                 FramingTool(Icons.Filled.RotateRight, "Pivoter", false, accent, "framing-rotate", Modifier.weight(1f)) {
                     haptic(Haptics.Kind.Tick)
-                    frame = Framing.contain(Framing.quarterTurn(frame), aspect); touched = true
+                    val turned = Framing.contain(Framing.quarterTurn(frame), aspect)
+                    // The player's rectangle keeps the shape of its artwork through a quarter turn.
+                    frame = if (locked != null) Framing.shaped(turned, locked, aspect) else turned
+                    touched = true
                 }
                 FramingTool(Icons.Filled.Flip, "Horizontal", false, accent, "framing-flip", Modifier.weight(1f)) {
                     haptic(Haptics.Kind.Tick)
                     frame = Framing.contain(Framing.mirror(frame), aspect); touched = true
                 }
                 Box(Modifier.width(1.dp).height(34.dp).background(Color.White.copy(alpha = .14f)))
+                if (locked != null) {
+                    // One shape only: the player's artwork. Back to what the player shows without a framing of its own.
+                    FramingTool(Icons.Filled.CropOriginal, "Par défaut", false, accent, "framing-player-default", Modifier.weight(1.4f)) {
+                        haptic(Haptics.Kind.Tick)
+                        frame = initial?.let { Framing.shaped(it, locked, aspect) } ?: Framing.default(aspect, locked); touched = true
+                    }
+                    Text("Le cadre garde la forme de la pochette du lecteur.", color = Color.White.copy(alpha = .62f), fontSize = 11.sp,
+                        lineHeight = 14.sp, maxLines = 3, modifier = Modifier.weight(1.85f).padding(horizontal = 8.dp).testTag("framing-player-note"))
+                } else {
                 FramingTool(Icons.Filled.CropFree, "Personnalisé", shape == FramingShape.Custom, accent, "framing-custom", Modifier.weight(1.25f)) {
                     shape = FramingShape.Custom
                 }
@@ -196,13 +251,16 @@ internal fun FramingEditor(track: Track?, cover: String?, canvas: String?, initi
                     shape = FramingShape.Square; touched = true
                     frame = Framing.square(aspect, frame.rotation, frame.flip)
                 }
+                }
             }
         }
         Row(Modifier.fillMaxWidth().background(Color(0xFF17181C)).padding(horizontal = 14.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically) {
             FramingEnd(Icons.Filled.Close, "Annuler", "framing-cancel", onCancel)
             Spacer(Modifier.weight(1f))
-            FramingEnd(Icons.Filled.Check, "Valider", "framing-done") { onDone(frame.clamped()) }
+            FramingEnd(Icons.Filled.Check, "Valider", "framing-done") {
+                if (scope == FramingScope.Player && onPlayerDone != null) onPlayerDone(frame.clamped()) else onDone(frame.clamped())
+            }
         }
     }
 }
@@ -254,6 +312,20 @@ private fun FramingTool(icon: ImageVector, label: String, selected: Boolean, acc
         Icon(icon, null, tint = ink, modifier = Modifier.size(26.dp))
         Text(label, localize = localize, color = ink, fontSize = 12.sp, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
             maxLines = 1, modifier = Modifier.padding(top = 5.dp))
+    }
+}
+
+/** One of the two modes at the top of the screen. */
+@Composable
+private fun FramingScopeChip(label: String, selected: Boolean, accent: Color, tag: String, onClick: () -> Unit) {
+    val state = AppText.t(if (selected) "Sélectionné" else "Non sélectionné")
+    Box(Modifier.clip(RoundedCornerShape(999.dp))
+        .background(if (selected) accent.copy(alpha = .24f) else Color.White.copy(alpha = .08f))
+        .clickable(role = Role.Tab, onClick = onClick)
+        .semantics { stateDescription = state }
+        .heightIn(min = 44.dp).padding(horizontal = 18.dp).testTag(tag), contentAlignment = Alignment.Center) {
+        Text(label, color = if (selected) accent else Color.White.copy(alpha = .86f), fontSize = 14.sp,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium, maxLines = 1)
     }
 }
 

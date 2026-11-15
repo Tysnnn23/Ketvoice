@@ -16,7 +16,7 @@ import kotlin.math.sqrt
  * description is all the tempo, beat and intro/outro analysis needs; the audio itself
  * is never kept.
  */
-internal class OnsetTracker(sampleRate: Int, private val channels: Int) {
+internal class OnsetTracker(sampleRate: Int, private val channels: Int, withKey: Boolean = false) {
     private val decimation = max(1, (sampleRate / 11_025f).roundToInt())
     /** Rate of the mono signal the analysis works on. */
     val rate: Float = sampleRate.toFloat() / decimation
@@ -36,6 +36,8 @@ internal class OnsetTracker(sampleRate: Int, private val channels: Int) {
     private val real = FloatArray(WINDOW)
     private val imaginary = FloatArray(WINDOW)
     private var hopEnergy = 0.0
+    /** The notes heard, when the key is wanted too. */
+    private val chroma: ChromaTracker? = if (withKey) ChromaTracker(rate) else null
 
     private var flux = FloatArray(4096)
     private var low = FloatArray(4096)
@@ -64,6 +66,7 @@ internal class OnsetTracker(sampleRate: Int, private val channels: Int) {
         if (pendingCount < decimation) return
         val v = pending / decimation
         pending = 0f; pendingCount = 0
+        chroma?.sample(v)
         frame[filled++] = v
         if (filled > WINDOW - HOP) hopEnergy += v * v
         if (filled == WINDOW) {
@@ -106,7 +109,8 @@ internal class OnsetTracker(sampleRate: Int, private val channels: Int) {
     /** Seconds, from the first sample given, at which the onset reported by [frame] happened. */
     fun timeOf(frame: Float): Float = (frame * HOP + ONSET_OFFSET) / rate
 
-    fun snapshot(): OnsetEnvelope = OnsetEnvelope(flux.copyOf(frames), low.copyOf(frames), level.copyOf(frames), fps, ONSET_OFFSET / rate)
+    fun snapshot(): OnsetEnvelope = OnsetEnvelope(flux.copyOf(frames), low.copyOf(frames), level.copyOf(frames), fps, ONSET_OFFSET / rate,
+        chroma?.snapshot(), keyRead = chroma != null)
 
     companion object {
         const val WINDOW = 512
@@ -121,14 +125,17 @@ internal class OnsetTracker(sampleRate: Int, private val channels: Int) {
 
 /** What [OnsetTracker] kept of a stretch of audio. Frame `n` is at `offsetSeconds + n / fps`. */
 internal class OnsetEnvelope(val flux: FloatArray, val low: FloatArray, val level: FloatArray, val fps: Float,
-                             val offsetSeconds: Float) {
+                             val offsetSeconds: Float, val chroma: FloatArray? = null, val keyRead: Boolean = false) {
     val size: Int get() = flux.size
     val seconds: Float get() = size / fps
     fun timeOf(frame: Float): Float = offsetSeconds + frame / fps
     fun frameAt(seconds: Float): Float = (seconds - offsetSeconds) * fps
+    /** The frames from [from] to [until], as a stretch of their own. */
+    fun slice(from: Int, until: Int): OnsetEnvelope = OnsetEnvelope(flux.copyOfRange(from, until), low.copyOfRange(from, until),
+        level.copyOfRange(from, until), fps, offsetSeconds + from / fps)
 }
 
-/** In-place radix-2 FFT, sized for the 512-sample analysis window. */
+/** In-place radix-2 FFT. */
 internal object Fft {
     fun transform(real: FloatArray, imaginary: FloatArray) {
         val n = real.size

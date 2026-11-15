@@ -7,6 +7,23 @@
 
 ---
 
+# Ketvoice 5.2.0
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 108** — Ketmix (beta): more than a fade; a new dark theme; a new Home.
+
+- Ketmix, the new name of Automix: six kinds of transition chosen from the two titles (matched to
+  the tempo with tempos that meet, echo out, filter crossing, dissolve, cut on the beat, plain
+  crossfade as a last resort), key detection, tighter tempo limits and less of an ending left
+  out, three analysis settings, the switch in the bar under the transport.
+- A new dark theme (neutral near-black, lit pages) and a rebuilt Home (lead card, tiles, week bars).
+- Smoother intro dots in lyrics; album pages take their colour from the Canvas they play.
+
+Full notes: [5.2.0](docs/releases/v5.2.0.md).
+
+---
+
 # Ketvoice 5.1.0
 
 ![Ketvoice](ketvoice-banner.png)

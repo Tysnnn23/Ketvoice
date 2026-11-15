@@ -1,5 +1,6 @@
 package com.ketvoice.app.ui.home
 
+import com.ketvoice.app.theme.pageBackground
 import com.ketvoice.app.ui.common.asHeading
 import com.ketvoice.app.ui.motion.captureRevealOrigin
 import com.ketvoice.app.ui.motion.rememberRevealOrigin
@@ -7,6 +8,7 @@ import com.ketvoice.app.ui.motion.rememberRevealOrigin
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -21,6 +23,8 @@ import com.ketvoice.app.ui.common.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -57,7 +61,6 @@ fun HomeScreen() {
     val playlists by PlaylistStore.lists.collectAsState()
     var grid by remember { mutableStateOf(false) }
     val layout = LocalAdaptiveLayout.current
-    val pageWidth = layout.recentPageWidthDp.dp
     // Read when the app comes back to the foreground: the title follows the day without
     // ever flipping while the page is being looked at.
     fun hourNow() = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
@@ -86,49 +89,41 @@ fun HomeScreen() {
         snapshotFlow { state.firstVisibleItemIndex to state.firstVisibleItemScrollOffset }
             .collect { (index, offset) -> AppUi.bottomCollapsed.value = fold.update(index, offset) }
     }
-    Box(Modifier.fillMaxSize().background(theme.background)) {
-        LazyColumn(state = state, modifier = Modifier.fillMaxSize().statusBarsPadding(),
+    Box(Modifier.fillMaxSize().pageBackground(theme)) {
+        LazyColumn(state = state, modifier = Modifier.fillMaxSize().statusBarsPadding().testTag("home-list"),
             contentPadding = PaddingValues(top = if (layout.hasRail) 24.dp else 12.dp, bottom = layout.bottomPaddingDp.dp)) {
-            item {
-                if (!layout.hasRail && !DesignChoices.enabled("D1")) {
-                    Box(Modifier.fillMaxWidth().padding(horizontal = 18.dp)) {
-                        Box(Modifier.align(Alignment.TopEnd).size(DesignTokens.Space.touch).clickable { AppUi.showAccount.value = true },
-                            contentAlignment = Alignment.Center) { AccountAvatar("K", 36.dp) }
+            // The page opens on who it greets: the brand in small, the hour in large, the account within reach.
+            item(key = "greeting") {
+                Row(Modifier.fillMaxWidth().padding(start = 18.dp, end = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Image(painterResource(R.drawable.logo_clean), null, Modifier.size(20.dp), contentScale = ContentScale.Fit)
+                            Text("KETVOICE", localize = false, color = theme.secondary, fontSize = 11.sp, fontWeight = FontWeight.Bold,
+                                letterSpacing = 2.2.sp, modifier = Modifier.padding(start = 8.dp))
+                        }
+                        Text(greeting, color = theme.onBackground, fontSize = if (layout.hasRail) 42.sp else 34.sp, fontWeight = FontWeight.Black,
+                            letterSpacing = (-1.2).sp, lineHeight = if (layout.hasRail) 46.sp else 38.sp, maxLines = 2,
+                            modifier = Modifier.padding(top = 6.dp).asHeading().testTag("home-greeting"))
                     }
+                    if (!layout.hasRail) Box(Modifier.size(DesignTokens.Space.touch).clip(androidx.compose.foundation.shape.CircleShape)
+                        .clickable(role = androidx.compose.ui.semantics.Role.Button) { AppUi.showAccount.value = true },
+                        contentAlignment = Alignment.Center) { AccountAvatar("K", 38.dp) }
                 }
-                Column(Modifier.padding(horizontal = 18.dp)) {
-                    if(DesignChoices.enabled("D1"))Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
-                        Image(painterResource(R.drawable.logo_clean),"Ketvoice",Modifier.size(30.dp),contentScale=ContentScale.Fit)
-                        Text("KETVOICE",localize=false,color=theme.onBackground,fontSize=13.sp,fontWeight=FontWeight.Bold,
-                            letterSpacing=2.sp,modifier=Modifier.weight(1f).padding(start=10.dp))
-                        if (!layout.hasRail) Box(Modifier.size(DesignTokens.Space.touch).clickable { AppUi.showAccount.value = true },
-                            contentAlignment = Alignment.Center) { AccountAvatar("K", 36.dp) }
-                    } else Image(painterResource(R.drawable.logo_clean), "Ketvoice",
-                        Modifier.height(48.dp).width(48.dp), contentScale = ContentScale.Fit)
-                    Text(greeting, color = theme.onBackground, fontSize = if (layout.hasRail) 40.sp else 30.sp, fontWeight = FontWeight.Black,
-                        letterSpacing = (-1).sp, maxLines = 2, modifier = Modifier.padding(top = 14.dp).asHeading())
-                    Row(Modifier.padding(top=3.dp,bottom=22.dp)) {
-                        Text(origin,color=theme.secondary,fontSize=12.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
-                        if(youtube.connected)Text(" · ${youtube.name}",localize=false,color=theme.secondary,fontSize=12.sp,maxLines=1)
-                    }
+                Row(Modifier.padding(start = 18.dp, end = 18.dp, top = 4.dp, bottom = 14.dp)) {
+                    Text(origin, color = theme.secondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    if (youtube.connected) Text(" · ${youtube.name}", localize = false, color = theme.secondary, fontSize = 12.sp, maxLines = 1)
                 }
             }
-            // Shortcuts to what already exists on this device.
-            item(key = "shortcuts") { HomeShortcuts(Modifier.padding(bottom = 10.dp)) }
-            // "For you": a paused title, a fresh release or the mix of the hour; else the former card.
+            // "For you" leads: a paused title, a fresh release or the mix of the hour; else the former card.
             item(key = "for-you") {
                 HomeForYou(hour, releases) {
                     if (player.current != null || recent.isNotEmpty()) HomeEditorial(if (player.current != null) player.queue else recent, resume = true)
                     else if (featured.isNotEmpty()) HomeEditorial(featured)
                 }
             }
-            if (playlists.any { it.pinned }) item(key = "pinned") {
-                EditorialHeader("Épinglés", onMore = { AppUi.selectTab(AppUi.LIBRARY) })
-                PlaylistShelf(playlists.filter { it.pinned })
-            }
-            // Personal mixes appear once enough music has been played, and rotate at each launch.
-            item(key = "mixes") { HomeMixes(Modifier.padding(bottom = 6.dp)) }
-            item(key = "week") { HomeWeekCard() }
+            // Shortcuts to what already exists on this device.
+            item(key = "shortcuts") { HomeShortcuts(Modifier.padding(top = 8.dp)) }
+            // What was played last, within a thumb's reach: tiles to start again from, or large covers.
             item(key = "recent-heading") {
                 EditorialHeader("Récents", onMore = if (recent.isNotEmpty()) ({
                     AppUi.openCatalog(CatalogRequest("history", "history", "Historique"))
@@ -141,21 +136,32 @@ fun HomeScreen() {
             if (recent.isEmpty()) item {
                 Text("Vos titres écoutés apparaîtront ici.", color = theme.secondary, fontSize = 13.sp,
                     modifier = Modifier.padding(horizontal = 18.dp, vertical = 18.dp))
-            } else if (!grid) item {
-                LazyRow(contentPadding = PaddingValues(horizontal = 18.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    val pages = recent.take(20).chunked(4)
-                    itemsIndexed(pages) { page, tracks ->
-                        Column(Modifier.width(pageWidth)) {
-                            tracks.forEachIndexed { row, track ->
-                                HomeRecentRow(track, active = player.current?.id == track.id,
-                                    onPlay = { Player.playQueue(recent, page * 4 + row) }, onMenu = { AppUi.trackMenuTrack.value = track })
+            } else if (!grid) item(key = "recent-tiles") {
+                BoxWithConstraints(Modifier.fillMaxWidth().padding(horizontal = 18.dp).testTag("home-recent-tiles")) {
+                    val columns = recentColumns(maxWidth.value)
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        recent.take(columns * 3).chunked(columns).forEachIndexed { line, tracks ->
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                tracks.forEachIndexed { column, track ->
+                                    RecentTile(track, active = player.current?.id == track.id, modifier = Modifier.weight(1f),
+                                        onPlay = { Player.playQueue(recent, line * columns + column) },
+                                        onMenu = { AppUi.trackMenuTrack.value = track })
+                                }
+                                repeat(columns - tracks.size) { Spacer(Modifier.weight(1f)) }
                             }
                         }
                     }
                 }
-            } else item {
+            } else item(key = "recent-covers") {
                 TrackCarousel(recent.take(20), onMenu = { AppUi.trackMenuTrack.value = it })
             }
+            if (playlists.any { it.pinned }) item(key = "pinned") {
+                EditorialHeader("Épinglés", onMore = { AppUi.selectTab(AppUi.LIBRARY) })
+                PlaylistShelf(playlists.filter { it.pinned })
+            }
+            // Personal mixes appear once enough music has been played, and rotate at each launch.
+            item(key = "mixes") { HomeMixes(Modifier.padding(bottom = 6.dp)) }
+            item(key = "week") { HomeWeekCard() }
             // The first personal shelf always leads; the album row and the other shelves
             // take turns from one launch to the next, and never move while browsing.
             homeBlockOrder(PersonalMixes.sessionSeed, shelfRows.size, albums.isNotEmpty(), releases.isNotEmpty(), learned).forEach { block ->
@@ -172,7 +178,7 @@ fun HomeScreen() {
                                 Column(Modifier.width(156.dp).captureRevealOrigin(origin).clickable {
                                     AppUi.openCatalog(CatalogRequest("album", album.id, album.title), origin.value)
                                 }) {
-                                    Cover(album.title, com.ketvoice.app.data.MediaOverrides.albumCover(album.title, album.artist, album.coverUrl), 156.dp, 13.dp)
+                                    Cover(album.title, com.ketvoice.app.data.MediaOverrides.albumCover(album.title, album.artist, album.coverUrl), 156.dp, 16.dp)
                                     Text(album.title, localize = false, color = theme.onBackground, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
                                         maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))
                                     Text(album.artist, localize = false, color = theme.secondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -202,21 +208,23 @@ fun HomeScreen() {
     }
 }
 
+/** How many recent titles fit side by side: two on a phone, up to four on a wide window. */
+internal fun recentColumns(widthDp: Float): Int = (widthDp / 190f).toInt().coerceIn(2, 4)
+
+/** A recent title as a compact tile: its cover flush with the edge, its name beside it. A long press opens its menu. */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
-private fun HomeRecentRow(track: Track, active: Boolean, onPlay: () -> Unit, onMenu: () -> Unit) {
+private fun RecentTile(track: Track, active: Boolean, modifier: Modifier, onPlay: () -> Unit, onMenu: () -> Unit) {
     val theme = LocalTheme.current
     val art by ArtworkRepo.covers.collectAsState()
-    Row(Modifier.fillMaxWidth().heightIn(min = 64.dp).clickable(onClick = onPlay).padding(vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
-        com.ketvoice.app.ui.common.DownloadCover(track, com.ketvoice.app.data.MediaOverrides.cover(track, art["t:${track.id}"] ?: track.coverUrl), 50.dp, 7.dp)
-        Spacer(Modifier.width(13.dp))
-        Column(Modifier.weight(1f)) {
-            Text(track.title, localize = false, color = if (active) theme.accent else theme.onBackground, fontSize = 15.sp,
-                fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(track.artist, localize = false, color = theme.secondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
-        Box(Modifier.size(48.dp).clickable(onClick = onMenu), contentAlignment = Alignment.Center) {
-            Icon(Icons.Filled.MoreVert, "Options de ${track.title}", tint = theme.secondary, modifier = Modifier.size(21.dp))
-        }
+    val options = AppText.t("Options de ${track.title}")
+    Row(modifier.height(60.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp)).background(theme.card)
+        .combinedClickable(role = androidx.compose.ui.semantics.Role.Button, onLongClickLabel = options, onLongClick = onMenu, onClick = onPlay)
+        .testTag("home-recent-tile"), verticalAlignment = Alignment.CenterVertically) {
+        com.ketvoice.app.ui.common.DownloadCover(track, com.ketvoice.app.data.MediaOverrides.cover(track, art["t:${track.id}"] ?: track.coverUrl), 60.dp, 0.dp)
+        Text(track.title, localize = false, color = if (active) theme.accent else theme.onBackground, fontSize = 13.sp, lineHeight = 16.sp,
+            fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f).padding(horizontal = 10.dp))
     }
 }
 
@@ -227,7 +235,7 @@ private fun TrackCarousel(tracks: List<Track>, onMenu: (Track) -> Unit) {
     LazyRow(contentPadding = PaddingValues(horizontal = 18.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
         itemsIndexed(tracks, key = { _, t -> t.id }) { i, track ->
             Column(Modifier.width(156.dp).clickable { Player.playQueue(tracks, i) }) {
-                com.ketvoice.app.ui.common.DownloadCover(track, com.ketvoice.app.data.MediaOverrides.cover(track, art["t:${track.id}"] ?: track.coverUrl), 156.dp, 13.dp)
+                com.ketvoice.app.ui.common.DownloadCover(track, com.ketvoice.app.data.MediaOverrides.cover(track, art["t:${track.id}"] ?: track.coverUrl), 156.dp, 16.dp)
                 Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(track.title, localize = false, color = theme.onBackground, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
                         maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))

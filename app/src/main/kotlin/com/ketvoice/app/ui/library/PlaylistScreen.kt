@@ -1,5 +1,6 @@
 package com.ketvoice.app.ui.library
 
+import com.ketvoice.app.theme.pageBackground
 import androidx.compose.ui.draw.shadow
 import com.ketvoice.app.ui.common.trackRowClick
 import androidx.compose.foundation.background
@@ -86,7 +87,7 @@ fun PlaylistScreen() {
         }
     }
 
-    BoxWithConstraints(Modifier.fillMaxSize().background(th.background).statusBarsPadding()) {
+    BoxWithConstraints(Modifier.fillMaxSize().pageBackground(th).statusBarsPadding()) {
     val compactHeader = maxHeight < 600.dp
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {

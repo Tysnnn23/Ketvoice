@@ -11,12 +11,15 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
@@ -24,6 +27,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -52,9 +56,11 @@ import com.ketvoice.app.data.SettingsStore
 import com.ketvoice.app.data.Track
 import com.ketvoice.app.theme.LocalTheme
 import com.ketvoice.app.ui.common.Text
+import com.ketvoice.app.ui.common.TrackActionFeedback
 import com.ketvoice.app.ui.motion.Haptics
 import com.ketvoice.app.ui.motion.Motion
 import com.ketvoice.app.ui.motion.rememberHaptics
+import kotlinx.coroutines.launch
 import kotlin.math.PI
 import kotlin.math.cos
 
@@ -108,7 +114,7 @@ internal fun rememberMixProgress(): State<Float?> {
 }
 
 /**
- * The Automix sign: two rings that overlap, one drawn fine and one bold, like two records
+ * The Ketmix sign: two rings that overlap, one drawn fine and one bold, like two records
  * blending into each other.
  */
 @Composable
@@ -122,46 +128,90 @@ internal fun AutomixGlyph(tint: Color, modifier: Modifier = Modifier, overlap: F
     }
 }
 
-/** The switch at the bottom left of the queue. */
+/** Flips Ketmix, keeps the choice and says what changed. */
 @Composable
-internal fun AutomixToggle(modifier: Modifier = Modifier, size: Dp = 52.dp, onChanged: (Boolean) -> Unit = {}) {
-    val theme = LocalTheme.current
-    val on = AppSettings.automix.value
-    val ui by Automix.ui.collectAsState()
+internal fun rememberKetmixSwitch(): () -> Unit {
+    val scope = rememberCoroutineScope()
     val haptic = rememberHaptics()
-    val progress by rememberMixProgress()
-    val busy = on && ui.phase != Automix.Phase.Idle
-    val glow by animateFloatAsState(if (busy) 1f else 0f, tween(Motion.duration(360)), label = "automix-busy")
-    val lift by animateFloatAsState(if (on) 1f else 0f,
-        if (Motion.reduced) tween(0) else spring(dampingRatio = .6f, stiffness = 380f), label = "automix-on")
-    val description = AppText.t("Automix")
-    val stateText = AppText.t(if (on) "Activé" else "Désactivé")
-    Box(modifier.size(size)
-        .graphicsLayer { val s = 1f + .06f * lift; scaleX = s; scaleY = s }
-        .clip(CircleShape)
-        .background(if (on) theme.accent.copy(alpha = .26f) else Color.White.copy(alpha = .10f))
-        .border(1.dp, if (on) theme.accent.copy(alpha = .5f + .4f * glow) else Color.White.copy(alpha = .14f), CircleShape)
-        .clickable(role = Role.Switch) {
+    return remember(scope) {
+        {
             val next = !AppSettings.automix.value
             AppSettings.automix.value = next
             SettingsStore.save()
             haptic(Haptics.Kind.Tick)
-            onChanged(next)
+            scope.launch {
+                TrackActionFeedback.snackbar.currentSnackbarData?.dismiss()
+                TrackActionFeedback.snackbar.showSnackbar(
+                    AppText.t(if (next) "Ketmix activé : les titres s'enchaînent comme dans un mix" else "Ketmix désactivé"),
+                    duration = SnackbarDuration.Short)
+            }
         }
+    }
+}
+
+/**
+ * Ketmix as the first segment of the bar under the transport, left of shuffle, repeat and
+ * autoplay: the queue's modes live in one place and nothing floats over the list.
+ */
+@Composable
+internal fun RowScope.KetmixSegment() {
+    val accent = LocalTheme.current.accent
+    val on = AppSettings.automix.value
+    val ui by Automix.ui.collectAsState()
+    val progress by rememberMixProgress()
+    val flip = rememberKetmixSwitch()
+    val shade by animateFloatAsState(if (on) .48f else 0f, tween(Motion.duration(Motion.FADE)), label = "ketmix-segment")
+    val busy by animateFloatAsState(if (on && ui.phase != Automix.Phase.Idle) 1f else 0f, tween(Motion.duration(360)), label = "ketmix-busy")
+    val description = AppText.t("Ketmix")
+    val stateText = AppText.t(if (on) "Activé" else "Désactivé")
+    Box(Modifier.weight(1f).fillMaxHeight()
+        .background(Color.Black.copy(alpha = shade))
+        .clickable(role = Role.Switch, onClick = flip)
         .semantics { contentDescription = description; stateDescription = stateText }
         .testTag("automix-toggle"), contentAlignment = Alignment.Center) {
-        AutomixGlyph(if (on) theme.accent else Color.White.copy(alpha = .82f), Modifier.size(size * .58f),
+        AutomixGlyph(if (on) accent else Color.White.copy(alpha = .78f),
+            Modifier.size(27.dp).graphicsLayer { val s = 1f + .08f * busy; scaleX = s; scaleY = s },
             overlap = if (Motion.reduced) .42f else MixVisuals.ringOverlap(progress))
     }
 }
 
-/** What Automix is doing, or why it is not mixing: the line that tells a listener why nothing happens. */
+/** The round switch, for the layouts whose queue carries its modes above the list. */
 @Composable
-internal fun AutomixStatusLine(modifier: Modifier = Modifier, color: Color = Color.White.copy(alpha = .72f), fontSize: androidx.compose.ui.unit.TextUnit = 12.sp) {
+internal fun AutomixToggle(modifier: Modifier = Modifier, size: Dp = 48.dp) {
+    val theme = LocalTheme.current
+    val on = AppSettings.automix.value
+    val ui by Automix.ui.collectAsState()
+    val progress by rememberMixProgress()
+    val flip = rememberKetmixSwitch()
+    val busy = on && ui.phase != Automix.Phase.Idle
+    val glow by animateFloatAsState(if (busy) 1f else 0f, tween(Motion.duration(360)), label = "automix-busy")
+    val lift by animateFloatAsState(if (on) 1f else 0f,
+        if (Motion.reduced) tween(0) else spring(dampingRatio = .6f, stiffness = 380f), label = "automix-on")
+    val description = AppText.t("Ketmix")
+    val stateText = AppText.t(if (on) "Activé" else "Désactivé")
+    Box(modifier.size(size)
+        .graphicsLayer { val s = 1f + .05f * lift; scaleX = s; scaleY = s }
+        .clip(CircleShape)
+        .background(if (on) theme.accent.copy(alpha = .22f) else Color.White.copy(alpha = .08f))
+        .border(1.dp, if (on) theme.accent.copy(alpha = .35f + .45f * glow) else Color.Transparent, CircleShape)
+        .clickable(role = Role.Switch, onClick = flip)
+        .semantics { contentDescription = description; stateDescription = stateText }
+        .testTag("automix-toggle"), contentAlignment = Alignment.Center) {
+        AutomixGlyph(if (on) theme.accent else Color.White.copy(alpha = .78f), Modifier.size(size * .58f),
+            overlap = if (Motion.reduced) .42f else MixVisuals.ringOverlap(progress))
+    }
+}
+
+/** What Ketmix is doing, or why it is not mixing: the line that tells a listener why nothing happens. */
+@Composable
+internal fun AutomixStatusLine(modifier: Modifier = Modifier, color: Color = Color.White.copy(alpha = .72f),
+                               fontSize: androidx.compose.ui.unit.TextUnit = 12.sp, glyph: Boolean = false) {
     val text by Automix.status.collectAsState()
     if (text.isBlank() || !AppSettings.automix.value) return
-    Text(text, color = color, fontSize = fontSize, lineHeight = fontSize * 1.3f, maxLines = 2, overflow = TextOverflow.Ellipsis,
-        modifier = modifier.testTag("automix-status"))
+    Row(modifier.testTag("automix-status"), verticalAlignment = Alignment.CenterVertically) {
+        if (glyph) AutomixGlyph(LocalTheme.current.accent, Modifier.padding(end = 7.dp).size(18.dp))
+        Text(text, color = color, fontSize = fontSize, lineHeight = fontSize * 1.25f, maxLines = 2, overflow = TextOverflow.Ellipsis)
+    }
 }
 
 /** "Mix en cours" over the artwork while two titles play together. */

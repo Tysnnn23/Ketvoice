@@ -189,17 +189,32 @@ object PublicationApi {
     }
 
     /**
+     * A change to what the music player alone shows for a catalogue title or album. A key that
+     * is not named is left as it is; [followFrame] and [followCanvas] give one back to the album page.
+     */
+    class PlayerChange(val frame: Frame? = null, val followFrame: Boolean = false,
+                       val canvas: Boolean? = null, val followCanvas: Boolean = false) {
+        init { require(frame != null || followFrame || canvas != null || followCanvas) }
+        fun json(): JSONObject = JSONObject().apply {
+            if (frame != null) put("frame", MediaOverrides.frameJson(frame)) else if (followFrame) put("frame", JSONObject.NULL)
+            if (canvas != null) put("canvas", if (canvas) "on" else "off") else if (followCanvas) put("canvas", JSONObject.NULL)
+        }
+    }
+
+    /**
      * Replaces the cover, Canvas or artist photo of a catalogue item ([MediaOverrides]),
      * or restores the original ones listed in [restore]. Returns what is now applied,
      * null once nothing is left (the catalogue's own visuals are back).
      */
     suspend fun saveOverride(kind: String, key: String, label: String, cover: File? = null, canvas: File? = null,
                              hero: File? = null, restore: List<String> = emptyList(),
-                             onProgress: (Int) -> Unit = {}, frame: Frame? = null, canvasOff: Boolean? = null): MediaOverride? {
-        require(cover != null || canvas != null || hero != null || restore.isNotEmpty() || frame != null || canvasOff != null)
+                             onProgress: (Int) -> Unit = {}, frame: Frame? = null, canvasOff: Boolean? = null,
+                             player: PlayerChange? = null): MediaOverride? {
+        require(cover != null || canvas != null || hero != null || restore.isNotEmpty() || frame != null || canvasOff != null || player != null)
         val meta = JSONObject().put("kind", kind).put("key", key).put("label", label.take(300)).put("rightsConfirmed", true)
         frame?.let { meta.put("frame", MediaOverrides.frameJson(it)) }
         canvasOff?.let { meta.put("canvasOff", it) }
+        player?.let { meta.put("player", it.json()) }
         if (restore.isNotEmpty()) meta.put("remove", JSONArray(restore.distinct()))
         val result = multipart("/admin/override", meta,
             listOfNotNull(cover?.let { "cover" to it }, canvas?.let { "canvas" to it }, hero?.let { "hero" to it }), onProgress)
@@ -214,8 +229,9 @@ object PublicationApi {
      * overrides that now exist for them; an item missing from the answer has none left.
      */
     suspend fun saveOverrides(kind: String, items: List<Pair<String, String>>, canvas: File? = null, canvasOff: Boolean? = null,
-                              restore: List<String> = emptyList(), onProgress: (Int) -> Unit = {}): List<MediaOverride> {
-        require(items.isNotEmpty() && (canvas != null || canvasOff != null || restore.isNotEmpty()))
+                              restore: List<String> = emptyList(), onProgress: (Int) -> Unit = {},
+                              player: PlayerChange? = null): List<MediaOverride> {
+        require(items.isNotEmpty() && (canvas != null || canvasOff != null || restore.isNotEmpty() || player != null))
         val saved = ArrayList<MediaOverride>()
         val chunks = items.distinctBy { it.first }.chunked(80)
         chunks.forEachIndexed { index, chunk ->
@@ -224,6 +240,7 @@ object PublicationApi {
             })
             if (restore.isNotEmpty()) meta.put("remove", JSONArray(restore.distinct()))
             canvasOff?.let { meta.put("canvasOff", it) }
+            player?.let { meta.put("player", it.json()) }
             val result = multipart("/admin/override", meta, listOfNotNull(canvas?.let { "canvas" to it }),
                 { onProgress((index * 100 + it) / chunks.size) })
             val rows = result.optJSONArray("overrides") ?: JSONArray()

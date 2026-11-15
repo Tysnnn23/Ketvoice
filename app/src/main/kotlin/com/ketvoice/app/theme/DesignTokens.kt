@@ -12,13 +12,23 @@ object DesignTokens {
         val white = androidx.compose.ui.graphics.Color(0xFFFFFFFF)
         val black = androidx.compose.ui.graphics.Color(0xFF000000)
         val backgroundLight = white
-        val backgroundDark = androidx.compose.ui.graphics.Color(0xFF0B0D10)
+        // The dark theme ("Onyx"): a neutral near-black that lets covers and the accent carry the
+        // colour, and three steps of surface above it. Not pure black, so that an OLED panel
+        // never switches pixels off and smears when the page scrolls.
+        val backgroundDark = androidx.compose.ui.graphics.Color(0xFF050507)
         val surfaceLight = androidx.compose.ui.graphics.Color(0xFFF2F2F7)
-        val surfaceDark = androidx.compose.ui.graphics.Color(0xFF191D23)
+        val surfaceDark = androidx.compose.ui.graphics.Color(0xFF15151A)
+        /** Sheets, menus and what floats over a card. */
+        val raisedDark = androidx.compose.ui.graphics.Color(0xFF1E1E24)
+        val highestDark = androidx.compose.ui.graphics.Color(0xFF2A2A31)
+        /** Just above the page: wells and fields. */
+        val sunkenDark = androidx.compose.ui.graphics.Color(0xFF0D0D10)
         val secondaryLight = androidx.compose.ui.graphics.Color(0xFF8E8E92)
-        val secondaryDark = androidx.compose.ui.graphics.Color(0xFFB4BAC4)
+        val secondaryDark = androidx.compose.ui.graphics.Color(0xFFA6A6B0)
+        val outlineDark = androidx.compose.ui.graphics.Color(0xFF70707C)
+        val outlineSoftDark = androidx.compose.ui.graphics.Color(0xFF2F2F37)
         val separatorLight = androidx.compose.ui.graphics.Color(0x14000000)
-        val separatorDark = androidx.compose.ui.graphics.Color(0x24FFFFFF)
+        val separatorDark = androidx.compose.ui.graphics.Color(0x1FFFFFFF)
         val accent = androidx.compose.ui.graphics.Color(0xFFFA2D48)
     }
 

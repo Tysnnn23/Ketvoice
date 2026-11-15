@@ -1,5 +1,6 @@
 package com.ketvoice.app.ui.studio
 
+import com.ketvoice.app.theme.pageBackground
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -132,7 +133,7 @@ fun PublisherScreen(target: Track?, onClose: () -> Unit) {
         state.run { PublisherSession.verify(link) }
     }
 
-    Box(Modifier.fillMaxSize().background(theme.background).testTag("studio"), contentAlignment = Alignment.TopCenter) {
+    Box(Modifier.fillMaxSize().pageBackground(theme).testTag("studio"), contentAlignment = Alignment.TopCenter) {
         Column(Modifier.widthIn(max = 780.dp).fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 GlassBackButton { back() }

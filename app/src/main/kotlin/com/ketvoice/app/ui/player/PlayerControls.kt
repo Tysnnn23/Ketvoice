@@ -67,7 +67,9 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.layout.ContentScale
+import com.ketvoice.app.ui.sub.framedPicture
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -116,7 +118,9 @@ fun ArtworkCanvas(
     forceCanvas: Boolean = false,
     onCanvasFailure: () -> Unit = {},
     /** Told the width over height of the picture or video once it is known. */
-    onMediaAspect: ((Float) -> Unit)? = null
+    onMediaAspect: ((Float) -> Unit)? = null,
+    /** The rectangle of the picture or video to show, filling the artwork; null shows it as it comes. */
+    frame: com.ketvoice.app.data.Frame? = null
 ) {
     val art by ArtworkRepo.covers.collectAsState()
     val cover = com.ketvoice.app.data.MediaOverrides.cover(track, art["t:${track.id}"] ?: track.coverUrl)
@@ -138,17 +142,24 @@ fun ArtworkCanvas(
             },
             label = "artwork"
         ) { data ->
-            Box(Modifier.fillMaxSize()) {
+            val video = data.canvas != null && (forceCanvas || AppSettings.animatedArtwork.value)
+            // Width over height of what is shown, once known: a Canvas is upright and a cover square until then.
+            var aspect by remember(data) { mutableFloatStateOf(0f) }
+            val measured: (Float) -> Unit = { value -> if (value.isFinite() && value > 0f) aspect = value; onMediaAspect?.invoke(value) }
+            // Framed: the whole picture is laid out at its own shape, then moved so that the rectangle fills the artwork.
+            val placed = if (frame == null) Modifier.fillMaxSize()
+                else Modifier.fillMaxSize().framedPicture(frame, if (aspect > 0f) aspect else if (video) 9f / 16f else 1f)
+            Box(Modifier.fillMaxSize().then(if (frame != null) Modifier.clipToBounds() else Modifier)) {
                 when {
-                    data.canvas != null && (forceCanvas || AppSettings.animatedArtwork.value) -> run {
+                    video -> run {
                         // Match the banner-era player: edge-to-edge video in the
                         // artwork region, blending into the separate blurred scene.
                         // FIT introduced the unwanted side bars in normal mode.
-                        Box(Modifier.fillMaxSize()) {
-                            CanvasVideo(path = data.canvas, playing = playing,
+                        Box(placed) {
+                            CanvasVideo(path = data.canvas!!, playing = playing,
                                 modifier = Modifier.fillMaxSize(),
                                 resizeMode = CanvasPresentation.NORMAL_RESIZE_MODE,
-                                onFailure = onCanvasFailure, onAspect = onMediaAspect)
+                                onFailure = onCanvasFailure, onAspect = measured)
                         }
                     }
                     data.cover != null ->
@@ -156,11 +167,11 @@ fun ArtworkCanvas(
                             AsyncImage(
                                 model = data.cover,
                                 contentDescription = null,
-                                modifier = Modifier.fillMaxSize(),
+                                modifier = placed,
                                 contentScale = ContentScale.Crop,
                                 onSuccess = { loaded ->
                                     val size = loaded.painter.intrinsicSize
-                                    if (onMediaAspect != null && size.width > 0f && size.height > 0f) onMediaAspect(size.width / size.height)
+                                    if (size.width > 0f && size.height > 0f) measured(size.width / size.height)
                                 }
                             )
                         }
@@ -671,6 +682,8 @@ fun QueueActionsBar(
         GlassPanel(Modifier.weight(1f).height(48.dp), RoundedCornerShape(999.dp),
             GlassParams.navigation(dark = true), enabled = AppSettings.liquidGlass.value) {
         Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
+            // Ketmix first, then the three ways the queue plays.
+            KetmixSegment()
             QueueSegment(shuffle, onShuffle) {
                 Icon(Icons.Filled.Shuffle, "Aléatoire", tint = it, modifier = Modifier.size(23.dp))
             }

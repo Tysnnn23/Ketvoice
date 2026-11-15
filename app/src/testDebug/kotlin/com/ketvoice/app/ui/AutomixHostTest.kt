@@ -24,6 +24,7 @@ import com.ketvoice.app.player.Player
 import com.ketvoice.app.player.PlayerUiState
 import com.ketvoice.app.theme.KetvoiceTheme
 import com.ketvoice.app.ui.player.ArtworkCanvas
+import com.ketvoice.app.ui.player.QueueActionsBar
 import com.ketvoice.app.ui.player.QueuePane
 import com.ketvoice.app.ui.player.ScrubBar
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -81,35 +82,40 @@ class AutomixHostTest {
         }
     }
 
-    @Test fun theQueueHasTheAutomixSwitchAtItsBottomLeft() {
+    @Test fun ketmixIsTheFirstSegmentOfTheBarUnderTheTransport() {
         player.value = PlayerUiState(queue = listOf(track("a", "Premier"), track("b", "Deuxième"), track("c", "Troisième")),
             queueEntryIds = listOf("k0", "k1", "k2"), index = 0)
         compose.setContent { KetvoiceTheme(useDark = true) {
-            Box(Modifier.fillMaxSize().background(Color(0xFF14141A)).padding(18.dp)) {
-                val state by Player.state.collectAsState(); QueuePane(state, Modifier.fillMaxSize())
+            Column(Modifier.fillMaxSize().background(Color(0xFF14141A)).padding(18.dp)) {
+                val state by Player.state.collectAsState()
+                QueuePane(state, Modifier.weight(1f).fillMaxWidth())
+                QueueActionsBar(state.shuffle, state.repeatOne, state.autoplay, state.repeatAll, {}, {}, {}, {})
             }
         } }
+        // One switch only: in the bar, left of shuffle, and nothing over the list.
+        compose.onAllNodesWithTag("automix-toggle").assertCountEquals(1)
         val toggle = compose.onNodeWithTag("automix-toggle")
         toggle.assertIsDisplayed().assertHasClickAction()
         val bounds = toggle.fetchSemanticsNode().boundsInRoot
-        val root = compose.onRoot().fetchSemanticsNode().boundsInRoot
-        assertTrue("on the left (${bounds.left})", bounds.left < root.width * .2f)
-        assertTrue("at the bottom (${bounds.bottom} of ${root.height})", bounds.bottom > root.height * .9f)
+        val shuffle = compose.onNodeWithContentDescription("Aléatoire").fetchSemanticsNode().boundsInRoot
+        val list = compose.onNodeWithTag("queue-list").fetchSemanticsNode().boundsInRoot
+        assertTrue("left of shuffle (${bounds.right} / ${shuffle.left})", bounds.right <= shuffle.left + 1f)
+        assertTrue("under the list (${bounds.top} / ${list.bottom})", bounds.top >= list.bottom - 1f)
         assertEquals("Désactivé", toggle.fetchSemanticsNode().config[SemanticsProperties.StateDescription])
-        image("automix-queue-off")
+        assertEquals("Ketmix", toggle.fetchSemanticsNode().config[SemanticsProperties.ContentDescription].single())
+        image("ketmix-bar-off")
         toggle.performClick()
         compose.waitForIdle()
         assertTrue(AppSettings.automix.value)
         assertEquals("Activé", compose.onNodeWithTag("automix-toggle").fetchSemanticsNode().config[SemanticsProperties.StateDescription])
-        image("automix-queue-on")
+        image("ketmix-bar-on")
         compose.onNodeWithTag("automix-toggle").performClick()
         compose.waitForIdle()
         assertFalse(AppSettings.automix.value)
-        // The list keeps room so that its last row is not hidden under the switch.
         compose.onNodeWithText("Troisième").assertIsDisplayed()
     }
 
-    @Test fun theQueueSaysWhyAutomixIsNotMixing() {
+    @Test fun theWideQueueCarriesKetmixWithItsModesAndSaysWhyItIsNotMixing() {
         val status = Automix::class.java.getDeclaredField("_status").apply { isAccessible = true }.get(Automix) as MutableStateFlow<String>
         player.value = PlayerUiState(queue = listOf(track("a", "Premier"), track("b", "Deuxième")), queueEntryIds = listOf("k0", "k1"), index = 0)
         AppSettings.automix.value = true
@@ -117,12 +123,16 @@ class AutomixHostTest {
             status.value = "Pas de mix · titre répété"
             compose.setContent { KetvoiceTheme(useDark = true) {
                 Box(Modifier.fillMaxSize().background(Color(0xFF14141A)).padding(18.dp)) {
-                    val state by Player.state.collectAsState(); QueuePane(state, Modifier.fillMaxSize())
+                    val state by Player.state.collectAsState(); QueuePane(state, Modifier.fillMaxSize(), showModes = true)
                 }
             } }
             compose.onNodeWithTag("automix-status").assertIsDisplayed()
             compose.onNodeWithText("Pas de mix · titre répété").assertIsDisplayed()
-            image("automix-queue-status")
+            // The line sits above the list, never over its rows.
+            val line = compose.onNodeWithTag("automix-status").fetchSemanticsNode().boundsInRoot
+            val list = compose.onNodeWithTag("queue-list").fetchSemanticsNode().boundsInRoot
+            assertTrue("above the list (${line.bottom} / ${list.top})", line.bottom <= list.top + 1f)
+            image("ketmix-queue-status")
             status.value = "Mix prévu dans 31 s · calé sur le tempo"
             compose.onNodeWithText("Mix prévu dans 31 s · calé sur le tempo").assertIsDisplayed()
             // Switched off: no status is shown, whatever was left in it.
@@ -205,5 +215,51 @@ class AutomixHostTest {
         image("framing-editor-custom")
         compose.onNodeWithTag("framing-cancel").performClick()
         assertTrue(cancelled)
+        // Alone, the screen frames the page only: no modes to choose from.
+        compose.onAllNodesWithTag("framing-scope-player").assertCountEquals(0)
+    }
+
+    @Test fun theFramingScreenHasAModeForTheMusicPlayerAlone() {
+        var page: Frame? = null; var player: Frame? = null
+        val box = .85f
+        compose.setContent { KetvoiceTheme(useDark = true) {
+            com.ketvoice.app.ui.sub.FramingEditor(track("a", "Titre"), null, null, initial = Frame(0f, 0f, 1f, .5f), pageBoxAspect = 1.2f,
+                onCancel = { }, onDone = { page = it }, playerInitial = null, playerBoxAspect = box, onPlayerDone = { player = it })
+        } }
+        compose.onNodeWithTag("framing-scope-page").assertIsDisplayed().assertHasClickAction()
+        compose.onNodeWithTag("framing-scope-player").assertIsDisplayed()
+        assertEquals("Sélectionné", compose.onNodeWithTag("framing-scope-page").fetchSemanticsNode().config[SemanticsProperties.StateDescription])
+        compose.onNodeWithTag("framing-custom").assertIsDisplayed()
+        compose.onNodeWithTag("framing-scope-player").performClick()
+        compose.waitForIdle()
+        assertEquals("Sélectionné", compose.onNodeWithTag("framing-scope-player").fetchSemanticsNode().config[SemanticsProperties.StateDescription])
+        // One shape only in this mode: the free shapes leave, a way back to the default comes.
+        compose.onAllNodesWithTag("framing-custom").assertCountEquals(0)
+        compose.onAllNodesWithTag("framing-square").assertCountEquals(0)
+        compose.onNodeWithTag("framing-player-default").assertIsDisplayed()
+        compose.onNodeWithTag("framing-player-note").assertIsDisplayed()
+        image("framing-editor-player")
+        // Without a framing of its own the player shows the page's band as its artwork crops it.
+        compose.onNodeWithTag("framing-done").performClick()
+        assertNull("The page's callback is not the one called", page)
+        assertEquals(box, player!!.aspect, .01f); assertEquals(.5f, player!!.h, .01f)
+        // An edge pulled inwards: both sides follow, the shape stays the player's.
+        compose.onNodeWithTag("framing-stage").performTouchInput {
+            val unit = minOf(width * .9f, height * .9f)
+            down(androidx.compose.ui.geometry.Offset(centerX + unit * .5f * box / 2f - 4f, centerY)); moveBy(androidx.compose.ui.geometry.Offset(-unit * .1f, 0f)); up()
+        }
+        compose.onNodeWithTag("framing-rotate").performClick()
+        compose.onNodeWithTag("framing-done").performClick()
+        assertEquals(box, player!!.aspect, .01f); assertEquals(90f, player!!.rotation, .5f)
+        assertTrue("smaller than before (${player!!.h})", player!!.h < .49f)
+        // Back to the page's mode: its own rectangle waited there, untouched.
+        compose.onNodeWithTag("framing-scope-page").performClick()
+        compose.onNodeWithTag("framing-done").performClick()
+        assertEquals(2f, page!!.aspect, .01f); assertEquals(0f, page!!.rotation, 0f)
+        // And the player's is found again as it was left.
+        player = null
+        compose.onNodeWithTag("framing-scope-player").performClick()
+        compose.onNodeWithTag("framing-done").performClick()
+        assertEquals(90f, player!!.rotation, .5f)
     }
 }

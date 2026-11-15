@@ -1,5 +1,6 @@
 package com.ketvoice.app.ui.sub
 
+import com.ketvoice.app.theme.pageBackground
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
@@ -72,7 +73,7 @@ fun SourcesScreen() {
     var apiTesting by remember { mutableStateOf(false) }
     var apiOk by remember { mutableStateOf<Boolean?>(null) }
 
-    Column(Modifier.fillMaxSize().background(th.background).statusBarsPadding()) {
+    Column(Modifier.fillMaxSize().pageBackground(th).statusBarsPadding()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.AutoMirrored.Filled.ArrowBack, "Retour", tint = th.onBackground,

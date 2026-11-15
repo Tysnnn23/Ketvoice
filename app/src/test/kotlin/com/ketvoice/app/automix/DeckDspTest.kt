@@ -77,12 +77,159 @@ class DeckDspTest {
         // Before the swap the outgoing title keeps its bass and the incoming one has none; after, the reverse.
         assertEquals(0f, out.highPassHz.at(187_000_000), 0f)
         assertEquals(DeckAutomation.BASS_HZ, into.highPassHz.at(inAt(187_000)), .5f)
-        assertEquals(DeckAutomation.BASS_HZ, out.highPassHz.at(189_000_000), .5f)
+        assertEquals(DeckAutomation.BASS_HZ, out.highPassHz.at(188_250_000), 1f)
         assertEquals(0f, into.highPassHz.at(inAt(189_000)), 0f)
+        // Once its bass is gone the outgoing title thins out into the air, up to about 1.1 kHz.
+        assertTrue(out.highPassHz.at(192_000_000) in 400f..900f)
+        assertEquals(1_100f, out.highPassHz.at(196_000_000), 2f)
+        assertEquals("...and no low-pass in this colour", 0f, out.lowPassHz.at(192_000_000), 0f)
+        // The incoming title opens up from 2.2 kHz while it rises, and is wide open well before the swap.
+        assertEquals(2_200f, into.lowPassHz.at(0), 1f)
+        assertTrue(into.lowPassHz.at(inAt(183_000)) in 2_300f..17_000f)
+        assertEquals(0f, into.lowPassHz.at(inAt(187_000)), 0f)
         val middle = out.highPassHz.at(188_000_000)
         assertTrue("The filters cross during one beat around the swap ($middle)", middle > 60f && middle < 150f)
         assertEquals(middle, into.highPassHz.at(inAt(188_000)), 6f)
         assertTrue(out.endUs >= 196_000_000 && into.endUs >= inAt(196_000) + 8_000_000 - 1_000)
+    }
+
+    @Test fun theOtherColourOfABeatMixSinksInsteadOfRising() {
+        val plan = beat.copy(variant = 1)
+        val out = DeckAutomation.outgoing(plan); val into = DeckAutomation.incoming(plan)
+        assertEquals("The bass still changes hands", DeckAutomation.BASS_HZ, out.highPassHz.at(190_000_000), 1f)
+        assertEquals(0f, out.lowPassHz.at(187_000_000), 0f)
+        assertTrue("then the top end closes (${out.lowPassHz.at(193_000_000)})", out.lowPassHz.at(193_000_000) in 2_000f..12_000f)
+        assertEquals(1_400f, out.lowPassHz.at(196_000_000), 2f)
+        assertEquals("The incoming title is not low-passed in this colour", 0f, into.lowPassHz.at(2_000_000), 0f)
+        // Keys that clash: the outgoing title is thinned further.
+        assertEquals(2_400f, DeckAutomation.outgoing(beat.copy(clash = true)).highPassHz.at(196_000_000), 4f)
+    }
+
+    @Test fun anEchoCatchesTheLastBeatThenTheTitleIsCut() {
+        val plan = MixPlan(MixKind.Echo, outMs = 185_000, inMs = 500, overlapMs = 2_000, gain = .9f, beatMs = 500f)
+        val out = DeckAutomation.outgoing(plan); val into = DeckAutomation.incoming(plan)
+        assertTrue(out.usesEcho); assertFalse(out.usesReverb)
+        assertEquals("Repeats every half beat", 250_000L, out.echoDelayUs)
+        assertEquals(0f, out.echo.at(184_400_000), 0f)
+        assertEquals("The last beat goes into the echo", 1f, out.echo.at(184_800_000), 1e-3f)
+        assertEquals("Nothing after the cut does", 0f, out.echo.at(185_020_000), 1e-3f)
+        assertEquals(1f, out.dry.at(185_000_000), 1e-3f); assertEquals(0f, out.dry.at(185_030_000), 1e-3f)
+        assertEquals(1f, out.gain.at(185_700_000), 1e-3f); assertEquals(0f, out.gain.at(187_000_000), 1e-3f)
+        // The next title is there at once, at its matched level.
+        assertEquals(0f, into.gain.at(500_000), 1e-3f); assertEquals(.9f, into.gain.at(540_000), 1e-3f)
+        assertEquals(.9f, into.gain.at(2_500_000), 1e-3f); assertEquals(1f, into.gain.at(2_500_000 + 8_000_000), 1e-3f)
+
+        // Heard: clicks every 400 ms, cut at 1 s. The click at 0.8 s keeps ringing every 250 ms, quieter each
+        // time; the clicks the title would have played at 1.2 s, 1.6 s… are not heard.
+        val rate = 44_100
+        val automation = DeckAutomation(Curve.flat(1f), Curve.flat(0f),
+            dry = Curve(longArrayOf(1_000_000, 1_028_000), floatArrayOf(1f, 0f)),
+            echo = Curve(longArrayOf(500_000, 625_000, 1_000_000, 1_008_000), floatArrayOf(0f, 1f, 1f, 0f)),
+            echoDelayUs = 250_000, echoFeedback = .6f)
+        val frames = rate * 4
+        val input = ByteBuffer.allocate(frames * 2).order(ByteOrder.LITTLE_ENDIAN)
+        for (i in 0 until frames) {
+            val inBeat = i % (rate * 2 / 5)
+            input.putShort(if (inBeat < 400) (sin(2 * PI * 1_000.0 * inBeat / rate) * 20_000).toInt().toShort() else 0)
+        }
+        input.flip()
+        val samples = run(DeckDsp(rate, 1), input, 0, automation)
+        fun peak(fromMs: Int, toMs: Int): Int { var top = 0; for (i in fromMs * rate / 1000 until toMs * rate / 1000) top = maxOf(top, abs(samples[i].toInt())); return top }
+        assertTrue("The title itself is heard until the cut (${peak(795, 815)})", peak(795, 815) > 15_000)
+        val first = peak(1_045, 1_075); val second = peak(1_295, 1_325); val third = peak(1_545, 1_575)
+        assertTrue("first repeat $first", first > 6_000)
+        assertTrue("each repeat is quieter: $first, $second, $third", second < first * .8 && third < second * .8 && third > 100)
+        assertTrue("The title is gone after the cut (${peak(1_195, 1_225)}, ${peak(1_995, 2_025)})", peak(1_195, 1_225) < first / 4 && peak(1_995, 2_025) < first / 4)
+        assertTrue("and the tail dies (${peak(3_600, 4_000)})", peak(3_600, 4_000) < 200)
+    }
+
+    @Test fun twoTitlesCanCrossBySpectrumInsteadOfByLevel() {
+        val plan = MixPlan(MixKind.Filter, outMs = 190_000, inMs = 300, overlapMs = 8_000, gain = 1f, hold = .55f)
+        val out = DeckAutomation.outgoing(plan); val into = DeckAutomation.incoming(plan)
+        assertEquals("The outgoing title keeps its level while it dies away by itself", 1f, out.gain.at(194_000_000), 1e-3f)
+        assertEquals(0f, out.gain.at(198_000_000), 1e-3f)
+        assertEquals(0f, out.highPassHz.at(189_000_000), 0f)
+        assertTrue("it rises into the air", out.highPassHz.at(194_000_000) in 100f..600f)
+        assertEquals(1_500f, out.highPassHz.at(198_000_000), 3f)
+        assertEquals("the next one grows from its low end", 380f, into.lowPassHz.at(300_000), 2f)
+        assertTrue(into.lowPassHz.at(4_000_000) in 1_000f..12_000f)
+        assertEquals("and ends wide open", 0f, into.lowPassHz.at(7_000_000), 0f)
+        assertEquals(1f, into.gain.at(8_300_000), 1e-3f)
+        // The other colour: the outgoing title sinks, the next one comes down from the top.
+        val other = plan.copy(variant = 1)
+        assertEquals(260f, DeckAutomation.outgoing(other).lowPassHz.at(198_000_000), 2f)
+        assertEquals(0f, DeckAutomation.outgoing(other).highPassHz.at(195_000_000), 0f)
+        assertEquals(1_200f, DeckAutomation.incoming(other).highPassHz.at(300_000), 2f)
+        assertEquals(0f, DeckAutomation.incoming(other).highPassHz.at(7_500_000), 0f)
+        assertEquals(190_000_000L + 8_000_000L, out.endUs)
+    }
+
+    @Test fun theLowPassTakesTheTopAndLeavesTheRest() {
+        val automation = DeckAutomation(Curve.flat(1f), Curve.flat(0f), Curve.flat(400f))
+        val rate = 48_000
+        val skip = rate / 5
+        fun ratio(hz: Double) = rms(run(DeckDsp(rate, 1), tone(hz, rate, 1f), 0, automation), skip) / rms(run(DeckDsp(rate, 1), tone(hz, rate, 1f), 0, null), skip)
+        assertTrue("4 kHz is taken away (${db(ratio(4_000.0))} dB)", db(ratio(4_000.0)) < -30)
+        assertEquals("80 Hz passes", 0.0, db(ratio(80.0)), .4)
+        assertEquals("-3 dB at the cut-off", -3.0, db(ratio(400.0)), .6)
+        // A filter that joins a sound in motion does not click: a constant stays a constant.
+        val late = DeckAutomation(Curve.flat(1f), Curve.flat(0f), Curve(longArrayOf(500_000, 500_001), floatArrayOf(0f, 18_000f)))
+        val constant = ByteBuffer.allocate(rate * 2).order(ByteOrder.LITTLE_ENDIAN).apply { repeat(rate) { putShort(12_000) }; flip() }
+        val through = run(DeckDsp(rate, 1), constant, 0, late)
+        for (i in 1 until through.size) assertTrue("step at $i: ${through[i - 1]} -> ${through[i]}", abs(through[i] - through[i - 1]) <= 40)
+    }
+
+    @Test fun aTitleWithoutABeatDissolvesIntoItsReverberation() {
+        val plan = MixPlan(MixKind.Wash, outMs = 190_000, inMs = 300, overlapMs = 8_000, gain = 1f)
+        val out = DeckAutomation.outgoing(plan); val into = DeckAutomation.incoming(plan)
+        assertTrue(out.usesReverb); assertFalse(out.usesEcho)
+        assertEquals(0f, out.reverb.at(190_000_000), 1e-3f); assertEquals(1f, out.reverb.at(193_000_000), 1e-3f)
+        assertEquals(1f, out.dry.at(191_000_000), 1e-3f); assertEquals(0f, out.dry.at(195_000_000), 1e-3f)
+        assertEquals(1f, out.gain.at(194_000_000), 1e-3f); assertEquals(0f, out.gain.at(198_000_000), 1e-3f)
+        assertEquals("The next title rises without its bass at first", 220f, into.highPassHz.at(300_000), 2f)
+        assertEquals(0f, into.highPassHz.at(6_000_000), 0f)
+
+        // Heard: with the dry sound closed, a tone that stops leaves a tail that fades and never overloads.
+        val rate = 44_100
+        val wet = DeckAutomation(Curve.flat(1f), Curve.flat(0f), dry = Curve.flat(0f), reverb = Curve(longArrayOf(0, 1), floatArrayOf(1f, 1f)))
+        val frames = rate * 5
+        val input = ByteBuffer.allocate(frames * 4).order(ByteOrder.LITTLE_ENDIAN)
+        for (i in 0 until frames) {
+            val v = if (i < rate) ((sin(2 * PI * 330.0 * i / rate) * .5 + sin(2 * PI * 880.0 * i / rate) * .3) * 16_000).toInt() else 0
+            input.putShort(v.toShort()); input.putShort(v.toShort())
+        }
+        input.flip()
+        val samples = run(DeckDsp(rate, 2), input, 0, wet)
+        fun level(fromMs: Int, toMs: Int): Double { var sum = 0.0; var n = 0; for (i in fromMs * rate / 1000 * 2 until toMs * rate / 1000 * 2) { sum += samples[i].toDouble() * samples[i]; n++ }; return sqrt(sum / n) }
+        val sounding = level(500, 1_000); val justAfter = level(1_050, 1_300); val later = level(2_500, 3_000); val gone = level(4_500, 5_000)
+        assertTrue("the room sounds about as loud as the title did ($sounding)", sounding in 3_000.0..12_000.0)
+        assertTrue("a tail is left when the sound stops ($justAfter)", justAfter > sounding * .08)
+        assertTrue("it fades ($later, $gone)", later < justAfter * .3 && gone < 30.0)
+        assertTrue(samples.none { abs(it.toInt()) >= 32_767 })
+        // The two sides are not the same signal: the room has width.
+        var different = 0
+        for (i in rate until rate * 2) if (abs(samples[i * 2] - samples[i * 2 + 1]) > 50) different++
+        assertTrue("stereo tail ($different)", different > rate / 10)
+    }
+
+    @Test fun twoTemposMeetWhileEachTitleIsTheQuietOne() {
+        // The incoming title starts at the speed that follows the outgoing one, and ends at its own.
+        assertEquals(.94f, DeckSync.ride(.94f, 0f), 1e-6f)
+        assertEquals(.94f, DeckSync.ride(.94f, .1f), 1e-6f)
+        assertEquals(1f, DeckSync.ride(.94f, .9f), 1e-6f)
+        assertEquals(1f, DeckSync.ride(.94f, 1f), 1e-6f)
+        var before = .94f
+        for (step in 0..100) {
+            val now = DeckSync.ride(.94f, step / 100f)
+            assertTrue("only ever towards its own tempo", now >= before - 1e-6f && now - before < .004f)
+            before = now
+            // The outgoing title plays at this speed divided by the ratio: the two stay locked all along.
+            val lead = now / .94f
+            assertTrue(lead in 1f..(1f / .94f + 1e-4f))
+        }
+        assertEquals("Half-way each title carries half of the difference", kotlin.math.sqrt(.94f), DeckSync.ride(.94f, .5f), 1e-4f)
+        assertEquals(1.064f, DeckSync.stepped(1f / .94f), 1e-6f)
+        assertEquals(1f, DeckSync.stepped(1.0004f), 0f)
     }
 
     @Test fun withoutAutomationTheSoundIsUntouched() {

@@ -243,6 +243,41 @@ class StudioAndHomeHostTest {
         compose.onNodeWithTag("studio-canvas-off").performScrollTo().assertIsEnabled()
     }
 
+    @Test fun theCanvasActionsHaveAModeForTheMusicPlayerAlone() {
+        val tracks = listOf(Track("yt:1", "One More Time", "Daft Punk", "Discovery"), Track("yt:2", "Aerodynamic", "Daft Punk", "Discovery"))
+        val target = VisualTarget.album("Discovery", "Daft Punk", null, tracks.first(), tracks)!!
+        MediaOverrides.replaceForTest(listOf(MediaOverride("track", "aerodynamic|daft punk", playerCanvas = false),
+            MediaOverride("album", "discovery|daft punk", canvasOff = true)))
+        compose.setContent { KetvoiceTheme(useDark = true) {
+            val scope = rememberCoroutineScope()
+            val state = androidx.compose.runtime.remember { StudioState(StudioFiles(compose.activity), scope) }
+            androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.background(com.ketvoice.app.theme.LocalTheme.current.background)) {
+                StudioVisuals(state, listOf(target))
+            }
+        } }
+        try {
+            // The page's mode first: what was there before, and the page's own marks.
+            compose.onNodeWithTag("studio-canvas-scope").performScrollTo().assertIsDisplayed()
+            compose.onNodeWithTag("studio-title-off").assertExists()
+            compose.onAllNodesWithText("Canvas désactivé").assertCountEquals(2)
+            compose.onAllNodesWithTag("studio-player-off").assertCountEquals(0)
+            compose.onNodeWithTag("studio-canvas-scope-player").performClick()
+            compose.waitForIdle()
+            // The player's mode: its three actions, its own marks, and nothing that would change the page.
+            for (tag in listOf("studio-player-off", "studio-player-on", "studio-player-follow")) compose.onNodeWithTag(tag).performScrollTo().assertIsDisplayed()
+            compose.onAllNodesWithTag("studio-title-off").assertCountEquals(0)
+            compose.onAllNodesWithTag("studio-title-apply").assertCountEquals(0)
+            compose.onAllNodesWithText("Masqué dans le lecteur").assertCountEquals(1)
+            compose.onAllNodesWithText("Canvas désactivé").assertCountEquals(0)
+            image("studio-title-canvas-player")
+            compose.onNodeWithTag("studio-player-off").assertIsNotEnabled()
+            compose.onNodeWithTag("studio-rights").performScrollTo().performClick()
+            compose.onNodeWithTag("studio-player-off").performScrollTo().assertIsEnabled()
+            compose.onNodeWithTag("studio-canvas-scope-page").performScrollTo().performClick()
+            compose.onNodeWithTag("studio-title-off").assertExists()
+        } finally { MediaOverrides.replaceForTest(emptyList()) }
+    }
+
     @Test fun theTitlesOfAnAlbumAreOnlyOfferedForAnAlbumWithTitles() {
         val track = Track("yt:1", "One More Time", "Daft Punk", "Discovery")
         compose.setContent { KetvoiceTheme(useDark = true) {

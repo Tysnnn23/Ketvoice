@@ -1,6 +1,7 @@
 package com.ketvoice.app.ui.home
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -13,6 +14,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerEventPass
@@ -120,7 +122,8 @@ internal fun HomeForYou(hour: Int, releases: List<CatalogAlbum>, fallback: @Comp
     when (forYouKind(current != null && !player.playWhenReady && position > 5_000, fresh != null, cards.isNotEmpty())) {
         ForYouKind.Resume -> ForYouCard("Reprendre là où vous étiez", current!!.title,
             "${current.artist} · " + com.ketvoice.app.data.AppText.t("à ${formatSecs(position)}"),
-            listOf(ArtworkRepo.coverForTrack(current) ?: current.coverUrl), action = "Reprendre", tag = "for-you-resume") {
+            listOf(ArtworkRepo.coverForTrack(current) ?: current.coverUrl), action = "Reprendre", tag = "for-you-resume",
+            progress = if (player.durationMs > 0) (position.toFloat() / player.durationMs).coerceIn(0f, 1f) else null) {
             Player.toggle(); AppUi.showPlayer.value = true
         }
         ForYouKind.NewRelease -> ForYouCard("Nouveau de ${fresh!!.artist}", fresh.title, fresh.releaseDate.orEmpty(),
@@ -137,29 +140,46 @@ internal fun HomeForYou(hour: Int, releases: List<CatalogAlbum>, fallback: @Comp
     }
 }
 
+/**
+ * The card the page leads with: the artwork edge to edge, a glow of its own colour under it,
+ * what it is in a small capsule, its name in large, one button. A paused title also shows
+ * how far it had got.
+ */
 @Composable
 private fun ForYouCard(label: String, title: String, subtitle: String, covers: List<String?>, action: String, tag: String,
-                       onClick: () -> Unit) {
+                       progress: Float? = null, onClick: () -> Unit) {
     val theme = LocalTheme.current
     val cover = covers.firstOrNull { !it.isNullOrBlank() }
-    Box(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 8.dp).height(208.dp).clip(RoundedCornerShape(30.dp))
-        .background(Brush.linearGradient(listOf(theme.accent.copy(alpha = .55f), theme.card)))
+    val glow = com.ketvoice.app.theme.rememberCoverAccent(cover)?.first ?: theme.accent
+    val shape = RoundedCornerShape(32.dp)
+    Box(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 10.dp)
+        .shadow(if (theme.isDark) 28.dp else 14.dp, shape, clip = false, ambientColor = glow, spotColor = glow)
+        .height(236.dp).clip(shape)
+        .background(Brush.linearGradient(listOf(glow.copy(alpha = .62f), theme.card)))
+        .border(1.dp, Color.White.copy(alpha = .10f), shape)
         .clickable(role = Role.Button, onClick = onClick).testTag(tag)) {
         if (cover != null) AsyncImage(cover, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
         // A floor of shade so the words stay readable on any artwork.
         Box(Modifier.matchParentSize().background(Brush.verticalGradient(
-            0f to Color.Black.copy(alpha = .05f), .45f to Color.Black.copy(alpha = .25f), 1f to Color.Black.copy(alpha = .78f))))
-        Column(Modifier.align(Alignment.BottomStart).padding(20.dp).fillMaxWidth(.78f)) {
-            Text(label.uppercase(), localize = false, color = Color.White.copy(alpha = .82f), fontSize = 11.sp,
-                fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(title, localize = false, color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Bold, letterSpacing = (-.6).sp,
-                lineHeight = 30.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
-            if (subtitle.isNotBlank()) Text(subtitle, localize = false, color = Color.White.copy(alpha = .78f), fontSize = 13.sp,
-                maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 2.dp))
+            0f to Color.Black.copy(alpha = .16f), .42f to Color.Black.copy(alpha = .20f), 1f to Color.Black.copy(alpha = .86f))))
+        Text(label.uppercase(), localize = false, color = Color.White, fontSize = 11.sp,
+            fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.align(Alignment.TopStart).padding(16.dp).clip(RoundedCornerShape(999.dp))
+                .background(Color.Black.copy(alpha = .40f)).border(1.dp, Color.White.copy(alpha = .14f), RoundedCornerShape(999.dp))
+                .padding(horizontal = 12.dp, vertical = 7.dp))
+        Column(Modifier.align(Alignment.BottomStart).padding(start = 20.dp, end = 92.dp, bottom = if (progress != null) 28.dp else 22.dp)) {
+            Text(title, localize = false, color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold, letterSpacing = (-.7).sp,
+                lineHeight = 32.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            if (subtitle.isNotBlank()) Text(subtitle, localize = false, color = Color.White.copy(alpha = .80f), fontSize = 13.sp,
+                maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 3.dp))
         }
-        Box(Modifier.align(Alignment.BottomEnd).padding(18.dp).size(52.dp).clip(CircleShape).background(Color.White),
-            contentAlignment = Alignment.Center) {
-            Icon(KetIcons.Play, action, tint = Color.Black, modifier = Modifier.size(24.dp))
+        Box(Modifier.align(Alignment.BottomEnd).padding(end = 18.dp, bottom = if (progress != null) 24.dp else 18.dp).size(56.dp)
+            .clip(CircleShape).background(Color.White), contentAlignment = Alignment.Center) {
+            Icon(KetIcons.Play, action, tint = Color.Black, modifier = Modifier.size(26.dp))
+        }
+        if (progress != null) Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(4.dp).background(Color.White.copy(alpha = .20f))
+            .testTag("for-you-progress")) {
+            Box(Modifier.fillMaxWidth(progress.coerceIn(0f, 1f)).fillMaxHeight().background(Color.White))
         }
     }
 }
@@ -175,7 +195,7 @@ internal fun HomeReleasesShelf(releases: List<CatalogAlbum>, modifier: Modifier 
                 Column(Modifier.width(156.dp).clip(RoundedCornerShape(14.dp)).clickable(role = Role.Button) {
                     AppUi.openCatalog(CatalogRequest("album", album.id, album.title))
                 }.padding(bottom = 4.dp)) {
-                    Cover(album.title, com.ketvoice.app.data.MediaOverrides.albumCover(album.title, album.artist, album.cover), 156.dp, 13.dp)
+                    Cover(album.title, com.ketvoice.app.data.MediaOverrides.albumCover(album.title, album.artist, album.cover), 156.dp, 16.dp)
                     Text(album.title, localize = false, color = theme.onBackground, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
                         maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))
                     Text(listOfNotNull(album.artist, album.releaseDate?.take(4)).joinToString(" · "), localize = false,
@@ -207,6 +227,16 @@ internal fun HomeWeekCard(modifier: Modifier = Modifier) {
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             WeekFigure(com.ketvoice.app.ui.sub.playtimeLabel(week.listenedMs).ifBlank { "< 1 min" }, "d'écoute", Modifier.weight(1f))
             WeekFigure("${week.plays}", "écoutes", Modifier.weight(1f))
+        }
+        // The seven days, oldest first: today in the accent, each bar as tall as that day's listening.
+        val daily = remember(days) { ListeningWeek.daily(days, LocalDate.now()) }
+        val longest = daily.max()
+        if (longest > 0L) Row(Modifier.fillMaxWidth().height(46.dp).testTag("home-week-days"),
+            horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.Bottom) {
+            daily.forEachIndexed { index, ms ->
+                Box(Modifier.weight(1f).fillMaxHeight(ListeningWeek.barShare(ms, longest)).clip(RoundedCornerShape(6.dp))
+                    .background(if (index == daily.lastIndex) theme.accent else theme.onBackground.copy(alpha = .18f)))
+            }
         }
         week.topArtist?.let { WeekLine("Artiste de la semaine", it) }
         week.topTrack?.let { WeekLine("Titre de la semaine", "${it.title} · ${it.artist}") }

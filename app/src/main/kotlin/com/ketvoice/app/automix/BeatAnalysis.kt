@@ -11,7 +11,7 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 
 /**
- * What Automix knows about a stretch of a title (its first or last seconds). Every time
+ * What Ketmix knows about a stretch of a title (its first or last seconds). Every time
  * is a position in the title, in milliseconds.
  */
 internal data class SegmentAnalysis(
@@ -37,7 +37,10 @@ internal data class SegmentAnalysis(
     /** The title ends on a fade rather than on a last note. */
     val fadeOut: Boolean = false,
     /** The title is at full level until its last note. */
-    val hardEnding: Boolean = false
+    val hardEnding: Boolean = false,
+    /** See [MusicalKey]: 0..23, [MusicalKey.NONE] when the music does not say, [MusicalKey.UNREAD] when it was not looked for. */
+    val key: Int = MusicalKey.UNREAD,
+    val keyStrength: Float = 0f
 ) {
     val beatMs: Float get() = if (bpm > 0f) 60_000f / bpm else 0f
     val hasBeat: Boolean get() = bpm > 0f && confidence >= MIN_CONFIDENCE
@@ -67,11 +70,16 @@ internal object BeatAnalysis {
 
     internal class Tempo(val bpm: Float, val periodFrames: Float, val phaseFrames: Float, val confidence: Float, val barOffset: Int)
 
-    fun analyze(envelope: OnsetEnvelope, startMs: Long): SegmentAnalysis {
+    /**
+     * [thorough] also checks that the tempo holds from one half of the stretch to the other: a
+     * band that speeds up or slows down cannot be kept in time for long, and is not trusted to.
+     */
+    fun analyze(envelope: OnsetEnvelope, startMs: Long, thorough: Boolean = false): SegmentAnalysis {
         val lengthMs = (envelope.seconds * 1000).toLong()
         if (envelope.size < 8) return SegmentAnalysis(startMs, lengthMs)
         val shape = structure(envelope)
-        val tempo = tempo(envelope)
+        val tempo = tempo(envelope)?.let { if (thorough) steadied(it, envelope) else it }
+        val (key, keyStrength) = if (envelope.keyRead) MusicalKey.estimate(envelope.chroma) else MusicalKey.UNREAD to 0f
         fun ms(frame: Float) = startMs + (envelope.timeOf(frame) * 1000).toLong()
         return SegmentAnalysis(
             startMs = startMs, lengthMs = lengthMs,
@@ -84,8 +92,21 @@ internal object BeatAnalysis {
             soundEndMs = ms(shape.soundEnd.toFloat()).coerceAtMost(startMs + lengthMs),
             riseMs = ms(shape.rise.toFloat()).coerceAtLeast(startMs),
             fallMs = ms(shape.fall.toFloat()).coerceAtMost(startMs + lengthMs),
-            fadeOut = shape.fadeOut, hardEnding = shape.hardEnding)
+            fadeOut = shape.fadeOut, hardEnding = shape.hardEnding, key = key, keyStrength = keyStrength)
     }
+
+    /** A tempo that is not the same in both halves of the stretch loses the confidence long mixes need. */
+    private fun steadied(whole: Tempo, envelope: OnsetEnvelope): Tempo {
+        val half = envelope.size / 2
+        if (half < envelope.fps * MIN_SECONDS) return whole
+        val first = tempo(envelope.slice(0, half)) ?: return whole
+        val second = tempo(envelope.slice(half, envelope.size)) ?: return whole
+        if (first.confidence < SegmentAnalysis.MIN_CONFIDENCE || second.confidence < SegmentAnalysis.MIN_CONFIDENCE) return whole
+        val drift = abs(foldedRatio(first.bpm, second.bpm) - 1f)
+        return if (drift <= MAX_DRIFT) whole
+            else Tempo(whole.bpm, whole.periodFrames, whole.phaseFrames, whole.confidence * .5f, whole.barOffset)
+    }
+    private const val MAX_DRIFT = .012f
 
     // ---------------------------------------------------------------- tempo and beats
 

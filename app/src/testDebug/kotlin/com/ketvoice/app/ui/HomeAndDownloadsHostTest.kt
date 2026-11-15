@@ -155,6 +155,47 @@ class HomeAndDownloadsHostTest {
         }
     }
 
+    @Test fun theHomePageLeadsWithACardThenTilesOfShortcutsAndRecentTitles() {
+        history(plays = 5)
+        recent.value = known.value.take(9)
+        AppSettings.favoriteIds.value = setOf(known.value.first().id)
+        @Suppress("UNCHECKED_CAST")
+        val days = ListeningHistory::class.java.getDeclaredField("_days").apply { isAccessible = true }.get(ListeningHistory) as MutableStateFlow<Map<String, DayStat>>
+        val before = days.value
+        val today = java.time.LocalDate.now()
+        var week = ListeningWeek.addTime(emptyMap(), today, 50 * 60_000L)
+        week = ListeningWeek.addTime(week, today.minusDays(1), 20 * 60_000L)
+        week = ListeningWeek.addTime(week, today.minusDays(3), 95 * 60_000L)
+        repeat(5) { week = ListeningWeek.addPlay(week, today, known.value.first().id) }
+        days.value = week
+        try {
+            compose.setContent { KetvoiceTheme(useDark = true) { com.ketvoice.app.ui.home.HomeScreen() } }
+            compose.onNodeWithTag("home-greeting").assertIsDisplayed()
+            // The card comes first, the shortcuts under it as tiles, two by two, each saying how much is behind it.
+            val card = compose.onNodeWithTag("for-you-mix").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+            val tiles = compose.onAllNodesWithTag("home-shortcut").fetchSemanticsNodes().map { it.boundsInRoot }
+            assertEquals(3, tiles.size)
+            assertTrue("under the card", tiles.all { it.top >= card.bottom })
+            assertEquals("two on a line", tiles[0].top, tiles[1].top, 1f)
+            assertTrue(tiles[1].left > tiles[0].right && tiles[2].top > tiles[0].bottom)
+            compose.onNodeWithText("Aléatoire").assertIsDisplayed()
+            compose.onNodeWithText("21 titres").assertIsDisplayed(); compose.onNodeWithText("1 titre").assertIsDisplayed()
+            image("home-page-dark")
+            // Recent titles: six tiles on a phone, two by two; a tap plays from there.
+            compose.onNodeWithTag("home-recent-tiles").performScrollTo()
+            val recents = compose.onAllNodesWithTag("home-recent-tile").fetchSemanticsNodes()
+            assertEquals(6, recents.size)
+            assertEquals(recents[0].boundsInRoot.top, recents[1].boundsInRoot.top, 1f)
+            image("home-page-dark-recents")
+            compose.onNodeWithContentDescription("Changer la présentation des récents").performClick()
+            compose.onAllNodesWithTag("home-recent-tile").assertCountEquals(0)
+            compose.onNodeWithTag("home-list").performScrollToNode(hasTestTag("home-week"))
+            compose.onNodeWithTag("home-week").assertIsDisplayed()
+            compose.onNodeWithTag("home-week-days", useUnmergedTree = true).assertExists()
+            image("home-page-dark-week")
+        } finally { days.value = before }
+    }
+
     @Test fun aLocalMixListsItsTracksAndCanBeSavedAsAPlaylist() {
         history(plays = 5)
         kotlinx.coroutines.runBlocking { PlaylistStore.init(compose.activity) }

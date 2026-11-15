@@ -33,7 +33,7 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sin
 
-/** What the playback service lends to Automix: its decks. Everything is called on the main thread. */
+/** What the playback service lends to Ketmix: its decks. Everything is called on the main thread. */
 internal interface AutomixHost {
     /** The deck the listener hears and controls. */
     val main: ExoPlayer
@@ -48,9 +48,9 @@ internal interface AutomixHost {
 }
 
 /**
- * Mixes the end of a title into the start of the next one. Towards the end of what plays,
- * a second deck reads (silently, eight times faster than real time) the last seconds of
- * the title and the first seconds of the next one; [TransitionPlanner] decides what to
+ * Ketmix: mixes the end of a title into the start of the next one. Towards the end of what
+ * plays, a second deck reads (silently, eight times faster than real time) the last seconds
+ * of the title and the first seconds of the next one; [TransitionPlanner] decides what to
  * do with them; the second deck then starts in time with the first, both follow their
  * [DeckAutomation], and half-way the second deck becomes the one the listener controls.
  *
@@ -69,8 +69,6 @@ internal object Automix {
     private const val PREP_LEAD_MS = 150_000L
     private const val MAX_ATTEMPTS = 3
     private const val RETRY_MS = 6_000L
-    private const val OUTRO_WINDOW_MS = 45_000L
-    private const val INTRO_WINDOW_MS = 40_000L
     private const val ANALYSIS_SPEED = 8f
     private const val SETTLE_MS = 8_000L
 
@@ -78,8 +76,8 @@ internal object Automix {
     val ui: StateFlow<Ui> = _ui
 
     /**
-     * What Automix is doing or why it is not mixing, in the words shown to the listener (French
-     * literals, translated where they are shown). Empty while Automix is off.
+     * What Ketmix is doing or why it is not mixing, in the words shown to the listener (French
+     * literals, translated where they are shown). Empty while Ketmix is off.
      */
     private val _status = MutableStateFlow("")
     val status: StateFlow<String> = _status
@@ -98,6 +96,8 @@ internal object Automix {
     private var session: Session? = null
     /** Pairs of queue entries already mixed or given up for this playback. */
     private val settled = HashSet<String>()
+    /** Colour of the last transition played, so that the next one of its kind takes the other. */
+    private var lastVariant = -1
 
     /** Everything a transition owns, so that giving it up is one call whatever the moment. */
     private class Session(val host: AutomixHost, val main: ExoPlayer, val next: Player.NextEntry) {
@@ -124,7 +124,8 @@ internal object Automix {
                 }
             } else {
                 host.control(main)?.reset()
-                if (started) runCatching { main.volume = baseVolume }
+                // The outgoing title may have been led towards the tempo of the next one: it gets its own back.
+                if (started) runCatching { main.volume = baseVolume; main.playbackParameters = PlaybackParameters.DEFAULT }
                 if (incoming != null) { host.control(incoming)?.reset(); host.release(incoming) }
             }
         }
@@ -182,7 +183,7 @@ internal object Automix {
             if (job?.isActive == true) continue
             val state = Player.state.value
             val current = state.current
-            if (current == null || state.failed) { say("Automix actif"); continue }
+            if (current == null || state.failed) { say("Ketmix actif"); continue }
             val next = Player.automixNext()
             if (next == null) { say("Pas de mix · dernier titre de la file"); continue }
             val key = "${state.queueEntryIds.getOrNull(state.index)}>${next.entryId}#${Player.playbackEpoch}"
@@ -194,7 +195,7 @@ internal object Automix {
             val duration = main.duration
             val position = main.currentPosition
             if (duration <= 0 || position < 8_000 || duration - position > PREP_LEAD_MS) {
-                say(if (duration > 0) "Automix actif · le mix du titre suivant se prépare avant la fin de celui-ci" else "Automix actif")
+                say(if (duration > 0) "Ketmix actif · le mix du titre suivant se prépare avant la fin de celui-ci" else "Ketmix actif")
                 continue
             }
             if (retryAt[key]?.let { SystemClock.elapsedRealtime() < it } == true) continue
@@ -225,13 +226,6 @@ internal object Automix {
     private fun sameAlbum(a: Track, b: Track): Boolean = a.album.isNotBlank() &&
         MediaOverrides.normalize(a.album) == MediaOverrides.normalize(b.album) &&
         MediaOverrides.normalize(MediaOverrides.mainArtist(a.artist)) == MediaOverrides.normalize(MediaOverrides.mainArtist(b.artist))
-
-    private fun kindLabel(kind: MixKind): String = when (kind) {
-        MixKind.Beatmatch -> "calé sur le tempo"
-        MixKind.Crossfade -> "fondu enchaîné"
-        MixKind.Trim -> "enchaînement sans silence"
-        MixKind.None -> "sans mix"
-    }
 
     /** The transition is given up for this pair: say why, and do not try again. */
     private fun skip(reason: String): Boolean {
@@ -276,6 +270,7 @@ internal object Automix {
             skipSilence = AppSettings.skipSilence.value,
             albumsMixed = AppSettings.automixAlbums.value)
         val settings = MixSettings(AppSettings.automixIntensity.value)
+        val depth = AnalysisDepth.of(AppSettings.ketmixAnalysis.value)
         val nextDuration = next.track.durationMs.takeIf { it > 0 } ?: 600_000L
         // The context alone may already say that these two titles simply follow each other.
         TransitionPlanner.plan(MixFacts(duration), MixFacts(nextDuration), context, settings).let { first ->
@@ -303,15 +298,15 @@ internal object Automix {
 
         val voice = scope.async(Dispatchers.IO) { withTimeoutOrNull(6_000L) { runCatching { firstVoice(next.track) }.getOrNull() } }
         val clock = scope.async { clockConfirmed(main, mainControl) }
-        var outro = AnalysisStore.outro(current.id, duration)
+        var outro = AnalysisStore.outro(current.id, duration, depth)
         if (outro == null) {
-            outro = read(deck, control, item, max(0L, duration - OUTRO_WINDOW_MS), OUTRO_WINDOW_MS, ::valid)
+            outro = read(deck, control, item, max(0L, duration - depth.outroMs), depth.outroMs, depth, ::valid)
             outro?.let { AnalysisStore.put(current.id, duration, false, it) }
         }
         if (!valid()) return false
-        var intro = AnalysisStore.intro(next.track.id, next.track.durationMs)
+        var intro = AnalysisStore.intro(next.track.id, next.track.durationMs, depth)
         if (intro == null) {
-            intro = read(deck, control, nextItem, 0L, INTRO_WINDOW_MS, ::valid)
+            intro = read(deck, control, nextItem, 0L, depth.introMs, depth, ::valid)
             intro?.let { AnalysisStore.put(next.track.id, next.track.durationMs, true, it) }
         }
         if (!valid()) return false
@@ -321,15 +316,17 @@ internal object Automix {
         val out = MixFacts(duration, outro, vocalEndMs = Vocals.endMs(LyricsRepo.state.value.lines, duration))
         val incoming = MixFacts(nextDuration, intro, vocalStartMs = voice.await())
         val clockOk = clock.await()
-        fun planFor(beats: Boolean): MixPlan = TransitionPlanner.plan(
-            if (beats) out else out.copy(analysis = outro?.copy(confidence = 0f)), incoming, context, settings)
-        var plan = planFor(beats = clockOk)
+        // Without the decks' processors in the sound path only a trim or a plain fade can be played;
+        // without beats to rely on (too late for them), the transitions that need none remain.
+        fun planFor(effects: Boolean, beats: Boolean = true): MixPlan = TransitionPlanner.plan(out, incoming,
+            context.copy(effects = effects, beats = beats, lastVariant = lastVariant), settings)
+        var plan = planFor(effects = clockOk)
         if (!plan.mixes) return skip(plan.reason)
 
-        fun preRollOf(p: MixPlan) = if (p.kind == MixKind.Beatmatch) min(2_500.0, p.inMs / p.rate.toDouble()).toLong() else min(400L, p.inMs)
-        // Too late for a beat mix (a seek near the end, a slow network): the simpler transition at the very end may still fit.
-        if (plan.kind == MixKind.Beatmatch && main.currentPosition > plan.outMs - preRollOf(plan) - 1_800L) {
-            plan = planFor(beats = false)
+        fun preRollOf(p: MixPlan) = if (p.beatTied) min(2_500.0, p.inMs / p.rate.toDouble()).toLong() else min(400L, p.inMs)
+        // Too late for a mix on the beat (a seek near the end, a slow network): a transition at the very end may still fit.
+        if (plan.beatTied && main.currentPosition > plan.outMs - preRollOf(plan) - 1_800L) {
+            plan = planFor(effects = clockOk, beats = false)
             if (!plan.mixes) return skip(plan.reason)
         }
         val preRoll = preRollOf(plan)
@@ -350,8 +347,8 @@ internal object Automix {
         }
         // Levels and filters tied to the music need the processors of both decks in the sound path.
         s.precise = clockOk && control.active && mainControl.active
-        if (!s.precise && plan.kind == MixKind.Beatmatch) {
-            plan = planFor(beats = false)
+        if (!s.precise && plan.kind != MixKind.Trim && plan.kind != MixKind.Crossfade) {
+            plan = planFor(effects = false)
             if (!plan.mixes || main.currentPosition > plan.outMs - 1_200L) return skip(plan.reason.ifBlank { "late" })
             s.plan = plan
             deck.playbackParameters = PlaybackParameters.DEFAULT
@@ -374,11 +371,12 @@ internal object Automix {
             if (position > plan.outMs + 300L) return skip("late")
             if (position >= finalStart) break
             val seconds = ((finalStart - position) / 1000L).coerceAtLeast(0L)
-            say("Mix prévu dans $seconds s · ${kindLabel(plan.kind)}")
+            say("Mix prévu dans $seconds s · ${MixWords.label(plan)}" + MixWords.measures(plan).let { if (it.isEmpty()) "" else " · $it" })
             delay(if (finalStart - position > 500L) 80L else 6L)
         }
 
-        say("Mix en cours")
+        say("Mix en cours · ${MixWords.label(plan)}")
+        if (plan.kind == MixKind.Beatmatch || plan.kind == MixKind.Filter) lastVariant = plan.variant
         s.baseVolume = main.volume
         if (s.precise) deck.volume = s.baseVolume
         deck.play()
@@ -397,14 +395,19 @@ internal object Automix {
         val end = plan.outMs + plan.overlapMs
         val promoteAt = when {
             plan.kind == MixKind.Beatmatch && plan.swapMs >= 0 -> plan.swapMs + (plan.beatMs / 2f).toLong()
-            // A last note is followed at once: the next title is the one shown as soon as it is heard.
-            plan.kind == MixKind.Trim -> plan.outMs
+            // A last note, or a cut on the bar, is followed at once: the next title is the one shown as soon as it is heard.
+            plan.kind == MixKind.Trim || plan.kind == MixKind.Echo -> plan.outMs
             else -> plan.outMs + plan.overlapMs * 55 / 100
         }
+        // Two tempos that differ meet half-way in time: the common tempo slides from the outgoing
+        // title's to the incoming one's, so that each is only stretched while it is the quiet one.
+        val ride = s.precise && plan.kind == MixKind.Beatmatch && abs(plan.rate - 1f) >= .004f
         var epochNow = epoch
         var smoothed = Double.NaN
         var speed = plan.rate
         var speedAt = 0L
+        var lead = 1f
+        var leadAt = 0L
         var reseeked = false
         while (true) {
             delay(40)
@@ -431,7 +434,7 @@ internal object Automix {
                 val x = ((outPosition - plan.outMs).toFloat() / plan.overlapMs).coerceIn(0f, 1f)
                 main.volume = s.baseVolume * cos(Math.PI / 2 * x).toFloat()
                 deck.volume = s.baseVolume * plan.gain * sin(Math.PI / 2 * x).toFloat()
-            } else if (plan.kind == MixKind.Beatmatch && deck.isPlaying && main.isPlaying) {
+            } else if (plan.beatTied && deck.isPlaying && main.isPlaying) {
                 val error = DeckSync.errorMs(plan, outPosition, inPosition)
                 smoothed = if (smoothed.isNaN()) error else smoothed * .6 + error * .4
                 val audible = inPosition >= plan.inMs
@@ -441,11 +444,23 @@ internal object Automix {
                     deck.seekTo((plan.inMs + (outPosition - plan.outMs + 90L) * plan.rate.toDouble()).toLong().coerceAtLeast(0L))
                     continue
                 }
-                val wanted = DeckSync.speed(plan.rate, smoothed, audible)
                 val now = SystemClock.elapsedRealtime()
+                // After a cut the next title is alone on its own tempo: nothing is left to follow.
+                val follows = plan.kind == MixKind.Beatmatch || !audible
+                val through = ((outPosition - plan.outMs).toFloat() / plan.overlapMs).coerceIn(0f, 1f)
+                // On the grid of small steps, so that a speed is only set again when it really changed.
+                val shared = if (ride) DeckSync.stepped(DeckSync.ride(plan.rate, through)) else plan.rate
+                val wanted = if (follows) DeckSync.speed(shared, smoothed, audible) else 1f
                 if (wanted != speed && now - speedAt >= (if (audible) 500L else 200L)) {
-                    deck.playbackParameters = PlaybackParameters(wanted)
+                    deck.playbackParameters = if (wanted == 1f) PlaybackParameters.DEFAULT else PlaybackParameters(wanted)
                     speed = wanted; speedAt = now
+                }
+                if (ride) {
+                    val wantedLead = DeckSync.stepped(shared / plan.rate)
+                    if (wantedLead != lead && now - leadAt >= 500L) {
+                        main.playbackParameters = if (wantedLead == 1f) PlaybackParameters.DEFAULT else PlaybackParameters(wantedLead)
+                        lead = wantedLead; leadAt = now
+                    }
                 }
             }
             if (outPosition >= end + 120L || ended) break
@@ -463,8 +478,8 @@ internal object Automix {
             }
             return
         }
-        // Back to the title's own tempo, in steps too small to hear.
-        for (step in DeckSync.glide(plan.rate)) {
+        // Back to the title's own tempo, in steps too small to hear, when the mix left it anywhere else.
+        for (step in DeckSync.glide(speed)) {
             delay(500)
             if (h.main !== deck || Player.playbackEpoch != epochNow || s.closed) return
             deck.playbackParameters = if (step == 1f) PlaybackParameters.DEFAULT else PlaybackParameters(step)
@@ -480,8 +495,8 @@ internal object Automix {
 
     /** Plays [lengthMs] of [item] from [fromMs] on the silent deck, fast, and measures it. */
     private suspend fun read(deck: ExoPlayer, control: DeckControl, item: MediaItem, fromMs: Long, lengthMs: Long,
-                             valid: () -> Boolean): SegmentAnalysis? {
-        val tap = AnalysisTap(fromMs * 1000L, (fromMs + lengthMs) * 1000L)
+                             depth: AnalysisDepth, valid: () -> Boolean): SegmentAnalysis? {
+        val tap = AnalysisTap(fromMs * 1000L, (fromMs + lengthMs) * 1000L, depth.key, depth.thorough)
         control.automation = DeckAutomation.MUTE
         deck.volume = 0f
         control.tap = tap

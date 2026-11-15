@@ -1,5 +1,6 @@
 package com.ketvoice.app.ui.library
 
+import com.ketvoice.app.theme.pageBackground
 import com.ketvoice.app.ui.common.trackRowClick
 import com.ketvoice.app.ui.common.asHeading
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -85,7 +86,7 @@ fun LibraryScreen() {
         runCatching { PlaylistStore.pin(playlist.id, !playlist.pinned) }.onFailure { error = "Impossible de lire les playlists" }
     } }
     val backdrop = com.ketvoice.app.glass.rememberGlassBackdrop(theme.background)
-    Box(Modifier.fillMaxSize().background(theme.background)) {
+    Box(Modifier.fillMaxSize().pageBackground(theme)) {
     com.ketvoice.app.glass.BackdropCapture(backdrop, Modifier.fillMaxSize()) {
     LazyColumn(Modifier.fillMaxSize().statusBarsPadding().testTag("library-list"), state = list,
         contentPadding = PaddingValues(top = 70.dp, bottom = LocalAdaptiveLayout.current.bottomPaddingDp.dp)) {

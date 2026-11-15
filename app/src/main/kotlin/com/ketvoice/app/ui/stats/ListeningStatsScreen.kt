@@ -1,5 +1,6 @@
 package com.ketvoice.app.ui.stats
 
+import com.ketvoice.app.theme.pageBackground
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -47,7 +48,7 @@ fun ListeningStatsScreen(modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(theme.background)
+            .pageBackground(theme)
     ) {
         LazyColumn(
             modifier = Modifier

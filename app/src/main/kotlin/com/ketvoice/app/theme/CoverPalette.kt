@@ -164,3 +164,32 @@ fun rememberCoverAccent(url: String?): Pair<Color, Color>? {
     }
     return accent
 }
+
+/**
+ * The same accent pair taken from a Canvas: a frame of the video, a little after its start,
+ * read off the main thread and remembered per file. Null until it is known, when [path] is
+ * null, or when the frame carries no usable colour.
+ */
+@Composable
+fun rememberCanvasAccent(path: String?): Pair<Color, Color>? {
+    if (path.isNullOrBlank()) return null
+    val key = "canvas:$path"
+    var accent by remember(key) { mutableStateOf(CoverPalette.cached(key)) }
+    if (accent != null) return accent
+    LaunchedEffect(key) {
+        val frame = withContext(Dispatchers.IO) {
+            val reader = android.media.MediaMetadataRetriever()
+            try {
+                if (path.startsWith("https://")) reader.setDataSource(path, emptyMap()) else reader.setDataSource(path)
+                // Small is enough for colours, and keeps the read light.
+                reader.getScaledFrameAtTime(1_000_000L, android.media.MediaMetadataRetriever.OPTION_CLOSEST_SYNC, 96, 170)
+            } catch (_: Exception) { null } finally { runCatching { reader.release() } }
+        }
+        if (frame != null) {
+            val pair = CoverPalette.extract(frame)
+            frame.recycle()
+            if (pair != null) { CoverPalette.store(key, pair); accent = pair }
+        }
+    }
+    return accent
+}

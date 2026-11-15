@@ -1,10 +1,13 @@
 package com.ketvoice.app.ui.sub
 
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.layout
 import com.ketvoice.app.data.Frame
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.roundToInt
 import kotlin.math.sin
 
 /**
@@ -120,7 +123,11 @@ internal object Framing {
      * The rectangle after a finger moved ([dx], [dy], in widths) while holding [grab]. A move
      * that would leave the picture is refused (per axis for a plain move), never resized.
      */
-    fun drag(frame: Frame, grab: Grab, dx: Float, dy: Float, aspect: Float, square: Boolean): Frame {
+    fun drag(frame: Frame, grab: Grab, dx: Float, dy: Float, aspect: Float, square: Boolean): Frame =
+        drag(frame, grab, dx, dy, aspect, if (square) 1f else null)
+
+    /** [locked] is the shape (width over height) the rectangle must keep, or null when its sides move freely. */
+    fun drag(frame: Frame, grab: Grab, dx: Float, dy: Float, aspect: Float, locked: Float?): Frame {
         if (grab.moves) {
             val both = frame.copy(cx = frame.cx + dx, cy = frame.cy + dy)
             if (fits(both, aspect)) return both
@@ -129,16 +136,16 @@ internal object Framing {
             val vertical = frame.copy(cy = frame.cy + dy)
             return if (fits(vertical, aspect)) vertical else frame
         }
-        val candidate = if (square) {
-            // One number for both sides: what the finger asks of the side it holds.
+        val candidate = if (locked != null) {
+            // One number for both sides: what the finger asks of the width, through the side it holds.
             val asked = when {
-                grab.x != 0 && grab.y != 0 -> (grab.x * dx + grab.y * dy) / 2f
+                grab.x != 0 && grab.y != 0 -> (grab.x * dx + grab.y * dy * locked) / 2f
                 grab.x != 0 -> grab.x * dx
-                else -> grab.y * dy
+                else -> grab.y * dy * locked
             }
-            val side = max(SMALLEST, frame.w + asked)
-            val change = side - frame.w
-            frame.copy(cx = frame.cx + grab.x * change / 2f, cy = frame.cy + grab.y * change / 2f, w = side, h = side)
+            val width = max(SMALLEST * max(1f, locked), frame.w + asked)
+            val height = width / locked
+            frame.copy(cx = frame.cx + grab.x * (width - frame.w) / 2f, cy = frame.cy + grab.y * (height - frame.h) / 2f, w = width, h = height)
         } else {
             val width = max(SMALLEST, frame.w + grab.x * dx)
             val height = max(SMALLEST, frame.h + grab.y * dy)
@@ -146,6 +153,12 @@ internal object Framing {
                 w = width, h = height)
         }
         return if (fits(candidate, aspect)) candidate else frame
+    }
+
+    /** The largest rectangle of shape [boxAspect] inside [frame], around the same centre: a framing made for another box. */
+    fun shaped(frame: Frame, boxAspect: Float, aspect: Float): Frame {
+        val width = min(frame.w, frame.h * boxAspect)
+        return contain(frame.copy(w = width, h = width / boxAspect), aspect)
     }
 
     /** Two fingers spreading or closing: the rectangle grows or shrinks around its centre. */
@@ -169,3 +182,23 @@ internal object Framing {
         return contain(frame.copy(rotation = quarters + tilt.coerceIn(-45f, 45f)).clamped(), aspect)
     }
 }
+
+/**
+ * Draws the picture at the size it has when it simply covers the box, whatever the box crops,
+ * then moves it so that the rectangle of [frame] fills the box.
+ */
+internal fun Modifier.framedPicture(frame: Frame, aspect: Float, alpha: () -> Float = { 1f }): Modifier =
+    layout { measurable, constraints ->
+        val boxWidth = constraints.maxWidth; val boxHeight = constraints.maxHeight
+        val width = Framing.baseWidth(boxWidth.toFloat(), boxHeight.toFloat(), aspect).roundToInt().coerceIn(1, 8_192)
+        val height = (width / aspect).roundToInt().coerceIn(1, 8_192)
+        val placeable = measurable.measure(androidx.compose.ui.unit.Constraints.fixed(width, height))
+        val layer = Framing.layer(Framing.contain(frame, aspect), boxWidth.toFloat(), boxHeight.toFloat(), aspect)
+        layout(boxWidth, boxHeight) {
+            placeable.placeWithLayer((boxWidth - width) / 2, (boxHeight - height) / 2) {
+                scaleX = layer.scaleX; scaleY = layer.scaleY; rotationZ = layer.rotation
+                translationX = layer.translationX; translationY = layer.translationY
+                this.alpha = alpha()
+            }
+        }
+    }
