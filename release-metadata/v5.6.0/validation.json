@@ -1,0 +1,209 @@
+{
+  "schema": 8,
+  "version": "5.6.0",
+  "versionCode": 113,
+  "source_commit": "e2062ce87fbdb060398c3b9431a590decb55b030",
+  "created_at": "2026-11-15T19:44:16.055998+00:00",
+  "build_origin": {
+    "kind": "github_actions_with_owner_discord_sdk",
+    "workflow": "android.yml",
+    "run_id": 43753085096,
+    "artifact": {
+      "id": 14177716839,
+      "sha256": "b4383516cbb71a1cfc4442076b897aeead1116b3a4231db331d293fb6e3203cc"
+    },
+    "gradle": "assembleMobileRelease assembleQuestRelease",
+    "note": "Signed by CI with the pinned keystore secret; the Discord Social SDK AAR matched its pinned SHA-256."
+  },
+  "local_validation": {
+    "result": "debug JVM/Robolectric suites for both flavors, release lint and the UI text audit passed in a cloud container without the Discord SDK",
+    "commands": [
+      "testMobileDebugUnitTest",
+      "testQuestDebugUnitTest",
+      "lintMobileRelease",
+      "lintQuestRelease",
+      "tools/audit_ui_texts.py --check"
+    ],
+    "ci_validation": "run 43753085096: release builds, debug and release unit tests for both flavors, UI text audit, lint, APK signature pin and Discord bridge packaging passed",
+    "code_review": {
+      "kind": "author's own re-read; no independent review"
+    },
+    "host_previews": "Ket 27 host renders (settings, Appearance, Playback, tab bar) regenerated with the iOS 27 glass and inspected",
+    "after_last_full_local_run": "no source change after the last complete local run"
+  },
+  "server": {
+    "function": "ketvoice-content",
+    "deployed_version": 23,
+    "changed_in_this_version": false,
+    "note": "no server change since 5.4.0"
+  },
+  "tests": {
+    "mobile": {
+      "jvm": {
+        "tests": 780,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "android_15_emulator_compose": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "quest": {
+      "jvm": {
+        "tests": 779,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "android_15_emulator_compose": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    }
+  },
+  "lint": {
+    "mobile": {
+      "Warning": 186,
+      "Hint": 21
+    },
+    "quest": {
+      "Warning": 188,
+      "Hint": 21
+    }
+  },
+  "apks": [
+    {
+      "name": "Ketvoice-5.6.0.apk",
+      "sha256": "0a818576310b609153f52d1b3fbe79dcf3a9bf0278f3d623e0b5f8fbddf86117",
+      "bytes": 74245412,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "5.6.0",
+      "versionCode": 113,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-5.6.0-Quest.apk",
+      "sha256": "cff15904e8465855a488150716c6819907da1859b8e7cdbf07a243855b1f48b0",
+      "bytes": 84295394,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "5.6.0",
+      "versionCode": 113,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    }
+  ],
+  "discord": {
+    "sdk_present_in_ci_build": true,
+    "sdk_sha256_pinned": true,
+    "bridge_and_native_libraries_verified": true,
+    "presence_mode": "unauthenticated_rpc_through_installed_discord_app"
+  },
+  "credential_scan": {
+    "entries": 3393,
+    "findings": 0,
+    "raw_pattern_findings": 1,
+    "scope": "tracked sources and APK archive entries",
+    "kind": "credential_patterns",
+    "explicit_private_provider_key_deny_list": false,
+    "triage": [
+      {
+        "file": "Ketvoice-Liquid-Glass-V4.html",
+        "classification": "embedded_image_false_positive",
+        "all_hits_inside_image_data_uris": true,
+        "rescanned_without_image_payloads": true
+      }
+    ]
+  },
+  "release_install_smoke": {
+    "mobile": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "quest": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    }
+  },
+  "publication_override": {
+    "authorized_by_user": true,
+    "authorized_at": "2026-11-15T19:44:16.055998+00:00",
+    "kind": "standing_authorization",
+    "user_statement": "J'autorise TOUT devient maintenant une règle.",
+    "user_statement_date": "2026-11-14",
+    "in_reply_to": "The question whether versions may be published without phone or Quest testing without asking again for each version.",
+    "recorded_in": "AGENTS.md (commit aeeda8e)",
+    "reason": "The owner made publishing validated versions without phone or Quest testing a standing rule.",
+    "scope": "physical device installation and all on-device behaviour of 5.6.0"
+  },
+  "owner_report_2026_11_15_third": {
+    "statement_summary": "make Ket 27 the default; music often cuts when leaving the app; Ketmix still 'horrible' (no journal sent this time); more animations and a Liquid Glass faithful 1:1 to iOS 27 in Ket 27; Canvas changes say 'applied' but the old Canvas stays; album changes must survive version updates.",
+    "canvas": {
+      "evidence": "ketvoice_media_overrides holds the owner's rows saved at 19:01-19:02 UTC (album and titles with a canvas link, titles with canvas_off): saving worked",
+      "cause": "CanvasRepo.resolve kept whatever Canvas was already on the device for a title (the catalogue's file, reloaded from preferences at each launch) and returned before looking at the owner's choice; only an earlier choice stored as a file was ever replaced",
+      "fix": "the Canvas shown gives way whenever it is not the one the owner's choice calls for, or when a choice was removed",
+      "persistence": "overrides live on the server and in a local cache independent of the app version; nothing in an update removes them",
+      "not_verified": "not seen on a device; whether the owner's link host serves a streamable MP4 to the phone was not checked"
+    },
+    "gaps_in_background": {
+      "cause": "not established: no log or device trace was available",
+      "mitigations": [
+        "audio track buffer 0.5-1 s instead of Media3's 0.25-0.75 s",
+        "Ketmix reads titles at 3x instead of 8x while the activity is stopped"
+      ],
+      "side_effect": "what follows the sound through the meter (reactive visuals) may run up to a quarter of a second further ahead of what is heard"
+    },
+    "ketmix": {
+      "found": "DeckMixProcessor rebuilt its DSP at every flush; Media3 flushes processors at each playback-speed change, which a blend in time makes many times: filter state, echo and reverb buffers were lost each time",
+      "changes": [
+        "DSP kept across flushes, reset only after a jump of more than 1.5 s in the title",
+        "ride of the common tempo in 1 % steps",
+        "audible nudges only beyond 18 ms and at most every 1.2 s",
+        "journal: worst beat gap and number of speed changes"
+      ],
+      "unknown": "whether this is what the owner hears as 'horrible' is not known: nothing was heard here and no description or journal came with the report; two separate audio tracks cannot be locked to the sample, which may itself be audible on drums"
+    },
+    "ket27": {
+      "default": "SettingsStore reads ket27 as true when absent",
+      "glass_source": "numbers reported from a third-party repository said to measure Apple's iOS 27 Figma kit (70 % surface, shadow y 8 at 25/45 %); not compared with a real iPhone: '1:1' cannot be claimed"
+    }
+  },
+  "not_validated": [
+    "physical phone or Quest installation, rendering and touch behaviour",
+    "Ketmix with real audio on any device or emulator",
+    "Ket 27 on a device: only four host renders were inspected; Home, Explore, Library, album, artist, player, search, sheets and Quest were not looked at with Ket 27 on",
+    "Inter rendering on a device (variable font weights), and languages whose scripts Inter lacks (Hindi, Japanese, Chinese, Korean fall back to the system typeface)",
+    "independent code review of this diff"
+  ],
+  "owner_section_changes": [
+    "A Canvas chosen by the owner now replaces the Canvas already on the device for that title (see owner_report_2026_11_15_third.canvas)."
+  ],
+  "known_limitations": [
+    "Owner-section changes are deliberately not mentioned in the public release notes (owner preference).",
+    "A Canvas given as a link depends on the site that serves it: if it goes away or refuses streaming, nothing plays behind the title.",
+    "Ketmix needs the next title to be playable without a new resolution or one that succeeds in time; otherwise it says so and the title ends as before.",
+    "A manual skip is still a plain change of title: it is not mixed.",
+    "The mix journal is kept in memory only and is lost when the app is closed.",
+    "Ket 27 is an alpha: settings, switch, alerts, tab bar, colours and type follow iOS 27; page layouts elsewhere (Home, Library, album, player, sheets, menus) keep Ketvoice's own structure. No iPad sidebar, no minimised tab bar change, no new haptics.",
+    "Titles under 150 s and the light analysis setting get no body reading; 3:2 and 4:3 tempo relations between two different titles are still not mixed in time.",
+    "Reading the body of two titles adds about 5 to 10 seconds of silent decoding before each new pair.",
+    "The signing certificate is the existing public Android debug identity, not a private production key."
+  ],
+  "canonical_banner_sha256": "47f6793088983f7d4e6bd1aeaa2cbd8b7cdc2a8f91271e3b2839daea81da0436"
+}
