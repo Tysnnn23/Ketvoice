@@ -1,0 +1,212 @@
+{
+  "schema": 8,
+  "version": "5.3.0",
+  "versionCode": 109,
+  "source_commit": "f95f26a71515ac416a75acba46fab8d7803ae0e4",
+  "created_at": "2026-11-15T14:15:27.729728+00:00",
+  "build_origin": {
+    "kind": "github_actions_with_owner_discord_sdk",
+    "workflow": "android.yml",
+    "run_id": 43722286279,
+    "artifact": {
+      "id": 14165560535,
+      "sha256": "903558b6a7ba86f57b2fe509bc9fdcbfd89e35d483f03c887f5cc615f225d261"
+    },
+    "gradle": "assembleMobileRelease assembleQuestRelease",
+    "note": "Signed by CI with the pinned keystore secret; the Discord Social SDK AAR matched its pinned SHA-256."
+  },
+  "local_validation": {
+    "result": "debug JVM/Robolectric suites for both flavors, release lint and the UI text audit passed in a cloud container without the Discord SDK",
+    "commands": [
+      "testMobileDebugUnitTest",
+      "testQuestDebugUnitTest",
+      "lintMobileRelease",
+      "lintQuestRelease",
+      "tools/audit_ui_texts.py --check"
+    ],
+    "ci_validation": "run 43722286279: release builds, debug and release unit tests for both flavors, UI text audit, lint, APK signature pin and Discord bridge packaging passed",
+    "code_review": {
+      "kind": "author's own re-read; no independent review"
+    },
+    "host_previews": "the queue in selection mode, the animated mix strip above the progress bar, and the Ketmix settings with the transition style, loop and vibration options rendered in software on the host and inspected",
+    "after_last_full_local_run": "no source change after the last complete local run"
+  },
+  "server": {
+    "changed": false,
+    "function": "ketvoice-content",
+    "deployed_version": 22,
+    "note": "no server change in 5.3.0; the function deployed for 5.2.0 (version 22, handler from commit fbcd896) is unchanged"
+  },
+  "tests": {
+    "mobile": {
+      "jvm": {
+        "tests": 765,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "android_15_emulator_compose": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "quest": {
+      "jvm": {
+        "tests": 764,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "android_15_emulator_compose": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    }
+  },
+  "lint": {
+    "mobile": {
+      "Warning": 185,
+      "Hint": 21
+    },
+    "quest": {
+      "Warning": 187,
+      "Hint": 21
+    }
+  },
+  "apks": [
+    {
+      "name": "Ketvoice-5.3.0.apk",
+      "sha256": "bd1a50befd4bef8935842d3e42006fea3cc426c22ed6776b9f88e7cf1489281f",
+      "bytes": 73664516,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "5.3.0",
+      "versionCode": 109,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-5.3.0-Quest.apk",
+      "sha256": "efdab0642b3f6d12816b0154c292ddff517eba6d1c428906b9274b4f54e80429",
+      "bytes": 83714502,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "5.3.0",
+      "versionCode": 109,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    }
+  ],
+  "discord": {
+    "sdk_present_in_ci_build": true,
+    "sdk_sha256_pinned": true,
+    "bridge_and_native_libraries_verified": true,
+    "presence_mode": "unauthenticated_rpc_through_installed_discord_app"
+  },
+  "credential_scan": {
+    "entries": 3368,
+    "findings": 0,
+    "raw_pattern_findings": 1,
+    "scope": "tracked sources and APK archive entries",
+    "kind": "credential_patterns",
+    "explicit_private_provider_key_deny_list": false,
+    "triage": [
+      {
+        "file": "Ketvoice-Liquid-Glass-V4.html",
+        "classification": "embedded_image_false_positive",
+        "all_hits_inside_image_data_uris": true,
+        "rescanned_without_image_payloads": true
+      }
+    ]
+  },
+  "release_install_smoke": {
+    "mobile": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "quest": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    }
+  },
+  "publication_override": {
+    "authorized_by_user": true,
+    "authorized_at": "2026-11-15T14:15:27.729728+00:00",
+    "kind": "standing_authorization",
+    "user_statement": "J'autorise TOUT devient maintenant une règle.",
+    "user_statement_date": "2026-11-14",
+    "in_reply_to": "The question whether versions may be published without phone or Quest testing without asking again for each version.",
+    "recorded_in": "AGENTS.md (commit aeeda8e)",
+    "reason": "The owner made publishing validated versions without phone or Quest testing a standing rule.",
+    "scope": "physical device installation and all on-device behaviour of 5.3.0"
+  },
+  "ketmix": {
+    "requested_by_owner": "2026-11-15: make Ketmix even smoother and more immersive, with a deeper analysis, and let titles on repeat be mixed too; first propose useful design improvements and improve Liquid Glass and its animations, from several sources with positive and negative reviews.",
+    "research": {
+      "how": "two background research agents; most pages were reached through search-engine extracts or fetch summaries (arxiv.org, ismir.net, nngroup.com, macstories.net and others were blocked here); Apple's HIG materials page, the Liquid Glass custom views and Spring docs were read in full",
+      "applied_to_ketmix": [
+        "eight-bar phrase starts from bar-level level and spectral change (in the spirit of Foote novelty and Vande Veire & De Bie's downbeat-snapped boundaries, much simplified)",
+        "downbeats from beat-synchronous rises of level and spectral activity when the bass gives none (after Davies & Plumbley 2006, without the KL divergence)",
+        "blend order highs, mids, bass with one bass line at a time",
+        "short overlaps when a title overlaps itself (comb filtering)",
+        "repeat-one: the end blends into the start on the beat (a simple version of the jump idea of the Infinite Jukebox, without beat-similarity search)",
+        "transition style choice, a mix strip and a haptic on the bass swap, as proposed to and chosen by the owner"
+      ],
+      "applied_to_glass": [
+        "squircle bezel profile (kube.io) in the Liquid 27 style; the classic styles keep the circular arc after the host render test showed the squircle halved their visible refraction",
+        "Schlick Fresnel with F0 0.04 (Prismal's technical notes use Schlick)",
+        "materialize: refraction ramps in with Apple's smooth spring (0.5 s, no bounce)",
+        "release spring damping 0.68 against the 'jelly button' criticism",
+        "switch thumb turns into a lens while touched (HIG: controls become glass while interacted with)",
+        "scroll-edge legibility in every glass style (iOS 27's answer to legibility complaints)"
+      ]
+    },
+    "design_choices_by_owner": "Asked with a multiple-choice question on 2026-11-15; chosen: scroll-edge legibility, queue multi-select, shuffle with fewer repeats, night-dimmed album colours, transition style choice, animated mix strip, vibration on the bass swap. Not chosen: 'listen to the mix now'.",
+    "tested_on_host": [
+      "phrase detection on synthetic material whose parts change every eight bars, and none on a groove that never changes; downbeats from cymbal crashes without bass accents (BeatAnalysisTest)",
+      "the planner: mixes on phrase starts, echoes on phrase boundaries, loops (repeat one) with short overlaps, every transition style and its fallbacks, the share of the mix at which the bass changes hands (TransitionPlannerTest)",
+      "the highs-mids-bass order of the incoming filter (DeckDspTest)",
+      "shuffle with fewer repeats, queue selection rules, scroll-edge curve, spring overshoot, switch lens, mix strip levels (DesignRulesTest); night cap of page colours (CollectionHeroTest)",
+      "queue selection, the mix strip and the new Ketmix settings rendered and driven on the host (AutomixHostTest, UiPolishHostTest)"
+    ],
+    "never_run_with_real_audio": [
+      "nothing of the engine was executed against real audio output on any device or emulator; no transition, loop or vibration was heard or felt",
+      "phrase and downbeat detection were only checked on synthetic material, not on real music",
+      "a title on repeat played by two decks reading the same cached file at once was not exercised",
+      "the glass changes (squircle bezel in Liquid 27, Fresnel, materialize) are AGSL shaders and were not rendered on a GPU here; only the Kotlin side and the composables were exercised on the host"
+    ],
+    "safeguards": [
+      "off by default; any seek, title change, error, missing analysis or lack of time gives up the transition and the title ends as before",
+      "on repeat, the player's own looping is switched off only once a loop mix is planned and is given back if the mix is given up",
+      "a vibration only when the setting is on (off by default) and the app is in front"
+    ]
+  },
+  "not_validated": [
+    "physical phone or Quest installation, rendering and touch behaviour",
+    "Ketmix with real audio on any device or emulator (see the ketmix section)",
+    "the Liquid Glass shader changes on a GPU (squircle bezel in Liquid 27, Fresnel, materialize); the shaders were compiled and rendered in software on the host only",
+    "independent code review of this diff"
+  ],
+  "owner_section_changes": [],
+  "known_limitations": [
+    "Ketmix needs the next title to be playable without a new resolution or one that succeeds in time; otherwise it says so and the title ends as before.",
+    "A manual skip is still a plain change of title: it is not mixed.",
+    "The loop of a title on repeat blends its end into its start; it does not search the title for the most similar bars to jump between.",
+    "The mix strip is drawn from the plan of the transition, not from the audio itself.",
+    "The vibration on the bass swap only happens while the app is on screen.",
+    "The signing certificate is the existing public Android debug identity, not a private production key."
+  ],
+  "canonical_banner_sha256": "47f6793088983f7d4e6bd1aeaa2cbd8b7cdc2a8f91271e3b2839daea81da0436"
+}
