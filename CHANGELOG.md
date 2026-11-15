@@ -7,6 +7,22 @@
 
 ---
 
+# Ketvoice 5.4.1
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 111** — Ketmix transitions that keep their effects; last notes that ring on; intros under the last words.
+
+- Ketmix waits for both players' audio processing before choosing a transition, so filtered and echoed
+  transitions are played instead of a plain fade.
+- A last note at full level rings on in an echo past the end of the title while the next one starts.
+- A next title that does not sing yet rises under the last sung words (up to 6 s balanced, 10 s DJ),
+  the outgoing voice stepping back; the mix journal shows more of each transition.
+
+Full notes: [5.4.1](docs/releases/v5.4.1.md).
+
+---
+
 # Ketvoice 5.4.0
 
 ![Ketvoice](ketvoice-banner.png)

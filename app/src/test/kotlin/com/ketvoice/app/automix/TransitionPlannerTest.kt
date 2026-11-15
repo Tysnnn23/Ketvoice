@@ -95,8 +95,10 @@ class TransitionPlannerTest {
         assertEquals(MixKind.Filter, plan(outro(120f, fall = 187_000, fade = true), intro(150f)).kind)
         assertEquals("A 40 s quiet ending is played, then crossed", MixKind.Filter,
             plan(outro(120f, fall = 159_000), intro(150f)).kind)
-        // A title that ends at full level keeps its last note, except with the DJ setting.
-        assertEquals(MixKind.Trim, plan(outro(120f, hard = true), intro(150f), sungUntil = 180_000).kind)
+        // A title that ends at full level keeps its last note, which rings on past the end; the DJ setting cuts on the bar.
+        val rung = plan(outro(120f, hard = true), intro(150f), sungUntil = 180_000)
+        assertEquals(MixKind.Echo, rung.kind); assertTrue(rung.tail); assertTrue(rung.cutMs >= 199_000L)
+        assertEquals(MixKind.Trim, plan(outro(120f, hard = true), intro(150f), intensity = 0, sungUntil = 180_000).kind)
         val dj = plan(outro(120f, hard = true), intro(150f), intensity = 2, sungUntil = 180_000)
         assertEquals(MixKind.Echo, dj.kind)
         assertEquals("the echo takes the place of the last four beats", 197_000L, dj.outMs)
@@ -220,21 +222,63 @@ class TransitionPlannerTest {
         assertEquals(MixKind.Filter, plan(outro(120f, fall = 181_000), intro(120f), intensity = 0, sungFrom = 1_200).kind)
     }
 
+    @Test fun aLastNoteAtFullLevelRingsOnPastTheEnd() {
+        // Not discreet: the next title starts where a trim starts it, the last note plays whole and its echo
+        // rings for four beats past the end of the title.
+        val rung = plan(outro(120f, hard = true), intro(150f))
+        assertEquals(MixKind.Echo, rung.kind)
+        assertTrue(rung.tail && rung.onBeat)
+        assertEquals("the title's own sound is cut after its last note", maxOf(199_000L, rung.outMs), rung.cutMs)
+        assertTrue("the next title starts within a beat of the last note (${rung.outMs})", rung.outMs in 198_500..199_300)
+        assertEquals("four beats of echo after the cut", rung.cutMs + 2_000L, rung.outMs + rung.overlapMs)
+        // A beat read without full confidence (41 %) still gives the echo its length; none at all, 120 BPM.
+        val unsure = plan(outro(130f, hard = true, confidence = .41f), intro(148f, confidence = .21f))
+        assertEquals(MixKind.Echo, unsure.kind); assertEquals(60_000f / 130f, unsure.beatMs, .5f)
+        val none = plan(outro(0f, hard = true, confidence = 0f), intro(0f, confidence = 0f))
+        assertEquals(MixKind.Echo, none.kind); assertEquals(500f, none.beatMs, 0f)
+        // The echo is played out on silence by the outgoing deck: within what it may ring past the end.
+        assertTrue(rung.outMs + rung.overlapMs <= duration + 6_000L)
+        // A title on repeat restarts on the beat after its last note, without an echo over itself.
+        assertEquals(MixKind.Trim, plan(outro(120f, hard = true), intro(120f), MixContext(repeatOne = true, loop = true)).kind)
+    }
+
     @Test fun aLastNoteAtFullLevelIsNeverCovered() {
-        val plan = plan(outro(120f, hard = true), intro(0f, confidence = 0f))
+        val plan = plan(outro(120f, hard = true), intro(0f, confidence = 0f), intensity = 0)
         assertEquals(MixKind.Trim, plan.kind)
         assertTrue(plan.overlapMs <= 300)
         assertTrue("The next title starts as the last note ends", abs(plan.outMs + plan.overlapMs / 2 - 199_000) <= 10)
         assertEquals(260L, plan.inMs)
         assertFalse(plan.onBeat)
         // Both have a beat: the first beat of the next title (at 500 ms) lands on the beat that follows the last note.
-        val timed = plan(outro(120f, hard = true), intro(150f))
+        val timed = plan(outro(120f, hard = true), intro(150f), intensity = 0)
         assertEquals(MixKind.Trim, timed.kind)
         assertTrue(timed.onBeat)
         assertTrue("on the outgoing title's grid", onBeat(timed.outMs + (500 - timed.inMs), 155_000.0, 120f))
         assertTrue("within a beat of the last note (${timed.outMs})", timed.outMs in 198_500..199_300)
         // Same tempo but singing until a hard ending: still no mix over it.
-        assertEquals(MixKind.Trim, plan(outro(120f, hard = true), intro(120f), sungUntil = 198_500).kind)
+        assertEquals(MixKind.Trim, plan(outro(120f, hard = true), intro(120f), intensity = 0, sungUntil = 198_500).kind)
+        assertEquals("rung out otherwise", MixKind.Echo, plan(outro(120f, hard = true), intro(120f), sungUntil = 198_500).kind)
+    }
+
+    @Test fun aNextTitleThatDoesNotSingYetRisesUnderTheLastSungWords() {
+        // 120 vs 188 BPM and no beat in the next intro; the outgoing title sings to 190 s of a 191 s end.
+        val a = outro(120f, fall = 191_000, end = 191_000, confidence = .89f)
+        val b = intro(0f, confidence = 0f)
+        val alone = plan(a, b, sungUntil = 190_000)
+        assertEquals("without knowing when the next title sings: 2.5 s", 2_500L, alone.overlapMs)
+        val under = plan(a, b, sungUntil = 190_000, sungFrom = 27_000)
+        assertEquals(MixKind.Filter, under.kind)
+        assertEquals("0.7 s after the singing plus 6 s under it", 6_700L, under.overlapMs)
+        assertEquals("the outgoing voice steps back", 190_300L, under.sungUntilMs)
+        assertEquals("DJ: 10 s under it", 10_700L, plan(a, b, intensity = 2, sungUntil = 190_000, sungFrom = 27_000).overlapMs)
+        assertEquals("discreet waits for the end of the singing", 2_500L, plan(a, b, intensity = 0, sungUntil = 190_000, sungFrom = 27_000).overlapMs)
+        // A next title that sings soon is not brought in under the outgoing voice for longer than its own silence.
+        assertEquals(3_500L, plan(a, b, sungUntil = 190_000, sungFrom = 5_300).overlapMs)
+        // The voice steps back on the outgoing deck.
+        val automation = DeckAutomation.outgoing(under)
+        assertTrue(automation.usesVocalCut)
+        assertEquals(0f, automation.vocalCut.at(under.outMs * 1000L), 1e-3f)
+        assertEquals(DeckAutomation.VOICE_DOWN, automation.vocalCut.at((under.outMs + 3_000L) * 1000L), 1e-3f)
     }
 
     @Test fun aFadeOutIsCrossedWhileItIsStillHeard() {

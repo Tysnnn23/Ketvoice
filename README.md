@@ -21,6 +21,16 @@
 
 ## Overview
 
+### 5.4.1 — Ketmix that keeps its effects
+
+Ketmix now waits for both players' audio processing before choosing a transition, so filtered and
+echoed transitions are played instead of a plain fade. A last note at full level rings on in an echo
+past the end of the title while the next one starts, and a next title that does not sing yet rises
+under the last sung words while the outgoing voice steps back.
+[Mobile](https://github.com/Tysnnn23/Ketvoice/releases/download/v5.4.1/Ketvoice-5.4.1.apk)
+· [Quest](https://github.com/Tysnnn23/Ketvoice/releases/download/v5.4.1/Ketvoice-5.4.1-Quest.apk)
+· [Release notes](docs/releases/v5.4.1.md).
+
 ### 5.4.0 — Longer Ketmix blends, your colours
 
 Ketmix blends now run up to 16 bars and play two titles in time across a wider range of tempos,

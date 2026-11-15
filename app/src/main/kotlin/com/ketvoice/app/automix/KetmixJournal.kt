@@ -30,7 +30,18 @@ internal object KetmixJournal {
         val clock: Boolean? = null,
         val sungUntilMs: Long? = null,
         val sungFromMs: Long? = null,
-        val analysis: String = ""
+        val analysis: String = "",
+        /** Where the outgoing title's sound ends, and how ("hard", "fade", "rings"). */
+        val outEndMs: Long? = null,
+        val ending: String = "",
+        /** Where the mix starts in the outgoing title, and where the incoming title is then. */
+        val mixAtMs: Long? = null,
+        val inAtMs: Long? = null,
+        /** The processors of each deck were in its sound path. */
+        val pathOut: Boolean? = null,
+        val pathIn: Boolean? = null,
+        /** The transition rang on past the end of the outgoing title. */
+        val tail: Boolean = false
     )
 
     private val _entries = MutableStateFlow<List<Entry>>(emptyList())
@@ -39,6 +50,14 @@ internal object KetmixJournal {
     fun add(entry: Entry) { _entries.value = (listOf(entry) + _entries.value).take(LIMIT) }
 
     fun clear() { _entries.value = emptyList() }
+
+    /** Corrects the newest entry: what happened once the mix played. */
+    fun amend(update: (Entry) -> Entry) {
+        val list = _entries.value
+        if (list.isNotEmpty()) _entries.value = listOf(update(list.first())) + list.drop(1)
+    }
+
+    private fun seconds(ms: Long) = "%.1f s".format(java.util.Locale.ROOT, ms / 1000.0)
 
     private fun beat(bpm: Float, confidence: Float) = if (bpm <= 0f) "no beat" else "%.1f BPM (%.0f %%)".format(java.util.Locale.ROOT, bpm, confidence * 100)
     private fun key(key: Int) = MusicalKey.code(key).ifEmpty { if (key == MusicalKey.UNREAD) "key not read" else "no key" }
@@ -62,6 +81,16 @@ internal object KetmixJournal {
             e.sungFromMs?.let { append(" · next sings at ").append(it / 1000).append(" s") }
             if (e.analysis.isNotEmpty()) append(" · ").append(e.analysis)
             append('\n')
+            if (e.outEndMs != null || e.mixAtMs != null || e.pathOut != null) {
+                append(" ")
+                e.outEndMs?.let { append(" out ends ").append(seconds(it)); if (e.ending.isNotEmpty()) append(" (").append(e.ending).append(')') }
+                e.mixAtMs?.let { append(" · mix at ").append(seconds(it)) }
+                e.inAtMs?.let { append(" → in ").append(seconds(it)) }
+                if (e.tail) append(" · rings past the end")
+                if (e.pathOut != null || e.pathIn != null)
+                    append(" · paths out ").append(if (e.pathOut == true) "on" else "off").append(", in ").append(if (e.pathIn == true) "on" else "off")
+                append('\n')
+            }
         }
     }
 }

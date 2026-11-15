@@ -88,5 +88,25 @@ internal class DeckMixProcessor(private val control: DeckControl) : BaseAudioPro
         output.flip()
     }
 
+    /**
+     * The title ends while its echo or reverb still rings (see [MixPlan.tail]): what rings is
+     * played out on silence, to the end of the automation, so that a last note is never cut short.
+     */
+    override fun onQueueEndOfStream() {
+        val engine = dsp ?: return
+        val automation = control.automation ?: return
+        if (!automation.usesEcho && !automation.usesReverb) return
+        val at = cursorUs.takeIf { it != C.TIME_UNSET } ?: return
+        val tailUs = (automation.endUs - at).coerceIn(0L, TransitionPlanner.MAX_TAIL_MS * 1000L)
+        if (tailUs < 40_000L) return
+        val rate = inputAudioFormat.sampleRate
+        val channels = inputAudioFormat.channelCount
+        val silence = ByteBuffer.allocate((tailUs * rate / 1_000_000L).toInt() * 2 * channels)
+        val output = replaceOutputBuffer(silence.remaining())
+        try { engine.process(silence, output, at, automation) } catch (_: RuntimeException) { output.clear(); output.limit(0); return }
+        cursorUs = at + tailUs
+        output.flip()
+    }
+
     override fun onReset() { dsp = null; control.active = false }
 }

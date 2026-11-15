@@ -74,6 +74,11 @@ internal data class MixSettings(val intensity: Int = 1, val style: MixStyle = Mi
     val beatCounts: IntArray get() = when (intensity) { 0 -> intArrayOf(32, 16, 8); 2 -> intArrayOf(64, 32, 16, 8); else -> intArrayOf(64, 32, 16, 8) }
     /** Beats of singing the incoming title may start under, the outgoing voice softened meanwhile. */
     val vocalLeadBeats: Int get() = when (intensity) { 0 -> 0; 2 -> 16; else -> 8 }
+    /**
+     * The same, for titles that are not played in time: how long an incoming title that does not
+     * sing yet may rise under the last sung words, the outgoing voice stepping back.
+     */
+    val vocalLeadMs: Long get() = when (intensity) { 0 -> 0L; 2 -> 10_000L; else -> 6_000L }
     /** Longest crossing of two titles that are not played in time. */
     val crossfadeMs: Long get() = when (intensity) { 0 -> 5_000L; 2 -> 11_000L; else -> 8_000L }
     /** How much of an instrumental ending may be left out to mix earlier. Discreet never leaves anything out. */
@@ -119,7 +124,14 @@ internal data class MixPlan(
     /** The mix starts where a phrase of the outgoing title starts. */
     val onPhrase: Boolean = false,
     /** Outgoing position where its last sung words end, when the blend starts under them; -1 otherwise. */
-    val sungUntilMs: Long = -1
+    val sungUntilMs: Long = -1,
+    /**
+     * Outgoing position where its own sound is cut, when not at [outMs] (-1): an echo after a last
+     * note at full level lets the note end, then rings on past the end of the title.
+     */
+    val cutMs: Long = -1,
+    /** The transition rings on past the end of the outgoing title (its echo is played out after its last sample). */
+    val tail: Boolean = false
 ) {
     val mixes: Boolean get() = kind != MixKind.None
     /** Position in the incoming title once the outgoing one is gone. */
@@ -134,6 +146,14 @@ internal object TransitionPlanner {
     private const val MIN_CROSSFADE_MS = 2_500L
     /** An echo rings for four beats after the cut. */
     private const val ECHO_BEATS = 4
+    /** The incoming voice still arrives this long after a crossing that started under the outgoing one. */
+    private const val VOICE_GAP_MS = 1_500L
+    /** Below the confidence needed to mix in time, a tempo still gives an echo its length. */
+    private const val RING_CONFIDENCE = .25f
+    /** The length of beat of an echo when no tempo could be read (120 BPM). */
+    private const val RING_BEAT_MS = 500f
+    /** How long an echo may ring past the end of the outgoing title. */
+    internal const val MAX_TAIL_MS = 6_000L
 
     fun plan(out: MixFacts, incoming: MixFacts, context: MixContext, settings: MixSettings = MixSettings()): MixPlan {
         if (context.exactAudio) return MixPlan(MixKind.None, reason = "exact audio")
@@ -176,15 +196,23 @@ internal object TransitionPlanner {
                     ?.let { blend -> measured(blend).takeIf { it.mixes }?.let { return it } }
             }
         }
-        // 2. A last note at full level is left alone: the next title starts right after it, on the beat when there is one.
+        // 2. A last note at full level is never covered: the next title starts right after it, on the beat
+        // when there is one, and (unless discreet) the last note rings on in an echo over that start.
         val fullEnding = a.hardEnding && !a.fadeOut
-        if (fullEnding && !(settings.cutsFullEndings && beats && a.hasBeat)) return measured(trim(a, b, out, end, start, gain, beats))
-        // 3. A way out on the beat that needs no common tempo (asked for, or left to Ketmix).
         val echoAllowed = settings.style == MixStyle.Echo || (settings.style == MixStyle.Auto && settings.echo)
+        // Ringing out leaves the whole title heard: only the plain styles do without it.
+        val ringAllowed = echoAllowed || (settings.style == MixStyle.Tempo && settings.echo)
+        fun ending(): MixPlan {
+            val trim = trim(a, b, out, end, start, gain, beats)
+            if (!ringAllowed || !context.effects || !context.beats || context.loop) return measured(trim)
+            return measured(ringOut(a, trim, end, sungUntil)).takeIf { it.mixes } ?: measured(trim)
+        }
+        if (fullEnding && !(settings.cutsFullEndings && beats && a.hasBeat)) return ending()
+        // 3. A way out on the beat that needs no common tempo (asked for, or left to Ketmix).
         if (beats && echoAllowed && a.hasBeat && !a.fadeOut) {
             echo(a, b, settings, end, start, sungUntil, gain)?.let { cut -> measured(cut).takeIf { it.mixes }?.let { return it } }
         }
-        if (fullEnding) return measured(trim(a, b, out, end, start, gain, beats))
+        if (fullEnding) return ending()
 
         // 4. The ending fades or rings out: the next title comes up under it, within that ending.
         var fade = settings.crossfadeMs
@@ -196,13 +224,35 @@ internal object TransitionPlanner {
         val sungFrom = incoming.vocalStartMs
         if (sungFrom != null && (sungUntil == null || sungUntil > end - fade) && sungFrom - start < fade / 2)
             fade = fade.coerceAtMost(max(MIN_CROSSFADE_MS, (sungFrom - start) * 2))
+        // An incoming title that does not sing for a while rises under the last sung words, the outgoing
+        // voice stepping back: no two voices meet, and a title sung to its end is not crossed in 2.5 s.
+        if (context.effects && sungUntil != null && sungFrom != null && settings.vocalLeadMs > 0) {
+            val under = min(settings.crossfadeMs, max(0L, end - sungUntil) + settings.vocalLeadMs)
+            val room = min(under, sungFrom - start - VOICE_GAP_MS)
+            if (room > fade) fade = room
+        }
         val reason = if (a.hasBeat && b.hasBeat) "tempos too far apart" else "no steady beat"
         if (!context.effects) return measured(MixPlan(MixKind.Crossfade, outMs = end - fade, inMs = start, overlapMs = fade, gain = gain, reason = reason))
         // While the title dies away by itself its level is left alone; ours only closes the end.
         val hold = if (end - fade >= a.fallMs - 400L) .55f else .2f
         val kind = if (!a.hasBeat && !a.fadeOut && settings.style != MixStyle.Filters) MixKind.Wash else MixKind.Filter
         return measured(MixPlan(kind, outMs = end - fade, inMs = start, overlapMs = fade, gain = gain, reason = reason,
-            variant = variant, clash = clash, hold = hold))
+            variant = variant, clash = clash, hold = hold, sungUntilMs = sungUntil?.takeIf { it > end - fade } ?: -1))
+    }
+
+    /**
+     * After a last note at full level: the next title starts where a trim would start it (on the
+     * beat when there is one), the outgoing title plays to its very end and its last beat rings
+     * on in an echo, played out past the end of the title, over the first seconds of the next one.
+     */
+    private fun ringOut(a: SegmentAnalysis, trim: MixPlan, end: Long, sungUntil: Long?): MixPlan {
+        // An echo needs a length of beat; one that was read without full confidence still gives one.
+        val beat = if (a.bpm > 0f && a.confidence >= RING_CONFIDENCE) pulse(a) else RING_BEAT_MS
+        val ring = (ECHO_BEATS * beat).roundToLong()
+        val cut = max(end, trim.outMs)
+        val overlap = cut + ring - trim.outMs
+        return trim.copy(kind = MixKind.Echo, overlapMs = overlap, beatMs = beat, cutMs = cut, tail = true,
+            reason = "hard ending", sungUntilMs = sungUntil?.takeIf { it > trim.outMs } ?: -1)
     }
 
     private fun trim(a: SegmentAnalysis, b: SegmentAnalysis, out: MixFacts, end: Long, start: Long, gain: Float, beats: Boolean): MixPlan {
@@ -324,7 +374,7 @@ internal object TransitionPlanner {
     private fun checked(plan: MixPlan, out: MixFacts, incoming: MixFacts): MixPlan = when {
         !plan.mixes -> plan
         plan.outMs < 5_000L -> MixPlan(MixKind.None, reason = "no room before the end")
-        plan.outMs + plan.overlapMs > out.durationMs + 400L -> MixPlan(MixKind.None, reason = "past the end")
+        plan.outMs + plan.overlapMs > out.durationMs + (if (plan.tail) MAX_TAIL_MS else 400L) -> MixPlan(MixKind.None, reason = "past the end")
         plan.inEndMs > incoming.durationMs - 5_000L -> MixPlan(MixKind.None, reason = "incoming too short")
         plan.overlapMs !in 1..45_000L -> MixPlan(MixKind.None, reason = "overlap out of range")
         else -> plan

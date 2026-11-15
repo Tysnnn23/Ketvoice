@@ -114,8 +114,8 @@ internal class DeckAutomation(
             return when (plan.kind) {
                 MixKind.Beatmatch -> if (plan.swapMs < 0) plainOut(start, end) else withVoiceDown(blendOut(plan, start, end), plan)
                 MixKind.Echo -> echoOut(plan, start, end)
-                MixKind.Filter -> filterOut(plan, start, end)
-                MixKind.Wash -> washOut(start, end)
+                MixKind.Filter -> withVoiceDown(filterOut(plan, start, end), plan)
+                MixKind.Wash -> withVoiceDown(washOut(start, end), plan)
                 else -> plainOut(start, end)
             }
         }
@@ -150,11 +150,14 @@ internal class DeckAutomation(
         private fun withVoiceDown(automation: DeckAutomation, plan: MixPlan): DeckAutomation {
             if (plan.sungUntilMs <= plan.outMs) return automation
             val start = plan.outMs * 1000L
-            val down = (start + (plan.beatMs * 8000f).toLong()).coerceAtMost(maxOf(start + 1, plan.sungUntilMs * 1000L))
+            // Over eight beats, or three seconds when the two titles are not in time.
+            val over = if (plan.beatMs > 0f) (plan.beatMs * 8000f).toLong() else VOICE_DOWN_US
+            val down = (start + over).coerceAtMost(maxOf(start + 1, plan.sungUntilMs * 1000L))
             return automation.copyWith(vocalCut = Curve.join(point(start, 0f), Curve.shaped(start + 1, down, 12) { VOICE_DOWN * ease(it) }))
         }
         /** The voice is taken down by this much: well under the incoming title, never cut off. */
         const val VOICE_DOWN = .8f
+        private const val VOICE_DOWN_US = 3_000_000L
 
         private fun plainOut(start: Long, end: Long) =
             DeckAutomation(Curve.join(Curve.shaped(start, end, shape = ::fadeOut)), Curve.flat(0f))
@@ -212,9 +215,12 @@ internal class DeckAutomation(
          */
         private fun echoOut(plan: MixPlan, start: Long, end: Long): DeckAutomation {
             val beat = (plan.beatMs * 1000f).toLong().coerceIn(250_000L, 1_200_000L)
-            val send = Curve.join(point(start - beat, 0f), point(start - beat * 3 / 4, 1f), point(start, 1f), point(start + 8_000L, 0f))
-            val dry = Curve.join(point(start, 1f), point(start + 28_000L, 0f))
-            val gain = Curve.join(point(start + (end - start) * 2 / 5, 1f), Curve.shaped(start + (end - start) * 2 / 5 + 1, end, 16) { fadeOut(it) })
+            // The title's own sound is cut here: where the next one starts, or after its last note.
+            val cut = if (plan.cutMs >= 0) (plan.cutMs * 1000L).coerceIn(start, end - 1) else start
+            val send = Curve.join(point(cut - beat, 0f), point(cut - beat * 3 / 4, 1f), point(cut, 1f), point(cut + 8_000L, 0f))
+            val dry = Curve.join(point(cut, 1f), point(cut + 28_000L, 0f))
+            val fadeFrom = cut + (end - cut) * 2 / 5
+            val gain = Curve.join(point(fadeFrom, 1f), Curve.shaped(fadeFrom + 1, end, 16) { fadeOut(it) })
             return DeckAutomation(gain, Curve.flat(0f), dry = dry, echo = send, echoDelayUs = beat / 2, echoFeedback = .6f)
         }
 

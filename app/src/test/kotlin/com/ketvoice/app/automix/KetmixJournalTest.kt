@@ -17,6 +17,14 @@ class KetmixJournalTest {
         for (part in listOf("Alpha — Werenoi → Vermine — Werenoi", "mixed · Beatmatch (64 beats)", "overlap 27.0 s", "rate 0.986",
                 "on a phrase", "140.0 BPM (80 %)", "8B", "9B", "precise false", "clock false", "singing ends 170 s", "next sings at 4 s", "balanced"))
             assertTrue("$part in\n$text", part in text)
+        // Where each title was, how the outgoing one ends, and whether both decks' processors were in their sound path.
+        KetmixJournal.clear()
+        KetmixJournal.add(KetmixJournal.Entry(0, "Argent Sale", "FE!N", "mixed", MixKind.Echo, "hard ending", outEndMs = 149_200, ending = "hard",
+            mixAtMs = 149_080, inAtMs = 260, pathOut = true, pathIn = false, tail = true, precise = true, clock = true))
+        KetmixJournal.amend { it.copy(pathIn = true) }
+        val detail = KetmixJournal.text()
+        for (part in listOf("out ends 149.2 s (hard)", "mix at 149.1 s", "→ in 0.3 s", "rings past the end", "paths out on, in on"))
+            assertTrue("$part in\n$detail", part in detail)
         KetmixJournal.clear()
     }
 }

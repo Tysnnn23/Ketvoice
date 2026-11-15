@@ -5,6 +5,7 @@ import androidx.media3.common.C
 import androidx.media3.common.audio.AudioProcessor
 import org.junit.Assert.*
 import org.junit.Test
+import kotlin.math.abs
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
@@ -39,6 +40,29 @@ class DeckMixProcessorTest {
         val samples = out(processor, input)
         assertEquals(960, samples.size); assertTrue(samples.all { it.toInt() == 10_000 })
         assertFalse("All of the input is consumed", input.hasRemaining())
+    }
+
+    @Test fun anEchoRingsOnPastTheLastSampleOfTheTitle() {
+        val control = DeckControl()
+        val processor = started(control, 48_000, 2)
+        // A last note at full level, cut at 10 s, its echo ringing for two seconds.
+        val plan = MixPlan(MixKind.Echo, outMs = 9_900, inMs = 0, overlapMs = 2_100, beatMs = 500f, cutMs = 10_000, tail = true)
+        control.automation = DeckAutomation.outgoing(plan)
+        control.pendingTimeUs = offset + 9_500_000
+        val last = out(processor, pcm(24_000))                 // 9.5–10.0 s: the note, heard whole
+        assertTrue("the note itself is untouched", last.take(9_600).all { it.toInt() == 10_000 })
+        processor.queueEndOfStream()
+        val tail = processor.output.order(ByteOrder.nativeOrder())
+        val samples = ShortArray(tail.remaining() / 2) { tail.short }
+        assertEquals("played out to the end of the echo", 192_000.0, samples.size.toDouble(), 1_920.0)
+        assertTrue("its repeats are heard", samples.take(48_000).any { abs(it.toInt()) > 1_000 })
+        assertTrue("and fade away", samples.takeLast(4_800).all { abs(it.toInt()) < 200 })
+        assertTrue(processor.isEnded || processor.output.remaining() == 0)
+        // Without an echo, an end is an end.
+        val plain = started(DeckControl(), 48_000, 2)
+        out(plain, pcm(480))
+        plain.queueEndOfStream()
+        assertEquals(0, plain.output.remaining())
     }
 
     @Test fun aFormatItCannotProcessLeavesItOutOfThePath() {

@@ -75,6 +75,10 @@ internal object Automix {
     private const val RETRY_MS = 6_000L
     private const val ANALYSIS_SPEED = 8f
     private const val SETTLE_MS = 8_000L
+    /** How long the decks' processors are waited for before a transition is decided. */
+    private const val PATHS_WAIT_MS = 1_500L
+    /** How long an incoming deck may play before its processors join; past that, a plain fade on the volume. */
+    private const val PATH_JOIN_MS = 900L
 
     private val _ui = MutableStateFlow(Ui())
     val ui: StateFlow<Ui> = _ui
@@ -112,6 +116,8 @@ internal object Automix {
         var deck: ExoPlayer? = null
         var plan: MixPlan? = null
         var precise = false
+        /** The incoming deck's processors have not joined its sound path yet: it stays silent until they do. */
+        var incomingPending = false
         var started = false
         var promoted = false
         var baseVolume = 1f
@@ -346,6 +352,7 @@ internal object Automix {
         note { it.copy(clock = clockOk, outBpm = outro?.bpm ?: 0f, outConfidence = outro?.confidence ?: 0f, outKey = outro?.key ?: MusicalKey.UNREAD,
             inBpm = intro?.bpm ?: 0f, inConfidence = intro?.confidence ?: 0f, inKey = intro?.key ?: MusicalKey.UNREAD,
             sungUntilMs = out.vocalEndMs, sungFromMs = incoming.vocalStartMs,
+            outEndMs = outro?.soundEndMs, ending = outro?.let { o -> if (o.fadeOut) "fade" else if (o.hardEnding) "hard" else "rings" } ?: "",
             analysis = listOfNotNull(if (outro == null) "outro not read" else null, if (intro == null) "intro not read" else null,
                 depth.name.lowercase()).joinToString(", ")) }
         // Without the decks' processors in the sound path only a trim or a plain fade can be played;
@@ -377,8 +384,17 @@ internal object Automix {
             if (SystemClock.elapsedRealtime() > readyBy || main.currentPosition > startOut - 300L) return skip("late")
             delay(30)
         }
-        // Levels and filters tied to the music need the processors of both decks in the sound path.
-        s.precise = clockOk && control.active && mainControl.active
+        // Levels and filters tied to the music need the processors of both decks in the sound path. They
+        // join it once a deck has decoded some sound: they are given a moment before anything is decided.
+        val pathsBy = SystemClock.elapsedRealtime() + PATHS_WAIT_MS
+        while (!(control.active && mainControl.active) && SystemClock.elapsedRealtime() < pathsBy && main.currentPosition < startOut - 900L) {
+            if (!valid()) return false
+            delay(40)
+        }
+        note { it.copy(pathOut = mainControl.active, pathIn = control.active) }
+        // The incoming deck's own processors may only join once it plays: it is kept silent until they do.
+        s.precise = clockOk && mainControl.active
+        s.incomingPending = s.precise && !control.active
         if (!s.precise && plan.kind != MixKind.Trim && plan.kind != MixKind.Crossfade) {
             plan = planFor(effects = false)
             if (!plan.mixes || main.currentPosition > plan.outMs - 1_200L) return skip(plan.reason.ifBlank { "late" })
@@ -414,21 +430,22 @@ internal object Automix {
 
         say("Mix en cours · ${MixWords.describe(plan)}")
         note { it.copy(kind = plan.kind, reason = plan.reason, rate = plan.rate, overlapMs = plan.overlapMs, onPhrase = plan.onPhrase,
-            precise = s.precise) }
+            precise = s.precise, mixAtMs = plan.outMs, inAtMs = plan.inMs, tail = plan.tail) }
         commit("mixed")
         if (plan.kind == MixKind.Beatmatch || plan.kind == MixKind.Filter) lastVariant = plan.variant
         s.baseVolume = main.volume
-        if (s.precise) deck.volume = s.baseVolume
+        if (s.precise && !s.incomingPending) deck.volume = s.baseVolume
         deck.play()
+        val playedAt = SystemClock.elapsedRealtime()
         s.started = true
         _ui.value = Ui(Phase.Mixing, current, next.track, plan.kind, SystemClock.elapsedRealtime() + finalPreRoll, plan.overlapMs,
             bpm = outro?.bpm ?: 0f, swapAt = MixWords.swapShare(plan), measures = MixWords.measures(plan))
-        mix(s, plan, epoch)
+        mix(s, plan, epoch, playedAt)
         return true
     }
 
     /** Both decks play: keep them in time, hand the session over, then let the incoming title settle. */
-    private suspend fun mix(s: Session, plan: MixPlan, epoch: Int) {
+    private suspend fun mix(s: Session, plan: MixPlan, epoch: Int, playedAt: Long = SystemClock.elapsedRealtime()) {
         val h = s.host
         val main = s.main
         val deck = s.deck ?: return
@@ -461,6 +478,21 @@ internal object Automix {
             // Play and pause reach the deck the listener controls; the other one follows.
             if (other.playWhenReady != heard.playWhenReady) other.playWhenReady = heard.playWhenReady
             if (!heard.playWhenReady) continue
+            if (s.incomingPending) {
+                if (h.control(deck)?.active == true) {
+                    // Its processors carry the levels from here: the deck can be heard.
+                    s.incomingPending = false
+                    deck.volume = s.baseVolume
+                    KetmixJournal.amend { it.copy(pathIn = true) }
+                } else if (SystemClock.elapsedRealtime() - playedAt > PATH_JOIN_MS) {
+                    // They never joined: a plain crossfade on the decks' volume from here.
+                    s.incomingPending = false
+                    s.precise = false
+                    h.control(main)?.automation = null
+                    h.control(deck)?.automation = null
+                    KetmixJournal.amend { it.copy(precise = false, pathIn = false) }
+                }
+            }
             val outPosition = main.currentPosition
             val inPosition = deck.currentPosition
             if (!swapped && swapMoment != null && outPosition >= swapMoment) { swapped = true; _swaps.tryEmit(Unit) }
