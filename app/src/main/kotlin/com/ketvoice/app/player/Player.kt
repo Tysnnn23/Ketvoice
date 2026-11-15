@@ -1138,7 +1138,8 @@ object Player {
         scope.launch {
             try {
                 val related = MusicApi.searchYtMusic(track.artist).filter { candidate ->
-                    s.queue.none { it.id == candidate.id || (it.title.equals(candidate.title, true) && it.artist.equals(candidate.artist, true)) }
+                    // An artist the listener blocked is never added by Ketvoice itself.
+                    com.ketvoice.app.data.ArtistPrefs.allows(candidate) && s.queue.none { it.id == candidate.id || (it.title.equals(candidate.title, true) && it.artist.equals(candidate.artist, true)) }
                 }.take(8)
                 if (gen != generation) return@launch
                 if (related.isNotEmpty()) {

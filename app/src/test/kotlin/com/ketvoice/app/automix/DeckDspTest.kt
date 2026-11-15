@@ -215,22 +215,42 @@ class DeckDspTest {
         assertTrue("stereo tail ($different)", different > rate / 10)
     }
 
-    @Test fun twoTemposMeetWhileEachTitleIsTheQuietOne() {
-        // The incoming title starts at the speed that follows the outgoing one, and ends at its own.
-        assertEquals(.94f, DeckSync.ride(.94f, 0f), 1e-6f)
-        assertEquals(.94f, DeckSync.ride(.94f, .1f), 1e-6f)
-        assertEquals(1f, DeckSync.ride(.94f, .9f), 1e-6f)
-        assertEquals(1f, DeckSync.ride(.94f, 1f), 1e-6f)
-        var before = .94f
-        for (step in 0..100) {
-            val now = DeckSync.ride(.94f, step / 100f)
-            assertTrue("only ever towards its own tempo", now >= before - 1e-6f && now - before < .004f)
-            before = now
-            // The outgoing title plays at this speed divided by the ratio: the two stay locked all along.
-            val lead = now / .94f
-            assertTrue(lead in 1f..(1f / .94f + 1e-4f))
+    @Test fun aBuildThinsTheTitleAndSwellsANoiseThenStops() {
+        val rate = 44_100
+        val plan = MixPlan(MixKind.Rise, outMs = 10_000, inMs = 0, overlapMs = 1_000, beatMs = 500f, buildMs = 4_000)
+        val out = DeckAutomation.outgoing(plan)
+        assertTrue(out.usesNoise)
+        assertEquals("nothing before the build", 0f, out.noise.at(5_000_000), 0f)
+        assertEquals(0f, out.highPassHz.at(5_900_000), 0f)
+        assertEquals("loudest at the cut", DeckAutomation.RISE_NOISE, out.noise.at(10_000_000), 1e-4f)
+        assertTrue("the filter climbs", out.highPassHz.at(9_900_000) > 1_500f)
+        assertEquals("the title itself stops on the cut", 0f, out.dry.at(10_030_000), 0f)
+        // Silence in: the noise alone comes out, swelling towards the cut, gone after it.
+        val dsp = DeckDsp(rate, 2)
+        fun peak(fromMs: Long, lengthMs: Long): Int {
+            val frames = (rate * lengthMs / 1000).toInt()
+            val input = java.nio.ByteBuffer.allocate(frames * 4).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+            val output = java.nio.ByteBuffer.allocate(frames * 4).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+            dsp.process(input, output, fromMs * 1000, out); output.flip()
+            var top = 0; while (output.hasRemaining()) top = maxOf(top, abs(output.short.toInt())); return top
         }
-        assertEquals("Half-way each title carries half of the difference", kotlin.math.sqrt(.94f), DeckSync.ride(.94f, .5f), 1e-4f)
+        val early = peak(6_500, 200); val late = peak(9_700, 200); val after = peak(10_100, 200)
+        assertTrue("swells ($early -> $late)", late > early * 3 && late > 500)
+        assertTrue("never louder than its share of full scale ($late)", late < 32_768 * DeckAutomation.RISE_NOISE * 3)
+        assertEquals("gone after the cut", 0, after)
+        assertFalse(DeckAutomation.incoming(plan).usesNoise)
+    }
+
+    @Test fun aDeckThatIsHeardNeverChangesSpeed() {
+        // The incoming deck is given one speed while still silent: in time with the outgoing title for a blend, its own otherwise.
+        assertEquals(.98f, DeckSync.speedOf(beat.copy(kind = MixKind.Beatmatch, rate = .98f), 1f), 1e-6f)
+        assertEquals("a title left 2 % fast by the previous blend", 1.0f, DeckSync.speedOf(beat.copy(kind = MixKind.Beatmatch, rate = .98f), 1.02f), .002f)
+        assertEquals(1f, DeckSync.speedOf(beat.copy(kind = MixKind.Echo, rate = 1f), 1.02f), 0f)
+        assertEquals(1f, DeckSync.speedOf(beat.copy(kind = MixKind.Filter), 1.03f), 0f)
+        // Corrections stop shortly before it is heard.
+        assertFalse(DeckSync.settled(beat, beat.inMs - 1_000))
+        assertTrue(DeckSync.settled(beat, beat.inMs - DeckSync.SETTLE_BEFORE_MS))
+        assertTrue(DeckSync.settled(beat, beat.inMs + 10))
         assertEquals(1.064f, DeckSync.stepped(1f / .94f), 1e-6f)
         assertEquals(1f, DeckSync.stepped(1.0004f), 0f)
     }
@@ -283,10 +303,6 @@ class DeckDspTest {
         assertEquals("Never more than 4 %", .96f * .96f, DeckSync.speed(.96f, 900.0, audible = false), .002f)
         assertEquals("While heard, small errors are not chased", 1f, DeckSync.speed(1f, 10.0, audible = true), 0f)
         assertTrue(DeckSync.speed(1f, 30.0, audible = true) > DeckSync.speed(1f, 30.0, audible = false))
-        assertEquals(listOf(1f), DeckSync.glide(1.001f))
-        val glide = DeckSync.glide(.92f)
-        assertEquals(16, glide.size); assertEquals(1f, glide.last(), 0f)
-        assertTrue(glide.zipWithNext().all { (a, b) -> b >= a && b - a < .012f })
     }
 
     @Test fun aVoiceThatEndsStepsBackUnderTheIncomingTitle() {

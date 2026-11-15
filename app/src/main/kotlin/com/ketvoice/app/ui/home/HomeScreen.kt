@@ -55,8 +55,14 @@ fun HomeScreen() {
     val context = LocalContext.current
     val state = rememberLazyListState()
     val recent by ListeningHistory.tracks.collectAsState()
-    val shelves by HomeFeed.shelves.collectAsState()
-    val albums by HomeFeed.albums.collectAsState()
+    val feedShelves by HomeFeed.shelves.collectAsState()
+    val feedAlbums by HomeFeed.albums.collectAsState()
+    // What Ketvoice proposes leaves out the artists the listener blocked from the search.
+    val blockedArtists = com.ketvoice.app.data.ArtistPrefs.blocked
+    val shelves = remember(feedShelves, blockedArtists) {
+        feedShelves.map { it.copy(tracks = it.tracks.filter(com.ketvoice.app.data.ArtistPrefs::allows)) }
+    }
+    val albums = remember(feedAlbums, blockedArtists) { feedAlbums.filter { com.ketvoice.app.data.ArtistPrefs.allows(it.artist) } }
     val loading by HomeFeed.loading.collectAsState()
     val origin by HomeFeed.origin.collectAsState()
     val youtube by YouTubeMusicSession.profile.collectAsState()
@@ -84,6 +90,7 @@ fun HomeScreen() {
     var releases by remember { mutableStateOf<List<CatalogAlbum>>(emptyList()) }
     LaunchedEffect(known.size / 10, counts.size / 10) {
         releases = runCatching { HomeReleases.load(known, counts, AppSettings.favoriteIds.value) }.getOrDefault(emptyList())
+            .filter { com.ketvoice.app.data.ArtistPrefs.allows(it.artist) }
     }
     val learned = HomeLearning.scores
     LaunchedEffect(recent) { ArtworkRepo.enrich(recent.take(20)) }

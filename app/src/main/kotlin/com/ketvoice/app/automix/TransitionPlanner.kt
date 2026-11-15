@@ -22,7 +22,13 @@ internal enum class MixKind {
     /** The two cross by their spectra: one thins out while the other opens up. */
     Filter,
     /** A title without a beat dissolves into a reverberation under which the next one rises. */
-    Wash
+    Wash,
+    /**
+     * The tension of a DJ's build: over the last bars of a phrase the outgoing title thins out through a
+     * rising filter while a breath of noise swells, then the next title drops in on the first beat of the
+     * next phrase. Needs no common tempo and no change of speed.
+     */
+    Rise
 }
 
 /** What is known about one of the two titles of a transition. */
@@ -51,27 +57,27 @@ internal data class MixContext(
     /** Colour of the previous transition (see [MixPlan.variant]), so that two in a row do not sound alike; -1 = none yet. */
     val lastVariant: Int = -1,
     /** The beats of the outgoing title can still be followed. False when it is too late to start in time with them. */
-    val beats: Boolean = true
+    val beats: Boolean = true,
+    /** Speed the outgoing title plays at (a previous blend may have left it a little off its own). */
+    val speed: Float = 1f
 )
 
 /** The transition the listener prefers; [Auto] lets Ketmix choose for each pair of titles. */
-internal enum class MixStyle { Auto, Tempo, Echo, Filters, Fade;
+internal enum class MixStyle { Auto, Tempo, Echo, Filters, Fade, Rise;
     companion object { fun of(setting: Int): MixStyle = values().getOrElse(setting) { Auto } }
 }
 
 /** 0 = discreet, 1 = balanced, 2 = DJ. */
 internal data class MixSettings(val intensity: Int = 1, val style: MixStyle = MixStyle.Auto) {
     /**
-     * How far apart two tempos may be for the titles to be played in time. The common tempo slides
-     * from the outgoing title's to the incoming one's during the blend (see [DeckSync.ride]), so each
-     * title is only stretched while it is the quiet one, its pitch kept: the way djay's tempo blend
-     * and Apple Music's AutoMix bring together titles that a fixed ±8 % would leave apart.
+     * How far from its own tempo a title may be played so that two titles meet in time. The incoming
+     * title is given that speed once, while it is still silent, and keeps it to its end: a change of
+     * speed while a title is heard is heard (listeners reported it as a hiccup and an odd speed-up),
+     * and below 4 % a tempo moved with its pitch kept passes unnoticed.
      */
-    val tempoRange: Float get() = when (intensity) { 0 -> .06f; 2 -> .18f; else -> .14f }
+    val tempoRange: Float get() = when (intensity) { 0 -> .02f; 2 -> .04f; else -> .03f }
     /**
-     * The tempos meet half-way during a blend (see [DeckSync.ride]): each title is stretched by
-     * about half of [tempoRange], under the 5 % listeners notice. Blends run up to 64 beats
-     * (16 bars, about 30 s at 128 BPM), the length DJs and Apple Music favour.
+     * Blends run up to 64 beats (16 bars, about 30 s at 128 BPM), the length DJs and Apple Music favour.
      */
     val beatCounts: IntArray get() = when (intensity) { 0 -> intArrayOf(32, 16, 8); 2 -> intArrayOf(64, 32, 16, 8); else -> intArrayOf(64, 32, 16, 8) }
     /** Beats of singing the incoming title may start under, the outgoing voice softened meanwhile. */
@@ -133,13 +139,15 @@ internal data class MixPlan(
      */
     val cutMs: Long = -1,
     /** The transition rings on past the end of the outgoing title (its echo is played out after its last sample). */
-    val tail: Boolean = false
+    val tail: Boolean = false,
+    /** How long the build of a [MixKind.Rise] lasts before [outMs], on the outgoing title's clock. */
+    val buildMs: Long = 0
 ) {
     val mixes: Boolean get() = kind != MixKind.None
     /** Position in the incoming title once the outgoing one is gone. */
     val inEndMs: Long get() = inMs + (overlapMs * rate).roundToLong()
     /** The transition follows the beats of the outgoing title. */
-    val beatTied: Boolean get() = kind == MixKind.Beatmatch || kind == MixKind.Echo
+    val beatTied: Boolean get() = kind == MixKind.Beatmatch || kind == MixKind.Echo || kind == MixKind.Rise
 }
 
 internal object TransitionPlanner {
@@ -191,9 +199,10 @@ internal object TransitionPlanner {
         // A plain fade was asked for: the same lengths and care for the singing, no effect.
         if (settings.style == MixStyle.Fade) return plan(out, incoming, context.copy(effects = false), settings.copy(style = MixStyle.Auto))
         // 1. Both in time, the bass changing hands: the finest transition, when the tempos allow it.
-        if (beats && a.hasBeat && b.hasBeat && settings.style != MixStyle.Echo && settings.style != MixStyle.Filters) {
+        if (beats && a.hasBeat && b.hasBeat && settings.style != MixStyle.Echo && settings.style != MixStyle.Filters && settings.style != MixStyle.Rise) {
             val rate = BeatAnalysis.foldedRatio(a.bpm, b.bpm)
-            if (abs(rate - 1f) <= settings.tempoRange) {
+            // Measured from the incoming title's own tempo: what it will sound like for the rest of it.
+            if (abs(context.speed * rate - 1f) <= settings.tempoRange) {
                 beatmatch(a, b, out, incoming, settings, rate, gain, end, start, sungUntil, clash, variant, context.loop)
                     ?.let { blend -> measured(blend).takeIf { it.mixes }?.let { return it } }
             }
@@ -210,9 +219,14 @@ internal object TransitionPlanner {
             return measured(ringOut(a, trim, end, sungUntil)).takeIf { it.mixes } ?: measured(trim)
         }
         if (fullEnding && !(settings.cutsFullEndings && beats && a.hasBeat)) return ending()
-        // 3. A way out on the beat that needs no common tempo (asked for, or left to Ketmix).
-        if (beats && echoAllowed && a.hasBeat && !a.fadeOut) {
-            echo(a, b, settings, end, start, sungUntil, gain)?.let { cut -> measured(cut).takeIf { it.mixes }?.let { return it } }
+        // 3. A way out on the beat that needs no common tempo (asked for, or left to Ketmix): a build into
+        // the next phrase, or an echo. Left to Ketmix, the two take turns from one transition to the next.
+        val riseAllowed = settings.style == MixStyle.Rise || (settings.style == MixStyle.Auto && settings.echo)
+        if (beats && (echoAllowed || riseAllowed) && a.hasBeat && !a.fadeOut) {
+            fun tryRise() = if (riseAllowed) rise(a, b, settings, end, start, sungUntil, gain, variant)?.let { measured(it) }?.takeIf { it.mixes } else null
+            fun tryEcho() = if (echoAllowed || settings.style == MixStyle.Rise) echo(a, b, settings, end, start, sungUntil, gain)?.let { measured(it) }?.takeIf { it.mixes } else null
+            val first = settings.style == MixStyle.Rise || (settings.style == MixStyle.Auto && context.lastVariant == 0)
+            (if (first) tryRise() ?: tryEcho() else tryEcho() ?: tryRise())?.let { return it.copy(variant = variant) }
         }
         if (fullEnding) return ending()
 
@@ -278,6 +292,37 @@ internal object TransitionPlanner {
         while (60_000f / beat >= 160f) beat *= 2f
         while (60_000f / beat < 80f) beat /= 2f
         return beat
+    }
+
+    /**
+     * A build into the next phrase: the cut falls on the first beat of a phrase (else of a bar) once the
+     * singing is over, the build takes the 8 beats before it (16 with the DJ setting), and the next title
+     * starts on its first downbeat. The outgoing title only rings on for two beats of reverberation.
+     */
+    private fun rise(a: SegmentAnalysis, b: SegmentAnalysis, settings: MixSettings, end: Long, start: Long, sungUntil: Long?,
+                     gain: Float, variant: Int): MixPlan? {
+        val beat = pulse(a)
+        val build = ((if (settings.intensity >= 2) 16 else 8) * beat).roundToLong()
+        // A drop needs something to drop into: the next title must start on a beat.
+        if (!b.hasBeat) return null
+        val bodyEnd = if (a.hardEnding) end else a.fallMs
+        // At most half of the build over the last sung words.
+        val earliest = max(a.startMs + build, sungUntil?.plus(build / 2) ?: a.startMs).toDouble()
+        val latest = min(bodyEnd + (beat / 2).toLong(), end - beat.toLong()).toDouble()
+        if (latest < earliest) return null
+        fun lastAtOrBefore(first: Double, period: Double) = first + floor((latest - first) / period + 1e-6) * period
+        val phrase = a.phraseStarts(earliest, latest).lastOrNull()
+        val cut = phrase ?: (if (a.barOffset >= 0) lastAtOrBefore(a.beatAtMs + a.barOffset * a.beatMs.toDouble(), a.beatMs * 4.0)
+            else lastAtOrBefore(a.beatAtMs, a.beatMs.toDouble())).takeIf { it >= earliest } ?: return null
+        // What is left out after the cut is counted against what this setting may skip.
+        if (end - cut.roundToLong() > max(settings.skippableOutroMs, 4_500L)) return null
+        // On its first downbeat, unless that is more than a beat away: the first beat will do.
+        val firstBeat = b.beatAtOrAfter(start - 20.0)
+        val firstBar = if (b.barOffset >= 0) b.barAtOrAfter(start - 20.0) else firstBeat
+        val inMs = if (!b.hasBeat) start else (if (firstBar - firstBeat <= b.beatMs * 1.05) firstBar else firstBeat).roundToLong().coerceAtLeast(0L)
+        val ring = (2 * beat).roundToLong()
+        return MixPlan(MixKind.Rise, outMs = cut.roundToLong(), inMs = inMs, overlapMs = min(ring, max(1L, end - cut.roundToLong() + ring / 2)),
+            gain = gain, beatMs = beat, reason = "rise", onPhrase = phrase != null, buildMs = build, variant = variant)
     }
 
     private fun echo(a: SegmentAnalysis, b: SegmentAnalysis, settings: MixSettings, end: Long, start: Long, sungUntil: Long?, gain: Float): MixPlan? {
@@ -393,6 +438,7 @@ internal object MixWords {
         MixKind.Echo -> "sortie en écho"
         MixKind.Filter -> "croisement de filtres"
         MixKind.Wash -> "dissolution"
+        MixKind.Rise -> "montée"
         MixKind.Crossfade -> "fondu enchaîné"
         MixKind.Trim -> if (plan.onBeat) "enchaîné sur le temps" else "enchaînement sans silence"
         MixKind.None -> "sans mix"
@@ -402,7 +448,7 @@ internal object MixWords {
     fun swapShare(plan: MixPlan): Float = when {
         plan.overlapMs <= 0L -> -1f
         plan.kind == MixKind.Beatmatch && plan.swapMs >= 0 -> ((plan.swapMs - plan.outMs).toFloat() / plan.overlapMs).coerceIn(0f, 1f)
-        plan.kind == MixKind.Echo || plan.kind == MixKind.Trim -> 0f
+        plan.kind == MixKind.Echo || plan.kind == MixKind.Trim || plan.kind == MixKind.Rise -> 0f
         else -> -1f
     }
 

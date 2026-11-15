@@ -2,6 +2,7 @@ package com.ketvoice.app.ui.chrome
 
 import org.junit.Assert.*
 import org.junit.Test
+import androidx.compose.ui.unit.dp
 
 class DropLensTest {
     @Test fun atRestTheLensIsExactlyOneSlot() {
@@ -20,5 +21,15 @@ class DropLensTest {
     @Test fun stretchIsBoundedAndInvalidValuesAreHarmless() {
         assertEquals(2.2f, dropLens(0f, 5f).span, 1e-4f)
         assertEquals(DropLens(0f, 1f, 1f), dropLens(Float.NaN, Float.NaN))
+    }
+
+    @Test fun aHeldSelectionSwellsIntoALensAndSettlesBack() {
+        assertEquals(HeldLens.Grow(0.dp, 0.dp), HeldLens.grow(0f))
+        assertEquals(16f, HeldLens.grow(1f).width.value, 1e-4f); assertEquals(8f, HeldLens.grow(1f).height.value, 1e-4f)
+        // The overshoot of the spring swells it a little further, never without bound.
+        assertTrue(HeldLens.grow(1.2f).width > HeldLens.grow(1f).width)
+        assertEquals(HeldLens.grow(1.25f), HeldLens.grow(3f))
+        assertEquals(HeldLens.grow(0f), HeldLens.grow(Float.NaN))
+        assertTrue("a spring that overshoots", HeldLens.DAMPING < 1f)
     }
 }

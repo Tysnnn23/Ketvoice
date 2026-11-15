@@ -115,9 +115,17 @@ internal fun HomeForYou(hour: Int, releases: List<CatalogAlbum>, fallback: @Comp
     val recent by ListeningHistory.tracks.collectAsState()
     val counts by ListeningHistory.playCounts.collectAsState()
     val favorites = AppSettings.favoriteIds.value
-    val cards = remember(known, recent, counts, favorites) { PersonalMixes.propose(known, recent, counts, favorites) }
+    val blockedArtists = com.ketvoice.app.data.ArtistPrefs.blocked
+    val cards = remember(known, recent, counts, favorites, blockedArtists) {
+        PersonalMixes.propose(known.filter(com.ketvoice.app.data.ArtistPrefs::allows), recent.filter(com.ketvoice.app.data.ArtistPrefs::allows), counts, favorites)
+    }
     val today = remember { LocalDate.now() }
-    val fresh = releases.firstOrNull { isFreshRelease(it.releaseDate, today) }
+    val freshOnes = remember(releases, today) { releases.filter { isFreshRelease(it.releaseDate, today) }.take(4) }
+    // Fresh releases and mixes take turns on the card (see ForYouRotation): the least shown, never the same twice in a row.
+    val candidates = remember(freshOnes, cards) { freshOnes.map { "release:${it.id}" } + cards.map { "mix:${it.id}" } }
+    val chosen = remember(candidates) { com.ketvoice.app.data.ForYouRotation.choose(candidates) }
+    val fresh = freshOnes.firstOrNull { "release:${it.id}" == chosen }
+    val chosenMix = cards.firstOrNull { "mix:${it.id}" == chosen }
     val current = player.current
     when (forYouKind(current != null && !player.playWhenReady && position > 5_000, fresh != null, cards.isNotEmpty())) {
         ForYouKind.Resume -> ForYouCard("Reprendre là où vous étiez", current!!.title,
@@ -131,7 +139,8 @@ internal fun HomeForYou(hour: Int, releases: List<CatalogAlbum>, fallback: @Comp
             AppUi.openCatalog(CatalogRequest("album", fresh.id, fresh.title))
         }
         ForYouKind.Mix -> {
-            val (card, title) = mixForHour(hour, cards)!!
+            val (hourCard, title) = mixForHour(hour, cards)!!
+            val card = chosenMix ?: hourCard
             ForYouCard(title, mixTitle(card), mixSubtitle(card), card.covers, action = "Écouter", tag = "for-you-mix") {
                 AppUi.openCatalog(CatalogRequest("mix", card.id, mixTitle(card)))
             }

@@ -115,5 +115,10 @@
  "MUSIC": "word of a settings header mapped to its sentence-case form (Ket 27), never shown on its own",
  "QUEST": "word of a settings header mapped to its sentence-case form (Ket 27), never shown on its own",
  "Quest": "word of a settings header mapped to its sentence-case form (Ket 27), never shown on its own",
- "YOUTUBE": "word of a settings header mapped to its sentence-case form (Ket 27), never shown on its own"
+ "YOUTUBE": "word of a settings header mapped to its sentence-case form (Ket 27), never shown on its own",
+ "mix:{0}": "internal id of a For You candidate, never shown",
+ "release:{0}": "internal id of a For You candidate, never shown",
+ "search-artist-{0}": "test tag",
+ "{0}-link": "test tag",
+ "{0}-use-link": "test tag"
 }

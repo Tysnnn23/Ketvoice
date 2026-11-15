@@ -76,13 +76,17 @@ internal class DeckAutomation(
      * How much of the voice is taken down (0..1): the centre of the stereo image, between 220 Hz
      * and 4.5 kHz, where a lead vocal sits. The instruments on the sides and the bass stay.
      */
-    val vocalCut: Curve = Curve.flat(0f)
+    val vocalCut: Curve = Curve.flat(0f),
+    /** A breath of white noise added to the deck (0..1 of full scale), and the high-pass it goes through. */
+    val noise: Curve = Curve.flat(0f),
+    val noiseHz: Curve = Curve.flat(0f)
 ) {
     val endUs: Long get() = maxOf(maxOf(gain.endUs, highPassHz.endUs, lowPassHz.endUs), maxOf(dry.endUs, echo.endUs, reverb.endUs), vocalCut.endUs)
     val usesVocalCut: Boolean get() = vocalCut.endUs > 0L
     val usesEcho: Boolean get() = echoDelayUs > 0L
 
-    fun copyWith(vocalCut: Curve) = DeckAutomation(gain, highPassHz, lowPassHz, dry, echo, reverb, echoDelayUs, echoFeedback, resonance, vocalCut)
+    fun copyWith(vocalCut: Curve) = DeckAutomation(gain, highPassHz, lowPassHz, dry, echo, reverb, echoDelayUs, echoFeedback, resonance, vocalCut, noise, noiseHz)
+    val usesNoise: Boolean get() = noise.endUs > 0L
     val usesReverb: Boolean get() = reverb.endUs > 0L
 
     companion object {
@@ -114,6 +118,7 @@ internal class DeckAutomation(
             return when (plan.kind) {
                 MixKind.Beatmatch -> if (plan.swapMs < 0) plainOut(start, end) else withVoiceDown(blendOut(plan, start, end), plan)
                 MixKind.Echo -> echoOut(plan, start, end)
+                MixKind.Rise -> riseOut(plan, start, end)
                 MixKind.Filter -> withVoiceDown(filterOut(plan, start, end), plan)
                 MixKind.Wash -> withVoiceDown(washOut(start, end), plan)
                 else -> plainOut(start, end)
@@ -130,7 +135,7 @@ internal class DeckAutomation(
             return when (plan.kind) {
                 MixKind.Beatmatch -> if (plan.swapMs < 0) plainIn(plan, start, end, settle)
                     else blendIn(plan, start, end, position(plan.swapMs), settle)
-                MixKind.Echo -> {
+                MixKind.Echo, MixKind.Rise -> {
                     // It comes in on the beat where the outgoing title is cut: at once, not faded.
                     val attack = start + 30_000L
                     DeckAutomation(Curve.join(point(start, 0f), point(attack, plan.gain), point(end, plan.gain), settle), Curve.flat(0f))
@@ -225,6 +230,29 @@ internal class DeckAutomation(
         }
 
         /**
+         * The build: from [MixPlan.buildMs] before the cut a high-pass climbs from the bass to the top of
+         * the mids, faster and faster, with an edge to it, while white noise swells through a filter that
+         * rises with it. On the cut the title stops at once, leaving two beats of its reverberation.
+         */
+        private fun riseOut(plan: MixPlan, start: Long, end: Long): DeckAutomation {
+            val from = start - plan.buildMs * 1000L
+            val climb = Curve.join(point(from, 0f), Curve.shaped(from + 1, start, 32) { sweep(OPEN_HZ, RISE_TOP_HZ, it * it) })
+            val noise = Curve.join(point(from, 0f), Curve.shaped(from + 1, start, 24) { RISE_NOISE * it * it * it }, point(start + 15_000L, 0f))
+            val noiseHz = Curve.join(point(from, RISE_NOISE_FROM_HZ), Curve.shaped(from + 1, start, 24) { sweep(RISE_NOISE_FROM_HZ, RISE_NOISE_TO_HZ, it) })
+            val beat = (plan.beatMs * 1000f).toLong().coerceIn(250_000L, 1_200_000L)
+            val send = Curve.join(point(start - beat, 0f), point(start, 1f), point(start + 10_000L, 0f))
+            val dry = Curve.join(point(start, 1f), point(start + 20_000L, 0f))
+            val gain = Curve.join(point(start, 1f), Curve.shaped(start + 1, end, 16) { fadeOut(it) })
+            return DeckAutomation(gain, climb, dry = dry, reverb = send, resonance = RISE_Q, noise = noise, noiseHz = noiseHz)
+        }
+        private const val RISE_TOP_HZ = 2_200f
+        private const val RISE_Q = 1.6f
+        /** The noise at its loudest, a share of full scale: present under the music, never over it. */
+        const val RISE_NOISE = .07f
+        private const val RISE_NOISE_FROM_HZ = 900f
+        private const val RISE_NOISE_TO_HZ = 7_500f
+
+        /**
          * A crossing of spectra rather than of levels. Variant 0: the outgoing title rises into
          * the air while the next one grows from its low end. Variant 1: it sinks while the next
          * one comes down from the top. [MixPlan.hold] keeps its level while it fades by itself.
@@ -279,9 +307,11 @@ internal class DeckDsp(val sampleRate: Int, val channels: Int) {
     private var echo: Echo? = null
     private var reverb: Reverb? = null
     private val frame = FloatArray(channels)
+    private val hiss = Biquad(1)
+    private var seed = 0x2545F491
 
     fun reset() {
-        high.clear(); low.clear(); voiceHigh.clear(); voiceLow.clear()
+        high.clear(); low.clear(); voiceHigh.clear(); voiceLow.clear(); hiss.clear()
         gain = Float.NaN; dry = 1f
         echo = null; reverb = null
     }
@@ -292,7 +322,7 @@ internal class DeckDsp(val sampleRate: Int, val channels: Int) {
      */
     fun process(input: ByteBuffer, output: ByteBuffer, startUs: Long, automation: DeckAutomation?) {
         if (automation == null) {
-            if (!gain.isNaN() || high.cutoff > 0f || low.cutoff > 0f || echo != null || reverb != null) reset()
+            if (!gain.isNaN() || high.cutoff > 0f || low.cutoff > 0f || echo != null || reverb != null || hiss.cutoff > 0f) reset()
             output.put(input)
             return
         }
@@ -318,6 +348,8 @@ internal class DeckDsp(val sampleRate: Int, val channels: Int) {
             if (voice > 0f) { voiceHigh.follow(220f, .7071f, sampleRate, highPass = true); voiceLow.follow(4_500f, .7071f, sampleRate, highPass = false) }
             val send = if (repeats != null) automation.echo.at(middleUs) else 0f
             val wash = if (room != null) automation.reverb.at(middleUs) else 0f
+            val breath = if (automation.usesNoise) automation.noise.at(middleUs) * 32_767f else 0f
+            if (breath > 0f) hiss.follow(automation.noiseHz.at(middleUs), .7071f, sampleRate, highPass = true)
             for (i in 0 until block) {
                 gain += step; dry += dryStep
                 for (c in 0 until channels) {
@@ -334,12 +366,13 @@ internal class DeckDsp(val sampleRate: Int, val channels: Int) {
                     val kept = mid - voice * band
                     frame[0] = kept + side; frame[1] = kept - side
                 }
+                val n = if (breath > 0f) hiss.run(nextNoise() * breath, 0) else 0f
                 for (c in 0 until channels) {
                     val x = frame[c]
                     var y = x * dry
                     if (repeats != null) y += repeats.run(x * send, c)
                     if (room != null && c < 2) y += room.run(x * wash, c)
-                    output.putShort((y * gain).toInt().coerceIn(-32768, 32767).toShort())
+                    output.putShort((y * gain + n).toInt().coerceIn(-32768, 32767).toShort())
                 }
                 repeats?.advance()
             }
@@ -348,6 +381,14 @@ internal class DeckDsp(val sampleRate: Int, val channels: Int) {
         }
         // A trailing partial frame is passed on as it came.
         while (input.hasRemaining()) output.put(input.get())
+    }
+
+    /** White noise in -1..1 (xorshift): cheap, and the same from one run to the next. */
+    private fun nextNoise(): Float {
+        var x = seed
+        x = x xor (x shl 13); x = x xor (x ushr 17); x = x xor (x shl 5)
+        seed = x
+        return (x.toFloat() / Int.MAX_VALUE.toFloat()).coerceIn(-1f, 1f)
     }
 
     /** A second-order filter that is retuned as its cut-off moves, one state per channel. */
@@ -480,7 +521,7 @@ internal object DeckSync {
      * While the title is audible only clear errors are corrected, and more gently.
      */
     fun speed(rate: Float, errorMs: Double, audible: Boolean): Float {
-        val deadBand = if (audible) AUDIBLE_DEAD_BAND_MS else 4.0
+        val deadBand = if (audible) 12.0 else 4.0
         if (abs(errorMs) < deadBand) return rate
         val strength = if (audible) .00035 else .0008
         val correction = (errorMs * strength).coerceIn(-.04, .04)
@@ -489,33 +530,20 @@ internal object DeckSync {
     }
 
     /**
-     * Speed of the incoming title [through] the overlap (0..1) when the two tempos meet in
-     * time: [rate] at first, when it must follow the outgoing title, its own tempo at the
-     * end. The outgoing title plays at this speed divided by [rate], so the two stay locked.
+     * The speed of the incoming deck for [plan] while the outgoing one plays at [outgoing]: in time with it
+     * for a blend on the beat, its own otherwise. Set once, before the deck is heard.
      */
-    fun ride(rate: Float, through: Float): Float {
-        val t = ((through - RIDE_FROM) / (RIDE_TO - RIDE_FROM)).coerceIn(0f, 1f)
-        val eased = t * t * (3f - 2f * t)
-        return rate.pow(1f - eased)
-    }
-    private const val RIDE_FROM = .12f
-    private const val RIDE_TO = .88f
+    fun speedOf(plan: MixPlan, outgoing: Float): Float =
+        if (plan.kind == MixKind.Beatmatch) stepped(outgoing * plan.rate) else 1f
 
-    /** While both titles are heard, the incoming one is only nudged for an error a listener would hear as a flam. */
-    const val AUDIBLE_DEAD_BAND_MS = 18.0
-    /** The common tempo of a ride moves in few, larger steps: each change of speed costs the sound a little. */
-    fun rideStep(speed: Float): Float = (Math.round(speed / RIDE_STEP) * RIDE_STEP).toFloat()
-    private const val RIDE_STEP = .01
-    /** Least time between two changes of a deck's speed while it is heard. */
-    const val AUDIBLE_SPEED_HOLD_MS = 1_200L
+    /** The incoming deck is back on its own speed this long (in its title) before it is heard. */
+    const val SETTLE_BEFORE_MS = 450L
+
+    /** True once the incoming deck is too close to being heard to have its speed corrected. */
+    fun settled(plan: MixPlan, inPositionMs: Long): Boolean = inPositionMs >= plan.inMs - SETTLE_BEFORE_MS
 
     /** A speed on the grid of steps too small to hear. */
     fun stepped(speed: Float): Float = (Math.round(speed / STEP) * STEP).toFloat()
-
-    /** Speeds from the mixing tempo back to the title's own, one per half second. */
-    fun glide(rate: Float, steps: Int = 16): List<Float> =
-        if (abs(rate - 1f) < .003f) listOf(1f)
-        else (1..steps).map { step -> if (step == steps) 1f else (Math.round((rate + (1f - rate) * step / steps) / STEP) * STEP).toFloat() }
 
     private const val STEP = .002
 }

@@ -11,6 +11,10 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.testTag
+import com.ketvoice.app.ui.common.KetIcons
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
@@ -175,8 +179,11 @@ fun SearchScreen() {
 
     // Vraies pochettes d'album (jamais les vignettes YouTube).
     LaunchedEffect(results) { ArtworkRepo.enrich(results) }
-    val grouped = remember(results, segment) {
-        if (segment == 2) results.map { SearchGroups.Group(listOf(it)) } else SearchGroups.group(results)
+    val blockedArtists = com.ketvoice.app.data.ArtistPrefs.blocked
+    val grouped = remember(results, segment, blockedArtists) {
+        // The listener's own music (Library) is shown as it is; the catalogue leaves blocked artists out.
+        if (segment == 2) results.map { SearchGroups.Group(listOf(it)) }
+        else SearchGroups.group(results.filter(com.ketvoice.app.data.ArtistPrefs::allows))
     }
 
     Column(
@@ -225,6 +232,20 @@ fun SearchScreen() {
                 if (segment == 1) {
                     SourcesCard()
                 } else {
+                    val favourites = com.ketvoice.app.data.ArtistPrefs.favourites
+                    if (favourites.isNotEmpty()) {
+                        Text("Vos artistes favoris", style = T.section, color = th.onBackground,
+                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp))
+                        LazyRow(contentPadding = PaddingValues(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(18.dp),
+                            modifier = Modifier.testTag("search-favourite-artists")) {
+                            itemsIndexed(favourites, key = { _, a -> a.key }) { _, entry ->
+                                SearchArtistCircle(com.ketvoice.app.data.MusicArtist(entry.id, entry.name, entry.photo)) { origin ->
+                                    AppUi.openArtist(entry.id, entry.name, origin)
+                                }
+                            }
+                        }
+                        Spacer(Modifier.height(16.dp))
+                    }
                     Text(
                         "Recherches récentes",
                         style = T.section,
@@ -294,31 +315,7 @@ fun SearchScreen() {
                     LazyRow(contentPadding = PaddingValues(horizontal = 20.dp),
                         horizontalArrangement = Arrangement.spacedBy(18.dp)) {
                         itemsIndexed(artists, key = { _, a -> a.id }) { _, artist ->
-                            val origin = rememberRevealOrigin()
-                            Column(Modifier.width(96.dp).captureRevealOrigin(origin).clickable {
-                                submitSearch()
-                                AppUi.openArtist(artist.id, artist.name, origin.value)
-                            }, horizontalAlignment = Alignment.CenterHorizontally) {
-                                Box(Modifier.size(88.dp).clip(CircleShape).background(th.card)
-                                    .border(1.dp, th.onBackground.copy(alpha = .10f), CircleShape),
-                                    contentAlignment = Alignment.Center) {
-                                    // Never an empty grey disc: the initial is always
-                                    // behind the photo and shows while it loads.
-                                    Text(artist.name.take(1).uppercase(), localize = false,
-                                        color = th.secondary, fontSize = 30.sp,
-                                        fontWeight = FontWeight.Bold)
-                                    val artistPhoto = com.ketvoice.app.data.MediaOverrides.artistPhoto(artist.name, artist.photo)
-                                    if (!artistPhoto.isNullOrBlank()) {
-                                        AsyncImage(model = artistPhoto, contentDescription = artist.name,
-                                            contentScale = ContentScale.Crop, alignment = Alignment.Center,
-                                            modifier = Modifier.fillMaxSize())
-                                    }
-                                }
-                                Text(artist.name, localize = false, color = th.onBackground, fontSize = 13.sp,
-                                    fontWeight = FontWeight.SemiBold, maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier.padding(top = 7.dp))
-                            }
+                            SearchArtistCircle(artist) { origin -> submitSearch(); AppUi.openArtist(artist.id, artist.name, origin) }
                         }
                     }
                     Spacer(Modifier.height(16.dp))
@@ -534,5 +531,60 @@ private fun SourcesCard(compact: Boolean = false) {
             "Ajoutez des manifestes .json pour étendre la recherche, le streaming et les téléchargements.",
             style = T.sub, color = th.secondary
         )
+    }
+}
+
+/**
+ * An artist's circle in the search. A tap opens the artist; a long press opens a small menu
+ * under the circle to block or unblock the artist, or keep it as a favourite.
+ */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+@Composable
+internal fun SearchArtistCircle(artist: com.ketvoice.app.data.MusicArtist, onOpen: (androidx.compose.ui.geometry.Rect?) -> Unit) {
+    val th = LocalTheme.current
+    val origin = rememberRevealOrigin()
+    val haptic = com.ketvoice.app.ui.motion.rememberHaptics()
+    var menu by remember { mutableStateOf(false) }
+    val prefs = com.ketvoice.app.data.ArtistPrefs
+    val entry = remember(artist) { com.ketvoice.app.data.ArtistPrefs.Entry(artist.name, artist.id, artist.photo) }
+    val blocked = prefs.isBlocked(artist.name)
+    val favourite = prefs.isFavourite(artist.name)
+    val lift by androidx.compose.animation.core.animateFloatAsState(if (menu) 1.06f else 1f,
+        if (com.ketvoice.app.ui.motion.Motion.reduced) androidx.compose.animation.core.snap()
+        else androidx.compose.animation.core.spring(dampingRatio = .62f, stiffness = 520f), label = "artist-circle-lift")
+    Box {
+        Column(Modifier.width(96.dp).captureRevealOrigin(origin)
+            .combinedClickable(onLongClick = { haptic(com.ketvoice.app.ui.motion.Haptics.Kind.Tick); menu = true },
+                onLongClickLabel = com.ketvoice.app.data.AppText.t("Options de l'artiste")) { onOpen(origin.value) }
+            .testTag("search-artist-${artist.id}"), horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(Modifier.size(88.dp).graphicsLayer { scaleX = lift; scaleY = lift; alpha = if (blocked) .45f else 1f }
+                .clip(CircleShape).background(th.card).border(1.dp, th.onBackground.copy(alpha = .10f), CircleShape),
+                contentAlignment = Alignment.Center) {
+                // Never an empty grey disc: the initial is always behind the photo and shows while it loads.
+                Text(artist.name.take(1).uppercase(), localize = false, color = th.secondary, fontSize = 30.sp, fontWeight = FontWeight.Bold)
+                val artistPhoto = com.ketvoice.app.data.MediaOverrides.artistPhoto(artist.name, artist.photo)
+                if (!artistPhoto.isNullOrBlank()) AsyncImage(model = artistPhoto, contentDescription = artist.name,
+                    contentScale = ContentScale.Crop, alignment = Alignment.Center, modifier = Modifier.fillMaxSize())
+            }
+            Row(Modifier.padding(top = 7.dp), verticalAlignment = Alignment.CenterVertically) {
+                if (favourite) Icon(KetIcons.Heart, "Artiste favori", tint = th.accent, modifier = Modifier.size(12.dp).padding(end = 3.dp))
+                if (blocked) Icon(KetIcons.Close, "Artiste bloqué", tint = th.secondary, modifier = Modifier.size(12.dp).padding(end = 3.dp))
+                Text(artist.name, localize = false, color = if (blocked) th.secondary else th.onBackground, fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            }
+        }
+        androidx.compose.material3.DropdownMenu(menu, { menu = false }, offset = androidx.compose.ui.unit.DpOffset(4.dp, 2.dp),
+            shape = RoundedCornerShape(if (com.ketvoice.app.theme.Ket27.on) 18.dp else 16.dp), containerColor = th.card,
+            modifier = Modifier.testTag("search-artist-menu")) {
+            @Composable fun option(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, tag: String, action: () -> Unit) =
+                androidx.compose.material3.DropdownMenuItem(text = { Text(label, color = th.onBackground, fontSize = 14.sp) },
+                    leadingIcon = { Icon(icon, null, tint = th.onBackground, modifier = Modifier.size(18.dp)) },
+                    onClick = { menu = false; haptic(com.ketvoice.app.ui.motion.Haptics.Kind.Tick); action() },
+                    modifier = Modifier.heightIn(min = 44.dp).testTag(tag))
+            if (blocked) option("Débloquer l'artiste", KetIcons.Refresh, "artist-unblock") { prefs.setBlocked(entry, false) }
+            else option("Bloquer l'artiste", KetIcons.Close, "artist-block") { prefs.setBlocked(entry, true) }
+            if (favourite) option("Retirer des favoris", KetIcons.Heart, "artist-unfavourite") { prefs.setFavourite(entry, false) }
+            else option("Mettre en favori", KetIcons.Heart, "artist-favourite") { prefs.setFavourite(entry, true) }
+        }
     }
 }

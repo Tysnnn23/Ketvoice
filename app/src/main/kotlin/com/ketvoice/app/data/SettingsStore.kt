@@ -48,7 +48,7 @@ object SettingsStore {
         s.ketmixAnalysis.value = p.getInt("ketmixAnalysis", s.ketmixAnalysis.value).coerceIn(0, 2)
         s.ketmixLoops.value = p.getBoolean("ketmixLoops", true)
         s.smartShuffle.value = p.getBoolean("smartShuffle", true)
-        s.ketmixStyle.value = p.getInt("ketmixStyle", 0).coerceIn(0, 4)
+        s.ketmixStyle.value = p.getInt("ketmixStyle", 0).coerceIn(0, 5)
         s.ketmixHaptics.value = p.getBoolean("ketmixHaptics", false)
         // On unless the listener switched it off (owner, 2026-11-15: « Rend le mode ket27 par défaut »).
         s.ket27.value = p.getBoolean("ket27", true)

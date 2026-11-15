@@ -71,6 +71,8 @@ class MainActivity : ComponentActivity() {
         runCatching { com.ketvoice.app.data.YouTubeMusicSession.init(this) }
         runCatching { com.ketvoice.app.data.PublisherSession.init(this) }
         runCatching { com.ketvoice.app.data.CustomSources.init(this) }
+        runCatching { com.ketvoice.app.data.ForYouRotation.init(this) }
+        runCatching { com.ketvoice.app.data.ArtistPrefs.init(this) }
         runCatching {
             com.ketvoice.app.util.LauncherIcons.apply(
                 this,

@@ -46,7 +46,7 @@ object AppSettings {
     val ketmixLoops = mutableStateOf(true)
     /** Shuffle keeps titles heard recently for later and does not put two titles of an artist in a row. */
     val smartShuffle = mutableStateOf(true)
-    /** Ketmix transition style: 0 = automatic, 1 = matched to the tempo, 2 = echo, 3 = filters, 4 = fade. */
+    /** Ketmix transition style: 0 = automatic, 1 = matched to the tempo, 2 = echo, 3 = filters, 4 = fade, 5 = build (rise). */
     val ketmixStyle = mutableStateOf(0)
     /** A light vibration when the bass passes from one title to the next (app in front only). */
     val ketmixHaptics = mutableStateOf(false)

@@ -38,6 +38,8 @@ uniform float2 lightDir;
 uniform float rimLight;
 uniform float pixelScale;
 uniform float3 touch;
+// 0..1: the glass is held as a lens (the selection of the tab bar under a finger): clear, and magnifying.
+uniform float lensPress;
 
 // Continuous corner: a superellipse (n = 2.6) whose radius is widened so the curve
 // starts earlier along the edge but never leaves the circular clip of the shape.
@@ -114,7 +116,8 @@ float4 main(float2 coord) {
 
     // Slight magnification of the whole body (the glass is a thick convex slab).
     float minSide = max(min(halfSize.x, halfSize.y) * 2.0, 1.0);
-    float magnify = 0.018 + press * 0.012;
+    float held = clamp(lensPress, 0.0, 1.0);
+    float magnify = 0.018 + press * 0.012 + held * 0.13;
     float2 body = coord - p * magnify;
 
     float4 color;
@@ -239,14 +242,17 @@ internal fun applyLiquid27Material(shader: android.graphics.RuntimeShader, w: Fl
     // Materialize: the glass forms by bending the light in, not by fading in.
     shader.setFloatUniform("lensAmount", lens.amountPx * params.materialize.coerceIn(0f, 1f))
     shader.setFloatUniform("dispersion", DesignTokens.Glass.DISPERSION * 1.5f)
-    shader.setFloatUniform("frost", GlassTuning.sanitize(frost))
+    // Held as a lens, the glass clears: no frost, almost no milk.
+    val clear = 1f - params.opticalPressure.let { if (it.isFinite()) it.coerceIn(0f, 1f) else 0f } * .85f
+    shader.setFloatUniform("frost", GlassTuning.sanitize(frost) * clear)
     // Lighter dark material than the other styles; the cover may tint it slightly.
     val milk = GlassTint.milk(params.dark)
-    shader.setFloatUniform("milk", milk[0], milk[1], milk[2], if (params.dark) .10f else .06f)
+    shader.setFloatUniform("milk", milk[0], milk[1], milk[2], (if (params.dark) .10f else .06f) * clear)
     shader.setFloatUniform("saturation", if (params.dark) 1.18f else 1.24f)
     shader.setFloatUniform("materialDark", if (params.dark) 1f else 0f)
     shader.setFloatUniform("lightDir", light.lightX, light.lightY)
     shader.setFloatUniform("rimLight", (if (params.dark) .34f else .46f) * params.materialize.coerceIn(0f, 1f))
     shader.setFloatUniform("pixelScale", density)
     shader.setFloatUniform("touch", light.touchX, light.touchY, light.press.let { if (it.isFinite()) it.coerceIn(0f, 1f) else 0f })
+    shader.setFloatUniform("lensPress", params.opticalPressure.let { if (it.isFinite()) it.coerceIn(0f, 1f) else 0f })
 }

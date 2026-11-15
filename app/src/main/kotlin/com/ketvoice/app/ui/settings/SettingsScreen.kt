@@ -426,9 +426,9 @@ fun SettingsScreen() {
                     value = when (AppSettings.automixIntensity.value) { 0 -> "Discret"; 2 -> "DJ"; else -> "Équilibré" }) {
                     choice = ChoiceSpec("Intensité du mix", "S'applique dès la prochaine transition.",
                         AppSettings.automixIntensity.value.toString(), listOf(
-                            ChoiceOption("0", "Discret", "Chaque titre joue jusqu'au bout, mix jusqu'à 8 mesures, tempos à 6 % près, pas d'écho"),
-                            ChoiceOption("1", "Équilibré", "Mix jusqu'à 16 mesures, sous les 2 dernières mesures chantées, tempos à 14 % près"),
-                            ChoiceOption("2", "DJ", "Mix jusqu'à 16 mesures, sous les 4 dernières mesures chantées, tempos à 18 % près"))
+                            ChoiceOption("0", "Discret", "Chaque titre joue jusqu'au bout, mix jusqu'à 8 mesures, tempos à 2 % près, pas d'écho"),
+                            ChoiceOption("1", "Équilibré", "Mix jusqu'à 16 mesures, sous les 2 dernières mesures chantées, tempos à 3 % près"),
+                            ChoiceOption("2", "DJ", "Mix jusqu'à 16 mesures, sous les 4 dernières mesures chantées, tempos à 4 % près"))
                     ) { id -> AppSettings.automixIntensity.value = id.toIntOrNull()?.coerceIn(0, 2) ?: 1; SettingsStore.save() }
                 }
                 SRow(KetIcons.Audio, "Analyse des titres",
@@ -443,15 +443,16 @@ fun SettingsScreen() {
                 }
                 SRow(KetIcons.Shuffle, "Style de transition",
                     sub = "Comment un titre passe au suivant",
-                    value = when (AppSettings.ketmixStyle.value) { 1 -> "Calé sur le tempo"; 2 -> "Écho"; 3 -> "Filtres"; 4 -> "Fondu"; else -> "Automatique" }) {
+                    value = when (AppSettings.ketmixStyle.value) { 1 -> "Calé sur le tempo"; 2 -> "Écho"; 3 -> "Filtres"; 4 -> "Fondu"; 5 -> "Montée"; else -> "Automatique" }) {
                     choice = ChoiceSpec("Style de transition", "Ketmix garde toujours le chant intact et repasse à un autre style quand celui-ci ne convient pas aux deux titres.",
                         AppSettings.ketmixStyle.value.toString(), listOf(
                             ChoiceOption("0", "Automatique", "Ketmix choisit pour chaque paire de titres, d'après ce qu'il a mesuré"),
                             ChoiceOption("1", "Calé sur le tempo", "Les deux titres en rythme et les basses échangées sur un temps ; jamais d'écho"),
                             ChoiceOption("2", "Écho", "Le dernier temps résonne en écho, le titre suivant part sur ce temps"),
                             ChoiceOption("3", "Filtres", "Les deux titres se croisent par leurs fréquences : l'un s'amincit, l'autre s'ouvre"),
-                            ChoiceOption("4", "Fondu", "Un fondu enchaîné, sans effet"))
-                    ) { id -> AppSettings.ketmixStyle.value = id.toIntOrNull()?.coerceIn(0, 4) ?: 0; SettingsStore.save() }
+                            ChoiceOption("4", "Fondu", "Un fondu enchaîné, sans effet"),
+                            ChoiceOption("5", "Montée", "Le titre monte en tension sur ses dernières mesures, le suivant tombe sur le premier temps"))
+                    ) { id -> AppSettings.ketmixStyle.value = id.toIntOrNull()?.coerceIn(0, 5) ?: 0; SettingsStore.save() }
                 }
                 SToggle(KetIcons.Album, "Mixer aussi les albums",
                     "Les titres d'un album écouté dans l'ordre sont mixés aussi, sauf si l'album n'a aucun blanc entre ses titres.",

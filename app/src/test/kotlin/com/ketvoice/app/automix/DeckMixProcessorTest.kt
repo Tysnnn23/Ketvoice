@@ -49,6 +49,11 @@ class DeckMixProcessorTest {
         val plan = MixPlan(MixKind.Echo, outMs = 9_900, inMs = 0, overlapMs = 2_100, beatMs = 500f, cutMs = 10_000, tail = true)
         control.automation = DeckAutomation.outgoing(plan)
         control.pendingTimeUs = offset + 9_500_000
+        // A drain before the end of the title (Media3 ends the stream to change speed) plays nothing out.
+        out(processor, pcm(4_800)); processor.queueEndOfStream()
+        assertEquals(0, processor.output.remaining()); processor.flush()
+        control.tailFromUs = 8_000_000
+        control.pendingTimeUs = offset + 9_500_000
         val last = out(processor, pcm(24_000))                 // 9.5–10.0 s: the note, heard whole
         assertTrue("the note itself is untouched", last.take(9_600).all { it.toInt() == 10_000 })
         processor.queueEndOfStream()

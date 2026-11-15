@@ -32,8 +32,10 @@ internal class DeckControl {
      * deck here holds a single item.
      */
     @Volatile var offsetUs: Long = PLAYER_CLOCK_OFFSET_US
+    /** From this position in the title an end of stream is the title's end, after which an echo may ring on (see [MixPlan.tail]). */
+    @Volatile var tailFromUs: Long = Long.MAX_VALUE
 
-    fun reset() { automation = null; tap = null }
+    fun reset() { automation = null; tap = null; tailFromUs = Long.MAX_VALUE }
 
     companion object { const val PLAYER_CLOCK_OFFSET_US = 1_000_000_000_000L }
 }
@@ -109,6 +111,8 @@ internal class DeckMixProcessor(private val control: DeckControl) : BaseAudioPro
         val automation = control.automation ?: return
         if (!automation.usesEcho && !automation.usesReverb) return
         val at = cursorUs.takeIf { it != C.TIME_UNSET } ?: return
+        // Media3 also ends the stream of its processors to apply a change of speed: that is no end of the title.
+        if (at < control.tailFromUs) return
         val tailUs = (automation.endUs - at).coerceIn(0L, TransitionPlanner.MAX_TAIL_MS * 1000L)
         if (tailUs < 40_000L) return
         val rate = inputAudioFormat.sampleRate

@@ -37,6 +37,9 @@ import androidx.compose.material.icons.filled.SkipNext
 import com.ketvoice.app.ui.common.Icon
 import com.ketvoice.app.ui.common.Text
 import com.ketvoice.app.ui.motion.Motion
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -415,6 +418,12 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier,
     var hover by remember { mutableFloatStateOf(0f) }
     val bulge by animateFloatAsState(if (held && !Motion.reduced) 1.055f else 1f,
         if (Motion.reduced) androidx.compose.animation.core.snap() else spring(dampingRatio = .82f, stiffness = 500f), label = "held-glass")
+    // Held, the selection becomes a lens as on iOS: it swells to the height of the bar, turns clear and
+    // magnifies the tab under it, with a little overshoot, then settles back into a selection when let go.
+    val lensLift by animateFloatAsState(if (held && !Motion.reduced) 1f else 0f,
+        if (Motion.reduced) androidx.compose.animation.core.snap() else spring(dampingRatio = HeldLens.DAMPING, stiffness = HeldLens.STIFFNESS),
+        label = "held-lens")
+    var lastHoverTab by remember { mutableIntStateOf(-1) }
     val tabs = listOf(
         TabSpec(Icons.Filled.Home, "Accueil", AppUi.HOME),
         TabSpec(Icons.Filled.GridView, "Explorer", AppUi.EXPLORER),
@@ -450,6 +459,19 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier,
                         change.consume()
                         hover = lensPosition(change.position.x, size.width.toFloat())
                     },
+                    onDragEnd = {
+                        focus.clearFocus()
+                        haptic(Haptics.Kind.Tick)
+                        AppUi.selectTab(kotlin.math.round(hover).toInt().coerceIn(0, 2))
+                        held = false
+                    }, onDragCancel = { held = false })
+            }
+            // A swipe along the bar grabs the lens at once, without waiting for a long press.
+            .pointerInput(collapsed, homeOnly) {
+                if (homeOnly || collapsed) return@pointerInput
+                detectHorizontalDragGestures(
+                    onDragStart = { start -> held = true; hover = lensPosition(start.x, size.width.toFloat()) },
+                    onHorizontalDrag = { change, _ -> change.consume(); hover = lensPosition(change.position.x, size.width.toFloat()) },
                     onDragEnd = {
                         focus.clearFocus()
                         haptic(Haptics.Kind.Tick)
@@ -513,14 +535,25 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier,
                     // peu pendant le déplacement puis se stabilise.
                     val pillShape = RoundedCornerShape(999.dp)
                     val lens = dropLens(lensLead, lensTrail)
+                    // Each tab crossed by the held lens is felt, as on iOS.
+                    if (held) {
+                        val over = kotlin.math.round(hover).toInt().coerceIn(0, 2)
+                        LaunchedEffect(over) { if (lastHoverTab != -1 && lastHoverTab != over) haptic(Haptics.Kind.Tick); lastHoverTab = over }
+                    } else lastHoverTab = -1
+                    val grow = HeldLens.grow(lensLift)
                     GlassPanel(
                         modifier = Modifier
-                            .offset(x = slot * lens.start + 5.dp)
-                            .size(width = slot * lens.span - 10.dp, height = heightAnim - 10.dp)
+                            .offset(x = slot * lens.start + 5.dp - grow.width / 2)
+                            .size(width = slot * lens.span - 10.dp + grow.width, height = heightAnim - 10.dp + grow.height)
                             .align(Alignment.CenterStart)
                             .graphicsLayer { scaleX = bulge; scaleY = bulge * lens.squash },
                         shape = pillShape,
-                        params = GlassParams.selection(dark = th.isDark),
+                        params = GlassParams.selection(dark = th.isDark).let { base ->
+                            if (lensLift <= 0f) base else base.copy(opticalPressure = lensLift.coerceIn(0f, 1f),
+                                blurPx = base.blurPx * (1f - lensLift.coerceIn(0f, 1f)), tintAlpha = base.tintAlpha * (1f - .8f * lensLift.coerceIn(0f, 1f)),
+                                refractionHeightDp = base.refractionHeightDp + 4f * lensLift, refractionAmountDp = base.refractionAmountDp + 9f * lensLift,
+                                highlightAlpha = base.highlightAlpha + .2f * lensLift.coerceIn(0f, 1f))
+                        },
                         enabled = AppSettings.liquidGlass.value
                     ) {}
                 }
@@ -538,8 +571,11 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier,
                             animationSpec = Motion.pressSpring(pressed),
                             label = "tabPress"
                         )
+                        // Under the held lens the tab is magnified, the more the closer the lens.
+                        val under = if (held) (1f - kotlin.math.abs(hover - tab.index)).coerceIn(0f, 1f) else 0f
+                        val magnified = 1f + HeldLens.MAGNIFY * lensLift * under
                         val iconScale by animateFloatAsState(
-                            targetValue = if (isSel) 1.07f else 1f,
+                            targetValue = (if (isSel) 1.07f else 1f) * magnified,
                             animationSpec = if (Motion.reduced) androidx.compose.animation.core.snap() else spring(dampingRatio = 0.78f, stiffness = 620f),
                             label = "tabIcon"
                         )
@@ -699,6 +735,18 @@ private fun Modifier.graphicsLayerScale(scale: Float): Modifier =
 
 /** Droplet lens geometry, in tab slots: where it starts, how many slots it spans, and its squash. */
 internal data class DropLens(val start: Float, val span: Float, val squash: Float)
+
+/** The selection of the tab bar held under a finger (iOS 26 and 27): a lens that swells, clears and magnifies. */
+internal object HeldLens {
+    const val STIFFNESS = 420f
+    /** A little overshoot: the lens swells past its size, then settles, like a drop. */
+    const val DAMPING = .58f
+    /** How much the tab under the lens is magnified. */
+    const val MAGNIFY = .32f
+    data class Grow(val width: androidx.compose.ui.unit.Dp, val height: androidx.compose.ui.unit.Dp)
+    /** How much wider and taller the lens is than the selection, for a lift of 0..1 (more during the overshoot). */
+    fun grow(lift: Float): Grow { val l = if (lift.isFinite()) lift.coerceIn(0f, 1.25f) else 0f; return Grow((16f * l).dp, (8f * l).dp) }
+}
 
 /**
  * The lens spans from its slower edge to its faster edge plus one slot. At rest both edges

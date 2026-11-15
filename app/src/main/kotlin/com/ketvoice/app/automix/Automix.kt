@@ -84,6 +84,8 @@ internal object Automix {
     private const val PATHS_WAIT_MS = 1_500L
     /** How long an incoming deck may play before its processors join; past that, a plain fade on the volume. */
     private const val PATH_JOIN_MS = 900L
+    /** How close to its end a title must be for its echo to be played out past it. */
+    private const val TAIL_END_MS = 2_500L
 
     private val _ui = MutableStateFlow(Ui())
     val ui: StateFlow<Ui> = _ui
@@ -139,15 +141,17 @@ internal object Automix {
             if (promoted) {
                 // The incoming title is the one being heard: it keeps playing, at its own tempo and level.
                 host.release(main)
+                // It keeps the speed it was mixed at: a change of speed while a title is heard is heard
+                // as a hiccup. The playback service gives the deck its own speed back at the next title.
                 if (incoming != null) {
                     host.control(incoming)?.reset()
-                    runCatching { incoming.playbackParameters = PlaybackParameters.DEFAULT; incoming.volume = baseVolume }
+                    runCatching { incoming.volume = baseVolume }
                 }
             } else {
                 host.control(main)?.reset()
                 repeatBefore?.let { mode -> runCatching { main.repeatMode = mode } }
-                // The outgoing title may have been led towards the tempo of the next one: it gets its own back.
-                if (started) runCatching { main.volume = baseVolume; main.playbackParameters = PlaybackParameters.DEFAULT }
+                // The outgoing title's speed is never touched by a mix; only its level is given back.
+                if (started) runCatching { main.volume = baseVolume }
                 if (incoming != null) { host.control(incoming)?.reset(); host.release(incoming) }
             }
         }
@@ -305,7 +309,8 @@ internal object Automix {
             stopAfterCurrent = SleepTimer.endOfTrack.value || SleepTimer.remainingSeconds.value in 1..180,
             exactAudio = h.exact || AppSettings.bitPerfect.value,
             skipSilence = AppSettings.skipSilence.value,
-            albumsMixed = AppSettings.automixAlbums.value)
+            albumsMixed = AppSettings.automixAlbums.value,
+            speed = main.playbackParameters.speed)
         val settings = MixSettings(AppSettings.automixIntensity.value, MixStyle.of(AppSettings.ketmixStyle.value))
         val depth = AnalysisDepth.of(AppSettings.ketmixAnalysis.value)
         val nextDuration = next.track.durationMs.takeIf { it > 0 } ?: 600_000L
@@ -393,7 +398,8 @@ internal object Automix {
 
         deck.volume = 0f
         deck.setMediaItem(nextItem, (plan.inMs - preRoll * plan.rate.toDouble()).toLong().coerceAtLeast(0L))
-        deck.playbackParameters = PlaybackParameters(plan.rate)
+        // The only speed the incoming deck is given while it can be heard, set now while it is silent.
+        deck.playbackParameters = DeckSync.speedOf(plan, main.playbackParameters.speed).let { if (it == 1f) PlaybackParameters.DEFAULT else PlaybackParameters(it) }
         deck.playWhenReady = false
         deck.prepare()
         val readyBy = SystemClock.elapsedRealtime() + 10_000L
@@ -424,7 +430,11 @@ internal object Automix {
         val finalStart = plan.outMs - finalPreRoll
         // Both automations are tied to positions in their title, so they are set ahead of time: the
         // sound a deck has already buffered when the mix starts then carries its level too.
-        if (s.precise) { control.automation = DeckAutomation.incoming(plan); mainControl.automation = DeckAutomation.outgoing(plan) }
+        if (s.precise) {
+            control.automation = DeckAutomation.incoming(plan); mainControl.automation = DeckAutomation.outgoing(plan)
+            // An echo is only played out on silence at the real end of the title, never at the drain a change of speed causes.
+            mainControl.tailFromUs = if (plan.tail) (duration - TAIL_END_MS) * 1000L else Long.MAX_VALUE
+        }
         // On repeat the player would jump back to the start by itself: for this loop the mix does it instead.
         if (plan.loop && main.repeatMode != androidx.media3.common.Player.REPEAT_MODE_OFF) {
             s.repeatBefore = main.repeatMode
@@ -451,6 +461,9 @@ internal object Automix {
             precise = s.precise, mixAtMs = plan.outMs, inAtMs = plan.inMs, tail = plan.tail) }
         commit("mixed")
         if (plan.kind == MixKind.Beatmatch || plan.kind == MixKind.Filter) lastVariant = plan.variant
+        // An echo and a build take turns: the next exit on the beat is the other one.
+        if (plan.kind == MixKind.Echo) lastVariant = 0
+        if (plan.kind == MixKind.Rise) lastVariant = 1
         s.baseVolume = main.volume
         if (s.precise && !s.incomingPending) deck.volume = s.baseVolume
         deck.play()
@@ -468,27 +481,22 @@ internal object Automix {
         val main = s.main
         val deck = s.deck ?: return
         val end = plan.outMs + plan.overlapMs
+        val base = DeckSync.speedOf(plan, main.playbackParameters.speed)
         val promoteAt = when {
             plan.kind == MixKind.Beatmatch && plan.swapMs >= 0 -> plan.swapMs + (plan.beatMs / 2f).toLong()
             // A last note, or a cut on the bar, is followed at once: the next title is the one shown as soon as it is heard.
-            plan.kind == MixKind.Trim || plan.kind == MixKind.Echo -> plan.outMs
+            plan.kind == MixKind.Trim || plan.kind == MixKind.Echo || plan.kind == MixKind.Rise -> plan.outMs
             else -> plan.outMs + plan.overlapMs * 55 / 100
         }
-        // Two tempos that differ meet half-way in time: the common tempo slides from the outgoing
-        // title's to the incoming one's, so that each is only stretched while it is the quiet one.
-        val ride = s.precise && plan.kind == MixKind.Beatmatch && abs(plan.rate - 1f) >= .004f
         var epochNow = epoch
         var smoothed = Double.NaN
-        var speed = plan.rate
+        var speed = base
         var speedAt = 0L
-        var lead = 1f
-        var leadAt = 0L
         var reseeked = false
         // The moment the bass changes hands, on the outgoing title's clock.
         val swapMoment = MixWords.swapShare(plan).takeIf { it >= 0f }?.let { plan.outMs + (plan.overlapMs * it).toLong() }
         var swapped = false
         var worstSync = 0.0
-        var speedChanges = 0
         while (true) {
             delay(40)
             if (host !== h || s.closed) return
@@ -540,31 +548,23 @@ internal object Automix {
                     deck.seekTo((plan.inMs + (outPosition - plan.outMs + 90L) * plan.rate.toDouble()).toLong().coerceAtLeast(0L))
                     continue
                 }
-                val now = SystemClock.elapsedRealtime()
-                // After a cut the next title is alone on its own tempo: nothing is left to follow.
-                val follows = plan.kind == MixKind.Beatmatch || !audible
-                val through = ((outPosition - plan.outMs).toFloat() / plan.overlapMs).coerceIn(0f, 1f)
-                // On the grid of small steps, so that a speed is only set again when it really changed.
-                val shared = if (ride) DeckSync.rideStep(DeckSync.ride(plan.rate, through)).let { if (through >= .88f) 1f else it } else plan.rate
-                if (audible) worstSync = max(worstSync, abs(smoothed))
-                val wanted = if (follows) DeckSync.speed(shared, smoothed, audible) else 1f
-                if (wanted != speed && now - speedAt >= (if (audible) DeckSync.AUDIBLE_SPEED_HOLD_MS else 200L)) {
-                    deck.playbackParameters = if (wanted == 1f) PlaybackParameters.DEFAULT else PlaybackParameters(wanted)
-                    speed = wanted; speedAt = now
-                    if (audible) speedChanges++
-                }
-                if (ride) {
-                    val wantedLead = DeckSync.stepped(shared / plan.rate)
-                    if (wantedLead != lead && now - leadAt >= DeckSync.AUDIBLE_SPEED_HOLD_MS) {
-                        main.playbackParameters = if (wantedLead == 1f) PlaybackParameters.DEFAULT else PlaybackParameters(wantedLead)
-                        lead = wantedLead; leadAt = now
-                        speedChanges++
+                if (audible) {
+                    // Once heard, a deck's speed never changes again: only how well the beats meet is noted.
+                    if (plan.kind == MixKind.Beatmatch) worstSync = max(worstSync, abs(smoothed))
+                } else {
+                    val now = SystemClock.elapsedRealtime()
+                    // Small corrections while it is still silent, then back on its own speed a moment before it is heard.
+                    val settled = DeckSync.settled(plan, inPosition)
+                    val wanted = if (settled) base else DeckSync.speed(base, smoothed, audible = false)
+                    if (wanted != speed && (settled || now - speedAt >= 200L)) {
+                        deck.playbackParameters = if (wanted == 1f) PlaybackParameters.DEFAULT else PlaybackParameters(wanted)
+                        speed = wanted; speedAt = now
                     }
                 }
             }
             if (outPosition >= end + 120L || ended) break
         }
-        if (plan.beatTied && s.precise) KetmixJournal.amend { it.copy(syncWorstMs = worstSync.toInt(), speedChanges = speedChanges) }
+        if (plan.kind == MixKind.Beatmatch && s.precise) KetmixJournal.amend { it.copy(syncWorstMs = worstSync.toInt(), speedChanges = 0) }
         if (!s.promoted) return
         // The outgoing title is over: one deck from here on.
         h.release(main)
@@ -577,12 +577,6 @@ internal object Automix {
                 deck.volume = from + (s.baseVolume - from) * step / 40f
             }
             return
-        }
-        // Back to the title's own tempo, in steps too small to hear, when the mix left it anywhere else.
-        for (step in DeckSync.glide(speed)) {
-            delay(500)
-            if (h.main !== deck || Player.playbackEpoch != epochNow || s.closed) return
-            deck.playbackParameters = if (step == 1f) PlaybackParameters.DEFAULT else PlaybackParameters(step)
         }
         // The automation ends at the title's own level; once past it, nothing is left of the transition.
         val automationEnd = (DeckAutomation.incoming(plan).endUs / 1000L) + 600L

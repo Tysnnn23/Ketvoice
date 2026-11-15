@@ -152,12 +152,24 @@ fun ArtistScreen(request: AppUi.ArtistRequest? = AppUi.artistRequest.value) {
                 val data = page!!
                 item(key = "artist-header") { ArtistHeader(data, { collapse.value }) { portraitTone = it } }
                 if (data.description.isNotBlank()) item {
-                    Column(Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
-                        Text(data.description, localize = false, color = theme.secondary, fontSize = 13.5.sp, lineHeight = 19.sp,
-                            maxLines = if (expandedBio) 40 else 4, overflow = TextOverflow.Ellipsis)
-                        Text(if (expandedBio) "Afficher moins" else "Lire plus", color = theme.accent,
-                            fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.clickable { expandedBio = !expandedBio }.padding(top = 8.dp))
+                    // The biography in the app's language; the original stays one tap away.
+                    val language = com.ketvoice.app.data.AppText.language()
+                    val translation by produceState<String?>(null, data.description, language) {
+                        value = com.ketvoice.app.data.ArtistBio.translated(data.description, language)
+                    }
+                    var original by remember(data.description) { mutableStateOf(false) }
+                    val translated = com.ketvoice.app.data.ArtistBio.differs(data.description, translation)
+                    Column(Modifier.padding(horizontal = 20.dp, vertical = 12.dp).testTag("artist-bio")) {
+                        Text(if (translated && !original) translation!! else data.description, localize = false, color = theme.secondary,
+                            fontSize = 13.5.sp, lineHeight = 19.sp, maxLines = if (expandedBio) 40 else 4, overflow = TextOverflow.Ellipsis)
+                        Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text(if (expandedBio) "Afficher moins" else "Lire plus", color = theme.accent,
+                                fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.clickable { expandedBio = !expandedBio })
+                            if (translated) Text(if (original) "Voir la traduction" else "Traduit automatiquement · Voir l'original",
+                                color = theme.secondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.padding(start = 14.dp).clickable { original = !original }.testTag("artist-bio-original"))
+                        }
                     }
                 }
                 if (data.tracks.isNotEmpty()) item {

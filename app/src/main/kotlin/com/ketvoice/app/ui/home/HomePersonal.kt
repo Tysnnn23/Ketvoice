@@ -153,7 +153,10 @@ internal fun HomeMixes(modifier: Modifier = Modifier) {
     val recent by ListeningHistory.tracks.collectAsState()
     val counts by ListeningHistory.playCounts.collectAsState()
     val favorites = AppSettings.favoriteIds.value
-    val cards = remember(known, recent, counts, favorites) { PersonalMixes.propose(known, recent, counts, favorites) }
+    val blockedArtists = com.ketvoice.app.data.ArtistPrefs.blocked
+    val cards = remember(known, recent, counts, favorites, blockedArtists) {
+        PersonalMixes.propose(known.filter(com.ketvoice.app.data.ArtistPrefs::allows), recent.filter(com.ketvoice.app.data.ArtistPrefs::allows), counts, favorites)
+    }
     if (cards.isEmpty()) return
     val theme = LocalTheme.current
     Column(modifier.testTag("home-mixes")) {

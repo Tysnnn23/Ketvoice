@@ -243,6 +243,10 @@ class PlaybackService : MediaSessionService() {
                                                mediaItem: androidx.media3.common.MediaItem?, reason: Int) {
                 manifestReported = false
                 mediaReported = false
+                // A title that Ketmix played in time with the previous one keeps that speed to its end; the
+                // next title starts on its own tempo again, at the boundary between the two where it is not heard.
+                if (::player.isInitialized && owner === this@PlaybackService.player && !com.ketvoice.app.automix.Automix.mixing &&
+                    owner.playbackParameters.speed != 1f) owner.playbackParameters = androidx.media3.common.PlaybackParameters.DEFAULT
             }
             override fun onLoadCompleted(eventTime: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime,
                                          loadEventInfo: androidx.media3.exoplayer.source.LoadEventInfo,

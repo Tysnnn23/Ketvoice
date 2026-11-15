@@ -54,9 +54,14 @@ internal fun visualKindLabel(kind: String): String = when (kind) {
 internal data class VisualChange(val cover: File? = null, val canvas: File? = null, val hero: File? = null,
                                  val restore: Set<String> = emptySet(), val canvasOff: Boolean? = null,
                                  /** A Canvas given by its address: streamed from there, never stored. */
-                                 val canvasLink: String? = null) {
-    val isEmpty: Boolean get() = cover == null && canvas == null && hero == null && restore.isEmpty() && canvasOff == null && canvasLink == null
-    val links: Map<String, String> get() = canvasLink?.let { mapOf("canvas" to it) } ?: emptyMap()
+                                 val canvasLink: String? = null,
+                                 /** A cover, portrait or artist photo given by its address: shown from there, never stored. */
+                                 val coverLink: String? = null, val heroLink: String? = null) {
+    val isEmpty: Boolean get() = cover == null && canvas == null && hero == null && restore.isEmpty() && canvasOff == null &&
+        canvasLink == null && coverLink == null && heroLink == null
+    val links: Map<String, String> get() = buildMap {
+        canvasLink?.let { put("canvas", it) }; coverLink?.let { put("cover", it) }; heroLink?.let { put("hero", it) }
+    }
 }
 
 /**
@@ -83,33 +88,36 @@ private fun VisualEditor(state: StudioState, target: VisualTarget) {
     val saved: MediaOverride? = MediaOverrides.get(target.kind, target.key)
     var change by remember { mutableStateOf(VisualChange()) }
     var rights by remember { mutableStateOf(false) }
-    val pickCover = coverPicker(state) { file -> change.cover?.delete(); change = change.copy(cover = file, restore = change.restore - "cover") }
+    val pickCover = coverPicker(state) { file -> change.cover?.delete(); change = change.copy(cover = file, coverLink = null, restore = change.restore - "cover") }
     val pickHero = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) state.run {
             val file = state.files.copy(uri, 8L * 1024 * 1024, setOf("png", "jpg", "jpeg", "webp"))
-            change.hero?.delete(); change = change.copy(hero = file, restore = change.restore - "hero")
+            change.hero?.delete(); change = change.copy(hero = file, heroLink = null, restore = change.restore - "hero")
         }
     }
+    fun linkCover(url: String?) { change.cover?.delete(); change = change.copy(cover = null, coverLink = url, restore = if (url != null) change.restore - "cover" else change.restore) }
+    fun linkHero(url: String?) { change.hero?.delete(); change = change.copy(hero = null, heroLink = url, restore = if (url != null) change.restore - "hero" else change.restore) }
     fun restore(field: String) { change = change.copy(restore = change.restore + field) }
     fun state(field: String, chosen: File?): String = when {
         chosen != null -> "Nouvelle image · à envoyer"
+        (if (field == "hero") change.heroLink else change.coverLink) != null -> "Lien · affiché depuis son adresse, sans limite de taille"
         field in change.restore -> "Original rétabli à l'envoi"
         when (field) { "cover" -> saved?.cover; "hero" -> saved?.hero; else -> saved?.canvas } != null -> "Personnalisé"
         else -> "Original du catalogue"
     }
-    val coverShown: Any? = change.cover ?: saved?.cover.takeIf { "cover" !in change.restore } ?: target.cover
+    val coverShown: Any? = change.cover ?: change.coverLink ?: saved?.cover.takeIf { "cover" !in change.restore } ?: target.cover
     Text(target.title, localize = false, color = theme.onBackground, fontSize = 20.sp, fontWeight = FontWeight.Bold,
         maxLines = 2, overflow = TextOverflow.Ellipsis)
     if (target.subtitle.isNotBlank()) Text(target.subtitle, localize = false, color = theme.secondary, fontSize = 14.sp)
     if (target.kind == MediaOverrides.ARTIST) {
-        val heroShown: Any? = change.hero ?: saved?.hero.takeIf { "hero" !in change.restore }
+        val heroShown: Any? = change.hero ?: change.heroLink ?: saved?.hero.takeIf { "hero" !in change.restore }
         ArtistVisualPreview(target.title, heroShown ?: coverShown, coverShown)
         VisualPart(KetIcons.Account, "Photo de l'artiste", "En haut de la page de l'artiste · JPEG, PNG ou WebP, 8 Mo maximum",
             state("hero", change.hero), saved?.hero != null && "hero" !in change.restore, state.busy, "studio-visual-hero",
-            onPick = { pickHero.launch(IMAGE_TYPES) }, onRestore = { restore("hero") })
+            onPick = { pickHero.launch(IMAGE_TYPES) }, onRestore = { restore("hero") }, state = state, linked = change.heroLink, onLink = ::linkHero)
         VisualPart(KetIcons.Account, "Portrait", "Rond, dans les listes et la recherche · 4 Mo maximum",
             state("cover", change.cover), saved?.cover != null && "cover" !in change.restore, state.busy, "studio-visual-portrait",
-            onPick = { pickCover.launch(IMAGE_TYPES) }, onRestore = { restore("cover") })
+            onPick = { pickCover.launch(IMAGE_TYPES) }, onRestore = { restore("cover") }, state = state, linked = change.coverLink, onLink = ::linkCover)
     } else {
         val canvasOff = change.canvasOff ?: (saved?.canvasOff == true && "canvas" !in change.restore)
         val canvasShown = if (canvasOff) null else change.canvas?.absolutePath ?: change.canvasLink ?: saved?.canvas.takeIf { "canvas" !in change.restore }
@@ -118,7 +126,7 @@ private fun VisualEditor(state: StudioState, target: VisualTarget) {
         }
         VisualPart(KetIcons.Album, "Pochette", if (target.kind == MediaOverrides.ALBUM) "Pour l'album et chacun de ses titres" else "Pour ce titre",
             state("cover", change.cover), saved?.cover != null && "cover" !in change.restore, state.busy, "studio-visual-cover",
-            onPick = { pickCover.launch(IMAGE_TYPES) }, onRestore = { restore("cover") })
+            onPick = { pickCover.launch(IMAGE_TYPES) }, onRestore = { restore("cover") }, state = state, linked = change.coverLink, onLink = ::linkCover)
         CanvasEditor(state, change.canvas, onChosen = { file ->
                 change.canvas?.delete()
                 change = if (file != null) change.copy(canvas = file, canvasLink = null, restore = change.restore - "canvas", canvasOff = null)
@@ -148,7 +156,7 @@ private fun VisualEditor(state: StudioState, target: VisualTarget) {
             listOfNotNull(sending.cover, sending.canvas, sending.hero).forEach { it.delete() }
             change = VisualChange()
             state.info = if (sending.restore.isNotEmpty() && sending.cover == null && sending.canvas == null && sending.hero == null &&
-                    sending.canvasOff == null && sending.canvasLink == null)
+                    sending.canvasOff == null && sending.links.isEmpty())
                 "Original rétabli" else "Visuels enregistrés"
         }
     }, Modifier.fillMaxWidth(), prominent = true, enabled = !state.busy && rights && !change.isEmpty,
@@ -165,7 +173,8 @@ private fun VisualEditor(state: StudioState, target: VisualTarget) {
 /** One visual with its state, a button to choose a new one and, once changed, one to go back. */
 @Composable
 private fun VisualPart(icon: androidx.compose.ui.graphics.vector.ImageVector, title: String, hint: String, value: String, canRestore: Boolean, busy: Boolean, tag: String,
-                       onPick: () -> Unit, onRestore: () -> Unit) {
+                       onPick: () -> Unit, onRestore: () -> Unit, state: StudioState? = null, linked: String? = null,
+                       onLink: ((String?) -> Unit)? = null) {
     val theme = LocalTheme.current
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(theme.card).padding(16.dp).testTag(tag),
         verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -181,6 +190,23 @@ private fun VisualPart(icon: androidx.compose.ui.graphics.vector.ImageVector, ti
             GlassCapsuleButton("Choisir une image", null, onPick, Modifier.weight(1f), enabled = !busy, tag = "$tag-pick", minHeight = 48.dp)
             if (canRestore) GlassCapsuleButton("Rétablir", null, onRestore, Modifier.weight(1f), enabled = !busy,
                 tag = "$tag-restore", minHeight = 48.dp)
+        }
+        // Or an address: the image is shown from there, nothing is stored on Ketvoice's server.
+        if (state != null && onLink != null) {
+            var link by remember { mutableStateOf("") }
+            if (linked != null) Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(linked, localize = false, color = theme.onBackground, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f))
+                Text("Annuler", color = theme.secondary, fontSize = 14.sp, modifier = Modifier.clip(RoundedCornerShape(12.dp))
+                    .clickable(role = androidx.compose.ui.semantics.Role.Button) { onLink(null) }.heightIn(min = 48.dp)
+                    .wrapContentHeight(Alignment.CenterVertically).padding(horizontal = 10.dp))
+            } else {
+                androidx.compose.material3.OutlinedTextField(link, { link = it.take(2048) }, singleLine = true, enabled = !busy,
+                    label = { Text("Ou un lien vers l'image") }, modifier = Modifier.fillMaxWidth().testTag("$tag-link"), colors = studioFieldColors())
+                GlassCapsuleButton("Utiliser ce lien", null, {
+                    state.run { onLink(com.ketvoice.app.data.StudioImageLink.check(link)); link = "" }
+                }, Modifier.fillMaxWidth(), enabled = !busy && link.isNotBlank(), tag = "$tag-use-link", minHeight = 48.dp)
+            }
         }
     }
 }
