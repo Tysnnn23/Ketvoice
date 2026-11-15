@@ -82,7 +82,31 @@ function lyricRow(meta: Row, source: {content:string,format:string}, owner: stri
   if (isrc && !/^[A-Z]{2}[A-Z0-9]{3}\d{7}$/.test(isrc)) throw new HttpError(400,"ISRC invalide");
   return {track_id:trackId,recording_key:key(title,artist),title,artist,duration_ms:duration(meta.durationMs),isrc:isrc || null,...source,created_by:owner,published:true};
 }
-const publicFile = (path: string) => `${base()}/storage/v1/object/public/${BUCKET}/${path}`;
+/** A stored file's public address; a link the owner gave is played from where it is, as given. */
+const publicFile = (path: string) => isLink(path) ? path : `${base()}/storage/v1/object/public/${BUCKET}/${path}`;
+const isLink = (value: unknown) => typeof value === "string" && value.startsWith("https://");
+/**
+ * A link to a cover, a Canvas or a photo that the app streams from where it is: nothing is
+ * downloaded or stored, so no size limit applies. HTTPS only, no credentials, no local host.
+ */
+function mediaLink(value: unknown): string {
+  if(typeof value!=="string" || value.length>2048) throw new HttpError(400,"Lien HTTPS requis");
+  let url: URL;
+  try { url=new URL(value.trim()); } catch { throw new HttpError(400,"Lien HTTPS requis"); }
+  const host=url.hostname.toLowerCase();
+  if(url.protocol!=="https:" || url.username || url.password || !host.includes(".") || host==="localhost" ||
+     /^(\d+\.){3}\d+$/.test(host) || host.startsWith("[")) throw new HttpError(400,"Lien HTTPS public requis");
+  return url.toString();
+}
+/** The links of a request, by field, checked; only the fields this kind of item allows. */
+function mediaLinks(value: unknown, allowed: string[]): Record<string,string> {
+  if(value===undefined) return {};
+  if(!value || typeof value!=="object" || Array.isArray(value) || Object.keys(value).some(k=>!allowed.includes(k)))
+    throw new HttpError(400,"Liens invalides");
+  const out: Record<string,string>={};
+  for(const [field,link] of Object.entries(value as Row)) out[field]=mediaLink(link);
+  return out;
+}
 function track(row: Row): Row {
   return {id:`kv:upload:${row.id}`,addonId:row.id,source:"upload",title:row.title,artist:row.artist,album:row.album,
     durationMs:row.duration_ms,artworkURL:row.cover_path ? publicFile(String(row.cover_path)) : null,
@@ -316,14 +340,16 @@ async function albumCanvas(req: Request, owner: string): Promise<Response> {
   try { meta=JSON.parse(String(form.get("metadata") || "{}")); }
   catch { throw new HttpError(400,"Métadonnées invalides"); }
   if(!meta || Array.isArray(meta) || typeof meta!=="object" ||
-     Object.keys(meta).some(k=>!["albumSourceId","revision","trackId"].includes(k)))
+     Object.keys(meta).some(k=>!["albumSourceId","revision","trackId","canvasLink"].includes(k)))
     throw new HttpError(400,"Métadonnées invalides");
   const source=await ownedSong(uploadId(meta.albumSourceId),owner);
   if(meta.revision!==await revision(source)) throw new HttpError(409,"L’album a changé. Actualisez la liste.");
   const album=String(source.album ?? "").trim(), artist=String(source.artist ?? "");
   if(!album) throw new HttpError(400,"Cet album n’a pas de nom");
-  const canvas=await readCanvas(form.get("canvas"));
-  if(!canvas) throw new HttpError(400,"Canvas MP4 requis");
+  const link=meta.canvasLink===undefined ? null : mediaLink(meta.canvasLink);
+  const canvas=link ? null : await readCanvas(form.get("canvas"));
+  if(link && form.get("canvas")!==null) throw new HttpError(400,"Choisissez entre un fichier et un lien");
+  if(!canvas && !link) throw new HttpError(400,"Canvas MP4 requis");
   // One canvas for the album, or a single track when trackId is supplied.
   let scope=`ketvoice_tracks?created_by=eq.${encodeURIComponent(owner)}&published=eq.true&artist=eq.${encodeURIComponent(artist)}&album=eq.${encodeURIComponent(album)}`;
   if(meta.trackId !== undefined && meta.trackId !== null && String(meta.trackId).trim() !== "") {
@@ -332,8 +358,8 @@ async function albumCanvas(req: Request, owner: string): Promise<Response> {
       throw new HttpError(400,"Ce titre n’appartient pas à cet album");
     scope=`ketvoice_tracks?id=eq.${target.id}&created_by=eq.${encodeURIComponent(owner)}`;
   }
-  const path=`album-${source.id}/${crypto.randomUUID()}/canvas.mp4`;
-  await store(path,canvas.data,canvas.mime);
+  const path=link ?? `album-${source.id}/${crypto.randomUUID()}/canvas.mp4`;
+  if(canvas) await store(path,canvas.data,canvas.mime);
   await database(scope,{method:"PATCH",headers:{Prefer:"return=minimal"},body:JSON.stringify({canvas_path:path})});
   return json({updated:true,canvasURL:publicFile(path)});
 }
@@ -361,16 +387,18 @@ async function selectionMedia(req: Request, owner: string): Promise<Response> {
   let meta: Row;
   try { meta=JSON.parse(String(form.get("metadata") || "{}")); }
   catch { throw new HttpError(400,"Métadonnées invalides"); }
-  if(!meta || Array.isArray(meta) || typeof meta!=="object" || Object.keys(meta).some(k=>!["trackIds","rightsConfirmed","removeCanvas"].includes(k)))
+  if(!meta || Array.isArray(meta) || typeof meta!=="object" || Object.keys(meta).some(k=>!["trackIds","rightsConfirmed","removeCanvas","links"].includes(k)))
     throw new HttpError(400,"Métadonnées invalides");
   if(meta.rightsConfirmed!==true) throw new HttpError(400,"Confirmez vos droits de publication");
   if(!Array.isArray(meta.trackIds) || !meta.trackIds.length || meta.trackIds.length>250) throw new HttpError(400,"Choisissez entre 1 et 250 titres");
   const ids=[...new Set(meta.trackIds.map(uploadId))];
   const remove=meta.removeCanvas===true;
+  const links=mediaLinks(meta.links,["cover","canvas"]);
+  if((links.cover && form.get("cover")!==null) || (links.canvas && form.get("canvas")!==null)) throw new HttpError(400,"Choisissez entre un fichier et un lien");
   const image=await readCover(form.get("cover"));
   const canvas=await readCanvas(form.get("canvas"));
-  if(remove && canvas) throw new HttpError(400,"Choisissez entre remplacer et retirer le Canvas");
-  if(!image && !canvas && !remove) throw new HttpError(400,"Aucune modification demandée");
+  if(remove && (canvas || links.canvas)) throw new HttpError(400,"Choisissez entre remplacer et retirer le Canvas");
+  if(!image && !canvas && !remove && !links.cover && !links.canvas) throw new HttpError(400,"Aucune modification demandée");
   const scope=`ketvoice_tracks?id=in.(${ids.join(",")})&created_by=eq.${encodeURIComponent(owner)}&published=eq.true`;
   const owned=await database(`${scope}&select=id`);
   if(owned.length!==ids.length) throw new HttpError(404,"Titre importé introuvable pour ce compte");
@@ -378,6 +406,8 @@ async function selectionMedia(req: Request, owner: string): Promise<Response> {
   try {
     if(image) { const path=`${prefix}/cover.${image.ext}`;await store(path,image.data,image.mime);uploaded.push(path);update.cover_path=path; }
     if(canvas) { const path=`${prefix}/canvas.${canvas.ext}`;await store(path,canvas.data,canvas.mime);uploaded.push(path);update.canvas_path=path; }
+    if(links.cover) update.cover_path=links.cover;
+    if(links.canvas) update.canvas_path=links.canvas;
     if(remove) update.canvas_path=null;
     const rows=await database(scope,{method:"PATCH",headers:{Prefer:"return=representation"},body:JSON.stringify(update)});
     return json({updated:rows.length,tracks:rows.map(track),
@@ -460,7 +490,9 @@ function overridePlayer(value: unknown, framable: boolean, single: boolean, hasC
 async function publicOverrides(): Promise<Response> {
   const rows=await database("ketvoice_media_overrides?select=kind,key,label,cover_path,canvas_path,hero_path,canvas_off,frame,player,updated_at&order=updated_at.desc&limit=5000");
   return new Response(JSON.stringify({overrides:rows.map(overrideView)}),{status:200,headers:{...CORS,
-    "content-type":"application/json; charset=utf-8","cache-control":"public, max-age=120"}});
+    "content-type":"application/json; charset=utf-8",
+    // Revalidated every time: a framing or a Canvas just saved must not be hidden by an older copy.
+    "cache-control":"no-cache"}});
 }
 const MAX_OVERRIDE_ITEMS = 80;
 const quotedKeys = (keys: string[]) => encodeURIComponent(`(${keys.map(k=>`"${k}"`).join(",")})`);
@@ -485,7 +517,7 @@ async function catalogueOverride(req: Request, owner: string): Promise<Response>
   let meta: Row;
   try { meta=JSON.parse(String(form.get("metadata") || "{}")); }
   catch { throw new HttpError(400,"Métadonnées invalides"); }
-  if(!meta || Array.isArray(meta) || typeof meta!=="object" || Object.keys(meta).some(k=>!["kind","key","label","items","rightsConfirmed","remove","frame","canvasOff","player"].includes(k)))
+  if(!meta || Array.isArray(meta) || typeof meta!=="object" || Object.keys(meta).some(k=>!["kind","key","label","items","rightsConfirmed","remove","frame","canvasOff","player","links"].includes(k)))
     throw new HttpError(400,"Métadonnées invalides");
   if(meta.rightsConfirmed!==true) throw new HttpError(400,"Confirmez vos droits sur ces visuels");
   const firstItem=Array.isArray(meta.items) ? (meta.items[0] as Row | undefined) : undefined;
@@ -513,12 +545,17 @@ async function catalogueOverride(req: Request, owner: string): Promise<Response>
   if(frame && remove.includes("frame")) throw new HttpError(400,"Choisissez entre recadrer et rétablir");
   if(meta.canvasOff!==undefined && (typeof meta.canvasOff!=="boolean" || !hasCanvas)) throw new HttpError(400,"Canvas désactivable pour les titres et les albums seulement");
   const player=meta.player===undefined ? null : overridePlayer(meta.player,framable,targets.length===1,hasCanvas);
+  const links=mediaLinks(meta.links,allowed);
+  if(Object.keys(links).some(f=>form.get(f)!==null)) throw new HttpError(400,"Choisissez entre un fichier et un lien");
+  if(Object.keys(links).some(f=>remove.includes(f))) throw new HttpError(400,"Choisissez entre remplacer et rétablir");
+  if(links.canvas && meta.canvasOff===true) throw new HttpError(400,"Choisissez entre désactiver, remplacer et rétablir le Canvas");
   const files: Record<string,{data:Uint8Array,ext:string,mime:string}|null>={
     cover:await readCover(form.get("cover")),canvas:await readCanvas(form.get("canvas")),hero:await readHero(form.get("hero"))};
   for(const field of names.slice(1)) if(files[field] && !allowed.includes(field)) throw new HttpError(400,"Ce visuel ne s'applique pas à cet élément");
   if(remove.some(f=>files[String(f)])) throw new HttpError(400,"Choisissez entre remplacer et rétablir");
   if(meta.canvasOff===true && (files.canvas || remove.includes("canvas"))) throw new HttpError(400,"Choisissez entre désactiver, remplacer et rétablir le Canvas");
-  if(!remove.length && !frame && !player && meta.canvasOff===undefined && !allowed.some(f=>files[f])) throw new HttpError(400,"Aucune modification demandée");
+  if(!remove.length && !frame && !player && meta.canvasOff===undefined && !allowed.some(f=>files[f]) && !Object.keys(links).length)
+    throw new HttpError(400,"Aucune modification demandée");
   const keys=targets.map(t=>t.key);
   const currentRows=await database(`ketvoice_media_overrides?kind=eq.${kind}&key=in.${quotedKeys(keys)}&limit=${MAX_OVERRIDE_ITEMS}`);
   const current=new Map<string,Row>(currentRows.map(row=>[String(row.key),row]));
@@ -527,6 +564,8 @@ async function catalogueOverride(req: Request, owner: string): Promise<Response>
     for(const field of allowed) {
       const file=files[field];
       if(file) { const path=`${prefix}/${field}.${file.ext}`;await store(path,file.data,file.mime);uploaded.push(path);fresh[overrideColumn(field)]=path; }
+      // A link is kept as given: the app streams it from where it is.
+      if(links[field]) fresh[overrideColumn(field)]=links[field];
     }
     const now=new Date().toISOString(), write: Row[]=[], drop: string[]=[], replaced=new Set<string>();
     for(const target of targets) {
@@ -539,7 +578,7 @@ async function catalogueOverride(req: Request, owner: string): Promise<Response>
       if(hasCanvas) {
         if(meta.canvasOff===true) { off=true; next.canvas_path=null; }
         else if(meta.canvasOff===false) off=false;
-        if(files.canvas || remove.includes("canvas")) off=false;
+        if(files.canvas || links.canvas || remove.includes("canvas")) off=false;
       }
       const framing=frame ? frame : remove.includes("frame") || !framable ? null : before.frame ?? null;
       // The player's own settings are merged key by key: null gives a key back to the page.
@@ -550,7 +589,8 @@ async function catalogueOverride(req: Request, owner: string): Promise<Response>
         if(value!==null && value!==undefined && (name!=="frame" || framable) && (name!=="canvas" || hasCanvas)) forPlayer[name]=value;
       }
       const playerValue=Object.keys(forPlayer).length ? forPlayer : null;
-      for(const field of allowed) { const old=before[overrideColumn(field)]; if(old && old!==next[overrideColumn(field)]) replaced.add(String(old)); }
+      // Only files this service stored are cleaned up; a link belongs to its own site.
+      for(const field of allowed) { const old=before[overrideColumn(field)]; if(old && !isLink(old) && old!==next[overrideColumn(field)]) replaced.add(String(old)); }
       if(allowed.every(f=>!next[overrideColumn(f)]) && framing==null && !off && !playerValue) { if(current.has(target.key)) drop.push(target.key); continue; }
       write.push({kind,key:target.key,label:target.label || String(before.label ?? ""),...next,canvas_off:off,frame:framing,player:playerValue,updated_by:owner,updated_at:now});
     }

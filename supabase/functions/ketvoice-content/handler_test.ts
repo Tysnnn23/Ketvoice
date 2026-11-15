@@ -284,3 +284,33 @@ Deno.test("catalogue overrides: the music player has its own framing and Canvas 
     assert((rows.get("track:aerodynamic|daft punk")?.player as Record<string,unknown>).canvas==="off");
   });
 });
+Deno.test("catalogue overrides: a link is streamed from where it is, never stored nor deleted",async()=>{
+  await withProject(async({rows,files,deleted})=>{
+    const album={kind:"album",key:"discovery|daft punk",label:"Discovery",rightsConfirmed:true};
+    const request=overrideRequest;
+    const row=()=>rows.get("album:discovery|daft punk");
+    const link="https://cdn.example.org/canvas/discovery.mp4";
+    const sent=await handler(request({...album,links:{canvas:link,cover:"https://img.example.org/c.jpg"}}));
+    assert(sent.status===200);
+    assert(row()?.canvas_path===link);assert(files.size===0);
+    const view=(await sent.json()).override;
+    assert(view.canvasURL===link);assert(view.coverURL==="https://img.example.org/c.jpg");
+    // Replaced by a file: the link is not deleted from storage (it is not ours).
+    assert((await handler(request(album,{canvas:mp4}))).status===200);
+    assert(!deleted.includes(link));assert(String(row()?.canvas_path).endsWith("/canvas.mp4"));
+    // Back to a link: the stored file is cleaned up.
+    const stored=String(row()?.canvas_path);
+    assert((await handler(request({...album,links:{canvas:link}}))).status===200);
+    assert(deleted.includes(stored));
+    // Refused: plain http, credentials, a local or numeric host, a field the kind does not have, a file and a link together.
+    for(const bad of ["http://cdn.example.org/a.mp4","https://user:pw@cdn.example.org/a.mp4","https://localhost/a.mp4","https://10.0.0.1/a.mp4","notalink"])
+      assert((await handler(request({...album,links:{canvas:bad}}))).status===400);
+    assert((await handler(request({...album,links:{hero:link}}))).status===400);
+    assert((await handler(request({...album,links:{canvas:link}},{canvas:mp4}))).status===400);
+    assert((await handler(request({...album,links:{canvas:link},remove:["canvas"]}))).status===400);
+    assert((await handler(request({...album,links:{canvas:link},canvasOff:true}))).status===400);
+    // An artist's photo by link.
+    assert((await handler(request({kind:"artist",key:"daft punk",rightsConfirmed:true,links:{hero:"https://img.example.org/h.jpg"}}))).status===200);
+    assert(rows.get("artist:daft punk")?.hero_path==="https://img.example.org/h.jpg");
+  });
+});
