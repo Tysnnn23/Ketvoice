@@ -1,0 +1,208 @@
+{
+  "schema": 8,
+  "version": "5.4.0",
+  "versionCode": 110,
+  "source_commit": "7ba2229a0560ef84dc391b1578d627d0194a1ecf",
+  "created_at": "2026-11-15T15:14:12.343625+00:00",
+  "build_origin": {
+    "kind": "github_actions_with_owner_discord_sdk",
+    "workflow": "android.yml",
+    "run_id": 43727572456,
+    "artifact": {
+      "id": 14166999623,
+      "sha256": "6b1d120c94ee3f2bdea6260aa5d6dbee5bbe9abda36451ee19022d3d2cb35899"
+    },
+    "gradle": "assembleMobileRelease assembleQuestRelease",
+    "note": "Signed by CI with the pinned keystore secret; the Discord Social SDK AAR matched its pinned SHA-256."
+  },
+  "local_validation": {
+    "result": "debug JVM/Robolectric suites for both flavors, release lint and the UI text audit passed in a cloud container without the Discord SDK",
+    "commands": [
+      "testMobileDebugUnitTest",
+      "testQuestDebugUnitTest",
+      "lintMobileRelease",
+      "lintQuestRelease",
+      "tools/audit_ui_texts.py --check"
+    ],
+    "ci_validation": "run 43727572456: release builds, debug and release unit tests for both flavors, UI text audit, lint, APK signature pin and Discord bridge packaging passed",
+    "code_review": {
+      "kind": "author's own re-read; no independent review"
+    },
+    "host_previews": "the rebuilt recent titles (shelf and grid of covers), the queue, the mix strip and the Ketmix settings rendered in software on the host and inspected",
+    "after_last_full_local_run": "no source change after the last complete local run"
+  },
+  "server": {
+    "function": "ketvoice-content",
+    "deployed_version": 23,
+    "deployment": "a one-line entrypoint importing supabase/functions/ketvoice-content/handler.ts from commit 86fa1f467922d738d7c283ac8d8f7236025ccb96 on raw.githubusercontent.com, bundled at deploy time",
+    "database_migrations": [
+      "20261115160000_public_media_allows_mp4.sql applied (video/mp4 added to the allowed types of the ketvoice-public-media bucket)"
+    ],
+    "changed_routes": [
+      "POST /admin/override, /admin/media and the album Canvas route accept HTTPS links (verified owner only), kept as addresses and never stored or deleted",
+      "GET /overrides is sent with cache-control no-cache"
+    ],
+    "tests": "handler_test.ts: 10 Deno tests pass locally, including links streamed from where they are, never stored nor deleted, and refusals of http, credentials, local and numeric hosts",
+    "live_check": "/health 200, /overrides 200 with cache-control no-cache, /admin/override 401 without an owner session after deployment"
+  },
+  "tests": {
+    "mobile": {
+      "jvm": {
+        "tests": 770,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "android_15_emulator_compose": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "quest": {
+      "jvm": {
+        "tests": 769,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "android_15_emulator_compose": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    }
+  },
+  "lint": {
+    "mobile": {
+      "Warning": 186,
+      "Hint": 21
+    },
+    "quest": {
+      "Warning": 188,
+      "Hint": 21
+    }
+  },
+  "apks": [
+    {
+      "name": "Ketvoice-5.4.0.apk",
+      "sha256": "8a2daa8110e90087115e08e1a5e50abd1563f1e045aad9696ec1f9a0e3014838",
+      "bytes": 73733384,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "5.4.0",
+      "versionCode": 110,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-5.4.0-Quest.apk",
+      "sha256": "23bd1348df57eb2e2afede1fed043adbd3ec1a740e6cf3b4ec89a2583f4e6d1f",
+      "bytes": 83766982,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "5.4.0",
+      "versionCode": 110,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    }
+  ],
+  "discord": {
+    "sdk_present_in_ci_build": true,
+    "sdk_sha256_pinned": true,
+    "bridge_and_native_libraries_verified": true,
+    "presence_mode": "unauthenticated_rpc_through_installed_discord_app"
+  },
+  "credential_scan": {
+    "entries": 3375,
+    "findings": 0,
+    "raw_pattern_findings": 1,
+    "scope": "tracked sources and APK archive entries",
+    "kind": "credential_patterns",
+    "explicit_private_provider_key_deny_list": false,
+    "triage": [
+      {
+        "file": "Ketvoice-Liquid-Glass-V4.html",
+        "classification": "embedded_image_false_positive",
+        "all_hits_inside_image_data_uris": true,
+        "rescanned_without_image_payloads": true
+      }
+    ]
+  },
+  "release_install_smoke": {
+    "mobile": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "quest": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    }
+  },
+  "publication_override": {
+    "authorized_by_user": true,
+    "authorized_at": "2026-11-15T15:14:12.343625+00:00",
+    "kind": "standing_authorization",
+    "user_statement": "J'autorise TOUT devient maintenant une règle.",
+    "user_statement_date": "2026-11-14",
+    "in_reply_to": "The question whether versions may be published without phone or Quest testing without asking again for each version.",
+    "recorded_in": "AGENTS.md (commit aeeda8e)",
+    "reason": "The owner made publishing validated versions without phone or Quest testing a standing rule.",
+    "scope": "physical device installation and all on-device behaviour of 5.4.0"
+  },
+  "owner_report_2026_11_15": {
+    "statement_summary": "framing changes reverted after a reload for everyone; uploads by link should stream from the link without the 20 MB limit and failed with 'impossible de sauvegarder le fichier'; album page colours kept the Canvas colour with the Canvas off; recent titles on Home looked bad; Ketmix rated 4/10 against Apple Music, Spotify and others; the pink accent colour was not respected outside album pages, artist pages and the player.",
+    "causes_found": [
+      "storage refused every Canvas file: the public bucket did not list video/mp4 among its allowed types (server log: POST /admin/override 502 'Impossible de sauvegarder le fichier' at 13:58 UTC); fixed by a migration",
+      "no album framing had ever reached the server (no row in ketvoice_media_overrides, no framing POST in the logs): the framing was only published after a second 'Publish' tap, and an expired owner session answered 401 without a retry; the framing is now published on the editor's confirm button, and a 401 renews the session and retries once",
+      "GET /overrides was cacheable for 120 s: a list fetched just after a save could hide it; now no-cache, and the app keeps what it saved over an older list for ten minutes",
+      "the whole app's accent was replaced by the playing cover's colour when 'Cover colours' was on; now only album pages, artist pages and the player use artwork colours",
+      "album pages were tinted by the most vivid colour of the cover (a small gold detail on a black-and-white cover); they now use its dominant colour"
+    ],
+    "ketmix": {
+      "changes": [
+        "blends up to 64 beats in every setting but discreet (32)",
+        "tempo ranges 5/8/12 % with the tempos meeting half-way",
+        "blends may start under the last 2 (balanced) or 4 (DJ) sung bars, the outgoing voice band (220 Hz–4.5 kHz, centre of the stereo image) lowered by 80 %, except for titles ending on a last note at full level",
+        "a mix journal in the settings, copyable, recording kind, reason, measured tempos and keys, analysis confidence, precise or plain fade, clock confirmation and singing positions"
+      ],
+      "why_the_journal": "no transition can be heard in this environment; the journal is meant to let the owner report what the engine actually did on the device",
+      "never_run_with_real_audio": [
+        "nothing of the engine was executed against real audio output on any device or emulator; none of the longer blends or the voice step-back was heard",
+        "the voice step-back only lowers a frequency band of the centre: on a real mix other centred instruments in that band are lowered too"
+      ]
+    }
+  },
+  "not_validated": [
+    "physical phone or Quest installation, rendering and touch behaviour",
+    "Ketmix with real audio on any device or emulator",
+    "the framing publication and the Canvas links end to end with the owner account (no owner session here); the server routes are tested with a fake project and the live function answers as expected",
+    "a Canvas streamed from a link on a device (playback and first-frame colour reading need the device's network and decoders)",
+    "independent code review of this diff"
+  ],
+  "owner_section_changes": [
+    "Framing is published when the framing screen is confirmed; a failed sending keeps the draft with its error and a retry button.",
+    "Owner requests refused with 401 renew the session and are sent once more.",
+    "Studio: a Canvas can be given as a link (direct MP4, API answer or Spotify title) for catalogue overrides, a selection of published titles, a published title and an album: the link is checked (its first bytes must be an MP4) and streamed from where it is, never downloaded, with no size limit.",
+    "Server: links accepted and never stored or deleted; video/mp4 allowed in storage; /overrides not cached."
+  ],
+  "known_limitations": [
+    "Owner-section changes are deliberately not mentioned in the public release notes (owner preference).",
+    "A Canvas given as a link depends on the site that serves it: if it goes away or refuses streaming, nothing plays behind the title.",
+    "Ketmix needs the next title to be playable without a new resolution or one that succeeds in time; otherwise it says so and the title ends as before.",
+    "A manual skip is still a plain change of title: it is not mixed.",
+    "The mix journal is kept in memory only and is lost when the app is closed.",
+    "The signing certificate is the existing public Android debug identity, not a private production key."
+  ],
+  "canonical_banner_sha256": "47f6793088983f7d4e6bd1aeaa2cbd8b7cdc2a8f91271e3b2839daea81da0436"
+}
