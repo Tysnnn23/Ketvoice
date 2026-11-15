@@ -407,8 +407,11 @@ function overrideView(row: Row): Row {
   const url=(value: unknown)=>value ? publicFile(String(value)) : null;
   // scale, x and y keep the app versions that knew a zoom-and-offset framing on an untouched picture.
   const frame=row.frame && typeof row.frame==="object" ? {...(row.frame as Row),scale:1,x:0,y:0} : null;
+  // What only the music player follows: its own framing, and its Canvas shown or hidden whatever the page does.
+  const stored=row.player && typeof row.player==="object" && !Array.isArray(row.player) ? row.player as Row : null;
+  const player=stored && (stored.frame || stored.canvas) ? {frame:stored.frame ?? null,canvas:stored.canvas ?? null} : null;
   return {kind:row.kind,key:row.key,label:row.label ?? "",coverURL:url(row.cover_path),canvasURL:url(row.canvas_path),
-    heroURL:url(row.hero_path),canvasOff:row.canvas_off===true,frame,updatedAt:row.updated_at};
+    heroURL:url(row.hero_path),canvasOff:row.canvas_off===true,frame,player,updatedAt:row.updated_at};
 }
 async function readHero(file: FormDataEntryValue | null) {
   if(file === null) return null;
@@ -434,9 +437,28 @@ function overrideFrame(value: unknown): Row {
   const round=(n: number)=>Math.round(n*10000)/10000;
   return {cx:round(cx),cy:round(cy),w:round(w),h:round(h),rotation:Math.round(rotation*100)/100,flip:v.flip===true};
 }
+/**
+ * What changes for the music player only: `frame` (a rectangle, or null to follow the page
+ * again) and `canvas` ("on", "off", or null to follow the page again).
+ */
+function overridePlayer(value: unknown, framable: boolean, single: boolean, hasCanvas: boolean): Row {
+  if(!value || typeof value!=="object" || Array.isArray(value) || !Object.keys(value).length || Object.keys(value).some(k=>!["frame","canvas"].includes(k)))
+    throw new HttpError(400,"Réglage du lecteur invalide");
+  const v=value as Row, out: Row={};
+  if(v.frame!==undefined) {
+    if(!framable) throw new HttpError(400,"Ce cadrage ne s'applique qu'aux albums");
+    if(!single) throw new HttpError(400,"Un cadrage ne s'applique qu'à un album à la fois");
+    out.frame=v.frame===null ? null : overrideFrame(v.frame);
+  }
+  if(v.canvas!==undefined) {
+    if(!hasCanvas || (v.canvas!==null && v.canvas!=="on" && v.canvas!=="off")) throw new HttpError(400,"Réglage du lecteur invalide");
+    out.canvas=v.canvas;
+  }
+  return out;
+}
 /** Every owner-curated catalogue visual, public and cacheable: the app applies them over the catalogue's own. */
 async function publicOverrides(): Promise<Response> {
-  const rows=await database("ketvoice_media_overrides?select=kind,key,label,cover_path,canvas_path,hero_path,canvas_off,frame,updated_at&order=updated_at.desc&limit=5000");
+  const rows=await database("ketvoice_media_overrides?select=kind,key,label,cover_path,canvas_path,hero_path,canvas_off,frame,player,updated_at&order=updated_at.desc&limit=5000");
   return new Response(JSON.stringify({overrides:rows.map(overrideView)}),{status:200,headers:{...CORS,
     "content-type":"application/json; charset=utf-8","cache-control":"public, max-age=120"}});
 }
@@ -449,7 +471,8 @@ async function referenced(path: string): Promise<boolean> {
 }
 /**
  * Replaces or restores the cover, Canvas or artist photo of catalogue titles, albums or
- * artists, switches a title's or an album's Canvas off, or frames an album's hero. One
+ * artists, switches a title's or an album's Canvas off, frames an album's hero, or sets
+ * what the music player alone shows (its own framing, its Canvas on or off). One
  * request may carry up to 80 items of one kind (a selection of titles): the files are
  * stored once and every item points at them. Only the verified owner reaches this; the
  * original catalogue data is never touched, so "restore" just forgets the override.
@@ -462,7 +485,7 @@ async function catalogueOverride(req: Request, owner: string): Promise<Response>
   let meta: Row;
   try { meta=JSON.parse(String(form.get("metadata") || "{}")); }
   catch { throw new HttpError(400,"Métadonnées invalides"); }
-  if(!meta || Array.isArray(meta) || typeof meta!=="object" || Object.keys(meta).some(k=>!["kind","key","label","items","rightsConfirmed","remove","frame","canvasOff"].includes(k)))
+  if(!meta || Array.isArray(meta) || typeof meta!=="object" || Object.keys(meta).some(k=>!["kind","key","label","items","rightsConfirmed","remove","frame","canvasOff","player"].includes(k)))
     throw new HttpError(400,"Métadonnées invalides");
   if(meta.rightsConfirmed!==true) throw new HttpError(400,"Confirmez vos droits sur ces visuels");
   const firstItem=Array.isArray(meta.items) ? (meta.items[0] as Row | undefined) : undefined;
@@ -489,12 +512,13 @@ async function catalogueOverride(req: Request, owner: string): Promise<Response>
   if(frame && targets.length>1) throw new HttpError(400,"Un cadrage ne s'applique qu'à un album à la fois");
   if(frame && remove.includes("frame")) throw new HttpError(400,"Choisissez entre recadrer et rétablir");
   if(meta.canvasOff!==undefined && (typeof meta.canvasOff!=="boolean" || !hasCanvas)) throw new HttpError(400,"Canvas désactivable pour les titres et les albums seulement");
+  const player=meta.player===undefined ? null : overridePlayer(meta.player,framable,targets.length===1,hasCanvas);
   const files: Record<string,{data:Uint8Array,ext:string,mime:string}|null>={
     cover:await readCover(form.get("cover")),canvas:await readCanvas(form.get("canvas")),hero:await readHero(form.get("hero"))};
   for(const field of names.slice(1)) if(files[field] && !allowed.includes(field)) throw new HttpError(400,"Ce visuel ne s'applique pas à cet élément");
   if(remove.some(f=>files[String(f)])) throw new HttpError(400,"Choisissez entre remplacer et rétablir");
   if(meta.canvasOff===true && (files.canvas || remove.includes("canvas"))) throw new HttpError(400,"Choisissez entre désactiver, remplacer et rétablir le Canvas");
-  if(!remove.length && !frame && meta.canvasOff===undefined && !allowed.some(f=>files[f])) throw new HttpError(400,"Aucune modification demandée");
+  if(!remove.length && !frame && !player && meta.canvasOff===undefined && !allowed.some(f=>files[f])) throw new HttpError(400,"Aucune modification demandée");
   const keys=targets.map(t=>t.key);
   const currentRows=await database(`ketvoice_media_overrides?kind=eq.${kind}&key=in.${quotedKeys(keys)}&limit=${MAX_OVERRIDE_ITEMS}`);
   const current=new Map<string,Row>(currentRows.map(row=>[String(row.key),row]));
@@ -518,9 +542,17 @@ async function catalogueOverride(req: Request, owner: string): Promise<Response>
         if(files.canvas || remove.includes("canvas")) off=false;
       }
       const framing=frame ? frame : remove.includes("frame") || !framable ? null : before.frame ?? null;
+      // The player's own settings are merged key by key: null gives a key back to the page.
+      const kept=before.player && typeof before.player==="object" && !Array.isArray(before.player) ? before.player as Row : {};
+      const forPlayer: Row={};
+      for(const name of ["frame","canvas"]) {
+        const value=player && player[name]!==undefined ? player[name] : kept[name];
+        if(value!==null && value!==undefined && (name!=="frame" || framable) && (name!=="canvas" || hasCanvas)) forPlayer[name]=value;
+      }
+      const playerValue=Object.keys(forPlayer).length ? forPlayer : null;
       for(const field of allowed) { const old=before[overrideColumn(field)]; if(old && old!==next[overrideColumn(field)]) replaced.add(String(old)); }
-      if(allowed.every(f=>!next[overrideColumn(f)]) && framing==null && !off) { if(current.has(target.key)) drop.push(target.key); continue; }
-      write.push({kind,key:target.key,label:target.label || String(before.label ?? ""),...next,canvas_off:off,frame:framing,updated_by:owner,updated_at:now});
+      if(allowed.every(f=>!next[overrideColumn(f)]) && framing==null && !off && !playerValue) { if(current.has(target.key)) drop.push(target.key); continue; }
+      write.push({kind,key:target.key,label:target.label || String(before.label ?? ""),...next,canvas_off:off,frame:framing,player:playerValue,updated_by:owner,updated_at:now});
     }
     let rows: Row[]=[];
     if(write.length) rows=await database("ketvoice_media_overrides?on_conflict=kind,key",{method:"POST",

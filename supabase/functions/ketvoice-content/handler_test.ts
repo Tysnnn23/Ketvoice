@@ -239,3 +239,48 @@ Deno.test("a selection of titles gets one canvas, switched off, or restored, in 
     assert(album.status===200);assert(rows.get("album:discovery|daft punk")?.canvas_off===true);
   });
 });
+Deno.test("catalogue overrides: the music player has its own framing and Canvas switch",async()=>{
+  await withProject(async({rows})=>{
+    const album={kind:"album",key:"discovery|daft punk",label:"Discovery",rightsConfirmed:true};
+    const request=overrideRequest;
+    const row=()=>rows.get("album:discovery|daft punk");
+    const rect={cx:0.1,cy:0.2,w:0.5,h:0.6,rotation:0,flip:false};
+    // The player's framing alone creates the override; the page's own is untouched.
+    const framed=await handler(request({...album,player:{frame:rect}}));
+    assert(framed.status===200);
+    assert((row()?.player as Record<string,Record<string,unknown>>).frame.w===0.5);assert(row()?.frame===null);
+    const view=(await framed.json()).override;
+    assert(view.player.frame.h===0.6);assert(view.player.canvas===null);assert(view.frame===null);
+    // The page is framed too: both live side by side.
+    assert((await handler(request({...album,frame:{...rect,w:0.9}}))).status===200);
+    assert((row()?.frame as Record<string,unknown>).w===0.9);
+    assert((row()?.player as Record<string,Record<string,unknown>>).frame.w===0.5);
+    // The Canvas is hidden in the player only; the framing of the player stays.
+    const hidden=await handler(request({...album,player:{canvas:"off"}}));
+    assert(hidden.status===200);
+    assert((row()?.player as Record<string,unknown>).canvas==="off");assert(row()?.canvas_off===false);
+    assert((row()?.player as Record<string,Record<string,unknown>>).frame.w===0.5);
+    // null gives a setting back to the page, key by key.
+    assert((await handler(request({...album,player:{frame:null}}))).status===200);
+    assert((row()?.player as Record<string,unknown>).frame===undefined);assert((row()?.player as Record<string,unknown>).canvas==="off");
+    assert((await handler(request({...album,player:{canvas:null}}))).status===200);
+    assert(row()?.player===null);assert((row()?.frame as Record<string,unknown>).w===0.9);
+    // Nothing left once the page's framing goes too.
+    assert((await handler(request({...album,remove:["frame"]}))).status===200);assert(row()===undefined);
+    // A player setting alone is an override, and is forgotten when it is given back.
+    assert((await handler(request({...album,player:{canvas:"on"}}))).status===200);assert((row()?.player as Record<string,unknown>).canvas==="on");
+    assert((await handler(request({...album,player:{canvas:null}}))).status===200);assert(row()===undefined);
+    // Refused: unknown keys or values, a framing for titles or for several albums, a Canvas switch for an artist.
+    assert((await handler(request({...album,player:{}}))).status===400);
+    assert((await handler(request({...album,player:{zoom:2}}))).status===400);
+    assert((await handler(request({...album,player:{canvas:"maybe"}}))).status===400);
+    assert((await handler(request({...album,player:{frame:{...rect,w:9}}}))).status===400);
+    assert((await handler(request({kind:"track",key:"one more time|daft punk",rightsConfirmed:true,player:{frame:rect}}))).status===400);
+    assert((await handler(request({kind:"album",rightsConfirmed:true,items:[{key:"a|b"},{key:"c|d"}],player:{frame:rect}}))).status===400);
+    assert((await handler(request({kind:"artist",key:"daft punk",rightsConfirmed:true,player:{canvas:"off"}}))).status===400);
+    // Titles: several at once, the Canvas of the player only.
+    const titles=await handler(request({kind:"track",rightsConfirmed:true,items:[{key:"one more time|daft punk"},{key:"aerodynamic|daft punk"}],player:{canvas:"off"}}));
+    assert(titles.status===200);assert((await titles.json()).overrides.length===2);
+    assert((rows.get("track:aerodynamic|daft punk")?.player as Record<string,unknown>).canvas==="off");
+  });
+});
