@@ -1,0 +1,185 @@
+{
+  "schema": 8,
+  "version": "5.8.1",
+  "versionCode": 116,
+  "source_commit": "2743b83d62fac98ad72e28539e8b48a7d751ce3a",
+  "created_at": "2026-11-15T23:04:26.263292+00:00",
+  "build_origin": {
+    "kind": "github_actions_with_owner_discord_sdk",
+    "workflow": "android.yml",
+    "run_id": 43771821531,
+    "artifact": {
+      "id": 14184911287,
+      "sha256": "2ea526087ad4b965af4d1195721025ded8e97e89f4cbf5dbc48e13e6d1389f81"
+    },
+    "gradle": "assembleMobileRelease assembleQuestRelease",
+    "note": "Signed by CI with the pinned keystore secret; the Discord Social SDK AAR matched its pinned SHA-256."
+  },
+  "local_validation": {
+    "result": "debug JVM/Robolectric suites for both flavors, release lint and the UI text audit passed in a cloud container without the Discord SDK",
+    "commands": [
+      "testMobileDebugUnitTest",
+      "testQuestDebugUnitTest",
+      "lintMobileRelease",
+      "lintQuestRelease",
+      "tools/audit_ui_texts.py --check"
+    ],
+    "ci_validation": "run 43771821531: release builds, debug and release unit tests for both flavors, UI text audit, lint, APK signature pin and Discord bridge packaging passed",
+    "code_review": {
+      "kind": "none independent; the author re-read the 5.7.0 to 5.8.0 diff of playback, audio and start-up code looking for the reported failure"
+    },
+    "host_previews": "the new Liquid Glass launcher icon rendered on the host (low density) and inspected",
+    "after_last_full_local_run": "the icon foreground was made transparent outside the K (lint IconLauncherShape); the icon test and both lint runs were repeated after it"
+  },
+  "server": {
+    "function": "ketvoice-content",
+    "deployed_version": 23,
+    "changed_in_this_version": false,
+    "note": "no server change since 5.4.0"
+  },
+  "tests": {
+    "mobile": {
+      "jvm": {
+        "tests": 799,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "android_15_emulator_compose": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "quest": {
+      "jvm": {
+        "tests": 798,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "android_15_emulator_compose": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    }
+  },
+  "lint": {
+    "mobile": {
+      "Warning": 187,
+      "Hint": 21
+    },
+    "quest": {
+      "Warning": 189,
+      "Hint": 21
+    },
+    "errors": 0,
+    "new_vs_5_8_0": "none"
+  },
+  "apks": [
+    {
+      "name": "Ketvoice-5.8.1.apk",
+      "sha256": "6200b25a0cb5e8b72b48aa8b851396db26f5e949eb926dc1406ffae2c8f176d3",
+      "bytes": 74663760,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "5.8.1",
+      "versionCode": 116,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-5.8.1-Quest.apk",
+      "sha256": "82986b61ed0129392e60aa8053168184d6e52561da420249b5c3aa5ca233e1bf",
+      "bytes": 84713742,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "5.8.1",
+      "versionCode": 116,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    }
+  ],
+  "discord": {
+    "sdk_present_in_ci_build": true,
+    "sdk_sha256_pinned": true,
+    "bridge_and_native_libraries_verified": true,
+    "presence_mode": "unauthenticated_rpc_through_installed_discord_app"
+  },
+  "credential_scan": {
+    "entries": 3442,
+    "findings": 0,
+    "raw_pattern_findings": 1,
+    "scope": "tracked sources and APK archive entries",
+    "kind": "credential_patterns",
+    "explicit_private_provider_key_deny_list": false,
+    "triage": [
+      {
+        "file": "Ketvoice-Liquid-Glass-V4.html",
+        "classification": "embedded_image_false_positive",
+        "all_hits_inside_image_data_uris": true,
+        "rescanned_without_image_payloads": true
+      }
+    ]
+  },
+  "release_install_smoke": {
+    "mobile": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "quest": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    }
+  },
+  "publication_override": {
+    "authorized_by_user": true,
+    "authorized_at": "2026-11-15T23:04:26.263292+00:00",
+    "kind": "standing_authorization",
+    "user_statement": "J'autorise TOUT devient maintenant une règle.",
+    "user_statement_date": "2026-11-14",
+    "in_reply_to": "The question whether versions may be published without phone or Quest testing without asking again for each version.",
+    "recorded_in": "AGENTS.md (commit aeeda8e)",
+    "reason": "The owner made publishing validated versions without phone or Quest testing a standing rule.",
+    "scope": "physical device installation and all on-device behaviour of 5.8.1"
+  },
+  "owner_report_2026_11_15_sixth": {
+    "statement_summary": "replace the Liquid Glass icon with the owner's image of a glass K; Ketvoice 5.8.0 does not work at all and stutters badly (fps, lag, latency); downloaded and streamed titles no longer start.",
+    "diagnosis": {
+      "established": "the 5.8.0 changes to playback, audio processing and start-up code were re-read and are covered by passing JVM tests; none of them stops a title from starting in those tests",
+      "most_likely_cause": "the R8-optimised release build introduced in 5.8.0, the only change that alters the whole app and was never run on a device",
+      "not_established": "the exact class or rule R8 broke: no device, emulator (no hardware virtualisation in the container) or crash log was available",
+      "action": "release built without R8 again, as in 5.7.0; proguard-rules.pro kept; AGENTS.md forbids switching R8 back on before an R8 release APK has been installed and played on a device"
+    },
+    "other_fixes": [
+      "the page card transition read its animation value during composition, recomposing the page at every frame of an opening; it is now read in the graphics layer",
+      "the lyrics index was rewritten to disk each time already-indexed lyrics were shown from the cache"
+    ],
+    "icon": "the owner's photographed glass K, cropped, scaled to 54 % of the adaptive icon so the round masks keep its ends, black made transparent over a black background layer; monochrome layer unchanged"
+  },
+  "not_validated": [
+    "physical phone or Quest installation, rendering and touch behaviour",
+    "that titles start again on the owner's phone: the cause is inferred, not reproduced",
+    "frame rate or latency on a device",
+    "the new launcher icon on a launcher (rendered on the host only)",
+    "independent code review of this diff"
+  ],
+  "owner_section_changes": [],
+  "known_limitations": [
+    "If titles still do not start with 5.8.1, the cause lies elsewhere than R8 and needs a device log of the failure.",
+    "Ket 27 stays an alpha: several pages keep Ketvoice's own structure.",
+    "The signing certificate is the existing public Android debug identity, not a private production key."
+  ],
+  "canonical_banner_sha256": "47f6793088983f7d4e6bd1aeaa2cbd8b7cdc2a8f91271e3b2839daea81da0436"
+}
