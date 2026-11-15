@@ -20,6 +20,16 @@ class ReverbAudioProcessorTest {
         assertEquals(1, processed)
     }
     @After fun reset() { ReverbControl.amount = 0f }
+    /** Media3 queues its shared empty buffer, which is then also the output: 5.8.0 copied it into itself and threw. */
+    @Test fun anEmptyInputPassesWithReverbOffAndOn() {
+        for (amount in listOf(0f, .5f)) {
+            ReverbControl.amount = amount
+            val processor = ReverbAudioProcessor()
+            processor.configure(AudioProcessor.AudioFormat(48000, 2, C.ENCODING_PCM_16BIT)); processor.flush()
+            processor.queueInput(AudioProcessor.EMPTY_BUFFER)
+            assertFalse(processor.output.hasRemaining())
+        }
+    }
     @Test fun pcmPipelinePreservesFramesAndDisabledSamplesExactly() {
         val processor = ReverbAudioProcessor()
         val format = AudioProcessor.AudioFormat(48000, 2, C.ENCODING_PCM_16BIT)

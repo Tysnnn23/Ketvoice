@@ -55,6 +55,8 @@ data class PlayerUiState(
     val searchingBetter: Boolean = false,
     val audioFallback: Boolean = false,
     val audioFallbackHttpStatus: Int? = null,
+    /** Media3's name for the last playback error and what caused it, shown in the audio details to tell one failure from another. */
+    val lastErrorCode: String? = null,
     /** Replays the whole queue from its first entry once the last one ends. */
     val repeatAll: Boolean = false,
     /** Entry ids in the order the queue had before shuffle; empty while not shuffled. */
@@ -157,7 +159,8 @@ object Player {
             failed?.url?.let { failedStreamUrls += it }
             sourceId?.let { failedSourceIds += it }
             resolving = true
-            _state.value = _state.value.copy(audioFallback = true, audioFallbackHttpStatus = status,
+            val code = error.errorCodeName + (generateSequence(error.cause) { it.cause }.lastOrNull()?.let { " · ${it.javaClass.simpleName}" } ?: "")
+            _state.value = _state.value.copy(audioFallback = true, audioFallbackHttpStatus = status, lastErrorCode = code,
                 isPlaying = false, buffering = true, failed = false)
             resolutionJob?.cancel()
             cancelQualityUpgrade()
@@ -278,6 +281,15 @@ object Player {
                     lastListenedPosition = saved.positionMs
                     restoredSessionPending = true
                 }
+                // While playing, the position is also saved every ten seconds: the state no longer changes with it.
+                launch {
+                    var savedAt = -1L
+                    while (true) {
+                        delay(10_000)
+                        val position = _position.value
+                        if (controller?.isPlaying == true && position != savedAt) { store.save(_state.value, position); savedAt = position }
+                    }
+                }
                 _state.collectLatest { current ->
                     delay(750)
                     store.save(current, _position.value)
@@ -332,11 +344,9 @@ object Player {
         _position.value = pos
         val dur = if (c.duration > 0) c.duration else _state.value.durationMs
         if (dur > 0 && dur - pos in 1..WARM_NEXT_WINDOW_MS && c.isPlaying) warmNextEntry()
-        if (dur != _state.value.durationMs ||
-            kotlin.math.abs(pos - _state.value.positionMs) > 3_500L
-        ) {
-            _state.value = _state.value.copy(positionMs = pos, durationMs = dur)
-        }
+        // Only a new duration changes the shared state. The position has its own flow: copying it into the
+        // state every few seconds recomposed every screen that follows the player (the whole app) while playing.
+        if (dur != _state.value.durationMs) _state.value = _state.value.copy(positionMs = pos, durationMs = dur)
     }
 
     /** Dernière position vue par le tic : base du delta de temps d'écoute réel. */
@@ -450,7 +460,7 @@ object Player {
         lastListenedPosition = 0L
         _state.value = s.copy(index = target, isPlaying = true, playWhenReady = true, positionMs = 0L,
             durationMs = track.durationMs, buffering = false, failed = false, quality = source.quality,
-            audioSource = source.audioSource, searchingBetter = false, audioFallback = false, audioFallbackHttpStatus = null)
+            audioSource = source.audioSource, searchingBetter = false, audioFallback = false, audioFallbackHttpStatus = null, lastErrorCode = null)
         _seekEpoch.value++
         com.ketvoice.app.data.ListeningHistory.rememberTrack(track)
         com.ketvoice.app.data.ListeningHistory.record(track)

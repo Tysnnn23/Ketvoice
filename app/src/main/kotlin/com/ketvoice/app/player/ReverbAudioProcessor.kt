@@ -28,7 +28,9 @@ internal class ReverbAudioProcessor(private val onProcessed: () -> Unit = {}) : 
         // Off and silent: copied in one go. The audio thread keeps its time for what is heard, which
         // matters most behind other apps, when Android gives the app less of the processor.
         if (inputBuffer.hasRemaining()) onProcessed()
-        if (room == null || (!(amount > 0f) && room.idle())) output.put(inputBuffer)
+        // An empty input is Media3's shared empty buffer, which is then also the output: nothing to copy.
+        // (5.8.0 copied it into itself, which throws, and every title failed to play.)
+        if (room == null || (!(amount > 0f) && room.idle())) { if (inputBuffer.hasRemaining()) output.put(inputBuffer) }
         else {
             var channel = 0
             while (inputBuffer.remaining() >= 2) {

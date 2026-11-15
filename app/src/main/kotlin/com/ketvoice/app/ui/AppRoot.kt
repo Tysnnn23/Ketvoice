@@ -139,7 +139,7 @@ fun AppRoot() {
                 artist = track.artist,
                 coverUrl = com.ketvoice.app.data.MediaOverrides.cover(track, artwork["t:${track.id}"] ?: track.coverUrl),
                 playing = true,
-                positionMs = playerState.positionMs,
+                positionMs = Player.positionMs.value,
                 nowMs = System.currentTimeMillis(),
                 listenUrl = com.ketvoice.app.util.ShareLinks.trackUrl(track.id, track.title, track.artist)
                     .takeUnless { track.id.startsWith("local:") }

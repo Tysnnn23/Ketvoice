@@ -110,7 +110,11 @@ internal fun mixForHour(hour: Int, cards: List<MixCard>): Pair<MixCard, String>?
 @Composable
 internal fun HomeForYou(hour: Int, releases: List<CatalogAlbum>, fallback: @Composable () -> Unit) {
     val player by Player.state.collectAsState()
-    val position by Player.positionMs.collectAsState()
+    // The position only matters to a paused title (« à 1:23 »): while playing it is not read, so the card does not
+    // recompose five times a second; paused, it is read to the second.
+    val positionFlow = Player.positionMs.collectAsState()
+    val playingNow = Player.state.collectAsState()
+    val position by remember { androidx.compose.runtime.derivedStateOf { if (playingNow.value.playWhenReady) 0L else positionFlow.value / 1000 * 1000 } }
     val known by ListeningHistory.knownTracks.collectAsState()
     val recent by ListeningHistory.tracks.collectAsState()
     val counts by ListeningHistory.playCounts.collectAsState()

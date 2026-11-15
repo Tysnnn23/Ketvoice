@@ -7,6 +7,22 @@
 
 ---
 
+# Ketvoice 5.8.2
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 117** — Every title plays again; a smoother app.
+
+- Fixed: since 5.8.0 the reverb stage's bulk copy put Media3's shared empty buffer into itself, which threw on
+  every title ("Reading error · try again"). New Robolectric test plays a file through the whole audio chain.
+- The player state is no longer copied every 3.5 s for the position (it recomposed the app root while playing);
+  the session position is saved every 10 s instead. Home's For you card reads the position only when paused.
+- Baseline profile covers all of Ketvoice's code. Stats info shows the last playback error code.
+
+Full notes: [5.8.2](docs/releases/v5.8.2.md).
+
+---
+
 # Ketvoice 5.8.1
 
 ![Ketvoice](ketvoice-banner.png)

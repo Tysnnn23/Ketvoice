@@ -32,3 +32,8 @@ Lcom/ketvoice/app/MainActivity;
 Lcom/ketvoice/app/ui/**;
 Lcom/ketvoice/app/glass/**;
 Lcom/ketvoice/app/theme/**;
+# Since 5.8.2: all of Ketvoice's own code is compiled ahead of time after installation, not only the
+# start-up path. The playback service, Ketmix's DSP on the audio thread and every page then run at
+# full speed from the first second, instead of being interpreted until the JIT has warmed up.
+HPLcom/ketvoice/app/**;->**(**)**
+Lcom/ketvoice/app/**;

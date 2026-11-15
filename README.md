@@ -21,6 +21,15 @@
 
 ## Overview
 
+### 5.8.2 — Every title plays again
+
+Fixes the *Reading error* that stopped every title in 5.8.0 and 5.8.1, downloaded or streamed, and makes the
+app smoother while music plays: no more redraws of every screen every few seconds, and all of Ketvoice's code
+compiled at installation. Every effect is kept.
+[Mobile](https://github.com/Tysnnn23/Ketvoice/releases/download/v5.8.2/Ketvoice-5.8.2.apk)
+· [Quest](https://github.com/Tysnnn23/Ketvoice/releases/download/v5.8.2/Ketvoice-5.8.2-Quest.apk)
+· [Release notes](docs/releases/v5.8.2.md).
+
 ### 5.8.1 — Playback restored, a new icon
 
 Titles start again, downloaded or streamed, and the app is smooth again: the optimised build of 5.8.0

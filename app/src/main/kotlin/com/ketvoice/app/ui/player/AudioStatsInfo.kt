@@ -50,5 +50,8 @@ internal fun AudioStatsInfo(modifier: Modifier = Modifier) {
             Text("HTTP $status", localize = false, color = LocalTheme.current.secondary, fontSize = 10.sp)
         }
         if (state.failed) Text(state.quality, color = LocalTheme.current.secondary, fontSize = 10.sp)
+        if (state.audioFallback || state.failed) state.lastErrorCode?.let { code ->
+            Text(code, localize = false, color = LocalTheme.current.secondary, fontSize = 10.sp, maxLines = 2)
+        }
     }
 }
