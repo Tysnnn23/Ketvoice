@@ -1,0 +1,190 @@
+{
+  "schema": 8,
+  "version": "5.8.2",
+  "versionCode": 117,
+  "source_commit": "008017601f0e1d4c651b75eb0ebe139b48ba3302",
+  "created_at": "2026-11-15T23:59:25.977922+00:00",
+  "build_origin": {
+    "kind": "github_actions_with_owner_discord_sdk",
+    "workflow": "android.yml",
+    "run_id": 43776775740,
+    "artifact": {
+      "id": 14187121529,
+      "sha256": "456f196f7558e8d37d08abc4c2e56b74e9018f22f2f7c67f5dd4dbd3e8d561a2"
+    },
+    "gradle": "assembleMobileRelease assembleQuestRelease",
+    "note": "Signed by CI with the pinned keystore secret; the Discord Social SDK AAR matched its pinned SHA-256."
+  },
+  "local_validation": {
+    "result": "debug JVM/Robolectric suites for both flavors, release lint and the UI text audit passed in a cloud container without the Discord SDK",
+    "commands": [
+      "testMobileDebugUnitTest",
+      "testQuestDebugUnitTest",
+      "lintMobileRelease",
+      "lintQuestRelease",
+      "tools/audit_ui_texts.py --check"
+    ],
+    "ci_validation": "run 43776775740: release builds, debug and release unit tests for both flavors, UI text audit, lint, APK signature pin and Discord bridge packaging passed",
+    "code_review": {
+      "kind": "none independent; the failure was reproduced by a new Robolectric test and the fix checked by it"
+    },
+    "host_previews": "no new screenshot; AudioChainPlaybackTest played a 3 s WAV file to its end (3000 ms) through DeckMixProcessor, ReverbAudioProcessor and TeeAudioProcessor inside ProcessingAudioSink, with the service's buffer sizes",
+    "after_last_full_local_run": "no source change after the last complete local run"
+  },
+  "server": {
+    "function": "ketvoice-content",
+    "deployed_version": 23,
+    "changed_in_this_version": false,
+    "note": "no server change since 5.4.0"
+  },
+  "tests": {
+    "mobile": {
+      "jvm": {
+        "tests": 801,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "android_15_emulator_compose": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "quest": {
+      "jvm": {
+        "tests": 800,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "android_15_emulator_compose": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    }
+  },
+  "lint": {
+    "mobile": {
+      "Warning": 187,
+      "Hint": 21
+    },
+    "quest": {
+      "Warning": 189,
+      "Hint": 21
+    },
+    "errors": 0,
+    "new_vs_5_8_1": "none"
+  },
+  "apks": [
+    {
+      "name": "Ketvoice-5.8.2.apk",
+      "sha256": "5ff538c4d19e54ea5f292a4061cc4dc6d81fa698f81e3f91f62078c49aae8655",
+      "bytes": 74680144,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "5.8.2",
+      "versionCode": 117,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-5.8.2-Quest.apk",
+      "sha256": "3f01395a80fd2342696df63bd73400b5b1b9c5f479c745d04ae79c755a7b99ab",
+      "bytes": 84713742,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "5.8.2",
+      "versionCode": 117,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    }
+  ],
+  "discord": {
+    "sdk_present_in_ci_build": true,
+    "sdk_sha256_pinned": true,
+    "bridge_and_native_libraries_verified": true,
+    "presence_mode": "unauthenticated_rpc_through_installed_discord_app"
+  },
+  "credential_scan": {
+    "entries": 3447,
+    "findings": 0,
+    "raw_pattern_findings": 1,
+    "scope": "tracked sources and APK archive entries",
+    "kind": "credential_patterns",
+    "explicit_private_provider_key_deny_list": false,
+    "triage": [
+      {
+        "file": "Ketvoice-Liquid-Glass-V4.html",
+        "classification": "embedded_image_false_positive",
+        "all_hits_inside_image_data_uris": true,
+        "rescanned_without_image_payloads": true
+      }
+    ]
+  },
+  "release_install_smoke": {
+    "mobile": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "quest": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    }
+  },
+  "publication_override": {
+    "authorized_by_user": true,
+    "authorized_at": "2026-11-15T23:59:25.977922+00:00",
+    "kind": "standing_authorization",
+    "user_statement": "J'autorise TOUT devient maintenant une règle.",
+    "user_statement_date": "2026-11-14",
+    "in_reply_to": "The question whether versions may be published without phone or Quest testing without asking again for each version.",
+    "recorded_in": "AGENTS.md (commit aeeda8e)",
+    "reason": "The owner made publishing validated versions without phone or Quest testing a standing rule.",
+    "scope": "physical device installation and all on-device behaviour of 5.8.2"
+  },
+  "owner_report_2026_11_16": {
+    "statement_summary": "screenshot of the player showing 'Reading error · try again' on a title (5.8.1); optimise the app's performance as much as possible while keeping the effects.",
+    "root_cause": {
+      "established": "ReverbAudioProcessor (changed in 5.8.0) copied its input in bulk while the reverb was off; for an empty input Media3 passes its shared EMPTY_BUFFER, which replaceOutputBuffer(0) also returns as the output, and ByteBuffer.put threw IllegalArgumentException('The source buffer is this buffer') on the playback thread: ERROR_CODE_FAILED_RUNTIME_CHECK on every title, streamed or local, after every fallback",
+      "how_found": "AudioChainPlaybackTest (Robolectric, sdk 35) reproduced ERROR_CODE_FAILED_RUNTIME_CHECK with this stack before the fix and played to the end after it",
+      "previous_diagnosis_corrected": "5.8.1 attributed the failure to R8 without proof; the failure is fully explained without R8 and was still present in 5.8.1, built without it. The release stays without R8 because no R8 build has run on a device"
+    },
+    "performance": {
+      "changes": [
+        "the shared player state was copied every 3.5 s while playing to carry the position, recomposing AppRoot and every screen collecting it; it now changes only with the duration, and the session position is saved every 10 s while playing",
+        "Home's For you card read the position at its top while playing (five recompositions a second); it now reads it only while paused",
+        "the baseline profile now covers all of com.ketvoice.app (hot and post-startup), not only start-up packages",
+        "earlier in 5.8.1: page card transition read in the layer; lyrics index not rewritten for unchanged lyrics"
+      ],
+      "effects_kept": "no visual or audio effect removed or reduced",
+      "not_measured": "no frame timing, startup time or CPU measurement on a device"
+    },
+    "diagnostics": "the Stats info lines now show Media3's error code name and the root cause's class for a failed title"
+  },
+  "not_validated": [
+    "physical phone or Quest installation, rendering and touch behaviour",
+    "playback of real streamed or downloaded titles on a device (the audio chain was exercised under Robolectric with a WAV file only)",
+    "frame rate, startup time or latency on a device",
+    "the baseline profile's effect after installation (compilation by ART on the device)",
+    "independent code review of this diff"
+  ],
+  "owner_section_changes": [],
+  "known_limitations": [
+    "The Robolectric playback test covers the audio chain with PCM; decoders (MP3, AAC, Opus) are not exercised by it.",
+    "Ket 27 stays an alpha: several pages keep Ketvoice's own structure.",
+    "The signing certificate is the existing public Android debug identity, not a private production key."
+  ],
+  "canonical_banner_sha256": "47f6793088983f7d4e6bd1aeaa2cbd8b7cdc2a8f91271e3b2839daea81da0436"
+}
