@@ -1,0 +1,235 @@
+{
+  "schema": 8,
+  "version": "5.2.0",
+  "versionCode": 108,
+  "source_commit": "2c9f9557ed6d964fdd58092ad7b8ea625e6ea340",
+  "created_at": "2026-11-15T13:16:11.643712+00:00",
+  "build_origin": {
+    "kind": "github_actions_with_owner_discord_sdk",
+    "workflow": "android.yml",
+    "run_id": 43716828772,
+    "artifact": {
+      "id": 14163485327,
+      "sha256": "c75b9c3b24df966caec0ce88fe90f74db2edfb1abbca33fa935e17b01ccdb216"
+    },
+    "gradle": "assembleMobileRelease assembleQuestRelease",
+    "note": "Signed by CI with the pinned keystore secret; the Discord Social SDK AAR matched its pinned SHA-256."
+  },
+  "local_validation": {
+    "result": "debug JVM/Robolectric suites for both flavors, release lint and the UI text audit passed in a cloud container without the Discord SDK",
+    "commands": [
+      "testMobileDebugUnitTest",
+      "testQuestDebugUnitTest",
+      "lintMobileRelease",
+      "lintQuestRelease",
+      "tools/audit_ui_texts.py --check"
+    ],
+    "ci_validation": "run 43716828772: release builds, debug and release unit tests for both flavors, UI text audit, lint, APK signature pin and Discord bridge packaging passed",
+    "code_review": {
+      "kind": "author's own re-read; no independent review"
+    },
+    "host_previews": "the queue with Ketmix as the first segment of the bar under the transport, the Ketmix settings and its analysis choice, the framing screen in its player mode, the Studio Canvas actions in their player mode, and the rebuilt Home page in the new dark theme rendered in software on the host and inspected",
+    "after_last_full_local_run": "no source change after the last complete local run"
+  },
+  "server": {
+    "function": "ketvoice-content",
+    "deployed_version": 22,
+    "deployment": "a one-line entrypoint importing supabase/functions/ketvoice-content/handler.ts from commit fbcd896c9bf9743d664471aa593ef929de1531b5 on raw.githubusercontent.com, bundled at deploy time",
+    "database_migrations": [
+      "20261115100000_media_override_player.sql applied (nullable jsonb column player on ketvoice_media_overrides)"
+    ],
+    "changed_routes": [
+      "POST /admin/override accepts player {frame, canvas} (verified owner only): the music player's own framing of an album and its Canvas shown or hidden for titles and albums, merged key by key; GET /overrides returns player"
+    ],
+    "tests": "handler_test.ts: 9 Deno tests pass locally, including the player's framing and Canvas switch living beside the page's, keys given back with null, and refusals",
+    "live_check": "/health 200, /overrides 200 with the player field, /admin/override 401 without an owner session after deployment"
+  },
+  "tests": {
+    "mobile": {
+      "jvm": {
+        "tests": 752,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "android_15_emulator_compose": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "quest": {
+      "jvm": {
+        "tests": 751,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "android_15_emulator_compose": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    }
+  },
+  "lint": {
+    "mobile": {
+      "Warning": 185,
+      "Hint": 20
+    },
+    "quest": {
+      "Warning": 187,
+      "Hint": 20
+    }
+  },
+  "apks": [
+    {
+      "name": "Ketvoice-5.2.0.apk",
+      "sha256": "e7683d07fe2ea23f4088895bee3eede12591b9f1081b99cfbb1ee3208e48e457",
+      "bytes": 73606824,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "5.2.0",
+      "versionCode": 108,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-5.2.0-Quest.apk",
+      "sha256": "caa4072ef8102a4dc3bc85011666c9d7550d2ac793baae3bac22e90de31b86ee",
+      "bytes": 83640422,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "5.2.0",
+      "versionCode": 108,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    }
+  ],
+  "discord": {
+    "sdk_present_in_ci_build": true,
+    "sdk_sha256_pinned": true,
+    "bridge_and_native_libraries_verified": true,
+    "presence_mode": "unauthenticated_rpc_through_installed_discord_app"
+  },
+  "credential_scan": {
+    "entries": 3363,
+    "findings": 0,
+    "raw_pattern_findings": 1,
+    "scope": "tracked sources and APK archive entries",
+    "kind": "credential_patterns",
+    "explicit_private_provider_key_deny_list": false,
+    "triage": [
+      {
+        "file": "Ketvoice-Liquid-Glass-V4.html",
+        "classification": "embedded_image_false_positive",
+        "all_hits_inside_image_data_uris": true,
+        "rescanned_without_image_payloads": true
+      }
+    ]
+  },
+  "release_install_smoke": {
+    "mobile": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "quest": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    }
+  },
+  "publication_override": {
+    "authorized_by_user": true,
+    "authorized_at": "2026-11-15T13:16:11.643712+00:00",
+    "kind": "standing_authorization",
+    "user_statement": "J'autorise TOUT devient maintenant une règle.",
+    "user_statement_date": "2026-11-14",
+    "in_reply_to": "The question whether versions may be published without phone or Quest testing without asking again for each version.",
+    "recorded_in": "AGENTS.md (commit aeeda8e)",
+    "reason": "The owner made publishing validated versions without phone or Quest testing a standing rule.",
+    "scope": "physical device installation and all on-device behaviour of 5.2.0"
+  },
+  "ketmix": {
+    "requested_by_owner": "2026-11-15: Automix works but must be more than a plain fade from one title to the next, with an analysis on the phone's processor in three settings, results in the style of Apple Music, researched from positive and negative reviews of other apps' automix, under the name Ketmix (BETA); its button at the left end of the bar under the transport.",
+    "research": {
+      "how": "one background research agent; it could not open any page directly (hosts not allowed in this environment), so everything comes from search-engine extracts of the listed pages and quoted fragments were not checked against the originals",
+      "what_listeners_dislike": [
+        "titles shortened (the dominant complaint about Apple Music AutoMix, Spotify Automix and AI DJ, djay)",
+        "transitions at the wrong moment (endings and false endings)",
+        "audible tempo changes on mismatched pairs",
+        "unpredictability and missing fallback",
+        "mixing of albums",
+        "the same effect on every transition",
+        "no control"
+      ],
+      "what_listeners_like": [
+        "continuous energy on single-genre playlists",
+        "beat-matched blends when they land",
+        "more transition types",
+        "BPM and key shown",
+        "a quiet fallback"
+      ],
+      "applied": [
+        "never over a sung line and never past the last one (already there, from synced lyrics)",
+        "tempo tolerance tightened to 4/6/8 %, each title stretched only while it is the quiet one",
+        "less of an ending left out (0/16/45 s)",
+        "a fallback ladder: in time, echo out, crossing of filters or dissolve, cut on the beat, plain fade",
+        "key read and clashes kept short",
+        "two colours per kind that alternate",
+        "BPM and key shown in the status line"
+      ]
+    },
+    "tested_on_host": [
+      "the planner on hand-built analyses: every kind, the limits by setting, keys, alternation, the fallbacks without processors or without beats (TransitionPlannerTest, 22 tests)",
+      "level, filter, echo and reverb curves of every kind and the signal processing itself on synthetic signals: low-pass and high-pass responses, echo repeats that decay after the cut, a reverb tail that fades without overload, no click when a filter joins (DeckDspTest)",
+      "key detection on synthetic chord progressions in five keys, noise and silence; the wheel positions and which keys go together (MusicalKeyTest)",
+      "the three analysis settings and when a kept analysis is read again; a tempo that does not hold (BeatAnalysisTest, MusicalKeyTest)",
+      "the wording of every status line in the ten languages, the switch in the bar and in the wide queue, the settings (host tests)"
+    ],
+    "never_run_with_real_audio": [
+      "nothing of the engine was executed against real audio output on any device or emulator: none of the new transitions was listened to",
+      "the echo, the reverb and the filters were only measured on synthetic signals, never heard on music",
+      "the meeting of two tempos changes the speed of both decks every half second during a mix; whether those steps are inaudible on a device is not verified",
+      "key detection on real music (the method, chroma against Krumhansl-Kessler profiles, is known to confuse related keys; a wrong key only shortens or lengthens a mix)",
+      "the claim that this is better than other apps' automix is the owner's goal, not something that was measured"
+    ],
+    "safeguards": [
+      "off by default; any seek, title change, error, missing analysis or lack of time gives up the transition and the title ends as before",
+      "if the decks' processors are not in the sound path or the clock cannot be confirmed, only a trim or a plain crossfade on the decks' volume is used",
+      "a transition that is given up before the hand-over gives the outgoing title its own speed and level back"
+    ]
+  },
+  "not_validated": [
+    "physical phone or Quest installation, rendering and touch behaviour",
+    "Ketmix with real audio on any device or emulator (see the ketmix section)",
+    "the new dark theme and the rebuilt Home page on a device (rendered on the host)",
+    "the album page taking its colour from a Canvas: reading a video frame needs a device; only the choice between the Canvas's and the cover's colour is tested",
+    "the framing of the player's artwork and the player-only Canvas switch end to end with the owner account (no owner session in this environment); the server routes are tested with a fake project and the screens on the host",
+    "independent code review of this diff"
+  ],
+  "owner_section_changes": [
+    "Framing screen: two modes, the album page and the music player alone; in the player's mode the rectangle keeps the shape of the player's artwork and is published as the player's own framing.",
+    "The music player now follows an album's framing (its own, else the page's) and the owner's Canvas switch (its own, else the page's).",
+    "Studio Canvas actions: a mode for the music player alone (hide, show, follow the album page), per ticked titles or for the whole album.",
+    "Server: the override row gains a nullable player column; POST /admin/override accepts player {frame, canvas}."
+  ],
+  "known_limitations": [
+    "Owner-section changes are deliberately not mentioned in the public release notes (owner preference).",
+    "Ketmix needs the next title to be playable without a new resolution or one that succeeds in time; otherwise it says so and the title ends as before.",
+    "Ketmix does not mix into titles added by Autoplay at the end of the queue, nor a title whose source was chosen by hand.",
+    "A manual skip is still a plain change of title: it is not mixed.",
+    "The player's framing made on one screen shape is cropped to fit another (the rectangle covers the artwork).",
+    "The signing certificate is the existing public Android debug identity, not a private production key."
+  ],
+  "canonical_banner_sha256": "47f6793088983f7d4e6bd1aeaa2cbd8b7cdc2a8f91271e3b2839daea81da0436"
+}
