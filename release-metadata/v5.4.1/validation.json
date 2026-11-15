@@ -1,0 +1,189 @@
+{
+  "schema": 8,
+  "version": "5.4.1",
+  "versionCode": 111,
+  "source_commit": "7df45a20a76836ce1f1b9f765b4175e7ea15545b",
+  "created_at": "2026-11-15T16:27:27.322463+00:00",
+  "build_origin": {
+    "kind": "github_actions_with_owner_discord_sdk",
+    "workflow": "android.yml",
+    "run_id": 43734504450,
+    "artifact": {
+      "id": 14169654063,
+      "sha256": "53fbfc045062d35601f6097e830d213cafff6e67c88367d93e02c56908773999"
+    },
+    "gradle": "assembleMobileRelease assembleQuestRelease",
+    "note": "Signed by CI with the pinned keystore secret; the Discord Social SDK AAR matched its pinned SHA-256."
+  },
+  "local_validation": {
+    "result": "debug JVM/Robolectric suites for both flavors, release lint and the UI text audit passed in a cloud container without the Discord SDK",
+    "commands": [
+      "testMobileDebugUnitTest",
+      "testQuestDebugUnitTest",
+      "lintMobileRelease",
+      "lintQuestRelease",
+      "tools/audit_ui_texts.py --check"
+    ],
+    "ci_validation": "run 43734504450: release builds, debug and release unit tests for both flavors, UI text audit, lint, APK signature pin and Discord bridge packaging passed",
+    "code_review": {
+      "kind": "author's own re-read; no independent review"
+    },
+    "host_previews": "no interface change in this version: no host preview was rendered",
+    "after_last_full_local_run": "no source change after the last complete local run"
+  },
+  "server": {
+    "function": "ketvoice-content",
+    "deployed_version": 23,
+    "changed_in_this_version": false,
+    "note": "no server change since 5.4.0"
+  },
+  "tests": {
+    "mobile": {
+      "jvm": {
+        "tests": 773,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "android_15_emulator_compose": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "quest": {
+      "jvm": {
+        "tests": 772,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "android_15_emulator_compose": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    }
+  },
+  "lint": {
+    "mobile": {
+      "Warning": 186,
+      "Hint": 21
+    },
+    "quest": {
+      "Warning": 188,
+      "Hint": 21
+    }
+  },
+  "apks": [
+    {
+      "name": "Ketvoice-5.4.1.apk",
+      "sha256": "d233363c4c4658a2eedbd15703aa74887020b7235bf534a68a336ad787bfe7f0",
+      "bytes": 73749768,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "5.4.1",
+      "versionCode": 111,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-5.4.1-Quest.apk",
+      "sha256": "466361aebc8a3901d89f550327d27a75405babee3fa8e32a1b0c9e7d23f9059b",
+      "bytes": 83783366,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "5.4.1",
+      "versionCode": 111,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    }
+  ],
+  "discord": {
+    "sdk_present_in_ci_build": true,
+    "sdk_sha256_pinned": true,
+    "bridge_and_native_libraries_verified": true,
+    "presence_mode": "unauthenticated_rpc_through_installed_discord_app"
+  },
+  "credential_scan": {
+    "entries": 3379,
+    "findings": 0,
+    "raw_pattern_findings": 1,
+    "scope": "tracked sources and APK archive entries",
+    "kind": "credential_patterns",
+    "explicit_private_provider_key_deny_list": false,
+    "triage": [
+      {
+        "file": "Ketvoice-Liquid-Glass-V4.html",
+        "classification": "embedded_image_false_positive",
+        "all_hits_inside_image_data_uris": true,
+        "rescanned_without_image_payloads": true
+      }
+    ]
+  },
+  "release_install_smoke": {
+    "mobile": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "quest": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    }
+  },
+  "publication_override": {
+    "authorized_by_user": true,
+    "authorized_at": "2026-11-15T16:27:27.322463+00:00",
+    "kind": "standing_authorization",
+    "user_statement": "J'autorise TOUT devient maintenant une règle.",
+    "user_statement_date": "2026-11-14",
+    "in_reply_to": "The question whether versions may be published without phone or Quest testing without asking again for each version.",
+    "recorded_in": "AGENTS.md (commit aeeda8e)",
+    "reason": "The owner made publishing validated versions without phone or Quest testing a standing rule.",
+    "scope": "physical device installation and all on-device behaviour of 5.4.1"
+  },
+  "owner_report_2026_11_15_ketmix_journal": {
+    "statement_summary": "the owner sent a copied Ketmix journal of three transitions (French rap titles, DJ intensity, maximum analysis).",
+    "journal_reading": [
+      "two of three transitions fell back to a plain volume fade ('precise false' with the clock confirmed): the decks' processors were taken as absent at the moment the transition was decided",
+      "the incoming intros gave no usable tempo (0 %, 21 % and 29 % confidence, under the 45 % needed to mix in time), so no blend in time could be played",
+      "a title ending at full level (130 BPM read at 41 %) was only joined to the next one with a 0.24 s overlap",
+      "a title sung to its last second was crossed in 2.5 s although the next title did not sing for 27 s"
+    ],
+    "changes": [
+      "both decks' processors are waited for up to 1.5 s before the transition is decided; the incoming deck is kept silent until its processors are in its sound path, and a plain fade is used only if they have not joined 0.9 s after it started",
+      "a last note at full level now rings on (balanced and DJ settings, effects available, not on repeat): the next title starts where the trim started it, the outgoing title plays to its last sample and its last beat rings for four beats in an echo that the outgoing deck plays out on silence past the end of the title (at most 6 s); the echo length comes from the tempo when it was read at 25 % confidence or more, else 500 ms",
+      "a next title whose voice starts later may rise under the last sung words of a crossing that is not in time (up to 6 s balanced, 10 s DJ, always ending 1.5 s before its voice), the outgoing voice band lowered over 3 s",
+      "the journal now records where the outgoing sound ends and how, where the mix started in both titles, whether it rang past the end and whether each deck's processors were in its sound path"
+    ],
+    "never_run_with_real_audio": [
+      "none of these changes was heard on a device or emulator; the echo played out past the end relies on Media3 draining a processor's output after the end of stream, covered only by a JVM test of the processor",
+      "why the processors were taken as absent on the device is not known for certain: the wait and the journal's new path fields are meant to show it"
+    ]
+  },
+  "not_validated": [
+    "physical phone or Quest installation, rendering and touch behaviour",
+    "Ketmix with real audio on any device or emulator",
+    "independent code review of this diff"
+  ],
+  "owner_section_changes": [],
+  "known_limitations": [
+    "Owner-section changes are deliberately not mentioned in the public release notes (owner preference).",
+    "A Canvas given as a link depends on the site that serves it: if it goes away or refuses streaming, nothing plays behind the title.",
+    "Ketmix needs the next title to be playable without a new resolution or one that succeeds in time; otherwise it says so and the title ends as before.",
+    "A manual skip is still a plain change of title: it is not mixed.",
+    "The mix journal is kept in memory only and is lost when the app is closed.",
+    "The signing certificate is the existing public Android debug identity, not a private production key."
+  ],
+  "canonical_banner_sha256": "47f6793088983f7d4e6bd1aeaa2cbd8b7cdc2a8f91271e3b2839daea81da0436"
+}
