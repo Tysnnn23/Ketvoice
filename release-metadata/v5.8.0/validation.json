@@ -1,0 +1,226 @@
+{
+  "schema": 8,
+  "version": "5.8.0",
+  "versionCode": 115,
+  "source_commit": "b9f03f4accec78c0d56213ae789d935e3175df69",
+  "created_at": "2026-11-15T21:54:05.657720+00:00",
+  "build_origin": {
+    "kind": "github_actions_with_owner_discord_sdk",
+    "workflow": "android.yml",
+    "run_id": 43764549690,
+    "artifact": {
+      "id": 14181398570,
+      "sha256": "aeb689459f1ada5655a88acba15512635c597285e46c0d3d14e57a20d11f7eaf"
+    },
+    "gradle": "assembleMobileRelease assembleQuestRelease",
+    "note": "Signed by CI with the pinned keystore secret; the Discord Social SDK AAR matched its pinned SHA-256."
+  },
+  "local_validation": {
+    "result": "debug JVM/Robolectric suites for both flavors, release lint and the UI text audit passed in a cloud container without the Discord SDK",
+    "commands": [
+      "testMobileDebugUnitTest",
+      "testQuestDebugUnitTest",
+      "lintMobileRelease",
+      "lintQuestRelease",
+      "tools/audit_ui_texts.py --check"
+    ],
+    "ci_validation": "run 43764549690: release builds, debug and release unit tests for both flavors, UI text audit, lint, APK signature pin and Discord bridge packaging passed",
+    "code_review": {
+      "kind": "none independent for this diff; the author re-read it and fixed the two failures and the lint warning found by the full local run"
+    },
+    "host_previews": "the Liquid Glass app icon rendered on the host and inspected; the other new screens are covered by host Compose and JVM tests only",
+    "release_r8_build": "assembleMobileRelease and assembleQuestRelease with R8 built locally without the Discord SDK (12.9 MB) and in CI with it; usage.txt showed only static initialisers removed from app classes",
+    "after_last_full_local_run": "two test fixes (reverb diagnostic callback restored on the fast copy path; icon colour threshold) and one lint fix (String.toUri); both test suites and both lint runs repeated after them"
+  },
+  "server": {
+    "function": "ketvoice-content",
+    "deployed_version": 23,
+    "changed_in_this_version": false,
+    "note": "no server change since 5.4.0"
+  },
+  "tests": {
+    "mobile": {
+      "jvm": {
+        "tests": 799,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "android_15_emulator_compose": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "quest": {
+      "jvm": {
+        "tests": 798,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "android_15_emulator_compose": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    }
+  },
+  "lint": {
+    "mobile": {
+      "Warning": 187,
+      "Hint": 21
+    },
+    "quest": {
+      "Warning": 189,
+      "Hint": 21
+    },
+    "errors": 0,
+    "new_vs_5_7_0": "one more warning per flavour, none in the files added by this version"
+  },
+  "apks": [
+    {
+      "name": "Ketvoice-5.8.0.apk",
+      "sha256": "809ba0f5a5cb7ff5d7df620b8bd0dae80e8c98d1f60755fce27230f7cf40ac21",
+      "bytes": 22648890,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "5.8.0",
+      "versionCode": 115,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-5.8.0-Quest.apk",
+      "sha256": "1e22276e381ea1ded6473111069725e0e79532059f6fe95d79008cda2c98cb82",
+      "bytes": 32682488,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "5.8.0",
+      "versionCode": 115,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    }
+  ],
+  "discord": {
+    "sdk_present_in_ci_build": true,
+    "sdk_sha256_pinned": true,
+    "bridge_and_native_libraries_verified": true,
+    "presence_mode": "unauthenticated_rpc_through_installed_discord_app"
+  },
+  "credential_scan": {
+    "entries": 3430,
+    "findings": 0,
+    "raw_pattern_findings": 1,
+    "scope": "tracked sources and APK archive entries",
+    "kind": "credential_patterns",
+    "explicit_private_provider_key_deny_list": false,
+    "triage": [
+      {
+        "file": "Ketvoice-Liquid-Glass-V4.html",
+        "classification": "embedded_image_false_positive",
+        "all_hits_inside_image_data_uris": true,
+        "rescanned_without_image_payloads": true
+      }
+    ]
+  },
+  "release_install_smoke": {
+    "mobile": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "quest": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    }
+  },
+  "publication_override": {
+    "authorized_by_user": true,
+    "authorized_at": "2026-11-15T21:54:05.657720+00:00",
+    "kind": "standing_authorization",
+    "user_statement": "J'autorise TOUT devient maintenant une règle.",
+    "user_statement_date": "2026-11-14",
+    "in_reply_to": "The question whether versions may be published without phone or Quest testing without asking again for each version.",
+    "recorded_in": "AGENTS.md (commit aeeda8e)",
+    "reason": "The owner made publishing validated versions without phone or Quest testing a standing rule.",
+    "scope": "physical device installation and all on-device behaviour of 5.8.0"
+  },
+  "owner_request_2026_11_15_fifth": {
+    "statement_summary": "optimise the app and its latency without losing the effects; music still cuts in the background; before that, propose design, feature and icon improvements for the owner to choose with a native question tool.",
+    "chosen": {
+      "design": [
+        "Apple-style library",
+        "iOS 27 player",
+        "Apple-style album pages",
+        "fluid page transitions"
+      ],
+      "features": [
+        "search by lyrics",
+        "favourites offline automatically",
+        "infinite radio"
+      ],
+      "icons": [
+        "Liquid Glass app icon",
+        "SF-Symbols-like glyphs"
+      ],
+      "animations": [
+        "heart burst on like",
+        "rubber-band overscroll",
+        "living artwork"
+      ]
+    },
+    "already_present_before_this_version": [
+      "player: artwork shrinks when paused, shared cover morph and blurred ambient background",
+      "album pages: centred hero, Play/Shuffle capsules, numbered rows",
+      "pages zoom from their origin"
+    ],
+    "background_cuts": {
+      "cause": "not proven: no device log of a cut was available",
+      "mitigations": [
+        "reverb copies the buffer in one go while off and silent",
+        "player position polled at 1 s instead of 200 ms behind other apps",
+        "Canvas downloads and Ketmix body readings only while the app is in front",
+        "one-time offer (and a Settings row) to lift Android battery optimisation, a frequent cause of music apps being slowed or stopped by the phone"
+      ],
+      "not_measured": "whether any of these removes the cuts the owner hears"
+    },
+    "latency": {
+      "change": "R8 enabled for the release build with proguard-android-optimize; app and Discord classes kept and not obfuscated",
+      "risk": "a library class removed or rewritten by R8 that is reached by reflection would only show on a device (crash or missing feature); no release APK was installed or launched",
+      "not_measured": "no frame-time or startup measurement was made"
+    },
+    "privacy": "a search of three words or more is also sent to Genius's public lyric search; PRIVACY.md updated; the local lyric index stays on the device"
+  },
+  "not_validated": [
+    "physical phone or Quest installation, rendering and touch behaviour",
+    "the R8 release APKs launched on any device or emulator",
+    "background playback without cuts on a phone with battery optimisation",
+    "the battery-optimisation request dialog on a device",
+    "the Genius lyric search against the live service (parsing tested on a sample response only)",
+    "radio queues and automatic favourite downloads against live catalogue services",
+    "rubber-band overscroll, heart burst, living artwork and the page card transition on a device",
+    "the Liquid Glass launcher icon on a launcher (rendered on the host only)",
+    "independent code review of this diff"
+  ],
+  "owner_section_changes": [],
+  "known_limitations": [
+    "Lyrics are searched on the device only for titles whose lyrics Ketvoice has already shown (up to 1500 titles); other titles need a sentence of three words or more and Genius.",
+    "Radio draws on the catalogue's similar artists and on YouTube Music search; for little-known artists it may repeat the same few artists.",
+    "The battery offer is shown once; Android may still restrict apps on some phones (vendor task killers).",
+    "The rubber-band effect applies to lists that use Compose's overscroll; a few custom scrollers keep their old edge.",
+    "Ket 27 stays an alpha: several pages keep Ketvoice's own structure.",
+    "A manual skip is still a plain change of title: it is not mixed.",
+    "The signing certificate is the existing public Android debug identity, not a private production key."
+  ],
+  "canonical_banner_sha256": "47f6793088983f7d4e6bd1aeaa2cbd8b7cdc2a8f91271e3b2839daea81da0436"
+}
