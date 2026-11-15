@@ -169,4 +169,20 @@ class MediaOverridesTest {
         assertEquals(stale, MediaOverrides.keepRecentWrites(fetched, mapOf(framed.id to (framed to now - 11 * 60_000L)), now)[framed.id])
         assertEquals(fetched, MediaOverrides.keepRecentWrites(fetched, emptyMap(), now))
     }
+
+    @Test fun aChosenCanvasReplacesTheOneAlreadyOnTheDevice() {
+        val link = "https://cdn.example.org/a/clip.mp4"
+        val stored = "https://x.supabase.co/storage/v1/object/public/ketvoice-public-media/canvas/a.mp4"
+        // The catalogue's Canvas, downloaded earlier, used to stay in place of the owner's choice.
+        assertTrue(CanvasRepo.givesWay("/data/canvas/4uLU6hMCjMI75M1A2tKUQC.mp4", link, "kvov-abc"))
+        assertTrue(CanvasRepo.givesWay("/data/canvas/4uLU6hMCjMI75M1A2tKUQC.mp4", stored, "kvov-abc"))
+        // The choice itself stays; another choice replaces it.
+        assertFalse(CanvasRepo.givesWay(link, link, "kvov-abc"))
+        assertFalse(CanvasRepo.givesWay("/data/canvas/kvov-abc.mp4", stored, "kvov-abc"))
+        assertTrue(CanvasRepo.givesWay("https://cdn.example.org/old.mp4", link, "kvov-abc"))
+        assertTrue(CanvasRepo.givesWay("/data/canvas/kvov-old.mp4", stored, "kvov-abc"))
+        // Once the choice is removed, what it showed goes and the catalogue's Canvas is looked up again.
+        assertTrue(CanvasRepo.givesWay(link, null, null)); assertTrue(CanvasRepo.givesWay("/data/canvas/kvov-abc.mp4", null, null))
+        assertFalse(CanvasRepo.givesWay("/data/canvas/4uLU6hMCjMI75M1A2tKUQC.mp4", null, null))
+    }
 }

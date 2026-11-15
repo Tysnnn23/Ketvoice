@@ -21,6 +21,15 @@
 
 ## Overview
 
+### 5.6.0 — Ket 27 by default, steadier playback
+
+Ket 27 (Alpha) is now the interface Ketvoice opens with and uses the regular glass of iOS 27.
+Playback keeps more sound ahead so that the music does not break up behind other apps, and
+Ketmix blends no longer restart their filters and echoes at each tempo nudge.
+[Mobile](https://github.com/Tysnnn23/Ketvoice/releases/download/v5.6.0/Ketvoice-5.6.0.apk)
+· [Quest](https://github.com/Tysnnn23/Ketvoice/releases/download/v5.6.0/Ketvoice-5.6.0-Quest.apk)
+· [Release notes](docs/releases/v5.6.0.md).
+
 ### 5.5.0 — Ketmix in time, Ket 27 (Alpha)
 
 Ketmix now reads the tempo of each title where its drums play, so intros and endings get the

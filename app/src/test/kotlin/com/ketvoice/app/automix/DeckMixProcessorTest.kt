@@ -65,6 +65,36 @@ class DeckMixProcessorTest {
         assertEquals(0, plain.output.remaining())
     }
 
+    @Test fun aChangeOfSpeedDoesNotStartTheFiltersAfresh() {
+        // Media3 flushes the processors at each change of speed. A deck under a high-pass must sound the same with or without it.
+        fun run(flushed: Boolean): ShortArray {
+            val control = DeckControl()
+            val processor = started(control, 48_000, 1)
+            control.automation = DeckAutomation(Curve.flat(1f), Curve.flat(900f))
+            control.pendingTimeUs = offset + 5_000_000
+            val first = out(processor, pcm(4_800, 1))
+            if (flushed) { processor.flush(); control.pendingTimeUs = offset + 5_100_000 }
+            return first + out(processor, pcm(4_800, 1))
+        }
+        val plain = run(false); val flushed = run(true)
+        assertEquals(plain.size, flushed.size)
+        // A constant level through a high-pass dies away; started afresh it would stay silent too, so the check is on the echo below.
+        assertTrue(plain.indices.all { abs(plain[it] - flushed[it]) <= 1 })
+        // An echo keeps ringing through the flush; a jump elsewhere in the title silences it.
+        fun tail(jumpUs: Long): Int {
+            val control = DeckControl()
+            val processor = started(control, 48_000, 2)
+            control.automation = DeckAutomation(Curve.flat(1f), Curve.flat(0f), dry = Curve.flat(0f), echo = Curve(longArrayOf(5_090_000, 5_100_000), floatArrayOf(1f, 0f)),
+                echoDelayUs = 250_000, echoFeedback = .6f)
+            control.pendingTimeUs = offset + 5_000_000
+            out(processor, pcm(4_800))                         // 5.0–5.1 s feeds the echo
+            processor.flush(); control.pendingTimeUs = offset + 5_100_000 + jumpUs
+            return out(processor, pcm(24_000)).maxOf { abs(it.toInt()) }
+        }
+        assertTrue("the repeats are still heard after a change of speed", tail(0) > 3_000)
+        assertEquals("but not after a seek", 0, tail(30_000_000))
+    }
+
     @Test fun aFormatItCannotProcessLeavesItOutOfThePath() {
         val control = DeckControl()
         val processor = DeckMixProcessor(control)

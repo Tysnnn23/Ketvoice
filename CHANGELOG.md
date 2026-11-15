@@ -7,6 +7,23 @@
 
 ---
 
+# Ketvoice 5.6.0
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 113** — Ket 27 by default with the glass of iOS 27; steadier playback behind other apps; cleaner Ketmix blends.
+
+- Ket 27 (Alpha) is on by default and uses the regular glass of iOS 27 (70 % surface, soft shadow,
+  Clear ↔ Tinted from 55 % to 85 %); settings rows darken under a touch.
+- Half a second of audio is buffered ahead and Ketmix reads titles more slowly while Ketvoice is
+  not on screen, against gaps in the music.
+- Ketmix: filters, echo and reverb carry on through tempo nudges; fewer and calmer tempo changes;
+  the journal shows beat sync and speed changes.
+
+Full notes: [5.6.0](docs/releases/v5.6.0.md).
+
+---
+
 # Ketvoice 5.5.0
 
 ![Ketvoice](ketvoice-banner.png)

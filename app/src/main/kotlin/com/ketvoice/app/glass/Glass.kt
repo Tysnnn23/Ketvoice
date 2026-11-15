@@ -295,7 +295,8 @@ private fun GlassPanelBody(
         1 -> params.copy(blurPx = maxOf(params.blurPx, 26f), tintAlpha = if (params.dark) .16f else .12f,
             refractionHeightDp = 3f, refractionAmountDp = 4f)
         // Defined borders replace drop and inner shadows; the blur follows Clear ↔ Tinted.
-        GlassStyles.LIQUID_27 -> params.copy(shadow = false, innerShadow = false,
+        GlassStyles.LIQUID_27 -> if (com.ketvoice.app.theme.Ket27.on) Ket27Glass.regular(params, AppSettings.glassTint.value)
+            else params.copy(shadow = false, innerShadow = false,
             blurPx = liquid27BlurPx(AppSettings.glassTint.value, params.role))
         else -> params
     }
@@ -312,7 +313,9 @@ private fun GlassPanelBody(
         return
     }
     val tint = GlassTuning.sanitize(AppSettings.glassTint.value)
-    val params = styledParams.copy(tintAlpha = GlassTuning.opticalTint(styledParams.tintAlpha, tint, styledParams.dark))
+    // Ket 27 sets the tint of iOS 27's regular glass itself.
+    val params = if (liquid27 && com.ketvoice.app.theme.Ket27.on) styledParams
+        else styledParams.copy(tintAlpha = GlassTuning.opticalTint(styledParams.tintAlpha, tint, styledParams.dark))
     val theme = LocalTheme.current
     val glassTheme = if (params.dark && !theme.isDark)
         com.ketvoice.app.theme.KetTheme.dark().copy(accent = theme.accent) else theme
@@ -491,6 +494,35 @@ private fun liquid27Hairline(dark: Boolean): Brush = Brush.linearGradient(listOf
     Color.White.copy(alpha = if (dark) .16f else .42f)))
 
 /** Persisted values of `AppSettings.glassStyle`. */
+/**
+ * The regular glass of iOS 27, from Apple's design kit: a surface at 70 % of white (light) or of
+ * #1A1A1A (dark) — less see-through and more diffused than iOS 26's —, a soft shadow 8 dp below
+ * (25 % of black in light, 45 % in dark) and no inner shadow; the half-point edge ring and the
+ * specular highlight are drawn by the Liquid 27 shader. The Clear ↔ Tinted setting moves the
+ * surface from 55 % to 85 %, as the Liquid Glass slider of iOS 27 does.
+ */
+internal object Ket27Glass {
+    const val SURFACE = .70f
+    const val CLEAREST = .55f
+    const val MOST_TINTED = .85f
+    const val SHADOW_LIGHT = .25f
+    const val SHADOW_DARK = .45f
+    const val ELEVATION_DP = 8f
+    const val MIN_BLUR_PX = 14f
+
+    /** Surface opacity for a Clear ↔ Tinted setting of 0..1; the middle, and an untouched setting, give Apple's 70 %. */
+    fun surface(tint: Float): Float {
+        val t = if (tint <= 0f) .5f else tint.coerceIn(0f, 1f)
+        return if (t <= .5f) CLEAREST + (SURFACE - CLEAREST) * (t / .5f) else SURFACE + (MOST_TINTED - SURFACE) * ((t - .5f) / .5f)
+    }
+
+    fun regular(params: GlassParams, tint: Float): GlassParams = params.copy(
+        tintAlpha = surface(tint), shadow = true, innerShadow = false, elevationDp = ELEVATION_DP,
+        shadowAlpha = if (params.dark) SHADOW_DARK else SHADOW_LIGHT,
+        blurPx = maxOf(liquid27BlurPx(tint, params.role), MIN_BLUR_PX),
+        highlightAlpha = maxOf(params.highlightAlpha, .6f))
+}
+
 object GlassStyles {
     const val CLEAR = 0
     const val FROSTED = 1

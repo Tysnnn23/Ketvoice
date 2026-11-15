@@ -235,8 +235,14 @@ class MainActivity : ComponentActivity() {
         return null
     }
 
+    override fun onStart() {
+        super.onStart()
+        com.ketvoice.app.automix.Automix.appInFront = true
+    }
+
     override fun onStop() {
         super.onStop()
+        com.ketvoice.app.automix.Automix.appInFront = false
         runCatching { com.ketvoice.app.data.SettingsStore.save() }
     }
 }

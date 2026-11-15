@@ -74,6 +74,11 @@ internal object Automix {
     private const val MAX_ATTEMPTS = 3
     private const val RETRY_MS = 6_000L
     private const val ANALYSIS_SPEED = 8f
+    /** Behind another app the phone lends fewer cores: titles are read more slowly, so that the one playing never starves. */
+    private const val BACKGROUND_ANALYSIS_SPEED = 3f
+    /** Set by the activity: whether Ketvoice is the app on screen. */
+    @Volatile var appInFront = true
+    internal fun analysisSpeed(inFront: Boolean) = if (inFront) ANALYSIS_SPEED else BACKGROUND_ANALYSIS_SPEED
     private const val SETTLE_MS = 8_000L
     /** How long the decks' processors are waited for before a transition is decided. */
     private const val PATHS_WAIT_MS = 1_500L
@@ -482,6 +487,8 @@ internal object Automix {
         // The moment the bass changes hands, on the outgoing title's clock.
         val swapMoment = MixWords.swapShare(plan).takeIf { it >= 0f }?.let { plan.outMs + (plan.overlapMs * it).toLong() }
         var swapped = false
+        var worstSync = 0.0
+        var speedChanges = 0
         while (true) {
             delay(40)
             if (host !== h || s.closed) return
@@ -538,22 +545,26 @@ internal object Automix {
                 val follows = plan.kind == MixKind.Beatmatch || !audible
                 val through = ((outPosition - plan.outMs).toFloat() / plan.overlapMs).coerceIn(0f, 1f)
                 // On the grid of small steps, so that a speed is only set again when it really changed.
-                val shared = if (ride) DeckSync.stepped(DeckSync.ride(plan.rate, through)) else plan.rate
+                val shared = if (ride) DeckSync.rideStep(DeckSync.ride(plan.rate, through)).let { if (through >= .88f) 1f else it } else plan.rate
+                if (audible) worstSync = max(worstSync, abs(smoothed))
                 val wanted = if (follows) DeckSync.speed(shared, smoothed, audible) else 1f
-                if (wanted != speed && now - speedAt >= (if (audible) 500L else 200L)) {
+                if (wanted != speed && now - speedAt >= (if (audible) DeckSync.AUDIBLE_SPEED_HOLD_MS else 200L)) {
                     deck.playbackParameters = if (wanted == 1f) PlaybackParameters.DEFAULT else PlaybackParameters(wanted)
                     speed = wanted; speedAt = now
+                    if (audible) speedChanges++
                 }
                 if (ride) {
                     val wantedLead = DeckSync.stepped(shared / plan.rate)
-                    if (wantedLead != lead && now - leadAt >= 500L) {
+                    if (wantedLead != lead && now - leadAt >= DeckSync.AUDIBLE_SPEED_HOLD_MS) {
                         main.playbackParameters = if (wantedLead == 1f) PlaybackParameters.DEFAULT else PlaybackParameters(wantedLead)
                         lead = wantedLead; leadAt = now
+                        speedChanges++
                     }
                 }
             }
             if (outPosition >= end + 120L || ended) break
         }
+        if (plan.beatTied && s.precise) KetmixJournal.amend { it.copy(syncWorstMs = worstSync.toInt(), speedChanges = speedChanges) }
         if (!s.promoted) return
         // The outgoing title is over: one deck from here on.
         h.release(main)
@@ -590,11 +601,12 @@ internal object Automix {
         deck.volume = 0f
         control.tap = tap
         deck.setMediaItem(item, fromMs)
-        deck.playbackParameters = PlaybackParameters(ANALYSIS_SPEED)
+        val speed = analysisSpeed(appInFront)
+        deck.playbackParameters = PlaybackParameters(speed)
         deck.prepare()
         deck.play()
         val started = SystemClock.elapsedRealtime()
-        val limit = started + (lengthMs / ANALYSIS_SPEED).toLong() + 9_000L
+        val limit = started + (lengthMs / speed).toLong() + 9_000L
         try {
             while (!tap.done && deck.playbackState != androidx.media3.common.Player.STATE_ENDED && deck.playerError == null &&
                 SystemClock.elapsedRealtime() < limit) {

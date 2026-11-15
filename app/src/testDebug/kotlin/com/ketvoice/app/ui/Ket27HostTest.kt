@@ -119,5 +119,11 @@ class Ket27HostTest {
         assertEquals(26f, Ket27.Metrics.groupRadius.value, 0f); assertEquals(62f, Ket27.Metrics.tabBar.value, 0f)
         AppSettings.ket27.value = false
         assertEquals(40f, T.hugeTitle.fontSize.value, 0f)
+        // The regular glass of iOS 27: a surface at 70 %, from 55 % (clearest) to 85 % (most tinted), with its shadow.
+        assertEquals(.70f, com.ketvoice.app.glass.Ket27Glass.surface(0f), 1e-4f); assertEquals(.70f, com.ketvoice.app.glass.Ket27Glass.surface(.5f), 1e-4f)
+        assertEquals(.55f, com.ketvoice.app.glass.Ket27Glass.surface(.001f), .01f); assertEquals(.85f, com.ketvoice.app.glass.Ket27Glass.surface(1f), 1e-4f)
+        val glass = com.ketvoice.app.glass.Ket27Glass.regular(com.ketvoice.app.glass.GlassParams.pill(dark = true), 0f)
+        assertTrue(glass.shadow); assertFalse(glass.innerShadow); assertEquals(.45f, glass.shadowAlpha, 0f); assertEquals(8f, glass.elevationDp, 0f)
+        assertEquals(.25f, com.ketvoice.app.glass.Ket27Glass.regular(com.ketvoice.app.glass.GlassParams.pill(dark = false), 0f).shadowAlpha, 0f)
     }
 }

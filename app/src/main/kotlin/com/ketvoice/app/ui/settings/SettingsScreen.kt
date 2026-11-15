@@ -981,7 +981,7 @@ private fun ColumnScope.SRow(
     val ket = Ket27.on
     Row(
         Modifier.fillMaxWidth()
-            .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier)
+            .then(if (onClick != null) Modifier.rowPress(onClick = onClick) else Modifier)
             .heightIn(min = if (ket) Ket27.Metrics.row else 72.dp).padding(horizontal = if (ket) 16.dp else 20.dp, vertical = if (ket) 10.dp else 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

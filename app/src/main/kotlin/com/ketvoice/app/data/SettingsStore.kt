@@ -50,7 +50,8 @@ object SettingsStore {
         s.smartShuffle.value = p.getBoolean("smartShuffle", true)
         s.ketmixStyle.value = p.getInt("ketmixStyle", 0).coerceIn(0, 4)
         s.ketmixHaptics.value = p.getBoolean("ketmixHaptics", false)
-        s.ket27.value = p.getBoolean("ket27", false)
+        // On unless the listener switched it off (owner, 2026-11-15: « Rend le mode ket27 par défaut »).
+        s.ket27.value = p.getBoolean("ket27", true)
         s.lyricsSource.value = p.getString("lyricsSource", s.lyricsSource.value) ?: "auto"
         if (s.lyricsSource.value !in MusicApi.lyricSources + listOf("auto", "off")) {
             s.lyricsSource.value = "auto"

@@ -42,6 +42,8 @@ internal class DeckControl {
 internal class DeckMixProcessor(private val control: DeckControl) : BaseAudioProcessor() {
     private var dsp: DeckDsp? = null
     private var cursorUs = C.TIME_UNSET
+    /** Where the sound was when the processor was last flushed. */
+    private var resumeUs = C.TIME_UNSET
 
     override fun onConfigure(inputAudioFormat: AudioProcessor.AudioFormat): AudioProcessor.AudioFormat {
         if (inputAudioFormat.encoding != C.ENCODING_PCM_16BIT || inputAudioFormat.channelCount !in 1..8 ||
@@ -53,7 +55,12 @@ internal class DeckMixProcessor(private val control: DeckControl) : BaseAudioPro
         // Media3 flushes every processor, also the ones a format left out of the path.
         val usable = inputAudioFormat.encoding == C.ENCODING_PCM_16BIT && inputAudioFormat.sampleRate > 0 &&
             inputAudioFormat.channelCount in 1..8
-        dsp = if (usable) DeckDsp(inputAudioFormat.sampleRate, inputAudioFormat.channelCount) else null
+        // Media3 also flushes its processors each time a deck's speed is nudged, many times during a mix
+        // played in time. The filters, the echo and the reverb must live through that: started afresh
+        // each time, a filtered deck clicked and an echo lost its tail. They only start afresh after a jump in the title.
+        val kept = dsp?.takeIf { usable && it.sampleRate == inputAudioFormat.sampleRate && it.channels == inputAudioFormat.channelCount }
+        dsp = kept ?: if (usable) DeckDsp(inputAudioFormat.sampleRate, inputAudioFormat.channelCount) else null
+        if (cursorUs != C.TIME_UNSET) resumeUs = cursorUs
         cursorUs = C.TIME_UNSET
         control.active = usable
     }
@@ -68,7 +75,12 @@ internal class DeckMixProcessor(private val control: DeckControl) : BaseAudioPro
         if (announced != C.TIME_UNSET) {
             control.pendingTimeUs = C.TIME_UNSET
             val position = announced - control.offsetUs
-            if (cursorUs == C.TIME_UNSET || kotlin.math.abs(position - cursorUs) > 300_000L) cursorUs = position
+            if (cursorUs == C.TIME_UNSET || kotlin.math.abs(position - cursorUs) > 300_000L) {
+                // A real jump (a seek, another title): what the filters and the echo remember belongs elsewhere.
+                val from = if (cursorUs != C.TIME_UNSET) cursorUs else resumeUs
+                if (from != C.TIME_UNSET && kotlin.math.abs(position - from) > JUMP_US) dsp?.reset()
+                cursorUs = position
+            }
         }
         val rate = inputAudioFormat.sampleRate
         val channels = inputAudioFormat.channelCount
@@ -108,5 +120,7 @@ internal class DeckMixProcessor(private val control: DeckControl) : BaseAudioPro
         output.flip()
     }
 
-    override fun onReset() { dsp = null; control.active = false }
+    override fun onReset() { dsp = null; resumeUs = C.TIME_UNSET; control.active = false }
+
+    private companion object { const val JUMP_US = 1_500_000L }
 }

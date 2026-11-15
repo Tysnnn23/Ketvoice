@@ -89,10 +89,14 @@ object CanvasRepo {
         // original resolves again from the catalogue.
         val curated = MediaOverrides.canvas(track)
         val curatedName = curated?.let { "kvov-" + sha(it) }
-        val currentName = _paths.value[track.id]?.let { File(it).nameWithoutExtension }
-        if (currentName != null && currentName.startsWith("kvov-") && currentName != curatedName) {
+        val current = _paths.value[track.id]
+        val currentName = current?.let { File(it).nameWithoutExtension }
+        // What is shown now gives way whenever it is not what the owner chose: the catalogue's Canvas
+        // already on the device when a Canvas was chosen (it used to stay, the new one never shown),
+        // an earlier choice, or a choice that was since removed.
+        if (current != null && givesWay(current, curated, curatedName)) {
             _paths.value = _paths.value - track.id
-            ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().remove(track.id).apply()
+            if (currentName?.startsWith("kvov-") == true) ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().remove(track.id).apply()
         }
         if (curatedName != null && currentName != curatedName) failed.remove(track.id)
         if (localPath(track.id) != null || (!force && recentlyFailed())) return@withContext
@@ -165,6 +169,13 @@ object CanvasRepo {
                 failed[track.id] = System.currentTimeMillis()
             }
         }
+    }
+
+    /** True when the Canvas shown for a title ([current], a file or a link) is not the one the owner's choice ([curated]) calls for. */
+    internal fun givesWay(current: String, curated: String?, curatedName: String?): Boolean {
+        val name = File(current).nameWithoutExtension
+        if (curated == null) return current.startsWith("https://") || name.startsWith("kvov-")
+        return if (streamedFromItsLink(curated)) current != curated else name != curatedName
     }
 
     /** A Canvas address outside Ketvoice's own storage: played from its link, whatever its size. */

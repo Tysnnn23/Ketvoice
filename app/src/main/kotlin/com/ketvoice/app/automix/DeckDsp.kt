@@ -268,7 +268,7 @@ internal class DeckAutomation(
  * sample (no zipper noise), two second-order filters whose cut-offs follow their curves,
  * an echo and a reverb fed after the filters.
  */
-internal class DeckDsp(private val sampleRate: Int, private val channels: Int) {
+internal class DeckDsp(val sampleRate: Int, val channels: Int) {
     private val high = Biquad(channels)
     private val low = Biquad(channels)
     /** The band of the voice, on the centre of the image: high-passed then low-passed. */
@@ -480,7 +480,7 @@ internal object DeckSync {
      * While the title is audible only clear errors are corrected, and more gently.
      */
     fun speed(rate: Float, errorMs: Double, audible: Boolean): Float {
-        val deadBand = if (audible) 12.0 else 4.0
+        val deadBand = if (audible) AUDIBLE_DEAD_BAND_MS else 4.0
         if (abs(errorMs) < deadBand) return rate
         val strength = if (audible) .00035 else .0008
         val correction = (errorMs * strength).coerceIn(-.04, .04)
@@ -500,6 +500,14 @@ internal object DeckSync {
     }
     private const val RIDE_FROM = .12f
     private const val RIDE_TO = .88f
+
+    /** While both titles are heard, the incoming one is only nudged for an error a listener would hear as a flam. */
+    const val AUDIBLE_DEAD_BAND_MS = 18.0
+    /** The common tempo of a ride moves in few, larger steps: each change of speed costs the sound a little. */
+    fun rideStep(speed: Float): Float = (Math.round(speed / RIDE_STEP) * RIDE_STEP).toFloat()
+    private const val RIDE_STEP = .01
+    /** Least time between two changes of a deck's speed while it is heard. */
+    const val AUDIBLE_SPEED_HOLD_MS = 1_200L
 
     /** A speed on the grid of steps too small to hear. */
     fun stepped(speed: Float): Float = (Math.round(speed / STEP) * STEP).toFloat()

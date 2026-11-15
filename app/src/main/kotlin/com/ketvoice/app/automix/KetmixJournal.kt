@@ -41,7 +41,10 @@ internal object KetmixJournal {
         val pathOut: Boolean? = null,
         val pathIn: Boolean? = null,
         /** The transition rang on past the end of the outgoing title. */
-        val tail: Boolean = false
+        val tail: Boolean = false,
+        /** While both titles were heard in time: the largest gap between their beats, and how often a speed was changed. */
+        val syncWorstMs: Int? = null,
+        val speedChanges: Int? = null
     )
 
     private val _entries = MutableStateFlow<List<Entry>>(emptyList())
@@ -87,6 +90,8 @@ internal object KetmixJournal {
                 e.mixAtMs?.let { append(" · mix at ").append(seconds(it)) }
                 e.inAtMs?.let { append(" → in ").append(seconds(it)) }
                 if (e.tail) append(" · rings past the end")
+                e.syncWorstMs?.let { append(" · sync within ").append(it).append(" ms") }
+                e.speedChanges?.let { append(" · ").append(it).append(" speed changes") }
                 if (e.pathOut != null || e.pathIn != null)
                     append(" · paths out ").append(if (e.pathOut == true) "on" else "off").append(", in ").append(if (e.pathIn == true) "on" else "off")
                 append('\n')

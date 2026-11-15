@@ -15,6 +15,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
@@ -93,6 +95,22 @@ private fun Ket27SettingsBar(category: SettingsCategory?, onBack: () -> Unit, mo
     }
 }
 
+/**
+ * A row that answers the finger the way a list row does on iOS: it darkens at once under the
+ * touch and lets go slowly, instead of giving no sign at all.
+ */
+@Composable
+internal fun Modifier.rowPress(role: Role = Role.Button, onClick: () -> Unit): Modifier {
+    val theme = LocalTheme.current
+    val source = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val pressed by source.collectIsPressedAsState()
+    val shade by androidx.compose.animation.core.animateFloatAsState(if (pressed) RowPress.SHADE else 0f,
+        androidx.compose.animation.core.tween(if (pressed) RowPress.IN_MS else RowPress.OUT_MS), label = "row-press")
+    return drawBehind { if (shade > 0f) drawRect(theme.onBackground.copy(alpha = shade)) }
+        .clickable(source, null, role = role, onClick = onClick)
+}
+internal object RowPress { const val SHADE = .09f; const val IN_MS = 40; const val OUT_MS = 320 }
+
 /** A symbol on its coloured tile, as in the Settings of iOS. */
 @Composable
 internal fun Ket27Tile(icon: ImageVector, index: Int) {
@@ -167,7 +185,7 @@ private fun SettingsCategoryGroup(categories: List<SettingsCategory>, onCategory
     Column(Modifier.fillMaxWidth().settingsGroup()) {
         categories.forEachIndexed { index, category ->
             Row(Modifier.fillMaxWidth().testTag("settings-category-${category.name}")
-                .clickable(role = Role.Button) { onCategory(category) }.heightIn(min = if (ket) 60.dp else 80.dp)
+                .rowPress { onCategory(category) }.heightIn(min = if (ket) 60.dp else 80.dp)
                 .padding(horizontal = if (ket) 16.dp else 20.dp, vertical = if (ket) 9.dp else 16.dp), verticalAlignment = Alignment.CenterVertically) {
                 if (ket) Ket27Tile(category.icon(), category.ordinal)
                 else Icon(category.icon(), null, tint = theme.onBackground.copy(alpha = .78f), modifier = Modifier.size(23.dp))

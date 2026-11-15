@@ -200,7 +200,12 @@ class PlaybackService : MediaSessionService() {
         }
         val renderers = object : DefaultRenderersFactory(this) {
             override fun buildAudioSink(context: android.content.Context, enableFloatOutput: Boolean, enableAudioTrackPlaybackParams: Boolean): AudioSink {
+                // Half a second of sound ahead in the audio track instead of a quarter: once the app is no longer
+                // in front Android gives it fewer and slower cores, and a short buffer then runs dry in audible gaps.
+                val buffers = androidx.media3.exoplayer.audio.DefaultAudioTrackBufferSizeProvider.Builder()
+                    .setMinPcmBufferDurationUs(AUDIO_BUFFER_MIN_US).setMaxPcmBufferDurationUs(AUDIO_BUFFER_MAX_US).build()
                 val fallback = ProcessingAudioSink(DefaultAudioSink.Builder(context).setEnableFloatOutput(false)
+                    .setAudioTrackBufferSizeProvider(buffers)
                     .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
                     .setAudioProcessors(if (exactRequested) emptyArray() else arrayOf(
                         com.ketvoice.app.automix.DeckMixProcessor(deck), ReverbAudioProcessor {
@@ -420,6 +425,8 @@ class PlaybackService : MediaSessionService() {
     }
 
     companion object {
+        const val AUDIO_BUFFER_MIN_US = 500_000
+        const val AUDIO_BUFFER_MAX_US = 1_000_000
         const val CMD_SKIP_SILENCE = "ketvoice.set_skip_silence"
         const val CMD_EQUALIZER = "ketvoice.apply_equalizer"
         const val CMD_REVERB = "ketvoice.set_reverb"
