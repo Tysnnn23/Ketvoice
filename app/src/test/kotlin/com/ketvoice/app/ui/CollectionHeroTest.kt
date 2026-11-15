@@ -86,4 +86,11 @@ class CollectionHeroTest {
         val dim = androidx.compose.ui.graphics.Color(.12f, .05f, .08f)
         assertEquals(dim, com.ketvoice.app.ui.sub.PageTint.nightCap(dim))
     }
+
+    @Test fun aLightPageStaysLightUnderADarkArtwork() {
+        val white = androidx.compose.ui.graphics.Color.White
+        val page = com.ketvoice.app.ui.sub.artistPageTint(white, androidx.compose.ui.graphics.Color(.06f, .06f, .06f), dark = false)
+        assertTrue("${page.luminance()}", page.luminance() >= com.ketvoice.app.ui.sub.PageTint.DAY_MIN_LUMINANCE - .01f)
+        assertTrue(page.luminance() < .99f)
+    }
 }

@@ -181,14 +181,16 @@ class HomeAndDownloadsHostTest {
             compose.onNodeWithText("Aléatoire").assertIsDisplayed()
             compose.onNodeWithText("21 titres").assertIsDisplayed(); compose.onNodeWithText("1 titre").assertIsDisplayed()
             image("home-page-dark")
-            // Recent titles: six tiles on a phone, two by two; a tap plays from there.
-            compose.onNodeWithTag("home-recent-tiles").performScrollTo()
-            val recents = compose.onAllNodesWithTag("home-recent-tile").fetchSemanticsNodes()
-            assertEquals(6, recents.size)
-            assertEquals(recents[0].boundsInRoot.top, recents[1].boundsInRoot.top, 1f)
+            // Recent titles: a shelf of large covers; the grid shows them three by three.
+            compose.onNodeWithTag("home-list").performScrollToNode(hasTestTag("home-recent-carousel"))
+            assertTrue(compose.onAllNodesWithTag("home-recent").fetchSemanticsNodes().size >= 2)
             image("home-page-dark-recents")
             compose.onNodeWithContentDescription("Changer la présentation des récents").performClick()
-            compose.onAllNodesWithTag("home-recent-tile").assertCountEquals(0)
+            compose.onNodeWithTag("home-list").performScrollToNode(hasTestTag("home-recent-grid"))
+            compose.onAllNodesWithTag("home-recent").assertCountEquals(6)
+            val grid = compose.onAllNodesWithTag("home-recent").fetchSemanticsNodes().map { it.boundsInRoot }
+            assertEquals("three on a line", grid[0].top, grid[2].top, 1f)
+            image("home-page-dark-recent-grid")
             compose.onNodeWithTag("home-list").performScrollToNode(hasTestTag("home-week"))
             compose.onNodeWithTag("home-week").assertIsDisplayed()
             compose.onNodeWithTag("home-week-days", useUnmergedTree = true).assertExists()

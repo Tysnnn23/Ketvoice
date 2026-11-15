@@ -193,3 +193,77 @@ fun rememberCanvasAccent(path: String?): Pair<Color, Color>? {
     }
     return accent
 }
+
+/**
+ * The colour a picture is mostly made of, the way the eye sums it up: the largest group of
+ * similar pixels, desaturated ones included. A black-and-white photo with a small gold detail
+ * is grey, not gold. Pages are tinted with it; the vivid accent stays for buttons and links.
+ */
+object CoverTone {
+    private val cache = object : LinkedHashMap<String, Color>(24, .75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Color>?) = size > 48
+    }
+    fun cached(key: String): Color? = synchronized(cache) { cache[key] }
+    fun store(key: String, color: Color) { synchronized(cache) { cache[key] = color } }
+
+    /** Pixels as 0xRRGGBB (alpha ignored below 128); the average of the most populated group. */
+    fun dominant(pixels: IntArray): Color? {
+        val counts = HashMap<Int, IntArray>()
+        for (c in pixels) {
+            if ((c ushr 24) and 0xFF < 128) continue
+            val r = (c shr 16) and 0xFF; val g = (c shr 8) and 0xFF; val b = c and 0xFF
+            val key = (r / 43 shl 16) or (g / 43 shl 8) or (b / 43)
+            val bucket = counts.getOrPut(key) { IntArray(4) }
+            bucket[0] += r; bucket[1] += g; bucket[2] += b; bucket[3]++
+        }
+        val top = counts.values.maxByOrNull { it[3] } ?: return null
+        return Color(top[0] / top[3], top[1] / top[3], top[2] / top[3])
+    }
+
+    suspend fun of(bitmap: Bitmap): Color? = withContext(Dispatchers.Default) {
+        val w = 32
+        val h = (bitmap.height.toFloat() / bitmap.width * w).toInt().coerceAtLeast(1)
+        val small = Bitmap.createScaledBitmap(bitmap, w, h, true)
+        val px = IntArray(w * h)
+        small.getPixels(px, 0, w, 0, 0, w, h)
+        if (small !== bitmap) small.recycle()
+        dominant(px)
+    }
+}
+
+/** [CoverTone] of a cover, cached per address; null until it is known. */
+@Composable
+fun rememberCoverTone(url: String?): Color? {
+    if (url.isNullOrBlank()) return null
+    var tone by remember(url) { mutableStateOf(CoverTone.cached(url)) }
+    if (tone != null) return tone
+    val ctx = LocalContext.current
+    LaunchedEffect(url) {
+        val result = runCatching { coil.Coil.imageLoader(ctx).execute(ImageRequest.Builder(ctx).data(url).allowHardware(false).size(96).build()) }.getOrNull()
+        val bmp = (result?.drawable as? BitmapDrawable)?.bitmap ?: return@LaunchedEffect
+        CoverTone.of(bmp)?.let { CoverTone.store(url, it); tone = it }
+    }
+    return tone
+}
+
+/** [CoverTone] of a Canvas, from a frame a little after its start; null until it is known. */
+@Composable
+fun rememberCanvasTone(path: String?): Color? {
+    if (path.isNullOrBlank()) return null
+    val key = "canvas:$path"
+    var tone by remember(key) { mutableStateOf(CoverTone.cached(key)) }
+    if (tone != null) return tone
+    LaunchedEffect(key) {
+        val frame = withContext(Dispatchers.IO) {
+            val reader = android.media.MediaMetadataRetriever()
+            try {
+                if (path.startsWith("https://")) reader.setDataSource(path, emptyMap()) else reader.setDataSource(path)
+                reader.getScaledFrameAtTime(1_000_000L, android.media.MediaMetadataRetriever.OPTION_CLOSEST_SYNC, 96, 170)
+            } catch (_: Exception) { null } finally { runCatching { reader.release() } }
+        } ?: return@LaunchedEffect
+        val found = CoverTone.of(frame)
+        frame.recycle()
+        found?.let { CoverTone.store(key, it); tone = it }
+    }
+    return tone
+}

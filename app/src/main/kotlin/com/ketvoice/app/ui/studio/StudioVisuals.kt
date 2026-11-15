@@ -52,8 +52,11 @@ internal fun visualKindLabel(kind: String): String = when (kind) {
 
 /** What saving would send: new files, and the originals to bring back. */
 internal data class VisualChange(val cover: File? = null, val canvas: File? = null, val hero: File? = null,
-                                 val restore: Set<String> = emptySet(), val canvasOff: Boolean? = null) {
-    val isEmpty: Boolean get() = cover == null && canvas == null && hero == null && restore.isEmpty() && canvasOff == null
+                                 val restore: Set<String> = emptySet(), val canvasOff: Boolean? = null,
+                                 /** A Canvas given by its address: streamed from there, never stored. */
+                                 val canvasLink: String? = null) {
+    val isEmpty: Boolean get() = cover == null && canvas == null && hero == null && restore.isEmpty() && canvasOff == null && canvasLink == null
+    val links: Map<String, String> get() = canvasLink?.let { mapOf("canvas" to it) } ?: emptyMap()
 }
 
 /**
@@ -109,21 +112,29 @@ private fun VisualEditor(state: StudioState, target: VisualTarget) {
             onPick = { pickCover.launch(IMAGE_TYPES) }, onRestore = { restore("cover") })
     } else {
         val canvasOff = change.canvasOff ?: (saved?.canvasOff == true && "canvas" !in change.restore)
-        val canvasShown = if (canvasOff) null else change.canvas?.absolutePath ?: saved?.canvas.takeIf { "canvas" !in change.restore }
+        val canvasShown = if (canvasOff) null else change.canvas?.absolutePath ?: change.canvasLink ?: saved?.canvas.takeIf { "canvas" !in change.restore }
         Box(Modifier.fillMaxWidth().padding(vertical = 6.dp), contentAlignment = Alignment.Center) {
             StudioPreview(target.sample?.title ?: target.title, target.subtitle, coverShown, canvasShown)
         }
         VisualPart(KetIcons.Album, "Pochette", if (target.kind == MediaOverrides.ALBUM) "Pour l'album et chacun de ses titres" else "Pour ce titre",
             state("cover", change.cover), saved?.cover != null && "cover" !in change.restore, state.busy, "studio-visual-cover",
             onPick = { pickCover.launch(IMAGE_TYPES) }, onRestore = { restore("cover") })
-        CanvasEditor(state, change.canvas, onChosen = { file -> change.canvas?.delete(); change = change.copy(canvas = file, restore = change.restore - "canvas", canvasOff = null) },
+        CanvasEditor(state, change.canvas, onChosen = { file ->
+                change.canvas?.delete()
+                change = if (file != null) change.copy(canvas = file, canvasLink = null, restore = change.restore - "canvas", canvasOff = null)
+                    else change.copy(canvas = null)
+            },
             published = saved?.canvas != null && "canvas" !in change.restore && !canvasOff,
-            onRemove = { change = change.copy(restore = change.restore + "canvas", canvasOff = null) }, removeEnabled = true)
+            onRemove = { change = change.copy(restore = change.restore + "canvas", canvasOff = null, canvasLink = null) }, removeEnabled = true,
+            linked = change.canvasLink, onLink = { url ->
+                change = if (url != null) change.copy(canvas = null, canvasLink = url, restore = change.restore - "canvas", canvasOff = null)
+                    else change.copy(canvasLink = null)
+            })
         // The Canvas of this title or album can be switched off: nothing plays behind it, whatever the catalogue offers.
         GlassCapsuleButton(if (canvasOff) "Réactiver le Canvas" else "Désactiver le Canvas", null, {
             change.canvas?.delete()
-            change = if (canvasOff) change.copy(canvas = null, canvasOff = false, restore = change.restore - "canvas")
-                else change.copy(canvas = null, canvasOff = true, restore = change.restore - "canvas")
+            change = if (canvasOff) change.copy(canvas = null, canvasLink = null, canvasOff = false, restore = change.restore - "canvas")
+                else change.copy(canvas = null, canvasLink = null, canvasOff = true, restore = change.restore - "canvas")
         }, Modifier.fillMaxWidth(), enabled = !state.busy, tag = "studio-canvas-off", minHeight = 48.dp)
         if (target.kind == MediaOverrides.ALBUM && target.tracks.isNotEmpty()) StudioTitleCanvas(state, target, rights)
     }
@@ -133,10 +144,11 @@ private fun VisualEditor(state: StudioState, target: VisualTarget) {
         val sending = change
         state.run {
             PublicationApi.saveOverride(target.kind, target.key, target.label, sending.cover, sending.canvas, sending.hero,
-                sending.restore.toList(), state::onProgress, canvasOff = sending.canvasOff)
+                sending.restore.toList(), state::onProgress, canvasOff = sending.canvasOff, links = sending.links)
             listOfNotNull(sending.cover, sending.canvas, sending.hero).forEach { it.delete() }
             change = VisualChange()
-            state.info = if (sending.restore.isNotEmpty() && sending.cover == null && sending.canvas == null && sending.hero == null && sending.canvasOff == null)
+            state.info = if (sending.restore.isNotEmpty() && sending.cover == null && sending.canvas == null && sending.hero == null &&
+                    sending.canvasOff == null && sending.canvasLink == null)
                 "Original rétabli" else "Visuels enregistrés"
         }
     }, Modifier.fillMaxWidth(), prominent = true, enabled = !state.busy && rights && !change.isEmpty,

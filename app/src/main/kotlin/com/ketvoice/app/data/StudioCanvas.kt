@@ -11,9 +11,9 @@ import java.net.URL
 
 /**
  * Where a Canvas comes from in the Studio: a video file, a direct link to a video, or a
- * link to an API (a JSON answer that names the video, or a Spotify track link). The
- * device downloads the video itself and sends the file; the server never fetches an
- * address it was given.
+ * link to an API (a JSON answer that names the video, or a Spotify track link). A file is
+ * sent; a link is checked (its first bytes must be an MP4) and kept as an address, which
+ * the app then streams from where it is: nothing is downloaded, whatever its size.
  */
 object StudioCanvas {
     /** The server's limit for one Canvas. */
@@ -91,6 +91,57 @@ object StudioCanvas {
     }
 
     fun canSend(checks: List<Check>) = checks.none { it.level == Level.Blocking }
+
+    /**
+     * The address of the video a source points to, followed through an API answer or a Spotify
+     * link, once its first bytes say it is an MP4. Only those bytes are read.
+     */
+    suspend fun resolve(source: Source): String = withContext(Dispatchers.IO) {
+        val url = when (source) {
+            is Source.Spotify -> KetvoiceApi.canvas(Track("studio:canvas", "", "", "", spotifyId = source.trackId))?.url
+                ?: error("Aucun Canvas pour ce titre Spotify")
+            is Source.Link -> source.url
+        }
+        probe(url, allowJson = source is Source.Link)
+    }
+
+    private fun probe(address: String, allowJson: Boolean): String {
+        val url = URL(address)
+        require(url.protocol == "https") { "Lien HTTPS requis" }
+        val c = (url.openConnection() as HttpURLConnection).apply {
+            connectTimeout = 12_000; readTimeout = 20_000; instanceFollowRedirects = true
+            setRequestProperty("Accept", "video/mp4,application/json;q=0.9,*/*;q=0.5")
+            setRequestProperty("User-Agent", "Ketvoice-Studio")
+            // Only the start of the file: enough to know what it is.
+            setRequestProperty("Range", "bytes=0-${MAX_JSON - 1}")
+        }
+        try {
+            require(c.responseCode in 200..299) { "Lien inaccessible (HTTP ${c.responseCode})" }
+            require(c.url.protocol == "https") { "Lien HTTPS requis" }
+            val type = c.contentType.orEmpty().lowercase()
+            val input = java.io.BufferedInputStream(c.inputStream)
+            input.mark(16)
+            val head = ByteArray(16).also { val read = input.read(it); require(read > 0) { "Réponse vide" } }
+            input.reset()
+            if (allowJson && ("json" in type || head.first().toInt().toChar() in "{[")) {
+                val text = java.io.ByteArrayOutputStream().also { out ->
+                    val buffer = ByteArray(8 * 1024)
+                    while (out.size() <= MAX_JSON) {
+                        val read = input.read(buffer, 0, minOf(buffer.size, MAX_JSON + 1 - out.size()))
+                        if (read <= 0) break
+                        out.write(buffer, 0, read)
+                    }
+                }.toByteArray()
+                require(text.size <= MAX_JSON) { "Réponse de l'API trop volumineuse" }
+                val video = videoUrlIn(JSONTokener(String(text, Charsets.UTF_8)).nextValue())
+                    ?: error("L'API ne donne pas de lien vers une vidéo")
+                return probe(video, allowJson = false)
+            }
+            require(isMp4(head)) { "Ce lien n'est pas une vidéo MP4" }
+            // The address after redirects is the one that serves the video.
+            return c.url.toString()
+        } finally { c.disconnect() }
+    }
 
     /** Downloads the Canvas a source points to into [dest]. */
     suspend fun download(source: Source, dest: File): File = withContext(Dispatchers.IO) {

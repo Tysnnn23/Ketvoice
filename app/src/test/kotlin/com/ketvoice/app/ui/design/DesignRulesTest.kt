@@ -81,4 +81,16 @@ class DesignRulesTest {
         assertTrue(MixVisuals.stripLevel(10, count, true, 1f) > MixVisuals.stripLevel(10, count, true, 0f))
         assertEquals(0f, MixVisuals.stripLevel(3, 1, true), 0f)
     }
+
+    @Test fun aPageTakesTheColourItsArtworkIsMostlyMadeOf() {
+        // A black-and-white photo with a small gold flame: grey-black, not gold.
+        val pixels = IntArray(1000) { i -> when {
+            i < 40 -> 0xFFD4A020.toInt()
+            i < 700 -> 0xFF101010.toInt()
+            else -> 0xFFC8C8C8.toInt()
+        } }
+        val tone = com.ketvoice.app.theme.CoverTone.dominant(pixels)!!
+        assertEquals(16f / 255f, tone.red, .01f); assertEquals(tone.red, tone.blue, .01f)
+        assertNull(com.ketvoice.app.theme.CoverTone.dominant(IntArray(10) { 0x00FFFFFF }))
+    }
 }

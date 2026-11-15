@@ -181,8 +181,8 @@ class FramingTest {
         assertEquals(.4f, com.ketvoice.app.data.ListeningWeek.barShare(3_000, 9_000), 1e-4f)
         assertEquals("A day without music keeps a stub", .1f, com.ketvoice.app.data.ListeningWeek.barShare(0, 9_000), 0f)
         assertEquals(.1f, com.ketvoice.app.data.ListeningWeek.barShare(0, 0), 0f)
-        assertEquals(2, com.ketvoice.app.ui.home.recentColumns(364f)); assertEquals(2, com.ketvoice.app.ui.home.recentColumns(200f))
-        assertEquals(3, com.ketvoice.app.ui.home.recentColumns(600f)); assertEquals(4, com.ketvoice.app.ui.home.recentColumns(1400f))
+        assertEquals(3, com.ketvoice.app.ui.home.recentColumns(364f)); assertEquals(3, com.ketvoice.app.ui.home.recentColumns(200f))
+        assertEquals(5, com.ketvoice.app.ui.home.recentColumns(600f)); assertEquals(6, com.ketvoice.app.ui.home.recentColumns(1400f))
     }
 
     @Test fun twoFingersGrowAndShrinkAroundTheCentre() {

@@ -33,7 +33,8 @@ import java.io.File
  */
 @Composable
 internal fun CanvasEditor(state: StudioState, chosen: File?, onChosen: (File?) -> Unit, published: Boolean = false,
-                          onRemove: (() -> Unit)? = null, removeEnabled: Boolean = false) {
+                          onRemove: (() -> Unit)? = null, removeEnabled: Boolean = false,
+                          linked: String? = null, onLink: ((String?) -> Unit)? = null) {
     val theme = LocalTheme.current
     var source by remember { mutableIntStateOf(0) }
     var link by remember { mutableStateOf("") }
@@ -47,7 +48,7 @@ internal fun CanvasEditor(state: StudioState, chosen: File?, onChosen: (File?) -
         }
     }
     val pick = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) state.run { onChosen(state.files.copy(uri, StudioCanvas.MAX_BYTES, setOf("mp4", "m4v", "mov"))) }
+        if (uri != null) state.run { onLink?.invoke(null); onChosen(state.files.copy(uri, StudioCanvas.MAX_BYTES, setOf("mp4", "m4v", "mov"))) }
     }
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(theme.card).padding(16.dp).testTag("studio-canvas"),
         verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -56,13 +57,14 @@ internal fun CanvasEditor(state: StudioState, chosen: File?, onChosen: (File?) -
             Column(Modifier.weight(1f).padding(start = 12.dp)) {
                 Text("Canvas", color = theme.onBackground, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                 Text(when {
+                    linked != null -> "Lien · diffusé depuis son adresse, sans limite de taille"
                     chosen != null -> "Nouvelle vidéo · à envoyer"
                     published -> "En ligne"
                     else -> "Aucun · vidéo courte en boucle derrière le titre"
                 }, color = theme.secondary, fontSize = 12.sp)
             }
-            if (chosen != null) Text("Annuler", color = theme.secondary, fontSize = 14.sp,
-                modifier = Modifier.clip(RoundedCornerShape(12.dp)).clickable(role = Role.Button) { onChosen(null) }
+            if (chosen != null || linked != null) Text("Annuler", color = theme.secondary, fontSize = 14.sp,
+                modifier = Modifier.clip(RoundedCornerShape(12.dp)).clickable(role = Role.Button) { onChosen(null); onLink?.invoke(null) }
                     .heightIn(min = 48.dp).wrapContentHeight(Alignment.CenterVertically).padding(horizontal = 10.dp))
         }
         GlassSegmentedControl(listOf("Fichier", "Lien vidéo", "API"), source, { source = it }, tag = "studio-canvas-source")
@@ -73,11 +75,15 @@ internal fun CanvasEditor(state: StudioState, chosen: File?, onChosen: (File?) -
                 OutlinedTextField(link, { link = it.take(2048) }, singleLine = true, enabled = !state.busy,
                     label = { Text(if (source == 1) "Lien direct vers une vidéo MP4" else "Lien d'API ou lien de titre Spotify") },
                     modifier = Modifier.fillMaxWidth().testTag("studio-canvas-link"), colors = studioFieldColors())
-                GlassCapsuleButton("Récupérer la vidéo", null, {
+                GlassCapsuleButton(if (onLink != null) "Utiliser ce lien" else "Récupérer la vidéo", null, {
                     val parsed = StudioCanvas.classify(link)
                     if (parsed == null) state.error = "Lien HTTPS requis"
+                    // A link is not downloaded: it is checked, then streamed from where it is.
+                    else if (onLink != null) state.run { val url = StudioCanvas.resolve(parsed); onChosen(null); onLink(url) }
                     else state.run { onChosen(StudioCanvas.download(parsed, state.files.newFile("mp4"))) }
                 }, Modifier.fillMaxWidth(), enabled = !state.busy && link.isNotBlank(), tag = "studio-canvas-fetch", minHeight = 48.dp)
+                if (onLink != null) Text("La vidéo est lue depuis ce lien : rien n'est téléchargé ni stocké, sans limite de taille.",
+                    color = theme.secondary, fontSize = 12.sp)
             }
         }
         if (chosen != null && checks.isNotEmpty()) Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.testTag("studio-canvas-checks")) {

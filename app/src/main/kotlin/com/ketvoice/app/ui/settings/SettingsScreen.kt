@@ -21,6 +21,7 @@ import com.ketvoice.app.ui.common.Text
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.*
+import androidx.compose.ui.platform.testTag
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -412,16 +413,16 @@ fun SettingsScreen() {
             // ==================================================== KETMIX
             Section("KETMIX (BÊTA)") {
                 SToggle(KetIcons.Shuffle, "Ketmix",
-                    "La fin d'un titre se mêle au début du suivant, comme le ferait un DJ : tempos accordés, basses échangées, écho, filtres ou réverbération selon les deux titres. Le chant n'est jamais coupé.",
+                    "La fin d'un titre se mêle au début du suivant, comme le ferait un DJ : tempos accordés, basses échangées, écho, filtres ou réverbération selon les deux titres. Le chant n'est jamais coupé : une voix qui se termine passe en retrait sous le titre suivant.",
                     AppSettings.automix.value) { AppSettings.automix.value = it; SettingsStore.save() }
                 SRow(KetIcons.Sliders, "Intensité du mix",
                     sub = "Longueur des transitions et écart de tempo accepté",
                     value = when (AppSettings.automixIntensity.value) { 0 -> "Discret"; 2 -> "DJ"; else -> "Équilibré" }) {
                     choice = ChoiceSpec("Intensité du mix", "S'applique dès la prochaine transition.",
                         AppSettings.automixIntensity.value.toString(), listOf(
-                            ChoiceOption("0", "Discret", "Chaque titre joue jusqu'au bout, transitions courtes, tempos à 4 % près, pas d'écho"),
-                            ChoiceOption("1", "Équilibré", "Jusqu'à 16 secondes de mix après le chant, tempos à 6 % près"),
-                            ChoiceOption("2", "DJ", "Mix dès la fin du chant, transitions longues, tempos à 8 % près"))
+                            ChoiceOption("0", "Discret", "Chaque titre joue jusqu'au bout, mix jusqu'à 8 mesures, tempos à 5 % près, pas d'écho"),
+                            ChoiceOption("1", "Équilibré", "Mix jusqu'à 16 mesures, sous les 2 dernières mesures chantées, tempos à 8 % près"),
+                            ChoiceOption("2", "DJ", "Mix jusqu'à 16 mesures, sous les 4 dernières mesures chantées, tempos à 12 % près"))
                     ) { id -> AppSettings.automixIntensity.value = id.toIntOrNull()?.coerceIn(0, 2) ?: 1; SettingsStore.save() }
                 }
                 SRow(KetIcons.Audio, "Analyse des titres",
@@ -456,6 +457,7 @@ fun SettingsScreen() {
                     "Quand un titre est répété, sa fin se mêle à son propre début, sur le temps, au lieu de repartir après un blanc.",
                     AppSettings.ketmixLoops.value) { AppSettings.ketmixLoops.value = it; SettingsStore.save() }
                 com.ketvoice.app.ui.player.AutomixStatusLine(Modifier.padding(horizontal = 16.dp, vertical = 6.dp), th.secondary, 12.sp)
+                KetmixJournalPanel()
                 Text("Ketmix est en bêta. La minuterie et la sortie bit-perfect ne sont jamais mixées. Une dernière note n'est jamais couverte : le titre suivant part juste après, sur le temps.",
                     color = th.secondary, fontSize = 11.sp, lineHeight = 16.sp, modifier = Modifier.padding(bottom = 8.dp))
             }
@@ -1127,5 +1129,32 @@ private fun CacheLimitRow() {
                 }
             }
         }
+    }
+}
+
+/**
+ * The last transitions Ketmix played or gave up, and a button to copy them: what a listener
+ * sends when a mix sounded wrong, so that it can be understood and fixed.
+ */
+@Composable
+private fun KetmixJournalPanel() {
+    val th = LocalTheme.current
+    val entries by com.ketvoice.app.automix.KetmixJournal.entries.collectAsState()
+    val context = androidx.compose.ui.platform.LocalContext.current
+    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp).testTag("ketmix-journal"),
+        verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text("Journal des mix", color = th.onBackground, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+        if (entries.isEmpty()) Text("Aucune transition depuis le lancement de l'app.", color = th.secondary, fontSize = 12.sp)
+        entries.take(5).forEach { e ->
+            Text("${e.from} → ${e.to}", localize = false, color = th.onBackground, fontSize = 12.sp, maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            Text(if (e.kind != com.ketvoice.app.automix.MixKind.None) "${e.kind.name} · ${e.reason}" + (if (e.precise == false) " · fade only" else "")
+                else e.outcome, localize = false, color = th.secondary, fontSize = 11.sp, maxLines = 1)
+        }
+        if (entries.isNotEmpty()) com.ketvoice.app.ui.common.GlassCapsuleButton("Copier le journal", null, {
+            val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+            clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Ketmix", com.ketvoice.app.automix.KetmixJournal.text(entries)))
+            android.widget.Toast.makeText(context, com.ketvoice.app.data.AppText.t("Journal copié"), android.widget.Toast.LENGTH_SHORT).show()
+        }, Modifier.fillMaxWidth().padding(top = 4.dp), tag = "ketmix-journal-copy", minHeight = 44.dp)
     }
 }

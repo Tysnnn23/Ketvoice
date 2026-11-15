@@ -41,34 +41,37 @@ class TransitionPlannerTest {
         val plan = plan(outro(120f), intro(124f), sungUntil = 170_000)
         assertEquals(MixKind.Beatmatch, plan.kind)
         assertEquals("The incoming title follows the outgoing tempo", 120f / 124f, plan.rate, 1e-4f)
-        assertEquals("32 beats at 120 BPM", 16_000L, plan.overlapMs)
+        assertEquals("64 beats at 120 BPM", 32_000L, plan.overlapMs)
         assertTrue("The mix starts on a beat of the outgoing title", onBeat(plan.outMs, 155_000.0, 120f))
         assertTrue("The incoming title enters on its first beat", onBeat(plan.inMs, 500.0, 124f))
         assertEquals(500L, plan.inMs)
-        assertTrue("Never before the singing is over", plan.outMs >= 170_300)
+        assertTrue("At most two bars under the last sung words (${plan.outMs})", plan.outMs >= 170_300 - 4_000)
         assertTrue("Both are heard until the outgoing title really ends", plan.outMs + plan.overlapMs <= 199_000)
+        assertEquals("the voice that ends steps back", 170_300L, plan.sungUntilMs)
         assertTrue("The bass changes hands on a beat in the middle", onBeat(plan.swapMs, 155_000.0, 120f) &&
             abs(plan.swapMs - (plan.outMs + plan.overlapMs / 2)) <= 500)
-        assertEquals(plan.inMs + (16_000 * plan.rate).toLong().toDouble(), plan.inEndMs.toDouble(), 2.0)
+        assertEquals(plan.inMs + (32_000 * plan.rate).toLong().toDouble(), plan.inEndMs.toDouble(), 2.0)
     }
 
     @Test fun aTempoReadTwiceAsFastIsTheSamePulse() {
         val plan = plan(outro(140f), intro(70f), sungUntil = 165_000)
         assertEquals(MixKind.Beatmatch, plan.kind)
         assertEquals(1f, plan.rate, 1e-4f)
-        // 140 BPM is a bar pulse already; 32 beats of it.
-        assertEquals((32 * 60_000f / 140f).toLong().toDouble(), plan.overlapMs.toDouble(), 2.0)
+        // 140 BPM is a bar pulse already; 64 beats of it.
+        assertEquals((64 * 60_000f / 140f).toLong().toDouble(), plan.overlapMs.toDouble(), 2.0)
         val fast = plan(outro(174f), intro(87f), sungUntil = 160_000)
         assertEquals("174 BPM is counted on its 87 BPM pulse", (32 * 60_000f / 87f).toLong().toDouble(), fast.overlapMs.toDouble(), 2.0)
     }
 
     @Test fun tempoRangeFollowsTheIntensity() {
         // Listeners hear a change of speed from about 5 %: the ranges stay around it.
-        assertEquals(.04f, MixSettings(0).tempoRange, 0f); assertEquals(.06f, MixSettings(1).tempoRange, 0f); assertEquals(.08f, MixSettings(2).tempoRange, 0f)
-        assertEquals("5 % apart: balanced plays them in time", MixKind.Beatmatch, plan(outro(120f), intro(126f), sungUntil = 170_000).kind)
-        assertEquals("discreet does not, and does without an echo", MixKind.Filter, plan(outro(120f), intro(126f), intensity = 0, sungUntil = 170_000).kind)
-        assertEquals("7 % apart: only DJ; balanced leaves on an echo", MixKind.Echo, plan(outro(120f), intro(128.4f), sungUntil = 170_000).kind)
-        assertEquals(MixKind.Beatmatch, plan(outro(120f), intro(128.4f), intensity = 2, sungUntil = 170_000).kind)
+        // The tempos meet half-way, so each title moves by half of these: under the 5 % listeners notice.
+        assertEquals(.05f, MixSettings(0).tempoRange, 0f); assertEquals(.08f, MixSettings(1).tempoRange, 0f); assertEquals(.12f, MixSettings(2).tempoRange, 0f)
+        assertEquals("5 % apart: in time, even discreet", MixKind.Beatmatch, plan(outro(120f), intro(126f), intensity = 0, sungUntil = 170_000).kind)
+        assertEquals("7 % apart: balanced plays them in time", MixKind.Beatmatch, plan(outro(120f), intro(128.4f), sungUntil = 170_000).kind)
+        assertEquals("discreet does not, and does without an echo", MixKind.Filter, plan(outro(120f), intro(128.4f), intensity = 0, sungUntil = 170_000).kind)
+        assertEquals("11 % apart: only DJ; balanced leaves on an echo", MixKind.Echo, plan(outro(120f), intro(133.5f), sungUntil = 170_000).kind)
+        assertEquals(MixKind.Beatmatch, plan(outro(120f), intro(133.5f), intensity = 2, sungUntil = 170_000).kind)
         assertEquals("20 % apart: nobody stretches that far", MixKind.Echo, plan(outro(120f), intro(150f), intensity = 2, sungUntil = 170_000).kind)
     }
 
@@ -100,16 +103,16 @@ class TransitionPlannerTest {
     }
 
     @Test fun aMixStartsWhereAPhraseOfTheOutgoingTitleStarts() {
-        // Phrases every 16 s from 171 s; without phrases the mix would start at 167 s.
+        // Without phrases the 64-beat mix starts at 163 s; phrases every 16 s from 165 s move it there.
         val plain = plan(outro(120f, bar = 0), intro(120f, bar = 0), sungUntil = 165_000)
-        assertEquals(167_000L, plain.outMs); assertFalse(plain.onPhrase)
-        val phrased = plan(outro(120f, bar = 0, phrase = 171_000.0), intro(120f, bar = 0), sungUntil = 165_000)
+        assertEquals(163_000L, plain.outMs); assertFalse(plain.onPhrase)
+        val phrased = plan(outro(120f, bar = 0, phrase = 165_000.0), intro(120f, bar = 0), sungUntil = 165_000)
         assertEquals(MixKind.Beatmatch, phrased.kind)
-        assertEquals(171_000L, phrased.outMs); assertTrue(phrased.onPhrase)
-        assertEquals("32 beats still", 16_000L, phrased.overlapMs)
-        // Never before the singing is over, nor so late that the overlap leaves the title.
+        assertEquals(165_000L, phrased.outMs); assertTrue(phrased.onPhrase)
+        assertEquals("64 beats still", 32_000L, phrased.overlapMs)
+        // Never earlier than two bars before the singing ends, nor so late that the overlap leaves the title.
         val tooLate = plan(outro(120f, bar = 0, phrase = 187_000.0), intro(120f, bar = 0), sungUntil = 165_000)
-        assertTrue(tooLate.outMs + tooLate.overlapMs <= 199_000); assertTrue(tooLate.outMs >= 165_300)
+        assertTrue(tooLate.outMs + tooLate.overlapMs <= 199_000); assertTrue(tooLate.outMs >= 165_300 - 4_000)
         // An echo leaves on the phrase boundary just before the end of the body.
         val echo = plan(outro(120f, bar = 0, phrase = 167_000.0), intro(150f), sungUntil = 165_000)
         assertEquals(MixKind.Echo, echo.kind); assertEquals(183_000L, echo.outMs); assertTrue(echo.onPhrase)
@@ -137,11 +140,11 @@ class TransitionPlannerTest {
         val clash = plan(outro(120f, key = 0), intro(120f, key = 6), sungUntil = 165_000)
         assertEquals(MixKind.Beatmatch, clash.kind)
         assertTrue(clash.clash)
-        assertEquals("16 beats instead of 32", 8_000L, clash.overlapMs)
+        assertEquals("16 beats instead of 64", 8_000L, clash.overlapMs)
         // C major into G major, or into A minor: neighbours, the full length.
         for (friend in listOf(7, 12 + 9, 0)) {
             val plan = plan(outro(120f, key = 0), intro(120f, key = friend), sungUntil = 165_000)
-            assertFalse(plan.clash); assertEquals(16_000L, plan.overlapMs)
+            assertFalse(plan.clash); assertEquals(32_000L, plan.overlapMs)
         }
         // A key that was not read, or that the music does not give, is no reason to shorten anything.
         assertFalse(plan(outro(120f, key = 0), intro(120f, key = MusicalKey.NONE), sungUntil = 165_000).clash)
@@ -180,15 +183,16 @@ class TransitionPlannerTest {
     }
 
     @Test fun theOverlapShrinksToTheRoomLeftAfterTheSinging() {
-        // Singing until 12 s before the end: 32 beats (16 s) do not fit, 16 beats (8 s) do.
+        // Singing until 12 s before the end: even two bars under the last words, 32 beats (16 s) do not fit, 16 do.
         val plan = plan(outro(120f), intro(120f), sungUntil = 187_000)
         assertEquals(MixKind.Beatmatch, plan.kind)
         assertEquals(8_000L, plan.overlapMs)
-        assertTrue(plan.outMs >= 187_300)
-        // Singing until the very end and a soft ending: a short crossfade, never a beat mix over the voice.
+        assertTrue(plan.outMs >= 187_300 - 4_000)
+        // Singing until the very end: 8 beats under the last words, the voice stepping back; discreet waits for the end of the singing.
         val late = plan(outro(120f), intro(120f), sungUntil = 198_000)
-        assertEquals(MixKind.Filter, late.kind)
-        assertEquals(2_500L, late.overlapMs)
+        assertEquals(MixKind.Beatmatch, late.kind)
+        assertEquals(4_000L, late.overlapMs); assertTrue(late.sungUntilMs > late.outMs)
+        assertEquals(MixKind.Filter, plan(outro(120f), intro(120f), intensity = 0, sungUntil = 198_000).kind)
     }
 
     @Test fun howMuchOfAnInstrumentalEndingIsSkippedDependsOnTheIntensity() {
@@ -196,10 +200,10 @@ class TransitionPlannerTest {
         val balanced = plan(outro(120f), intro(120f), intensity = 1, sungUntil = 160_000)
         val dj = plan(outro(120f), intro(120f), intensity = 2, sungUntil = 160_000)
         assertEquals("Discreet plays the ending to its last bar", 199_000L, discreet.outMs + discreet.overlapMs)
-        assertEquals("16 beats at most when discreet", 8_000L, discreet.overlapMs)
+        assertEquals("32 beats at most when discreet", 16_000L, discreet.overlapMs)
         assertEquals(0L, MixSettings(0).skippableOutroMs)
-        assertTrue("Balanced leaves out 16 s of an instrumental ending at most", balanced.outMs + balanced.overlapMs in 182_500..183_500)
-        assertTrue("DJ mixes as soon as the singing is over", dj.outMs in 160_300..161_000)
+        assertTrue("Balanced leaves out 16 s of an instrumental ending at most", balanced.outMs + balanced.overlapMs >= 199_000 - 16_000)
+        assertTrue("DJ mixes from four bars before the singing ends, here from the start of what was read (${dj.outMs})", dj.outMs in 155_000..156_000)
         assertEquals("DJ mixes over 64 beats", 32_000L, dj.overlapMs)
     }
 

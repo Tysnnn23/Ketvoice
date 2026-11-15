@@ -226,6 +226,7 @@ internal object Automix {
                     throw cancelled
                 } catch (failure: Exception) {
                     android.util.Log.w("KetvoiceAutomix", "transition failed: ${failure.javaClass.simpleName}")
+                    commit("failed: ${failure.javaClass.simpleName}")
                     settled += key
                     say("Pas de mix · le titre suivant n'a pas pu être préparé")
                 } finally {
@@ -240,8 +241,19 @@ internal object Automix {
         MediaOverrides.normalize(a.album) == MediaOverrides.normalize(b.album) &&
         MediaOverrides.normalize(MediaOverrides.mainArtist(a.artist)) == MediaOverrides.normalize(MediaOverrides.mainArtist(b.artist))
 
+    /** What is known of the transition being prepared, for [KetmixJournal]. */
+    private var draft: KetmixJournal.Entry? = null
+
+    private fun note(update: (KetmixJournal.Entry) -> KetmixJournal.Entry) { draft = draft?.let(update) }
+
+    private fun commit(outcome: String) {
+        draft?.let { KetmixJournal.add(it.copy(outcome = outcome, at = System.currentTimeMillis())) }
+        draft = null
+    }
+
     /** The transition is given up for this pair: say why, and do not try again. */
     private fun skip(reason: String): Boolean {
+        commit("not mixed: $reason")
         say("Pas de mix · " + when (reason) {
             "album in order" -> "album joué dans l'ordre"
             "gapless album" -> "album sans blanc entre les titres"
@@ -292,6 +304,7 @@ internal object Automix {
         }
 
         _ui.value = Ui(Phase.Preparing, current, next.track)
+        draft = KetmixJournal.Entry(System.currentTimeMillis(), "${current.title} — ${current.artist}", "${next.track.title} — ${next.track.artist}", "")
         say("Préparation du titre suivant…")
         Player.warmForAutomix(next.track)
         // The next title is resolved now (or taken from what was prefetched): it is loaded long before any mix starts.
@@ -330,6 +343,11 @@ internal object Automix {
         val out = MixFacts(duration, outro, vocalEndMs = Vocals.endMs(LyricsRepo.state.value.lines, duration))
         val incoming = MixFacts(nextDuration, intro, vocalStartMs = voice.await())
         val clockOk = clock.await()
+        note { it.copy(clock = clockOk, outBpm = outro?.bpm ?: 0f, outConfidence = outro?.confidence ?: 0f, outKey = outro?.key ?: MusicalKey.UNREAD,
+            inBpm = intro?.bpm ?: 0f, inConfidence = intro?.confidence ?: 0f, inKey = intro?.key ?: MusicalKey.UNREAD,
+            sungUntilMs = out.vocalEndMs, sungFromMs = incoming.vocalStartMs,
+            analysis = listOfNotNull(if (outro == null) "outro not read" else null, if (intro == null) "intro not read" else null,
+                depth.name.lowercase()).joinToString(", ")) }
         // Without the decks' processors in the sound path only a trim or a plain fade can be played;
         // without beats to rely on (too late for them), the transitions that need none remain.
         fun planFor(effects: Boolean, beats: Boolean = true): MixPlan = TransitionPlanner.plan(out, incoming,
@@ -395,6 +413,9 @@ internal object Automix {
         }
 
         say("Mix en cours · ${MixWords.describe(plan)}")
+        note { it.copy(kind = plan.kind, reason = plan.reason, rate = plan.rate, overlapMs = plan.overlapMs, onPhrase = plan.onPhrase,
+            precise = s.precise) }
+        commit("mixed")
         if (plan.kind == MixKind.Beatmatch || plan.kind == MixKind.Filter) lastVariant = plan.variant
         s.baseVolume = main.volume
         if (s.precise) deck.volume = s.baseVolume

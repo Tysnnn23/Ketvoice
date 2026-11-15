@@ -25,14 +25,19 @@ object PublicationApi {
             admin?.let { setRequestProperty("x-ketvoice-admin", it) }
         }
 
+    /** The server did not recognise the owner's session (expired token): renewed and sent once more. */
+    internal class Unauthorized(message: String) : IllegalStateException(message)
+
     private fun response(c: HttpURLConnection): JSONObject {
         val status = c.responseCode
         val stream = if (status in 200..299) c.inputStream else c.errorStream
         val text = stream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty()
         val json = runCatching { JSONObject(text) }.getOrDefault(JSONObject())
-        if (status !in 200..299) error(json.optString("error_description").ifBlank {
+        val message = json.optString("error_description").ifBlank {
             json.optString("msg").ifBlank { json.optString("error").ifBlank { "Service de publication indisponible" } }
-        }.take(250))
+        }.take(250)
+        if (status == 401) throw Unauthorized(message)
+        if (status !in 200..299) error(message)
         return json
     }
 
@@ -166,11 +171,13 @@ object PublicationApi {
      * a selection or a whole album), or the Canvas removed from them.
      */
     suspend fun applyMedia(trackIds: List<String>, cover: File?, canvas: File?, removeCanvas: Boolean = false,
-                           onProgress: (Int) -> Unit = {}): List<Track> {
+                           onProgress: (Int) -> Unit = {}, canvasLink: String? = null): List<Track> {
         require(trackIds.isNotEmpty() && trackIds.all { ImportedSong.id(Track(it, "", "", "")) != null })
-        require(cover != null || canvas != null || removeCanvas)
+        require(cover != null || canvas != null || removeCanvas || canvasLink != null)
         val meta = JSONObject().put("trackIds", JSONArray(trackIds.distinct())).put("rightsConfirmed", true)
         if (removeCanvas) meta.put("removeCanvas", true)
+        // A link is kept as an address and streamed from where it is.
+        canvasLink?.let { meta.put("links", JSONObject().put("canvas", it)) }
         val result = multipart("/admin/media", meta, listOfNotNull(cover?.let { "cover" to it }, canvas?.let { "canvas" to it }), onProgress)
         val rows = result.optJSONArray("tracks") ?: JSONArray()
         val tracks = (0 until rows.length()).mapNotNull { rows.optJSONObject(it)?.let(::track) }
@@ -182,6 +189,8 @@ object PublicationApi {
     suspend fun overrides(): String? = withContext(Dispatchers.IO) {
         val c = connection("$BASE/overrides", "GET")
         c.readTimeout = 15_000
+        c.useCaches = false
+        c.setRequestProperty("Cache-Control", "no-cache")
         try {
             if (c.responseCode !in 200..299) null
             else c.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }.takeIf { it.length < 4_000_000 }
@@ -209,12 +218,14 @@ object PublicationApi {
     suspend fun saveOverride(kind: String, key: String, label: String, cover: File? = null, canvas: File? = null,
                              hero: File? = null, restore: List<String> = emptyList(),
                              onProgress: (Int) -> Unit = {}, frame: Frame? = null, canvasOff: Boolean? = null,
-                             player: PlayerChange? = null): MediaOverride? {
-        require(cover != null || canvas != null || hero != null || restore.isNotEmpty() || frame != null || canvasOff != null || player != null)
+                             player: PlayerChange? = null, links: Map<String, String> = emptyMap()): MediaOverride? {
+        require(cover != null || canvas != null || hero != null || restore.isNotEmpty() || frame != null || canvasOff != null ||
+            player != null || links.isNotEmpty())
         val meta = JSONObject().put("kind", kind).put("key", key).put("label", label.take(300)).put("rightsConfirmed", true)
         frame?.let { meta.put("frame", MediaOverrides.frameJson(it)) }
         canvasOff?.let { meta.put("canvasOff", it) }
         player?.let { meta.put("player", it.json()) }
+        if (links.isNotEmpty()) meta.put("links", JSONObject(links))
         if (restore.isNotEmpty()) meta.put("remove", JSONArray(restore.distinct()))
         val result = multipart("/admin/override", meta,
             listOfNotNull(cover?.let { "cover" to it }, canvas?.let { "canvas" to it }, hero?.let { "hero" to it }), onProgress)
@@ -230,8 +241,8 @@ object PublicationApi {
      */
     suspend fun saveOverrides(kind: String, items: List<Pair<String, String>>, canvas: File? = null, canvasOff: Boolean? = null,
                               restore: List<String> = emptyList(), onProgress: (Int) -> Unit = {},
-                              player: PlayerChange? = null): List<MediaOverride> {
-        require(items.isNotEmpty() && (canvas != null || canvasOff != null || restore.isNotEmpty() || player != null))
+                              player: PlayerChange? = null, links: Map<String, String> = emptyMap()): List<MediaOverride> {
+        require(items.isNotEmpty() && (canvas != null || canvasOff != null || restore.isNotEmpty() || player != null || links.isNotEmpty()))
         val saved = ArrayList<MediaOverride>()
         val chunks = items.distinctBy { it.first }.chunked(80)
         chunks.forEachIndexed { index, chunk ->
@@ -241,6 +252,7 @@ object PublicationApi {
             if (restore.isNotEmpty()) meta.put("remove", JSONArray(restore.distinct()))
             canvasOff?.let { meta.put("canvasOff", it) }
             player?.let { meta.put("player", it.json()) }
+            if (links.isNotEmpty()) meta.put("links", JSONObject(links))
             val result = multipart("/admin/override", meta, listOfNotNull(canvas?.let { "canvas" to it }),
                 { onProgress((index * 100 + it) / chunks.size) })
             val rows = result.optJSONArray("overrides") ?: JSONArray()
@@ -266,7 +278,15 @@ object PublicationApi {
         return track(result.getJSONObject("track")) ?: error("Réponse de publication invalide")
     }
 
-    private suspend fun multipart(path: String, meta: JSONObject, files: List<Pair<String, File>>, onProgress: (Int) -> Unit): JSONObject = withContext(Dispatchers.IO) {
+    private suspend fun multipart(path: String, meta: JSONObject, files: List<Pair<String, File>>, onProgress: (Int) -> Unit): JSONObject =
+        try { multipartOnce(path, meta, files, onProgress) }
+        catch (refused: Unauthorized) {
+            // An access token can be refused before its announced expiry: renew it and send once more.
+            PublisherSession.expire()
+            multipartOnce(path, meta, files, onProgress)
+        }
+
+    private suspend fun multipartOnce(path: String, meta: JSONObject, files: List<Pair<String, File>>, onProgress: (Int) -> Unit): JSONObject = withContext(Dispatchers.IO) {
         val token = PublisherSession.token()
         val boundary = "Ketvoice${UUID.randomUUID()}"
         val c = connection("$BASE$path", "POST", token)

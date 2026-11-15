@@ -236,9 +236,35 @@ object MediaOverrides {
 
     suspend fun refresh() {
         val text = PublicationApi.overrides() ?: return
-        val next = decode(text)
+        val next = keepRecentWrites(decode(text), recentWrites, System.currentTimeMillis())
         if (next == state.value) return
         set(next)
+    }
+
+    /** What the owner saved on this device in the last minutes: a list fetched in between must not undo it. */
+    private val recentWrites = java.util.concurrent.ConcurrentHashMap<String, Pair<MediaOverride?, Long>>()
+    private const val RECENT_WRITE_MS = 10 * 60_000L
+
+    /**
+     * The fetched list, except for items saved here a moment ago: those keep what was saved (or
+     * stay removed), until the server's list shows the same thing or the moment has passed.
+     */
+    internal fun keepRecentWrites(fetched: Map<String, MediaOverride>, writes: Map<String, Pair<MediaOverride?, Long>>,
+                                  now: Long): Map<String, MediaOverride> {
+        if (writes.isEmpty()) return fetched
+        val result = LinkedHashMap(fetched)
+        for ((id, write) in writes) {
+            val (saved, at) = write
+            if (now - at > RECENT_WRITE_MS) continue
+            if (saved == null) result.remove(id) else result[id] = saved
+        }
+        return result
+    }
+
+    private fun remember(id: String, saved: MediaOverride?) {
+        val now = System.currentTimeMillis()
+        recentWrites.entries.removeIf { now - it.value.second > RECENT_WRITE_MS }
+        recentWrites[id] = saved to now
     }
 
     private fun set(next: Map<String, MediaOverride>) {
@@ -253,12 +279,14 @@ object MediaOverrides {
     /** What the owner just saved, shown at once without waiting for the next refresh. */
     internal fun accept(kind: String, key: String, saved: MediaOverride?) {
         val id = "$kind:$key"
+        remember(id, saved)
         set(if (saved == null) state.value - id else state.value + (id to saved))
     }
 
     /** What the owner just saved for several items: the ones the server no longer lists have no override left. */
     internal fun acceptMany(kind: String, keys: List<String>, saved: List<MediaOverride>) {
         val kept = saved.filter { it.kind == kind }.associateBy { it.id }
+        keys.forEach { key -> remember("$kind:$key", kept["$kind:$key"]) }
         set(state.value - keys.map { "$kind:$it" }.toSet() + kept)
     }
 

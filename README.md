@@ -21,6 +21,17 @@
 
 ## Overview
 
+### 5.4.0 — Longer Ketmix blends, your colours
+
+Ketmix blends now run up to 16 bars and play two titles in time across a wider range of tempos,
+and can start under the last sung bars while the outgoing voice steps back; a copyable mix journal
+explains each transition. The accent colour you choose now applies everywhere except album pages,
+artist pages and the player, album pages take the colour their artwork is mostly made of, and
+recent titles on Home are a shelf of large covers.
+[Mobile](https://github.com/Tysnnn23/Ketvoice/releases/download/v5.4.0/Ketvoice-5.4.0.apk)
+· [Quest](https://github.com/Tysnnn23/Ketvoice/releases/download/v5.4.0/Ketvoice-5.4.0-Quest.apk)
+· [Release notes](docs/releases/v5.4.0.md).
+
 ### 5.3.0 — Ketmix on the phrase, glass that forms
 
 Ketmix now starts its mixes where the music turns a page (every eight bars), brings the next

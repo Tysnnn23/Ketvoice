@@ -34,7 +34,8 @@ internal fun rememberCanvasAspectRatio(path: String?): State<Float?> = key(path)
         if (path != null) value = withContext(Dispatchers.IO) {
             val reader = MediaMetadataRetriever()
             try {
-                reader.setDataSource(path)
+                // A Canvas streamed from its link is read over the network, the first frames only.
+                if (path.startsWith("https://")) reader.setDataSource(path, emptyMap()) else reader.setDataSource(path)
                 CanvasPresentation.aspectRatio(
                     reader.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)?.toIntOrNull() ?: 0,
                     reader.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)?.toIntOrNull() ?: 0,

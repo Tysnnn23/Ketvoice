@@ -53,7 +53,9 @@ internal fun artistPageTint(background: Color, tone: Color?, dark: Boolean): Col
     if (tone == null) return background
     val tinted = androidx.compose.ui.graphics.lerp(background, tone, if (dark) .30f else .38f)
     // A dark page, not a light page shown with dark controls, is held down at night.
-    return if (dark && background.luminance() < .2f) PageTint.nightCap(tinted) else tinted
+    if (dark && background.luminance() < .2f) return PageTint.nightCap(tinted)
+    // A light page stays light under a dark artwork: dark text must stay readable on it.
+    return if (!dark) PageTint.dayFloor(tinted, background) else tinted
 }
 
 /**
@@ -64,6 +66,19 @@ internal fun artistPageTint(background: Color, tone: Color?, dark: Boolean): Col
 internal object PageTint {
     /** Relative luminance a dark page never exceeds, about that of #333333. */
     const val NIGHT_MAX_LUMINANCE = .033f
+
+    /** Relative luminance a light page never goes under. */
+    const val DAY_MIN_LUMINANCE = .55f
+
+    fun dayFloor(color: Color, background: Color): Color {
+        val l = color.luminance(); val lb = background.luminance()
+        if (l >= DAY_MIN_LUMINANCE || lb <= l) return color
+        // Back towards the page colour, just enough.
+        var t = ((DAY_MIN_LUMINANCE - l) / (lb - l)).coerceIn(0f, 1f)
+        var result = androidx.compose.ui.graphics.lerp(color, background, t)
+        repeat(4) { if (result.luminance() < DAY_MIN_LUMINANCE) { t = (t + .1f).coerceAtMost(1f); result = androidx.compose.ui.graphics.lerp(color, background, t) } }
+        return result
+    }
 
     fun nightCap(color: Color): Color {
         val luminance = color.luminance()

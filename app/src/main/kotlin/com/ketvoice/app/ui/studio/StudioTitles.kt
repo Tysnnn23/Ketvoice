@@ -61,6 +61,7 @@ internal fun StudioTitleCanvas(state: StudioState, target: VisualTarget, rights:
     val theme = LocalTheme.current
     var selected by remember(target.key) { mutableStateOf(setOf<String>()) }
     var canvas by remember(target.key) { mutableStateOf<File?>(null) }
+    var canvasLink by remember(target.key) { mutableStateOf<String?>(null) }
     // Two modes: what everyone sees on the album page (the player follows it), or the music player alone.
     var playerOnly by remember(target.key) { mutableStateOf(false) }
     val tracks = target.tracks
@@ -123,15 +124,20 @@ internal fun StudioTitleCanvas(state: StudioState, target: VisualTarget, rights:
             }
             return@Column
         }
-        CanvasEditor(state, canvas, onChosen = { file -> canvas?.delete(); canvas = file })
+        CanvasEditor(state, canvas, onChosen = { file -> canvas?.delete(); canvas = file; if (file != null) canvasLink = null },
+            linked = canvasLink, onLink = { canvasLink = it })
         GlassCapsuleButton("Appliquer le Canvas choisi", null, {
-            val file = canvas ?: return@GlassCapsuleButton
+            val file = canvas
+            val links = canvasLink?.let { mapOf("canvas" to it) } ?: emptyMap()
+            if (file == null && links.isEmpty()) return@GlassCapsuleButton
             run("Canvas appliqué") { items ->
-                if (wholeAlbum) PublicationApi.saveOverride(MediaOverrides.ALBUM, target.key, target.label, canvas = file, onProgress = state::onProgress)
-                else PublicationApi.saveOverrides(MediaOverrides.TRACK, items, canvas = file, onProgress = state::onProgress)
-                file.delete(); canvas = null
+                if (wholeAlbum) PublicationApi.saveOverride(MediaOverrides.ALBUM, target.key, target.label, canvas = file,
+                    onProgress = state::onProgress, links = links)
+                else PublicationApi.saveOverrides(MediaOverrides.TRACK, items, canvas = file, onProgress = state::onProgress, links = links)
+                file?.delete(); canvas = null; canvasLink = null
             }
-        }, Modifier.fillMaxWidth(), prominent = true, enabled = enabled && canvas != null, tag = "studio-title-apply", minHeight = 52.dp)
+        }, Modifier.fillMaxWidth(), prominent = true, enabled = enabled && (canvas != null || canvasLink != null),
+            tag = "studio-title-apply", minHeight = 52.dp)
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             GlassCapsuleButton("Désactiver le Canvas", null, {
                 run("Canvas désactivé") { items ->

@@ -23,6 +23,9 @@ import com.ketvoice.app.ui.common.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.shadow
+import androidx.compose.foundation.border
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.layout.ContentScale
@@ -136,24 +139,25 @@ fun HomeScreen() {
             if (recent.isEmpty()) item {
                 Text("Vos titres écoutés apparaîtront ici.", color = theme.secondary, fontSize = 13.sp,
                     modifier = Modifier.padding(horizontal = 18.dp, vertical = 18.dp))
-            } else if (!grid) item(key = "recent-tiles") {
-                BoxWithConstraints(Modifier.fillMaxWidth().padding(horizontal = 18.dp).testTag("home-recent-tiles")) {
+            } else if (!grid) item(key = "recent-carousel") {
+                // Large covers to start again from, the way a record shelf reads: the title playing wears its bars.
+                RecentCarousel(recent.take(20), player.current?.id, player.isPlaying,
+                    onPlay = { index -> Player.playQueue(recent, index) }, onMenu = { AppUi.trackMenuTrack.value = it })
+            } else item(key = "recent-grid") {
+                BoxWithConstraints(Modifier.fillMaxWidth().padding(horizontal = 18.dp).testTag("home-recent-grid")) {
                     val columns = recentColumns(maxWidth.value)
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        recent.take(columns * 3).chunked(columns).forEachIndexed { line, tracks ->
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    val side = (maxWidth - 12.dp * (columns - 1)) / columns
+                    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                        recent.take(columns * 2).chunked(columns).forEachIndexed { line, tracks ->
+                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                 tracks.forEachIndexed { column, track ->
-                                    RecentTile(track, active = player.current?.id == track.id, modifier = Modifier.weight(1f),
-                                        onPlay = { Player.playQueue(recent, line * columns + column) },
-                                        onMenu = { AppUi.trackMenuTrack.value = track })
+                                    RecentCover(track, side, player.current?.id == track.id, player.isPlaying,
+                                        onPlay = { Player.playQueue(recent, line * columns + column) }, onMenu = { AppUi.trackMenuTrack.value = track })
                                 }
-                                repeat(columns - tracks.size) { Spacer(Modifier.weight(1f)) }
                             }
                         }
                     }
                 }
-            } else item(key = "recent-covers") {
-                TrackCarousel(recent.take(20), onMenu = { AppUi.trackMenuTrack.value = it })
             }
             if (playlists.any { it.pinned }) item(key = "pinned") {
                 EditorialHeader("Épinglés", onMore = { AppUi.selectTab(AppUi.LIBRARY) })
@@ -208,23 +212,55 @@ fun HomeScreen() {
     }
 }
 
-/** How many recent titles fit side by side: two on a phone, up to four on a wide window. */
-internal fun recentColumns(widthDp: Float): Int = (widthDp / 190f).toInt().coerceIn(2, 4)
+/** How many recent covers fit side by side in the grid: three on a phone, up to six on a wide window. */
+internal fun recentColumns(widthDp: Float): Int = (widthDp / 120f).toInt().coerceIn(3, 6)
 
-/** A recent title as a compact tile: its cover flush with the edge, its name beside it. A long press opens its menu. */
+/** The recent titles as a shelf of large covers. */
+@Composable
+private fun RecentCarousel(tracks: List<Track>, playingId: String?, playing: Boolean, onPlay: (Int) -> Unit, onMenu: (Track) -> Unit) {
+    LazyRow(Modifier.testTag("home-recent-carousel"), contentPadding = PaddingValues(horizontal = 18.dp),
+        horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+        itemsIndexed(tracks, key = { _, t -> t.id }) { index, track ->
+            RecentCover(track, 150.dp, track.id == playingId, playing, onPlay = { onPlay(index) }, onMenu = { onMenu(track) })
+        }
+    }
+}
+
+/**
+ * One recent title: its cover large, lifted by a shadow of its own colour, a small play
+ * button on it, the bars of the title playing, then its name and artist. A long press opens
+ * the title's menu.
+ */
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
-private fun RecentTile(track: Track, active: Boolean, modifier: Modifier, onPlay: () -> Unit, onMenu: () -> Unit) {
+private fun RecentCover(track: Track, side: androidx.compose.ui.unit.Dp, active: Boolean, playing: Boolean, onPlay: () -> Unit, onMenu: () -> Unit) {
     val theme = LocalTheme.current
     val art by ArtworkRepo.covers.collectAsState()
+    val cover = com.ketvoice.app.data.MediaOverrides.cover(track, art["t:${track.id}"] ?: track.coverUrl)
+    val glow = com.ketvoice.app.theme.rememberCoverTone(cover) ?: theme.onBackground
+    val shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
     val options = AppText.t("Options de ${track.title}")
-    Row(modifier.height(60.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp)).background(theme.card)
+    Column(Modifier.width(side).clip(androidx.compose.foundation.shape.RoundedCornerShape(18.dp))
         .combinedClickable(role = androidx.compose.ui.semantics.Role.Button, onLongClickLabel = options, onLongClick = onMenu, onClick = onPlay)
-        .testTag("home-recent-tile"), verticalAlignment = Alignment.CenterVertically) {
-        com.ketvoice.app.ui.common.DownloadCover(track, com.ketvoice.app.data.MediaOverrides.cover(track, art["t:${track.id}"] ?: track.coverUrl), 60.dp, 0.dp)
-        Text(track.title, localize = false, color = if (active) theme.accent else theme.onBackground, fontSize = 13.sp, lineHeight = 16.sp,
-            fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f).padding(horizontal = 10.dp))
+        .testTag("home-recent")) {
+        Box(Modifier.size(side).shadow(if (theme.isDark) 18.dp else 10.dp, shape, clip = false,
+            ambientColor = glow, spotColor = glow)) {
+            com.ketvoice.app.ui.common.DownloadCover(track, cover, side, 16.dp)
+            // A thin light rim: the cover reads as an object on a dark page.
+            Box(Modifier.matchParentSize().border(.8.dp, Color.White.copy(alpha = if (theme.isDark) .10f else .0f), shape))
+            if (active) Box(Modifier.align(Alignment.BottomStart).padding(8.dp).clip(androidx.compose.foundation.shape.CircleShape)
+                .background(Color.Black.copy(alpha = .55f)).padding(horizontal = 6.dp, vertical = 5.dp).testTag("home-recent-playing")) {
+                com.ketvoice.app.ui.player.NowPlayingBars(playing, Modifier.size(width = 18.dp, height = 14.dp))
+            }
+            Box(Modifier.align(Alignment.BottomEnd).padding(8.dp).size(30.dp).clip(androidx.compose.foundation.shape.CircleShape)
+                .background(Color.White.copy(alpha = .92f)), contentAlignment = Alignment.Center) {
+                Icon(com.ketvoice.app.ui.common.KetIcons.Play, null, tint = Color.Black, modifier = Modifier.size(15.dp))
+            }
+        }
+        Text(track.title, localize = false, color = if (active) theme.accent else theme.onBackground, fontSize = 14.sp,
+            fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 9.dp, start = 2.dp, end = 2.dp))
+        Text(track.artist, localize = false, color = theme.secondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(start = 2.dp, end = 2.dp, bottom = 2.dp))
     }
 }
 

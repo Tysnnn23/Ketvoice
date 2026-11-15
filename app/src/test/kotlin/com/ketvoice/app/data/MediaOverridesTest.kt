@@ -153,4 +153,20 @@ class MediaOverridesTest {
         assertEquals("https://cdn/c.mp4", MediaOverrides.get("track", "c|x")!!.canvas)
         assertEquals("An override of another kind is untouched", "https://cdn/c.jpg", MediaOverrides.get("album", "al|x")!!.cover)
     }
+
+    @Test fun aListFetchedJustAfterASaveDoesNotUndoIt() {
+        val framed = MediaOverride("album", "pyramide 2|werenoi", frame = Frame(0f, 0f, .6f, .4f))
+        val stale = MediaOverride("album", "pyramide 2|werenoi", frame = null, cover = "https://cdn/old.jpg")
+        val other = MediaOverride("track", "a|b", canvasOff = true)
+        val now = 1_000_000L
+        val fetched = mapOf(stale.id to stale, other.id to other)
+        // Saved a minute ago: what was saved stays, the rest of the list is taken as it is.
+        val kept = MediaOverrides.keepRecentWrites(fetched, mapOf(framed.id to (framed to now - 60_000L)), now)
+        assertEquals(framed, kept[framed.id]); assertEquals(other, kept[other.id])
+        // Restored a minute ago: it stays removed.
+        assertNull(MediaOverrides.keepRecentWrites(fetched, mapOf(stale.id to (null to now - 60_000L)), now)[stale.id])
+        // Long ago: the server's list wins.
+        assertEquals(stale, MediaOverrides.keepRecentWrites(fetched, mapOf(framed.id to (framed to now - 11 * 60_000L)), now)[framed.id])
+        assertEquals(fetched, MediaOverrides.keepRecentWrites(fetched, emptyMap(), now))
+    }
 }

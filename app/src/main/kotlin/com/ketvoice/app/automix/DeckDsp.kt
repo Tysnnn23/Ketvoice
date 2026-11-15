@@ -71,10 +71,18 @@ internal class DeckAutomation(
     val echoDelayUs: Long = 0L,
     val echoFeedback: Float = 0f,
     /** Q of the two filters: .707 is neutral, more gives a sweep its edge. */
-    val resonance: Float = .7071f
+    val resonance: Float = .7071f,
+    /**
+     * How much of the voice is taken down (0..1): the centre of the stereo image, between 220 Hz
+     * and 4.5 kHz, where a lead vocal sits. The instruments on the sides and the bass stay.
+     */
+    val vocalCut: Curve = Curve.flat(0f)
 ) {
-    val endUs: Long get() = maxOf(maxOf(gain.endUs, highPassHz.endUs, lowPassHz.endUs), maxOf(dry.endUs, echo.endUs, reverb.endUs))
+    val endUs: Long get() = maxOf(maxOf(gain.endUs, highPassHz.endUs, lowPassHz.endUs), maxOf(dry.endUs, echo.endUs, reverb.endUs), vocalCut.endUs)
+    val usesVocalCut: Boolean get() = vocalCut.endUs > 0L
     val usesEcho: Boolean get() = echoDelayUs > 0L
+
+    fun copyWith(vocalCut: Curve) = DeckAutomation(gain, highPassHz, lowPassHz, dry, echo, reverb, echoDelayUs, echoFeedback, resonance, vocalCut)
     val usesReverb: Boolean get() = reverb.endUs > 0L
 
     companion object {
@@ -104,7 +112,7 @@ internal class DeckAutomation(
             val start = plan.outMs * 1000L
             val end = (plan.outMs + plan.overlapMs) * 1000L
             return when (plan.kind) {
-                MixKind.Beatmatch -> if (plan.swapMs < 0) plainOut(start, end) else blendOut(plan, start, end)
+                MixKind.Beatmatch -> if (plan.swapMs < 0) plainOut(start, end) else withVoiceDown(blendOut(plan, start, end), plan)
                 MixKind.Echo -> echoOut(plan, start, end)
                 MixKind.Filter -> filterOut(plan, start, end)
                 MixKind.Wash -> washOut(start, end)
@@ -137,6 +145,16 @@ internal class DeckAutomation(
                 else -> plainIn(plan, start, end, settle)
             }
         }
+
+        /** When the blend starts under the last sung bars, the outgoing voice steps back over them. */
+        private fun withVoiceDown(automation: DeckAutomation, plan: MixPlan): DeckAutomation {
+            if (plan.sungUntilMs <= plan.outMs) return automation
+            val start = plan.outMs * 1000L
+            val down = (start + (plan.beatMs * 8000f).toLong()).coerceAtMost(maxOf(start + 1, plan.sungUntilMs * 1000L))
+            return automation.copyWith(vocalCut = Curve.join(point(start, 0f), Curve.shaped(start + 1, down, 12) { VOICE_DOWN * ease(it) }))
+        }
+        /** The voice is taken down by this much: well under the incoming title, never cut off. */
+        const val VOICE_DOWN = .8f
 
         private fun plainOut(start: Long, end: Long) =
             DeckAutomation(Curve.join(Curve.shaped(start, end, shape = ::fadeOut)), Curve.flat(0f))
@@ -247,6 +265,9 @@ internal class DeckAutomation(
 internal class DeckDsp(private val sampleRate: Int, private val channels: Int) {
     private val high = Biquad(channels)
     private val low = Biquad(channels)
+    /** The band of the voice, on the centre of the image: high-passed then low-passed. */
+    private val voiceHigh = Biquad(1)
+    private val voiceLow = Biquad(1)
     private var gain = Float.NaN
     private var dry = 1f
     private var echo: Echo? = null
@@ -254,7 +275,7 @@ internal class DeckDsp(private val sampleRate: Int, private val channels: Int) {
     private val frame = FloatArray(channels)
 
     fun reset() {
-        high.clear(); low.clear()
+        high.clear(); low.clear(); voiceHigh.clear(); voiceLow.clear()
         gain = Float.NaN; dry = 1f
         echo = null; reverb = null
     }
@@ -287,6 +308,8 @@ internal class DeckDsp(private val sampleRate: Int, private val channels: Int) {
             val dryStep = (dryTarget - dry) / block
             high.follow(automation.highPassHz.at(middleUs), automation.resonance, sampleRate, highPass = true)
             low.follow(automation.lowPassHz.at(middleUs), automation.resonance, sampleRate, highPass = false)
+            val voice = if (channels >= 2 && automation.usesVocalCut) automation.vocalCut.at(middleUs).coerceIn(0f, 1f) else 0f
+            if (voice > 0f) { voiceHigh.follow(220f, .7071f, sampleRate, highPass = true); voiceLow.follow(4_500f, .7071f, sampleRate, highPass = false) }
             val send = if (repeats != null) automation.echo.at(middleUs) else 0f
             val wash = if (room != null) automation.reverb.at(middleUs) else 0f
             for (i in 0 until block) {
@@ -296,6 +319,14 @@ internal class DeckDsp(private val sampleRate: Int, private val channels: Int) {
                     if (high.cutoff > 0f) x = high.run(x, c)
                     if (low.cutoff > 0f) x = low.run(x, c)
                     frame[c] = x
+                }
+                if (voice > 0f) {
+                    // Mid and side: the voice lives in the middle; only its band is taken down there.
+                    val mid = (frame[0] + frame[1]) * .5f
+                    val side = (frame[0] - frame[1]) * .5f
+                    val band = voiceLow.run(voiceHigh.run(mid, 0), 0)
+                    val kept = mid - voice * band
+                    frame[0] = kept + side; frame[1] = kept - side
                 }
                 for (c in 0 until channels) {
                     val x = frame[c]

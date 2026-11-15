@@ -93,6 +93,9 @@ object PublisherSession {
         access
     }
 
+    /** Forgets the access token only: the next call renews it from the remembered session. */
+    suspend fun expire() = mutex.withLock { access = ""; expiresAt = 0L }
+
     fun signOut() {
         val old = access
         access = ""; refresh = ""; expiresAt = 0L; _allowed.value = false

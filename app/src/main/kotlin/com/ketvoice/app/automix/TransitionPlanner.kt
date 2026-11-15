@@ -65,8 +65,15 @@ internal data class MixSettings(val intensity: Int = 1, val style: MixStyle = Mi
      * How far apart two tempos may be for the titles to be played in time. Listeners hear a
      * change of speed from about 5 %; each title is only stretched while it is the quiet one.
      */
-    val tempoRange: Float get() = when (intensity) { 0 -> .04f; 2 -> .08f; else -> .06f }
-    val beatCounts: IntArray get() = when (intensity) { 0 -> intArrayOf(16, 8); 2 -> intArrayOf(64, 32, 16, 8); else -> intArrayOf(32, 16, 8) }
+    val tempoRange: Float get() = when (intensity) { 0 -> .05f; 2 -> .12f; else -> .08f }
+    /**
+     * The tempos meet half-way during a blend (see [DeckSync.ride]): each title is stretched by
+     * about half of [tempoRange], under the 5 % listeners notice. Blends run up to 64 beats
+     * (16 bars, about 30 s at 128 BPM), the length DJs and Apple Music favour.
+     */
+    val beatCounts: IntArray get() = when (intensity) { 0 -> intArrayOf(32, 16, 8); 2 -> intArrayOf(64, 32, 16, 8); else -> intArrayOf(64, 32, 16, 8) }
+    /** Beats of singing the incoming title may start under, the outgoing voice softened meanwhile. */
+    val vocalLeadBeats: Int get() = when (intensity) { 0 -> 0; 2 -> 16; else -> 8 }
     /** Longest crossing of two titles that are not played in time. */
     val crossfadeMs: Long get() = when (intensity) { 0 -> 5_000L; 2 -> 11_000L; else -> 8_000L }
     /** How much of an instrumental ending may be left out to mix earlier. Discreet never leaves anything out. */
@@ -110,7 +117,9 @@ internal data class MixPlan(
     /** The title mixes into its own start: it is on repeat. */
     val loop: Boolean = false,
     /** The mix starts where a phrase of the outgoing title starts. */
-    val onPhrase: Boolean = false
+    val onPhrase: Boolean = false,
+    /** Outgoing position where its last sung words end, when the blend starts under them; -1 otherwise. */
+    val sungUntilMs: Long = -1
 ) {
     val mixes: Boolean get() = kind != MixKind.None
     /** Position in the incoming title once the outgoing one is gone. */
@@ -258,8 +267,11 @@ internal object TransitionPlanner {
         for ((index, count) in counts.withIndex()) {
             val overlap = (count * beat).roundToLong()
             val latest = end - overlap
-            // The mix starts once the singing is over; without lyrics, where the level drops.
-            val earliest = max(a.startMs + a.beatMs.toLong(), sungUntil ?: a.fallMs)
+            // The mix starts once the singing is over, or under its last bars with the voice softened;
+            // without lyrics, where the level drops.
+            // A title that ends sung on a last note at full level keeps its ending whole.
+            val lead = if (a.hardEnding && !a.fadeOut) 0L else (settings.vocalLeadBeats * beat).roundToLong()
+            val earliest = max(a.startMs + a.beatMs.toLong(), sungUntil?.let { it - lead } ?: a.fallMs)
             if (earliest > latest) continue
             // The incoming voice should arrive once the outgoing title is mostly gone.
             if (sungFrom != null && sungUntil == null) {
@@ -289,7 +301,7 @@ internal object TransitionPlanner {
             val swap = a.beatAtOrAfter(middle - a.beatMs / 2.0)
             return MixPlan(MixKind.Beatmatch, outMs = outMs.roundToLong(), inMs = inMs, overlapMs = overlap, rate = rate,
                 swapMs = swap.roundToLong(), gain = gain, beatMs = beat, reason = "$count beats", variant = variant, clash = clash,
-                onPhrase = phrase != null)
+                onPhrase = phrase != null, sungUntilMs = sungUntil?.takeIf { it > outMs.roundToLong() } ?: -1)
         }
         return null
     }

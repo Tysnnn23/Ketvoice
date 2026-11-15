@@ -541,6 +541,7 @@ private fun StudioSong(state: StudioState, initial: Track, onChanged: () -> Unit
     var duration by remember { mutableLongStateOf(0L) }
     var cover by remember { mutableStateOf<File?>(null) }
     var canvas by remember { mutableStateOf<File?>(null) }
+    var canvasLink by remember { mutableStateOf<String?>(null) }
     var title by remember { mutableStateOf(initial.title) }
     var artist by remember { mutableStateOf(initial.artist) }
     var album by remember { mutableStateOf(initial.album) }
@@ -557,18 +558,19 @@ private fun StudioSong(state: StudioState, initial: Track, onChanged: () -> Unit
     val pickCover = coverPicker(state) { cover?.delete(); cover = it }
     val info = PublicationApi.SongInfo(title.trim().takeIf { it != current.title }, artist.trim().takeIf { it != current.artist },
         album.trim().takeIf { it != current.album })
-    val changed = audio != null || cover != null || canvas != null || info != PublicationApi.SongInfo()
+    val changed = audio != null || cover != null || canvas != null || canvasLink != null || info != PublicationApi.SongInfo()
     if (lyricsFor) { StudioLyrics(state, current, onDone = { lyricsFor = false }); return }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp).testTag("studio-song-page"),
         verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Box(Modifier.fillMaxWidth().padding(vertical = 6.dp), contentAlignment = Alignment.Center) {
-            StudioPreview(title, artist, cover ?: current.coverUrl, canvas?.absolutePath ?: current.canvasUrl)
+            StudioPreview(title, artist, cover ?: current.coverUrl, canvas?.absolutePath ?: canvasLink ?: current.canvasUrl)
         }
         StudioPart(KetIcons.Music, "Audio", audio?.let { "${state.files.nameOf(it) ?: it.name} · ${durationLabel(duration)} · à envoyer" }
             ?: durationLabel(current.durationMs), "Remplacer", !state.busy, "studio-replace-audio", { pickAudio.launch(AUDIO_TYPES) })
         StudioPart(KetIcons.Album, "Pochette", if (cover != null) "Nouvelle image · à envoyer" else if (current.coverUrl != null) "En ligne" else "Aucune",
             "Changer", !state.busy, "studio-replace-cover", { pickCover.launch(IMAGE_TYPES) })
-        CanvasEditor(state, canvas, onChosen = { canvas?.delete(); canvas = it }, published = current.canvasUrl != null,
+        CanvasEditor(state, canvas, onChosen = { canvas?.delete(); canvas = it; if (it != null) canvasLink = null }, published = current.canvasUrl != null,
+            linked = canvasLink, onLink = { canvasLink = it },
             onRemove = {
                 state.run {
                     PublicationApi.applyMedia(listOf(current.id), null, null, removeCanvas = true)
@@ -587,8 +589,11 @@ private fun StudioSong(state: StudioState, initial: Track, onChanged: () -> Unit
         GlassCapsuleButton("Enregistrer", null, {
             val song = editable ?: return@GlassCapsuleButton
             state.run {
-                PublicationApi.updateSong(song, audio, cover, duration, state::onProgress, canvas, info)
-                audio = null; cover = null; canvas = null
+                if (audio != null || cover != null || canvas != null || info != PublicationApi.SongInfo())
+                    PublicationApi.updateSong(song, audio, cover, duration, state::onProgress, canvas, info)
+                // A Canvas link is streamed from where it is.
+                canvasLink?.let { PublicationApi.applyMedia(listOf(current.id), null, null, canvasLink = it) }
+                audio = null; cover = null; canvas = null; canvasLink = null
                 state.info = "Modifications enregistrées"
                 load(); onChanged()
             }
@@ -611,6 +616,7 @@ private fun StudioAlbumPage(state: StudioState, artist: String, album: String, o
     var selected by remember { mutableStateOf(setOf<String>()) }
     var cover by remember { mutableStateOf<File?>(null) }
     var canvas by remember { mutableStateOf<File?>(null) }
+    var canvasLink by remember { mutableStateOf<String?>(null) }
     var rights by remember { mutableStateOf(false) }
     val pickCover = coverPicker(state) { cover?.delete(); cover = it }
     val targets = if (selecting && selected.isNotEmpty()) songs.filter { it.track.id in selected } else songs
@@ -646,7 +652,8 @@ private fun StudioAlbumPage(state: StudioState, artist: String, album: String, o
                 else "Pour ${targets.size} titres sélectionnés", color = theme.onBackground, fontSize = 16.sp, fontWeight = FontWeight.Bold)
             StudioPart(KetIcons.Album, "Pochette", if (cover != null) "Nouvelle image" else "Inchangée", "Choisir", !state.busy,
                 "studio-album-cover", { pickCover.launch(IMAGE_TYPES) })
-            CanvasEditor(state, canvas, onChosen = { canvas?.delete(); canvas = it }, published = targets.any { it.track.canvasUrl != null },
+            CanvasEditor(state, canvas, onChosen = { canvas?.delete(); canvas = it; if (it != null) canvasLink = null },
+                published = targets.any { it.track.canvasUrl != null }, linked = canvasLink, onLink = { canvasLink = it },
                 onRemove = {
                     state.run {
                         PublicationApi.applyMedia(targets.map { it.track.id }, null, null, removeCanvas = true)
@@ -656,11 +663,11 @@ private fun StudioAlbumPage(state: StudioState, artist: String, album: String, o
             RightsRow(rights, !state.busy) { rights = it }
             GlassCapsuleButton("Appliquer", null, {
                 state.run {
-                    PublicationApi.applyMedia(targets.map { it.track.id }, cover, canvas, onProgress = state::onProgress)
-                    cover = null; canvas = null
+                    PublicationApi.applyMedia(targets.map { it.track.id }, cover, canvas, onProgress = state::onProgress, canvasLink = canvasLink)
+                    cover = null; canvas = null; canvasLink = null
                     state.info = "Modifications enregistrées"; state.songs = PublicationApi.songs()
                 }
-            }, Modifier.fillMaxWidth(), prominent = true, enabled = !state.busy && rights && targets.isNotEmpty() && (cover != null || canvas != null),
+            }, Modifier.fillMaxWidth(), prominent = true, enabled = !state.busy && rights && targets.isNotEmpty() && (cover != null || canvas != null || canvasLink != null),
                 tag = "studio-album-apply", minHeight = 56.dp)
         }
         Spacer(Modifier.height(24.dp))

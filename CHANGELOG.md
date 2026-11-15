@@ -7,6 +7,22 @@
 
 ---
 
+# Ketvoice 5.4.0
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 110** — Longer Ketmix blends under the last sung bars; accent colour everywhere; recent titles as covers.
+
+- Ketmix: blends up to 16 bars, tempo matching up to 5/8/12 %, blends starting under the last sung bars
+  with the outgoing voice stepping back, and a copyable mix journal.
+- The chosen accent colour applies everywhere except album pages, artist pages and the player;
+  album pages are tinted by the colour their artwork is mostly made of.
+- Home: recent titles as a shelf (or grid) of large covers.
+
+Full notes: [5.4.0](docs/releases/v5.4.0.md).
+
+---
+
 # Ketvoice 5.3.0
 
 ![Ketvoice](ketvoice-banner.png)

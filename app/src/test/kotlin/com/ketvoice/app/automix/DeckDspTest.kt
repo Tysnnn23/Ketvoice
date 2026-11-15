@@ -288,4 +288,34 @@ class DeckDspTest {
         assertEquals(16, glide.size); assertEquals(1f, glide.last(), 0f)
         assertTrue(glide.zipWithNext().all { (a, b) -> b >= a && b - a < .012f })
     }
+
+    @Test fun aVoiceThatEndsStepsBackUnderTheIncomingTitle() {
+        // The blend starts 2 s before the last words end (at 182 s); the voice band of the centre goes down over them.
+        val plan = beat.copy(outMs = 180_000, sungUntilMs = 182_000)
+        val out = DeckAutomation.outgoing(plan)
+        assertTrue(out.usesVocalCut)
+        assertEquals(0f, out.vocalCut.at(180_000_000), 1e-3f)
+        assertEquals(DeckAutomation.VOICE_DOWN, out.vocalCut.at(182_000_000), 1e-3f)
+        assertFalse(DeckAutomation.outgoing(beat).usesVocalCut)
+        assertFalse(DeckAutomation.incoming(plan).usesVocalCut)
+
+        // Heard: a 1 kHz tone in the centre (the "voice") is taken down; the same tone on one side only, and a 60 Hz bass, are kept.
+        val rate = 44_100
+        val cut = DeckAutomation(Curve.flat(1f), Curve.flat(0f), vocalCut = Curve(longArrayOf(0, 1), floatArrayOf(.8f, .8f)))
+        fun stereo(hz: Double, left: Float, right: Float): ByteBuffer {
+            val frames = rate
+            val buffer = ByteBuffer.allocate(frames * 4).order(ByteOrder.LITTLE_ENDIAN)
+            for (i in 0 until frames) { val v = sin(2 * PI * hz * i / rate) * 12_000
+                buffer.putShort((v * left).toInt().toShort()); buffer.putShort((v * right).toInt().toShort()) }
+            buffer.flip(); return buffer
+        }
+        val skip = rate / 2
+        fun ratio(input: () -> ByteBuffer) = rms(run(DeckDsp(rate, 2), input(), 0, cut), skip) / rms(run(DeckDsp(rate, 2), input(), 0, null), skip)
+        assertTrue("centred voice band down (${db(ratio { stereo(1_000.0, 1f, 1f) })} dB)", db(ratio { stereo(1_000.0, 1f, 1f) }) < -9)
+        assertTrue("the bass stays (${db(ratio { stereo(60.0, 1f, 1f) })} dB)", db(ratio { stereo(60.0, 1f, 1f) }) > -2.5)
+        assertTrue("a side instrument mostly stays (${db(ratio { stereo(1_000.0, 1f, 0f) })} dB)", db(ratio { stereo(1_000.0, 1f, 0f) }) > -6)
+        // Mono has no centre to tell apart: untouched.
+        val mono = run(DeckDsp(rate, 1), tone(1_000.0, rate, .5f), 0, cut)
+        assertTrue(rms(mono, rate / 10) > 0.9 * rms(run(DeckDsp(rate, 1), tone(1_000.0, rate, .5f), 0, null), rate / 10))
+    }
 }

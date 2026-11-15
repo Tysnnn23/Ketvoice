@@ -103,6 +103,11 @@ object CanvasRepo {
                 // A canvas published for the album by its owner takes priority:
                 // it is the same file for every track of that album.
                 val published = curated ?: track.canvasUrl?.takeIf { it.startsWith("https://") }
+                // A Canvas the owner gave as a link to another site is streamed from there, never downloaded.
+                if (published != null && streamedFromItsLink(published)) {
+                    _paths.value = _paths.value + (track.id to published)
+                    return@withLock
+                }
                 if (published != null) {
                     val name = curatedName ?: ("kvpub-" + (track.addonId ?: track.id)
                         .replace(Regex("[^A-Za-z0-9_-]"), "_").take(72))
@@ -161,6 +166,10 @@ object CanvasRepo {
             }
         }
     }
+
+    /** A Canvas address outside Ketvoice's own storage: played from its link, whatever its size. */
+    internal fun streamedFromItsLink(url: String): Boolean =
+        url.startsWith("https://") && "/storage/v1/object/public/ketvoice-public-media/" !in url
 
     private fun sha(value: String): String = java.security.MessageDigest.getInstance("SHA-256")
         .digest(value.toByteArray(Charsets.UTF_8)).take(12).joinToString("") { "%02x".format(it) }

@@ -101,14 +101,10 @@ fun AppRoot() {
         controller.isAppearanceLightNavigationBars = !(effectiveDark || darkSurface)
     }
 
-    // Dynamic accent from the currently-playing artwork (opt-in via Album colours).
-    // Computed above the theme so the whole UI breathes with the music.
+    // The accent the listener chose is the app's colour everywhere. Only an album page, an artist
+    // page and the player take their colours from the artwork (Album colours); they do it locally.
     val playingForAccent by Player.state.collectAsState()
-    val dynamicAccent = if (com.ketvoice.app.data.AppSettings.albumColors.value) {
-        val t = playingForAccent.current
-        val url = t?.let { ArtworkRepo.coverForTrack(it) }
-        com.ketvoice.app.theme.rememberCoverAccent(url)?.first
-    } else null
+    val dynamicAccent: androidx.compose.ui.graphics.Color? = null
 
     // The playing cover lightly tints the optical glass (independent of the accent option).
     com.ketvoice.app.glass.ObserveCoverTint(playingForAccent.current?.let { ArtworkRepo.coverForTrack(it) })
