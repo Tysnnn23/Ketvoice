@@ -45,7 +45,12 @@ internal data class SegmentAnalysis(
      * Start of a phrase: a first beat of a bar from which the music changes every
      * [PHRASE_BARS] bars (a part comes in or drops out); -1 when no such grid stands out.
      */
-    val phraseAtMs: Double = -1.0
+    val phraseAtMs: Double = -1.0,
+    /**
+     * The tempo of the body of the title this stretch was read against (see [BeatAnalysis.Hint]);
+     * 0 when it was read on its own.
+     */
+    val tempoHint: Float = 0f
 ) {
     val beatMs: Float get() = if (bpm > 0f) 60_000f / bpm else 0f
     val hasBeat: Boolean get() = bpm > 0f && confidence >= MIN_CONFIDENCE
@@ -98,11 +103,26 @@ internal object BeatAnalysis {
      * [thorough] also checks that the tempo holds from one half of the stretch to the other: a
      * band that speeds up or slows down cannot be kept in time for long, and is not trusted to.
      */
-    fun analyze(envelope: OnsetEnvelope, startMs: Long, thorough: Boolean = false): SegmentAnalysis {
+    /**
+     * The tempo of the body of a title, where its drums play: what its intro and its ending are
+     * read against. An intro without drums, or an ending where only hats are left, cannot tell a
+     * tempo from one that is 3/2 or 2/3 of it; the body can, and a produced title keeps its tempo.
+     */
+    class Hint(val bpm: Float, val confidence: Float)
+
+    fun analyze(envelope: OnsetEnvelope, startMs: Long, thorough: Boolean = false, hint: Hint? = null): SegmentAnalysis {
         val lengthMs = (envelope.seconds * 1000).toLong()
         if (envelope.size < 8) return SegmentAnalysis(startMs, lengthMs)
         val shape = structure(envelope)
-        val tempo = tempo(envelope)?.let { if (thorough) steadied(it, envelope) else it }
+        val usable = hint?.takeIf { it.bpm in MIN_BPM..MAX_BPM && it.confidence >= SegmentAnalysis.MIN_CONFIDENCE }
+        val alone = tempo(envelope)
+        val hinted = usable?.let { tempo(envelope, it) }
+        // A grid at the body's tempo that the attacks of this stretch support is taken over a reading of
+        // its own, unless that reading is sure of a tempo that is no relative of the body's (the title changes tempo).
+        val ownTempo = usable != null && alone != null && alone.confidence >= OWN_TEMPO_CONFIDENCE &&
+            RELATIVES.none { abs(alone.bpm / (usable.bpm * it) - 1f) <= .03f }
+        val followed = hinted != null && hinted.confidence >= SegmentAnalysis.MIN_CONFIDENCE && !ownTempo
+        val tempo = (if (followed) hinted else alone?.let { if (thorough) steadied(it, envelope) else it })
         val (key, keyStrength) = if (envelope.keyRead) MusicalKey.estimate(envelope.chroma) else MusicalKey.UNREAD to 0f
         fun ms(frame: Float) = startMs + (envelope.timeOf(frame) * 1000).toLong()
         return SegmentAnalysis(
@@ -118,7 +138,8 @@ internal object BeatAnalysis {
             fallMs = ms(shape.fall.toFloat()).coerceAtMost(startMs + lengthMs),
             fadeOut = shape.fadeOut, hardEnding = shape.hardEnding, key = key, keyStrength = keyStrength,
             phraseAtMs = tempo?.takeIf { it.barOffset >= 0 && it.confidence >= SegmentAnalysis.MIN_CONFIDENCE }
-                ?.let { phrase(envelope, it) }?.let { startMs + envelope.timeOf(it) * 1000.0 } ?: -1.0)
+                ?.let { phrase(envelope, it) }?.let { startMs + envelope.timeOf(it) * 1000.0 } ?: -1.0,
+            tempoHint = if (followed) usable?.bpm ?: 0f else 0f)
     }
 
     /**
@@ -192,7 +213,7 @@ internal object BeatAnalysis {
         return values[i] * (1f - t) + values[i + 1] * t
     }
 
-    fun tempo(envelope: OnsetEnvelope): Tempo? {
+    fun tempo(envelope: OnsetEnvelope, hint: Hint? = null): Tempo? {
         val fps = envelope.fps
         val n = envelope.size
         if (n < fps * MIN_SECONDS) return null
@@ -213,7 +234,8 @@ internal object BeatAnalysis {
             repeat[lag] = (sum / count).toFloat()
         }
         var first = 0f; var firstScore = Float.NEGATIVE_INFINITY
-        var bpm = MIN_BPM
+        var bpm = if (hint != null) MAX_BPM + 1f else MIN_BPM
+        if (hint != null) { first = hint.bpm; firstScore = 1f }
         while (bpm <= MAX_BPM) {
             val period = fps * 60f / bpm
             val score = (at(repeat, period) + .6f * at(repeat, 2 * period) + .4f * at(repeat, 3 * period) + .3f * at(repeat, 4 * period)) * prior(bpm)
@@ -227,7 +249,7 @@ internal object BeatAnalysis {
         // right grid has an attack on its beats and leaves the fewest attacks outside it.
         val bass = accents(envelope.low, fps)
         var chosen: Tempo? = null; var chosenFit = -1f
-        for (factor in RELATIVES) {
+        for (factor in if (hint != null) ONLY else RELATIVES) {
             val candidate = first * factor
             if (candidate < MIN_BPM || candidate > MAX_BPM) continue
             val coarse = fps * 60f / candidate
@@ -258,7 +280,10 @@ internal object BeatAnalysis {
             val score = fit.f + .04f * prior(fps * 60f / period)
             if (score > chosenFit) {
                 chosenFit = score
-                val confidence = ((fit.recall - .45f) / .4f).coerceIn(0f, 1f) * ((fit.f - .25f) / .3f).coerceIn(0f, 1f)
+                val own = ((fit.recall - .45f) / .4f).coerceIn(0f, 1f) * ((fit.f - .25f) / .3f).coerceIn(0f, 1f)
+                // The tempo is known from the body of the title: this stretch only has to place the beats,
+                // which a few attacks on the grid do. Without any, the grid is not trusted.
+                val confidence = if (hint != null && own >= HINTED_MIN_CONFIDENCE) max(own, min(hint.confidence, HINTED_CONFIDENCE)) else own
                 // Bars: the beat of four that carries the most bass attacks.
                 val sums = FloatArray(4)
                 var beat = 0; var position = phase
@@ -274,6 +299,12 @@ internal object BeatAnalysis {
     }
 
     private val RELATIVES = floatArrayOf(1f, 2f, .5f, 1.5f, 2f / 3f, 4f / 3f, .75f)
+    private val ONLY = floatArrayOf(1f)
+    /** What a stretch's own attacks must give for a grid at the body's tempo to be placed on them. */
+    const val HINTED_MIN_CONFIDENCE = .15f
+    /** The most a stretch read against the body is trusted when its own attacks say less. */
+    const val HINTED_CONFIDENCE = .6f
+    private const val OWN_TEMPO_CONFIDENCE = .8f
 
     /**
      * After Davies and Plumbley (2006): the spectrum and level of each beat compared with the

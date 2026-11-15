@@ -55,6 +55,7 @@ import com.ketvoice.app.player.AudioCache
 import com.ketvoice.app.player.BitPerfectState
 import com.ketvoice.app.player.ExactAudioPhase
 import com.ketvoice.app.player.Player
+import com.ketvoice.app.theme.Ket27
 import com.ketvoice.app.theme.LocalTheme
 import com.ketvoice.app.theme.Palette
 import com.ketvoice.app.glass.GlassPanel
@@ -238,6 +239,11 @@ fun SettingsScreen() {
                     }
                 }
             }
+            Section("KET 27 (ALPHA)") {
+                SToggle(KetIcons.Appearance, "Ket 27 (Alpha)",
+                    "Toute l'interface à la manière d'iOS 27 : couleurs système, grands titres, listes groupées, police Inter et verre Liquid 27. En cours de construction : certaines pages gardent encore l'ancien style.",
+                    AppSettings.ket27.value) { AppSettings.ket27.value = it; SettingsStore.save() }
+            }
             Section("APPARENCE") {
                 SRow(KetIcons.Appearance, "Aperçu du verre", sub = "Comparer Clair, Dépoli, Opaque et Liquid 27 avant d'appliquer") {
                     glassPreview = true
@@ -420,9 +426,9 @@ fun SettingsScreen() {
                     value = when (AppSettings.automixIntensity.value) { 0 -> "Discret"; 2 -> "DJ"; else -> "Équilibré" }) {
                     choice = ChoiceSpec("Intensité du mix", "S'applique dès la prochaine transition.",
                         AppSettings.automixIntensity.value.toString(), listOf(
-                            ChoiceOption("0", "Discret", "Chaque titre joue jusqu'au bout, mix jusqu'à 8 mesures, tempos à 5 % près, pas d'écho"),
-                            ChoiceOption("1", "Équilibré", "Mix jusqu'à 16 mesures, sous les 2 dernières mesures chantées, tempos à 8 % près"),
-                            ChoiceOption("2", "DJ", "Mix jusqu'à 16 mesures, sous les 4 dernières mesures chantées, tempos à 12 % près"))
+                            ChoiceOption("0", "Discret", "Chaque titre joue jusqu'au bout, mix jusqu'à 8 mesures, tempos à 6 % près, pas d'écho"),
+                            ChoiceOption("1", "Équilibré", "Mix jusqu'à 16 mesures, sous les 2 dernières mesures chantées, tempos à 14 % près"),
+                            ChoiceOption("2", "DJ", "Mix jusqu'à 16 mesures, sous les 4 dernières mesures chantées, tempos à 18 % près"))
                     ) { id -> AppSettings.automixIntensity.value = id.toIntOrNull()?.coerceIn(0, 2) ?: 1; SettingsStore.save() }
                 }
                 SRow(KetIcons.Audio, "Analyse des titres",
@@ -957,12 +963,10 @@ private fun cycleQuality(current: String): String = when (current) {
 private fun Section(header: String, content: @Composable ColumnScope.() -> Unit) {
     val destination = SettingsCategory.forGroup(header) ?: return
     if (destination != LocalSettingsCategory.current) return
-    val th = LocalTheme.current
-    SettingsGroupHeading(header, Modifier.padding(horizontal = 20.dp))
-    val shape = RoundedCornerShape(20.dp)
-    Column(Modifier.padding(horizontal = 20.dp).fillMaxWidth().clip(shape)
-        .background(th.card).border(.5.dp, th.onBackground.copy(alpha = .055f), shape)
-        .padding(vertical = 3.dp), content = content)
+    val margin = if (Ket27.on) Ket27.Metrics.margin else 20.dp
+    SettingsGroupHeading(header, Modifier.padding(horizontal = margin))
+    Column(Modifier.padding(horizontal = margin).fillMaxWidth().settingsGroup()
+        .padding(vertical = if (Ket27.on) 0.dp else 3.dp), content = content)
 }
 
 @Composable
@@ -974,15 +978,17 @@ private fun ColumnScope.SRow(
     onClick: (() -> Unit)? = null
 ) {
     val th = LocalTheme.current
+    val ket = Ket27.on
     Row(
         Modifier.fillMaxWidth()
             .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier)
-            .heightIn(min = 72.dp).padding(horizontal = 20.dp, vertical = 16.dp),
+            .heightIn(min = if (ket) Ket27.Metrics.row else 72.dp).padding(horizontal = if (ket) 16.dp else 20.dp, vertical = if (ket) 10.dp else 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(icon, null, tint = th.onBackground.copy(alpha = .74f), modifier = Modifier.size(21.dp))
-        Column(Modifier.weight(1f).padding(start = 18.dp, end = 12.dp)) {
-            Text(title, color = th.onBackground, fontSize = 15.5.sp, lineHeight = 22.sp, fontWeight = FontWeight.Medium)
+        if (ket) Ket27Tile(icon, title.length + title.first().code)
+        else Icon(icon, null, tint = th.onBackground.copy(alpha = .74f), modifier = Modifier.size(21.dp))
+        Column(Modifier.weight(1f).padding(start = if (ket) 12.dp else 18.dp, end = 12.dp)) {
+            Text(title, color = th.onBackground, fontSize = if (ket) 17.sp else 15.5.sp, lineHeight = 22.sp, fontWeight = if (ket) FontWeight.Normal else FontWeight.Medium)
             if (sub.isNotEmpty()) Text(sub, color = th.secondary, fontSize = 13.sp, lineHeight = 18.sp,
                 modifier = Modifier.padding(top = 3.dp))
             if (value.isNotEmpty()) Text(value, color = th.onBackground.copy(alpha = .76f), fontSize = 13.sp,
@@ -1003,14 +1009,16 @@ private fun ColumnScope.SToggle(
     onChecked: (Boolean) -> Unit
 ) {
     val th = LocalTheme.current
+    val ket = Ket27.on
     Row(
         Modifier.fillMaxWidth().toggleable(checked, role = Role.Switch, onValueChange = onChecked)
-            .heightIn(min = 76.dp).padding(horizontal = 20.dp, vertical = 16.dp),
+            .heightIn(min = if (ket) Ket27.Metrics.row else 76.dp).padding(horizontal = if (ket) 16.dp else 20.dp, vertical = if (ket) 10.dp else 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(icon, null, tint = th.onBackground.copy(alpha = .74f), modifier = Modifier.size(21.dp))
-        Column(Modifier.weight(1f).padding(start = 18.dp, end = 14.dp)) {
-            Text(title, color = th.onBackground, fontSize = 15.5.sp, lineHeight = 22.sp, fontWeight = FontWeight.Medium)
+        if (ket) Ket27Tile(icon, title.length + title.first().code)
+        else Icon(icon, null, tint = th.onBackground.copy(alpha = .74f), modifier = Modifier.size(21.dp))
+        Column(Modifier.weight(1f).padding(start = if (ket) 12.dp else 18.dp, end = 14.dp)) {
+            Text(title, color = th.onBackground, fontSize = if (ket) 17.sp else 15.5.sp, lineHeight = 22.sp, fontWeight = if (ket) FontWeight.Normal else FontWeight.Medium)
             Text(sub, color = th.secondary, fontSize = 13.sp, lineHeight = 18.sp, modifier = Modifier.padding(top = 3.dp))
         }
         com.ketvoice.app.ui.common.LiquidGlassSwitch(checked, onCheckedChange = null)

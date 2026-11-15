@@ -7,6 +7,22 @@
 
 ---
 
+# Ketvoice 5.5.0
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 112** — Ketmix in time far more often; Ket 27 (Alpha), the interface in the manner of iOS 27.
+
+- Ketmix reads the tempo of each title where its drums play and reads intros and endings against it;
+  titles are played in time within 6/14/18 % of each other instead of 5/8/12 %.
+- Ket 27 (Alpha), in Settings → Appearance: iOS system colours, Inter with the iOS text styles, settings
+  as inset grouped lists with coloured tiles, the iOS 27 switch, a 62 pt tab bar tinted by the accent,
+  Liquid 27 glass everywhere.
+
+Full notes: [5.5.0](docs/releases/v5.5.0.md).
+
+---
+
 # Ketvoice 5.4.1
 
 ![Ketvoice](ketvoice-banner.png)

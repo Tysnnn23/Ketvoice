@@ -64,15 +64,17 @@ class TransitionPlannerTest {
     }
 
     @Test fun tempoRangeFollowsTheIntensity() {
-        // Listeners hear a change of speed from about 5 %: the ranges stay around it.
-        // The tempos meet half-way, so each title moves by half of these: under the 5 % listeners notice.
-        assertEquals(.05f, MixSettings(0).tempoRange, 0f); assertEquals(.08f, MixSettings(1).tempoRange, 0f); assertEquals(.12f, MixSettings(2).tempoRange, 0f)
+        // The common tempo slides from one title's to the other's during the blend: each is only stretched while it is the quiet one.
+        assertEquals(.06f, MixSettings(0).tempoRange, 0f); assertEquals(.14f, MixSettings(1).tempoRange, 0f); assertEquals(.18f, MixSettings(2).tempoRange, 0f)
         assertEquals("5 % apart: in time, even discreet", MixKind.Beatmatch, plan(outro(120f), intro(126f), intensity = 0, sungUntil = 170_000).kind)
         assertEquals("7 % apart: balanced plays them in time", MixKind.Beatmatch, plan(outro(120f), intro(128.4f), sungUntil = 170_000).kind)
         assertEquals("discreet does not, and does without an echo", MixKind.Filter, plan(outro(120f), intro(128.4f), intensity = 0, sungUntil = 170_000).kind)
-        assertEquals("11 % apart: only DJ; balanced leaves on an echo", MixKind.Echo, plan(outro(120f), intro(133.5f), sungUntil = 170_000).kind)
-        assertEquals(MixKind.Beatmatch, plan(outro(120f), intro(133.5f), intensity = 2, sungUntil = 170_000).kind)
-        assertEquals("20 % apart: nobody stretches that far", MixKind.Echo, plan(outro(120f), intro(150f), intensity = 2, sungUntil = 170_000).kind)
+        // 138 into 122 BPM (13 % apart), a pair a listener reported as never played in time: balanced does now.
+        val reported = plan(outro(138f), intro(122f), sungUntil = 170_000)
+        assertEquals(MixKind.Beatmatch, reported.kind); assertEquals(138f / 122f, reported.rate, 1e-3f)
+        assertEquals("15 % apart: only DJ; balanced leaves on an echo", MixKind.Echo, plan(outro(120f), intro(142f), sungUntil = 170_000).kind)
+        assertEquals(MixKind.Beatmatch, plan(outro(120f), intro(142f), intensity = 2, sungUntil = 170_000).kind)
+        assertEquals("25 % apart: nobody stretches that far", MixKind.Echo, plan(outro(120f), intro(150f), intensity = 2, sungUntil = 170_000).kind)
     }
 
     @Test fun titlesThatCannotShareATempoPartOnAnEcho() {

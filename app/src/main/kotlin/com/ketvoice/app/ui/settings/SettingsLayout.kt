@@ -15,6 +15,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.layout.onSizeChanged
@@ -24,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ketvoice.app.BuildConfig
 import com.ketvoice.app.glass.*
+import com.ketvoice.app.theme.Ket27
 import com.ketvoice.app.theme.LocalTheme
 import com.ketvoice.app.ui.common.Icon
 import com.ketvoice.app.ui.common.KetIcons
@@ -45,7 +47,8 @@ internal fun SettingsLayout(category: SettingsCategory?, onBack: () -> Unit, con
             BackdropCapture(background, Modifier.widthIn(max = 840.dp).fillMaxSize()) {
                 content()
             }
-            CompositionLocalProvider(LocalBackdropLayer provides background) {
+            if (Ket27.on) Ket27SettingsBar(category, onBack, Modifier.widthIn(max = 840.dp).fillMaxWidth().onSizeChanged { headerHeight = it.height })
+            else CompositionLocalProvider(LocalBackdropLayer provides background) {
                 Row(Modifier.widthIn(max = 840.dp).fillMaxWidth()
                     .onSizeChanged { headerHeight = it.height }
                     .statusBarsPadding().padding(horizontal = 20.dp, vertical = 8.dp),
@@ -69,15 +72,56 @@ internal fun SettingsLayout(category: SettingsCategory?, onBack: () -> Unit, con
     }
 }
 
+/**
+ * Ket 27: the bar of an iOS 27 page once content scrolls under it — one uniform, nearly solid
+ * bar, a glass back button and the title of the page in its middle. The root page keeps its
+ * title large, in the content.
+ */
+@Composable
+private fun Ket27SettingsBar(category: SettingsCategory?, onBack: () -> Unit, modifier: Modifier) {
+    val theme = LocalTheme.current
+    Column(modifier.background(theme.background.copy(alpha = .94f)).testTag("ket27-settings-bar")) {
+        Box(Modifier.fillMaxWidth().statusBarsPadding().height(54.dp).padding(horizontal = Ket27.Metrics.margin)) {
+            com.ketvoice.app.ui.common.LiquidGlassButton(onBack, Modifier.align(Alignment.CenterStart).size(44.dp)) {
+                Icon(KetIcons.ChevronRight, "Retour", tint = theme.onBackground,
+                    modifier = Modifier.size(20.dp).graphicsLayer { scaleX = -1f })
+            }
+            if (category != null) Text(category.title, color = theme.onBackground, style = Ket27.Type.headline, maxLines = 1,
+                modifier = Modifier.align(Alignment.Center).padding(horizontal = 56.dp).semantics { heading() })
+        }
+        Box(Modifier.fillMaxWidth().height(.5.dp).background(theme.hairline))
+    }
+}
+
+/** A symbol on its coloured tile, as in the Settings of iOS. */
+@Composable
+internal fun Ket27Tile(icon: ImageVector, index: Int) {
+    Box(Modifier.size(Ket27.Metrics.tile).clip(RoundedCornerShape(Ket27.Metrics.tileRadius)).background(Ket27.tile(index)),
+        contentAlignment = Alignment.Center) {
+        Icon(icon, null, tint = androidx.compose.ui.graphics.Color.White, modifier = Modifier.size(18.dp))
+    }
+}
+
+/** The shape and colour of a group of rows: iOS's inset grouped list while Ket 27 is on. */
+@Composable
+internal fun Modifier.settingsGroup(): Modifier {
+    val theme = LocalTheme.current
+    if (Ket27.on) return clip(RoundedCornerShape(Ket27.Metrics.groupRadius)).background(theme.card)
+    val shape = RoundedCornerShape(20.dp)
+    return clip(shape).background(theme.card).border(.5.dp, theme.onBackground.copy(alpha = .055f), shape)
+}
+
 @Composable
 internal fun SettingsHome(connected: Boolean, name: String, onCategory: (SettingsCategory) -> Unit) {
     val theme = LocalTheme.current
     Column(Modifier.fillMaxSize().testTag("settings-home").verticalScroll(rememberScrollState())
-        .navigationBarsPadding().padding(horizontal = 20.dp).padding(top = LocalSettingsTopInset.current + 8.dp, bottom = 32.dp)) {
-        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(theme.card)
-            .border(.5.dp, theme.onBackground.copy(alpha = .055f), RoundedCornerShape(22.dp))
+        .navigationBarsPadding().padding(horizontal = if (Ket27.on) Ket27.Metrics.margin else 20.dp).padding(top = LocalSettingsTopInset.current + 8.dp, bottom = 32.dp)) {
+        if (Ket27.on) Text("Réglages", color = theme.onBackground, style = Ket27.Type.largeTitle,
+            modifier = Modifier.padding(start = 4.dp, bottom = 14.dp).semantics { heading() }.testTag("ket27-large-title"))
+        Row(Modifier.fillMaxWidth().then(if (Ket27.on) Modifier.settingsGroup() else Modifier.clip(RoundedCornerShape(22.dp)).background(theme.card)
+            .border(.5.dp, theme.onBackground.copy(alpha = .055f), RoundedCornerShape(22.dp)))
             .clickable(role = Role.Button) { onCategory(SettingsCategory.Account) }
-            .heightIn(min = 104.dp).padding(horizontal = 20.dp, vertical = 20.dp),
+            .heightIn(min = if (Ket27.on) 76.dp else 104.dp).padding(horizontal = if (Ket27.on) 16.dp else 20.dp, vertical = if (Ket27.on) 12.dp else 20.dp),
             verticalAlignment = Alignment.CenterVertically) {
             Icon(KetIcons.Account, null, tint = theme.onBackground.copy(alpha = .8f), modifier = Modifier.size(28.dp))
             Column(Modifier.weight(1f).padding(horizontal = 18.dp)) {
@@ -108,7 +152,10 @@ internal fun SettingsHome(connected: Boolean, name: String, onCategory: (Setting
 @Composable
 internal fun SettingsGroupHeading(title: String, modifier: Modifier = Modifier) {
     val theme = LocalTheme.current
-    Text(title, color = theme.secondary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
+    // iOS 27 writes its section headers in sentence case, larger and heavier.
+    if (Ket27.on) Text(ket27Heading(com.ketvoice.app.data.AppText.t(title)), localize = false, color = theme.onBackground,
+        style = Ket27.Type.headline, modifier = modifier.padding(start = 16.dp, end = 16.dp, top = 26.dp, bottom = 9.dp).semantics { heading() })
+    else Text(title, color = theme.secondary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
         lineHeight = 18.sp, modifier = modifier.padding(start = 4.dp, end = 4.dp, top = 24.dp, bottom = 10.dp)
             .semantics { heading() })
 }
@@ -116,19 +163,19 @@ internal fun SettingsGroupHeading(title: String, modifier: Modifier = Modifier) 
 @Composable
 private fun SettingsCategoryGroup(categories: List<SettingsCategory>, onCategory: (SettingsCategory) -> Unit) {
     val theme = LocalTheme.current
-    val shape = RoundedCornerShape(20.dp)
-    Column(Modifier.fillMaxWidth().clip(shape).background(theme.card)
-        .border(.5.dp, theme.onBackground.copy(alpha = .055f), shape)) {
+    val ket = Ket27.on
+    Column(Modifier.fillMaxWidth().settingsGroup()) {
         categories.forEachIndexed { index, category ->
             Row(Modifier.fillMaxWidth().testTag("settings-category-${category.name}")
-                .clickable(role = Role.Button) { onCategory(category) }.heightIn(min = 80.dp)
-                .padding(horizontal = 20.dp, vertical = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(category.icon(), null, tint = theme.onBackground.copy(alpha = .78f), modifier = Modifier.size(23.dp))
-                Column(Modifier.weight(1f).padding(start = 18.dp, end = 14.dp)) {
-                    Text(category.title, color = theme.onBackground, fontSize = 16.sp,
-                        fontWeight = FontWeight.Medium, lineHeight = 22.sp)
+                .clickable(role = Role.Button) { onCategory(category) }.heightIn(min = if (ket) 60.dp else 80.dp)
+                .padding(horizontal = if (ket) 16.dp else 20.dp, vertical = if (ket) 9.dp else 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                if (ket) Ket27Tile(category.icon(), category.ordinal)
+                else Icon(category.icon(), null, tint = theme.onBackground.copy(alpha = .78f), modifier = Modifier.size(23.dp))
+                Column(Modifier.weight(1f).padding(start = if (ket) 12.dp else 18.dp, end = 14.dp)) {
+                    Text(category.title, color = theme.onBackground, fontSize = if (ket) 17.sp else 16.sp,
+                        fontWeight = if (ket) FontWeight.Normal else FontWeight.Medium, lineHeight = 22.sp)
                     Text(category.supportingText(), color = theme.secondary, fontSize = 13.sp,
-                        lineHeight = 18.sp, modifier = Modifier.padding(top = 3.dp))
+                        lineHeight = 18.sp, modifier = Modifier.padding(top = if (ket) 1.dp else 3.dp))
                 }
                 Icon(KetIcons.ChevronRight, null, tint = theme.secondary.copy(alpha = .8f), modifier = Modifier.size(18.dp))
             }
@@ -140,9 +187,21 @@ private fun SettingsCategoryGroup(categories: List<SettingsCategory>, onCategory
 @Composable
 internal fun SettingsCellDivider() {
     val theme = LocalTheme.current
-    Box(Modifier.padding(start = 61.dp, end = 20.dp).fillMaxWidth().height(.5.dp)
+    // iOS aligns the separator with the text of the row and runs it to the edge of the group.
+    if (Ket27.on) Box(Modifier.padding(start = 58.dp).fillMaxWidth().height(.5.dp).background(theme.hairline))
+    else Box(Modifier.padding(start = 61.dp, end = 20.dp).fillMaxWidth().height(.5.dp)
         .background(theme.onBackground.copy(alpha = .065f)))
 }
+
+/** "APPARENCE" as iOS 27 writes a header: "Apparence". Names written in capitals on purpose keep them. */
+internal fun ket27Heading(title: String): String {
+    if (title.isEmpty() || title.any { it.isLowerCase() }) return title
+    return title.split(' ').joinToString(" ") { word ->
+        NAMES[word] ?: word.lowercase()
+    }.replaceFirstChar { it.titlecase() }
+}
+private val NAMES = mapOf("API" to "API", "KETVOICE" to "Ketvoice", "KETMIX" to "Ketmix", "KET" to "Ket", "QUEST" to "Quest",
+    "DISCORD" to "Discord", "STUDIO" to "Studio", "YOUTUBE" to "YouTube", "MUSIC" to "Music", "CANVAS" to "Canvas")
 
 private fun SettingsCategory.supportingText(): String = when (this) {
     SettingsCategory.Account -> "Comptes, synchronisation et publications"

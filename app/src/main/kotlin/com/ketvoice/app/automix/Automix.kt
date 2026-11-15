@@ -331,15 +331,27 @@ internal object Automix {
 
         val voice = scope.async(Dispatchers.IO) { withTimeoutOrNull(6_000L) { runCatching { firstVoice(next.track) }.getOrNull() } }
         val clock = scope.async { clockConfirmed(main, mainControl) }
-        var outro = AnalysisStore.outro(current.id, duration, depth)
+        // The body of each title, where its drums play, gives the tempo its ending and its intro are read against.
+        suspend fun body(id: String, length: Long, media: MediaItem): BeatAnalysis.Hint? {
+            if (depth == AnalysisDepth.Light) return null
+            val window = AnalysisStore.bodyWindow(length) ?: return null
+            val known = AnalysisStore.body(id, length) ?: read(deck, control, media, window.first, AnalysisStore.BODY_MS, depth, ::valid, key = false)
+                ?.also { AnalysisStore.putBody(id, length, it) }
+            return known?.takeIf { it.hasBeat }?.let { BeatAnalysis.Hint(it.bpm, it.confidence) }
+        }
+        val outHint = body(current.id, duration, item)
+        if (!valid()) return false
+        var outro = AnalysisStore.outro(current.id, duration, depth)?.takeIf { outHint == null || it.tempoHint > 0f || it.confidence >= .8f }
         if (outro == null) {
-            outro = read(deck, control, item, max(0L, duration - depth.outroMs), depth.outroMs, depth, ::valid)
+            outro = read(deck, control, item, max(0L, duration - depth.outroMs), depth.outroMs, depth, ::valid, outHint)
             outro?.let { AnalysisStore.put(current.id, duration, false, it) }
         }
         if (!valid()) return false
-        var intro = AnalysisStore.intro(next.track.id, next.track.durationMs, depth)
+        val inHint = if (next.track.id == current.id) outHint else body(next.track.id, next.track.durationMs, nextItem)
+        if (!valid()) return false
+        var intro = AnalysisStore.intro(next.track.id, next.track.durationMs, depth)?.takeIf { inHint == null || it.tempoHint > 0f || it.confidence >= .8f }
         if (intro == null) {
-            intro = read(deck, control, nextItem, 0L, depth.introMs, depth, ::valid)
+            intro = read(deck, control, nextItem, 0L, depth.introMs, depth, ::valid, inHint)
             intro?.let { AnalysisStore.put(next.track.id, next.track.durationMs, true, it) }
         }
         if (!valid()) return false
@@ -354,6 +366,7 @@ internal object Automix {
             sungUntilMs = out.vocalEndMs, sungFromMs = incoming.vocalStartMs,
             outEndMs = outro?.soundEndMs, ending = outro?.let { o -> if (o.fadeOut) "fade" else if (o.hardEnding) "hard" else "rings" } ?: "",
             analysis = listOfNotNull(if (outro == null) "outro not read" else null, if (intro == null) "intro not read" else null,
+                outHint?.let { "out body %.0f BPM".format(java.util.Locale.ROOT, it.bpm) }, inHint?.let { "in body %.0f BPM".format(java.util.Locale.ROOT, it.bpm) },
                 depth.name.lowercase()).joinToString(", ")) }
         // Without the decks' processors in the sound path only a trim or a plain fade can be played;
         // without beats to rely on (too late for them), the transitions that need none remain.
@@ -571,8 +584,8 @@ internal object Automix {
 
     /** Plays [lengthMs] of [item] from [fromMs] on the silent deck, fast, and measures it. */
     private suspend fun read(deck: ExoPlayer, control: DeckControl, item: MediaItem, fromMs: Long, lengthMs: Long,
-                             depth: AnalysisDepth, valid: () -> Boolean): SegmentAnalysis? {
-        val tap = AnalysisTap(fromMs * 1000L, (fromMs + lengthMs) * 1000L, depth.key, depth.thorough)
+                             depth: AnalysisDepth, valid: () -> Boolean, hint: BeatAnalysis.Hint? = null, key: Boolean = depth.key): SegmentAnalysis? {
+        val tap = AnalysisTap(fromMs * 1000L, (fromMs + lengthMs) * 1000L, key, depth.thorough, hint)
         control.automation = DeckAutomation.MUTE
         deck.volume = 0f
         control.tap = tap

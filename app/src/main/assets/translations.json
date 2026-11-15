@@ -1451,7 +1451,13 @@
   "Le cadrage n'a pas été publié": "The framing was not published",
   "Lien · diffusé depuis son adresse, sans limite de taille": "Link · streamed from its address, no size limit",
   "Publication du cadrage…": "Publishing the framing…",
-  "Utiliser ce lien": "Use this link"
+  "Utiliser ce lien": "Use this link",
+  "Chaque titre joue jusqu'au bout, mix jusqu'à 8 mesures, tempos à 6 % près, pas d'écho": "Every title plays to its end, mixes up to 8 bars, tempos within 6%, no echo",
+  "Mix jusqu'à 16 mesures, sous les 2 dernières mesures chantées, tempos à 14 % près": "Mixes up to 16 bars, under the last 2 sung bars, tempos within 14%",
+  "Mix jusqu'à 16 mesures, sous les 4 dernières mesures chantées, tempos à 18 % près": "Mixes up to 16 bars, under the last 4 sung bars, tempos within 18%",
+  "KET 27 (ALPHA)": "KET 27 (ALPHA)",
+  "Ket 27 (Alpha)": "Ket 27 (Alpha)",
+  "Toute l'interface à la manière d'iOS 27 : couleurs système, grands titres, listes groupées, police Inter et verre Liquid 27. En cours de construction : certaines pages gardent encore l'ancien style.": "The whole interface in the manner of iOS 27: system colours, large titles, grouped lists, the Inter typeface and Liquid 27 glass. Work in progress: some pages still keep the previous style."
  },
  "hi": {
   "Reverb": "रीवर्ब",
@@ -2905,7 +2911,13 @@
   "Le cadrage n'a pas été publié": "फ़्रेमिंग प्रकाशित नहीं हुई",
   "Lien · diffusé depuis son adresse, sans limite de taille": "लिंक · अपने पते से स्ट्रीम, आकार की कोई सीमा नहीं",
   "Publication du cadrage…": "फ़्रेमिंग प्रकाशित हो रही है…",
-  "Utiliser ce lien": "यह लिंक इस्तेमाल करें"
+  "Utiliser ce lien": "यह लिंक इस्तेमाल करें",
+  "Chaque titre joue jusqu'au bout, mix jusqu'à 8 mesures, tempos à 6 % près, pas d'écho": "हर गाना अंत तक बजता है, 8 बार तक मिक्स, टेम्पो में 6% तक का अंतर, इको नहीं",
+  "Mix jusqu'à 16 mesures, sous les 2 dernières mesures chantées, tempos à 14 % près": "16 बार तक मिक्स, आख़िरी 2 गाए गए बार के नीचे, टेम्पो में 14% तक का अंतर",
+  "Mix jusqu'à 16 mesures, sous les 4 dernières mesures chantées, tempos à 18 % près": "16 बार तक मिक्स, आख़िरी 4 गाए गए बार के नीचे, टेम्पो में 18% तक का अंतर",
+  "KET 27 (ALPHA)": "KET 27 (ALPHA)",
+  "Ket 27 (Alpha)": "Ket 27 (Alpha)",
+  "Toute l'interface à la manière d'iOS 27 : couleurs système, grands titres, listes groupées, police Inter et verre Liquid 27. En cours de construction : certaines pages gardent encore l'ancien style.": "पूरा इंटरफ़ेस iOS 27 के अंदाज़ में: सिस्टम रंग, बड़े शीर्षक, समूहबद्ध सूचियाँ, Inter फ़ॉन्ट और Liquid 27 ग्लास। काम जारी है: कुछ पेज अभी पुरानी शैली में हैं।"
  },
  "ja": {
   "Reverb": "リバーブ",
@@ -4359,7 +4371,13 @@
   "Le cadrage n'a pas été publié": "フレーミングは公開されませんでした",
   "Lien · diffusé depuis son adresse, sans limite de taille": "リンク · そのアドレスから配信、サイズ制限なし",
   "Publication du cadrage…": "フレーミングを公開中…",
-  "Utiliser ce lien": "このリンクを使う"
+  "Utiliser ce lien": "このリンクを使う",
+  "Chaque titre joue jusqu'au bout, mix jusqu'à 8 mesures, tempos à 6 % près, pas d'écho": "各曲を最後まで再生、ミックスは最大 8 小節、テンポ差 6% 以内、エコーなし",
+  "Mix jusqu'à 16 mesures, sous les 2 dernières mesures chantées, tempos à 14 % près": "最大 16 小節のミックス、歌の最後の 2 小節から、テンポ差 14% 以内",
+  "Mix jusqu'à 16 mesures, sous les 4 dernières mesures chantées, tempos à 18 % près": "最大 16 小節のミックス、歌の最後の 4 小節から、テンポ差 18% 以内",
+  "KET 27 (ALPHA)": "KET 27 (ALPHA)",
+  "Ket 27 (Alpha)": "Ket 27 (Alpha)",
+  "Toute l'interface à la manière d'iOS 27 : couleurs système, grands titres, listes groupées, police Inter et verre Liquid 27. En cours de construction : certaines pages gardent encore l'ancien style.": "インターフェース全体を iOS 27 風に:システムカラー、大きなタイトル、グループ化されたリスト、Inter フォント、Liquid 27 ガラス。開発中のため、一部のページは以前のスタイルのままです。"
  },
  "zh": {
   "Reverb": "混响",
@@ -5813,7 +5831,13 @@
   "Le cadrage n'a pas été publié": "取景未发布",
   "Lien · diffusé depuis son adresse, sans limite de taille": "链接 · 从其地址播放,无大小限制",
   "Publication du cadrage…": "正在发布取景…",
-  "Utiliser ce lien": "使用此链接"
+  "Utiliser ce lien": "使用此链接",
+  "Chaque titre joue jusqu'au bout, mix jusqu'à 8 mesures, tempos à 6 % près, pas d'écho": "每首歌播放到结尾,最多混音 8 小节,速度相差 6% 以内,无回声",
+  "Mix jusqu'à 16 mesures, sous les 2 dernières mesures chantées, tempos à 14 % près": "最多混音 16 小节,可在最后 2 小节人声下开始,速度相差 14% 以内",
+  "Mix jusqu'à 16 mesures, sous les 4 dernières mesures chantées, tempos à 18 % près": "最多混音 16 小节,可在最后 4 小节人声下开始,速度相差 18% 以内",
+  "KET 27 (ALPHA)": "KET 27 (ALPHA)",
+  "Ket 27 (Alpha)": "Ket 27 (Alpha)",
+  "Toute l'interface à la manière d'iOS 27 : couleurs système, grands titres, listes groupées, police Inter et verre Liquid 27. En cours de construction : certaines pages gardent encore l'ancien style.": "整个界面采用 iOS 27 风格:系统颜色、大标题、分组列表、Inter 字体和 Liquid 27 玻璃。仍在开发中:部分页面暂时保留原有样式。"
  },
  "ru": {
   "Reverb": "Реверберация",
@@ -7267,7 +7291,13 @@
   "Le cadrage n'a pas été publié": "Кадрирование не опубликовано",
   "Lien · diffusé depuis son adresse, sans limite de taille": "Ссылка · воспроизводится по адресу, без ограничения размера",
   "Publication du cadrage…": "Публикация кадрирования…",
-  "Utiliser ce lien": "Использовать ссылку"
+  "Utiliser ce lien": "Использовать ссылку",
+  "Chaque titre joue jusqu'au bout, mix jusqu'à 8 mesures, tempos à 6 % près, pas d'écho": "Каждый трек звучит до конца, микс до 8 тактов, темпы в пределах 6 %, без эха",
+  "Mix jusqu'à 16 mesures, sous les 2 dernières mesures chantées, tempos à 14 % près": "Микс до 16 тактов, под последними 2 тактами вокала, темпы в пределах 14 %",
+  "Mix jusqu'à 16 mesures, sous les 4 dernières mesures chantées, tempos à 18 % près": "Микс до 16 тактов, под последними 4 тактами вокала, темпы в пределах 18 %",
+  "KET 27 (ALPHA)": "KET 27 (ALPHA)",
+  "Ket 27 (Alpha)": "Ket 27 (Alpha)",
+  "Toute l'interface à la manière d'iOS 27 : couleurs système, grands titres, listes groupées, police Inter et verre Liquid 27. En cours de construction : certaines pages gardent encore l'ancien style.": "Весь интерфейс в духе iOS 27: системные цвета, крупные заголовки, сгруппированные списки, шрифт Inter и стекло Liquid 27. В разработке: некоторые страницы пока сохраняют прежний стиль."
  },
  "it": {
   "Reverb": "Riverbero",
@@ -8721,7 +8751,13 @@
   "Le cadrage n'a pas été publié": "L'inquadratura non è stata pubblicata",
   "Lien · diffusé depuis son adresse, sans limite de taille": "Link · riprodotto dal suo indirizzo, senza limiti di dimensione",
   "Publication du cadrage…": "Pubblicazione dell'inquadratura…",
-  "Utiliser ce lien": "Usa questo link"
+  "Utiliser ce lien": "Usa questo link",
+  "Chaque titre joue jusqu'au bout, mix jusqu'à 8 mesures, tempos à 6 % près, pas d'écho": "Ogni brano suona fino alla fine, mix fino a 8 battute, tempi entro il 6%, niente eco",
+  "Mix jusqu'à 16 mesures, sous les 2 dernières mesures chantées, tempos à 14 % près": "Mix fino a 16 battute, sotto le ultime 2 battute cantate, tempi entro l'14%",
+  "Mix jusqu'à 16 mesures, sous les 4 dernières mesures chantées, tempos à 18 % près": "Mix fino a 16 battute, sotto le ultime 4 battute cantate, tempi entro il 18%",
+  "KET 27 (ALPHA)": "KET 27 (ALPHA)",
+  "Ket 27 (Alpha)": "Ket 27 (Alpha)",
+  "Toute l'interface à la manière d'iOS 27 : couleurs système, grands titres, listes groupées, police Inter et verre Liquid 27. En cours de construction : certaines pages gardent encore l'ancien style.": "Tutta l'interfaccia alla maniera di iOS 27: colori di sistema, titoli grandi, elenchi raggruppati, carattere Inter e vetro Liquid 27. In costruzione: alcune pagine mantengono ancora lo stile precedente."
  },
  "es": {
   "Reverb": "Reverb",
@@ -10175,7 +10211,13 @@
   "Le cadrage n'a pas été publié": "El encuadre no se ha publicado",
   "Lien · diffusé depuis son adresse, sans limite de taille": "Enlace · se reproduce desde su dirección, sin límite de tamaño",
   "Publication du cadrage…": "Publicando el encuadre…",
-  "Utiliser ce lien": "Usar este enlace"
+  "Utiliser ce lien": "Usar este enlace",
+  "Chaque titre joue jusqu'au bout, mix jusqu'à 8 mesures, tempos à 6 % près, pas d'écho": "Cada tema suena hasta el final, mezcla de hasta 8 compases, tempos con un 6 % de margen, sin eco",
+  "Mix jusqu'à 16 mesures, sous les 2 dernières mesures chantées, tempos à 14 % près": "Mezcla de hasta 16 compases, bajo los 2 últimos compases cantados, tempos con un 14 % de margen",
+  "Mix jusqu'à 16 mesures, sous les 4 dernières mesures chantées, tempos à 18 % près": "Mezcla de hasta 16 compases, bajo los 4 últimos compases cantados, tempos con un 18 % de margen",
+  "KET 27 (ALPHA)": "KET 27 (ALPHA)",
+  "Ket 27 (Alpha)": "Ket 27 (Alpha)",
+  "Toute l'interface à la manière d'iOS 27 : couleurs système, grands titres, listes groupées, police Inter et verre Liquid 27. En cours de construction : certaines pages gardent encore l'ancien style.": "Toda la interfaz al estilo de iOS 27: colores del sistema, títulos grandes, listas agrupadas, tipografía Inter y cristal Liquid 27. En construcción: algunas páginas conservan todavía el estilo anterior."
  },
  "de": {
   "Reverb": "Reverb",
@@ -11629,7 +11671,13 @@
   "Le cadrage n'a pas été publié": "Der Bildausschnitt wurde nicht veröffentlicht",
   "Lien · diffusé depuis son adresse, sans limite de taille": "Link · von seiner Adresse gestreamt, ohne Größenlimit",
   "Publication du cadrage…": "Bildausschnitt wird veröffentlicht…",
-  "Utiliser ce lien": "Diesen Link verwenden"
+  "Utiliser ce lien": "Diesen Link verwenden",
+  "Chaque titre joue jusqu'au bout, mix jusqu'à 8 mesures, tempos à 6 % près, pas d'écho": "Jeder Titel läuft bis zum Ende, Mix bis 8 Takte, Tempi bis 6 % Abstand, kein Echo",
+  "Mix jusqu'à 16 mesures, sous les 2 dernières mesures chantées, tempos à 14 % près": "Mix bis 16 Takte, unter den letzten 2 gesungenen Takten, Tempi bis 14 % Abstand",
+  "Mix jusqu'à 16 mesures, sous les 4 dernières mesures chantées, tempos à 18 % près": "Mix bis 16 Takte, unter den letzten 4 gesungenen Takten, Tempi bis 18 % Abstand",
+  "KET 27 (ALPHA)": "KET 27 (ALPHA)",
+  "Ket 27 (Alpha)": "Ket 27 (Alpha)",
+  "Toute l'interface à la manière d'iOS 27 : couleurs système, grands titres, listes groupées, police Inter et verre Liquid 27. En cours de construction : certaines pages gardent encore l'ancien style.": "Die gesamte Oberfläche im Stil von iOS 27: Systemfarben, große Titel, gruppierte Listen, die Schrift Inter und Liquid-27-Glas. In Arbeit: Einige Seiten behalten vorerst den bisherigen Stil."
  },
  "pt": {
   "Reverb": "Reverb",
@@ -13083,7 +13131,13 @@
   "Le cadrage n'a pas été publié": "O enquadramento não foi publicado",
   "Lien · diffusé depuis son adresse, sans limite de taille": "Ligação · reproduzida a partir do seu endereço, sem limite de tamanho",
   "Publication du cadrage…": "A publicar o enquadramento…",
-  "Utiliser ce lien": "Usar esta ligação"
+  "Utiliser ce lien": "Usar esta ligação",
+  "Chaque titre joue jusqu'au bout, mix jusqu'à 8 mesures, tempos à 6 % près, pas d'écho": "Cada faixa toca até ao fim, mix até 8 compassos, tempos até 6% de diferença, sem eco",
+  "Mix jusqu'à 16 mesures, sous les 2 dernières mesures chantées, tempos à 14 % près": "Mix até 16 compassos, sob os 2 últimos compassos cantados, tempos até 14% de diferença",
+  "Mix jusqu'à 16 mesures, sous les 4 dernières mesures chantées, tempos à 18 % près": "Mix até 16 compassos, sob os 4 últimos compassos cantados, tempos até 18% de diferença",
+  "KET 27 (ALPHA)": "KET 27 (ALPHA)",
+  "Ket 27 (Alpha)": "Ket 27 (Alpha)",
+  "Toute l'interface à la manière d'iOS 27 : couleurs système, grands titres, listes groupées, police Inter et verre Liquid 27. En cours de construction : certaines pages gardent encore l'ancien style.": "Toda a interface à maneira do iOS 27: cores do sistema, títulos grandes, listas agrupadas, tipo de letra Inter e vidro Liquid 27. Em construção: algumas páginas ainda mantêm o estilo anterior."
  },
  "ko": {
   "Reverb": "리버브",
@@ -14537,6 +14591,12 @@
   "Le cadrage n'a pas été publié": "프레이밍이 게시되지 않았습니다",
   "Lien · diffusé depuis son adresse, sans limite de taille": "링크 · 해당 주소에서 스트리밍, 크기 제한 없음",
   "Publication du cadrage…": "프레이밍 게시 중…",
-  "Utiliser ce lien": "이 링크 사용"
+  "Utiliser ce lien": "이 링크 사용",
+  "Chaque titre joue jusqu'au bout, mix jusqu'à 8 mesures, tempos à 6 % près, pas d'écho": "모든 곡을 끝까지 재생, 최대 8마디 믹스, 템포 차이 6% 이내, 에코 없음",
+  "Mix jusqu'à 16 mesures, sous les 2 dernières mesures chantées, tempos à 14 % près": "최대 16마디 믹스, 마지막 2마디 노래 아래에서, 템포 차이 14% 이내",
+  "Mix jusqu'à 16 mesures, sous les 4 dernières mesures chantées, tempos à 18 % près": "최대 16마디 믹스, 마지막 4마디 노래 아래에서, 템포 차이 18% 이내",
+  "KET 27 (ALPHA)": "KET 27 (ALPHA)",
+  "Ket 27 (Alpha)": "Ket 27 (Alpha)",
+  "Toute l'interface à la manière d'iOS 27 : couleurs système, grands titres, listes groupées, police Inter et verre Liquid 27. En cours de construction : certaines pages gardent encore l'ancien style.": "전체 인터페이스를 iOS 27 스타일로: 시스템 색상, 큰 제목, 그룹 목록, Inter 서체와 Liquid 27 글래스. 개발 중이라 일부 페이지는 아직 이전 스타일을 유지합니다."
  }
 }

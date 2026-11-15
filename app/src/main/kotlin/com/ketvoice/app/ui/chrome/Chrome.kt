@@ -72,6 +72,7 @@ import com.ketvoice.app.glass.GlassParams
 import com.ketvoice.app.glass.GlassPanel
 import com.ketvoice.app.ui.motion.Haptics
 import com.ketvoice.app.player.Player
+import com.ketvoice.app.theme.Ket27
 import com.ketvoice.app.theme.LocalTheme
 import com.ketvoice.app.theme.T
 import com.ketvoice.app.theme.DesignTokens
@@ -338,7 +339,8 @@ fun FloatingChrome(collapsed: Boolean, onOpenPlayer: () -> Unit) {
         val width = maxWidth
         val f = fraction
         val hasTrack = Player.state.collectAsState().value.current != null
-        val fullHeight = if (hasTrack) 126.dp else 64.dp
+        // Ket 27's tab bar is 62 dp high, as on iOS 27, instead of 60.
+        val fullHeight = (if (hasTrack) 126.dp else 64.dp) + (if (Ket27.on) 2.dp else 0.dp)
         val height = fullHeight + (58.dp - fullHeight) * f
         // Replié : Accueil (52 dp) + 8 dp + mini-lecteur + 8 dp + Recherche (52 dp).
         val miniWidth = maxWidth - 144.dp * f
@@ -430,7 +432,7 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier,
         label = "tabWidth"
     )
     val heightAnim by animateDpAsState(
-        targetValue = if (homeOnly || collapsed) 52.dp else 60.dp,
+        targetValue = if (homeOnly || collapsed) 52.dp else if (Ket27.on) Ket27.Metrics.tabBar else 60.dp,
         animationSpec = if (Motion.reduced) androidx.compose.animation.core.snap() else spring(
             dampingRatio = DesignTokens.Motion.CHROME_DAMPING, stiffness = DesignTokens.Motion.CHROME_STIFFNESS),
         label = "tabHeight"
@@ -559,6 +561,8 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier,
                             label = "tabWeight"
                         )
                         val targetContentColor = when {
+                            // iOS tints the selected tab with the app's colour.
+                            isSel && Ket27.on -> th.accent
                             isSel && !th.isDark -> Color(0xFF141414)
                             isSel && th.isDark -> Color.White
                             else -> th.onBackground.copy(alpha = 0.76f)
@@ -596,8 +600,8 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier,
                             Spacer(Modifier.height(3.dp))
                             Text(
                                 tab.label,
-                                fontSize = 10.5.sp,
-                                fontWeight = FontWeight(weight.toInt().coerceIn(100, 900)),
+                                fontSize = if (Ket27.on) 10.sp else 10.5.sp,
+                                fontWeight = if (Ket27.on) FontWeight.SemiBold else FontWeight(weight.toInt().coerceIn(100, 900)),
                                 color = contentColor.copy(alpha = iconAlpha),
                                 maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis
                             )

@@ -16,7 +16,7 @@ fun AppAlertDialog(onDismissRequest: () -> Unit, confirmButton: @Composable () -
     title: (@Composable () -> Unit)? = null, text: (@Composable () -> Unit)? = null) {
     val th = LocalTheme.current
     val refined = DesignChoices.enabled("D5")
-    val shape = RoundedCornerShape(if (refined) 26.dp else 28.dp)
+    val shape = RoundedCornerShape(if (com.ketvoice.app.theme.Ket27.on) com.ketvoice.app.theme.Ket27.Metrics.alertRadius else if (refined) 26.dp else 28.dp)
     AlertDialog(onDismissRequest, confirmButton,
         modifier = modifier.then(if (refined) Modifier.border(.7.dp,th.hairline,shape) else Modifier),
         dismissButton = dismissButton, title = title, text = text, shape = shape,

@@ -156,9 +156,9 @@ internal fun BackdropEffectScope.liquid27Fused(params: GlassParams, shapes: List
 @Composable
 fun GlassFusionLayer(fusion: GlassFusion, dark: Boolean, modifier: Modifier = Modifier) {
     val backdrop = LocalBackdropLayer.current
-    val mode = currentGlassRenderMode(AppSettings.glassStyle.value, enabled = true, captured = false)
+    val mode = currentGlassRenderMode(GlassStyles.current, enabled = true, captured = false)
     val available = backdrop != null && mode == GlassRenderMode.Optical && !fusion.failed &&
-        AppSettings.glassStyle.value == GlassStyles.LIQUID_27
+        GlassStyles.current == GlassStyles.LIQUID_27
     fusion.active = available
     if (!available || backdrop == null) return
     var origin by remember { mutableStateOf(Offset.Zero) }

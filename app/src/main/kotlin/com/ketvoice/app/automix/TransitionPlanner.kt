@@ -62,10 +62,12 @@ internal enum class MixStyle { Auto, Tempo, Echo, Filters, Fade;
 /** 0 = discreet, 1 = balanced, 2 = DJ. */
 internal data class MixSettings(val intensity: Int = 1, val style: MixStyle = MixStyle.Auto) {
     /**
-     * How far apart two tempos may be for the titles to be played in time. Listeners hear a
-     * change of speed from about 5 %; each title is only stretched while it is the quiet one.
+     * How far apart two tempos may be for the titles to be played in time. The common tempo slides
+     * from the outgoing title's to the incoming one's during the blend (see [DeckSync.ride]), so each
+     * title is only stretched while it is the quiet one, its pitch kept: the way djay's tempo blend
+     * and Apple Music's AutoMix bring together titles that a fixed ±8 % would leave apart.
      */
-    val tempoRange: Float get() = when (intensity) { 0 -> .05f; 2 -> .12f; else -> .08f }
+    val tempoRange: Float get() = when (intensity) { 0 -> .06f; 2 -> .18f; else -> .14f }
     /**
      * The tempos meet half-way during a blend (see [DeckSync.ride]): each title is stretched by
      * about half of [tempoRange], under the 5 % listeners notice. Blends run up to 64 beats

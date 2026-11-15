@@ -175,6 +175,39 @@ class BeatAnalysisTest {
         assertEquals(20_000.0, quiet.fallMs.toDouble(), 1_500.0)
     }
 
+    @Test fun aStretchIsReadAgainstTheTempoOfTheBodyOfItsTitle() {
+        val rate = 22_050
+        // An ending where hats in triplets are all that is left of a 122 BPM title: every two beats, three hats.
+        val seconds = 30f
+        val samples = FloatArray((rate * seconds).toInt())
+        val random = Random(5)
+        fun click(time: Float, level: Float) {
+            val start = (time * rate).toInt()
+            for (i in 0 until (rate * .03f).toInt()) { val at = start + i; if (at >= samples.size) break
+                samples[at] += level * (random.nextFloat() * 2 - 1) * exp(-i / (rate * .008f)) }
+        }
+        val beat = 60f / 122f
+        var t = 0f; while (t < seconds) { click(t, .5f); t += beat * 2f / 3f }
+        var k = 0; while (k * beat < seconds) { click(k * beat, .22f); k++ }
+        val envelope = Synth.envelope(samples, rate)
+        val alone = BeatAnalysis.analyze(envelope, 0)
+        assertEquals("on its own the stretch is counted on its hats", 183f, alone.bpm, 2.5f)
+        val hinted = BeatAnalysis.analyze(envelope, 0, hint = BeatAnalysis.Hint(122f, .9f))
+        assertEquals("against the body, on the title's tempo", 122f, hinted.bpm, 1.2f)
+        assertTrue(hinted.hasBeat); assertEquals(122f, hinted.tempoHint, 0f)
+        assertTrue("its beats are where the title's are (${hinted.beatAtMs})", BeatAnalysis.nearestBeatError(hinted, 0.0) < 25.0)
+        // A stretch with nothing on that grid is not given one.
+        val drone = BeatAnalysis.analyze(Synth.envelope(Synth.rubato(rate, 30f), rate), 0, hint = BeatAnalysis.Hint(122f, .9f))
+        assertFalse(drone.hasBeat)
+        // A body that is not sure of its tempo is no hint; a stretch sure of another tempo keeps its own.
+        assertEquals(alone.bpm, BeatAnalysis.analyze(envelope, 0, hint = BeatAnalysis.Hint(122f, .3f)).bpm, 0f)
+        val steady = Synth.envelope(Synth.groove(rate, 30f, 100f), rate)
+        assertEquals(100f, BeatAnalysis.analyze(steady, 0, hint = BeatAnalysis.Hint(128f, .9f)).bpm, 1f)
+        // What it was read against is kept with it.
+        assertEquals(122f, AnalysisStore.decode(AnalysisStore.encode(hinted))!!.tempoHint, 0f)
+        assertNull(AnalysisStore.bodyWindow(120_000)); assertEquals(90_000L until 120_000L, AnalysisStore.bodyWindow(200_000))
+    }
+
     @Test fun doubleAndHalfTempoCountAsTheSamePulse() {
         assertEquals(1f, BeatAnalysis.foldedRatio(140f, 70f), 1e-4f)
         assertEquals(1f, BeatAnalysis.foldedRatio(64f, 128f), 1e-4f)

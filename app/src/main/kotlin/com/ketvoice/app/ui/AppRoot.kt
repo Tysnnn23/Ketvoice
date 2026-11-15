@@ -84,7 +84,7 @@ fun AppRoot() {
     com.ketvoice.app.ui.motion.ObserveDisplayRefresh()
     // Liquid 27 highlights follow device tilt; never on Quest or with reduced motion.
     com.ketvoice.app.glass.ObserveGlassTilt(
-        AppSettings.glassStyle.value == com.ketvoice.app.glass.GlassStyles.LIQUID_27 &&
+        com.ketvoice.app.glass.GlassStyles.current == com.ketvoice.app.glass.GlassStyles.LIQUID_27 &&
             AppSettings.liquidGlass.value && !Motion.reduced && !com.ketvoice.app.BuildConfig.IS_QUEST)
     val themeMode = AppSettings.themeMode.value
     val useDark = if (themeMode == 1) false else if (themeMode == 2) true else null
@@ -199,7 +199,7 @@ fun AppRoot() {
                                 clip = true
                             }
                         }) {
-                    val liquid27 = AppSettings.glassStyle.value == com.ketvoice.app.glass.GlassStyles.LIQUID_27 &&
+                    val liquid27 = com.ketvoice.app.glass.GlassStyles.current == com.ketvoice.app.glass.GlassStyles.LIQUID_27 &&
                         AppSettings.liquidGlass.value
                     NavigationPresentation(AppUi.tab.value to AppUi.snapshot()) { tab, entry ->
                         val overlay = entry.overlay

@@ -50,6 +50,7 @@ object SettingsStore {
         s.smartShuffle.value = p.getBoolean("smartShuffle", true)
         s.ketmixStyle.value = p.getInt("ketmixStyle", 0).coerceIn(0, 4)
         s.ketmixHaptics.value = p.getBoolean("ketmixHaptics", false)
+        s.ket27.value = p.getBoolean("ket27", false)
         s.lyricsSource.value = p.getString("lyricsSource", s.lyricsSource.value) ?: "auto"
         if (s.lyricsSource.value !in MusicApi.lyricSources + listOf("auto", "off")) {
             s.lyricsSource.value = "auto"
@@ -176,6 +177,7 @@ object SettingsStore {
             .putBoolean("smartShuffle", s.smartShuffle.value)
             .putInt("ketmixStyle", s.ketmixStyle.value)
             .putBoolean("ketmixHaptics", s.ketmixHaptics.value)
+            .putBoolean("ket27", s.ket27.value)
             .putString("lyricsSource", s.lyricsSource.value)
             .putStringSet("favoriteIds", s.favoriteIds.value)
             .putString("translateLanguage", s.translateLanguage.value)

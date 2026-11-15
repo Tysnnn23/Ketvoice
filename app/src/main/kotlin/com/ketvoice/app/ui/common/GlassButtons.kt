@@ -48,7 +48,7 @@ import com.ketvoice.app.ui.motion.rememberHaptics
 /** True when controls should behave like Liquid 27 glass: the style is chosen and glass is on. */
 @Composable
 internal fun isLiquid27Glass(): Boolean =
-    AppSettings.liquidGlass.value && AppSettings.glassStyle.value == GlassStyles.LIQUID_27
+    AppSettings.liquidGlass.value && GlassStyles.current == GlassStyles.LIQUID_27
 
 /**
  * How a glass control answers a press. Liquid 27 follows the documented behaviour of

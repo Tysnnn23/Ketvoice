@@ -7,7 +7,7 @@ import java.nio.ByteBuffer
 
 /** Feeds the sound of a deck played silently and fast into an [OnsetTracker], between two positions of a title. */
 internal class AnalysisTap(private val fromUs: Long, private val untilUs: Long, private val withKey: Boolean = false,
-                           private val thorough: Boolean = false) : PcmTap {
+                           private val thorough: Boolean = false, private val hint: BeatAnalysis.Hint? = null) : PcmTap {
     private var tracker: OnsetTracker? = null
     private var firstUs = 0L
     private var expectedUs = 0L
@@ -37,7 +37,7 @@ internal class AnalysisTap(private val fromUs: Long, private val untilUs: Long, 
         val read = tracker ?: return null
         // A reading that does not start where it was asked to is not trusted with positions.
         if (read.frames / read.fps < 6f || kotlin.math.abs(firstUs - fromUs) > 6_000_000L) return null
-        return BeatAnalysis.analyze(read.snapshot(), firstUs / 1000L, thorough)
+        return BeatAnalysis.analyze(read.snapshot(), firstUs / 1000L, thorough, hint)
     }
 }
 
@@ -68,7 +68,7 @@ internal enum class AnalysisDepth(val outroMs: Long, val introMs: Long, val key:
  * read once. Kept on the device, a few hundred titles at most.
  */
 internal object AnalysisStore {
-    private const val LIMIT = 600
+    private const val LIMIT = 900
     private val entries = object : LinkedHashMap<String, SegmentAnalysis>(64, .75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, SegmentAnalysis>?) = size > LIMIT
     }
@@ -98,6 +98,21 @@ internal object AnalysisStore {
     @Synchronized fun outro(trackId: String, durationMs: Long, depth: AnalysisDepth = AnalysisDepth.Light): SegmentAnalysis? =
         entries[key(trackId, durationMs, false)]?.takeIf { depth.satisfiedBy(it, depth.outroMs, durationMs) }
 
+    /** What was measured of the body of a title (see [BeatAnalysis.Hint]). */
+    @Synchronized fun body(trackId: String, durationMs: Long): SegmentAnalysis? = entries["b|${durationMs / 1000}|$trackId"]
+    @Synchronized fun putBody(trackId: String, durationMs: Long, analysis: SegmentAnalysis) {
+        entries["b|${durationMs / 1000}|$trackId"] = analysis
+        dirty = true
+    }
+
+    /** The stretch of the body that is read: 30 s from 45 % of the title, when the title is long enough to have one. */
+    fun bodyWindow(durationMs: Long): LongRange? {
+        if (durationMs < 150_000L) return null
+        val from = (durationMs * 45 / 100).coerceIn(60_000L, durationMs - 90_000L)
+        return from until from + BODY_MS
+    }
+    const val BODY_MS = 30_000L
+
     @Synchronized fun put(trackId: String, durationMs: Long, intro: Boolean, analysis: SegmentAnalysis) {
         entries[key(trackId, durationMs, intro)] = analysis
         dirty = true
@@ -123,7 +138,7 @@ internal object AnalysisStore {
         .put("s", a.startMs).put("l", a.lengthMs).put("b", a.bpm.toDouble()).put("p", a.beatAtMs).put("c", a.confidence.toDouble())
         .put("r", a.barOffset).put("d", a.loudnessDb.toDouble()).put("ss", a.soundStartMs).put("se", a.soundEndMs)
         .put("ri", a.riseMs).put("fa", a.fallMs).put("fo", a.fadeOut).put("he", a.hardEnding)
-        .put("k", a.key).put("ks", a.keyStrength.toDouble()).put("ph", a.phraseAtMs)
+        .put("k", a.key).put("ks", a.keyStrength.toDouble()).put("ph", a.phraseAtMs).put("h", a.tempoHint.toDouble())
 
     internal fun decode(o: JSONObject?): SegmentAnalysis? {
         o ?: return null
@@ -138,6 +153,7 @@ internal object AnalysisStore {
             o.optLong("ri", start).coerceIn(start, end), o.optLong("fa", end).coerceIn(start, end),
             o.optBoolean("fo"), o.optBoolean("he"),
             o.optInt("k", MusicalKey.UNREAD).coerceIn(MusicalKey.UNREAD, 23), o.optDouble("ks", 0.0).toFloat().coerceIn(0f, 1f),
-            o.optDouble("ph", -1.0).takeIf { it.isFinite() && it >= 0.0 && it <= end } ?: -1.0)
+            o.optDouble("ph", -1.0).takeIf { it.isFinite() && it >= 0.0 && it <= end } ?: -1.0,
+            o.optDouble("h", 0.0).toFloat().takeIf { it.isFinite() && it in 0f..400f } ?: 0f)
     }
 }

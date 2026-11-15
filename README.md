@@ -21,6 +21,17 @@
 
 ## Overview
 
+### 5.5.0 — Ketmix in time, Ket 27 (Alpha)
+
+Ketmix now reads the tempo of each title where its drums play, so intros and endings get the
+title's own beat grid, and plays two titles in time within 6, 14 or 18 % of each other. Ket 27
+(Alpha), a new switch in Settings → Appearance, turns the interface towards iOS 27: system
+colours, the Inter typeface ([SIL Open Font License](docs/licenses/Inter-OFL.txt)) with the iOS
+text styles, inset grouped settings, the iOS 27 switch and a tinted tab bar.
+[Mobile](https://github.com/Tysnnn23/Ketvoice/releases/download/v5.5.0/Ketvoice-5.5.0.apk)
+· [Quest](https://github.com/Tysnnn23/Ketvoice/releases/download/v5.5.0/Ketvoice-5.5.0-Quest.apk)
+· [Release notes](docs/releases/v5.5.0.md).
+
 ### 5.4.1 — Ketmix that keeps its effects
 
 Ketmix now waits for both players' audio processing before choosing a transition, so filtered and

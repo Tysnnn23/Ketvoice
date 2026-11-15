@@ -289,7 +289,7 @@ private fun GlassPanelBody(
     fusion: GlassFusion?,
     content: @Composable () -> Unit
 ) {
-    val style = styleOverride ?: AppSettings.glassStyle.value
+    val style = styleOverride ?: GlassStyles.current
     val liquid27 = style == GlassStyles.LIQUID_27
     val styledParams = when (style) {
         1 -> params.copy(blurPx = maxOf(params.blurPx, 26f), tintAlpha = if (params.dark) .16f else .12f,
@@ -497,6 +497,8 @@ object GlassStyles {
     const val OPAQUE = 2
     const val LIQUID_27 = 3
     const val MAX = LIQUID_27
+    /** The style in use: the listener's, or Liquid 27 while Ket 27 is on. */
+    val current: Int get() = if (AppSettings.ket27.value) LIQUID_27 else AppSettings.glassStyle.value
 }
 
 /**

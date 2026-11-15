@@ -90,24 +90,31 @@ internal fun LiquidGlassSwitch(checked: Boolean, onCheckedChange: ((Boolean) -> 
     val lens by animateFloatAsState(if (pressed && !Motion.reduced) 1f else 0f,
         if (Motion.reduced) androidx.compose.animation.core.snap() else
             androidx.compose.animation.core.spring(dampingRatio = GlassMotion.RELEASE_DAMPING, stiffness = 520f), label = "glass-switch-lens")
-    val x by androidx.compose.animation.core.animateDpAsState(if (checked) 23.dp else 3.dp,
+    // Ket 27: the switch of iOS 27 — a 63 × 28 track, green when on, under a wide capsule thumb.
+    val ket = com.ketvoice.app.theme.Ket27.on
+    val trackWidth = if (ket) com.ketvoice.app.theme.Ket27.Metrics.switchWidth else 56.dp
+    val trackHeight = if (ket) com.ketvoice.app.theme.Ket27.Metrics.switchHeight else 32.dp
+    val thumbWidth = if (ket) 38.dp else 30.dp
+    val thumbHeight = if (ket) 24.dp else 28.dp
+    val on = if (ket) androidx.compose.ui.graphics.Color(if (theme.isDark) 0xFF30D158 else 0xFF34C759) else theme.accent
+    val x by androidx.compose.animation.core.animateDpAsState(if (checked) trackWidth - thumbWidth - (if (ket) 2.dp else 3.dp) else if (ket) 2.dp else 3.dp,
         if (Motion.reduced) androidx.compose.animation.core.snap() else
             androidx.compose.animation.core.spring(dampingRatio = .82f, stiffness = 650f), label = "glass-switch")
-    Box(modifier.width(56.dp).height(48.dp)
+    Box(modifier.width(trackWidth).height(48.dp)
         .then(if (onCheckedChange != null) Modifier.toggleable(checked, interactions, null, role = Role.Switch,
             onValueChange = onCheckedChange) else Modifier),
         contentAlignment = Alignment.Center) {
-        Box(Modifier.width(56.dp).height(32.dp)) {
+        Box(Modifier.width(trackWidth).height(trackHeight)) {
             BackdropCapture(track, Modifier.fillMaxSize()) {
                 Box(Modifier.fillMaxSize().clip(RoundedCornerShape(16.dp)).background(
-                    Brush.horizontalGradient(if (checked) listOf(theme.accent.copy(alpha = .78f), theme.accent)
+                    Brush.horizontalGradient(if (checked) listOf(on.copy(alpha = if (ket) 1f else .78f), on)
                     else listOf(theme.onBackground.copy(alpha = .12f), theme.onBackground.copy(alpha = .22f)))))
             }
             CompositionLocalProvider(LocalBackdropLayer provides track) {
                 val grow = LiquidSwitchLens.size(lens)
                 GlassPanel(Modifier.offset { IntOffset((x - (if (checked) grow.width else 0.dp)).roundToPx(),
-                    (2.dp - grow.height / 2).roundToPx()) }.size(30.dp + grow.width, 28.dp + grow.height),
-                    RoundedCornerShape(14.dp + grow.height / 2),
+                    (2.dp - grow.height / 2).roundToPx()) }.size(thumbWidth + grow.width, thumbHeight + grow.height),
+                    RoundedCornerShape(thumbHeight / 2 + grow.height / 2),
                     GlassParams.circle(dark = theme.isDark).copy(blurPx = 2f * (1f - lens),
                         refractionHeightDp = 6f + 4f * lens, refractionAmountDp = 8f + 8f * lens,
                         tintAlpha = LiquidSwitchLens.tint(lens), opticalPressure = lens,
