@@ -1,0 +1,201 @@
+{
+  "schema": 8,
+  "version": "5.5.0",
+  "versionCode": 112,
+  "source_commit": "a862087785fbcd7030136718cb0c2f622f699a51",
+  "created_at": "2026-11-15T18:52:01.829762+00:00",
+  "build_origin": {
+    "kind": "github_actions_with_owner_discord_sdk",
+    "workflow": "android.yml",
+    "run_id": 43747834653,
+    "artifact": {
+      "id": 14175009268,
+      "sha256": "3e3169b53181498f3147a3e0525d43d4ead1b4059ea375f3e21faec976101693"
+    },
+    "gradle": "assembleMobileRelease assembleQuestRelease",
+    "note": "Signed by CI with the pinned keystore secret; the Discord Social SDK AAR matched its pinned SHA-256."
+  },
+  "local_validation": {
+    "result": "debug JVM/Robolectric suites for both flavors, release lint and the UI text audit passed in a cloud container without the Discord SDK",
+    "commands": [
+      "testMobileDebugUnitTest",
+      "testQuestDebugUnitTest",
+      "lintMobileRelease",
+      "lintQuestRelease",
+      "tools/audit_ui_texts.py --check"
+    ],
+    "ci_validation": "run 43747834653: release builds, debug and release unit tests for both flavors, UI text audit, lint, APK signature pin and Discord bridge packaging passed",
+    "code_review": {
+      "kind": "author's own re-read; no independent review"
+    },
+    "host_previews": "Ket 27 rendered in software on the host and inspected: settings root (dark), Appearance (light), Playback (dark), tab bar (light)",
+    "after_last_full_local_run": "no source change after the last complete local run"
+  },
+  "server": {
+    "function": "ketvoice-content",
+    "deployed_version": 23,
+    "changed_in_this_version": false,
+    "note": "no server change since 5.4.0"
+  },
+  "tests": {
+    "mobile": {
+      "jvm": {
+        "tests": 778,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "android_15_emulator_compose": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "quest": {
+      "jvm": {
+        "tests": 777,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "android_15_emulator_compose": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    }
+  },
+  "lint": {
+    "mobile": {
+      "Warning": 186,
+      "Hint": 21
+    },
+    "quest": {
+      "Warning": 188,
+      "Hint": 21
+    }
+  },
+  "apks": [
+    {
+      "name": "Ketvoice-5.5.0.apk",
+      "sha256": "80e50b72794f1ff55b77948619e3dcab4fc538eb73932ef502c60f82e25dd2f6",
+      "bytes": 74245408,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "5.5.0",
+      "versionCode": 112,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-5.5.0-Quest.apk",
+      "sha256": "40c44755aac02a92c058a10d4ebc00d2cd4bcfae78efa6e30269af5d83187c8c",
+      "bytes": 84279006,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "5.5.0",
+      "versionCode": 112,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    }
+  ],
+  "discord": {
+    "sdk_present_in_ci_build": true,
+    "sdk_sha256_pinned": true,
+    "bridge_and_native_libraries_verified": true,
+    "presence_mode": "unauthenticated_rpc_through_installed_discord_app"
+  },
+  "credential_scan": {
+    "entries": 3389,
+    "findings": 0,
+    "raw_pattern_findings": 1,
+    "scope": "tracked sources and APK archive entries",
+    "kind": "credential_patterns",
+    "explicit_private_provider_key_deny_list": false,
+    "triage": [
+      {
+        "file": "Ketvoice-Liquid-Glass-V4.html",
+        "classification": "embedded_image_false_positive",
+        "all_hits_inside_image_data_uris": true,
+        "rescanned_without_image_payloads": true
+      }
+    ]
+  },
+  "release_install_smoke": {
+    "mobile": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "quest": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    }
+  },
+  "publication_override": {
+    "authorized_by_user": true,
+    "authorized_at": "2026-11-15T18:52:01.829762+00:00",
+    "kind": "standing_authorization",
+    "user_statement": "J'autorise TOUT devient maintenant une règle.",
+    "user_statement_date": "2026-11-14",
+    "in_reply_to": "The question whether versions may be published without phone or Quest testing without asking again for each version.",
+    "recorded_in": "AGENTS.md (commit aeeda8e)",
+    "reason": "The owner made publishing validated versions without phone or Quest testing a standing rule.",
+    "scope": "physical device installation and all on-device behaviour of 5.5.0"
+  },
+  "owner_report_2026_11_15_second_journal": {
+    "statement_summary": "the owner said Ketmix is 'more fade transitions than a real automix like Apple Music's', asked for much more research, sent a second journal (three transitions: Filter, Echo, Filter; all 'precise true', 'paths out on, in on') and asked for a new 'Ket 27 (Alpha)' mode giving the app a complete iOS 27 interface.",
+    "journal_reading": [
+      "the 5.4.1 fix held on the device: every transition was precise with both decks' processors in their sound path",
+      "none of the three pairs was played in time: 138 into 122 BPM was outside the 8 % range; an ending read at 183 BPM (49 %) belongs to a title whose intro had been read at 122 BPM (3/2 apart); intros read at 21 % confidence gave no usable grid"
+    ],
+    "research": {
+      "how": "two delegated web research passes (search-result excerpts and GitHub sources; most press and Apple pages could not be opened in full)",
+      "automix_findings_used": [
+        "Apple describes AutoMix as time stretching plus beat matching with a fallback to a simple crossfade; iOS 27 reportedly aligns tempo across wider gaps",
+        "djay syncs within a few percent and tempo-blends beyond; half/double tempo relations are standard",
+        "octave and 3:2 tempo errors are the dominant failure of tempo estimation; reading a drum-bearing section is the usual remedy (inference from sources)"
+      ],
+      "ios27_numbers_source": "a third-party repository stating it measured Apple's iOS 27 Figma kit; not checked against the kit itself"
+    },
+    "ketmix_changes": [
+      "30 s of the body of each title (from 45 % of its length, titles of 150 s or more, balanced and maximum analysis) are read by the standby deck and stored; intro and ending are analysed against that tempo when the body is confident (>= 45 %), the grid being accepted when the stretch's own attacks give at least 15 % confidence, capped at 60 %",
+      "tempo ranges 6/14/18 % instead of 5/8/12 %",
+      "the journal lists the body tempo of each title"
+    ],
+    "ket27": "see known_limitations: an alpha covering colours, typeface and text styles, settings lists, switch, alerts and the tab bar; other pages inherit colours and type only",
+    "never_run_with_real_audio": [
+      "the body reading and the hinted grids were never run on real music: thresholds (15 %, 45 %, 60 %) are untuned guesses checked on synthetic signals only",
+      "blends at 14-18 % tempo difference were never heard; time-stretch artefacts at such ratios are likely on sustained vocals"
+    ]
+  },
+  "not_validated": [
+    "physical phone or Quest installation, rendering and touch behaviour",
+    "Ketmix with real audio on any device or emulator",
+    "Ket 27 on a device: only four host renders were inspected; Home, Explore, Library, album, artist, player, search, sheets and Quest were not looked at with Ket 27 on",
+    "Inter rendering on a device (variable font weights), and languages whose scripts Inter lacks (Hindi, Japanese, Chinese, Korean fall back to the system typeface)",
+    "independent code review of this diff"
+  ],
+  "owner_section_changes": [],
+  "known_limitations": [
+    "Owner-section changes are deliberately not mentioned in the public release notes (owner preference).",
+    "A Canvas given as a link depends on the site that serves it: if it goes away or refuses streaming, nothing plays behind the title.",
+    "Ketmix needs the next title to be playable without a new resolution or one that succeeds in time; otherwise it says so and the title ends as before.",
+    "A manual skip is still a plain change of title: it is not mixed.",
+    "The mix journal is kept in memory only and is lost when the app is closed.",
+    "Ket 27 is an alpha: settings, switch, alerts, tab bar, colours and type follow iOS 27; page layouts elsewhere (Home, Library, album, player, sheets, menus) keep Ketvoice's own structure. No iPad sidebar, no minimised tab bar change, no new haptics.",
+    "Titles under 150 s and the light analysis setting get no body reading; 3:2 and 4:3 tempo relations between two different titles are still not mixed in time.",
+    "Reading the body of two titles adds about 5 to 10 seconds of silent decoding before each new pair.",
+    "The signing certificate is the existing public Android debug identity, not a private production key."
+  ],
+  "canonical_banner_sha256": "47f6793088983f7d4e6bd1aeaa2cbd8b7cdc2a8f91271e3b2839daea81da0436"
+}
