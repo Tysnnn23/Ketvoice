@@ -40,6 +40,9 @@ import com.ketvoice.app.ui.motion.Motion
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -423,7 +426,7 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier,
     val lensLift by animateFloatAsState(if (held && !Motion.reduced) 1f else 0f,
         if (Motion.reduced) androidx.compose.animation.core.snap() else spring(dampingRatio = HeldLens.DAMPING, stiffness = HeldLens.STIFFNESS),
         label = "held-lens")
-    var lastHoverTab by remember { mutableIntStateOf(-1) }
+    val lastHoverTab = remember { mutableIntStateOf(-1) }
     val tabs = listOf(
         TabSpec(Icons.Filled.Home, "Accueil", AppUi.HOME),
         TabSpec(Icons.Filled.GridView, "Explorer", AppUi.EXPLORER),
@@ -452,32 +455,40 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier,
             .width(widthAnim)
             .height(heightAnim)
             .pointerInput(collapsed, homeOnly) {
-                if (homeOnly) return@pointerInput
-                detectDragGesturesAfterLongPress(
-                    onDragStart = { start -> held = true; hover = lensPosition(start.x, size.width.toFloat()) },
-                    onDrag = { change, _ ->
-                        change.consume()
-                        hover = lensPosition(change.position.x, size.width.toFloat())
-                    },
-                    onDragEnd = {
-                        focus.clearFocus()
-                        haptic(Haptics.Kind.Tick)
-                        AppUi.selectTab(kotlin.math.round(hover).toInt().coerceIn(0, 2))
-                        held = false
-                    }, onDragCancel = { held = false })
-            }
-            // A swipe along the bar grabs the lens at once, without waiting for a long press.
-            .pointerInput(collapsed, homeOnly) {
                 if (homeOnly || collapsed) return@pointerInput
-                detectHorizontalDragGestures(
-                    onDragStart = { start -> held = true; hover = lensPosition(start.x, size.width.toFloat()) },
-                    onHorizontalDrag = { change, _ -> change.consume(); hover = lensPosition(change.position.x, size.width.toFloat()) },
-                    onDragEnd = {
+                // One gesture grabs the lens: a hold, or a slide along the bar. A plain tap is left to the tabs.
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    // Null: still held when the long press is reached, which grabs it too.
+                    val grabbed = withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) {
+                        var result: Boolean? = null
+                        while (result == null) {
+                            val change = awaitPointerEvent().changes.firstOrNull { it.id == down.id }
+                            result = when {
+                                change == null || !change.pressed -> false
+                                kotlin.math.abs(change.position.x - down.position.x) > viewConfiguration.touchSlop -> true
+                                else -> null
+                            }
+                        }
+                        result
+                    } ?: true
+                    if (!grabbed) return@awaitEachGesture
+                    held = true
+                    hover = lensPosition(down.position.x, size.width.toFloat())
+                    var released = false
+                    while (!released) {
+                        // Read before the tabs, so that letting go of the lens is not also a tap on a tab.
+                        val change = awaitPointerEvent(PointerEventPass.Initial).changes.firstOrNull { it.id == down.id } ?: break
+                        change.consume()
+                        if (change.pressed) hover = lensPosition(change.position.x, size.width.toFloat()) else released = true
+                    }
+                    if (released) {
                         focus.clearFocus()
                         haptic(Haptics.Kind.Tick)
                         AppUi.selectTab(kotlin.math.round(hover).toInt().coerceIn(0, 2))
-                        held = false
-                    }, onDragCancel = { held = false })
+                    }
+                    held = false
+                }
             },
         shape = RoundedCornerShape(30.dp),
         params = GlassParams.navigation(dark = th.isDark),
@@ -538,18 +549,18 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier,
                     // Each tab crossed by the held lens is felt, as on iOS.
                     if (held) {
                         val over = kotlin.math.round(hover).toInt().coerceIn(0, 2)
-                        LaunchedEffect(over) { if (lastHoverTab != -1 && lastHoverTab != over) haptic(Haptics.Kind.Tick); lastHoverTab = over }
-                    } else lastHoverTab = -1
+                        LaunchedEffect(over) { if (lastHoverTab.intValue != -1 && lastHoverTab.intValue != over) haptic(Haptics.Kind.Tick); lastHoverTab.intValue = over }
+                    } else lastHoverTab.intValue = -1
                     val grow = HeldLens.grow(lensLift)
                     GlassPanel(
                         modifier = Modifier
-                            .offset(x = slot * lens.start + 5.dp - grow.width / 2)
+                            .offset { androidx.compose.ui.unit.IntOffset((slot * lens.start + 5.dp - grow.width / 2).roundToPx(), 0) }
                             .size(width = slot * lens.span - 10.dp + grow.width, height = heightAnim - 10.dp + grow.height)
                             .align(Alignment.CenterStart)
                             .graphicsLayer { scaleX = bulge; scaleY = bulge * lens.squash },
                         shape = pillShape,
                         params = GlassParams.selection(dark = th.isDark).let { base ->
-                            if (lensLift <= 0f) base else base.copy(opticalPressure = lensLift.coerceIn(0f, 1f),
+                            if (lensLift <= 0f) base else base.copy(opticalPressure = lensLift.coerceIn(0f, 1f), lens = lensLift.coerceIn(0f, 1f),
                                 blurPx = base.blurPx * (1f - lensLift.coerceIn(0f, 1f)), tintAlpha = base.tintAlpha * (1f - .8f * lensLift.coerceIn(0f, 1f)),
                                 refractionHeightDp = base.refractionHeightDp + 4f * lensLift, refractionAmountDp = base.refractionAmountDp + 9f * lensLift,
                                 highlightAlpha = base.highlightAlpha + .2f * lensLift.coerceIn(0f, 1f))

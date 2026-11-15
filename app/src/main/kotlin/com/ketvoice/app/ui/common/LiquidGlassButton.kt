@@ -117,7 +117,7 @@ internal fun LiquidGlassSwitch(checked: Boolean, onCheckedChange: ((Boolean) -> 
                     RoundedCornerShape(thumbHeight / 2 + grow.height / 2),
                     GlassParams.circle(dark = theme.isDark).copy(blurPx = 2f * (1f - lens),
                         refractionHeightDp = 6f + 4f * lens, refractionAmountDp = 8f + 8f * lens,
-                        tintAlpha = LiquidSwitchLens.tint(lens), opticalPressure = lens,
+                        tintAlpha = LiquidSwitchLens.tint(lens), opticalPressure = lens, lens = lens,
                         shadow = false, innerShadow = false),
                     enabled = AppSettings.liquidGlass.value) {}
             }

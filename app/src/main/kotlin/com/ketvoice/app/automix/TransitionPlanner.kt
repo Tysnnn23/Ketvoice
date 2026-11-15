@@ -59,7 +59,9 @@ internal data class MixContext(
     /** The beats of the outgoing title can still be followed. False when it is too late to start in time with them. */
     val beats: Boolean = true,
     /** Speed the outgoing title plays at (a previous blend may have left it a little off its own). */
-    val speed: Float = 1f
+    val speed: Float = 1f,
+    /** The last exit on the beat that needs no common tempo: 0 none yet, 1 an echo, 2 a build. They take turns. */
+    val lastExit: Int = 0
 )
 
 /** The transition the listener prefers; [Auto] lets Ketmix choose for each pair of titles. */
@@ -225,7 +227,7 @@ internal object TransitionPlanner {
         if (beats && (echoAllowed || riseAllowed) && a.hasBeat && !a.fadeOut) {
             fun tryRise() = if (riseAllowed) rise(a, b, settings, end, start, sungUntil, gain, variant)?.let { measured(it) }?.takeIf { it.mixes } else null
             fun tryEcho() = if (echoAllowed || settings.style == MixStyle.Rise) echo(a, b, settings, end, start, sungUntil, gain)?.let { measured(it) }?.takeIf { it.mixes } else null
-            val first = settings.style == MixStyle.Rise || (settings.style == MixStyle.Auto && context.lastVariant == 0)
+            val first = settings.style == MixStyle.Rise || (settings.style == MixStyle.Auto && context.lastExit == 1)
             (if (first) tryRise() ?: tryEcho() else tryEcho() ?: tryRise())?.let { return it.copy(variant = variant) }
         }
         if (fullEnding) return ending()

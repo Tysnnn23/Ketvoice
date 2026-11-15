@@ -23,5 +23,11 @@ class ForYouRotationTest {
         // Kept on the device as text.
         val counts = mapOf("release:77" to 2, "mix:artist:x" to 1)
         assertEquals(counts, ForYouRotation.decode(ForYouRotation.encode(counts)))
+        // Within a launch the card keeps what it shows while it is still a candidate (releases arriving late do not flip it).
+        ForYouRotation.newLaunchForTest()
+        val first = ForYouRotation.choose(listOf("mix:m1"))
+        assertEquals(first, ForYouRotation.choose(listOf("release:new", "mix:m1")))
+        assertEquals("release:new", ForYouRotation.choose(listOf("release:new")))
+        ForYouRotation.newLaunchForTest()
     }
 }

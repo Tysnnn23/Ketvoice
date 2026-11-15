@@ -22,10 +22,18 @@ object StudioImageLink {
             (text(4, "ftyp") && (text(8, "avif") || text(8, "avis") || text(8, "heic") || text(8, "mif1")))
     }
 
+    internal fun publicHost(host: String?): Boolean {
+        val h = host?.lowercase()?.trim('.') ?: return false
+        return '.' in h && h != "localhost" && !h.endsWith(".local") && !h.endsWith(".internal") &&
+            !Regex("^(\\d+\\.){3}\\d+$").matches(h) && !h.startsWith("[") && ':' !in h
+    }
+
     /** Checks that [address] serves an image over HTTPS and returns the address that serves it (after redirects). */
     suspend fun check(address: String): String = withContext(Dispatchers.IO) {
         val url = runCatching { URL(address.trim()) }.getOrNull() ?: error("Lien HTTPS requis")
         require(url.protocol == "https" && url.userInfo == null) { "Lien HTTPS requis" }
+        // As the server does: a public host only, never the phone's own network.
+        require(publicHost(url.host)) { "Lien HTTPS public requis" }
         val c = (url.openConnection() as HttpURLConnection).apply {
             connectTimeout = 12_000; readTimeout = 20_000; instanceFollowRedirects = true
             setRequestProperty("Accept", "image/*")

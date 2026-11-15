@@ -229,7 +229,7 @@ class TransitionPlannerTest {
         // 120 vs 150 BPM, phrases every 16 s from 167 s, the singing over at 165 s.
         val a = outro(120f, bar = 0, phrase = 167_000.0)
         val built = TransitionPlanner.plan(MixFacts(duration, a, vocalEndMs = 165_000), MixFacts(duration, intro(150f)),
-            MixContext(lastVariant = 0), MixSettings(1))
+            MixContext(lastExit = 1), MixSettings(1))
         assertEquals(MixKind.Rise, built.kind)
         assertEquals("on the phrase before the body ends", 183_000L, built.outMs); assertTrue(built.onPhrase)
         assertEquals("eight beats of build", 4_000L, built.buildMs)
@@ -237,20 +237,23 @@ class TransitionPlannerTest {
         assertEquals("no change of speed", 1f, built.rate, 0f); assertTrue(built.beatTied)
         assertEquals("montée", MixWords.label(built)); assertEquals(0f, MixWords.swapShare(built), 0f)
         // Left to Ketmix, a build and an echo take turns.
-        val echoed = TransitionPlanner.plan(MixFacts(duration, a, vocalEndMs = 165_000), MixFacts(duration, intro(150f)), MixContext(lastVariant = 1), MixSettings(1))
+        val echoed = TransitionPlanner.plan(MixFacts(duration, a, vocalEndMs = 165_000), MixFacts(duration, intro(150f)), MixContext(lastExit = 2), MixSettings(1))
         assertEquals(MixKind.Echo, echoed.kind)
         // The DJ setting builds for 16 beats; the style asks for it whatever came before; discreet never does.
         assertEquals(8_000L, TransitionPlanner.plan(MixFacts(duration, a, vocalEndMs = 165_000), MixFacts(duration, intro(150f)),
-            MixContext(lastVariant = 0), MixSettings(2)).buildMs)
+            MixContext(lastExit = 1), MixSettings(2)).buildMs)
         assertEquals(MixKind.Rise, TransitionPlanner.plan(MixFacts(duration, a, vocalEndMs = 165_000), MixFacts(duration, intro(150f)),
-            MixContext(lastVariant = 1), MixSettings(1, MixStyle.Rise)).kind)
+            MixContext(lastExit = 2), MixSettings(1, MixStyle.Rise)).kind)
         assertEquals(MixKind.Rise, TransitionPlanner.plan(MixFacts(duration, a, vocalEndMs = 165_000), MixFacts(duration, intro(120f)),
             MixContext(), MixSettings(1, MixStyle.Rise)).kind)
         assertNotEquals(MixKind.Rise, TransitionPlanner.plan(MixFacts(duration, a, vocalEndMs = 165_000), MixFacts(duration, intro(150f)),
-            MixContext(lastVariant = 0), MixSettings(0)).kind)
+            MixContext(lastExit = 1), MixSettings(0)).kind)
         // Never while the singing goes on to the end.
         assertNotEquals(MixKind.Rise, TransitionPlanner.plan(MixFacts(duration, a, vocalEndMs = 198_000), MixFacts(duration, intro(150f)),
-            MixContext(lastVariant = 0), MixSettings(1)).kind)
+            MixContext(lastExit = 1), MixSettings(1)).kind)
+        // Whatever colour the blends in between took, the next exit on the beat is the other one.
+        assertEquals(MixKind.Rise, TransitionPlanner.plan(MixFacts(duration, a, vocalEndMs = 165_000), MixFacts(duration, intro(150f)),
+            MixContext(lastExit = 1, lastVariant = 1), MixSettings(1)).kind)
     }
 
     @Test fun aLastNoteAtFullLevelRingsOnPastTheEnd() {

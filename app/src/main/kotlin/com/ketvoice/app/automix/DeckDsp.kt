@@ -242,13 +242,16 @@ internal class DeckAutomation(
             val beat = (plan.beatMs * 1000f).toLong().coerceIn(250_000L, 1_200_000L)
             val send = Curve.join(point(start - beat, 0f), point(start, 1f), point(start + 10_000L, 0f))
             val dry = Curve.join(point(start, 1f), point(start + 20_000L, 0f))
-            val gain = Curve.join(point(start, 1f), Curve.shaped(start + 1, end, 16) { fadeOut(it) })
+            // The resonant filter lifts its cut-off by a few dB and the noise adds to the music: the title gives way a little meanwhile.
+            val gain = Curve.join(point(from, 1f), Curve.shaped(from + 1, start, 16) { 1f - (1f - RISE_FLOOR) * it }, point(start, RISE_FLOOR),
+                Curve.shaped(start + 1, end, 16) { RISE_FLOOR * fadeOut(it) })
             return DeckAutomation(gain, climb, dry = dry, reverb = send, resonance = RISE_Q, noise = noise, noiseHz = noiseHz)
         }
         private const val RISE_TOP_HZ = 2_200f
         private const val RISE_Q = 1.6f
         /** The noise at its loudest, a share of full scale: present under the music, never over it. */
-        const val RISE_NOISE = .07f
+        const val RISE_NOISE = .05f
+        private const val RISE_FLOOR = .78f
         private const val RISE_NOISE_FROM_HZ = 900f
         private const val RISE_NOISE_TO_HZ = 7_500f
 
@@ -372,7 +375,8 @@ internal class DeckDsp(val sampleRate: Int, val channels: Int) {
                     var y = x * dry
                     if (repeats != null) y += repeats.run(x * send, c)
                     if (room != null && c < 2) y += room.run(x * wash, c)
-                    output.putShort((y * gain + n).toInt().coerceIn(-32768, 32767).toShort())
+                    val v = y * gain + n
+                    output.putShort((if (breath > 0f) softClip(v) else v).toInt().coerceIn(-32768, 32767).toShort())
                 }
                 repeats?.advance()
             }
@@ -381,6 +385,16 @@ internal class DeckDsp(val sampleRate: Int, val channels: Int) {
         }
         // A trailing partial frame is passed on as it came.
         while (input.hasRemaining()) output.put(input.get())
+    }
+
+    /** Above -3 dBFS a sample is bent smoothly towards full scale instead of being cut flat. */
+    private fun softClip(v: Float): Float {
+        val knee = 23_170f
+        val a = kotlin.math.abs(v)
+        if (a <= knee) return v
+        val room = 32_767f - knee
+        val bent = knee + room * kotlin.math.tanh((a - knee) / room)
+        return if (v < 0f) -bent else bent
     }
 
     /** White noise in -1..1 (xorshift): cheap, and the same from one run to the next. */
@@ -536,11 +550,20 @@ internal object DeckSync {
     fun speedOf(plan: MixPlan, outgoing: Float): Float =
         if (plan.kind == MixKind.Beatmatch) stepped(outgoing * plan.rate) else 1f
 
-    /** The incoming deck is back on its own speed this long (in its title) before it is heard. */
-    const val SETTLE_BEFORE_MS = 450L
+    /**
+     * The incoming deck is heard once its level means something: at once for a cut (an echo, a build, a
+     * trim), after the first eighth of the overlap for a blend, whose level rises from silence.
+     */
+    fun heard(plan: MixPlan, inPositionMs: Long): Boolean = inPositionMs >= heardFrom(plan)
+    private fun heardFrom(plan: MixPlan): Double =
+        if (plan.kind == MixKind.Beatmatch) plan.inMs + plan.overlapMs * plan.rate * QUIET_SHARE else plan.inMs.toDouble()
+    /** In a blend the incoming title is still under -20 dB over this share of the overlap. */
+    private const val QUIET_SHARE = .12
+    /** A change of speed reaches the sound once the audio buffer (up to a second) has played out: corrections stop this long before. */
+    const val SETTLE_BEFORE_MS = 1_400L
 
     /** True once the incoming deck is too close to being heard to have its speed corrected. */
-    fun settled(plan: MixPlan, inPositionMs: Long): Boolean = inPositionMs >= plan.inMs - SETTLE_BEFORE_MS
+    fun settled(plan: MixPlan, inPositionMs: Long): Boolean = inPositionMs >= heardFrom(plan) - SETTLE_BEFORE_MS
 
     /** A speed on the grid of steps too small to hear. */
     fun stepped(speed: Float): Float = (Math.round(speed / STEP) * STEP).toFloat()

@@ -127,7 +127,12 @@ data class GlassParams(
     val dark: Boolean = false,
     val opticalPressure: Float = 0f,
     /** 0 while the glass forms, 1 once it is there: scales its refraction and its rim light. */
-    val materialize: Float = 1f
+    val materialize: Float = 1f,
+    /**
+     * 0..1: the glass is held as a lens (the selection of the tab bar, the thumb of a switch under a finger):
+     * it clears and magnifies what is under it. A pressed button only uses [opticalPressure].
+     */
+    val lens: Float = 0f
 ) {
     companion object {
         /**

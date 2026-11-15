@@ -1,6 +1,7 @@
 package com.ketvoice.app.data
 
 import android.content.Context
+import androidx.core.content.edit
 
 /**
  * Which poster the "For you" card at the top of Home shows. Fresh releases and personal mixes take
@@ -9,24 +10,30 @@ import android.content.Context
  */
 object ForYouRotation {
     private var prefs: android.content.SharedPreferences? = null
-    private val shownThisLaunch = HashMap<List<String>, String>()
+    /** What this launch shows: kept while it is still a candidate, so the card does not change under the eyes. */
+    private var launchChoice: String? = null
 
     fun init(context: Context) {
         if (prefs == null) prefs = context.applicationContext.getSharedPreferences("for-you", Context.MODE_PRIVATE)
     }
 
-    /** The candidate to show among [candidates] (ids such as "release:…" or "mix:…"); recorded as shown, once per launch. */
+    /** The candidate to show among [candidates] (ids such as "release:…" or "mix:…"); recorded as shown once per launch. */
     @Synchronized fun choose(candidates: List<String>): String? {
         if (candidates.isEmpty()) return null
-        shownThisLaunch[candidates]?.let { return it }
+        launchChoice?.takeIf { it in candidates }?.let { return it }
+        val counted = launchChoice != null
         val store = prefs
         val seen = store?.getString("seen", null)?.let(::decode).orEmpty()
         val last = store?.getString("last", null)
         val chosen = pick(candidates, seen, last, System.currentTimeMillis() / 3_600_000L) ?: return null
-        shownThisLaunch[candidates] = chosen
-        store?.edit()?.putString("seen", encode(shown(seen, chosen, candidates)))?.putString("last", chosen)?.apply()
+        launchChoice = chosen
+        // One show per launch is counted, whatever the card has to change to later.
+        if (!counted) store?.edit(commit = false) { putString("seen", encode(shown(seen, chosen, candidates))); putString("last", chosen) }
         return chosen
     }
+
+    /** For tests: a new launch. */
+    internal fun newLaunchForTest() { launchChoice = null }
 
     /** The least shown candidate, not [last] when there is another; ties take turns with [seed]. */
     internal fun pick(candidates: List<String>, seen: Map<String, Int>, last: String?, seed: Long): String? {

@@ -1476,7 +1476,9 @@
   "Lien": "Link",
   "affiché depuis son adresse, sans limite de taille": "shown from its address, no size limit",
   "Ce lien n'est pas une image (JPEG, PNG, WebP, GIF ou AVIF)": "This link is not an image (JPEG, PNG, WebP, GIF or AVIF)",
-  "Lien · affiché depuis son adresse, sans limite de taille": "Link · shown from its address, no size limit"
+  "Lien · affiché depuis son adresse, sans limite de taille": "Link · shown from its address, no size limit",
+  "Pour vous": "For you",
+  "Lien HTTPS public requis": "A public HTTPS link is required"
  },
  "hi": {
   "Reverb": "रीवर्ब",
@@ -2955,7 +2957,9 @@
   "Lien": "लिंक",
   "affiché depuis son adresse, sans limite de taille": "अपने पते से दिखाया जाता है, आकार की कोई सीमा नहीं",
   "Ce lien n'est pas une image (JPEG, PNG, WebP, GIF ou AVIF)": "यह लिंक छवि नहीं है (JPEG, PNG, WebP, GIF या AVIF)",
-  "Lien · affiché depuis son adresse, sans limite de taille": "लिंक · अपने पते से दिखाया जाता है, आकार की कोई सीमा नहीं"
+  "Lien · affiché depuis son adresse, sans limite de taille": "लिंक · अपने पते से दिखाया जाता है, आकार की कोई सीमा नहीं",
+  "Pour vous": "आपके लिए",
+  "Lien HTTPS public requis": "सार्वजनिक HTTPS लिंक आवश्यक है"
  },
  "ja": {
   "Reverb": "リバーブ",
@@ -4434,7 +4438,9 @@
   "Lien": "リンク",
   "affiché depuis son adresse, sans limite de taille": "元のアドレスから表示、サイズ制限なし",
   "Ce lien n'est pas une image (JPEG, PNG, WebP, GIF ou AVIF)": "このリンクは画像ではありません(JPEG、PNG、WebP、GIF、AVIF)",
-  "Lien · affiché depuis son adresse, sans limite de taille": "リンク · 元のアドレスから表示、サイズ制限なし"
+  "Lien · affiché depuis son adresse, sans limite de taille": "リンク · 元のアドレスから表示、サイズ制限なし",
+  "Pour vous": "あなたへ",
+  "Lien HTTPS public requis": "公開されている HTTPS リンクが必要です"
  },
  "zh": {
   "Reverb": "混响",
@@ -5913,7 +5919,9 @@
   "Lien": "链接",
   "affiché depuis son adresse, sans limite de taille": "从其地址显示,无大小限制",
   "Ce lien n'est pas une image (JPEG, PNG, WebP, GIF ou AVIF)": "此链接不是图片(JPEG、PNG、WebP、GIF 或 AVIF)",
-  "Lien · affiché depuis son adresse, sans limite de taille": "链接 · 从其地址显示,无大小限制"
+  "Lien · affiché depuis son adresse, sans limite de taille": "链接 · 从其地址显示,无大小限制",
+  "Pour vous": "为你推荐",
+  "Lien HTTPS public requis": "需要公开的 HTTPS 链接"
  },
  "ru": {
   "Reverb": "Реверберация",
@@ -7392,7 +7400,9 @@
   "Lien": "Ссылка",
   "affiché depuis son adresse, sans limite de taille": "показывается по своему адресу, без ограничения размера",
   "Ce lien n'est pas une image (JPEG, PNG, WebP, GIF ou AVIF)": "Эта ссылка не ведёт на изображение (JPEG, PNG, WebP, GIF или AVIF)",
-  "Lien · affiché depuis son adresse, sans limite de taille": "Ссылка · показывается по своему адресу, без ограничения размера"
+  "Lien · affiché depuis son adresse, sans limite de taille": "Ссылка · показывается по своему адресу, без ограничения размера",
+  "Pour vous": "Для вас",
+  "Lien HTTPS public requis": "Нужна общедоступная ссылка HTTPS"
  },
  "it": {
   "Reverb": "Riverbero",
@@ -8871,7 +8881,9 @@
   "Lien": "Link",
   "affiché depuis son adresse, sans limite de taille": "mostrata dal suo indirizzo, senza limite di dimensione",
   "Ce lien n'est pas une image (JPEG, PNG, WebP, GIF ou AVIF)": "Questo link non è un'immagine (JPEG, PNG, WebP, GIF o AVIF)",
-  "Lien · affiché depuis son adresse, sans limite de taille": "Link · mostrata dal suo indirizzo, senza limite di dimensione"
+  "Lien · affiché depuis son adresse, sans limite de taille": "Link · mostrata dal suo indirizzo, senza limite di dimensione",
+  "Pour vous": "Per te",
+  "Lien HTTPS public requis": "È richiesto un link HTTPS pubblico"
  },
  "es": {
   "Reverb": "Reverb",
@@ -10350,7 +10362,9 @@
   "Lien": "Enlace",
   "affiché depuis son adresse, sans limite de taille": "se muestra desde su dirección, sin límite de tamaño",
   "Ce lien n'est pas une image (JPEG, PNG, WebP, GIF ou AVIF)": "Este enlace no es una imagen (JPEG, PNG, WebP, GIF o AVIF)",
-  "Lien · affiché depuis son adresse, sans limite de taille": "Enlace · se muestra desde su dirección, sin límite de tamaño"
+  "Lien · affiché depuis son adresse, sans limite de taille": "Enlace · se muestra desde su dirección, sin límite de tamaño",
+  "Pour vous": "Para ti",
+  "Lien HTTPS public requis": "Se requiere un enlace HTTPS público"
  },
  "de": {
   "Reverb": "Reverb",
@@ -11829,7 +11843,9 @@
   "Lien": "Link",
   "affiché depuis son adresse, sans limite de taille": "wird von seiner Adresse angezeigt, ohne Größenbeschränkung",
   "Ce lien n'est pas une image (JPEG, PNG, WebP, GIF ou AVIF)": "Dieser Link ist kein Bild (JPEG, PNG, WebP, GIF oder AVIF)",
-  "Lien · affiché depuis son adresse, sans limite de taille": "Link · wird von seiner Adresse angezeigt, ohne Größenbeschränkung"
+  "Lien · affiché depuis son adresse, sans limite de taille": "Link · wird von seiner Adresse angezeigt, ohne Größenbeschränkung",
+  "Pour vous": "Für dich",
+  "Lien HTTPS public requis": "Ein öffentlicher HTTPS-Link ist erforderlich"
  },
  "pt": {
   "Reverb": "Reverb",
@@ -13308,7 +13324,9 @@
   "Lien": "Ligação",
   "affiché depuis son adresse, sans limite de taille": "mostrada a partir do seu endereço, sem limite de tamanho",
   "Ce lien n'est pas une image (JPEG, PNG, WebP, GIF ou AVIF)": "Esta ligação não é uma imagem (JPEG, PNG, WebP, GIF ou AVIF)",
-  "Lien · affiché depuis son adresse, sans limite de taille": "Ligação · mostrada a partir do seu endereço, sem limite de tamanho"
+  "Lien · affiché depuis son adresse, sans limite de taille": "Ligação · mostrada a partir do seu endereço, sem limite de tamanho",
+  "Pour vous": "Para si",
+  "Lien HTTPS public requis": "É necessária uma ligação HTTPS pública"
  },
  "ko": {
   "Reverb": "리버브",
@@ -14787,6 +14805,8 @@
   "Lien": "링크",
   "affiché depuis son adresse, sans limite de taille": "원래 주소에서 표시, 크기 제한 없음",
   "Ce lien n'est pas une image (JPEG, PNG, WebP, GIF ou AVIF)": "이 링크는 이미지가 아닙니다(JPEG, PNG, WebP, GIF 또는 AVIF)",
-  "Lien · affiché depuis son adresse, sans limite de taille": "링크 · 원래 주소에서 표시, 크기 제한 없음"
+  "Lien · affiché depuis son adresse, sans limite de taille": "링크 · 원래 주소에서 표시, 크기 제한 없음",
+  "Pour vous": "당신을 위한",
+  "Lien HTTPS public requis": "공개 HTTPS 링크가 필요합니다"
  }
 }

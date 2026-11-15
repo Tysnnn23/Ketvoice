@@ -87,10 +87,10 @@ fun HomeScreen() {
     // New releases of the artists played most: loaded beside the page, never blocking it.
     val known by ListeningHistory.knownTracks.collectAsState()
     val counts by ListeningHistory.playCounts.collectAsState()
-    var releases by remember { mutableStateOf<List<CatalogAlbum>>(emptyList()) }
+    var loadedReleases by remember { mutableStateOf<List<CatalogAlbum>>(emptyList()) }
+    val releases = remember(loadedReleases, blockedArtists) { loadedReleases.filter { com.ketvoice.app.data.ArtistPrefs.allows(it.artist) } }
     LaunchedEffect(known.size / 10, counts.size / 10) {
-        releases = runCatching { HomeReleases.load(known, counts, AppSettings.favoriteIds.value) }.getOrDefault(emptyList())
-            .filter { com.ketvoice.app.data.ArtistPrefs.allows(it.artist) }
+        loadedReleases = runCatching { HomeReleases.load(known, counts, AppSettings.favoriteIds.value) }.getOrDefault(emptyList())
     }
     val learned = HomeLearning.scores
     LaunchedEffect(recent) { ArtworkRepo.enrich(recent.take(20)) }

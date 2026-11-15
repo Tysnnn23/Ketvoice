@@ -18,5 +18,8 @@ class StudioImageLinkTest {
         val mp4 = ascii("ftyp", 4).also { "isom".forEachIndexed { i, c -> it[8 + i] = c.code.toByte() } }
         assertFalse("a video is not an image", StudioImageLink.isImage(mp4))
         assertFalse("a page is not an image", StudioImageLink.isImage(ascii("<!doctype html>")))
+        // Public hosts only, as the server requires.
+        assertTrue(StudioImageLink.publicHost("cdn.example.org"))
+        for (host in listOf("localhost", "192.168.1.10", "printer.local", "[::1]", "intranet", null)) assertFalse("$host", StudioImageLink.publicHost(host))
     }
 }

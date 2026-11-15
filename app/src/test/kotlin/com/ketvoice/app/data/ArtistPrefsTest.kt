@@ -21,6 +21,11 @@ class ArtistPrefsTest {
         assertFalse(ArtistPrefs.allows("Simon and Garfunkel", duo))
         assertTrue(ArtistPrefs.allows("Paul Simon", duo))
         assertTrue("nothing blocked, everything allowed", ArtistPrefs.allows("Anyone", emptySet()))
+        // A blocked name that holds a separator is found again when featured.
+        val tyler = setOf(MediaOverrides.normalize("Tyler, The Creator"))
+        assertFalse(ArtistPrefs.allows("Kali Uchis, Tyler, The Creator", tyler))
+        assertFalse(ArtistPrefs.allows("Tyler, The Creator", tyler))
+        assertTrue(ArtistPrefs.allows("Kali Uchis, The Creators", tyler))
     }
 
     @Test fun blockingAndFavouritesExcludeEachOtherAndAreKept() {

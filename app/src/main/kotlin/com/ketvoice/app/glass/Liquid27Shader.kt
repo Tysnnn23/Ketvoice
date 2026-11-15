@@ -243,7 +243,7 @@ internal fun applyLiquid27Material(shader: android.graphics.RuntimeShader, w: Fl
     shader.setFloatUniform("lensAmount", lens.amountPx * params.materialize.coerceIn(0f, 1f))
     shader.setFloatUniform("dispersion", DesignTokens.Glass.DISPERSION * 1.5f)
     // Held as a lens, the glass clears: no frost, almost no milk.
-    val clear = 1f - params.opticalPressure.let { if (it.isFinite()) it.coerceIn(0f, 1f) else 0f } * .85f
+    val clear = 1f - params.lens.let { if (it.isFinite()) it.coerceIn(0f, 1f) else 0f } * .85f
     shader.setFloatUniform("frost", GlassTuning.sanitize(frost) * clear)
     // Lighter dark material than the other styles; the cover may tint it slightly.
     val milk = GlassTint.milk(params.dark)
@@ -254,5 +254,5 @@ internal fun applyLiquid27Material(shader: android.graphics.RuntimeShader, w: Fl
     shader.setFloatUniform("rimLight", (if (params.dark) .34f else .46f) * params.materialize.coerceIn(0f, 1f))
     shader.setFloatUniform("pixelScale", density)
     shader.setFloatUniform("touch", light.touchX, light.touchY, light.press.let { if (it.isFinite()) it.coerceIn(0f, 1f) else 0f })
-    shader.setFloatUniform("lensPress", params.opticalPressure.let { if (it.isFinite()) it.coerceIn(0f, 1f) else 0f })
+    shader.setFloatUniform("lensPress", params.lens.let { if (it.isFinite()) it.coerceIn(0f, 1f) else 0f })
 }

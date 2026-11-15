@@ -718,9 +718,13 @@ object MusicApi {
         return "Lyrics.ovh" to lines.map { LyricLine(-1L, it) }
     }
 
-    suspend fun translate(text: String, target: String = "fr"): String? = withContext(Dispatchers.IO) {
+    /**
+     * [source] is the language the text is in, for the fallback service that needs one; null when it is
+     * not known (a biography): then only the service that detects the language is asked.
+     */
+    suspend fun translate(text: String, target: String = "fr", source: String? = AppSettings.translationSource.value): String? = withContext(Dispatchers.IO) {
         if (text.isBlank()) return@withContext ""
-        val cacheKey = "translation|${AppSettings.translationSource.value}|$target|$text"
+        val cacheKey = "translation|${source ?: "auto"}|$target|$text"
         LyricsDiskCache.read(cacheKey)?.let { return@withContext it.second.joinToString("\n") { line -> line.text } }
         val chunks = mutableListOf<String>()
         val current = StringBuilder()
@@ -736,13 +740,13 @@ object MusicApi {
 
         val out = StringBuilder()
         for (chunk in chunks) {
-            val translated = translateChunk(chunk, target) ?: return@withContext null
+            val translated = translateChunk(chunk, target, source) ?: return@withContext null
             val expectedLines = chunk.split('\n')
             val receivedLines = translated.replace("\r", "").trimEnd('\n').split('\n')
 
             val aligned = if (receivedLines.size == expectedLines.size) receivedLines
                 else expectedLines.map { line ->
-                    if (line.isBlank()) "" else translateChunk(line, target)?.replace("\n", " ") ?: return@withContext null
+                    if (line.isBlank()) "" else translateChunk(line, target, source)?.replace("\n", " ") ?: return@withContext null
                 }
             out.append(aligned.joinToString("\n")).append('\n')
         }
@@ -764,7 +768,7 @@ object MusicApi {
         } catch (_: Exception) { null } finally { connection?.disconnect() }
     }
 
-    private fun translateChunk(chunk: String, target: String): String? {
+    private fun translateChunk(chunk: String, target: String, source: String?): String? {
 
         if (System.currentTimeMillis() >= googleTranslationRetryAt) run {
             val url = "https://translate.googleapis.com/translate_a/single?client=gtx" +
@@ -785,8 +789,9 @@ object MusicApi {
             googleTranslationRetryAt = System.currentTimeMillis() + 120_000
         }
 
+        if (source == null || source.equals(target, ignoreCase = true)) return null
         val mmUrl = "https://api.mymemory.translated.net/get?q=${enc(chunk)}" +
-            "&langpair=${enc("${AppSettings.translationSource.value}|$target")}"
+            "&langpair=${enc("$source|$target")}"
         val raw = translationHttp(mmUrl) ?: return null
         val obj = runCatching { JSONObject(raw) }.getOrNull() ?: return null
         if (obj.optInt("responseStatus", 0) !in 200..299) return null

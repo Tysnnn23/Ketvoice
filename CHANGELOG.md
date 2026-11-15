@@ -7,6 +7,23 @@
 
 ---
 
+# Ketvoice 5.7.0
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 114** — Ketmix without speed effects and with a build-up transition; block or keep artists; translated biographies; the tab bar lens.
+
+- Ketmix never changes a title's speed while it is heard; titles are played in time within 2/3/4 % only,
+  others leave on the new build-up transition, an echo or filters.
+- Search: a long press on an artist's circle blocks, unblocks or keeps the artist as a favourite; blocked
+  artists are left out of what Ketvoice proposes.
+- Artist biographies are translated into the app's language; the For you card rotates between releases and mixes.
+- Holding or sliding the tab bar's selection turns it into a clear, magnifying lens.
+
+Full notes: [5.7.0](docs/releases/v5.7.0.md).
+
+---
+
 # Ketvoice 5.6.0
 
 ![Ketvoice](ketvoice-banner.png)

@@ -1,6 +1,7 @@
 package com.ketvoice.app.data
 
 import android.content.Context
+import androidx.core.content.edit
 import androidx.compose.runtime.mutableStateOf
 import org.json.JSONArray
 import org.json.JSONObject
@@ -51,8 +52,17 @@ object ArtistPrefs {
     fun allows(artist: String): Boolean = allows(artist, blockedState.value.keys)
     fun allows(track: Track): Boolean = allows(track.artist)
 
-    internal fun allows(artist: String, blocked: Set<String>): Boolean =
-        blocked.isEmpty() || credited(artist).none { it in blocked }
+    internal fun allows(artist: String, blocked: Set<String>): Boolean {
+        if (blocked.isEmpty()) return true
+        val parts = credited(artist)
+        if (parts.any { it in blocked }) return false
+        // A name that holds a separator ("Tyler, The Creator") is found again as consecutive parts of the line.
+        val split = parts.drop(1)
+        for (from in split.indices) for (until in from + 2..minOf(split.size, from + 3)) {
+            if (split.subList(from, until).joinToString(" ") in blocked) return false
+        }
+        return true
+    }
 
     /**
      * The whole artist line and every artist credited on it: "Maes, Ninho", "Werenoi feat. Damso",
@@ -64,7 +74,7 @@ object ArtistPrefs {
             .map { MediaOverrides.normalize(it) }.filter { it.isNotEmpty() }.distinct()
 
     private fun save() {
-        prefs?.edit()?.putString("blocked", encode(blockedState.value.values))?.putString("favourites", encode(favouriteState.value.values))?.apply()
+        prefs?.edit(commit = false) { putString("blocked", encode(blockedState.value.values)); putString("favourites", encode(favouriteState.value.values)) }
     }
 
     internal fun encode(entries: Collection<Entry>): String = JSONArray().apply {

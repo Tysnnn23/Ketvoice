@@ -181,9 +181,9 @@ fun SearchScreen() {
     LaunchedEffect(results) { ArtworkRepo.enrich(results) }
     val blockedArtists = com.ketvoice.app.data.ArtistPrefs.blocked
     val grouped = remember(results, segment, blockedArtists) {
-        // The listener's own music (Library) is shown as it is; the catalogue leaves blocked artists out.
+        // The catalogue ("All") leaves blocked artists out; the listener's own sources and library are shown as they are.
         if (segment == 2) results.map { SearchGroups.Group(listOf(it)) }
-        else SearchGroups.group(results.filter(com.ketvoice.app.data.ArtistPrefs::allows))
+        else SearchGroups.group(if (segment == 0) results.filter(com.ketvoice.app.data.ArtistPrefs::allows) else results)
     }
 
     Column(
@@ -320,10 +320,11 @@ fun SearchScreen() {
                     }
                     Spacer(Modifier.height(16.dp))
                 }
-                if (albums.isNotEmpty()) {
+                val shownAlbums = remember(albums, blockedArtists) { albums.filter { com.ketvoice.app.data.ArtistPrefs.allows(it.artist) } }
+                if (shownAlbums.isNotEmpty()) {
                     Text("Albums", style = T.section, color = th.onBackground,
                         modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp))
-                    com.ketvoice.app.ui.explorer.AlbumShelf(albums, edge = 20.dp) { album ->
+                    com.ketvoice.app.ui.explorer.AlbumShelf(shownAlbums, edge = 20.dp) { album ->
                         submitSearch()
                         AppUi.openCatalog(com.ketvoice.app.data.CatalogRequest("album", album.id, album.title))
                     }

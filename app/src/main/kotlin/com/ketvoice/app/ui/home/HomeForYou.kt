@@ -123,11 +123,13 @@ internal fun HomeForYou(hour: Int, releases: List<CatalogAlbum>, fallback: @Comp
     val freshOnes = remember(releases, today) { releases.filter { isFreshRelease(it.releaseDate, today) }.take(4) }
     // Fresh releases and mixes take turns on the card (see ForYouRotation): the least shown, never the same twice in a row.
     val candidates = remember(freshOnes, cards) { freshOnes.map { "release:${it.id}" } + cards.map { "mix:${it.id}" } }
-    val chosen = remember(candidates) { com.ketvoice.app.data.ForYouRotation.choose(candidates) }
+    val current = player.current
+    val resumable = current != null && !player.playWhenReady && position > 5_000
+    // Not counted while the paused title has the card.
+    val chosen = remember(candidates, resumable) { if (resumable) null else com.ketvoice.app.data.ForYouRotation.choose(candidates) }
     val fresh = freshOnes.firstOrNull { "release:${it.id}" == chosen }
     val chosenMix = cards.firstOrNull { "mix:${it.id}" == chosen }
-    val current = player.current
-    when (forYouKind(current != null && !player.playWhenReady && position > 5_000, fresh != null, cards.isNotEmpty())) {
+    when (forYouKind(resumable, fresh != null, cards.isNotEmpty())) {
         ForYouKind.Resume -> ForYouCard("Reprendre là où vous étiez", current!!.title,
             "${current.artist} · " + com.ketvoice.app.data.AppText.t("à ${formatSecs(position)}"),
             listOf(ArtworkRepo.coverForTrack(current) ?: current.coverUrl), action = "Reprendre", tag = "for-you-resume",
@@ -139,8 +141,10 @@ internal fun HomeForYou(hour: Int, releases: List<CatalogAlbum>, fallback: @Comp
             AppUi.openCatalog(CatalogRequest("album", fresh.id, fresh.title))
         }
         ForYouKind.Mix -> {
-            val (hourCard, title) = mixForHour(hour, cards)!!
+            val (hourCard, hourTitle) = mixForHour(hour, cards)!!
             val card = chosenMix ?: hourCard
+            // The name of the hour belongs to the mix of the hour; another mix is simply "for you".
+            val title = if (card.id == hourCard.id) hourTitle else "Pour vous"
             ForYouCard(title, mixTitle(card), mixSubtitle(card), card.covers, action = "Écouter", tag = "for-you-mix") {
                 AppUi.openCatalog(CatalogRequest("mix", card.id, mixTitle(card)))
             }

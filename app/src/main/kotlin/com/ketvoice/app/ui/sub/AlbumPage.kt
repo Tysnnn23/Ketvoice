@@ -75,6 +75,10 @@ internal fun AlbumPage(request: CatalogRequest, page: CatalogPage?, tracks: List
     // The Canvas the hero plays, when this listener has it on: what the framing screen works on.
     val heroCanvasOn = AppSettings.albumHeroCanvas.value && !Motion.reduced && !AppSettings.highPerformanceMode.value
     val canvasPaths by CanvasRepo.paths.collectAsState()
+    // The titles of this page belong to the album the page keys its visuals by: what is saved here
+    // reaches them in the player too, whatever album name and artist each title carries.
+    val pageAlbumKey = com.ketvoice.app.data.MediaOverrides.albumKey(title, com.ketvoice.app.data.MediaOverrides.mainArtist(artist))
+    LaunchedEffect(pageAlbumKey, tracks) { if (pageAlbumKey != null && tracks.isNotEmpty()) com.ketvoice.app.data.MediaOverrides.linkAlbum(tracks, pageAlbumKey) }
     val heroCanvas = tracks.firstOrNull()?.takeIf { !com.ketvoice.app.data.MediaOverrides.canvasDisabled(it) }?.let { canvasPaths[it.id] }.takeIf { heroCanvasOn }
     // The page takes its colour from what its hero shows: the Canvas while one plays there (the
     // cover's until a frame of it is read), the cover as soon as the Canvas is off or gone.
@@ -310,7 +314,9 @@ private fun BoxScope.AlbumArtwork(cover: String?, track: Track?, frame: com.ketv
     val image = remember(context, cover) { coil.request.ImageRequest.Builder(context).data(cover).crossfade(false).build() }
     val canvasEnabled = AppSettings.albumHeroCanvas.value && !Motion.reduced && !AppSettings.highPerformanceMode.value
     val paths by CanvasRepo.paths.collectAsState()
-    LaunchedEffect(track?.id, canvasEnabled) { if (canvasEnabled && track != null) CanvasRepo.resolve(track) }
+    // Looked again whenever what the owner chose changes (the Studio opens over this page and leaves it on screen).
+    val overridesRevision by com.ketvoice.app.data.MediaOverrides.revision.collectAsState()
+    LaunchedEffect(track?.id, canvasEnabled, overridesRevision) { if (canvasEnabled && track != null) CanvasRepo.resolve(track) }
     val canvas = track?.takeIf { !com.ketvoice.app.data.MediaOverrides.canvasDisabled(it) }?.let { paths[it.id] }
     val video = canvasEnabled && track != null && canvas != null
     // Width over height of what is drawn, once known; a Canvas is upright and a cover square until then.

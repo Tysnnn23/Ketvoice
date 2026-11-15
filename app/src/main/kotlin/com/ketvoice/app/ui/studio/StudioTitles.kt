@@ -41,7 +41,7 @@ internal fun canvasMark(track: Track): String? {
 
 /** What the owner decided for the music player alone, in a word for the title's row. */
 internal fun playerCanvasMark(track: Track): String? =
-    when (MediaOverrides.track(track)?.playerCanvas ?: MediaOverrides.get(MediaOverrides.ALBUM, MediaOverrides.albumKeyFor(track))?.playerCanvas) {
+    when (MediaOverrides.track(track)?.playerCanvas ?: MediaOverrides.albumOf(track)?.playerCanvas) {
         true -> "Affiché dans le lecteur"
         false -> "Masqué dans le lecteur"
         null -> null
@@ -72,6 +72,15 @@ internal fun StudioTitleCanvas(state: StudioState, target: VisualTarget, rights:
         if (items.isEmpty() && !wholeAlbum) error("Aucun titre exploitable")
         block(items)
         state.info = done
+    }
+    /**
+     * An action for the whole album also reaches the titles that had a Canvas of their own, or had it
+     * switched off: a title's own choice wins over its album's, so it is given back to the album.
+     */
+    suspend fun freeTitlesFromOwnCanvas() {
+        val own = tracks.filter { MediaOverrides.track(it)?.let { o -> o.canvas != null || o.canvasOff } == true }
+            .mapNotNull { t -> VisualTarget.track(t)?.let { it.key to it.label } }
+        if (own.isNotEmpty()) PublicationApi.saveOverrides(MediaOverrides.TRACK, own, restore = listOf("canvas"))
     }
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(theme.card).padding(16.dp).testTag("studio-title-canvas"),
         verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -131,8 +140,11 @@ internal fun StudioTitleCanvas(state: StudioState, target: VisualTarget, rights:
             val links = canvasLink?.let { mapOf("canvas" to it) } ?: emptyMap()
             if (file == null && links.isEmpty()) return@GlassCapsuleButton
             run("Canvas appliqué") { items ->
-                if (wholeAlbum) PublicationApi.saveOverride(MediaOverrides.ALBUM, target.key, target.label, canvas = file,
-                    onProgress = state::onProgress, links = links)
+                if (wholeAlbum) {
+                    PublicationApi.saveOverride(MediaOverrides.ALBUM, target.key, target.label, canvas = file,
+                        onProgress = state::onProgress, links = links)
+                    freeTitlesFromOwnCanvas()
+                }
                 else PublicationApi.saveOverrides(MediaOverrides.TRACK, items, canvas = file, onProgress = state::onProgress, links = links)
                 file?.delete(); canvas = null; canvasLink = null
             }
@@ -141,13 +153,13 @@ internal fun StudioTitleCanvas(state: StudioState, target: VisualTarget, rights:
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             GlassCapsuleButton("Désactiver le Canvas", null, {
                 run("Canvas désactivé") { items ->
-                    if (wholeAlbum) PublicationApi.saveOverride(MediaOverrides.ALBUM, target.key, target.label, canvasOff = true)
+                    if (wholeAlbum) { PublicationApi.saveOverride(MediaOverrides.ALBUM, target.key, target.label, canvasOff = true); freeTitlesFromOwnCanvas() }
                     else PublicationApi.saveOverrides(MediaOverrides.TRACK, items, canvasOff = true)
                 }
             }, Modifier.fillMaxWidth(), enabled = enabled, tag = "studio-title-off", minHeight = 48.dp)
             GlassCapsuleButton("Rétablir le Canvas d'origine", KetIcons.Refresh, {
                 run("Canvas d'origine rétabli") { items ->
-                    if (wholeAlbum) PublicationApi.saveOverride(MediaOverrides.ALBUM, target.key, target.label, restore = listOf("canvas"))
+                    if (wholeAlbum) { PublicationApi.saveOverride(MediaOverrides.ALBUM, target.key, target.label, restore = listOf("canvas")); freeTitlesFromOwnCanvas() }
                     else PublicationApi.saveOverrides(MediaOverrides.TRACK, items, restore = listOf("canvas"))
                 }
             }, Modifier.fillMaxWidth(), enabled = enabled, tag = "studio-title-restore", minHeight = 48.dp)

@@ -69,10 +69,13 @@ object CanvasRepo {
         }
     }
 
-    suspend fun resolve(track: Track, force: Boolean = false) = withContext(Dispatchers.IO) {
+    suspend fun resolve(track: Track, force: Boolean = false): Unit = resolve(track, force, again = true)
+
+    private suspend fun resolve(track: Track, force: Boolean, again: Boolean): Unit = withContext(Dispatchers.IO) {
         val ctx = appContext ?: return@withContext
 
-        if (!AppSettings.animatedArtwork.value) return@withContext
+        // The player's Canvas and the album page's are two separate settings: either is enough to look.
+        if (!AppSettings.animatedArtwork.value && !AppSettings.albumHeroCanvas.value) return@withContext
         // Switched off by the owner for this title or its album, on the page and in the player: nothing is looked up or downloaded.
         if (MediaOverrides.canvasUnused(track)) {
             _paths.value = _paths.value - track.id
@@ -87,20 +90,25 @@ object CanvasRepo {
         // A Canvas the owner chose for this title or its album replaces the catalogue's.
         // Its file name follows the URL, so a new choice is fetched and a restored
         // original resolves again from the catalogue.
-        val curated = MediaOverrides.canvas(track)
-        val curatedName = curated?.let { "kvov-" + sha(it) }
-        val current = _paths.value[track.id]
-        val currentName = current?.let { File(it).nameWithoutExtension }
+        var curated = MediaOverrides.canvas(track)
+        var curatedName = curated?.let { "kvov-" + sha(it) }
         // What is shown now gives way whenever it is not what the owner chose: the catalogue's Canvas
         // already on the device when a Canvas was chosen (it used to stay, the new one never shown),
         // an earlier choice, or a choice that was since removed.
-        if (current != null && givesWay(current, curated, curatedName)) {
+        fun dropStale() {
+            val current = _paths.value[track.id] ?: return
+            val currentName = File(current).nameWithoutExtension
+            if (!givesWay(current, curated, curatedName)) return
             _paths.value = _paths.value - track.id
-            if (currentName?.startsWith("kvov-") == true) ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().remove(track.id).apply()
+            if (currentName.startsWith("kvov-")) ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().remove(track.id).apply()
+            if (curatedName != null) failed.remove(track.id)
         }
-        if (curatedName != null && currentName != curatedName) failed.remove(track.id)
+        dropStale()
         if (localPath(track.id) != null || (!force && recentlyFailed())) return@withContext
         mutex.withLock {
+            // Another resolution may have run while this one waited: what is shown is checked again against the choice of now.
+            curated = MediaOverrides.canvas(track); curatedName = curated?.let { "kvov-" + sha(it) }
+            dropStale()
             if (localPath(track.id) != null || (!force && recentlyFailed())) return@withLock
             try {
                 val prefs = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -130,9 +138,12 @@ object CanvasRepo {
                     _paths.value = _paths.value + (track.id to target.absolutePath)
                     return@withLock
                 }
+                // A file named after an owner's choice ("kvov-…", or a published "kvpub-…") is never taken
+                // for the catalogue's Canvas once that choice is gone: a downloaded title remembers its name.
+                fun catalogueName(name: String?) = name?.takeUnless { it.startsWith("kvov-") || it.startsWith("kvpub-") }
                 val albumKey = albumKey(track)
-                val albumSpotifyId = prefs.getString(albumKey, null)
-                var spotifyId = track.spotifyId ?: prefs.getString(track.id, null)
+                val albumSpotifyId = catalogueName(prefs.getString(albumKey, null))
+                var spotifyId = catalogueName(track.spotifyId) ?: catalogueName(prefs.getString(track.id, null))
                 var dest: File? = spotifyId?.let { File(canvasDir(ctx), "$it.mp4") }
 
                 if (dest?.exists() != true && spotifyId == null && albumSpotifyId != null) {
@@ -169,6 +180,8 @@ object CanvasRepo {
                 failed[track.id] = System.currentTimeMillis()
             }
         }
+        // The owner changed the choice while this resolution ran: once more, for the choice of now.
+        if (again && MediaOverrides.canvas(track) != curated) resolve(track, force, again = false)
     }
 
     /** True when the Canvas shown for a title ([current], a file or a link) is not the one the owner's choice ([curated]) calls for. */

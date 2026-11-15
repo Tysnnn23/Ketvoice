@@ -51,14 +51,14 @@ Local messages use unencrypted HTTP. There is no cryptographic pairing or verifi
 
 ### Direct providers
 
-Interface translations ship inside the APK and do not make network requests. Optional **lyric translation** is a separate feature and may contact translation providers. Downloading a song also checks lyric providers and, when video Canvas is enabled, requests its Canvas if available. Offline capsules do not fetch Canvas videos.
+Interface translations ship inside the APK and do not make network requests. Optional **lyric translation** is a separate feature and may contact translation providers. An **artist's biography** is translated into the language of the app when its page is opened: its text (public catalogue text, nothing about you) is sent to Google Translate, and the result is kept on the device so that it is sent only once. Downloading a song also checks lyric providers and, when video Canvas is enabled, requests its Canvas if available. Offline capsules do not fetch Canvas videos.
 
 The app also makes direct requests to the providers needed for the feature being used, which may include:
 
 - YouTube Music / Google for catalog data, streams, account validation, and optional history tracking
 - Deezer, iTunes, and YouTube image CDNs for artwork
 - LRCLIB, NetEase, Genius, BetterLyrics, LiriQo, and other lyric providers
-- Google Translate or MyMemory for optional translations
+- Google Translate or MyMemory for optional lyric translations, and Google Translate for artist biographies
 - Spotify CDNs for Canvas media
 - Any custom JSON source added by the user
 

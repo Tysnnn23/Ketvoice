@@ -1,6 +1,7 @@
 package com.ketvoice.app.data
 
 import android.content.Context
+import androidx.core.content.edit
 import androidx.compose.runtime.mutableStateOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -100,7 +101,38 @@ object MediaOverrides {
     }
 
     fun keyFor(track: Track): String? = trackKey(track.title, track.artist)
-    fun albumKeyFor(track: Track): String? = track.album.takeIf { it.isNotBlank() }?.let { albumKey(it, track.artist) }
+    /**
+     * The album key a title belongs to: the album page it was shown on when there is one (the page
+     * keys its album by its own title and album artist, which a title's own album name and artist
+     * do not always give back: compilations, featured performers, "(Deluxe)"), else its own.
+     */
+    fun albumKeyFor(track: Track): String? = albumOfTrack[track.id] ?: ownAlbumKey(track)
+    private fun ownAlbumKey(track: Track): String? = track.album.takeIf { it.isNotBlank() }?.let { albumKey(it, track.artist) }
+
+    /** Titles shown on an album page, by id, and the key of that album: what the page saved reaches them in the player too. */
+    private val albumOfTrack = java.util.concurrent.ConcurrentHashMap<String, String>()
+
+    fun linkAlbum(tracks: List<Track>, albumKey: String) {
+        var changed = false
+        for (t in tracks) if (albumOfTrack.put(t.id, albumKey) != albumKey) changed = true
+        if (!changed) return
+        if (albumOfTrack.size > MAX_LINKS) albumOfTrack.keys.take(albumOfTrack.size - MAX_LINKS).forEach { albumOfTrack.remove(it) }
+        val json = JSONObject().apply { albumOfTrack.forEach { (k, v) -> put(k, v) } }.toString()
+        context?.getSharedPreferences(PREFS, Context.MODE_PRIVATE)?.edit(commit = false) { putString("albums", json) }
+        _revision.value++
+    }
+    private const val MAX_LINKS = 4_000
+
+    /** The album override that applies to a title: by its album page, by its own album and artist, else by its album's name alone when only one album has it. */
+    fun albumOf(track: Track): MediaOverride? {
+        albumOfTrack[track.id]?.let { key -> get(ALBUM, key)?.let { return it } }
+        get(ALBUM, ownAlbumKey(track))?.let { return it }
+        val name = edition(track.album).takeIf { it.isNotEmpty() } ?: return null
+        return state.value.values.filter { it.id.startsWith("$ALBUM:") && edition(it.id.removePrefix("$ALBUM:").substringBefore('|')) == name }
+            .singleOrNull()
+    }
+    /** An album's name without what editions add to it ("(Deluxe)", "[Remastered]"). */
+    internal fun edition(album: String): String = normalize(album.replace(Regex("[(\\[][^)\\]]*[)\\]]"), " "))
 
     // ---- lookups ----------------------------------------------------------------------
 
@@ -112,7 +144,7 @@ object MediaOverrides {
     /** The title's own cover, else its album's, else what the catalogue gave. */
     fun cover(track: Track, fallback: String?): String? {
         if (state.value.isEmpty()) return fallback
-        return track(track)?.cover ?: get(ALBUM, albumKeyFor(track))?.cover ?: fallback
+        return track(track)?.cover ?: albumOf(track)?.cover ?: fallback
     }
 
     /** A Canvas chosen for the title, else for its album; none when the title's own override switched it off. */
@@ -121,7 +153,7 @@ object MediaOverrides {
         val own = track(track)
         if (own?.canvas != null) return own.canvas
         if (own?.canvasOff == true) return null
-        return get(ALBUM, albumKeyFor(track))?.canvas
+        return albumOf(track)?.canvas
     }
 
     /**
@@ -133,7 +165,7 @@ object MediaOverrides {
         val own = track(track)
         if (own?.canvas != null) return false
         if (own?.canvasOff == true) return true
-        val album = get(ALBUM, albumKeyFor(track))
+        val album = albumOf(track)
         return album != null && album.canvas == null && album.canvasOff
     }
 
@@ -143,7 +175,7 @@ object MediaOverrides {
      */
     fun canvasHiddenInPlayer(track: Track): Boolean {
         if (state.value.isEmpty()) return false
-        val choice = track(track)?.playerCanvas ?: get(ALBUM, albumKeyFor(track))?.playerCanvas
+        val choice = track(track)?.playerCanvas ?: albumOf(track)?.playerCanvas
         return if (choice != null) !choice else canvasDisabled(track)
     }
 
@@ -153,7 +185,7 @@ object MediaOverrides {
     /** How the music player frames the artwork of this title: its own framing of the album, else the album page's. */
     fun playerFrame(track: Track): Frame? {
         if (state.value.isEmpty()) return null
-        val album = get(ALBUM, albumKeyFor(track)) ?: return null
+        val album = albumOf(track) ?: return null
         return album.playerFrame ?: album.frame
     }
 
@@ -172,8 +204,11 @@ object MediaOverrides {
 
     // ---- loading ----------------------------------------------------------------------
 
-    internal fun decode(text: String): Map<String, MediaOverride> {
-        val rows = runCatching { JSONObject(text).optJSONArray("overrides") }.getOrNull() ?: return emptyMap()
+    internal fun decode(text: String): Map<String, MediaOverride> = decodeList(text) ?: emptyMap()
+
+    /** The overrides of a server answer, or null when the answer is not such a list. */
+    internal fun decodeList(text: String): Map<String, MediaOverride>? {
+        val rows = runCatching { JSONObject(text).optJSONArray("overrides") }.getOrNull() ?: return null
         val result = LinkedHashMap<String, MediaOverride>()
         for (i in 0 until rows.length()) {
             val row = rows.optJSONObject(i) ?: continue
@@ -224,8 +259,10 @@ object MediaOverrides {
     fun init(ctx: Context) {
         if (context != null) return
         context = ctx.applicationContext
-        val cached = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString("json", null)
+        val prefs = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val cached = prefs.getString("json", null)
         if (cached != null) state.value = decode(cached)
+        runCatching { prefs.getString("albums", null)?.let { JSONObject(it) }?.let { o -> o.keys().forEach { k -> albumOfTrack[k] = o.getString(k) } } }
         scope.launch {
             while (true) {
                 refresh()
@@ -236,10 +273,19 @@ object MediaOverrides {
 
     suspend fun refresh() {
         val text = PublicationApi.overrides() ?: return
-        val next = keepRecentWrites(decode(text), recentWrites, System.currentTimeMillis())
-        if (next == state.value) return
-        set(next)
+        // A body that is not the list (a captive portal answering 200, a proxy page) changes nothing.
+        val fetched = decodeList(text) ?: return
+        synchronized(lock) {
+            val next = keepRecentWrites(fetched, recentWrites, System.currentTimeMillis())
+            if (next == state.value) return
+            set(next)
+        }
     }
+    private val lock = Any()
+
+    /** Grows each time what a Canvas or a cover shows may have changed: pages that show one look again. */
+    private val _revision = kotlinx.coroutines.flow.MutableStateFlow(0)
+    val revision: kotlinx.coroutines.flow.StateFlow<Int> = _revision
 
     /** What the owner saved on this device in the last minutes: a list fetched in between must not undo it. */
     private val recentWrites = java.util.concurrent.ConcurrentHashMap<String, Pair<MediaOverride?, Long>>()
@@ -274,17 +320,18 @@ object MediaOverrides {
         if (before.values.map { Triple(it.canvas, it.canvasOff, it.playerCanvas) } != next.values.map { Triple(it.canvas, it.canvasOff, it.playerCanvas) }) {
             com.ketvoice.app.player.Player.state.value.current?.let { scope.launch { CanvasRepo.resolve(it) } }
         }
+        if (before != next) _revision.value++
     }
 
     /** What the owner just saved, shown at once without waiting for the next refresh. */
-    internal fun accept(kind: String, key: String, saved: MediaOverride?) {
+    internal fun accept(kind: String, key: String, saved: MediaOverride?) = synchronized(lock) {
         val id = "$kind:$key"
         remember(id, saved)
         set(if (saved == null) state.value - id else state.value + (id to saved))
     }
 
     /** What the owner just saved for several items: the ones the server no longer lists have no override left. */
-    internal fun acceptMany(kind: String, keys: List<String>, saved: List<MediaOverride>) {
+    internal fun acceptMany(kind: String, keys: List<String>, saved: List<MediaOverride>) = synchronized(lock) {
         val kept = saved.filter { it.kind == kind }.associateBy { it.id }
         keys.forEach { key -> remember("$kind:$key", kept["$kind:$key"]) }
         set(state.value - keys.map { "$kind:$it" }.toSet() + kept)

@@ -85,7 +85,7 @@ internal object Automix {
     /** How long an incoming deck may play before its processors join; past that, a plain fade on the volume. */
     private const val PATH_JOIN_MS = 900L
     /** How close to its end a title must be for its echo to be played out past it. */
-    private const val TAIL_END_MS = 2_500L
+    private const val TAIL_END_MS = 1_000L
 
     private val _ui = MutableStateFlow(Ui())
     val ui: StateFlow<Ui> = _ui
@@ -117,6 +117,8 @@ internal object Automix {
     private val settled = HashSet<String>()
     /** Colour of the last transition played, so that the next one of its kind takes the other. */
     private var lastVariant = -1
+    /** The last echo (1) or build (2), so that the next exit on the beat is the other one. */
+    private var lastExit = 0
 
     /** Everything a transition owns, so that giving it up is one call whatever the moment. */
     private class Session(val host: AutomixHost, val main: ExoPlayer, val next: Player.NextEntry) {
@@ -380,14 +382,23 @@ internal object Automix {
                 depth.name.lowercase()).joinToString(", ")) }
         // Without the decks' processors in the sound path only a trim or a plain fade can be played;
         // without beats to rely on (too late for them), the transitions that need none remain.
+        val outSpeed = main.playbackParameters.speed
+        // A transition that is not played in time leaves the incoming title on its own speed: when the outgoing
+        // one plays a little off its own (a previous blend), the positions of the two do not run alike.
         fun planFor(effects: Boolean, beats: Boolean = true): MixPlan = TransitionPlanner.plan(out, incoming,
-            context.copy(effects = effects, beats = beats, lastVariant = lastVariant), settings)
+            context.copy(effects = effects, beats = beats, lastVariant = lastVariant, lastExit = lastExit), settings)
+            .let { p -> if (p.mixes && p.kind != MixKind.Beatmatch && abs(outSpeed - 1f) > .0005f) p.copy(rate = 1f / outSpeed) else p }
         var plan = planFor(effects = clockOk)
         if (!plan.mixes) return skip(plan.reason)
 
         fun preRollOf(p: MixPlan) = if (p.beatTied) min(2_500.0, p.inMs / p.rate.toDouble()).toLong() else min(400L, p.inMs)
         // Too late for a mix on the beat (a seek near the end, a slow network): a transition at the very end may still fit.
         if (plan.beatTied && main.currentPosition > plan.outMs - preRollOf(plan) - 1_800L) {
+            plan = planFor(effects = clockOk, beats = false)
+            if (!plan.mixes) return skip(plan.reason)
+        }
+        // A build is heard from its start, bars before the cut: too late for its start, another transition.
+        if (plan.kind == MixKind.Rise && main.currentPosition > plan.outMs - plan.buildMs - preRollOf(plan) - 1_500L) {
             plan = planFor(effects = clockOk, beats = false)
             if (!plan.mixes) return skip(plan.reason)
         }
@@ -433,7 +444,8 @@ internal object Automix {
         if (s.precise) {
             control.automation = DeckAutomation.incoming(plan); mainControl.automation = DeckAutomation.outgoing(plan)
             // An echo is only played out on silence at the real end of the title, never at the drain a change of speed causes.
-            mainControl.tailFromUs = if (plan.tail) (duration - TAIL_END_MS) * 1000L else Long.MAX_VALUE
+            // From the last note's measured end, not from the announced duration, which may be too long.
+            mainControl.tailFromUs = if (plan.tail) (max(plan.outMs, plan.cutMs) - TAIL_END_MS) * 1000L else Long.MAX_VALUE
         }
         // On repeat the player would jump back to the start by itself: for this loop the mix does it instead.
         if (plan.loop && main.repeatMode != androidx.media3.common.Player.REPEAT_MODE_OFF) {
@@ -457,13 +469,13 @@ internal object Automix {
         }
 
         say("Mix en cours · ${MixWords.describe(plan)}")
-        note { it.copy(kind = plan.kind, reason = plan.reason, rate = plan.rate, overlapMs = plan.overlapMs, onPhrase = plan.onPhrase,
+        note { it.copy(kind = plan.kind, reason = plan.reason, rate = DeckSync.speedOf(plan, main.playbackParameters.speed), overlapMs = plan.overlapMs, onPhrase = plan.onPhrase,
             precise = s.precise, mixAtMs = plan.outMs, inAtMs = plan.inMs, tail = plan.tail) }
         commit("mixed")
         if (plan.kind == MixKind.Beatmatch || plan.kind == MixKind.Filter) lastVariant = plan.variant
         // An echo and a build take turns: the next exit on the beat is the other one.
-        if (plan.kind == MixKind.Echo) lastVariant = 0
-        if (plan.kind == MixKind.Rise) lastVariant = 1
+        if (plan.kind == MixKind.Echo) lastExit = 1
+        if (plan.kind == MixKind.Rise) lastExit = 2
         s.baseVolume = main.volume
         if (s.precise && !s.incomingPending) deck.volume = s.baseVolume
         deck.play()
@@ -497,6 +509,7 @@ internal object Automix {
         val swapMoment = MixWords.swapShare(plan).takeIf { it >= 0f }?.let { plan.outMs + (plan.overlapMs * it).toLong() }
         var swapped = false
         var worstSync = 0.0
+        var speedChanges = 0
         while (true) {
             delay(40)
             if (host !== h || s.closed) return
@@ -514,9 +527,9 @@ internal object Automix {
                     KetmixJournal.amend { it.copy(pathIn = true) }
                 } else if (SystemClock.elapsedRealtime() - playedAt > PATH_JOIN_MS) {
                     // They never joined: a plain crossfade on the decks' volume from here.
+                    // The outgoing title keeps its own part (a build or an echo stays whole); the incoming one fades in on its volume.
                     s.incomingPending = false
                     s.precise = false
-                    h.control(main)?.automation = null
                     h.control(deck)?.automation = null
                     KetmixJournal.amend { it.copy(precise = false, pathIn = false) }
                 }
@@ -541,30 +554,29 @@ internal object Automix {
             } else if (plan.beatTied && deck.isPlaying && main.isPlaying) {
                 val error = DeckSync.errorMs(plan, outPosition, inPosition)
                 smoothed = if (smoothed.isNaN()) error else smoothed * .6 + error * .4
-                val audible = inPosition >= plan.inMs
-                if (!audible && !reseeked && abs(smoothed) > 160.0) {
-                    // Far off before it is heard: put it where it should be, then fine-tune.
+                val heard = DeckSync.heard(plan, inPosition)
+                val settled = DeckSync.settled(plan, inPosition)
+                if (!settled && !reseeked && abs(smoothed) > 160.0) {
+                    // Far off before it can be heard: put it where it should be, then fine-tune.
                     reseeked = true; smoothed = Double.NaN
                     deck.seekTo((plan.inMs + (outPosition - plan.outMs + 90L) * plan.rate.toDouble()).toLong().coerceAtLeast(0L))
                     continue
                 }
-                if (audible) {
-                    // Once heard, a deck's speed never changes again: only how well the beats meet is noted.
-                    if (plan.kind == MixKind.Beatmatch) worstSync = max(worstSync, abs(smoothed))
-                } else {
+                if (heard && plan.kind == MixKind.Beatmatch) worstSync = max(worstSync, abs(smoothed))
+                if (speed != base || !settled) {
+                    // Small corrections while it cannot be heard yet; back on its own speed early enough that the change,
+                    // which reaches the sound only once the audio buffer has played out, lands before it is heard.
                     val now = SystemClock.elapsedRealtime()
-                    // Small corrections while it is still silent, then back on its own speed a moment before it is heard.
-                    val settled = DeckSync.settled(plan, inPosition)
                     val wanted = if (settled) base else DeckSync.speed(base, smoothed, audible = false)
                     if (wanted != speed && (settled || now - speedAt >= 200L)) {
                         deck.playbackParameters = if (wanted == 1f) PlaybackParameters.DEFAULT else PlaybackParameters(wanted)
-                        speed = wanted; speedAt = now
+                        speed = wanted; speedAt = now; speedChanges++
                     }
                 }
             }
             if (outPosition >= end + 120L || ended) break
         }
-        if (plan.kind == MixKind.Beatmatch && s.precise) KetmixJournal.amend { it.copy(syncWorstMs = worstSync.toInt(), speedChanges = 0) }
+        if (plan.kind == MixKind.Beatmatch && s.precise) KetmixJournal.amend { it.copy(syncWorstMs = worstSync.toInt(), speedChanges = speedChanges) }
         if (!s.promoted) return
         // The outgoing title is over: one deck from here on.
         h.release(main)

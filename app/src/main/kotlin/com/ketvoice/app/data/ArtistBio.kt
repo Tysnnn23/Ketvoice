@@ -15,7 +15,8 @@ object ArtistBio {
     /** The biography in [language], or null when it could not be translated now (the original is shown meanwhile). */
     suspend fun translated(text: String, language: AppLanguage = AppText.language()): String? {
         if (text.isBlank()) return text
-        val out = MusicApi.translate(text, target(language))?.trim() ?: return null
+        // The language of a biography is not known: only the service that detects it is asked.
+        val out = MusicApi.translate(text, target(language), source = null)?.trim() ?: return null
         return out.takeIf { it.isNotBlank() }
     }
 

@@ -247,10 +247,15 @@ class DeckDspTest {
         assertEquals("a title left 2 % fast by the previous blend", 1.0f, DeckSync.speedOf(beat.copy(kind = MixKind.Beatmatch, rate = .98f), 1.02f), .002f)
         assertEquals(1f, DeckSync.speedOf(beat.copy(kind = MixKind.Echo, rate = 1f), 1.02f), 0f)
         assertEquals(1f, DeckSync.speedOf(beat.copy(kind = MixKind.Filter), 1.03f), 0f)
-        // Corrections stop shortly before it is heard.
-        assertFalse(DeckSync.settled(beat, beat.inMs - 1_000))
-        assertTrue(DeckSync.settled(beat, beat.inMs - DeckSync.SETTLE_BEFORE_MS))
-        assertTrue(DeckSync.settled(beat, beat.inMs + 10))
+        // Corrections stop early enough that the last one is played out of the audio buffer before the title is heard:
+        // a cut is heard at once, a blend once its rising level means something.
+        val cut = beat.copy(kind = MixKind.Echo)
+        assertFalse(DeckSync.settled(cut, cut.inMs - 2_000)); assertTrue(DeckSync.settled(cut, cut.inMs - DeckSync.SETTLE_BEFORE_MS))
+        assertTrue(DeckSync.heard(cut, cut.inMs)); assertFalse(DeckSync.heard(cut, cut.inMs - 1))
+        val blend = beat.copy(kind = MixKind.Beatmatch, overlapMs = 32_000, rate = 1f)
+        assertFalse("the first beats of a blend are still under -20 dB", DeckSync.heard(blend, blend.inMs + 2_000))
+        assertTrue(DeckSync.heard(blend, blend.inMs + 4_000))
+        assertFalse(DeckSync.settled(blend, blend.inMs + 1_000)); assertTrue(DeckSync.settled(blend, blend.inMs + 3_000))
         assertEquals(1.064f, DeckSync.stepped(1f / .94f), 1e-6f)
         assertEquals(1f, DeckSync.stepped(1.0004f), 0f)
     }

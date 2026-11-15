@@ -150,6 +150,7 @@ object PersonalMixes {
             "style" -> CatalogRepo.artistRadio(name, mine().firstOrNull(::fromCatalogue)?.artistId).take(MIX_SIZE).ifEmpty { null }
             else -> null
         }
-        return result?.let { withLocalFiles(it, LocalMusic.tracks.value) }
+        // Proposed by Ketvoice: the artists the listener blocked are left out.
+        return result?.filter(ArtistPrefs::allows)?.ifEmpty { null }?.let { withLocalFiles(it, LocalMusic.tracks.value) }
     }
 }

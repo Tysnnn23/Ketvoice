@@ -96,6 +96,8 @@ class PlaybackService : MediaSessionService() {
         androidx.media3.common.util.Log.setLogger(SafeMedia3Logger)
 
         com.ketvoice.app.data.SettingsStore.load(applicationContext)
+        // Playback may start from the system's controls without the app's screen: what the listener blocked still holds.
+        runCatching { com.ketvoice.app.data.ArtistPrefs.init(applicationContext) }
         player = buildPlayer()
         getSystemService(android.media.AudioManager::class.java).registerAudioDeviceCallback(audioDevices, android.os.Handler(mainLooper))
         val session = MediaSession.Builder(this, sessionPlayer(player))
@@ -245,8 +247,9 @@ class PlaybackService : MediaSessionService() {
                 mediaReported = false
                 // A title that Ketmix played in time with the previous one keeps that speed to its end; the
                 // next title starts on its own tempo again, at the boundary between the two where it is not heard.
+                // A title that starts over on repeat is the same title, heard on: its speed is left alone.
                 if (::player.isInitialized && owner === this@PlaybackService.player && !com.ketvoice.app.automix.Automix.mixing &&
-                    owner.playbackParameters.speed != 1f) owner.playbackParameters = androidx.media3.common.PlaybackParameters.DEFAULT
+                    reason != androidx.media3.common.Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT && owner.playbackParameters.speed != 1f) owner.playbackParameters = androidx.media3.common.PlaybackParameters.DEFAULT
             }
             override fun onLoadCompleted(eventTime: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime,
                                          loadEventInfo: androidx.media3.exoplayer.source.LoadEventInfo,

@@ -21,6 +21,16 @@
 
 ## Overview
 
+### 5.7.0 — Ketmix without speed effects, artists you can block
+
+Ketmix no longer changes a title's speed while it is heard, and adds a build-up transition for titles
+at different tempos. In the search, a long press on an artist's circle blocks, unblocks or keeps the
+artist as a favourite; biographies are translated into the app's language; the For you card rotates;
+and holding the tab bar's selection turns it into a magnifying lens.
+[Mobile](https://github.com/Tysnnn23/Ketvoice/releases/download/v5.7.0/Ketvoice-5.7.0.apk)
+· [Quest](https://github.com/Tysnnn23/Ketvoice/releases/download/v5.7.0/Ketvoice-5.7.0-Quest.apk)
+· [Release notes](docs/releases/v5.7.0.md).
+
 ### 5.6.0 — Ket 27 by default, steadier playback
 
 Ket 27 (Alpha) is now the interface Ketvoice opens with and uses the regular glass of iOS 27.
