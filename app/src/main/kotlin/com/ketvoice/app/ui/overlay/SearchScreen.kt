@@ -85,6 +85,9 @@ fun SearchScreen() {
     var segment by rememberSaveable { mutableIntStateOf(0) } // 0 Tout | 1 Sources | 2 Bibliothèque
     var query by rememberSaveable { mutableStateOf(AppUi.searchSeed.value) }
     var results by remember { mutableStateOf<List<Track>>(emptyList()) }
+    // Found by their lyrics: on the device (playable at once), and online (searched in the catalogue when touched).
+    var lyricTracks by remember { mutableStateOf<List<Track>>(emptyList()) }
+    var lyricFound by remember { mutableStateOf<List<com.ketvoice.app.data.LyricsSearch.Found>>(emptyList()) }
     var allResults by remember { mutableStateOf<List<Track>>(emptyList()) }
     var artists by remember { mutableStateOf<List<MusicArtist>>(emptyList()) }
     var albums by remember { mutableStateOf<List<com.ketvoice.app.data.CatalogAlbum>>(emptyList()) }
@@ -121,6 +124,7 @@ fun SearchScreen() {
         }
         if (q.length < 2) {
             clear()
+            lyricTracks = emptyList(); lyricFound = emptyList()
             loading = false
             return@LaunchedEffect
         }
@@ -129,6 +133,14 @@ fun SearchScreen() {
         // no longer blanks the page at every letter. Another scope starts from nothing.
         if (segment != shownSegment) { clear(); shownSegment = segment }
         delay(220)
+        if (segment != 1) {
+            lyricTracks = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { com.ketvoice.app.data.LyricsSearch.local(q) }
+            if (segment == 2) lyricFound = emptyList()
+        }
+        if (segment == 0) launch {
+            lyricFound = if (com.ketvoice.app.data.LyricsSearch.looksLikeLyrics(q)) com.ketvoice.app.data.LyricsSearch.online(q)
+                .filter { com.ketvoice.app.data.ArtistPrefs.allows(it.artist) } else emptyList()
+        }
         if (segment == 2) {
             val lists = PlaylistStore.lists.value
             results = com.ketvoice.app.data.LibrarySearch.tracks(q, Downloader.items.value.map { it.track }, lists,
@@ -295,7 +307,7 @@ fun SearchScreen() {
                 }
             }
 
-            results.isEmpty() && artists.isEmpty() && albums.isEmpty() && playlists.isEmpty() -> {
+            results.isEmpty() && artists.isEmpty() && albums.isEmpty() && playlists.isEmpty() && lyricTracks.isEmpty() && lyricFound.isEmpty() -> {
                 EmptyState("Aucun résultat pour « $query »", when (segment) {
                     1 -> "Vérifiez que vos sources sont activées et accessibles."
                     2 -> "Essayez un autre titre, artiste ou album de votre bibliothèque."
@@ -319,6 +331,31 @@ fun SearchScreen() {
                         }
                     }
                     Spacer(Modifier.height(16.dp))
+                }
+                // Titles found by their words.
+                if (lyricTracks.isNotEmpty() || lyricFound.isNotEmpty()) Column(Modifier.testTag("search-lyrics")) {
+                    Text("D'après les paroles", style = T.section, color = th.onBackground,
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp))
+                    lyricTracks.forEachIndexed { index, track ->
+                        SearchResultRow(track = track, variants = listOf(track),
+                            cover = com.ketvoice.app.data.MediaOverrides.cover(track, art["t:${track.id}"] ?: track.coverUrl),
+                            onClick = { submitSearch(); Player.playQueue(lyricTracks, index) }, onVariant = { Player.playQueue(listOf(it), 0) })
+                    }
+                    lyricFound.forEach { found ->
+                        Row(Modifier.fillMaxWidth().clickable { query = found.query }.padding(horizontal = 20.dp, vertical = 8.dp)
+                            .testTag("search-lyrics-online"), verticalAlignment = Alignment.CenterVertically) {
+                            Box(Modifier.size(48.dp).clip(RoundedCornerShape(8.dp)).background(th.card)) {
+                                if (found.cover != null) AsyncImage(found.cover, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                            }
+                            Column(Modifier.weight(1f).padding(start = 12.dp)) {
+                                Text(found.title, localize = false, color = th.onBackground, fontSize = 15.sp, fontWeight = FontWeight.SemiBold,
+                                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(found.artist, localize = false, color = th.secondary, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            }
+                            Icon(Icons.Filled.Search, "Rechercher ce titre", tint = th.secondary, modifier = Modifier.size(18.dp))
+                        }
+                    }
+                    Spacer(Modifier.height(12.dp))
                 }
                 val shownAlbums = remember(albums, blockedArtists) { albums.filter { com.ketvoice.app.data.ArtistPrefs.allows(it.artist) } }
                 if (shownAlbums.isNotEmpty()) {

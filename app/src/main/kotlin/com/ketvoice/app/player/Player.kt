@@ -306,7 +306,8 @@ object Player {
         scope.launch {
             while (true) {
                 if (controller?.isPlaying == true) positionNow()
-                delay(200)
+                // Behind other apps nothing shows the position: a second is enough for the listening time.
+                delay(if (com.ketvoice.app.automix.Automix.appInFront) 200 else 1_000)
             }
         }
     }
@@ -516,8 +517,8 @@ object Player {
      */
     fun playTrack(track: Track, queue: List<Track> = listOf(track), startIndex: Int? = null,
                   startPositionMs: Long = 0L, autoPlay: Boolean = true, keepOrder: Boolean = false) =
-        startPlayback(track, queue, startIndex, startPositionMs, autoPlay,
-            if (keepOrder) QueueOrigin.Keep else QueueOrigin.External)
+        run { radio = false; startPlayback(track, queue, startIndex, startPositionMs, autoPlay,
+            if (keepOrder) QueueOrigin.Keep else QueueOrigin.External) }
 
     /** Plays [tracks] in a random order; turning shuffle off restores the given order. */
     fun playShuffled(tracks: List<Track>) {
@@ -851,6 +852,32 @@ object Player {
         prefetchNext(generation, s.current ?: return, listOf(s.queue[target]), margin = WARM_NEXT_WINDOW_MS + 5_000L)
     }
 
+    /** The queue is a radio: it never runs out, each new batch built from the title playing then. */
+    @Volatile var radio = false
+        private set
+
+    /**
+     * A radio from [seed]: the title, then titles of its artist and of artists like it, and more of
+     * them whenever the queue runs out. Never an artist the listener blocked.
+     */
+    fun startRadio(seed: Track) {
+        val gen = generation
+        scope.launch {
+            val first = radioBatch(seed, listOf(seed))
+            if (gen != generation && _state.value.current?.id != seed.id) return@launch
+            playQueue(listOf(seed) + first, 0)
+            radio = true
+            setAutoplay(true)
+        }
+    }
+
+    private suspend fun radioBatch(from: Track, queue: List<Track>): List<Track> {
+        val artist = com.ketvoice.app.data.MediaOverrides.mainArtist(from.artist)
+        val similar = runCatching { com.ketvoice.app.data.CatalogRepo.artistRadio(artist) }.getOrDefault(emptyList())
+        val own = runCatching { MusicApi.searchYtMusic(from.artist) }.getOrDefault(emptyList())
+        return RadioMix.next(similar, own, queue, com.ketvoice.app.data.ArtistPrefs::allows, seed = from.id.hashCode().toLong() + queue.size)
+    }
+
     fun playQueue(tracks: List<Track>, start: Int = 0) {
         if (tracks.isEmpty()) return
         val index = start.coerceIn(tracks.indices)
@@ -1137,7 +1164,7 @@ object Player {
         extending = true
         scope.launch {
             try {
-                val related = MusicApi.searchYtMusic(track.artist).filter { candidate ->
+                val related = if (radio) radioBatch(track, s.queue) else MusicApi.searchYtMusic(track.artist).filter { candidate ->
                     // An artist the listener blocked is never added by Ketvoice itself.
                     com.ketvoice.app.data.ArtistPrefs.allows(candidate) && s.queue.none { it.id == candidate.id || (it.title.equals(candidate.title, true) && it.artist.equals(candidate.artist, true)) }
                 }.take(8)
@@ -1357,4 +1384,27 @@ object Player {
         state.first { it.current?.id == trackId && !it.buffering && controller?.playbackState == Player.STATE_READY }
         true
     } ?: false
+}
+
+/** How a radio's next titles are chosen: other artists and the same one in turn, never twice the same title. */
+internal object RadioMix {
+    const val BATCH = 10
+
+    fun next(similar: List<Track>, own: List<Track>, queue: List<Track>, allows: (Track) -> Boolean, seed: Long): List<Track> {
+        fun key(t: Track) = com.ketvoice.app.data.MediaOverrides.normalize(t.title) + "|" + com.ketvoice.app.data.MediaOverrides.normalize(
+            com.ketvoice.app.data.MediaOverrides.mainArtist(t.artist))
+        val seen = queue.mapTo(HashSet()) { key(it) }
+        val ids = queue.mapTo(HashSet()) { it.id }
+        val random = kotlin.random.Random(seed)
+        val a = similar.shuffled(random).iterator(); val b = own.shuffled(random).iterator()
+        val out = ArrayList<Track>()
+        // Two titles of artists like it for one of the same artist.
+        var turn = 0
+        while (out.size < BATCH && (a.hasNext() || b.hasNext())) {
+            val pick = if ((turn++ % 3 != 2 && a.hasNext()) || !b.hasNext()) a.next() else b.next()
+            if (pick.id in ids || !seen.add(key(pick)) || !allows(pick)) continue
+            ids += pick.id; out += pick
+        }
+        return out
+    }
 }

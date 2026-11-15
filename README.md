@@ -21,6 +21,17 @@
 
 ## Overview
 
+### 5.8.0 — Faster, without cuts, search by lyrics
+
+The release is now built with Android's optimiser for a faster interface, and Ketvoice leaves the
+processor to the music behind other apps — with a one-time offer to lift the phone's battery
+restrictions. New: search by lyrics, radios from a title or an artist, favourites offline
+automatically, a library in the manner of Apple Music, pages that grow out of their cover, lists that
+bounce, a bursting heart, living artwork and a Liquid Glass app icon.
+[Mobile](https://github.com/Tysnnn23/Ketvoice/releases/download/v5.8.0/Ketvoice-5.8.0.apk)
+· [Quest](https://github.com/Tysnnn23/Ketvoice/releases/download/v5.8.0/Ketvoice-5.8.0-Quest.apk)
+· [Release notes](docs/releases/v5.8.0.md).
+
 ### 5.7.0 — Ketmix without speed effects, artists you can block
 
 Ketmix no longer changes a title's speed while it is heard, and adds a build-up transition for titles

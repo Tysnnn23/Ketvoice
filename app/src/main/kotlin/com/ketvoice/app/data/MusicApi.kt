@@ -403,12 +403,14 @@ object MusicApi {
         }
 
         val saved = LyricsDiskCache.read(key)
-        if (!refresh && saved != null) return@withContext saved
+        if (!refresh && saved != null) { LyricsSearch.remember(track, saved.second); return@withContext saved }
         if (refresh) synchronized(httpCache) { httpCache.clear() }
         val fetched = fetchForSource(track, title, artist, forcePlain, source)
         val offlineFallback = saved ?: LyricsDiskCache.read(key.replaceFirst("native-v4|", "native-v3|"))
         val result = if (fetched.second.isEmpty() && offlineFallback != null) offlineFallback else fetched
         LyricsDiskCache.write(key, result)
+        // Kept for the search by lyrics, on the device.
+        LyricsSearch.remember(track, result.second)
         synchronized(lyricCache) {
             if (lyricCache.size > 90) {
                 val it = lyricCache.entries.iterator()

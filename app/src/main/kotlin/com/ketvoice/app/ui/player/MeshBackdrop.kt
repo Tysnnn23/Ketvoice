@@ -99,10 +99,10 @@ internal fun MeshBackdrop(colors: List<Color>, playing: Boolean, modifier: Modif
     // The audio meter only runs while this backdrop is visible, playing and allowed to move.
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     DisposableEffect(lifecycle, policy.animate) {
-        fun update() { SonicMeter.observe(policy.animate && lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) }
+        fun update() { SonicMeter.observe("mesh", policy.animate && lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) }
         val observer = LifecycleEventObserver { _, _ -> update() }
         lifecycle.addObserver(observer); update()
-        onDispose { lifecycle.removeObserver(observer); SonicMeter.observe(false) }
+        onDispose { lifecycle.removeObserver(observer); SonicMeter.observe("mesh", false) }
     }
     val levels by SonicMeter.levels.collectAsState()
     LaunchedEffect(policy.animate) {

@@ -25,9 +25,11 @@ internal class ReverbAudioProcessor(private val onProcessed: () -> Unit = {}) : 
         val amount = ReverbControl.amount
         val size = ReverbControl.size
         val damping = ReverbControl.damping
-        if (room == null) output.put(inputBuffer)
+        // Off and silent: copied in one go. The audio thread keeps its time for what is heard, which
+        // matters most behind other apps, when Android gives the app less of the processor.
+        if (inputBuffer.hasRemaining()) onProcessed()
+        if (room == null || (!(amount > 0f) && room.idle())) output.put(inputBuffer)
         else {
-            if (inputBuffer.hasRemaining()) onProcessed()
             var channel = 0
             while (inputBuffer.remaining() >= 2) {
                 val value = inputBuffer.short

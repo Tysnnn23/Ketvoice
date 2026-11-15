@@ -400,7 +400,7 @@ private fun SearchCircleButton(size: androidx.compose.ui.unit.Dp, modifier: Modi
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                Icons.Filled.Search,
+                if (com.ketvoice.app.theme.Ket27.on) com.ketvoice.app.ui.common.Ket27Glyphs.Search else Icons.Filled.Search,
                 contentDescription = "Rechercher",
                 tint = th.onBackground,
                 modifier = Modifier.size(size * 0.42f)
@@ -427,10 +427,12 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier,
         if (Motion.reduced) androidx.compose.animation.core.snap() else spring(dampingRatio = HeldLens.DAMPING, stiffness = HeldLens.STIFFNESS),
         label = "held-lens")
     val lastHoverTab = remember { mutableIntStateOf(-1) }
+    // Ket 27 draws its own symbols, in the manner of iOS.
+    val ket = com.ketvoice.app.theme.Ket27.on
     val tabs = listOf(
-        TabSpec(Icons.Filled.Home, "Accueil", AppUi.HOME),
-        TabSpec(Icons.Filled.GridView, "Explorer", AppUi.EXPLORER),
-        TabSpec(Icons.Filled.LibraryMusic, "Bibliothèque", AppUi.LIBRARY)
+        TabSpec(if (ket) com.ketvoice.app.ui.common.Ket27Glyphs.Home else Icons.Filled.Home, "Accueil", AppUi.HOME),
+        TabSpec(if (ket) com.ketvoice.app.ui.common.Ket27Glyphs.Explore else Icons.Filled.GridView, "Explorer", AppUi.EXPLORER),
+        TabSpec(if (ket) com.ketvoice.app.ui.common.Ket27Glyphs.Library else Icons.Filled.LibraryMusic, "Bibliothèque", AppUi.LIBRARY)
     )
 
     val widthAnim by animateDpAsState(
@@ -515,7 +517,7 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier,
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    Icons.Filled.Home,
+                    if (com.ketvoice.app.theme.Ket27.on) com.ketvoice.app.ui.common.Ket27Glyphs.Home else Icons.Filled.Home,
                     contentDescription = "Accueil",
                     tint = th.onBackground,
                     modifier = Modifier.size(24.dp)

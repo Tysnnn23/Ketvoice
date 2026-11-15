@@ -1,6 +1,7 @@
 package com.ketvoice.app.ui
 
 import androidx.compose.animation.*
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -10,6 +11,8 @@ import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.IntOffset
@@ -79,7 +82,30 @@ internal fun NavigationPresentation(
             },
             label = "nav"
         ) { (tab, entry) ->
-            states.SaveableStateProvider(navigationPageKey(tab, entry)) { content(tab, entry) }
+            // A page opened from a cover grows out of it as a card: its corners round off while it is
+            // small and straighten as it fills the screen; closing it folds it back into the card.
+            val card = entry.isArtworkDetail() && !Motion.reduced
+            val opened by transition.animateFloat(transitionSpec = { spring(dampingRatio = .92f, stiffness = 430f) }, label = "page-card") {
+                if (it == EnterExitState.Visible) 1f else 0f
+            }
+            val radius = with(androidx.compose.ui.platform.LocalDensity.current) { PageCard.radius(opened).dp.toPx() }
+            androidx.compose.foundation.layout.Box(if (!card) Modifier else Modifier.graphicsLayer {
+                if (radius > .5f) { shape = androidx.compose.foundation.shape.RoundedCornerShape(radius); clip = true }
+            }) {
+                states.SaveableStateProvider(navigationPageKey(tab, entry)) { content(tab, entry) }
+            }
         }
+    }
+}
+
+/** The corners of a page while it grows out of a cover (as on iOS): those of a card, then none. */
+internal object PageCard {
+    const val CARD_RADIUS = 34f
+    /** Corner radius (dp) for an opening of 0..1: square once the page is nearly full. */
+    fun radius(opened: Float): Float {
+        val p = if (opened.isFinite()) opened.coerceIn(0f, 1f) else 1f
+        if (p >= .97f) return 0f
+        val r = 1f - p / .97f
+        return CARD_RADIUS * r * (2f - r)
     }
 }

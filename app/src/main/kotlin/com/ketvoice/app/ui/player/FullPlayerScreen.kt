@@ -370,6 +370,24 @@ fun FullPlayerScreen(
                         if (Motion.reduced) pauseShrink.snapTo(target)
                         else pauseShrink.animateTo(target, androidx.compose.animation.core.spring(dampingRatio = .62f, stiffness = 260f))
                     }
+                    // The living artwork: a pulse with the bass, read in the layer so that it never recomposes the page.
+                    val living = AppSettings.livingArtwork.value && !Motion.reduced && !AppSettings.highPerformanceMode.value && state.isPlaying
+                    val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
+                    DisposableEffect(lifecycle, living) {
+                        fun update() = com.ketvoice.app.player.SonicMeter.observe("living-artwork",
+                            living && lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED))
+                        val observer = androidx.lifecycle.LifecycleEventObserver { _, _ -> update() }
+                        lifecycle.addObserver(observer); update()
+                        onDispose { lifecycle.removeObserver(observer); com.ketvoice.app.player.SonicMeter.observe("living-artwork", false) }
+                    }
+                    val sonic = com.ketvoice.app.player.SonicMeter.levels.collectAsState()
+                    val beat = remember { androidx.compose.animation.core.Animatable(0f) }
+                    LaunchedEffect(living) {
+                        if (!living) { beat.animateTo(0f, tween(Motion.duration(240))); return@LaunchedEffect }
+                        androidx.compose.runtime.snapshotFlow { sonic.value.low }.collect { low ->
+                            beat.animateTo(LivingArtwork.target(low), tween(LivingArtwork.FOLLOW_MS))
+                        }
+                    }
                     PlayerArtworkFrame(inlineCanvas, ambience.color,
                         Modifier.width(sceneWidth).height(artworkHeight)
                         // Shared element: the artwork grows out of the mini-player cover on the
@@ -377,7 +395,7 @@ fun FullPlayerScreen(
                         .graphicsLayer {
                             val morph = sharedCoverMorph(AppUi.miniCoverBounds.value, size.width, size.height, revealProgress())
                             // Paused, the artwork steps back with a small bounce; playing, it comes forward again.
-                            val rest = pausedArtworkScale(pauseShrink.value)
+                            val rest = pausedArtworkScale(pauseShrink.value) * (1f + beat.value)
                             scaleX = morph.scale * rest; scaleY = morph.scale * rest
                             translationX = morph.translationX; translationY = morph.translationY
                             if (pauseShrink.value > .01f) {
@@ -531,12 +549,14 @@ internal fun PlayerTitle(track: Track, compact: Boolean, cover: String?, sheetAc
     var favoriteTap by remember(track.id) { mutableIntStateOf(0) }
     val favoriteHaptic = com.ketvoice.app.ui.motion.rememberHaptics()
     val pulse = remember(track.id) { androidx.compose.animation.core.Animatable(1f) }
+    // Counts only the times the title became a favourite: those burst.
+    var bursts by remember(track.id) { mutableIntStateOf(0) }
     val starColor by animateColorAsState(if (favorite) com.ketvoice.app.theme.LocalTheme.current.accent else Color(0xFFCED2E3),
         tween(Motion.duration()), label = "favorite-color")
     LaunchedEffect(favoriteTap, Motion.reduced) {
         if (favoriteTap > 0 && !Motion.reduced) {
-            pulse.animateTo(1.16f, tween(Motion.PRESS))
-            pulse.animateTo(1f, tween(Motion.FADE))
+            pulse.animateTo(if (favorite) 1.32f else 1.12f, tween(Motion.PRESS))
+            pulse.animateTo(1f, androidx.compose.animation.core.spring(dampingRatio = .42f, stiffness = 520f))
         } else pulse.snapTo(1f)
     }
     Row(modifier, verticalAlignment = Alignment.CenterVertically) {
@@ -564,15 +584,19 @@ internal fun PlayerTitle(track: Track, compact: Boolean, cover: String?, sheetAc
             )
         }
         Spacer(Modifier.width(8.dp))
+        Box(contentAlignment = Alignment.Center) {
+        com.ketvoice.app.ui.motion.HeartBurst(bursts, starColor, Modifier.align(Alignment.Center).wrapContentSize(unbounded = true))
         SmallCircleButton({
             favoriteTap++
-            if (!favorite) favoriteHaptic(com.ketvoice.app.ui.motion.Haptics.Kind.Confirm)
+            if (!favorite) { favoriteHaptic(com.ketvoice.app.ui.motion.Haptics.Kind.Confirm); bursts++ }
             AppSettings.favoriteIds.value = if (favorite) AppSettings.favoriteIds.value - track.id else AppSettings.favoriteIds.value + track.id
             SettingsStore.save()
         }, active = favorite, size = 36.dp) {
-            Icon(if (favorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+            Icon(if (com.ketvoice.app.theme.Ket27.on) (if (favorite) com.ketvoice.app.ui.common.Ket27Glyphs.HeartFilled else com.ketvoice.app.ui.common.Ket27Glyphs.Heart)
+                else if (favorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
                 if (favorite) "Retirer des favoris" else "Ajouter aux favoris", tint = starColor,
                 modifier = Modifier.size(23.dp).graphicsLayer { scaleX = pulse.value; scaleY = pulse.value })
+        }
         }
         Spacer(Modifier.width(8.dp))
         SmallCircleButton(sheetAction, size = 36.dp) {
@@ -615,4 +639,12 @@ private fun Modifier.playerDismissDrag(
             onDragCancel = { settle() }
         )
     }
+}
+
+/** The living artwork's pulse: a breath with the bass, at most two and a half percent. */
+internal object LivingArtwork {
+    const val MAX = .025f
+    const val FOLLOW_MS = 90
+    /** The scale to add for a bass level of 0..1: nothing for the quiet floor, a little more for the kicks. */
+    fun target(low: Float): Float = if (!low.isFinite()) 0f else (((low - .18f) / .82f).coerceIn(0f, 1f).let { it * it }) * MAX
 }

@@ -129,7 +129,8 @@ object CanvasRepo {
                         _paths.value = _paths.value + (track.id to target.absolutePath)
                         return@withLock
                     }
-                    if (!force && !networkAllowed(ctx)) return@withLock
+                    // A Canvas only shows on screen: behind other apps it is not downloaded, so that the stream being heard keeps the network.
+                    if (!force && (!networkAllowed(ctx) || !com.ketvoice.app.automix.Automix.appInFront)) return@withLock
                     if (download(published, target) == null) {
                         failed[track.id] = System.currentTimeMillis()
                         return@withLock
@@ -152,7 +153,8 @@ object CanvasRepo {
                 val alreadyDownloaded = dest?.let { it.exists() && it.length() > 10_000 } == true
 
                 if (!alreadyDownloaded) {
-                    if (!force && !networkAllowed(ctx)) return@withLock
+                    // A Canvas only shows on screen: behind other apps it is not downloaded, so that the stream being heard keeps the network.
+                    if (!force && (!networkAllowed(ctx) || !com.ketvoice.app.automix.Automix.appInFront)) return@withLock
                     val resolved = KetvoiceApi.canvas(track.copy(spotifyId = spotifyId)) ?: run {
                         failed[track.id] = System.currentTimeMillis()
                         return@withLock

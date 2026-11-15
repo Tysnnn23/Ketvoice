@@ -7,6 +7,23 @@
 
 ---
 
+# Ketvoice 5.8.0
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 115** — Faster, music without cuts in the background, search by lyrics, radios, Apple-style library and animations.
+
+- Release built with R8; less work behind other apps (reverb idle copy, slower position polling, Canvas
+  downloads and Ketmix body readings only in front); one-time offer to lift Android's battery restrictions.
+- Search by lyrics (on the device, and Genius for sentences); radio from a title or an artist;
+  favourites downloaded automatically.
+- Ket 27 library in the manner of Apple Music; pages grow out of their cover as cards; iOS rubber-band
+  lists; heart burst; living artwork; Liquid Glass app icon; Ket 27 symbols.
+
+Full notes: [5.8.0](docs/releases/v5.8.0.md).
+
+---
+
 # Ketvoice 5.7.0
 
 ![Ketvoice](ketvoice-banner.png)

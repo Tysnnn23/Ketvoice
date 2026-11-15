@@ -21,10 +21,14 @@ object AppSettings {
     /** Continuous additional glass tint, zero preserves the existing material. */
     val glassTint = mutableStateOf(0f)
     val downloadsWifiOnly = mutableStateOf(false)
+    /** A title made a favourite is downloaded for listening offline. */
+    val autoOfflineFavorites = mutableStateOf(true)
     val panoramicCanvas = mutableStateOf(false)
     val sonicCanvas = mutableStateOf(false)
     val albumColors = mutableStateOf(true)
     val artworkDepth = mutableStateOf(true)
+    /** The player's artwork pulses very slightly with the bass of the music. */
+    val livingArtwork = mutableStateOf(true)
     val systemReduceMotion = mutableStateOf(false)
     val canvasWithMobileData = mutableStateOf(false)
     val artistSignatures = mutableStateOf(false)

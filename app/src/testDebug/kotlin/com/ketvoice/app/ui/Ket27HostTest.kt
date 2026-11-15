@@ -126,4 +126,17 @@ class Ket27HostTest {
         assertTrue(glass.shadow); assertFalse(glass.innerShadow); assertEquals(.45f, glass.shadowAlpha, 0f); assertEquals(8f, glass.elevationDp, 0f)
         assertEquals(.25f, com.ketvoice.app.glass.Ket27Glass.regular(com.ketvoice.app.glass.GlassParams.pill(dark = false), 0f).shadowAlpha, 0f)
     }
+
+    @Test fun theLiquidGlassAppIconIsDrawn() {
+        val context = compose.activity
+        val icon = context.getDrawable(com.ketvoice.app.R.mipmap.ic_launcher_glass)!!
+        val bitmap = Bitmap.createBitmap(432, 432, Bitmap.Config.ARGB_8888)
+        icon.setBounds(0, 0, 432, 432); icon.draw(Canvas(bitmap))
+        val file = File("build/host-ui-preview/${com.ketvoice.app.BuildConfig.FLAVOR}/app-icon-liquid-glass.png")
+        file.parentFile?.mkdirs(); file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+        // The coloured ground in a corner, the light glass of the K in the middle of its stem.
+        val corner = bitmap.getPixel(70, 70); val stem = bitmap.getPixel((432 * 42.5 / 108).toInt(), 216)
+        assertTrue("coloured ground", android.graphics.Color.red(corner) > 150 && android.graphics.Color.green(corner) < 150 && android.graphics.Color.blue(corner) > 150)
+        assertTrue("glass is lighter than the ground", android.graphics.Color.green(stem) > android.graphics.Color.green(corner) + 60)
+    }
 }

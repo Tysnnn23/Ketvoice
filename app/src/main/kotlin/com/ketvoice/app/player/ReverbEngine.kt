@@ -50,6 +50,8 @@ internal class ReverbEngine(private val sampleRate: Int, channels: Int) {
     private val preDelay = Array(channels) { FloatArray((sampleRate * .018f).toInt().coerceAtLeast(1)) }
     private val preIndex = IntArray(channels)
     private val wet = FloatArray(channels)
+    /** No reverberation left to ring: the sound can be passed on as it is, without a sample-by-sample pass. */
+    fun idle(): Boolean = wet.all { it < .000001f }
     private val dcIn = FloatArray(channels)
     private val dcOut = FloatArray(channels)
     private val smoothing = 1f / (sampleRate * .03f).coerceAtLeast(1f)

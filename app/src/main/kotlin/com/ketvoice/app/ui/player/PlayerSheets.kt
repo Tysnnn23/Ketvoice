@@ -14,6 +14,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Radio
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Close
@@ -163,6 +164,9 @@ fun TrackMenuSheet(track: Track, onClose: () -> Unit) {
         }
         MenuItemRow("Ajouter à une playlist", Icons.Filled.PlaylistAdd) {
             onClose(); com.ketvoice.app.ui.AppUi.addToPlaylist.value = track
+        }
+        MenuItemRow("Lancer la radio", androidx.compose.material.icons.Icons.Filled.Radio) {
+            onClose(); Player.startRadio(track)
         }
         // A story card of the line being sung (if this title is playing), else of the title alone.
         val momentScope = androidx.compose.runtime.rememberCoroutineScope()

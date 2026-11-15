@@ -111,6 +111,7 @@ fun AppRoot() {
 
     KetvoiceTheme(useDark = useDark, dynamicAccent = dynamicAccent) {
         com.ketvoice.app.ui.player.PlaybackFeatureDialogs()
+        BackgroundPlaybackOffer()
         val th = LocalTheme.current
         val backdrop = rememberGlassBackdrop(th.background)
         val playerState by Player.state.collectAsState()
@@ -463,4 +464,29 @@ private fun CompactTabTitle(title: String, visible: Boolean, modifier: Modifier 
                     .semantics { heading() })
         }
     }
+}
+
+/**
+ * Asked once, the first time music plays while Android's battery saving may stop Ketvoice behind
+ * other apps (heard as cuts): a word of why, and the system's own question.
+ */
+@Composable
+private fun BackgroundPlaybackOffer() {
+    if (com.ketvoice.app.BuildConfig.IS_QUEST) return
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val playing = Player.state.collectAsState().value.isPlaying
+    var show by remember { mutableStateOf(false) }
+    LaunchedEffect(playing) {
+        if (playing && com.ketvoice.app.data.BackgroundPlayback.shouldOffer(context)) {
+            kotlinx.coroutines.delay(4_000)
+            if (Player.state.value.isPlaying) { show = true; com.ketvoice.app.data.BackgroundPlayback.offered(context) }
+        }
+    }
+    if (!show) return
+    com.ketvoice.app.ui.common.AppAlertDialog(onDismissRequest = { show = false },
+        title = { com.ketvoice.app.ui.common.Text("Musique sans coupure en arrière-plan") },
+        text = { com.ketvoice.app.ui.common.Text("Sur ce téléphone, l'économie de batterie peut couper la musique quand Ketvoice n'est pas à l'écran. Autorisez Ketvoice à jouer sans restriction ; vous pourrez changer d'avis dans Réglages → Lecture.") },
+        confirmButton = { androidx.compose.material3.TextButton({ show = false; com.ketvoice.app.data.BackgroundPlayback.ask(context) }) {
+            com.ketvoice.app.ui.common.Text("Autoriser") } },
+        dismissButton = { androidx.compose.material3.TextButton({ show = false }) { com.ketvoice.app.ui.common.Text("Plus tard") } })
 }

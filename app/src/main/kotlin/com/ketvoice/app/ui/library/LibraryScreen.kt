@@ -65,6 +65,8 @@ fun LibraryScreen() {
         query.isBlank() || listOf(track.title, track.artist, track.album).any { it.contains(query.trim(), true) }
     }
     val selectedTracks = all.filter { it.id in selected }
+    // Ket 27: the library of Apple Music — categories in a list, then what was added lately.
+    val appleRoot = com.ketvoice.app.theme.Ket27.on && view == 0 && query.isBlank() && chosen == null
     val list = rememberLazyListState()
     LaunchedEffect(all) { selected = selected.filter { id -> all.any { it.id == id } } }
     LaunchedEffect(list) {
@@ -92,14 +94,16 @@ fun LibraryScreen() {
         contentPadding = PaddingValues(top = 70.dp, bottom = LocalAdaptiveLayout.current.bottomPaddingDp.dp)) {
         item(key = "header") {
             Column(Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 14.dp)) {
-                Text("Bibliothèque", color = theme.onBackground, fontSize = 38.sp, fontWeight = FontWeight.Bold,
+                if (com.ketvoice.app.theme.Ket27.on) Text("Bibliothèque", color = theme.onBackground, style = com.ketvoice.app.theme.T.hugeTitle,
+                    modifier = Modifier.asHeading())
+                else Text("Bibliothèque", color = theme.onBackground, fontSize = 38.sp, fontWeight = FontWeight.Bold,
                     letterSpacing = (-1.2).sp, modifier = Modifier.asHeading())
                 Text(AppText.t(if (all.size == 1) "1 titre" else "${all.size} titres") + " · " +
                     AppText.t("Playlists") + " " + playlists.size, localize = false, color = theme.secondary,
                     fontSize = 14.sp, modifier = Modifier.padding(top = 5.dp, bottom = 18.dp))
                 CompactSearchField(query, { query = it }, {}, Modifier.testTag("library-search"))
             }
-            LazyRow(contentPadding = PaddingValues(horizontal = 22.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (!appleRoot) LazyRow(contentPadding = PaddingValues(horizontal = 22.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 itemsIndexed(listOf("Tout", "Playlists", "Albums", "Titres", "Artistes")) { index, label ->
                     CollectionFilter(label, view == index, {
                         view = index; album = null; selecting = false; selected = emptyList()
@@ -115,7 +119,33 @@ fun LibraryScreen() {
                 CollectionPlaybackActions(chosen.tracks, Modifier.fillMaxWidth().padding(top = 16.dp))
             }
         }
-        if (view == 0 && query.isBlank() && chosen == null) {
+        if (appleRoot) {
+            item(key = "apple-categories") {
+                AppleLibraryCategories(listOf(
+                    Triple("Playlists", KetIcons.Music) { view = 1 }, Triple("Artistes", KetIcons.Account) { view = 4 },
+                    Triple("Albums", KetIcons.Album) { view = 2 }, Triple("Titres", KetIcons.Lyrics) { view = 3 },
+                    Triple("Favoris", KetIcons.Heart) { AppUi.openCatalog(CatalogRequest("favorites", "local", "Favoris")) },
+                    Triple("Téléchargements", KetIcons.Download) { AppUi.openDownloads() },
+                    Triple("Musique locale", KetIcons.Folder) { AppUi.openLocalFiles() },
+                    Triple("Replay", KetIcons.Clock) { AppUi.openReplay() }))
+            }
+            if (playlists.any { it.pinned }) item(key = "pinned") {
+                LibrarySection("Épinglés")
+                PlaylistShelf(playlists.filter { it.pinned }, if (loadError) null else ::pin)
+            }
+            if (groups.isNotEmpty()) item(key = "apple-recent") {
+                LibrarySection("Ajouts récents")
+                CoverGrid(groups.take(8), Modifier.testTag("library-recent")) { group, side ->
+                    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).clickable(role = Role.Button) { album = group.key }) {
+                        Cover(group.title, ArtworkRepo.coverForTrack(group.tracks.first()) ?: group.tracks.first().coverUrl, side, 10.dp)
+                        Text(group.title, localize = false, color = theme.onBackground, fontWeight = FontWeight.Medium,
+                            fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 7.dp))
+                        Text(group.artist, localize = false, color = theme.secondary, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                }
+            }
+        }
+        if (view == 0 && query.isBlank() && chosen == null && !appleRoot) {
             item(key = "shortcuts") {
                 Column(Modifier.padding(horizontal = 22.dp, vertical = 12.dp)
                     .clip(RoundedCornerShape(24.dp)).background(theme.card)) {
@@ -130,7 +160,7 @@ fun LibraryScreen() {
                 PlaylistShelf(playlists.filter { it.pinned }, if (loadError) null else ::pin)
             }
         }
-        if (view in 0..1 && chosen == null) {
+        if (view in 0..1 && chosen == null && !appleRoot) {
             val rows = playlists.filter { query.isBlank() || it.name.contains(query.trim(), true) }
                 .filterNot { view == 0 && query.isBlank() && it.pinned }
             item(key = "playlists") {
@@ -147,7 +177,7 @@ fun LibraryScreen() {
                     color = theme.secondary, modifier = Modifier.padding(18.dp))
             }
         }
-        if (view == 0 || view == 2) {
+        if ((view == 0 || view == 2) && !appleRoot) {
             val rows = albums.filter { query.isBlank() || it.title.contains(query.trim(), true) || it.artist.contains(query.trim(), true) }
             if (rows.isNotEmpty() && chosen == null) item(key = "albums") {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -182,7 +212,7 @@ fun LibraryScreen() {
                 EmptyState("Aucun album", "Les titres sans album restent disponibles dans Titres.", "Titres", onAction = { view = 3 })
             }
         }
-        if ((view == 0 || view == 4) && chosen == null) {
+        if ((view == 0 || view == 4) && chosen == null && !appleRoot) {
             val artists = all.filter { it.artist.isNotBlank() }.groupBy { it.artist.substringBefore(',').trim() }
                 .filterKeys { query.isBlank() || it.contains(query.trim(), true) }
             if (artists.isNotEmpty()) item(key = "artists") {
@@ -199,7 +229,7 @@ fun LibraryScreen() {
                 }
             }
         }
-        if (view == 0 || view == 3 || chosen != null) {
+        if ((view == 0 && !appleRoot) || view == 3 || chosen != null) {
             item(key = "tracks-heading") {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.weight(1f)) { LibrarySection("Titres") }
@@ -335,5 +365,23 @@ private fun LibraryShortcut(title: String, icon: androidx.compose.ui.graphics.ve
         Text(title, color = theme.onBackground, fontSize = 16.sp, fontWeight = FontWeight.Medium,
             maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(start = 16.dp, end = 8.dp))
         Icon(KetIcons.ChevronRight, null, tint = theme.secondary, modifier = Modifier.size(18.dp))
+    }
+}
+
+/** The categories of the library as Apple Music lists them: a symbol in the accent, a name, a chevron. */
+@Composable
+private fun AppleLibraryCategories(rows: List<Triple<String, androidx.compose.ui.graphics.vector.ImageVector, () -> Unit>>) {
+    val theme = LocalTheme.current
+    Column(Modifier.padding(horizontal = 16.dp, vertical = 6.dp).testTag("library-categories")) {
+        rows.forEachIndexed { index, (title, icon, open) ->
+            Row(Modifier.fillMaxWidth().clickable(role = Role.Button, onClick = open).heightIn(min = 50.dp)
+                .padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(icon, null, tint = theme.accent, modifier = Modifier.size(24.dp))
+                Text(title, color = theme.onBackground, fontSize = 20.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f).padding(start = 16.dp))
+                Icon(KetIcons.ChevronRight, null, tint = theme.secondary.copy(alpha = .6f), modifier = Modifier.size(16.dp))
+            }
+            if (index != rows.lastIndex) Box(Modifier.padding(start = 44.dp).fillMaxWidth().height(.5.dp).background(theme.hairline))
+        }
     }
 }

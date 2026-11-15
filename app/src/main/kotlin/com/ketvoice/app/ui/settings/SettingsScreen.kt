@@ -296,6 +296,8 @@ fun SettingsScreen() {
                 if (!com.ketvoice.app.BuildConfig.IS_QUEST) SToggle(KetIcons.Sliders, "Retours haptiques",
                     "Légère vibration sur le verre, les onglets et la barre de lecture",
                     AppSettings.haptics.value) { AppSettings.haptics.value = it; SettingsStore.save() }
+                SToggle(KetIcons.Canvas, "Pochette vivante", "Dans le lecteur, la pochette pulse très légèrement au rythme des basses",
+                    AppSettings.livingArtwork.value) { AppSettings.livingArtwork.value = it; SettingsStore.save() }
                 SToggle(KetIcons.Canvas, "Profondeur de pochette", "Mouvement léger au toucher ou au pointeur, sans modifier les gestes",
                     AppSettings.artworkDepth.value) { AppSettings.artworkDepth.value = it; SettingsStore.save() }
                 SToggle(KetIcons.Canvas, "Canvas panoramique",
@@ -370,6 +372,16 @@ fun SettingsScreen() {
 
             // ==================================================== LECTURE
             Section("LECTURE") {
+                if (!com.ketvoice.app.BuildConfig.IS_QUEST) {
+                    val ctx = LocalContext.current
+                    var free by remember { mutableStateOf(com.ketvoice.app.data.BackgroundPlayback.unrestricted(ctx)) }
+                    androidx.lifecycle.compose.LifecycleResumeEffect(Unit) { free = com.ketvoice.app.data.BackgroundPlayback.unrestricted(ctx); onPauseOrDispose { } }
+                    SRow(KetIcons.Audio, "Lecture en arrière-plan",
+                        sub = "Si la musique se coupe quand Ketvoice n'est pas à l'écran, laissez Android la jouer sans restriction de batterie.",
+                        value = if (free) "Sans restriction" else "Limitée par l'économie de batterie") {
+                        com.ketvoice.app.data.BackgroundPlayback.ask(ctx)
+                    }
+                }
                 SToggle(KetIcons.Shuffle, "Aléatoire avec moins de répétitions",
                     "Le mode aléatoire garde pour plus tard les titres écoutés récemment et n'enchaîne pas deux titres du même artiste quand il peut l'éviter.",
                     AppSettings.smartShuffle.value) { AppSettings.smartShuffle.value = it; SettingsStore.save() }
@@ -632,6 +644,9 @@ fun SettingsScreen() {
 
             // ==================================================== TÉLÉCHARGEMENTS
             Section("TÉLÉCHARGEMENTS") {
+                SToggle(KetIcons.Download, "Favoris hors ligne automatiquement",
+                    "Un titre ajouté aux favoris se télécharge tout seul, pour l'écouter sans connexion",
+                    AppSettings.autoOfflineFavorites.value) { AppSettings.autoOfflineFavorites.value = it; SettingsStore.save() }
                 SToggle(KetIcons.Wifi, "Téléchargements en Wi-Fi uniquement", "Les transferts attendent une connexion Wi-Fi", AppSettings.downloadsWifiOnly.value) {
                     AppSettings.downloadsWifiOnly.value = it; SettingsStore.save()
                 }

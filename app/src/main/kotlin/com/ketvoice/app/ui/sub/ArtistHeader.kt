@@ -167,6 +167,11 @@ internal fun ArtistHeader(page: ArtistPage, collapse: () -> Float = { 0f }, onTo
                         { Player.setShuffle(false); Player.playQueue(page.tracks) }, { Player.playShuffled(page.tracks) },
                         Modifier.widthIn(max = 560.dp), playLabel = "Écouter", playTag = "artist-play", shuffleTag = "artist-shuffle")
                 }
+                Text("Radio de l'artiste", color = theme.accent, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(top = 10.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
+                        .clickable(role = androidx.compose.ui.semantics.Role.Button) { Player.startRadio(page.tracks.first()) }
+                        .heightIn(min = 44.dp).wrapContentHeight(Alignment.CenterVertically).padding(horizontal = 12.dp)
+                        .testTag("artist-radio"))
             }
             Spacer(Modifier.height(18.dp))
         }

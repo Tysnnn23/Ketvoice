@@ -347,7 +347,8 @@ internal object Automix {
         suspend fun body(id: String, length: Long, media: MediaItem): BeatAnalysis.Hint? {
             if (depth == AnalysisDepth.Light) return null
             val window = AnalysisStore.bodyWindow(length) ?: return null
-            val known = AnalysisStore.body(id, length) ?: read(deck, control, media, window.first, AnalysisStore.BODY_MS, depth, ::valid, key = false)
+            // Behind other apps only a body already read is used: two more readings would cost the title being heard.
+            val known = AnalysisStore.body(id, length) ?: if (!appInFront) null else read(deck, control, media, window.first, AnalysisStore.BODY_MS, depth, ::valid, key = false)
                 ?.also { AnalysisStore.putBody(id, length, it) }
             return known?.takeIf { it.hasBeat }?.let { BeatAnalysis.Hint(it.bpm, it.confidence) }
         }

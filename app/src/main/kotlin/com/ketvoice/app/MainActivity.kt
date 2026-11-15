@@ -73,6 +73,8 @@ class MainActivity : ComponentActivity() {
         runCatching { com.ketvoice.app.data.CustomSources.init(this) }
         runCatching { com.ketvoice.app.data.ForYouRotation.init(this) }
         runCatching { com.ketvoice.app.data.ArtistPrefs.init(this) }
+        runCatching { com.ketvoice.app.data.LyricsSearch.init(this) }
+        com.ketvoice.app.data.FavoritesOffline.start()
         runCatching {
             com.ketvoice.app.util.LauncherIcons.apply(
                 this,

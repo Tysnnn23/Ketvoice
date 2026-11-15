@@ -12,10 +12,17 @@ object SonicMeter : TeeAudioProcessor.AudioBufferSink {
     private val _levels = MutableStateFlow(SonicLevels())
     val levels: StateFlow<SonicLevels> = _levels
     @Volatile private var observed = false
+    /** Who is listening: the meter runs while at least one of them is (the backdrop, the sonic canvas, the living artwork). */
+    private val watchers = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
     @Volatile private var resetRequested = true
     @Volatile private var supported = false
     @Volatile private var lastData = 0L
-    fun observe(on: Boolean) { observed = on; if (!on) reset() }
+    fun observe(on: Boolean) { if (!on) watchers.clear(); observed = on; if (!on) reset() }
+    fun observe(who: String, on: Boolean) {
+        if (on) watchers.add(who) else watchers.remove(who)
+        val any = watchers.isNotEmpty()
+        if (any != observed) { observed = any; if (!any) reset() }
+    }
     fun reset() { resetRequested = true; lastData = 0; _levels.value = SonicLevels() }
     fun expire() { if (System.nanoTime() - lastData > 450_000_000L) _levels.value = SonicLevels() }
     override fun flush(sampleRateHz: Int, channelCount: Int, encoding: Int) {

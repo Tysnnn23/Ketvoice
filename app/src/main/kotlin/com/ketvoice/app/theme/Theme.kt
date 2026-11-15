@@ -111,6 +111,10 @@ fun KetvoiceTheme(
         // pas la Ripple Material héritée d'Android.
         androidx.compose.foundation.LocalIndication provides com.ketvoice.app.theme.NoIndication
     ) {
+      // Lists bounce at their ends as on iOS (the platform's stretch with reduced motion).
+      androidx.compose.runtime.CompositionLocalProvider(androidx.compose.foundation.LocalOverscrollFactory provides
+          (if (com.ketvoice.app.ui.motion.Motion.reduced) androidx.compose.foundation.LocalOverscrollFactory.current
+           else com.ketvoice.app.ui.motion.BounceOverscrollFactory)) {
         val ketFont = if (Ket27.on) Ket27.font else null
         MaterialTheme(
             colorScheme = if (isDark) darkColorScheme(
@@ -144,6 +148,7 @@ fun KetvoiceTheme(
                 androidx.compose.material3.ProvideTextStyle(inherited.copy(fontFamily = ketFont ?: inherited.fontFamily), content)
             }
         )
+      }
     }
 }
 

@@ -22,10 +22,10 @@ internal fun SonicCanvas(playing: Boolean, color: Color) {
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val reduced = Motion.reduced
     DisposableEffect(lifecycle, playing, reduced) {
-        fun update() { SonicMeter.observe(playing && !reduced && lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) }
+        fun update() { SonicMeter.observe("sonic-canvas", playing && !reduced && lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) }
         val observer = LifecycleEventObserver { _, _ -> update() }
         lifecycle.addObserver(observer); update()
-        onDispose { lifecycle.removeObserver(observer); SonicMeter.observe(false) }
+        onDispose { lifecycle.removeObserver(observer); SonicMeter.observe("sonic-canvas", false) }
     }
     LaunchedEffect(playing, reduced) { if (playing && !reduced) while (true) { delay(250); SonicMeter.expire() } }
     val levels by SonicMeter.levels.collectAsState()

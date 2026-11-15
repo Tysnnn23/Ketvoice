@@ -59,6 +59,7 @@ The app also makes direct requests to the providers needed for the feature being
 - Deezer, iTunes, and YouTube image CDNs for artwork
 - LRCLIB, NetEase, Genius, BetterLyrics, LiriQo, and other lyric providers
 - Google Translate or MyMemory for optional lyric translations, and Google Translate for artist biographies
+- Genius, for a search of three words or more, to find titles by their lyrics (only the words typed are sent)
 - Spotify CDNs for Canvas media
 - Any custom JSON source added by the user
 
