@@ -1,0 +1,224 @@
+{
+  "schema": 8,
+  "version": "5.7.0",
+  "versionCode": 114,
+  "source_commit": "5dc5305c487d2c724439211afdbc6042e7ed7679",
+  "created_at": "2026-11-15T20:42:16.281111+00:00",
+  "build_origin": {
+    "kind": "github_actions_with_owner_discord_sdk",
+    "workflow": "android.yml",
+    "run_id": 43758482579,
+    "artifact": {
+      "id": 14179252966,
+      "sha256": "3dab8e80fc670eaf378ebc5a445afbd4257bec0617407c0960751477c05f6761"
+    },
+    "gradle": "assembleMobileRelease assembleQuestRelease",
+    "note": "Signed by CI with the pinned keystore secret; the Discord Social SDK AAR matched its pinned SHA-256."
+  },
+  "local_validation": {
+    "result": "debug JVM/Robolectric suites for both flavors, release lint and the UI text audit passed in a cloud container without the Discord SDK",
+    "commands": [
+      "testMobileDebugUnitTest",
+      "testQuestDebugUnitTest",
+      "lintMobileRelease",
+      "lintQuestRelease",
+      "tools/audit_ui_texts.py --check"
+    ],
+    "ci_validation": "run 43758482579: release builds, debug and release unit tests for both flavors, UI text audit, lint, APK signature pin and Discord bridge packaging passed",
+    "code_review": {
+      "kind": "three independent read-only reviews by separate agents (Ketmix engine; new interface and data features with translations; Canvas and overrides persistence); their findings fixed or recorded below"
+    },
+    "host_previews": "the search artist circle and its menu exercised in a host Compose test (long press, block, unblock, favourite); no new screenshot inspected",
+    "after_last_full_local_run": "no source change after the last complete local run"
+  },
+  "server": {
+    "function": "ketvoice-content",
+    "deployed_version": 23,
+    "changed_in_this_version": false,
+    "note": "no server change since 5.4.0"
+  },
+  "tests": {
+    "mobile": {
+      "jvm": {
+        "tests": 791,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "android_15_emulator_compose": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "quest": {
+      "jvm": {
+        "tests": 790,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "android_15_emulator_compose": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    }
+  },
+  "lint": {
+    "mobile": {
+      "Warning": 186,
+      "Hint": 21
+    },
+    "quest": {
+      "Warning": 188,
+      "Hint": 21
+    }
+  },
+  "apks": [
+    {
+      "name": "Ketvoice-5.7.0.apk",
+      "sha256": "c247a980904cf097dbef2cdc4424adb4f8f87a5a4d2d6e848b208c4d6563e7af",
+      "bytes": 74331108,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "5.7.0",
+      "versionCode": 114,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-5.7.0-Quest.apk",
+      "sha256": "90c9a35765fcacd0fdb44a7b132e282686e0dce26652d09f5ae8d44320c2c192",
+      "bytes": 84364710,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "5.7.0",
+      "versionCode": 114,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    }
+  ],
+  "discord": {
+    "sdk_present_in_ci_build": true,
+    "sdk_sha256_pinned": true,
+    "bridge_and_native_libraries_verified": true,
+    "presence_mode": "unauthenticated_rpc_through_installed_discord_app"
+  },
+  "credential_scan": {
+    "entries": 3407,
+    "findings": 0,
+    "raw_pattern_findings": 1,
+    "scope": "tracked sources and APK archive entries",
+    "kind": "credential_patterns",
+    "explicit_private_provider_key_deny_list": false,
+    "triage": [
+      {
+        "file": "Ketvoice-Liquid-Glass-V4.html",
+        "classification": "embedded_image_false_positive",
+        "all_hits_inside_image_data_uris": true,
+        "rescanned_without_image_payloads": true
+      }
+    ]
+  },
+  "release_install_smoke": {
+    "mobile": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "quest": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    }
+  },
+  "publication_override": {
+    "authorized_by_user": true,
+    "authorized_at": "2026-11-15T20:42:16.281111+00:00",
+    "kind": "standing_authorization",
+    "user_statement": "J'autorise TOUT devient maintenant une règle.",
+    "user_statement_date": "2026-11-14",
+    "in_reply_to": "The question whether versions may be published without phone or Quest testing without asking again for each version.",
+    "recorded_in": "AGENTS.md (commit aeeda8e)",
+    "reason": "The owner made publishing validated versions without phone or Quest testing a standing rule.",
+    "scope": "physical device installation and all on-device behaviour of 5.7.0"
+  },
+  "owner_report_2026_11_15_fourth": {
+    "statement_summary": "re-read all the code and always translate fully; in Ketmix, titles at different BPM were sped up with an odd cutting effect: no such effect; artist biographies must be translated; the new-release poster must not always be the same; artist pages must accept uploads by URL and keep them across versions; block/unblock/favourite an artist from a small menu under its circle in the search; the tab bar slider should become special when held (as on iOS); improve Ketmix copying Apple Music and Spotify.",
+    "ketmix": {
+      "cause_of_the_effect": "since 5.5.0 tempos up to 14-18 % apart were stretched, the common tempo rode during the blend and the incoming title glided back to its own speed in 16 steps afterwards; Media3 drains and flushes the processor chain at every playback-speed change, heard as small cuts",
+      "changes": [
+        "no speed change while a deck is heard: the incoming speed is set once while silent, kept to the end of the title, reset to 1 at the next media item (not on repeat)",
+        "tempo ranges 2/3/4 %",
+        "silent corrections stop 1.4 s before the deck is heard (audio buffer up to 1 s); a blend counts as heard after 12 % of its overlap",
+        "non-beatmatched plans use the outgoing deck's speed in their position mapping",
+        "new MixKind.Rise: resonant high-pass climb to 2.2 kHz, filtered noise up to 5 % of full scale, gain down to 78 %, soft clip, cut on a phrase with two beats of reverb; alternates with the echo; style 'Montée'",
+        "echo tail threshold from the measured last note, not from the announced duration"
+      ],
+      "never_run_with_real_audio": "none of this was heard; the rise's levels are untuned"
+    },
+    "canvas_and_overrides": {
+      "review_findings_fixed": [
+        "the album page now looks again when overrides change (the Studio opens over it)",
+        "CanvasRepo re-checks the owner's choice under its lock and once more if the choice changed during a resolution",
+        "titles shown on an album page are linked to the page's album key (persisted), and a title's album is also found by its name alone when a single album override has it",
+        "an album-wide Canvas action also gives back the titles that had their own Canvas or had it off",
+        "downloaded titles no longer revive an old owner Canvas file by its 'kvov-' or 'kvpub-' name",
+        "a non-list answer (captive portal) no longer empties the overrides; refresh and local saves are serialised"
+      ],
+      "persistence": "overrides are stored on the server and cached in SharedPreferences; allowBackup is false and nothing clears them on update",
+      "not_fixed": [
+        "the overrides list is fetched without paging (58 rows today, limit 5000 requested, PostgREST may cap at 1000)",
+        "framings saved by 4.17.0 in the zoom/offset form are not shown"
+      ]
+    },
+    "review_findings_fixed_elsewhere": [
+      "personal mixes leave blocked artists out when opened",
+      "one gesture grabs the tab lens (hold or slide), so holding then sliding no longer drops it",
+      "the magnifying lens uses its own parameter: pressed buttons no longer magnify",
+      "biographies are translated only by the service that detects the language; PRIVACY.md updated",
+      "the For you card keeps its choice within a launch and is not counted while the paused title has it; another mix than the hour's is labelled 'Pour vous'",
+      "ArtistPrefs is also loaded by the playback service",
+      "image links must be on a public host",
+      "home releases and search albums are filtered by the block list"
+    ],
+    "studio": "image links for covers, artist photos and portraits (shown from their address, nothing stored on the server)"
+  },
+  "not_validated": [
+    "physical phone or Quest installation, rendering and touch behaviour",
+    "Ketmix with real audio on any device or emulator",
+    "Ket 27 on a device: only four host renders were inspected; Home, Explore, Library, album, artist, player, search, sheets and Quest were not looked at with Ket 27 on",
+    "the held tab lens and its gesture on a device (only unit-tested sizes)",
+    "biography translation against the live translation service",
+    "Inter rendering on a device (variable font weights), and languages whose scripts Inter lacks (Hindi, Japanese, Chinese, Korean fall back to the system typeface)",
+    "independent code review of this diff"
+  ],
+  "owner_section_changes": [
+    "Studio: covers, artist photos and portraits can be given as HTTPS links on a public host (checked as an image, shown from their address, never stored).",
+    "Studio: an album-wide Canvas action also restores the titles of the album that had their own Canvas or had it off.",
+    "Overrides: album page titles linked to the page's album key; stale Canvas files and cached choices re-checked (see owner_report_2026_11_15_fourth)."
+  ],
+  "known_limitations": [
+    "Owner-section changes are deliberately not mentioned in the public release notes (owner preference).",
+    "A Canvas given as a link depends on the site that serves it: if it goes away or refuses streaming, nothing plays behind the title.",
+    "Ketmix needs the next title to be playable without a new resolution or one that succeeds in time; otherwise it says so and the title ends as before.",
+    "A manual skip is still a plain change of title: it is not mixed.",
+    "The mix journal is kept in memory only and is lost when the app is closed.",
+    "Ket 27 is an alpha: settings, switch, alerts, tab bar, colours and type follow iOS 27; page layouts elsewhere (Home, Library, album, player, sheets, menus) keep Ketvoice's own structure. No iPad sidebar, no minimised tab bar change, no new haptics.",
+    "Titles under 150 s and the light analysis setting get no body reading; 3:2 and 4:3 tempo relations between two different titles are still not mixed in time.",
+    "A title entered by a blend keeps the speed it was given (at most 4 % off its own) until it ends.",
+    "Blocking matches artist names; a blocked short name may also hide a group whose name contains it after a separator (\"Fire\" and \"Earth, Wind & Fire\").",
+    "Reading the body of two titles adds about 5 to 10 seconds of silent decoding before each new pair.",
+    "The signing certificate is the existing public Android debug identity, not a private production key."
+  ],
+  "canonical_banner_sha256": "47f6793088983f7d4e6bd1aeaa2cbd8b7cdc2a8f91271e3b2839daea81da0436"
+}
