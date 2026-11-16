@@ -129,5 +129,6 @@
  "Wrapped": "feature brand name, the same in every language",
  "wrapped-{0}.png": "file name of an exported image, never shown",
  "{0} min · {1} {2}": "numbers and an already translated word joined, not a sentence",
- "Ctrl F": "keyboard shortcut shown beside the search field of the sidebar, the same in every language"
+ "Ctrl F": "keyboard shortcut shown beside the search field of the sidebar, the same in every language",
+ "icon-option-{0}": "test tag of the icon picker, never shown"
 }
