@@ -908,7 +908,7 @@ fun PlayerSheetScrim(onClose: () -> Unit, content: @Composable () -> Unit) {
     // Ket 27: every sheet rests on detents (half height, full height), follows the finger and settles with a spring.
     if (com.ketvoice.app.ui.common.springSheets) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
-            com.ketvoice.app.ui.common.SpringSheet(onClose, Modifier.statusBarsPadding().navigationBarsPadding()) {
+            com.ketvoice.app.ui.common.SpringSheet(onClose, insets = Modifier.statusBarsPadding().navigationBarsPadding()) {
                 Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.BottomCenter) {
                     Box(Modifier.widthIn(max = 560.dp).fillMaxWidth().pointerInput(Unit) { detectTapGestures {} }) { content() }
                 }

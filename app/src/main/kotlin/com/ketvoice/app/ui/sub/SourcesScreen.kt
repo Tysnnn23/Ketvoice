@@ -81,8 +81,7 @@ fun SourcesScreen() {
                     Icon(Icons.Filled.Add, "Ajouter", tint = Color.White, modifier = Modifier.size(20.dp))
                 }
             }
-        } else
-        Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
+        } else Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.AutoMirrored.Filled.ArrowBack, "Retour", tint = th.onBackground,
                 modifier = Modifier.size(30.dp).clickable { AppUi.closeOverlay() })

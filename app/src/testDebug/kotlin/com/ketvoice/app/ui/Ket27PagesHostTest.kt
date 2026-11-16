@@ -121,6 +121,7 @@ class Ket27PagesHostTest {
         image("ket27-page-catalog")
     }
     @Test fun queue() {
+        if (com.ketvoice.app.BuildConfig.IS_QUEST) return // there the queue is the right-hand pane of a landscape window, not this portrait one.
         val tracks = (0 until 5).map { Track("qa:q$it", "Titre $it", "Artiste $it", "Album", durationMs = 180_000) }
         player.value = PlayerUiState(queue = tracks, queueEntryIds = tracks.map { it.id }, index = 0, durationMs = 180_000)
         page(true) { com.ketvoice.app.ui.player.FullPlayerScreen(initialPage = com.ketvoice.app.ui.player.PlayerPage.QUEUE, onDismiss = {}) }
@@ -178,6 +179,7 @@ class Ket27PagesHostTest {
     }
 
     @Test fun aPickerIsAnInsetListOnASheetThatOpensWhole() {
+        if (com.ketvoice.app.BuildConfig.IS_QUEST) return // sheets rest on detents on phones and tablets only.
         AppSettings.reduceAnimations.value = false
         page(false) { com.ketvoice.app.ui.settings.SettingsScreen() }
         compose.onNodeWithTag("settings-category-Appearance").performClick()

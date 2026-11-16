@@ -223,6 +223,7 @@ class Ket27MotionHostTest {
     }
 
     @Test fun thePlayerUnfoldsFromTheMiniPlayerInOneMovement() {
+        if (com.ketvoice.app.BuildConfig.IS_QUEST) return // Quest keeps its two-pane player: there is no mini-player title to travel from.
         AppSettings.lyricsMode.value = 2
         val track = Track("qa:unfold", "Titre qui voyage", "Artiste", "Album", durationMs = 180_000)
         player.value = PlayerUiState(queue = listOf(track), queueEntryIds = listOf("fixture"), index = 0, durationMs = 180_000)
@@ -320,7 +321,18 @@ class Ket27MotionHostTest {
         } }
     }
 
+    @Test fun onQuestSheetsKeepTheirClassicBehaviour() {
+        if (!com.ketvoice.app.BuildConfig.IS_QUEST) return
+        // A pointer does not drag a sheet well: no detents there, whatever the interface.
+        assertFalse(com.ketvoice.app.ui.common.springSheets)
+        tallSheet { }
+        compose.waitForIdle()
+        compose.onNodeWithTag("spring-sheet").assertDoesNotExist()
+        compose.onNodeWithTag("sheet-body").assertExists()
+    }
+
     @Test fun theSheetOpensAtHalfHeightFollowsTheFingerAndCloses() {
+        if (com.ketvoice.app.BuildConfig.IS_QUEST) return // sheets rest on detents on phones and tablets only.
         var closed = 0
         tallSheet { closed++ }
         compose.waitForIdle()
@@ -341,9 +353,15 @@ class Ket27MotionHostTest {
         sheet.performTouchInput { swipeDown(startY = 40f, endY = 400f, durationMillis = 160) }
         compose.waitForIdle()
         assertEquals(1, closed)
+        // Its owner did not take it away (an owner may refuse while a save is running): it comes back up.
+        compose.mainClock.advanceTimeBy(SheetDetents.REFUSED_AFTER_MS + 1200)
+        compose.waitForIdle()
+        assertEquals(450f, sheet.fetchSemanticsNode().boundsInRoot.top, 2f)
+        assertEquals(1, closed)
     }
 
     @Test fun reducedMotionPutsTheSheetOnItsDetentAtOnce() {
+        if (com.ketvoice.app.BuildConfig.IS_QUEST) return // sheets rest on detents on phones and tablets only.
         AppSettings.reduceAnimations.value = true
         compose.mainClock.autoAdvance = false
         tallSheet { }

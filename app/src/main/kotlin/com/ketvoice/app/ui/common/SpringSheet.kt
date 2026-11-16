@@ -28,6 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -117,11 +118,12 @@ internal fun sheetMaxHeight(): Dp = LocalSheetMaxHeight.current
  * past the lowest one. A list inside it scrolls only once the sheet is at full height.
  * With reduced motion every move snaps.
  *
- * [content] is told the tallest it may be; it should not be taller.
+ * [insets] keeps the sheet clear of the system bars and the keyboard; the veil behind it covers the
+ * whole of [modifier]. [content] is told the tallest it may be; it should not be taller.
  */
 @Composable
 internal fun SpringSheet(onDismiss: () -> Unit, modifier: Modifier = Modifier, scrim: Float = .35f, startFull: Boolean = false,
-                         content: @Composable (maxHeight: Dp) -> Unit) {
+                         insets: Modifier = Modifier, content: @Composable (maxHeight: Dp) -> Unit) {
     val dismiss by rememberUpdatedState(onDismiss)
     val scope = rememberCoroutineScope()
     val haptic = rememberHaptics()
@@ -197,35 +199,39 @@ internal fun SpringSheet(onDismiss: () -> Unit, modifier: Modifier = Modifier, s
             }
         }
     }
-    BoxWithConstraints(modifier.fillMaxSize()) {
-        val container = constraints.maxHeight.toFloat()
-        val room = maxHeight
-        LaunchedEffect(contentPx, container) {
-            val next = SheetDetents.heights(contentPx.toFloat(), container)
-            detents = next
-            if (next.isEmpty() || closing) return@LaunchedEffect
-            // A menu rises to half height; a form, whose buttons are at its bottom, opens whole. When the content
-            // changes height afterwards (it finishes loading, a section unfolds), the sheet stays on the same detent.
-            val target = SheetDetents.opening(next, atFull)
-            if (kotlin.math.abs(target - visible.value) < 1f) { opened = true; return@LaunchedEffect }
-            val rising = !opened
-            opened = true
-            if (Motion.reduced) visible.snapTo(target)
-            else visible.animateTo(target, spring(dampingRatio = if (rising) SheetDetents.DAMPING else 1f, stiffness = SheetDetents.STIFFNESS))
-        }
+    Box(modifier.fillMaxSize()) {
         if (scrim > 0f) Box(Modifier.fillMaxSize()
             .background(Color.Black.copy(alpha = scrim * SheetDetents.scrim(visible.value, detents))))
         Box(Modifier.fillMaxSize().semantics { contentDescription = closeLabel }
             .clickable(remember { MutableInteractionSource() }, null) { close() })
-        CompositionLocalProvider(LocalSheetMaxHeight provides room) {
-            Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth()
-                // What is not showing yet is pushed under the bottom edge.
-                .offset { IntOffset(0, (contentPx - visible.value).toInt().coerceAtLeast(0)) }
-                .onSizeChanged { contentPx = it.height }
-                .nestedScroll(connection)
-                .draggable(rememberDraggableState { delta -> drag(delta) }, Orientation.Vertical,
-                    onDragStopped = { velocity -> settle(velocity) })
-                .testTag("spring-sheet")) { content(room) }
+        BoxWithConstraints(Modifier.fillMaxSize().then(insets)) {
+            val container = constraints.maxHeight.toFloat()
+            val room = maxHeight
+            LaunchedEffect(contentPx, container) {
+                val next = SheetDetents.heights(contentPx.toFloat(), container)
+                detents = next
+                if (next.isEmpty() || closing) return@LaunchedEffect
+                // A menu rises to half height; a form, whose buttons are at its bottom, opens whole. When the content
+                // changes height afterwards (it finishes loading, a section unfolds), the sheet stays on the same detent.
+                val target = SheetDetents.opening(next, atFull)
+                if (kotlin.math.abs(target - visible.value) < 1f) { opened = true; return@LaunchedEffect }
+                val rising = !opened
+                opened = true
+                if (Motion.reduced) visible.snapTo(target)
+                else visible.animateTo(target, spring(dampingRatio = if (rising) SheetDetents.DAMPING else 1f, stiffness = SheetDetents.STIFFNESS))
+            }
+            CompositionLocalProvider(LocalSheetMaxHeight provides room) {
+                Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth()
+                    // What is not showing yet is pushed under the bottom edge; wholly under it, the sheet is not drawn
+                    // at all (it would otherwise show in the strip of the navigation bar).
+                    .offset { IntOffset(0, (contentPx - visible.value).toInt().coerceAtLeast(0)) }
+                    .graphicsLayer { alpha = if (visible.value < 1f) 0f else 1f }
+                    .onSizeChanged { contentPx = it.height }
+                    .nestedScroll(connection)
+                    .draggable(rememberDraggableState { delta -> drag(delta) }, Orientation.Vertical,
+                        onDragStopped = { velocity -> settle(velocity) })
+                    .testTag("spring-sheet")) { content(room) }
+            }
         }
     }
 }
