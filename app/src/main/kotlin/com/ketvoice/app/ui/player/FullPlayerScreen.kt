@@ -634,7 +634,7 @@ internal fun PlayerTitle(track: Track, compact: Boolean, cover: String?, sheetAc
  * Relâché court → [onSettle] (rebord spring) ; franchi le seuil → [onDismiss].
  */
 @Composable
-private fun Modifier.playerDismissDrag(
+internal fun Modifier.playerDismissDrag(
     dismissOffset: androidx.compose.animation.core.Animatable<Float, *>,
     maxPx: Float,
     onSettle: () -> Unit,

@@ -1,5 +1,6 @@
 package com.ketvoice.app.ui.common
 
+import com.ketvoice.app.ui.adaptive.hoverHighlight
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -71,6 +72,7 @@ fun LiquidGlassButton(
             alpha = if (enabled) 1f else .45f
             if (liquid27) { scaleX = scaleWidth; scaleY = scaleHeight }
         }
+            .hoverHighlight(interactions, shape)
             .clickable(interactions, null, enabled = enabled, role = Role.Button, onClick = onClick),
             contentAlignment = Alignment.Center, content = content)
     }

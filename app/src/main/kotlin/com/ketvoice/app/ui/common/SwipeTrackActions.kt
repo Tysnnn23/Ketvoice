@@ -1,5 +1,6 @@
 package com.ketvoice.app.ui.common
 
+import com.ketvoice.app.ui.adaptive.largeScreenTrackRow
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.border
@@ -131,7 +132,10 @@ internal fun Modifier.trackRowClick(track: Track, enabled: Boolean = true, role:
     // Ket 27: held, the row lifts as a preview of itself and a glass menu unfolds from it; the "more" button still opens the full sheet.
     if (ContextMenus.enabled) {
         val anchor = rememberRowAnchor()
-        return rowAnchor(anchor).combinedClickable(enabled = enabled, role = role, onLongClickLabel = AppText.t("Options"),
+        // With a mouse or a trackpad (large screens only): a secondary click opens
+        // the same menu, and the title can be dragged onto a playlist of the sidebar (ui/adaptive/PointerExtras).
+        return rowAnchor(anchor).largeScreenTrackRow(track) { ContextMenus.open(track, anchor.bounds()) }
+            .combinedClickable(enabled = enabled, role = role, onLongClickLabel = AppText.t("Options"),
             onLongClick = { haptic(Haptics.Kind.Tick); ContextMenus.open(track, anchor.bounds()) }, onClick = onClick)
     }
     return combinedClickable(enabled = enabled, role = role, onLongClickLabel = AppText.t("Options"),

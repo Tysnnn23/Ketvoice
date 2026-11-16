@@ -47,3 +47,34 @@ fun rememberTabletop(): Tabletop? {
         }
     }.value
 }
+
+/** A vertical fold that splits the window into a left and a right page (a book held open). Pixels, window coordinates. */
+data class BookFold(val hingeLeftPx: Int, val hingeRightPx: Int)
+
+/**
+ * The left page of a book posture, in dp: how wide the pane before the hinge may be once [startDp] of the
+ * window is used before it. Null unless both pages keep at least 280 dp, otherwise one layout reads better.
+ */
+fun bookPane(hingeLeftDp: Float, hingeRightDp: Float, windowWidthDp: Float, startDp: Float): Float? {
+    if (!(hingeLeftDp.isFinite() && hingeRightDp.isFinite() && windowWidthDp.isFinite() && startDp.isFinite())) return null
+    if (hingeRightDp < hingeLeftDp || hingeLeftDp <= startDp) return null
+    val left = hingeLeftDp - startDp
+    if (left < 280f || windowWidthDp - hingeRightDp < 280f) return null
+    return left
+}
+
+/** Observes a vertical fold, half-opened or separating (two screens). Null without one, and in previews/tests. */
+@Composable
+fun rememberBookFold(): BookFold? {
+    val activity = LocalContext.current.findActivity() ?: return null
+    return produceState<BookFold?>(null, activity) {
+        runCatching {
+            WindowInfoTracker.getOrCreate(activity).windowLayoutInfo(activity).collect { info ->
+                value = info.displayFeatures.filterIsInstance<FoldingFeature>().firstOrNull {
+                    it.orientation == FoldingFeature.Orientation.VERTICAL &&
+                        (it.state == FoldingFeature.State.HALF_OPENED || it.isSeparating)
+                }?.let { BookFold(it.bounds.left, it.bounds.right) }
+            }
+        }
+    }.value
+}
