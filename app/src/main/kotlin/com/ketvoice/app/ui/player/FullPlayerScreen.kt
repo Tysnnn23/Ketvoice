@@ -359,6 +359,8 @@ fun FullPlayerScreen(
                 com.ketvoice.app.glass.BackdropCapture(controlsBackdrop, Modifier.matchParentSize()) {
                     PlayerSceneBackground(track, canvasPath, state.isPlaying && !canvasFocus, cover, ambience,
                         plain = false)
+                    // The lyrics page glows in the cover's colours (6.0.0): a mesh over the ambient background.
+                    if (!AppSettings.sonicCanvas.value) LyricsMesh(page == PlayerPage.LYRICS, cover, ambience, state.isPlaying)
                 }
 
                 AnimatedContent(page, transitionSpec = {
