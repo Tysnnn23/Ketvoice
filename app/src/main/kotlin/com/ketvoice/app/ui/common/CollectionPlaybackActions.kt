@@ -27,7 +27,7 @@ import com.ketvoice.app.theme.LocalTheme
 @Composable
 @OptIn(ExperimentalLayoutApi::class)
 internal fun CollectionPlaybackActions(tracks: List<Track>, modifier: Modifier = Modifier,
-                                       label: String = "Lecture", enabled: Boolean = tracks.isNotEmpty()) {
+                                       label: String = "Lire", enabled: Boolean = tracks.isNotEmpty()) {
     val largeFont = LocalDensity.current.fontScale >= 1.2f
     BoxWithConstraints(modifier) {
         FlowRow(Modifier.fillMaxWidth(), maxItemsInEachRow = if (largeFont && maxWidth < 340.dp) 1 else 2,

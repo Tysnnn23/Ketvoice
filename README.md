@@ -21,6 +21,13 @@
 
 ## Overview
 
+### 5.8.3 — Small fixes
+
+*Artist radio* sits under the artist page's buttons, albums say *Play*, and Home's For you card is translated.
+[Mobile](https://github.com/Tysnnn23/Ketvoice/releases/download/v5.8.3/Ketvoice-5.8.3.apk)
+· [Quest](https://github.com/Tysnnn23/Ketvoice/releases/download/v5.8.3/Ketvoice-5.8.3-Quest.apk)
+· [Release notes](docs/releases/v5.8.3.md).
+
 ### 5.8.2 — Every title plays again
 
 Fixes the *Reading error* that stopped every title in 5.8.0 and 5.8.1, downloaded or streamed, and makes the

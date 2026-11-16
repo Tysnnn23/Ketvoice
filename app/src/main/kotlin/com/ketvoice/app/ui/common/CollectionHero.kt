@@ -152,7 +152,7 @@ internal fun CollectionActionPair(
     onPlay: () -> Unit,
     onShuffle: () -> Unit,
     modifier: Modifier = Modifier,
-    playLabel: String = "Lecture",
+    playLabel: String = "Lire",
     enabled: Boolean = true,
     playTag: String? = null,
     shuffleTag: String? = null,

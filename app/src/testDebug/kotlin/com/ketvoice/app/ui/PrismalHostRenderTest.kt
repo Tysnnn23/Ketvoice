@@ -209,6 +209,10 @@ class PrismalHostRenderTest {
         compose.onNodeWithText(track.artist).assertIsDisplayed()
         compose.onNodeWithText("Écouter").assertIsDisplayed()
         compose.onNodeWithText("Aléatoire").assertIsDisplayed()
+        // The radio link sits under the two buttons, never over Listen (5.8.0 drew it on top).
+        val play = compose.onNodeWithTag("artist-play", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+        val radio = compose.onNodeWithTag("artist-radio", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+        assertTrue("radio ${radio.top} below play ${play.bottom}", radio.top >= play.bottom)
         image("artist-header-dark-fallback")
     }
 
@@ -508,7 +512,7 @@ class PrismalHostRenderTest {
         compose.waitUntil(10_000) { compose.onAllNodesWithTag("album-artwork-loaded").fetchSemanticsNodes().isNotEmpty() }
         compose.waitForIdle()
         val hero = compose.onNodeWithTag("album-hero-visual").fetchSemanticsNode().boundsInRoot
-        compose.onNodeWithText("Lecture").assertIsDisplayed()
+        compose.onNodeWithText("Lire").assertIsDisplayed()
         image("album-page-tint-light") { shot ->
             val page = shot.getPixel(20, (hero.bottom + 30f).toInt().coerceAtMost(shot.height - 1))
             assertTrue("The page is tinted warm (r=${android.graphics.Color.red(page)}, b=${android.graphics.Color.blue(page)})",
@@ -617,7 +621,7 @@ class PrismalHostRenderTest {
         assertTrue("and is capped by the window height", hero.height <= 800f * .46f + 1f)
         assertEquals("The cover itself stays a whole square", cover.width, cover.height, 1f)
         assertEquals("centred in the header", 300f, (cover.left + cover.right) / 2f, 1.5f)
-        compose.onNodeWithText("Lecture").assertIsDisplayed()
+        compose.onNodeWithText("Lire").assertIsDisplayed()
         image("album-whole-cover-wide-dark")
     }
 
@@ -671,7 +675,7 @@ class PrismalHostRenderTest {
                 listOf(track), false, {})
         } }
         compose.onNodeWithText("2026-10-31  ·  1 titre  ·  1 h 17 min").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("Lecture").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Lire").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Aléatoire").assertIsDisplayed()
         image("album-header-light")
     }

@@ -161,7 +161,9 @@ internal fun ArtistHeader(page: ArtistPage, collapse: () -> Float = { 0f }, onTo
                 Text(meta, localize = false, color = theme.secondary, fontSize = 12.5.sp, maxLines = 1,
                     overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp, bottom = 14.dp))
             }
+            // A column: the radio link sits under the two buttons (in the reveal's box it was drawn over Listen).
             if (page.tracks.isNotEmpty()) StaggeredReveal(order = 2, modifier = Modifier.fillMaxWidth()) {
+              Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
                 Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                     com.ketvoice.app.ui.common.CollectionActionPair(
                         { Player.setShuffle(false); Player.playQueue(page.tracks) }, { Player.playShuffled(page.tracks) },
@@ -172,6 +174,7 @@ internal fun ArtistHeader(page: ArtistPage, collapse: () -> Float = { 0f }, onTo
                         .clickable(role = androidx.compose.ui.semantics.Role.Button) { Player.startRadio(page.tracks.first()) }
                         .heightIn(min = 44.dp).wrapContentHeight(Alignment.CenterVertically).padding(horizontal = 12.dp)
                         .testTag("artist-radio"))
+              }
             }
             Spacer(Modifier.height(18.dp))
         }

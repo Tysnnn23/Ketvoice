@@ -133,7 +133,7 @@ class LibraryRedesignHostTest {
     @Test fun emptyLibraryDoesNotOfferDeadPlaybackButtons() {
         compose.setContent { KetvoiceTheme(useDark = false) { DownloadsScreen() } }
         compose.onNodeWithText("Aucun téléchargement").assertIsDisplayed()
-        compose.onNodeWithText("Lecture").assertDoesNotExist()
+        compose.onNodeWithText("Lire").assertDoesNotExist()
         compose.onNodeWithText("Aléatoire").assertDoesNotExist()
         image("downloads-empty-light")
     }
@@ -214,9 +214,9 @@ class LibraryRedesignHostTest {
             AlbumPage(CatalogRequest("album", "fixture:wide", "Album paysage"),
                 CatalogPage("Album paysage", "Artiste", null, tracks, "2026"), tracks, false, {})
         } }
-        compose.onNodeWithText("Lecture").assertIsDisplayed()
+        compose.onNodeWithText("Lire").assertIsDisplayed()
         val art = compose.onNodeWithTag("album-hero-visual").fetchSemanticsNode().boundsInRoot
-        val play = compose.onNodeWithText("Lecture").fetchSemanticsNode().boundsInRoot
+        val play = compose.onNodeWithText("Lire").fetchSemanticsNode().boundsInRoot
         assertTrue("Landscape actions belong beside artwork", play.left >= art.right)
         image("album-redesign-landscape-dark")
         compose.onNodeWithTag("album-list").performScrollToIndex(10)
@@ -233,9 +233,9 @@ class LibraryRedesignHostTest {
                     listOf(track), false, {})
             }
         } }
-        compose.onNodeWithText("Lecture").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Lire").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Aléatoire").assertIsDisplayed()
-        val play = compose.onNodeWithText("Lecture").fetchSemanticsNode().boundsInRoot
+        val play = compose.onNodeWithText("Lire").fetchSemanticsNode().boundsInRoot
         val shuffle = compose.onNodeWithText("Aléatoire").fetchSemanticsNode().boundsInRoot
         assertTrue(play.right < shuffle.left || play.bottom < shuffle.top)
         image("album-redesign-narrow-large-font-light")

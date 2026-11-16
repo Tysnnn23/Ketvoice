@@ -140,7 +140,7 @@ internal fun HomeForYou(hour: Int, releases: List<CatalogAlbum>, fallback: @Comp
             progress = if (player.durationMs > 0) (position.toFloat() / player.durationMs).coerceIn(0f, 1f) else null) {
             Player.toggle(); AppUi.showPlayer.value = true
         }
-        ForYouKind.NewRelease -> ForYouCard("Nouveau de ${fresh!!.artist}", fresh.title, fresh.releaseDate.orEmpty(),
+        ForYouKind.NewRelease -> ForYouCard(com.ketvoice.app.data.AppText.t("Nouveau de {0}").replace("{0}", fresh!!.artist), fresh.title, fresh.releaseDate.orEmpty(),
             listOf(fresh.cover), action = "Ouvrir", tag = "for-you-release") {
             AppUi.openCatalog(CatalogRequest("album", fresh.id, fresh.title))
         }
@@ -149,7 +149,7 @@ internal fun HomeForYou(hour: Int, releases: List<CatalogAlbum>, fallback: @Comp
             val card = chosenMix ?: hourCard
             // The name of the hour belongs to the mix of the hour; another mix is simply "for you".
             val title = if (card.id == hourCard.id) hourTitle else "Pour vous"
-            ForYouCard(title, mixTitle(card), mixSubtitle(card), card.covers, action = "Écouter", tag = "for-you-mix") {
+            ForYouCard(title, com.ketvoice.app.data.AppText.t(mixTitle(card)), com.ketvoice.app.data.AppText.t(mixSubtitle(card)), card.covers, action = "Écouter", tag = "for-you-mix") {
                 AppUi.openCatalog(CatalogRequest("mix", card.id, mixTitle(card)))
             }
         }
@@ -179,7 +179,7 @@ private fun ForYouCard(label: String, title: String, subtitle: String, covers: L
         // A floor of shade so the words stay readable on any artwork.
         Box(Modifier.matchParentSize().background(Brush.verticalGradient(
             0f to Color.Black.copy(alpha = .16f), .42f to Color.Black.copy(alpha = .20f), 1f to Color.Black.copy(alpha = .86f))))
-        Text(label.uppercase(), localize = false, color = Color.White, fontSize = 11.sp,
+        Text(com.ketvoice.app.data.AppText.t(label).uppercase(), localize = false, color = Color.White, fontSize = 11.sp,
             fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
             modifier = Modifier.align(Alignment.TopStart).padding(16.dp).clip(RoundedCornerShape(999.dp))
                 .background(Color.Black.copy(alpha = .40f)).border(1.dp, Color.White.copy(alpha = .14f), RoundedCornerShape(999.dp))

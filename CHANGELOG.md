@@ -7,6 +7,16 @@
 
 ---
 
+# Ketvoice 5.8.3
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 118** — Artist radio under the buttons, *Play* on albums, translated For you card.
+
+Full notes: [5.8.3](docs/releases/v5.8.3.md).
+
+---
+
 # Ketvoice 5.8.2
 
 ![Ketvoice](ketvoice-banner.png)
