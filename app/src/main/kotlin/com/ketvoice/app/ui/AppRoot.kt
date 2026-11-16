@@ -82,10 +82,11 @@ import com.ketvoice.app.ui.motion.Motion
 fun AppRoot() {
     com.ketvoice.app.ui.motion.ObserveSystemMotion()
     com.ketvoice.app.ui.motion.ObserveDisplayRefresh()
-    // Liquid 27 highlights follow device tilt; never on Quest or with reduced motion.
-    com.ketvoice.app.glass.ObserveGlassTilt(
-        com.ketvoice.app.glass.GlassStyles.current == com.ketvoice.app.glass.GlassStyles.LIQUID_27 &&
-            AppSettings.liquidGlass.value && !Motion.reduced && !com.ketvoice.app.BuildConfig.IS_QUEST)
+    // Liquid 27 highlights follow device tilt while the app is resumed; never on Quest, with reduced
+    // motion, in the performance mode or with "Reflets selon l'inclinaison" off.
+    com.ketvoice.app.glass.ObserveGlassTilt(com.ketvoice.app.glass.GlassLight.tiltWanted(
+        AppSettings.glassTilt.value, AppSettings.liquidGlass.value, Motion.reduced,
+        AppSettings.highPerformanceMode.value, com.ketvoice.app.BuildConfig.IS_QUEST))
     val themeMode = AppSettings.themeMode.value
     val useDark = if (themeMode == 1) false else if (themeMode == 2) true else null
     val view = androidx.compose.ui.platform.LocalView.current
@@ -104,33 +105,24 @@ fun AppRoot() {
     // The accent the listener chose is the app's colour everywhere. Only an album page, an artist
     // page and the player take their colours from the artwork (Album colours); they do it locally.
     val playingForAccent by Player.state.collectAsState()
+    val playingCover = playingForAccent.current?.let { ArtworkRepo.coverForTrack(it) }
     // Except when the listener asked for it (Settings → Appearance, "Couleur de la pochette", 5.9.0):
-    // then the accent of the whole interface follows the cover playing, made readable, and glides
-    // from one title's colour to the next.
-    val coverUrl = if (com.ketvoice.app.data.AppSettings.coverAccent.value) playingForAccent.current?.let { ArtworkRepo.coverForTrack(it) } else null
-    val coverPair = com.ketvoice.app.theme.rememberCoverAccent(coverUrl)
-    val wanted = coverPair?.first?.let { androidx.compose.ui.graphics.Color(com.ketvoice.app.ui.player.AlbumColors.readableAccent(it.toArgb())) }
-    val glidingAccent by androidx.compose.animation.animateColorAsState(
-        wanted ?: androidx.compose.ui.graphics.Color(com.ketvoice.app.data.AppSettings.accentArgb.value.toInt()),
-        androidx.compose.animation.core.tween(com.ketvoice.app.ui.motion.Motion.duration(700)), label = "cover-accent")
-    val dynamicAccent: androidx.compose.ui.graphics.Color? = if (wanted != null) glidingAccent else null
+    // then the accent of the whole interface — buttons, links, sliders — follows the cover playing,
+    // glides from one title's colour to the next and back to the chosen accent when it stops.
+    val coverAccent = com.ketvoice.app.theme.rememberCoverAccent(
+        if (com.ketvoice.app.data.AppSettings.coverAccent.value) playingCover else null)?.first
+    val (accentColor, accentAmount) = com.ketvoice.app.theme.rememberCoverGlide(coverAccent, 700)
 
     // The playing cover lightly tints the optical glass (independent of the accent option).
-    com.ketvoice.app.glass.ObserveCoverTint(playingForAccent.current?.let { ArtworkRepo.coverForTrack(it) })
+    com.ketvoice.app.glass.ObserveCoverTint(playingCover)
 
-    // "Fond selon la pochette" (5.9.1): the background of every page glides to the colour of the cover playing.
-    val toneUrl = if (com.ketvoice.app.data.AppSettings.coverBackground.value) playingForAccent.current?.let { ArtworkRepo.coverForTrack(it) } else null
-    val wantedTone = com.ketvoice.app.theme.rememberCoverTone(toneUrl)
-    // The first colour is taken at once; the next ones glide from the one shown.
-    val toneMotion = remember { mutableStateOf<androidx.compose.animation.core.Animatable<androidx.compose.ui.graphics.Color, androidx.compose.animation.core.AnimationVector4D>?>(null) }
-    LaunchedEffect(wantedTone) {
-        val target = wantedTone
-        if (target == null) { toneMotion.value = null; return@LaunchedEffect }
-        val current = toneMotion.value
-        if (current == null) toneMotion.value = androidx.compose.animation.Animatable(target)
-        else current.animateTo(target, androidx.compose.animation.core.tween(com.ketvoice.app.ui.motion.Motion.duration(900)))
-    }
-    KetvoiceTheme(useDark = useDark, dynamicAccent = dynamicAccent, dynamicTone = toneMotion.value?.value) {
+    // "Fond selon la pochette" (5.9.1): the background of every page glides to the colour of the cover
+    // playing, and back to the theme's own when nothing plays or the setting is turned off.
+    val wantedTone = com.ketvoice.app.theme.rememberCoverTone(
+        if (com.ketvoice.app.data.AppSettings.coverBackground.value) playingCover else null)
+    val (toneColor, toneAmount) = com.ketvoice.app.theme.rememberCoverGlide(wantedTone, 900)
+    val cover = com.ketvoice.app.theme.CoverLook(toneColor, toneAmount, accentColor, accentAmount)
+    KetvoiceTheme(useDark = useDark, cover = cover) {
         com.ketvoice.app.ui.player.PlaybackFeatureDialogs()
         BackgroundPlaybackOffer()
         val th = LocalTheme.current

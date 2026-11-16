@@ -154,4 +154,26 @@ class PersonalBackupMergeHostTest {
         assertEquals(100, LyricsOffsets.values.value[LyricsOffsets.key("song")])
         assertEquals(-200, LyricsOffsets.values.value[LyricsOffsets.key("other")])
     }
+
+    @Test fun glassTransparencyAndTiltTravelInBackupsAndOldTintsLandOnAStep() = runBlocking {
+        field(SettingsStore, "prefs").set(SettingsStore, null)
+        SettingsStore.load(context)
+        fun backup(settings: Map<String, Any>) = PersonalBackupData(emptyList(), emptySet(), settings, emptyList(), emptyList(), emptyMap(), 0)
+        // Exported and restored as they are.
+        AppSettings.glassTintLevel.value = 5; AppSettings.glassTilt.value = false
+        SettingsStore.save()
+        val exported = PersonalBackup.collect(context).settings
+        assertEquals(5, exported["glassTintLevel"]); assertEquals(false, exported["glassTilt"])
+        assertFalse("the retired continuous tint is never exported", "glassTint" in exported)
+        AppSettings.glassTintLevel.value = 2; AppSettings.glassTilt.value = true
+        SettingsStore.save()
+        PersonalBackup.merge(context, backup(mapOf("glassTintLevel" to 5, "glassTilt" to false)))
+        assertEquals(5, AppSettings.glassTintLevel.value); assertFalse(AppSettings.glassTilt.value)
+        // Out of range is refused, never clamped into something the listener did not choose.
+        PersonalBackup.merge(context, backup(mapOf("glassTintLevel" to 9)))
+        assertEquals(5, AppSettings.glassTintLevel.value)
+        // A backup of 5.x: its continuous tint lands on the nearest step.
+        PersonalBackup.merge(context, backup(mapOf("glassTint" to .5f)))
+        assertEquals(4, AppSettings.glassTintLevel.value)
+    }
 }

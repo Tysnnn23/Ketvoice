@@ -18,8 +18,13 @@ object AppSettings {
     val albumHeroCanvas = mutableStateOf(true)
     /** 0 clear optical glass, 1 frosted, 2 opaque accessibility material. */
     val glassStyle = mutableStateOf(0)
-    /** Continuous additional glass tint, zero preserves the existing material. */
-    val glassTint = mutableStateOf(0f)
+    /**
+     * Transparency of the glass, 0 (very clear) .. 6 (tinted, most legible); 2 is the look of earlier
+     * versions. Replaces the continuous `glassTint` of 5.x, converted once by [SettingsStore].
+     */
+    val glassTintLevel = mutableStateOf(com.ketvoice.app.glass.GlassClarity.DEFAULT)
+    /** The reflections of the glass follow the phone's tilt (never on Quest, with reduced motion or in the performance mode). */
+    val glassTilt = mutableStateOf(true)
     val downloadsWifiOnly = mutableStateOf(false)
     /** A title made a favourite is downloaded for listening offline. */
     val autoOfflineFavorites = mutableStateOf(true)

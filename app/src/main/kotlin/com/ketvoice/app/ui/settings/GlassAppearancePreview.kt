@@ -1,16 +1,8 @@
 package com.ketvoice.app.ui.settings
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.selection.selectableGroup
-import androidx.compose.ui.semantics.Role
-import com.ketvoice.app.ui.common.Icon
-import com.ketvoice.app.ui.common.KetIcons
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -19,6 +11,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -29,64 +22,78 @@ import com.ketvoice.app.data.ArtworkRepo
 import com.ketvoice.app.data.SettingsStore
 import com.ketvoice.app.glass.*
 import com.ketvoice.app.player.Player
+import com.ketvoice.app.theme.Ket27
 import com.ketvoice.app.theme.LocalTheme
 import com.ketvoice.app.ui.common.GlassSlider
+import com.ketvoice.app.ui.common.Icon
+import com.ketvoice.app.ui.common.KetIcons
 import com.ketvoice.app.ui.common.Text
 
+/**
+ * « Transparence du verre » (Settings → Appearance → Glass): a live preview of the glass over the
+ * cover playing (the Ketvoice logo when nothing plays) above a stepped Ket 27 slider, from very
+ * clear glass to tinted, more legible glass, like the Liquid Glass slider of iOS 27. The whole
+ * app follows the slider while it moves (every glass surface reads [GlassClarity]); the level is
+ * saved when the thumb is released.
+ */
 @Composable
-internal fun GlassAppearancePreview(onClose: () -> Unit) {
-    val initialTint = remember { GlassTuning.sanitize(AppSettings.glassTint.value) }
+internal fun GlassTransparencyCard(modifier: Modifier = Modifier) {
     val theme = LocalTheme.current
     val state by Player.state.collectAsState()
     val covers by ArtworkRepo.covers.collectAsState()
     val cover = state.current?.let { com.ketvoice.app.data.MediaOverrides.cover(it, covers["t:${it.id}"] ?: it.coverUrl) }
     val backdrop = rememberGlassBackdrop(theme.background)
-    fun cancel() {
-        AppSettings.glassTint.value = initialTint
-        SettingsStore.save()
-        onClose()
-    }
-    SettingsSheet(onDismiss = ::cancel) {
-        // Annuler / Appliquer stay pinned under the scrollable preview, always reachable.
-        Column(Modifier.fillMaxWidth().heightIn(max = com.ketvoice.app.ui.common.sheetMaxHeight())) {
-        Column(Modifier.fillMaxWidth().weight(1f, fill = false).verticalScroll(rememberScrollState())
-            .padding(start = 20.dp, end = 20.dp, top = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            SettingsSheetHeader("Aperçu du verre", onClose = ::cancel)
-            Box(Modifier.fillMaxWidth().height(180.dp).clip(RoundedCornerShape(20.dp))) {
-                BackdropCapture(backdrop, Modifier.matchParentSize()) {
-                    AsyncImage(cover ?: com.ketvoice.app.R.drawable.logo_main, null,
-                        contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+    val level = GlassClarity.level
+    Column(modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Box(Modifier.fillMaxWidth().height(150.dp).clip(RoundedCornerShape(20.dp)).testTag("glass-preview")) {
+            BackdropCapture(backdrop, Modifier.matchParentSize()) {
+                AsyncImage(cover ?: com.ketvoice.app.R.drawable.logo_main, null,
+                    contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+            }
+            CompositionLocalProvider(LocalBackdropLayer provides backdrop) {
+                GlassPanel(Modifier.align(Alignment.TopEnd).padding(12.dp).size(44.dp), CircleShape,
+                    GlassParams.circle(dark = theme.isDark)) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Icon(KetIcons.Shuffle, null, tint = LocalTheme.current.onBackground, modifier = Modifier.size(20.dp))
+                    }
                 }
-                CompositionLocalProvider(LocalBackdropLayer provides backdrop) {
-                    GlassPanel(Modifier.align(Alignment.BottomCenter).padding(14.dp).fillMaxWidth().testTag("glass-preview-sample"),
-                        RoundedCornerShape(28.dp), GlassParams.pill(dark = theme.isDark)) {
-                        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically) {
-                            Icon(KetIcons.Play, null, tint = theme.onBackground, modifier = Modifier.size(20.dp))
-                            Text("Lecture · Aléatoire", color = theme.onBackground, fontSize = 14.sp,
-                                fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f).padding(horizontal = 12.dp))
-                            Icon(KetIcons.Shuffle, null, tint = theme.onBackground, modifier = Modifier.size(20.dp))
-                        }
+                GlassPanel(Modifier.align(Alignment.BottomCenter).padding(12.dp).fillMaxWidth().testTag("glass-preview-sample"),
+                    RoundedCornerShape(28.dp), GlassParams.pill(dark = theme.isDark)) {
+                    val ink = LocalTheme.current.onBackground
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically) {
+                        Icon(KetIcons.Play, null, tint = ink, modifier = Modifier.size(20.dp))
+                        Text("Lecture · Aléatoire", color = ink, fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f).padding(horizontal = 12.dp))
+                        Icon(KetIcons.Shuffle, null, tint = ink, modifier = Modifier.size(20.dp))
                     }
                 }
             }
-            Text(if (cover != null) "Aperçu sur la pochette en cours" else "Aperçu sur le logo Ketvoice", color = theme.secondary, fontSize = 12.sp)
-            Text("Transparence du verre", color = theme.onBackground, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-            val sliderLabel = AppText.t("Transparence du verre")
-            GlassSlider(value = AppSettings.glassTint.value,
-                onValueChange = { AppSettings.glassTint.value = GlassTuning.sanitize(it) },
-                onValueChangeFinished = { SettingsStore.save() },
-                modifier = Modifier.testTag("glass-tint-slider").semantics { contentDescription = sliderLabel })
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("Clair", color = theme.secondary, fontSize = 12.sp)
-                Text("Teinté", color = theme.secondary, fontSize = 12.sp)
-            }
         }
-            Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 6.dp, bottom = 16.dp),
-                horizontalArrangement = Arrangement.End) {
-                SettingsAction("Annuler", ::cancel)
-                SettingsAction("Appliquer", { SettingsStore.save(); onClose() }, primary = true)
-            }
+        Text(if (cover != null) "Aperçu sur la pochette en cours" else "Aperçu sur le logo Ketvoice", color = theme.secondary,
+            style = Ket27.Type.footnote)
+        Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("Transparence du verre", color = theme.onBackground, style = Ket27.Type.body, modifier = Modifier.weight(1f))
+            Text(GlassClarity.label(level), color = theme.secondary, style = Ket27.Type.body,
+                modifier = Modifier.testTag("glass-tint-level"))
         }
+        val sliderLabel = AppText.t("Transparence du verre")
+        val levelLabel = AppText.t(GlassClarity.label(level))
+        GlassSlider(value = level.toFloat(),
+            onValueChange = { AppSettings.glassTintLevel.value = GlassClarity.sanitize(Math.round(it)) },
+            onValueChangeFinished = { SettingsStore.save() },
+            valueRange = GlassClarity.MIN.toFloat()..GlassClarity.MAX.toFloat(),
+            snapSteps = GlassClarity.STEPS,
+            modifier = Modifier.testTag("glass-tint-slider").semantics {
+                contentDescription = sliderLabel
+                stateDescription = levelLabel
+            })
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text("Transparent", color = theme.secondary, style = Ket27.Type.footnote)
+            Text("Teinté", color = theme.secondary, style = Ket27.Type.footnote)
+        }
+        Text("Plus le verre est teinté, plus le texte posé dessus est lisible.", color = theme.secondary,
+            style = Ket27.Type.footnote)
     }
+    SettingsCellDivider()
 }

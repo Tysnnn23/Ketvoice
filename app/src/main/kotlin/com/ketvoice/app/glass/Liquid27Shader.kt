@@ -31,6 +31,8 @@ uniform float lensHeight;
 uniform float lensAmount;
 uniform float dispersion;
 uniform float frost;
+// 0..1: clearer than the default glass (the clear end of the transparency setting): less milk, a lighter veil.
+uniform float clarity;
 uniform float4 milk;
 uniform float saturation;
 uniform float materialDark;
@@ -150,17 +152,20 @@ float4 main(float2 coord) {
     // Clear ↔ Tinted: milk opacity grows with frost; a bright backdrop needs less
     // milk in light mode, a dark backdrop needs less in dark mode.
     float adapt = materialDark > 0.5 ? (0.75 + bg * 0.5) : (1.25 - bg * 0.5);
-    float milkAmount = clamp(mix(milk.a, 0.42, frost) * adapt, 0.0, 0.6);
+    float clearer = clamp(clarity, 0.0, 1.0);
+    float milkAmount = clamp(mix(milk.a, 0.42, frost) * adapt, 0.0, 0.6) * (1.0 - 0.8 * clearer);
     color.rgb = mix(color.rgb, milk.rgb, milkAmount);
 
-    // Legibility veil: only as much light as glyphs need (lighter dark material).
+    // Legibility veil: only as much light as glyphs need (lighter dark material). Clearer glass
+    // asks for less of it, never none: labels keep a floor of contrast at the clearest level.
     float lum = lumaOf(color.rgb);
+    float veil = 0.85 * (1.0 - 0.35 * clearer);
     if (materialDark > 0.5) {
-        float target = mix(0.30, 0.22, frost);
-        if (lum > target) color.rgb *= mix(1.0, target / lum, 0.85);
+        float target = mix(0.30, 0.22, frost) + 0.10 * clearer;
+        if (lum > target) color.rgb *= mix(1.0, target / lum, veil);
     } else {
-        float target = mix(0.46, 0.74, frost);
-        if (lum < target) color.rgb = mix(color.rgb, float3(1.0), (target - lum) / max(1.0 - lum, 0.001) * 0.85);
+        float target = mix(0.46, 0.74, frost) - 0.14 * clearer;
+        if (lum < target) color.rgb = mix(color.rgb, float3(1.0), (target - lum) / max(1.0 - lum, 0.001) * veil);
     }
 
     // Defined border: thin lit rim facing the light, softer bounce on the opposite
@@ -200,7 +205,9 @@ float4 main(float2 coord) {
 internal const val LIQUID27_AGSL = LIQUID27_COMMON + LIQUID27_SINGLE_SCENE + LIQUID27_MATERIAL
 
 /** Uniform values for one Liquid 27 pass. */
-internal data class Liquid27Light(val lightX: Float, val lightY: Float, val touchX: Float, val touchY: Float, val press: Float)
+internal data class Liquid27Light(val lightX: Float, val lightY: Float, val touchX: Float, val touchY: Float, val press: Float,
+                                  /** Brightness of the rim and sheen as the phone tips towards the light (see [GlassLight.glint]). */
+                                  val glint: Float = 1f)
 
 /** Blur applied before the Liquid 27 pass: almost none when clear, frosted when tinted. */
 internal fun liquid27BlurPx(frost: Float, role: GlassRole): Float {
@@ -210,11 +217,12 @@ internal fun liquid27BlurPx(frost: Float, role: GlassRole): Float {
     return base + (tinted - base) * f
 }
 
-internal fun BackdropEffectScope.liquid27Glass(params: GlassParams, radii: FloatArray, frost: Float, light: Liquid27Light): Boolean {
+internal fun BackdropEffectScope.liquid27Glass(params: GlassParams, radii: FloatArray, frost: Float, light: Liquid27Light,
+                                               clarity: Float = 0f): Boolean {
     if (Build.VERSION.SDK_INT < 33) return false
     val shader = runCatching { obtainRuntimeShader("kv-liquid-27", LIQUID27_AGSL) }.getOrNull() ?: return false
     return runCatching {
-        applyLiquid27Uniforms(shader, size.width, size.height, padding, density, params, radii, frost, light)
+        applyLiquid27Uniforms(shader, size.width, size.height, padding, density, params, radii, frost, light, clarity)
         effect(RenderEffect.createRuntimeShaderEffect(shader, "content"))
         true
     }.getOrDefault(false)
@@ -223,16 +231,18 @@ internal fun BackdropEffectScope.liquid27Glass(params: GlassParams, radii: Float
 /** Every Liquid 27 uniform, shared by the backdrop effect and the host render test. */
 @androidx.annotation.RequiresApi(33)
 internal fun applyLiquid27Uniforms(shader: android.graphics.RuntimeShader, w: Float, h: Float, pad: Float, density: Float,
-                                   params: GlassParams, radii: FloatArray, frost: Float, light: Liquid27Light) {
+                                   params: GlassParams, radii: FloatArray, frost: Float, light: Liquid27Light,
+                                   clarity: Float = 0f) {
     shader.setFloatUniform("size", w, h)
     shader.setFloatUniform("cornerRadii", radii)
-    applyLiquid27Material(shader, w, h, minOf(w, h), pad, density, params, frost, light)
+    applyLiquid27Material(shader, w, h, minOf(w, h), pad, density, params, frost, light, clarity)
 }
 
 /** Material uniforms common to the single-shape and fused passes; [lensEdgePx] bounds the lens band. */
 @androidx.annotation.RequiresApi(33)
 internal fun applyLiquid27Material(shader: android.graphics.RuntimeShader, w: Float, h: Float, lensEdgePx: Float, pad: Float,
-                                   density: Float, params: GlassParams, frost: Float, light: Liquid27Light) {
+                                   density: Float, params: GlassParams, frost: Float, light: Liquid27Light,
+                                   clarity: Float = 0f) {
     // Uniform refraction: a wider band than the Prismal controls, still bounded by the control.
     val lens = ControlLens.forControl(lensEdgePx, density, params.refractionHeightDp * 2.2f, params.refractionAmountDp * 1.6f)
     // Same capture coordinate contract as the Prismal pass: padding is negative.
@@ -245,13 +255,15 @@ internal fun applyLiquid27Material(shader: android.graphics.RuntimeShader, w: Fl
     // Held as a lens, the glass clears: no frost, almost no milk.
     val clear = 1f - params.lens.let { if (it.isFinite()) it.coerceIn(0f, 1f) else 0f } * .85f
     shader.setFloatUniform("frost", GlassTuning.sanitize(frost) * clear)
+    shader.setFloatUniform("clarity", GlassTuning.sanitize(clarity))
     // Lighter dark material than the other styles; the cover may tint it slightly.
     val milk = GlassTint.milk(params.dark)
     shader.setFloatUniform("milk", milk[0], milk[1], milk[2], (if (params.dark) .10f else .06f) * clear)
     shader.setFloatUniform("saturation", if (params.dark) 1.18f else 1.24f)
     shader.setFloatUniform("materialDark", if (params.dark) 1f else 0f)
     shader.setFloatUniform("lightDir", light.lightX, light.lightY)
-    shader.setFloatUniform("rimLight", (if (params.dark) .34f else .46f) * params.materialize.coerceIn(0f, 1f))
+    val glint = light.glint.let { if (it.isFinite()) it.coerceIn(.5f, 1.5f) else 1f }
+    shader.setFloatUniform("rimLight", (if (params.dark) .34f else .46f) * params.materialize.coerceIn(0f, 1f) * glint)
     shader.setFloatUniform("pixelScale", density)
     shader.setFloatUniform("touch", light.touchX, light.touchY, light.press.let { if (it.isFinite()) it.coerceIn(0f, 1f) else 0f })
     shader.setFloatUniform("lensPress", params.lens.let { if (it.isFinite()) it.coerceIn(0f, 1f) else 0f })

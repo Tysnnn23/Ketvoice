@@ -81,8 +81,6 @@ private val noRip: MutableInteractionSource = MutableInteractionSource()
  */
 @Composable
 fun SettingsScreen() {
-    var glassPreview by remember { mutableStateOf(false) }
-    if (glassPreview) GlassAppearancePreview { glassPreview = false }
     val th = LocalTheme.current
     val ctx = LocalContext.current
     var editSetting by remember { mutableStateOf("") }
@@ -241,10 +239,31 @@ fun SettingsScreen() {
                     }
                 }
             }
+            Section("VERRE") {
+                GlassTransparencyCard()
+                // A headset's window has no tilt to follow: the switch is not offered on Quest.
+                if (!com.ketvoice.app.BuildConfig.IS_QUEST) SToggle(KetIcons.Appearance, "Reflets selon l'inclinaison",
+                    when {
+                        com.ketvoice.app.ui.motion.Motion.reduced -> "Reflet fixe tant que les animations sont réduites."
+                        AppSettings.highPerformanceMode.value -> "Reflet fixe en mode performance."
+                        else -> "Le reflet du verre suit doucement l'inclinaison du téléphone"
+                    }, AppSettings.glassTilt.value) { AppSettings.glassTilt.value = it; SettingsStore.save() }
+            }
+            Section("COULEURS DE LA POCHETTE") {
+                Text("Le texte reste toujours lisible : chaque couleur est ajustée au thème clair ou sombre.",
+                    color = th.secondary, fontSize = 13.sp, lineHeight = 18.sp,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp))
+                SToggle(KetIcons.Appearance, "Verre teinté par la pochette",
+                    "La couleur dominante de la pochette colore légèrement le verre, sans réduire la lisibilité",
+                    AppSettings.coverTintedGlass.value) { AppSettings.coverTintedGlass.value = it; SettingsStore.save() }
+                SToggle(KetIcons.Sliders, "Couleur de la pochette", "La couleur d'accent de toute l'interface suit la pochette du titre en cours",
+                    AppSettings.coverAccent.value) { AppSettings.coverAccent.value = it; SettingsStore.save() }
+                SToggle(KetIcons.Sliders, "Fond selon la pochette", "Le fond de toute l'application prend la couleur de ce qui est en écoute, comme une page d'album",
+                    AppSettings.coverBackground.value) { AppSettings.coverBackground.value = it; SettingsStore.save() }
+                SToggle(KetIcons.Appearance, "Couleurs de la pochette", "Accents du lecteur adaptés à l'album, avec contraste renforcé",
+                    AppSettings.albumColors.value) { AppSettings.albumColors.value = it; SettingsStore.save() }
+            }
             Section("APPARENCE") {
-                SRow(KetIcons.Appearance, "Aperçu du verre", sub = "Transparence du verre") {
-                    glassPreview = true
-                }
                 SToggle(KetIcons.Info, "Stats info", "Informations audio réelles, uniquement dans le lecteur", AppSettings.techStats.value) {
                     AppSettings.techStats.value = it; SettingsStore.save()
                 }
@@ -273,21 +292,12 @@ fun SettingsScreen() {
                 SToggle(KetIcons.Canvas, "Canvas sur les pages d'album",
                     "Affiche la vidéo de l'album à la place de la pochette, en plein cadre. Indépendant du Canvas du lecteur.",
                     AppSettings.albumHeroCanvas.value) { AppSettings.albumHeroCanvas.value = it; SettingsStore.save() }
-                SToggle(KetIcons.Appearance, "Couleurs de la pochette", "Accents du lecteur adaptés à l'album, avec contraste renforcé",
-                    AppSettings.albumColors.value) { AppSettings.albumColors.value = it; SettingsStore.save() }
-                SToggle(KetIcons.Appearance, "Verre teinté par la pochette",
-                    "La couleur dominante de la pochette colore légèrement le verre, sans réduire la lisibilité",
-                    AppSettings.coverTintedGlass.value) { AppSettings.coverTintedGlass.value = it; SettingsStore.save() }
                 SToggle(KetIcons.Canvas, "Fond animé du lecteur",
                     "Dégradé lent aux couleurs de la pochette derrière le lecteur, qui suit doucement la musique",
                     AppSettings.meshBackground.value) { AppSettings.meshBackground.value = it; SettingsStore.save() }
                 if (!com.ketvoice.app.BuildConfig.IS_QUEST) SToggle(KetIcons.Sliders, "Retours haptiques",
                     "Légère vibration sur le verre, les onglets et la barre de lecture",
                     AppSettings.haptics.value) { AppSettings.haptics.value = it; SettingsStore.save() }
-                SToggle(KetIcons.Sliders, "Fond selon la pochette", "Le fond de toute l'application prend la couleur de ce qui est en écoute, comme une page d'album",
-                    AppSettings.coverBackground.value) { AppSettings.coverBackground.value = it; SettingsStore.save() }
-                SToggle(KetIcons.Sliders, "Couleur de la pochette", "La couleur d'accent de toute l'interface suit la pochette du titre en cours",
-                    AppSettings.coverAccent.value) { AppSettings.coverAccent.value = it; SettingsStore.save() }
                 SToggle(KetIcons.Canvas, "Pochette vivante", "Dans le lecteur, la pochette pulse très légèrement au rythme des basses",
                     AppSettings.livingArtwork.value) { AppSettings.livingArtwork.value = it; SettingsStore.save() }
                 SToggle(KetIcons.Canvas, "Profondeur de pochette", "Mouvement léger au toucher ou au pointeur, sans modifier les gestes",
