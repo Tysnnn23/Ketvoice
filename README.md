@@ -21,6 +21,16 @@
 
 ## Overview
 
+### 5.11.0 — Ketmix ahead of you, Ket 27 in motion
+
+Ketmix now prepares its mixes from the first seconds of a song, three songs ahead, mixes for real when you
+skip, knows where each song sings, can lay the next voice over the current instrumental and picks the best
+next song in shuffle. Ket 27 gains an unfolding mini-player, animated icons, context menus, spring sheets and
+controls that tick.
+[Mobile](https://github.com/Tysnnn23/Ketvoice/releases/download/v5.11.0/Ketvoice-5.11.0.apk)
+· [Quest](https://github.com/Tysnnn23/Ketvoice/releases/download/v5.11.0/Ketvoice-5.11.0-Quest.apk)
+· [Release notes](docs/releases/v5.11.0.md).
+
 ### 5.10.0 — Ketmix separates the voices
 
 Ketmix now really separates the voices with an optional on-device AI model: the current song's voice stops,

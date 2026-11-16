@@ -7,6 +7,19 @@
 
 ---
 
+# Ketvoice 5.11.0
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 123** — Ketmix prepared from the first seconds and smarter; Ket 27 animations, menus, sheets and controls.
+
+- Ketmix: `Automix.prepare` (ending of the current title, intro and ending of the next three, from 4 s in), `StemLibrary` (downloads while charging), `skipMix` (two-deck mix on a manual skip), `VoiceActivity` (sung passages from the separation, format KVS2), `Mashup` (incoming voice over the outgoing instrumental), `SmartQueue` (shuffle picks the best tempo/key match).
+- Ket 27: unfolding mini-player with travelling title and transport, symbol effects (morphing play/pause, filling heart and download, pulsing shuffle/repeat), `SpringSheet` detents, `GlassContextMenu` on track rows, stepped glass sliders with haptics, inset pickers, `Ket27PageBar` and large titles on more pages.
+
+Full notes: [5.11.0](docs/releases/v5.11.0.md).
+
+---
+
 # Ketvoice 5.10.0
 
 ![Ketvoice](ketvoice-banner.png)
