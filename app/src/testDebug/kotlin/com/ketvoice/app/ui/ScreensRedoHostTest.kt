@@ -151,6 +151,35 @@ class ScreensRedoHostTest {
         compose.runOnIdle { AppSettings.liquidGlass.value = true }
     }
 
+    @Test fun aDragDownTheFullBleedArtworkStillClosesThePlayer() {
+        if (com.ketvoice.app.BuildConfig.IS_QUEST) return
+        playing(track("drag", "Glisser", "Nova"))
+        var closed = false
+        compose.setContent { KetvoiceTheme(useDark = true) { FullPlayerScreen(onDismiss = { closed = true }) } }
+        // The artwork lies under the page's words, yet its gestures still reach it.
+        compose.onNodeWithTag("player-hero-artwork").performTouchInput {
+            swipeDown(startY = 120f, endY = 620f, durationMillis = 120)
+        }
+        compose.waitForIdle()
+        assertTrue("a drag down the artwork closes the player", closed)
+    }
+
+    @Test fun aDragOnTheGlassBetweenControlsNeitherClosesNorSkips() {
+        if (com.ketvoice.app.BuildConfig.IS_QUEST) return
+        playing(track("still", "Immobile", "Nova"), track("other", "Autre"))
+        var closed = false
+        compose.setContent { KetvoiceTheme(useDark = true) { FullPlayerScreen(onDismiss = { closed = true }) } }
+        val platter = compose.onNodeWithTag("player-glass-platter").fetchSemanticsNode().boundsInRoot
+        // Beside the title, over the foot of the artwork: the glass takes the drag, not the artwork under it.
+        compose.onRoot().performTouchInput {
+            swipe(start = androidx.compose.ui.geometry.Offset(platter.left + 14f, platter.top + 40f),
+                end = androidx.compose.ui.geometry.Offset(platter.left + 14f, platter.top + 300f), durationMillis = 120)
+        }
+        compose.waitForIdle()
+        assertFalse(closed)
+        assertEquals("fixture:still", player.value.current?.id)
+    }
+
     @Test fun lyricsAndQueueKeepTheirPagesOnTheSameGlass() {
         if (com.ketvoice.app.BuildConfig.IS_QUEST) return
         playing(track("lyr", "Les mots", "Nova"), track("q2", "Deuxième"), track("q3", "Troisième"))
