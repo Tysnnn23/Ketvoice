@@ -47,6 +47,9 @@ import com.ketvoice.app.ui.motion.Motion
 internal fun heroArtworkSide(width: Float, beside: Boolean): Float =
     if (beside) (width * .32f).coerceIn(120f, 300f) else (width * .62f).coerceIn(168f, 300f)
 
+/** The header's scale while its page scrolls ([collapse] 0 → 1): down to 86 % before the bar takes over. */
+internal fun heroShrinkScale(collapse: Float): Float = 1f - .14f * (if (collapse.isFinite()) collapse.coerceIn(0f, 1f) else 0f)
+
 /**
  * Scale the artwork starts from when its page was opened from a card: the size of
  * that card relative to the artwork, so the cover seems to keep growing into place.
@@ -78,13 +81,21 @@ internal fun CollectionHero(
     artworkSide: Dp? = null,
     bleed: Dp = 0.dp,
     titleSlot: (@Composable (centred: Boolean) -> Unit)? = null,
+    /** While the page scrolls, 0 → 1: the artwork and the words shrink and clear over the colours that stay. Read in a layer. */
+    shrink: (() -> Float)? = null,
     artwork: @Composable BoxScope.() -> Unit,
     actions: @Composable ColumnScope.() -> Unit
 ) {
     val theme = LocalTheme.current
     val density = LocalDensity.current
     CollectionAmbient(cover, modifier.fillMaxWidth(), bleed = bleed) {
-        BoxWithConstraints(Modifier.fillMaxWidth()) {
+        BoxWithConstraints(Modifier.fillMaxWidth().then(if (shrink == null) Modifier else Modifier.graphicsLayer {
+            val c = shrink().let { if (it.isFinite()) it.coerceIn(0f, 1f) else 0f }
+            val scale = heroShrinkScale(c)
+            scaleX = scale; scaleY = scale
+            transformOrigin = androidx.compose.ui.graphics.TransformOrigin(.5f, 0f)
+            alpha = 1f - .9f * c
+        })) {
             val side = artworkSide ?: heroArtworkSide(maxWidth.value, beside).dp
             val shape: Shape = if (round) CircleShape else RoundedCornerShape(if (side < 140.dp) 16.dp else 24.dp)
             // The page opened from a card: the artwork continues that movement into its place.

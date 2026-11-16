@@ -52,6 +52,7 @@ import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -264,6 +265,8 @@ fun FullPlayerScreen(
         val dismissOffset = presentationOffset ?: remember { Animatable(0f) }
         val dismissScope = rememberCoroutineScope()
         val screenH = with(LocalDensity.current) { maxHeight.toPx() }
+        val windowHeight = maxHeight
+        val windowWidth = maxWidth
         fun settleDismiss() {
             dismissScope.launch {
                 if (Motion.reduced) { dismissOffset.snapTo(0f); return@launch }
@@ -354,23 +357,21 @@ fun FullPlayerScreen(
                     }
                 }
             }) {
-                // The footer samples only this background sibling, never the
-                // enclosing full-scene layer which also captures the footer.
-                com.ketvoice.app.glass.BackdropCapture(controlsBackdrop, Modifier.matchParentSize()) {
-                    PlayerSceneBackground(track, canvasPath, state.isPlaying && !canvasFocus, cover, ambience,
-                        plain = false)
+                // Ket 27, the player of iOS 26/27: upright on a phone the artwork, or its Canvas, fills the
+                // window behind the controls, which rest on one glass platter over a legibility gradient.
+                // Landscape and tabletop keep the artwork beside or above the controls, as before.
+                val hero = !wide && tabletop == null
+                val inlineCanvas = canvasPath != null && AppSettings.animatedArtwork.value && !panoramicCanvasActive(canvasPath)
+                val titleTop = if (wide) safeHeight - 66.dp else tabletop?.let { it.sceneHeightDp.dp - 66.dp }
+                    ?: minOf(safeHeight * .514f, contentBottom - 61.dp)
+                val artworkHeight = when {
+                    wide -> safeHeight
+                    tabletop != null -> tabletop.sceneHeightDp.dp
+                    // A Canvas that failed shows the still cover, laid as a cover is.
+                    inlineCanvas && !failedCanvas -> windowHeight
+                    else -> PlayerHero.coverHeightDp(windowWidth.value, safeHeight.value).dp
                 }
-
-                AnimatedContent(page, transitionSpec = {
-                    (fadeIn(tween(Motion.duration())) + slideInVertically(tween(Motion.duration())) { it / 35 })
-                        .togetherWith(fadeOut(tween(Motion.duration())))
-                }, label = "player-page", modifier = Modifier.fillMaxSize()) { shownPage ->
-                Box(Modifier.fillMaxSize()) {
-                if (shownPage == PlayerPage.ARTWORK) {
-                    val inlineCanvas = canvasPath != null && AppSettings.animatedArtwork.value && !panoramicCanvasActive(canvasPath)
-                    val titleTop = if (wide) safeHeight - 66.dp else tabletop?.let { it.sceneHeightDp.dp - 66.dp }
-                        ?: minOf(safeHeight * .514f, contentBottom - 61.dp)
-                    val artworkHeight = if (wide) safeHeight else tabletop?.sceneHeightDp?.dp ?: (safeHeight * .55f)
+                val artworkScene: @Composable () -> Unit = {
                     // Swipe the artwork sideways to change track; a vertical drag still closes the player.
                     val trackSwipe = rememberTrackSwipe()
                     val pauseShrink = remember { androidx.compose.animation.core.Animatable(if (state.playWhenReady) 0f else 1f) }
@@ -397,8 +398,7 @@ fun FullPlayerScreen(
                             beat.animateTo(LivingArtwork.target(low), tween(LivingArtwork.FOLLOW_MS))
                         }
                     }
-                    PlayerArtworkFrame(inlineCanvas, ambience.color,
-                        Modifier.width(sceneWidth).height(artworkHeight)
+                    val artworkModifier = Modifier.width(sceneWidth).height(artworkHeight)
                         // Shared element: the artwork grows out of the mini-player cover on the
                         // reveal timeline, and returns to it during a dismissal or a back gesture.
                         .graphicsLayer {
@@ -418,11 +418,54 @@ fun FullPlayerScreen(
                             onClickLabel = AppText.t("Voir le Canvas en plein écran")
                         ) { canvasFocus = true }.semantics {
                             contentDescription = AppText.t("Voir le Canvas en plein écran")
-                        } else Modifier)) {
+                        } else Modifier)
+                    val artwork: @Composable () -> Unit = {
                         ArtworkCanvas(track, if (canvasFocus || panoramicCanvasActive(canvasPath)) null else canvasPath,
                             state.isPlaying && !canvasFocus, Modifier.fillMaxSize().trackSwipeContent(trackSwipe), depth = true,
                             onCanvasFailure = { failedCanvas = true }, frame = artworkFrame)
                     }
+                    if (hero) PlayerHeroFrame(inlineCanvas && !failedCanvas, ambience.color, artworkModifier.testTag("player-hero-artwork"), artwork)
+                    else PlayerArtworkFrame(inlineCanvas, ambience.color, artworkModifier, artwork)
+                }
+                // The footer samples only this background sibling, never the
+                // enclosing full-scene layer which also captures the footer.
+                com.ketvoice.app.glass.BackdropCapture(controlsBackdrop, Modifier.matchParentSize()) {
+                    PlayerSceneBackground(track, canvasPath, state.isPlaying && !canvasFocus, cover, ambience,
+                        plain = false)
+                    // Full-bleed, the artwork belongs to what the glass of the controls sees through.
+                    if (hero) AnimatedVisibility(page == PlayerPage.ARTWORK, Modifier.fillMaxSize(),
+                        enter = fadeIn(tween(Motion.duration())), exit = fadeOut(tween(Motion.duration()))) {
+                        Box(Modifier.fillMaxSize()) {
+                            artworkScene()
+                            PlayerLegibilityGradient(Modifier.matchParentSize())
+                        }
+                    }
+                }
+                if (hero) {
+                    // One glass platter carries the controls; on the artwork it also takes in the title.
+                    val platterTop by animateDpAsState(if (page == PlayerPage.ARTWORK) titleTop - 18.dp else contentBottom - 10.dp,
+                        tween(Motion.duration(360), easing = androidx.compose.animation.core.CubicBezierEasing(.22f, 1f, .36f, 1f)),
+                        label = "player-platter")
+                    CompositionLocalProvider(LocalBackdropLayer provides controlsBackdrop) {
+                        PlayerChrome(!expanded, Modifier.offset(y = platterTop).padding(horizontal = PlayerHero.PLATTER_MARGIN.dp)
+                            .fillMaxWidth().height((windowHeight - bottomInset - PlayerHero.PLATTER_MARGIN.dp - platterTop).coerceAtLeast(0.dp))
+                            .graphicsLayer {
+                                val rise = controlsReveal(revealProgress())
+                                alpha = rise
+                                translationY = (1f - rise) * 28.dp.toPx()
+                            }) {
+                            PlayerGlassPlatter(Modifier.fillMaxSize())
+                        }
+                    }
+                }
+
+                AnimatedContent(page, transitionSpec = {
+                    (fadeIn(tween(Motion.duration())) + slideInVertically(tween(Motion.duration())) { it / 35 })
+                        .togetherWith(fadeOut(tween(Motion.duration())))
+                }, label = "player-page", modifier = Modifier.fillMaxSize()) { shownPage ->
+                Box(Modifier.fillMaxSize()) {
+                if (shownPage == PlayerPage.ARTWORK) {
+                    if (!hero) artworkScene()
                     Text("Lecture depuis ${track.artist}", color = Color(0xFFCBCDD6), fontSize = 10.sp,
                         fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis,
                         textAlign = TextAlign.Center,

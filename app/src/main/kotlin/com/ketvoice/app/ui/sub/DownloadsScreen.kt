@@ -108,7 +108,8 @@ fun DownloadsScreen() {
         if (grid.firstVisibleItemIndex > 0) 1f else (grid.firstVisibleItemScrollOffset / 520f).coerceIn(0f, 1f)
     } }
     com.ketvoice.app.glass.BackdropCapture(backdrop, Modifier.fillMaxSize()) {
-        LazyVerticalGrid(columns = GridCells.Adaptive(360.dp), state = grid,
+        // Ket 27: albums and artists as a grid of covers; the titles keep their rows, two side by side on a wide pane.
+        LazyVerticalGrid(columns = GridCells.Adaptive(DownloadsLayout.CELL_DP.dp), state = grid,
             modifier = Modifier.fillMaxSize().testTag("downloads-list"),
             contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = adaptive.bottomPaddingDp.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -116,11 +117,13 @@ fun DownloadsScreen() {
                 // The shared collection header: the latest covers as a mosaic over their own colours.
                 val recent = remember(saved) { saved.sortedByDescending { it.file.lastModified() }.take(4).map { it.track } }
                 Column(Modifier.fillMaxWidth()) {
+                // The header shrinks and clears as the list scrolls; the bar's capsule then names the page.
                 com.ketvoice.app.ui.common.CollectionHero(
                     recent.firstOrNull()?.let { com.ketvoice.app.data.MediaOverrides.cover(it, artwork["t:${it.id}"] ?: it.coverUrl) }, 82.dp, AppText.t("Téléchargements"),
                     meta = listOf(AppText.t(if (summary.count == 1) "1 titre" else "${summary.count} titres"),
                         size(summary.bytes).takeIf { summary.count > 0 }.orEmpty(), playtimeLabel(summary.durationMs))
                         .filter { it.isNotBlank() }.joinToString(" · "),
+                    shrink = { collapse },
                     artworkTag = "downloads-mosaic", artworkSide = 132.dp, bleed = 20.dp,
                     artwork = { DownloadMosaic(recent.map { it.title to (com.ketvoice.app.data.MediaOverrides.cover(it, artwork["t:${it.id}"] ?: it.coverUrl)) }) }) {
                     if (saved.isNotEmpty()) com.ketvoice.app.ui.common.CollectionActionPair(
@@ -191,7 +194,7 @@ fun DownloadsScreen() {
                 }
                 if (view == 1 && chosen == null) items(groups, key = { "offline-album:${it.key}" }) { group ->
                     val ids = group.tracks.map { it.id }
-                    DownloadGroupRow(
+                    DownloadCoverCell(
                         title = group.title, subtitle = group.artist,
                         meta = AppText.t(if (ids.size == 1) "1 titre" else "${ids.size} titres") + " · " +
                             size(base.saved.filter { it.track.id in ids }.sumOf { it.bytes }),
@@ -203,7 +206,7 @@ fun DownloadsScreen() {
                 }
                 else if (view == 2 && chosenArtist == null) items(artists, key = { "offline-artist:${it.key}" }) { artist ->
                     val ids = artist.items.map { it.track.id }
-                    DownloadGroupRow(
+                    DownloadCoverCell(
                         title = artist.name, subtitle = null,
                         meta = AppText.t(if (ids.size == 1) "1 titre" else "${ids.size} titres") + " · " + size(artist.bytes),
                         cover = artist.items.first().track.let { ArtworkRepo.coverForTrack(it) ?: it.coverUrl },
@@ -212,7 +215,7 @@ fun DownloadsScreen() {
                         else artistKey = artist.key
                     }
                 }
-                else items(sections.saved, key = { it.track.id }) { item ->
+                else items(sections.saved, key = { it.track.id }, span = { GridItemSpan(DownloadsLayout.rowSpan(maxLineSpan)) }) { item ->
                     val track = item.track
                     val current = player.current?.id == track.id
                     SwipeTrackActions(track, if (Motion.reduced) Modifier else Modifier.animateItem(), enabled = !selecting) {
@@ -267,8 +270,9 @@ fun DownloadsScreen() {
         com.ketvoice.app.ui.common.CollectionTopBar(AppText.t("Téléchargements"), collapse, { AppUi.closeOverlay() },
             onPlay = if (saved.isNotEmpty() && !selecting) ({ Player.setShuffle(false); Player.playQueue(saved.map { it.track }) }) else null,
             titleTag = "downloads-collapsed-title") {
+            // Sized to its word, so the bar's capsule keeps the room to name the page once the header has gone.
             if (saved.isNotEmpty()) LiquidGlassButton({ selecting = !selecting; selected = emptyList() },
-                Modifier.widthIn(min = 48.dp).height(48.dp), shape = RoundedCornerShape(24.dp)) {
+                Modifier.widthIn(min = 48.dp).width(IntrinsicSize.Max).height(48.dp), shape = RoundedCornerShape(24.dp)) {
                 Text(if (selecting) "Annuler" else "Sélectionner", color = theme.onBackground,
                     fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 18.dp))
             }
@@ -413,4 +417,41 @@ private fun separatedWhole(trackId: String): Boolean {
         }
     }
     return separated
+}
+
+/** The grid of Downloads (Ket 27): covers for albums and artists, rows for titles. */
+internal object DownloadsLayout {
+    /** The narrowest a cover cell gets: two side by side on a phone. */
+    const val CELL_DP = 156f
+
+    /** A title row takes the whole line on a phone, half of it on a pane wide enough for four covers. */
+    fun rowSpan(maxLineSpan: Int): Int = if (maxLineSpan >= 4) maxLineSpan / 2 else maxLineSpan.coerceAtLeast(1)
+}
+
+/**
+ * An album or an artist of Downloads as a cover in the grid, its name and what it holds below.
+ * While selecting, a tap ticks all of its titles, and the tick sits on the cover.
+ */
+@Composable
+internal fun DownloadCoverCell(title: String, subtitle: String?, meta: String, cover: String?, round: Boolean,
+                               checked: Boolean?, onClick: () -> Unit) {
+    val theme = LocalTheme.current
+    Column(Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 14.dp).clip(RoundedCornerShape(18.dp))
+        .clickable(role = if (checked != null) Role.Checkbox else Role.Button, onClick = onClick).testTag("download-cover-cell"),
+        horizontalAlignment = if (round) Alignment.CenterHorizontally else Alignment.Start) {
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+            val side = maxWidth
+            Box {
+                Cover(title, cover, side, if (round) side / 2 else 16.dp)
+                if (checked != null) com.ketvoice.app.ui.common.KetCheckbox(checked, onCheckedChange = null,
+                    modifier = Modifier.align(Alignment.TopEnd).padding(6.dp))
+            }
+        }
+        Text(title, localize = false, color = theme.onBackground, fontSize = 15.sp, fontWeight = FontWeight.SemiBold,
+            maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp, start = 2.dp, end = 2.dp))
+        if (!subtitle.isNullOrBlank()) Text(subtitle, localize = false, color = theme.secondary, fontSize = 13.sp,
+            maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 2.dp))
+        Text(meta, localize = false, color = theme.secondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(horizontal = 2.dp))
+    }
 }

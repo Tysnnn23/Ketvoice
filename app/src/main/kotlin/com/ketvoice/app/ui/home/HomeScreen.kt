@@ -26,6 +26,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.shadow
 import androidx.compose.foundation.border
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
@@ -93,6 +94,9 @@ fun HomeScreen() {
     }
     val learned = HomeLearning.scores
     LaunchedEffect(recent) { ArtworkRepo.enrich(recent.take(20)) }
+    // Ket 27: the large title hands over to a small one in the bar as the page scrolls (read in layers only).
+    val handover = with(androidx.compose.ui.platform.LocalDensity.current) { HomeLayout.titleHandover.toPx() }
+    val collapse = { HomeLayout.collapse(state.firstVisibleItemIndex, state.firstVisibleItemScrollOffset, handover) }
     LaunchedEffect(state) {
         val fold = com.ketvoice.app.ui.chrome.ChromeCollapse()
         snapshotFlow { state.firstVisibleItemIndex to state.firstVisibleItemScrollOffset }
@@ -103,6 +107,13 @@ fun HomeScreen() {
             contentPadding = PaddingValues(top = if (layout.hasRail) 24.dp else 12.dp, bottom = layout.bottomPaddingDp.dp)) {
             // The page opens on who it greets: the brand in small, the hour in large, the account within reach.
             item(key = "greeting") {
+                Column(Modifier.graphicsLayer {
+                    // The large title clears as it leaves, a little slower than the page under it.
+                    val gone = collapse()
+                    alpha = 1f - gone
+                    if (!com.ketvoice.app.ui.motion.Motion.reduced && state.firstVisibleItemIndex == 0)
+                        translationY = state.firstVisibleItemScrollOffset * .3f
+                }) {
                 Row(Modifier.fillMaxWidth().padding(start = com.ketvoice.app.ui.common.pageMargin, end = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -120,6 +131,7 @@ fun HomeScreen() {
                 Row(Modifier.padding(start = com.ketvoice.app.ui.common.pageMargin, end = 18.dp, top = 4.dp, bottom = 14.dp)) {
                     Text(origin, color = theme.secondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     if (youtube.connected) Text(" · ${youtube.name}", localize = false, color = theme.secondary, fontSize = 12.sp, maxLines = 1)
+                }
                 }
             }
             // The owner removed the large For you card and the four shortcut tiles (5.9.0): the page goes
@@ -142,7 +154,7 @@ fun HomeScreen() {
                 RecentCarousel(recent.take(20), player.current?.id, player.isPlaying,
                     onPlay = { index -> Player.playQueue(recent, index) })
             } else item(key = "recent-grid") {
-                BoxWithConstraints(Modifier.fillMaxWidth().padding(horizontal = 18.dp).testTag("home-recent-grid")) {
+                BoxWithConstraints(Modifier.fillMaxWidth().padding(horizontal = com.ketvoice.app.ui.common.pageMargin).testTag("home-recent-grid")) {
                     val columns = recentColumns(maxWidth.value)
                     val side = (maxWidth - 12.dp * (columns - 1)) / columns
                     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -174,8 +186,8 @@ fun HomeScreen() {
                     HomeBlock.Albums -> if (albums.isNotEmpty()) item(key = "home-albums") {
                         Column(Modifier.learnsOpens(block.learningKey)) {
                         EditorialHeader("Albums du catalogue", onMore = { AppUi.selectTab(AppUi.EXPLORER) })
-                        val cell = com.ketvoice.app.ui.adaptive.shelfCell(156.dp, 18.dp)
-                        LazyRow(contentPadding = PaddingValues(horizontal = 18.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                        val cell = com.ketvoice.app.ui.adaptive.shelfCell(156.dp, com.ketvoice.app.ui.common.pageMargin, HomeLayout.gap)
+                        HomeRow {
                             itemsIndexed(albums, key = { _, album -> album.id }) { _, album ->
                                 val origin = rememberRevealOrigin()
                                 Column(Modifier.width(cell).captureRevealOrigin(origin).clickable {
@@ -208,6 +220,7 @@ fun HomeScreen() {
                 }
             }
         }
+        HomeInlineTitle(greeting, collapse, Modifier.align(Alignment.TopCenter))
     }
 }
 
@@ -218,9 +231,8 @@ internal fun recentColumns(widthDp: Float): Int = (widthDp / 120f).toInt().coerc
 @Composable
 private fun RecentCarousel(tracks: List<Track>, playingId: String?, playing: Boolean, onPlay: (Int) -> Unit) {
     // Large windows: more whole covers per row, sized to the page (ui/adaptive/LargeScreen.shelfCell); 150 dp on a phone.
-    val cell = com.ketvoice.app.ui.adaptive.shelfCell(150.dp, 18.dp)
-    LazyRow(Modifier.testTag("home-recent-carousel"), contentPadding = PaddingValues(horizontal = 18.dp),
-        horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+    val cell = com.ketvoice.app.ui.adaptive.shelfCell(150.dp, com.ketvoice.app.ui.common.pageMargin, HomeLayout.gap)
+    HomeRow(Modifier.testTag("home-recent-carousel")) {
         itemsIndexed(tracks, key = { _, t -> t.id }) { index, track ->
             RecentCover(track, cell, track.id == playingId, playing, onPlay = { onPlay(index) })
         }
@@ -272,8 +284,8 @@ private fun RecentCover(track: Track, side: androidx.compose.ui.unit.Dp, active:
 private fun TrackCarousel(tracks: List<Track>) {
     val theme = LocalTheme.current
     val art by ArtworkRepo.covers.collectAsState()
-    val cell = com.ketvoice.app.ui.adaptive.shelfCell(156.dp, 18.dp)
-    LazyRow(contentPadding = PaddingValues(horizontal = 18.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+    val cell = com.ketvoice.app.ui.adaptive.shelfCell(156.dp, com.ketvoice.app.ui.common.pageMargin, HomeLayout.gap)
+    HomeRow {
         itemsIndexed(tracks, key = { _, t -> t.id }) { i, track ->
             Column(Modifier.width(cell).clickable { Player.playQueue(tracks, i) }) {
                 com.ketvoice.app.ui.common.DownloadCover(track, com.ketvoice.app.data.MediaOverrides.cover(track, art["t:${track.id}"] ?: track.coverUrl), cell, 16.dp)

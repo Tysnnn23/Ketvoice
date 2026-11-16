@@ -47,7 +47,8 @@ import java.time.LocalDate
 internal fun EditorialHeader(title: String, modifier: Modifier = Modifier, subtitle: String? = null, onMore: (() -> Unit)? = null,
                              trailing: (@Composable () -> Unit)? = null) {
     val theme = LocalTheme.current
-    Row(modifier.fillMaxWidth().padding(start = com.ketvoice.app.ui.common.pageMargin, end = 8.dp, top = 26.dp, bottom = 12.dp)
+    // Ket 27: the header rises into place as it comes up from the bottom of the window.
+    Row(modifier.fillMaxWidth().headerReveal().padding(start = com.ketvoice.app.ui.common.pageMargin, end = 8.dp, top = 26.dp, bottom = 12.dp)
         .then(if (onMore != null) Modifier.clip(RoundedCornerShape(12.dp)).clickable(role = Role.Button, onClick = onMore) else Modifier),
         verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f, fill = false)) {
@@ -206,12 +207,13 @@ internal fun HomeReleasesShelf(releases: List<CatalogAlbum>, modifier: Modifier 
     val theme = LocalTheme.current
     Column(modifier.testTag("home-releases")) {
         EditorialHeader("Sorties de vos artistes", subtitle = "Les nouveautés de ceux que vous écoutez le plus")
-        LazyRow(contentPadding = PaddingValues(horizontal = 18.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+        val cell = com.ketvoice.app.ui.adaptive.shelfCell(156.dp, com.ketvoice.app.ui.common.pageMargin, HomeLayout.gap)
+        HomeRow {
             items(releases, key = { it.id }) { album ->
-                Column(Modifier.width(156.dp).clip(RoundedCornerShape(14.dp)).clickable(role = Role.Button) {
+                Column(Modifier.width(cell).clip(RoundedCornerShape(14.dp)).clickable(role = Role.Button) {
                     AppUi.openCatalog(CatalogRequest("album", album.id, album.title))
                 }.padding(bottom = 4.dp)) {
-                    Cover(album.title, com.ketvoice.app.data.MediaOverrides.albumCover(album.title, album.artist, album.cover), 156.dp, 16.dp)
+                    Cover(album.title, com.ketvoice.app.data.MediaOverrides.albumCover(album.title, album.artist, album.cover), cell, 16.dp)
                     Text(album.title, localize = false, color = theme.onBackground, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
                         maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))
                     Text(listOfNotNull(album.artist, album.releaseDate?.take(4)).joinToString(" · "), localize = false,
@@ -230,7 +232,7 @@ internal fun HomeWeekCard(modifier: Modifier = Modifier) {
     val known by ListeningHistory.knownTracks.collectAsState()
     val week = remember(days, known) { ListeningWeek.summary(days, LocalDate.now(), known) }
     if (week.plays < 3) return
-    Column(modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 8.dp).clip(RoundedCornerShape(26.dp))
+    Column(modifier.fillMaxWidth().padding(horizontal = com.ketvoice.app.ui.common.pageMargin, vertical = 8.dp).clip(RoundedCornerShape(26.dp))
         // A solid card first: the accent tint never decides the contrast of the text.
         .background(theme.card).background(Brush.linearGradient(listOf(theme.accent.copy(alpha = .22f), Color.Transparent)))
         .clickable(role = Role.Button) { AppUi.openReplay() }.padding(20.dp).testTag("home-week"),
