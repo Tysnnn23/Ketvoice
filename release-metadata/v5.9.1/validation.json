@@ -1,0 +1,191 @@
+{
+  "schema": 8,
+  "version": "5.9.1",
+  "versionCode": 120,
+  "source_commit": "451c858acc7b0f5b1a14776b037b1c74caf05bfe",
+  "created_at": "2026-11-16T12:35:07.359915+00:00",
+  "build_origin": {
+    "kind": "github_actions_with_owner_discord_sdk",
+    "workflow": "android.yml",
+    "run_id": 43866033482,
+    "artifact": {
+      "id": 14226631454,
+      "sha256": "aa03e6d3fc24f61cb57bcc0b8352e6e5942de344eda8936bdf15cef8b99e09fd"
+    },
+    "gradle": "assembleMobileRelease assembleQuestRelease",
+    "note": "Signed by CI with the pinned keystore secret; the Discord Social SDK AAR matched its pinned SHA-256."
+  },
+  "local_validation": {
+    "result": "debug JVM/Robolectric suites for both flavors, release lint and the UI text audit passed in a cloud container without the Discord SDK",
+    "commands": [
+      "testMobileDebugUnitTest",
+      "testQuestDebugUnitTest",
+      "lintMobileRelease",
+      "lintQuestRelease",
+      "tools/audit_ui_texts.py --check"
+    ],
+    "ci_validation": "run 43866033482: release builds, debug and release unit tests for both flavors, UI text audit, lint, APK signature pin and Discord bridge packaging passed",
+    "code_review": {
+      "kind": "none independent"
+    },
+    "host_previews": "no new screenshot; parsers, colour analysis, stems automation and playlist additions covered by JVM tests",
+    "after_last_full_local_run": "no source change after the last complete local run",
+    "discord_module": "src/discord is compiled only by CI (the Discord SDK is not in the local container): the session-restore change was first compiled by CI run 43866033482"
+  },
+  "server": {
+    "function": "ketvoice-content",
+    "deployed_version": 23,
+    "changed_in_this_version": false,
+    "note": "no server change since 5.4.0"
+  },
+  "tests": {
+    "mobile": {
+      "jvm": {
+        "tests": 830,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "android_15_emulator_compose": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "quest": {
+      "jvm": {
+        "tests": 829,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "android_15_emulator_compose": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    }
+  },
+  "lint": {
+    "mobile": {
+      "Warning": 187,
+      "Hint": 21
+    },
+    "quest": {
+      "Warning": 189,
+      "Hint": 21
+    },
+    "errors": 0,
+    "new_vs_5_9_0": "none"
+  },
+  "apks": [
+    {
+      "name": "Ketvoice-5.9.1.apk",
+      "sha256": "abf765c236aeb2bf27285a2afa94bb6a006ac5c7a0c440df000cec92a349168a",
+      "bytes": 74915348,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "5.9.1",
+      "versionCode": 120,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-5.9.1-Quest.apk",
+      "sha256": "1ed41a4557f9e761d437a6326d37a8db3017938052bf118d7c048c5b09fc8b60",
+      "bytes": 84949022,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "5.9.1",
+      "versionCode": 120,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    }
+  ],
+  "discord": {
+    "sdk_present_in_ci_build": true,
+    "sdk_sha256_pinned": true,
+    "bridge_and_native_libraries_verified": true,
+    "presence_mode": "unauthenticated_rpc_through_installed_discord_app"
+  },
+  "credential_scan": {
+    "entries": 3492,
+    "findings": 0,
+    "raw_pattern_findings": 1,
+    "scope": "tracked sources and APK archive entries",
+    "kind": "credential_patterns",
+    "explicit_private_provider_key_deny_list": false,
+    "triage": [
+      {
+        "file": "Ketvoice-Liquid-Glass-V4.html",
+        "classification": "embedded_image_false_positive",
+        "all_hits_inside_image_data_uris": true,
+        "rescanned_without_image_payloads": true
+      }
+    ]
+  },
+  "release_install_smoke": {
+    "mobile": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "quest": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    }
+  },
+  "publication_override": {
+    "authorized_by_user": true,
+    "authorized_at": "2026-11-16T12:35:07.359915+00:00",
+    "kind": "standing_authorization",
+    "user_statement": "J'autorise TOUT devient maintenant une règle.",
+    "user_statement_date": "2026-11-14",
+    "in_reply_to": "The question whether versions may be published without phone or Quest testing without asking again for each version.",
+    "recorded_in": "AGENTS.md (commit aeeda8e)",
+    "reason": "The owner made publishing validated versions without phone or Quest testing a standing rule.",
+    "scope": "physical device installation and all on-device behaviour of 5.9.1"
+  },
+  "owner_request_2026_11_16_second": {
+    "statement_summary": "Custom lyrics source opening the file explorer with the widest format support, used and kept per title; app-wide background from the playing cover (off by default); better cover colours (purple/green results, colourful covers turning grey); Discord login kept across restarts and updates; experimental stem separation for AutoMix (fast vocals/instrumental and Demucs four stems, vocal transitions, instrumental first, bass swap, automatic use, background/charging, storage display and deletion, lighter option); add a whole album / several titles to a playlist. Screenshots of another app's stem settings were attached as reference.",
+    "done": {
+      "custom_lyrics": "CustomLyrics: OpenDocument picker from the lyrics sources sheet; content-detected LRC (multi-time lines, enhanced word tags), TTML, SRT, WebVTT, ASS/SSA with \\k karaoke, YRC, JSON (Spotify-like lines, Musixmatch richsync, nested), plain text; UTF-8/UTF-16/Latin-1; 2 MB limit; copy kept in filesDir/custom-lyrics, per-title index, active flag; LyricsRepo uses it before downloads and online sources",
+      "cover_background": "setting coverBackground (off): KetvoiceTheme dynamicTone = playing cover tone through artistPageTint (night cap and day floor kept), first colour immediate, then 900 ms glides",
+      "colours": "CoverColors: 24 hue bins weighted by chroma and mid lightness, smoothed peak, average of the peak hue's own pixels; grey only under 5 % coloured pixels, then the most common grey; used by AlbumColors.dominant, CoverPalette.extract and CoverTone.dominant",
+      "discord": "start() restored nothing: tokens were saved encrypted on linking but never read back; now the access token is set, and on refusal the refresh token is used before an interactive link",
+      "stems": "real-time: Ketmix already had a centre-band vocal cut, a lyrics-timed voice-down and a bass swap; ketmixStems (off) adds instrumental-first entry released 0.3 s before the incoming voice (or at the swap / two thirds of the blend) and an outgoing voice-down ending when the incoming voice starts",
+      "playlists": "PlaylistStore.addAll with PlaylistRules.newEntries (no duplicates); album pad button, library selection button, queue selection action; create-playlist dialog takes the pending titles"
+    },
+    "not_done": {
+      "stored_stems_and_demucs": "no stem files are computed, stored or listed, no Demucs model: on-device four-stem separation needs a neural model of tens to hundreds of MB and an inference runtime added to the app, with minutes of CPU per title; not attempted in this version. Background/charging-only processing, storage display, deletion and a lighter format therefore do not apply.",
+      "custom_lyrics_formats_not_read": "binary or proprietary formats (KRC, QRC encrypted files, SMI/SAMI) are read as plain text or refused"
+    },
+    "not_measured": "no device: file picker, Discord restore, colours on real covers and the stems cut were not seen or heard"
+  },
+  "not_validated": [
+    "physical phone or Quest installation, rendering and touch behaviour",
+    "Discord session restore with a real account (needs the SDK and a linked account on a device)",
+    "the file picker and real lyrics files from other apps",
+    "the vocal cut by ear in real mixes",
+    "colour results on a broad set of real covers (unit tests use synthetic pixels)",
+    "independent code review of this diff"
+  ],
+  "owner_section_changes": [],
+  "known_limitations": [
+    "Vocal separation is a real-time cut of the centre of the stereo image between 220 Hz and 4.5 kHz: it lowers lead vocals but is not a neural stem separation; voices panned wide or doubled keep part of their sound.",
+    "The incoming voice is timed from its lyrics; without timed lyrics it joins at the bass swap or two thirds into the blend.",
+    "A custom lyrics file is kept for one title (its id); another version of the same song needs its own file.",
+    "Ket 27 stays an alpha: several pages keep Ketvoice's own structure.",
+    "The signing certificate is the existing public Android debug identity, not a private production key."
+  ],
+  "canonical_banner_sha256": "47f6793088983f7d4e6bd1aeaa2cbd8b7cdc2a8f91271e3b2839daea81da0436"
+}
