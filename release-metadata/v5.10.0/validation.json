@@ -1,0 +1,194 @@
+{
+  "schema": 8,
+  "version": "5.10.0",
+  "versionCode": 122,
+  "source_commit": "566a5e8dcd1e455312e1e43bff3a241181f2526d",
+  "created_at": "2026-11-16T14:27:35.621846+00:00",
+  "build_origin": {
+    "kind": "github_actions_with_owner_discord_sdk",
+    "workflow": "android.yml",
+    "run_id": 43883349800,
+    "artifact": {
+      "id": 14232789522,
+      "sha256": "cf7c574eac712f497e0e7f5da6236d40f2ab07b8e5e01a64efed278ddc92539f"
+    },
+    "gradle": "assembleMobileRelease assembleQuestRelease",
+    "note": "Signed by CI with the pinned keystore secret; the Discord Social SDK AAR matched its pinned SHA-256."
+  },
+  "local_validation": {
+    "result": "debug JVM/Robolectric suites for both flavors, release lint and the UI text audit passed in a cloud container without the Discord SDK",
+    "commands": [
+      "testMobileDebugUnitTest",
+      "testQuestDebugUnitTest",
+      "lintMobileRelease",
+      "lintQuestRelease",
+      "tools/audit_ui_texts.py --check"
+    ],
+    "ci_validation": "run 43883349800: release builds, debug and release unit tests for both flavors, UI text audit, lint, APK signature pin and Discord bridge packaging passed",
+    "code_review": {
+      "kind": "none independent"
+    },
+    "host_previews": "none for the new settings rows; the separation pipeline was checked end to end on the host against sherpa-onnx's Spleeter (see stems_validation)",
+    "after_last_full_local_run": "no source change after the last complete local run"
+  },
+  "server": {
+    "function": "ketvoice-content",
+    "deployed_version": 23,
+    "changed_in_this_version": false,
+    "note": "no server change since 5.4.0"
+  },
+  "tests": {
+    "mobile": {
+      "jvm": {
+        "tests": 850,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "android_15_emulator_compose": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "quest": {
+      "jvm": {
+        "tests": 849,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "android_15_emulator_compose": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    }
+  },
+  "lint": {
+    "mobile": {
+      "Warning": 190,
+      "Hint": 21
+    },
+    "quest": {
+      "Warning": 192,
+      "Hint": 21
+    },
+    "errors": 0,
+    "new_vs_5_9_2": "3 more warnings than 5.9.2 and no error; among them GradleDependency for LiteRT (2.x exists, 1.x keeps the Interpreter API) and UsableSpace in StemModel"
+  },
+  "apks": [
+    {
+      "name": "Ketvoice-5.10.0.apk",
+      "sha256": "b44b9cf224f18044b39b9c56c724e8c4d9fe909d36f0b5d030d083b77fa98c3a",
+      "bytes": 79445368,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "5.10.0",
+      "versionCode": 122,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-5.10.0-Quest.apk",
+      "sha256": "2fe0deae9929ba7c5786dec10195501475464aeae16e18f16ebb4b736241013c",
+      "bytes": 95548015,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "5.10.0",
+      "versionCode": 122,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    }
+  ],
+  "discord": {
+    "sdk_present_in_ci_build": true,
+    "sdk_sha256_pinned": true,
+    "bridge_and_native_libraries_verified": true,
+    "presence_mode": "unauthenticated_rpc_through_installed_discord_app"
+  },
+  "credential_scan": {
+    "entries": 3521,
+    "findings": 0,
+    "raw_pattern_findings": 1,
+    "scope": "tracked sources and APK archive entries",
+    "kind": "credential_patterns",
+    "explicit_private_provider_key_deny_list": false,
+    "triage": [
+      {
+        "file": "Ketvoice-Liquid-Glass-V4.html",
+        "classification": "embedded_image_false_positive",
+        "all_hits_inside_image_data_uris": true,
+        "rescanned_without_image_payloads": true
+      }
+    ]
+  },
+  "release_install_smoke": {
+    "mobile": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "quest": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    }
+  },
+  "publication_override": {
+    "authorized_by_user": true,
+    "authorized_at": "2026-11-16T14:27:35.621846+00:00",
+    "kind": "standing_authorization",
+    "user_statement": "J'autorise TOUT devient maintenant une règle.",
+    "user_statement_date": "2026-11-14",
+    "in_reply_to": "The question whether versions may be published without phone or Quest testing without asking again for each version.",
+    "recorded_in": "AGENTS.md (commit aeeda8e)",
+    "reason": "The owner made publishing validated versions without phone or Quest testing a standing rule.",
+    "scope": "physical device installation and all on-device behaviour of 5.10.0"
+  },
+  "owner_request_2026_11_16_fourth": {
+    "statement_summary": "the separation must be real, it greatly improves Ketmix (a voice stops, the next song continues on the instrumental) as Apple Music does; the download is optional and must be optimised so that it is done only once and works quickly and smoothly; fix Ketvoice cutting out in the background; optimise the app and make video creation faster, with the sound (switchable).",
+    "done": {
+      "stems_model": "Spleeter 2 stems (Deezer, MIT) from the ONNX export of sherpa-onnx (SHA-256 pinned), converted to LiteRT with float16 weights by .github/workflows/publish-stem-models.yml (run 43880565743) and published as the ketmix-stems-v1 prerelease (not latest; the in-app updater ignores non-version tags); downloaded on request (39.4 MB) and checked against tools/stems/expected.sha256 / StemModel.kt; LiteRT 1.4.0 added to the APK",
+      "stems_engine": "pure-Kotlin STFT (4096/1024 periodic Hann, as kaldi-native-fbank), sinc resampler, mask computation and inverse; the network runs on a low-priority thread once per title part (intro and ending, at most 50 s each), the mask is stored on 4 bits (filesDir/stems/masks, ~1 MB per title, 400 MB cap) and applied to a fresh silent capture of the deck's own sound at later mixes; decks cross-fade from the title to its instrumental under the existing vocalCut curves (now reaching full removal); without the model the 5.9.1 band cut stays; settings: model download/delete, separated songs count/size/clear, ketmixStemsCharging",
+      "background_cuts": "network connection errors no longer burn through every source until playback stops: the same stream waits for connectivity (up to 3 min, 8 times per title) and resumes at its position; PlaybackJournal records service start/stop, task removal, focus losses, noisy events, errors and Android's ApplicationExitInfo reasons, shown and shareable in Settings; shortcut to manufacturer battery managers (Xiaomi, Huawei/Honor, Oppo/OnePlus/Realme, Vivo, Samsung) with manifest queries; Canvas players no longer decode audio",
+      "lyrics_video": "Canvas frames decoded sequentially with getFramesAtIndex in batches of 8 (5.9.2 seeked with OPTION_CLOSEST for each of up to 150 frames), per-frame Paint/Path/text allocations removed, encoder polled instead of waited; optional sound (lyricVideoSound, on by default): MediaExtractor + MediaCodec decode of the chosen window from the downloaded file or progressive stream, 250 ms fades, AAC-LC 192 kb/s muxed before the video samples; DASH sources get a silent video"
+    },
+    "stems_validation": {
+      "reference": "60 s of a commercial song (local only, not committed) separated by sherpa-onnx 2.0.1 (fp16 Spleeter)",
+      "kotlin_vs_sherpa_instrumental_snr_db": 41.7,
+      "network_outputs": "computed by the published LiteRT files (ai-edge-litert 2.1.2 on x86) on the Kotlin pipeline's own inputs, replayed into the Kotlin test",
+      "published_model_vs_onnx_relative_difference": {
+        "vocals": 0.0018,
+        "accompaniment": 2e-05
+      },
+      "host_dsp_time_ms_for_60_s": 740,
+      "host_network_time": "about 0.46 s per 512-frame block per model with 4 threads on the container's x86 CPU (Python LiteRT); never measured on a phone"
+    },
+    "not_measured": "no phone ran LiteRT, the separation, a mix with separated stems, the network recovery, the journal, the manufacturer screens or the lyrics video encoders (video and sound)"
+  },
+  "not_validated": [
+    "physical phone or Quest installation, rendering and touch behaviour",
+    "LiteRT loading and running the separation model on a device, its speed and memory use there, and the model download from the app",
+    "how a Ketmix transition with separated instrumentals sounds on a device (alignment of the instrumental with the deck, the cross-fade)",
+    "playback recovery after a real network loss in the background, and the manufacturer battery screens on their phones",
+    "lyrics video encoding and AAC sound encoding on any device, and its speed",
+    "independent code review of this diff"
+  ],
+  "known_limitations": [
+    "Voice separation needs the optional 39 MB model; without it the voice is only softened.",
+    "Only the intro and the ending of a title (at most 50 s each) are separated; a mix beyond them falls back to softening the voice there.",
+    "The first mix of a title computes its separation while the mix is prepared; if it is not ready in time, that mix softens the voice and the next one uses the separation.",
+    "Lyrics videos of titles streamed as DASH have no sound.",
+    "The signing certificate is the existing public Android debug identity, not a private production key."
+  ],
+  "canonical_banner_sha256": "47f6793088983f7d4e6bd1aeaa2cbd8b7cdc2a8f91271e3b2839daea81da0436"
+}
