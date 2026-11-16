@@ -282,10 +282,13 @@ fun AppRoot() {
                 // Masqué dès qu'une feuille inférieure occupe le bas de l'écran :
                 // le mini-lecteur et la navigation ne doivent jamais recouvrir
                 // les options d'un menu ouvert.
+                // Phones (6.0.0): the search field lives in the chrome, at the bottom, and rises with the keyboard.
+                val floatingSearch = com.ketvoice.app.ui.chrome.FloatingSearch.applies(layout.hasRail, quest) &&
+                    AppUi.overlay.value == AppUi.SEARCH
                 val chromeVisible = AppUi.overlay.value != AppUi.SETTINGS &&
                     AppUi.overlay.value != AppUi.QUEUE &&
                     !AppUi.showPlayer.value &&
-                    !imeVisible &&
+                    (!imeVisible || floatingSearch) &&
                     AppUi.trackMenuTrack.value == null &&
                     AppUi.pendingPlaylistTracks() == null &&
                     AppUi.playlistMenu.value == null &&
@@ -318,8 +321,12 @@ fun AppRoot() {
                             // et rejoint la rangée de navigation (accueil + recherche
                             // interposés). On remonte → retour à la présentation pleine.
                             FloatingChrome(
-                                collapsed = AppUi.bottomCollapsed.value && AppUi.overlay.value == AppUi.NONE,
-                                onOpenPlayer = { AppUi.showPlayer.value = true }
+                                // Optional since 6.0.0 (Settings → Appearance), off by default: the bar stays whole.
+                                collapsed = AppSettings.collapsingTabBar.value && AppUi.bottomCollapsed.value &&
+                                    AppUi.overlay.value == AppUi.NONE,
+                                onOpenPlayer = { AppUi.showPlayer.value = true },
+                                searching = floatingSearch,
+                                typing = floatingSearch && imeVisible
                             )
                         }
                     }

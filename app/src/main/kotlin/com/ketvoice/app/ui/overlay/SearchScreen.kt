@@ -83,7 +83,13 @@ fun SearchScreen() {
     val layout = LocalAdaptiveLayout.current
     var attempt by rememberSaveable { mutableIntStateOf(0) }
     var segment by rememberSaveable { mutableIntStateOf(0) } // 0 Tout | 1 Sources | 2 Bibliothèque
-    var query by rememberSaveable { mutableStateOf(AppUi.searchSeed.value) }
+    // Phones (6.0.0): the field is the floating one at the bottom of the screen (ui/chrome/FloatingSearch).
+    val floating = com.ketvoice.app.ui.chrome.FloatingSearch.applies(layout.hasRail, com.ketvoice.app.BuildConfig.IS_QUEST)
+    val pageQuery = rememberSaveable { mutableStateOf(AppUi.searchSeed.value) }
+    remember(floating) {
+        if (floating && AppUi.searchSeed.value.isNotBlank()) com.ketvoice.app.ui.chrome.FloatingSearch.query.value = AppUi.searchSeed.value
+    }
+    var query by (if (floating) com.ketvoice.app.ui.chrome.FloatingSearch.query else pageQuery)
     var results by remember { mutableStateOf<List<Track>>(emptyList()) }
     // Found by their lyrics: on the device (playable at once), and online (searched in the catalogue when touched).
     var lyricTracks by remember { mutableStateOf<List<Track>>(emptyList()) }
@@ -112,6 +118,12 @@ fun SearchScreen() {
 
     // La graine est consommée une seule fois (tuile genre / album).
     LaunchedEffect(Unit) { AppUi.searchSeed.value = "" }
+    // The keyboard's search key in the floating field searches here.
+    DisposableEffect(floating) {
+        val submit = { submitSearch(true) }
+        if (floating) com.ketvoice.app.ui.chrome.FloatingSearch.onSubmit = submit
+        onDispose { if (com.ketvoice.app.ui.chrome.FloatingSearch.onSubmit === submit) com.ketvoice.app.ui.chrome.FloatingSearch.onSubmit = null }
+    }
 
     LaunchedEffect(query, segment, attempt, customSources) {
         val q = query.trim()
@@ -219,9 +231,11 @@ fun SearchScreen() {
             }
         }
 
-        com.ketvoice.app.ui.common.CompactSearchField(query, { query = it }, { submitSearch(true) },
-            Modifier.padding(horizontal = 20.dp).align(Alignment.CenterHorizontally).searchFieldFocus())
-        Spacer(Modifier.height(14.dp))
+        if (!floating) {
+            com.ketvoice.app.ui.common.CompactSearchField(query, { query = it }, { submitSearch(true) },
+                Modifier.padding(horizontal = 20.dp).align(Alignment.CenterHorizontally).searchFieldFocus())
+            Spacer(Modifier.height(14.dp))
+        }
         AppUi.playlistResolution.value?.let { pending ->
             Column(Modifier.padding(horizontal=20.dp)) {
                 Text("Choisissez une version pour la playlist",color=th.accent)

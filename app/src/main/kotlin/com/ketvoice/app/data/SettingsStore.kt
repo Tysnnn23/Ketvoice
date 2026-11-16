@@ -92,6 +92,7 @@ object SettingsStore {
         s.shareNowPlaying.value = p.getBoolean("shareNowPlaying", false)
         s.haptics.value = p.getBoolean("haptics", true)
         s.meshBackground.value = p.getBoolean("meshBackground", true)
+        s.collapsingTabBar.value = p.getBoolean("collapsingTabBar", false)
         s.coverTintedGlass.value = p.getBoolean("coverTintedGlass", true)
         s.equalizerGains.value = com.ketvoice.app.player.EqualizerProfile.normalize(
             p.getString("equalizerGains", "").orEmpty().split(',').mapNotNull { it.toIntOrNull() })
@@ -218,6 +219,7 @@ object SettingsStore {
             .putBoolean("shareNowPlaying", s.shareNowPlaying.value)
             .putBoolean("haptics", s.haptics.value)
             .putBoolean("meshBackground", s.meshBackground.value)
+            .putBoolean("collapsingTabBar", s.collapsingTabBar.value)
             .putBoolean("coverTintedGlass", s.coverTintedGlass.value)
             .putString("equalizerGains", s.equalizerGains.value.joinToString(","))
             .putBoolean("wifiHandoffEnabled", s.wifiHandoffEnabled.value)

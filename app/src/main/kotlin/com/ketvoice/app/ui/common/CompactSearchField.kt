@@ -20,11 +20,12 @@ import com.ketvoice.app.theme.LocalTheme
 
 @Composable
 internal fun CompactSearchField(query: String, onQueryChange: (String) -> Unit, onSearch: () -> Unit,
-                                modifier: Modifier = Modifier) {
+                                modifier: Modifier = Modifier, filled: Boolean = true) {
     val theme = LocalTheme.current
     BasicTextField(query, { onQueryChange(it.replace('\r', ' ').replace('\n', ' ')) },
         modifier.widthIn(max = 640.dp).fillMaxWidth()
-            .background(theme.onBackground.copy(alpha = if (theme.isDark) .075f else .055f), RoundedCornerShape(18.dp)),
+            // Inside the floating glass bubble (phones, 6.0.0) the glass is the field's ground.
+            .then(if (filled) Modifier.background(theme.onBackground.copy(alpha = if (theme.isDark) .075f else .055f), RoundedCornerShape(18.dp)) else Modifier),
         singleLine = true, textStyle = TextStyle(color = theme.onBackground, fontSize = 16.sp),
         cursorBrush = SolidColor(theme.accent),
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
