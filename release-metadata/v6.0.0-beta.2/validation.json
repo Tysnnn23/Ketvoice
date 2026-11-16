@@ -1,0 +1,205 @@
+{
+  "schema": 8,
+  "version": "6.0.0-beta.2",
+  "versionCode": 125,
+  "source_commit": "fa084bb1d5b1eee361412dbdb1d08f6e87804c5d",
+  "created_at": "2026-11-16T20:23:04.264849+00:00",
+  "build_origin": {
+    "kind": "github_actions_with_owner_discord_sdk",
+    "workflow": "android.yml",
+    "run_id": 43946151136,
+    "artifact": {
+      "id": 14265742693,
+      "sha256": "7fe3a3ae0131354a36548bdc545814ca0a315d3b46ba2b2ed138a551681b34b8"
+    },
+    "gradle": "assembleMobileRelease assembleQuestRelease",
+    "note": "Signed by CI with the pinned keystore secret; the Discord Social SDK AAR matched its pinned SHA-256."
+  },
+  "local_validation": {
+    "result": "debug JVM/Robolectric suites for both flavors, release lint and the UI text audit passed in a cloud container without the Discord SDK",
+    "commands": [
+      "testMobileDebugUnitTest",
+      "testQuestDebugUnitTest",
+      "lintMobileRelease",
+      "lintQuestRelease",
+      "tools/audit_ui_texts.py --check"
+    ],
+    "ci_validation": "run 43946151136 (first attempt): release builds, debug and release unit tests for both flavors, UI text audit, lint, APK signature pin and Discord bridge packaging passed",
+    "code_review": {
+      "kind": "none independent",
+      "note": "the Ket 27-only and tablet work was written by two sub-agents whose sessions ended before they reported; their commits were merged, conflicts resolved, compiled and tested by the main agent without their reports"
+    },
+    "host_previews": "Robolectric software renders on the host (not a phone): glass context menu from a long press and from a row's more button, voice slider alone and on the lyrics screen, the Ket 27 page and tablet renders (TabletLayoutHostTest, LargeScreenTest); looked at by the agent, not by the owner",
+    "after_last_full_local_run": "test files only (Ket27MotionHostTest, VoiceSliderHostTest, TabletLayoutHostTest), re-run on both flavors; no change under app/src/main"
+  },
+  "server": {
+    "function": "ketvoice-content",
+    "deployed_version": 23,
+    "changed_in_this_version": false,
+    "note": "no server change since 5.4.0"
+  },
+  "tests": {
+    "mobile": {
+      "jvm_full_run": {
+        "tests": 964,
+        "failures": 2,
+        "errors": 0,
+        "skipped": 3,
+        "failed": [
+          "Ket27MotionHostTest: two tests written for the menu's old fallback to the full sheet and its old 'Options' item"
+        ]
+      },
+      "jvm_after_fix": {
+        "classes": [
+          "Ket27MotionHostTest",
+          "VoiceSliderHostTest",
+          "TabletLayoutHostTest"
+        ],
+        "tests": 45,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "android_15_emulator_compose": {
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "quest": {
+      "jvm_full_run": {
+        "tests": 964,
+        "failures": 20,
+        "errors": 0,
+        "skipped": 3,
+        "failed": [
+          "TabletLayoutHostTest (20 tests): large-screen layouts that Quest never draws by design; the class is now skipped on Quest",
+          "Ket27MotionHostTest: the same two tests as on mobile"
+        ]
+      },
+      "jvm_after_fix": {
+        "classes": [
+          "Ket27MotionHostTest",
+          "VoiceSliderHostTest",
+          "TabletLayoutHostTest"
+        ],
+        "tests": 45,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 23
+      },
+      "android_15_emulator_compose": {
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "note": "no file under app/src/main changed between the full runs and the build; only the failing test classes were changed and re-run"
+  },
+  "lint": {
+    "mobile": {
+      "Warning": 192,
+      "Hint": 23
+    },
+    "quest": {
+      "Warning": 194,
+      "Hint": 23
+    },
+    "errors": 0
+  },
+  "apks": [
+    {
+      "name": "Ketvoice-6.0.0-beta.2.apk",
+      "sha256": "40b5da96b2e546a64a4547d4eed4cc28c2c8c5cb04eec61e2f77a6ea63078df5",
+      "bytes": 79946744,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "6.0.0-beta.2",
+      "versionCode": 125,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-6.0.0-beta.2-Quest.apk",
+      "sha256": "878ee5f3c4c87f69cee5dc67d5e66539d8a4b60ec05bf92e2abbc9c6e7be3d61",
+      "bytes": 96049391,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "6.0.0-beta.2",
+      "versionCode": 125,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    }
+  ],
+  "discord": {
+    "sdk_present_in_ci_build": true,
+    "sdk_sha256_pinned": true,
+    "bridge_and_native_libraries_verified": true,
+    "presence_mode": "unauthenticated_rpc_through_installed_discord_app"
+  },
+  "credential_scan": {
+    "entries": 3475,
+    "findings": 0,
+    "raw_pattern_findings": 1,
+    "scope": "tracked sources and APK archive entries",
+    "kind": "credential_patterns",
+    "explicit_private_provider_key_deny_list": false,
+    "triage": [
+      {
+        "file": "Ketvoice-Liquid-Glass-V4.html",
+        "classification": "embedded_image_false_positive",
+        "all_hits_inside_image_data_uris": true,
+        "rescanned_without_image_payloads": true
+      }
+    ]
+  },
+  "release_install_smoke": {
+    "mobile": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "quest": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    }
+  },
+  "publication_override": {
+    "authorized_by_user": true,
+    "authorized_at": "2026-11-16T20:23:04.264849+00:00",
+    "kind": "standing_authorization",
+    "user_statement": "J'autorise TOUT devient maintenant une règle.",
+    "user_statement_date": "2026-11-14",
+    "in_reply_to": "The question whether versions may be published without phone or Quest testing without asking again for each version.",
+    "recorded_in": "AGENTS.md (commit aeeda8e)",
+    "reason": "The owner made publishing validated versions without phone or Quest testing a standing rule.",
+    "scope": "physical device installation and all on-device behaviour of 6.0.0-beta.2"
+  },
+  "owner_requests_2026_11_16": {
+    "redesign": "Ket 27 becomes the only interface and Cascade the only lyrics style; adapt the app to tablets better than Apple Music on iPadOS; keep improving the separation and Ketmix.",
+    "menus_badge_slider": "The Ket 27 glass menu replaces the base menu, the old one only behind More; downloads separated by the model show a music symbol; a voice level slider visible on the lyrics screen only with the controls (not in full-screen lyrics), drawn after the owner's reference image.",
+    "done": {
+      "ket27_only": "ket27 and lyricsStyle settings retired (RetiredInterfaceSettingsHostTest); classic branches removed; Material alerts, text buttons, spinners, progress bars and snackbar replaced by Ket 27 components",
+      "menus": "GlassContextMenu opens from long presses and every more button (library, playlists, albums, Home, track rows, full and tablet players); the full TrackMenuSheet opens from its More item",
+      "tablet": "LargeScreen layouts for large windows (never phones or Quest): rail, glass sidebar, docked mini-player, two-pane collection and search pages, TabletPlayer, floating sheets, keyboard shortcuts, pointer extras",
+      "voice_level": "StemLibrary separates downloads whole while charging (StemStore -w.kvs); VoiceStage applies the stored mask in real time after the deck DSP with a constant 4096-frame delay; VoiceSlider on the lyrics screen; voiceLevel key 0..100",
+      "downloads_badge": "KetIcons.Music on downloads separated whole, read off the main thread"
+    }
+  },
+  "not_validated": [
+    "physical phone, tablet, foldable or Quest installation, rendering, touch, keyboard and mouse behaviour",
+    "the voice level on a device: audio quality of the real-time voice reduction, its CPU cost on the audio thread, the 4096-frame (about 0.09 s) delay it adds to separated titles",
+    "whole-title separation of downloads on a device: time, battery and storage",
+    "the high-quality separation model on a device (speed, memory, battery)",
+    "independent code review of this diff"
+  ],
+  "known_limitations": [
+    "The voice level works only on downloaded songs once they are separated whole, which happens while the phone charges.",
+    "Separated songs play about 0.09 s later than they otherwise would, at every voice level, so that moving the slider never makes the sound jump.",
+    "The high-quality model is about ten times slower than the quick one; in automatic mode it only runs while the phone charges.",
+    "Being a beta tag, the in-app updater does not offer it to users of a stable version; it is offered on the website and the releases page.",
+    "The signing certificate is the existing public Android debug identity, not a private production key."
+  ],
+  "canonical_banner_sha256": "47f6793088983f7d4e6bd1aeaa2cbd8b7cdc2a8f91271e3b2839daea81da0436"
+}
