@@ -21,6 +21,15 @@
 
 ## Overview
 
+### 6.0.0 Beta 4 — Ketmix in time, a glass icon, a finer Ket 27
+
+Ketmix now blends songs on the beat like Apple Music's AutoMix, then lets each one glide back to its own tempo;
+the voice slider answers at once; better quality arrives without a gap; and Ket 27 gets a new glass icon,
+a full-screen player, glowing lyrics, a floating search and covers that zoom into their page.
+[Mobile](https://github.com/Tysnnn23/Ketvoice/releases/download/v6.0.0-beta.4/Ketvoice-6.0.0-beta.4.apk)
+· [Quest](https://github.com/Tysnnn23/Ketvoice/releases/download/v6.0.0-beta.4/Ketvoice-6.0.0-beta.4-Quest.apk)
+· [Release notes](docs/releases/v6.0.0-beta.4.md).
+
 ### 6.0.0 Beta 3 — The voice of every song
 
 The voice slider of the lyrics screen now works on every song: touch it and Ketvoice separates the song you

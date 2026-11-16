@@ -7,6 +7,22 @@
 
 ---
 
+# Ketvoice 6.0.0 Beta 4
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 127** — Ketmix at AutoMix's level, an instant voice slider, the new glass icon, a finer Ket 27.
+
+- Ketmix: `tempoRange` 4/6/8 % with `TempoReturn` (0.25 % every 500 ms after the blend, pitch kept; the owner lifted the no-speed-change rule); `DeckAutomation.midDb` peaking band at 1 kHz held back on one deck at a time in blends in time (−4 dB, −8 dB on key clashes); crossfades start on phrases and are halved on key clashes.
+- Voice level: `VoiceStage` runs from the stream start whenever a model is installed and takes masks up live (no re-seek), survives speed-change flushes, interpolates between mask frames and extends the mask above 11 kHz (also in `Separator.stem`); `VoiceSeparation` starts on the lyrics screen and upgrades to the HQ model; lyrics compensate `VoiceLevel.delayMs`.
+- Progressive quality: upgrades wait for the first stream to play and retry; `QualityHandoff.offset` aligns renditions on their loudness envelopes; equal-power crossfade; `progressiveQuality` on by default.
+- Icons: owner's four iOS 27 images matted (`tools/icons/`), transparent adaptive backgrounds, themed layer, picker with previews.
+- Ket 27: `glassTintLevel` (0..6, replaces `glassTint`), `glassTilt`, `CoverLook` with WCAG-checked accents; full-bleed phone player (`PlayerHero`); Home mix cards; Library/Downloads glass pills and grids; lyrics mesh and word halo; floating search bubble; cover zoom (`CoverZoom`); `collapsingTabBar` (off by default).
+
+Full notes: [6.0.0 Beta 4](docs/releases/v6.0.0-beta.4.md).
+
+---
+
 # Ketvoice 6.0.0 Beta 3
 
 ![Ketvoice](ketvoice-banner.png)
