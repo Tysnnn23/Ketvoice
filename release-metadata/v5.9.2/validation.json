@@ -1,0 +1,182 @@
+{
+  "schema": 8,
+  "version": "5.9.2",
+  "versionCode": 121,
+  "source_commit": "8fc643221835969e8ab7bc7f831902aead4e807f",
+  "created_at": "2026-11-16T13:14:18.354983+00:00",
+  "build_origin": {
+    "kind": "github_actions_with_owner_discord_sdk",
+    "workflow": "android.yml",
+    "run_id": 43871742472,
+    "artifact": {
+      "id": 14229286029,
+      "sha256": "e0f6b690cc8f13bc8e2031d1fd00b94356fd49df6050d94bfbca5a7afe33591d"
+    },
+    "gradle": "assembleMobileRelease assembleQuestRelease",
+    "note": "Signed by CI with the pinned keystore secret; the Discord Social SDK AAR matched its pinned SHA-256."
+  },
+  "local_validation": {
+    "result": "debug JVM/Robolectric suites for both flavors, release lint and the UI text audit passed in a cloud container without the Discord SDK",
+    "commands": [
+      "testMobileDebugUnitTest",
+      "testQuestDebugUnitTest",
+      "lintMobileRelease",
+      "lintQuestRelease",
+      "tools/audit_ui_texts.py --check"
+    ],
+    "ci_validation": "run 43871742472: release builds, debug and release unit tests for both flavors, UI text audit, lint, APK signature pin and Discord bridge packaging passed",
+    "code_review": {
+      "kind": "none independent"
+    },
+    "host_previews": "one lyrics-video frame rendered on the host (cover-colour background, four lines, partial word fill, cover and title, logo) and inspected; LikeLayoutHostTest checks the title stays in place after a like",
+    "after_last_full_local_run": "no source change after the last complete local run"
+  },
+  "server": {
+    "function": "ketvoice-content",
+    "deployed_version": 23,
+    "changed_in_this_version": false,
+    "note": "no server change since 5.4.0"
+  },
+  "tests": {
+    "mobile": {
+      "jvm": {
+        "tests": 833,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "android_15_emulator_compose": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "quest": {
+      "jvm": {
+        "tests": 832,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "android_15_emulator_compose": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    }
+  },
+  "lint": {
+    "mobile": {
+      "Warning": 187,
+      "Hint": 21
+    },
+    "quest": {
+      "Warning": 189,
+      "Hint": 21
+    },
+    "errors": 0,
+    "new_vs_5_9_1": "none"
+  },
+  "apks": [
+    {
+      "name": "Ketvoice-5.9.2.apk",
+      "sha256": "d199f997df5090d53c25115906ba4e8858490936c3c2ad607d9bbd42c706bf72",
+      "bytes": 74950656,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "5.9.2",
+      "versionCode": 121,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-5.9.2-Quest.apk",
+      "sha256": "344c966c28a5a26d5484a9befa4b121b79c86f3b3c473819e2175eeb4a17837e",
+      "bytes": 84984330,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "5.9.2",
+      "versionCode": 121,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    }
+  ],
+  "discord": {
+    "sdk_present_in_ci_build": true,
+    "sdk_sha256_pinned": true,
+    "bridge_and_native_libraries_verified": true,
+    "presence_mode": "unauthenticated_rpc_through_installed_discord_app"
+  },
+  "credential_scan": {
+    "entries": 3499,
+    "findings": 0,
+    "raw_pattern_findings": 1,
+    "scope": "tracked sources and APK archive entries",
+    "kind": "credential_patterns",
+    "explicit_private_provider_key_deny_list": false,
+    "triage": [
+      {
+        "file": "Ketvoice-Liquid-Glass-V4.html",
+        "classification": "embedded_image_false_positive",
+        "all_hits_inside_image_data_uris": true,
+        "rescanned_without_image_payloads": true
+      }
+    ]
+  },
+  "release_install_smoke": {
+    "mobile": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "quest": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    }
+  },
+  "publication_override": {
+    "authorized_by_user": true,
+    "authorized_at": "2026-11-16T13:14:18.354983+00:00",
+    "kind": "standing_authorization",
+    "user_statement": "J'autorise TOUT devient maintenant une règle.",
+    "user_statement_date": "2026-11-14",
+    "in_reply_to": "The question whether versions may be published without phone or Quest testing without asking again for each version.",
+    "recorded_in": "AGENTS.md (commit aeeda8e)",
+    "reason": "The owner made publishing validated versions without phone or Quest testing a standing rule.",
+    "scope": "physical device installation and all on-device behaviour of 5.9.2"
+  },
+  "owner_request_2026_11_16_third": {
+    "statement_summary": "the app still needs a lot of performance work; create a performance mode where effects stay visible and invisible or barely visible things are reduced, to raise performance and lower latency and loading; fix the like animation moving the button and title; a new video mode for shared lyrics with the Canvas blurred behind and synchronised lyrics in the middle, up to four lines (a screenshot of another app's share sheet given as inspiration, not to copy).",
+    "done": {
+      "performance_mode": "highPerformanceMode now renders glass as Blur (it used to switch glass to Static, i.e. no glass effect), removes per-line lyric blur layers, runs ArtworkFlow every fourth frame instead of stopping it, disables Coil crossfades (read at image-loader creation), and no longer turns off album hero Canvas; living artwork and lyric breathing stay off in it",
+      "like": "HeartBurst measured 96 dp inside the heart's Box, so the first like grew the title row; it is now laid out as a zero-size point at the button's centre",
+      "lyrics_video": "LyricVideo: 720x1280, 30 fps, H.264 baseline via MediaCodec input surface (lockHardwareCanvas), muxed to MP4 with frame-count timestamps, no audio; window from 0.7 s before the first line to 1.3 s after the next line's start (15 s max); Canvas frames read every 100 ms at 54x96 and cross-faded, else three rotating blurred cover copies; frosted card with up to four lines, word fill from word times, cover thumbnail, title, artist, optional KETVOICE mark; shared as video/mp4 with the title link. MomentCard MAX_LINES 2 -> 4"
+    },
+    "not_measured": "the encoder was never run (no device or emulator; Robolectric has no hardware encoder); no frame-time measurement of the performance mode"
+  },
+  "not_validated": [
+    "physical phone or Quest installation, rendering and touch behaviour",
+    "lyrics video encoding on any device: MediaCodec surface encoding, frame pacing and the resulting MP4 were never produced",
+    "Canvas frame extraction for the video on real Canvas files",
+    "the performance mode's effect on frame rate",
+    "independent code review of this diff"
+  ],
+  "known_limitations": [
+    "Lyrics videos have no sound.",
+    "If a phone's encoder refuses the format, the video is not made and the player says so; the picture still works.",
+    "Lines without timing can only be shared as a picture.",
+    "Image crossfades follow the performance mode from the next launch of the app.",
+    "Ket 27 stays an alpha: several pages keep Ketvoice's own structure.",
+    "The signing certificate is the existing public Android debug identity, not a private production key."
+  ],
+  "canonical_banner_sha256": "47f6793088983f7d4e6bd1aeaa2cbd8b7cdc2a8f91271e3b2839daea81da0436"
+}
