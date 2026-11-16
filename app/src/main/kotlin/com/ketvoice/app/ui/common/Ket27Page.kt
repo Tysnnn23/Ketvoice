@@ -1,6 +1,8 @@
 package com.ketvoice.app.ui.common
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.LocalTextStyle
@@ -79,11 +81,8 @@ internal fun Ket27Alert(onDismissRequest: () -> Unit, confirmButton: @Composable
                         dismissButton: (@Composable () -> Unit)? = null, title: (@Composable () -> Unit)? = null,
                         text: (@Composable () -> Unit)? = null) {
     val theme = LocalTheme.current
-    Dialog(onDismissRequest) {
-        val shape = RoundedCornerShape(Ket27.Metrics.alertRadius)
-        GlassPanel(modifier.widthIn(max = 320.dp).fillMaxWidth().testTag("ket27-alert"), shape, GlassParams.sheet(34f, dark = theme.isDark)) {
-            Column(Modifier.fillMaxWidth().background(theme.card.copy(alpha = if (theme.isDark) .82f else .9f))
-                .padding(start = 18.dp, end = 18.dp, top = 22.dp, bottom = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+    Ket27DialogCard(onDismissRequest, modifier.testTag("ket27-alert")) {
+            Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
                 val centred: TextStyle = LocalTextStyle.current.copy(textAlign = TextAlign.Center)
                 if (title != null) ProvideTextStyle(centred.merge(Ket27.Type.headline).copy(color = theme.onBackground, textAlign = TextAlign.Center)) {
                     Box(Modifier.fillMaxWidth().padding(horizontal = 6.dp).semantics { heading() }, contentAlignment = Alignment.Center) { title() }
@@ -92,15 +91,51 @@ internal fun Ket27Alert(onDismissRequest: () -> Unit, confirmButton: @Composable
                     Box(Modifier.fillMaxWidth().padding(start = 6.dp, end = 6.dp, top = if (title != null) 6.dp else 0.dp),
                         contentAlignment = Alignment.Center) { text() }
                 }
-                Row(Modifier.fillMaxWidth().padding(top = 18.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    val capsule = RoundedCornerShape(999.dp)
-                    if (dismissButton != null) Box(Modifier.weight(1f).heightIn(min = 48.dp).clip(capsule)
-                        .background(theme.onBackground.copy(alpha = .08f)), contentAlignment = Alignment.Center, propagateMinConstraints = true) { dismissButton() }
-                    Box(Modifier.weight(1f).heightIn(min = 48.dp).clip(capsule).background(theme.accent.copy(alpha = .16f)),
-                        contentAlignment = Alignment.Center, propagateMinConstraints = true) { confirmButton() }
-                }
+                Ket27AlertButtons(confirmButton, dismissButton, Modifier.padding(top = 18.dp))
             }
+    }
+}
+
+/** The buttons of a Ket 27 alert: two capsules side by side, the confirmation tinted with the app's colour. */
+@Composable
+internal fun Ket27AlertButtons(confirmButton: @Composable () -> Unit, dismissButton: (@Composable () -> Unit)?, modifier: Modifier = Modifier) {
+    val theme = LocalTheme.current
+    Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        val capsule = RoundedCornerShape(999.dp)
+        if (dismissButton != null) Box(Modifier.weight(1f).heightIn(min = 48.dp).clip(capsule)
+            .background(theme.onBackground.copy(alpha = .08f)), contentAlignment = Alignment.Center, propagateMinConstraints = true) { dismissButton() }
+        Box(Modifier.weight(1f).heightIn(min = 48.dp).clip(capsule).background(theme.accent.copy(alpha = .16f)),
+            contentAlignment = Alignment.Center, propagateMinConstraints = true) { confirmButton() }
+    }
+}
+
+/**
+ * The card every Ket 27 dialog is drawn on: rounded glass (34 dp corners) in the middle of the
+ * screen, at most 320 dp wide, its content laid out by the caller (an alert, a short choice, a field).
+ */
+@Composable
+internal fun Ket27DialogCard(onDismissRequest: () -> Unit, modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
+    val theme = LocalTheme.current
+    Dialog(onDismissRequest) {
+        val shape = RoundedCornerShape(Ket27.Metrics.alertRadius)
+        GlassPanel(modifier.widthIn(max = 320.dp).fillMaxWidth(), shape, GlassParams.sheet(34f, dark = theme.isDark)) {
+            Column(Modifier.fillMaxWidth().background(theme.card.copy(alpha = if (theme.isDark) .82f else .9f))
+                .padding(start = 18.dp, end = 18.dp, top = 22.dp, bottom = 16.dp), content = content)
         }
+    }
+}
+
+/**
+ * The back link inside a page, as iOS writes it: a chevron and the name of the level above, in the
+ * app's colour, with a 44 dp target. [label] is a French literal, translated at display.
+ */
+@Composable
+internal fun BackLink(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val theme = LocalTheme.current
+    Row(modifier.heightIn(min = 44.dp).clickable(role = Role.Button, onClick = onClick).padding(end = 10.dp),
+        verticalAlignment = Alignment.CenterVertically) {
+        Icon(KetIcons.ChevronRight, null, tint = theme.accent, modifier = Modifier.size(18.dp).turnedBack())
+        Text(label, color = theme.accent, style = Ket27.Type.body, modifier = Modifier.padding(start = 4.dp))
     }
 }
 

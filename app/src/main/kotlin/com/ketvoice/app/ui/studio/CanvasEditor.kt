@@ -6,7 +6,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,31 +49,31 @@ internal fun CanvasEditor(state: StudioState, chosen: File?, onChosen: (File?) -
     val pick = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) state.run { onLink?.invoke(null); onChosen(state.files.copy(uri, StudioCanvas.MAX_BYTES, setOf("mp4", "m4v", "mov"))) }
     }
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(theme.card).padding(16.dp).testTag("studio-canvas"),
+    // Ket 27: a group of the inset list (26 dp corners), the Canvas's tile and name at its head.
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(com.ketvoice.app.theme.Ket27.Metrics.groupRadius)).background(theme.card)
+        .padding(16.dp).testTag("studio-canvas"),
         verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(KetIcons.Canvas, null, tint = theme.accent, modifier = Modifier.size(22.dp))
+            com.ketvoice.app.ui.settings.Ket27Tile(KetIcons.Canvas, 4)
             Column(Modifier.weight(1f).padding(start = 12.dp)) {
-                Text("Canvas", color = theme.onBackground, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                Text("Canvas", color = theme.onBackground, style = com.ketvoice.app.theme.Ket27.Type.body)
                 Text(when {
                     linked != null -> "Lien · diffusé depuis son adresse, sans limite de taille"
                     chosen != null -> "Nouvelle vidéo · à envoyer"
                     published -> "En ligne"
                     else -> "Aucun · vidéo courte en boucle derrière le titre"
-                }, color = theme.secondary, fontSize = 12.sp)
+                }, color = theme.secondary, style = com.ketvoice.app.theme.Ket27.Type.footnote)
             }
-            if (chosen != null || linked != null) Text("Annuler", color = theme.secondary, fontSize = 14.sp,
-                modifier = Modifier.clip(RoundedCornerShape(12.dp)).clickable(role = Role.Button) { onChosen(null); onLink?.invoke(null) }
-                    .heightIn(min = 48.dp).wrapContentHeight(Alignment.CenterVertically).padding(horizontal = 10.dp))
+            if (chosen != null || linked != null) com.ketvoice.app.ui.common.KetTextButton("Annuler",
+                { onChosen(null); onLink?.invoke(null) }, Modifier.heightIn(min = 48.dp))
         }
         GlassSegmentedControl(listOf("Fichier", "Lien vidéo", "API"), source, { source = it }, tag = "studio-canvas-source")
         when (source) {
             0 -> GlassCapsuleButton("Choisir un MP4", null, { pick.launch(arrayOf("video/mp4", "video/quicktime", "video/*")) },
                 Modifier.fillMaxWidth(), enabled = !state.busy, tag = "studio-canvas-file", minHeight = 48.dp)
             else -> {
-                OutlinedTextField(link, { link = it.take(2048) }, singleLine = true, enabled = !state.busy,
-                    label = { Text(if (source == 1) "Lien direct vers une vidéo MP4" else "Lien d'API ou lien de titre Spotify") },
-                    modifier = Modifier.fillMaxWidth().testTag("studio-canvas-link"), colors = studioFieldColors())
+                com.ketvoice.app.ui.common.KetTextField(link, { link = it.take(2048) }, if (source == 1) "Lien direct vers une vidéo MP4" else "Lien d'API ou lien de titre Spotify",
+                    Modifier.fillMaxWidth().testTag("studio-canvas-link"), enabled = !state.busy)
                 GlassCapsuleButton(if (onLink != null) "Utiliser ce lien" else "Récupérer la vidéo", null, {
                     val parsed = StudioCanvas.classify(link)
                     if (parsed == null) state.error = "Lien HTTPS requis"
@@ -83,7 +82,7 @@ internal fun CanvasEditor(state: StudioState, chosen: File?, onChosen: (File?) -
                     else state.run { onChosen(StudioCanvas.download(parsed, state.files.newFile("mp4"))) }
                 }, Modifier.fillMaxWidth(), enabled = !state.busy && link.isNotBlank(), tag = "studio-canvas-fetch", minHeight = 48.dp)
                 if (onLink != null) Text("La vidéo est lue depuis ce lien : rien n'est téléchargé ni stocké, sans limite de taille.",
-                    color = theme.secondary, fontSize = 12.sp)
+                    color = theme.secondary, style = com.ketvoice.app.theme.Ket27.Type.footnote)
             }
         }
         if (chosen != null && checks.isNotEmpty()) Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.testTag("studio-canvas-checks")) {
@@ -95,7 +94,7 @@ internal fun CanvasEditor(state: StudioState, chosen: File?, onChosen: (File?) -
                         StudioCanvas.Level.Blocking -> Color(0xFFFF453A)
                     }
                     Box(Modifier.size(8.dp).clip(RoundedCornerShape(4.dp)).background(tint))
-                    Text(check.label, color = theme.onBackground, fontSize = 12.sp, modifier = Modifier.padding(start = 8.dp))
+                    Text(check.label, color = theme.onBackground, style = com.ketvoice.app.theme.Ket27.Type.footnote, modifier = Modifier.padding(start = 8.dp))
                 }
             }
         }

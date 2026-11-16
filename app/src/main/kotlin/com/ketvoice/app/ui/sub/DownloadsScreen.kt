@@ -18,9 +18,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -160,13 +158,7 @@ fun DownloadsScreen() {
                     }
                     val crumb = chosen?.title ?: chosenArtist?.name
                     if (crumb != null) Row(verticalAlignment = Alignment.CenterVertically) {
-                        // The back link of iOS: a chevron and the name of the page above, in the app's colour.
-                        Row(Modifier.heightIn(min = 44.dp).clickable(role = androidx.compose.ui.semantics.Role.Button) { albumKey = null; artistKey = null }
-                            .padding(end = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Icon(KetIcons.ChevronRight, null, tint = theme.accent, modifier = Modifier.size(18.dp).graphicsLayer { scaleX = -1f })
-                            Text(if (chosen != null) "Albums" else "Artistes", color = theme.accent, style = com.ketvoice.app.theme.Ket27.Type.body,
-                                modifier = Modifier.padding(start = 4.dp))
-                        }
+                        com.ketvoice.app.ui.common.BackLink(if (chosen != null) "Albums" else "Artistes", { albumKey = null; artistKey = null })
                         Text(crumb, localize = false, color = theme.onBackground, fontSize = 22.sp, fontWeight = FontWeight.Bold,
                             maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
@@ -305,8 +297,8 @@ fun DownloadsScreen() {
 private fun DownloadSectionTitle(title: String, count: Int) {
     val theme = LocalTheme.current
     Row(Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(title, color = theme.onBackground, fontWeight = FontWeight.Bold, fontSize = 19.sp, modifier = Modifier.weight(1f))
-        Text(count.toString(), localize = false, color = theme.secondary, fontSize = 13.sp)
+        com.ketvoice.app.ui.common.SectionHeader(title, Modifier.weight(1f))
+        Text(count.toString(), localize = false, color = theme.secondary, style = com.ketvoice.app.theme.Ket27.Type.subheadline)
     }
 }
 

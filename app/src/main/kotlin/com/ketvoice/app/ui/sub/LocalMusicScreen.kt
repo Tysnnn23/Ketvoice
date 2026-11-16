@@ -15,7 +15,6 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -205,10 +204,7 @@ fun LocalMusicScreen() {
                             }
                         }
                         if (group != null) Row(verticalAlignment = Alignment.CenterVertically) {
-                            TextButton(onClick = { groupKey = null }, contentPadding = PaddingValues(end = 10.dp)) {
-                                Icon(KetIcons.ArrowLeft, null, tint = theme.accent, modifier = Modifier.size(18.dp))
-                                Text(if (view == 1) "Albums" else "Artistes", color = theme.accent, modifier = Modifier.padding(start = 6.dp))
-                            }
+                            com.ketvoice.app.ui.common.BackLink(if (view == 1) "Albums" else "Artistes", { groupKey = null })
                             Text(group.title, localize = false, color = theme.onBackground, fontSize = 20.sp, fontWeight = FontWeight.Bold,
                                 maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }

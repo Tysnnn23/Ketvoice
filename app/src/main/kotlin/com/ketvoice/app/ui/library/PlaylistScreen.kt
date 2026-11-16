@@ -186,7 +186,7 @@ fun PlaylistScreen() {
                     com.ketvoice.app.ui.common.GlassCapsuleButton(if (editing) "Terminer" else "Modifier l'ordre", null,
                         { editing = !editing }, Modifier.widthIn(max = 240.dp), enabled = !busy && playlist.entries.size > 1,
                         tag = "playlist-reorder", minHeight = 44.dp)
-                    if (error.isNotBlank()) Text(error, color = MaterialTheme.colorScheme.error,
+                    if (error.isNotBlank()) Text(error, color = com.ketvoice.app.ui.common.DESTRUCTIVE,
                         fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
                 }
             }

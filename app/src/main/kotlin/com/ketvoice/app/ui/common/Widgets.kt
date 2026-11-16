@@ -107,7 +107,7 @@ fun SectionTitle(
             .padding(start = 20.dp, end = 16.dp, top = topPad, bottom = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(text, style = T.section, color = LocalTheme.current.onBackground)
+        SectionHeader(text)
         Spacer(Modifier.weight(1f))
         trailing?.invoke()
     }

@@ -20,7 +20,6 @@ import com.ketvoice.app.ui.common.GlassBackButton
 import com.ketvoice.app.ui.common.Icon
 import com.ketvoice.app.ui.common.Text
 import androidx.compose.runtime.*
-import androidx.compose.material3.TextButton
 import androidx.compose.ui.platform.testTag
 import kotlinx.coroutines.launch
 import com.ketvoice.app.ui.common.TrackActionFeedback
@@ -148,7 +147,8 @@ fun CatalogScreen(request: CatalogRequest? = AppUi.catalogRequest.value) {
             }
             if (request.kind == "mix") item(span = { GridItemSpan(maxLineSpan) }) {
                 // A mix changes with the listening history; saving it keeps this exact selection.
-                TextButton(enabled = !saving && !savedAsPlaylist, onClick = {
+                com.ketvoice.app.ui.common.KetTextButton(if (savedAsPlaylist) "Playlist enregistrée dans la bibliothèque" else "Enregistrer comme playlist",
+                    enabled = !saving && !savedAsPlaylist, primary = true, tint = if (savedAsPlaylist) theme.secondary else null, onClick = {
                     // One playlist per mix page: a second tap must not create a copy.
                     saving = true
                     saveScope.launch {
@@ -162,10 +162,7 @@ fun CatalogScreen(request: CatalogRequest? = AppUi.catalogRequest.value) {
                         TrackActionFeedback.snackbar.showSnackbar(AppText.t(
                             if (saved) "Playlist enregistrée dans la bibliothèque" else "Impossible d'enregistrer la playlist"))
                     }
-                }, modifier = Modifier.padding(horizontal = 10.dp).testTag("mix-save")) {
-                    Text(if (savedAsPlaylist) "Playlist enregistrée dans la bibliothèque" else "Enregistrer comme playlist",
-                        color = if (savedAsPlaylist) theme.secondary else theme.accent, fontWeight = FontWeight.SemiBold)
-                }
+                }, modifier = Modifier.padding(horizontal = 10.dp).testTag("mix-save"))
             }
             itemsIndexed(tracks, key = { i, t -> "${t.id}:$i" }) { index, track ->
                 val active = player.current?.id == track.id

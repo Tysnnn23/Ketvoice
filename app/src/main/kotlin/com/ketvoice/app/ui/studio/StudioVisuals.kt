@@ -201,8 +201,7 @@ private fun VisualPart(icon: androidx.compose.ui.graphics.vector.ImageVector, ti
                     .clickable(role = androidx.compose.ui.semantics.Role.Button) { onLink(null) }.heightIn(min = 48.dp)
                     .wrapContentHeight(Alignment.CenterVertically).padding(horizontal = 10.dp))
             } else {
-                androidx.compose.material3.OutlinedTextField(link, { link = it.take(2048) }, singleLine = true, enabled = !busy,
-                    label = { Text("Ou un lien vers l'image") }, modifier = Modifier.fillMaxWidth().testTag("$tag-link"), colors = studioFieldColors())
+                com.ketvoice.app.ui.common.KetTextField(link, { link = it.take(2048) }, "Ou un lien vers l'image", Modifier.fillMaxWidth().testTag("$tag-link"), enabled = !busy)
                 GlassCapsuleButton("Utiliser ce lien", null, {
                     state.run { onLink(com.ketvoice.app.data.StudioImageLink.check(link)); link = "" }
                 }, Modifier.fillMaxWidth(), enabled = !busy && link.isNotBlank(), tag = "$tag-use-link", minHeight = 48.dp)

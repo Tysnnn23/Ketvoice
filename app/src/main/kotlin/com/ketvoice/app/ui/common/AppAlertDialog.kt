@@ -42,7 +42,7 @@ fun KetTextButton(label: String, onClick: () -> Unit, modifier: Modifier = Modif
         .padding(horizontal = 12.dp, vertical = 10.dp), contentAlignment = Alignment.Center) {
         Text(label, localize = localize, color = color, style = Ket27.Type.body,
             fontWeight = if (primary) FontWeight.SemiBold else FontWeight.Normal, textAlign = TextAlign.Center,
-            maxLines = 1, overflow = TextOverflow.Ellipsis)
+            maxLines = 2, overflow = TextOverflow.Ellipsis)
     }
 }
 

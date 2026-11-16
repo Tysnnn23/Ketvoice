@@ -101,14 +101,7 @@ fun ListeningStatsScreen(modifier: Modifier = Modifier) {
 
 @Composable
 private fun SectionTitle(label: String) {
-    val theme = LocalTheme.current
-    Text(
-        text = label,
-        color = theme.onBackground,
-        fontSize = 18.sp,
-        fontWeight = FontWeight.Bold,
-        modifier = Modifier.padding(top = 10.dp, bottom = 2.dp)
-    )
+    com.ketvoice.app.ui.common.SectionHeader(label, Modifier.padding(top = 10.dp, bottom = 2.dp))
 }
 
 @Composable

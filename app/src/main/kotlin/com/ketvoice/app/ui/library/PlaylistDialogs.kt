@@ -59,7 +59,7 @@ private fun CreatePlaylistDialog() {
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Créer une playlist", color = th.onBackground, fontSize = 20.sp, fontWeight = FontWeight.Bold)
             SettingsTextInput(name, { name = it.take(80) }, "Nom de la playlist", !saving, Modifier.testTag("playlist-name"))
-            if (error.isNotBlank()) Text(error, color = MaterialTheme.colorScheme.error)
+            if (error.isNotBlank()) Text(error, color = com.ketvoice.app.ui.common.DESTRUCTIVE)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                 SettingsAction("Annuler", { AppUi.showCreatePlaylist.value = false }, enabled = !saving)
                 SettingsAction("Créer", {
@@ -226,7 +226,7 @@ fun SpotifyImportDialog(onClose: () -> Unit) {
                 }
             }
             if(busy)com.ketvoice.app.ui.common.KetProgressBar(null)
-            if(error.isNotBlank())Text(error,color=MaterialTheme.colorScheme.error)
+            if(error.isNotBlank())Text(error,color=com.ketvoice.app.ui.common.DESTRUCTIVE)
             Column(Modifier.fillMaxWidth(), horizontalAlignment=Alignment.End) {
                 SettingsAction("Créer avec les titres affichés", {run{
                     val source=preview ?: return@run
