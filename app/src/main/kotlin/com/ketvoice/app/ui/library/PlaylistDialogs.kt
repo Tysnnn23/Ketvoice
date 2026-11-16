@@ -68,9 +68,9 @@ private fun CreatePlaylistDialog() {
                     saving = true; error = ""
                     scope.launch {
                         try {
-                            val entries = AppUi.addToPlaylist.value?.let { listOf(PlaylistRules.entry(it)) }.orEmpty()
+                            val entries = AppUi.pendingPlaylistTracks().orEmpty().distinctBy { it.id }.map { PlaylistRules.entry(it) }
                             val id = PlaylistStore.create(name,entries)
-                            AppUi.addToPlaylist.value = null; AppUi.showCreatePlaylist.value = false; AppUi.openPlaylist(id)
+                            AppUi.clearPendingPlaylistTracks(); AppUi.showCreatePlaylist.value = false; AppUi.openPlaylist(id)
                         } catch (cancelled: CancellationException) { throw cancelled }
                         catch (failure: Exception) { error = userError(failure) }
                         finally { saving = false }
@@ -101,7 +101,7 @@ private fun SettingsTextInput(value: String, onChange: (String) -> Unit, label: 
  * Rendue par AppRoot au-dessus du chrome flottant.
  */
 @Composable
-fun AddToPlaylistSheet(track: Track, onClose: () -> Unit) {
+fun AddToPlaylistSheet(tracks: List<Track>, onClose: () -> Unit) {
     val rows by PlaylistStore.lists.collectAsState()
     val scope = rememberCoroutineScope()
     var savingId by remember { mutableStateOf<String?>(null) }
@@ -122,7 +122,9 @@ fun AddToPlaylistSheet(track: Track, onClose: () -> Unit) {
                     .background(Color.White.copy(alpha = .35f)))
             }
             Text("Ajouter à une playlist", color = Color.White, fontSize = 21.sp,
-                fontWeight = FontWeight.Black, modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp))
+                fontWeight = FontWeight.Black, modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = if (tracks.size > 1) 2.dp else 12.dp))
+            if (tracks.size > 1) Text(AppText.t("{0} titres").replace("{0}", tracks.size.toString()), localize = false,
+                color = Color.White.copy(alpha = .6f), fontSize = 13.sp, modifier = Modifier.padding(start = 20.dp, bottom = 10.dp))
             if (rows.isEmpty()) {
                 Text("Créez votre première playlist pour y ajouter ce titre.",
                     color = Color.White.copy(alpha = .6f), fontSize = 14.sp,
@@ -136,7 +138,7 @@ fun AddToPlaylistSheet(track: Track, onClose: () -> Unit) {
                                 .clickable(enabled = !saving) {
                                     savingId = list.id
                                     scope.launch {
-                                        try { PlaylistStore.add(list.id, track); onClose() }
+                                        try { PlaylistStore.addAll(list.id, tracks); onClose() }
                                         finally { savingId = null }
                                     }
                                 }

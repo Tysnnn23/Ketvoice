@@ -36,6 +36,11 @@ object AppUi {
     val showCreatePlaylist = androidx.compose.runtime.mutableStateOf(false)
     val showSpotifyImport = androidx.compose.runtime.mutableStateOf(false)
     val addToPlaylist = androidx.compose.runtime.mutableStateOf<com.ketvoice.app.data.Track?>(null)
+    /** Several titles at once for a playlist (5.9.1): a whole album or a selection. */
+    val addTracksToPlaylist = androidx.compose.runtime.mutableStateOf<List<com.ketvoice.app.data.Track>?>(null)
+    /** What the "add to playlist" sheet adds: one title or several. */
+    fun pendingPlaylistTracks(): List<com.ketvoice.app.data.Track>? = addToPlaylist.value?.let(::listOf) ?: addTracksToPlaylist.value?.takeIf { it.isNotEmpty() }
+    fun clearPendingPlaylistTracks() { addToPlaylist.value = null; addTracksToPlaylist.value = null }
     // Menu d'actions d'une playlist : porté au niveau racine pour que la feuille
     // se dessine au-dessus du chrome flottant (mini-lecteur + navigation) au lieu
     // d'être recouverte par lui, et pour hériter du vrai verre dynamique. Les

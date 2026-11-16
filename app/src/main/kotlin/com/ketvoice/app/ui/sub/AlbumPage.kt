@@ -361,6 +361,9 @@ private fun AlbumPlaybackActions(tracks: List<Track>, savedIds: Set<String>, loa
                 com.ketvoice.app.ui.common.PadAction(if (missing.isEmpty() && enabled) KetIcons.Check else KetIcons.Download,
                     if (missing.isEmpty() && enabled) "Téléchargé" else "Télécharger", "album-download",
                     enabled = enabled && missing.isNotEmpty()) { missing.forEach { Downloader.download(it) } },
+                // The whole album into a playlist (5.9.1).
+                com.ketvoice.app.ui.common.PadAction(KetIcons.Plus, "Ajouter l'album à une playlist", "album-add-playlist", enabled = enabled) {
+                    com.ketvoice.app.ui.AppUi.addTracksToPlaylist.value = tracks.distinctBy { it.id } },
                 com.ketvoice.app.ui.common.PadAction(KetIcons.Refresh, "Actualiser", "album-refresh", enabled = !loading, onClick = onRefresh)))
             Spacer(Modifier.weight(1f))
             Text("Titres", color = theme.secondary, fontSize = 12.sp, fontWeight = FontWeight.Medium)

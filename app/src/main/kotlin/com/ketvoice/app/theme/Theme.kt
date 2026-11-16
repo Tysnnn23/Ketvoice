@@ -95,16 +95,23 @@ object T {
 fun KetvoiceTheme(
     useDark: Boolean? = null,
     dynamicAccent: Color? = null,
+    /** The colour the whole app's pages take (5.9.1, "Fond selon la pochette"), or null for the theme's own. */
+    dynamicTone: Color? = null,
     content: @Composable () -> Unit
 ) {
     val sysDark = isSystemInDarkTheme()
     val isDark = useDark ?: sysDark
     val accent = dynamicAccent ?: Color(com.ketvoice.app.data.AppSettings.accentArgb.value.toInt())
     val base = (if (isDark) KetTheme.dark() else KetTheme.light()).copy(accent = accent)
-    val th = if (Ket27.on) Ket27.theme(isDark, accent) else if (com.ketvoice.app.data.DesignChoices.enabled("D1")) base.copy(
+    val chosen = if (Ket27.on) Ket27.theme(isDark, accent) else if (com.ketvoice.app.data.DesignChoices.enabled("D1")) base.copy(
         background=if(isDark)Palette.BackgroundDark else Color(0xFFF7F7FA),
         card=if(isDark)Palette.CardDark else Color.White,
         secondary=if(isDark)Palette.SecondaryTextDark else Color(0xFF555A69)) else base
+    // Like an album page, the whole app takes the colour of what plays: the same tint, held dim at night.
+    val th = if (dynamicTone == null) chosen else {
+        val page = com.ketvoice.app.ui.sub.artistPageTint(chosen.background, dynamicTone, chosen.isDark)
+        chosen.copy(background = page, card = androidx.compose.ui.graphics.lerp(page, chosen.onBackground, if (chosen.isDark) .08f else .05f))
+    }
     androidx.compose.runtime.CompositionLocalProvider(
         LocalTheme provides th,
         // Le repère visuel de l'app est la réaction du verre et du contenu,

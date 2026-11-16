@@ -32,6 +32,11 @@ object PlaylistRules {
         return entries.toMutableList().apply { add(to, removeAt(from)) }
     }
     fun entry(track: Track) = PlaylistEntry(title = track.title, artist = track.artist, track = safe(track))
+    /** Entries for [tracks] that the playlist does not hold yet, each title once, in their order. */
+    fun newEntries(existing: List<PlaylistEntry>, tracks: List<Track>): List<PlaylistEntry> {
+        val held = existing.mapNotNullTo(HashSet()) { it.track?.id }
+        return tracks.distinctBy { it.id }.filter { it.id !in held }.map(::entry)
+    }
 }
 
 object PlaylistStore {
@@ -82,6 +87,10 @@ object PlaylistStore {
     suspend fun rename(id: String, value: String) { val name = PlaylistRules.name(value); change { rows -> rows.map { if (it.id == id) it.copy(name = name) else it } } }
     suspend fun delete(id: String) { change { rows -> rows.filterNot { it.id == id } } }
     suspend fun pin(id: String, pinned: Boolean) { change { rows -> rows.map { if (it.id == id) it.copy(pinned = pinned) else it } } }
+    /** Several titles at once (an album, a selection), each once: titles already in the playlist are not added again. */
+    suspend fun addAll(id: String, tracks: List<Track>) { change { rows -> rows.map { row ->
+        if (row.id != id) row else row.copy(entries = row.entries + PlaylistRules.newEntries(row.entries, tracks))
+    } } }
     suspend fun add(id: String, track: Track) { change { rows -> rows.map { if (it.id == id) it.copy(entries = it.entries + PlaylistRules.entry(track)) else it } } }
     suspend fun remove(id: String, entry: String) { change { rows -> rows.map { if (it.id == id) it.copy(entries = it.entries.filterNot { e -> e.id == entry }) else it } } }
     suspend fun move(id: String, from: Int, to: Int) { change { rows -> rows.map { if (it.id == id) it.copy(entries = PlaylistRules.move(it.entries, from, to)) else it } } }

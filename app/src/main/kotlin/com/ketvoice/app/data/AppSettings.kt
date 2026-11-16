@@ -33,6 +33,10 @@ object AppSettings {
     val coverAccent = mutableStateOf(false)
     /** Every title at about the same loudness (5.9.0, a slow leveler in the audio chain); off by default. */
     val volumeLeveling = mutableStateOf(false)
+    /** Every page of the app takes the colour of the cover playing, like an album page (5.9.1); off by default. */
+    val coverBackground = mutableStateOf(false)
+    /** Ketmix separates voices from instruments in real time for its transitions (5.9.1, experimental); off by default. */
+    val ketmixStems = mutableStateOf(false)
     val systemReduceMotion = mutableStateOf(false)
     val canvasWithMobileData = mutableStateOf(false)
     val artistSignatures = mutableStateOf(false)

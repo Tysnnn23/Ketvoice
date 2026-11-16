@@ -389,6 +389,7 @@ internal object Automix {
         fun planFor(effects: Boolean, beats: Boolean = true): MixPlan = TransitionPlanner.plan(out, incoming,
             context.copy(effects = effects, beats = beats, lastVariant = lastVariant, lastExit = lastExit), settings)
             .let { p -> if (p.mixes && p.kind != MixKind.Beatmatch && abs(outSpeed - 1f) > .0005f) p.copy(rate = 1f / outSpeed) else p }
+            .let { p -> if (p.mixes && AppSettings.ketmixStems.value) p.copy(stems = true, voiceFromMs = incoming.vocalStartMs ?: -1L) else p }
         var plan = planFor(effects = clockOk)
         if (!plan.mixes) return skip(plan.reason)
 

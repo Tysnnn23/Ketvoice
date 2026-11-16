@@ -7,6 +7,22 @@
 
 ---
 
+# Ketvoice 5.9.1
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 120** — Custom lyrics files, app-wide cover background, truer cover colours, Discord session restore, vocal separation in Ketmix.
+
+- CustomLyrics: file picker in the lyrics sources; LRC (multi-time, enhanced), TTML, SRT, VTT, ASS/SSA (\k), YRC, JSON, TXT; saved per title.
+- `coverBackground` setting (off): every page tinted like an album page. CoverColors: hue-clustered cover colour for pages, accents and the player.
+- Discord: stored access/refresh tokens restored on start (they were saved but never read back).
+- `ketmixStems` (off): real-time vocal cut — incoming instrumental first, outgoing vocals down before the next voice.
+- Add an album or a selection (library, queue) to a playlist, without duplicates.
+
+Full notes: [5.9.1](docs/releases/v5.9.1.md).
+
+---
+
 # Ketvoice 5.9.0
 
 ![Ketvoice](ketvoice-banner.png)

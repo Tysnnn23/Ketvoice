@@ -23,8 +23,8 @@ android {
         applicationId = "com.ketvoice.app"
         minSdk = 31
         targetSdk = 36
-        versionCode = 119
-        versionName = "5.9.0"
+        versionCode = 120
+        versionName = "5.9.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         resourceConfigurations += listOf("fr", "en", "hi", "ja", "zh", "ru", "it", "es", "de", "pt", "ko")
         ndkVersion = "27.0.12077973"

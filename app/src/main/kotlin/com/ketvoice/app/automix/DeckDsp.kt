@@ -112,7 +112,9 @@ internal class DeckAutomation(
         private fun point(us: Long, value: Float) = longArrayOf(us) to floatArrayOf(value)
 
         /** The title that leaves. */
-        fun outgoing(plan: MixPlan): DeckAutomation {
+        fun outgoing(plan: MixPlan): DeckAutomation = Stems.outgoing(outgoingMix(plan), plan)
+
+        private fun outgoingMix(plan: MixPlan): DeckAutomation {
             val start = plan.outMs * 1000L
             val end = (plan.outMs + plan.overlapMs) * 1000L
             return when (plan.kind) {
@@ -126,7 +128,9 @@ internal class DeckAutomation(
         }
 
         /** The title that arrives. Its positions run [MixPlan.rate] times faster than the outgoing clock. */
-        fun incoming(plan: MixPlan): DeckAutomation {
+        fun incoming(plan: MixPlan): DeckAutomation = Stems.incoming(incomingMix(plan), plan)
+
+        private fun incomingMix(plan: MixPlan): DeckAutomation {
             fun position(outMs: Long) = ((plan.inMs + (outMs - plan.outMs) * plan.rate.toDouble()) * 1000.0).toLong()
             val start = plan.inMs * 1000L
             val end = position(plan.outMs + plan.overlapMs)
@@ -299,6 +303,52 @@ internal class DeckAutomation(
  * sample (no zipper noise), two second-order filters whose cut-offs follow their curves,
  * an echo and a reverb fed after the filters.
  */
+/**
+ * The voices of a transition when "Séparer les voix" is on (5.9.1, experimental). Ketvoice separates
+ * in real time the centre of the stereo image between 220 Hz and 4.5 kHz, where a lead vocal sits
+ * (the [DeckAutomation.vocalCut] of the decks), so nothing is computed ahead or stored:
+ * - the incoming title enters as its instrumental, and its voice joins over two bars just before
+ *   it sings (or at the bass swap, or two thirds into the blend, when that moment is unknown);
+ * - the outgoing voice steps down before the incoming one sings, so two voices never overlap.
+ * The bass already changes hands on one beat (the swap of the blends).
+ */
+internal object Stems {
+    /** How far the voice is taken down: well under the music, never a hole. */
+    const val DOWN = .85f
+    private const val MOVE_US = 2_000_000L
+
+    private fun kinds(plan: MixPlan) = plan.stems && plan.kind in setOf(MixKind.Beatmatch, MixKind.Filter, MixKind.Wash, MixKind.Crossfade)
+
+    private fun ease(x: Float) = (.5 - .5 * kotlin.math.cos(Math.PI * x)).toFloat()
+
+    fun incoming(automation: DeckAutomation, plan: MixPlan): DeckAutomation {
+        if (!kinds(plan)) return automation
+        val start = plan.inMs * 1000L
+        val end = plan.inEndMs * 1000L
+        if (end <= start + MOVE_US) return automation
+        val swap = if (plan.swapMs >= 0) ((plan.inMs + (plan.swapMs - plan.outMs) * plan.rate) * 1000L).toLong() else -1L
+        val natural = plan.voiceFromMs.takeIf { it > plan.inMs }?.let { it * 1000L - 300_000L }
+        val releaseEnd = (natural ?: swap.takeIf { it > start } ?: (start + (end - start) * 2 / 3)).coerceIn(start + MOVE_US, end)
+        val releaseStart = (releaseEnd - MOVE_US).coerceAtLeast(start + 1)
+        val cut = Curve.join(Curve.shaped(start, releaseStart, 2) { DOWN }, Curve.shaped(releaseStart + 1, releaseEnd, 12) { DOWN * (1f - ease(it)) })
+        return automation.copyWith(vocalCut = cut)
+    }
+
+    fun outgoing(automation: DeckAutomation, plan: MixPlan): DeckAutomation {
+        // Already stepping down under its last sung bars: that earlier move is kept.
+        if (!kinds(plan) || automation.usesVocalCut) return automation
+        val start = plan.outMs * 1000L
+        val end = (plan.outMs + plan.overlapMs) * 1000L
+        // When the incoming voice starts, on the outgoing clock; else halfway into the blend.
+        val sings = plan.voiceFromMs.takeIf { it > plan.inMs }?.let { (plan.outMs + (it - plan.inMs) / plan.rate.toDouble()).toLong() * 1000L }
+        val downEnd = (sings ?: (start + (end - start) / 2)).coerceIn(start + 1, end)
+        val downStart = (downEnd - MOVE_US).coerceAtLeast(start)
+        val cut = Curve.join(Curve.shaped(start, maxOf(start + 1, downStart), 2) { 0f },
+            Curve.shaped(maxOf(start + 2, downStart + 1), maxOf(start + 3, downEnd), 12) { DOWN * ease(it) })
+        return automation.copyWith(vocalCut = cut)
+    }
+}
+
 internal class DeckDsp(val sampleRate: Int, val channels: Int) {
     private val high = Biquad(channels)
     private val low = Biquad(channels)

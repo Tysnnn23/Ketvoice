@@ -1517,7 +1517,18 @@
   "minutes de musique": "minutes of music",
   "{0} écoutes de {1} titres.": "{0} plays of {1} titles.",
   "Touchez pour écouter": "Tap to listen",
-  "Écoutez quelques titres pour voir votre semaine": "Play a few titles to see your week"
+  "Écoutez quelques titres pour voir votre semaine": "Play a few titles to see your week",
+  "Ajouter l'album à une playlist": "Add the album to a playlist",
+  "Changer de fichier": "Change file",
+  "Choisir un fichier : LRC, TTML, SRT, VTT, ASS, JSON, TXT…": "Choose a file: LRC, TTML, SRT, VTT, ASS, JSON, TXT…",
+  "Fichier illisible": "Unreadable file",
+  "Fichier trop volumineux (2 Mo maximum)": "File too large (2 MB maximum)",
+  "Aucune parole trouvée dans ce fichier": "No lyrics found in this file",
+  "Personnalisées · {0}": "Custom · {0}",
+  "Fond selon la pochette": "Background from the cover",
+  "Le fond de toute l'application prend la couleur de ce qui est en écoute, comme une page d'album": "The background of the whole app takes the colour of what is playing, like an album page",
+  "Pendant un mix, le titre suivant entre sans sa voix puis elle le rejoint, et la voix du titre en cours s'efface avant qu'il chante. En temps réel : rien n'est stocké": "During a mix, the next title comes in without its vocals, which then join it, and the current vocals fade before the next one sings. In real time: nothing is stored",
+  "Séparer les voix (expérimental)": "Separate vocals (experimental)"
  },
  "hi": {
   "Reverb": "रीवर्ब",
@@ -3037,7 +3048,18 @@
   "minutes de musique": "मिनट संगीत",
   "{0} écoutes de {1} titres.": "{1} गानों के {0} प्ले।",
   "Touchez pour écouter": "सुनने के लिए टैप करें",
-  "Écoutez quelques titres pour voir votre semaine": "अपना सप्ताह देखने के लिए कुछ गाने सुनें"
+  "Écoutez quelques titres pour voir votre semaine": "अपना सप्ताह देखने के लिए कुछ गाने सुनें",
+  "Ajouter l'album à une playlist": "एल्बम को प्लेलिस्ट में जोड़ें",
+  "Changer de fichier": "फ़ाइल बदलें",
+  "Choisir un fichier : LRC, TTML, SRT, VTT, ASS, JSON, TXT…": "फ़ाइल चुनें: LRC, TTML, SRT, VTT, ASS, JSON, TXT…",
+  "Fichier illisible": "फ़ाइल पढ़ी नहीं जा सकी",
+  "Fichier trop volumineux (2 Mo maximum)": "फ़ाइल बहुत बड़ी है (अधिकतम 2 MB)",
+  "Aucune parole trouvée dans ce fichier": "इस फ़ाइल में कोई बोल नहीं मिले",
+  "Personnalisées · {0}": "कस्टम · {0}",
+  "Fond selon la pochette": "कवर के अनुसार बैकग्राउंड",
+  "Le fond de toute l'application prend la couleur de ce qui est en écoute, comme une page d'album": "पूरे ऐप का बैकग्राउंड चल रहे गाने के रंग में बदल जाता है, एल्बम पेज की तरह",
+  "Pendant un mix, le titre suivant entre sans sa voix puis elle le rejoint, et la voix du titre en cours s'efface avant qu'il chante. En temps réel : rien n'est stocké": "मिक्स के दौरान अगला गाना बिना आवाज़ के आता है, फिर आवाज़ जुड़ती है, और मौजूदा आवाज़ उसके गाने से पहले धीमी हो जाती है। रीयल-टाइम में: कुछ भी सेव नहीं होता",
+  "Séparer les voix (expérimental)": "आवाज़ अलग करें (प्रायोगिक)"
  },
  "ja": {
   "Reverb": "リバーブ",
@@ -4557,7 +4579,18 @@
   "minutes de musique": "分の音楽",
   "{0} écoutes de {1} titres.": "{1}曲を{0}回再生。",
   "Touchez pour écouter": "タップして聴く",
-  "Écoutez quelques titres pour voir votre semaine": "何曲か聴くと今週が表示されます"
+  "Écoutez quelques titres pour voir votre semaine": "何曲か聴くと今週が表示されます",
+  "Ajouter l'album à une playlist": "アルバムをプレイリストに追加",
+  "Changer de fichier": "ファイルを変更",
+  "Choisir un fichier : LRC, TTML, SRT, VTT, ASS, JSON, TXT…": "ファイルを選択：LRC、TTML、SRT、VTT、ASS、JSON、TXT…",
+  "Fichier illisible": "ファイルを読み込めません",
+  "Fichier trop volumineux (2 Mo maximum)": "ファイルが大きすぎます（最大2 MB）",
+  "Aucune parole trouvée dans ce fichier": "このファイルに歌詞が見つかりません",
+  "Personnalisées · {0}": "カスタム · {0}",
+  "Fond selon la pochette": "ジャケットに合わせた背景",
+  "Le fond de toute l'application prend la couleur de ce qui est en écoute, comme une page d'album": "アプリ全体の背景が再生中の曲の色に変わります（アルバムページのように）",
+  "Pendant un mix, le titre suivant entre sans sa voix puis elle le rejoint, et la voix du titre en cours s'efface avant qu'il chante. En temps réel : rien n'est stocké": "ミックス中、次の曲はボーカルなしで入り、その後ボーカルが加わります。次の曲が歌う前に今の曲のボーカルは消えます。リアルタイム処理で何も保存されません",
+  "Séparer les voix (expérimental)": "ボーカルを分離（試験的）"
  },
  "zh": {
   "Reverb": "混响",
@@ -6077,7 +6110,18 @@
   "minutes de musique": "分钟音乐",
   "{0} écoutes de {1} titres.": "{1} 首歌共播放 {0} 次。",
   "Touchez pour écouter": "轻点即可收听",
-  "Écoutez quelques titres pour voir votre semaine": "听几首歌即可查看你的一周"
+  "Écoutez quelques titres pour voir votre semaine": "听几首歌即可查看你的一周",
+  "Ajouter l'album à une playlist": "将专辑添加到播放列表",
+  "Changer de fichier": "更换文件",
+  "Choisir un fichier : LRC, TTML, SRT, VTT, ASS, JSON, TXT…": "选择文件：LRC、TTML、SRT、VTT、ASS、JSON、TXT…",
+  "Fichier illisible": "无法读取文件",
+  "Fichier trop volumineux (2 Mo maximum)": "文件过大（最大 2 MB）",
+  "Aucune parole trouvée dans ce fichier": "此文件中未找到歌词",
+  "Personnalisées · {0}": "自定义 · {0}",
+  "Fond selon la pochette": "背景跟随封面",
+  "Le fond de toute l'application prend la couleur de ce qui est en écoute, comme une page d'album": "整个应用的背景随正在播放的内容变色，就像专辑页面一样",
+  "Pendant un mix, le titre suivant entre sans sa voix puis elle le rejoint, et la voix du titre en cours s'efface avant qu'il chante. En temps réel : rien n'est stocké": "混音时，下一首先不带人声进入，随后人声加入；在它开唱前，当前歌曲的人声会淡出。实时处理：不存储任何内容",
+  "Séparer les voix (expérimental)": "分离人声（实验性）"
  },
  "ru": {
   "Reverb": "Реверберация",
@@ -7597,7 +7641,18 @@
   "minutes de musique": "минут музыки",
   "{0} écoutes de {1} titres.": "{0} прослушиваний {1} треков.",
   "Touchez pour écouter": "Нажмите, чтобы слушать",
-  "Écoutez quelques titres pour voir votre semaine": "Послушайте несколько треков, чтобы увидеть свою неделю"
+  "Écoutez quelques titres pour voir votre semaine": "Послушайте несколько треков, чтобы увидеть свою неделю",
+  "Ajouter l'album à une playlist": "Добавить альбом в плейлист",
+  "Changer de fichier": "Сменить файл",
+  "Choisir un fichier : LRC, TTML, SRT, VTT, ASS, JSON, TXT…": "Выберите файл: LRC, TTML, SRT, VTT, ASS, JSON, TXT…",
+  "Fichier illisible": "Не удаётся прочитать файл",
+  "Fichier trop volumineux (2 Mo maximum)": "Файл слишком большой (максимум 2 МБ)",
+  "Aucune parole trouvée dans ce fichier": "В этом файле не найден текст песни",
+  "Personnalisées · {0}": "Свои · {0}",
+  "Fond selon la pochette": "Фон по обложке",
+  "Le fond de toute l'application prend la couleur de ce qui est en écoute, comme une page d'album": "Фон всего приложения принимает цвет того, что играет, как на странице альбома",
+  "Pendant un mix, le titre suivant entre sans sa voix puis elle le rejoint, et la voix du titre en cours s'efface avant qu'il chante. En temps réel : rien n'est stocké": "Во время микса следующий трек входит без вокала, затем вокал присоединяется, а голос текущего трека затихает до того, как запоёт следующий. В реальном времени: ничего не сохраняется",
+  "Séparer les voix (expérimental)": "Отделять вокал (экспериментально)"
  },
  "it": {
   "Reverb": "Riverbero",
@@ -9117,7 +9172,18 @@
   "minutes de musique": "minuti di musica",
   "{0} écoutes de {1} titres.": "{0} ascolti di {1} brani.",
   "Touchez pour écouter": "Tocca per ascoltare",
-  "Écoutez quelques titres pour voir votre semaine": "Ascolta qualche brano per vedere la tua settimana"
+  "Écoutez quelques titres pour voir votre semaine": "Ascolta qualche brano per vedere la tua settimana",
+  "Ajouter l'album à une playlist": "Aggiungi l'album a una playlist",
+  "Changer de fichier": "Cambia file",
+  "Choisir un fichier : LRC, TTML, SRT, VTT, ASS, JSON, TXT…": "Scegli un file: LRC, TTML, SRT, VTT, ASS, JSON, TXT…",
+  "Fichier illisible": "File illeggibile",
+  "Fichier trop volumineux (2 Mo maximum)": "File troppo grande (massimo 2 MB)",
+  "Aucune parole trouvée dans ce fichier": "Nessun testo trovato in questo file",
+  "Personnalisées · {0}": "Personalizzati · {0}",
+  "Fond selon la pochette": "Sfondo dalla copertina",
+  "Le fond de toute l'application prend la couleur de ce qui est en écoute, comme une page d'album": "Lo sfondo di tutta l'app prende il colore di ciò che stai ascoltando, come una pagina album",
+  "Pendant un mix, le titre suivant entre sans sa voix puis elle le rejoint, et la voix du titre en cours s'efface avant qu'il chante. En temps réel : rien n'est stocké": "Durante un mix, il brano successivo entra senza voce, che poi lo raggiunge, e la voce del brano in corso sfuma prima che canti. In tempo reale: non viene salvato nulla",
+  "Séparer les voix (expérimental)": "Separa le voci (sperimentale)"
  },
  "es": {
   "Reverb": "Reverb",
@@ -10637,7 +10703,18 @@
   "minutes de musique": "minutos de música",
   "{0} écoutes de {1} titres.": "{0} reproducciones de {1} canciones.",
   "Touchez pour écouter": "Toca para escuchar",
-  "Écoutez quelques titres pour voir votre semaine": "Escucha algunas canciones para ver tu semana"
+  "Écoutez quelques titres pour voir votre semaine": "Escucha algunas canciones para ver tu semana",
+  "Ajouter l'album à une playlist": "Añadir el álbum a una playlist",
+  "Changer de fichier": "Cambiar archivo",
+  "Choisir un fichier : LRC, TTML, SRT, VTT, ASS, JSON, TXT…": "Elige un archivo: LRC, TTML, SRT, VTT, ASS, JSON, TXT…",
+  "Fichier illisible": "Archivo ilegible",
+  "Fichier trop volumineux (2 Mo maximum)": "Archivo demasiado grande (máximo 2 MB)",
+  "Aucune parole trouvée dans ce fichier": "No se encontró ninguna letra en este archivo",
+  "Personnalisées · {0}": "Personalizadas · {0}",
+  "Fond selon la pochette": "Fondo según la portada",
+  "Le fond de toute l'application prend la couleur de ce qui est en écoute, comme une page d'album": "El fondo de toda la app toma el color de lo que suena, como una página de álbum",
+  "Pendant un mix, le titre suivant entre sans sa voix puis elle le rejoint, et la voix du titre en cours s'efface avant qu'il chante. En temps réel : rien n'est stocké": "Durante una mezcla, la siguiente canción entra sin voz y luego se le une, y la voz de la actual se desvanece antes de que cante. En tiempo real: no se guarda nada",
+  "Séparer les voix (expérimental)": "Separar voces (experimental)"
  },
  "de": {
   "Reverb": "Reverb",
@@ -12157,7 +12234,18 @@
   "minutes de musique": "Minuten Musik",
   "{0} écoutes de {1} titres.": "{0} Wiedergaben von {1} Titeln.",
   "Touchez pour écouter": "Zum Hören tippen",
-  "Écoutez quelques titres pour voir votre semaine": "Hör ein paar Titel, um deine Woche zu sehen"
+  "Écoutez quelques titres pour voir votre semaine": "Hör ein paar Titel, um deine Woche zu sehen",
+  "Ajouter l'album à une playlist": "Album zu einer Playlist hinzufügen",
+  "Changer de fichier": "Datei ändern",
+  "Choisir un fichier : LRC, TTML, SRT, VTT, ASS, JSON, TXT…": "Datei wählen: LRC, TTML, SRT, VTT, ASS, JSON, TXT…",
+  "Fichier illisible": "Datei nicht lesbar",
+  "Fichier trop volumineux (2 Mo maximum)": "Datei zu groß (höchstens 2 MB)",
+  "Aucune parole trouvée dans ce fichier": "In dieser Datei wurde kein Songtext gefunden",
+  "Personnalisées · {0}": "Eigene · {0}",
+  "Fond selon la pochette": "Hintergrund nach Cover",
+  "Le fond de toute l'application prend la couleur de ce qui est en écoute, comme une page d'album": "Der Hintergrund der ganzen App nimmt die Farbe des Gespielten an, wie eine Albumseite",
+  "Pendant un mix, le titre suivant entre sans sa voix puis elle le rejoint, et la voix du titre en cours s'efface avant qu'il chante. En temps réel : rien n'est stocké": "Beim Mix kommt der nächste Titel ohne Gesang herein, der dann dazukommt, und der aktuelle Gesang blendet aus, bevor der nächste singt. In Echtzeit: nichts wird gespeichert",
+  "Séparer les voix (expérimental)": "Gesang trennen (experimentell)"
  },
  "pt": {
   "Reverb": "Reverb",
@@ -13677,7 +13765,18 @@
   "minutes de musique": "minutos de música",
   "{0} écoutes de {1} titres.": "{0} reproduções de {1} faixas.",
   "Touchez pour écouter": "Toque para ouvir",
-  "Écoutez quelques titres pour voir votre semaine": "Ouça algumas faixas para ver sua semana"
+  "Écoutez quelques titres pour voir votre semaine": "Ouça algumas faixas para ver sua semana",
+  "Ajouter l'album à une playlist": "Adicionar o álbum a uma playlist",
+  "Changer de fichier": "Trocar arquivo",
+  "Choisir un fichier : LRC, TTML, SRT, VTT, ASS, JSON, TXT…": "Escolha um arquivo: LRC, TTML, SRT, VTT, ASS, JSON, TXT…",
+  "Fichier illisible": "Arquivo ilegível",
+  "Fichier trop volumineux (2 Mo maximum)": "Arquivo muito grande (máximo de 2 MB)",
+  "Aucune parole trouvée dans ce fichier": "Nenhuma letra encontrada neste arquivo",
+  "Personnalisées · {0}": "Personalizadas · {0}",
+  "Fond selon la pochette": "Fundo pela capa",
+  "Le fond de toute l'application prend la couleur de ce qui est en écoute, comme une page d'album": "O fundo de todo o app assume a cor do que está tocando, como uma página de álbum",
+  "Pendant un mix, le titre suivant entre sans sa voix puis elle le rejoint, et la voix du titre en cours s'efface avant qu'il chante. En temps réel : rien n'est stocké": "Durante uma mixagem, a próxima faixa entra sem voz, que depois se junta, e a voz da atual some antes que ela cante. Em tempo real: nada é armazenado",
+  "Séparer les voix (expérimental)": "Separar vozes (experimental)"
  },
  "ko": {
   "Reverb": "리버브",
@@ -15197,6 +15296,17 @@
   "minutes de musique": "분의 음악",
   "{0} écoutes de {1} titres.": "{1}곡을 {0}회 재생.",
   "Touchez pour écouter": "탭하여 듣기",
-  "Écoutez quelques titres pour voir votre semaine": "몇 곡을 들으면 이번 주가 표시됩니다"
+  "Écoutez quelques titres pour voir votre semaine": "몇 곡을 들으면 이번 주가 표시됩니다",
+  "Ajouter l'album à une playlist": "앨범을 플레이리스트에 추가",
+  "Changer de fichier": "파일 변경",
+  "Choisir un fichier : LRC, TTML, SRT, VTT, ASS, JSON, TXT…": "파일 선택: LRC, TTML, SRT, VTT, ASS, JSON, TXT…",
+  "Fichier illisible": "파일을 읽을 수 없습니다",
+  "Fichier trop volumineux (2 Mo maximum)": "파일이 너무 큽니다(최대 2MB)",
+  "Aucune parole trouvée dans ce fichier": "이 파일에서 가사를 찾을 수 없습니다",
+  "Personnalisées · {0}": "사용자 지정 · {0}",
+  "Fond selon la pochette": "커버에 맞춘 배경",
+  "Le fond de toute l'application prend la couleur de ce qui est en écoute, comme une page d'album": "앨범 페이지처럼 앱 전체 배경이 재생 중인 곡의 색을 따릅니다",
+  "Pendant un mix, le titre suivant entre sans sa voix puis elle le rejoint, et la voix du titre en cours s'efface avant qu'il chante. En temps réel : rien n'est stocké": "믹스 중 다음 곡은 보컬 없이 들어오고 이후 보컬이 합류하며, 다음 곡이 노래하기 전에 현재 곡의 보컬이 사라집니다. 실시간 처리: 아무것도 저장하지 않습니다",
+  "Séparer les voix (expérimental)": "보컬 분리(실험적)"
  }
 }

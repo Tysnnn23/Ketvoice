@@ -45,54 +45,13 @@ object CoverPalette {
         val h = (bitmap.height.toFloat() / bitmap.width * w).toInt().coerceAtLeast(1)
         val small = Bitmap.createScaledBitmap(bitmap, w, h, true)
 
-        // Bucket colours into a 4x4x4 grid and track weighted "vividness" per bucket.
-        data class Bucket(var r: Int, var g: Int, var b: Int, var weight: Float, var count: Int)
-        val buckets = HashMap<Int, Bucket>()
         val px = IntArray(w * h)
         small.getPixels(px, 0, w, 0, 0, w, h)
-        for (c in px) {
-            val a = (c ushr 24) and 0xFF
-            if (a < 128) continue
-            val r = (c shr 16) and 0xFF
-            val g = (c shr 8) and 0xFF
-            val b = c and 0xFF
-            val mx = maxOf(r, g, b)
-            val mn = minOf(r, g, b)
-            val sat = if (mx == 0) 0f else (mx - mn).toFloat() / mx
-            val lum = (0.299f * r + 0.587f * g + 0.114f * b) / 255f
-            // Skip near-black / near-white, favour mid-lightness with saturation.
-            if (lum < 0.10f || lum > 0.95f) continue
-            if (sat < 0.12f) continue
-            val key = (r / 68 shl 16) or (g / 68 shl 8) or (b / 68)
-            val bucket = buckets.getOrPut(key) { Bucket(0, 0, 0, 0f, 0) }
-            // Weight = saturation * (1 - distance from pleasant mid luminance) * area
-            val midPenalty = 1f - abs(lum - 0.55f)
-            val wgt = sat * midPenalty + 0.04f
-            bucket.r += r
-            bucket.g += g
-            bucket.b += b
-            bucket.weight += wgt
-            bucket.count += 1
-        }
-        if (buckets.isEmpty()) {
-            small.recycle()
-            return@withContext null
-        }
-        // Average colours inside each bucket, sort by total weight.
-        val cols = buckets.values
-            .filter { it.count > 0 }
-            .map { bk ->
-                val c = Color(bk.r / bk.count, bk.g / bk.count, bk.b / bk.count)
-                bk.weight / bk.count to c
-            }
-            .sortedByDescending { it.first }
-        small.recycle()
-        if (cols.isEmpty()) return@withContext null
-
-        val primary = tune(cols[0].second)
-        // Secondary: first colour that is a decent distance from primary.
-        val secondary = cols.drop(1).firstOrNull { colorDistance(primary, it.second) > 0.22f }?.second
-            ?.let { tune(it) } ?: shiftHue(primary, 0.12f)
+        if (small !== bitmap) small.recycle()
+        // One hue of the cover, never an average of two (see CoverColors); a grey cover keeps the chosen accent.
+        val found = CoverColors.analyze(px)?.takeIf { it.colourful } ?: return@withContext null
+        val primary = tune(Color(found.base))
+        val secondary = found.second?.let { tune(Color(it)) } ?: shiftHue(primary, 0.12f)
         primary to secondary
     }
 
@@ -206,19 +165,8 @@ object CoverTone {
     fun cached(key: String): Color? = synchronized(cache) { cache[key] }
     fun store(key: String, color: Color) { synchronized(cache) { cache[key] = color } }
 
-    /** Pixels as 0xRRGGBB (alpha ignored below 128); the average of the most populated group. */
-    fun dominant(pixels: IntArray): Color? {
-        val counts = HashMap<Int, IntArray>()
-        for (c in pixels) {
-            if ((c ushr 24) and 0xFF < 128) continue
-            val r = (c shr 16) and 0xFF; val g = (c shr 8) and 0xFF; val b = c and 0xFF
-            val key = (r / 43 shl 16) or (g / 43 shl 8) or (b / 43)
-            val bucket = counts.getOrPut(key) { IntArray(4) }
-            bucket[0] += r; bucket[1] += g; bucket[2] += b; bucket[3]++
-        }
-        val top = counts.values.maxByOrNull { it[3] } ?: return null
-        return Color(top[0] / top[3], top[1] / top[3], top[2] / top[3])
-    }
+    /** The colour the cover is made of: its main hue's own pixels, or its greys when it has almost no colour. */
+    fun dominant(pixels: IntArray): Color? = CoverColors.analyze(pixels)?.let { Color(it.base) }
 
     suspend fun of(bitmap: Bitmap): Color? = withContext(Dispatchers.Default) {
         val w = 32

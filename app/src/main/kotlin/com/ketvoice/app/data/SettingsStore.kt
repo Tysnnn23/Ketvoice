@@ -35,6 +35,8 @@ object SettingsStore {
         s.livingArtwork.value = p.getBoolean("livingArtwork", true)
         s.coverAccent.value = p.getBoolean("coverAccent", false)
         s.volumeLeveling.value = p.getBoolean("volumeLeveling", false)
+        s.coverBackground.value = p.getBoolean("coverBackground", false)
+        s.ketmixStems.value = p.getBoolean("ketmixStems", false)
         s.autoOfflineFavorites.value = p.getBoolean("autoOfflineFavorites", true)
         s.canvasWithMobileData.value = p.getBoolean("canvasWithMobileData", s.canvasWithMobileData.value)
         // The old unused flag was saved as true without any consent screen.
@@ -169,6 +171,8 @@ object SettingsStore {
             .putBoolean("livingArtwork", s.livingArtwork.value)
             .putBoolean("coverAccent", s.coverAccent.value)
             .putBoolean("volumeLeveling", s.volumeLeveling.value)
+            .putBoolean("coverBackground", s.coverBackground.value)
+            .putBoolean("ketmixStems", s.ketmixStems.value)
             .putBoolean("autoOfflineFavorites", s.autoOfflineFavorites.value)
             .putInt("lyricsTextSize", s.lyricsTextSize.value)
             .putBoolean("canvasWithMobileData", s.canvasWithMobileData.value)

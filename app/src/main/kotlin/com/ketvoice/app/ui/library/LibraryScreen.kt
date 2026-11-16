@@ -243,6 +243,11 @@ fun LibraryScreen() {
                     IconButton(onClick = { Player.enqueue(selectedTracks); selected = emptyList(); selecting = false }, enabled = selectedTracks.isNotEmpty()) {
                         Icon(Icons.Filled.QueueMusic, "Ajouter à la file", tint = theme.accent)
                     }
+                    // Several titles into a playlist at once (5.9.1).
+                    IconButton(onClick = { AppUi.addTracksToPlaylist.value = selectedTracks; selected = emptyList(); selecting = false },
+                        enabled = selectedTracks.isNotEmpty(), modifier = Modifier.testTag("library-selection-playlist")) {
+                        Icon(KetIcons.Plus, "Ajouter à une playlist", tint = theme.accent)
+                    }
                     Text(selected.size.toString(), localize = false, color = theme.secondary)
                 }
             }

@@ -143,7 +143,14 @@ internal data class MixPlan(
     /** The transition rings on past the end of the outgoing title (its echo is played out after its last sample). */
     val tail: Boolean = false,
     /** How long the build of a [MixKind.Rise] lasts before [outMs], on the outgoing title's clock. */
-    val buildMs: Long = 0
+    val buildMs: Long = 0,
+    /**
+     * "Séparer les voix" (5.9.1, experimental): the incoming title enters as its instrumental and its
+     * voice joins later; the outgoing voice is taken down before the incoming one sings.
+     */
+    val stems: Boolean = false,
+    /** Incoming position where its voice begins (-1 unknown), from its lyrics. */
+    val voiceFromMs: Long = -1
 ) {
     val mixes: Boolean get() = kind != MixKind.None
     /** Position in the incoming title once the outgoing one is gone. */

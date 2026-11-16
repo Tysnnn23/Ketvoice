@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 object LyricsRepo {
+    const val SOURCE_CUSTOM = "custom"
     data class State(
         val loading: Boolean = false,
         val source: String = "",
@@ -50,6 +51,12 @@ object LyricsRepo {
             return
         }
 
+        // The listener's own file for this title comes first (5.9.1), whatever the online sources say.
+        runCatching { CustomLyrics.lines(track.id) }.getOrNull()?.let { (entry, lines) ->
+            _state.value = State(loading = false, source = "Personnalisées · ${entry.name}", sourceKey = SOURCE_CUSTOM, lines = lines,
+                isTimed = lines.any { it.timeMs >= 0 }, wordTimed = lines.any { it.words.size >= 2 }, syllableTimed = lines.any { it.syllableTimed })
+            return
+        }
         if (!refresh) {
             val local = runCatching { Downloader.localLyrics(track.id) }.getOrNull()
             if (local != null && local.second.isNotEmpty()) {

@@ -21,6 +21,15 @@
 
 ## Overview
 
+### 5.9.1 — Your lyrics, your colours
+
+Bring your own lyrics files (LRC, TTML, SRT, VTT, ASS, JSON and more), let the whole app take the colour of
+what plays, enjoy truer cover colours, keep Discord linked across restarts and updates, and let Ketmix keep
+two voices from singing over each other. Albums and selections can now be added to a playlist at once.
+[Mobile](https://github.com/Tysnnn23/Ketvoice/releases/download/v5.9.1/Ketvoice-5.9.1.apk)
+· [Quest](https://github.com/Tysnnn23/Ketvoice/releases/download/v5.9.1/Ketvoice-5.9.1-Quest.apk)
+· [Release notes](docs/releases/v5.9.1.md).
+
 ### 5.9.0 — Wrapped, widgets and a ten-band equalizer
 
 Your year as stories with Ketvoice Wrapped, four home-screen widgets, a ten-band equalizer you drag, volume

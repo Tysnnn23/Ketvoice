@@ -3,22 +3,8 @@ package com.ketvoice.app.ui.player
 import kotlin.math.pow
 
 object AlbumColors {
-    fun dominant(pixels: IntArray): Int? {
-        val buckets = mutableMapOf<Int, MutableList<Int>>()
-        pixels.filter { (it ushr 24) >= 128 }.forEach { pixel ->
-            val r = pixel shr 16 and 255; val g = pixel shr 8 and 255; val b = pixel and 255
-            val key = (r / 32 shl 6) or (g / 32 shl 3) or (b / 32)
-            buckets.getOrPut(key) { mutableListOf() }.add(pixel)
-        }
-        val chosen = buckets.values.maxByOrNull { group ->
-            val color = group.first()
-            val channels = listOf(color shr 16 and 255, color shr 8 and 255, color and 255)
-            val chroma = (channels.max() - channels.min()) / 255.0
-            group.size * (.25 + chroma)
-        } ?: return null
-        fun channel(shift: Int) = chosen.sumOf { (it shr shift and 255).toLong() }.div(chosen.size).toInt()
-        return (255 shl 24) or (channel(16) shl 16) or (channel(8) shl 8) or channel(0)
-    }
+    /** The colour of a cover (see [com.ketvoice.app.theme.CoverColors]): its main hue, never an average of two. */
+    fun dominant(pixels: IntArray): Int? = com.ketvoice.app.theme.CoverColors.analyze(pixels)?.base
 
     fun luminance(color: Int): Double {
         fun linear(shift: Int): Double {

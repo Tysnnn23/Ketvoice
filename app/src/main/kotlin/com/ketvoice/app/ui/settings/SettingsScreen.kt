@@ -296,6 +296,8 @@ fun SettingsScreen() {
                 if (!com.ketvoice.app.BuildConfig.IS_QUEST) SToggle(KetIcons.Sliders, "Retours haptiques",
                     "Légère vibration sur le verre, les onglets et la barre de lecture",
                     AppSettings.haptics.value) { AppSettings.haptics.value = it; SettingsStore.save() }
+                SToggle(KetIcons.Sliders, "Fond selon la pochette", "Le fond de toute l'application prend la couleur de ce qui est en écoute, comme une page d'album",
+                    AppSettings.coverBackground.value) { AppSettings.coverBackground.value = it; SettingsStore.save() }
                 SToggle(KetIcons.Sliders, "Couleur de la pochette", "La couleur d'accent de toute l'interface suit la pochette du titre en cours",
                     AppSettings.coverAccent.value) { AppSettings.coverAccent.value = it; SettingsStore.save() }
                 SToggle(KetIcons.Canvas, "Pochette vivante", "Dans le lecteur, la pochette pulse très légèrement au rythme des basses",
@@ -476,6 +478,9 @@ fun SettingsScreen() {
                 SToggle(KetIcons.Audio, "Vibrer à l'échange des basses",
                     "Une petite vibration au moment où la basse passe d'un titre à l'autre, quand l'app est à l'écran.",
                     AppSettings.ketmixHaptics.value) { AppSettings.ketmixHaptics.value = it; SettingsStore.save() }
+                SToggle(KetIcons.Audio, "Séparer les voix (expérimental)",
+                    "Pendant un mix, le titre suivant entre sans sa voix puis elle le rejoint, et la voix du titre en cours s'efface avant qu'il chante. En temps réel : rien n'est stocké",
+                    AppSettings.ketmixStems.value) { AppSettings.ketmixStems.value = it; SettingsStore.save() }
                 SToggle(KetIcons.Refresh, "Mixer aussi un titre en boucle",
                     "Quand un titre est répété, sa fin se mêle à son propre début, sur le temps, au lieu de repartir après un blanc.",
                     AppSettings.ketmixLoops.value) { AppSettings.ketmixLoops.value = it; SettingsStore.save() }

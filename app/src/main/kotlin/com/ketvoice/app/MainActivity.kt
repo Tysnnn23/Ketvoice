@@ -73,6 +73,7 @@ class MainActivity : ComponentActivity() {
         runCatching { com.ketvoice.app.data.CustomSources.init(this) }
         runCatching { com.ketvoice.app.data.ForYouRotation.init(this) }
         runCatching { com.ketvoice.app.data.ArtistPrefs.init(this) }
+        runCatching { com.ketvoice.app.data.CustomLyrics.init(this) }
         // Faster start (5.9.0): what the first screen does not need is read beside it, off the main thread —
         // the lyrics index (up to a few megabytes) and the launcher icon check (calls to the package manager).
         val app = applicationContext

@@ -119,7 +119,19 @@ fun AppRoot() {
     // The playing cover lightly tints the optical glass (independent of the accent option).
     com.ketvoice.app.glass.ObserveCoverTint(playingForAccent.current?.let { ArtworkRepo.coverForTrack(it) })
 
-    KetvoiceTheme(useDark = useDark, dynamicAccent = dynamicAccent) {
+    // "Fond selon la pochette" (5.9.1): the background of every page glides to the colour of the cover playing.
+    val toneUrl = if (com.ketvoice.app.data.AppSettings.coverBackground.value) playingForAccent.current?.let { ArtworkRepo.coverForTrack(it) } else null
+    val wantedTone = com.ketvoice.app.theme.rememberCoverTone(toneUrl)
+    // The first colour is taken at once; the next ones glide from the one shown.
+    val toneMotion = remember { mutableStateOf<androidx.compose.animation.core.Animatable<androidx.compose.ui.graphics.Color, androidx.compose.animation.core.AnimationVector4D>?>(null) }
+    LaunchedEffect(wantedTone) {
+        val target = wantedTone
+        if (target == null) { toneMotion.value = null; return@LaunchedEffect }
+        val current = toneMotion.value
+        if (current == null) toneMotion.value = androidx.compose.animation.Animatable(target)
+        else current.animateTo(target, androidx.compose.animation.core.tween(com.ketvoice.app.ui.motion.Motion.duration(900)))
+    }
+    KetvoiceTheme(useDark = useDark, dynamicAccent = dynamicAccent, dynamicTone = toneMotion.value?.value) {
         com.ketvoice.app.ui.player.PlaybackFeatureDialogs()
         BackgroundPlaybackOffer()
         val th = LocalTheme.current
@@ -195,7 +207,7 @@ fun AppRoot() {
                         .pageBackground(th)
                         .then(if (AppUi.showPlayer.value || AppUi.showAccount.value || AppUi.showPublisher.value ||
                             AppUi.trackMenuTrack.value != null || AppUi.playlistMenu.value != null ||
-                            AppUi.addToPlaylist.value != null) Modifier.clearAndSetSemantics { } else Modifier)
+                            AppUi.pendingPlaylistTracks() != null) Modifier.clearAndSetSemantics { } else Modifier)
                 ) {
                     Box(Modifier.fillMaxSize().padding(start = if (queueOverlay) 0.dp else layout.railWidthDp.dp), contentAlignment = Alignment.TopCenter) {
                     Box(Modifier.widthIn(max = pageMaxWidth).fillMaxSize()
@@ -265,7 +277,7 @@ fun AppRoot() {
                     !AppUi.showPlayer.value &&
                     !imeVisible &&
                     AppUi.trackMenuTrack.value == null &&
-                    AppUi.addToPlaylist.value == null &&
+                    AppUi.pendingPlaylistTracks() == null &&
                     AppUi.playlistMenu.value == null &&
                     !AppUi.showCreatePlaylist.value &&
                     AppUi.playlistResolution.value == null
@@ -380,11 +392,11 @@ fun AppRoot() {
                     }
                 }
                 // ---- Ajouter à une playlist : feuille verre au-dessus du chrome ----
-                AppUi.addToPlaylist.value?.let { track ->
+                AppUi.pendingPlaylistTracks()?.let { tracks ->
                     Box(Modifier.fillMaxSize().zIndex(7f)) {
-                        androidx.activity.compose.BackHandler { AppUi.addToPlaylist.value = null }
-                        com.ketvoice.app.ui.player.PlayerSheetScrim({ AppUi.addToPlaylist.value = null }) {
-                            com.ketvoice.app.ui.library.AddToPlaylistSheet(track) { AppUi.addToPlaylist.value = null }
+                        androidx.activity.compose.BackHandler { AppUi.clearPendingPlaylistTracks() }
+                        com.ketvoice.app.ui.player.PlayerSheetScrim({ AppUi.clearPendingPlaylistTracks() }) {
+                            com.ketvoice.app.ui.library.AddToPlaylistSheet(tracks) { AppUi.clearPendingPlaylistTracks() }
                         }
                     }
                 }

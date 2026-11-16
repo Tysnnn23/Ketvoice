@@ -248,6 +248,14 @@ internal fun QueuePane(state: PlayerUiState, modifier: Modifier = Modifier, show
                     fontSize = 13.sp, maxLines = 1, modifier = Modifier.weight(1f).padding(start = 10.dp))
                 QueueAction("Lire ensuite", enabled = chosen.isNotEmpty(), tag = "queue-selection-next", onClick = ::playChosenNext)
                 QueueAction("Retirer", enabled = chosen.isNotEmpty(), tag = "queue-selection-remove", onClick = ::removeChosen)
+                // The chosen titles into a playlist (5.9.1).
+                QueueAction("Playlist", enabled = chosen.isNotEmpty(), tag = "queue-selection-playlist") {
+                    val now = Player.state.value
+                    val picked = QueueSelection.ordered(now.queueEntryIds, now.index, chosen)
+                        .mapNotNull { key -> now.queueEntryIds.indexOf(key).takeIf { it >= 0 }?.let(now.queue::getOrNull) }
+                    selecting = false; chosen = emptySet()
+                    if (picked.isNotEmpty()) com.ketvoice.app.ui.AppUi.addTracksToPlaylist.value = picked
+                }
             }
         }
     }

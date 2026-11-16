@@ -641,6 +641,25 @@ internal fun LyricsSourceSheet(track: Track, onClose: () -> Unit) {
             } }
         }
     }
+    // "Personnalisé" (5.9.1): the listener's own lyrics file for this title, kept and used from then on.
+    LaunchedEffect(context) { com.ketvoice.app.data.CustomLyrics.init(context) }
+    var custom by remember(track.id) { mutableStateOf(com.ketvoice.app.data.CustomLyrics.entry(track.id)) }
+    var customError by remember(track.id) { mutableStateOf<String?>(null) }
+    val pickScope = rememberCoroutineScope()
+    val picker = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        pickScope.launch {
+            val result = kotlinx.coroutines.withContext(Dispatchers.IO) {
+                runCatching { com.ketvoice.app.data.CustomLyrics.choose(context, track.id, uri) }
+            }
+            result.onSuccess {
+                custom = it; customError = null
+                LyricsRepo.load(track, force = true)
+                onClose()
+            }.onFailure { customError = it.message ?: "Fichier illisible" }
+        }
+    }
     val radius = with(LocalDensity.current) { 26.dp.toPx() }
     GlassPanel(Modifier.fillMaxWidth().padding(10.dp), RoundedCornerShape(26.dp), GlassParams.sheet(radius, true)) {
         Column(Modifier.fillMaxWidth().heightIn(max = 600.dp).verticalScroll(rememberScrollState()).padding(18.dp)) {
@@ -661,12 +680,44 @@ internal fun LyricsSourceSheet(track: Track, onClose: () -> Unit) {
             Text("Réinitialiser", color = Color.White.copy(alpha = .78f), modifier = Modifier
                 .clickable(role = Role.Button) { LyricsOffsets.set(track.id, 0) }.heightIn(min = 48.dp)
                 .wrapContentHeight().padding(horizontal = 8.dp))
+            run {
+                val active = custom?.active == true
+                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
+                    .background(if (active) Color.White.copy(alpha = .09f) else Color.Transparent)
+                    .clickable(role = Role.Button) {
+                        val existing = custom
+                        if (existing != null && !existing.active) {
+                            com.ketvoice.app.data.CustomLyrics.setActive(track.id, true)
+                            custom = existing.copy(active = true); LyricsRepo.load(track, force = true); onClose()
+                        } else picker.launch(arrayOf("*/*"))
+                    }.padding(horizontal = 12.dp, vertical = 11.dp).testTag("lyrics-custom"), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Personnalisé", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                        Text(customError?.let { com.ketvoice.app.data.AppText.t(it) } ?: custom?.let { "${it.name} · ${it.format.uppercase()}" }
+                            ?: com.ketvoice.app.data.AppText.t("Choisir un fichier : LRC, TTML, SRT, VTT, ASS, JSON, TXT…"),
+                            localize = false, color = Color.White.copy(alpha = .78f), fontSize = if (com.ketvoice.app.BuildConfig.IS_QUEST) 14.sp else 11.sp,
+                            maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    }
+                    if (active) Icon(Icons.Filled.Check, "Sélectionnée", tint = LocalTheme.current.accent, modifier = Modifier.size(20.dp))
+                }
+                if (custom != null) Row(Modifier.fillMaxWidth().padding(start = 12.dp)) {
+                    Text("Changer de fichier", color = Color.White.copy(alpha = .78f), fontSize = 13.sp,
+                        modifier = Modifier.clickable(role = Role.Button) { picker.launch(arrayOf("*/*")) }.heightIn(min = 44.dp)
+                            .wrapContentHeight().padding(end = 18.dp))
+                    Text("Retirer", color = Color.White.copy(alpha = .78f), fontSize = 13.sp,
+                        modifier = Modifier.clickable(role = Role.Button) {
+                            com.ketvoice.app.data.CustomLyrics.forget(track.id); custom = null; LyricsRepo.load(track, force = true)
+                        }.heightIn(min = 44.dp).wrapContentHeight())
+                }
+            }
             (listOf(MusicApi.SRC_AUTO) + MusicApi.lyricSources + MusicApi.SRC_OFF).forEach { source ->
                 val status = results[source]
-                val selected = AppSettings.lyricsSource.value == source
+                val selected = AppSettings.lyricsSource.value == source && custom?.active != true
                 Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
                     .background(if (selected) Color.White.copy(alpha = .09f) else Color.Transparent)
                     .clickable {
+                        // Another source for this title: its own file steps aside (kept, ready to be chosen again).
+                        if (custom?.active == true) com.ketvoice.app.data.CustomLyrics.setActive(track.id, false)
                         AppSettings.lyricsSource.value = source
                         AppSettings.lyricsMode.value = if (source == MusicApi.SRC_OFF) 2 else 0
                         SettingsStore.save()

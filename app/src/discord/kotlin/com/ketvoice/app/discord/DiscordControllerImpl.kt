@@ -151,6 +151,10 @@ class DiscordControllerImpl : DiscordController {
     override fun start() {
         if (linked || presenceOnly) return
         ensureCreated()
+        // An account linked before is signed in again from its stored tokens (5.9.1): the encrypted
+        // tokens were saved on linking but never read back, so every launch and every update asked
+        // to link again. The access token comes first; if Discord refuses it, the refresh token.
+        if (created && restoreSession()) return
         if (com.ketvoice.app.data.AppSettings.discordPresence.value) {
             // Presence does not need an account: publish through the installed
             // Discord app over RPC instead of restoring a gateway token. The
@@ -197,6 +201,27 @@ class DiscordControllerImpl : DiscordController {
         Discord.update {
             it.copy(presenceOnly = false, presenceActive = false, presenceError = null)
         }
+    }
+
+    /** True when a stored session is being restored; its outcome arrives in [handleAuth]. */
+    private fun restoreSession(): Boolean {
+        val access = runCatching { tokens?.loadAccess() }.getOrNull()
+        val refresh = runCatching { tokens?.load() }.getOrNull()
+        if (access.isNullOrBlank() && refresh.isNullOrBlank()) return false
+        Discord.update { it.copy(busy = true, error = null, presenceOnly = false) }
+        armPresenceTimeout()
+        if (!access.isNullOrBlank()) {
+            restoring = true; restoringAccess = true
+            if (runCatching { NativeDiscord.nativeSetToken(access) }.getOrDefault(false)) return true
+            restoringAccess = false
+        }
+        if (!refresh.isNullOrBlank()) {
+            restoring = true
+            if (runCatching { NativeDiscord.nativeRestore(refresh) }.getOrDefault(false)) return true
+        }
+        restoring = false
+        busyClear()
+        return false
     }
 
     private fun busyClear() {
@@ -526,6 +551,13 @@ class DiscordControllerImpl : DiscordController {
             if (!restoring) linked = false
             restoring = false
             main.removeCallbacks(presenceTimeout)
+            // A stale access token is renewed from the refresh token before Discord is asked to link again.
+            val refresh = if (droppedStored) runCatching { tokens?.load() }.getOrNull() else null
+            if (!refresh.isNullOrBlank() && runCatching { NativeDiscord.nativeRestore(refresh) }.getOrDefault(false)) {
+                restoring = true
+                Discord.update { it.copy(busy = true, error = null) }
+                return
+            }
             Discord.update { it.copy(linked = linked, busy = false, error = friendly(message)) }
             if (droppedStored) connect()
             return

@@ -871,7 +871,7 @@ object MusicApi {
         return out.distinctBy { it.timeMs to it.text }.sortedBy { it.timeMs }
     }
 
-    private fun parseYrc(yrc: String): List<LyricLine> {
+    internal fun parseYrc(yrc: String): List<LyricLine> {
         if (yrc.isBlank()) return emptyList()
         val out = mutableListOf<LyricLine>()
         for (raw in yrc.replace("\r", "").lines()) {
