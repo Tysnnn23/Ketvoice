@@ -1,0 +1,175 @@
+{
+  "schema": 8,
+  "version": "6.0.0-beta.3",
+  "versionCode": 126,
+  "source_commit": "0e03c2c75bbb65ed34ce02a037bc284c0d22e9f2",
+  "created_at": "2026-11-16T21:13:58.319820+00:00",
+  "build_origin": {
+    "kind": "github_actions_with_owner_discord_sdk",
+    "workflow": "android.yml",
+    "run_id": 43955659672,
+    "artifact": {
+      "id": 14271333575,
+      "sha256": "50b38daaef2f2961d921daf317dce52186605f32bc66d4c6988f169ff24a398b"
+    },
+    "gradle": "assembleMobileRelease assembleQuestRelease",
+    "note": "Signed by CI with the pinned keystore secret; the Discord Social SDK AAR matched its pinned SHA-256."
+  },
+  "local_validation": {
+    "result": "debug JVM/Robolectric suites for both flavors, release lint and the UI text audit passed in a cloud container without the Discord SDK",
+    "commands": [
+      "testMobileDebugUnitTest",
+      "testQuestDebugUnitTest",
+      "lintMobileRelease",
+      "lintQuestRelease",
+      "tools/audit_ui_texts.py --check"
+    ],
+    "ci_validation": "run 43955659672: release builds, debug and release unit tests for both flavors, UI text audit, lint, APK signature pin and Discord bridge packaging passed",
+    "code_review": {
+      "kind": "none independent"
+    },
+    "host_previews": "Robolectric software render on the host (not a phone): the voice slider on the lyrics screen of a title never separated, after a touch without a model; the model dialog opens in its own window and was checked through the semantics tree, not rendered",
+    "after_last_full_local_run": "documentation and code graph only (no change under app/) after the last complete local run"
+  },
+  "server": {
+    "function": "ketvoice-content",
+    "deployed_version": 23,
+    "changed_in_this_version": false,
+    "note": "no server change since 5.4.0"
+  },
+  "tests": {
+    "mobile": {
+      "jvm": {
+        "tests": 971,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 3
+      },
+      "android_15_emulator_compose": {
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "quest": {
+      "jvm": {
+        "tests": 970,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 26,
+        "skipped_note": "TabletLayoutHostTest is skipped on Quest, which never draws large-screen layouts"
+      },
+      "android_15_emulator_compose": {
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "after_full_run": "the voice dialog's wording changed (a timing claim removed); VoiceSliderHostTest and VoiceSeparationTest re-run on both flavors (5 tests, 0 failures), UI text audit and Quest lint re-run"
+  },
+  "lint": {
+    "mobile": {
+      "Warning": 192,
+      "Hint": 23
+    },
+    "quest": {
+      "Warning": 194,
+      "Hint": 23
+    },
+    "errors": 0
+  },
+  "apks": [
+    {
+      "name": "Ketvoice-6.0.0-beta.3.apk",
+      "sha256": "741060620751318e0dbd7ec44e9e2e525ba0318eccfc04862d8f8aa5f6d9a886",
+      "bytes": 79981360,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "6.0.0-beta.3",
+      "versionCode": 126,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-6.0.0-beta.3-Quest.apk",
+      "sha256": "54fd609f2699f4e6d703d93216baf778c02c38ecf15cd72e3e25b1c5af031a9f",
+      "bytes": 96084011,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "6.0.0-beta.3",
+      "versionCode": 126,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    }
+  ],
+  "discord": {
+    "sdk_present_in_ci_build": true,
+    "sdk_sha256_pinned": true,
+    "bridge_and_native_libraries_verified": true,
+    "presence_mode": "unauthenticated_rpc_through_installed_discord_app"
+  },
+  "credential_scan": {
+    "entries": 3479,
+    "findings": 0,
+    "raw_pattern_findings": 1,
+    "scope": "tracked sources and APK archive entries",
+    "kind": "credential_patterns",
+    "explicit_private_provider_key_deny_list": false,
+    "triage": [
+      {
+        "file": "Ketvoice-Liquid-Glass-V4.html",
+        "classification": "embedded_image_false_positive",
+        "all_hits_inside_image_data_uris": true,
+        "rescanned_without_image_payloads": true
+      }
+    ]
+  },
+  "release_install_smoke": {
+    "mobile": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "quest": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    }
+  },
+  "publication_override": {
+    "authorized_by_user": true,
+    "authorized_at": "2026-11-16T21:13:58.319820+00:00",
+    "kind": "standing_authorization",
+    "user_statement": "J'autorise TOUT devient maintenant une règle.",
+    "user_statement_date": "2026-11-14",
+    "in_reply_to": "The question whether versions may be published without phone or Quest testing without asking again for each version.",
+    "recorded_in": "AGENTS.md (commit aeeda8e)",
+    "reason": "The owner made publishing validated versions without phone or Quest testing a standing rule.",
+    "scope": "physical device installation and all on-device behaviour of 6.0.0-beta.3"
+  },
+  "owner_request_2026_11_16_voice": {
+    "statement_summary": "Songs would not start and the voice level slider did not show. Then: playback works after all (the owner's correction, with a screenshot); the slider is still missing. Chosen: the slider on every song.",
+    "playback": "not reproduced and not changed: the owner confirmed playback works; AudioChainPlaybackTest gained a separated title played through the voice stage, and RowTapHostTest checks that a tap on a row plays it on a phone and in a large window",
+    "done": {
+      "slider_everywhere": "VoiceSlider(trackId) shown on every title of the lyrics screen with the controls (never in full-screen lyrics)",
+      "on_demand": "VoiceSeparation reads the title with MediaExtractor from its download or the address the playback service loaded (not DASH/HLS), separates it whole with the quick model when present (StemLibrary.separateWhole, the library pausing meanwhile), and offers the quick model's download (39 MB) when no model is there",
+      "applied_at_once": "PlaybackService.takeUpVoice gives the playing deck the new separation and re-seeks to the same position so that the voice stage starts; with voiceLevel < 100 each new title is separated as it starts"
+    }
+  },
+  "not_validated": [
+    "physical phone or Quest installation, rendering and touch behaviour",
+    "on-demand separation on a device: time per song, battery, memory, reading a streamed address with MediaExtractor (headers, expiring links), the model download from the slider",
+    "the re-seek that applies a fresh separation: whether it is heard on a stream",
+    "the voice level's audio quality and CPU cost on the audio thread",
+    "independent code review of this diff"
+  ],
+  "known_limitations": [
+    "A song is separated the first time its voice slider is touched; the time depends on the phone and the song.",
+    "Streams made of many small files (DASH, HLS) cannot be read whole: those songs must be downloaded to adjust their voice.",
+    "A streamed song is downloaded a second time by the separation.",
+    "Separated songs play about 0.09 s later than they otherwise would, at every voice level.",
+    "Being a beta tag, the in-app updater does not offer it to users of a stable version; it is offered on the website and the releases page.",
+    "The signing certificate is the existing public Android debug identity, not a private production key."
+  ],
+  "canonical_banner_sha256": "47f6793088983f7d4e6bd1aeaa2cbd8b7cdc2a8f91271e3b2839daea81da0436"
+}
