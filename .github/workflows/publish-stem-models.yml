@@ -1,6 +1,6 @@
 name: Publish voice separation model
 
-# Builds Ketmix's optional voice separation model (5.9.3) from public sources and publishes it
+# Builds Ketmix's optional voice separation model (5.10.0) from public sources and publishes it
 # as the assets of the `ketmix-stems-v1` prerelease, which the app downloads on request and checks
 # against the SHA-256 of tools/stems/expected.sha256 (repeated in StemModel.kt; a test keeps them
 # equal). The conversion is pinned and reproducible: the job fails when its output differs from

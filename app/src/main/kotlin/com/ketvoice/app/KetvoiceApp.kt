@@ -19,6 +19,9 @@ class KetvoiceApp : Application(), ImageLoaderFactory {
         super.onCreate()
         instance = this
         com.ketvoice.app.data.AppText.init(this)
+        // The voice separation model (optional download) and the separations already made: file checks only.
+        runCatching { com.ketvoice.app.stems.StemModel.init(this) }
+        runCatching { com.ketvoice.app.data.PlaybackJournal.init(this) }
         // Keeps a placed home-screen widget in step with playback (no work when none is placed).
         if (!BuildConfig.IS_QUEST) runCatching { com.ketvoice.app.widget.NowPlayingWidgetUpdater.start(this) }
         if (!BuildConfig.IS_QUEST) runCatching { com.ketvoice.app.widget.KetvoiceWidgetsUpdater.start(this) }

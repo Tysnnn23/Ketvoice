@@ -99,6 +99,8 @@ object Player {
     private var activeStream: MusicApi.StreamInfo? = null
     private var activeSourceId: String? = null
     private var fallbackAttempts = 0
+    /** Times the current title waited for the network to come back (see [NetworkRecovery]). */
+    private var networkRetries = 0
     private val failedStreamUrls = mutableSetOf<String>()
     private val failedSourceIds = mutableSetOf<String>()
     private var refreshedExpiredStream = false
@@ -156,6 +158,30 @@ object Player {
             val status = generateSequence(error as Throwable?) { it.cause }
                 .filterIsInstance<androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException>()
                 .firstOrNull()?.responseCode
+            val code0 = error.errorCodeName
+            com.ketvoice.app.data.PlaybackJournal.add("error $code0${status?.let { " · HTTP $it" } ?: ""} · ${track.title}")
+            // The network went away (a tunnel, Wi-Fi to mobile data, the phone asleep behind other apps): the stream is not
+            // at fault. The same stream starts again where it stopped once the network is back, instead of the next
+            // sources being tried, and failed, one after the other until playback stops (5.10.0).
+            if (failed != null && status == null && NetworkRecovery.isNetworkError(error.errorCode) && networkRetries < NetworkRecovery.MAX_RETRIES) {
+                networkRetries++
+                resolving = true
+                _state.value = _state.value.copy(isPlaying = false, buffering = true, failed = false, lastErrorCode = code0)
+                resolutionJob?.cancel()
+                cancelQualityUpgrade()
+                val gen = generation
+                val pos = controller?.currentPosition?.coerceAtLeast(0) ?: 0L
+                val attempt = networkRetries
+                resolutionJob = scope.launch {
+                    val waitedFrom = android.os.SystemClock.elapsedRealtime()
+                    while (!hasInternet() && android.os.SystemClock.elapsedRealtime() - waitedFrom < NetworkRecovery.WAIT_MS) delay(1_000)
+                    delay(NetworkRecovery.backoffMs(attempt))
+                    if (gen != generation) return@launch
+                    com.ketvoice.app.data.PlaybackJournal.add("network back after ${(android.os.SystemClock.elapsedRealtime() - waitedFrom) / 1000} s · resuming at ${pos / 1000} s")
+                    startItem(controller ?: return@launch, track, failed.url, pos, desiredPlay, AudioCache.key(track.id, failed), failed)
+                }
+                return
+            }
             failed?.url?.let { failedStreamUrls += it }
             sourceId?.let { failedSourceIds += it }
             resolving = true
@@ -447,6 +473,7 @@ object Player {
         activeStream = source.stream
         activeSourceId = source.sourceId
         fallbackAttempts = 0
+        networkRetries = 0
         failedStreamUrls.clear()
         failedSourceIds.clear()
         refreshedExpiredStream = false
@@ -558,6 +585,7 @@ object Player {
         activeStream = null
         activeSourceId = null
         fallbackAttempts = 0
+        networkRetries = 0
         failedStreamUrls.clear()
         failedSourceIds.clear()
         refreshedExpiredStream = false
@@ -1459,3 +1487,17 @@ internal object SkipFade {
     }
 }
 
+
+
+/** What playback does when the network goes away under a stream (5.10.0). */
+internal object NetworkRecovery {
+    const val MAX_RETRIES = 8
+    /** How long the network is waited for before the usual fallbacks take over. */
+    const val WAIT_MS = 180_000L
+
+    fun isNetworkError(code: Int): Boolean = code == androidx.media3.common.PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED ||
+        code == androidx.media3.common.PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT
+
+    /** A short pause before the stream is opened again, a little longer each time. */
+    fun backoffMs(attempt: Int): Long = (400L shl (attempt - 1).coerceIn(0, 4)).coerceAtMost(6_400L)
+}

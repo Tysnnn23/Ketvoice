@@ -37,6 +37,10 @@ object AppSettings {
     val coverBackground = mutableStateOf(false)
     /** Ketmix separates voices from instruments in real time for its transitions (5.9.1, experimental); off by default. */
     val ketmixStems = mutableStateOf(false)
+    /** New separations only while the phone charges (those already made are always used). */
+    val ketmixStemsCharging = mutableStateOf(false)
+    /** Lyrics videos carry the song's sound (5.10.0). */
+    val lyricVideoSound = mutableStateOf(true)
     val systemReduceMotion = mutableStateOf(false)
     val canvasWithMobileData = mutableStateOf(false)
     val artistSignatures = mutableStateOf(false)

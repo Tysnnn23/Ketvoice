@@ -7,6 +7,20 @@
 
 ---
 
+# Ketvoice 5.10.0
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 122** — Real voice separation in Ketmix, music that keeps playing behind other apps, lyrics videos with sound.
+
+- Stems: optional Spleeter 2-stems model (LiteRT, float16 weights, 39 MB, `ketmix-stems-v1` prerelease, SHA-256 pinned); each title's intro and ending separated once, stored as 4-bit masks (~1 MB per title), applied to the decks' own sound; decks fade from the title to its instrumental (`DeckControl.stem`).
+- Playback: network losses wait for the network and resume the same stream at the same position (`NetworkRecovery`); playback log with Android's exit reasons; manufacturer battery-manager shortcut.
+- LyricVideo: Canvas frames decoded in one pass, per-frame allocations removed; optional AAC sound of the chosen lines. Canvas players skip their audio track.
+
+Full notes: [5.10.0](docs/releases/v5.10.0.md).
+
+---
+
 # Ketvoice 5.9.2
 
 ![Ketvoice](ketvoice-banner.png)

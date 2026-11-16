@@ -224,6 +224,9 @@ private fun CanvasVideo(path: String, playing: Boolean, modifier: Modifier = Mod
             .build()
             .apply {
                 volume = 0f
+                // A Canvas is a silent loop: its sound track is never decoded (less work beside the music).
+                trackSelectionParameters = trackSelectionParameters.buildUpon()
+                    .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, true).build()
                 repeatMode = androidx.media3.common.Player.REPEAT_MODE_ONE
                 // A published Canvas plays from its public HTTPS address; a cached or chosen one from its file.
                 setMediaItem(MediaItem.fromUri(if (path.startsWith("https://")) Uri.parse(path) else Uri.fromFile(File(path))))

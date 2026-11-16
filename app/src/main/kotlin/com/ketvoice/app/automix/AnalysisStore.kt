@@ -157,3 +157,51 @@ internal object AnalysisStore {
             o.optDouble("h", 0.0).toFloat().takeIf { it.isFinite() && it in 0f..400f } ?: 0f)
     }
 }
+
+/**
+ * Records the sound of a deck played silently between two positions of a title (16-bit
+ * interleaved), for the separation of its voice (see [com.ketvoice.app.stems.StemEngine]).
+ */
+internal class PcmCapture(private val fromUs: Long, private val untilUs: Long) : PcmTap {
+    private var data = ShortArray(0)
+    private var size = 0
+    private var expectedUs = Long.MIN_VALUE
+    @Volatile var rate = 0
+        private set
+    @Volatile var channels = 0
+        private set
+    /** Position in the title of the first recorded frame. */
+    @Volatile var startUs = 0L
+        private set
+    @Volatile var done = false
+        private set
+
+    override fun pcm(buffer: ByteBuffer, positionUs: Long, sampleRate: Int, channels: Int) {
+        if (done || channels != 2) return
+        val frames = buffer.remaining() / 4
+        // A jump (the seek that starts the reading, or a rebuffer) starts the recording again.
+        if (size == 0 || sampleRate != rate || kotlin.math.abs(positionUs - expectedUs) > 40_000L) {
+            if (positionUs + frames * 1_000_000L / sampleRate < fromUs) return
+            rate = sampleRate; this.channels = channels; startUs = positionUs; size = 0
+            data = ShortArray(((untilUs - positionUs).coerceAtLeast(1_000_000L) * sampleRate / 1_000_000L).toInt() * 2 + 8192)
+        }
+        val copy = buffer.duplicate().order(java.nio.ByteOrder.LITTLE_ENDIAN)
+        val room = (data.size - size) / 2
+        val n = minOf(frames, room)
+        for (i in 0 until n * 2) data[size + i] = copy.short
+        size += n * 2
+        expectedUs = positionUs + frames * 1_000_000L / sampleRate
+        if (expectedUs >= untilUs || n < frames) done = true
+    }
+
+    /** What was recorded, or null when too little of it is continuous. */
+    fun pcm(): ShortArray? = if (rate > 0 && size >= rate * 2 * 5) data.copyOf(size) else null
+}
+
+/** Feeds one reading to two taps. */
+internal class BothTaps(private val a: PcmTap, private val b: PcmTap) : PcmTap {
+    override fun pcm(buffer: ByteBuffer, positionUs: Long, sampleRate: Int, channels: Int) {
+        a.pcm(buffer.duplicate(), positionUs, sampleRate, channels)
+        b.pcm(buffer.duplicate(), positionUs, sampleRate, channels)
+    }
+}

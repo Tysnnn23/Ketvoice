@@ -96,6 +96,8 @@ class PlaybackService : MediaSessionService() {
         androidx.media3.common.util.Log.setLogger(SafeMedia3Logger)
 
         com.ketvoice.app.data.SettingsStore.load(applicationContext)
+        com.ketvoice.app.data.PlaybackJournal.init(applicationContext)
+        com.ketvoice.app.data.PlaybackJournal.add("playback service started")
         // Playback may start from the system's controls without the app's screen: what the listener blocked still holds.
         runCatching { com.ketvoice.app.data.ArtistPrefs.init(applicationContext) }
         player = buildPlayer()
@@ -271,6 +273,19 @@ class PlaybackService : MediaSessionService() {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 if (owner === this@PlaybackService.player && !isPlaying) SonicMeter.reset()
             }
+            override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+                if (owner !== this@PlaybackService.player || playWhenReady) return
+                when (reason) {
+                    androidx.media3.common.Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_FOCUS_LOSS ->
+                        com.ketvoice.app.data.PlaybackJournal.add("paused: another app took the audio")
+                    androidx.media3.common.Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_BECOMING_NOISY ->
+                        com.ketvoice.app.data.PlaybackJournal.add("paused: headphones or Bluetooth disconnected")
+                }
+            }
+            override fun onPlaybackSuppressionReasonChanged(reason: Int) {
+                if (owner === this@PlaybackService.player && reason == androidx.media3.common.Player.PLAYBACK_SUPPRESSION_REASON_TRANSIENT_AUDIO_FOCUS_LOSS)
+                    com.ketvoice.app.data.PlaybackJournal.add("paused for a moment: another app (a call, a notification) took the audio")
+            }
             override fun onPositionDiscontinuity(
                 oldPosition: androidx.media3.common.Player.PositionInfo,
                 newPosition: androidx.media3.common.Player.PositionInfo,
@@ -416,7 +431,13 @@ class PlaybackService : MediaSessionService() {
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? =
         mediaSession
 
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        com.ketvoice.app.data.PlaybackJournal.add("app swiped away from recent apps · ${if (::player.isInitialized && player.playWhenReady) "playback goes on" else "nothing playing, service ends"}")
+        super.onTaskRemoved(rootIntent)
+    }
+
     override fun onDestroy() {
+        com.ketvoice.app.data.PlaybackJournal.add("playback service stopped")
         stopping = true
         com.ketvoice.app.automix.Automix.detach(automixHost)
         getSystemService(android.media.AudioManager::class.java).unregisterAudioDeviceCallback(audioDevices)

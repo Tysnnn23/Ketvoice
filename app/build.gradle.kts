@@ -23,8 +23,8 @@ android {
         applicationId = "com.ketvoice.app"
         minSdk = 31
         targetSdk = 36
-        versionCode = 121
-        versionName = "5.9.2"
+        versionCode = 122
+        versionName = "5.10.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         resourceConfigurations += listOf("fr", "en", "hi", "ja", "zh", "ru", "it", "es", "de", "pt", "ko")
         ndkVersion = "27.0.12077973"
@@ -143,6 +143,8 @@ dependencies {
     implementation(composeBom)
 
     implementation("androidx.core:core-ktx:1.16.0")
+    // Voice separation for Ketmix (5.9.3): LiteRT runs the optional Spleeter model on the processor.
+    implementation("com.google.ai.edge.litert:litert:1.4.0")
     implementation("androidx.core:core-splashscreen:1.0.1")
     implementation("androidx.activity:activity-compose:1.10.1")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.9.0")

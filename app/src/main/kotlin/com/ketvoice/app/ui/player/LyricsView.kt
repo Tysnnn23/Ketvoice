@@ -369,6 +369,7 @@ private fun MomentBar(track: Track, lines: List<MusicApi.LyricLine>, nextMs: Lon
     var progress by remember { mutableStateOf<Float?>(null) }
     var failed by remember { mutableStateOf<String?>(null) }
     var logo by remember { mutableStateOf(true) }
+    var sound by remember { mutableStateOf(com.ketvoice.app.data.AppSettings.lyricVideoSound.value) }
     val cover = com.ketvoice.app.data.ArtworkRepo.coverForTrack(track) ?: track.coverUrl
     val accent = com.ketvoice.app.theme.rememberCoverAccent(cover)?.first
     val canvas = com.ketvoice.app.data.CanvasRepo.paths.collectAsState().value[track.id]
@@ -393,7 +394,7 @@ private fun MomentBar(track: Track, lines: List<MusicApi.LyricLine>, nextMs: Lon
                 if (!busy) { busy = true; failed = null; progress = 0f
                     scope.launch {
                         try {
-                            val file = com.ketvoice.app.util.LyricVideo.render(context, track, lines, nextMs, canvas, accent?.toArgb(), logo) { p ->
+                            val file = com.ketvoice.app.util.LyricVideo.render(context, track, lines, nextMs, canvas, accent?.toArgb(), logo, sound) { p ->
                                 scope.launch(kotlinx.coroutines.Dispatchers.Main) { progress = p }
                             }
                             com.ketvoice.app.util.LyricVideo.share(context, file, track)
@@ -409,6 +410,12 @@ private fun MomentBar(track: Track, lines: List<MusicApi.LyricLine>, nextMs: Lon
         if (timed) Row(Modifier.fillMaxWidth().padding(top = 4.dp, start = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             Text("Logo Ketvoice dans la vidéo", color = Color.White.copy(alpha = .78f), fontSize = 13.sp, modifier = Modifier.weight(1f))
             com.ketvoice.app.ui.common.LiquidGlassSwitch(logo, { logo = it })
+        }
+        if (timed) Row(Modifier.fillMaxWidth().padding(top = 4.dp, start = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("Son du morceau dans la vidéo", color = Color.White.copy(alpha = .78f), fontSize = 13.sp, modifier = Modifier.weight(1f))
+            com.ketvoice.app.ui.common.LiquidGlassSwitch(sound, {
+                sound = it; com.ketvoice.app.data.AppSettings.lyricVideoSound.value = it; com.ketvoice.app.data.SettingsStore.save()
+            })
         }
     }
 }

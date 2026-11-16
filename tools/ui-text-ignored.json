@@ -1,4 +1,5 @@
 {
+ "Ketvoice {0} · {1} {2} · Android {3}\n\n": "header of the shared playback journal, a support report kept in English",
  " erreur-présence=": "Discord diagnostics key copied into a support report, not user-facing copy",
  " occupé=": "structured log field, never shown in the UI",
  " prêt=": "structured log field, never shown in the UI",

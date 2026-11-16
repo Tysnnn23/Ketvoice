@@ -21,6 +21,16 @@
 
 ## Overview
 
+### 5.10.0 — Ketmix separates the voices
+
+Ketmix now really separates the voices with an optional on-device AI model: the current song's voice stops,
+the next one carries on over its instrumental, then its voice comes in — each song is separated only once.
+Music keeps playing behind other apps when the network drops, a playback log explains any stop, and lyrics
+videos can carry the song's sound and are made much faster.
+[Mobile](https://github.com/Tysnnn23/Ketvoice/releases/download/v5.10.0/Ketvoice-5.10.0.apk)
+· [Quest](https://github.com/Tysnnn23/Ketvoice/releases/download/v5.10.0/Ketvoice-5.10.0-Quest.apk)
+· [Release notes](docs/releases/v5.10.0.md).
+
 ### 5.9.2 — Lyrics videos
 
 Share up to four lines of lyrics as a video — the Canvas blurred behind, the words lit in time — try the new
@@ -751,7 +761,7 @@ You are responsible for complying with the terms of service of any provider you 
 
 ## License
 
-Ketvoice is source-available under the [Ketvoice Source-Available License](LICENSE). You may read the code and install the official releases for personal use. Reusing the code or any part of it, publishing your own builds, or any commercial use requires the project owner's written permission first — ask in an [issue](https://github.com/Tysnnn23/Ketvoice/issues). Third-party components, such as the Inter typeface, keep their own licenses.
+Ketvoice is source-available under the [Ketvoice Source-Available License](LICENSE). You may read the code and install the official releases for personal use. Reusing the code or any part of it, publishing your own builds, or any commercial use requires the project owner's written permission first — ask in an [issue](https://github.com/Tysnnn23/Ketvoice/issues). Third-party components, such as the Inter typeface and the optional Spleeter voice separation model ([MIT](docs/licenses/Spleeter-MIT.txt)), keep their own licenses.
 
 ## Acknowledgements
 

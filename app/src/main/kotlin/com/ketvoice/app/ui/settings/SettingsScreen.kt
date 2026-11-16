@@ -387,6 +387,15 @@ fun SettingsScreen() {
                         value = if (free) "Sans restriction" else "Limitée par l'économie de batterie") {
                         com.ketvoice.app.data.BackgroundPlayback.ask(ctx)
                     }
+                    val vendor = remember { com.ketvoice.app.data.BackgroundPlayback.manufacturerScreen(ctx) != null }
+                    if (vendor) SRow(KetIcons.Shield, "Gestionnaire de batterie du fabricant",
+                        sub = "Sur ce téléphone, autorisez aussi Ketvoice à démarrer et à rester actif en arrière-plan : c'est souvent lui qui coupe la musique.",
+                        value = "Ouvrir") { com.ketvoice.app.data.BackgroundPlayback.openManufacturerScreen(ctx) }
+                    var journal by remember { mutableStateOf(false) }
+                    SRow(KetIcons.Info, "Journal de lecture",
+                        sub = "Ce qui a arrêté la musique : réseau perdu, autre app, fermeture par Android. Reste sur le téléphone.",
+                        value = "Voir") { journal = true }
+                    if (journal) PlaybackJournalDialog { journal = false }
                 }
                 SToggle(KetIcons.Shuffle, "Aléatoire avec moins de répétitions",
                     "Le mode aléatoire garde pour plus tard les titres écoutés récemment et n'enchaîne pas deux titres du même artiste quand il peut l'éviter.",
@@ -478,9 +487,10 @@ fun SettingsScreen() {
                 SToggle(KetIcons.Audio, "Vibrer à l'échange des basses",
                     "Une petite vibration au moment où la basse passe d'un titre à l'autre, quand l'app est à l'écran.",
                     AppSettings.ketmixHaptics.value) { AppSettings.ketmixHaptics.value = it; SettingsStore.save() }
-                SToggle(KetIcons.Audio, "Séparer les voix (expérimental)",
-                    "Pendant un mix, le titre suivant entre sans sa voix puis elle le rejoint, et la voix du titre en cours s'efface avant qu'il chante. En temps réel : rien n'est stocké",
+                SToggle(KetIcons.Audio, "Séparer les voix",
+                    "Pendant un mix, la voix du titre en cours s'arrête et le suivant continue sur son instrumental, puis sa voix le rejoint. Avec le modèle de séparation, la voix est vraiment retirée ; sans lui, elle est seulement atténuée.",
                     AppSettings.ketmixStems.value) { AppSettings.ketmixStems.value = it; SettingsStore.save() }
+                if (AppSettings.ketmixStems.value) StemSettings()
                 SToggle(KetIcons.Refresh, "Mixer aussi un titre en boucle",
                     "Quand un titre est répété, sa fin se mêle à son propre début, sur le temps, au lieu de repartir après un blanc.",
                     AppSettings.ketmixLoops.value) { AppSettings.ketmixLoops.value = it; SettingsStore.save() }
@@ -1190,4 +1200,74 @@ private fun KetmixJournalPanel() {
             android.widget.Toast.makeText(context, com.ketvoice.app.data.AppText.t("Journal copié"), android.widget.Toast.LENGTH_SHORT).show()
         }, Modifier.fillMaxWidth().padding(top = 4.dp), tag = "ketmix-journal-copy", minHeight = 44.dp)
     }
+}
+
+
+/** The optional separation model and the separations already made (5.10.0). */
+@Composable
+private fun ColumnScope.StemSettings() {
+    val model by com.ketvoice.app.stems.StemModel.state.collectAsState()
+    var usage by remember { mutableStateOf(0 to 0L) }
+    var confirm by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    LaunchedEffect(model) {
+        usage = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.ketvoice.app.stems.StemStore.usage() }
+    }
+    val size = "${com.ketvoice.app.stems.StemModel.totalBytes / 1_000_000L} Mo"
+    SRow(KetIcons.Download, "Modèle de séparation",
+        sub = com.ketvoice.app.data.AppText.t("Séparation par IA sur le téléphone (Spleeter), téléchargée une fois : {0}").replace("{0}", size),
+        value = when (val m = model) {
+            com.ketvoice.app.stems.StemModel.State.Missing -> "Télécharger"
+            is com.ketvoice.app.stems.StemModel.State.Downloading -> "Téléchargement · ${(m.fraction * 100).toInt()} %"
+            com.ketvoice.app.stems.StemModel.State.Ready -> "Prêt"
+            is com.ketvoice.app.stems.StemModel.State.Failed -> "Échec · réessayer"
+        }) {
+        when (model) {
+            com.ketvoice.app.stems.StemModel.State.Ready -> confirm = true
+            is com.ketvoice.app.stems.StemModel.State.Downloading -> com.ketvoice.app.stems.StemModel.cancel()
+            else -> com.ketvoice.app.stems.StemModel.download()
+        }
+    }
+    SRow(KetIcons.Storage, "Titres séparés",
+        sub = "Chaque titre n'est séparé qu'une fois ; ses mix suivants réutilisent la séparation. Toucher pour tout effacer.",
+        value = "${usage.first} · ${"%.1f".format(usage.second / 1_000_000.0)} Mo") {
+        scope.launch {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.ketvoice.app.stems.StemStore.clear() }
+            usage = 0 to 0L
+        }
+    }
+    SToggle(KetIcons.Audio, "Séparer seulement en charge",
+        "Les nouvelles séparations n'ont lieu que téléphone branché ; celles déjà faites servent toujours.",
+        AppSettings.ketmixStemsCharging.value) { AppSettings.ketmixStemsCharging.value = it; SettingsStore.save() }
+    if (confirm) androidx.compose.material3.AlertDialog(
+        onDismissRequest = { confirm = false },
+        title = { Text(com.ketvoice.app.data.AppText.t("Supprimer le modèle de séparation ?")) },
+        text = { Text(com.ketvoice.app.data.AppText.t("Les mix atténueront la voix au lieu de la retirer. Les titres déjà séparés restent.")) },
+        confirmButton = { androidx.compose.material3.TextButton({ confirm = false; com.ketvoice.app.stems.StemModel.delete() }) {
+            Text(com.ketvoice.app.data.AppText.t("Supprimer")) } },
+        dismissButton = { androidx.compose.material3.TextButton({ confirm = false }) { Text(com.ketvoice.app.data.AppText.t("Annuler")) } })
+}
+
+
+/** The playback journal, to read or share (5.10.0). */
+@Composable
+private fun PlaybackJournalDialog(onClose: () -> Unit) {
+    val ctx = LocalContext.current
+    val lines = remember { com.ketvoice.app.data.PlaybackJournal.snapshot().takeLast(120).reversed() }
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onClose,
+        title = { Text(com.ketvoice.app.data.AppText.t("Journal de lecture")) },
+        text = {
+            androidx.compose.foundation.lazy.LazyColumn(Modifier.heightIn(max = 420.dp)) {
+                if (lines.isEmpty()) item { Text(com.ketvoice.app.data.AppText.t("Rien à signaler pour l'instant."), fontSize = 13.sp) }
+                items(lines.size) { i -> Text(lines[i], fontSize = 11.sp, lineHeight = 15.sp, modifier = Modifier.padding(vertical = 2.dp)) }
+            }
+        },
+        confirmButton = { androidx.compose.material3.TextButton({
+            val text = "Ketvoice ${com.ketvoice.app.BuildConfig.VERSION_NAME} · ${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL} · Android ${android.os.Build.VERSION.RELEASE}\n\n" +
+                com.ketvoice.app.data.PlaybackJournal.snapshot().joinToString("\n")
+            runCatching { ctx.startActivity(android.content.Intent.createChooser(android.content.Intent(android.content.Intent.ACTION_SEND)
+                .setType("text/plain").putExtra(android.content.Intent.EXTRA_TEXT, text), null).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
+        }) { Text(com.ketvoice.app.data.AppText.t("Partager")) } },
+        dismissButton = { androidx.compose.material3.TextButton(onClose) { Text(com.ketvoice.app.data.AppText.t("Fermer")) } })
 }

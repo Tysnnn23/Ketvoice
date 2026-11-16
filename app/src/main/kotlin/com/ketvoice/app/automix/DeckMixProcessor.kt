@@ -34,8 +34,10 @@ internal class DeckControl {
     @Volatile var offsetUs: Long = PLAYER_CLOCK_OFFSET_US
     /** From this position in the title an end of stream is the title's end, after which an echo may ring on (see [MixPlan.tail]). */
     @Volatile var tailFromUs: Long = Long.MAX_VALUE
+    /** The instrumental of the part of the title this deck mixes, when its voice was separated (5.10.0). */
+    @Volatile var stem: com.ketvoice.app.stems.StemAudio? = null
 
-    fun reset() { automation = null; tap = null; tailFromUs = Long.MAX_VALUE }
+    fun reset() { automation = null; tap = null; tailFromUs = Long.MAX_VALUE; stem = null }
 
     companion object { const val PLAYER_CLOCK_OFFSET_US = 1_000_000_000_000L }
 }
@@ -92,7 +94,7 @@ internal class DeckMixProcessor(private val control: DeckControl) : BaseAudioPro
         val engine = dsp
         if (engine == null) output.put(inputBuffer)
         else try {
-            engine.process(inputBuffer, output, startUs, if (cursorUs == C.TIME_UNSET) null else control.automation)
+            engine.process(inputBuffer, output, startUs, if (cursorUs == C.TIME_UNSET) null else control.automation, control.stem)
         } catch (_: RuntimeException) {
             // A transition must never cost the playback: drop it and pass the rest of the sound through.
             control.automation = null

@@ -30,6 +30,8 @@ import com.ketvoice.app.data.ArtworkRepo
 import com.ketvoice.app.data.MusicApi
 import com.ketvoice.app.data.Track
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -97,7 +99,7 @@ object LyricVideo {
     fun active(lines: List<MusicApi.LyricLine>, t: Long): Int = lines.indexOfLast { it.timeMs in 0..t }
 
     suspend fun render(context: Context, track: Track, lines: List<MusicApi.LyricLine>, nextMs: Long, canvas: String?,
-                       accent: Int?, logo: Boolean, onProgress: (Float) -> Unit): File = withContext(Dispatchers.Default) {
+                       accent: Int?, logo: Boolean, sound: Boolean = true, onProgress: (Float) -> Unit): File = withContext(Dispatchers.Default) {
         require(lines.isNotEmpty()) { "Aucune ligne choisie" }
         val shown = lines.take(4)
         val window = window(shown, nextMs)
@@ -110,7 +112,14 @@ object LyricVideo {
                 (coil.Coil.imageLoader(context).execute(request).drawable as? BitmapDrawable)?.bitmap
             }.getOrNull()
         }
+        // The Canvas frames and the song's sound are read at the same time (5.10.0).
+        val audioJob = if (!sound) null else async(Dispatchers.IO) {
+            runCatching { withTimeoutOrNull(25_000L) { LyricAudio.encode(context, track, window.first * 1000L, window.last * 1000L) } }
+                .onFailure { android.util.Log.w("KetvoiceVideo", "sound unavailable: ${it.javaClass.simpleName}") }.getOrNull()
+        }
         val backdrop = canvas?.let { readCanvas(it, duration) } ?: emptyList()
+        onProgress(.05f)
+        val audio = audioJob?.await()
         val flow = cover?.scale(16, 16)?.scale(64, 64)
         val folder = File(context.cacheDir, "exports").apply { mkdirs() }
         folder.listFiles { f -> f.name.startsWith("lyrics-") }?.forEach { it.delete() }
@@ -133,16 +142,24 @@ object LyricVideo {
         fun drain(endOfStream: Boolean, untilFrames: Int) {
             var idle = 0
             while (true) {
-                val index = encoder.dequeueOutputBuffer(info, 10_000)
+                // While frames are still drawn the encoder is only polled; at the end it is waited for.
+                val index = encoder.dequeueOutputBuffer(info, if (endOfStream) 10_000 else 2_000)
                 if (index == MediaCodec.INFO_TRY_AGAIN_LATER) {
                     // Caught up enough (or the encoder is silent for three seconds): go on drawing.
                     if (!endOfStream && written >= untilFrames) return
-                    if (++idle > 300) return
+                    if (++idle > (if (endOfStream) 300 else 1500)) return
                     continue
                 }
                 idle = 0
                 if (index == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
-                    videoTrack = muxer.addTrack(encoder.outputFormat); muxer.start(); muxing = true
+                    videoTrack = muxer.addTrack(encoder.outputFormat)
+                    val soundTrack = audio?.let { muxer.addTrack(it.format) }
+                    muxer.start(); muxing = true
+                    // The sound is already encoded: it is written whole, before the pictures.
+                    if (audio != null && soundTrack != null) for (sample in audio.samples) {
+                        val b = MediaCodec.BufferInfo().apply { set(0, sample.data.size, sample.timeUs, sample.flags) }
+                        muxer.writeSampleData(soundTrack, java.nio.ByteBuffer.wrap(sample.data), b)
+                    }
                     continue
                 }
                 if (index < 0) continue
@@ -174,8 +191,8 @@ object LyricVideo {
                     painter.card(c, songMs)
                 } finally { surface.unlockCanvasAndPost(c) }
                 // Never more than a few frames ahead of the encoder: a full queue would drop frames.
-                drain(endOfStream = false, untilFrames = frame - 4)
-                if (frame % 6 == 0) onProgress(frame.toFloat() / frames)
+                drain(endOfStream = false, untilFrames = frame - 6)
+                if (frame % 6 == 0) onProgress(.05f + .95f * frame / frames)
             }
             encoder.signalEndOfInputStream()
             drain(endOfStream = true, untilFrames = Int.MAX_VALUE)
@@ -202,18 +219,46 @@ object LyricVideo {
         return bitmap
     }
 
-    /** Small frames of the Canvas, every [BACKDROP_STEP_MS], looping when the Canvas is shorter than the video. */
+    /**
+     * Small frames of the Canvas, every [BACKDROP_STEP_MS], looping when the Canvas is shorter than
+     * the video. The frames are decoded one after the other in small batches (5.10.0): seeking to each
+     * one, as 5.9.2 did, decoded the video again from its last key frame every time and was slow.
+     */
     private fun readCanvas(path: String, durationMs: Long): List<Bitmap> {
         val reader = MediaMetadataRetriever()
         return try {
             if (path.startsWith("http")) reader.setDataSource(path, emptyMap()) else reader.setDataSource(path)
             val length = reader.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull()?.takeIf { it > 0 } ?: return emptyList()
+            val count = reader.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_FRAME_COUNT)?.toIntOrNull()?.takeIf { it > 0 }
             val steps = (min(durationMs, length) / BACKDROP_STEP_MS).toInt().coerceIn(1, 150)
-            (0 until steps).mapNotNull { i ->
-                reader.getScaledFrameAtTime(i * BACKDROP_STEP_MS * 1000L, MediaMetadataRetriever.OPTION_CLOSEST, 54, 96)
-                    ?.let { frame -> frame.scale(27, 48).also { if (it !== frame) frame.recycle() } }
+            if (count == null) return seekFrames(reader, steps)
+            val perStep = count.toDouble() / (length / BACKDROP_STEP_MS.toDouble())
+            val wanted = (0 until steps).map { (it * perStep).toInt().coerceAtMost(count - 1) }
+            val params = MediaMetadataRetriever.BitmapParams().apply { preferredConfig = Bitmap.Config.RGB_565 }
+            val out = ArrayList<Bitmap>(steps)
+            var next = 0
+            var index = 0
+            while (next < wanted.size && index < count) {
+                val batch = minOf(8, count - index)
+                val decoded = reader.getFramesAtIndex(index, batch, params)
+                decoded.forEachIndexed { k, frame ->
+                    if (next < wanted.size && index + k == wanted[next]) {
+                        out += frame.scale(27, 48)
+                        while (next < wanted.size && wanted[next] <= index + k) next++
+                    }
+                    frame.recycle()
+                }
+                index += batch
+                // Frames between two kept ones are skipped by batches when they are far apart.
+                if (next < wanted.size && wanted[next] - index > 8) index = wanted[next]
             }
+            out.ifEmpty { seekFrames(reader, steps) }
         } catch (_: Exception) { emptyList() } finally { runCatching { reader.release() } }
+    }
+
+    private fun seekFrames(reader: MediaMetadataRetriever, steps: Int): List<Bitmap> = (0 until steps).mapNotNull { i ->
+        reader.getScaledFrameAtTime(i * BACKDROP_STEP_MS * 1000L, MediaMetadataRetriever.OPTION_CLOSEST_SYNC, 54, 96)
+            ?.let { frame -> frame.scale(27, 48).also { if (it !== frame) frame.recycle() } }
     }
 
     private class Painter(context: Context, val track: Track, val lines: List<MusicApi.LyricLine>, val nextMs: Long,
@@ -240,7 +285,7 @@ object LyricVideo {
 
         fun background(c: Canvas, frames: List<Bitmap>, flow: Bitmap?, sinceStartMs: Long, frame: Int) {
             c.drawColor(darken(base, .4f))
-            val dst = RectF(-40f, -40f, WIDTH + 40f, HEIGHT + 40f)
+            val dst = backdropRect
             if (frames.isNotEmpty()) {
                 val pos = sinceStartMs.toFloat() / BACKDROP_STEP_MS
                 val a = frames[pos.toInt() % frames.size]; val b = frames[(pos.toInt() + 1) % frames.size]
@@ -261,16 +306,29 @@ object LyricVideo {
                 }
                 smooth.alpha = 255
             }
-            c.drawRect(0f, 0f, WIDTH.toFloat(), HEIGHT.toFloat(), Paint().apply {
-                shader = LinearGradient(0f, 0f, 0f, HEIGHT.toFloat(), 0x33000000, 0x99000000.toInt(), Shader.TileMode.CLAMP)
-            })
+            c.drawRect(0f, 0f, WIDTH.toFloat(), HEIGHT.toFloat(), shade)
         }
 
+        // What every frame draws the same way is made once (5.10.0), not for each of the 450 frames.
+        private val shape = Path().apply { addRoundRect(RectF(cardLeft, cardTop, cardLeft + cardWidth, cardTop + cardHeight), 42f, 42f, Path.Direction.CW) }
+        private val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0x2EFFFFFF }
+        private val edge = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 2f; color = 0x33FFFFFF }
+        private val shade = Paint().apply {
+            shader = LinearGradient(0f, 0f, 0f, HEIGHT.toFloat(), 0x33000000, 0x99000000.toInt(), Shader.TileMode.CLAMP)
+        }
+        private val rule = Paint().apply { color = 0x22FFFFFF; strokeWidth = 2f }
+        private val name = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFFFFFFF.toInt(); textSize = 26f; typeface = bold }
+        private val sub = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xCCFFFFFF.toInt(); textSize = 22f }
+        private val brand = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xCCFFFFFF.toInt(); textSize = 24f; typeface = bold; letterSpacing = .25f }
+        private val thumbRect = RectF(cardLeft + 30f, cardTop + cardHeight - footer + 26f, cardLeft + 94f, cardTop + cardHeight - footer + 90f)
+        private val thumbClip = Path().apply { addRoundRect(thumbRect, 12f, 12f, Path.Direction.CW) }
+        private val titleText = ellipsize(track.title, name, cardLeft + cardWidth - 30f - (thumbRect.right + 18f))
+        private val artistText = ellipsize(track.artist, sub, cardLeft + cardWidth - 30f - (thumbRect.right + 18f))
+        private val backdropRect = RectF(-40f, -40f, WIDTH + 40f, HEIGHT + 40f)
+
         fun card(c: Canvas, songMs: Long) {
-            val rect = RectF(cardLeft, cardTop, cardLeft + cardWidth, cardTop + cardHeight)
-            val shape = Path().apply { addRoundRect(rect, 42f, 42f, Path.Direction.CW) }
-            c.drawPath(shape, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0x2EFFFFFF })
-            c.drawPath(shape, Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 2f; color = 0x33FFFFFF })
+            c.drawPath(shape, fill)
+            c.drawPath(shape, edge)
             val lit = lit(lines, nextMs, songMs)
             val active = active(lines, songMs)
             var y = cardTop + 40f
@@ -299,19 +357,12 @@ object LyricVideo {
             }
             // The cover and the title under the words; the Ketvoice name when wanted.
             val footTop = cardTop + cardHeight - footer + 12f
-            c.drawLine(cardLeft + 24f, footTop - 6f, cardLeft + cardWidth - 24f, footTop - 6f, Paint().apply { color = 0x22FFFFFF; strokeWidth = 2f })
-            val thumb = RectF(cardLeft + 30f, footTop + 14f, cardLeft + 30f + 64f, footTop + 78f)
-            if (cover != null) c.withClip(Path().apply { addRoundRect(thumb, 12f, 12f, Path.Direction.CW) }) { drawBitmap(cover, null, thumb, smooth) }
-            val name = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFFFFFFF.toInt(); textSize = 26f; typeface = bold }
-            val sub = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xCCFFFFFF.toInt(); textSize = 22f }
-            val textLeft = thumb.right + 18f
-            val room = cardLeft + cardWidth - 30f - textLeft
-            c.drawText(ellipsize(track.title, name, room), textLeft, footTop + 42f, name)
-            c.drawText(ellipsize(track.artist, sub, room), textLeft, footTop + 72f, sub)
-            if (logo) {
-                val brand = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xCCFFFFFF.toInt(); textSize = 24f; typeface = bold; letterSpacing = .25f }
-                c.drawText("KETVOICE", (WIDTH - brand.measureText("KETVOICE")) / 2f, HEIGHT - 90f, brand)
-            }
+            c.drawLine(cardLeft + 24f, footTop - 6f, cardLeft + cardWidth - 24f, footTop - 6f, rule)
+            if (cover != null) c.withClip(thumbClip) { drawBitmap(cover, null, thumbRect, smooth) }
+            val textLeft = thumbRect.right + 18f
+            c.drawText(titleText, textLeft, footTop + 42f, name)
+            c.drawText(artistText, textLeft, footTop + 72f, sub)
+            if (logo) c.drawText("KETVOICE", (WIDTH - brand.measureText("KETVOICE")) / 2f, HEIGHT - 90f, brand)
         }
 
         private fun ellipsize(text: String, paint: TextPaint, width: Float) =

@@ -304,17 +304,21 @@ internal class DeckAutomation(
  * an echo and a reverb fed after the filters.
  */
 /**
- * The voices of a transition when "Séparer les voix" is on (5.9.1, experimental). Ketvoice separates
- * in real time the centre of the stereo image between 220 Hz and 4.5 kHz, where a lead vocal sits
- * (the [DeckAutomation.vocalCut] of the decks), so nothing is computed ahead or stored:
+ * The voices of a transition when "Séparer les voix" is on. Since 5.10.0 the voice is really
+ * separated when the separation model was downloaded: each deck carries the instrumental of the
+ * part it mixes ([DeckControl.stem], computed once per title by [com.ketvoice.app.stems.StemEngine]) and
+ * [DeckAutomation.vocalCut] fades from the title to it. Without the model, Ketvoice cuts in real time the
+ * centre of the stereo image between 220 Hz and 4.5 kHz, where a lead vocal sits (5.9.1):
  * - the incoming title enters as its instrumental, and its voice joins over two bars just before
  *   it sings (or at the bass swap, or two thirds into the blend, when that moment is unknown);
  * - the outgoing voice steps down before the incoming one sings, so two voices never overlap.
  * The bass already changes hands on one beat (the swap of the blends).
  */
 internal object Stems {
-    /** How far the voice is taken down: well under the music, never a hole. */
+    /** How far a band cut takes the voice down, without a separation: well under the music, never a hole. */
     const val DOWN = .85f
+    /** The curves ask for the whole voice; with a separated instrumental it really leaves. */
+    private const val ALL = 1f
     private const val MOVE_US = 2_000_000L
 
     private fun kinds(plan: MixPlan) = plan.stems && plan.kind in setOf(MixKind.Beatmatch, MixKind.Filter, MixKind.Wash, MixKind.Crossfade)
@@ -330,7 +334,7 @@ internal object Stems {
         val natural = plan.voiceFromMs.takeIf { it > plan.inMs }?.let { it * 1000L - 300_000L }
         val releaseEnd = (natural ?: swap.takeIf { it > start } ?: (start + (end - start) * 2 / 3)).coerceIn(start + MOVE_US, end)
         val releaseStart = (releaseEnd - MOVE_US).coerceAtLeast(start + 1)
-        val cut = Curve.join(Curve.shaped(start, releaseStart, 2) { DOWN }, Curve.shaped(releaseStart + 1, releaseEnd, 12) { DOWN * (1f - ease(it)) })
+        val cut = Curve.join(Curve.shaped(start, releaseStart, 2) { ALL }, Curve.shaped(releaseStart + 1, releaseEnd, 12) { ALL * (1f - ease(it)) })
         return automation.copyWith(vocalCut = cut)
     }
 
@@ -344,7 +348,7 @@ internal object Stems {
         val downEnd = (sings ?: (start + (end - start) / 2)).coerceIn(start + 1, end)
         val downStart = (downEnd - MOVE_US).coerceAtLeast(start)
         val cut = Curve.join(Curve.shaped(start, maxOf(start + 1, downStart), 2) { 0f },
-            Curve.shaped(maxOf(start + 2, downStart + 1), maxOf(start + 3, downEnd), 12) { DOWN * ease(it) })
+            Curve.shaped(maxOf(start + 2, downStart + 1), maxOf(start + 3, downEnd), 12) { ALL * ease(it) })
         return automation.copyWith(vocalCut = cut)
     }
 }
@@ -373,7 +377,8 @@ internal class DeckDsp(val sampleRate: Int, val channels: Int) {
      * Reads all of [input] and writes the result to [output]. [startUs] is the position in
      * the title of the first frame. Without automation the sound passes through untouched.
      */
-    fun process(input: ByteBuffer, output: ByteBuffer, startUs: Long, automation: DeckAutomation?) {
+    fun process(input: ByteBuffer, output: ByteBuffer, startUs: Long, automation: DeckAutomation?,
+                stem: com.ketvoice.app.stems.StemAudio? = null) {
         if (automation == null) {
             if (!gain.isNaN() || high.cutoff > 0f || low.cutoff > 0f || echo != null || reverb != null || hiss.cutoff > 0f) reset()
             output.put(input)
@@ -398,7 +403,13 @@ internal class DeckDsp(val sampleRate: Int, val channels: Int) {
             high.follow(automation.highPassHz.at(middleUs), automation.resonance, sampleRate, highPass = true)
             low.follow(automation.lowPassHz.at(middleUs), automation.resonance, sampleRate, highPass = false)
             val voice = if (channels >= 2 && automation.usesVocalCut) automation.vocalCut.at(middleUs).coerceIn(0f, 1f) else 0f
-            if (voice > 0f) { voiceHigh.follow(220f, .7071f, sampleRate, highPass = true); voiceLow.follow(4_500f, .7071f, sampleRate, highPass = false) }
+            // The separated instrumental, where it covers this block: the voice is really taken out.
+            val stemAt = if (voice > 0f && stem != null && channels == 2 && stem.rate == sampleRate)
+                stem.frameAt(blockUs).takeIf { it >= 0 && stem.frameAt(endUs - 1) >= 0 } ?: -1 else -1
+            val stemPcm = stem?.pcm
+            if (voice > 0f && stemAt < 0) { voiceHigh.follow(220f, .7071f, sampleRate, highPass = true); voiceLow.follow(4_500f, .7071f, sampleRate, highPass = false) }
+            // Without the separation, a band cut reaches [Stems.DOWN] at most.
+            val bandVoice = if (stemAt >= 0) 0f else minOf(voice, Stems.DOWN)
             val send = if (repeats != null) automation.echo.at(middleUs) else 0f
             val wash = if (room != null) automation.reverb.at(middleUs) else 0f
             val breath = if (automation.usesNoise) automation.noise.at(middleUs) * 32_767f else 0f
@@ -407,16 +418,17 @@ internal class DeckDsp(val sampleRate: Int, val channels: Int) {
                 gain += step; dry += dryStep
                 for (c in 0 until channels) {
                     var x = input.short.toFloat()
+                    if (stemAt >= 0 && stemPcm != null) x += voice * (stemPcm[2 * (stemAt + i) + c] - x)
                     if (high.cutoff > 0f) x = high.run(x, c)
                     if (low.cutoff > 0f) x = low.run(x, c)
                     frame[c] = x
                 }
-                if (voice > 0f) {
+                if (bandVoice > 0f) {
                     // Mid and side: the voice lives in the middle; only its band is taken down there.
                     val mid = (frame[0] + frame[1]) * .5f
                     val side = (frame[0] - frame[1]) * .5f
                     val band = voiceLow.run(voiceHigh.run(mid, 0), 0)
-                    val kept = mid - voice * band
+                    val kept = mid - bandVoice * band
                     frame[0] = kept + side; frame[1] = kept - side
                 }
                 val n = if (breath > 0f) hiss.run(nextNoise() * breath, 0) else 0f

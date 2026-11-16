@@ -21,6 +21,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.isActive
+import com.ketvoice.app.stems.StemEngine
+import com.ketvoice.app.stems.StemModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -354,20 +359,40 @@ internal object Automix {
         }
         val outHint = body(current.id, duration, item)
         if (!valid()) return false
+        // The voices are really separated when the model is there (5.10.0): the parts of both titles that a mix can use are recorded.
+        val separate = AppSettings.ketmixStems.value && StemModel.ready && !h.exact
+        val outFrom = max(0L, duration - depth.outroMs)
+        val stemOutFrom = max(outFrom, duration - StemEngine.MAX_PART_MS)
+        val stemInUntil = min(depth.introMs, StemEngine.MAX_PART_MS)
+        var outCapture: PcmCapture? = null
+        var inCapture: PcmCapture? = null
         var outro = AnalysisStore.outro(current.id, duration, depth)?.takeIf { outHint == null || it.tempoHint > 0f || it.confidence >= .8f }
         if (outro == null) {
-            outro = read(deck, control, item, max(0L, duration - depth.outroMs), depth.outroMs, depth, ::valid, outHint)
+            outCapture = if (separate) PcmCapture(stemOutFrom * 1000L, duration * 1000L) else null
+            outro = read(deck, control, item, outFrom, depth.outroMs, depth, ::valid, outHint, capture = outCapture)
             outro?.let { AnalysisStore.put(current.id, duration, false, it) }
-        }
+        } else if (separate) outCapture = capture(deck, control, item, stemOutFrom, duration - stemOutFrom, ::valid)
         if (!valid()) return false
         val inHint = if (next.track.id == current.id) outHint else body(next.track.id, next.track.durationMs, nextItem)
         if (!valid()) return false
         var intro = AnalysisStore.intro(next.track.id, next.track.durationMs, depth)?.takeIf { inHint == null || it.tempoHint > 0f || it.confidence >= .8f }
         if (intro == null) {
-            intro = read(deck, control, nextItem, 0L, depth.introMs, depth, ::valid, inHint)
+            inCapture = if (separate) PcmCapture(0L, stemInUntil * 1000L) else null
+            intro = read(deck, control, nextItem, 0L, depth.introMs, depth, ::valid, inHint, capture = inCapture)
             intro?.let { AnalysisStore.put(next.track.id, next.track.durationMs, true, it) }
-        }
+        } else if (separate) inCapture = capture(deck, control, nextItem, 0L, stemInUntil, ::valid)
         if (!valid()) return false
+        // The network runs once per part of a title, on a thread of its own; its result is kept for later mixes.
+        val compute = !AppSettings.ketmixStemsCharging.value || StemModel.charging()
+        val nextId = next.track.id
+        val stemWork = if (!separate) null else CoroutineScope(currentCoroutineContext()).async(stemThread) {
+            val ctx = currentCoroutineContext()
+            fun part(c: PcmCapture?, id: String, length: Long, intro: Boolean) = c?.pcm()?.let { pcm ->
+                runCatching { StemEngine.instrumental(id, length, intro, pcm, c.rate, c.startUs, compute) { !ctx.isActive } }
+                    .onFailure { android.util.Log.w("KetvoiceStems", "separation failed: ${it.javaClass.simpleName}") }.getOrNull()
+            }
+            part(outCapture, current.id, duration, false) to part(inCapture, nextId, nextDuration, true)
+        }
         scope.launch(Dispatchers.IO) { AnalysisStore.save() }
         control.reset()
 
@@ -441,6 +466,19 @@ internal object Automix {
         }
         val finalPreRoll = preRollOf(plan)
         val finalStart = plan.outMs - finalPreRoll
+        // The separated instrumentals join the decks before their automations do.
+        if (stemWork != null && s.precise) {
+            val budget = finalStart - main.currentPosition - 2_500L
+            val stems = if (stemWork.isCompleted) runCatching { stemWork.getCompleted() }.getOrNull()
+                else if (budget > 0) withTimeoutOrNull(budget) { runCatching { stemWork.await() }.getOrNull() } else null
+            if (!valid()) return false
+            stems?.first?.let { mainControl.stem = it }
+            stems?.second?.let { control.stem = it }
+            note { it.copy(analysis = it.analysis + ", voices " + when {
+                stems?.first != null && stems.second != null -> "separated"
+                stems?.first != null || stems?.second != null -> "partly separated"
+                else -> "band cut" }) }
+        }
         // Both automations are tied to positions in their title, so they are set ahead of time: the
         // sound a deck has already buffered when the mix starts then carries its level too.
         if (s.precise) {
@@ -603,11 +641,12 @@ internal object Automix {
 
     /** Plays [lengthMs] of [item] from [fromMs] on the silent deck, fast, and measures it. */
     private suspend fun read(deck: ExoPlayer, control: DeckControl, item: MediaItem, fromMs: Long, lengthMs: Long,
-                             depth: AnalysisDepth, valid: () -> Boolean, hint: BeatAnalysis.Hint? = null, key: Boolean = depth.key): SegmentAnalysis? {
+                             depth: AnalysisDepth, valid: () -> Boolean, hint: BeatAnalysis.Hint? = null, key: Boolean = depth.key,
+                             capture: PcmCapture? = null): SegmentAnalysis? {
         val tap = AnalysisTap(fromMs * 1000L, (fromMs + lengthMs) * 1000L, key, depth.thorough, hint)
         control.automation = DeckAutomation.MUTE
         deck.volume = 0f
-        control.tap = tap
+        control.tap = if (capture != null) BothTaps(tap, capture) else tap
         deck.setMediaItem(item, fromMs)
         val speed = analysisSpeed(appInFront)
         deck.playbackParameters = PlaybackParameters(speed)
@@ -616,7 +655,7 @@ internal object Automix {
         val started = SystemClock.elapsedRealtime()
         val limit = started + (lengthMs / speed).toLong() + 9_000L
         try {
-            while (!tap.done && deck.playbackState != androidx.media3.common.Player.STATE_ENDED && deck.playerError == null &&
+            while (!(tap.done && capture?.done != false) && deck.playbackState != androidx.media3.common.Player.STATE_ENDED && deck.playerError == null &&
                 SystemClock.elapsedRealtime() < limit) {
                 if (!valid()) return null
                 // Playing, but no sound reaches the tap: this format bypasses the processors.
@@ -629,6 +668,41 @@ internal object Automix {
         }
         delay(60)
         return withContext(Dispatchers.Default) { runCatching { tap.result() }.getOrNull() }
+    }
+
+    /** Plays [lengthMs] of [item] from [fromMs] on the silent deck, fast, and records its sound for the separation of its voice. */
+    private suspend fun capture(deck: ExoPlayer, control: DeckControl, item: MediaItem, fromMs: Long, lengthMs: Long,
+                                valid: () -> Boolean): PcmCapture? {
+        val capture = PcmCapture(fromMs * 1000L, (fromMs + lengthMs) * 1000L)
+        control.automation = DeckAutomation.MUTE
+        deck.volume = 0f
+        control.tap = capture
+        deck.setMediaItem(item, fromMs)
+        val speed = analysisSpeed(appInFront)
+        deck.playbackParameters = PlaybackParameters(speed)
+        deck.prepare()
+        deck.play()
+        val started = SystemClock.elapsedRealtime()
+        val limit = started + (lengthMs / speed).toLong() + 9_000L
+        try {
+            while (!capture.done && deck.playbackState != androidx.media3.common.Player.STATE_ENDED && deck.playerError == null &&
+                SystemClock.elapsedRealtime() < limit) {
+                if (!valid()) return null
+                if (deck.isPlaying && capture.rate == 0 && SystemClock.elapsedRealtime() - started > 4_000L) break
+                delay(50)
+            }
+        } finally {
+            runCatching { deck.pause() }
+            control.tap = null
+        }
+        return capture
+    }
+
+    /** The separations run on one thread of low priority: the title being heard never waits for them. */
+    private val stemThread by lazy {
+        java.util.concurrent.Executors.newSingleThreadExecutor { r ->
+            Thread({ android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND); r.run() }, "ketvoice-stems")
+        }.asCoroutineDispatcher()
     }
 
     /**

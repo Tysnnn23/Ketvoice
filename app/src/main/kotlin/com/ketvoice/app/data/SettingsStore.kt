@@ -37,6 +37,8 @@ object SettingsStore {
         s.volumeLeveling.value = p.getBoolean("volumeLeveling", false)
         s.coverBackground.value = p.getBoolean("coverBackground", false)
         s.ketmixStems.value = p.getBoolean("ketmixStems", false)
+        s.ketmixStemsCharging.value = p.getBoolean("ketmixStemsCharging", false)
+        s.lyricVideoSound.value = p.getBoolean("lyricVideoSound", true)
         s.autoOfflineFavorites.value = p.getBoolean("autoOfflineFavorites", true)
         s.canvasWithMobileData.value = p.getBoolean("canvasWithMobileData", s.canvasWithMobileData.value)
         // The old unused flag was saved as true without any consent screen.
@@ -173,6 +175,8 @@ object SettingsStore {
             .putBoolean("volumeLeveling", s.volumeLeveling.value)
             .putBoolean("coverBackground", s.coverBackground.value)
             .putBoolean("ketmixStems", s.ketmixStems.value)
+            .putBoolean("ketmixStemsCharging", s.ketmixStemsCharging.value)
+            .putBoolean("lyricVideoSound", s.lyricVideoSound.value)
             .putBoolean("autoOfflineFavorites", s.autoOfflineFavorites.value)
             .putInt("lyricsTextSize", s.lyricsTextSize.value)
             .putBoolean("canvasWithMobileData", s.canvasWithMobileData.value)
