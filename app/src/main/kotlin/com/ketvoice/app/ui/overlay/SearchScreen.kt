@@ -86,9 +86,6 @@ fun SearchScreen() {
     // Phones (6.0.0): the field is the floating one at the bottom of the screen (ui/chrome/FloatingSearch).
     val floating = com.ketvoice.app.ui.chrome.FloatingSearch.applies(layout.hasRail, com.ketvoice.app.BuildConfig.IS_QUEST)
     val pageQuery = rememberSaveable { mutableStateOf(AppUi.searchSeed.value) }
-    remember(floating) {
-        if (floating && AppUi.searchSeed.value.isNotBlank()) com.ketvoice.app.ui.chrome.FloatingSearch.query.value = AppUi.searchSeed.value
-    }
     var query by (if (floating) com.ketvoice.app.ui.chrome.FloatingSearch.query else pageQuery)
     var results by remember { mutableStateOf<List<Track>>(emptyList()) }
     // Found by their lyrics: on the device (playable at once), and online (searched in the catalogue when touched).
@@ -117,7 +114,11 @@ fun SearchScreen() {
     }
 
     // La graine est consommée une seule fois (tuile genre / album).
-    LaunchedEffect(Unit) { AppUi.searchSeed.value = "" }
+    LaunchedEffect(Unit) {
+        // A seeded search (a genre tile) fills the floating field too.
+        if (floating && AppUi.searchSeed.value.isNotBlank()) com.ketvoice.app.ui.chrome.FloatingSearch.query.value = AppUi.searchSeed.value
+        AppUi.searchSeed.value = ""
+    }
     // The keyboard's search key in the floating field searches here.
     DisposableEffect(floating) {
         val submit = { submitSearch(true) }
