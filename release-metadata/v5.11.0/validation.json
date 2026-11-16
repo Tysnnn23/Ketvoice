@@ -1,0 +1,199 @@
+{
+  "schema": 8,
+  "version": "5.11.0",
+  "versionCode": 123,
+  "source_commit": "ae1f8fdca79076edbfce67b1c1795cfa5cfa1f61",
+  "created_at": "2026-11-16T16:36:48.015974+00:00",
+  "build_origin": {
+    "kind": "github_actions_with_owner_discord_sdk",
+    "workflow": "android.yml",
+    "run_id": 43907225025,
+    "artifact": {
+      "id": 14246996996,
+      "sha256": "be1dc865594c124b37cebc45a8f07ba61620f18adb8967b39a6f990622f5c061"
+    },
+    "gradle": "assembleMobileRelease assembleQuestRelease",
+    "note": "Signed by CI with the pinned keystore secret; the Discord Social SDK AAR matched its pinned SHA-256."
+  },
+  "local_validation": {
+    "result": "debug JVM/Robolectric suites for both flavors, release lint and the UI text audit passed in a cloud container without the Discord SDK",
+    "commands": [
+      "testMobileDebugUnitTest",
+      "testQuestDebugUnitTest",
+      "lintMobileRelease",
+      "lintQuestRelease",
+      "tools/audit_ui_texts.py --check"
+    ],
+    "ci_validation": "run 43907225025: release builds, debug and release unit tests for both flavors, UI text audit, lint, APK signature pin and Discord bridge packaging passed",
+    "code_review": {
+      "kind": "none independent",
+      "note": "the Ket 27 work was written by a subagent in a git worktree and merged after its report, the full test and lint run and a look at four renders; its diff was not read line by line"
+    },
+    "host_previews": "Ket 27: a subagent rendered and looked at the transport morph, player unfold (early, middle, fold-back), context menu, slider and switch, sheet at half, light track menu and thirteen ket27-page renders; the main session looked at four of them (context menu, sheet at half, Sources page, player unfold early). The 105 pre-existing classic host previews were compared pixel for pixel before and after the Ket 27 work by the subagent: identical",
+    "after_last_full_local_run": "documentation and code graph only (no change under app/) after the last complete local run"
+  },
+  "server": {
+    "function": "ketvoice-content",
+    "deployed_version": 23,
+    "changed_in_this_version": false,
+    "note": "no server change since 5.4.0"
+  },
+  "tests": {
+    "mobile": {
+      "jvm": {
+        "tests": 900,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "android_15_emulator_compose": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "quest": {
+      "jvm": {
+        "tests": 899,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "android_15_emulator_compose": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    }
+  },
+  "lint": {
+    "mobile": {
+      "Warning": 190,
+      "Hint": 22
+    },
+    "quest": {
+      "Warning": 192,
+      "Hint": 22
+    },
+    "errors": 0,
+    "new_vs_5_10_0": "one more hint, same warnings"
+  },
+  "apks": [
+    {
+      "name": "Ketvoice-5.11.0.apk",
+      "sha256": "eb8faf8f7aad4d03028d9f708c93c42331e58ff62183dacdde115807969c97af",
+      "bytes": 79712020,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "5.11.0",
+      "versionCode": 123,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-5.11.0-Quest.apk",
+      "sha256": "b1646963c4c023f2f4c2ea90000797781f3bd75619d9932f05c198db8b095740",
+      "bytes": 95814667,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "5.11.0",
+      "versionCode": 123,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    }
+  ],
+  "discord": {
+    "sdk_present_in_ci_build": true,
+    "sdk_sha256_pinned": true,
+    "bridge_and_native_libraries_verified": true,
+    "presence_mode": "unauthenticated_rpc_through_installed_discord_app"
+  },
+  "credential_scan": {
+    "entries": 3534,
+    "findings": 0,
+    "raw_pattern_findings": 1,
+    "scope": "tracked sources and APK archive entries",
+    "kind": "credential_patterns",
+    "explicit_private_provider_key_deny_list": false,
+    "triage": [
+      {
+        "file": "Ketvoice-Liquid-Glass-V4.html",
+        "classification": "embedded_image_false_positive",
+        "all_hits_inside_image_data_uris": true,
+        "rescanned_without_image_payloads": true
+      }
+    ]
+  },
+  "release_install_smoke": {
+    "mobile": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "quest": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    }
+  },
+  "publication_override": {
+    "authorized_by_user": true,
+    "authorized_at": "2026-11-16T16:36:48.015974+00:00",
+    "kind": "standing_authorization",
+    "user_statement": "J'autorise TOUT devient maintenant une règle.",
+    "user_statement_date": "2026-11-14",
+    "in_reply_to": "The question whether versions may be published without phone or Quest testing without asking again for each version.",
+    "recorded_in": "AGENTS.md (commit aeeda8e)",
+    "reason": "The owner made publishing validated versions without phone or Quest testing a standing rule.",
+    "scope": "physical device installation and all on-device behaviour of 5.11.0"
+  },
+  "owner_request_2026_11_16_fifth": {
+    "statement_summary": "anticipate the mix ahead, make it even faster, load it as soon as a song starts, make the mix intelligent; improve Ket 27 further with iOS 27 animations; before all that, a multiple choice. Chosen: preparation from the start of a title, 2 to 3 titles ahead, separation after download, instant mix on skip; mix points by structure, voice over the other title's instrumental, smart queue; unfolding mini-player, animated icons, spring menus and sheets; iOS settings controls, finish every page.",
+    "done": {
+      "prepare": "Automix.prepare from 4 s into a title: ending of the current title, then intro and ending of the next 3 queue entries (1 on a metered network) read on a silent standby deck at 8x (3x behind other apps), measured, and separated on the low-priority stem thread (at most two captures waiting); results kept in AnalysisStore and StemStore; the later transition finds them and only re-reads the sound to apply the stored separation",
+      "library": "StemLibrary: downloaded non-DASH files decoded with MediaExtractor/MediaCodec, intro and ending measured (AnalysisTap) and separated, one title at a time on a background-priority thread, only while charging and while no mix is prepared or played; at most the 300 most recent downloads; woken by ACTION_POWER_CONNECTED and by the downloads list changing; setting ketmixLibrary (on)",
+      "skip": "Automix.skipMix: on a manual next with Ketmix on, when the next entry has a stored intro analysis and an instant source (downloaded, cached or prefetched) and its deck is ready within 1.4 s, a 3.2 s two-deck Filter transition entering at the incoming title's first sound; precise (levels and filters in the decks) only when the outgoing deck's clock was confirmed earlier, else a volume crossfade; otherwise the 5.9.0 fade",
+      "voice_activity": "Separator.mask records per frame the voice's share and level in the 200 Hz-4 kHz band; VoiceActivity turns them into sung passages (30 % share, within 26 dB of the loud moments, runs of 450 ms, rests under 900 ms bridged); StemStore format KVS2 (KVS1 still read); VoiceFacts feeds the planner the later of lyrics/separation for the outgoing voice end and the earlier for the incoming voice start",
+      "mashup": "Mashup.fits (beatmatch with a bass swap, keys read and not clashing, rate within 6 %, overlap of 8 s or more, incoming voice within 40 % of the blend) and both separations covering the blend: the incoming deck plays its separated voice alone (StemAudio.vocals, DeckAutomation.vocalSolo) until the swap, the outgoing deck its instrumental",
+      "smart_queue": "SmartQueue: in shuffle, among the next 6 entries with a stored intro analysis, the best tempo (folded ratio) and key match is moved next when clearly better; never across a title added with Lire ensuite; setting ketmixSmartQueue (on)",
+      "ket27": "by a subagent: PlayerDismiss spring and travelFromMini (phone layout only), SymbolEffects (TransportMorph, FillingHeart, FillingDownloadGlyph, DrawnCheck, pulses), SpringSheet detents in the two sheet hosts (off on Quest), GlassContextMenu on trackRowClick rows, stepped glass sliders/volume/progress/equalizer with haptic ticks, inset ChoiceSpec pickers, Ket27PageBar and large titles on more pages, glass AppAlertDialog, KetCheckbox; all gated on Ket27.on and Motion.reduced; label stays Alpha"
+    },
+    "differs_from_what_was_proposed": [
+      "Mix points by structure: no verse/chorus/break map of the whole title was built. The sung passages of the separated intro and ending (at most 50 s each) are used; a title is never left before its last sung part.",
+      "Separation after download covers downloaded files only (not favourites that are not downloaded), and only while the app's process is alive and the phone charges.",
+      "Finish every page: not finished, Ket 27 stays Alpha (tablet and Quest players, several dialogs, Studio fields, editors, Discord settings, update centre)."
+    ],
+    "stems_validation": {
+      "reference": "60 s of a commercial song (local only, not committed) separated by sherpa-onnx 2.0.1",
+      "kotlin_vs_sherpa_instrumental_snr_db": 41.7,
+      "kotlin_vs_sherpa_voice_alone_snr_db": 40.4,
+      "sung_passages": "the eight passages VoiceActivity found in that minute were compared by eye with the 0.5 s level profile of sherpa-onnx's vocal stem: same passages, edges within about 0.3 s"
+    },
+    "not_measured": "no phone ran any of it: preparation time and battery cost, network use of reading three titles ahead, the skip mix's latency and sound, the mashup's sound, the smart queue on a real library, library preparation with MediaCodec, and every Ket 27 animation, haptic and glass rendering"
+  },
+  "not_validated": [
+    "physical phone or Quest installation, rendering and touch behaviour",
+    "Ketmix preparation, skip mix, mashup, smart queue and library preparation on a device (timing, sound, battery, data use)",
+    "MediaCodec decoding of downloaded files in StemLibrary (cannot run under Robolectric)",
+    "Ket 27 on a device: glass rendering and contrast, haptic density, nested scrolling inside sheets, system-bar insets of sheets, the handover between the bottom bar and the unfolding player",
+    "LiteRT and the separation model on a device (unchanged since 5.10.0, still never run on a phone)",
+    "independent code review of this diff"
+  ],
+  "known_limitations": [
+    "Ketmix prepares three titles ahead on unmetered networks and one on mobile data; this reads parts of coming titles and uses data.",
+    "A skip is only mixed when the next title is already measured and loads at once; otherwise it fades as before.",
+    "A voice over the other title's instrumental needs the separation model, matching tempo and keys, and an incoming title that sings early.",
+    "Downloaded titles streamed as DASH are not prepared from their file.",
+    "Ket 27 stays an alpha: tablet and Quest players, several dialogs and some pages keep their previous look.",
+    "The signing certificate is the existing public Android debug identity, not a private production key."
+  ],
+  "canonical_banner_sha256": "47f6793088983f7d4e6bd1aeaa2cbd8b7cdc2a8f91271e3b2839daea81da0436"
+}
