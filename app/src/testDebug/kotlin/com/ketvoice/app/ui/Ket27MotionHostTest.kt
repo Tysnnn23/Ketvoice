@@ -55,14 +55,19 @@ class Ket27MotionHostTest {
     @Suppress("UNCHECKED_CAST")
     private val player get() = Player.state as MutableStateFlow<PlayerUiState>
 
+    private var lyricsModeBefore = 0
+
     @Before fun setup() {
         java.util.Locale.setDefault(java.util.Locale.FRANCE)
         AppSettings.languageChosen.value = true
         AppSettings.language.value = com.ketvoice.app.data.AppLanguage.FRENCH.label
         AppSettings.reduceAnimations.value = false
         AppSettings.ket27.value = true
+        lyricsModeBefore = AppSettings.lyricsMode.value
     }
     @After fun reset() {
+        // Leave the settings as they were found: other tests draw the same screens.
+        AppSettings.lyricsMode.value = lyricsModeBefore
         AppSettings.ket27.value = false
         AppSettings.reduceAnimations.value = false
         ContextMenus.request.value = null
