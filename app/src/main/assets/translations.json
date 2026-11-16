@@ -1572,7 +1572,8 @@
   "Quel modèle sépare les titres": "Which model separates songs",
   "Toujours la meilleure": "Always the best",
   "Toujours rapide": "Always quick",
-  "Voix et instrumentaux bien plus nets (UVR MDX-Net), environ dix fois plus lent : {0}. Il sert téléphone en charge et améliore alors les titres déjà séparés.": "Much cleaner voices and instrumentals (UVR MDX-Net), about ten times slower: {0}. It works while the phone charges and then improves songs already separated."
+  "Voix et instrumentaux bien plus nets (UVR MDX-Net), environ dix fois plus lent : {0}. Il sert téléphone en charge et améliore alors les titres déjà séparés.": "Much cleaner voices and instrumentals (UVR MDX-Net), about ten times slower: {0}. It works while the phone charges and then improves songs already separated.",
+  "Niveau de la voix": "Voice level"
  },
  "hi": {
   "Reverb": "रीवर्ब",
@@ -3147,7 +3148,8 @@
   "Quel modèle sépare les titres": "कौन-सा मॉडल गाने अलग करता है",
   "Toujours la meilleure": "हमेशा सबसे अच्छी",
   "Toujours rapide": "हमेशा तेज़",
-  "Voix et instrumentaux bien plus nets (UVR MDX-Net), environ dix fois plus lent : {0}. Il sert téléphone en charge et améliore alors les titres déjà séparés.": "कहीं ज़्यादा साफ़ आवाज़ें और इंस्ट्रुमेंटल (UVR MDX-Net), लगभग दस गुना धीमा: {0}। यह फ़ोन चार्ज होते समय काम करता है और तब पहले से अलग किए गए गानों को बेहतर बनाता है।"
+  "Voix et instrumentaux bien plus nets (UVR MDX-Net), environ dix fois plus lent : {0}. Il sert téléphone en charge et améliore alors les titres déjà séparés.": "कहीं ज़्यादा साफ़ आवाज़ें और इंस्ट्रुमेंटल (UVR MDX-Net), लगभग दस गुना धीमा: {0}। यह फ़ोन चार्ज होते समय काम करता है और तब पहले से अलग किए गए गानों को बेहतर बनाता है।",
+  "Niveau de la voix": "आवाज़ का स्तर"
  },
  "ja": {
   "Reverb": "リバーブ",
@@ -4722,7 +4724,8 @@
   "Quel modèle sépare les titres": "曲を分離するモデル",
   "Toujours la meilleure": "常に最高",
   "Toujours rapide": "常に高速",
-  "Voix et instrumentaux bien plus nets (UVR MDX-Net), environ dix fois plus lent : {0}. Il sert téléphone en charge et améliore alors les titres déjà séparés.": "はるかにクリアな声とインスト（UVR MDX-Net）、約10倍遅い：{0}。充電中に動作し、分離済みの曲を改善します。"
+  "Voix et instrumentaux bien plus nets (UVR MDX-Net), environ dix fois plus lent : {0}. Il sert téléphone en charge et améliore alors les titres déjà séparés.": "はるかにクリアな声とインスト（UVR MDX-Net）、約10倍遅い：{0}。充電中に動作し、分離済みの曲を改善します。",
+  "Niveau de la voix": "ボーカルの音量"
  },
  "zh": {
   "Reverb": "混响",
@@ -6297,7 +6300,8 @@
   "Quel modèle sépare les titres": "由哪个模型分离歌曲",
   "Toujours la meilleure": "始终最佳",
   "Toujours rapide": "始终快速",
-  "Voix et instrumentaux bien plus nets (UVR MDX-Net), environ dix fois plus lent : {0}. Il sert téléphone en charge et améliore alors les titres déjà séparés.": "人声和伴奏干净得多（UVR MDX-Net），速度约慢十倍：{0}。它在手机充电时工作，并改进已分离的歌曲。"
+  "Voix et instrumentaux bien plus nets (UVR MDX-Net), environ dix fois plus lent : {0}. Il sert téléphone en charge et améliore alors les titres déjà séparés.": "人声和伴奏干净得多（UVR MDX-Net），速度约慢十倍：{0}。它在手机充电时工作，并改进已分离的歌曲。",
+  "Niveau de la voix": "人声音量"
  },
  "ru": {
   "Reverb": "Реверберация",
@@ -7872,7 +7876,8 @@
   "Quel modèle sépare les titres": "Какая модель разделяет треки",
   "Toujours la meilleure": "Всегда лучшее",
   "Toujours rapide": "Всегда быстро",
-  "Voix et instrumentaux bien plus nets (UVR MDX-Net), environ dix fois plus lent : {0}. Il sert téléphone en charge et améliore alors les titres déjà séparés.": "Намного более чистые голоса и инструменталы (UVR MDX-Net), примерно в десять раз медленнее: {0}. Работает при зарядке телефона и улучшает уже разделённые треки."
+  "Voix et instrumentaux bien plus nets (UVR MDX-Net), environ dix fois plus lent : {0}. Il sert téléphone en charge et améliore alors les titres déjà séparés.": "Намного более чистые голоса и инструменталы (UVR MDX-Net), примерно в десять раз медленнее: {0}. Работает при зарядке телефона и улучшает уже разделённые треки.",
+  "Niveau de la voix": "Громкость голоса"
  },
  "it": {
   "Reverb": "Riverbero",
@@ -9447,7 +9452,8 @@
   "Quel modèle sépare les titres": "Quale modello separa i brani",
   "Toujours la meilleure": "Sempre la migliore",
   "Toujours rapide": "Sempre rapida",
-  "Voix et instrumentaux bien plus nets (UVR MDX-Net), environ dix fois plus lent : {0}. Il sert téléphone en charge et améliore alors les titres déjà séparés.": "Voci e basi molto più pulite (UVR MDX-Net), circa dieci volte più lento: {0}. Funziona con il telefono in carica e allora migliora i brani già separati."
+  "Voix et instrumentaux bien plus nets (UVR MDX-Net), environ dix fois plus lent : {0}. Il sert téléphone en charge et améliore alors les titres déjà séparés.": "Voci e basi molto più pulite (UVR MDX-Net), circa dieci volte più lento: {0}. Funziona con il telefono in carica e allora migliora i brani già separati.",
+  "Niveau de la voix": "Livello della voce"
  },
  "es": {
   "Reverb": "Reverb",
@@ -11022,7 +11028,8 @@
   "Quel modèle sépare les titres": "Qué modelo separa las canciones",
   "Toujours la meilleure": "Siempre la mejor",
   "Toujours rapide": "Siempre rápida",
-  "Voix et instrumentaux bien plus nets (UVR MDX-Net), environ dix fois plus lent : {0}. Il sert téléphone en charge et améliore alors les titres déjà séparés.": "Voces e instrumentales mucho más limpios (UVR MDX-Net), unas diez veces más lento: {0}. Funciona con el teléfono cargando y entonces mejora las canciones ya separadas."
+  "Voix et instrumentaux bien plus nets (UVR MDX-Net), environ dix fois plus lent : {0}. Il sert téléphone en charge et améliore alors les titres déjà séparés.": "Voces e instrumentales mucho más limpios (UVR MDX-Net), unas diez veces más lento: {0}. Funciona con el teléfono cargando y entonces mejora las canciones ya separadas.",
+  "Niveau de la voix": "Nivel de la voz"
  },
  "de": {
   "Reverb": "Reverb",
@@ -12597,7 +12604,8 @@
   "Quel modèle sépare les titres": "Welches Modell die Titel trennt",
   "Toujours la meilleure": "Immer die beste",
   "Toujours rapide": "Immer schnell",
-  "Voix et instrumentaux bien plus nets (UVR MDX-Net), environ dix fois plus lent : {0}. Il sert téléphone en charge et améliore alors les titres déjà séparés.": "Viel sauberere Stimmen und Instrumentals (UVR MDX-Net), etwa zehnmal langsamer: {0}. Es arbeitet, während das Telefon lädt, und verbessert dann bereits getrennte Titel."
+  "Voix et instrumentaux bien plus nets (UVR MDX-Net), environ dix fois plus lent : {0}. Il sert téléphone en charge et améliore alors les titres déjà séparés.": "Viel sauberere Stimmen und Instrumentals (UVR MDX-Net), etwa zehnmal langsamer: {0}. Es arbeitet, während das Telefon lädt, und verbessert dann bereits getrennte Titel.",
+  "Niveau de la voix": "Lautstärke der Stimme"
  },
  "pt": {
   "Reverb": "Reverb",
@@ -14172,7 +14180,8 @@
   "Quel modèle sépare les titres": "Qual modelo separa as músicas",
   "Toujours la meilleure": "Sempre a melhor",
   "Toujours rapide": "Sempre rápida",
-  "Voix et instrumentaux bien plus nets (UVR MDX-Net), environ dix fois plus lent : {0}. Il sert téléphone en charge et améliore alors les titres déjà séparés.": "Vozes e instrumentais muito mais limpos (UVR MDX-Net), cerca de dez vezes mais lento: {0}. Funciona com o telefone carregando e então melhora as músicas já separadas."
+  "Voix et instrumentaux bien plus nets (UVR MDX-Net), environ dix fois plus lent : {0}. Il sert téléphone en charge et améliore alors les titres déjà séparés.": "Vozes e instrumentais muito mais limpos (UVR MDX-Net), cerca de dez vezes mais lento: {0}. Funciona com o telefone carregando e então melhora as músicas já separadas.",
+  "Niveau de la voix": "Nível da voz"
  },
  "ko": {
   "Reverb": "리버브",
@@ -15747,6 +15756,7 @@
   "Quel modèle sépare les titres": "곡을 분리하는 모델",
   "Toujours la meilleure": "항상 최고",
   "Toujours rapide": "항상 빠르게",
-  "Voix et instrumentaux bien plus nets (UVR MDX-Net), environ dix fois plus lent : {0}. Il sert téléphone en charge et améliore alors les titres déjà séparés.": "훨씬 깨끗한 목소리와 반주(UVR MDX-Net), 약 10배 느림: {0}. 휴대폰 충전 중에 작동하며 이미 분리된 곡을 개선합니다."
+  "Voix et instrumentaux bien plus nets (UVR MDX-Net), environ dix fois plus lent : {0}. Il sert téléphone en charge et améliore alors les titres déjà séparés.": "훨씬 깨끗한 목소리와 반주(UVR MDX-Net), 약 10배 느림: {0}. 휴대폰 충전 중에 작동하며 이미 분리된 곡을 개선합니다.",
+  "Niveau de la voix": "보컬 볼륨"
  }
 }
