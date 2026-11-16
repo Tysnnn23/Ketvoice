@@ -41,6 +41,8 @@ object AppSettings {
     val ketmixStemsCharging = mutableStateOf(false)
     /** Which separation model: 0 automatic (the better one while charging), 1 always the better one, 2 always the quick one (6.0.0). */
     val ketmixStemsQuality = mutableStateOf(0)
+    /** Level of the voice in titles separated whole, 0..100 (6.0.0, the slider of the lyrics screen). */
+    val voiceLevel = mutableStateOf(100)
     /** In shuffle, the next title is the one that mixes best with the current one (5.11.0). */
     val ketmixSmartQueue = mutableStateOf(true)
     /** Downloaded titles are measured and separated ahead while the phone charges (5.11.0). */

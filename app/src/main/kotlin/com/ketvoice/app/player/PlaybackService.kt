@@ -247,6 +247,13 @@ class PlaybackService : MediaSessionService() {
                                                mediaItem: androidx.media3.common.MediaItem?, reason: Int) {
                 manifestReported = false
                 mediaReported = false
+                // A title separated whole can have its voice turned down (6.0.0): its separation is read before its first sound.
+                deck.voiceMask = null
+                val id = mediaItem?.mediaId
+                if (id != null && !exactRequested) serviceScope.launch(Dispatchers.IO) {
+                    val mask = runCatching { com.ketvoice.app.stems.StemStore.loadWhole(id) }.getOrNull()
+                    withContext(Dispatchers.Main) { if (owner.currentMediaItem?.mediaId == id) deck.voiceMask = mask }
+                }
                 // A title that Ketmix played in time with the previous one keeps that speed to its end; the
                 // next title starts on its own tempo again, at the boundary between the two where it is not heard.
                 // A title that starts over on repeat is the same title, heard on: its speed is left alone.

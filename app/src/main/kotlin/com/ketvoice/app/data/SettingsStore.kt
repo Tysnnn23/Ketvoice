@@ -39,6 +39,8 @@ object SettingsStore {
         s.ketmixStems.value = p.getBoolean("ketmixStems", false)
         s.ketmixStemsCharging.value = p.getBoolean("ketmixStemsCharging", false)
         s.ketmixStemsQuality.value = p.getInt("ketmixStemsQuality", 0).coerceIn(0, 2)
+        s.voiceLevel.value = p.getInt("voiceLevel", 100).coerceIn(0, 100)
+        com.ketvoice.app.stems.VoiceLevel.level = s.voiceLevel.value / 100f
         s.ketmixSmartQueue.value = p.getBoolean("ketmixSmartQueue", true)
         s.ketmixLibrary.value = p.getBoolean("ketmixLibrary", true)
         s.lyricVideoSound.value = p.getBoolean("lyricVideoSound", true)
@@ -180,6 +182,7 @@ object SettingsStore {
             .putBoolean("ketmixStems", s.ketmixStems.value)
             .putBoolean("ketmixStemsCharging", s.ketmixStemsCharging.value)
             .putInt("ketmixStemsQuality", s.ketmixStemsQuality.value)
+            .putInt("voiceLevel", s.voiceLevel.value)
             .putBoolean("ketmixSmartQueue", s.ketmixSmartQueue.value)
             .putBoolean("ketmixLibrary", s.ketmixLibrary.value)
             .putBoolean("lyricVideoSound", s.lyricVideoSound.value)

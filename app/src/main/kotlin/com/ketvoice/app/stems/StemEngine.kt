@@ -70,7 +70,7 @@ internal object StemEngine {
         ?: StemModel.quality(com.ketvoice.app.data.AppSettings.ketmixStemsQuality.value, StemModel.charging())
 
     /** Separates [left]/[right] (44.1 kHz) with the model of [quality]. */
-    private fun separate(left: FloatArray, right: FloatArray, startUs: Long, quality: Int, cancelled: () -> Boolean): StemMask? {
+    internal fun separate(left: FloatArray, right: FloatArray, startUs: Long, quality: Int, cancelled: () -> Boolean): StemMask? {
         if (quality == StemMask.HIGH) {
             val model = highQuality() ?: return null
             return synchronized(this) {

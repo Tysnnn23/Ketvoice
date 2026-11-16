@@ -46,9 +46,39 @@ internal object StemStore {
 
     fun has(trackId: String, durationMs: Long, intro: Boolean): Boolean = existing(trackId, durationMs, intro) != null
 
+    /**
+     * The separation of a whole title (6.0.0, downloaded titles): what the voice level of the player
+     * works from, and what any mix of the title can use. Its frames start at the title's first sample.
+     */
+    private fun wholeFile(trackId: String): File? = root?.let {
+        val digest = MessageDigest.getInstance("SHA-256").digest(trackId.toByteArray()).take(12).joinToString("") { b -> "%02x".format(b) }
+        File(it, "$digest-w.kvs")
+    }
+
+    fun hasWhole(trackId: String): Boolean = wholeFile(trackId)?.isFile == true
+
+    fun wholeQuality(trackId: String): Int? = wholeFile(trackId)?.takeIf { it.isFile }?.let { f ->
+        runCatching { DataInputStream(f.inputStream().buffered()).use { input ->
+            if (input.readInt() == MAGIC_QUALITY) { input.readLong(); input.readInt(); input.readInt(); input.readByte().toInt() } else StemMask.FAST
+        } }.getOrNull()
+    }
+
+    fun loadWhole(trackId: String): StemMask? {
+        val f = wholeFile(trackId)?.takeIf { it.isFile } ?: return null
+        return runCatching { decode(f.readBytes()).also { f.setLastModified(System.currentTimeMillis()) } }.getOrElse { f.delete(); null }
+    }
+
+    fun saveWhole(trackId: String, mask: StemMask) {
+        val f = wholeFile(trackId) ?: return
+        val tmp = File(f.parentFile, f.name + ".tmp")
+        tmp.writeBytes(encode(mask))
+        if (!tmp.renameTo(f)) { tmp.delete(); return }
+        trim()
+    }
+
     /** The model that found the stored separation of this part ([StemMask.FAST] or [StemMask.HIGH]), or null when there is none. */
     fun quality(trackId: String, durationMs: Long, intro: Boolean): Int? {
-        val f = existing(trackId, durationMs, intro) ?: return null
+        val f = existing(trackId, durationMs, intro) ?: wholeFile(trackId)?.takeIf { it.isFile } ?: return null
         return runCatching {
             DataInputStream(f.inputStream().buffered()).use { input ->
                 when (input.readInt()) {
@@ -60,7 +90,8 @@ internal object StemStore {
     }
 
     fun load(trackId: String, durationMs: Long, intro: Boolean): StemMask? {
-        val f = existing(trackId, durationMs, intro) ?: return null
+        // A title separated whole serves its intro and its ending too.
+        val f = existing(trackId, durationMs, intro) ?: wholeFile(trackId)?.takeIf { it.isFile } ?: return null
         return runCatching {
             decode(f.readBytes()).also { f.setLastModified(System.currentTimeMillis()) }
         }.getOrElse { f.delete(); null }

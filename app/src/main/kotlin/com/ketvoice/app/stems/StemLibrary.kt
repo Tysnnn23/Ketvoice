@@ -39,6 +39,9 @@ internal object StemLibrary {
     data class Progress(val done: Int = 0, val total: Int = 0, val running: Boolean = false)
 
     const val MAX_TITLES = 300
+    /** A whole title is separated about a minute at a time, with two seconds of margin on each side. */
+    private const val WHOLE_PIECE_FRAMES = 2560
+    private const val WHOLE_MARGIN_FRAMES = 86
     private val _progress = MutableStateFlow(Progress())
     val progress: StateFlow<Progress> = _progress
     /** One thread of low priority for all of it: decoding and separating never compete with the music. */
@@ -72,7 +75,8 @@ internal object StemLibrary {
         val id = item.track.id
         val introLength = item.track.durationMs.takeIf { it > 0 } ?: durationMs
         val measured = AnalysisStore.intro(id, introLength, depth) != null && AnalysisStore.outro(id, durationMs, depth) != null
-        val separated = !separate || (!StemEngine.needs(id, introLength, true) && !StemEngine.needs(id, durationMs, false))
+        // 6.0.0: downloaded titles are separated whole (the player's voice level works from it, and every mix can use it).
+        val separated = !separate || StemEngine.wanted()?.let { q -> (StemStore.wholeQuality(id) ?: -1) >= q } != false
         return !(measured && separated)
     }
 
@@ -124,13 +128,65 @@ internal object StemLibrary {
             extractor.selectTrack(index)
             val id = item.track.id
             val introLength = item.track.durationMs.takeIf { it > 0 } ?: durationMs
-            part(extractor, format, id, introLength, true, 0L, minOf(depth.introMs, durationMs), depth, separate)
+            part(extractor, format, id, introLength, true, 0L, minOf(depth.introMs, durationMs), depth, separate = false)
             val from = maxOf(0L, durationMs - depth.outroMs)
-            part(extractor, format, id, durationMs, false, from, durationMs, depth, separate)
+            part(extractor, format, id, durationMs, false, from, durationMs, depth, separate = false)
+            if (separate && channels(format) == 2) whole(extractor, format, id, durationMs)
             return true
         } finally {
             runCatching { extractor.release() }
         }
+    }
+
+    private fun channels(format: MediaFormat) = if (format.containsKey(MediaFormat.KEY_CHANNEL_COUNT)) format.getInteger(MediaFormat.KEY_CHANNEL_COUNT) else 0
+
+    /**
+     * Separates a whole downloaded title, about a minute at a time (6.0.0). Each piece is read with a
+     * margin on both sides so that its edges are separated like the middle of the title, and only its
+     * own frames are kept: the result is the same separation, frame for frame, as one of the whole title.
+     * Nothing is stored when the phone is unplugged half-way.
+     */
+    private fun whole(extractor: MediaExtractor, format: MediaFormat, id: String, durationMs: Long) {
+        val quality = StemEngine.wanted() ?: return
+        val stored = StemStore.wholeQuality(id)
+        if (stored != null && stored >= quality) return
+        val hop = StemDsp.HOP
+        val samples = (durationMs * StemDsp.RATE / 1000L).toInt()
+        val total = StemDsp.frames(samples)
+        if (total <= 0) return
+        val packed = ByteArray(total * StemDsp.NET_BINS / 2)
+        val share = ByteArray(total); val level = ByteArray(total)
+        val pieces = (total + WHOLE_PIECE_FRAMES - 1) / WHOLE_PIECE_FRAMES
+        val per = (total + pieces - 1) / pieces
+        var first = 0
+        while (first < total) {
+            if (!goAhead()) return
+            val last = minOf(total, first + per)
+            val regionFrame = maxOf(0, first - WHOLE_MARGIN_FRAMES)
+            val regionStart = regionFrame * hop
+            val regionEnd = minOf(samples, (last + WHOLE_MARGIN_FRAMES - 1) * hop + StemDsp.N_FFT)
+            val fromUs = regionStart * 1_000_000L / StemDsp.RATE
+            val untilUs = regionEnd * 1_000_000L / StemDsp.RATE
+            val capture = PcmCapture(fromUs, untilUs)
+            decode(extractor, format, fromUs, untilUs, capture)
+            val pcm = capture.pcm() ?: return
+            val l = Resampler.resample(pcm, 0, 2, capture.rate, StemDsp.RATE)
+            val r = Resampler.resample(pcm, 1, 2, capture.rate, StemDsp.RATE)
+            // The recording starts on the decoder's buffer that holds the region's start, a little before it.
+            val skip = Math.round((fromUs - capture.startUs) * StemDsp.RATE / 1_000_000.0).toInt().coerceAtLeast(0)
+            val length = regionEnd - regionStart
+            val left = FloatArray(length) { i -> l.getOrElse(i + skip) { 0f } }
+            val right = FloatArray(length) { i -> r.getOrElse(i + skip) { 0f } }
+            val mask = StemEngine.separate(left, right, fromUs, quality) { !goAhead() } ?: return
+            for (f in first until last) {
+                val j = f - regionFrame
+                if (j !in 0 until mask.frames) continue
+                System.arraycopy(mask.packed, j * StemDsp.NET_BINS / 2, packed, f * StemDsp.NET_BINS / 2, StemDsp.NET_BINS / 2)
+                mask.voiceShare?.let { share[f] = it[j] }; mask.voiceLevel?.let { level[f] = it[j] }
+            }
+            first = last
+        }
+        StemStore.saveWhole(id, StemMask(0L, total, packed, share, level, quality))
     }
 
     private fun part(extractor: MediaExtractor, format: MediaFormat, id: String, length: Long, intro: Boolean,
