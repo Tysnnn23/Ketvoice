@@ -7,6 +7,19 @@
 
 ---
 
+# Ketvoice 6.0.0 Beta
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 124** — First beta of Ketvoice 6: high-quality voice separation for Ketmix.
+
+- Stems: optional UVR-MDX-NET Voc FT model (LiteRT, float16 weights, 33 MB, `ketmix-stems-v2` prerelease, pinned), run as sherpa-onnx does (`Uvr.kt`, mixed-radix 6144-point FFT); its voice is stored as the existing 4-bit mask (format KVS3, with the model that made it). MUSDB18-HQ: instrumental 15.0 dB / voice 10.2 dB SDR against Spleeter's 12.4 / 6.7.
+- `ketmixStemsQuality` (automatic: high quality while charging, upgrading quick separations; always the best; always quick); with the slow model on battery Ketmix prepares one title ahead.
+
+Full notes: [6.0.0 Beta](docs/releases/v6.0.0-beta.md).
+
+---
+
 # Ketvoice 5.11.0
 
 ![Ketvoice](ketvoice-banner.png)

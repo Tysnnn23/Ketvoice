@@ -21,6 +21,15 @@
 
 ## Overview
 
+### 6.0.0 Beta — Ketmix separates voices like a studio
+
+The first beta of Ketvoice 6 adds an optional high-quality voice separation model to Ketmix: instrumentals and
+voices about 3 dB cleaner, used while the phone charges or all the time if you choose. The redesign of
+Ketvoice 6 comes in the next beta.
+[Mobile](https://github.com/Tysnnn23/Ketvoice/releases/download/v6.0.0-beta/Ketvoice-6.0.0-beta.apk)
+· [Quest](https://github.com/Tysnnn23/Ketvoice/releases/download/v6.0.0-beta/Ketvoice-6.0.0-beta-Quest.apk)
+· [Release notes](docs/releases/v6.0.0-beta.md).
+
 ### 5.11.0 — Ketmix ahead of you, Ket 27 in motion
 
 Ketmix now prepares its mixes from the first seconds of a song, three songs ahead, mixes for real when you
@@ -771,7 +780,7 @@ You are responsible for complying with the terms of service of any provider you 
 
 ## License
 
-Ketvoice is source-available under the [Ketvoice Source-Available License](LICENSE). You may read the code and install the official releases for personal use. Reusing the code or any part of it, publishing your own builds, or any commercial use requires the project owner's written permission first — ask in an [issue](https://github.com/Tysnnn23/Ketvoice/issues). Third-party components, such as the Inter typeface and the optional Spleeter voice separation model ([MIT](docs/licenses/Spleeter-MIT.txt)), keep their own licenses.
+Ketvoice is source-available under the [Ketvoice Source-Available License](LICENSE). You may read the code and install the official releases for personal use. Reusing the code or any part of it, publishing your own builds, or any commercial use requires the project owner's written permission first — ask in an [issue](https://github.com/Tysnnn23/Ketvoice/issues). Third-party components, such as the Inter typeface and the optional voice separation models (Spleeter, [MIT](docs/licenses/Spleeter-MIT.txt); UVR MDX-Net, [MIT](docs/licenses/UVR-MIT.txt)), keep their own licenses.
 
 ## Acknowledgements
 
