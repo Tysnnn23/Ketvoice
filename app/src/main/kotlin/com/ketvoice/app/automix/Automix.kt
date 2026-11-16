@@ -166,11 +166,12 @@ internal object Automix {
             if (promoted) {
                 // The incoming title is the one being heard: it keeps playing, at its own tempo and level.
                 host.release(main)
-                // It keeps the speed it was mixed at: a change of speed while a title is heard is heard
-                // as a hiccup. The playback service gives the deck its own speed back at the next title.
+                // Played in time with the outgoing title, it glides back to its own tempo once it is alone
+                // (6.0.0 Beta 4, Apple Music's way), its pitch kept, in steps too small to be heard.
                 if (incoming != null) {
                     host.control(incoming)?.reset()
                     runCatching { incoming.volume = baseVolume }
+                    if (runCatching { incoming.playbackParameters.speed }.getOrDefault(1f) != 1f) returnToTempo(incoming)
                 }
             } else {
                 host.control(main)?.reset()
@@ -178,6 +179,25 @@ internal object Automix {
                 // The outgoing title's speed is never touched by a mix; only its level is given back.
                 if (started) runCatching { main.volume = baseVolume }
                 if (incoming != null) { host.control(incoming)?.reset(); host.release(incoming) }
+            }
+        }
+    }
+
+    private var tempoJob: Job? = null
+
+    /** Brings [deck] back to its own speed after a mix in time, while it is the only deck and no mix starts. */
+    private fun returnToTempo(deck: androidx.media3.exoplayer.ExoPlayer) {
+        tempoJob?.cancel()
+        tempoJob = scope.launch {
+            delay(TempoReturn.WAIT_MS)
+            while (isActive) {
+                val h = host ?: break
+                if (h.main !== deck || mixing) break
+                val speed = runCatching { deck.playbackParameters.speed }.getOrDefault(1f)
+                if (speed == 1f) break
+                val next = TempoReturn.next(speed)
+                runCatching { deck.playbackParameters = if (next == 1f) PlaybackParameters.DEFAULT else PlaybackParameters(next) }
+                delay(TempoReturn.EVERY_MS)
             }
         }
     }
@@ -965,3 +985,25 @@ internal object Automix {
         return Vocals.startMs(MusicApi.lyrics(track, false, AppSettings.lyricsSource.value, false).second)
     }
 }
+
+/**
+ * The way back to a title's own tempo after a mix in time (6.0.0 Beta 4): steps of a quarter of a percent,
+ * half a second apart, the pitch kept by Media3's time stretching. Six percent take twelve seconds,
+ * and no step is heard as a change of speed.
+ */
+internal object TempoReturn {
+    const val STEP = .0025f
+    const val EVERY_MS = 500L
+    /** The blend's last bars ring out on the title's mixed speed before the glide starts. */
+    const val WAIT_MS = 2_000L
+
+    fun next(speed: Float): Float = when {
+        kotlin.math.abs(speed - 1f) <= STEP -> 1f
+        speed > 1f -> speed - STEP
+        else -> speed + STEP
+    }
+
+    /** How long the glide back from [speed] takes. */
+    fun durationMs(speed: Float): Long = (kotlin.math.ceil(kotlin.math.abs(speed - 1f) / STEP - 1e-4).toLong()) * EVERY_MS
+}
+

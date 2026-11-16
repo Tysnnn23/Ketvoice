@@ -36,6 +36,18 @@ class DeckDspTest {
     }
     private fun db(ratio: Double) = 20 * log10(ratio)
 
+    @Test fun theMidBandIsTakenDownAndTheBassLeftAlone() {
+        val rate = 44_100
+        val eq = DeckAutomation(Curve.flat(1f), Curve.flat(0f), midDb = Curve.flat(-8f))
+        val flat = DeckAutomation(Curve.flat(1f), Curve.flat(0f))
+        fun level(hz: Double, automation: DeckAutomation): Double =
+            rms(run(DeckDsp(rate, 1), tone(hz, rate, 1f), 0L, automation), from = rate / 2)
+        val mid = db(level(1_000.0, eq) / level(1_000.0, flat))
+        val bass = db(level(80.0, eq) / level(80.0, flat))
+        assertEquals("1 kHz down by the curve's 8 dB", -8.0, mid, .6)
+        assertTrue("80 Hz barely touched: $bass dB", abs(bass) < 1.0)
+    }
+
     @Test fun aCurveIsFlatOutsideItsPointsAndStraightBetweenThem() {
         val curve = Curve(longArrayOf(1_000, 2_000, 4_000), floatArrayOf(0f, 1f, .5f))
         assertEquals(0f, curve.at(0), 0f); assertEquals(0f, curve.at(1_000), 0f)

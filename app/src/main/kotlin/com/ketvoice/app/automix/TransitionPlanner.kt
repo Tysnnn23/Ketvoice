@@ -72,12 +72,13 @@ internal enum class MixStyle { Auto, Tempo, Echo, Filters, Fade, Rise;
 /** 0 = discreet, 1 = balanced, 2 = DJ. */
 internal data class MixSettings(val intensity: Int = 1, val style: MixStyle = MixStyle.Auto) {
     /**
-     * How far from its own tempo a title may be played so that two titles meet in time. The incoming
-     * title is given that speed once, while it is still silent, and keeps it to its end: a change of
-     * speed while a title is heard is heard (listeners reported it as a hiccup and an odd speed-up),
-     * and below 4 % a tempo moved with its pitch kept passes unnoticed.
+     * How far from its own tempo a title may be played so that two titles meet in time (6.0.0 Beta 4, the
+     * owner chose Apple Music's way: « Calage des temps »). The incoming title is given that speed while it
+     * is still silent, plays the whole blend in time, then glides back to its own tempo in steps too small
+     * to be heard, its pitch kept (see [TempoReturn]). Before, it kept that speed to its end, so only 2–4 %
+     * were allowed.
      */
-    val tempoRange: Float get() = when (intensity) { 0 -> .02f; 2 -> .04f; else -> .03f }
+    val tempoRange: Float get() = when (intensity) { 0 -> .04f; 2 -> .08f; else -> .06f }
     /**
      * Blends run up to 64 beats (16 bars, about 30 s at 128 BPM), the length DJs and Apple Music favour.
      */
@@ -204,7 +205,8 @@ internal object TransitionPlanner {
         val end = if (a.fadeOut) min(a.soundEndMs, a.fallMs + (a.soundEndMs - a.fallMs) * 3 / 4) else a.soundEndMs
         val start = b.soundStartMs
         val sungUntil = out.vocalEndMs?.plus(300L)
-        val clash = MusicalKey.relation(a.key, b.key) == MusicalKey.Relation.Clash
+        val relation = MusicalKey.relation(a.key, b.key)
+        val clash = relation == MusicalKey.Relation.Clash
         val variant = if (context.lastVariant == 0) 1 else 0
         val beats = context.effects && context.beats && !context.skipSilence
         fun measured(plan: MixPlan) = checked(plan.copy(fromBpm = if (a.hasBeat) a.bpm else 0f, toBpm = if (b.hasBeat) b.bpm else 0f,
@@ -217,7 +219,7 @@ internal object TransitionPlanner {
             val rate = BeatAnalysis.foldedRatio(a.bpm, b.bpm)
             // Measured from the incoming title's own tempo: what it will sound like for the rest of it.
             if (abs(context.speed * rate - 1f) <= settings.tempoRange) {
-                beatmatch(a, b, out, incoming, settings, rate, gain, end, start, sungUntil, clash, variant, context.loop)
+                beatmatch(a, b, out, incoming, settings, rate, gain, end, start, sungUntil, clash, variant, context.loop, relation)
                     ?.let { blend -> measured(blend).takeIf { it.mixes }?.let { return it } }
             }
         }
@@ -261,13 +263,26 @@ internal object TransitionPlanner {
             val room = min(under, sungFrom - start - VOICE_GAP_MS)
             if (room > fade) fade = room
         }
+        // Keys that clash are not left to rub for long, even without a beat in common.
+        if (clash) fade = fade.coerceAtMost(max(MIN_CROSSFADE_MS, settings.crossfadeMs / 2))
+        // On a phrase (6.0.0 Beta 4): the crossing starts where a phrase of the outgoing title starts, when one
+        // lies within a quarter of the planned crossing, so that the next title arrives as the music turns a page.
+        var onPhrase = false
+        if (a.hasBeat) {
+            val planned = (end - fade).toDouble()
+            val phrase = a.phraseStarts(planned - fade / 4.0, planned + fade / 4.0).minByOrNull { abs(it - planned) }
+            if (phrase != null) {
+                val longer = (end - phrase).roundToLong()
+                if (longer >= MIN_CROSSFADE_MS && (sungUntil == null || phrase >= sungUntil - settings.vocalLeadMs)) { fade = longer; onPhrase = true }
+            }
+        }
         val reason = if (a.hasBeat && b.hasBeat) "tempos too far apart" else "no steady beat"
-        if (!context.effects) return measured(MixPlan(MixKind.Crossfade, outMs = end - fade, inMs = start, overlapMs = fade, gain = gain, reason = reason))
+        if (!context.effects) return measured(MixPlan(MixKind.Crossfade, outMs = end - fade, inMs = start, overlapMs = fade, gain = gain, reason = reason, onPhrase = onPhrase))
         // While the title dies away by itself its level is left alone; ours only closes the end.
         val hold = if (end - fade >= a.fallMs - 400L) .55f else .2f
         val kind = if (!a.hasBeat && !a.fadeOut && settings.style != MixStyle.Filters) MixKind.Wash else MixKind.Filter
         return measured(MixPlan(kind, outMs = end - fade, inMs = start, overlapMs = fade, gain = gain, reason = reason,
-            variant = variant, clash = clash, hold = hold, sungUntilMs = sungUntil?.takeIf { it > end - fade } ?: -1))
+            variant = variant, clash = clash, hold = hold, onPhrase = onPhrase, sungUntilMs = sungUntil?.takeIf { it > end - fade } ?: -1))
     }
 
     /**
@@ -364,7 +379,7 @@ internal object TransitionPlanner {
 
     private fun beatmatch(a: SegmentAnalysis, b: SegmentAnalysis, out: MixFacts, incoming: MixFacts, settings: MixSettings,
                           rate: Float, gain: Float, end: Long, start: Long, sungUntil: Long?, clash: Boolean, variant: Int,
-                          loop: Boolean = false): MixPlan? {
+                          loop: Boolean = false, relation: MusicalKey.Relation = MusicalKey.Relation.Unknown): MixPlan? {
         val beat = pulse(a)
         // The incoming title enters on its first beat, or on its first downbeat when that is the next beat.
         val firstBeat = b.beatAtOrAfter(start - 20.0)
@@ -374,6 +389,9 @@ internal object TransitionPlanner {
         // Keys that do not go together are not left to rub against each other for long.
         // Keys that clash are not left to rub for long; a title over its own start neither, since the
         // same instruments slightly apart in time colour each other (comb filtering).
+        // Harmonic mixing: keys that clash never rub for long; keys that go together (the same, or
+        // neighbours on the circle of fifths) are blended the longest, with their mids left fuller (see
+        // DeckAutomation.withMids, 6.0.0 Beta 4).
         val counts = if (clash || loop) settings.beatCounts.filter { it <= 16 }.toIntArray() else settings.beatCounts
         for ((index, count) in counts.withIndex()) {
             val overlap = (count * beat).roundToLong()

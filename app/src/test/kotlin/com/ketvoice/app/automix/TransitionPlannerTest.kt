@@ -64,18 +64,43 @@ class TransitionPlannerTest {
     }
 
     @Test fun tempoRangeFollowsTheIntensity() {
-        // The incoming title keeps the speed it is given for the rest of it: only tempos that close pass unnoticed.
-        assertEquals(.02f, MixSettings(0).tempoRange, 0f); assertEquals(.03f, MixSettings(1).tempoRange, 0f); assertEquals(.04f, MixSettings(2).tempoRange, 0f)
-        assertEquals("2 % apart: in time, even discreet", MixKind.Beatmatch, plan(outro(120f), intro(122.4f), intensity = 0, sungUntil = 170_000).kind)
-        assertEquals("3 % apart: balanced plays them in time", MixKind.Beatmatch, plan(outro(120f), intro(123.6f), sungUntil = 170_000).kind)
-        assertEquals("discreet does not, and does without an echo", MixKind.Filter, plan(outro(120f), intro(123.6f), intensity = 0, sungUntil = 170_000).kind)
-        assertEquals("4 % apart: only DJ; balanced leaves on an echo", MixKind.Echo, plan(outro(120f), intro(124.8f), sungUntil = 170_000).kind)
-        assertEquals(MixKind.Beatmatch, plan(outro(120f), intro(124.8f), intensity = 2, sungUntil = 170_000).kind)
-        // 138 into 122 BPM (13 % apart) is not stretched any more: a listener heard it as an odd speed-up.
+        // 6.0.0 Beta 4 (the owner chose Apple Music's way): the incoming title plays the blend in time, then glides
+        // back to its own tempo (TempoReturn), so wider gaps are bridged than when it kept the speed to its end.
+        assertEquals(.04f, MixSettings(0).tempoRange, 0f); assertEquals(.06f, MixSettings(1).tempoRange, 0f); assertEquals(.08f, MixSettings(2).tempoRange, 0f)
+        assertEquals("4 % apart: in time, even discreet", MixKind.Beatmatch, plan(outro(120f), intro(124.8f), intensity = 0, sungUntil = 170_000).kind)
+        assertEquals("6 % apart: balanced plays them in time", MixKind.Beatmatch, plan(outro(120f), intro(127.2f), sungUntil = 170_000).kind)
+        assertEquals("discreet does not, and does without an echo", MixKind.Filter, plan(outro(120f), intro(127.2f), intensity = 0, sungUntil = 170_000).kind)
+        assertEquals("8 % apart: only DJ; balanced leaves on an echo", MixKind.Echo, plan(outro(120f), intro(129.6f), sungUntil = 170_000).kind)
+        assertEquals(MixKind.Beatmatch, plan(outro(120f), intro(129.6f), intensity = 2, sungUntil = 170_000).kind)
+        // 138 into 122 BPM (13 % apart) is never stretched.
         assertNotEquals(MixKind.Beatmatch, plan(outro(138f), intro(122f), intensity = 2, sungUntil = 170_000).kind)
-        // A title left 2 % fast by the previous blend: the next one is judged from its own tempo.
+        // A title still 2 % fast from the previous blend: the next one is judged from its own tempo.
         assertEquals(MixKind.Beatmatch, plan(outro(120f), intro(120f), MixContext(speed = 1.02f), sungUntil = 170_000).kind)
-        assertNotEquals(MixKind.Beatmatch, plan(outro(120f), intro(116.4f), MixContext(speed = 1.02f), sungUntil = 170_000).kind)
+        assertNotEquals(MixKind.Beatmatch, plan(outro(120f), intro(112f), MixContext(speed = 1.02f), sungUntil = 170_000).kind)
+    }
+
+    @Test fun aTitlePlayedInTimeGlidesBackToItsOwnTempo() {
+        assertEquals(1f, TempoReturn.next(1.002f), 0f)
+        assertEquals(1.0575f, TempoReturn.next(1.06f), 1e-5f)
+        assertEquals(.9425f, TempoReturn.next(.94f), 1e-5f)
+        var speed = 1.06f; var steps = 0
+        while (speed != 1f) { speed = TempoReturn.next(speed); steps++ }
+        assertEquals("6 % back in 24 steps", 24, steps)
+        assertEquals(12_000L, TempoReturn.durationMs(1.06f))
+        assertEquals(0L, TempoReturn.durationMs(1f))
+    }
+
+    @Test fun aBlendInTimeHoldsTheMidsOfOneTitleAtATime() {
+        val plan = MixPlan(MixKind.Beatmatch, outMs = 100_000, inMs = 0, overlapMs = 16_000, swapMs = 108_000, gain = 1f, beatMs = 500f)
+        val incoming = DeckAutomation.incoming(plan); val outgoing = DeckAutomation.outgoing(plan)
+        assertTrue(incoming.usesMids && outgoing.usesMids)
+        assertEquals("incoming mids held back before the swap", DeckAutomation.MID_DOWN_DB, incoming.midDb.at(4_000_000L), .01f)
+        assertEquals("outgoing mids full before the swap", 0f, outgoing.midDb.at(104_000_000L), .01f)
+        assertEquals("incoming mids full at the end", 0f, incoming.midDb.at(16_100_000L), .01f)
+        assertEquals("outgoing mids down at the end", DeckAutomation.MID_DOWN_DB, outgoing.midDb.at(116_000_000L), .2f)
+        val clashing = DeckAutomation.incoming(plan.copy(clash = true))
+        assertEquals(DeckAutomation.MID_CLASH_DB, clashing.midDb.at(4_000_000L), .01f)
+        assertFalse("a plain crossfade keeps its mids", DeckAutomation.incoming(plan.copy(kind = MixKind.Crossfade)).usesMids)
     }
 
     @Test fun titlesThatCannotShareATempoPartOnAnEcho() {

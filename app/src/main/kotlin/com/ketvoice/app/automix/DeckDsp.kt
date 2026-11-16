@@ -84,15 +84,22 @@ internal class DeckAutomation(
      * How much the deck plays its voice alone (0..1), from its separated voice (5.11.0): a voice over
      * the other title's instrumental. Without that separation the title plays whole.
      */
-    val vocalSolo: Curve = Curve.flat(0f)
+    val vocalSolo: Curve = Curve.flat(0f),
+    /**
+     * Level of the mids, in dB, around [MID_HZ] (6.0.0 Beta 4): the third band of a DJ's equaliser, between
+     * the bass the high-pass hands over and the highs the sweeps open. Taken down where two titles would
+     * rub (their chords and voices live there), more when their keys clash.
+     */
+    val midDb: Curve = Curve.flat(0f)
 ) {
-    val endUs: Long get() = maxOf(maxOf(gain.endUs, highPassHz.endUs, lowPassHz.endUs), maxOf(dry.endUs, echo.endUs, reverb.endUs), maxOf(vocalCut.endUs, vocalSolo.endUs))
+    val endUs: Long get() = maxOf(maxOf(gain.endUs, highPassHz.endUs, lowPassHz.endUs), maxOf(dry.endUs, echo.endUs, reverb.endUs), maxOf(vocalCut.endUs, vocalSolo.endUs, midDb.endUs))
+    val usesMids: Boolean get() = midDb.endUs > 0L || midDb.at(0L) != 0f
     val usesVocalCut: Boolean get() = vocalCut.endUs > 0L
     val usesVocalSolo: Boolean get() = vocalSolo.endUs > 0L
     val usesEcho: Boolean get() = echoDelayUs > 0L
 
-    fun copyWith(vocalCut: Curve = this.vocalCut, vocalSolo: Curve = this.vocalSolo) =
-        DeckAutomation(gain, highPassHz, lowPassHz, dry, echo, reverb, echoDelayUs, echoFeedback, resonance, vocalCut, noise, noiseHz, vocalSolo)
+    fun copyWith(vocalCut: Curve = this.vocalCut, vocalSolo: Curve = this.vocalSolo, midDb: Curve = this.midDb) =
+        DeckAutomation(gain, highPassHz, lowPassHz, dry, echo, reverb, echoDelayUs, echoFeedback, resonance, vocalCut, noise, noiseHz, vocalSolo, midDb)
     val usesNoise: Boolean get() = noise.endUs > 0L
     val usesReverb: Boolean get() = reverb.endUs > 0L
 
@@ -118,8 +125,31 @@ internal class DeckAutomation(
         private fun sweep(fromHz: Float, toHz: Float, x: Float) = exp(ln(fromHz) + (ln(toHz) - ln(fromHz)) * ease(x))
         private fun point(us: Long, value: Float) = longArrayOf(us) to floatArrayOf(value)
 
+        /** Centre of the middle band of the equaliser. */
+        const val MID_HZ = 1_000f
+        /** How far the mids step back during a blend in time; further when the keys clash. */
+        const val MID_DOWN_DB = -4f
+        const val MID_CLASH_DB = -8f
+
         /** The title that leaves. */
-        fun outgoing(plan: MixPlan): DeckAutomation = Stems.outgoing(outgoingMix(plan), plan)
+        fun outgoing(plan: MixPlan): DeckAutomation = withMids(Stems.outgoing(outgoingMix(plan), plan), plan, outgoing = true)
+
+        /**
+         * The three-band equaliser of a blend in time (6.0.0 Beta 4): before the bass changes hands the
+         * incoming title rises with its mids held back, after it the outgoing one steps back the same way,
+         * so that the two sets of chords and voices are never both at full. Other transitions are left as they are.
+         */
+        internal fun withMids(automation: DeckAutomation, plan: MixPlan, outgoing: Boolean): DeckAutomation {
+            if (plan.kind != MixKind.Beatmatch || plan.swapMs < 0 || plan.overlapMs <= 0) return automation
+            val depth = if (plan.clash) MID_CLASH_DB else MID_DOWN_DB
+            fun at(outMs: Long): Long = if (outgoing) outMs * 1000L
+                else ((plan.inMs + (outMs - plan.outMs) * plan.rate.toDouble()) * 1000.0).toLong()
+            val start = at(plan.outMs); val swap = at(plan.swapMs); val end = at(plan.outMs + plan.overlapMs)
+            if (swap <= start || end <= swap) return automation
+            val curve = if (outgoing) Curve.join(point(start, 0f), point(swap, 0f), Curve.shaped(swap + 1, end, 16) { depth * ease(it) })
+                else Curve.join(point(start, depth), point(swap, depth), Curve.shaped(swap + 1, end, 16) { depth * (1f - ease(it)) }, point(end + 1, 0f))
+            return automation.copyWith(midDb = curve)
+        }
 
         private fun outgoingMix(plan: MixPlan): DeckAutomation {
             val start = plan.outMs * 1000L
@@ -135,7 +165,7 @@ internal class DeckAutomation(
         }
 
         /** The title that arrives. Its positions run [MixPlan.rate] times faster than the outgoing clock. */
-        fun incoming(plan: MixPlan): DeckAutomation = Stems.incoming(incomingMix(plan), plan)
+        fun incoming(plan: MixPlan): DeckAutomation = withMids(Stems.incoming(incomingMix(plan), plan), plan, outgoing = false)
 
         private fun incomingMix(plan: MixPlan): DeckAutomation {
             fun position(outMs: Long) = ((plan.inMs + (outMs - plan.outMs) * plan.rate.toDouble()) * 1000.0).toLong()
@@ -375,6 +405,7 @@ internal object Stems {
 internal class DeckDsp(val sampleRate: Int, val channels: Int) {
     private val high = Biquad(channels)
     private val low = Biquad(channels)
+    private val mids = Peak(channels)
     /** The band of the voice, on the centre of the image: high-passed then low-passed. */
     private val voiceHigh = Biquad(1)
     private val voiceLow = Biquad(1)
@@ -387,7 +418,7 @@ internal class DeckDsp(val sampleRate: Int, val channels: Int) {
     private var seed = 0x2545F491
 
     fun reset() {
-        high.clear(); low.clear(); voiceHigh.clear(); voiceLow.clear(); hiss.clear()
+        high.clear(); low.clear(); voiceHigh.clear(); voiceLow.clear(); hiss.clear(); mids.clear()
         gain = Float.NaN; dry = 1f
         echo = null; reverb = null
     }
@@ -421,6 +452,7 @@ internal class DeckDsp(val sampleRate: Int, val channels: Int) {
             val dryStep = (dryTarget - dry) / block
             high.follow(automation.highPassHz.at(middleUs), automation.resonance, sampleRate, highPass = true)
             low.follow(automation.lowPassHz.at(middleUs), automation.resonance, sampleRate, highPass = false)
+            if (automation.usesMids) mids.follow(automation.midDb.at(middleUs), sampleRate) else mids.follow(0f, sampleRate)
             val voice = if (channels >= 2 && automation.usesVocalCut) automation.vocalCut.at(middleUs).coerceIn(0f, 1f) else 0f
             // The separated instrumental, where it covers this block: the voice is really taken out.
             val solo = if (channels == 2 && automation.usesVocalSolo && stem?.vocals != null) automation.vocalSolo.at(middleUs).coerceIn(0f, 1f) else 0f
@@ -443,6 +475,7 @@ internal class DeckDsp(val sampleRate: Int, val channels: Int) {
                     if (soloPcm != null) x += solo * (soloPcm[2 * (stemAt + i) + c] - x)
                     if (high.cutoff > 0f) x = high.run(x, c)
                     if (low.cutoff > 0f) x = low.run(x, c)
+                    if (mids.active) x = mids.run(x, c)
                     frame[c] = x
                 }
                 if (bandVoice > 0f) {
@@ -487,6 +520,42 @@ internal class DeckDsp(val sampleRate: Int, val channels: Int) {
         x = x xor (x shl 13); x = x xor (x ushr 17); x = x xor (x shl 5)
         seed = x
         return (x.toFloat() / Int.MAX_VALUE.toFloat()).coerceIn(-1f, 1f)
+    }
+
+    /** A peaking filter at [DeckAutomation.MID_HZ] (RBJ's cookbook), retuned as its level moves; flat at 0 dB. */
+    private class Peak(channels: Int) {
+        private val x1 = FloatArray(channels); private val x2 = FloatArray(channels)
+        private val y1 = FloatArray(channels); private val y2 = FloatArray(channels)
+        private var b0 = 1f; private var b1 = 0f; private var b2 = 0f; private var a1 = 0f; private var a2 = 0f
+        private var db = 0f
+        /** The filter runs while its level is off 0 dB, and its state is kept from block to block. */
+        var active = false
+            private set
+
+        fun clear() { x1.fill(0f); x2.fill(0f); y1.fill(0f); y2.fill(0f); db = 0f; active = false }
+
+        fun follow(levelDb: Float, sampleRate: Int) {
+            val target = if (abs(levelDb) < .05f) 0f else levelDb
+            if (!active && target == 0f) return
+            // Back at 0 dB (unity) for a block: the filter steps out of the path.
+            if (active && abs(target - db) < .05f) { if (target == 0f) clear(); return }
+            if (!active) { x1.fill(0f); x2.fill(0f); y1.fill(0f); y2.fill(0f) }
+            db = target; active = true
+            val level = target
+            val a = 10.0.pow(level / 40.0)
+            val w = 2.0 * PI * DeckAutomation.MID_HZ / sampleRate
+            val alpha = sin(w) / (2.0 * .8)
+            val c = cos(w)
+            val a0 = 1.0 + alpha / a
+            b0 = ((1.0 + alpha * a) / a0).toFloat(); b1 = (-2.0 * c / a0).toFloat(); b2 = ((1.0 - alpha * a) / a0).toFloat()
+            a1 = b1; a2 = ((1.0 - alpha / a) / a0).toFloat()
+        }
+
+        fun run(x: Float, c: Int): Float {
+            val v = b0 * x + b1 * x1[c] + b2 * x2[c] - a1 * y1[c] - a2 * y2[c]
+            x2[c] = x1[c]; x1[c] = x; y2[c] = y1[c]; y1[c] = v
+            return v
+        }
     }
 
     /** A second-order filter that is retuned as its cut-off moves, one state per channel. */

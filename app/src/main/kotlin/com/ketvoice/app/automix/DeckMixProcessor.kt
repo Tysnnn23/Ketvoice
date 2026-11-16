@@ -79,8 +79,10 @@ internal class DeckMixProcessor(private val control: DeckControl) : BaseAudioPro
         // and, once running, takes up a separation that arrives while the title plays (6.0.0 Beta 4).
         val stage = usable && inputAudioFormat.channelCount == 2 &&
             runCatching { com.ketvoice.app.stems.VoiceLevel.stageWanted(control.voiceMask != null) }.getOrDefault(false)
-        voice = if (stage) (voice?.takeIf { it.rate == inputAudioFormat.sampleRate }
-            ?: com.ketvoice.app.stems.VoiceStage(inputAudioFormat.sampleRate, 2)).also { it.reset() } else null
+        // Media3 flushes on every change of speed too (6.0.0 Beta 4: a title glides back to its tempo after a
+        // mix): the stage lives through those, like the filters, and only starts afresh after a jump in the title.
+        voice = if (stage) voice?.takeIf { it.rate == inputAudioFormat.sampleRate }
+            ?: com.ketvoice.app.stems.VoiceStage(inputAudioFormat.sampleRate, 2) else null
         control.voiceStageOn = stage
         if (control.main) com.ketvoice.app.stems.VoiceLevel.stageDelay(inputAudioFormat.sampleRate, stage)
     }
@@ -98,7 +100,9 @@ internal class DeckMixProcessor(private val control: DeckControl) : BaseAudioPro
             if (cursorUs == C.TIME_UNSET || kotlin.math.abs(position - cursorUs) > 300_000L) {
                 // A real jump (a seek, another title): what the filters and the echo remember belongs elsewhere.
                 val from = if (cursorUs != C.TIME_UNSET) cursorUs else resumeUs
-                if (from != C.TIME_UNSET && kotlin.math.abs(position - from) > JUMP_US) dsp?.reset()
+                if (from != C.TIME_UNSET && kotlin.math.abs(position - from) > JUMP_US) { dsp?.reset(); voice?.reset() }
+                // A stream that starts from nothing (a first title, after a pause-free gap) starts the stage from silence.
+                if (from == C.TIME_UNSET) voice?.reset()
                 cursorUs = position
             }
         }
