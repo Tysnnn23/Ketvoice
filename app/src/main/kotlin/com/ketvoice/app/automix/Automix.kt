@@ -399,7 +399,7 @@ internal object Automix {
         val outHint = body(current.id, duration, item)
         if (!valid()) return false
         // The voices are really separated when the model is there (5.10.0): the parts of both titles that a mix can use are recorded.
-        val separate = AppSettings.ketmixStems.value && StemModel.ready && !h.exact
+        val separate = AppSettings.ketmixStems.value && StemModel.anyReady && !h.exact
         val outFrom = max(0L, duration - depth.outroMs)
         val stemOutFrom = max(outFrom, duration - StemEngine.MAX_PART_MS)
         val stemInUntil = min(depth.introMs, StemEngine.MAX_PART_MS)
@@ -739,16 +739,18 @@ internal object Automix {
             main.playerError == null && !(h.exact || AppSettings.bitPerfect.value)
         if (!valid()) return
         val depth = AnalysisDepth.of(AppSettings.ketmixAnalysis.value)
-        val separate = AppSettings.ketmixStems.value && StemModel.ready && (!AppSettings.ketmixStemsCharging.value || StemModel.charging())
+        val separate = AppSettings.ketmixStems.value && StemModel.anyReady && (!AppSettings.ketmixStemsCharging.value || StemModel.charging())
+        // The better model is about ten times slower: on battery it prepares only the next title.
+        val slow = separate && StemEngine.wanted() == com.ketvoice.app.stems.StemMask.HIGH && !StemModel.charging()
         fun known(id: String, length: Long, intro: Boolean) =
             (if (intro) AnalysisStore.intro(id, length, depth) else AnalysisStore.outro(id, length, depth)) != null &&
-                (!separate || StemStore.has(id, length, intro))
+                (!separate || !StemEngine.needs(id, length, intro))
         val item = main.currentMediaItem ?: return
         val mainControl = h.control(main) ?: return
         if (clockOf?.get() !== main && clockConfirmed(main, mainControl)) clockOf = java.lang.ref.WeakReference(main)
         if (!valid()) return
         fun introLength(t: Track) = t.durationMs.takeIf { it > 0 } ?: 600_000L
-        fun upcoming() = Player.automixUpcoming(if (Player.onMeteredNetwork()) 1 else LOOKAHEAD).filter { it.track.id != current.id }
+        fun upcoming() = Player.automixUpcoming(if (Player.onMeteredNetwork() || slow) 1 else LOOKAHEAD).filter { it.track.id != current.id }
         fun done(t: Track) = known(t.id, introLength(t), true) && preparedEndings[t.id]?.let { known(t.id, it, false) } == true
         if (known(current.id, duration, false) && upcoming().all { done(it.track) }) { preparedKey = key; return }
 
@@ -761,7 +763,7 @@ internal object Automix {
             val span = if (intro) min(depth.introMs, length) else length - from
             val stemFrom = if (intro) 0L else max(from, length - StemEngine.MAX_PART_MS)
             val stemUntil = if (intro) min(span, StemEngine.MAX_PART_MS) else length
-            val wantStem = separate && !StemStore.has(id, length, intro)
+            val wantStem = separate && StemEngine.needs(id, length, intro)
             var recorded = if (wantStem) PcmCapture(stemFrom * 1000L, stemUntil * 1000L) else null
             val analysed = (if (intro) AnalysisStore.intro(id, length, depth) else AnalysisStore.outro(id, length, depth)) != null
             if (!analysed) {

@@ -17,6 +17,8 @@ internal object StemStore {
     private const val MAGIC = 0x4B565331 // "KVS1", 5.10.0
     /** With the voice activity of each frame (5.11.0). */
     private const val MAGIC_VOICE = 0x4B565332
+    /** With the model that found it (6.0.0). */
+    private const val MAGIC_QUALITY = 0x4B565333
     /** Separations past this size are dropped, the least recently used first. */
     const val LIMIT_BYTES = 400L * 1024 * 1024
     @Volatile private var root: File? = null
@@ -44,6 +46,19 @@ internal object StemStore {
 
     fun has(trackId: String, durationMs: Long, intro: Boolean): Boolean = existing(trackId, durationMs, intro) != null
 
+    /** The model that found the stored separation of this part ([StemMask.FAST] or [StemMask.HIGH]), or null when there is none. */
+    fun quality(trackId: String, durationMs: Long, intro: Boolean): Int? {
+        val f = existing(trackId, durationMs, intro) ?: return null
+        return runCatching {
+            DataInputStream(f.inputStream().buffered()).use { input ->
+                when (input.readInt()) {
+                    MAGIC_QUALITY -> { input.readLong(); input.readInt(); input.readInt(); input.readByte().toInt() }
+                    else -> StemMask.FAST
+                }
+            }
+        }.getOrNull()
+    }
+
     fun load(trackId: String, durationMs: Long, intro: Boolean): StemMask? {
         val f = existing(trackId, durationMs, intro) ?: return null
         return runCatching {
@@ -67,8 +82,11 @@ internal object StemStore {
         }
         val out = ByteArrayOutputStream()
         DataOutputStream(out).use {
-            it.writeInt(if (mask.voiceShare != null) MAGIC_VOICE else MAGIC); it.writeLong(mask.startUs); it.writeInt(mask.frames)
-            it.writeInt(mask.packed.size); it.write(packed.toByteArray())
+            val voice = mask.voiceShare != null
+            it.writeInt(if (voice) MAGIC_QUALITY else MAGIC); it.writeLong(mask.startUs); it.writeInt(mask.frames)
+            it.writeInt(mask.packed.size)
+            if (voice) it.writeByte(mask.quality)
+            it.write(packed.toByteArray())
         }
         return out.toByteArray()
     }
@@ -76,16 +94,17 @@ internal object StemStore {
     fun decode(bytes: ByteArray): StemMask {
         DataInputStream(bytes.inputStream()).use { input ->
             val magic = input.readInt()
-            check(magic == MAGIC || magic == MAGIC_VOICE) { "not a separation" }
+            check(magic == MAGIC || magic == MAGIC_VOICE || magic == MAGIC_QUALITY) { "not a separation" }
             val start = input.readLong(); val frames = input.readInt(); val size = input.readInt()
             check(frames in 1..200_000 && size == frames * StemDsp.NET_BINS / 2) { "bad separation" }
+            val quality = if (magic == MAGIC_QUALITY) input.readByte().toInt() else StemMask.FAST
             val packed = ByteArray(size)
             val data = DataInputStream(InflaterInputStream(input))
             data.readFully(packed)
             if (magic == MAGIC) return StemMask(start, frames, packed)
             val share = ByteArray(frames); val level = ByteArray(frames)
             data.readFully(share); data.readFully(level)
-            return StemMask(start, frames, packed, share, level)
+            return StemMask(start, frames, packed, share, level, quality)
         }
     }
 

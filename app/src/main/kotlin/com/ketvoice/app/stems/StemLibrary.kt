@@ -72,7 +72,7 @@ internal object StemLibrary {
         val id = item.track.id
         val introLength = item.track.durationMs.takeIf { it > 0 } ?: durationMs
         val measured = AnalysisStore.intro(id, introLength, depth) != null && AnalysisStore.outro(id, durationMs, depth) != null
-        val separated = !separate || (StemStore.has(id, introLength, true) && StemStore.has(id, durationMs, false))
+        val separated = !separate || (!StemEngine.needs(id, introLength, true) && !StemEngine.needs(id, durationMs, false))
         return !(measured && separated)
     }
 
@@ -99,7 +99,7 @@ internal object StemLibrary {
             // The title being mixed comes first: the phone's processor is left to it.
             while (Automix.busy) delay(2_000)
             val depth = AnalysisDepth.of(AppSettings.ketmixAnalysis.value)
-            val separate = AppSettings.ketmixStems.value && StemModel.ready
+            val separate = AppSettings.ketmixStems.value && StemModel.anyReady
             val ok = runCatching { one(item, depth, separate) }.getOrDefault(false)
             if (!ok) unreadable += item.file.absolutePath
             done++
@@ -136,7 +136,7 @@ internal object StemLibrary {
     private fun part(extractor: MediaExtractor, format: MediaFormat, id: String, length: Long, intro: Boolean,
                      fromMs: Long, untilMs: Long, depth: AnalysisDepth, separate: Boolean) {
         val measured = (if (intro) AnalysisStore.intro(id, length, depth) else AnalysisStore.outro(id, length, depth)) != null
-        val wantStem = separate && !StemStore.has(id, length, intro)
+        val wantStem = separate && StemEngine.needs(id, length, intro)
         if (measured && !wantStem) return
         val stemFrom = if (intro) 0L else maxOf(fromMs, untilMs - StemEngine.MAX_PART_MS)
         val stemUntil = if (intro) minOf(untilMs, StemEngine.MAX_PART_MS) else untilMs

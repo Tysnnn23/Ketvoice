@@ -1222,28 +1222,40 @@ private fun KetmixJournalPanel() {
 /** The optional separation model and the separations already made (5.10.0). */
 @Composable
 private fun ColumnScope.StemSettings() {
-    val model by com.ketvoice.app.stems.StemModel.state.collectAsState()
+    val fast by com.ketvoice.app.stems.StemModel.fast.state.collectAsState()
+    val hq by com.ketvoice.app.stems.StemModel.hq.state.collectAsState()
     var usage by remember { mutableStateOf(0 to 0L) }
-    var confirm by remember { mutableStateOf(false) }
+    var confirm by remember { mutableStateOf<com.ketvoice.app.stems.ModelPack?>(null) }
+    var qualityOpen by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    LaunchedEffect(model) {
+    LaunchedEffect(fast, hq) {
         usage = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.ketvoice.app.stems.StemStore.usage() }
     }
-    val size = "${com.ketvoice.app.stems.StemModel.totalBytes / 1_000_000L} Mo"
-    SRow(KetIcons.Download, "Modèle de séparation",
-        sub = com.ketvoice.app.data.AppText.t("Séparation par IA sur le téléphone (Spleeter), téléchargée une fois : {0}").replace("{0}", size),
-        value = when (val m = model) {
-            com.ketvoice.app.stems.StemModel.State.Missing -> "Télécharger"
-            is com.ketvoice.app.stems.StemModel.State.Downloading -> "Téléchargement · ${(m.fraction * 100).toInt()} %"
-            com.ketvoice.app.stems.StemModel.State.Ready -> "Prêt"
-            is com.ketvoice.app.stems.StemModel.State.Failed -> "Échec · réessayer"
-        }) {
-        when (model) {
-            com.ketvoice.app.stems.StemModel.State.Ready -> confirm = true
-            is com.ketvoice.app.stems.StemModel.State.Downloading -> com.ketvoice.app.stems.StemModel.cancel()
-            else -> com.ketvoice.app.stems.StemModel.download()
+    @Composable
+    fun ModelRow(pack: com.ketvoice.app.stems.ModelPack, state: com.ketvoice.app.stems.ModelPack.State, title: String, sub: String) {
+        val size = "${pack.totalBytes / 1_000_000L} Mo"
+        SRow(KetIcons.Download, title,
+            sub = com.ketvoice.app.data.AppText.t(sub).replace("{0}", size),
+            value = when (state) {
+                com.ketvoice.app.stems.ModelPack.State.Missing -> "Télécharger"
+                is com.ketvoice.app.stems.ModelPack.State.Downloading -> "Téléchargement · ${(state.fraction * 100).toInt()} %"
+                com.ketvoice.app.stems.ModelPack.State.Ready -> "Prêt"
+                is com.ketvoice.app.stems.ModelPack.State.Failed -> "Échec · réessayer"
+            }) {
+            when (state) {
+                com.ketvoice.app.stems.ModelPack.State.Ready -> confirm = pack
+                is com.ketvoice.app.stems.ModelPack.State.Downloading -> pack.cancel()
+                else -> pack.download()
+            }
         }
     }
+    ModelRow(com.ketvoice.app.stems.StemModel.fast, fast, "Modèle de séparation",
+        "Séparation par IA sur le téléphone (Spleeter), téléchargée une fois : {0}")
+    ModelRow(com.ketvoice.app.stems.StemModel.hq, hq, "Modèle haute qualité",
+        "Voix et instrumentaux bien plus nets (UVR MDX-Net), environ dix fois plus lent : {0}. Il sert téléphone en charge et améliore alors les titres déjà séparés.")
+    SRow(KetIcons.Sliders, "Qualité de séparation",
+        sub = "Quel modèle sépare les titres",
+        value = when (AppSettings.ketmixStemsQuality.value) { 1 -> "Toujours la meilleure"; 2 -> "Toujours rapide"; else -> "Automatique" }) { qualityOpen = true }
     SRow(KetIcons.Storage, "Titres séparés",
         sub = "Chaque titre n'est séparé qu'une fois ; ses mix suivants réutilisent la séparation. Toucher pour tout effacer.",
         value = "${usage.first} · ${"%.1f".format(usage.second / 1_000_000.0)} Mo") {
@@ -1255,13 +1267,37 @@ private fun ColumnScope.StemSettings() {
     SToggle(KetIcons.Audio, "Séparer seulement en charge",
         "Les nouvelles séparations n'ont lieu que téléphone branché ; celles déjà faites servent toujours.",
         AppSettings.ketmixStemsCharging.value) { AppSettings.ketmixStemsCharging.value = it; SettingsStore.save() }
-    if (confirm) androidx.compose.material3.AlertDialog(
-        onDismissRequest = { confirm = false },
-        title = { Text(com.ketvoice.app.data.AppText.t("Supprimer le modèle de séparation ?")) },
-        text = { Text(com.ketvoice.app.data.AppText.t("Les mix atténueront la voix au lieu de la retirer. Les titres déjà séparés restent.")) },
-        confirmButton = { androidx.compose.material3.TextButton({ confirm = false; com.ketvoice.app.stems.StemModel.delete() }) {
-            Text(com.ketvoice.app.data.AppText.t("Supprimer")) } },
-        dismissButton = { androidx.compose.material3.TextButton({ confirm = false }) { Text(com.ketvoice.app.data.AppText.t("Annuler")) } })
+    if (qualityOpen) {
+        val options = listOf(
+            "0" to ("Automatique" to "Le modèle rapide sur batterie, le meilleur téléphone en charge ; les titres déjà séparés sont alors améliorés"),
+            "1" to ("Toujours la meilleure" to "Le modèle haute qualité tout le temps : plus de batterie, et un seul titre préparé à l'avance sur batterie"),
+            "2" to ("Toujours rapide" to "Le modèle rapide seulement : le moins de batterie"))
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { qualityOpen = false },
+            title = { Text(com.ketvoice.app.data.AppText.t("Qualité de séparation")) },
+            text = {
+                Column {
+                    options.forEach { (id, label) ->
+                        Column(Modifier.fillMaxWidth().clickable {
+                            AppSettings.ketmixStemsQuality.value = id.toInt(); SettingsStore.save(); qualityOpen = false
+                        }.padding(vertical = 10.dp)) {
+                            Text((if (AppSettings.ketmixStemsQuality.value == id.toInt()) "✓ " else "") + com.ketvoice.app.data.AppText.t(label.first), fontSize = 16.sp)
+                            Text(com.ketvoice.app.data.AppText.t(label.second), fontSize = 12.sp, lineHeight = 16.sp)
+                        }
+                    }
+                }
+            },
+            confirmButton = { androidx.compose.material3.TextButton({ qualityOpen = false }) { Text(com.ketvoice.app.data.AppText.t("Fermer")) } })
+    }
+    confirm?.let { pack ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { confirm = null },
+            title = { Text(com.ketvoice.app.data.AppText.t("Supprimer le modèle de séparation ?")) },
+            text = { Text(com.ketvoice.app.data.AppText.t("Les mix atténueront la voix au lieu de la retirer. Les titres déjà séparés restent.")) },
+            confirmButton = { androidx.compose.material3.TextButton({ confirm = null; pack.delete() }) {
+                Text(com.ketvoice.app.data.AppText.t("Supprimer")) } },
+            dismissButton = { androidx.compose.material3.TextButton({ confirm = null }) { Text(com.ketvoice.app.data.AppText.t("Annuler")) } })
+    }
 }
 
 

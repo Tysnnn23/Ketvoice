@@ -256,7 +256,75 @@ class StemsTest {
     }
 }
 
+class StemQualityTest {
+    @Test fun theBetterModelServesWhileChargingOrWhenAskedFor() {
+        // Automatic: quick on battery, better on the charger.
+        assertEquals(StemMask.FAST, StemModel.choose(0, charging = false, fastReady = true, hqReady = true))
+        assertEquals(StemMask.HIGH, StemModel.choose(0, charging = true, fastReady = true, hqReady = true))
+        // Only one model there: that one.
+        assertEquals(StemMask.HIGH, StemModel.choose(0, charging = false, fastReady = false, hqReady = true))
+        assertEquals(StemMask.FAST, StemModel.choose(0, charging = true, fastReady = true, hqReady = false))
+        assertNull(StemModel.choose(0, charging = true, fastReady = false, hqReady = false))
+        assertEquals(StemMask.HIGH, StemModel.choose(1, charging = false, fastReady = true, hqReady = true))
+        assertEquals(StemMask.FAST, StemModel.choose(2, charging = true, fastReady = true, hqReady = true))
+        assertEquals(StemMask.HIGH, StemModel.choose(2, charging = true, fastReady = false, hqReady = true))
+    }
+
+    @Test fun storeRemembersWhichModelSeparated() {
+        val frames = 12
+        val mask = StemMask(0L, frames, ByteArray(frames * StemDsp.NET_BINS / 2), ByteArray(frames), ByteArray(frames), StemMask.HIGH)
+        assertEquals(StemMask.HIGH, StemStore.decode(StemStore.encode(mask)).quality)
+        val dir = kotlin.io.path.createTempDirectory("stems").toFile()
+        try {
+            StemStore.init(dir)
+            assertNull(StemStore.quality("q", 200_000, true))
+            StemStore.save("q", 200_000, true, mask)
+            assertEquals(StemMask.HIGH, StemStore.quality("q", 200_000, true))
+            StemStore.save("q", 200_000, false, StemMask(0L, frames, ByteArray(frames * StemDsp.NET_BINS / 2)))
+            assertEquals(StemMask.FAST, StemStore.quality("q", 200_000, false))
+        } finally { dir.deleteRecursively() }
+    }
+
+    /** A part separated by the quick model is separated again by the better one, once, when it is wanted. */
+    @Test fun preparationUpgradesQuickSeparations() {
+        val dir = kotlin.io.path.createTempDirectory("stems").toFile()
+        var fastRuns = 0; var hqRuns = 0
+        try {
+            StemStore.init(dir)
+            val rate = 44_100
+            val pcm = ShortArray(rate * 2 * 8) { (kotlin.math.sin(it * .01) * 8_000).toInt().toShort() }
+            StemEngine.testNet = object : StemNet {
+                override fun run(input: FloatArray, vocals: FloatArray, accompaniment: FloatArray) { fastRuns++; vocals.fill(0f); input.copyInto(accompaniment) }
+            }
+            assertTrue(StemEngine.prepare("u", 200_000, true, pcm, rate, 0L))
+            assertEquals(StemMask.FAST, StemStore.quality("u", 200_000, true))
+            assertTrue(StemEngine.prepare("u", 200_000, true, pcm, rate, 0L))
+            val afterFast = fastRuns
+            StemEngine.testUvr = object : UvrNet {
+                override val nFft = 1536; override val dimF = 768; override val dimT = 64
+                override fun run(input: FloatArray, output: FloatArray) { hqRuns++; output.fill(0f) }
+            }
+            assertTrue(StemEngine.needs("u", 200_000, true))
+            assertTrue(StemEngine.prepare("u", 200_000, true, pcm, rate, 0L))
+            assertEquals(StemMask.HIGH, StemStore.quality("u", 200_000, true))
+            val afterHq = hqRuns
+            assertTrue(afterHq > 0)
+            assertFalse(StemEngine.needs("u", 200_000, true))
+            assertTrue(StemEngine.prepare("u", 200_000, true, pcm, rate, 0L))
+            assertEquals(afterHq, hqRuns)
+            assertEquals(afterFast, fastRuns)
+        } finally { StemEngine.testNet = null; StemEngine.testUvr = null; dir.deleteRecursively() }
+    }
+}
+
 class StemModelPinTest {
+    @org.junit.Test fun highQualityDigestMatchesThePublishedModel() {
+        val expected = File("../tools/stems/expected-hq.sha256").takeIf { it.isFile } ?: File("tools/stems/expected-hq.sha256")
+        val (sha, name) = expected.readLines().first { it.isNotBlank() }.split("  ")
+        assertEquals(name, StemModel.hq.parts.single().name)
+        assertEquals(sha, StemModel.hq.parts.single().sha256)
+    }
+
     /** The app checks the downloaded model against the digests the publishing workflow verifies. */
     @org.junit.Test fun digestsMatchThePublishedModel() {
         val expected = File("../tools/stems/expected.sha256").takeIf { it.isFile } ?: File("tools/stems/expected.sha256")

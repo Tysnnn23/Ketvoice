@@ -23,7 +23,9 @@ internal interface StemNet : AutoCloseable {
  */
 internal class StemMask(val startUs: Long, val frames: Int, val packed: ByteArray,
                         /** Per frame, how much of the voice band is voice (0..255), and how loud that voice is (0..255 for -96..0 dB). Null in separations of 5.10.0. */
-                        val voiceShare: ByteArray? = null, val voiceLevel: ByteArray? = null) {
+                        val voiceShare: ByteArray? = null, val voiceLevel: ByteArray? = null,
+                        /** Which model found it: [FAST] (Spleeter) or [HIGH] (UVR MDX-Net). */
+                        val quality: Int = FAST) {
     init {
         require(packed.size == frames * StemDsp.NET_BINS / 2)
         require(voiceShare == null || (voiceShare.size == frames && voiceLevel?.size == frames))
@@ -41,6 +43,8 @@ internal class StemMask(val startUs: Long, val frames: Int, val packed: ByteArra
     val endMs: Long get() = timeMs(frames) + StemDsp.N_FFT * 1000L / StemDsp.RATE
 
     companion object {
+        const val FAST = 0
+        const val HIGH = 1
         private val LEVELS = FloatArray(16) { val r = it / 15f; r * r }
 
         fun quantize(value: Float): Int = (sqrt(value.coerceIn(0f, 1f)) * 15f + .5f).toInt().coerceIn(0, 15)
@@ -117,6 +121,36 @@ internal object Separator {
     private const val VOICE_FROM = 19
     private const val VOICE_UNTIL = 372
 
+    /** Fills a separation frame by frame, from the share of each cell that is instrumental. */
+    private class MaskWriter(val frames: Int) {
+        val packed = ByteArray(frames * StemDsp.NET_BINS / 2)
+        val voiceShare = ByteArray(frames); val voiceLevel = ByteArray(frames)
+        private var voiceEnergy = 0.0; private var bandEnergy = 0.0
+
+        /** [kept] of each channel at bin [k] (0..1), and the magnitude of the title there. */
+        fun cell(frame: Int, k: Int, keptL: Float, keptR: Float, magL: Float, magR: Float) {
+            if (k in VOICE_FROM..VOICE_UNTIL) {
+                bandEnergy += magL * magL + magR * magR
+                voiceEnergy += (1f - keptL) * (1f - keptL) * magL * magL + (1f - keptR) * (1f - keptR) * magR * magR
+            }
+            val q = StemMask.quantize((keptL + keptR) * .5f)
+            val at = (frame * StemDsp.NET_BINS + k) shr 1
+            packed[at] = (if (k and 1 == 0) (packed[at].toInt() and 0xF0) or q else (packed[at].toInt() and 0x0F) or (q shl 4)).toByte()
+        }
+
+        fun endFrame(frame: Int) {
+            voiceShare[frame] = (sqrt(voiceEnergy / (bandEnergy + 1e-9)) * 255.0).toInt().coerceIn(0, 255).toByte()
+            // Energy of a full-scale tone in the band is about (N/4)^2 per bin; -96..0 dB on 0..255.
+            val db = 10.0 * kotlin.math.log10(voiceEnergy / (StemDsp.N_FFT.toDouble() * StemDsp.N_FFT) + 1e-12)
+            voiceLevel[frame] = ((db + 96.0) * 255.0 / 96.0).toInt().coerceIn(0, 255).toByte()
+            voiceEnergy = 0.0; bandEnergy = 0.0
+        }
+
+        fun result(startUs: Long, quality: Int) = StemMask(startUs, frames, packed, voiceShare, voiceLevel, quality)
+    }
+
+    private fun kept(v: Float, a: Float) = (a * a + EPS / 2) / (v * v + a * a + EPS)
+
     /**
      * Runs the network over a stereo signal at 44.1 kHz and returns where its instrumental is.
      * [startUs] is the position in the title of the first sample. [cancelled] is checked between
@@ -125,8 +159,7 @@ internal object Separator {
     fun mask(left: FloatArray, right: FloatArray, startUs: Long, net: StemNet, cancelled: () -> Boolean = { false }): StemMask? {
         val frames = StemDsp.frames(left.size)
         if (frames <= 0) return null
-        val packed = ByteArray(frames * StemDsp.NET_BINS / 2)
-        val voiceShare = ByteArray(frames); val voiceLevel = ByteArray(frames)
+        val out = MaskWriter(frames)
         val stft = StereoStft()
         val lr = FloatArray(StemDsp.BINS); val li = FloatArray(StemDsp.BINS)
         val rr = FloatArray(StemDsp.BINS); val ri = FloatArray(StemDsp.BINS)
@@ -151,30 +184,43 @@ internal object Separator {
             for (f in 0 until count) {
                 val row = f * StemDsp.NET_BINS
                 val frame = first + f
-                var voiceEnergy = 0.0; var bandEnergy = 0.0
                 for (k in 0 until StemDsp.NET_BINS) {
-                    var share = 0f
-                    for (c in 0..1) {
-                        val v = vocals[c * block + row + k]; val a = accompaniment[c * block + row + k]
-                        val kept = (a * a + EPS / 2) / (v * v + a * a + EPS)
-                        share += kept
-                        if (k in VOICE_FROM..VOICE_UNTIL) {
-                            val x = input[c * block + row + k]
-                            bandEnergy += x * x; voiceEnergy += (1f - kept) * (1f - kept) * x * x
-                        }
-                    }
-                    val q = StemMask.quantize(share * .5f)
-                    val at = (frame * StemDsp.NET_BINS + k) shr 1
-                    packed[at] = (if (k and 1 == 0) (packed[at].toInt() and 0xF0) or q else (packed[at].toInt() and 0x0F) or (q shl 4)).toByte()
+                    val l = row + k; val r = block + row + k
+                    out.cell(frame, k, kept(vocals[l], accompaniment[l]), kept(vocals[r], accompaniment[r]), input[l], input[r])
                 }
-                voiceShare[frame] = (sqrt(voiceEnergy / (bandEnergy + 1e-9)) * 255.0).toInt().coerceIn(0, 255).toByte()
-                // Energy of a full-scale tone in the band is about (N/4)^2 per bin; -96..0 dB on 0..255.
-                val db = 10.0 * kotlin.math.log10(voiceEnergy / (StemDsp.N_FFT.toDouble() * StemDsp.N_FFT) + 1e-12)
-                voiceLevel[frame] = ((db + 96.0) * 255.0 / 96.0).toInt().coerceIn(0, 255).toByte()
+                out.endFrame(frame)
             }
             first += count
         }
-        return StemMask(startUs, frames, packed, voiceShare, voiceLevel)
+        return out.result(startUs, StemMask.FAST)
+    }
+
+    /**
+     * The separation of a title whose voice was estimated as a sound of its own (by the high-quality
+     * model, see [UvrSeparator]): each cell's instrumental share is what is left once the voice is
+     * taken away, on the same grid and in the same small form as [mask].
+     */
+    fun maskFromVoice(left: FloatArray, right: FloatArray, voiceL: FloatArray, voiceR: FloatArray, startUs: Long,
+                      cancelled: () -> Boolean = { false }): StemMask? {
+        val frames = StemDsp.frames(left.size)
+        if (frames <= 0) return null
+        val out = MaskWriter(frames)
+        val mix = StereoStft(); val voice = StereoStft()
+        val lr = FloatArray(StemDsp.BINS); val li = FloatArray(StemDsp.BINS); val rr = FloatArray(StemDsp.BINS); val ri = FloatArray(StemDsp.BINS)
+        val vlr = FloatArray(StemDsp.BINS); val vli = FloatArray(StemDsp.BINS); val vrr = FloatArray(StemDsp.BINS); val vri = FloatArray(StemDsp.BINS)
+        for (t in 0 until frames) {
+            if (t % 256 == 0 && cancelled()) return null
+            mix.forward(left, right, t * StemDsp.HOP, lr, li, rr, ri)
+            voice.forward(voiceL, voiceR, t * StemDsp.HOP, vlr, vli, vrr, vri)
+            for (k in 0 until StemDsp.NET_BINS) {
+                val vL = sqrt(vlr[k] * vlr[k] + vli[k] * vli[k]); val vR = sqrt(vrr[k] * vrr[k] + vri[k] * vri[k])
+                val aLr = lr[k] - vlr[k]; val aLi = li[k] - vli[k]; val aRr = rr[k] - vrr[k]; val aRi = ri[k] - vri[k]
+                val aL = sqrt(aLr * aLr + aLi * aLi); val aR = sqrt(aRr * aRr + aRi * aRi)
+                out.cell(t, k, kept(vL, aL), kept(vR, aR), sqrt(lr[k] * lr[k] + li[k] * li[k]), sqrt(rr[k] * rr[k] + ri[k] * ri[k]))
+            }
+            out.endFrame(t)
+        }
+        return out.result(startUs, StemMask.HIGH)
     }
 
     /**

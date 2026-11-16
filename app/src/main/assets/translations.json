@@ -1563,7 +1563,16 @@
   "Préparer les titres téléchargés": "Prepare downloaded songs",
   "Téléphone en charge, les titres téléchargés sont analysés (et leurs voix séparées si le modèle est là) avant même d'être joués : leurs mix sont prêts tout de suite.": "While the phone charges, downloaded songs are analysed (and their voices separated if the model is there) before they are even played: their mixes are ready at once.",
   "préparation des titres suivants…": "preparing the next songs…",
-  "mix du titre suivant prêt": "next song's mix ready"
+  "mix du titre suivant prêt": "next song's mix ready",
+  "Le modèle haute qualité tout le temps : plus de batterie, et un seul titre préparé à l'avance sur batterie": "The high-quality model all the time: more battery, and only one song prepared ahead on battery",
+  "Le modèle rapide seulement : le moins de batterie": "The quick model only: the least battery",
+  "Le modèle rapide sur batterie, le meilleur téléphone en charge ; les titres déjà séparés sont alors améliorés": "The quick model on battery, the best one while charging; songs already separated are then improved",
+  "Modèle haute qualité": "High-quality model",
+  "Qualité de séparation": "Separation quality",
+  "Quel modèle sépare les titres": "Which model separates songs",
+  "Toujours la meilleure": "Always the best",
+  "Toujours rapide": "Always quick",
+  "Voix et instrumentaux bien plus nets (UVR MDX-Net), environ dix fois plus lent : {0}. Il sert téléphone en charge et améliore alors les titres déjà séparés.": "Much cleaner voices and instrumentals (UVR MDX-Net), about ten times slower: {0}. It works while the phone charges and then improves songs already separated."
  },
  "hi": {
   "Reverb": "रीवर्ब",
@@ -3129,7 +3138,16 @@
   "Préparer les titres téléchargés": "डाउनलोड किए गए गाने तैयार करें",
   "Téléphone en charge, les titres téléchargés sont analysés (et leurs voix séparées si le modèle est là) avant même d'être joués : leurs mix sont prêts tout de suite.": "फ़ोन चार्ज होते समय डाउनलोड किए गए गानों का विश्लेषण होता है (और मॉडल होने पर उनकी आवाज़ें अलग की जाती हैं), उनके बजने से पहले ही: उनके मिक्स तुरंत तैयार रहते हैं।",
   "préparation des titres suivants…": "अगले गाने तैयार हो रहे हैं…",
-  "mix du titre suivant prêt": "अगले गाने का मिक्स तैयार"
+  "mix du titre suivant prêt": "अगले गाने का मिक्स तैयार",
+  "Le modèle haute qualité tout le temps : plus de batterie, et un seul titre préparé à l'avance sur batterie": "हमेशा उच्च गुणवत्ता मॉडल: ज़्यादा बैटरी, और बैटरी पर सिर्फ़ एक गाना पहले से तैयार",
+  "Le modèle rapide seulement : le moins de batterie": "सिर्फ़ तेज़ मॉडल: सबसे कम बैटरी",
+  "Le modèle rapide sur batterie, le meilleur téléphone en charge ; les titres déjà séparés sont alors améliorés": "बैटरी पर तेज़ मॉडल, चार्जिंग पर सबसे अच्छा; तब पहले से अलग किए गए गाने बेहतर किए जाते हैं",
+  "Modèle haute qualité": "उच्च गुणवत्ता मॉडल",
+  "Qualité de séparation": "अलगाव की गुणवत्ता",
+  "Quel modèle sépare les titres": "कौन-सा मॉडल गाने अलग करता है",
+  "Toujours la meilleure": "हमेशा सबसे अच्छी",
+  "Toujours rapide": "हमेशा तेज़",
+  "Voix et instrumentaux bien plus nets (UVR MDX-Net), environ dix fois plus lent : {0}. Il sert téléphone en charge et améliore alors les titres déjà séparés.": "कहीं ज़्यादा साफ़ आवाज़ें और इंस्ट्रुमेंटल (UVR MDX-Net), लगभग दस गुना धीमा: {0}। यह फ़ोन चार्ज होते समय काम करता है और तब पहले से अलग किए गए गानों को बेहतर बनाता है।"
  },
  "ja": {
   "Reverb": "リバーブ",
@@ -4695,7 +4713,16 @@
   "Préparer les titres téléchargés": "ダウンロードした曲を準備",
   "Téléphone en charge, les titres téléchargés sont analysés (et leurs voix séparées si le modèle est là) avant même d'être joués : leurs mix sont prêts tout de suite.": "充電中に、ダウンロードした曲を再生前に解析し（モデルがあれば声も分離し）ます。ミックスはすぐに使えます。",
   "préparation des titres suivants…": "次の曲を準備中…",
-  "mix du titre suivant prêt": "次の曲のミックス準備完了"
+  "mix du titre suivant prêt": "次の曲のミックス準備完了",
+  "Le modèle haute qualité tout le temps : plus de batterie, et un seul titre préparé à l'avance sur batterie": "常に高品質モデル：バッテリー消費が増え、バッテリー駆動中は先に準備する曲が1曲だけになります",
+  "Le modèle rapide seulement : le moins de batterie": "高速モデルのみ：バッテリー消費が最小",
+  "Le modèle rapide sur batterie, le meilleur téléphone en charge ; les titres déjà séparés sont alors améliorés": "バッテリー駆動中は高速モデル、充電中は最高のモデル。そのとき分離済みの曲も改善されます",
+  "Modèle haute qualité": "高品質モデル",
+  "Qualité de séparation": "分離の品質",
+  "Quel modèle sépare les titres": "曲を分離するモデル",
+  "Toujours la meilleure": "常に最高",
+  "Toujours rapide": "常に高速",
+  "Voix et instrumentaux bien plus nets (UVR MDX-Net), environ dix fois plus lent : {0}. Il sert téléphone en charge et améliore alors les titres déjà séparés.": "はるかにクリアな声とインスト（UVR MDX-Net）、約10倍遅い：{0}。充電中に動作し、分離済みの曲を改善します。"
  },
  "zh": {
   "Reverb": "混响",
@@ -6261,7 +6288,16 @@
   "Préparer les titres téléchargés": "准备已下载的歌曲",
   "Téléphone en charge, les titres téléchargés sont analysés (et leurs voix séparées si le modèle est là) avant même d'être joués : leurs mix sont prêts tout de suite.": "手机充电时，会在播放前分析已下载的歌曲（有模型时还会分离人声）：它们的混音随时可用。",
   "préparation des titres suivants…": "正在准备接下来的歌曲…",
-  "mix du titre suivant prêt": "下一首的混音已就绪"
+  "mix du titre suivant prêt": "下一首的混音已就绪",
+  "Le modèle haute qualité tout le temps : plus de batterie, et un seul titre préparé à l'avance sur batterie": "始终使用高质量模型：更耗电，使用电池时只提前准备一首歌",
+  "Le modèle rapide seulement : le moins de batterie": "仅使用快速模型：最省电",
+  "Le modèle rapide sur batterie, le meilleur téléphone en charge ; les titres déjà séparés sont alors améliorés": "使用电池时用快速模型，充电时用最佳模型；届时已分离的歌曲会被改进",
+  "Modèle haute qualité": "高质量模型",
+  "Qualité de séparation": "分离质量",
+  "Quel modèle sépare les titres": "由哪个模型分离歌曲",
+  "Toujours la meilleure": "始终最佳",
+  "Toujours rapide": "始终快速",
+  "Voix et instrumentaux bien plus nets (UVR MDX-Net), environ dix fois plus lent : {0}. Il sert téléphone en charge et améliore alors les titres déjà séparés.": "人声和伴奏干净得多（UVR MDX-Net），速度约慢十倍：{0}。它在手机充电时工作，并改进已分离的歌曲。"
  },
  "ru": {
   "Reverb": "Реверберация",
@@ -7827,7 +7863,16 @@
   "Préparer les titres téléchargés": "Готовить загруженные треки",
   "Téléphone en charge, les titres téléchargés sont analysés (et leurs voix séparées si le modèle est là) avant même d'être joués : leurs mix sont prêts tout de suite.": "Пока телефон заряжается, загруженные треки анализируются (а их голоса разделяются, если модель установлена) ещё до воспроизведения: их миксы готовы сразу.",
   "préparation des titres suivants…": "подготовка следующих треков…",
-  "mix du titre suivant prêt": "микс следующего трека готов"
+  "mix du titre suivant prêt": "микс следующего трека готов",
+  "Le modèle haute qualité tout le temps : plus de batterie, et un seul titre préparé à l'avance sur batterie": "Всегда модель высокого качества: больше расход батареи, и от батареи заранее готовится только один трек",
+  "Le modèle rapide seulement : le moins de batterie": "Только быстрая модель: меньше всего расход батареи",
+  "Le modèle rapide sur batterie, le meilleur téléphone en charge ; les titres déjà séparés sont alors améliorés": "Быстрая модель от батареи, лучшая — при зарядке; уже разделённые треки тогда улучшаются",
+  "Modèle haute qualité": "Модель высокого качества",
+  "Qualité de séparation": "Качество разделения",
+  "Quel modèle sépare les titres": "Какая модель разделяет треки",
+  "Toujours la meilleure": "Всегда лучшее",
+  "Toujours rapide": "Всегда быстро",
+  "Voix et instrumentaux bien plus nets (UVR MDX-Net), environ dix fois plus lent : {0}. Il sert téléphone en charge et améliore alors les titres déjà séparés.": "Намного более чистые голоса и инструменталы (UVR MDX-Net), примерно в десять раз медленнее: {0}. Работает при зарядке телефона и улучшает уже разделённые треки."
  },
  "it": {
   "Reverb": "Riverbero",
@@ -9393,7 +9438,16 @@
   "Préparer les titres téléchargés": "Prepara i brani scaricati",
   "Téléphone en charge, les titres téléchargés sont analysés (et leurs voix séparées si le modèle est là) avant même d'être joués : leurs mix sont prêts tout de suite.": "Con il telefono in carica, i brani scaricati vengono analizzati (e le voci separate se il modello c'è) prima ancora di essere riprodotti: i loro mix sono pronti subito.",
   "préparation des titres suivants…": "preparazione dei brani successivi…",
-  "mix du titre suivant prêt": "mix del brano successivo pronto"
+  "mix du titre suivant prêt": "mix del brano successivo pronto",
+  "Le modèle haute qualité tout le temps : plus de batterie, et un seul titre préparé à l'avance sur batterie": "Sempre il modello di alta qualità: più batteria, e un solo brano preparato in anticipo a batteria",
+  "Le modèle rapide seulement : le moins de batterie": "Solo il modello rapido: la minor batteria",
+  "Le modèle rapide sur batterie, le meilleur téléphone en charge ; les titres déjà séparés sont alors améliorés": "Il modello rapido a batteria, il migliore in carica; i brani già separati vengono allora migliorati",
+  "Modèle haute qualité": "Modello di alta qualità",
+  "Qualité de séparation": "Qualità di separazione",
+  "Quel modèle sépare les titres": "Quale modello separa i brani",
+  "Toujours la meilleure": "Sempre la migliore",
+  "Toujours rapide": "Sempre rapida",
+  "Voix et instrumentaux bien plus nets (UVR MDX-Net), environ dix fois plus lent : {0}. Il sert téléphone en charge et améliore alors les titres déjà séparés.": "Voci e basi molto più pulite (UVR MDX-Net), circa dieci volte più lento: {0}. Funziona con il telefono in carica e allora migliora i brani già separati."
  },
  "es": {
   "Reverb": "Reverb",
@@ -10959,7 +11013,16 @@
   "Préparer les titres téléchargés": "Preparar las canciones descargadas",
   "Téléphone en charge, les titres téléchargés sont analysés (et leurs voix séparées si le modèle est là) avant même d'être joués : leurs mix sont prêts tout de suite.": "Con el teléfono cargando, las canciones descargadas se analizan (y sus voces se separan si el modelo está) antes incluso de reproducirse: sus mezclas están listas al instante.",
   "préparation des titres suivants…": "preparando las siguientes canciones…",
-  "mix du titre suivant prêt": "mezcla de la siguiente canción lista"
+  "mix du titre suivant prêt": "mezcla de la siguiente canción lista",
+  "Le modèle haute qualité tout le temps : plus de batterie, et un seul titre préparé à l'avance sur batterie": "El modelo de alta calidad siempre: más batería y una sola canción preparada de antemano con batería",
+  "Le modèle rapide seulement : le moins de batterie": "Solo el modelo rápido: la menor batería",
+  "Le modèle rapide sur batterie, le meilleur téléphone en charge ; les titres déjà séparés sont alors améliorés": "El modelo rápido con batería, el mejor al cargar; las canciones ya separadas se mejoran entonces",
+  "Modèle haute qualité": "Modelo de alta calidad",
+  "Qualité de séparation": "Calidad de separación",
+  "Quel modèle sépare les titres": "Qué modelo separa las canciones",
+  "Toujours la meilleure": "Siempre la mejor",
+  "Toujours rapide": "Siempre rápida",
+  "Voix et instrumentaux bien plus nets (UVR MDX-Net), environ dix fois plus lent : {0}. Il sert téléphone en charge et améliore alors les titres déjà séparés.": "Voces e instrumentales mucho más limpios (UVR MDX-Net), unas diez veces más lento: {0}. Funciona con el teléfono cargando y entonces mejora las canciones ya separadas."
  },
  "de": {
   "Reverb": "Reverb",
@@ -12525,7 +12588,16 @@
   "Préparer les titres téléchargés": "Heruntergeladene Titel vorbereiten",
   "Téléphone en charge, les titres téléchargés sont analysés (et leurs voix séparées si le modèle est là) avant même d'être joués : leurs mix sont prêts tout de suite.": "Während das Telefon lädt, werden heruntergeladene Titel analysiert (und ihre Stimmen getrennt, wenn das Modell vorhanden ist), noch bevor sie gespielt werden: Ihre Mixe sind sofort bereit.",
   "préparation des titres suivants…": "nächste Titel werden vorbereitet…",
-  "mix du titre suivant prêt": "Mix des nächsten Titels bereit"
+  "mix du titre suivant prêt": "Mix des nächsten Titels bereit",
+  "Le modèle haute qualité tout le temps : plus de batterie, et un seul titre préparé à l'avance sur batterie": "Immer das hochwertige Modell: mehr Akku, und im Akkubetrieb wird nur ein Titel vorbereitet",
+  "Le modèle rapide seulement : le moins de batterie": "Nur das schnelle Modell: am wenigsten Akku",
+  "Le modèle rapide sur batterie, le meilleur téléphone en charge ; les titres déjà séparés sont alors améliorés": "Das schnelle Modell im Akkubetrieb, das beste beim Laden; bereits getrennte Titel werden dann verbessert",
+  "Modèle haute qualité": "Hochwertiges Modell",
+  "Qualité de séparation": "Trennungsqualität",
+  "Quel modèle sépare les titres": "Welches Modell die Titel trennt",
+  "Toujours la meilleure": "Immer die beste",
+  "Toujours rapide": "Immer schnell",
+  "Voix et instrumentaux bien plus nets (UVR MDX-Net), environ dix fois plus lent : {0}. Il sert téléphone en charge et améliore alors les titres déjà séparés.": "Viel sauberere Stimmen und Instrumentals (UVR MDX-Net), etwa zehnmal langsamer: {0}. Es arbeitet, während das Telefon lädt, und verbessert dann bereits getrennte Titel."
  },
  "pt": {
   "Reverb": "Reverb",
@@ -14091,7 +14163,16 @@
   "Préparer les titres téléchargés": "Preparar as músicas baixadas",
   "Téléphone en charge, les titres téléchargés sont analysés (et leurs voix séparées si le modèle est là) avant même d'être joués : leurs mix sont prêts tout de suite.": "Com o telefone carregando, as músicas baixadas são analisadas (e suas vozes separadas se o modelo estiver presente) antes mesmo de tocarem: as mixagens ficam prontas na hora.",
   "préparation des titres suivants…": "preparando as próximas músicas…",
-  "mix du titre suivant prêt": "mixagem da próxima música pronta"
+  "mix du titre suivant prêt": "mixagem da próxima música pronta",
+  "Le modèle haute qualité tout le temps : plus de batterie, et un seul titre préparé à l'avance sur batterie": "O modelo de alta qualidade sempre: mais bateria e só uma música preparada com antecedência na bateria",
+  "Le modèle rapide seulement : le moins de batterie": "Só o modelo rápido: o mínimo de bateria",
+  "Le modèle rapide sur batterie, le meilleur téléphone en charge ; les titres déjà séparés sont alors améliorés": "O modelo rápido na bateria, o melhor carregando; as músicas já separadas são então melhoradas",
+  "Modèle haute qualité": "Modelo de alta qualidade",
+  "Qualité de séparation": "Qualidade da separação",
+  "Quel modèle sépare les titres": "Qual modelo separa as músicas",
+  "Toujours la meilleure": "Sempre a melhor",
+  "Toujours rapide": "Sempre rápida",
+  "Voix et instrumentaux bien plus nets (UVR MDX-Net), environ dix fois plus lent : {0}. Il sert téléphone en charge et améliore alors les titres déjà séparés.": "Vozes e instrumentais muito mais limpos (UVR MDX-Net), cerca de dez vezes mais lento: {0}. Funciona com o telefone carregando e então melhora as músicas já separadas."
  },
  "ko": {
   "Reverb": "리버브",
@@ -15657,6 +15738,15 @@
   "Préparer les titres téléchargés": "다운로드한 곡 준비",
   "Téléphone en charge, les titres téléchargés sont analysés (et leurs voix séparées si le modèle est là) avant même d'être joués : leurs mix sont prêts tout de suite.": "휴대폰 충전 중에 다운로드한 곡을 재생 전에 분석합니다(모델이 있으면 목소리도 분리). 믹스가 바로 준비됩니다.",
   "préparation des titres suivants…": "다음 곡 준비 중…",
-  "mix du titre suivant prêt": "다음 곡 믹스 준비됨"
+  "mix du titre suivant prêt": "다음 곡 믹스 준비됨",
+  "Le modèle haute qualité tout le temps : plus de batterie, et un seul titre préparé à l'avance sur batterie": "항상 고품질 모델: 배터리를 더 쓰고, 배터리 사용 중에는 한 곡만 미리 준비",
+  "Le modèle rapide seulement : le moins de batterie": "빠른 모델만: 배터리 최소",
+  "Le modèle rapide sur batterie, le meilleur téléphone en charge ; les titres déjà séparés sont alors améliorés": "배터리 사용 중에는 빠른 모델, 충전 중에는 최고 모델; 그때 이미 분리된 곡이 개선됩니다",
+  "Modèle haute qualité": "고품질 모델",
+  "Qualité de séparation": "분리 품질",
+  "Quel modèle sépare les titres": "곡을 분리하는 모델",
+  "Toujours la meilleure": "항상 최고",
+  "Toujours rapide": "항상 빠르게",
+  "Voix et instrumentaux bien plus nets (UVR MDX-Net), environ dix fois plus lent : {0}. Il sert téléphone en charge et améliore alors les titres déjà séparés.": "훨씬 깨끗한 목소리와 반주(UVR MDX-Net), 약 10배 느림: {0}. 휴대폰 충전 중에 작동하며 이미 분리된 곡을 개선합니다."
  }
 }

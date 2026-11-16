@@ -39,6 +39,8 @@ object AppSettings {
     val ketmixStems = mutableStateOf(false)
     /** New separations only while the phone charges (those already made are always used). */
     val ketmixStemsCharging = mutableStateOf(false)
+    /** Which separation model: 0 automatic (the better one while charging), 1 always the better one, 2 always the quick one (6.0.0). */
+    val ketmixStemsQuality = mutableStateOf(0)
     /** In shuffle, the next title is the one that mixes best with the current one (5.11.0). */
     val ketmixSmartQueue = mutableStateOf(true)
     /** Downloaded titles are measured and separated ahead while the phone charges (5.11.0). */

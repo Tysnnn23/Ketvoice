@@ -35,39 +35,78 @@ internal object StemEngine {
     const val MAX_PART_MS = 50_000L
 
     @Volatile private var net: StemNet? = null
-    /** Set by tests: the network to use instead of the downloaded one. */
+    @Volatile private var uvr: UvrNet? = null
+    /** Set by tests: the networks to use instead of the downloaded ones. */
     @Volatile internal var testNet: StemNet? = null
+    @Volatile internal var testUvr: UvrNet? = null
+
+    private fun threads() = (Runtime.getRuntime().availableProcessors() / 2).coerceIn(2, 4)
 
     @Synchronized private fun network(): StemNet? {
         testNet?.let { return it }
         net?.let { return it }
-        if (!StemModel.ready) return null
-        val v = StemModel.file(StemModel.parts[0]) ?: return null
-        val a = StemModel.file(StemModel.parts[1]) ?: return null
-        val threads = (Runtime.getRuntime().availableProcessors() / 2).coerceIn(2, 4)
-        return runCatching { LiteRtStemNet(v, a, threads) }.onFailure {
+        if (!StemModel.fast.ready) return null
+        val v = StemModel.fast.file(StemModel.fast.parts[0]) ?: return null
+        val a = StemModel.fast.file(StemModel.fast.parts[1]) ?: return null
+        return runCatching { LiteRtStemNet(v, a, threads()) }.onFailure {
             android.util.Log.w("KetvoiceStems", "model failed to load: ${it.javaClass.simpleName}")
         }.getOrNull()?.also { net = it }
     }
 
-    @Synchronized fun close() { net?.close(); net = null }
+    @Synchronized private fun highQuality(): UvrNet? {
+        testUvr?.let { return it }
+        uvr?.let { return it }
+        if (!StemModel.hq.ready) return null
+        val f = StemModel.hq.file(StemModel.hq.parts[0]) ?: return null
+        return runCatching { LiteRtUvrNet(f, threads()) }.onFailure {
+            android.util.Log.w("KetvoiceStems", "high-quality model failed to load: ${it.javaClass.simpleName}")
+        }.getOrNull()?.also { uvr = it }
+    }
+
+    @Synchronized fun close() { net?.close(); net = null; uvr?.close(); uvr = null }
+
+    /** Which model separates right now, from the setting and the charger; null when none is there. */
+    fun wanted(): Int? = testUvr?.let { StemMask.HIGH } ?: testNet?.let { StemMask.FAST }
+        ?: StemModel.quality(com.ketvoice.app.data.AppSettings.ketmixStemsQuality.value, StemModel.charging())
+
+    /** Separates [left]/[right] (44.1 kHz) with the model of [quality]. */
+    private fun separate(left: FloatArray, right: FloatArray, startUs: Long, quality: Int, cancelled: () -> Boolean): StemMask? {
+        if (quality == StemMask.HIGH) {
+            val model = highQuality() ?: return null
+            return synchronized(this) {
+                val (vl, vr) = UvrSeparator(model).voice(left, right, cancelled) ?: return null
+                Separator.maskFromVoice(left, right, vl, vr, startUs, cancelled)
+            }
+        }
+        val model = network() ?: return null
+        return synchronized(this) { Separator.mask(left, right, startUs, model, cancelled) }
+    }
 
     /**
-     * Separates this part of a title now if it never was, so that a later mix only has to apply
-     * the result (5.11.0: titles are prepared as soon as the one before them starts). True when the
-     * separation exists afterwards.
+     * Separates this part of a title now if it never was, or was by the quick model while the better
+     * one is wanted, so that a later mix only has to apply the result (5.11.0: titles are prepared as
+     * soon as the one before them starts; 6.0.0: separations are improved while the phone charges).
+     * True when a separation exists afterwards.
      */
     fun prepare(trackId: String, durationMs: Long, intro: Boolean, pcm: ShortArray, rate: Int, startUs: Long,
                 cancelled: () -> Boolean = { false }): Boolean {
-        if (StemStore.has(trackId, durationMs, intro)) return true
-        if (pcm.size < 4 || rate <= 0) return false
-        val model = network() ?: return false
+        val stored = StemStore.quality(trackId, durationMs, intro)
+        val quality = wanted() ?: return stored != null
+        if (stored != null && stored >= quality) return true
+        if (pcm.size < 4 || rate <= 0) return stored != null
         val left = Resampler.resample(pcm, 0, 2, rate, StemDsp.RATE)
         val right = Resampler.resample(pcm, 1, 2, rate, StemDsp.RATE)
-        if (cancelled()) return false
-        val found = synchronized(this) { Separator.mask(left, right, startUs, model, cancelled) } ?: return false
+        if (cancelled()) return stored != null
+        val found = separate(left, right, startUs, quality, cancelled) ?: return stored != null
         StemStore.save(trackId, durationMs, intro, found)
         return true
+    }
+
+    /** Whether this part still needs the work of [prepare] (no separation, or one the wanted model would improve). */
+    fun needs(trackId: String, durationMs: Long, intro: Boolean): Boolean {
+        val quality = wanted() ?: return false
+        val stored = StemStore.quality(trackId, durationMs, intro) ?: return true
+        return stored < quality
     }
 
     /**
@@ -85,8 +124,9 @@ internal object StemEngine {
         if (cancelled()) return null
         val mask = StemStore.load(trackId, durationMs, intro) ?: run {
             if (!compute) return null
-            val model = network() ?: return null
-            val found = synchronized(this) { Separator.mask(left, right, startUs, model, cancelled) } ?: return null
+            // Here a mix waits for the result: the quick model when it is there, the better one otherwise.
+            val quality = if (StemModel.fast.ready || testNet != null) StemMask.FAST else wanted() ?: return null
+            val found = separate(left, right, startUs, quality, cancelled) ?: return null
             StemStore.save(trackId, durationMs, intro, found)
             found
         }
