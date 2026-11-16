@@ -410,17 +410,23 @@ private fun SearchBubble(stretch: Float, searching: Boolean, modifier: Modifier 
     val pressed by src.collectIsPressedAsState()
     val haptic = com.ketvoice.app.ui.motion.rememberHaptics()
     val shape = RoundedCornerShape(percent = 50)
-    val fieldAlpha = ((stretch - .35f) / .55f).coerceIn(0f, 1f)
+    // The glyph leaves early and the field arrives late, so the two never read over each other.
+    val fieldAlpha = ((stretch - .5f) / .4f).coerceIn(0f, 1f)
+    val glyphAlpha = (1f - stretch * 2.2f).coerceIn(0f, 1f)
     Box(modifier
         .pressScale(min = .9f, isPressed = pressed && !searching)
         .shadow(if (th.isDark) 0.dp else 2.5.dp, shape, spotColor = Color.Black.copy(alpha = 0.12f))
         .testTag("search-bubble")) {
         GlassPanel(Modifier.matchParentSize(), shape, GlassParams.circle(dark = th.isDark), enabled = AppSettings.liquidGlass.value) {}
-        if (!searching) Box(Modifier.matchParentSize().clip(shape)
-            .clickable(src, null, role = Role.Button) { haptic(Haptics.Kind.Press); FloatingSearch.open() })
         // The glyph gives way to the field as the bubble stretches.
-        if (fieldAlpha < 1f) Icon(com.ketvoice.app.ui.common.Ket27Glyphs.Search, contentDescription = if (searching) null else "Rechercher",
-            tint = th.onBackground, modifier = Modifier.align(Alignment.Center).size(25.dp).graphicsLayer { alpha = 1f - fieldAlpha })
+        val glyph: @Composable (String?) -> Unit = { label ->
+            Icon(com.ketvoice.app.ui.common.Ket27Glyphs.Search, contentDescription = label, tint = th.onBackground,
+                modifier = Modifier.size(25.dp).graphicsLayer { alpha = glyphAlpha })
+        }
+        if (!searching) Box(Modifier.matchParentSize().clip(shape)
+            .clickable(src, null, role = Role.Button) { haptic(Haptics.Kind.Press); FloatingSearch.open() },
+            contentAlignment = Alignment.Center) { glyph("Rechercher") }
+        else if (glyphAlpha > 0f) Box(Modifier.matchParentSize(), contentAlignment = Alignment.Center) { glyph(null) }
         if (searching || stretch > .01f) {
             val requester = remember { androidx.compose.ui.focus.FocusRequester() }
             val focus = androidx.compose.ui.platform.LocalFocusManager.current

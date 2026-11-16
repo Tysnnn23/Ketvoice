@@ -45,5 +45,12 @@ internal class ChromeCollapse(private val foldAfterPx: Int = 36, private val unf
 
         /** The bar unfolds now (a touch on it), whatever the page's scroll. */
         fun restoreAll() { restoreCount++; com.ketvoice.app.ui.AppUi.bottomCollapsed.value = false }
+
+        /**
+         * Whether the floating bar shows folded: only when the listener turned it on (Settings → Appearance,
+         * "Barre d'onglets réductible", off by default), a tab page has scrolled down, and no page is on top.
+         */
+        fun folded(enabled: Boolean, scrolledDown: Boolean, overlay: Int): Boolean =
+            enabled && scrolledDown && overlay == com.ketvoice.app.ui.AppUi.NONE
     }
 }

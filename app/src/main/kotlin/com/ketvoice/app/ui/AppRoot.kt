@@ -325,8 +325,8 @@ fun AppRoot() {
                             // interposés). On remonte → retour à la présentation pleine.
                             FloatingChrome(
                                 // Optional since 6.0.0 (Settings → Appearance), off by default: the bar stays whole.
-                                collapsed = AppSettings.collapsingTabBar.value && AppUi.bottomCollapsed.value &&
-                                    AppUi.overlay.value == AppUi.NONE,
+                                collapsed = com.ketvoice.app.ui.chrome.ChromeCollapse.folded(AppSettings.collapsingTabBar.value,
+                                    AppUi.bottomCollapsed.value, AppUi.overlay.value),
                                 onOpenPlayer = { AppUi.showPlayer.value = true },
                                 searching = floatingSearch,
                                 typing = floatingSearch && imeVisible

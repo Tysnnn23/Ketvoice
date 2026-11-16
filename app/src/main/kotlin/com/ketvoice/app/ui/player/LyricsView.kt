@@ -569,8 +569,21 @@ internal fun KaraokeLine(line: MusicApi.LyricLine, modifier: Modifier, fontScale
             if (haloOn) masks.forEach { word ->
                 val halo = LyricsWords.halo(now, word.start, word.end) * haloScale
                 if (halo > .01f) {
-                    val rise = LyricsWords.lift(segmentProgress(now, word.start, word.end)) * liftPx
-                    translate(top = -rise) { word.slices.forEach { drawWordHalo(it.bounds, halo, haloSpread) } }
+                    val progress = segmentProgress(now, word.start, word.end)
+                    val rise = LyricsWords.lift(progress) * liftPx
+                    // The light follows the voice: it covers the part of the word already sung.
+                    var remaining = word.width * progress
+                    translate(top = -rise) {
+                        word.slices.forEach { slice ->
+                            val bounds = slice.bounds
+                            val fill = remaining.coerceIn(0f, bounds.width)
+                            remaining -= bounds.width
+                            if (fill > 0f) drawWordHalo(
+                                if (slice.rtl) androidx.compose.ui.geometry.Rect(bounds.right - fill, bounds.top, bounds.right, bounds.bottom)
+                                else androidx.compose.ui.geometry.Rect(bounds.left, bounds.top, bounds.left + fill, bounds.bottom),
+                                halo, haloSpread)
+                        }
+                    }
                 }
             }
             masks.forEach { word ->

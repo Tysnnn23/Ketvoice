@@ -25,6 +25,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -155,6 +156,8 @@ internal object CoverZoom {
      */
     fun sourceAlpha(bounds: Rect?): Float {
         val current = flight.value ?: return 1f
+        // Read every frame of the flight: a card composed again on the way back is placed after its first drawing.
+        progress.value
         return if (bounds != null && sameRect(bounds, current.origin, 3f + current.origin.width * .1f)) 0f else 1f
     }
 
@@ -289,8 +292,8 @@ internal fun CoverZoomLayer(modifier: Modifier = Modifier) {
     }
     if (current == null) return
     val origin = remember { arrayOf<Offset>(Offset.Zero) }
-    Box(modifier.fillMaxSize().onGloballyPositioned { origin[0] = it.localToWindow(Offset.Zero) }.clearAndSetSemantics { }) {
-        Box(Modifier.testTag("cover-zoom")
+    Box(modifier.fillMaxSize().onGloballyPositioned { origin[0] = it.localToWindow(Offset.Zero) }) {
+        Box(Modifier
             .layout { measurable, _ ->
                 val hero = CoverZoom.heroFor(current)
                 val (rect, _) = CoverZoom.frame(current, hero, CoverZoom.progress.value)
@@ -301,6 +304,8 @@ internal fun CoverZoomLayer(modifier: Modifier = Modifier) {
                     placeable.place((rect.left - origin[0].x).roundToInt(), (rect.top - origin[0].y).roundToInt())
                 }
             }
+            // Never announced: the page's own artwork is what a screen reader finds.
+            .clearAndSetSemantics { testTag = "cover-zoom" }
             .graphicsLayer {
                 val p = CoverZoom.progress.value
                 val hero = CoverZoom.heroFor(current)
