@@ -1,0 +1,71 @@
+Ketvoice Source-Available License — Permission Required
+Version 1.0, 16 November 2026
+
+Copyright (c) 2026 Tysnnn23 (the "Project Owner"). All rights reserved.
+
+This license covers the source code, build files, documentation, graphics and
+other material in this repository (the "Software"), except the third-party
+components listed under "Third-party components" below.
+
+1. What you may do without asking
+
+   a. View and read the Software on GitHub, and fork it on GitHub only as far
+      as GitHub's Terms of Service require for that purpose.
+   b. Download, install and use the official Ketvoice releases (the APK files
+      published by the Project Owner) on your own devices for your personal,
+      non-commercial use.
+   c. Report issues and propose changes to this repository. By submitting a
+      contribution you give the Project Owner a perpetual, worldwide,
+      royalty-free, irrevocable license to use, modify and distribute it as part
+      of the Software, under this license or any other.
+
+2. What needs the Project Owner's written permission first
+
+   Anything else, in whole or in part, and whether or not it is modified,
+   including:
+
+   a. copying, reusing or adapting the code, or any part of it, in another
+      project, app, library, service or product;
+   b. building, publishing or distributing your own APKs, binaries or other
+      versions of the Software (including renamed versions and "mods");
+   c. sublicensing, selling, renting or otherwise using the Software for any
+      commercial purpose;
+   d. using the Software, or any part of it, to train or evaluate machine
+      learning models.
+
+   Permission is only valid if it is given in writing (for example in a GitHub
+   issue or message) by the Project Owner, who may grant it on conditions or
+   refuse it. A permission covers only what it explicitly names.
+
+   To ask for permission, open an issue on
+   https://github.com/Tysnnn23/Ketvoice/issues or contact the Project Owner
+   through https://github.com/Tysnnn23.
+
+3. Names and logos
+
+   "Ketvoice", "Ketmix" and the Ketvoice logos and icons may not be used to
+   name, identify or promote any other project or product without the Project
+   Owner's written permission.
+
+4. Third-party components
+
+   Third-party libraries, fonts and other material included in or used by the
+   Software keep their own licenses, which this license does not change. In
+   particular, the Inter typeface is licensed under the SIL Open Font License
+   (docs/licenses/Inter-OFL.txt). Music, artwork, lyrics, Canvas videos and
+   other content shown by the app belong to their respective owners and are not
+   covered by this license.
+
+5. Termination
+
+   Any use that breaks this license ends every right it gives you, immediately
+   and without notice.
+
+6. No warranty
+
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+   PROJECT OWNER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+   IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+   CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.

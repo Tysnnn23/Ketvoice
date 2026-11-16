@@ -721,7 +721,11 @@ Earlier development builds from **1.2.0 through 2.3.0** contained development-on
 
 Ketvoice is an independent project for personal use. It is not affiliated with or endorsed by Apple, Google, YouTube, Spotify, Deezer, Genius, LRCLIB, BitChord, or any other music service. All trademarks belong to their respective owners.
 
-You are responsible for complying with the terms of service of any provider you connect and with the copyright laws that apply to you. The project does not host or distribute music. The source is published for transparency and personal experimentation; no license for redistribution is granted unless a separate license file is added by the author.
+You are responsible for complying with the terms of service of any provider you connect and with the copyright laws that apply to you. The project does not host or distribute music. The source is published for transparency. It is **not open source**: see [LICENSE](LICENSE).
+
+## License
+
+Ketvoice is source-available under the [Ketvoice Source-Available License](LICENSE). You may read the code and install the official releases for personal use. Reusing the code or any part of it, publishing your own builds, or any commercial use requires the project owner's written permission first — ask in an [issue](https://github.com/Tysnnn23/Ketvoice/issues). Third-party components, such as the Inter typeface, keep their own licenses.
 
 ## Acknowledgements
 
