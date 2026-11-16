@@ -59,13 +59,24 @@ import kotlinx.coroutines.launch
  * at the root of the app.
  */
 internal object ContextMenus {
-    class Request(val track: Track, val anchor: Rect)
+    /** [anchor] is where the menu comes from; null opens it in the middle of the window. */
+    class Request(val track: Track, val anchor: Rect?)
 
     val request = mutableStateOf<Request?>(null)
 
+    /**
+     * Opens the menu of [track] from [anchor] (6.0.0: the glass menu is the only menu of a title,
+     * from a long press or a "…" button; the full sheet opens from its "More" item).
+     */
     fun open(track: Track, anchor: Rect?) {
-        if (anchor == null || anchor.width <= 0f || anchor.height <= 0f) { AppUi.trackMenuTrack.value = track; return }
-        request.value = Request(track, anchor)
+        request.value = Request(track, anchor?.takeIf { it.width > 0f && it.height > 0f })
+    }
+
+    /** The anchor of a menu opened from nowhere in particular: a row's width, centred, a third of the way down. */
+    fun centred(width: Float, height: Float, rowWidth: Float, rowHeight: Float): Rect {
+        val w = rowWidth.coerceAtMost(width)
+        val top = height * .3f
+        return Rect((width - w) / 2f, top, (width + w) / 2f, top + rowHeight)
     }
 
     /** Where the preview and the menu go, in px from the top-left of the window. */
@@ -104,6 +115,12 @@ internal object ContextMenus {
 internal class RowAnchor {
     var coordinates: LayoutCoordinates? = null
     fun bounds(): Rect? = coordinates?.takeIf { it.isAttached }?.boundsInRoot()
+
+    /** For a "…" button: put on the button, the menu of its title unfolds from it. */
+    val modifier: Modifier = Modifier.onGloballyPositioned { coordinates = it }
+
+    /** Opens the glass menu of [track] from where this anchor is. */
+    fun open(track: Track) = ContextMenus.open(track, bounds())
 }
 
 @Composable
@@ -158,7 +175,7 @@ internal fun ContextMenuHost(modifier: Modifier = Modifier) {
         MenuAction("Ajouter à une playlist", KetIcons.Plus) { AppUi.addToPlaylist.value = track },
         MenuAction("Lancer la radio", Icons.Filled.Radio) { Player.startRadio(track) },
         MenuAction("Partager", KetIcons.Share) { com.ketvoice.app.util.ShareLinks.shareTrack(context, track) },
-        MenuAction("Options", KetIcons.More) { AppUi.trackMenuTrack.value = track })
+        MenuAction("Plus", KetIcons.More) { AppUi.trackMenuTrack.value = track })
     val closeLabel = AppText.t("Fermer")
     BoxWithConstraints(modifier.fillMaxSize().testTag("context-menu")) {
         val width = constraints.maxWidth.toFloat()
@@ -168,7 +185,8 @@ internal fun ContextMenuHost(modifier: Modifier = Modifier) {
         val menuWidth = with(density) { 250.dp.toPx() }.coerceAtMost(width - with(density) { 32.dp.toPx() })
         var menuHeight by remember(request) { mutableIntStateOf(0) }
         val previewHeight = with(density) { 68.dp.toPx() }
-        val placement = ContextMenus.place(request.anchor, previewHeight, with(density) { 280.dp.toPx() }, menuWidth,
+        val anchor = request.anchor ?: ContextMenus.centred(width, height, with(density) { 320.dp.toPx() }, previewHeight)
+        val placement = ContextMenus.place(anchor, previewHeight, with(density) { 280.dp.toPx() }, menuWidth,
             menuHeight.toFloat(), width, insetTop, height - insetBottom, with(density) { 16.dp.toPx() }, with(density) { 10.dp.toPx() })
         // The page steps back behind a veil; no blur of its own, so the menu costs the same in performance mode.
         Box(Modifier.fillMaxSize().graphicsLayer { alpha = progress.value.coerceIn(0f, 1f) }
@@ -178,7 +196,7 @@ internal fun ContextMenuHost(modifier: Modifier = Modifier) {
         // The preview: the row itself, lifted off the page where it was pressed.
         Row(Modifier
             .offset { IntOffset(placement.previewLeft.toInt(),
-                (request.anchor.top + (placement.previewTop - request.anchor.top) * progress.value.coerceIn(0f, 1f)).toInt()) }
+                (anchor.top + (placement.previewTop - anchor.top) * progress.value.coerceIn(0f, 1f)).toInt()) }
             .width(with(density) { placement.previewWidth.toDp() }).height(68.dp)
             .graphicsLayer {
                 val lifted = ContextMenus.lift(progress.value)

@@ -253,7 +253,11 @@ fun LibraryScreen() {
                         TrackTitle(track.title, color = theme.onBackground)
                         Text(track.artist, localize = false, color = theme.secondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
-                    if (!selecting) IconButton(onClick = { AppUi.trackMenuTrack.value = track }) { Icon(KetIcons.More, "Options", tint = theme.secondary) }
+                    if (!selecting) {
+                        val menuAnchor = com.ketvoice.app.ui.common.rememberRowAnchor()
+                        IconButton(onClick = { menuAnchor.open(track) },
+                            modifier = menuAnchor.modifier) { Icon(KetIcons.More, "Options", tint = theme.secondary) }
+                    }
                 }
                 }
             }

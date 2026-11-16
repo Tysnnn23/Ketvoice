@@ -136,7 +136,7 @@ internal fun TabletPlayer(
                         }
                     },
                     onQueue = { onPage(if (page == PlayerPage.QUEUE) PlayerPage.ARTWORK else PlayerPage.QUEUE) },
-                    onOutput = onOutput, onTrackMenu = onTrackMenu)
+                    onOutput = onOutput, track = track)
                 Box(Modifier.weight(1f).fillMaxWidth().padding(bottom = 20.dp)) {
                     val controls: @Composable (Modifier, Boolean) -> Unit = { modifier, centred ->
                         NowPlayingControls(state, track, cover, onTrackMenu, travels, lateRise, modifier, centred)
@@ -159,7 +159,7 @@ internal fun TabletPlayer(
 /** The grabber that folds the player away, and the buttons of the player at the top: lyrics, queue, output, more. */
 @Composable
 private fun TabletPlayerBar(plan: LargeScreen.PlayerPlan, onClose: () -> Unit, dismissDrag: Modifier, lateRise: Modifier,
-                            onLyrics: () -> Unit, onQueue: () -> Unit, onOutput: () -> Unit, onTrackMenu: () -> Unit) {
+                            onLyrics: () -> Unit, onQueue: () -> Unit, onOutput: () -> Unit, track: Track) {
     Box(Modifier.fillMaxWidth().height(56.dp)) {
         SmallCircleButton(onClose, size = 40.dp) { ink ->
             Icon(Icons.Filled.KeyboardArrowDown, "Fermer le lecteur", tint = ink, modifier = Modifier.size(26.dp))
@@ -182,8 +182,11 @@ private fun TabletPlayerBar(plan: LargeScreen.PlayerPlan, onClose: () -> Unit, d
             SmallCircleButton(onOutput, size = 40.dp, transparent = true) { ink ->
                 Icon(Icons.Filled.PhoneAndroid, "Sortie audio", tint = ink, modifier = Modifier.size(20.dp))
             }
-            SmallCircleButton(onTrackMenu, size = 40.dp, transparent = true) { ink ->
+            val menuAnchor = com.ketvoice.app.ui.common.rememberRowAnchor()
+            Box(menuAnchor.modifier) {
+            SmallCircleButton({ menuAnchor.open(track) }, size = 40.dp, transparent = true) { ink ->
                 Icon(Icons.Filled.MoreHoriz, "Options", tint = ink, modifier = Modifier.size(22.dp))
+            }
             }
         }
     }

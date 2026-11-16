@@ -140,7 +140,7 @@ fun HomeScreen() {
             } else if (!grid) item(key = "recent-carousel") {
                 // Large covers to start again from, the way a record shelf reads: the title playing wears its bars.
                 RecentCarousel(recent.take(20), player.current?.id, player.isPlaying,
-                    onPlay = { index -> Player.playQueue(recent, index) }, onMenu = { AppUi.trackMenuTrack.value = it })
+                    onPlay = { index -> Player.playQueue(recent, index) })
             } else item(key = "recent-grid") {
                 BoxWithConstraints(Modifier.fillMaxWidth().padding(horizontal = 18.dp).testTag("home-recent-grid")) {
                     val columns = recentColumns(maxWidth.value)
@@ -150,7 +150,7 @@ fun HomeScreen() {
                             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                 tracks.forEachIndexed { column, track ->
                                     RecentCover(track, side, player.current?.id == track.id, player.isPlaying,
-                                        onPlay = { Player.playQueue(recent, line * columns + column) }, onMenu = { AppUi.trackMenuTrack.value = track })
+                                        onPlay = { Player.playQueue(recent, line * columns + column) })
                                 }
                             }
                         }
@@ -194,7 +194,7 @@ fun HomeScreen() {
                         if (shown.isNotEmpty()) item(key = "home-shelf:${block.ordinal - 1}:${shelf.title}") {
                             Column(Modifier.learnsOpens(block.learningKey)) {
                                 EditorialHeader(shelf.title, subtitle = shelf.subtitle)
-                                TrackCarousel(shown, onMenu = { AppUi.trackMenuTrack.value = it })
+                                TrackCarousel(shown)
                             }
                         }
                     }
@@ -216,13 +216,13 @@ internal fun recentColumns(widthDp: Float): Int = (widthDp / 120f).toInt().coerc
 
 /** The recent titles as a shelf of large covers. */
 @Composable
-private fun RecentCarousel(tracks: List<Track>, playingId: String?, playing: Boolean, onPlay: (Int) -> Unit, onMenu: (Track) -> Unit) {
+private fun RecentCarousel(tracks: List<Track>, playingId: String?, playing: Boolean, onPlay: (Int) -> Unit) {
     // Large windows: more whole covers per row, sized to the page (ui/adaptive/LargeScreen.shelfCell); 150 dp on a phone.
     val cell = com.ketvoice.app.ui.adaptive.shelfCell(150.dp, 18.dp)
     LazyRow(Modifier.testTag("home-recent-carousel"), contentPadding = PaddingValues(horizontal = 18.dp),
         horizontalArrangement = Arrangement.spacedBy(14.dp)) {
         itemsIndexed(tracks, key = { _, t -> t.id }) { index, track ->
-            RecentCover(track, cell, track.id == playingId, playing, onPlay = { onPlay(index) }, onMenu = { onMenu(track) })
+            RecentCover(track, cell, track.id == playingId, playing, onPlay = { onPlay(index) })
         }
     }
 }
@@ -234,15 +234,18 @@ private fun RecentCarousel(tracks: List<Track>, playingId: String?, playing: Boo
  */
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
-private fun RecentCover(track: Track, side: androidx.compose.ui.unit.Dp, active: Boolean, playing: Boolean, onPlay: () -> Unit, onMenu: () -> Unit) {
+private fun RecentCover(track: Track, side: androidx.compose.ui.unit.Dp, active: Boolean, playing: Boolean, onPlay: () -> Unit) {
+    val menuAnchor = com.ketvoice.app.ui.common.rememberRowAnchor()
     val theme = LocalTheme.current
     val art by ArtworkRepo.covers.collectAsState()
     val cover = com.ketvoice.app.data.MediaOverrides.cover(track, art["t:${track.id}"] ?: track.coverUrl)
     val glow = com.ketvoice.app.theme.rememberCoverTone(cover) ?: theme.onBackground
     val shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
     val options = AppText.t("Options de ${track.title}")
-    Column(Modifier.width(side).clip(androidx.compose.foundation.shape.RoundedCornerShape(18.dp))
-        .combinedClickable(role = androidx.compose.ui.semantics.Role.Button, onLongClickLabel = options, onLongClick = onMenu, onClick = onPlay)
+    val haptic = com.ketvoice.app.ui.motion.rememberHaptics()
+    Column(Modifier.width(side).then(menuAnchor.modifier).clip(androidx.compose.foundation.shape.RoundedCornerShape(18.dp))
+        .combinedClickable(role = androidx.compose.ui.semantics.Role.Button, onLongClickLabel = options,
+            onLongClick = { haptic(com.ketvoice.app.ui.motion.Haptics.Kind.Tick); menuAnchor.open(track) }, onClick = onPlay)
         .testTag("home-recent")) {
         Box(Modifier.size(side).shadow(if (theme.isDark) 18.dp else 10.dp, shape, clip = false,
             ambientColor = glow, spotColor = glow)) {
@@ -266,7 +269,7 @@ private fun RecentCover(track: Track, side: androidx.compose.ui.unit.Dp, active:
 }
 
 @Composable
-private fun TrackCarousel(tracks: List<Track>, onMenu: (Track) -> Unit) {
+private fun TrackCarousel(tracks: List<Track>) {
     val theme = LocalTheme.current
     val art by ArtworkRepo.covers.collectAsState()
     val cell = com.ketvoice.app.ui.adaptive.shelfCell(156.dp, 18.dp)
@@ -277,7 +280,8 @@ private fun TrackCarousel(tracks: List<Track>, onMenu: (Track) -> Unit) {
                 Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(track.title, localize = false, color = theme.onBackground, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
                         maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                    Box(Modifier.size(DesignTokens.Space.touch).clickable { onMenu(track) }, contentAlignment = Alignment.Center) {
+                    val menuAnchor = com.ketvoice.app.ui.common.rememberRowAnchor()
+                    Box(Modifier.size(DesignTokens.Space.touch).then(menuAnchor.modifier).clickable { menuAnchor.open(track) }, contentAlignment = Alignment.Center) {
                         Icon(Icons.Filled.MoreVert, "Options de ${track.title}", tint = theme.secondary, modifier = Modifier.size(22.dp))
                     }
                 }

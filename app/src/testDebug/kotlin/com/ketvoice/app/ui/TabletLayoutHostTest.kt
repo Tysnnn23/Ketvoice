@@ -55,6 +55,8 @@ class TabletLayoutHostTest {
     private val tracks = (0 until 24).map { Track("qa:t$it", "Titre $it", "Artiste ${it % 4}", "Album QA", durationMs = 180_000L + it * 7_000L) }
 
     @Before fun setup() {
+        // Quest keeps its own landscape window: no large-screen layout is ever drawn there (LargeScreen.isLarge).
+        org.junit.Assume.assumeFalse(com.ketvoice.app.BuildConfig.IS_QUEST)
         java.util.Locale.setDefault(java.util.Locale.FRANCE)
         AppSettings.languageChosen.value = true
         AppSettings.language.value = com.ketvoice.app.data.AppLanguage.FRENCH.label

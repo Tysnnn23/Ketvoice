@@ -7,6 +7,21 @@
 
 ---
 
+# Ketvoice 6.0.0 Beta 2
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 125** — The Ketvoice 6 redesign: Ket 27 as the only interface, tablet and large-window layouts, and the voice level of a song.
+
+- Interface: the `ket27` and `lyricsStyle` settings are retired (stored values ignored, never backed up); every classic branch is removed; Material alerts, text buttons, spinners, progress bars and the snackbar are replaced by `AppAlertDialog`, `KetTextButton`, `ActivitySpinner`, `KetProgressBar`, `KetSnackbar`. Cascade is the only lyrics style.
+- Menus: `GlassContextMenu` is the menu of a title from a long press and from every "…" button (anchored on the button, centred when opened from nowhere); the full sheet opens from its *More* item.
+- Large screens (`ui/adaptive`, `ui/tablet`): navigation follows the window (tab bar, rail, glass sidebar from 1000 dp), docked mini-player, two-pane collection and search pages, `TabletPlayer` (lyrics beside or below the artwork, queue panel, fold-aware), floating sheets, keyboard shortcuts, secondary click, hover, drag to a sidebar playlist. Phones and Quest keep their layouts.
+- Voice level: `VoiceStage` (real-time STFT, 4096/1024, constant 4096-frame delay) applies the whole-title separation (`StemStore` `-w.kvs`, made by `StemLibrary` for downloads while charging) with `kept + level × (1 − kept)` per bin; `VoiceSlider` on the lyrics screen (controls shown, not full-screen lyrics); new key `voiceLevel` (0–100). Downloads mark titles separated whole with a music symbol.
+
+Full notes: [6.0.0 Beta 2](docs/releases/v6.0.0-beta.2.md).
+
+---
+
 # Ketvoice 6.0.0 Beta
 
 ![Ketvoice](ketvoice-banner.png)

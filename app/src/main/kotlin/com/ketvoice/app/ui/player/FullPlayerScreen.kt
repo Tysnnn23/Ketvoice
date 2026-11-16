@@ -609,8 +609,10 @@ internal fun PlayerTitle(track: Track, compact: Boolean, cover: String?, sheetAc
         }
         }
         Spacer(Modifier.width(8.dp))
-        Box(actionsModifier) {
-        SmallCircleButton(sheetAction, size = 36.dp) {
+        // 6.0.0: "…" unfolds the glass menu of the title from the button; its "More" item opens the full sheet.
+        val menuAnchor = com.ketvoice.app.ui.common.rememberRowAnchor()
+        Box(actionsModifier.then(menuAnchor.modifier)) {
+        SmallCircleButton(if (share) sheetAction else ({ menuAnchor.open(track) }), size = 36.dp) {
             Icon(if (share) Icons.Filled.Share else Icons.Filled.MoreHoriz, if (share) "Partager" else "Options",
                 tint = Color(0xFFCED2E3), modifier = Modifier.size(22.dp))
         }

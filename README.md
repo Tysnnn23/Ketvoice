@@ -21,11 +21,20 @@
 
 ## Overview
 
+### 6.0.0 Beta 2 — The Ketvoice 6 redesign
+
+One interface for every screen: Ket 27 becomes Ketvoice's design, lyrics flow in Cascade, and the glass menu
+unfolds from any song. Tablets and large windows get a glass sidebar, two-pane pages, a player with the lyrics
+beside the artwork, keyboard and mouse. On the lyrics screen, a slider turns the singer's voice down on your
+separated downloads.
+[Mobile](https://github.com/Tysnnn23/Ketvoice/releases/download/v6.0.0-beta.2/Ketvoice-6.0.0-beta.2.apk)
+· [Quest](https://github.com/Tysnnn23/Ketvoice/releases/download/v6.0.0-beta.2/Ketvoice-6.0.0-beta.2-Quest.apk)
+· [Release notes](docs/releases/v6.0.0-beta.2.md).
+
 ### 6.0.0 Beta — Ketmix separates voices like a studio
 
 The first beta of Ketvoice 6 adds an optional high-quality voice separation model to Ketmix: instrumentals and
-voices about 3 dB cleaner, used while the phone charges or all the time if you choose. The redesign of
-Ketvoice 6 comes in the next beta.
+voices about 3 dB cleaner, used while the phone charges or all the time if you choose.
 [Mobile](https://github.com/Tysnnn23/Ketvoice/releases/download/v6.0.0-beta/Ketvoice-6.0.0-beta.apk)
 · [Quest](https://github.com/Tysnnn23/Ketvoice/releases/download/v6.0.0-beta/Ketvoice-6.0.0-beta-Quest.apk)
 · [Release notes](docs/releases/v6.0.0-beta.md).

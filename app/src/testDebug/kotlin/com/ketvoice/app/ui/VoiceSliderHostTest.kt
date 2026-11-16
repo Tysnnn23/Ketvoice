@@ -5,6 +5,8 @@ import android.graphics.Canvas
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -64,6 +66,38 @@ class VoiceSliderHostTest {
         compose.onNodeWithTag("voice-slider").performTouchInput { swipeUp(startY = bottom - 10f, endY = top + 10f) }
         compose.runOnIdle { assertTrue("level ${VoiceLevel.level}", VoiceLevel.level > .9f); assertTrue(AppSettings.voiceLevel.value > 90) }
         image("voice-slider-full")
+    }
+
+    @Test fun theLyricsScreenShowsItOnlyWithItsControlsAndForTitlesSeparatedWhole() {
+        val dir = java.nio.file.Files.createTempDirectory("voice-ui").toFile()
+        com.ketvoice.app.stems.StemStore.init(dir)
+        val separated = com.ketvoice.app.data.Track("qa:sing", "Titre séparé", "Artiste", "Album")
+        val plain = com.ketvoice.app.data.Track("qa:plain", "Titre entier", "Artiste", "Album")
+        val frames = 8
+        com.ketvoice.app.stems.StemStore.saveWhole(separated.id,
+            com.ketvoice.app.stems.StemMask(0L, frames, ByteArray(frames * com.ketvoice.app.stems.StemDsp.NET_BINS / 2)))
+        var track by androidx.compose.runtime.mutableStateOf(separated)
+        var expanded by androidx.compose.runtime.mutableStateOf(false)
+        compose.setContent {
+            com.ketvoice.app.theme.KetvoiceTheme(useDark = true) {
+                Box(Modifier.fillMaxSize().background(Color(0xFF3A2A25))) {
+                    com.ketvoice.app.ui.player.LyricsPane(track, expanded, onSource = {}, modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp))
+                }
+            }
+        }
+        compose.waitUntil(5_000) { compose.onAllNodesWithTag("voice-slider").fetchSemanticsNodes().isNotEmpty() }
+        val slider = compose.onNodeWithTag("voice-slider").fetchSemanticsNode().boundsInRoot
+        val width = compose.activity.window.decorView.width
+        assertTrue("at the right of the lyrics ($slider)", slider.right > width * .8f)
+        image("voice-slider-lyrics")
+        // Full-screen lyrics: no slider.
+        expanded = true
+        compose.waitUntil(5_000) { compose.onAllNodesWithTag("voice-slider").fetchSemanticsNodes().isEmpty() }
+        // A title that was never separated whole: no slider either.
+        expanded = false; track = plain
+        compose.waitForIdle()
+        compose.onNodeWithTag("voice-slider").assertDoesNotExist()
+        dir.deleteRecursively()
     }
 
     @Test fun logic() {

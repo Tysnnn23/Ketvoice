@@ -1573,7 +1573,14 @@
   "Toujours la meilleure": "Always the best",
   "Toujours rapide": "Always quick",
   "Voix et instrumentaux bien plus nets (UVR MDX-Net), environ dix fois plus lent : {0}. Il sert téléphone en charge et améliore alors les titres déjà séparés.": "Much cleaner voices and instrumentals (UVR MDX-Net), about ten times slower: {0}. It works while the phone charges and then improves songs already separated.",
-  "Niveau de la voix": "Voice level"
+  "Niveau de la voix": "Voice level",
+  "Plus": "More",
+  "Voix et musique séparées": "Voice and music separated",
+  "Afficher la barre latérale": "Show sidebar",
+  "Réduire la barre latérale": "Hide sidebar",
+  "Ajouté à la playlist": "Added to playlist",
+  "Les résultats apparaîtront ici.": "Results will appear here.",
+  "Parcourir les catégories": "Browse categories"
  },
  "hi": {
   "Reverb": "रीवर्ब",
@@ -3149,7 +3156,14 @@
   "Toujours la meilleure": "हमेशा सबसे अच्छी",
   "Toujours rapide": "हमेशा तेज़",
   "Voix et instrumentaux bien plus nets (UVR MDX-Net), environ dix fois plus lent : {0}. Il sert téléphone en charge et améliore alors les titres déjà séparés.": "कहीं ज़्यादा साफ़ आवाज़ें और इंस्ट्रुमेंटल (UVR MDX-Net), लगभग दस गुना धीमा: {0}। यह फ़ोन चार्ज होते समय काम करता है और तब पहले से अलग किए गए गानों को बेहतर बनाता है।",
-  "Niveau de la voix": "आवाज़ का स्तर"
+  "Niveau de la voix": "आवाज़ का स्तर",
+  "Plus": "और",
+  "Voix et musique séparées": "आवाज़ और संगीत अलग किए गए",
+  "Afficher la barre latérale": "साइडबार दिखाएँ",
+  "Réduire la barre latérale": "साइडबार छिपाएँ",
+  "Ajouté à la playlist": "प्लेलिस्ट में जोड़ा गया",
+  "Les résultats apparaîtront ici.": "परिणाम यहाँ दिखेंगे।",
+  "Parcourir les catégories": "श्रेणियाँ ब्राउज़ करें"
  },
  "ja": {
   "Reverb": "リバーブ",
@@ -4725,7 +4739,14 @@
   "Toujours la meilleure": "常に最高",
   "Toujours rapide": "常に高速",
   "Voix et instrumentaux bien plus nets (UVR MDX-Net), environ dix fois plus lent : {0}. Il sert téléphone en charge et améliore alors les titres déjà séparés.": "はるかにクリアな声とインスト（UVR MDX-Net）、約10倍遅い：{0}。充電中に動作し、分離済みの曲を改善します。",
-  "Niveau de la voix": "ボーカルの音量"
+  "Niveau de la voix": "ボーカルの音量",
+  "Plus": "その他",
+  "Voix et musique séparées": "ボーカルと演奏を分離済み",
+  "Afficher la barre latérale": "サイドバーを表示",
+  "Réduire la barre latérale": "サイドバーを隠す",
+  "Ajouté à la playlist": "プレイリストに追加しました",
+  "Les résultats apparaîtront ici.": "ここに結果が表示されます。",
+  "Parcourir les catégories": "カテゴリを見る"
  },
  "zh": {
   "Reverb": "混响",
@@ -6301,7 +6322,14 @@
   "Toujours la meilleure": "始终最佳",
   "Toujours rapide": "始终快速",
   "Voix et instrumentaux bien plus nets (UVR MDX-Net), environ dix fois plus lent : {0}. Il sert téléphone en charge et améliore alors les titres déjà séparés.": "人声和伴奏干净得多（UVR MDX-Net），速度约慢十倍：{0}。它在手机充电时工作，并改进已分离的歌曲。",
-  "Niveau de la voix": "人声音量"
+  "Niveau de la voix": "人声音量",
+  "Plus": "更多",
+  "Voix et musique séparées": "人声与音乐已分离",
+  "Afficher la barre latérale": "显示侧边栏",
+  "Réduire la barre latérale": "隐藏侧边栏",
+  "Ajouté à la playlist": "已添加到播放列表",
+  "Les résultats apparaîtront ici.": "结果将显示在这里。",
+  "Parcourir les catégories": "浏览分类"
  },
  "ru": {
   "Reverb": "Реверберация",
@@ -7877,7 +7905,14 @@
   "Toujours la meilleure": "Всегда лучшее",
   "Toujours rapide": "Всегда быстро",
   "Voix et instrumentaux bien plus nets (UVR MDX-Net), environ dix fois plus lent : {0}. Il sert téléphone en charge et améliore alors les titres déjà séparés.": "Намного более чистые голоса и инструменталы (UVR MDX-Net), примерно в десять раз медленнее: {0}. Работает при зарядке телефона и улучшает уже разделённые треки.",
-  "Niveau de la voix": "Громкость голоса"
+  "Niveau de la voix": "Громкость голоса",
+  "Plus": "Ещё",
+  "Voix et musique séparées": "Голос и музыка разделены",
+  "Afficher la barre latérale": "Показать боковую панель",
+  "Réduire la barre latérale": "Скрыть боковую панель",
+  "Ajouté à la playlist": "Добавлено в плейлист",
+  "Les résultats apparaîtront ici.": "Здесь появятся результаты.",
+  "Parcourir les catégories": "Обзор категорий"
  },
  "it": {
   "Reverb": "Riverbero",
@@ -9453,7 +9488,14 @@
   "Toujours la meilleure": "Sempre la migliore",
   "Toujours rapide": "Sempre rapida",
   "Voix et instrumentaux bien plus nets (UVR MDX-Net), environ dix fois plus lent : {0}. Il sert téléphone en charge et améliore alors les titres déjà séparés.": "Voci e basi molto più pulite (UVR MDX-Net), circa dieci volte più lento: {0}. Funziona con il telefono in carica e allora migliora i brani già separati.",
-  "Niveau de la voix": "Livello della voce"
+  "Niveau de la voix": "Livello della voce",
+  "Plus": "Altro",
+  "Voix et musique séparées": "Voce e musica separate",
+  "Afficher la barre latérale": "Mostra barra laterale",
+  "Réduire la barre latérale": "Nascondi barra laterale",
+  "Ajouté à la playlist": "Aggiunto alla playlist",
+  "Les résultats apparaîtront ici.": "I risultati appariranno qui.",
+  "Parcourir les catégories": "Sfoglia le categorie"
  },
  "es": {
   "Reverb": "Reverb",
@@ -11029,7 +11071,14 @@
   "Toujours la meilleure": "Siempre la mejor",
   "Toujours rapide": "Siempre rápida",
   "Voix et instrumentaux bien plus nets (UVR MDX-Net), environ dix fois plus lent : {0}. Il sert téléphone en charge et améliore alors les titres déjà séparés.": "Voces e instrumentales mucho más limpios (UVR MDX-Net), unas diez veces más lento: {0}. Funciona con el teléfono cargando y entonces mejora las canciones ya separadas.",
-  "Niveau de la voix": "Nivel de la voz"
+  "Niveau de la voix": "Nivel de la voz",
+  "Plus": "Más",
+  "Voix et musique séparées": "Voz y música separadas",
+  "Afficher la barre latérale": "Mostrar barra lateral",
+  "Réduire la barre latérale": "Ocultar barra lateral",
+  "Ajouté à la playlist": "Añadido a la playlist",
+  "Les résultats apparaîtront ici.": "Los resultados aparecerán aquí.",
+  "Parcourir les catégories": "Explorar categorías"
  },
  "de": {
   "Reverb": "Reverb",
@@ -12605,7 +12654,14 @@
   "Toujours la meilleure": "Immer die beste",
   "Toujours rapide": "Immer schnell",
   "Voix et instrumentaux bien plus nets (UVR MDX-Net), environ dix fois plus lent : {0}. Il sert téléphone en charge et améliore alors les titres déjà séparés.": "Viel sauberere Stimmen und Instrumentals (UVR MDX-Net), etwa zehnmal langsamer: {0}. Es arbeitet, während das Telefon lädt, und verbessert dann bereits getrennte Titel.",
-  "Niveau de la voix": "Lautstärke der Stimme"
+  "Niveau de la voix": "Lautstärke der Stimme",
+  "Plus": "Mehr",
+  "Voix et musique séparées": "Stimme und Musik getrennt",
+  "Afficher la barre latérale": "Seitenleiste einblenden",
+  "Réduire la barre latérale": "Seitenleiste ausblenden",
+  "Ajouté à la playlist": "Zur Playlist hinzugefügt",
+  "Les résultats apparaîtront ici.": "Hier erscheinen die Ergebnisse.",
+  "Parcourir les catégories": "Kategorien durchsuchen"
  },
  "pt": {
   "Reverb": "Reverb",
@@ -14181,7 +14237,14 @@
   "Toujours la meilleure": "Sempre a melhor",
   "Toujours rapide": "Sempre rápida",
   "Voix et instrumentaux bien plus nets (UVR MDX-Net), environ dix fois plus lent : {0}. Il sert téléphone en charge et améliore alors les titres déjà séparés.": "Vozes e instrumentais muito mais limpos (UVR MDX-Net), cerca de dez vezes mais lento: {0}. Funciona com o telefone carregando e então melhora as músicas já separadas.",
-  "Niveau de la voix": "Nível da voz"
+  "Niveau de la voix": "Nível da voz",
+  "Plus": "Mais",
+  "Voix et musique séparées": "Voz e música separadas",
+  "Afficher la barre latérale": "Mostrar barra lateral",
+  "Réduire la barre latérale": "Ocultar barra lateral",
+  "Ajouté à la playlist": "Adicionado à playlist",
+  "Les résultats apparaîtront ici.": "Os resultados aparecerão aqui.",
+  "Parcourir les catégories": "Explorar categorias"
  },
  "ko": {
   "Reverb": "리버브",
@@ -15757,6 +15820,13 @@
   "Toujours la meilleure": "항상 최고",
   "Toujours rapide": "항상 빠르게",
   "Voix et instrumentaux bien plus nets (UVR MDX-Net), environ dix fois plus lent : {0}. Il sert téléphone en charge et améliore alors les titres déjà séparés.": "훨씬 깨끗한 목소리와 반주(UVR MDX-Net), 약 10배 느림: {0}. 휴대폰 충전 중에 작동하며 이미 분리된 곡을 개선합니다.",
-  "Niveau de la voix": "보컬 볼륨"
+  "Niveau de la voix": "보컬 볼륨",
+  "Plus": "더 보기",
+  "Voix et musique séparées": "보컬과 음악 분리됨",
+  "Afficher la barre latérale": "사이드바 보기",
+  "Réduire la barre latérale": "사이드바 숨기기",
+  "Ajouté à la playlist": "플레이리스트에 추가됨",
+  "Les résultats apparaîtront ici.": "결과가 여기에 표시됩니다.",
+  "Parcourir les catégories": "카테고리 둘러보기"
  }
 }

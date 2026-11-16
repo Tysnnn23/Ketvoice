@@ -306,8 +306,9 @@ private fun PlaylistRow(entry: PlaylistEntry, index: Int, editing: Boolean, busy
                 maxLines = 1, overflow = TextOverflow.Ellipsis)
             if (entry.track == null) Text("Non retrouvé · choisir une version", color = th.accent, fontSize = 12.sp)
         }
-        Box(Modifier.size(48.dp).clip(CircleShape).clickable(enabled = !busy) {
-            if (editing || entry.track == null) onRemove() else AppUi.trackMenuTrack.value = entry.track
+        val menuAnchor = com.ketvoice.app.ui.common.rememberRowAnchor()
+        Box(Modifier.size(48.dp).then(menuAnchor.modifier).clip(CircleShape).clickable(enabled = !busy) {
+            if (editing || entry.track == null) onRemove() else menuAnchor.open(entry.track)
         },
             contentAlignment = Alignment.Center) {
             Icon(if (editing || entry.track == null) Icons.Filled.Close else Icons.Filled.MoreHoriz,

@@ -419,19 +419,42 @@ class Ket27MotionHostTest {
         assertEquals("the preview sits on the row", 200f, preview.top, 12f)
         assertTrue("the menu hangs under it", menu.top >= preview.bottom && menu.bottom <= 900f)
         capture("ket27-context-menu")
-        // "Options" hands over to the full sheet of the title.
-        compose.onNodeWithText("Options").performClick()
+        // "More" hands over to the full sheet of the title.
+        compose.onNodeWithText("Plus").performClick()
         compose.waitForIdle()
         compose.onNodeWithTag("context-menu").assertDoesNotExist()
         assertEquals(track, AppUi.trackMenuTrack.value)
     }
 
-    @Test fun aRowWithoutAPlaceOnScreenFallsBackToTheFullSheet() {
-        // The menu needs to know where the row is; without that, a long press opens the title's sheet.
+    @Test fun aMenuOpenedFromNowhereIsCentred() {
+        // 6.0.0: the glass menu is the only menu of a title; without a place on screen it opens in the middle.
         val track = Track("qa:nowhere", "Titre", "Artiste", "Album")
         ContextMenus.open(track, null)
-        assertNull(ContextMenus.request.value)
-        assertEquals(track, AppUi.trackMenuTrack.value)
+        assertEquals(track, ContextMenus.request.value?.track)
+        assertNull(ContextMenus.request.value?.anchor)
+        assertNull("the full sheet is not opened", AppUi.trackMenuTrack.value)
+        ContextMenus.request.value = null
+        val centred = ContextMenus.centred(1000f, 2000f, 600f, 100f)
+        assertEquals(200f, centred.left, .01f); assertEquals(800f, centred.right, .01f); assertEquals(600f, centred.top, .01f)
+        assertEquals("never wider than the window", 400f, ContextMenus.centred(400f, 800f, 600f, 100f).width, .01f)
+    }
+
+    @Test fun theMoreButtonOfARowUnfoldsTheGlassMenuFromItself() {
+        val track = Track("qa:dots", "Titre points", "Artiste", "Album")
+        compose.setContent { KetvoiceTheme(useDark = false) {
+            Box(Modifier.fillMaxSize().background(com.ketvoice.app.theme.LocalTheme.current.background)) {
+                Column(Modifier.padding(top = 300.dp)) { TrackRow(track, null, active = false, playing = false, onClick = {}) }
+                ContextMenuHost()
+            }
+        } }
+        compose.onNodeWithContentDescription("Options").performClick()
+        compose.waitForIdle()
+        compose.onNodeWithTag("context-menu-actions").assertIsDisplayed()
+        compose.onNodeWithText("Plus").assertIsDisplayed()
+        assertNull("the full sheet waits for More", AppUi.trackMenuTrack.value)
+        val preview = compose.onNodeWithTag("context-menu-preview").fetchSemanticsNode().boundsInRoot
+        assertEquals("the preview sits where the button is", 300f, preview.top, 40f)
+        capture("ket27-context-menu-from-button")
     }
 
     // ---------------------------------------------------------------- controls

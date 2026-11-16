@@ -71,7 +71,8 @@ internal fun TrackRow(
         else if (trailing == null && track.durationMs > 0) Text(formatSecs(track.durationMs), localize = false,
             color = theme.secondary, fontSize = if (BuildConfig.IS_QUEST) 14.sp else 12.sp)
         if (trailing != null) trailing()
-        Box(Modifier.size(48.dp).clip(CircleShape).clickable(role = Role.Button) { AppUi.trackMenuTrack.value = track },
+        val menuAnchor = rememberRowAnchor()
+        Box(Modifier.size(48.dp).then(menuAnchor.modifier).clip(CircleShape).clickable(role = Role.Button) { menuAnchor.open(track) },
             contentAlignment = Alignment.Center) {
             Icon(Icons.Filled.MoreVert, "Options", tint = theme.secondary, modifier = Modifier.size(22.dp))
         }

@@ -399,7 +399,8 @@ private fun AlbumTrackRow(track: Track, index: Int, active: Boolean, downloaded:
             modifier = Modifier.padding(start = 8.dp).size(16.dp))
         if (LocalDensity.current.fontScale < 1.3f && track.durationMs > 0) Text(formatSecs(track.durationMs), localize = false,
             color = theme.secondary, fontSize = 12.sp, modifier = Modifier.padding(start = 12.dp))
-        androidx.compose.material3.IconButton(onClick = { AppUi.trackMenuTrack.value = track }, modifier = Modifier.size(48.dp)) {
+        val menuAnchor = com.ketvoice.app.ui.common.rememberRowAnchor()
+        androidx.compose.material3.IconButton(onClick = { menuAnchor.open(track) }, modifier = Modifier.size(48.dp).then(menuAnchor.modifier)) {
             Icon(KetIcons.More, "Options", tint = theme.secondary, modifier = Modifier.size(24.dp))
         }
     }

@@ -342,6 +342,18 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
                 FollowCapsule("Reprendre le suivi", Modifier.align(Alignment.CenterHorizontally).padding(bottom = 8.dp)) { following = true }
             }
         }
+        // 6.0.0: the level of the voice, at the right above the translation button, while the controls are shown
+        // (never in full-screen lyrics), for titles separated whole.
+        val voiceAvailable by androidx.compose.runtime.produceState(false, track.id) {
+            value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                runCatching { com.ketvoice.app.stems.VoiceLevel.available(track.id) }.getOrDefault(false)
+            }
+        }
+        AnimatedVisibility(!expanded && voiceAvailable && moment.isEmpty(), Modifier.align(Alignment.BottomEnd).padding(bottom = 60.dp),
+            enter = fadeIn(tween(Motion.duration(280))) + androidx.compose.animation.scaleIn(tween(Motion.duration(320)), initialScale = .85f),
+            exit = fadeOut(tween(Motion.duration(200))) + androidx.compose.animation.scaleOut(tween(Motion.duration(240)), targetScale = .85f)) {
+            VoiceSlider()
+        }
     }
     }
 }

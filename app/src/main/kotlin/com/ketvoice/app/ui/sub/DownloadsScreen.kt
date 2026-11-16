@@ -240,6 +240,9 @@ fun DownloadsScreen() {
                                     modifier = Modifier.size(14.dp))
                                 if (item.hasCanvas) Icon(KetIcons.Canvas, "Canvas enregistré", tint = theme.secondary,
                                     modifier = Modifier.size(14.dp))
+                                // 6.0.0: separated by the model, voice and music apart (the voice level of the lyrics works on it).
+                                if (separatedWhole(track.id)) Icon(KetIcons.Music, "Voix et musique séparées", tint = theme.secondary,
+                                    modifier = Modifier.size(14.dp).testTag("download-separated"))
                             }
                         }
                         if (!selecting) IconButton(onClick = { deleteIds = listOf(track.id) }, modifier = Modifier.size(48.dp).testTag("download-delete")) {
@@ -398,4 +401,16 @@ private fun QualityBadge(format: String) {
     Text(formatBadge(format), localize = false, color = tone,
         fontSize = 10.sp, fontWeight = FontWeight.Bold, maxLines = 1,
         modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(tone.copy(alpha = .14f)).padding(horizontal = 6.dp, vertical = 2.dp))
+}
+
+/** Whether [trackId] was separated whole, read off the main thread and again whenever the library separates more. */
+@Composable
+private fun separatedWhole(trackId: String): Boolean {
+    val library by com.ketvoice.app.stems.StemLibrary.progress.collectAsState()
+    val separated by androidx.compose.runtime.produceState(false, trackId, library.done, library.running) {
+        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            runCatching { com.ketvoice.app.stems.StemStore.hasWhole(trackId) }.getOrDefault(false)
+        }
+    }
+    return separated
 }
