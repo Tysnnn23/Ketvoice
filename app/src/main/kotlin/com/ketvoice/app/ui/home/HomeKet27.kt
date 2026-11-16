@@ -60,11 +60,8 @@ internal object HomeLayout {
     val titleHandover: Dp = 64.dp
 
     /** 0 while the large title is whole, 1 once it has scrolled [handoverPx] away; 1 past the first item. */
-    fun collapse(firstIndex: Int, firstOffsetPx: Int, handoverPx: Float): Float = when {
-        firstIndex > 0 -> 1f
-        handoverPx <= 0f -> 0f
-        else -> (firstOffsetPx / handoverPx).coerceIn(0f, 1f)
-    }
+    fun collapse(firstIndex: Int, firstOffsetPx: Int, handoverPx: Float): Float =
+        com.ketvoice.app.ui.common.ScrollTitle.collapse(firstIndex, firstOffsetPx, handoverPx)
 
     /**
      * How far a section header that is [topPx] from the top of a window [windowPx] tall has come in:
@@ -104,27 +101,10 @@ internal fun Modifier.headerReveal(): Modifier = composed {
     }
 }
 
-/**
- * The small title of the bar, shown as the large one scrolls away. [collapse] is read in the layer,
- * so scrolling never recomposes the bar.
- */
+/** The small title of the bar, shown as the large one scrolls away (see ScrollEdgeTitle). */
 @Composable
-internal fun HomeInlineTitle(title: String, collapse: () -> Float, modifier: Modifier = Modifier) {
-    val theme = LocalTheme.current
-    val shown by remember { derivedStateOf { collapse() > .01f } }
-    if (!shown) return
-    val whole by remember { derivedStateOf { collapse() > .98f } }
-    Box(modifier.fillMaxWidth().graphicsLayer { alpha = collapse() }
-        // The edge of the page fades under the bar, as iOS 26 draws its scroll edge.
-        .background(Brush.verticalGradient(0f to theme.background, .58f to theme.background.copy(alpha = .95f), .80f to theme.background.copy(alpha = .70f), 1f to theme.background.copy(alpha = 0f)))
-        .testTag("home-inline-title")) {
-        Text(title, color = theme.onBackground, style = Ket27.Type.headline, maxLines = 1, overflow = TextOverflow.Ellipsis,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth().statusBarsPadding().padding(bottom = 28.dp).height(48.dp).wrapContentHeight(Alignment.CenterVertically)
-                .padding(horizontal = 72.dp)
-                .then(if (whole) Modifier.semantics { heading() } else Modifier.clearAndSetSemantics {}))
-    }
-}
+internal fun HomeInlineTitle(title: String, collapse: () -> Float, modifier: Modifier = Modifier) =
+    com.ketvoice.app.ui.common.ScrollEdgeTitle(title, collapse, modifier, tag = "home-inline-title")
 
 /**
  * A mix as a large card, as Apple Music presents what it composed for the listener: its covers

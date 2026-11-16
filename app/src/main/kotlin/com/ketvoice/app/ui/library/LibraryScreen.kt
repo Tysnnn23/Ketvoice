@@ -50,7 +50,6 @@ fun LibraryScreen() {
     var query by rememberSaveable { mutableStateOf("") }
     var view by rememberSaveable { mutableIntStateOf(0) }
     var order by rememberSaveable { mutableIntStateOf(0) }
-    var sorting by remember { mutableStateOf(false) }
     var album by rememberSaveable { mutableStateOf<String?>(null) }
     var selecting by rememberSaveable { mutableStateOf(false) }
     var selected by rememberSaveable { mutableStateOf(listOf<String>()) }
@@ -75,6 +74,9 @@ fun LibraryScreen() {
     val appleRoot = view == 0 && query.isBlank() && chosen == null
     val list = rememberLazyListState()
     LaunchedEffect(all) { selected = selected.filter { id -> all.any { it.id == id } } }
+    // Ket 27: the large title shrinks while the list scrolls and hands over to a small one in the bar.
+    val handover = with(androidx.compose.ui.platform.LocalDensity.current) { 72.dp.toPx() }
+    val collapse = { ScrollTitle.collapse(list.firstVisibleItemIndex, list.firstVisibleItemScrollOffset, handover) }
     LaunchedEffect(list) {
         val fold = com.ketvoice.app.ui.chrome.ChromeCollapse()
         snapshotFlow { list.firstVisibleItemIndex to list.firstVisibleItemScrollOffset }
@@ -101,13 +103,13 @@ fun LibraryScreen() {
         item(key = "header") {
             Column(Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 14.dp)) {
                 Text("Bibliothèque", color = theme.onBackground, style = com.ketvoice.app.theme.T.hugeTitle,
-                    modifier = Modifier.asHeading())
+                    modifier = Modifier.shrinkingTitle(collapse).asHeading())
                 Text(AppText.t(if (all.size == 1) "1 titre" else "${all.size} titres") + " · " +
                     AppText.t("Playlists") + " " + playlists.size, localize = false, color = theme.secondary,
                     fontSize = 14.sp, modifier = Modifier.padding(top = 5.dp, bottom = 18.dp))
                 CompactSearchField(query, { query = it }, {}, Modifier.testTag("library-search"))
             }
-            if (!appleRoot) LazyRow(contentPadding = PaddingValues(horizontal = 22.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (!appleRoot) LazyRow(Modifier.testTag("library-filters"), contentPadding = PaddingValues(horizontal = 22.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 itemsIndexed(listOf("Tout", "Playlists", "Albums", "Titres", "Artistes")) { index, label ->
                     CollectionFilter(label, view == index, {
                         view = index; album = null; selecting = false; selected = emptyList()
@@ -169,14 +171,12 @@ fun LibraryScreen() {
         if ((view == 0 || view == 2) && !appleRoot) {
             val rows = albums.filter { query.isBlank() || it.title.contains(query.trim(), true) || it.artist.contains(query.trim(), true) }
             if (rows.isNotEmpty() && chosen == null) item(key = "albums") {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.weight(1f)) { LibrarySection("Albums") }
-                    Box {
-                        com.ketvoice.app.ui.common.KetTextButton("Trier", { sorting = true })
-                        DropdownMenu(expanded = sorting, onDismissRequest = { sorting = false }) {
-                            AlbumOrder.labels.forEachIndexed { index, label -> DropdownMenuItem(text = { Text(label) }, onClick = { order = index; sorting = false }) }
-                        }
-                    }
+                LibrarySection("Albums")
+                // Ket 27: the orders as glass pills, the one in use filled.
+                if (rows.size > 1) LazyRow(Modifier.testTag("library-sort"), contentPadding = PaddingValues(horizontal = 18.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    item { Text("Trier", color = theme.secondary, fontSize = 13.sp, modifier = Modifier.padding(end = 2.dp)) }
+                    itemsIndexed(AlbumOrder.labels) { index, label -> CollectionFilter(label, order == index, { order = index }) }
                 }
                 if (view == 2) CoverGrid(rows, Modifier.testTag("library-albums")) { group, side ->
                     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).clickable(role = Role.Button) { album = group.key }) {
@@ -206,7 +206,18 @@ fun LibraryScreen() {
                 .filterKeys { query.isBlank() || it.contains(query.trim(), true) }
             if (artists.isNotEmpty()) item(key = "artists") {
                 LibrarySection("Artistes")
-                LazyRow(contentPadding = PaddingValues(horizontal = 18.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                // The Artists view shows them as a grid of portraits; "All" keeps a row.
+                if (view == 4) CoverGrid(artists.entries.toList(), Modifier.testTag("library-artist-grid")) { (name, tracks), side ->
+                    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).clickable(role = Role.Button) {
+                        AppUi.openArtist(tracks.first().artistId.orEmpty(), name)
+                    }, horizontalAlignment = Alignment.CenterHorizontally) {
+                        Cover(name, ArtworkRepo.coverForTrack(tracks.first()) ?: tracks.first().coverUrl, side, side / 2)
+                        Text(name, localize = false, color = theme.onBackground, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))
+                        Text(AppText.t(if (tracks.size == 1) "1 titre" else "${tracks.size} titres"), localize = false,
+                            color = theme.secondary, fontSize = 12.sp, maxLines = 1)
+                    }
+                } else LazyRow(contentPadding = PaddingValues(horizontal = 18.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                     items(artists.entries.toList(), key = { it.key }) { (name, tracks) ->
                         Column(Modifier.width(100.dp).clickable { AppUi.openArtist(tracks.first().artistId.orEmpty(), name) },
                             horizontalAlignment = Alignment.CenterHorizontally) {
@@ -270,6 +281,7 @@ fun LibraryScreen() {
         }
     }
     }
+    ScrollEdgeTitle("Bibliothèque", collapse, Modifier.align(Alignment.TopCenter), tag = "library-inline-title")
     CompositionLocalProvider(com.ketvoice.app.glass.LocalBackdropLayer provides backdrop) {
         Row(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 20.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.End) {

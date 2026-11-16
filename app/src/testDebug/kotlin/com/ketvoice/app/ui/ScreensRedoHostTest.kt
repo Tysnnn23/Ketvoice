@@ -233,4 +233,98 @@ class ScreensRedoHostTest {
         assertEquals("well inside the window", 1f, home.reveal(100f, 900f, 140f), 0f)
         assertEquals(1f, home.reveal(Float.NaN, 900f, 140f), 0f)
     }
+
+    // ---------------------------------------------------------------- Library and Downloads
+
+    private val saved get() = Downloader.items as MutableStateFlow<List<Downloader.Item>>
+
+    private fun file(track: Track, format: String, bytes: Long, age: Long): Downloader.Item {
+        val file = File(compose.activity.cacheDir, track.id.replace(':', '_') + ".bin").apply {
+            writeText("host fixture"); setLastModified(1_700_000_000_000L + age)
+        }
+        return Downloader.Item(track, file, format, bytes)
+    }
+
+    private fun offline() = listOf(
+        file(track("d1", "Bravo", "Zed"), "FLAC · Sans perte", 31_457_280, 1000),
+        file(track("d2", "Alpha", "Abel"), "MP3 · Haute qualité", 8_388_608, 3000),
+        file(track("d3", "Charlie", "Abel"), "DASH · FLAC", 41_943_040, 2000),
+        file(track("d4", "Delta", "Mira"), "FLAC · Sans perte", 21_457_280, 500),
+        file(track("d5", "Echo", "Noor"), "AAC", 6_457_280, 400))
+
+    @Test fun libraryAlbumsAreACoverGridSortedWithGlassPills() {
+        recent.value = (1..6).map { track("l$it", "Piste $it", "Artiste ${it % 3}") }
+        try {
+            compose.setContent { KetvoiceTheme(useDark = true) { com.ketvoice.app.ui.library.LibraryScreen() } }
+            compose.onNodeWithTag("library-inline-title").assertDoesNotExist()
+            image("redo-library-root-dark")
+            compose.onNode(hasText("Albums") and hasClickAction()).performClick()
+            compose.onNodeWithTag("library-filters").assertExists()
+            compose.onNodeWithTag("library-albums").assertExists()
+            compose.onNode(hasText("Albums") and hasAnyAncestor(hasTestTag("library-filters"))).assertIsSelected()
+            // The orders are pills; choosing one fills it, no menu opens.
+            compose.onNode(hasText("Artiste A–Z") and hasAnyAncestor(hasTestTag("library-sort"))).performClick().assertIsSelected()
+            compose.onNode(hasText("Récents") and hasAnyAncestor(hasTestTag("library-sort"))).assertIsNotSelected()
+            image("redo-library-albums-dark")
+            compose.onNode(hasText("Artistes") and hasAnyAncestor(hasTestTag("library-filters"))).performClick()
+            compose.onNodeWithTag("library-artist-grid").assertExists()
+            image("redo-library-artists-dark")
+            compose.onNode(hasText("Titres") and hasAnyAncestor(hasTestTag("library-filters"))).performClick()
+            compose.onNodeWithTag("library-list").performScrollToIndex(4)
+            compose.onNodeWithTag("library-inline-title").assertExists()
+            image("redo-library-titles-scrolled-dark")
+        } finally { recent.value = emptyList() }
+    }
+
+    @Test fun downloadsShowAlbumsAndArtistsAsCoversAndKeepSelectionAndBadges() {
+        saved.value = offline()
+        try {
+            compose.setContent { KetvoiceTheme(useDark = false) { com.ketvoice.app.ui.sub.DownloadsScreen() } }
+            compose.onNodeWithTag("downloads-mosaic").assertIsDisplayed()
+            image("redo-downloads-top-light")
+            compose.onNode(hasText("Albums") and hasAnyAncestor(hasTestTag("downloads-view"))).performScrollTo().performClick()
+            compose.onAllNodesWithTag("saved-download").assertCountEquals(0)
+            val cells = compose.onAllNodesWithTag("download-cover-cell").fetchSemanticsNodes().map { it.boundsInRoot }
+            assertTrue("a grid of covers (${cells.size})", cells.size >= 2)
+            assertEquals("two on a line", cells[0].top, cells[1].top, 1f)
+            image("redo-downloads-albums-light")
+            // Selecting ticks a whole album from its cover; nothing is deleted without the alert.
+            compose.onNodeWithText("Sélectionner").performClick()
+            compose.onAllNodesWithTag("download-cover-cell").onFirst().performClick()
+            compose.onNodeWithContentDescription("Supprimer").performScrollTo().performClick()
+            compose.onNodeWithTag("downloads-delete-alert").assertExists()
+            compose.onNode(hasText("Annuler") and hasAnyAncestor(hasTestTag("downloads-delete-alert"))).performClick()
+            assertEquals(5, saved.value.size)
+            assertTrue(saved.value.all { it.file.exists() })
+            compose.onNodeWithText("Annuler").performClick()
+            compose.onNode(hasText("Artistes") and hasAnyAncestor(hasTestTag("downloads-view"))).performScrollTo().performClick()
+            compose.onNodeWithText("Abel").performScrollTo().assertIsDisplayed()
+            image("redo-downloads-artists-light")
+            compose.onNodeWithText("Abel").performClick()
+            compose.onAllNodesWithTag("saved-download").assertCountEquals(2)
+        } finally { saved.value = emptyList() }
+    }
+
+    @Test fun downloadsHeaderShrinksAsTheListScrolls() {
+        saved.value = offline() + (6..14).map { file(track("e$it", "Titre $it", "Artiste $it"), "FLAC", 10_000_000, it.toLong()) }
+        try {
+            compose.setContent { KetvoiceTheme(useDark = true) { com.ketvoice.app.ui.sub.DownloadsScreen() } }
+            val before = compose.onNodeWithTag("downloads-mosaic").fetchSemanticsNode().boundsInRoot
+            compose.onNodeWithTag("downloads-list").performTouchInput { swipeUp(startY = bottom - 40f, endY = bottom - 240f) }
+            compose.waitForIdle()
+            val after = compose.onNodeWithTag("downloads-mosaic").fetchSemanticsNode().boundsInRoot
+            assertTrue("the header shrinks (${before.width} → ${after.width})", after.width < before.width - 1f)
+            image("redo-downloads-scrolled-dark")
+            // The swipe actions and the separated-music badge belong to the rows, which keep them.
+            compose.onAllNodesWithTag("saved-download").onFirst().assertExists()
+        } finally { saved.value = emptyList() }
+    }
+
+    @Test fun downloadRowsSpanTheLineOnAPhoneAndHalfOfItOnAWidePane() {
+        val layout = com.ketvoice.app.ui.sub.DownloadsLayout
+        assertEquals(2, layout.rowSpan(2)); assertEquals(1, layout.rowSpan(1)); assertEquals(3, layout.rowSpan(6))
+        val scale = { c: Float -> com.ketvoice.app.ui.common.heroShrinkScale(c) }
+        assertEquals(1f, scale(0f), 0f); assertEquals(.86f, scale(1f), .001f)
+        assertEquals(1f, scale(Float.NaN), 0f)
+    }
 }

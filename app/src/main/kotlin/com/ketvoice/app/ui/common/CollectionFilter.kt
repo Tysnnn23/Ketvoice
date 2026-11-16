@@ -25,20 +25,30 @@ import androidx.compose.ui.unit.sp
 import com.ketvoice.app.theme.LocalTheme
 import com.ketvoice.app.ui.motion.Motion
 
+/**
+ * A filter or a sort order as a pill of glass (Ket 27): the one chosen is filled with the page's text
+ * colour, the others are clear glass over the page. Keeps a 48 dp target and says whether it is chosen.
+ */
 @Composable
 fun CollectionFilter(label: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val theme = LocalTheme.current
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
-    val background by animateColorAsState(if (selected) theme.onBackground else theme.card,
+    val fill by animateColorAsState(if (selected) theme.onBackground else theme.onBackground.copy(alpha = 0f),
         androidx.compose.animation.core.tween(Motion.fastMs()), label = "collection-filter-color")
+    val ink by animateColorAsState(if (selected) theme.background else theme.onBackground,
+        androidx.compose.animation.core.tween(Motion.fastMs()), label = "collection-filter-ink")
     val scale by androidx.compose.animation.core.animateFloatAsState(if (pressed && !Motion.reduced) .96f else 1f,
         Motion.pressSpring(pressed), label = "collection-filter-press")
     Box(modifier.heightIn(min = 48.dp).semantics { this.selected = selected }
-        .graphicsLayer { scaleX = scale; scaleY = scale }.clip(CircleShape).background(background)
-        .clickable(interaction, null, role = Role.Tab, onClick = onClick).padding(horizontal = 18.dp, vertical = 12.dp),
-        contentAlignment = Alignment.Center) {
-        Text(label, color = if (selected) theme.background else theme.secondary,
-            fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+        .graphicsLayer { scaleX = scale; scaleY = scale }
+        .clickable(interaction, null, role = Role.Tab, onClick = onClick), contentAlignment = Alignment.Center) {
+        com.ketvoice.app.glass.GlassPanel(Modifier.heightIn(min = 38.dp), CircleShape,
+            com.ketvoice.app.glass.GlassParams.pill(dark = theme.isDark), enabled = com.ketvoice.app.data.AppSettings.liquidGlass.value) {
+            Box(Modifier.heightIn(min = 38.dp).clip(CircleShape).background(fill).padding(horizontal = 16.dp, vertical = 9.dp),
+                contentAlignment = Alignment.Center) {
+                Text(label, color = ink, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+            }
+        }
     }
 }
