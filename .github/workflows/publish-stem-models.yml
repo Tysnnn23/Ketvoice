@@ -1,0 +1,88 @@
+name: Publish voice separation model
+
+# Builds Ketmix's optional voice separation model (5.9.3) from public sources and publishes it
+# as the assets of the `ketmix-stems-v1` prerelease, which the app downloads on request and checks
+# against the SHA-256 of tools/stems/expected.sha256 (repeated in StemModel.kt; a test keeps them
+# equal). The conversion is pinned and reproducible: the job fails when its output differs from
+# those digests, and it never overwrites a published release.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      TAG: ketmix-stems-v1
+      HF: https://huggingface.co/csukuangfj/sherpa-onnx-spleeter-2stems/resolve/main
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install the pinned converter
+        run: |
+          python -m pip install --quiet "tensorflow==2.21.0" "onnx2tf==2.6.9" "onnx==1.20.1" "onnxruntime==1.26.0" \
+            "onnx_graphsurgeon==0.6.1" "sng4onnx==2.0.1" "psutil==5.9.5" "ai-edge-litert==2.1.2" \
+            "flatbuffers==25.12.19" "numpy==2.2.6"
+
+      - name: Download Spleeter 2 stems (ONNX export of sherpa-onnx)
+        run: |
+          set -euo pipefail
+          mkdir -p work && cd work
+          curl -fsSL -o vocals.onnx "$HF/vocals.onnx"
+          curl -fsSL -o accompaniment.onnx "$HF/accompaniment.onnx"
+          cat > SOURCES.sha256 <<'EOF'
+          bdc16ab6bf6117ddd4842c19e80e40e2be188fc555295064d424616b0224ac97  vocals.onnx
+          671ace17acd3720674a2bc14de32ac6292453dec20d9eb0ba4255d4ad8e3d8c0  accompaniment.onnx
+          EOF
+          sed -i 's/^ *//' SOURCES.sha256
+          sha256sum -c SOURCES.sha256
+
+      - name: Convert to LiteRT with float16 weights and check against the original
+        run: |
+          set -euo pipefail
+          cd work
+          mkdir -p out
+          for part in vocals accompaniment; do
+            onnx2tf -i $part.onnx -o tfl/$part -ois x:2,1,512,1024 -kat x -n > $part.log 2>&1 || { tail -40 $part.log; exit 1; }
+            python ../tools/stems/w16.py tfl/$part/${part}_float32.tflite out/spleeter-2stems-$part.tflite tfl/$part/schema_generated.py
+            python ../tools/stems/check.py $part.onnx out/spleeter-2stems-$part.tflite
+          done
+          cp ../docs/licenses/Spleeter-MIT.txt out/LICENSE-Spleeter.txt
+          cd out && sha256sum spleeter-2stems-*.tflite LICENSE-Spleeter.txt | tee SHA256SUMS.txt
+
+      - name: Compare with the digests the app expects (tools/stems/expected.sha256, also in StemModel.kt)
+        run: |
+          set -euo pipefail
+          cd work/out
+          sha256sum -c ../../tools/stems/expected.sha256
+
+      - name: Publish the prerelease (never over an existing one)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "::error::$TAG already exists; refusing to overwrite it."
+            exit 1
+          fi
+          cat > notes.md <<'EOF'
+          Optional voice separation model for Ketmix (Settings → Ketmix → Séparer les voix). Downloaded by the app
+          on request and checked against its SHA-256; not an app version.
+
+          Converted from Deezer's Spleeter 2 stems (MIT, see LICENSE-Spleeter.txt) through the ONNX export of
+          sherpa-onnx, by .github/workflows/publish-stem-models.yml.
+          EOF
+          sed -i 's/^ *//' notes.md
+          gh release create "$TAG" --prerelease --latest=false --title "Ketmix voice separation model v1" \
+            --notes-file notes.md work/out/spleeter-2stems-vocals.tflite work/out/spleeter-2stems-accompaniment.tflite \
+            work/out/LICENSE-Spleeter.txt work/out/SHA256SUMS.txt
+          mkdir -p check && cd check
+          gh release download "$TAG" --pattern 'spleeter-2stems-*.tflite'
+          for f in spleeter-2stems-*.tflite; do cmp "$f" "../work/out/$f"; done
+          echo "published and verified $TAG"
