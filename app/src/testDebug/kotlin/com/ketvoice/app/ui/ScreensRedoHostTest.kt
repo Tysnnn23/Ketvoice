@@ -39,7 +39,10 @@ class ScreensRedoHostTest {
     @Suppress("UNCHECKED_CAST")
     private val player get() = Player.state as MutableStateFlow<PlayerUiState>
 
+    private var lyricsModeBefore = 0
+
     @Before fun setup() {
+        lyricsModeBefore = AppSettings.lyricsMode.value
         java.util.Locale.setDefault(java.util.Locale.FRANCE)
         AppSettings.languageChosen.value = true
         AppSettings.language.value = AppLanguage.FRENCH.label
@@ -49,6 +52,7 @@ class ScreensRedoHostTest {
     }
 
     @After fun reset() {
+        AppSettings.lyricsMode.value = lyricsModeBefore
         coil.Coil.reset()
         player.value = PlayerUiState()
         AppSettings.reduceAnimations.value = false
@@ -156,6 +160,18 @@ class ScreensRedoHostTest {
         assertTrue("on the queue the glass carries only the controls (${platter.top})", platter.top > 450f)
         compose.onNodeWithText("Deuxième").assertIsDisplayed()
         image("redo-player-queue-dark")
+    }
+
+    @Test fun theLyricsPageKeepsItsLayoutWithTheControlsOnGlass() {
+        if (com.ketvoice.app.BuildConfig.IS_QUEST) return
+        AppSettings.lyricsMode.value = 2
+        playing(track("words", "Les paroles", "Nova"))
+        compose.setContent { KetvoiceTheme(useDark = true) { FullPlayerScreen(initialPage = PlayerPage.LYRICS, onDismiss = {}) } }
+        compose.onNodeWithTag("player-hero-artwork").assertDoesNotExist()
+        val platter = compose.onNodeWithTag("player-glass-platter").fetchSemanticsNode().boundsInRoot
+        assertTrue("the glass stays under the controls, below the lyrics (${platter.top})", platter.top > 450f)
+        compose.onNodeWithContentDescription("Paroles", useUnmergedTree = true).assertExists()
+        image("redo-player-lyrics-dark")
     }
 
     @Test @Config(qualifiers = "w900dp-h420dp-mdpi")

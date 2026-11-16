@@ -367,7 +367,8 @@ fun FullPlayerScreen(
                 val artworkHeight = when {
                     wide -> safeHeight
                     tabletop != null -> tabletop.sceneHeightDp.dp
-                    inlineCanvas -> windowHeight
+                    // A Canvas that failed shows the still cover, laid as a cover is.
+                    inlineCanvas && !failedCanvas -> windowHeight
                     else -> PlayerHero.coverHeightDp(windowWidth.value, safeHeight.value).dp
                 }
                 val artworkScene: @Composable () -> Unit = {
@@ -423,7 +424,7 @@ fun FullPlayerScreen(
                             state.isPlaying && !canvasFocus, Modifier.fillMaxSize().trackSwipeContent(trackSwipe), depth = true,
                             onCanvasFailure = { failedCanvas = true }, frame = artworkFrame)
                     }
-                    if (hero) PlayerHeroFrame(inlineCanvas, ambience.color, artworkModifier.testTag("player-hero-artwork"), artwork)
+                    if (hero) PlayerHeroFrame(inlineCanvas && !failedCanvas, ambience.color, artworkModifier.testTag("player-hero-artwork"), artwork)
                     else PlayerArtworkFrame(inlineCanvas, ambience.color, artworkModifier, artwork)
                 }
                 // The footer samples only this background sibling, never the
