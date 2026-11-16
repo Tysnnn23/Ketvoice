@@ -18,15 +18,17 @@ object GlassTint {
 
     private val LIGHT = floatArrayOf(1f, 1f, 1f)
     private val DARK = floatArrayOf(.24f, .24f, .27f)
+    private val BLACK = floatArrayOf(0f, 0f, 0f)
 
     /**
      * Veil of the blurred fallback (below Android 13, performance mode) for the current cover: the
-     * light milk itself, or the dark milk brought near black so light labels keep their contrast.
+     * light milk itself, or black tinted as lightly as the dark milk so light labels keep their contrast.
      * Read in draw-phase lambdas only.
      */
     fun veil(dark: Boolean): Color {
-        val m = milk(dark)
-        return if (dark) Color(m[0] * .3f, m[1] * .3f, m[2] * .3f) else Color(m[0], m[1], m[2])
+        // Without a cover these are exactly the white and black veils of earlier versions.
+        val m = if (dark) tinted(BLACK, cover.value, true, AppSettings.coverTintedGlass.value, strength.floatValue) else milk(false)
+        return Color(m[0], m[1], m[2])
     }
 
     /** Liquid 27 milk colour for the current cover. */

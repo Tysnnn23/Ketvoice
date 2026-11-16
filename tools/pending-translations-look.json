@@ -35,18 +35,6 @@
     "pt": "Reflexos conforme a inclinação",
     "ko": "기울기에 따른 반사광"
   },
-  "Le reflet reste fixe dans le casque.": {
-    "en": "The reflection stays still in the headset.",
-    "hi": "हेडसेट में चमक स्थिर रहती है।",
-    "ja": "ヘッドセットでは反射は固定されます。",
-    "zh": "在头显中反光保持固定。",
-    "ru": "В гарнитуре блик остаётся неподвижным.",
-    "it": "Nel visore il riflesso resta fisso.",
-    "es": "En el visor el reflejo permanece fijo.",
-    "de": "Im Headset bleibt die Spiegelung fest.",
-    "pt": "No headset o reflexo fica fixo.",
-    "ko": "헤드셋에서는 반사광이 고정됩니다."
-  },
   "Reflet fixe tant que les animations sont réduites.": {
     "en": "The reflection stays still while animations are reduced.",
     "hi": "एनिमेशन कम होने तक चमक स्थिर रहती है।",

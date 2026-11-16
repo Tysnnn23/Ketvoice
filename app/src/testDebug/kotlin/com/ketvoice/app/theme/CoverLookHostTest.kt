@@ -37,6 +37,8 @@ class CoverLookHostTest {
         check("accent on page", theme.accent, theme.background, CoverLegibility.TEXT)
         check("accent on card", theme.accent, theme.card, CoverLegibility.TEXT)
         check("label on accent", CoverLegibility.onFill(theme.accent), theme.accent, CoverLegibility.TEXT)
+        check("accent in a tinted capsule on the page", theme.accent, CoverLegibility.tinted(theme.accent, theme.background), CoverLegibility.TEXT)
+        check("accent in a tinted capsule on a card", theme.accent, CoverLegibility.tinted(theme.accent, theme.card), CoverLegibility.TEXT)
     }
 
     @Test fun everyCoverKeepsTextReadableInBothThemes() {
@@ -83,8 +85,8 @@ class CoverLookHostTest {
         assertTrue(CoverLegibility.contrast(fixed, light.background) >= CoverLegibility.TEXT)
         // One step lighter would not have been enough: not darker than needed.
         val lighter = hsl.copy(l = hsl.l + .02f).toColor()
-        assertTrue(CoverLegibility.contrast(lighter, light.background) < CoverLegibility.TEXT ||
-            CoverLegibility.contrast(lighter, light.card) < CoverLegibility.TEXT)
+        assertTrue(listOf(light.background, light.card, CoverLegibility.tinted(lighter, light.background),
+            CoverLegibility.tinted(lighter, light.card)).any { CoverLegibility.contrast(lighter, it) < CoverLegibility.TEXT })
         // Dark theme: a deep navy cover is lifted, not darkened.
         val dark = Ket27.theme(true, chosenAccent)
         val navy = Color(0xFF101A40)

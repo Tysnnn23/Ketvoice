@@ -55,17 +55,25 @@ object CoverLegibility {
         return if (a > b) a / b else b / a
     }
 
+    /** Opacity of the accent behind the label of a tinted capsule button (`Ket27AlertButtons`). */
+    const val CAPSULE_TINT = .16f
+
+    /** A capsule tinted with [accent] at [CAPSULE_TINT] over [surface]. */
+    fun tinted(accent: Color, surface: Color): Color = accent.copy(alpha = CAPSULE_TINT).compositeOver(surface.copy(alpha = 1f))
+
     /** Black or white, whichever reads better on [fill] (the label of a button filled with the accent). */
     fun onFill(fill: Color): Color = if (contrast(Color.Black, fill) >= contrast(Color.White, fill)) Color.Black else Color.White
 
     /**
      * The accent itself where it already reads on both [background] and [card]; otherwise the same
      * hue and saturation, darker on a light page or lighter on a dark one, just enough to reach
-     * [TEXT] on both. A cover colour can thus never leave a link or a slider fill unreadable.
+     * [TEXT] on both, and in a capsule tinted with itself. A cover colour can thus never leave a link or a slider fill unreadable.
      */
     fun readableAccent(accent: Color, background: Color, card: Color, minimum: Float = TEXT): Color {
         val opaque = accent.copy(alpha = 1f)
-        fun ok(c: Color) = contrast(c, background) >= minimum && contrast(c, card) >= minimum
+        // Also as the label of a capsule tinted with the accent itself (Ket 27 alert and page buttons).
+        fun ok(c: Color) = contrast(c, background) >= minimum && contrast(c, card) >= minimum &&
+            contrast(c, tinted(c, background)) >= minimum && contrast(c, tinted(c, card)) >= minimum
         if (ok(opaque)) return opaque
         val hsl = Hsl.of(opaque)
         val lighten = background.luminance() < .18f

@@ -240,9 +240,9 @@ fun SettingsScreen() {
             }
             Section("VERRE") {
                 GlassTransparencyCard()
-                SToggle(KetIcons.Appearance, "Reflets selon l'inclinaison",
+                // A headset's window has no tilt to follow: the switch is not offered on Quest.
+                if (!com.ketvoice.app.BuildConfig.IS_QUEST) SToggle(KetIcons.Appearance, "Reflets selon l'inclinaison",
                     when {
-                        com.ketvoice.app.BuildConfig.IS_QUEST -> "Le reflet reste fixe dans le casque."
                         com.ketvoice.app.ui.motion.Motion.reduced -> "Reflet fixe tant que les animations sont réduites."
                         AppSettings.highPerformanceMode.value -> "Reflet fixe en mode performance."
                         else -> "Le reflet du verre suit doucement l'inclinaison du téléphone"
