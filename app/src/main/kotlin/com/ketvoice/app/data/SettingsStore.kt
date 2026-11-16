@@ -87,7 +87,7 @@ object SettingsStore {
         com.ketvoice.app.player.ReverbControl.amount = s.reverbAmount.value / 100f
         com.ketvoice.app.player.ReverbControl.size = s.reverbSize.value / 100f
         com.ketvoice.app.player.ReverbControl.damping = s.reverbDamping.value / 100f
-        s.progressiveQuality.value = p.getBoolean("progressiveQuality", false)
+        s.progressiveQuality.value = p.getBoolean("progressiveQuality", true)
         s.discordPresence.value = p.getBoolean("discordPresence", false)
         s.shareNowPlaying.value = p.getBoolean("shareNowPlaying", false)
         s.haptics.value = p.getBoolean("haptics", true)

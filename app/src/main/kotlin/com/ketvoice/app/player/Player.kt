@@ -774,9 +774,8 @@ object Player {
                 if (gen == generation) _state.value = _state.value.copy(searchingBetter = false)
             }
             var currentStream: MusicApi.StreamInfo? = seededStream
-            suspend fun upgrade(stream: MusicApi.StreamInfo, sourceId: String) {
-                if (AppSettings.bitPerfect.value || !highQuality || stream.url == currentStream?.url || gen != generation ||
-                    StreamQuality.rank(stream) <= (currentStream?.let(StreamQuality::rank) ?: 0)) return
+            suspend fun switchTo(stream: MusicApi.StreamInfo, sourceId: String): Boolean {
+                if (gen != generation || StreamQuality.rank(stream) <= (currentStream?.let(StreamQuality::rank) ?: 0)) return gen == generation
                 val future = c.sendCustomCommand(androidx.media3.session.SessionCommand(PlaybackService.CMD_UPGRADE, Bundle.EMPTY),
                     Bundle().apply {
                         putString("id", track.id); putString("url", stream.url)
@@ -793,13 +792,29 @@ object Player {
                 }
                 if (!switched || gen != generation) {
                     // A failed standby decoder must never interrupt the audible stream.
-                    return
+                    return false
                 }
                 currentStream = stream
                 activeStream = stream
                 activeSourceId = sourceId
                 _state.value = _state.value.copy(quality = label(stream), audioSource = sourceLabel(sourceId, stream))
                 AudioCache.cacheWhole(track.id, stream)
+                return true
+            }
+            suspend fun upgrade(stream: MusicApi.StreamInfo, sourceId: String) {
+                if (AppSettings.bitPerfect.value || !highQuality || stream.url == currentStream?.url || gen != generation ||
+                    StreamQuality.rank(stream) <= (currentStream?.let(StreamQuality::rank) ?: 0)) return
+                // 6.0.0 Beta 4: the better stream often answers while the first one is still buffering, and a switch
+                // is only made once the sound plays; it waits for that, then tries twice, instead of being lost.
+                for (attempt in 0..1) {
+                    withTimeoutOrNull(15_000) {
+                        while (gen == generation && !(c.isPlaying || (!c.playWhenReady && c.playbackState == androidx.media3.common.Player.STATE_READY)))
+                            kotlinx.coroutines.delay(150)
+                    }
+                    if (gen != generation) return
+                    if (switchTo(stream, sourceId)) return
+                    kotlinx.coroutines.delay(3_000)
+                }
             }
             val candidates = StreamResolver.candidates(resolvedTrack, download = false, lossless = wantsLossless(), race = progressive)
             if (StreamResolver.sources(resolvedTrack, download = false, lossless = wantsLossless()).isEmpty()) {

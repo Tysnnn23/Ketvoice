@@ -202,7 +202,7 @@ internal class PcmCapture(private val fromUs: Long, private val untilUs: Long) :
     }
 
     /** What was recorded, or null when too little of it is continuous. */
-    fun pcm(): ShortArray? = if (rate > 0 && size >= rate * 2 * 5) data.copyOf(size) else null
+    fun pcm(minSeconds: Double = 5.0): ShortArray? = if (rate > 0 && size >= (rate * 2 * minSeconds).toInt()) data.copyOf(size) else null
 }
 
 /** Feeds one reading to two taps. */

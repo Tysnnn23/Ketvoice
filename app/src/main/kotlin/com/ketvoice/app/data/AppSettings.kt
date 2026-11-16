@@ -106,7 +106,8 @@ object AppSettings {
     val coverTintedGlass = mutableStateOf(true)
     /** Opt-in: the website's "Listening now" shows the title, artist and cover. The count itself is anonymous. */
     val shareNowPlaying = mutableStateOf(false)
-    val progressiveQuality = mutableStateOf(false)
+    /** Start on the first stream found, then switch to the best one without a gap (on by default since 6.0.0 Beta 4). */
+    val progressiveQuality = mutableStateOf(true)
     val equalizerGains = mutableStateOf(List(10) { 0 })
     val wifiHandoffEnabled = mutableStateOf(false)
     val spatialAudio = mutableStateOf(false)
