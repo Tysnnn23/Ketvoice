@@ -102,7 +102,9 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
     var moment by remember(track.id) { mutableStateOf(listOf<Int>()) }
     val momentHaptic = com.ketvoice.app.ui.motion.rememberHaptics()
     val offsets by LyricsOffsets.values.collectAsState()
-    val offsetMs = offsets[remember(track.id) { LyricsOffsets.key(track.id) }] ?: 0
+    // The voice stage plays the sound a little later (6.0.0 Beta 4): the lyrics follow the sound heard.
+    val stageDelay by com.ketvoice.app.stems.VoiceLevel.delayMs.collectAsState()
+    val offsetMs = (offsets[remember(track.id) { LyricsOffsets.key(track.id) }] ?: 0) - stageDelay
 
     // The sung line breathes with the bass (5.9.0): read in the line's layer, never recomposing the list.
     val breathing = !Motion.reduced && !AppSettings.highPerformanceMode.value && Player.state.collectAsState().value.isPlaying
@@ -340,6 +342,12 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
                 lyrics.lines.getOrNull((moment.maxOrNull() ?: -1) + 1)?.timeMs ?: -1L, lyrics.isTimed) { moment = emptyList() }
             else if (expanded && !following && lyrics.isTimed) {
                 FollowCapsule("Reprendre le suivi", Modifier.align(Alignment.CenterHorizontally).padding(bottom = 8.dp)) { following = true }
+            }
+        }
+        // 6.0.0 Beta 4: the title is separated whole as soon as its lyrics are shown, so that the slider answers at once.
+        LaunchedEffect(track.id) {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                runCatching { if (com.ketvoice.app.stems.VoiceSeparation.modelReady) com.ketvoice.app.stems.VoiceSeparation.request(track.id) }
             }
         }
         // 6.0.0: the level of the voice, at the right above the translation button, while the controls are shown

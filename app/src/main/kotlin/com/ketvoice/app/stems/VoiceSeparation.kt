@@ -71,26 +71,46 @@ internal object VoiceSeparation {
 
     val modelReady: Boolean get() = quality() != null
 
-    /** Separates [trackId] whole now, unless it already is or is being separated. */
+    /**
+     * The better model, when it is wanted now and better than [quality] (6.0.0 Beta 4): a title separated
+     * by the quick model is separated again by the high-quality one while the phone charges, or always
+     * when the listener chose "Always the best", and its voice level is then taken up live.
+     */
+    private fun upgrade(quality: Int): Int? = StemEngine.wanted()?.takeIf { it > quality && StemModel.hq.ready }
+
+    /**
+     * Separates [trackId] whole now (6.0.0 Beta 4: as soon as its lyrics are shown, so that the slider is
+     * ready when touched), unless it already is or is being separated; a separation by the quick model is
+     * then improved by the better one when that one is wanted.
+     */
     @Synchronized fun request(trackId: String) {
         when (val now = _state.value) {
             is State.Working -> if (now.trackId == trackId) return
             is State.Unavailable -> if (now.trackId == trackId) return
+            is State.Ready -> if (now.trackId == trackId && job?.isActive == true) return
             else -> Unit
         }
-        if (StemStore.hasWhole(trackId)) { _state.value = State.Ready(trackId); return }
-        val quality = quality() ?: return
+        val stored = StemStore.wholeQuality(trackId)
+        val first = if (stored != null) null else quality() ?: return
+        val better = upgrade(stored ?: first ?: return)
+        if (first == null && better == null) { _state.value = State.Ready(trackId); return }
         job?.cancel()
-        _state.value = State.Working(trackId, 0f)
+        _state.value = if (first != null) State.Working(trackId, 0f) else State.Ready(trackId)
         job = scope.launch {
             busy = true
-            val ok = try {
+            try {
                 val context = coroutineContext
-                runCatching { separate(trackId, quality) { context.isActive } }.getOrDefault(false)
+                if (first != null) {
+                    val ok = runCatching { separate(trackId, first, false) { context.isActive } }.getOrDefault(false)
+                    if (!context.isActive) return@launch
+                    _state.value = if (ok) State.Ready(trackId) else State.Unavailable(trackId)
+                    if (!ok) { android.util.Log.w("KetvoiceStems", "voice separation unavailable for this title"); return@launch }
+                    _separated.tryEmit(trackId)
+                }
+                // The better separation, in the background: the slider keeps working on the quick one meanwhile.
+                if (better != null && runCatching { separate(trackId, better, true) { context.isActive } }.getOrDefault(false) && context.isActive)
+                    _separated.tryEmit(trackId)
             } finally { busy = false; StemLibrary.wake() }
-            if (!coroutineContext.isActive) return@launch
-            _state.value = if (ok) State.Ready(trackId) else State.Unavailable(trackId)
-            if (ok) _separated.tryEmit(trackId) else android.util.Log.w("KetvoiceStems", "voice separation unavailable for this title")
         }
     }
 
@@ -100,7 +120,7 @@ internal object VoiceSeparation {
         return synchronized(addresses) { addresses[trackId] }
     }
 
-    private fun separate(trackId: String, quality: Int, goOn: () -> Boolean): Boolean {
+    private fun separate(trackId: String, quality: Int, quiet: Boolean, goOn: () -> Boolean): Boolean {
         val context = appContext ?: return false
         val uri = source(trackId) ?: return false
         val extractor = MediaExtractor()
@@ -115,7 +135,7 @@ internal object VoiceSeparation {
             if (durationMs <= 0) return false
             extractor.selectTrack(index)
             return StemLibrary.separateWhole(extractor, format, trackId, durationMs, quality, goOn) { fraction ->
-                _state.value = State.Working(trackId, fraction.coerceIn(0f, 1f))
+                if (!quiet) _state.value = State.Working(trackId, fraction.coerceIn(0f, 1f))
             }
         } finally {
             runCatching { extractor.release() }

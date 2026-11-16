@@ -65,7 +65,7 @@ class StemsTest {
     }
 
     /** With a network that hears as much voice as music, half of each cell stays below 11 kHz, all of it above. */
-    @Test fun maskFollowsTheNetworkAndKeepsTheHighs() {
+    @Test fun maskFollowsTheNetworkAndCarriesItAboveTheBand() {
         val n = 44_100 * 4
         val low = sine(500.0, 44_100, n, .4f); val high = sine(15_000.0, 44_100, n, .1f)
         val mix = FloatArray(n) { low[it] + high[it] }
@@ -78,8 +78,9 @@ class StemsTest {
         assertEquals(StemDsp.frames(n), mask.frames)
         val r = Separator.instrumental(mix, mix, mask, 0)
         val kept = StemMask.quantize(.5f).let { (it / 15f) * (it / 15f) }
-        // The instrumental of the low tone is the kept share of it; the high tone passes untouched.
-        val bandLow = FloatArray(n) { low[it] * kept + high[it] }
+        // The instrumental of the low tone is the kept share of it; above the network's band (6.0.0 Beta 4) the
+        // share of the band's top carries on, here the same even share.
+        val bandLow = FloatArray(n) { (low[it] + high[it]) * kept }
         var err = 0.0; var ref = 0.0
         for (i in r.from until r.until) { err += (r.left[i] - bandLow[i]).toDouble().let { it * it }; ref += bandLow[i].toDouble() * bandLow[i] }
         assertTrue("error ${sqrt(err / ref)}", sqrt(err / ref) < .02)

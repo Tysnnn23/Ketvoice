@@ -37,6 +37,14 @@ internal class StemMask(val startUs: Long, val frames: Int, val packed: ByteArra
         return LEVELS[q]
     }
 
+    /** The mean share kept over the top eighth of the band at [frame]: what is kept above the band. */
+    fun upper(frame: Int): Float {
+        val from = StemDsp.NET_BINS - StemDsp.NET_BINS / 8
+        var sum = 0f
+        for (k in from until StemDsp.NET_BINS) sum += value(frame, k)
+        return sum / (StemDsp.NET_BINS - from)
+    }
+
     /** Position in the title of the start of [frame], in milliseconds. */
     fun timeMs(frame: Int): Long = (startUs + frame.toLong() * StemDsp.HOP * 1_000_000L / StemDsp.RATE) / 1000L
 
@@ -248,7 +256,11 @@ internal object Separator {
                 val m = if (vocals) 1f - kept else kept
                 lr[k] *= m; li[k] *= m; rr[k] *= m; ri[k] *= m
             }
-            if (vocals) for (k in StemDsp.NET_BINS until StemDsp.BINS) { lr[k] = 0f; li[k] = 0f; rr[k] = 0f; ri[k] = 0f }
+            // Above the network's 11 kHz, the share of its highest band carries on (Spleeter's "average" mask
+            // extension, 6.0.0 Beta 4): the voice's sibilants leave the instrumental with the rest of the voice.
+            val upper = mask.upper(t)
+            val high = if (vocals) 1f - upper else upper
+            for (k in StemDsp.NET_BINS until StemDsp.BINS) { lr[k] *= high; li[k] *= high; rr[k] *= high; ri[k] *= high }
             stft.inverseAdd(lr, li, rr, ri, outL, outR, at)
             used = t - firstFrame + 1
         }

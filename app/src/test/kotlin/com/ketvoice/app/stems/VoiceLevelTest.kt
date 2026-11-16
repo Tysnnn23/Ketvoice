@@ -103,6 +103,60 @@ class VoiceLevelTest {
         } finally { VoiceLevel.level = 1f }
     }
 
+    /**
+     * With a model installed the stage runs from the start of the sound (6.0.0 Beta 4), so a separation that
+     * arrives while the title plays is taken up live: the voice goes, without a click or a gap.
+     */
+    @Test fun aRunningStageTakesTheSeparationUpLive() {
+        val control = DeckControl()
+        val processor = DeckMixProcessor(control)
+        val rate = 48_000
+        VoiceLevel.testStage = true; VoiceLevel.level = 0f
+        try {
+            processor.configure(AudioProcessor.AudioFormat(rate, 2, C.ENCODING_PCM_16BIT))
+            processor.flush()
+            assertTrue(control.voiceStageOn)
+            var at = 0
+            val out = ArrayList<Short>()
+            fun feed(frames: Int) {
+                if (at == 0) control.pendingTimeUs = control.offsetUs
+                processor.queueInput(pcm(frames, rate) { i -> (.4f * sin(2 * PI * 300 * (i + at) / rate).toFloat()).let { it to it } })
+                at += frames
+                shorts(processor.output).forEach { out += it }
+            }
+            repeat(10) { feed(4_800) }            // one second, nothing separated yet: the sound goes through
+            val before = out.size
+            control.voiceMask = mask(0f, 8)       // the separation arrives: every cell is voice
+            repeat(30) { feed(4_800) }
+            val left = out.filterIndexed { i, _ -> i % 2 == 0 }.map { it.toInt() }
+            val loudBefore = left.subList(rate / 2, before / 2 - 100).maxOf { abs(it) }
+            val quietAfter = left.subList(before / 2 + rate, left.size).maxOf { abs(it) }
+            assertTrue("sound before $loudBefore", loudBefore > 10_000)
+            assertTrue("voice left after $quietAfter", quietAfter < 60)
+            // No click: from one sample to the next the sound never jumps more than a 300 Hz tone can.
+            val step = (2 * PI * 300 / rate * .4 * 32768 * 1.2).toInt()
+            var worst = 0
+            for (i in 1 until left.size) worst = maxOf(worst, abs(left[i] - left[i - 1]))
+            assertTrue("jump $worst > $step", worst <= step)
+        } finally { VoiceLevel.testStage = false; VoiceLevel.level = 1f }
+    }
+
+    /** Between the separation's frames the gains are read in a straight line, and above its band its top carries on. */
+    @Test fun gainsAreReadBetweenFramesAndAboveTheBand() {
+        val stage = VoiceStage(44_100, 2)
+        val packed = ByteArray(2 * StemDsp.NET_BINS / 2)
+        for (k in 0 until StemDsp.NET_BINS step 2) { packed[(StemDsp.NET_BINS + k) shr 1] = 0xFF.toByte() }   // frame 1 all kept, frame 0 none
+        val m = StemMask(0L, 2, packed)
+        val gains = FloatArray(StemDsp.N_FFT / 2 + 1)
+        // A window centred halfway between frame 0 and frame 1.
+        val centreUs = ((StemDsp.N_FFT / 2 + StemDsp.HOP / 2) * 1_000_000L) / StemDsp.RATE
+        assertTrue(stage.gainsAt(centreUs, m, 0f, gains))
+        assertEquals(.5f, gains[10], .05f)
+        assertEquals("above the band, the band's top", .5f, gains[StemDsp.N_FFT / 2 - 10], .05f)
+        assertFalse("level 1 changes nothing", stage.gainsAt(centreUs, m, 1f, gains))
+        assertFalse("no separation, nothing", stage.gainsAt(centreUs, null, 0f, gains))
+    }
+
     /** On a real song (local only), the live stage at level 0 gives what the offline separation gives, 4096 frames later. */
     @Test fun liveMatchesOfflineOnASong() {
         val dir = System.getenv("KETVOICE_STEM_REF")?.let(::File)

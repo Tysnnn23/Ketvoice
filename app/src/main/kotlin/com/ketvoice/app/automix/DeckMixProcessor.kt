@@ -38,6 +38,10 @@ internal class DeckControl {
     @Volatile var stem: com.ketvoice.app.stems.StemAudio? = null
     /** The separation of the whole title on this deck, when it has one: the voice level works from it (6.0.0). */
     @Volatile var voiceMask: com.ketvoice.app.stems.StemMask? = null
+    /** True while the stream on this deck runs through the voice stage: a separation is then taken up live. */
+    @Volatile var voiceStageOn: Boolean = false
+    /** The deck heard as the player (not a deck preparing a mix): its delay is the one the lyrics follow. */
+    @Volatile var main: Boolean = true
 
     fun reset() { automation = null; tap = null; tailFromUs = Long.MAX_VALUE; stem = null }
 
@@ -49,8 +53,6 @@ internal class DeckMixProcessor(private val control: DeckControl) : BaseAudioPro
     private var dsp: DeckDsp? = null
     /** Turns the voice down when the title was separated whole; chosen at the start of a stream and kept to its end. */
     private var voice: com.ketvoice.app.stems.VoiceStage? = null
-    private var voiceMask: com.ketvoice.app.stems.StemMask? = null
-    private var framesSinceFlush = 0L
     private var cursorUs = C.TIME_UNSET
     /** Where the sound was when the processor was last flushed. */
     private var resumeUs = C.TIME_UNSET
@@ -73,11 +75,14 @@ internal class DeckMixProcessor(private val control: DeckControl) : BaseAudioPro
         if (cursorUs != C.TIME_UNSET) resumeUs = cursorUs
         cursorUs = C.TIME_UNSET
         control.active = usable
-        // The voice stage delays the sound by a fixed amount: it starts or stops only where the sound starts again.
-        voice = if (usable && inputAudioFormat.channelCount == 2) (voice?.takeIf { it.rate == inputAudioFormat.sampleRate }
+        // The voice stage delays the sound by a fixed amount: it starts or stops only where the sound starts again,
+        // and, once running, takes up a separation that arrives while the title plays (6.0.0 Beta 4).
+        val stage = usable && inputAudioFormat.channelCount == 2 &&
+            runCatching { com.ketvoice.app.stems.VoiceLevel.stageWanted(control.voiceMask != null) }.getOrDefault(false)
+        voice = if (stage) (voice?.takeIf { it.rate == inputAudioFormat.sampleRate }
             ?: com.ketvoice.app.stems.VoiceStage(inputAudioFormat.sampleRate, 2)).also { it.reset() } else null
-        voiceMask = null
-        framesSinceFlush = 0L
+        control.voiceStageOn = stage
+        if (control.main) com.ketvoice.app.stems.VoiceLevel.stageDelay(inputAudioFormat.sampleRate, stage)
     }
 
     override fun queueInput(inputBuffer: ByteBuffer) {
@@ -112,15 +117,13 @@ internal class DeckMixProcessor(private val control: DeckControl) : BaseAudioPro
             if (inputBuffer.remaining() <= output.remaining()) output.put(inputBuffer) else inputBuffer.position(inputBuffer.limit())
         }
         val frames = size / (2 * channels)
-        // The separation can only be taken up before the first sound of the stream has gone out.
-        if (framesSinceFlush == 0L && voiceMask == null && cursorUs != C.TIME_UNSET) voiceMask = control.voiceMask
-        val mask = voiceMask
         val stage = voice
-        if (mask != null && stage != null && cursorUs != C.TIME_UNSET) {
+        if (stage != null) {
+            // Once running, the stage processes every buffer (its delay must stay the same); the separation is read live.
+            val mask = if (cursorUs != C.TIME_UNSET) control.voiceMask else null
             try { stage.process(output, 0, frames, startUs, mask, com.ketvoice.app.stems.VoiceLevel.level) }
-            catch (_: RuntimeException) { voiceMask = null }
+            catch (_: RuntimeException) { control.voiceMask = null }
         }
-        framesSinceFlush += frames
         if (cursorUs != C.TIME_UNSET) cursorUs += frames * 1_000_000L / rate
         output.flip()
     }

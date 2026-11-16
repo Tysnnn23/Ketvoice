@@ -188,8 +188,9 @@ class PlaybackService : MediaSessionService() {
             if (main.currentMediaItem?.mediaId != trackId || com.ketvoice.app.automix.Automix.mixing) return@launch
             val control = decks[main] ?: return@launch
             control.voiceMask = mask
-            // The voice stage only starts where the sound starts again (its delay is fixed): a seek to the same place.
-            main.seekTo(main.currentPosition)
+            // A stream already running through the voice stage takes the separation up live, with no gap; otherwise
+            // (the model arrived during the title) the stage starts where the sound starts again: a seek to the same place.
+            if (!control.voiceStageOn) main.seekTo(main.currentPosition)
         }
     }
 
@@ -202,7 +203,7 @@ class PlaybackService : MediaSessionService() {
         if (exactRequested) { AudioEqualizer.release(); ReverbControl.amount = 0f }
         else ReverbControl.amount = AppSettings.reverbAmount.value / 100f
         lateinit var owner: ExoPlayer
-        val deck = com.ketvoice.app.automix.DeckControl()
+        val deck = com.ketvoice.app.automix.DeckControl().also { it.main = !standby }
         val meter = object : TeeAudioProcessor.AudioBufferSink {
             private var rate = 0
             private var channels = 0
