@@ -75,7 +75,7 @@ fun TrackMenuSheet(track: Track, onClose: () -> Unit) {
     GlassPanel(
         modifier = Modifier.fillMaxWidth().padding(10.dp),
         shape = RoundedCornerShape(28.dp),
-        params = GlassParams.sheet(radius, dark = true)
+        params = GlassParams.sheet(radius, dark = com.ketvoice.app.ui.common.sheetDark())
     ) {
         Column(
             Modifier
@@ -95,7 +95,7 @@ fun TrackMenuSheet(track: Track, onClose: () -> Unit) {
                     .width(44.dp)
                     .height(5.dp)
                     .clip(RoundedCornerShape(3.dp))
-                    .background(Color.White.copy(alpha = 0.35f))
+                    .background(com.ketvoice.app.ui.common.sheetInk().copy(alpha = 0.35f))
             )
         }
 
@@ -114,7 +114,7 @@ fun TrackMenuSheet(track: Track, onClose: () -> Unit) {
                     Text(
                         track.title,
                         localize = false,
-                        color = Color.White,
+                        color = com.ketvoice.app.ui.common.sheetInk(),
                         style = T.bodyBold,
                         fontSize = 17.sp,
                         maxLines = 3,
@@ -124,7 +124,7 @@ fun TrackMenuSheet(track: Track, onClose: () -> Unit) {
                 Text(
                     track.artist,
                     localize = false,
-                    color = Color.White.copy(alpha = 0.78f),
+                    color = com.ketvoice.app.ui.common.sheetInk().copy(alpha = 0.78f),
                     style = T.sub,
                     maxLines = 1,
                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
@@ -132,7 +132,7 @@ fun TrackMenuSheet(track: Track, onClose: () -> Unit) {
             }
             Spacer(Modifier.width(10.dp))
             Icon(
-                Icons.Filled.Close, "Fermer", tint = Color.White.copy(alpha = 0.7f),
+                Icons.Filled.Close, "Fermer", tint = com.ketvoice.app.ui.common.sheetInk().copy(alpha = 0.7f),
                 modifier = Modifier.size(48.dp).clickable(noRip, null) { onClose() }.padding(12.dp)
             )
         }
@@ -194,12 +194,12 @@ fun TrackMenuSheet(track: Track, onClose: () -> Unit) {
                     kotlinx.coroutines.delay(350)
                 }
             }
-            Text("Réverbération", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+            Text("Réverbération", color = com.ketvoice.app.ui.common.sheetInk(), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
             Text("Ambiance de salle réglable, traitée dans le flux audio.",
-                color = Color.White.copy(alpha = .72f), fontSize = 12.sp)
+                color = com.ketvoice.app.ui.common.sheetInk().copy(alpha = .72f), fontSize = 12.sp)
             if (AppSettings.reverbAmount.value > 0) Text(
                 if (processing) "Traitement audio actif" else "En attente du flux audio",
-                color = Color.White.copy(alpha = .72f), fontSize = 12.sp)
+                color = com.ketvoice.app.ui.common.sheetInk().copy(alpha = .72f), fontSize = 12.sp)
             ReverbSlider("Intensité", AppSettings.reverbAmount.value, { amount ->
                 Player.setReverb(amount, AppSettings.reverbSize.value, AppSettings.reverbDamping.value)
             })
@@ -283,9 +283,9 @@ fun TrackMenuSheet(track: Track, onClose: () -> Unit) {
 @Composable
 private fun ReverbSlider(label: String, value: Int, onChange: (Int) -> Unit) {
     Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(label, color = Color.White.copy(alpha = .82f), fontSize = 12.sp)
+        Text(label, color = com.ketvoice.app.ui.common.sheetInk().copy(alpha = .82f), fontSize = 12.sp)
         Spacer(Modifier.weight(1f))
-        Text("$value%", localize = false, color = Color.White.copy(alpha = .82f), fontSize = 12.sp)
+        Text("$value%", localize = false, color = com.ketvoice.app.ui.common.sheetInk().copy(alpha = .82f), fontSize = 12.sp)
     }
     com.ketvoice.app.ui.common.GlassSlider(
         value = value.toFloat(),
@@ -302,7 +302,7 @@ private fun ReverbSlider(label: String, value: Int, onChange: (Int) -> Unit) {
 private fun MenuItemRow(
     label: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
-    tint: Color = Color.White,
+    tint: Color = com.ketvoice.app.ui.common.sheetInk(),
     onClick: () -> Unit
 ) {
     Row(
@@ -314,7 +314,7 @@ private fun MenuItemRow(
     ) {
         Icon(icon, null, tint = tint, modifier = Modifier.size(25.dp))
         Spacer(Modifier.width(18.dp))
-        Text(label, color = Color.White, fontSize = 17.sp)
+        Text(label, color = com.ketvoice.app.ui.common.sheetInk(), fontSize = 17.sp)
     }
 }
 
@@ -324,7 +324,7 @@ fun AudioOutputSheet(onClose: () -> Unit) {
     GlassPanel(
         modifier = Modifier.fillMaxWidth().padding(10.dp),
         shape = RoundedCornerShape(26.dp),
-        params = GlassParams.sheet(radius, dark = true)
+        params = GlassParams.sheet(radius, dark = com.ketvoice.app.ui.common.sheetDark())
     ) {
         Column(
             Modifier
@@ -337,12 +337,12 @@ fun AudioOutputSheet(onClose: () -> Unit) {
                     .width(44.dp)
                     .height(5.dp)
                     .clip(RoundedCornerShape(3.dp))
-                    .background(Color.White.copy(alpha = 0.35f))
+                    .background(com.ketvoice.app.ui.common.sheetInk().copy(alpha = 0.35f))
             )
         }
         Text(
             "Sortie audio",
-            color = Color.White,
+            color = com.ketvoice.app.ui.common.sheetInk(),
             fontSize = 22.sp,
             fontWeight = FontWeight.Black,
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp)
@@ -375,7 +375,7 @@ fun AudioOutputSheet(onClose: () -> Unit) {
         }
         Text(
             "Le volume règle la lecture de Ketvoice sur cet appareil.",
-            color = Color.White.copy(alpha = 0.5f),
+            color = com.ketvoice.app.ui.common.sheetInk().copy(alpha = 0.5f),
             fontSize = 12.sp,
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp)
         )
@@ -412,13 +412,13 @@ private fun OutputCard(
             Modifier
                 .size(44.dp)
                 .clip(CircleShape)
-                .background(Color.White.copy(alpha = 0.12f)),
+                .background(com.ketvoice.app.ui.common.sheetInk().copy(alpha = 0.12f)),
             contentAlignment = Alignment.Center
-        ) { Icon(icon, null, tint = Color.White, modifier = Modifier.size(21.dp)) }
+        ) { Icon(icon, null, tint = com.ketvoice.app.ui.common.sheetInk(), modifier = Modifier.size(21.dp)) }
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
-            Text(title, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
-            Text(sub, color = Color.White.copy(alpha = 0.55f), fontSize = 13.sp)
+            Text(title, color = com.ketvoice.app.ui.common.sheetInk(), fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+            Text(sub, color = com.ketvoice.app.ui.common.sheetInk().copy(alpha = 0.55f), fontSize = 13.sp)
         }
         trailing()
     }

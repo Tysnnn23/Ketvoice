@@ -299,6 +299,9 @@ class Ket27MotionHostTest {
         assertEquals(450f, SheetDetents.settle(880f, 1200f, detents, fling), 0f)
         assertEquals(0f, SheetDetents.settle(450f, 1200f, detents, fling), 0f)
         assertEquals(900f, SheetDetents.settle(900f, -1200f, detents, fling), 0f)
+        // A menu opens at half height; a form, whose buttons are at its bottom, opens whole.
+        assertEquals(450f, SheetDetents.opening(detents, full = false), 0f); assertEquals(900f, SheetDetents.opening(detents, full = true), 0f)
+        assertEquals(300f, SheetDetents.opening(listOf(300f), full = false), 0f); assertEquals(0f, SheetDetents.opening(emptyList(), full = true), 0f)
         assertEquals(0f, SheetDetents.scrim(0f, detents), 0f); assertEquals(1f, SheetDetents.scrim(700f, detents), 0f)
         assertEquals(.5f, SheetDetents.scrim(225f, detents), 1e-4f)
     }

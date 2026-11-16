@@ -57,27 +57,27 @@ fun PlaylistMenuSheet(
     GlassPanel(
         modifier = Modifier.fillMaxWidth().padding(10.dp),
         shape = RoundedCornerShape(28.dp),
-        params = GlassParams.sheet(radius, dark = true)
+        params = GlassParams.sheet(radius, dark = com.ketvoice.app.ui.common.sheetDark())
     ) {
         Column(Modifier.fillMaxWidth().heightIn(max = com.ketvoice.app.ui.common.sheetMaxHeight())
             .verticalScroll(rememberScrollState()).pointerInput(Unit) { detectTapGestures {} }) {
             Box(Modifier.fillMaxWidth().padding(top = 8.dp), contentAlignment = Alignment.Center) {
                 Box(Modifier.width(44.dp).height(5.dp).clip(RoundedCornerShape(3.dp))
-                    .background(Color.White.copy(alpha = .35f)))
+                    .background(com.ketvoice.app.ui.common.sheetInk().copy(alpha = .35f)))
             }
             Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                 PlaylistArtwork(playlist, playlist.name, Modifier.size(56.dp))
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(playlist.name, localize = false, color = Color.White, fontSize = 17.sp,
+                    Text(playlist.name, localize = false, color = com.ketvoice.app.ui.common.sheetInk(), fontSize = 17.sp,
                         fontWeight = FontWeight.Bold, maxLines = 3, overflow = TextOverflow.Ellipsis)
                     Text("${playable.size} / ${playlist.entries.size} titres disponibles",
-                        color = Color.White.copy(alpha = .78f), fontSize = 13.sp)
+                        color = com.ketvoice.app.ui.common.sheetInk().copy(alpha = .78f), fontSize = 13.sp)
                 }
                 Spacer(Modifier.width(10.dp))
                 Box(Modifier.size(48.dp).clip(RoundedCornerShape(50)).clickable(noRip, null) { onClose() },
                     contentAlignment = Alignment.Center) {
-                    Icon(Icons.Filled.Close, "Fermer", tint = Color.White.copy(alpha = .7f), modifier = Modifier.size(20.dp))
+                    Icon(Icons.Filled.Close, "Fermer", tint = com.ketvoice.app.ui.common.sheetInk().copy(alpha = .7f), modifier = Modifier.size(20.dp))
                 }
             }
             if (playable.isNotEmpty()) {
@@ -103,7 +103,7 @@ fun PlaylistMenuSheet(
 private fun PlaylistMenuRow(
     label: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
-    tint: Color = Color.White,
+    tint: Color = com.ketvoice.app.ui.common.sheetInk(),
     enabled: Boolean = true,
     onClick: () -> Unit
 ) {
@@ -111,8 +111,8 @@ private fun PlaylistMenuRow(
         .clickable(noRip, null, enabled = enabled) { onClick() }
         .heightIn(min = 48.dp).padding(horizontal = 20.dp, vertical = 13.dp),
         verticalAlignment = Alignment.CenterVertically) {
-        Icon(icon, null, tint = if (enabled) tint else Color.White.copy(alpha = .4f), modifier = Modifier.size(25.dp))
+        Icon(icon, null, tint = if (enabled) tint else com.ketvoice.app.ui.common.sheetInk().copy(alpha = .4f), modifier = Modifier.size(25.dp))
         Spacer(Modifier.width(18.dp))
-        Text(label, color = if (enabled) tint else Color.White.copy(alpha = .4f), fontSize = 17.sp)
+        Text(label, color = if (enabled) tint else com.ketvoice.app.ui.common.sheetInk().copy(alpha = .4f), fontSize = 17.sp)
     }
 }

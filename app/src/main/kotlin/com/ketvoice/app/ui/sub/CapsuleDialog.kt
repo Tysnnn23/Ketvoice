@@ -33,14 +33,19 @@ fun CapsuleDialog(onClose: () -> Unit) {
     val selected = preview.filterNot { it.id in excluded }
     val ready = OfflineCapsule.readyTracks()
     val readyItems = downloaded.filter { it.track.id in ready.map { t -> t.id }.toSet() }
-    AlertDialog(onDismissRequest = onClose, title = { Text("Capsule hors ligne") },
+    AlertDialog(onDismissRequest = onClose,
+        // Ket 27: the rounder corners and the cell colour of an iOS alert.
+        shape = if (com.ketvoice.app.theme.Ket27.on) androidx.compose.foundation.shape.RoundedCornerShape(com.ketvoice.app.theme.Ket27.Metrics.alertRadius)
+            else androidx.compose.material3.AlertDialogDefaults.shape,
+        containerColor = if (com.ketvoice.app.theme.Ket27.on) theme.card else androidx.compose.material3.AlertDialogDefaults.containerColor,
+        title = { Text("Capsule hors ligne") },
         text = { Column(Modifier.fillMaxWidth().heightIn(max = (LocalConfiguration.current.screenHeightDp * .60f).dp)
             .verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Préparez une réserve pour votre trajet. Favoris en priorité, puis historique et sélection choisie. Aucun fichier existant n'est supprimé ou remplacé.", color = theme.secondary)
             CapsuleChoice("Durée souhaitée", listOf(30, 60, 120, 180).map { "$it min" }, "$minutes min", !capsule.busy) { minutes = listOf(30,60,120,180)[it]; preview = emptyList() }
             CapsuleChoice("Budget des fichiers", listOf(128,256,512,1024).map { "$it Mo" }, "$megabytes Mo", !capsule.busy) { megabytes = listOf(128,256,512,1024)[it]; preview = emptyList() }
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Checkbox(discoveries, { discoveries = it; preview = emptyList() }, enabled = !capsule.busy)
+                com.ketvoice.app.ui.common.KetCheckbox(discoveries, { discoveries = it; preview = emptyList() }, enabled = !capsule.busy)
                 Text("Inclure la sélection d'accueil", color = theme.onBackground)
             }
             Text("Durée et taille de la sélection sont estimées. Le budget est contrôlé sur les fichiers réellement écrits, hors cache partagé. Pochettes et paroles sont conservées si disponibles et si elles tiennent dans le budget. Les vidéos Canvas ne sont pas ajoutées à la capsule.", fontSize = 12.sp, color = theme.secondary)
@@ -54,7 +59,7 @@ fun CapsuleDialog(onClose: () -> Unit) {
                 Text("${selected.size} titres sélectionnés", color = theme.accent)
                 preview.forEach { track ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Checkbox(track.id !in excluded, { checked -> excluded = if (checked) excluded - track.id else excluded + track.id }, enabled = !capsule.busy)
+                        com.ketvoice.app.ui.common.KetCheckbox(track.id !in excluded, { checked -> excluded = if (checked) excluded - track.id else excluded + track.id }, enabled = !capsule.busy)
                         Column(Modifier.weight(1f)) { TrackTitle(track.title, theme.onBackground, fontSize = 14.sp)
                             Text(track.artist, localize = false, color = theme.secondary, fontSize = 12.sp) }
                     }

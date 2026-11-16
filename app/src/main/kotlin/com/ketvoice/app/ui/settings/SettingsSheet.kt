@@ -52,7 +52,7 @@ internal fun SettingsSheet(onDismiss: () -> Unit, content: @Composable ColumnSco
             val compactLandscape = maxWidth > 640.dp && maxHeight < 600.dp
             // Ket 27: the same sheet as everywhere else — detents, the finger, a spring.
             if (com.ketvoice.app.ui.common.springSheets && !compactLandscape) {
-                com.ketvoice.app.ui.common.SpringSheet(onDismiss, Modifier.statusBarsPadding().imePadding().navigationBarsPadding(), scrim = 0f) { room ->
+                com.ketvoice.app.ui.common.SpringSheet(onDismiss, Modifier.statusBarsPadding().imePadding().navigationBarsPadding(), scrim = 0f, startFull = true) { room ->
                     Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.BottomCenter) {
                         CompositionLocalProvider(LocalBackdropLayer provides backdrop) {
                             GlassPanel(Modifier.widthIn(max = 560.dp).fillMaxWidth().padding(horizontal = 12.dp).padding(top = 12.dp, bottom = 12.dp)

@@ -54,18 +54,18 @@ internal fun QuickTrackAction(label: String, glyph: ImageVector, modifier: Modif
         GlassPanel(Modifier.size(54.dp).graphicsLayer {
             val (width, height) = glassPressScale(pressure, liquid27)
             scaleX = width; scaleY = height
-        }, CircleShape, GlassParams.circle(dark = true).copy(opticalPressure = pressure), captured = true) {
+        }, CircleShape, GlassParams.circle(dark = com.ketvoice.app.ui.common.sheetDark()).copy(opticalPressure = pressure), captured = true) {
             // Ket 27: the symbol bounces when its state is set (a favourite, a finished download).
             Box(Modifier.fillMaxSize().then(if (com.ketvoice.app.theme.Ket27.on) Modifier.symbolBounce(active) else Modifier),
                 contentAlignment = Alignment.Center) {
                 AnimatedContent(glyph, transitionSpec = { fadeIn(tween(Motion.duration(160))).togetherWith(fadeOut(tween(Motion.duration(120)))) },
                     label = "quick-action-glyph") {
-                    Icon(it, null, tint = if (active) accent else Color.White, modifier = Modifier.size(24.dp))
+                    Icon(it, null, tint = if (active) accent else com.ketvoice.app.ui.common.sheetInk(), modifier = Modifier.size(24.dp))
                 }
             }
         }
         Spacer(Modifier.height(6.dp))
-        Text(label, color = Color.White.copy(alpha = .9f), fontSize = 11.sp, lineHeight = 13.sp, textAlign = TextAlign.Center,
+        Text(label, color = com.ketvoice.app.ui.common.sheetInk().copy(alpha = .9f), fontSize = 11.sp, lineHeight = 13.sp, textAlign = TextAlign.Center,
             maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 2.dp))
     }
 }

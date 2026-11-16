@@ -104,22 +104,22 @@ fun HomeScreen() {
             contentPadding = PaddingValues(top = if (layout.hasRail) 24.dp else 12.dp, bottom = layout.bottomPaddingDp.dp)) {
             // The page opens on who it greets: the brand in small, the hour in large, the account within reach.
             item(key = "greeting") {
-                Row(Modifier.fillMaxWidth().padding(start = 18.dp, end = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.fillMaxWidth().padding(start = com.ketvoice.app.ui.common.pageMargin(18.dp), end = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Image(painterResource(R.drawable.logo_clean), null, Modifier.size(20.dp), contentScale = ContentScale.Fit)
                             Text("KETVOICE", localize = false, color = theme.secondary, fontSize = 11.sp, fontWeight = FontWeight.Bold,
                                 letterSpacing = 2.2.sp, modifier = Modifier.padding(start = 8.dp))
                         }
-                        Text(greeting, color = theme.onBackground, fontSize = if (layout.hasRail) 42.sp else 34.sp, fontWeight = FontWeight.Black,
-                            letterSpacing = (-1.2).sp, lineHeight = if (layout.hasRail) 46.sp else 38.sp, maxLines = 2,
-                            modifier = Modifier.padding(top = 6.dp).asHeading().testTag("home-greeting"))
+                        com.ketvoice.app.ui.common.PageTitle(greeting, if (layout.hasRail) 42.sp else 34.sp,
+                            Modifier.padding(top = 6.dp).asHeading().testTag("home-greeting"), classicWeight = FontWeight.Black,
+                            classicSpacing = (-1.2).sp, classicLineHeight = if (layout.hasRail) 46.sp else 38.sp, maxLines = 2)
                     }
                     if (!layout.hasRail) Box(Modifier.size(DesignTokens.Space.touch).clip(androidx.compose.foundation.shape.CircleShape)
                         .clickable(role = androidx.compose.ui.semantics.Role.Button) { AppUi.showAccount.value = true },
                         contentAlignment = Alignment.Center) { AccountAvatar("K", 38.dp) }
                 }
-                Row(Modifier.padding(start = 18.dp, end = 18.dp, top = 4.dp, bottom = 14.dp)) {
+                Row(Modifier.padding(start = com.ketvoice.app.ui.common.pageMargin(18.dp), end = 18.dp, top = 4.dp, bottom = 14.dp)) {
                     Text(origin, color = theme.secondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     if (youtube.connected) Text(" · ${youtube.name}", localize = false, color = theme.secondary, fontSize = 12.sp, maxLines = 1)
                 }

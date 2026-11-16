@@ -14,6 +14,7 @@ import com.ketvoice.app.theme.LocalTheme
 fun AppAlertDialog(onDismissRequest: () -> Unit, confirmButton: @Composable () -> Unit,
     modifier: Modifier = Modifier, dismissButton: (@Composable () -> Unit)? = null,
     title: (@Composable () -> Unit)? = null, text: (@Composable () -> Unit)? = null) {
+    if (com.ketvoice.app.theme.Ket27.on) { Ket27Alert(onDismissRequest, confirmButton, modifier, dismissButton, title, text); return }
     val th = LocalTheme.current
     val refined = DesignChoices.enabled("D5")
     val shape = RoundedCornerShape(if (com.ketvoice.app.theme.Ket27.on) com.ketvoice.app.theme.Ket27.Metrics.alertRadius else if (refined) 26.dp else 28.dp)

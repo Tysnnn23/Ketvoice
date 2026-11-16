@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -107,7 +106,7 @@ internal fun StudioTitleCanvas(state: StudioState, target: VisualTarget, rights:
             Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable(role = Role.Checkbox) {
                 selected = if (ticked) selected - track.id else selected + track.id
             }.padding(vertical = 2.dp).testTag("studio-title-row"), verticalAlignment = Alignment.CenterVertically) {
-                Checkbox(ticked, null, colors = CheckboxDefaults.colors(checkedColor = theme.accent, uncheckedColor = theme.secondary))
+                com.ketvoice.app.ui.common.KetCheckbox(ticked, null, colors = CheckboxDefaults.colors(checkedColor = theme.accent, uncheckedColor = theme.secondary))
                 Text("${index + 1}", localize = false, color = theme.secondary, fontSize = 12.sp, modifier = Modifier.width(22.dp))
                 Text(track.title, localize = false, color = theme.onBackground, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f))

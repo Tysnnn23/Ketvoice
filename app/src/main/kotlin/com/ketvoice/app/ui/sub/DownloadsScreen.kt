@@ -21,7 +21,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.Checkbox
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -233,7 +232,7 @@ fun DownloadsScreen() {
                             Player.playQueue(tracks, tracks.indexOfFirst { it.id == track.id }.coerceAtLeast(0))
                         }).padding(start = 8.dp, end = 2.dp, top = 8.dp, bottom = 8.dp).testTag("saved-download"),
                         verticalAlignment = Alignment.CenterVertically) {
-                        if (selecting) Checkbox(track.id in selected, onCheckedChange = null)
+                        if (selecting) com.ketvoice.app.ui.common.KetCheckbox(track.id in selected, onCheckedChange = null)
                         Cover(track.title, com.ketvoice.app.data.MediaOverrides.cover(track, artwork["t:${track.id}"] ?: track.coverUrl), 56.dp, 12.dp)
                         Column(Modifier.padding(start = 12.dp).weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                             TrackTitle(track.title, color = if (current) theme.accent else theme.onBackground)
@@ -280,6 +279,9 @@ fun DownloadsScreen() {
     }
     if (deleteItems.isNotEmpty()) {
         AlertDialog(onDismissRequest = { if (!deleting) deleteIds = emptyList() }, containerColor = theme.card,
+            // Ket 27: the rounder corners of an iOS alert.
+            shape = if (com.ketvoice.app.theme.Ket27.on) RoundedCornerShape(com.ketvoice.app.theme.Ket27.Metrics.alertRadius)
+                else androidx.compose.material3.AlertDialogDefaults.shape,
             title = { Text("Supprimer le téléchargement", color = theme.onBackground) },
             text = { Column {
                 Text(deleteItems.take(3).joinToString("\n") { it.track.title }, localize = false, color = theme.secondary)
@@ -381,7 +383,7 @@ internal fun DownloadGroupRow(title: String, subtitle: String?, meta: String, co
     Row(Modifier.fillMaxWidth().padding(vertical = 4.dp).clip(RoundedCornerShape(20.dp)).background(theme.card)
         .clickable(role = if (checked != null) Role.Checkbox else Role.Button, onClick = onClick).padding(12.dp),
         verticalAlignment = Alignment.CenterVertically) {
-        if (checked != null) Checkbox(checked, onCheckedChange = null)
+        if (checked != null) com.ketvoice.app.ui.common.KetCheckbox(checked, onCheckedChange = null)
         Cover(title, cover, 68.dp, if (round) 34.dp else 14.dp)
         Column(Modifier.weight(1f).padding(start = 14.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(title, localize = false, color = theme.onBackground, fontSize = 16.sp, fontWeight = FontWeight.Bold,

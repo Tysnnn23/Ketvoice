@@ -63,6 +63,8 @@ internal object SheetDetents {
     const val FLING_DP = 700f
     const val DAMPING = .82f
     const val STIFFNESS = 380f
+    /** A sheet whose owner has not removed it this long after being asked to close was refused, and returns. */
+    const val REFUSED_AFTER_MS = 700L
 
     /** The visible heights a sheet of [content] px can rest at in a window of [container] px, lowest first. */
     fun heights(content: Float, container: Float): List<Float> {
@@ -85,6 +87,12 @@ internal object SheetDetents {
         return detents.minByOrNull { kotlin.math.abs(it - visible) } ?: detents.first()
     }
 
+    /** The detent a sheet opens on: the lowest, or the highest for a sheet that must be seen whole ([full]). */
+    fun opening(detents: List<Float>, full: Boolean): Float = (if (full) detents.lastOrNull() else detents.firstOrNull()) ?: 0f
+
+    /** Whether [target] is the highest of several detents (a sheet with one detent is not "full": it has nowhere lower to rest). */
+    fun isFull(target: Float, detents: List<Float>): Boolean = detents.size > 1 && target >= detents.last() - 1f
+
     /** How dark the scrim is for a sheet showing [visible] px: full once the lowest detent is reached. */
     fun scrim(visible: Float, detents: List<Float>): Float {
         val low = detents.firstOrNull() ?: return 0f
@@ -104,14 +112,15 @@ internal fun sheetMaxHeight(): Dp = LocalSheetMaxHeight.current
 /**
  * A bottom sheet with detents and a spring, shared by every sheet of Ket 27 (title menu, playlist
  * menu, lyrics sources, audio output, the pickers and dialogs of the settings…). The sheet rises
- * to half height, follows the finger, settles on the nearest detent with a spring, and closes when
- * pulled down past the lowest one. A list inside it scrolls only once the sheet is at full height.
+ * to half height (or, for a form whose buttons are at its bottom, to its full height: [startFull]),
+ * follows the finger, settles on the nearest detent with a spring, and closes when pulled down
+ * past the lowest one. A list inside it scrolls only once the sheet is at full height.
  * With reduced motion every move snaps.
  *
  * [content] is told the tallest it may be; it should not be taller.
  */
 @Composable
-internal fun SpringSheet(onDismiss: () -> Unit, modifier: Modifier = Modifier, scrim: Float = .35f,
+internal fun SpringSheet(onDismiss: () -> Unit, modifier: Modifier = Modifier, scrim: Float = .35f, startFull: Boolean = false,
                          content: @Composable (maxHeight: Dp) -> Unit) {
     val dismiss by rememberUpdatedState(onDismiss)
     val scope = rememberCoroutineScope()
@@ -123,8 +132,22 @@ internal fun SpringSheet(onDismiss: () -> Unit, modifier: Modifier = Modifier, s
     var opened by remember { mutableStateOf(false) }
     var closing by remember { mutableStateOf(false) }
     var detents by remember { mutableStateOf(emptyList<Float>()) }
+    // The detent the sheet is meant to rest on, kept when its content changes height under it.
+    var atFull by remember { mutableStateOf(startFull) }
     val closeLabel = com.ketvoice.app.data.AppText.t("Fermer")
 
+    /**
+     * Asks the owner to close the sheet, which has just gone under the edge. An owner may refuse (a save
+     * is running): the sheet is then still here a moment later, and comes back up instead of staying hidden.
+     */
+    suspend fun leave() {
+        dismiss()
+        kotlinx.coroutines.delay(SheetDetents.REFUSED_AFTER_MS)
+        closing = false
+        val back = SheetDetents.opening(detents, atFull)
+        if (Motion.reduced) visible.snapTo(back)
+        else visible.animateTo(back, spring(dampingRatio = SheetDetents.DAMPING, stiffness = SheetDetents.STIFFNESS))
+    }
     fun settle(velocity: Float) {
         if (closing || detents.isEmpty()) return
         val target = SheetDetents.settle(visible.value, velocity, detents, fling)
@@ -133,8 +156,9 @@ internal fun SpringSheet(onDismiss: () -> Unit, modifier: Modifier = Modifier, s
                 closing = true
                 if (Motion.reduced) visible.snapTo(0f)
                 else visible.animateTo(0f, spring(dampingRatio = 1f, stiffness = SheetDetents.STIFFNESS), initialVelocity = -velocity)
-                dismiss()
+                leave()
             } else {
+                atFull = SheetDetents.isFull(target, detents)
                 if (kotlin.math.abs(target - visible.value) > 1f) haptic(Haptics.Kind.Tick)
                 if (Motion.reduced) visible.snapTo(target)
                 else visible.animateTo(target, spring(dampingRatio = SheetDetents.DAMPING, stiffness = SheetDetents.STIFFNESS), initialVelocity = -velocity)
@@ -146,7 +170,7 @@ internal fun SpringSheet(onDismiss: () -> Unit, modifier: Modifier = Modifier, s
         closing = true
         scope.launch {
             if (!Motion.reduced) visible.animateTo(0f, spring(dampingRatio = 1f, stiffness = SheetDetents.STIFFNESS))
-            dismiss()
+            leave()
         }
     }
     /** Moves the sheet by [delta] px (positive downwards) and says how much of it was used. */
@@ -180,16 +204,14 @@ internal fun SpringSheet(onDismiss: () -> Unit, modifier: Modifier = Modifier, s
             val next = SheetDetents.heights(contentPx.toFloat(), container)
             detents = next
             if (next.isEmpty() || closing) return@LaunchedEffect
-            if (!opened) {
-                opened = true
-                if (Motion.reduced) visible.snapTo(next.first())
-                else visible.animateTo(next.first(), spring(dampingRatio = SheetDetents.DAMPING, stiffness = SheetDetents.STIFFNESS))
-            } else if (!visible.isRunning && next.none { kotlin.math.abs(it - visible.value) < 1f }) {
-                // The content changed height (a section unfolded): stay on the detent that is nearest now.
-                val target = next.minByOrNull { kotlin.math.abs(it - visible.value) } ?: next.first()
-                if (Motion.reduced) visible.snapTo(target)
-                else visible.animateTo(target, spring(dampingRatio = 1f, stiffness = SheetDetents.STIFFNESS))
-            }
+            // A menu rises to half height; a form, whose buttons are at its bottom, opens whole. When the content
+            // changes height afterwards (it finishes loading, a section unfolds), the sheet stays on the same detent.
+            val target = SheetDetents.opening(next, atFull)
+            if (kotlin.math.abs(target - visible.value) < 1f) { opened = true; return@LaunchedEffect }
+            val rising = !opened
+            opened = true
+            if (Motion.reduced) visible.snapTo(target)
+            else visible.animateTo(target, spring(dampingRatio = if (rising) SheetDetents.DAMPING else 1f, stiffness = SheetDetents.STIFFNESS))
         }
         if (scrim > 0f) Box(Modifier.fillMaxSize()
             .background(Color.Black.copy(alpha = scrim * SheetDetents.scrim(visible.value, detents))))
@@ -207,3 +229,15 @@ internal fun SpringSheet(onDismiss: () -> Unit, modifier: Modifier = Modifier, s
         }
     }
 }
+
+/**
+ * The ink of a menu sheet. The classic interface draws its menus on dark glass whatever the page, so
+ * their ink is white; under Ket 27 a sheet takes the colours of what it lies over, as on iOS.
+ */
+@Composable
+internal fun sheetInk(): androidx.compose.ui.graphics.Color =
+    if (Ket27.on) com.ketvoice.app.theme.LocalTheme.current.onBackground else androidx.compose.ui.graphics.Color.White
+
+/** Whether a menu sheet is made of dark glass: always in the classic interface, with the theme under Ket 27. */
+@Composable
+internal fun sheetDark(): Boolean = if (Ket27.on) com.ketvoice.app.theme.LocalTheme.current.isDark else true

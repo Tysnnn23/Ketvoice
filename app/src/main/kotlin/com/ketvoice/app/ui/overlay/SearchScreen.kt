@@ -210,11 +210,10 @@ fun SearchScreen() {
             Row(
                 Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 6.dp),
+                    .padding(horizontal = com.ketvoice.app.ui.common.pageMargin(20.dp), vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Rechercher", color = th.onBackground, fontSize = 28.sp, fontWeight = FontWeight.Bold,
-                    modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                com.ketvoice.app.ui.common.PageTitle("Rechercher", 28.sp, Modifier.weight(1f))
                 AccountAvatar(
                     "K", size = 42.dp, modifier = Modifier.clickable(
                         interactionSource = remember { MutableInteractionSource() },

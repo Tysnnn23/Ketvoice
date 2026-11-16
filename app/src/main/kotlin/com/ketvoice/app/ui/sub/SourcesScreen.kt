@@ -74,6 +74,14 @@ fun SourcesScreen() {
     var apiOk by remember { mutableStateOf<Boolean?>(null) }
 
     Column(Modifier.fillMaxSize().pageBackground(th).statusBarsPadding()) {
+        // Ket 27: the bar of a pushed page, with the page's one action at its end.
+        if (com.ketvoice.app.theme.Ket27.on) com.ketvoice.app.ui.common.Ket27PageBar("Sources", { AppUi.closeOverlay() }) {
+            Box(Modifier.size(44.dp).clip(CircleShape).clickable { showAdd = true }, contentAlignment = Alignment.Center) {
+                Box(Modifier.size(34.dp).clip(CircleShape).background(th.accent), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Filled.Add, "Ajouter", tint = Color.White, modifier = Modifier.size(20.dp))
+                }
+            }
+        } else
         Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.AutoMirrored.Filled.ArrowBack, "Retour", tint = th.onBackground,
@@ -86,7 +94,7 @@ fun SourcesScreen() {
                 Icon(Icons.Filled.Add, "Ajouter", tint = Color.White, modifier = Modifier.size(22.dp))
             }
         }
-        LazyColumn(contentPadding = PaddingValues(start = 18.dp, end = 18.dp, bottom = 160.dp)) {
+        LazyColumn(contentPadding = PaddingValues(start = com.ketvoice.app.ui.common.pageMargin(18.dp), end = com.ketvoice.app.ui.common.pageMargin(18.dp), bottom = 160.dp)) {
             item {
                 Text(
                     "Glissez les poignées pour définir la priorité de lecture et de téléchargement. " +
@@ -395,6 +403,8 @@ private fun SourceCard(
 
 @Composable
 private fun CustomSwitch(checked: Boolean, onToggle: () -> Unit) {
+    // Ket 27: the same switch as everywhere else in the app.
+    if (com.ketvoice.app.theme.Ket27.on) { com.ketvoice.app.ui.common.LiquidGlassSwitch(checked, { onToggle() }); return }
     val th = LocalTheme.current
     val offset by animateDpAsState(if (checked) 19.dp else 1.dp, spring(dampingRatio = .82f, stiffness = 500f))
     val color by animateColorAsState(if (checked) th.accent else th.hairline)
