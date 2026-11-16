@@ -66,8 +66,9 @@ internal fun QuestLandscapePlayer(
                     SmallCircleButton(onClose, size = 36.dp, transparent = true) {
                         Icon(Icons.Filled.KeyboardArrowDown, "Fermer le lecteur", tint = it, modifier = Modifier.size(26.dp))
                     }
-                    Text("Lecture en cours", color = Color.White.copy(alpha = .80f), fontSize = 14.sp,
-                        modifier = Modifier.padding(start = 8.dp))
+                    // Ket 27: the window's heading in iOS's text styles, as everywhere else.
+                    Text("Lecture en cours", color = Color.White.copy(alpha = .80f), style = com.ketvoice.app.theme.Ket27.Type.subheadline,
+                        fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 8.dp))
                 }
                 Row(Modifier.weight(1f).fillMaxWidth().padding(top = 12.dp, bottom = 12.dp),
                     horizontalArrangement = Arrangement.spacedBy(if(DesignChoices.enabled("D8"))24.dp else 40.dp)) {
@@ -105,7 +106,7 @@ internal fun QuestLandscapePlayer(
                             Modifier.clip(RoundedCornerShape(20.dp)).background(Color.Black.copy(alpha=.10f))
                                 .border(.6.dp,Color.White.copy(alpha=.08f),RoundedCornerShape(20.dp)).padding(14.dp) else Modifier)) {
                             if (shown == PlayerPage.LYRICS) Text("Paroles", color = Color.White.copy(alpha = .7f),
-                                fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 8.dp))
+                                style = com.ketvoice.app.theme.Ket27.Type.headline, modifier = Modifier.padding(bottom = 8.dp))
                             if (shown == PlayerPage.QUEUE) QueuePane(state, Modifier.weight(1f).fillMaxWidth(), showModes = true)
                             else LyricsPane(track, expanded = false, onSource = onSources,
                                 modifier = Modifier.weight(1f).fillMaxWidth(),

@@ -441,7 +441,6 @@ fun VolumeRail(
         val railH = (6f + 5f * swell.coerceIn(-.2f, 1.3f)).dp.toPx()
         val y = size.height / 2f
         val w = size.width
-        val knobR = 9.dp.toPx()
         val x0 = 2.dp.toPx()
         val x1 = w - 2.dp.toPx()
         val span = (x1 - x0).coerceAtLeast(1f)

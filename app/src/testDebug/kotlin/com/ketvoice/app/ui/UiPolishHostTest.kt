@@ -88,7 +88,7 @@ class UiPolishHostTest {
         try {
             compose.setContent { KetvoiceTheme(useDark = true) { com.ketvoice.app.ui.settings.SettingsScreen() } }
             compose.onNodeWithTag("settings-category-Playback").performClick()
-            compose.onNodeWithText("KETMIX (BÊTA)").performScrollTo().assertIsDisplayed()
+            compose.onNodeWithText("Ketmix (bêta)").performScrollTo().assertIsDisplayed()
             compose.onNodeWithText("Ketmix").performScrollTo().assertIsDisplayed().performClick()
             compose.waitForIdle()
             assertTrue(AppSettings.automix.value)
@@ -140,7 +140,7 @@ class UiPolishHostTest {
         image("settings-appearance-charcoal")
     }
 
-    @Test fun darkTrackMenuRetainsContrastWhenOpenedAboveALightPage() {
+    @Test fun trackMenuKeepsItsContrastWhenOpenedAboveALightPage() {
         compose.setContent { KetvoiceTheme(useDark = false) {
             Box(Modifier.fillMaxSize().background(Color.White), contentAlignment = Alignment.BottomCenter) {
                 TrackMenuSheet(Track("qa:menu", "A readable menu", "QA artist", "QA album"), {})
@@ -149,9 +149,10 @@ class UiPolishHostTest {
         compose.onNodeWithText("A readable menu").assertIsDisplayed()
         compose.onNodeWithText("Lire ensuite").assertIsDisplayed()
         compose.onNodeWithText("Partager").assertIsDisplayed()
+        // Ket 27: above a light page the sheet is light, written in the page's dark ink (see Ket27PagesHostTest).
         image("track-menu-light-page-fixed") { bitmap ->
             val color = bitmap.getPixel(200, 865)
-            assertTrue("Dark explicit sheet must not inherit white card", android.graphics.Color.red(color) < 60)
+            assertTrue("A light sheet above a light page", android.graphics.Color.red(color) > 180)
         }
     }
 

@@ -241,7 +241,7 @@ fun SettingsScreen() {
                 }
             }
             Section("APPARENCE") {
-                SRow(KetIcons.Appearance, "Aperçu du verre", sub = "Régler la transparence du verre avant d'appliquer") {
+                SRow(KetIcons.Appearance, "Aperçu du verre", sub = "Transparence du verre") {
                     glassPreview = true
                 }
                 SToggle(KetIcons.Info, "Stats info", "Informations audio réelles, uniquement dans le lecteur", AppSettings.techStats.value) {

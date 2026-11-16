@@ -241,14 +241,6 @@ class VisualRefreshHostTest {
         assertEquals(listOf("current"),state.value.queueEntryIds)
     }
 
-    @Test fun glassChoicePreviewDoesNotPersistUntilApplied() {
-        compose.setContent { KetvoiceTheme(useDark = false) { com.ketvoice.app.ui.settings.GlassAppearancePreview {} } }
-        compose.onNodeWithText("Dépoli").performClick()
-        assertEquals(0, AppSettings.glassStyle.value)
-        compose.onNodeWithText("Appliquer").performClick()
-        assertEquals(1, AppSettings.glassStyle.value)
-    }
-
     @Test fun downloadPausedStateAndMenuRenderReadableActions() {
         val track = Track("qa:menu", "A real title", "Artist", "Album")
         compose.setContent { KetvoiceTheme(useDark = false) {

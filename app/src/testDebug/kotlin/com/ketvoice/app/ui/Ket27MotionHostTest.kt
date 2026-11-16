@@ -62,13 +62,11 @@ class Ket27MotionHostTest {
         AppSettings.languageChosen.value = true
         AppSettings.language.value = com.ketvoice.app.data.AppLanguage.FRENCH.label
         AppSettings.reduceAnimations.value = false
-        AppSettings.ket27.value = true
         lyricsModeBefore = AppSettings.lyricsMode.value
     }
     @After fun reset() {
         // Leave the settings as they were found: other tests draw the same screens.
         AppSettings.lyricsMode.value = lyricsModeBefore
-        AppSettings.ket27.value = false
         AppSettings.reduceAnimations.value = false
         ContextMenus.request.value = null
         AppUi.trackMenuTrack.value = null
@@ -215,10 +213,10 @@ class Ket27MotionHostTest {
 
     @Test fun aFlickClosesThePlayerAndAFlickUpKeepsIt() {
         val h = 900f; val fling = 900f
-        // Classic: the distance alone decides.
+        // Without the speed of a flick, the distance alone decides.
         assertFalse(PlayerDismiss.closes(100f, 5000f, h, fling, velocityAware = false))
         assertTrue(PlayerDismiss.closes(160f, -5000f, h, fling, velocityAware = false))
-        // Ket 27: the same distance at rest, and the direction of a flick.
+        // With it (as the player reads it): the same distance at rest, and the direction of a flick.
         assertFalse(PlayerDismiss.closes(100f, 0f, h, fling, velocityAware = true))
         assertTrue(PlayerDismiss.closes(160f, 0f, h, fling, velocityAware = true))
         assertTrue(PlayerDismiss.closes(40f, 1200f, h, fling, velocityAware = true))
@@ -377,13 +375,9 @@ class Ket27MotionHostTest {
         assertEquals(450f, compose.onNodeWithTag("spring-sheet").fetchSemanticsNode().boundsInRoot.top, 2f)
     }
 
-    @Test fun theClassicInterfaceKeepsItsSheet() {
-        AppSettings.ket27.value = false
-        tallSheet { }
-        compose.waitForIdle()
-        compose.onNodeWithTag("spring-sheet").assertDoesNotExist()
-        // 650 dp at most, resting on the bottom edge.
-        assertEquals(250f, compose.onNodeWithTag("sheet-body").fetchSemanticsNode().boundsInRoot.top, 2f)
+    @Test fun sheetsRestOnDetentsWithoutAnySwitchExceptOnQuest() {
+        // Ket 27 is the only interface (6.0.0): no setting turns the spring sheets off; only Quest keeps its plain sheet.
+        assertEquals(!com.ketvoice.app.BuildConfig.IS_QUEST, com.ketvoice.app.ui.common.springSheets)
     }
 
     // ---------------------------------------------------------------- context menu
@@ -432,15 +426,11 @@ class Ket27MotionHostTest {
         assertEquals(track, AppUi.trackMenuTrack.value)
     }
 
-    @Test fun theClassicInterfaceStillOpensTheSheetOnALongPress() {
-        AppSettings.ket27.value = false
-        val track = Track("qa:classic", "Titre classique", "Artiste", "Album")
-        compose.setContent { KetvoiceTheme(useDark = false) { Box(Modifier.fillMaxSize()) {
-            TrackRow(track, null, active = false, playing = false, onClick = {}); ContextMenuHost()
-        } } }
-        compose.onNodeWithText("Titre classique").performTouchInput { longClick() }
-        compose.waitForIdle()
-        compose.onNodeWithTag("context-menu").assertDoesNotExist()
+    @Test fun aRowWithoutAPlaceOnScreenFallsBackToTheFullSheet() {
+        // The menu needs to know where the row is; without that, a long press opens the title's sheet.
+        val track = Track("qa:nowhere", "Titre", "Artiste", "Album")
+        ContextMenus.open(track, null)
+        assertNull(ContextMenus.request.value)
         assertEquals(track, AppUi.trackMenuTrack.value)
     }
 

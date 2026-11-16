@@ -51,7 +51,7 @@ internal fun GlassAppearancePreview(onClose: () -> Unit) {
         Column(Modifier.fillMaxWidth().heightIn(max = com.ketvoice.app.ui.common.sheetMaxHeight())) {
         Column(Modifier.fillMaxWidth().weight(1f, fill = false).verticalScroll(rememberScrollState())
             .padding(start = 20.dp, end = 20.dp, top = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            SettingsSheetHeader("Aperçu du verre", "Régler la transparence du verre avant d'appliquer", ::cancel)
+            SettingsSheetHeader("Aperçu du verre", onClose = ::cancel)
             Box(Modifier.fillMaxWidth().height(180.dp).clip(RoundedCornerShape(20.dp))) {
                 BackdropCapture(backdrop, Modifier.matchParentSize()) {
                     AsyncImage(cover ?: com.ketvoice.app.R.drawable.logo_main, null,

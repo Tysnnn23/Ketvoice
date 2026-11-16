@@ -135,6 +135,10 @@ class UnifiedExperienceHostTest {
     @Test fun playlistPinPersistsFromTheLibraryWithoutChangingItsEntries() {
         val id = runBlocking { PlaylistStore.create("Ma playlist", listOf(PlaylistRules.entry(track("pin")))) }
         compose.setContent { KetvoiceTheme(useDark = false) { LibraryScreen() } }
+        // The library opens on its categories, as Apple Music's: the playlists are one tap away.
+        compose.onNodeWithTag("library-categories").assertIsDisplayed()
+        compose.onNodeWithText("Playlists").performClick()
+        compose.waitForIdle()
         compose.onNodeWithTag("library-list").performScrollToNode(hasContentDescription("Épingler"))
         compose.onNodeWithContentDescription("Épingler").performClick()
         compose.waitUntil(5000) { PlaylistStore.lists.value.single().pinned }
@@ -142,6 +146,9 @@ class UnifiedExperienceHostTest {
         assertEquals(1, PlaylistStore.lists.value.single().entries.size)
         val disk = org.json.JSONArray(File(compose.activity.filesDir, "playlists-v1.json").readText())
         assertTrue("The pin must survive the modeled atomic write", disk.getJSONObject(0).getBoolean("pinned"))
+        // Back at the root, the pinned playlist has its own shelf.
+        compose.onNodeWithText("Tout").performClick()
+        compose.waitForIdle()
         compose.onNodeWithTag("library-list").performScrollToNode(hasText("Épinglés"))
         image("library-pinned-light")
     }
@@ -217,18 +224,23 @@ class UnifiedExperienceHostTest {
         image("navigation-restored-compact-light")
     }
 
-    @Test fun pressureChangesTheMaterialWithoutChangingTheGlyphBounds() {
+    @Test fun pressureSwellsTheGlassAndItsGlyphEvenlyWhileTheTargetStaysPut() {
+        // Liquid 27, the glass of Ket 27 (the only interface since 6.0.0): the glyph rides the glass as it swells.
         AppSettings.reduceAnimations.value = false
         compose.setContent { KetvoiceTheme(useDark = false) {
             Box(Modifier.fillMaxSize()) {
                 LiquidGlassButton({}, Modifier.size(160.dp, 56.dp).testTag("pressure")) { Text("Stable") }
             }
         } }
+        val target = compose.onNodeWithTag("pressure").fetchSemanticsNode().boundsInRoot
         val before = compose.onNodeWithText("Stable", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
         compose.onNodeWithTag("pressure").performTouchInput { down(centerLeft + androidx.compose.ui.geometry.Offset(15f, 0f)) }
         compose.mainClock.advanceTimeBy(180)
         val during = compose.onNodeWithText("Stable", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
-        assertEquals(before, during)
+        assertEquals("it swells around its centre", before.center.x, during.center.x, .6f)
+        assertEquals(before.center.y, during.center.y, .6f)
+        assertTrue("it swells, never shrinks", during.width >= before.width && during.width <= before.width * (1f + com.ketvoice.app.ui.common.GLASS_SWELL) + .5f)
+        assertEquals("the hit target does not move", target, compose.onNodeWithTag("pressure").fetchSemanticsNode().boundsInRoot)
         compose.onNodeWithTag("pressure").performTouchInput { up() }
     }
 

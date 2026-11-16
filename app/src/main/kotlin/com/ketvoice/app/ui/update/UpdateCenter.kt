@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -421,7 +422,7 @@ internal fun UpdateDialog(info: UpdateInfo, onDismiss: () -> Unit, onSkip: () ->
                     )
                     com.ketvoice.app.ui.common.KetTextButton("GitHub", {
                         runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(info.pageUrl))) }
-                    }, Modifier.padding(top = 6.dp), localize = false)
+                    }, Modifier.padding(top = 6.dp).offset(x = (-12).dp), localize = false)
 
                     Column(
                         Modifier

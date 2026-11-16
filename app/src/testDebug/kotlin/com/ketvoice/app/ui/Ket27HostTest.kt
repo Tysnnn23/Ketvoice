@@ -28,7 +28,7 @@ import org.robolectric.annotation.GraphicsMode
 import org.robolectric.util.ReflectionHelpers
 import java.io.File
 
-/** Ket 27 (Alpha) rendered in software on the host: not a phone. */
+/** Ket 27, Ketvoice's only interface since 6.0.0, rendered in software on the host: not a phone. */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], qualifiers = "w400dp-h900dp-mdpi")
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -39,7 +39,7 @@ class Ket27HostTest {
         AppSettings.languageChosen.value = true
         AppSettings.language.value = com.ketvoice.app.data.AppLanguage.FRENCH.label
     }
-    @After fun reset() { AppSettings.ket27.value = false; AppUi.tab.value = AppUi.HOME }
+    @After fun reset() { AppUi.tab.value = AppUi.HOME }
 
     private fun image(name: String, verify: (Bitmap) -> Unit = {}) {
         compose.runOnIdle {
@@ -56,17 +56,17 @@ class Ket27HostTest {
         }
     }
 
-    @Test fun theSwitchTurnsTheSettingsIntoAnIosList() {
+    @Test fun theSettingsAreAnIosListWithoutAnInterfaceSwitch() {
         compose.setContent { KetvoiceTheme(useDark = false) { com.ketvoice.app.ui.settings.SettingsScreen() } }
-        // Off: the usual page, without a large title of its own.
-        compose.onNodeWithTag("ket27-large-title").assertDoesNotExist()
+        // There is no other interface to switch to: the root has its large title from the start.
+        compose.onNodeWithTag("ket27-large-title").assertIsDisplayed()
         compose.onNodeWithTag("settings-category-Appearance").performClick()
-        compose.onNodeWithText("KET 27 (ALPHA)").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("Ket 27 (Alpha)").performScrollTo().performClick()
         compose.waitForIdle()
-        assertTrue(AppSettings.ket27.value)
-        // On: headers in sentence case, the uniform bar with the page's title.
-        compose.onNodeWithText("Ket 27 (alpha)").assertExists()
+        // No switch, no section and no word of the former mode, nor any choice of lyrics style.
+        for (gone in listOf("Ket 27", "Alpha", "Style des paroles", "Cascade")) {
+            assertEquals(gone, 0, compose.onAllNodes(hasText(gone, substring = true, ignoreCase = true)).fetchSemanticsNodes().size)
+        }
+        // Headers in sentence case, the uniform bar with the page's title.
         assertEquals("the bar title and the section header", 2, compose.onAllNodesWithText("Apparence").fetchSemanticsNodes().size)
         compose.onNodeWithTag("ket27-settings-bar").assertIsDisplayed()
         image("ket27-appearance-light") { bitmap ->
@@ -76,8 +76,39 @@ class Ket27HostTest {
         }
     }
 
+    @Test fun noPageOfTheSettingsOffersTheFormerInterfaceOrALyricsStyle() {
+        compose.setContent { KetvoiceTheme(useDark = true) { com.ketvoice.app.ui.settings.SettingsScreen() } }
+        val gone = listOf("Ket 27", "(Alpha)", "Style des paroles", "Cascade", "Signature Ketvoice", "Menus unifiés",
+            "Dépoli", "Opaque")
+        fun assertNothingGone(page: String) = gone.forEach { word ->
+            assertEquals("$word on $page", 0, compose.onAllNodes(hasText(word, substring = true, ignoreCase = true)).fetchSemanticsNodes().size)
+        }
+        assertNothingGone("the root")
+        for (category in listOf("Appearance", "Playback", "Lyrics", "Canvas", "Sources", "Downloads", "LocalMusic", "Storage", "About")) {
+            compose.onNodeWithTag("settings-category-$category").performScrollTo().performClick()
+            compose.waitForIdle()
+            assertNothingGone(category)
+            if (category == "Appearance") {
+                // The design choices and the glass preview: only what still changes something.
+                compose.onNodeWithText("DESIGN KETVOICE").performScrollTo().performClick()
+                compose.waitForIdle()
+                assertNothingGone("Design")
+                compose.onNodeWithText("Typographie harmonisée").assertExists()
+                compose.onNodeWithContentDescription("Retour").performClick()
+                compose.waitForIdle()
+                compose.onNodeWithText("Aperçu du verre").performScrollTo().performClick()
+                compose.waitForIdle()
+                compose.onNodeWithTag("glass-tint-slider").assertExists()
+                assertNothingGone("the glass preview")
+                compose.onNodeWithText("Annuler").performClick()
+                compose.waitForIdle()
+            }
+            compose.onNodeWithContentDescription("Retour").performClick()
+            compose.waitForIdle()
+        }
+    }
+
     @Test fun theRootOfTheSettingsHasALargeTitleAndColouredTiles() {
-        AppSettings.ket27.value = true
         compose.setContent { KetvoiceTheme(useDark = true) { com.ketvoice.app.ui.settings.SettingsScreen() } }
         compose.onNodeWithTag("ket27-large-title").assertIsDisplayed()
         compose.onNodeWithTag("settings-category-Playback").assertIsDisplayed()
@@ -90,7 +121,6 @@ class Ket27HostTest {
     }
 
     @Test fun theTabBarTintsTheSelectedTab() {
-        AppSettings.ket27.value = true
         compose.setContent {
             KetvoiceTheme(useDark = false) {
                 val theme = LocalTheme.current
@@ -113,12 +143,10 @@ class Ket27HostTest {
         assertEquals("Ketvoice API · Canvas", ket27Heading("KETVOICE API · CANVAS"))
         assertEquals("YouTube Music", ket27Heading("YOUTUBE MUSIC"))
         assertEquals("already written that way", "Déjà écrit", ket27Heading("Déjà écrit"))
-        // The styles of iOS: a 34 dp bold large title, a 17 dp body.
-        AppSettings.ket27.value = true
+        // The styles of iOS, always: a 34 dp bold large title, a 17 dp body.
         assertEquals(34f, T.hugeTitle.fontSize.value, 0f); assertEquals(17f, T.body.fontSize.value, 0f)
+        assertEquals(34f, T.huge.fontSize.value, 0f); assertEquals(22f, T.h2.fontSize.value, 0f)
         assertEquals(26f, Ket27.Metrics.groupRadius.value, 0f); assertEquals(62f, Ket27.Metrics.tabBar.value, 0f)
-        AppSettings.ket27.value = false
-        assertEquals(40f, T.hugeTitle.fontSize.value, 0f)
         // The regular glass of iOS 27: a surface at 70 %, from 55 % (clearest) to 85 % (most tinted), with its shadow.
         assertEquals(.70f, com.ketvoice.app.glass.Ket27Glass.surface(0f), 1e-4f); assertEquals(.70f, com.ketvoice.app.glass.Ket27Glass.surface(.5f), 1e-4f)
         assertEquals(.55f, com.ketvoice.app.glass.Ket27Glass.surface(.001f), .01f); assertEquals(.85f, com.ketvoice.app.glass.Ket27Glass.surface(1f), 1e-4f)
