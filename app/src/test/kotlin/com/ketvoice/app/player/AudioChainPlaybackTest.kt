@@ -45,9 +45,17 @@ class AudioChainPlaybackTest {
         try { play() } finally { com.ketvoice.app.data.AppSettings.volumeLeveling.value = false; ReverbControl.amount = 0f }
     }
 
-    private fun play() {
+    /** A title separated whole, its voice turned half down by the voice stage (6.0.0). */
+    @Test fun aSeparatedTitlePlaysWithTheVoiceTurnedDown() {
+        val frames = com.ketvoice.app.stems.StemDsp.frames(4 * com.ketvoice.app.stems.StemDsp.RATE)
+        val mask = com.ketvoice.app.stems.StemMask(0L, frames, ByteArray(frames * com.ketvoice.app.stems.StemDsp.NET_BINS / 2) { 0x37 })
+        com.ketvoice.app.stems.VoiceLevel.level = .5f
+        try { play(mask) } finally { com.ketvoice.app.stems.VoiceLevel.level = 1f }
+    }
+
+    private fun play(voiceMask: com.ketvoice.app.stems.StemMask? = null) {
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
-        val deck = com.ketvoice.app.automix.DeckControl()
+        val deck = com.ketvoice.app.automix.DeckControl().also { it.voiceMask = voiceMask }
         val renderers = object : DefaultRenderersFactory(context) {
             override fun buildAudioSink(context: android.content.Context, enableFloatOutput: Boolean, enableAudioTrackPlaybackParams: Boolean): AudioSink {
                 val buffers = androidx.media3.exoplayer.audio.DefaultAudioTrackBufferSizeProvider.Builder()
