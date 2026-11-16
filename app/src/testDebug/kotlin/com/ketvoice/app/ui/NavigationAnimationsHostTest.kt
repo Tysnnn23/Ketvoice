@@ -298,6 +298,52 @@ class NavigationAnimationsHostTest {
         compose.runOnIdle { assertEquals(1f, CoverZoom.sourceAlpha(card), 0f) }
     }
 
+    @Test fun throughTheRealNavigationTheCoverLandsInTheAlbumHeroAndBack() {
+        AppUi.selectTab(AppUi.HOME)
+        compose.mainClock.autoAdvance = false
+        fun advance(ms: Long) {
+            compose.runOnUiThread { androidx.compose.runtime.snapshots.Snapshot.sendApplyNotifications() }
+            compose.mainClock.advanceTimeByFrame(); compose.waitForIdle()
+            compose.mainClock.advanceTimeBy(ms); compose.waitForIdle()
+        }
+        compose.setContent { KetvoiceTheme(useDark = true) {
+            Box(Modifier.fillMaxSize()) {
+                NavigationPresentation(AppUi.tab.intValue to AppUi.snapshot()) { _, entry ->
+                    Box(Modifier.fillMaxSize().background(com.ketvoice.app.theme.LocalTheme.current.background)) {
+                        if (entry.overlay == AppUi.CATALOG) {
+                            com.ketvoice.app.ui.common.CollectionHero(null, 40.dp, "Album A",
+                                artwork = { Box(Modifier.fillMaxSize().background(Color(0xFFE0A030))) }) {}
+                        } else {
+                            val source = rememberZoomSource(radius = 14.dp) { place -> Box(place.background(Color(0xFFE0A030))) }
+                            Box(Modifier.offset(24.dp, 600.dp).size(132.dp).zoomSource(source).background(Color(0xFFE0A030))
+                                .testTag("album-card").clickable { source.openCatalog(com.ketvoice.app.data.CatalogRequest("album", "a1", "Album A")) })
+                        }
+                    }
+                }
+                CoverZoomLayer()
+            }
+        } }
+        advance(300)
+        compose.onNodeWithTag("album-card").performClick()
+        advance(110)
+        val flying = compose.onNodeWithTag("cover-zoom", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+        assertTrue("on its way up: $flying", flying.width > 132f && flying.top < 600f)
+        image("cover-zoom-real-opening")
+        advance(1_500)
+        compose.onAllNodesWithTag("cover-zoom", useUnmergedTree = true).assertCountEquals(0)
+        image("cover-zoom-real-opened")
+        // Back: the hero shrinks into the card while the album page folds into it.
+        compose.runOnIdle { AppUi.closeOverlay() }
+        advance(110)
+        val back = compose.onNodeWithTag("cover-zoom", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+        assertTrue("on its way back: $back", back.top > 40f)
+        image("cover-zoom-real-closing")
+        advance(1_500)
+        compose.onAllNodesWithTag("cover-zoom", useUnmergedTree = true).assertCountEquals(0)
+        compose.onNodeWithTag("album-card").assertIsDisplayed()
+        image("cover-zoom-real-closed")
+    }
+
     @Test fun nothingFliesWithReducedMotionOrAfterATabJump() {
         AppSettings.reduceAnimations.value = true
         zoomHost()
