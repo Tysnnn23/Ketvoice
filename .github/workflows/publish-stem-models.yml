@@ -54,7 +54,7 @@ jobs:
             python ../tools/stems/check.py $part.onnx out/spleeter-2stems-$part.tflite
           done
           cp ../docs/licenses/Spleeter-MIT.txt out/LICENSE-Spleeter.txt
-          cd out && sha256sum spleeter-2stems-*.tflite LICENSE-Spleeter.txt | tee SHA256SUMS.txt
+          cd out && sha256sum spleeter-2stems-*.tflite LICENSE-Spleeter.txt | tee SHA256SUMS.txt && ls -l spleeter-2stems-*.tflite
 
       - name: Compare with the digests the app expects (tools/stems/expected.sha256, also in StemModel.kt)
         run: |
