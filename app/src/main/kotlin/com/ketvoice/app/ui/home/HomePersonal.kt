@@ -158,49 +158,17 @@ internal fun HomeMixes(modifier: Modifier = Modifier) {
         PersonalMixes.propose(known.filter(com.ketvoice.app.data.ArtistPrefs::allows), recent.filter(com.ketvoice.app.data.ArtistPrefs::allows), counts, favorites)
     }
     if (cards.isEmpty()) return
-    val theme = LocalTheme.current
     Column(modifier.testTag("home-mixes")) {
         EditorialHeader("Vos mix", subtitle = "Composés d'après vos écoutes")
-        LazyRow(contentPadding = PaddingValues(horizontal = 18.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-            items(cards, key = { it.id }) { card -> MixTile(card) }
-        }
-    }
-}
-
-@Composable
-private fun MixTile(card: MixCard) {
-    val theme = LocalTheme.current
-    val origin = rememberRevealOrigin()
-    val title = mixTitle(card)
-    Column(Modifier.width(168.dp).captureRevealOrigin(origin).clickable(role = Role.Button) {
-        AppUi.openCatalog(CatalogRequest("mix", card.id, title), origin.value)
-    }.testTag("home-mix")) {
-        Box(Modifier.size(168.dp).clip(RoundedCornerShape(24.dp)).background(
-            Brush.linearGradient(listOf(theme.accent.copy(alpha = .55f), theme.card)))) {
-            MixCollage(card.covers)
-            // A soft floor so the label stays readable on any artwork.
-            Box(Modifier.matchParentSize().background(Brush.verticalGradient(
-                0f to Color.Transparent, .5f to Color.Transparent, 1f to Color.Black.copy(alpha = .62f))))
-            Row(Modifier.align(Alignment.BottomStart).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(when (card.kind) {
-                    MixKind.Artist -> KetIcons.Music
-                    MixKind.Style -> KetIcons.Globe
-                    MixKind.OnRepeat -> KetIcons.Refresh
-                    MixKind.Rediscover -> KetIcons.Clock
-                }, null, tint = Color.White, modifier = Modifier.size(16.dp))
-                Text("Mix", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(start = 6.dp))
-            }
-        }
-        Text(title, color = theme.onBackground, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
-            maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))
-        Text(mixSubtitle(card), color = theme.secondary, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        // Ket 27: large cards, as Apple Music shows what it composed for the listener.
+        val width = com.ketvoice.app.ui.adaptive.shelfCell(HomeLayout.featureWidth, com.ketvoice.app.ui.common.pageMargin, HomeLayout.gap)
+        HomeRow { items(cards, key = { it.id }) { card -> MixFeatureCard(card, width) } }
     }
 }
 
 /** One cover, or a 2 × 2 mosaic when the mix has four different ones. */
 @Composable
-private fun MixCollage(covers: List<String?>) {
+internal fun MixCollage(covers: List<String?>) {
     val shown = covers.filter { !it.isNullOrBlank() }
     when {
         shown.size >= 4 -> Column(Modifier.fillMaxSize()) {

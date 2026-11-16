@@ -174,4 +174,63 @@ class ScreensRedoHostTest {
         assertEquals("never more than 1.4 times the width", 560f, PlayerHero.coverHeightDp(400f, 2000f), .01f)
         assertEquals(0f, PlayerHero.coverHeightDp(Float.NaN, 900f), 0f)
     }
+
+    // ---------------------------------------------------------------- Home
+
+    private val known get() = ListeningHistory.knownTracks as MutableStateFlow<List<Track>>
+    private val recent get() = ListeningHistory.tracks as MutableStateFlow<List<Track>>
+    private val counts get() = ListeningHistory.playCounts as MutableStateFlow<Map<String, Int>>
+
+    private fun history() {
+        val tracks = (1..6).map { track("a$it", "Alpha $it", "Alpha") } + (1..5).map { track("b$it", "Beta $it", "Beta") } +
+            (1..10).map { track("s$it", "Solo $it", "Solo $it") }
+        known.value = tracks
+        recent.value = tracks.take(9)
+        counts.value = tracks.associate { it.id to if (it.artist == "Alpha") 5 else if (it.artist == "Beta") 3 else 1 }
+    }
+
+    @Test fun homeLeadsWithLargeCardsAndHandsItsTitleToTheBar() {
+        history()
+        try {
+            compose.setContent { KetvoiceTheme(useDark = true) { com.ketvoice.app.ui.home.HomeScreen() } }
+            compose.onNodeWithTag("home-greeting").assertIsDisplayed()
+            compose.onNodeWithTag("home-inline-title").assertDoesNotExist()
+            // The owner removed the For you card and the shortcut tiles (5.9.0): they stay away.
+            compose.onNodeWithTag("for-you-mix").assertDoesNotExist()
+            compose.onNodeWithTag("for-you-resume").assertDoesNotExist()
+            compose.onAllNodesWithTag("home-shortcut").assertCountEquals(0)
+            image("redo-home-top-dark")
+            // Scrolled to the mixes, the greeting has left: the bar names the page in small.
+            compose.onNodeWithTag("home-list").performScrollToIndex(3)
+            compose.onNodeWithTag("home-inline-title").assertExists()
+            val card = compose.onAllNodesWithTag("home-mix").onFirst().fetchSemanticsNode().boundsInRoot
+            assertEquals("a large card", com.ketvoice.app.ui.home.HomeLayout.featureWidth.value, card.width, 1f)
+            assertTrue("taller than wide", card.height > card.width)
+            assertEquals("aligned with the page's margin", 16f, card.left, 1f)
+            image("redo-home-mixes-dark")
+            compose.onNodeWithTag("home-list").performScrollToNode(hasTestTag("home-recent-carousel"))
+            compose.onNodeWithTag("home-recent-carousel").assertIsDisplayed()
+        } finally { known.value = emptyList(); recent.value = emptyList(); counts.value = emptyMap() }
+    }
+
+    @Test fun homeLightKeepsTheSameCards() {
+        history()
+        try {
+            compose.setContent { KetvoiceTheme(useDark = false) { com.ketvoice.app.ui.home.HomeScreen() } }
+            compose.onNodeWithTag("home-list").performScrollToIndex(3)
+            image("redo-home-mixes-light")
+        } finally { known.value = emptyList(); recent.value = emptyList(); counts.value = emptyMap() }
+    }
+
+    @Test fun theTitleHandoverAndTheHeaderRiseFollowTheScroll() {
+        val home = com.ketvoice.app.ui.home.HomeLayout
+        assertEquals(0f, home.collapse(0, 0, 64f), 0f)
+        assertEquals(.5f, home.collapse(0, 32, 64f), .001f)
+        assertEquals(1f, home.collapse(0, 400, 64f), 0f)
+        assertEquals(1f, home.collapse(3, 0, 64f), 0f)
+        assertEquals("at the bottom edge", 0f, home.reveal(900f, 900f, 140f), 0f)
+        assertEquals(.5f, home.reveal(830f, 900f, 140f), .001f)
+        assertEquals("well inside the window", 1f, home.reveal(100f, 900f, 140f), 0f)
+        assertEquals(1f, home.reveal(Float.NaN, 900f, 140f), 0f)
+    }
 }
