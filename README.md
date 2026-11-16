@@ -21,6 +21,14 @@
 
 ## Overview
 
+### 6.0.0 Beta 3 — The voice of every song
+
+The voice slider of the lyrics screen now works on every song: touch it and Ketvoice separates the song you
+are hearing on the phone, once, then lets you turn the singer down or out.
+[Mobile](https://github.com/Tysnnn23/Ketvoice/releases/download/v6.0.0-beta.3/Ketvoice-6.0.0-beta.3.apk)
+· [Quest](https://github.com/Tysnnn23/Ketvoice/releases/download/v6.0.0-beta.3/Ketvoice-6.0.0-beta.3-Quest.apk)
+· [Release notes](docs/releases/v6.0.0-beta.3.md).
+
 ### 6.0.0 Beta 2 — The Ketvoice 6 redesign
 
 One interface for every screen: Ket 27 becomes Ketvoice's design, lyrics flow in Cascade, and the glass menu

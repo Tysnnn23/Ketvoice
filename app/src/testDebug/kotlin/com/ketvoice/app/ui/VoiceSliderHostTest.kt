@@ -53,7 +53,7 @@ class VoiceSliderHostTest {
     @Test fun dragAndTapSetTheVoiceLevel() {
         AppSettings.voiceLevel.value = 30
         compose.setContent {
-            Box(Modifier.fillMaxSize().background(Color(0xFF3A2A25)), contentAlignment = Alignment.Center) { VoiceSlider() }
+            Box(Modifier.fillMaxSize().background(Color(0xFF3A2A25)), contentAlignment = Alignment.Center) { VoiceSlider(null) }
         }
         image("voice-slider-30")
         // A tap on it takes the voice out; another one brings it back where it was.
@@ -68,7 +68,7 @@ class VoiceSliderHostTest {
         image("voice-slider-full")
     }
 
-    @Test fun theLyricsScreenShowsItOnlyWithItsControlsAndForTitlesSeparatedWhole() {
+    @Test fun theLyricsScreenShowsItWithItsControlsOnEveryTitle() {
         val dir = java.nio.file.Files.createTempDirectory("voice-ui").toFile()
         com.ketvoice.app.stems.StemStore.init(dir)
         val separated = com.ketvoice.app.data.Track("qa:sing", "Titre séparé", "Artiste", "Album")
@@ -93,10 +93,16 @@ class VoiceSliderHostTest {
         // Full-screen lyrics: no slider.
         expanded = true
         compose.waitUntil(5_000) { compose.onAllNodesWithTag("voice-slider").fetchSemanticsNodes().isEmpty() }
-        // A title that was never separated whole: no slider either.
+        // A title that was never separated whole: the slider is there too (6.0.0 Beta 3); without the
+        // separation model, a touch asks once to download it.
         expanded = false; track = plain
-        compose.waitForIdle()
-        compose.onNodeWithTag("voice-slider").assertDoesNotExist()
+        compose.waitUntil(5_000) { compose.onAllNodesWithTag("voice-slider").fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithTag("voice-slider").performClick()
+        compose.onNodeWithText(com.ketvoice.app.data.AppText.t("Régler la voix")).assertIsDisplayed()
+        image("voice-slider-ask-model")
+        compose.onNodeWithText(com.ketvoice.app.data.AppText.t("Télécharger")).assertExists()
+        compose.onNodeWithText(com.ketvoice.app.data.AppText.t("Annuler")).performClick()
+        compose.onNodeWithText(com.ketvoice.app.data.AppText.t("Régler la voix")).assertDoesNotExist()
         dir.deleteRecursively()
     }
 

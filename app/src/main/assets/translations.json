@@ -1580,7 +1580,11 @@
   "Réduire la barre latérale": "Hide sidebar",
   "Ajouté à la playlist": "Added to playlist",
   "Les résultats apparaîtront ici.": "Results will appear here.",
-  "Parcourir les catégories": "Browse categories"
+  "Parcourir les catégories": "Browse categories",
+  "Régler la voix": "Adjust the voice",
+  "Préparation de la voix…": "Preparing the voice…",
+  "Ce son ne peut pas être séparé en streaming : téléchargez-le pour régler la voix.": "This song can't be separated while streaming: download it to adjust the voice.",
+  "Pour régler la voix, Ketvoice télécharge une seule fois le modèle de séparation ({0} Mo). Ensuite, chaque son est séparé sur le téléphone, une seule fois.": "To adjust the voice, Ketvoice downloads the separation model once ({0} MB). After that, each song is separated on the phone, once."
  },
  "hi": {
   "Reverb": "रीवर्ब",
@@ -3163,7 +3167,11 @@
   "Réduire la barre latérale": "साइडबार छिपाएँ",
   "Ajouté à la playlist": "प्लेलिस्ट में जोड़ा गया",
   "Les résultats apparaîtront ici.": "परिणाम यहाँ दिखेंगे।",
-  "Parcourir les catégories": "श्रेणियाँ ब्राउज़ करें"
+  "Parcourir les catégories": "श्रेणियाँ ब्राउज़ करें",
+  "Régler la voix": "आवाज़ समायोजित करें",
+  "Préparation de la voix…": "आवाज़ तैयार हो रही है…",
+  "Ce son ne peut pas être séparé en streaming : téléchargez-le pour régler la voix.": "स्ट्रीमिंग के दौरान यह गाना अलग नहीं किया जा सकता: आवाज़ समायोजित करने के लिए इसे डाउनलोड करें।",
+  "Pour régler la voix, Ketvoice télécharge une seule fois le modèle de séparation ({0} Mo). Ensuite, chaque son est séparé sur le téléphone, une seule fois.": "आवाज़ समायोजित करने के लिए Ketvoice एक बार अलगाव मॉडल ({0} MB) डाउनलोड करता है। उसके बाद हर गाना फ़ोन पर, एक ही बार, अलग किया जाता है।"
  },
  "ja": {
   "Reverb": "リバーブ",
@@ -4746,7 +4754,11 @@
   "Réduire la barre latérale": "サイドバーを隠す",
   "Ajouté à la playlist": "プレイリストに追加しました",
   "Les résultats apparaîtront ici.": "ここに結果が表示されます。",
-  "Parcourir les catégories": "カテゴリを見る"
+  "Parcourir les catégories": "カテゴリを見る",
+  "Régler la voix": "ボーカルを調整",
+  "Préparation de la voix…": "ボーカルを準備中…",
+  "Ce son ne peut pas être séparé en streaming : téléchargez-le pour régler la voix.": "この曲はストリーミング中には分離できません。ボーカルを調整するにはダウンロードしてください。",
+  "Pour régler la voix, Ketvoice télécharge une seule fois le modèle de séparation ({0} Mo). Ensuite, chaque son est séparé sur le téléphone, une seule fois.": "ボーカルを調整するため、Ketvoice は分離モデル（{0} MB）を一度だけダウンロードします。その後、各曲はスマートフォン上で一度だけ分離されます。"
  },
  "zh": {
   "Reverb": "混响",
@@ -6329,7 +6341,11 @@
   "Réduire la barre latérale": "隐藏侧边栏",
   "Ajouté à la playlist": "已添加到播放列表",
   "Les résultats apparaîtront ici.": "结果将显示在这里。",
-  "Parcourir les catégories": "浏览分类"
+  "Parcourir les catégories": "浏览分类",
+  "Régler la voix": "调节人声",
+  "Préparation de la voix…": "正在准备人声…",
+  "Ce son ne peut pas être séparé en streaming : téléchargez-le pour régler la voix.": "此歌曲在流式播放时无法分离：请下载后再调节人声。",
+  "Pour régler la voix, Ketvoice télécharge une seule fois le modèle de séparation ({0} Mo). Ensuite, chaque son est séparé sur le téléphone, une seule fois.": "为调节人声，Ketvoice 会下载一次分离模型（{0} MB）。之后，每首歌都会在手机上分离一次。"
  },
  "ru": {
   "Reverb": "Реверберация",
@@ -7912,7 +7928,11 @@
   "Réduire la barre latérale": "Скрыть боковую панель",
   "Ajouté à la playlist": "Добавлено в плейлист",
   "Les résultats apparaîtront ici.": "Здесь появятся результаты.",
-  "Parcourir les catégories": "Обзор категорий"
+  "Parcourir les catégories": "Обзор категорий",
+  "Régler la voix": "Настроить голос",
+  "Préparation de la voix…": "Подготовка голоса…",
+  "Ce son ne peut pas être séparé en streaming : téléchargez-le pour régler la voix.": "Эту песню нельзя разделить при потоковом воспроизведении: скачайте её, чтобы настроить голос.",
+  "Pour régler la voix, Ketvoice télécharge une seule fois le modèle de séparation ({0} Mo). Ensuite, chaque son est séparé sur le téléphone, une seule fois.": "Чтобы настраивать голос, Ketvoice один раз скачивает модель разделения ({0} МБ). Затем каждая песня разделяется на телефоне один раз."
  },
  "it": {
   "Reverb": "Riverbero",
@@ -9495,7 +9515,11 @@
   "Réduire la barre latérale": "Nascondi barra laterale",
   "Ajouté à la playlist": "Aggiunto alla playlist",
   "Les résultats apparaîtront ici.": "I risultati appariranno qui.",
-  "Parcourir les catégories": "Sfoglia le categorie"
+  "Parcourir les catégories": "Sfoglia le categorie",
+  "Régler la voix": "Regola la voce",
+  "Préparation de la voix…": "Preparazione della voce…",
+  "Ce son ne peut pas être séparé en streaming : téléchargez-le pour régler la voix.": "Questo brano non può essere separato in streaming: scaricalo per regolare la voce.",
+  "Pour régler la voix, Ketvoice télécharge une seule fois le modèle de séparation ({0} Mo). Ensuite, chaque son est séparé sur le téléphone, une seule fois.": "Per regolare la voce, Ketvoice scarica una sola volta il modello di separazione ({0} MB). Poi ogni brano viene separato sul telefono, una volta sola."
  },
  "es": {
   "Reverb": "Reverb",
@@ -11078,7 +11102,11 @@
   "Réduire la barre latérale": "Ocultar barra lateral",
   "Ajouté à la playlist": "Añadido a la playlist",
   "Les résultats apparaîtront ici.": "Los resultados aparecerán aquí.",
-  "Parcourir les catégories": "Explorar categorías"
+  "Parcourir les catégories": "Explorar categorías",
+  "Régler la voix": "Ajustar la voz",
+  "Préparation de la voix…": "Preparando la voz…",
+  "Ce son ne peut pas être séparé en streaming : téléchargez-le pour régler la voix.": "Esta canción no se puede separar en streaming: descárgala para ajustar la voz.",
+  "Pour régler la voix, Ketvoice télécharge une seule fois le modèle de séparation ({0} Mo). Ensuite, chaque son est séparé sur le téléphone, une seule fois.": "Para ajustar la voz, Ketvoice descarga una sola vez el modelo de separación ({0} MB). Después, cada canción se separa en el teléfono, una sola vez."
  },
  "de": {
   "Reverb": "Reverb",
@@ -12661,7 +12689,11 @@
   "Réduire la barre latérale": "Seitenleiste ausblenden",
   "Ajouté à la playlist": "Zur Playlist hinzugefügt",
   "Les résultats apparaîtront ici.": "Hier erscheinen die Ergebnisse.",
-  "Parcourir les catégories": "Kategorien durchsuchen"
+  "Parcourir les catégories": "Kategorien durchsuchen",
+  "Régler la voix": "Stimme einstellen",
+  "Préparation de la voix…": "Stimme wird vorbereitet…",
+  "Ce son ne peut pas être séparé en streaming : téléchargez-le pour régler la voix.": "Dieser Song lässt sich im Stream nicht trennen: Lade ihn herunter, um die Stimme einzustellen.",
+  "Pour régler la voix, Ketvoice télécharge une seule fois le modèle de séparation ({0} Mo). Ensuite, chaque son est séparé sur le téléphone, une seule fois.": "Um die Stimme einzustellen, lädt Ketvoice einmalig das Trennmodell herunter ({0} MB). Danach wird jeder Song einmal auf dem Handy getrennt."
  },
  "pt": {
   "Reverb": "Reverb",
@@ -14244,7 +14276,11 @@
   "Réduire la barre latérale": "Ocultar barra lateral",
   "Ajouté à la playlist": "Adicionado à playlist",
   "Les résultats apparaîtront ici.": "Os resultados aparecerão aqui.",
-  "Parcourir les catégories": "Explorar categorias"
+  "Parcourir les catégories": "Explorar categorias",
+  "Régler la voix": "Ajustar a voz",
+  "Préparation de la voix…": "Preparando a voz…",
+  "Ce son ne peut pas être séparé en streaming : téléchargez-le pour régler la voix.": "Esta música não pode ser separada em streaming: baixe-a para ajustar a voz.",
+  "Pour régler la voix, Ketvoice télécharge une seule fois le modèle de séparation ({0} Mo). Ensuite, chaque son est séparé sur le téléphone, une seule fois.": "Para ajustar a voz, o Ketvoice baixa uma única vez o modelo de separação ({0} MB). Depois, cada música é separada no telefone, uma única vez."
  },
  "ko": {
   "Reverb": "리버브",
@@ -15827,6 +15863,10 @@
   "Réduire la barre latérale": "사이드바 숨기기",
   "Ajouté à la playlist": "플레이리스트에 추가됨",
   "Les résultats apparaîtront ici.": "결과가 여기에 표시됩니다.",
-  "Parcourir les catégories": "카테고리 둘러보기"
+  "Parcourir les catégories": "카테고리 둘러보기",
+  "Régler la voix": "보컬 조절",
+  "Préparation de la voix…": "보컬 준비 중…",
+  "Ce son ne peut pas être séparé en streaming : téléchargez-le pour régler la voix.": "이 곡은 스트리밍 중에는 분리할 수 없습니다. 보컬을 조절하려면 다운로드하세요.",
+  "Pour régler la voix, Ketvoice télécharge une seule fois le modèle de séparation ({0} Mo). Ensuite, chaque son est séparé sur le téléphone, une seule fois.": "보컬을 조절하기 위해 Ketvoice가 분리 모델({0} MB)을 한 번 다운로드합니다. 이후 각 곡은 휴대폰에서 한 번만 분리됩니다."
  }
 }

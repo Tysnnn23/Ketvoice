@@ -102,6 +102,8 @@ class PlaybackService : MediaSessionService() {
         runCatching { com.ketvoice.app.data.ArtistPrefs.init(applicationContext) }
         player = buildPlayer()
         getSystemService(android.media.AudioManager::class.java).registerAudioDeviceCallback(audioDevices, android.os.Handler(mainLooper))
+        // A title separated while it plays (the voice slider, 6.0.0 Beta 3) has its voice level at once.
+        serviceScope.launch { com.ketvoice.app.stems.VoiceSeparation.separated.collect { takeUpVoice(it) } }
         val session = MediaSession.Builder(this, sessionPlayer(player))
             .setSessionActivity(
                 PendingIntent.getActivity(
@@ -177,6 +179,20 @@ class PlaybackService : MediaSessionService() {
      * so the queue is reached directly; it is connected first for a cold start from
      * a headset or the notification.
      */
+    /** Gives the deck playing [trackId] its fresh separation; the sound is picked up again where it is, which flushes the chain. */
+    private fun takeUpVoice(trackId: String) {
+        if (AppSettings.bitPerfect.value || !::player.isInitialized) return
+        serviceScope.launch {
+            val mask = withContext(Dispatchers.IO) { runCatching { com.ketvoice.app.stems.StemStore.loadWhole(trackId) }.getOrNull() } ?: return@launch
+            val main = player
+            if (main.currentMediaItem?.mediaId != trackId || com.ketvoice.app.automix.Automix.mixing) return@launch
+            val control = decks[main] ?: return@launch
+            control.voiceMask = mask
+            // The voice stage only starts where the sound starts again (its delay is fixed): a seek to the same place.
+            main.seekTo(main.currentPosition)
+        }
+    }
+
     private fun sessionPlayer(engine: ExoPlayer): androidx.media3.common.Player = QueueBridgePlayer(engine,
         onNext = { Player.connect(applicationContext); Player.next() },
         onPrevious = { Player.connect(applicationContext); Player.previous() })
@@ -250,9 +266,23 @@ class PlaybackService : MediaSessionService() {
                 // A title separated whole can have its voice turned down (6.0.0): its separation is read before its first sound.
                 deck.voiceMask = null
                 val id = mediaItem?.mediaId
+                // Where its sound comes from, for a separation asked from the voice slider (6.0.0 Beta 3); a stream
+                // made of several files (DASH, HLS) cannot be read whole, a downloaded copy is used instead.
+                if (id != null) {
+                    val local = mediaItem.localConfiguration
+                    val uri = local?.uri
+                    val pieces = local?.mimeType == androidx.media3.common.MimeTypes.APPLICATION_MPD ||
+                        local?.mimeType == androidx.media3.common.MimeTypes.APPLICATION_M3U8
+                    if (uri != null && !pieces) com.ketvoice.app.stems.VoiceSeparation.heard(id, uri)
+                }
                 if (id != null && !exactRequested) serviceScope.launch(Dispatchers.IO) {
                     val mask = runCatching { com.ketvoice.app.stems.StemStore.loadWhole(id) }.getOrNull()
-                    withContext(Dispatchers.Main) { if (owner.currentMediaItem?.mediaId == id) deck.voiceMask = mask }
+                    withContext(Dispatchers.Main) {
+                        if (owner.currentMediaItem?.mediaId == id) deck.voiceMask = mask
+                        // A listener who turned the voice down keeps it down: each new title is separated as it starts.
+                        if (mask == null && owner.currentMediaItem?.mediaId == id && com.ketvoice.app.stems.VoiceLevel.level < .99f &&
+                            com.ketvoice.app.stems.VoiceSeparation.modelReady) com.ketvoice.app.stems.VoiceSeparation.request(id)
+                    }
                 }
                 // A title that Ketmix played in time with the previous one keeps that speed to its end; the
                 // next title starts on its own tempo again, at the boundary between the two where it is not heard.

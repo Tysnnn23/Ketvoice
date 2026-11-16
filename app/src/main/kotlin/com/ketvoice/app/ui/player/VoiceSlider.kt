@@ -34,6 +34,20 @@ import com.ketvoice.app.data.AppSettings
 import com.ketvoice.app.data.AppText
 import com.ketvoice.app.data.SettingsStore
 import com.ketvoice.app.stems.VoiceLevel
+import androidx.compose.foundation.layout.padding
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.semantics.stateDescription
+import com.ketvoice.app.stems.ModelPack
+import com.ketvoice.app.stems.StemModel
+import com.ketvoice.app.stems.StemStore
+import com.ketvoice.app.stems.VoiceSeparation
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import com.ketvoice.app.ui.motion.Haptics
 import com.ketvoice.app.ui.motion.Motion
 import com.ketvoice.app.ui.motion.rememberHaptics
@@ -54,16 +68,43 @@ internal object VoiceSliderLogic {
 }
 
 /**
- * The level of the voice in a title separated whole (6.0.0, in the manner of Apple Music Sing): a tall
- * glass pill that fills from the bottom, a microphone at its foot. Drag it up and down; tap the
- * microphone to take the voice out or bring it back.
+ * The level of the voice (6.0.0, in the manner of Apple Music Sing): a tall glass pill that fills from
+ * the bottom, a microphone at its foot. Drag it up and down; tap the microphone to take the voice out or
+ * bring it back. It is shown on every title (6.0.0 Beta 3): the first touch on a title that was never
+ * separated separates it on the phone, and asks once to download the separation model when it is missing.
  */
 @Composable
-fun VoiceSlider(modifier: Modifier = Modifier, width: Dp = 52.dp, height: Dp = 100.dp) {
+fun VoiceSlider(trackId: String?, modifier: Modifier = Modifier, width: Dp = 52.dp, height: Dp = 100.dp) {
     val haptics = rememberHaptics()
+    val context = androidx.compose.ui.platform.LocalContext.current
     var level by remember { mutableFloatStateOf(AppSettings.voiceLevel.value / 100f) }
     var remembered by remember { mutableFloatStateOf(1f) }
     val shown by animateFloatAsState(level, if (Motion.reduced) spring(stiffness = 10_000f) else spring(dampingRatio = .9f, stiffness = 900f), label = "voice")
+    val separation by VoiceSeparation.state.collectAsState()
+    val model by StemModel.fast.state.collectAsState()
+    val ready by produceState(false, trackId, separation) {
+        value = trackId != null && withContext(Dispatchers.IO) { runCatching { StemStore.hasWhole(trackId) }.getOrDefault(false) }
+    }
+    val working = (separation as? VoiceSeparation.State.Working)?.takeIf { it.trackId == trackId }
+    val unavailable = (separation as? VoiceSeparation.State.Unavailable)?.trackId == trackId && !ready
+    val downloading = model is ModelPack.State.Downloading
+    var askModel by remember { mutableStateOf(false) }
+    var afterDownload by remember(trackId) { mutableStateOf(false) }
+    LaunchedEffect(model, afterDownload, trackId) {
+        if (afterDownload && trackId != null && model == ModelPack.State.Ready) { afterDownload = false; VoiceSeparation.request(trackId) }
+    }
+    /** A touch on a title not separated yet starts what it needs. */
+    fun prepare() {
+        val id = trackId ?: return
+        if (ready || working != null) return
+        when {
+            unavailable -> android.widget.Toast.makeText(context,
+                AppText.t("Ce son ne peut pas être séparé en streaming : téléchargez-le pour régler la voix."), android.widget.Toast.LENGTH_LONG).show()
+            VoiceSeparation.modelReady -> VoiceSeparation.request(id)
+            downloading -> afterDownload = true
+            else -> askModel = true
+        }
+    }
     fun set(value: Float, tick: Boolean = true) {
         val old = level
         level = value
@@ -72,28 +113,45 @@ fun VoiceSlider(modifier: Modifier = Modifier, width: Dp = 52.dp, height: Dp = 1
     }
     fun save() { AppSettings.voiceLevel.value = Math.round(level * 100); SettingsStore.save() }
     val description = AppText.t("Niveau de la voix")
+    val preparing = AppText.t("Préparation de la voix…")
+    val busy = working != null || (afterDownload && downloading)
     Box(modifier.size(width, height).testTag("voice-slider")
+        .graphicsLayer { alpha = if (ready || busy) 1f else if (unavailable) .45f else .8f }
         .semantics {
             contentDescription = description
+            if (busy) stateDescription = preparing
             progressBarRangeInfo = ProgressBarRangeInfo(level, 0f..1f, VoiceSliderLogic.STEPS - 1)
-            setProgress { target -> set(target.coerceIn(0f, 1f), tick = false); save(); true }
+            setProgress { target -> prepare(); set(target.coerceIn(0f, 1f), tick = false); save(); true }
         }
-        .pointerInput(Unit) {
-            detectVerticalDragGestures(onDragEnd = { save() }) { change, dy ->
+        .pointerInput(trackId) {
+            detectVerticalDragGestures(onDragStart = { prepare() }, onDragEnd = { save() }) { change, dy ->
                 change.consume()
                 set(VoiceSliderLogic.dragged(level, dy, size.height.toFloat()))
             }
         }
-        .pointerInput(Unit) {
+        .pointerInput(trackId) {
             detectTapGestures {
+                prepare()
                 if (level > .02f) remembered = level
                 set(VoiceSliderLogic.tapped(level, remembered), tick = false)
                 haptics(Haptics.Kind.Tick)
                 save()
             }
-        }) {
+        }, contentAlignment = Alignment.TopCenter) {
         Canvas(Modifier.size(width, height)) { drawVoicePill(shown) }
+        // While the title is being separated (or the model arrives): a small spinner at the top of the pill.
+        if (busy) com.ketvoice.app.ui.common.ActivitySpinner(Modifier.padding(top = 10.dp).testTag("voice-slider-preparing"),
+            size = 18.dp, color = if (shown > .78f) Color.Black.copy(alpha = .6f) else Color.White)
     }
+    if (askModel) com.ketvoice.app.ui.common.AppAlertDialog(
+        onDismissRequest = { askModel = false },
+        title = { com.ketvoice.app.ui.common.Text("Régler la voix") },
+        text = { com.ketvoice.app.ui.common.Text(AppText.t("Pour régler la voix, Ketvoice télécharge une seule fois le modèle de séparation ({0} Mo). Ensuite, chaque son est séparé sur le téléphone, une seule fois.")
+            .replace("{0}", (StemModel.fast.totalBytes / 1_000_000L).toString()), localize = false) },
+        confirmButton = { com.ketvoice.app.ui.common.KetTextButton("Télécharger", {
+            askModel = false; afterDownload = true; StemModel.fast.download()
+        }, primary = true) },
+        dismissButton = { com.ketvoice.app.ui.common.KetTextButton("Annuler", { askModel = false }) })
 }
 
 private fun DrawScope.drawVoicePill(level: Float) {

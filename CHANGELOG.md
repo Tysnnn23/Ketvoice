@@ -7,6 +7,19 @@
 
 ---
 
+# Ketvoice 6.0.0 Beta 3
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 126** — The voice level on every song.
+
+- `VoiceSlider(trackId)` is shown on every title (lyrics screen, controls shown). A touch on a title not separated whole calls `VoiceSeparation.request`: the title is read with `MediaExtractor` from its download or from the address the playback service loaded (`VoiceSeparation.heard`; DASH/HLS excluded) and separated whole with the quick model when present (`StemLibrary.separateWhole`, shared with the library, which waits while it runs). Without a model, a dialog offers the quick model's download and the separation follows it.
+- `PlaybackService.takeUpVoice` gives the playing deck its fresh separation and re-seeks to the same position so that `DeckMixProcessor` starts its voice stage; with the voice turned down (`voiceLevel` < 100) each new title is separated as it starts.
+
+Full notes: [6.0.0 Beta 3](docs/releases/v6.0.0-beta.3.md).
+
+---
+
 # Ketvoice 6.0.0 Beta 2
 
 ![Ketvoice](ketvoice-banner.png)
