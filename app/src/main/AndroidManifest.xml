@@ -46,8 +46,8 @@
     <application
         android:name=".KetvoiceApp"
         android:allowBackup="false"
-        android:icon="@mipmap/ic_launcher"
-        android:roundIcon="@mipmap/ic_launcher_round"
+        android:icon="@mipmap/ic_launcher_glass"
+        android:roundIcon="@mipmap/ic_launcher_glass_round"
         android:label="@string/app_name"
         android:theme="@style/Theme.Ketvoice"
         android:enableOnBackInvokedCallback="true"

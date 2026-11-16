@@ -92,6 +92,7 @@ fun SettingsScreen() {
     var categoryKey by rememberSaveable { mutableStateOf<String?>(null) }
     val category = SettingsCategory.fromKey(categoryKey)
     var choice by remember { mutableStateOf<ChoiceSpec?>(null) }
+    var iconPicker by remember { mutableStateOf(false) }
     val settingsScope = rememberCoroutineScope()
     val youtube by YouTubeMusicSession.profile.collectAsState()
     val publisher by com.ketvoice.app.data.PublisherSession.allowed.collectAsState()
@@ -342,23 +343,12 @@ fun SettingsScreen() {
                     KetIcons.Album, "Icône de l'app",
                     sub = "Change réellement l'icône du lanceur",
                     value = appIconLabel(AppSettings.appIconVariant.value)
-                ) {
-                    choice = ChoiceSpec(
-                        "Icône de l'app", "L'icône du lanceur change immédiatement.",
-                        AppSettings.appIconVariant.value.toString(),
-                        listOf(
-                            ChoiceOption("0", "Défaut"),
-                            ChoiceOption("1", "Liquid Glass"),
-                            ChoiceOption("2", "Dark"),
-                            ChoiceOption("3", "Classic")
-                        )
-                    ) { id ->
-                        val next = id.toIntOrNull() ?: 0
-                        AppSettings.appIconVariant.value = next
-                        LauncherIcons.apply(ctx, next, notify = true)
-                        SettingsStore.save()
-                    }
-                }
+                ) { iconPicker = true }
+                if (iconPicker) AppIconPicker(AppSettings.appIconVariant.value, onPick = { next ->
+                    AppSettings.appIconVariant.value = next
+                    LauncherIcons.apply(ctx, next, notify = true)
+                    SettingsStore.save()
+                }, onClose = { iconPicker = false })
             }
 
             // ==================================================== LECTURE
@@ -826,11 +816,53 @@ private fun lyricsModeLabel(value: Int) = when (value) {
     else -> "Synchronisées"
 }
 
-private fun appIconLabel(value: Int) = when (value) {
-    1 -> "Liquid Glass"
-    2 -> "Dark"
-    3 -> "Classic"
-    else -> "Défaut"
+private fun appIconLabel(value: Int) = AppIcons.options.firstOrNull { it.id == value }?.label ?: "Liquid Glass"
+
+/** The launcher icons of 6.0.0 Beta 4 (the owner's glass K, without a background), with their previews. */
+internal object AppIcons {
+    class Option(val id: Int, val label: String, val preview: Int)
+    val options = listOf(
+        Option(1, "Liquid Glass", com.ketvoice.app.R.drawable.icon_preview_glass),
+        Option(3, "Clair", com.ketvoice.app.R.drawable.icon_preview_light),
+        Option(2, "Teinté", com.ketvoice.app.R.drawable.icon_preview_tinted),
+        Option(0, "Transparent", com.ketvoice.app.R.drawable.icon_preview_clear))
+}
+
+/** The icon chooser: each icon shown as on a home screen, over a wallpaper, the chosen one ringed. */
+@Composable
+internal fun AppIconPicker(current: Int, onPick: (Int) -> Unit, onClose: () -> Unit) {
+    val theme = LocalTheme.current
+    var chosen by remember { mutableStateOf(current) }
+    com.ketvoice.app.ui.common.AppAlertDialog(
+        onDismissRequest = onClose,
+        title = { Text("Icône de l'app") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                Text("L'icône du lanceur change immédiatement. Son fond est transparent : on voit le fond d'écran à travers le verre.",
+                    fontSize = 13.sp, lineHeight = 17.sp, color = theme.secondary)
+                AppIcons.options.chunked(2).forEach { row ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                        row.forEach { option ->
+                            val selected = chosen == option.id
+                            Column(Modifier.weight(1f).clip(RoundedCornerShape(20.dp)).clickable {
+                                chosen = option.id; onPick(option.id)
+                            }.padding(4.dp).testTag("icon-option-${option.id}"), horizontalAlignment = Alignment.CenterHorizontally) {
+                                Box(Modifier.size(104.dp).clip(RoundedCornerShape(26.dp))
+                                    .background(androidx.compose.ui.graphics.Brush.linearGradient(
+                                        listOf(androidx.compose.ui.graphics.Color(0xFF2B5FA8), androidx.compose.ui.graphics.Color(0xFF7A4FB8), androidx.compose.ui.graphics.Color(0xFFE38B6B))))
+                                    .border(if (selected) 3.dp else 0.dp, if (selected) theme.accent else androidx.compose.ui.graphics.Color.Transparent, RoundedCornerShape(26.dp)),
+                                    contentAlignment = Alignment.Center) {
+                                    androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(option.preview), null, Modifier.size(84.dp))
+                                }
+                                Text(option.label, fontSize = 13.sp, color = if (selected) theme.accent else theme.onBackground,
+                                    modifier = Modifier.padding(top = 6.dp), maxLines = 1)
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = { com.ketvoice.app.ui.common.KetTextButton("OK", onClose, primary = true) })
 }
 
 private val accentPalette = listOf(
