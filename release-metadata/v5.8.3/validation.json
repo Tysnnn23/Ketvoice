@@ -1,0 +1,172 @@
+{
+  "schema": 8,
+  "version": "5.8.3",
+  "versionCode": 118,
+  "source_commit": "9eed9cf510ec84d981191325870445fea05003d7",
+  "created_at": "2026-11-16T10:16:13.164109+00:00",
+  "build_origin": {
+    "kind": "github_actions_with_owner_discord_sdk",
+    "workflow": "android.yml",
+    "run_id": 43843829852,
+    "artifact": {
+      "id": 14214942389,
+      "sha256": "5754208a95d0f972b44f2883110313aa9aa45f9aa7b9ef9c55a2e8dabb38e321"
+    },
+    "gradle": "assembleMobileRelease assembleQuestRelease",
+    "note": "Signed by CI with the pinned keystore secret; the Discord Social SDK AAR matched its pinned SHA-256."
+  },
+  "local_validation": {
+    "result": "debug JVM/Robolectric suites for both flavors, release lint and the UI text audit passed in a cloud container without the Discord SDK",
+    "commands": [
+      "testMobileDebugUnitTest",
+      "testQuestDebugUnitTest",
+      "lintMobileRelease",
+      "lintQuestRelease",
+      "tools/audit_ui_texts.py --check"
+    ],
+    "ci_validation": "run 43843829852: release builds, debug and release unit tests for both flavors, UI text audit, lint, APK signature pin and Discord bridge packaging passed",
+    "code_review": {
+      "kind": "none independent; three defects seen on the owner's phone screenshots fixed"
+    },
+    "host_previews": "artist header host test now asserts the radio link is below the Listen button; album and playlist host tests updated for the 'Lire' label",
+    "after_last_full_local_run": "five host tests updated for the new play label, then both suites rerun green; lint was run on the source before those test-only edits"
+  },
+  "server": {
+    "function": "ketvoice-content",
+    "deployed_version": 23,
+    "changed_in_this_version": false,
+    "note": "no server change since 5.4.0"
+  },
+  "tests": {
+    "mobile": {
+      "jvm": {
+        "tests": 801,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "android_15_emulator_compose": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "quest": {
+      "jvm": {
+        "tests": 800,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "android_15_emulator_compose": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    }
+  },
+  "lint": {
+    "mobile": {
+      "Warning": 187,
+      "Hint": 21
+    },
+    "quest": {
+      "Warning": 189,
+      "Hint": 21
+    },
+    "errors": 0,
+    "new_vs_5_8_2": "none"
+  },
+  "apks": [
+    {
+      "name": "Ketvoice-5.8.3.apk",
+      "sha256": "5d332f41ae6a8d02a2f738e462fc6a0cb5663cda8d880428f8e4ce5d2efbf2cd",
+      "bytes": 74680144,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "5.8.3",
+      "versionCode": 118,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-5.8.3-Quest.apk",
+      "sha256": "c4492284cacd9fa1d9d534514ca9e1e33fb971e6ee3b17dcadb7f7e23601d04a",
+      "bytes": 84713742,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "5.8.3",
+      "versionCode": 118,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    }
+  ],
+  "discord": {
+    "sdk_present_in_ci_build": true,
+    "sdk_sha256_pinned": true,
+    "bridge_and_native_libraries_verified": true,
+    "presence_mode": "unauthenticated_rpc_through_installed_discord_app"
+  },
+  "credential_scan": {
+    "entries": 3451,
+    "findings": 0,
+    "raw_pattern_findings": 1,
+    "scope": "tracked sources and APK archive entries",
+    "kind": "credential_patterns",
+    "explicit_private_provider_key_deny_list": false,
+    "triage": [
+      {
+        "file": "Ketvoice-Liquid-Glass-V4.html",
+        "classification": "embedded_image_false_positive",
+        "all_hits_inside_image_data_uris": true,
+        "rescanned_without_image_payloads": true
+      }
+    ]
+  },
+  "release_install_smoke": {
+    "mobile": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "quest": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    }
+  },
+  "publication_override": {
+    "authorized_by_user": true,
+    "authorized_at": "2026-11-16T10:16:13.164109+00:00",
+    "kind": "standing_authorization",
+    "user_statement": "J'autorise TOUT devient maintenant une règle.",
+    "user_statement_date": "2026-11-14",
+    "in_reply_to": "The question whether versions may be published without phone or Quest testing without asking again for each version.",
+    "recorded_in": "AGENTS.md (commit aeeda8e)",
+    "reason": "The owner made publishing validated versions without phone or Quest testing a standing rule.",
+    "scope": "physical device installation and all on-device behaviour of 5.8.3"
+  },
+  "owner_report_2026_11_16_screenshots": {
+    "statement_summary": "four phone screenshots sent without text (artist page, album page, Explore, Home), after the Reddit promotion kit",
+    "defects_seen_and_fixed": [
+      "artist page: the 'Artist radio' link (5.8.0) was drawn over the Listen button because StaggeredReveal lays its content in a Box; it is now in a column under the buttons",
+      "album and playlist play button read 'Playback' in English: its label was the noun 'Lecture'; it now uses 'Lire' (Play) in all ten languages, 'Lecture' stays the Settings and Sources word",
+      "Home's For you card showed 'POUR VOUS', 'Dans le style de Maes' and 'Des artistes proches à découvrir' in French in an English interface: its texts were drawn with localize=false; they now go through AppText"
+    ],
+    "not_fixed": "'Translated automatically · Show original' under the biography was partly hidden by the mini player in the screenshot; that is the end of the scroll position, not a layout defect"
+  },
+  "not_validated": [
+    "physical phone or Quest installation, rendering and touch behaviour",
+    "the fixed artist page, album button and For you card on a device",
+    "independent code review of this diff"
+  ],
+  "canonical_banner_sha256": "47f6793088983f7d4e6bd1aeaa2cbd8b7cdc2a8f91271e3b2839daea81da0436"
+}
