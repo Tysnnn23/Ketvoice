@@ -3,4 +3,7 @@
     <color name="ic_launcher_background">#F4F4F5</color>
     <color name="ic_launcher_dark_background">#0B0B0C</color>
     <color name="ic_launcher_classic_background">#FFFFFF</color>
+    <!-- 6.0.0 Beta 4: Android fills an adaptive icon's background in black, so each glass K keeps the ground it was drawn on. -->
+    <color name="ic_launcher27_dark_ground">#000000</color>
+    <color name="ic_launcher27_light_ground">#F4F6F8</color>
 </resources>

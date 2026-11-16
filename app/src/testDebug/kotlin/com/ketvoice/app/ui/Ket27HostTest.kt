@@ -99,7 +99,8 @@ class Ket27HostTest {
                 // The transparency of the glass sits in the page itself, with its live preview.
                 compose.onNodeWithTag("glass-tint-slider").performScrollTo().assertExists()
                 compose.onNodeWithTag("glass-preview").assertExists()
-                compose.onNodeWithText("Reflets selon l'inclinaison").performScrollTo().assertExists()
+                // The tilt switch is a phone's: Quest has no tilt to follow.
+                if (!com.ketvoice.app.BuildConfig.IS_QUEST) compose.onNodeWithText("Reflets selon l'inclinaison").performScrollTo().assertExists()
                 assertNothingGone("the glass preview")
             }
             compose.onNodeWithContentDescription("Retour").performClick()
@@ -162,10 +163,16 @@ class Ket27HostTest {
         icon.setBounds(0, 0, 432, 432); icon.draw(Canvas(bitmap))
         val file = File("build/host-ui-preview/${com.ketvoice.app.BuildConfig.FLAVOR}/app-icon-liquid-glass.png")
         file.parentFile?.mkdirs(); file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
-        // The owner's glass K on its black ground: dark corners, light glass in the middle of the stem.
+        // 6.0.0 Beta 4: the owner's iOS 27 glass K on the black it was drawn on (Android fills an adaptive
+        // icon's background, so a transparent one would turn black anyway), its glass catching light.
         val corner = bitmap.getPixel(20, 20)
-        val lightOnStem = (80 until 200).count { android.graphics.Color.green(bitmap.getPixel(it, 216)) > 120 }
         assertTrue("black ground", android.graphics.Color.red(corner) < 20 && android.graphics.Color.green(corner) < 20 && android.graphics.Color.blue(corner) < 20)
-        assertTrue("the glass catches light across the stem", lightOnStem > 20)
+        val lit = (60 until 372).count { x -> (60 until 372 step 8).any { y -> android.graphics.Color.green(bitmap.getPixel(x, y)) > 120 } }
+        assertTrue("the glass catches light: $lit", lit > 40)
+        // The light K sits on its pale ground.
+        val light = context.getDrawable(com.ketvoice.app.R.mipmap.ic_launcher_classic)!!
+        val lightBitmap = Bitmap.createBitmap(432, 432, Bitmap.Config.ARGB_8888)
+        light.setBounds(0, 0, 432, 432); light.draw(Canvas(lightBitmap))
+        assertTrue("pale ground", android.graphics.Color.red(lightBitmap.getPixel(20, 20)) > 200)
     }
 }

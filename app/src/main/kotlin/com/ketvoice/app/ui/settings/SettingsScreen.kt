@@ -833,12 +833,13 @@ private fun appIconLabel(value: Int) = AppIcons.options.firstOrNull { it.id == v
 
 /** The launcher icons of 6.0.0 Beta 4 (the owner's glass K, without a background), with their previews. */
 internal object AppIcons {
-    class Option(val id: Int, val label: String, val preview: Int)
+    /** [ground] is the colour Android draws under the glass (an adaptive icon's background is always filled). */
+    class Option(val id: Int, val label: String, val preview: Int, val ground: Long)
     val options = listOf(
-        Option(1, "Liquid Glass", com.ketvoice.app.R.drawable.icon_preview_glass),
-        Option(3, "Clair", com.ketvoice.app.R.drawable.icon_preview_light),
-        Option(2, "Teinté", com.ketvoice.app.R.drawable.icon_preview_tinted),
-        Option(0, "Transparent", com.ketvoice.app.R.drawable.icon_preview_clear))
+        Option(1, "Liquid Glass", com.ketvoice.app.R.drawable.icon_preview_glass, 0xFF000000),
+        Option(3, "Clair", com.ketvoice.app.R.drawable.icon_preview_light, 0xFFF4F6F8),
+        Option(2, "Teinté", com.ketvoice.app.R.drawable.icon_preview_tinted, 0xFF000000),
+        Option(0, "Transparent", com.ketvoice.app.R.drawable.icon_preview_clear, 0xFFF4F6F8))
 }
 
 /** The icon chooser: each icon shown as on a home screen, over a wallpaper, the chosen one ringed. */
@@ -851,7 +852,7 @@ internal fun AppIconPicker(current: Int, onPick: (Int) -> Unit, onClose: () -> U
         title = { Text("Icône de l'app") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                Text("L'icône du lanceur change immédiatement. Son fond est transparent : on voit le fond d'écran à travers le verre.",
+                Text("L'icône du lanceur change immédiatement.",
                     fontSize = 13.sp, lineHeight = 17.sp, color = theme.secondary)
                 AppIcons.options.chunked(2).forEach { row ->
                     Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -860,9 +861,9 @@ internal fun AppIconPicker(current: Int, onPick: (Int) -> Unit, onClose: () -> U
                             Column(Modifier.weight(1f).clip(RoundedCornerShape(20.dp)).clickable {
                                 chosen = option.id; onPick(option.id)
                             }.padding(4.dp).testTag("icon-option-${option.id}"), horizontalAlignment = Alignment.CenterHorizontally) {
+                                // As the launcher shows it: the glass K on its own ground, in the launcher's rounded shape.
                                 Box(Modifier.size(104.dp).clip(RoundedCornerShape(26.dp))
-                                    .background(androidx.compose.ui.graphics.Brush.linearGradient(
-                                        listOf(androidx.compose.ui.graphics.Color(0xFF2B5FA8), androidx.compose.ui.graphics.Color(0xFF7A4FB8), androidx.compose.ui.graphics.Color(0xFFE38B6B))))
+                                    .background(androidx.compose.ui.graphics.Color(option.ground))
                                     .border(if (selected) 3.dp else 0.dp, if (selected) theme.accent else androidx.compose.ui.graphics.Color.Transparent, RoundedCornerShape(26.dp)),
                                     contentAlignment = Alignment.Center) {
                                     androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(option.preview), null, Modifier.size(84.dp))
