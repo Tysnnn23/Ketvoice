@@ -7,6 +7,20 @@
 
 ---
 
+# Ketvoice 5.9.2
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 121** — Lyrics video sharing, a performance mode that keeps the effects, a like that no longer shifts the layout.
+
+- LyricVideo: on-device H.264 MP4 (720×1280, 30 fps) of up to four lines lit in time over the blurred Canvas or the flowing cover; Moments hold four lines.
+- Performance mode now keeps glass as blur (no refraction), drops per-line lyric blur, runs the artwork flow at a quarter rate, turns image crossfades off; album hero Canvas stays.
+- HeartBurst lays out as a point: liking no longer grows the title row (LikeLayoutHostTest).
+
+Full notes: [5.9.2](docs/releases/v5.9.2.md).
+
+---
+
 # Ketvoice 5.9.1
 
 ![Ketvoice](ketvoice-banner.png)

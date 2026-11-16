@@ -30,8 +30,9 @@ import java.io.File
 object MomentCard {
     const val WIDTH = 1080
     const val HEIGHT = 1920
-    const val MAX_LINES = 2
-    private const val MAX_CHARS = 180
+    /** Up to four lines since 5.9.2 (the video and the picture). */
+    const val MAX_LINES = 4
+    private const val MAX_CHARS = 280
 
     /**
      * Selecting lines for a card: a line is added if it touches the selection, the

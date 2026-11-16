@@ -43,7 +43,8 @@ class KetvoiceApp : Application(), ImageLoaderFactory {
                     .maxSizeBytes(2L * 1024L * 1024L * 1024L)
                     .build()
             }
-            .crossfade(true)
+            // In the performance mode images appear at once instead of fading in: one animated layer less per image.
+            .crossfade(!runCatching { getSharedPreferences("ketvoice_settings", MODE_PRIVATE).getBoolean("highPerformanceMode", false) }.getOrDefault(false))
             .build()
     }
 }

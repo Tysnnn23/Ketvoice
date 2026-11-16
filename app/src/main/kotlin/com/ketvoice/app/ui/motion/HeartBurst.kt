@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -32,7 +33,13 @@ internal fun HeartBurst(trigger: Int, color: Color, modifier: Modifier = Modifie
     if (Motion.reduced || trigger <= 0) return
     val progress = remember(trigger) { Animatable(0f) }
     LaunchedEffect(trigger) { progress.snapTo(0f); progress.animateTo(1f, tween(BurstShape.DURATION_MS, easing = LinearOutSlowInEasing)) }
-    Box(modifier.size(size).testTag("heart-burst"), contentAlignment = Alignment.Center) {
+    // The burst takes no room (5.9.2): measured at its own size but laid out as a point at the centre of
+    // the button, so a like never pushes the title and the buttons around it.
+    Box(modifier.layout { measurable, _ ->
+        val side = size.roundToPx()
+        val placeable = measurable.measure(androidx.compose.ui.unit.Constraints.fixed(side, side))
+        layout(0, 0) { placeable.place(-side / 2, -side / 2) }
+    }.testTag("heart-burst"), contentAlignment = Alignment.Center) {
         Canvas(Modifier.size(size)) {
             val t = progress.value
             if (t >= 1f) return@Canvas

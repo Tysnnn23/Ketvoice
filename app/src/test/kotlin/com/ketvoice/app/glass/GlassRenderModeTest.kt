@@ -20,7 +20,7 @@ class GlassRenderModeTest {
     @Test fun reducedMotionAndLowMemoryUseBoundedBlurWithoutAnimatedRefraction() {
         assertEquals(GlassRenderMode.Blur, mode(reduced = true))
         assertEquals(GlassRenderMode.Blur, mode(lowMemory = true))
-        assertEquals(GlassRenderMode.Static, mode(performance = true))
+        assertEquals(GlassRenderMode.Blur, mode(performance = true))
         assertEquals(GlassRenderMode.Static, mode(reduceBlur = true))
         assertEquals(GlassRenderMode.Static, mode(opaque = true))
         assertEquals(GlassRenderMode.Static, mode(enabled = false))

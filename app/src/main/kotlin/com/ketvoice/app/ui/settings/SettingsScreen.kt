@@ -343,7 +343,7 @@ fun SettingsScreen() {
                 ) { AppSettings.liquidGlass.value = it; SettingsStore.save() }
                 SToggle(
                     KetIcons.Sliders, "Mode performance",
-                    "Allège les effets de verre sur les appareils modestes",
+                    "Garde les effets visibles et allège ceux qu'on remarque à peine : verre sans réfraction, paroles sans flou, fond animé à cadence réduite, images sans fondu",
                     AppSettings.highPerformanceMode.value
                 ) { AppSettings.highPerformanceMode.value = it; SettingsStore.save() }
                 SToggle(

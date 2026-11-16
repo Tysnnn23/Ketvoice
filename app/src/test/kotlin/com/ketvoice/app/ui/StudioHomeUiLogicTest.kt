@@ -74,15 +74,18 @@ class StudioHomeUiLogicTest {
         assertEquals("Without scores nothing changes from before", homeBlockOrder(9, 3, true), homeBlockOrder(9, 3, true, false, emptyMap()))
     }
 
-    @Test fun aMomentHoldsOneOrTwoNeighbouringLines() {
+    @Test fun aMomentHoldsUpToFourNeighbouringLines() {
         assertEquals(listOf(4), MomentCard.toggle(emptyList(), 4))
         assertEquals(listOf(4, 5), MomentCard.toggle(listOf(4), 5))
         assertEquals("A distant line starts a new selection", listOf(9), MomentCard.toggle(listOf(4), 9))
-        assertEquals("Never three lines", listOf(6), MomentCard.toggle(listOf(4, 5), 6))
+        // Up to four lines since 5.9.2 (owner's request for the lyrics video); a fifth starts again.
+        assertEquals(listOf(4, 5, 6), MomentCard.toggle(listOf(4, 5), 6))
+        assertEquals(listOf(4, 5, 6, 7), MomentCard.toggle(listOf(4, 5, 6), 7))
+        assertEquals("Never five lines", listOf(8), MomentCard.toggle(listOf(4, 5, 6, 7), 8))
         assertEquals(listOf(5), MomentCard.toggle(listOf(4, 5), 4))
         assertEquals(emptyList<Int>(), MomentCard.toggle(listOf(4), 4))
         assertEquals("First\nSecond", MomentCard.text(listOf(" First ", "", "Second")))
-        assertTrue(MomentCard.text(listOf("x".repeat(400))).length <= 180)
+        assertTrue(MomentCard.text(listOf("x".repeat(400))).length <= 280)
         assertEquals(0xFFFFFFFF.toInt(), MomentCard.inkOn(0xFF101820.toInt()))
         assertEquals(0xFF111111.toInt(), MomentCard.inkOn(0xFFF2E6C9.toInt()))
     }

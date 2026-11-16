@@ -225,7 +225,8 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
                             // Progressive blur: sung lines stay slightly soft, upcoming
                             // lines sharpen to the active one, then soften again the
                             // further down they are.
-                            val blur = if (reduced || !AppSettings.blurInactiveLyrics.value || current || !lyrics.isTimed) 0.dp
+                            // A blur per line is a layer per line: the performance mode keeps the lines sharp.
+                            val blur = if (reduced || !AppSettings.blurInactiveLyrics.value || AppSettings.highPerformanceMode.value || current || !lyrics.isTimed) 0.dp
                                 else if (below) when (distance) {
                                     1 -> 0.dp
                                     2 -> .5.dp
@@ -341,7 +342,8 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
                     }
                 }
             }
-            if (moment.isNotEmpty()) MomentBar(track, moment.mapNotNull { lyrics.lines.getOrNull(it)?.text }) { moment = emptyList() }
+            if (moment.isNotEmpty()) MomentBar(track, moment.mapNotNull { lyrics.lines.getOrNull(it) },
+                lyrics.lines.getOrNull((moment.maxOrNull() ?: -1) + 1)?.timeMs ?: -1L, lyrics.isTimed) { moment = emptyList() }
             else if (expanded && !following && lyrics.isTimed) {
                 Text("Reprendre le suivi", color = Color.White, fontSize = if (com.ketvoice.app.BuildConfig.IS_QUEST) 14.sp else 12.sp,
                     modifier = Modifier.align(Alignment.CenterHorizontally).clickable { following = true }.padding(12.dp))
@@ -355,30 +357,59 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
 private fun Modifier.momentClickable(onClick: () -> Unit, onLongClick: () -> Unit): Modifier =
     combinedClickable(onClick = onClick, onLongClick = onLongClick, onLongClickLabel = com.ketvoice.app.data.AppText.t("Partager ce moment"))
 
-/** The selected lines become a card for a story, shared with a link to the title. */
+/**
+ * The selected lines (up to four) become a picture or, since 5.9.2, a video for a story: the Canvas
+ * blurred behind, the words lit in time in a frosted card. Both are shared with a link to the title.
+ */
 @Composable
-private fun MomentBar(track: Track, lines: List<String>, onClose: () -> Unit) {
+private fun MomentBar(track: Track, lines: List<MusicApi.LyricLine>, nextMs: Long, timed: Boolean, onClose: () -> Unit) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val scope = rememberCoroutineScope()
     var busy by remember { mutableStateOf(false) }
+    var progress by remember { mutableStateOf<Float?>(null) }
+    var failed by remember { mutableStateOf<String?>(null) }
+    var logo by remember { mutableStateOf(true) }
     val cover = com.ketvoice.app.data.ArtworkRepo.coverForTrack(track) ?: track.coverUrl
     val accent = com.ketvoice.app.theme.rememberCoverAccent(cover)?.first
-    Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp).testTag("moment-bar"),
-        horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-        com.ketvoice.app.ui.common.GlassCapsuleButton("Partager", com.ketvoice.app.ui.common.KetIcons.Share, {
-            if (!busy) { busy = true
-                scope.launch {
-                    try {
-                        val file = com.ketvoice.app.util.MomentCard.render(context, track, lines, accent?.toArgb())
-                        com.ketvoice.app.util.MomentCard.share(context, file, track)
-                        onClose()
-                    } catch (_: Exception) { } finally { busy = false }
+    val canvas = com.ketvoice.app.data.CanvasRepo.paths.collectAsState().value[track.id]
+    Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp).testTag("moment-bar")) {
+        if (progress != null || failed != null) Text(failed?.let { com.ketvoice.app.data.AppText.t(it) }
+            ?: "${com.ketvoice.app.data.AppText.t("Création de la vidéo…")} ${((progress ?: 0f) * 100).toInt()} %", localize = false,
+            color = Color.White.copy(alpha = .82f), fontSize = 13.sp, modifier = Modifier.padding(start = 6.dp, bottom = 6.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            com.ketvoice.app.ui.common.GlassCapsuleButton("Image", com.ketvoice.app.ui.common.KetIcons.Share, {
+                if (!busy) { busy = true; failed = null
+                    scope.launch {
+                        try {
+                            val file = com.ketvoice.app.util.MomentCard.render(context, track, lines.map { it.text }, accent?.toArgb())
+                            com.ketvoice.app.util.MomentCard.share(context, file, track)
+                            onClose()
+                        } catch (_: Exception) { } finally { busy = false }
+                    }
                 }
-            }
-        }, Modifier.weight(1.7f), prominent = true, enabled = !busy, tag = "moment-share", minHeight = 48.dp)
-        // Both buttons get a share of the row: a capsule fills the width it is given, so a
-        // Cancel without a weight used to take the whole row and hide Share.
-        com.ketvoice.app.ui.common.GlassCapsuleButton("Annuler", null, onClose, Modifier.weight(1f), minHeight = 48.dp, tag = "moment-cancel")
+            }, Modifier.weight(1f), prominent = !timed, enabled = !busy, tag = "moment-share", minHeight = 48.dp)
+            // The video needs times: lyrics without them only make a picture.
+            if (timed) com.ketvoice.app.ui.common.GlassCapsuleButton("Vidéo", com.ketvoice.app.ui.common.KetIcons.Play, {
+                if (!busy) { busy = true; failed = null; progress = 0f
+                    scope.launch {
+                        try {
+                            val file = com.ketvoice.app.util.LyricVideo.render(context, track, lines, nextMs, canvas, accent?.toArgb(), logo) { p ->
+                                scope.launch(kotlinx.coroutines.Dispatchers.Main) { progress = p }
+                            }
+                            com.ketvoice.app.util.LyricVideo.share(context, file, track)
+                            onClose()
+                        } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled
+                        } catch (e: Exception) { failed = "Vidéo indisponible sur cet appareil"
+                        } finally { busy = false; progress = null }
+                    }
+                }
+            }, Modifier.weight(1f), prominent = true, enabled = !busy, tag = "moment-video", minHeight = 48.dp)
+            com.ketvoice.app.ui.common.GlassCapsuleButton("Annuler", null, onClose, Modifier.weight(1f), minHeight = 48.dp, tag = "moment-cancel")
+        }
+        if (timed) Row(Modifier.fillMaxWidth().padding(top = 4.dp, start = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("Logo Ketvoice dans la vidéo", color = Color.White.copy(alpha = .78f), fontSize = 13.sp, modifier = Modifier.weight(1f))
+            com.ketvoice.app.ui.common.LiquidGlassSwitch(logo, { logo = it })
+        }
     }
 }
 

@@ -1528,7 +1528,14 @@
   "Fond selon la pochette": "Background from the cover",
   "Le fond de toute l'application prend la couleur de ce qui est en écoute, comme une page d'album": "The background of the whole app takes the colour of what is playing, like an album page",
   "Pendant un mix, le titre suivant entre sans sa voix puis elle le rejoint, et la voix du titre en cours s'efface avant qu'il chante. En temps réel : rien n'est stocké": "During a mix, the next title comes in without its vocals, which then join it, and the current vocals fade before the next one sings. In real time: nothing is stored",
-  "Séparer les voix (expérimental)": "Separate vocals (experimental)"
+  "Séparer les voix (expérimental)": "Separate vocals (experimental)",
+  "Création de la vidéo…": "Creating the video…",
+  "Garde les effets visibles et allège ceux qu'on remarque à peine : verre sans réfraction, paroles sans flou, fond animé à cadence réduite, images sans fondu": "Keeps the visible effects and lightens those you barely notice: glass without refraction, lyrics without blur, animated background at a lower frame rate, images without fade",
+  "Image": "Image",
+  "Vidéo": "Video",
+  "Logo Ketvoice dans la vidéo": "Ketvoice logo in the video",
+  "Vidéo indisponible sur cet appareil": "Video unavailable on this device",
+  "Aucune ligne choisie": "No line chosen"
  },
  "hi": {
   "Reverb": "रीवर्ब",
@@ -3059,7 +3066,14 @@
   "Fond selon la pochette": "कवर के अनुसार बैकग्राउंड",
   "Le fond de toute l'application prend la couleur de ce qui est en écoute, comme une page d'album": "पूरे ऐप का बैकग्राउंड चल रहे गाने के रंग में बदल जाता है, एल्बम पेज की तरह",
   "Pendant un mix, le titre suivant entre sans sa voix puis elle le rejoint, et la voix du titre en cours s'efface avant qu'il chante. En temps réel : rien n'est stocké": "मिक्स के दौरान अगला गाना बिना आवाज़ के आता है, फिर आवाज़ जुड़ती है, और मौजूदा आवाज़ उसके गाने से पहले धीमी हो जाती है। रीयल-टाइम में: कुछ भी सेव नहीं होता",
-  "Séparer les voix (expérimental)": "आवाज़ अलग करें (प्रायोगिक)"
+  "Séparer les voix (expérimental)": "आवाज़ अलग करें (प्रायोगिक)",
+  "Création de la vidéo…": "वीडियो बन रहा है…",
+  "Garde les effets visibles et allège ceux qu'on remarque à peine : verre sans réfraction, paroles sans flou, fond animé à cadence réduite, images sans fondu": "दिखने वाले इफ़ेक्ट रखता है और मुश्किल से दिखने वालों को हल्का करता है: बिना रिफ़्रैक्शन का ग्लास, बिना ब्लर के बोल, कम फ़्रेम रेट पर एनिमेटेड बैकग्राउंड, बिना फ़ेड की इमेज",
+  "Image": "इमेज",
+  "Vidéo": "वीडियो",
+  "Logo Ketvoice dans la vidéo": "वीडियो में Ketvoice लोगो",
+  "Vidéo indisponible sur cet appareil": "इस डिवाइस पर वीडियो उपलब्ध नहीं",
+  "Aucune ligne choisie": "कोई पंक्ति नहीं चुनी गई"
  },
  "ja": {
   "Reverb": "リバーブ",
@@ -4590,7 +4604,14 @@
   "Fond selon la pochette": "ジャケットに合わせた背景",
   "Le fond de toute l'application prend la couleur de ce qui est en écoute, comme une page d'album": "アプリ全体の背景が再生中の曲の色に変わります（アルバムページのように）",
   "Pendant un mix, le titre suivant entre sans sa voix puis elle le rejoint, et la voix du titre en cours s'efface avant qu'il chante. En temps réel : rien n'est stocké": "ミックス中、次の曲はボーカルなしで入り、その後ボーカルが加わります。次の曲が歌う前に今の曲のボーカルは消えます。リアルタイム処理で何も保存されません",
-  "Séparer les voix (expérimental)": "ボーカルを分離（試験的）"
+  "Séparer les voix (expérimental)": "ボーカルを分離（試験的）",
+  "Création de la vidéo…": "動画を作成中…",
+  "Garde les effets visibles et allège ceux qu'on remarque à peine : verre sans réfraction, paroles sans flou, fond animé à cadence réduite, images sans fondu": "見える効果はそのままに、ほとんど気づかない効果を軽くします：屈折なしのガラス、ぼかしなしの歌詞、フレームレートを下げた動く背景、フェードなしの画像",
+  "Image": "画像",
+  "Vidéo": "動画",
+  "Logo Ketvoice dans la vidéo": "動画に Ketvoice のロゴを表示",
+  "Vidéo indisponible sur cet appareil": "この端末では動画を作成できません",
+  "Aucune ligne choisie": "行が選択されていません"
  },
  "zh": {
   "Reverb": "混响",
@@ -6121,7 +6142,14 @@
   "Fond selon la pochette": "背景跟随封面",
   "Le fond de toute l'application prend la couleur de ce qui est en écoute, comme une page d'album": "整个应用的背景随正在播放的内容变色，就像专辑页面一样",
   "Pendant un mix, le titre suivant entre sans sa voix puis elle le rejoint, et la voix du titre en cours s'efface avant qu'il chante. En temps réel : rien n'est stocké": "混音时，下一首先不带人声进入，随后人声加入；在它开唱前，当前歌曲的人声会淡出。实时处理：不存储任何内容",
-  "Séparer les voix (expérimental)": "分离人声（实验性）"
+  "Séparer les voix (expérimental)": "分离人声（实验性）",
+  "Création de la vidéo…": "正在生成视频…",
+  "Garde les effets visibles et allège ceux qu'on remarque à peine : verre sans réfraction, paroles sans flou, fond animé à cadence réduite, images sans fondu": "保留可见效果，减轻几乎察觉不到的效果：无折射的玻璃、无模糊的歌词、降低帧率的动态背景、无淡入的图片",
+  "Image": "图片",
+  "Vidéo": "视频",
+  "Logo Ketvoice dans la vidéo": "视频中显示 Ketvoice 标志",
+  "Vidéo indisponible sur cet appareil": "此设备无法生成视频",
+  "Aucune ligne choisie": "未选择任何行"
  },
  "ru": {
   "Reverb": "Реверберация",
@@ -7652,7 +7680,14 @@
   "Fond selon la pochette": "Фон по обложке",
   "Le fond de toute l'application prend la couleur de ce qui est en écoute, comme une page d'album": "Фон всего приложения принимает цвет того, что играет, как на странице альбома",
   "Pendant un mix, le titre suivant entre sans sa voix puis elle le rejoint, et la voix du titre en cours s'efface avant qu'il chante. En temps réel : rien n'est stocké": "Во время микса следующий трек входит без вокала, затем вокал присоединяется, а голос текущего трека затихает до того, как запоёт следующий. В реальном времени: ничего не сохраняется",
-  "Séparer les voix (expérimental)": "Отделять вокал (экспериментально)"
+  "Séparer les voix (expérimental)": "Отделять вокал (экспериментально)",
+  "Création de la vidéo…": "Создание видео…",
+  "Garde les effets visibles et allège ceux qu'on remarque à peine : verre sans réfraction, paroles sans flou, fond animé à cadence réduite, images sans fondu": "Сохраняет заметные эффекты и облегчает почти незаметные: стекло без преломления, текст без размытия, анимированный фон с меньшей частотой кадров, изображения без плавного появления",
+  "Image": "Изображение",
+  "Vidéo": "Видео",
+  "Logo Ketvoice dans la vidéo": "Логотип Ketvoice в видео",
+  "Vidéo indisponible sur cet appareil": "Видео недоступно на этом устройстве",
+  "Aucune ligne choisie": "Строки не выбраны"
  },
  "it": {
   "Reverb": "Riverbero",
@@ -9183,7 +9218,14 @@
   "Fond selon la pochette": "Sfondo dalla copertina",
   "Le fond de toute l'application prend la couleur de ce qui est en écoute, comme une page d'album": "Lo sfondo di tutta l'app prende il colore di ciò che stai ascoltando, come una pagina album",
   "Pendant un mix, le titre suivant entre sans sa voix puis elle le rejoint, et la voix du titre en cours s'efface avant qu'il chante. En temps réel : rien n'est stocké": "Durante un mix, il brano successivo entra senza voce, che poi lo raggiunge, e la voce del brano in corso sfuma prima che canti. In tempo reale: non viene salvato nulla",
-  "Séparer les voix (expérimental)": "Separa le voci (sperimentale)"
+  "Séparer les voix (expérimental)": "Separa le voci (sperimentale)",
+  "Création de la vidéo…": "Creazione del video…",
+  "Garde les effets visibles et allège ceux qu'on remarque à peine : verre sans réfraction, paroles sans flou, fond animé à cadence réduite, images sans fondu": "Mantiene gli effetti visibili e alleggerisce quelli che si notano appena: vetro senza rifrazione, testi senza sfocatura, sfondo animato a frequenza ridotta, immagini senza dissolvenza",
+  "Image": "Immagine",
+  "Vidéo": "Video",
+  "Logo Ketvoice dans la vidéo": "Logo Ketvoice nel video",
+  "Vidéo indisponible sur cet appareil": "Video non disponibile su questo dispositivo",
+  "Aucune ligne choisie": "Nessuna riga scelta"
  },
  "es": {
   "Reverb": "Reverb",
@@ -10714,7 +10756,14 @@
   "Fond selon la pochette": "Fondo según la portada",
   "Le fond de toute l'application prend la couleur de ce qui est en écoute, comme une page d'album": "El fondo de toda la app toma el color de lo que suena, como una página de álbum",
   "Pendant un mix, le titre suivant entre sans sa voix puis elle le rejoint, et la voix du titre en cours s'efface avant qu'il chante. En temps réel : rien n'est stocké": "Durante una mezcla, la siguiente canción entra sin voz y luego se le une, y la voz de la actual se desvanece antes de que cante. En tiempo real: no se guarda nada",
-  "Séparer les voix (expérimental)": "Separar voces (experimental)"
+  "Séparer les voix (expérimental)": "Separar voces (experimental)",
+  "Création de la vidéo…": "Creando el vídeo…",
+  "Garde les effets visibles et allège ceux qu'on remarque à peine : verre sans réfraction, paroles sans flou, fond animé à cadence réduite, images sans fondu": "Mantiene los efectos visibles y aligera los que apenas se notan: cristal sin refracción, letras sin desenfoque, fondo animado con menos fotogramas, imágenes sin fundido",
+  "Image": "Imagen",
+  "Vidéo": "Vídeo",
+  "Logo Ketvoice dans la vidéo": "Logo de Ketvoice en el vídeo",
+  "Vidéo indisponible sur cet appareil": "Vídeo no disponible en este dispositivo",
+  "Aucune ligne choisie": "Ninguna línea elegida"
  },
  "de": {
   "Reverb": "Reverb",
@@ -12245,7 +12294,14 @@
   "Fond selon la pochette": "Hintergrund nach Cover",
   "Le fond de toute l'application prend la couleur de ce qui est en écoute, comme une page d'album": "Der Hintergrund der ganzen App nimmt die Farbe des Gespielten an, wie eine Albumseite",
   "Pendant un mix, le titre suivant entre sans sa voix puis elle le rejoint, et la voix du titre en cours s'efface avant qu'il chante. En temps réel : rien n'est stocké": "Beim Mix kommt der nächste Titel ohne Gesang herein, der dann dazukommt, und der aktuelle Gesang blendet aus, bevor der nächste singt. In Echtzeit: nichts wird gespeichert",
-  "Séparer les voix (expérimental)": "Gesang trennen (experimentell)"
+  "Séparer les voix (expérimental)": "Gesang trennen (experimentell)",
+  "Création de la vidéo…": "Video wird erstellt…",
+  "Garde les effets visibles et allège ceux qu'on remarque à peine : verre sans réfraction, paroles sans flou, fond animé à cadence réduite, images sans fondu": "Behält die sichtbaren Effekte und erleichtert die kaum bemerkbaren: Glas ohne Lichtbrechung, Songtexte ohne Unschärfe, animierter Hintergrund mit geringerer Bildrate, Bilder ohne Einblenden",
+  "Image": "Bild",
+  "Vidéo": "Video",
+  "Logo Ketvoice dans la vidéo": "Ketvoice-Logo im Video",
+  "Vidéo indisponible sur cet appareil": "Video auf diesem Gerät nicht verfügbar",
+  "Aucune ligne choisie": "Keine Zeile gewählt"
  },
  "pt": {
   "Reverb": "Reverb",
@@ -13776,7 +13832,14 @@
   "Fond selon la pochette": "Fundo pela capa",
   "Le fond de toute l'application prend la couleur de ce qui est en écoute, comme une page d'album": "O fundo de todo o app assume a cor do que está tocando, como uma página de álbum",
   "Pendant un mix, le titre suivant entre sans sa voix puis elle le rejoint, et la voix du titre en cours s'efface avant qu'il chante. En temps réel : rien n'est stocké": "Durante uma mixagem, a próxima faixa entra sem voz, que depois se junta, e a voz da atual some antes que ela cante. Em tempo real: nada é armazenado",
-  "Séparer les voix (expérimental)": "Separar vozes (experimental)"
+  "Séparer les voix (expérimental)": "Separar vozes (experimental)",
+  "Création de la vidéo…": "Criando o vídeo…",
+  "Garde les effets visibles et allège ceux qu'on remarque à peine : verre sans réfraction, paroles sans flou, fond animé à cadence réduite, images sans fondu": "Mantém os efeitos visíveis e alivia os que mal se notam: vidro sem refração, letras sem desfoque, fundo animado com menos quadros, imagens sem esmaecimento",
+  "Image": "Imagem",
+  "Vidéo": "Vídeo",
+  "Logo Ketvoice dans la vidéo": "Logo do Ketvoice no vídeo",
+  "Vidéo indisponible sur cet appareil": "Vídeo indisponível neste dispositivo",
+  "Aucune ligne choisie": "Nenhuma linha escolhida"
  },
  "ko": {
   "Reverb": "리버브",
@@ -15307,6 +15370,13 @@
   "Fond selon la pochette": "커버에 맞춘 배경",
   "Le fond de toute l'application prend la couleur de ce qui est en écoute, comme une page d'album": "앨범 페이지처럼 앱 전체 배경이 재생 중인 곡의 색을 따릅니다",
   "Pendant un mix, le titre suivant entre sans sa voix puis elle le rejoint, et la voix du titre en cours s'efface avant qu'il chante. En temps réel : rien n'est stocké": "믹스 중 다음 곡은 보컬 없이 들어오고 이후 보컬이 합류하며, 다음 곡이 노래하기 전에 현재 곡의 보컬이 사라집니다. 실시간 처리: 아무것도 저장하지 않습니다",
-  "Séparer les voix (expérimental)": "보컬 분리(실험적)"
+  "Séparer les voix (expérimental)": "보컬 분리(실험적)",
+  "Création de la vidéo…": "동영상 만드는 중…",
+  "Garde les effets visibles et allège ceux qu'on remarque à peine : verre sans réfraction, paroles sans flou, fond animé à cadence réduite, images sans fondu": "보이는 효과는 유지하고 거의 눈에 띄지 않는 효과를 가볍게 합니다: 굴절 없는 유리, 흐림 없는 가사, 낮은 프레임의 움직이는 배경, 페이드 없는 이미지",
+  "Image": "이미지",
+  "Vidéo": "동영상",
+  "Logo Ketvoice dans la vidéo": "동영상에 Ketvoice 로고",
+  "Vidéo indisponible sur cet appareil": "이 기기에서는 동영상을 만들 수 없습니다",
+  "Aucune ligne choisie": "선택한 줄 없음"
  }
 }

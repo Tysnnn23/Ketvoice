@@ -73,7 +73,7 @@ internal fun AlbumPage(request: CatalogRequest, page: CatalogPage?, tracks: List
     val cover = com.ketvoice.app.data.MediaOverrides.albumCover(title, artist, page?.cover?.takeIf { it.isNotBlank() }
         ?: tracks.firstOrNull()?.let { com.ketvoice.app.data.MediaOverrides.cover(it, art["t:${it.id}"] ?: it.coverUrl) })
     // The Canvas the hero plays, when this listener has it on: what the framing screen works on.
-    val heroCanvasOn = AppSettings.albumHeroCanvas.value && !Motion.reduced && !AppSettings.highPerformanceMode.value
+    val heroCanvasOn = AppSettings.albumHeroCanvas.value && !Motion.reduced
     val canvasPaths by CanvasRepo.paths.collectAsState()
     // The titles of this page belong to the album the page keys its visuals by: what is saved here
     // reaches them in the player too, whatever album name and artist each title carries.
@@ -312,7 +312,7 @@ private fun BoxScope.AlbumArtwork(cover: String?, track: Track?, frame: com.ketv
     val alpha by animateFloatAsState(if (ready) 1f else 0f,
         tween(Motion.duration(420), easing = Motion.EASE_STANDARD), label = "albumArtworkReveal")
     val image = remember(context, cover) { coil.request.ImageRequest.Builder(context).data(cover).crossfade(false).build() }
-    val canvasEnabled = AppSettings.albumHeroCanvas.value && !Motion.reduced && !AppSettings.highPerformanceMode.value
+    val canvasEnabled = AppSettings.albumHeroCanvas.value && !Motion.reduced
     val paths by CanvasRepo.paths.collectAsState()
     // Looked again whenever what the owner chose changes (the Studio opens over this page and leaves it on screen).
     val overridesRevision by com.ketvoice.app.data.MediaOverrides.revision.collectAsState()

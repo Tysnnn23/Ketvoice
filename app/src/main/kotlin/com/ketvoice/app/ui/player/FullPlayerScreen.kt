@@ -585,7 +585,7 @@ internal fun PlayerTitle(track: Track, compact: Boolean, cover: String?, sheetAc
         }
         Spacer(Modifier.width(8.dp))
         Box(contentAlignment = Alignment.Center) {
-        com.ketvoice.app.ui.motion.HeartBurst(bursts, starColor, Modifier.align(Alignment.Center).wrapContentSize(unbounded = true))
+        com.ketvoice.app.ui.motion.HeartBurst(bursts, starColor, Modifier.align(Alignment.Center))
         SmallCircleButton({
             favoriteTap++
             if (!favorite) { favoriteHaptic(com.ketvoice.app.ui.motion.Haptics.Kind.Confirm); bursts++ }

@@ -96,7 +96,9 @@ internal fun ArtworkFlowBackground(url: String?, playing: Boolean, modifier: Mod
         }
     }.value
     val field = loaded ?: return
-    val moving = playing && !Motion.reduced && !AppSettings.highPerformanceMode.value && !com.ketvoice.app.BuildConfig.IS_QUEST
+    val moving = playing && !Motion.reduced && !com.ketvoice.app.BuildConfig.IS_QUEST
+    // The performance mode keeps the colours moving, at a quarter of the frames.
+    val every = if (AppSettings.highPerformanceMode.value) 4 else 2
     // The clock only runs while a title plays: paused, the colours hold still where they were.
     val seconds = remember { mutableFloatStateOf(0f) }
     LaunchedEffect(moving) {
@@ -109,7 +111,7 @@ internal fun ArtworkFlowBackground(url: String?, playing: Boolean, modifier: Mod
                 if (last != 0L) pending += ((now - last) / 1e9f).coerceIn(0f, .1f)
                 last = now
                 // Half rate: the fields move slowly, thirty images a second are plenty.
-                if (frame++ % 2 == 0) { seconds.floatValue += pending; pending = 0f }
+                if (frame++ % every == 0) { seconds.floatValue += pending; pending = 0f }
             }
         }
     }

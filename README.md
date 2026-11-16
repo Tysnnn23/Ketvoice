@@ -21,6 +21,14 @@
 
 ## Overview
 
+### 5.9.2 — Lyrics videos
+
+Share up to four lines of lyrics as a video — the Canvas blurred behind, the words lit in time — try the new
+performance mode that keeps the effects visible, and like a title without the player moving.
+[Mobile](https://github.com/Tysnnn23/Ketvoice/releases/download/v5.9.2/Ketvoice-5.9.2.apk)
+· [Quest](https://github.com/Tysnnn23/Ketvoice/releases/download/v5.9.2/Ketvoice-5.9.2-Quest.apk)
+· [Release notes](docs/releases/v5.9.2.md).
+
 ### 5.9.1 — Your lyrics, your colours
 
 Bring your own lyrics files (LRC, TTML, SRT, VTT, ASS, JSON and more), let the whole app take the colour of
