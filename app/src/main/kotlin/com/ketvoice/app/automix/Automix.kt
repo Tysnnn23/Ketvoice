@@ -93,6 +93,7 @@ internal object Automix {
     /** How long a skip waits for the next title's deck before it falls back to a plain fade. */
     private const val SKIP_READY_MS = 1_400L
     private const val SKIP_OVERLAP_MS = 3_200L
+    private const val SKIP_LEAD_MS = 600L
     private const val SETTLE_MS = 8_000L
     /** How long the decks' processors are waited for before a transition is decided. */
     private const val PATHS_WAIT_MS = 1_500L
@@ -851,7 +852,9 @@ internal object Automix {
         try {
             val control = h.control(deck) ?: return false
             val inMs = intro.soundStartMs.coerceAtLeast(0L)
-            val preRoll = min(350L, inMs)
+            // The outgoing deck has already processed about half a second of sound that is still to be heard:
+            // its part of the mix starts just past that, so that its level and filter move from their first step.
+            val preRoll = min(SKIP_LEAD_MS - 60L, inMs)
             deck.volume = 0f
             deck.setMediaItem(playbackMediaItem(next.track, source.url, source.cacheKey, source.stream, source.offlineDash), inMs - preRoll)
             deck.playWhenReady = false
@@ -865,7 +868,7 @@ internal object Automix {
             val outro = AnalysisStore.outro(current.id, main.duration)
             val gain = if (outro != null) Math.pow(10.0, ((outro.loudnessDb - intro.loudnessDb) / 20f).toDouble()).toFloat().coerceIn(.5f, 1f) else 1f
             val variant = if (lastVariant == 0) 1 else 0
-            val plan = MixPlan(MixKind.Filter, outMs = main.currentPosition + preRoll + 60L, inMs = inMs, overlapMs = SKIP_OVERLAP_MS,
+            val plan = MixPlan(MixKind.Filter, outMs = main.currentPosition + SKIP_LEAD_MS, inMs = inMs, overlapMs = SKIP_OVERLAP_MS,
                 gain = gain, reason = "skip", variant = variant, hold = .2f)
             s.plan = plan
             s.precise = clockOf?.get() === main && mainControl.active
