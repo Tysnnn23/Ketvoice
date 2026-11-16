@@ -23,8 +23,8 @@ internal object PersonalBackup {
         "highPerformanceMode", "questKeepAwake", "filterNonAudio", "localMusicEnrich", "playNextOnSwipe",
         "noRepeatSuggestions", "stopOnSwipeFromRecents", "hideVolumeBar", "hideStatusBarInPlayer",
         "showQueueHistory", "hideTitleStatus", "languageChosen", "lastfmGenres", "smartAudioAlignment", "techStats",
-        "haptics", "coverTintedGlass", "meshBackground", "automixOn", "automixAlbums", "ketmixLoops", "smartShuffle", "ketmixHaptics")
-    private val integers = mapOf("themeMode" to 0..2, "glassStyle" to 0..com.ketvoice.app.glass.GlassStyles.MAX, "lyricsTextSize" to 0..2,
+        "haptics", "coverTintedGlass", "glassTilt", "meshBackground", "automixOn", "automixAlbums", "ketmixLoops", "smartShuffle", "ketmixHaptics")
+    private val integers = mapOf("themeMode" to 0..2, "glassStyle" to 0..com.ketvoice.app.glass.GlassStyles.MAX, "glassTintLevel" to com.ketvoice.app.glass.GlassClarity.MIN..com.ketvoice.app.glass.GlassClarity.MAX, "lyricsTextSize" to 0..2,
         "reverbAmount" to 0..100, "reverbSize" to 0..100, "reverbDamping" to 0..100,
         "lyricsMode" to 0..2, "automixIntensity" to 0..2, "ketmixAnalysis" to 0..2, "ketmixStyle" to 0..5, "ketmixStemsQuality" to 0..2, "voiceLevel" to 0..100, "downloadQualityMode" to 0..2, "appIconVariant" to 0..3)
     private val longs = setOf("accentArgb", "cacheBytes")
@@ -179,7 +179,13 @@ internal object PersonalBackup {
         withContext(Dispatchers.IO) { ListeningHistory.mergeBackup(checked.recent, checked.known, checked.counts, checked.listenedMs) }
         val prefs = context.applicationContext.getSharedPreferences("ketvoice_settings", Context.MODE_PRIVATE)
         val editor = prefs.edit()
+        // A backup of 5.x carries the continuous glass tint: it lands on the nearest step of the transparency.
+        val legacyTint = checked.settings["glassTint"] as? Float
+        if (legacyTint != null && "glassTintLevel" !in checked.settings) {
+            editor.putInt("glassTintLevel", com.ketvoice.app.glass.GlassClarity.fromLegacyTint(legacyTint))
+        }
         checked.settings.forEach { (key, raw) ->
+            if (key == "glassTint") return@forEach
             when (val value = setting(key, raw)) {
                 is Boolean -> editor.putBoolean(key, value)
                 is Int -> editor.putInt(key, value)

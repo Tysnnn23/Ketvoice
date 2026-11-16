@@ -59,11 +59,19 @@ fun GlassSlider(
     enabled: Boolean = true,
     /** How many steps the travel is felt in (Ket 27 ticks at each); 0 picks them from the range. */
     steps: Int = 0,
+    /**
+     * > 0: a stepped Ket 27 slider of that many steps (so one more stop): the value only ever lands
+     * on a stop, a tick marks each one on the rail, the arrows of a keyboard move one stop, and the
+     * thumb settles onto its stop when released (at once under reduced motion).
+     */
+    snapSteps: Int = 0,
     onValueChangeFinished: () -> Unit = {}
 ) {
     val theme = LocalTheme.current
     val span = (valueRange.endInclusive - valueRange.start).takeIf { it > 0f } ?: 1f
-    val fraction = ((value - valueRange.start) / span).let { if (it.isFinite()) it.coerceIn(0f, 1f) else 0f }
+    val snap = snapSteps > 0
+    fun snapped(f: Float) = if (snap) SliderSteps.index(f, snapSteps).toFloat() / snapSteps else f
+    val fraction = ((value - valueRange.start) / span).let { if (it.isFinite()) snapped(it.coerceIn(0f, 1f)) else 0f }
     var dragFraction by remember { mutableFloatStateOf(fraction) }
     var dragging by remember { mutableStateOf(false) }
     val change by rememberUpdatedState(onValueChange)
@@ -78,7 +86,7 @@ fun GlassSlider(
     val thumbHeight = 24.dp
     val rail = 6.dp
     val tick = com.ketvoice.app.ui.motion.rememberHaptics()
-    val stepCount = if (steps > 0) steps else SliderSteps.count(valueRange.start, valueRange.endInclusive)
+    val stepCount = if (snap) snapSteps else if (steps > 0) steps else SliderSteps.count(valueRange.start, valueRange.endInclusive)
     var lastStep by remember { mutableStateOf(SliderSteps.index(fraction, stepCount)) }
     fun feel(next: Float) {
         val step = SliderSteps.index(next, stepCount)
@@ -91,11 +99,13 @@ fun GlassSlider(
             .height(48.dp)
             .onSizeChanged { widthPx = it.width }
             .semantics {
-                progressBarRangeInfo = ProgressBarRangeInfo(valueRange.start + fraction * span, valueRange)
+                progressBarRangeInfo = ProgressBarRangeInfo(valueRange.start + fraction * span, valueRange,
+                    if (snap) (snapSteps - 1).coerceAtLeast(0) else 0)
                 if (!enabled) disabled()
                 setProgress { next ->
                     if (!enabled || !next.isFinite()) false else {
-                        change(next.coerceIn(valueRange)); finished(); true
+                        val f = snapped(((next.coerceIn(valueRange) - valueRange.start) / span).coerceIn(0f, 1f))
+                        change(valueRange.start + f * span); finished(); true
                     }
                 }
             }
@@ -106,7 +116,11 @@ fun GlassSlider(
                     else -> 0f
                 }
                 if (!enabled || event.type != KeyEventType.KeyDown || sign == 0f) false else {
-                    change((valueRange.start + fraction * span + sign * span * .05f).coerceIn(valueRange))
+                    val stride = if (snap) 1f / snapSteps else .05f
+                    // From the last value sent, not the last composed one: quick presses each count.
+                    val next = snapped((dragFraction + sign * stride).coerceIn(0f, 1f))
+                    dragFraction = next
+                    change(valueRange.start + next * span)
                     finished()
                     true
                 }
@@ -117,7 +131,7 @@ fun GlassSlider(
                     val travel = (widthPx - thumb.toPx()).coerceAtLeast(1f)
                     val physical = ((point.x - thumb.toPx() / 2f) / travel).coerceIn(0f, 1f)
                     val next = if (direction == LayoutDirection.Rtl) 1f - physical else physical
-                    dragFraction = next; feel(next); change(valueRange.start + next * span); finished()
+                    dragFraction = snapped(next); feel(next); change(valueRange.start + snapped(next) * span); finished()
                 }
             }
             .draggable(
@@ -131,13 +145,18 @@ fun GlassSlider(
                         val logicalDelta = if (direction == LayoutDirection.Rtl) -delta else delta
                         dragFraction = (dragFraction + logicalDelta / travel).coerceIn(0f, 1f)
                         feel(dragFraction)
-                        change(valueRange.start + dragFraction * span)
+                        change(valueRange.start + snapped(dragFraction) * span)
                     }
                 }
             ),
         contentAlignment = Alignment.CenterStart
     ) {
-        val displayedFraction = if (dragging) dragFraction else fraction
+        // A stepped slider's thumb follows the finger, then settles onto its stop.
+        val settled by androidx.compose.animation.core.animateFloatAsState(fraction,
+            if (snap && !com.ketvoice.app.ui.motion.Motion.reduced)
+                androidx.compose.animation.core.spring(dampingRatio = .82f, stiffness = 700f)
+            else androidx.compose.animation.core.snap(), label = "slider-stop")
+        val displayedFraction = if (dragging) dragFraction else if (snap) settled else fraction
         val track = com.ketvoice.app.glass.rememberGlassBackdrop(theme.card)
         val pressure by androidx.compose.animation.core.animateFloatAsState(
             if (dragging && !com.ketvoice.app.ui.motion.Motion.reduced) 1f else 0f,
@@ -147,6 +166,7 @@ fun GlassSlider(
                 .clip(CircleShape).background(theme.onBackground.copy(alpha = .12f)))
             Box(Modifier.align(Alignment.CenterStart).fillMaxWidth(displayedFraction).height(rail)
                 .clip(CircleShape).background(theme.accent))
+            if (snap) SliderTicks(snapSteps, thumb, theme.onBackground.copy(alpha = .30f))
         }
         val travel = with(density) {
             (widthPx.toFloat() - thumb.toPx()).coerceAtLeast(0f).toDp()
@@ -175,4 +195,20 @@ internal object SliderSteps {
         if (steps <= 0 || !fraction.isFinite()) 0 else Math.round(fraction.coerceIn(0f, 1f) * steps)
     /** Whether going from one fraction to another crosses onto a new step: a tick is due. */
     fun crossed(from: Float, to: Float, steps: Int): Boolean = index(from, steps) != index(to, steps)
+}
+
+/** The stops of a stepped slider: a small dot on the rail at each one, under the thumb's centre. */
+@Composable
+private fun androidx.compose.foundation.layout.BoxScope.SliderTicks(steps: Int, thumb: androidx.compose.ui.unit.Dp,
+                                                                    color: androidx.compose.ui.graphics.Color) {
+    androidx.compose.foundation.Canvas(Modifier.matchParentSize()) {
+        val inset = thumb.toPx() / 2f
+        val travel = (size.width - inset * 2f).coerceAtLeast(0f)
+        val radius = 1.5.dp.toPx()
+        for (i in 0..steps) {
+            val x = inset + travel * i / steps
+            drawCircle(color, radius, androidx.compose.ui.geometry.Offset(
+                if (layoutDirection == LayoutDirection.Rtl) size.width - x else x, size.height / 2f))
+        }
+    }
 }

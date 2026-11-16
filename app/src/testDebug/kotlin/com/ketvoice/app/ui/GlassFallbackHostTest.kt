@@ -35,7 +35,7 @@ class GlassFallbackHostTest {
         AppSettings.reduceAnimations.value = false
         AppSettings.reduceDynamicBlur.value = false
         AppSettings.highPerformanceMode.value = false
-        AppSettings.glassTint.value = 0f
+        AppSettings.glassTintLevel.value = com.ketvoice.app.glass.GlassClarity.DEFAULT
         AppSettings.glassStyle.value = 0
     }
 
@@ -71,7 +71,7 @@ class GlassFallbackHostTest {
     @Test fun liquid27ControlKeepsItsClicksAcrossFallbacks() {
         var pressed by mutableIntStateOf(0)
         AppSettings.glassStyle.value = GlassStyles.LIQUID_27
-        AppSettings.glassTint.value = .5f
+        AppSettings.glassTintLevel.value = 4
         compose.setContent { KetvoiceTheme(useDark = true) {
             val backdrop = rememberGlassBackdrop(Color.Magenta)
             Box(Modifier.fillMaxSize()) {

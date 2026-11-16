@@ -118,7 +118,7 @@ internal fun fusedShapesFor(shapes: Collection<FusedShape>, origin: Offset): Lis
 @androidx.annotation.RequiresApi(33)
 internal fun applyLiquid27FusedUniforms(shader: android.graphics.RuntimeShader, w: Float, h: Float, pad: Float, density: Float,
                                         params: GlassParams, shapes: List<FusedShape>, fusePx: Float, frost: Float,
-                                        light: Liquid27Light) {
+                                        light: Liquid27Light, clarity: Float = 0f) {
     fun rect(index: Int): FloatArray {
         val shape = shapes.getOrNull(index) ?: return floatArrayOf(0f, 0f, 0f, 0f)
         return floatArrayOf(shape.bounds.center.x, shape.bounds.center.y, shape.bounds.width / 2f, shape.bounds.height / 2f)
@@ -133,15 +133,15 @@ internal fun applyLiquid27FusedUniforms(shader: android.graphics.RuntimeShader, 
     shader.setFloatUniform("fuse", if (fusePx.isFinite()) fusePx.coerceAtLeast(0f) else 0f)
     // The lens band is bounded by the thinnest control so small buttons keep a quiet centre.
     val thinnest = shapes.minOfOrNull { minOf(it.bounds.width, it.bounds.height) } ?: 0f
-    applyLiquid27Material(shader, w, h, thinnest, pad, density, params, frost, light)
+    applyLiquid27Material(shader, w, h, thinnest, pad, density, params, frost, light, clarity)
 }
 
 internal fun BackdropEffectScope.liquid27Fused(params: GlassParams, shapes: List<FusedShape>, fusePx: Float, frost: Float,
-                                               light: Liquid27Light): Boolean {
+                                               light: Liquid27Light, clarity: Float = 0f): Boolean {
     if (Build.VERSION.SDK_INT < 33 || shapes.isEmpty()) return false
     val shader = runCatching { obtainRuntimeShader("kv-liquid-27-fused", LIQUID27_FUSED_AGSL) }.getOrNull() ?: return false
     return runCatching {
-        applyLiquid27FusedUniforms(shader, size.width, size.height, padding, density, params, shapes, fusePx, frost, light)
+        applyLiquid27FusedUniforms(shader, size.width, size.height, padding, density, params, shapes, fusePx, frost, light, clarity)
         effect(RenderEffect.createRuntimeShaderEffect(shader, "content"))
         true
     }.getOrDefault(false)
@@ -167,11 +167,14 @@ fun GlassFusionLayer(fusion: GlassFusion, dark: Boolean, modifier: Modifier = Mo
         backdrop = backdrop,
         shape = { RectangleShape },
         effects = {
-            val frost = GlassTuning.sanitize(AppSettings.glassTint.value)
+            // The same transparency as every other glass surface (GlassClarity), read here in the draw phase.
+            val level = GlassClarity.level
+            val frost = GlassClarity.frost(level)
+            val clarity = GlassClarity.clarity(level)
             blur(liquid27BlurPx(frost, GlassRole.Control))
             val shapes = fusedShapesFor(fusion.shapes.values, origin)
             // A failed pass must not leave an unshaded blurred rectangle: fall back to panels.
-            if (shapes.isNotEmpty() && !liquid27Fused(params, shapes, fusion.strengthPx, frost, liquid27Light(0f, 0f, 0f))) {
+            if (shapes.isNotEmpty() && !liquid27Fused(params, shapes, fusion.strengthPx, frost, liquid27Light(0f, 0f, 0f), clarity)) {
                 fusion.failed = true
                 fusion.active = false
             }

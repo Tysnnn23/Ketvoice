@@ -235,13 +235,14 @@ data class GlassParams(
  * Le résultat lit comme un verre dépoli posé sur la page, pas comme un rectangle peint.
  */
 @Composable
-private fun rememberStaticMaterial(p: GlassParams, opaque: Boolean = false, tint: Float = 0f): Pair<Brush, Brush> {
+private fun rememberStaticMaterial(p: GlassParams, opaque: Boolean = false, level: Int = GlassClarity.DEFAULT): Pair<Brush, Brush> {
     val th = LocalTheme.current
-    return remember(p, th.isDark, opaque, tint) {
+    return remember(p, th.isDark, opaque, level) {
         val base = if (p.dark) Color(0xFF232329) else Color.White
-        // Transmission statique : le fond transparaît à ~12-18 %.
+        // Transmission statique : le fond transparaît à ~12-18 % (more at the clearer levels of the transparency).
         val sheet = p.role == GlassRole.Sheet
-        fun opacity(value: Float) = if (opaque) 1f else (value + GlassTuning.sanitize(tint) * .08f).coerceAtMost(.98f)
+        val shift = GlassClarity.frost(level) * .08f - GlassClarity.staticClearing(level)
+        fun opacity(value: Float) = if (opaque) 1f else (value + shift).coerceIn(.3f, .98f)
         val body = base.copy(alpha = opacity(if (sheet) .94f else if (p.dark) .64f else .70f))
         val lift = base.copy(alpha = opacity(if (sheet) .96f else if (p.dark) .68f else .74f))
         val surface = Brush.linearGradient(listOf(lift, body,
@@ -296,11 +297,13 @@ private fun GlassPanelBody(
 ) {
     val style = styleOverride ?: GlassStyles.current
     val liquid27 = style == GlassStyles.LIQUID_27
+    // The listener's transparency: the one value every glass surface reads (GlassClarity).
+    val level = GlassClarity.level
     val styledParams = when (style) {
         1 -> params.copy(blurPx = maxOf(params.blurPx, 26f), tintAlpha = if (params.dark) .16f else .12f,
             refractionHeightDp = 3f, refractionAmountDp = 4f)
         // Defined borders replace drop and inner shadows; the blur follows Clear ↔ Tinted.
-        GlassStyles.LIQUID_27 -> Ket27Glass.regular(params, AppSettings.glassTint.value)
+        GlassStyles.LIQUID_27 -> Ket27Glass.regular(params, level)
         else -> params
     }
     if (styledParams.role == GlassRole.Panel) {
@@ -315,7 +318,8 @@ private fun GlassPanelBody(
         }
         return
     }
-    val tint = GlassTuning.sanitize(AppSettings.glassTint.value)
+    val tint = GlassClarity.frost(level)
+    val clarity = GlassClarity.clarity(level)
     // Ket 27 sets the tint of iOS 27's regular glass itself.
     val params = if (liquid27) styledParams
         else styledParams.copy(tintAlpha = GlassTuning.opticalTint(styledParams.tintAlpha, tint, styledParams.dark))
@@ -360,7 +364,7 @@ private fun GlassPanelBody(
         if (formed.value < 1f) formed.animateTo(1f, spring(dampingRatio = 1f, stiffness = GlassMotion.MATERIALIZE_STIFFNESS))
     }
 
-    val (surface, hairline) = rememberStaticMaterial(params, opaque = style == 2, tint = tint)
+    val (surface, hairline) = rememberStaticMaterial(params, opaque = style == 2, level = level)
     val sheen = remember(params) { staticSheen(params) }
     // En AGSL, le shader dessine le liseré et le bord sombre : plus de bordure
     // Compose par-dessus (sinon double contour artificiel).
@@ -407,7 +411,7 @@ private fun GlassPanelBody(
                         val forming = params.copy(materialize = formed.value)
                         renderState.shaderApplied = if (liquid27) {
                             liquid27Glass(forming, realRadii, tint,
-                                liquid27Light(touch.position.x, touch.position.y, touch.press.value))
+                                liquid27Light(touch.position.x, touch.position.y, touch.press.value), clarity)
                         } else liquidGlass(forming, realRadii)
                     } else {
                         if (params.saturation != 1f || params.brightness != 1f || params.contrast != 1f) {
@@ -431,7 +435,9 @@ private fun GlassPanelBody(
                         minOf(params.highlightAlpha, DesignTokens.Glass.FALLBACK_HIGHLIGHT),
                         HighlightStyle.Default(
                             params.highlightIntensity,
-                            params.highlightAngle,
+                            // Liquid 27's highlight follows the tilt here too (read in this draw-phase lambda only).
+                            if (liquid27) params.highlightAngle + GlassLight.degrees() - GlassLight.REST_DEGREES
+                            else params.highlightAngle,
                             params.highlightFalloff
                         )
                     )
@@ -442,8 +448,8 @@ private fun GlassPanelBody(
                     if (!agsl || !renderState.shaderApplied) {
                         // The captured backdrop remains visible; this veil is only as strong as
                         // needed for readable dark/light glyphs on an opposite-luminance cover.
-                        drawRect(if (params.dark) Color.Black.copy(alpha = GlassTuning.fallbackTint(tint, true))
-                            else Color.White.copy(alpha = GlassTuning.fallbackTint(tint, false)))
+                        // The veil takes the cover's colour too (GlassTint), read here in the draw phase.
+                        drawRect(GlassTint.veil(params.dark).copy(alpha = GlassClarity.fallbackVeil(params.dark, level)))
                         drawRect(sheen)
                     }
                 }
@@ -513,16 +519,14 @@ internal object Ket27Glass {
     const val ELEVATION_DP = 8f
     const val MIN_BLUR_PX = 14f
 
-    /** Surface opacity for a Clear ↔ Tinted setting of 0..1; the middle, and an untouched setting, give Apple's 70 %. */
-    fun surface(tint: Float): Float {
-        val t = if (tint <= 0f) .5f else tint.coerceIn(0f, 1f)
-        return if (t <= .5f) CLEAREST + (SURFACE - CLEAREST) * (t / .5f) else SURFACE + (MOST_TINTED - SURFACE) * ((t - .5f) / .5f)
-    }
+    /** Surface opacity for a transparency level ([GlassClarity]); the default level gives Apple's 70 %. */
+    fun surface(level: Int): Float =
+        SURFACE - (SURFACE - CLEAREST) * GlassClarity.clarity(level) + (MOST_TINTED - SURFACE) * GlassClarity.frost(level)
 
-    fun regular(params: GlassParams, tint: Float): GlassParams = params.copy(
-        tintAlpha = surface(tint), shadow = true, innerShadow = false, elevationDp = ELEVATION_DP,
+    fun regular(params: GlassParams, level: Int): GlassParams = params.copy(
+        tintAlpha = surface(level), shadow = true, innerShadow = false, elevationDp = ELEVATION_DP,
         shadowAlpha = if (params.dark) SHADOW_DARK else SHADOW_LIGHT,
-        blurPx = maxOf(liquid27BlurPx(tint, params.role), MIN_BLUR_PX),
+        blurPx = maxOf(liquid27BlurPx(GlassClarity.frost(level), params.role), GlassClarity.minimumBlurPx(level)),
         highlightAlpha = maxOf(params.highlightAlpha, .6f))
 }
 

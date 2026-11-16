@@ -8,6 +8,17 @@ object SettingsStore {
     private const val NAME = "ketvoice_settings"
     private var prefs: SharedPreferences? = null
 
+    /**
+     * The stepped glass transparency. A listener who only ever set the continuous tint of 5.x keeps
+     * it on the nearest step. Wrong preference types never crash loading.
+     */
+    internal fun glassTintLevel(p: SharedPreferences): Int {
+        val glass = com.ketvoice.app.glass.GlassClarity
+        if (p.contains("glassTintLevel")) return glass.sanitize(
+            runCatching { p.getInt("glassTintLevel", glass.DEFAULT) }.getOrDefault(glass.DEFAULT))
+        return glass.fromLegacyTint(runCatching { p.getFloat("glassTint", 0f) }.getOrDefault(0f))
+    }
+
     fun load(context: Context) {
         val p = context.applicationContext.getSharedPreferences(NAME, Context.MODE_PRIVATE)
         prefs = p
@@ -26,7 +37,8 @@ object SettingsStore {
         s.animatedArtwork.value = p.getBoolean("animatedArtwork", s.animatedArtwork.value)
         s.albumHeroCanvas.value = p.getBoolean("albumHeroCanvas", true)
         s.glassStyle.value = p.getInt("glassStyle", 0).coerceIn(0, com.ketvoice.app.glass.GlassStyles.MAX)
-        s.glassTint.value = com.ketvoice.app.glass.GlassTuning.sanitize(runCatching { p.getFloat("glassTint", 0f) }.getOrDefault(0f))
+        s.glassTintLevel.value = glassTintLevel(p)
+        s.glassTilt.value = p.getBoolean("glassTilt", true)
         s.downloadsWifiOnly.value = p.getBoolean("downloadsWifiOnly", false)
         s.panoramicCanvas.value = p.getBoolean("panoramicCanvas", false)
         s.sonicCanvas.value = p.getBoolean("sonicCanvas", false)
@@ -166,7 +178,10 @@ object SettingsStore {
             .putBoolean("animatedArtwork", s.animatedArtwork.value)
             .putBoolean("albumHeroCanvas", s.albumHeroCanvas.value)
             .putInt("glassStyle", s.glassStyle.value)
-            .putFloat("glassTint", com.ketvoice.app.glass.GlassTuning.sanitize(s.glassTint.value))
+            .putInt("glassTintLevel", com.ketvoice.app.glass.GlassClarity.sanitize(s.glassTintLevel.value))
+            // The continuous tint of 5.x has been converted on loading; it is not written again.
+            .remove("glassTint")
+            .putBoolean("glassTilt", s.glassTilt.value)
             .putBoolean("downloadsWifiOnly", s.downloadsWifiOnly.value)
             .putBoolean("panoramicCanvas", s.panoramicCanvas.value)
             .putBoolean("sonicCanvas", s.sonicCanvas.value)

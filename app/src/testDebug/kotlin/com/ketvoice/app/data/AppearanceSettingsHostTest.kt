@@ -18,41 +18,74 @@ class AppearanceSettingsHostTest {
         SettingsStore.load(context)
         try {
             AppSettings.glassStyle.value = 2
-            AppSettings.glassTint.value = .37f
+            AppSettings.glassTintLevel.value = 5
+            AppSettings.glassTilt.value = false
             AppSettings.techStats.value = true
             AppSettings.downloadsWifiOnly.value = true
             SettingsStore.save()
             AppSettings.glassStyle.value = 0
-            AppSettings.glassTint.value = 0f
+            AppSettings.glassTintLevel.value = 0
+            AppSettings.glassTilt.value = true
             AppSettings.techStats.value = false
             AppSettings.downloadsWifiOnly.value = false
             SettingsStore.load(context)
             assertEquals(2, AppSettings.glassStyle.value)
-            assertEquals(.37f, AppSettings.glassTint.value, .0001f)
+            assertEquals(5, AppSettings.glassTintLevel.value)
+            assertFalse(AppSettings.glassTilt.value)
             assertTrue(AppSettings.techStats.value)
             assertTrue(AppSettings.downloadsWifiOnly.value)
         } finally {
             AppSettings.glassStyle.value = 0
-            AppSettings.glassTint.value = 0f
+            AppSettings.glassTintLevel.value = com.ketvoice.app.glass.GlassClarity.DEFAULT
+            AppSettings.glassTilt.value = true
             AppSettings.techStats.value = false
             AppSettings.downloadsWifiOnly.value = false
             SettingsStore.save()
         }
     }
-    @Test fun invalidStoredTintCannotReachTheShader() {
+    @Test fun invalidStoredTransparencyCannotReachTheShader() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val preferences = context.getSharedPreferences("ketvoice_settings", Context.MODE_PRIVATE)
+        val glass = com.ketvoice.app.glass.GlassClarity
         try {
-            for ((input, expected) in listOf(Float.NaN to 0f, -5f to 0f, 9f to 1f)) {
-                preferences.edit().putFloat("glassTint", input).commit()
+            for ((input, expected) in listOf(-5 to glass.MIN, 9 to glass.MAX, 3 to 3)) {
+                preferences.edit().putInt("glassTintLevel", input).commit()
                 SettingsStore.load(context)
-                assertEquals(expected, AppSettings.glassTint.value, 0f)
+                assertEquals(expected, AppSettings.glassTintLevel.value)
             }
-            preferences.edit().putInt("glassTint", 7).commit()
+            preferences.edit().putFloat("glassTintLevel", 7f).commit()
             SettingsStore.load(context)
-            assertEquals("Wrong preference types must not crash loading", 0f, AppSettings.glassTint.value, 0f)
-        } finally { preferences.edit().remove("glassTint").commit(); AppSettings.glassTint.value = 0f }
+            assertEquals("Wrong preference types must not crash loading", glass.DEFAULT, AppSettings.glassTintLevel.value)
+        } finally { preferences.edit().remove("glassTintLevel").remove("glassTint").commit(); AppSettings.glassTintLevel.value = glass.DEFAULT }
     }
+
+    @Test fun theContinuousTintOfEarlierVersionsIsConvertedOnceAndRetired() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val preferences = context.getSharedPreferences("ketvoice_settings", Context.MODE_PRIVATE)
+        val glass = com.ketvoice.app.glass.GlassClarity
+        try {
+            // A listener of 5.x who never touched the tint keeps today's look.
+            preferences.edit().remove("glassTintLevel").putFloat("glassTint", 0f).commit()
+            SettingsStore.load(context)
+            assertEquals(glass.DEFAULT, AppSettings.glassTintLevel.value)
+            // One who tinted it halfway lands on the nearest step, and keeps it after a save.
+            preferences.edit().remove("glassTintLevel").putFloat("glassTint", .5f).commit()
+            SettingsStore.load(context)
+            assertEquals(4, AppSettings.glassTintLevel.value)
+            SettingsStore.save()
+            assertFalse("The old key is not written again", preferences.contains("glassTint"))
+            assertEquals(4, preferences.getInt("glassTintLevel", -1))
+            // Garbage of the old key never crashes loading.
+            preferences.edit().remove("glassTintLevel").putString("glassTint", "x").commit()
+            SettingsStore.load(context)
+            assertEquals(glass.DEFAULT, AppSettings.glassTintLevel.value)
+            // The tilt switch defaults to on.
+            preferences.edit().remove("glassTilt").commit()
+            SettingsStore.load(context)
+            assertTrue(AppSettings.glassTilt.value)
+        } finally { preferences.edit().remove("glassTintLevel").remove("glassTint").commit(); AppSettings.glassTintLevel.value = glass.DEFAULT }
+    }
+
     @After fun reset() { AppSettings.artistSignatures.value = false; AppSettings.highRefreshRate.value = false }
     @Test fun unusedLegacySignatureFlagCannotEnableNetworkWithoutConsent() {
         val context = ApplicationProvider.getApplicationContext<Context>()

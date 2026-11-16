@@ -19,6 +19,16 @@ object GlassTint {
     private val LIGHT = floatArrayOf(1f, 1f, 1f)
     private val DARK = floatArrayOf(.24f, .24f, .27f)
 
+    /**
+     * Veil of the blurred fallback (below Android 13, performance mode) for the current cover: the
+     * light milk itself, or the dark milk brought near black so light labels keep their contrast.
+     * Read in draw-phase lambdas only.
+     */
+    fun veil(dark: Boolean): Color {
+        val m = milk(dark)
+        return if (dark) Color(m[0] * .3f, m[1] * .3f, m[2] * .3f) else Color(m[0], m[1], m[2])
+    }
+
     /** Liquid 27 milk colour for the current cover. */
     fun milk(dark: Boolean): FloatArray =
         tinted(if (dark) DARK else LIGHT, cover.value, dark, AppSettings.coverTintedGlass.value, strength.floatValue)
@@ -49,15 +59,10 @@ object GlassTint {
 fun ObserveCoverTint(coverUrl: String?) {
     val wanted = AppSettings.coverTintedGlass.value && AppSettings.liquidGlass.value
     val accent = if (wanted) com.ketvoice.app.theme.rememberCoverAccent(coverUrl)?.first else null
-    val last = androidx.compose.runtime.remember { mutableStateOf(Color.Gray) }
-    if (accent != null) last.value = accent
-    val reduced = com.ketvoice.app.ui.motion.Motion.reduced
-    val color = androidx.compose.animation.animateColorAsState(last.value,
-        androidx.compose.animation.core.tween(if (reduced) 0 else 520), label = "glass-cover-tint")
-    val presence = androidx.compose.animation.core.animateFloatAsState(if (accent != null) 1f else 0f,
-        androidx.compose.animation.core.tween(if (reduced) 0 else 420), label = "glass-cover-presence")
+    // The same glide as the pages and the accent: one title's colour to the next, held between them.
+    val (color, presence) = com.ketvoice.app.theme.rememberCoverGlide(accent, 520)
     androidx.compose.runtime.SideEffect {
-        GlassTint.cover.value = if (presence.value > 0f) color.value else null
-        GlassTint.strength.floatValue = presence.value
+        GlassTint.cover.value = if (presence > 0f) color else null
+        GlassTint.strength.floatValue = presence
     }
 }
