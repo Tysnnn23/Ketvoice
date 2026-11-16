@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Ketvoice</string>
+    <string name="tab_home">ホーム</string>
+    <string name="tab_explore">探検する</string>
+    <string name="tab_library">ライブラリ</string>
+    <string name="listen_now">今すぐ聞いてください</string>
+    <string name="explorer_title">探検する</string>
+    <string name="library_title">ライブラリ</string>
+    <string name="search_hint">検索</string>
+    <string name="recents">最近の</string>
+    <string name="trending">トレンド</string>
+    <string name="albums_singles">アルバムとシングル</string>
+    <string name="widget_glass_player">Ketvoice · プレーヤー</string>
+    <string name="widget_glass_player_desc">大きな Liquid Glass プレーヤー：ジャケット、タイトル、進行状況、操作</string>
+    <string name="widget_week">Ketvoice · 今週</string>
+    <string name="widget_week_desc">今週の再生時間と今週のアーティスト</string>
+    <string name="widget_mix">Ketvoice · あなたへ</string>
+    <string name="widget_mix_desc">今のミックス：タップで再生</string>
+    <string name="widget_mini">Ketvoice · ミニ</string>
+    <string name="widget_mini_desc">ジャケット、再生/一時停止、次へ</string>
+</resources>

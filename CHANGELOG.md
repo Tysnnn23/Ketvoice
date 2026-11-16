@@ -7,6 +7,23 @@
 
 ---
 
+# Ketvoice 5.9.0
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 119** — Wrapped, four widgets, ten-band equalizer, Apple-style lyrics, flowing player colours.
+
+- Ketvoice Wrapped (yearly listening recorded from 5.9.0; all-time fallback), shareable story picture.
+- Widgets: large glass player, your week, mix of the moment, mini controls.
+- Ten-band EQ via DynamicsProcessing with limiter (Equalizer fallback), draggable curve, new presets.
+- Volume normalisation (slow leveler, off by default), Ketmix fade on manual skip, cover-coloured accent option.
+- Artwork flow background, word lift and glow in lyrics, bass breathing; Home without the For you card and tiles.
+- Startup: lyrics index, launcher icon check and Discord start moved off the first frame.
+
+Full notes: [5.9.0](docs/releases/v5.9.0.md).
+
+---
+
 # Ketvoice 5.8.3
 
 ![Ketvoice](ketvoice-banner.png)

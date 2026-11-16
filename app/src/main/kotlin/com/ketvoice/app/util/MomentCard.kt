@@ -15,6 +15,7 @@ import android.text.Layout
 import android.text.StaticLayout
 import android.text.TextPaint
 import androidx.core.content.FileProvider
+import androidx.core.graphics.scale
 import com.ketvoice.app.data.AppText
 import com.ketvoice.app.data.ArtworkRepo
 import com.ketvoice.app.data.Track
@@ -83,7 +84,16 @@ object MomentCard {
         canvas.drawRect(0f, 0f, WIDTH.toFloat(), HEIGHT.toFloat(), Paint().apply {
             shader = LinearGradient(0f, 0f, 0f, HEIGHT.toFloat(), base, shade, Shader.TileMode.CLAMP)
         })
-        val ink = inkOn(darken(base, .3f))
+        // Since 5.9.0 the cover itself, blurred to colour fields, lies under the shade, as in Apple Music's shared lyrics.
+        if (cover != null) {
+            val tiny = cover.scale(9, 16)
+            canvas.drawBitmap(tiny.scale(WIDTH, HEIGHT), 0f, 0f, Paint(Paint.FILTER_BITMAP_FLAG).apply { alpha = 200 })
+            canvas.drawRect(0f, 0f, WIDTH.toFloat(), HEIGHT.toFloat(), Paint().apply {
+                shader = LinearGradient(0f, 0f, 0f, HEIGHT.toFloat(), 0x33000000, darken(base, .7f) and 0x00FFFFFF or 0xB3000000.toInt(), Shader.TileMode.CLAMP)
+            })
+        }
+        // Over the darkened cover the words are white; on the flat colour they take the readable ink.
+        val ink = if (cover != null) 0xFFFFFFFF.toInt() else inkOn(darken(base, .3f))
         val side = 640f
         val left = (WIDTH - side) / 2f
         val top = 260f

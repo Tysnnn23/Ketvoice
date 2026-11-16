@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Ketvoice</string>
+    <string name="tab_home">होम</string>
+    <string name="tab_explore">अन्वेषण करें</string>
+    <string name="tab_library">लाइब्रेरी</string>
+    <string name="listen_now">अभी सुनो</string>
+    <string name="explorer_title">अन्वेषण करें</string>
+    <string name="library_title">लाइब्रेरी</string>
+    <string name="search_hint">खोजें</string>
+    <string name="recents">हाल का</string>
+    <string name="trending">ट्रेंडिंग</string>
+    <string name="albums_singles">एल्बम और एकल</string>
+    <string name="widget_glass_player">Ketvoice · प्लेयर</string>
+    <string name="widget_glass_player_desc">बड़ा Liquid Glass प्लेयर: कवर, शीर्षक, प्रगति और नियंत्रण</string>
+    <string name="widget_week">Ketvoice · आपका सप्ताह</string>
+    <string name="widget_week_desc">आपके सुनने के मिनट और सप्ताह के कलाकार</string>
+    <string name="widget_mix">Ketvoice · आपके लिए</string>
+    <string name="widget_mix_desc">इस समय का मिक्स: एक टैप में चलाएँ</string>
+    <string name="widget_mini">Ketvoice · मिनी</string>
+    <string name="widget_mini_desc">कवर, चलाएँ/रोकें और अगला</string>
+</resources>

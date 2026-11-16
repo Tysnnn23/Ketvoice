@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Ketvoice</string>
+    <string name="tab_home">Home</string>
+    <string name="tab_explore">Explore</string>
+    <string name="tab_library">Library</string>
+    <string name="listen_now">Listen now</string>
+    <string name="explorer_title">Explore</string>
+    <string name="library_title">Library</string>
+    <string name="search_hint">Search</string>
+    <string name="recents">Recent</string>
+    <string name="trending">Trending</string>
+    <string name="albums_singles">Albums and singles</string>
+    <string name="widget_glass_player">Ketvoice · Player</string>
+    <string name="widget_glass_player_desc">Large Liquid Glass player: cover, title, progress and controls</string>
+    <string name="widget_week">Ketvoice · Your week</string>
+    <string name="widget_week_desc">Your listening minutes and artist of the week</string>
+    <string name="widget_mix">Ketvoice · For you</string>
+    <string name="widget_mix_desc">The mix of the moment: one tap plays it</string>
+    <string name="widget_mini">Ketvoice · Mini</string>
+    <string name="widget_mini_desc">Cover, play/pause and next</string>
+</resources>

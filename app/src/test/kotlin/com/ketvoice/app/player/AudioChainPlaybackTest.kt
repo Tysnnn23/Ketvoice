@@ -36,7 +36,16 @@ class AudioChainPlaybackTest {
         return File.createTempFile("chain", ".wav").apply { writeBytes(header.array() + data.array()); deleteOnExit() }
     }
 
-    @Test fun aLocalFilePlaysThroughKetvoicesAudioChain() {
+    @Test fun aLocalFilePlaysThroughKetvoicesAudioChain() = play()
+
+    /** The same with every effect of the chain working: volume leveler and reverb on. */
+    @Test fun aLocalFilePlaysWithLevelingAndReverbOn() {
+        com.ketvoice.app.data.AppSettings.volumeLeveling.value = true
+        ReverbControl.amount = .4f
+        try { play() } finally { com.ketvoice.app.data.AppSettings.volumeLeveling.value = false; ReverbControl.amount = 0f }
+    }
+
+    private fun play() {
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
         val deck = com.ketvoice.app.automix.DeckControl()
         val renderers = object : DefaultRenderersFactory(context) {
@@ -45,7 +54,7 @@ class AudioChainPlaybackTest {
                     .setMinPcmBufferDurationUs(PlaybackService.AUDIO_BUFFER_MIN_US).setMaxPcmBufferDurationUs(PlaybackService.AUDIO_BUFFER_MAX_US).build()
                 return ProcessingAudioSink(DefaultAudioSink.Builder(context).setEnableFloatOutput(false)
                     .setAudioTrackBufferSizeProvider(buffers)
-                    .setAudioProcessors(arrayOf(com.ketvoice.app.automix.DeckMixProcessor(deck), ReverbAudioProcessor {},
+                    .setAudioProcessors(arrayOf(com.ketvoice.app.automix.DeckMixProcessor(deck), LevelingAudioProcessor(), ReverbAudioProcessor {},
                         TeeAudioProcessor(SonicMeter))).build(), deck)
             }
         }

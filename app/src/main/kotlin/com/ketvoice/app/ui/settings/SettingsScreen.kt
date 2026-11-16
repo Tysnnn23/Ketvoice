@@ -296,6 +296,8 @@ fun SettingsScreen() {
                 if (!com.ketvoice.app.BuildConfig.IS_QUEST) SToggle(KetIcons.Sliders, "Retours haptiques",
                     "Légère vibration sur le verre, les onglets et la barre de lecture",
                     AppSettings.haptics.value) { AppSettings.haptics.value = it; SettingsStore.save() }
+                SToggle(KetIcons.Sliders, "Couleur de la pochette", "La couleur d'accent de toute l'interface suit la pochette du titre en cours",
+                    AppSettings.coverAccent.value) { AppSettings.coverAccent.value = it; SettingsStore.save() }
                 SToggle(KetIcons.Canvas, "Pochette vivante", "Dans le lecteur, la pochette pulse très légèrement au rythme des basses",
                     AppSettings.livingArtwork.value) { AppSettings.livingArtwork.value = it; SettingsStore.save() }
                 SToggle(KetIcons.Canvas, "Profondeur de pochette", "Mouvement léger au toucher ou au pointeur, sans modifier les gestes",
@@ -372,6 +374,8 @@ fun SettingsScreen() {
 
             // ==================================================== LECTURE
             Section("LECTURE") {
+                SToggle(KetIcons.Audio, "Normaliser le volume", "Tous les titres à un volume perçu proche, sans saut d'une chanson à l'autre",
+                    AppSettings.volumeLeveling.value) { AppSettings.volumeLeveling.value = it; SettingsStore.save() }
                 if (!com.ketvoice.app.BuildConfig.IS_QUEST) {
                     val ctx = LocalContext.current
                     var free by remember { mutableStateOf(com.ketvoice.app.data.BackgroundPlayback.unrestricted(ctx)) }

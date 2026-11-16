@@ -124,15 +124,8 @@ fun HomeScreen() {
                     if (youtube.connected) Text(" · ${youtube.name}", localize = false, color = theme.secondary, fontSize = 12.sp, maxLines = 1)
                 }
             }
-            // "For you" leads: a paused title, a fresh release or the mix of the hour; else the former card.
-            item(key = "for-you") {
-                HomeForYou(hour, releases) {
-                    if (player.current != null || recent.isNotEmpty()) HomeEditorial(if (player.current != null) player.queue else recent, resume = true)
-                    else if (featured.isNotEmpty()) HomeEditorial(featured)
-                }
-            }
-            // Shortcuts to what already exists on this device.
-            item(key = "shortcuts") { HomeShortcuts(Modifier.padding(top = 8.dp)) }
+            // The owner removed the large For you card and the four shortcut tiles (5.9.0): the page goes
+            // from the greeting straight to what was played last. Votre semaine stays further down.
             // What was played last, within a thumb's reach: tiles to start again from, or large covers.
             item(key = "recent-heading") {
                 EditorialHeader("Récents", onMore = if (recent.isNotEmpty()) ({

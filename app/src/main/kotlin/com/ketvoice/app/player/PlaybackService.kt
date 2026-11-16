@@ -210,7 +210,7 @@ class PlaybackService : MediaSessionService() {
                     .setAudioTrackBufferSizeProvider(buffers)
                     .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
                     .setAudioProcessors(if (exactRequested) emptyArray() else arrayOf(
-                        com.ketvoice.app.automix.DeckMixProcessor(deck), ReverbAudioProcessor {
+                        com.ketvoice.app.automix.DeckMixProcessor(deck), LevelingAudioProcessor(), ReverbAudioProcessor {
                         if (::player.isInitialized && owner === this@PlaybackService.player) ReverbControl.notePcm()
                     }, TeeAudioProcessor(meter))).build(), if (exactRequested) null else deck)
                 if (exactRequested && android.os.Build.VERSION.SDK_INT >= 34) return BitPerfectAudioSink(context, fallback)

@@ -1131,7 +1131,27 @@ object Player {
         }
     }
 
-    fun next() = advance(ended = false)
+    fun next() {
+        // Ketmix au skip (5.9.0): with Ketmix on, a manual skip is a short transition instead of a hard
+        // cut — the title fades out in a third of a second, the next one rises in under one.
+        val c = controller
+        if (!AppSettings.automix.value || AppSettings.bitPerfect.value || c == null || !c.isPlaying ||
+            SleepTimer.remainingSeconds.value in 1..30) { skipFade?.cancel(); c?.volume = 1f; advance(ended = false); return }
+        skipFade?.cancel()
+        skipFade = scope.launch {
+            try {
+                SkipFade.ramp(c.volume, 0f, SkipFade.OUT_MS) { c.volume = it }
+                advance(ended = false)
+                // The next title starts silent and rises once it really plays (or after a few seconds anyway).
+                c.volume = 0f
+                kotlinx.coroutines.withTimeoutOrNull(6_000) { _state.first { it.isPlaying } }
+                SkipFade.ramp(0f, 1f, SkipFade.IN_MS) { c.volume = it }
+            } finally {
+                runCatching { c.volume = 1f }
+            }
+        }
+    }
+    private var skipFade: kotlinx.coroutines.Job? = null
 
     /** One rule for a manual skip and for the end of a track. */
     private fun advance(ended: Boolean) {
@@ -1418,3 +1438,24 @@ internal object RadioMix {
         return out
     }
 }
+
+/** The short fades of a manual skip with Ketmix on. */
+internal object SkipFade {
+    const val OUT_MS = 320L
+    const val IN_MS = 850L
+    private const val STEP_MS = 16L
+
+    /** The level at [t] (0..1) of a fade from [from] to [to]: an equal-power curve, so the ear hears an even glide. */
+    fun level(from: Float, to: Float, t: Float): Float {
+        val p = t.coerceIn(0f, 1f)
+        val curve = if (to < from) kotlin.math.cos(p * Math.PI / 2).toFloat() else kotlin.math.sin(p * Math.PI / 2).toFloat()
+        return if (to < from) to + (from - to) * curve else from + (to - from) * curve
+    }
+
+    suspend fun ramp(from: Float, to: Float, durationMs: Long, set: (Float) -> Unit) {
+        val steps = (durationMs / STEP_MS).coerceAtLeast(1)
+        for (i in 1..steps) { set(level(from, to, i.toFloat() / steps)); kotlinx.coroutines.delay(STEP_MS) }
+        set(to)
+    }
+}
+

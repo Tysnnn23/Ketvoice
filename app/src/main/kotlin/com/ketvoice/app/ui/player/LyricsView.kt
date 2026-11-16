@@ -55,6 +55,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.withTransform
@@ -103,6 +104,24 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
     val momentHaptic = com.ketvoice.app.ui.motion.rememberHaptics()
     val offsets by LyricsOffsets.values.collectAsState()
     val offsetMs = offsets[remember(track.id) { LyricsOffsets.key(track.id) }] ?: 0
+
+    // The sung line breathes with the bass (5.9.0): read in the line's layer, never recomposing the list.
+    val breathing = !Motion.reduced && !AppSettings.highPerformanceMode.value && Player.state.collectAsState().value.isPlaying
+    val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
+    DisposableEffect(lifecycle, breathing) {
+        fun update() = com.ketvoice.app.player.SonicMeter.observe("lyrics-breath",
+            breathing && lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED))
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, _ -> update() }
+        lifecycle.addObserver(observer); update()
+        onDispose { lifecycle.removeObserver(observer); com.ketvoice.app.player.SonicMeter.observe("lyrics-breath", false) }
+    }
+    val breath = remember { Animatable(0f) }
+    LaunchedEffect(breathing) {
+        if (!breathing) { breath.animateTo(0f, tween(240)); return@LaunchedEffect }
+        androidx.compose.runtime.snapshotFlow { com.ketvoice.app.player.SonicMeter.levels.value.low }.collect { low ->
+            breath.animateTo(LyricsWords.breath(low), tween(110))
+        }
+    }
 
     val position = Player.positionMs.collectAsState()
     val active by remember(lyrics, offsetMs) { derivedStateOf { lyrics.indexAt(LyricsOffsets.adjustedPosition(position.value, offsetMs)) } }
@@ -267,8 +286,9 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
                                  lineModifier.graphicsLayer {
                                     alpha = entry.value
                                     translationY = if (reduced) 0f else (1f - entry.value) * 16.dp.toPx() + wave.value.dp.toPx()
-                                    scaleX = lineScale
-                                    scaleY = lineScale
+                                    val breathe = if (current) 1f + breath.value else 1f
+                                    scaleX = lineScale * breathe
+                                    scaleY = lineScale * breathe
                                     transformOrigin = TransformOrigin(0f, .5f)
                                 }
                             ) {
@@ -470,11 +490,16 @@ internal fun KaraokeLine(line: MusicApi.LyricLine, modifier: Modifier, fontScale
             LyricWordMask(word.startMs, word.endMs, slices, slices.sumOf { it.bounds.width.toDouble() }.toFloat())
         }
     }.orEmpty() }
+    // Apple-style words (5.9.0): each word rises a little as it is sung and a held note glows. The
+    // words are then drawn by the canvas, dim and lit parts moving together; when the word timing
+    // does not cover the line's letters, the line keeps the flat drawing so that nothing disappears.
+    val pendingAlpha = if (backing) .36f else if (dim) .30f else .40f
+    val lifting = remember(line, alignedWords) { !Motion.reduced && LyricsWords.covers(line.text, alignedWords.map { it.text }) }
     Box(modifier) {
         // One shaped layout for both the pending glyphs and the sung overlay.
         // No remeasurement, shifted word copy, scaling or disappearing held glyph.
-        Text(line.text, localize = false, color = Color.White.copy(
-            alpha = if (backing) .36f else if (dim) .30f else .40f),
+        Text(line.text, localize = false, color = if (lifting) Color.Transparent else Color.White.copy(
+            alpha = pendingAlpha),
             fontSize = ((if (backing) 24 else 33) * fontScale).sp,
             lineHeight = ((if (backing) 31 else 41) * fontScale).sp,
             letterSpacing = (-.3).sp, fontWeight = if (backing) FontWeight.Bold else FontWeight.Black,
@@ -482,10 +507,37 @@ internal fun KaraokeLine(line: MusicApi.LyricLine, modifier: Modifier, fontScale
         Canvas(Modifier.matchParentSize()) {
             val measured = layout ?: return@Canvas
             val now = LyricsOffsets.adjustedPosition(clock.longValue, offset)
+            val liftPx = LyricsWords.LIFT_DP.dp.toPx()
             masks.forEach { word ->
                 val progress = segmentProgress(now, word.start, word.end)
-                if (progress <= 0f) return@forEach
                 val ink = Color.White.copy(alpha = if (dim) .82f else 1f)
+                if (lifting) {
+                    val rise = LyricsWords.lift(progress) * liftPx
+                    val glow = LyricsWords.glow(progress, word.end - word.start)
+                    translate(top = -rise) {
+                        word.slices.forEach { slice -> clipPath(slice.path) { drawText(measured, color = Color.White.copy(alpha = pendingAlpha)) } }
+                        if (progress > 0f) {
+                            var remaining = word.width * progress
+                            word.slices.forEach { slice ->
+                                val bounds = slice.bounds
+                                val fill = remaining.coerceIn(0f, bounds.width)
+                                remaining -= bounds.width
+                                if (fill > 0f) {
+                                    val left = if (slice.rtl) bounds.right - fill else bounds.left
+                                    val right = if (slice.rtl) bounds.right else bounds.left + fill
+                                    clipPath(slice.path) {
+                                        clipRect(left, bounds.top, right, bounds.bottom) {
+                                            drawText(measured, color = ink, shadow = if (glow > .01f) androidx.compose.ui.graphics.Shadow(
+                                                Color.White.copy(alpha = .55f * glow), blurRadius = 18f * glow) else null)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    return@forEach
+                }
+                if (progress <= 0f) return@forEach
                 var remaining = word.width * progress
                 word.slices.forEach { slice ->
                     val bounds = slice.bounds
@@ -645,3 +697,35 @@ internal fun LyricsSourceSheet(track: Track, onClose: () -> Unit) {
         }
     }
 }
+
+/** How sung words move (5.9.0), in the manner of Apple Music. */
+internal object LyricsWords {
+    /** How high a sung word rises, in dp. */
+    const val LIFT_DP = 2.5f
+    /** Notes held at least this long glow while they are sung. */
+    const val GLOW_FROM_MS = 900L
+
+    /** The sung line's breath for a bass level of 0..1: at most one and a half percent. */
+    fun breath(low: Float): Float = if (!low.isFinite()) 0f else (((low - .2f) / .8f).coerceIn(0f, 1f).let { it * it }) * .015f
+
+    /** A word rises while it is sung and stays risen: an ease-out of its progress. */
+    fun lift(progress: Float): Float {
+        val p = if (progress.isFinite()) progress.coerceIn(0f, 1f) else 0f
+        return 1f - (1f - p) * (1f - p)
+    }
+
+    /** The glow of a held note: strongest in the middle of the note, nothing for short words. */
+    fun glow(progress: Float, durationMs: Long): Float {
+        if (durationMs < GLOW_FROM_MS || !(progress > 0f && progress < 1f)) return 0f
+        val strength = ((durationMs - GLOW_FROM_MS) / 1_100f + .5f).coerceIn(.5f, 1f)
+        return kotlin.math.sin(progress * Math.PI).toFloat() * strength
+    }
+
+    /** True when the words, joined, hold every visible letter of the line (so drawing words alone loses nothing). */
+    fun covers(line: String, words: List<String>): Boolean {
+        val letters = line.count { !it.isWhitespace() }
+        if (letters == 0 || words.isEmpty()) return false
+        return words.sumOf { w -> w.count { !it.isWhitespace() } } >= letters && words.joinToString("").length <= line.length
+    }
+}
+

@@ -21,6 +21,15 @@
 
 ## Overview
 
+### 5.9.0 — Wrapped, widgets and a ten-band equalizer
+
+Your year as stories with Ketvoice Wrapped, four home-screen widgets, a ten-band equalizer you drag, volume
+normalisation, a short fade on skip with Ketmix, lyrics whose words rise and glow, a player whose colours flow
+like Apple Music's, and a simpler Home.
+[Mobile](https://github.com/Tysnnn23/Ketvoice/releases/download/v5.9.0/Ketvoice-5.9.0.apk)
+· [Quest](https://github.com/Tysnnn23/Ketvoice/releases/download/v5.9.0/Ketvoice-5.9.0-Quest.apk)
+· [Release notes](docs/releases/v5.9.0.md).
+
 ### 5.8.3 — Small fixes
 
 *Artist radio* sits under the artist page's buttons, albums say *Play*, and Home's For you card is translated.

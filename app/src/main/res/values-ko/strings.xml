@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Ketvoice</string>
+    <string name="tab_home">홈</string>
+    <string name="tab_explore">탐색</string>
+    <string name="tab_library">라이브러리</string>
+    <string name="listen_now">지금 들어보세요</string>
+    <string name="explorer_title">탐색</string>
+    <string name="library_title">라이브러리</string>
+    <string name="search_hint">검색</string>
+    <string name="recents">최근</string>
+    <string name="trending">인기</string>
+    <string name="albums_singles">앨범 및 싱글</string>
+    <string name="widget_glass_player">Ketvoice · 플레이어</string>
+    <string name="widget_glass_player_desc">큰 Liquid Glass 플레이어: 커버, 제목, 진행 상황, 컨트롤</string>
+    <string name="widget_week">Ketvoice · 이번 주</string>
+    <string name="widget_week_desc">이번 주 감상 시간과 이번 주의 아티스트</string>
+    <string name="widget_mix">Ketvoice · 추천</string>
+    <string name="widget_mix_desc">지금의 믹스: 탭하면 재생</string>
+    <string name="widget_mini">Ketvoice · 미니</string>
+    <string name="widget_mini_desc">커버, 재생/일시정지, 다음</string>
+</resources>

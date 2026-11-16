@@ -23,6 +23,10 @@ object ListeningHistory {
     private val _days = MutableStateFlow<Map<String, DayStat>>(emptyMap())
     /** Listening of the last two weeks, per day: what "your week" is made of. */
     internal val days: StateFlow<Map<String, DayStat>> = _days
+    /** Listening per calendar year (since 5.9.0), for Ketvoice Wrapped: time and plays per title, keyed "2026". */
+    private val _years = MutableStateFlow<Map<String, DayStat>>(emptyMap())
+    internal val years: StateFlow<Map<String, DayStat>> = _years
+    private fun year() = java.time.LocalDate.now().year.toString()
     private fun today() = java.time.LocalDate.now()
 
     fun init(context: Context) {
@@ -38,6 +42,7 @@ object ListeningHistory {
         }.getOrDefault(emptyMap())
         _listenedMs.value = prefs!!.getLong("listenedMs", 0L)
         _days.value = ListeningWeek.trim(ListeningWeek.decode(prefs!!.getString("days", null)), today())
+        _years.value = Wrapped.decode(prefs!!.getString("years", null))
         runCatching { ListeningStats.refresh() }
     }
 
@@ -50,9 +55,11 @@ object ListeningHistory {
         if (deltaMs <= 0L) return
         _listenedMs.value = _listenedMs.value + deltaMs
         _days.value = ListeningWeek.addTime(_days.value, today(), deltaMs)
+        _years.value = Wrapped.addTime(_years.value, year(), deltaMs)
         unflushedMs += deltaMs
         if (unflushedMs >= 15_000L) {
-            prefs?.edit()?.putLong("listenedMs", _listenedMs.value)?.putString("days", ListeningWeek.encode(_days.value))?.apply()
+            prefs?.edit()?.putLong("listenedMs", _listenedMs.value)?.putString("days", ListeningWeek.encode(_days.value))
+                ?.putString("years", ListeningWeek.encode(_years.value))?.apply()
             unflushedMs = 0L
         }
     }
@@ -60,7 +67,8 @@ object ListeningHistory {
     /** Flush immédiat (arrêt du service, pause longue). */
     @Synchronized fun flushListenedMs() {
         if (unflushedMs > 0L) {
-            prefs?.edit()?.putLong("listenedMs", _listenedMs.value)?.putString("days", ListeningWeek.encode(_days.value))?.apply()
+            prefs?.edit()?.putLong("listenedMs", _listenedMs.value)?.putString("days", ListeningWeek.encode(_days.value))
+                ?.putString("years", ListeningWeek.encode(_years.value))?.apply()
             unflushedMs = 0L
         }
     }
@@ -88,8 +96,10 @@ object ListeningHistory {
         }
         _playCounts.value = counts
         _days.value = ListeningWeek.addPlay(_days.value, today(), track.id)
+        _years.value = Wrapped.addPlay(_years.value, year(), track.id)
         prefs?.edit()?.putString("tracks", gson.toJson(_tracks.value))
-            ?.putString("counts", gson.toJson(counts))?.putString("days", ListeningWeek.encode(_days.value))?.apply()
+            ?.putString("counts", gson.toJson(counts))?.putString("days", ListeningWeek.encode(_days.value))
+            ?.putString("years", ListeningWeek.encode(_years.value))?.apply()
         // Keep the recap projection warm so the stats screen opens instantly.
         runCatching { ListeningStats.refresh() }
     }

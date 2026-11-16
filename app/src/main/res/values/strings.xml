@@ -11,4 +11,12 @@
     <string name="recents">Recents</string>
     <string name="trending">Tendances</string>
     <string name="albums_singles">Albums et singles</string>
+    <string name="widget_glass_player">Ketvoice · Lecteur</string>
+    <string name="widget_glass_player_desc">Grand lecteur Liquid Glass : pochette, titre, progression et commandes</string>
+    <string name="widget_week">Ketvoice · Votre semaine</string>
+    <string name="widget_week_desc">Vos minutes d\'écoute et votre artiste de la semaine</string>
+    <string name="widget_mix">Ketvoice · Pour vous</string>
+    <string name="widget_mix_desc">Le mix du moment : un tap le lance</string>
+    <string name="widget_mini">Ketvoice · Mini</string>
+    <string name="widget_mini_desc">Pochette, lecture/pause et suivant</string>
 </resources>

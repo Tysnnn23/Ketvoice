@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Ketvoice</string>
+    <string name="tab_home">首页</string>
+    <string name="tab_explore">探索</string>
+    <string name="tab_library">音乐库</string>
+    <string name="listen_now">现在听</string>
+    <string name="explorer_title">探索</string>
+    <string name="library_title">音乐库</string>
+    <string name="search_hint">搜索</string>
+    <string name="recents">最近</string>
+    <string name="trending">热门</string>
+    <string name="albums_singles">专辑和单曲</string>
+    <string name="widget_glass_player">Ketvoice · 播放器</string>
+    <string name="widget_glass_player_desc">大号 Liquid Glass 播放器：封面、标题、进度和控制</string>
+    <string name="widget_week">Ketvoice · 你的一周</string>
+    <string name="widget_week_desc">你本周的收听分钟数和本周艺人</string>
+    <string name="widget_mix">Ketvoice · 为你推荐</string>
+    <string name="widget_mix_desc">此刻的混音：轻点即可播放</string>
+    <string name="widget_mini">Ketvoice · 迷你</string>
+    <string name="widget_mini_desc">封面、播放/暂停和下一首</string>
+</resources>

@@ -155,7 +155,7 @@ class HomeAndDownloadsHostTest {
         }
     }
 
-    @Test fun theHomePageLeadsWithACardThenTilesOfShortcutsAndRecentTitles() {
+    @Test fun theHomePageGoesFromTheGreetingToRecentTitlesWithoutCardOrTiles() {
         history(plays = 5)
         recent.value = known.value.take(9)
         AppSettings.favoriteIds.value = setOf(known.value.first().id)
@@ -171,15 +171,10 @@ class HomeAndDownloadsHostTest {
         try {
             compose.setContent { KetvoiceTheme(useDark = true) { com.ketvoice.app.ui.home.HomeScreen() } }
             compose.onNodeWithTag("home-greeting").assertIsDisplayed()
-            // The card comes first, the shortcuts under it as tiles, two by two, each saying how much is behind it.
-            val card = compose.onNodeWithTag("for-you-mix").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
-            val tiles = compose.onAllNodesWithTag("home-shortcut").fetchSemanticsNodes().map { it.boundsInRoot }
-            assertEquals(3, tiles.size)
-            assertTrue("under the card", tiles.all { it.top >= card.bottom })
-            assertEquals("two on a line", tiles[0].top, tiles[1].top, 1f)
-            assertTrue(tiles[1].left > tiles[0].right && tiles[2].top > tiles[0].bottom)
-            compose.onNodeWithText("Aléatoire").assertIsDisplayed()
-            compose.onNodeWithText("21 titres").assertIsDisplayed(); compose.onNodeWithText("1 titre").assertIsDisplayed()
+            // Since 5.9.0 (owner's choice) neither the For you card nor the shortcut tiles are on Home.
+            compose.onNodeWithTag("for-you-mix").assertDoesNotExist()
+            compose.onNodeWithTag("for-you-resume").assertDoesNotExist()
+            assertEquals(0, compose.onAllNodesWithTag("home-shortcut").fetchSemanticsNodes().size)
             image("home-page-dark")
             // Recent titles: a shelf of large covers; the grid shows them three by three.
             compose.onNodeWithTag("home-list").performScrollToNode(hasTestTag("home-recent-carousel"))

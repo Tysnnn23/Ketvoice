@@ -29,6 +29,10 @@ object AppSettings {
     val artworkDepth = mutableStateOf(true)
     /** The player's artwork pulses very slightly with the bass of the music. */
     val livingArtwork = mutableStateOf(true)
+    /** The accent of the whole interface follows the cover playing (5.9.0); off by default: the chosen accent rules. */
+    val coverAccent = mutableStateOf(false)
+    /** Every title at about the same loudness (5.9.0, a slow leveler in the audio chain); off by default. */
+    val volumeLeveling = mutableStateOf(false)
     val systemReduceMotion = mutableStateOf(false)
     val canvasWithMobileData = mutableStateOf(false)
     val artistSignatures = mutableStateOf(false)
@@ -94,7 +98,7 @@ object AppSettings {
     /** Opt-in: the website's "Listening now" shows the title, artist and cover. The count itself is anonymous. */
     val shareNowPlaying = mutableStateOf(false)
     val progressiveQuality = mutableStateOf(false)
-    val equalizerGains = mutableStateOf(listOf(0, 0, 0, 0, 0))
+    val equalizerGains = mutableStateOf(List(10) { 0 })
     val wifiHandoffEnabled = mutableStateOf(false)
     val spatialAudio = mutableStateOf(false)
     val downloadQuality = mutableStateOf("~35MB par piste")

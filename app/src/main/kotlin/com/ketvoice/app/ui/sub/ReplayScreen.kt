@@ -84,14 +84,22 @@ fun ReplayScreen() {
     val scope = rememberCoroutineScope()
     var saving by remember { mutableStateOf(false) }
     var saved by remember { mutableStateOf(false) }
+    var showWrapped by remember { mutableStateOf(false) }
 
     Column(Modifier.fillMaxSize().pageBackground(th).statusBarsPadding()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             GlassBackButton { AppUi.closeOverlay() }
             Spacer(Modifier.width(12.dp))
             Text("Replay", color = th.onBackground, fontSize = 30.sp, fontWeight = FontWeight.Bold, letterSpacing = (-.7).sp,
-                modifier = Modifier.asHeading())
+                modifier = Modifier.asHeading().weight(1f))
+            // Ketvoice Wrapped (5.9.0): the year as stories, shareable.
+            if (stats.totalPlays > 0) Box(Modifier.clip(RoundedCornerShape(999.dp))
+                .background(Brush.linearGradient(listOf(th.accent, th.accent.copy(alpha = .70f))))
+                .clickable(role = Role.Button) { showWrapped = true }.padding(horizontal = 16.dp, vertical = 9.dp).testTag("replay-wrapped")) {
+                Text("Wrapped", localize = false, color = androidx.compose.ui.graphics.Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            }
         }
+        if (showWrapped) WrappedStory(rememberWrappedRecap()) { showWrapped = false }
         if (stats.totalPlays == 0) {
             EmptyState("Pas encore de Replay", "Vos titres les plus écoutés apparaîtront ici dès que vous aurez écouté de la musique.",
                 "Rechercher des titres", onAction = ::openTrackSearch)

@@ -45,15 +45,17 @@ internal fun rememberCoverAmbience(url: String?): CoverAmbience {
 @Composable
 internal fun AmbientArtwork(url: String?, ambience: CoverAmbience, playing: Boolean = false) {
     Box(Modifier.fillMaxSize().background(ambience.color)) {
-        if (url != null) AsyncImage(url, null, Modifier.fillMaxSize().blur(90.dp), contentScale = ContentScale.Crop, alpha = .88f)
-        // Slow mesh of the cover's colours over the blurred artwork, under the veil.
-        MeshBackdrop(remember(ambience.color, ambience.accent, url) {
-            meshColors(ambience.color, ambience.accent, com.ketvoice.app.theme.CoverPalette.cached(url))
-        }, playing)
+        // "Fond animé" (5.9.0): the cover's colours flow as in Apple Music — three blurred copies turning
+        // slowly. Off, the blurred artwork stands still as before.
+        val flowing = url != null && com.ketvoice.app.data.AppSettings.meshBackground.value
+        if (flowing) ArtworkFlowBackground(url, playing)
+        else if (url != null) AsyncImage(url, null, Modifier.fillMaxSize().blur(90.dp), contentScale = ContentScale.Crop, alpha = .88f)
+        // A lighter veil over the flowing colours: they are the show, the text still reads on them.
+        val veil = if (flowing) (ambience.veil - .18f).coerceAtLeast(.30f) else ambience.veil
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(
-            Color.Black.copy(alpha = ambience.veil),
-            ambience.color.copy(alpha = .40f),
-            Color.Black.copy(alpha = ambience.veil + .08f)
+            Color.Black.copy(alpha = veil),
+            ambience.color.copy(alpha = if (flowing) .22f else .40f),
+            Color.Black.copy(alpha = veil + .12f)
         ))))
     }
 }

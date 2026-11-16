@@ -73,24 +73,28 @@ class MainActivity : ComponentActivity() {
         runCatching { com.ketvoice.app.data.CustomSources.init(this) }
         runCatching { com.ketvoice.app.data.ForYouRotation.init(this) }
         runCatching { com.ketvoice.app.data.ArtistPrefs.init(this) }
-        runCatching { com.ketvoice.app.data.LyricsSearch.init(this) }
+        // Faster start (5.9.0): what the first screen does not need is read beside it, off the main thread —
+        // the lyrics index (up to a few megabytes) and the launcher icon check (calls to the package manager).
+        val app = applicationContext
+        val iconVariant = com.ketvoice.app.data.AppSettings.appIconVariant.value
+        Thread({
+            runCatching { com.ketvoice.app.data.LyricsSearch.init(app) }
+            runCatching { com.ketvoice.app.util.LauncherIcons.apply(app, iconVariant) }
+        }, "ketvoice-startup").apply { priority = Thread.NORM_PRIORITY - 1 }.start()
         com.ketvoice.app.data.FavoritesOffline.start()
-        runCatching {
-            com.ketvoice.app.util.LauncherIcons.apply(
-                this,
-                com.ketvoice.app.data.AppSettings.appIconVariant.value
-            )
-        }
 
         try {
             Player.connect(applicationContext)
         } catch (_: Exception) {
         }
 
-        runCatching {
-            com.ketvoice.app.discord.Discord.attach(this)
-            com.ketvoice.app.discord.Discord.start()
-        }.onFailure { android.util.Log.w("KetvoiceDiscord", "Discord init failed", it) }
+        runCatching { com.ketvoice.app.discord.Discord.attach(this) }
+            .onFailure { android.util.Log.w("KetvoiceDiscord", "Discord init failed", it) }
+        // The Discord SDK starts once the first frame is drawn: the app shows itself first.
+        window.decorView.post {
+            runCatching { com.ketvoice.app.discord.Discord.start() }
+                .onFailure { android.util.Log.w("KetvoiceDiscord", "Discord init failed", it) }
+        }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
@@ -131,6 +135,7 @@ class MainActivity : ComponentActivity() {
             }
         }
         handleAuthIntent(intent)
+        handleWidgetIntent(intent)
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -142,11 +147,34 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         handleAuthIntent(intent)
+        handleWidgetIntent(intent)
     }
 
     override fun onResume() {
         super.onResume()
         runCatching { com.ketvoice.app.discord.Discord.onForeground() }
+    }
+
+    /** A home-screen widget opened the app: the mix it showed is played, or "Votre semaine" opens Replay. */
+    private fun handleWidgetIntent(intent: Intent?) {
+        intent ?: return
+        val mix = intent.getStringExtra(com.ketvoice.app.widget.WidgetIntents.MIX)
+        val open = intent.getStringExtra(com.ketvoice.app.widget.WidgetIntents.OPEN)
+        intent.removeExtra(com.ketvoice.app.widget.WidgetIntents.MIX)
+        intent.removeExtra(com.ketvoice.app.widget.WidgetIntents.OPEN)
+        if (open == "replay") AppUi.openReplay()
+        if (mix.isNullOrBlank()) return
+        lifecycleScope.launch {
+            val tracks = runCatching { com.ketvoice.app.data.PersonalMixes.tracks(mix) }.getOrNull()
+            if (tracks.isNullOrEmpty()) {
+                val title = intent.getStringExtra(com.ketvoice.app.widget.WidgetIntents.MIX_TITLE).orEmpty()
+                AppUi.openCatalog(com.ketvoice.app.data.CatalogRequest("mix", mix, title))
+                return@launch
+            }
+            com.ketvoice.app.player.Player.setShuffle(false)
+            com.ketvoice.app.player.Player.playQueue(tracks)
+            AppUi.showPlayer.value = true
+        }
     }
 
     private fun handleAuthIntent(intent: Intent?) {

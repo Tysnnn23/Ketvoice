@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Ketvoice</string>
+    <string name="tab_home">Главная</string>
+    <string name="tab_explore">Исследовать</string>
+    <string name="tab_library">Библиотека</string>
+    <string name="listen_now">Слушай сейчас</string>
+    <string name="explorer_title">Исследовать</string>
+    <string name="library_title">Библиотека</string>
+    <string name="search_hint">Для исследования</string>
+    <string name="recents">Недавний</string>
+    <string name="trending">В тренде</string>
+    <string name="albums_singles">Альбомы и синглы</string>
+    <string name="widget_glass_player">Ketvoice · Плеер</string>
+    <string name="widget_glass_player_desc">Большой плеер Liquid Glass: обложка, название, прогресс и управление</string>
+    <string name="widget_week">Ketvoice · Ваша неделя</string>
+    <string name="widget_week_desc">Ваши минуты прослушивания и артист недели</string>
+    <string name="widget_mix">Ketvoice · Для вас</string>
+    <string name="widget_mix_desc">Микс момента: одно касание — и он играет</string>
+    <string name="widget_mini">Ketvoice · Мини</string>
+    <string name="widget_mini_desc">Обложка, воспроизведение/пауза и далее</string>
+</resources>

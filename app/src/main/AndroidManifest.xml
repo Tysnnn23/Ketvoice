@@ -154,6 +154,51 @@
             </intent-filter>
         </activity-alias>
 
+        <!-- Widgets of 5.9.0: large glass player, your week, mix of the moment, mini controls. -->
+        <receiver
+            android:name=".widget.GlassPlayerWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_glass_player">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/glass_player_widget_info" />
+        </receiver>
+        <receiver
+            android:name=".widget.WeekWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_week">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/week_widget_info" />
+        </receiver>
+        <receiver
+            android:name=".widget.MixWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_mix">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/mix_widget_info" />
+        </receiver>
+        <receiver
+            android:name=".widget.MiniControlsWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_mini">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/mini_controls_widget_info" />
+        </receiver>
         <!-- Home-screen widget: now playing with transport. -->
         <receiver
             android:name=".widget.NowPlayingWidgetReceiver"

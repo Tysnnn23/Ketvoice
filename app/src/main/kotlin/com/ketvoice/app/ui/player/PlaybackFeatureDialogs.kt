@@ -12,6 +12,10 @@ import com.ketvoice.app.ui.common.GlassSlider
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -102,10 +106,16 @@ private fun EqualizerDialog(onClose:()->Unit){
                 status.applied -> "Traitement natif actif sur la session audio."
                 else -> "Égaliseur désactivé."
             },color=theme.secondary,fontSize=12.sp,modifier=Modifier.padding(vertical=8.dp))
-            EqualizerCurve(AppSettings.equalizerGains.value)
+            // Drag the curve itself (5.9.0): the nearest band follows the finger, as on a graphic equalizer.
+            EqualizerCurve(EqualizerProfile.normalize(AppSettings.equalizerGains.value),
+                enabled = status.available && AppSettings.equalizerEnabled.value,
+                onBand = { i, gain ->
+                    val now = EqualizerProfile.normalize(AppSettings.equalizerGains.value)
+                    if (now[i] != gain) { AppSettings.equalizerGains.value = now.toMutableList().apply { set(i, gain) }; apply() }
+                }, onDone = { Player.applyEqualizer(); SettingsStore.save() })
             FlowRow(horizontalArrangement=Arrangement.spacedBy(6.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
                 EqualizerProfile.presets.forEach{(name,gains)->
-                    val selected=AppSettings.equalizerGains.value==gains
+                    val selected=EqualizerProfile.normalize(AppSettings.equalizerGains.value)==gains
                     Box(Modifier.clip(RoundedCornerShape(16.dp)).background(if(selected) theme.accent.copy(alpha=.16f) else theme.onBackground.copy(alpha=.06f))
                         .selectable(selected,role=Role.RadioButton){AppSettings.equalizerGains.value=gains;Player.applyEqualizer();SettingsStore.save()}
                         .heightIn(min=48.dp).padding(horizontal=14.dp),contentAlignment=Alignment.Center){
@@ -114,23 +124,24 @@ private fun EqualizerDialog(onClose:()->Unit){
                 }
             }
             Row(Modifier.fillMaxWidth().padding(top=4.dp),verticalAlignment=Alignment.CenterVertically){
-                Text(if(status.centersHz.isEmpty()) "Bandes natives : détection en cours"
-                     else "${status.centersHz.size} bandes natives · ${status.centersHz.joinToString(" · ") { if (it>=1000) "${it/1000} kHz" else "$it Hz" }}",
+                Text(if(status.centersHz.isEmpty()) com.ketvoice.app.data.AppText.t("Bandes natives : détection en cours")
+                     else if (status.tenBands) com.ketvoice.app.data.AppText.t("10 bandes exactes · limiteur actif")
+                     else "${status.centersHz.size} ${com.ketvoice.app.data.AppText.t("bandes natives")} · ${status.centersHz.joinToString(" · ") { if (it>=1000) "${it/1000} kHz" else "$it Hz" }}",
                      localize=false,color=theme.secondary,fontSize=11.sp,modifier=Modifier.weight(1f))
                 Text("Réinitialiser", color=theme.accent, fontSize=12.sp,
                     modifier=Modifier.clickable{
-                        AppSettings.equalizerGains.value=listOf(0,0,0,0,0)
+                        AppSettings.equalizerGains.value=List(10){0}
                         Player.applyEqualizer();SettingsStore.save()
                     })
             }
             EqualizerProfile.frequencies.forEachIndexed{i,hz->
-                val gain=AppSettings.equalizerGains.value[i]
+                val gain=EqualizerProfile.normalize(AppSettings.equalizerGains.value)[i]
                 Row(Modifier.fillMaxWidth().padding(top=8.dp)){
                     Text(if(hz%1000==0) "${hz/1000} kHz" else if(hz>=1000) "${hz/1000f} kHz" else "$hz Hz",localize=false,color=theme.onBackground,fontSize=12.sp)
                     Spacer(Modifier.weight(1f));Text("${if(gain>0)"+" else ""}$gain dB",localize=false,color=theme.secondary,fontSize=12.sp)
                 }
                 GlassSlider(value=gain.toFloat(),onValueChange={value->
-                    AppSettings.equalizerGains.value=AppSettings.equalizerGains.value.toMutableList().apply{set(i,value.toInt())};apply()
+                    AppSettings.equalizerGains.value=EqualizerProfile.normalize(AppSettings.equalizerGains.value).toMutableList().apply{set(i,value.toInt())};apply()
                 },onValueChangeFinished={Player.applyEqualizer();SettingsStore.save()},valueRange=-12f..12f,
                     enabled=status.available&&AppSettings.equalizerEnabled.value)
             }
@@ -179,29 +190,73 @@ private fun HandoffDialog(onClose:()->Unit){
 
 /** Smooth glowing response curve of the five band gains. */
 @Composable
-private fun EqualizerCurve(gains: List<Int>) {
+private fun EqualizerCurve(gains: List<Int>, enabled: Boolean, onBand: (Int, Int) -> Unit, onDone: () -> Unit) {
     val theme = LocalTheme.current
     val accent = theme.accent
-    Canvas(Modifier.fillMaxWidth().height(74.dp).padding(vertical = 6.dp)) {
-        if (gains.isEmpty()) return@Canvas
-        val step = size.width / (gains.size - 1).coerceAtLeast(1)
-        fun point(i: Int): Offset {
-            val normalized = (gains.getOrElse(i) { 0 }.coerceIn(-12, 12) + 12f) / 24f
-            return Offset(i * step, size.height * (.95f - normalized * .9f))
-        }
-        val path = Path().apply {
-            val first = point(0)
-            moveTo(first.x, first.y)
-            for (i in 1 until gains.size) {
-                val previous = point(i - 1)
-                val current = point(i)
-                val middle = (previous.x + current.x) / 2f
-                cubicTo(middle, previous.y, middle, current.y, current.x, current.y)
+    val latestBand by rememberUpdatedState(onBand)
+    val latestDone by rememberUpdatedState(onDone)
+    Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+        Canvas(Modifier.fillMaxWidth().height(150.dp).testTag("eq-curve")
+            .pointerInput(enabled, gains.size) {
+                if (!enabled) return@pointerInput
+                fun touch(x: Float, y: Float) {
+                    val band = EqualizerCurveMath.band(x, size.width.toFloat(), gains.size)
+                    latestBand(band, EqualizerCurveMath.gain(y, size.height.toFloat()))
+                }
+                detectDragGestures(onDragStart = { touch(it.x, it.y) }, onDragEnd = { latestDone() }, onDragCancel = { latestDone() }) { change, _ ->
+                    change.consume(); touch(change.position.x, change.position.y)
+                }
+            }
+            .pointerInput(enabled, gains.size) {
+                if (!enabled) return@pointerInput
+                detectTapGestures { latestBand(EqualizerCurveMath.band(it.x, size.width.toFloat(), gains.size),
+                    EqualizerCurveMath.gain(it.y, size.height.toFloat())); latestDone() }
+            }) {
+            if (gains.isEmpty()) return@Canvas
+            val step = size.width / (gains.size - 1).coerceAtLeast(1)
+            fun point(i: Int): Offset = Offset(i * step, EqualizerCurveMath.y(gains.getOrElse(i) { 0 }, size.height))
+            // The zero line and the grid of the bands.
+            drawLine(theme.onBackground.copy(alpha = .14f), Offset(0f, size.height / 2f), Offset(size.width, size.height / 2f), 1.dp.toPx())
+            for (i in gains.indices) drawLine(theme.onBackground.copy(alpha = .06f), Offset(i * step, 0f), Offset(i * step, size.height), 1.dp.toPx())
+            val path = Path().apply {
+                val first = point(0)
+                moveTo(first.x, first.y)
+                for (i in 1 until gains.size) {
+                    val previous = point(i - 1)
+                    val current = point(i)
+                    val middle = (previous.x + current.x) / 2f
+                    cubicTo(middle, previous.y, middle, current.y, current.x, current.y)
+                }
+            }
+            val fill = Path().apply { addPath(path); lineTo(size.width, size.height / 2f); lineTo(0f, size.height / 2f); close() }
+            drawPath(fill, accent.copy(alpha = if (enabled) .18f else .06f))
+            drawPath(path, accent.copy(alpha = if (enabled) .45f else .15f), style = Stroke(5.dp.toPx(), cap = StrokeCap.Round))
+            drawPath(path, theme.onBackground.copy(alpha = if (enabled) .92f else .35f), style = Stroke(1.8.dp.toPx(), cap = StrokeCap.Round))
+            for (i in gains.indices) {
+                drawCircle(accent.copy(alpha = if (enabled) 1f else .3f), 6.dp.toPx(), point(i))
+                drawCircle(androidx.compose.ui.graphics.Color.White, 3.dp.toPx(), point(i))
             }
         }
-        drawPath(path, accent.copy(alpha = .16f), style = Stroke(11.dp.toPx(), cap = StrokeCap.Round))
-        drawPath(path, accent.copy(alpha = .42f), style = Stroke(4.5.dp.toPx(), cap = StrokeCap.Round))
-        drawPath(path, theme.onBackground.copy(alpha = .92f), style = Stroke(1.6.dp.toPx(), cap = StrokeCap.Round))
-        for (i in gains.indices) drawCircle(theme.onBackground, 3.dp.toPx(), point(i))
+        Row(Modifier.fillMaxWidth()) {
+            EqualizerProfile.frequencies.forEach { hz ->
+                Text(if (hz >= 1000) "${hz / 1000}k" else "$hz", localize = false, color = theme.secondary, fontSize = 10.sp,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.weight(1f))
+            }
+        }
     }
+}
+
+/** Where a finger on the equalizer curve lands: the band under it and the gain at its height. */
+internal object EqualizerCurveMath {
+    const val RANGE_DB = 12
+    fun band(x: Float, width: Float, bands: Int): Int {
+        if (bands <= 1 || width <= 0f) return 0
+        return Math.round(x / (width / (bands - 1))).coerceIn(0, bands - 1)
+    }
+    fun gain(y: Float, height: Float): Int {
+        if (height <= 0f) return 0
+        val share = (1f - (y / height).coerceIn(0f, 1f)) * 2f - 1f
+        return Math.round(share * RANGE_DB).coerceIn(-RANGE_DB, RANGE_DB)
+    }
+    fun y(gain: Int, height: Float): Float = height * (1f - ((gain.coerceIn(-RANGE_DB, RANGE_DB) + RANGE_DB) / (2f * RANGE_DB)))
 }

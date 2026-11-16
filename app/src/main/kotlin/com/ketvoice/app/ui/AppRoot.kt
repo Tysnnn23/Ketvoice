@@ -1,5 +1,6 @@
 package com.ketvoice.app.ui
 
+import androidx.compose.ui.graphics.toArgb
 import com.ketvoice.app.theme.pageBackground
 import androidx.compose.ui.input.pointer.pointerInput
 import android.os.Build
@@ -104,7 +105,16 @@ fun AppRoot() {
     // The accent the listener chose is the app's colour everywhere. Only an album page, an artist
     // page and the player take their colours from the artwork (Album colours); they do it locally.
     val playingForAccent by Player.state.collectAsState()
-    val dynamicAccent: androidx.compose.ui.graphics.Color? = null
+    // Except when the listener asked for it (Settings → Appearance, "Couleur de la pochette", 5.9.0):
+    // then the accent of the whole interface follows the cover playing, made readable, and glides
+    // from one title's colour to the next.
+    val coverUrl = if (com.ketvoice.app.data.AppSettings.coverAccent.value) playingForAccent.current?.let { ArtworkRepo.coverForTrack(it) } else null
+    val coverPair = com.ketvoice.app.theme.rememberCoverAccent(coverUrl)
+    val wanted = coverPair?.first?.let { androidx.compose.ui.graphics.Color(com.ketvoice.app.ui.player.AlbumColors.readableAccent(it.toArgb())) }
+    val glidingAccent by androidx.compose.animation.animateColorAsState(
+        wanted ?: androidx.compose.ui.graphics.Color(com.ketvoice.app.data.AppSettings.accentArgb.value.toInt()),
+        androidx.compose.animation.core.tween(com.ketvoice.app.ui.motion.Motion.duration(700)), label = "cover-accent")
+    val dynamicAccent: androidx.compose.ui.graphics.Color? = if (wanted != null) glidingAccent else null
 
     // The playing cover lightly tints the optical glass (independent of the accent option).
     com.ketvoice.app.glass.ObserveCoverTint(playingForAccent.current?.let { ArtworkRepo.coverForTrack(it) })
