@@ -153,12 +153,13 @@ internal fun AlbumPage(request: CatalogRequest, page: CatalogPage?, tracks: List
     CompositionLocalProvider(LocalTheme provides theme, LocalBackdropLayer provides backdrop) {
         Box(Modifier.fillMaxSize().background(theme.background)) {
             BackdropCapture(backdrop, Modifier.fillMaxSize()) {
-                LazyColumn(Modifier.fillMaxSize().testTag("album-list"), state = list,
-                    contentPadding = PaddingValues(bottom = LocalAdaptiveLayout.current.bottomPaddingDp.dp + 20.dp)) {
-                    item(key = "album-hero") {
+                // Wide: the hero stays on the left and the titles scroll on the right (ui/adaptive/CollectionPanes).
+                com.ketvoice.app.ui.adaptive.CollectionPanes(Modifier.fillMaxSize(), list, "album-list",
+                    contentPadding = PaddingValues(bottom = LocalAdaptiveLayout.current.bottomPaddingDp.dp + 20.dp),
+                    headerKey = "album-hero", listTop = top, header = {
                         AlbumHero(title, artist, page?.releaseDate, cover, tracks, savedIds, loading, top, refresh,
                             frame = draft ?: savedFrame)
-                    }
+                    }) {
                     if (loading) items(5, key = { "album-loading:$it" }) { CatalogSkeletonRow() }
                     else if (tracks.isEmpty()) item {
                         EmptyState("Catalogue indisponible", "Vérifiez votre connexion, puis réessayez.", "Réessayer", onAction = onRetry)

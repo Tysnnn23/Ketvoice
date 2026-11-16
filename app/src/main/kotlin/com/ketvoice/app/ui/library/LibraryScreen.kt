@@ -54,6 +54,12 @@ fun LibraryScreen() {
     var album by rememberSaveable { mutableStateOf<String?>(null) }
     var selecting by rememberSaveable { mutableStateOf(false) }
     var selected by rememberSaveable { mutableStateOf(listOf<String>()) }
+    // The sidebar of a large window opens a section of the library directly, and lights the one shown (ui/tablet).
+    val askedSection = com.ketvoice.app.ui.adaptive.LargeScreenNav.librarySection.value
+    LaunchedEffect(askedSection) { if (askedSection != null) {
+        view = askedSection; album = null; selecting = false; selected = emptyList(); query = ""
+        com.ketvoice.app.ui.adaptive.LargeScreenNav.librarySection.value = null } }
+    SideEffect { com.ketvoice.app.ui.adaptive.LargeScreenNav.shownLibrarySection.intValue = view }
     val all = remember(recent, known, downloads) { (recent + downloads.map { it.track } + known).distinctBy { it.id } }
     val groups = remember(all) { localAlbums(all) }
     val albums = remember(groups, order) {

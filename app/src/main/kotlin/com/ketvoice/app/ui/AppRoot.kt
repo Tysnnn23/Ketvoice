@@ -56,8 +56,7 @@ import com.ketvoice.app.theme.LocalTheme
 import com.ketvoice.app.ui.account.AccountDialog
 import com.ketvoice.app.ui.chrome.FloatingChrome
 import com.ketvoice.app.ui.chrome.GlassBottomBar
-import com.ketvoice.app.ui.chrome.MiniPlayerPill
-import com.ketvoice.app.ui.chrome.TabletNavigationRail
+import com.ketvoice.app.ui.adaptive.keyboardShortcuts
 import com.ketvoice.app.ui.adaptive.AdaptiveLayout
 import com.ketvoice.app.ui.adaptive.LocalAdaptiveLayout
 import com.ketvoice.app.ui.explorer.ExplorerScreen
@@ -178,8 +177,15 @@ fun AppRoot() {
         BoxWithConstraints(Modifier.fillMaxSize()) {
         val quest = com.ketvoice.app.BuildConfig.IS_QUEST
         val questLayout = com.ketvoice.app.ui.quest.QuestLayout(maxWidth.value, maxHeight.value)
+        // Tablets, foldables and desktop windows (never a phone, never Quest): a sidebar or a rail, see ui/tablet.
+        com.ketvoice.app.ui.tablet.SidebarPrefs.load(context)
+        val largeScreen = com.ketvoice.app.ui.adaptive.LargeScreen.info(maxWidth.value, maxHeight.value, quest,
+            com.ketvoice.app.ui.tablet.SidebarPrefs.collapsed.value)
         val layout = AdaptiveLayout(if (quest) questLayout.contentWidthDp else maxWidth.value,
-            maxHeight.value, preferPhone = quest)
+            maxHeight.value, preferPhone = quest, navigationWidthDp = largeScreen?.navigationWidthDp)
+        // The sidebar folds into the rail and back on a spring; the pages follow its edge.
+        val navigationWidth by androidx.compose.animation.core.animateDpAsState(layout.railWidthDp.dp,
+            if (Motion.reduced) androidx.compose.animation.core.snap() else spring(dampingRatio = .9f, stiffness = 420f), label = "navigation-width")
         val queueOverlay = AppUi.overlay.value == AppUi.QUEUE
         val pageMaxWidth = if (quest) when (AppUi.overlay.value) {
             AppUi.SETTINGS, AppUi.SOURCES -> minOf(maxWidth, 840.dp)
@@ -190,9 +196,11 @@ fun AppRoot() {
             AppUi.SEARCH, AppUi.CATALOG, AppUi.DOWNLOADS -> 1060.dp
             else -> 1280.dp
         }
-        CompositionLocalProvider(LocalBackdropLayer provides backdrop, LocalAdaptiveLayout provides layout) {
+        CompositionLocalProvider(LocalBackdropLayer provides backdrop, LocalAdaptiveLayout provides layout,
+            com.ketvoice.app.ui.adaptive.LocalLargeScreen provides largeScreen) {
             // Every touch is noted, never consumed: a menu opened by it grows out of that place.
-            Box(Modifier.fillMaxSize().pointerInput(Unit) {
+            Box(Modifier.fillMaxSize().keyboardShortcuts(largeScreen != null) {
+                com.ketvoice.app.ui.tablet.SidebarPrefs.toggle(context, largeScreen) }.pointerInput(Unit) {
                 awaitPointerEventScope {
                     while (true) {
                         val event = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
@@ -211,7 +219,7 @@ fun AppRoot() {
                             com.ketvoice.app.ui.common.ContextMenus.request.value != null ||
                             AppUi.pendingPlaylistTracks() != null) Modifier.clearAndSetSemantics { } else Modifier)
                 ) {
-                    Box(Modifier.fillMaxSize().padding(start = if (queueOverlay) 0.dp else layout.railWidthDp.dp), contentAlignment = Alignment.TopCenter) {
+                    Box(Modifier.fillMaxSize().padding(start = if (queueOverlay) 0.dp else navigationWidth), contentAlignment = Alignment.TopCenter) {
                     Box(Modifier.widthIn(max = pageMaxWidth).fillMaxSize()
                         .padding(horizontal = if (layout.hasRail && !queueOverlay) 16.dp else 0.dp)
                         .graphicsLayer {
@@ -264,10 +272,10 @@ fun AppRoot() {
                     },
                     visible = AppUi.overlay.value == AppUi.NONE && AppUi.bottomCollapsed.value &&
                         !AppUi.showPlayer.value && !imeVisible,
-                    modifier = Modifier.align(Alignment.TopCenter).padding(start = layout.railWidthDp.dp).zIndex(3f))
+                    modifier = Modifier.align(Alignment.TopCenter).padding(start = navigationWidth).zIndex(3f))
 
-                if (layout.hasRail && AppUi.overlay.value != AppUi.QUEUE) {
-                    TabletNavigationRail(Modifier.width(layout.railWidthDp.dp).align(Alignment.CenterStart).zIndex(3f))
+                if (largeScreen != null && AppUi.overlay.value != AppUi.QUEUE) {
+                    com.ketvoice.app.ui.tablet.TabletNavigation(largeScreen, navigationWidth, Modifier.align(Alignment.CenterStart).zIndex(3f))
                 }
 
                 // ---- Chrome flottant en verre ----
@@ -295,15 +303,16 @@ fun AppRoot() {
                         else fadeOut(tween(Motion.duration())) + slideOutVertically(tween(Motion.duration())) { it / 3 },
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
-                        .padding(start = layout.railWidthDp.dp)
+                        .padding(start = navigationWidth)
                         .fillMaxWidth()
                         .zIndex(3f)
                 ) {
                     Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    Column(Modifier.widthIn(max = if (layout.hasRail) 640.dp else 560.dp).fillMaxWidth()
+                    Column(Modifier.widthIn(max = if (layout.hasRail) 1072.dp else 560.dp).fillMaxWidth()
                         .imePadding().navigationBarsPadding().padding(bottom = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         if (layout.hasRail) {
-                            MiniPlayerPill(onOpen = { AppUi.showPlayer.value = true })
+                            // Docked along the bottom of the page, beside the sidebar; it unfolds into the player.
+                            com.ketvoice.app.ui.tablet.TabletMiniPlayer(Modifier.padding(horizontal = 16.dp)) { AppUi.showPlayer.value = true }
                         } else {
                             // Chrome complet : au scroll, le mini-lecteur se condense
                             // et rejoint la rangée de navigation (accueil + recherche

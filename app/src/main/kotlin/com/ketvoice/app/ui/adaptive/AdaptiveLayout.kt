@@ -8,7 +8,9 @@ import androidx.compose.runtime.staticCompositionLocalOf
  */
 enum class WindowTier { Compact, Medium, Expanded, Wide }
 
-data class AdaptiveLayout(val widthDp: Float, val heightDp: Float, val preferPhone: Boolean = false) {
+data class AdaptiveLayout(val widthDp: Float, val heightDp: Float, val preferPhone: Boolean = false,
+                          /** The width of the rail or sidebar actually shown ([LargeScreen]), when the root knows it. */
+                          val navigationWidthDp: Float? = null) {
 
     /** Coarse window tier derived from the shortest width breakpoint chain. */
     val tier: WindowTier
@@ -28,7 +30,7 @@ data class AdaptiveLayout(val widthDp: Float, val heightDp: Float, val preferPho
 
     val hasRail: Boolean get() = !preferPhone && widthDp >= 600f && heightDp >= 480f
     val expandedRail: Boolean get() = hasRail && widthDp >= 1200f
-    val railWidthDp: Float get() = if (!hasRail) 0f else if (expandedRail) 184f else 104f
+    val railWidthDp: Float get() = if (!hasRail) 0f else navigationWidthDp ?: if (expandedRail) 184f else 104f
 
     /** Reading-width cap: long text never sprawls on tablets/desktop. */
     val contentWidthDp: Float get() = (widthDp - railWidthDp).coerceAtMost(1280f)

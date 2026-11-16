@@ -147,10 +147,13 @@ fun ArtistScreen(request: AppUi.ArtistRequest? = AppUi.artistRequest.value) {
             }
             else -> {
             // Portrait and metadata scroll as one; wide source banners stay fitted.
-            LazyColumn(Modifier.fillMaxSize(), state = listState,
-                contentPadding = PaddingValues(bottom = 210.dp)) {
-                val data = page!!
-                item(key = "artist-header") { ArtistHeader(data, { collapse.value }) { portraitTone = it } }
+            val data = page!!
+            // Wide: the portrait stays on the left while the titles and albums scroll on the right (ui/adaptive/CollectionPanes).
+            com.ketvoice.app.ui.adaptive.CollectionPanes(Modifier.fillMaxSize(), listState, "artist-list",
+                contentPadding = PaddingValues(bottom = 210.dp), headerKey = "artist-header",
+                listTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 68.dp, header = {
+                    val still = com.ketvoice.app.ui.adaptive.LocalCollectionPane.current
+                    ArtistHeader(data, if (still) ({ 0f }) else ({ collapse.value })) { portraitTone = it } }) {
                 if (data.description.isNotBlank()) item {
                     // The biography in the app's language; the original stays one tap away.
                     val language = com.ketvoice.app.data.AppText.language()

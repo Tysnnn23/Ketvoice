@@ -2,6 +2,7 @@
 
 package com.ketvoice.app.ui.player
 
+import com.ketvoice.app.ui.adaptive.hoverHighlight
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import android.net.Uri
@@ -664,6 +665,7 @@ fun SmallCircleButton(
         tween(Motion.duration()), label = "circleInk")
     Box(
         Modifier.size(maxOf(size, 48.dp)).clip(CircleShape).questPointer()
+            .hoverHighlight(source, CircleShape, Color.White)
             .clickable(source, null, role = androidx.compose.ui.semantics.Role.Button) { onClick() },
         contentAlignment = Alignment.Center
     ) {

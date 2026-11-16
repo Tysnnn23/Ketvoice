@@ -124,6 +124,14 @@ internal fun sheetMaxHeight(): Dp = LocalSheetMaxHeight.current
 @Composable
 internal fun SpringSheet(onDismiss: () -> Unit, modifier: Modifier = Modifier, scrim: Float = .35f, startFull: Boolean = false,
                          insets: Modifier = Modifier, content: @Composable (maxHeight: Dp) -> Unit) {
+    // A tablet or a desktop window floats the sheet as a panel instead (ui/adaptive/FloatingSheet); a phone keeps this one.
+    val window = androidx.compose.ui.platform.LocalConfiguration.current
+    val floating = com.ketvoice.app.ui.adaptive.LargeScreen.sheetStyle(window.screenWidthDp.toFloat(), window.screenHeightDp.toFloat(),
+        BuildConfig.IS_QUEST, wholeForm = startFull, anchored = com.ketvoice.app.ui.AppUi.lastTouch != null)
+    if (floating != com.ketvoice.app.ui.adaptive.SheetStyle.Bottom) {
+        com.ketvoice.app.ui.adaptive.FloatingSheet(onDismiss, modifier, scrim, floating, insets, content)
+        return
+    }
     val dismiss by rememberUpdatedState(onDismiss)
     val scope = rememberCoroutineScope()
     val haptic = rememberHaptics()

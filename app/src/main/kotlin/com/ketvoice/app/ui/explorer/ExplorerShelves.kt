@@ -53,13 +53,15 @@ internal fun ShelfHeading(title: String, modifier: Modifier = Modifier) {
 internal fun ChartTracksShelf(tracks: List<Track>, modifier: Modifier = Modifier, edge: androidx.compose.ui.unit.Dp = 0.dp) {
     val theme = LocalTheme.current
     val art by ArtworkRepo.covers.collectAsState()
+    // Large windows: more whole cards per row, sized to the page (ui/adaptive/LargeScreen.shelfCell); 132 dp on a phone.
+    val cell = com.ketvoice.app.ui.adaptive.shelfCell(132.dp, edge + 16.dp)
     LazyRow(modifier.testTag("chart-tracks"), contentPadding = PaddingValues(horizontal = edge),
         horizontalArrangement = Arrangement.spacedBy(14.dp)) {
         itemsIndexed(tracks, key = { _, track -> track.id }) { index, track ->
-            Column(Modifier.width(132.dp).clip(shelfCard).trackRowClick(track) { Player.playQueue(tracks, index) }
+            Column(Modifier.width(cell).clip(shelfCard).trackRowClick(track) { Player.playQueue(tracks, index) }
                 .padding(bottom = 4.dp)) {
                 Box {
-                    Cover(track.title, com.ketvoice.app.data.MediaOverrides.cover(track, art["t:${track.id}"] ?: track.coverUrl), 132.dp, 14.dp)
+                    Cover(track.title, com.ketvoice.app.data.MediaOverrides.cover(track, art["t:${track.id}"] ?: track.coverUrl), cell, 14.dp)
                     Text("${index + 1}", localize = false, color = androidx.compose.ui.graphics.Color.White, fontSize = 13.sp,
                         fontWeight = FontWeight.Bold, modifier = Modifier.padding(8.dp).clip(RoundedCornerShape(8.dp))
                             .background(androidx.compose.ui.graphics.Color.Black.copy(alpha = .55f)).padding(horizontal = 7.dp, vertical = 2.dp))
@@ -77,12 +79,13 @@ internal fun ChartTracksShelf(tracks: List<Track>, modifier: Modifier = Modifier
 internal fun AlbumShelf(albums: List<CatalogAlbum>, modifier: Modifier = Modifier, edge: androidx.compose.ui.unit.Dp = 0.dp,
                         onOpen: (CatalogAlbum) -> Unit = { AppUi.openCatalog(CatalogRequest("album", it.id, it.title)) }) {
     val theme = LocalTheme.current
+    val cell = com.ketvoice.app.ui.adaptive.shelfCell(132.dp, edge + 16.dp)
     LazyRow(modifier.testTag("album-shelf"), contentPadding = PaddingValues(horizontal = edge),
         horizontalArrangement = Arrangement.spacedBy(14.dp)) {
         items(albums, key = { it.id }) { album ->
-            Column(Modifier.width(132.dp).clip(shelfCard).clickable(role = Role.Button) { onOpen(album) }
+            Column(Modifier.width(cell).clip(shelfCard).clickable(role = Role.Button) { onOpen(album) }
                 .padding(bottom = 4.dp)) {
-                Cover(album.title, com.ketvoice.app.data.MediaOverrides.albumCover(album.title, album.artist, album.cover), 132.dp, 14.dp)
+                Cover(album.title, com.ketvoice.app.data.MediaOverrides.albumCover(album.title, album.artist, album.cover), cell, 14.dp)
                 Text(album.title, localize = false, color = theme.onBackground, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
                     maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))
                 Text(album.artist, localize = false, color = theme.secondary, fontSize = 12.sp,

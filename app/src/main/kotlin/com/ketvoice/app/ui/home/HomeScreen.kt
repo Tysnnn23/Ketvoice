@@ -174,13 +174,14 @@ fun HomeScreen() {
                     HomeBlock.Albums -> if (albums.isNotEmpty()) item(key = "home-albums") {
                         Column(Modifier.learnsOpens(block.learningKey)) {
                         EditorialHeader("Albums du catalogue", onMore = { AppUi.selectTab(AppUi.EXPLORER) })
+                        val cell = com.ketvoice.app.ui.adaptive.shelfCell(156.dp, 18.dp)
                         LazyRow(contentPadding = PaddingValues(horizontal = 18.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                             itemsIndexed(albums, key = { _, album -> album.id }) { _, album ->
                                 val origin = rememberRevealOrigin()
-                                Column(Modifier.width(156.dp).captureRevealOrigin(origin).clickable {
+                                Column(Modifier.width(cell).captureRevealOrigin(origin).clickable {
                                     AppUi.openCatalog(CatalogRequest("album", album.id, album.title), origin.value)
                                 }) {
-                                    Cover(album.title, com.ketvoice.app.data.MediaOverrides.albumCover(album.title, album.artist, album.coverUrl), 156.dp, 16.dp)
+                                    Cover(album.title, com.ketvoice.app.data.MediaOverrides.albumCover(album.title, album.artist, album.coverUrl), cell, 16.dp)
                                     Text(album.title, localize = false, color = theme.onBackground, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
                                         maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))
                                     Text(album.artist, localize = false, color = theme.secondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -216,10 +217,12 @@ internal fun recentColumns(widthDp: Float): Int = (widthDp / 120f).toInt().coerc
 /** The recent titles as a shelf of large covers. */
 @Composable
 private fun RecentCarousel(tracks: List<Track>, playingId: String?, playing: Boolean, onPlay: (Int) -> Unit, onMenu: (Track) -> Unit) {
+    // Large windows: more whole covers per row, sized to the page (ui/adaptive/LargeScreen.shelfCell); 150 dp on a phone.
+    val cell = com.ketvoice.app.ui.adaptive.shelfCell(150.dp, 18.dp)
     LazyRow(Modifier.testTag("home-recent-carousel"), contentPadding = PaddingValues(horizontal = 18.dp),
         horizontalArrangement = Arrangement.spacedBy(14.dp)) {
         itemsIndexed(tracks, key = { _, t -> t.id }) { index, track ->
-            RecentCover(track, 150.dp, track.id == playingId, playing, onPlay = { onPlay(index) }, onMenu = { onMenu(track) })
+            RecentCover(track, cell, track.id == playingId, playing, onPlay = { onPlay(index) }, onMenu = { onMenu(track) })
         }
     }
 }
@@ -266,10 +269,11 @@ private fun RecentCover(track: Track, side: androidx.compose.ui.unit.Dp, active:
 private fun TrackCarousel(tracks: List<Track>, onMenu: (Track) -> Unit) {
     val theme = LocalTheme.current
     val art by ArtworkRepo.covers.collectAsState()
+    val cell = com.ketvoice.app.ui.adaptive.shelfCell(156.dp, 18.dp)
     LazyRow(contentPadding = PaddingValues(horizontal = 18.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
         itemsIndexed(tracks, key = { _, t -> t.id }) { i, track ->
-            Column(Modifier.width(156.dp).clickable { Player.playQueue(tracks, i) }) {
-                com.ketvoice.app.ui.common.DownloadCover(track, com.ketvoice.app.data.MediaOverrides.cover(track, art["t:${track.id}"] ?: track.coverUrl), 156.dp, 16.dp)
+            Column(Modifier.width(cell).clickable { Player.playQueue(tracks, i) }) {
+                com.ketvoice.app.ui.common.DownloadCover(track, com.ketvoice.app.data.MediaOverrides.cover(track, art["t:${track.id}"] ?: track.coverUrl), cell, 16.dp)
                 Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(track.title, localize = false, color = theme.onBackground, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
                         maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))

@@ -58,6 +58,7 @@ import com.ketvoice.app.theme.Palette
 import com.ketvoice.app.theme.T
 import com.ketvoice.app.ui.AppUi
 import com.ketvoice.app.ui.adaptive.LocalAdaptiveLayout
+import com.ketvoice.app.ui.adaptive.searchFieldFocus
 import com.ketvoice.app.ui.common.AccountAvatar
 import com.ketvoice.app.ui.common.Cover
 import com.ketvoice.app.ui.common.DownloadCover
@@ -197,14 +198,11 @@ fun SearchScreen() {
         else SearchGroups.group(if (segment == 0) results.filter(com.ketvoice.app.data.ArtistPrefs::allows) else results)
     }
 
-    Column(
-        Modifier
-            .fillMaxSize()
-            .pageBackground(th)
-            .verticalScroll(rememberScrollState())
-            .statusBarsPadding()
-            .padding(top = 12.dp)
-    ) {
+    // Wide: the query and the recent searches on the left, the results beside them (ui/adaptive/SearchPanes).
+    com.ketvoice.app.ui.adaptive.SearchPanes(Modifier.fillMaxSize().pageBackground(th),
+        idle = query.trim().length < 2 && segment != 1, recent = recentQueries,
+        onRecent = { previous -> query = previous; SearchHistory.record(previous); YouTubeMusicSession.submitSearch(previous) },
+        head = {
         if (!layout.hasRail) {
             Row(
                 Modifier
@@ -222,7 +220,7 @@ fun SearchScreen() {
         }
 
         com.ketvoice.app.ui.common.CompactSearchField(query, { query = it }, { submitSearch(true) },
-            Modifier.padding(horizontal = 20.dp).align(Alignment.CenterHorizontally))
+            Modifier.padding(horizontal = 20.dp).align(Alignment.CenterHorizontally).searchFieldFocus())
         Spacer(Modifier.height(14.dp))
         AppUi.playlistResolution.value?.let { pending ->
             Column(Modifier.padding(horizontal=20.dp)) {
@@ -236,7 +234,7 @@ fun SearchScreen() {
         com.ketvoice.app.ui.common.GlassSegmentedControl(listOf("Tout", "Sources", "Bibliothèque"), segment, { segment = it },
             Modifier.padding(horizontal = 20.dp).widthIn(max = 640.dp).align(Alignment.CenterHorizontally), tag = "search-scope")
         Spacer(Modifier.height(18.dp))
-
+        }, results = {
         when {
             query.trim().length < 2 -> {
                 if (segment == 1) {
@@ -423,7 +421,7 @@ fun SearchScreen() {
         }
 
         Spacer(Modifier.height(layout.bottomPaddingDp.dp))
-    }
+    })
 }
 
 @OptIn(ExperimentalLayoutApi::class)

@@ -157,12 +157,11 @@ fun PlaylistScreen() {
         var dragOffset by remember { mutableFloatStateOf(0f) }
         var dragMovePending by remember { mutableStateOf(false) }
 
-        LazyColumn(
-            Modifier.weight(1f).fillMaxWidth().testTag("playlist-tracks"),
-            state = list,
-            contentPadding = PaddingValues(bottom = LocalAdaptiveLayout.current.bottomPaddingDp.dp)
-        ) {
-            item(key = "playlist-hero") {
+        // Wide: the cover and the actions stay on the left, the titles scroll on the right (ui/adaptive/CollectionPanes).
+        com.ketvoice.app.ui.adaptive.CollectionPanes(
+            Modifier.weight(1f).fillMaxWidth(), list, "playlist-tracks",
+            contentPadding = PaddingValues(bottom = LocalAdaptiveLayout.current.bottomPaddingDp.dp),
+            headerKey = "playlist-hero", header = {
                 val totalMinutes = playable.sumOf { it.durationMs } / 60_000
                 // The shared collection header; a short window puts the cover beside the text.
                 com.ketvoice.app.ui.common.CollectionHero(heroCover, 0.dp, playlist.name,
@@ -189,7 +188,7 @@ fun PlaylistScreen() {
                     if (error.isNotBlank()) Text(error, color = com.ketvoice.app.ui.common.DESTRUCTIVE,
                         fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
                 }
-            }
+            }) {
 
             if (playlist.entries.isEmpty()) {
                 // État vide affiché comme premier item
