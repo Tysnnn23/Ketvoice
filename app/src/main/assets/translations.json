@@ -1543,7 +1543,6 @@
   "Les mix atténueront la voix au lieu de la retirer. Les titres déjà séparés restent.": "Mixes will soften the voice instead of removing it. Songs already separated stay.",
   "Les nouvelles séparations n'ont lieu que téléphone branché ; celles déjà faites servent toujours.": "New separations only happen while the phone is plugged in; those already made are always used.",
   "Modèle de séparation": "Separation model",
-  "Pendant un mix, la voix du titre en cours s'arrête et le suivant continue sur son instrumental, puis sa voix le rejoint. Avec le modèle de séparation, la voix est vraiment retirée ; sans lui, elle est seulement atténuée.": "During a mix, the current song's voice stops and the next one carries on over its instrumental, then its voice joins in. With the separation model the voice is really removed; without it, it is only softened.",
   "Prêt": "Ready",
   "Rien à signaler pour l'instant.": "Nothing to report yet.",
   "Son du morceau dans la vidéo": "Song's sound in the video",
@@ -1556,7 +1555,15 @@
   "Téléchargement · {0} %": "Downloading · {0} %",
   "Voir": "View",
   "{0} · {1} Mo": "{0} · {1} MB",
-  "Échec · réessayer": "Failed · try again"
+  "Échec · réessayer": "Failed · try again",
+  "En lecture aléatoire, le titre suivant est choisi parmi les prochains pour s'accorder au tempo et à la tonalité de celui en cours. Une file que vous avez ordonnée et un titre demandé « à la suite » ne bougent jamais.": "In shuffle, the next song is picked among the coming ones to match the tempo and key of the current one. A queue you ordered yourself and a song you asked to play next never move.",
+  "File intelligente": "Smart queue",
+  "Pendant un mix, la voix du titre en cours s'arrête et le suivant continue sur son instrumental, puis sa voix le rejoint ; quand tempo et tonalité s'accordent, la voix du suivant chante sur l'instrumental de celui en cours. Avec le modèle de séparation, la voix est vraiment retirée ; sans lui, elle est seulement atténuée.": "During a mix, the current song's voice stops and the next one carries on over its instrumental, then its voice joins in; when tempo and key agree, the next song's voice sings over the current one's instrumental. With the separation model the voice is really removed; without it, it is only softened.",
+  "Préparation en cours : {0} sur {1}": "Preparing: {0} of {1}",
+  "Préparer les titres téléchargés": "Prepare downloaded songs",
+  "Téléphone en charge, les titres téléchargés sont analysés (et leurs voix séparées si le modèle est là) avant même d'être joués : leurs mix sont prêts tout de suite.": "While the phone charges, downloaded songs are analysed (and their voices separated if the model is there) before they are even played: their mixes are ready at once.",
+  "préparation des titres suivants…": "preparing the next songs…",
+  "mix du titre suivant prêt": "next song's mix ready"
  },
  "hi": {
   "Reverb": "रीवर्ब",
@@ -3102,7 +3109,6 @@
   "Les mix atténueront la voix au lieu de la retirer. Les titres déjà séparés restent.": "मिक्स आवाज़ को हटाने के बजाय धीमा करेंगे। पहले से अलग किए गए गाने बने रहेंगे।",
   "Les nouvelles séparations n'ont lieu que téléphone branché ; celles déjà faites servent toujours.": "नए अलगाव सिर्फ़ फ़ोन चार्ज होते समय होते हैं; पहले से बने अलगाव हमेशा इस्तेमाल होते हैं।",
   "Modèle de séparation": "अलगाव मॉडल",
-  "Pendant un mix, la voix du titre en cours s'arrête et le suivant continue sur son instrumental, puis sa voix le rejoint. Avec le modèle de séparation, la voix est vraiment retirée ; sans lui, elle est seulement atténuée.": "मिक्स के दौरान मौजूदा गाने की आवाज़ रुक जाती है और अगला गाना अपने इंस्ट्रुमेंटल पर चलता रहता है, फिर उसकी आवाज़ जुड़ती है। अलगाव मॉडल के साथ आवाज़ सच में हटाई जाती है; उसके बिना सिर्फ़ धीमी होती है।",
   "Prêt": "तैयार",
   "Rien à signaler pour l'instant.": "अभी कुछ बताने लायक नहीं।",
   "Son du morceau dans la vidéo": "वीडियो में गाने की आवाज़",
@@ -3115,7 +3121,15 @@
   "Téléchargement · {0} %": "डाउनलोड हो रहा है · {0} %",
   "Voir": "देखें",
   "{0} · {1} Mo": "{0} · {1} MB",
-  "Échec · réessayer": "विफल · फिर कोशिश करें"
+  "Échec · réessayer": "विफल · फिर कोशिश करें",
+  "En lecture aléatoire, le titre suivant est choisi parmi les prochains pour s'accorder au tempo et à la tonalité de celui en cours. Une file que vous avez ordonnée et un titre demandé « à la suite » ne bougent jamais.": "शफ़ल में अगला गाना आने वाले गानों में से ऐसे चुना जाता है कि वह मौजूदा गाने की गति और सुर से मेल खाए। आपकी सजाई हुई कतार और «इसके बाद» माँगा गया गाना कभी नहीं हिलते।",
+  "File intelligente": "स्मार्ट कतार",
+  "Pendant un mix, la voix du titre en cours s'arrête et le suivant continue sur son instrumental, puis sa voix le rejoint ; quand tempo et tonalité s'accordent, la voix du suivant chante sur l'instrumental de celui en cours. Avec le modèle de séparation, la voix est vraiment retirée ; sans lui, elle est seulement atténuée.": "मिक्स के दौरान मौजूदा गाने की आवाज़ रुक जाती है और अगला गाना अपने इंस्ट्रुमेंटल पर चलता रहता है, फिर उसकी आवाज़ जुड़ती है; जब गति और सुर मेल खाते हैं, अगले गाने की आवाज़ मौजूदा गाने के इंस्ट्रुमेंटल पर गाती है। अलगाव मॉडल के साथ आवाज़ सच में हटाई जाती है; उसके बिना सिर्फ़ धीमी होती है।",
+  "Préparation en cours : {0} sur {1}": "तैयारी जारी: {1} में से {0}",
+  "Préparer les titres téléchargés": "डाउनलोड किए गए गाने तैयार करें",
+  "Téléphone en charge, les titres téléchargés sont analysés (et leurs voix séparées si le modèle est là) avant même d'être joués : leurs mix sont prêts tout de suite.": "फ़ोन चार्ज होते समय डाउनलोड किए गए गानों का विश्लेषण होता है (और मॉडल होने पर उनकी आवाज़ें अलग की जाती हैं), उनके बजने से पहले ही: उनके मिक्स तुरंत तैयार रहते हैं।",
+  "préparation des titres suivants…": "अगले गाने तैयार हो रहे हैं…",
+  "mix du titre suivant prêt": "अगले गाने का मिक्स तैयार"
  },
  "ja": {
   "Reverb": "リバーブ",
@@ -4661,7 +4675,6 @@
   "Les mix atténueront la voix au lieu de la retirer. Les titres déjà séparés restent.": "ミックスでは声を取り除かず、小さくするだけになります。分離済みの曲は残ります。",
   "Les nouvelles séparations n'ont lieu que téléphone branché ; celles déjà faites servent toujours.": "新しい分離は充電中のみ行います。分離済みのものは常に使われます。",
   "Modèle de séparation": "分離モデル",
-  "Pendant un mix, la voix du titre en cours s'arrête et le suivant continue sur son instrumental, puis sa voix le rejoint. Avec le modèle de séparation, la voix est vraiment retirée ; sans lui, elle est seulement atténuée.": "ミックス中、再生中の曲の声が止まり、次の曲はそのインストゥルメンタルで続き、その後で声が加わります。分離モデルがあれば声は本当に取り除かれ、なければ小さくなるだけです。",
   "Prêt": "準備完了",
   "Rien à signaler pour l'instant.": "今のところ問題はありません。",
   "Son du morceau dans la vidéo": "動画に曲の音を入れる",
@@ -4674,7 +4687,15 @@
   "Téléchargement · {0} %": "ダウンロード中 · {0} %",
   "Voir": "表示",
   "{0} · {1} Mo": "{0} · {1} MB",
-  "Échec · réessayer": "失敗 · 再試行"
+  "Échec · réessayer": "失敗 · 再試行",
+  "En lecture aléatoire, le titre suivant est choisi parmi les prochains pour s'accorder au tempo et à la tonalité de celui en cours. Une file que vous avez ordonnée et un titre demandé « à la suite » ne bougent jamais.": "シャッフル再生では、次の曲はこれから再生される曲の中から、今の曲のテンポとキーに合うものが選ばれます。自分で並べたキューや「次に再生」に指定した曲は動きません。",
+  "File intelligente": "スマートキュー",
+  "Pendant un mix, la voix du titre en cours s'arrête et le suivant continue sur son instrumental, puis sa voix le rejoint ; quand tempo et tonalité s'accordent, la voix du suivant chante sur l'instrumental de celui en cours. Avec le modèle de séparation, la voix est vraiment retirée ; sans lui, elle est seulement atténuée.": "ミックス中、再生中の曲の声が止まり、次の曲はそのインストゥルメンタルで続き、その後で声が加わります。テンポとキーが合うときは、次の曲の声が今の曲のインストゥルメンタルに乗ります。分離モデルがあれば声は本当に取り除かれ、なければ小さくなるだけです。",
+  "Préparation en cours : {0} sur {1}": "準備中：{1} 曲中 {0} 曲",
+  "Préparer les titres téléchargés": "ダウンロードした曲を準備",
+  "Téléphone en charge, les titres téléchargés sont analysés (et leurs voix séparées si le modèle est là) avant même d'être joués : leurs mix sont prêts tout de suite.": "充電中に、ダウンロードした曲を再生前に解析し（モデルがあれば声も分離し）ます。ミックスはすぐに使えます。",
+  "préparation des titres suivants…": "次の曲を準備中…",
+  "mix du titre suivant prêt": "次の曲のミックス準備完了"
  },
  "zh": {
   "Reverb": "混响",
@@ -6220,7 +6241,6 @@
   "Les mix atténueront la voix au lieu de la retirer. Les titres déjà séparés restent.": "混音将只减弱人声而不是移除。已分离的歌曲会保留。",
   "Les nouvelles séparations n'ont lieu que téléphone branché ; celles déjà faites servent toujours.": "新的分离仅在手机充电时进行；已完成的分离始终可用。",
   "Modèle de séparation": "分离模型",
-  "Pendant un mix, la voix du titre en cours s'arrête et le suivant continue sur son instrumental, puis sa voix le rejoint. Avec le modèle de séparation, la voix est vraiment retirée ; sans lui, elle est seulement atténuée.": "混音时，当前歌曲的人声停止，下一首在其伴奏上继续，然后其人声加入。有分离模型时人声会被真正移除；没有时只会减弱。",
   "Prêt": "就绪",
   "Rien à signaler pour l'instant.": "暂时没有需要报告的。",
   "Son du morceau dans la vidéo": "视频中包含歌曲声音",
@@ -6233,7 +6253,15 @@
   "Téléchargement · {0} %": "正在下载 · {0} %",
   "Voir": "查看",
   "{0} · {1} Mo": "{0} · {1} MB",
-  "Échec · réessayer": "失败 · 重试"
+  "Échec · réessayer": "失败 · 重试",
+  "En lecture aléatoire, le titre suivant est choisi parmi les prochains pour s'accorder au tempo et à la tonalité de celui en cours. Une file que vous avez ordonnée et un titre demandé « à la suite » ne bougent jamais.": "随机播放时，会从接下来的歌曲中挑选与当前歌曲速度和调性相配的一首作为下一首。你自己排好的队列和指定“下一首播放”的歌曲不会被移动。",
+  "File intelligente": "智能队列",
+  "Pendant un mix, la voix du titre en cours s'arrête et le suivant continue sur son instrumental, puis sa voix le rejoint ; quand tempo et tonalité s'accordent, la voix du suivant chante sur l'instrumental de celui en cours. Avec le modèle de séparation, la voix est vraiment retirée ; sans lui, elle est seulement atténuée.": "混音时，当前歌曲的人声停止，下一首在其伴奏上继续，然后其人声加入；当速度和调性相配时，下一首的人声会唱在当前歌曲的伴奏上。有分离模型时人声会被真正移除；没有时只会减弱。",
+  "Préparation en cours : {0} sur {1}": "正在准备：{0} / {1}",
+  "Préparer les titres téléchargés": "准备已下载的歌曲",
+  "Téléphone en charge, les titres téléchargés sont analysés (et leurs voix séparées si le modèle est là) avant même d'être joués : leurs mix sont prêts tout de suite.": "手机充电时，会在播放前分析已下载的歌曲（有模型时还会分离人声）：它们的混音随时可用。",
+  "préparation des titres suivants…": "正在准备接下来的歌曲…",
+  "mix du titre suivant prêt": "下一首的混音已就绪"
  },
  "ru": {
   "Reverb": "Реверберация",
@@ -7779,7 +7807,6 @@
   "Les mix atténueront la voix au lieu de la retirer. Les titres déjà séparés restent.": "Миксы будут приглушать голос, а не убирать его. Уже разделённые треки сохранятся.",
   "Les nouvelles séparations n'ont lieu que téléphone branché ; celles déjà faites servent toujours.": "Новые разделения выполняются только при зарядке телефона; уже сделанные используются всегда.",
   "Modèle de séparation": "Модель разделения",
-  "Pendant un mix, la voix du titre en cours s'arrête et le suivant continue sur son instrumental, puis sa voix le rejoint. Avec le modèle de séparation, la voix est vraiment retirée ; sans lui, elle est seulement atténuée.": "Во время микса голос текущего трека затихает, а следующий продолжает на своём инструментале, затем вступает его голос. С моделью разделения голос действительно убирается, без неё — только приглушается.",
   "Prêt": "Готово",
   "Rien à signaler pour l'instant.": "Пока нечего сообщить.",
   "Son du morceau dans la vidéo": "Звук трека в видео",
@@ -7792,7 +7819,15 @@
   "Téléchargement · {0} %": "Загрузка · {0} %",
   "Voir": "Открыть",
   "{0} · {1} Mo": "{0} · {1} МБ",
-  "Échec · réessayer": "Ошибка · повторить"
+  "Échec · réessayer": "Ошибка · повторить",
+  "En lecture aléatoire, le titre suivant est choisi parmi les prochains pour s'accorder au tempo et à la tonalité de celui en cours. Une file que vous avez ordonnée et un titre demandé « à la suite » ne bougent jamais.": "В случайном порядке следующий трек выбирается среди ближайших так, чтобы он подходил по темпу и тональности к текущему. Очередь, которую вы упорядочили сами, и трек, который вы попросили «играть следующим», никогда не сдвигаются.",
+  "File intelligente": "Умная очередь",
+  "Pendant un mix, la voix du titre en cours s'arrête et le suivant continue sur son instrumental, puis sa voix le rejoint ; quand tempo et tonalité s'accordent, la voix du suivant chante sur l'instrumental de celui en cours. Avec le modèle de séparation, la voix est vraiment retirée ; sans lui, elle est seulement atténuée.": "Во время микса голос текущего трека затихает, а следующий продолжает на своём инструментале, затем вступает его голос; когда темп и тональность совпадают, голос следующего трека звучит поверх инструментала текущего. С моделью разделения голос действительно убирается, без неё — только приглушается.",
+  "Préparation en cours : {0} sur {1}": "Подготовка: {0} из {1}",
+  "Préparer les titres téléchargés": "Готовить загруженные треки",
+  "Téléphone en charge, les titres téléchargés sont analysés (et leurs voix séparées si le modèle est là) avant même d'être joués : leurs mix sont prêts tout de suite.": "Пока телефон заряжается, загруженные треки анализируются (а их голоса разделяются, если модель установлена) ещё до воспроизведения: их миксы готовы сразу.",
+  "préparation des titres suivants…": "подготовка следующих треков…",
+  "mix du titre suivant prêt": "микс следующего трека готов"
  },
  "it": {
   "Reverb": "Riverbero",
@@ -9338,7 +9373,6 @@
   "Les mix atténueront la voix au lieu de la retirer. Les titres déjà séparés restent.": "I mix attenueranno la voce invece di toglierla. I brani già separati restano.",
   "Les nouvelles séparations n'ont lieu que téléphone branché ; celles déjà faites servent toujours.": "Le nuove separazioni avvengono solo con il telefono in carica; quelle già fatte vengono sempre usate.",
   "Modèle de séparation": "Modello di separazione",
-  "Pendant un mix, la voix du titre en cours s'arrête et le suivant continue sur son instrumental, puis sa voix le rejoint. Avec le modèle de séparation, la voix est vraiment retirée ; sans lui, elle est seulement atténuée.": "Durante un mix, la voce del brano in corso si ferma e il successivo continua sulla sua base strumentale, poi entra la sua voce. Con il modello di separazione la voce viene davvero tolta; senza, viene solo attenuata.",
   "Prêt": "Pronto",
   "Rien à signaler pour l'instant.": "Niente da segnalare per ora.",
   "Son du morceau dans la vidéo": "Audio del brano nel video",
@@ -9351,7 +9385,15 @@
   "Téléchargement · {0} %": "Download · {0} %",
   "Voir": "Vedi",
   "{0} · {1} Mo": "{0} · {1} MB",
-  "Échec · réessayer": "Errore · riprova"
+  "Échec · réessayer": "Errore · riprova",
+  "En lecture aléatoire, le titre suivant est choisi parmi les prochains pour s'accorder au tempo et à la tonalité de celui en cours. Une file que vous avez ordonnée et un titre demandé « à la suite » ne bougent jamais.": "In riproduzione casuale, il brano successivo viene scelto tra i prossimi per accordarsi con tempo e tonalità di quello in corso. Una coda che hai ordinato tu e un brano chiesto «subito dopo» non si spostano mai.",
+  "File intelligente": "Coda intelligente",
+  "Pendant un mix, la voix du titre en cours s'arrête et le suivant continue sur son instrumental, puis sa voix le rejoint ; quand tempo et tonalité s'accordent, la voix du suivant chante sur l'instrumental de celui en cours. Avec le modèle de séparation, la voix est vraiment retirée ; sans lui, elle est seulement atténuée.": "Durante un mix, la voce del brano in corso si ferma e il successivo continua sulla sua base strumentale, poi entra la sua voce; quando tempo e tonalità si accordano, la voce del successivo canta sulla base di quello in corso. Con il modello di separazione la voce viene davvero tolta; senza, viene solo attenuata.",
+  "Préparation en cours : {0} sur {1}": "Preparazione in corso: {0} di {1}",
+  "Préparer les titres téléchargés": "Prepara i brani scaricati",
+  "Téléphone en charge, les titres téléchargés sont analysés (et leurs voix séparées si le modèle est là) avant même d'être joués : leurs mix sont prêts tout de suite.": "Con il telefono in carica, i brani scaricati vengono analizzati (e le voci separate se il modello c'è) prima ancora di essere riprodotti: i loro mix sono pronti subito.",
+  "préparation des titres suivants…": "preparazione dei brani successivi…",
+  "mix du titre suivant prêt": "mix del brano successivo pronto"
  },
  "es": {
   "Reverb": "Reverb",
@@ -10897,7 +10939,6 @@
   "Les mix atténueront la voix au lieu de la retirer. Les titres déjà séparés restent.": "Las mezclas atenuarán la voz en lugar de quitarla. Las canciones ya separadas se conservan.",
   "Les nouvelles séparations n'ont lieu que téléphone branché ; celles déjà faites servent toujours.": "Las nuevas separaciones solo se hacen con el teléfono enchufado; las ya hechas siempre se usan.",
   "Modèle de séparation": "Modelo de separación",
-  "Pendant un mix, la voix du titre en cours s'arrête et le suivant continue sur son instrumental, puis sa voix le rejoint. Avec le modèle de séparation, la voix est vraiment retirée ; sans lui, elle est seulement atténuée.": "Durante una mezcla, la voz de la canción actual se detiene y la siguiente continúa sobre su instrumental, y luego su voz se une. Con el modelo de separación la voz se quita de verdad; sin él, solo se atenúa.",
   "Prêt": "Listo",
   "Rien à signaler pour l'instant.": "Nada que señalar por ahora.",
   "Son du morceau dans la vidéo": "Sonido de la canción en el vídeo",
@@ -10910,7 +10951,15 @@
   "Téléchargement · {0} %": "Descargando · {0} %",
   "Voir": "Ver",
   "{0} · {1} Mo": "{0} · {1} MB",
-  "Échec · réessayer": "Error · reintentar"
+  "Échec · réessayer": "Error · reintentar",
+  "En lecture aléatoire, le titre suivant est choisi parmi les prochains pour s'accorder au tempo et à la tonalité de celui en cours. Une file que vous avez ordonnée et un titre demandé « à la suite » ne bougent jamais.": "En aleatorio, la siguiente canción se elige entre las próximas para encajar con el tempo y la tonalidad de la actual. Una cola que ordenaste tú y una canción que pediste «a continuación» nunca se mueven.",
+  "File intelligente": "Cola inteligente",
+  "Pendant un mix, la voix du titre en cours s'arrête et le suivant continue sur son instrumental, puis sa voix le rejoint ; quand tempo et tonalité s'accordent, la voix du suivant chante sur l'instrumental de celui en cours. Avec le modèle de séparation, la voix est vraiment retirée ; sans lui, elle est seulement atténuée.": "Durante una mezcla, la voz de la canción actual se detiene y la siguiente continúa sobre su instrumental, y luego su voz se une; cuando tempo y tonalidad encajan, la voz de la siguiente canta sobre el instrumental de la actual. Con el modelo de separación la voz se quita de verdad; sin él, solo se atenúa.",
+  "Préparation en cours : {0} sur {1}": "Preparando: {0} de {1}",
+  "Préparer les titres téléchargés": "Preparar las canciones descargadas",
+  "Téléphone en charge, les titres téléchargés sont analysés (et leurs voix séparées si le modèle est là) avant même d'être joués : leurs mix sont prêts tout de suite.": "Con el teléfono cargando, las canciones descargadas se analizan (y sus voces se separan si el modelo está) antes incluso de reproducirse: sus mezclas están listas al instante.",
+  "préparation des titres suivants…": "preparando las siguientes canciones…",
+  "mix du titre suivant prêt": "mezcla de la siguiente canción lista"
  },
  "de": {
   "Reverb": "Reverb",
@@ -12456,7 +12505,6 @@
   "Les mix atténueront la voix au lieu de la retirer. Les titres déjà séparés restent.": "Mixe dämpfen die Stimme, statt sie zu entfernen. Bereits getrennte Titel bleiben erhalten.",
   "Les nouvelles séparations n'ont lieu que téléphone branché ; celles déjà faites servent toujours.": "Neue Trennungen nur, wenn das Telefon lädt; bereits erstellte werden immer genutzt.",
   "Modèle de séparation": "Trennungsmodell",
-  "Pendant un mix, la voix du titre en cours s'arrête et le suivant continue sur son instrumental, puis sa voix le rejoint. Avec le modèle de séparation, la voix est vraiment retirée ; sans lui, elle est seulement atténuée.": "Während eines Mixes verstummt die Stimme des laufenden Titels, der nächste läuft über seinem Instrumental weiter, dann setzt seine Stimme ein. Mit dem Trennungsmodell wird die Stimme wirklich entfernt, ohne es nur gedämpft.",
   "Prêt": "Bereit",
   "Rien à signaler pour l'instant.": "Bisher nichts zu melden.",
   "Son du morceau dans la vidéo": "Ton des Titels im Video",
@@ -12469,7 +12517,15 @@
   "Téléchargement · {0} %": "Wird heruntergeladen · {0} %",
   "Voir": "Ansehen",
   "{0} · {1} Mo": "{0} · {1} MB",
-  "Échec · réessayer": "Fehlgeschlagen · erneut versuchen"
+  "Échec · réessayer": "Fehlgeschlagen · erneut versuchen",
+  "En lecture aléatoire, le titre suivant est choisi parmi les prochains pour s'accorder au tempo et à la tonalité de celui en cours. Une file que vous avez ordonnée et un titre demandé « à la suite » ne bougent jamais.": "Bei Zufallswiedergabe wird der nächste Titel unter den kommenden so gewählt, dass er zu Tempo und Tonart des aktuellen passt. Eine von dir geordnete Warteschlange und ein Titel, den du „als Nächstes“ gewünscht hast, werden nie verschoben.",
+  "File intelligente": "Intelligente Warteschlange",
+  "Pendant un mix, la voix du titre en cours s'arrête et le suivant continue sur son instrumental, puis sa voix le rejoint ; quand tempo et tonalité s'accordent, la voix du suivant chante sur l'instrumental de celui en cours. Avec le modèle de séparation, la voix est vraiment retirée ; sans lui, elle est seulement atténuée.": "Während eines Mixes verstummt die Stimme des laufenden Titels, der nächste läuft über seinem Instrumental weiter, dann setzt seine Stimme ein; passen Tempo und Tonart, singt die Stimme des nächsten über dem Instrumental des laufenden. Mit dem Trennungsmodell wird die Stimme wirklich entfernt, ohne es nur gedämpft.",
+  "Préparation en cours : {0} sur {1}": "Vorbereitung läuft: {0} von {1}",
+  "Préparer les titres téléchargés": "Heruntergeladene Titel vorbereiten",
+  "Téléphone en charge, les titres téléchargés sont analysés (et leurs voix séparées si le modèle est là) avant même d'être joués : leurs mix sont prêts tout de suite.": "Während das Telefon lädt, werden heruntergeladene Titel analysiert (und ihre Stimmen getrennt, wenn das Modell vorhanden ist), noch bevor sie gespielt werden: Ihre Mixe sind sofort bereit.",
+  "préparation des titres suivants…": "nächste Titel werden vorbereitet…",
+  "mix du titre suivant prêt": "Mix des nächsten Titels bereit"
  },
  "pt": {
   "Reverb": "Reverb",
@@ -14015,7 +14071,6 @@
   "Les mix atténueront la voix au lieu de la retirer. Les titres déjà séparés restent.": "As mixagens vão suavizar a voz em vez de removê-la. As músicas já separadas permanecem.",
   "Les nouvelles séparations n'ont lieu que téléphone branché ; celles déjà faites servent toujours.": "Novas separações só acontecem com o telefone carregando; as já feitas são sempre usadas.",
   "Modèle de séparation": "Modelo de separação",
-  "Pendant un mix, la voix du titre en cours s'arrête et le suivant continue sur son instrumental, puis sa voix le rejoint. Avec le modèle de séparation, la voix est vraiment retirée ; sans lui, elle est seulement atténuée.": "Durante uma mixagem, a voz da música atual para e a próxima continua sobre o instrumental dela, depois a voz dela entra. Com o modelo de separação a voz é realmente removida; sem ele, só é suavizada.",
   "Prêt": "Pronto",
   "Rien à signaler pour l'instant.": "Nada a relatar por enquanto.",
   "Son du morceau dans la vidéo": "Som da música no vídeo",
@@ -14028,7 +14083,15 @@
   "Téléchargement · {0} %": "Baixando · {0} %",
   "Voir": "Ver",
   "{0} · {1} Mo": "{0} · {1} MB",
-  "Échec · réessayer": "Falhou · tentar de novo"
+  "Échec · réessayer": "Falhou · tentar de novo",
+  "En lecture aléatoire, le titre suivant est choisi parmi les prochains pour s'accorder au tempo et à la tonalité de celui en cours. Une file que vous avez ordonnée et un titre demandé « à la suite » ne bougent jamais.": "No modo aleatório, a próxima música é escolhida entre as seguintes para combinar com o andamento e o tom da atual. Uma fila que você ordenou e uma música pedida para «tocar a seguir» nunca se movem.",
+  "File intelligente": "Fila inteligente",
+  "Pendant un mix, la voix du titre en cours s'arrête et le suivant continue sur son instrumental, puis sa voix le rejoint ; quand tempo et tonalité s'accordent, la voix du suivant chante sur l'instrumental de celui en cours. Avec le modèle de séparation, la voix est vraiment retirée ; sans lui, elle est seulement atténuée.": "Durante uma mixagem, a voz da música atual para e a próxima continua sobre o instrumental dela, depois a voz dela entra; quando andamento e tom combinam, a voz da próxima canta sobre o instrumental da atual. Com o modelo de separação a voz é realmente removida; sem ele, só é suavizada.",
+  "Préparation en cours : {0} sur {1}": "Preparando: {0} de {1}",
+  "Préparer les titres téléchargés": "Preparar as músicas baixadas",
+  "Téléphone en charge, les titres téléchargés sont analysés (et leurs voix séparées si le modèle est là) avant même d'être joués : leurs mix sont prêts tout de suite.": "Com o telefone carregando, as músicas baixadas são analisadas (e suas vozes separadas se o modelo estiver presente) antes mesmo de tocarem: as mixagens ficam prontas na hora.",
+  "préparation des titres suivants…": "preparando as próximas músicas…",
+  "mix du titre suivant prêt": "mixagem da próxima música pronta"
  },
  "ko": {
   "Reverb": "리버브",
@@ -15574,7 +15637,6 @@
   "Les mix atténueront la voix au lieu de la retirer. Les titres déjà séparés restent.": "믹스에서 목소리를 제거하지 않고 줄이기만 합니다. 이미 분리된 곡은 남습니다.",
   "Les nouvelles séparations n'ont lieu que téléphone branché ; celles déjà faites servent toujours.": "새 분리는 휴대폰이 충전 중일 때만 진행되며, 이미 만든 분리는 항상 사용됩니다.",
   "Modèle de séparation": "분리 모델",
-  "Pendant un mix, la voix du titre en cours s'arrête et le suivant continue sur son instrumental, puis sa voix le rejoint. Avec le modèle de séparation, la voix est vraiment retirée ; sans lui, elle est seulement atténuée.": "믹스 중 현재 곡의 목소리가 멈추고 다음 곡이 반주로 이어진 뒤 그 곡의 목소리가 들어옵니다. 분리 모델이 있으면 목소리가 실제로 제거되고, 없으면 줄어들기만 합니다.",
   "Prêt": "준비됨",
   "Rien à signaler pour l'instant.": "아직 보고할 내용이 없습니다.",
   "Son du morceau dans la vidéo": "동영상에 곡 소리 넣기",
@@ -15587,6 +15649,14 @@
   "Téléchargement · {0} %": "다운로드 중 · {0} %",
   "Voir": "보기",
   "{0} · {1} Mo": "{0} · {1} MB",
-  "Échec · réessayer": "실패 · 다시 시도"
+  "Échec · réessayer": "실패 · 다시 시도",
+  "En lecture aléatoire, le titre suivant est choisi parmi les prochains pour s'accorder au tempo et à la tonalité de celui en cours. Une file que vous avez ordonnée et un titre demandé « à la suite » ne bougent jamais.": "셔플 재생에서는 다음 곡을 이어질 곡들 중에서 현재 곡의 템포와 조성에 맞는 곡으로 고릅니다. 직접 정렬한 대기열과 '다음에 재생'으로 요청한 곡은 움직이지 않습니다.",
+  "File intelligente": "스마트 대기열",
+  "Pendant un mix, la voix du titre en cours s'arrête et le suivant continue sur son instrumental, puis sa voix le rejoint ; quand tempo et tonalité s'accordent, la voix du suivant chante sur l'instrumental de celui en cours. Avec le modèle de séparation, la voix est vraiment retirée ; sans lui, elle est seulement atténuée.": "믹스 중 현재 곡의 목소리가 멈추고 다음 곡이 반주로 이어진 뒤 그 곡의 목소리가 들어옵니다. 템포와 조성이 맞으면 다음 곡의 목소리가 현재 곡의 반주 위에서 노래합니다. 분리 모델이 있으면 목소리가 실제로 제거되고, 없으면 줄어들기만 합니다.",
+  "Préparation en cours : {0} sur {1}": "준비 중: {1}곡 중 {0}곡",
+  "Préparer les titres téléchargés": "다운로드한 곡 준비",
+  "Téléphone en charge, les titres téléchargés sont analysés (et leurs voix séparées si le modèle est là) avant même d'être joués : leurs mix sont prêts tout de suite.": "휴대폰 충전 중에 다운로드한 곡을 재생 전에 분석합니다(모델이 있으면 목소리도 분리). 믹스가 바로 준비됩니다.",
+  "préparation des titres suivants…": "다음 곡 준비 중…",
+  "mix du titre suivant prêt": "다음 곡 믹스 준비됨"
  }
 }
