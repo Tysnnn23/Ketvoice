@@ -1,0 +1,4 @@
+a2c669fde50febe339ec672c697701eef0e1fc25b62bb09ba25bf0edbec3fdf5  Ketvoice-6.0.0-beta.apk
+25c8fca172fa60865f21b47de7614ca872103adf07f6a041c46b4225538ca36d  Ketvoice-6.0.0-beta-Quest.apk
+900a5953397d778caa378681ef8b6ed074fd0220aff45349fd83c0b51832c7ac  RELEASE-NOTES.md
+31aa4c384f02d883e9bd8edfe959da526021e71d51a71078bd0b9f6e27d72a18  validation.json

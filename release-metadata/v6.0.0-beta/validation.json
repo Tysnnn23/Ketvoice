@@ -1,0 +1,204 @@
+{
+  "schema": 8,
+  "version": "6.0.0-beta",
+  "versionCode": 124,
+  "source_commit": "687128d7fdd6588e736d167abcb9582c9f1897df",
+  "created_at": "2026-11-16T18:46:31.845513+00:00",
+  "build_origin": {
+    "kind": "github_actions_with_owner_discord_sdk",
+    "workflow": "android.yml",
+    "run_id": 43923553991,
+    "artifact": {
+      "id": 14255453722,
+      "sha256": "f15ac3e189d6f5bbbcb7f76d2425cb2bded59dffe1ef9a696568b5568f2c3e36"
+    },
+    "gradle": "assembleMobileRelease assembleQuestRelease",
+    "note": "Signed by CI with the pinned keystore secret; the Discord Social SDK AAR matched its pinned SHA-256."
+  },
+  "local_validation": {
+    "result": "debug JVM/Robolectric suites for both flavors, release lint and the UI text audit passed in a cloud container without the Discord SDK",
+    "commands": [
+      "testMobileDebugUnitTest",
+      "testQuestDebugUnitTest",
+      "lintMobileRelease",
+      "lintQuestRelease",
+      "tools/audit_ui_texts.py --check"
+    ],
+    "ci_validation": "run 43923553991 (second attempt; the first failed while Robolectric fetched its Android jar from Maven, before any test of ours ran): release builds, debug and release unit tests for both flavors, UI text audit, lint, APK signature pin and Discord bridge packaging passed",
+    "code_review": {
+      "kind": "none independent"
+    },
+    "host_previews": "no interface was redesigned in this beta; the two new settings rows were not rendered",
+    "after_last_full_local_run": "documentation and code graph only (no change under app/) after the last complete local run"
+  },
+  "server": {
+    "function": "ketvoice-content",
+    "deployed_version": 23,
+    "changed_in_this_version": false,
+    "note": "no server change since 5.4.0"
+  },
+  "tests": {
+    "mobile": {
+      "jvm": {
+        "tests": 907,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "android_15_emulator_compose": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "quest": {
+      "jvm": {
+        "tests": 906,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "android_15_emulator_compose": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    }
+  },
+  "lint": {
+    "mobile": {
+      "Warning": 190,
+      "Hint": 23
+    },
+    "quest": {
+      "Warning": 192,
+      "Hint": 23
+    },
+    "errors": 0,
+    "new_vs_5_11_0": "one more hint, same warnings"
+  },
+  "apks": [
+    {
+      "name": "Ketvoice-6.0.0-beta.apk",
+      "sha256": "a2c669fde50febe339ec672c697701eef0e1fc25b62bb09ba25bf0edbec3fdf5",
+      "bytes": 79748612,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "6.0.0-beta",
+      "versionCode": 124,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-6.0.0-beta-Quest.apk",
+      "sha256": "25c8fca172fa60865f21b47de7614ca872103adf07f6a041c46b4225538ca36d",
+      "bytes": 95851255,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "6.0.0-beta",
+      "versionCode": 124,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    }
+  ],
+  "discord": {
+    "sdk_present_in_ci_build": true,
+    "sdk_sha256_pinned": true,
+    "bridge_and_native_libraries_verified": true,
+    "presence_mode": "unauthenticated_rpc_through_installed_discord_app"
+  },
+  "credential_scan": {
+    "entries": 3546,
+    "findings": 0,
+    "raw_pattern_findings": 1,
+    "scope": "tracked sources and APK archive entries",
+    "kind": "credential_patterns",
+    "explicit_private_provider_key_deny_list": false,
+    "triage": [
+      {
+        "file": "Ketvoice-Liquid-Glass-V4.html",
+        "classification": "embedded_image_false_positive",
+        "all_hits_inside_image_data_uris": true,
+        "rescanned_without_image_payloads": true
+      }
+    ]
+  },
+  "release_install_smoke": {
+    "mobile": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "quest": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    }
+  },
+  "publication_override": {
+    "authorized_by_user": true,
+    "authorized_at": "2026-11-16T18:46:31.845513+00:00",
+    "kind": "standing_authorization",
+    "user_statement": "J'autorise TOUT devient maintenant une règle.",
+    "user_statement_date": "2026-11-14",
+    "in_reply_to": "The question whether versions may be published without phone or Quest testing without asking again for each version.",
+    "recorded_in": "AGENTS.md (commit aeeda8e)",
+    "reason": "The owner made publishing validated versions without phone or Quest testing a standing rule.",
+    "scope": "physical device installation and all on-device behaviour of 6.0.0-beta"
+  },
+  "owner_request_2026_11_16_sixth": {
+    "statement_summary": "Ket 27 becomes the only interface and Cascade the only lyrics style; move to 6.0.0, a redesign with big changes; adapt the app to tablets better than Apple Music on iPadOS; keep improving the separation and Ketmix. Then: publish, as 6.0.0 Beta.",
+    "in_this_beta": "only the separation work: the redesign (Ket 27 only, Cascade only, tablet layouts) is being built in separate worktrees and is not in this beta",
+    "done": {
+      "hq_model": "UVR-MDX-NET Voc FT (sherpa-onnx ONNX export, source SHA-256 e411182c...) converted to LiteRT with float16 weights by publish-stem-model-hq.yml run 43916920223 and published as the ketmix-stems-v2 prerelease (33,429,300 bytes, SHA-256 94f35d9d...); relative difference against the ONNX model 0.0031 on random input",
+      "uvr_pipeline": "stems/Uvr.kt: MixedFft (2^k and 3*2^k), UvrSeparator with sherpa-onnx's chunking (15 s, 1 s margins), 256-frame segments, centred reflect-padded 6144-point STFT; UvrTest replays ONNX Runtime outputs and matches sherpa-onnx's voice at 128 dB on a 20 s MUSDB18-HQ excerpt",
+      "storage": "Separator.maskFromVoice turns the model's voice into the existing 4-bit mono mask on the 4096/1024 grid; StemStore format KVS3 records the model (KVS1/KVS2 still read)",
+      "choice": "ModelPack: two independently downloadable models; ketmixStemsQuality 0 automatic (high quality while charging, quick separations re-done then), 1 always the best, 2 always quick; Automix.prepare looks one title ahead when the slow model runs on battery; a mix waiting for a missing separation uses the quick model when present"
+    },
+    "measurements": {
+      "dataset": "five MUSDB18-HQ test tracks (60 s excerpts with the most voice), local only, CC BY-NC-SA, not committed",
+      "metric": "SDR = 10 log10(|s|^2/|s - s_hat|^2) on the trusted part, median over tracks",
+      "spleeter_as_stored": {
+        "instrumental_db": 12.4,
+        "voice_db": 6.74
+      },
+      "uvr_voc_ft_direct": {
+        "instrumental_db": 15.64,
+        "voice_db": 11.15
+      },
+      "uvr_voc_ft_as_stored": {
+        "instrumental_db": 14.98,
+        "voice_db": 10.24
+      },
+      "published_litert_as_stored_two_tracks_30_s": {
+        "instrumental_db": 15.87,
+        "voice_db": 14.19
+      },
+      "speed": "x86 container, LiteRT with 2 threads: about 85 s of computation for 30 s of music (Spleeter: about 3 s); never measured on a phone"
+    },
+    "not_measured": "no phone ran the high-quality model: its time per title, memory and battery use, and whether LiteRT runs it with XNNPACK there"
+  },
+  "not_validated": [
+    "physical phone or Quest installation, rendering and touch behaviour",
+    "the high-quality model on a device: download, loading by LiteRT, speed, memory (about 13 MB of input and output per segment plus the model's activations), battery",
+    "a Ketmix transition using a high-quality separation on a device",
+    "the licence of the UVR model rests on the Ultimate Vocal Remover project's MIT licence as stated by secondary sources; the model repository itself carries no licence file that could be checked",
+    "independent code review of this diff"
+  ],
+  "known_limitations": [
+    "The high-quality model is about ten times slower than the quick one; in automatic mode it only runs while the phone charges.",
+    "With 'Always the best' on battery, Ketmix prepares one song ahead instead of three.",
+    "This beta does not contain the 6.0 redesign of the interface.",
+    "Being a beta tag, the in-app updater does not offer it to users of a stable version; it is offered on the website and the releases page.",
+    "The signing certificate is the existing public Android debug identity, not a private production key."
+  ],
+  "canonical_banner_sha256": "47f6793088983f7d4e6bd1aeaa2cbd8b7cdc2a8f91271e3b2839daea81da0436"
+}
