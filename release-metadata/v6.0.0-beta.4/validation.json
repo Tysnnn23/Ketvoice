@@ -1,0 +1,182 @@
+{
+  "schema": 8,
+  "version": "6.0.0-beta.4",
+  "versionCode": 127,
+  "source_commit": "609109c93e19431a51557e56058d37aa4f9d8764",
+  "created_at": "2026-11-16T23:35:15.520273+00:00",
+  "build_origin": {
+    "kind": "github_actions_with_owner_discord_sdk",
+    "workflow": "android.yml",
+    "run_id": 43978633113,
+    "artifact": {
+      "id": 14283047405,
+      "sha256": "562aed841b0b3e9850055a0a1fc27e5c58a5dd32e66f3d5a219e52afa9c96b9e"
+    },
+    "gradle": "assembleMobileRelease assembleQuestRelease",
+    "note": "Signed by CI with the pinned keystore secret; the Discord Social SDK AAR matched its pinned SHA-256."
+  },
+  "local_validation": {
+    "result": "debug JVM/Robolectric suites for both flavors, release lint and the UI text audit passed in a cloud container without the Discord SDK",
+    "commands": [
+      "testMobileDebugUnitTest",
+      "testQuestDebugUnitTest",
+      "lintMobileRelease",
+      "lintQuestRelease",
+      "tools/audit_ui_texts.py --check"
+    ],
+    "ci_validation": "run 43978633113: release builds, debug and release unit tests for both flavors, UI text audit, lint, APK signature pin and Discord bridge packaging passed",
+    "code_review": {
+      "kind": "none independent"
+    },
+    "host_previews": "Robolectric software renders on the host (not a phone), looked at by the agents and the main agent: full-bleed player, Home mix cards, Library/Downloads pills and grids, lyrics mesh and word halo, search bubble, cover zoom frames, glass levels and tilt, cover-coloured pages, icon picker; backdrop-sampling glass draws flat on the host, so real blur and refraction were not seen",
+    "after_last_full_local_run": "documentation and code graph only (no change under app/) after the last complete local run"
+  },
+  "server": {
+    "function": "ketvoice-content",
+    "deployed_version": 23,
+    "changed_in_this_version": false,
+    "note": "no server change since 5.4.0"
+  },
+  "tests": {
+    "mobile": {
+      "jvm": {
+        "tests": 1023,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 3
+      },
+      "android_15_emulator_compose": {
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "quest": {
+      "jvm": {
+        "tests": 1022,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 26
+      },
+      "android_15_emulator_compose": {
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "earlier_full_run": "the run before the final commit failed 2 mobile and 3 Quest tests (settings sections, the new icon, Quest's hidden tilt switch); the icon was fixed (Android fills adaptive backgrounds in black) and the tests updated, then the full suites re-run green"
+  },
+  "lint": {
+    "mobile": {
+      "Warning": 203,
+      "Hint": 24
+    },
+    "quest": {
+      "Warning": 205,
+      "Hint": 24
+    },
+    "errors": 0
+  },
+  "apks": [
+    {
+      "name": "Ketvoice-6.0.0-beta.4.apk",
+      "sha256": "93089c5b33c35acf167f2c95a45d3a7c5c9390d8c9adc97959ab682ee8b92dc8",
+      "bytes": 81044657,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "6.0.0-beta.4",
+      "versionCode": 127,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-6.0.0-beta.4-Quest.apk",
+      "sha256": "b10a595831f7e6b0486ef7cbb6ddf409788e0cc1d424899b83e014598ddd2acb",
+      "bytes": 97147304,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "6.0.0-beta.4",
+      "versionCode": 127,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    }
+  ],
+  "discord": {
+    "sdk_present_in_ci_build": true,
+    "sdk_sha256_pinned": true,
+    "bridge_and_native_libraries_verified": true,
+    "presence_mode": "unauthenticated_rpc_through_installed_discord_app"
+  },
+  "credential_scan": {
+    "entries": 3589,
+    "findings": 0,
+    "raw_pattern_findings": 1,
+    "scope": "tracked sources and APK archive entries",
+    "kind": "credential_patterns",
+    "explicit_private_provider_key_deny_list": false,
+    "triage": [
+      {
+        "file": "Ketvoice-Liquid-Glass-V4.html",
+        "classification": "embedded_image_false_positive",
+        "all_hits_inside_image_data_uris": true,
+        "rescanned_without_image_payloads": true
+      }
+    ]
+  },
+  "release_install_smoke": {
+    "mobile": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "quest": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    }
+  },
+  "publication_override": {
+    "authorized_by_user": true,
+    "authorized_at": "2026-11-16T23:35:15.520273+00:00",
+    "kind": "standing_authorization",
+    "user_statement": "J'autorise TOUT devient maintenant une règle.",
+    "user_statement_date": "2026-11-14",
+    "in_reply_to": "The question whether versions may be published without phone or Quest testing without asking again for each version.",
+    "recorded_in": "AGENTS.md (commit aeeda8e)",
+    "reason": "The owner made publishing validated versions without phone or Quest testing a standing rule.",
+    "scope": "physical device installation and all on-device behaviour of 6.0.0-beta.4"
+  },
+  "owner_requests_2026_11_16_beta4": {
+    "statements": [
+      "the voice should be prepared whole, changed instantly like Apple's, in better quality",
+      "improve Ketmix to Apple Music's level, researching everywhere",
+      "a better Ket 27, offered as a large multiple choice (all choices taken; the collapsing tab bar optional in settings)",
+      "the launcher icon from four images the owner generated, with previews in the app, backgrounds removed keeping the liquid glass",
+      "make progressive streaming really work, very high quality loading fast and smoothly"
+    ],
+    "done": {
+      "voice": "VoiceStage runs from stream start when a model is installed and takes masks up live; survives speed-change flushes; mask interpolated in time and extended above 11 kHz (also in Separator.stem); separation starts with the lyrics screen and is upgraded by the HQ model; lyrics follow the stage delay",
+      "ketmix": "tempoRange 4/6/8 % with TempoReturn back to the native tempo after the blend (owner lifted the no-speed-change rule); mid-band EQ at 1 kHz held back on one deck at a time (-4 dB, -8 dB on clashes), measured -8.0 dB at 1 kHz in DeckDspTest; crossfades on phrases, halved on key clashes",
+      "progressive": "upgrade waits for playback then retries once; renditions aligned by loudness-envelope correlation (137 ms recovered within 2.5 ms in QualityHandoffTest), different songs rejected; equal-power crossfade; progressiveQuality on by default",
+      "icons": "owner's four images matted (tools/icons), each laid on the ground it was drawn on because Android fills adaptive icon backgrounds in black (a transparent background is not possible; the owner asked for one and is told), previews in the picker",
+      "ket27": "three sub-agents (look, navigation, screens) built glass transparency levels, tilt reflections, cover colours with WCAG checks, full-bleed player, Home cards, Library/Downloads pills and grids, lyrics mesh and word halo, floating search, cover zoom, optional collapsing tab bar; merged with one conflict resolved by the main agent"
+    }
+  },
+  "not_validated": [
+    "physical phone or Quest installation, rendering, touch, sensors and keyboard behaviour",
+    "real glass blur and refraction of the new screens (flat in host renders)",
+    "tilt reflections' feel; cover-zoom with the back gesture; the search bubble with the keyboard",
+    "Ketmix tempo glide and mid EQ by ear on real songs",
+    "progressive handoff on real streams from different providers (alignment, crossfade, timing)",
+    "the voice stage's CPU cost on a phone and live mask take-up by ear",
+    "independent code review of the main agent's diff (the sub-agents' diffs were reviewed only through their reports, renders and tests)"
+  ],
+  "known_limitations": [
+    "Songs are played about 0.09 s later whenever a separation model is installed (the voice stage runs from the start of every stream); the lyrics compensate.",
+    "Launcher icons keep a background: Android fills adaptive icon backgrounds in black.",
+    "Streams made of many small files (DASH, HLS) cannot be separated whole for the voice level.",
+    "Being a beta tag, the in-app updater does not offer it to users of a stable version; it is offered on the website and the releases page.",
+    "The signing certificate is the existing public Android debug identity, not a private production key."
+  ],
+  "canonical_banner_sha256": "47f6793088983f7d4e6bd1aeaa2cbd8b7cdc2a8f91271e3b2839daea81da0436"
+}
