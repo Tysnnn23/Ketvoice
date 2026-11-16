@@ -34,7 +34,8 @@ jobs:
           set -euo pipefail
           mkdir -p work && cd work
           curl -fsSL -o voc_ft.onnx "$SOURCE"
-          echo "6cae86ac6fb1a79fbbc01866c31f13ae57e0330ed7f37e489ea36f94047e1240  voc_ft.onnx" | sha256sum -c
+          echo "e411182ce2c53541fefdcc99a8f46f2fe03978eb22038b9497c1d9d95a00fad4  voc_ft.onnx" | sha256sum -c
+          # onnx2tf rewrites its input in place: the pinned digest is checked before it runs.
 
       - name: Convert to LiteRT with float16 weights and check against the original
         run: |
