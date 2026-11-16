@@ -1,0 +1,50 @@
+{
+  "Barre d'onglets réductible": {
+    "en": "Collapsing tab bar",
+    "hi": "सिकुड़ने वाला टैब बार",
+    "ja": "縮小するタブバー",
+    "zh": "可收起的标签栏",
+    "ru": "Сворачиваемая панель вкладок",
+    "it": "Barra delle schede comprimibile",
+    "es": "Barra de pestañas plegable",
+    "de": "Einklappbare Tableiste",
+    "pt": "Barra de abas recolhível",
+    "ko": "축소되는 탭 막대"
+  },
+  "En faisant défiler une page, la barre d'onglets se réduit en pastille et le mini-lecteur s'y loge ; elle revient en remontant ou d'un toucher": {
+    "en": "When you scroll a page, the tab bar shrinks into a pill and the mini-player docks beside it; it comes back when you scroll up or tap it",
+    "hi": "पेज स्क्रॉल करने पर टैब बार एक गोली जैसे आकार में सिकुड़ जाता है और मिनी-प्लेयर उसके पास आ जाता है; ऊपर स्क्रॉल करने या टैप करने पर यह वापस आ जाता है",
+    "ja": "ページをスクロールするとタブバーが小さなピル型に縮み、ミニプレーヤーがその横に収まります。上にスクロールするかタップすると元に戻ります",
+    "zh": "滚动页面时，标签栏会缩成药丸形，迷你播放器停靠在旁边；向上滚动或轻点即可恢复",
+    "ru": "При прокрутке страницы панель вкладок сжимается в капсулу, а мини-плеер встраивается рядом; она возвращается при прокрутке вверх или касании",
+    "it": "Scorrendo una pagina, la barra delle schede si riduce a una pillola e il mini-player vi si affianca; torna scorrendo verso l'alto o con un tocco",
+    "es": "Al desplazar una página, la barra de pestañas se reduce a una píldora y el minirreproductor se acopla a su lado; vuelve al desplazarte hacia arriba o al tocarla",
+    "de": "Beim Scrollen einer Seite schrumpft die Tableiste zu einer Pille und der Mini-Player dockt daneben an; sie kehrt beim Hochscrollen oder Antippen zurück",
+    "pt": "Ao rolar uma página, a barra de abas encolhe para uma pílula e o miniplayer se encaixa ao lado; ela volta ao rolar para cima ou com um toque",
+    "ko": "페이지를 스크롤하면 탭 막대가 알약 모양으로 줄어들고 미니 플레이어가 옆에 자리 잡습니다. 위로 스크롤하거나 탭하면 다시 나타납니다"
+  },
+  "Afficher les onglets": {
+    "en": "Show tabs",
+    "hi": "टैब दिखाएँ",
+    "ja": "タブを表示",
+    "zh": "显示标签",
+    "ru": "Показать вкладки",
+    "it": "Mostra le schede",
+    "es": "Mostrar pestañas",
+    "de": "Tabs anzeigen",
+    "pt": "Mostrar abas",
+    "ko": "탭 표시"
+  },
+  "Fermer la recherche": {
+    "en": "Close search",
+    "hi": "खोज बंद करें",
+    "ja": "検索を閉じる",
+    "zh": "关闭搜索",
+    "ru": "Закрыть поиск",
+    "it": "Chiudi la ricerca",
+    "es": "Cerrar la búsqueda",
+    "de": "Suche schließen",
+    "pt": "Fechar a pesquisa",
+    "ko": "검색 닫기"
+  }
+}

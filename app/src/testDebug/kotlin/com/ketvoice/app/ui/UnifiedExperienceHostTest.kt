@@ -108,14 +108,21 @@ class UnifiedExperienceHostTest {
         AppSettings.reduceAnimations.value = false
         val line = MusicApi.LyricLine(0, "Des mots nets et stables", listOf(MusicApi.LyricWord(0, "Des mots nets et stables", 3000)))
         position.value = 3000L
-        compose.setContent { KetvoiceTheme(useDark = true) {
-            Box(Modifier.fillMaxSize().background(Color.Black).padding(24.dp)) { KaraokeLine(line, Modifier.fillMaxWidth()) }
-        } }
-        val atEnd = image("lyrics-clean-at-end")
-        compose.runOnIdle { position.value = 4000L }
-        val after = image("lyrics-clean-after-hold")
-        assertArrayEquals("No scaled or diffused word copy may survive the hold", atEnd, after)
-        compose.onAllNodesWithText(line.text).assertCountEquals(1)
+        // 6.0.0 lights a halo around a word as it is sung (a light, not a copy of the word): the glyphs are
+        // compared without it, then the halo must leave nothing behind once the hold is over.
+        AppSettings.highPerformanceMode.value = true
+        try {
+            compose.setContent { KetvoiceTheme(useDark = true) {
+                Box(Modifier.fillMaxSize().background(Color.Black).padding(24.dp)) { KaraokeLine(line, Modifier.fillMaxWidth()) }
+            } }
+            val atEnd = image("lyrics-clean-at-end")
+            compose.runOnIdle { position.value = 4000L }
+            val after = image("lyrics-clean-after-hold")
+            assertArrayEquals("No scaled or diffused word copy may survive the hold", atEnd, after)
+            compose.runOnIdle { AppSettings.highPerformanceMode.value = false }
+            assertArrayEquals("The halo has faded by the end of the hold", after, image("lyrics-clean-after-hold-glow"))
+            compose.onAllNodesWithText(line.text).assertCountEquals(1)
+        } finally { AppSettings.highPerformanceMode.value = false }
     }
 
     @Test fun resumeCardOpensTheCurrentQueueWithoutRestartingIt() {
