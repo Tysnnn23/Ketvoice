@@ -1,0 +1,78 @@
+name: Publish high-quality voice separation model
+
+# Builds Ketmix's optional high-quality voice separation model (6.0.0) from public sources and
+# publishes it as the asset of the `ketmix-stems-v2` prerelease, which the app downloads on request
+# and checks against the SHA-256 of tools/stems/expected-hq.sha256 (repeated in StemModel.kt; a test
+# keeps them equal). Pinned and reproducible; never overwrites a published release.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      TAG: ketmix-stems-v2
+      SOURCE: https://huggingface.co/k2-fsa/sherpa-onnx-models/resolve/main/source-separation-models/UVR-MDX-NET-Voc_FT.onnx
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install the pinned converter
+        run: |
+          python -m pip install --quiet "tensorflow==2.21.0" "onnx2tf==2.6.9" "onnx==1.20.1" "onnxruntime==1.26.0" \
+            "onnx_graphsurgeon==0.6.1" "sng4onnx==2.0.1" "psutil==5.9.5" "ai-edge-litert==2.1.2" \
+            "flatbuffers==25.12.19" "numpy==2.2.6"
+
+      - name: Download UVR-MDX-NET Voc FT (ONNX export of sherpa-onnx)
+        run: |
+          set -euo pipefail
+          mkdir -p work && cd work
+          curl -fsSL -o voc_ft.onnx "$SOURCE"
+          echo "6cae86ac6fb1a79fbbc01866c31f13ae57e0330ed7f37e489ea36f94047e1240  voc_ft.onnx" | sha256sum -c
+
+      - name: Convert to LiteRT with float16 weights and check against the original
+        run: |
+          set -euo pipefail
+          cd work
+          mkdir -p out
+          onnx2tf -i voc_ft.onnx -o tfl -ois input:1,4,3072,256 -kat input -n > convert.log 2>&1 || { tail -40 convert.log; exit 1; }
+          python ../tools/stems/w16.py tfl/voc_ft_float32.tflite out/uvr-mdx-net-voc-ft.tflite tfl/schema_generated.py
+          python ../tools/stems/check.py voc_ft.onnx out/uvr-mdx-net-voc-ft.tflite input 1,4,3072,256
+          cp ../docs/licenses/UVR-MIT.txt out/LICENSE-UVR.txt
+          cd out && sha256sum uvr-mdx-net-voc-ft.tflite LICENSE-UVR.txt | tee SHA256SUMS.txt && ls -l uvr-mdx-net-voc-ft.tflite
+
+      - name: Compare with the digest the app expects
+        run: |
+          set -euo pipefail
+          cd work/out
+          sha256sum -c ../../tools/stems/expected-hq.sha256
+
+      - name: Publish the prerelease (never over an existing one)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "::error::$TAG already exists; refusing to overwrite it."
+            exit 1
+          fi
+          cat > notes.md <<'NOTES'
+          Optional high-quality voice separation model for Ketmix (Settings → Ketmix). Downloaded by the app on
+          request and checked against its SHA-256; not an app version.
+
+          Converted from UVR-MDX-NET Voc FT, distributed by Ultimate Vocal Remover (MIT, see LICENSE-UVR.txt), through
+          the ONNX export of sherpa-onnx, by .github/workflows/publish-stem-model-hq.yml.
+          NOTES
+          sed -i 's/^ *//' notes.md
+          gh release create "$TAG" --prerelease --latest=false --title "Ketmix voice separation model v2 (high quality)" \
+            --notes-file notes.md work/out/uvr-mdx-net-voc-ft.tflite work/out/LICENSE-UVR.txt work/out/SHA256SUMS.txt
+          mkdir -p check && cd check
+          gh release download "$TAG" --pattern 'uvr-mdx-net-voc-ft.tflite'
+          cmp uvr-mdx-net-voc-ft.tflite ../work/out/uvr-mdx-net-voc-ft.tflite
+          echo "published and verified $TAG"
