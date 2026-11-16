@@ -57,6 +57,7 @@ import com.ketvoice.app.theme.LocalTheme
 import com.ketvoice.app.ui.common.Cover
 import com.ketvoice.app.ui.common.TrackActionFeedback
 import com.ketvoice.app.ui.common.asHeading
+import com.ketvoice.app.ui.motion.symbolPulse
 import com.ketvoice.app.ui.motion.Haptics
 import com.ketvoice.app.ui.motion.Motion
 import com.ketvoice.app.ui.motion.rememberHaptics
@@ -165,9 +166,14 @@ internal fun QueuePane(state: PlayerUiState, modifier: Modifier = Modifier, show
     }
 
     Column(modifier) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("File d'attente", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold, letterSpacing = (-.6).sp,
-                maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).asHeading())
+        val ket = com.ketvoice.app.theme.Ket27.on
+        // Ket 27: Inter is wider, so the name of the queue keeps a line of its own whenever the actions do not fit beside it.
+        QueueHeaderRow(ket, title = {
+            if (ket) Text("File d'attente", color = Color.White, style = com.ketvoice.app.theme.Ket27.Type.title3, maxLines = 1,
+                overflow = TextOverflow.Ellipsis, modifier = it.asHeading())
+            else Text("File d'attente", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold, letterSpacing = (-.6).sp,
+                maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = it.asHeading())
+        }) {
             if (selecting) {
                 val all = state.queueEntryIds.drop(state.index + 1).toSet()
                 QueueAction(if (chosen.size == all.size && all.isNotEmpty()) "Aucun" else "Tout", tag = "queue-select-all") {
@@ -302,18 +308,22 @@ private fun QueueModes(state: PlayerUiState) {
         AutomixToggle()
         QueueMode(Icons.Filled.Shuffle, "Aléatoire", state.shuffle) { Player.setShuffle(!state.shuffle) }
         QueueMode(if (state.repeatOne) Icons.Filled.RepeatOne else Icons.Filled.Repeat,
-            repeatLabel(state.repeatOne, state.repeatAll), state.repeatOne || state.repeatAll) { Player.cycleRepeat() }
+            repeatLabel(state.repeatOne, state.repeatAll), state.repeatOne || state.repeatAll,
+            effectKey = if (state.repeatOne) 2 else if (state.repeatAll) 1 else 0, spin = true) { Player.cycleRepeat() }
         QueueMode(Icons.Filled.AllInclusive, "Lecture automatique", state.autoplay) { Player.setAutoplay(!state.autoplay) }
     }
 }
 
 @Composable
-private fun QueueMode(icon: ImageVector, label: String, active: Boolean, onClick: () -> Unit) {
+private fun QueueMode(icon: ImageVector, label: String, active: Boolean, effectKey: Any? = active, spin: Boolean = false,
+                      onClick: () -> Unit) {
     val accent = LocalTheme.current.accent
+    val ket = com.ketvoice.app.theme.Ket27.on
     Box(Modifier.size(48.dp).clip(CircleShape)
         .background(if (active) accent.copy(alpha = .22f) else Color.White.copy(alpha = .08f))
         .clickable(role = Role.Button, onClick = onClick), contentAlignment = Alignment.Center) {
-        Icon(icon, label, tint = if (active) accent else Color.White.copy(alpha = .78f), modifier = Modifier.size(22.dp))
+        Icon(icon, label, tint = if (active) accent else Color.White.copy(alpha = .78f), modifier = Modifier.size(22.dp)
+            .then(if (ket) Modifier.symbolPulse(effectKey, spin = spin) else Modifier))
     }
 }
 
@@ -375,5 +385,17 @@ private fun QueueRow(track: Track, cover: String?, modifier: Modifier = Modifier
         Box(Modifier.size(48.dp).clickable(onClick = onRemove), contentAlignment = Alignment.Center) {
             Icon(Icons.Filled.Close, "Retirer ${track.title}", tint = Color.White.copy(alpha = .78f), modifier = Modifier.size(20.dp))
         }
+    }
+}
+
+/** The queue's header: its name, then its actions — beside it, or (Ket 27) on the next line when they do not fit. */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+private fun QueueHeaderRow(ket: Boolean, title: @Composable (Modifier) -> Unit, actions: @Composable RowScope.() -> Unit) {
+    if (!ket) { Row(verticalAlignment = Alignment.CenterVertically) { title(Modifier.weight(1f)); actions() }; return }
+    androidx.compose.foundation.layout.FlowRow(Modifier.fillMaxWidth().testTag("queue-header"),
+        horizontalArrangement = Arrangement.SpaceBetween, verticalArrangement = Arrangement.Center) {
+        Box(Modifier.heightIn(min = 40.dp).align(Alignment.CenterVertically), contentAlignment = Alignment.CenterStart) { title(Modifier) }
+        Row(verticalAlignment = Alignment.CenterVertically, content = actions)
     }
 }

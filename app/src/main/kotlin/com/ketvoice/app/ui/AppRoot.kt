@@ -141,6 +141,7 @@ fun AppRoot() {
         val backProgress = remember { androidx.compose.animation.core.Animatable(0f) }
         val backEdgeRight = remember { androidx.compose.runtime.mutableStateOf(false) }
         val backScope = androidx.compose.runtime.rememberCoroutineScope()
+        val playerWasShown = remember { mutableStateOf(false) }
 
         // Discord live presence: only while a linked account explicitly opted in.
         val discord by com.ketvoice.app.discord.Discord.state.collectAsState()
@@ -207,6 +208,7 @@ fun AppRoot() {
                         .pageBackground(th)
                         .then(if (AppUi.showPlayer.value || AppUi.showAccount.value || AppUi.showPublisher.value ||
                             AppUi.trackMenuTrack.value != null || AppUi.playlistMenu.value != null ||
+                            com.ketvoice.app.ui.common.ContextMenus.request.value != null ||
                             AppUi.pendingPlaylistTracks() != null) Modifier.clearAndSetSemantics { } else Modifier)
                 ) {
                     Box(Modifier.fillMaxSize().padding(start = if (queueOverlay) 0.dp else layout.railWidthDp.dp), contentAlignment = Alignment.TopCenter) {
@@ -281,10 +283,16 @@ fun AppRoot() {
                     AppUi.playlistMenu.value == null &&
                     !AppUi.showCreatePlaylist.value &&
                     AppUi.playlistResolution.value == null
+                // Ket 27: the player grows out of the mini-player and shrinks back into it, so the bar stays
+                // where it is under it instead of sliding away.
+                val morphing = com.ketvoice.app.theme.Ket27.on && !Motion.reduced &&
+                    (AppUi.showPlayer.value || playerWasShown.value)
+                androidx.compose.runtime.SideEffect { playerWasShown.value = AppUi.showPlayer.value }
                 AnimatedVisibility(
                     visible = chromeVisible,
-                    enter = fadeIn(tween(Motion.duration())) + slideInVertically(tween(Motion.duration())) { it / 3 },
-                    exit = fadeOut(tween(Motion.duration())) + slideOutVertically(tween(Motion.duration())) { it / 3 },
+                    enter = if (morphing) fadeIn(tween(90)) else fadeIn(tween(Motion.duration())) + slideInVertically(tween(Motion.duration())) { it / 3 },
+                    exit = if (morphing) fadeOut(tween(120, delayMillis = 140))
+                        else fadeOut(tween(Motion.duration())) + slideOutVertically(tween(Motion.duration())) { it / 3 },
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .padding(start = layout.railWidthDp.dp)
@@ -359,6 +367,8 @@ fun AppRoot() {
                         }
                     }
                 }
+                // ---- Ket 27 : menu contextuel d'un titre (appui long), au-dessus de tout le reste ----
+                com.ketvoice.app.ui.common.ContextMenuHost(Modifier.zIndex(7f))
                 // ---- Menu d'actions de playlist : même couche que le menu morceau,
                 //      donc au-dessus du chrome flottant (correctif de recouvrement) ----
                 AppUi.playlistMenu.value?.let { request ->

@@ -241,6 +241,7 @@ internal fun CollectionTopBar(
 internal fun GlassSegmentedControl(labels: List<String>, selected: Int, onSelect: (Int) -> Unit,
                                    modifier: Modifier = Modifier, tag: String? = null) {
     val theme = LocalTheme.current
+    val tick = com.ketvoice.app.ui.motion.rememberHaptics()
     BoxWithConstraints(modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(theme.card).padding(4.dp)
         .selectableGroup().then(if (tag != null) Modifier.testTag(tag) else Modifier)) {
         val count = labels.size.coerceAtLeast(1)
@@ -256,7 +257,11 @@ internal fun GlassSegmentedControl(labels: List<String>, selected: Int, onSelect
             labels.forEachIndexed { index, label ->
                 val active = selected == index
                 Box(Modifier.weight(1f).height(44.dp).clip(RoundedCornerShape(14.dp))
-                    .selectable(active, role = Role.Tab) { onSelect(index) }, contentAlignment = Alignment.Center) {
+                    .selectable(active, role = Role.Tab) {
+                        // Ket 27: each segment chosen is felt, as on iOS.
+                        if (!active && com.ketvoice.app.theme.Ket27.on) tick(com.ketvoice.app.ui.motion.Haptics.Kind.Tick)
+                        onSelect(index)
+                    }, contentAlignment = Alignment.Center) {
                     Text(label, color = if (active) theme.onBackground else theme.secondary, fontSize = 14.sp,
                         fontWeight = if (active) FontWeight.SemiBold else FontWeight.Medium, maxLines = 1,
                         overflow = TextOverflow.Ellipsis)

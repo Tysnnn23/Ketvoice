@@ -41,12 +41,13 @@ fun AccountDialog(modifier: Modifier = Modifier) {
     BackHandler { AppUi.showAccount.value = false }
     Box(modifier.fillMaxSize().background(Color.Black.copy(alpha = .45f)).clickable { AppUi.showAccount.value = false }) {
         Column(Modifier.align(androidx.compose.ui.Alignment.TopCenter).widthIn(max = 560.dp)
-            .padding(18.dp).padding(top = 82.dp).clip(RoundedCornerShape(26.dp)).background(theme.card)
+            .padding(18.dp).padding(top = 82.dp).clip(RoundedCornerShape(if (com.ketvoice.app.theme.Ket27.on) com.ketvoice.app.theme.Ket27.Metrics.alertRadius else 26.dp)).background(theme.card)
             .clickable(enabled = false) {}.padding(22.dp)
             .verticalScroll(rememberScrollState())) {
             Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text("YouTube Music", color = theme.onBackground, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                    if (com.ketvoice.app.theme.Ket27.on) Text("YouTube Music", color = theme.onBackground, style = com.ketvoice.app.theme.Ket27.Type.title2)
+                    else Text("YouTube Music", color = theme.onBackground, fontSize = 24.sp, fontWeight = FontWeight.Bold)
                     Text(if (profile.connected) "Session confirmée" else "Mode local",
                         color = theme.secondary, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp))
                 }
@@ -99,7 +100,7 @@ fun AccountDialog(modifier: Modifier = Modifier) {
     }
 
     if (signOutOpen) {
-        androidx.compose.material3.AlertDialog(onDismissRequest = { signOutOpen = false },
+        com.ketvoice.app.ui.common.AppAlertDialog(onDismissRequest = { signOutOpen = false },
             title = { Text("Se déconnecter de YouTube Music ?") },
             text = { Text("La session chiffrée de cet appareil est effacée. Vos playlists et téléchargements Ketvoice sont conservés.") },
             confirmButton = {

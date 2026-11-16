@@ -103,7 +103,8 @@ fun CatalogScreen(request: CatalogRequest? = AppUi.catalogRequest.value) {
     val appNamed = request.kind in listOf("favorites", "history", "all", "mix")
     val shownTitle = if (appNamed) AppText.t(request.title) else request.title
     Column(Modifier.fillMaxSize().pageBackground(theme).statusBarsPadding()) {
-        Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+        if (com.ketvoice.app.theme.Ket27.on) com.ketvoice.app.ui.common.Ket27PageBar(page?.title ?: request.title, { AppUi.closeOverlay() })
+        else Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             GlassBackButton { AppUi.closeOverlay() }
             Spacer(Modifier.width(14.dp))
             Text(page?.title ?: request.title, color = theme.onBackground, fontSize = 24.sp,

@@ -57,7 +57,7 @@ private fun CreatePlaylistDialog() {
     var error by remember { mutableStateOf("") }
     var saving by remember { mutableStateOf(false) }
     SettingsSheet(onDismiss = { if (!saving) AppUi.showCreatePlaylist.value = false }) {
-        Column(Modifier.fillMaxWidth().heightIn(max = 650.dp).verticalScroll(rememberScrollState()).padding(20.dp),
+        Column(Modifier.fillMaxWidth().heightIn(max = com.ketvoice.app.ui.common.sheetMaxHeight()).verticalScroll(rememberScrollState()).padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Créer une playlist", color = th.onBackground, fontSize = 20.sp, fontWeight = FontWeight.Bold)
             SettingsTextInput(name, { name = it.take(80) }, "Nom de la playlist", !saving, Modifier.testTag("playlist-name"))
@@ -109,7 +109,7 @@ fun AddToPlaylistSheet(tracks: List<Track>, onClose: () -> Unit) {
     GlassPanel(
         modifier = Modifier.fillMaxWidth().padding(10.dp),
         shape = RoundedCornerShape(28.dp),
-        params = GlassParams.sheet(radius, dark = true)
+        params = GlassParams.sheet(radius, dark = com.ketvoice.app.ui.common.sheetDark())
     ) {
         Column(
             Modifier
@@ -119,15 +119,15 @@ fun AddToPlaylistSheet(tracks: List<Track>, onClose: () -> Unit) {
         ) {
             Box(Modifier.fillMaxWidth().padding(top = 8.dp), contentAlignment = Alignment.Center) {
                 Box(Modifier.width(44.dp).height(5.dp).clip(RoundedCornerShape(3.dp))
-                    .background(Color.White.copy(alpha = .35f)))
+                    .background(com.ketvoice.app.ui.common.sheetInk().copy(alpha = .35f)))
             }
-            Text("Ajouter à une playlist", color = Color.White, fontSize = 21.sp,
+            Text("Ajouter à une playlist", color = com.ketvoice.app.ui.common.sheetInk(), fontSize = 21.sp,
                 fontWeight = FontWeight.Black, modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = if (tracks.size > 1) 2.dp else 12.dp))
             if (tracks.size > 1) Text(AppText.t("{0} titres").replace("{0}", tracks.size.toString()), localize = false,
-                color = Color.White.copy(alpha = .6f), fontSize = 13.sp, modifier = Modifier.padding(start = 20.dp, bottom = 10.dp))
+                color = com.ketvoice.app.ui.common.sheetInk().copy(alpha = .6f), fontSize = 13.sp, modifier = Modifier.padding(start = 20.dp, bottom = 10.dp))
             if (rows.isEmpty()) {
                 Text("Créez votre première playlist pour y ajouter ce titre.",
-                    color = Color.White.copy(alpha = .6f), fontSize = 14.sp,
+                    color = com.ketvoice.app.ui.common.sheetInk().copy(alpha = .6f), fontSize = 14.sp,
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
             } else {
                 LazyColumn(Modifier.fillMaxWidth().heightIn(max = 380.dp)) {
@@ -148,15 +148,15 @@ fun AddToPlaylistSheet(tracks: List<Track>, onClose: () -> Unit) {
                             PlaylistArtwork(list, list.name, Modifier.size(52.dp))
                             Spacer(Modifier.width(13.dp))
                             Column(Modifier.weight(1f)) {
-                                Text(list.name, localize = false, color = Color.White, fontSize = 16.sp,
+                                Text(list.name, localize = false, color = com.ketvoice.app.ui.common.sheetInk(), fontSize = 16.sp,
                                     fontWeight = FontWeight.SemiBold, maxLines = 1,
                                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                                 val available = list.entries.count { it.track != null }
                                 Text("$available / ${list.entries.size} titres disponibles",
-                                    color = Color.White.copy(alpha = .6f), fontSize = 12.5.sp)
+                                    color = com.ketvoice.app.ui.common.sheetInk().copy(alpha = .6f), fontSize = 12.5.sp)
                             }
                             if (saving) CircularProgressIndicator(
-                                Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
+                                Modifier.size(20.dp), color = com.ketvoice.app.ui.common.sheetInk(), strokeWidth = 2.dp)
                         }
                     }
                 }
@@ -164,14 +164,14 @@ fun AddToPlaylistSheet(tracks: List<Track>, onClose: () -> Unit) {
             Row(
                 Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)
                     .clip(RoundedCornerShape(16.dp))
-                    .background(Color.White.copy(alpha = .12f))
+                    .background(com.ketvoice.app.ui.common.sheetInk().copy(alpha = .12f))
                     .clickable { AppUi.showCreatePlaylist.value = true }
                     .padding(horizontal = 16.dp, vertical = 13.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(Icons.Filled.Add, null, tint = Color.White, modifier = Modifier.size(22.dp))
+                Icon(Icons.Filled.Add, null, tint = com.ketvoice.app.ui.common.sheetInk(), modifier = Modifier.size(22.dp))
                 Spacer(Modifier.width(12.dp))
-                Text("Créer une playlist", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                Text("Créer une playlist", color = com.ketvoice.app.ui.common.sheetInk(), fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
             }
             Spacer(Modifier.height(10.dp))
         }
@@ -197,7 +197,7 @@ fun SpotifyImportDialog(onClose: () -> Unit) {
             catch(failure:Exception){error=userError(failure)} finally{busy=false} }
     }
     SettingsSheet(onDismiss={operation?.cancel();onClose()}) {
-        Column(Modifier.fillMaxWidth().heightIn(max=650.dp)
+        Column(Modifier.fillMaxWidth().heightIn(max = com.ketvoice.app.ui.common.sheetMaxHeight())
             .verticalScroll(rememberScrollState()).padding(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
             Text("Importer depuis Spotify",color=th.onBackground,fontSize=20.sp,fontWeight=FontWeight.Bold)
             PlaylistArtwork(null, "Spotify", Modifier.size(100.dp))

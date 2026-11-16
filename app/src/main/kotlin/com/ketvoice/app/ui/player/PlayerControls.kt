@@ -96,6 +96,7 @@ import com.ketvoice.app.player.Player
 import com.ketvoice.app.ui.common.gradientFor
 import com.ketvoice.app.ui.quest.questPointer
 import com.ketvoice.app.ui.motion.Motion
+import com.ketvoice.app.ui.motion.symbolPulse
 import com.ketvoice.app.ui.motion.artworkDepth
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
@@ -263,6 +264,11 @@ private fun CanvasVideo(path: String, playing: Boolean, modifier: Modifier = Mod
     )
 }
 
+/** How many steps a scrub across the whole title is felt in (Ket 27). */
+internal const val SCRUB_STEPS = 20
+/** How many steps the volume is felt in (Ket 27): the sixteen of iOS. */
+internal const val VOLUME_STEPS = 16
+
 /** Height of the progress bar: 5 dp at rest, 12 dp under the finger (the spring may overshoot a little). */
 internal fun scrubThicknessDp(progress: Float): Float = 5f + 7f * (if (progress.isFinite()) progress.coerceIn(-.2f, 1.3f) else 0f)
 
@@ -302,6 +308,16 @@ fun ScrubBar(
     }
 
     val shown = (dragFraction ?: anim.value).coerceIn(0f, 1f)
+    // Ket 27: the progress bar of iOS 27 — a capsule that swells under the finger, without a knob, and a
+    // tick in the hand at each twentieth of the title that the finger crosses.
+    val ket = com.ketvoice.app.theme.Ket27.on
+    var lastScrubStep by remember(trackId) { mutableIntStateOf(-1) }
+    fun feelScrub(next: Float) {
+        if (!ket) return
+        val step = com.ketvoice.app.ui.common.SliderSteps.index(next, SCRUB_STEPS)
+        if (lastScrubStep != -1 && step != lastScrubStep) haptic(com.ketvoice.app.ui.motion.Haptics.Kind.Tick)
+        lastScrubStep = step
+    }
     // During a mix a second, finer line runs above the bar: the transition's own progress.
     val mix = rememberMixProgress()
     // The bar swells under the finger and settles back with a small bounce once released.
@@ -324,9 +340,11 @@ fun ScrubBar(
                     detectHorizontalDragGestures(
                         onDragStart = { off ->
                             dragFraction = (off.x / size.width).coerceIn(0f, 1f)
+                            lastScrubStep = -1; feelScrub(dragFraction ?: 0f)
                         },
                         onHorizontalDrag = { change, _ ->
                             dragFraction = (change.position.x / size.width).coerceIn(0f, 1f)
+                            feelScrub(dragFraction ?: 0f)
                         },
                         onDragEnd = {
                             val f = dragFraction
@@ -362,7 +380,12 @@ fun ScrubBar(
                     cap = StrokeCap.Round
                 )
             }
-            if (thickness > .02f) {
+            if (ket) {
+                // A line of light along the top of the fill: the bar reads as glass, at the cost of one line.
+                if (shown > 0.02f) drawLine(Color.White.copy(alpha = .22f + .16f * thickness.coerceIn(0f, 1f)),
+                    Offset(barH * .3f, y - barH * .22f), Offset((x - barH * .3f).coerceAtLeast(barH * .3f), y - barH * .22f),
+                    strokeWidth = (barH * .16f).coerceAtLeast(1f), cap = StrokeCap.Round)
+            } else if (thickness > .02f) {
                 drawCircle(Color.White, radius = 7.dp.toPx() * thickness.coerceIn(0f, 1.2f), center = Offset(x, y))
             }
             mix.value?.let { progress ->
@@ -393,21 +416,36 @@ fun VolumeRail(
     knobColor: Color = Color.White,
     onChange: (Float) -> Unit
 ) {
+    // Ket 27: the volume of iOS 27 — the rail swells under the finger and each of its sixteen steps is felt.
+    val ket = com.ketvoice.app.theme.Ket27.on
+    val haptic = com.ketvoice.app.ui.motion.rememberHaptics()
+    val latestChange by rememberUpdatedState(onChange)
+    val latestValue by rememberUpdatedState(value)
+    var held by remember { mutableStateOf(false) }
+    val swell by androidx.compose.animation.core.animateFloatAsState(if (held && ket) 1f else 0f,
+        if (Motion.reduced) androidx.compose.animation.core.snap()
+        else androidx.compose.animation.core.spring(dampingRatio = .55f, stiffness = 420f), label = "volume-swell")
+    fun set(next: Float) {
+        if (ket && com.ketvoice.app.ui.common.SliderSteps.crossed(latestValue, next, VOLUME_STEPS))
+            haptic(com.ketvoice.app.ui.motion.Haptics.Kind.Tick)
+        latestChange(next)
+    }
     Canvas(
         modifier
             .height(30.dp)
             .pointerInput(Unit) {
                 detectTapGestures { off ->
-                    onChange((off.x / size.width).coerceIn(0f, 1f))
+                    set((off.x / size.width).coerceIn(0f, 1f))
                 }
             }
             .pointerInput(Unit) {
-                detectHorizontalDragGestures { change, _ ->
-                    onChange((change.position.x / size.width).coerceIn(0f, 1f))
+                detectHorizontalDragGestures(onDragStart = { held = true }, onDragEnd = { held = false },
+                    onDragCancel = { held = false }) { change, _ ->
+                    set((change.position.x / size.width).coerceIn(0f, 1f))
                 }
             }
     ) {
-        val railH = 6.dp.toPx()
+        val railH = (6f + 5f * swell.coerceIn(-.2f, 1.3f)).dp.toPx()
         val y = size.height / 2f
         val w = size.width
         val knobR = 9.dp.toPx()
@@ -428,7 +466,10 @@ fun PlayerTransport(
     modifier: Modifier = Modifier,
     onPrevious: () -> Unit,
     onToggle: () -> Unit,
-    onNext: () -> Unit
+    onNext: () -> Unit,
+    previousModifier: Modifier = Modifier,
+    playModifier: Modifier = Modifier,
+    nextModifier: Modifier = Modifier
 ) {
     Row(
         modifier
@@ -438,7 +479,7 @@ fun PlayerTransport(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        TransportButton(onPrevious) {
+        TransportButton(onPrevious, previousModifier) {
             TransportGlyph("previous", Modifier.size(48.dp))
         }
         val playSrc = remember { MutableInteractionSource() }
@@ -446,7 +487,7 @@ fun PlayerTransport(
         val transportHaptic = com.ketvoice.app.ui.motion.rememberHaptics()
         val playbackStateLabel = com.ketvoice.app.data.AppText.t(if (playing) "Lecture en cours" else "En pause")
         Box(
-            Modifier
+            playModifier
                 .pressScale(min = 0.88f, isPressed = playPressed)
                 .size(74.dp)
                 .clip(CircleShape)
@@ -456,7 +497,7 @@ fun PlayerTransport(
         ) {
             MorphingTransportGlyph(playing, Modifier.size(46.dp))
         }
-        TransportButton(onNext) {
+        TransportButton(onNext, nextModifier) {
             TransportGlyph("next", Modifier.size(48.dp))
         }
     }
@@ -503,11 +544,11 @@ fun QueueGlyph(modifier: Modifier = Modifier, tint: Color = Color.White.copy(alp
 }
 
 @Composable
-private fun TransportButton(onClick: () -> Unit, inner: @Composable () -> Unit) {
+private fun TransportButton(onClick: () -> Unit, modifier: Modifier = Modifier, inner: @Composable () -> Unit) {
     val src = remember { MutableInteractionSource() }
     val pressed by src.collectIsPressedAsState()
     Box(
-        Modifier
+        modifier
             .pressScale(min = 0.84f, isPressed = pressed)
             .size(66.dp)
             .clip(CircleShape)
@@ -691,7 +732,7 @@ fun QueueActionsBar(
                 Icon(Icons.Filled.Shuffle, "Aléatoire", tint = it, modifier = Modifier.size(23.dp))
             }
             // Off, the whole queue, then the current title.
-            QueueSegment(repeatOne || repeatAll, onRepeat) {
+            QueueSegment(repeatOne || repeatAll, onRepeat, effectKey = if (repeatOne) 2 else if (repeatAll) 1 else 0, spin = true) {
                 Icon(
                     if (repeatOne) Icons.Filled.RepeatOne else Icons.Filled.Repeat,
                     repeatLabel(repeatOne, repeatAll),
@@ -726,19 +767,24 @@ internal fun repeatLabel(repeatOne: Boolean, repeatAll: Boolean): String = when 
 }
 
 @Composable
-private fun RowScope.QueueSegment(active: Boolean, onClick: () -> Unit, inner: @Composable (Color) -> Unit) {
+private fun RowScope.QueueSegment(active: Boolean, onClick: () -> Unit, effectKey: Any? = active, spin: Boolean = false,
+                                  inner: @Composable (Color) -> Unit) {
 
     val segAlpha by animateFloatAsState(if (active) 0.20f else 0f, tween(Motion.duration(Motion.FADE)), label = "segBg")
     val accent = com.ketvoice.app.theme.LocalTheme.current.accent
+    // Ket 27: the symbol pulses when its mode is switched (the arrows of "repeat" also go round), with a tick.
+    val ket = com.ketvoice.app.theme.Ket27.on
+    val haptic = com.ketvoice.app.ui.motion.rememberHaptics()
     Box(
         Modifier
             .weight(1f)
             .fillMaxHeight()
             .background(Color.Black.copy(alpha = segAlpha * 2.4f))
-            .clickable(noRipple, null) { onClick() },
+            .clickable(noRipple, null) { if (ket) haptic(com.ketvoice.app.ui.motion.Haptics.Kind.Tick); onClick() },
         contentAlignment = Alignment.Center
     ) {
-        inner(if (active) accent else Color.White.copy(alpha = 0.78f))
+        val tint = if (active) accent else Color.White.copy(alpha = 0.78f)
+        if (ket) Box(Modifier.symbolPulse(effectKey, spin = spin)) { inner(tint) } else inner(tint)
     }
 }
 
@@ -859,6 +905,17 @@ internal fun sheetOrigin(touch: androidx.compose.ui.geometry.Offset?, bounds: an
 
 @Composable
 fun PlayerSheetScrim(onClose: () -> Unit, content: @Composable () -> Unit) {
+    // Ket 27: every sheet rests on detents (half height, full height), follows the finger and settles with a spring.
+    if (com.ketvoice.app.ui.common.springSheets) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
+            com.ketvoice.app.ui.common.SpringSheet(onClose, insets = Modifier.statusBarsPadding().navigationBarsPadding()) {
+                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.BottomCenter) {
+                    Box(Modifier.widthIn(max = 560.dp).fillMaxWidth().pointerInput(Unit) { detectTapGestures {} }) { content() }
+                }
+            }
+        }
+        return
+    }
 
     val appear = remember { androidx.compose.animation.core.Animatable(if (Motion.reduced) 1f else 0f) }
     LaunchedEffect(Unit) {

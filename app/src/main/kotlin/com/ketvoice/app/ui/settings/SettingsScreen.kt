@@ -26,6 +26,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.selected
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.Alignment
@@ -877,30 +878,38 @@ private fun qualityChoice(title: String, current: String, onSelect: (String) -> 
 @Composable
 private fun ChoiceDialog(spec: ChoiceSpec, onDismiss: () -> Unit) {
     val th = LocalTheme.current
+    // Ket 27: the picker of iOS 27 — an inset group of 52 dp rows on the glass sheet, the choice
+    // marked in the app's colour, and a tick in the hand when it is made.
+    val ket = Ket27.on
+    val tick = com.ketvoice.app.ui.motion.rememberHaptics()
     SettingsSheet(onDismiss = onDismiss) {
-        Column(Modifier.fillMaxWidth().heightIn(max = 650.dp).verticalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp, vertical = 16.dp)) {
+        Column(Modifier.fillMaxWidth().heightIn(max = com.ketvoice.app.ui.common.sheetMaxHeight()).verticalScroll(rememberScrollState())
+            .padding(horizontal = if (ket) Ket27.Metrics.margin else 20.dp, vertical = 16.dp)) {
             SettingsSheetHeader(spec.title, spec.subtitle, onDismiss)
             Spacer(Modifier.height(18.dp))
-            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp))
-                .background(th.onBackground.copy(alpha = .035f)).selectableGroup()) {
+            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(if (ket) Ket27.Metrics.groupRadius else 18.dp))
+                .background(if (ket) th.card.copy(alpha = if (th.isDark) .62f else .78f) else th.onBackground.copy(alpha = .035f))
+                .selectableGroup().testTag("choice-options")) {
                 spec.options.forEachIndexed { index, option ->
-                    Row(Modifier.fillMaxWidth().selectable(option.id == spec.selectedId,
-                        role = Role.RadioButton, onClick = { spec.onSelect(option.id); onDismiss() })
-                        .heightIn(min = 56.dp).padding(horizontal = 16.dp, vertical = 14.dp),
+                    val chosen = option.id == spec.selectedId
+                    Row(Modifier.fillMaxWidth().then(if (ket) Modifier.rowPress(Role.RadioButton) {
+                            tick(com.ketvoice.app.ui.motion.Haptics.Kind.Tick); spec.onSelect(option.id); onDismiss()
+                        }.semantics { selected = chosen } else Modifier.selectable(chosen,
+                        role = Role.RadioButton, onClick = { spec.onSelect(option.id); onDismiss() }))
+                        .heightIn(min = if (ket) Ket27.Metrics.row else 56.dp).padding(horizontal = 16.dp, vertical = if (ket) 10.dp else 14.dp),
                         verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f).padding(end = 14.dp)) {
                             Text(option.label, localize = spec.title != "Langue de l'application", color = th.onBackground,
-                                fontSize = 15.5.sp, fontWeight = if (option.id == spec.selectedId) FontWeight.SemiBold else FontWeight.Normal,
+                                fontSize = if (ket) 17.sp else 15.5.sp, fontWeight = if (chosen && !ket) FontWeight.SemiBold else FontWeight.Normal,
                                 lineHeight = 22.sp)
                             if (option.sub.isNotBlank()) Text(option.sub, color = th.secondary,
-                                fontSize = 13.sp, lineHeight = 18.sp, modifier = Modifier.padding(top = 3.dp))
+                                fontSize = 13.sp, lineHeight = 18.sp, modifier = Modifier.padding(top = if (ket) 1.dp else 3.dp))
                         }
-                        if (option.id == spec.selectedId) Icon(KetIcons.Check, null, tint = th.onBackground, modifier = Modifier.size(20.dp))
+                        if (chosen) Icon(KetIcons.Check, null, tint = if (ket) th.accent else th.onBackground, modifier = Modifier.size(20.dp))
                         else Spacer(Modifier.size(20.dp))
                     }
-                    if (index != spec.options.lastIndex) Box(Modifier.padding(horizontal = 16.dp).fillMaxWidth().height(.5.dp)
-                        .background(th.onBackground.copy(alpha = .065f)))
+                    if (index != spec.options.lastIndex) Box(Modifier.padding(start = 16.dp, end = if (ket) 0.dp else 16.dp).fillMaxWidth().height(.5.dp)
+                        .background(if (ket) th.hairline else th.onBackground.copy(alpha = .065f)))
                 }
             }
             Spacer(Modifier.height(8.dp))
@@ -915,7 +924,7 @@ private fun AccentDialog(onClose: () -> Unit) {
     var error by remember { mutableStateOf<String?>(null) }
     val hexLabel = com.ketvoice.app.data.AppText.t("Code hexadécimal")
     SettingsSheet(onDismiss = onClose) {
-        Column(Modifier.fillMaxWidth().heightIn(max = 650.dp).verticalScroll(rememberScrollState()).padding(20.dp)) {
+        Column(Modifier.fillMaxWidth().heightIn(max = com.ketvoice.app.ui.common.sheetMaxHeight()).verticalScroll(rememberScrollState()).padding(20.dp)) {
             SettingsSheetHeader("Couleur d'accent",
                 "Appliquée à la timeline, au scrub, aux contrôles et à la progression.", onClose)
             Spacer(Modifier.height(18.dp))
@@ -973,7 +982,7 @@ private fun ConfigValueDialog(title: String, initial: String, secret: Boolean, o
     val valid = secret || value.isBlank() || value.startsWith("https://")
     val inputLabel = com.ketvoice.app.data.AppText.t(title)
     SettingsSheet(onDismiss = onClose) {
-        Column(Modifier.fillMaxWidth().heightIn(max = 650.dp).verticalScroll(rememberScrollState()).padding(20.dp)) {
+        Column(Modifier.fillMaxWidth().heightIn(max = com.ketvoice.app.ui.common.sheetMaxHeight()).verticalScroll(rememberScrollState()).padding(20.dp)) {
             SettingsSheetHeader(title, onClose = onClose)
             Spacer(Modifier.height(18.dp))
             BasicTextField(value, { value = it }, singleLine = true,
@@ -1049,8 +1058,11 @@ private fun ColumnScope.SToggle(
 ) {
     val th = LocalTheme.current
     val ket = Ket27.on
+    // Ket 27: flipping a switch is felt, as on iOS.
+    val tick = com.ketvoice.app.ui.motion.rememberHaptics()
     Row(
-        Modifier.fillMaxWidth().toggleable(checked, role = Role.Switch, onValueChange = onChecked)
+        Modifier.fillMaxWidth().toggleable(checked, role = Role.Switch,
+            onValueChange = { if (ket) tick(com.ketvoice.app.ui.motion.Haptics.Kind.Tick); onChecked(it) })
             .heightIn(min = if (ket) Ket27.Metrics.row else 76.dp).padding(horizontal = if (ket) 16.dp else 20.dp, vertical = if (ket) 10.dp else 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

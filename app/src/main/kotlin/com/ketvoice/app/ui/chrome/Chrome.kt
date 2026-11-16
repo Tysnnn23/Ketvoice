@@ -165,6 +165,7 @@ fun MiniPlayerPill(
                 Column(
                     Modifier.weight(1f).graphicsLayer { alpha = labelAlpha }
                         .trackSwipeContent(swipe, travel = .55f)
+                        .onGloballyPositioned { com.ketvoice.app.ui.player.MiniPlayerAnchors.title = it.boundsInRoot() }
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         if (current.explicit) {
@@ -192,9 +193,13 @@ fun MiniPlayerPill(
                     )
                 }
                 Spacer(Modifier.width(4.dp))
-                MiniTransportButton(playing = ps.playWhenReady, size = playSize)
+                Box(Modifier.onGloballyPositioned { com.ketvoice.app.ui.player.MiniPlayerAnchors.play = it.boundsInRoot() }) {
+                    MiniTransportButton(playing = ps.playWhenReady, size = playSize)
+                }
                 Spacer(Modifier.width(2.dp))
-                MiniTransportNext()
+                Box(Modifier.onGloballyPositioned { com.ketvoice.app.ui.player.MiniPlayerAnchors.next = it.boundsInRoot() }) {
+                    MiniTransportNext()
+                }
             }
 
             // Ligne de progression animée (composant isolé du tic)

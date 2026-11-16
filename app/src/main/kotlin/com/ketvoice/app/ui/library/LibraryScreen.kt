@@ -259,7 +259,7 @@ fun LibraryScreen() {
                         selected = if (track.id in selected) selected - track.id else selected + track.id
                     } else Modifier.trackRowClick(track) { Player.playQueue(shown, shown.indexOfFirst { it.id == track.id }) }
                 ).padding(horizontal = 18.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    if (selecting) Checkbox(track.id in selected, onCheckedChange = null)
+                    if (selecting) com.ketvoice.app.ui.common.KetCheckbox(track.id in selected, onCheckedChange = null)
                     DownloadCover(track, ArtworkRepo.coverForTrack(track) ?: track.coverUrl, 48.dp, 10.dp)
                     Column(Modifier.weight(1f).padding(start = 12.dp)) {
                         TrackTitle(track.title, color = theme.onBackground)

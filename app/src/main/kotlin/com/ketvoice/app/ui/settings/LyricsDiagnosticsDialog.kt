@@ -35,7 +35,7 @@ fun LyricsDiagnosticsDialog(onClose: () -> Unit) {
         probing = false
     }
     SettingsSheet(onDismiss = onClose) {
-        Column(Modifier.fillMaxWidth().heightIn(max = 650.dp).verticalScroll(rememberScrollState()).padding(20.dp)) {
+        Column(Modifier.fillMaxWidth().heightIn(max = com.ketvoice.app.ui.common.sheetMaxHeight()).verticalScroll(rememberScrollState()).padding(20.dp)) {
             SettingsSheetHeader("Diagnostic des sources de paroles",
                 if (track == null) "Lisez un titre puis relancez le test : chaque source est interrogée sur ce titre."
                 else "Chaque source est interrogée sur « ${track.title} — ${track.artist} ».", onClose)

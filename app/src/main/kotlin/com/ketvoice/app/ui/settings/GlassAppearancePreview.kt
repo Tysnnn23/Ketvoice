@@ -49,7 +49,7 @@ internal fun GlassAppearancePreview(onClose: () -> Unit) {
     }
     SettingsSheet(onDismiss = ::cancel) {
         // Annuler / Appliquer stay pinned under the scrollable preview, always reachable.
-        Column(Modifier.fillMaxWidth().heightIn(max = 650.dp)) {
+        Column(Modifier.fillMaxWidth().heightIn(max = com.ketvoice.app.ui.common.sheetMaxHeight())) {
         Column(Modifier.fillMaxWidth().weight(1f, fill = false).verticalScroll(rememberScrollState())
             .padding(start = 20.dp, end = 20.dp, top = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             SettingsSheetHeader("Aperçu du verre", "Comparer Clair, Dépoli, Opaque et Liquid 27 avant d'appliquer", ::cancel)

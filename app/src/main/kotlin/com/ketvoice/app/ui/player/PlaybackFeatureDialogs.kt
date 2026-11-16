@@ -91,8 +91,9 @@ private fun EqualizerDialog(onClose:()->Unit){
     var job by remember{mutableStateOf<Job?>(null)}
     fun apply(){job?.cancel();job=scope.launch{delay(45);Player.applyEqualizer()}}
     fun finish(){job?.cancel();Player.applyEqualizer();SettingsStore.save();onClose()}
+    val eqTick = com.ketvoice.app.ui.motion.rememberHaptics()
     SettingsSheet(onDismiss=::finish) {
-        Column(Modifier.fillMaxWidth().heightIn(max=650.dp).verticalScroll(rememberScrollState()).padding(20.dp)){
+        Column(Modifier.fillMaxWidth().heightIn(max = com.ketvoice.app.ui.common.sheetMaxHeight()).verticalScroll(rememberScrollState()).padding(20.dp)){
             Text("Égaliseur",color=theme.onBackground,fontSize=20.sp,fontWeight=FontWeight.Bold,modifier=Modifier.padding(bottom=12.dp))
             Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){
                 Text("Activer l'égaliseur",color=theme.onBackground,modifier=Modifier.weight(1f))
@@ -111,7 +112,11 @@ private fun EqualizerDialog(onClose:()->Unit){
                 enabled = status.available && AppSettings.equalizerEnabled.value,
                 onBand = { i, gain ->
                     val now = EqualizerProfile.normalize(AppSettings.equalizerGains.value)
-                    if (now[i] != gain) { AppSettings.equalizerGains.value = now.toMutableList().apply { set(i, gain) }; apply() }
+                    if (now[i] != gain) {
+                        // Ket 27: each decibel the curve is pulled through is felt.
+                        if (com.ketvoice.app.theme.Ket27.on) eqTick(com.ketvoice.app.ui.motion.Haptics.Kind.Tick)
+                        AppSettings.equalizerGains.value = now.toMutableList().apply { set(i, gain) }; apply()
+                    }
                 }, onDone = { Player.applyEqualizer(); SettingsStore.save() })
             FlowRow(horizontalArrangement=Arrangement.spacedBy(6.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
                 EqualizerProfile.presets.forEach{(name,gains)->
@@ -157,7 +162,7 @@ private fun HandoffDialog(onClose:()->Unit){
     val playback by Player.state.collectAsState()
     val theme=LocalTheme.current
     SettingsSheet(onDismiss=onClose) {
-        Column(Modifier.fillMaxWidth().heightIn(max=650.dp).verticalScroll(rememberScrollState()).padding(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
+        Column(Modifier.fillMaxWidth().heightIn(max = com.ketvoice.app.ui.common.sheetMaxHeight()).verticalScroll(rememberScrollState()).padding(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
             Text("Transfert sur le même Wi-Fi",color=theme.onBackground,fontSize=20.sp,fontWeight=FontWeight.Bold)
             Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){
                 Text("Découverte et réception locales",color=theme.onBackground,modifier=Modifier.weight(1f))
