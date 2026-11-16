@@ -63,9 +63,6 @@ internal object ContextMenus {
 
     val request = mutableStateOf<Request?>(null)
 
-    /** Whether a long press opens this menu instead of the title's sheet. */
-    val enabled: Boolean get() = Ket27.on
-
     fun open(track: Track, anchor: Rect?) {
         if (anchor == null || anchor.width <= 0f || anchor.height <= 0f) { AppUi.trackMenuTrack.value = track; return }
         request.value = Request(track, anchor)

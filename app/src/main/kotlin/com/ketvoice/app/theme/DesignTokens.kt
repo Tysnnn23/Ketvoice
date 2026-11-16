@@ -33,15 +33,6 @@ object DesignTokens {
     }
 
     object Typography {
-        val display = TextStyle(fontWeight = FontWeight.Black, fontSize = 34.sp, letterSpacing = .5.sp, lineHeight = 40.sp)
-        val largeTitle = TextStyle(fontWeight = FontWeight.ExtraBold, fontSize = 40.sp, lineHeight = 44.sp)
-        val title = TextStyle(fontWeight = FontWeight.Bold, fontSize = 22.sp)
-        val section = TextStyle(fontWeight = FontWeight.Bold, fontSize = 20.sp)
-        val body = TextStyle(fontSize = 16.sp)
-        val bodyBold = TextStyle(fontWeight = FontWeight.Bold, fontSize = 16.sp)
-        val supporting = TextStyle(fontSize = 13.sp, lineHeight = 18.sp)
-        val caption = TextStyle(fontSize = 12.sp)
-        val label = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
         val lyrics = TextStyle(fontWeight = FontWeight.Bold, fontSize = 21.sp, lineHeight = 30.sp)
     }
 

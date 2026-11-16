@@ -166,13 +166,10 @@ internal fun QueuePane(state: PlayerUiState, modifier: Modifier = Modifier, show
     }
 
     Column(modifier) {
-        val ket = com.ketvoice.app.theme.Ket27.on
-        // Ket 27: Inter is wider, so the name of the queue keeps a line of its own whenever the actions do not fit beside it.
-        QueueHeaderRow(ket, title = {
-            if (ket) Text("File d'attente", color = Color.White, style = com.ketvoice.app.theme.Ket27.Type.title3, maxLines = 1,
+        // Inter is wide, so the name of the queue keeps a line of its own whenever the actions do not fit beside it.
+        QueueHeaderRow(title = {
+            Text("File d'attente", color = Color.White, style = com.ketvoice.app.theme.Ket27.Type.title3, maxLines = 1,
                 overflow = TextOverflow.Ellipsis, modifier = it.asHeading())
-            else Text("File d'attente", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold, letterSpacing = (-.6).sp,
-                maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = it.asHeading())
         }) {
             if (selecting) {
                 val all = state.queueEntryIds.drop(state.index + 1).toSet()
@@ -318,12 +315,11 @@ private fun QueueModes(state: PlayerUiState) {
 private fun QueueMode(icon: ImageVector, label: String, active: Boolean, effectKey: Any? = active, spin: Boolean = false,
                       onClick: () -> Unit) {
     val accent = LocalTheme.current.accent
-    val ket = com.ketvoice.app.theme.Ket27.on
     Box(Modifier.size(48.dp).clip(CircleShape)
         .background(if (active) accent.copy(alpha = .22f) else Color.White.copy(alpha = .08f))
         .clickable(role = Role.Button, onClick = onClick), contentAlignment = Alignment.Center) {
         Icon(icon, label, tint = if (active) accent else Color.White.copy(alpha = .78f), modifier = Modifier.size(22.dp)
-            .then(if (ket) Modifier.symbolPulse(effectKey, spin = spin) else Modifier))
+            .symbolPulse(effectKey, spin = spin))
     }
 }
 
@@ -388,11 +384,10 @@ private fun QueueRow(track: Track, cover: String?, modifier: Modifier = Modifier
     }
 }
 
-/** The queue's header: its name, then its actions — beside it, or (Ket 27) on the next line when they do not fit. */
+/** The queue's header: its name, then its actions — beside it, or on the next line when they do not fit. */
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
-private fun QueueHeaderRow(ket: Boolean, title: @Composable (Modifier) -> Unit, actions: @Composable RowScope.() -> Unit) {
-    if (!ket) { Row(verticalAlignment = Alignment.CenterVertically) { title(Modifier.weight(1f)); actions() }; return }
+private fun QueueHeaderRow(title: @Composable (Modifier) -> Unit, actions: @Composable RowScope.() -> Unit) {
     androidx.compose.foundation.layout.FlowRow(Modifier.fillMaxWidth().testTag("queue-header"),
         horizontalArrangement = Arrangement.SpaceBetween, verticalArrangement = Arrangement.Center) {
         Box(Modifier.heightIn(min = 40.dp).align(Alignment.CenterVertically), contentAlignment = Alignment.CenterStart) { title(Modifier) }

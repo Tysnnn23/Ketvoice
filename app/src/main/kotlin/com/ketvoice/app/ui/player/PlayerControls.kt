@@ -310,10 +310,8 @@ fun ScrubBar(
     val shown = (dragFraction ?: anim.value).coerceIn(0f, 1f)
     // Ket 27: the progress bar of iOS 27 — a capsule that swells under the finger, without a knob, and a
     // tick in the hand at each twentieth of the title that the finger crosses.
-    val ket = com.ketvoice.app.theme.Ket27.on
     var lastScrubStep by remember(trackId) { mutableIntStateOf(-1) }
     fun feelScrub(next: Float) {
-        if (!ket) return
         val step = com.ketvoice.app.ui.common.SliderSteps.index(next, SCRUB_STEPS)
         if (lastScrubStep != -1 && step != lastScrubStep) haptic(com.ketvoice.app.ui.motion.Haptics.Kind.Tick)
         lastScrubStep = step
@@ -380,14 +378,10 @@ fun ScrubBar(
                     cap = StrokeCap.Round
                 )
             }
-            if (ket) {
-                // A line of light along the top of the fill: the bar reads as glass, at the cost of one line.
-                if (shown > 0.02f) drawLine(Color.White.copy(alpha = .22f + .16f * thickness.coerceIn(0f, 1f)),
-                    Offset(barH * .3f, y - barH * .22f), Offset((x - barH * .3f).coerceAtLeast(barH * .3f), y - barH * .22f),
-                    strokeWidth = (barH * .16f).coerceAtLeast(1f), cap = StrokeCap.Round)
-            } else if (thickness > .02f) {
-                drawCircle(Color.White, radius = 7.dp.toPx() * thickness.coerceIn(0f, 1.2f), center = Offset(x, y))
-            }
+            // A line of light along the top of the fill: the bar reads as glass, at the cost of one line.
+            if (shown > 0.02f) drawLine(Color.White.copy(alpha = .22f + .16f * thickness.coerceIn(0f, 1f)),
+                Offset(barH * .3f, y - barH * .22f), Offset((x - barH * .3f).coerceAtLeast(barH * .3f), y - barH * .22f),
+                strokeWidth = (barH * .16f).coerceAtLeast(1f), cap = StrokeCap.Round)
             mix.value?.let { progress ->
                 val lineY = y - 8.dp.toPx()
                 // It fades in and out at the ends of the mix instead of popping.
@@ -417,16 +411,15 @@ fun VolumeRail(
     onChange: (Float) -> Unit
 ) {
     // Ket 27: the volume of iOS 27 — the rail swells under the finger and each of its sixteen steps is felt.
-    val ket = com.ketvoice.app.theme.Ket27.on
     val haptic = com.ketvoice.app.ui.motion.rememberHaptics()
     val latestChange by rememberUpdatedState(onChange)
     val latestValue by rememberUpdatedState(value)
     var held by remember { mutableStateOf(false) }
-    val swell by androidx.compose.animation.core.animateFloatAsState(if (held && ket) 1f else 0f,
+    val swell by androidx.compose.animation.core.animateFloatAsState(if (held) 1f else 0f,
         if (Motion.reduced) androidx.compose.animation.core.snap()
         else androidx.compose.animation.core.spring(dampingRatio = .55f, stiffness = 420f), label = "volume-swell")
     fun set(next: Float) {
-        if (ket && com.ketvoice.app.ui.common.SliderSteps.crossed(latestValue, next, VOLUME_STEPS))
+        if (com.ketvoice.app.ui.common.SliderSteps.crossed(latestValue, next, VOLUME_STEPS))
             haptic(com.ketvoice.app.ui.motion.Haptics.Kind.Tick)
         latestChange(next)
     }
@@ -773,18 +766,17 @@ private fun RowScope.QueueSegment(active: Boolean, onClick: () -> Unit, effectKe
     val segAlpha by animateFloatAsState(if (active) 0.20f else 0f, tween(Motion.duration(Motion.FADE)), label = "segBg")
     val accent = com.ketvoice.app.theme.LocalTheme.current.accent
     // Ket 27: the symbol pulses when its mode is switched (the arrows of "repeat" also go round), with a tick.
-    val ket = com.ketvoice.app.theme.Ket27.on
     val haptic = com.ketvoice.app.ui.motion.rememberHaptics()
     Box(
         Modifier
             .weight(1f)
             .fillMaxHeight()
             .background(Color.Black.copy(alpha = segAlpha * 2.4f))
-            .clickable(noRipple, null) { if (ket) haptic(com.ketvoice.app.ui.motion.Haptics.Kind.Tick); onClick() },
+            .clickable(noRipple, null) { haptic(com.ketvoice.app.ui.motion.Haptics.Kind.Tick); onClick() },
         contentAlignment = Alignment.Center
     ) {
         val tint = if (active) accent else Color.White.copy(alpha = 0.78f)
-        if (ket) Box(Modifier.symbolPulse(effectKey, spin = spin)) { inner(tint) } else inner(tint)
+        Box(Modifier.symbolPulse(effectKey, spin = spin)) { inner(tint) }
     }
 }
 

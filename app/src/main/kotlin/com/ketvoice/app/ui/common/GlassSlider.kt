@@ -74,15 +74,13 @@ fun GlassSlider(
     val direction = LocalLayoutDirection.current
     // Ket 27: the slider of iOS 27 — a capsule of glass wider than it is tall, on a slightly thicker
     // track, and a tick in the hand at each step of its travel.
-    val ket = com.ketvoice.app.theme.Ket27.on
-    val thumb = if (ket) 36.dp else 22.dp
-    val thumbHeight = if (ket) 24.dp else 22.dp
-    val rail = if (ket) 6.dp else 5.dp
+    val thumb = 36.dp
+    val thumbHeight = 24.dp
+    val rail = 6.dp
     val tick = com.ketvoice.app.ui.motion.rememberHaptics()
     val stepCount = if (steps > 0) steps else SliderSteps.count(valueRange.start, valueRange.endInclusive)
     var lastStep by remember { mutableStateOf(SliderSteps.index(fraction, stepCount)) }
     fun feel(next: Float) {
-        if (!ket) return
         val step = SliderSteps.index(next, stepCount)
         if (step != lastStep) { lastStep = step; tick(com.ketvoice.app.ui.motion.Haptics.Kind.Tick) }
     }

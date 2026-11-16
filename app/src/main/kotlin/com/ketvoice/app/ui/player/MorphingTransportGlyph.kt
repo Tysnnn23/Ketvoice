@@ -69,13 +69,11 @@ internal fun TransportGlyphAt(progress: Float, modifier: Modifier = Modifier, ti
 /** Two matching polygon halves become pause bars; never crossfade two icons. */
 @Composable
 fun MorphingTransportGlyph(playing: Boolean, modifier: Modifier = Modifier, tint: Color = Color.White) {
-    val ket = Ket27.on
     // Ket 27: the symbol is replaced on a spring that overshoots once, as SF Symbols do, and it dips under the change.
     val morph by animateFloatAsState(if (playing) 1f else 0f,
-        if (Motion.reduced) snap() else if (ket) spring(dampingRatio = SymbolEffects.MORPH_DAMPING, stiffness = SymbolEffects.MORPH_STIFFNESS)
-        else tween(Motion.duration(220)), label = "transport-morph")
+        if (Motion.reduced) snap() else spring(dampingRatio = SymbolEffects.MORPH_DAMPING, stiffness = SymbolEffects.MORPH_STIFFNESS),
+        label = "transport-morph")
     val described = modifier.semantics { contentDescription = AppText.t(if (playing) "Pause" else "Lecture") }
-    if (!ket) { TransportGlyphAt(morph, described, tint); return }
     TransportGlyphAt(morph, described.graphicsLayer {
         val dip = SymbolEffects.replaceDip(morph)
         scaleX = dip; scaleY = dip

@@ -60,7 +60,7 @@ fun ListeningStatsScreen(modifier: Modifier = Modifier) {
         ) {
             item {
                 Column {
-                    com.ketvoice.app.ui.common.PageTitle("Ton récap", 30.sp, classicWeight = FontWeight.Black)
+                    com.ketvoice.app.ui.common.PageTitle("Ton récap")
                     Spacer(Modifier.height(4.dp))
                     Text(
                         text = "Ce que tu as écouté dans Ketvoice — rien ne quitte ton appareil.",

@@ -9,18 +9,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ketvoice.app.R
-import com.ketvoice.app.data.AppSettings
 
 /**
- * Ket 27 (Alpha): Ketvoice in the manner of iOS 27. One switch; everything that follows it reads
- * [on]. The numbers are those of Apple's iOS 27 design kit (1 pt = 1 dp): system colours, the
- * text styles of San Francisco, grouped lists with 26 dp corners and 52 dp rows, a 62 dp tab bar.
- * San Francisco itself cannot be shipped outside Apple's platforms; Inter (SIL Open Font
- * License) is the open typeface closest to it.
+ * Ket 27: Ketvoice's interface (since 6.0.0 the only one), in the manner of iOS 27. The numbers
+ * are those of Apple's iOS 27 design kit (1 pt = 1 dp): system colours, the text styles of San
+ * Francisco, grouped lists with 26 dp corners and 52 dp rows, a 62 dp tab bar. San Francisco
+ * itself cannot be shipped outside Apple's platforms; Inter (SIL Open Font License) is the open
+ * typeface closest to it.
  */
 object Ket27 {
-    val on: Boolean get() = AppSettings.ket27.value
-
     @OptIn(androidx.compose.ui.text.ExperimentalTextApi::class)
     val font: FontFamily by lazy {
         FontFamily(listOf(100, 200, 300, 400, 500, 600, 700, 800, 900).map { weight ->

@@ -300,9 +300,7 @@ private fun GlassPanelBody(
         1 -> params.copy(blurPx = maxOf(params.blurPx, 26f), tintAlpha = if (params.dark) .16f else .12f,
             refractionHeightDp = 3f, refractionAmountDp = 4f)
         // Defined borders replace drop and inner shadows; the blur follows Clear ↔ Tinted.
-        GlassStyles.LIQUID_27 -> if (com.ketvoice.app.theme.Ket27.on) Ket27Glass.regular(params, AppSettings.glassTint.value)
-            else params.copy(shadow = false, innerShadow = false,
-            blurPx = liquid27BlurPx(AppSettings.glassTint.value, params.role))
+        GlassStyles.LIQUID_27 -> Ket27Glass.regular(params, AppSettings.glassTint.value)
         else -> params
     }
     if (styledParams.role == GlassRole.Panel) {
@@ -319,7 +317,7 @@ private fun GlassPanelBody(
     }
     val tint = GlassTuning.sanitize(AppSettings.glassTint.value)
     // Ket 27 sets the tint of iOS 27's regular glass itself.
-    val params = if (liquid27 && com.ketvoice.app.theme.Ket27.on) styledParams
+    val params = if (liquid27) styledParams
         else styledParams.copy(tintAlpha = GlassTuning.opticalTint(styledParams.tintAlpha, tint, styledParams.dark))
     val theme = LocalTheme.current
     val glassTheme = if (params.dark && !theme.isDark)
@@ -534,8 +532,8 @@ object GlassStyles {
     const val OPAQUE = 2
     const val LIQUID_27 = 3
     const val MAX = LIQUID_27
-    /** The style in use: the listener's, or Liquid 27 while Ket 27 is on. */
-    val current: Int get() = if (AppSettings.ket27.value) LIQUID_27 else AppSettings.glassStyle.value
+    /** The style in use: Liquid 27, the glass of Ket 27 (the others remain for previews and tests that name them). */
+    val current: Int get() = LIQUID_27
 }
 
 /**

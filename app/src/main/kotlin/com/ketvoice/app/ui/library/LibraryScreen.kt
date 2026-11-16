@@ -65,8 +65,8 @@ fun LibraryScreen() {
         query.isBlank() || listOf(track.title, track.artist, track.album).any { it.contains(query.trim(), true) }
     }
     val selectedTracks = all.filter { it.id in selected }
-    // Ket 27: the library of Apple Music — categories in a list, then what was added lately.
-    val appleRoot = com.ketvoice.app.theme.Ket27.on && view == 0 && query.isBlank() && chosen == null
+    // The library of Apple Music (Ket 27): categories in a list, then what was added lately.
+    val appleRoot = view == 0 && query.isBlank() && chosen == null
     val list = rememberLazyListState()
     LaunchedEffect(all) { selected = selected.filter { id -> all.any { it.id == id } } }
     LaunchedEffect(list) {
@@ -94,10 +94,8 @@ fun LibraryScreen() {
         contentPadding = PaddingValues(top = 70.dp, bottom = LocalAdaptiveLayout.current.bottomPaddingDp.dp)) {
         item(key = "header") {
             Column(Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 14.dp)) {
-                if (com.ketvoice.app.theme.Ket27.on) Text("Bibliothèque", color = theme.onBackground, style = com.ketvoice.app.theme.T.hugeTitle,
+                Text("Bibliothèque", color = theme.onBackground, style = com.ketvoice.app.theme.T.hugeTitle,
                     modifier = Modifier.asHeading())
-                else Text("Bibliothèque", color = theme.onBackground, fontSize = 38.sp, fontWeight = FontWeight.Bold,
-                    letterSpacing = (-1.2).sp, modifier = Modifier.asHeading())
                 Text(AppText.t(if (all.size == 1) "1 titre" else "${all.size} titres") + " · " +
                     AppText.t("Playlists") + " " + playlists.size, localize = false, color = theme.secondary,
                     fontSize = 14.sp, modifier = Modifier.padding(top = 5.dp, bottom = 18.dp))
@@ -113,7 +111,7 @@ fun LibraryScreen() {
         }
         if (chosen != null) item(key = "album-heading") {
             Column(Modifier.padding(horizontal = 18.dp, vertical = 12.dp)) {
-                TextButton(onClick = { album = null }) { Text("Albums", color = theme.accent) }
+                com.ketvoice.app.ui.common.KetTextButton("Albums", { album = null })
                 Text(chosen.title, localize = false, color = theme.onBackground, fontSize = 28.sp, fontWeight = FontWeight.Bold)
                 Text(chosen.artist, localize = false, color = theme.secondary, fontSize = 14.sp)
                 CollectionPlaybackActions(chosen.tracks, Modifier.fillMaxWidth().padding(top = 16.dp))
@@ -145,34 +143,19 @@ fun LibraryScreen() {
                 }
             }
         }
-        if (view == 0 && query.isBlank() && chosen == null && !appleRoot) {
-            item(key = "shortcuts") {
-                Column(Modifier.padding(horizontal = 22.dp, vertical = 12.dp)
-                    .clip(RoundedCornerShape(24.dp)).background(theme.card)) {
-                    LibraryShortcut("Favoris", KetIcons.Heart, Modifier.fillMaxWidth()) { AppUi.openCatalog(CatalogRequest("favorites", "local", "Favoris")) }
-                    LibraryShortcut("Téléchargements", KetIcons.Download, Modifier.fillMaxWidth()) { AppUi.openDownloads() }
-                    LibraryShortcut("Musique locale", KetIcons.Folder, Modifier.fillMaxWidth()) { AppUi.openLocalFiles() }
-                    LibraryShortcut("Replay", KetIcons.Clock, Modifier.fillMaxWidth()) { AppUi.openReplay() }
-                }
-            }
-            if (playlists.any { it.pinned }) item(key = "pinned") {
-                LibrarySection("Épinglés")
-                PlaylistShelf(playlists.filter { it.pinned }, if (loadError) null else ::pin)
-            }
-        }
         if (view in 0..1 && chosen == null && !appleRoot) {
             val rows = playlists.filter { query.isBlank() || it.name.contains(query.trim(), true) }
                 .filterNot { view == 0 && query.isBlank() && it.pinned }
             item(key = "playlists") {
                 LibrarySection("Playlists")
                 Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    TextButton(onClick = { AppUi.showCreatePlaylist.value = true }, enabled = !loadError) { Text("Créer une playlist", color = theme.accent) }
-                    TextButton(onClick = { AppUi.showSpotifyImport.value = true }, enabled = !loadError) { Text("Importer depuis Spotify", color = theme.accent) }
+                    com.ketvoice.app.ui.common.KetTextButton("Créer une playlist", { AppUi.showCreatePlaylist.value = true }, enabled = !loadError)
+                    com.ketvoice.app.ui.common.KetTextButton("Importer depuis Spotify", { AppUi.showSpotifyImport.value = true }, enabled = !loadError)
                 }
                 // The Playlists view shows a grid of large covers; "All" keeps a row.
                 if (rows.isNotEmpty()) { if (view == 1) PlaylistGrid(rows, if (loadError) null else ::pin) else PlaylistShelf(rows, if (loadError) null else ::pin) }
-                TextButton(onClick = { importFile.launch(arrayOf("application/json", "text/*", "audio/x-mpegurl", "audio/mpegurl", "*/*")) },
-                    enabled = !loadError, modifier = Modifier.padding(horizontal = 14.dp)) { Text("Importer un fichier · .json / .m3u", color = theme.accent) }
+                com.ketvoice.app.ui.common.KetTextButton("Importer un fichier · .json / .m3u", { importFile.launch(arrayOf("application/json", "text/*", "audio/x-mpegurl", "audio/mpegurl", "*/*")) },
+                    enabled = !loadError, modifier = Modifier.padding(horizontal = 14.dp))
                 if (loadError || error.isNotBlank()) Text(if (error.isNotBlank()) error else "Impossible de lire les playlists",
                     color = theme.secondary, modifier = Modifier.padding(18.dp))
             }
@@ -183,7 +166,7 @@ fun LibraryScreen() {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.weight(1f)) { LibrarySection("Albums") }
                     Box {
-                        TextButton(onClick = { sorting = true }) { Text("Trier", color = theme.accent) }
+                        com.ketvoice.app.ui.common.KetTextButton("Trier", { sorting = true })
                         DropdownMenu(expanded = sorting, onDismissRequest = { sorting = false }) {
                             AlbumOrder.labels.forEachIndexed { index, label -> DropdownMenuItem(text = { Text(label) }, onClick = { order = index; sorting = false }) }
                         }
@@ -233,12 +216,11 @@ fun LibraryScreen() {
             item(key = "tracks-heading") {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.weight(1f)) { LibrarySection("Titres") }
-                    if (all.isNotEmpty()) TextButton(onClick = { selecting = !selecting; selected = emptyList() }) {
-                        Text(if (selecting) "Annuler" else "Sélectionner", color = theme.accent)
-                    }
+                    if (all.isNotEmpty()) com.ketvoice.app.ui.common.KetTextButton(if (selecting) "Annuler" else "Sélectionner",
+                        { selecting = !selecting; selected = emptyList() })
                 }
                 if (selecting) Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                    TextButton(onClick = { selected = shown.map { it.id } }) { Text("Tout sélectionner", color = theme.accent) }
+                    com.ketvoice.app.ui.common.KetTextButton("Tout sélectionner", { selected = shown.map { it.id } })
                     IconButton(onClick = { Player.playQueue(selectedTracks) }, enabled = selectedTracks.isNotEmpty()) { Icon(KetIcons.Play, "Lecture", tint = theme.accent) }
                     IconButton(onClick = { Player.enqueue(selectedTracks); selected = emptyList(); selecting = false }, enabled = selectedTracks.isNotEmpty()) {
                         Icon(Icons.Filled.QueueMusic, "Ajouter à la file", tint = theme.accent)
@@ -357,20 +339,7 @@ internal fun PlaylistGrid(rows: List<LocalPlaylist>, onPin: ((LocalPlaylist) -> 
 
 @Composable
 private fun LibrarySection(title: String) {
-    Text(title, color = LocalTheme.current.onBackground, fontSize = 22.sp, fontWeight = FontWeight.Bold,
-        modifier = Modifier.padding(horizontal = 18.dp, vertical = 16.dp))
-}
-
-@Composable
-private fun LibraryShortcut(title: String, icon: androidx.compose.ui.graphics.vector.ImageVector, modifier: Modifier, onClick: () -> Unit) {
-    val theme = LocalTheme.current
-    Row(modifier.clickable(role = Role.Button, onClick = onClick)
-        .heightIn(min = 62.dp).padding(horizontal = 18.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-        Icon(icon, null, tint = theme.accent, modifier = Modifier.size(24.dp))
-        Text(title, color = theme.onBackground, fontSize = 16.sp, fontWeight = FontWeight.Medium,
-            maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(start = 16.dp, end = 8.dp))
-        Icon(KetIcons.ChevronRight, null, tint = theme.secondary, modifier = Modifier.size(18.dp))
-    }
+    com.ketvoice.app.ui.common.SectionHeader(title, Modifier.padding(horizontal = 18.dp, vertical = 16.dp))
 }
 
 /** The categories of the library as Apple Music lists them: a symbol in the accent, a name, a chevron. */

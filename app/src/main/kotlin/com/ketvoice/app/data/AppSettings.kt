@@ -52,8 +52,6 @@ object AppSettings {
     val highRefreshRate = mutableStateOf(false)
     val syncedLyrics = mutableStateOf(true)
     val blurInactiveLyrics = mutableStateOf(true)
-    /** 0: Ketvoice lyrics; 1: Cascade, large lines that follow the song in a staggered wave. */
-    val lyricsStyle = mutableStateOf(0)
     /** Titles are mixed into each other at the end, like a DJ; off by default. */
     val automix = mutableStateOf(false)
     /** 0 = discreet, 1 = balanced, 2 = DJ. */
@@ -70,11 +68,6 @@ object AppSettings {
     val ketmixStyle = mutableStateOf(0)
     /** A light vibration when the bass passes from one title to the next (app in front only). */
     val ketmixHaptics = mutableStateOf(false)
-    /**
-     * Ket 27 (Alpha): the interface in the manner of iOS 27 — system colours, grouped lists, large
-     * titles, Inter (the open typeface closest to San Francisco) and Liquid 27 glass everywhere.
-     */
-    val ket27 = mutableStateOf(false)
     val lyricsSource = mutableStateOf("auto")
     val betterLyricsKey = mutableStateOf("")
     val lyricaUrl = mutableStateOf("")

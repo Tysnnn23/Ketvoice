@@ -2,21 +2,30 @@ package com.ketvoice.app.ui.sub
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.*
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ketvoice.app.data.*
 import com.ketvoice.app.player.Player
 import com.ketvoice.app.theme.LocalTheme
+import com.ketvoice.app.ui.common.AppAlertDialog
+import com.ketvoice.app.ui.common.KetProgressBar
+import com.ketvoice.app.ui.common.KetTextButton
 import com.ketvoice.app.ui.common.Text
 import com.ketvoice.app.ui.common.TrackTitle
-import com.ketvoice.app.ui.common.AppAlertDialog as AlertDialog
 
+/** The offline capsule, in Ket 27's alert: a form read from the start of each line, its actions in the alert's capsules. */
 @Composable
 fun CapsuleDialog(onClose: () -> Unit) {
     val theme = LocalTheme.current
@@ -33,13 +42,10 @@ fun CapsuleDialog(onClose: () -> Unit) {
     val selected = preview.filterNot { it.id in excluded }
     val ready = OfflineCapsule.readyTracks()
     val readyItems = downloaded.filter { it.track.id in ready.map { t -> t.id }.toSet() }
-    AlertDialog(onDismissRequest = onClose,
-        // Ket 27: the rounder corners and the cell colour of an iOS alert.
-        shape = if (com.ketvoice.app.theme.Ket27.on) androidx.compose.foundation.shape.RoundedCornerShape(com.ketvoice.app.theme.Ket27.Metrics.alertRadius)
-            else androidx.compose.material3.AlertDialogDefaults.shape,
-        containerColor = if (com.ketvoice.app.theme.Ket27.on) theme.card else androidx.compose.material3.AlertDialogDefaults.containerColor,
+    AppAlertDialog(onDismissRequest = onClose, modifier = Modifier.testTag("capsule-dialog"),
         title = { Text("Capsule hors ligne") },
-        text = { Column(Modifier.fillMaxWidth().heightIn(max = (LocalConfiguration.current.screenHeightDp * .60f).dp)
+        text = { ProvideTextStyle(LocalTextStyle.current.copy(textAlign = TextAlign.Start)) {
+          Column(Modifier.fillMaxWidth().heightIn(max = (LocalConfiguration.current.screenHeightDp * .60f).dp)
             .verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Préparez une réserve pour votre trajet. Favoris en priorité, puis historique et sélection choisie. Aucun fichier existant n'est supprimé ou remplacé.", color = theme.secondary)
             CapsuleChoice("Durée souhaitée", listOf(30, 60, 120, 180).map { "$it min" }, "$minutes min", !capsule.busy) { minutes = listOf(30,60,120,180)[it]; preview = emptyList() }
@@ -49,12 +55,12 @@ fun CapsuleDialog(onClose: () -> Unit) {
                 Text("Inclure la sélection d'accueil", color = theme.onBackground)
             }
             Text("Durée et taille de la sélection sont estimées. Le budget est contrôlé sur les fichiers réellement écrits, hors cache partagé. Pochettes et paroles sont conservées si disponibles et si elles tiennent dans le budget. Les vidéos Canvas ne sont pas ajoutées à la capsule.", fontSize = 12.sp, color = theme.secondary)
-            if (!capsule.busy) TextButton(onClick = {
+            if (!capsule.busy) KetTextButton("Voir la sélection", {
                 preview = CapsulePlan.choose(history + known + Player.state.value.queue + downloaded.map { it.track } +
                     (if (discoveries) shelves.flatMap { it.tracks } else emptyList()), AppSettings.favoriteIds.value,
                     minutes * 60_000L, megabytes * 1_048_576L, downloaded.associate { it.track.id to Downloader.storedBytes(it) })
                 excluded = emptySet()
-            }) { Text("Voir la sélection", color = theme.accent) }
+            })
             if (preview.isNotEmpty()) {
                 Text("${selected.size} titres sélectionnés", color = theme.accent)
                 preview.forEach { track ->
@@ -69,30 +75,31 @@ fun CapsuleDialog(onClose: () -> Unit) {
                 Text("${ready.size} / ${capsule.tracks.size} audios prêts", color = theme.accent)
                 Text("${readyItems.count { it.hasLyrics }} paroles · ${readyItems.count { it.track.coverUrl?.startsWith("file:") == true }} pochettes enregistrées", color = theme.secondary)
                 if (capsule.busy) {
-                    LinearProgressIndicator(progress = { capsule.attempted.toFloat() / capsule.tracks.size.coerceAtLeast(1) }, modifier = Modifier.fillMaxWidth())
+                    KetProgressBar({ capsule.attempted.toFloat() / capsule.tracks.size.coerceAtLeast(1) })
                     Text("Gardez Ketvoice ouvert pendant la préparation.", color = theme.secondary)
                 }
                 if (capsule.message.isNotBlank()) Text(capsule.message, color = theme.secondary)
-                if (ready.isNotEmpty()) TextButton(onClick = { Player.playQueue(ready); onClose() }) { Text("Écouter la capsule", color = theme.accent) }
+                if (ready.isNotEmpty()) KetTextButton("Écouter la capsule", { Player.playQueue(ready); onClose() })
             }
+          }
         } }, confirmButton = {
-            if (!capsule.busy) TextButton(enabled = selected.isNotEmpty(), onClick = {
+            // While it prepares, the capsule can only be stopped; otherwise the selection is prepared.
+            if (capsule.busy) KetTextButton("Arrêter", OfflineCapsule::cancel, destructive = true)
+            else KetTextButton(if (capsule.tracks.isEmpty()) "Préparer la capsule" else "Remplacer la sélection", {
                 OfflineCapsule.prepare(selected, minutes, megabytes * 1_048_576L)
-            }) { Text(if (capsule.tracks.isEmpty()) "Préparer la capsule" else "Remplacer la sélection", color = theme.accent) }
-        }, dismissButton = {
-            Row { if (capsule.busy) TextButton(onClick = OfflineCapsule::cancel) { Text("Arrêter") }
-                TextButton(onClick = onClose) { Text("Fermer") } }
-        })
+            }, primary = true, enabled = selected.isNotEmpty())
+        }, dismissButton = { KetTextButton("Fermer", onClose) })
 }
 
 @Composable
 private fun CapsuleChoice(label: String, options: List<String>, value: String, enabled: Boolean, onChoose: (Int) -> Unit) {
+    val theme = LocalTheme.current
     var open by remember { mutableStateOf(false) }
-    Column {
-        Text(label)
-        Box { TextButton(enabled = enabled, onClick = { open = true }) { Text(value) }
-            DropdownMenu(open, { open = false }) { options.forEachIndexed { index, option ->
-                DropdownMenuItem(text = { Text(option) }, onClick = { open = false; onChoose(index) })
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(label, color = theme.onBackground, modifier = Modifier.weight(1f))
+        Box { KetTextButton(value, { open = true }, enabled = enabled)
+            DropdownMenu(open, { open = false }, shape = RoundedCornerShape(18.dp), containerColor = theme.card) { options.forEachIndexed { index, option ->
+                DropdownMenuItem(text = { Text(option, color = theme.onBackground) }, onClick = { open = false; onChoose(index) })
             } }
         }
     }

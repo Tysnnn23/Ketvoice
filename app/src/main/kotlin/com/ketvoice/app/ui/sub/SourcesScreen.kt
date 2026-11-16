@@ -24,7 +24,6 @@ import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material3.CircularProgressIndicator
 import com.ketvoice.app.ui.common.Icon
 import com.ketvoice.app.ui.common.Text
 import androidx.compose.runtime.*
@@ -75,25 +74,14 @@ fun SourcesScreen() {
 
     Column(Modifier.fillMaxSize().pageBackground(th).statusBarsPadding()) {
         // Ket 27: the bar of a pushed page, with the page's one action at its end.
-        if (com.ketvoice.app.theme.Ket27.on) com.ketvoice.app.ui.common.Ket27PageBar("Sources", { AppUi.closeOverlay() }) {
+        com.ketvoice.app.ui.common.Ket27PageBar("Sources", { AppUi.closeOverlay() }) {
             Box(Modifier.size(44.dp).clip(CircleShape).clickable { showAdd = true }, contentAlignment = Alignment.Center) {
                 Box(Modifier.size(34.dp).clip(CircleShape).background(th.accent), contentAlignment = Alignment.Center) {
                     Icon(Icons.Filled.Add, "Ajouter", tint = Color.White, modifier = Modifier.size(20.dp))
                 }
             }
-        } else Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, "Retour", tint = th.onBackground,
-                modifier = Modifier.size(30.dp).clickable { AppUi.closeOverlay() })
-            Spacer(Modifier.width(12.dp))
-            Text("Sources", color = th.onBackground, fontSize = 22.sp, fontWeight = FontWeight.Bold,
-                modifier = Modifier.weight(1f))
-            Box(Modifier.size(38.dp).clip(CircleShape).background(th.accent)
-                .clickable { showAdd = true }, contentAlignment = Alignment.Center) {
-                Icon(Icons.Filled.Add, "Ajouter", tint = Color.White, modifier = Modifier.size(22.dp))
-            }
         }
-        LazyColumn(contentPadding = PaddingValues(start = com.ketvoice.app.ui.common.pageMargin(18.dp), end = com.ketvoice.app.ui.common.pageMargin(18.dp), bottom = 160.dp)) {
+        LazyColumn(contentPadding = PaddingValues(start = com.ketvoice.app.ui.common.pageMargin, end = com.ketvoice.app.ui.common.pageMargin, bottom = 160.dp)) {
             item {
                 Text(
                     "Glissez les poignées pour définir la priorité de lecture et de téléchargement. " +
@@ -326,7 +314,7 @@ private fun KetvoiceApiCard(
             )
             Spacer(Modifier.weight(1f))
             if (testing) {
-                CircularProgressIndicator(color = th.accent, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
+                com.ketvoice.app.ui.common.ActivitySpinner(size = 18.dp)
             } else {
                 Text("Tester", color = th.accent, fontWeight = FontWeight.SemiBold, fontSize = 13.sp,
                     modifier = Modifier.clickable(onClick = onTest).padding(horizontal = 6.dp, vertical = 4.dp))
@@ -389,8 +377,7 @@ private fun SourceCard(
                 modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(th.background.copy(alpha = .55f))
                     .clickable(onClick = onQuality).padding(horizontal = 9.dp, vertical = 6.dp))
             Spacer(Modifier.weight(1f))
-            if (refreshing) CircularProgressIndicator(color = th.accent, strokeWidth = 2.dp,
-                modifier = Modifier.size(18.dp))
+            if (refreshing) com.ketvoice.app.ui.common.ActivitySpinner(size = 18.dp)
             else Icon(Icons.Filled.Refresh, "Tester", tint = th.secondary,
                 modifier = Modifier.size(20.dp).clickable(onClick = onRefresh).padding(1.dp))
             Spacer(Modifier.width(14.dp))
@@ -402,15 +389,8 @@ private fun SourceCard(
 
 @Composable
 private fun CustomSwitch(checked: Boolean, onToggle: () -> Unit) {
-    // Ket 27: the same switch as everywhere else in the app.
-    if (com.ketvoice.app.theme.Ket27.on) { com.ketvoice.app.ui.common.LiquidGlassSwitch(checked, { onToggle() }); return }
-    val th = LocalTheme.current
-    val offset by animateDpAsState(if (checked) 19.dp else 1.dp, spring(dampingRatio = .82f, stiffness = 500f))
-    val color by animateColorAsState(if (checked) th.accent else th.hairline)
-    Box(Modifier.width(43.dp).height(25.dp).clip(RoundedCornerShape(999.dp))
-        .background(color).clickable(onClick = onToggle).padding(2.dp)) {
-        Box(Modifier.offset(x = offset).size(21.dp).clip(CircleShape).background(Color.White))
-    }
+    // The same switch as everywhere else in the app.
+    com.ketvoice.app.ui.common.LiquidGlassSwitch(checked, { onToggle() })
 }
 
 @Composable
@@ -462,8 +442,7 @@ private fun AddSourceDialog(onDismiss: () -> Unit, onAdded: (String) -> Unit) {
                         else error = result.exceptionOrNull()?.message ?: "Source refusée"
                     }
                 }.padding(horizontal = 18.dp, vertical = 10.dp)) {
-                    if (busy) CircularProgressIndicator(color = Color.White, strokeWidth = 2.dp,
-                        modifier = Modifier.size(17.dp))
+                    if (busy) com.ketvoice.app.ui.common.ActivitySpinner(size = 17.dp, color = Color.White)
                     else Text("Valider", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 }
             }

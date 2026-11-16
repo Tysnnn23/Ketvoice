@@ -28,25 +28,29 @@ import com.ketvoice.app.theme.Ket27
 import com.ketvoice.app.theme.LocalTheme
 
 /**
- * What every page shares under Ket 27, in one place: the large title of a root page, the bar of a
- * page reached from another, the alert. Each falls back to what the classic page draws.
+ * What every page shares, in one place (Ket 27): the large title of a root page, its section
+ * headers, the bar of a page reached from another, the alert.
  */
 
-/** The margin of a page: 16 dp under Ket 27, the page's own otherwise. */
-internal fun pageMargin(classic: Dp): Dp = if (Ket27.on) Ket27.Metrics.margin else classic
+/** The margin of a page: 16 dp, as on iOS. */
+internal val pageMargin: Dp get() = Ket27.Metrics.margin
+
+/** The title a root page opens on, written as iOS writes a large title (34, bold). */
+@Composable
+internal fun PageTitle(text: String, modifier: Modifier = Modifier, color: Color = LocalTheme.current.onBackground,
+                       localize: Boolean = true, maxLines: Int = 1) {
+    Text(text, modifier, color = color, style = Ket27.Type.largeTitle, localize = localize, maxLines = maxLines,
+        overflow = TextOverflow.Ellipsis)
+}
 
 /**
- * The title a root page opens on. Ket 27 writes it as iOS writes a large title (34, bold); the
- * classic interface keeps the size, weight and tracking the page chose.
+ * The header of a section of a page, as iOS 27 writes it: in sentence case (« Écouté récemment »),
+ * title 2 (22, bold), in the page's text colour. [title] is a French literal, translated at display.
  */
 @Composable
-internal fun PageTitle(text: String, classicSize: TextUnit, modifier: Modifier = Modifier, classicWeight: FontWeight = FontWeight.Bold,
-                       classicSpacing: TextUnit = TextUnit.Unspecified, classicLineHeight: TextUnit = TextUnit.Unspecified,
-                       color: Color = LocalTheme.current.onBackground, localize: Boolean = true, maxLines: Int = 1) {
-    if (Ket27.on) Text(text, modifier, color = color, style = Ket27.Type.largeTitle, localize = localize, maxLines = maxLines,
-        overflow = TextOverflow.Ellipsis)
-    else Text(text, modifier, color = color, fontSize = classicSize, fontWeight = classicWeight, letterSpacing = classicSpacing,
-        lineHeight = classicLineHeight, localize = localize, maxLines = maxLines, overflow = TextOverflow.Ellipsis)
+internal fun SectionHeader(title: String, modifier: Modifier = Modifier, localize: Boolean = true) {
+    Text(title, modifier.semantics { heading() }, color = LocalTheme.current.onBackground, style = Ket27.Type.title2,
+        localize = localize, maxLines = 1, overflow = TextOverflow.Ellipsis)
 }
 
 /**

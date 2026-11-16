@@ -12,8 +12,6 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -155,8 +153,7 @@ fun AddToPlaylistSheet(tracks: List<Track>, onClose: () -> Unit) {
                                 Text("$available / ${list.entries.size} titres disponibles",
                                     color = com.ketvoice.app.ui.common.sheetInk().copy(alpha = .6f), fontSize = 12.5.sp)
                             }
-                            if (saving) CircularProgressIndicator(
-                                Modifier.size(20.dp), color = com.ketvoice.app.ui.common.sheetInk(), strokeWidth = 2.dp)
+                            if (saving) com.ketvoice.app.ui.common.ActivitySpinner(size = 20.dp, color = com.ketvoice.app.ui.common.sheetInk())
                         }
                     }
                 }
@@ -228,7 +225,7 @@ fun SpotifyImportDialog(onClose: () -> Unit) {
                     }
                 }
             }
-            if(busy)LinearProgressIndicator(modifier=Modifier.fillMaxWidth())
+            if(busy)com.ketvoice.app.ui.common.KetProgressBar(null)
             if(error.isNotBlank())Text(error,color=MaterialTheme.colorScheme.error)
             Column(Modifier.fillMaxWidth(), horizontalAlignment=Alignment.End) {
                 SettingsAction("Créer avec les titres affichés", {run{

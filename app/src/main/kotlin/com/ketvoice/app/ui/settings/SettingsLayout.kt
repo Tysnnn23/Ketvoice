@@ -49,27 +49,7 @@ internal fun SettingsLayout(category: SettingsCategory?, onBack: () -> Unit, con
             BackdropCapture(background, Modifier.widthIn(max = 840.dp).fillMaxSize()) {
                 content()
             }
-            if (Ket27.on) Ket27SettingsBar(category, onBack, Modifier.widthIn(max = 840.dp).fillMaxWidth().onSizeChanged { headerHeight = it.height })
-            else CompositionLocalProvider(LocalBackdropLayer provides background) {
-                Row(Modifier.widthIn(max = 840.dp).fillMaxWidth()
-                    .onSizeChanged { headerHeight = it.height }
-                    .statusBarsPadding().padding(horizontal = 20.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically) {
-                    com.ketvoice.app.ui.common.LiquidGlassButton(onBack, Modifier.size(48.dp)) {
-                        Icon(KetIcons.ArrowLeft, "Retour", tint = theme.onBackground, modifier = Modifier.size(22.dp))
-                    }
-                    GlassPanel(Modifier.weight(1f).padding(start = 12.dp), RoundedCornerShape(24.dp),
-                        GlassParams.pill(dark = theme.isDark)) {
-                        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 9.dp)) {
-                            Text(category?.title ?: "Réglages", color = theme.onBackground,
-                                fontSize = if (category == null) 29.sp else 25.sp, fontWeight = FontWeight.SemiBold,
-                                letterSpacing = (-.65).sp, lineHeight = 32.sp)
-                            if (category != null) Text(category.supportingText(), color = theme.secondary,
-                                fontSize = 13.sp, lineHeight = 18.sp, modifier = Modifier.padding(top = 3.dp))
-                        }
-                    }
-                }
-            }
+            Ket27SettingsBar(category, onBack, Modifier.widthIn(max = 840.dp).fillMaxWidth().onSizeChanged { headerHeight = it.height })
         }
     }
 }
@@ -120,26 +100,23 @@ internal fun Ket27Tile(icon: ImageVector, index: Int) {
     }
 }
 
-/** The shape and colour of a group of rows: iOS's inset grouped list while Ket 27 is on. */
+/** The shape and colour of a group of rows: iOS's inset grouped list (Ket 27). */
 @Composable
 internal fun Modifier.settingsGroup(): Modifier {
     val theme = LocalTheme.current
-    if (Ket27.on) return clip(RoundedCornerShape(Ket27.Metrics.groupRadius)).background(theme.card)
-    val shape = RoundedCornerShape(20.dp)
-    return clip(shape).background(theme.card).border(.5.dp, theme.onBackground.copy(alpha = .055f), shape)
+    return clip(RoundedCornerShape(Ket27.Metrics.groupRadius)).background(theme.card)
 }
 
 @Composable
 internal fun SettingsHome(connected: Boolean, name: String, onCategory: (SettingsCategory) -> Unit) {
     val theme = LocalTheme.current
     Column(Modifier.fillMaxSize().testTag("settings-home").verticalScroll(rememberScrollState())
-        .navigationBarsPadding().padding(horizontal = if (Ket27.on) Ket27.Metrics.margin else 20.dp).padding(top = LocalSettingsTopInset.current + 8.dp, bottom = 32.dp)) {
-        if (Ket27.on) Text("Réglages", color = theme.onBackground, style = Ket27.Type.largeTitle,
+        .navigationBarsPadding().padding(horizontal = Ket27.Metrics.margin).padding(top = LocalSettingsTopInset.current + 8.dp, bottom = 32.dp)) {
+        Text("Réglages", color = theme.onBackground, style = Ket27.Type.largeTitle,
             modifier = Modifier.padding(start = 4.dp, bottom = 14.dp).semantics { heading() }.testTag("ket27-large-title"))
-        Row(Modifier.fillMaxWidth().then(if (Ket27.on) Modifier.settingsGroup() else Modifier.clip(RoundedCornerShape(22.dp)).background(theme.card)
-            .border(.5.dp, theme.onBackground.copy(alpha = .055f), RoundedCornerShape(22.dp)))
+        Row(Modifier.fillMaxWidth().settingsGroup()
             .clickable(role = Role.Button) { onCategory(SettingsCategory.Account) }
-            .heightIn(min = if (Ket27.on) 76.dp else 104.dp).padding(horizontal = if (Ket27.on) 16.dp else 20.dp, vertical = if (Ket27.on) 12.dp else 20.dp),
+            .heightIn(min = 76.dp).padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically) {
             Icon(KetIcons.Account, null, tint = theme.onBackground.copy(alpha = .8f), modifier = Modifier.size(28.dp))
             Column(Modifier.weight(1f).padding(horizontal = 18.dp)) {
@@ -171,29 +148,24 @@ internal fun SettingsHome(connected: Boolean, name: String, onCategory: (Setting
 internal fun SettingsGroupHeading(title: String, modifier: Modifier = Modifier) {
     val theme = LocalTheme.current
     // iOS 27 writes its section headers in sentence case, larger and heavier.
-    if (Ket27.on) Text(ket27Heading(com.ketvoice.app.data.AppText.t(title)), localize = false, color = theme.onBackground,
+    Text(ket27Heading(com.ketvoice.app.data.AppText.t(title)), localize = false, color = theme.onBackground,
         style = Ket27.Type.headline, modifier = modifier.padding(start = 16.dp, end = 16.dp, top = 26.dp, bottom = 9.dp).semantics { heading() })
-    else Text(title, color = theme.secondary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
-        lineHeight = 18.sp, modifier = modifier.padding(start = 4.dp, end = 4.dp, top = 24.dp, bottom = 10.dp)
-            .semantics { heading() })
 }
 
 @Composable
 private fun SettingsCategoryGroup(categories: List<SettingsCategory>, onCategory: (SettingsCategory) -> Unit) {
     val theme = LocalTheme.current
-    val ket = Ket27.on
     Column(Modifier.fillMaxWidth().settingsGroup()) {
         categories.forEachIndexed { index, category ->
             Row(Modifier.fillMaxWidth().testTag("settings-category-${category.name}")
-                .rowPress { onCategory(category) }.heightIn(min = if (ket) 60.dp else 80.dp)
-                .padding(horizontal = if (ket) 16.dp else 20.dp, vertical = if (ket) 9.dp else 16.dp), verticalAlignment = Alignment.CenterVertically) {
-                if (ket) Ket27Tile(category.icon(), category.ordinal)
-                else Icon(category.icon(), null, tint = theme.onBackground.copy(alpha = .78f), modifier = Modifier.size(23.dp))
-                Column(Modifier.weight(1f).padding(start = if (ket) 12.dp else 18.dp, end = 14.dp)) {
-                    Text(category.title, color = theme.onBackground, fontSize = if (ket) 17.sp else 16.sp,
-                        fontWeight = if (ket) FontWeight.Normal else FontWeight.Medium, lineHeight = 22.sp)
+                .rowPress { onCategory(category) }.heightIn(min = 60.dp)
+                .padding(horizontal = 16.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
+                Ket27Tile(category.icon(), category.ordinal)
+                Column(Modifier.weight(1f).padding(start = 12.dp, end = 14.dp)) {
+                    Text(category.title, color = theme.onBackground, fontSize = 17.sp,
+                        fontWeight = FontWeight.Normal, lineHeight = 22.sp)
                     Text(category.supportingText(), color = theme.secondary, fontSize = 13.sp,
-                        lineHeight = 18.sp, modifier = Modifier.padding(top = if (ket) 1.dp else 3.dp))
+                        lineHeight = 18.sp, modifier = Modifier.padding(top = 1.dp))
                 }
                 Icon(KetIcons.ChevronRight, null, tint = theme.secondary.copy(alpha = .8f), modifier = Modifier.size(18.dp))
             }
@@ -206,9 +178,7 @@ private fun SettingsCategoryGroup(categories: List<SettingsCategory>, onCategory
 internal fun SettingsCellDivider() {
     val theme = LocalTheme.current
     // iOS aligns the separator with the text of the row and runs it to the edge of the group.
-    if (Ket27.on) Box(Modifier.padding(start = 58.dp).fillMaxWidth().height(.5.dp).background(theme.hairline))
-    else Box(Modifier.padding(start = 61.dp, end = 20.dp).fillMaxWidth().height(.5.dp)
-        .background(theme.onBackground.copy(alpha = .065f)))
+    Box(Modifier.padding(start = 58.dp).fillMaxWidth().height(.5.dp).background(theme.hairline))
 }
 
 /** "APPARENCE" as iOS 27 writes a header: "Apparence". Names written in capitals on purpose keep them. */

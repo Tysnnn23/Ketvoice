@@ -8,7 +8,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -109,7 +108,7 @@ internal fun DiscordSettings(modifier: Modifier = Modifier) {
                 )
             }
             when {
-                discord.busy -> CircularProgressIndicator(Modifier.size(18.dp), color = theme.accent, strokeWidth = 2.dp)
+                discord.busy -> com.ketvoice.app.ui.common.ActivitySpinner(size = 18.dp)
                 discord.presenceActive || discord.ready -> Box(Modifier.size(9.dp).clip(CircleShape).background(Color(0xFF34C759)))
                 discord.presenceOnly || discord.linked -> Box(Modifier.size(9.dp).clip(CircleShape).background(Color(0xFFFFB020)))
                 else -> Box(Modifier.size(9.dp).clip(CircleShape).background(theme.secondary.copy(alpha = .45f)))

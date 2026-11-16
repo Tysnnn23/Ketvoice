@@ -95,14 +95,7 @@ fun ReplayScreen() {
                 Text("Wrapped", localize = false, color = androidx.compose.ui.graphics.Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
             }
         }
-        if (com.ketvoice.app.theme.Ket27.on) com.ketvoice.app.ui.common.Ket27PageBar("Replay", { AppUi.closeOverlay() }) { wrapped() }
-        else Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            GlassBackButton { AppUi.closeOverlay() }
-            Spacer(Modifier.width(12.dp))
-            Text("Replay", color = th.onBackground, fontSize = 30.sp, fontWeight = FontWeight.Bold, letterSpacing = (-.7).sp,
-                modifier = Modifier.asHeading().weight(1f))
-            wrapped()
-        }
+        com.ketvoice.app.ui.common.Ket27PageBar("Replay", { AppUi.closeOverlay() }) { wrapped() }
         if (showWrapped) WrappedStory(rememberWrappedRecap()) { showWrapped = false }
         if (stats.totalPlays == 0) {
             EmptyState("Pas encore de Replay", "Vos titres les plus écoutés apparaîtront ici dès que vous aurez écouté de la musique.",

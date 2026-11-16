@@ -43,51 +43,20 @@ data class KetTheme(
 
 val LocalTheme = staticCompositionLocalOf<KetTheme> { KetTheme.light() }
 
-/** How strong the glow of a dark page is at its brightest, as a share of the accent. */
-internal object PageGlow {
-    const val MAIN = .16f
-    const val SIDE = .07f
-    /** The colour of the second, smaller glow: the accent a third of the way round the wheel, so the page is not one colour. */
-    fun companion(accent: Color): Color {
-        val hsv = FloatArray(3)
-        android.graphics.Color.colorToHSV(android.graphics.Color.argb(255, (accent.red * 255).toInt(), (accent.green * 255).toInt(),
-            (accent.blue * 255).toInt()), hsv)
-        hsv[0] = (hsv[0] + 250f) % 360f
-        hsv[1] = (hsv[1] * .85f).coerceIn(0f, 1f)
-        return Color(android.graphics.Color.HSVToColor(hsv))
-    }
-}
+/** The background of a page: the plain system background of Ket 27, light or dark. */
+fun androidx.compose.ui.Modifier.pageBackground(theme: KetTheme): androidx.compose.ui.Modifier = background(theme.background)
 
-/**
- * The background of a page. Light, it is the plain page colour. Dark, the page is lit from
- * above by two soft glows of the accent that stay in place while the content scrolls: depth
- * without a single line, and the colour of the app (or of the cover being played) on every
- * screen. Two gradients drawn behind the content; nothing is animated.
- */
-fun androidx.compose.ui.Modifier.pageBackground(theme: KetTheme): androidx.compose.ui.Modifier =
-    // Ket 27: the plain system background, light or dark.
-    if (!theme.isDark || Ket27.on) background(theme.background) else drawBehind {
-        drawRect(theme.background)
-        val reach = maxOf(size.width, size.height * .5f)
-        drawRect(Brush.radialGradient(
-            0f to theme.accent.copy(alpha = PageGlow.MAIN), .45f to theme.accent.copy(alpha = PageGlow.MAIN * .3f), 1f to Color.Transparent,
-            center = Offset(size.width * .12f, -size.height * .04f), radius = reach * 1.05f))
-        drawRect(Brush.radialGradient(
-            0f to PageGlow.companion(theme.accent).copy(alpha = PageGlow.SIDE), 1f to Color.Transparent,
-            center = Offset(size.width * 1.02f, size.height * .10f), radius = reach * .8f))
-    }
-
+/** The text styles of the app: each is the iOS text style that plays its part (Ket 27). */
 object T {
-    // Ket 27 swaps each style for the iOS text style that plays its part.
-    val huge get() = if (Ket27.on) Ket27.Type.largeTitle else DesignTokens.Typography.display
-    val hugeTitle get() = if (Ket27.on) Ket27.Type.largeTitle else DesignTokens.Typography.largeTitle
-    val h2 get() = if (Ket27.on) Ket27.Type.title2 else DesignTokens.Typography.title
-    val section get() = if (Ket27.on) Ket27.Type.title3 else DesignTokens.Typography.section
-    val body get() = if (Ket27.on) Ket27.Type.body else DesignTokens.Typography.body
-    val bodyBold get() = if (Ket27.on) Ket27.Type.headline else DesignTokens.Typography.bodyBold
-    val sub get() = if (Ket27.on) Ket27.Type.footnote else DesignTokens.Typography.supporting
-    val caption get() = if (Ket27.on) Ket27.Type.caption else DesignTokens.Typography.caption
-    val chip get() = if (Ket27.on) Ket27.Type.subheadline.copy(fontWeight = FontWeight.Medium) else DesignTokens.Typography.label
+    val huge get() = Ket27.Type.largeTitle
+    val hugeTitle get() = Ket27.Type.largeTitle
+    val h2 get() = Ket27.Type.title2
+    val section get() = Ket27.Type.title3
+    val body get() = Ket27.Type.body
+    val bodyBold get() = Ket27.Type.headline
+    val sub get() = Ket27.Type.footnote
+    val caption get() = Ket27.Type.caption
+    val chip get() = Ket27.Type.subheadline.copy(fontWeight = FontWeight.Medium)
     val lyrics get() = DesignTokens.Typography.lyrics
 }
 
@@ -102,11 +71,7 @@ fun KetvoiceTheme(
     val sysDark = isSystemInDarkTheme()
     val isDark = useDark ?: sysDark
     val accent = dynamicAccent ?: Color(com.ketvoice.app.data.AppSettings.accentArgb.value.toInt())
-    val base = (if (isDark) KetTheme.dark() else KetTheme.light()).copy(accent = accent)
-    val chosen = if (Ket27.on) Ket27.theme(isDark, accent) else if (com.ketvoice.app.data.DesignChoices.enabled("D1")) base.copy(
-        background=if(isDark)Palette.BackgroundDark else Color(0xFFF7F7FA),
-        card=if(isDark)Palette.CardDark else Color.White,
-        secondary=if(isDark)Palette.SecondaryTextDark else Color(0xFF555A69)) else base
+    val chosen = Ket27.theme(isDark, accent)
     // Like an album page, the whole app takes the colour of what plays: the same tint, held dim at night.
     val th = if (dynamicTone == null) chosen else {
         val page = com.ketvoice.app.ui.sub.artistPageTint(chosen.background, dynamicTone, chosen.isDark)
@@ -122,7 +87,7 @@ fun KetvoiceTheme(
       androidx.compose.runtime.CompositionLocalProvider(androidx.compose.foundation.LocalOverscrollFactory provides
           (if (com.ketvoice.app.ui.motion.Motion.reduced) androidx.compose.foundation.LocalOverscrollFactory.current
            else com.ketvoice.app.ui.motion.BounceOverscrollFactory)) {
-        val ketFont = if (Ket27.on) Ket27.font else null
+        val ketFont = Ket27.font
         MaterialTheme(
             colorScheme = if (isDark) darkColorScheme(
                 background = th.background,
@@ -150,16 +115,15 @@ fun KetvoiceTheme(
             ),
             typography = Material3Typography(ketFont),
             content = {
-                // Always through the same call, so that switching Ket 27 on does not rebuild the page and lose where one is.
                 val inherited = androidx.compose.material3.LocalTextStyle.current
-                androidx.compose.material3.ProvideTextStyle(inherited.copy(fontFamily = ketFont ?: inherited.fontFamily), content)
+                androidx.compose.material3.ProvideTextStyle(inherited.copy(fontFamily = ketFont), content)
             }
         )
       }
     }
 }
 
-private fun Material3Typography(family: androidx.compose.ui.text.font.FontFamily? = null) = androidx.compose.material3.Typography(
+private fun Material3Typography(family: androidx.compose.ui.text.font.FontFamily) =androidx.compose.material3.Typography(
     headlineLarge = T.hugeTitle.copy(fontFamily = family), headlineMedium = T.huge.copy(fontFamily = family), titleLarge = T.h2.copy(fontFamily = family),
     bodyLarge = T.body.copy(fontFamily = family), bodyMedium = T.sub.copy(fontFamily = family), labelLarge = T.chip.copy(fontFamily = family)
 )

@@ -37,7 +37,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Translate
-import androidx.compose.material3.CircularProgressIndicator
 import com.ketvoice.app.ui.common.Icon
 import com.ketvoice.app.ui.common.Text
 import androidx.compose.runtime.*
@@ -245,27 +244,24 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
                                     entry.animateTo(1f, tween(420, easing = CubicBezierEasing(.16f, .84f, .28f, 1f)))
                                 }
                             }
-                            val cascade = AppSettings.lyricsStyle.value == 1
                             val lineColor by animateColorAsState(
                                 // Lines already sung stay white; only what is still to come is dimmed.
                                 targetValue = if (current || !lyrics.isTimed || LyricsCascade.sung(index, active)) Color.White
-                                    else Color.White.copy(alpha = if (cascade) LyricsCascade.INACTIVE_ALPHA else .54f),
+                                    else Color.White.copy(alpha = LyricsCascade.INACTIVE_ALPHA),
                                 animationSpec = tween(Motion.duration(320)),
                                 label = "lyricColor"
                             )
                             val lineBlur by animateDpAsState(blur, tween(Motion.duration(320)), label = "lyricBlur")
-                            // Toutes les lignes gardent exactement la même taille et la
-                            // même graisse : seule la couleur distingue la ligne active.
-                            // Aucun changement d'échelle, pour éviter l'effet « lyrics
-                            // basiques » sur les lignes non sélectionnées.
-                            // Cascade: the sung line alone stands forward; the others step back a
-                            // little and catch up in a wave, each a few milliseconds after the one above.
+                            // Cascade, the only lyrics style: the sung line alone stands forward; the others step
+                            // back a little and catch up in a wave, each a few milliseconds after the one above.
+                            // With reduced motion the lines keep their size and place: only their colour changes.
                             val lineScale by animateFloatAsState(
-                                if (cascade && lyrics.isTimed && !current && !reduced) LyricsCascade.INACTIVE_SCALE else 1f,
-                                androidx.compose.animation.core.spring(dampingRatio = 1f, stiffness = 170f), label = "lyricScale")
+                                if (lyrics.isTimed && !current && !reduced) LyricsCascade.INACTIVE_SCALE else 1f,
+                                if (reduced) androidx.compose.animation.core.snap() else androidx.compose.animation.core.spring(dampingRatio = 1f, stiffness = 170f),
+                                label = "lyricScale")
                             val wave = remember(index, track.id) { Animatable(0f) }
-                            LaunchedEffect(active, cascade, reduced) {
-                                if (!cascade || reduced || active < 0 || index < active) { wave.animateTo(0f, tween(Motion.duration(260))); return@LaunchedEffect }
+                            LaunchedEffect(active, reduced) {
+                                if (reduced || active < 0 || index < active) { wave.animateTo(0f, tween(Motion.duration(260))); return@LaunchedEffect }
                                 // The lines below hold back a little, then glide into place one after
                                 // the other: a smooth ease-out, no overshoot and no jump.
                                 wave.snapTo(maxOf(wave.value, LyricsCascade.waveStartDp(index - active)))
@@ -317,7 +313,7 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
             } else {
                 Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        if (lyrics.loading) CircularProgressIndicator(Modifier.size(22.dp), color = Color.White, strokeWidth = 2.dp)
+                        if (lyrics.loading) com.ketvoice.app.ui.common.ActivitySpinner(size = 22.dp, color = Color.White)
                         Spacer(Modifier.height(16.dp))
                         Text(if (lyrics.loading) "Recherche dans les sources de paroles…" else "Aucune parole disponible pour cette version",
                             color = Color(0xFFA0A1AA), fontSize = 15.sp)
@@ -337,7 +333,7 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
                     SmallCircleButton({
                         translationEnabled = !translationEnabled
                     }, active = translationEnabled, size = 36.dp) {
-                        if (translating) CircularProgressIndicator(Modifier.size(17.dp), color = it, strokeWidth = 1.6.dp)
+                        if (translating) com.ketvoice.app.ui.common.ActivitySpinner(size = 17.dp, color = it)
                         else Icon(Icons.Filled.Translate, "Traduire les paroles", tint = it, modifier = Modifier.size(21.dp))
                     }
                 }

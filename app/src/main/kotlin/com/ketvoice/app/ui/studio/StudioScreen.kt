@@ -19,8 +19,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.CheckboxDefaults
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.TextFieldColors
@@ -134,7 +132,7 @@ fun PublisherScreen(target: Track?, onClose: () -> Unit) {
 
     Box(Modifier.fillMaxSize().pageBackground(theme).testTag("studio"), contentAlignment = Alignment.TopCenter) {
         Column(Modifier.widthIn(max = 780.dp).fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
-            Row(Modifier.fillMaxWidth().padding(horizontal = com.ketvoice.app.ui.common.pageMargin(14.dp), vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().padding(horizontal = com.ketvoice.app.ui.common.pageMargin, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 GlassBackButton { back() }
                 Spacer(Modifier.weight(1f))
                 if (allowed && route == StudioRoute.Home) Text("Se déconnecter", color = theme.secondary, fontSize = 13.sp,
@@ -174,7 +172,7 @@ fun PublisherScreen(target: Track?, onClose: () -> Unit) {
 private fun StudioWaiting() {
     val theme = LocalTheme.current
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-        androidx.compose.material3.CircularProgressIndicator(Modifier.size(28.dp), color = theme.accent, strokeWidth = 2.dp)
+        com.ketvoice.app.ui.common.ActivitySpinner(size = 28.dp)
         Text("Reconnexion au Studio…", color = theme.secondary, modifier = Modifier.padding(top = 14.dp))
     }
 }
@@ -185,10 +183,7 @@ private fun StudioStatus(state: StudioState) {
     val theme = LocalTheme.current
     Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         if (state.busy) {
-            if (state.progress > 0) LinearProgressIndicator({ state.progress / 100f }, Modifier.fillMaxWidth().height(4.dp)
-                .clip(RoundedCornerShape(2.dp)), color = theme.accent, trackColor = theme.card)
-            else LinearProgressIndicator(Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(2.dp)), color = theme.accent,
-                trackColor = theme.card)
+            com.ketvoice.app.ui.common.KetProgressBar(if (state.progress > 0) ({ state.progress / 100f }) else null)
             Text(if (state.progress > 0) "Envoi · ${state.progress} %" else "Chargement…", color = theme.secondary, fontSize = 12.sp)
         }
         if (state.info.isNotBlank()) Text(state.info, color = theme.accent, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
@@ -211,7 +206,7 @@ internal fun studioFieldColors(): TextFieldColors {
 internal fun StudioTitle(title: String, subtitle: String? = null) {
     val theme = LocalTheme.current
     Column(Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
-        com.ketvoice.app.ui.common.PageTitle(title, 32.sp, Modifier.asHeading(), classicSpacing = (-.8).sp, maxLines = 3)
+        com.ketvoice.app.ui.common.PageTitle(title, Modifier.asHeading(), maxLines = 3)
         if (subtitle != null) Text(subtitle, color = theme.secondary, fontSize = 14.sp)
     }
 }
@@ -308,7 +303,7 @@ private fun StudioSongRow(track: Track, checked: Boolean? = null, onClick: () ->
     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
         .clickable(role = if (checked != null) Role.Checkbox else Role.Button, onClick = onClick)
         .padding(vertical = 8.dp, horizontal = 4.dp).testTag("studio-song"), verticalAlignment = Alignment.CenterVertically) {
-        if (checked != null) com.ketvoice.app.ui.common.KetCheckbox(checked, null, colors = CheckboxDefaults.colors(checkedColor = theme.accent, uncheckedColor = theme.secondary))
+        if (checked != null) com.ketvoice.app.ui.common.KetCheckbox(checked, null)
         Cover(track.title, track.coverUrl, 52.dp, 10.dp)
         Column(Modifier.weight(1f).padding(start = 12.dp)) {
             Text(track.title, localize = false, color = theme.onBackground, fontSize = 15.sp, fontWeight = FontWeight.SemiBold,
@@ -377,7 +372,7 @@ internal fun RightsRow(checked: Boolean, enabled: Boolean, onChange: (Boolean) -
     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
         .clickable(enabled = enabled, role = Role.Checkbox) { onChange(!checked) }.padding(vertical = 4.dp).testTag("studio-rights"),
         verticalAlignment = Alignment.CenterVertically) {
-        com.ketvoice.app.ui.common.KetCheckbox(checked, null, enabled = enabled, colors = CheckboxDefaults.colors(checkedColor = theme.accent, uncheckedColor = theme.secondary))
+        com.ketvoice.app.ui.common.KetCheckbox(checked, null, enabled = enabled)
         Text("Je possède les droits nécessaires et j'autorise la diffusion publique de ces fichiers.", color = theme.onBackground,
             fontSize = 13.sp, modifier = Modifier.weight(1f))
     }

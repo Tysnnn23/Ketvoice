@@ -240,23 +240,9 @@ fun SettingsScreen() {
                     }
                 }
             }
-            Section("KET 27 (ALPHA)") {
-                SToggle(KetIcons.Appearance, "Ket 27 (Alpha)",
-                    "Toute l'interface à la manière d'iOS 27 : couleurs système, grands titres, listes groupées, police Inter et verre Liquid 27. En cours de construction : certaines pages gardent encore l'ancien style.",
-                    AppSettings.ket27.value) { AppSettings.ket27.value = it; SettingsStore.save() }
-            }
             Section("APPARENCE") {
-                SRow(KetIcons.Appearance, "Aperçu du verre", sub = "Comparer Clair, Dépoli, Opaque et Liquid 27 avant d'appliquer") {
+                SRow(KetIcons.Appearance, "Aperçu du verre", sub = "Régler la transparence du verre avant d'appliquer") {
                     glassPreview = true
-                }
-                SRow(KetIcons.Lyrics, "Style des paroles",
-                    sub = "Ketvoice, ou Cascade : grandes lignes qui suivent la chanson en vague",
-                    value = if (AppSettings.lyricsStyle.value == 1) "Cascade" else "Ketvoice") {
-                    choice = ChoiceSpec("Style des paroles", "S'applique au lecteur et au plein écran des paroles.",
-                        AppSettings.lyricsStyle.value.toString(), listOf(
-                            ChoiceOption("0", "Ketvoice", "Toutes les lignes à la même taille, la ligne chantée éclairée"),
-                            ChoiceOption("1", "Cascade", "Ligne chantée seule en avant, les autres en retrait suivent en vague"))
-                    ) { id -> AppSettings.lyricsStyle.value = id.toIntOrNull()?.coerceIn(0, 1) ?: 0; SettingsStore.save() }
                 }
                 SToggle(KetIcons.Info, "Stats info", "Informations audio réelles, uniquement dans le lecteur", AppSettings.techStats.value) {
                     AppSettings.techStats.value = it; SettingsStore.save()
@@ -880,36 +866,33 @@ private fun ChoiceDialog(spec: ChoiceSpec, onDismiss: () -> Unit) {
     val th = LocalTheme.current
     // Ket 27: the picker of iOS 27 — an inset group of 52 dp rows on the glass sheet, the choice
     // marked in the app's colour, and a tick in the hand when it is made.
-    val ket = Ket27.on
     val tick = com.ketvoice.app.ui.motion.rememberHaptics()
     SettingsSheet(onDismiss = onDismiss) {
         Column(Modifier.fillMaxWidth().heightIn(max = com.ketvoice.app.ui.common.sheetMaxHeight()).verticalScroll(rememberScrollState())
-            .padding(horizontal = if (ket) Ket27.Metrics.margin else 20.dp, vertical = 16.dp)) {
+            .padding(horizontal = Ket27.Metrics.margin, vertical = 16.dp)) {
             SettingsSheetHeader(spec.title, spec.subtitle, onDismiss)
             Spacer(Modifier.height(18.dp))
-            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(if (ket) Ket27.Metrics.groupRadius else 18.dp))
-                .background(if (ket) th.card.copy(alpha = if (th.isDark) .62f else .78f) else th.onBackground.copy(alpha = .035f))
+            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(Ket27.Metrics.groupRadius))
+                .background(th.card.copy(alpha = if (th.isDark) .62f else .78f))
                 .selectableGroup().testTag("choice-options")) {
                 spec.options.forEachIndexed { index, option ->
                     val chosen = option.id == spec.selectedId
-                    Row(Modifier.fillMaxWidth().then(if (ket) Modifier.rowPress(Role.RadioButton) {
+                    Row(Modifier.fillMaxWidth().rowPress(Role.RadioButton) {
                             tick(com.ketvoice.app.ui.motion.Haptics.Kind.Tick); spec.onSelect(option.id); onDismiss()
-                        }.semantics { selected = chosen } else Modifier.selectable(chosen,
-                        role = Role.RadioButton, onClick = { spec.onSelect(option.id); onDismiss() }))
-                        .heightIn(min = if (ket) Ket27.Metrics.row else 56.dp).padding(horizontal = 16.dp, vertical = if (ket) 10.dp else 14.dp),
+                        }.semantics { selected = chosen }
+                        .heightIn(min = Ket27.Metrics.row).padding(horizontal = 16.dp, vertical = 10.dp),
                         verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f).padding(end = 14.dp)) {
                             Text(option.label, localize = spec.title != "Langue de l'application", color = th.onBackground,
-                                fontSize = if (ket) 17.sp else 15.5.sp, fontWeight = if (chosen && !ket) FontWeight.SemiBold else FontWeight.Normal,
-                                lineHeight = 22.sp)
+                                fontSize = 17.sp, fontWeight = FontWeight.Normal, lineHeight = 22.sp)
                             if (option.sub.isNotBlank()) Text(option.sub, color = th.secondary,
-                                fontSize = 13.sp, lineHeight = 18.sp, modifier = Modifier.padding(top = if (ket) 1.dp else 3.dp))
+                                fontSize = 13.sp, lineHeight = 18.sp, modifier = Modifier.padding(top = 1.dp))
                         }
-                        if (chosen) Icon(KetIcons.Check, null, tint = if (ket) th.accent else th.onBackground, modifier = Modifier.size(20.dp))
+                        if (chosen) Icon(KetIcons.Check, null, tint = th.accent, modifier = Modifier.size(20.dp))
                         else Spacer(Modifier.size(20.dp))
                     }
-                    if (index != spec.options.lastIndex) Box(Modifier.padding(start = 16.dp, end = if (ket) 0.dp else 16.dp).fillMaxWidth().height(.5.dp)
-                        .background(if (ket) th.hairline else th.onBackground.copy(alpha = .065f)))
+                    if (index != spec.options.lastIndex) Box(Modifier.padding(start = 16.dp).fillMaxWidth().height(.5.dp)
+                        .background(th.hairline))
                 }
             }
             Spacer(Modifier.height(8.dp))
@@ -1011,10 +994,9 @@ private fun cycleQuality(current: String): String = when (current) {
 private fun Section(header: String, content: @Composable ColumnScope.() -> Unit) {
     val destination = SettingsCategory.forGroup(header) ?: return
     if (destination != LocalSettingsCategory.current) return
-    val margin = if (Ket27.on) Ket27.Metrics.margin else 20.dp
+    val margin = Ket27.Metrics.margin
     SettingsGroupHeading(header, Modifier.padding(horizontal = margin))
-    Column(Modifier.padding(horizontal = margin).fillMaxWidth().settingsGroup()
-        .padding(vertical = if (Ket27.on) 0.dp else 3.dp), content = content)
+    Column(Modifier.padding(horizontal = margin).fillMaxWidth().settingsGroup(), content = content)
 }
 
 @Composable
@@ -1026,17 +1008,15 @@ private fun ColumnScope.SRow(
     onClick: (() -> Unit)? = null
 ) {
     val th = LocalTheme.current
-    val ket = Ket27.on
     Row(
         Modifier.fillMaxWidth()
             .then(if (onClick != null) Modifier.rowPress(onClick = onClick) else Modifier)
-            .heightIn(min = if (ket) Ket27.Metrics.row else 72.dp).padding(horizontal = if (ket) 16.dp else 20.dp, vertical = if (ket) 10.dp else 16.dp),
+            .heightIn(min = Ket27.Metrics.row).padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        if (ket) Ket27Tile(icon, title.length + title.first().code)
-        else Icon(icon, null, tint = th.onBackground.copy(alpha = .74f), modifier = Modifier.size(21.dp))
-        Column(Modifier.weight(1f).padding(start = if (ket) 12.dp else 18.dp, end = 12.dp)) {
-            Text(title, color = th.onBackground, fontSize = if (ket) 17.sp else 15.5.sp, lineHeight = 22.sp, fontWeight = if (ket) FontWeight.Normal else FontWeight.Medium)
+        Ket27Tile(icon, title.length + title.first().code)
+        Column(Modifier.weight(1f).padding(start = 12.dp, end = 12.dp)) {
+            Text(title, color = th.onBackground, fontSize = 17.sp, lineHeight = 22.sp, fontWeight = FontWeight.Normal)
             if (sub.isNotEmpty()) Text(sub, color = th.secondary, fontSize = 13.sp, lineHeight = 18.sp,
                 modifier = Modifier.padding(top = 3.dp))
             if (value.isNotEmpty()) Text(value, color = th.onBackground.copy(alpha = .76f), fontSize = 13.sp,
@@ -1057,19 +1037,17 @@ private fun ColumnScope.SToggle(
     onChecked: (Boolean) -> Unit
 ) {
     val th = LocalTheme.current
-    val ket = Ket27.on
     // Ket 27: flipping a switch is felt, as on iOS.
     val tick = com.ketvoice.app.ui.motion.rememberHaptics()
     Row(
         Modifier.fillMaxWidth().toggleable(checked, role = Role.Switch,
-            onValueChange = { if (ket) tick(com.ketvoice.app.ui.motion.Haptics.Kind.Tick); onChecked(it) })
-            .heightIn(min = if (ket) Ket27.Metrics.row else 76.dp).padding(horizontal = if (ket) 16.dp else 20.dp, vertical = if (ket) 10.dp else 16.dp),
+            onValueChange = { tick(com.ketvoice.app.ui.motion.Haptics.Kind.Tick); onChecked(it) })
+            .heightIn(min = Ket27.Metrics.row).padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        if (ket) Ket27Tile(icon, title.length + title.first().code)
-        else Icon(icon, null, tint = th.onBackground.copy(alpha = .74f), modifier = Modifier.size(21.dp))
-        Column(Modifier.weight(1f).padding(start = if (ket) 12.dp else 18.dp, end = 14.dp)) {
-            Text(title, color = th.onBackground, fontSize = if (ket) 17.sp else 15.5.sp, lineHeight = 22.sp, fontWeight = if (ket) FontWeight.Normal else FontWeight.Medium)
+        Ket27Tile(icon, title.length + title.first().code)
+        Column(Modifier.weight(1f).padding(start = 12.dp, end = 14.dp)) {
+            Text(title, color = th.onBackground, fontSize = 17.sp, lineHeight = 22.sp, fontWeight = FontWeight.Normal)
             Text(sub, color = th.secondary, fontSize = 13.sp, lineHeight = 18.sp, modifier = Modifier.padding(top = 3.dp))
         }
         com.ketvoice.app.ui.common.LiquidGlassSwitch(checked, onCheckedChange = null)
@@ -1148,13 +1126,13 @@ private fun CacheLimitRow() {
     Column(
         Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 16.dp)
+            .padding(horizontal = 16.dp, vertical = 10.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(KetIcons.Storage, null, tint = th.onBackground.copy(alpha = .74f), modifier = Modifier.size(21.dp))
-            Column(Modifier.weight(1f).padding(start = 18.dp)) {
-                Text("Limite du cache des chansons", color = th.onBackground, fontSize = 15.5.sp,
-                    lineHeight = 22.sp, fontWeight = FontWeight.Medium)
+            Ket27Tile(KetIcons.Storage, "Limite du cache des chansons".let { it.length + it.first().code })
+            Column(Modifier.weight(1f).padding(start = 12.dp)) {
+                Text("Limite du cache des chansons", color = th.onBackground, fontSize = 17.sp,
+                    lineHeight = 22.sp)
                 Text(
                     if (AppSettings.cacheBytes.value < 1_000_000_000L) "500 Mo"
                     else String.format(java.util.Locale.FRANCE, "%.1f Go", AppSettings.cacheBytes.value / 1_000_000_000.0),
@@ -1255,13 +1233,13 @@ private fun ColumnScope.StemSettings() {
     SToggle(KetIcons.Audio, "Séparer seulement en charge",
         "Les nouvelles séparations n'ont lieu que téléphone branché ; celles déjà faites servent toujours.",
         AppSettings.ketmixStemsCharging.value) { AppSettings.ketmixStemsCharging.value = it; SettingsStore.save() }
-    if (confirm) androidx.compose.material3.AlertDialog(
+    if (confirm) com.ketvoice.app.ui.common.AppAlertDialog(
         onDismissRequest = { confirm = false },
-        title = { Text(com.ketvoice.app.data.AppText.t("Supprimer le modèle de séparation ?")) },
-        text = { Text(com.ketvoice.app.data.AppText.t("Les mix atténueront la voix au lieu de la retirer. Les titres déjà séparés restent.")) },
-        confirmButton = { androidx.compose.material3.TextButton({ confirm = false; com.ketvoice.app.stems.StemModel.delete() }) {
-            Text(com.ketvoice.app.data.AppText.t("Supprimer")) } },
-        dismissButton = { androidx.compose.material3.TextButton({ confirm = false }) { Text(com.ketvoice.app.data.AppText.t("Annuler")) } })
+        title = { Text("Supprimer le modèle de séparation ?") },
+        text = { Text("Les mix atténueront la voix au lieu de la retirer. Les titres déjà séparés restent.") },
+        confirmButton = { com.ketvoice.app.ui.common.KetTextButton("Supprimer", { confirm = false; com.ketvoice.app.stems.StemModel.delete() },
+            primary = true, destructive = true) },
+        dismissButton = { com.ketvoice.app.ui.common.KetTextButton("Annuler", { confirm = false }) })
 }
 
 
@@ -1270,22 +1248,23 @@ private fun ColumnScope.StemSettings() {
 private fun PlaybackJournalDialog(onClose: () -> Unit) {
     val ctx = LocalContext.current
     val lines = remember { com.ketvoice.app.data.PlaybackJournal.snapshot().takeLast(120).reversed() }
-    androidx.compose.material3.AlertDialog(
+    com.ketvoice.app.ui.common.AppAlertDialog(
         onDismissRequest = onClose,
-        title = { Text(com.ketvoice.app.data.AppText.t("Journal de lecture")) },
+        title = { Text("Journal de lecture") },
         text = {
             androidx.compose.foundation.lazy.LazyColumn(Modifier.heightIn(max = 420.dp)) {
-                if (lines.isEmpty()) item { Text(com.ketvoice.app.data.AppText.t("Rien à signaler pour l'instant."), fontSize = 13.sp) }
-                items(lines.size) { i -> Text(lines[i], fontSize = 11.sp, lineHeight = 15.sp, modifier = Modifier.padding(vertical = 2.dp)) }
+                if (lines.isEmpty()) item { Text("Rien à signaler pour l'instant.", fontSize = 13.sp) }
+                items(lines.size) { i -> Text(lines[i], localize = false, fontSize = 11.sp, lineHeight = 15.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Start,
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) }
             }
         },
-        confirmButton = { androidx.compose.material3.TextButton({
+        confirmButton = { com.ketvoice.app.ui.common.KetTextButton("Partager", {
             val text = "Ketvoice ${com.ketvoice.app.BuildConfig.VERSION_NAME} · ${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL} · Android ${android.os.Build.VERSION.RELEASE}\n\n" +
                 com.ketvoice.app.data.PlaybackJournal.snapshot().joinToString("\n")
             runCatching { ctx.startActivity(android.content.Intent.createChooser(android.content.Intent(android.content.Intent.ACTION_SEND)
                 .setType("text/plain").putExtra(android.content.Intent.EXTRA_TEXT, text), null).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
-        }) { Text(com.ketvoice.app.data.AppText.t("Partager")) } },
-        dismissButton = { androidx.compose.material3.TextButton(onClose) { Text(com.ketvoice.app.data.AppText.t("Fermer")) } })
+        }, primary = true) },
+        dismissButton = { com.ketvoice.app.ui.common.KetTextButton("Fermer", onClose) })
 }
 
 /** Downloaded titles prepared ahead for Ketmix while the phone charges (5.11.0). */

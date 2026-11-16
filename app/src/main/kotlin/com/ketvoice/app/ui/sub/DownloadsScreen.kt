@@ -152,7 +152,7 @@ fun DownloadsScreen() {
                         if (selecting) FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp),
                             verticalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()
                                 .clip(RoundedCornerShape(18.dp)).background(theme.accent.copy(alpha = .08f)).padding(horizontal = 8.dp)) {
-                            TextButton(onClick = { selected = sections.saved.map { it.track.id } }) { Text("Tout sélectionner", color = theme.accent) }
+                            com.ketvoice.app.ui.common.KetTextButton("Tout sélectionner", { selected = sections.saved.map { it.track.id } })
                             IconButton(onClick = { deleteIds = selected }, enabled = selected.isNotEmpty()) { Icon(KetIcons.Trash, "Supprimer", tint = theme.accent) }
                             Text(selected.size.toString(), localize = false, color = theme.secondary,
                                 modifier = Modifier.align(Alignment.CenterVertically))
@@ -160,9 +160,12 @@ fun DownloadsScreen() {
                     }
                     val crumb = chosen?.title ?: chosenArtist?.name
                     if (crumb != null) Row(verticalAlignment = Alignment.CenterVertically) {
-                        TextButton(onClick = { albumKey = null; artistKey = null }, contentPadding = PaddingValues(end = 10.dp)) {
-                            Icon(KetIcons.ArrowLeft, null, tint = theme.accent, modifier = Modifier.size(18.dp))
-                            Text(if (chosen != null) "Albums" else "Artistes", color = theme.accent, modifier = Modifier.padding(start = 6.dp))
+                        // The back link of iOS: a chevron and the name of the page above, in the app's colour.
+                        Row(Modifier.heightIn(min = 44.dp).clickable(role = androidx.compose.ui.semantics.Role.Button) { albumKey = null; artistKey = null }
+                            .padding(end = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(KetIcons.ChevronRight, null, tint = theme.accent, modifier = Modifier.size(18.dp).graphicsLayer { scaleX = -1f })
+                            Text(if (chosen != null) "Albums" else "Artistes", color = theme.accent, style = com.ketvoice.app.theme.Ket27.Type.body,
+                                modifier = Modifier.padding(start = 4.dp))
                         }
                         Text(crumb, localize = false, color = theme.onBackground, fontSize = 22.sp, fontWeight = FontWeight.Bold,
                             maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -278,25 +281,23 @@ fun DownloadsScreen() {
     }
     }
     if (deleteItems.isNotEmpty()) {
-        AlertDialog(onDismissRequest = { if (!deleting) deleteIds = emptyList() }, containerColor = theme.card,
-            // Ket 27: the rounder corners of an iOS alert.
-            shape = if (com.ketvoice.app.theme.Ket27.on) RoundedCornerShape(com.ketvoice.app.theme.Ket27.Metrics.alertRadius)
-                else androidx.compose.material3.AlertDialogDefaults.shape,
-            title = { Text("Supprimer le téléchargement", color = theme.onBackground) },
-            text = { Column {
-                Text(deleteItems.take(3).joinToString("\n") { it.track.title }, localize = false, color = theme.secondary)
+        com.ketvoice.app.ui.common.AppAlertDialog(onDismissRequest = { if (!deleting) deleteIds = emptyList() },
+            modifier = Modifier.testTag("downloads-delete-alert"),
+            title = { Text("Supprimer le téléchargement") },
+            text = { Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(deleteItems.take(3).joinToString("\n") { it.track.title }, localize = false)
                 Text(AppText.t(if (deleteItems.size == 1) "1 titre" else "${deleteItems.size} titres") + " · " + android.text.format.Formatter.formatShortFileSize(context, deleteItems.sumOf { it.bytes }),
-                    localize = false, color = theme.secondary)
+                    localize = false)
             } },
-            confirmButton = { TextButton(enabled = !deleting, onClick = {
+            confirmButton = { com.ketvoice.app.ui.common.KetTextButton("Supprimer", enabled = !deleting, primary = true, destructive = true, onClick = {
                 deleting = true
                 scope.launch {
                     val failed = withContext(Dispatchers.IO) { deleteItems.filterNot { runCatching { Downloader.delete(it) }.getOrDefault(false) } }
                     selected = failed.map { it.track.id }; selecting = failed.isNotEmpty(); deleteError = failed.isNotEmpty()
                     deleteIds = emptyList(); deleting = false
                 }
-            }) { Text("Supprimer", color = theme.accent) } },
-            dismissButton = { TextButton(enabled = !deleting, onClick = { deleteIds = emptyList() }) { Text("Annuler", color = theme.secondary) } })
+            }) },
+            dismissButton = { com.ketvoice.app.ui.common.KetTextButton("Annuler", enabled = !deleting, onClick = { deleteIds = emptyList() }) })
     }
 }
 

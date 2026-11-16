@@ -133,8 +133,7 @@ internal fun WrappedStory(recap: Wrapped.Recap, onClose: () -> Unit) {
                     Text("KETVOICE WRAPPED", localize = false, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold,
                         letterSpacing = 2.sp, modifier = Modifier.weight(1f))
                     // Ket 27: the round 44 dp button of an iOS story.
-                    val side = if (com.ketvoice.app.theme.Ket27.on) 44.dp else 40.dp
-                    Box(Modifier.size(side).clip(CircleShape).background(Color.White.copy(alpha = if (com.ketvoice.app.theme.Ket27.on) .22f else .16f))
+                    Box(Modifier.size(44.dp).clip(CircleShape).background(Color.White.copy(alpha = .22f))
                         .clickable(role = Role.Button, onClick = onClose).testTag("wrapped-close"), contentAlignment = Alignment.Center) {
                         Icon(KetIcons.Close, "Fermer", tint = Color.White, modifier = Modifier.size(20.dp))
                     }
@@ -147,17 +146,14 @@ internal fun WrappedStory(recap: Wrapped.Recap, onClose: () -> Unit) {
 @Composable
 private fun Headline(text: String, size: Int = 40) {
     // Ket 27: a display title as iOS sets one — bold rather than black, with the tracking that suits Inter.
-    val ket = com.ketvoice.app.theme.Ket27.on
-    Text(text, localize = false, color = Color.White, fontSize = size.sp, fontWeight = if (ket) FontWeight.Bold else FontWeight.Black,
-        letterSpacing = if (ket) (-size * .018f).sp else (-1.2).sp, lineHeight = (size + 4).sp)
+    Text(text, localize = false, color = Color.White, fontSize = size.sp, fontWeight = FontWeight.Bold,
+        letterSpacing = (-size * .018f).sp, lineHeight = (size + 4).sp)
 }
 
 @Composable
 private fun Caption(text: String) {
-    if (com.ketvoice.app.theme.Ket27.on) Text(text, localize = false, color = Color.White.copy(alpha = .82f),
+    Text(text, localize = false, color = Color.White.copy(alpha = .82f),
         style = com.ketvoice.app.theme.Ket27.Type.body, modifier = Modifier.padding(top = 10.dp))
-    else Text(text, localize = false, color = Color.White.copy(alpha = .82f), fontSize = 17.sp, lineHeight = 23.sp,
-        modifier = Modifier.padding(top = 10.dp))
 }
 
 @Composable
@@ -176,7 +172,7 @@ private fun WrappedMinutes(recap: Wrapped.Recap) {
     }
     Caption(AppText.t("Vous avez écouté"))
     Text("%,d".format(shown.value.toLong()).replace(',', ' '), localize = false, color = Color.White, fontSize = 72.sp,
-        fontWeight = if (com.ketvoice.app.theme.Ket27.on) FontWeight.Bold else FontWeight.Black,
+        fontWeight = FontWeight.Bold,
         letterSpacing = (-2.5).sp, modifier = Modifier.testTag("wrapped-minutes"))
     Headline(AppText.t("minutes de musique"), 30)
     Caption(AppText.t("{0} écoutes de {1} titres.").replace("{0}", recap.plays.toString()).replace("{1}", recap.titles.toString()))
@@ -193,7 +189,7 @@ private fun WrappedArtist(recap: Wrapped.Recap) {
     }
     Spacer(Modifier.height(22.dp))
     Text(artist.name, localize = false, color = Color.White, fontSize = 40.sp,
-        fontWeight = if (com.ketvoice.app.theme.Ket27.on) FontWeight.Bold else FontWeight.Black,
+        fontWeight = FontWeight.Bold,
         textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.fillMaxWidth())
     Text(AppText.t("{0} écoutes").replace("{0}", artist.plays.toString()), localize = false, color = Color.White.copy(alpha = .82f),
         fontSize = 17.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(top = 6.dp))

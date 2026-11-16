@@ -24,7 +24,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material3.CircularProgressIndicator
 import com.ketvoice.app.ui.common.Icon
 import com.ketvoice.app.ui.common.Text
 import androidx.compose.runtime.*
@@ -210,10 +209,10 @@ fun SearchScreen() {
             Row(
                 Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = com.ketvoice.app.ui.common.pageMargin(20.dp), vertical = 6.dp),
+                    .padding(horizontal = com.ketvoice.app.ui.common.pageMargin, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                com.ketvoice.app.ui.common.PageTitle("Rechercher", 28.sp, Modifier.weight(1f))
+                com.ketvoice.app.ui.common.PageTitle("Rechercher", Modifier.weight(1f))
                 AccountAvatar(
                     "K", size = 42.dp, modifier = Modifier.clickable(
                         interactionSource = remember { MutableInteractionSource() },
@@ -302,7 +301,7 @@ fun SearchScreen() {
                         .padding(vertical = 50.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator(color = th.accent, modifier = Modifier.size(28.dp))
+                    com.ketvoice.app.ui.common.ActivitySpinner(size = 28.dp)
                 }
             }
 
@@ -318,8 +317,7 @@ fun SearchScreen() {
 
             else -> {
                 // A quiet line while a new query is still loading over the previous results.
-                if (loading) androidx.compose.material3.LinearProgressIndicator(
-                    Modifier.fillMaxWidth().padding(horizontal = 20.dp).height(2.dp), color = th.accent, trackColor = Color.Transparent)
+                if (loading) com.ketvoice.app.ui.common.KetProgressBar(null, Modifier.padding(horizontal = 20.dp), track = Color.Transparent, height = 2.dp)
                 if (artists.isNotEmpty()) {
                     Text("Artistes", style = T.section, color = th.onBackground,
                         modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp))
@@ -611,7 +609,7 @@ internal fun SearchArtistCircle(artist: com.ketvoice.app.data.MusicArtist, onOpe
             }
         }
         androidx.compose.material3.DropdownMenu(menu, { menu = false }, offset = androidx.compose.ui.unit.DpOffset(4.dp, 2.dp),
-            shape = RoundedCornerShape(if (com.ketvoice.app.theme.Ket27.on) 18.dp else 16.dp), containerColor = th.card,
+            shape = RoundedCornerShape(18.dp), containerColor = th.card,
             modifier = Modifier.testTag("search-artist-menu")) {
             @Composable fun option(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, tag: String, action: () -> Unit) =
                 androidx.compose.material3.DropdownMenuItem(text = { Text(label, color = th.onBackground, fontSize = 14.sp) },

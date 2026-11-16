@@ -47,14 +47,11 @@ import java.time.LocalDate
 internal fun EditorialHeader(title: String, modifier: Modifier = Modifier, subtitle: String? = null, onMore: (() -> Unit)? = null,
                              trailing: (@Composable () -> Unit)? = null) {
     val theme = LocalTheme.current
-    Row(modifier.fillMaxWidth().padding(start = com.ketvoice.app.ui.common.pageMargin(18.dp), end = 8.dp, top = 26.dp, bottom = 12.dp)
+    Row(modifier.fillMaxWidth().padding(start = com.ketvoice.app.ui.common.pageMargin, end = 8.dp, top = 26.dp, bottom = 12.dp)
         .then(if (onMore != null) Modifier.clip(RoundedCornerShape(12.dp)).clickable(role = Role.Button, onClick = onMore) else Modifier),
         verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f, fill = false)) {
-            if (com.ketvoice.app.theme.Ket27.on) Text(title, color = theme.onBackground, style = com.ketvoice.app.theme.Ket27.Type.title2,
-                maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.asHeading())
-            else Text(title, color = theme.onBackground, fontSize = 22.sp, fontWeight = FontWeight.Bold, letterSpacing = (-.5).sp,
-                maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.asHeading())
+            com.ketvoice.app.ui.common.SectionHeader(title)
             if (subtitle != null) Text(subtitle, color = theme.secondary, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp))
         }
         if (onMore != null) Icon(KetIcons.ChevronRight, null, tint = theme.secondary,

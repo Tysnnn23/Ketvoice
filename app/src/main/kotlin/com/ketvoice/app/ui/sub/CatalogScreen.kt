@@ -19,7 +19,6 @@ import androidx.compose.material.icons.filled.Share
 import com.ketvoice.app.ui.common.GlassBackButton
 import com.ketvoice.app.ui.common.Icon
 import com.ketvoice.app.ui.common.Text
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.*
 import androidx.compose.material3.TextButton
 import androidx.compose.ui.platform.testTag
@@ -103,15 +102,9 @@ fun CatalogScreen(request: CatalogRequest? = AppUi.catalogRequest.value) {
     val appNamed = request.kind in listOf("favorites", "history", "all", "mix")
     val shownTitle = if (appNamed) AppText.t(request.title) else request.title
     Column(Modifier.fillMaxSize().pageBackground(theme).statusBarsPadding()) {
-        if (com.ketvoice.app.theme.Ket27.on) com.ketvoice.app.ui.common.Ket27PageBar(page?.title ?: request.title, { AppUi.closeOverlay() })
-        else Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            GlassBackButton { AppUi.closeOverlay() }
-            Spacer(Modifier.width(14.dp))
-            Text(page?.title ?: request.title, color = theme.onBackground, fontSize = 24.sp,
-                fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
-        }
+        com.ketvoice.app.ui.common.Ket27PageBar(page?.title ?: request.title, { AppUi.closeOverlay() })
         if (loading) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(color = theme.accent, modifier = Modifier.size(26.dp), strokeWidth = 2.dp)
+            com.ketvoice.app.ui.common.ActivitySpinner(size = 26.dp)
         } else if (tracks.isEmpty()) {
             val remote = request.kind in listOf("album", "genre", "mix")
             EmptyState(if (remote) "Catalogue indisponible" else "Aucun titre dans cette collection.",
