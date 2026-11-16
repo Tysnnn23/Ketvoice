@@ -262,6 +262,9 @@ fun AppRoot() {
                     }
                 }
 
+                // ---- A cover in flight between its card and its page (ui/motion/CoverZoom) ----
+                com.ketvoice.app.ui.motion.CoverZoomLayer(Modifier.zIndex(2f))
+
                 // ---- Titre compact : quand la page d'un onglet défile, son grand titre
                 //      se réduit en une capsule de verre centrée sous la barre d'état ----
                 CompactTabTitle(

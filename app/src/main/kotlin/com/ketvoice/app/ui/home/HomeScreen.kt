@@ -177,11 +177,12 @@ fun HomeScreen() {
                         val cell = com.ketvoice.app.ui.adaptive.shelfCell(156.dp, 18.dp)
                         LazyRow(contentPadding = PaddingValues(horizontal = 18.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                             itemsIndexed(albums, key = { _, album -> album.id }) { _, album ->
-                                val origin = rememberRevealOrigin()
-                                Column(Modifier.width(cell).captureRevealOrigin(origin).clickable {
-                                    AppUi.openCatalog(CatalogRequest("album", album.id, album.title), origin.value)
+                                val albumCover = com.ketvoice.app.data.MediaOverrides.albumCover(album.title, album.artist, album.coverUrl)
+                                val zoom = com.ketvoice.app.ui.motion.rememberZoomSource(albumCover, 16.dp)
+                                Column(Modifier.width(cell).clickable {
+                                    zoom.openCatalog(CatalogRequest("album", album.id, album.title))
                                 }) {
-                                    Cover(album.title, com.ketvoice.app.data.MediaOverrides.albumCover(album.title, album.artist, album.coverUrl), cell, 16.dp)
+                                    Cover(album.title, albumCover, cell, 16.dp, modifier = com.ketvoice.app.ui.motion.zoomSourceOf(zoom))
                                     Text(album.title, localize = false, color = theme.onBackground, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
                                         maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))
                                     Text(album.artist, localize = false, color = theme.secondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)

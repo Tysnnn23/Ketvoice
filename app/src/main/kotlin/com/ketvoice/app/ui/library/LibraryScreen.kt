@@ -208,9 +208,11 @@ fun LibraryScreen() {
                 LibrarySection("Artistes")
                 LazyRow(contentPadding = PaddingValues(horizontal = 18.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                     items(artists.entries.toList(), key = { it.key }) { (name, tracks) ->
-                        Column(Modifier.width(100.dp).clickable { AppUi.openArtist(tracks.first().artistId.orEmpty(), name) },
+                        val face = ArtworkRepo.coverForTrack(tracks.first()) ?: tracks.first().coverUrl
+                        val zoom = com.ketvoice.app.ui.motion.rememberZoomSource(face, round = true)
+                        Column(Modifier.width(100.dp).clickable { zoom.openArtist(tracks.first().artistId.orEmpty(), name) },
                             horizontalAlignment = Alignment.CenterHorizontally) {
-                            Cover(name, ArtworkRepo.coverForTrack(tracks.first()) ?: tracks.first().coverUrl, 90.dp, 45.dp)
+                            Cover(name, face, 90.dp, 45.dp, modifier = com.ketvoice.app.ui.motion.zoomSourceOf(zoom))
                             Text(name, localize = false, color = theme.onBackground, fontSize = 13.sp, maxLines = 1,
                                 overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))
                         }
@@ -290,8 +292,10 @@ internal fun PlaylistShelf(rows: List<LocalPlaylist>, onPin: ((LocalPlaylist) ->
     val theme = LocalTheme.current
     LazyRow(contentPadding = PaddingValues(horizontal = 18.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
         items(rows, key = { it.id }) { playlist ->
+            val zoom = com.ketvoice.app.ui.motion.rememberZoomSource(18.dp) { place -> PlaylistArtwork(playlist, playlist.name, place) }
             Column(Modifier.width(148.dp)) {
-                PlaylistArtwork(playlist, playlist.name, Modifier.size(148.dp).clickable { AppUi.openPlaylist(playlist.id) })
+                PlaylistArtwork(playlist, playlist.name, Modifier.size(148.dp).then(com.ketvoice.app.ui.motion.zoomSourceOf(zoom))
+                    .clickable { zoom.openPlaylist(playlist.id) })
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(playlist.name, localize = false, color = theme.onBackground, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
                         maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(top = 6.dp))
@@ -330,8 +334,9 @@ internal fun PlaylistGrid(rows: List<LocalPlaylist>, onPin: ((LocalPlaylist) -> 
     val theme = LocalTheme.current
     CoverGrid(rows, Modifier.testTag("library-playlist-grid")) { playlist, side ->
         Column(Modifier.fillMaxWidth()) {
-            PlaylistArtwork(playlist, playlist.name, Modifier.size(side).clip(RoundedCornerShape(18.dp))
-                .clickable(role = Role.Button) { AppUi.openPlaylist(playlist.id) })
+            val zoom = com.ketvoice.app.ui.motion.rememberZoomSource(18.dp) { place -> PlaylistArtwork(playlist, playlist.name, place) }
+            PlaylistArtwork(playlist, playlist.name, Modifier.size(side).then(com.ketvoice.app.ui.motion.zoomSourceOf(zoom))
+                .clip(RoundedCornerShape(18.dp)).clickable(role = Role.Button) { zoom.openPlaylist(playlist.id) })
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f).padding(top = 8.dp)) {
                     Text(playlist.name, localize = false, color = theme.onBackground, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,

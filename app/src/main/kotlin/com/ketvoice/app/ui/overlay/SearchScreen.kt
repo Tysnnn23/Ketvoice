@@ -361,9 +361,9 @@ fun SearchScreen() {
                 val shownAlbums = remember(albums, blockedArtists) { albums.filter { com.ketvoice.app.data.ArtistPrefs.allows(it.artist) } }
                 if (shownAlbums.isNotEmpty()) {
                     com.ketvoice.app.ui.common.SectionHeader("Albums", Modifier.padding(horizontal = 20.dp, vertical = 6.dp))
-                    com.ketvoice.app.ui.explorer.AlbumShelf(shownAlbums, edge = 20.dp) { album ->
+                    com.ketvoice.app.ui.explorer.AlbumShelf(shownAlbums, edge = 20.dp) { album, origin ->
                         submitSearch()
-                        AppUi.openCatalog(com.ketvoice.app.data.CatalogRequest("album", album.id, album.title))
+                        AppUi.openCatalog(com.ketvoice.app.data.CatalogRequest("album", album.id, album.title), origin)
                     }
                     Spacer(Modifier.height(16.dp))
                 }
@@ -588,11 +588,14 @@ internal fun SearchArtistCircle(artist: com.ketvoice.app.data.MusicArtist, onOpe
         if (com.ketvoice.app.ui.motion.Motion.reduced) androidx.compose.animation.core.snap()
         else androidx.compose.animation.core.spring(dampingRatio = .62f, stiffness = 520f), label = "artist-circle-lift")
     Box {
+        val zoom = com.ketvoice.app.ui.motion.rememberZoomSource(
+            com.ketvoice.app.data.MediaOverrides.artistPhoto(artist.name, artist.photo), round = true)
         Column(Modifier.width(96.dp).captureRevealOrigin(origin)
             .combinedClickable(onLongClick = { haptic(com.ketvoice.app.ui.motion.Haptics.Kind.Tick); menu = true },
-                onLongClickLabel = com.ketvoice.app.data.AppText.t("Options de l'artiste")) { onOpen(origin.value) }
+                onLongClickLabel = com.ketvoice.app.data.AppText.t("Options de l'artiste")) { zoom.arm(); onOpen(zoom.bounds ?: origin.value) }
             .testTag("search-artist-${artist.id}"), horizontalAlignment = Alignment.CenterHorizontally) {
-            Box(Modifier.size(88.dp).graphicsLayer { scaleX = lift; scaleY = lift; alpha = if (blocked) .45f else 1f }
+            Box(Modifier.size(88.dp).then(com.ketvoice.app.ui.motion.zoomSourceOf(zoom))
+                .graphicsLayer { scaleX = lift; scaleY = lift; alpha = if (blocked) .45f else 1f }
                 .clip(CircleShape).background(th.card).border(1.dp, th.onBackground.copy(alpha = .10f), CircleShape),
                 contentAlignment = Alignment.Center) {
                 // Never an empty grey disc: the initial is always behind the photo and shows while it loads.

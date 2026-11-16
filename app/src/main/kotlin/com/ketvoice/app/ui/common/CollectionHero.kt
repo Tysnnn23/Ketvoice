@@ -42,6 +42,8 @@ import com.ketvoice.app.glass.rememberGlassFusion
 import com.ketvoice.app.theme.LocalTheme
 import com.ketvoice.app.ui.AppUi
 import com.ketvoice.app.ui.motion.Motion
+import com.ketvoice.app.ui.motion.rememberZoomTarget
+import com.ketvoice.app.ui.motion.zoomTarget
 
 /** Side of the floating artwork for a header [width] dp wide: large, never wider than the text needs. */
 internal fun heroArtworkSide(width: Float, beside: Boolean): Float =
@@ -89,10 +91,14 @@ internal fun CollectionHero(
             val shape: Shape = if (round) CircleShape else RoundedCornerShape(if (side < 140.dp) 16.dp else 24.dp)
             // The page opened from a card: the artwork continues that movement into its place.
             val origin = remember { AppUi.revealOrigin.value }
-            val entry = remember { Animatable(if (Motion.reduced) 1f else heroEntryScale(origin, with(density) { side.toPx() })) }
+            // 6.0.0: the touched cover itself flies into this place (ui/motion/CoverZoom); the artwork then
+            // stays still under it instead of growing on its own.
+            val zoom = rememberZoomTarget(if (round) 0.dp else if (side < 140.dp) 16.dp else 24.dp, round)
+            val entry = remember { Animatable(if (Motion.reduced || zoom.flying) 1f else heroEntryScale(origin, with(density) { side.toPx() })) }
             LaunchedEffect(Unit) { entry.animateTo(1f, Motion.gentleSpring()) }
             val frame: @Composable () -> Unit = {
-                Box(Modifier.size(side).graphicsLayer { scaleX = entry.value; scaleY = entry.value }
+                Box(Modifier.size(side).zoomTarget(zoom)
+                    .graphicsLayer { scaleX = entry.value; scaleY = entry.value; alpha = zoom.alpha() }
                     .shadow(if (side < 140.dp) 10.dp else 26.dp, shape, ambientColor = Color.Black.copy(alpha = .40f),
                         spotColor = Color.Black.copy(alpha = .55f))
                     .clip(shape).background(theme.card)

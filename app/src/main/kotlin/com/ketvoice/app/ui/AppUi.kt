@@ -55,9 +55,10 @@ object AppUi {
     val playlistMenu = androidx.compose.runtime.mutableStateOf<PlaylistMenuRequest?>(null)
     data class PlaylistResolution(val playlistId: String, val entryId: String)
     val playlistResolution = androidx.compose.runtime.mutableStateOf<PlaylistResolution?>(null)
-    fun openPlaylist(id: String) {
+    fun openPlaylist(id: String, origin: androidx.compose.ui.geometry.Rect? = null) {
         push(OverlayEntry(PLAYLIST, null, null, null, ""))
         playlistId.value = id
+        revealOrigin.value = origin
         showPlayer.value = false
         bottomCollapsed.value = false
     }
@@ -147,19 +148,24 @@ object AppUi {
 
     private fun jump(target: Int) {
         navKind.intValue = NAV_JUMP
+        com.ketvoice.app.ui.motion.CoverZoom.forget()
         overlayStack.clear()
         overlay.intValue = target
     }
 
     /** Ouvre un overlay au-dessus du courant : le retour y reviendra. */
     fun closeOverlay(): Boolean {
+        // A page opened from a cover shrinks back into it (ui/motion/CoverZoom).
+        val leaving = navigationPageKey(tab.intValue, snapshot())
         val previous = overlayStack.removeLastOrNull() ?: run {
             navKind.intValue = NAV_JUMP
             overlay.intValue = NONE
+            com.ketvoice.app.ui.motion.CoverZoom.close(leaving)
             return false
         }
         navKind.intValue = NAV_POP
         restore(previous)
+        com.ketvoice.app.ui.motion.CoverZoom.close(leaving)
         return true
     }
 
@@ -290,6 +296,7 @@ object AppUi {
         playlistResolution.value = null
         revealOrigin.value = null
         tab.intValue = index
+        com.ketvoice.app.ui.motion.CoverZoom.forget()
         overlayStack.clear()
         overlay.intValue = NONE
         showPlayer.value = false

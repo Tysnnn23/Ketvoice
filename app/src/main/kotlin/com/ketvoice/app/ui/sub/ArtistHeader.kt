@@ -1,5 +1,6 @@
 package com.ketvoice.app.ui.sub
 
+import com.ketvoice.app.ui.motion.zoomTarget
 import androidx.compose.ui.platform.testTag
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -121,13 +122,17 @@ internal fun ArtistHeader(page: ArtistPage, collapse: () -> Float = { 0f }, onTo
     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         BoxWithConstraints(Modifier.fillMaxWidth()) {
             val height = (maxWidth * (if (wide) .62f else .96f)).coerceIn(260.dp, 460.dp)
-            Box(Modifier.fillMaxWidth().height(height).clipToBounds().testTag("artist-portrait")) {
+            // 6.0.0: the artist's circle that was touched grows into this portrait (ui/motion/CoverZoom).
+            val zoom = com.ketvoice.app.ui.motion.rememberZoomTarget()
+            Box(Modifier.fillMaxWidth().height(height).zoomTarget(zoom)
+                .clipToBounds().testTag("artist-portrait")) {
                 if (hero != null) {
                     AsyncImage(heroRequest, page.artist.name, contentScale = ContentScale.Crop, alignment = Alignment.TopCenter,
                         onSuccess = { result ->
                             if (curated != null) result.painter.intrinsicSize.takeIf { it.height > 0f }?.let { curatedRatio = it.width / it.height }
                         },
                         modifier = Modifier.fillMaxSize().graphicsLayer {
+                            alpha = zoom.alpha()
                             val c = collapse().coerceIn(0f, 1f)
                             // A slight overscan hides any seam; the photo drifts a little as the page scrolls.
                             scaleX = 1.02f; scaleY = 1.02f

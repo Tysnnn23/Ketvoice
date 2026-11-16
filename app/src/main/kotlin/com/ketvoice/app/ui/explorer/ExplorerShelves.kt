@@ -77,15 +77,19 @@ internal fun ChartTracksShelf(tracks: List<Track>, modifier: Modifier = Modifier
 
 @Composable
 internal fun AlbumShelf(albums: List<CatalogAlbum>, modifier: Modifier = Modifier, edge: androidx.compose.ui.unit.Dp = 0.dp,
-                        onOpen: (CatalogAlbum) -> Unit = { AppUi.openCatalog(CatalogRequest("album", it.id, it.title)) }) {
+                        onOpen: (CatalogAlbum, androidx.compose.ui.geometry.Rect?) -> Unit = { album, origin ->
+                            AppUi.openCatalog(CatalogRequest("album", album.id, album.title), origin) }) {
     val theme = LocalTheme.current
     val cell = com.ketvoice.app.ui.adaptive.shelfCell(132.dp, edge + 16.dp)
     LazyRow(modifier.testTag("album-shelf"), contentPadding = PaddingValues(horizontal = edge),
         horizontalArrangement = Arrangement.spacedBy(14.dp)) {
         items(albums, key = { it.id }) { album ->
-            Column(Modifier.width(cell).clip(shelfCard).clickable(role = Role.Button) { onOpen(album) }
+            val albumCover = com.ketvoice.app.data.MediaOverrides.albumCover(album.title, album.artist, album.cover)
+            val zoom = com.ketvoice.app.ui.motion.rememberZoomSource(albumCover, 14.dp)
+            // The page opened grows out of the cover (ui/motion/CoverZoom).
+            Column(Modifier.width(cell).clip(shelfCard).clickable(role = Role.Button) { zoom.arm(); onOpen(album, zoom.bounds) }
                 .padding(bottom = 4.dp)) {
-                Cover(album.title, com.ketvoice.app.data.MediaOverrides.albumCover(album.title, album.artist, album.cover), cell, 14.dp)
+                Cover(album.title, albumCover, cell, 14.dp, modifier = com.ketvoice.app.ui.motion.zoomSourceOf(zoom))
                 Text(album.title, localize = false, color = theme.onBackground, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
                     maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))
                 Text(album.artist, localize = false, color = theme.secondary, fontSize = 12.sp,
@@ -101,10 +105,12 @@ internal fun ArtistShelf(artists: List<CatalogArtist>, modifier: Modifier = Modi
     LazyRow(modifier.testTag("artist-shelf"), contentPadding = PaddingValues(horizontal = edge),
         horizontalArrangement = Arrangement.spacedBy(16.dp)) {
         items(artists, key = { it.id }) { artist ->
+            val zoom = com.ketvoice.app.ui.motion.rememberZoomSource(
+                com.ketvoice.app.data.MediaOverrides.artistPhoto(artist.name, artist.picture), round = true)
             Column(Modifier.width(96.dp).clip(RoundedCornerShape(14.dp))
-                .clickable(role = Role.Button) { AppUi.openArtist(artist.id, artist.name) }.padding(bottom = 4.dp),
+                .clickable(role = Role.Button) { zoom.openArtist(artist.id, artist.name) }.padding(bottom = 4.dp),
                 horizontalAlignment = Alignment.CenterHorizontally) {
-                Box(Modifier.size(88.dp).clip(CircleShape).background(theme.card)
+                Box(Modifier.size(88.dp).then(com.ketvoice.app.ui.motion.zoomSourceOf(zoom)).clip(CircleShape).background(theme.card)
                     .border(1.dp, theme.onBackground.copy(alpha = .10f), CircleShape), contentAlignment = Alignment.Center) {
                     // The initial stays behind the photo while it loads.
                     Text(artist.name.take(1).uppercase(), localize = false, color = theme.secondary, fontSize = 30.sp,
