@@ -69,6 +69,7 @@ import com.ketvoice.app.ui.adaptive.LocalAdaptiveLayout
 import com.ketvoice.app.ui.common.Cover
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.ketvoice.app.ui.motion.Motion
+import com.ketvoice.app.ui.motion.symbolBounce
 import androidx.compose.animation.animateColorAsState
 import com.ketvoice.app.theme.LocalTheme
 import com.ketvoice.app.theme.KetTheme
@@ -281,6 +282,14 @@ fun FullPlayerScreen(
                 if (presentationOffset == null) dismissOffset.snapTo(0f)
             }
         }
+        // Ket 27, opened from the mini-player: its cover, title, play and next buttons travel to their places in
+        // one movement; the other controls rise in a little later, each on its own.
+        val travels = com.ketvoice.app.theme.Ket27.on && presentationOffset != null && !Motion.reduced
+        val lateRise = if (!travels) Modifier else Modifier.graphicsLayer {
+            val rise = controlsReveal(revealProgress())
+            alpha = rise
+            translationY = (1f - rise) * 28.dp.toPx()
+        }
         fun requestClose() {
             if (dismissOffset.value > 0f && dismissOffset.isRunning) return
             completeDismiss()
@@ -419,7 +428,10 @@ fun FullPlayerScreen(
                         textAlign = TextAlign.Center,
                         modifier = Modifier.width(sceneWidth).padding(top = topInset + 32.dp))
                     PlayerTitle(track, false, cover, sheetAction = { sheet = "track" },
-                        modifier = Modifier.width(sceneWidth).offset(y = titleTop).padding(horizontal = margin))
+                        modifier = Modifier.width(sceneWidth).offset(y = titleTop).padding(horizontal = margin),
+                        // Ket 27: the title and the artist travel up from the mini-player; the buttons beside them fade in.
+                        textModifier = if (travels) Modifier.travelFromMini({ MiniPlayerAnchors.title }, revealProgress, anchorStart = true) else Modifier,
+                        actionsModifier = lateRise)
                 } else {
                     PlayerTitle(track, true, cover, sheetAction = {
                         if (expanded) {
@@ -469,14 +481,14 @@ fun FullPlayerScreen(
 
                 CompositionLocalProvider(LocalBackdropLayer provides controlsBackdrop) {
                 PlayerChrome(!expanded, Modifier.align(if (wide) Alignment.BottomEnd else Alignment.BottomCenter).padding(bottom = bottomInset)
-                    .graphicsLayer {
+                    .then(if (travels) Modifier else Modifier.graphicsLayer {
                         val rise = controlsReveal(revealProgress())
                         alpha = rise
                         translationY = (1f - rise) * 28.dp.toPx()
-                    }) {
+                    })) {
                     Column(Modifier
                         .height(lowerHeight).width(controlsWidth).padding(horizontal = if (wide) 20.dp else margin)) {
-                        Box(Modifier.height(34.dp).fillMaxWidth(), contentAlignment = Alignment.CenterStart) {
+                        Box(Modifier.height(34.dp).fillMaxWidth().then(lateRise), contentAlignment = Alignment.CenterStart) {
                             if (page == PlayerPage.LYRICS) {
                                 Text("${lyrics.source.ifBlank { "Recherche des paroles…" }} · ${lyrics.syncDescription()}", color = Color(0xFFB5B5C0), fontSize = 12.sp,
                                     maxLines = 1, overflow = TextOverflow.Ellipsis,
@@ -489,27 +501,30 @@ fun FullPlayerScreen(
                                 AutomixStatusLine(Modifier.fillMaxWidth(), fontSize = 12.sp, glyph = true)
                             } else LyricsPreviewLine { navigate(PlayerPage.LYRICS) }
                         }
-                        ScrubBar(state.durationMs, Modifier.fillMaxWidth(), onSeek = Player::seekTo)
-                        AudioStatsInfo(Modifier.fillMaxWidth())
+                        ScrubBar(state.durationMs, Modifier.fillMaxWidth().then(lateRise), onSeek = Player::seekTo)
+                        AudioStatsInfo(Modifier.fillMaxWidth().then(lateRise))
                         Box(Modifier.weight(1f).fillMaxWidth()) {
-                            PlayerTransport(state.playWhenReady, Modifier.fillMaxSize(), Player::previous, Player::toggle, Player::next)
+                            PlayerTransport(state.playWhenReady, Modifier.fillMaxSize(), Player::previous, Player::toggle, Player::next,
+                                previousModifier = lateRise,
+                                playModifier = if (travels) Modifier.travelFromMini({ MiniPlayerAnchors.play }, revealProgress) else Modifier,
+                                nextModifier = if (travels) Modifier.travelFromMini({ MiniPlayerAnchors.next }, revealProgress) else Modifier)
                             if (state.buffering) Text("Chargement…", color = Color.White.copy(alpha = .42f), fontSize = 10.sp,
                                 modifier = Modifier.align(Alignment.BottomCenter))
                             else if (state.failed) Text(state.quality, color = Color.White, fontSize = 12.sp,
                                 modifier = Modifier.align(Alignment.BottomCenter))
                         }
-                        PlayerVolume(Modifier.fillMaxWidth(), compact = true)
+                        PlayerVolume(Modifier.fillMaxWidth().then(lateRise), compact = true)
                         Spacer(Modifier.height(8.dp))
                         if (page == PlayerPage.QUEUE) QueueActionsBar(state.shuffle, state.repeatOne, state.autoplay, state.repeatAll,
                             { Player.setShuffle(!state.shuffle) }, { Player.cycleRepeat() },
-                            { Player.setAutoplay(!state.autoplay) }, { navigate(PlayerPage.ARTWORK) })
+                            { Player.setAutoplay(!state.autoplay) }, { navigate(PlayerPage.ARTWORK) }, lateRise)
                         else PlayerBottomBar(page == PlayerPage.LYRICS,
                             onLyrics = { navigate(if (page == PlayerPage.LYRICS) PlayerPage.ARTWORK else PlayerPage.LYRICS) },
                             onOutput = { sheet = "audio" },
                             onProfile = { AppUi.showAccount.value = true },
-                            onQueue = { navigate(PlayerPage.QUEUE) })
+                            onQueue = { navigate(PlayerPage.QUEUE) }, modifier = lateRise)
                         Text(if (com.ketvoice.app.BuildConfig.IS_QUEST) "Ce casque" else "Ce téléphone", color = Color(0xFF777984), fontSize = 10.sp,
-                            fontWeight = FontWeight.SemiBold, modifier = Modifier.align(Alignment.CenterHorizontally).padding(top = 18.dp, bottom = 19.dp))
+                            fontWeight = FontWeight.SemiBold, modifier = Modifier.align(Alignment.CenterHorizontally).padding(top = 18.dp, bottom = 19.dp).then(lateRise))
                     }
                 }
                 }
@@ -544,7 +559,8 @@ private fun PlayerHandle(modifier: Modifier, onClose: () -> Unit, drag: Modifier
 
 @Composable
 internal fun PlayerTitle(track: Track, compact: Boolean, cover: String?, sheetAction: () -> Unit,
-                         modifier: Modifier = Modifier, share: Boolean = false, onCover: () -> Unit = {}) {
+                         modifier: Modifier = Modifier, share: Boolean = false, onCover: () -> Unit = {},
+                         textModifier: Modifier = Modifier, actionsModifier: Modifier = Modifier) {
     val favorite = track.id in AppSettings.favoriteIds.value
     var favoriteTap by remember(track.id) { mutableIntStateOf(0) }
     val favoriteHaptic = com.ketvoice.app.ui.motion.rememberHaptics()
@@ -562,7 +578,7 @@ internal fun PlayerTitle(track: Track, compact: Boolean, cover: String?, sheetAc
     Row(modifier, verticalAlignment = Alignment.CenterVertically) {
         if (compact) { Cover(track.title, cover, size = 56.dp, radius = 8.dp,
             modifier = Modifier.semantics { contentDescription = com.ketvoice.app.data.AppText.t("Revenir à la pochette") }.clickable(onClick = onCover)); Spacer(Modifier.width(12.dp)) }
-        Column(Modifier.weight(1f)) {
+        Column(Modifier.weight(1f).then(textModifier)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (track.explicit) {
                     Text("E", color = Color.Black, fontSize = 9.sp, fontWeight = FontWeight.Black,
@@ -584,7 +600,7 @@ internal fun PlayerTitle(track: Track, compact: Boolean, cover: String?, sheetAc
             )
         }
         Spacer(Modifier.width(8.dp))
-        Box(contentAlignment = Alignment.Center) {
+        Box(actionsModifier, contentAlignment = Alignment.Center) {
         com.ketvoice.app.ui.motion.HeartBurst(bursts, starColor, Modifier.align(Alignment.Center))
         SmallCircleButton({
             favoriteTap++
@@ -592,16 +608,22 @@ internal fun PlayerTitle(track: Track, compact: Boolean, cover: String?, sheetAc
             AppSettings.favoriteIds.value = if (favorite) AppSettings.favoriteIds.value - track.id else AppSettings.favoriteIds.value + track.id
             SettingsStore.save()
         }, active = favorite, size = 36.dp) {
-            Icon(if (com.ketvoice.app.theme.Ket27.on) (if (favorite) com.ketvoice.app.ui.common.Ket27Glyphs.HeartFilled else com.ketvoice.app.ui.common.Ket27Glyphs.Heart)
-                else if (favorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+            // Ket 27: the heart fills inside its outline and bounces (give way, spring past, settle).
+            if (com.ketvoice.app.theme.Ket27.on) com.ketvoice.app.ui.motion.FillingHeart(favorite,
+                com.ketvoice.app.ui.common.Ket27Glyphs.Heart, com.ketvoice.app.ui.common.Ket27Glyphs.HeartFilled,
+                if (favorite) "Retirer des favoris" else "Ajouter aux favoris", starColor,
+                Modifier.size(23.dp).symbolBounce(favoriteTap))
+            else Icon(if (favorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
                 if (favorite) "Retirer des favoris" else "Ajouter aux favoris", tint = starColor,
                 modifier = Modifier.size(23.dp).graphicsLayer { scaleX = pulse.value; scaleY = pulse.value })
         }
         }
         Spacer(Modifier.width(8.dp))
+        Box(actionsModifier) {
         SmallCircleButton(sheetAction, size = 36.dp) {
             Icon(if (share) Icons.Filled.Share else Icons.Filled.MoreHoriz, if (share) "Partager" else "Options",
                 tint = Color(0xFFCED2E3), modifier = Modifier.size(22.dp))
+        }
         }
     }
 }
@@ -622,10 +644,13 @@ private fun Modifier.playerDismissDrag(
     val dismiss by rememberUpdatedState(onDismiss)
     // snapTo/animateTo sont suspendus : les callbacks de drag passent par un scope.
     val scope = rememberCoroutineScope()
+    val fling = with(LocalDensity.current) { PlayerDismiss.FLING_DP.dp.toPx() }
     return this.pointerInput(maxPx) {
+        val tracker = androidx.compose.ui.input.pointer.util.VelocityTracker()
         detectVerticalDragGestures(
-            onDragStart = { },
+            onDragStart = { tracker.resetTracking() },
             onVerticalDrag = { change, dy ->
+                tracker.addPosition(change.uptimeMillis, change.position)
                 change.consume()
                 val next = dismissOffset.value + dy
                 // Résistance : au-delà de 75 % de l'écran, le doigt « appuie ».
@@ -634,7 +659,13 @@ private fun Modifier.playerDismissDrag(
                 scope.launch { dismissOffset.snapTo(resisted.coerceIn(0f, maxPx)) }
             },
             onDragEnd = {
-                if (dismissOffset.value > maxPx * 0.16f) dismiss() else settle()
+                // Ket 27: a flick down closes the player from anywhere, a flick up keeps it; the spring leaves at the finger's speed.
+                val velocity = tracker.calculateVelocity().y
+                val ket = com.ketvoice.app.theme.Ket27.on
+                if (PlayerDismiss.closes(dismissOffset.value, velocity, maxPx, fling, velocityAware = ket)) {
+                    if (ket) PlayerDismiss.throwAt(velocity)
+                    dismiss()
+                } else settle()
             },
             onDragCancel = { settle() }
         )

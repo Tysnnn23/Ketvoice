@@ -50,6 +50,26 @@ internal fun SettingsSheet(onDismiss: () -> Unit, content: @Composable ColumnSco
             }
             Box(Modifier.matchParentSize().clickable(remember { MutableInteractionSource() }, indication = null, onClick = onDismiss))
             val compactLandscape = maxWidth > 640.dp && maxHeight < 600.dp
+            // Ket 27: the same sheet as everywhere else — detents, the finger, a spring.
+            if (com.ketvoice.app.ui.common.springSheets && !compactLandscape) {
+                com.ketvoice.app.ui.common.SpringSheet(onDismiss, Modifier.statusBarsPadding().imePadding().navigationBarsPadding(), scrim = 0f) { room ->
+                    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.BottomCenter) {
+                        CompositionLocalProvider(LocalBackdropLayer provides backdrop) {
+                            GlassPanel(Modifier.widthIn(max = 560.dp).fillMaxWidth().padding(horizontal = 12.dp).padding(top = 12.dp, bottom = 12.dp)
+                                .heightIn(max = room - 24.dp), RoundedCornerShape(com.ketvoice.app.theme.Ket27.Metrics.alertRadius),
+                                GlassParams.sheet(34f, dark = theme.isDark)) {
+                                Column(Modifier.fillMaxWidth().pointerInput(Unit) { detectTapGestures {} }) {
+                                    Box(Modifier.align(Alignment.CenterHorizontally).padding(top = 6.dp)
+                                        .width(36.dp).height(5.dp).clip(CircleShape)
+                                        .background(theme.secondary.copy(alpha = .4f)))
+                                    content()
+                                }
+                            }
+                        }
+                    }
+                }
+                return@BoxWithConstraints
+            }
             val alignment = if (compactLandscape) Alignment.Center else Alignment.BottomCenter
             BoxWithConstraints(Modifier.align(alignment).widthIn(max = 560.dp).fillMaxWidth()
                 .statusBarsPadding().imePadding().navigationBarsPadding().padding(horizontal = 12.dp, vertical = 12.dp)) {

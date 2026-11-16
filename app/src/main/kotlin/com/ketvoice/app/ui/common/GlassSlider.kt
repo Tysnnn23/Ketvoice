@@ -57,6 +57,8 @@ fun GlassSlider(
     modifier: Modifier = Modifier,
     valueRange: ClosedFloatingPointRange<Float> = 0f..1f,
     enabled: Boolean = true,
+    /** How many steps the travel is felt in (Ket 27 ticks at each); 0 picks them from the range. */
+    steps: Int = 0,
     onValueChangeFinished: () -> Unit = {}
 ) {
     val theme = LocalTheme.current
@@ -70,7 +72,20 @@ fun GlassSlider(
     var widthPx by remember { mutableStateOf(0) }
     val density = LocalDensity.current
     val direction = LocalLayoutDirection.current
-    val thumb = 22.dp
+    // Ket 27: the slider of iOS 27 — a capsule of glass wider than it is tall, on a slightly thicker
+    // track, and a tick in the hand at each step of its travel.
+    val ket = com.ketvoice.app.theme.Ket27.on
+    val thumb = if (ket) 36.dp else 22.dp
+    val thumbHeight = if (ket) 24.dp else 22.dp
+    val rail = if (ket) 6.dp else 5.dp
+    val tick = com.ketvoice.app.ui.motion.rememberHaptics()
+    val stepCount = if (steps > 0) steps else SliderSteps.count(valueRange.start, valueRange.endInclusive)
+    var lastStep by remember { mutableStateOf(SliderSteps.index(fraction, stepCount)) }
+    fun feel(next: Float) {
+        if (!ket) return
+        val step = SliderSteps.index(next, stepCount)
+        if (step != lastStep) { lastStep = step; tick(com.ketvoice.app.ui.motion.Haptics.Kind.Tick) }
+    }
 
     Box(
         modifier
@@ -104,19 +119,20 @@ fun GlassSlider(
                     val travel = (widthPx - thumb.toPx()).coerceAtLeast(1f)
                     val physical = ((point.x - thumb.toPx() / 2f) / travel).coerceIn(0f, 1f)
                     val next = if (direction == LayoutDirection.Rtl) 1f - physical else physical
-                    dragFraction = next; change(valueRange.start + next * span); finished()
+                    dragFraction = next; feel(next); change(valueRange.start + next * span); finished()
                 }
             }
             .draggable(
                 orientation = Orientation.Horizontal,
                 enabled = enabled,
-                onDragStarted = { dragging = true; dragFraction = fraction },
+                onDragStarted = { dragging = true; dragFraction = fraction; lastStep = SliderSteps.index(fraction, stepCount) },
                 onDragStopped = { dragging = false; finished() },
                 state = rememberDraggableState { delta ->
                     if (widthPx > 0) {
                         val travel = (widthPx - with(density) { thumb.toPx() }).coerceAtLeast(1f)
                         val logicalDelta = if (direction == LayoutDirection.Rtl) -delta else delta
                         dragFraction = (dragFraction + logicalDelta / travel).coerceIn(0f, 1f)
+                        feel(dragFraction)
                         change(valueRange.start + dragFraction * span)
                     }
                 }
@@ -129,9 +145,9 @@ fun GlassSlider(
             if (dragging && !com.ketvoice.app.ui.motion.Motion.reduced) 1f else 0f,
             com.ketvoice.app.ui.motion.Motion.pressSpring(dragging), label = "slider-pressure")
         com.ketvoice.app.glass.BackdropCapture(track, Modifier.matchParentSize()) {
-            Box(Modifier.align(Alignment.Center).fillMaxWidth().height(5.dp)
+            Box(Modifier.align(Alignment.Center).fillMaxWidth().height(rail)
                 .clip(CircleShape).background(theme.onBackground.copy(alpha = .12f)))
-            Box(Modifier.align(Alignment.CenterStart).fillMaxWidth(displayedFraction).height(5.dp)
+            Box(Modifier.align(Alignment.CenterStart).fillMaxWidth(displayedFraction).height(rail)
                 .clip(CircleShape).background(theme.accent))
         }
         val travel = with(density) {
@@ -139,7 +155,7 @@ fun GlassSlider(
         }
         androidx.compose.runtime.CompositionLocalProvider(com.ketvoice.app.glass.LocalBackdropLayer provides track) {
             GlassPanel(
-                Modifier.offset(x = travel * displayedFraction).size(thumb),
+                Modifier.offset(x = travel * displayedFraction).size(thumb, thumbHeight),
                 CircleShape,
                 GlassParams.circle(dark = theme.isDark).copy(blurPx = 2f, tintAlpha = .16f,
                     opticalPressure = pressure),
@@ -147,4 +163,18 @@ fun GlassSlider(
             ) {}
         }
     }
+}
+
+/** The steps a slider is felt in: where a tick falls along its travel. */
+internal object SliderSteps {
+    /** A whole-number range of at most 24 is felt unit by unit (the equalizer's decibels); anything else in twentieths. */
+    fun count(start: Float, end: Float): Int {
+        val span = end - start
+        return if (span.isFinite() && span >= 2f && span <= 24f && span == Math.round(span).toFloat()) Math.round(span) else 20
+    }
+    /** The step a fraction of the travel (0..1) falls on. */
+    fun index(fraction: Float, steps: Int): Int =
+        if (steps <= 0 || !fraction.isFinite()) 0 else Math.round(fraction.coerceIn(0f, 1f) * steps)
+    /** Whether going from one fraction to another crosses onto a new step: a tick is due. */
+    fun crossed(from: Float, to: Float, steps: Int): Boolean = index(from, steps) != index(to, steps)
 }

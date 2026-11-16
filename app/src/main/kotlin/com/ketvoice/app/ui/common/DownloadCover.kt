@@ -24,6 +24,8 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.ketvoice.app.data.Downloader
@@ -57,7 +59,14 @@ fun DownloadCover(track: Track, url: String?, size: Dp, radius: Dp = 9.dp) {
         Cover(track.title, url, size, radius)
         if (active) {
             Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .58f)))
-            Canvas(Modifier.align(Alignment.Center).size(size * .55f).semantics {
+            val waiting = phase == com.ketvoice.app.data.DownloadPhase.Paused || phase == com.ketvoice.app.data.DownloadPhase.WaitingWifi
+            // Ket 27: the download arrow itself fills from the bottom as the file arrives.
+            if (com.ketvoice.app.theme.Ket27.on) { if (!waiting) com.ketvoice.app.ui.motion.FillingDownloadGlyph(
+                (progress[track.id] ?: 0).coerceIn(0, 100) / 100f,
+                Modifier.align(Alignment.Center).size(size * .52f).testTag("download-fill").semantics {
+                    progressBarRangeInfo = ProgressBarRangeInfo((progress[track.id] ?: 0).coerceIn(0, 100) / 100f, 0f..1f)
+                }, fill = accent) }
+            else Canvas(Modifier.align(Alignment.Center).size(size * .55f).semantics {
                 progressBarRangeInfo = ProgressBarRangeInfo((progress[track.id] ?: 0).coerceIn(0, 100) / 100f, 0f..1f)
             }) {
                 val stroke = Stroke(3.dp.toPx(), cap = StrokeCap.Round)
@@ -75,7 +84,12 @@ fun DownloadCover(track: Track, url: String?, size: Dp, radius: Dp = 9.dp) {
             exit = fadeOut(tween(Motion.duration()))) {
             Box(Modifier.padding(3.dp).size(24.dp).clip(CircleShape)
                 .background(Color(0xFF173F2B)), contentAlignment = Alignment.Center) {
-                Icon(Icons.Filled.Check, "Téléchargé", tint = Color.White, modifier = Modifier.size(17.dp))
+                if (com.ketvoice.app.theme.Ket27.on) {
+                    val drawn by animateFloatAsState(if (complete) 1f else 0f,
+                        if (Motion.reduced) androidx.compose.animation.core.snap() else tween(320, delayMillis = 90), label = "download-check")
+                    val done = com.ketvoice.app.data.AppText.t("Téléchargé")
+                    com.ketvoice.app.ui.motion.DrawnCheck(drawn, Modifier.size(17.dp).semantics { contentDescription = done })
+                } else Icon(Icons.Filled.Check, "Téléchargé", tint = Color.White, modifier = Modifier.size(17.dp))
             }
         }
     }

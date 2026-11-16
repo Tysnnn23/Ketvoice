@@ -34,6 +34,7 @@ import com.ketvoice.app.ui.common.glassPressScale
 import com.ketvoice.app.ui.common.glassPressSpec
 import com.ketvoice.app.ui.common.isLiquid27Glass
 import com.ketvoice.app.ui.motion.Motion
+import com.ketvoice.app.ui.motion.symbolBounce
 
 /**
  * One of the quick actions at the top of a title's menu: a round glass button with
@@ -54,7 +55,9 @@ internal fun QuickTrackAction(label: String, glyph: ImageVector, modifier: Modif
             val (width, height) = glassPressScale(pressure, liquid27)
             scaleX = width; scaleY = height
         }, CircleShape, GlassParams.circle(dark = true).copy(opticalPressure = pressure), captured = true) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            // Ket 27: the symbol bounces when its state is set (a favourite, a finished download).
+            Box(Modifier.fillMaxSize().then(if (com.ketvoice.app.theme.Ket27.on) Modifier.symbolBounce(active) else Modifier),
+                contentAlignment = Alignment.Center) {
                 AnimatedContent(glyph, transitionSpec = { fadeIn(tween(Motion.duration(160))).togetherWith(fadeOut(tween(Motion.duration(120)))) },
                     label = "quick-action-glyph") {
                     Icon(it, null, tint = if (active) accent else Color.White, modifier = Modifier.size(24.dp))

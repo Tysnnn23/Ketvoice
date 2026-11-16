@@ -56,7 +56,7 @@ internal fun PersonalBackupSheet(onClose: () -> Unit) {
         }
     }
     SettingsSheet(onDismiss = { if (!busy) onClose() }) {
-        Column(Modifier.fillMaxWidth().heightIn(max = 650.dp).verticalScroll(rememberScrollState()).padding(20.dp),
+        Column(Modifier.fillMaxWidth().heightIn(max = com.ketvoice.app.ui.common.sheetMaxHeight()).verticalScroll(rememberScrollState()).padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
             SettingsSheetHeader("Sauvegarde personnelle", "Les comptes, clés, réglages sensibles et fichiers multimédias ne sont pas inclus.") {
                 if (!busy) onClose()

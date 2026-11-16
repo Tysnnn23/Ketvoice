@@ -80,7 +80,7 @@ fun TrackMenuSheet(track: Track, onClose: () -> Unit) {
         Column(
             Modifier
                 .fillMaxWidth()
-                .heightIn(max = 650.dp)
+                .heightIn(max = com.ketvoice.app.ui.common.sheetMaxHeight())
                 .verticalScroll(rememberScrollState())
                 .pointerInput(Unit) { detectTapGestures {} }
         ) {

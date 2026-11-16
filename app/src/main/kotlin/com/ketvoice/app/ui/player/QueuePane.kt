@@ -57,6 +57,7 @@ import com.ketvoice.app.theme.LocalTheme
 import com.ketvoice.app.ui.common.Cover
 import com.ketvoice.app.ui.common.TrackActionFeedback
 import com.ketvoice.app.ui.common.asHeading
+import com.ketvoice.app.ui.motion.symbolPulse
 import com.ketvoice.app.ui.motion.Haptics
 import com.ketvoice.app.ui.motion.Motion
 import com.ketvoice.app.ui.motion.rememberHaptics
@@ -302,18 +303,22 @@ private fun QueueModes(state: PlayerUiState) {
         AutomixToggle()
         QueueMode(Icons.Filled.Shuffle, "Aléatoire", state.shuffle) { Player.setShuffle(!state.shuffle) }
         QueueMode(if (state.repeatOne) Icons.Filled.RepeatOne else Icons.Filled.Repeat,
-            repeatLabel(state.repeatOne, state.repeatAll), state.repeatOne || state.repeatAll) { Player.cycleRepeat() }
+            repeatLabel(state.repeatOne, state.repeatAll), state.repeatOne || state.repeatAll,
+            effectKey = if (state.repeatOne) 2 else if (state.repeatAll) 1 else 0, spin = true) { Player.cycleRepeat() }
         QueueMode(Icons.Filled.AllInclusive, "Lecture automatique", state.autoplay) { Player.setAutoplay(!state.autoplay) }
     }
 }
 
 @Composable
-private fun QueueMode(icon: ImageVector, label: String, active: Boolean, onClick: () -> Unit) {
+private fun QueueMode(icon: ImageVector, label: String, active: Boolean, effectKey: Any? = active, spin: Boolean = false,
+                      onClick: () -> Unit) {
     val accent = LocalTheme.current.accent
+    val ket = com.ketvoice.app.theme.Ket27.on
     Box(Modifier.size(48.dp).clip(CircleShape)
         .background(if (active) accent.copy(alpha = .22f) else Color.White.copy(alpha = .08f))
         .clickable(role = Role.Button, onClick = onClick), contentAlignment = Alignment.Center) {
-        Icon(icon, label, tint = if (active) accent else Color.White.copy(alpha = .78f), modifier = Modifier.size(22.dp))
+        Icon(icon, label, tint = if (active) accent else Color.White.copy(alpha = .78f), modifier = Modifier.size(22.dp)
+            .then(if (ket) Modifier.symbolPulse(effectKey, spin = spin) else Modifier))
     }
 }
 

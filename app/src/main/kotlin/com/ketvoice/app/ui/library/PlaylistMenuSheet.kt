@@ -59,7 +59,7 @@ fun PlaylistMenuSheet(
         shape = RoundedCornerShape(28.dp),
         params = GlassParams.sheet(radius, dark = true)
     ) {
-        Column(Modifier.fillMaxWidth().heightIn(max = 650.dp)
+        Column(Modifier.fillMaxWidth().heightIn(max = com.ketvoice.app.ui.common.sheetMaxHeight())
             .verticalScroll(rememberScrollState()).pointerInput(Unit) { detectTapGestures {} }) {
             Box(Modifier.fillMaxWidth().padding(top = 8.dp), contentAlignment = Alignment.Center) {
                 Box(Modifier.width(44.dp).height(5.dp).clip(RoundedCornerShape(3.dp))

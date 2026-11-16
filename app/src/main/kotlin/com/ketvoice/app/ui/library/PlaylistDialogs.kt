@@ -57,7 +57,7 @@ private fun CreatePlaylistDialog() {
     var error by remember { mutableStateOf("") }
     var saving by remember { mutableStateOf(false) }
     SettingsSheet(onDismiss = { if (!saving) AppUi.showCreatePlaylist.value = false }) {
-        Column(Modifier.fillMaxWidth().heightIn(max = 650.dp).verticalScroll(rememberScrollState()).padding(20.dp),
+        Column(Modifier.fillMaxWidth().heightIn(max = com.ketvoice.app.ui.common.sheetMaxHeight()).verticalScroll(rememberScrollState()).padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Créer une playlist", color = th.onBackground, fontSize = 20.sp, fontWeight = FontWeight.Bold)
             SettingsTextInput(name, { name = it.take(80) }, "Nom de la playlist", !saving, Modifier.testTag("playlist-name"))
@@ -197,7 +197,7 @@ fun SpotifyImportDialog(onClose: () -> Unit) {
             catch(failure:Exception){error=userError(failure)} finally{busy=false} }
     }
     SettingsSheet(onDismiss={operation?.cancel();onClose()}) {
-        Column(Modifier.fillMaxWidth().heightIn(max=650.dp)
+        Column(Modifier.fillMaxWidth().heightIn(max = com.ketvoice.app.ui.common.sheetMaxHeight())
             .verticalScroll(rememberScrollState()).padding(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
             Text("Importer depuis Spotify",color=th.onBackground,fontSize=20.sp,fontWeight=FontWeight.Bold)
             PlaylistArtwork(null, "Spotify", Modifier.size(100.dp))

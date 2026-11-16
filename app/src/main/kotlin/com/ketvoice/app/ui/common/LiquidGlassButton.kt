@@ -100,9 +100,10 @@ internal fun LiquidGlassSwitch(checked: Boolean, onCheckedChange: ((Boolean) -> 
     val x by androidx.compose.animation.core.animateDpAsState(if (checked) trackWidth - thumbWidth - (if (ket) 2.dp else 3.dp) else if (ket) 2.dp else 3.dp,
         if (Motion.reduced) androidx.compose.animation.core.snap() else
             androidx.compose.animation.core.spring(dampingRatio = .82f, stiffness = 650f), label = "glass-switch")
+    val tick = com.ketvoice.app.ui.motion.rememberHaptics()
     Box(modifier.width(trackWidth).height(48.dp)
         .then(if (onCheckedChange != null) Modifier.toggleable(checked, interactions, null, role = Role.Switch,
-            onValueChange = onCheckedChange) else Modifier),
+            onValueChange = { if (ket) tick(com.ketvoice.app.ui.motion.Haptics.Kind.Tick); onCheckedChange(it) }) else Modifier),
         contentAlignment = Alignment.Center) {
         Box(Modifier.width(trackWidth).height(trackHeight)) {
             BackdropCapture(track, Modifier.fillMaxSize()) {
