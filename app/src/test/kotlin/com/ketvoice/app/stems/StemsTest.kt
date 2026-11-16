@@ -235,6 +235,9 @@ class StemsTest {
         val result = Separator.instrumental(left, right, mask, 0)
         val ms = (System.nanoTime() - started) / 1_000_000
         assertTrue("network input differs: $worstInput", worstInput < 1e-3)
+        println("sung passages (s): " + VoiceActivity.passages(mask)!!.joinToString { "%.1f-%.1f".format(it.first / 1000.0, it.last / 1000.0) })
+        val voice = Separator.stem(left, right, mask, 0, vocals = true)
+        var voiceErr = 0.0; var voiceRef = 0.0
         val sherpaVocals = floats("sherpa-vocals.f32")
         var err = 0.0; var ref = 0.0
         for (i in maxOf(result.from, 8192) until minOf(result.until, sherpaVocals.size / 2 - 8192)) for (c in 0..1) {
@@ -242,6 +245,11 @@ class StemsTest {
             val got = if (c == 0) result.left[i] else result.right[i]
             err += (got - expected).toDouble().let { it * it }; ref += expected.toDouble() * expected
         }
+        for (i in maxOf(voice.from, 8192) until minOf(voice.until, sherpaVocals.size / 2 - 8192)) {
+            val expected = sherpaVocals[2 * i]
+            voiceErr += (voice.left[i] - expected).toDouble().let { it * it }; voiceRef += expected.toDouble() * expected
+        }
+        println("voice alone vs sherpa-onnx: %.1f dB".format(10 * log10(voiceRef / voiceErr)))
         val snr = 10 * log10(ref / err)
         println("separation of ${n / 44_100} s in $ms ms (without the network), instrumental vs sherpa-onnx: %.1f dB".format(snr))
         assertTrue("instrumental too far from the reference: $snr dB", snr > 18)
@@ -255,5 +263,92 @@ class StemModelPinTest {
         val pins = expected.readLines().filter { it.isNotBlank() }.associate { it.substringAfter("  ") to it.substringBefore("  ") }
         assertEquals(pins.keys, StemModel.parts.map { it.name }.toSet())
         for (part in StemModel.parts) assertEquals(pins[part.name], part.sha256)
+    }
+}
+
+class VoiceActivityTest {
+    private fun mask(frames: Int, sung: (Int) -> Boolean, startUs: Long = 0L): StemMask {
+        val share = ByteArray(frames) { if (sung(it)) 200.toByte() else 20.toByte() }
+        val level = ByteArray(frames) { if (sung(it)) 180.toByte() else 90.toByte() }
+        return StemMask(startUs, frames, ByteArray(frames * StemDsp.NET_BINS / 2), share, level)
+    }
+    private fun frame(ms: Long) = (ms * StemDsp.RATE / 1000 / StemDsp.HOP).toInt()
+
+    @Test fun findsWhereTheVoiceStartsAndStops() {
+        val m = mask(frame(40_000), { it in frame(12_000) until frame(30_000) })
+        assertEquals(12_000f, VoiceActivity.startMs(m)!!.toFloat(), 60f)
+        assertEquals(30_000f, VoiceActivity.endMs(m)!!.toFloat(), 60f)
+    }
+
+    @Test fun shortBurstsAreNotSingingAndBreathsDoNotEndAPassage() {
+        // A 200 ms leak at 2 s, then a voice from 10 s to 20 s with a half-second breath in it.
+        val m = mask(frame(30_000), { it in frame(2_000) until frame(2_200) ||
+            (it in frame(10_000) until frame(20_000) && it !in frame(14_000) until frame(14_500)) })
+        val passages = VoiceActivity.passages(m)!!
+        assertEquals(1, passages.size)
+        assertEquals(10_000f, passages[0].first.toFloat(), 60f)
+        assertEquals(20_000f, passages[0].last.toFloat(), 60f)
+    }
+
+    @Test fun anInstrumentalPartSingsNowhere() {
+        val m = mask(frame(40_000), { false }, startUs = 150_000_000L)
+        // Nobody sings in this ending: the voice was over before it; in an intro, it starts after it.
+        assertEquals(150_000L, VoiceActivity.endMs(m))
+        assertTrue(VoiceActivity.startMs(m)!! >= 150_000L + 39_000L)
+    }
+
+    @Test fun separationsOfTheFirstVersionCarryNoVoiceActivity() {
+        val old = StemMask(0L, 10, ByteArray(10 * StemDsp.NET_BINS / 2))
+        assertNull(VoiceActivity.passages(old))
+        val back = StemStore.decode(StemStore.encode(old))
+        assertNull(back.voiceShare)
+        val withVoice = StemStore.decode(StemStore.encode(mask(10, { it > 4 })))
+        assertEquals(200.toByte(), withVoice.voiceShare!![7])
+    }
+
+    @Test fun storeFindsAPartFiledUnderANeighbouringSecond() {
+        val dir = kotlin.io.path.createTempDirectory("stems").toFile()
+        try {
+            StemStore.init(dir)
+            StemStore.save("t", 200_950, false, mask(10, { true }))
+            assertTrue(StemStore.has("t", 201_020, false))
+            assertFalse(StemStore.has("t", 203_000, false))
+        } finally { dir.deleteRecursively() }
+    }
+
+    /** The voice alone and the instrumental add up to the title, below the network's top frequency. */
+    @Test fun voiceAndInstrumentalAddUp() {
+        val n = 44_100 * 3
+        val left = FloatArray(n) { (.4 * kotlin.math.sin(2 * Math.PI * 440 * it / 44_100)).toFloat() }
+        val net = object : StemNet {
+            override fun run(input: FloatArray, vocals: FloatArray, accompaniment: FloatArray) {
+                for (i in input.indices) { vocals[i] = input[i] * .8f; accompaniment[i] = input[i] * .6f }
+            }
+        }
+        val mask = Separator.mask(left, left, 0L, net)!!
+        val music = Separator.stem(left, left, mask, 0, vocals = false)
+        val voice = Separator.stem(left, left, mask, 0, vocals = true)
+        for (i in music.from + 100 until music.until - 100 step 97) assertEquals(left[i], music.left[i] + voice.left[i], 2e-3f)
+    }
+
+    @Test fun deckPlaysTheVoiceAlone() {
+        val rate = 48_000
+        val input = ByteBuffer.allocate(rate * 4).order(ByteOrder.LITTLE_ENDIAN)
+        for (i in 0 until rate) { input.putShort(10_000); input.putShort(10_000) }
+        input.flip()
+        val stem = StemAudio(0L, rate, ShortArray(rate * 2) { 6_000 }, 0, rate, vocals = ShortArray(rate * 2) { 4_000 })
+        val dsp = DeckDsp(rate, 2)
+        val auto = DeckAutomation(Curve.flat(1f), Curve.flat(0f), vocalSolo = Curve(longArrayOf(0, 1), floatArrayOf(1f, 1f)))
+        val out = ByteBuffer.allocate(rate * 4).order(ByteOrder.LITTLE_ENDIAN)
+        dsp.process(input, out, 0L, auto, stem)
+        out.flip()
+        assertEquals(4_000, ShortArray(out.remaining() / 2) { out.short }[2_000].toInt())
+    }
+
+    @Test fun libraryWaitsForPowerAndTheSwitches() {
+        assertTrue(StemLibrary.allowed(ketmix = true, library = true, charging = true))
+        assertFalse(StemLibrary.allowed(ketmix = true, library = true, charging = false))
+        assertFalse(StemLibrary.allowed(ketmix = false, library = true, charging = true))
+        assertFalse(StemLibrary.allowed(ketmix = true, library = false, charging = true))
     }
 }

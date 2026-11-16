@@ -488,9 +488,13 @@ fun SettingsScreen() {
                     "Une petite vibration au moment où la basse passe d'un titre à l'autre, quand l'app est à l'écran.",
                     AppSettings.ketmixHaptics.value) { AppSettings.ketmixHaptics.value = it; SettingsStore.save() }
                 SToggle(KetIcons.Audio, "Séparer les voix",
-                    "Pendant un mix, la voix du titre en cours s'arrête et le suivant continue sur son instrumental, puis sa voix le rejoint. Avec le modèle de séparation, la voix est vraiment retirée ; sans lui, elle est seulement atténuée.",
+                    "Pendant un mix, la voix du titre en cours s'arrête et le suivant continue sur son instrumental, puis sa voix le rejoint ; quand tempo et tonalité s'accordent, la voix du suivant chante sur l'instrumental de celui en cours. Avec le modèle de séparation, la voix est vraiment retirée ; sans lui, elle est seulement atténuée.",
                     AppSettings.ketmixStems.value) { AppSettings.ketmixStems.value = it; SettingsStore.save() }
                 if (AppSettings.ketmixStems.value) StemSettings()
+                SToggle(KetIcons.Shuffle, "File intelligente",
+                    "En lecture aléatoire, le titre suivant est choisi parmi les prochains pour s'accorder au tempo et à la tonalité de celui en cours. Une file que vous avez ordonnée et un titre demandé « à la suite » ne bougent jamais.",
+                    AppSettings.ketmixSmartQueue.value) { AppSettings.ketmixSmartQueue.value = it; SettingsStore.save() }
+                KetmixLibraryRow()
                 SToggle(KetIcons.Refresh, "Mixer aussi un titre en boucle",
                     "Quand un titre est répété, sa fin se mêle à son propre début, sur le temps, au lieu de repartir après un blanc.",
                     AppSettings.ketmixLoops.value) { AppSettings.ketmixLoops.value = it; SettingsStore.save() }
@@ -1270,4 +1274,17 @@ private fun PlaybackJournalDialog(onClose: () -> Unit) {
                 .setType("text/plain").putExtra(android.content.Intent.EXTRA_TEXT, text), null).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
         }) { Text(com.ketvoice.app.data.AppText.t("Partager")) } },
         dismissButton = { androidx.compose.material3.TextButton(onClose) { Text(com.ketvoice.app.data.AppText.t("Fermer")) } })
+}
+
+/** Downloaded titles prepared ahead for Ketmix while the phone charges (5.11.0). */
+@Composable
+private fun ColumnScope.KetmixLibraryRow() {
+    val progress by com.ketvoice.app.stems.StemLibrary.progress.collectAsState()
+    SToggle(KetIcons.Download, "Préparer les titres téléchargés",
+        if (progress.running) com.ketvoice.app.data.AppText.t("Préparation en cours : {0} sur {1}").replace("{0}", progress.done.toString()).replace("{1}", progress.total.toString())
+        else "Téléphone en charge, les titres téléchargés sont analysés (et leurs voix séparées si le modèle est là) avant même d'être joués : leurs mix sont prêts tout de suite.",
+        AppSettings.ketmixLibrary.value) {
+        AppSettings.ketmixLibrary.value = it; SettingsStore.save()
+        if (it) com.ketvoice.app.stems.StemLibrary.wake()
+    }
 }

@@ -149,8 +149,13 @@ internal data class MixPlan(
      * voice joins later; the outgoing voice is taken down before the incoming one sings.
      */
     val stems: Boolean = false,
-    /** Incoming position where its voice begins (-1 unknown), from its lyrics. */
-    val voiceFromMs: Long = -1
+    /** Incoming position where its voice begins (-1 unknown), from its lyrics or from its separated voice. */
+    val voiceFromMs: Long = -1,
+    /**
+     * The incoming voice sings alone over the outgoing title's instrumental until the bass changes
+     * hands (5.11.0). Only set once both separations are on the decks, see [Mashup].
+     */
+    val mashup: Boolean = false
 ) {
     val mixes: Boolean get() = kind != MixKind.None
     /** Position in the incoming title once the outgoing one is gone. */
@@ -161,7 +166,7 @@ internal data class MixPlan(
 
 internal object TransitionPlanner {
     private const val TRIM_OVERLAP_MS = 240L
-    private const val MIN_TITLE_MS = 30_000L
+    internal const val MIN_TITLE_MS = 30_000L
     private const val MIN_CROSSFADE_MS = 2_500L
     /** An echo rings for four beats after the cut. */
     private const val ECHO_BEATS = 4
@@ -485,5 +490,87 @@ internal object Vocals {
         val guessed = last.timeMs + (1_500L + 320L * last.text.split(' ').count { it.isNotBlank() }).coerceAtMost(7_000L)
         val end = timedEnd ?: guessed
         return if (durationMs > 0) end.coerceAtMost(durationMs) else end
+    }
+}
+
+/** When a voice may sing over the other title's instrumental (5.11.0). */
+internal object Mashup {
+    /** The incoming voice must be singing within this share of the blend, or the listener only hears an instrumental thinning out. */
+    const val VOICE_WITHIN = .4f
+
+    /**
+     * Both titles in time and in keys that go together, the bass changing hands, and an incoming
+     * voice that sings early in the blend. The separations themselves are checked by the engine.
+     */
+    fun fits(plan: MixPlan): Boolean {
+        if (plan.kind != MixKind.Beatmatch || plan.swapMs < 0 || plan.clash || plan.loop) return false
+        if (plan.fromKey == MusicalKey.UNREAD || plan.toKey == MusicalKey.UNREAD) return false
+        if (kotlin.math.abs(plan.rate - 1f) > .06f || plan.overlapMs < 8_000L) return false
+        if (plan.voiceFromMs < 0) return false
+        val voiceAfterMs = (plan.voiceFromMs - plan.inMs) / plan.rate
+        return voiceAfterMs <= plan.overlapMs * VOICE_WITHIN
+    }
+}
+
+/** Where a title sings, from its lyrics and from its separated voice: the cautious one of the two. */
+internal object VoiceFacts {
+    /** The outgoing voice is over once both say so. */
+    fun end(lyrics: Long?, separated: Long?): Long? = listOfNotNull(lyrics, separated).maxOrNull()
+    /** The incoming voice starts as soon as either says so. */
+    fun start(lyrics: Long?, separated: Long?): Long? = listOfNotNull(lyrics, separated).minOrNull()
+}
+
+/**
+ * "File intelligente" (5.11.0, on unless switched off): in shuffle, the title that plays next is
+ * the one, among the next few, that goes best with the end of the current one (tempo, then key).
+ * Only titles Ketmix has already measured can be compared; a queue the listener ordered (shuffle
+ * off) and a title they asked to hear next are never moved.
+ */
+internal object SmartQueue {
+    /** How many of the coming titles are looked at. */
+    const val WINDOW = 6
+
+    /** 0 = a perfect match; larger = further apart. Null when one of the two was not measured. */
+    fun distance(out: SegmentAnalysis?, into: SegmentAnalysis?): Float? {
+        if (out == null || into == null || !out.hasBeat || !into.hasBeat) return null
+        val tempo = kotlin.math.abs(BeatAnalysis.foldedRatio(out.bpm, into.bpm) - 1f)
+        val key = when (MusicalKey.relation(out.key, into.key)) {
+            MusicalKey.Relation.Same -> 0f
+            MusicalKey.Relation.Close -> .01f
+            MusicalKey.Relation.Unknown -> .03f
+            MusicalKey.Relation.Clash -> .06f
+        }
+        return tempo + key
+    }
+
+    /**
+     * Which of [candidates] (the coming titles, in order) should play next: the best match when it is
+     * clearly better than the one already next, else 0 (nothing moves).
+     */
+    fun pick(out: SegmentAnalysis?, candidates: List<SegmentAnalysis?>): Int {
+        val scores = candidates.map { distance(out, it) }
+        val best = scores.withIndex().filter { it.value != null }.minByOrNull { it.value!! } ?: return 0
+        if (scores.isEmpty()) return 0
+        val first = scores[0]
+        // An unmeasured next title keeps its place unless a measured one is a real match.
+        val margin = if (first == null) best.value!! <= .04f else first - best.value!! >= .03f
+        return if (best.index != 0 && margin) best.index else 0
+    }
+
+    /** Moves the best match right after the current title. Returns true when the queue changed. */
+    fun reorder(current: com.ketvoice.app.data.Track, durationMs: Long): Boolean {
+        val state = com.ketvoice.app.player.Player.state.value
+        if (!com.ketvoice.app.data.AppSettings.ketmixSmartQueue.value || !state.shuffle || state.repeatOne) return false
+        val coming = com.ketvoice.app.player.Player.automixUpcoming(WINDOW)
+        if (coming.size < 2 || coming.first().index != state.index + 1) return false
+        if (com.ketvoice.app.player.Player.pinnedNext(coming.first().entryId)) return false
+        val out = AnalysisStore.outro(current.id, durationMs) ?: return false
+        val choice = pick(out, coming.map { e -> AnalysisStore.intro(e.track.id, e.track.durationMs.takeIf { it > 0 } ?: 600_000L) })
+        if (choice == 0) return false
+        val from = coming[choice].index
+        // Only a plain run of the queue is reordered (not across a repeat-all wrap).
+        if (from <= state.index + 1) return false
+        com.ketvoice.app.player.Player.moveQueue(from, state.index + 1)
+        return true
     }
 }

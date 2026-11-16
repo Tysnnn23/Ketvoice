@@ -94,9 +94,16 @@ internal object AnalysisStore {
      * stretch read by a lighter setting is read again rather than trusted for a finer mix.
      */
     @Synchronized fun intro(trackId: String, durationMs: Long, depth: AnalysisDepth = AnalysisDepth.Light): SegmentAnalysis? =
-        entries[key(trackId, durationMs, true)]?.takeIf { depth.satisfiedBy(it, depth.introMs, durationMs) }
+        near(trackId, durationMs, true)?.takeIf { depth.satisfiedBy(it, depth.introMs, durationMs) }
     @Synchronized fun outro(trackId: String, durationMs: Long, depth: AnalysisDepth = AnalysisDepth.Light): SegmentAnalysis? =
-        entries[key(trackId, durationMs, false)]?.takeIf { depth.satisfiedBy(it, depth.outroMs, durationMs) }
+        near(trackId, durationMs, false)?.takeIf { depth.satisfiedBy(it, depth.outroMs, durationMs) }
+
+    /**
+     * A length read from a file's header and the one the player reports may fall on either side of a
+     * second (5.11.0: titles are also measured from their downloaded file): the neighbours are looked at too.
+     */
+    private fun near(trackId: String, durationMs: Long, intro: Boolean): SegmentAnalysis? =
+        entries[key(trackId, durationMs, intro)] ?: entries[key(trackId, durationMs - 1000, intro)] ?: entries[key(trackId, durationMs + 1000, intro)]
 
     /** What was measured of the body of a title (see [BeatAnalysis.Hint]). */
     @Synchronized fun body(trackId: String, durationMs: Long): SegmentAnalysis? = entries["b|${durationMs / 1000}|$trackId"]

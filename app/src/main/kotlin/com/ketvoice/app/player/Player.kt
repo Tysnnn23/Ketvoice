@@ -406,6 +406,32 @@ object Player {
         return NextEntry(target, s.queue[target], s.queueEntryIds.getOrNull(target) ?: return null)
     }
 
+    /**
+     * The queue entries that follow the current title, in the order they will play, at most [count]
+     * (5.11.0: Ketmix prepares several titles ahead). Empty on repeat-one.
+     */
+    internal fun automixUpcoming(count: Int): List<NextEntry> {
+        val s = _state.value
+        if (s.repeatOne) return listOfNotNull(automixNext())
+        val out = ArrayList<NextEntry>(count)
+        var index = s.index
+        while (out.size < count) {
+            val step = QueueSteps.next(s.queue.size, index, false, s.repeatAll, autoplay = false, ended = true)
+            val target = (step as? QueueStep.Jump)?.index ?: break
+            if (target == s.index || out.any { it.index == target }) break
+            out += NextEntry(target, s.queue[target], s.queueEntryIds.getOrNull(target) ?: break)
+            index = target
+        }
+        return out
+    }
+
+    private val pinnedEntries = HashSet<String>()
+    /** The listener asked for this entry to play next (see [playNext]). */
+    internal fun pinnedNext(entryId: String): Boolean = entryId in pinnedEntries
+
+    /** True on a connection the listener pays by the megabyte: Ketmix then prepares one title ahead only. */
+    internal fun onMeteredNetwork(): Boolean = isMetered()
+
     /** Resolves the next title early enough for Automix to read and prepare it. */
     internal fun warmForAutomix(track: Track) {
         val current = _state.value.current ?: return
@@ -932,7 +958,11 @@ object Player {
         val insertAt = (s.index + 1).coerceIn(0, q.size)
         q.add(insertAt, track)
         val keys = s.queueEntryIds.toMutableList()
-        keys.add(insertAt.coerceAtMost(keys.size), java.util.UUID.randomUUID().toString())
+        val entry = java.util.UUID.randomUUID().toString()
+        keys.add(insertAt.coerceAtMost(keys.size), entry)
+        // Asked for by the listener: Ketmix's smart queue never moves another title in front of it.
+        if (pinnedEntries.size > 200) pinnedEntries.clear()
+        pinnedEntries += entry
         _state.value = _state.value.copy(queue = q, queueEntryIds = keys,
             linearOrder = QueueOrder.syncLinear(s.linearOrder, keys, afterKey = s.queueEntryIds.getOrNull(s.index)))
         appContext?.let {
@@ -1165,9 +1195,14 @@ object Player {
         val c = controller
         if (!AppSettings.automix.value || AppSettings.bitPerfect.value || c == null || !c.isPlaying ||
             SleepTimer.remainingSeconds.value in 1..30) { skipFade?.cancel(); c?.volume = 1f; advance(ended = false); return }
-        skipFade?.cancel()
+        // A second press while the first skip is still on its way goes straight to the title after.
+        if (skipFade?.isActive == true || com.ketvoice.app.automix.Automix.mixing) {
+            skipFade?.cancel(); com.ketvoice.app.automix.Automix.cancel(); c.volume = 1f; advance(ended = false); return
+        }
         skipFade = scope.launch {
             try {
+                // 5.11.0: a prepared next title is mixed in for real, over a few seconds, instead of faded to.
+                if (runCatching { com.ketvoice.app.automix.Automix.skipMix() }.getOrDefault(false)) return@launch
                 SkipFade.ramp(c.volume, 0f, SkipFade.OUT_MS) { c.volume = it }
                 advance(ended = false)
                 // The next title starts silent and rises once it really plays (or after a few seconds anyway).

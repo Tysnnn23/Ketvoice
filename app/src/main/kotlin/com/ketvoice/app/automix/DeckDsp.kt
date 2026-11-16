@@ -79,13 +79,20 @@ internal class DeckAutomation(
     val vocalCut: Curve = Curve.flat(0f),
     /** A breath of white noise added to the deck (0..1 of full scale), and the high-pass it goes through. */
     val noise: Curve = Curve.flat(0f),
-    val noiseHz: Curve = Curve.flat(0f)
+    val noiseHz: Curve = Curve.flat(0f),
+    /**
+     * How much the deck plays its voice alone (0..1), from its separated voice (5.11.0): a voice over
+     * the other title's instrumental. Without that separation the title plays whole.
+     */
+    val vocalSolo: Curve = Curve.flat(0f)
 ) {
-    val endUs: Long get() = maxOf(maxOf(gain.endUs, highPassHz.endUs, lowPassHz.endUs), maxOf(dry.endUs, echo.endUs, reverb.endUs), vocalCut.endUs)
+    val endUs: Long get() = maxOf(maxOf(gain.endUs, highPassHz.endUs, lowPassHz.endUs), maxOf(dry.endUs, echo.endUs, reverb.endUs), maxOf(vocalCut.endUs, vocalSolo.endUs))
     val usesVocalCut: Boolean get() = vocalCut.endUs > 0L
+    val usesVocalSolo: Boolean get() = vocalSolo.endUs > 0L
     val usesEcho: Boolean get() = echoDelayUs > 0L
 
-    fun copyWith(vocalCut: Curve) = DeckAutomation(gain, highPassHz, lowPassHz, dry, echo, reverb, echoDelayUs, echoFeedback, resonance, vocalCut, noise, noiseHz)
+    fun copyWith(vocalCut: Curve = this.vocalCut, vocalSolo: Curve = this.vocalSolo) =
+        DeckAutomation(gain, highPassHz, lowPassHz, dry, echo, reverb, echoDelayUs, echoFeedback, resonance, vocalCut, noise, noiseHz, vocalSolo)
     val usesNoise: Boolean get() = noise.endUs > 0L
     val usesReverb: Boolean get() = reverb.endUs > 0L
 
@@ -331,6 +338,12 @@ internal object Stems {
         val end = plan.inEndMs * 1000L
         if (end <= start + MOVE_US) return automation
         val swap = if (plan.swapMs >= 0) ((plan.inMs + (plan.swapMs - plan.outMs) * plan.rate) * 1000L).toLong() else -1L
+        if (plan.mashup && swap > start + MOVE_US) {
+            // Its voice alone over the other title's instrumental, then all of it as the bass changes hands.
+            val whole = (swap + MOVE_US / 2).coerceAtMost(end)
+            val solo = Curve.join(Curve.shaped(start, whole - MOVE_US, 2) { 1f }, Curve.shaped(whole - MOVE_US + 1, whole, 12) { 1f - ease(it) })
+            return automation.copyWith(vocalSolo = solo)
+        }
         val natural = plan.voiceFromMs.takeIf { it > plan.inMs }?.let { it * 1000L - 300_000L }
         val releaseEnd = (natural ?: swap.takeIf { it > start } ?: (start + (end - start) * 2 / 3)).coerceIn(start + MOVE_US, end)
         val releaseStart = (releaseEnd - MOVE_US).coerceAtLeast(start + 1)
@@ -339,10 +352,16 @@ internal object Stems {
     }
 
     fun outgoing(automation: DeckAutomation, plan: MixPlan): DeckAutomation {
-        // Already stepping down under its last sung bars: that earlier move is kept.
-        if (!kinds(plan) || automation.usesVocalCut) return automation
+        if (!kinds(plan)) return automation
         val start = plan.outMs * 1000L
         val end = (plan.outMs + plan.overlapMs) * 1000L
+        if (plan.mashup && end > start + MOVE_US) {
+            // Its voice leaves at once: the incoming voice sings over its instrumental.
+            val from = (start - MOVE_US).coerceAtLeast(0L)
+            return automation.copyWith(vocalCut = Curve.join(Curve.shaped(from, start, 12) { ALL * ease(it) }, Curve.shaped(start + 1, end, 2) { ALL }))
+        }
+        // Already stepping down under its last sung bars: that earlier move is kept.
+        if (automation.usesVocalCut) return automation
         // When the incoming voice starts, on the outgoing clock; else halfway into the blend.
         val sings = plan.voiceFromMs.takeIf { it > plan.inMs }?.let { (plan.outMs + (it - plan.inMs) / plan.rate.toDouble()).toLong() * 1000L }
         val downEnd = (sings ?: (start + (end - start) / 2)).coerceIn(start + 1, end)
@@ -404,9 +423,11 @@ internal class DeckDsp(val sampleRate: Int, val channels: Int) {
             low.follow(automation.lowPassHz.at(middleUs), automation.resonance, sampleRate, highPass = false)
             val voice = if (channels >= 2 && automation.usesVocalCut) automation.vocalCut.at(middleUs).coerceIn(0f, 1f) else 0f
             // The separated instrumental, where it covers this block: the voice is really taken out.
-            val stemAt = if (voice > 0f && stem != null && channels == 2 && stem.rate == sampleRate)
+            val solo = if (channels == 2 && automation.usesVocalSolo && stem?.vocals != null) automation.vocalSolo.at(middleUs).coerceIn(0f, 1f) else 0f
+            val stemAt = if ((voice > 0f || solo > 0f) && stem != null && channels == 2 && stem.rate == sampleRate)
                 stem.frameAt(blockUs).takeIf { it >= 0 && stem.frameAt(endUs - 1) >= 0 } ?: -1 else -1
             val stemPcm = stem?.pcm
+            val soloPcm = if (solo > 0f && stemAt >= 0) stem?.vocals else null
             if (voice > 0f && stemAt < 0) { voiceHigh.follow(220f, .7071f, sampleRate, highPass = true); voiceLow.follow(4_500f, .7071f, sampleRate, highPass = false) }
             // Without the separation, a band cut reaches [Stems.DOWN] at most.
             val bandVoice = if (stemAt >= 0) 0f else minOf(voice, Stems.DOWN)
@@ -418,7 +439,8 @@ internal class DeckDsp(val sampleRate: Int, val channels: Int) {
                 gain += step; dry += dryStep
                 for (c in 0 until channels) {
                     var x = input.short.toFloat()
-                    if (stemAt >= 0 && stemPcm != null) x += voice * (stemPcm[2 * (stemAt + i) + c] - x)
+                    if (stemAt >= 0 && stemPcm != null && voice > 0f) x += voice * (stemPcm[2 * (stemAt + i) + c] - x)
+                    if (soloPcm != null) x += solo * (soloPcm[2 * (stemAt + i) + c] - x)
                     if (high.cutoff > 0f) x = high.run(x, c)
                     if (low.cutoff > 0f) x = low.run(x, c)
                     frame[c] = x

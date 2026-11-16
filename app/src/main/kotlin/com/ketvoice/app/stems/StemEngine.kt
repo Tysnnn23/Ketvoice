@@ -53,12 +53,30 @@ internal object StemEngine {
     @Synchronized fun close() { net?.close(); net = null }
 
     /**
+     * Separates this part of a title now if it never was, so that a later mix only has to apply
+     * the result (5.11.0: titles are prepared as soon as the one before them starts). True when the
+     * separation exists afterwards.
+     */
+    fun prepare(trackId: String, durationMs: Long, intro: Boolean, pcm: ShortArray, rate: Int, startUs: Long,
+                cancelled: () -> Boolean = { false }): Boolean {
+        if (StemStore.has(trackId, durationMs, intro)) return true
+        if (pcm.size < 4 || rate <= 0) return false
+        val model = network() ?: return false
+        val left = Resampler.resample(pcm, 0, 2, rate, StemDsp.RATE)
+        val right = Resampler.resample(pcm, 1, 2, rate, StemDsp.RATE)
+        if (cancelled()) return false
+        val found = synchronized(this) { Separator.mask(left, right, startUs, model, cancelled) } ?: return false
+        StemStore.save(trackId, durationMs, intro, found)
+        return true
+    }
+
+    /**
      * The instrumental of [pcm] (interleaved 16-bit stereo at [rate], its first frame at [startUs]
-     * in the title). Null when this part was never separated and [compute] is false, or when the
-     * model is missing.
+     * in the title), and with [withVocals] its voice alone too. Null when this part was never
+     * separated and [compute] is false, or when the model is missing.
      */
     fun instrumental(trackId: String, durationMs: Long, intro: Boolean, pcm: ShortArray, rate: Int, startUs: Long,
-                     compute: Boolean, cancelled: () -> Boolean = { false }): StemAudio? {
+                     compute: Boolean, withVocals: Boolean = false, cancelled: () -> Boolean = { false }): StemAudio? {
         if (pcm.size < 4 || rate <= 0) return null
         val frames = pcm.size / 2
         // Each channel is resampled straight from the recording: the fewest copies of a minute of sound.
@@ -74,19 +92,24 @@ internal object StemEngine {
         }
         // The stored separation starts where its first reading started; this reading may start a little elsewhere.
         val offset = Math.round((mask.startUs - startUs) * StemDsp.RATE / 1_000_000.0).toInt()
-        val result = Separator.instrumental(left, right, mask, offset)
-        if (result.until - result.from < StemDsp.RATE || cancelled()) return null
-        val outL = Resampler.resample(result.left, StemDsp.RATE, rate)
-        val outR = Resampler.resample(result.right, StemDsp.RATE, rate)
-        val n = minOf(outL.size, outR.size, frames)
-        val out = ShortArray(n * 2)
-        for (i in 0 until n) {
-            out[2 * i] = (outL[i] * 32768f).toInt().coerceIn(-32768, 32767).toShort()
-            out[2 * i + 1] = (outR[i] * 32768f).toInt().coerceIn(-32768, 32767).toShort()
+        fun render(vocals: Boolean): Pair<ShortArray, IntRange>? {
+            val result = Separator.stem(left, right, mask, offset, vocals)
+            if (result.until - result.from < StemDsp.RATE || cancelled()) return null
+            val outL = Resampler.resample(result.left, StemDsp.RATE, rate)
+            val outR = Resampler.resample(result.right, StemDsp.RATE, rate)
+            val n = minOf(outL.size, outR.size, frames)
+            val out = ShortArray(frames * 2)
+            for (i in 0 until n) {
+                out[2 * i] = (outL[i] * 32768f).toInt().coerceIn(-32768, 32767).toShort()
+                out[2 * i + 1] = (outR[i] * 32768f).toInt().coerceIn(-32768, 32767).toShort()
+            }
+            val from = (result.from.toLong() * rate / StemDsp.RATE).toInt() + 1
+            val until = (result.until.toLong() * rate / StemDsp.RATE).toInt().coerceAtMost(n) - 1
+            return out to (from until until)
         }
-        val from = (result.from.toLong() * rate / StemDsp.RATE).toInt() + 1
-        val until = (result.until.toLong() * rate / StemDsp.RATE).toInt().coerceAtMost(n) - 1
-        if (until - from < rate) return null
-        return StemAudio(startUs, rate, out, from, until)
+        val (music, range) = render(vocals = false) ?: return null
+        if (range.last - range.first < rate) return null
+        val voice = if (withVocals) render(vocals = true)?.first else null
+        return StemAudio(startUs, rate, music, range.first, range.last + 1, voice)
     }
 }

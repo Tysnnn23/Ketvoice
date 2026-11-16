@@ -26,6 +26,8 @@ import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.isActive
 import com.ketvoice.app.stems.StemEngine
 import com.ketvoice.app.stems.StemModel
+import com.ketvoice.app.stems.StemStore
+import com.ketvoice.app.stems.VoiceActivity
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -84,6 +86,13 @@ internal object Automix {
     /** Set by the activity: whether Ketvoice is the app on screen. */
     @Volatile var appInFront = true
     internal fun analysisSpeed(inFront: Boolean) = if (inFront) ANALYSIS_SPEED else BACKGROUND_ANALYSIS_SPEED
+    /** A title must have played this long before the ones after it are prepared: a listener skipping through titles prepares nothing. */
+    private const val PREP_FROM_MS = 4_000L
+    /** Titles prepared ahead (their intro and their ending); one on a metered connection. */
+    internal const val LOOKAHEAD = 3
+    /** How long a skip waits for the next title's deck before it falls back to a plain fade. */
+    private const val SKIP_READY_MS = 1_400L
+    private const val SKIP_OVERLAP_MS = 3_200L
     private const val SETTLE_MS = 8_000L
     /** How long the decks' processors are waited for before a transition is decided. */
     private const val PATHS_WAIT_MS = 1_500L
@@ -117,6 +126,14 @@ internal object Automix {
     private var host: AutomixHost? = null
     private var watcher: Job? = null
     private var job: Job? = null
+    /** Reads and separates the coming titles while the current one plays (see [prepare]). */
+    private var prepJob: Job? = null
+    private var prepKey: String? = null
+    private var preparedKey: String? = null
+    /** Titles whose ending was prepared in this process, with their real length. */
+    private val preparedEndings = HashMap<String, Long>()
+    /** The deck whose clock was confirmed, for a skip that cannot wait for it. */
+    private var clockOf: java.lang.ref.WeakReference<ExoPlayer>? = null
     private var session: Session? = null
     /** Pairs of queue entries already mixed or given up for this playback. */
     private val settled = HashSet<String>()
@@ -175,11 +192,15 @@ internal object Automix {
         host = null
     }
 
+    /** A mix is being prepared or played: other work on the phone's processor waits. */
+    val busy: Boolean get() = job?.isActive == true
+
     /** True from the moment the incoming title plays until it is the only one. */
     val mixing: Boolean get() = session?.let { it.started && !it.closed } == true
 
     /** The listener chose something else, or moved in the title: the transition is dropped at once. */
     fun cancel() {
+        prepJob?.cancel(); prepJob = null
         job?.cancel(); job = null
         session?.close(); session = null
         if (_ui.value.phase != Phase.Idle) _ui.value = Ui()
@@ -230,9 +251,26 @@ internal object Automix {
             val duration = main.duration
             val position = main.currentPosition
             if (duration <= 0 || position < 8_000 || duration - position > PREP_LEAD_MS) {
-                say(if (duration > 0) "Ketmix actif · le mix du titre suivant se prépare avant la fin de celui-ci" else "Ketmix actif")
+                // Since 5.11.0 the titles that follow are read, measured and separated from the first seconds of this one:
+                // the mix is ready long before the end, and a skip finds its title prepared.
+                if (duration > 0 && position >= PREP_FROM_MS && prepKey != key && prepJob?.isActive != true) {
+                    prepKey = key
+                    prepJob = scope.launch {
+                        try { prepare(target, main, current, duration) }
+                        catch (cancelled: CancellationException) { throw cancelled }
+                        catch (failure: Exception) { android.util.Log.w("KetvoiceAutomix", "preparation failed: ${failure.javaClass.simpleName}") }
+                    }
+                }
+                say(when {
+                    duration <= 0 -> "Ketmix actif"
+                    prepJob?.isActive == true -> "Ketmix actif · préparation des titres suivants…"
+                    preparedKey == key -> "Ketmix actif · mix du titre suivant prêt"
+                    else -> "Ketmix actif · le mix du titre suivant se prépare avant la fin de celui-ci"
+                })
                 continue
             }
+            // The mix itself takes over the standby deck from here.
+            prepJob?.cancel(); prepJob = null
             if (retryAt[key]?.let { SystemClock.elapsedRealtime() < it } == true) continue
             if (settled.size > 48) { settled.clear(); attempts.clear(); retryAt.clear() }
             if (duration - position < 3_500) { settled += key; continue }
@@ -382,23 +420,19 @@ internal object Automix {
             intro?.let { AnalysisStore.put(next.track.id, next.track.durationMs, true, it) }
         } else if (separate) inCapture = capture(deck, control, nextItem, 0L, stemInUntil, ::valid)
         if (!valid()) return false
-        // The network runs once per part of a title, on a thread of its own; its result is kept for later mixes.
-        val compute = !AppSettings.ketmixStemsCharging.value || StemModel.charging()
-        val nextId = next.track.id
-        val stemWork = if (!separate) null else CoroutineScope(currentCoroutineContext()).async(stemThread) {
-            val ctx = currentCoroutineContext()
-            fun part(c: PcmCapture?, id: String, length: Long, intro: Boolean) = c?.pcm()?.let { pcm ->
-                runCatching { StemEngine.instrumental(id, length, intro, pcm, c.rate, c.startUs, compute) { !ctx.isActive } }
-                    .onFailure { android.util.Log.w("KetvoiceStems", "separation failed: ${it.javaClass.simpleName}") }.getOrNull()
-            }
-            part(outCapture, current.id, duration, false) to part(inCapture, nextId, nextDuration, true)
-        }
         scope.launch(Dispatchers.IO) { AnalysisStore.save() }
         control.reset()
 
-        val out = MixFacts(duration, outro, vocalEndMs = Vocals.endMs(LyricsRepo.state.value.lines, duration))
-        val incoming = MixFacts(nextDuration, intro, vocalStartMs = voice.await())
+        // Where each title sings: from its lyrics, and from its separated voice when it has one (5.11.0),
+        // so that a title without lyrics is not mixed over its last sung words either.
+        val sung = if (!AppSettings.ketmixStems.value) null to null else withContext(Dispatchers.Default) {
+            runCatching { StemStore.load(current.id, duration, false)?.let(VoiceActivity::endMs) }.getOrNull() to
+                runCatching { StemStore.load(next.track.id, nextDuration, true)?.let(VoiceActivity::startMs) }.getOrNull()
+        }
+        val out = MixFacts(duration, outro, vocalEndMs = VoiceFacts.end(Vocals.endMs(LyricsRepo.state.value.lines, duration), sung.first))
+        val incoming = MixFacts(nextDuration, intro, vocalStartMs = VoiceFacts.start(voice.await(), sung.second))
         val clockOk = clock.await()
+        if (clockOk) clockOf = java.lang.ref.WeakReference(main)
         note { it.copy(clock = clockOk, outBpm = outro?.bpm ?: 0f, outConfidence = outro?.confidence ?: 0f, outKey = outro?.key ?: MusicalKey.UNREAD,
             inBpm = intro?.bpm ?: 0f, inConfidence = intro?.confidence ?: 0f, inKey = intro?.key ?: MusicalKey.UNREAD,
             sungUntilMs = out.vocalEndMs, sungFromMs = incoming.vocalStartMs,
@@ -417,6 +451,19 @@ internal object Automix {
             .let { p -> if (p.mixes && AppSettings.ketmixStems.value) p.copy(stems = true, voiceFromMs = incoming.vocalStartMs ?: -1L) else p }
         var plan = planFor(effects = clockOk)
         if (!plan.mixes) return skip(plan.reason)
+        // The incoming voice alone is only rendered when this pair may be mixed voice over instrumental.
+        val wantVocals = Mashup.fits(plan)
+        // The network runs once per part of a title, on a thread of its own; its result is kept for later mixes.
+        val compute = !AppSettings.ketmixStemsCharging.value || StemModel.charging()
+        val nextId = next.track.id
+        val stemWork = if (!separate) null else CoroutineScope(currentCoroutineContext()).async(stemThread) {
+            val ctx = currentCoroutineContext()
+            fun part(c: PcmCapture?, id: String, length: Long, intro: Boolean) = c?.pcm()?.let { pcm ->
+                runCatching { StemEngine.instrumental(id, length, intro, pcm, c.rate, c.startUs, compute, withVocals = intro && wantVocals) { !ctx.isActive } }
+                    .onFailure { android.util.Log.w("KetvoiceStems", "separation failed: ${it.javaClass.simpleName}") }.getOrNull()
+            }
+            part(outCapture, current.id, duration, false) to part(inCapture, nextId, nextDuration, true)
+        }
 
         fun preRollOf(p: MixPlan) = if (p.beatTied) min(2_500.0, p.inMs / p.rate.toDouble()).toLong() else min(400L, p.inMs)
         // Too late for a mix on the beat (a seek near the end, a slow network): a transition at the very end may still fit.
@@ -474,7 +521,15 @@ internal object Automix {
             if (!valid()) return false
             stems?.first?.let { mainControl.stem = it }
             stems?.second?.let { control.stem = it }
+            // The incoming voice over the outgoing instrumental, when both separations cover the blend.
+            val outStem = stems?.first; val inStem = stems?.second
+            if (Mashup.fits(plan) && outStem != null && inStem?.vocals != null &&
+                outStem.covers(plan.outMs * 1000L, (plan.outMs + plan.overlapMs) * 1000L - 200_000L) &&
+                inStem.covers((plan.inMs + 150L) * 1000L, (plan.inMs + ((plan.swapMs - plan.outMs) * plan.rate).toLong() + 1_500L) * 1000L)) {
+                plan = plan.copy(mashup = true); s.plan = plan
+            }
             note { it.copy(analysis = it.analysis + ", voices " + when {
+                plan.mashup -> "over instrumental"
                 stems?.first != null && stems.second != null -> "separated"
                 stems?.first != null || stems?.second != null -> "partly separated"
                 else -> "band cut" }) }
@@ -668,6 +723,178 @@ internal object Automix {
         }
         delay(60)
         return withContext(Dispatchers.Default) { runCatching { tap.result() }.getOrNull() }
+    }
+
+    /**
+     * Prepares the mixes to come while the current title plays (5.11.0): the ending of this title, then
+     * the intro and the ending of the next [LOOKAHEAD] titles are read on a silent deck, measured, and
+     * their voices separated. All of it is kept, so the mix itself, a skip, or the same titles another
+     * day find the work done.
+     */
+    private suspend fun prepare(h: AutomixHost, main: ExoPlayer, current: Track, duration: Long) {
+        val epoch = Player.playbackEpoch
+        val key = prepKey
+        fun valid() = host === h && h.main === main && Player.playbackEpoch == epoch && AppSettings.automix.value &&
+            main.playerError == null && !(h.exact || AppSettings.bitPerfect.value)
+        if (!valid()) return
+        val depth = AnalysisDepth.of(AppSettings.ketmixAnalysis.value)
+        val separate = AppSettings.ketmixStems.value && StemModel.ready && (!AppSettings.ketmixStemsCharging.value || StemModel.charging())
+        fun known(id: String, length: Long, intro: Boolean) =
+            (if (intro) AnalysisStore.intro(id, length, depth) else AnalysisStore.outro(id, length, depth)) != null &&
+                (!separate || StemStore.has(id, length, intro))
+        val item = main.currentMediaItem ?: return
+        val mainControl = h.control(main) ?: return
+        if (clockOf?.get() !== main && clockConfirmed(main, mainControl)) clockOf = java.lang.ref.WeakReference(main)
+        if (!valid()) return
+        fun introLength(t: Track) = t.durationMs.takeIf { it > 0 } ?: 600_000L
+        fun upcoming() = Player.automixUpcoming(if (Player.onMeteredNetwork()) 1 else LOOKAHEAD).filter { it.track.id != current.id }
+        fun done(t: Track) = known(t.id, introLength(t), true) && preparedEndings[t.id]?.let { known(t.id, it, false) } == true
+        if (known(current.id, duration, false) && upcoming().all { done(it.track) }) { preparedKey = key; return }
+
+        val deck = h.standby()
+        val control = h.control(deck) ?: run { h.release(deck); return }
+        val separations = ArrayDeque<kotlinx.coroutines.Deferred<Boolean>>()
+        suspend fun part(media: MediaItem, id: String, length: Long, intro: Boolean) {
+            if (!valid() || known(id, length, intro)) return
+            val from = if (intro) 0L else max(0L, length - depth.outroMs)
+            val span = if (intro) min(depth.introMs, length) else length - from
+            val stemFrom = if (intro) 0L else max(from, length - StemEngine.MAX_PART_MS)
+            val stemUntil = if (intro) min(span, StemEngine.MAX_PART_MS) else length
+            val wantStem = separate && !StemStore.has(id, length, intro)
+            var recorded = if (wantStem) PcmCapture(stemFrom * 1000L, stemUntil * 1000L) else null
+            val analysed = (if (intro) AnalysisStore.intro(id, length, depth) else AnalysisStore.outro(id, length, depth)) != null
+            if (!analysed) {
+                // The body of the title, where its drums play, gives the tempo this part is read against.
+                val hint = if (depth == AnalysisDepth.Light) null else AnalysisStore.bodyWindow(length)?.let { window ->
+                    (AnalysisStore.body(id, length) ?: if (!appInFront) null else read(deck, control, media, window.first, AnalysisStore.BODY_MS, depth, ::valid, key = false)
+                        ?.also { AnalysisStore.putBody(id, length, it) })?.takeIf { it.hasBeat }?.let { BeatAnalysis.Hint(it.bpm, it.confidence) }
+                }
+                if (!valid()) return
+                read(deck, control, media, from, span, depth, ::valid, hint, capture = recorded)?.let { AnalysisStore.put(id, length, intro, it) }
+            } else if (wantStem) recorded = capture(deck, control, media, stemFrom, stemUntil - stemFrom, ::valid)
+            val sound = recorded?.takeIf { valid() }?.pcm() ?: return
+            // No more than two parts wait for the network at once: each is ten megabytes of sound.
+            while (separations.size >= 2) separations.removeFirst().await()
+            val (rate, startUs) = recorded.rate to recorded.startUs
+            separations += scope.async(stemThread) {
+                val ctx = currentCoroutineContext()
+                runCatching { StemEngine.prepare(id, length, intro, sound, rate, startUs) { !ctx.isActive } }.getOrDefault(false)
+            }
+        }
+        try {
+            part(item, current.id, duration, false)
+            SmartQueue.reorder(current, duration)
+            for (entry in upcoming()) {
+                if (!valid()) return
+                val t = entry.track
+                if (done(t)) continue
+                Player.warmForAutomix(t)
+                val source = Player.resolveDeckSource(t) ?: continue
+                if (!valid()) return
+                val media = playbackMediaItem(t, source.url, source.cacheKey, source.stream, source.offlineDash)
+                part(media, t.id, introLength(t), true)
+                if (!valid()) return
+                // Its ending is filed under its real length, which the deck knows once the title is loaded.
+                var real = preparedEndings[t.id] ?: 0L
+                if (real <= 0L) {
+                    if (deck.currentMediaItem?.mediaId != media.mediaId || deck.duration <= 0) {
+                        deck.volume = 0f; control.automation = DeckAutomation.MUTE
+                        deck.setMediaItem(media); deck.playWhenReady = false; deck.prepare()
+                        val by = SystemClock.elapsedRealtime() + 8_000L
+                        while (deck.duration <= 0 && deck.playerError == null && SystemClock.elapsedRealtime() < by) { if (!valid()) return; delay(40) }
+                    }
+                    real = deck.duration
+                }
+                if (real >= TransitionPlanner.MIN_TITLE_MS) { part(media, t.id, real, false); if (valid()) preparedEndings[t.id] = real }
+            }
+            while (separations.isNotEmpty()) separations.removeFirst().await()
+            if (valid()) preparedKey = key
+        } finally {
+            separations.forEach { it.cancel() }
+            scope.launch(Dispatchers.IO) { AnalysisStore.save() }
+            control.reset()
+            h.release(deck)
+            if (preparedEndings.size > 200) preparedEndings.clear()
+        }
+    }
+
+    /**
+     * The listener skips to the next title: when that title is prepared and loads at once, a real
+     * mix of a few seconds takes them there, the incoming title entering where its music starts
+     * (5.11.0). False when it cannot be done now: the caller then fades as before.
+     */
+    suspend fun skipMix(): Boolean {
+        val h = host ?: return false
+        if (!AppSettings.automix.value || h.exact || AppSettings.bitPerfect.value || mixing) return false
+        val state = Player.state.value
+        val current = state.current ?: return false
+        if (state.repeatOne || state.failed) return false
+        val next = Player.automixNext() ?: return false
+        val main = h.main
+        if (!main.isPlaying || main.duration - main.currentPosition < SKIP_OVERLAP_MS + 6_000L) return false
+        val nextDuration = next.track.durationMs.takeIf { it > 0 } ?: 600_000L
+        val intro = AnalysisStore.intro(next.track.id, nextDuration) ?: return false
+        if (nextDuration < TransitionPlanner.MIN_TITLE_MS) return false
+        // Only a title that needs no network question: downloaded, cached or already resolved.
+        val source = Player.deckSource(next.track) ?: return false
+        val mainControl = h.control(main) ?: return false
+        prepJob?.cancel(); prepJob = null
+        job?.cancel(); job = null
+        session?.close(); session = null
+        val epoch = Player.playbackEpoch
+        val s = Session(h, main, next)
+        s.source = source
+        session = s
+        val deck = h.standby()
+        s.deck = deck
+        var handedOver = false
+        try {
+            val control = h.control(deck) ?: return false
+            val inMs = intro.soundStartMs.coerceAtLeast(0L)
+            val preRoll = min(350L, inMs)
+            deck.volume = 0f
+            deck.setMediaItem(playbackMediaItem(next.track, source.url, source.cacheKey, source.stream, source.offlineDash), inMs - preRoll)
+            deck.playWhenReady = false
+            deck.prepare()
+            val readyBy = SystemClock.elapsedRealtime() + SKIP_READY_MS
+            while (deck.playbackState != androidx.media3.common.Player.STATE_READY) {
+                if (deck.playerError != null || SystemClock.elapsedRealtime() > readyBy || host !== h || h.main !== main ||
+                    Player.playbackEpoch != epoch || !main.isPlaying) return false
+                delay(20)
+            }
+            val outro = AnalysisStore.outro(current.id, main.duration)
+            val gain = if (outro != null) Math.pow(10.0, ((outro.loudnessDb - intro.loudnessDb) / 20f).toDouble()).toFloat().coerceIn(.5f, 1f) else 1f
+            val variant = if (lastVariant == 0) 1 else 0
+            val plan = MixPlan(MixKind.Filter, outMs = main.currentPosition + preRoll + 60L, inMs = inMs, overlapMs = SKIP_OVERLAP_MS,
+                gain = gain, reason = "skip", variant = variant, hold = .2f)
+            s.plan = plan
+            s.precise = clockOf?.get() === main && mainControl.active
+            s.incomingPending = s.precise && !control.active
+            if (s.precise) { control.automation = DeckAutomation.incoming(plan); mainControl.automation = DeckAutomation.outgoing(plan) }
+            lastVariant = variant
+            s.baseVolume = main.volume
+            if (s.precise && !s.incomingPending) deck.volume = s.baseVolume
+            deck.play()
+            val playedAt = SystemClock.elapsedRealtime()
+            s.started = true
+            KetmixJournal.add(KetmixJournal.Entry(System.currentTimeMillis(), "${current.title} — ${current.artist}", "${next.track.title} — ${next.track.artist}",
+                "mixed", kind = plan.kind, reason = "skip", overlapMs = plan.overlapMs, precise = s.precise, mixAtMs = plan.outMs, inAtMs = plan.inMs))
+            say("Mix en cours · ${MixWords.describe(plan)}")
+            _ui.value = Ui(Phase.Mixing, current, next.track, plan.kind, SystemClock.elapsedRealtime() + preRoll, plan.overlapMs)
+            handedOver = true
+            job = scope.launch {
+                try { mix(s, plan, epoch, playedAt) }
+                catch (cancelled: CancellationException) { throw cancelled }
+                catch (failure: Exception) { android.util.Log.w("KetvoiceAutomix", "skip mix failed: ${failure.javaClass.simpleName}") }
+                finally {
+                    s.close()
+                    if (session === s) { session = null; if (_ui.value.phase != Phase.Idle) _ui.value = Ui() }
+                }
+            }
+            return true
+        } finally {
+            if (!handedOver) { s.close(); if (session === s) session = null }
+        }
     }
 
     /** Plays [lengthMs] of [item] from [fromMs] on the silent deck, fast, and records its sound for the separation of its voice. */

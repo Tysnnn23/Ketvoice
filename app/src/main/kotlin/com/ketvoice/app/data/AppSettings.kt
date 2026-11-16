@@ -39,6 +39,10 @@ object AppSettings {
     val ketmixStems = mutableStateOf(false)
     /** New separations only while the phone charges (those already made are always used). */
     val ketmixStemsCharging = mutableStateOf(false)
+    /** In shuffle, the next title is the one that mixes best with the current one (5.11.0). */
+    val ketmixSmartQueue = mutableStateOf(true)
+    /** Downloaded titles are measured and separated ahead while the phone charges (5.11.0). */
+    val ketmixLibrary = mutableStateOf(true)
     /** Lyrics videos carry the song's sound (5.10.0). */
     val lyricVideoSound = mutableStateOf(true)
     val systemReduceMotion = mutableStateOf(false)
