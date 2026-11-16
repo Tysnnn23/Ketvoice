@@ -1,0 +1,194 @@
+{
+  "schema": 8,
+  "version": "5.9.0",
+  "versionCode": 119,
+  "source_commit": "be8a02f7999ef76b6b2b2c1fcfdc32c58fdd557a",
+  "created_at": "2026-11-16T11:56:20.367985+00:00",
+  "build_origin": {
+    "kind": "github_actions_with_owner_discord_sdk",
+    "workflow": "android.yml",
+    "run_id": 43860070186,
+    "artifact": {
+      "id": 14223960278,
+      "sha256": "3f802a45c4a7d3828473b6524478ad88b99989d3f66f6beef81c6818aebe55b2"
+    },
+    "gradle": "assembleMobileRelease assembleQuestRelease",
+    "note": "Signed by CI with the pinned keystore secret; the Discord Social SDK AAR matched its pinned SHA-256."
+  },
+  "local_validation": {
+    "result": "debug JVM/Robolectric suites for both flavors, release lint and the UI text audit passed in a cloud container without the Discord SDK",
+    "commands": [
+      "testMobileDebugUnitTest",
+      "testQuestDebugUnitTest",
+      "lintMobileRelease",
+      "lintQuestRelease",
+      "tools/audit_ui_texts.py --check"
+    ],
+    "ci_validation": "run 43860070186: release builds, debug and release unit tests for both flavors, UI text audit, lint, APK signature pin and Discord bridge packaging passed",
+    "code_review": {
+      "kind": "none independent; the author compiled and tested each part as it was written"
+    },
+    "host_previews": "Home without the For you card and tiles rendered on the host and inspected; AudioChainPlaybackTest plays a WAV file to its end through DeckMix, the new leveler, reverb and tee, with leveling and reverb off and on",
+    "after_last_full_local_run": "no source change after the last complete local run"
+  },
+  "server": {
+    "function": "ketvoice-content",
+    "deployed_version": 23,
+    "changed_in_this_version": false,
+    "note": "no server change since 5.4.0"
+  },
+  "tests": {
+    "mobile": {
+      "jvm": {
+        "tests": 817,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "android_15_emulator_compose": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "quest": {
+      "jvm": {
+        "tests": 816,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "android_15_emulator_compose": {
+        "tests": 0,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    }
+  },
+  "lint": {
+    "mobile": {
+      "Warning": 187,
+      "Hint": 21
+    },
+    "quest": {
+      "Warning": 189,
+      "Hint": 21
+    },
+    "errors": 0,
+    "new_vs_5_8_3": "none"
+  },
+  "apks": [
+    {
+      "name": "Ketvoice-5.9.0.apk",
+      "sha256": "c38cc597693cee1ee1a49695af72889d3dda300bbb4534ba00eb30b8171f1f74",
+      "bytes": 74862304,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "5.9.0",
+      "versionCode": 119,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-5.9.0-Quest.apk",
+      "sha256": "72fc74dcb07b425e238477dbb389665b35f2fa5588dba5c323c071507098db3b",
+      "bytes": 84912362,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "5.9.0",
+      "versionCode": 119,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    }
+  ],
+  "discord": {
+    "sdk_present_in_ci_build": true,
+    "sdk_sha256_pinned": true,
+    "bridge_and_native_libraries_verified": true,
+    "presence_mode": "unauthenticated_rpc_through_installed_discord_app"
+  },
+  "credential_scan": {
+    "entries": 3485,
+    "findings": 0,
+    "raw_pattern_findings": 1,
+    "scope": "tracked sources and APK archive entries",
+    "kind": "credential_patterns",
+    "explicit_private_provider_key_deny_list": false,
+    "triage": [
+      {
+        "file": "Ketvoice-Liquid-Glass-V4.html",
+        "classification": "embedded_image_false_positive",
+        "all_hits_inside_image_data_uris": true,
+        "rescanned_without_image_payloads": true
+      }
+    ]
+  },
+  "release_install_smoke": {
+    "mobile": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "quest": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    }
+  },
+  "publication_override": {
+    "authorized_by_user": true,
+    "authorized_at": "2026-11-16T11:56:20.367985+00:00",
+    "kind": "standing_authorization",
+    "user_statement": "J'autorise TOUT devient maintenant une règle.",
+    "user_statement_date": "2026-11-14",
+    "in_reply_to": "The question whether versions may be published without phone or Quest testing without asking again for each version.",
+    "recorded_in": "AGENTS.md (commit aeeda8e)",
+    "reason": "The owner made publishing validated versions without phone or Quest testing a standing rule.",
+    "scope": "physical device installation and all on-device behaviour of 5.9.0"
+  },
+  "owner_request_2026_11_16_improvements": {
+    "statement_summary": "propose many improvements with a native question tool; the owner chose: animated full-screen player, Apple-style lyrics, automatic colour theme, remove Home widgets except Votre semaine (then: the four shortcut tiles and the For you card) and create Android widgets (large glass player, your week, mix, mini controls), Ketvoice Wrapped, lyrics share image, visual equalizer, Ketmix on skip, volume normalisation, in-app update, faster startup.",
+    "done": {
+      "player_background": "ArtworkFlowBackground: three blurred 48 px copies of the cover rotating in opposite directions (64, 86, 112 s), drawn every other frame while playing, frozen when paused or with reduced motion / high performance / Quest; replaces the AGSL mesh under the 'Fond animé' setting",
+      "lyrics": "word lift 2.5 dp and glow on words held 900 ms or more (canvas drawing of whole words when the word timing covers every letter, else the former flat drawing); sung line scale up to 1.5 % from the SonicMeter bass; progressive blur already existed",
+      "cover_accent": "setting coverAccent (off by default): the app accent follows the playing cover's readable accent, animated 700 ms",
+      "home": "For you card and shortcut tiles removed from HomeScreen (composables kept for the widgets and tests)",
+      "widgets": "GlassPlayerWidget 4x2, WeekWidget 2x2, MixWidget 2x2 (opens the app with the mix id; MainActivity plays PersonalMixes.tracks or opens the mix page), MiniControlsWidget 2x1; one updater, works only while one is placed; progress refreshed every 30 s while playing; picker labels in 11 languages",
+      "wrapped": "yearly DayStat in listening-history 'years' from 5.9.0; recap of the year with 25+ plays, else all-time counts labelled as such; five-page story over the flowing cover; 1080x1920 PNG shared via FileProvider with the site address",
+      "lyrics_share": "already existed (Moment card, story size); now drawn over the blurred cover with white text",
+      "equalizer": "ten bands 31 Hz-16 kHz; DynamicsProcessing pre-EQ with exact band gains and a limiter, falling back to Equalizer with interpolation; draggable curve and seven presets; five-band settings converted by interpolation",
+      "skip": "with Ketmix on, a manual next fades the title out in 320 ms (equal-power) and the next one in over 850 ms once it plays; not a two-deck mix",
+      "normalisation": "LevelingAudioProcessor between DeckMixProcessor and ReverbAudioProcessor, setting volumeLeveling off by default: gated power average (6 s), gain toward -18 dBFS RMS within -9..+6 dB moving with a 4 s constant, soft clip above 0.9; state kept across titles",
+      "update": "already existed: GitHub release check, download, archive and signature verification, installer",
+      "startup": "LyricsSearch.init and LauncherIcons.apply moved to a background thread; Discord.start posted after the first frame; Home already showed its cached feed first"
+    },
+    "not_measured": "no listening test of the leveler, skip fade, equalizer curves or DynamicsProcessing on a device; no frame-time or startup measurement"
+  },
+  "not_validated": [
+    "physical phone or Quest installation, rendering and touch behaviour",
+    "the four widgets on a launcher (Glance compiled, never placed)",
+    "DynamicsProcessing on real devices (some vendors may refuse it; the fallback is the former Equalizer)",
+    "the volume leveler and skip fade by ear",
+    "the artwork flow, word lift and breathing on a device",
+    "Wrapped and its shared picture on a device",
+    "independent code review of this diff"
+  ],
+  "owner_section_changes": [],
+  "known_limitations": [
+    "Wrapped's yearly figures start with 5.9.0: before enough plays this year, the recap covers all the listening counted since the first launch.",
+    "Ketmix on skip is a short fade, not a beat-matched two-deck mix.",
+    "The leveler adapts over several seconds: the first seconds of a much louder or quieter title still differ.",
+    "Widgets refresh the progress bar every 30 seconds while a title plays.",
+    "Ket 27 stays an alpha: several pages keep Ketvoice's own structure.",
+    "The signing certificate is the existing public Android debug identity, not a private production key."
+  ],
+  "canonical_banner_sha256": "47f6793088983f7d4e6bd1aeaa2cbd8b7cdc2a8f91271e3b2839daea81da0436"
+}
