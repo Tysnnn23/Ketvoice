@@ -24,7 +24,6 @@ import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material3.CircularProgressIndicator
 import com.ketvoice.app.ui.common.Icon
 import com.ketvoice.app.ui.common.Text
 import androidx.compose.runtime.*
@@ -48,6 +47,9 @@ import com.ketvoice.app.data.KetvoiceApi
 import com.ketvoice.app.data.SourcePriority
 import com.ketvoice.app.theme.LocalTheme
 import com.ketvoice.app.theme.T
+import com.ketvoice.app.theme.Ket27
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.style.TextAlign
 import com.ketvoice.app.ui.AppUi
 import kotlinx.coroutines.launch
 
@@ -75,25 +77,14 @@ fun SourcesScreen() {
 
     Column(Modifier.fillMaxSize().pageBackground(th).statusBarsPadding()) {
         // Ket 27: the bar of a pushed page, with the page's one action at its end.
-        if (com.ketvoice.app.theme.Ket27.on) com.ketvoice.app.ui.common.Ket27PageBar("Sources", { AppUi.closeOverlay() }) {
+        com.ketvoice.app.ui.common.Ket27PageBar("Sources", { AppUi.closeOverlay() }) {
             Box(Modifier.size(44.dp).clip(CircleShape).clickable { showAdd = true }, contentAlignment = Alignment.Center) {
                 Box(Modifier.size(34.dp).clip(CircleShape).background(th.accent), contentAlignment = Alignment.Center) {
                     Icon(Icons.Filled.Add, "Ajouter", tint = Color.White, modifier = Modifier.size(20.dp))
                 }
             }
-        } else Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, "Retour", tint = th.onBackground,
-                modifier = Modifier.size(30.dp).clickable { AppUi.closeOverlay() })
-            Spacer(Modifier.width(12.dp))
-            Text("Sources", color = th.onBackground, fontSize = 22.sp, fontWeight = FontWeight.Bold,
-                modifier = Modifier.weight(1f))
-            Box(Modifier.size(38.dp).clip(CircleShape).background(th.accent)
-                .clickable { showAdd = true }, contentAlignment = Alignment.Center) {
-                Icon(Icons.Filled.Add, "Ajouter", tint = Color.White, modifier = Modifier.size(22.dp))
-            }
         }
-        LazyColumn(contentPadding = PaddingValues(start = com.ketvoice.app.ui.common.pageMargin(18.dp), end = com.ketvoice.app.ui.common.pageMargin(18.dp), bottom = 160.dp)) {
+        LazyColumn(contentPadding = PaddingValues(start = com.ketvoice.app.ui.common.pageMargin, end = com.ketvoice.app.ui.common.pageMargin, bottom = 160.dp)) {
             item {
                 Text(
                     "Glissez les poignées pour définir la priorité de lecture et de téléchargement. " +
@@ -194,7 +185,7 @@ fun SourcesScreen() {
             }
             item {
                 Spacer(Modifier.height(12.dp))
-                Text("Format d'un manifeste", style = T.section, color = th.onBackground)
+                com.ketvoice.app.ui.common.SectionHeader("Format d'un manifeste")
                 Spacer(Modifier.height(8.dp))
                 Text(
                     "{\n" +
@@ -227,44 +218,38 @@ fun SourcesScreen() {
         })
     }
     qualityFor?.let { source ->
-        Dialog(onDismissRequest = { qualityFor = null }) {
-            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp))
-                .background(th.background).padding(20.dp)) {
-                Text("Qualité demandée", color = th.onBackground, fontSize = 19.sp, fontWeight = FontWeight.Bold)
-                Text("La source reste maîtresse du flux renvoyé.",
-                    color = th.secondary, style = T.caption, modifier = Modifier.padding(top = 4.dp, bottom = 14.dp))
-                listOf("high" to "Haute qualité", "low" to "Qualité économique").forEach { (value, label) ->
-                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
-                        .clickable {
+        // Ket 27: a short choice on the dialog card — an inset group of rows, the choice ticked in the app's colour.
+        com.ketvoice.app.ui.common.Ket27DialogCard({ qualityFor = null }, Modifier.testTag("source-quality")) {
+            Text("Qualité demandée", color = th.onBackground, style = Ket27.Type.headline,
+                textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+            Text("La source reste maîtresse du flux renvoyé.", color = th.secondary, style = Ket27.Type.footnote,
+                textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 14.dp))
+            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(th.onBackground.copy(alpha = .06f))) {
+                listOf("high" to "Haute qualité", "low" to "Qualité économique").forEachIndexed { index, (value, label) ->
+                    if (index > 0) Box(Modifier.padding(start = 16.dp).fillMaxWidth().height(.5.dp).background(th.hairline))
+                    Row(Modifier.fillMaxWidth().clickable(role = androidx.compose.ui.semantics.Role.RadioButton) {
                             CustomSources.setQuality(source.id, value)
                             qualityFor = null
-                        }.padding(horizontal = 12.dp, vertical = 13.dp),
+                        }.heightIn(min = Ket27.Metrics.row).padding(horizontal = 16.dp),
                         verticalAlignment = Alignment.CenterVertically) {
-                        Text(label, color = th.onBackground, fontSize = 16.sp, modifier = Modifier.weight(1f))
-                        if (source.quality == value) Text("✓", color = th.accent, fontWeight = FontWeight.Bold)
+                        Text(label, color = th.onBackground, style = Ket27.Type.body, modifier = Modifier.weight(1f))
+                        if (source.quality == value) Icon(com.ketvoice.app.ui.common.KetIcons.Check, null, tint = th.accent,
+                            modifier = Modifier.size(20.dp))
                     }
                 }
             }
         }
     }
     deleteFor?.let { source ->
-        Dialog(onDismissRequest = { deleteFor = null }) {
-            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp))
-                .background(th.background).padding(22.dp)) {
-                Text("Supprimer la source ?", color = th.onBackground, fontSize = 19.sp, fontWeight = FontWeight.Bold)
-                Text(source.name, color = th.secondary, style = T.sub, modifier = Modifier.padding(top = 6.dp))
-                Row(Modifier.fillMaxWidth().padding(top = 18.dp), horizontalArrangement = Arrangement.End) {
-                    Text("Annuler", color = th.secondary, fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.clickable { deleteFor = null }.padding(10.dp))
-                    Text("Supprimer", color = Color(0xFFFF3B30), fontWeight = FontWeight.Bold,
-                        modifier = Modifier.clickable {
-                            CustomSources.remove(source.id)
-                            deleteFor = null
-                            flash = "Source supprimée."
-                        }.padding(10.dp))
-                }
-            }
-        }
+        com.ketvoice.app.ui.common.AppAlertDialog(onDismissRequest = { deleteFor = null },
+            title = { Text("Supprimer la source ?") },
+            text = { Text(source.name, localize = false) },
+            confirmButton = { com.ketvoice.app.ui.common.KetTextButton("Supprimer", {
+                CustomSources.remove(source.id)
+                deleteFor = null
+                flash = "Source supprimée."
+            }, primary = true, destructive = true) },
+            dismissButton = { com.ketvoice.app.ui.common.KetTextButton("Annuler", { deleteFor = null }) })
     }
 }
 
@@ -326,7 +311,7 @@ private fun KetvoiceApiCard(
             )
             Spacer(Modifier.weight(1f))
             if (testing) {
-                CircularProgressIndicator(color = th.accent, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
+                com.ketvoice.app.ui.common.ActivitySpinner(size = 18.dp)
             } else {
                 Text("Tester", color = th.accent, fontWeight = FontWeight.SemiBold, fontSize = 13.sp,
                     modifier = Modifier.clickable(onClick = onTest).padding(horizontal = 6.dp, vertical = 4.dp))
@@ -389,8 +374,7 @@ private fun SourceCard(
                 modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(th.background.copy(alpha = .55f))
                     .clickable(onClick = onQuality).padding(horizontal = 9.dp, vertical = 6.dp))
             Spacer(Modifier.weight(1f))
-            if (refreshing) CircularProgressIndicator(color = th.accent, strokeWidth = 2.dp,
-                modifier = Modifier.size(18.dp))
+            if (refreshing) com.ketvoice.app.ui.common.ActivitySpinner(size = 18.dp)
             else Icon(Icons.Filled.Refresh, "Tester", tint = th.secondary,
                 modifier = Modifier.size(20.dp).clickable(onClick = onRefresh).padding(1.dp))
             Spacer(Modifier.width(14.dp))
@@ -402,15 +386,8 @@ private fun SourceCard(
 
 @Composable
 private fun CustomSwitch(checked: Boolean, onToggle: () -> Unit) {
-    // Ket 27: the same switch as everywhere else in the app.
-    if (com.ketvoice.app.theme.Ket27.on) { com.ketvoice.app.ui.common.LiquidGlassSwitch(checked, { onToggle() }); return }
-    val th = LocalTheme.current
-    val offset by animateDpAsState(if (checked) 19.dp else 1.dp, spring(dampingRatio = .82f, stiffness = 500f))
-    val color by animateColorAsState(if (checked) th.accent else th.hairline)
-    Box(Modifier.width(43.dp).height(25.dp).clip(RoundedCornerShape(999.dp))
-        .background(color).clickable(onClick = onToggle).padding(2.dp)) {
-        Box(Modifier.offset(x = offset).size(21.dp).clip(CircleShape).background(Color.White))
-    }
+    // The same switch as everywhere else in the app.
+    com.ketvoice.app.ui.common.LiquidGlassSwitch(checked, { onToggle() })
 }
 
 @Composable
@@ -421,20 +398,23 @@ private fun AddSourceDialog(onDismiss: () -> Unit, onAdded: (String) -> Unit) {
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
 
-    Dialog(onDismissRequest = { if (!busy) onDismiss() }) {
-        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(th.background).padding(20.dp)
-            .verticalScroll(rememberScrollState())) {
-            Text("Ajouter une source", color = th.onBackground, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-            Text("URL HTTPS du manifeste, terminée par .json",
-                color = th.secondary, style = T.caption, modifier = Modifier.padding(top = 4.dp, bottom = 14.dp))
+    // Ket 27: the dialog card of an iOS alert with a field — title and message centred, the field in a
+    // rounded well, Annuler and Valider as the alert's two capsules.
+    com.ketvoice.app.ui.common.Ket27DialogCard({ if (!busy) onDismiss() }, Modifier.testTag("add-source")) {
+        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
+            Text("Ajouter une source", color = th.onBackground, style = Ket27.Type.headline,
+                textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+            Text("URL HTTPS du manifeste, terminée par .json", color = th.secondary, style = Ket27.Type.footnote,
+                textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 14.dp))
             BasicTextField(
                 value = url,
                 onValueChange = { url = it.trim(); error = null },
                 singleLine = false,
                 textStyle = TextStyle(color = th.onBackground, fontSize = 14.sp, fontFamily = FontFamily.Monospace),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
-                modifier = Modifier.fillMaxWidth().heightIn(min = 54.dp).clip(RoundedCornerShape(13.dp))
-                    .background(th.card).padding(13.dp),
+                cursorBrush = androidx.compose.ui.graphics.SolidColor(th.accent),
+                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).clip(RoundedCornerShape(12.dp))
+                    .background(th.onBackground.copy(alpha = .07f)).padding(12.dp),
                 decorationBox = { inner ->
                     if (url.isEmpty()) Text("https://exemple.com/source.json",
                         color = th.secondary.copy(alpha = .7f), fontSize = 14.sp)
@@ -442,17 +422,12 @@ private fun AddSourceDialog(onDismiss: () -> Unit, onAdded: (String) -> Unit) {
                 }
             )
             if (error != null) {
-                Text(error.orEmpty(), color = Color(0xFFFF3B30), style = T.caption,
+                Text(error.orEmpty(), color = com.ketvoice.app.ui.common.DESTRUCTIVE, style = Ket27.Type.footnote,
                     modifier = Modifier.padding(top = 8.dp))
             }
-            Row(Modifier.fillMaxWidth().padding(top = 18.dp), horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically) {
-                Text("Annuler", color = th.secondary, fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.clickable(enabled = !busy) { onDismiss() }.padding(10.dp))
-                Spacer(Modifier.width(6.dp))
-                Box(Modifier.clip(RoundedCornerShape(999.dp)).background(
-                    if (busy) th.hairline else th.accent).clickable(enabled = !busy) {
-                    if (url.isBlank() || busy) return@clickable
+            com.ketvoice.app.ui.common.Ket27AlertButtons(confirmButton = {
+                if (busy) Box(Modifier.heightIn(min = 44.dp), contentAlignment = Alignment.Center) { com.ketvoice.app.ui.common.ActivitySpinner(size = 17.dp) }
+                else com.ketvoice.app.ui.common.KetTextButton("Valider", {
                     busy = true
                     scope.launch {
                         val result = CustomSources.add(url)
@@ -461,12 +436,9 @@ private fun AddSourceDialog(onDismiss: () -> Unit, onAdded: (String) -> Unit) {
                         if (source != null) onAdded(source.name)
                         else error = result.exceptionOrNull()?.message ?: "Source refusée"
                     }
-                }.padding(horizontal = 18.dp, vertical = 10.dp)) {
-                    if (busy) CircularProgressIndicator(color = Color.White, strokeWidth = 2.dp,
-                        modifier = Modifier.size(17.dp))
-                    else Text("Valider", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                }
-            }
+                }, primary = true, enabled = url.isNotBlank())
+            }, dismissButton = { com.ketvoice.app.ui.common.KetTextButton("Annuler", { onDismiss() }, enabled = !busy) },
+                modifier = Modifier.padding(top = 18.dp))
         }
     }
 }

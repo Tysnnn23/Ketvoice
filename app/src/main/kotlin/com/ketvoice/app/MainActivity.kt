@@ -18,11 +18,11 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import com.ketvoice.app.ui.common.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -290,19 +290,21 @@ private fun CrashReportsDialog() {
     val report = remember(index) {
         runCatching { pending[index].readText() }.getOrDefault("(rapport illisible)")
     }
-    AlertDialog(
+    com.ketvoice.app.ui.common.AppAlertDialog(
         onDismissRequest = { visible = false },
         title = { Text("Rapport de crash") },
         text = {
             Text(
                 report,
+                localize = false,
                 fontSize = 11.sp,
                 fontFamily = FontFamily.Monospace,
-                modifier = androidx.compose.ui.Modifier.verticalScroll(rememberScrollState())
+                textAlign = androidx.compose.ui.text.style.TextAlign.Start,
+                modifier = androidx.compose.ui.Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState())
             )
         },
         confirmButton = {
-            TextButton(onClick = {
+            com.ketvoice.app.ui.common.KetTextButton("Copier le rapport", primary = true, onClick = {
                 runCatching {
                     val cm = activity.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                     cm.setPrimaryClip(ClipData.newPlainText("ketvoice_crash", report))
@@ -310,10 +312,10 @@ private fun CrashReportsDialog() {
                 }
                 Crash.clearAll(activity)
                 visible = false
-            }) { Text("Copier le rapport") }
+            })
         },
         dismissButton = {
-            TextButton(onClick = { Crash.clearAll(activity); visible = false }) { Text("Effacer") }
+            com.ketvoice.app.ui.common.KetTextButton("Effacer", { Crash.clearAll(activity); visible = false }, destructive = true)
         }
     )
 }

@@ -91,24 +91,23 @@ internal fun LiquidGlassSwitch(checked: Boolean, onCheckedChange: ((Boolean) -> 
         if (Motion.reduced) androidx.compose.animation.core.snap() else
             androidx.compose.animation.core.spring(dampingRatio = GlassMotion.RELEASE_DAMPING, stiffness = 520f), label = "glass-switch-lens")
     // Ket 27: the switch of iOS 27 — a 63 × 28 track, green when on, under a wide capsule thumb.
-    val ket = com.ketvoice.app.theme.Ket27.on
-    val trackWidth = if (ket) com.ketvoice.app.theme.Ket27.Metrics.switchWidth else 56.dp
-    val trackHeight = if (ket) com.ketvoice.app.theme.Ket27.Metrics.switchHeight else 32.dp
-    val thumbWidth = if (ket) 38.dp else 30.dp
-    val thumbHeight = if (ket) 24.dp else 28.dp
-    val on = if (ket) androidx.compose.ui.graphics.Color(if (theme.isDark) 0xFF30D158 else 0xFF34C759) else theme.accent
-    val x by androidx.compose.animation.core.animateDpAsState(if (checked) trackWidth - thumbWidth - (if (ket) 2.dp else 3.dp) else if (ket) 2.dp else 3.dp,
+    val trackWidth = com.ketvoice.app.theme.Ket27.Metrics.switchWidth
+    val trackHeight = com.ketvoice.app.theme.Ket27.Metrics.switchHeight
+    val thumbWidth = 38.dp
+    val thumbHeight = 24.dp
+    val on = androidx.compose.ui.graphics.Color(if (theme.isDark) 0xFF30D158 else 0xFF34C759)
+    val x by androidx.compose.animation.core.animateDpAsState(if (checked) trackWidth - thumbWidth - 2.dp else 2.dp,
         if (Motion.reduced) androidx.compose.animation.core.snap() else
             androidx.compose.animation.core.spring(dampingRatio = .82f, stiffness = 650f), label = "glass-switch")
     val tick = com.ketvoice.app.ui.motion.rememberHaptics()
     Box(modifier.width(trackWidth).height(48.dp)
         .then(if (onCheckedChange != null) Modifier.toggleable(checked, interactions, null, role = Role.Switch,
-            onValueChange = { if (ket) tick(com.ketvoice.app.ui.motion.Haptics.Kind.Tick); onCheckedChange(it) }) else Modifier),
+            onValueChange = { tick(com.ketvoice.app.ui.motion.Haptics.Kind.Tick); onCheckedChange(it) }) else Modifier),
         contentAlignment = Alignment.Center) {
         Box(Modifier.width(trackWidth).height(trackHeight)) {
             BackdropCapture(track, Modifier.fillMaxSize()) {
                 Box(Modifier.fillMaxSize().clip(RoundedCornerShape(16.dp)).background(
-                    Brush.horizontalGradient(if (checked) listOf(on.copy(alpha = if (ket) 1f else .78f), on)
+                    Brush.horizontalGradient(if (checked) listOf(on, on)
                     else listOf(theme.onBackground.copy(alpha = .12f), theme.onBackground.copy(alpha = .22f)))))
             }
             CompositionLocalProvider(LocalBackdropLayer provides track) {

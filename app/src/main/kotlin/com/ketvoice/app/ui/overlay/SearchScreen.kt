@@ -24,7 +24,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material3.CircularProgressIndicator
 import com.ketvoice.app.ui.common.Icon
 import com.ketvoice.app.ui.common.Text
 import androidx.compose.runtime.*
@@ -210,10 +209,10 @@ fun SearchScreen() {
             Row(
                 Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = com.ketvoice.app.ui.common.pageMargin(20.dp), vertical = 6.dp),
+                    .padding(horizontal = com.ketvoice.app.ui.common.pageMargin, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                com.ketvoice.app.ui.common.PageTitle("Rechercher", 28.sp, Modifier.weight(1f))
+                com.ketvoice.app.ui.common.PageTitle("Rechercher", Modifier.weight(1f))
                 AccountAvatar(
                     "K", size = 42.dp, modifier = Modifier.clickable(
                         interactionSource = remember { MutableInteractionSource() },
@@ -229,7 +228,7 @@ fun SearchScreen() {
             Column(Modifier.padding(horizontal=20.dp)) {
                 Text("Choisissez une version pour la playlist",color=th.accent)
                 if(playlistError.isNotBlank())Text(playlistError,color=th.secondary)
-                androidx.compose.material3.TextButton(onClick={AppUi.playlistResolution.value=null;AppUi.openPlaylist(pending.playlistId)}){Text("Annuler")}
+                com.ketvoice.app.ui.common.KetTextButton("Annuler", {AppUi.playlistResolution.value=null;AppUi.openPlaylist(pending.playlistId)})
             }
         }
 
@@ -245,8 +244,7 @@ fun SearchScreen() {
                 } else {
                     val favourites = com.ketvoice.app.data.ArtistPrefs.favourites
                     if (favourites.isNotEmpty()) {
-                        Text("Vos artistes favoris", style = T.section, color = th.onBackground,
-                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp))
+                        com.ketvoice.app.ui.common.SectionHeader("Vos artistes favoris", Modifier.padding(horizontal = 20.dp, vertical = 6.dp))
                         LazyRow(contentPadding = PaddingValues(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(18.dp),
                             modifier = Modifier.testTag("search-favourite-artists")) {
                             itemsIndexed(favourites, key = { _, a -> a.key }) { _, entry ->
@@ -257,12 +255,7 @@ fun SearchScreen() {
                         }
                         Spacer(Modifier.height(16.dp))
                     }
-                    Text(
-                        "Recherches récentes",
-                        style = T.section,
-                        color = th.onBackground,
-                        modifier = Modifier.padding(horizontal = 20.dp)
-                    )
+                    com.ketvoice.app.ui.common.SectionHeader("Recherches récentes", Modifier.padding(horizontal = 20.dp))
                     Spacer(Modifier.height(6.dp))
                     if (recentQueries.isEmpty()) Text(
                         if (segment == 2) "Recherchez dans vos téléchargements, playlists, fichiers locaux et titres écoutés."
@@ -302,7 +295,7 @@ fun SearchScreen() {
                         .padding(vertical = 50.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator(color = th.accent, modifier = Modifier.size(28.dp))
+                    com.ketvoice.app.ui.common.ActivitySpinner(size = 28.dp)
                 }
             }
 
@@ -318,11 +311,9 @@ fun SearchScreen() {
 
             else -> {
                 // A quiet line while a new query is still loading over the previous results.
-                if (loading) androidx.compose.material3.LinearProgressIndicator(
-                    Modifier.fillMaxWidth().padding(horizontal = 20.dp).height(2.dp), color = th.accent, trackColor = Color.Transparent)
+                if (loading) com.ketvoice.app.ui.common.KetProgressBar(null, Modifier.padding(horizontal = 20.dp), track = Color.Transparent, height = 2.dp)
                 if (artists.isNotEmpty()) {
-                    Text("Artistes", style = T.section, color = th.onBackground,
-                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp))
+                    com.ketvoice.app.ui.common.SectionHeader("Artistes", Modifier.padding(horizontal = 20.dp, vertical = 6.dp))
                     LazyRow(contentPadding = PaddingValues(horizontal = 20.dp),
                         horizontalArrangement = Arrangement.spacedBy(18.dp)) {
                         itemsIndexed(artists, key = { _, a -> a.id }) { _, artist ->
@@ -333,8 +324,7 @@ fun SearchScreen() {
                 }
                 // Titles found by their words.
                 if (lyricTracks.isNotEmpty() || lyricFound.isNotEmpty()) Column(Modifier.testTag("search-lyrics")) {
-                    Text("D'après les paroles", style = T.section, color = th.onBackground,
-                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp))
+                    com.ketvoice.app.ui.common.SectionHeader("D'après les paroles", Modifier.padding(horizontal = 20.dp, vertical = 6.dp))
                     lyricTracks.forEachIndexed { index, track ->
                         SearchResultRow(track = track, variants = listOf(track),
                             cover = com.ketvoice.app.data.MediaOverrides.cover(track, art["t:${track.id}"] ?: track.coverUrl),
@@ -358,8 +348,7 @@ fun SearchScreen() {
                 }
                 val shownAlbums = remember(albums, blockedArtists) { albums.filter { com.ketvoice.app.data.ArtistPrefs.allows(it.artist) } }
                 if (shownAlbums.isNotEmpty()) {
-                    Text("Albums", style = T.section, color = th.onBackground,
-                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp))
+                    com.ketvoice.app.ui.common.SectionHeader("Albums", Modifier.padding(horizontal = 20.dp, vertical = 6.dp))
                     com.ketvoice.app.ui.explorer.AlbumShelf(shownAlbums, edge = 20.dp) { album ->
                         submitSearch()
                         AppUi.openCatalog(com.ketvoice.app.data.CatalogRequest("album", album.id, album.title))
@@ -367,8 +356,7 @@ fun SearchScreen() {
                     Spacer(Modifier.height(16.dp))
                 }
                 if (playlists.isNotEmpty()) {
-                    Text("Playlists", style = T.section, color = th.onBackground,
-                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp))
+                    com.ketvoice.app.ui.common.SectionHeader("Playlists", Modifier.padding(horizontal = 20.dp, vertical = 6.dp))
                     playlists.forEach { playlist ->
                         Row(Modifier.fillMaxWidth().clickable(role = Role.Button) { submitSearch(); AppUi.openPlaylist(playlist.id) }
                             .padding(horizontal = 20.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -387,11 +375,9 @@ fun SearchScreen() {
                     SourcesCard(compact = true)
                     Spacer(Modifier.height(6.dp))
                 }
-                if (segment == 2 && results.isNotEmpty()) Text("Titres", style = T.section, color = th.onBackground,
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp))
+                if (segment == 2 && results.isNotEmpty()) com.ketvoice.app.ui.common.SectionHeader("Titres", Modifier.padding(horizontal = 20.dp, vertical = 12.dp))
                 if (segment == 0) {
-                    Text("Titres", style = T.section, color = th.onBackground,
-                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp))
+                    com.ketvoice.app.ui.common.SectionHeader("Titres", Modifier.padding(horizontal = 20.dp, vertical = 12.dp))
                     if (results.isEmpty()) Text("Catalogue indisponible · Réessayer", color = th.secondary,
                         modifier = Modifier.clickable { attempt++ }.padding(horizontal = 20.dp, vertical = 16.dp))
                 }
@@ -520,7 +506,7 @@ private fun SourcesCard(compact: Boolean = false) {
     Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = if (compact) 4.dp else 10.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text("Ketvoice API", style = T.section, color = th.onBackground)
+                com.ketvoice.app.ui.common.SectionHeader("Ketvoice API")
                 Text(
                     "Recherche, streaming et canvas · Supabase",
                     color = th.secondary, style = T.caption, modifier = Modifier.padding(top = 3.dp)
@@ -539,7 +525,7 @@ private fun SourcesCard(compact: Boolean = false) {
                     .padding(start = 12.dp, top = 8.dp, bottom = 8.dp))
         }
         Spacer(Modifier.height(10.dp))
-        Text("Sources personnalisées", style = T.section, color = th.onBackground)
+        com.ketvoice.app.ui.common.SectionHeader("Sources personnalisées")
         Text(
             if (custom.isEmpty()) "Aucune source .json ajoutée"
             else "${custom.count { it.enabled }} active(s) sur ${custom.size}",
@@ -611,7 +597,7 @@ internal fun SearchArtistCircle(artist: com.ketvoice.app.data.MusicArtist, onOpe
             }
         }
         androidx.compose.material3.DropdownMenu(menu, { menu = false }, offset = androidx.compose.ui.unit.DpOffset(4.dp, 2.dp),
-            shape = RoundedCornerShape(if (com.ketvoice.app.theme.Ket27.on) 18.dp else 16.dp), containerColor = th.card,
+            shape = RoundedCornerShape(18.dp), containerColor = th.card,
             modifier = Modifier.testTag("search-artist-menu")) {
             @Composable fun option(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, tag: String, action: () -> Unit) =
                 androidx.compose.material3.DropdownMenuItem(text = { Text(label, color = th.onBackground, fontSize = 14.sp) },

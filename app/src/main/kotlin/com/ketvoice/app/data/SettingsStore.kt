@@ -53,7 +53,6 @@ object SettingsStore {
         s.highRefreshRate.value = p.getBoolean("highRefreshRate", false)
         s.syncedLyrics.value = p.getBoolean("syncedLyrics", s.syncedLyrics.value)
         s.blurInactiveLyrics.value = p.getBoolean("blurInactiveLyrics", s.blurInactiveLyrics.value)
-        s.lyricsStyle.value = p.getInt("lyricsStyle", s.lyricsStyle.value).coerceIn(0, 1)
         // "automix" was the switch of the AutoMix retired in 3.10: it stays retired and never turns this one on.
         s.automix.value = p.getBoolean("automixOn", s.automix.value)
         s.automixIntensity.value = p.getInt("automixIntensity", s.automixIntensity.value).coerceIn(0, 2)
@@ -63,8 +62,6 @@ object SettingsStore {
         s.smartShuffle.value = p.getBoolean("smartShuffle", true)
         s.ketmixStyle.value = p.getInt("ketmixStyle", 0).coerceIn(0, 5)
         s.ketmixHaptics.value = p.getBoolean("ketmixHaptics", false)
-        // On unless the listener switched it off (owner, 2026-11-15: « Rend le mode ket27 par défaut »).
-        s.ket27.value = p.getBoolean("ket27", true)
         s.lyricsSource.value = p.getString("lyricsSource", s.lyricsSource.value) ?: "auto"
         if (s.lyricsSource.value !in MusicApi.lyricSources + listOf("auto", "off")) {
             s.lyricsSource.value = "auto"
@@ -194,7 +191,6 @@ object SettingsStore {
             .putBoolean("highRefreshRate", s.highRefreshRate.value)
             .putBoolean("syncedLyrics", s.syncedLyrics.value)
             .putBoolean("blurInactiveLyrics", s.blurInactiveLyrics.value)
-            .putInt("lyricsStyle", s.lyricsStyle.value)
             .putBoolean("automixOn", s.automix.value)
             .putInt("automixIntensity", s.automixIntensity.value)
             .putBoolean("automixAlbums", s.automixAlbums.value)
@@ -203,7 +199,6 @@ object SettingsStore {
             .putBoolean("smartShuffle", s.smartShuffle.value)
             .putInt("ketmixStyle", s.ketmixStyle.value)
             .putBoolean("ketmixHaptics", s.ketmixHaptics.value)
-            .putBoolean("ket27", s.ket27.value)
             .putString("lyricsSource", s.lyricsSource.value)
             .putStringSet("favoriteIds", s.favoriteIds.value)
             .putString("translateLanguage", s.translateLanguage.value)

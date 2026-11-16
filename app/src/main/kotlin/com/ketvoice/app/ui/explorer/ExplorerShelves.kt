@@ -45,10 +45,7 @@ private val shelfCard = RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp, bot
 
 @Composable
 internal fun ShelfHeading(title: String, modifier: Modifier = Modifier) {
-    if (com.ketvoice.app.theme.Ket27.on) Text(title, color = LocalTheme.current.onBackground, style = com.ketvoice.app.theme.Ket27.Type.title2,
-        maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = modifier.padding(vertical = 8.dp).asHeading())
-    else Text(title, color = LocalTheme.current.onBackground, fontSize = 20.sp, fontWeight = FontWeight.Bold,
-        maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = modifier.padding(vertical = 8.dp).asHeading())
+    com.ketvoice.app.ui.common.SectionHeader(title, modifier.padding(vertical = 8.dp))
 }
 
 /** Ranked titles in a row: a tap plays the chart from that title, a long-press opens its menu. */

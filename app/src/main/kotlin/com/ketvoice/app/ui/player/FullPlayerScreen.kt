@@ -284,7 +284,7 @@ fun FullPlayerScreen(
         }
         // Ket 27, opened from the mini-player: its cover, title, play and next buttons travel to their places in
         // one movement; the other controls rise in a little later, each on its own.
-        val travels = com.ketvoice.app.theme.Ket27.on && presentationOffset != null && !Motion.reduced
+        val travels = presentationOffset != null && !Motion.reduced
         val lateRise = if (!travels) Modifier else Modifier.graphicsLayer {
             val rise = controlsReveal(revealProgress())
             alpha = rise
@@ -564,17 +564,10 @@ internal fun PlayerTitle(track: Track, compact: Boolean, cover: String?, sheetAc
     val favorite = track.id in AppSettings.favoriteIds.value
     var favoriteTap by remember(track.id) { mutableIntStateOf(0) }
     val favoriteHaptic = com.ketvoice.app.ui.motion.rememberHaptics()
-    val pulse = remember(track.id) { androidx.compose.animation.core.Animatable(1f) }
     // Counts only the times the title became a favourite: those burst.
     var bursts by remember(track.id) { mutableIntStateOf(0) }
     val starColor by animateColorAsState(if (favorite) com.ketvoice.app.theme.LocalTheme.current.accent else Color(0xFFCED2E3),
         tween(Motion.duration()), label = "favorite-color")
-    LaunchedEffect(favoriteTap, Motion.reduced) {
-        if (favoriteTap > 0 && !Motion.reduced) {
-            pulse.animateTo(if (favorite) 1.32f else 1.12f, tween(Motion.PRESS))
-            pulse.animateTo(1f, androidx.compose.animation.core.spring(dampingRatio = .42f, stiffness = 520f))
-        } else pulse.snapTo(1f)
-    }
     Row(modifier, verticalAlignment = Alignment.CenterVertically) {
         if (compact) { Cover(track.title, cover, size = 56.dp, radius = 8.dp,
             modifier = Modifier.semantics { contentDescription = com.ketvoice.app.data.AppText.t("Revenir à la pochette") }.clickable(onClick = onCover)); Spacer(Modifier.width(12.dp)) }
@@ -609,13 +602,10 @@ internal fun PlayerTitle(track: Track, compact: Boolean, cover: String?, sheetAc
             SettingsStore.save()
         }, active = favorite, size = 36.dp) {
             // Ket 27: the heart fills inside its outline and bounces (give way, spring past, settle).
-            if (com.ketvoice.app.theme.Ket27.on) com.ketvoice.app.ui.motion.FillingHeart(favorite,
+            com.ketvoice.app.ui.motion.FillingHeart(favorite,
                 com.ketvoice.app.ui.common.Ket27Glyphs.Heart, com.ketvoice.app.ui.common.Ket27Glyphs.HeartFilled,
                 if (favorite) "Retirer des favoris" else "Ajouter aux favoris", starColor,
                 Modifier.size(23.dp).symbolBounce(favoriteTap))
-            else Icon(if (favorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                if (favorite) "Retirer des favoris" else "Ajouter aux favoris", tint = starColor,
-                modifier = Modifier.size(23.dp).graphicsLayer { scaleX = pulse.value; scaleY = pulse.value })
         }
         }
         Spacer(Modifier.width(8.dp))
@@ -661,9 +651,8 @@ private fun Modifier.playerDismissDrag(
             onDragEnd = {
                 // Ket 27: a flick down closes the player from anywhere, a flick up keeps it; the spring leaves at the finger's speed.
                 val velocity = tracker.calculateVelocity().y
-                val ket = com.ketvoice.app.theme.Ket27.on
-                if (PlayerDismiss.closes(dismissOffset.value, velocity, maxPx, fling, velocityAware = ket)) {
-                    if (ket) PlayerDismiss.throwAt(velocity)
+                if (PlayerDismiss.closes(dismissOffset.value, velocity, maxPx, fling, velocityAware = true)) {
+                    PlayerDismiss.throwAt(velocity)
                     dismiss()
                 } else settle()
             },

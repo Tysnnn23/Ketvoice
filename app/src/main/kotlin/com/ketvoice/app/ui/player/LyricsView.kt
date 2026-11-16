@@ -37,7 +37,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Translate
-import androidx.compose.material3.CircularProgressIndicator
 import com.ketvoice.app.ui.common.Icon
 import com.ketvoice.app.ui.common.Text
 import androidx.compose.runtime.*
@@ -245,27 +244,24 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
                                     entry.animateTo(1f, tween(420, easing = CubicBezierEasing(.16f, .84f, .28f, 1f)))
                                 }
                             }
-                            val cascade = AppSettings.lyricsStyle.value == 1
                             val lineColor by animateColorAsState(
                                 // Lines already sung stay white; only what is still to come is dimmed.
                                 targetValue = if (current || !lyrics.isTimed || LyricsCascade.sung(index, active)) Color.White
-                                    else Color.White.copy(alpha = if (cascade) LyricsCascade.INACTIVE_ALPHA else .54f),
+                                    else Color.White.copy(alpha = LyricsCascade.INACTIVE_ALPHA),
                                 animationSpec = tween(Motion.duration(320)),
                                 label = "lyricColor"
                             )
                             val lineBlur by animateDpAsState(blur, tween(Motion.duration(320)), label = "lyricBlur")
-                            // Toutes les lignes gardent exactement la même taille et la
-                            // même graisse : seule la couleur distingue la ligne active.
-                            // Aucun changement d'échelle, pour éviter l'effet « lyrics
-                            // basiques » sur les lignes non sélectionnées.
-                            // Cascade: the sung line alone stands forward; the others step back a
-                            // little and catch up in a wave, each a few milliseconds after the one above.
+                            // Cascade, the only lyrics style: the sung line alone stands forward; the others step
+                            // back a little and catch up in a wave, each a few milliseconds after the one above.
+                            // With reduced motion the lines keep their size and place: only their colour changes.
                             val lineScale by animateFloatAsState(
-                                if (cascade && lyrics.isTimed && !current && !reduced) LyricsCascade.INACTIVE_SCALE else 1f,
-                                androidx.compose.animation.core.spring(dampingRatio = 1f, stiffness = 170f), label = "lyricScale")
+                                if (lyrics.isTimed && !current && !reduced) LyricsCascade.INACTIVE_SCALE else 1f,
+                                if (reduced) androidx.compose.animation.core.snap() else androidx.compose.animation.core.spring(dampingRatio = 1f, stiffness = 170f),
+                                label = "lyricScale")
                             val wave = remember(index, track.id) { Animatable(0f) }
-                            LaunchedEffect(active, cascade, reduced) {
-                                if (!cascade || reduced || active < 0 || index < active) { wave.animateTo(0f, tween(Motion.duration(260))); return@LaunchedEffect }
+                            LaunchedEffect(active, reduced) {
+                                if (reduced || active < 0 || index < active) { wave.animateTo(0f, tween(Motion.duration(260))); return@LaunchedEffect }
                                 // The lines below hold back a little, then glide into place one after
                                 // the other: a smooth ease-out, no overshoot and no jump.
                                 wave.snapTo(maxOf(wave.value, LyricsCascade.waveStartDp(index - active)))
@@ -317,12 +313,11 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
             } else {
                 Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        if (lyrics.loading) CircularProgressIndicator(Modifier.size(22.dp), color = Color.White, strokeWidth = 2.dp)
+                        if (lyrics.loading) com.ketvoice.app.ui.common.ActivitySpinner(size = 22.dp, color = Color.White)
                         Spacer(Modifier.height(16.dp))
                         Text(if (lyrics.loading) "Recherche dans les sources de paroles…" else "Aucune parole disponible pour cette version",
-                            color = Color(0xFFA0A1AA), fontSize = 15.sp)
-                        Text("Choisir une source", color = Color.White, fontSize = 14.sp,
-                            modifier = Modifier.clickable(onClick = onSource).padding(16.dp))
+                            color = Color.White.copy(alpha = .6f), style = com.ketvoice.app.theme.Ket27.Type.subheadline)
+                        com.ketvoice.app.ui.common.KetTextButton("Choisir une source", onSource, Modifier.padding(top = 6.dp), primary = true, tint = Color.White)
                     }
                 }
             }
@@ -332,12 +327,11 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
                 Row(Modifier.fillMaxWidth().height(48.dp), verticalAlignment = Alignment.CenterVertically) {
                     SmallCircleButton(onSource, size = 36.dp) { Icon(Icons.Filled.Language, "Sources des paroles", tint = it, modifier = Modifier.size(21.dp)) }
                     Spacer(Modifier.weight(1f))
-                    if (!following && lyrics.isTimed) Text("Suivre la lecture", color = Color.White, fontSize = if (com.ketvoice.app.BuildConfig.IS_QUEST) 14.sp else 11.sp,
-                        modifier = Modifier.clickable { following = true }.padding(8.dp))
+                    if (!following && lyrics.isTimed) FollowCapsule("Suivre la lecture") { following = true }
                     SmallCircleButton({
                         translationEnabled = !translationEnabled
                     }, active = translationEnabled, size = 36.dp) {
-                        if (translating) CircularProgressIndicator(Modifier.size(17.dp), color = it, strokeWidth = 1.6.dp)
+                        if (translating) com.ketvoice.app.ui.common.ActivitySpinner(size = 17.dp, color = it)
                         else Icon(Icons.Filled.Translate, "Traduire les paroles", tint = it, modifier = Modifier.size(21.dp))
                     }
                 }
@@ -345,11 +339,24 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
             if (moment.isNotEmpty()) MomentBar(track, moment.mapNotNull { lyrics.lines.getOrNull(it) },
                 lyrics.lines.getOrNull((moment.maxOrNull() ?: -1) + 1)?.timeMs ?: -1L, lyrics.isTimed) { moment = emptyList() }
             else if (expanded && !following && lyrics.isTimed) {
-                Text("Reprendre le suivi", color = Color.White, fontSize = if (com.ketvoice.app.BuildConfig.IS_QUEST) 14.sp else 12.sp,
-                    modifier = Modifier.align(Alignment.CenterHorizontally).clickable { following = true }.padding(12.dp))
+                FollowCapsule("Reprendre le suivi", Modifier.align(Alignment.CenterHorizontally).padding(bottom = 8.dp)) { following = true }
             }
         }
     }
+    }
+}
+
+/**
+ * Back to following the song, as a small capsule of glass over the lyrics (Ket 27): its label in the
+ * footnote style (larger on Quest), with a 44 dp target.
+ */
+@Composable
+private fun FollowCapsule(label: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    Box(modifier.heightIn(min = 44.dp).clickable(role = Role.Button, onClick = onClick).testTag("lyrics-follow"),
+        contentAlignment = Alignment.Center) {
+        Text(label, color = Color.White, style = if (com.ketvoice.app.BuildConfig.IS_QUEST) com.ketvoice.app.theme.Ket27.Type.subheadline else com.ketvoice.app.theme.Ket27.Type.footnote,
+            fontWeight = FontWeight.SemiBold, modifier = Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(999.dp))
+                .background(Color.White.copy(alpha = .16f)).padding(horizontal = 14.dp, vertical = 7.dp))
     }
 }
 
@@ -701,23 +708,18 @@ internal fun LyricsSourceSheet(track: Track, onClose: () -> Unit) {
     val radius = with(LocalDensity.current) { 26.dp.toPx() }
     GlassPanel(Modifier.fillMaxWidth().padding(10.dp), RoundedCornerShape(26.dp), GlassParams.sheet(radius, true)) {
         Column(Modifier.fillMaxWidth().heightIn(max = 600.dp).verticalScroll(rememberScrollState()).padding(18.dp)) {
-            Text("Sources des paroles", color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.Bold)
-            Text("Syllabes natives → mots natifs → lignes → texte", color = Color.White.copy(alpha = .78f), fontSize = if (com.ketvoice.app.BuildConfig.IS_QUEST) 14.sp else 12.sp,
+            Text("Sources des paroles", color = Color.White, style = com.ketvoice.app.theme.Ket27.Type.title3)
+            Text("Syllabes natives → mots natifs → lignes → texte", color = Color.White.copy(alpha = .78f),
+                style = if (com.ketvoice.app.BuildConfig.IS_QUEST) com.ketvoice.app.theme.Ket27.Type.subheadline else com.ketvoice.app.theme.Ket27.Type.footnote,
                 modifier = Modifier.padding(top = 5.dp, bottom = 12.dp))
-            Text("Décalage des paroles", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+            Text("Décalage des paroles", color = Color.White, style = com.ketvoice.app.theme.Ket27.Type.headline)
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text("Retarder", color = Color.White, modifier = Modifier.clickable(role = Role.Button) {
-                    LyricsOffsets.set(track.id, offset - 100)
-                }.heightIn(min = 48.dp).wrapContentHeight().padding(horizontal = 8.dp))
-                Text("${if (offset > 0) "+" else ""}$offset ms", localize = false, color = Color.White,
+                com.ketvoice.app.ui.common.KetTextButton("Retarder", { LyricsOffsets.set(track.id, offset - 100) }, Modifier.heightIn(min = 48.dp), tint = Color.White)
+                Text("${if (offset > 0) "+" else ""}$offset ms", localize = false, color = Color.White, style = com.ketvoice.app.theme.Ket27.Type.body,
                     modifier = Modifier.weight(1f), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-                Text("Avancer", color = Color.White, modifier = Modifier.clickable(role = Role.Button) {
-                    LyricsOffsets.set(track.id, offset + 100)
-                }.heightIn(min = 48.dp).wrapContentHeight().padding(horizontal = 8.dp))
+                com.ketvoice.app.ui.common.KetTextButton("Avancer", { LyricsOffsets.set(track.id, offset + 100) }, Modifier.heightIn(min = 48.dp), tint = Color.White)
             }
-            Text("Réinitialiser", color = Color.White.copy(alpha = .78f), modifier = Modifier
-                .clickable(role = Role.Button) { LyricsOffsets.set(track.id, 0) }.heightIn(min = 48.dp)
-                .wrapContentHeight().padding(horizontal = 8.dp))
+            com.ketvoice.app.ui.common.KetTextButton("Réinitialiser", { LyricsOffsets.set(track.id, 0) }, Modifier.heightIn(min = 48.dp), tint = Color.White.copy(alpha = .78f))
             run {
                 val active = custom?.active == true
                 Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
@@ -730,22 +732,19 @@ internal fun LyricsSourceSheet(track: Track, onClose: () -> Unit) {
                         } else picker.launch(arrayOf("*/*"))
                     }.padding(horizontal = 12.dp, vertical = 11.dp).testTag("lyrics-custom"), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text("Personnalisé", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                        Text("Personnalisé", color = Color.White, style = com.ketvoice.app.theme.Ket27.Type.body)
                         Text(customError?.let { com.ketvoice.app.data.AppText.t(it) } ?: custom?.let { "${it.name} · ${it.format.uppercase()}" }
                             ?: com.ketvoice.app.data.AppText.t("Choisir un fichier : LRC, TTML, SRT, VTT, ASS, JSON, TXT…"),
-                            localize = false, color = Color.White.copy(alpha = .78f), fontSize = if (com.ketvoice.app.BuildConfig.IS_QUEST) 14.sp else 11.sp,
+                            localize = false, color = Color.White.copy(alpha = .78f), style = if (com.ketvoice.app.BuildConfig.IS_QUEST) com.ketvoice.app.theme.Ket27.Type.subheadline else com.ketvoice.app.theme.Ket27.Type.footnote,
                             maxLines = 2, overflow = TextOverflow.Ellipsis)
                     }
                     if (active) Icon(Icons.Filled.Check, "Sélectionnée", tint = LocalTheme.current.accent, modifier = Modifier.size(20.dp))
                 }
                 if (custom != null) Row(Modifier.fillMaxWidth().padding(start = 12.dp)) {
-                    Text("Changer de fichier", color = Color.White.copy(alpha = .78f), fontSize = 13.sp,
-                        modifier = Modifier.clickable(role = Role.Button) { picker.launch(arrayOf("*/*")) }.heightIn(min = 44.dp)
-                            .wrapContentHeight().padding(end = 18.dp))
-                    Text("Retirer", color = Color.White.copy(alpha = .78f), fontSize = 13.sp,
-                        modifier = Modifier.clickable(role = Role.Button) {
-                            com.ketvoice.app.data.CustomLyrics.forget(track.id); custom = null; LyricsRepo.load(track, force = true)
-                        }.heightIn(min = 44.dp).wrapContentHeight())
+                    com.ketvoice.app.ui.common.KetTextButton("Changer de fichier", { picker.launch(arrayOf("*/*")) }, tint = Color.White.copy(alpha = .78f))
+                    com.ketvoice.app.ui.common.KetTextButton("Retirer", {
+                        com.ketvoice.app.data.CustomLyrics.forget(track.id); custom = null; LyricsRepo.load(track, force = true)
+                    }, destructive = true)
                 }
             }
             (listOf(MusicApi.SRC_AUTO) + MusicApi.lyricSources + MusicApi.SRC_OFF).forEach { source ->
@@ -763,7 +762,7 @@ internal fun LyricsSourceSheet(track: Track, onClose: () -> Unit) {
                         onClose()
                     }.padding(horizontal = 12.dp, vertical = 11.dp), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text(MusicApi.sourceName(source), color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                        Text(MusicApi.sourceName(source), color = Color.White, style = com.ketvoice.app.theme.Ket27.Type.body)
                         val description = when {
                             source == MusicApi.SRC_AUTO -> "Meilleure synchronisation disponible"
                             source == MusicApi.SRC_OFF -> "Ne pas afficher de paroles"
@@ -774,15 +773,16 @@ internal fun LyricsSourceSheet(track: Track, onClose: () -> Unit) {
                             status.timed -> "Ligne par ligne · ${status.lines} lignes"
                             else -> "Texte non synchronisé · ${status.lines} lignes"
                         }
-                        Text(description, color = Color.White.copy(alpha = .78f), fontSize = if (com.ketvoice.app.BuildConfig.IS_QUEST) 14.sp else 11.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        Text(description, color = Color.White.copy(alpha = .78f), style = if (com.ketvoice.app.BuildConfig.IS_QUEST) com.ketvoice.app.theme.Ket27.Type.subheadline else com.ketvoice.app.theme.Ket27.Type.footnote,
+                            maxLines = 2, overflow = TextOverflow.Ellipsis)
                     }
                     if (selected) Icon(Icons.Filled.Check, "Sélectionnée", tint = LocalTheme.current.accent, modifier = Modifier.size(20.dp))
                 }
             }
-            Text("Relancer les sources en ligne", color = Color.White, fontSize = 14.sp,
-                modifier = Modifier.fillMaxWidth().clickable { LyricsRepo.load(track, force = true, refresh = true); onClose() }.padding(12.dp))
+            com.ketvoice.app.ui.common.KetTextButton("Relancer les sources en ligne", { LyricsRepo.load(track, force = true, refresh = true); onClose() },
+                Modifier.padding(top = 4.dp), tint = Color.White)
             Text("Paroles fournies notamment par lrc.red, BetterLyrics et LiriQo. Les accès peuvent varier selon le titre.",
-                color = Color.White.copy(alpha = .78f), fontSize = if (com.ketvoice.app.BuildConfig.IS_QUEST) 13.sp else 10.sp, modifier = Modifier.padding(12.dp))
+                color = Color.White.copy(alpha = .78f), style = if (com.ketvoice.app.BuildConfig.IS_QUEST) com.ketvoice.app.theme.Ket27.Type.footnote else com.ketvoice.app.theme.Ket27.Type.caption, modifier = Modifier.padding(12.dp))
         }
     }
 }

@@ -57,7 +57,7 @@ object LyricsMotion {
     fun targetIndex(active: Int, timed: Boolean): Int = if (active < 0) 0 else active + if (timed) 1 else 0
 }
 
-/** The Cascade lyrics style: how far the other lines step back and how the wave travels. */
+/** Cascade, how lyrics are shown: how far the other lines step back and how the wave travels. */
 internal object LyricsCascade {
     const val INACTIVE_ALPHA = .32f
     const val INACTIVE_SCALE = .955f

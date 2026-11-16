@@ -3,7 +3,6 @@ package com.ketvoice.app.ui.common
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MusicNote
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -24,9 +23,7 @@ fun EmptyState(title: String, description: String, action: String, modifier: Mod
         Text(title, color = theme.onBackground, fontSize = 18.sp, fontWeight = FontWeight.Bold)
         Text(description, color = theme.secondary, fontSize = if (BuildConfig.IS_QUEST) 15.sp else 14.sp,
             modifier = Modifier.widthIn(max = 460.dp))
-        TextButton(onClick = onAction, modifier = Modifier.heightIn(min = 48.dp)) {
-            Text(action, color = theme.accent, fontWeight = FontWeight.SemiBold)
-        }
+        KetTextButton(action, onAction, Modifier.heightIn(min = 48.dp), primary = true)
     }
 }
 

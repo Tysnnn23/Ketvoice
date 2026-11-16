@@ -12,8 +12,6 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -61,7 +59,7 @@ private fun CreatePlaylistDialog() {
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Créer une playlist", color = th.onBackground, fontSize = 20.sp, fontWeight = FontWeight.Bold)
             SettingsTextInput(name, { name = it.take(80) }, "Nom de la playlist", !saving, Modifier.testTag("playlist-name"))
-            if (error.isNotBlank()) Text(error, color = MaterialTheme.colorScheme.error)
+            if (error.isNotBlank()) Text(error, color = com.ketvoice.app.ui.common.DESTRUCTIVE)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                 SettingsAction("Annuler", { AppUi.showCreatePlaylist.value = false }, enabled = !saving)
                 SettingsAction("Créer", {
@@ -155,8 +153,7 @@ fun AddToPlaylistSheet(tracks: List<Track>, onClose: () -> Unit) {
                                 Text("$available / ${list.entries.size} titres disponibles",
                                     color = com.ketvoice.app.ui.common.sheetInk().copy(alpha = .6f), fontSize = 12.5.sp)
                             }
-                            if (saving) CircularProgressIndicator(
-                                Modifier.size(20.dp), color = com.ketvoice.app.ui.common.sheetInk(), strokeWidth = 2.dp)
+                            if (saving) com.ketvoice.app.ui.common.ActivitySpinner(size = 20.dp, color = com.ketvoice.app.ui.common.sheetInk())
                         }
                     }
                 }
@@ -228,8 +225,8 @@ fun SpotifyImportDialog(onClose: () -> Unit) {
                     }
                 }
             }
-            if(busy)LinearProgressIndicator(modifier=Modifier.fillMaxWidth())
-            if(error.isNotBlank())Text(error,color=MaterialTheme.colorScheme.error)
+            if(busy)com.ketvoice.app.ui.common.KetProgressBar(null)
+            if(error.isNotBlank())Text(error,color=com.ketvoice.app.ui.common.DESTRUCTIVE)
             Column(Modifier.fillMaxWidth(), horizontalAlignment=Alignment.End) {
                 SettingsAction("Créer avec les titres affichés", {run{
                     val source=preview ?: return@run

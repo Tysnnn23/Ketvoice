@@ -26,7 +26,6 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
-import com.ketvoice.app.theme.Ket27
 import com.ketvoice.app.ui.common.Icon
 
 /**
@@ -167,5 +166,3 @@ internal fun DrawnCheck(progress: Float, modifier: Modifier = Modifier, tint: Co
     }
 }
 
-/** True when Ket 27's symbol effects apply. Read where a composable chooses between a static icon and an animated one. */
-internal val symbolEffectsOn: Boolean get() = Ket27.on

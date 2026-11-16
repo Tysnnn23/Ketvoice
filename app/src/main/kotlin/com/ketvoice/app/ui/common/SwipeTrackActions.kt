@@ -128,12 +128,8 @@ internal fun SwipeTrackActions(track: Track, modifier: Modifier = Modifier, enab
 internal fun Modifier.trackRowClick(track: Track, enabled: Boolean = true, role: Role? = Role.Button,
                                     onClick: () -> Unit): Modifier {
     val haptic = rememberHaptics()
-    // Ket 27: held, the row lifts as a preview of itself and a glass menu unfolds from it; the "more" button still opens the full sheet.
-    if (ContextMenus.enabled) {
-        val anchor = rememberRowAnchor()
-        return rowAnchor(anchor).combinedClickable(enabled = enabled, role = role, onLongClickLabel = AppText.t("Options"),
-            onLongClick = { haptic(Haptics.Kind.Tick); ContextMenus.open(track, anchor.bounds()) }, onClick = onClick)
-    }
-    return combinedClickable(enabled = enabled, role = role, onLongClickLabel = AppText.t("Options"),
-        onLongClick = { haptic(Haptics.Kind.Tick); AppUi.trackMenuTrack.value = track }, onClick = onClick)
+    // Held, the row lifts as a preview of itself and a glass menu unfolds from it; the "more" button still opens the full sheet.
+    val anchor = rememberRowAnchor()
+    return rowAnchor(anchor).combinedClickable(enabled = enabled, role = role, onLongClickLabel = AppText.t("Options"),
+        onLongClick = { haptic(Haptics.Kind.Tick); ContextMenus.open(track, anchor.bounds()) }, onClick = onClick)
 }

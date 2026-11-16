@@ -11,7 +11,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MusicNote
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -95,14 +94,7 @@ fun ReplayScreen() {
                 Text("Wrapped", localize = false, color = androidx.compose.ui.graphics.Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
             }
         }
-        if (com.ketvoice.app.theme.Ket27.on) com.ketvoice.app.ui.common.Ket27PageBar("Replay", { AppUi.closeOverlay() }) { wrapped() }
-        else Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            GlassBackButton { AppUi.closeOverlay() }
-            Spacer(Modifier.width(12.dp))
-            Text("Replay", color = th.onBackground, fontSize = 30.sp, fontWeight = FontWeight.Bold, letterSpacing = (-.7).sp,
-                modifier = Modifier.asHeading().weight(1f))
-            wrapped()
-        }
+        com.ketvoice.app.ui.common.Ket27PageBar("Replay", { AppUi.closeOverlay() }) { wrapped() }
         if (showWrapped) WrappedStory(rememberWrappedRecap()) { showWrapped = false }
         if (stats.totalPlays == 0) {
             EmptyState("Pas encore de Replay", "Vos titres les plus écoutés apparaîtront ici dès que vous aurez écouté de la musique.",
@@ -130,8 +122,7 @@ fun ReplayScreen() {
                 }
                 if (stats.topArtists.isNotEmpty()) {
                     item(key = "artists") {
-                        Text("Vos artistes", color = th.onBackground, fontSize = 20.sp, fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(start = 18.dp, top = 14.dp, bottom = 10.dp).asHeading())
+                        com.ketvoice.app.ui.common.SectionHeader("Vos artistes", Modifier.padding(start = 18.dp, top = 14.dp, bottom = 10.dp))
                         Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
                             .padding(horizontal = 18.dp),
                             horizontalArrangement = Arrangement.spacedBy(18.dp)) {
@@ -159,7 +150,8 @@ fun ReplayScreen() {
                             fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 18.dp, top = 20.dp, bottom = 6.dp).asHeading())
                         Column(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 6.dp)) {
                             CollectionPlaybackActions(topTracks.map { it.first }, Modifier.fillMaxWidth())
-                            TextButton(enabled = !saving && !saved, onClick = {
+                            com.ketvoice.app.ui.common.KetTextButton(if (saved) "Playlist enregistrée dans la bibliothèque" else "Enregistrer comme playlist",
+                                enabled = !saving && !saved, primary = true, tint = if (saved) th.secondary else null, onClick = {
                                 saving = true
                                 scope.launch {
                                     val tracks = topTracks.map { it.first }
@@ -174,10 +166,7 @@ fun ReplayScreen() {
                                     TrackActionFeedback.snackbar.showSnackbar(AppText.t(
                                         if (done) "Playlist enregistrée dans la bibliothèque" else "Impossible d'enregistrer la playlist"))
                                 }
-                            }, modifier = Modifier.testTag("replay-save")) {
-                                Text(if (saved) "Playlist enregistrée dans la bibliothèque" else "Enregistrer comme playlist",
-                                    color = if (saved) th.secondary else th.accent, fontWeight = FontWeight.SemiBold)
-                            }
+                            }, modifier = Modifier.testTag("replay-save"))
                         }
                     }
                     itemsIndexed(topTracks, key = { _, pair -> pair.first.id }) { index, pair ->

@@ -68,7 +68,11 @@ class QueueAndBrowseHostTest {
         AppUi.closeOverlays(); AppUi.selectTab(AppUi.HOME)
         AppUi.catalogRequest.value = null
         AppUi.trackMenuTrack.value = null
+        com.ketvoice.app.ui.common.ContextMenus.request.value = null
     }
+
+    /** A long press on a title opens its menu: Ket 27's context menu, drawn from where the row is. */
+    private fun menuOpenedFor(): String? = com.ketvoice.app.ui.common.ContextMenus.request.value?.track?.id ?: AppUi.trackMenuTrack.value?.id
 
     @After fun restoreController() { playerField("controller").set(Player, oldController) }
 
@@ -210,7 +214,7 @@ class QueueAndBrowseHostTest {
         compose.onNodeWithTag("replay-list").performScrollToNode(hasText("Favori"))
         compose.onNodeWithText("Favori").performTouchInput { longClick() }
         compose.waitForIdle()
-        assertEquals(a.id, AppUi.trackMenuTrack.value?.id)
+        assertEquals(a.id, menuOpenedFor())
     }
 
     @Test fun replayArtistWithoutACataloguePageOpensASearchForThatName() {
@@ -241,7 +245,8 @@ class QueueAndBrowseHostTest {
         compose.onNodeWithText("Numéro un").assertIsDisplayed()
         compose.onNodeWithText("Numéro deux").performTouchInput { longClick() }
         compose.waitForIdle()
-        assertEquals("fixture:b", AppUi.trackMenuTrack.value?.id)
+        assertEquals("fixture:b", menuOpenedFor())
+        com.ketvoice.app.ui.common.ContextMenus.request.value = null
         compose.onNodeWithText("Grand album").performClick()
         compose.waitForIdle()
         assertEquals(CatalogRequest("album", "42", "Grand album"), AppUi.catalogRequest.value)

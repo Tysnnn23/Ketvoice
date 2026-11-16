@@ -11,9 +11,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CheckboxColors
-import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -24,7 +21,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
-import com.ketvoice.app.theme.Ket27
 import com.ketvoice.app.theme.LocalTheme
 import com.ketvoice.app.ui.motion.DrawnCheck
 import com.ketvoice.app.ui.motion.Haptics
@@ -32,17 +28,12 @@ import com.ketvoice.app.ui.motion.Motion
 import com.ketvoice.app.ui.motion.rememberHaptics
 
 /**
- * A check box. The classic interface keeps Material's square; Ket 27 draws the round mark of an
+ * A check box, as Ket 27 draws it: the round mark of an
  * iOS list — an empty ring, then the app's colour with a check that draws itself, and a tick in
  * the hand when the listener sets it.
  */
 @Composable
-internal fun KetCheckbox(checked: Boolean, onCheckedChange: ((Boolean) -> Unit)?, modifier: Modifier = Modifier, enabled: Boolean = true,
-                         colors: CheckboxColors? = null) {
-    if (!Ket27.on) {
-        Checkbox(checked, onCheckedChange, modifier, enabled, colors ?: CheckboxDefaults.colors())
-        return
-    }
+internal fun KetCheckbox(checked: Boolean, onCheckedChange: ((Boolean) -> Unit)?, modifier: Modifier = Modifier, enabled: Boolean = true) {
     val theme = LocalTheme.current
     val haptic = rememberHaptics()
     val fill by animateColorAsState(if (checked) theme.accent else Color.Transparent, tween(Motion.duration(160)), label = "check-fill")

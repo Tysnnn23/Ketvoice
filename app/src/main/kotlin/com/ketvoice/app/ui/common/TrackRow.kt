@@ -47,7 +47,7 @@ internal fun TrackRow(
 ) {
     val theme = LocalTheme.current
     val small = if (BuildConfig.IS_QUEST) 14.sp else 13.sp
-    Row(modifier.fillMaxWidth().trackRowClick(track, onClick = onClick).padding(start = pageMargin(18.dp), end = 6.dp, top = 7.dp, bottom = 7.dp),
+    Row(modifier.fillMaxWidth().trackRowClick(track, onClick = onClick).padding(start = pageMargin, end = 6.dp, top = 7.dp, bottom = 7.dp),
         verticalAlignment = Alignment.CenterVertically) {
         if (rank != null) Text("$rank", localize = false, color = theme.secondary, fontSize = 13.sp, modifier = Modifier.width(26.dp))
         DownloadCover(track, cover, 52.dp, 10.dp)

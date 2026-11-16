@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import com.ketvoice.app.ui.common.Text
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -61,13 +60,13 @@ fun ExplorerScreen() {
     // The chart loads beside the genres and never blocks them.
     LaunchedEffect(attempt) { chart = CatalogRepo.chart() }
     Column(Modifier.fillMaxSize().pageBackground(theme).statusBarsPadding()) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = com.ketvoice.app.ui.common.pageMargin(18.dp), vertical = 18.dp), verticalAlignment = Alignment.CenterVertically) {
-            com.ketvoice.app.ui.common.PageTitle("Explorer", 32.sp, Modifier.weight(1f).asHeading())
+        Row(Modifier.fillMaxWidth().padding(horizontal = com.ketvoice.app.ui.common.pageMargin, vertical = 18.dp), verticalAlignment = Alignment.CenterVertically) {
+            com.ketvoice.app.ui.common.PageTitle("Explorer", Modifier.weight(1f).asHeading())
             if (!layout.hasRail) Box(Modifier.size(DesignTokens.Space.touch).clickable { AppUi.showAccount.value = true },
                 contentAlignment = Alignment.Center) { AccountAvatar("K", 36.dp) }
         }
         if (loading) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(Modifier.size(25.dp), color = theme.accent, strokeWidth = 2.dp)
+            com.ketvoice.app.ui.common.ActivitySpinner(size = 25.dp)
         } else if (genres.isEmpty()) Text("Catalogue indisponible · Réessayer", color = theme.secondary,
             modifier = Modifier.clickable { attempt++ }.padding(24.dp))
         else {

@@ -19,11 +19,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.CheckboxDefaults
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.TextFieldColors
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -134,7 +129,7 @@ fun PublisherScreen(target: Track?, onClose: () -> Unit) {
 
     Box(Modifier.fillMaxSize().pageBackground(theme).testTag("studio"), contentAlignment = Alignment.TopCenter) {
         Column(Modifier.widthIn(max = 780.dp).fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
-            Row(Modifier.fillMaxWidth().padding(horizontal = com.ketvoice.app.ui.common.pageMargin(14.dp), vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().padding(horizontal = com.ketvoice.app.ui.common.pageMargin, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 GlassBackButton { back() }
                 Spacer(Modifier.weight(1f))
                 if (allowed && route == StudioRoute.Home) Text("Se déconnecter", color = theme.secondary, fontSize = 13.sp,
@@ -174,7 +169,7 @@ fun PublisherScreen(target: Track?, onClose: () -> Unit) {
 private fun StudioWaiting() {
     val theme = LocalTheme.current
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-        androidx.compose.material3.CircularProgressIndicator(Modifier.size(28.dp), color = theme.accent, strokeWidth = 2.dp)
+        com.ketvoice.app.ui.common.ActivitySpinner(size = 28.dp)
         Text("Reconnexion au Studio…", color = theme.secondary, modifier = Modifier.padding(top = 14.dp))
     }
 }
@@ -185,10 +180,7 @@ private fun StudioStatus(state: StudioState) {
     val theme = LocalTheme.current
     Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         if (state.busy) {
-            if (state.progress > 0) LinearProgressIndicator({ state.progress / 100f }, Modifier.fillMaxWidth().height(4.dp)
-                .clip(RoundedCornerShape(2.dp)), color = theme.accent, trackColor = theme.card)
-            else LinearProgressIndicator(Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(2.dp)), color = theme.accent,
-                trackColor = theme.card)
+            com.ketvoice.app.ui.common.KetProgressBar(if (state.progress > 0) ({ state.progress / 100f }) else null)
             Text(if (state.progress > 0) "Envoi · ${state.progress} %" else "Chargement…", color = theme.secondary, fontSize = 12.sp)
         }
         if (state.info.isNotBlank()) Text(state.info, color = theme.accent, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
@@ -198,20 +190,10 @@ private fun StudioStatus(state: StudioState) {
 }
 
 @Composable
-internal fun studioFieldColors(): TextFieldColors {
-    val theme = LocalTheme.current
-    return OutlinedTextFieldDefaults.colors(
-        focusedBorderColor = theme.accent, unfocusedBorderColor = theme.secondary.copy(alpha = .45f),
-        focusedLabelColor = theme.accent, unfocusedLabelColor = theme.secondary, cursorColor = theme.accent,
-        focusedTextColor = theme.onBackground, unfocusedTextColor = theme.onBackground,
-        focusedContainerColor = theme.card.copy(alpha = .55f), unfocusedContainerColor = theme.card.copy(alpha = .35f))
-}
-
-@Composable
 internal fun StudioTitle(title: String, subtitle: String? = null) {
     val theme = LocalTheme.current
     Column(Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
-        com.ketvoice.app.ui.common.PageTitle(title, 32.sp, Modifier.asHeading(), classicSpacing = (-.8).sp, maxLines = 3)
+        com.ketvoice.app.ui.common.PageTitle(title, Modifier.asHeading(), maxLines = 3)
         if (subtitle != null) Text(subtitle, color = theme.secondary, fontSize = 14.sp)
     }
 }
@@ -234,8 +216,7 @@ private fun StudioSignIn(state: StudioState) {
             GlassCapsuleButton("Envoyer le lien de connexion", null, {
                 state.run { PublisherSession.sendLink(); state.info = "Lien envoyé. Ouvrez-le depuis cet appareil." }
             }, Modifier.fillMaxWidth(), prominent = true, enabled = !state.busy, tag = "studio-send-link", minHeight = 52.dp)
-            OutlinedTextField(code, { code = it }, enabled = !state.busy, label = { Text("Lien reçu par email (ou code)") },
-                modifier = Modifier.fillMaxWidth(), singleLine = true, colors = studioFieldColors(),
+com.ketvoice.app.ui.common.KetTextField(code, { code = it }, "Lien reçu par email (ou code)", Modifier.fillMaxWidth(), enabled = !state.busy,
                 visualTransformation = if (code.trim().all { it in '0'..'9' }) VisualTransformation.None else PasswordVisualTransformation())
             GlassCapsuleButton("Vérifier mon accès", null, { state.run { PublisherSession.verify(code); code = "" } },
                 Modifier.fillMaxWidth(), enabled = !state.busy && code.isNotBlank(), minHeight = 48.dp)
@@ -308,7 +289,7 @@ private fun StudioSongRow(track: Track, checked: Boolean? = null, onClick: () ->
     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
         .clickable(role = if (checked != null) Role.Checkbox else Role.Button, onClick = onClick)
         .padding(vertical = 8.dp, horizontal = 4.dp).testTag("studio-song"), verticalAlignment = Alignment.CenterVertically) {
-        if (checked != null) com.ketvoice.app.ui.common.KetCheckbox(checked, null, colors = CheckboxDefaults.colors(checkedColor = theme.accent, uncheckedColor = theme.secondary))
+        if (checked != null) com.ketvoice.app.ui.common.KetCheckbox(checked, null)
         Cover(track.title, track.coverUrl, 52.dp, 10.dp)
         Column(Modifier.weight(1f).padding(start = 12.dp)) {
             Text(track.title, localize = false, color = theme.onBackground, fontSize = 15.sp, fontWeight = FontWeight.SemiBold,
@@ -377,7 +358,7 @@ internal fun RightsRow(checked: Boolean, enabled: Boolean, onChange: (Boolean) -
     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
         .clickable(enabled = enabled, role = Role.Checkbox) { onChange(!checked) }.padding(vertical = 4.dp).testTag("studio-rights"),
         verticalAlignment = Alignment.CenterVertically) {
-        com.ketvoice.app.ui.common.KetCheckbox(checked, null, enabled = enabled, colors = CheckboxDefaults.colors(checkedColor = theme.accent, uncheckedColor = theme.secondary))
+        com.ketvoice.app.ui.common.KetCheckbox(checked, null, enabled = enabled)
         Text("Je possède les droits nécessaires et j'autorise la diffusion publique de ces fichiers.", color = theme.onBackground,
             fontSize = 13.sp, modifier = Modifier.weight(1f))
     }
@@ -457,12 +438,9 @@ private fun StudioNewTitle(state: StudioState, onDone: (Track?) -> Unit) {
                     ?: "MP3, M4A, AAC, FLAC, WAV, OGG ou Opus · 25 Mo maximum",
                     if (audio == null) "Choisir" else "Changer", !state.busy, "studio-pick-audio", { pickAudio.launch(AUDIO_TYPES) })
                 if (audio != null) Text("Titre, artiste et album sont lus dans le fichier : vérifiez-les.", color = theme.secondary, fontSize = 12.sp)
-                OutlinedTextField(title, { title = it.take(200) }, label = { Text("Titre") }, enabled = !state.busy, singleLine = true,
-                    modifier = Modifier.fillMaxWidth().testTag("studio-title"), colors = studioFieldColors())
-                OutlinedTextField(artist, { artist = it.take(200) }, label = { Text("Artiste") }, enabled = !state.busy, singleLine = true,
-                    modifier = Modifier.fillMaxWidth(), colors = studioFieldColors())
-                OutlinedTextField(album, { album = it.take(200) }, label = { Text("Album") }, enabled = !state.busy, singleLine = true,
-                    modifier = Modifier.fillMaxWidth(), colors = studioFieldColors())
+                com.ketvoice.app.ui.common.KetTextField(title, { title = it.take(200) }, "Titre", Modifier.fillMaxWidth().testTag("studio-title"), enabled = !state.busy)
+                com.ketvoice.app.ui.common.KetTextField(artist, { artist = it.take(200) }, "Artiste", Modifier.fillMaxWidth(), enabled = !state.busy)
+                com.ketvoice.app.ui.common.KetTextField(album, { album = it.take(200) }, "Album", Modifier.fillMaxWidth(), enabled = !state.busy)
                 GlassCapsuleButton("Continuer", null, { step = 1 }, Modifier.fillMaxWidth(), prominent = true,
                     enabled = !state.busy && audio != null && title.isNotBlank() && artist.isNotBlank(), tag = "studio-next")
             }
@@ -577,12 +555,9 @@ private fun StudioSong(state: StudioState, initial: Track, onChanged: () -> Unit
             }, removeEnabled = rights)
         StudioPart(KetIcons.Lyrics, "Paroles", "TTML ou LRC", "Importer", !state.busy, "studio-lyrics", { lyricsFor = true })
         Text("Infos", color = theme.onBackground, fontSize = 16.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 6.dp))
-        OutlinedTextField(title, { title = it.take(200) }, label = { Text("Titre") }, enabled = !state.busy, singleLine = true,
-            modifier = Modifier.fillMaxWidth(), colors = studioFieldColors())
-        OutlinedTextField(artist, { artist = it.take(200) }, label = { Text("Artiste") }, enabled = !state.busy, singleLine = true,
-            modifier = Modifier.fillMaxWidth(), colors = studioFieldColors())
-        OutlinedTextField(album, { album = it.take(200) }, label = { Text("Album") }, enabled = !state.busy, singleLine = true,
-            modifier = Modifier.fillMaxWidth(), colors = studioFieldColors())
+        com.ketvoice.app.ui.common.KetTextField(title, { title = it.take(200) }, "Titre", Modifier.fillMaxWidth(), enabled = !state.busy)
+        com.ketvoice.app.ui.common.KetTextField(artist, { artist = it.take(200) }, "Artiste", Modifier.fillMaxWidth(), enabled = !state.busy)
+        com.ketvoice.app.ui.common.KetTextField(album, { album = it.take(200) }, "Album", Modifier.fillMaxWidth(), enabled = !state.busy)
         RightsRow(rights, !state.busy) { rights = it }
         GlassCapsuleButton("Enregistrer", null, {
             val song = editable ?: return@GlassCapsuleButton

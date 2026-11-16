@@ -18,6 +18,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import com.ketvoice.app.data.AppLanguage
 import com.ketvoice.app.data.AppSettings
 import com.ketvoice.app.data.SettingsStore
+import com.ketvoice.app.glass.GlassStyles
 import com.ketvoice.app.theme.KetvoiceTheme
 import com.ketvoice.app.ui.settings.GlassAppearancePreview
 import org.junit.*
@@ -60,40 +61,28 @@ class GlassPreviewHostTest {
         assertEquals("Cancel must persist the original value", .25f, AppSettings.glassTint.value, .0001f)
     }
 
-    @Test fun styleAndTintRemainIndependentAndSurviveReloadAfterApply() {
+    @Test fun applyKeepsTheTransparencyAndSurvivesReload() {
         var visible by mutableStateOf(true)
         compose.setContent { KetvoiceTheme(useDark = true) { if (visible) GlassAppearancePreview { visible = false } } }
-        compose.onNodeWithText("Dépoli").performScrollTo().performClick()
-        assertEquals("Style preview must not commit prematurely", 0, AppSettings.glassStyle.value)
         compose.onNodeWithTag("glass-tint-slider").performScrollTo()
             .performSemanticsAction(SemanticsActions.SetProgress) { assertTrue(it(.61f)) }
         compose.onNodeWithText("Appliquer").performClick()
         assertFalse(visible)
-        compose.runOnIdle { AppSettings.glassStyle.value = 0; AppSettings.glassTint.value = 0f; SettingsStore.load(compose.activity) }
-        assertEquals(1, AppSettings.glassStyle.value)
+        compose.runOnIdle { AppSettings.glassTint.value = 0f; SettingsStore.load(compose.activity) }
         assertEquals(.61f, AppSettings.glassTint.value, .0001f)
     }
 
-    @Test fun liquid27StartsAtTheMidpointAndPersistsAsTheFourthStyle() {
-        var visible by mutableStateOf(true)
-        compose.setContent { KetvoiceTheme(useDark = false) { if (visible) GlassAppearancePreview { visible = false } } }
-        compose.onNodeWithText("Liquid 27").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithTag("glass-style-3").performScrollTo().performClick()
-        compose.runOnIdle { assertEquals(.5f, AppSettings.glassTint.value, .0001f) }
-        assertEquals("Style preview must not commit prematurely", 0, AppSettings.glassStyle.value)
+    @Test fun theGlassIsAlwaysLiquid27AndThePreviewOffersNoOtherStyle() {
+        // 6.0.0: Ket 27 is the only interface and Liquid 27 its glass, whatever an earlier version stored.
+        AppSettings.glassStyle.value = 2
+        assertEquals(GlassStyles.LIQUID_27, GlassStyles.current)
+        compose.setContent { KetvoiceTheme(useDark = false) { GlassAppearancePreview {} } }
+        for (gone in listOf("Dépoli", "Opaque", "Liquid 27")) compose.onAllNodesWithText(gone).assertCountEquals(0)
+        for (index in 0..3) compose.onAllNodesWithTag("glass-style-$index").assertCountEquals(0)
+        // A chosen transparency is kept as it is: there is no style to reset it.
+        compose.runOnIdle { assertEquals(.25f, AppSettings.glassTint.value, .0001f) }
         compose.onNodeWithText("Appliquer").performClick()
-        assertFalse(visible)
-        compose.runOnIdle { AppSettings.glassStyle.value = 0; SettingsStore.load(compose.activity) }
-        assertEquals(3, AppSettings.glassStyle.value)
-    }
-
-    @Test fun liquid27KeepsAChosenTransparency() {
-        AppSettings.glassStyle.value = 3
-        AppSettings.glassTint.value = .2f
-        compose.setContent { KetvoiceTheme(useDark = true) { GlassAppearancePreview {} } }
-        compose.onNodeWithTag("glass-style-0").performScrollTo().performClick()
-        compose.onNodeWithTag("glass-style-3").performScrollTo().performClick()
-        compose.runOnIdle { assertEquals(.2f, AppSettings.glassTint.value, .0001f) }
+        compose.runOnIdle { assertEquals("Applying never writes a style", 2, AppSettings.glassStyle.value) }
     }
 
     @Test fun previewSheetExposesItsAccessibleSliderAndButtons() {
@@ -119,7 +108,7 @@ class GlassPreviewHostTest {
             CompositionLocalProvider(LocalDensity provides Density(1f, 1.5f)) { GlassAppearancePreview {} }
         } }
         compose.onNodeWithTag("glass-tint-slider").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("Opaque").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Teinté").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Appliquer").assertIsDisplayed()
         compose.onNodeWithText("Annuler").assertIsDisplayed()
     }

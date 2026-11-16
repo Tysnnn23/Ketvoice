@@ -35,7 +35,6 @@ import com.ketvoice.app.ui.common.Text
 
 @Composable
 internal fun GlassAppearancePreview(onClose: () -> Unit) {
-    var choice by remember { mutableIntStateOf(AppSettings.glassStyle.value) }
     val initialTint = remember { GlassTuning.sanitize(AppSettings.glassTint.value) }
     val theme = LocalTheme.current
     val state by Player.state.collectAsState()
@@ -52,7 +51,7 @@ internal fun GlassAppearancePreview(onClose: () -> Unit) {
         Column(Modifier.fillMaxWidth().heightIn(max = com.ketvoice.app.ui.common.sheetMaxHeight())) {
         Column(Modifier.fillMaxWidth().weight(1f, fill = false).verticalScroll(rememberScrollState())
             .padding(start = 20.dp, end = 20.dp, top = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            SettingsSheetHeader("Aperçu du verre", "Comparer Clair, Dépoli, Opaque et Liquid 27 avant d'appliquer", ::cancel)
+            SettingsSheetHeader("Aperçu du verre", onClose = ::cancel)
             Box(Modifier.fillMaxWidth().height(180.dp).clip(RoundedCornerShape(20.dp))) {
                 BackdropCapture(backdrop, Modifier.matchParentSize()) {
                     AsyncImage(cover ?: com.ketvoice.app.R.drawable.logo_main, null,
@@ -60,7 +59,7 @@ internal fun GlassAppearancePreview(onClose: () -> Unit) {
                 }
                 CompositionLocalProvider(LocalBackdropLayer provides backdrop) {
                     GlassPanel(Modifier.align(Alignment.BottomCenter).padding(14.dp).fillMaxWidth().testTag("glass-preview-sample"),
-                        RoundedCornerShape(28.dp), GlassParams.pill(dark = theme.isDark), styleOverride = choice) {
+                        RoundedCornerShape(28.dp), GlassParams.pill(dark = theme.isDark)) {
                         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
                             verticalAlignment = Alignment.CenterVertically) {
                             Icon(KetIcons.Play, null, tint = theme.onBackground, modifier = Modifier.size(20.dp))
@@ -82,33 +81,11 @@ internal fun GlassAppearancePreview(onClose: () -> Unit) {
                 Text("Clair", color = theme.secondary, fontSize = 12.sp)
                 Text("Teinté", color = theme.secondary, fontSize = 12.sp)
             }
-            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp))
-                .background(theme.onBackground.copy(alpha = .035f)).selectableGroup()) {
-                listOf("Clair", "Dépoli", "Opaque", "Liquid 27").forEachIndexed { index, label ->
-                    Row(Modifier.fillMaxWidth().selectable(choice == index, role = Role.RadioButton, onClick = {
-                        // Liquid 27 starts at the reference default: the slider midpoint.
-                        if (index == GlassStyles.LIQUID_27 && choice != index && AppSettings.glassTint.value == initialTint &&
-                            AppSettings.glassStyle.value != GlassStyles.LIQUID_27) AppSettings.glassTint.value = .5f
-                        choice = index
-                    }).testTag("glass-style-$index")
-                        .heightIn(min = 56.dp).padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(when (index) { 0 -> KetIcons.Sun; 1 -> KetIcons.Appearance; 2 -> KetIcons.Moon; else -> KetIcons.Sliders }, null,
-                            tint = theme.secondary, modifier = Modifier.size(20.dp))
-                        Column(Modifier.weight(1f).padding(horizontal = 14.dp)) {
-                            Text(label, color = theme.onBackground, fontSize = 15.sp,
-                                fontWeight = if (choice == index) FontWeight.SemiBold else FontWeight.Normal)
-                            if (index == GlassStyles.LIQUID_27) Text("Réfraction uniforme, bords nets, reflets qui suivent l'inclinaison",
-                                color = theme.secondary, fontSize = 12.sp)
-                        }
-                        if (choice == index) Icon(KetIcons.Check, null, tint = theme.onBackground, modifier = Modifier.size(20.dp))
-                    }
-                }
-            }
         }
             Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 6.dp, bottom = 16.dp),
                 horizontalArrangement = Arrangement.End) {
                 SettingsAction("Annuler", ::cancel)
-                SettingsAction("Appliquer", { AppSettings.glassStyle.value = choice; SettingsStore.save(); onClose() }, primary = true)
+                SettingsAction("Appliquer", { SettingsStore.save(); onClose() }, primary = true)
             }
         }
     }

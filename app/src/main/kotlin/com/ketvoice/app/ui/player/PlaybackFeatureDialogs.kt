@@ -114,7 +114,7 @@ private fun EqualizerDialog(onClose:()->Unit){
                     val now = EqualizerProfile.normalize(AppSettings.equalizerGains.value)
                     if (now[i] != gain) {
                         // Ket 27: each decibel the curve is pulled through is felt.
-                        if (com.ketvoice.app.theme.Ket27.on) eqTick(com.ketvoice.app.ui.motion.Haptics.Kind.Tick)
+                        eqTick(com.ketvoice.app.ui.motion.Haptics.Kind.Tick)
                         AppSettings.equalizerGains.value = now.toMutableList().apply { set(i, gain) }; apply()
                     }
                 }, onDone = { Player.applyEqualizer(); SettingsStore.save() })

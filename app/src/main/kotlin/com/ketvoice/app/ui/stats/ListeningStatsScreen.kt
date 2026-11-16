@@ -60,7 +60,7 @@ fun ListeningStatsScreen(modifier: Modifier = Modifier) {
         ) {
             item {
                 Column {
-                    com.ketvoice.app.ui.common.PageTitle("Ton récap", 30.sp, classicWeight = FontWeight.Black)
+                    com.ketvoice.app.ui.common.PageTitle("Ton récap")
                     Spacer(Modifier.height(4.dp))
                     Text(
                         text = "Ce que tu as écouté dans Ketvoice — rien ne quitte ton appareil.",
@@ -101,14 +101,7 @@ fun ListeningStatsScreen(modifier: Modifier = Modifier) {
 
 @Composable
 private fun SectionTitle(label: String) {
-    val theme = LocalTheme.current
-    Text(
-        text = label,
-        color = theme.onBackground,
-        fontSize = 18.sp,
-        fontWeight = FontWeight.Bold,
-        modifier = Modifier.padding(top = 10.dp, bottom = 2.dp)
-    )
+    com.ketvoice.app.ui.common.SectionHeader(label, Modifier.padding(top = 10.dp, bottom = 2.dp))
 }
 
 @Composable

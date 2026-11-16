@@ -18,6 +18,7 @@ import com.ketvoice.app.player.Player
 import com.ketvoice.app.player.PlayerUiState
 import com.ketvoice.app.theme.KetvoiceTheme
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
@@ -30,7 +31,7 @@ import org.robolectric.annotation.GraphicsMode
 import org.robolectric.util.ReflectionHelpers
 import java.io.File
 
-/** Every page under Ket 27, drawn in software on the host (not a phone), with what makes it a Ket 27 page checked. */
+/** Every page in Ket 27, the only interface, drawn in software on the host (not a phone), with what makes it a Ket 27 page checked. */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], qualifiers = "w400dp-h900dp-mdpi")
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -44,10 +45,8 @@ class Ket27PagesHostTest {
         AppSettings.languageChosen.value = true
         AppSettings.language.value = com.ketvoice.app.data.AppLanguage.FRENCH.label
         AppSettings.reduceAnimations.value = true
-        AppSettings.ket27.value = true
     }
     @After fun reset() {
-        AppSettings.ket27.value = false
         AppSettings.reduceAnimations.value = false
         AppUi.closeOverlays(); AppUi.selectTab(AppUi.HOME)
         player.value = PlayerUiState()
@@ -125,7 +124,7 @@ class Ket27PagesHostTest {
         val tracks = (0 until 5).map { Track("qa:q$it", "Titre $it", "Artiste $it", "Album", durationMs = 180_000) }
         player.value = PlayerUiState(queue = tracks, queueEntryIds = tracks.map { it.id }, index = 0, durationMs = 180_000)
         page(true) { com.ketvoice.app.ui.player.FullPlayerScreen(initialPage = com.ketvoice.app.ui.player.PlayerPage.QUEUE, onDismiss = {}) }
-        // Inter is wider than the classic face: the name of the queue is no longer cut by its actions.
+        // Inter is wide: the name of the queue is never cut by its actions.
         val name = compose.onNodeWithText("File d'attente").fetchSemanticsNode()
         compose.runOnIdle {
             val layout = mutableListOf<androidx.compose.ui.text.TextLayoutResult>()
@@ -136,12 +135,77 @@ class Ket27PagesHostTest {
         image("ket27-page-queue")
     }
 
-    @Test fun theClassicPagesKeepTheirOwnHeaders() {
-        AppSettings.ket27.value = false
+    @Test fun theAddSourceDialogIsAnAlertWithAField() {
         page(false) { com.ketvoice.app.ui.sub.SourcesScreen() }
-        compose.onNodeWithTag("ket27-page-bar").assertDoesNotExist()
-        compose.onNodeWithText("Sources").assertIsDisplayed()
-        compose.onNodeWithContentDescription("Retour").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Ajouter").performClick()
+        compose.waitForIdle()
+        compose.onNodeWithTag("add-source").assertIsDisplayed()
+        compose.onNodeWithText("Valider").assertIsNotEnabled()
+        compose.onNodeWithText("Annuler").assertIsEnabled()
+        assertSideBySide("Annuler", "Valider")
+        dialogImage("ket27-dialog-add-source")
+        compose.onNodeWithText("Annuler").performClick()
+        compose.onNodeWithTag("add-source").assertDoesNotExist()
+    }
+
+    @Test fun theCapsuleIsAFormInAnAlert() {
+        page(false) { com.ketvoice.app.ui.sub.CapsuleDialog {} }
+        compose.onNodeWithTag("capsule-dialog").assertIsDisplayed()
+        compose.onNodeWithText("Capsule hors ligne").assertIsDisplayed()
+        compose.onNodeWithText("Préparer la capsule").assertIsNotEnabled()
+        assertSideBySide("Fermer", "Préparer la capsule")
+        assertEquals(0, compose.onAllNodesWithText("Arrêter").fetchSemanticsNodes().size)
+        dialogImage("ket27-dialog-capsule")
+    }
+
+    @Test fun theUpdateCentreTakesTheColoursOfThePage() {
+        val info = com.ketvoice.app.ui.update.UpdateInfo("v99.0.0", "Ketvoice 99", listOf("## Nouveau", "Une note."),
+            "https://example.invalid/Ketvoice-99.apk", "https://example.invalid", "2026-11-16", 1)
+        page(false) { com.ketvoice.app.ui.update.UpdateDialog(info, {}, {}) }
+        compose.onNodeWithTag("update-dialog").assertIsDisplayed()
+        compose.onNodeWithText("Télécharger").assertIsEnabled()
+        compose.onNodeWithText("Plus tard").assertIsEnabled(); compose.onNodeWithText("Passer cette version").assertIsEnabled()
+        // A light page gives a light card: the title is written in the page's ink.
+        assertEquals(androidx.compose.ui.graphics.Color.Black, inkOf("Ketvoice 99"))
+        dialogImage("ket27-dialog-update-light")
+    }
+
+    @Test fun discordSettingsAreACellOfTheList() {
+        page(false) {
+            androidx.compose.foundation.layout.Column(androidx.compose.ui.Modifier.fillMaxSize()
+                .background(com.ketvoice.app.theme.LocalTheme.current.background).padding(16.dp)) {
+                androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.background(com.ketvoice.app.theme.LocalTheme.current.card)) {
+                    com.ketvoice.app.ui.account.DiscordSettings()
+                }
+            }
+        }
+        compose.onNodeWithText("Discord").assertIsDisplayed()
+        assertEquals(17f, sizeOf("Discord"), 0f)
+        image("ket27-discord-settings")
+    }
+
+    @Test fun aConfirmationIsAGlassCapsuleWithItsAction() {
+        page(true) {
+            androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.fillMaxSize()
+                .background(com.ketvoice.app.theme.LocalTheme.current.background)) {
+                androidx.compose.material3.SnackbarHost(com.ketvoice.app.ui.common.TrackActionFeedback.snackbar,
+                    androidx.compose.ui.Modifier.align(androidx.compose.ui.Alignment.BottomCenter).padding(bottom = 150.dp)) {
+                    com.ketvoice.app.ui.common.KetSnackbar(it)
+                }
+            }
+        }
+        var undone = false
+        val job = kotlinx.coroutines.MainScope().launch {
+            val result = com.ketvoice.app.ui.common.TrackActionFeedback.snackbar.showSnackbar("Ajouté à la file", "Annuler",
+                duration = androidx.compose.material3.SnackbarDuration.Indefinite)
+            undone = result == androidx.compose.material3.SnackbarResult.ActionPerformed
+        }
+        compose.waitForIdle()
+        compose.onNodeWithTag("ket-snackbar").assertIsDisplayed()
+        image("ket27-snackbar-dark")
+        compose.onNodeWithText("Annuler").performClick()
+        compose.waitForIdle()
+        compose.runOnIdle { assertTrue(undone); assertTrue(job.isCompleted) }
     }
 
     @Test fun anAlertIsARoundedCardWithTwoCapsules() {
@@ -150,8 +214,8 @@ class Ket27PagesHostTest {
             com.ketvoice.app.ui.common.AppAlertDialog(onDismissRequest = { dismissed++ },
                 title = { com.ketvoice.app.ui.common.Text("Supprimer cette playlist ?") },
                 text = { com.ketvoice.app.ui.common.Text("Les titres restent dans votre bibliothèque.", localize = false) },
-                confirmButton = { androidx.compose.material3.TextButton({ confirmed++ }) { com.ketvoice.app.ui.common.Text("Supprimer") } },
-                dismissButton = { androidx.compose.material3.TextButton({ dismissed++ }) { com.ketvoice.app.ui.common.Text("Annuler") } })
+                confirmButton = { com.ketvoice.app.ui.common.KetTextButton("Supprimer", { confirmed++ }, primary = true, destructive = true) },
+                dismissButton = { com.ketvoice.app.ui.common.KetTextButton("Annuler", { dismissed++ }) })
         }
         compose.onNodeWithTag("ket27-alert").assertIsDisplayed()
         val cancel = compose.onNodeWithText("Annuler").fetchSemanticsNode().boundsInRoot
@@ -212,15 +276,47 @@ class Ket27PagesHostTest {
             }
         }
         compose.onNodeWithText("Lancer la radio").assertExists()
-        // On a light page the menu is written in the page's ink, not in the white of the classic dark sheet.
+        // On a light page the menu is written in the page's ink.
         assertEquals(androidx.compose.ui.graphics.Color.Black, inkOf("Un titre"))
         image("ket27-track-menu-light")
     }
 
-    @Test fun theClassicMenuSheetStaysWhiteOnDarkGlass() {
-        AppSettings.ket27.value = false
+    @Test fun onADarkPageTheMenuIsWrittenInWhite() {
         val track = Track("qa:menu", "Un titre", "Une artiste", "Album")
-        page(false) { com.ketvoice.app.ui.player.PlayerSheetScrim({}) { com.ketvoice.app.ui.player.TrackMenuSheet(track) {} } }
+        page(true) { com.ketvoice.app.ui.player.PlayerSheetScrim({}) { com.ketvoice.app.ui.player.TrackMenuSheet(track) {} } }
         assertEquals(androidx.compose.ui.graphics.Color.White, inkOf("Un titre"))
+    }
+
+    private fun sizeOf(text: String): Float {
+        val node = compose.onNodeWithText(text).fetchSemanticsNode()
+        var size = 0f
+        compose.runOnIdle {
+            val layout = mutableListOf<androidx.compose.ui.text.TextLayoutResult>()
+            node.config[androidx.compose.ui.semantics.SemanticsActions.GetTextLayoutResult].action?.invoke(layout)
+            size = layout.first().layoutInput.style.fontSize.value
+        }
+        return size
+    }
+
+    private fun assertSideBySide(start: String, end: String) {
+        val a = compose.onNodeWithText(start).fetchSemanticsNode().boundsInRoot
+        val b = compose.onNodeWithText(end).fetchSemanticsNode().boundsInRoot
+        assertTrue("$start and $end are on one row", a.top < b.bottom && b.top < a.bottom)
+        assertTrue("$start is before $end", a.right <= b.left)
+    }
+
+    /** A dialog is its own window: drawn from the latest dialog's decor view. */
+    private fun dialogImage(name: String) {
+        compose.runOnIdle {
+            val view = org.robolectric.shadows.ShadowDialog.getLatestDialog().window!!.decorView
+            val bitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bitmap)
+            ReflectionHelpers.setField(canvas, "mAllowHwFeaturesInSwMode", true)
+            view.draw(canvas)
+            val file = File("build/host-ui-preview/${com.ketvoice.app.BuildConfig.FLAVOR}/$name.png")
+            file.parentFile?.mkdirs()
+            file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+            bitmap.recycle()
+        }
     }
 }

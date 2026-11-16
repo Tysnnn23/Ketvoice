@@ -13,6 +13,7 @@ import androidx.compose.foundation.verticalScroll
 import com.ketvoice.app.ui.common.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -41,13 +42,12 @@ fun AccountDialog(modifier: Modifier = Modifier) {
     BackHandler { AppUi.showAccount.value = false }
     Box(modifier.fillMaxSize().background(Color.Black.copy(alpha = .45f)).clickable { AppUi.showAccount.value = false }) {
         Column(Modifier.align(androidx.compose.ui.Alignment.TopCenter).widthIn(max = 560.dp)
-            .padding(18.dp).padding(top = 82.dp).clip(RoundedCornerShape(if (com.ketvoice.app.theme.Ket27.on) com.ketvoice.app.theme.Ket27.Metrics.alertRadius else 26.dp)).background(theme.card)
+            .padding(18.dp).padding(top = 82.dp).clip(RoundedCornerShape(com.ketvoice.app.theme.Ket27.Metrics.alertRadius)).background(theme.card)
             .clickable(enabled = false) {}.padding(22.dp)
             .verticalScroll(rememberScrollState())) {
             Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    if (com.ketvoice.app.theme.Ket27.on) Text("YouTube Music", color = theme.onBackground, style = com.ketvoice.app.theme.Ket27.Type.title2)
-                    else Text("YouTube Music", color = theme.onBackground, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                    Text("YouTube Music", color = theme.onBackground, style = com.ketvoice.app.theme.Ket27.Type.title2)
                     Text(if (profile.connected) "Session confirmée" else "Mode local",
                         color = theme.secondary, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp))
                 }
@@ -104,13 +104,13 @@ fun AccountDialog(modifier: Modifier = Modifier) {
             title = { Text("Se déconnecter de YouTube Music ?") },
             text = { Text("La session chiffrée de cet appareil est effacée. Vos playlists et téléchargements Ketvoice sont conservés.") },
             confirmButton = {
-                androidx.compose.material3.TextButton(onClick = {
+                com.ketvoice.app.ui.common.KetTextButton("Se déconnecter", {
                     signOutOpen = false
                     YouTubeMusicSession.signOut()
-                }) { Text("Se déconnecter") }
+                }, primary = true, destructive = true)
             },
             dismissButton = {
-                androidx.compose.material3.TextButton(onClick = { signOutOpen = false }) { Text("Annuler") }
+                com.ketvoice.app.ui.common.KetTextButton("Annuler", { signOutOpen = false })
             })
     }
 
@@ -118,41 +118,40 @@ fun AccountDialog(modifier: Modifier = Modifier) {
         var value by remember { mutableStateOf("") }
         var busy by remember { mutableStateOf(false) }
         var error by remember { mutableStateOf<String?>(null) }
-        Dialog(onDismissRequest = { if (!busy) cookieOpen = false }) {
-            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(theme.background)
-                .padding(20.dp)) {
-                Text("Cookie YouTube Music", color = theme.onBackground, fontSize = 19.sp, fontWeight = FontWeight.Bold)
+        // Ket 27: an alert with a field, on the dialog card — title and message centred, the field in a
+        // rounded well, Annuler and Valider as the alert's capsules.
+        com.ketvoice.app.ui.common.Ket27DialogCard({ if (!busy) cookieOpen = false }, Modifier.testTag("youtube-cookie")) {
+                Text("Cookie YouTube Music", color = theme.onBackground, style = com.ketvoice.app.theme.Ket27.Type.headline,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.fillMaxWidth())
                 Text("Collez l'en-tête Cookie complet (il doit contenir SAPISID ou __Secure-3PAPISID) " +
-                    "ou seulement la valeur SAPISID.", color = theme.secondary, fontSize = 12.sp,
-                    lineHeight = 17.sp, modifier = Modifier.padding(top = 5.dp, bottom = 12.dp))
+                    "ou seulement la valeur SAPISID.", color = theme.secondary, style = com.ketvoice.app.theme.Ket27.Type.footnote,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth().padding(top = 5.dp, bottom = 12.dp))
                 BasicTextField(value, { value = it; error = null }, textStyle = TextStyle(
                     color = theme.onBackground, fontSize = 12.sp, fontFamily = FontFamily.Monospace),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    cursorBrush = androidx.compose.ui.graphics.SolidColor(theme.accent),
                     modifier = Modifier.fillMaxWidth().heightIn(min = 84.dp).clip(RoundedCornerShape(12.dp))
-                        .background(theme.card).padding(12.dp),
+                        .background(theme.onBackground.copy(alpha = .07f)).padding(12.dp),
                     decorationBox = { inner ->
                         if (value.isBlank()) Text("SAPISID=… ; __Secure-3PAPISID=…",
                             color = theme.secondary.copy(alpha = .65f), fontSize = 12.sp)
                         inner()
                     })
-                if (error != null) Text(error.orEmpty(), color = Color(0xFFFF3B30), fontSize = 12.sp,
-                    modifier = Modifier.padding(top = 7.dp))
-                Row(Modifier.fillMaxWidth().padding(top = 14.dp), horizontalArrangement = Arrangement.End) {
-                    Text("Annuler", color = theme.secondary, fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.clickable(enabled = !busy) { cookieOpen = false }.padding(10.dp))
-                    Text(if (busy) "Validation…" else "Valider", color = theme.accent, fontWeight = FontWeight.Bold,
-                        modifier = Modifier.clickable(enabled = !busy) {
-                            if (value.isBlank()) return@clickable
-                            busy = true
-                            scope.launch {
-                                val ok = runCatching { YouTubeMusicSession.connectCookie(value) }.getOrDefault(false)
-                                busy = false
-                                if (ok) cookieOpen = false
-                                else error = "YouTube n'a pas confirmé cette session. Aucun compte n'est déclaré connecté."
-                            }
-                        }.padding(10.dp))
-                }
-            }
+                if (error != null) Text(error.orEmpty(), color = com.ketvoice.app.ui.common.DESTRUCTIVE,
+                    style = com.ketvoice.app.theme.Ket27.Type.footnote, modifier = Modifier.padding(top = 7.dp))
+                com.ketvoice.app.ui.common.Ket27AlertButtons(confirmButton = {
+                    com.ketvoice.app.ui.common.KetTextButton(if (busy) "Validation…" else "Valider", {
+                        busy = true
+                        scope.launch {
+                            val ok = runCatching { YouTubeMusicSession.connectCookie(value) }.getOrDefault(false)
+                            busy = false
+                            if (ok) cookieOpen = false
+                            else error = "YouTube n'a pas confirmé cette session. Aucun compte n'est déclaré connecté."
+                        }
+                    }, primary = true, enabled = !busy && value.isNotBlank())
+                }, dismissButton = { com.ketvoice.app.ui.common.KetTextButton("Annuler", { cookieOpen = false }, enabled = !busy) },
+                    modifier = Modifier.padding(top = 14.dp))
         }
     }
 }

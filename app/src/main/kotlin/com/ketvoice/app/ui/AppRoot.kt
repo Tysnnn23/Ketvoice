@@ -285,7 +285,7 @@ fun AppRoot() {
                     AppUi.playlistResolution.value == null
                 // Ket 27: the player grows out of the mini-player and shrinks back into it, so the bar stays
                 // where it is under it instead of sliding away.
-                val morphing = com.ketvoice.app.theme.Ket27.on && !Motion.reduced &&
+                val morphing = !Motion.reduced &&
                     (AppUi.showPlayer.value || playerWasShown.value)
                 androidx.compose.runtime.SideEffect { playerWasShown.value = AppUi.showPlayer.value }
                 AnimatedVisibility(
@@ -355,7 +355,9 @@ fun AppRoot() {
                 // ---- Dialog compte ----
                 androidx.compose.material3.SnackbarHost(
                     com.ketvoice.app.ui.common.TrackActionFeedback.snackbar,
-                    Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 150.dp).zIndex(12f))
+                    Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 150.dp).zIndex(12f)) {
+                    com.ketvoice.app.ui.common.KetSnackbar(it)
+                }
                 AnimatedContent(AppUi.trackMenuTrack.value,
                     modifier = Modifier.fillMaxSize().zIndex(7f),
                     transitionSpec = { fadeIn(tween(Motion.duration(240))).togetherWith(fadeOut(tween(Motion.duration(220)))) },
@@ -518,7 +520,6 @@ private fun BackgroundPlaybackOffer() {
     com.ketvoice.app.ui.common.AppAlertDialog(onDismissRequest = { show = false },
         title = { com.ketvoice.app.ui.common.Text("Musique sans coupure en arrière-plan") },
         text = { com.ketvoice.app.ui.common.Text("Sur ce téléphone, l'économie de batterie peut couper la musique quand Ketvoice n'est pas à l'écran. Autorisez Ketvoice à jouer sans restriction ; vous pourrez changer d'avis dans Réglages → Lecture.") },
-        confirmButton = { androidx.compose.material3.TextButton({ show = false; com.ketvoice.app.data.BackgroundPlayback.ask(context) }) {
-            com.ketvoice.app.ui.common.Text("Autoriser") } },
-        dismissButton = { androidx.compose.material3.TextButton({ show = false }) { com.ketvoice.app.ui.common.Text("Plus tard") } })
+        confirmButton = { com.ketvoice.app.ui.common.KetTextButton("Autoriser", { show = false; com.ketvoice.app.data.BackgroundPlayback.ask(context) }, primary = true) },
+        dismissButton = { com.ketvoice.app.ui.common.KetTextButton("Plus tard", { show = false }) })
 }

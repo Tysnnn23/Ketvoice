@@ -213,7 +213,8 @@ internal fun FramingEditor(track: Track?, cover: String?, canvas: String?, initi
             }
         }
 
-        Column(Modifier.fillMaxWidth().background(Color(0xFF0E0F12))) {
+        // Ket 27: the tools of the Photos editor of iOS 27, on the same black as the stage.
+        Column(Modifier.fillMaxWidth().background(Color.Black)) {
             AngleWheel(Framing.tilt(frame.rotation), accent) { tilt ->
                 val next = Framing.withTilt(frame, tilt, aspect)
                 if (next != frame) { frame = next; touched = true; if (shape == FramingShape.Original) shape = FramingShape.Custom }
@@ -237,8 +238,8 @@ internal fun FramingEditor(track: Track?, cover: String?, canvas: String?, initi
                         haptic(Haptics.Kind.Tick)
                         frame = initial?.let { Framing.shaped(it, locked, aspect) } ?: Framing.default(aspect, locked); touched = true
                     }
-                    Text("Le cadre garde la forme de la pochette du lecteur.", color = Color.White.copy(alpha = .62f), fontSize = 11.sp,
-                        lineHeight = 14.sp, maxLines = 3, modifier = Modifier.weight(1.85f).padding(horizontal = 8.dp).testTag("framing-player-note"))
+                    Text("Le cadre garde la forme de la pochette du lecteur.", color = Color.White.copy(alpha = .62f),
+                        style = com.ketvoice.app.theme.Ket27.Type.caption, maxLines = 3, modifier = Modifier.weight(1.85f).padding(horizontal = 8.dp).testTag("framing-player-note"))
                 } else {
                 FramingTool(Icons.Filled.CropFree, "Personnalisé", shape == FramingShape.Custom, accent, "framing-custom", Modifier.weight(1.25f)) {
                     shape = FramingShape.Custom
@@ -254,11 +255,12 @@ internal fun FramingEditor(track: Track?, cover: String?, canvas: String?, initi
                 }
             }
         }
-        Row(Modifier.fillMaxWidth().background(Color(0xFF17181C)).padding(horizontal = 14.dp, vertical = 6.dp),
+        // As in Photos: Annuler in white at the start, Valider in the app's colour at the end.
+        Row(Modifier.fillMaxWidth().background(Color.Black).padding(horizontal = 8.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically) {
-            FramingEnd(Icons.Filled.Close, "Annuler", "framing-cancel", onCancel)
+            FramingEnd("Annuler", "framing-cancel", Color.White, primary = false, onClick = onCancel)
             Spacer(Modifier.weight(1f))
-            FramingEnd(Icons.Filled.Check, "Valider", "framing-done") {
+            FramingEnd("Valider", "framing-done", accent, primary = true) {
                 if (scope == FramingScope.Player && onPlayerDone != null) onPlayerDone(frame.clamped()) else onDone(frame.clamped())
             }
         }
@@ -297,7 +299,8 @@ private fun AngleWheel(tilt: Float, accent: Color, onTilt: (Float) -> Unit) {
             }
             drawLine(accent, Offset(middle, 0f), Offset(middle, size.height), 2.5.dp.toPx(), StrokeCap.Round)
         }
-        Text("${tilt.roundToInt()}°", localize = false, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Medium,
+        Text("${tilt.roundToInt()}°", localize = false, color = Color.White, style = com.ketvoice.app.theme.Ket27.Type.subheadline,
+            fontWeight = FontWeight.Medium,
             modifier = Modifier.padding(top = 2.dp, bottom = 6.dp).testTag("framing-angle-value"))
     }
 }
@@ -310,7 +313,8 @@ private fun FramingTool(icon: ImageVector, label: String, selected: Boolean, acc
         .heightIn(min = 64.dp).padding(vertical = 8.dp).testTag(tag), horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center) {
         Icon(icon, null, tint = ink, modifier = Modifier.size(26.dp))
-        Text(label, localize = localize, color = ink, fontSize = 12.sp, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+        Text(label, localize = localize, color = ink, style = com.ketvoice.app.theme.Ket27.Type.caption,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
             maxLines = 1, modifier = Modifier.padding(top = 5.dp))
     }
 }
@@ -324,15 +328,17 @@ private fun FramingScopeChip(label: String, selected: Boolean, accent: Color, ta
         .clickable(role = Role.Tab, onClick = onClick)
         .semantics { stateDescription = state }
         .heightIn(min = 44.dp).padding(horizontal = 18.dp).testTag(tag), contentAlignment = Alignment.Center) {
-        Text(label, color = if (selected) accent else Color.White.copy(alpha = .86f), fontSize = 14.sp,
+        Text(label, color = if (selected) accent else Color.White.copy(alpha = .86f), style = com.ketvoice.app.theme.Ket27.Type.subheadline,
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium, maxLines = 1)
     }
 }
 
+/** Annuler or Valider at the ends of the bottom bar: a word, as iOS's photo editor writes them, with a 56 dp target. */
 @Composable
-private fun FramingEnd(icon: ImageVector, label: String, tag: String, onClick: () -> Unit) {
-    Box(Modifier.size(56.dp).clip(RoundedCornerShape(999.dp)).clickable(role = Role.Button, onClick = onClick).testTag(tag),
-        contentAlignment = Alignment.Center) {
-        Icon(icon, label, tint = Color.White, modifier = Modifier.size(28.dp))
+private fun FramingEnd(label: String, tag: String, color: Color, primary: Boolean, onClick: () -> Unit) {
+    Box(Modifier.heightIn(min = 56.dp).clip(RoundedCornerShape(999.dp)).clickable(role = Role.Button, onClick = onClick)
+        .padding(horizontal = 14.dp).testTag(tag), contentAlignment = Alignment.Center) {
+        Text(label, color = color, style = com.ketvoice.app.theme.Ket27.Type.body,
+            fontWeight = if (primary) FontWeight.SemiBold else FontWeight.Normal)
     }
 }

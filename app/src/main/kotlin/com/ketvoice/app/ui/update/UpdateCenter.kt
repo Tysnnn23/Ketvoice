@@ -16,15 +16,15 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import com.ketvoice.app.ui.common.Text
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.semantics.Role
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -368,26 +368,32 @@ internal fun UpdateDialog(info: UpdateInfo, onDismiss: () -> Unit, onSkip: () ->
         }
     }
 
+    // Ket 27: the update centre is a card of the system's colours — the release's banner melting into
+    // it, its notes in iOS text styles, one filled capsule to download, plain buttons to wait or skip.
+    val theme = com.ketvoice.app.theme.LocalTheme.current
+    val type = com.ketvoice.app.theme.Ket27.Type
+    val corner = com.ketvoice.app.theme.Ket27.Metrics.alertRadius
     Dialog(
         onDismissRequest = { if (!downloading) onDismiss() },
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
         Surface(
-            shape = RoundedCornerShape(28.dp),
-            color = Color(0xFF14151A),
+            shape = RoundedCornerShape(corner),
+            color = theme.card,
             tonalElevation = 0.dp,
             modifier = Modifier
                 .widthIn(max = 560.dp)
                 .fillMaxWidth()
                 .heightIn(max = maxDialogHeight)
                 .padding(horizontal = 20.dp, vertical = 24.dp)
+                .testTag("update-dialog")
         ) {
             Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
                 val banner = info.bannerUrl()
                 var bannerLoaded by remember(banner) { mutableStateOf(false) }
                 if (banner != null) Box(Modifier.fillMaxWidth().height(190.dp).testTag("release-banner")
                     .semantics { this[ReleaseBannerLoaded] = bannerLoaded }
-                    .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))) {
+                    .clip(RoundedCornerShape(topStart = corner, topEnd = corner))) {
                     AsyncImage(
                         model = if (banner == UpdateChecker.CANONICAL_BANNER) "file:///android_asset/release_banner.png" else banner,
                         contentDescription = null,
@@ -399,7 +405,7 @@ internal fun UpdateDialog(info: UpdateInfo, onDismiss: () -> Unit, onSkip: () ->
                         Modifier.fillMaxSize().background(
                             Brush.verticalGradient(
                                 0.55f to Color.Transparent,
-                                1f to Color(0xFF14151A)
+                                1f to theme.card
                             )
                         )
                     )
@@ -407,24 +413,16 @@ internal fun UpdateDialog(info: UpdateInfo, onDismiss: () -> Unit, onSkip: () ->
                 else Spacer(Modifier.height(24.dp))
 
                 Column(Modifier.padding(horizontal = 22.dp)) {
-                    Text(
-                        info.name,
-                        color = Color.White,
-                        fontSize = 21.sp,
-                        lineHeight = 26.sp,
-                        fontWeight = FontWeight.Black
-                    )
+                    Text(info.name, localize = false, color = theme.onBackground, style = type.title2)
                     Spacer(Modifier.height(4.dp))
-                    Text(
+                    Text(localize = false, text =
                         AppText.t("Version") + " " + info.versionLabel() + " · " + info.publishedAt,
-                        color = Color.White.copy(alpha = .45f),
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium
+                        color = theme.secondary,
+                        style = type.footnote
                     )
-                    Spacer(Modifier.height(14.dp))
-                    TextButton(onClick = {
+                    com.ketvoice.app.ui.common.KetTextButton("GitHub", {
                         runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(info.pageUrl))) }
-                    }) { Text("GitHub", color = Color.White.copy(alpha = .74f)) }
+                    }, Modifier.padding(top = 6.dp).offset(x = (-12).dp), localize = false)
 
                     Column(
                         Modifier
@@ -436,115 +434,75 @@ internal fun UpdateDialog(info: UpdateInfo, onDismiss: () -> Unit, onSkip: () ->
                         sections.forEachIndexed { idx, (title, items) ->
                             if (idx > 0) Spacer(Modifier.height(8.dp))
                             title?.let {
-                                Text(
-                                    it,
-                                    color = Color.White,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.padding(bottom = 4.dp)
-                                )
+                                Text(it, localize = false, color = theme.onBackground, style = type.headline, modifier = Modifier.padding(bottom = 4.dp))
                             }
                             items.forEach { line ->
-                                Text(
-                                    line,
-                                    color = Color.White.copy(alpha = .74f),
-                                    fontSize = 12.sp,
-                                    lineHeight = 18.sp,
-                                    modifier = Modifier.padding(vertical = 2.dp)
-                                )
+                                Text(line, localize = false, color = theme.secondary, style = type.subheadline, modifier = Modifier.padding(vertical = 2.dp))
                             }
                         }
                     }
 
                     error?.let {
                         Spacer(Modifier.height(10.dp))
-                        Text(it, color = Color(0xFFFF8A80), fontSize = 12.sp)
+                        Text(it, localize = false, color = com.ketvoice.app.ui.common.DESTRUCTIVE, style = type.footnote)
                     }
 
                     progress?.let { value ->
                         Spacer(Modifier.height(16.dp))
-                        LinearProgressIndicator(
-                            progress = { value },
-                            modifier = Modifier.fillMaxWidth().height(4.dp),
-                            color = Color.White,
-                            trackColor = Color.White.copy(alpha = .16f)
-                        )
+                        com.ketvoice.app.ui.common.KetProgressBar(progress = { value })
                         Spacer(Modifier.height(6.dp))
-                        Text(
+                        Text(localize = false, text =
                             (value * 100).toInt().toString() + "% · " + AppText.t("Téléchargement en cours"),
-                            color = Color.White.copy(alpha = .5f),
-                            fontSize = 11.sp
+                            color = theme.secondary,
+                            style = type.caption
                         )
                     }
 
                     Spacer(Modifier.height(18.dp))
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End,
-                        verticalAlignment = Alignment.CenterVertically
+                    // The one action to take: a filled capsule in the app's colour, as iOS draws a prominent button.
+                    val ink = com.ketvoice.app.ui.common.onAccent(theme.accent)
+                    Box(
+                        Modifier.fillMaxWidth().heightIn(min = 50.dp).clip(RoundedCornerShape(50))
+                            .background(if (downloading) theme.accent.copy(alpha = .45f) else theme.accent)
+                            .clickable(enabled = !downloading, role = Role.Button) {
+                                error = null
+                                progress = 0f
+                                scope.launch {
+                                    try {
+                                        val file = downloadedPath?.let(::File)?.takeIf { it.isFile }
+                                            ?: download(context, info) { progress = it }.also { downloadedPath = it.absolutePath }
+                                        installReady(file)
+                                    } catch (cancelled: CancellationException) { throw cancelled }
+                                    catch (_: Exception) {
+                                        error = AppText.t(if (downloadedPath == null) "Téléchargement impossible" else "Installation impossible")
+                                    } finally {
+                                        // The system installer may be cancelled; keep the verified file
+                                        // and re-enable retry instead of leaving a permanent 100% state.
+                                        progress = null
+                                    }
+                                }
+                            },
+                        contentAlignment = Alignment.Center
                     ) {
-                        TextButton(onClick = onDismiss, enabled = !downloading) {
-                            Text(
-                                AppText.t("Plus tard"),
-                                color = Color.White.copy(alpha = if (downloading) .3f else .62f),
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
-                        TextButton(
-                            onClick = onSkip,
-                            enabled = !downloading
-                        ) {
-                            Text(
-                                AppText.t("Passer cette version"),
-                                color = Color.White.copy(alpha = if (downloading) .3f else .62f),
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.SemiBold
+                        if (downloading && progress!! <= 0f) {
+                            com.ketvoice.app.ui.common.ActivitySpinner(size = 18.dp, color = ink)
+                        } else {
+                            Text(localize = false, text =
+                                AppText.t(if (downloadedPath == null) "Télécharger" else "Installer"),
+                                color = ink,
+                                style = type.headline,
+                                textAlign = TextAlign.Center
                             )
                         }
                     }
-                    Spacer(Modifier.height(6.dp))
-                        Surface(
-                            shape = RoundedCornerShape(50),
-                            color = Color.White,
-                            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(50))
-                        ) {
-                            TextButton(
-                                modifier = Modifier.fillMaxWidth(),
-                                enabled = !downloading,
-                                onClick = {
-                                    error = null
-                                    progress = 0f
-                                    scope.launch {
-                                        try {
-                                            val file = downloadedPath?.let(::File)?.takeIf { it.isFile }
-                                                ?: download(context, info) { progress = it }.also { downloadedPath = it.absolutePath }
-                                            installReady(file)
-                                        } catch (cancelled: CancellationException) { throw cancelled }
-                                        catch (_: Exception) {
-                                            error = AppText.t(if (downloadedPath == null) "Téléchargement impossible" else "Installation impossible")
-                                        } finally {
-                                            // The system installer may be cancelled; keep the verified file
-                                            // and re-enable retry instead of leaving a permanent 100% state.
-                                            progress = null
-                                        }
-                                    }
-                                }
-                            ) {
-                                if (downloading && progress!! <= 0f) {
-                                    CircularProgressIndicator(Modifier.size(15.dp), color = Color.Black, strokeWidth = 1.8.dp)
-                                } else {
-                                    Text(
-                                        AppText.t(if (downloadedPath == null) "Télécharger" else "Installer"),
-                                        color = Color.Black,
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        textAlign = TextAlign.Center
-                                    )
-                                }
-                            }
-                        }
-                    Spacer(Modifier.height(6.dp))
+                    Row(
+                        Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        com.ketvoice.app.ui.common.KetTextButton("Plus tard", onDismiss, enabled = !downloading)
+                        com.ketvoice.app.ui.common.KetTextButton("Passer cette version", onSkip, enabled = !downloading)
+                    }
                 }
             }
         }

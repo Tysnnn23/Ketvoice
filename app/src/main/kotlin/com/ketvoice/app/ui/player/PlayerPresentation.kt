@@ -182,15 +182,13 @@ internal fun PlayerPresentation(visible: Boolean, origin: Rect?, modifier: Modif
             if (reduced) reveal.snapTo(if (visible) 1f else 0f)
             // Ket 27: one spring carries the mini-player into the full player and back; released from a
             // drag, it starts at the speed of the finger.
-            else if (Ket27.on) {
+            else {
                 val thrown = PlayerDismiss.takeVelocity()
                 reveal.animateTo(if (visible) 1f else 0f,
                     if (visible) spring(dampingRatio = PlayerDismiss.OPEN_DAMPING, stiffness = PlayerDismiss.OPEN_STIFFNESS)
                     else spring(dampingRatio = 1f, stiffness = PlayerDismiss.CLOSE_STIFFNESS),
                     initialVelocity = if (visible) 0f else -(thrown / h).coerceIn(0f, 12f))
             }
-            else reveal.animateTo(if (visible) 1f else 0f,
-                tween(if (visible) 420 else 320, easing = CubicBezierEasing(.22f, .8f, .2f, 1f)))
         }
         if (visible || reveal.value > 0f) {
             val p = presentationProgress(reveal.value, drag.value, h)
@@ -204,8 +202,8 @@ internal fun PlayerPresentation(visible: Boolean, origin: Rect?, modifier: Modif
                     }
                 }
             }
-            // Under Ket 27 the shared elements may pass their place a little before they settle (the spring's overshoot).
-            val springy = Ket27.on && !reduced
+            // The shared elements may pass their place a little before they settle (the spring's overshoot).
+            val springy = !reduced
             val progress = remember(h, springy) { { presentationProgress(reveal.value, drag.value, h, if (springy) PlayerDismiss.OVERSHOOT else 1f) } }
             CompositionLocalProvider(LocalPlayerDismissOffset provides drag, LocalPlayerReveal provides progress) {
                 Box(Modifier.fillMaxSize().graphicsLayer {

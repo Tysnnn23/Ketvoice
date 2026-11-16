@@ -350,8 +350,8 @@ fun FloatingChrome(collapsed: Boolean, onOpenPlayer: () -> Unit) {
         val width = maxWidth
         val f = fraction
         val hasTrack = Player.state.collectAsState().value.current != null
-        // Ket 27's tab bar is 62 dp high, as on iOS 27, instead of 60.
-        val fullHeight = (if (hasTrack) 126.dp else 64.dp) + (if (Ket27.on) 2.dp else 0.dp)
+        // The tab bar is 62 dp high, as on iOS 27.
+        val fullHeight = (if (hasTrack) 126.dp else 64.dp) + 2.dp
         val height = fullHeight + (58.dp - fullHeight) * f
         // Replié : Accueil (52 dp) + 8 dp + mini-lecteur + 8 dp + Recherche (52 dp).
         val miniWidth = maxWidth - 144.dp * f
@@ -405,7 +405,7 @@ private fun SearchCircleButton(size: androidx.compose.ui.unit.Dp, modifier: Modi
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                if (com.ketvoice.app.theme.Ket27.on) com.ketvoice.app.ui.common.Ket27Glyphs.Search else Icons.Filled.Search,
+                com.ketvoice.app.ui.common.Ket27Glyphs.Search,
                 contentDescription = "Rechercher",
                 tint = th.onBackground,
                 modifier = Modifier.size(size * 0.42f)
@@ -433,11 +433,10 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier,
         label = "held-lens")
     val lastHoverTab = remember { mutableIntStateOf(-1) }
     // Ket 27 draws its own symbols, in the manner of iOS.
-    val ket = com.ketvoice.app.theme.Ket27.on
     val tabs = listOf(
-        TabSpec(if (ket) com.ketvoice.app.ui.common.Ket27Glyphs.Home else Icons.Filled.Home, "Accueil", AppUi.HOME),
-        TabSpec(if (ket) com.ketvoice.app.ui.common.Ket27Glyphs.Explore else Icons.Filled.GridView, "Explorer", AppUi.EXPLORER),
-        TabSpec(if (ket) com.ketvoice.app.ui.common.Ket27Glyphs.Library else Icons.Filled.LibraryMusic, "Bibliothèque", AppUi.LIBRARY)
+        TabSpec(com.ketvoice.app.ui.common.Ket27Glyphs.Home, "Accueil", AppUi.HOME),
+        TabSpec(com.ketvoice.app.ui.common.Ket27Glyphs.Explore, "Explorer", AppUi.EXPLORER),
+        TabSpec(com.ketvoice.app.ui.common.Ket27Glyphs.Library, "Bibliothèque", AppUi.LIBRARY)
     )
 
     val widthAnim by animateDpAsState(
@@ -451,7 +450,7 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier,
         label = "tabWidth"
     )
     val heightAnim by animateDpAsState(
-        targetValue = if (homeOnly || collapsed) 52.dp else if (Ket27.on) Ket27.Metrics.tabBar else 60.dp,
+        targetValue = if (homeOnly || collapsed) 52.dp else Ket27.Metrics.tabBar,
         animationSpec = if (Motion.reduced) androidx.compose.animation.core.snap() else spring(
             dampingRatio = DesignTokens.Motion.CHROME_DAMPING, stiffness = DesignTokens.Motion.CHROME_STIFFNESS),
         label = "tabHeight"
@@ -522,7 +521,7 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier,
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    if (com.ketvoice.app.theme.Ket27.on) com.ketvoice.app.ui.common.Ket27Glyphs.Home else Icons.Filled.Home,
+                    com.ketvoice.app.ui.common.Ket27Glyphs.Home,
                     contentDescription = "Accueil",
                     tint = th.onBackground,
                     modifier = Modifier.size(24.dp)
@@ -607,18 +606,9 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier,
                             animationSpec = if (Motion.reduced) androidx.compose.animation.core.snap() else spring(dampingRatio = 0.8f, stiffness = 600f),
                             label = "tabLift"
                         )
-                        // Weight morphs numerically: no bold/semibold swap that
-                        // would reflow the label in one frame.
-                        val weight by animateFloatAsState(
-                            targetValue = if (isSel) 700f else 500f,
-                            animationSpec = if (Motion.reduced) androidx.compose.animation.core.snap() else spring(dampingRatio = 0.9f, stiffness = 520f),
-                            label = "tabWeight"
-                        )
                         val targetContentColor = when {
                             // iOS tints the selected tab with the app's colour.
-                            isSel && Ket27.on -> th.accent
-                            isSel && !th.isDark -> Color(0xFF141414)
-                            isSel && th.isDark -> Color.White
+                            isSel -> th.accent
                             else -> th.onBackground.copy(alpha = 0.76f)
                         }
                         val contentColor by animateColorAsState(
@@ -654,8 +644,8 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier,
                             Spacer(Modifier.height(3.dp))
                             Text(
                                 tab.label,
-                                fontSize = if (Ket27.on) 10.sp else 10.5.sp,
-                                fontWeight = if (Ket27.on) FontWeight.SemiBold else FontWeight(weight.toInt().coerceIn(100, 900)),
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.SemiBold,
                                 color = contentColor.copy(alpha = iconAlpha),
                                 maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis
                             )

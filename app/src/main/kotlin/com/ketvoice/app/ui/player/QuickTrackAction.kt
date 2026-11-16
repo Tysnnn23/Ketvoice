@@ -56,7 +56,7 @@ internal fun QuickTrackAction(label: String, glyph: ImageVector, modifier: Modif
             scaleX = width; scaleY = height
         }, CircleShape, GlassParams.circle(dark = com.ketvoice.app.ui.common.sheetDark()).copy(opticalPressure = pressure), captured = true) {
             // Ket 27: the symbol bounces when its state is set (a favourite, a finished download).
-            Box(Modifier.fillMaxSize().then(if (com.ketvoice.app.theme.Ket27.on) Modifier.symbolBounce(active) else Modifier),
+            Box(Modifier.fillMaxSize().symbolBounce(active),
                 contentAlignment = Alignment.Center) {
                 AnimatedContent(glyph, transitionSpec = { fadeIn(tween(Motion.duration(160))).togetherWith(fadeOut(tween(Motion.duration(120)))) },
                     label = "quick-action-glyph") {

@@ -101,10 +101,10 @@ internal object SheetDetents {
     }
 }
 
-/** Whether sheets rest on detents and follow the finger: Ket 27, never on Quest (a pointer does not drag a sheet well). */
-internal val springSheets: Boolean get() = Ket27.on && !BuildConfig.IS_QUEST
+/** Whether sheets rest on detents and follow the finger: always, except on Quest (a pointer does not drag a sheet well). */
+internal val springSheets: Boolean get() = !BuildConfig.IS_QUEST
 
-/** The tallest a sheet's content may be: 650 dp in the classic interface, the room its window leaves under Ket 27. */
+/** The tallest a sheet's content may be: the room its window leaves on a spring sheet, 650 dp otherwise (Quest). */
 internal val LocalSheetMaxHeight = compositionLocalOf { 650.dp }
 
 @Composable
@@ -236,14 +236,10 @@ internal fun SpringSheet(onDismiss: () -> Unit, modifier: Modifier = Modifier, s
     }
 }
 
-/**
- * The ink of a menu sheet. The classic interface draws its menus on dark glass whatever the page, so
- * their ink is white; under Ket 27 a sheet takes the colours of what it lies over, as on iOS.
- */
+/** The ink of a menu sheet: a sheet takes the colours of what it lies over, as on iOS. */
 @Composable
-internal fun sheetInk(): androidx.compose.ui.graphics.Color =
-    if (Ket27.on) com.ketvoice.app.theme.LocalTheme.current.onBackground else androidx.compose.ui.graphics.Color.White
+internal fun sheetInk(): androidx.compose.ui.graphics.Color = com.ketvoice.app.theme.LocalTheme.current.onBackground
 
-/** Whether a menu sheet is made of dark glass: always in the classic interface, with the theme under Ket 27. */
+/** Whether a menu sheet is made of dark glass: with the theme, as on iOS. */
 @Composable
-internal fun sheetDark(): Boolean = if (Ket27.on) com.ketvoice.app.theme.LocalTheme.current.isDark else true
+internal fun sheetDark(): Boolean = com.ketvoice.app.theme.LocalTheme.current.isDark

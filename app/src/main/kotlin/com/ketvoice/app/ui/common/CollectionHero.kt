@@ -259,7 +259,7 @@ internal fun GlassSegmentedControl(labels: List<String>, selected: Int, onSelect
                 Box(Modifier.weight(1f).height(44.dp).clip(RoundedCornerShape(14.dp))
                     .selectable(active, role = Role.Tab) {
                         // Ket 27: each segment chosen is felt, as on iOS.
-                        if (!active && com.ketvoice.app.theme.Ket27.on) tick(com.ketvoice.app.ui.motion.Haptics.Kind.Tick)
+                        if (!active) tick(com.ketvoice.app.ui.motion.Haptics.Kind.Tick)
                         onSelect(index)
                     }, contentAlignment = Alignment.Center) {
                     Text(label, color = if (active) theme.onBackground else theme.secondary, fontSize = 14.sp,

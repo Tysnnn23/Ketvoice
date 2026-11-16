@@ -427,7 +427,7 @@ private fun AlbumFramingBar(busy: Boolean, error: String, hasPublished: Boolean,
                 fontWeight = FontWeight.Bold, modifier = Modifier.testTag("album-framing-heading"))
             Text(if (forPlayer) "Une fois publié, le lecteur affichera ce cadrage pour les titres de cet album. La page d'album ne change pas."
                 else "Voici la page telle que tout le monde la verra une fois le cadrage publié.", color = theme.secondary, fontSize = 12.sp)
-            if (error.isNotBlank()) Text(error, localize = false, color = androidx.compose.material3.MaterialTheme.colorScheme.error, fontSize = 12.sp)
+            if (error.isNotBlank()) Text(error, localize = false, color = com.ketvoice.app.ui.common.DESTRUCTIVE, fontSize = 12.sp)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 com.ketvoice.app.ui.common.GlassCapsuleButton("Annuler", null, onCancel, Modifier.weight(1f), enabled = !busy,
                     tag = "album-framing-cancel", minHeight = 48.dp)

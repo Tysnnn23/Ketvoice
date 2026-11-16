@@ -15,7 +15,6 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -111,21 +110,16 @@ fun LocalMusicScreen() {
     val showTitles = view == 0 || group != null
 
     Column(Modifier.fillMaxSize().pageBackground(theme).statusBarsPadding()) {
-        val ket = com.ketvoice.app.theme.Ket27.on
         // Ket 27: the bar of a pushed page; what the scan found is said in a line under it.
-        if (ket) com.ketvoice.app.ui.common.Ket27PageBar("Musique locale", { AppUi.closeOverlay() }) {
+        com.ketvoice.app.ui.common.Ket27PageBar("Musique locale", { AppUi.closeOverlay() }) {
             Box(Modifier.size(44.dp).clip(CircleShape).clickable(role = Role.Button) { LocalMusic.scan(context) },
                 contentAlignment = Alignment.Center) {
                 Icon(Icons.Filled.Refresh, "Rafraîchir", tint = theme.onBackground, modifier = Modifier.size(22.dp))
             }
         }
-        Row(Modifier.fillMaxWidth().padding(if (ket) PaddingValues(start = 20.dp, end = 20.dp, bottom = 8.dp) else PaddingValues(16.dp)),
+        Row(Modifier.fillMaxWidth().padding(PaddingValues(start = 20.dp, end = 20.dp, bottom = 8.dp)),
             verticalAlignment = Alignment.CenterVertically) {
-            if (!ket) { GlassBackButton { AppUi.closeOverlay() }
-            Spacer(Modifier.width(14.dp)) }
             Column(Modifier.weight(1f)) {
-                if (!ket) Text("Musique locale", color = theme.onBackground, fontSize = 24.sp, fontWeight = FontWeight.Bold,
-                    modifier = Modifier.asHeading())
                 Text(
                     when {
                         needsPermission -> "Accès à la musique requis"
@@ -138,10 +132,6 @@ fun LocalMusicScreen() {
                     },
                     color = theme.secondary, fontSize = 13.sp
                 )
-            }
-            if (!ket) Box(Modifier.size(48.dp).clip(CircleShape).clickable(role = Role.Button) { LocalMusic.scan(context) },
-                contentAlignment = Alignment.Center) {
-                Icon(Icons.Filled.Refresh, "Rafraîchir", tint = theme.onBackground, modifier = Modifier.size(24.dp))
             }
         }
 
@@ -214,10 +204,7 @@ fun LocalMusicScreen() {
                             }
                         }
                         if (group != null) Row(verticalAlignment = Alignment.CenterVertically) {
-                            TextButton(onClick = { groupKey = null }, contentPadding = PaddingValues(end = 10.dp)) {
-                                Icon(KetIcons.ArrowLeft, null, tint = theme.accent, modifier = Modifier.size(18.dp))
-                                Text(if (view == 1) "Albums" else "Artistes", color = theme.accent, modifier = Modifier.padding(start = 6.dp))
-                            }
+                            com.ketvoice.app.ui.common.BackLink(if (view == 1) "Albums" else "Artistes", { groupKey = null })
                             Text(group.title, localize = false, color = theme.onBackground, fontSize = 20.sp, fontWeight = FontWeight.Bold,
                                 maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
