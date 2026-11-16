@@ -80,13 +80,15 @@ class FusedChromeHostTest {
     @Test fun collapsedFusedChromeKeepsOrderTargetsAndActions() {
         content(collapsed = true)
         compose.mainClock.advanceTimeBy(1200)
-        val home = compose.onNodeWithContentDescription("Accueil").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+        // 6.0.0: folded, the bar is a pill showing the tab you are on (Library here); a touch unfolds it.
+        val pill = compose.onNodeWithContentDescription("Bibliothèque").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
         val play = compose.onNodeWithContentDescription("Lecture").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
         val search = compose.onNodeWithContentDescription("Rechercher").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
-        assertTrue(home.right <= play.left && play.right <= search.left)
+        assertTrue(pill.right <= play.left && play.right <= search.left)
         assertTrue(play.width >= 48f && play.height >= 48f)
-        compose.onNodeWithContentDescription("Accueil").performClick()
-        compose.runOnIdle { assertEquals(AppUi.HOME, AppUi.tab.intValue) }
+        compose.runOnIdle { AppUi.bottomCollapsed.value = true }
+        compose.onNodeWithContentDescription("Bibliothèque").performClick()
+        compose.runOnIdle { assertEquals(AppUi.LIBRARY, AppUi.tab.intValue); assertFalse(AppUi.bottomCollapsed.value) }
         compose.onNodeWithContentDescription("Rechercher").performClick()
         compose.runOnIdle { assertEquals(AppUi.SEARCH, AppUi.overlay.intValue) }
     }

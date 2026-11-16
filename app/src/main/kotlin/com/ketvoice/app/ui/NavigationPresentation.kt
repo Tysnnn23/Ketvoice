@@ -94,7 +94,10 @@ internal fun NavigationPresentation(
                 if (radius > .5f) { shape = androidx.compose.foundation.shape.RoundedCornerShape(radius); clip = true }
                 else clip = false
             }) {
-                states.SaveableStateProvider(navigationPageKey(tab, entry)) { content(tab, entry) }
+                val key = navigationPageKey(tab, entry)
+                androidx.compose.runtime.CompositionLocalProvider(com.ketvoice.app.ui.motion.LocalNavigationPageKey provides key) {
+                    states.SaveableStateProvider(key) { content(tab, entry) }
+                }
             }
         }
     }

@@ -295,6 +295,9 @@ fun SettingsScreen() {
                 SToggle(KetIcons.Canvas, "Fond animé du lecteur",
                     "Dégradé lent aux couleurs de la pochette derrière le lecteur, qui suit doucement la musique",
                     AppSettings.meshBackground.value) { AppSettings.meshBackground.value = it; SettingsStore.save() }
+                if (!com.ketvoice.app.BuildConfig.IS_QUEST) SToggle(KetIcons.Sliders, "Barre d'onglets réductible",
+                    "En faisant défiler une page, la barre d'onglets se réduit en pastille et le mini-lecteur s'y loge ; elle revient en remontant ou d'un toucher",
+                    AppSettings.collapsingTabBar.value) { AppSettings.collapsingTabBar.value = it; SettingsStore.save() }
                 if (!com.ketvoice.app.BuildConfig.IS_QUEST) SToggle(KetIcons.Sliders, "Retours haptiques",
                     "Légère vibration sur le verre, les onglets et la barre de lecture",
                     AppSettings.haptics.value) { AppSettings.haptics.value = it; SettingsStore.save() }

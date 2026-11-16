@@ -83,7 +83,10 @@ fun SearchScreen() {
     val layout = LocalAdaptiveLayout.current
     var attempt by rememberSaveable { mutableIntStateOf(0) }
     var segment by rememberSaveable { mutableIntStateOf(0) } // 0 Tout | 1 Sources | 2 Bibliothèque
-    var query by rememberSaveable { mutableStateOf(AppUi.searchSeed.value) }
+    // Phones (6.0.0): the field is the floating one at the bottom of the screen (ui/chrome/FloatingSearch).
+    val floating = com.ketvoice.app.ui.chrome.FloatingSearch.applies(layout.hasRail, com.ketvoice.app.BuildConfig.IS_QUEST)
+    val pageQuery = rememberSaveable { mutableStateOf(AppUi.searchSeed.value) }
+    var query by (if (floating) com.ketvoice.app.ui.chrome.FloatingSearch.query else pageQuery)
     var results by remember { mutableStateOf<List<Track>>(emptyList()) }
     // Found by their lyrics: on the device (playable at once), and online (searched in the catalogue when touched).
     var lyricTracks by remember { mutableStateOf<List<Track>>(emptyList()) }
@@ -111,7 +114,17 @@ fun SearchScreen() {
     }
 
     // La graine est consommée une seule fois (tuile genre / album).
-    LaunchedEffect(Unit) { AppUi.searchSeed.value = "" }
+    LaunchedEffect(Unit) {
+        // A seeded search (a genre tile) fills the floating field too.
+        if (floating && AppUi.searchSeed.value.isNotBlank()) com.ketvoice.app.ui.chrome.FloatingSearch.query.value = AppUi.searchSeed.value
+        AppUi.searchSeed.value = ""
+    }
+    // The keyboard's search key in the floating field searches here.
+    DisposableEffect(floating) {
+        val submit = { submitSearch(true) }
+        if (floating) com.ketvoice.app.ui.chrome.FloatingSearch.onSubmit = submit
+        onDispose { if (com.ketvoice.app.ui.chrome.FloatingSearch.onSubmit === submit) com.ketvoice.app.ui.chrome.FloatingSearch.onSubmit = null }
+    }
 
     LaunchedEffect(query, segment, attempt, customSources) {
         val q = query.trim()
@@ -219,9 +232,11 @@ fun SearchScreen() {
             }
         }
 
-        com.ketvoice.app.ui.common.CompactSearchField(query, { query = it }, { submitSearch(true) },
-            Modifier.padding(horizontal = 20.dp).align(Alignment.CenterHorizontally).searchFieldFocus())
-        Spacer(Modifier.height(14.dp))
+        if (!floating) {
+            com.ketvoice.app.ui.common.CompactSearchField(query, { query = it }, { submitSearch(true) },
+                Modifier.padding(horizontal = 20.dp).align(Alignment.CenterHorizontally).searchFieldFocus())
+            Spacer(Modifier.height(14.dp))
+        }
         AppUi.playlistResolution.value?.let { pending ->
             Column(Modifier.padding(horizontal=20.dp)) {
                 Text("Choisissez une version pour la playlist",color=th.accent)
@@ -347,9 +362,9 @@ fun SearchScreen() {
                 val shownAlbums = remember(albums, blockedArtists) { albums.filter { com.ketvoice.app.data.ArtistPrefs.allows(it.artist) } }
                 if (shownAlbums.isNotEmpty()) {
                     com.ketvoice.app.ui.common.SectionHeader("Albums", Modifier.padding(horizontal = 20.dp, vertical = 6.dp))
-                    com.ketvoice.app.ui.explorer.AlbumShelf(shownAlbums, edge = 20.dp) { album ->
+                    com.ketvoice.app.ui.explorer.AlbumShelf(shownAlbums, edge = 20.dp) { album, origin ->
                         submitSearch()
-                        AppUi.openCatalog(com.ketvoice.app.data.CatalogRequest("album", album.id, album.title))
+                        AppUi.openCatalog(com.ketvoice.app.data.CatalogRequest("album", album.id, album.title), origin)
                     }
                     Spacer(Modifier.height(16.dp))
                 }
@@ -574,11 +589,14 @@ internal fun SearchArtistCircle(artist: com.ketvoice.app.data.MusicArtist, onOpe
         if (com.ketvoice.app.ui.motion.Motion.reduced) androidx.compose.animation.core.snap()
         else androidx.compose.animation.core.spring(dampingRatio = .62f, stiffness = 520f), label = "artist-circle-lift")
     Box {
+        val zoom = com.ketvoice.app.ui.motion.rememberZoomSource(
+            com.ketvoice.app.data.MediaOverrides.artistPhoto(artist.name, artist.photo), round = true)
         Column(Modifier.width(96.dp).captureRevealOrigin(origin)
             .combinedClickable(onLongClick = { haptic(com.ketvoice.app.ui.motion.Haptics.Kind.Tick); menu = true },
-                onLongClickLabel = com.ketvoice.app.data.AppText.t("Options de l'artiste")) { onOpen(origin.value) }
+                onLongClickLabel = com.ketvoice.app.data.AppText.t("Options de l'artiste")) { zoom.arm(); onOpen(zoom.bounds ?: origin.value) }
             .testTag("search-artist-${artist.id}"), horizontalAlignment = Alignment.CenterHorizontally) {
-            Box(Modifier.size(88.dp).graphicsLayer { scaleX = lift; scaleY = lift; alpha = if (blocked) .45f else 1f }
+            Box(Modifier.size(88.dp).then(com.ketvoice.app.ui.motion.zoomSourceOf(zoom))
+                .graphicsLayer { scaleX = lift; scaleY = lift; alpha = if (blocked) .45f else 1f }
                 .clip(CircleShape).background(th.card).border(1.dp, th.onBackground.copy(alpha = .10f), CircleShape),
                 contentAlignment = Alignment.Center) {
                 // Never an empty grey disc: the initial is always behind the photo and shows while it loads.

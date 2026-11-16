@@ -10,4 +10,6 @@ internal fun navigationPageKey(tab: Int, entry: AppUi.OverlayEntry): String = wh
 }
 
 internal fun AppUi.OverlayEntry.isArtworkDetail(): Boolean =
-    overlay == AppUi.ARTIST || (overlay == AppUi.CATALOG && catalogRequest?.kind == "album")
+    overlay == AppUi.ARTIST || (overlay == AppUi.CATALOG && catalogRequest?.kind == "album") ||
+        // 6.0.0: any collection opened from its cover (a mix, a playlist) grows out of it too.
+        (origin != null && (overlay == AppUi.CATALOG || overlay == AppUi.PLAYLIST))

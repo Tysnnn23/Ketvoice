@@ -192,11 +192,12 @@ fun ArtistScreen(request: AppUi.ArtistRequest? = AppUi.artistRequest.value) {
                     LazyRow(contentPadding = PaddingValues(horizontal = 20.dp),
                         horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                         itemsIndexed(data.albums, key = { _, a -> a.id }) { _, album ->
-                            val origin = rememberRevealOrigin()
-                            Column(Modifier.width(150.dp).captureRevealOrigin(origin).clickable {
-                                AppUi.openCatalog(com.ketvoice.app.data.CatalogRequest("album", album.id, album.title), origin.value)
+                            val albumCover = com.ketvoice.app.data.MediaOverrides.albumCover(album.title, album.artist, art["a:${album.id}"] ?: album.coverUrl)
+                            val zoom = com.ketvoice.app.ui.motion.rememberZoomSource(albumCover, 12.dp)
+                            Column(Modifier.width(150.dp).clickable {
+                                zoom.openCatalog(com.ketvoice.app.data.CatalogRequest("album", album.id, album.title))
                             }) {
-                                Cover(album.title, com.ketvoice.app.data.MediaOverrides.albumCover(album.title, album.artist, art["a:${album.id}"] ?: album.coverUrl), 150.dp, 12.dp)
+                                Cover(album.title, albumCover, 150.dp, 12.dp, modifier = com.ketvoice.app.ui.motion.zoomSourceOf(zoom))
                                 Text(album.title, localize = false, color = theme.onBackground, fontSize = 14.sp,
                                     fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
                                     modifier = Modifier.padding(top = 7.dp))
@@ -212,10 +213,11 @@ fun ArtistScreen(request: AppUi.ArtistRequest? = AppUi.artistRequest.value) {
                     LazyRow(contentPadding = PaddingValues(horizontal = 20.dp),
                         horizontalArrangement = Arrangement.spacedBy(18.dp)) {
                         itemsIndexed(data.related, key = { _, a -> a.id }) { _, related ->
-                            val origin = rememberRevealOrigin()
-                            Column(Modifier.width(104.dp).captureRevealOrigin(origin).clickable { AppUi.openArtist(related.id, related.name, origin.value) },
+                            val relatedZoom = com.ketvoice.app.ui.motion.rememberZoomSource(
+                                com.ketvoice.app.data.MediaOverrides.artistPhoto(related.name, related.photo), round = true)
+                            Column(Modifier.width(104.dp).clickable { relatedZoom.openArtist(related.id, related.name) },
                                 horizontalAlignment = Alignment.CenterHorizontally) {
-                                Box(Modifier.size(94.dp).clip(CircleShape).background(theme.card)
+                                Box(Modifier.size(94.dp).then(com.ketvoice.app.ui.motion.zoomSourceOf(relatedZoom)).clip(CircleShape).background(theme.card)
                                     .border(1.dp, theme.onBackground.copy(alpha = .10f), CircleShape),
                                     contentAlignment = Alignment.Center) {
                                     // Initiale en repli : le cercle n'est jamais vide.

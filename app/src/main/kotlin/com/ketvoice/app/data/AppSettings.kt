@@ -107,6 +107,11 @@ object AppSettings {
     val haptics = mutableStateOf(true)
     /** Animated colour mesh behind the full player. */
     val meshBackground = mutableStateOf(true)
+    /**
+     * When a page scrolls down, the tab bar shrinks into a pill and the mini-player docks beside it
+     * (Apple Music on iOS 26); scrolling up or a touch restores it. Owner, 2026-11-16: optional, off by default.
+     */
+    val collapsingTabBar = mutableStateOf(false)
     /** The dominant cover colour lightly tints the optical glass. */
     val coverTintedGlass = mutableStateOf(true)
     /** Opt-in: the website's "Listening now" shows the title, artist and cover. The count itself is anonymous. */

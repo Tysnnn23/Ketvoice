@@ -16,6 +16,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ShaderBrush
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -133,5 +135,35 @@ internal fun MeshBackdrop(colors: List<Color>, playing: Boolean, modifier: Modif
             shader.setFloatUniform("c$index", color.red, color.green, color.blue)
         }
         drawRect(brush, alpha = alpha)
+    }
+}
+
+/** How strongly the lyrics mesh covers the player's ambient background: the colours are the show there. */
+internal const val LYRICS_MESH_ALPHA = .86f
+
+/**
+ * The lyrics screen's background (6.0.0, after Apple Music): the cover's colours flow as a mesh
+ * gradient behind the words. It fades in with the lyrics page and out when the artwork returns; its
+ * colours glide from one title to the next. The shader needs Android 13; before that, with the
+ * performance mode or with "Fond animé du lecteur" off, the ambient background below stays alone.
+ * With reduced motion the mesh holds still (see [meshPolicy]).
+ */
+@Composable
+internal fun LyricsMesh(visible: Boolean, cover: String?, ambience: CoverAmbience, playing: Boolean) {
+    val shown = androidx.compose.animation.core.animateFloatAsState(if (visible) 1f else 0f,
+        if (Motion.reduced) androidx.compose.animation.core.snap() else androidx.compose.animation.core.tween(Motion.duration(520)),
+        label = "lyrics-mesh")
+    // Hidden and faded out: nothing runs, not even the mesh clock.
+    if (!visible && shown.value <= 0f) return
+    val vivid = com.ketvoice.app.theme.rememberCoverAccent(cover)
+    val target = meshColors(ambience.color, ambience.accent, vivid)
+    val glide = androidx.compose.animation.core.tween<Color>(Motion.duration(700))
+    val colors = target.mapIndexed { index, color ->
+        androidx.compose.animation.animateColorAsState(color, glide, label = "lyrics-mesh-$index").value
+    }
+    // The fade is read in the layer: it never recomposes the mesh.
+    androidx.compose.foundation.layout.Box(Modifier.fillMaxSize().graphicsLayer { alpha = shown.value }
+        .testTag("lyrics-mesh")) {
+        MeshBackdrop(colors, playing, Modifier.fillMaxSize(), alpha = LYRICS_MESH_ALPHA)
     }
 }

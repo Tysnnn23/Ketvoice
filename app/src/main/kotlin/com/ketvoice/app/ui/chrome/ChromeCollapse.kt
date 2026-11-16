@@ -13,9 +13,14 @@ internal class ChromeCollapse(private val foldAfterPx: Int = 36, private val unf
     private var travel = 0
     var collapsed = false
         private set
+    private var seenRestore = restoreCount
+
+    /** A touch on the folded bar unfolds it where the page is; the next fold needs a new travel down. */
+    fun restore() { collapsed = false; travel = 0 }
 
     /** Feeds the first visible item and its scroll offset; returns whether the bar is folded. */
     fun update(index: Int, offset: Int): Boolean {
+        if (seenRestore != restoreCount) { seenRestore = restoreCount; restore() }
         if (index == 0 && offset <= topPx) {
             collapsed = false; travel = 0
         } else if (lastIndex >= 0) {
@@ -31,5 +36,21 @@ internal class ChromeCollapse(private val foldAfterPx: Int = 36, private val unf
         }
         lastIndex = index; lastOffset = offset
         return collapsed
+    }
+
+    companion object {
+        /** Counts the touches that unfolded the bar; every page's fold starts its travel again from there. */
+        @Volatile var restoreCount = 0
+            private set
+
+        /** The bar unfolds now (a touch on it), whatever the page's scroll. */
+        fun restoreAll() { restoreCount++; com.ketvoice.app.ui.AppUi.bottomCollapsed.value = false }
+
+        /**
+         * Whether the floating bar shows folded: only when the listener turned it on (Settings → Appearance,
+         * "Barre d'onglets réductible", off by default), a tab page has scrolled down, and no page is on top.
+         */
+        fun folded(enabled: Boolean, scrolledDown: Boolean, overlay: Int): Boolean =
+            enabled && scrolledDown && overlay == com.ketvoice.app.ui.AppUi.NONE
     }
 }

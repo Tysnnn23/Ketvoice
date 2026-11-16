@@ -23,7 +23,7 @@ internal object PersonalBackup {
         "highPerformanceMode", "questKeepAwake", "filterNonAudio", "localMusicEnrich", "playNextOnSwipe",
         "noRepeatSuggestions", "stopOnSwipeFromRecents", "hideVolumeBar", "hideStatusBarInPlayer",
         "showQueueHistory", "hideTitleStatus", "languageChosen", "lastfmGenres", "smartAudioAlignment", "techStats",
-        "haptics", "coverTintedGlass", "glassTilt", "meshBackground", "automixOn", "automixAlbums", "ketmixLoops", "smartShuffle", "ketmixHaptics")
+        "haptics", "coverTintedGlass", "glassTilt", "meshBackground", "collapsingTabBar", "automixOn", "automixAlbums", "ketmixLoops", "smartShuffle", "ketmixHaptics")
     private val integers = mapOf("themeMode" to 0..2, "glassStyle" to 0..com.ketvoice.app.glass.GlassStyles.MAX, "glassTintLevel" to com.ketvoice.app.glass.GlassClarity.MIN..com.ketvoice.app.glass.GlassClarity.MAX, "lyricsTextSize" to 0..2,
         "reverbAmount" to 0..100, "reverbSize" to 0..100, "reverbDamping" to 0..100,
         "lyricsMode" to 0..2, "automixIntensity" to 0..2, "ketmixAnalysis" to 0..2, "ketmixStyle" to 0..5, "ketmixStemsQuality" to 0..2, "voiceLevel" to 0..100, "downloadQualityMode" to 0..2, "appIconVariant" to 0..3)

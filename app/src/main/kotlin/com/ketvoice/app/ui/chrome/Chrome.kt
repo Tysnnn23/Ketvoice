@@ -60,6 +60,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -337,50 +338,113 @@ private data class TabSpec(val icon: ImageVector, val label: String, val index: 
  * `collapsed` (scroll vers le bas) condense tout en une seule rangée.
  */
 @Composable
-fun FloatingChrome(collapsed: Boolean, onOpenPlayer: () -> Unit) {
+fun FloatingChrome(collapsed: Boolean, onOpenPlayer: () -> Unit, searching: Boolean = false, typing: Boolean = false) {
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         // Le repli Accueil + mini + Recherche tient dès 320 dp (52+8+176+8+52+24).
         // L'ancien seuil de 380 dp empêchait l'animation sur les téléphones 360 dp.
-        val compact = collapsed && maxWidth >= 320.dp
+        val compact = collapsed && !searching && maxWidth >= 320.dp
         // Base compactness on the actual pane, not the device's full window width.
         val fraction by animateFloatAsState(if (compact) 1f else 0f,
             if (Motion.reduced) androidx.compose.animation.core.snap() else spring(
                 dampingRatio = DesignTokens.Motion.CHROME_DAMPING,
                 stiffness = DesignTokens.Motion.CHROME_STIFFNESS), label = "chrome-morph")
+        // Phones (6.0.0): the search bubble stretches into the field, a little past it and back, like a drop.
+        val stretch by animateFloatAsState(if (searching) 1f else 0f,
+            if (Motion.reduced) androidx.compose.animation.core.snap() else spring(dampingRatio = .78f, stiffness = 360f),
+            label = "search-stretch")
         val width = maxWidth
         val f = fraction
         val hasTrack = Player.state.collectAsState().value.current != null
+        // While the keyboard is up only the field stays, just above it.
+        val miniShown = hasTrack && !typing
         // The tab bar is 62 dp high, as on iOS 27.
-        val fullHeight = (if (hasTrack) 126.dp else 64.dp) + 2.dp
+        val fullHeight = (if (miniShown) 126.dp else 64.dp) + 2.dp
         val height = fullHeight + (58.dp - fullHeight) * f
         // Replié : Accueil (52 dp) + 8 dp + mini-lecteur + 8 dp + Recherche (52 dp).
         val miniWidth = maxWidth - 144.dp * f
         val miniX = 72.dp * f
         val miniHeight = 54.dp - 6.dp * f
         val coverSize = 44.dp - 12.dp * f
-        val labelAlpha = (1f - f * 1.8f).coerceIn(0f, 1f)
-        val navigationY = if (hasTrack) 66.dp * (1f - f) else 0.dp
+        // The labels fade out while the pill moves, and the title comes back once it has docked (iOS 26).
+        val labelAlpha = if (f < .5f) (1f - f * 2f) else ((f - .5f) * 2f).coerceIn(0f, 1f)
+        val navigationY = if (miniShown) 66.dp * (1f - f) else 0.dp
         // Liquid 27: Home, the mini-player and Search are one glass body. At rest they
         // are separate; while the chrome morphs they pull liquid bridges and merge like
         // droplets, then split again. Other styles and fallbacks keep three panels.
         val fusion = com.ketvoice.app.glass.rememberGlassFusion()
         val fuseReach = with(androidx.compose.ui.platform.LocalDensity.current) { 26.dp.toPx() }
-        fusion.strengthPx = if (Motion.reduced) 0f else com.ketvoice.app.glass.fusionStrength(f, fuseReach)
+        val morph = maxOf(f, kotlin.math.sin(Math.PI * stretch.coerceIn(0f, 1f)).toFloat() * .8f)
+        fusion.strengthPx = if (Motion.reduced) 0f else com.ketvoice.app.glass.fusionStrength(morph, fuseReach)
         Box(Modifier.fillMaxWidth().height(height)) {
             com.ketvoice.app.glass.GlassFusionLayer(fusion, LocalTheme.current.isDark, Modifier.matchParentSize())
             androidx.compose.runtime.CompositionLocalProvider(com.ketvoice.app.glass.LocalGlassFusion provides fusion) {
             GlassTabCapsule(compact, Modifier.offset(x = 12.dp, y = navigationY),
-                availableWidth = width, homeOnly = compact)
-            if (hasTrack) MiniPlayerPill(
+                availableWidth = width, homeOnly = compact || searching,
+                onPill = if (searching) ({ AppUi.closeOverlay(); Unit }) else ({ ChromeCollapse.restoreAll() }),
+                pillLabel = if (searching) "Fermer la recherche" else "Afficher les onglets")
+            if (miniShown) MiniPlayerPill(
                 Modifier.offset(x = miniX).width(miniWidth),
                 compact = f > .65f,
                 height = miniHeight,
                 coverSize = coverSize,
                 labelAlpha = labelAlpha,
                 onOpen = onOpenPlayer)
-            SearchCircleButton(size = 60.dp - 8.dp * f,
-                modifier = Modifier.offset(x = width - 76.dp + 12.dp * f, y = navigationY))
+            val restSide = 60f - 8f * f.coerceIn(0f, 1f)
+            val bubble = FloatingSearch.bubble(stretch, width.value, restSide, width.value - 76f + 12f * f, pillEnd = 72f, margin = 16f)
+            SearchBubble(stretch, searching,
+                Modifier.offset(x = bubble.x.dp, y = navigationY + ((restSide - bubble.height) / 2f).coerceAtLeast(0f).dp)
+                    .size(bubble.width.dp, bubble.height.dp))
             }
+        }
+    }
+}
+
+/**
+ * Search, as a glass bubble that stretches into the search field (phones, 6.0.0). At rest a touch opens
+ * the search page; stretched, it holds the field shared with that page ([FloatingSearch.query]).
+ */
+@Composable
+private fun SearchBubble(stretch: Float, searching: Boolean, modifier: Modifier = Modifier) {
+    val th = LocalTheme.current
+    val src = remember { MutableInteractionSource() }
+    val pressed by src.collectIsPressedAsState()
+    val haptic = com.ketvoice.app.ui.motion.rememberHaptics()
+    val shape = RoundedCornerShape(percent = 50)
+    // The glyph leaves early and the field arrives late, so the two never read over each other.
+    val fieldAlpha = ((stretch - .5f) / .4f).coerceIn(0f, 1f)
+    val glyphAlpha = (1f - stretch * 2.2f).coerceIn(0f, 1f)
+    Box(modifier
+        .pressScale(min = .9f, isPressed = pressed && !searching)
+        .shadow(if (th.isDark) 0.dp else 2.5.dp, shape, spotColor = Color.Black.copy(alpha = 0.12f))
+        .testTag("search-bubble")) {
+        GlassPanel(Modifier.matchParentSize(), shape, GlassParams.circle(dark = th.isDark), enabled = AppSettings.liquidGlass.value) {}
+        // The glyph gives way to the field as the bubble stretches.
+        val glyph: @Composable (String?) -> Unit = { label ->
+            Icon(com.ketvoice.app.ui.common.Ket27Glyphs.Search, contentDescription = label, tint = th.onBackground,
+                modifier = Modifier.size(25.dp).graphicsLayer { alpha = glyphAlpha })
+        }
+        if (!searching) Box(Modifier.matchParentSize().clip(shape)
+            .clickable(src, null, role = Role.Button) { haptic(Haptics.Kind.Press); FloatingSearch.open() },
+            contentAlignment = Alignment.Center) { glyph("Rechercher") }
+        else if (glyphAlpha > 0f) Box(Modifier.matchParentSize(), contentAlignment = Alignment.Center) { glyph(null) }
+        if (searching || stretch > .01f) {
+            val requester = remember { androidx.compose.ui.focus.FocusRequester() }
+            val focus = androidx.compose.ui.platform.LocalFocusManager.current
+            val asked = FloatingSearch.focusAsked.value
+            LaunchedEffect(searching, asked) {
+                if (searching && asked) {
+                    // A frame for the field to be placed before it takes the focus (and brings the keyboard).
+                    kotlinx.coroutines.delay(32)
+                    runCatching { requester.requestFocus() }
+                    FloatingSearch.focusAsked.value = false
+                }
+                if (!searching) focus.clearFocus()
+            }
+            com.ketvoice.app.ui.common.CompactSearchField(FloatingSearch.query.value, { FloatingSearch.query.value = it },
+                { FloatingSearch.onSubmit?.invoke() },
+                Modifier.matchParentSize().graphicsLayer { alpha = fieldAlpha }
+                    .focusRequester(requester).testTag("floating-search-field"),
+                filled = false)
         }
     }
 }
@@ -418,7 +482,8 @@ private fun SearchCircleButton(size: androidx.compose.ui.unit.Dp, modifier: Modi
 @Composable
 internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier,
                              availableWidth: Dp = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp.dp,
-                             homeOnly: Boolean = false) {
+                             homeOnly: Boolean = false, onPill: () -> Unit = { ChromeCollapse.restoreAll() },
+                             pillLabel: String = "Afficher les onglets") {
     val th = LocalTheme.current
     val focus = androidx.compose.ui.platform.LocalFocusManager.current
     val haptic = com.ketvoice.app.ui.motion.rememberHaptics()
@@ -501,7 +566,9 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier,
         enabled = AppSettings.liquidGlass.value
     ) {
         if (homeOnly) {
-            // Replié : la capsule entière devient un bouton Accueil en verre.
+            // Folded (Settings → "Barre d'onglets réductible", iOS 26): the bar is a pill showing the tab
+            // you are on; a touch unfolds it again where the page is.
+            val current = tabs.firstOrNull { it.index == AppUi.tab.value } ?: tabs.first()
             val src = remember { MutableInteractionSource() }
             val pressed by src.collectIsPressedAsState()
             val press by animateFloatAsState(
@@ -513,16 +580,18 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier,
                 Modifier
                     .fillMaxSize()
                     .graphicsLayer { scaleX = press; scaleY = press }
-                    .clickable(interactionSource = src, indication = null, role = Role.Button) {
+                    .testTag("folded-tab-pill")
+                    .clickable(interactionSource = src, indication = null, role = Role.Button,
+                        onClickLabel = com.ketvoice.app.data.AppText.t(pillLabel)) {
                         focus.clearFocus()
                         haptic(Haptics.Kind.Tick)
-                        AppUi.selectTab(AppUi.HOME)
+                        onPill()
                     },
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    com.ketvoice.app.ui.common.Ket27Glyphs.Home,
-                    contentDescription = "Accueil",
+                    current.icon,
+                    contentDescription = current.label,
                     tint = th.onBackground,
                     modifier = Modifier.size(24.dp)
                 )
