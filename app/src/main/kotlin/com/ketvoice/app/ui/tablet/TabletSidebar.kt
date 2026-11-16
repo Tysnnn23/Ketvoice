@@ -57,10 +57,10 @@ import com.ketvoice.app.ui.common.KetIcons
 import com.ketvoice.app.ui.common.Text
 import kotlinx.coroutines.launch
 
-/** The listener's choice for the sidebar, kept in preferences of its own (`large-screen`, key `sidebarCollapsed`). */
+/** The listener's choice for the sidebar, kept in preferences of its own (`large-screen`, key `sidebar_collapsed`). */
 object SidebarPrefs {
     private const val FILE = "large-screen"
-    private const val KEY = "sidebarCollapsed"
+    private const val KEY = "sidebar_collapsed"
 
     /** True: closed to a rail; false: open; null: never chosen, the width decides. */
     val collapsed = mutableStateOf<Boolean?>(null)
@@ -357,14 +357,23 @@ private fun SidebarIconButton(icon: ImageVector, label: String, tag: String, siz
 internal object SidebarGlyph {
     private fun panel(name: String, filled: Boolean) = ImageVector.Builder(name, 24.dp, 24.dp, 24f, 24f).apply {
         val ink = androidx.compose.ui.graphics.SolidColor(androidx.compose.ui.graphics.Color.Black)
-        addPath(androidx.compose.ui.graphics.vector.PathParser().parsePathString(
-            "M5,4.5h14a2.5,2.5 0 0 1 2.5,2.5v10a2.5,2.5 0 0 1 -2.5,2.5h-14a2.5,2.5 0 0 1 -2.5,-2.5v-10a2.5,2.5 0 0 1 2.5,-2.5z").toNodes(),
+        // The window: a rectangle with rounded corners.
+        addPath(androidx.compose.ui.graphics.vector.PathBuilder().apply {
+            moveTo(5f, 4.5f); lineTo(19f, 4.5f); arcTo(2.5f, 2.5f, 0f, false, true, 21.5f, 7f)
+            lineTo(21.5f, 17f); arcTo(2.5f, 2.5f, 0f, false, true, 19f, 19.5f)
+            lineTo(5f, 19.5f); arcTo(2.5f, 2.5f, 0f, false, true, 2.5f, 17f)
+            lineTo(2.5f, 7f); arcTo(2.5f, 2.5f, 0f, false, true, 5f, 4.5f); close()
+        }.nodes, stroke = ink, strokeLineWidth = 1.8f)
+        // The edge of the sidebar.
+        addPath(androidx.compose.ui.graphics.vector.PathBuilder().apply { moveTo(9.5f, 4.5f); lineTo(9.5f, 19.5f) }.nodes,
             stroke = ink, strokeLineWidth = 1.8f)
-        addPath(androidx.compose.ui.graphics.vector.PathParser().parsePathString("M9.5,4.5v15").toNodes(), stroke = ink, strokeLineWidth = 1.8f)
-        if (filled) addPath(androidx.compose.ui.graphics.vector.PathParser().parsePathString(
-            "M5,6.3h3v11.4h-3a0.7,0.7 0 0 1 -0.7,-0.7v-10a0.7,0.7 0 0 1 0.7,-0.7z").toNodes(), fill = ink)
+        // Open: the sidebar is filled.
+        if (filled) addPath(androidx.compose.ui.graphics.vector.PathBuilder().apply {
+            moveTo(5f, 6.3f); lineTo(8f, 6.3f); lineTo(8f, 17.7f); lineTo(5f, 17.7f)
+            arcTo(.7f, .7f, 0f, false, true, 4.3f, 17f); lineTo(4.3f, 7f); arcTo(.7f, .7f, 0f, false, true, 5f, 6.3f); close()
+        }.nodes, fill = ink)
     }.build()
 
-    val Fold: ImageVector by lazy { panel("SidebarFold", filled = true) }
-    val Unfold: ImageVector by lazy { panel("SidebarUnfold", filled = false) }
+    val Fold: ImageVector by lazy { panel("sidebar-fold", filled = true) }
+    val Unfold: ImageVector by lazy { panel("sidebar-unfold", filled = false) }
 }

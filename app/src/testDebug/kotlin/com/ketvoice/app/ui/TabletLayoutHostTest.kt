@@ -155,7 +155,7 @@ class TabletLayoutHostTest {
         compose.waitForIdle()
         compose.onNodeWithTag("tablet-rail").assertIsDisplayed()
         assertEquals(true, SidebarPrefs.collapsed.value)
-        assertEquals(true, compose.activity.getSharedPreferences("large-screen", 0).getBoolean("sidebarCollapsed", false))
+        assertEquals(true, compose.activity.getSharedPreferences("large-screen", 0).getBoolean("sidebar_collapsed", false))
         image("home-rail-dark")
         compose.onNodeWithTag("sidebar-unfold").performClick()
         compose.waitForIdle()
@@ -210,6 +210,17 @@ class TabletLayoutHostTest {
         compose.waitForIdle()
         compose.onNodeWithTag("tablet-player-lyrics-pane").assertDoesNotExist()
         image("player-landscape-queue")
+    }
+
+    @Test fun withoutLyricsTheArtworkTakesTheStage() {
+        player(com.ketvoice.app.ui.player.PlayerPage.ARTWORK)
+        @Suppress("UNCHECKED_CAST")
+        (com.ketvoice.app.data.LyricsRepo.state as MutableStateFlow<com.ketvoice.app.data.LyricsRepo.State>).value = com.ketvoice.app.data.LyricsRepo.State()
+        compose.waitForIdle()
+        compose.onNodeWithTag("tablet-player-lyrics-pane").assertDoesNotExist()
+        val art = compose.onNodeWithTag("tablet-player-artwork").fetchSemanticsNode().boundsInRoot
+        assertEquals("centred", 683f, art.center.x, 2f)
+        image("player-landscape-artwork")
     }
 
     @Test @Config(qualifiers = "w1024dp-h1366dp-xlarge-port-mdpi")
@@ -329,6 +340,24 @@ class TabletLayoutHostTest {
             .filter { it.boundsInRoot.right <= 1062f - 16f + 1f }
         assertTrue("at least six whole albums fit beside the sidebar (${cards.size})", cards.size >= 6)
         image("explorer-shelves-wide-dark")
+    }
+
+    @Test fun thePlayerUnfoldsFromTheDockedMiniPlayer() {
+        playlists(); playing()
+        AppSettings.reduceAnimations.value = false
+        root(dark = true)
+        val dock = compose.onNodeWithTag("tablet-mini-player").fetchSemanticsNode().boundsInRoot
+        compose.mainClock.autoAdvance = false
+        compose.runOnIdle { AppUi.showPlayer.value = true }
+        compose.mainClock.advanceTimeBy(80)
+        image("player-unfold-from-dock-early")
+        compose.mainClock.advanceTimeBy(120)
+        image("player-unfold-from-dock-middle")
+        compose.mainClock.advanceTimeBy(1_500)
+        compose.onNodeWithTag("tablet-player-artwork").assertExists()
+        image("player-unfold-from-dock-open")
+        compose.mainClock.autoAdvance = true
+        assertTrue("the dock is at the bottom of the page", dock.top > 900f)
     }
 
     @OptIn(ExperimentalTestApi::class)

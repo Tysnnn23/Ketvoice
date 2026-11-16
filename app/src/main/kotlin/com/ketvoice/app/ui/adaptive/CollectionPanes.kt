@@ -1,6 +1,5 @@
 package com.ketvoice.app.ui.adaptive
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.PaddingValues
@@ -60,11 +59,10 @@ fun CollectionPanes(
         } else {
             val direction = LocalLayoutDirection.current
             Row(Modifier.fillMaxSize()) {
-                // The left pane holds still, a card of its own under the page's bar; it scrolls on its own only when the
-                // window is too short for it.
+                // The left pane holds still under the page's bar, its artwork rounded like a card; it scrolls on its own
+                // only when the window is too short for it.
                 Box(Modifier.width(pane.dp).fillMaxHeight().padding(start = 12.dp, top = listTop, bottom = 12.dp)
-                    .clip(RoundedCornerShape(28.dp)).background(com.ketvoice.app.theme.LocalTheme.current.onBackground.copy(alpha = .035f))
-                    .verticalScroll(rememberScrollState()).testTag("$listTag-pane")) {
+                    .clip(RoundedCornerShape(28.dp)).verticalScroll(rememberScrollState()).testTag(listTag + "-pane")) {
                     CompositionLocalProvider(LocalCollectionPane provides true) { header() }
                 }
                 LazyColumn(Modifier.weight(1f).fillMaxHeight().testTag(listTag), state = listState,

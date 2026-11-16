@@ -94,7 +94,6 @@ fun Modifier.secondaryClick(onSecondary: () -> Unit): Modifier {
  * finger keeps scrolling the list and a long press keeps opening the menu.
  */
 @OptIn(ExperimentalFoundationApi::class)
-@Suppress("DEPRECATION")
 @Composable
 fun Modifier.trackDragSource(track: Track): Modifier {
     if (LocalLargeScreen.current == null) return this
