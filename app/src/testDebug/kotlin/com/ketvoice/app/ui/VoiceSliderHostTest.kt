@@ -51,7 +51,7 @@ class VoiceSliderHostTest {
     @Test fun dragAndTapSetTheVoiceLevel() {
         AppSettings.voiceLevel.value = 30
         compose.setContent {
-            Box(Modifier.fillMaxSize().background(Color(0xFF5A4A40)), contentAlignment = Alignment.Center) { VoiceSlider() }
+            Box(Modifier.fillMaxSize().background(Color(0xFF3A2A25)), contentAlignment = Alignment.Center) { VoiceSlider() }
         }
         image("voice-slider-30")
         // A tap on it takes the voice out; another one brings it back where it was.

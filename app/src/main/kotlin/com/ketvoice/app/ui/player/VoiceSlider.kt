@@ -59,7 +59,7 @@ internal object VoiceSliderLogic {
  * microphone to take the voice out or bring it back.
  */
 @Composable
-fun VoiceSlider(modifier: Modifier = Modifier, width: Dp = 46.dp, height: Dp = 132.dp) {
+fun VoiceSlider(modifier: Modifier = Modifier, width: Dp = 52.dp, height: Dp = 100.dp) {
     val haptics = rememberHaptics()
     var level by remember { mutableFloatStateOf(AppSettings.voiceLevel.value / 100f) }
     var remembered by remember { mutableFloatStateOf(1f) }
@@ -97,36 +97,57 @@ fun VoiceSlider(modifier: Modifier = Modifier, width: Dp = 46.dp, height: Dp = 1
 }
 
 private fun DrawScope.drawVoicePill(level: Float) {
-    val radius = CornerRadius(size.width / 2, size.width / 2)
-    val pill = Path().apply { addRoundRect(androidx.compose.ui.geometry.RoundRect(0f, 0f, size.width, size.height, radius)) }
-    // Frosted glass, its level of white rising from the bottom, a thin rim.
-    drawRoundRect(Color.White.copy(alpha = .18f), cornerRadius = radius)
-    clipPath(pill) {
-        val top = size.height * (1f - level)
-        drawRect(Color.White.copy(alpha = .92f), topLeft = Offset(0f, top), size = Size(size.width, size.height - top))
+    val w = size.width; val h = size.height
+    // A tall rounded square, as on iOS: corners of about a third of its width.
+    val radius = CornerRadius(w * .34f, w * .34f)
+    val shape = Path().apply { addRoundRect(androidx.compose.ui.geometry.RoundRect(0f, 0f, w, h, radius)) }
+    clipPath(shape) {
+        // Frosted glass over what lies behind, then the level in white from the bottom.
+        drawRect(Color.White.copy(alpha = .16f))
+        val top = h * (1f - level)
+        drawRect(Color.White, topLeft = Offset(0f, top), size = Size(w, h - top))
     }
-    drawRoundRect(Color.White.copy(alpha = .28f), cornerRadius = radius, style = Stroke(1.dp.toPx()))
-    // The microphone at the foot, dark on the white fill, white on the glass.
-    val c = Offset(size.width / 2, size.height - size.width * .62f)
-    val u = size.width / 46f
-    // Dark once the white fill reaches the microphone's head, white on the glass.
-    val onFill = size.height * (1f - level) < c.y - 4f * u
-    val ink = if (onFill) Color(0xFF2B2B30) else Color.White
-    // Head, tilted like the reference: a capsule from the lower left to the upper right.
-    val head = Path().apply {
-        addRoundRect(androidx.compose.ui.geometry.RoundRect(c.x - 3.2f * u, c.y - 12f * u, c.x + 3.2f * u, c.y - 1f * u, CornerRadius(3.2f * u)))
+    // The microphone and its sparkles, in a dark ink that takes the colour of the glass behind it.
+    val ink = Color.Black.copy(alpha = .58f)
+    sparkle(Offset(w * .3f, h * .71f), w * .085f, Color.Black.copy(alpha = .2f))
+    sparkle(Offset(w * .66f, h * .84f), w * .075f, Color.Black.copy(alpha = .5f))
+    val pivot = Offset(w * .5f, h * .8f)
+    rotateAround(pivot, 45f) {
+        // Upright before the turn: the ball on top, its band, then the handle down to its end.
+        val headR = w * .135f
+        val headC = Offset(pivot.x, pivot.y - w * .2f)
+        drawCircle(ink, headR, headC)
+        // The band across the bottom of the ball, as a lighter ring.
+        drawLine(Color.White.copy(alpha = .22f), Offset(headC.x - headR, headC.y + headR * .42f),
+            Offset(headC.x + headR, headC.y + headR * .42f), strokeWidth = w * .045f)
+        val handleTop = headC.y + headR * .78f
+        val handleBottom = pivot.y + w * .36f
+        val topHalf = w * .07f; val bottomHalf = w * .045f
+        val handle = Path().apply {
+            moveTo(pivot.x - topHalf, handleTop); lineTo(pivot.x + topHalf, handleTop)
+            lineTo(pivot.x + bottomHalf, handleBottom); lineTo(pivot.x - bottomHalf, handleBottom); close()
+        }
+        drawPath(handle, ink)
+        // A thin highlight down one side of the handle, and the cap at its end.
+        drawLine(Color.White.copy(alpha = .16f), Offset(pivot.x + topHalf * .45f, handleTop + w * .03f),
+            Offset(pivot.x + bottomHalf * .45f, handleBottom - w * .04f), strokeWidth = w * .016f)
+        drawRoundRect(ink, topLeft = Offset(pivot.x - bottomHalf * .8f, handleBottom - w * .01f),
+            size = Size(bottomHalf * 1.6f, w * .06f), cornerRadius = CornerRadius(w * .02f))
     }
-    rotateAround(c, 38f) {
-        drawPath(head, ink)
-        drawLine(ink, Offset(c.x, c.y - 1f * u), Offset(c.x, c.y + 9f * u), strokeWidth = 2.2f * u)
+}
+
+/** A four-pointed star with curved sides. */
+private fun DrawScope.sparkle(c: Offset, r: Float, color: Color) {
+    val k = r * .18f
+    val star = Path().apply {
+        moveTo(c.x, c.y - r)
+        quadraticTo(c.x + k, c.y - k, c.x + r, c.y)
+        quadraticTo(c.x + k, c.y + k, c.x, c.y + r)
+        quadraticTo(c.x - k, c.y + k, c.x - r, c.y)
+        quadraticTo(c.x - k, c.y - k, c.x, c.y - r)
+        close()
     }
-    // Two small sparkles: the voice that can be taken out.
-    fun sparkle(at: Offset, r: Float) {
-        drawLine(ink.copy(alpha = .8f), Offset(at.x - r, at.y), Offset(at.x + r, at.y), strokeWidth = 1.2f * u)
-        drawLine(ink.copy(alpha = .8f), Offset(at.x, at.y - r), Offset(at.x, at.y + r), strokeWidth = 1.2f * u)
-    }
-    sparkle(Offset(c.x - 9f * u, c.y - 6f * u), 2.4f * u)
-    sparkle(Offset(c.x + 8f * u, c.y + 4f * u), 2f * u)
+    drawPath(star, color)
 }
 
 private inline fun DrawScope.rotateAround(pivot: Offset, degrees: Float, block: DrawScope.() -> Unit) {
