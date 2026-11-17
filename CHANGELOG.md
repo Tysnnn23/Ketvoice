@@ -7,6 +7,20 @@
 
 ---
 
+# Ketvoice 6.0.0 Beta 5
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 128** — Android Auto, background playback that holds, iOS 27 sliders, Ketmix's sign under the seek bar.
+
+- Android Auto: `PlaybackService` is a `MediaLibraryService`; `player/AutoLibrary.kt` builds the browse tree (Home mixes and history, Favourites, Playlists, Downloads; offline root), search (playlists, `LibrarySearch`, catalogue sources with a 9 s timeout) and voice requests; car requests are resolved to tracks and handed to `Player` (same sources and fallbacks as the phone). `AutoArtworkProvider` serves signed, scaled covers. Mobile flavour only (`app/src/mobile/AndroidManifest.xml`).
+- Background playback: `PlaybackBuffer` (30–180 s ahead, 32 MB cap); `BackgroundThrift` (off screen and on battery: slow Ketmix analysis, no automatic separation); `MemoryRelief` releases the separation models on `onTrimMemory`; journal lines for data waits, data saver and memory warnings; Honor/Huawei *App launch* intents first, with guidance in Settings.
+- Ket 27: `ui/common/SliderPress.kt` (press-and-hold swell, reach and rubber band on the seek bar, volume, glass and voice sliders; sliders moved to `ui/player/PlayerSliders.kt`); `RowHighlight`; `EmptyState` with symbols; `CatalogSkeletonList`; `KetmixMixingBadge` between the times; the full-bleed `PlayerHero` removed; word halo at alpha 0.11 and none after a word ends.
+
+Full notes: [6.0.0 Beta 5](docs/releases/v6.0.0-beta.5.md).
+
+---
+
 # Ketvoice 6.0.0 Beta 4
 
 ![Ketvoice](ketvoice-banner.png)

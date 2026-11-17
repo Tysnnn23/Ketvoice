@@ -21,6 +21,15 @@
 
 ## Overview
 
+### 6.0.0 Beta 5 — Android Auto, music that holds in the background
+
+Ketvoice now runs in the car with Android Auto (browse, search and voice); music keeps playing in the
+background with three minutes read ahead and lighter work off screen; sliders swell under your finger like
+iOS 27; and Ketmix's sign appears under the seek bar while two songs are mixed.
+[Mobile](https://github.com/Tysnnn23/Ketvoice/releases/download/v6.0.0-beta.5/Ketvoice-6.0.0-beta.5.apk)
+· [Quest](https://github.com/Tysnnn23/Ketvoice/releases/download/v6.0.0-beta.5/Ketvoice-6.0.0-beta.5-Quest.apk)
+· [Release notes](docs/releases/v6.0.0-beta.5.md).
+
 ### 6.0.0 Beta 4 — Ketmix in time, a glass icon, a finer Ket 27
 
 Ketmix now blends songs on the beat like Apple Music's AutoMix, then lets each one glide back to its own tempo;

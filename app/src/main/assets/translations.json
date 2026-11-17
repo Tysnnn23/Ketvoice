@@ -1603,7 +1603,10 @@
   "Barre d'onglets réductible": "Collapsing tab bar",
   "En faisant défiler une page, la barre d'onglets se réduit en pastille et le mini-lecteur s'y loge ; elle revient en remontant ou d'un toucher": "When you scroll a page, the tab bar shrinks into a pill and the mini-player docks beside it; it comes back when you scroll up or tap it",
   "Afficher les onglets": "Show tabs",
-  "Fermer la recherche": "Close search"
+  "Fermer la recherche": "Close search",
+  "Lancement d'applis → Ketvoice : désactivez « Gérer automatiquement », puis activez « Exécution en arrière-plan ». Sans cela, ce téléphone coupe la musique.": "App launch → Ketvoice: turn off “Manage automatically”, then turn on “Run in background”. Without this, this phone stops the music.",
+  "Ketmix mixe les titres": "Ketmix is mixing the songs",
+  "Titre introuvable": "Track not found"
  },
  "hi": {
   "Reverb": "रीवर्ब",
@@ -3209,7 +3212,10 @@
   "Barre d'onglets réductible": "सिकुड़ने वाला टैब बार",
   "En faisant défiler une page, la barre d'onglets se réduit en pastille et le mini-lecteur s'y loge ; elle revient en remontant ou d'un toucher": "पेज स्क्रॉल करने पर टैब बार एक गोली जैसे आकार में सिकुड़ जाता है और मिनी-प्लेयर उसके पास आ जाता है; ऊपर स्क्रॉल करने या टैप करने पर यह वापस आ जाता है",
   "Afficher les onglets": "टैब दिखाएँ",
-  "Fermer la recherche": "खोज बंद करें"
+  "Fermer la recherche": "खोज बंद करें",
+  "Lancement d'applis → Ketvoice : désactivez « Gérer automatiquement », puis activez « Exécution en arrière-plan ». Sans cela, ce téléphone coupe la musique.": "ऐप लॉन्च → Ketvoice: “स्वचालित रूप से प्रबंधित करें” बंद करें, फिर “पृष्ठभूमि में चलाएँ” चालू करें। इसके बिना यह फ़ोन संगीत रोक देता है।",
+  "Ketmix mixe les titres": "Ketmix गाने मिक्स कर रहा है",
+  "Titre introuvable": "ट्रैक नहीं मिला"
  },
  "ja": {
   "Reverb": "リバーブ",
@@ -4815,7 +4821,10 @@
   "Barre d'onglets réductible": "縮小するタブバー",
   "En faisant défiler une page, la barre d'onglets se réduit en pastille et le mini-lecteur s'y loge ; elle revient en remontant ou d'un toucher": "ページをスクロールするとタブバーが小さなピル型に縮み、ミニプレーヤーがその横に収まります。上にスクロールするかタップすると元に戻ります",
   "Afficher les onglets": "タブを表示",
-  "Fermer la recherche": "検索を閉じる"
+  "Fermer la recherche": "検索を閉じる",
+  "Lancement d'applis → Ketvoice : désactivez « Gérer automatiquement », puis activez « Exécution en arrière-plan ». Sans cela, ce téléphone coupe la musique.": "アプリ起動 → Ketvoice：「自動で管理」をオフにして「バックグラウンドで実行」をオンにしてください。そうしないと、この端末は音楽を止めてしまいます。",
+  "Ketmix mixe les titres": "Ketmixが曲をミックス中",
+  "Titre introuvable": "曲が見つかりません"
  },
  "zh": {
   "Reverb": "混响",
@@ -6421,7 +6430,10 @@
   "Barre d'onglets réductible": "可收起的标签栏",
   "En faisant défiler une page, la barre d'onglets se réduit en pastille et le mini-lecteur s'y loge ; elle revient en remontant ou d'un toucher": "滚动页面时，标签栏会缩成药丸形，迷你播放器停靠在旁边；向上滚动或轻点即可恢复",
   "Afficher les onglets": "显示标签",
-  "Fermer la recherche": "关闭搜索"
+  "Fermer la recherche": "关闭搜索",
+  "Lancement d'applis → Ketvoice : désactivez « Gérer automatiquement », puis activez « Exécution en arrière-plan ». Sans cela, ce téléphone coupe la musique.": "应用启动管理 → Ketvoice：关闭“自动管理”，然后开启“后台活动”。否则这台手机会停止播放音乐。",
+  "Ketmix mixe les titres": "Ketmix 正在混音歌曲",
+  "Titre introuvable": "找不到该歌曲"
  },
  "ru": {
   "Reverb": "Реверберация",
@@ -8027,7 +8039,10 @@
   "Barre d'onglets réductible": "Сворачиваемая панель вкладок",
   "En faisant défiler une page, la barre d'onglets se réduit en pastille et le mini-lecteur s'y loge ; elle revient en remontant ou d'un toucher": "При прокрутке страницы панель вкладок сжимается в капсулу, а мини-плеер встраивается рядом; она возвращается при прокрутке вверх или касании",
   "Afficher les onglets": "Показать вкладки",
-  "Fermer la recherche": "Закрыть поиск"
+  "Fermer la recherche": "Закрыть поиск",
+  "Lancement d'applis → Ketvoice : désactivez « Gérer automatiquement », puis activez « Exécution en arrière-plan ». Sans cela, ce téléphone coupe la musique.": "Запуск приложений → Ketvoice: отключите «Управлять автоматически», затем включите «Работа в фоновом режиме». Иначе этот телефон остановит музыку.",
+  "Ketmix mixe les titres": "Ketmix сводит треки",
+  "Titre introuvable": "Трек не найден"
  },
  "it": {
   "Reverb": "Riverbero",
@@ -9633,7 +9648,10 @@
   "Barre d'onglets réductible": "Barra delle schede comprimibile",
   "En faisant défiler une page, la barre d'onglets se réduit en pastille et le mini-lecteur s'y loge ; elle revient en remontant ou d'un toucher": "Scorrendo una pagina, la barra delle schede si riduce a una pillola e il mini-player vi si affianca; torna scorrendo verso l'alto o con un tocco",
   "Afficher les onglets": "Mostra le schede",
-  "Fermer la recherche": "Chiudi la ricerca"
+  "Fermer la recherche": "Chiudi la ricerca",
+  "Lancement d'applis → Ketvoice : désactivez « Gérer automatiquement », puis activez « Exécution en arrière-plan ». Sans cela, ce téléphone coupe la musique.": "Avvio app → Ketvoice: disattiva «Gestisci automaticamente», poi attiva «Esegui in background». Altrimenti questo telefono interrompe la musica.",
+  "Ketmix mixe les titres": "Ketmix sta mixando i brani",
+  "Titre introuvable": "Brano non trovato"
  },
  "es": {
   "Reverb": "Reverb",
@@ -11239,7 +11257,10 @@
   "Barre d'onglets réductible": "Barra de pestañas plegable",
   "En faisant défiler une page, la barre d'onglets se réduit en pastille et le mini-lecteur s'y loge ; elle revient en remontant ou d'un toucher": "Al desplazar una página, la barra de pestañas se reduce a una píldora y el minirreproductor se acopla a su lado; vuelve al desplazarte hacia arriba o al tocarla",
   "Afficher les onglets": "Mostrar pestañas",
-  "Fermer la recherche": "Cerrar la búsqueda"
+  "Fermer la recherche": "Cerrar la búsqueda",
+  "Lancement d'applis → Ketvoice : désactivez « Gérer automatiquement », puis activez « Exécution en arrière-plan ». Sans cela, ce téléphone coupe la musique.": "Inicio de apps → Ketvoice: desactiva «Gestionar automáticamente» y activa «Ejecutar en segundo plano». Si no, este teléfono detiene la música.",
+  "Ketmix mixe les titres": "Ketmix está mezclando las canciones",
+  "Titre introuvable": "No se encontró la canción"
  },
  "de": {
   "Reverb": "Reverb",
@@ -12845,7 +12866,10 @@
   "Barre d'onglets réductible": "Einklappbare Tableiste",
   "En faisant défiler une page, la barre d'onglets se réduit en pastille et le mini-lecteur s'y loge ; elle revient en remontant ou d'un toucher": "Beim Scrollen einer Seite schrumpft die Tableiste zu einer Pille und der Mini-Player dockt daneben an; sie kehrt beim Hochscrollen oder Antippen zurück",
   "Afficher les onglets": "Tabs anzeigen",
-  "Fermer la recherche": "Suche schließen"
+  "Fermer la recherche": "Suche schließen",
+  "Lancement d'applis → Ketvoice : désactivez « Gérer automatiquement », puis activez « Exécution en arrière-plan ». Sans cela, ce téléphone coupe la musique.": "App-Start → Ketvoice: „Automatisch verwalten“ ausschalten, dann „Im Hintergrund ausführen“ einschalten. Sonst stoppt dieses Handy die Musik.",
+  "Ketmix mixe les titres": "Ketmix mischt die Titel",
+  "Titre introuvable": "Titel nicht gefunden"
  },
  "pt": {
   "Reverb": "Reverb",
@@ -14451,7 +14475,10 @@
   "Barre d'onglets réductible": "Barra de abas recolhível",
   "En faisant défiler une page, la barre d'onglets se réduit en pastille et le mini-lecteur s'y loge ; elle revient en remontant ou d'un toucher": "Ao rolar uma página, a barra de abas encolhe para uma pílula e o miniplayer se encaixa ao lado; ela volta ao rolar para cima ou com um toque",
   "Afficher les onglets": "Mostrar abas",
-  "Fermer la recherche": "Fechar a pesquisa"
+  "Fermer la recherche": "Fechar a pesquisa",
+  "Lancement d'applis → Ketvoice : désactivez « Gérer automatiquement », puis activez « Exécution en arrière-plan ». Sans cela, ce téléphone coupe la musique.": "Início de apps → Ketvoice: desative “Gerir automaticamente” e ative “Executar em segundo plano”. Sem isso, este telefone para a música.",
+  "Ketmix mixe les titres": "Ketmix está mixando as músicas",
+  "Titre introuvable": "Faixa não encontrada"
  },
  "ko": {
   "Reverb": "리버브",
@@ -16057,6 +16084,9 @@
   "Barre d'onglets réductible": "축소되는 탭 막대",
   "En faisant défiler une page, la barre d'onglets se réduit en pastille et le mini-lecteur s'y loge ; elle revient en remontant ou d'un toucher": "페이지를 스크롤하면 탭 막대가 알약 모양으로 줄어들고 미니 플레이어가 옆에 자리 잡습니다. 위로 스크롤하거나 탭하면 다시 나타납니다",
   "Afficher les onglets": "탭 표시",
-  "Fermer la recherche": "검색 닫기"
+  "Fermer la recherche": "검색 닫기",
+  "Lancement d'applis → Ketvoice : désactivez « Gérer automatiquement », puis activez « Exécution en arrière-plan ». Sans cela, ce téléphone coupe la musique.": "앱 실행 → Ketvoice: ‘자동으로 관리’를 끄고 ‘백그라운드에서 실행’을 켜세요. 그렇지 않으면 이 휴대폰이 음악을 멈춥니다.",
+  "Ketmix mixe les titres": "Ketmix가 곡을 믹싱하는 중",
+  "Titre introuvable": "곡을 찾을 수 없습니다"
  }
 }
