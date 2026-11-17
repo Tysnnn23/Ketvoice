@@ -28,6 +28,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -231,6 +232,7 @@ internal fun KetmixEditorScreen(state: EditorState, onClose: () -> Unit, modifie
     val theme = LocalTheme.current
     BoxWithConstraints(modifier.fillMaxSize().background(theme.background).testTag("ketmix-editor")) {
         val wide = LargeScreen.isLarge(maxWidth.value, maxHeight.value, BuildConfig.IS_QUEST)
+        val tallLanes = ((maxHeight - 380.dp) / 2).coerceIn(132.dp, 260.dp)
         Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
             Ket27PageBar("Éditeur Ketmix", onClose)
             val plan = state.plan()
@@ -238,7 +240,7 @@ internal fun KetmixEditorScreen(state: EditorState, onClose: () -> Unit, modifie
                 // A wide window: the waves take the room, the controls stand in a column beside them.
                 Row(Modifier.fillMaxSize().padding(horizontal = 24.dp), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
                     Column(Modifier.weight(1f).fillMaxHeight().verticalScroll(rememberScrollState())) {
-                        Lanes(state, plan, wide = true)
+                        Lanes(state, plan, wide = true, laneHeight = tallLanes)
                     }
                     Column(Modifier.width(340.dp).fillMaxHeight().verticalScroll(rememberScrollState()).padding(top = 8.dp)) {
                         Controls(state, plan)
@@ -247,7 +249,7 @@ internal fun KetmixEditorScreen(state: EditorState, onClose: () -> Unit, modifie
             } else {
                 Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.CenterHorizontally) {
                     Column(Modifier.widthIn(max = 640.dp).fillMaxWidth().padding(horizontal = Ket27.Metrics.margin)) {
-                        Lanes(state, plan, wide = false)
+                        Lanes(state, plan, wide = false, laneHeight = 96.dp)
                         Spacer(Modifier.height(18.dp))
                         Controls(state, plan)
                         Spacer(Modifier.height(24.dp))
@@ -267,11 +269,10 @@ private fun gridWord(kind: GridSnap.Kind): String? = when (kind) {
 }
 
 @Composable
-private fun Lanes(state: EditorState, plan: MixPlan, wide: Boolean) {
+private fun Lanes(state: EditorState, plan: MixPlan, wide: Boolean, laneHeight: Dp) {
     val theme = LocalTheme.current
     val auto = state.automatic()
     val view = MixEditor.view(plan, wide)
-    val laneHeight = if (wide) 132.dp else 96.dp
     val palette = if (theme.isDark) WavePalette(Color(0xFF4F8DFF), Color(0xFFFFA24C), Color(0xFFF2F2F7))
         else WavePalette(Color(0xFF2F6BEA), Color(0xFFE5822A), Color(0xFF3A3A3C))
     val exitMs = if (plan.mixes) plan.outMs else (state.effective.exitMs.takeIf { it >= 0 } ?: (state.out.durationMs - 12_000L).coerceAtLeast(0L))
@@ -441,19 +442,35 @@ private fun DetailLane(side: EditorSide, anchorMs: Long, rate: Float, view: MixE
             // Where the outgoing voice stops: a listener's exit may come before it.
             if (sungUntilMs != null) {
                 val x = toX(sungUntilMs)
-                if (x in 0f..size.width) drawLine(Color(0xFFFF6B8B).copy(alpha = .85f), Offset(x, size.height * .12f), Offset(x, size.height * .88f), 1.5.dp.toPx(),
-                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(2.dp.toPx(), 3.dp.toPx())))
+                if (x in 0f..size.width) drawLine(voiceEnd(theme.isDark), Offset(x, size.height * .1f), Offset(x, size.height * .9f), 1.5.dp.toPx(),
+                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(3.dp.toPx(), 3.dp.toPx())))
             }
         }
         LaneState(side, Modifier.align(Alignment.Center))
         val name = if (outgoing) "Sortant" else "Entrant"
         Text(name, color = theme.secondary, fontSize = 11.sp, fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.align(if (outgoing) Alignment.TopStart else Alignment.BottomStart).padding(horizontal = 10.dp, vertical = 6.dp))
-        if (outgoing && sungUntilMs != null && sungUntilMs > anchorMs) {
-            Text("fin du chant", color = Color(0xFFFF6B8B), fontSize = 11.sp, fontWeight = FontWeight.Medium,
-                modifier = Modifier.align(Alignment.TopEnd).padding(horizontal = 10.dp, vertical = 6.dp))
+            modifier = Modifier.align(if (outgoing) Alignment.TopStart else Alignment.BottomStart)
+                .padding(horizontal = 6.dp, vertical = 5.dp).clip(RoundedCornerShape(6.dp))
+                .background(theme.background.copy(alpha = .7f)).padding(horizontal = 5.dp, vertical = 1.dp))
+        if (outgoing && sungUntilMs != null) {
+            val fraction = ((sungUntilMs - anchorMs) / rate + view.beforeMs) / view.spanMs
+            if (fraction in 0f..1f) Text("fin du chant", color = voiceEnd(theme.isDark), fontSize = 11.sp, fontWeight = FontWeight.SemiBold, maxLines = 1,
+                modifier = Modifier.align(Alignment.BottomStart).padding(bottom = 5.dp).besideLine(fraction, 5.dp))
         }
     }
+}
+
+/** Where the outgoing voice stops, in the lanes: apart from the app's colour, which marks the mix. */
+private fun voiceEnd(dark: Boolean): Color = if (dark) Color(0xFFFFD60A) else Color(0xFF9A7400)
+
+/** Puts a label just after the line at [fraction] of the width, or just before it when there is no room after. */
+private fun Modifier.besideLine(fraction: Float, gap: Dp): Modifier = layout { measurable, constraints ->
+    val placeable = measurable.measure(constraints.copy(minWidth = 0))
+    val width = constraints.maxWidth
+    val x = (fraction * width).toInt()
+    val space = gap.roundToPx()
+    val left = if (x + space + placeable.width <= width) x + space else (x - space - placeable.width).coerceAtLeast(0)
+    layout(width, placeable.height) { placeable.place(left, 0) }
 }
 
 /** While a wave is read, or when it cannot be: said in the middle of its lane. */
@@ -463,7 +480,7 @@ private fun LaneState(side: EditorSide, modifier: Modifier) {
     val progress = side.progress
     val problem = side.problem
     if (side.wave != null && progress == null) return
-    Column(modifier.widthIn(max = 260.dp).padding(horizontal = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(modifier.widthIn(max = 260.dp).padding(horizontal = 16.dp).clip(RoundedCornerShape(14.dp)).background(theme.background.copy(alpha = .86f)).padding(horizontal = 14.dp, vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         when {
             progress != null -> {
                 Text(AppText.t("Lecture de l'onde… {0} %").replace("{0}", (progress * 100).toInt().toString()), localize = false,
@@ -523,8 +540,8 @@ private fun DrawScope.drawWave(wave: Wave, fromT: Long, untilT: Long, rate: Floa
                     palette.low.red * lowShare + palette.mid.red * midShare + palette.high.red * highShare,
                     palette.low.green * lowShare + palette.mid.green * midShare + palette.high.green * highShare,
                     palette.low.blue * lowShare + palette.mid.blue * midShare + palette.high.blue * highShare)
-                val p = sqrt(peak) * reach
-                val r = (sqrt(level) * 1.25f).coerceAtMost(1f) * reach
+                val p = shape(peak, 1.15f) * reach
+                val r = shape(level, 1.9f) * reach
                 if (peaks && p > r) drawLine(colour.copy(alpha = .30f * alpha), Offset(x, middle - p), Offset(x, middle + p), stroke, StrokeCap.Round)
                 drawLine(colour.copy(alpha = alpha), Offset(x, middle - r.coerceAtLeast(.75f)), Offset(x, middle + r.coerceAtLeast(.75f)), stroke, StrokeCap.Round)
             }
@@ -621,7 +638,7 @@ private fun Overview(side: EditorSide, pointMs: Long, autoMs: Long?, visible: Lo
                     val t = window.first + (px / size.width * length).toLong()
                     val c = wave.columnAt(t)
                     if (c >= 0) {
-                        val r = (sqrt(wave.level(c)) * 1.25f).coerceAtMost(1f) * middle * .82f
+                        val r = shape(wave.level(c), 1.9f) * middle * .82f
                         val bass = (wave.lowAt(c) / wave.level(c).coerceAtLeast(1e-4f)).coerceIn(0f, 1f)
                         drawLine(lerp(palette.mid, palette.low, bass).copy(alpha = .7f), Offset(px, middle - r - .5f), Offset(px, middle + r + .5f), 1.6f)
                     }
@@ -644,6 +661,9 @@ private fun Overview(side: EditorSide, pointMs: Long, autoMs: Long?, visible: Lo
 
 private fun lerp(a: Color, b: Color, t: Float): Color = Color(a.red + (b.red - a.red) * t, a.green + (b.green - a.green) * t, a.blue + (b.blue - a.blue) * t)
 
+/** How tall a linear level is drawn (0..1): compressed so that quiet parts show, with room left for the kicks to stand out. */
+private fun shape(linear: Float, gain: Float): Float = (Math.pow(linear.coerceIn(0f, 1f).toDouble(), .7).toFloat() * gain).coerceAtMost(1f)
+
 /** The words of a transition's kind, for the summary under the waves. */
 private fun kindWord(plan: MixPlan): String = if (!plan.mixes) "Pas de mix" else MixWords.label(plan).replaceFirstChar { it.uppercase() }
 
@@ -663,7 +683,7 @@ private fun Controls(state: EditorState, plan: MixPlan) {
         }
     }
     val measures = MixWords.measures(plan)
-    val blend = if (plan.mixes) AppText.t("Fondu de {0} s").replace("{0}", "%.1f".format(java.util.Locale.ROOT, plan.overlapMs / 1000f)) else ""
+    val blend = if (plan.mixes) AppText.t("Mix de {0} s").replace("{0}", "%.1f".format(java.util.Locale.ROOT, plan.overlapMs / 1000f)) else ""
     Text(listOf(blend, measures).filter { it.isNotBlank() }.joinToString(" · "), localize = false, color = theme.secondary, style = Ket27.Type.footnote)
     val sung = state.vocalEndMs
     if (plan.mixes && sung != null && state.effective.exitMs >= 0 && plan.outMs < sung) {
@@ -699,6 +719,7 @@ private fun Controls(state: EditorState, plan: MixPlan) {
                 val on = style == chosen
                 Box(Modifier.heightIn(min = 40.dp).clip(RoundedCornerShape(999.dp))
                     .background(if (on) theme.accent else theme.onBackground.copy(alpha = .08f))
+                    .testTag("ketmix-style-${style.name}")
                     .clickable(role = Role.RadioButton) { state.commitStyle(style); if (AppSettings.ketmixHaptics.value) haptic(Haptics.Kind.Tick) }
                     .padding(horizontal = 14.dp), contentAlignment = Alignment.Center) {
                     Text(label, color = if (on) com.ketvoice.app.ui.common.onAccent(theme.accent) else theme.onBackground,
