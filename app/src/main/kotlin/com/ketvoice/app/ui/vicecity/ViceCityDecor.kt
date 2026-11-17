@@ -1,5 +1,6 @@
 package com.ketvoice.app.ui.vicecity
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -18,7 +19,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
@@ -28,6 +32,7 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.ketvoice.app.R
+import com.ketvoice.app.theme.SeasonPulse
 import com.ketvoice.app.theme.ViceCityTheme
 
 /** The palms' ink: a shade darker than the night, so they stand out only against the sunset glow. */
@@ -42,11 +47,41 @@ private val PalmInk = Color(0xFF07030F)
 fun ViceCityPalms(modifier: Modifier = Modifier, fade: () -> Float = { 0f }) {
     Box(modifier.fillMaxWidth().height(250.dp).clearAndSetSemantics { testTag = "vicecity-palms" }
         .graphicsLayer { alpha = 1f - fade().coerceIn(0f, 1f) }) {
+        ViceCitySun(Modifier.matchParentSize())
         val ink = ColorFilter.tint(PalmInk.copy(alpha = .78f))
         Image(painterResource(R.drawable.vicecity_palm_left), null, Modifier.align(Alignment.TopStart)
             .offset(x = (-18).dp, y = (-46).dp).width(150.dp), contentScale = ContentScale.FillWidth, colorFilter = ink)
         Image(painterResource(R.drawable.vicecity_palm_right), null, Modifier.align(Alignment.TopEnd)
             .offset(x = 8.dp, y = (-30).dp).width(96.dp), contentScale = ContentScale.FillWidth, colorFilter = ink)
+    }
+}
+
+/**
+ * The setting sun of the 80s poster behind the greeting (6.2.1): a disc fading from orange to magenta whose lower half
+ * is cut by horizontal slats that widen towards the horizon. Faint (it never lowers the greeting's contrast), it
+ * breathes with the theme's slow pulse (read in the draw phase only) and holds still under reduced motion.
+ */
+@Composable
+fun ViceCitySun(modifier: Modifier = Modifier) {
+    Canvas(modifier) {
+        val radius = size.width * .17f
+        val centre = Offset(size.width * .70f, radius * .72f)
+        val breath = .5f + .5f * kotlin.math.cos(SeasonPulse.phase.floatValue * 2f * Math.PI.toFloat())
+        val sunset = Brush.verticalGradient(0f to ViceCityTheme.Colors.orange, .55f to ViceCityTheme.Colors.accent,
+            1f to ViceCityTheme.Colors.magenta, startY = centre.y - radius, endY = centre.y + radius)
+        val alpha = .20f + .05f * breath
+        // The upper half whole, then the lower half in slats: thin near the middle, wide towards the bottom.
+        clipRect(top = centre.y - radius, bottom = centre.y) { drawCircle(sunset, radius, centre, alpha) }
+        var y = centre.y
+        var gap = radius * .05f
+        var band = radius * .16f
+        while (y < centre.y + radius) {
+            val bottom = (y + band).coerceAtMost(centre.y + radius)
+            clipRect(top = y + gap, bottom = bottom) { drawCircle(sunset, radius, centre, alpha) }
+            y = bottom + gap * .2f
+            gap += radius * .035f
+            band = (band - radius * .018f).coerceAtLeast(radius * .05f)
+        }
     }
 }
 

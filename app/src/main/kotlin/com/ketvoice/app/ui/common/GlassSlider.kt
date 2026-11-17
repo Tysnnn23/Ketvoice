@@ -194,7 +194,8 @@ fun GlassSlider(
                 // The fill runs from the logical start to the thumb's centre.
                 translate(left = edge) {
                     drawPressTrack(railFor(size.width - 2f * edge), displayedFraction, railColor, fillColor,
-                        press.expansion, highlight = false, direction = direction)
+                        press.expansion, highlight = false, direction = direction,
+                        fillBrush = theme.season?.fill)
                 }
             }
             if (snap) Box(Modifier.matchParentSize().padding(horizontal = bleed)) {

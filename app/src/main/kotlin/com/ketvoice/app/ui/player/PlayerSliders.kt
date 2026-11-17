@@ -82,6 +82,9 @@ fun ScrubBar(
     val posMs by Player.positionMs.collectAsState()
     val trackId = Player.state.collectAsState().value.current?.id
     val latestSeek by rememberUpdatedState(onSeek)
+    // A seasonal theme fills the bar with its sunset, unless the caller chose its own colour (6.2.1).
+    val season = com.ketvoice.app.theme.LocalTheme.current.season
+    val seasonFill = fillColor == com.ketvoice.app.theme.LocalTheme.current.accent
     val dur = durationMs.coerceAtLeast(1L)
     // Where the finger is while it drags (px); the value is read from the track as it is drawn, so
     // what lies under the finger is what is set, even while the track swells.
@@ -168,7 +171,7 @@ fun ScrubBar(
                 }
         ) {
             val track = trackFor(size.width)
-            drawPressTrack(track, shown, trackColor, fillColor, press.expansion)
+            drawPressTrack(track, shown, trackColor, fillColor, press.expansion, fillBrush = if (seasonFill) season?.fill else null)
             mix.value?.let { progress ->
                 val w = size.width
                 val lineY = size.height / 2f - 8.dp.toPx()

@@ -21,6 +21,14 @@
 
 ## Overview
 
+### 6.2.1 — Vice City sunset
+
+The Vice City theme gets a striped setting sun on Home and a sunset fill on the player's seek bar and the sliders.
+[Mobile](https://github.com/Tysnnn23/Ketvoice/releases/download/v6.2.1/Ketvoice-6.2.1.apk)
+· [Lite](https://github.com/Tysnnn23/Ketvoice/releases/download/v6.2.1/Ketvoice-6.2.1-Lite.apk)
+· [Quest](https://github.com/Tysnnn23/Ketvoice/releases/download/v6.2.1/Ketvoice-6.2.1-Quest.apk)
+· [Release notes](docs/releases/v6.2.1.md).
+
 ### 6.2.0 — Your Ketvoice account
 
 A Ketvoice account with your profile photo and your library on every device, a library that understands what you ask, a livelier player, a welcome for new listeners and seasonal themes.

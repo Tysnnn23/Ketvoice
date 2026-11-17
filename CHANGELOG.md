@@ -7,6 +7,19 @@
 
 ---
 
+# Ketvoice 6.2.1
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 133** — the Vice City theme gets its sunset.
+
+- `ViceCitySun` (in Home's palms decor): a faint striped sun (orange to pink, slats widening towards the horizon) that breathes with `SeasonPulse` and holds still under reduced motion.
+- `drawPressTrack(fillBrush)`: with a seasonal theme the player's `ScrubBar` (unless the caller chose its own colour) and `GlassSlider` fill with the season's gradient and a soft halo under the fill.
+
+Full notes: [6.2.1](docs/releases/v6.2.1.md).
+
+---
+
 # Ketvoice 6.2.0
 
 ![Ketvoice](ketvoice-banner.png)

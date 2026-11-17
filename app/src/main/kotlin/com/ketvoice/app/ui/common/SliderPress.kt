@@ -231,7 +231,9 @@ fun DrawScope.drawPressTrack(
     expansion: Float,
     highlight: Boolean = true,
     direction: LayoutDirection = LayoutDirection.Ltr,
-    showEmptyFill: Boolean = false
+    showEmptyFill: Boolean = false,
+    /** A seasonal theme fills the bar with its gradient instead of [fillColor] (6.2.1). */
+    fillBrush: Brush? = null
 ) {
     val t = track.thickness.coerceAtLeast(1f)
     val y = size.height / 2f
@@ -252,7 +254,12 @@ fun DrawScope.drawPressTrack(
         fillLeft = track.left
         fillRight = maxOf(endLtr, track.left + t)
     }
-    if (filled) drawRoundRect(fillColor, Offset(fillLeft, top), Size(fillRight - fillLeft, t), radius)
+    if (filled && fillBrush != null) {
+        // A soft halo under the fill, then the fill itself in the season's gradient (the whole bar's width, so it is revealed as it grows).
+        if (e > .01f || t >= 3f) drawRoundRect(fillBrush, Offset(fillLeft, top - t * .35f), Size(fillRight - fillLeft, t * 1.7f), radius,
+            alpha = .16f + .12f * e)
+        drawRoundRect(fillBrush, Offset(fillLeft, top), Size(fillRight - fillLeft, t), radius)
+    } else if (filled) drawRoundRect(fillColor, Offset(fillLeft, top), Size(fillRight - fillLeft, t), radius)
     // A line of light along the top of the fill: the bar reads as glass, brighter while held.
     if (highlight && filled && fillRight - fillLeft > t * 1.2f) drawLine(
         Color.White.copy(alpha = .22f + .16f * e),
