@@ -235,6 +235,17 @@ class MainActivity : ComponentActivity() {
     private fun handleAuthIntent(intent: Intent?) {
         if (intent?.action != Intent.ACTION_VIEW) return
         val uri = intent.data ?: return
+        // 6.3: an invitation to a shared playlist (ketvoice://join/<code>) and a profile (ketvoice://u/<handle>).
+        com.ketvoice.app.sync.SharedLinks.joinCode(uri.toString())?.let { code ->
+            intent.data = null
+            com.ketvoice.app.ui.library.SharedUi.openJoin(code)
+            return
+        }
+        com.ketvoice.app.sync.SharedLinks.profileHandle(uri.toString())?.let { handle ->
+            intent.data = null
+            com.ketvoice.app.ui.account.ProfileUi.open(handle)
+            return
+        }
         val supabaseLink = uri.scheme == "https" &&
             uri.host == com.ketvoice.app.data.PublisherAccess.HOST &&
             uri.path == "/auth/v1/verify"

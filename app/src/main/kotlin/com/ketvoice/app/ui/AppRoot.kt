@@ -434,9 +434,16 @@ fun AppRoot() {
                         }
                     }
                 }
+                // ---- Shared playlists (6.3): invitation, members, join ----
+                if (com.ketvoice.app.ui.library.SharedUi.share.value != null || com.ketvoice.app.ui.library.SharedUi.members.value != null ||
+                    com.ketvoice.app.ui.library.SharedUi.confirmShare.value != null || com.ketvoice.app.ui.library.SharedUi.join.value != null) {
+                    Box(Modifier.fillMaxSize().zIndex(7.2f)) { com.ketvoice.app.ui.library.SharedPlaylistHosts() }
+                }
                 if (AppUi.showAccount.value) {
                     AccountDialog(Modifier.zIndex(8f))
                 }
+                // ---- Profile page (6.3): from a link, a search by handle or a member's photo ----
+                com.ketvoice.app.ui.account.ProfileHost()
                 if (AppUi.showPublisher.value) {
                     Box(Modifier.fillMaxSize().zIndex(9f)) {
                         com.ketvoice.app.ui.studio.PublisherScreen(AppUi.publisherTrack.value) {

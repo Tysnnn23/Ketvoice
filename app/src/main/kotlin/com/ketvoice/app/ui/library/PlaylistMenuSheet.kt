@@ -12,6 +12,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.DriveFileRenameOutline
 import androidx.compose.material.icons.filled.IosShare
 import androidx.compose.material.icons.filled.PlaylistAdd
@@ -48,8 +50,14 @@ fun PlaylistMenuSheet(
     onRename: () -> Unit,
     onExportJson: () -> Unit,
     onExportM3u: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onShare: () -> Unit = {},
+    onMembers: () -> Unit = {},
+    onTogglePublic: () -> Unit = {}
 ) {
+    val shared = com.ketvoice.app.data.PlaylistRules.isShared(playlist.id)
+    val owner = !shared || com.ketvoice.app.sync.SharedPlaylists.isOwner(playlist.id)
+    val published = playlist.id in com.ketvoice.app.account.PublicProfiles.published.collectAsState().value
     val playable = playlist.entries.mapNotNull { it.track }
     val radius = with(LocalDensity.current) { 28.dp.toPx() }
     // Rendue au niveau racine (AppRoot), hors de la couche capturée : le verre est
@@ -89,10 +97,15 @@ fun PlaylistMenuSheet(
                     enabled = pending > 0
                 ) { onDownload(); onClose() }
             }
-            PlaylistMenuRow("Renommer", Icons.Filled.DriveFileRenameOutline) { onRename(); onClose() }
+            // 6.3: shared playlists (several accounts edit together) and the public profile.
+            if (owner) PlaylistMenuRow("Partager la playlist", Icons.Filled.IosShare) { onShare(); onClose() }
+            if (shared) PlaylistMenuRow("Membres", Icons.Filled.Group) { onMembers(); onClose() }
+            if (!shared) PlaylistMenuRow(if (published) "Retirer cette playlist de mon profil" else "Rendre cette playlist publique",
+                Icons.Filled.Public) { onTogglePublic(); onClose() }
+            if (owner) PlaylistMenuRow("Renommer", Icons.Filled.DriveFileRenameOutline) { onRename(); onClose() }
             PlaylistMenuRow("Exporter (.json)", Icons.Filled.UploadFile) { onExportJson(); onClose() }
             PlaylistMenuRow("Exporter (.m3u)", Icons.Filled.IosShare) { onExportM3u(); onClose() }
-            PlaylistMenuRow("Supprimer la playlist", Icons.Filled.Delete,
+            PlaylistMenuRow(if (shared && !owner) "Quitter la playlist" else "Supprimer la playlist", Icons.Filled.Delete,
                 tint = Color(0xFFFF6B6B)) { onDelete(); onClose() }
             Spacer(Modifier.height(10.dp))
         }

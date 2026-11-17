@@ -10,7 +10,13 @@ import org.json.JSONObject
 import java.io.File
 
 /** The listener's profile: a name, an optional @handle and a photo (a stored object path, never a public link). */
-data class AccountProfile(val displayName: String = "", val handle: String = "", val avatarPath: String = "")
+data class AccountProfile(val displayName: String = "", val handle: String = "", val avatarPath: String = "",
+                          /** Others may open the profile page by its @handle (off by default, and it needs a handle). */
+                          val isPublic: Boolean = false,
+                          /** The profile page shows the title playing now (off by default; only with a public profile). */
+                          val showListening: Boolean = false,
+                          /** Random name of the photo's public copy, see the migration of 2026-11-18. */
+                          val avatarRef: String = "")
 
 /**
  * The profile of the signed-in listener, kept on the device for offline display: the name in the app's
@@ -30,19 +36,23 @@ object Profiles {
     fun init(context: Context) {
         if (this.context != null) return
         this.context = context.applicationContext
+        RemoteAvatars.init(context)
         val p = prefs() ?: return
         _profile.value = AccountProfile(p.getString("name", "").orEmpty(), p.getString("handle", "").orEmpty(),
-            p.getString("avatar", "").orEmpty())
+            p.getString("avatar", "").orEmpty(), p.getBoolean("public", false), p.getBoolean("showListening", false),
+            p.getString("avatarRef", "").orEmpty())
         _avatar.value = avatarDir()?.listFiles()?.firstOrNull { it.name.startsWith("avatar-") }
     }
 
     private fun prefs() = context?.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+    internal fun localPrefs() = prefs()
     private fun avatarDir(): File? = context?.let { File(it.filesDir, "account").apply { mkdirs() } }
 
-    private fun keep(profile: AccountProfile) {
+    internal fun keep(profile: AccountProfile) {
         _profile.value = profile
         prefs()?.edit()?.putString("name", profile.displayName)?.putString("handle", profile.handle)
-            ?.putString("avatar", profile.avatarPath)?.apply()
+            ?.putString("avatar", profile.avatarPath)?.putBoolean("public", profile.isPublic)
+            ?.putBoolean("showListening", profile.showListening)?.putString("avatarRef", profile.avatarRef)?.apply()
     }
 
     internal fun signedIn(userId: String, displayName: String?) {
@@ -51,6 +61,7 @@ object Profiles {
 
     internal fun signedOut(context: Context) {
         keep(AccountProfile())
+        RemoteAvatars.forget()
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().clear().apply()
         File(context.filesDir, "account").listFiles()?.filter { it.name.startsWith("avatar-") }?.forEach { it.delete() }
         _avatar.value = null
@@ -59,13 +70,15 @@ object Profiles {
     internal fun parse(row: JSONObject): AccountProfile = AccountProfile(
         if (row.isNull("display_name")) "" else row.optString("display_name"),
         if (row.isNull("handle")) "" else row.optString("handle"),
-        if (row.isNull("avatar_url")) "" else row.optString("avatar_url"))
+        if (row.isNull("avatar_url")) "" else row.optString("avatar_url"),
+        row.optBoolean("is_public"), row.optBoolean("show_listening"),
+        if (row.isNull("avatar_ref")) "" else row.optString("avatar_ref"))
 
     /** Reads the profile from the server (creates it when missing) and fetches the photo when it changed. */
     suspend fun refresh() = withContext(Dispatchers.IO) {
         val uid = AccountSession.userId() ?: return@withContext
         val response = AccountSession.authorized { token ->
-            SupabaseHttp.request("GET", "/rest/v1/ketvoice_profiles?select=display_name,handle,avatar_url&id=eq.$uid", token = token)
+            SupabaseHttp.request("GET", "/rest/v1/ketvoice_profiles?select=display_name,handle,avatar_url,is_public,show_listening,avatar_ref&id=eq.$uid", token = token)
         }
         if (!response.ok) return@withContext
         val rows = JSONArray(response.text)
@@ -90,6 +103,7 @@ object Profiles {
         val uid = AccountSession.userId() ?: error("Connexion requise")
         val name = AccountRules.displayName(displayName)
         val tag = AccountRules.handle(handle)
+        require(tag != null || !_profile.value.isPublic) { "Désactivez d'abord le profil public pour retirer le nom d'utilisateur." }
         val body = JSONObject().put("display_name", name).put("handle", tag ?: JSONObject.NULL)
         val response = AccountSession.authorized { token ->
             SupabaseHttp.request("PATCH", "/rest/v1/ketvoice_profiles?id=eq.$uid", body.toString().toByteArray(), token,
@@ -119,6 +133,7 @@ object Profiles {
         keep(_profile.value.copy(avatarPath = path))
         storeLocal(path, jpeg)
         if (old.isNotBlank() && old != path) removeObjects(listOf(old))
+        PublicAvatar.changed()
     }
 
     suspend fun removeAvatar() = withContext(Dispatchers.IO) {
@@ -132,6 +147,25 @@ object Profiles {
         keep(_profile.value.copy(avatarPath = ""))
         clearLocalAvatar()
         if (old.isNotBlank()) removeObjects(listOf(old))
+        PublicAvatar.changed()
+    }
+
+    /**
+     * « Profil public » and « Montrer ce que j'écoute »: saved on the profile. A public profile needs a
+     * @handle (the server refuses it otherwise). Both are off until the listener turns them on.
+     */
+    suspend fun setVisibility(isPublic: Boolean, showListening: Boolean) = withContext(Dispatchers.IO) {
+        val uid = AccountSession.userId() ?: error("Connexion requise")
+        require(!isPublic || _profile.value.handle.isNotBlank()) { "Choisissez d'abord un nom d'utilisateur (Modifier le profil)." }
+        val shows = showListening && isPublic
+        val body = JSONObject().put("is_public", isPublic).put("show_listening", shows).toString()
+        val response = AccountSession.authorized { token ->
+            SupabaseHttp.request("PATCH", "/rest/v1/ketvoice_profiles?id=eq.$uid", body.toByteArray(), token,
+                headers = mapOf("Prefer" to "return=minimal"))
+        }
+        check(response.ok) { "Enregistrement impossible pour le moment." }
+        keep(_profile.value.copy(isPublic = isPublic, showListening = shows))
+        PublicAvatar.changed()
     }
 
     private suspend fun download(path: String) {
@@ -169,6 +203,7 @@ object Profiles {
     /** Before the account goes: every photo the listener stored (the server refuses the deletion while one remains). */
     internal suspend fun deleteAllAvatars() {
         val uid = AccountSession.userId() ?: return
+        PublicAvatar.removeCopy()
         val listed = AccountSession.authorized { token ->
             SupabaseHttp.request("POST", "/storage/v1/object/list/$BUCKET", JSONObject().put("prefix", "$uid/").put("limit", 100)
                 .toString().toByteArray(), token)

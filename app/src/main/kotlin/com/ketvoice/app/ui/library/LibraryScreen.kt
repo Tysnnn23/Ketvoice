@@ -46,6 +46,8 @@ fun LibraryScreen() {
     val playlists by PlaylistStore.lists.collectAsState()
     val loadError by PlaylistStore.loadError.collectAsState()
     val scope = rememberCoroutineScope()
+    // Shared playlists (6.3) are read again when the Library opens.
+    LaunchedEffect(Unit) { com.ketvoice.app.sync.SharedPlaylists.refreshSoon() }
     var error by remember { mutableStateOf("") }
     var query by rememberSaveable { mutableStateOf("") }
     var view by rememberSaveable { mutableIntStateOf(0) }
@@ -162,6 +164,8 @@ fun LibraryScreen() {
                     com.ketvoice.app.ui.common.KetTextButton("Créer une playlist", { AppUi.showCreatePlaylist.value = true }, enabled = !loadError)
                     com.ketvoice.app.ui.common.KetTextButton("Importer des playlists", { AppUi.openPlaylistImport() }, enabled = !loadError)
                 }
+                com.ketvoice.app.ui.common.KetTextButton("Rejoindre avec un code", { SharedUi.openJoin(null) }, enabled = !loadError,
+                    modifier = Modifier.padding(horizontal = 14.dp))
                 // The Playlists view shows a grid of large covers; "All" keeps a row.
                 if (rows.isNotEmpty()) { if (view == 1) PlaylistGrid(rows, if (loadError) null else ::pin) else PlaylistShelf(rows, if (loadError) null else ::pin) }
                 com.ketvoice.app.ui.common.KetTextButton("Importer un fichier · .json / .m3u", { importFile.launch(arrayOf("application/json", "text/*", "audio/x-mpegurl", "audio/mpegurl", "*/*")) },
@@ -321,7 +325,10 @@ internal fun PlaylistShelf(rows: List<LocalPlaylist>, onPin: ((LocalPlaylist) ->
                             tint = if (playlist.pinned) theme.accent else theme.secondary, modifier = Modifier.size(18.dp))
                     }
                 }
-                Text(if (playlist.entries.size == 1) "1 titre" else "${playlist.entries.size} titres", color = theme.secondary, fontSize = 12.sp)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(if (playlist.entries.size == 1) "1 titre" else "${playlist.entries.size} titres", color = theme.secondary, fontSize = 12.sp)
+                    if (com.ketvoice.app.data.PlaylistRules.isShared(playlist.id)) SharedBadge(Modifier.padding(start = 6.dp))
+                }
             }
         }
     }
@@ -358,7 +365,10 @@ internal fun PlaylistGrid(rows: List<LocalPlaylist>, onPin: ((LocalPlaylist) -> 
                 Column(Modifier.weight(1f).padding(top = 8.dp)) {
                     Text(playlist.name, localize = false, color = theme.onBackground, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
                         maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(if (playlist.entries.size == 1) "1 titre" else "${playlist.entries.size} titres", color = theme.secondary, fontSize = 12.sp)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(if (playlist.entries.size == 1) "1 titre" else "${playlist.entries.size} titres", color = theme.secondary, fontSize = 12.sp)
+                        if (com.ketvoice.app.data.PlaylistRules.isShared(playlist.id)) SharedBadge(Modifier.padding(start = 6.dp))
+                    }
                 }
                 if (onPin != null) IconButton(onClick = { onPin(playlist) }, modifier = Modifier.size(48.dp)) {
                     Icon(Icons.Filled.PushPin, if (playlist.pinned) "Désépingler" else "Épingler",

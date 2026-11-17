@@ -109,6 +109,8 @@ object AccountSession {
         scope.launch { runCatching { Profiles.refresh() } }
         com.ketvoice.app.sync.LibrarySync.signedIn(context, fresh)
         com.ketvoice.app.sync.NowPlayingSync.signedIn(context)
+        com.ketvoice.app.sync.SharedPlaylists.signedIn(context)
+        PublicProfiles.signedIn(context)
     }
 
     /** Sends [call] with a valid token; on 401 the token is renewed once and the call sent again. */
@@ -143,6 +145,8 @@ object AccountSession {
         appContext?.let { context ->
             com.ketvoice.app.sync.LibrarySync.signedOut(context)
             com.ketvoice.app.sync.NowPlayingSync.signedOut()
+            com.ketvoice.app.sync.SharedPlaylists.signedOut(context)
+            PublicProfiles.signedOut()
             Profiles.signedOut(context)
         }
         _state.value = AccountState(message = message)
