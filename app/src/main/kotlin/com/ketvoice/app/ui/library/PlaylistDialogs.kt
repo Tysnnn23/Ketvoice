@@ -44,7 +44,8 @@ private fun userError(failure: Exception): String = if (failure is IllegalArgume
 @Composable
 fun PlaylistDialogs() {
     if (AppUi.showCreatePlaylist.value) CreatePlaylistDialog()
-    if (AppUi.showSpotifyImport.value) SpotifyImportDialog { AppUi.showSpotifyImport.value = false }
+    // « Importer des playlists » (Spotify and Deezer links), see AppUi.openPlaylistImport.
+    if (AppUi.showSpotifyImport.value) PlaylistImportSheet({ AppUi.showSpotifyImport.value = false })
 }
 
 @Composable
@@ -80,7 +81,7 @@ private fun CreatePlaylistDialog() {
 }
 
 @Composable
-private fun SettingsTextInput(value: String, onChange: (String) -> Unit, label: String, enabled: Boolean,
+internal fun SettingsTextInput(value: String, onChange: (String) -> Unit, label: String, enabled: Boolean,
                               modifier: Modifier = Modifier) {
     val theme = LocalTheme.current
     val accessible = AppText.t(label)
@@ -171,70 +172,6 @@ fun AddToPlaylistSheet(tracks: List<Track>, onClose: () -> Unit) {
                 Text("Créer une playlist", color = com.ketvoice.app.ui.common.sheetInk(), fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
             }
             Spacer(Modifier.height(10.dp))
-        }
-    }
-}
-
-@Composable
-fun SpotifyImportDialog(onClose: () -> Unit) {
-    val th = LocalTheme.current
-    val scope = rememberCoroutineScope()
-    var link by remember { mutableStateOf("") }
-    var preview by remember { mutableStateOf<SpotifyPreview?>(null) }
-    var entries by remember { mutableStateOf<List<PlaylistEntry>>(emptyList()) }
-    var progress by remember { mutableIntStateOf(0) }
-    var acknowledged by remember { mutableStateOf(false) }
-    var busy by remember { mutableStateOf(false) }
-    var error by remember { mutableStateOf("") }
-    var operation by remember { mutableStateOf<Job?>(null) }
-    fun run(block: suspend () -> Unit) {
-        if (busy) return
-        busy=true;error=""
-        operation=scope.launch { try { block() } catch(cancelled:CancellationException){throw cancelled}
-            catch(failure:Exception){error=userError(failure)} finally{busy=false} }
-    }
-    SettingsSheet(onDismiss={operation?.cancel();onClose()}) {
-        Column(Modifier.fillMaxWidth().heightIn(max = com.ketvoice.app.ui.common.sheetMaxHeight())
-            .verticalScroll(rememberScrollState()).padding(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
-            Text("Importer depuis Spotify",color=th.onBackground,fontSize=20.sp,fontWeight=FontWeight.Bold)
-            PlaylistArtwork(null, "Spotify", Modifier.size(100.dp))
-            Text("Import par lien public, sans connexion Spotify. Aucun fichier audio Spotify n'est téléchargé.",color=th.secondary)
-            SettingsTextInput(link,{link=it.take(2000);preview=null;entries=emptyList();acknowledged=false},
-                "Lien public Spotify",!busy,Modifier.testTag("spotify-link"))
-            SettingsAction("Charger l'aperçu", {run{preview=SpotifyPlaylistImport.preview(link);entries=emptyList();progress=0}},
-                enabled=!busy&&link.isNotBlank(),primary=true)
-            preview?.let { source ->
-                Text(source.name,localize=false,color=th.onBackground)
-                Text("${source.entries.size} titres visibles dans l'aperçu public",color=th.secondary)
-                Text("Spotify ne garantit pas que cet aperçu contient toute la playlist. Les titres privés ou absents ne sont pas inventés.",color=th.secondary)
-                Row(Modifier.fillMaxWidth().toggleable(acknowledged,enabled=!busy,role=Role.Checkbox){acknowledged=it}
-                    .heightIn(min=48.dp),verticalAlignment=Alignment.CenterVertically){
-                    Box(Modifier.size(24.dp).clip(RoundedCornerShape(7.dp)).background(if(acknowledged)th.accent else th.onBackground.copy(alpha=.12f)),
-                        contentAlignment=Alignment.Center){ if(acknowledged) Text("✓",color=Color.White,fontWeight=FontWeight.Bold) }
-                    Spacer(Modifier.width(10.dp))
-                    Text("J'accepte d'importer cet aperçu, qui peut être incomplet",modifier=Modifier.weight(1f))}
-                SettingsAction("Retrouver les titres dans Ketvoice", {run{entries=SpotifyPlaylistImport.resolve(source){progress=it}}},
-                    enabled=!busy,primary=true)
-                if(busy)Text("$progress / ${source.entries.size} recherches terminées",color=th.secondary)
-                if(entries.isNotEmpty()) {
-                    Text("${entries.count{it.track!=null}} / ${entries.size} titres disponibles",color=th.accent)
-                    Text("Les titres non retrouvés resteront visibles, mais ne seront pas annoncés comme jouables.",color=th.secondary)
-                    entries.take(8).forEach { item ->
-                        Column { Text(item.title,localize=false,color=th.onBackground,fontSize=14.sp)
-                            Text(if(item.track!=null) "Disponible" else "Non retrouvé",color=th.secondary,fontSize=12.sp) }
-                    }
-                }
-            }
-            if(busy)com.ketvoice.app.ui.common.KetProgressBar(null)
-            if(error.isNotBlank())Text(error,color=com.ketvoice.app.ui.common.DESTRUCTIVE)
-            Column(Modifier.fillMaxWidth(), horizontalAlignment=Alignment.End) {
-                SettingsAction("Créer avec les titres affichés", {run{
-                    val source=preview ?: return@run
-                    val id=PlaylistStore.create(source.name,entries,source.url,source.cover)
-                    onClose();AppUi.openPlaylist(id)
-                }}, enabled=!busy&&acknowledged&&entries.isNotEmpty(),primary=true)
-                SettingsAction(if(busy)"Annuler" else "Fermer", {operation?.cancel();onClose()})
-            }
         }
     }
 }

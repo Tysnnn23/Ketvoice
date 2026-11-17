@@ -173,10 +173,10 @@ class UnifiedExperienceHostTest {
     }
 
     @Test fun spotifySheetDoesNotAllowImportWithoutPreviewAndExplicitAcknowledgement() {
-        AppUi.showSpotifyImport.value = true
+        AppUi.openPlaylistImport()
         compose.setContent { KetvoiceTheme(useDark = true) { com.ketvoice.app.ui.library.PlaylistDialogs() } }
         compose.onNodeWithText("Créer avec les titres affichés").performScrollTo().assertIsNotEnabled()
-        compose.onNodeWithTag("spotify-link").performScrollTo().performTextInput("https://open.spotify.com/playlist/fixture")
+        compose.onNodeWithTag("playlist-import-link").performScrollTo().performTextInput("https://open.spotify.com/playlist/fixture")
         compose.onNodeWithText("Charger l'aperçu").assertIsEnabled()
         compose.onNodeWithText("Créer avec les titres affichés").performScrollTo().assertIsNotEnabled()
         compose.onNodeWithText("Fermer").performScrollTo().performClick()

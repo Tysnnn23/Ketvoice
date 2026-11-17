@@ -32,9 +32,30 @@ object AppUi {
     val SOURCES = 16
     val ARTIST = 17
     val PLAYLIST = 18
+    /** An ambiance of the smart library (« Calme », « Énergie »…), see [openMood]. */
+    val MOOD = 19
+    /** The review of titles saved several times. */
+    val DUPLICATES = 20
     val playlistId = androidx.compose.runtime.mutableStateOf<String?>(null)
     val showCreatePlaylist = androidx.compose.runtime.mutableStateOf(false)
     val showSpotifyImport = androidx.compose.runtime.mutableStateOf(false)
+
+    /**
+     * « Importer des playlists »: the sheet that imports a public Spotify or Deezer playlist by its link.
+     * Safe to call from anywhere (onboarding included): the sheet opens over the current page.
+     */
+    fun openPlaylistImport() { showSpotifyImport.value = true }
+
+    /** The page of one generated ambiance. */
+    fun openMood(mood: com.ketvoice.app.smartlib.Mood) {
+        com.ketvoice.app.ui.smartlib.SmartLibrary.openMood.value = mood
+        pushOverlay(MOOD)
+        showPlayer.value = false
+        bottomCollapsed.value = false
+    }
+
+    /** The review of duplicates: merge them, or keep them. */
+    fun openDuplicates() { pushOverlay(DUPLICATES); showPlayer.value = false; bottomCollapsed.value = false }
     val addToPlaylist = androidx.compose.runtime.mutableStateOf<com.ketvoice.app.data.Track?>(null)
     /** Several titles at once for a playlist (5.9.1): a whole album or a selection. */
     val addTracksToPlaylist = androidx.compose.runtime.mutableStateOf<List<com.ketvoice.app.data.Track>?>(null)
