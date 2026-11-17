@@ -18,6 +18,12 @@ class KetvoiceApp : Application(), ImageLoaderFactory {
     override fun onCreate() {
         super.onCreate()
         instance = this
+        // The work process (6.1, separation and Ketmix's preparation): only what its work reads, nothing that plays,
+        // shows or writes the app's settings and journal.
+        if (WorkProcess.isWork(getProcessName(), packageName)) {
+            runCatching { com.ketvoice.app.stems.StemModel.init(this) }
+            return
+        }
         com.ketvoice.app.data.AppText.init(this)
         // The voice separation model (optional download) and the separations already made: file checks only.
         runCatching { com.ketvoice.app.stems.StemModel.init(this) }
@@ -45,6 +51,10 @@ class KetvoiceApp : Application(), ImageLoaderFactory {
         if (MemoryRelief.releaseModels(level, com.ketvoice.app.stems.StemModel.charging()))
             Thread({ runCatching { com.ketvoice.app.stems.StemEngine.close() } }, "ketvoice-release-models")
                 .apply { isDaemon = true }.start()
+        // 6.1: the covers held in memory (up to a fifth of the app's memory) go once no screen of the app is shown:
+        // the playing process stays small behind other apps, and they come back from the disk cache when it returns.
+        if (MemoryRelief.releaseImages(level) && !WorkProcess.isWork(getProcessName(), packageName))
+            runCatching { coil.Coil.imageLoader(this).memoryCache?.clear() }
     }
 
     override fun newImageLoader(): ImageLoader {
@@ -68,12 +78,22 @@ class KetvoiceApp : Application(), ImageLoaderFactory {
     }
 }
 
+internal object WorkProcess {
+    /** The name of the work process, as declared for StemWorkService in the manifest. */
+    const val SUFFIX = ":stems"
+    fun isWork(processName: String?, packageName: String): Boolean = processName == packageName + SUFFIX
+}
+
 internal object MemoryRelief {
     @Suppress("DEPRECATION")
     fun releaseModels(level: Int, charging: Boolean): Boolean =
         level >= android.content.ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN && !charging ||
             level == android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL ||
             level >= android.content.ComponentCallbacks2.TRIM_MEMORY_COMPLETE
+
+    /** The images kept in memory go when the app's screens are hidden, and whenever memory runs low. */
+    @Suppress("DEPRECATION")
+    fun releaseImages(level: Int): Boolean = level >= android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW // low, critical, UI hidden and above
 
     @Suppress("DEPRECATION")
     fun note(level: Int): String? = when (level) {

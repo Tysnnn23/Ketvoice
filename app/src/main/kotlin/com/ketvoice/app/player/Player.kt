@@ -1177,6 +1177,18 @@ object Player {
         controller?.pause()
     }
 
+    /**
+     * Plays the session restored from the disk again at [positionMs] (6.1: playback that Android ended is brought
+     * back by [PlaybackRevival]). False when no restored session waits: then the listener already chose what plays.
+     */
+    internal fun resumeRestored(positionMs: Long): Boolean {
+        val state = _state.value
+        val track = state.current ?: return false
+        if (!restoredSessionPending) return state.playWhenReady
+        startPlayback(track, state.queue, state.index, positionMs, true, QueueOrigin.Internal)
+        return true
+    }
+
     fun toggle() {
         val state = _state.value
         if (restoredSessionPending) {

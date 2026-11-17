@@ -19,6 +19,9 @@ object SettingsStore {
         return glass.fromLegacyTint(runCatching { p.getFloat("glassTint", 0f) }.getOrDefault(0f))
     }
 
+    /** Whether this process read the settings already. */
+    val loaded: Boolean get() = prefs != null
+
     fun load(context: Context) {
         val p = context.applicationContext.getSharedPreferences(NAME, Context.MODE_PRIVATE)
         prefs = p
@@ -55,6 +58,7 @@ object SettingsStore {
         com.ketvoice.app.stems.VoiceLevel.level = s.voiceLevel.value / 100f
         s.ketmixSmartQueue.value = p.getBoolean("ketmixSmartQueue", true)
         s.ketmixLibrary.value = p.getBoolean("ketmixLibrary", true)
+        s.autoResume.value = p.getBoolean("autoResume", true)
         s.lyricVideoSound.value = p.getBoolean("lyricVideoSound", true)
         s.autoOfflineFavorites.value = p.getBoolean("autoOfflineFavorites", true)
         s.canvasWithMobileData.value = p.getBoolean("canvasWithMobileData", s.canvasWithMobileData.value)
@@ -198,6 +202,7 @@ object SettingsStore {
             .putInt("voiceLevel", s.voiceLevel.value)
             .putBoolean("ketmixSmartQueue", s.ketmixSmartQueue.value)
             .putBoolean("ketmixLibrary", s.ketmixLibrary.value)
+            .putBoolean("autoResume", s.autoResume.value)
             .putBoolean("lyricVideoSound", s.lyricVideoSound.value)
             .putBoolean("autoOfflineFavorites", s.autoOfflineFavorites.value)
             .putInt("lyricsTextSize", s.lyricsTextSize.value)

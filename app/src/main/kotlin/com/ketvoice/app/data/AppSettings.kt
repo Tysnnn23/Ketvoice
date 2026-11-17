@@ -52,6 +52,8 @@ object AppSettings {
     val ketmixSmartQueue = mutableStateOf(true)
     /** Downloaded titles are measured and separated ahead while the phone charges (5.11.0). */
     val ketmixLibrary = mutableStateOf(true)
+    /** Playback that Android or a battery manager stopped while it played comes back at the same title and place (6.1). */
+    val autoResume = mutableStateOf(true)
     /** Lyrics videos carry the song's sound (5.10.0). */
     val lyricVideoSound = mutableStateOf(true)
     val systemReduceMotion = mutableStateOf(false)

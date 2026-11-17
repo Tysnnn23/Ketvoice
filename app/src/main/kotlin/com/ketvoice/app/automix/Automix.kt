@@ -479,8 +479,14 @@ internal object Automix {
         val nextId = next.track.id
         val stemWork = if (!separate) null else CoroutineScope(currentCoroutineContext()).async(stemThread) {
             val ctx = currentCoroutineContext()
-            fun part(c: PcmCapture?, id: String, length: Long, intro: Boolean) = c?.pcm()?.let { pcm ->
-                runCatching { StemEngine.instrumental(id, length, intro, pcm, c.rate, c.startUs, compute, withVocals = intro && wantVocals) { !ctx.isActive } }
+            suspend fun part(c: PcmCapture?, id: String, length: Long, intro: Boolean): com.ketvoice.app.stems.StemAudio? {
+                val pcm = c?.pcm() ?: return null
+                // 6.1: the network runs in the work process (StemWork) and stores its result; here it is only applied.
+                if (compute && StemStore.quality(id, length, intro) == null) StemEngine.forMix()?.let { quality ->
+                    com.ketvoice.app.stems.StemWork.part(id, length, intro, pcm, c.rate, c.startUs, quality)
+                }
+                if (!ctx.isActive) return null
+                return runCatching { StemEngine.instrumental(id, length, intro, pcm, c.rate, c.startUs, compute = false, withVocals = intro && wantVocals) { !ctx.isActive } }
                     .onFailure { android.util.Log.w("KetvoiceStems", "separation failed: ${it.javaClass.simpleName}") }.getOrNull()
             }
             part(outCapture, current.id, duration, false) to part(inCapture, nextId, nextDuration, true)
@@ -803,9 +809,9 @@ internal object Automix {
             // No more than two parts wait for the network at once: each is ten megabytes of sound.
             while (separations.size >= 2) separations.removeFirst().await()
             val (rate, startUs) = recorded.rate to recorded.startUs
+            // 6.1: separated in the work process (StemWork); the result is stored where the mix reads it.
             separations += scope.async(stemThread) {
-                val ctx = currentCoroutineContext()
-                runCatching { StemEngine.prepare(id, length, intro, sound, rate, startUs) { !ctx.isActive } }.getOrDefault(false)
+                runCatching { com.ketvoice.app.stems.StemWork.part(id, length, intro, sound, rate, startUs) == com.ketvoice.app.stems.StemWork.Outcome.Done }.getOrDefault(false)
             }
         }
         try {

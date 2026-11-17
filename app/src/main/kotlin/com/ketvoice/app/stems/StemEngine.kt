@@ -93,14 +93,26 @@ internal object StemEngine {
         val stored = StemStore.quality(trackId, durationMs, intro)
         val quality = wanted() ?: return stored != null
         if (stored != null && stored >= quality) return true
-        if (pcm.size < 4 || rate <= 0) return stored != null
+        return store(trackId, durationMs, intro, pcm, rate, startUs, quality, cancelled) || stored != null
+    }
+
+    /**
+     * Separates this part with the model of [quality] and stores it, whatever is stored already (6.1: what a
+     * mix about to play asks the work process for). True when it was stored.
+     */
+    fun store(trackId: String, durationMs: Long, intro: Boolean, pcm: ShortArray, rate: Int, startUs: Long,
+              quality: Int, cancelled: () -> Boolean = { false }): Boolean {
+        if (pcm.size < 4 || rate <= 0) return false
         val left = Resampler.resample(pcm, 0, 2, rate, StemDsp.RATE)
         val right = Resampler.resample(pcm, 1, 2, rate, StemDsp.RATE)
-        if (cancelled()) return stored != null
-        val found = separate(left, right, startUs, quality, cancelled) ?: return stored != null
+        if (cancelled()) return false
+        val found = separate(left, right, startUs, quality, cancelled) ?: return false
         StemStore.save(trackId, durationMs, intro, found)
         return true
     }
+
+    /** The model a mix waiting for its result uses: the quick one when it is there, the better one otherwise. */
+    fun forMix(): Int? = if (StemModel.fast.ready || testNet != null) StemMask.FAST else wanted()
 
     /** Whether this part still needs the work of [prepare] (no separation, or one the wanted model would improve). */
     fun needs(trackId: String, durationMs: Long, intro: Boolean): Boolean {
@@ -125,7 +137,7 @@ internal object StemEngine {
         val mask = StemStore.load(trackId, durationMs, intro) ?: run {
             if (!compute) return null
             // Here a mix waits for the result: the quick model when it is there, the better one otherwise.
-            val quality = if (StemModel.fast.ready || testNet != null) StemMask.FAST else wanted() ?: return null
+            val quality = forMix() ?: return null
             val found = separate(left, right, startUs, quality, cancelled) ?: return null
             StemStore.save(trackId, durationMs, intro, found)
             found

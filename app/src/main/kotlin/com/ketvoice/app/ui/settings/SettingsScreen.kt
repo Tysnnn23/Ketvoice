@@ -382,6 +382,19 @@ fun SettingsScreen() {
                         sub = if (com.ketvoice.app.data.BackgroundPlayback.honorLike()) "Lancement d'applis → Ketvoice : désactivez « Gérer automatiquement », puis activez « Exécution en arrière-plan ». Sans cela, ce téléphone coupe la musique."
                             else "Sur ce téléphone, autorisez aussi Ketvoice à démarrer et à rester actif en arrière-plan : c'est souvent lui qui coupe la musique.",
                         value = "Ouvrir") { com.ketvoice.app.data.BackgroundPlayback.openManufacturerScreen(ctx) }
+                    SToggle(KetIcons.Refresh, "Reprendre automatiquement la lecture après un arrêt par le système",
+                        "Si Android ou le gestionnaire de batterie arrête Ketvoice pendant l'écoute, la musique reprend au même titre et au même endroit dans les minutes qui suivent. Jamais après une pause ou un arrêt de votre part.",
+                        AppSettings.autoResume.value) { AppSettings.autoResume.value = it; SettingsStore.save() }
+                    var exactAlarms by remember { mutableStateOf(com.ketvoice.app.player.PlaybackRevival.exactAllowed(ctx)) }
+                    androidx.lifecycle.compose.LifecycleResumeEffect(Unit) { exactAlarms = com.ketvoice.app.player.PlaybackRevival.exactAllowed(ctx); onPauseOrDispose { } }
+                    if (AppSettings.autoResume.value && !exactAlarms) SRow(KetIcons.Clock, "Reprise en moins d'une minute",
+                        sub = "Autorisez Ketvoice dans « Alarmes et rappels » : après un arrêt par Android, la musique revient en moins d'une minute, même écran éteint.",
+                        value = "Autoriser") {
+                        runCatching {
+                            ctx.startActivity(android.content.Intent(android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
+                                android.net.Uri.parse("package:${ctx.packageName}")).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+                        }
+                    }
                     var journal by remember { mutableStateOf(false) }
                     SRow(KetIcons.Info, "Journal de lecture",
                         sub = "Ce qui a arrêté la musique : réseau perdu, autre app, fermeture par Android. Reste sur le téléphone.",

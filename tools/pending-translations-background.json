@@ -1,0 +1,86 @@
+{
+ "Reprendre automatiquement la lecture après un arrêt par le système": {
+  "en": "Automatically resume playback after the system stops it",
+  "hi": "सिस्टम द्वारा रोके जाने के बाद प्लेबैक अपने आप फिर से शुरू करें",
+  "ja": "システムに停止されたあと再生を自動で再開",
+  "zh": "被系统停止后自动恢复播放",
+  "ru": "Автоматически возобновлять воспроизведение после остановки системой",
+  "it": "Riprendi automaticamente la riproduzione dopo un arresto del sistema",
+  "es": "Reanudar automáticamente la reproducción tras una parada del sistema",
+  "de": "Wiedergabe nach einem Stopp durch das System automatisch fortsetzen",
+  "pt": "Retomar automaticamente a reprodução após uma parada do sistema",
+  "ko": "시스템이 중지한 후 재생 자동으로 다시 시작"
+ },
+ "Si Android ou le gestionnaire de batterie arrête Ketvoice pendant l'écoute, la musique reprend au même titre et au même endroit dans les minutes qui suivent. Jamais après une pause ou un arrêt de votre part.": {
+  "en": "If Android or the battery manager stops Ketvoice while you listen, the music picks up at the same track and the same spot within minutes. Never after you paused or stopped it yourself.",
+  "hi": "अगर सुनते समय Android या बैटरी मैनेजर Ketvoice को रोक देता है, तो संगीत कुछ ही मिनटों में उसी गाने और उसी जगह से फिर शुरू हो जाता है। आपके द्वारा रोकने या बंद करने के बाद कभी नहीं।",
+  "ja": "再生中に Android やバッテリー管理が Ketvoice を停止した場合、数分以内に同じ曲の同じ位置から再開します。自分で一時停止・停止したあとは再開しません。",
+  "zh": "如果在收听时 Android 或电池管理器停止了 Ketvoice，音乐会在几分钟内从同一首歌的同一位置继续播放。你自己暂停或停止后绝不会恢复。",
+  "ru": "Если Android или диспетчер батареи остановит Ketvoice во время прослушивания, музыка продолжится с того же трека и того же места в течение нескольких минут. Никогда — после вашей паузы или остановки.",
+  "it": "Se Android o il gestore della batteria interrompe Ketvoice durante l'ascolto, la musica riprende dallo stesso brano e dallo stesso punto entro pochi minuti. Mai dopo una tua pausa o un tuo arresto.",
+  "es": "Si Android o el gestor de batería detiene Ketvoice mientras escuchas, la música se reanuda en la misma canción y en el mismo punto en pocos minutos. Nunca después de que tú la pauses o la detengas.",
+  "de": "Wenn Android oder der Akku-Manager Ketvoice während des Hörens beendet, geht die Musik innerhalb weniger Minuten beim selben Titel an derselben Stelle weiter. Nie nachdem du selbst pausiert oder gestoppt hast.",
+  "pt": "Se o Android ou o gestor de bateria parar o Ketvoice enquanto você ouve, a música retoma na mesma faixa e no mesmo ponto em poucos minutos. Nunca depois de você pausar ou parar.",
+  "ko": "듣는 중에 Android나 배터리 관리자가 Ketvoice를 중지하면 몇 분 안에 같은 곡의 같은 위치에서 음악이 다시 재생됩니다. 직접 일시정지하거나 중지한 뒤에는 절대 다시 시작하지 않습니다."
+ },
+ "Reprise en moins d'une minute": {
+  "en": "Resume within a minute",
+  "hi": "एक मिनट से कम में फिर से शुरू",
+  "ja": "1 分以内に再開",
+  "zh": "一分钟内恢复",
+  "ru": "Возобновление меньше чем за минуту",
+  "it": "Ripresa in meno di un minuto",
+  "es": "Reanudación en menos de un minuto",
+  "de": "Fortsetzen in unter einer Minute",
+  "pt": "Retomar em menos de um minuto",
+  "ko": "1분 이내에 다시 재생"
+ },
+ "Autorisez Ketvoice dans « Alarmes et rappels » : après un arrêt par Android, la musique revient en moins d'une minute, même écran éteint.": {
+  "en": "Allow Ketvoice in “Alarms & reminders”: after Android stops it, the music comes back in under a minute, even with the screen off.",
+  "hi": "“अलार्म और रिमाइंडर” में Ketvoice को अनुमति दें: Android द्वारा रोके जाने के बाद संगीत एक मिनट से कम में लौट आता है, स्क्रीन बंद होने पर भी।",
+  "ja": "「アラームとリマインダー」で Ketvoice を許可してください。Android に停止されても、画面がオフでも 1 分以内に音楽が戻ります。",
+  "zh": "在“闹钟和提醒”中允许 Ketvoice：被 Android 停止后，即使屏幕关闭，音乐也会在一分钟内恢复。",
+  "ru": "Разрешите Ketvoice в разделе «Будильники и напоминания»: после остановки Android музыка вернётся меньше чем за минуту, даже при выключенном экране.",
+  "it": "Consenti Ketvoice in «Sveglie e promemoria»: dopo un arresto di Android la musica torna in meno di un minuto, anche a schermo spento.",
+  "es": "Permite Ketvoice en «Alarmas y recordatorios»: tras una parada de Android, la música vuelve en menos de un minuto, incluso con la pantalla apagada.",
+  "de": "Erlaube Ketvoice unter „Wecker und Erinnerungen“: Nach einem Stopp durch Android ist die Musik in unter einer Minute zurück, auch bei ausgeschaltetem Bildschirm.",
+  "pt": "Permita o Ketvoice em “Alarmes e lembretes”: depois de uma parada do Android, a música volta em menos de um minuto, mesmo com a tela desligada.",
+  "ko": "‘알람 및 리마인더’에서 Ketvoice를 허용하세요. Android가 중지한 뒤에도 화면이 꺼져 있어도 1분 이내에 음악이 돌아옵니다."
+ },
+ "Reprise de la lecture": {
+  "en": "Playback resume",
+  "hi": "प्लेबैक फिर से शुरू",
+  "ja": "再生の再開",
+  "zh": "恢复播放",
+  "ru": "Возобновление воспроизведения",
+  "it": "Ripresa della riproduzione",
+  "es": "Reanudación de la reproducción",
+  "de": "Wiedergabe fortsetzen",
+  "pt": "Retomada da reprodução",
+  "ko": "재생 재개"
+ },
+ "La musique a été arrêtée par Android": {
+  "en": "Android stopped the music",
+  "hi": "Android ने संगीत रोक दिया",
+  "ja": "Android が音楽を停止しました",
+  "zh": "Android 停止了音乐",
+  "ru": "Android остановил музыку",
+  "it": "Android ha interrotto la musica",
+  "es": "Android detuvo la música",
+  "de": "Android hat die Musik gestoppt",
+  "pt": "O Android parou a música",
+  "ko": "Android가 음악을 중지했습니다"
+ },
+ "Touchez pour reprendre là où elle s'était arrêtée.": {
+  "en": "Tap to resume where it left off.",
+  "hi": "जहाँ रुका था वहीं से फिर शुरू करने के लिए टैप करें।",
+  "ja": "タップすると止まったところから再開します。",
+  "zh": "轻点即可从中断处继续。",
+  "ru": "Нажмите, чтобы продолжить с того места, где она остановилась.",
+  "it": "Tocca per riprendere da dove si era fermata.",
+  "es": "Toca para reanudar donde se detuvo.",
+  "de": "Tippe, um dort weiterzuhören, wo sie aufgehört hat.",
+  "pt": "Toque para retomar de onde parou.",
+  "ko": "탭하면 멈춘 곳부터 다시 재생합니다."
+ }
+}

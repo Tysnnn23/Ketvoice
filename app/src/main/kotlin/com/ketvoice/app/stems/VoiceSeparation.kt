@@ -1,8 +1,6 @@
 package com.ketvoice.app.stems
 
 import android.content.Context
-import android.media.MediaExtractor
-import android.media.MediaFormat
 import android.net.Uri
 import com.ketvoice.app.data.Downloader
 import kotlinx.coroutines.CoroutineScope
@@ -23,6 +21,7 @@ import kotlin.coroutines.coroutineContext
  * otherwise from the address the player streams it from; the quick model is used when it is there,
  * for it is about ten times faster. The result is the same whole-title separation the library makes
  * ([StemLibrary.separateWhole]), stored once and used by the voice level and by every Ketmix mix.
+ * Since 6.1 the work itself runs in the work process ([StemWork]); here only its state is kept.
  */
 internal object VoiceSeparation {
     sealed interface State {
@@ -60,7 +59,7 @@ internal object VoiceSeparation {
     private var job: Job? = null
     @Volatile private var appContext: Context? = null
 
-    fun init(context: Context) { appContext = context.applicationContext }
+    fun init(context: Context) { appContext = context.applicationContext; StemWork.init(context) }
 
     /** The model a title is separated with here: the quick one when it is there. Null when none is downloaded. */
     fun quality(): Int? = when {
@@ -95,24 +94,48 @@ internal object VoiceSeparation {
         val better = upgrade(stored ?: first ?: return)
         if (first == null && better == null) { _state.value = State.Ready(trackId); return }
         job?.cancel()
+        lastRequested = trackId
         _state.value = if (first != null) State.Working(trackId, 0f) else State.Ready(trackId)
         job = scope.launch {
             busy = true
             try {
                 val context = coroutineContext
                 if (first != null) {
-                    val ok = runCatching { separate(trackId, first, false) { context.isActive } }.getOrDefault(false)
+                    val outcome = runCatching { separate(trackId, first, false) }.getOrDefault(StemWork.Outcome.Failed)
                     if (!context.isActive) return@launch
+                    if (outcome == StemWork.Outcome.Lost) { _state.value = State.Idle; retryLater(trackId); return@launch }
+                    val ok = outcome == StemWork.Outcome.Done
                     _state.value = if (ok) State.Ready(trackId) else State.Unavailable(trackId)
                     if (!ok) { android.util.Log.w("KetvoiceStems", "voice separation unavailable for this title"); return@launch }
+                    retries.remove(trackId)
                     _separated.tryEmit(trackId)
                 }
                 // The better separation, in the background: the slider keeps working on the quick one meanwhile.
-                if (better != null && runCatching { separate(trackId, better, true) { context.isActive } }.getOrDefault(false) && context.isActive)
+                if (better != null && runCatching { separate(trackId, better, true) }.getOrNull() == StemWork.Outcome.Done && context.isActive)
                     _separated.tryEmit(trackId)
             } finally { busy = false; StemLibrary.wake() }
         }
     }
+
+    /** The title most recently asked for: a separation lost with the work process is asked again only for it. */
+    @Volatile private var lastRequested: String? = null
+    private val retries = HashMap<String, Int>()
+
+    /**
+     * The work process was stopped by Android while it separated [trackId] (6.1): the music went on; the
+     * separation is asked again a little later, twice at most, while the listener has not moved on.
+     */
+    private fun retryLater(trackId: String) {
+        val count = synchronized(retries) { (retries[trackId] ?: 0) + 1 }.also { n -> synchronized(retries) { retries[trackId] = n } }
+        if (count > MAX_RETRIES) return
+        scope.launch {
+            kotlinx.coroutines.delay(RETRY_MS)
+            if (lastRequested == trackId && _state.value == State.Idle) request(trackId)
+        }
+    }
+
+    private const val MAX_RETRIES = 2
+    private const val RETRY_MS = 20_000L
 
     /** Where the sound of [trackId] can be read: its downloaded file, or the address it is streamed from. */
     internal fun source(trackId: String): Uri? {
@@ -120,25 +143,11 @@ internal object VoiceSeparation {
         return synchronized(addresses) { addresses[trackId] }
     }
 
-    private fun separate(trackId: String, quality: Int, quiet: Boolean, goOn: () -> Boolean): Boolean {
-        val context = appContext ?: return false
-        val uri = source(trackId) ?: return false
-        val extractor = MediaExtractor()
-        try {
-            extractor.setDataSource(context, uri, null)
-            val index = (0 until extractor.trackCount).firstOrNull {
-                extractor.getTrackFormat(it).getString(MediaFormat.KEY_MIME)?.startsWith("audio/") == true
-            } ?: return false
-            val format = extractor.getTrackFormat(index)
-            if (StemLibrary.channels(format) != 2) return false
-            val durationMs = if (format.containsKey(MediaFormat.KEY_DURATION)) format.getLong(MediaFormat.KEY_DURATION) / 1000L else return false
-            if (durationMs <= 0) return false
-            extractor.selectTrack(index)
-            return StemLibrary.separateWhole(extractor, format, trackId, durationMs, quality, goOn) { fraction ->
-                if (!quiet) _state.value = State.Working(trackId, fraction.coerceIn(0f, 1f))
-            }
-        } finally {
-            runCatching { extractor.release() }
+    /** Asks the work process ([StemWork]) for the whole separation of [trackId]; [quiet] keeps the slider's progress as it is. */
+    private suspend fun separate(trackId: String, quality: Int, quiet: Boolean): StemWork.Outcome {
+        val uri = source(trackId) ?: return StemWork.Outcome.Failed
+        return StemWork.whole(trackId, uri, quality) { fraction ->
+            if (!quiet) _state.value = State.Working(trackId, fraction.coerceIn(0f, 1f))
         }
     }
 }
