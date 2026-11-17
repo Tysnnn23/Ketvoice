@@ -1985,7 +1985,11 @@
   "Chinois": "Chinese",
   "Coréen": "Korean",
   "Hindi": "Hindi",
-  "Arabe": "Arabic"
+  "Arabe": "Arabic",
+  "Nouvelles sorties": "New releases",
+  "Nouvelle sortie : %s": "New release: %s",
+  "Nouvelles sorties de vos artistes": "New releases from your artists",
+  "Une notification quand un artiste que vous suivez sort un album, un single ou un EP. Vérifié deux fois par jour, au plus trois notifications à la fois.": "A notification when an artist you follow releases an album, a single or an EP. Checked twice a day, at most three notifications at a time."
  },
  "hi": {
   "Reverb": "रीवर्ब",
@@ -3973,7 +3977,11 @@
   "Chinois": "चीनी",
   "Coréen": "कोरियाई",
   "Hindi": "हिंदी",
-  "Arabe": "अरबी"
+  "Arabe": "अरबी",
+  "Nouvelles sorties": "नई रिलीज़",
+  "Nouvelle sortie : %s": "नई रिलीज़: %s",
+  "Nouvelles sorties de vos artistes": "आपके कलाकारों की नई रिलीज़",
+  "Une notification quand un artiste que vous suivez sort un album, un single ou un EP. Vérifié deux fois par jour, au plus trois notifications à la fois.": "जब आपका फ़ॉलो किया हुआ कलाकार कोई एल्बम, सिंगल या EP जारी करता है तो एक सूचना। दिन में दो बार जाँच, एक बार में अधिकतम तीन सूचनाएँ।"
  },
  "ja": {
   "Reverb": "リバーブ",
@@ -5961,7 +5969,11 @@
   "Chinois": "中国語",
   "Coréen": "韓国語",
   "Hindi": "ヒンディー語",
-  "Arabe": "アラビア語"
+  "Arabe": "アラビア語",
+  "Nouvelles sorties": "新着リリース",
+  "Nouvelle sortie : %s": "新リリース：%s",
+  "Nouvelles sorties de vos artistes": "お気に入りアーティストの新着リリース",
+  "Une notification quand un artiste que vous suivez sort un album, un single ou un EP. Vérifié deux fois par jour, au plus trois notifications à la fois.": "フォロー中のアーティストがアルバム、シングル、EPをリリースしたときに通知します。1日2回確認し、通知は一度に最大3件です。"
  },
  "zh": {
   "Reverb": "混响",
@@ -7949,7 +7961,11 @@
   "Chinois": "中文",
   "Coréen": "韩语",
   "Hindi": "印地语",
-  "Arabe": "阿拉伯语"
+  "Arabe": "阿拉伯语",
+  "Nouvelles sorties": "新发行",
+  "Nouvelle sortie : %s": "新发行：%s",
+  "Nouvelles sorties de vos artistes": "你关注的艺人的新发行",
+  "Une notification quand un artiste que vous suivez sort un album, un single ou un EP. Vérifié deux fois par jour, au plus trois notifications à la fois.": "当你关注的艺人发行专辑、单曲或EP时发送通知。每天检查两次，每次最多三条通知。"
  },
  "ru": {
   "Reverb": "Реверберация",
@@ -9937,7 +9953,11 @@
   "Chinois": "Китайский",
   "Coréen": "Корейский",
   "Hindi": "Хинди",
-  "Arabe": "Арабский"
+  "Arabe": "Арабский",
+  "Nouvelles sorties": "Новые релизы",
+  "Nouvelle sortie : %s": "Новый релиз: %s",
+  "Nouvelles sorties de vos artistes": "Новые релизы ваших исполнителей",
+  "Une notification quand un artiste que vous suivez sort un album, un single ou un EP. Vérifié deux fois par jour, au plus trois notifications à la fois.": "Уведомление, когда исполнитель, на которого вы подписаны, выпускает альбом, сингл или EP. Проверка два раза в день, не более трёх уведомлений за раз."
  },
  "it": {
   "Reverb": "Riverbero",
@@ -11925,7 +11945,11 @@
   "Chinois": "Cinese",
   "Coréen": "Coreano",
   "Hindi": "Hindi",
-  "Arabe": "Arabo"
+  "Arabe": "Arabo",
+  "Nouvelles sorties": "Nuove uscite",
+  "Nouvelle sortie : %s": "Nuova uscita: %s",
+  "Nouvelles sorties de vos artistes": "Nuove uscite dei tuoi artisti",
+  "Une notification quand un artiste que vous suivez sort un album, un single ou un EP. Vérifié deux fois par jour, au plus trois notifications à la fois.": "Una notifica quando un artista che segui pubblica un album, un singolo o un EP. Controllo due volte al giorno, al massimo tre notifiche alla volta."
  },
  "es": {
   "Reverb": "Reverb",
@@ -13913,7 +13937,11 @@
   "Chinois": "Chino",
   "Coréen": "Coreano",
   "Hindi": "Hindi",
-  "Arabe": "Árabe"
+  "Arabe": "Árabe",
+  "Nouvelles sorties": "Novedades",
+  "Nouvelle sortie : %s": "Nuevo lanzamiento: %s",
+  "Nouvelles sorties de vos artistes": "Novedades de tus artistas",
+  "Une notification quand un artiste que vous suivez sort un album, un single ou un EP. Vérifié deux fois par jour, au plus trois notifications à la fois.": "Una notificación cuando un artista que sigues publica un álbum, un sencillo o un EP. Se comprueba dos veces al día, con un máximo de tres notificaciones a la vez."
  },
  "de": {
   "Reverb": "Reverb",
@@ -15901,7 +15929,11 @@
   "Chinois": "Chinesisch",
   "Coréen": "Koreanisch",
   "Hindi": "Hindi",
-  "Arabe": "Arabisch"
+  "Arabe": "Arabisch",
+  "Nouvelles sorties": "Neuerscheinungen",
+  "Nouvelle sortie : %s": "Neuerscheinung: %s",
+  "Nouvelles sorties de vos artistes": "Neuerscheinungen deiner Künstler",
+  "Une notification quand un artiste que vous suivez sort un album, un single ou un EP. Vérifié deux fois par jour, au plus trois notifications à la fois.": "Eine Benachrichtigung, wenn ein Künstler, dem du folgst, ein Album, eine Single oder eine EP veröffentlicht. Zweimal täglich geprüft, höchstens drei Benachrichtigungen auf einmal."
  },
  "pt": {
   "Reverb": "Reverb",
@@ -17889,7 +17921,11 @@
   "Chinois": "Chinês",
   "Coréen": "Coreano",
   "Hindi": "Hindi",
-  "Arabe": "Árabe"
+  "Arabe": "Árabe",
+  "Nouvelles sorties": "Novos lançamentos",
+  "Nouvelle sortie : %s": "Novo lançamento: %s",
+  "Nouvelles sorties de vos artistes": "Novos lançamentos dos seus artistas",
+  "Une notification quand un artiste que vous suivez sort un album, un single ou un EP. Vérifié deux fois par jour, au plus trois notifications à la fois.": "Uma notificação quando um artista que você segue lança um álbum, um single ou um EP. Verificado duas vezes por dia, no máximo três notificações por vez."
  },
  "ko": {
   "Reverb": "리버브",
@@ -19877,6 +19913,10 @@
   "Chinois": "중국어",
   "Coréen": "한국어",
   "Hindi": "힌디어",
-  "Arabe": "아랍어"
+  "Arabe": "아랍어",
+  "Nouvelles sorties": "새 발매",
+  "Nouvelle sortie : %s": "새 발매: %s",
+  "Nouvelles sorties de vos artistes": "내 아티스트의 새 발매",
+  "Une notification quand un artiste que vous suivez sort un album, un single ou un EP. Vérifié deux fois par jour, au plus trois notifications à la fois.": "팔로우하는 아티스트가 앨범, 싱글 또는 EP를 발매하면 알림을 보냅니다. 하루 두 번 확인하며 한 번에 최대 세 개까지 알립니다."
  }
 }
