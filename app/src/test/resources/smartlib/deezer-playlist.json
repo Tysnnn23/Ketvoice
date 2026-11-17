@@ -1,0 +1,8 @@
+{"id":11223344556,"title":"Rap FR chill 2010s","description":"","duration":1260,"public":true,"is_loved_track":false,"collaborative":false,"nb_tracks":5,"fans":12,
+"link":"https://www.deezer.com/playlist/11223344556","picture_xl":"https://e-cdns-images.dzcdn.net/images/playlist/0f1e2d3c4b5a/1000x1000-000000-80-0-0.jpg",
+"creator":{"id":5,"name":"someone","type":"user"},"type":"playlist",
+"tracks":{"data":[
+{"id":136332242,"readable":true,"title":"Bené","title_short":"Bené","title_version":"","duration":201,"rank":512345,"explicit_lyrics":true,"isrc":"FRX201700001","artist":{"id":1001,"name":"Werenoi","type":"artist"},"album":{"id":2001,"title":"Pétunias","cover_xl":"https://e-cdns-images.dzcdn.net/images/cover/aa/1000x1000-000000-80-0-0.jpg","type":"album"},"type":"track"},
+{"id":136332243,"readable":true,"title":"Chemin d'or","title_short":"Chemin d'or","duration":188,"explicit_lyrics":true,"isrc":"FRX201700002","artist":{"id":1001,"name":"Werenoi"},"album":{"id":2001,"title":"Pétunias","cover_xl":"https://e-cdns-images.dzcdn.net/images/cover/aa/1000x1000-000000-80-0-0.jpg"},"type":"track"},
+{"id":99887766,"readable":false,"title":"Titre retiré","duration":240,"isrc":"FRX201000099","artist":{"id":1002,"name":"Artiste Fantôme"},"album":{"id":2002,"title":"Archives"},"type":"track"}
+],"checksum":"abc","next":"https://api.deezer.com/playlist/11223344556/tracks?index=3"}}
