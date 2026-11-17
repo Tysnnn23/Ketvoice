@@ -169,6 +169,8 @@ fun HomeScreen() {
                     }
                 }
             }
+            // The week's discoveries (6.1): renewed every Monday, right under what was played last.
+            item(key = "discoveries") { HomeDiscoveries() }
             if (playlists.any { it.pinned }) item(key = "pinned") {
                 EditorialHeader("Épinglés", onMore = { AppUi.selectTab(AppUi.LIBRARY) })
                 PlaylistShelf(playlists.filter { it.pinned })
@@ -176,6 +178,7 @@ fun HomeScreen() {
             // Personal mixes appear once enough music has been played, and rotate at each launch.
             item(key = "mixes") { HomeMixes(Modifier.padding(bottom = 6.dp)) }
             item(key = "week") { HomeWeekCard() }
+            item(key = "replay") { HomeReplayLink() }
             // The first personal shelf always leads; the album row and the other shelves
             // take turns from one launch to the next, and never move while browsing.
             homeBlockOrder(PersonalMixes.sessionSeed, shelfRows.size, albums.isNotEmpty(), releases.isNotEmpty(), learned).forEach { block ->

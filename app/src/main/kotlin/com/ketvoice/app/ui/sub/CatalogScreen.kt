@@ -135,7 +135,7 @@ fun CatalogScreen(request: CatalogRequest? = AppUi.catalogRequest.value) {
                             "favorites" -> append(" · Vos favoris")
                             "history" -> append(" · Écoutés récemment")
                             "downloads" -> append(" · Hors ligne")
-                            "mix" -> append(" · Fait pour vous")
+                            "mix" -> append(if (request.id == com.ketvoice.app.data.WeeklyDiscoveries.MIX_ID) " · Nouveau chaque lundi" else " · Fait pour vous")
                         }
                     }),
                     covers = tracks.take(4).map { ArtworkRepo.coverForTrack(it) ?: it.coverUrl },
@@ -158,7 +158,12 @@ fun CatalogScreen(request: CatalogRequest? = AppUi.catalogRequest.value) {
                     saving = true
                     saveScope.launch {
                         val saved = runCatching {
-                            PlaylistStore.create(shownTitle.take(80), tracks.map(PlaylistRules::entry),
+                            // The week's discoveries are saved under their week, so two Mondays never share a name.
+                            val name = if (request.id == com.ketvoice.app.data.WeeklyDiscoveries.MIX_ID)
+                                com.ketvoice.app.data.WeeklyDiscoveries.week.value?.monday?.let {
+                                    com.ketvoice.app.data.WeeklyDiscoveries.playlistName(it, com.ketvoice.app.ui.sub.WrappedPeriod.locale())
+                                } ?: shownTitle else shownTitle
+                            PlaylistStore.create(name.take(80), tracks.map(PlaylistRules::entry),
                                 cover = tracks.firstOrNull()?.let { ArtworkRepo.coverForTrack(it) ?: it.coverUrl })
                         }.isSuccess
                         savedAsPlaylist = saved
