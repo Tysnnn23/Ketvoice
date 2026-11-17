@@ -395,7 +395,7 @@ internal fun UpdateDialog(info: UpdateInfo, onDismiss: () -> Unit, onSkip: () ->
                     .semantics { this[ReleaseBannerLoaded] = bannerLoaded }
                     .clip(RoundedCornerShape(topStart = corner, topEnd = corner))) {
                     AsyncImage(
-                        model = if (banner == UpdateChecker.CANONICAL_BANNER) "file:///android_asset/release_banner.png" else banner,
+                        model = if (banner == UpdateChecker.CANONICAL_BANNER) "file:///android_asset/" + com.ketvoice.app.LiteTuning.bannerAsset() else banner,
                         contentDescription = null,
                         onSuccess = { bannerLoaded = true },
                         contentScale = ContentScale.Crop,

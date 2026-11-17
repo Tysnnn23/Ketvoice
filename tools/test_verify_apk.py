@@ -4,7 +4,7 @@ from pathlib import Path
 import unittest
 from unittest.mock import patch
 import zipfile
-from verify_apk import CERTIFICATE, verify
+from verify_apk import CERTIFICATE, edition_of, verify
 
 
 class ApkGateTest(unittest.TestCase):
@@ -16,7 +16,7 @@ class ApkGateTest(unittest.TestCase):
             for name in ('AndroidManifest.xml', 'classes.dex', 'resources.arsc'):
                 archive.writestr(name, b'test fixture')
 
-    def tools(self, certificate=CERTIFICATE, quest=False, version='3.0.0-Beta3', code=25, debug=False):
+    def tools(self, certificate=CERTIFICATE, quest=False, version='3.0.0-Beta3', code=25, debug=False, label=None):
         def run(path, *args):
             if 'apksigner' in path.name:
                 return 'Signer #1 certificate SHA-256 digest: ' + certificate
@@ -24,6 +24,7 @@ class ApkGateTest(unittest.TestCase):
                 return 'Verification successful'
             return (f"package: name='com.ketvoice.app' versionCode='{code}' versionName='{version}'\n"
                     f"sdkVersion:'{32 if quest else 31}'\ntargetSdkVersion:'{34 if quest else 36}'\n" +
+                    (f"application-label:'{label}'\n" if label else '') +
                     ('application-debuggable' if debug else ''))
         return patch('verify_apk.run_tool', side_effect=run)
 
@@ -71,6 +72,42 @@ class ApkGateTest(unittest.TestCase):
             mocked.side_effect = reject
             with self.assertRaises(ValueError):
                 self.check()
+
+    def add_libs(self, *abis):
+        with zipfile.ZipFile(self.apk, 'a') as archive:
+            for abi in abis:
+                archive.writestr(f'lib/{abi}/libtensorflowlite_jni.so', b'elf')
+
+    def test_lite_needs_its_own_label_and_arm64_only(self):
+        self.add_libs('arm64-v8a')
+        with self.tools(label='Ketvoice Lite'):
+            report = self.check(edition='lite')
+        self.assertEqual('lite', report['edition'])
+        self.assertEqual('com.ketvoice.app', report['package'])
+        # A mobile APK renamed -Lite (or an unlabelled one) is refused.
+        for label in ('Ketvoice', None):
+            with self.tools(label=label), self.assertRaises(ValueError):
+                self.check(edition='lite')
+
+    def test_lite_with_other_abis_rejected(self):
+        self.add_libs('arm64-v8a', 'x86_64')
+        with self.tools(label='Ketvoice Lite'), self.assertRaises(ValueError):
+            self.check(edition='lite')
+
+    def test_mobile_and_quest_never_pass_as_each_other_or_lite(self):
+        with self.tools(label='Ketvoice Lite'), self.assertRaises(ValueError):
+            self.check()
+        with self.tools(label='Ketvoice'):
+            self.assertNotIn('edition', self.check())
+        with self.tools(quest=True, label='Ketvoice Quest'):
+            self.assertNotIn('edition', self.check(quest=True))
+        with self.tools(label='Ketvoice'), self.assertRaises(ValueError):
+            self.check(quest=True, edition='lite')
+
+    def test_edition_follows_the_published_file_name(self):
+        self.assertEqual('mobile', edition_of('Ketvoice-6.1.0.apk'))
+        self.assertEqual('quest', edition_of('Ketvoice-6.1.0-Quest.apk'))
+        self.assertEqual('lite', edition_of('Ketvoice-6.1.0-Lite.apk'))
 
     def test_truncated_zip_rejected(self):
         self.apk.write_bytes(self.apk.read_bytes()[:50])

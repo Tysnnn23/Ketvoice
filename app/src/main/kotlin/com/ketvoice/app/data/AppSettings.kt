@@ -44,8 +44,8 @@ object AppSettings {
     val ketmixStems = mutableStateOf(false)
     /** New separations only while the phone charges (those already made are always used). */
     val ketmixStemsCharging = mutableStateOf(false)
-    /** Which separation model: 0 automatic (the better one while charging), 1 always the better one, 2 always the quick one (6.0.0). */
-    val ketmixStemsQuality = mutableStateOf(0)
+    /** Which separation model: 0 automatic (the better one while charging), 1 always the better one, 2 always the quick one (6.0.0; the default in Lite). */
+    val ketmixStemsQuality = mutableStateOf(com.ketvoice.app.LiteTuning.defaultStemsQuality())
     /** Level of the voice in titles separated whole, 0..100 (6.0.0, the slider of the lyrics screen). */
     val voiceLevel = mutableStateOf(100)
     /** In shuffle, the next title is the one that mixes best with the current one (5.11.0). */
@@ -127,7 +127,8 @@ object AppSettings {
     val spatialAudio = mutableStateOf(false)
     val downloadQuality = mutableStateOf("~35MB par piste")
 
-    val highPerformanceMode = mutableStateOf(false)
+    /** On by default in Ketvoice Lite (LiteTuning): visible effects stay, barely visible ones are lightened. */
+    val highPerformanceMode = mutableStateOf(com.ketvoice.app.LiteTuning.defaultPerformanceMode())
 
     val lyricsTextSize = mutableStateOf(0)
     val questLyricsSize = lyricsTextSize

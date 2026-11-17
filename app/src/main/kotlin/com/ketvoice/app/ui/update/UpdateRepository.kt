@@ -2,6 +2,7 @@ package com.ketvoice.app.ui.update
 
 import android.content.Context
 import com.ketvoice.app.BuildConfig
+import com.ketvoice.app.Edition
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -16,7 +17,8 @@ import java.net.URL
 internal class UpdateRepository(
     context: Context,
     private val version: String = BuildConfig.VERSION_NAME,
-    private val quest: Boolean = BuildConfig.IS_QUEST,
+    /** Which APK of a release this build installs: mobile, Quest and Lite never update to another edition's. */
+    private val edition: Edition = Edition.current,
     private val now: () -> Long = System::currentTimeMillis,
     private val fetch: () -> String = ::fetchUpdateFeed
 ) {
@@ -33,7 +35,7 @@ internal class UpdateRepository(
 
     fun cached(force: Boolean = false): UpdateInfo? = visible(runCatching {
         val raw = prefs.getString("available_release", null) ?: return@runCatching null
-        UpdateFeed.select(JSONArray(raw), version, quest)
+        UpdateFeed.select(JSONArray(raw), version, edition)
     }.getOrNull(), force)
 
     suspend fun check(force: Boolean = false): UpdateInfo? = withContext(Dispatchers.IO) {
@@ -44,7 +46,7 @@ internal class UpdateRepository(
                 return@withLock cached()
             // Do not advance last_check on HTTP/JSON failures: returning to the app can retry.
             val feed = JSONArray(fetch())
-            val candidate = UpdateFeed.select(feed, version, quest)
+            val candidate = UpdateFeed.select(feed, version, edition)
             prefs.edit().putLong("last_check", time).putString("checked_version", version)
                 .putString("available_release", feed.toString()).apply()
             visible(candidate, force)
@@ -59,7 +61,15 @@ internal object UpdateFeed {
 
     fun validTag(tag: String): Boolean = versionPattern.matches(tag)
 
-    fun select(feed: JSONArray, current: String, quest: Boolean): UpdateInfo? {
+    fun select(feed: JSONArray, current: String, quest: Boolean): UpdateInfo? =
+        select(feed, current, if (quest) Edition.Quest else Edition.Mobile)
+
+    /**
+     * The newest release newer than [current] that carries this [edition]'s own APK. A release without it
+     * (for Lite, every release published before Ketvoice Lite existed) is skipped, never answered with
+     * another edition's APK.
+     */
+    fun select(feed: JSONArray, current: String, edition: Edition): UpdateInfo? {
         var newest: UpdateInfo? = null
         for (index in 0 until feed.length()) {
             val release = feed.optJSONObject(index) ?: continue
@@ -68,7 +78,7 @@ internal object UpdateFeed {
             if (!current.substringBefore('+').contains('-') &&
                 (release.optBoolean("prerelease") || tag.substringBefore('+').contains('-'))) continue
             val version = tag.removePrefix("v").removePrefix("V")
-            val expected = "Ketvoice-$version${if (quest) "-Quest" else ""}.apk"
+            val expected = edition.assetName(version)
             val assets = release.optJSONArray("assets") ?: continue
             val asset = (0 until assets.length()).mapNotNull { assets.optJSONObject(it) }.firstOrNull {
                 it.optString("name").equals(expected, ignoreCase = true) &&

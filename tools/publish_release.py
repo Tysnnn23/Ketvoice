@@ -1,6 +1,6 @@
 """Publish only verified, signed release APKs; never overwrite a public tag/release.
 
-Requires staged RELEASE-NOTES.md, validation.json, SHA256SUMS.txt and both APKs.
+Requires staged RELEASE-NOTES.md, validation.json, SHA256SUMS.txt and the three APKs (mobile, Quest, Lite).
 Example: --version 3.0.0-Beta3 --tag v3.0.0-Beta3-rebuild.1 --version-code 25
 """
 import argparse
@@ -12,7 +12,7 @@ from pathlib import Path
 import subprocess
 import urllib.parse
 import urllib.request
-from verify_apk import verify
+from verify_apk import edition_of, verify
 
 ROOT = Path(__file__).resolve().parents[1]
 REPO = 'Tysnnn23/Ketvoice'
@@ -42,7 +42,8 @@ def main():
     if commit != git('rev-parse', 'origin/main'):
         raise SystemExit('Push this source commit to main first')
     artifact_version = args.tag.removeprefix('v')
-    apks = [f'Ketvoice-{artifact_version}.apk', f'Ketvoice-{artifact_version}-Quest.apk']
+    apks = [f'Ketvoice-{artifact_version}.apk', f'Ketvoice-{artifact_version}-Quest.apk',
+            f'Ketvoice-{artifact_version}-Lite.apk']
     files = apks + ['RELEASE-NOTES.md', 'validation.json', 'SHA256SUMS.txt']
     validation = json.loads((stage / 'validation.json').read_text(encoding='utf-8'))
     if validation.get('source_commit') != commit:
@@ -59,9 +60,9 @@ def main():
     if not isinstance(scan, dict) or scan.get('findings') != 0 or not scan.get('entries'):
         raise SystemExit('A passing credential scan must be recorded')
     if (not isinstance(smoke, dict) or any(
-        not smoke.get(flavor, {}).get('installed_and_launched') for flavor in ('mobile', 'quest')
+        not smoke.get(flavor, {}).get('installed_and_launched') for flavor in ('mobile', 'quest', 'lite')
     )) and not args.allow_incomplete_device_validation:
-        raise SystemExit('Both signed release APKs require install/launch checks')
+        raise SystemExit('Every signed release APK requires install/launch checks')
     for flavor in ('mobile', 'quest'):
         for suite, minimum in (('jvm', 117), ('android_15_emulator_compose', 19)):
             result = validation['tests'][flavor][suite]
@@ -71,8 +72,14 @@ def main():
                 raise SystemExit('Incomplete or failed validation suite')
         if any(validation['lint'][flavor].get(level, 0) for level in ('Error', 'Fatal')):
             raise SystemExit('Release lint errors')
-    for index, name in enumerate(apks):
-        checked = verify(stage / name, args.build_tools, args.version, args.version_code, quest=index == 1)
+    # Lite runs the same code as mobile; whatever was run for it must have passed.
+    for suite in validation['tests'].get('lite', {}).values():
+        if isinstance(suite, dict) and any(suite.get(key, 0) for key in ('failures', 'errors')):
+            raise SystemExit('Failed Lite validation suite')
+    if any(validation.get('lint', {}).get('lite', {}).get(level, 0) for level in ('Error', 'Fatal')):
+        raise SystemExit('Release lint errors (Lite)')
+    for name in apks:
+        checked = verify(stage / name, args.build_tools, args.version, args.version_code, edition=edition_of(name))
         entry = next(a for a in validation['apks'] if a['name'] == name)
         if checked != entry:
             raise SystemExit('APK no longer matches its validation record: ' + name)

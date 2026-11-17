@@ -18,6 +18,12 @@ class KetvoiceApp : Application(), ImageLoaderFactory {
     override fun onCreate() {
         super.onCreate()
         instance = this
+        // Ketvoice Lite: budgets follow the phone's memory (LiteTuning; mobile and Quest keep their values).
+        if (LiteTuning.lite) runCatching {
+            val am = getSystemService(android.app.ActivityManager::class.java)
+            val info = android.app.ActivityManager.MemoryInfo().also { am.getMemoryInfo(it) }
+            LiteTuning.modest = LiteTuning.modest(am.isLowRamDevice, info.totalMem)
+        }
         // The work process (6.1, separation and Ketmix's preparation): only what its work reads, nothing that plays,
         // shows or writes the app's settings and journal.
         if (WorkProcess.isWork(getProcessName(), packageName)) {
@@ -25,18 +31,25 @@ class KetvoiceApp : Application(), ImageLoaderFactory {
             return
         }
         com.ketvoice.app.data.AppText.init(this)
+        // Lite starts what the first screen does not need a few seconds later (LiteTuning.deferred; none elsewhere).
+        val later = LiteTuning.deferred()
+        fun start(work: LiteTuning.StartWork, block: () -> Unit) {
+            if (work !in later) runCatching(block)
+            else android.os.Handler(mainLooper).postDelayed({ runCatching(block) }, LiteTuning.DEFERRED_START_MS)
+        }
         // The voice separation model (optional download) and the separations already made: file checks only.
         runCatching { com.ketvoice.app.stems.StemModel.init(this) }
         // Downloaded titles are prepared for Ketmix while the phone charges (waits 20 s, then works on its own thread).
-        runCatching { com.ketvoice.app.stems.StemLibrary.init(this) }
+        start(LiteTuning.StartWork.StemLibrary) { com.ketvoice.app.stems.StemLibrary.init(this) }
         runCatching { com.ketvoice.app.stems.VoiceSeparation.init(this) }
         runCatching { com.ketvoice.app.data.PlaybackJournal.init(this) }
         // The week's discoveries (6.1): read at once, renewed in the background on an unmetered network.
         runCatching { com.ketvoice.app.data.WeeklyDiscoveries.init(this) }
-        if (android.os.Build.FINGERPRINT != "robolectric") runCatching { com.ketvoice.app.data.DiscoveryWork.schedule(this) }
+        if (android.os.Build.FINGERPRINT != "robolectric")
+            start(LiteTuning.StartWork.DiscoverySchedule) { com.ketvoice.app.data.DiscoveryWork.schedule(this) }
         // Keeps a placed home-screen widget in step with playback (no work when none is placed).
-        if (!BuildConfig.IS_QUEST) runCatching { com.ketvoice.app.widget.NowPlayingWidgetUpdater.start(this) }
-        if (!BuildConfig.IS_QUEST) runCatching { com.ketvoice.app.widget.KetvoiceWidgetsUpdater.start(this) }
+        if (!BuildConfig.IS_QUEST) start(LiteTuning.StartWork.NowPlayingWidget) { com.ketvoice.app.widget.NowPlayingWidgetUpdater.start(this) }
+        if (!BuildConfig.IS_QUEST) start(LiteTuning.StartWork.Widgets) { com.ketvoice.app.widget.KetvoiceWidgetsUpdater.start(this) }
         // Bound the re-fetchable caches once per process, off the main thread and after startup.
         Thread({
             runCatching { Thread.sleep(20_000); com.ketvoice.app.data.DiskBudget.trimAll(this) }
@@ -66,17 +79,21 @@ class KetvoiceApp : Application(), ImageLoaderFactory {
             .components { add(com.ketvoice.app.data.PermanentImageInterceptor(this@KetvoiceApp)) }
             .memoryCache {
                 MemoryCache.Builder(this)
-                    .maxSizePercent(0.20)
+                    .maxSizePercent(LiteTuning.imageMemoryPercent())
                     .build()
             }
             .diskCache {
                 DiskCache.Builder()
                     .directory(dir)
-                    .maxSizeBytes(2L * 1024L * 1024L * 1024L)
+                    .maxSizeBytes(LiteTuning.imageDiskBytes())
                     .build()
             }
+            .apply { LiteTuning.imageDecoders()?.let { bitmapFactoryMaxParallelism(it) } }
             // In the performance mode images appear at once instead of fading in: one animated layer less per image.
-            .crossfade(!runCatching { getSharedPreferences("ketvoice_settings", MODE_PRIVATE).getBoolean("highPerformanceMode", false) }.getOrDefault(false))
+            .crossfade(!runCatching {
+                getSharedPreferences("ketvoice_settings", MODE_PRIVATE)
+                    .getBoolean("highPerformanceMode", LiteTuning.defaultPerformanceMode())
+            }.getOrDefault(LiteTuning.defaultPerformanceMode()))
             .build()
     }
 }

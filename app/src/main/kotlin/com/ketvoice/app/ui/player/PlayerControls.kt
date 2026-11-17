@@ -225,6 +225,14 @@ private fun CanvasVideo(path: String, playing: Boolean, modifier: Modifier = Mod
                     .build(),
                 false
             )
+            // Ketvoice Lite keeps a few seconds of a Canvas in memory instead of Media3's 50 s (a short loop needs no more).
+            .apply {
+                com.ketvoice.app.LiteTuning.canvasBuffer()?.let { b ->
+                    setLoadControl(androidx.media3.exoplayer.DefaultLoadControl.Builder()
+                        .setBufferDurationsMs(b.minMs, b.maxMs, b.playMs, b.rebufferMs)
+                        .setTargetBufferBytes(b.bytes).setPrioritizeTimeOverSizeThresholds(false).build())
+                }
+            }
             .build()
             .apply {
                 volume = 0f

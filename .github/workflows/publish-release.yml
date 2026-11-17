@@ -59,10 +59,15 @@ jobs:
           mkdir -p "$stage"
           cp artifact/mobile/release/*.apk "$stage/Ketvoice-$version.apk"
           cp artifact/quest/release/*.apk "$stage/Ketvoice-$version-Quest.apk"
+          # Ketvoice Lite (6.1): the lighter phone APK, published beside the other two.
+          lite=(artifact/lite/release/*.apk)
+          [ -f "${lite[0]}" ] && [ "${#lite[@]}" -eq 1 ] || { echo "::error::The CI artifact must hold exactly one Lite APK (lite/release/*.apk)"; exit 1; }
+          cp "${lite[0]}" "$stage/Ketvoice-$version-Lite.apk"
           cp "$meta/RELEASE-NOTES.md" "$meta/validation.json" "$meta/SHA256SUMS.txt" "$stage/"
           cd "$stage"
           # The checksum list must cover exactly the payload, and every file must match it.
-          expected=$(printf '%s\n' "Ketvoice-$version.apk" "Ketvoice-$version-Quest.apk" RELEASE-NOTES.md validation.json | sort)
+          expected=$(printf '%s\n' "Ketvoice-$version.apk" "Ketvoice-$version-Quest.apk" "Ketvoice-$version-Lite.apk" \
+            RELEASE-NOTES.md validation.json | sort)
           listed=$(cut -d' ' -f3- SHA256SUMS.txt | sort)
           [ "$expected" = "$listed" ] || { echo "::error::SHA256SUMS.txt does not cover exactly the payload"; exit 1; }
           sha256sum -c SHA256SUMS.txt
@@ -93,8 +98,10 @@ jobs:
           from verify_apk import verify
           bt, version, code = Path(sys.argv[1]), sys.argv[2], int(sys.argv[3])
           record = {a["name"]: a for a in json.load(open("stage/validation.json"))["apks"]}
-          for name, quest in ((f"Ketvoice-{version}.apk", False), (f"Ketvoice-{version}-Quest.apk", True)):
-              checked = verify(Path("stage") / name, bt, version, code, quest=quest)
+          for name, edition in ((f"Ketvoice-{version}.apk", "mobile"), (f"Ketvoice-{version}-Quest.apk", "quest"),
+                                (f"Ketvoice-{version}-Lite.apk", "lite")):
+              assert name in record, f"{name} is missing from the validation record"
+              checked = verify(Path("stage") / name, bt, version, code, edition=edition)
               assert checked == record[name], f"{name} no longer matches its validation record"
               print("verified", name)
           EOF
@@ -122,7 +129,8 @@ jobs:
           cd stage
           gh release create "$TAG" --draft --target "$source" --title "Ketvoice $version" \
             --notes-file RELEASE-NOTES.md \
-            "Ketvoice-$version.apk" "Ketvoice-$version-Quest.apk" RELEASE-NOTES.md validation.json SHA256SUMS.txt
+            "Ketvoice-$version.apk" "Ketvoice-$version-Quest.apk" "Ketvoice-$version-Lite.apk" \
+            RELEASE-NOTES.md validation.json SHA256SUMS.txt
           mkdir -p ../check
           gh release download "$TAG" --dir ../check
           (cd ../check && sha256sum -c ../stage/SHA256SUMS.txt)

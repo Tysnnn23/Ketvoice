@@ -793,7 +793,9 @@ internal object Automix {
         if (clockOf?.get() !== main && clockConfirmed(main, mainControl)) clockOf = java.lang.ref.WeakReference(main)
         if (!valid()) return
         fun introLength(t: Track) = t.durationMs.takeIf { it > 0 } ?: 600_000L
-        fun upcoming() = Player.automixUpcoming(if (Player.onMeteredNetwork() || slow) 1 else LOOKAHEAD).filter { it.track.id != current.id }
+        // Ketvoice Lite prepares fewer titles ahead (2, 1 on a modest phone): less memory and work at once.
+        fun upcoming() = Player.automixUpcoming(if (Player.onMeteredNetwork() || slow) 1 else com.ketvoice.app.LiteTuning.ketmixLookahead(full = LOOKAHEAD))
+            .filter { it.track.id != current.id }
         fun done(t: Track) = known(t.id, introLength(t), true) && preparedEndings[t.id]?.let { known(t.id, it, false) } == true
         if (known(current.id, duration, false) && upcoming().all { done(it.track) }) { preparedKey = key; return }
 
