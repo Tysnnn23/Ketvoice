@@ -88,6 +88,10 @@ class MainActivity : ComponentActivity() {
             Player.connect(applicationContext)
         } catch (_: Exception) {
         }
+        // 6.1: music that Android ended a moment ago comes back when the app is opened (when nothing brought it back before).
+        if (savedInstanceState == null) lifecycleScope.launch {
+            runCatching { com.ketvoice.app.player.PlaybackRevival.check(applicationContext, com.ketvoice.app.player.PlaybackRevival.WAY_APP) }
+        }
 
         runCatching { com.ketvoice.app.discord.Discord.attach(this) }
             .onFailure { android.util.Log.w("KetvoiceDiscord", "Discord init failed", it) }
@@ -138,6 +142,14 @@ class MainActivity : ComponentActivity() {
         handleAuthIntent(intent)
         handleWidgetIntent(intent)
         com.ketvoice.app.player.AutoVoice.handle(this, intent, lifecycleScope)
+        handleResumeIntent(intent)
+    }
+
+    /** The notification of a playback Android stopped was touched (6.1): it resumes, once. */
+    private fun handleResumeIntent(intent: Intent?) {
+        if (intent?.action != com.ketvoice.app.player.PlaybackRevival.ACTION_TAP) return
+        intent.action = null
+        lifecycleScope.launch { runCatching { com.ketvoice.app.player.PlaybackRevival.resumeAsked(applicationContext) } }
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -151,6 +163,7 @@ class MainActivity : ComponentActivity() {
         handleAuthIntent(intent)
         handleWidgetIntent(intent)
         com.ketvoice.app.player.AutoVoice.handle(this, intent, lifecycleScope)
+        handleResumeIntent(intent)
     }
 
     override fun onResume() {

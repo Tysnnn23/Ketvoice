@@ -172,6 +172,53 @@ class PlaybackService : MediaLibraryService() {
         mediaSession = session
         com.ketvoice.app.automix.AnalysisStore.init(applicationContext)
         com.ketvoice.app.automix.Automix.attach(automixHost)
+        // 6.1: Android refused to let playback start from the background (a resume after Android ended the app,
+        // with no exemption at that moment): paused rather than frozen, and a notification offers to resume.
+        setListener(object : Listener {
+            override fun onForegroundServiceStartNotAllowedException() {
+                if (::player.isInitialized && !com.ketvoice.app.automix.Automix.appInFront) player.pause()
+                PlaybackRevival.refused(this@PlaybackService)
+            }
+        })
+        // 6.1: where the music is, every few seconds while it plays, for a resume after Android ends the app.
+        serviceScope.launch {
+            while (isActive) {
+                delay(PlaybackRevival.MARK_MS)
+                markPlayback()
+            }
+        }
+    }
+
+    /**
+     * Records the title and place of the music and whether it plays ([PlaybackRevival]). A deck between two
+     * titles (no item yet, preparing) leaves the last mark as it is: only a pause or an end says "stopped".
+     */
+    private fun markPlayback() {
+        if (!::player.isInitialized || stopping) return
+        val p = player
+        val item = p.currentMediaItem
+        val state = p.playbackState
+        when {
+            item != null && (state == androidx.media3.common.Player.STATE_READY || state == androidx.media3.common.Player.STATE_BUFFERING) ->
+                PlaybackRevival.mark(this, item.mediaId, p.currentPosition, p.playWhenReady)
+            !p.playWhenReady || state == androidx.media3.common.Player.STATE_ENDED -> PlaybackRevival.mark(this, null, 0L, false)
+        }
+    }
+
+    /**
+     * Media3 asks Android to start this service again when its process was ended while it ran (START_STICKY):
+     * the intent is then null. That is one of the ways back of [PlaybackRevival].
+     */
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        val result = super.onStartCommand(intent, flags, startId)
+        if (intent == null) {
+            com.ketvoice.app.data.PlaybackJournal.add("playback service started again by Android")
+            serviceScope.launch {
+                val resumed = PlaybackRevival.check(this@PlaybackService, "service restarted by Android")
+                if (!resumed && ::player.isInitialized && player.currentMediaItem == null && !stopping) stopSelf()
+            }
+        }
+        return result
     }
 
     /**
@@ -317,7 +364,10 @@ class PlaybackService : MediaLibraryService() {
                 if (owner === this@PlaybackService.player && !isPlaying) SonicMeter.reset()
             }
             override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
-                if (owner !== this@PlaybackService.player || playWhenReady) return
+                if (owner !== this@PlaybackService.player) return
+                // A pause is marked at once: playback the listener paused is never brought back (6.1).
+                markPlayback()
+                if (playWhenReady) return
                 when (reason) {
                     androidx.media3.common.Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_FOCUS_LOSS ->
                         com.ketvoice.app.data.PlaybackJournal.add("paused: another app took the audio")
@@ -549,6 +599,8 @@ class PlaybackService : MediaLibraryService() {
     override fun onDestroy() {
         com.ketvoice.app.data.PlaybackJournal.add("playback service stopped")
         stopping = true
+        // An end the app chose (nothing plays any more): nothing to resume.
+        PlaybackRevival.stopped(this)
         com.ketvoice.app.automix.Automix.detach(automixHost)
         getSystemService(android.media.AudioManager::class.java).unregisterAudioDeviceCallback(audioDevices)
         BitPerfectState.report(ExactAudioStatus())

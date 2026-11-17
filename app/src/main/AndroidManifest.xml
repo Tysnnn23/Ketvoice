@@ -10,6 +10,9 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- 6.1: an exact alarm brings back playback that Android ended (when the listener allows alarms):
+         Android then lets the app start its playback from the background. Used only while music plays. -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
@@ -239,6 +242,11 @@
             android:name=".stems.StemWorkService"
             android:exported="false"
             android:process=":stems" />
+
+        <!-- 6.1: brings back playback that Android ended (an alarm while music plays, the notification's touch). -->
+        <receiver
+            android:name=".player.RevivalReceiver"
+            android:exported="false" />
 
         <!-- Discord OAuth2 + PKCE redirect handled by Ketvoice itself. -->
         <activity
