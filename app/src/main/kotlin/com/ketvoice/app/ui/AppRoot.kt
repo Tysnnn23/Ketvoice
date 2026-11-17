@@ -382,6 +382,8 @@ fun AppRoot() {
                 }
                 // ---- Ket 27 : menu contextuel d'un titre (appui long), au-dessus de tout le reste ----
                 com.ketvoice.app.ui.common.ContextMenuHost(Modifier.zIndex(7f))
+                // ---- Ketmix DJ editor (6.1): over the player and the menus ----
+                com.ketvoice.app.ui.player.KetmixEditorHost(Modifier.zIndex(7.5f))
                 // ---- Menu d'actions de playlist : même couche que le menu morceau,
                 //      donc au-dessus du chrome flottant (correctif de recouvrement) ----
                 AppUi.playlistMenu.value?.let { request ->
