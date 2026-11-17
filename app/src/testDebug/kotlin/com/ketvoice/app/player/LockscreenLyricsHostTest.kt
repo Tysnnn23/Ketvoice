@@ -164,8 +164,34 @@ class LockscreenLyricsHostTest {
 
 /** Android 15 and older: the same notification, without the Live Update request. */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [35])
+@Config(sdk = [35], qualifiers = "w411dp-h891dp-xhdpi")
+@org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
 class LockscreenLyricsOlderAndroidHostTest {
+    /** Android's own notification templates, inflated and drawn on the host (not a phone's lock screen). */
+    @Test fun theTemplatesDrawTheLineBigAndTheNextSmall() {
+        val context: Context = ApplicationProvider.getApplicationContext()
+        val line = LiveLine("t1", "Midnight City", "M83", 0, "Waiting in a car", "Waiting for a ride in the dark", "En attendant dans une voiture")
+        val n = LyricsNotification.build(context, LyricsNotification.content(line))
+        val builder = Notification.Builder.recoverBuilder(context, n)
+        for ((name, remote) in listOf("folded" to builder.createContentView(), "unfolded" to builder.createBigContentView())) {
+            val host = android.widget.FrameLayout(context)
+            val view = remote.apply(context, host)
+            val density = context.resources.displayMetrics.density
+            val w = (380 * density).toInt()
+            host.addView(view)
+            host.measure(android.view.View.MeasureSpec.makeMeasureSpec(w, android.view.View.MeasureSpec.EXACTLY),
+                android.view.View.MeasureSpec.makeMeasureSpec(((if (name == "folded") 76 else 200) * density).toInt(), android.view.View.MeasureSpec.EXACTLY))
+            host.layout(0, 0, w, host.measuredHeight)
+            val bitmap = android.graphics.Bitmap.createBitmap(w, host.measuredHeight.coerceAtLeast(1), android.graphics.Bitmap.Config.ARGB_8888)
+            val canvas = android.graphics.Canvas(bitmap)
+            org.robolectric.util.ReflectionHelpers.setField(canvas, "mAllowHwFeaturesInSwMode", true)
+            canvas.drawColor(0xFFF2F2F7.toInt())
+            host.draw(canvas)
+            val file = java.io.File("build/host-ui-preview/${com.ketvoice.app.BuildConfig.FLAVOR}/lockscreen-lyrics-$name.png")
+            file.parentFile?.mkdirs(); file.outputStream().use { bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+        }
+    }
+
     @Test fun noPromotionBeforeAndroid16() {
         val context: Context = ApplicationProvider.getApplicationContext()
         val content = LyricsNotification.content(LiveLine("t1", "Song", "Artist", 0, "Line", "Next"))

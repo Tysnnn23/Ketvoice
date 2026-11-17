@@ -53,18 +53,27 @@ internal object LyricsNotification {
     const val EXTRA_TRACK = "track"
 
     /** What the notification says, worked out from the line (host-tested). */
-    data class Content(val trackId: String, val title: String, val text: String?, val big: String?, val sub: String)
+    data class Content(val trackId: String, val title: String, val translation: String?, val next: String?, val sub: String) {
+        /** Folded: the translation if the lyrics screen shows one, else the next line. */
+        val text: String? get() = translation ?: next
+        /** Unfolded (and as a Live Update): both. */
+        val big: String? get() = listOfNotNull(translation, next).takeIf { it.isNotEmpty() }?.joinToString("\n")
+    }
 
-    fun content(line: LiveLine): Content {
-        val small = listOfNotNull(line.translation, line.next)
-        return Content(
-            trackId = line.trackId,
-            title = line.current,
-            // Folded: the translation if the lyrics screen shows one, else the next line. Unfolded: both.
-            text = small.firstOrNull(),
-            big = small.takeIf { it.isNotEmpty() }?.joinToString("\n"),
-            sub = listOf(line.title, line.artist).filter { it.isNotBlank() }.joinToString(" · "),
-        )
+    fun content(line: LiveLine): Content = Content(
+        trackId = line.trackId,
+        title = line.current,
+        translation = line.translation,
+        next = line.next,
+        sub = listOf(line.title, line.artist).filter { it.isNotBlank() }.joinToString(" · "),
+    )
+
+    /** The translation in italics, as under the lines of the lyrics screen. */
+    private fun styled(text: String?, translation: String?): CharSequence? {
+        if (text == null || translation.isNullOrEmpty() || !text.startsWith(translation)) return text
+        return android.text.SpannableString(text).apply {
+            setSpan(android.text.style.StyleSpan(android.graphics.Typeface.ITALIC), 0, translation.length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
     }
 
     fun ensureChannel(context: Context) {
@@ -102,7 +111,7 @@ internal object LyricsNotification {
         val builder = NotificationCompat.Builder(app, CHANNEL)
             .setSmallIcon(com.ketvoice.app.R.drawable.ic_notification_lyrics)
             .setContentTitle(content.title)
-            .setContentText(content.text)
+            .setContentText(styled(content.text, content.translation))
             .setSubText(content.sub.ifBlank { null })
             .setContentIntent(open)
             .setDeleteIntent(dismissed)
@@ -115,19 +124,25 @@ internal object LyricsNotification {
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setCategory(NotificationCompat.CATEGORY_STATUS)
             .setPriority(NotificationCompat.PRIORITY_LOW)
-        content.big?.let { builder.setStyle(NotificationCompat.BigTextStyle().setBigContentTitle(content.title).bigText(it)) }
+        content.big?.let { builder.setStyle(NotificationCompat.BigTextStyle().setBigContentTitle(content.title).bigText(styled(it, content.translation))) }
         // Android 16: a Live Update when the system allows it (ongoing, titled, standard or BigText style, not colourised).
         if (sdk >= PROMOTION_SDK) builder.addExtras(Bundle().apply { putBoolean(EXTRA_REQUEST_PROMOTED, true) })
         return builder.build()
     }
 
-    fun post(context: Context, content: Content): Boolean = try {
-        ensureChannel(context)
-        NotificationManagerCompat.from(context).notify(ID, build(context, content))
-        true
-    } catch (_: RuntimeException) {
-        // Notifications refused at that moment (a SecurityException among them): nothing else depends on it.
-        false
+    fun post(context: Context, content: Content): Boolean {
+        if (Build.VERSION.SDK_INT >= 33 && androidx.core.content.ContextCompat.checkSelfPermission(context,
+                android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) return false
+        return try {
+            ensureChannel(context)
+            NotificationManagerCompat.from(context).notify(ID, build(context, content))
+            true
+        } catch (_: SecurityException) {
+            // Notifications refused at that moment: nothing else depends on it.
+            false
+        } catch (_: RuntimeException) {
+            false
+        }
     }
 
     fun cancel(context: Context) { runCatching { NotificationManagerCompat.from(context).cancel(ID) } }
