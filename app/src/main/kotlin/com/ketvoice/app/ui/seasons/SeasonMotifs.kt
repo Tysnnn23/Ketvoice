@@ -43,14 +43,17 @@ internal fun DrawScope.drawMotif(motif: Motif, p: SeasonPalette, phase: Float, k
 
 // ------------------------------------------------------------------ Noël
 
+/** Two swags of lights on the right, clear of the greeting. */
 private fun DrawScope.garland(p: SeasonPalette, phase: Float, k: Float) {
-    val from = Offset(-size.width * .02f, 18.dp.toPx() * k)
-    val bend = Offset(size.width * .5f, 92.dp.toPx() * k)
-    val to = Offset(size.width * 1.02f, 30.dp.toPx() * k)
+    swag(p, phase, k, Offset(size.width * .44f, 0f), Offset(size.width * .63f, 62.dp.toPx() * k), Offset(size.width * .80f, 8.dp.toPx() * k), 0)
+    swag(p, phase, k, Offset(size.width * .80f, 8.dp.toPx() * k), Offset(size.width * .93f, 50.dp.toPx() * k), Offset(size.width * 1.04f, 0f), 7)
+}
+
+private fun DrawScope.swag(p: SeasonPalette, phase: Float, k: Float, from: Offset, bend: Offset, to: Offset, first: Int) {
     val wire = Path().apply { moveTo(from.x, from.y); quadraticTo(bend.x, bend.y, to.x, to.y) }
     drawPath(wire, Color.White.copy(alpha = .18f), style = Stroke(1.2.dp.toPx() * k))
     val colours = listOf(p.core, p.mid, p.cool, p.fill.first())
-    for (i in 1 until 13) bulb(quadratic(from, bend, to, i / 13f), colours[i % colours.size], twinkle(phase, i), k)
+    for (i in 1 until 7) bulb(quadratic(from, bend, to, i / 7f), colours[(first + i) % colours.size], twinkle(phase, first + i), k)
 }
 
 private fun quadratic(a: Offset, b: Offset, c: Offset, t: Float): Offset {
@@ -90,7 +93,8 @@ private fun DrawScope.flake(at: Offset, r: Float, colour: Color) {
 // ------------------------------------------------------------------ Nouvel An
 
 private fun DrawScope.bursts(p: SeasonPalette, phase: Float, k: Float) {
-    val places = listOf(Triple(.18f, 64f, 46f), Triple(.80f, 44f, 54f), Triple(.56f, 132f, 34f))
+    // Clear of the greeting on the left: high in the middle, and over the right side.
+    val places = listOf(Triple(.56f, 30f, 32f), Triple(.92f, 150f, 20f), Triple(.70f, 92f, 20f))
     val colours = listOf(p.mid, p.cool, p.fill.last())
     places.forEachIndexed { i, (fx, y, r) ->
         val open = .82f + .18f * sin(TAU * (phase + i / 3f))
@@ -104,9 +108,9 @@ private fun DrawScope.burst(at: Offset, r: Float, colour: Color, turn: Float, k:
         val dir = Offset(cos(a), sin(a))
         val start = at + dir * (r * .32f)
         val end = at + dir * r
-        drawLine(Brush.linearGradient(listOf(colour.copy(alpha = 0f), colour.copy(alpha = .62f)), start, end),
+        drawLine(Brush.linearGradient(listOf(colour.copy(alpha = 0f), colour.copy(alpha = .5f)), start, end),
             start, end, 1.6.dp.toPx() * k, StrokeCap.Round)
-        drawCircle(colour.copy(alpha = .8f), 1.8.dp.toPx() * k, end)
+        drawCircle(colour.copy(alpha = .7f), 1.6.dp.toPx() * k, end)
     }
 }
 
@@ -133,7 +137,7 @@ private fun DrawScope.hearts(p: SeasonPalette, phase: Float, k: Float) {
     for (i in 0 until 10) {
         val y = (seeded(i, 8f) * band - phase * band + band) % band
         val sway = sin(TAU * (phase + i * .2f)) * 6.dp.toPx() * k
-        val at = Offset(seeded(i, 9f) * size.width + sway, y)
+        val at = Offset((.42f + seeded(i, 9f) * .58f) * size.width + sway, y)
         val s = (10f + seeded(i, 10f) * 16f).dp.toPx() * k
         val fade = (y / band).coerceIn(0f, 1f)
         val path = heart(at, s)
@@ -144,7 +148,7 @@ private fun DrawScope.hearts(p: SeasonPalette, phase: Float, k: Float) {
 
 /** A heart of width [s] centred on [at]. */
 internal fun heart(at: Offset, s: Float): Path = Path().apply {
-    val h = s * .5f
+    val h = s * .62f
     moveTo(at.x, at.y + h * .9f)
     cubicTo(at.x - s * .9f, at.y + h * .1f, at.x - s * .55f, at.y - h * 1.1f, at.x, at.y - h * .45f)
     cubicTo(at.x + s * .55f, at.y - h * 1.1f, at.x + s * .9f, at.y + h * .1f, at.x, at.y + h * .9f)
@@ -156,11 +160,12 @@ internal fun heart(at: Offset, s: Float): Path = Path().apply {
 private val Bark = Color(0xFF1E1214)
 
 private fun DrawScope.branchPoint(t: Float, k: Float): Offset {
-    val a = Offset(-12.dp.toPx() * k, 26.dp.toPx() * k)
-    val d = Offset(size.width * .66f, 18.dp.toPx() * k)
+    // From the right edge towards the middle, above the avatar and clear of the greeting.
+    val a = Offset(size.width + 12.dp.toPx() * k, 14.dp.toPx() * k)
+    val d = Offset(size.width * .44f, 10.dp.toPx() * k)
     val u = 1f - t
-    val b = Offset(size.width * .22f, 86.dp.toPx() * k)
-    val c = Offset(size.width * .44f, -6.dp.toPx() * k)
+    val b = Offset(size.width * .80f, 78.dp.toPx() * k)
+    val c = Offset(size.width * .60f, -10.dp.toPx() * k)
     return a * (u * u * u) + b * (3 * u * u * t) + c * (3 * u * t * t) + d * (t * t * t)
 }
 
@@ -186,17 +191,17 @@ private fun DrawScope.petals(p: SeasonPalette, phase: Float, k: Float) {
     val band = size.height
     for (i in 0 until 12) {
         val y = (seeded(i, 12f) * band + phase * band) % band
-        val x = (seeded(i, 13f) * size.width + phase * size.width * .2f) % size.width
+        val x = size.width * (.4f + (seeded(i, 13f) + phase) % 1f * .6f)
         val r = (2.5f + seeded(i, 14f) * 2.5f).dp.toPx() * k
-        drawOval(lighten(p.core, .45f).copy(alpha = .6f * (1f - y / band)), Offset(x - r, y - r * .6f), Size(r * 2f, r * 1.2f))
+        drawOval(lighten(p.core, .3f).copy(alpha = .75f * (1f - y / band)), Offset(x - r, y - r * .6f), Size(r * 2f, r * 1.2f))
     }
 }
 
 // ------------------------------------------------------------------ Été
 
 private fun DrawScope.sun(p: SeasonPalette, phase: Float, k: Float) {
-    val at = Offset(size.width * .84f, 30.dp.toPx() * k)
-    val r = 40.dp.toPx() * k
+    val at = Offset(size.width * .68f, 26.dp.toPx() * k)
+    val r = 32.dp.toPx() * k
     for (i in 0 until 12) {
         val a = i * TAU / 12f + phase * TAU / 12f
         val dir = Offset(cos(a), sin(a))
@@ -207,16 +212,19 @@ private fun DrawScope.sun(p: SeasonPalette, phase: Float, k: Float) {
 
 private fun DrawScope.waves(p: SeasonPalette, phase: Float, k: Float) {
     val length = 90.dp.toPx() * k
-    listOf(160f to .34f, 182f to .24f, 204f to .14f).forEachIndexed { i, (y, alpha) ->
+    // A short swell under the sun, on the right, fading towards the greeting.
+    val start = size.width * .46f
+    listOf(112f to .34f, 128f to .24f, 144f to .14f).forEachIndexed { i, (y, alpha) ->
         val path = Path()
         val base = y.dp.toPx() * k
-        var x = 0f
+        var x = start
         while (x <= size.width) {
             val wy = base + sin(TAU * (x / length + phase + i * .25f)) * 5.dp.toPx() * k
-            if (x == 0f) path.moveTo(x, wy) else path.lineTo(x, wy)
+            if (x == start) path.moveTo(x, wy) else path.lineTo(x, wy)
             x += 6.dp.toPx() * k
         }
-        drawPath(path, p.cool.copy(alpha = alpha), style = Stroke(1.6.dp.toPx() * k, cap = StrokeCap.Round))
+        drawPath(path, Brush.horizontalGradient(listOf(Color.Transparent, p.cool.copy(alpha = alpha)), start, start + size.width * .25f),
+            style = Stroke(1.6.dp.toPx() * k, cap = StrokeCap.Round))
     }
 }
 

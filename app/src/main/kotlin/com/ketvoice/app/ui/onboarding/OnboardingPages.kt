@@ -41,6 +41,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -186,7 +187,7 @@ private fun loop(periodMs: Int, still: Float = .3f, reverse: Boolean = false): S
 internal fun PageArt(page: OnboardingPage, modifier: Modifier) {
     val th = LocalTheme.current
     val t = loop(if (page == OnboardingPage.Playlists) 2_800 else 6_000)
-    Canvas(modifier.clearAndSetSemantics { }.testTag("onboarding-art")) {
+    Canvas(modifier.clearAndSetSemantics { testTag = "onboarding-art" }) {
         when (page) {
             OnboardingPage.Language -> globe(th, t.value)
             OnboardingPage.Playlists -> covers(th, t.value)

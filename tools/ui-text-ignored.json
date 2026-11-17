@@ -149,5 +149,10 @@
  "hostLost": "Ketogether end-reason code, mapped to a French sentence before display",
  "notFound": "Ketogether end-reason code, mapped to a French sentence before display",
  "Ketvoice {0}{1} · {2} {3} · Android {4}\n\n": "header of the shared playback journal (with the edition), a support report kept in English",
- "Vice City": "name of the limited-edition theme, the same in every language"
+ "Vice City": "name of the limited-edition theme, the same in every language",
+ "DiscouragedApi": "lint suppression name in an annotation, not user text",
+ "openPlaylistImport": "method name looked up by reflection (onboarding's playlist import hook), not user text",
+ "season-decor-{0}": "test tag of a seasonal theme's decor, never shown",
+ "season-preview-{0}": "test tag of a seasonal theme's preview, never shown",
+ "season_{0}_{1}": "drawable resource name of an optional seasonal picture, never shown"
 }
