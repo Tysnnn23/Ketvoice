@@ -5,6 +5,7 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
@@ -39,6 +40,10 @@ object CanvasRepo {
     }
 
     private val mutex = Mutex()
+    private val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.IO)
+    /** A Canvas fetched from another site is kept up to this size; a larger one keeps streaming. */
+    private const val LINK_MAX_BYTES = 40L * 1024 * 1024
+    private val keeping = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
     private var appContext: Context? = null
     private val failed = java.util.concurrent.ConcurrentHashMap<String, Long>()
 
@@ -100,7 +105,7 @@ object CanvasRepo {
             val currentName = File(current).nameWithoutExtension
             if (!givesWay(current, curated, curatedName)) return
             _paths.value = _paths.value - track.id
-            if (currentName.startsWith("kvov-")) ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().remove(track.id).apply()
+            if (currentName.startsWith("kvov-") || currentName.startsWith("kvlink-")) ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().remove(track.id).apply()
             if (curatedName != null) failed.remove(track.id)
         }
         dropStale()
@@ -115,9 +120,26 @@ object CanvasRepo {
                 // A canvas published for the album by its owner takes priority:
                 // it is the same file for every track of that album.
                 val published = curated ?: track.canvasUrl?.takeIf { it.startsWith("https://") }
-                // A Canvas the owner gave as a link to another site is streamed from there, never downloaded.
+                // A Canvas the owner gave as a link to another site: played from the link the first time, and kept on
+                // the device once loaded (6.2.2), so it opens at once, online or not, and goes with a download.
                 if (published != null && streamedFromItsLink(published)) {
+                    val name = linkName(published)
+                    val target = File(canvasDir(ctx), "$name.mp4")
+                    if (target.exists() && target.length() > 10_000) {
+                        prefs.edit().putString(track.id, name).apply()
+                        _paths.value = _paths.value + (track.id to target.absolutePath)
+                        return@withLock
+                    }
+                    if (force) {
+                        // A download keeps the Canvas with the song: it is fetched now, or the link stays as it was.
+                        if (download(published, target, LINK_MAX_BYTES) != null) {
+                            prefs.edit().putString(track.id, name).apply()
+                            _paths.value = _paths.value + (track.id to target.absolutePath)
+                        } else _paths.value = _paths.value + (track.id to published)
+                        return@withLock
+                    }
                     _paths.value = _paths.value + (track.id to published)
+                    if (networkAllowed(ctx)) this@CanvasRepo.scope.launch { keepLink(track.id, published, target, name) }
                     return@withLock
                 }
                 if (published != null) {
@@ -141,7 +163,7 @@ object CanvasRepo {
                 }
                 // A file named after an owner's choice ("kvov-…", or a published "kvpub-…") is never taken
                 // for the catalogue's Canvas once that choice is gone: a downloaded title remembers its name.
-                fun catalogueName(name: String?) = name?.takeUnless { it.startsWith("kvov-") || it.startsWith("kvpub-") }
+                fun catalogueName(name: String?) = name?.takeUnless { it.startsWith("kvov-") || it.startsWith("kvpub-") || it.startsWith("kvlink-") }
                 val albumKey = albumKey(track)
                 val albumSpotifyId = catalogueName(prefs.getString(albumKey, null))
                 var spotifyId = catalogueName(track.spotifyId) ?: catalogueName(prefs.getString(track.id, null))
@@ -186,12 +208,39 @@ object CanvasRepo {
         if (again && MediaOverrides.canvas(track) != curated) resolve(track, force, again = false)
     }
 
+    /**
+     * Keeps a link's Canvas on the device while it plays from the link. When the file is there the title shows it
+     * instead of the link (the video starts again once, from the beginning of its loop).
+     */
+    private suspend fun keepLink(trackId: String, url: String, target: File, name: String) {
+        if (!keeping.add(name)) return
+        try {
+            if (download(url, target, LINK_MAX_BYTES) == null) return
+            val ctx = appContext ?: return
+            ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(trackId, name).apply()
+            // Only while the title still shows this very link: a new choice made meanwhile is left alone.
+            if (_paths.value[trackId] == url) _paths.value = _paths.value + (trackId to target.absolutePath)
+        } finally { keeping.remove(name) }
+    }
+
+    /** The Canvas already on the device for an album (one for all its titles), or null. */
+    fun albumFile(album: String, artist: String): File? {
+        val ctx = appContext ?: return null
+        val name = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(albumKey(album, artist), null) ?: return null
+        if (name.startsWith("kvov-") || name.startsWith("kvpub-") || name.startsWith("kvlink-")) return null
+        return File(canvasDir(ctx), "$name.mp4").takeIf { it.exists() && it.length() > 10_000 }
+    }
+
     /** True when the Canvas shown for a title ([current], a file or a link) is not the one the owner's choice ([curated]) calls for. */
     internal fun givesWay(current: String, curated: String?, curatedName: String?): Boolean {
         val name = File(current).nameWithoutExtension
-        if (curated == null) return current.startsWith("https://") || name.startsWith("kvov-")
-        return if (streamedFromItsLink(curated)) current != curated else name != curatedName
+        if (curated == null) return current.startsWith("https://") || name.startsWith("kvov-") || name.startsWith("kvlink-")
+        // A link's Canvas kept on the device (kvlink-…) is the same choice as the link itself.
+        return if (streamedFromItsLink(curated)) current != curated && name != linkName(curated) else name != curatedName
     }
+
+    /** The file name under which a link's Canvas is kept: it follows the link, so a new link is a new file. */
+    internal fun linkName(url: String): String = "kvlink-" + sha(url)
 
     /** A Canvas address outside Ketvoice's own storage: played from its link, whatever its size. */
     internal fun streamedFromItsLink(url: String): Boolean =
@@ -209,10 +258,12 @@ object CanvasRepo {
         return File(path).takeIf { it.exists() && it.length() > 10_000 }
     }
 
-    private fun albumKey(track: Track): String {
-        val album = track.album.trim().lowercase(java.util.Locale.ROOT)
-        val artist = track.artist.substringBefore(',').trim().lowercase(java.util.Locale.ROOT)
-        return if (album.isBlank()) "album:${track.id}" else "album:$artist:$album"
+    private fun albumKey(track: Track): String = albumKey(track.album, track.artist, track.id)
+
+    private fun albumKey(album: String, artist: String, id: String = ""): String {
+        val a = album.trim().lowercase(java.util.Locale.ROOT)
+        val who = artist.substringBefore(',').trim().lowercase(java.util.Locale.ROOT)
+        return if (a.isBlank()) "album:$id" else "album:$who:$a"
     }
 
     fun testPipeline(): Boolean {
@@ -233,7 +284,7 @@ object CanvasRepo {
     private fun canvasDir(context: Context): File =
         File(context.filesDir, "canvas").apply { if (!exists()) mkdirs() }
 
-    private fun download(url: String, dest: File): File? {
+    private fun download(url: String, dest: File, maxBytes: Long = Long.MAX_VALUE): File? {
         return try {
             var current = URL(url)
             var c: HttpURLConnection? = null
@@ -261,9 +312,18 @@ object CanvasRepo {
                 conn.disconnect()
                 return null
             }
+            // A link of another site may be anything: one that announces more than the limit is left to stream.
+            if (conn.contentLengthLong > maxBytes) { conn.disconnect(); return null }
             val tmp = File(dest.parentFile, dest.name + ".part")
             if (tmp.exists()) tmp.delete()
-            conn.inputStream.use { input -> tmp.outputStream().use { input.copyTo(it) } }
+            conn.inputStream.use { input -> tmp.outputStream().use { out ->
+                val buffer = ByteArray(64 * 1024); var total = 0L
+                while (true) {
+                    val read = input.read(buffer); if (read < 0) break
+                    total += read; if (total > maxBytes) { tmp.delete(); return null }
+                    out.write(buffer, 0, read)
+                }
+            } }
             conn.disconnect()
             if (tmp.length() < 10_000) {
                 tmp.delete()

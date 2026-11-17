@@ -634,6 +634,8 @@ object Downloader {
                 val canvasFile = canvasName?.let { File(it) }
                     ?: o.optString("canvasSpotifyId").takeIf { it.isNotEmpty() }
                         ?.let { File(c.filesDir, "canvas/$it.mp4") }
+                    // One Canvas for the whole album: a title downloaded before it had its own takes the album's (6.2.2).
+                    ?: CanvasRepo.albumFile(o.optString("album"), o.getString("artist"))
                 val track = Track(
                     id = id,
                     title = o.getString("title"),
