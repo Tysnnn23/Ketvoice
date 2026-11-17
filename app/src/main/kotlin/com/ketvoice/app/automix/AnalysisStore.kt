@@ -125,19 +125,59 @@ internal object AnalysisStore {
         dirty = true
     }
 
-    /** Written at most once per transition, off the main thread. */
+    /**
+     * Written at most once per transition, off the main thread. Since 6.1 two processes keep measurements (the
+     * playing one, and the work process that prepares downloads): what the other wrote since is read and kept
+     * first, under a file lock, so that neither erases the other's work.
+     */
     fun save() {
-        val (target, text) = synchronized(this) {
-            if (!dirty) return
-            dirty = false
-            val root = JSONObject()
-            for ((key, value) in entries) root.put(key, encode(value))
-            (file ?: return) to root.toString()
-        }
+        val target = synchronized(this) { if (!dirty) return; file } ?: return
         runCatching {
-            val temporary = File(target.parentFile, target.name + ".tmp")
-            temporary.writeText(text)
-            if (!temporary.renameTo(target)) { target.writeText(text); temporary.delete() }
+            locked(target) {
+                val text = synchronized(this) {
+                    merge(readDisk(target))
+                    dirty = false
+                    val root = JSONObject()
+                    for ((key, value) in entries) root.put(key, encode(value))
+                    root.toString()
+                }
+                val temporary = File(target.parentFile, target.name + ".tmp")
+                temporary.writeText(text)
+                if (!temporary.renameTo(target)) { target.writeText(text); temporary.delete() }
+            }
+        }
+    }
+
+    /** Takes up what the other process measured and wrote since (the playing process, after the library's work). */
+    fun refresh() {
+        val target = synchronized(this) { file } ?: return
+        runCatching { val disk = locked(target) { readDisk(target) }; synchronized(this) { merge(disk) } }
+    }
+
+    private fun readDisk(target: File): Map<String, SegmentAnalysis> {
+        if (!target.isFile || target.length() >= 4_000_000L) return emptyMap()
+        val root = JSONObject(target.readText())
+        val out = LinkedHashMap<String, SegmentAnalysis>()
+        for (key in root.keys()) decode(root.optJSONObject(key))?.let { out[key] = it }
+        return out
+    }
+
+    /** Adds the entries of [disk] this process does not have, as the oldest ones; called under the object's lock. */
+    internal fun merge(disk: Map<String, SegmentAnalysis>) {
+        val missing = disk.filterKeys { it !in entries }
+        if (missing.isEmpty()) return
+        val mine = LinkedHashMap(entries)
+        entries.clear()
+        for ((k, v) in missing) entries[k] = v
+        for ((k, v) in mine) entries[k] = v
+        while (entries.size > LIMIT) entries.remove(entries.keys.first())
+    }
+
+    /** One writer at a time: the threads of this process (a monitor), then the other process (a file lock). */
+    private val diskMonitor = Any()
+    private fun <T> locked(target: File, block: () -> T): T = synchronized(diskMonitor) {
+        java.io.RandomAccessFile(File(target.parentFile, target.name + ".lock"), "rw").use { lock ->
+            lock.channel.lock().use { block() }
         }
     }
 

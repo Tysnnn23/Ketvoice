@@ -34,4 +34,19 @@ class MemoryReliefTest {
         assertNull(com.ketvoice.app.MemoryRelief.note(moderate))
         assertNotNull(com.ketvoice.app.MemoryRelief.note(critical))
     }
+
+    /** 6.1: the covers kept in memory go once the app's screens are hidden, so that the playing process stays small. */
+    @Suppress("DEPRECATION")
+    @Test fun imagesGoWhenTheScreensAreHidden() {
+        val c = android.content.ComponentCallbacks2::class.java
+        assertTrue(com.ketvoice.app.MemoryRelief.releaseImages(c.getField("TRIM_MEMORY_UI_HIDDEN").getInt(null)))
+        assertTrue(com.ketvoice.app.MemoryRelief.releaseImages(c.getField("TRIM_MEMORY_RUNNING_LOW").getInt(null)))
+        assertFalse(com.ketvoice.app.MemoryRelief.releaseImages(c.getField("TRIM_MEMORY_RUNNING_MODERATE").getInt(null)))
+    }
+
+    @Test fun theWorkProcessIsKnownByItsName() {
+        assertTrue(com.ketvoice.app.WorkProcess.isWork("com.ketvoice.app:stems", "com.ketvoice.app"))
+        assertFalse(com.ketvoice.app.WorkProcess.isWork("com.ketvoice.app", "com.ketvoice.app"))
+        assertFalse(com.ketvoice.app.WorkProcess.isWork(null, "com.ketvoice.app"))
+    }
 }

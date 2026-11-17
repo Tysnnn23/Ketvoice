@@ -85,6 +85,8 @@ internal class ModelPack(private val release: String, val parts: List<Part>, pri
         // A separation may be running: the model is closed once it is done, away from the screen.
         scope.launch {
             StemEngine.close()
+            // The models live in the work process since 6.1: it lets them go too.
+            StemWork.closeModels()
             dir?.listFiles()?.forEach { it.delete() }
         }
     }

@@ -20,6 +20,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -32,7 +33,7 @@ import java.nio.ByteOrder
  * Downloaded titles are made ready for Ketmix before they are ever played (5.11.0): while the
  * phone charges, the intro and the ending of each downloaded file are decoded, measured (tempo,
  * key, levels) and, with the separation model, separated. One title at a time, on a thread of
- * low priority; nothing is done on battery, and nothing while a mix is playing.
+ * low priority in the work process (6.1, [StemWork]); nothing is done on battery, and nothing while a mix is playing.
  */
 internal object StemLibrary {
     /** Titles done and titles found, for Settings. */
@@ -52,7 +53,7 @@ internal object StemLibrary {
     private val scope = CoroutineScope(SupervisorJob() + worker)
     private var job: Job? = null
     @Volatile private var appContext: Context? = null
-    /** Files that could not be read: not tried again in this process. */
+    /** Files that could not be read: not tried again by this process. */
     private val unreadable = HashSet<String>()
 
     fun init(context: Context) {
@@ -71,9 +72,8 @@ internal object StemLibrary {
     /** What stands between the library and its preparation, in the order it is checked. */
     internal fun allowed(ketmix: Boolean, library: Boolean, charging: Boolean): Boolean = ketmix && library && charging
 
-    internal fun pending(item: Downloader.Item, depth: AnalysisDepth, separate: Boolean, durationMs: Long): Boolean {
-        val id = item.track.id
-        val introLength = item.track.durationMs.takeIf { it > 0 } ?: durationMs
+    internal fun pending(id: String, trackDurationMs: Long, depth: AnalysisDepth, separate: Boolean, durationMs: Long): Boolean {
+        val introLength = trackDurationMs.takeIf { it > 0 } ?: durationMs
         val measured = AnalysisStore.intro(id, introLength, depth) != null && AnalysisStore.outro(id, durationMs, depth) != null
         // 6.0.0: downloaded titles are separated whole (the player's voice level works from it, and every mix can use it).
         val separated = !separate || StemEngine.wanted()?.let { q -> (StemStore.wholeQuality(id) ?: -1) >= q } != false
@@ -84,55 +84,104 @@ internal object StemLibrary {
         if (job?.isActive == true) return
         job = scope.launch {
             delay(20_000)
-            runCatching { run() }.onFailure { android.util.Log.w("KetvoiceStems", "library preparation stopped: ${it.javaClass.simpleName}") }
+            val outcome = runCatching { run() }.onFailure { android.util.Log.w("KetvoiceStems", "library preparation stopped: ${it.javaClass.simpleName}") }
+                .getOrNull()
             _progress.value = _progress.value.copy(running = false)
+            // The work process was stopped by Android (6.1): the music went on, the preparation starts again a little later.
+            if (outcome == StemWork.Outcome.Lost) scope.launch { delay(LOST_RETRY_MS); wake() }
         }
     }
+
+    private const val LOST_RETRY_MS = 60_000L
 
     // A title the listener is waiting for (the voice slider) comes first.
     private fun goAhead() = allowed(AppSettings.automix.value, AppSettings.ketmixLibrary.value, StemModel.charging()) && !VoiceSeparation.busy
 
-    private suspend fun run() {
-        if (!goAhead()) return
-        AnalysisStore.init(appContext ?: return)
+    /**
+     * Hands the downloads to the work process (6.1: decoding, measuring and separating them takes the most
+     * memory of all, and a phone's battery manager stops the biggest process first: now never the music's).
+     * While a mix is prepared or played it holds the work between two titles; it stops when the phone is unplugged.
+     */
+    private suspend fun run(): StemWork.Outcome? {
+        if (!goAhead()) return null
+        val context = appContext ?: return null
+        AnalysisStore.init(context)
         // The most recent downloads first, and no more than the measurements Ketmix keeps (see AnalysisStore).
-        val items = Downloader.items.value.filter { it.dashManifestUrl == null && it.file.isFile && it.file.absolutePath !in unreadable }.take(MAX_TITLES)
-        var done = 0
+        val items = Downloader.items.value.filter { it.dashManifestUrl == null && it.file.isFile }.take(MAX_TITLES)
+            .map { LibraryItem(it.track.id, it.file.absolutePath, it.track.durationMs) }
         _progress.value = Progress(0, items.size, running = true)
+        val depth = AnalysisDepth.of(AppSettings.ketmixAnalysis.value)
+        val separate = AppSettings.ketmixStems.value && StemModel.anyReady
+        return kotlinx.coroutines.coroutineScope {
+            val work = async {
+                StemWork.library(context, items, depth, separate) { done, total ->
+                    _progress.value = Progress(done, total, running = true)
+                    if (done % 8 == 0) AnalysisStore.refresh()
+                }
+            }
+            val watch = launch {
+                while (isActive) {
+                    StemWork.hold(Automix.busy)
+                    if (!allowed(AppSettings.automix.value, AppSettings.ketmixLibrary.value, StemModel.charging())) { work.cancel(); break }
+                    delay(2_000)
+                }
+            }
+            try {
+                runCatching { work.await() }.getOrNull()
+            } finally {
+                watch.cancel()
+                StemWork.hold(false)
+                // What the work process measured joins what Ketmix knows here.
+                AnalysisStore.refresh()
+            }
+        }
+    }
+
+    /** A downloaded file the work process prepares: its title, its path and the length the catalogue gives it. */
+    internal data class LibraryItem(val id: String, val path: String, val trackDurationMs: Long)
+
+    /**
+     * Prepares [items] one after the other (in the work process, or here in the host tests). [goOn] stops it
+     * (unplugged), [held] holds it between two titles (a mix, a voice the listener waits for), [separating]
+     * stops a whole-title separation half-way (that voice), [progress] hears titles done and found.
+     */
+    internal suspend fun runItems(items: List<LibraryItem>, depth: AnalysisDepth, separate: Boolean, goOn: () -> Boolean,
+                                  held: () -> Boolean, progress: (Int, Int) -> Unit, separating: () -> Boolean = goOn) {
+        var done = 0
         for (item in items) {
-            if (!kotlin.coroutines.coroutineContext.isActive || !goAhead()) return
+            if (!kotlin.coroutines.coroutineContext.isActive || !goOn()) break
             // The title being mixed comes first: the phone's processor is left to it.
-            while (Automix.busy) delay(2_000)
-            val depth = AnalysisDepth.of(AppSettings.ketmixAnalysis.value)
-            val separate = AppSettings.ketmixStems.value && StemModel.anyReady
-            val ok = runCatching { one(item, depth, separate) }.getOrDefault(false)
-            if (!ok) unreadable += item.file.absolutePath
+            while (held() && kotlin.coroutines.coroutineContext.isActive) delay(2_000)
+            if (item.path !in unreadable) {
+                val ok = runCatching { one(item, depth, separate, separating) }.getOrDefault(false)
+                if (!ok) unreadable += item.path
+            }
             done++
-            _progress.value = Progress(done, items.size, running = true)
+            progress(done, items.size)
             if (done % 8 == 0) AnalysisStore.save()
         }
         AnalysisStore.save()
     }
 
     /** Measures and separates the intro and the ending of one downloaded file. False when the file cannot be decoded. */
-    private fun one(item: Downloader.Item, depth: AnalysisDepth, separate: Boolean): Boolean {
+    private fun one(item: LibraryItem, depth: AnalysisDepth, separate: Boolean, goOn: () -> Boolean): Boolean {
         val extractor = MediaExtractor()
         try {
-            extractor.setDataSource(item.file.absolutePath)
+            extractor.setDataSource(item.path)
             val index = (0 until extractor.trackCount).firstOrNull {
                 extractor.getTrackFormat(it).getString(MediaFormat.KEY_MIME)?.startsWith("audio/") == true
             } ?: return false
             val format = extractor.getTrackFormat(index)
             val durationMs = if (format.containsKey(MediaFormat.KEY_DURATION)) format.getLong(MediaFormat.KEY_DURATION) / 1000L else return false
             if (durationMs < 30_000L) return true
-            if (!pending(item, depth, separate, durationMs)) return true
+            if (!pending(item.id, item.trackDurationMs, depth, separate, durationMs)) return true
             extractor.selectTrack(index)
-            val id = item.track.id
-            val introLength = item.track.durationMs.takeIf { it > 0 } ?: durationMs
+            val id = item.id
+            val introLength = item.trackDurationMs.takeIf { it > 0 } ?: durationMs
             part(extractor, format, id, introLength, true, 0L, minOf(depth.introMs, durationMs), depth, separate = false)
             val from = maxOf(0L, durationMs - depth.outroMs)
             part(extractor, format, id, durationMs, false, from, durationMs, depth, separate = false)
-            if (separate && channels(format) == 2) whole(extractor, format, id, durationMs)
+            if (separate && channels(format) == 2) whole(extractor, format, id, durationMs, goOn)
             return true
         } finally {
             runCatching { extractor.release() }
@@ -141,11 +190,11 @@ internal object StemLibrary {
 
     internal fun channels(format: MediaFormat) = if (format.containsKey(MediaFormat.KEY_CHANNEL_COUNT)) format.getInteger(MediaFormat.KEY_CHANNEL_COUNT) else 0
 
-    private fun whole(extractor: MediaExtractor, format: MediaFormat, id: String, durationMs: Long) {
+    private fun whole(extractor: MediaExtractor, format: MediaFormat, id: String, durationMs: Long, goOn: () -> Boolean) {
         val quality = StemEngine.wanted() ?: return
         val stored = StemStore.wholeQuality(id)
         if (stored != null && stored >= quality) return
-        separateWhole(extractor, format, id, durationMs, quality, ::goAhead) {}
+        separateWhole(extractor, format, id, durationMs, quality, goOn) {}
     }
 
     /**

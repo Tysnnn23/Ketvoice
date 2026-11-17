@@ -233,6 +233,13 @@
             </intent-filter>
         </service>
 
+        <!-- 6.1: voice separation and Ketmix's preparation of downloads run in their own process. A battery
+             manager or Android's memory killer that stops it leaves the music playing; the work is asked again. -->
+        <service
+            android:name=".stems.StemWorkService"
+            android:exported="false"
+            android:process=":stems" />
+
         <!-- Discord OAuth2 + PKCE redirect handled by Ketvoice itself. -->
         <activity
             android:name=".discord.DiscordAuthActivity"
