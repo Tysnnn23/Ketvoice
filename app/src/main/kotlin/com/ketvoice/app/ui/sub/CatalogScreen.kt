@@ -102,9 +102,9 @@ fun CatalogScreen(request: CatalogRequest? = AppUi.catalogRequest.value) {
     val shownTitle = if (appNamed) AppText.t(request.title) else request.title
     Column(Modifier.fillMaxSize().pageBackground(theme).statusBarsPadding()) {
         com.ketvoice.app.ui.common.Ket27PageBar(page?.title ?: request.title, { AppUi.closeOverlay() })
-        if (loading) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            com.ketvoice.app.ui.common.ActivitySpinner(size = 26.dp)
-        } else if (tracks.isEmpty()) {
+        // Loading: placeholder rows laid out as the titles will be (no jump when they arrive).
+        if (loading) CatalogSkeletonList(rows = 8, modifier = Modifier.padding(top = 8.dp))
+        else if (tracks.isEmpty()) {
             val remote = request.kind in listOf("album", "genre", "mix")
             EmptyState(if (remote) "Catalogue indisponible" else "Aucun titre dans cette collection.",
                 when (request.kind) {
@@ -112,7 +112,12 @@ fun CatalogScreen(request: CatalogRequest? = AppUi.catalogRequest.value) {
                     "history" -> "Vos titres écoutés apparaîtront ici. Lancez une première écoute."
                     "album", "genre", "mix" -> "Vérifiez votre connexion, puis réessayez."
                     else -> "Écoutez un titre pour commencer votre collection."
-                }, if (remote) "Réessayer" else "Rechercher des titres") {
+                }, if (remote) "Réessayer" else "Rechercher des titres", icon = when (request.kind) {
+                    "favorites" -> com.ketvoice.app.ui.common.KetIcons.Heart
+                    "history" -> com.ketvoice.app.ui.common.KetIcons.Clock
+                    "album", "genre", "mix" -> com.ketvoice.app.ui.common.KetIcons.Wifi
+                    else -> com.ketvoice.app.ui.common.KetIcons.Music
+                }) {
                     if (remote) attempt++ else openTrackSearch()
                 }
         } else LazyVerticalGrid(

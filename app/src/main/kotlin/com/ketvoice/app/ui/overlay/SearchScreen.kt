@@ -302,14 +302,8 @@ fun SearchScreen() {
             }
 
             loading && results.isEmpty() && artists.isEmpty() && albums.isEmpty() && playlists.isEmpty() -> {
-                Box(
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 50.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    com.ketvoice.app.ui.common.ActivitySpinner(size = 28.dp)
-                }
+                // Placeholder rows laid out as the results will be, instead of a lone spinner.
+                com.ketvoice.app.ui.sub.CatalogSkeletonList(rows = 6, modifier = Modifier.padding(top = 8.dp))
             }
 
             results.isEmpty() && artists.isEmpty() && albums.isEmpty() && playlists.isEmpty() && lyricTracks.isEmpty() && lyricFound.isEmpty() -> {
@@ -317,7 +311,7 @@ fun SearchScreen() {
                     1 -> "Vérifiez que vos sources sont activées et accessibles."
                     2 -> "Essayez un autre titre, artiste ou album de votre bibliothèque."
                     else -> "Essayez un titre plus court ou le nom de l'artiste. Vérifiez aussi votre connexion."
-                }, if (segment == 1) "Gérer les sources" else "Réessayer") {
+                }, if (segment == 1) "Gérer les sources" else "Réessayer", icon = com.ketvoice.app.ui.common.KetIcons.Search) {
                     if (segment == 1) AppUi.pushOverlay(AppUi.SOURCES) else attempt++
                 }
             }

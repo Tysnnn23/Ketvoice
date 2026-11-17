@@ -133,7 +133,12 @@ internal fun Modifier.trackRowClick(track: Track, enabled: Boolean = true, role:
     val anchor = rememberRowAnchor()
     // With a mouse or a trackpad (large screens only): a secondary click opens
     // the same menu, and the title can be dragged onto a playlist of the sidebar (ui/adaptive/PointerExtras).
+    // Under the finger the row darkens as an iOS list row does (RowHighlight), and lets go slowly.
+    val ink = LocalTheme.current.onBackground
+    val highlight = remember(ink) { RowHighlight(ink) }
+    val source = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     return rowAnchor(anchor).largeScreenTrackRow(track) { ContextMenus.open(track, anchor.bounds()) }
-        .combinedClickable(enabled = enabled, role = role, onLongClickLabel = AppText.t("Options"),
+        .combinedClickable(interactionSource = source, indication = highlight,
+        enabled = enabled, role = role, onLongClickLabel = AppText.t("Options"),
         onLongClick = { haptic(Haptics.Kind.Tick); ContextMenus.open(track, anchor.bounds()) }, onClick = onClick)
 }

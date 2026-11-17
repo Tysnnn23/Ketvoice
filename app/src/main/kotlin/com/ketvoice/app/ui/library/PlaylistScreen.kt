@@ -144,7 +144,7 @@ fun PlaylistScreen() {
             }
         }
         if (playlist == null) {
-            EmptyState("Playlist introuvable", "Cette collection n'est plus disponible sur cet appareil.", "Bibliothèque") {
+            EmptyState("Playlist introuvable", "Cette collection n'est plus disponible sur cet appareil.", "Bibliothèque", icon = com.ketvoice.app.ui.common.KetIcons.Playlist) {
                 AppUi.closeOverlay()
             }
             return@Column
@@ -196,7 +196,7 @@ fun PlaylistScreen() {
                     Box(Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
                         EmptyState("Votre playlist est vide",
                             "Ouvrez le menu d'un titre et choisissez Ajouter à une playlist.",
-                            "Rechercher des titres", onAction = ::openTrackSearch)
+                            "Rechercher des titres", icon = com.ketvoice.app.ui.common.KetIcons.Playlist, onAction = ::openTrackSearch)
                     }
                 }
             } else {

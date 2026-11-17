@@ -98,7 +98,7 @@ fun ReplayScreen() {
         if (showWrapped) WrappedStory(rememberWrappedRecap()) { showWrapped = false }
         if (stats.totalPlays == 0) {
             EmptyState("Pas encore de Replay", "Vos titres les plus écoutés apparaîtront ici dès que vous aurez écouté de la musique.",
-                "Rechercher des titres", onAction = ::openTrackSearch)
+                "Rechercher des titres", icon = com.ketvoice.app.ui.common.KetIcons.Clock, onAction = ::openTrackSearch)
         } else {
             LazyColumn(Modifier.weight(1f).fillMaxWidth().testTag("replay-list"),
                 contentPadding = PaddingValues(bottom = LocalAdaptiveLayout.current.bottomPaddingDp.dp)) {

@@ -160,9 +160,9 @@ internal fun AlbumPage(request: CatalogRequest, page: CatalogPage?, tracks: List
                         AlbumHero(title, artist, page?.releaseDate, cover, tracks, savedIds, loading, top, refresh,
                             frame = draft ?: savedFrame)
                     }) {
-                    if (loading) items(5, key = { "album-loading:$it" }) { CatalogSkeletonRow() }
+                    if (loading) items(5, key = { "album-loading:$it" }) { CatalogSkeletonRow(it) }
                     else if (tracks.isEmpty()) item {
-                        EmptyState("Catalogue indisponible", "Vérifiez votre connexion, puis réessayez.", "Réessayer", onAction = onRetry)
+                        EmptyState("Catalogue indisponible", "Vérifiez votre connexion, puis réessayez.", "Réessayer", icon = com.ketvoice.app.ui.common.KetIcons.Wifi, onAction = onRetry)
                     }
                     itemsIndexed(tracks, key = { index, track -> "${track.id}:$index" }) { index, track ->
                         StaggeredReveal(order = index.coerceAtMost(5),
