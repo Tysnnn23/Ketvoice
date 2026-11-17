@@ -25,6 +25,7 @@ import kotlinx.coroutines.launch
  * dataSync with a notification (progress, speed, « Annuler »), a partial wake lock and a Wi-Fi lock, all released
  * when the transfer ends. The locks are never held while no transfer runs.
  */
+@android.annotation.SuppressLint("ForegroundServiceType") // the manifest declares dataSync; lint does not match it to this class
 class AirKetService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var wake: PowerManager.WakeLock? = null
@@ -49,8 +50,8 @@ class AirKetService : Service() {
     }
 
     private fun enterForeground(notification: Notification) {
-        if (Build.VERSION.SDK_INT >= 29) startForeground(ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
-        else startForeground(ID, notification)
+        androidx.core.app.ServiceCompat.startForeground(this, ID, notification,
+            if (Build.VERSION.SDK_INT >= 29) ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC else 0)
     }
 
     @Suppress("DEPRECATION")
