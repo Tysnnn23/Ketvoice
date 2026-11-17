@@ -1,0 +1,208 @@
+{
+  "schema": 8,
+  "version": "6.1.2",
+  "versionCode": 131,
+  "source_commit": "4f5a2f3210d05838eac84c5b5981e515e35b5c70",
+  "created_at": "2026-11-17T15:34:57.964402+00:00",
+  "build_origin": {
+    "kind": "github_actions_with_owner_discord_sdk",
+    "workflow": "android.yml",
+    "run_id": 44110644498,
+    "artifact": {
+      "id": 14342497079,
+      "sha256": "5ff9a9629c9edfa226614cb76598d0247306019e2ae7d3681b255e0e4078c144"
+    },
+    "gradle": "assembleMobileRelease assembleQuestRelease assembleLiteRelease",
+    "note": "Signed by CI with the pinned keystore secret; the Discord Social SDK AAR matched its pinned SHA-256."
+  },
+  "local_validation": {
+    "result": "debug JVM/Robolectric suites for the three flavors (mobile, quest, lite), release lint and the UI text audit passed in a cloud container without the Discord SDK",
+    "commands": [
+      "testMobileDebugUnitTest",
+      "testQuestDebugUnitTest",
+      "testLiteDebugUnitTest",
+      "lintMobileRelease",
+      "lintQuestRelease",
+      "lintLiteRelease",
+      "tools/test_verify_apk.py",
+      "tools/audit_ui_texts.py --check"
+    ],
+    "ci_validation": "run 44110644498: release builds, debug and release unit tests for both flavors, UI text audit, lint, APK signature pin and Discord bridge packaging passed",
+    "code_review": {
+      "kind": "none independent"
+    },
+    "host_previews": "no new UI in 6.1.2",
+    "host_previews_6_1_0": "Robolectric software renders on the host (not a phone), looked at by the sub-agents and the main agent: artist and album pages, discoveries card, Replay and Wrapped pages, Ketmix editor, Ketogether sheet and pills, lock-screen lyrics notification and widgets, settings rows, Vice City welcome screen (phone, tablet, landscape, large text), Vice City Home/player/settings, lyrics without halo; glass draws flat on the host",
+    "after_last_full_local_run": "documentation and code graph only (no change under app/) after the last complete local run"
+  },
+  "server": {
+    "function": "ketvoice-content",
+    "deployed_version": 23,
+    "changed_in_this_version": false,
+    "note": "no server change since 5.4.0"
+  },
+  "tests": {
+    "mobile": {
+      "jvm": {
+        "tests": 1255,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 3
+      },
+      "android_15_emulator_compose": {
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "quest": {
+      "jvm": {
+        "tests": 1246,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 33
+      },
+      "android_15_emulator_compose": {
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "lite": {
+      "jvm": {
+        "tests": 1246,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 3
+      }
+    },
+    "dex_register_check": "tools/check_dex_registers.py passed on the three release APKs (largest Ketvoice method 144 registers)"
+  },
+  "lint": {
+    "mobile": {
+      "Warning": 240,
+      "Hint": 25
+    },
+    "quest": {
+      "Warning": 240,
+      "Hint": 25
+    },
+    "lite": {
+      "Warning": 246,
+      "Hint": 25
+    },
+    "errors": 0
+  },
+  "apks": [
+    {
+      "name": "Ketvoice-6.1.2.apk",
+      "sha256": "69ad928e76dbaad91338002655556d03fd6368d8fe6673b8436704b89e8314ee",
+      "bytes": 82708307,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "6.1.2",
+      "versionCode": 131,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-6.1.2-Quest.apk",
+      "sha256": "3d28bed376f4e2c024ff67998f098461bf29501570ee5cb7d10a6fe104084471",
+      "bytes": 98794038,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "6.1.2",
+      "versionCode": 131,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-6.1.2-Lite.apk",
+      "sha256": "40708f275c124a53c04cda6aaef88a6a128040a4b9131144aa84b43d437a85e6",
+      "bytes": 31798087,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "6.1.2",
+      "versionCode": 131,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false,
+      "edition": "lite"
+    }
+  ],
+  "discord": {
+    "sdk_present_in_ci_build": true,
+    "sdk_sha256_pinned": true,
+    "bridge_and_native_libraries_verified": true,
+    "presence_mode": "unauthenticated_rpc_through_installed_discord_app"
+  },
+  "credential_scan": {
+    "entries": 5287,
+    "findings": 0,
+    "raw_pattern_findings": 1,
+    "scope": "tracked sources and APK archive entries",
+    "kind": "credential_patterns",
+    "explicit_private_provider_key_deny_list": false,
+    "triage": [
+      {
+        "file": "Ketvoice-Liquid-Glass-V4.html",
+        "classification": "embedded_image_false_positive",
+        "all_hits_inside_image_data_uris": true,
+        "rescanned_without_image_payloads": true
+      }
+    ]
+  },
+  "release_install_smoke": {
+    "mobile": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "quest": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "lite": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    }
+  },
+  "publication_override": {
+    "authorized_by_user": true,
+    "authorized_at": "2026-11-17T15:34:57.964402+00:00",
+    "kind": "standing_authorization",
+    "user_statement": "J'autorise TOUT devient maintenant une règle.",
+    "user_statement_date": "2026-11-14",
+    "in_reply_to": "The question whether versions may be published without phone or Quest testing without asking again for each version.",
+    "recorded_in": "AGENTS.md (commit aeeda8e)",
+    "reason": "The owner made publishing validated versions without phone or Quest testing a standing rule.",
+    "scope": "physical device installation and all on-device behaviour of 6.1.2 (mobile, Lite and Quest)"
+  },
+  "owner_requests_2026_11_17_6_1_2": {
+    "statements": [
+      "the safe-mode report from the owner's phone (HONOR BRP-NX1M, API 36, 6.1.1 lite): java.lang.VerifyError: Verifier rejected class com.ketvoice.app.automix.Automix (transition, copy-cat1 v5<-v286), at MainActivity.onStart"
+    ],
+    "done": {
+      "cause": "Automix.transition grew to 287 registers in 6.1.0 (Ketmix editor points); ART rejects such dex code on the device, so the whole Automix class failed to load at launch. JVM/Robolectric tests never run the ART verifier, which is why the 6.1.0 and 6.1.1 test suites passed",
+      "fix": "transition split into analyse, startStems and joinStems with the same behaviour; 144 registers in the release dex (largest Ketvoice method now)",
+      "guard": "tools/check_dex_registers.py fails CI when any com.ketvoice method in a release APK needs 256 registers or more; it reports the 6.1.1 APKs as broken and the 6.1.2 builds as clean"
+    }
+  },
+  "not_validated": [
+    "6.1.2 installed and launched on a device (the owner's Honor in particular): the fix follows the verifier's exact message and the dex now stays far under the limit, but ART verification itself was not run here",
+    "physical phone, Lite or Quest installation, rendering and behaviour",
+    "everything listed as not validated for 6.1.0 (Ketogether between phones, lock-screen lyrics on Android 16, the :stems process and automatic resume on devices, Lite on a modest phone)",
+    "independent code review"
+  ],
+  "known_limitations": [
+    "No Wear OS app in this version.",
+    "Android Auto's queue screen shows only the current song.",
+    "Switching between Ketvoice and Ketvoice Lite is a manual install of the other APK.",
+    "Ketogether guests hear titles their own sources can play; local files and private titles are shown as unavailable.",
+    "Launcher icons keep a background: Android fills adaptive icon backgrounds in black.",
+    "The signing certificate is the existing public Android debug identity, not a private production key."
+  ],
+  "canonical_banner_sha256": "ddc0e2c1270027f4b9dd92254374b79727ae9eaf8914e418b52e23c5b39b5966"
+}
