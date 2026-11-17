@@ -152,6 +152,7 @@ private fun SignedInCard() {
         }
     }
     SyncLine()
+    PublicProfileSettings()
     AccountButton("Modifier le profil", modifier = Modifier.padding(top = 14.dp).testTag("account-edit-profile")) { AccountUi.profileOpen.value = true }
     AccountButton("Se déconnecter", modifier = Modifier.padding(top = 8.dp)) { AccountUi.confirmSignOut.value = true }
     KetTextButton("Supprimer le compte", { AccountUi.confirmDelete.value = true }, Modifier.fillMaxWidth().padding(top = 4.dp), destructive = true)

@@ -90,6 +90,15 @@
                     android:host="auth" />
             </intent-filter>
 
+            <!-- Shared playlists and profiles (6.3): ketvoice://join/<code> and ketvoice://u/<handle>. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="ketvoice" android:host="join" />
+                <data android:scheme="ketvoice" android:host="u" />
+            </intent-filter>
+
             <!-- Partage de morceau : ketvoice://listen?track=... (ouvert aussi
                  par la page listen.html via une URL intent://). -->
             <intent-filter>

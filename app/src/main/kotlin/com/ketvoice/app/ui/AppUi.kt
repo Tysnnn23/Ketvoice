@@ -71,7 +71,11 @@ object AppUi {
         val onRename: () -> Unit = {},
         val onExportJson: () -> Unit = {},
         val onExportM3u: () -> Unit = {},
-        val onDelete: () -> Unit = {}
+        val onDelete: () -> Unit = {},
+        /** 6.3: « Partager la playlist », « Membres » and « Rendre cette playlist publique ». */
+        val onShare: () -> Unit = {},
+        val onMembers: () -> Unit = {},
+        val onTogglePublic: () -> Unit = {}
     )
     val playlistMenu = androidx.compose.runtime.mutableStateOf<PlaylistMenuRequest?>(null)
     data class PlaylistResolution(val playlistId: String, val entryId: String)

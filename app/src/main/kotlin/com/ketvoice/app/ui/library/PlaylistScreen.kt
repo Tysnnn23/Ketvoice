@@ -137,7 +137,10 @@ fun PlaylistScreen() {
                     onRename = { name = target.name; rename = true },
                     onExportJson = { action { PlaylistExchange.exportJson(context, target) } },
                     onExportM3u = { action { PlaylistExchange.exportM3u(context, target) } },
-                    onDelete = { deleting = true }
+                    onDelete = { deleting = true },
+                    onShare = { shareFromMenu(target) },
+                    onMembers = { SharedUi.members.value = target.id },
+                    onTogglePublic = { publicFromMenu(target, context) }
                 )
             }, modifier = Modifier.size(DesignTokens.Space.touch), enabled = playlist != null) {
                 Icon(Icons.Filled.MoreHoriz, "Actions de la playlist", tint = th.onBackground, modifier = Modifier.size(22.dp))
@@ -169,7 +172,8 @@ fun PlaylistScreen() {
                     meta = listOfNotNull(
                         com.ketvoice.app.data.AppText.t("${playable.size} / ${playlist.entries.size} titres disponibles"),
                         if (totalMinutes > 0) com.ketvoice.app.data.AppText.t("$totalMinutes min") else null,
-                        if (playlist.spotifyUrl != null) com.ketvoice.app.data.AppText.t("Import Spotify") else null
+                        if (playlist.spotifyUrl != null) com.ketvoice.app.data.AppText.t("Import Spotify") else null,
+                        if (com.ketvoice.app.data.PlaylistRules.isShared(playlist.id)) com.ketvoice.app.data.AppText.t("Partagée") else null
                     ).joinToString(" · "),
                     beside = compactHeader, artworkTag = "playlist-cover", artworkSide = if (compactHeader) 104.dp else null,
                     artwork = { PlaylistArtwork(playlist, playlist.name, Modifier.fillMaxSize()) }) {
@@ -265,12 +269,18 @@ fun PlaylistScreen() {
         }
         if (deleting) SettingsSheet(onDismiss = { if (!busy) deleting = false }) {
             Column(Modifier.fillMaxWidth().padding(20.dp)) {
-                Text("Supprimer cette playlist ?", color = th.onBackground, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                Text("Seule la playlist est supprimée. Vos titres et téléchargements sont conservés.",
-                    color = th.secondary, modifier = Modifier.padding(top = 12.dp))
+                // A shared playlist: its owner deletes it for everybody, another member leaves it (6.3).
+                val shared = com.ketvoice.app.data.PlaylistRules.isShared(playlist.id)
+                val leaves = shared && !com.ketvoice.app.sync.SharedPlaylists.isOwner(playlist.id)
+                Text(if (leaves) "Quitter cette playlist ?" else "Supprimer cette playlist ?", color = th.onBackground, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Text(when {
+                    leaves -> "Elle disparaît de votre bibliothèque. Les autres membres la gardent."
+                    shared -> "La playlist est supprimée pour tous ses membres."
+                    else -> "Seule la playlist est supprimée. Vos titres et téléchargements sont conservés."
+                }, color = th.secondary, modifier = Modifier.padding(top = 12.dp))
                 Row(Modifier.fillMaxWidth().padding(top = 14.dp), horizontalArrangement = Arrangement.End) {
                     SettingsAction("Annuler", { deleting = false }, enabled = !busy)
-                    SettingsAction("Supprimer", { action { PlaylistStore.delete(playlist.id); AppUi.closeOverlay() } },
+                    SettingsAction(if (leaves) "Quitter" else "Supprimer", { action { PlaylistStore.delete(playlist.id); AppUi.closeOverlay() } },
                         enabled = !busy, primary = true)
                 }
             }
