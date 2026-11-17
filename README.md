@@ -21,6 +21,14 @@
 
 ## Overview
 
+### 6.2.0 — Your Ketvoice account
+
+A Ketvoice account with your profile photo and your library on every device, a library that understands what you ask, a livelier player, a welcome for new listeners and seasonal themes.
+[Mobile](https://github.com/Tysnnn23/Ketvoice/releases/download/v6.2.0/Ketvoice-6.2.0.apk)
+· [Lite](https://github.com/Tysnnn23/Ketvoice/releases/download/v6.2.0/Ketvoice-6.2.0-Lite.apk)
+· [Quest](https://github.com/Tysnnn23/Ketvoice/releases/download/v6.2.0/Ketvoice-6.2.0-Quest.apk)
+· [Release notes](docs/releases/v6.2.0.md).
+
 ### 6.1.2 — Ketvoice opens again
 
 Fixes the crash at launch of 6.1.0 and 6.1.1 on some phones.

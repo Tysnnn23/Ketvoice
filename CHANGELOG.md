@@ -7,6 +7,22 @@
 
 ---
 
+# Ketvoice 6.2.0
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 132** — Ketvoice accounts and library sync, the smart library, a livelier player, first-launch welcome and seasonal themes.
+
+- `account/*`: Supabase Auth over REST (email and password without confirmation code, or Discord), session in the Android Keystore with refresh; `ketvoice_profiles` (name, handle, photo in the private `ketvoice-avatars` bucket) and `ketvoice_library` (favourites, playlists, artists, settings, now playing; one JSON document per kind, server-counted revisions, tombstones for deletions), all under owner-only row level security. `ui/account/*`: account sheet, photo crop, avatar on Home, Library, Search and Settings, « Reprendre ici » on Home.
+- `smartlib/*`: `NaturalQuery` reads free-text searches in the 11 interface languages into removable chips; `MoodScore` builds mood playlists from Ketmix measurements, styles and words; `Duplicates` merges copies in playlists (downloads deleted only after confirmation); `PlaylistImport` reads public Spotify and Deezer playlists.
+- Player: `CoverDrift`, bass-breathing `ArtworkFlow`, Apple Music-style title changes (reduced motion: still; performance mode and Lite: gentler).
+- `data/FirstRun` + `ui/onboarding`: welcome for new installs only (language, playlist import, Ketmix, voice).
+- `data/Seasons`: Christmas, New Year, Valentine's Day, Spring, Summer, Halloween, generalised from the Vice City edition; image slots `season_<id>_welcome/_header/_emblem` for the owner's pictures.
+
+Full notes: [6.2.0](docs/releases/v6.2.0.md).
+
+---
+
 # Ketvoice 6.1.2
 
 ![Ketvoice](ketvoice-banner.png)
