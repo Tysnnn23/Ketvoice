@@ -67,6 +67,35 @@ internal fun ArtistIdentity(name: String, signature: ArtistSignature?, startAlig
     }
 }
 
+/**
+ * The artist's signature alone, as « À propos » shows it under the biography: nothing at all until
+ * the picture has loaded (no empty box), then the signature and the credit of its source.
+ */
+@Composable
+internal fun ArtistSignatureMark(name: String, signature: ArtistSignature, modifier: Modifier = Modifier) {
+    val theme = LocalTheme.current
+    val context = LocalContext.current
+    var loaded by remember(signature.url) { mutableStateOf(false) }
+    val blend by animateFloatAsState(if (loaded) 1f else 0f, tween(Motion.duration(300)), label = "artist-signature-mark")
+    val request = remember(signature) {
+        // Its own size: the picture is loaded before it is given any room, so nothing waits on a zero height.
+        ImageRequest.Builder(context).data(signature.url).crossfade(false).size(Size.ORIGINAL)
+            .setHeader("User-Agent", "Ketvoice/${com.ketvoice.app.BuildConfig.VERSION_NAME} (https://github.com/Tysnnn23/Ketvoice)")
+            .apply { if (signature.monochrome) transformations(SignatureInk) }.build()
+    }
+    Column(modifier) {
+        AsyncImage(request, name, contentScale = ContentScale.Fit, alignment = Alignment.CenterStart,
+            colorFilter = if (signature.monochrome) ColorFilter.tint(theme.onBackground) else null,
+            onState = { loaded = it is AsyncImagePainter.State.Success },
+            modifier = Modifier.fillMaxWidth().height(if (loaded) 76.dp else 0.dp).graphicsLayer { alpha = blend })
+        if (loaded) Text(com.ketvoice.app.data.AppText.t("Visuel d'artiste") + " · ${signature.attribution}", localize = false,
+            color = theme.secondary, fontSize = 10.sp,
+            modifier = Modifier.clickable {
+                runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(signature.source))) }
+            }.padding(top = 3.dp, bottom = 3.dp))
+    }
+}
+
 /** White paper in a raster asset must not become an opaque white rectangle. */
 internal object SignatureInk : Transformation {
     override val cacheKey = "ketvoice-signature-ink-v1"

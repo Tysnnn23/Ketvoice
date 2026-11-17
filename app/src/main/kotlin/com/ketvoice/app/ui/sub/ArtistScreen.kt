@@ -1,84 +1,62 @@
 package com.ketvoice.app.ui.sub
 
-import com.ketvoice.app.ui.common.trackRowClick
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Share
-import com.ketvoice.app.ui.common.GlassBackButton
-import com.ketvoice.app.ui.common.Icon
-import com.ketvoice.app.ui.common.Text
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.*
-import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
-import com.ketvoice.app.data.Album
+import com.ketvoice.app.data.AppSettings
 import com.ketvoice.app.data.ArtistCache
 import com.ketvoice.app.data.ArtistPage
+import com.ketvoice.app.data.ArtistPages
 import com.ketvoice.app.data.ArtistSignatures
 import com.ketvoice.app.data.ArtworkRepo
-import com.ketvoice.app.data.YouTubeCatalog
+import com.ketvoice.app.data.MediaOverrides
+import com.ketvoice.app.data.Track
 import com.ketvoice.app.player.Player
 import com.ketvoice.app.theme.LocalTheme
 import com.ketvoice.app.ui.AppUi
-import androidx.compose.ui.platform.testTag
-import com.ketvoice.app.ui.common.Cover
+import com.ketvoice.app.ui.adaptive.LargeScreen
+import com.ketvoice.app.ui.common.GlassBackButton
+import com.ketvoice.app.ui.common.KetIcons
+import com.ketvoice.app.ui.common.Text
 import com.ketvoice.app.ui.motion.Motion
-import com.ketvoice.app.ui.motion.captureRevealOrigin
-import com.ketvoice.app.ui.motion.rememberRevealOrigin
-import com.ketvoice.app.ui.player.formatSecs
+import kotlinx.coroutines.launch
 
 /**
- * Page d'artiste réelle : photo, écoute mensuelle, biographie, titres,
- * albums et artistes similaires proviennent de YouTube Music.
+ * The artist page (6.1, after Apple Music): a large hero (photo or Canvas, the name over it, Listen,
+ * Shuffle and the favourite in glass), « Titres populaires » (five, then all), the latest release,
+ * the discography in shelves by kind, the similar artists, « À propos » with the biography in the
+ * app's language and the signature, the artist radio. Everything comes from the catalogue
+ * (YouTube Music); a section without data is not shown. A wide window lays the titles in columns
+ * beside the latest release under a banner; phones and Quest keep one column.
  */
 @Composable
 fun ArtistScreen(request: AppUi.ArtistRequest? = AppUi.artistRequest.value) {
     request ?: return
-    val baseTheme = LocalTheme.current
-    val art by ArtworkRepo.covers.collectAsState()
-    val player by Player.state.collectAsState()
     var page by remember(request.id, request.name) { mutableStateOf<ArtistPage?>(null) }
-    val accent = com.ketvoice.app.theme.rememberCoverAccent(page?.artist?.photo)?.first
-    // The page takes its colour from the portrait: the header reports it once it is known.
-    var portraitTone by remember(request) { mutableStateOf<androidx.compose.ui.graphics.Color?>(null) }
-    val pageTint by androidx.compose.animation.animateColorAsState(
-        artistPageTint(baseTheme.background,
-            portraitTone.takeIf { com.ketvoice.app.data.AppSettings.albumColors.value }, baseTheme.isDark),
-        androidx.compose.animation.core.tween(Motion.duration(520)), label = "artist-page-tint")
-    val theme = baseTheme.copy(
-        background = pageTint,
-        card = androidx.compose.ui.graphics.lerp(pageTint, baseTheme.onBackground, if (baseTheme.isDark) .08f else .05f),
-        accent = if (com.ketvoice.app.data.AppSettings.albumColors.value) accent ?: baseTheme.accent else baseTheme.accent
-    )
     var loading by remember(request.id, request.name) { mutableStateOf(true) }
     var failed by remember(request.id, request.name) { mutableStateOf(false) }
     var attempt by remember(request.id, request.name) { mutableIntStateOf(0) }
-    var expandedBio by remember(request.id, request.name) { mutableStateOf(false) }
-    val context = androidx.compose.ui.platform.LocalContext.current
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(request.id, request.name, attempt) {
@@ -91,20 +69,8 @@ fun ArtistScreen(request: AppUi.ArtistRequest? = AppUi.artistRequest.value) {
             loading = false
         }
         runCatching {
-            // Un morceau ne porte pas toujours de channelId YouTube ("UC...") :
-            // on retombe alors sur une résolution par nom, sinon la page restait
-            // vide sans explication.
-            val directId = request.id.takeIf { it.matches(Regex("UC[A-Za-z0-9_-]+")) }
-            var resolved = directId?.let { runCatching { YouTubeCatalog.artist(it) }.getOrNull() }
-            if (resolved == null && request.name.isNotBlank()) {
-                val candidates = runCatching { YouTubeCatalog.searchArtists(request.name) }
-                    .getOrDefault(emptyList())
-                // On privilégie une correspondance exacte du nom : sinon une
-                // recherche approximative ouvrait la fiche d'un homonyme.
-                val match = candidates.firstOrNull { it.name.equals(request.name, ignoreCase = true) }
-                    ?: candidates.firstOrNull()
-                if (match != null) resolved = YouTubeCatalog.artist(match.id)
-            }
+            // A title does not always carry a channel id: the artist is then found by name (data/ArtistPages).
+            val resolved = ArtistPages.fetch(request.id, request.name)
             if (resolved == null && cached == null) ArtistCache.put(request.id, request.name, null)
             if (resolved != null) {
                 ArtistCache.put(request.id, request.name, resolved)
@@ -115,20 +81,48 @@ fun ArtistScreen(request: AppUi.ArtistRequest? = AppUi.artistRequest.value) {
         if (page == null) failed = true
         loading = false
     }
+    ArtistPageFrame(request, page, loading, failed, attempt, onRetry = { attempt++ }, onRefresh = {
+        // Full reload: drop the cached page and artwork for this artist, then fetch the current server version.
+        scope.launch {
+            ArtistCache.invalidate(request.id, request.name)
+            ArtistSignatures.invalidate(request.name)
+            attempt++
+        }
+    })
+}
 
+/**
+ * The artist page around what was loaded: its colour taken from the portrait, the skeleton while it loads,
+ * the error with Retry, the page itself, and the floating bar.
+ */
+@Composable
+internal fun ArtistPageFrame(request: AppUi.ArtistRequest, page: ArtistPage?, loading: Boolean, failed: Boolean,
+                             revision: Int, onRetry: () -> Unit, onRefresh: () -> Unit) {
+    val baseTheme = LocalTheme.current
+    val accent = com.ketvoice.app.theme.rememberCoverAccent(page?.artist?.photo)?.first
+    // The page takes its colour from the portrait: the header reports it once it is known.
+    var portraitTone by remember(request) { mutableStateOf<androidx.compose.ui.graphics.Color?>(null) }
+    val pageTint by androidx.compose.animation.animateColorAsState(
+        artistPageTint(baseTheme.background, portraitTone.takeIf { AppSettings.albumColors.value }, baseTheme.isDark),
+        tween(Motion.duration(520)), label = "artist-page-tint")
+    val theme = baseTheme.copy(
+        background = pageTint,
+        card = androidx.compose.ui.graphics.lerp(pageTint, baseTheme.onBackground, if (baseTheme.isDark) .08f else .05f),
+        accent = if (AppSettings.albumColors.value) accent ?: baseTheme.accent else baseTheme.accent
+    )
+    val context = androidx.compose.ui.platform.LocalContext.current
     val artist = page?.artist
-    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
-    // Collapse is read from the real header bounds, so a fling, a restored back
-    // stack or an instant jump all produce the same top-bar state, no jump.
+    val listState = rememberLazyListState()
+    // Collapse is read from the real header bounds, so a fling, a restored back stack or an
+    // instant jump all produce the same top-bar state, no jump.
     val collapse = remember {
         derivedStateOf {
-            val header = listState.layoutInfo.visibleItemsInfo
-                .firstOrNull { it.key == "artist-header" }
+            val header = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.key == "artist-header" }
             if (header == null) if (listState.firstVisibleItemIndex > 0) 1f else 0f
             else {
                 val scrolled = (-header.offset).toFloat()
-                val span = (header.size * 0.55f).coerceAtLeast(1f)
-                (scrolled / span).coerceIn(0f, 1f)
+                val span = (header.size * 0.62f).coerceAtLeast(1f)
+                AlbumPresentation.smoothProgress(scrolled / span)
             }
         }
     }
@@ -143,161 +137,143 @@ fun ArtistScreen(request: AppUi.ArtistRequest? = AppUi.artistRequest.value) {
                 Text("Vérifiez la connexion puis réessayez.", color = theme.secondary, fontSize = 13.sp,
                     modifier = Modifier.padding(top = 8.dp))
                 Text("Réessayer", color = theme.accent, fontWeight = FontWeight.Bold,
-                    modifier = Modifier.clickable { attempt++ }.padding(top = 20.dp, bottom = 12.dp))
+                    modifier = Modifier.clickable(onClick = onRetry).padding(top = 20.dp, bottom = 12.dp))
             }
-            else -> {
-            // Portrait and metadata scroll as one; wide source banners stay fitted.
-            val data = page!!
-            // Wide: the portrait stays on the left while the titles and albums scroll on the right (ui/adaptive/CollectionPanes).
-            com.ketvoice.app.ui.adaptive.CollectionPanes(Modifier.fillMaxSize(), listState, "artist-list",
-                contentPadding = PaddingValues(bottom = 210.dp), headerKey = "artist-header",
-                listTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 68.dp, header = {
-                    val still = com.ketvoice.app.ui.adaptive.LocalCollectionPane.current
-                    ArtistHeader(data, if (still) ({ 0f }) else ({ collapse.value })) { portraitTone = it } }) {
-                if (data.description.isNotBlank()) item {
-                    // The biography in the app's language; the original stays one tap away.
-                    val language = com.ketvoice.app.data.AppText.language()
-                    val translation by produceState<String?>(null, data.description, language) {
-                        value = com.ketvoice.app.data.ArtistBio.translated(data.description, language)
-                    }
-                    var original by remember(data.description) { mutableStateOf(false) }
-                    val translated = com.ketvoice.app.data.ArtistBio.differs(data.description, translation)
-                    Column(Modifier.padding(horizontal = 20.dp, vertical = 12.dp).testTag("artist-bio")) {
-                        Text(if (translated && !original) translation!! else data.description, localize = false, color = theme.secondary,
-                            fontSize = 13.5.sp, lineHeight = 19.sp, maxLines = if (expandedBio) 40 else 4, overflow = TextOverflow.Ellipsis)
-                        Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Text(if (expandedBio) "Afficher moins" else "Lire plus", color = theme.accent,
-                                fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
-                                modifier = Modifier.clickable { expandedBio = !expandedBio })
-                            if (translated) Text(if (original) "Voir la traduction" else "Traduit automatiquement · Voir l'original",
-                                color = theme.secondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.padding(start = 14.dp).clickable { original = !original }.testTag("artist-bio-original"))
-                        }
-                    }
-                }
-                if (data.tracks.isNotEmpty()) item {
-                    Text("Titres populaires", color = theme.onBackground, fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 20.dp, top = 18.dp, bottom = 8.dp))
-                }
-                itemsIndexed(data.tracks, key = { i, t -> "${t.id}:$i" }) { index, track ->
-                    val active = player.current?.id == track.id
-                    com.ketvoice.app.ui.common.SwipeTrackActions(track, if (Motion.reduced) Modifier else Modifier.animateItem()) {
-                        com.ketvoice.app.ui.common.TrackRow(track, com.ketvoice.app.data.MediaOverrides.cover(track, art["t:${track.id}"] ?: track.coverUrl), active, player.isPlaying,
-                            { Player.playQueue(data.tracks, index) }, rank = index + 1)
-                    }
-                }
-                if (data.albums.isNotEmpty()) item {
-                    Text("Albums et singles", color = theme.onBackground, fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 20.dp, top = 24.dp, bottom = 10.dp))
-                    LazyRow(contentPadding = PaddingValues(horizontal = 20.dp),
-                        horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                        itemsIndexed(data.albums, key = { _, a -> a.id }) { _, album ->
-                            val albumCover = com.ketvoice.app.data.MediaOverrides.albumCover(album.title, album.artist, art["a:${album.id}"] ?: album.coverUrl)
-                            val zoom = com.ketvoice.app.ui.motion.rememberZoomSource(albumCover, 12.dp)
-                            Column(Modifier.width(150.dp).clickable {
-                                zoom.openCatalog(com.ketvoice.app.data.CatalogRequest("album", album.id, album.title))
-                            }) {
-                                Cover(album.title, albumCover, 150.dp, 12.dp, modifier = com.ketvoice.app.ui.motion.zoomSourceOf(zoom))
-                                Text(album.title, localize = false, color = theme.onBackground, fontSize = 14.sp,
-                                    fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier.padding(top = 7.dp))
-                                Text(album.type, color = theme.secondary, fontSize = 12.sp, maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis)
-                            }
-                        }
-                    }
-                }
-                if (data.related.isNotEmpty()) item {
-                    Text("Artistes similaires", color = theme.onBackground, fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 20.dp, top = 24.dp, bottom = 10.dp))
-                    LazyRow(contentPadding = PaddingValues(horizontal = 20.dp),
-                        horizontalArrangement = Arrangement.spacedBy(18.dp)) {
-                        itemsIndexed(data.related, key = { _, a -> a.id }) { _, related ->
-                            val relatedZoom = com.ketvoice.app.ui.motion.rememberZoomSource(
-                                com.ketvoice.app.data.MediaOverrides.artistPhoto(related.name, related.photo), round = true)
-                            Column(Modifier.width(104.dp).clickable { relatedZoom.openArtist(related.id, related.name) },
-                                horizontalAlignment = Alignment.CenterHorizontally) {
-                                Box(Modifier.size(94.dp).then(com.ketvoice.app.ui.motion.zoomSourceOf(relatedZoom)).clip(CircleShape).background(theme.card)
-                                    .border(1.dp, theme.onBackground.copy(alpha = .10f), CircleShape),
-                                    contentAlignment = Alignment.Center) {
-                                    // Initiale en repli : le cercle n'est jamais vide.
-                                    Text(related.name.take(1).uppercase(), localize = false, color = theme.secondary,
-                                        fontSize = 30.sp, fontWeight = FontWeight.Bold)
-                                    val relatedPhoto = com.ketvoice.app.data.MediaOverrides.artistPhoto(related.name, related.photo)
-                                    if (!relatedPhoto.isNullOrBlank()) {
-                                        AsyncImage(
-                                            model = relatedPhoto,
-                                            contentDescription = related.name,
-                                            contentScale = ContentScale.Crop,
-                                            alignment = Alignment.Center,
-                                            modifier = Modifier.fillMaxSize()
-                                        )
-                                    } else {
-                                        Icon(Icons.Filled.Person, null,
-                                            tint = theme.accent.copy(alpha = 0.7f),
-                                            modifier = Modifier.size(36.dp))
-                                    }
-                                }
-                                Text(related.name, localize = false, color = theme.onBackground, fontSize = 14.sp,
-                                    fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier.padding(top = 8.dp).width(92.dp))
-                            }
-                        }
-                    }
-                }
-            }
-            }
+            else -> ArtistPageContent(page!!, listState, { collapse.value }, revision, onRefresh) { portraitTone = it }
         }
-        // The top bar only gains a surface and a title once the hero has moved
-        // away, so the immersive first frame stays untouched.
-        Box(
-            Modifier.fillMaxWidth().height(118.dp).align(Alignment.TopCenter)
-                .graphicsLayer { alpha = collapse.value }.background(
-                androidx.compose.ui.graphics.Brush.verticalGradient(
-                    listOf(theme.background.copy(alpha = 0.94f), androidx.compose.ui.graphics.Color.Transparent)
-                )
-            )
-        )
-        // Barre supérieure superposée : retour + actualisation flottent au-dessus
-        // du hero (immersion), le nom reste porté par la bannière. En chargement
-        // ou en erreur, le nom d'artiste est affiché pour garder le contexte.
-        Row(Modifier.fillMaxWidth().statusBarsPadding()
-            .padding(horizontal = 14.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically) {
+        // The bar: back, then the owner's visuals and Share in one capsule of glass; once the hero has scrolled
+        // away, the name settles in the middle over the page's faded edge and a small Play joins them.
+        val publisher by com.ketvoice.app.data.PublisherSession.allowed.collectAsState()
+        val padActions = page?.let { shown ->
+            listOfNotNull(
+                com.ketvoice.app.ui.common.PadAction(KetIcons.Appearance, "Modifier les visuels", "artist-visuals") {
+                    AppUi.openVisuals(listOf(com.ketvoice.app.data.VisualTarget.artist(shown.artist.name, shown.artist.photo)))
+                }.takeIf { publisher },
+                com.ketvoice.app.ui.common.PadAction(KetIcons.Share, "Partager l'artiste", "artist-share") {
+                    com.ketvoice.app.util.ShareLinks.shareArtist(context, shown.artist.id, shown.artist.name)
+                })
+        }.orEmpty()
+        val tracks = page?.tracks.orEmpty()
+        val barSide = barSidePadding(padActions.size, tracks.isNotEmpty())
+        com.ketvoice.app.ui.common.ScrollEdgeTitle(artist?.name ?: request.name,
+            { if (page == null) 0f else collapse.value }, Modifier.align(Alignment.TopCenter),
+            tag = "artist-bar-title", localize = false, sidePadding = barSide, textTop = 8.dp)
+        Row(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             GlassBackButton { AppUi.closeOverlay() }
-            Spacer(Modifier.width(12.dp))
-            Text(artist?.name ?: request.name, localize = false, color = theme.onBackground,
-                fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                 modifier = Modifier.weight(1f).graphicsLayer { alpha = if (page == null) 1f else collapse.value })
-            page?.tracks?.takeIf { it.isNotEmpty() }?.let { tracks ->
-                Row(Modifier.graphicsLayer { alpha = collapse.value }
-                    .then(if (collapse.value < .98f) Modifier.clearAndSetSemantics {} else Modifier)) {
-                    com.ketvoice.app.ui.common.CollectionQuickActions(tracks, enabled = collapse.value >= .98f)
+            // While the page cannot show its hero, the name keeps the context beside the back button.
+            if (page == null) Text(request.name, localize = false, color = theme.onBackground, fontSize = 18.sp,
+                fontWeight = FontWeight.Bold, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f).padding(start = 4.dp))
+            else Spacer(Modifier.weight(1f))
+            if (tracks.isNotEmpty()) Box(Modifier.graphicsLayer { alpha = collapse.value }
+                .then(if (collapse.value < .98f) Modifier.clearAndSetSemantics {} else Modifier)) {
+                com.ketvoice.app.ui.common.LiquidGlassButton({ Player.setShuffle(false); Player.playQueue(tracks) },
+                    Modifier.size(44.dp), enabled = collapse.value >= .98f) {
+                    com.ketvoice.app.ui.common.Icon(KetIcons.Play, "Lecture", tint = theme.accent, modifier = Modifier.size(20.dp))
                 }
             }
-            // Refresh, visuals (verified owner) and share live in one capsule of glass.
-            val publisher by com.ketvoice.app.data.PublisherSession.allowed.collectAsState()
-            page?.let { shown ->
-                com.ketvoice.app.ui.common.GlassButtonPad(listOfNotNull(
-                    com.ketvoice.app.ui.common.PadAction(com.ketvoice.app.ui.common.KetIcons.Refresh, "Actualiser la page et le cache", "artist-refresh") {
-                        // Full reload: drop the cached page and artwork for this artist,
-                        // then fetch the current server version.
-                        scope.launch {
-                            ArtistCache.invalidate(request.id, request.name)
-                            ArtistSignatures.invalidate(request.name)
-                            attempt++
-                        }
-                    },
-                    com.ketvoice.app.ui.common.PadAction(com.ketvoice.app.ui.common.KetIcons.Appearance, "Modifier les visuels", "artist-visuals") {
-                        AppUi.openVisuals(listOf(com.ketvoice.app.data.VisualTarget.artist(shown.artist.name, shown.artist.photo)))
-                    }.takeIf { publisher },
-                    com.ketvoice.app.ui.common.PadAction(com.ketvoice.app.ui.common.KetIcons.Share, "Partager l'artiste", "artist-share") {
-                        com.ketvoice.app.util.ShareLinks.shareArtist(context, shown.artist.id, shown.artist.name)
-                    }), captured = true, tag = "artist-actions")
-            }
+            com.ketvoice.app.ui.common.GlassButtonPad(padActions, height = 44.dp, captured = true, tag = "artist-actions")
         }
     }
+    }
+}
+
+/** Widens the content by [by] towards the start and moves it there, so the margin of its rows falls outside. */
+private fun Modifier.bleedStart(by: Dp): Modifier = layout { measurable, constraints ->
+    val px = by.roundToPx()
+    if (!constraints.hasBoundedWidth) return@layout measurable.measure(constraints).let { p -> layout(p.width, p.height) { p.placeRelative(0, 0) } }
+    val placeable = measurable.measure(constraints.copy(minWidth = constraints.minWidth + px, maxWidth = constraints.maxWidth + px))
+    layout(constraints.maxWidth, placeable.height) { placeable.placeRelative(-px, 0) }
+}
+
+/** Room the centred bar title leaves on each side: the back button on one, the Play and the capsule on the other. */
+internal fun barSidePadding(padActions: Int, play: Boolean): Dp {
+    val pad = when { padActions <= 0 -> 0f; padActions == 1 -> 44f; else -> 6f + 44f * padActions }
+    val end = 12f + pad + (if (play) 52f else 0f) + 8f
+    return maxOf(64f, end).dp
+}
+
+@Composable
+private fun ArtistPageContent(data: ArtistPage, listState: androidx.compose.foundation.lazy.LazyListState,
+                              collapse: () -> Float, revision: Int, onRefresh: () -> Unit,
+                              onTone: (androidx.compose.ui.graphics.Color?) -> Unit) {
+    val theme = LocalTheme.current
+    val art by ArtworkRepo.covers.collectAsState()
+    val player by Player.state.collectAsState()
+    val artwork = rememberArtistArtwork(data.artist.name, revision)
+    var expanded by remember(data.artist.id) { mutableStateOf(false) }
+    val latest = remember(data.albums) { ArtistDiscography.latest(data.albums) }
+    val shelves = remember(data.albums) { ArtistDiscography.shelves(data.albums) }
+    val bottom = com.ketvoice.app.ui.adaptive.LocalAdaptiveLayout.current.bottomPaddingDp.dp + 40.dp
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val wide = ArtistLayout.wide(maxWidth.value)
+        val margin = ArtistLayout.margin(wide).dp
+        val cell = if (wide) LargeScreen.shelfCell(maxWidth.value, 170f, margin.value, 16f).dp else 150.dp
+        val popular = ArtistDiscography.popular(data.tracks, expanded)
+        val canExpand = data.tracks.size > ArtistDiscography.POPULAR_PREVIEW
+        val showAll: (() -> Unit)? = if (canExpand) ({ expanded = !expanded }) else null
+        val row: @Composable (Track, Int) -> Unit = { track, index ->
+            com.ketvoice.app.ui.common.SwipeTrackActions(track) {
+                com.ketvoice.app.ui.common.TrackRow(track, MediaOverrides.cover(track, art["t:${track.id}"] ?: track.coverUrl),
+                    player.current?.id == track.id, player.isPlaying, { Player.playQueue(data.tracks, index) }, rank = index + 1)
+            }
+        }
+        LazyColumn(Modifier.fillMaxSize().testTag("artist-list"), state = listState, contentPadding = PaddingValues(bottom = bottom)) {
+            item(key = "artist-header") { ArtistHeader(data, collapse, artwork, onTone) }
+            if (wide && (data.tracks.isNotEmpty() || latest != null)) item(key = "artist-top") {
+                // The room of a wide window: the latest release beside the popular titles, in columns.
+                Row(Modifier.fillMaxWidth().padding(horizontal = margin).testTag("artist-list-pane"),
+                    horizontalArrangement = Arrangement.spacedBy(28.dp)) {
+                    if (latest != null) Column(Modifier.weight(.36f)) {
+                        PageSectionTitle("Dernière sortie", 0.dp)
+                        LatestReleaseCard(latest, cover = 132.dp)
+                    }
+                    if (data.tracks.isNotEmpty()) BoxWithConstraints(Modifier.weight(.64f)) {
+                        val columns = ArtistLayout.popularColumns(maxWidth.value)
+                        Column(Modifier.fillMaxWidth().testTag("artist-popular")) {
+                            PageSectionTitle("Titres populaires", 0.dp, action = if (expanded) "Afficher moins" else "Tout afficher",
+                                actionTag = "artist-show-all", onAction = showAll)
+                            val perColumn = (popular.size + columns - 1) / columns
+                            // The rows keep their own margin: they reach back over it so the numbers line up with the titles.
+                            Row(Modifier.fillMaxWidth().bleedStart(com.ketvoice.app.ui.common.pageMargin),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                repeat(columns) { column ->
+                                    Column(Modifier.weight(1f)) {
+                                        popular.drop(column * perColumn).take(perColumn).forEachIndexed { i, track ->
+                                            row(track, column * perColumn + i)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            if (!wide && data.tracks.isNotEmpty()) {
+                item(key = "artist-popular-title") {
+                    PageSectionTitle("Titres populaires", margin, Modifier.testTag("artist-popular"),
+                        action = if (expanded) "Afficher moins" else "Tout afficher", actionTag = "artist-show-all", onAction = showAll)
+                }
+                itemsIndexed(popular, key = { i, t -> "${t.id}:$i" }) { index, track ->
+                    Box(if (Motion.reduced) Modifier else Modifier.animateItem()) { row(track, index) }
+                }
+            }
+            if (!wide && latest != null) item(key = "artist-latest") {
+                Column(Modifier.fillMaxWidth()) {
+                    PageSectionTitle("Dernière sortie", margin)
+                    LatestReleaseCard(latest, Modifier.padding(horizontal = margin))
+                }
+            }
+            shelves.forEach { shelf ->
+                item(key = shelf.tag) {
+                    ReleaseShelf(shelf.title, shelf.albums, margin, cell, shelf.tag) { ArtistDiscography.caption(it, shelf.singles) }
+                }
+            }
+            if (data.related.isNotEmpty()) item(key = "artist-similar") { SimilarArtists(data.related, margin) }
+            item(key = "artist-about") { ArtistAbout(data, artwork.signature, margin) }
+            item(key = "artist-footer") { ArtistPageFooter(data.artist, margin, onRefresh) }
+        }
     }
 }
 
@@ -318,26 +294,28 @@ private fun ArtistSkeleton(theme: com.ketvoice.app.theme.KetTheme) {
             label = "artistSkeletonAlpha"
         )
     }
-    Column(Modifier.fillMaxSize()) {
-        Box(Modifier.fillMaxWidth().height(330.dp)
-            .background(theme.card.copy(alpha = alpha)))
-        Box(Modifier.padding(start = 24.dp, top = 20.dp).width(190.dp).height(18.dp)
-            .clip(androidx.compose.foundation.shape.RoundedCornerShape(9.dp))
-            .background(theme.card.copy(alpha = alpha)))
-        repeat(6) { index ->
-            Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 9.dp),
-                verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(50.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(7.dp))
-                    .background(theme.card.copy(alpha = alpha)))
-                Spacer(Modifier.width(12.dp))
-                Column(Modifier.weight(1f)) {
-                    Box(Modifier.fillMaxWidth(if (index % 2 == 0) 0.72f else 0.54f).height(13.dp)
-                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(6.dp))
-                        .background(theme.card.copy(alpha = alpha)))
-                    Spacer(Modifier.height(7.dp))
-                    Box(Modifier.fillMaxWidth(0.34f).height(10.dp)
-                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(5.dp))
-                        .background(theme.card.copy(alpha = alpha * 0.8f)))
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val wide = ArtistLayout.wide(maxWidth.value)
+        val window = androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp.toFloat()
+        val margin = ArtistLayout.margin(wide).dp
+        val heroHeight = ArtistLayout.heroHeight(maxWidth.value, window, wide).dp
+        Column(Modifier.fillMaxSize()) {
+            Box(Modifier.fillMaxWidth().height(heroHeight)
+                .background(theme.card.copy(alpha = alpha)))
+            Box(Modifier.padding(start = margin, top = 26.dp).width(190.dp).height(20.dp)
+                .clip(RoundedCornerShape(9.dp)).background(theme.card.copy(alpha = alpha)))
+            repeat(5) { index ->
+                Row(Modifier.fillMaxWidth().padding(horizontal = margin, vertical = 9.dp),
+                    verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(52.dp).clip(RoundedCornerShape(10.dp)).background(theme.card.copy(alpha = alpha)))
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Box(Modifier.fillMaxWidth(if (index % 2 == 0) 0.72f else 0.54f).height(13.dp)
+                            .clip(RoundedCornerShape(6.dp)).background(theme.card.copy(alpha = alpha)))
+                        Spacer(Modifier.height(7.dp))
+                        Box(Modifier.fillMaxWidth(0.34f).height(10.dp)
+                            .clip(RoundedCornerShape(5.dp)).background(theme.card.copy(alpha = alpha * 0.8f)))
+                    }
                 }
             }
         }

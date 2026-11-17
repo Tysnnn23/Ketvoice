@@ -53,7 +53,11 @@ internal fun Modifier.shrinkingTitle(collapse: () -> Float): Modifier = graphics
  */
 @Composable
 internal fun ScrollEdgeTitle(title: String, collapse: () -> Float, modifier: Modifier = Modifier, tag: String = "scroll-edge-title",
-                             localize: Boolean = true) {
+                             localize: Boolean = true,
+                             /** Room kept clear on each side for the bar's buttons, so the title never runs under them. */
+                             sidePadding: androidx.compose.ui.unit.Dp = 112.dp,
+                             /** Lowers the title onto the centre line of a bar drawn a little below the status bar. */
+                             textTop: androidx.compose.ui.unit.Dp = 0.dp) {
     val theme = LocalTheme.current
     val shown by remember { derivedStateOf { collapse() > .01f } }
     if (!shown) return
@@ -64,8 +68,8 @@ internal fun ScrollEdgeTitle(title: String, collapse: () -> Float, modifier: Mod
         .testTag(tag)) {
         Text(title, color = theme.onBackground, style = Ket27.Type.headline, maxLines = 1, overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center, localize = localize,
-            modifier = Modifier.fillMaxWidth().statusBarsPadding().padding(bottom = 28.dp).height(48.dp)
-                .wrapContentHeight(Alignment.CenterVertically).padding(horizontal = 112.dp)
+            modifier = Modifier.fillMaxWidth().statusBarsPadding().padding(top = textTop, bottom = 28.dp).height(48.dp)
+                .wrapContentHeight(Alignment.CenterVertically).padding(horizontal = sidePadding)
                 .then(if (whole) Modifier.semantics { heading() } else Modifier.clearAndSetSemantics {}))
     }
 }
