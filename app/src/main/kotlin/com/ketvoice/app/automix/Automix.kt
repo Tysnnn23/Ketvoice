@@ -376,8 +376,11 @@ internal object Automix {
             exactAudio = h.exact || AppSettings.bitPerfect.value,
             skipSilence = AppSettings.skipSilence.value,
             albumsMixed = AppSettings.automixAlbums.value,
-            speed = main.playbackParameters.speed)
-        val settings = MixSettings(AppSettings.automixIntensity.value, MixStyle.of(AppSettings.ketmixStyle.value))
+            speed = main.playbackParameters.speed,
+            userOverlapMs = MixPointStore.pair(current.id, next.track.id)?.overlapMs ?: -1L)
+        // The style the listener chose for this pair in the DJ editor (6.1) comes before the one of the settings.
+        val settings = MixSettings(AppSettings.automixIntensity.value,
+            MixPointStore.pair(current.id, next.track.id)?.style ?: MixStyle.of(AppSettings.ketmixStyle.value))
         val depth = AnalysisDepth.of(AppSettings.ketmixAnalysis.value)
         val nextDuration = next.track.durationMs.takeIf { it > 0 } ?: 600_000L
         // The context alone may already say that these two titles simply follow each other.
@@ -428,7 +431,7 @@ internal object Automix {
         var outro = AnalysisStore.outro(current.id, duration, depth)?.takeIf { outHint == null || it.tempoHint > 0f || it.confidence >= .8f }
         if (outro == null) {
             outCapture = if (separate) PcmCapture(stemOutFrom * 1000L, duration * 1000L) else null
-            outro = read(deck, control, item, outFrom, depth.outroMs, depth, ::valid, outHint, capture = outCapture)
+            outro = read(deck, control, item, outFrom, depth.outroMs, depth, ::valid, outHint, capture = outCapture, waveOf = current.id to duration)
             outro?.let { AnalysisStore.put(current.id, duration, false, it) }
         } else if (separate) outCapture = capture(deck, control, item, stemOutFrom, duration - stemOutFrom, ::valid)
         if (!valid()) return false
@@ -437,7 +440,7 @@ internal object Automix {
         var intro = AnalysisStore.intro(next.track.id, next.track.durationMs, depth)?.takeIf { inHint == null || it.tempoHint > 0f || it.confidence >= .8f }
         if (intro == null) {
             inCapture = if (separate) PcmCapture(0L, stemInUntil * 1000L) else null
-            intro = read(deck, control, nextItem, 0L, depth.introMs, depth, ::valid, inHint, capture = inCapture)
+            intro = read(deck, control, nextItem, 0L, depth.introMs, depth, ::valid, inHint, capture = inCapture, waveOf = next.track.id to next.track.durationMs)
             intro?.let { AnalysisStore.put(next.track.id, next.track.durationMs, true, it) }
         } else if (separate) inCapture = capture(deck, control, nextItem, 0L, stemInUntil, ::valid)
         if (!valid()) return false
@@ -450,8 +453,11 @@ internal object Automix {
             runCatching { StemStore.load(current.id, duration, false)?.let(VoiceActivity::endMs) }.getOrNull() to
                 runCatching { StemStore.load(next.track.id, nextDuration, true)?.let(VoiceActivity::startMs) }.getOrNull()
         }
-        val out = MixFacts(duration, outro, vocalEndMs = VoiceFacts.end(Vocals.endMs(LyricsRepo.state.value.lines, duration), sung.first))
-        val incoming = MixFacts(nextDuration, intro, vocalStartMs = VoiceFacts.start(voice.await(), sung.second))
+        // The points the listener chose in the DJ editor (6.1), remembered per title.
+        val out = MixFacts(duration, outro, vocalEndMs = VoiceFacts.end(Vocals.endMs(LyricsRepo.state.value.lines, duration), sung.first),
+            userExitMs = MixPointStore.exitOf(current.id, duration))
+        val incoming = MixFacts(nextDuration, intro, vocalStartMs = VoiceFacts.start(voice.await(), sung.second),
+            userEntryMs = MixPointStore.entryOf(next.track.id, nextDuration))
         val clockOk = clock.await()
         if (clockOk) clockOf = java.lang.ref.WeakReference(main)
         note { it.copy(clock = clockOk, outBpm = outro?.bpm ?: 0f, outConfidence = outro?.confidence ?: 0f, outKey = outro?.key ?: MusicalKey.UNREAD,
@@ -724,11 +730,14 @@ internal object Automix {
     /** Plays [lengthMs] of [item] from [fromMs] on the silent deck, fast, and measures it. */
     private suspend fun read(deck: ExoPlayer, control: DeckControl, item: MediaItem, fromMs: Long, lengthMs: Long,
                              depth: AnalysisDepth, valid: () -> Boolean, hint: BeatAnalysis.Hint? = null, key: Boolean = depth.key,
-                             capture: PcmCapture? = null): SegmentAnalysis? {
+                             capture: PcmCapture? = null, waveOf: Pair<String, Long>? = null): SegmentAnalysis? {
         val tap = AnalysisTap(fromMs * 1000L, (fromMs + lengthMs) * 1000L, key, depth.thorough, hint)
+        // The same reading draws the stretch's wave for the DJ editor (6.1), kept apart from the analysis.
+        val wave = waveOf?.let { WaveTap(fromMs * 1000L, (fromMs + lengthMs) * 1000L) }
         control.automation = DeckAutomation.MUTE
         deck.volume = 0f
-        control.tap = if (capture != null) BothTaps(tap, capture) else tap
+        val measured: PcmTap = if (wave != null) BothTaps(tap, wave) else tap
+        control.tap = if (capture != null) BothTaps(measured, capture) else measured
         deck.setMediaItem(item, fromMs)
         val speed = analysisSpeed(appInFront)
         deck.playbackParameters = PlaybackParameters(speed)
@@ -749,6 +758,9 @@ internal object Automix {
             control.tap = null
         }
         delay(60)
+        if (wave != null && waveOf != null) withContext(Dispatchers.IO) {
+            runCatching { wave.result()?.let { WaveStore.put(waveOf.first, waveOf.second, it) } }
+        }
         return withContext(Dispatchers.Default) { runCatching { tap.result() }.getOrNull() }
     }
 
@@ -803,7 +815,7 @@ internal object Automix {
                         ?.also { AnalysisStore.putBody(id, length, it) })?.takeIf { it.hasBeat }?.let { BeatAnalysis.Hint(it.bpm, it.confidence) }
                 }
                 if (!valid()) return
-                read(deck, control, media, from, span, depth, ::valid, hint, capture = recorded)?.let { AnalysisStore.put(id, length, intro, it) }
+                read(deck, control, media, from, span, depth, ::valid, hint, capture = recorded, waveOf = id to length)?.let { AnalysisStore.put(id, length, intro, it) }
             } else if (wantStem) recorded = capture(deck, control, media, stemFrom, stemUntil - stemFrom, ::valid)
             val sound = recorded?.takeIf { valid() }?.pcm() ?: return
             // No more than two parts wait for the network at once: each is ten megabytes of sound.
@@ -883,7 +895,9 @@ internal object Automix {
         var handedOver = false
         try {
             val control = h.control(deck) ?: return false
-            val inMs = intro.soundStartMs.coerceAtLeast(0L)
+            // The entry the listener chose in the DJ editor, when there is one and it leaves room for the blend.
+            val inMs = MixPointStore.entryOf(next.track.id, nextDuration).takeIf { it in 0..(nextDuration - SKIP_OVERLAP_MS - 8_000L) }
+                ?: intro.soundStartMs.coerceAtLeast(0L)
             // The outgoing deck has already processed about half a second of sound that is still to be heard:
             // its part of the mix starts just past that, so that its level and filter move from their first step.
             val preRoll = min(SKIP_LEAD_MS - 60L, inMs)
@@ -930,6 +944,143 @@ internal object Automix {
         } finally {
             if (!handedOver) { s.close(); if (session === s) session = null }
         }
+    }
+
+    /** What the DJ editor could load of one end of a title. */
+    sealed class EditorLoad {
+        data class Ready(val durationMs: Long) : EditorLoad()
+        /** Nothing has played yet: there is no deck to read the title with. */
+        object NoPlayer : EditorLoad()
+        /** Bit-perfect output: the decks have no processors to read the sound from. */
+        object Exact : EditorLoad()
+        /** The title could not be loaded (no network, no source). */
+        object Unavailable : EditorLoad()
+    }
+
+    /**
+     * Reads, on a silent deck of its own, the stretch of [track] the DJ editor shows (6.1): its last
+     * [MixEditor.TAIL_MS] when [tail], else its first [MixEditor.HEAD_MS]. Its wave is kept in [WaveStore]
+     * and, when Ketmix has not measured that end of the title yet, its analysis too, read over the stretch
+     * Ketmix always reads. Titles measured before 6.1 have no wave: this draws it when the editor opens.
+     */
+    suspend fun loadForEditor(track: Track, tail: Boolean, progress: (Float) -> Unit = {}): EditorLoad {
+        val h = host ?: return EditorLoad.NoPlayer
+        if (h.exact || AppSettings.bitPerfect.value) return EditorLoad.Exact
+        // A mix being heard is not disturbed by a third deck reading fast.
+        while (mixing) delay(250)
+        val isCurrent = Player.state.value.current?.id == track.id
+        val media = (if (isCurrent) h.main.currentMediaItem else null) ?: run {
+            val source = Player.resolveDeckSource(track) ?: return EditorLoad.Unavailable
+            playbackMediaItem(track, source.url, source.cacheKey, source.stream, source.offlineDash)
+        }
+        if (host !== h) return EditorLoad.NoPlayer
+        val deck = h.standby()
+        try {
+            val control = h.control(deck) ?: return EditorLoad.Exact
+            control.automation = DeckAutomation.MUTE
+            deck.volume = 0f
+            // The real length, which the deck knows once the title is loaded.
+            var duration = if (isCurrent) h.main.duration.coerceAtLeast(0L) else 0L
+            if (duration <= 0L) {
+                deck.setMediaItem(media); deck.playWhenReady = false; deck.prepare()
+                val by = SystemClock.elapsedRealtime() + 12_000L
+                while (deck.duration <= 0 && deck.playerError == null && SystemClock.elapsedRealtime() < by) {
+                    if (host !== h) return EditorLoad.NoPlayer
+                    delay(40)
+                }
+                duration = deck.duration
+            }
+            if (duration <= 0L) return EditorLoad.Unavailable
+            val depth = AnalysisDepth.of(AppSettings.ketmixAnalysis.value)
+            val window = min(if (tail) MixEditor.TAIL_MS else MixEditor.HEAD_MS, duration)
+            val from = if (tail) duration - window else 0L
+            // Filed as Ketmix files them: an ending under the title's real length, a start under the length the queue gives it.
+            val key = if (tail) duration else track.durationMs.takeIf { it > 0 } ?: duration
+            val wave = WaveTap(from * 1000L, (from + window) * 1000L)
+            val analysisFrom = if (tail) max(0L, duration - depth.outroMs) else 0L
+            val analysisUntil = if (tail) duration else min(depth.introMs, duration)
+            val known = if (tail) AnalysisStore.outro(track.id, duration, depth) else AnalysisStore.intro(track.id, key, depth)
+            val hint = if (depth == AnalysisDepth.Light) null
+                else AnalysisStore.body(track.id, duration)?.takeIf { it.hasBeat }?.let { BeatAnalysis.Hint(it.bpm, it.confidence) }
+            val analysis = if (known == null) AnalysisTap(analysisFrom * 1000L, analysisUntil * 1000L, depth.key, depth.thorough, hint) else null
+            control.tap = if (analysis != null) BothTaps(wave, FromTap(analysisFrom * 1000L, analysis)) else wave
+            deck.setMediaItem(media, from)
+            val speed = analysisSpeed(appInFront)
+            deck.playbackParameters = PlaybackParameters(speed)
+            deck.prepare()
+            deck.play()
+            val started = SystemClock.elapsedRealtime()
+            val limit = started + (window / speed).toLong() + 12_000L
+            try {
+                while (!wave.done && deck.playbackState != androidx.media3.common.Player.STATE_ENDED && deck.playerError == null &&
+                    SystemClock.elapsedRealtime() < limit) {
+                    if (host !== h) return EditorLoad.NoPlayer
+                    // Playing, but no sound reaches the tap: this format bypasses the processors.
+                    if (deck.isPlaying && wave.reachedUs == Long.MIN_VALUE && SystemClock.elapsedRealtime() - started > 5_000L) break
+                    if (wave.reachedUs != Long.MIN_VALUE) progress(((wave.reachedUs / 1000L - from).toFloat() / window).coerceIn(0f, 1f))
+                    delay(80)
+                }
+            } finally {
+                runCatching { deck.pause() }
+                control.tap = null
+            }
+            val drawn = withContext(Dispatchers.Default) { runCatching { wave.result() }.getOrNull() } ?: return EditorLoad.Unavailable
+            withContext(Dispatchers.IO) {
+                WaveStore.put(track.id, key, drawn)
+                analysis?.let { runCatching { it.result() }.getOrNull() }?.let { AnalysisStore.put(track.id, key, !tail, it); AnalysisStore.save() }
+            }
+            progress(1f)
+            return EditorLoad.Ready(duration)
+        } finally {
+            h.release(deck)
+        }
+    }
+
+    /** Forgets that the transitions from the queue entry [entryId] were settled, so that they are planned again. */
+    private fun forget(entryId: String) {
+        val prefix = "$entryId>"
+        settled.removeAll { it.startsWith(prefix) }
+        attempts.keys.removeAll { it.startsWith(prefix) }
+        retryAt.keys.removeAll { it.startsWith(prefix) }
+    }
+
+    /**
+     * The listener changed the points of the transition about to play in the DJ editor: unless it is being heard,
+     * it is planned again with them.
+     */
+    fun pointsChanged() {
+        if (mixing) return
+        val state = Player.state.value
+        val entry = state.queueEntryIds.getOrNull(state.index) ?: return
+        if (job?.isActive == true || session != null) {
+            job?.cancel(); job = null
+            session?.close(); session = null
+            if (_ui.value.phase != Phase.Idle) _ui.value = Ui()
+        }
+        forget(entry)
+    }
+
+    /** How long before its start the DJ editor's « Écouter » plays a transition: room for the engine to prepare it, and to hear it come. */
+    const val PREVIEW_LEAD_MS = 12_000L
+
+    /**
+     * « Écouter » in the DJ editor (6.1): the title playing is taken back to [PREVIEW_LEAD_MS] before the
+     * transition ([plan], with the listener's points, already remembered) starts, and Ketmix plays it as it
+     * will play it — by the engine itself, the decks, the analysis and the plan of a real mix, not a copy of it.
+     * False when Ketmix cannot mix now (off, bit-perfect, nothing playing, a mix under way).
+     */
+    fun preview(plan: MixPlan): Boolean {
+        val h = host ?: return false
+        if (!AppSettings.automix.value || h.exact || AppSettings.bitPerfect.value || mixing || !plan.mixes) return false
+        val state = Player.state.value
+        val entry = state.queueEntryIds.getOrNull(state.index) ?: return false
+        val duration = h.main.duration.takeIf { it > 0 } ?: return false
+        // The engine starts on a title's ending only in its last PREP_LEAD_MS.
+        val target = (plan.outMs - plan.buildMs - PREVIEW_LEAD_MS).coerceIn(max(0L, duration - PREP_LEAD_MS + 1_000L), duration)
+        forget(entry)
+        Player.seekTo(target)
+        if (!state.playWhenReady) Player.toggle()
+        return true
     }
 
     /** Plays [lengthMs] of [item] from [fromMs] on the silent deck, fast, and records its sound for the separation of its voice. */

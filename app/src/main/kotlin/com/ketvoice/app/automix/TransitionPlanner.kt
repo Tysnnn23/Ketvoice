@@ -39,7 +39,11 @@ internal data class MixFacts(
     /** Incoming title: where the first sung line starts. */
     val vocalStartMs: Long? = null,
     /** Outgoing title: where the last sung line ends. */
-    val vocalEndMs: Long? = null
+    val vocalEndMs: Long? = null,
+    /** Outgoing title: the exit the listener chose in the DJ editor (6.1), -1 = Ketmix's own. */
+    val userExitMs: Long = -1,
+    /** Incoming title: the entry the listener chose in the DJ editor (6.1), -1 = Ketmix's own. */
+    val userEntryMs: Long = -1
 )
 
 internal data class MixContext(
@@ -61,7 +65,9 @@ internal data class MixContext(
     /** Speed the outgoing title plays at (a previous blend may have left it a little off its own). */
     val speed: Float = 1f,
     /** The last exit on the beat that needs no common tempo: 0 none yet, 1 an echo, 2 a build. They take turns. */
-    val lastExit: Int = 0
+    val lastExit: Int = 0,
+    /** How long both titles are heard, as the listener chose it for this pair in the DJ editor (6.1); -1 = Ketmix's. */
+    val userOverlapMs: Long = -1
 )
 
 /** The transition the listener prefers; [Auto] lets Ketmix choose for each pair of titles. */
@@ -180,13 +186,23 @@ internal object TransitionPlanner {
     /** How long an echo may ring past the end of the outgoing title. */
     internal const val MAX_TAIL_MS = 6_000L
 
+    /** True when the listener chose a point or an overlap for this pair in the DJ editor. */
+    fun listener(out: MixFacts, incoming: MixFacts, context: MixContext): Boolean =
+        out.userExitMs >= 0 || incoming.userEntryMs >= 0 || context.userOverlapMs > 0
+
     fun plan(out: MixFacts, incoming: MixFacts, context: MixContext, settings: MixSettings = MixSettings()): MixPlan {
+        // The rules that say these two titles are not to be mixed at all stand whatever the listener chose.
         if (context.exactAudio) return MixPlan(MixKind.None, reason = "exact audio")
         if (context.repeatOne && !context.loop) return MixPlan(MixKind.None, reason = "repeat one")
         if (context.stopAfterCurrent) return MixPlan(MixKind.None, reason = "sleep timer")
         if (context.sameAlbumInOrder && !context.albumsMixed) return MixPlan(MixKind.None, reason = "album in order")
         if (out.durationMs < MIN_TITLE_MS || incoming.durationMs < MIN_TITLE_MS) return MixPlan(MixKind.None, reason = "short title")
+        val listener = listener(out, incoming, context)
+        val auto = automatic(out, incoming, context, settings, listener)
+        return if (listener) honour(auto, out, incoming, context, settings) else auto
+    }
 
+    private fun automatic(out: MixFacts, incoming: MixFacts, context: MixContext, settings: MixSettings, listener: Boolean): MixPlan {
         val a = out.analysis
         val b = incoming.analysis
         // Without analysis only the duration is known: a plain, short crossfade.
@@ -199,7 +215,8 @@ internal object TransitionPlanner {
 
         // An album whose titles run into each other (no silence after one, a full-level start for the
         // next) is one piece of music: mixing over its joins would only cover them.
-        if (context.sameAlbumInOrder && gapless(out.durationMs, a, b)) return MixPlan(MixKind.None, reason = "gapless album")
+        // A pair the listener set by hand in the DJ editor is mixed where they chose, joins or not.
+        if (context.sameAlbumInOrder && !listener && gapless(out.durationMs, a, b)) return MixPlan(MixKind.None, reason = "gapless album")
         val gain = 10f.pow((a.loudnessDb - b.loudnessDb) / 20f).coerceIn(.5f, 1f)
         // A fade is almost silent in its last quarter: the incoming title must be in before that.
         val end = if (a.fadeOut) min(a.soundEndMs, a.fallMs + (a.soundEndMs - a.fallMs) * 3 / 4) else a.soundEndMs
@@ -213,7 +230,7 @@ internal object TransitionPlanner {
             fromKey = a.key, toKey = b.key, loop = context.loop), out, incoming)
 
         // A plain fade was asked for: the same lengths and care for the singing, no effect.
-        if (settings.style == MixStyle.Fade) return plan(out, incoming, context.copy(effects = false), settings.copy(style = MixStyle.Auto))
+        if (settings.style == MixStyle.Fade) return automatic(out, incoming, context.copy(effects = false), settings.copy(style = MixStyle.Auto), listener)
         // 1. Both in time, the bass changing hands: the finest transition, when the tempos allow it.
         if (beats && a.hasBeat && b.hasBeat && settings.style != MixStyle.Echo && settings.style != MixStyle.Filters && settings.style != MixStyle.Rise) {
             val rate = BeatAnalysis.foldedRatio(a.bpm, b.bpm)
@@ -433,6 +450,117 @@ internal object TransitionPlanner {
                 onPhrase = phrase != null, sungUntilMs = sungUntil?.takeIf { it > outMs.roundToLong() } ?: -1)
         }
         return null
+    }
+
+    /** The shortest overlap a listener may choose. */
+    internal const val MIN_USER_OVERLAP_MS = 1_000L
+    /** The longest one (the planner's own limit). */
+    internal const val MAX_USER_OVERLAP_MS = 45_000L
+
+    /**
+     * The points the listener chose in the DJ editor (6.1): [auto] is what Ketmix would have played; its exit,
+     * its entry and its overlap are replaced by the listener's where they chose them, and its kind is kept when
+     * it can be played from there.
+     *
+     * Ketmix's own exits never leave a title before its last sung part (5.11.0, see [automatic]). A point the
+     * listener set is their explicit choice: it may lie before the last sung words, and it is honoured there —
+     * that rule is lifted for listener-set points only, never for Ketmix's own. The outgoing voice is still
+     * stepped back under the blend ([MixPlan.sungUntilMs]) so that two voices do not run over each other.
+     *
+     * What still holds: no exit before 5 s or past the end of the title, no entry that leaves less than 5 s of
+     * the incoming title after the blend, an overlap within 1–45 s that fits in what is left of the outgoing
+     * title, and, for a transition tied to the beat (in time, echo, build), both points on a beat of their
+     * title's grid; a point outside any grid gets a transition that needs none.
+     */
+    private fun honour(auto: MixPlan, out: MixFacts, incoming: MixFacts, context: MixContext, settings: MixSettings): MixPlan {
+        val a = out.analysis
+        val b = incoming.analysis
+        val userExit = out.userExitMs.takeIf { it >= 0 }
+        val userEntry = incoming.userEntryMs.takeIf { it >= 0 }
+        val userOverlap = context.userOverlapMs.takeIf { it > 0 }?.coerceIn(MIN_USER_OVERLAP_MS, MAX_USER_OVERLAP_MS)
+        val beats = context.effects && context.beats && !context.skipSilence
+        val tempoRate = if (a != null && b != null && a.hasBeat && b.hasBeat) BeatAnalysis.foldedRatio(a.bpm, b.bpm) else 0f
+        val inTime = beats && tempoRate > 0f && abs(context.speed * tempoRate - 1f) <= settings.tempoRange
+        val end = a?.let { if (it.fadeOut) min(it.soundEndMs, it.fallMs + (it.soundEndMs - it.fallMs) * 3 / 4) else it.soundEndMs }
+            ?: (out.durationMs - 250L)
+
+        // The kind: the listener's style for this pair when it can be played, else what Ketmix chose.
+        val blend = if (context.effects) (if (a != null && !a.hasBeat && !a.fadeOut) MixKind.Wash else MixKind.Filter) else MixKind.Crossfade
+        var kind = when {
+            !context.effects -> if (auto.kind == MixKind.Trim && userOverlap == null) MixKind.Trim else MixKind.Crossfade
+            settings.style == MixStyle.Fade -> MixKind.Crossfade
+            settings.style == MixStyle.Filters -> MixKind.Filter
+            settings.style == MixStyle.Tempo -> if (inTime) MixKind.Beatmatch else blend
+            settings.style == MixStyle.Echo -> if (beats && a?.hasBeat == true) MixKind.Echo else blend
+            settings.style == MixStyle.Rise -> if (beats && a?.hasBeat == true && b?.hasBeat == true) MixKind.Rise else blend
+            auto.mixes -> auto.kind
+            inTime -> MixKind.Beatmatch
+            else -> blend
+        }
+        if (kind == MixKind.Beatmatch && !inTime) kind = blend
+        // An overlap asked for is a blend, not a cut.
+        if (kind == MixKind.Trim && userOverlap != null) kind = blend
+        val sameKind = auto.mixes && auto.kind == kind
+
+        // The two points, before they are made to fit.
+        var exit = userExit ?: if (auto.mixes) auto.outMs else end - (userOverlap ?: settings.crossfadeMs)
+        var entry = userEntry ?: if (auto.mixes) auto.inMs else (b?.soundStartMs ?: 0L)
+        // A transition tied to the beat needs both points on their title's grid: they are put on the nearest beat.
+        if (kind == MixKind.Beatmatch || kind == MixKind.Echo || kind == MixKind.Rise) {
+            if (a == null || !GridSnap.covers(a, exit)) kind = blend
+            else exit = GridSnap.nearestBeat(a, exit.toDouble()).roundToLong()
+        }
+        if ((kind == MixKind.Beatmatch || kind == MixKind.Rise) && b != null && b.hasBeat) {
+            if (GridSnap.covers(b, entry)) entry = GridSnap.nearestBeat(b, entry.toDouble()).roundToLong().coerceAtLeast(0L)
+            else if (kind == MixKind.Beatmatch) kind = blend
+        }
+        val beat = if (a != null && a.bpm > 0f) pulse(a) else RING_BEAT_MS
+        val rate = if (kind == MixKind.Beatmatch) (if (auto.kind == MixKind.Beatmatch) auto.rate else tempoRate) else 1f
+
+        // How long both are heard.
+        var build = 0L
+        var overlap = when (kind) {
+            MixKind.Trim -> TRIM_OVERLAP_MS
+            MixKind.Echo -> (ECHO_BEATS * beat).roundToLong()
+            MixKind.Rise -> {
+                build = if (auto.kind == MixKind.Rise) auto.buildMs else ((if (settings.intensity >= 2) 16 else 8) * beat).roundToLong()
+                (2 * beat).roundToLong()
+            }
+            MixKind.Beatmatch -> GridSnap.bars(a!!, userOverlap ?: if (sameKind) auto.overlapMs else (32 * beat).roundToLong())
+            else -> userOverlap ?: if (sameKind || (auto.mixes && auto.kind != MixKind.Trim && auto.kind != MixKind.Echo && auto.kind != MixKind.Rise))
+                auto.overlapMs else settings.crossfadeMs
+        }
+        overlap = overlap.coerceIn(if (kind == MixKind.Trim) TRIM_OVERLAP_MS else MIN_USER_OVERLAP_MS / 4, MAX_USER_OVERLAP_MS)
+
+        // The exit stays inside the title: after its first 5 s (and the build of a rise), before its very end.
+        val earliest = 5_000L + build
+        val room = out.durationMs + 400L
+        exit = exit.coerceIn(earliest, maxOf(earliest, out.durationMs - 1_000L))
+        when (kind) {
+            // An echo or a build rings on for its own length; a shorter one is played when the title ends first.
+            MixKind.Echo, MixKind.Rise -> overlap = min(overlap, maxOf(1L, out.durationMs - exit))
+            MixKind.Beatmatch -> if (exit + overlap > room) overlap = GridSnap.barsWithin(a!!, room - exit)
+            else -> if (exit + overlap > room) overlap = maxOf(MIN_USER_OVERLAP_MS / 4, room - exit)
+        }
+        if (exit + overlap > room) exit = maxOf(earliest, room - overlap)
+        // The entry leaves the incoming title at least 5 s once the blend is over.
+        val inLatest = incoming.durationMs - 5_000L - (overlap * rate).roundToLong() - 1L
+        entry = entry.coerceIn(0L, maxOf(0L, inLatest))
+
+        val sungUntil = out.vocalEndMs?.plus(300L)
+        val swap = if (kind == MixKind.Beatmatch) a!!.beatAtOrAfter(exit + overlap / 2.0 - a.beatMs / 2.0).roundToLong() else -1L
+        val hold = if (kind == MixKind.Filter || kind == MixKind.Wash) (if (a != null && exit >= a.fallMs - 400L) .55f else .2f) else 0f
+        val gain = if (auto.mixes) auto.gain else if (a != null && b != null) 10f.pow((a.loudnessDb - b.loudnessDb) / 20f).coerceIn(.5f, 1f) else 1f
+        val onPhrase = a?.phraseStarts(exit - 60.0, exit + 60.0)?.isNotEmpty() == true
+        val plan = MixPlan(kind, outMs = exit, inMs = entry, overlapMs = overlap, rate = rate, swapMs = swap, gain = gain,
+            beatMs = if (kind == MixKind.Beatmatch || kind == MixKind.Echo || kind == MixKind.Rise || kind == MixKind.Trim) beat else 0f,
+            reason = "listener", variant = if (auto.mixes) auto.variant else if (context.lastVariant == 0) 1 else 0,
+            clash = auto.clash || (a != null && b != null && MusicalKey.relation(a.key, b.key) == MusicalKey.Relation.Clash),
+            hold = hold, onPhrase = onPhrase, buildMs = build,
+            sungUntilMs = if (kind == MixKind.Echo || kind == MixKind.Rise || kind == MixKind.Trim) -1L else sungUntil?.takeIf { it > exit } ?: -1L,
+            fromBpm = if (a?.hasBeat == true) a.bpm else 0f, toBpm = if (b?.hasBeat == true) b.bpm else 0f,
+            fromKey = a?.key ?: MusicalKey.UNREAD, toKey = b?.key ?: MusicalKey.UNREAD, loop = context.loop)
+        return checked(plan, out, incoming)
     }
 
     /** True when the end of one title and the start of the next leave no gap at all. */

@@ -29,6 +29,19 @@ class PersonalBackupTest {
         assertEquals(300, restored.lyricOffsets[LyricsOffsets.key(track.id)])
     }
 
+    @Test fun ketmixMixPointsTravelInTheBackupAsDigests() {
+        val store = com.ketvoice.app.automix.MixPointStore
+        val points = mapOf(store.titleKey("tidal:42") to "171000,-1,200000",
+            store.pairKey("tidal:42", "tidal:43") to "${com.ketvoice.app.automix.MixStyle.Echo.ordinal},9000")
+        val data = PersonalBackupData(emptyList(), emptySet(), emptyMap(), emptyList(), emptyList(), emptyMap(), 0, ketmixPoints = points + ("t:bad" to "1,2,3"))
+        val encoded = PersonalBackup.encode(data)
+        assertFalse("ids never in clear", String(encoded).contains("tidal:42"))
+        assertEquals(points, PersonalBackup.decode(encoded).ketmixPoints)
+        // A backup of before 6.1 has none.
+        val old = String(encoded).replace(Regex(",?\"ketmixPoints\":\\{[^}]*\\}"), "")
+        assertTrue(PersonalBackup.decode(old.toByteArray()).ketmixPoints.isEmpty())
+    }
+
     @Test fun unknownVersionsAndOversizedFilesAreRejectedBeforeImport() {
         assertThrows(Exception::class.java) {
             PersonalBackup.decode("""{"kind":"ketvoice-personal-backup","version":2}""".toByteArray())

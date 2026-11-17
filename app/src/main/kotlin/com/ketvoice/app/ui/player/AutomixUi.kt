@@ -8,6 +8,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
@@ -64,6 +65,21 @@ import com.ketvoice.app.ui.motion.rememberHaptics
 import kotlinx.coroutines.launch
 import kotlin.math.PI
 import kotlin.math.cos
+
+/**
+ * The Ketmix switch: a tap turns it on or off; a long press opens the DJ editor (6.1) on the transition
+ * about to play, the title playing into the next one.
+ */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+@Composable
+private fun Modifier.ketmixSwitchGestures(flip: () -> Unit): Modifier {
+    val haptic = rememberHaptics()
+    val editor = AppText.t("Éditeur Ketmix")
+    return this.combinedClickable(role = Role.Switch, onClick = flip, onLongClickLabel = editor, onLongClick = {
+        haptic(Haptics.Kind.Press)
+        KetmixEditor.openNext()
+    })
+}
 
 /** Numbers behind the mix animations, kept apart so they can be checked without a screen. */
 internal object MixVisuals {
@@ -181,7 +197,7 @@ internal fun RowScope.KetmixSegment() {
     val stateText = AppText.t(if (on) "Activé" else "Désactivé")
     Box(Modifier.weight(1f).fillMaxHeight()
         .background(Color.Black.copy(alpha = shade))
-        .clickable(role = Role.Switch, onClick = flip)
+        .ketmixSwitchGestures(flip)
         .semantics { contentDescription = description; stateDescription = stateText }
         .testTag("automix-toggle"), contentAlignment = Alignment.Center) {
         AutomixGlyph(if (on) accent else Color.White.copy(alpha = .78f),
@@ -209,7 +225,7 @@ internal fun AutomixToggle(modifier: Modifier = Modifier, size: Dp = 48.dp) {
         .clip(CircleShape)
         .background(if (on) theme.accent.copy(alpha = .22f) else Color.White.copy(alpha = .08f))
         .border(1.dp, if (on) theme.accent.copy(alpha = .35f + .45f * glow) else Color.Transparent, CircleShape)
-        .clickable(role = Role.Switch, onClick = flip)
+        .ketmixSwitchGestures(flip)
         .semantics { contentDescription = description; stateDescription = stateText }
         .testTag("automix-toggle"), contentAlignment = Alignment.Center) {
         AutomixGlyph(if (on) theme.accent else Color.White.copy(alpha = .78f), Modifier.size(size * .58f),
