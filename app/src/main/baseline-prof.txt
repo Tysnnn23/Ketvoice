@@ -7,6 +7,8 @@
 HSPLcom/ketvoice/app/KetvoiceApp;->**(**)**
 HSPLcom/ketvoice/app/MainActivity;->**(**)**
 HSPLcom/ketvoice/app/MainActivityKt;->**(**)**
+HSPLcom/ketvoice/app/LiteTuning;->**(**)**
+HSPLcom/ketvoice/app/Edition;->**(**)**
 HSPLcom/ketvoice/app/ui/AppRootKt;->**(**)**
 HSPLcom/ketvoice/app/ui/AppUi;->**(**)**
 HSPLcom/ketvoice/app/ui/NavigationPresentationKt;->**(**)**

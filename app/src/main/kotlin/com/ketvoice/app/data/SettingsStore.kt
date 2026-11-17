@@ -53,7 +53,7 @@ object SettingsStore {
         s.coverBackground.value = p.getBoolean("coverBackground", false)
         s.ketmixStems.value = p.getBoolean("ketmixStems", false)
         s.ketmixStemsCharging.value = p.getBoolean("ketmixStemsCharging", false)
-        s.ketmixStemsQuality.value = p.getInt("ketmixStemsQuality", 0).coerceIn(0, 2)
+        s.ketmixStemsQuality.value = p.getInt("ketmixStemsQuality", com.ketvoice.app.LiteTuning.defaultStemsQuality()).coerceIn(0, 2)
         s.voiceLevel.value = p.getInt("voiceLevel", 100).coerceIn(0, 100)
         com.ketvoice.app.stems.VoiceLevel.level = s.voiceLevel.value / 100f
         s.ketmixSmartQueue.value = p.getBoolean("ketmixSmartQueue", true)

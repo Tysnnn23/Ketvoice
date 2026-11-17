@@ -782,7 +782,7 @@ fun SettingsScreen() {
                 SRow(
                     KetIcons.Album, "Version",
                     sub = "YouTube Music · Ketvoice API · canvas · paroles",
-                    value = com.ketvoice.app.BuildConfig.VERSION_NAME + if (com.ketvoice.app.BuildConfig.IS_QUEST) " · Quest" else ""
+                    value = com.ketvoice.app.BuildConfig.VERSION_NAME + com.ketvoice.app.Edition.current.label
                 ) {}
             }
 
@@ -1355,7 +1355,7 @@ private fun PlaybackJournalDialog(onClose: () -> Unit) {
             }
         },
         confirmButton = { com.ketvoice.app.ui.common.KetTextButton("Partager", {
-            val text = "Ketvoice ${com.ketvoice.app.BuildConfig.VERSION_NAME} · ${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL} · Android ${android.os.Build.VERSION.RELEASE}\n\n" +
+            val text = "Ketvoice ${com.ketvoice.app.BuildConfig.VERSION_NAME}${com.ketvoice.app.Edition.current.label} · ${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL} · Android ${android.os.Build.VERSION.RELEASE}\n\n" +
                 com.ketvoice.app.data.PlaybackJournal.snapshot().joinToString("\n")
             runCatching { ctx.startActivity(android.content.Intent.createChooser(android.content.Intent(android.content.Intent.ACTION_SEND)
                 .setType("text/plain").putExtra(android.content.Intent.EXTRA_TEXT, text), null).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
