@@ -171,6 +171,9 @@ class PlaybackService : MediaLibraryService() {
             .build()
         mediaSession = session
         com.ketvoice.app.automix.AnalysisStore.init(applicationContext)
+        // The DJ editor's waves and the listener's mix points (6.1).
+        com.ketvoice.app.automix.WaveStore.init(applicationContext)
+        com.ketvoice.app.automix.MixPointStore.init(applicationContext)
         com.ketvoice.app.automix.Automix.attach(automixHost)
     }
 
