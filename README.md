@@ -21,6 +21,17 @@
 
 ## Overview
 
+### 6.1.0 — Listen together, mix by hand, Vice City edition
+
+Ketogether lets friends hear the same song at the same moment; the Ketmix editor lets you place mix points on
+the waveforms; the sung line appears on the lock screen; weekly discoveries and a monthly Replay join Home;
+playback resumes by itself if Android stops it; Ketvoice Lite is a lighter APK with the same effects; and a
+limited Vice City theme celebrates GTA VI until 10 December (Ketvoice is not affiliated with Rockstar Games).
+[Mobile](https://github.com/Tysnnn23/Ketvoice/releases/download/v6.1.0/Ketvoice-6.1.0.apk)
+· [Lite](https://github.com/Tysnnn23/Ketvoice/releases/download/v6.1.0/Ketvoice-6.1.0-Lite.apk)
+· [Quest](https://github.com/Tysnnn23/Ketvoice/releases/download/v6.1.0/Ketvoice-6.1.0-Quest.apk)
+· [Release notes](docs/releases/v6.1.0.md).
+
 ### 6.0.0 Beta 5 — Android Auto, music that holds in the background
 
 Ketvoice now runs in the car with Android Auto (browse, search and voice); music keeps playing in the

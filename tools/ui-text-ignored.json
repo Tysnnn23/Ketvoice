@@ -147,5 +147,7 @@
  " (Discord)": "brand name after the listener's Discord name in the Ketogether sheet",
  "hostEnded": "Ketogether end-reason code, mapped to a French sentence before display",
  "hostLost": "Ketogether end-reason code, mapped to a French sentence before display",
- "notFound": "Ketogether end-reason code, mapped to a French sentence before display"
+ "notFound": "Ketogether end-reason code, mapped to a French sentence before display",
+ "Ketvoice {0}{1} · {2} {3} · Android {4}\n\n": "header of the shared playback journal (with the edition), a support report kept in English",
+ "Vice City": "name of the limited-edition theme, the same in every language"
 }

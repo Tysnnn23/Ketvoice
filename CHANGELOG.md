@@ -7,6 +7,26 @@
 
 ---
 
+# Ketvoice 6.1.0
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 129** — Ketogether, the Ketmix editor, lock-screen lyrics, weekly discoveries and Replay, redone artist/album pages, playback that survives, Ketvoice Lite and the Vice City edition.
+
+- Ketogether: `together/` (Supabase Realtime public broadcast + presence channel per room, host-relative clock, signed host messages with ECDSA P-256, drift corrected by seeking, rate limits, reconnect), `ui/together/KetogetherUi.kt`, `Player.transportGate`; Ketmix held for guests.
+- Ketmix editor: `automix/Waveform.kt` (50 ms columns stored in `filesDir/ketmix-waves`), `MixPoints.kt`/`MixPointStore` (per-title exit/entry, per-pair style/overlap, backed up), `TransitionPlanner.honour()`, `Automix.preview`, `ui/player/KetmixEditor.kt`.
+- Lyrics: `player/LiveLyrics.kt` and `LockscreenLyrics.kt` (channel `ketvoice.lyrics`, promoted ongoing on Android 16, key `lockscreenLyrics`); no halo and no line blur (`blurInactiveLyrics` retired), held-note glow only; widgets in the glass look with the sung line.
+- Discover: `data/WeeklyDiscoveries.kt` (+ worker), `player/Radio.kt` (no repeats), `data/ListeningMonths.kt` (monthly Replay), richer `WrappedStory` with 1080×1920 share pictures.
+- Pages: `ui/sub/ArtistSections.kt`, `ArtistDiscography.kt`, `data/ArtistPages.kt`, album foot and « More by » shelf.
+- Background: `stems/StemWork.kt` + `StemWorkService` in process `:stems`; `player/PlaybackRevival.kt` (`ResumeDecision`, `RevivalStore`, dead-man alarm, key `autoResume`); `MemoryRelief` also clears image memory.
+- Ketvoice Lite: `lite` flavour (same applicationId, trimmed icon set, WebP resources, compressed dex, `LiteTuning` defaults), `Ketvoice-<v>-Lite.apk`, edition-aware updater.
+- Vice City edition: `data/ViceCityEdition.kt` (welcome until 2026-11-20 once per versionCode, theme and icon until 2026-12-10), `theme/ViceCityTheme.kt` (key `viceCityTheme`), `ui/vicecity/ViceCityWelcome.kt`, `.LauncherViceCity` alias; new banner.
+- Tab bar dock always on (`collapsingTabBar` retired).
+
+Full notes: [6.1.0](docs/releases/v6.1.0.md).
+
+---
+
 # Ketvoice 6.0.0 Beta 5
 
 ![Ketvoice](ketvoice-banner.png)
