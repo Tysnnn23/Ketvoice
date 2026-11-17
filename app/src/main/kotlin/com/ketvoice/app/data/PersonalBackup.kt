@@ -28,7 +28,7 @@ internal object PersonalBackup {
         "haptics", "coverTintedGlass", "glassTilt", "meshBackground", "automixOn", "automixAlbums", "ketmixLoops", "smartShuffle", "ketmixHaptics")
     private val integers = mapOf("themeMode" to 0..2, "glassStyle" to 0..com.ketvoice.app.glass.GlassStyles.MAX, "glassTintLevel" to com.ketvoice.app.glass.GlassClarity.MIN..com.ketvoice.app.glass.GlassClarity.MAX, "lyricsTextSize" to 0..2,
         "reverbAmount" to 0..100, "reverbSize" to 0..100, "reverbDamping" to 0..100,
-        "lyricsMode" to 0..2, "automixIntensity" to 0..2, "ketmixAnalysis" to 0..2, "ketmixStyle" to 0..5, "ketmixStemsQuality" to 0..2, "voiceLevel" to 0..100, "downloadQualityMode" to 0..2, "appIconVariant" to 0..3)
+        "lyricsMode" to 0..2, "automixIntensity" to 0..2, "ketmixAnalysis" to 0..2, "ketmixStyle" to 0..5, "ketmixStemsQuality" to 0..2, "voiceLevel" to 0..100, "downloadQualityMode" to 0..2, "appIconVariant" to 0..ViceCityEdition.ICON_VARIANT)
     private val longs = setOf("accentArgb", "cacheBytes")
     private val strings = setOf("lyricsSource", "translateLanguage", "translationSource", "wifiQuality",
         "mobileQuality", "equalizerGains", "language")
@@ -52,6 +52,10 @@ internal object PersonalBackup {
     }
 
     private fun setting(key: String, raw: Any?): Any? = when {
+        // The Vice City edition (6.1) is saved and restored only while it lasts; turning it off always goes through.
+        key == "viceCityTheme" -> (raw as? Boolean)?.takeIf { !it || ViceCityEdition.themeAvailable() }
+        key == "appIconVariant" -> (raw as? Number)?.toInt()
+            ?.takeIf { it in integers.getValue(key) && ViceCityEdition.iconAllowed(it) }
         key in booleans || key.startsWith("design212_") && DesignChoices.all.any { "design212_${it.code}" == key } -> raw as? Boolean
         key in integers -> (raw as? Number)?.toInt()?.takeIf { it in integers.getValue(key) }
         key == "accentArgb" -> (raw as? Number)?.toLong()?.takeIf { it in 0L..0xffffffffL }

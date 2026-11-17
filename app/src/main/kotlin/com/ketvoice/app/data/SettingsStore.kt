@@ -163,7 +163,13 @@ object SettingsStore {
         s.smartAudioAlignment.value = p.getBoolean("smartAudioAlignment", s.smartAudioAlignment.value)
         s.techStats.value = p.getBoolean("techStats", s.techStats.value)
         s.bitPerfect.value = p.getBoolean("bitPerfect", false)
-        s.appIconVariant.value = p.getInt("appIconVariant", s.appIconVariant.value)
+        s.appIconVariant.value = p.getInt("appIconVariant", s.appIconVariant.value).coerceIn(0, ViceCityEdition.ICON_VARIANT)
+        s.viceCityTheme.value = p.getBoolean("viceCityTheme", false)
+        // The Vice City edition is over: its theme and icon go back to the listener's look, silently.
+        if (ViceCityEdition.expire()) p.edit()
+            .putBoolean("viceCityTheme", s.viceCityTheme.value)
+            .putInt("appIconVariant", s.appIconVariant.value)
+            .apply()
     }
 
     fun save() {
@@ -264,6 +270,7 @@ object SettingsStore {
             .putBoolean("techStats", s.techStats.value)
             .putBoolean("bitPerfect", s.bitPerfect.value)
             .putInt("appIconVariant", s.appIconVariant.value)
+            .putBoolean("viceCityTheme", s.viceCityTheme.value)
             .also { editor -> DesignChoices.all.forEach { editor.putBoolean("design212_${it.code}", DesignChoices.enabled(it.code)) } }
             .apply()
     }

@@ -156,4 +156,9 @@ object AppSettings {
     val techStats = mutableStateOf(false)
     val bitPerfect = mutableStateOf(false)
     val appIconVariant = mutableStateOf(1)
+    /**
+     * The Vice City theme (6.1, limited edition until 10 December 2026, see [ViceCityEdition]); off by default.
+     * It lays its own dark look over the listener's choices without changing them: read [ViceCityEdition.themeOn].
+     */
+    val viceCityTheme = mutableStateOf(false)
 }

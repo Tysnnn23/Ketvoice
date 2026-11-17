@@ -171,6 +171,21 @@
             </intent-filter>
         </activity-alias>
 
+        <!-- 6.1: the Vice City limited-edition icon (until 10 December 2026, see ViceCityEdition). -->
+        <activity-alias
+            android:name=".LauncherViceCity"
+            android:targetActivity=".MainActivity"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_vicecity"
+            android:roundIcon="@mipmap/ic_launcher_vicecity_round"
+            android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
         <!-- Widgets of 5.9.0: large glass player, your week, mix of the moment, mini controls. -->
         <receiver
             android:name=".widget.GlassPlayerWidgetReceiver"
