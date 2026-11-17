@@ -54,6 +54,8 @@ object AppSettings {
     val ketmixLibrary = mutableStateOf(true)
     /** Playback that Android or a battery manager stopped while it played comes back at the same title and place (6.1). */
     val autoResume = mutableStateOf(true)
+    /** The sung line in a notification of its own, on the lock screen and in the shade (6.1). */
+    val lockscreenLyrics = mutableStateOf(true)
     /** Lyrics videos carry the song's sound (5.10.0). */
     val lyricVideoSound = mutableStateOf(true)
     val systemReduceMotion = mutableStateOf(false)

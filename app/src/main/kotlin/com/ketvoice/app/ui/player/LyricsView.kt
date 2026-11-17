@@ -144,12 +144,18 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
     val target = TranslationLanguages.code(AppSettings.translateLanguage.value)
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    // The lock screen line (6.1) shows the translation while this screen shows it.
+    DisposableEffect(track.id) { onDispose { LyricsTranslation.showing(track.id, false) } }
     LaunchedEffect(translationEnabled, lyrics.lines, target) {
         translated.clear()
+        LyricsTranslation.showing(track.id, translationEnabled && lyrics.lines.isNotEmpty())
         if (translationEnabled && lyrics.lines.isNotEmpty()) {
             translating = true
             try {
-                LyricsTranslation.stream(lyrics.lines, target, active) { index, text -> translated[index] = text }
+                LyricsTranslation.stream(lyrics.lines, target, active) { index, text ->
+                    translated[index] = text
+                    LyricsTranslation.translated(track.id, index, text)
+                }
                 if (translated.isEmpty()) Toast.makeText(context, AppText.t("Traduction temporairement indisponible"), Toast.LENGTH_SHORT).show()
             } finally { translating = false }
         }

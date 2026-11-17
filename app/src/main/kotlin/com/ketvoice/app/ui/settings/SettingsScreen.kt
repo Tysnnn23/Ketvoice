@@ -559,6 +559,7 @@ fun SettingsScreen() {
                     "Les lignes suivantes restent estompées",
                     AppSettings.blurInactiveLyrics.value
                 ) { AppSettings.blurInactiveLyrics.value = it; SettingsStore.save() }
+                if (!com.ketvoice.app.BuildConfig.IS_QUEST) LockscreenLyricsRows()
                 SRow(KetIcons.Lyrics, "Clé BetterLyrics (facultative)",
                     sub = "Cache public ; certaines recherches exigent une clé",
                     value = if (AppSettings.betterLyricsKey.value.isBlank()) "Non définie" else "Définie"
@@ -1086,6 +1087,49 @@ private fun ColumnScope.SRow(
             modifier = Modifier.size(17.dp))
     }
     SettingsCellDivider()
+}
+
+/**
+ * « Paroles sur l'écran verrouillé » (6.1): the switch, then what Android needs for it — the notifications
+ * allowed, or the notification's own settings (silent notifications hidden on the lock screen, Live Updates).
+ */
+@Composable
+private fun ColumnScope.LockscreenLyricsRows() {
+    val ctx = LocalContext.current
+    var allowed by remember { mutableStateOf(com.ketvoice.app.player.LyricsNotification.allowed(ctx)) }
+    androidx.lifecycle.compose.LifecycleResumeEffect(Unit) {
+        val now = com.ketvoice.app.player.LyricsNotification.allowed(ctx)
+        if (now != allowed) com.ketvoice.app.player.LiveLyrics.demandChanged()
+        allowed = now
+        onPauseOrDispose { }
+    }
+    SToggle(KetIcons.Lyrics, "Paroles sur l'écran verrouillé",
+        "La ligne chantée dans une notification silencieuse, sur l'écran verrouillé et dans le volet ; la suivante en dessous.",
+        AppSettings.lockscreenLyrics.value) {
+        AppSettings.lockscreenLyrics.value = it
+        SettingsStore.save()
+        com.ketvoice.app.player.LiveLyrics.demandChanged()
+    }
+    if (!AppSettings.lockscreenLyrics.value) return
+    if (!allowed) SRow(KetIcons.Info, "Notifications désactivées",
+        sub = "Autorisez les notifications de Ketvoice pour voir les paroles sur l'écran verrouillé.",
+        value = "Autoriser") {
+        runCatching {
+            ctx.startActivity(android.content.Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                .putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, ctx.packageName)
+                .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+        }
+    } else SRow(KetIcons.Info, "Notification des paroles",
+        sub = "Si l'écran verrouillé masque les notifications silencieuses, rendez celle-ci visible dans les réglages d'Android.",
+        value = "Réglages d'Android") {
+        com.ketvoice.app.player.LyricsNotification.ensureChannel(ctx)
+        runCatching {
+            ctx.startActivity(android.content.Intent(android.provider.Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS)
+                .putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, ctx.packageName)
+                .putExtra(android.provider.Settings.EXTRA_CHANNEL_ID, com.ketvoice.app.player.LyricsNotification.CHANNEL)
+                .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+        }
+    }
 }
 
 @Composable
