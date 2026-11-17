@@ -137,6 +137,7 @@ class MainActivity : ComponentActivity() {
         }
         handleAuthIntent(intent)
         handleWidgetIntent(intent)
+        com.ketvoice.app.player.AutoVoice.handle(this, intent, lifecycleScope)
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -149,6 +150,7 @@ class MainActivity : ComponentActivity() {
         setIntent(intent)
         handleAuthIntent(intent)
         handleWidgetIntent(intent)
+        com.ketvoice.app.player.AutoVoice.handle(this, intent, lifecycleScope)
     }
 
     override fun onResume() {

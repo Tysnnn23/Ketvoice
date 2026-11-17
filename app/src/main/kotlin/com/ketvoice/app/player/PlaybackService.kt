@@ -12,7 +12,7 @@ import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.audio.DefaultAudioSink
 import androidx.media3.exoplayer.audio.TeeAudioProcessor
 import androidx.media3.session.MediaSession
-import androidx.media3.session.MediaSessionService
+import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionError
 import androidx.media3.session.SessionResult
@@ -25,7 +25,7 @@ import com.google.common.util.concurrent.SettableFuture
 import java.nio.ByteBuffer
 
 @UnstableApi
-class PlaybackService : MediaSessionService() {
+class PlaybackService : MediaLibraryService() {
 
     private var mediaSession: MediaSession? = null
     private lateinit var player: ExoPlayer
@@ -104,7 +104,8 @@ class PlaybackService : MediaSessionService() {
         getSystemService(android.media.AudioManager::class.java).registerAudioDeviceCallback(audioDevices, android.os.Handler(mainLooper))
         // A title separated while it plays (the voice slider, 6.0.0 Beta 3) has its voice level at once.
         serviceScope.launch { com.ketvoice.app.stems.VoiceSeparation.separated.collect { takeUpVoice(it) } }
-        val session = MediaSession.Builder(this, sessionPlayer(player))
+        // A library session (Android Auto, 6.0.0): the browse tree and the car's requests live in AutoLibrary.kt.
+        val session = AutoLibrarySessionBuilder(this, sessionPlayer(player))
             .setSessionActivity(
                 PendingIntent.getActivity(
                     this, 0,
@@ -112,10 +113,10 @@ class PlaybackService : MediaSessionService() {
                     PendingIntent.FLAG_IMMUTABLE
                 )
             )
-            .setCallback(object : MediaSession.Callback {
+            .setCallback(object : AutoLibraryCallback(this@PlaybackService) {
                 override fun onConnect(session: MediaSession, controller: MediaSession.ControllerInfo): MediaSession.ConnectionResult {
                     if (controller.packageName != packageName) return super.onConnect(session, controller)
-                    val commands = MediaSession.ConnectionResult.DEFAULT_SESSION_COMMANDS.buildUpon()
+                    val commands = MediaSession.ConnectionResult.DEFAULT_SESSION_AND_LIBRARY_COMMANDS.buildUpon()
                         .add(SessionCommand(CMD_SKIP_SILENCE, Bundle.EMPTY))
                         .add(SessionCommand(CMD_EQUALIZER, Bundle.EMPTY))
                         .add(SessionCommand(CMD_REVERB, Bundle.EMPTY))
@@ -537,8 +538,8 @@ class PlaybackService : MediaSessionService() {
             android.net.ConnectivityManager.RESTRICT_BACKGROUND_STATUS_ENABLED
     }.getOrDefault(false)
 
-    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? =
-        mediaSession
+    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? =
+        mediaSession as? MediaLibrarySession
 
     override fun onTaskRemoved(rootIntent: Intent?) {
         com.ketvoice.app.data.PlaybackJournal.add("app swiped away from recent apps · ${if (::player.isInitialized && player.playWhenReady) "playback goes on" else "nothing playing, service ends"}")
