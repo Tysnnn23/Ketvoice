@@ -116,6 +116,8 @@ fun SectionTitle(
 @Composable
 fun AccountAvatar(initial: String, size: Dp = 40.dp, modifier: Modifier = Modifier) {
     val session = com.ketvoice.app.data.YouTubeMusicSession.profile.collectAsState().value
+    // The Ketvoice account comes first: its photo, or the first letter of its name.
+    val account = com.ketvoice.app.account.AccountSession.state.collectAsState().value
     val label = if (session.connected && session.name.isNotBlank()) session.name.take(1).uppercase() else initial
     // Badge "mise à jour disponible" : visible quand l'utilisateur a reporté la
     // popup avec "Plus tard" ; un clic rouvre la popup via UpdateHost.
@@ -128,7 +130,9 @@ fun AccountAvatar(initial: String, size: Dp = 40.dp, modifier: Modifier = Modifi
                 .background(Palette.Teal),
             contentAlignment = Alignment.Center
         ) {
-            if (session.connected && !session.photo.isNullOrBlank()) {
+            if (account.signedIn) {
+                com.ketvoice.app.ui.account.KetvoiceAvatarContent(size)
+            } else if (session.connected && !session.photo.isNullOrBlank()) {
                 AsyncImage(
                     model = session.photo,
                     contentDescription = session.name,

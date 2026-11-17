@@ -83,6 +83,8 @@ class MainActivity : ComponentActivity() {
         runCatching { com.ketvoice.app.data.ForYouRotation.init(this) }
         runCatching { com.ketvoice.app.data.ArtistPrefs.init(this) }
         runCatching { com.ketvoice.app.data.CustomLyrics.init(this) }
+        // The Ketvoice account: a remembered session is renewed and the library synced; nothing is sent otherwise.
+        runCatching { com.ketvoice.app.account.AccountSession.init(this) }
         // Faster start (5.9.0): what the first screen does not need is read beside it, off the main thread —
         // the lyrics index (up to a few megabytes) and the launcher icon check (calls to the package manager).
         val app = applicationContext
@@ -221,6 +223,10 @@ class MainActivity : ComponentActivity() {
             uri.path == "/auth/v1/verify"
         val appLink = uri.scheme == "ketvoice" && uri.host == "auth"
         when {
+            com.ketvoice.app.account.AccountSession.isOAuthRedirect(uri) -> {
+                intent.data = null
+                com.ketvoice.app.ui.account.AccountUi.completeOAuth(uri)
+            }
             supabaseLink || appLink -> {
                 AppUi.openPublisherLink(uri.toString())
                 intent.data = null
@@ -311,6 +317,8 @@ class MainActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         com.ketvoice.app.automix.Automix.appInFront = true
+        com.ketvoice.app.sync.LibrarySync.onForeground()
+        com.ketvoice.app.sync.NowPlayingSync.refresh()
         // The Vice City edition may end while the app lives: its theme and icon then go back, silently.
         if (com.ketvoice.app.data.ViceCityEdition.expire()) {
             runCatching { com.ketvoice.app.data.SettingsStore.save() }
@@ -324,6 +332,7 @@ class MainActivity : ComponentActivity() {
         super.onStop()
         com.ketvoice.app.automix.Automix.appInFront = false
         runCatching { com.ketvoice.app.data.SettingsStore.save() }
+        com.ketvoice.app.sync.LibrarySync.onBackground()
     }
 }
 
