@@ -1,0 +1,213 @@
+{
+  "schema": 8,
+  "version": "6.2.0",
+  "versionCode": 132,
+  "source_commit": "81138aecaf0d550609e65be88e035f0921fae6bb",
+  "created_at": "2026-11-17T19:41:53.958832+00:00",
+  "build_origin": {
+    "kind": "github_actions_with_owner_discord_sdk",
+    "workflow": "android.yml",
+    "run_id": 44157083717,
+    "artifact": {
+      "id": 14363885087,
+      "sha256": "979edc5a5394ad452951bb236341a63a887e48792808603e6339e72f826da4e3"
+    },
+    "gradle": "assembleMobileRelease assembleQuestRelease assembleLiteRelease",
+    "note": "Signed by CI with the pinned keystore secret; the Discord Social SDK AAR matched its pinned SHA-256."
+  },
+  "local_validation": {
+    "result": "debug JVM/Robolectric suites for the three flavors (mobile, quest, lite), release lint and the UI text audit passed in a cloud container without the Discord SDK",
+    "commands": [
+      "testMobileDebugUnitTest",
+      "testQuestDebugUnitTest",
+      "testLiteDebugUnitTest",
+      "lintMobileRelease",
+      "lintQuestRelease",
+      "lintLiteRelease",
+      "tools/test_verify_apk.py",
+      "tools/audit_ui_texts.py --check"
+    ],
+    "ci_validation": "run 44157083717: release builds, debug and release unit tests for both flavors, UI text audit, lint, APK signature pin and Discord bridge packaging passed",
+    "code_review": {
+      "kind": "none independent"
+    },
+    "host_previews": "Robolectric software renders on the host (not a phone), looked at by the sub-agents: account sheet (sign-up, sign-in, profile, photo crop), avatar on Home/Library/Search/Settings, Resume here card, smart-search chips, Moods with generated covers, duplicates review, playlist import sheet, onboarding (phone, dark, tablet, large text), Home of every season, season welcome cards, player title-change frames; glass draws flat on the host",
+    "host_previews_6_1_0": "Robolectric software renders on the host (not a phone), looked at by the sub-agents and the main agent: artist and album pages, discoveries card, Replay and Wrapped pages, Ketmix editor, Ketogether sheet and pills, lock-screen lyrics notification and widgets, settings rows, Vice City welcome screen (phone, tablet, landscape, large text), Vice City Home/player/settings, lyrics without halo; glass draws flat on the host",
+    "after_last_full_local_run": "after the first full run, a test-isolation fix (RetiredMixingMigrationTest) and a lint fix (CatalogScreen collects synced favourites as state); then mobile, quest and lite unit suites and quest release lint were rerun green; CI run 44157083717 ran lint for every flavour"
+  },
+  "server": {
+    "function": "ketvoice-content",
+    "deployed_version": 23,
+    "changed_in_this_version": false,
+    "database": "6.2.0 adds Supabase migrations 20261117120100_reserve_owner_email (applied through the MCP) and 20261117120000_listener_accounts (run by the owner in the SQL editor on 2026-11-17 and verified afterwards: ketvoice_profiles and ketvoice_library with row level security on, 12 ketvoice_* policies, 3 triggers, ketvoice_delete_account, private ketvoice-avatars bucket)",
+    "auth_settings": "the owner turned email confirmation off in Supabase Auth (2026-11-17)"
+  },
+  "tests": {
+    "mobile": {
+      "jvm": {
+        "tests": 1376,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 3
+      },
+      "android_15_emulator_compose": {
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "quest": {
+      "jvm": {
+        "tests": 1367,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 33
+      },
+      "android_15_emulator_compose": {
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "lite": {
+      "jvm": {
+        "tests": 1367,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 3
+      }
+    },
+    "dex_register_check": "tools/check_dex_registers.py passed on the three release APKs"
+  },
+  "lint": {
+    "mobile": "passed in CI run 44157083717",
+    "quest": {
+      "Warning": 263,
+      "Hint": 25
+    },
+    "lite": {
+      "Warning": 246,
+      "Hint": 25
+    },
+    "errors": 0
+  },
+  "apks": [
+    {
+      "name": "Ketvoice-6.2.0.apk",
+      "sha256": "afccfefca062cbffe60ef33a637d8b7c1c35e8da16df9cd6b1f06278fd617aae",
+      "bytes": 83522945,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "6.2.0",
+      "versionCode": 132,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-6.2.0-Quest.apk",
+      "sha256": "577620a4125aea3a4083b3f1ab47362a1f209c8cff0f045a03d4a97a70b6b60c",
+      "bytes": 99625060,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "6.2.0",
+      "versionCode": 132,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-6.2.0-Lite.apk",
+      "sha256": "41fd449d0cedb06bfa8b4678034a7d26acdf9b190e86ac13e6bc4350ba1f91d6",
+      "bytes": 32153915,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "6.2.0",
+      "versionCode": 132,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false,
+      "edition": "lite"
+    }
+  ],
+  "discord": {
+    "sdk_present_in_ci_build": true,
+    "sdk_sha256_pinned": true,
+    "bridge_and_native_libraries_verified": true,
+    "presence_mode": "unauthenticated_rpc_through_installed_discord_app"
+  },
+  "credential_scan": {
+    "entries": 4197,
+    "findings": 0,
+    "raw_pattern_findings": 1,
+    "scope": "the three release APKs (0 findings); the repository scan flags only the known image data URIs of Ketvoice-Liquid-Glass-V4.html",
+    "kind": "credential_patterns",
+    "explicit_private_provider_key_deny_list": false,
+    "triage": [
+      {
+        "file": "Ketvoice-Liquid-Glass-V4.html",
+        "classification": "embedded_image_false_positive",
+        "all_hits_inside_image_data_uris": true,
+        "rescanned_without_image_payloads": true
+      }
+    ]
+  },
+  "release_install_smoke": {
+    "mobile": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "quest": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "lite": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    }
+  },
+  "publication_override": {
+    "authorized_by_user": true,
+    "authorized_at": "2026-11-17T19:41:53.958832+00:00",
+    "kind": "standing_authorization",
+    "user_statement": "J'autorise TOUT devient maintenant une règle.",
+    "user_statement_date": "2026-11-14",
+    "in_reply_to": "The question whether versions may be published without phone or Quest testing without asking again for each version.",
+    "recorded_in": "AGENTS.md (commit aeeda8e)",
+    "reason": "The owner made publishing validated versions without phone or Quest testing a standing rule.",
+    "scope": "physical device installation and all on-device behaviour of 6.2.0 (mobile, Lite and Quest), including accounts and sync on devices"
+  },
+  "owner_requests_2026_11_17_6_2_0": {
+    "statements": [
+      "Bibliothèque intelligente, Synchro multi-appareils, Pour la synchronisation multi appareil ajoute connexion sans vérification 2 step ke compte ketvoice avec photo de profil etc comme spotify",
+      "Page de partage soignée, Journal des versions vivant",
+      "Lecteur encore plus vivant, Onboarding premier lancement, Thèmes saisonniers, A toi de definir les dates pour theme saisonnier mais creer le mode etc maije te donnerai les image uke fois la version fini."
+    ],
+    "done": {
+      "accounts": "Supabase Auth over REST (email and password without confirmation, Discord), Keystore session, profile with photo, library sync with tombstones, now playing and Resume here; owner-only RLS; listener accounts get no publishing right and the owner address is reserved",
+      "smart_library": "on-device natural search with chips, mood playlists, duplicates, Spotify and Deezer public playlist import",
+      "player": "cover drift, bass-breathing background, Apple Music-style title changes",
+      "onboarding": "first launch of new installs only",
+      "seasons": "Christmas, New Year, Valentine's Day, Spring, Summer, Halloween with code-drawn decor; image slots wait for the owner's pictures",
+      "website": "share page listen.html and living changelog on ketvoice-web"
+    }
+  },
+  "not_validated": [
+    "physical phone, Lite or Quest installation, rendering and behaviour of 6.2.0",
+    "account sign-up, sign-in, Discord sign-in, photo upload and sync between two real devices against the live project (unit and host tests use fakes)",
+    "Spotify and Deezer import against the live services from a phone",
+    "seasonal themes with the owner's pictures (not delivered yet)",
+    "independent code review"
+  ],
+  "known_limitations": [
+    "No Wear OS app in this version.",
+    "Seasonal themes use code-drawn decor until the owner's pictures are added.",
+    "Android Auto's queue screen shows only the current song.",
+    "Switching between Ketvoice and Ketvoice Lite is a manual install of the other APK.",
+    "Ketogether guests hear titles their own sources can play; local files and private titles are shown as unavailable.",
+    "Launcher icons keep a background: Android fills adaptive icon backgrounds in black.",
+    "The signing certificate is the existing public Android debug identity, not a private production key."
+  ],
+  "canonical_banner_sha256": "ddc0e2c1270027f4b9dd92254374b79727ae9eaf8914e418b52e23c5b39b5966"
+}
