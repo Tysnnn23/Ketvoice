@@ -29,6 +29,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.async
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.first
@@ -241,6 +242,7 @@ object Player {
                 android.util.Log.i("KetvoicePlayback", "playing_state_ms=${android.os.SystemClock.elapsedRealtime() - resolveStartedAt}")
                 _state.value.current?.let { com.ketvoice.app.data.ListeningHistory.record(it) }
                 historyGeneration = generation
+                if (radio) topUpRadio()
             }
             if (isPlaying) _state.value.current?.let { track ->
                 if (recordedListens.size > 500) recordedListens.clear()
@@ -580,7 +582,7 @@ object Player {
      */
     fun playTrack(track: Track, queue: List<Track> = listOf(track), startIndex: Int? = null,
                   startPositionMs: Long = 0L, autoPlay: Boolean = true, keepOrder: Boolean = false) =
-        run { radio = false; startPlayback(track, queue, startIndex, startPositionMs, autoPlay,
+        run { radio = false; radioMemory = null; startPlayback(track, queue, startIndex, startPositionMs, autoPlay,
             if (keepOrder) QueueOrigin.Keep else QueueOrigin.External) }
 
     /** Plays [tracks] in a random order; turning shuffle off restores the given order. */
@@ -934,28 +936,94 @@ object Player {
     /** The queue is a radio: it never runs out, each new batch built from the title playing then. */
     @Volatile var radio = false
         private set
+    /** What the radio has played in this session (6.1): no title, recording or artist comes back too soon. */
+    @Volatile private var radioMemory: RadioMemory? = null
 
     /**
-     * A radio from [seed]: the title, then titles of its artist and of artists like it, and more of
-     * them whenever the queue runs out. Never an artist the listener blocked.
+     * A radio from the title [seed]: the title, then titles of artists like it, of its artist and a
+     * few of the listener's favourites of that circle, more of them before the queue runs out.
+     * Never an artist the listener blocked, never a title twice.
      */
-    fun startRadio(seed: Track) {
+    fun startRadio(seed: Track) = launchRadio(RadioSeed.Title(seed), listOf(seed))
+
+    /** An artist's radio: led by one of [tracks] (the artist's own), then the same mix as a title radio around the artist. */
+    fun startArtistRadio(name: String, catalogId: String?, tracks: List<Track>) {
+        val lead = tracks.firstOrNull() ?: return
+        launchRadio(RadioSeed.Artist(name, catalogId), listOf(lead))
+    }
+
+    private fun launchRadio(seed: RadioSeed, lead: List<Track>) {
         val gen = generation
         scope.launch {
-            val first = radioBatch(seed, listOf(seed))
-            if (gen != generation && _state.value.current?.id != seed.id) return@launch
-            playQueue(listOf(seed) + first, 0)
+            val memory = RadioMemory(seed).apply { rememberAll(lead) }
+            val first = radioBatch(lead.last(), memory)
+            if (gen != generation && _state.value.current?.id != lead.first().id) return@launch
+            playQueue(lead + first, 0)
+            radioMemory = memory
             radio = true
             setAutoplay(true)
         }
     }
 
-    private suspend fun radioBatch(from: Track, queue: List<Track>): List<Track> {
-        val artist = com.ketvoice.app.data.MediaOverrides.mainArtist(from.artist)
-        val similar = runCatching { com.ketvoice.app.data.CatalogRepo.artistRadio(artist) }.getOrDefault(emptyList())
-        val own = runCatching { MusicApi.searchYtMusic(from.artist) }.getOrDefault(emptyList())
-        return RadioMix.next(similar, own, queue, com.ketvoice.app.data.ArtistPrefs::allows, seed = from.id.hashCode().toLong() + queue.size)
+    private suspend fun radioBatch(from: Track, memory: RadioMemory): List<Track> = kotlinx.coroutines.coroutineScope {
+        val catalog = com.ketvoice.app.data.CatalogRepo
+        val seedArtist = memory.seed.artist
+        val seedId = (memory.seed as? RadioSeed.Artist)?.catalogId
+        // A title radio drifts with what plays; an artist radio stays around its artist.
+        val current = if (memory.seed is RadioSeed.Artist) seedArtist else com.ketvoice.app.data.MediaOverrides.mainArtist(from.artist)
+        val currentId = if (memory.seed is RadioSeed.Artist) seedId
+            else from.artistId?.takeIf { from.addon == "um" && it.all(Char::isDigit) }
+        val style = async { runCatching { catalog.artistRadio(current, currentId) }.getOrDefault(emptyList()) }
+        val anchor = async {
+            if (current.equals(seedArtist, true)) emptyList()
+            else runCatching { catalog.artistRadio(seedArtist, seedId) }.getOrDefault(emptyList())
+        }
+        val related = async { runCatching { catalog.relatedArtists(current, currentId) }.getOrDefault(emptyList()).take(6) }
+        val own = async {
+            runCatching { catalog.artistTop(current, currentId) }.getOrDefault(emptyList())
+                .ifEmpty { runCatching { MusicApi.searchYtMusic(current) }.getOrDefault(emptyList()) }
+        }
+        val close = related.await()
+        val closeTops = close.shuffled().take(2).map { artist ->
+            async { runCatching { catalog.artistTop(artist.name, artist.id) }.getOrDefault(emptyList()).take(6) }
+        }.flatMap { it.await() }
+        val ownTracks = own.await()
+        val currentKey = com.ketvoice.app.data.MediaOverrides.normalize(current)
+        var fresh = (style.await() + anchor.await() + closeTops).filter { RadioMix.artistKey(it) != currentKey }
+        // Titles the catalogue does not know (YouTube, publications): the search, other artists only.
+        if (fresh.isEmpty()) fresh = runCatching { MusicApi.searchYtMusic("${from.title} ${from.artist}") + MusicApi.searchYtMusic(current) }
+            .getOrDefault(emptyList()).filter { RadioMix.artistKey(it) != currentKey }
+        // The listener's favourites of the same circle: their artists, and the artists like them.
+        val circle = (listOf(seedArtist, current) + close.map { it.name } + fresh.map { it.artist })
+            .mapTo(HashSet()) { com.ketvoice.app.data.MediaOverrides.normalize(com.ketvoice.app.data.MediaOverrides.mainArtist(it)) }
+        val counts = com.ketvoice.app.data.ListeningHistory.playCounts.value
+        val favorites = AppSettings.favoriteIds.value
+        val familiar = com.ketvoice.app.data.ListeningHistory.knownTracks.value
+            .filter { ((counts[it.id] ?: 0) >= 2 || it.id in favorites) && RadioMix.artistKey(it) in circle }
+            .let { com.ketvoice.app.data.PersonalMixes.withLocalFiles(it, com.ketvoice.app.data.LocalMusic.tracks.value) }
+        RadioMix.pick(fresh, ownTracks.filter { RadioMix.artistKey(it) == currentKey }, familiar, memory,
+            com.ketvoice.app.data.ArtistPrefs::allows, kotlin.random.Random(from.id.hashCode().toLong() * 31 + memory.size))
     }
+
+    /** A radio grows before it runs out: a few titles before the end of the queue, the next batch joins it. */
+    private fun topUpRadio() {
+        val s = _state.value
+        val memory = radioMemory ?: return
+        if (!radio || extending || s.queue.size - 1 - s.index > RADIO_AHEAD) return
+        val track = s.current ?: return
+        val gen = generation
+        extending = true
+        scope.launch {
+            try {
+                memory.rememberAll(s.queue)
+                val more = radioBatch(track, memory)
+                if (radio && radioMemory === memory && more.isNotEmpty() && (gen == generation || _state.value.current?.id == track.id)) enqueue(more)
+            } finally { extending = false }
+        }
+    }
+
+    /** Titles left in a radio's queue when the next batch is fetched. */
+    private val RADIO_AHEAD = 3
 
     fun playQueue(tracks: List<Track>, start: Int = 0) {
         if (tracks.isEmpty()) return
@@ -1272,7 +1340,8 @@ object Player {
         extending = true
         scope.launch {
             try {
-                val related = if (radio) radioBatch(track, s.queue) else MusicApi.searchYtMusic(track.artist).filter { candidate ->
+                val memory = radioMemory
+                val related = if (radio && memory != null) radioBatch(track, memory.apply { rememberAll(s.queue) }) else MusicApi.searchYtMusic(track.artist).filter { candidate ->
                     // An artist the listener blocked is never added by Ketvoice itself.
                     com.ketvoice.app.data.ArtistPrefs.allows(candidate) && s.queue.none { it.id == candidate.id || (it.title.equals(candidate.title, true) && it.artist.equals(candidate.artist, true)) }
                 }.take(8)
@@ -1492,29 +1561,6 @@ object Player {
         state.first { it.current?.id == trackId && !it.buffering && controller?.playbackState == Player.STATE_READY }
         true
     } ?: false
-}
-
-/** How a radio's next titles are chosen: other artists and the same one in turn, never twice the same title. */
-internal object RadioMix {
-    const val BATCH = 10
-
-    fun next(similar: List<Track>, own: List<Track>, queue: List<Track>, allows: (Track) -> Boolean, seed: Long): List<Track> {
-        fun key(t: Track) = com.ketvoice.app.data.MediaOverrides.normalize(t.title) + "|" + com.ketvoice.app.data.MediaOverrides.normalize(
-            com.ketvoice.app.data.MediaOverrides.mainArtist(t.artist))
-        val seen = queue.mapTo(HashSet()) { key(it) }
-        val ids = queue.mapTo(HashSet()) { it.id }
-        val random = kotlin.random.Random(seed)
-        val a = similar.shuffled(random).iterator(); val b = own.shuffled(random).iterator()
-        val out = ArrayList<Track>()
-        // Two titles of artists like it for one of the same artist.
-        var turn = 0
-        while (out.size < BATCH && (a.hasNext() || b.hasNext())) {
-            val pick = if ((turn++ % 3 != 2 && a.hasNext()) || !b.hasNext()) a.next() else b.next()
-            if (pick.id in ids || !seen.add(key(pick)) || !allows(pick)) continue
-            ids += pick.id; out += pick
-        }
-        return out
-    }
 }
 
 /** The short fades of a manual skip with Ketmix on. */

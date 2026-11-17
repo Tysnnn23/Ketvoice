@@ -50,7 +50,11 @@ internal object KetmixJournal {
     private val _entries = MutableStateFlow<List<Entry>>(emptyList())
     val entries: StateFlow<List<Entry>> = _entries
 
-    fun add(entry: Entry) { _entries.value = (listOf(entry) + _entries.value).take(LIMIT) }
+    fun add(entry: Entry) {
+        _entries.value = (listOf(entry) + _entries.value).take(LIMIT)
+        // Counted for the month's Replay and Wrapped (6.1): only transitions really mixed.
+        if (entry.outcome == "mixed") runCatching { com.ketvoice.app.data.ListeningHistory.noteKetmixMix() }
+    }
 
     fun clear() { _entries.value = emptyList() }
 

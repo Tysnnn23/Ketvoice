@@ -25,6 +25,9 @@ class KetvoiceApp : Application(), ImageLoaderFactory {
         runCatching { com.ketvoice.app.stems.StemLibrary.init(this) }
         runCatching { com.ketvoice.app.stems.VoiceSeparation.init(this) }
         runCatching { com.ketvoice.app.data.PlaybackJournal.init(this) }
+        // The week's discoveries (6.1): read at once, renewed in the background on an unmetered network.
+        runCatching { com.ketvoice.app.data.WeeklyDiscoveries.init(this) }
+        if (android.os.Build.FINGERPRINT != "robolectric") runCatching { com.ketvoice.app.data.DiscoveryWork.schedule(this) }
         // Keeps a placed home-screen widget in step with playback (no work when none is placed).
         if (!BuildConfig.IS_QUEST) runCatching { com.ketvoice.app.widget.NowPlayingWidgetUpdater.start(this) }
         if (!BuildConfig.IS_QUEST) runCatching { com.ketvoice.app.widget.KetvoiceWidgetsUpdater.start(this) }

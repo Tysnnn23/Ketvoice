@@ -28,6 +28,12 @@ object ListeningHistory {
     internal val years: StateFlow<Map<String, DayStat>> = _years
     private fun year() = java.time.LocalDate.now().year.toString()
     private fun today() = java.time.LocalDate.now()
+    /** Listening per calendar month (6.1), for the monthly Replay; keyed "2026-11", one preference each. */
+    private val _months = MutableStateFlow<Map<String, MonthStat>>(emptyMap())
+    internal val months: StateFlow<Map<String, MonthStat>> = _months
+    /** Artists ever heard (normalised names): a first listen is a discovery of the month. */
+    private var seenArtists = LinkedHashSet<String>()
+    private const val MAX_SEEN_ARTISTS = 4000
 
     fun init(context: Context) {
         if (prefs != null) return
@@ -43,7 +49,44 @@ object ListeningHistory {
         _listenedMs.value = prefs!!.getLong("listenedMs", 0L)
         _days.value = ListeningWeek.trim(ListeningWeek.decode(prefs!!.getString("days", null)), today())
         _years.value = Wrapped.decode(prefs!!.getString("years", null))
+        runCatching { loadMonths(prefs!!) }
         runCatching { ListeningStats.refresh() }
+    }
+
+    private fun loadMonths(p: android.content.SharedPreferences) {
+        val current = ListeningMonths.key(today())
+        val loaded = mutableMapOf<String, MonthStat>()
+        val edit = p.edit()
+        p.all.keys.filter { it.startsWith(ListeningMonths.PREFIX) }.forEach { k ->
+            val month = k.removePrefix(ListeningMonths.PREFIX)
+            if (!ListeningMonths.isKey(month)) return@forEach
+            val stat = ListeningMonths.decode(p.getString(k, null)) ?: return@forEach
+            // A month that is over keeps only what its Replay shows.
+            val kept = if (month < current) ListeningMonths.close(stat) else stat
+            if (kept !== stat) edit.putString(k, ListeningMonths.encode(kept))
+            loaded[month] = kept
+        }
+        edit.apply()
+        _months.value = loaded
+        // The first launch with monthly Replay: what was heard before is not a discovery.
+        seenArtists = ListeningMonths.decodeSeen(p.getString("artistsSeen", null)) ?: LinkedHashSet<String>().also { seen ->
+            _known.value.forEach { artistKey(it)?.let(seen::add) }
+            p.edit().putString("artistsSeen", ListeningMonths.encodeSeen(seen)).apply()
+        }
+    }
+
+    private fun artistKey(track: Track): String? =
+        MediaOverrides.normalize(PersonalMixes.primaryArtist(track)).takeIf { it.isNotEmpty() && it !in PLACEHOLDER_ARTISTS }
+
+    private val PLACEHOLDER_ARTISTS = setOf("artiste inconnu", "unknown artist", "unknown")
+
+    private fun monthPrefKey() = ListeningMonths.PREFIX + ListeningMonths.key(today())
+    private fun currentMonthJson(): String? = _months.value[ListeningMonths.key(today())]?.let(ListeningMonths::encode)
+
+    /** A transition Ketmix really mixed, counted for the month's Replay and Wrapped. */
+    @Synchronized fun noteKetmixMix() {
+        _months.value = ListeningMonths.addMix(_months.value, today())
+        prefs?.edit()?.putString(monthPrefKey(), currentMonthJson())?.apply()
     }
 
     /**
@@ -56,10 +99,11 @@ object ListeningHistory {
         _listenedMs.value = _listenedMs.value + deltaMs
         _days.value = ListeningWeek.addTime(_days.value, today(), deltaMs)
         _years.value = Wrapped.addTime(_years.value, year(), deltaMs)
+        _months.value = ListeningMonths.addTime(_months.value, today(), java.time.LocalTime.now().hour, deltaMs)
         unflushedMs += deltaMs
         if (unflushedMs >= 15_000L) {
             prefs?.edit()?.putLong("listenedMs", _listenedMs.value)?.putString("days", ListeningWeek.encode(_days.value))
-                ?.putString("years", ListeningWeek.encode(_years.value))?.apply()
+                ?.putString("years", ListeningWeek.encode(_years.value))?.putString(monthPrefKey(), currentMonthJson())?.apply()
             unflushedMs = 0L
         }
     }
@@ -68,7 +112,7 @@ object ListeningHistory {
     @Synchronized fun flushListenedMs() {
         if (unflushedMs > 0L) {
             prefs?.edit()?.putLong("listenedMs", _listenedMs.value)?.putString("days", ListeningWeek.encode(_days.value))
-                ?.putString("years", ListeningWeek.encode(_years.value))?.apply()
+                ?.putString("years", ListeningWeek.encode(_years.value))?.putString(monthPrefKey(), currentMonthJson())?.apply()
             unflushedMs = 0L
         }
     }
@@ -97,9 +141,15 @@ object ListeningHistory {
         _playCounts.value = counts
         _days.value = ListeningWeek.addPlay(_days.value, today(), track.id)
         _years.value = Wrapped.addPlay(_years.value, year(), track.id)
+        // The first title ever heard of an artist makes it a discovery of the month.
+        val newArtist = artistKey(saved)?.takeIf { prefs != null && seenArtists.add(it) }
+            ?.let { PersonalMixes.primaryArtist(saved) }
+        if (seenArtists.size > MAX_SEEN_ARTISTS) seenArtists.iterator().let { it.next(); it.remove() }
+        _months.value = ListeningMonths.addPlay(_months.value, today(), saved, newArtist)
         prefs?.edit()?.putString("tracks", gson.toJson(_tracks.value))
             ?.putString("counts", gson.toJson(counts))?.putString("days", ListeningWeek.encode(_days.value))
-            ?.putString("years", ListeningWeek.encode(_years.value))?.apply()
+            ?.putString("years", ListeningWeek.encode(_years.value))?.putString(monthPrefKey(), currentMonthJson())
+            ?.also { if (newArtist != null) it.putString("artistsSeen", ListeningMonths.encodeSeen(seenArtists)) }?.apply()
         // Keep the recap projection warm so the stats screen opens instantly.
         runCatching { ListeningStats.refresh() }
     }
