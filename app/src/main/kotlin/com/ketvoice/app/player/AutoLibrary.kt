@@ -643,10 +643,13 @@ internal open class AutoLibraryCallback(private val context: Context) : MediaLib
 
     private fun listResult(params: LibraryParams?, block: suspend () -> List<MediaItem>?): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> =
         future {
-            try {
-                block()?.let { LibraryResult.ofItemList(it, params) } ?: LibraryResult.ofError(SessionError.ERROR_BAD_VALUE)
-            } catch (_: AutoUnavailable) {
-                LibraryResult.ofError(SessionError.ERROR_IO)
+            // Browsing reads the stores and the network off the main thread: the phone's screen never waits for the car.
+            withContext(Dispatchers.Default) {
+                try {
+                    block()?.let { LibraryResult.ofItemList(it, params) } ?: LibraryResult.ofError(SessionError.ERROR_BAD_VALUE)
+                } catch (_: AutoUnavailable) {
+                    LibraryResult.ofError(SessionError.ERROR_IO)
+                }
             }
         }
 
@@ -656,7 +659,9 @@ internal open class AutoLibraryCallback(private val context: Context) : MediaLib
         if (params?.isRecent == true) return Futures.immediateFuture(LibraryResult.ofError(SessionError.ERROR_NOT_SUPPORTED))
         runCatching { library.prepare() }
         val rootParams = LibraryParams.Builder().setOffline(params?.isOffline == true).setExtras(library.rootExtras()).build()
-        return Futures.immediateFuture(LibraryResult.ofItem(library.root(), rootParams))
+        // A car asking for what plays without a network gets the downloads as its root.
+        val root = if (params?.isOffline == true) library.tabs().first { it.mediaId == AutoIds.DOWNLOADS } else library.root()
+        return Futures.immediateFuture(LibraryResult.ofItem(root, rootParams))
     }
 
     override fun onGetChildren(session: MediaLibrarySession, browser: MediaSession.ControllerInfo, parentId: String,
@@ -665,9 +670,11 @@ internal open class AutoLibraryCallback(private val context: Context) : MediaLib
 
     override fun onGetItem(session: MediaLibrarySession, browser: MediaSession.ControllerInfo,
                            mediaId: String): ListenableFuture<LibraryResult<MediaItem>> = future {
-        try {
-            library.item(mediaId)?.let { LibraryResult.ofItem(it, null) } ?: LibraryResult.ofError(SessionError.ERROR_BAD_VALUE)
-        } catch (_: AutoUnavailable) { LibraryResult.ofError(SessionError.ERROR_IO) }
+        withContext(Dispatchers.Default) {
+            try {
+                library.item(mediaId)?.let { LibraryResult.ofItem(it, null) } ?: LibraryResult.ofError(SessionError.ERROR_BAD_VALUE)
+            } catch (_: AutoUnavailable) { LibraryResult.ofError(SessionError.ERROR_IO) }
+        }
     }
 
     override fun onSubscribe(session: MediaLibrarySession, browser: MediaSession.ControllerInfo, parentId: String,
@@ -678,7 +685,7 @@ internal open class AutoLibraryCallback(private val context: Context) : MediaLib
                           params: LibraryParams?): ListenableFuture<LibraryResult<Void>> {
         scope.launch {
             // Always answered, even with nothing: a car waits for this count before it shows the results.
-            val count = runCatching { library.searchCount(query) }.getOrDefault(0)
+            val count = withContext(Dispatchers.Default) { runCatching { library.searchCount(query) }.getOrDefault(0) }
             runCatching { session.notifySearchResultChanged(browser, query, count, params) }
         }
         return Futures.immediateFuture(LibraryResult.ofVoid())
@@ -699,7 +706,8 @@ internal open class AutoLibraryCallback(private val context: Context) : MediaLib
                                  mediaItems: MutableList<MediaItem>): ListenableFuture<MutableList<MediaItem>> {
         if (!needsQueue(mediaItems)) return super.onAddMediaItems(mediaSession, controller, mediaItems)
         return future {
-            report(mediaSession, library.perform(library.enqueueRequest(mediaItems)))
+            val request = withContext(Dispatchers.Default) { library.enqueueRequest(mediaItems) }
+            report(mediaSession, library.perform(request))
             throw HandledByQueue()
         }
     }
@@ -709,7 +717,9 @@ internal open class AutoLibraryCallback(private val context: Context) : MediaLib
                                  startPositionMs: Long): ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
         if (!needsQueue(mediaItems)) return super.onSetMediaItems(mediaSession, controller, mediaItems, startIndex, startPositionMs)
         return future {
-            report(mediaSession, library.perform(library.request(mediaItems, startIndex)))
+            // Resolved off the main thread; the phone's queue is then driven from the main thread, where it lives.
+            val request = withContext(Dispatchers.Default) { library.request(mediaItems, startIndex) }
+            report(mediaSession, library.perform(request))
             throw HandledByQueue()
         }
     }

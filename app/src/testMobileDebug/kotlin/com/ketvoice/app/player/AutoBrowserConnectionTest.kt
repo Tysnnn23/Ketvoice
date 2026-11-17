@@ -90,6 +90,10 @@ class AutoBrowserConnectionTest {
             assertEquals(MediaConstants.EXTRAS_VALUE_CONTENT_STYLE_GRID_ITEM,
                 root.params!!.extras.getInt(MediaConstants.EXTRAS_KEY_CONTENT_STYLE_BROWSABLE))
 
+            // Offline, the car is given the downloads to start from.
+            assertEquals(AutoIds.DOWNLOADS, await(browser.getLibraryRoot(
+                MediaLibraryService.LibraryParams.Builder().setOffline(true).build())).value!!.mediaId)
+
             val tabs = await(browser.getChildren(AutoIds.ROOT, 0, 10, null)).value!!
             assertEquals(listOf(AutoIds.HOME, AutoIds.FAVORITES, AutoIds.PLAYLISTS, AutoIds.DOWNLOADS), tabs.map { it.mediaId })
 
