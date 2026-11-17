@@ -65,6 +65,7 @@ object SettingsStore {
         s.lockscreenLyrics.value = p.getBoolean("lockscreenLyrics", true)
         s.autoOfflineFavorites.value = p.getBoolean("autoOfflineFavorites", true)
         s.canvasWithMobileData.value = p.getBoolean("canvasWithMobileData", s.canvasWithMobileData.value)
+        s.releaseAlerts.value = p.getBoolean("releaseAlerts", s.releaseAlerts.value)
         // The old unused flag was saved as true without any consent screen.
         // A new key makes the network-backed feature genuinely opt-in.
         s.artistSignatures.value = p.getBoolean("artistSignaturesOptIn", false)
@@ -217,6 +218,7 @@ object SettingsStore {
             .putBoolean("autoOfflineFavorites", s.autoOfflineFavorites.value)
             .putInt("lyricsTextSize", s.lyricsTextSize.value)
             .putBoolean("canvasWithMobileData", s.canvasWithMobileData.value)
+            .putBoolean("releaseAlerts", s.releaseAlerts.value)
             .putBoolean("artistSignaturesOptIn", s.artistSignatures.value)
             .putBoolean("artistPhotos", s.artistPhotos.value)
             .putBoolean("highRefreshRate", s.highRefreshRate.value)

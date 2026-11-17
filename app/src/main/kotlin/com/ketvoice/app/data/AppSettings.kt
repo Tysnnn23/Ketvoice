@@ -60,6 +60,8 @@ object AppSettings {
     val lyricVideoSound = mutableStateOf(true)
     val systemReduceMotion = mutableStateOf(false)
     val canvasWithMobileData = mutableStateOf(false)
+    /** A notification when an artist the listener follows puts out a release (6.3, see ReleaseWatch). */
+    val releaseAlerts = mutableStateOf(true)
     val artistSignatures = mutableStateOf(false)
     val artistPhotos = mutableStateOf(true)
     val highRefreshRate = mutableStateOf(false)

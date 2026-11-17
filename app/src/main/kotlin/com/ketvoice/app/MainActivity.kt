@@ -166,6 +166,16 @@ class MainActivity : ComponentActivity() {
         handleWidgetIntent(intent)
         com.ketvoice.app.player.AutoVoice.handle(this, intent, lifecycleScope)
         handleResumeIntent(intent)
+        handleReleaseIntent(intent)
+    }
+
+    /** The notification of a new release was touched (6.3): the artist's page opens. */
+    private fun handleReleaseIntent(intent: Intent?) {
+        if (intent?.action != "ketvoice.release.open") return
+        val id = intent.getStringExtra(com.ketvoice.app.data.ReleaseWatch.EXTRA_ARTIST_ID).orEmpty()
+        val name = intent.getStringExtra(com.ketvoice.app.data.ReleaseWatch.EXTRA_ARTIST_NAME).orEmpty()
+        intent.action = null
+        com.ketvoice.app.ui.AppUi.openArtist(id, name)
     }
 
     /** The notification of a playback Android stopped was touched (6.1): it resumes, once. */
@@ -187,6 +197,7 @@ class MainActivity : ComponentActivity() {
         handleWidgetIntent(intent)
         com.ketvoice.app.player.AutoVoice.handle(this, intent, lifecycleScope)
         handleResumeIntent(intent)
+        handleReleaseIntent(intent)
     }
 
     override fun onResume() {

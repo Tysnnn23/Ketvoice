@@ -396,6 +396,9 @@ fun SettingsScreen() {
                         sub = if (com.ketvoice.app.data.BackgroundPlayback.honorLike()) "Lancement d'applis → Ketvoice : désactivez « Gérer automatiquement », puis activez « Exécution en arrière-plan ». Sans cela, ce téléphone coupe la musique."
                             else "Sur ce téléphone, autorisez aussi Ketvoice à démarrer et à rester actif en arrière-plan : c'est souvent lui qui coupe la musique.",
                         value = "Ouvrir") { com.ketvoice.app.data.BackgroundPlayback.openManufacturerScreen(ctx) }
+                    SToggle(KetIcons.Bell, "Nouvelles sorties de vos artistes",
+                        "Une notification quand un artiste que vous suivez sort un album, un single ou un EP. Vérifié deux fois par jour, au plus trois notifications à la fois.",
+                        AppSettings.releaseAlerts.value) { AppSettings.releaseAlerts.value = it; SettingsStore.save() }
                     SToggle(KetIcons.Refresh, "Reprendre automatiquement la lecture après un arrêt par le système",
                         "Si Android ou le gestionnaire de batterie arrête Ketvoice pendant l'écoute, la musique reprend au même titre et au même endroit dans les minutes qui suivent. Jamais après une pause ou un arrêt de votre part.",
                         AppSettings.autoResume.value) { AppSettings.autoResume.value = it; SettingsStore.save() }
