@@ -241,7 +241,9 @@ class PlaybackService : MediaSessionService() {
             .setMediaSourceFactory(playbackMediaSourceFactory(this))
             .setLoadControl(
                 androidx.media3.exoplayer.DefaultLoadControl.Builder()
-                    .setBufferDurationsMs(20_000, 60_000, 500, 1_200)
+                    .setBufferDurationsMs(PlaybackBuffer.MIN_MS, PlaybackBuffer.MAX_MS, 500, 1_200)
+                    .setTargetBufferBytes(PlaybackBuffer.TARGET_BYTES)
+                    .setPrioritizeTimeOverSizeThresholds(false)
                     .build()
             )
             .setAudioAttributes(
@@ -320,6 +322,18 @@ class PlaybackService : MediaSessionService() {
                         com.ketvoice.app.data.PlaybackJournal.add("paused: another app took the audio")
                     androidx.media3.common.Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_BECOMING_NOISY ->
                         com.ketvoice.app.data.PlaybackJournal.add("paused: headphones or Bluetooth disconnected")
+                }
+            }
+            private var stalledAt = 0L
+            override fun onPlaybackStateChanged(state: Int) {
+                if (owner !== this@PlaybackService.player) return
+                val now = android.os.SystemClock.elapsedRealtime()
+                if (state == androidx.media3.common.Player.STATE_BUFFERING && owner.playWhenReady) {
+                    if (stalledAt == 0L) stalledAt = now
+                } else if (stalledAt != 0L) {
+                    PlaybackBuffer.stallNote(now - stalledAt, com.ketvoice.app.automix.Automix.appInFront,
+                        restrictedData())?.let { com.ketvoice.app.data.PlaybackJournal.add(it) }
+                    stalledAt = 0L
                 }
             }
             override fun onPlaybackSuppressionReasonChanged(reason: Int) {
@@ -517,6 +531,12 @@ class PlaybackService : MediaSessionService() {
         return result
     }
 
+    /** Whether Android's data saver keeps this app off the network in the background. */
+    private fun restrictedData(): Boolean = runCatching {
+        getSystemService(android.net.ConnectivityManager::class.java).restrictBackgroundStatus ==
+            android.net.ConnectivityManager.RESTRICT_BACKGROUND_STATUS_ENABLED
+    }.getOrDefault(false)
+
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? =
         mediaSession
 
@@ -556,3 +576,22 @@ class PlaybackService : MediaSessionService() {
 /** Arguments carry the value; older controllers put it in the command extras. */
 internal fun skipSilenceRequested(args: android.os.Bundle, extras: android.os.Bundle): Boolean =
     if (args.containsKey("on")) args.getBoolean("on", false) else extras.getBoolean("on", false)
+
+/**
+ * How far ahead the player reads (6.0.0 Beta 5). Three minutes of sound means a phone that cuts the network
+ * of apps in the background (MagicOS, data saver) has to hold it off for that long before the music stops,
+ * and the radio wakes far less often; the byte cap keeps very high quality files to a sensible size.
+ */
+internal object PlaybackBuffer {
+    const val MIN_MS = 30_000
+    const val MAX_MS = 180_000
+    const val TARGET_BYTES = 32 * 1024 * 1024
+
+    /** A journal line for a wait for data that a listener could hear, or null for a short one. */
+    fun stallNote(waitedMs: Long, inFront: Boolean, restrictedData: Boolean): String? {
+        if (waitedMs < 2_000) return null
+        val where = if (inFront) "" else " · app in the background"
+        val saver = if (restrictedData) " · data saver limits Ketvoice in the background" else ""
+        return "waited ${waitedMs / 1000} s for data$where$saver"
+    }
+}

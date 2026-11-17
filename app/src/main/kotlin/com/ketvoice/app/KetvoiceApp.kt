@@ -34,6 +34,19 @@ class KetvoiceApp : Application(), ImageLoaderFactory {
         }, "ketvoice-disk-budget").apply { isDaemon = true; priority = Thread.MIN_PRIORITY }.start()
     }
 
+    /**
+     * Away from the screen on battery, the separation models (up to a few hundred MB once used) are let go:
+     * battery managers such as MagicOS stop the biggest processes first, music or not (6.0.0 Beta 5).
+     * They load again the next time a separation runs. Memory warnings go to the playback journal.
+     */
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        MemoryRelief.note(level)?.let { com.ketvoice.app.data.PlaybackJournal.add(it) }
+        if (MemoryRelief.releaseModels(level, com.ketvoice.app.stems.StemModel.charging()))
+            Thread({ runCatching { com.ketvoice.app.stems.StemEngine.close() } }, "ketvoice-release-models")
+                .apply { isDaemon = true }.start()
+    }
+
     override fun newImageLoader(): ImageLoader {
         val dir = File(filesDir, "images").apply { if (!exists()) mkdirs() }
         return ImageLoader.Builder(this)
@@ -52,5 +65,21 @@ class KetvoiceApp : Application(), ImageLoaderFactory {
             // In the performance mode images appear at once instead of fading in: one animated layer less per image.
             .crossfade(!runCatching { getSharedPreferences("ketvoice_settings", MODE_PRIVATE).getBoolean("highPerformanceMode", false) }.getOrDefault(false))
             .build()
+    }
+}
+
+internal object MemoryRelief {
+    @Suppress("DEPRECATION")
+    fun releaseModels(level: Int, charging: Boolean): Boolean =
+        level >= android.content.ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN && !charging ||
+            level == android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL ||
+            level >= android.content.ComponentCallbacks2.TRIM_MEMORY_COMPLETE
+
+    @Suppress("DEPRECATION")
+    fun note(level: Int): String? = when (level) {
+        android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW -> "memory: the phone is running low"
+        android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL -> "memory: the phone is critically low"
+        android.content.ComponentCallbacks2.TRIM_MEMORY_COMPLETE -> "memory: Ketvoice is next in line to be stopped"
+        else -> null
     }
 }
