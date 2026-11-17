@@ -83,6 +83,8 @@ fun SubScreensRouter() {
         AppUi.DOWNLOADS -> DownloadsScreen()
         AppUi.LOCAL_FILES -> LocalMusicScreen()
         AppUi.REPLAY -> ReplayScreen()
+        AppUi.MOOD -> com.ketvoice.app.ui.smartlib.MoodScreen()
+        AppUi.DUPLICATES -> com.ketvoice.app.ui.smartlib.DuplicatesScreen()
         else -> {}
     }
 }

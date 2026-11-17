@@ -50,7 +50,7 @@ class PlaylistUiTest {
         compose.setContent { KetvoiceTheme(useDark = true) { LibraryAndPlaylist() } }
         compose.onNodeWithTag("library-list").performScrollToNode(hasTestTag("create-playlist"))
         compose.onNodeWithText("Créer une playlist").assertIsDisplayed()
-        compose.onNodeWithText("Importer depuis Spotify").assertIsDisplayed()
+        compose.onNodeWithText("Importer des playlists").assertIsDisplayed()
         compose.onNodeWithTag("create-playlist").assertIsEnabled()
         compose.onNodeWithTag("import-spotify").assertIsEnabled()
     }
@@ -76,10 +76,10 @@ class PlaylistUiTest {
         compose.setContent { KetvoiceTheme(useDark = true) { LibraryAndPlaylist() } }
         compose.onNodeWithTag("library-list").performScrollToNode(hasTestTag("import-spotify"))
         compose.onNodeWithTag("import-spotify").performClick()
-        compose.onNodeWithTag("spotify-link").assertExists()
-        compose.onNodeWithText("Aucun fichier audio Spotify n'est téléchargé.", substring = true).assertExists()
+        compose.onNodeWithTag("playlist-import-link").assertExists()
+        compose.onNodeWithText("Sans compte ni clé", substring = true).assertExists()
         compose.onNodeWithText("Charger l'aperçu").assertIsNotEnabled()
-        compose.onNodeWithTag("spotify-link").performTextInput("https://open.spotify.com/track/abc")
+        compose.onNodeWithTag("playlist-import-link").performTextInput("https://open.spotify.com/track/abc")
         compose.onNodeWithText("Charger l'aperçu").performClick()
         compose.waitUntil(5000) { compose.onAllNodesWithText("Collez un lien de playlist Spotify publique").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("Créer avec les titres affichés").assertIsNotEnabled()

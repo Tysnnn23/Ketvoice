@@ -133,6 +133,7 @@ fun DownloadsScreen() {
                 Column(Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     DownloadSummaryCard(summary, freeBytes, ::size) { AppUi.showCapsule.value = true }
+                    com.ketvoice.app.ui.smartlib.DuplicatesHint(saved)
                     if (saved.isNotEmpty() || active.isNotEmpty()) {
                         CompactSearchField(query, { query = it }, { keyboard?.hide() }, Modifier.testTag("downloads-search"))
                         if (saved.isNotEmpty()) DownloadViewSwitch(view) { view = it; albumKey = null; artistKey = null }

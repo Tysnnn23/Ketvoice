@@ -97,6 +97,9 @@ fun SearchScreen() {
     var playlists by remember { mutableStateOf<List<com.ketvoice.app.data.LocalPlaylist>>(emptyList()) }
     var shownSegment by remember { mutableIntStateOf(segment) }
     var loading by remember { mutableStateOf(false) }
+    // Natural search (smart library): what was understood of the query, and the chips removed from it.
+    var understood by remember { mutableStateOf<com.ketvoice.app.smartlib.NaturalQuery?>(null) }
+    var dismissed by remember(query) { mutableStateOf(emptySet<String>()) }
     val art by ArtworkRepo.covers.collectAsState()
     val customSources by CustomSources.sources.collectAsState()
     val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
@@ -126,7 +129,7 @@ fun SearchScreen() {
         onDispose { if (com.ketvoice.app.ui.chrome.FloatingSearch.onSubmit === submit) com.ketvoice.app.ui.chrome.FloatingSearch.onSubmit = null }
     }
 
-    LaunchedEffect(query, segment, attempt, customSources) {
+    LaunchedEffect(query, segment, attempt, customSources, dismissed) {
         val q = query.trim()
         fun clear() {
             results = emptyList()
@@ -146,6 +149,8 @@ fun SearchScreen() {
         // no longer blanks the page at every letter. Another scope starts from nothing.
         if (segment != shownSegment) { clear(); shownSegment = segment }
         delay(220)
+        val smart = if (segment == 1) null else com.ketvoice.app.ui.smartlib.SmartSearch.understand(q, dismissed)
+        understood = smart
         if (segment != 1) {
             lyricTracks = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { com.ketvoice.app.data.LyricsSearch.local(q) }
             if (segment == 2) lyricFound = emptyList()
@@ -156,7 +161,8 @@ fun SearchScreen() {
         }
         if (segment == 2) {
             val lists = PlaylistStore.lists.value
-            results = com.ketvoice.app.data.LibrarySearch.tracks(q, Downloader.items.value.map { it.track }, lists,
+            results = smart?.let { com.ketvoice.app.ui.smartlib.SmartSearch.library(it) }?.takeIf { it.isNotEmpty() }
+                ?: com.ketvoice.app.data.LibrarySearch.tracks(q, Downloader.items.value.map { it.track }, lists,
                 com.ketvoice.app.data.LocalMusic.tracks.value, com.ketvoice.app.data.ListeningHistory.knownTracks.value)
             allResults = results
             playlists = com.ketvoice.app.data.LibrarySearch.playlists(q, lists)
@@ -166,19 +172,23 @@ fun SearchScreen() {
             var gotTracks = false
             coroutineScope {
                 val searches = mutableListOf<suspend () -> List<Track>>()
+                // A request ("rap français calme") asks the catalogue for its words, then filters what comes back.
+                val asked = smart?.catalogueText() ?: q
                 if (segment == 0) {
-                    searches += { MusicApi.searchYtMusic(q) }
-                    searches += { PublicationApi.search(q) }
+                    searches += { MusicApi.searchYtMusic(asked) }
+                    searches += { PublicationApi.search(asked) }
+                    if (smart != null) searches += com.ketvoice.app.ui.smartlib.SmartSearch.chartSearches(smart)
                 }
-                searches += { MusicApi.searchAddons(q) }
-                customSources.filter { it.enabled }.forEach { source -> searches += { CustomSources.search(source, q) } }
+                searches += { MusicApi.searchAddons(asked) }
+                customSources.filter { it.enabled }.forEach { source -> searches += { CustomSources.search(source, asked) } }
                 playlists = emptyList()
                 launch {
                     SearchGroups.collectProgressively(searches) { tracks ->
                         gotTracks = true
-                        results = tracks
+                        results = smart?.let { com.ketvoice.app.ui.smartlib.SmartSearch.refineNow(tracks, it) } ?: tracks
                         allResults = tracks
                     }
+                    if (smart != null && allResults.isNotEmpty()) results = com.ketvoice.app.ui.smartlib.SmartSearch.refine(allResults, smart)
                 }
                 if (segment == 0) {
                     launch {
@@ -248,7 +258,9 @@ fun SearchScreen() {
         // Segments : la même lentille de verre glissante que les autres sélecteurs.
         com.ketvoice.app.ui.common.GlassSegmentedControl(listOf("Tout", "Sources", "Bibliothèque"), segment, { segment = it },
             Modifier.padding(horizontal = 20.dp).widthIn(max = 640.dp).align(Alignment.CenterHorizontally), tag = "search-scope")
-        Spacer(Modifier.height(18.dp))
+        Spacer(Modifier.height(if (understood != null && query.trim().length >= 2) 8.dp else 18.dp))
+        if (query.trim().length >= 2) com.ketvoice.app.ui.smartlib.UnderstoodChips(understood, { dismissed = dismissed + it.key },
+            Modifier.padding(bottom = 8.dp))
         }, results = {
         when {
             query.trim().length < 2 -> {
