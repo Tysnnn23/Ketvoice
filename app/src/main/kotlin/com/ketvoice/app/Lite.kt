@@ -110,5 +110,10 @@ object LiteTuning {
 
     const val DEFERRED_START_MS = 4_000L
 
-    fun deferred(lite: Boolean = this.lite): Set<StartWork> = if (lite) StartWork.entries.toSet() else emptySet()
+    /** Mobile and Quest start the same work too, sooner (6.2.2): the first frame comes first everywhere. */
+    const val QUICK_DEFERRED_START_MS = 1_500L
+
+    fun deferred(lite: Boolean = this.lite): Set<StartWork> = StartWork.entries.toSet()
+
+    fun deferredStartMs(lite: Boolean = this.lite): Long = if (lite) DEFERRED_START_MS else QUICK_DEFERRED_START_MS
 }

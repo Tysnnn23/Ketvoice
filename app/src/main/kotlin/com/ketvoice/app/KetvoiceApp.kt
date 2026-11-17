@@ -33,11 +33,14 @@ class KetvoiceApp : Application(), ImageLoaderFactory {
             return
         }
         com.ketvoice.app.data.AppText.init(this)
-        // Lite starts what the first screen does not need a few seconds later (LiteTuning.deferred; none elsewhere).
+        // The settings and the lists the first screen reads are loaded beside the main thread, which would wait for them.
+        com.ketvoice.app.util.PrefsWarmup.start(this)
+        // What the first screen does not need starts after it: a few seconds later in Lite, 1.5 s later elsewhere (6.2.2).
         val later = LiteTuning.deferred()
+        val delayMs = LiteTuning.deferredStartMs()
         fun start(work: LiteTuning.StartWork, block: () -> Unit) {
             if (work !in later) runCatching(block)
-            else android.os.Handler(mainLooper).postDelayed({ runCatching(block) }, LiteTuning.DEFERRED_START_MS)
+            else android.os.Handler(mainLooper).postDelayed({ runCatching(block) }, delayMs)
         }
         // The voice separation model (optional download) and the separations already made: file checks only.
         runCatching { com.ketvoice.app.stems.StemModel.init(this) }

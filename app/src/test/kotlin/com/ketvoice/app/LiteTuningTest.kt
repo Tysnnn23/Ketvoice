@@ -13,7 +13,9 @@ class LiteTuningTest {
         assertNull(LiteTuning.imageDecoders(lite = false))
         assertEquals(3, LiteTuning.ketmixLookahead(lite = false, modest = true))
         assertNull(LiteTuning.canvasBuffer(lite = false))
-        assertTrue(LiteTuning.deferred(lite = false).isEmpty())
+        // Every edition starts the same late work after the first screen; mobile and Quest sooner than Lite.
+        assertEquals(LiteTuning.StartWork.entries.toSet(), LiteTuning.deferred(lite = false))
+        assertTrue(LiteTuning.deferredStartMs(lite = false) < LiteTuning.deferredStartMs(lite = true))
     }
 
     @Test fun liteDefaultsKeepEffectsVisibleAndLightenTheRest() {
