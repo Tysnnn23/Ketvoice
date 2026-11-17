@@ -184,14 +184,18 @@ fun MiniPlayerPill(
                             modifier = Modifier.semantics { liveRegion = androidx.compose.ui.semantics.LiveRegionMode.Polite }
                         )
                     }
-                    Text(
-                        current.artist,
-                        localize = false,
-                        style = T.sub.copy(fontSize = 12.5.sp),
-                        color = th.secondary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        // Ketogether (6.1): a small live sign before the artist while a session runs.
+                        com.ketvoice.app.ui.together.KetogetherLivePill(Modifier.padding(end = 5.dp), compact = true, onDark = th.isDark)
+                        Text(
+                            current.artist,
+                            localize = false,
+                            style = T.sub.copy(fontSize = 12.5.sp),
+                            color = th.secondary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
                 Spacer(Modifier.width(4.dp))
                 Box(Modifier.onGloballyPositioned { com.ketvoice.app.ui.player.MiniPlayerAnchors.play = it.boundsInRoot() }) {

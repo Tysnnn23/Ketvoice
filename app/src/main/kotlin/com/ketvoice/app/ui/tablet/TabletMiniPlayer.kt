@@ -97,8 +97,11 @@ fun TabletMiniPlayer(modifier: Modifier = Modifier, onOpen: () -> Unit) {
                             .onGloballyPositioned { MiniPlayerAnchors.title = it.boundsInRoot() }) {
                             Text(current.title, localize = false, color = theme.onBackground, fontSize = 15.sp, fontWeight = FontWeight.SemiBold,
                                 maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(current.artist, localize = false, color = theme.secondary, fontSize = 13.sp,
-                                maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                com.ketvoice.app.ui.together.KetogetherLivePill(Modifier.padding(end = 5.dp), compact = true, onDark = theme.isDark)
+                                Text(current.artist, localize = false, color = theme.secondary, fontSize = 13.sp,
+                                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            }
                         }
                     }
                     DockButton("Précédent", 44.dp, "dock-previous", { com.ketvoice.app.ui.player.TransportGlyph("previous", Modifier.size(26.dp), it) }) { Player.previous() }

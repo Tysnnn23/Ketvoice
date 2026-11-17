@@ -417,6 +417,7 @@ fun SettingsScreen() {
                 ) { Player.setBitPerfect(it); SettingsStore.save() }
                 BitPerfectPanel()
                 SRow(KetIcons.Sliders, "Égaliseur", sub="Traitement réel de la session audio", value="") { AppUi.showEqualizer.value=true }
+                SRow(com.ketvoice.app.ui.together.KetogetherIcon, "Ketogether", sub="Écouter ensemble, en même temps, avec une file partagée", value="") { com.ketvoice.app.together.Ketogether.sheet.value=true }
                 SRow(KetIcons.Wifi, "Transfert sur le même Wi-Fi", sub="Découverte locale et confirmation sur le destinataire", value="") { AppUi.showHandoff.value=true }
                 SRow(
                     KetIcons.Audio, "Qualité en Wi-Fi",

@@ -162,6 +162,9 @@ fun TrackMenuSheet(track: Track, onClose: () -> Unit) {
                 com.ketvoice.app.util.ShareLinks.shareTrack(shareContext, track)
             }
         }
+        if (com.ketvoice.app.together.Ketogether.ui.collectAsState().value.active) MenuItemRow("Ajouter à Ketogether", com.ketvoice.app.ui.together.KetogetherIcon) {
+            onClose(); com.ketvoice.app.together.Ketogether.add(track)
+        }
         MenuItemRow("Ajouter à une playlist", Icons.Filled.PlaylistAdd) {
             onClose(); com.ketvoice.app.ui.AppUi.addToPlaylist.value = track
         }
@@ -381,6 +384,9 @@ fun AudioOutputSheet(onClose: () -> Unit) {
         )
         MenuItemRow("Égaliseur", Icons.Filled.Equalizer) {
             onClose();com.ketvoice.app.ui.AppUi.showEqualizer.value=true
+        }
+        MenuItemRow("Ketogether", com.ketvoice.app.ui.together.KetogetherIcon) {
+            onClose(); com.ketvoice.app.together.Ketogether.sheet.value = true
         }
         MenuItemRow("Transférer sur le même Wi-Fi", Icons.Filled.Wifi) {
             onClose();com.ketvoice.app.ui.AppUi.showHandoff.value=true

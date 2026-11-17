@@ -65,6 +65,7 @@ fun PlaybackFeatureDialogs() {
     }
     if(AppUi.showEqualizer.value) EqualizerDialog { AppUi.showEqualizer.value=false }
     if(AppUi.showHandoff.value) HandoffDialog { AppUi.showHandoff.value=false }
+    com.ketvoice.app.ui.together.KetogetherHost()
     val pending by WifiHandoff.pending.collectAsState()
     pending?.let{offer->
         val theme = LocalTheme.current

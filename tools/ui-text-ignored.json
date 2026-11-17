@@ -132,5 +132,10 @@
  "Ctrl F": "keyboard shortcut shown beside the search field of the sidebar, the same in every language",
  "icon-option-{0}": "test tag of the icon picker, never shown",
  "lyrics-mesh-{0}": "test tag of the lyrics mesh, never shown",
- "release-{0}": "test tag of a release card on the artist and album pages, never shown"
+ "release-{0}": "test tag of a release card on the artist and album pages, never shown",
+ "Ketogether": "brand name of group listening, the same in every language",
+ " (Discord)": "brand name after the listener's Discord name in the Ketogether sheet",
+ "hostEnded": "Ketogether end-reason code, mapped to a French sentence before display",
+ "hostLost": "Ketogether end-reason code, mapped to a French sentence before display",
+ "notFound": "Ketogether end-reason code, mapped to a French sentence before display"
 }
