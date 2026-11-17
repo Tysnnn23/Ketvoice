@@ -34,6 +34,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.sp
 import androidx.core.app.ActivityCompat
@@ -127,9 +128,15 @@ class MainActivity : ComponentActivity() {
                     splash = false
                 }
                 Box(Modifier.fillMaxSize()) {
-                    CrashReportsDialog()
-                    AppRoot()
+                    val crashReport = CrashReportsDialog()
+                    // While the Vice City welcome is up, TalkBack reads it alone.
+                    val welcome = com.ketvoice.app.ui.vicecity.ViceCityWelcomeGate.visible.value
+                    Box(Modifier.fillMaxSize().then(if (welcome) Modifier.clearAndSetSemantics { } else Modifier)) {
+                        AppRoot()
+                    }
                     com.ketvoice.app.ui.update.UpdateHost()
+                    // The Vice City welcome (6.1): after the splash, never over a crash report.
+                    com.ketvoice.app.ui.vicecity.ViceCityWelcomeHost(ready = !splash && !crashReport)
                     AnimatedVisibility(
                         visible = splash,
                         exit = fadeOut(tween(360))
@@ -296,6 +303,13 @@ class MainActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         com.ketvoice.app.automix.Automix.appInFront = true
+        // The Vice City edition may end while the app lives: its theme and icon then go back, silently.
+        if (com.ketvoice.app.data.ViceCityEdition.expire()) {
+            runCatching { com.ketvoice.app.data.SettingsStore.save() }
+            val app = applicationContext
+            val icon = com.ketvoice.app.data.AppSettings.appIconVariant.value
+            Thread({ runCatching { com.ketvoice.app.util.LauncherIcons.apply(app, icon) } }, "ketvoice-icon").start()
+        }
     }
 
     override fun onStop() {
@@ -305,13 +319,14 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+/** The crash reports left by an earlier run; returns whether the dialog is on screen. */
 @Composable
-private fun CrashReportsDialog() {
-    val activity = androidx.activity.compose.LocalActivity.current ?: return
+private fun CrashReportsDialog(): Boolean {
+    val activity = androidx.activity.compose.LocalActivity.current ?: return false
     val pending = remember { Crash.pending(activity) }
     var index by remember { mutableIntStateOf(0) }
     var visible by remember { mutableStateOf(pending.isNotEmpty()) }
-    if (!visible || pending.isEmpty()) return
+    if (!visible || pending.isEmpty()) return false
     val report = remember(index) {
         runCatching { pending[index].readText() }.getOrDefault("(rapport illisible)")
     }
@@ -343,4 +358,5 @@ private fun CrashReportsDialog() {
             com.ketvoice.app.ui.common.KetTextButton("Effacer", { Crash.clearAll(activity); visible = false }, destructive = true)
         }
     )
+    return true
 }

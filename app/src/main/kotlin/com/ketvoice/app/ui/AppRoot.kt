@@ -37,6 +37,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -88,11 +89,14 @@ fun AppRoot() {
         AppSettings.glassTilt.value, AppSettings.liquidGlass.value, Motion.reduced,
         AppSettings.highPerformanceMode.value, com.ketvoice.app.BuildConfig.IS_QUEST))
     val themeMode = AppSettings.themeMode.value
-    val useDark = if (themeMode == 1) false else if (themeMode == 2) true else null
+    // The Vice City limited edition (6.1) is a dark look of its own while it is on; the listener's theme is kept.
+    val viceCity = com.ketvoice.app.data.ViceCityEdition.themeOn
+    val useDark = if (viceCity) true else if (themeMode == 1) false else if (themeMode == 2) true else null
     val view = androidx.compose.ui.platform.LocalView.current
     val effectiveDark = useDark ?: isSystemInDarkTheme()
     // Le lecteur / la file d'attente ont toujours un fond noir : icônes système claires.
-    val darkSurface = AppUi.showPlayer.value || AppUi.overlay.value == AppUi.QUEUE
+    val darkSurface = AppUi.showPlayer.value || AppUi.overlay.value == AppUi.QUEUE ||
+        com.ketvoice.app.ui.vicecity.ViceCityWelcomeGate.visible.value
 
     androidx.compose.runtime.SideEffect {
         val controller = androidx.core.view.WindowCompat.getInsetsController(
@@ -110,7 +114,7 @@ fun AppRoot() {
     // then the accent of the whole interface — buttons, links, sliders — follows the cover playing,
     // glides from one title's colour to the next and back to the chosen accent when it stops.
     val coverAccent = com.ketvoice.app.theme.rememberCoverAccent(
-        if (com.ketvoice.app.data.AppSettings.coverAccent.value) playingCover else null)?.first
+        if (com.ketvoice.app.data.AppSettings.coverAccent.value && !viceCity) playingCover else null)?.first
     val (accentColor, accentAmount) = com.ketvoice.app.theme.rememberCoverGlide(coverAccent, 700)
 
     // The playing cover lightly tints the optical glass (independent of the accent option).
@@ -119,10 +123,11 @@ fun AppRoot() {
     // "Fond selon la pochette" (5.9.1): the background of every page glides to the colour of the cover
     // playing, and back to the theme's own when nothing plays or the setting is turned off.
     val wantedTone = com.ketvoice.app.theme.rememberCoverTone(
-        if (com.ketvoice.app.data.AppSettings.coverBackground.value) playingCover else null)
+        if (com.ketvoice.app.data.AppSettings.coverBackground.value && !viceCity) playingCover else null)
     val (toneColor, toneAmount) = com.ketvoice.app.theme.rememberCoverGlide(wantedTone, 900)
     val cover = com.ketvoice.app.theme.CoverLook(toneColor, toneAmount, accentColor, accentAmount)
-    KetvoiceTheme(useDark = useDark, cover = cover) {
+    KetvoiceTheme(useDark = useDark, cover = cover, viceCity = viceCity) {
+        if (viceCity) com.ketvoice.app.theme.ViceCityTheme.Pulse(Motion.reduced, AppSettings.highPerformanceMode.value)
         com.ketvoice.app.ui.player.PlaybackFeatureDialogs()
         BackgroundPlaybackOffer()
         val th = LocalTheme.current
@@ -454,7 +459,10 @@ fun AppRoot() {
  */
 @Composable
 private fun ScrollEdges(modifier: Modifier, bottom: Boolean) {
-    val background = LocalTheme.current.background
+    val theme = LocalTheme.current
+    // Vice City (6.1): the top edge keeps the sunset's colour, and a glow rises behind the tab bar.
+    val background = if (theme.viceCity) androidx.compose.ui.graphics.lerp(theme.background,
+        com.ketvoice.app.theme.ViceCityTheme.Colors.magenta, .16f) else theme.background
     Box(modifier.testTag("scroll-edges")) {
         Box(Modifier.align(Alignment.TopCenter).fillMaxWidth()
             .background(androidx.compose.ui.graphics.Brush.verticalGradient(
@@ -462,8 +470,11 @@ private fun ScrollEdges(modifier: Modifier, bottom: Boolean) {
             .statusBarsPadding().height(30.dp))
         if (bottom) Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth()
             .background(androidx.compose.ui.graphics.Brush.verticalGradient(
-                *ScrollEdge.stops(ScrollEdge.BOTTOM_ALPHA, fromEdge = false).map { (at, alpha) -> at to background.copy(alpha = alpha) }.toTypedArray()))
+                *ScrollEdge.stops(ScrollEdge.BOTTOM_ALPHA, fromEdge = false).map { (at, alpha) -> at to theme.background.copy(alpha = alpha) }.toTypedArray()))
             .navigationBarsPadding().height(140.dp))
+        if (theme.viceCity && bottom) Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth()
+            .drawBehind { with(com.ketvoice.app.theme.ViceCityTheme) { bottomGlow(phase.floatValue) } }
+            .navigationBarsPadding().height(150.dp))
     }
 }
 

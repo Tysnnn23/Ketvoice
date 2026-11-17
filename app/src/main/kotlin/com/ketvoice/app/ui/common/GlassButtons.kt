@@ -119,7 +119,9 @@ internal fun GlassCapsuleButton(
         .graphicsLayer {
             scaleX = scaleWidth; scaleY = scaleHeight
             alpha = if (enabled) 1f else .45f
-        }) {
+        }
+        // Vice City (6.1): the main button wears a thin neon edge.
+        .then(with(com.ketvoice.app.theme.ViceCityTheme) { Modifier.viceCityNeon(shape, theme.viceCity && prominent) })) {
         GlassPanel(Modifier.matchParentSize(), shape, GlassParams.pill(dark = theme.isDark).copy(
             highlightAngle = light, opticalPressure = pressure), enabled = AppSettings.liquidGlass.value) {}
         // A plain glass button keeps a faint body, so it still reads as a button on a flat page.
@@ -129,7 +131,9 @@ internal fun GlassCapsuleButton(
         if (prominent) {
             // Tinted glass: the accent fills the body, the rim and the top light stay glass.
             Box(Modifier.matchParentSize().clip(shape)
-                .background(theme.accent.copy(alpha = if (liquid27) .88f else 1f))
+                // Vice City (6.1): filled with the sunset, its dark label reads on every colour of it.
+                .then(if (theme.viceCity) Modifier.background(com.ketvoice.app.theme.ViceCityTheme.sunset, alpha = if (liquid27) .92f else 1f)
+                    else Modifier.background(theme.accent.copy(alpha = if (liquid27) .88f else 1f)))
                 .background(Brush.verticalGradient(0f to Color.White.copy(alpha = if (liquid27) .22f else .08f),
                     .5f to Color.Transparent, 1f to Color.Black.copy(alpha = if (liquid27) .10f else .04f)))
                 .then(if (liquid27) Modifier.border(.8.dp, Brush.verticalGradient(

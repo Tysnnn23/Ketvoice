@@ -253,6 +253,11 @@ fun SettingsScreen() {
                 Text("Le texte reste toujours lisible : chaque couleur est ajustée au thème clair ou sombre.",
                     color = th.secondary, fontSize = 13.sp, lineHeight = 18.sp,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp))
+                // Vice City keeps its colours on the pages; the cover still colours the player and the glass.
+                if (com.ketvoice.app.data.ViceCityEdition.themeOn) Text(
+                    "Avec le thème Vice City, les pages gardent ses couleurs ; la pochette colore toujours le lecteur et le verre.",
+                    color = th.secondary, fontSize = 13.sp, lineHeight = 18.sp,
+                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 10.dp).testTag("vicecity-cover-note"))
                 SToggle(KetIcons.Appearance, "Verre teinté par la pochette",
                     "La couleur dominante de la pochette colore légèrement le verre, sans réduire la lisibilité",
                     AppSettings.coverTintedGlass.value) { AppSettings.coverTintedGlass.value = it; SettingsStore.save() }
@@ -264,6 +269,8 @@ fun SettingsScreen() {
                     AppSettings.albumColors.value) { AppSettings.albumColors.value = it; SettingsStore.save() }
             }
             Section("APPARENCE") {
+                // The Vice City limited edition (6.1): offered until 10 December, then gone from here.
+                if (com.ketvoice.app.data.ViceCityEdition.themeAvailable()) ViceCityThemeRow()
                 SToggle(KetIcons.Info, "Stats info", "Informations audio réelles, uniquement dans le lecteur", AppSettings.techStats.value) {
                     AppSettings.techStats.value = it; SettingsStore.save()
                 }
@@ -313,7 +320,8 @@ fun SettingsScreen() {
                 }
                 SRow(
                     KetIcons.Moon, "Thème",
-                    sub = "S'applique immédiatement à toute l'app",
+                    sub = if (com.ketvoice.app.data.ViceCityEdition.themeOn) "Le thème Vice City est sombre ; votre choix revient quand il est désactivé"
+                        else "S'applique immédiatement à toute l'app",
                     value = themeLabel(AppSettings.themeMode.value)
                 ) {
                     choice = ChoiceSpec(
@@ -331,7 +339,8 @@ fun SettingsScreen() {
                 }
                 SRow(
                     KetIcons.Appearance, "Couleur d'accent",
-                    sub = "Barre de lecture, scrub, boutons et progression",
+                    sub = if (com.ketvoice.app.data.ViceCityEdition.themeOn) "Le rose Vice City la remplace tant que le thème est activé"
+                        else "Barre de lecture, scrub, boutons et progression",
                     value = accentLabel(AppSettings.accentArgb.value)
                 ) { accentOpen = true }
                 SToggle(
@@ -841,13 +850,22 @@ private fun appIconLabel(value: Int) = AppIcons.options.firstOrNull { it.id == v
 
 /** The launcher icons of 6.0.0 Beta 4 (the owner's glass K, without a background), with their previews. */
 internal object AppIcons {
-    /** [ground] is the colour Android draws under the glass (an adaptive icon's background is always filled). */
-    class Option(val id: Int, val label: String, val preview: Int, val ground: Long)
-    val options = listOf(
+    /**
+     * [ground] is the colour Android draws under the glass (an adaptive icon's background is always filled);
+     * a [fullBleed] preview is the whole icon, background included (the Vice City K, 6.1).
+     */
+    class Option(val id: Int, val label: String, val preview: Int, val ground: Long, val fullBleed: Boolean = false,
+                 val note: String? = null)
+    private val regular = listOf(
         Option(1, "Liquid Glass", com.ketvoice.app.R.drawable.icon_preview_glass, 0xFF000000),
         Option(3, "Clair", com.ketvoice.app.R.drawable.icon_preview_light, 0xFFF4F6F8),
         Option(2, "Teinté", com.ketvoice.app.R.drawable.icon_preview_tinted, 0xFF000000),
         Option(0, "Transparent", com.ketvoice.app.R.drawable.icon_preview_clear, 0xFFF4F6F8))
+    private val viceCity = Option(com.ketvoice.app.data.ViceCityEdition.ICON_VARIANT, "Vice City",
+        com.ketvoice.app.R.drawable.vicecity_logo, 0xFF120A22, fullBleed = true, note = "Jusqu'au 10 décembre")
+    /** The icons offered now: the Vice City one only while its edition lasts. */
+    val options: List<Option> get() =
+        if (com.ketvoice.app.data.ViceCityEdition.themeAvailable()) regular + viceCity else regular
 }
 
 /** The icon chooser: each icon shown as on a home screen, over a wallpaper, the chosen one ringed. */
@@ -874,10 +892,15 @@ internal fun AppIconPicker(current: Int, onPick: (Int) -> Unit, onClose: () -> U
                                     .background(androidx.compose.ui.graphics.Color(option.ground))
                                     .border(if (selected) 3.dp else 0.dp, if (selected) theme.accent else androidx.compose.ui.graphics.Color.Transparent, RoundedCornerShape(26.dp)),
                                     contentAlignment = Alignment.Center) {
-                                    androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(option.preview), null, Modifier.size(84.dp))
+                                    if (option.fullBleed) androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(option.preview), null,
+                                        Modifier.matchParentSize(), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
+                                    else androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(option.preview), null, Modifier.size(84.dp))
+                                    if (option.fullBleed && selected) Box(Modifier.matchParentSize()
+                                        .border(3.dp, theme.accent, RoundedCornerShape(26.dp)))
                                 }
                                 Text(option.label, fontSize = 13.sp, color = if (selected) theme.accent else theme.onBackground,
-                                    modifier = Modifier.padding(top = 6.dp), maxLines = 1)
+                                    modifier = Modifier.padding(top = 6.dp), maxLines = 1, localize = option.note == null)
+                                option.note?.let { Text(it, fontSize = 11.sp, color = theme.secondary, maxLines = 1) }
                             }
                         }
                     }
@@ -1123,6 +1146,34 @@ private fun ColumnScope.LockscreenLyricsRows() {
                 .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
         }
     }
+}
+
+/**
+ * « Thème Vice City » (6.1, limited edition until 10 December): the switch, with a small picture of the theme.
+ * It lays its own look over the listener's theme, accent and colours, which come back when it is turned off.
+ */
+@Composable
+private fun ColumnScope.ViceCityThemeRow() {
+    val th = LocalTheme.current
+    val tick = com.ketvoice.app.ui.motion.rememberHaptics()
+    val on = AppSettings.viceCityTheme.value
+    Column(Modifier.fillMaxWidth().toggleable(on, role = Role.Switch, onValueChange = {
+            tick(com.ketvoice.app.ui.motion.Haptics.Kind.Tick); AppSettings.viceCityTheme.value = it; SettingsStore.save()
+        }).padding(horizontal = 16.dp, vertical = 12.dp).testTag("vicecity-theme-row")) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            com.ketvoice.app.ui.vicecity.ViceCityLogo(Ket27.Metrics.tile)
+            Column(Modifier.weight(1f).padding(start = 12.dp, end = 14.dp)) {
+                Text("Thème Vice City", color = th.onBackground, fontSize = 17.sp, lineHeight = 22.sp)
+                Text("Édition limitée, jusqu'au 10 décembre", color = th.secondary, fontSize = 13.sp, lineHeight = 18.sp,
+                    modifier = Modifier.padding(top = 3.dp))
+            }
+            com.ketvoice.app.ui.common.LiquidGlassSwitch(on, onCheckedChange = null)
+        }
+        com.ketvoice.app.ui.vicecity.ViceCityPreview(Modifier.padding(top = 12.dp))
+        Text("Nuit violette, coucher de soleil rose et orange, néon discret. Votre thème et votre couleur d'accent reviennent quand vous le désactivez.",
+            color = th.secondary, fontSize = 13.sp, lineHeight = 18.sp, modifier = Modifier.padding(top = 10.dp))
+    }
+    SettingsCellDivider()
 }
 
 @Composable

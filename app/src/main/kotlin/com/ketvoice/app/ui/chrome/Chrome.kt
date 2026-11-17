@@ -636,7 +636,9 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier,
                             .offset { androidx.compose.ui.unit.IntOffset((slot * lens.start + 5.dp - grow.width / 2).roundToPx(), 0) }
                             .size(width = slot * lens.span - 10.dp + grow.width, height = heightAnim - 10.dp + grow.height)
                             .align(Alignment.CenterStart)
-                            .graphicsLayer { scaleX = bulge; scaleY = bulge * lens.squash },
+                            .graphicsLayer { scaleX = bulge; scaleY = bulge * lens.squash }
+                            // Vice City (6.1): the selection wears a thin neon edge.
+                            .then(with(com.ketvoice.app.theme.ViceCityTheme) { Modifier.viceCityNeon(pillShape, th.viceCity) }),
                         shape = pillShape,
                         params = GlassParams.selection(dark = th.isDark).let { base ->
                             if (lensLift <= 0f) base else base.copy(opticalPressure = lensLift.coerceIn(0f, 1f), lens = lensLift.coerceIn(0f, 1f),
@@ -747,7 +749,8 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier,
                     Modifier
                         .offset(x = slot * pos + 5.dp)
                         .size(width = slot - 10.dp, height = heightAnim - 14.dp)
-                        .align(Alignment.CenterStart),
+                        .align(Alignment.CenterStart)
+                        .then(with(com.ketvoice.app.theme.ViceCityTheme) { Modifier.viceCityNeon(RoundedCornerShape(999.dp), th.viceCity) }),
                     RoundedCornerShape(999.dp),
                     GlassParams.selection(dark = th.isDark),
                     enabled = AppSettings.liquidGlass.value
