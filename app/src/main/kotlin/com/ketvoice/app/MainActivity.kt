@@ -179,6 +179,11 @@ class MainActivity : ComponentActivity() {
         intent.removeExtra(com.ketvoice.app.widget.WidgetIntents.MIX)
         intent.removeExtra(com.ketvoice.app.widget.WidgetIntents.OPEN)
         if (open == "replay") AppUi.openReplay()
+        // The lock screen lyrics notification or the large player widget's line (6.1): the player, on its lyrics.
+        if (open == "lyrics" && com.ketvoice.app.player.Player.state.value.current != null) {
+            AppUi.showPlayer.value = true
+            AppUi.showLyrics.value = true
+        }
         if (mix.isNullOrBlank()) return
         lifecycleScope.launch {
             val tracks = runCatching { com.ketvoice.app.data.PersonalMixes.tracks(mix) }.getOrNull()

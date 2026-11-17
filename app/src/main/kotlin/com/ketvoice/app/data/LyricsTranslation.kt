@@ -8,6 +8,23 @@ import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 
 object LyricsTranslation {
+    /** The translation the lyrics screen shows, line by line, while it is turned on (6.1): the lock screen shows it too. */
+    data class Live(val trackId: String, val lines: Map<Int, String> = emptyMap())
+    private val _live = kotlinx.coroutines.flow.MutableStateFlow<Live?>(null)
+    val live: kotlinx.coroutines.flow.StateFlow<Live?> = _live
+
+    /** The lyrics screen turned the translation of [trackId] on (an empty map until lines arrive) or off. */
+    fun showing(trackId: String, on: Boolean) {
+        if (on) _live.value = Live(trackId) else if (_live.value?.trackId == trackId) _live.value = null
+    }
+
+    /** A translated line arrived on the lyrics screen. */
+    fun translated(trackId: String, index: Int, text: String) {
+        val current = _live.value ?: return
+        if (current.trackId != trackId || current.lines[index] == text) return
+        _live.value = current.copy(lines = current.lines + (index to text))
+    }
+
     suspend fun stream(lines: List<MusicApi.LyricLine>, target: String, active: Int,
                        onLine: (Int, String) -> Unit) = coroutineScope {
         val semaphore = Semaphore(3)

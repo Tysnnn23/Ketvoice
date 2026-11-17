@@ -18,7 +18,9 @@ object LyricsRepo {
         val lines: List<MusicApi.LyricLine> = emptyList(),
         val isTimed: Boolean = true,
         val wordTimed: Boolean = false,
-        val syllableTimed: Boolean = false
+        val syllableTimed: Boolean = false,
+        /** The title these lines belong to (6.1): the lock screen and the widget never show another title's lines. */
+        val trackId: String? = null
     ) {
         fun indexAt(positionMs: Long): Int = if (!isTimed) -1
             else lines.indexOfLast { it.timeMs >= 0 && it.timeMs <= positionMs }
@@ -47,14 +49,14 @@ object LyricsRepo {
         val source = AppSettings.lyricsSource.value
         val mode = AppSettings.lyricsMode.value
         if (mode == 2 || source == MusicApi.SRC_OFF) {
-            _state.value = State(source = "Désactivées", sourceKey = MusicApi.SRC_OFF)
+            _state.value = State(source = "Désactivées", sourceKey = MusicApi.SRC_OFF, trackId = track.id)
             return
         }
 
         // The listener's own file for this title comes first (5.9.1), whatever the online sources say.
         runCatching { CustomLyrics.lines(track.id) }.getOrNull()?.let { (entry, lines) ->
             _state.value = State(loading = false, source = "Personnalisées · ${entry.name}", sourceKey = SOURCE_CUSTOM, lines = lines,
-                isTimed = lines.any { it.timeMs >= 0 }, wordTimed = lines.any { it.words.size >= 2 }, syllableTimed = lines.any { it.syllableTimed })
+                isTimed = lines.any { it.timeMs >= 0 }, wordTimed = lines.any { it.words.size >= 2 }, syllableTimed = lines.any { it.syllableTimed }, trackId = track.id)
             return
         }
         if (!refresh) {
@@ -67,12 +69,13 @@ object LyricsRepo {
                     lines = local.second,
                     isTimed = local.second.any { it.timeMs >= 0 },
                     wordTimed = local.second.any { it.words.size >= 2 },
-                    syllableTimed = local.second.any { it.syllableTimed }
+                    syllableTimed = local.second.any { it.syllableTimed },
+                    trackId = track.id
                 )
                 return
             }
         }
-        _state.value = State(loading = true, sourceKey = source)
+        _state.value = State(loading = true, sourceKey = source, trackId = track.id)
         job = scope.launch {
             var bestRank = -1
             var bestPriority = Int.MAX_VALUE
@@ -90,12 +93,12 @@ object LyricsRepo {
                             bestPriority = priority
                             _state.value = State(false, result.first, source, result.second,
                                 result.second.any { it.timeMs >= 0 }, result.second.any { it.words.size >= 2 },
-                                result.second.any { it.syllableTimed })
+                                result.second.any { it.syllableTimed }, trackId = track.id)
                         }
                     }
                 } }
             }
-            if (gen == generation && _state.value.loading) _state.value = State(source = MusicApi.sourceName(source), sourceKey = source)
+            if (gen == generation && _state.value.loading) _state.value = State(source = MusicApi.sourceName(source), sourceKey = source, trackId = track.id)
         }
     }
     fun clear() {

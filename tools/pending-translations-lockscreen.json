@@ -1,0 +1,110 @@
+{
+ "Paroles sur l'écran verrouillé": {
+  "en": "Lyrics on the lock screen",
+  "hi": "लॉक स्क्रीन पर गीत",
+  "ja": "ロック画面に歌詞",
+  "zh": "锁屏显示歌词",
+  "ru": "Текст песни на экране блокировки",
+  "it": "Testi sulla schermata di blocco",
+  "es": "Letras en la pantalla de bloqueo",
+  "de": "Songtexte auf dem Sperrbildschirm",
+  "pt": "Letras na tela de bloqueio",
+  "ko": "잠금 화면에 가사"
+ },
+ "La ligne chantée dans une notification silencieuse, sur l'écran verrouillé et dans le volet ; la suivante en dessous.": {
+  "en": "The line being sung in a silent notification, on the lock screen and in the shade; the next one below.",
+  "hi": "गाई जा रही पंक्ति एक साइलेंट सूचना में, लॉक स्क्रीन और नोटिफ़िकेशन पैनल पर; अगली पंक्ति उसके नीचे।",
+  "ja": "歌われている行をサイレント通知でロック画面と通知シェードに表示し、次の行をその下に表示します。",
+  "zh": "正在演唱的歌词行以静默通知显示在锁屏和通知栏中，下一行显示在其下方。",
+  "ru": "Исполняемая строка в беззвучном уведомлении — на экране блокировки и в шторке; следующая под ней.",
+  "it": "La riga cantata in una notifica silenziosa, sulla schermata di blocco e nella tendina; la successiva sotto.",
+  "es": "La línea que se canta en una notificación silenciosa, en la pantalla de bloqueo y en el panel; la siguiente debajo.",
+  "de": "Die gesungene Zeile in einer stummen Benachrichtigung, auf dem Sperrbildschirm und in der Leiste; die nächste darunter.",
+  "pt": "A linha cantada em uma notificação silenciosa, na tela de bloqueio e na aba de notificações; a próxima logo abaixo.",
+  "ko": "부르고 있는 가사 줄을 무음 알림으로 잠금 화면과 알림 창에 표시하고, 다음 줄은 그 아래에 표시합니다."
+ },
+ "Notifications désactivées": {
+  "en": "Notifications turned off",
+  "hi": "सूचनाएँ बंद हैं",
+  "ja": "通知がオフです",
+  "zh": "通知已关闭",
+  "ru": "Уведомления отключены",
+  "it": "Notifiche disattivate",
+  "es": "Notificaciones desactivadas",
+  "de": "Benachrichtigungen deaktiviert",
+  "pt": "Notificações desativadas",
+  "ko": "알림이 꺼져 있음"
+ },
+ "Autorisez les notifications de Ketvoice pour voir les paroles sur l'écran verrouillé.": {
+  "en": "Allow Ketvoice's notifications to see the lyrics on the lock screen.",
+  "hi": "लॉक स्क्रीन पर गीत देखने के लिए Ketvoice की सूचनाओं की अनुमति दें।",
+  "ja": "ロック画面で歌詞を見るには、Ketvoice の通知を許可してください。",
+  "zh": "允许 Ketvoice 发送通知，即可在锁屏上查看歌词。",
+  "ru": "Разрешите уведомления Ketvoice, чтобы видеть текст на экране блокировки.",
+  "it": "Consenti le notifiche di Ketvoice per vedere i testi sulla schermata di blocco.",
+  "es": "Permite las notificaciones de Ketvoice para ver las letras en la pantalla de bloqueo.",
+  "de": "Erlaube die Benachrichtigungen von Ketvoice, um die Songtexte auf dem Sperrbildschirm zu sehen.",
+  "pt": "Permita as notificações do Ketvoice para ver as letras na tela de bloqueio.",
+  "ko": "잠금 화면에서 가사를 보려면 Ketvoice의 알림을 허용하세요."
+ },
+ "Notification des paroles": {
+  "en": "Lyrics notification",
+  "hi": "गीत की सूचना",
+  "ja": "歌詞の通知",
+  "zh": "歌词通知",
+  "ru": "Уведомление с текстом",
+  "it": "Notifica dei testi",
+  "es": "Notificación de letras",
+  "de": "Songtext-Benachrichtigung",
+  "pt": "Notificação das letras",
+  "ko": "가사 알림"
+ },
+ "Si l'écran verrouillé masque les notifications silencieuses, rendez celle-ci visible dans les réglages d'Android.": {
+  "en": "If the lock screen hides silent notifications, make this one visible in Android's settings.",
+  "hi": "अगर लॉक स्क्रीन साइलेंट सूचनाएँ छिपाती है, तो Android की सेटिंग में इसे दिखने योग्य बनाएँ।",
+  "ja": "ロック画面でサイレント通知が非表示になる場合は、Android の設定でこの通知を表示するようにしてください。",
+  "zh": "如果锁屏会隐藏静默通知，请在 Android 设置中让此通知可见。",
+  "ru": "Если экран блокировки скрывает беззвучные уведомления, сделайте это уведомление видимым в настройках Android.",
+  "it": "Se la schermata di blocco nasconde le notifiche silenziose, rendi visibile questa nelle impostazioni di Android.",
+  "es": "Si la pantalla de bloqueo oculta las notificaciones silenciosas, haz visible esta en los ajustes de Android.",
+  "de": "Wenn der Sperrbildschirm stumme Benachrichtigungen ausblendet, mache diese in den Android-Einstellungen sichtbar.",
+  "pt": "Se a tela de bloqueio ocultar as notificações silenciosas, deixe esta visível nas configurações do Android.",
+  "ko": "잠금 화면에서 무음 알림이 숨겨진다면 Android 설정에서 이 알림이 표시되도록 하세요."
+ },
+ "Réglages d'Android": {
+  "en": "Android settings",
+  "hi": "Android सेटिंग",
+  "ja": "Android の設定",
+  "zh": "Android 设置",
+  "ru": "Настройки Android",
+  "it": "Impostazioni di Android",
+  "es": "Ajustes de Android",
+  "de": "Android-Einstellungen",
+  "pt": "Configurações do Android",
+  "ko": "Android 설정"
+ },
+ "Paroles en direct": {
+  "en": "Live lyrics",
+  "hi": "लाइव गीत",
+  "ja": "ライブ歌詞",
+  "zh": "实时歌词",
+  "ru": "Текст в реальном времени",
+  "it": "Testi in diretta",
+  "es": "Letras en directo",
+  "de": "Live-Songtexte",
+  "pt": "Letras ao vivo",
+  "ko": "실시간 가사"
+ },
+ "La ligne chantée sur l'écran verrouillé et dans les notifications": {
+  "en": "The line being sung on the lock screen and in notifications",
+  "hi": "लॉक स्क्रीन और सूचनाओं में गाई जा रही पंक्ति",
+  "ja": "ロック画面と通知に表示される、歌われている行",
+  "zh": "在锁屏和通知中显示正在演唱的歌词行",
+  "ru": "Исполняемая строка на экране блокировки и в уведомлениях",
+  "it": "La riga cantata sulla schermata di blocco e nelle notifiche",
+  "es": "La línea que se canta en la pantalla de bloqueo y en las notificaciones",
+  "de": "Die gesungene Zeile auf dem Sperrbildschirm und in den Benachrichtigungen",
+  "pt": "A linha cantada na tela de bloqueio e nas notificações",
+  "ko": "잠금 화면과 알림에 표시되는 부르고 있는 가사 줄"
+ }
+}

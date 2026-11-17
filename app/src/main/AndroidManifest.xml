@@ -10,6 +10,8 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- 6.1: the sung line on the lock screen may become an Android 16 Live Update (a normal permission). -->
+    <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
     <!-- 6.1: an exact alarm brings back playback that Android ended (when the listener allows alarms):
          Android then lets the app start its playback from the background. Used only while music plays. -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
@@ -246,6 +248,11 @@
         <!-- 6.1: brings back playback that Android ended (an alarm while music plays, the notification's touch). -->
         <receiver
             android:name=".player.RevivalReceiver"
+            android:exported="false" />
+
+        <!-- 6.1: the lock screen lyrics notification was swiped away (not shown again for that title). -->
+        <receiver
+            android:name=".player.LyricsNotificationReceiver"
             android:exported="false" />
 
         <!-- Discord OAuth2 + PKCE redirect handled by Ketvoice itself. -->

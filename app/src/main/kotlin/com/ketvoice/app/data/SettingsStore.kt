@@ -60,6 +60,7 @@ object SettingsStore {
         s.ketmixLibrary.value = p.getBoolean("ketmixLibrary", true)
         s.autoResume.value = p.getBoolean("autoResume", true)
         s.lyricVideoSound.value = p.getBoolean("lyricVideoSound", true)
+        s.lockscreenLyrics.value = p.getBoolean("lockscreenLyrics", true)
         s.autoOfflineFavorites.value = p.getBoolean("autoOfflineFavorites", true)
         s.canvasWithMobileData.value = p.getBoolean("canvasWithMobileData", s.canvasWithMobileData.value)
         // The old unused flag was saved as true without any consent screen.
@@ -204,6 +205,7 @@ object SettingsStore {
             .putBoolean("ketmixLibrary", s.ketmixLibrary.value)
             .putBoolean("autoResume", s.autoResume.value)
             .putBoolean("lyricVideoSound", s.lyricVideoSound.value)
+            .putBoolean("lockscreenLyrics", s.lockscreenLyrics.value)
             .putBoolean("autoOfflineFavorites", s.autoOfflineFavorites.value)
             .putInt("lyricsTextSize", s.lyricsTextSize.value)
             .putBoolean("canvasWithMobileData", s.canvasWithMobileData.value)

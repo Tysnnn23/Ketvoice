@@ -36,6 +36,8 @@ class PlaybackService : MediaLibraryService() {
     /** Level, filter and analysis tap of each deck's sound path (absent in exact mode). */
     private val decks = java.util.WeakHashMap<ExoPlayer, com.ketvoice.app.automix.DeckControl>()
     private val released = java.util.Collections.newSetFromMap(java.util.WeakHashMap<ExoPlayer, Boolean>())
+    /** The sung line on the lock screen and in the large widget (6.1), from the deck being heard. */
+    private val lockLyrics by lazy { LockscreenLyrics(this, serviceScope, ::lyricsPlayhead) }
     private val automixHost = object : com.ketvoice.app.automix.AutomixHost {
         override val main: ExoPlayer get() = player
         override val exact: Boolean get() = AppSettings.bitPerfect.value
@@ -53,6 +55,7 @@ class PlaybackService : MediaLibraryService() {
             val attributes = old.audioAttributes
             player = next
             mediaSession?.setPlayer(sessionPlayer(next))
+            lockLyrics.poke()
             // The outgoing deck keeps playing its fade; audio focus and headset events follow the new one.
             old.setAudioAttributes(attributes, false)
             next.setAudioAttributes(attributes, true)
@@ -170,6 +173,7 @@ class PlaybackService : MediaLibraryService() {
             })
             .build()
         mediaSession = session
+        lockLyrics.start()
         com.ketvoice.app.automix.AnalysisStore.init(applicationContext)
         // The DJ editor's waves and the listener's mix points (6.1).
         com.ketvoice.app.automix.WaveStore.init(applicationContext)
@@ -243,6 +247,18 @@ class PlaybackService : MediaLibraryService() {
             // (the model arrived during the title) the stage starts where the sound starts again: a seek to the same place.
             if (!control.voiceStageOn) main.seekTo(main.currentPosition)
         }
+    }
+
+    /** Where the deck being heard is, for [LockscreenLyrics]; read on the main thread like every player call. */
+    private fun lyricsPlayhead(): Playhead? {
+        if (!::player.isInitialized || stopping) return null
+        val p = player
+        val item = p.currentMediaItem ?: return null
+        val state = p.playbackState
+        val active = state == androidx.media3.common.Player.STATE_READY || state == androidx.media3.common.Player.STATE_BUFFERING
+        val meta = item.mediaMetadata
+        return Playhead(item.mediaId, p.currentPosition.coerceAtLeast(0L), p.playWhenReady && active, p.isPlaying,
+            p.playbackParameters.speed, meta.title?.toString().orEmpty(), meta.artist?.toString().orEmpty())
     }
 
     private fun sessionPlayer(engine: ExoPlayer): androidx.media3.common.Player = QueueBridgePlayer(engine,
@@ -365,9 +381,18 @@ class PlaybackService : MediaLibraryService() {
         player.addListener(object : androidx.media3.common.Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 if (owner === this@PlaybackService.player && !isPlaying) SonicMeter.reset()
+                if (owner === this@PlaybackService.player) lockLyrics.poke()
+            }
+            override fun onMediaItemTransition(mediaItem: androidx.media3.common.MediaItem?, reason: Int) {
+                if (owner === this@PlaybackService.player) lockLyrics.poke()
+            }
+            override fun onPlaybackParametersChanged(playbackParameters: androidx.media3.common.PlaybackParameters) {
+                // Ketmix's tempo glide changes the speed a little: the next line's moment moves with it.
+                if (owner === this@PlaybackService.player) lockLyrics.poke()
             }
             override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
                 if (owner !== this@PlaybackService.player) return
+                lockLyrics.poke()
                 // A pause is marked at once: playback the listener paused is never brought back (6.1).
                 markPlayback()
                 if (playWhenReady) return
@@ -381,6 +406,7 @@ class PlaybackService : MediaLibraryService() {
             private var stalledAt = 0L
             override fun onPlaybackStateChanged(state: Int) {
                 if (owner !== this@PlaybackService.player) return
+                lockLyrics.poke()
                 val now = android.os.SystemClock.elapsedRealtime()
                 if (state == androidx.media3.common.Player.STATE_BUFFERING && owner.playWhenReady) {
                     if (stalledAt == 0L) stalledAt = now
@@ -402,6 +428,7 @@ class PlaybackService : MediaLibraryService() {
                 if (owner === this@PlaybackService.player) {
                     playbackRevision++
                     SonicMeter.reset()
+                    lockLyrics.poke()
                 }
             }
             override fun onAudioSessionIdChanged(audioSessionId: Int) {
@@ -433,6 +460,7 @@ class PlaybackService : MediaLibraryService() {
         player.volume = 1f
         player.repeatMode = repeat
         mediaSession?.setPlayer(sessionPlayer(player))
+        lockLyrics.poke()
         old.release()
         if (item != null) { player.setMediaItem(item, position); player.prepare(); player.playWhenReady = play }
     }
@@ -561,6 +589,7 @@ class PlaybackService : MediaLibraryService() {
                     val attributes = old.audioAttributes
                     player = next
                     mediaSession?.setPlayer(sessionPlayer(next))
+                    lockLyrics.poke()
                     promoted = true
                     old.setAudioAttributes(attributes, false)
                     old.pause()
@@ -607,6 +636,7 @@ class PlaybackService : MediaLibraryService() {
         com.ketvoice.app.automix.Automix.detach(automixHost)
         getSystemService(android.media.AudioManager::class.java).unregisterAudioDeviceCallback(audioDevices)
         BitPerfectState.report(ExactAudioStatus())
+        lockLyrics.stop()
         serviceScope.cancel()
         SonicMeter.observe(false)
         AudioEqualizer.release()
