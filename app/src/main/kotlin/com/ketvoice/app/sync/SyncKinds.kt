@@ -66,7 +66,8 @@ internal object PlaylistsKind : SyncKind {
     private const val PREFIX = "pl:"
 
     override fun snapshot(context: Context, previous: SyncDoc): Map<String, String> {
-        val rows = PlaylistStore.lists.value
+        // Shared playlists live on their own server tables (SharedPlaylists), never in the personal library.
+        val rows = PlaylistStore.lists.value.filterNot { com.ketvoice.app.data.PlaylistRules.isShared(it.id) }
         val out = rows.associate { PREFIX + it.id to Canonical.text(encode(it)) }.toMutableMap()
         if (rows.isNotEmpty()) out[ORDER] = Canonical.text(JSONArray(rows.map { it.id }))
         return out

@@ -19,6 +19,11 @@ data class LocalPlaylist(val id: String = UUID.randomUUID().toString(), val name
     val coverUrl: String? = null, val createdAt: Long = System.currentTimeMillis(), val pinned: Boolean = false)
 
 object PlaylistRules {
+    /** A shared playlist (6.3) shows in the Library under `shared:<server id>`; it never goes through the personal sync. */
+    const val SHARED_PREFIX = "shared:"
+    fun isShared(id: String): Boolean = id.startsWith(SHARED_PREFIX)
+    fun sharedLocalId(serverId: String): String = SHARED_PREFIX + serverId
+    fun sharedServerId(localId: String): String? = localId.removePrefix(SHARED_PREFIX).takeIf { localId.startsWith(SHARED_PREFIX) && it.isNotBlank() }
     fun name(value: String): String = value.trim().also {
         require(it.isNotEmpty() && it.length <= 80 && it.none(Char::isISOControl)) { "Nom de playlist invalide" }
     }
@@ -47,6 +52,8 @@ object PlaylistStore {
     private var file: AtomicFile? = null
     private val mutex = Mutex()
     private val gson = Gson()
+    /** Told synchronously after every committed change (inside the store's lock): the shared playlists' edit tracker. */
+    @Volatile internal var sharedHook: ((List<LocalPlaylist>) -> Unit)? = null
     fun init(context: Context) {
         if (file != null) return
         val storage = AtomicFile(File(context.filesDir, "playlists-v1.json")); file = storage
@@ -76,6 +83,7 @@ object PlaylistStore {
             }
             catch (failure: Exception) { storage.failWrite(out); throw failure }
             _lists.value = next
+            runCatching { sharedHook?.invoke(next) }
         }
     }
     suspend fun create(name: String, entries: List<PlaylistEntry> = emptyList(), spotifyUrl: String? = null, cover: String? = null): String {
@@ -113,15 +121,25 @@ object PlaylistStore {
      * in their order. Only called with what this device held plus what the account added or changed.
      */
     internal suspend fun replaceFromSync(rows: List<LocalPlaylist>) {
-        change { _ -> rows.map { playlist -> playlist.copy(name = PlaylistRules.name(playlist.name),
-            entries = playlist.entries.map { it.copy(track = it.track?.let(PlaylistRules::safe)) }) } }
+        change { current -> current.filter { PlaylistRules.isShared(it.id) } +
+            rows.filterNot { PlaylistRules.isShared(it.id) }.map { playlist -> playlist.copy(name = PlaylistRules.name(playlist.name),
+                entries = playlist.entries.map { it.copy(track = it.track?.let(PlaylistRules::safe)) }) } }
+    }
+
+    /**
+     * The shared playlists (6.3): [compute] gets those now held and returns those that must be held; the
+     * personal ones are left as they are. Runs inside the store's lock, so a listener's edit made a moment
+     * ago has already reached the shared state by then.
+     */
+    internal suspend fun putShared(compute: (List<LocalPlaylist>) -> List<LocalPlaylist>) {
+        change { current -> compute(current.filter { PlaylistRules.isShared(it.id) }) + current.filterNot { PlaylistRules.isShared(it.id) } }
     }
 
     /** Restore only missing identities; never replace a playlist edited on this device. */
     internal suspend fun mergeBackup(incoming: List<LocalPlaylist>) {
         change { rows ->
             val existing = rows.map { it.id }.toSet()
-            rows + incoming.filterNot { it.id in existing }.map { playlist ->
+            rows + incoming.filterNot { it.id in existing || PlaylistRules.isShared(it.id) }.map { playlist ->
                 playlist.copy(name = PlaylistRules.name(playlist.name),
                     entries = playlist.entries.map { it.copy(track = it.track?.let(PlaylistRules::safe)) })
             }

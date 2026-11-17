@@ -103,10 +103,14 @@ object LibrarySync {
     }
 
     /** The app came to the front: what other devices changed meanwhile comes in. */
-    fun onForeground() { if (AccountSession.userId() != null) request(800L) }
+    fun onForeground() {
+        if (AccountSession.userId() != null) { request(800L); SharedPlaylists.onForeground() }
+    }
 
     /** The app goes to the background: what changed here goes out now. */
-    fun onBackground() { if (AccountSession.userId() != null) request(0L) }
+    fun onBackground() {
+        if (AccountSession.userId() != null) { request(0L); SharedPlaylists.onBackground() }
+    }
 
     fun request(delayMs: Long = DEBOUNCE_MS) {
         if (context == null || AccountSession.userId() == null) return
