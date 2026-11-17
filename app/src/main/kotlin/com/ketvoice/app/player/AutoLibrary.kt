@@ -3,6 +3,7 @@ package com.ketvoice.app.player
 
 import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import androidx.media3.common.MediaItem
@@ -406,8 +407,12 @@ internal class AutoLibrary(
         val found = search(text).tracks
         if (found.isEmpty()) return AutoRequest.Missing(source.text("Aucun résultat pour « $text »"))
         val ranked = VoiceMatch.rank(found, text, title, artist)
-        val queue = if (focus == ARTIST_FOCUS && artist != null)
-            ranked.filter { VoiceMatch.sameArtist(it, artist) }.ifEmpty { ranked } else ranked
+        val queue = when {
+            focus == ARTIST_FOCUS && artist != null -> ranked.filter { VoiceMatch.sameArtist(it, artist) }.ifEmpty { ranked }
+            focus == ALBUM_FOCUS && album != null ->
+                ranked.filter { MediaOverrides.normalize(it.album).contains(MediaOverrides.normalize(album)) }.ifEmpty { ranked }
+            else -> ranked
+        }
         return AutoRequest.Play(queue.take(MAX_QUEUE), 0)
     }
 
@@ -583,7 +588,10 @@ internal class AppAutoSource(private val context: Context) : AutoSource {
             LocalMusic.tracks.value.firstOrNull { it.id == trackId })).firstOrNull()
     }
 
-    override fun cover(track: Track): String? = ArtworkRepo.coverForTrack(track) ?: track.coverUrl
+    /** A downloaded title shows its saved cover (it reaches the car offline); the owner's overrides still apply. */
+    override fun cover(track: Track): String? =
+        Downloader.itemFor(track.id)?.track?.coverUrl?.takeIf { it.startsWith("file:") }?.let { MediaOverrides.cover(track, it) }
+            ?: ArtworkRepo.coverForTrack(track) ?: track.coverUrl
     override fun text(french: String): String = AppText.t(french)
 }
 
@@ -609,6 +617,33 @@ internal class PlayerAutoPlayback(private val context: Context) : AutoPlayback {
         // The saved session is read from the disk when the queue first connects.
         withTimeoutOrNull(2_500) { Player.state.first { it.current != null } } ?: return false
         if (!Player.state.value.playWhenReady) Player.toggle()
+        return true
+    }
+}
+
+/**
+ * « Joue X sur Ketvoice » said to the phone's assistant outside the car arrives as an activity intent
+ * (MEDIA_PLAY_FROM_SEARCH, declared in the mobile manifest): the same voice request as in the car.
+ */
+internal object AutoVoice {
+    @Volatile private var library: AutoLibrary? = null
+
+    /** Plays what [intent] asks for when it is a voice search; false for any other intent. */
+    fun handle(context: Context, intent: Intent?, scope: CoroutineScope): Boolean {
+        if (intent?.action != android.provider.MediaStore.INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH) return false
+        val query = intent.getStringExtra(android.app.SearchManager.QUERY).orEmpty()
+        val extras = intent.extras?.let(::Bundle)
+        // Handled once: a recreated activity must not play it again.
+        intent.action = null
+        val app = context.applicationContext
+        val voice = library ?: AutoLibrary(AppAutoSource(app), PlayerAutoPlayback(app)).also { library = it }
+        scope.launch(Dispatchers.Main) {
+            voice.prepare()
+            val request = withContext(Dispatchers.Default) { voice.voice(query, extras) }
+            val message = voice.perform(request)
+            if (message != null) android.widget.Toast.makeText(app, message, android.widget.Toast.LENGTH_SHORT).show()
+            else if (request is AutoRequest.Play || request is AutoRequest.Shuffle) com.ketvoice.app.ui.AppUi.showPlayer.value = true
+        }
         return true
     }
 }

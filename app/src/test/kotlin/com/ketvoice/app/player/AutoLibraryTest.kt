@@ -280,6 +280,13 @@ class AutoLibraryTest {
         assertEquals("Aucun résultat", library.perform(AutoRequest.Resume))
     }
 
+    @Test fun voiceWithTheAlbumFocusKeepsThatAlbum() = runBlocking {
+        source.catalogue = { listOf(track("x1", "Hello", "Adele").copy(album = "25"), track("x2", "Chasing pavements", "Adele").copy(album = "19"),
+            track("x3", "Water under the bridge", "Adele").copy(album = "25")) }
+        val album = Bundle().apply { putString(MediaStore.EXTRA_MEDIA_FOCUS, "vnd.android.cursor.item/album"); putString(MediaStore.EXTRA_MEDIA_ALBUM, "25") }
+        assertEquals(setOf("x1", "x3"), (library.voice("25 adele", album) as AutoRequest.Play).tracks.map { it.id }.toSet())
+    }
+
     @Test fun voiceScoring() {
         val hello = track("1", "Hello", "Adele")
         assertTrue(VoiceMatch.score(hello, "hello adele", null, null) > VoiceMatch.score(track("2", "Hello", "Lionel Richie"), "hello adele", null, null))
