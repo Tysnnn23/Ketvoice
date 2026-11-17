@@ -100,12 +100,14 @@ class StemWorkService : Service() {
                 val lengths = data.getLongArray("lengths") ?: return@start false
                 val items = ids.indices.filter { it < paths.size && it < lengths.size }.map { StemLibrary.LibraryItem(ids[it], paths[it], lengths[it]) }
                 val depth = AnalysisDepth.entries.getOrElse(data.getInt("depth")) { AnalysisDepth.Balanced }
+                val ctx = currentCoroutineContext()
                 StemLibrary.runItems(items, depth, data.getBoolean("separate"),
-                    goOn = { StemModel.charging() },
+                    goOn = { ctx.isActive && StemModel.charging() },
                     // A voice the listener waits for comes first, then the mix being prepared in the playing process.
                     held = { held || voices.get() > 0 },
                     progress = { done, total -> progress(Bundle().apply { putInt("done", done); putInt("total", total) }) },
-                    separating = { StemModel.charging() && voices.get() == 0 })
+                    // A cancelled request (unplugged, Ketmix turned off) stops even a whole title half-way.
+                    separating = { ctx.isActive && StemModel.charging() && voices.get() == 0 })
                 true
             }
         }
