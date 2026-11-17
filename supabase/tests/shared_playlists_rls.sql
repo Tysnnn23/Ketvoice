@@ -297,6 +297,8 @@ select public.zz_ok('the profile page names the copy by a random reference, not 
   public.ketvoice_public_profile('alice') ->> 'avatar_ref' = 'dddddddd-0000-4000-8000-0000000000aa');
 select public.zz_ok('a stranger does not read the private photo', not exists (
   select 1 from storage.objects where bucket_id = 'ketvoice-avatars'));
+select public.zz_fails('nobody claims someone else''s photo reference',
+  $$update public.ketvoice_profiles set avatar_ref = 'dddddddd-0000-4000-8000-0000000000aa' where id = 'cccccccc-0000-4000-8000-000000000003'$$, '23505');
 select public.zz_fails('nobody uploads a copy under someone else''s reference',
   $$insert into storage.objects (bucket_id, name, owner) values ('ketvoice-public-avatars', 'dddddddd-0000-4000-8000-0000000000aa.jpg', 'cccccccc-0000-4000-8000-000000000003')$$, '42501');
 -- Bob re-joins: he now shares a playlist with Alice and may read her private photo.

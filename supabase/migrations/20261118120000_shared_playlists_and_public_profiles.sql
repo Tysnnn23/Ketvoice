@@ -357,6 +357,9 @@ alter table public.ketvoice_profiles add column if not exists is_public boolean 
 alter table public.ketvoice_profiles add column if not exists show_listening boolean not null default false;
 -- Random name of the public copy of the photo (see the top of this file); not derived from the user id.
 alter table public.ketvoice_profiles add column if not exists avatar_ref uuid;
+-- One owner per reference: nobody can claim someone else's reference (which would let them overwrite or delete
+-- that person's public photo through the bucket policies below).
+create unique index if not exists ketvoice_profiles_avatar_ref_key on public.ketvoice_profiles (avatar_ref) where avatar_ref is not null;
 
 do $$
 begin
