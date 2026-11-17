@@ -156,7 +156,9 @@ internal class AutoLibrary(
     private val source: AutoSource,
     private val playback: AutoPlayback,
     private val artwork: (String?) -> Uri? = { url -> url?.takeIf { it.isNotBlank() }?.let(Uri::parse) },
-    private val clock: () -> Long = System::currentTimeMillis
+    private val clock: () -> Long = System::currentTimeMillis,
+    private val searchTimeoutMs: Long = SEARCH_TIMEOUT_MS,
+    private val mixTimeoutMs: Long = MIX_TIMEOUT_MS
 ) {
     companion object {
         /** Longest list a car is given: driving screens are short, and Auto cuts long lists anyway. */
@@ -253,7 +255,7 @@ internal class AutoLibrary(
                     cached(parentId, LOCAL_TTL_MS) { list.entries.mapNotNull { it.track } }
                 }
                 mix != null -> lists[parentId]?.takeIf { clock() - it.at < REMOTE_TTL_MS }?.value
-                    ?: (withTimeoutOrNull(MIX_TIMEOUT_MS) { source.mixTracks(mix) } ?: throw AutoUnavailable())
+                    ?: (withTimeoutOrNull(mixTimeoutMs) { source.mixTracks(mix) } ?: throw AutoUnavailable())
                         .also { lists[parentId] = Entry(clock(), it) }
                 query != null -> search(query).tracks
                 else -> null
@@ -292,7 +294,7 @@ internal class AutoLibrary(
         searches[key]?.takeIf { clock() - it.at < REMOTE_TTL_MS }?.let { return it.value }
         val playlists = source.searchPlaylists(query).take(10)
         val library = source.searchLibrary(query).distinctBy { it.id }.take(MAX_ITEMS)
-        val catalogue = (withTimeoutOrNull(SEARCH_TIMEOUT_MS) { source.searchCatalogue(query) } ?: emptyList())
+        val catalogue = (withTimeoutOrNull(searchTimeoutMs) { source.searchCatalogue(query) } ?: emptyList())
             .filter { found -> library.none { it.id == found.id || SearchGroups.sameRecording(it, found) } }
             .distinctBy { it.id }
             .take(MAX_ITEMS)
