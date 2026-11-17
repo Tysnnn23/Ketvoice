@@ -637,8 +637,8 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier,
                             .size(width = slot * lens.span - 10.dp + grow.width, height = heightAnim - 10.dp + grow.height)
                             .align(Alignment.CenterStart)
                             .graphicsLayer { scaleX = bulge; scaleY = bulge * lens.squash }
-                            // Vice City (6.1): the selection wears a thin neon edge.
-                            .then(with(com.ketvoice.app.theme.ViceCityTheme) { Modifier.viceCityNeon(pillShape, th.viceCity) }),
+                            // A seasonal theme (Vice City, 6.1): the selection wears a thin neon edge.
+                            .then(th.season?.let { look -> with(look) { Modifier.seasonEdge(pillShape, true) } } ?: Modifier),
                         shape = pillShape,
                         params = GlassParams.selection(dark = th.isDark).let { base ->
                             if (lensLift <= 0f) base else base.copy(opticalPressure = lensLift.coerceIn(0f, 1f), lens = lensLift.coerceIn(0f, 1f),
@@ -750,7 +750,7 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier,
                         .offset(x = slot * pos + 5.dp)
                         .size(width = slot - 10.dp, height = heightAnim - 14.dp)
                         .align(Alignment.CenterStart)
-                        .then(with(com.ketvoice.app.theme.ViceCityTheme) { Modifier.viceCityNeon(RoundedCornerShape(999.dp), th.viceCity) }),
+                        .then(th.season?.let { look -> with(look) { Modifier.seasonEdge(RoundedCornerShape(999.dp), true) } } ?: Modifier),
                     RoundedCornerShape(999.dp),
                     GlassParams.selection(dark = th.isDark),
                     enabled = AppSettings.liquidGlass.value

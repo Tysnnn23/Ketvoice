@@ -139,14 +139,20 @@ class MainActivity : ComponentActivity() {
                 }
                 Box(Modifier.fillMaxSize()) {
                     val crashReport = CrashReportsDialog()
-                    // While the Vice City welcome is up, TalkBack reads it alone.
-                    val welcome = com.ketvoice.app.ui.vicecity.ViceCityWelcomeGate.visible.value
+                    // While a welcome is up (first launch, Vice City, a season), TalkBack reads it alone.
+                    val onboarding = com.ketvoice.app.data.FirstRun.pending.value
+                    val welcome = com.ketvoice.app.ui.vicecity.ViceCityWelcomeGate.visible.value || onboarding ||
+                        com.ketvoice.app.ui.seasons.SeasonWelcomeGate.visible.value != null
                     Box(Modifier.fillMaxSize().then(if (welcome) Modifier.clearAndSetSemantics { } else Modifier)) {
                         AppRoot()
                     }
                     com.ketvoice.app.ui.update.UpdateHost()
-                    // The Vice City welcome (6.1): after the splash, never over a crash report.
-                    com.ketvoice.app.ui.vicecity.ViceCityWelcomeHost(ready = !splash && !crashReport)
+                    // The first-launch welcome of a new install (6.2) comes first, then the Vice City welcome (6.1)
+                    // and a season's offer (6.2): after the splash, never over a crash report.
+                    com.ketvoice.app.ui.onboarding.OnboardingHost(ready = !splash && !crashReport)
+                    com.ketvoice.app.ui.vicecity.ViceCityWelcomeHost(ready = !splash && !crashReport && !onboarding)
+                    com.ketvoice.app.ui.seasons.SeasonWelcomeHost(ready = !splash && !crashReport && !onboarding &&
+                        !com.ketvoice.app.ui.vicecity.ViceCityWelcomeGate.visible.value)
                     AnimatedVisibility(
                         visible = splash,
                         exit = fadeOut(tween(360))
@@ -319,8 +325,8 @@ class MainActivity : ComponentActivity() {
         com.ketvoice.app.automix.Automix.appInFront = true
         com.ketvoice.app.sync.LibrarySync.onForeground()
         com.ketvoice.app.sync.NowPlayingSync.refresh()
-        // The Vice City edition may end while the app lives: its theme and icon then go back, silently.
-        if (com.ketvoice.app.data.ViceCityEdition.expire()) {
+        // The Vice City edition or a season may end while the app lives: its theme and icon then go back, silently.
+        if (com.ketvoice.app.data.Seasons.expire()) {
             runCatching { com.ketvoice.app.data.SettingsStore.save() }
             val app = applicationContext
             val icon = com.ketvoice.app.data.AppSettings.appIconVariant.value

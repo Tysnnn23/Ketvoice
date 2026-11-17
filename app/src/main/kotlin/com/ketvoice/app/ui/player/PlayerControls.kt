@@ -134,7 +134,8 @@ fun ArtworkCanvas(
     Box(
         modifier
             .clip(RoundedCornerShape(corner))
-            .background(Brush.linearGradient(gradient))
+            // In the player the scene shows through while one cover steps back for the next (6.2).
+            .then(if (depth) Modifier else Modifier.background(Brush.linearGradient(gradient)))
     ) {
         AnimatedContent(
             modifier = Modifier.fillMaxSize().then(if (depth && canvasPath == null) Modifier.artworkDepth() else Modifier),
@@ -142,7 +143,11 @@ fun ArtworkCanvas(
 
             contentKey = { if (it.canvas != null) "${it.id}:video:${it.canvas}" else "${it.id}:art:${it.cover.orEmpty()}" },
             transitionSpec = {
-                fadeIn(tween(Motion.duration())).togetherWith(fadeOut(tween(Motion.duration())))
+                // In the player (6.2), a new title comes in the way Apple Music does it; elsewhere, and for a cover
+                // that only finished loading, a plain cross-fade.
+                if (depth && initialState.id != targetState.id)
+                    trackChange(TrackChange.direction(Player.state.value.queue.map { it.id }, initialState.id, targetState.id))
+                else fadeIn(tween(Motion.duration())).togetherWith(fadeOut(tween(Motion.duration())))
             },
             label = "artwork"
         ) { data ->
@@ -171,7 +176,8 @@ fun ArtworkCanvas(
                             AsyncImage(
                                 model = data.cover,
                                 contentDescription = null,
-                                modifier = placed,
+                                // In the player, a cover without a Canvas moves very gently (6.2).
+                                modifier = if (depth) placed.generatedCoverMotion(playing) else placed,
                                 contentScale = ContentScale.Crop,
                                 onSuccess = { loaded ->
                                     val size = loaded.painter.intrinsicSize
@@ -179,8 +185,9 @@ fun ArtworkCanvas(
                                 }
                             )
                         }
-                    else -> Box(Modifier.fillMaxSize().background(
-                        Brush.verticalGradient(listOf(Color.White.copy(alpha = .06f), Color.Transparent))))
+                    else -> Box(Modifier.fillMaxSize()
+                        .then(if (depth) Modifier.background(Brush.linearGradient(gradientFor(data.id))) else Modifier)
+                        .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = .06f), Color.Transparent))))
                 }
             }
         }

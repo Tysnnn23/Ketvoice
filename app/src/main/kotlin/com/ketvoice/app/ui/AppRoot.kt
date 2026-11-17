@@ -89,14 +89,18 @@ fun AppRoot() {
         AppSettings.glassTilt.value, AppSettings.liquidGlass.value, Motion.reduced,
         AppSettings.highPerformanceMode.value, com.ketvoice.app.BuildConfig.IS_QUEST))
     val themeMode = AppSettings.themeMode.value
-    // The Vice City limited edition (6.1) is a dark look of its own while it is on; the listener's theme is kept.
-    val viceCity = com.ketvoice.app.data.ViceCityEdition.themeOn
+    // A seasonal theme (the Vice City edition, 6.1; the others, 6.2) is a dark look of its own while it is on;
+    // the listener's theme is kept.
+    val season = com.ketvoice.app.ui.seasons.SeasonLooks.of(com.ketvoice.app.data.Seasons.inEffect()?.id)
+    val viceCity = season != null
     val useDark = if (viceCity) true else if (themeMode == 1) false else if (themeMode == 2) true else null
     val view = androidx.compose.ui.platform.LocalView.current
     val effectiveDark = useDark ?: isSystemInDarkTheme()
     // Le lecteur / la file d'attente ont toujours un fond noir : icônes système claires.
     val darkSurface = AppUi.showPlayer.value || AppUi.overlay.value == AppUi.QUEUE ||
-        com.ketvoice.app.ui.vicecity.ViceCityWelcomeGate.visible.value
+        com.ketvoice.app.ui.vicecity.ViceCityWelcomeGate.visible.value ||
+        com.ketvoice.app.ui.seasons.SeasonWelcomeGate.visible.value != null ||
+        com.ketvoice.app.data.FirstRun.pending.value
 
     androidx.compose.runtime.SideEffect {
         val controller = androidx.core.view.WindowCompat.getInsetsController(
@@ -126,8 +130,8 @@ fun AppRoot() {
         if (com.ketvoice.app.data.AppSettings.coverBackground.value && !viceCity) playingCover else null)
     val (toneColor, toneAmount) = com.ketvoice.app.theme.rememberCoverGlide(wantedTone, 900)
     val cover = com.ketvoice.app.theme.CoverLook(toneColor, toneAmount, accentColor, accentAmount)
-    KetvoiceTheme(useDark = useDark, cover = cover, viceCity = viceCity) {
-        if (viceCity) com.ketvoice.app.theme.ViceCityTheme.Pulse(Motion.reduced, AppSettings.highPerformanceMode.value)
+    KetvoiceTheme(useDark = useDark, cover = cover, season = season) {
+        if (season != null) com.ketvoice.app.theme.SeasonPulse.Pulse(Motion.reduced, AppSettings.highPerformanceMode.value)
         com.ketvoice.app.ui.player.PlaybackFeatureDialogs()
         BackgroundPlaybackOffer()
         val th = LocalTheme.current
@@ -460,9 +464,9 @@ fun AppRoot() {
 @Composable
 private fun ScrollEdges(modifier: Modifier, bottom: Boolean) {
     val theme = LocalTheme.current
-    // Vice City (6.1): the top edge keeps the sunset's colour, and a glow rises behind the tab bar.
-    val background = if (theme.viceCity) androidx.compose.ui.graphics.lerp(theme.background,
-        com.ketvoice.app.theme.ViceCityTheme.Colors.magenta, .16f) else theme.background
+    // A seasonal theme (Vice City, 6.1): the top edge keeps the glow's colour, and a glow rises behind the tab bar.
+    val season = theme.season
+    val background = if (season != null) androidx.compose.ui.graphics.lerp(theme.background, season.edgeTint, .16f) else theme.background
     Box(modifier.testTag("scroll-edges")) {
         Box(Modifier.align(Alignment.TopCenter).fillMaxWidth()
             .background(androidx.compose.ui.graphics.Brush.verticalGradient(
@@ -472,8 +476,8 @@ private fun ScrollEdges(modifier: Modifier, bottom: Boolean) {
             .background(androidx.compose.ui.graphics.Brush.verticalGradient(
                 *ScrollEdge.stops(ScrollEdge.BOTTOM_ALPHA, fromEdge = false).map { (at, alpha) -> at to theme.background.copy(alpha = alpha) }.toTypedArray()))
             .navigationBarsPadding().height(140.dp))
-        if (theme.viceCity && bottom) Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth()
-            .drawBehind { with(com.ketvoice.app.theme.ViceCityTheme) { bottomGlow(phase.floatValue) } }
+        if (season != null && bottom) Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth()
+            .drawBehind { with(season) { bottomGlow(com.ketvoice.app.theme.SeasonPulse.phase.floatValue) } }
             .navigationBarsPadding().height(150.dp))
     }
 }
