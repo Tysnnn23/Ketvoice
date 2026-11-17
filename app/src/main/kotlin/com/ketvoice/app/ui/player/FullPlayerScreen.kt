@@ -525,8 +525,11 @@ fun FullPlayerScreen(
                             onOutput = { sheet = "audio" },
                             onProfile = { AppUi.showAccount.value = true },
                             onQueue = { navigate(PlayerPage.QUEUE) }, modifier = lateRise)
+                        // Ketogether (6.1): during a session the device label is the session's live pill.
+                        com.ketvoice.app.ui.together.KetogetherDeviceLabel(Modifier.align(Alignment.CenterHorizontally).padding(top = 12.dp, bottom = 13.dp).then(lateRise)) {
                         Text(if (com.ketvoice.app.BuildConfig.IS_QUEST) "Ce casque" else "Ce téléphone", color = Color(0xFF777984), fontSize = 10.sp,
                             fontWeight = FontWeight.SemiBold, modifier = Modifier.align(Alignment.CenterHorizontally).padding(top = 18.dp, bottom = 19.dp).then(lateRise))
+                        }
                     }
                 }
                 }

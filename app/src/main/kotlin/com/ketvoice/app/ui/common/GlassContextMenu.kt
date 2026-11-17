@@ -161,7 +161,10 @@ internal fun ContextMenuHost(modifier: Modifier = Modifier) {
     val cover = com.ketvoice.app.data.MediaOverrides.cover(track, art["t:${track.id}"] ?: track.coverUrl)
     val favorite = track.id in AppSettings.favoriteIds.value
     val downloaded = Downloader.itemFor(track.id) != null
-    val actions = listOf(
+    val together = com.ketvoice.app.together.Ketogether.ui.collectAsState().value.active
+    val actions = listOfNotNull(
+        // Ketogether (6.1): in a session, the title goes to the shared queue (the host adds it, a guest proposes it).
+        if (together) MenuAction("Ajouter à Ketogether", com.ketvoice.app.ui.together.KetogetherIcon) { com.ketvoice.app.together.Ketogether.add(track) } else null,
         MenuAction("Lire ensuite", Icons.AutoMirrored.Filled.PlaylistPlay) { Player.playNext(track) },
         MenuAction("Ajouter à la file", Icons.AutoMirrored.Filled.PlaylistAdd) { Player.enqueue(listOf(track)) },
         MenuAction(if (favorite) "Retirer des favoris" else "Ajouter aux favoris",

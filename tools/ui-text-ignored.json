@@ -142,5 +142,10 @@
  "LLLL yyyy": "date format pattern, not user-facing copy",
  "d MMMM": "date format pattern, not user-facing copy",
  "month:{0}": "list item key of the monthly Replay, never shown",
- "wrapped-{0}-{1}.png": "file name of a shared story picture, never shown"
+ "wrapped-{0}-{1}.png": "file name of a shared story picture, never shown",
+ "Ketogether": "brand name of group listening, the same in every language",
+ " (Discord)": "brand name after the listener's Discord name in the Ketogether sheet",
+ "hostEnded": "Ketogether end-reason code, mapped to a French sentence before display",
+ "hostLost": "Ketogether end-reason code, mapped to a French sentence before display",
+ "notFound": "Ketogether end-reason code, mapped to a French sentence before display"
 }

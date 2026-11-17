@@ -173,6 +173,7 @@ private fun TabletPlayerBar(plan: LargeScreen.PlayerPlan, onClose: () -> Unit, d
         }
         Row(Modifier.align(Alignment.CenterEnd).then(lateRise), horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically) {
+            com.ketvoice.app.ui.together.KetogetherLivePill(Modifier.padding(end = 4.dp))
             SmallCircleButton(onLyrics, active = plan.lyrics, size = 40.dp, transparent = !plan.lyrics) { ink ->
                 LyricsGlyph(Modifier.size(22.dp).semantics { contentDescription = AppText.t("Paroles") }.testTag("tablet-player-lyrics"), ink)
             }
