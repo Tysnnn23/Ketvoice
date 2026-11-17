@@ -33,6 +33,7 @@
 - User preference (owner, 2026-11-14): changes to the verified publishing section (Studio: uploads, editing a title's audio, cover or Canvas, per-title or per-album, and catalogue visual overrides) are never mentioned in changelogs, release notes, the README or the website. Record them only in `validation.json`.
 - Write all new changelog entries and release notes in English. Include the canonical `ketvoice-banner.png` banner from this repository in release presentation.
 - Keep `Tysnnn23/Ketvoice-web` synchronized with app releases: current feature descriptions, latest Mobile/Quest downloads, English release notes and the canonical banner. Preserve its upstream changes and verify the rendered website before claiming web synchronization.
+- Website hosting (owner, 2026-11-17: « Je vais redéployer le projet sur vercel »): the public site is the Vercel project `ketvoice-web` (team `netral`), linked to `Tysnnn23/Ketvoice-web` branch `main`: every push to that branch deploys to https://ketvoice-web.vercel.app (production public, Vercel Authentication on previews only). The older https://ketvoice.netlify.app is not updated by pushes. Since 6.1.2 the site follows tryliner.fun's design language in Vice City colours (no GSAP/Lenis; `js/flow.js`, `js/motion.js`); version the CSS/JS links (`?v=`) when they change.
 
 ## Cost-aware code work
 
