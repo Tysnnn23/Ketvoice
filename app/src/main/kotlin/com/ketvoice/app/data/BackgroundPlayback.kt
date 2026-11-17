@@ -43,6 +43,10 @@ object BackgroundPlayback {
         .map { it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
         .firstOrNull { runCatching { it.resolveActivity(context.packageManager) != null }.getOrDefault(false) }
 
+    /** Honor and Huawei phones: their « App launch » screen must be set by hand (MagicOS, EMUI). */
+    fun honorLike(manufacturer: String = android.os.Build.MANUFACTURER): Boolean =
+        manufacturer.lowercase(java.util.Locale.ROOT) in setOf("honor", "huawei")
+
     fun openManufacturerScreen(context: Context): Boolean {
         val intent = manufacturerScreen(context) ?: return false
         return runCatching { context.startActivity(intent) }.isSuccess
@@ -55,6 +59,10 @@ object BackgroundPlayback {
                 component("com.miui.securitycenter", "com.miui.permcenter.autostart.AutoStartManagementActivity"),
                 component("com.miui.powerkeeper", "com.miui.powerkeeper.ui.HiddenAppsConfigActivity"))
             "huawei", "honor" -> listOf(
+                // MagicOS and EMUI 9+: « Lancement d'applications », where "Manage automatically" is turned off and
+                // "Run in background" on (Honor's own guidance), then the older screens.
+                component("com.hihonor.systemmanager", "com.hihonor.systemmanager.appcontrol.activity.StartupAppControlActivity"),
+                component("com.huawei.systemmanager", "com.huawei.systemmanager.appcontrol.activity.StartupAppControlActivity"),
                 component("com.huawei.systemmanager", "com.huawei.systemmanager.startupmgr.ui.StartupNormalAppListActivity"),
                 component("com.huawei.systemmanager", "com.huawei.systemmanager.optimize.process.ProtectActivity"),
                 component("com.hihonor.systemmanager", "com.hihonor.systemmanager.startupmgr.ui.StartupNormalAppListActivity"))

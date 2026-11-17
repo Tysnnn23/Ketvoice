@@ -281,8 +281,10 @@ class PlaybackService : MediaSessionService() {
                     withContext(Dispatchers.Main) {
                         if (owner.currentMediaItem?.mediaId == id) deck.voiceMask = mask
                         // A listener who turned the voice down keeps it down: each new title is separated as it starts.
+                        // Not while the app is away on battery (background thrift): the slider asks again when it is shown.
                         if (mask == null && owner.currentMediaItem?.mediaId == id && com.ketvoice.app.stems.VoiceLevel.level < .99f &&
-                            com.ketvoice.app.stems.VoiceSeparation.modelReady) com.ketvoice.app.stems.VoiceSeparation.request(id)
+                            com.ketvoice.app.stems.VoiceSeparation.modelReady && !com.ketvoice.app.automix.BackgroundThrift.active())
+                            com.ketvoice.app.stems.VoiceSeparation.request(id)
                     }
                 }
                 // A title that Ketmix played in time with the previous one keeps that speed to its end; the

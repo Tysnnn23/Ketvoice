@@ -76,7 +76,7 @@ internal object VoiceSeparation {
      * by the quick model is separated again by the high-quality one while the phone charges, or always
      * when the listener chose "Always the best", and its voice level is then taken up live.
      */
-    private fun upgrade(quality: Int): Int? = StemEngine.wanted()?.takeIf { it > quality && StemModel.hq.ready }
+    private fun upgrade(quality: Int): Int? = StemEngine.wanted()?.takeIf { it > quality && StemModel.hq.ready && !com.ketvoice.app.automix.BackgroundThrift.active() }
 
     /**
      * Separates [trackId] whole now (6.0.0 Beta 4: as soon as its lyrics are shown, so that the slider is

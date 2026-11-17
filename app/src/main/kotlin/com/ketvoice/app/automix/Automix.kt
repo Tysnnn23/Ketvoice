@@ -759,9 +759,13 @@ internal object Automix {
             main.playerError == null && !(h.exact || AppSettings.bitPerfect.value)
         if (!valid()) return
         val depth = AnalysisDepth.of(AppSettings.ketmixAnalysis.value)
-        val separate = AppSettings.ketmixStems.value && StemModel.anyReady && (!AppSettings.ketmixStemsCharging.value || StemModel.charging())
+        // 6.0.0 Beta 5, background thrift: screen away and on battery, the phone's own battery manager
+        // (MagicOS, HyperOS, One UI…) stops apps that work hard in the background, music or not. Then only
+        // the next title is measured, and nothing is separated that was not separated already.
+        val thrift = BackgroundThrift.active()
+        val separate = !thrift && AppSettings.ketmixStems.value && StemModel.anyReady && (!AppSettings.ketmixStemsCharging.value || StemModel.charging())
         // The better model is about ten times slower: on battery it prepares only the next title.
-        val slow = separate && StemEngine.wanted() == com.ketvoice.app.stems.StemMask.HIGH && !StemModel.charging()
+        val slow = thrift || (separate && StemEngine.wanted() == com.ketvoice.app.stems.StemMask.HIGH && !StemModel.charging())
         fun known(id: String, length: Long, intro: Boolean) =
             (if (intro) AnalysisStore.intro(id, length, depth) else AnalysisStore.outro(id, length, depth)) != null &&
                 (!separate || !StemEngine.needs(id, length, intro))
@@ -1005,5 +1009,15 @@ internal object TempoReturn {
 
     /** How long the glide back from [speed] takes. */
     fun durationMs(speed: Float): Long = (kotlin.math.ceil(kotlin.math.abs(speed - 1f) / STEP - 1e-4).toLong()) * EVERY_MS
+}
+
+/**
+ * Background thrift (6.0.0 Beta 5, owner: playback cut in the background on an Honor phone): while no
+ * screen of the app is shown and the phone is on battery, the work beside the music (Ketmix's preparation,
+ * voice separation) is kept to the least, so that the manufacturer's battery manager has no reason to stop it.
+ */
+internal object BackgroundThrift {
+    fun active(inFront: Boolean = Automix.appInFront, charging: Boolean = com.ketvoice.app.stems.StemModel.charging()): Boolean =
+        !inFront && !charging
 }
 

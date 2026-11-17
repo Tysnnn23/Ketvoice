@@ -379,7 +379,8 @@ fun SettingsScreen() {
                     }
                     val vendor = remember { com.ketvoice.app.data.BackgroundPlayback.manufacturerScreen(ctx) != null }
                     if (vendor) SRow(KetIcons.Shield, "Gestionnaire de batterie du fabricant",
-                        sub = "Sur ce téléphone, autorisez aussi Ketvoice à démarrer et à rester actif en arrière-plan : c'est souvent lui qui coupe la musique.",
+                        sub = if (com.ketvoice.app.data.BackgroundPlayback.honorLike()) "Lancement d'applis → Ketvoice : désactivez « Gérer automatiquement », puis activez « Exécution en arrière-plan ». Sans cela, ce téléphone coupe la musique."
+                            else "Sur ce téléphone, autorisez aussi Ketvoice à démarrer et à rester actif en arrière-plan : c'est souvent lui qui coupe la musique.",
                         value = "Ouvrir") { com.ketvoice.app.data.BackgroundPlayback.openManufacturerScreen(ctx) }
                     var journal by remember { mutableStateOf(false) }
                     SRow(KetIcons.Info, "Journal de lecture",
