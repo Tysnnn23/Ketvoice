@@ -20,7 +20,7 @@ internal object PersonalBackup {
     const val MAX_BYTES = 16 * 1024 * 1024
     private val booleans = setOf("reduceAnimations", "reduceDynamicBlur", "liquidGlass", "fullArtwork",
         "classicGradient", "animatedArtwork", "albumHeroCanvas", "downloadsWifiOnly", "panoramicCanvas",
-        "sonicCanvas", "albumColors", "artworkDepth", "livingArtwork", "coverAccent", "volumeLeveling", "coverBackground", "ketmixStems", "ketmixStemsCharging", "ketmixSmartQueue", "ketmixLibrary", "autoResume", "lyricVideoSound", "lockscreenLyrics", "autoOfflineFavorites", "canvasWithMobileData", "artistPhotos", "highRefreshRate",
+        "sonicCanvas", "albumColors", "artworkDepth", "livingArtwork", "coverAccent", "volumeLeveling", "coverBackground", "ketmixStems", "ketmixStemsCharging", "ketmixSmartQueue", "ketmixLibrary", "autoResume", "lyricVideoSound", "lockscreenLyrics", "autoOfflineFavorites", "canvasWithMobileData", "canvasPreloadWifi", "artistPhotos", "highRefreshRate",
         "syncedLyrics", "skipSilence", "equalizerEnabled", "progressiveQuality",
         "highPerformanceMode", "questKeepAwake", "filterNonAudio", "localMusicEnrich", "playNextOnSwipe",
         "noRepeatSuggestions", "stopOnSwipeFromRecents", "hideVolumeBar", "hideStatusBarInPlayer",
@@ -28,7 +28,7 @@ internal object PersonalBackup {
         "haptics", "coverTintedGlass", "glassTilt", "meshBackground", "automixOn", "automixAlbums", "ketmixLoops", "smartShuffle", "ketmixHaptics")
     private val integers = mapOf("themeMode" to 0..2, "glassStyle" to 0..com.ketvoice.app.glass.GlassStyles.MAX, "glassTintLevel" to com.ketvoice.app.glass.GlassClarity.MIN..com.ketvoice.app.glass.GlassClarity.MAX, "lyricsTextSize" to 0..2,
         "reverbAmount" to 0..100, "reverbSize" to 0..100, "reverbDamping" to 0..100,
-        "lyricsMode" to 0..2, "automixIntensity" to 0..2, "ketmixAnalysis" to 0..2, "ketmixStyle" to 0..5, "ketmixStemsQuality" to 0..2, "voiceLevel" to 0..100, "downloadQualityMode" to 0..2, "appIconVariant" to 0..ViceCityEdition.ICON_VARIANT)
+        "lyricsMode" to 0..2, "automixIntensity" to 0..2, "ketmixAnalysis" to 0..2, "ketmixStyle" to 0..5, "ketmixStemsQuality" to 0..2, "voiceLevel" to 0..100, "canvasCacheMb" to 256..2048, "downloadQualityMode" to 0..2, "appIconVariant" to 0..ViceCityEdition.ICON_VARIANT)
     private val longs = setOf("accentArgb", "cacheBytes")
     private val strings = setOf("lyricsSource", "translateLanguage", "translationSource", "wifiQuality",
         "mobileQuality", "equalizerGains", "language")

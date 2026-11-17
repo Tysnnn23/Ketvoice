@@ -642,6 +642,7 @@ fun SettingsScreen() {
                         settingsScope.launch { com.ketvoice.app.data.CanvasRepo.resolve(track) }
                     }
                 }
+                CanvasCacheRows { choice = it }
                 SRow(
                     KetIcons.Sliders, "Tester le canvas",
                     sub = if (testing.value) "Test en cours…" else "Vérifie le pipeline Ketvoice API",
@@ -836,8 +837,8 @@ fun SettingsScreen() {
 }
 
 // ------------------------------------------------------------- choix réels
-private data class ChoiceOption(val id: String, val label: String, val sub: String = "")
-private data class ChoiceSpec(
+internal data class ChoiceOption(val id: String, val label: String, val sub: String = "")
+internal data class ChoiceSpec(
     val title: String,
     val subtitle: String,
     val selectedId: String,
@@ -1088,7 +1089,7 @@ private fun Section(header: String, content: @Composable ColumnScope.() -> Unit)
 }
 
 @Composable
-private fun ColumnScope.SRow(
+internal fun ColumnScope.SRow(
     icon: ImageVector,
     title: String,
     sub: String = "",
@@ -1215,7 +1216,7 @@ private fun ColumnScope.SeasonThemeRow(season: com.ketvoice.app.data.SeasonalThe
 }
 
 @Composable
-private fun ColumnScope.SToggle(
+internal fun ColumnScope.SToggle(
     icon: ImageVector,
     title: String,
     sub: String,

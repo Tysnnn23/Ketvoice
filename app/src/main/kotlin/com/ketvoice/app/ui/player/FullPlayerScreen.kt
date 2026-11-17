@@ -421,9 +421,16 @@ fun FullPlayerScreen(
                         ) { canvasFocus = true }.semantics {
                             contentDescription = AppText.t("Voir le Canvas en plein écran")
                         } else Modifier)) {
-                        ArtworkCanvas(track, if (canvasFocus || panoramicCanvasActive(canvasPath)) null else canvasPath,
-                            state.isPlaying && !canvasFocus, Modifier.fillMaxSize().trackSwipeContent(trackSwipe), depth = true,
-                            onCanvasFailure = { failedCanvas = true }, frame = artworkFrame)
+                        Box(Modifier.fillMaxSize()) {
+                            ArtworkCanvas(track, if (canvasFocus || panoramicCanvasActive(canvasPath)) null else canvasPath,
+                                state.isPlaying && !canvasFocus, Modifier.fillMaxSize().trackSwipeContent(trackSwipe), depth = true,
+                                onCanvasFailure = { failedCanvas = true }, frame = artworkFrame)
+                            // Under « Lecture depuis », far from the controls: only when the Canvas is late (6.2.3).
+                            com.ketvoice.app.ui.common.CanvasLoadingPill(track,
+                                wanted = AppSettings.animatedArtwork.value && track.id !in canvasExcluded &&
+                                    !com.ketvoice.app.data.MediaOverrides.canvasUnused(track) && !com.ketvoice.app.data.MediaOverrides.canvasHiddenInPlayer(track),
+                                modifier = Modifier.align(Alignment.TopCenter).padding(top = topInset + 58.dp))
+                        }
                     }
                     Text("Lecture depuis ${track.artist}", color = Color(0xFFCBCDD6), fontSize = 10.sp,
                         fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis,

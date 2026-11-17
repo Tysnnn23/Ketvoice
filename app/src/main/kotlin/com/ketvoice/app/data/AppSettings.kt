@@ -62,6 +62,10 @@ object AppSettings {
     val canvasWithMobileData = mutableStateOf(false)
     /** A notification when an artist the listener follows puts out a release (6.3, see ReleaseWatch). */
     val releaseAlerts = mutableStateOf(true)
+    /** The most the Canvas files may use on the device, in MB: 256, 512 (default), 1024 or 2048 (6.2.3). */
+    val canvasCacheMb = mutableStateOf(512)
+    /** The Canvas of favourites and playlists are fetched ahead on Wi-Fi (6.2.3). */
+    val canvasPreloadWifi = mutableStateOf(true)
     val artistSignatures = mutableStateOf(false)
     val artistPhotos = mutableStateOf(true)
     val highRefreshRate = mutableStateOf(false)
