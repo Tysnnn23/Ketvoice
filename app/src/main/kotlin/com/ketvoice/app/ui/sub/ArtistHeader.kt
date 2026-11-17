@@ -173,7 +173,7 @@ internal fun ArtistHeader(page: ArtistPage, collapse: () -> Float = { 0f }, artw
             if (page.tracks.isNotEmpty()) Box(Modifier.fillMaxWidth().padding(horizontal = margin).padding(top = 12.dp, bottom = 2.dp),
                 contentAlignment = if (wide) Alignment.CenterStart else Alignment.Center) {
                 com.ketvoice.app.ui.common.GlassCapsuleButton("Radio de l'artiste", Icons.Filled.Radio,
-                    { Player.startRadio(page.tracks.first()) }, Modifier.width(IntrinsicSize.Max), tag = "artist-radio", minHeight = 44.dp)
+                    { Player.startArtistRadio(page.artist.name, null, page.tracks) }, Modifier.width(IntrinsicSize.Max), tag = "artist-radio", minHeight = 44.dp)
             }
         }
     }

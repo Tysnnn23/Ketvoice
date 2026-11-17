@@ -1,6 +1,7 @@
 package com.ketvoice.app.ui.home
 
 import androidx.compose.foundation.background
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.snapping.SnapPosition
@@ -149,4 +150,5 @@ internal fun mixGlyph(kind: MixKind) = when (kind) {
     MixKind.Style -> KetIcons.Globe
     MixKind.OnRepeat -> KetIcons.Refresh
     MixKind.Rediscover -> KetIcons.Clock
+    MixKind.Discover -> androidx.compose.material.icons.Icons.Filled.AutoAwesome
 }

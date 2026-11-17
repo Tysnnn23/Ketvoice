@@ -155,6 +155,8 @@ dependencies {
     // Fold posture (tabletop player), home-screen widget, and startup profile installation for sideloads.
     implementation("androidx.window:window:1.3.0")
     implementation("androidx.glance:glance-appwidget:1.1.1")
+    // Already shipped through Glance; declared for the weekly discoveries worker (same version, nothing new downloaded).
+    implementation("androidx.work:work-runtime-ktx:2.7.1")
     implementation("androidx.profileinstaller:profileinstaller:1.4.1")
 
     implementation("androidx.compose.ui:ui")

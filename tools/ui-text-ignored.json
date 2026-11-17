@@ -132,5 +132,15 @@
  "Ctrl F": "keyboard shortcut shown beside the search field of the sidebar, the same in every language",
  "icon-option-{0}": "test tag of the icon picker, never shown",
  "lyrics-mesh-{0}": "test tag of the lyrics mesh, never shown",
- "release-{0}": "test tag of a release card on the artist and album pages, never shown"
+ "release-{0}": "test tag of a release card on the artist and album pages, never shown",
+ "KETVOICE REPLAY": "feature brand name, the same in every language",
+ "REPLAY": "feature brand name, the same in every language",
+ "Replay · ": "feature brand name before a month name the locale already writes",
+ "Replay · {0}": "feature brand name before a month name the locale already writes",
+ "Ketmix (BETA)": "feature brand name, the same in every language",
+ "BPM": "unit symbol (beats per minute), the same in every language",
+ "LLLL yyyy": "date format pattern, not user-facing copy",
+ "d MMMM": "date format pattern, not user-facing copy",
+ "month:{0}": "list item key of the monthly Replay, never shown",
+ "wrapped-{0}-{1}.png": "file name of a shared story picture, never shown"
 }

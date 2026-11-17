@@ -154,6 +154,18 @@ object CatalogRepo {
         parseTracks(get("artist/$id/radio")?.optJSONArray("data"))
     }
 
+    /** Artists the catalogue lists as close to [name] (6.1, weekly discoveries and radio); empty when unavailable. */
+    suspend fun relatedArtists(name: String, knownId: String? = null): List<CatalogArtist> = withContext(Dispatchers.IO) {
+        val id = artistId(name, knownId) ?: return@withContext emptyList()
+        parseArtists(get("artist/$id/related?limit=20")?.optJSONArray("data"))
+    }
+
+    /** The artist's photo in the catalogue, for Wrapped; null when unavailable. */
+    suspend fun artistPicture(name: String, knownId: String? = null): String? = withContext(Dispatchers.IO) {
+        val id = artistId(name, knownId) ?: return@withContext null
+        get("artist/$id")?.let { image(it, "picture_xl", "picture_big") }
+    }
+
     internal fun parseTracks(data: JSONArray?, release: JSONObject? = null, artist: JSONObject? = null): List<Track> {
         if (data == null) return emptyList()
         return (0 until data.length()).mapNotNull { i ->
