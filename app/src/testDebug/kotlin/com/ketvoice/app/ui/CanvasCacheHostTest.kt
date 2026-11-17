@@ -80,15 +80,15 @@ class CanvasCacheHostTest {
         } }
         // The app's own translation turns « Mo » into « MB » on the host: the sizes are matched on their number.
         compose.waitUntil(5_000) { compose.onAllNodesWithText("440 M", substring = true).fetchSemanticsNodes().isNotEmpty() }
-        compose.onNodeWithText("Espace utilisé par les Canvas").assertIsDisplayed()
-        compose.onNodeWithText("Limite du cache des Canvas").assertIsDisplayed()
-        compose.onNodeWithText("Précharger en Wi-Fi").assertIsDisplayed()
+        compose.onNodeWithText(com.ketvoice.app.data.AppText.t("Espace utilisé par les Canvas")).assertIsDisplayed()
+        compose.onNodeWithText(com.ketvoice.app.data.AppText.t("Limite du cache des Canvas")).assertIsDisplayed()
+        compose.onNodeWithText(com.ketvoice.app.data.AppText.t("Précharger en Wi-Fi")).assertIsDisplayed()
         compose.onNodeWithText("440 M", substring = true).assertIsDisplayed()
-        compose.onNodeWithText("Les moins récemment", substring = true).assertIsDisplayed()
+        compose.onNodeWithText(com.ketvoice.app.data.AppText.t("Les moins récemment utilisés partent en premier, jamais ceux de tes téléchargements.")).assertIsDisplayed()
         save("canvas-cache-settings")
         // The button asks first, then clears everything but what the download needs.
-        compose.onNodeWithText("Vider le cache des Canvas").performClick()
-        compose.onNodeWithText("Vider le cache des Canvas ?").assertIsDisplayed()
+        compose.onNodeWithText(com.ketvoice.app.data.AppText.t("Vider le cache des Canvas")).performClick()
+        compose.onNodeWithText(com.ketvoice.app.data.AppText.t("Vider le cache des Canvas ?")).assertIsDisplayed()
         compose.onNodeWithText(com.ketvoice.app.data.AppText.t("Vider")).performClick()
         compose.waitUntil(5_000) { !File(files, "canvas/a.mp4").exists() }
         assertTrue(File(files, "canvas/kept.mp4").exists())
