@@ -78,6 +78,26 @@ object CustomLyrics {
         prefs?.edit { putString(trackId, JSONObject().put("file", e.file).put("name", e.name).put("format", e.format).put("active", active).toString()) }
     }
 
+    /** The index (title → entry as stored) and the folder, for Air Ket (7.0). */
+    @Synchronized internal fun index(context: Context): Map<String, String> {
+        init(context)
+        return prefs?.all.orEmpty().mapNotNull { (key, value) -> (value as? String)?.takeIf { it.length <= 2000 }?.let { key to it } }.toMap()
+    }
+
+    internal fun folder(context: Context): File { init(context); return requireNotNull(folder) }
+
+    /** Entries received from another phone: kept when their file arrived too and this title has no file of its own. */
+    @Synchronized internal fun adopt(context: Context, entries: Map<String, String>): Int {
+        init(context)
+        var kept = 0
+        entries.forEach { (trackId, text) ->
+            val file = runCatching { JSONObject(text).getString("file") }.getOrNull() ?: return@forEach
+            if (!File(folder, file).isFile || prefs?.contains(trackId) == true) return@forEach
+            prefs?.edit { putString(trackId, text) }; kept++
+        }
+        return kept
+    }
+
     @Synchronized fun forget(trackId: String) {
         entry(trackId)?.let { File(folder ?: return@let, it.file).delete() }
         prefs?.edit { remove(trackId) }

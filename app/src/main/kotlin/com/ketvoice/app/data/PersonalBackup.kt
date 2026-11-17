@@ -12,10 +12,20 @@ internal data class PersonalBackupData(
     val recent: List<Track>, val known: List<Track>, val counts: Map<String, Int>, val listenedMs: Long,
     val lyricOffsets: Map<String, Int> = emptyMap(),
     /** The listener's Ketmix mix points (6.1, DJ editor), keyed by digests of the titles' ids. */
-    val ketmixPoints: Map<String, String> = emptyMap()
+    val ketmixPoints: Map<String, String> = emptyMap(),
+    /** Blocked and favourite artists (7.0, `ArtistPrefs.encode` of each), empty in older backups. */
+    val artistBlocked: String = "",
+    val artistFavourites: String = "",
+    /** Listening behind Replay and Wrapped (7.0): `days`, `years` and `month:YYYY-MM`, as the history stores them. */
+    val listening: Map<String, String> = emptyMap()
 )
 
-/** Portable metadata only: no accounts, credentials, source URLs or downloaded files. */
+/**
+ * Portable metadata only: no accounts, credentials, source URLs or downloaded files. Since 7.0 it also carries
+ * the blocked and favourite artists and the listening counters of Replay and Wrapped; Air Ket (`airket/`) sends it
+ * to another phone and adds the downloads. Never in it: the Ketvoice, Discord and YouTube Music sessions, keys,
+ * custom sources, local music links, caches and the queue.
+ */
 internal object PersonalBackup {
     const val MAX_BYTES = 16 * 1024 * 1024
     private val booleans = setOf("reduceAnimations", "reduceDynamicBlur", "liquidGlass", "fullArtwork",
@@ -88,9 +98,31 @@ internal object PersonalBackup {
         val points = context.getSharedPreferences(com.ketvoice.app.automix.MixPointStore.PREFS, Context.MODE_PRIVATE).all.mapNotNull { (key, value) ->
             (value as? String)?.takeIf { com.ketvoice.app.automix.MixPointStore.validEntry(key, it) }?.let { key to it }
         }.toMap()
+        val artists = context.getSharedPreferences("artist-prefs", Context.MODE_PRIVATE)
         return PersonalBackupData(PlaylistStore.lists.value, AppSettings.favoriteIds.value.filter(::cleanId).toSet(),
             settings, ListeningHistory.tracks.value, ListeningHistory.knownTracks.value,
-            ListeningHistory.playCounts.value.filterKeys(::cleanId), ListeningHistory.listenedMs.value, offsets, points)
+            ListeningHistory.playCounts.value.filterKeys(::cleanId), ListeningHistory.listenedMs.value, offsets, points,
+            artists.getString("blocked", "").orEmpty(), artists.getString("favourites", "").orEmpty(), collectListening(context))
+    }
+
+    private const val MAX_LISTENING_VALUE = 400_000
+
+    private fun listeningKey(key: String) = key == "days" || key == "years" ||
+        (key.startsWith(ListeningMonths.PREFIX) && ListeningMonths.isKey(key.removePrefix(ListeningMonths.PREFIX)))
+
+    private fun collectListening(context: Context): Map<String, String> {
+        ListeningHistory.flushListenedMs()
+        val prefs = context.getSharedPreferences("listening-history", Context.MODE_PRIVATE)
+        return prefs.all.mapNotNull { (key, value) ->
+            (value as? String)?.takeIf { listeningKey(key) && it.length <= MAX_LISTENING_VALUE }?.let { key to it }
+        }.toMap()
+    }
+
+    private fun artistText(text: String): String {
+        if (text.isEmpty()) return ""
+        require(text.length <= 200_000)
+        // Must read back as a list of artists, else it is dropped.
+        return if (ArtistPrefs.decode(text).isNotEmpty() || text == "[]") text else ""
     }
 
     fun encode(data: PersonalBackupData): ByteArray {
@@ -120,6 +152,8 @@ internal object PersonalBackup {
             .put("listenedMs", data.listenedMs.coerceAtLeast(0)).put("lyricOffsets", JSONObject(data.lyricOffsets.filter {
                 (key, value) -> key.matches(Regex("[0-9a-f]{64}")) && value in -10_000..10_000
             })).put("ketmixPoints", JSONObject(data.ketmixPoints.filter { (key, value) -> com.ketvoice.app.automix.MixPointStore.validEntry(key, value) }))
+            .put("artistBlocked", artistText(data.artistBlocked)).put("artistFavourites", artistText(data.artistFavourites))
+            .put("listening", JSONObject(data.listening.filter { (key, value) -> listeningKey(key) && value.length <= MAX_LISTENING_VALUE }))
         return root.toString().toByteArray(Charsets.UTF_8).also { require(it.size <= MAX_BYTES) }
     }
 
@@ -176,8 +210,15 @@ internal object PersonalBackup {
         val points = rawPoints.keys().asSequence().associateWith { key ->
             rawPoints.getString(key).also { require(com.ketvoice.app.automix.MixPointStore.validEntry(key, it)) }
         }
+        // Backups made before 7.0 carry neither artists nor listening counters.
+        val rawListening = root.optJSONObject("listening") ?: JSONObject()
+        require(rawListening.length() <= 200)
+        val listening = rawListening.keys().asSequence().filter(::listeningKey).associateWith { key ->
+            rawListening.getString(key).also { require(it.length <= MAX_LISTENING_VALUE) }
+        }
         return PersonalBackupData(playlists, favorites, settings, tracks("recent", 80), tracks("known", 400),
-            counts, root.optLong("listenedMs").also { require(it >= 0) }, offsets, points)
+            counts, root.optLong("listenedMs").also { require(it >= 0) }, offsets, points,
+            artistText(root.optString("artistBlocked")), artistText(root.optString("artistFavourites")), listening)
     }
 
     fun readLimited(input: InputStream): ByteArray {
@@ -192,9 +233,16 @@ internal object PersonalBackup {
         return out.toByteArray()
     }
 
-    suspend fun merge(context: Context, data: PersonalBackupData) {
+    suspend fun merge(context: Context, data: PersonalBackupData) = apply(context, data, replace = false)
+
+    /**
+     * Restores a backup. With [replace] (Air Ket's « Remplacer »), this device's playlists and favourites become
+     * the backup's; without it they are merged and nothing already here is overwritten. Settings always take the
+     * backup's values; history, artists and listening counters are always merged.
+     */
+    suspend fun apply(context: Context, data: PersonalBackupData, replace: Boolean) {
         val checked = withContext(Dispatchers.IO) { decode(encode(data)) }
-        PlaylistStore.mergeBackup(checked.playlists)
+        if (replace) PlaylistStore.replaceFromSync(checked.playlists) else PlaylistStore.mergeBackup(checked.playlists)
         withContext(Dispatchers.IO) { ListeningHistory.mergeBackup(checked.recent, checked.known, checked.counts, checked.listenedMs) }
         val prefs = context.applicationContext.getSharedPreferences("ketvoice_settings", Context.MODE_PRIVATE)
         val editor = prefs.edit()
@@ -214,12 +262,21 @@ internal object PersonalBackup {
             }
         }
         val favorites = prefs.getStringSet("favoriteIds", emptySet()).orEmpty().toSet()
-        editor.putStringSet("favoriteIds", favorites + checked.favorites)
+        editor.putStringSet("favoriteIds", if (replace) checked.favorites else favorites + checked.favorites)
         check(withContext(Dispatchers.IO) { editor.commit() })
         SettingsStore.load(context)
         LyricsOffsets.init(context)
         withContext(Dispatchers.IO) { LyricsOffsets.mergeBackup(checked.lyricOffsets) }
         com.ketvoice.app.automix.MixPointStore.init(context)
         withContext(Dispatchers.IO) { com.ketvoice.app.automix.MixPointStore.mergeBackup(checked.ketmixPoints) }
+        mergeArtists(context, checked)
+        withContext(Dispatchers.IO) { ListeningHistory.mergeStats(checked.listening) }
+    }
+
+    private fun mergeArtists(context: Context, data: PersonalBackupData) {
+        ArtistPrefs.init(context)
+        val blocked = ArtistPrefs.blocked + ArtistPrefs.decode(data.artistBlocked)
+        val favourites = (ArtistPrefs.favourites.associateBy { it.key } + ArtistPrefs.decode(data.artistFavourites)) - blocked.keys
+        ArtistPrefs.replaceFromSync(blocked.values.toList(), favourites.values.toList())
     }
 }

@@ -42,6 +42,20 @@ class PersonalBackupTest {
         assertTrue(PersonalBackup.decode(old.toByteArray()).ketmixPoints.isEmpty())
     }
 
+    @Test fun blockedAndFavouriteArtistsAndTheListeningCountersTravelToo() {
+        val blocked = ArtistPrefs.encode(listOf(ArtistPrefs.Entry("Some Artist", "id1", "https://photo.example/x.jpg")))
+        val listening = mapOf("days" to "{}", "years" to "{}", "month:2026-11" to "{}", "tracks" to "[\"must not travel\"]", "month:nonsense" to "{}")
+        val data = PersonalBackupData(emptyList(), emptySet(), emptyMap(), emptyList(), emptyList(), emptyMap(), 0,
+            artistBlocked = blocked, artistFavourites = "not json", listening = listening)
+        val back = PersonalBackup.decode(PersonalBackup.encode(data))
+        assertEquals(1, ArtistPrefs.decode(back.artistBlocked).size)
+        assertEquals("a favourites text that does not read back is dropped", "", back.artistFavourites)
+        assertEquals(setOf("days", "years", "month:2026-11"), back.listening.keys)
+        // A backup of before 7.0 has neither.
+        val old = PersonalBackup.decode(PersonalBackup.encode(data.copy(artistBlocked = "", artistFavourites = "", listening = emptyMap())))
+        assertEquals("", old.artistBlocked); assertTrue(old.listening.isEmpty())
+    }
+
     @Test fun unknownVersionsAndOversizedFilesAreRejectedBeforeImport() {
         assertThrows(Exception::class.java) {
             PersonalBackup.decode("""{"kind":"ketvoice-personal-backup","version":2}""".toByteArray())

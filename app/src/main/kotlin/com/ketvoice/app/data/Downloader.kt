@@ -173,6 +173,12 @@ object Downloader {
         restoreQueue(context.applicationContext)
     }
 
+    /** Reads the downloads folder again (after Air Ket put titles there, 7.0). */
+    internal fun reload() { refresh() }
+
+    /** The folder the downloaded titles and their files live in. */
+    internal fun folder(context: Context): File = dir(context)
+
     fun itemFor(trackId: String): Item? = _items.value.firstOrNull { it.track.id == trackId }
 
     @Synchronized fun download(track: Track, capsuleLimit: Long? = null): Job? {

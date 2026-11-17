@@ -759,6 +759,9 @@ fun SettingsScreen() {
                 ) {}
                 CacheLimitRow()
                 SRow(KetIcons.Storage, "Sauvegarde personnelle", sub = "Playlists, favoris et réglages") { backupOpen = true }
+                SRow(KetIcons.Wifi, "Air Ket", sub = "Tout transférer vers un autre téléphone, en Wi-Fi") {
+                    com.ketvoice.app.airket.AirKet.sheet.value = com.ketvoice.app.airket.AirKet.Mode.Menu
+                }
                 SRow(
                     KetIcons.Trash, "Vider le cache des chansons",
                     sub = "Les paroles et canvas téléchargés restent"
