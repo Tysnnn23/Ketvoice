@@ -272,6 +272,11 @@ class MainActivity : ComponentActivity() {
         val title = uri.getQueryParameter("title")?.trim().orEmpty()
         val artist = uri.getQueryParameter("artist")?.trim().orEmpty()
         val kind = uri.getQueryParameter("kind")?.trim().orEmpty()
+        if (kind == "airket") {
+            // Air Ket (7.0): the QR code of the old phone, opened with the camera; the receive screen asks before it connects.
+            com.ketvoice.app.airket.AirKet.openReceive(id, uri.getQueryParameter("h"), uri.getQueryParameter("p")?.toIntOrNull() ?: 0)
+            return
+        }
         if (kind == com.ketvoice.app.together.TogetherLink.KIND) {
             // Ketogether (6.1): a session's link or QR code; the sheet asks before joining.
             com.ketvoice.app.together.TogetherLink.parse(id)?.let(com.ketvoice.app.together.Ketogether::openLink)

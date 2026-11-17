@@ -196,4 +196,26 @@ object ListeningHistory {
         unflushedMs = 0L
         runCatching { ListeningStats.refresh() }
     }
+
+    /**
+     * Air Ket and backups (7.0): the days, years and months of a backup join this device's, a day or month kept
+     * under the larger time heard when both have it. [stored] is the preferences text of each (`days`, `years`, `month:…`).
+     */
+    @Synchronized internal fun mergeStats(stored: Map<String, String>) {
+        val p = prefs ?: return
+        fun <T> union(a: Map<String, T>, b: Map<String, T>, ms: (T) -> Long): Map<String, T> =
+            (a.keys + b.keys).associateWith { k -> val x = a[k]; val y = b[k]; if (x == null) y!! else if (y == null) x else if (ms(y) > ms(x)) y else x }
+        val days = stored["days"]?.let { ListeningWeek.decode(it) }.orEmpty()
+        val years = stored["years"]?.let { Wrapped.decode(it) }.orEmpty()
+        val months = stored.filterKeys { it.startsWith(ListeningMonths.PREFIX) }.mapNotNull { (key, text) ->
+            ListeningMonths.decode(text)?.let { key.removePrefix(ListeningMonths.PREFIX) to it }
+        }.toMap()
+        _days.value = ListeningWeek.trim(union(_days.value, days) { it.ms }, today())
+        _years.value = union(_years.value, years) { it.ms }
+        _months.value = union(_months.value, months) { it.ms }
+        val edit = p.edit().putString("days", ListeningWeek.encode(_days.value)).putString("years", ListeningWeek.encode(_years.value))
+        _months.value.forEach { (month, stat) -> edit.putString(ListeningMonths.PREFIX + month, ListeningMonths.encode(stat)) }
+        edit.commit()
+        runCatching { ListeningStats.refresh() }
+    }
 }

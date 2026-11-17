@@ -251,6 +251,15 @@ object CanvasRepo {
         } finally { keeping.remove(name) }
     }
 
+    /** A Canvas file received from another phone (Air Ket, 7.0) becomes the title's and its album's. */
+    internal fun adopt(trackId: String, album: String, artist: String, name: String) {
+        val ctx = appContext ?: return
+        val file = File(canvasDir(ctx), "$name.mp4").takeIf { it.isFile && it.length() > 10_000 } ?: return
+        val prefs = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        prefs.edit().putString(trackId, name).apply { if (album.isNotBlank() && !prefs.contains(albumKey(album, artist))) putString(albumKey(album, artist), name) }.apply()
+        _paths.value = _paths.value + (trackId to file.absolutePath)
+    }
+
     /** The Canvas already on the device for an album (one for all its titles), or null. */
     fun albumFile(album: String, artist: String): File? {
         val ctx = appContext ?: return null

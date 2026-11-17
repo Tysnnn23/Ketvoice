@@ -106,6 +106,7 @@ private fun LanguageRow(title: String, sub: String, selected: Boolean, localize:
 @Composable
 internal fun ImportChoice(state: PageState) {
     val th = LocalTheme.current
+    val context = LocalContext.current
     Group(Modifier.testTag("onboarding-import")) {
         if (state.importAvailable) SwitchRow("Importer mes playlists",
             "Spotify, Deezer… L'import s'ouvre à la fin de l'accueil.", state.importPlaylists, state.onImport, "onboarding-import-switch") {
@@ -117,6 +118,20 @@ internal fun ImportChoice(state: PageState) {
                 Text("L'import depuis Spotify et Deezer arrive bientôt.", color = th.secondary, fontSize = 13.sp)
             }
             Soon(th)
+        }
+    }
+    Spacer(Modifier.height(10.dp))
+    // 7.0: a new phone can take everything from the old one over the Wi-Fi (Air Ket); the sheet is the app's own.
+    Group(Modifier.testTag("onboarding-airket")) {
+        Row(Modifier.fillMaxWidth().heightIn(min = 52.dp).clickable(role = Role.Button) {
+            com.ketvoice.app.airket.AirKet.sheet.value = com.ketvoice.app.airket.AirKet.Mode.Receive
+            com.ketvoice.app.airket.AirKet.startSearching(context)
+        }.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(KetIcons.Wifi, null, tint = th.accent, modifier = Modifier.size(26.dp))
+            Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
+                Text("Recevoir via Air Ket", color = th.onBackground, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+                Text("Depuis votre ancien téléphone, sur le même Wi-Fi.", color = th.secondary, fontSize = 13.sp)
+            }
         }
     }
     Spacer(Modifier.height(10.dp))
