@@ -15,6 +15,9 @@ class RetiredMixingMigrationTest {
     @Test fun oldMixingSettingsAndOnlyTheirAnalysisCacheAreRemovedOnUpgrade() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val prefs = context.getSharedPreferences("ketvoice_settings", Context.MODE_PRIVATE)
+        // Another test (the onboarding's Ketmix choice) may have left Ketmix on in memory: start from a fresh install.
+        prefs.edit().clear().commit()
+        AppSettings.automix.value = false
         prefs.edit().putBoolean("automix", true).putBoolean("automixAutoFade", false)
             .putInt("automixFadeSeconds", 30).putInt("automixPerformance", 3)
             .putBoolean("skipSilence", true).commit()
