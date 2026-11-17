@@ -7,6 +7,23 @@
 
 ---
 
+# Ketvoice 6.3.0
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 134** — shared playlists, public profile, Air Ket, Canvas cache, release alerts, faster start.
+
+- Shared playlists (`sync/Shared*`, `ui/library/SharedPlaylist*`): Supabase tables `ketvoice_shared_playlists/_members/_tracks/_invites` with member-only RLS, invitation codes through `ketvoice_create_shared_invite` / `ketvoice_join_shared_playlist` (8 wrong codes per 10 minutes), titles ordered by fractional `pos`, offline writes queued; deep links `ketvoice://join/<code>`. Public profile: `ketvoice_profiles.is_public/show_listening/avatar_ref`, `ketvoice_public_playlists`, read-only `ketvoice_public_profile(handle)`, public photo copy in `ketvoice-public-avatars`; deep link `ketvoice://u/<handle>`. Migration `20261118120000_shared_playlists_and_public_profiles.sql`, checked with `supabase/tests/shared_playlists_rls.sql` on a local Postgres 16.
+- Air Ket (`airket/*`): SPAKE2 pairing with a six-digit code, AES-256-GCM frames, LAN-only, NSD `_airket._tcp`, resumable per-file SHA-256 transfer of the personal backup and, optionally, downloads, Canvas and separations; foreground service.
+- Canvas: a Canvas from a link is kept as `kvlink-<sha>.mp4` (cap 40 MB); next titles' Canvas fetched ahead; a downloaded title takes its album's (`CanvasRepo.albumFile`); Settings: size, limit `canvasCacheMb`, clear; Wi-Fi preload `canvasPreloadWifi`; `CanvasPill`.
+- `ReleaseWatch`: twice a day, per followed artist, new discography ids are announced (key `releaseAlerts`).
+- Start: `PrefsWarmup` loads the settings files on a thread of their own; late work starts 1.5 s after the first screen on every edition.
+- Vice City: `ViceCitySun`, sunset fill of `ScrubBar` and `GlassSlider` (`drawPressTrack(fillBrush)`).
+
+Full notes: [6.3.0](docs/releases/v6.3.0.md).
+
+---
+
 # Ketvoice 6.2.1
 
 ![Ketvoice](ketvoice-banner.png)

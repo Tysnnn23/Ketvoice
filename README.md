@@ -21,6 +21,14 @@
 
 ## Overview
 
+### 6.3.0 — Share, move and keep
+
+Shared playlists, a public profile, Air Ket to move your whole Ketvoice to a new phone over Wi-Fi, Canvas kept on the phone, new-release notifications and a faster start.
+[Mobile](https://github.com/Tysnnn23/Ketvoice/releases/download/v6.3.0/Ketvoice-6.3.0.apk)
+· [Lite](https://github.com/Tysnnn23/Ketvoice/releases/download/v6.3.0/Ketvoice-6.3.0-Lite.apk)
+· [Quest](https://github.com/Tysnnn23/Ketvoice/releases/download/v6.3.0/Ketvoice-6.3.0-Quest.apk)
+· [Release notes](docs/releases/v6.3.0.md).
+
 ### 6.2.1 — Vice City sunset
 
 The Vice City theme gets a striped setting sun on Home and a sunset fill on the player's seek bar and the sliders.
