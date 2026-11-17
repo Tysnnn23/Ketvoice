@@ -240,7 +240,7 @@ internal fun QueuePane(state: PlayerUiState, modifier: Modifier = Modifier, show
             }
             if (upcoming.isEmpty()) item {
                 EmptyState("Aucun autre titre dans la file", "Choisissez un titre puis utilisez Lire ensuite pour préparer la suite.",
-                    "Ajouter des titres", onAction = ::openTrackSearch)
+                    "Ajouter des titres", icon = com.ketvoice.app.ui.common.KetIcons.Playlist, onAction = ::openTrackSearch)
             }
         }
         // What can be done with the chosen titles, under the list.

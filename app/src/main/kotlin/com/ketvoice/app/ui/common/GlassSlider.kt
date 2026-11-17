@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
@@ -25,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.progressBarRangeInfo
@@ -74,6 +77,11 @@ fun GlassSlider(
     val fraction = ((value - valueRange.start) / span).let { if (it.isFinite()) snapped(it.coerceIn(0f, 1f)) else 0f }
     var dragFraction by remember { mutableFloatStateOf(fraction) }
     var dragging by remember { mutableStateOf(false) }
+    // The press of iOS 26/27 (SliderPress): the rail swells, the glass thumb grows, and a drag past an
+    // end pulls the rail like a rubber band. rawFraction keeps the unclamped travel of the drag for it.
+    val press = rememberSliderPress()
+    var rawFraction by remember { mutableFloatStateOf(fraction) }
+    val reduced = com.ketvoice.app.ui.motion.Motion.reduced
     val change by rememberUpdatedState(onValueChange)
     val finished by rememberUpdatedState(onValueChangeFinished)
     LaunchedEffect(fraction, dragging) { if (!dragging) dragFraction = fraction }
@@ -84,7 +92,6 @@ fun GlassSlider(
     // track, and a tick in the hand at each step of its travel.
     val thumb = 36.dp
     val thumbHeight = 24.dp
-    val rail = 6.dp
     val tick = com.ketvoice.app.ui.motion.rememberHaptics()
     val stepCount = if (snap) snapSteps else if (steps > 0) steps else SliderSteps.count(valueRange.start, valueRange.endInclusive)
     var lastStep by remember { mutableStateOf(SliderSteps.index(fraction, stepCount)) }
@@ -92,6 +99,10 @@ fun GlassSlider(
         val step = SliderSteps.index(next, stepCount)
         if (step != lastStep) { lastStep = step; tick(com.ketvoice.app.ui.motion.Haptics.Kind.Tick) }
     }
+
+    /** The rail as drawn now, in px: the thumb's travel runs between half a thumb in from each end. */
+    fun railFor(width: Float, withStretch: Boolean = true) = SliderPress.track(SliderPress.Glass, density, 0f, width,
+        press.expansion, if (withStretch) press.stretch else 0f, reduced, inset = with(density) { thumb.toPx() } / 2f)
 
     Box(
         modifier
@@ -126,10 +137,10 @@ fun GlassSlider(
                 }
             }
             .focusable(enabled)
+            .sliderPress(press, enabled)
             .pointerInput(enabled, widthPx, valueRange) {
                 if (enabled) detectTapGestures { point ->
-                    val travel = (widthPx - thumb.toPx()).coerceAtLeast(1f)
-                    val physical = ((point.x - thumb.toPx() / 2f) / travel).coerceIn(0f, 1f)
+                    val physical = railFor(widthPx.toFloat(), withStretch = false).fractionAt(point.x)
                     val next = if (direction == LayoutDirection.Rtl) 1f - physical else physical
                     dragFraction = snapped(next); feel(next); change(valueRange.start + snapped(next) * span); finished()
                 }
@@ -137,13 +148,19 @@ fun GlassSlider(
             .draggable(
                 orientation = Orientation.Horizontal,
                 enabled = enabled,
-                onDragStarted = { dragging = true; dragFraction = fraction; lastStep = SliderSteps.index(fraction, stepCount) },
-                onDragStopped = { dragging = false; finished() },
+                onDragStarted = { dragging = true; dragFraction = fraction; rawFraction = fraction; press.press()
+                    lastStep = SliderSteps.index(fraction, stepCount) },
+                onDragStopped = { dragging = false; press.release(); finished() },
                 state = rememberDraggableState { delta ->
                     if (widthPx > 0) {
-                        val travel = (widthPx - with(density) { thumb.toPx() }).coerceAtLeast(1f)
+                        val rail = railFor(widthPx.toFloat(), withStretch = false)
+                        val travel = (rail.length - 2f * rail.inset).coerceAtLeast(1f)
                         val logicalDelta = if (direction == LayoutDirection.Rtl) -delta else delta
-                        dragFraction = (dragFraction + logicalDelta / travel).coerceIn(0f, 1f)
+                        rawFraction += logicalDelta / travel
+                        dragFraction = rawFraction.coerceIn(0f, 1f)
+                        // Past an end, the rail follows as a rubber band (in physical px: the end being pulled).
+                        val over = (rawFraction - dragFraction) * travel
+                        press.pull(if (direction == LayoutDirection.Rtl) -over else over, SliderPress.Glass.maxStretch * density.density)
                         feel(dragFraction)
                         change(valueRange.start + snapped(dragFraction) * span)
                     }
@@ -159,21 +176,47 @@ fun GlassSlider(
         val displayedFraction = if (dragging) dragFraction else if (snap) settled else fraction
         val track = com.ketvoice.app.glass.rememberGlassBackdrop(theme.card)
         val pressure by androidx.compose.animation.core.animateFloatAsState(
-            if (dragging && !com.ketvoice.app.ui.motion.Motion.reduced) 1f else 0f,
-            com.ketvoice.app.ui.motion.Motion.pressSpring(dragging), label = "slider-pressure")
-        com.ketvoice.app.glass.BackdropCapture(track, Modifier.matchParentSize()) {
-            Box(Modifier.align(Alignment.Center).fillMaxWidth().height(rail)
-                .clip(CircleShape).background(theme.onBackground.copy(alpha = .12f)))
-            Box(Modifier.align(Alignment.CenterStart).fillMaxWidth(displayedFraction).height(rail)
-                .clip(CircleShape).background(theme.accent))
-            if (snap) SliderTicks(snapSteps, thumb, theme.onBackground.copy(alpha = .30f))
-        }
-        val travel = with(density) {
-            (widthPx.toFloat() - thumb.toPx()).coerceAtLeast(0f).toDp()
+            if ((dragging || press.held) && !com.ketvoice.app.ui.motion.Motion.reduced) 1f else 0f,
+            com.ketvoice.app.ui.motion.Motion.pressSpring(dragging || press.held), label = "slider-pressure")
+        // The glass reads what lies under the thumb from this capture: it bleeds past the slider's ends so
+        // a thumb carried out by the swell or the rubber band still has the rail under it.
+        val bleed = 24.dp
+        com.ketvoice.app.glass.BackdropCapture(track, Modifier.matchParentSize().layout { measurable, constraints ->
+            val extra = bleed.roundToPx()
+            val placeable = measurable.measure(androidx.compose.ui.unit.Constraints.fixed(
+                constraints.maxWidth + 2 * extra, constraints.maxHeight))
+            layout(constraints.maxWidth, constraints.maxHeight) { placeable.place(-extra, 0) }
+        }) {
+            val railColor = theme.onBackground.copy(alpha = .12f)
+            val fillColor = theme.accent
+            androidx.compose.foundation.Canvas(Modifier.matchParentSize()) {
+                val edge = bleed.toPx()
+                // The fill runs from the logical start to the thumb's centre.
+                translate(left = edge) {
+                    drawPressTrack(railFor(size.width - 2f * edge), displayedFraction, railColor, fillColor,
+                        press.expansion, highlight = false, direction = direction)
+                }
+            }
+            if (snap) Box(Modifier.matchParentSize().padding(horizontal = bleed)) {
+                SliderTicks(snapSteps, thumb, theme.onBackground.copy(alpha = .30f))
+            }
         }
         androidx.compose.runtime.CompositionLocalProvider(com.ketvoice.app.glass.LocalBackdropLayer provides track) {
+            // The glass thumb rides on the rail as it now stands, and grows a little while held.
             GlassPanel(
-                Modifier.offset(x = travel * displayedFraction).size(thumb, thumbHeight),
+                Modifier
+                    .layout { measurable, constraints ->
+                        val e = if (reduced) 0f else press.expansion.coerceIn(-.2f, 1.3f)
+                        val w = (thumb.toPx() + 8.dp.toPx() * e).roundToIntSafe()
+                        val h = (thumbHeight.toPx() + 4.dp.toPx() * e).roundToIntSafe()
+                        val placeable = measurable.measure(androidx.compose.ui.unit.Constraints.fixed(w, h))
+                        // As wide as the slider, so the thumb is placed in physical px whatever the direction.
+                        val full = if (constraints.hasBoundedWidth) constraints.maxWidth else widthPx
+                        layout(full, placeable.height) {
+                            val physical = if (direction == LayoutDirection.Rtl) 1f - displayedFraction else displayedFraction
+                            placeable.place((railFor(widthPx.toFloat()).xOf(physical) - placeable.width / 2f).roundToIntSafe(), 0)
+                        }
+                    },
                 CircleShape,
                 GlassParams.circle(dark = theme.isDark).copy(blurPx = 2f, tintAlpha = .16f,
                     opticalPressure = pressure),
@@ -182,6 +225,8 @@ fun GlassSlider(
         }
     }
 }
+
+private fun Float.roundToIntSafe(): Int = if (isFinite()) Math.round(this) else 0
 
 /** The steps a slider is felt in: where a tick falls along its travel. */
 internal object SliderSteps {

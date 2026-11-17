@@ -255,14 +255,14 @@ fun DownloadsScreen() {
                     }
                 }
                 if (view == 1 && chosen == null && groups.isEmpty()) item(span = { GridItemSpan(maxLineSpan) }, key = "no-albums") {
-                    EmptyState("Aucun album", "Les titres sans album restent disponibles dans Titres.", "Titres", onAction = { view = 0 })
+                    EmptyState("Aucun album", "Les titres sans album restent disponibles dans Titres.", "Titres", icon = com.ketvoice.app.ui.common.KetIcons.Album, onAction = { view = 0 })
                 }
             }
             if (sections.saved.isEmpty() && sections.transfers.isEmpty()) item(span = { GridItemSpan(maxLineSpan) }, key = "empty") {
-                if (query.isNotBlank() || filter != DownloadFilter.All) EmptyState("Aucun résultat", "Essayez un autre titre ou artiste.", "Effacer",
+                if (query.isNotBlank() || filter != DownloadFilter.All) EmptyState("Aucun résultat", "Essayez un autre titre ou artiste.", "Effacer", icon = com.ketvoice.app.ui.common.KetIcons.Search,
                     onAction = { query = ""; filterName = DownloadFilter.All.name; albumKey = null; artistKey = null })
                 else EmptyState("Aucun téléchargement", "Pour écouter hors ligne, ouvrez le menu d'un titre puis choisissez Télécharger.",
-                    "Rechercher des titres", onAction = ::openTrackSearch)
+                    "Rechercher des titres", icon = com.ketvoice.app.ui.common.KetIcons.Download, onAction = ::openTrackSearch)
             }
         }
     }

@@ -81,15 +81,12 @@ private fun Ket27SettingsBar(category: SettingsCategory?, onBack: () -> Unit, mo
  */
 @Composable
 internal fun Modifier.rowPress(role: Role = Role.Button, onClick: () -> Unit): Modifier {
-    val theme = LocalTheme.current
+    // The same highlight as the rows of titles (drawn without recomposing, at once under reduced motion).
+    val ink = LocalTheme.current.onBackground
+    val highlight = remember(ink) { com.ketvoice.app.ui.common.RowHighlight(ink) }
     val source = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-    val pressed by source.collectIsPressedAsState()
-    val shade by androidx.compose.animation.core.animateFloatAsState(if (pressed) RowPress.SHADE else 0f,
-        androidx.compose.animation.core.tween(if (pressed) RowPress.IN_MS else RowPress.OUT_MS), label = "row-press")
-    return drawBehind { if (shade > 0f) drawRect(theme.onBackground.copy(alpha = shade)) }
-        .clickable(source, null, role = role, onClick = onClick)
+    return clickable(source, highlight, role = role, onClick = onClick)
 }
-internal object RowPress { const val SHADE = .09f; const val IN_MS = 40; const val OUT_MS = 320 }
 
 /** A symbol on its coloured tile, as in the Settings of iOS. */
 @Composable

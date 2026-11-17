@@ -198,7 +198,7 @@ fun LibraryScreen() {
                 }
             }
             if (view == 2 && chosen == null && albums.isEmpty()) item(key = "no-albums") {
-                EmptyState("Aucun album", "Les titres sans album restent disponibles dans Titres.", "Titres", onAction = { view = 3 })
+                EmptyState("Aucun album", "Les titres sans album restent disponibles dans Titres.", "Titres", icon = com.ketvoice.app.ui.common.KetIcons.Album, onAction = { view = 3 })
             }
         }
         if ((view == 0 || view == 4) && chosen == null && !appleRoot) {
@@ -276,10 +276,10 @@ fun LibraryScreen() {
             }
         }
         if (all.isEmpty() && playlists.isEmpty()) item {
-            EmptyState("Votre bibliothèque est vide", "Écoutez un titre ou téléchargez-le pour le retrouver ici, même hors ligne.", "Rechercher des titres", onAction = ::openTrackSearch)
+            EmptyState("Votre bibliothèque est vide", "Écoutez un titre ou téléchargez-le pour le retrouver ici, même hors ligne.", "Rechercher des titres", icon = KetIcons.Library, onAction = ::openTrackSearch)
         }
         else if (query.isNotBlank() && shown.isEmpty() && playlists.none { it.name.contains(query.trim(), true) }) item {
-            EmptyState("Aucun résultat", "Essayez un autre titre ou artiste.", "Effacer", onAction = { query = "" })
+            EmptyState("Aucun résultat", "Essayez un autre titre ou artiste.", "Effacer", icon = KetIcons.Search, onAction = { query = "" })
         }
     }
     }
