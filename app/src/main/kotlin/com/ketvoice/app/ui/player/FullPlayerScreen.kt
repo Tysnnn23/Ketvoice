@@ -576,7 +576,10 @@ internal fun PlayerTitle(track: Track, compact: Boolean, cover: String?, sheetAc
     Row(modifier, verticalAlignment = Alignment.CenterVertically) {
         if (compact) { Cover(track.title, cover, size = 56.dp, radius = 8.dp,
             modifier = Modifier.semantics { contentDescription = com.ketvoice.app.data.AppText.t("Revenir à la pochette") }.clickable(onClick = onCover)); Spacer(Modifier.width(12.dp)) }
-        Column(Modifier.weight(1f).then(textModifier)) {
+        // The title and artist cross-fade from one title to the next (6.2), like Apple Music.
+        AnimatedContent(track, Modifier.weight(1f).then(textModifier), transitionSpec = { titleChange() },
+            contentKey = { it.id }, label = "player-title") { track ->
+        Column(Modifier.fillMaxWidth()) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (track.explicit) {
                     Text("E", color = Color.Black, fontSize = 9.sp, fontWeight = FontWeight.Black,
@@ -596,6 +599,7 @@ internal fun PlayerTitle(track: Track, compact: Boolean, cover: String?, sheetAc
                     .clickable { AppUi.openArtist(track.artistId.orEmpty(), track.artist) }
                     .semantics { contentDescription = com.ketvoice.app.data.AppText.t("Ouvrir la page de ${track.artist}") }
             )
+        }
         }
         Spacer(Modifier.width(8.dp))
         Box(actionsModifier, contentAlignment = Alignment.Center) {
