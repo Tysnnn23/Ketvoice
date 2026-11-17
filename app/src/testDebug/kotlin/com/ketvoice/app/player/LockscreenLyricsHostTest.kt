@@ -50,6 +50,8 @@ class LockscreenLyricsHostTest {
     )
 
     @Before fun setup() {
+        // Quest has no lock screen: the feature is off there by design (LockscreenLyricsGate).
+        org.junit.Assume.assumeFalse(com.ketvoice.app.BuildConfig.IS_QUEST)
         shadowOf(context as android.app.Application).grantPermissions(android.Manifest.permission.POST_NOTIFICATIONS)
         AppSettings.lockscreenLyrics.value = true
         LyricsNotification.dismissedTrack = null
@@ -59,7 +61,7 @@ class LockscreenLyricsHostTest {
     }
 
     @After fun cleanup() {
-        lock.stop(); scope.cancel()
+        if (::lock.isInitialized) lock.stop(); scope.cancel()
         repo.value = LyricsRepo.State()
         LyricsTranslation.showing("t1", false)
         AppSettings.lockscreenLyrics.value = true

@@ -166,6 +166,8 @@ class ArtistAlbumPagesHostTest {
 
     @Test @Config(qualifiers = "w1194dp-h834dp-xlarge-land-mdpi")
     fun artistPageOnATablet() {
+        // Quest keeps its own window layout and never sees a large-screen one (AGENTS.md).
+        org.junit.Assume.assumeFalse(com.ketvoice.app.BuildConfig.IS_QUEST)
         frame(large = true) { com.ketvoice.app.ui.sub.ArtistPageFrame(AppUi.ArtistRequest(artist.id, artist.name), page, false, false, 0, {}, {}) }
         compose.onNodeWithTag("artist-list-pane").assertIsDisplayed()
         // The latest release sits beside the popular titles.
@@ -181,6 +183,8 @@ class ArtistAlbumPagesHostTest {
 
     @Test @Config(qualifiers = "w1194dp-h834dp-xlarge-land-mdpi")
     fun albumPageOnATablet() {
+        // Quest keeps its own window layout and never sees a large-screen one (AGENTS.md).
+        org.junit.Assume.assumeFalse(com.ketvoice.app.BuildConfig.IS_QUEST)
         kotlinx.coroutines.runBlocking { com.ketvoice.app.data.ArtistCache.put(artist.id, artist.name, page) }
         val album = tracks.take(10)
         frame(large = true) {
