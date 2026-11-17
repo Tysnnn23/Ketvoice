@@ -131,7 +131,13 @@ class AutoBrowserConnectionTest {
             idle()
             assertEquals(1, service.get().sessions.single().player.mediaItemCount)
             assertEquals("own", service.get().sessions.single().player.currentMediaItem?.mediaId)
-            assertTrue(playback.played.isEmpty())
+            // A bare address from another app is not a car request: it stays unsupported, as before.
+            browser.setMediaItem(MediaItem.Builder().setRequestMetadata(MediaItem.RequestMetadata.Builder()
+                .setMediaUri(android.net.Uri.parse("https://example.com/a.mp3")).build()).build())
+            idle()
+            assertTrue(playback.played.isEmpty() && playback.shuffled.isEmpty())
+            assertEquals(0, playback.resumed)
+            assertEquals("own", service.get().sessions.single().player.currentMediaItem?.mediaId)
         } finally { browser.release() }
     }
 }

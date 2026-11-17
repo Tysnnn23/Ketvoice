@@ -688,8 +688,12 @@ internal open class AutoLibraryCallback(private val context: Context) : MediaLib
                                    page: Int, pageSize: Int, params: LibraryParams?): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> =
         listResult(params) { library.searchResult(query, page, pageSize) }
 
-    /** Items without a stream (a car's media ids) are resolved by the phone's queue; the app's own items pass. */
-    private fun needsQueue(items: List<MediaItem>) = items.isEmpty() || items.any { it.localConfiguration == null }
+    /**
+     * Items without a stream (a car's media ids, a voice query) are resolved by the phone's queue. The app's own
+     * items pass as before, and so does a bare address (« play from URI »), which stays unsupported as it was.
+     */
+    private fun needsQueue(items: List<MediaItem>) = items.isNotEmpty() && items.any { it.localConfiguration == null } &&
+        items.none { it.mediaId.isBlank() && it.requestMetadata.searchQuery == null && it.requestMetadata.mediaUri != null }
 
     override fun onAddMediaItems(mediaSession: MediaSession, controller: MediaSession.ControllerInfo,
                                  mediaItems: MutableList<MediaItem>): ListenableFuture<MutableList<MediaItem>> {
