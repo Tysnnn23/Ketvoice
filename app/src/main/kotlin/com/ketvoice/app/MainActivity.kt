@@ -60,6 +60,14 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
 
         Crash.install(this)
+        // 6.1.1: two launches in a row closed by a crash → a plain screen with the report instead of the app.
+        if (savedInstanceState == null && runCatching { com.ketvoice.app.util.CrashLoop.beginLaunch(this) }.getOrDefault(false)) {
+            super.onCreate(savedInstanceState)
+            startActivity(Intent(this, SafeModeActivity::class.java))
+            finish()
+            return
+        }
+        android.os.Handler(mainLooper).postDelayed({ runCatching { com.ketvoice.app.util.CrashLoop.steady(this) } }, com.ketvoice.app.util.CrashLoop.STEADY_MS)
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         // After Android reclaimed the process, come back to the page the user was on.

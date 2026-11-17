@@ -18,6 +18,8 @@ class KetvoiceApp : Application(), ImageLoaderFactory {
     override fun onCreate() {
         super.onCreate()
         instance = this
+        // Every process keeps its crash reports from the very start (6.1.1).
+        runCatching { com.ketvoice.app.util.Crash.install(this) }
         // Ketvoice Lite: budgets follow the phone's memory (LiteTuning; mobile and Quest keep their values).
         if (LiteTuning.lite) runCatching {
             val am = getSystemService(android.app.ActivityManager::class.java)

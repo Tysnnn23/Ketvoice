@@ -21,6 +21,14 @@
 
 ## Overview
 
+### 6.1.1 — Safe mode
+
+If Ketvoice closes twice in a row while starting, it now opens a simple screen with the crash report to share.
+[Mobile](https://github.com/Tysnnn23/Ketvoice/releases/download/v6.1.1/Ketvoice-6.1.1.apk)
+· [Lite](https://github.com/Tysnnn23/Ketvoice/releases/download/v6.1.1/Ketvoice-6.1.1-Lite.apk)
+· [Quest](https://github.com/Tysnnn23/Ketvoice/releases/download/v6.1.1/Ketvoice-6.1.1-Quest.apk)
+· [Release notes](docs/releases/v6.1.1.md).
+
 ### 6.1.0 — Listen together, mix by hand, Vice City edition
 
 Ketogether lets friends hear the same song at the same moment; the Ketmix editor lets you place mix points on

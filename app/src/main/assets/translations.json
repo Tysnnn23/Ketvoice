@@ -1796,7 +1796,14 @@
   "Le thème Vice City est sombre ; votre choix revient quand il est désactivé": "The Vice City theme is dark; your choice comes back when it is turned off",
   "Le rose Vice City la remplace tant que le thème est activé": "Vice City pink replaces it while the theme is on",
   "Avec le thème Vice City, les pages gardent ses couleurs ; la pochette colore toujours le lecteur et le verre.": "With the Vice City theme, pages keep its colours; the cover still colours the player and the glass.",
-  "Jusqu'au 10 décembre": "Until December 10"
+  "Jusqu'au 10 décembre": "Until December 10",
+  "Aucun rapport n'a été trouvé.": "No report was found.",
+  "Ketvoice s'est arrêté au démarrage": "Ketvoice stopped while starting",
+  "Partagez ce rapport avec le développeur : il indique exactement ce qui a planté.": "Share this report with the developer: it shows exactly what crashed.",
+  "Partager le rapport": "Share report",
+  "Copier": "Copy",
+  "Rapport copié": "Report copied",
+  "Relancer": "Try again"
  },
  "hi": {
   "Reverb": "रीवर्ब",
@@ -3595,7 +3602,14 @@
   "Le thème Vice City est sombre ; votre choix revient quand il est désactivé": "Vice City थीम गहरी है; इसे बंद करने पर आपकी पसंद वापस आ जाती है",
   "Le rose Vice City la remplace tant que le thème est activé": "थीम चालू रहने तक Vice City गुलाबी रंग इसकी जगह लेता है",
   "Avec le thème Vice City, les pages gardent ses couleurs ; la pochette colore toujours le lecteur et le verre.": "Vice City थीम के साथ पेज उसके रंग बनाए रखते हैं; कवर अब भी प्लेयर और ग्लास को रंग देता है।",
-  "Jusqu'au 10 décembre": "10 दिसंबर तक"
+  "Jusqu'au 10 décembre": "10 दिसंबर तक",
+  "Aucun rapport n'a été trouvé.": "कोई रिपोर्ट नहीं मिली।",
+  "Ketvoice s'est arrêté au démarrage": "Ketvoice शुरू होते समय बंद हो गया",
+  "Partagez ce rapport avec le développeur : il indique exactement ce qui a planté.": "यह रिपोर्ट डेवलपर के साथ साझा करें: इसमें ठीक-ठीक लिखा है कि क्या क्रैश हुआ।",
+  "Partager le rapport": "रिपोर्ट साझा करें",
+  "Copier": "कॉपी करें",
+  "Rapport copié": "रिपोर्ट कॉपी हो गई",
+  "Relancer": "फिर से खोलें"
  },
  "ja": {
   "Reverb": "リバーブ",
@@ -5394,7 +5408,14 @@
   "Le thème Vice City est sombre ; votre choix revient quand il est désactivé": "Vice Cityテーマはダークです。オフにすると選択した設定に戻ります",
   "Le rose Vice City la remplace tant que le thème est activé": "テーマがオンの間はVice Cityのピンクに置き換わります",
   "Avec le thème Vice City, les pages gardent ses couleurs ; la pochette colore toujours le lecteur et le verre.": "Vice Cityテーマでは、ページはテーマの色のままです。ジャケットの色はプレーヤーとガラスに引き続き反映されます。",
-  "Jusqu'au 10 décembre": "12月10日まで"
+  "Jusqu'au 10 décembre": "12月10日まで",
+  "Aucun rapport n'a été trouvé.": "レポートが見つかりませんでした。",
+  "Ketvoice s'est arrêté au démarrage": "Ketvoice が起動中に停止しました",
+  "Partagez ce rapport avec le développeur : il indique exactement ce qui a planté.": "このレポートを開発者に共有してください。何がクラッシュしたかが正確にわかります。",
+  "Partager le rapport": "レポートを共有",
+  "Copier": "コピー",
+  "Rapport copié": "レポートをコピーしました",
+  "Relancer": "再起動"
  },
  "zh": {
   "Reverb": "混响",
@@ -7193,7 +7214,14 @@
   "Le thème Vice City est sombre ; votre choix revient quand il est désactivé": "Vice City 主题为深色；关闭后会恢复你的选择",
   "Le rose Vice City la remplace tant que le thème est activé": "主题开启期间，由 Vice City 粉色代替",
   "Avec le thème Vice City, les pages gardent ses couleurs ; la pochette colore toujours le lecteur et le verre.": "使用 Vice City 主题时，页面保持主题颜色；封面仍会为播放器和玻璃着色。",
-  "Jusqu'au 10 décembre": "截至 12 月 10 日"
+  "Jusqu'au 10 décembre": "截至 12 月 10 日",
+  "Aucun rapport n'a été trouvé.": "未找到报告。",
+  "Ketvoice s'est arrêté au démarrage": "Ketvoice 在启动时停止了",
+  "Partagez ce rapport avec le développeur : il indique exactement ce qui a planté.": "请将此报告分享给开发者：它准确显示了崩溃的原因。",
+  "Partager le rapport": "分享报告",
+  "Copier": "复制",
+  "Rapport copié": "已复制报告",
+  "Relancer": "重新启动"
  },
  "ru": {
   "Reverb": "Реверберация",
@@ -8992,7 +9020,14 @@
   "Le thème Vice City est sombre ; votre choix revient quand il est désactivé": "Тема Vice City тёмная; ваш выбор вернётся, когда вы её отключите",
   "Le rose Vice City la remplace tant que le thème est activé": "Пока тема включена, его заменяет розовый Vice City",
   "Avec le thème Vice City, les pages gardent ses couleurs ; la pochette colore toujours le lecteur et le verre.": "С темой Vice City страницы сохраняют её цвета; обложка по-прежнему окрашивает плеер и стекло.",
-  "Jusqu'au 10 décembre": "До 10 декабря"
+  "Jusqu'au 10 décembre": "До 10 декабря",
+  "Aucun rapport n'a été trouvé.": "Отчёт не найден.",
+  "Ketvoice s'est arrêté au démarrage": "Ketvoice остановился при запуске",
+  "Partagez ce rapport avec le développeur : il indique exactement ce qui a planté.": "Отправьте этот отчёт разработчику: в нём точно указано, что сломалось.",
+  "Partager le rapport": "Поделиться отчётом",
+  "Copier": "Копировать",
+  "Rapport copié": "Отчёт скопирован",
+  "Relancer": "Перезапустить"
  },
  "it": {
   "Reverb": "Riverbero",
@@ -10791,7 +10826,14 @@
   "Le thème Vice City est sombre ; votre choix revient quand il est désactivé": "Il tema Vice City è scuro; la tua scelta torna quando lo disattivi",
   "Le rose Vice City la remplace tant que le thème est activé": "Il rosa Vice City la sostituisce finché il tema è attivo",
   "Avec le thème Vice City, les pages gardent ses couleurs ; la pochette colore toujours le lecteur et le verre.": "Con il tema Vice City le pagine mantengono i suoi colori; la copertina colora sempre il lettore e il vetro.",
-  "Jusqu'au 10 décembre": "Fino al 10 dicembre"
+  "Jusqu'au 10 décembre": "Fino al 10 dicembre",
+  "Aucun rapport n'a été trouvé.": "Nessun rapporto trovato.",
+  "Ketvoice s'est arrêté au démarrage": "Ketvoice si è chiuso all'avvio",
+  "Partagez ce rapport avec le développeur : il indique exactement ce qui a planté.": "Condividi questo rapporto con lo sviluppatore: indica esattamente cosa si è bloccato.",
+  "Partager le rapport": "Condividi rapporto",
+  "Copier": "Copia",
+  "Rapport copié": "Rapporto copiato",
+  "Relancer": "Riprova"
  },
  "es": {
   "Reverb": "Reverb",
@@ -12590,7 +12632,14 @@
   "Le thème Vice City est sombre ; votre choix revient quand il est désactivé": "El tema Vice City es oscuro; tu elección vuelve cuando lo desactivas",
   "Le rose Vice City la remplace tant que le thème est activé": "El rosa Vice City lo sustituye mientras el tema está activado",
   "Avec le thème Vice City, les pages gardent ses couleurs ; la pochette colore toujours le lecteur et le verre.": "Con el tema Vice City, las páginas conservan sus colores; la portada sigue coloreando el reproductor y el cristal.",
-  "Jusqu'au 10 décembre": "Hasta el 10 de diciembre"
+  "Jusqu'au 10 décembre": "Hasta el 10 de diciembre",
+  "Aucun rapport n'a été trouvé.": "No se encontró ningún informe.",
+  "Ketvoice s'est arrêté au démarrage": "Ketvoice se detuvo al iniciarse",
+  "Partagez ce rapport avec le développeur : il indique exactement ce qui a planté.": "Comparte este informe con el desarrollador: indica exactamente qué falló.",
+  "Partager le rapport": "Compartir informe",
+  "Copier": "Copiar",
+  "Rapport copié": "Informe copiado",
+  "Relancer": "Reintentar"
  },
  "de": {
   "Reverb": "Reverb",
@@ -14389,7 +14438,14 @@
   "Le thème Vice City est sombre ; votre choix revient quand il est désactivé": "Das Vice-City-Design ist dunkel; deine Wahl kehrt zurück, wenn es ausgeschaltet wird",
   "Le rose Vice City la remplace tant que le thème est activé": "Solange das Design aktiv ist, ersetzt sie das Vice-City-Pink",
   "Avec le thème Vice City, les pages gardent ses couleurs ; la pochette colore toujours le lecteur et le verre.": "Mit dem Vice-City-Design behalten die Seiten seine Farben; das Cover färbt weiterhin den Player und das Glas.",
-  "Jusqu'au 10 décembre": "Bis zum 10. Dezember"
+  "Jusqu'au 10 décembre": "Bis zum 10. Dezember",
+  "Aucun rapport n'a été trouvé.": "Kein Bericht gefunden.",
+  "Ketvoice s'est arrêté au démarrage": "Ketvoice wurde beim Start beendet",
+  "Partagez ce rapport avec le développeur : il indique exactement ce qui a planté.": "Teile diesen Bericht mit dem Entwickler: Er zeigt genau, was abgestürzt ist.",
+  "Partager le rapport": "Bericht teilen",
+  "Copier": "Kopieren",
+  "Rapport copié": "Bericht kopiert",
+  "Relancer": "Neu starten"
  },
  "pt": {
   "Reverb": "Reverb",
@@ -16188,7 +16244,14 @@
   "Le thème Vice City est sombre ; votre choix revient quand il est désactivé": "O tema Vice City é escuro; sua escolha volta quando ele é desativado",
   "Le rose Vice City la remplace tant que le thème est activé": "O rosa Vice City a substitui enquanto o tema estiver ativado",
   "Avec le thème Vice City, les pages gardent ses couleurs ; la pochette colore toujours le lecteur et le verre.": "Com o tema Vice City, as páginas mantêm as cores dele; a capa continua colorindo o player e o vidro.",
-  "Jusqu'au 10 décembre": "Até 10 de dezembro"
+  "Jusqu'au 10 décembre": "Até 10 de dezembro",
+  "Aucun rapport n'a été trouvé.": "Nenhum relatório foi encontrado.",
+  "Ketvoice s'est arrêté au démarrage": "O Ketvoice parou ao iniciar",
+  "Partagez ce rapport avec le développeur : il indique exactement ce qui a planté.": "Partilhe este relatório com o programador: ele mostra exatamente o que falhou.",
+  "Partager le rapport": "Partilhar relatório",
+  "Copier": "Copiar",
+  "Rapport copié": "Relatório copiado",
+  "Relancer": "Tentar de novo"
  },
  "ko": {
   "Reverb": "리버브",
@@ -17987,6 +18050,13 @@
   "Le thème Vice City est sombre ; votre choix revient quand il est désactivé": "Vice City 테마는 어두운 테마입니다. 끄면 선택한 설정으로 돌아갑니다",
   "Le rose Vice City la remplace tant que le thème est activé": "테마가 켜져 있는 동안 Vice City 핑크로 바뀝니다",
   "Avec le thème Vice City, les pages gardent ses couleurs ; la pochette colore toujours le lecteur et le verre.": "Vice City 테마에서는 페이지가 테마 색상을 유지하며, 앨범 커버는 계속 플레이어와 유리에 색을 입힙니다.",
-  "Jusqu'au 10 décembre": "12월 10일까지"
+  "Jusqu'au 10 décembre": "12월 10일까지",
+  "Aucun rapport n'a été trouvé.": "보고서를 찾을 수 없습니다.",
+  "Ketvoice s'est arrêté au démarrage": "Ketvoice가 시작 중에 멈췄습니다",
+  "Partagez ce rapport avec le développeur : il indique exactement ce qui a planté.": "이 보고서를 개발자와 공유하세요. 무엇이 충돌했는지 정확히 보여 줍니다.",
+  "Partager le rapport": "보고서 공유",
+  "Copier": "복사",
+  "Rapport copié": "보고서를 복사했습니다",
+  "Relancer": "다시 시작"
  }
 }

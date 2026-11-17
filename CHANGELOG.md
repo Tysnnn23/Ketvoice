@@ -7,6 +7,19 @@
 
 ---
 
+# Ketvoice 6.1.1
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 130** — safe mode after crashes at launch.
+
+- `util/CrashLoop` counts launches that did not last 10 s; after two in a row with a newer crash report, `SafeModeActivity` (plain Android views) opens with the report to share, copy, or retry. `Crash.install` now runs first in `KetvoiceApp.onCreate`, in every process, and reports carry the version and edition.
+- `AppLaunchHostTest`, `AppLaunchWithServiceHostTest` (SDK 34–36, real `PlaybackService` bound) and `SafeModeHostTest` start the whole app on the host.
+
+Full notes: [6.1.1](docs/releases/v6.1.1.md).
+
+---
+
 # Ketvoice 6.1.0
 
 ![Ketvoice](ketvoice-banner.png)

@@ -270,6 +270,12 @@
             android:name=".player.LyricsNotificationReceiver"
             android:exported="false" />
 
+        <!-- 6.1.1: opened instead of the app after two launches in a row ended in a crash (plain views, the report to share). -->
+        <activity
+            android:name=".SafeModeActivity"
+            android:exported="false"
+            android:theme="@android:style/Theme.DeviceDefault.NoActionBar" />
+
         <!-- Discord OAuth2 + PKCE redirect handled by Ketvoice itself. -->
         <activity
             android:name=".discord.DiscordAuthActivity"
