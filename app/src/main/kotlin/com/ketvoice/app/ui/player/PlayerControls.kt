@@ -105,6 +105,8 @@ import androidx.lifecycle.LifecycleEventObserver
 import kotlinx.coroutines.launch
 import java.io.File
 import java.util.Locale
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.platform.testTag
 
 private val noRipple = MutableInteractionSource()
 
@@ -393,9 +395,12 @@ fun ScrubBar(
             }
         }
         if (showTimes) {
-            Row(Modifier.fillMaxWidth().padding(top = 1.dp)) {
+            Row(Modifier.fillMaxWidth().padding(top = 1.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                 Text(formatSecs((shown * dur).toLong()), color = timeColor, fontSize = 11.sp)
-                Spacer(Modifier.weight(1f))
+                // Between the two times, where Apple Music says it is mixing (6.0.0 Beta 5): Ketmix's sign while a mix plays.
+                androidx.compose.foundation.layout.Box(Modifier.weight(1f), contentAlignment = androidx.compose.ui.Alignment.Center) {
+                    KetmixMixingBadge(mix.value, timeColor)
+                }
                 Text("-" + formatSecs(((1f - shown) * dur).toLong()), color = timeColor, fontSize = 11.sp)
             }
         }
@@ -945,3 +950,45 @@ fun PlayerSheetScrim(onClose: () -> Unit, content: @Composable () -> Unit) {
         ) { content() }
     }
 }
+
+/**
+ * Ketmix at work (6.0.0 Beta 5), between the times under the bar: its sign of two rings that drift
+ * together, merge at the hand-over and part again, and its name under a passing sheen. It rises in with a
+ * small spring when a mix starts and leaves when it ends. Still under reduced motion.
+ */
+@Composable
+internal fun KetmixMixingBadge(progress: Float?, tint: Color, modifier: Modifier = Modifier) {
+    val visible = progress != null
+    val presence by animateFloatAsState(if (visible) 1f else 0f,
+        if (Motion.reduced) androidx.compose.animation.core.snap() else androidx.compose.animation.core.spring(dampingRatio = .62f, stiffness = 380f),
+        label = "ketmix-badge")
+    if (presence <= .01f) return
+    val sheen = if (Motion.reduced) 0f else rememberInfiniteTransition(label = "ketmix-sheen").animateFloat(
+        -1f, 2f, infiniteRepeatable(androidx.compose.animation.core.tween(1_600, easing = LinearEasing)), label = "sheen").value
+    val label = com.ketvoice.app.data.AppText.t("Ketmix")
+    Row(modifier.then(Modifier.ketmixBadgeTag()).graphicsLayer {
+            alpha = presence.coerceIn(0f, 1f)
+            val s = .8f + .2f * presence
+            scaleX = s; scaleY = s
+            translationY = (1f - presence) * 6.dp.toPx()
+        }.semantics { contentDescription = com.ketvoice.app.data.AppText.t("Ketmix mixe les titres") },
+        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+        AutomixGlyph(tint.copy(alpha = .95f), Modifier.size(14.dp), overlap = MixVisuals.ringOverlap(progress))
+        Spacer(Modifier.width(4.dp))
+        Text(label, color = tint, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, localize = false,
+            modifier = Modifier.graphicsLayer { compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen }
+                .then(Modifier.ketmixSheen(sheen)))
+    }
+}
+
+private fun Modifier.ketmixBadgeTag(): Modifier = this.testTag("ketmix-badge")
+
+/** A sheen that passes over what is drawn, inside its own letters only. */
+private fun Modifier.ketmixSheen(sheen: Float): Modifier = this.drawWithContent {
+                    drawContent()
+                    if (sheen != 0f) drawRect(androidx.compose.ui.graphics.Brush.linearGradient(
+                        0f to Color.White.copy(alpha = 0f), .5f to Color.White.copy(alpha = .9f), 1f to Color.White.copy(alpha = 0f),
+                        start = Offset(size.width * (sheen - .35f), 0f), end = Offset(size.width * (sheen + .35f), size.height)),
+                        blendMode = androidx.compose.ui.graphics.BlendMode.SrcAtop)
+                }
+

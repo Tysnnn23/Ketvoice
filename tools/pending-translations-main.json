@@ -10,5 +10,17 @@
   "de": "App-Start → Ketvoice: „Automatisch verwalten“ ausschalten, dann „Im Hintergrund ausführen“ einschalten. Sonst stoppt dieses Handy die Musik.",
   "pt": "Início de apps → Ketvoice: desative “Gerir automaticamente” e ative “Executar em segundo plano”. Sem isso, este telefone para a música.",
   "ko": "앱 실행 → Ketvoice: ‘자동으로 관리’를 끄고 ‘백그라운드에서 실행’을 켜세요. 그렇지 않으면 이 휴대폰이 음악을 멈춥니다."
+ },
+ "Ketmix mixe les titres": {
+  "en": "Ketmix is mixing the songs",
+  "hi": "Ketmix गाने मिक्स कर रहा है",
+  "es": "Ketmix está mezclando las canciones",
+  "pt": "Ketmix está mixando as músicas",
+  "ru": "Ketmix сводит треки",
+  "ja": "Ketmixが曲をミックス中",
+  "de": "Ketmix mischt die Titel",
+  "zh": "Ketmix 正在混音歌曲",
+  "it": "Ketmix sta mixando i brani",
+  "ko": "Ketmix가 곡을 믹싱하는 중"
  }
 }
