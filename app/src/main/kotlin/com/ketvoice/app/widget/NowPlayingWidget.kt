@@ -69,7 +69,9 @@ internal data class WidgetNowPlaying(
     val title: String = "",
     val artist: String = "",
     val playing: Boolean = false,
-    val cover: Bitmap? = null
+    val cover: Bitmap? = null,
+    /** The Ket 27 glass ground tinted by the cover (6.1, [WidgetGlass]). */
+    val ground: Bitmap? = null
 ) {
     val hasTrack: Boolean get() = title.isNotBlank()
 }
@@ -88,9 +90,9 @@ internal fun widgetLayoutFor(widthDp: Float, heightDp: Float): WidgetLayout = wh
 }
 
 /**
- * Home-screen widget in the glass language of the app: a translucent rounded card,
- * the cover, the title and the transport. RemoteViews cannot refract what is behind
- * them, so this is a frosted card, not the optical material.
+ * Home-screen widget in the glass language of the app (Ket 27 since 6.1): a glass card tinted by the cover,
+ * the cover, the title and the transport. RemoteViews cannot refract what is behind them, so the glass is
+ * drawn once per cover ([WidgetGlass]), not the optical material.
  */
 class NowPlayingWidget : GlanceAppWidget() {
     override val sizeMode = SizeMode.Responsive(setOf(WIDGET_COMPACT, WIDGET_ROW, WIDGET_CARD))
@@ -108,24 +110,20 @@ class NowPlayingWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = NowPlayingWidget()
 }
 
-private val surface = ColorProvider(day = Color(0xE6FFFFFF), night = Color(0xE61C1C1F))
-private val onSurface = ColorProvider(day = Color(0xFF141414), night = Color(0xFFFFFFFF))
-private val secondary = ColorProvider(day = Color(0xFF5B5B63), night = Color(0xFFB7B7C2))
-private val placeholder = ColorProvider(day = Color(0x1F000000), night = Color(0x29FFFFFF))
-
 @Composable
-private fun WidgetContent(state: WidgetNowPlaying) {
+internal fun WidgetContent(state: WidgetNowPlaying) {
     val size = LocalSize.current
     val layout = widgetLayoutFor(size.width.value, size.height.value)
     val open = actionStartActivity<MainActivity>()
-    Box(GlanceModifier.fillMaxSize().cornerRadius(28.dp).background(surface).clickable(open).padding(10.dp),
+    GlassCard(state.ground, if (layout == WidgetLayout.Card) 28.dp else 999.dp, open) {
+      Box(GlanceModifier.fillMaxSize().padding(horizontal = if (layout == WidgetLayout.Card) 12.dp else 8.dp, vertical = 8.dp),
         contentAlignment = Alignment.Center) {
         when (layout) {
             WidgetLayout.Compact -> Row(GlanceModifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
                 Cover(state, 40)
                 Spacer(GlanceModifier.defaultWeight())
                 Transport(R.drawable.ic_widget_play.takeUnless { state.playing } ?: R.drawable.ic_widget_pause,
-                    if (state.playing) "Pause" else "Lecture", "toggle", state, 40)
+                    if (state.playing) "Pause" else "Lecture", "toggle", state, 40, filled = true)
             }
             WidgetLayout.Row -> Row(GlanceModifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
                 Cover(state, 44)
@@ -144,23 +142,21 @@ private fun WidgetContent(state: WidgetNowPlaying) {
                 }
             }
         }
+      }
     }
 }
 
 @Composable
 private fun Cover(state: WidgetNowPlaying, sizeDp: Int) {
-    val modifier = GlanceModifier.size(sizeDp.dp).cornerRadius((sizeDp / 4).dp)
-    val bitmap = state.cover
-    if (bitmap != null) Image(ImageProvider(bitmap), null, modifier, contentScale = ContentScale.Crop)
-    else Box(modifier.background(placeholder)) {}
+    CoverImage(state.cover, sizeDp, sizeDp / 4)
 }
 
 @Composable
 private fun Labels(state: WidgetNowPlaying, modifier: GlanceModifier) {
     Column(modifier) {
         Text(state.title.ifBlank { "Ketvoice" }, maxLines = 1,
-            style = TextStyle(color = onSurface, fontSize = 14.sp, fontWeight = FontWeight.Bold))
-        if (state.artist.isNotBlank()) Text(state.artist, maxLines = 1, style = TextStyle(color = secondary, fontSize = 12.sp))
+            style = TextStyle(color = WidgetGlass.text, fontSize = 14.sp, fontWeight = FontWeight.Bold))
+        if (state.artist.isNotBlank()) Text(state.artist, maxLines = 1, style = TextStyle(color = WidgetGlass.textSoft, fontSize = 12.sp))
     }
 }
 
@@ -169,19 +165,14 @@ private fun TransportRow(state: WidgetNowPlaying, sizeDp: Int) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Transport(R.drawable.ic_widget_previous, "Précédent", "previous", state, sizeDp)
         Transport(if (state.playing) R.drawable.ic_widget_pause else R.drawable.ic_widget_play,
-            if (state.playing) "Pause" else "Lecture", "toggle", state, sizeDp)
+            if (state.playing) "Pause" else "Lecture", "toggle", state, sizeDp, filled = true)
         Transport(R.drawable.ic_widget_next, "Suivant", "next", state, sizeDp)
     }
 }
 
 @Composable
-private fun Transport(icon: Int, label: String, command: String, state: WidgetNowPlaying, sizeDp: Int) {
-    // Without a loaded queue a transport tap opens the app instead of doing nothing.
-    val action: Action = if (state.hasTrack) actionRunCallback<WidgetTransportCallback>(actionParametersOf(COMMAND to command))
-    else actionStartActivity<MainActivity>()
-    Image(ImageProvider(icon), AppText.t(label), GlanceModifier.size(sizeDp.dp).cornerRadius((sizeDp / 2).dp)
-        .clickable(action).padding(((sizeDp - 24) / 2).dp), colorFilter = ColorFilter.tint(onSurface))
-}
+private fun Transport(icon: Int, label: String, command: String, state: WidgetNowPlaying, sizeDp: Int, filled: Boolean = false) =
+    TransportButton(icon, label, command, state.hasTrack, sizeDp, filled = filled)
 
 internal val COMMAND = ActionParameters.Key<String>("command")
 
@@ -223,20 +214,18 @@ internal object NowPlayingWidgetUpdater {
                 if (!placed) return@collectLatest
                 val previous = state.value
                 // Publish text and play state at once; the cover follows when it is decoded.
+                val same = previous.title == key.title && previous.artist == key.artist
                 state.value = WidgetNowPlaying(key.title, key.artist, key.playing,
-                    previous.cover.takeIf { previous.title == key.title && previous.artist == key.artist })
+                    previous.cover.takeIf { same }, previous.ground.takeIf { same })
                 runCatching { NowPlayingWidget().updateAll(app) }
-                val bitmap = key.cover?.let { loadCover(app, it) }
+                val bitmap = key.cover?.let { KetvoiceWidgetsUpdater.loadCover(app, it) }
                 if (bitmap != null || key.cover == null) {
-                    state.value = state.value.copy(cover = bitmap)
+                    state.value = state.value.copy(cover = bitmap,
+                        ground = runCatching { WidgetGlass.ground(bitmap, WidgetGlass.tint(bitmap)) }.getOrNull())
                     runCatching { NowPlayingWidget().updateAll(app) }
                 }
             }
         }
     }
 
-    private suspend fun loadCover(context: Context, url: String): Bitmap? = runCatching {
-        val request = ImageRequest.Builder(context).data(url).size(320).allowHardware(false).build()
-        context.imageLoader.execute(request).drawable?.toBitmap()
-    }.getOrNull()
 }
