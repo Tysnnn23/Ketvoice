@@ -256,7 +256,8 @@ internal object Automix {
         while (true) {
             delay(250)
             val target = host ?: continue
-            if (!AppSettings.automix.value) { if (job != null || session != null) cancel(); say(""); continue }
+            // A Ketogether guest follows the host's music: no Ketmix of its own meanwhile (6.1).
+            if (!AppSettings.automix.value || com.ketvoice.app.together.Ketogether.holdsKetmix) { if (job != null || session != null) cancel(); say(""); continue }
             if (job?.isActive == true) continue
             val state = Player.state.value
             val current = state.current
@@ -858,7 +859,7 @@ internal object Automix {
      */
     suspend fun skipMix(): Boolean {
         val h = host ?: return false
-        if (!AppSettings.automix.value || h.exact || AppSettings.bitPerfect.value || mixing) return false
+        if (!AppSettings.automix.value || com.ketvoice.app.together.Ketogether.holdsKetmix || h.exact || AppSettings.bitPerfect.value || mixing) return false
         val state = Player.state.value
         val current = state.current ?: return false
         if (state.repeatOne || state.failed) return false

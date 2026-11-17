@@ -1189,8 +1189,15 @@ object Player {
         return true
     }
 
+    /**
+     * Ketogether (6.1): on a guest's phone the transport buttons go to the session first, which sends them to the
+     * host or refuses them; true when it took the action. Null outside a session.
+     */
+    @Volatile internal var transportGate: ((action: String, positionMs: Long) -> Boolean)? = null
+
     fun toggle() {
         val state = _state.value
+        if (transportGate?.invoke(if (state.playWhenReady) "pause" else "play", 0L) == true) return
         if (restoredSessionPending) {
             val track = state.current ?: return
             startPlayback(track, state.queue, state.index, _position.value, true, QueueOrigin.Internal)
@@ -1217,6 +1224,7 @@ object Player {
     }
 
     fun next() {
+        if (transportGate?.invoke("next", 0L) == true) return
         // Ketmix au skip (5.9.0): with Ketmix on, a manual skip is a short transition instead of a hard
         // cut — the title fades out in a third of a second, the next one rises in under one.
         val c = controller
@@ -1260,6 +1268,7 @@ object Player {
      * listener really came from, then to the one before it in the queue.
      */
     fun previous() {
+        if (transportGate?.invoke("previous", 0L) == true) return
         val c = controller ?: return
         val s = _state.value
         if (s.queue.isEmpty()) return
@@ -1299,6 +1308,7 @@ object Player {
     }
 
     fun seekTo(ms: Long) {
+        if (transportGate?.invoke("seek", ms.coerceAtLeast(0L)) == true) return
         cancelQualityUpgrade()
         com.ketvoice.app.automix.Automix.cancel()
         val position = ms.coerceAtLeast(0L)

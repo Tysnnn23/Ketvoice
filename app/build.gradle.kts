@@ -174,6 +174,8 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
     implementation("io.coil-kt:coil-compose:2.7.0")
     implementation("com.google.code.gson:gson:2.11.0")
+    // Ketogether (6.1): the WebSocket of Supabase Realtime. Same version Coil already brings in.
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("io.github.kyant0:backdrop:1.0.0-rc02")
     implementation("androidx.media3:media3-datasource:1.6.1")
 
