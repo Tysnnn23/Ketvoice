@@ -872,24 +872,29 @@ internal object LyricsWords {
         return kotlin.math.sin(progress * Math.PI).toFloat() * strength
     }
 
-    /** The halo of a sung word (6.0.0): how bright at its centre, and how far it reaches past the word, in dp. */
-    const val HALO_ALPHA = .34f
-    const val HALO_SPREAD_DP = 14f
+    /**
+     * The halo of a sung word (6.0.0): how bright at its centre, and how far it reaches past the word, in dp.
+     * 6.0.0 Beta 5 (owner: « rends l'effet halo beaucoup moins visible »): a third of its first brightness, closer to the word.
+     */
+    const val HALO_ALPHA = .11f
+    const val HALO_SPREAD_DP = 9f
     /** The halo rises in this time as the word starts… */
     const val HALO_ATTACK_MS = 90L
-    /** …and fades in this time once it ends, before the line steps back (LyricsPresentation.LEAD_TAIL_MS). */
-    const val HALO_RELEASE_MS = 380L
+    /** …and is gone the moment the word ends: no light lingers at the end of a line (owner, 6.0.0 Beta 5). */
+    const val HALO_RELEASE_MS = 0L
 
     /**
      * How bright the halo of a word sung from [start] to [end] is at [now] (0..1): it lights up as the
-     * word starts, stays while it is sung and fades just after; held notes shine a little more.
+     * word starts, stays while it is sung and is gone once it ends; held notes shine a little more.
      */
     fun halo(now: Long, start: Long, end: Long): Float {
-        if (now == Long.MIN_VALUE || now < start) return 0f
+        if (now == Long.MIN_VALUE || now < start || now >= end) return 0f
         val rise = ((now - start).toFloat() / HALO_ATTACK_MS).coerceIn(0f, 1f).let { it * it * (3f - 2f * it) }
-        val fade = if (now <= end) 1f else (1f - (now - end).toFloat() / HALO_RELEASE_MS).coerceIn(0f, 1f).let { it * it }
+        // It eases off over the last fifth of the word, so that it never stops on a bright light.
+        val left = end - now
+        val tail = ((left.toFloat() / ((end - start) * .2f).coerceAtLeast(1f))).coerceIn(0f, 1f)
         val held = ((end - start - 300L).toFloat() / 900f).coerceIn(0f, 1f)
-        return rise * fade * (.72f + .28f * held)
+        return rise * tail * (.72f + .28f * held)
     }
 
     /** True when the words, joined, hold every visible letter of the line (so drawing words alone loses nothing). */

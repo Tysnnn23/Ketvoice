@@ -108,7 +108,8 @@ class GlowingLyricsHostTest {
         compose.runOnIdle { AppSettings.highPerformanceMode.value = true }
         compose.mainClock.advanceTimeBy(600)
         val performance = light(image("halo-performance-mode"))
-        assertTrue("the halo adds light around the sung word ($glowing vs $performance)", glowing > performance * 1.004)
+        // Faint since 6.0.0 Beta 5 (owner): still there, a fraction of a percent of light.
+        assertTrue("the halo adds light around the sung word ($glowing vs $performance)", glowing > performance * 1.001)
         // Before the line is sung, there is no halo at all: both modes draw the same line.
         compose.runOnIdle { AppSettings.highPerformanceMode.value = false; position.value = 0L }
         compose.mainClock.advanceTimeBy(600)
@@ -130,17 +131,19 @@ class GlowingLyricsHostTest {
         assertTrue(light(image("halo-motion")) > reduced)
     }
 
-    @Test fun haloRisesWithTheWordAndFadesBeforeTheLineStepsBack() {
+    @Test fun haloRisesWithTheWordAndIsGoneWhenItEnds() {
         assertEquals(0f, LyricsWords.halo(-1, 0, 500), 0f)
         assertEquals(0f, LyricsWords.halo(Long.MIN_VALUE, 0, 500), 0f)
         assertTrue(LyricsWords.halo(20, 0, 500) in 0.01f..0.5f)
         val sung = LyricsWords.halo(250, 0, 500)
-        assertEquals(.72f, LyricsWords.halo(250, 0, 300), .01f)
+        assertEquals(.72f, LyricsWords.halo(150, 0, 300), .01f)
         assertEquals(.72f + .28f * 200f / 900f, sung, .01f)
         assertTrue("a held note shines more", LyricsWords.halo(800, 0, 1_600) > sung)
-        assertTrue("it fades after the word", LyricsWords.halo(650, 0, 500) in 0.01f..sung)
-        assertEquals("gone before the line steps back", 0f,
-            LyricsWords.halo(500 + com.ketvoice.app.ui.player.LyricsPresentation.LEAD_TAIL_MS, 0, 500), 0f)
+        assertTrue("it eases off at the end of the word", LyricsWords.halo(480, 0, 500) < sung)
+        // 6.0.0 Beta 5 (owner): no light lingers once the word is sung, at the end of a line or anywhere.
+        assertEquals(0f, LyricsWords.halo(500, 0, 500), 0f)
+        assertEquals(0f, LyricsWords.halo(650, 0, 500), 0f)
+        assertTrue("much fainter than before", LyricsWords.HALO_ALPHA <= .12f)
     }
 
     private fun mesh(visible: Boolean) {

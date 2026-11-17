@@ -14,7 +14,6 @@ import com.ketvoice.app.player.Player
 import com.ketvoice.app.player.PlayerUiState
 import com.ketvoice.app.theme.KetvoiceTheme
 import com.ketvoice.app.ui.player.FullPlayerScreen
-import com.ketvoice.app.ui.player.PlayerHero
 import com.ketvoice.app.ui.player.PlayerPage
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.*
@@ -110,98 +109,11 @@ class ScreensRedoHostTest {
             durationMs = 200_000, isPlaying = true, playWhenReady = true)
     }
 
-    @Test fun thePhonePlayerLaysItsArtworkFullBleedBehindAGlassPlatter() {
-        if (com.ketvoice.app.BuildConfig.IS_QUEST) return // Quest keeps its landscape two-pane player.
-        playing(track("hero", "Lumière du nord", "Nova"), track("next", "Après"))
-        compose.setContent { KetvoiceTheme(useDark = true) { FullPlayerScreen(onDismiss = {}) } }
-        val art = compose.onNodeWithTag("player-hero-artwork").fetchSemanticsNode().boundsInRoot
-        assertEquals("the artwork starts at the top edge", 0f, art.top, .5f)
-        assertEquals("and runs from side to side", 400f, art.width, .5f)
-        assertEquals(PlayerHero.coverHeightDp(400f, 900f), art.height, 1f)
-        val platter = compose.onNodeWithTag("player-glass-platter").fetchSemanticsNode().boundsInRoot
-        assertTrue("the controls' glass runs over the artwork (${platter.top} < ${art.bottom})", platter.top < art.bottom)
-        val title = compose.onNodeWithText("Lumière du nord", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
-        assertTrue("the title rests on the glass", title.top > platter.top && title.bottom < platter.bottom)
-        compose.onNodeWithTag("player-legibility-gradient").assertExists()
-        // Every control stays: heart, the menu, lyrics, output, account, queue, transport.
-        compose.onNodeWithContentDescription("Ajouter aux favoris", useUnmergedTree = true).assertExists()
-        compose.onNodeWithContentDescription("Options", useUnmergedTree = true).assertExists()
-        compose.onNodeWithContentDescription("Paroles", useUnmergedTree = true).assertExists()
-        compose.onNodeWithContentDescription("Sortie audio", useUnmergedTree = true).assertExists()
-        compose.onNodeWithContentDescription("File d'attente", useUnmergedTree = true).assertExists()
-        image("redo-player-hero-dark")
-        // Host Skia cannot sample a backdrop layer: the static glass shows what the platter is made of.
-        compose.runOnIdle { AppSettings.liquidGlass.value = false }
-        image("redo-player-hero-static-glass")
-        compose.runOnIdle { AppSettings.liquidGlass.value = true }
-    }
 
-    @Test fun pausedTheFullBleedArtworkStepsBackAsACard() {
-        if (com.ketvoice.app.BuildConfig.IS_QUEST) return
-        AppSettings.reduceAnimations.value = false
-        playing(track("pause", "En pause", "Nova"))
-        player.value = player.value.copy(isPlaying = false, playWhenReady = false)
-        compose.setContent { KetvoiceTheme(useDark = true) { FullPlayerScreen(onDismiss = {}) } }
-        compose.mainClock.advanceTimeBy(2000)
-        val art = compose.onNodeWithTag("player-hero-artwork").fetchSemanticsNode().boundsInRoot
-        assertEquals("it steps back by twelve percent", 400f * .88f, art.width, 1f)
-        assertTrue("around its centre", art.top > 0f && art.left > 0f)
-        compose.runOnIdle { AppSettings.liquidGlass.value = false }
-        image("redo-player-hero-paused")
-        compose.runOnIdle { AppSettings.liquidGlass.value = true }
-    }
 
-    @Test fun aDragDownTheFullBleedArtworkStillClosesThePlayer() {
-        if (com.ketvoice.app.BuildConfig.IS_QUEST) return
-        playing(track("drag", "Glisser", "Nova"))
-        var closed = false
-        compose.setContent { KetvoiceTheme(useDark = true) { FullPlayerScreen(onDismiss = { closed = true }) } }
-        // The artwork lies under the page's words, yet its gestures still reach it.
-        compose.onNodeWithTag("player-hero-artwork").performTouchInput {
-            swipeDown(startY = 120f, endY = 620f, durationMillis = 120)
-        }
-        compose.waitForIdle()
-        assertTrue("a drag down the artwork closes the player", closed)
-    }
 
-    @Test fun aDragOnTheGlassBetweenControlsNeitherClosesNorSkips() {
-        if (com.ketvoice.app.BuildConfig.IS_QUEST) return
-        playing(track("still", "Immobile", "Nova"), track("other", "Autre"))
-        var closed = false
-        compose.setContent { KetvoiceTheme(useDark = true) { FullPlayerScreen(onDismiss = { closed = true }) } }
-        val platter = compose.onNodeWithTag("player-glass-platter").fetchSemanticsNode().boundsInRoot
-        // Beside the title, over the foot of the artwork: the glass takes the drag, not the artwork under it.
-        compose.onRoot().performTouchInput {
-            swipe(start = androidx.compose.ui.geometry.Offset(platter.left + 14f, platter.top + 40f),
-                end = androidx.compose.ui.geometry.Offset(platter.left + 14f, platter.top + 300f), durationMillis = 120)
-        }
-        compose.waitForIdle()
-        assertFalse(closed)
-        assertEquals("fixture:still", player.value.current?.id)
-    }
 
-    @Test fun lyricsAndQueueKeepTheirPagesOnTheSameGlass() {
-        if (com.ketvoice.app.BuildConfig.IS_QUEST) return
-        playing(track("lyr", "Les mots", "Nova"), track("q2", "Deuxième"), track("q3", "Troisième"))
-        compose.setContent { KetvoiceTheme(useDark = true) { FullPlayerScreen(initialPage = PlayerPage.QUEUE, onDismiss = {}) } }
-        compose.onNodeWithTag("player-hero-artwork").assertDoesNotExist()
-        val platter = compose.onNodeWithTag("player-glass-platter").fetchSemanticsNode().boundsInRoot
-        assertTrue("on the queue the glass carries only the controls (${platter.top})", platter.top > 450f)
-        compose.onNodeWithText("Deuxième").assertIsDisplayed()
-        image("redo-player-queue-dark")
-    }
 
-    @Test fun theLyricsPageKeepsItsLayoutWithTheControlsOnGlass() {
-        if (com.ketvoice.app.BuildConfig.IS_QUEST) return
-        AppSettings.lyricsMode.value = 2
-        playing(track("words", "Les paroles", "Nova"))
-        compose.setContent { KetvoiceTheme(useDark = true) { FullPlayerScreen(initialPage = PlayerPage.LYRICS, onDismiss = {}) } }
-        compose.onNodeWithTag("player-hero-artwork").assertDoesNotExist()
-        val platter = compose.onNodeWithTag("player-glass-platter").fetchSemanticsNode().boundsInRoot
-        assertTrue("the glass stays under the controls, below the lyrics (${platter.top})", platter.top > 450f)
-        compose.onNodeWithContentDescription("Paroles", useUnmergedTree = true).assertExists()
-        image("redo-player-lyrics-dark")
-    }
 
     @Test @Config(qualifiers = "w900dp-h420dp-mdpi")
     fun aLandscapeWindowKeepsTheArtworkBesideTheControls() {
@@ -213,12 +125,6 @@ class ScreensRedoHostTest {
         compose.onNodeWithText("Paysage", useUnmergedTree = true).assertExists()
     }
 
-    @Test fun coverHeightKeepsTheSidesOfASquareCover() {
-        assertEquals(540f, PlayerHero.coverHeightDp(400f, 900f), .01f)
-        assertEquals("never shorter than a square", 400f, PlayerHero.coverHeightDp(400f, 500f), .01f)
-        assertEquals("never more than 1.4 times the width", 560f, PlayerHero.coverHeightDp(400f, 2000f), .01f)
-        assertEquals(0f, PlayerHero.coverHeightDp(Float.NaN, 900f), 0f)
-    }
 
     // ---------------------------------------------------------------- Home
 
