@@ -10,7 +10,9 @@ import java.io.InputStream
 internal data class PersonalBackupData(
     val playlists: List<LocalPlaylist>, val favorites: Set<String>, val settings: Map<String, Any>,
     val recent: List<Track>, val known: List<Track>, val counts: Map<String, Int>, val listenedMs: Long,
-    val lyricOffsets: Map<String, Int> = emptyMap()
+    val lyricOffsets: Map<String, Int> = emptyMap(),
+    /** The listener's Ketmix mix points (6.1, DJ editor), keyed by digests of the titles' ids. */
+    val ketmixPoints: Map<String, String> = emptyMap()
 )
 
 /** Portable metadata only: no accounts, credentials, source URLs or downloaded files. */
@@ -76,14 +78,18 @@ internal object PersonalBackup {
         val offsets = context.getSharedPreferences("lyrics-offsets-v1", Context.MODE_PRIVATE).all.mapNotNull { (key, value) ->
             (value as? Int)?.takeIf { key.matches(Regex("[0-9a-f]{64}")) && it in -10_000..10_000 }?.let { key to it }
         }.toMap()
+        val points = context.getSharedPreferences(com.ketvoice.app.automix.MixPointStore.PREFS, Context.MODE_PRIVATE).all.mapNotNull { (key, value) ->
+            (value as? String)?.takeIf { com.ketvoice.app.automix.MixPointStore.validEntry(key, it) }?.let { key to it }
+        }.toMap()
         return PersonalBackupData(PlaylistStore.lists.value, AppSettings.favoriteIds.value.filter(::cleanId).toSet(),
             settings, ListeningHistory.tracks.value, ListeningHistory.knownTracks.value,
-            ListeningHistory.playCounts.value.filterKeys(::cleanId), ListeningHistory.listenedMs.value, offsets)
+            ListeningHistory.playCounts.value.filterKeys(::cleanId), ListeningHistory.listenedMs.value, offsets, points)
     }
 
     fun encode(data: PersonalBackupData): ByteArray {
         require(data.playlists.size <= 100 && data.favorites.size <= 5000 && data.recent.size <= 80 &&
-            data.known.size <= 400 && data.counts.size <= 550 && data.lyricOffsets.size <= 5000)
+            data.known.size <= 400 && data.counts.size <= 550 && data.lyricOffsets.size <= 5000 &&
+            data.ketmixPoints.size <= com.ketvoice.app.automix.MixPointStore.LIMIT)
         fun trackArray(tracks: List<Track>) = JSONArray().apply { tracks.forEach { put(DownloadQueue.trackToJson(safeTrack(it))) } }
         val playlists = JSONArray().apply {
             data.playlists.forEach { playlist ->
@@ -106,7 +112,7 @@ internal object PersonalBackup {
             .put("counts", JSONObject(data.counts.filter { (key, value) -> cleanId(key) && value in 0..1_000_000 }))
             .put("listenedMs", data.listenedMs.coerceAtLeast(0)).put("lyricOffsets", JSONObject(data.lyricOffsets.filter {
                 (key, value) -> key.matches(Regex("[0-9a-f]{64}")) && value in -10_000..10_000
-            }))
+            })).put("ketmixPoints", JSONObject(data.ketmixPoints.filter { (key, value) -> com.ketvoice.app.automix.MixPointStore.validEntry(key, value) }))
         return root.toString().toByteArray(Charsets.UTF_8).also { require(it.size <= MAX_BYTES) }
     }
 
@@ -157,8 +163,14 @@ internal object PersonalBackup {
             require(key.matches(Regex("[0-9a-f]{64}")))
             rawOffsets.getInt(key).also { require(it in -10_000..10_000) }
         }
+        // Backups made before 6.1 have no mix points.
+        val rawPoints = root.optJSONObject("ketmixPoints") ?: JSONObject()
+        require(rawPoints.length() <= com.ketvoice.app.automix.MixPointStore.LIMIT)
+        val points = rawPoints.keys().asSequence().associateWith { key ->
+            rawPoints.getString(key).also { require(com.ketvoice.app.automix.MixPointStore.validEntry(key, it)) }
+        }
         return PersonalBackupData(playlists, favorites, settings, tracks("recent", 80), tracks("known", 400),
-            counts, root.optLong("listenedMs").also { require(it >= 0) }, offsets)
+            counts, root.optLong("listenedMs").also { require(it >= 0) }, offsets, points)
     }
 
     fun readLimited(input: InputStream): ByteArray {
@@ -200,5 +212,7 @@ internal object PersonalBackup {
         SettingsStore.load(context)
         LyricsOffsets.init(context)
         withContext(Dispatchers.IO) { LyricsOffsets.mergeBackup(checked.lyricOffsets) }
+        com.ketvoice.app.automix.MixPointStore.init(context)
+        withContext(Dispatchers.IO) { com.ketvoice.app.automix.MixPointStore.mergeBackup(checked.ketmixPoints) }
     }
 }

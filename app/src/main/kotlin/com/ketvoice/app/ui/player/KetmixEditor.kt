@@ -665,7 +665,7 @@ private fun lerp(a: Color, b: Color, t: Float): Color = Color(a.red + (b.red - a
 private fun shape(linear: Float, gain: Float): Float = (Math.pow(linear.coerceIn(0f, 1f).toDouble(), .7).toFloat() * gain).coerceAtMost(1f)
 
 /** The words of a transition's kind, for the summary under the waves. */
-private fun kindWord(plan: MixPlan): String = if (!plan.mixes) "Pas de mix" else MixWords.label(plan).replaceFirstChar { it.uppercase() }
+private fun kindWord(plan: MixPlan): String = if (!plan.mixes) AppText.t("Pas de mix") else AppText.t(MixWords.label(plan)).replaceFirstChar { it.uppercase() }
 
 @Composable
 private fun Controls(state: EditorState, plan: MixPlan) {
@@ -675,7 +675,7 @@ private fun Controls(state: EditorState, plan: MixPlan) {
     val listener = plan.reason == "listener"
     // What will be played, and why it may differ from what Ketmix would do.
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(kindWord(plan), color = theme.onBackground, style = Ket27.Type.headline, modifier = Modifier.weight(1f, fill = false))
+        Text(kindWord(plan), localize = false, color = theme.onBackground, style = Ket27.Type.headline, modifier = Modifier.weight(1f, fill = false))
         Spacer(Modifier.width(8.dp))
         Box(Modifier.clip(RoundedCornerShape(999.dp)).background(if (listener) theme.accent.copy(alpha = .16f) else theme.onBackground.copy(alpha = .08f))
             .padding(horizontal = 9.dp, vertical = 3.dp)) {
@@ -719,7 +719,7 @@ private fun Controls(state: EditorState, plan: MixPlan) {
                 val on = style == chosen
                 Box(Modifier.heightIn(min = 40.dp).clip(RoundedCornerShape(999.dp))
                     .background(if (on) theme.accent else theme.onBackground.copy(alpha = .08f))
-                    .testTag("ketmix-style-${style.name}")
+                    .testTag("ketmix-style-" + style.name)
                     .clickable(role = Role.RadioButton) { state.commitStyle(style); if (AppSettings.ketmixHaptics.value) haptic(Haptics.Kind.Tick) }
                     .padding(horizontal = 14.dp), contentAlignment = Alignment.Center) {
                     Text(label, color = if (on) com.ketvoice.app.ui.common.onAccent(theme.accent) else theme.onBackground,
