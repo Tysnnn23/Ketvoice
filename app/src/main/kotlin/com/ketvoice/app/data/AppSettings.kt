@@ -60,6 +60,10 @@ object AppSettings {
     val lyricVideoSound = mutableStateOf(true)
     val systemReduceMotion = mutableStateOf(false)
     val canvasWithMobileData = mutableStateOf(false)
+    /** The most the Canvas files may use on the device, in MB: 256, 512 (default), 1024 or 2048 (6.2.3). */
+    val canvasCacheMb = mutableStateOf(512)
+    /** The Canvas of favourites and playlists are fetched ahead on Wi-Fi (6.2.3). */
+    val canvasPreloadWifi = mutableStateOf(true)
     val artistSignatures = mutableStateOf(false)
     val artistPhotos = mutableStateOf(true)
     val highRefreshRate = mutableStateOf(false)

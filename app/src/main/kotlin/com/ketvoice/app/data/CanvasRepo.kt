@@ -74,9 +74,37 @@ object CanvasRepo {
         }
     }
 
-    suspend fun resolve(track: Track, force: Boolean = false): Unit = resolve(track, force, again = true)
+    /**
+     * Looks for the Canvas of [track] and keeps it on the device. [ahead] is the Wi-Fi preload (6.2.3): it works
+     * behind other apps too (the caller checked the conditions) but never on a metered network.
+     */
+    suspend fun resolve(track: Track, force: Boolean = false, ahead: Boolean = false): Unit {
+        // A title that has its Canvas is not "loading": the pill of the player only shows while one is being fetched.
+        if (localPath(track.id) != null) return resolveNow(track, force, again = true, ahead = ahead)
+        setLoading(track.id, true)
+        try { resolveNow(track, force, again = true, ahead = ahead) } finally { setLoading(track.id, false) }
+    }
 
-    private suspend fun resolve(track: Track, force: Boolean, again: Boolean): Unit = withContext(Dispatchers.IO) {
+    /** Track ids whose Canvas is being looked up or downloaded now (6.2.3). */
+    val loading: StateFlow<Set<String>> get() = _loading
+    private val _loading = MutableStateFlow<Set<String>>(emptySet())
+    private val loadingCount = HashMap<String, Int>()
+
+    internal fun setLoading(id: String, on: Boolean) = synchronized(loadingCount) {
+        val n = (loadingCount[id] ?: 0) + if (on) 1 else -1
+        if (n > 0) loadingCount[id] = n else loadingCount.remove(id)
+        _loading.value = loadingCount.keys.toSet()
+    }
+
+    /** Wi-Fi or Ethernet that is not metered: what the preload requires, whatever « Canvas en données mobiles » says. */
+    fun unmetered(context: Context): Boolean {
+        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return false
+        val caps = cm.getNetworkCapabilities(cm.activeNetwork) ?: return false
+        return caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED) &&
+            (caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) || caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET))
+    }
+
+    private suspend fun resolveNow(track: Track, force: Boolean, again: Boolean, ahead: Boolean): Unit = withContext(Dispatchers.IO) {
         val ctx = appContext ?: return@withContext
 
         // The player's Canvas and the album page's are two separate settings: either is enough to look.
@@ -152,7 +180,7 @@ object CanvasRepo {
                         return@withLock
                     }
                     // A Canvas only shows on screen: behind other apps it is not downloaded, so that the stream being heard keeps the network.
-                    if (!force && (!networkAllowed(ctx) || !com.ketvoice.app.automix.Automix.appInFront)) return@withLock
+                    if (!force && !mayDownload(ctx, ahead)) return@withLock
                     if (download(published, target) == null) {
                         failed[track.id] = System.currentTimeMillis()
                         return@withLock
@@ -176,7 +204,7 @@ object CanvasRepo {
 
                 if (!alreadyDownloaded) {
                     // A Canvas only shows on screen: behind other apps it is not downloaded, so that the stream being heard keeps the network.
-                    if (!force && (!networkAllowed(ctx) || !com.ketvoice.app.automix.Automix.appInFront)) return@withLock
+                    if (!force && !mayDownload(ctx, ahead)) return@withLock
                     val resolved = KetvoiceApi.canvas(track.copy(spotifyId = spotifyId)) ?: run {
                         failed[track.id] = System.currentTimeMillis()
                         return@withLock
@@ -205,7 +233,7 @@ object CanvasRepo {
             }
         }
         // The owner changed the choice while this resolution ran: once more, for the choice of now.
-        if (again && MediaOverrides.canvas(track) != curated) resolve(track, force, again = false)
+        if (again && MediaOverrides.canvas(track) != curated) resolveNow(track, force, again = false, ahead = ahead)
     }
 
     /**
@@ -348,6 +376,10 @@ object CanvasRepo {
             null
         }
     }
+
+    /** A Canvas only shows on screen, so it is fetched in front; ahead of time (preload) the caller's conditions decide, on an unmetered network only. */
+    private fun mayDownload(context: Context, ahead: Boolean): Boolean =
+        if (ahead) unmetered(context) else networkAllowed(context) && com.ketvoice.app.automix.Automix.appInFront
 
     private fun networkAllowed(context: Context): Boolean {
         if (AppSettings.canvasWithMobileData.value) return true

@@ -49,6 +49,8 @@ class KetvoiceApp : Application(), ImageLoaderFactory {
         runCatching { com.ketvoice.app.data.WeeklyDiscoveries.init(this) }
         if (android.os.Build.FINGERPRINT != "robolectric")
             start(LiteTuning.StartWork.DiscoverySchedule) { com.ketvoice.app.data.DiscoveryWork.schedule(this) }
+        // The Canvas of favourites and playlists are fetched ahead on Wi-Fi (6.2.3): its own coroutine, first run 45 s after the start.
+        if (android.os.Build.FINGERPRINT != "robolectric") runCatching { com.ketvoice.app.data.CanvasPreload.start(this) }
         // Keeps a placed home-screen widget in step with playback (no work when none is placed).
         if (!BuildConfig.IS_QUEST) start(LiteTuning.StartWork.NowPlayingWidget) { com.ketvoice.app.widget.NowPlayingWidgetUpdater.start(this) }
         if (!BuildConfig.IS_QUEST) start(LiteTuning.StartWork.Widgets) { com.ketvoice.app.widget.KetvoiceWidgetsUpdater.start(this) }

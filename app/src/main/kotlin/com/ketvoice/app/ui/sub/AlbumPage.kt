@@ -367,6 +367,9 @@ private fun BoxScope.AlbumArtwork(cover: String?, track: Track?, frame: com.ketv
             modifier = (if (frame == null) framing.graphicsLayer { this.alpha = alpha } else framing)
                 .testTag(if (ready) "album-artwork-loaded" else "album-artwork-loading"))
     }
+    // The Canvas is late: a small pill says it is coming (6.2.3).
+    if (canvasEnabled && track != null) com.ketvoice.app.ui.common.CanvasLoadingPill(track,
+        wanted = !com.ketvoice.app.data.MediaOverrides.canvasDisabled(track), modifier = Modifier.align(Alignment.TopEnd).padding(10.dp))
 }
 
 @Composable
