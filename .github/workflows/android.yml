@@ -194,10 +194,55 @@ jobs:
           KETVOICE_KEY_ALIAS: ${{ secrets.KETVOICE_KEY_ALIAS }}
         run: ./gradlew :app:assembleMobileRelease :app:assembleQuestRelease --stacktrace
 
+      # ---- Ketvoice Lite (6.1): the lighter phone APK, same sources and signing as mobile.
+      # assembleLiteRelease also runs verifyLiteReleaseIcons (every icon the app draws is packaged).
+      - name: Compile Ketvoice Lite (assemble lite release)
+        env:
+          KETVOICE_STORE_PASSWORD: ${{ secrets.KETVOICE_STORE_PASSWORD }}
+          KETVOICE_KEY_PASSWORD: ${{ secrets.KETVOICE_KEY_PASSWORD }}
+          KETVOICE_KEY_ALIAS: ${{ secrets.KETVOICE_KEY_ALIAS }}
+        run: ./gradlew :app:assembleLiteRelease --stacktrace
+
+      - name: Check Ketvoice Lite APK (edition, ABIs, size)
+        run: |
+          set -euo pipefail
+          lite=(app/build/outputs/apk/lite/release/*.apk)
+          mobile=(app/build/outputs/apk/mobile/release/*.apk)
+          [ "${#lite[@]}" -eq 1 ] && [ -f "${lite[0]}" ] || { echo "::error::Expected one Lite release APK."; exit 1; }
+          # The edition really is Lite: its launcher label (mobile and Lite share package and SDK levels).
+          aapt_bin=$(find "$ANDROID_HOME/build-tools" -maxdepth 2 -name aapt -type f | sort -Vr | head -1)
+          "$aapt_bin" dump badging "${lite[0]}" | grep -q "^application-label:'Ketvoice Lite'" \
+            || { echo "::error::The Lite APK is not labelled Ketvoice Lite."; exit 1; }
+          # 64-bit ARM only.
+          abis=$(unzip -Z1 "${lite[0]}" | sed -n 's#^lib/\([^/]*\)/.*#\1#p' | sort -u | tr '\n' ' ')
+          echo "Lite ABIs: ${abis:-none}"
+          for abi in $abis; do
+            [ "$abi" = "arm64-v8a" ] || { echo "::error::Lite APK ships $abi native libraries."; exit 1; }
+          done
+          lite_bytes=$(stat -c %s "${lite[0]}")
+          mobile_bytes=$(stat -c %s "${mobile[0]}")
+          echo "Lite APK: $lite_bytes bytes; mobile APK: $mobile_bytes bytes"
+          if [ "$lite_bytes" -ge "$mobile_bytes" ]; then
+            echo "::error::The Lite APK is not smaller than the mobile APK."
+            exit 1
+          fi
+          echo "### Ketvoice Lite: $((lite_bytes / 1048576)) MB (mobile $((mobile_bytes / 1048576)) MB)" >> "$GITHUB_STEP_SUMMARY"
+      # ---- end Ketvoice Lite
+
       - name: Unit tests (Mobile and Quest)
         run: >-
           ./gradlew :app:testMobileDebugUnitTest :app:testQuestDebugUnitTest
           :app:testMobileReleaseUnitTest :app:testQuestReleaseUnitTest
+          --stacktrace --max-workers=2
+
+      # Lite compiles the same sources as mobile (covered above); these tests read its own build flags,
+      # defaults, images, updater asset choice and update dialog in the Lite build itself.
+      - name: Unit tests (Ketvoice Lite)
+        run: >-
+          ./gradlew :app:testLiteDebugUnitTest
+          --tests 'com.ketvoice.app.LiteTuningTest'
+          --tests 'com.ketvoice.app.LiteResourcesTest'
+          --tests 'com.ketvoice.app.ui.update.*'
           --stacktrace --max-workers=2
 
       # Fails when a user-facing string exists only in French. Strings that are
@@ -207,6 +252,9 @@ jobs:
 
       - name: Lint (Mobile and Quest)
         run: ./gradlew :app:lintMobileRelease :app:lintQuestRelease --stacktrace --max-workers=2
+
+      - name: Lint (Ketvoice Lite)
+        run: ./gradlew :app:lintLiteRelease --stacktrace --max-workers=2
 
       # The keystore preflight proves the secret is readable; this proves the
       # APKs on disk really carry the release identity before anything is
