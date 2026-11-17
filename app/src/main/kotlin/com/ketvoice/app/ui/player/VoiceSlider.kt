@@ -51,6 +51,10 @@ import kotlinx.coroutines.withContext
 import com.ketvoice.app.ui.motion.Haptics
 import com.ketvoice.app.ui.motion.Motion
 import com.ketvoice.app.ui.motion.rememberHaptics
+import com.ketvoice.app.ui.common.sliderPress
+
+/** How far the voice pill may stretch past an end (dp). */
+private const val PILL_STRETCH_DP = 8f
 
 /** What the voice slider does with a drag and a tap (6.0.0), kept apart so that it can be tested. */
 internal object VoiceSliderLogic {
@@ -112,6 +116,8 @@ fun VoiceSlider(trackId: String?, modifier: Modifier = Modifier, width: Dp = 52.
         if (tick && VoiceSliderLogic.step(old) != VoiceSliderLogic.step(value)) haptics(Haptics.Kind.Tick)
     }
     fun save() { AppSettings.voiceLevel.value = Math.round(level * 100); SettingsStore.save() }
+    val press = com.ketvoice.app.ui.common.rememberSliderPress()
+    var raw by remember { mutableFloatStateOf(level) }
     val description = AppText.t("Niveau de la voix")
     val preparing = AppText.t("Préparation de la voix…")
     val busy = working != null || (afterDownload && downloading)
@@ -123,10 +129,16 @@ fun VoiceSlider(trackId: String?, modifier: Modifier = Modifier, width: Dp = 52.
             progressBarRangeInfo = ProgressBarRangeInfo(level, 0f..1f, VoiceSliderLogic.STEPS - 1)
             setProgress { target -> prepare(); set(target.coerceIn(0f, 1f), tick = false); save(); true }
         }
+        .sliderPress(press, vertical = true)
         .pointerInput(trackId) {
-            detectVerticalDragGestures(onDragStart = { prepare() }, onDragEnd = { save() }) { change, dy ->
+            detectVerticalDragGestures(onDragStart = { prepare(); press.press(); raw = level },
+                onDragEnd = { press.release(); save() }, onDragCancel = { press.release() }) { change, dy ->
                 change.consume()
-                set(VoiceSliderLogic.dragged(level, dy, size.height.toFloat()))
+                val h = size.height.toFloat()
+                // The unclamped travel feeds the rubber band of the pill past its top or its foot.
+                raw = if (h > 0f) raw - dy / h else raw
+                set(VoiceSliderLogic.dragged(level, dy, h))
+                press.pull((raw - raw.coerceIn(0f, 1f)) * h, PILL_STRETCH_DP * density)
             }
         }
         .pointerInput(trackId) {
@@ -138,7 +150,14 @@ fun VoiceSlider(trackId: String?, modifier: Modifier = Modifier, width: Dp = 52.
                 save()
             }
         }, contentAlignment = Alignment.TopCenter) {
-        Canvas(Modifier.size(width, height)) { drawVoicePill(shown) }
+        // Held, the pill swells a little (iOS 26/27); pulled past an end it stretches that way and springs back.
+        Canvas(Modifier.size(width, height).graphicsLayer {
+            val e = if (Motion.reduced) 0f else press.expansion
+            val stretch = press.stretch
+            scaleX = 1f + .06f * e
+            scaleY = 1f + .03f * e + (if (size.height > 0f) kotlin.math.abs(stretch) / size.height else 0f)
+            transformOrigin = androidx.compose.ui.graphics.TransformOrigin(.5f, if (stretch > 0f) 1f else if (stretch < 0f) 0f else .5f)
+        }) { drawVoicePill(shown) }
         // While the title is being separated (or the model arrives): a small spinner at the top of the pill.
         if (busy) com.ketvoice.app.ui.common.ActivitySpinner(Modifier.padding(top = 10.dp).testTag("voice-slider-preparing"),
             size = 18.dp, color = if (shown > .78f) Color.Black.copy(alpha = .6f) else Color.White)
