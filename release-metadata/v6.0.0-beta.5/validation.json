@@ -1,0 +1,182 @@
+{
+  "schema": 8,
+  "version": "6.0.0-beta.5",
+  "versionCode": 128,
+  "source_commit": "16386176c182f906a8a26e2ca54ea7b239c500a8",
+  "created_at": "2026-11-17T00:58:49.266950+00:00",
+  "build_origin": {
+    "kind": "github_actions_with_owner_discord_sdk",
+    "workflow": "android.yml",
+    "run_id": 43989440555,
+    "artifact": {
+      "id": 14287082786,
+      "sha256": "fd846d9c0588bf06f9b217ed194722c0ff147aa5982bdb663d37b8d595ceac9d"
+    },
+    "gradle": "assembleMobileRelease assembleQuestRelease",
+    "note": "Signed by CI with the pinned keystore secret; the Discord Social SDK AAR matched its pinned SHA-256."
+  },
+  "local_validation": {
+    "result": "debug JVM/Robolectric suites for both flavors, release lint and the UI text audit passed in a cloud container without the Discord SDK",
+    "commands": [
+      "testMobileDebugUnitTest",
+      "testQuestDebugUnitTest",
+      "lintMobileRelease",
+      "lintQuestRelease",
+      "tools/audit_ui_texts.py --check"
+    ],
+    "ci_validation": "run 43989440555: release builds, debug and release unit tests for both flavors, UI text audit, lint, APK signature pin and Discord bridge packaging passed",
+    "code_review": {
+      "kind": "none independent"
+    },
+    "host_previews": "Robolectric software renders on the host (not a phone), looked at by the agents and the main agent: Ketmix sign between the times, sliders at rest, held, stretched and releasing, pressed row, empty pages and loading rows, faint word halo; Android Auto was exercised only through Media3 MediaBrowser and MediaBrowserCompat connections to the real service under Robolectric",
+    "after_last_full_local_run": "none: the last complete local run was on the released commit"
+  },
+  "server": {
+    "function": "ketvoice-content",
+    "deployed_version": 23,
+    "changed_in_this_version": false,
+    "note": "no server change since 5.4.0"
+  },
+  "tests": {
+    "mobile": {
+      "jvm": {
+        "tests": 1053,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 3
+      },
+      "android_15_emulator_compose": {
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "quest": {
+      "jvm": {
+        "tests": 1047,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 26
+      },
+      "android_15_emulator_compose": {
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    }
+  },
+  "lint": {
+    "mobile": {
+      "Warning": 210,
+      "Hint": 25
+    },
+    "quest": {
+      "Warning": 210,
+      "Hint": 25
+    },
+    "errors": 0
+  },
+  "apks": [
+    {
+      "name": "Ketvoice-6.0.0-beta.5.apk",
+      "sha256": "b5cc9575e0f600d7d26873215bd984b203a648a8bfd5c040e2b07a29dfeccf3d",
+      "bytes": 81194101,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "6.0.0-beta.5",
+      "versionCode": 128,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-6.0.0-beta.5-Quest.apk",
+      "sha256": "7090336e46d6ad5e2704ea4bd7f473bba1e08657d698ce76fd467da9a94a78e1",
+      "bytes": 97279844,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "6.0.0-beta.5",
+      "versionCode": 128,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    }
+  ],
+  "discord": {
+    "sdk_present_in_ci_build": true,
+    "sdk_sha256_pinned": true,
+    "bridge_and_native_libraries_verified": true,
+    "presence_mode": "unauthenticated_rpc_through_installed_discord_app"
+  },
+  "credential_scan": {
+    "entries": 3708,
+    "findings": 0,
+    "raw_pattern_findings": 1,
+    "scope": "tracked sources and APK archive entries",
+    "kind": "credential_patterns",
+    "explicit_private_provider_key_deny_list": false,
+    "triage": [
+      {
+        "file": "Ketvoice-Liquid-Glass-V4.html",
+        "classification": "embedded_image_false_positive",
+        "all_hits_inside_image_data_uris": true,
+        "rescanned_without_image_payloads": true
+      }
+    ]
+  },
+  "release_install_smoke": {
+    "mobile": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "quest": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    }
+  },
+  "publication_override": {
+    "authorized_by_user": true,
+    "authorized_at": "2026-11-17T00:58:49.266950+00:00",
+    "kind": "standing_authorization",
+    "user_statement": "J'autorise TOUT devient maintenant une règle.",
+    "user_statement_date": "2026-11-14",
+    "in_reply_to": "The question whether versions may be published without phone or Quest testing without asking again for each version.",
+    "recorded_in": "AGENTS.md (commit aeeda8e)",
+    "reason": "The owner made publishing validated versions without phone or Quest testing a standing rule.",
+    "scope": "physical device installation and all on-device behaviour of 6.0.0-beta.5"
+  },
+  "owner_requests_2026_11_17_beta5": {
+    "statements": [
+      "make the lyrics halo much less visible and remove it at the end of a line",
+      "remove the full-bleed artwork mode added to the music player",
+      "make background playback work by every means (it cuts despite the permissions; the owner's phone is an Honor)",
+      "full, working, optimised Android Auto support with search",
+      "improve the interfaces and add the iOS 27 animation when a slider is held",
+      "improve Ketmix and put Apple Music's mixing logo and animation under the seek bar, between the times"
+    ],
+    "done": {
+      "halo": "HALO_ALPHA 0.11, spread 9 dp, no release after the word ends",
+      "player": "the full-bleed PlayerHero player removed; the previous player restored with the lyrics mesh",
+      "background": "PlaybackBuffer 30-180 s ahead with a 32 MB cap; BackgroundThrift (off screen and on battery: slow Ketmix analysis, no automatic separation); MemoryRelief releases the separation models on onTrimMemory; journal lines for data waits, data saver and memory warnings; Honor/Huawei App launch intents first with guidance in Settings. The real cause of the owner's cuts is not known: no playback journal from the phone was available",
+      "android_auto": "MediaLibraryService with browse tree, search, voice and lazy resolution through Player; signed artwork provider; mobile flavour only; tested by MediaBrowser and MediaBrowserCompat connections under Robolectric",
+      "sliders_and_ui": "SliderPress shared by seek bar, volume, glass and voice sliders (swell, reach, rubber band, reduced motion); row highlight, empty states, loading rows",
+      "ketmix_sign": "Apple's logo and animation cannot be copied; KetmixMixingBadge uses Ketmix's own two-ring glyph (rings merge with the mix progress) and a sheen on its name, in the same place"
+    }
+  },
+  "not_validated": [
+    "physical phone or Quest installation, rendering, touch, haptics and feel of the slider springs",
+    "Android Auto in a car or the Desktop Head Unit (rendering, tabs, grid, artwork, voice, legacy transport controls)",
+    "background playback on the owner's Honor phone with MagicOS (whether the cuts stop)",
+    "the artwork provider's https download path",
+    "independent code review of the main agent's diff (the sub-agents' diffs were reviewed only through their reports, renders and tests)"
+  ],
+  "known_limitations": [
+    "Android Auto's queue screen shows only the current song; the real queue lives in the app.",
+    "Android Auto lists an app installed outside the Play Store only with Unknown sources on in its developer settings.",
+    "Songs are played about 0.09 s later whenever a separation model is installed (the voice stage runs from the start of every stream); the lyrics compensate.",
+    "Launcher icons keep a background: Android fills adaptive icon backgrounds in black.",
+    "Being a beta tag, the in-app updater does not offer it to users of a stable version; it is offered on the website and the releases page.",
+    "The signing certificate is the existing public Android debug identity, not a private production key."
+  ],
+  "canonical_banner_sha256": "47f6793088983f7d4e6bd1aeaa2cbd8b7cdc2a8f91271e3b2839daea81da0436"
+}
