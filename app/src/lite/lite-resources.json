@@ -1,0 +1,204 @@
+{
+ "assets": {
+  "src/lite/assets/release_banner.webp": {
+   "sha256": "47f6793088983f7d4e6bd1aeaa2cbd8b7cdc2a8f91271e3b2839daea81da0436",
+   "source": "src/standard/assets/release_banner.png"
+  }
+ },
+ "converted": {
+  "src/lite/res/drawable-hdpi/ic_launcher27_clear_fg.webp": {
+   "sha256": "f150e0760f55e6ec249a3884ec610af55af7ae01d17746900b90e356702c18eb",
+   "source": "src/main/res/drawable-hdpi/ic_launcher27_clear_fg.png"
+  },
+  "src/lite/res/drawable-hdpi/ic_launcher27_glass_fg.webp": {
+   "sha256": "4e35661e41dfb16c791f3b663b1f23f45d0987a935f0d19df82008b34535ee41",
+   "source": "src/main/res/drawable-hdpi/ic_launcher27_glass_fg.png"
+  },
+  "src/lite/res/drawable-hdpi/ic_launcher27_light_fg.webp": {
+   "sha256": "62d3bfb241ed448aafe74bbe60202b1e0a1c74f0dfc25a238bb1d678fe630a4b",
+   "source": "src/main/res/drawable-hdpi/ic_launcher27_light_fg.png"
+  },
+  "src/lite/res/drawable-hdpi/ic_launcher27_mono.webp": {
+   "sha256": "86cb7dd7db895c00ac9e477ed8cc6ac14e175d55bf70f7b9278c45952b5d4919",
+   "source": "src/main/res/drawable-hdpi/ic_launcher27_mono.png"
+  },
+  "src/lite/res/drawable-hdpi/ic_launcher27_tinted_fg.webp": {
+   "sha256": "d23e1288b65f557f74f9a694074c16f70ca2c45f86801f1e6a0afaffa25c0929",
+   "source": "src/main/res/drawable-hdpi/ic_launcher27_tinted_fg.png"
+  },
+  "src/lite/res/drawable-mdpi/ic_launcher27_clear_fg.webp": {
+   "sha256": "dcebe9d284557b0f4820fec96d4657c179d4465121c5c069ba29ba0e699c83d4",
+   "source": "src/main/res/drawable-mdpi/ic_launcher27_clear_fg.png"
+  },
+  "src/lite/res/drawable-mdpi/ic_launcher27_glass_fg.webp": {
+   "sha256": "bd5321e32620959917430ac17b99c86ea4026a16a4aaf59e0d12b50af0b126bf",
+   "source": "src/main/res/drawable-mdpi/ic_launcher27_glass_fg.png"
+  },
+  "src/lite/res/drawable-mdpi/ic_launcher27_light_fg.webp": {
+   "sha256": "a72c354d3ed7dbe430bc88cd5490315bd306dac660e7f42f394e1f1fb2d9184a",
+   "source": "src/main/res/drawable-mdpi/ic_launcher27_light_fg.png"
+  },
+  "src/lite/res/drawable-mdpi/ic_launcher27_mono.webp": {
+   "sha256": "593064dc5967955edd8f0280248bb1cdf8e1a050ca32a4aafb89c89b5bdc4fb7",
+   "source": "src/main/res/drawable-mdpi/ic_launcher27_mono.png"
+  },
+  "src/lite/res/drawable-mdpi/ic_launcher27_tinted_fg.webp": {
+   "sha256": "220a179ad20d95df016d810b1b1f92d04387b2835f9c56d3c3cab53e492ee458",
+   "source": "src/main/res/drawable-mdpi/ic_launcher27_tinted_fg.png"
+  },
+  "src/lite/res/drawable-nodpi/icon_preview_clear.webp": {
+   "sha256": "819a1c64f9f28e1ca3d032d38184d6377c82d6213e28749703a8562e4c1dcedd",
+   "source": "src/main/res/drawable-nodpi/icon_preview_clear.png"
+  },
+  "src/lite/res/drawable-nodpi/icon_preview_glass.webp": {
+   "sha256": "f469496588456dc94367568970769de4d4a3293439f92c370affca741e4ef93d",
+   "source": "src/main/res/drawable-nodpi/icon_preview_glass.png"
+  },
+  "src/lite/res/drawable-nodpi/icon_preview_light.webp": {
+   "sha256": "8c4b70840e9a82a9b3680afdd45eaaf51df4bea7bf4e803851b8f7bcb3af3b7d",
+   "source": "src/main/res/drawable-nodpi/icon_preview_light.png"
+  },
+  "src/lite/res/drawable-nodpi/icon_preview_tinted.webp": {
+   "sha256": "b7503b28b20e10aba531e3354bb81ccd31bb12c783513beb5340902db245db0a",
+   "source": "src/main/res/drawable-nodpi/icon_preview_tinted.png"
+  },
+  "src/lite/res/drawable-xhdpi/ic_launcher27_clear_fg.webp": {
+   "sha256": "4cf7278037e8781bab1f6afe7382dd07307fff9f74b49c6b14a6c54858f00efb",
+   "source": "src/main/res/drawable-xhdpi/ic_launcher27_clear_fg.png"
+  },
+  "src/lite/res/drawable-xhdpi/ic_launcher27_glass_fg.webp": {
+   "sha256": "246c44ba0126e376e596efe2e6f038e5c4045dec2a2ecfe45ead41a29a089aff",
+   "source": "src/main/res/drawable-xhdpi/ic_launcher27_glass_fg.png"
+  },
+  "src/lite/res/drawable-xhdpi/ic_launcher27_light_fg.webp": {
+   "sha256": "4789561507657b631e2ebdf8f81dc93cd35b31fb3e49c5aee36ceedf297aeab6",
+   "source": "src/main/res/drawable-xhdpi/ic_launcher27_light_fg.png"
+  },
+  "src/lite/res/drawable-xhdpi/ic_launcher27_mono.webp": {
+   "sha256": "ff17120f3fc2fcd358274f96ff8d10f44b7e0bcf8987e06e0893e2fbbb937057",
+   "source": "src/main/res/drawable-xhdpi/ic_launcher27_mono.png"
+  },
+  "src/lite/res/drawable-xhdpi/ic_launcher27_tinted_fg.webp": {
+   "sha256": "cba7d739a67979486d12a5135a0dd08bd7742b3b7d6c59b02693f6747a4cdb6a",
+   "source": "src/main/res/drawable-xhdpi/ic_launcher27_tinted_fg.png"
+  },
+  "src/lite/res/drawable-xxhdpi/ic_launcher27_clear_fg.webp": {
+   "sha256": "9357cbd9ac1ac12fb0e2af34b8a31cfd7b44674c73eb8281a8c357e2422e333e",
+   "source": "src/main/res/drawable-xxhdpi/ic_launcher27_clear_fg.png"
+  },
+  "src/lite/res/drawable-xxhdpi/ic_launcher27_glass_fg.webp": {
+   "sha256": "1da82b1846af0bd6d576845cd96af8c94c0da3e5dbfcab8ef98153f6a580a89a",
+   "source": "src/main/res/drawable-xxhdpi/ic_launcher27_glass_fg.png"
+  },
+  "src/lite/res/drawable-xxhdpi/ic_launcher27_light_fg.webp": {
+   "sha256": "c03e0271c1ef344dfe5863ad1d5e335a6f5507d64c5dd86eb8ce05d7d909fa1c",
+   "source": "src/main/res/drawable-xxhdpi/ic_launcher27_light_fg.png"
+  },
+  "src/lite/res/drawable-xxhdpi/ic_launcher27_mono.webp": {
+   "sha256": "13a434a477444597f13f7a40cfbf12049bb2bcbc9f8be90fa926d22c1b7a5b31",
+   "source": "src/main/res/drawable-xxhdpi/ic_launcher27_mono.png"
+  },
+  "src/lite/res/drawable-xxhdpi/ic_launcher27_tinted_fg.webp": {
+   "sha256": "6585b8baad1377e60860d68c4fe6a1e73b22c57325c7e2cb7840bf15450358b2",
+   "source": "src/main/res/drawable-xxhdpi/ic_launcher27_tinted_fg.png"
+  },
+  "src/lite/res/drawable-xxxhdpi/ic_launcher27_clear_fg.webp": {
+   "sha256": "805650c65d35c7cef039faf83b61f345dd73f3ec69db5330613acdb012f493b1",
+   "source": "src/main/res/drawable-xxxhdpi/ic_launcher27_clear_fg.png"
+  },
+  "src/lite/res/drawable-xxxhdpi/ic_launcher27_glass_fg.webp": {
+   "sha256": "68606c94acbae4260123d8bcf53a33d3d8dfb304861fe20ee035cef7e4b615be",
+   "source": "src/main/res/drawable-xxxhdpi/ic_launcher27_glass_fg.png"
+  },
+  "src/lite/res/drawable-xxxhdpi/ic_launcher27_light_fg.webp": {
+   "sha256": "069e17c5e586c35850ab4c4148f8cfa226e58cf2287fd5858d466c6c992372f8",
+   "source": "src/main/res/drawable-xxxhdpi/ic_launcher27_light_fg.png"
+  },
+  "src/lite/res/drawable-xxxhdpi/ic_launcher27_mono.webp": {
+   "sha256": "3984c7a0a790e5aec9e33403d7fd91750eb43042189d805b4380ebed403fc14c",
+   "source": "src/main/res/drawable-xxxhdpi/ic_launcher27_mono.png"
+  },
+  "src/lite/res/drawable-xxxhdpi/ic_launcher27_tinted_fg.webp": {
+   "sha256": "0d1d0bd46e77efed6565090b4b4036db6fc6a46f65a38095ab07c23cc405065e",
+   "source": "src/main/res/drawable-xxxhdpi/ic_launcher27_tinted_fg.png"
+  },
+  "src/lite/res/drawable/logo_clean.webp": {
+   "sha256": "6455b4527cb771af7760a6ec391a0650c2a48bfb61b153ac7cd8edf812cd42ba",
+   "source": "src/main/res/drawable/logo_clean.png"
+  },
+  "src/lite/res/drawable/logo_main.webp": {
+   "sha256": "d7422ce559420536035c85df531c7b1382a2c749c8c243f7b070bca77ffed8f1",
+   "source": "src/main/res/drawable/logo_main.png"
+  },
+  "src/lite/res/mipmap-hdpi/ic_launcher.webp": {
+   "sha256": "3f45f4bb9ace1c1253e29e762cdf0dc6ba069f44078d25493f4e0b985e77407c",
+   "source": "src/main/res/mipmap-hdpi/ic_launcher.png"
+  },
+  "src/lite/res/mipmap-hdpi/ic_launcher_round.webp": {
+   "sha256": "bbb2c3678e0abe79965d6c2f5645caccf7c7b824a8bcd03b3716f74a3f02a932",
+   "source": "src/main/res/mipmap-hdpi/ic_launcher_round.png"
+  },
+  "src/lite/res/mipmap-mdpi/ic_launcher.webp": {
+   "sha256": "daa52e1840694fb8e671a3021658e4e07cad0c362f08a3e787f42e35fdae7571",
+   "source": "src/main/res/mipmap-mdpi/ic_launcher.png"
+  },
+  "src/lite/res/mipmap-mdpi/ic_launcher_round.webp": {
+   "sha256": "a28e6db59999e8d6795a3ca8128e5f7d1e49b1803dc2f886b28daf24f37a45f5",
+   "source": "src/main/res/mipmap-mdpi/ic_launcher_round.png"
+  },
+  "src/lite/res/mipmap-xhdpi/ic_launcher.webp": {
+   "sha256": "8f0ea47ead45c84ece463c8c40ccbb657555aead5db9064e170adc38c4240dbd",
+   "source": "src/main/res/mipmap-xhdpi/ic_launcher.png"
+  },
+  "src/lite/res/mipmap-xhdpi/ic_launcher_round.webp": {
+   "sha256": "671eb1494ff072347621c85c3ada3715499f1c1b8b67ae0a8e51442f73ad562a",
+   "source": "src/main/res/mipmap-xhdpi/ic_launcher_round.png"
+  },
+  "src/lite/res/mipmap-xxhdpi/ic_launcher.webp": {
+   "sha256": "8cd91393c453adb7a893647bcf9e8656f1a7d9413701e21f508741e0396d9074",
+   "source": "src/main/res/mipmap-xxhdpi/ic_launcher.png"
+  },
+  "src/lite/res/mipmap-xxhdpi/ic_launcher_round.webp": {
+   "sha256": "707602e8e1173012d87f6525483efd1933f74d09daabfc2985a5e7c14364bf77",
+   "source": "src/main/res/mipmap-xxhdpi/ic_launcher_round.png"
+  },
+  "src/lite/res/mipmap-xxxhdpi/ic_launcher.webp": {
+   "sha256": "1d0993acbc58b1179488685af855a95aa168cd47f561bf6a6d866eac55395e4e",
+   "source": "src/main/res/mipmap-xxxhdpi/ic_launcher.png"
+  },
+  "src/lite/res/mipmap-xxxhdpi/ic_launcher_round.webp": {
+   "sha256": "e7ded9f8aa800ecec9fde7169e61c57dcd5ed09bb87530800078c3d7dcc202dc",
+   "source": "src/main/res/mipmap-xxxhdpi/ic_launcher_round.png"
+  }
+ },
+ "placeholders": {
+  "src/lite/res/drawable-hdpi/ic_launcher_liquid_fg.webp": {
+   "sha256": "76e07f55564129d10595d7df355db7b51b87464970ade8e626f2a03d1cc584f1",
+   "source": "src/main/res/drawable-hdpi/ic_launcher_liquid_fg.png"
+  },
+  "src/lite/res/drawable-mdpi/ic_launcher_liquid_fg.webp": {
+   "sha256": "1643dcc43e4c71c8293c6e8818ac2e2e56fae757c42ac47bf7f0189b47a26c00",
+   "source": "src/main/res/drawable-mdpi/ic_launcher_liquid_fg.png"
+  },
+  "src/lite/res/drawable-xhdpi/ic_launcher_liquid_fg.webp": {
+   "sha256": "1f1a513d66e5e98c25fe09d89430ba1800fd71161d94b386a0618eedec00bd14",
+   "source": "src/main/res/drawable-xhdpi/ic_launcher_liquid_fg.png"
+  },
+  "src/lite/res/drawable-xxhdpi/ic_launcher_liquid_fg.webp": {
+   "sha256": "90c5be035d7d2af3b4c07cc329eec421cd7c0593c01038ff9e2dbd1da443468e",
+   "source": "src/main/res/drawable-xxhdpi/ic_launcher_liquid_fg.png"
+  },
+  "src/lite/res/drawable-xxxhdpi/ic_launcher_liquid_fg.webp": {
+   "sha256": "280c0fd4bf6887bc44df0fe2dee6e0fdb159ad32678dfbf95bf9e0bcde7f4848",
+   "source": "src/main/res/drawable-xxxhdpi/ic_launcher_liquid_fg.png"
+  },
+  "src/lite/res/drawable/logo_dark.webp": {
+   "sha256": "d61b744e89418cccf9b38b8caabb5fb130756780bab9c112b602ccf0e8036517",
+   "source": "src/main/res/drawable/logo_dark.png"
+  },
+  "src/lite/res/drawable/logo_light.webp": {
+   "sha256": "73e8423f4014d12eb242e20c3565e1630a43ab42e4171d24278366f7243ed6da",
+   "source": "src/main/res/drawable/logo_light.png"
+  }
+ }
+}
