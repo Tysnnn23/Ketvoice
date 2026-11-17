@@ -81,7 +81,9 @@ fun CatalogScreen(request: CatalogRequest? = AppUi.catalogRequest.value) {
         }
     }
     val tracks = when (request.kind) {
-        "favorites" -> (known + recent + downloads.map { it.track }).distinctBy { it.id }.filter { it.id in AppSettings.favoriteIds.value }
+        // Favourites made on the account's other devices are shown too (their titles came with the sync).
+        "favorites" -> (known + recent + downloads.map { it.track } + com.ketvoice.app.sync.SyncedTracks.tracks.value)
+            .distinctBy { it.id }.filter { it.id in AppSettings.favoriteIds.value }
         "history" -> recent
         "all" -> (known + recent + downloads.map { it.track }).distinctBy { it.id }
         else -> page?.tracks.orEmpty()

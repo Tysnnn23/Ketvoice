@@ -137,6 +137,8 @@ fun HomeScreen() {
                 }
                 }
             }
+            // What another of the listener's devices plays, to resume here (signed in only).
+            item(key = "resume-elsewhere") { ResumeElsewhereBanner() }
             // The owner removed the large For you card and the four shortcut tiles (5.9.0): the page goes
             // from the greeting straight to what was played last. Votre semaine stays further down.
             // What was played last, within a thumb's reach: tiles to start again from, or large covers.

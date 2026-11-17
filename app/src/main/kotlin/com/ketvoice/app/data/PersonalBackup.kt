@@ -51,7 +51,8 @@ internal object PersonalBackup {
             lyricsProvider = track.lyricsProvider.takeIf(::cleanId) ?: "LRCLIB")
     }
 
-    private fun setting(key: String, raw: Any?): Any? = when {
+    /** The checked value of a setting a backup (or the account's sync) may carry, or null. */
+    internal fun setting(key: String, raw: Any?): Any? = when {
         // The Vice City edition (6.1) is saved and restored only while it lasts; turning it off always goes through.
         key == "viceCityTheme" -> (raw as? Boolean)?.takeIf { !it || ViceCityEdition.themeAvailable() }
         key == "appIconVariant" -> (raw as? Number)?.toInt()

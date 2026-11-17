@@ -90,6 +90,13 @@ object ArtistPrefs {
         }.associateBy { it.key }
     }.getOrDefault(emptyMap())
 
+    /** The account's sync: the merged blocked and favourite artists replace this device's. */
+    internal fun replaceFromSync(blocked: List<Entry>, favourites: List<Entry>) {
+        blockedState.value = blocked.associateBy { it.key }
+        favouriteState.value = favourites.associateBy { it.key } - blockedState.value.keys
+        save()
+    }
+
     /** For tests and previews. */
     internal fun replaceForTest(blocked: List<Entry> = emptyList(), favourites: List<Entry> = emptyList()) {
         blockedState.value = blocked.associateBy { it.key }; favouriteState.value = favourites.associateBy { it.key }

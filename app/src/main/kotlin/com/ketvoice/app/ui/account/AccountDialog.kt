@@ -45,6 +45,9 @@ fun AccountDialog(modifier: Modifier = Modifier) {
             .padding(18.dp).padding(top = 82.dp).clip(RoundedCornerShape(com.ketvoice.app.theme.Ket27.Metrics.alertRadius)).background(theme.card)
             .clickable(enabled = false) {}.padding(22.dp)
             .verticalScroll(rememberScrollState())) {
+            // The Ketvoice account (profile and sync across devices) comes first; YouTube Music follows.
+            KetvoiceAccountSection()
+            Box(Modifier.padding(vertical = 18.dp).fillMaxWidth().height(1.dp).background(theme.hairline))
             Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text("YouTube Music", color = theme.onBackground, style = com.ketvoice.app.theme.Ket27.Type.title2)

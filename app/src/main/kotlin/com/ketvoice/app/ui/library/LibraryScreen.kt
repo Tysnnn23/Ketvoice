@@ -292,7 +292,10 @@ fun LibraryScreen() {
             }
             Spacer(Modifier.width(10.dp))
             LiquidGlassButton({ AppUi.showAccount.value = true }, Modifier.size(48.dp)) {
-                Icon(KetIcons.Account, "Compte", tint = theme.onBackground)
+                // Signed in to Ketvoice: the profile photo in place of the glyph.
+                if (com.ketvoice.app.account.AccountSession.state.collectAsState().value.signedIn)
+                    com.ketvoice.app.ui.common.AccountAvatar("K", 36.dp)
+                else Icon(KetIcons.Account, "Compte", tint = theme.onBackground)
             }
         }
     }
