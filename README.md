@@ -21,6 +21,14 @@
 
 ## Overview
 
+### 6.1.2 — Ketvoice opens again
+
+Fixes the crash at launch of 6.1.0 and 6.1.1 on some phones.
+[Mobile](https://github.com/Tysnnn23/Ketvoice/releases/download/v6.1.2/Ketvoice-6.1.2.apk)
+· [Lite](https://github.com/Tysnnn23/Ketvoice/releases/download/v6.1.2/Ketvoice-6.1.2-Lite.apk)
+· [Quest](https://github.com/Tysnnn23/Ketvoice/releases/download/v6.1.2/Ketvoice-6.1.2-Quest.apk)
+· [Release notes](docs/releases/v6.1.2.md).
+
 ### 6.1.1 — Safe mode
 
 If Ketvoice closes twice in a row while starting, it now opens a simple screen with the crash report to share.

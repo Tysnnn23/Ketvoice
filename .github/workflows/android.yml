@@ -229,6 +229,13 @@ jobs:
           echo "### Ketvoice Lite: $((lite_bytes / 1048576)) MB (mobile $((mobile_bytes / 1048576)) MB)" >> "$GITHUB_STEP_SUMMARY"
       # ---- end Ketvoice Lite
 
+      - name: Check method sizes against the Android verifier
+        # 6.1.0/6.1.1 shipped a method of 287 registers: ART rejected Automix at launch (JVM tests never run ART).
+        run: |
+          set -euo pipefail
+          bt=$(find "$ANDROID_HOME/build-tools" -maxdepth 1 -mindepth 1 -type d | sort -Vr | head -1)
+          python3 tools/check_dex_registers.py "$bt" app/build/outputs/apk/*/release/*.apk
+
       - name: Unit tests (Mobile and Quest)
         run: >-
           ./gradlew :app:testMobileDebugUnitTest :app:testQuestDebugUnitTest

@@ -7,6 +7,19 @@
 
 ---
 
+# Ketvoice 6.1.2
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 131** — the crash at launch of 6.1.0 and 6.1.1 fixed.
+
+- Cause (from the owner's safe-mode report, Honor BRP-NX1M, API 36): `java.lang.VerifyError: Verifier rejected class com.ketvoice.app.automix.Automix` — `Automix.transition` had grown to 287 registers with the Ketmix editor's points, and ART refused the class at `MainActivity.onStart`. JVM/Robolectric tests never run the ART verifier.
+- `transition` is split (`analyse`, `startStems`, `joinStems`): 144 registers. `tools/check_dex_registers.py` fails CI when any Ketvoice method in a release APK needs 256 registers or more.
+
+Full notes: [6.1.2](docs/releases/v6.1.2.md).
+
+---
+
 # Ketvoice 6.1.1
 
 ![Ketvoice](ketvoice-banner.png)
