@@ -1,0 +1,222 @@
+{
+  "schema": 8,
+  "version": "6.1.0",
+  "versionCode": 129,
+  "source_commit": "aa37f3aa1ed7f7b134cb90646fb032da55d378fe",
+  "created_at": "2026-11-17T14:11:13.223857+00:00",
+  "build_origin": {
+    "kind": "github_actions_with_owner_discord_sdk",
+    "workflow": "android.yml",
+    "run_id": 44095965381,
+    "artifact": {
+      "id": 14334789216,
+      "sha256": "3ac75422de103e4646367fe09eaab04dde7a41606e804babbdc1307d785f56d6"
+    },
+    "gradle": "assembleMobileRelease assembleQuestRelease assembleLiteRelease",
+    "note": "Signed by CI with the pinned keystore secret; the Discord Social SDK AAR matched its pinned SHA-256."
+  },
+  "local_validation": {
+    "result": "debug JVM/Robolectric suites for the three flavors (mobile, quest, lite), release lint and the UI text audit passed in a cloud container without the Discord SDK",
+    "commands": [
+      "testMobileDebugUnitTest",
+      "testQuestDebugUnitTest",
+      "testLiteDebugUnitTest",
+      "lintMobileRelease",
+      "lintQuestRelease",
+      "lintLiteRelease",
+      "tools/test_verify_apk.py",
+      "tools/audit_ui_texts.py --check"
+    ],
+    "ci_validation": "run 44095965381: release builds, debug and release unit tests for both flavors, UI text audit, lint, APK signature pin and Discord bridge packaging passed",
+    "code_review": {
+      "kind": "none independent"
+    },
+    "host_previews": "Robolectric software renders on the host (not a phone), looked at by the sub-agents and the main agent: artist and album pages, discoveries card, Replay and Wrapped pages, Ketmix editor, Ketogether sheet and pills, lock-screen lyrics notification and widgets, settings rows, Vice City welcome screen (phone, tablet, landscape, large text), Vice City Home/player/settings, lyrics without halo; glass draws flat on the host",
+    "after_last_full_local_run": "Quest-skips in two host tests (re-run as stated) and the release notes' Lite size wording, after the last complete local run"
+  },
+  "server": {
+    "function": "ketvoice-content",
+    "deployed_version": 23,
+    "changed_in_this_version": false,
+    "note": "no server change since 5.4.0"
+  },
+  "tests": {
+    "mobile": {
+      "jvm": {
+        "tests": 1247,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 3
+      },
+      "android_15_emulator_compose": {
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "quest": {
+      "jvm": {
+        "tests": 1241,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 26
+      },
+      "android_15_emulator_compose": {
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "lite": {
+      "jvm": {
+        "tests": 1241,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 3
+      }
+    },
+    "earlier_full_run": "the full Quest run failed 6 tests that check phone-only features (tablet page layouts, lock-screen lyrics); they were made to skip on Quest, re-run (11 tests: 4 pass, 7 skipped on Quest; 11 pass on mobile), and the whole Quest suite passed again in CI run 44095965381"
+  },
+  "lint": {
+    "mobile": {
+      "Warning": 236,
+      "Hint": 25
+    },
+    "quest": {
+      "Warning": 236,
+      "Hint": 25
+    },
+    "lite": {
+      "Warning": 242,
+      "Hint": 25
+    },
+    "errors": 0
+  },
+  "apks": [
+    {
+      "name": "Ketvoice-6.1.0.apk",
+      "sha256": "331c3f8042d23a9af2429b3a06d6e06a66772d6c4082a99dbd131ed138c99f07",
+      "bytes": 82706567,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "6.1.0",
+      "versionCode": 129,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-6.1.0-Quest.apk",
+      "sha256": "1f502dfe85b3a5200791e63cf7c2ba3f5f11b9682aad68b18454e5403b247f00",
+      "bytes": 98792298,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "6.1.0",
+      "versionCode": 129,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-6.1.0-Lite.apk",
+      "sha256": "b6c9f51e22da4da18d93b035089490c58017b0957bafa47456bab9db40fe5fc5",
+      "bytes": 31796347,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "6.1.0",
+      "versionCode": 129,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false,
+      "edition": "lite"
+    }
+  ],
+  "discord": {
+    "sdk_present_in_ci_build": true,
+    "sdk_sha256_pinned": true,
+    "bridge_and_native_libraries_verified": true,
+    "presence_mode": "unauthenticated_rpc_through_installed_discord_app"
+  },
+  "credential_scan": {
+    "entries": 5274,
+    "findings": 0,
+    "raw_pattern_findings": 1,
+    "scope": "tracked sources and APK archive entries",
+    "kind": "credential_patterns",
+    "explicit_private_provider_key_deny_list": false,
+    "triage": [
+      {
+        "file": "Ketvoice-Liquid-Glass-V4.html",
+        "classification": "embedded_image_false_positive",
+        "all_hits_inside_image_data_uris": true,
+        "rescanned_without_image_payloads": true
+      }
+    ]
+  },
+  "release_install_smoke": {
+    "mobile": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "quest": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "lite": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    }
+  },
+  "publication_override": {
+    "authorized_by_user": true,
+    "authorized_at": "2026-11-17T14:11:13.223857+00:00",
+    "kind": "standing_authorization",
+    "user_statement": "J'autorise TOUT devient maintenant une règle.",
+    "user_statement_date": "2026-11-14",
+    "in_reply_to": "The question whether versions may be published without phone or Quest testing without asking again for each version.",
+    "recorded_in": "AGENTS.md (commit aeeda8e)",
+    "reason": "The owner made publishing validated versions without phone or Quest testing a standing rule.",
+    "scope": "physical device installation and all on-device behaviour of 6.1.0 (mobile, Lite and Quest)"
+  },
+  "owner_requests_2026_11_17_6_1": {
+    "statements": [
+      "chosen from a multiple choice: a full bug pass, background playback that survives, a separate lighter APK with the same effects, the Ketmix DJ editor, lyrics on the lock screen, redone artist and album pages, weekly discoveries, monthly Replay and Wrapped, a Wear OS app, Ketogether (authorizing group listening)",
+      "no blur on lyrics except a held note's glow; remove the Beta 4 glass-platter player; the tab bar dock on by default and not optional",
+      "a GTA VI welcome screen at the first launch of each update until 20 November, a limited Vice City theme until 10 December offered on it, the owner's logo and banner, the website redone in a Vice City theme with motion design like tryliner.fun",
+      "« Publier tout de suite »: publish without the unfinished Wear OS app and without the independent review"
+    ],
+    "done": {
+      "background": "voice separation and Ketmix heavy work in process :stems (Messenger IPC, results through files); automatic resume after a system kill (ResumeDecision, RevivalStore every 5 s, dead-man exact alarm, sticky restart, notification fallback; key autoResume)",
+      "lite": "lite flavour, same applicationId, trimmed Material icons (verified at build), lossless WebP resources, compressed dex, LiteTuning defaults; CI release APKs: Lite 31,796,347 B, mobile 82,706,567 B (with the Discord SDK); locally without it 21.7 MB vs 72 MB (arm64); edition-aware updater",
+      "ketmix_editor": "waveforms, snapping to phrases/bars/beats, remembered exit/entry points and pair style/overlap honoured by TransitionPlanner.honour, preview through the real engine, backup",
+      "lockscreen_lyrics": "separate silent notification channel ketvoice.lyrics, promoted ongoing requested on Android 16, throttled to line changes; widgets redone with the sung line",
+      "pages": "artist page (hero, popular, latest release, discography, similar artists, about) and album page (marks, foot, More by)",
+      "discover": "weekly discoveries renewed on Mondays (WorkManager, unmetered), radio without repeats, monthly Replay, Wrapped pages shareable as 1080x1920 stories",
+      "ketogether": "Supabase Realtime public channels (no server change); two clients exchanged presence and broadcasts from the build container through the real project, clock offset within 1 ms in a throwaway check; host messages signed with ECDSA P-256",
+      "owner_corrections": "lyrics halo and line blur removed (blurInactiveLyrics retired), held-note glow kept; collapsingTabBar retired, the dock always on for phones and tablets",
+      "vice_city": "welcome screen until 2026-11-20 once per versionCode, theme viceCityTheme and Vice City icon until 2026-12-10 then reverted; non-affiliation line shown; new canonical banner",
+      "not_done": "Wear OS app (started, stopped before completion, not shipped); independent bug review (stopped before reporting)"
+    }
+  },
+  "not_validated": [
+    "physical phone, Lite or Quest installation, rendering, touch and feel",
+    "the :stems process, kills by battery managers, exact-alarm delivery and foreground restarts on real devices (the owner's Honor phone in particular)",
+    "Ketogether between real phones (sync, background, deep links, QR scan)",
+    "lock-screen lyrics and Live Update promotion on Android 16 and on Honor/Samsung lock screens",
+    "Ketmix editor waveform reading and preview on a device (they need the playback service and real decoding)",
+    "weekly discoveries against live catalogue answers and the background worker on a device",
+    "Lite startup time and memory on a modest phone",
+    "Vice City theme cost and look on a device; the icon as real launchers mask it",
+    "independent code review: the two review agents were stopped before reporting; only per-feature tests and the main agent's merges were checked"
+  ],
+  "known_limitations": [
+    "No Wear OS app in this version.",
+    "Android Auto's queue screen shows only the current song.",
+    "Switching between Ketvoice and Ketvoice Lite is a manual install of the other APK.",
+    "Ketogether guests hear titles their own sources can play; local files and private titles are shown as unavailable.",
+    "Launcher icons keep a background: Android fills adaptive icon backgrounds in black.",
+    "The signing certificate is the existing public Android debug identity, not a private production key."
+  ],
+  "canonical_banner_sha256": "ddc0e2c1270027f4b9dd92254374b79727ae9eaf8914e418b52e23c5b39b5966"
+}
