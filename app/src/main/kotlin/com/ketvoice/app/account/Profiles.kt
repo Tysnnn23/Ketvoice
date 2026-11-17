@@ -77,7 +77,7 @@ object Profiles {
     }
 
     private suspend fun create(uid: String) {
-        val name = _profile.value.displayName.ifBlank { "Auditeur" }
+        val name = _profile.value.displayName
         AccountSession.authorized { token ->
             SupabaseHttp.request("POST", "/rest/v1/ketvoice_profiles", JSONObject().put("id", uid).put("display_name", name)
                 .toString().toByteArray(), token, headers = mapOf("Prefer" to "return=minimal,resolution=ignore-duplicates"))
