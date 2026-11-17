@@ -1,7 +1,7 @@
 {
  "assets": {
   "src/lite/assets/release_banner.webp": {
-   "sha256": "47f6793088983f7d4e6bd1aeaa2cbd8b7cdc2a8f91271e3b2839daea81da0436",
+   "sha256": "ddc0e2c1270027f4b9dd92254374b79727ae9eaf8914e418b52e23c5b39b5966",
    "source": "src/standard/assets/release_banner.png"
   }
  },
@@ -169,6 +169,44 @@
   "src/lite/res/mipmap-xxxhdpi/ic_launcher_round.webp": {
    "sha256": "e7ded9f8aa800ecec9fde7169e61c57dcd5ed09bb87530800078c3d7dcc202dc",
    "source": "src/main/res/mipmap-xxxhdpi/ic_launcher_round.png"
+  }
+ },
+ "photos": {
+  "src/lite/res/drawable-hdpi/ic_launcher_vicecity_bg.webp": {
+   "sha256": "9247e30a08a3d26845b8b3c47b981b654f46ffce0896b49edd744ee43b39a14b",
+   "source": "src/main/res/drawable-hdpi/ic_launcher_vicecity_bg.webp"
+  },
+  "src/lite/res/drawable-mdpi/ic_launcher_vicecity_bg.webp": {
+   "sha256": "62eaa9fbc173abb5f51d704cf96725458d8b172726e72958266ec3e1b2118cfa",
+   "source": "src/main/res/drawable-mdpi/ic_launcher_vicecity_bg.webp"
+  },
+  "src/lite/res/drawable-nodpi/vicecity_logo.webp": {
+   "sha256": "8923d9821be784f2115f1d4b3689b4cfbc10444fb688fac922b96763aa24797b",
+   "source": "src/main/res/drawable-nodpi/vicecity_logo.webp"
+  },
+  "src/lite/res/drawable-nodpi/vicecity_palm_left.webp": {
+   "sha256": "567f011e127c81c411a13185a5401a32c8bf01ee6bcdc61cbe28f4f6ff81a014",
+   "source": "src/main/res/drawable-nodpi/vicecity_palm_left.webp"
+  },
+  "src/lite/res/drawable-nodpi/vicecity_palm_right.webp": {
+   "sha256": "b62fdbdd5b22eee5678dc1ec3f98fdd89fdcd88cfe45c0189be1473ee3cf72eb",
+   "source": "src/main/res/drawable-nodpi/vicecity_palm_right.webp"
+  },
+  "src/lite/res/drawable-nodpi/vicecity_welcome.webp": {
+   "sha256": "b4b3c2632d12931f8fc4058c3455ebadd7d6af416e915210125177aa7a38e17d",
+   "source": "src/main/res/drawable-nodpi/vicecity_welcome.webp"
+  },
+  "src/lite/res/drawable-xhdpi/ic_launcher_vicecity_bg.webp": {
+   "sha256": "bd5416eb4c6a3e899cc7ea6320169eb6e5cd5857840eada5da855fcdc37fff28",
+   "source": "src/main/res/drawable-xhdpi/ic_launcher_vicecity_bg.webp"
+  },
+  "src/lite/res/drawable-xxhdpi/ic_launcher_vicecity_bg.webp": {
+   "sha256": "f8a6f005db392ce268a5f63b3d96d48de4731938b06d38f80f75c27c98492364",
+   "source": "src/main/res/drawable-xxhdpi/ic_launcher_vicecity_bg.webp"
+  },
+  "src/lite/res/drawable-xxxhdpi/ic_launcher_vicecity_bg.webp": {
+   "sha256": "344d1e37335bc76a3708426e7591547a77ba41ddb327a2e4d9245b4fe44cba14",
+   "source": "src/main/res/drawable-xxxhdpi/ic_launcher_vicecity_bg.webp"
   }
  },
  "placeholders": {

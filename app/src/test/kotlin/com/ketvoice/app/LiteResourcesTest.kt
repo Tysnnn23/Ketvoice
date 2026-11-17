@@ -20,10 +20,10 @@ class LiteResourcesTest {
     private fun sha256(file: File) = MessageDigest.getInstance("SHA-256").digest(file.readBytes())
         .joinToString("") { "%02x".format(it) }
 
-    private fun entries(part: String) = record.getJSONObject(part).let { o -> o.keys().asSequence().map { it to o.getJSONObject(it) }.toList() }
+    private fun entries(part: String) = (record.optJSONObject(part) ?: JSONObject()).let { o -> o.keys().asSequence().map { it to o.getJSONObject(it) }.toList() }
 
     @Test fun everyLiteCopyMatchesItsCurrentSource() {
-        val all = entries("converted") + entries("placeholders") + entries("assets")
+        val all = entries("converted") + entries("placeholders") + entries("assets") + entries("photos")
         assertTrue(all.size > 40)
         all.forEach { (copy, source) ->
             val original = File(app, source.getString("source"))
@@ -41,6 +41,26 @@ class LiteResourcesTest {
         val images = File(app, "src/main/res").listFiles()!!.flatMap { dir -> dir.listFiles()!!.filter { it.name.endsWith(".png") && !it.name.endsWith(".9.png") } }
             .map { it.relativeTo(app).invariantSeparatorsPath }
         assertEquals("new images: run tools/lite/make_lite_resources.py", images.toSet() - covered, emptySet<String>())
+        // Lossy WebP photographs (the Vice City pictures of 6.1) have a lighter copy of their own in Lite.
+        val photos = entries("photos").map { it.second.getString("source") }.toSet()
+        val lossy = File(app, "src/main/res").listFiles()!!.flatMap { dir -> dir.listFiles()!!.filter { it.name.endsWith(".webp") } }
+            .filter { lossyWebp(it.readBytes()) }
+            .map { it.relativeTo(app).invariantSeparatorsPath }
+        assertEquals("new photos: run tools/lite/make_lite_resources.py", lossy.toSet() - photos, emptySet<String>())
+    }
+
+    /** Whether a WebP file holds a lossy picture (a `VP8 ` chunk) rather than a lossless one (`VP8L`). */
+    private fun lossyWebp(bytes: ByteArray): Boolean {
+        var offset = 12
+        while (offset + 8 <= bytes.size) {
+            val id = String(bytes, offset, 4, Charsets.ISO_8859_1)
+            val size = (bytes[offset + 4].toInt() and 0xff) or ((bytes[offset + 5].toInt() and 0xff) shl 8) or
+                ((bytes[offset + 6].toInt() and 0xff) shl 16) or ((bytes[offset + 7].toInt() and 0xff) shl 24)
+            if (id == "VP8 ") return true
+            if (id == "VP8L") return false
+            offset += 8 + size + (size and 1)
+        }
+        return false
     }
 
     @Test fun placeholdersStandOnlyForUnusedImages() {
