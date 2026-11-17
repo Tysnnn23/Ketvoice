@@ -150,6 +150,15 @@ internal fun AlbumPage(request: CatalogRequest, page: CatalogPage?, tracks: List
         ArtworkRepo.enrich(tracks)
         onRetry()
     }
+    // The artist's other releases, from the artist page the catalogue gives (cached with it, data/ArtistPages).
+    val artistId = tracks.firstOrNull()?.artistId.orEmpty()
+    val moreBy by produceState(emptyList<Album>(), artistId, mainArtist, loading, request.id) {
+        if (loading || mainArtist.isBlank()) return@produceState
+        // Only a catalogue album (YouTube Music or Deezer) asks the network; others use what is already cached.
+        val catalogue = request.id.startsWith("MPRE") || (request.id.isNotEmpty() && request.id.all(Char::isDigit))
+        val artistPage = ArtistPages.cachedOrFetch(artistId, mainArtist, network = catalogue)
+        value = AlbumPresentation.moreBy(artistPage?.albums.orEmpty(), request.id, title)
+    }
     CompositionLocalProvider(LocalTheme provides theme, LocalBackdropLayer provides backdrop) {
         Box(Modifier.fillMaxSize().background(theme.background)) {
             BackdropCapture(backdrop, Modifier.fillMaxSize()) {
@@ -168,12 +177,20 @@ internal fun AlbumPage(request: CatalogRequest, page: CatalogPage?, tracks: List
                         StaggeredReveal(order = index.coerceAtMost(5),
                             modifier = if (Motion.reduced) Modifier else Modifier.animateItem()) {
                             SwipeTrackActions(track) {
-                                AlbumTrackRow(track, index, current.current?.id == track.id, track.id in savedIds) {
+                                AlbumTrackRow(track, index, current.current?.id == track.id, track.id in savedIds, mainArtist) {
                                     Player.setShuffle(false)
                                     Player.playQueue(tracks, index)
                                 }
                             }
                         }
+                    }
+                    // The foot of the album, as Apple Music closes it: the release date, then its titles and length.
+                    if (!loading && tracks.isNotEmpty()) item(key = "album-footer") { AlbumFooter(page?.releaseDate, tracks) }
+                    // « Plus de … »: the artist's other releases, when the catalogue knows them.
+                    if (moreBy.isNotEmpty()) item(key = "album-more") {
+                        val wideRows = com.ketvoice.app.ui.adaptive.LocalLargeScreen.current != null
+                        ReleaseShelf(AppText.t("Plus de $mainArtist"), moreBy, 20.dp, if (wideRows) 168.dp else 150.dp,
+                            "album-more", localizeTitle = false) { ArtistDiscography.caption(it, singles = true) }
                     }
                 }
             }
@@ -189,14 +206,26 @@ internal fun AlbumPage(request: CatalogRequest, page: CatalogPage?, tracks: List
                     onCancel = { draft = null; playerDraft = null }, onDefault = { send(restore = true) },
                     onPublish = { send(restore = false) })
             }
-            // Floating controls sample the scrolled page, not an opaque full-width header band.
-            CollectionTopBar(title, collapse.value, { AppUi.closeOverlay() },
-                onPlay = if (tracks.isNotEmpty() && !loading) ({ Player.setShuffle(false); Player.playQueue(tracks) }) else null,
-                titleTag = "album-collapsed-title") {
+            // Floating controls sample the scrolled page, not an opaque full-width header band. Once the hero has
+            // scrolled away the album's name settles in the middle of the bar over the page's faded edge.
+            val publisher by com.ketvoice.app.data.PublisherSession.allowed.collectAsState()
+            val owner = publisher && title.isNotBlank() && artist.isNotBlank()
+            val canPlay = tracks.isNotEmpty() && !loading
+            ScrollEdgeTitle(title, { collapse.value }, Modifier.align(Alignment.TopCenter), tag = "album-collapsed-title",
+                localize = false, sidePadding = barSidePadding(if (owner) 3 else 1, canPlay), textTop = 8.dp)
+            Row(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                GlassBackButton { AppUi.closeOverlay() }
+                Spacer(Modifier.weight(1f))
+                if (canPlay) Box(Modifier.graphicsLayer { alpha = collapse.value }
+                    .then(if (collapse.value < .98f) Modifier.clearAndSetSemantics {} else Modifier)) {
+                    LiquidGlassButton({ Player.setShuffle(false); Player.playQueue(tracks) }, Modifier.size(44.dp),
+                        enabled = collapse.value >= .98f) {
+                        Icon(KetIcons.Play, "Lecture", tint = theme.accent, modifier = Modifier.size(20.dp))
+                    }
+                }
                 // Visuals and framing (verified owner) sit with Share in one capsule of glass.
-                val publisher by com.ketvoice.app.data.PublisherSession.allowed.collectAsState()
-                val owner = publisher && title.isNotBlank() && artist.isNotBlank()
-                com.ketvoice.app.ui.common.GlassButtonPad(listOfNotNull(
+                com.ketvoice.app.ui.common.GlassButtonPad(height = 44.dp, actions = listOfNotNull(
                     com.ketvoice.app.ui.common.PadAction(KetIcons.Appearance, "Modifier les visuels", "album-visuals") {
                         val original = page?.cover?.takeIf { it.isNotBlank() } ?: tracks.firstOrNull()?.let { art["t:${it.id}"] ?: it.coverUrl }
                         val main = com.ketvoice.app.data.MediaOverrides.mainArtist(artist)
@@ -230,12 +259,7 @@ private fun AlbumHero(title: String, artist: String, date: String?, cover: Strin
                       frame: com.ketvoice.app.data.Frame? = null) {
     val density = LocalDensity.current
     val context = LocalContext.current
-    val total = remember(tracks) { tracks.sumOf { it.durationMs.coerceAtLeast(0L) } }
-    val duration = when {
-        total <= 0L -> null
-        total >= 3_600_000L -> AppText.t("${total / 3_600_000L} h ${(total % 3_600_000L) / 60_000L} min")
-        else -> AppText.t("${(total / 60_000L).coerceAtLeast(1L)} min")
-    }
+    val duration = remember(tracks) { AlbumPresentation.totalDuration(tracks) }?.let(AppText::t)
     val count = AppText.t(if (tracks.size == 1) "1 titre" else "${tracks.size} titres")
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         val beside = AlbumPresentation.sideBySide(maxWidth.value, density.fontScale)
@@ -373,28 +397,49 @@ private fun AlbumPlaybackActions(tracks: List<Track>, savedIds: Set<String>, loa
     }
 }
 
+/**
+ * A title of the album, numbered as on the record: its name with the explicit sign, the artists only
+ * when they are not the album's own (a feature), the downloaded and separated marks, its length and
+ * the menu. A tap plays from it, a long press or « … » opens its glass menu.
+ */
 @Composable
-private fun AlbumTrackRow(track: Track, index: Int, active: Boolean, downloaded: Boolean, onPlay: () -> Unit) {
+private fun AlbumTrackRow(track: Track, index: Int, active: Boolean, downloaded: Boolean, albumArtist: String,
+                          onPlay: () -> Unit) {
     val theme = LocalTheme.current
     val ink by androidx.compose.animation.animateColorAsState(if (active) theme.accent else theme.onBackground,
         tween(Motion.duration(180)), label = "album-track-state")
-    Row(Modifier.fillMaxWidth().heightIn(min = 60.dp)
+    // The artist line says something only when it differs from the album's artist.
+    val credit = track.artist.takeIf { it.isNotBlank() && !it.trim().equals(albumArtist.trim(), ignoreCase = true) }
+    val separated = rememberSeparatedWhole(track.id, downloaded)
+    val hairline = theme.onBackground.copy(alpha = .09f)
+    Row(Modifier.fillMaxWidth().heightIn(min = 54.dp)
         .background(if (active) theme.accent.copy(alpha = .065f) else Color.Transparent)
+        // A hairline under the title, from where the name starts, as Apple Music separates an album's titles.
+        .drawWithCache {
+            val start = 62.dp.toPx(); val stroke = .6.dp.toPx()
+            onDrawBehind { drawLine(hairline, androidx.compose.ui.geometry.Offset(start, size.height - stroke / 2),
+                androidx.compose.ui.geometry.Offset(size.width - 16.dp.toPx(), size.height - stroke / 2), stroke) }
+        }
         .trackRowClick(track, onClick = onPlay)
         .padding(start = 20.dp, end = 6.dp, top = 4.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.width(28.dp), contentAlignment = Alignment.Center) {
             if (active) com.ketvoice.app.ui.player.NowPlayingBars(
                 com.ketvoice.app.player.Player.state.collectAsState().value.isPlaying)
-            else Text("${index + 1}", localize = false, color = theme.secondary, fontSize = 13.sp, textAlign = TextAlign.Center)
+            else Text("${index + 1}", localize = false, color = theme.secondary, fontSize = 15.sp, textAlign = TextAlign.Center)
         }
         Column(Modifier.weight(1f).padding(start = 14.dp, top = 2.dp, bottom = 2.dp),
             verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            TrackTitle(track.title, color = ink, selected = active)
-            if (track.artist.isNotBlank()) Text(track.artist, localize = false, color = theme.secondary,
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                TrackTitle(track.title, color = ink, selected = active, modifier = Modifier.weight(1f, fill = false))
+                if (track.explicit) EBadge(Modifier.padding(start = 6.dp).testTag("album-track-explicit"))
+            }
+            if (credit != null) Text(credit, localize = false, color = theme.secondary,
                 fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             if (LocalDensity.current.fontScale >= 1.3f && track.durationMs > 0)
                 Text(formatSecs(track.durationMs), localize = false, color = theme.secondary, fontSize = 12.sp)
         }
+        if (separated) Icon(KetIcons.Music, "Voix et musique séparées", tint = theme.secondary,
+            modifier = Modifier.padding(start = 8.dp).size(15.dp))
         if (downloaded) Icon(KetIcons.Check, "Téléchargé", tint = theme.secondary,
             modifier = Modifier.padding(start = 8.dp).size(16.dp))
         if (LocalDensity.current.fontScale < 1.3f && track.durationMs > 0) Text(formatSecs(track.durationMs), localize = false,
@@ -403,6 +448,35 @@ private fun AlbumTrackRow(track: Track, index: Int, active: Boolean, downloaded:
         androidx.compose.material3.IconButton(onClick = { menuAnchor.open(track) }, modifier = Modifier.size(48.dp).then(menuAnchor.modifier)) {
             Icon(KetIcons.More, "Options", tint = theme.secondary, modifier = Modifier.size(24.dp))
         }
+    }
+}
+
+/** Whether a downloaded title was separated whole (voice and music), read off the main thread and again as the library separates more. */
+@Composable
+private fun rememberSeparatedWhole(trackId: String, downloaded: Boolean): Boolean {
+    if (!downloaded) return false
+    val library by com.ketvoice.app.stems.StemLibrary.progress.collectAsState()
+    val separated by produceState(false, trackId, library.done, library.running) {
+        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            runCatching { com.ketvoice.app.stems.StemStore.hasWhole(trackId) }.getOrDefault(false)
+        }
+    }
+    return separated
+}
+
+/** The foot of an album page: when it came out, then how many titles and how long, as Apple Music closes an album. */
+@Composable
+private fun AlbumFooter(date: String?, tracks: List<Track>) {
+    val theme = LocalTheme.current
+    val language = AppText.language()
+    val released = remember(date, language) { AlbumPresentation.releaseDate(date, java.util.Locale.forLanguageTag(language.code)) }
+    val count = AppText.t(if (tracks.size == 1) "1 titre" else "${tracks.size} titres")
+    val duration = remember(tracks) { AlbumPresentation.totalDuration(tracks) }?.let(AppText::t)
+    Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(top = 18.dp, bottom = 4.dp).testTag("album-footer"),
+        verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        if (released != null) Text(released, localize = false, color = theme.secondary, style = com.ketvoice.app.theme.Ket27.Type.footnote)
+        Text(listOfNotNull(count, duration).joinToString(", "), localize = false, color = theme.secondary,
+            style = com.ketvoice.app.theme.Ket27.Type.footnote)
     }
 }
 
