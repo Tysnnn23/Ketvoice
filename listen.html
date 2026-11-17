@@ -4,115 +4,453 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#f3f4f6">
 <title>Ketvoice — Lecture partagée</title>
+<meta name="description" content="Un titre partagé depuis Ketvoice, le lecteur de musique gratuit pour Android : ouvrez-le dans l'app ou téléchargez Ketvoice.">
+<!-- Aperçus de lien : ces balises sont fixes. Les robots d'aperçu (WhatsApp, Discord, iMessage…) n'exécutent pas
+     le JavaScript et la page est servie telle quelle par un hébergement statique (GitHub Pages, Vercel) : un aperçu
+     propre à chaque titre demanderait un rendu côté serveur. -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Ketvoice">
+<meta property="og:locale" content="fr_FR">
+<meta property="og:title" content="Écoute partagée sur Ketvoice">
+<meta property="og:description" content="Ouvrez ce titre dans Ketvoice — paroles mot à mot, Ketmix et Ketogether. Gratuit pour Android et Meta Quest.">
+<meta property="og:image" content="https://raw.githubusercontent.com/Tysnnn23/Ketvoice/main/ketvoice-banner.png">
+<meta property="og:image:width" content="1448">
+<meta property="og:image:height" content="1086">
+<meta property="og:image:alt" content="Ketvoice — votre musique, sur tous vos appareils">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Écoute partagée sur Ketvoice">
+<meta name="twitter:description" content="Ouvrez ce titre dans Ketvoice — paroles mot à mot, Ketmix et Ketogether.">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/Tysnnn23/Ketvoice/main/ketvoice-banner.png">
+<link rel="icon" href="data:image/webp;base64,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">
+<script>(function(){var d=document.documentElement,t=null;try{t=localStorage.getItem('ketvoice-theme')}catch(e){}if(t==='dark'||(t!=='light'&&matchMedia('(prefers-color-scheme: dark)').matches))d.classList.add('dark');if(!matchMedia('(prefers-reduced-motion: reduce)').matches)d.classList.add('motion')})();</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400..600&amp;family=Geist+Mono:wght@400;500&amp;display=swap">
 <style>
-  :root { color-scheme: dark; }
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body {
-    min-height: 100vh;
-    display: flex; align-items: center; justify-content: center;
-    font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    background: radial-gradient(120% 120% at 15% 0%, #1d2b3f 0%, #0b0e14 55%, #07080c 100%);
-    color: #f2f4f8; padding: 24px;
-  }
-  .card {
-    width: 100%; max-width: 430px;
-    background: rgba(255,255,255,0.055);
-    border: 1px solid rgba(255,255,255,0.12);
-    border-radius: 28px; padding: 36px 28px 30px;
-    backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
-    box-shadow: 0 30px 80px rgba(0,0,0,0.55);
-    text-align: center;
-  }
-  .brand { display: flex; align-items: center; justify-content: center; gap: 9px;
-    font-weight: 700; letter-spacing: 3px; font-size: 12px; color: rgba(242,244,248,0.65); }
-  .dot { width: 8px; height: 8px; border-radius: 50%; background: #35d0ff;
-    box-shadow: 0 0 14px #35d0ff; }
-  h1 { font-size: 22px; font-weight: 800; margin-top: 26px; line-height: 1.25;
-    overflow-wrap: anywhere; }
-  .artist { margin-top: 7px; font-size: 15px; color: rgba(242,244,248,0.62);
-    overflow-wrap: anywhere; }
-  .status { margin-top: 26px; font-size: 13.5px; color: rgba(242,244,248,0.7);
-    line-height: 1.5; min-height: 40px; }
-  .spinner { width: 26px; height: 26px; margin: 0 auto 14px; border-radius: 50%;
-    border: 2.5px solid rgba(255,255,255,0.14); border-top-color: #35d0ff;
-    animation: spin 0.9s linear infinite; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .actions { margin-top: 22px; display: flex; flex-direction: column; gap: 11px; }
-  .btn { display: block; padding: 14px 18px; border-radius: 999px; font-weight: 700;
-    font-size: 15px; text-decoration: none; transition: transform .15s ease, opacity .15s ease; }
-  .btn:active { transform: scale(0.97); }
-  .primary { background: linear-gradient(120deg, #35d0ff, #5e8bff); color: #04121c; }
-  .ghost { border: 1px solid rgba(255,255,255,0.2); color: #f2f4f8; }
-  .note { margin-top: 20px; font-size: 11.5px; color: rgba(242,244,248,0.4); line-height: 1.5; }
+/* La page de partage de Ketvoice, dans le langage du site (ketvoice-web) : Geist, étiquettes /slash en mono,
+   surfaces plates cerclées d'un filet, l'accent rose pour l'action, la bande du coucher de soleil en bas.
+   Page autonome (CSS, JS et logo intégrés) : le même fichier sert sur GitHub Pages et sur Vercel. */
+:root{
+  --font:"Geist",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  --mono:"Geist Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --out:cubic-bezier(.22,1,.36,1);--snap:cubic-bezier(.2,.9,.3,1.1);
+  --bg:#f3f4f6;--card:#fff;--soft:#f3f4f6;--ink:#0e0820;--muted:#4c5064;
+  --line:rgba(14,8,32,.12);--ring:rgba(14,8,32,.15);
+  --accent:#ffc3dc;--accent-hover:#ffadd0;--on-accent:#0e0820;--tint:#fdecf4;
+  --shadow:0 30px 80px rgba(14,8,32,.18);
+  color-scheme:light;
+}
+html.dark{
+  --bg:#0c0913;--card:#17121f;--soft:#130f1c;--ink:#f3eff8;--muted:#b9b2c7;
+  --line:rgba(255,255,255,.11);--ring:rgba(255,255,255,.16);
+  --accent:#ff9cc6;--accent-hover:#ffb3d3;--on-accent:#0e0820;--tint:#22152b;
+  --shadow:0 30px 80px rgba(0,0,0,.5);
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;background:var(--bg);color:var(--ink);font:400 16px/24px var(--font);-webkit-font-smoothing:antialiased;overflow-x:hidden;position:relative;isolation:isolate}
+h1,p,figure{margin:0}
+[hidden]{display:none!important}
+a{color:inherit;text-decoration:none}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+:focus-visible{outline:2px solid #d0457f;outline-offset:3px;border-radius:6px}
+.icon{width:18px;height:18px;flex:none;stroke:currentColor;stroke-width:1.7;fill:none;stroke-linecap:round;stroke-linejoin:round}
+
+/* la bande du coucher de soleil, et la pochette floutée en lumière d'ambiance */
+.sunset{position:absolute;left:0;right:0;bottom:0;height:190px;z-index:-2;pointer-events:none;opacity:.9;
+  background:linear-gradient(180deg,transparent 0%,#ffd6c4 30%,#ff6fa6 55%,#7a35d6 82%,#1a0a38 100%);
+  -webkit-mask:radial-gradient(130% 100% at 50% 100%,#000 45%,transparent 75%);mask:radial-gradient(130% 100% at 50% 100%,#000 45%,transparent 75%)}
+html.dark .sunset{opacity:.7}
+.ambient{position:fixed;inset:-10%;z-index:-1;pointer-events:none;background-size:cover;background-position:center;filter:blur(90px) saturate(140%);opacity:0;transform:scale(1.1);transition:opacity 1.2s var(--out)}
+.ambient.on{opacity:.2}
+html.dark .ambient.on{opacity:.16}
+
+.bar{display:flex;align-items:center;justify-content:space-between;gap:12px;width:min(1040px,100% - 32px);margin:20px auto 0;height:52px;padding:0 8px 0 14px;border-radius:32px;background:var(--card);box-shadow:0 0 0 1px var(--ring),0 6px 24px rgba(14,8,32,.06)}
+.brand{display:flex;align-items:center;gap:9px;font-size:18px;font-weight:500;letter-spacing:-.01em}
+.brand img{display:block;width:28px;height:28px;border-radius:7px}
+.bar-actions{display:flex;align-items:center;gap:4px}
+.bar-link{display:inline-flex;align-items:center;height:36px;padding:0 12px;border-radius:18px;font-size:14px;color:var(--muted);transition:color .3s,background-color .15s}
+.bar-link:hover{color:var(--ink);background:var(--soft)}
+.theme{display:grid;place-items:center;width:36px;height:36px;border-radius:18px;color:var(--muted);transition:color .3s,background-color .15s}
+.theme:hover{color:var(--ink);background:var(--soft)}
+.theme .icon{overflow:visible}
+.theme .sun,.theme .moon{transform-origin:12px 12px;transition:transform .5s var(--out),opacity .3s}
+.theme .moon{opacity:0;transform:rotate(-70deg) scale(.4)}
+html.dark .theme .sun{opacity:0;transform:rotate(80deg) scale(.4)}
+html.dark .theme .moon{opacity:1;transform:none}
+
+.share{flex:1;display:grid;grid-template-columns:minmax(0,440px) minmax(0,1fr);align-items:center;gap:64px;width:min(1040px,100% - 32px);margin:0 auto;padding:64px 0 96px}
+.art{position:relative;aspect-ratio:1;border-radius:20px;overflow:hidden;background:#3a0f6e;box-shadow:var(--shadow),0 0 0 1px var(--line)}
+.art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .6s var(--out)}
+.art img.ready{opacity:1}
+.art-gen{position:absolute;inset:0;display:grid;place-items:center;
+  background:radial-gradient(120% 90% at 20% 0%,#ffd6c4 0%,transparent 55%),linear-gradient(160deg,#ff8fbf 0%,#ff6fa6 30%,#7a35d6 72%,#1a0a38 100%)}
+.art-gen span{font-size:clamp(64px,14vw,132px);line-height:1;font-weight:500;letter-spacing:-.03em;color:#fff;text-shadow:0 6px 40px rgba(26,10,56,.45)}
+.art-gen .rings{position:absolute;inset:0}
+.art-gen .rings i{position:absolute;left:50%;top:50%;border-radius:50%;border:1.5px solid rgba(255,255,255,.55);transform:translate(-50%,-50%)}
+.art-gen .rings i:nth-child(1){width:34%;height:34%}.art-gen .rings i:nth-child(2){width:58%;height:58%;opacity:.6}.art-gen .rings i:nth-child(3){width:84%;height:84%;opacity:.35}
+.art-gen .rings svg{position:absolute;left:50%;top:50%;width:18%;height:18%;transform:translate(-50%,-50%);stroke:#fff;stroke-width:1.6;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.art-badge{position:absolute;left:14px;bottom:14px;display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:8px;color:#fff;font:400 12px/18px var(--mono);background:rgba(14,6,30,.66);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14)}
+.art-badge i{width:7px;height:7px;border-radius:50%;background:#ff7ab0;box-shadow:0 0 10px #ff7ab0}
+
+.info{display:grid;gap:16px;justify-items:start;min-width:0}
+.tag{display:inline-flex;align-items:center;height:26px;padding:0 8px;border:1px solid var(--ink);border-radius:6px;font:400 14px/24px var(--mono)}
+h1{font-size:48px;line-height:56px;font-weight:500;letter-spacing:-.012em;overflow-wrap:anywhere}
+.artist{font-size:20px;line-height:28px;color:var(--muted);overflow-wrap:anywhere;margin-top:-8px}
+.artist:empty{display:none}
+
+.session{display:grid;gap:4px;padding:16px 20px;border-radius:14px;background:var(--card);box-shadow:0 0 0 1px var(--ring)}
+.session span{font:400 12px/18px var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.session b{font:500 40px/48px var(--mono);letter-spacing:.06em}
+.session small{font-size:13px;line-height:20px;color:var(--muted)}
+
+.lyrics{display:grid;gap:6px;width:100%;max-width:520px;padding:16px 20px 14px;border-radius:14px;background:var(--card);box-shadow:0 0 0 1px var(--ring)}
+.lyrics figcaption{display:flex;justify-content:space-between;gap:12px;font:400 12px/18px var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.lyrics .l1{font-size:22px;line-height:30px;font-weight:500;overflow-wrap:anywhere}
+.lyrics .l2{font-size:17px;line-height:26px;color:var(--muted);overflow-wrap:anywhere}
+.lyrics .src{font-size:12px;line-height:18px;color:var(--muted)}
+.lyrics .src a{text-decoration:underline;text-underline-offset:2px}
+
+.status{display:flex;align-items:center;gap:10px;min-height:24px;font-size:14px;line-height:20px;color:var(--muted)}
+.status:empty{display:none}
+.spinner{width:16px;height:16px;flex:none;border-radius:50%;border:2px solid var(--line);border-top-color:#d0457f;animation:spin .9s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+.actions[hidden]{display:none}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:0 20px;border-radius:8px;font-size:15px;font-weight:500;white-space:nowrap;transition:background-color .15s,box-shadow .15s,transform .2s var(--snap)}
+.btn:active{transform:scale(.97)}
+.btn-accent{background:var(--accent);color:var(--on-accent)}
+.btn-accent:hover{background:var(--accent-hover)}
+.btn-line{background:var(--card);box-shadow:inset 0 0 0 1px var(--ring)}
+.btn-line:hover{box-shadow:inset 0 0 0 1px var(--ink)}
+.btn small{font:400 12px/16px var(--mono);color:var(--muted)}
+.note{font-size:13px;line-height:20px;color:var(--muted);max-width:440px}
+
+.foot{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 16px;width:min(1040px,100% - 32px);margin:0 auto 20px;padding:12px 16px;border-radius:12px;font-size:13px;line-height:20px;color:var(--ink);background:var(--card);box-shadow:0 0 0 1px var(--ring)}
+.foot a{text-decoration:underline;text-underline-offset:3px}
+
+/* entrées : comme sur le site, un fondu sur cubic-bezier(.22,1,.36,1), quelques pixels de montée */
+@keyframes rise{from{opacity:.001;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes pop{from{opacity:.001;transform:scale(.94) rotate(-1.5deg)}to{opacity:1;transform:none}}
+@keyframes sweep{from{background-position:100% 0}to{background-position:0 0}}
+html.motion .art{animation:pop 1.1s var(--out) both}
+html.motion .info>*{animation:rise .9s var(--out) both}
+html.motion .info>:nth-child(2){animation-delay:.06s}html.motion .info>:nth-child(3){animation-delay:.12s}
+html.motion .info>:nth-child(4){animation-delay:.18s}html.motion .info>:nth-child(5){animation-delay:.24s}
+html.motion .info>:nth-child(6){animation-delay:.3s}html.motion .info>:nth-child(7){animation-delay:.36s}
+html.motion .info>:nth-child(n+8){animation-delay:.42s}
+html.motion .lyrics:not([hidden]) .l1{background:linear-gradient(90deg,var(--ink) 50%,var(--muted) 50%) 100% 0/200% 100% no-repeat;-webkit-background-clip:text;background-clip:text;color:transparent;animation:sweep 2.6s cubic-bezier(.45,0,.3,1) .5s both}
+html.motion .art-gen .rings i{animation:ring 3.2s ease-in-out infinite}
+html.motion .art-gen .rings i:nth-child(2){animation-delay:.4s}html.motion .art-gen .rings i:nth-child(3){animation-delay:.8s}
+@keyframes ring{0%,100%{transform:translate(-50%,-50%) scale(1)}50%{transform:translate(-50%,-50%) scale(1.04)}}
+
+@media (max-width:860px){
+  .share{grid-template-columns:1fr;gap:32px;padding:32px 0 72px;align-items:start}
+  .art{width:100%;max-width:420px}
+  h1{font-size:36px;line-height:44px}
+  .artist{font-size:18px;line-height:26px}
+}
+@media (max-width:520px){
+  .bar{margin-top:12px;width:calc(100% - 24px)}
+  .bar-link{display:none}
+  .share{width:calc(100% - 32px);padding-top:24px}
+  .art{border-radius:16px}
+  h1{font-size:32px;line-height:40px}
+  .session b{font-size:34px;line-height:42px}
+  .lyrics .l1{font-size:19px;line-height:27px}
+  .actions{display:grid;width:100%}
+  .btn{width:100%}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition-duration:.01ms!important}
+  .spinner{border-top-color:var(--line);border-right-color:#d0457f}
+}
 </style>
 </head>
 <body>
-<main class="card">
-  <div class="brand"><span class="dot"></span> KETVOICE</div>
-  <h1 id="title">Lecture partagée</h1>
-  <p class="artist" id="artist"></p>
-  <div class="status" id="status"><div class="spinner"></div>Ouverture de Ketvoice…</div>
-  <div class="actions" id="actions" hidden>
-    <a class="btn primary" id="open-app" href="#">Ouvrir dans Ketvoice</a>
-    <a class="btn ghost" id="download" href="https://github.com/Tysnnn23/Ketvoice/releases/latest">Télécharger Ketvoice</a>
+<div class="sunset" aria-hidden="true"></div>
+<div class="ambient" id="ambient" aria-hidden="true"></div>
+
+<header class="bar">
+  <a class="brand" href="https://ketvoice-web.vercel.app/" aria-label="Ketvoice, le site"><img alt="" width="28" height="28" src="data:image/webp;base64,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"><span>Ketvoice</span></a>
+  <div class="bar-actions">
+    <a class="bar-link" href="https://ketvoice-web.vercel.app/">Découvrir l'app</a>
+    <button class="theme" id="theme" type="button" aria-label="Passer en thème sombre"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><g class="sun"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.2M12 19.2v2.2M2.6 12h2.2M19.2 12h2.2M5.4 5.4l1.6 1.6M17 17l1.6 1.6M18.6 5.4 17 7M7 17l-1.6 1.6"/></g><path class="moon" d="M20 14.4A8.4 8.4 0 1 1 9.6 4a6.9 6.9 0 0 0 10.4 10.4Z"/></svg></button>
   </div>
-  <p class="note">Si la lecture ne s'ouvre pas, installez l'application puis retapez le lien.</p>
+</header>
+
+<main class="share">
+  <figure class="art" id="art">
+    <div class="art-gen" id="art-gen"><span id="art-initial" aria-hidden="true">K</span></div>
+    <img id="cover" alt="" decoding="async" referrerpolicy="no-referrer" hidden>
+    <figcaption class="art-badge" id="art-badge"><i aria-hidden="true"></i><span id="badge-text">Partagé depuis Ketvoice</span></figcaption>
+  </figure>
+
+  <div class="info">
+    <p class="tag" id="kind-tag">/écoute-partagée</p>
+    <h1 id="title">Lecture partagée</h1>
+    <p class="artist" id="artist"></p>
+    <div class="session" id="session" hidden>
+      <span>Code de la session</span>
+      <b id="session-code"></b>
+      <small id="session-fp"></small>
+    </div>
+    <figure class="lyrics" id="lyrics" hidden aria-labelledby="lyrics-cap">
+      <figcaption id="lyrics-cap"><span>Paroles du moment</span><span id="lyrics-time"></span></figcaption>
+      <p class="l1" id="l1"></p>
+      <p class="l2" id="l2"></p>
+      <p class="src" id="lyrics-src">Paroles synchronisées : <a href="https://lrclib.net/" rel="noopener noreferrer" target="_blank">LRCLIB</a></p>
+    </figure>
+    <p class="status" id="status" role="status" aria-live="polite"><span class="spinner" aria-hidden="true"></span>Ouverture de Ketvoice…</p>
+    <div class="actions" id="actions">
+      <a class="btn btn-accent" id="open-app" href="#">Ouvrir dans Ketvoice</a>
+      <a class="btn btn-line" id="download" href="https://github.com/Tysnnn23/Ketvoice/releases/latest">Télécharger Ketvoice <small id="dl-meta"></small></a>
+    </div>
+    <p class="note" id="note">Si la lecture ne s'ouvre pas, installez l'application puis retapez le lien.</p>
+  </div>
 </main>
+
+<footer class="foot"><span>Ketvoice · lecteur de musique gratuit pour Android et Meta Quest</span><a href="https://ketvoice-web.vercel.app/">Le site</a><a href="https://github.com/Tysnnn23/Ketvoice/releases/latest">Toutes les versions</a></footer>
+
 <script>
 (function () {
+  'use strict';
+  var $ = function (id) { return document.getElementById(id); };
+  var root = document.documentElement;
+
+  /* ---------- thème clair / sombre (même clé que le site) ---------- */
+  var themeBtn = $('theme');
+  function themeLabel() { themeBtn.setAttribute('aria-label', root.classList.contains('dark') ? 'Passer en thème clair' : 'Passer en thème sombre'); }
+  themeBtn.addEventListener('click', function () {
+    root.classList.toggle('dark');
+    try { localStorage.setItem('ketvoice-theme', root.classList.contains('dark') ? 'dark' : 'light'); } catch (e) {}
+    themeLabel();
+  });
+  themeLabel();
+
+  /* ---------- le lien ---------- */
   var q = new URLSearchParams(location.search);
   var track = q.get('track') || '';
   var title = q.get('title') || '';
   var artist = q.get('artist') || '';
   var kind = q.get('kind') || 'track';
-  document.title = (title ? title + ' — ' : '') + 'Ketvoice';
-  document.getElementById('title').textContent = title || (kind === 'album' ? 'Album partagé' : 'Lecture partagée');
-  document.getElementById('artist').textContent = artist;
-
   var noredirect = q.get('noredirect') === '1';
-  var status = document.getElementById('status');
-  var actions = document.getElementById('actions');
+  // Facultatifs (pas encore envoyés par l'app) : pochette, instant (secondes ou m:ss) et ligne chantée.
+  var cover = q.get('cover') || '';
+  var at = parseTime(q.get('t'));
+  var sungLine = (q.get('line') || '').slice(0, 200);
+  // Playlists et collections partagées (ShareLinks.playlistUrl / collectionUrl).
+  var playlist = q.get('playlist') || '';
+  var collection = q.get('collection') || '';
+  var listName = q.get('name') || '';
 
+  var status = $('status'), actions = $('actions'), openApp = $('open-app');
+
+  function parseTime(v) {
+    if (!v) return null;
+    var m = String(v).match(/^(?:(\d+):)?(\d+(?:\.\d+)?)$/);
+    if (!m) return null;
+    return (m[1] ? Number(m[1]) * 60 : 0) + Number(m[2]);
+  }
+  function clock(s) { s = Math.max(0, Math.floor(s)); return Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2); }
+
+  // Lien profond, à l'identique de la page d'origine : ketvoice://listen?track&title&artist&kind
   function appUrl() {
     var params = 'track=' + encodeURIComponent(track) +
       '&title=' + encodeURIComponent(title) + '&artist=' + encodeURIComponent(artist) +
       '&kind=' + encodeURIComponent(kind);
     return 'ketvoice://listen?' + params;
   }
+  function extras() {
+    var s = '';
+    if (cover) s += '&cover=' + encodeURIComponent(cover);
+    if (q.get('t')) s += '&t=' + encodeURIComponent(q.get('t'));
+    if (sungLine) s += '&line=' + encodeURIComponent(sungLine);
+    return s;
+  }
+  function intentUrl() {
+    // Bascule automatique : l'app installée ouvre le contenu ; sinon le navigateur
+    // revient sur cette page (noredirect=1) avec le bouton de téléchargement.
+    var fallback = location.origin + location.pathname +
+      '?track=' + encodeURIComponent(track) + '&title=' + encodeURIComponent(title) +
+      '&artist=' + encodeURIComponent(artist) + '&kind=' + encodeURIComponent(kind) +
+      '&noredirect=1' + extras();
+    return 'intent://listen?track=' + encodeURIComponent(track) +
+      '&title=' + encodeURIComponent(title) + '&artist=' + encodeURIComponent(artist) +
+      '&kind=' + encodeURIComponent(kind) +
+      '#Intent;scheme=ketvoice;package=com.ketvoice.app;S.browser_fallback_url=' +
+      encodeURIComponent(fallback) + ';end';
+  }
+  window.KetvoiceListen = { appUrl: appUrl, intentUrl: intentUrl };
 
+  function say(html, busy) { status.innerHTML = (busy ? '<span class="spinner" aria-hidden="true"></span>' : '') + html; }
   function showFallback(message) {
-    status.innerHTML = message;
+    say(message);
     actions.hidden = false;
-    document.getElementById('open-app').href = appUrl();
+    openApp.href = appUrl();
   }
 
+  /* ---------- ce qui est partagé ---------- */
+  var together = kind === 'together';
+  var initial = (title || listName || 'K').trim().charAt(0).toUpperCase() || 'K';
+  $('art-initial').textContent = initial;
+  var heading, tagText, badge;
+  if (together) {
+    var raw = track.split('-'), code = (raw[0] || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (code.length !== 6) code = artist.replace(/^code\s*/i, '').replace(/\s+/g, '').toUpperCase();
+    var fp = (raw[1] || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    heading = 'Session Ketogether';
+    tagText = '/ketogether';
+    badge = 'Écoute à plusieurs';
+    $('session').hidden = false;
+    $('session-code').textContent = code.length === 6 ? code.slice(0, 3) + ' ' + code.slice(3) : code || '—';
+    $('session-fp').textContent = fp.length === 8 ? 'Hôte vérifié par son empreinte ' + fp : 'Rejoignez pour écouter la même chanson au même moment.';
+    $('artist').textContent = 'Écoutez la même chanson, au même moment, chacun sur son téléphone.';
+    openApp.textContent = 'Rejoindre la session';
+    $('note').textContent = 'Ketvoice vous demande avant de rejoindre. Sans l\'app, installez-la puis retapez le lien.';
+    var gen = $('art-gen');
+    gen.innerHTML = '<div class="rings" aria-hidden="true"><i></i><i></i><i></i><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><circle cx="17" cy="9.5" r="2.4"/><path d="M3.5 19c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5M15 14.3c2.6-.4 4.7 1.2 5.3 4.2"/></svg></div>';
+  } else if (playlist || collection) {
+    heading = listName || 'Playlist partagée';
+    tagText = '/playlist';
+    badge = 'Playlist Ketvoice';
+    $('artist').textContent = 'Une playlist partagée depuis Ketvoice.';
+  } else {
+    heading = title || (kind === 'album' ? 'Album partagé' : 'Lecture partagée');
+    tagText = kind === 'album' ? '/album' : '/titre';
+    badge = kind === 'album' ? 'Album partagé' : 'Titre partagé';
+    $('artist').textContent = artist;
+    if (kind === 'album') $('note').textContent = 'Si l\'album ne s\'ouvre pas, installez l\'application puis retapez le lien.';
+  }
+  $('title').textContent = heading;
+  $('kind-tag').textContent = tagText;
+  $('badge-text').textContent = badge;
+  document.title = (title && !together ? title + ' — ' : together ? 'Ketogether — ' : listName ? listName + ' — ' : '') + 'Ketvoice';
+  $('art').setAttribute('aria-label', together ? 'Session Ketogether' : 'Pochette' + (title ? ' de ' + title : ''));
+
+  /* ---------- la pochette : paramètre cover, sinon la vignette YouTube du titre ---------- */
+  var img = $('cover'), ambient = $('ambient');
+  var candidates = [];
+  if (/^https:\/\//i.test(cover)) candidates.push(cover);
+  if (!together && kind !== 'album' && /^[A-Za-z0-9_-]{11}$/.test(track)) {
+    candidates.push('https://i.ytimg.com/vi/' + track + '/maxresdefault.jpg', 'https://i.ytimg.com/vi/' + track + '/hqdefault.jpg');
+  }
+  function nextCover() {
+    var src = candidates.shift();
+    if (!src) { img.hidden = true; return; }
+    img.hidden = false;
+    img.src = src;
+  }
+  img.addEventListener('load', function () {
+    // YouTube répond par une image grise de 120 px quand la grande vignette n'existe pas.
+    if (img.naturalWidth && img.naturalWidth <= 120 && candidates.length) { nextCover(); return; }
+    img.alt = title ? 'Pochette de ' + title + (artist ? ' — ' + artist : '') : '';
+    img.classList.add('ready');
+    ambient.style.backgroundImage = 'url("' + img.src.replace(/"/g, '%22') + '")';
+    ambient.classList.add('on');
+  });
+  img.addEventListener('error', nextCover);
+  nextCover();
+
+  /* ---------- le téléchargement : l'APK de la dernière version stable ---------- */
+  var quest = /Quest|Oculus/i.test(navigator.userAgent);
+  fetch('https://api.github.com/repos/Tysnnn23/Ketvoice/releases/latest', { headers: { Accept: 'application/vnd.github+json' } })
+    .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then(function (rel) {
+      var apks = (rel.assets || []).filter(function (a) { return /\.apk$/i.test(a.name || ''); });
+      var want = function (a) { return quest ? /quest/i.test(a.name) : !/quest|wear|(^|[^a-z])lite([^a-z]|$)/i.test(a.name); };
+      var pick = apks.filter(want);
+      var apk = pick.filter(function (a) { return /^Ketvoice-/i.test(a.name); })[0] || pick[0];
+      if (!apk) return;
+      $('download').href = apk.browser_download_url;
+      var v = String(rel.tag_name || '').replace(/^v/i, '');
+      $('dl-meta').textContent = (quest ? 'Quest · ' : '') + 'v' + v + (apk.size ? ' · ' + Math.round(apk.size / 1048576) + ' Mo' : '');
+    })
+    .catch(function () { /* le lien vers la dernière version reste */ });
+
+  /* ---------- paroles du moment : 1 ou 2 lignes, jamais le texte entier ---------- */
+  function showLines(a, b, time, fromLink) {
+    $('l1').textContent = a;
+    $('l2').textContent = b || '';
+    $('l2').hidden = !b;
+    $('lyrics-time').textContent = time != null ? 'à ' + clock(time) : '';
+    $('lyrics-src').hidden = !!fromLink;
+    $('lyrics').hidden = false;
+  }
+  function parseLrc(text) {
+    var out = [];
+    String(text || '').split(/\r?\n/).forEach(function (l) {
+      var m = l.match(/^\[(\d+):(\d+(?:\.\d+)?)\](.*)$/);
+      if (m) { var t = m[3].replace(/<\d+:\d+(?:\.\d+)?>/g, '').trim(); if (t) out.push({ t: Number(m[1]) * 60 + Number(m[2]), text: t }); }
+    });
+    return out;
+  }
+  var norm = function (s) { return s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim(); };
+  // Le moment choisi : l'instant du lien, sinon la ligne du lien, sinon le refrain (la ligne la plus reprise).
+  function pickMoment(lines) {
+    if (!lines.length) return -1;
+    var i;
+    if (at != null) { for (i = lines.length - 1; i >= 0; i--) if (lines[i].t <= at + 0.25) return i; return 0; }
+    if (sungLine) { var n = norm(sungLine); for (i = 0; i < lines.length; i++) if (norm(lines[i].text) === n) return i; }
+    var count = {}, best = -1, bestN = 1;
+    lines.forEach(function (l) { var k = norm(l.text); if (k.length > 3) count[k] = (count[k] || 0) + 1; });
+    for (i = 0; i < lines.length; i++) { var c = count[norm(lines[i].text)] || 0; if (c > bestN) { bestN = c; best = i; } }
+    if (best >= 0) return best;
+    return Math.floor(lines.length / 3);
+  }
+  function lyrics() {
+    if (together || kind === 'album' || playlist || collection || !title) return;
+    if (sungLine && at == null) showLines(sungLine, '', null, true);
+    var ctrl = 'AbortController' in window ? new AbortController() : null;
+    var timer = setTimeout(function () { if (ctrl) ctrl.abort(); }, 6000);
+    var base = 'https://lrclib.net/api/';
+    var qs = 'track_name=' + encodeURIComponent(title) + (artist ? '&artist_name=' + encodeURIComponent(artist) : '');
+    var opts = ctrl ? { signal: ctrl.signal } : {};
+    fetch(base + 'get?' + qs, opts)
+      .then(function (r) { return r.ok ? r.json() : fetch(base + 'search?' + qs, opts).then(function (s) { return s.ok ? s.json() : []; }).then(function (list) { return (list || []).filter(function (x) { return x && x.syncedLyrics; })[0] || null; }); })
+      .then(function (rec) {
+        clearTimeout(timer);
+        if (!rec || rec.instrumental || !rec.syncedLyrics) return;
+        var lines = parseLrc(rec.syncedLyrics), i = pickMoment(lines);
+        if (i < 0) return;
+        var next = lines[i + 1] && norm(lines[i + 1].text) !== norm(lines[i].text) ? lines[i + 1].text : '';
+        showLines(lines[i].text, next, lines[i].t, false);
+      })
+      .catch(function () { clearTimeout(timer); });
+  }
+  lyrics();
+
+  /* ---------- ouverture de l'app ---------- */
+  openApp.href = (playlist || collection) ? 'ketvoice://listen?' + (playlist ? 'playlist=' + encodeURIComponent(playlist) : 'collection=' + encodeURIComponent(collection)) + '&name=' + encodeURIComponent(listName) : appUrl();
+
+  if (playlist || collection) {
+    say('Ouvrez Ketvoice pour la retrouver, ou installez l\'application.');
+    return;
+  }
   if (!track) {
     showFallback('Ce lien de partage est incomplet.');
     return;
   }
   if (noredirect) {
-    showFallback('L\'application n\'a pas répondu.<br>Installez Ketvoice pour écouter ce morceau.');
+    showFallback(together ? 'L\'application n\'a pas répondu. Installez Ketvoice pour rejoindre la session.' : 'L\'application n\'a pas répondu. Installez Ketvoice pour écouter ' + (kind === 'album' ? 'cet album.' : 'ce morceau.'));
     return;
   }
-  // Bascule automatique : l'app installée ouvre le contenu ; sinon le navigateur
-  // revient sur cette page (noredirect=1) avec le bouton de téléchargement.
-  var fallback = location.origin + location.pathname +
-    '?track=' + encodeURIComponent(track) + '&title=' + encodeURIComponent(title) +
-    '&artist=' + encodeURIComponent(artist) + '&kind=' + encodeURIComponent(kind) +
-    '&noredirect=1';
-  var intent = 'intent://listen?track=' + encodeURIComponent(track) +
-    '&title=' + encodeURIComponent(title) + '&artist=' + encodeURIComponent(artist) +
-    '&kind=' + encodeURIComponent(kind) +
-    '#Intent;scheme=ketvoice;package=com.ketvoice.app;S.browser_fallback_url=' +
-    encodeURIComponent(fallback) + ';end';
-  status.innerHTML = '<div class="spinner"></div>Ouverture de Ketvoice…';
+  // L'app n'existe que sur Android et Meta Quest : ailleurs, la page reste affichée telle quelle.
+  if (!/Android|Quest|Oculus/i.test(navigator.userAgent)) {
+    say('Ketvoice est une app Android et Meta Quest : ouvrez ce lien sur votre téléphone ou installez l\'app.');
+    return;
+  }
+  say('Ouverture de Ketvoice…', true);
   setTimeout(function () {
-    window.location.replace(intent);
+    window.location.replace(intentUrl());
   }, 350);
   // Si la bascule n'a pas eu lieu (app absente), Chrome a suivi le fallback.
   setTimeout(function () {
-    if (!document.hidden) showFallback('L\'application n\'a pas répondu.<br>Installez Ketvoice pour écouter ce morceau.');
+    if (!document.hidden) showFallback(together ? 'L\'application n\'a pas répondu. Installez Ketvoice pour rejoindre la session.' : 'L\'application n\'a pas répondu. Installez Ketvoice pour écouter ' + (kind === 'album' ? 'cet album.' : 'ce morceau.'));
   }, 2600);
 })();
 </script>
