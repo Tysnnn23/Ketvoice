@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android Auto (phones only: Quest has no car to project to). -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <!-- The playback service is a media library: cars, Automotive and other media browsers can list and search it. -->
+        <service android:name=".player.PlaybackService">
+            <intent-filter>
+                <action android:name="androidx.media3.session.MediaLibraryService" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.media.browse.MediaBrowserService" />
+            </intent-filter>
+        </service>
+
+        <!-- Covers for the car's screens: read-only, signed URIs handed out by the library (AutoArtwork). -->
+        <provider
+            android:name=".player.AutoArtworkProvider"
+            android:authorities="${applicationId}.autoart"
+            android:exported="true" />
+
+        <meta-data
+            android:name="com.google.android.gms.car.application"
+            android:resource="@xml/automotive_app_desc" />
+    </application>
+</manifest>
