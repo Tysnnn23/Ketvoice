@@ -730,7 +730,7 @@ private fun Controls(state: EditorState, plan: MixPlan) {
     }
 
     Spacer(Modifier.height(22.dp))
-    val playing = Player.state.value.current?.id == state.from.id
+    val playing = Player.state.collectAsState().value.current?.id == state.from.id
     val nextMatches = Player.automixNext()?.track?.id == state.into.track.id
     val canPreview = state.pair && playing && nextMatches && AppSettings.automix.value && !AppSettings.bitPerfect.value && plan.mixes
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {

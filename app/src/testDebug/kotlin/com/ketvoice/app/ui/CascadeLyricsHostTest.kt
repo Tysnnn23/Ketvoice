@@ -52,11 +52,9 @@ class CascadeLyricsHostTest {
         AppSettings.languageChosen.value = true
         AppSettings.language.value = com.ketvoice.app.data.AppLanguage.FRENCH.label
         AppSettings.reduceAnimations.value = false
-        AppSettings.blurInactiveLyrics.value = false
     }
     @After fun reset() {
         AppSettings.reduceAnimations.value = false
-        AppSettings.blurInactiveLyrics.value = true
         lyrics.value = LyricsRepo.State()
         position.value = 0L
     }

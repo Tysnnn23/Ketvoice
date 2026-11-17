@@ -37,7 +37,7 @@ import java.io.File
 
 /**
  * Glowing lyrics (6.0.0, after Apple Music) on the host: the cover's mesh behind the lyrics page and the
- * halo of a word as it is sung, both plain with reduced motion and in the performance mode.
+ * glow of a held note only (6.1: no halo, no blur on the words).
  * Software renders under build/host-ui-preview; not a device GPU result.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -100,23 +100,16 @@ class GlowingLyricsHostTest {
         } }
     }
 
-    @Test fun aSungWordLightsAHaloThatTheCalmModesLeaveOut() {
-        position.value = 2_000L
+    @Test fun aShortSungWordHasNoHaloNorBlur() {
+        // 6.1 (owner: « supprime tout effet de blur sur les paroles sauf quand une note est maintenue »):
+        // the words of « Lumière du » are short, so the line draws the same with or without the effects.
+        position.value = 700L
         karaoke()
         compose.mainClock.advanceTimeBy(600)
-        val glowing = light(image("halo-sung"))
+        val normal = light(image("short-word-sung"))
         compose.runOnIdle { AppSettings.highPerformanceMode.value = true }
         compose.mainClock.advanceTimeBy(600)
-        val performance = light(image("halo-performance-mode"))
-        // Faint since 6.0.0 Beta 5 (owner): still there, a fraction of a percent of light.
-        assertTrue("the halo adds light around the sung word ($glowing vs $performance)", glowing > performance * 1.001)
-        // Before the line is sung, there is no halo at all: both modes draw the same line.
-        compose.runOnIdle { AppSettings.highPerformanceMode.value = false; position.value = 0L }
-        compose.mainClock.advanceTimeBy(600)
-        val before = light(image("halo-before"))
-        compose.runOnIdle { AppSettings.highPerformanceMode.value = true }
-        compose.mainClock.advanceTimeBy(600)
-        assertEquals(before.toDouble(), light(image("halo-before-performance")).toDouble(), before * .002)
+        assertEquals(normal.toDouble(), light(image("short-word-performance")).toDouble(), normal * .002)
     }
 
     @Test fun reducedMotionDrawsThePlainWords() {
@@ -131,19 +124,12 @@ class GlowingLyricsHostTest {
         assertTrue(light(image("halo-motion")) > reduced)
     }
 
-    @Test fun haloRisesWithTheWordAndIsGoneWhenItEnds() {
-        assertEquals(0f, LyricsWords.halo(-1, 0, 500), 0f)
-        assertEquals(0f, LyricsWords.halo(Long.MIN_VALUE, 0, 500), 0f)
-        assertTrue(LyricsWords.halo(20, 0, 500) in 0.01f..0.5f)
-        val sung = LyricsWords.halo(250, 0, 500)
-        assertEquals(.72f, LyricsWords.halo(150, 0, 300), .01f)
-        assertEquals(.72f + .28f * 200f / 900f, sung, .01f)
-        assertTrue("a held note shines more", LyricsWords.halo(800, 0, 1_600) > sung)
-        assertTrue("it eases off at the end of the word", LyricsWords.halo(480, 0, 500) < sung)
-        // 6.0.0 Beta 5 (owner): no light lingers once the word is sung, at the end of a line or anywhere.
-        assertEquals(0f, LyricsWords.halo(500, 0, 500), 0f)
-        assertEquals(0f, LyricsWords.halo(650, 0, 500), 0f)
-        assertTrue("much fainter than before", LyricsWords.HALO_ALPHA <= .12f)
+    @Test fun onlyAHeldNoteGlows() {
+        assertEquals("a short word never glows", 0f, LyricsWords.glow(.5f, 600), 0f)
+        assertEquals(0f, LyricsWords.glow(0f, 2_000), 0f)
+        assertEquals("gone once the note is over", 0f, LyricsWords.glow(1f, 2_000), 0f)
+        assertTrue("a held note glows in its middle", LyricsWords.glow(.5f, 2_000) > .5f)
+        assertTrue(LyricsWords.glow(.5f, 2_000) > LyricsWords.glow(.1f, 2_000))
     }
 
     private fun mesh(visible: Boolean) {

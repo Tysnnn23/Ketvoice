@@ -316,8 +316,8 @@ fun AppRoot() {
                             // et rejoint la rangée de navigation (accueil + recherche
                             // interposés). On remonte → retour à la présentation pleine.
                             FloatingChrome(
-                                // Optional since 6.0.0 (Settings → Appearance), off by default: the bar stays whole.
-                                collapsed = com.ketvoice.app.ui.chrome.ChromeCollapse.folded(AppSettings.collapsingTabBar.value,
+                                // Always on since 6.1 (owner): the bar folds into a pill and the mini-player docks beside it.
+                                collapsed = com.ketvoice.app.ui.chrome.ChromeCollapse.folded(AppSettings.dockingTabBar,
                                     AppUi.bottomCollapsed.value, AppUi.overlay.value),
                                 onOpenPlayer = { AppUi.showPlayer.value = true },
                                 searching = floatingSearch,

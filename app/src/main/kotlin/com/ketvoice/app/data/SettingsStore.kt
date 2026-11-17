@@ -69,7 +69,6 @@ object SettingsStore {
         s.artistPhotos.value = p.getBoolean("artistPhotos", true)
         s.highRefreshRate.value = p.getBoolean("highRefreshRate", false)
         s.syncedLyrics.value = p.getBoolean("syncedLyrics", s.syncedLyrics.value)
-        s.blurInactiveLyrics.value = p.getBoolean("blurInactiveLyrics", s.blurInactiveLyrics.value)
         // "automix" was the switch of the AutoMix retired in 3.10: it stays retired and never turns this one on.
         s.automix.value = p.getBoolean("automixOn", s.automix.value)
         s.automixIntensity.value = p.getInt("automixIntensity", s.automixIntensity.value).coerceIn(0, 2)
@@ -109,7 +108,6 @@ object SettingsStore {
         s.shareNowPlaying.value = p.getBoolean("shareNowPlaying", false)
         s.haptics.value = p.getBoolean("haptics", true)
         s.meshBackground.value = p.getBoolean("meshBackground", true)
-        s.collapsingTabBar.value = p.getBoolean("collapsingTabBar", false)
         s.coverTintedGlass.value = p.getBoolean("coverTintedGlass", true)
         s.equalizerGains.value = com.ketvoice.app.player.EqualizerProfile.normalize(
             p.getString("equalizerGains", "").orEmpty().split(',').mapNotNull { it.toIntOrNull() })
@@ -213,7 +211,6 @@ object SettingsStore {
             .putBoolean("artistPhotos", s.artistPhotos.value)
             .putBoolean("highRefreshRate", s.highRefreshRate.value)
             .putBoolean("syncedLyrics", s.syncedLyrics.value)
-            .putBoolean("blurInactiveLyrics", s.blurInactiveLyrics.value)
             .putBoolean("automixOn", s.automix.value)
             .putInt("automixIntensity", s.automixIntensity.value)
             .putBoolean("automixAlbums", s.automixAlbums.value)
@@ -241,7 +238,6 @@ object SettingsStore {
             .putBoolean("shareNowPlaying", s.shareNowPlaying.value)
             .putBoolean("haptics", s.haptics.value)
             .putBoolean("meshBackground", s.meshBackground.value)
-            .putBoolean("collapsingTabBar", s.collapsingTabBar.value)
             .putBoolean("coverTintedGlass", s.coverTintedGlass.value)
             .putString("equalizerGains", s.equalizerGains.value.joinToString(","))
             .putBoolean("wifiHandoffEnabled", s.wifiHandoffEnabled.value)

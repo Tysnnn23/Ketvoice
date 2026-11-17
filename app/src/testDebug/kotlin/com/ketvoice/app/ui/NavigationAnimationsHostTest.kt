@@ -87,7 +87,6 @@ class NavigationAnimationsHostTest {
     @After fun reset() {
         AppSettings.glassStyle.value = 0
         AppSettings.reduceAnimations.value = false
-        AppSettings.collapsingTabBar.value = false
         AppUi.closeOverlays()
         AppUi.selectTab(AppUi.HOME)
         FloatingSearch.query.value = ""
@@ -130,34 +129,23 @@ class NavigationAnimationsHostTest {
         } }
     }
 
-    @Test fun theFoldingTabBarIsAStoredBackedUpSettingOffByDefault() {
+    @Test fun theFoldingTabBarIsAlwaysOnAndNoLongerASetting() {
         val context = ApplicationProvider.getApplicationContext<Context>()
-        val prefs = context.getSharedPreferences("ketvoice_settings", Context.MODE_PRIVATE)
-        prefs.edit().remove("collapsingTabBar").commit()
-        SettingsStore.load(context)
-        assertFalse("off by default (owner: optional in the settings)", AppSettings.collapsingTabBar.value)
-        try {
-            AppSettings.collapsingTabBar.value = true
-            SettingsStore.save()
-            AppSettings.collapsingTabBar.value = false
-            SettingsStore.load(context)
-            assertTrue(AppSettings.collapsingTabBar.value)
-            assertEquals(true, PersonalBackup.collect(context).settings["collapsingTabBar"])
-        } finally {
-            AppSettings.collapsingTabBar.value = false
-            SettingsStore.save()
-        }
-        // Off, scrolling never folds the bar; on, only a tab page does.
-        assertFalse(ChromeCollapse.folded(enabled = false, scrolledDown = true, overlay = AppUi.NONE))
+        // 6.1 (owner: « le nav bar dock il doit etre par defaut non desactivable »): on for phones and tablets,
+        // nothing stored or backed up any more.
+        assertEquals(!com.ketvoice.app.BuildConfig.IS_QUEST, AppSettings.dockingTabBar)
+        SettingsStore.save()
+        assertFalse(context.getSharedPreferences("ketvoice_settings", Context.MODE_PRIVATE).contains("collapsingTabBar"))
+        assertFalse(PersonalBackup.collect(context).settings.containsKey("collapsingTabBar"))
+        // Scrolling down folds the bar on a tab page only.
         assertTrue(ChromeCollapse.folded(enabled = true, scrolledDown = true, overlay = AppUi.NONE))
         assertFalse(ChromeCollapse.folded(enabled = true, scrolledDown = true, overlay = AppUi.CATALOG))
         assertFalse(ChromeCollapse.folded(enabled = true, scrolledDown = false, overlay = AppUi.NONE))
     }
 
     @Test fun aTouchOnTheFoldedPillUnfoldsItAndTheNextFoldNeedsANewScroll() {
-        AppSettings.collapsingTabBar.value = true
         AppUi.bottomCollapsed.value = true
-        chrome { ChromeCollapse.folded(AppSettings.collapsingTabBar.value, AppUi.bottomCollapsed.value, AppUi.overlay.value) }
+        chrome { ChromeCollapse.folded(true, AppUi.bottomCollapsed.value, AppUi.overlay.value) }
         compose.mainClock.advanceTimeBy(1_500)
         // The folded pill shows the tab you are on, the mini-player docked beside it keeps its title.
         compose.onNodeWithTag("folded-tab-pill").assertIsDisplayed()

@@ -42,8 +42,6 @@ import com.ketvoice.app.ui.common.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
-import androidx.compose.ui.draw.BlurredEdgeTreatment
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
@@ -229,18 +227,8 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
                             val current = index == active
                             val below = index > active
                             val distance = if (active < 0) 1 else abs(index - active)
-                            // Progressive blur: sung lines stay slightly soft, upcoming
-                            // lines sharpen to the active one, then soften again the
-                            // further down they are.
-                            // A blur per line is a layer per line: the performance mode keeps the lines sharp.
-                            val blur = if (reduced || !AppSettings.blurInactiveLyrics.value || AppSettings.highPerformanceMode.value || current || !lyrics.isTimed) 0.dp
-                                else if (below) when (distance) {
-                                    1 -> 0.dp
-                                    2 -> .5.dp
-                                    3 -> 1.dp
-                                    4 -> 1.5.dp
-                                    else -> 2.dp
-                                } else if (distance <= 1) .3.dp else .8.dp
+                            // 6.1 (owner, 2026-11-17: « supprime tout effet de blur sur les paroles sauf quand une note
+                            // est maintenue »): no line is blurred any more; only a held note glows (see LyricsWords.glow).
                             val entry = remember(index, track.id, lyrics.lines) { Animatable(if (index in revealed || reduced) 1f else 0f) }
                             LaunchedEffect(index, reduced, revealed) {
                                 if (reduced || !revealed.add(index)) entry.snapTo(1f)
@@ -259,7 +247,6 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
                                 animationSpec = tween(Motion.duration(320)),
                                 label = "lyricColor"
                             )
-                            val lineBlur by animateDpAsState(blur, tween(Motion.duration(320)), label = "lyricBlur")
                             // Cascade, the only lyrics style: the sung line alone stands forward; the others step
                             // back a little and catch up in a wave, each a few milliseconds after the one above.
                             // With reduced motion the lines keep their size and place: only their colour changes.
@@ -298,7 +285,7 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
                                 }
                             ) {
                                 val nearActive = active < 0 || abs(index - active) <= 1
-                                LyricVoices(line, current, lyrics.isTimed, fontScale, lineColor, lineBlur, nearActive)
+                                LyricVoices(line, current, lyrics.isTimed, fontScale, lineColor, nearActive = nearActive)
 
                                 AnimatedVisibility(
                                     visible = translationEnabled && translated[index] != null && (current || !lyrics.isTimed),
@@ -450,8 +437,7 @@ private fun MomentBar(track: Track, lines: List<MusicApi.LyricLine>, nextMs: Lon
 
 @Composable
 internal fun LyricVoices(line: MusicApi.LyricLine, active: Boolean, timed: Boolean, fontScale: Float = 1f,
-                         color: Color = Color.White, blur: androidx.compose.ui.unit.Dp = 0.dp,
-                         nearActive: Boolean = true) {
+                         color: Color = Color.White, nearActive: Boolean = true) {
     val voices = remember(line) { LyricsPresentation.split(line) }
     // Only the active line and its immediate neighbours need the transport clock.
     // This keeps the other visible lines cheap while still letting an unfinished
@@ -471,7 +457,7 @@ internal fun LyricVoices(line: MusicApi.LyricLine, active: Boolean, timed: Boole
             else Text(voices.lead.text, localize = false, color = color,
                 fontSize = (33f * fontScale).sp, lineHeight = (41f * fontScale).sp,
                 letterSpacing = (-.3).sp, fontWeight = FontWeight.Black,
-                modifier = Modifier.fillMaxWidth().blur(blur, BlurredEdgeTreatment.Unbounded))
+                modifier = Modifier.fillMaxWidth())
         }
         val leadStart = voices.lead.words.minOfOrNull { it.startMs } ?: line.timeMs
         voices.backs.forEach { back ->
@@ -561,10 +547,6 @@ internal fun KaraokeLine(line: MusicApi.LyricLine, modifier: Modifier, fontScale
     // does not cover the line's letters, the line keeps the flat drawing so that nothing disappears.
     val pendingAlpha = if (backing) .36f else if (dim) .30f else .40f
     val lifting = remember(line, alignedWords) { !Motion.reduced && LyricsWords.covers(line.text, alignedWords.map { it.text }) }
-    // 6.0.0, glowing lyrics: a soft halo of light around each word the moment it is sung. Drawn on the
-    // same canvas (no layer, no blur pass); reduced motion and the performance mode keep the plain words.
-    val haloOn = lifting && !AppSettings.highPerformanceMode.value
-    val haloScale = if (backing) .7f else if (dim) .55f else 1f
     Box(modifier) {
         // One shaped layout for both the pending glyphs and the sung overlay.
         // No remeasurement, shifted word copy, scaling or disappearing held glyph.
@@ -578,28 +560,6 @@ internal fun KaraokeLine(line: MusicApi.LyricLine, modifier: Modifier, fontScale
             val measured = layout ?: return@Canvas
             val now = LyricsOffsets.adjustedPosition(clock.longValue, offset)
             val liftPx = LyricsWords.LIFT_DP.dp.toPx()
-            val haloSpread = LyricsWords.HALO_SPREAD_DP.dp.toPx() * fontScale
-            // The halos first, under every word, so that a word's light never covers its neighbour's letters.
-            if (haloOn) masks.forEach { word ->
-                val halo = LyricsWords.halo(now, word.start, word.end) * haloScale
-                if (halo > .01f) {
-                    val progress = segmentProgress(now, word.start, word.end)
-                    val rise = LyricsWords.lift(progress) * liftPx
-                    // The light follows the voice: it covers the part of the word already sung.
-                    var remaining = word.width * progress
-                    translate(top = -rise) {
-                        word.slices.forEach { slice ->
-                            val bounds = slice.bounds
-                            val fill = remaining.coerceIn(0f, bounds.width)
-                            remaining -= bounds.width
-                            if (fill > 0f) drawWordHalo(
-                                if (slice.rtl) androidx.compose.ui.geometry.Rect(bounds.right - fill, bounds.top, bounds.right, bounds.bottom)
-                                else androidx.compose.ui.geometry.Rect(bounds.left, bounds.top, bounds.left + fill, bounds.bottom),
-                                halo, haloSpread)
-                        }
-                    }
-                }
-            }
             masks.forEach { word ->
                 val progress = segmentProgress(now, word.start, word.end)
                 val ink = Color.White.copy(alpha = if (dim) .82f else 1f)
@@ -620,7 +580,7 @@ internal fun KaraokeLine(line: MusicApi.LyricLine, modifier: Modifier, fontScale
                                     clipPath(slice.path) {
                                         clipRect(left, bounds.top, right, bounds.bottom) {
                                             drawText(measured, color = ink, shadow = if (glow > .01f) androidx.compose.ui.graphics.Shadow(
-                                                Color.White.copy(alpha = .55f * glow), blurRadius = 18f * glow) else null)
+                                                Color.White.copy(alpha = .42f * glow), blurRadius = 14f * glow) else null)
                                         }
                                     }
                                 }
@@ -647,27 +607,6 @@ internal fun KaraokeLine(line: MusicApi.LyricLine, modifier: Modifier, fontScale
                 }
             }
         }
-    }
-}
-
-/**
- * A soft light behind a sung word: an ellipse a little wider than the word, brightest at its centre and
- * fading to nothing at its edge, so the halo has no outline (one gradient fill, no blur layer).
- */
-private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawWordHalo(
-    bounds: androidx.compose.ui.geometry.Rect, strength: Float, spreadPx: Float
-) {
-    if (bounds.isEmpty || !(strength > 0f)) return
-    val radiusY = bounds.height / 2f + spreadPx * .5f
-    val radiusX = bounds.width / 2f + spreadPx
-    val centre = bounds.center
-    val peak = LyricsWords.HALO_ALPHA * strength.coerceIn(0f, 1f)
-    withTransform({ scale(radiusX / radiusY, 1f, centre) }) {
-        drawCircle(Brush.radialGradient(
-            0f to Color.White.copy(alpha = peak),
-            .5f to Color.White.copy(alpha = peak * .45f),
-            1f to Color.Transparent,
-            center = centre, radius = radiusY), radius = radiusY, center = centre)
     }
 }
 
@@ -878,30 +817,6 @@ internal object LyricsWords {
         return kotlin.math.sin(progress * Math.PI).toFloat() * strength
     }
 
-    /**
-     * The halo of a sung word (6.0.0): how bright at its centre, and how far it reaches past the word, in dp.
-     * 6.0.0 Beta 5 (owner: « rends l'effet halo beaucoup moins visible »): a third of its first brightness, closer to the word.
-     */
-    const val HALO_ALPHA = .11f
-    const val HALO_SPREAD_DP = 9f
-    /** The halo rises in this time as the word starts… */
-    const val HALO_ATTACK_MS = 90L
-    /** …and is gone the moment the word ends: no light lingers at the end of a line (owner, 6.0.0 Beta 5). */
-    const val HALO_RELEASE_MS = 0L
-
-    /**
-     * How bright the halo of a word sung from [start] to [end] is at [now] (0..1): it lights up as the
-     * word starts, stays while it is sung and is gone once it ends; held notes shine a little more.
-     */
-    fun halo(now: Long, start: Long, end: Long): Float {
-        if (now == Long.MIN_VALUE || now < start || now >= end) return 0f
-        val rise = ((now - start).toFloat() / HALO_ATTACK_MS).coerceIn(0f, 1f).let { it * it * (3f - 2f * it) }
-        // It eases off over the last fifth of the word, so that it never stops on a bright light.
-        val left = end - now
-        val tail = ((left.toFloat() / ((end - start) * .2f).coerceAtLeast(1f))).coerceIn(0f, 1f)
-        val held = ((end - start - 300L).toFloat() / 900f).coerceIn(0f, 1f)
-        return rise * tail * (.72f + .28f * held)
-    }
 
     /** True when the words, joined, hold every visible letter of the line (so drawing words alone loses nothing). */
     fun covers(line: String, words: List<String>): Boolean {

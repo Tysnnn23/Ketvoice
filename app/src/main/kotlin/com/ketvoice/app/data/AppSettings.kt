@@ -64,7 +64,6 @@ object AppSettings {
     val artistPhotos = mutableStateOf(true)
     val highRefreshRate = mutableStateOf(false)
     val syncedLyrics = mutableStateOf(true)
-    val blurInactiveLyrics = mutableStateOf(true)
     /** Titles are mixed into each other at the end, like a DJ; off by default. */
     val automix = mutableStateOf(false)
     /** 0 = discreet, 1 = balanced, 2 = DJ. */
@@ -113,9 +112,10 @@ object AppSettings {
     val meshBackground = mutableStateOf(true)
     /**
      * When a page scrolls down, the tab bar shrinks into a pill and the mini-player docks beside it
-     * (Apple Music on iOS 26); scrolling up or a touch restores it. Owner, 2026-11-16: optional, off by default.
+     * (Apple Music on iOS 26). Optional in 6.0.0; since 6.1 (owner, 2026-11-17: « le nav bar dock il doit etre
+     * par defaut non desactivable ») always on for phones and tablets: the `collapsingTabBar` key is retired.
      */
-    val collapsingTabBar = mutableStateOf(false)
+    val dockingTabBar: Boolean get() = !com.ketvoice.app.BuildConfig.IS_QUEST
     /** The dominant cover colour lightly tints the optical glass. */
     val coverTintedGlass = mutableStateOf(true)
     /** Opt-in: the website's "Listening now" shows the title, artist and cover. The count itself is anonymous. */
