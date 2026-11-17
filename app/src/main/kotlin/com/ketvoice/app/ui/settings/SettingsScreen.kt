@@ -258,6 +258,10 @@ fun SettingsScreen() {
                     "Avec le thème Vice City, les pages gardent ses couleurs ; la pochette colore toujours le lecteur et le verre.",
                     color = th.secondary, fontSize = 13.sp, lineHeight = 18.sp,
                     modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 10.dp).testTag("vicecity-cover-note"))
+                else if (com.ketvoice.app.data.Seasons.inEffect() != null) Text(
+                    "Avec un thème saisonnier, les pages gardent ses couleurs ; la pochette colore toujours le lecteur et le verre.",
+                    color = th.secondary, fontSize = 13.sp, lineHeight = 18.sp,
+                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 10.dp).testTag("season-cover-note"))
                 SToggle(KetIcons.Appearance, "Verre teinté par la pochette",
                     "La couleur dominante de la pochette colore légèrement le verre, sans réduire la lisibilité",
                     AppSettings.coverTintedGlass.value) { AppSettings.coverTintedGlass.value = it; SettingsStore.save() }
@@ -269,8 +273,10 @@ fun SettingsScreen() {
                     AppSettings.albumColors.value) { AppSettings.albumColors.value = it; SettingsStore.save() }
             }
             Section("APPARENCE") {
-                // The Vice City limited edition (6.1): offered until 10 December, then gone from here.
-                if (com.ketvoice.app.data.ViceCityEdition.themeAvailable()) ViceCityThemeRow()
+                // The seasonal theme of the moment (the Vice City edition, 6.1; the others, 6.2): here only while it lasts.
+                com.ketvoice.app.data.Seasons.active()?.let { season ->
+                    if (season.ownWelcome) ViceCityThemeRow() else SeasonThemeRow(season)
+                }
                 SToggle(KetIcons.Info, "Stats info", "Informations audio réelles, uniquement dans le lecteur", AppSettings.techStats.value) {
                     AppSettings.techStats.value = it; SettingsStore.save()
                 }
@@ -321,6 +327,7 @@ fun SettingsScreen() {
                 SRow(
                     KetIcons.Moon, "Thème",
                     sub = if (com.ketvoice.app.data.ViceCityEdition.themeOn) "Le thème Vice City est sombre ; votre choix revient quand il est désactivé"
+                        else if (com.ketvoice.app.data.Seasons.inEffect() != null) "Le thème saisonnier est sombre ; votre choix revient quand il est désactivé"
                         else "S'applique immédiatement à toute l'app",
                     value = themeLabel(AppSettings.themeMode.value)
                 ) {
@@ -340,6 +347,7 @@ fun SettingsScreen() {
                 SRow(
                     KetIcons.Appearance, "Couleur d'accent",
                     sub = if (com.ketvoice.app.data.ViceCityEdition.themeOn) "Le rose Vice City la remplace tant que le thème est activé"
+                        else if (com.ketvoice.app.data.Seasons.inEffect() != null) "La couleur du thème saisonnier la remplace tant qu'il est activé"
                         else "Barre de lecture, scrub, boutons et progression",
                     value = accentLabel(AppSettings.accentArgb.value)
                 ) { accentOpen = true }
@@ -1172,6 +1180,33 @@ private fun ColumnScope.ViceCityThemeRow() {
         com.ketvoice.app.ui.vicecity.ViceCityPreview(Modifier.padding(top = 12.dp))
         Text("Nuit violette, coucher de soleil rose et orange, néon discret. Votre thème et votre couleur d'accent reviennent quand vous le désactivez.",
             color = th.secondary, fontSize = 13.sp, lineHeight = 18.sp, modifier = Modifier.padding(top = 10.dp))
+    }
+    SettingsCellDivider()
+}
+
+/**
+ * A seasonal theme (6.2) while its window lasts: the switch, its emblem and a small picture of it. Like Vice City,
+ * it lays its own look over the listener's theme, accent and colours, which come back when it is turned off.
+ */
+@Composable
+private fun ColumnScope.SeasonThemeRow(season: com.ketvoice.app.data.SeasonalTheme) {
+    val th = LocalTheme.current
+    val look = com.ketvoice.app.ui.seasons.SeasonLooks.of(season.id) ?: return
+    val tick = com.ketvoice.app.ui.motion.rememberHaptics()
+    val on = com.ketvoice.app.data.Seasons.chosen(season)
+    Column(Modifier.fillMaxWidth().toggleable(on, role = Role.Switch, onValueChange = {
+            tick(com.ketvoice.app.ui.motion.Haptics.Kind.Tick); com.ketvoice.app.data.Seasons.choose(season, it); SettingsStore.save()
+        }).padding(horizontal = 16.dp, vertical = 12.dp).testTag("season-theme-row")) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            look.Emblem(Ket27.Metrics.tile, Modifier)
+            Column(Modifier.weight(1f).padding(start = 12.dp, end = 14.dp)) {
+                Text(season.title, color = th.onBackground, fontSize = 17.sp, lineHeight = 22.sp)
+                Text(season.until, color = th.secondary, fontSize = 13.sp, lineHeight = 18.sp, modifier = Modifier.padding(top = 3.dp))
+            }
+            com.ketvoice.app.ui.common.LiquidGlassSwitch(on, onCheckedChange = null)
+        }
+        look.Preview(Modifier.padding(top = 12.dp), 92.dp)
+        Text(season.description, color = th.secondary, fontSize = 13.sp, lineHeight = 18.sp, modifier = Modifier.padding(top = 10.dp))
     }
     SettingsCellDivider()
 }

@@ -103,8 +103,8 @@ fun HomeScreen() {
             .collect { (index, offset) -> AppUi.bottomCollapsed.value = fold.update(index, offset) }
     }
     Box(Modifier.fillMaxSize().pageBackground(theme)) {
-        // Vice City (6.1): palms frame the sunset behind the greeting and leave with it.
-        if (theme.viceCity) com.ketvoice.app.ui.vicecity.ViceCityPalms(fade = {
+        // A seasonal theme (Vice City's palms, 6.1; the others' decor, 6.2) frames the glow behind the greeting and leaves with it.
+        theme.season?.HomeDecor(Modifier, fade = {
             if (state.firstVisibleItemIndex > 0) 1f else state.firstVisibleItemScrollOffset / handover.coerceAtLeast(1f) })
         LazyColumn(state = state, modifier = Modifier.fillMaxSize().statusBarsPadding().testTag("home-list"),
             contentPadding = PaddingValues(top = if (layout.hasRail) 24.dp else 12.dp, bottom = layout.bottomPaddingDp.dp)) {

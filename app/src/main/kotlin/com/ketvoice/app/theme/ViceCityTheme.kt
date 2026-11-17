@@ -1,26 +1,12 @@
 package com.ketvoice.app.theme
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.draw.drawWithCache
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.unit.dp
-import com.ketvoice.app.data.AppSettings
-import kotlin.math.PI
-import kotlin.math.cos
-import kotlin.math.max
-import kotlin.math.min
-import kotlin.math.sin
+import androidx.compose.ui.unit.Dp
 
 /**
  * The look of the Vice City limited edition (6.1, until 10 December 2026; see `data/ViceCityEdition.kt`):
@@ -51,82 +37,47 @@ object ViceCityTheme {
         val ink = Color(0xFF140A22)
     }
 
-    fun theme(): KetTheme = KetTheme(
-        isDark = true, background = Colors.night, onBackground = Color.White, secondary = Colors.secondary,
-        card = Colors.card, hairline = Colors.hairline, accent = Colors.accent, viceCity = true)
+    const val ID = "vicecity"
+
+    /** The edition's look in the seasonal registry (6.2): the glows and edge below, with its palms and K. */
+    val look: SeasonLook = object : SeasonLook(ID, SeasonPalette(
+        night = Colors.night, card = Colors.card, secondary = Colors.secondary, hairline = Colors.hairline,
+        accent = Colors.accent, core = Colors.magenta, mid = Colors.orange, far = Colors.violet, cool = Colors.cyan,
+        fill = listOf(Colors.magenta, Colors.accent, Colors.orange), ink = Colors.ink,
+        edge = listOf(Colors.magenta, Colors.orange, Colors.cyan))) {
+        override val edgeTint: Color get() = Colors.magenta
+        @Composable override fun HomeDecor(modifier: Modifier, fade: () -> Float) =
+            com.ketvoice.app.ui.vicecity.ViceCityPalms(modifier, fade)
+        @Composable override fun Emblem(size: Dp, modifier: Modifier) = com.ketvoice.app.ui.vicecity.ViceCityLogo(size, modifier)
+        @Composable override fun Preview(modifier: Modifier, height: Dp) = com.ketvoice.app.ui.vicecity.ViceCityPreview(modifier, height)
+    }
+
+    fun theme(): KetTheme = look.theme()
 
     /** The sunset of a filled button, left to right. */
-    val sunset: Brush get() = Brush.horizontalGradient(listOf(Colors.magenta, Colors.accent, Colors.orange))
+    val sunset: Brush get() = look.fill
 
     /** Where the glow is in its slow cycle, 0..1; set by [Pulse] at the root, read in the draw phase only. */
-    val phase = mutableFloatStateOf(.25f)
+    val phase get() = SeasonPulse.phase
 
     /** One breath of the glow. */
-    const val CYCLE_MS = 16_000L
+    const val CYCLE_MS = SeasonPulse.CYCLE_MS
     /** How often the glow moves: often enough to look continuous at its slow pace. */
-    fun stepMs(performance: Boolean): Long = if (performance) 500L else 100L
+    fun stepMs(performance: Boolean): Long = SeasonPulse.stepMs(performance)
 
-    /**
-     * Moves the glow while the theme is on and frames are drawn (it pauses with the app). Under reduced motion
-     * it stays where it is.
-     */
+    /** Moves the glow while the theme is on and frames are drawn (it pauses with the app); still under reduced motion. */
     @Composable
-    fun Pulse(reducedMotion: Boolean, performance: Boolean) {
-        LaunchedEffect(reducedMotion, performance) {
-            if (reducedMotion) return@LaunchedEffect
-            val step = stepMs(performance)
-            while (true) {
-                androidx.compose.runtime.withFrameMillis { now -> phase.floatValue = (now % CYCLE_MS) / CYCLE_MS.toFloat() }
-                kotlinx.coroutines.delay(step)
-            }
-        }
-    }
+    fun Pulse(reducedMotion: Boolean, performance: Boolean) = SeasonPulse.Pulse(reducedMotion, performance)
 
     /** The glow at the top of a page (see [pageBackground]). */
-    val glow: Modifier = Modifier.drawBehind { topGlow(phase.floatValue) }
+    val glow: Modifier get() = look.glow
 
     /** The sunset behind the top of a page: a magenta core turning orange, from just above the screen. */
-    fun DrawScope.topGlow(phase: Float) {
-        val turn = phase * 2f * PI.toFloat()
-        val drift = sin(turn)
-        val breath = .5f + .5f * cos(turn)
-        val w = size.width
-        val r = max(w * .95f, 360.dp.toPx())
-        val h = min(size.height, r)
-        drawRect(Brush.radialGradient(
-            0f to Colors.magenta.copy(alpha = .40f + .06f * breath),
-            .38f to Colors.orange.copy(alpha = .15f + .04f * breath),
-            .70f to Colors.violet.copy(alpha = .07f),
-            1f to Color.Transparent,
-            center = Offset(w * (.38f + .07f * drift), -r * .14f), radius = r), size = Size(w, h))
-        drawRect(Brush.radialGradient(
-            0f to Colors.cyan.copy(alpha = .12f + .03f * (1f - breath)), 1f to Color.Transparent,
-            center = Offset(w * (.98f - .05f * drift), -r * .04f), radius = r * .40f), size = Size(w, h))
-    }
+    fun DrawScope.topGlow(phase: Float) = with(look) { topGlow(phase) }
 
     /** The glow the glass tab bar floats over, rising from the bottom edge. */
-    fun DrawScope.bottomGlow(phase: Float) {
-        val turn = phase * 2f * PI.toFloat()
-        val w = size.width
-        val r = max(w * .75f, 300.dp.toPx())
-        drawRect(Brush.radialGradient(
-            0f to Colors.magenta.copy(alpha = .30f + .05f * cos(turn)),
-            .5f to Colors.violet.copy(alpha = .10f),
-            1f to Color.Transparent,
-            center = Offset(w * (.5f - .06f * sin(turn)), size.height + r * .35f), radius = r))
-    }
+    fun DrawScope.bottomGlow(phase: Float) = with(look) { bottomGlow(phase) }
 
     /** The edge of a selected tab or a main button, as a thin neon tube with a soft halo (the tube alone in the performance mode). */
-    fun Modifier.viceCityNeon(shape: Shape, on: Boolean): Modifier = if (!on) this else drawWithCache {
-        val outline = shape.createOutline(size, layoutDirection, this)
-        val tube = Brush.linearGradient(listOf(Colors.magenta, Colors.orange, Colors.cyan), Offset.Zero, Offset(size.width, size.height))
-        val halo = if (AppSettings.highPerformanceMode.value) emptyList()
-            else listOf(7.dp.toPx() to .05f, 4.dp.toPx() to .08f, 2.2.dp.toPx() to .14f)
-        val thin = Stroke(1.dp.toPx())
-        onDrawWithContent {
-            drawContent()
-            halo.forEach { (width, alpha) -> drawOutline(outline, Colors.magenta.copy(alpha = alpha), style = Stroke(width)) }
-            drawOutline(outline, tube, alpha = .9f, style = thin)
-        }
-    }
+    fun Modifier.viceCityNeon(shape: Shape, on: Boolean): Modifier = with(look) { seasonEdge(shape, on) }
 }

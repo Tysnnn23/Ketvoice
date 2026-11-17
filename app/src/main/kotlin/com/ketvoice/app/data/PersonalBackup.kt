@@ -54,6 +54,8 @@ internal object PersonalBackup {
     private fun setting(key: String, raw: Any?): Any? = when {
         // The Vice City edition (6.1) is saved and restored only while it lasts; turning it off always goes through.
         key == "viceCityTheme" -> (raw as? Boolean)?.takeIf { !it || ViceCityEdition.themeAvailable() }
+        // A season (6.2) is restored only while it lasts; turning it off always goes through.
+        key == "seasonTheme" -> (raw as? String)?.takeIf { Seasons.storable(it) }
         key == "appIconVariant" -> (raw as? Number)?.toInt()
             ?.takeIf { it in integers.getValue(key) && ViceCityEdition.iconAllowed(it) }
         key in booleans || key.startsWith("design212_") && DesignChoices.all.any { "design212_${it.code}" == key } -> raw as? Boolean

@@ -23,9 +23,12 @@ data class KetTheme(
     val hairline: Color,
     val accent: Color,
     val glassDefault: Boolean = true,
-    /** The Vice City limited-edition look is on (6.1, [ViceCityTheme]): its glows and neon edges are drawn. */
-    val viceCity: Boolean = false
+    /** A seasonal theme is on (6.2, [SeasonLook]; Vice City since 6.1): its glows, edges and decor are drawn. */
+    val season: SeasonLook? = null
 ) {
+    /** The Vice City limited-edition look is on (6.1, [ViceCityTheme]). */
+    val viceCity: Boolean get() = season?.id == ViceCityTheme.ID
+
     companion object {
         fun light() = KetTheme(
             isDark = false, background = Palette.BackgroundLight, onBackground = Palette.Black,
@@ -43,11 +46,11 @@ data class KetTheme(
 val LocalTheme = staticCompositionLocalOf<KetTheme> { KetTheme.light() }
 
 /**
- * The background of a page: the plain system background of Ket 27, light or dark; with the Vice City theme,
- * its night violet and the slow sunset glow at the top ([ViceCityTheme.glow]).
+ * The background of a page: the plain system background of Ket 27, light or dark; with a seasonal theme (Vice
+ * City, 6.1; the others, 6.2), its night and the slow glow at the top ([SeasonLook.glow]).
  */
 fun androidx.compose.ui.Modifier.pageBackground(theme: KetTheme): androidx.compose.ui.Modifier =
-    if (theme.viceCity) background(theme.background).then(ViceCityTheme.glow) else background(theme.background)
+    theme.season?.let { background(theme.background).then(it.glow) } ?: background(theme.background)
 
 /** The text styles of the app: each is the iOS text style that plays its part (Ket 27). */
 object T {
@@ -77,13 +80,16 @@ fun KetvoiceTheme(
      * player and the glass, not the pages; the listener's theme and accent are kept for when it ends.
      */
     viceCity: Boolean = false,
+    /** A seasonal theme (6.2): like Vice City, its own dark look and accent over the listener's choices. */
+    season: SeasonLook? = null,
     content: @Composable () -> Unit
 ) {
     val sysDark = isSystemInDarkTheme()
-    val isDark = viceCity || (useDark ?: sysDark)
+    val look = season ?: if (viceCity) ViceCityTheme.look else null
+    val isDark = look != null || (useDark ?: sysDark)
     val chosenAccent = dynamicAccent ?: Color(com.ketvoice.app.data.AppSettings.accentArgb.value.toInt())
     // Like an album page, the whole app takes the colour of what plays: the same tint, held dim at night.
-    val th = if (viceCity) ViceCityTheme.theme() else cover.apply(Ket27.theme(isDark, chosenAccent))
+    val th = look?.theme() ?: cover.apply(Ket27.theme(isDark, chosenAccent))
     val accent = th.accent
     androidx.compose.runtime.CompositionLocalProvider(
         LocalTheme provides th,

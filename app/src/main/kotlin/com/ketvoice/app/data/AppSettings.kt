@@ -161,4 +161,9 @@ object AppSettings {
      * It lays its own dark look over the listener's choices without changing them: read [ViceCityEdition.themeOn].
      */
     val viceCityTheme = mutableStateOf(false)
+    /**
+     * The seasonal theme chosen (6.2, [Seasons]): the id of an active season other than Vice City, or empty. Kept
+     * only while that season lasts; read [Seasons.inEffect].
+     */
+    val seasonTheme = mutableStateOf("")
 }

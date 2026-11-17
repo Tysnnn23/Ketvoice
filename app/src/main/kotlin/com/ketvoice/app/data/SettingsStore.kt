@@ -25,6 +25,8 @@ object SettingsStore {
     fun load(context: Context) {
         val p = context.applicationContext.getSharedPreferences(NAME, Context.MODE_PRIVATE)
         prefs = p
+        // A new install is told apart from an update before anything is written (6.2, the first-launch welcome).
+        runCatching { FirstRun.init(context, p) }
         val s = AppSettings
         DesignChoices.all.forEach { DesignChoices.set(it.code, p.getBoolean("design212_${it.code}", true)) }
 
@@ -165,9 +167,11 @@ object SettingsStore {
         s.bitPerfect.value = p.getBoolean("bitPerfect", false)
         s.appIconVariant.value = p.getInt("appIconVariant", s.appIconVariant.value).coerceIn(0, ViceCityEdition.ICON_VARIANT)
         s.viceCityTheme.value = p.getBoolean("viceCityTheme", false)
-        // The Vice City edition is over: its theme and icon go back to the listener's look, silently.
-        if (ViceCityEdition.expire()) p.edit()
+        s.seasonTheme.value = runCatching { p.getString("seasonTheme", "") }.getOrNull().orEmpty()
+        // The Vice City edition or a season is over: its theme and icon go back to the listener's look, silently.
+        if (Seasons.expire()) p.edit()
             .putBoolean("viceCityTheme", s.viceCityTheme.value)
+            .putString("seasonTheme", s.seasonTheme.value)
             .putInt("appIconVariant", s.appIconVariant.value)
             .apply()
     }
@@ -271,6 +275,7 @@ object SettingsStore {
             .putBoolean("bitPerfect", s.bitPerfect.value)
             .putInt("appIconVariant", s.appIconVariant.value)
             .putBoolean("viceCityTheme", s.viceCityTheme.value)
+            .putString("seasonTheme", s.seasonTheme.value)
             .also { editor -> DesignChoices.all.forEach { editor.putBoolean("design212_${it.code}", DesignChoices.enabled(it.code)) } }
             .apply()
     }
