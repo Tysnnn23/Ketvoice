@@ -381,8 +381,9 @@ internal object Automix {
             speed = main.playbackParameters.speed,
             userOverlapMs = MixPointStore.pair(current.id, next.track.id)?.overlapMs ?: -1L)
         // The style the listener chose for this pair in the DJ editor (6.1) comes before the one of the settings.
+        val shape = MixPointStore.pair(current.id, next.track.id)?.shape ?: MixShape.DEFAULT
         val settings = MixSettings(AppSettings.automixIntensity.value,
-            MixPointStore.pair(current.id, next.track.id)?.style ?: MixStyle.of(AppSettings.ketmixStyle.value))
+            MixPointStore.pair(current.id, next.track.id)?.style ?: MixStyle.of(AppSettings.ketmixStyle.value), tempoMatch = shape.tempo)
         val depth = AnalysisDepth.of(AppSettings.ketmixAnalysis.value)
         val nextDuration = next.track.durationMs.takeIf { it > 0 } ?: 600_000L
         // The context alone may already say that these two titles simply follow each other.
@@ -422,6 +423,7 @@ internal object Automix {
         // one plays a little off its own (a previous blend), the positions of the two do not run alike.
         fun planFor(effects: Boolean, beats: Boolean = true): MixPlan = TransitionPlanner.plan(out, incoming,
             context.copy(effects = effects, beats = beats, lastVariant = lastVariant, lastExit = lastExit), settings)
+            .let { p -> MixShaping.apply(p, shape, effects) }
             .let { p -> if (p.mixes && p.kind != MixKind.Beatmatch && abs(outSpeed - 1f) > .0005f) p.copy(rate = 1f / outSpeed) else p }
             .let { p -> if (p.mixes && AppSettings.ketmixStems.value) p.copy(stems = true, voiceFromMs = incoming.vocalStartMs ?: -1L) else p }
         var plan = planFor(effects = clockOk)
@@ -1094,28 +1096,11 @@ internal object Automix {
         forget(entry)
     }
 
-    /** How long before its start the DJ editor's « Écouter » plays a transition: room for the engine to prepare it, and to hear it come. */
-    const val PREVIEW_LEAD_MS = 12_000L
-
     /**
-     * « Écouter » in the DJ editor (6.1): the title playing is taken back to [PREVIEW_LEAD_MS] before the
-     * transition ([plan], with the listener's points, already remembered) starts, and Ketmix plays it as it
-     * will play it — by the engine itself, the decks, the analysis and the plan of a real mix, not a copy of it.
-     * False when Ketmix cannot mix now (off, bit-perfect, nothing playing, a mix under way).
+     * The decks the DJ editor's « Écouter » (6.9, [DeckPreview]) may borrow: none while a mix is heard, in
+     * bit-perfect output, or before anything has played (no playback service yet).
      */
-    fun preview(plan: MixPlan): Boolean {
-        val h = host ?: return false
-        if (!AppSettings.automix.value || h.exact || AppSettings.bitPerfect.value || mixing || !plan.mixes) return false
-        val state = Player.state.value
-        val entry = state.queueEntryIds.getOrNull(state.index) ?: return false
-        val duration = h.main.duration.takeIf { it > 0 } ?: return false
-        // The engine starts on a title's ending only in its last PREP_LEAD_MS.
-        val target = (plan.outMs - plan.buildMs - PREVIEW_LEAD_MS).coerceIn(max(0L, duration - PREP_LEAD_MS + 1_000L), duration)
-        forget(entry)
-        Player.seekTo(target)
-        if (!state.playWhenReady) Player.toggle()
-        return true
-    }
+    internal fun previewHost(): AutomixHost? = host?.takeIf { !mixing && !it.exact && !AppSettings.bitPerfect.value }
 
     /** Plays [lengthMs] of [item] from [fromMs] on the silent deck, fast, and records its sound for the separation of its voice. */
     private suspend fun capture(deck: ExoPlayer, control: DeckControl, item: MediaItem, fromMs: Long, lengthMs: Long,

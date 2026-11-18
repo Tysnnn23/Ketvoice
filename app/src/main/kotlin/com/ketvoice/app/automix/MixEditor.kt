@@ -19,15 +19,19 @@ internal object MixEditor {
     data class Side(val trackId: String, val durationMs: Long, val wave: Wave? = null, val analysis: SegmentAnalysis? = null)
 
     /** The listener's choice for a transition; -1 / null = left to Ketmix. */
-    data class Choice(val exitMs: Long = -1, val entryMs: Long = -1, val overlapMs: Long = -1, val style: MixStyle? = null) {
-        val automatic: Boolean get() = exitMs < 0 && entryMs < 0 && overlapMs <= 0 && style == null
+    data class Choice(val exitMs: Long = -1, val entryMs: Long = -1, val overlapMs: Long = -1, val style: MixStyle? = null,
+                      /** Volume curve, bass, filter and tempo (6.9); the default is Ketmix's own. */
+                      val shape: MixShape = MixShape.DEFAULT) {
+        val automatic: Boolean get() = exitMs < 0 && entryMs < 0 && overlapMs <= 0 && style == null && shape.isDefault
+        /** What is remembered for the pair (the points belong to each title). */
+        val pairChoice: PairChoice get() = PairChoice(style, overlapMs, shape)
     }
 
     /** What is remembered for the transition from [fromId] into [toId] (a title alone when both are the same). */
     fun remembered(fromId: String, fromDurationMs: Long, toId: String, toDurationMs: Long, pair: Boolean): Choice {
         val choice = if (pair) MixPointStore.pair(fromId, toId) else null
         return Choice(MixPointStore.exitOf(fromId, fromDurationMs), MixPointStore.entryOf(toId, toDurationMs),
-            choice?.overlapMs ?: -1, choice?.style)
+            choice?.overlapMs ?: -1, choice?.style, choice?.shape ?: MixShape.DEFAULT)
     }
 
     /**
@@ -40,7 +44,8 @@ internal object MixEditor {
             MixFacts(out.durationMs, out.analysis, vocalEndMs = vocalEndMs, userExitMs = choice.exitMs),
             MixFacts(into.durationMs, into.analysis, vocalStartMs = vocalStartMs, userEntryMs = choice.entryMs),
             MixContext(loop = out.trackId == into.trackId, userOverlapMs = choice.overlapMs),
-            MixSettings(intensity, choice.style ?: defaultStyle))
+            MixSettings(intensity, choice.style ?: defaultStyle, tempoMatch = choice.shape.tempo))
+            .let { MixShaping.apply(it, choice.shape) }
 
     /** Ketmix's own plan for the same pair: where the editor draws the automatic points. */
     fun automatic(out: Side, into: Side, intensity: Int, defaultStyle: MixStyle, vocalEndMs: Long? = null, vocalStartMs: Long? = null): MixPlan =

@@ -21,8 +21,8 @@ internal data class TitlePoints(val exitMs: Long = -1, val entryMs: Long = -1, v
 }
 
 /** What the listener chose for one pair of titles: the style of its transition and how long both are heard (-1 = Ketmix's). */
-internal data class PairChoice(val style: MixStyle? = null, val overlapMs: Long = -1) {
-    val empty: Boolean get() = style == null && overlapMs <= 0
+internal data class PairChoice(val style: MixStyle? = null, val overlapMs: Long = -1, val shape: MixShape = MixShape.DEFAULT) {
+    val empty: Boolean get() = style == null && overlapMs <= 0 && shape.isDefault
 }
 
 /**
@@ -137,7 +137,7 @@ internal object MixPointStore {
     private const val MAX_POSITION_MS = 3_600_000L
     private val keyPattern = Regex("[tp]:[0-9a-f]{64}")
     private val titlePattern = Regex("-?\\d{1,7},-?\\d{1,7},\\d{1,7}")
-    private val pairPattern = Regex("-?\\d,-?\\d{1,5}")
+    private val pairPattern = Regex("-?\\d,-?\\d{1,5}(,\\d{1,3})?")
 
     @Volatile private var backend: PointsBackend? = null
     private val _revision = MutableStateFlow(0)
@@ -170,12 +170,16 @@ internal object MixPointStore {
         if (exit < -1 || entry < -1 || exit > MAX_POSITION_MS || entry > MAX_POSITION_MS || duration > MAX_POSITION_MS) return null
         return TitlePoints(exit, entry, duration).takeIf { !it.empty }
     }
-    internal fun encodePair(c: PairChoice): String = "${c.style?.ordinal ?: -1},${c.overlapMs.coerceIn(-1, 60_000)}"
+    internal fun encodePair(c: PairChoice): String = "${c.style?.ordinal ?: -1},${c.overlapMs.coerceIn(-1, 60_000)}" +
+        if (c.shape.isDefault) "" else ",${c.shape.code()}"
     internal fun decodePair(text: String?): PairChoice? {
         if (text == null || !pairPattern.matches(text)) return null
-        val (style, overlap) = text.split(',').map { it.toLong() }
+        val parts = text.split(',').map { it.toLong() }
+        val (style, overlap) = parts
         if (overlap < -1 || overlap > 60_000) return null
-        return PairChoice(if (style < 0) null else MixStyle.values().getOrNull(style.toInt()) ?: return null, overlap).takeIf { !it.empty }
+        // Choices saved before 6.9 have no shape: Ketmix's own.
+        val shape = parts.getOrNull(2)?.let { MixShape.of(it.toInt()) ?: return null } ?: MixShape.DEFAULT
+        return PairChoice(if (style < 0) null else MixStyle.values().getOrNull(style.toInt()) ?: return null, overlap, shape).takeIf { !it.empty }
     }
 
     /** True for a key and value a backup may bring back. */
