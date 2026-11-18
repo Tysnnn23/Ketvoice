@@ -300,7 +300,9 @@ internal object TransitionPlanner {
             val phrase = a.phraseStarts(planned - fade / 4.0, planned + fade / 4.0).minByOrNull { abs(it - planned) }
             if (phrase != null) {
                 val longer = (end - phrase).roundToLong()
-                if (longer >= MIN_CROSSFADE_MS && (sungUntil == null || phrase >= sungUntil - settings.vocalLeadMs)) { fade = longer; onPhrase = true }
+                // Never earlier for the sake of a phrase when that would put the incoming voice under the outgoing one.
+                val voices = sungUntil != null && sungFrom != null && phrase < planned && phrase + (sungFrom - start) < sungUntil
+                if (longer >= MIN_CROSSFADE_MS && !voices && (sungUntil == null || phrase >= sungUntil - settings.vocalLeadMs)) { fade = longer; onPhrase = true }
             }
         }
         val reason = if (a.hasBeat && b.hasBeat) "tempos too far apart" else "no steady beat"
@@ -359,8 +361,9 @@ internal object TransitionPlanner {
                      gain: Float, variant: Int): MixPlan? {
         val beat = pulse(a)
         val build = ((if (settings.intensity >= 2) 16 else 8) * beat).roundToLong()
-        // A drop needs something to drop into: the next title must start on a beat.
-        if (!b.hasBeat) return null
+        // A drop needs something to drop into: the next title must start on a beat, and not well under the
+        // level of the one that built up to it.
+        if (!b.hasBeat || !BlendFit.carriesADrop(a, b)) return null
         val bodyEnd = if (a.hardEnding) end else a.fallMs
         // At most half of the build over the last sung words.
         val earliest = max(a.startMs + build, sungUntil?.plus(build / 2) ?: a.startMs).toDouble()

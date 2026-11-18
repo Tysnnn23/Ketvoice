@@ -31,6 +31,13 @@ internal object BlendFit {
     /** Under this a level was not measured. */
     private const val UNMEASURED_DB = -80f
 
+    /** A build promises a drop: an incoming title more than this under the outgoing one would fall flat after it. */
+    const val DROP_LEVEL_DB = 4f
+
+    /** True unless the incoming title is known to be too quiet to follow a build (see [MixKind.Rise]). */
+    fun carriesADrop(a: SegmentAnalysis, b: SegmentAnalysis): Boolean =
+        a.loudnessDb <= UNMEASURED_DB || b.loudnessDb <= UNMEASURED_DB || b.loudnessDb >= a.loudnessDb - DROP_LEVEL_DB
+
     /** How far apart the loud parts of the two stretches are, in dB; 0 when one of them was not measured. */
     fun levelGapDb(a: SegmentAnalysis, b: SegmentAnalysis): Float =
         if (a.loudnessDb <= UNMEASURED_DB || b.loudnessDb <= UNMEASURED_DB) 0f else abs(a.loudnessDb - b.loudnessDb)

@@ -158,6 +158,20 @@ class KetmixFitTest {
         }
     }
 
+    @Test fun aBuildIsOnlyPlayedIntoATitleThatCanFollowIt() {
+        // Tempos too far apart; the last exit was an echo, so a build is due.
+        val due = MixContext(lastExit = 1)
+        assertEquals(MixKind.Rise, plan(outro(138f), intro(122f), due, sungUntil = 170_000).kind)
+        // Into a title 8 dB quieter the drop would fall flat: the outgoing title leaves on an echo instead.
+        val flat = plan(outro(138f, loudness = -9f), intro(122f, loudness = -17f), due, sungUntil = 170_000)
+        assertEquals(MixKind.Echo, flat.kind)
+        assertEquals("the quieter title is not turned up, nor the other one cut down at once", 1f, flat.gain, 0f)
+        assertTrue(BlendFit.carriesADrop(outro(loudness = -12f), intro(loudness = -15f)))
+        assertTrue(BlendFit.carriesADrop(outro(loudness = -12f), intro(loudness = -6f)))
+        assertFalse(BlendFit.carriesADrop(outro(loudness = -12f), intro(loudness = -17f)))
+        assertTrue("a level that was not measured rules nothing out", BlendFit.carriesADrop(outro(loudness = -90f), intro(loudness = -17f)))
+    }
+
     private fun db(gain: Float) = (20.0 * Math.log10(gain.toDouble())).toFloat()
 
     @Test fun twoVoicesNeverSingTogether() {
@@ -172,6 +186,14 @@ class KetmixFitTest {
         assertEquals(MixKind.Beatmatch, late.kind)
         assertTrue("under the last two bars (${late.outMs})", late.outMs in 176_000L until 180_300L)
         assertEquals("the outgoing voice steps back", 180_300L, late.sungUntilMs)
+        // Titles that are not played in time: a phrase 0.8 s before the last sung word ends is not worth two voices at once…
+        val fading = outro(120f, fall = 187_000, fade = true, bar = 3, phrase = 158_500.0)
+        val crossed = plan(fading, intro(150f), sungUntil = 191_000, sungFrom = 500)
+        assertEquals(MixKind.Filter, crossed.kind)
+        assertEquals("starts as the outgoing voice ends", 191_300L, crossed.outMs); assertFalse(crossed.onPhrase)
+        // …while an incoming title whose voice comes after those words is still brought in on that phrase.
+        val phrased = plan(fading, intro(150f), sungUntil = 191_000, sungFrom = 3_000)
+        assertEquals(190_500L, phrased.outMs); assertTrue(phrased.onPhrase)
         // The rule on its own: none of the lead is left once the incoming voice is there at once.
         val a = outro(120f); val balanced = MixSettings(1)
         assertEquals(4_000L, BlendFit.voiceLeadMs(a, balanced, 500f, null))
