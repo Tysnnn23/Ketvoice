@@ -526,6 +526,9 @@ fun SettingsScreen() {
                     color = th.secondary, fontSize = 11.sp, lineHeight = 16.sp, modifier = Modifier.padding(bottom = 8.dp))
             }
 
+            // ==================================================== WIDGETS (6.4, phones only)
+            if (!com.ketvoice.app.BuildConfig.IS_QUEST) Section("WIDGETS") { WidgetShortcutRows() }
+
             // ==================================================== PAROLES
             Section("PAROLES") {
                 SRow(

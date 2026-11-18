@@ -84,6 +84,11 @@ class LockscreenLyricsHostTest {
         assertTrue("asks to be a Live Update on Android 16", intro.extras.getBoolean(LyricsNotification.EXTRA_REQUEST_PROMOTED))
         assertFalse("never colourised (it could not be promoted)", intro.extras.getBoolean(Notification.EXTRA_COLORIZED))
         assertNull("a standard notification, not a custom view", intro.contentView)
+        // Beside the media notification (6.4): no controls of its own, so the lock screen never shows two transports,
+        // and its own group, so Android never folds it into the media controls.
+        assertTrue("no actions", intro.actions.isNullOrEmpty())
+        assertNull("not a media style", intro.extras.getString(Notification.EXTRA_TEMPLATE)?.takeIf { it.contains("MediaStyle") })
+        assertEquals(LyricsNotification.GROUP, intro.group)
         val channel = manager.getNotificationChannel(LyricsNotification.CHANNEL)!!
         assertEquals(NotificationManager.IMPORTANCE_LOW, channel.importance)
         assertNull("silent", channel.sound)

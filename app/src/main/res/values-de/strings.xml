@@ -12,11 +12,21 @@
     <string name="trending">Trends</string>
     <string name="albums_singles">Alben und Singles</string>
     <string name="widget_glass_player">Ketvoice · Player</string>
-    <string name="widget_glass_player_desc">Großer Liquid-Glass-Player: Cover, Titel, Fortschritt und Steuerung</string>
+    <string name="widget_glass_player_desc">Großer Player: Cover, gesungene Zeile, Fortschritt und Steuerung</string>
     <string name="widget_week">Ketvoice · Deine Woche</string>
     <string name="widget_week_desc">Deine Hörminuten und dein Künstler der Woche</string>
     <string name="widget_mix">Ketvoice · Für dich</string>
     <string name="widget_mix_desc">Der Mix des Moments: ein Tipp spielt ihn ab</string>
     <string name="widget_mini">Ketvoice · Mini</string>
     <string name="widget_mini_desc">Cover, Wiedergabe/Pause und Weiter</string>
+    <string name="widget_now_playing">Ketvoice · Läuft gerade</string>
+    <string name="widget_now_playing_desc">Cover, Titel und Steuerung, in jeder Größe</string>
+    <string name="widget_lyrics">Ketvoice · Live-Songtext</string>
+    <string name="widget_lyrics_desc">Die gesungene Zeile und die nächste, live</string>
+    <string name="widget_ketmix">Ketvoice · Ketmix</string>
+    <string name="widget_ketmix_desc">Der Ketmix-Schalter und der nächste gemixte Titel</string>
+    <string name="widget_replay">Ketvoice · Replay</string>
+    <string name="widget_replay_desc">Deine Minuten des Monats, dein Künstler und dein Titel</string>
+    <string name="tile_play">Ketvoice-Wiedergabe</string>
+    <string name="tile_ketmix">Ketmix</string>
 </resources>

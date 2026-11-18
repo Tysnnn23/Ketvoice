@@ -1,4 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 6.4: a softly rounded play glyph, as the iOS 27 widgets draw it. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
-    <path android:fillColor="#FFFFFFFF" android:pathData="M8,5 L8,19 L19,12 Z" />
+    <path android:fillColor="#FFFFFFFF" android:strokeColor="#FFFFFFFF" android:strokeWidth="2.2"
+        android:strokeLineJoin="round" android:pathData="M8.2,5.6 L18.4,12 L8.2,18.4 Z" />
 </vector>
