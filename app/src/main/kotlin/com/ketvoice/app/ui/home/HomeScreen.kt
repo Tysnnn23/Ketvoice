@@ -48,6 +48,8 @@ import com.ketvoice.app.ui.common.Cover
 import com.ketvoice.app.ui.player.PlayerSheetScrim
 import com.ketvoice.app.ui.player.TrackMenuSheet
 import com.ketvoice.app.ui.library.PlaylistShelf
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 
 @Composable
 fun HomeScreen() {
@@ -66,7 +68,10 @@ fun HomeScreen() {
     val loading by HomeFeed.loading.collectAsState()
     val origin by HomeFeed.origin.collectAsState()
     val youtube by YouTubeMusicSession.profile.collectAsState()
-    val player by Player.state.collectAsState()
+    // Only what Home shows of the player (6.6): the whole state also moves with buffering, quality and sources,
+    // and each of those changes recomposed the whole page.
+    val playingId by remember { Player.state.map { it.current?.id }.distinctUntilChanged() }.collectAsState(Player.state.value.current?.id)
+    val isPlaying by remember { Player.state.map { it.isPlaying }.distinctUntilChanged() }.collectAsState(Player.state.value.isPlaying)
     val playlists by PlaylistStore.lists.collectAsState()
     var grid by remember { mutableStateOf(false) }
     val layout = LocalAdaptiveLayout.current
@@ -77,7 +82,7 @@ fun HomeScreen() {
     androidx.lifecycle.compose.LifecycleResumeEffect(Unit) { hour = hourNow(); onPauseOrDispose { } }
     val greeting = homeGreeting(hour)
     val featured = shelves.firstOrNull { it.tracks.isNotEmpty() }?.tracks ?: recent.take(6)
-    val leadId = player.current?.id ?: recent.firstOrNull()?.id ?: featured.firstOrNull()?.id
+    val leadId = playingId ?: recent.firstOrNull()?.id ?: featured.firstOrNull()?.id
     val shelfRows = remember(shelves, leadId) {
         val seen = mutableSetOf<String>().apply { leadId?.let(::add) }
         shelves.map { shelf -> shelf to shelf.tracks.filter { seen.add(it.id) } }
@@ -158,7 +163,7 @@ fun HomeScreen() {
                     modifier = Modifier.padding(horizontal = 18.dp, vertical = 18.dp))
             } else if (!grid) item(key = "recent-carousel") {
                 // Large covers to start again from, the way a record shelf reads: the title playing wears its bars.
-                RecentCarousel(recent.take(20), player.current?.id, player.isPlaying,
+                RecentCarousel(recent.take(20), playingId, isPlaying,
                     onPlay = { index -> Player.playQueue(recent, index) })
             } else item(key = "recent-grid") {
                 BoxWithConstraints(Modifier.fillMaxWidth().padding(horizontal = com.ketvoice.app.ui.common.pageMargin).testTag("home-recent-grid")) {
@@ -168,7 +173,7 @@ fun HomeScreen() {
                         recent.take(columns * 2).chunked(columns).forEachIndexed { line, tracks ->
                             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                 tracks.forEachIndexed { column, track ->
-                                    RecentCover(track, side, player.current?.id == track.id, player.isPlaying,
+                                    RecentCover(track, side, playingId == track.id, isPlaying,
                                         onPlay = { Player.playQueue(recent, line * columns + column) })
                                 }
                             }
@@ -264,8 +269,7 @@ private fun RecentCarousel(tracks: List<Track>, playingId: String?, playing: Boo
 private fun RecentCover(track: Track, side: androidx.compose.ui.unit.Dp, active: Boolean, playing: Boolean, onPlay: () -> Unit) {
     val menuAnchor = com.ketvoice.app.ui.common.rememberRowAnchor()
     val theme = LocalTheme.current
-    val art by ArtworkRepo.covers.collectAsState()
-    val cover = com.ketvoice.app.data.MediaOverrides.cover(track, art["t:${track.id}"] ?: track.coverUrl)
+    val cover = com.ketvoice.app.ui.common.rememberTrackCover(track)
     val glow = com.ketvoice.app.theme.rememberCoverTone(cover) ?: theme.onBackground
     val shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
     val options = AppText.t("Options de ${track.title}")
@@ -298,12 +302,11 @@ private fun RecentCover(track: Track, side: androidx.compose.ui.unit.Dp, active:
 @Composable
 private fun TrackCarousel(tracks: List<Track>) {
     val theme = LocalTheme.current
-    val art by ArtworkRepo.covers.collectAsState()
     val cell = com.ketvoice.app.ui.adaptive.shelfCell(156.dp, com.ketvoice.app.ui.common.pageMargin, HomeLayout.gap)
     HomeRow {
         itemsIndexed(tracks, key = { _, t -> t.id }) { i, track ->
             Column(Modifier.width(cell).clickable { Player.playQueue(tracks, i) }) {
-                com.ketvoice.app.ui.common.DownloadCover(track, com.ketvoice.app.data.MediaOverrides.cover(track, art["t:${track.id}"] ?: track.coverUrl), cell, 16.dp)
+                com.ketvoice.app.ui.common.DownloadCover(track, com.ketvoice.app.ui.common.rememberTrackCover(track), cell, 16.dp)
                 Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(track.title, localize = false, color = theme.onBackground, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
                         maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
