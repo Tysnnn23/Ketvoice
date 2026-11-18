@@ -35,7 +35,27 @@ object ViceCityTheme {
         val violet = Color(0xFF7B3FE4)
         /** Labels on a button filled with the sunset. */
         val ink = Color(0xFF140A22)
+        /** The chrome of a large title (6.3): a pink mist above its horizon, a light pink and a peach under it. */
+        val chromeMist = Color(0xFFFFE3F1)
+        val chromePink = Color(0xFFFFA3CE)
+        val chromePeach = Color(0xFFFFA36B)
     }
+
+    /**
+     * The 80s chrome of the large titles of Home, Explorer and the Library (6.3), from the top of each line to its
+     * bottom: white, a pink mist down to the horizon, then light pink turning peach. Every stop reads at AA on the
+     * night and on the brightest of the glow (ViceCityThemeTest).
+     */
+    val chromeStops: List<Pair<Float, Color>> = listOf(0f to Color.White, .50f to Colors.chromeMist,
+        .56f to Colors.chromePink, 1f to Colors.chromePeach)
+
+    /** The player's elapsed time (light pink) and remaining time and Ketmix's sign (cyan), over the darkened cover. */
+    val elapsedTime: Color get() = Colors.chromePink
+    val remainingTime: Color get() = Colors.cyan
+
+    /** The colour of a held note's small glow in the lyrics: neon pink turning cyan as the note is held (0..1). */
+    fun heldNoteGlow(progress: Float): Color =
+        androidx.compose.ui.graphics.lerp(Colors.accent, Colors.cyan, if (progress.isFinite()) progress.coerceIn(0f, 1f) else 0f)
 
     const val ID = "vicecity"
 
@@ -48,11 +68,22 @@ object ViceCityTheme {
         override val edgeTint: Color get() = Colors.magenta
         @Composable override fun HomeDecor(modifier: Modifier, fade: () -> Float) =
             com.ketvoice.app.ui.vicecity.ViceCityPalms(modifier, fade)
+        @Composable override fun BottomDecor(modifier: Modifier) = com.ketvoice.app.ui.vicecity.ViceCityFloor(modifier)
         @Composable override fun Emblem(size: Dp, modifier: Modifier) = com.ketvoice.app.ui.vicecity.ViceCityLogo(size, modifier)
         @Composable override fun Preview(modifier: Modifier, height: Dp) = com.ketvoice.app.ui.vicecity.ViceCityPreview(modifier, height)
     }
 
     fun theme(): KetTheme = look.theme()
+
+    /**
+     * The theme is on around a surface that keeps its own colours (the player, 6.3): there only its neon tints apply —
+     * the play button's ring, the times, the progress, a held note's glow — never its night or its layout.
+     */
+    val LocalNeon = androidx.compose.runtime.staticCompositionLocalOf { false }
+
+    /** Whether the neon tints apply here: on a page of the theme, or inside the player while the theme is on. */
+    @Composable
+    fun neonHere(): Boolean = LocalTheme.current.viceCity || LocalNeon.current
 
     /** The sunset of a filled button, left to right. */
     val sunset: Brush get() = look.fill

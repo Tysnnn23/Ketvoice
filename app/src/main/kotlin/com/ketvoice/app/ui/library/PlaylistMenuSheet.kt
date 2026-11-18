@@ -63,7 +63,7 @@ fun PlaylistMenuSheet(
     // Rendue au niveau racine (AppRoot), hors de la couche capturée : le verre est
     // donc DYNAMIQUE — il échantillonne réellement le contenu derrière la feuille.
     GlassPanel(
-        modifier = Modifier.fillMaxWidth().padding(10.dp),
+        modifier = Modifier.fillMaxWidth().padding(10.dp).then(com.ketvoice.app.ui.common.sheetEdge(RoundedCornerShape(28.dp))),
         shape = RoundedCornerShape(28.dp),
         params = GlassParams.sheet(radius, dark = com.ketvoice.app.ui.common.sheetDark())
     ) {

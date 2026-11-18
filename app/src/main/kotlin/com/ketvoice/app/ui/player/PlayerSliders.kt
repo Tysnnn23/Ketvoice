@@ -37,6 +37,7 @@ import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ketvoice.app.data.AppSettings
@@ -75,7 +76,7 @@ fun ScrubBar(
     modifier: Modifier = Modifier,
     trackColor: Color = Color.White.copy(alpha = 0.28f),
     fillColor: Color = com.ketvoice.app.theme.LocalTheme.current.accent,
-    timeColor: Color = Color.White.copy(alpha = 0.62f),
+    timeColor: Color = DefaultTimeColor,
     showTimes: Boolean = true,
     onSeek: (Long) -> Unit
 ) {
@@ -85,6 +86,9 @@ fun ScrubBar(
     // A seasonal theme fills the bar with its sunset, unless the caller chose its own colour (6.2.1).
     val season = com.ketvoice.app.theme.LocalTheme.current.season
     val seasonFill = fillColor == com.ketvoice.app.theme.LocalTheme.current.accent
+    // Inside the player, which keeps its own colours, the Vice City theme still fills the bar with its sunset (6.3).
+    val fillBrush = if (!seasonFill) null else season?.fill
+        ?: if (com.ketvoice.app.theme.ViceCityTheme.LocalNeon.current) com.ketvoice.app.theme.ViceCityTheme.sunset else null
     val dur = durationMs.coerceAtLeast(1L)
     // Where the finger is while it drags (px); the value is read from the track as it is drawn, so
     // what lies under the finger is what is set, even while the track swells.
@@ -171,7 +175,7 @@ fun ScrubBar(
                 }
         ) {
             val track = trackFor(size.width)
-            drawPressTrack(track, shown, trackColor, fillColor, press.expansion, fillBrush = if (seasonFill) season?.fill else null)
+            drawPressTrack(track, shown, trackColor, fillColor, press.expansion, fillBrush = fillBrush)
             mix.value?.let { progress ->
                 val w = size.width
                 val lineY = size.height / 2f - 8.dp.toPx()
@@ -182,19 +186,31 @@ fun ScrubBar(
                     strokeWidth = 2.dp.toPx(), cap = StrokeCap.Round)
             }
         }
-        if (showTimes) {
-            Row(Modifier.fillMaxWidth().padding(top = 1.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                // The times step aside as the bar reaches out, and grow a little while it is held.
-                Text(formatSecs((shown * dur).toLong()), color = timeColor, fontSize = 11.sp,
-                    modifier = Modifier.pressLabel(press, outwards = -1f))
-                // Between the two times, where Apple Music says it is mixing (6.0.0 Beta 5): Ketmix's sign while a mix plays.
-                androidx.compose.foundation.layout.Box(Modifier.weight(1f), contentAlignment = androidx.compose.ui.Alignment.Center) {
-                    KetmixMixingBadge(mix.value, timeColor)
-                }
-                Text("-" + formatSecs(((1f - shown) * dur).toLong()), color = timeColor, fontSize = 11.sp,
-                    modifier = Modifier.pressLabel(press, outwards = 1f))
-            }
+        if (showTimes) ScrubTimes(shown, dur, press, mix.value, timeColor)
+    }
+}
+
+private val DefaultTimeColor = Color.White.copy(alpha = 0.62f)
+
+/**
+ * The times under the bar and, between them, Ketmix's sign while a mix plays. In the Vice City theme (6.3) the
+ * elapsed time is light pink and the remaining time and Ketmix's sign cyan, unless the caller chose its own colour.
+ */
+@Composable
+private fun ScrubTimes(shown: Float, dur: Long, press: SliderPressState, mix: Float?, timeColor: Color) {
+    val neon = timeColor == DefaultTimeColor && com.ketvoice.app.theme.ViceCityTheme.neonHere()
+    val elapsed = if (neon) com.ketvoice.app.theme.ViceCityTheme.elapsedTime else timeColor
+    val remaining = if (neon) com.ketvoice.app.theme.ViceCityTheme.remainingTime else timeColor
+    Row(Modifier.fillMaxWidth().padding(top = 1.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+        // The times step aside as the bar reaches out, and grow a little while it is held.
+        Text(formatSecs((shown * dur).toLong()), color = elapsed, fontSize = 11.sp,
+            modifier = Modifier.pressLabel(press, outwards = -1f).testTag("scrub-elapsed"))
+        // Between the two times, where Apple Music says it is mixing (6.0.0 Beta 5): Ketmix's sign while a mix plays.
+        androidx.compose.foundation.layout.Box(Modifier.weight(1f), contentAlignment = androidx.compose.ui.Alignment.Center) {
+            KetmixMixingBadge(mix, remaining)
         }
+        Text("-" + formatSecs(((1f - shown) * dur).toLong()), color = remaining, fontSize = 11.sp,
+            modifier = Modifier.pressLabel(press, outwards = 1f).testTag("scrub-remaining"))
     }
 }
 

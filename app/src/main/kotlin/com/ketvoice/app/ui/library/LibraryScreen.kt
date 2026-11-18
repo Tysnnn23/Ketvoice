@@ -104,8 +104,8 @@ fun LibraryScreen() {
         contentPadding = PaddingValues(top = 70.dp, bottom = LocalAdaptiveLayout.current.bottomPaddingDp.dp)) {
         item(key = "header") {
             Column(Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 14.dp)) {
-                Text("Bibliothèque", color = theme.onBackground, style = com.ketvoice.app.theme.T.hugeTitle,
-                    modifier = Modifier.shrinkingTitle(collapse).asHeading())
+                com.ketvoice.app.ui.common.PageTitle("Bibliothèque", Modifier.shrinkingTitle(collapse).asHeading(),
+                    maxLines = Int.MAX_VALUE, neon = true)
                 Text(AppText.t(if (all.size == 1) "1 titre" else "${all.size} titres") + " · " +
                     AppText.t("Playlists") + " " + playlists.size, localize = false, color = theme.secondary,
                     fontSize = 14.sp, modifier = Modifier.padding(top = 5.dp, bottom = 18.dp))

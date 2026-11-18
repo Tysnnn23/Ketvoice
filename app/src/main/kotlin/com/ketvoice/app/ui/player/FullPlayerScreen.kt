@@ -147,7 +147,10 @@ fun FullPlayerScreen(
         }
     }
 
-    CompositionLocalProvider(LocalTheme provides KetTheme.dark().copy(accent = albumAccent, secondary = Color.White.copy(alpha = .78f))) {
+    // The player keeps its own colours; with the Vice City theme on it takes its neon tints only (6.3).
+    val neon = com.ketvoice.app.theme.ViceCityTheme.neonHere()
+    CompositionLocalProvider(LocalTheme provides KetTheme.dark().copy(accent = albumAccent, secondary = Color.White.copy(alpha = .78f)),
+        com.ketvoice.app.theme.ViceCityTheme.LocalNeon provides neon) {
     MaterialTheme(colorScheme = darkColorScheme(primary = albumAccent,
         onPrimary = if (albumAccent.luminance() > .179f) Color.Black else Color.White,
         background = com.ketvoice.app.theme.Palette.BackgroundDark,

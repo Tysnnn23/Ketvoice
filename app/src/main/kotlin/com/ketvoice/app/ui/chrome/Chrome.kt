@@ -316,13 +316,16 @@ private fun MiniProgressLine(modifier: Modifier = Modifier) {
         else tween(durationMillis = 500, easing = androidx.compose.animation.core.LinearEasing),
         label = "miniProgress"
     )
-    // A hairline inset from the pill's edges: a faint track and the accent filling it.
+    // A hairline inset from the pill's edges: a faint track and the accent filling it. Vice City (6.3): the track is a
+    // faint neon underline and the sunset fills it.
+    val neon = LocalTheme.current.viceCity
     Box(
         modifier
             .padding(start = 18.dp, end = 18.dp, bottom = 3.dp)
             .height(2.5.dp)
             .clip(RoundedCornerShape(2.dp))
-            .background(LocalTheme.current.onBackground.copy(alpha = .10f))
+            .then(if (neon) Modifier.background(com.ketvoice.app.ui.vicecity.MiniNeon.track)
+                else Modifier.background(LocalTheme.current.onBackground.copy(alpha = .10f)))
             .testTag("mini-progress")
     ) {
         Box(
@@ -330,7 +333,8 @@ private fun MiniProgressLine(modifier: Modifier = Modifier) {
                 .fillMaxHeight()
                 .fillMaxWidth(smooth)
                 .clip(RoundedCornerShape(2.dp))
-                .background(LocalTheme.current.accent)
+                .then(if (neon) Modifier.background(com.ketvoice.app.theme.ViceCityTheme.sunset)
+                    else Modifier.background(LocalTheme.current.accent))
         )
     }
 }

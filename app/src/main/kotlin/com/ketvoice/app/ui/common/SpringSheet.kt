@@ -248,6 +248,17 @@ internal fun SpringSheet(onDismiss: () -> Unit, modifier: Modifier = Modifier, s
 @Composable
 internal fun sheetInk(): androidx.compose.ui.graphics.Color = com.ketvoice.app.theme.LocalTheme.current.onBackground
 
+/**
+ * The edge of a sheet, a menu or a toast of [shape]: in the Vice City theme (6.3) the neon tube of its selected tab
+ * and main buttons (the tube alone in the performance mode); nothing otherwise, and nothing for the other seasons.
+ */
+@Composable
+internal fun sheetEdge(shape: androidx.compose.ui.graphics.Shape): Modifier {
+    val theme = com.ketvoice.app.theme.LocalTheme.current
+    if (!theme.viceCity) return Modifier
+    return with(com.ketvoice.app.theme.ViceCityTheme) { Modifier.viceCityNeon(shape, true) }
+}
+
 /** Whether a menu sheet is made of dark glass: with the theme, as on iOS. */
 @Composable
 internal fun sheetDark(): Boolean = com.ketvoice.app.theme.LocalTheme.current.isDark

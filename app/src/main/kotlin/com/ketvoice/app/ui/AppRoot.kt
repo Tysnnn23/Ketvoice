@@ -486,6 +486,10 @@ private fun ScrollEdges(modifier: Modifier, bottom: Boolean) {
         if (season != null && bottom) Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth()
             .drawBehind { with(season) { bottomGlow(com.ketvoice.app.theme.SeasonPulse.phase.floatValue) } }
             .navigationBarsPadding().height(150.dp))
+        // Vice City's neon floor (6.3), only where a bar covers the bottom of the page: the tab bar of a phone, or
+        // the mini-player docked along the bottom of a large window.
+        val barBelow = !LocalAdaptiveLayout.current.hasRail || Player.state.collectAsState().value.current != null
+        if (season != null && bottom && barBelow) season.BottomDecor(Modifier.align(Alignment.BottomCenter))
     }
 }
 

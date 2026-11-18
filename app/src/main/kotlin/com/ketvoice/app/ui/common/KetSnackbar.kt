@@ -34,7 +34,9 @@ import com.ketvoice.app.theme.LocalTheme
 fun KetSnackbar(data: SnackbarData, modifier: Modifier = Modifier) {
     val theme = LocalTheme.current
     val shape = RoundedCornerShape(26.dp)
-    GlassPanel(modifier.padding(horizontal = Ket27.Metrics.margin).widthIn(max = 520.dp).fillMaxWidth().testTag("ket-snackbar"),
+    // Vice City (6.3): the toast wears the theme's neon edge.
+    GlassPanel(modifier.padding(horizontal = Ket27.Metrics.margin).widthIn(max = 520.dp).fillMaxWidth().testTag("ket-snackbar")
+        .then(sheetEdge(shape)),
         shape, GlassParams.pill(dark = theme.isDark)) {
         Row(Modifier.fillMaxWidth().background(theme.card.copy(alpha = if (theme.isDark) .55f else .7f))
             .heightIn(min = 52.dp).padding(start = 20.dp, end = 8.dp).semantics { liveRegion = LiveRegionMode.Polite },

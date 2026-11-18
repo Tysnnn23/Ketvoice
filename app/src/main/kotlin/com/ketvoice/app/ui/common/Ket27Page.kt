@@ -37,10 +37,18 @@ import com.ketvoice.app.theme.LocalTheme
 /** The margin of a page: 16 dp, as on iOS. */
 internal val pageMargin: Dp get() = Ket27.Metrics.margin
 
-/** The title a root page opens on, written as iOS writes a large title (34, bold). */
+/**
+ * The title a root page opens on, written as iOS writes a large title (34, bold). With [neon] (Home, Explorer and the
+ * Library) the Vice City theme writes it in its 80s chrome with a neon underline (6.3, `ui/vicecity/ViceCityNeon.kt`).
+ */
 @Composable
 internal fun PageTitle(text: String, modifier: Modifier = Modifier, color: Color = LocalTheme.current.onBackground,
-                       localize: Boolean = true, maxLines: Int = 1) {
+                       localize: Boolean = true, maxLines: Int = 1, neon: Boolean = false) {
+    if (neon && LocalTheme.current.viceCity) {
+        com.ketvoice.app.ui.vicecity.ViceCityPageTitle(if (localize) com.ketvoice.app.data.AppText.t(text) else text,
+            modifier, Ket27.Type.largeTitle, maxLines)
+        return
+    }
     Text(text, modifier, color = color, style = Ket27.Type.largeTitle, localize = localize, maxLines = maxLines,
         overflow = TextOverflow.Ellipsis)
 }

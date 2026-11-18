@@ -129,6 +129,12 @@ abstract class SeasonLook(val id: String, val palette: SeasonPalette) {
     /** The decor of Home's header, fading out with the large title ([fade], 0..1, read in the draw phase only). */
     @Composable abstract fun HomeDecor(modifier: Modifier, fade: () -> Float)
 
+    /**
+     * What a season lays at the very bottom of the pages, behind the tab bar, over the scroll edge (6.3): nothing by
+     * default; Vice City's neon floor. Decorative only, never under text that must be read.
+     */
+    @Composable open fun BottomDecor(modifier: Modifier) {}
+
     /** The season's badge, in a rounded square. */
     @Composable abstract fun Emblem(size: Dp, modifier: Modifier)
 

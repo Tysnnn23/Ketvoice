@@ -547,6 +547,8 @@ internal fun KaraokeLine(line: MusicApi.LyricLine, modifier: Modifier, fontScale
     // does not cover the line's letters, the line keeps the flat drawing so that nothing disappears.
     val pendingAlpha = if (backing) .36f else if (dim) .30f else .40f
     val lifting = remember(line, alignedWords) { !Motion.reduced && LyricsWords.covers(line.text, alignedWords.map { it.text }) }
+    // Vice City (6.3): a held note's small glow is neon, pink turning cyan; the sung words stay white.
+    val neon = com.ketvoice.app.theme.ViceCityTheme.neonHere()
     Box(modifier) {
         // One shaped layout for both the pending glyphs and the sung overlay.
         // No remeasurement, shifted word copy, scaling or disappearing held glyph.
@@ -580,7 +582,7 @@ internal fun KaraokeLine(line: MusicApi.LyricLine, modifier: Modifier, fontScale
                                     clipPath(slice.path) {
                                         clipRect(left, bounds.top, right, bounds.bottom) {
                                             drawText(measured, color = ink, shadow = if (glow > .01f) androidx.compose.ui.graphics.Shadow(
-                                                Color.White.copy(alpha = .42f * glow), blurRadius = 14f * glow) else null)
+                                                LyricsWords.glowColor(progress, neon, glow), blurRadius = 14f * glow) else null)
                                         }
                                     }
                                 }
@@ -817,6 +819,15 @@ internal object LyricsWords {
         return kotlin.math.sin(progress * Math.PI).toFloat() * strength
     }
 
+
+    /**
+     * The colour of a held note's glow of strength [glow]: white, or in the Vice City theme ([neon]) its neon pink
+     * turning cyan as the note is held ([progress]), a little denser so that it reads as much as the white one.
+     * Its size never changes (owner, 6.1: only a held note glows, a little).
+     */
+    fun glowColor(progress: Float, neon: Boolean, glow: Float): Color =
+        if (neon) com.ketvoice.app.theme.ViceCityTheme.heldNoteGlow(progress).copy(alpha = .55f * glow.coerceIn(0f, 1f))
+        else Color.White.copy(alpha = .42f * glow.coerceIn(0f, 1f))
 
     /** True when the words, joined, hold every visible letter of the line (so drawing words alone loses nothing). */
     fun covers(line: String, words: List<String>): Boolean {
