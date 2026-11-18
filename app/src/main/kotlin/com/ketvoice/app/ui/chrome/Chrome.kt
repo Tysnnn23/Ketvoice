@@ -53,6 +53,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -310,13 +311,16 @@ private fun MiniProgressLine(modifier: Modifier = Modifier) {
     val durationMs = Player.state.collectAsState().value.durationMs.coerceAtLeast(1L)
     val fraction = (posMs.toFloat() / durationMs).coerceIn(0f, 1f)
     // Interpolation linéaire continue : plus aucun saut entre les tics de position.
-    val smooth by animateFloatAsState(
+    // Read while drawing (6.6): the glide never stops while a title plays, and read here it recomposed and measured
+    // the line again at every frame, on every page.
+    val smooth = animateFloatAsState(
         targetValue = fraction,
         animationSpec = if (Motion.reduced) androidx.compose.animation.core.snap()
         else tween(durationMillis = 500, easing = androidx.compose.animation.core.LinearEasing),
         label = "miniProgress"
     )
     // A hairline inset from the pill's edges: a faint track and the accent filling it.
+    val accent = LocalTheme.current.accent
     Box(
         modifier
             .padding(start = 18.dp, end = 18.dp, bottom = 3.dp)
@@ -324,15 +328,13 @@ private fun MiniProgressLine(modifier: Modifier = Modifier) {
             .clip(RoundedCornerShape(2.dp))
             .background(LocalTheme.current.onBackground.copy(alpha = .10f))
             .testTag("mini-progress")
-    ) {
-        Box(
-            Modifier
-                .fillMaxHeight()
-                .fillMaxWidth(smooth)
-                .clip(RoundedCornerShape(2.dp))
-                .background(LocalTheme.current.accent)
-        )
-    }
+            .drawBehind {
+                val filled = androidx.compose.ui.geometry.Size(size.width * smooth.value.coerceIn(0f, 1f), size.height)
+                if (filled.width <= 0f) return@drawBehind
+                val corner = androidx.compose.ui.geometry.CornerRadius(2.dp.toPx())
+                drawRoundRect(accent, size = filled, cornerRadius = corner)
+            }
+    )
 }
 
 private data class TabSpec(val icon: ImageVector, val label: String, val index: Int)

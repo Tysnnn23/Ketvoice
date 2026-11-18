@@ -15,8 +15,19 @@ internal class UiTextDictionary(private val entries: Map<String, String>) {
             Template(Regex(pattern, RegexOption.DOT_MATCHES_ALL), target, args, " · " in source)
         }
 
+    /**
+     * Texts that are not a plain entry, once worked out (6.6): each of them otherwise ran up to 160 template
+     * patterns at every composition of the Text showing it (titles, counts, names in long lists).
+     */
+    private val worked = java.util.concurrent.ConcurrentHashMap<String, String>()
+
     fun translate(text: String): String {
         entries[text]?.let { return it }
+        worked[text]?.let { return it }
+        return translateUncached(text).also { if (worked.size < MAX_WORKED) worked[text] = it }
+    }
+
+    private fun translateUncached(text: String): String {
         templates.forEach { template ->
             if (" · " in text && !template.composite) return@forEach
             val match = template.pattern.matchEntire(text) ?: return@forEach
@@ -27,5 +38,10 @@ internal class UiTextDictionary(private val entries: Map<String, String>) {
         if (" · " in text) return text.split(" · ").joinToString(" · ") { translate(it) }
         if ('\n' in text) return text.split('\n').joinToString("\n") { translate(it) }
         return text
+    }
+
+    private companion object {
+        /** A few thousand short texts at most; past that, new ones are worked out each time as before. */
+        const val MAX_WORKED = 4_096
     }
 }

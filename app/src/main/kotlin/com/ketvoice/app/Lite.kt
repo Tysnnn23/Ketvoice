@@ -41,7 +41,9 @@ object LiteTuning {
      * etc., mais qui garde les mêmes effets »): Android's own low-RAM flag, about 3 GB or less, or about 4 GB with
      * a modest graphics chip (no OpenGL ES 3.2). Every visible effect stays; what changes is how it is made
      * (smaller offscreen pictures, smaller decodes and caches, one Canvas at a time, separation on the quick
-     * model away from the charger). Set once at start by [KetvoiceApp]; the budgets below read it.
+     * model away from the charger). Set once at start by [KetvoiceApp]; the budgets below read it. Since 6.6 it is
+     * found in the mobile edition too, where it drives only the rules that change nothing one sees (decoders, one
+     * Canvas at a time and its size, images let go early, small blurred pictures); never on Quest.
      */
     @Volatile var modest: Boolean = false
         internal set
@@ -107,18 +109,22 @@ object LiteTuning {
     /** Covers kept on the disk (re-fetchable; saved covers live apart in `artwork-permanent`). */
     fun imageDiskBytes(lite: Boolean = this.lite): Long = if (lite) 512L * 1024L * 1024L else 2L * 1024L * 1024L * 1024L
 
-    /** Covers decoded at the same time: fewer large bitmaps in memory at once on a modest phone. Null keeps Coil's default. */
-    fun imageDecoders(lite: Boolean = this.lite): Int? = if (lite) 2 else null
+    /**
+     * Covers decoded at the same time: fewer large bitmaps in memory at once in Lite and, since 6.6, on a modest
+     * phone in the mobile edition too. Null keeps Coil's default.
+     */
+    fun imageDecoders(lite: Boolean = this.lite, modest: Boolean = this.modest): Int? = if (lite || modest) 2 else null
 
     /** Opaque pictures (covers) in RGB_565 on a modest device: half the memory, the same look for a photo. */
     fun imageRgb565(lite: Boolean = this.lite, modest: Boolean = this.modest): Boolean = lite && modest
 
     /**
-     * The largest side a picture is decoded at on a modest device: the screen's longer side. A request without a
-     * size (an image in an unbounded row, a full-size request) is bounded by it too. Null: no bound (Coil's size).
+     * The largest side a picture is decoded at: the screen's longer side. A request without a size (an image in an
+     * unbounded row, a full-size request) is bounded by it too. Lite on a modest device only until 6.5; since 6.6
+     * every edition, as nothing is ever shown larger than the screen, and a full-size cover (up to 3000 px, 36 MB)
+     * took its decode and its upload to the graphics chip in the middle of a scroll. Null: no bound (Coil's size).
      */
-    fun decodeBoundPx(screenLongSidePx: Int, lite: Boolean = this.lite, modest: Boolean = this.modest): Int? =
-        if (lite && modest && screenLongSidePx > 0) screenLongSidePx else null
+    fun decodeBoundPx(screenLongSidePx: Int): Int? = screenLongSidePx.takeIf { it > 0 }
 
     /** A requested decode of [width] × [height] (≤ 0: no size given), bounded to [bound] on its longer side. */
     fun boundedDecode(width: Int, height: Int, bound: Int): Pair<Int, Int> {
@@ -151,18 +157,20 @@ object LiteTuning {
     fun canvasBuffer(lite: Boolean = this.lite): CanvasBuffer? =
         if (lite) CanvasBuffer(minMs = 4_000, maxMs = 10_000, playMs = 1_000, rebufferMs = 1_500, bytes = 6 * 1024 * 1024) else null
 
+    // The three Canvas rules below hold on a modest device in Lite and, since 6.6, in the mobile edition too
+    // ([modest] is only ever found in those two): one video at a time already shows the same, the newest one.
+
     /** Canvas videos playing at once: one on a modest device (one video decoder), the newest shown. */
-    fun canvasAtOnce(lite: Boolean = this.lite, modest: Boolean = this.modest): Int = if (lite && modest) 1 else Int.MAX_VALUE
+    fun canvasAtOnce(modest: Boolean = this.modest): Int = if (modest) 1 else Int.MAX_VALUE
 
     /**
      * The largest Canvas rendition chosen on a modest device (720 × 1280, what every hardware decoder plays), and
      * a fallback decoder when the hardware one refuses a file. Null keeps Media3's choice.
      */
-    fun canvasMaxVideo(lite: Boolean = this.lite, modest: Boolean = this.modest): Pair<Int, Int>? =
-        if (lite && modest) 720 to 1280 else null
+    fun canvasMaxVideo(modest: Boolean = this.modest): Pair<Int, Int>? = if (modest) 720 to 1280 else null
 
     /** A Canvas lets its decoder go while the app is out of sight on a modest device (it starts again on return). */
-    fun canvasReleasedWhenHidden(lite: Boolean = this.lite, modest: Boolean = this.modest): Boolean = lite && modest
+    fun canvasReleasedWhenHidden(modest: Boolean = this.modest): Boolean = modest
 
     // ------------------------------------------------------------------ separation
 
@@ -180,8 +188,8 @@ object LiteTuning {
      * warning (running moderate), elsewhere when memory runs low (see MemoryRelief).
      */
     @Suppress("DEPRECATION")
-    fun releaseImagesAt(level: Int, lite: Boolean = this.lite, modest: Boolean = this.modest): Boolean =
-        if (lite && modest) level >= android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_MODERATE
+    fun releaseImagesAt(level: Int, modest: Boolean = this.modest): Boolean =
+        if (modest) level >= android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_MODERATE
         else level >= android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW
 
     // ------------------------------------------------------------------ Settings → À propos

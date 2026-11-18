@@ -96,30 +96,46 @@ object ListeningHistory {
      */
     @Synchronized fun addListenedMs(deltaMs: Long) {
         if (deltaMs <= 0L) return
+        pendingMs += deltaMs
+        if (pendingMs >= PUBLISH_MS) publishListened()
+    }
+
+    /**
+     * Time heard but not yet in the flows. The figures (week, month, year, total) move every [PUBLISH_MS] of
+     * listening instead of at every 200 ms tick: each page showing them (Home's week and Replay cards, Replay,
+     * Wrapped, the widgets) recomputed and recomposed five times a second while music played (6.6).
+     */
+    private var pendingMs = 0L
+    const val PUBLISH_MS = 5_000L
+
+    private fun publishListened() {
+        val deltaMs = pendingMs
+        if (deltaMs <= 0L) return
+        pendingMs = 0L
         _listenedMs.value = _listenedMs.value + deltaMs
         _days.value = ListeningWeek.addTime(_days.value, today(), deltaMs)
         _years.value = Wrapped.addTime(_years.value, year(), deltaMs)
         _months.value = ListeningMonths.addTime(_months.value, today(), java.time.LocalTime.now().hour, deltaMs)
         unflushedMs += deltaMs
-        if (unflushedMs >= 15_000L) {
-            prefs?.edit()?.putLong("listenedMs", _listenedMs.value)?.putString("days", ListeningWeek.encode(_days.value))
-                ?.putString("years", ListeningWeek.encode(_years.value))?.putString(monthPrefKey(), currentMonthJson())?.apply()
-            unflushedMs = 0L
-        }
+        if (unflushedMs >= 15_000L) persistListened()
+    }
+
+    private fun persistListened() {
+        prefs?.edit()?.putLong("listenedMs", _listenedMs.value)?.putString("days", ListeningWeek.encode(_days.value))
+            ?.putString("years", ListeningWeek.encode(_years.value))?.putString(monthPrefKey(), currentMonthJson())?.apply()
+        unflushedMs = 0L
     }
 
     /** Flush immédiat (arrêt du service, pause longue). */
     @Synchronized fun flushListenedMs() {
-        if (unflushedMs > 0L) {
-            prefs?.edit()?.putLong("listenedMs", _listenedMs.value)?.putString("days", ListeningWeek.encode(_days.value))
-                ?.putString("years", ListeningWeek.encode(_years.value))?.putString(monthPrefKey(), currentMonthJson())?.apply()
-            unflushedMs = 0L
-        }
+        publishListened()
+        if (unflushedMs > 0L) persistListened()
     }
 
     @Synchronized fun resetListenedMs() {
         _listenedMs.value = 0L
         unflushedMs = 0L
+        pendingMs = 0L
         prefs?.edit()?.putLong("listenedMs", 0L)?.apply()
     }
     @Synchronized fun rememberTrack(track: Track) {

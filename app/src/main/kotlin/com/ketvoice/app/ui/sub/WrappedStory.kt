@@ -33,6 +33,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -130,19 +131,16 @@ internal object WrappedPeriod {
     }
 }
 
-/** The year's recap, with what the months of the year counted (hours, discoveries, Ketmix, mood). */
-@Composable
-internal fun rememberWrappedRecap(): Wrapped.Recap {
-    val years by ListeningHistory.years.collectAsState()
-    val counts by ListeningHistory.playCounts.collectAsState()
-    val known by ListeningHistory.knownTracks.collectAsState()
-    val listened by ListeningHistory.listenedMs.collectAsState()
-    val months by ListeningHistory.months.collectAsState()
-    return remember(years, counts, known, listened, months) {
-        val cover = { t: Track -> ArtworkRepo.coverForTrack(t) ?: t.coverUrl }
-        Wrapped.withMonths(Wrapped.recap(java.time.LocalDate.now().year.toString(), years, counts, listened, known, coverOf = cover),
-            months, coverOf = cover, bpmOf = ::measuredBpm)
-    }
+/**
+ * The year's recap, with what the months of the year counted (hours, discoveries, Ketmix, mood). Worked out when
+ * Wrapped opens (6.6): kept up to date in the Replay page, it was recomputed while the page was only looked at.
+ */
+internal fun wrappedRecapNow(): Wrapped.Recap {
+    val cover = { t: Track -> ArtworkRepo.coverForTrack(t) ?: t.coverUrl }
+    val months = ListeningHistory.months.value
+    return Wrapped.withMonths(Wrapped.recap(java.time.LocalDate.now().year.toString(), ListeningHistory.years.value,
+        ListeningHistory.playCounts.value, ListeningHistory.listenedMs.value, ListeningHistory.knownTracks.value, coverOf = cover),
+        months, coverOf = cover, bpmOf = ::measuredBpm)
 }
 
 /** The tempo Ketmix measured for a title, when it did (its ending first, then its intro). */
@@ -197,10 +195,13 @@ internal fun WrappedStoryContent(recap: Wrapped.Recap, onClose: () -> Unit, star
         Column(Modifier.fillMaxWidth().systemBarsPadding().padding(horizontal = 12.dp, vertical = 10.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 repeat(pages.size) { index ->
-                    val fill = when { index < page -> 1f; index == page -> progress.value; else -> 0f }
-                    Box(Modifier.weight(1f).height(3.dp).clip(RoundedCornerShape(2.dp)).background(Color.White.copy(alpha = .30f))) {
-                        Box(Modifier.fillMaxHeight().fillMaxWidth(fill).background(Color.White))
-                    }
+                    // The running bar is drawn from the progress, never composed from it: reading it here recomposed
+                    // the whole story, its page and its flowing background, every frame of every page (6.6).
+                    Box(Modifier.weight(1f).height(3.dp).clip(RoundedCornerShape(2.dp)).background(Color.White.copy(alpha = .30f))
+                        .drawBehind {
+                            val fill = when { index < page -> 1f; index == page -> progress.value; else -> 0f }
+                            if (fill > 0f) drawRect(Color.White, size = size.copy(width = size.width * fill.coerceIn(0f, 1f)))
+                        })
                 }
             }
             Row(Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {

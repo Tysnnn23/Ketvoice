@@ -27,6 +27,8 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.ketvoice.app.theme.LocalTheme
 import com.ketvoice.app.theme.Palette
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import com.ketvoice.app.theme.T
 import java.security.MessageDigest
 
@@ -44,6 +46,20 @@ fun gradientFor(key: String): List<Color> {
         Color(android.graphics.Color.HSVToColor(floatArrayOf(hue1.toFloat(), sat / 100f, l1))),
         Color(android.graphics.Color.HSVToColor(floatArrayOf(hue2.toFloat(), sat / 100f, l2)))
     )
+}
+
+/**
+ * The cover of [track] as the artwork lookups find it (6.6): follows only this title's entry. A cell collecting the
+ * whole map recomposed, with every other cell of its row, each time any cover of the page was found.
+ */
+@Composable
+fun rememberTrackCover(track: com.ketvoice.app.data.Track): String? {
+    val key = "t:${track.id}"
+    val (flow, now) = remember(key) {
+        com.ketvoice.app.data.ArtworkRepo.covers.map { it[key] }.distinctUntilChanged() to com.ketvoice.app.data.ArtworkRepo.covers.value[key]
+    }
+    val found = flow.collectAsState(now).value
+    return com.ketvoice.app.data.MediaOverrides.cover(track, found ?: track.coverUrl)
 }
 
 @Composable

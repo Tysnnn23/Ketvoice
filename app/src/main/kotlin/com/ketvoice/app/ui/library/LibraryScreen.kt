@@ -67,11 +67,23 @@ fun LibraryScreen() {
         val byTrack = groups.associateBy { it.tracks.first().id }
         AlbumOrder.sort(groups.map { it.tracks.first() }, order).mapNotNull { byTrack[it.id] }
     }
-    val chosen = groups.firstOrNull { it.key == album }
-    val shown = (chosen?.tracks ?: all).filter { track ->
-        query.isBlank() || listOf(track.title, track.artist, track.album).any { it.contains(query.trim(), true) }
+    val chosen = remember(groups, album) { groups.firstOrNull { it.key == album } }
+    // Worked out when what they come from changes, not at every recomposition of the page (6.6).
+    val shown = remember(chosen, all, query) {
+        val q = query.trim()
+        (chosen?.tracks ?: all).filter { track ->
+            q.isEmpty() || track.title.contains(q, true) || track.artist.contains(q, true) || track.album.contains(q, true)
+        }
     }
-    val selectedTracks = all.filter { it.id in selected }
+    val albumRows = remember(albums, query) {
+        val q = query.trim()
+        albums.filter { q.isEmpty() || it.title.contains(q, true) || it.artist.contains(q, true) }
+    }
+    val selectedTracks = remember(all, selected) { val ids = selected.toHashSet(); all.filter { it.id in ids } }
+    val artists = remember(all, query) {
+        all.filter { it.artist.isNotBlank() }.groupBy { it.artist.substringBefore(',').trim() }
+            .filterKeys { query.isBlank() || it.contains(query.trim(), true) }.entries.toList()
+    }
     // The library of Apple Music (Ket 27): categories in a list, then what was added lately.
     val appleRoot = view == 0 && query.isBlank() && chosen == null
     val list = rememberLazyListState()
@@ -100,6 +112,11 @@ fun LibraryScreen() {
     val backdrop = com.ketvoice.app.glass.rememberGlassBackdrop(theme.background)
     Box(Modifier.fillMaxSize().pageBackground(theme)) {
     com.ketvoice.app.glass.BackdropCapture(backdrop, Modifier.fillMaxSize()) {
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+    // The cover grids (Albums, Artists) are rows of the list itself, composed as they scroll in (6.6): a whole
+    // grid in one item composed and measured every cover of the library at once when the view opened.
+    val gridColumns = coverGridColumns(maxWidth.value)
+    val gridSide = (maxWidth - 36.dp - 14.dp * (gridColumns - 1)) / gridColumns
     LazyColumn(Modifier.fillMaxSize().statusBarsPadding().testTag("library-list"), state = list,
         contentPadding = PaddingValues(top = 70.dp, bottom = LocalAdaptiveLayout.current.bottomPaddingDp.dp)) {
         item(key = "header") {
@@ -175,7 +192,7 @@ fun LibraryScreen() {
             }
         }
         if ((view == 0 || view == 2) && !appleRoot) {
-            val rows = albums.filter { query.isBlank() || it.title.contains(query.trim(), true) || it.artist.contains(query.trim(), true) }
+            val rows = albumRows
             if (rows.isNotEmpty() && chosen == null) item(key = "albums") {
                 LibrarySection("Albums")
                 // Ket 27: the orders as glass pills, the one in use filled.
@@ -184,14 +201,7 @@ fun LibraryScreen() {
                     item { Text("Trier", color = theme.secondary, fontSize = 13.sp, modifier = Modifier.padding(end = 2.dp)) }
                     itemsIndexed(AlbumOrder.labels) { index, label -> CollectionFilter(label, order == index, { order = index }) }
                 }
-                if (view == 2) CoverGrid(rows, Modifier.testTag("library-albums")) { group, side ->
-                    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).clickable(role = Role.Button) { album = group.key }) {
-                        Cover(group.title, ArtworkRepo.coverForTrack(group.tracks.first()) ?: group.tracks.first().coverUrl, side, 18.dp)
-                        Text(group.title, localize = false, color = theme.onBackground, fontWeight = FontWeight.SemiBold,
-                            fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))
-                        Text(group.artist, localize = false, color = theme.secondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    }
-                } else LazyRow(Modifier.testTag("library-albums"), contentPadding = PaddingValues(horizontal = 18.dp),
+                if (view != 2) LazyRow(Modifier.testTag("library-albums"), contentPadding = PaddingValues(horizontal = 18.dp),
                     horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                     items(rows, key = { it.key }) { group ->
                         Column(Modifier.width(148.dp).clickable(role = Role.Button) { album = group.key }) {
@@ -203,28 +213,24 @@ fun LibraryScreen() {
                     }
                 }
             }
+            if (view == 2 && chosen == null) coverGridRows("albums", rows, gridColumns, gridSide, "library-albums", { it.key }) { group, side ->
+                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).clickable(role = Role.Button) { album = group.key }) {
+                    Cover(group.title, ArtworkRepo.coverForTrack(group.tracks.first()) ?: group.tracks.first().coverUrl, side, 18.dp)
+                    Text(group.title, localize = false, color = theme.onBackground, fontWeight = FontWeight.SemiBold,
+                        fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))
+                    Text(group.artist, localize = false, color = theme.secondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+            }
             if (view == 2 && chosen == null && albums.isEmpty()) item(key = "no-albums") {
                 EmptyState("Aucun album", "Les titres sans album restent disponibles dans Titres.", "Titres", icon = com.ketvoice.app.ui.common.KetIcons.Album, onAction = { view = 3 })
             }
         }
         if ((view == 0 || view == 4) && chosen == null && !appleRoot) {
-            val artists = all.filter { it.artist.isNotBlank() }.groupBy { it.artist.substringBefore(',').trim() }
-                .filterKeys { query.isBlank() || it.contains(query.trim(), true) }
             if (artists.isNotEmpty()) item(key = "artists") {
                 LibrarySection("Artistes")
-                // The Artists view shows them as a grid of portraits; "All" keeps a row.
-                if (view == 4) CoverGrid(artists.entries.toList(), Modifier.testTag("library-artist-grid")) { (name, tracks), side ->
-                    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).clickable(role = Role.Button) {
-                        AppUi.openArtist(tracks.first().artistId.orEmpty(), name)
-                    }, horizontalAlignment = Alignment.CenterHorizontally) {
-                        Cover(name, ArtworkRepo.coverForTrack(tracks.first()) ?: tracks.first().coverUrl, side, side / 2)
-                        Text(name, localize = false, color = theme.onBackground, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
-                            maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))
-                        Text(AppText.t(if (tracks.size == 1) "1 titre" else "${tracks.size} titres"), localize = false,
-                            color = theme.secondary, fontSize = 12.sp, maxLines = 1)
-                    }
-                } else LazyRow(contentPadding = PaddingValues(horizontal = 18.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                    items(artists.entries.toList(), key = { it.key }) { (name, tracks) ->
+                // The Artists view shows them as a grid of portraits (the rows below); "All" keeps a row.
+                if (view != 4) LazyRow(contentPadding = PaddingValues(horizontal = 18.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                    items(artists, key = { it.key }) { (name, tracks) ->
                         val face = ArtworkRepo.coverForTrack(tracks.first()) ?: tracks.first().coverUrl
                         val zoom = com.ketvoice.app.ui.motion.rememberZoomSource(face, round = true)
                         Column(Modifier.width(100.dp).clickable { zoom.openArtist(tracks.first().artistId.orEmpty(), name) },
@@ -234,6 +240,17 @@ fun LibraryScreen() {
                                 overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))
                         }
                     }
+                }
+            }
+            if (view == 4) coverGridRows("artists", artists, gridColumns, gridSide, "library-artist-grid", { it.key }) { (name, tracks), side ->
+                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).clickable(role = Role.Button) {
+                    AppUi.openArtist(tracks.first().artistId.orEmpty(), name)
+                }, horizontalAlignment = Alignment.CenterHorizontally) {
+                    Cover(name, ArtworkRepo.coverForTrack(tracks.first()) ?: tracks.first().coverUrl, side, side / 2)
+                    Text(name, localize = false, color = theme.onBackground, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))
+                    Text(AppText.t(if (tracks.size == 1) "1 titre" else "${tracks.size} titres"), localize = false,
+                        color = theme.secondary, fontSize = 12.sp, maxLines = 1)
                 }
             }
         }
@@ -258,7 +275,7 @@ fun LibraryScreen() {
                     Text(selected.size.toString(), localize = false, color = theme.secondary)
                 }
             }
-            items(shown, key = { it.id }) { track ->
+            items(shown, key = { it.id }, contentType = { "library-track" }) { track ->
                 com.ketvoice.app.ui.common.SwipeTrackActions(track,
                     if (com.ketvoice.app.ui.motion.Motion.reduced) Modifier else Modifier.animateItem(), enabled = !selecting) {
                 Row(Modifier.fillMaxWidth().then(
@@ -287,6 +304,7 @@ fun LibraryScreen() {
         else if (query.isNotBlank() && shown.isEmpty() && playlists.none { it.name.contains(query.trim(), true) }) item {
             EmptyState("Aucun résultat", "Essayez un autre titre ou artiste.", "Effacer", icon = KetIcons.Search, onAction = { query = "" })
         }
+    }
     }
     }
     ScrollEdgeTitle("Bibliothèque", collapse, Modifier.align(Alignment.TopCenter), tag = "library-inline-title")
@@ -349,6 +367,22 @@ internal fun <T> CoverGrid(rows: List<T>, modifier: Modifier = Modifier, cell: @
                     line.forEach { item -> Box(Modifier.width(side)) { cell(item, side) } }
                 }
             }
+        }
+    }
+}
+
+/**
+ * The same cover grid as [CoverGrid], one lazy item per line of [columns] cells [side] wide (6.6): only the lines
+ * on screen are composed. The first line carries [tag].
+ */
+internal fun <T> LazyListScope.coverGridRows(name: String, rows: List<T>, columns: Int, side: androidx.compose.ui.unit.Dp,
+                                             tag: String, key: (T) -> Any,
+                                             cell: @Composable (T, androidx.compose.ui.unit.Dp) -> Unit) {
+    val lines = rows.chunked(columns.coerceAtLeast(1))
+    itemsIndexed(lines, key = { _, line -> name + ':' + key(line.first()) }, contentType = { _, _ -> name }) { index, line ->
+        Row(Modifier.fillMaxWidth().padding(start = 18.dp, end = 18.dp, top = if (index == 0) 0.dp else 18.dp)
+            .then(if (index == 0) Modifier.testTag(tag) else Modifier), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            line.forEach { item -> Box(Modifier.width(side)) { cell(item, side) } }
         }
     }
 }

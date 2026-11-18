@@ -48,9 +48,12 @@ internal fun SoftBlurredImage(
 }
 
 internal object SoftImage {
-    /** Android 11, or a modest phone in Lite: blurred pictures are decoded small and blurred once. */
-    fun soft(api: Int = GlassCompat.api, lite: Boolean = LiteTuning.lite, modest: Boolean = LiteTuning.modest): Boolean =
-        SoftBlur.needed(api) || (lite && modest)
+    /**
+     * Android 11, or a modest phone (Lite and, since 6.6, the mobile edition): blurred pictures are decoded small
+     * and blurred once — the same soft picture as a live blur.
+     */
+    fun soft(api: Int = GlassCompat.api, modest: Boolean = LiteTuning.modest): Boolean =
+        SoftBlur.needed(api) || modest
 
     /** The blur's sigma as a share of the picture's width: the picture spans about the window's width ([spanDp]). */
     fun sigmaFraction(blurDp: Float, spanDp: Int): Float = .57735f * blurDp / spanDp.coerceAtLeast(1)

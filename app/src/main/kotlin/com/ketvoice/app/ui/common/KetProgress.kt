@@ -11,7 +11,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -34,11 +35,14 @@ import com.ketvoice.app.ui.motion.Motion
 @Composable
 fun ActivitySpinner(modifier: Modifier = Modifier, size: Dp = 20.dp, color: Color = LocalTheme.current.secondary) {
     val turn = rememberInfiniteTransition(label = "activity")
-    val step by turn.animateFloat(0f, Spinner.SPOKES.toFloat(),
+    val step = turn.animateFloat(0f, Spinner.SPOKES.toFloat(),
         infiniteRepeatable(tween(if (Motion.reduced) Spinner.PERIOD_MS * 2 else Spinner.PERIOD_MS, easing = LinearEasing), RepeatMode.Restart),
         label = "activity-step")
+    // The spokes move a step at a time: the spinner is drawn again at each step (10 a second), not at every frame
+    // in between, which also redrew the glass over the page each frame while something loaded (6.6).
+    val lead = remember(step) { derivedStateOf { step.value.toInt() % Spinner.SPOKES } }
     Canvas(modifier.size(size).testTag("activity-spinner").semantics { progressBarRangeInfo = ProgressBarRangeInfo.Indeterminate }) {
-        val lead = step.toInt() % Spinner.SPOKES
+        val lead = lead.value
         val width = this.size.minDimension * .095f
         val outer = this.size.minDimension / 2f - width / 2f
         val inner = outer * .5f
@@ -69,11 +73,12 @@ internal object Spinner {
 @Composable
 fun KetProgressBar(progress: (() -> Float)?, modifier: Modifier = Modifier, color: Color = LocalTheme.current.accent,
                    track: Color = LocalTheme.current.onBackground.copy(alpha = .12f), height: Dp = 4.dp) {
-    val glide = if (progress == null && !Motion.reduced) {
+    // Read while drawing (6.6): read here it recomposed the bar every frame while the amount was unknown.
+    val glideState = if (progress == null && !Motion.reduced) {
         val transition = rememberInfiniteTransition(label = "progress")
         transition.animateFloat(0f, 1f, infiniteRepeatable(tween(1_300, easing = LinearEasing), RepeatMode.Restart),
-            label = "progress-glide").value
-    } else .5f
+            label = "progress-glide")
+    } else null
     Canvas(modifier.fillMaxWidth().height(height).testTag("ket-progress").semantics {
         progressBarRangeInfo = progress?.let { ProgressBarRangeInfo(it().coerceIn(0f, 1f), 0f..1f) } ?: ProgressBarRangeInfo.Indeterminate
     }) {
@@ -87,6 +92,7 @@ fun KetProgressBar(progress: (() -> Float)?, modifier: Modifier = Modifier, colo
             if (fraction > 0f) drawLine(color, Offset(start, y), Offset(start + (end - start) * fraction, y), stroke, StrokeCap.Round)
         } else {
             val span = (end - start) * .3f
+            val glide = glideState?.value ?: .5f
             val left = start - span + (end - start + span) * glide
             drawLine(color, Offset(left.coerceAtLeast(start), y), Offset((left + span).coerceAtMost(end), y), stroke, StrokeCap.Round)
         }

@@ -10,7 +10,7 @@ class LiteTuningTest {
         assertEquals(0, LiteTuning.defaultStemsQuality(lite = false))
         assertEquals(0.20, LiteTuning.imageMemoryPercent(lite = false, modest = true), 0.0)
         assertEquals(2L * 1024 * 1024 * 1024, LiteTuning.imageDiskBytes(lite = false))
-        assertNull(LiteTuning.imageDecoders(lite = false))
+        assertNull(LiteTuning.imageDecoders(lite = false, modest = false))
         assertEquals(3, LiteTuning.ketmixLookahead(lite = false, modest = true))
         assertNull(LiteTuning.canvasBuffer(lite = false))
         // Every edition starts the same late work after the first screen; mobile and Quest sooner than Lite.
@@ -90,10 +90,10 @@ class LiteTuningTest {
         assertEquals(0, LiteTuning.marketedGigabytes(0L))
     }
 
-    @Test fun picturesAreDecodedNoLargerThanTheScreenOnModestDevices() {
-        assertNull(LiteTuning.decodeBoundPx(2400, lite = false, modest = true))
-        assertNull(LiteTuning.decodeBoundPx(2400, lite = true, modest = false))
-        assertEquals(2400, LiteTuning.decodeBoundPx(2400, lite = true, modest = true))
+    @Test fun picturesAreDecodedNoLargerThanTheScreenOnEveryDevice() {
+        // 6.6: every edition and every device, the mobile app included (nothing is shown larger than the screen).
+        assertEquals(2400, LiteTuning.decodeBoundPx(2400))
+        assertNull("Unknown screen: Coil's own size", LiteTuning.decodeBoundPx(0))
         assertEquals(1200 to 1200, LiteTuning.boundedDecode(-1, -1, 1200))
         assertEquals(1200 to 300, LiteTuning.boundedDecode(-1, 300, 1200))
         assertEquals(400 to 400, LiteTuning.boundedDecode(400, 400, 1200))
@@ -104,13 +104,18 @@ class LiteTuningTest {
     }
 
     @Test fun oneCanvasAtATimeOnAModestDevice() {
-        assertEquals(1, LiteTuning.canvasAtOnce(lite = true, modest = true))
-        assertEquals(Int.MAX_VALUE, LiteTuning.canvasAtOnce(lite = true, modest = false))
-        assertEquals(Int.MAX_VALUE, LiteTuning.canvasAtOnce(lite = false, modest = true))
-        assertEquals(720 to 1280, LiteTuning.canvasMaxVideo(lite = true, modest = true))
-        assertNull(LiteTuning.canvasMaxVideo(lite = false, modest = true))
-        assertTrue(LiteTuning.canvasReleasedWhenHidden(lite = true, modest = true))
-        assertFalse(LiteTuning.canvasReleasedWhenHidden(lite = false, modest = true))
+        // 6.6: a modest phone in the mobile edition follows the same rules (modest is never found on Quest).
+        assertEquals(1, LiteTuning.canvasAtOnce(modest = true))
+        assertEquals(Int.MAX_VALUE, LiteTuning.canvasAtOnce(modest = false))
+        assertEquals(720 to 1280, LiteTuning.canvasMaxVideo(modest = true))
+        assertNull(LiteTuning.canvasMaxVideo(modest = false))
+        assertTrue(LiteTuning.canvasReleasedWhenHidden(modest = true))
+        assertFalse(LiteTuning.canvasReleasedWhenHidden(modest = false))
+        assertEquals(2, LiteTuning.imageDecoders(lite = false, modest = true))
+        assertNull(LiteTuning.imageDecoders(lite = false, modest = false))
+        // What one could see stays Lite's own choice: 16-bit covers and the performance mode by default.
+        assertFalse(LiteTuning.imageRgb565(lite = false, modest = true))
+        assertFalse(LiteTuning.defaultPerformanceMode(lite = false))
     }
 
     @Test fun awayFromTheChargerAModestDeviceSeparatesWithTheQuickModel() {
@@ -125,12 +130,11 @@ class LiteTuningTest {
     @Test fun aModestDeviceLetsPicturesGoAtTheFirstMemoryWarning() {
         val moderate = android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_MODERATE
         val low = android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW
-        assertTrue(LiteTuning.releaseImagesAt(moderate, lite = true, modest = true))
-        assertFalse(LiteTuning.releaseImagesAt(moderate, lite = true, modest = false))
-        assertFalse(LiteTuning.releaseImagesAt(moderate, lite = false, modest = true))
+        assertTrue(LiteTuning.releaseImagesAt(moderate, modest = true))
+        assertFalse(LiteTuning.releaseImagesAt(moderate, modest = false))
         // Elsewhere: as MemoryRelief always did.
         for (level in listOf(moderate, low, 15, 20, 40, 60, 80))
-            assertEquals(MemoryRelief.releaseImages(level), LiteTuning.releaseImagesAt(level, lite = false, modest = false))
+            assertEquals(MemoryRelief.releaseImages(level), LiteTuning.releaseImagesAt(level, modest = false))
     }
 
     @Test fun aboutSaysWhichModeIsActiveAndWhy() {

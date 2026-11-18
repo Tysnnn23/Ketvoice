@@ -101,14 +101,13 @@ fun ReplayScreen() {
     var chosen by rememberSaveable { mutableStateOf<String?>(null) }
     val period = chosen?.takeIf { it == ReplayPeriods.ALL || it in months } ?: ReplayPeriods.default(months, currentMonth)
     var wrapped by remember { mutableStateOf<Wrapped.Recap?>(null) }
-    val yearRecap = rememberWrappedRecap()
 
     Column(Modifier.fillMaxSize().pageBackground(th).statusBarsPadding()) {
         // Ketvoice Wrapped (5.9.0): the year as stories, shareable.
         com.ketvoice.app.ui.common.Ket27PageBar("Replay", { AppUi.closeOverlay() }) {
             if (stats.totalPlays > 0) Box(Modifier.clip(RoundedCornerShape(999.dp))
                 .background(Brush.linearGradient(listOf(th.accent, th.accent.copy(alpha = .70f))))
-                .clickable(role = Role.Button) { wrapped = yearRecap }.padding(horizontal = 16.dp, vertical = 9.dp).testTag("replay-wrapped")) {
+                .clickable(role = Role.Button) { wrapped = wrappedRecapNow() }.padding(horizontal = 16.dp, vertical = 9.dp).testTag("replay-wrapped")) {
                 Text("Wrapped", localize = false, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
             }
         }

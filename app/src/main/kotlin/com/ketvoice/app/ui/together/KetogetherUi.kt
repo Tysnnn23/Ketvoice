@@ -423,8 +423,9 @@ fun KetogetherPill(ui: TogetherUi, modifier: Modifier = Modifier, compact: Boole
     val waiting = ui.phase != TogetherPhase.Live
     val dot = if (waiting) KetogetherLook.waiting else KetogetherLook.live
     val reduced = Motion.reduced
-    val breath = if (reduced || waiting) 1f else rememberInfiniteTransition(label = "ketogether-live").animateFloat(.45f, 1f,
-        infiniteRepeatable(tween(1_100), RepeatMode.Reverse), label = "dot").value
+    // Read in the layer (6.6): read here it recomposed the pill, inside the mini-player, every frame of a session.
+    val breathState = if (reduced || waiting) null else rememberInfiniteTransition(label = "ketogether-live").animateFloat(.45f, 1f,
+        infiniteRepeatable(tween(1_100), RepeatMode.Reverse), label = "dot")
     // A reaction shows for two and a half seconds.
     var shown by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(ui.reaction?.serial) {
@@ -441,7 +442,7 @@ fun KetogetherPill(ui: TogetherUi, modifier: Modifier = Modifier, compact: Boole
         .semantics { contentDescription = description }.testTag("ketogether-pill")
         .padding(horizontal = if (compact) 7.dp else 10.dp, vertical = if (compact) 2.dp else 5.dp),
         verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(if (compact) 6.dp else 7.dp).graphicsLayer { alpha = breath }.clip(CircleShape).background(dot))
+        Box(Modifier.size(if (compact) 6.dp else 7.dp).graphicsLayer { alpha = breathState?.value ?: 1f }.clip(CircleShape).background(dot))
         Spacer(Modifier.width(if (compact) 4.dp else 6.dp))
         if (!compact) {
             Text("Ketogether", localize = false, color = ink, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)

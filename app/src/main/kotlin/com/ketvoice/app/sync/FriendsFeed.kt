@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import java.io.File
 
@@ -177,9 +178,11 @@ object FriendsFeed {
 
     private fun prefs() = context?.getSharedPreferences("ketvoice-account", Context.MODE_PRIVATE)
 
-    suspend fun refresh() { if (AccountSession.userId() != null) model?.refresh() }
-    suspend fun loadMore() { model?.loadMore() }
-    suspend fun react(id: String, reaction: String?): Boolean = model?.react(id, reaction) ?: false
+    // Beside the main thread (6.6): Home refreshes the feed from its own coroutine, and each refresh parses the
+    // page and writes the cached copy of it to the disk.
+    suspend fun refresh() { withContext(Dispatchers.IO) { if (AccountSession.userId() != null) model?.refresh() } }
+    suspend fun loadMore() { withContext(Dispatchers.IO) { model?.loadMore() } }
+    suspend fun react(id: String, reaction: String?): Boolean = withContext(Dispatchers.IO) { model?.react(id, reaction) ?: false }
     fun forget(handle: String) { model?.forget(handle) }
 
     /** Follows a public profile: following, already, unavailable, self, needs_handle or limit. */
