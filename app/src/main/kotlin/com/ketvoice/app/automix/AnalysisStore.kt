@@ -7,8 +7,11 @@ import java.nio.ByteBuffer
 
 /** Feeds the sound of a deck played silently and fast into an [OnsetTracker], between two positions of a title. */
 internal class AnalysisTap(private val fromUs: Long, private val untilUs: Long, private val withKey: Boolean = false,
-                           private val thorough: Boolean = false, private val hint: BeatAnalysis.Hint? = null) : PcmTap {
+                           private val thorough: Boolean = false, private val hint: BeatAnalysis.Hint? = null,
+                           /** Set when the beat model reads this stretch too: true for an ending, false for an intro. */
+                           private val beatTail: Boolean? = null) : PcmTap {
     private var tracker: OnsetTracker? = null
+    private var beatPcm: BeatPcm? = null
     private var firstUs = 0L
     private var expectedUs = 0L
     private var rate = 0
@@ -25,8 +28,10 @@ internal class AnalysisTap(private val fromUs: Long, private val untilUs: Long, 
         if (current == null || sampleRate != rate || kotlin.math.abs(positionUs - expectedUs) > 40_000L) {
             current = OnsetTracker(sampleRate, channels, withKey)
             tracker = current; rate = sampleRate; firstUs = positionUs
+            beatPcm = if (beatTail != null) BeatPcm(sampleRate, channels, positionUs) else null
         }
         current.accept16(buffer)
+        beatPcm?.accept16(buffer)
         expectedUs = positionUs + (buffer.remaining() / (2 * channels)) * 1_000_000L / sampleRate
         reachedUs = expectedUs
         if (expectedUs >= untilUs) done = true
@@ -37,7 +42,8 @@ internal class AnalysisTap(private val fromUs: Long, private val untilUs: Long, 
         val read = tracker ?: return null
         // A reading that does not start where it was asked to is not trusted with positions.
         if (read.frames / read.fps < 6f || kotlin.math.abs(firstUs - fromUs) > 6_000_000L) return null
-        return BeatAnalysis.analyze(read.snapshot(), firstUs / 1000L, thorough, hint)
+        val signal = BeatAnalysis.analyze(read.snapshot(), firstUs / 1000L, thorough, hint)
+        return beatPcm?.let { BeatModel.refine(signal, it, beatTail == true) } ?: signal
     }
 }
 
@@ -55,7 +61,9 @@ internal enum class AnalysisDepth(val outroMs: Long, val introMs: Long, val key:
 
     fun satisfiedBy(analysis: SegmentAnalysis, windowMs: Long, durationMs: Long): Boolean {
         val wanted = if (durationMs > 0) minOf(windowMs, durationMs) else windowMs
-        return analysis.lengthMs >= wanted - 6_000L && (!key || analysis.key != MusicalKey.UNREAD)
+        // A reading made before the beat model was installed is made again, once, with it.
+        val beat = analysis.analyser != 0 || !BeatModel.usable()
+        return analysis.lengthMs >= wanted - 6_000L && (!key || analysis.key != MusicalKey.UNREAD) && beat
     }
 
     companion object {
@@ -185,7 +193,7 @@ internal object AnalysisStore {
         .put("s", a.startMs).put("l", a.lengthMs).put("b", a.bpm.toDouble()).put("p", a.beatAtMs).put("c", a.confidence.toDouble())
         .put("r", a.barOffset).put("d", a.loudnessDb.toDouble()).put("ss", a.soundStartMs).put("se", a.soundEndMs)
         .put("ri", a.riseMs).put("fa", a.fallMs).put("fo", a.fadeOut).put("he", a.hardEnding)
-        .put("k", a.key).put("ks", a.keyStrength.toDouble()).put("ph", a.phraseAtMs).put("h", a.tempoHint.toDouble())
+        .put("k", a.key).put("ks", a.keyStrength.toDouble()).put("ph", a.phraseAtMs).put("h", a.tempoHint.toDouble()).put("an", a.analyser)
 
     internal fun decode(o: JSONObject?): SegmentAnalysis? {
         o ?: return null
@@ -201,7 +209,8 @@ internal object AnalysisStore {
             o.optBoolean("fo"), o.optBoolean("he"),
             o.optInt("k", MusicalKey.UNREAD).coerceIn(MusicalKey.UNREAD, 23), o.optDouble("ks", 0.0).toFloat().coerceIn(0f, 1f),
             o.optDouble("ph", -1.0).takeIf { it.isFinite() && it >= 0.0 && it <= end } ?: -1.0,
-            o.optDouble("h", 0.0).toFloat().takeIf { it.isFinite() && it in 0f..400f } ?: 0f)
+            o.optDouble("h", 0.0).toFloat().takeIf { it.isFinite() && it in 0f..400f } ?: 0f,
+            o.optInt("an", 0).coerceIn(0, SegmentAnalysis.BEAT_TRIED))
     }
 }
 
