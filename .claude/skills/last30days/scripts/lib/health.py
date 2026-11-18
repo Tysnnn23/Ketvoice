@@ -1,0 +1,641 @@
+"""Typed source health: classify a source/tool outcome honestly.
+
+The pipeline historically collapsed every failure into "returned nothing" or a
+flat ``errors_by_source`` entry, which hides the difference between a tool that
+is *absent*, one that is *present but broken* (the classic stale-venv-shim after
+a Python upgrade), one that *timed out*, and one that merely *degraded* (fewer
+results than expected). This module gives callers a small typed vocabulary so
+warnings can say what actually happened and prescribe the right fix.
+
+It complements ``preflight.py`` (which gates doomed *queries*); this gates
+doomed *sources/tools*.
+"""
+
+from __future__ import annotations
+
+import os
+import re
+import shutil
+import subprocess
+import time
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Dict, Iterable, List, Optional, Tuple
+
+from . import subproc
+
+# Health states, best to worst.
+OK = "ok"
+DEGRADED = "degraded"        # ran, but returned less than expected
+MISSING = "missing"          # tool/binary/credential absent
+BROKEN = "broken"            # present but won't execute (stale shim, bad perms)
+TIMEOUT = "timeout"          # exceeded the probe deadline
+ERROR = "error"              # ran and failed for another reason
+
+# Per-run outcomes. Doctor does not emit these: it predicts source readiness
+# before retrieval, while Report.source_status records what happened in one run.
+NO_RESULTS = "no-results"
+PARTIAL = "partial"
+RATE_LIMITED = "rate-limited"
+AUTH_FAILED = "auth-failed"
+PAYMENT_REQUIRED = "payment-required"  # HTTP 402 / credits exhausted: top up, not re-login
+UNREACHABLE = "unreachable"
+SCHEMA_DRIFT = "schema-drift"
+SKIPPED_UNCONFIGURED = "skipped-unconfigured"
+
+# The exit code alone also means clarification in hosted mode.
+STRICT_EXIT_CODE = 3
+STRICT_EXIT_PREFIX = "[last30days] strict-exit: degraded sources: "
+
+# Prefer the failure whose remediation matters most when several requests fail.
+FAILURE_SPECIFICITY = {
+    AUTH_FAILED: 0,
+    PAYMENT_REQUIRED: 1,
+    RATE_LIMITED: 2,
+    SCHEMA_DRIFT: 3,
+    TIMEOUT: 4,
+    UNREACHABLE: 5,
+    ERROR: 6,
+}
+
+
+def credits_exhausted_label(source: str) -> str:
+    """Human label for a ``PAYMENT_REQUIRED`` outcome on ``source``.
+
+    The X source names the API whose credits ran out; every other source
+    gets the generic phrasing so the same label serves render summaries and
+    the doctor post-mortem without each surface hand-writing its own.
+    """
+    return "X API credits exhausted" if source == "x" else "credits exhausted"
+
+
+@dataclass
+class SourceHealth:
+    """Typed outcome for a source or the tool backing it.
+
+    ``state`` is one of the module-level constants. ``reason`` is a short,
+    human-readable explanation suitable for a run warning.
+    """
+
+    name: str
+    state: str
+    reason: str = ""
+
+    @property
+    def ok(self) -> bool:
+        return self.state == OK
+
+    @property
+    def usable(self) -> bool:
+        """True when the source produced something worth keeping (ok/degraded)."""
+        return self.state in (OK, DEGRADED)
+
+
+def probe_command(
+    command: list[str],
+    timeout: float = 5.0,
+) -> SourceHealth:
+    """Probe an external command, distinguishing missing/broken/timeout/ok.
+
+    Separating these is what lets the caller emit a correct repair prescription
+    instead of a generic "failed":
+      - ``missing``: the executable is not on PATH.
+      - ``broken``: on PATH but won't run — FileNotFoundError/OSError on exec, or
+        shell exit 126/127 (not-executable / not-found-after-resolution), the
+        signature of a stale interpreter shim after an upgrade.
+      - ``timeout``: exceeded ``timeout`` seconds.
+      - ``ok``: exited 0.
+      - ``error``: ran but exited non-zero for another reason.
+
+    The command should be side-effect-free (e.g. ``["gh", "auth", "status"]``);
+    callers pass a status/version subcommand, not a mutating one.
+    """
+    name = command[0] if command else ""
+    if not name or shutil.which(name) is None:
+        return SourceHealth(name=name, state=MISSING, reason=f"{name or 'command'} not found on PATH")
+
+    try:
+        proc = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+    except (FileNotFoundError, OSError) as exc:
+        return SourceHealth(name=name, state=BROKEN, reason=f"{name} present but won't execute: {exc}")
+    except subprocess.TimeoutExpired:
+        return SourceHealth(name=name, state=TIMEOUT, reason=f"{name} timed out after {timeout:g}s")
+
+    if proc.returncode == 0:
+        return SourceHealth(name=name, state=OK)
+    if proc.returncode in (126, 127):
+        return SourceHealth(name=name, state=BROKEN, reason=f"{name} not executable (exit {proc.returncode})")
+    detail = (proc.stderr or proc.stdout or "").strip().splitlines()
+    first = detail[0] if detail else f"exit {proc.returncode}"
+    return SourceHealth(name=name, state=ERROR, reason=f"{name}: {first}")
+
+
+# ---------------------------------------------------------------------------
+# Dependency probes (doctor command, issue #692).
+#
+# ``probe_dependency`` generalizes ``probe_command`` for the skill's external
+# binaries (yt-dlp, Printing Press CLIs, node for the vendored bird client,
+# ffmpeg). It answers three questions the bare shutil.which gate cannot:
+#   - Is the binary genuinely runnable (a stale shim that resolves on PATH but
+#     cannot exec is BROKEN, not available)?
+#   - If not, WHICH fix applies (install vs reinstall vs a PATH edit), keyed to
+#     the package manager that owns the binary on this machine?
+#   - Is an on-disk binary merely off the agent-subprocess PATH (the Digg
+#     ~/.local/bin case) — MISSING with a PATH-fix, never "installed"?
+#
+# Semantics follow the engine gate: availability means PATH-resolvable in THIS
+# process, not present-on-disk. Probes are one short-timeout version exec each
+# and memoized per process, so doctor and setup can consult them freely.
+# ---------------------------------------------------------------------------
+
+# Per-probe budget in seconds: a healthy --version exec is near-instant, so a
+# slow probe is itself a diagnostic (network-mounted shim, hung interpreter).
+PROBE_TIMEOUT = 5.0
+
+_PP_CLI_SUFFIX = "-pp-cli"
+# The pinned Printing Press catalog installer. The only copy of this string:
+# setup_wizard imports it, so setup installs and doctor prescribes the same
+# release (default install dir $HOME/.local/bin on macOS/Linux).
+PRINTING_PRESS_NPM = "@mvanhorn/printing-press-library@0.1.27"
+
+# Oldest helper version the engine can call, per binary. Versions compare as
+# dotted integer tuples, never across helpers: each numbers its own releases
+# (digg-pp-cli 2026.11.1 beside yahoo-finance-pp-cli 1.0.0). A helper with no
+# entry here, or whose version cannot be read, is never called outdated.
+#
+# digg-pp-cli: 2026.10.1 is the first release whose `search` takes --topic,
+# the flag the engine sends when `search --help` lists no --sort. Earlier
+# releases reject the call outright.
+#
+# techmeme-pp-cli: 2026.11.1 is the first release whose `search` takes --pages
+# (printing-press-library #2470), so a run reads past Techmeme's first 10 hits.
+# It also emits a dated record per headline (since 2026.9.1, #1440), which the
+# engine needs to window hits to the run. Older releases still work, one page.
+MIN_HELPER_VERSIONS: Dict[str, Tuple[int, ...]] = {
+    "digg-pp-cli": (2026, 10, 1),
+    "techmeme-pp-cli": (2026, 11, 1),
+}
+
+# Why an older helper falls short, for doctor's detail line, when it still runs
+# in a reduced form. A helper absent here cannot be called below its minimum.
+MIN_HELPER_SHORTFALL: Dict[str, str] = {
+    "techmeme-pp-cli": "it still runs but reads only Techmeme's first 10 results; upgrade to read more pages",
+}
+
+_VERSION_RE = re.compile(r"\d+(?:\.\d+)+")
+
+# Dependencies the doctor probes by default.
+KNOWN_DEPENDENCIES: Tuple[str, ...] = (
+    "yt-dlp", "digg-pp-cli", "yahoo-finance-pp-cli", "node", "ffmpeg", "grok",
+)
+
+# Cheap side-effect-free version invocation per dependency (default --version).
+_VERSION_ARGS: Dict[str, List[str]] = {
+    "ffmpeg": ["-version"],
+}
+
+# Package managers each dependency may be owned by, in preference order, and
+# the (install, reinstall) prescription for each. "reinstall" wording matters:
+# a BROKEN binary is present, so telling the user to "install" it reads as a
+# no-op ("it's already installed") — the stale-shim trap this module exists
+# to name.
+_MANAGER_PRESCRIPTIONS: Dict[str, Dict[str, Tuple[str, str]]] = {
+    "yt-dlp": {
+        "brew": ("brew install yt-dlp", "brew reinstall yt-dlp"),
+        "pipx": ("pipx install yt-dlp", "pipx reinstall yt-dlp"),
+    },
+    "node": {
+        "brew": ("brew install node", "brew reinstall node"),
+        "nvm": ("nvm install --lts", "reinstall node via nvm: nvm install --lts && nvm use --lts"),
+    },
+    "ffmpeg": {
+        "brew": ("brew install ffmpeg", "brew reinstall ffmpeg"),
+        "apt": ("sudo apt-get install -y ffmpeg", "sudo apt-get install -y --reinstall ffmpeg"),
+    },
+    # The official installer is the primary path; npm is a real alternative
+    # (the package is published as @xai-official/grok) and fits the existing
+    # manager-preference machinery.
+    "grok": {
+        "npm": (
+            "npm install -g @xai-official/grok",
+            "reinstall the Grok CLI: npm install -g @xai-official/grok@latest",
+        ),
+    },
+}
+
+# Last-resort prescriptions when no known package manager is detected.
+_FALLBACK_PRESCRIPTIONS: Dict[str, Tuple[str, str]] = {
+    "yt-dlp": (
+        "install yt-dlp (https://github.com/yt-dlp/yt-dlp#installation) and ensure it is on PATH",
+        "reinstall yt-dlp (https://github.com/yt-dlp/yt-dlp#installation); the current binary won't run",
+    ),
+    "node": (
+        "install Node.js 22+ (https://nodejs.org) and ensure `node` is on PATH",
+        "reinstall Node.js 22+ (https://nodejs.org); the current binary won't run",
+    ),
+    "ffmpeg": (
+        "install ffmpeg (https://ffmpeg.org/download.html) and ensure it is on PATH",
+        "reinstall ffmpeg (https://ffmpeg.org/download.html); the current binary won't run",
+    ),
+    "grok": (
+        "install the Grok CLI: npm install -g @xai-official/grok (or the installer at https://x.ai/cli/install.sh), then run `grok login`",
+        "reinstall the Grok CLI: npm install -g @xai-official/grok@latest (or the installer at https://x.ai/cli/install.sh); the current binary won't run",
+    ),
+}
+
+
+@dataclass
+class DependencyProbe:
+    """Uniform probe result for one external dependency.
+
+    ``status`` is one of the module-level constants (OK/MISSING/BROKEN/TIMEOUT).
+    ``detail`` says what was observed (version string, exec error, off-PATH
+    location). ``prescription`` is the copy-pasteable fix, empty when OK.
+    ``owner_pkg_manager`` names the manager the prescription targets
+    ("brew", "pipx", "apt", "nvm", "npx"), or "" for PATH fixes / fallbacks.
+    """
+
+    name: str
+    status: str
+    detail: str = ""
+    prescription: str = ""
+    owner_pkg_manager: str = ""
+    # True for the on-disk-but-off-PATH case: MISSING (the engine gate would
+    # not pass) but the fix is a PATH edit, not an install.
+    off_path: bool = False
+    # For an OK helper with a minimum in MIN_HELPER_VERSIONS: True when below
+    # it (``prescription`` then carries the upgrade), False when at or above
+    # it, None when the helper has no minimum or its version is unreadable.
+    outdated: Optional[bool] = None
+
+    @property
+    def ok(self) -> bool:
+        return self.status == OK
+
+
+# Safe under the GIL (dict get/set are atomic) and each dependency name is
+# probed from a single builder today; worst case is one redundant probe.
+_dependency_probe_cache: Dict[str, DependencyProbe] = {}
+
+
+def clear_dependency_probe_cache() -> None:
+    """Reset memoized probes (tests, or a doctor re-run after a fix)."""
+    _dependency_probe_cache.clear()
+
+
+def _nvm_present() -> bool:
+    return bool(os.environ.get("NVM_DIR")) or (Path.home() / ".nvm").is_dir()
+
+
+def _manager_available(manager: str) -> bool:
+    if manager == "nvm":
+        return _nvm_present()
+    if manager == "apt":
+        return shutil.which("apt-get") is not None
+    return shutil.which(manager) is not None
+
+
+def _is_pp_cli(name: str) -> bool:
+    return name.endswith(_PP_CLI_SUFFIX) and len(name) > len(_PP_CLI_SUFFIX)
+
+
+def _pp_install_cmd(name: str) -> str:
+    slug = name[: -len(_PP_CLI_SUFFIX)]
+    return f"npx -y {PRINTING_PRESS_NPM} install {slug} --cli-only"
+
+
+def pp_install_cmd(slug: str) -> str:
+    """Public catalog-install command for the Printing Press CLI ``<slug>-pp-cli``."""
+    return _pp_install_cmd(f"{slug}{_PP_CLI_SUFFIX}")
+
+
+def helper_upgrade_cmd(slug: str) -> str:
+    """Shell command that upgrades the helper ``<slug>-pp-cli`` in place.
+
+    The pinned catalog install replaces an older binary, so upgrading is the
+    install command run again, e.g.
+    ``npx -y @mvanhorn/printing-press-library@<pin> install digg --cli-only``.
+    """
+    return pp_install_cmd(slug)
+
+
+def parse_version(text: str) -> Optional[Tuple[int, ...]]:
+    """First dotted version in a ``--version`` line, as an integer tuple.
+
+    ``"digg-pp-cli 2026.11.1"`` -> ``(2026, 11, 1)``; None when the line has
+    no dotted number (``"digg-pp-cli dev"``).
+    """
+    match = _VERSION_RE.search(text or "")
+    if match is None:
+        return None
+    return tuple(int(part) for part in match.group(0).split("."))
+
+
+def _format_version(version: Tuple[int, ...]) -> str:
+    return ".".join(str(part) for part in version)
+
+
+def _version_verdict(name: str, version_line: str) -> Optional[bool]:
+    """True below the helper's minimum, False at or above, None when unknown."""
+    minimum = MIN_HELPER_VERSIONS.get(name)
+    if minimum is None:
+        return None
+    version = parse_version(version_line)
+    if version is None:
+        return None
+    return version < minimum
+
+
+def helper_outdated(name: str, resolved: Optional[str] = None,
+                    timeout: float = PROBE_TIMEOUT) -> Optional[bool]:
+    """Whether the helper ``name`` on PATH is older than the engine can call.
+
+    Reads ``<resolved> --version`` fresh (setup asks again after an upgrade,
+    so the memoized probe would be stale). Runs nothing for a helper with no
+    minimum. Returns True/False, or None when there is no minimum or the
+    version could not be read; None never triggers an upgrade.
+    """
+    if name not in MIN_HELPER_VERSIONS:
+        return None
+    command = [resolved or name] + _VERSION_ARGS.get(name, ["--version"])
+    try:
+        proc = subproc.run_with_timeout(
+            command, timeout=timeout, cleanup_grace=0.1, capture_limit_bytes=64 * 1024,
+        )
+    except (OSError, subproc.SubprocTimeout):
+        return None
+    if proc.returncode != 0:
+        return None
+    return _version_verdict(name, (proc.stdout or proc.stderr or "").strip())
+
+
+def static_prescription(name: str, manager: str) -> Tuple[str, str]:
+    """Public ``(install, reinstall)`` strings for one dependency/manager pair.
+
+    Reads the static table without probing manager availability; raises
+    KeyError for unknown pairs so consumers fail loudly at import time.
+    """
+    return _MANAGER_PRESCRIPTIONS[name][manager]
+
+
+def _prescription(name: str, kind: str) -> Tuple[str, str]:
+    """Return ``(prescription, owner_pkg_manager)`` for install/reinstall.
+
+    ``kind`` is "install" (MISSING) or "reinstall" (BROKEN). Printing Press
+    CLIs always re-run the catalog installer; other deps pick the first
+    detected manager from their preference table, falling back to a generic
+    but still actionable instruction.
+    """
+    idx = 0 if kind == "install" else 1
+    if _is_pp_cli(name):
+        cmd = _pp_install_cmd(name)
+        if kind == "reinstall":
+            return f"re-run the Printing Press install: {cmd}", "npx"
+        return cmd, "npx"
+    for manager, prescriptions in _MANAGER_PRESCRIPTIONS.get(name, {}).items():
+        if _manager_available(manager):
+            return prescriptions[idx], manager
+    fallback = _FALLBACK_PRESCRIPTIONS.get(name)
+    if fallback:
+        return fallback[idx], ""
+    verb = "install" if kind == "install" else "reinstall"
+    return f"{verb} {name} and ensure it is on PATH", ""
+
+
+def windows_printing_press_bin_dir() -> Optional[Path]:
+    """Windows managed install dir for Printing Press CLIs, when applicable.
+
+    Returns ``%LOCALAPPDATA%/Programs/PrintingPress/bin`` on Windows when
+    LOCALAPPDATA is set; ``None`` otherwise.
+    """
+    if os.name != "nt":
+        return None
+    local_app = os.environ.get("LOCALAPPDATA") or os.environ.get("LocalAppData")
+    if not local_app:
+        return None
+    return Path(local_app) / "Programs" / "PrintingPress" / "bin"
+
+
+def add_managed_bin_dir_to_path() -> Optional[Path]:
+    """Append the Windows Printing Press bin dir to this process's PATH.
+
+    The Printing Press installer drops its CLIs (Digg, arXiv, Techmeme,
+    Yahoo Finance, ...) in ``%LOCALAPPDATA%/Programs/PrintingPress/bin`` and
+    does not put that dir on the user PATH, so every source gated on
+    ``shutil.which`` stayed off until the user edited PATH by hand (#1434).
+    The dir holds only installer-managed binaries, so appending it (lowest
+    precedence) is safe. Returns the dir when it was added, else ``None``.
+    """
+    directory = windows_printing_press_bin_dir()
+    if directory is None or not directory.is_dir():
+        return None
+    current = os.environ.get("PATH", "")
+    entries = {os.path.normcase(os.path.normpath(p)) for p in current.split(os.pathsep) if p}
+    if os.path.normcase(os.path.normpath(str(directory))) in entries:
+        return None
+    os.environ["PATH"] = f"{current}{os.pathsep}{directory}" if current else str(directory)
+    return directory
+
+
+def path_edit_example(directory: str) -> str:
+    """A copy-pasteable command that puts ``directory`` on PATH for this OS.
+
+    POSIX gets the shell ``export``; Windows gets a PowerShell command that
+    persists the dir on the user PATH (an ``export`` line with a Windows path
+    neither runs in PowerShell nor survives a restart).
+    """
+    if os.name == "nt":
+        # PowerShell single-quoted strings escape an apostrophe by doubling it
+        # (a C:\Users\O'Brien path would otherwise end the string early).
+        quoted = directory.replace("'", "''")
+        return (
+            "[Environment]::SetEnvironmentVariable('Path', "
+            "[Environment]::GetEnvironmentVariable('Path', 'User') + "
+            f"';{quoted}', 'User')"
+        )
+    return f'export PATH="{directory}:$PATH"'
+
+
+def path_edit_prescription(directory: str, name: str) -> str:
+    """Prescription text for a binary that sits in ``directory`` off PATH."""
+    restart = " then restart your agent host" if os.name == "nt" else ""
+    return f"add {directory} to PATH (e.g. {path_edit_example(directory)}){restart} so {name} resolves"
+
+
+def installer_bin_dirs() -> List[Path]:
+    """Installer-managed bin dirs shared with setup_wizard's Digg candidates.
+
+    Single source of truth for where installers drop binaries: the Printing
+    Press library default (~/.local/bin), Go bins, and — on Windows — the
+    managed %LOCALAPPDATA%/Programs/PrintingPress/bin dir.
+    ``setup_wizard._digg_bin_candidate_paths`` derives its Digg-specific
+    paths from this list; keep the two in lockstep by editing only here.
+    """
+    home = Path.home()
+    dirs = [home / ".local" / "bin"]
+    gopath = os.environ.get("GOPATH")
+    if gopath:
+        dirs.append(Path(gopath) / "bin")
+    dirs.append(home / "go" / "bin")
+    win_dir = windows_printing_press_bin_dir()
+    if win_dir is not None:
+        dirs.append(win_dir)
+    return dirs
+
+
+def _off_path_candidate_dirs() -> List[Path]:
+    """Directories where installers drop binaries that PATH may not cover.
+
+    The shared installer dirs (``installer_bin_dirs``, which also backs
+    setup_wizard's Digg candidates) plus the Homebrew prefixes (an agent
+    subprocess PATH sometimes omits even those).
+    """
+    dirs = installer_bin_dirs()
+    dirs.extend([Path("/opt/homebrew/bin"), Path("/usr/local/bin")])
+    return dirs
+
+
+def _off_path_binary(name: str) -> Optional[Path]:
+    """Return an executable for ``name`` in a known dir that PATH misses."""
+    names = [name, f"{name}.exe"] if os.name == "nt" else [name]
+    for directory in _off_path_candidate_dirs():
+        for candidate_name in names:
+            candidate = directory / candidate_name
+            if candidate.is_file() and os.access(candidate, os.X_OK):
+                return candidate
+    return None
+
+
+def _path_hint(directory: Path) -> str:
+    """Render a bin dir with $HOME substituted for copy-pasteable PATH edits."""
+    raw = str(directory)
+    if os.name == "nt":
+        return raw
+    home = str(Path.home())
+    if raw == home:
+        return "$HOME"
+    if raw.startswith(home + os.sep):
+        return "$HOME/" + raw[len(home) + 1:].replace(os.sep, "/")
+    return raw
+
+
+def probe_dependency(name: str, timeout: float = PROBE_TIMEOUT) -> DependencyProbe:
+    """Probe one external dependency: OK | MISSING | BROKEN | TIMEOUT.
+
+    - MISSING: not resolvable on this process's PATH. If the binary exists in
+      a known install dir, the prescription is a PATH edit, not an install —
+      installing again would not fix anything.
+    - BROKEN: shutil.which resolves it but a cheap version exec fails
+      (OSError/exec-format, or any non-zero exit). Prescription says
+      *reinstall* — the #692 stale-shim class must never read as available.
+    - TIMEOUT: the version exec exceeded the per-probe budget.
+    - OK: version exec exited 0; ``detail`` carries the version line.
+
+    Memoized per process; ``clear_dependency_probe_cache()`` resets.
+    """
+    cached = _dependency_probe_cache.get(name)
+    if cached is not None:
+        return cached
+    probe = _probe_dependency_uncached(name, timeout)
+    _dependency_probe_cache[name] = probe
+    return probe
+
+
+def _probe_dependency_uncached(name: str, timeout: float) -> DependencyProbe:
+    deadline = time.monotonic() + timeout
+    resolved = shutil.which(name)
+    if resolved is None:
+        off_path = _off_path_binary(name)
+        if off_path is not None:
+            hint = _path_hint(off_path.parent)
+            return DependencyProbe(
+                name=name,
+                status=MISSING,
+                detail=f"{name} is installed at {off_path} but that directory is not on this process's PATH",
+                prescription=path_edit_prescription(hint, name),
+                owner_pkg_manager="",
+                off_path=True,
+            )
+        prescription, manager = _prescription(name, "install")
+        return DependencyProbe(
+            name=name,
+            status=MISSING,
+            detail=f"{name} not found on PATH",
+            prescription=prescription,
+            owner_pkg_manager=manager,
+        )
+
+    command = [name] + _VERSION_ARGS.get(name, ["--version"])
+    try:
+        cleanup_grace = 0.1
+        proc = subproc.run_with_timeout(
+            command,
+            timeout=max(0, deadline - time.monotonic() - 2 * cleanup_grace),
+            deadline_monotonic=deadline - 2 * cleanup_grace,
+            cleanup_grace=cleanup_grace,
+            capture_limit_bytes=64 * 1024,
+        )
+    except (FileNotFoundError, OSError) as exc:
+        prescription, manager = _prescription(name, "reinstall")
+        return DependencyProbe(
+            name=name,
+            status=BROKEN,
+            detail=f"{name} resolves to {resolved} but won't execute: {exc}",
+            prescription=prescription,
+            owner_pkg_manager=manager,
+        )
+    except subproc.SubprocTimeout:
+        prescription, manager = _prescription(name, "reinstall")
+        return DependencyProbe(
+            name=name,
+            status=TIMEOUT,
+            detail=f"{name} version probe timed out after {timeout:g}s",
+            prescription=f"re-run doctor; if the timeout persists: {prescription}",
+            owner_pkg_manager=manager,
+        )
+
+    if proc.returncode == 0:
+        lines = (proc.stdout or proc.stderr or "").strip().splitlines()
+        version = lines[0].strip() if lines else ""
+        if name not in MIN_HELPER_VERSIONS:
+            return DependencyProbe(name=name, status=OK, detail=version)
+        outdated = _version_verdict(name, version)
+        if outdated is None:
+            return DependencyProbe(
+                name=name, status=OK, detail=f"{version} (version unknown)".strip(),
+            )
+        if not outdated:
+            return DependencyProbe(name=name, status=OK, detail=version, outdated=False)
+        minimum = _format_version(MIN_HELPER_VERSIONS[name])
+        # A Printing Press install replaces the older binary in place.
+        prescription, manager = _prescription(name, "install")
+        return DependencyProbe(
+            name=name,
+            status=OK,
+            detail=f"{version} (older than {minimum}; "
+            f"{MIN_HELPER_SHORTFALL.get(name, 'the oldest the engine can call')})",
+            prescription=prescription,
+            owner_pkg_manager=manager,
+            outdated=True,
+        )
+
+    lines = (proc.stderr or proc.stdout or "").strip().splitlines()
+    why = lines[0].strip() if lines else f"exit {proc.returncode}"
+    prescription, manager = _prescription(name, "reinstall")
+    return DependencyProbe(
+        name=name,
+        status=BROKEN,
+        detail=f"{name} resolves to {resolved} but the version probe failed: {why}",
+        prescription=prescription,
+        owner_pkg_manager=manager,
+    )
+
+
+def probe_dependencies(names: Optional[Iterable[str]] = None) -> Dict[str, DependencyProbe]:
+    """Probe every known dependency (or ``names``), memoized per process."""
+    return {name: probe_dependency(name) for name in (names or KNOWN_DEPENDENCIES)}
