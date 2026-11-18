@@ -14,6 +14,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
@@ -142,7 +148,11 @@ private fun DockButton(label: String, size: Dp, tag: String, glyph: @Composable 
     }
 }
 
-/** Elapsed time, a bar to touch or drag along, remaining time. Isolated: only it follows the position. */
+/**
+ * Elapsed time, a bar to touch or drag along, remaining time. Isolated: only it follows the position. The glide is
+ * read while the bar is drawn and the two times change once a second (6.7): read in composition, it composed and
+ * measured the scrubber again at every frame while a title played.
+ */
 @Composable
 private fun DockScrubber(durationMs: Long, modifier: Modifier) {
     val theme = LocalTheme.current
@@ -150,10 +160,14 @@ private fun DockScrubber(durationMs: Long, modifier: Modifier) {
     var dragging by remember { mutableStateOf<Float?>(null) }
     val duration = durationMs.coerceAtLeast(1L)
     val fraction = dragging ?: (position.toFloat() / duration).coerceIn(0f, 1f)
-    val smooth by animateFloatAsState(fraction, if (Motion.reduced || dragging != null) androidx.compose.animation.core.snap()
+    val smooth = animateFloatAsState(fraction, if (Motion.reduced || dragging != null) androidx.compose.animation.core.snap()
         else tween(500, easing = androidx.compose.animation.core.LinearEasing), label = "dock-progress")
+    // Whole seconds: each changes once a second, and only then is its text made and composed again.
+    val elapsed by remember(duration) { derivedStateOf { (smooth.value * duration).toLong() / 1000 } }
+    val remaining by remember(duration) { derivedStateOf { ((1f - smooth.value) * duration).toLong() / 1000 } }
+    val accent = theme.accent
     Row(modifier.testTag("dock-scrubber"), verticalAlignment = Alignment.CenterVertically) {
-        Text(com.ketvoice.app.ui.player.formatSecs((smooth * duration).toLong()), localize = false, color = theme.secondary, fontSize = 11.sp)
+        Text(com.ketvoice.app.ui.player.formatSecs(elapsed * 1000), localize = false, color = theme.secondary, fontSize = 11.sp)
         Box(Modifier.weight(1f).height(28.dp).padding(horizontal = 10.dp)
             .pointerInput(duration) {
                 detectTapGestures { offset -> Player.seekTo((offset.x / size.width).coerceIn(0f, 1f).times(duration).toLong()) }
@@ -166,11 +180,10 @@ private fun DockScrubber(durationMs: Long, modifier: Modifier) {
                     onDragCancel = { dragging = null })
             }, contentAlignment = Alignment.CenterStart) {
             Box(Modifier.fillMaxWidth().height(if (dragging != null) 6.dp else 4.dp).clip(RoundedCornerShape(3.dp))
-                .background(theme.onBackground.copy(alpha = .12f))) {
-                Box(Modifier.fillMaxHeight().fillMaxWidth(smooth).clip(RoundedCornerShape(3.dp)).background(theme.accent))
-            }
+                .background(theme.onBackground.copy(alpha = .12f))
+                .drawBehind { drawFilled(accent, smooth.value, 3.dp.toPx()) })
         }
-        Text("-" + com.ketvoice.app.ui.player.formatSecs(((1f - smooth) * duration).toLong()), localize = false, color = theme.secondary, fontSize = 11.sp)
+        Text("-" + com.ketvoice.app.ui.player.formatSecs(remaining * 1000), localize = false, color = theme.secondary, fontSize = 11.sp)
     }
 }
 
@@ -178,10 +191,20 @@ private fun DockScrubber(durationMs: Long, modifier: Modifier) {
 private fun DockProgressLine(modifier: Modifier) {
     val position by Player.positionMs.collectAsState()
     val duration = Player.state.collectAsState().value.durationMs.coerceAtLeast(1L)
-    val smooth by animateFloatAsState((position.toFloat() / duration).coerceIn(0f, 1f),
+    // Read while drawing, as the phone's mini-player line (Chrome.kt, 6.6).
+    val smooth = animateFloatAsState((position.toFloat() / duration).coerceIn(0f, 1f),
         if (Motion.reduced) androidx.compose.animation.core.snap() else tween(500, easing = androidx.compose.animation.core.LinearEasing), label = "dock-line")
+    val accent = LocalTheme.current.accent
     Box(modifier.padding(horizontal = 26.dp).padding(bottom = 4.dp).height(2.5.dp).clip(RoundedCornerShape(2.dp))
-        .background(LocalTheme.current.onBackground.copy(alpha = .10f))) {
-        Box(Modifier.fillMaxHeight().fillMaxWidth(smooth).background(LocalTheme.current.accent))
-    }
+        .background(LocalTheme.current.onBackground.copy(alpha = .10f))
+        .drawBehind { drawFilled(accent, smooth.value, 0f) })
+}
+
+/** The filled part of a progress track, from its start: [fraction] of the width, its own corners rounded by [cornerPx]. */
+private fun DrawScope.drawFilled(color: Color, fraction: Float, cornerPx: Float) {
+    val filled = Size(size.width * fraction.coerceIn(0f, 1f), size.height)
+    if (filled.width <= 0f) return
+    val left = if (layoutDirection == LayoutDirection.Rtl) size.width - filled.width else 0f
+    if (cornerPx <= 0f) drawRect(color, Offset(left, 0f), filled)
+    else drawRoundRect(color, Offset(left, 0f), filled, CornerRadius(cornerPx))
 }

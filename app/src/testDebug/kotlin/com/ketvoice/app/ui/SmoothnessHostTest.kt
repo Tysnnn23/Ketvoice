@@ -213,6 +213,33 @@ class SmoothnessHostTest {
         image("smooth-library-albums")
     }
 
+    /** One second of a title playing under the docked mini-player of a large window: how often [name] ran again. */
+    private fun dockRuns(name: String): Int {
+        AppSettings.reduceAnimations.value = false
+        val tracks = (1..3).map(::track)
+        player.value = PlayerUiState(queue = tracks, index = 0, isPlaying = true, playWhenReady = true, durationMs = 200_000)
+        compose.mainClock.autoAdvance = false
+        compose.setContent { KetvoiceTheme(useDark = true) { com.ketvoice.app.ui.tablet.TabletMiniPlayer(onOpen = {}) } }
+        compose.mainClock.advanceTimeBy(500)
+        Runs.counts.clear()
+        // Five of the player's 200 ms ticks, and the 60 frames of the glide between them.
+        repeat(5) { position.value = position.value + 200; compose.mainClock.advanceTimeBy(200) }
+        return Runs.of(name)
+    }
+
+    /** Until 6.6 the scrubber and its two times were composed again at every frame of the glide (about 60 a second). */
+    @Config(sdk = [35], qualifiers = "w1000dp-h700dp-mdpi")
+    @Test fun dockScrubberGlidesWithoutComposingAtEveryFrame() {
+        val runs = dockRuns("DockScrubber")
+        compose.onNodeWithTag("dock-scrubber").assertExists()
+        assertTrue("the scrubber follows the ticks and the seconds, not the frames ($runs)", runs in 1..10)
+    }
+
+    @Test fun dockProgressLineGlidesWithoutComposingAtEveryFrame() {
+        val runs = dockRuns("DockProgressLine")
+        assertTrue("the line follows the ticks, not the frames ($runs)", runs in 1..6)
+    }
+
     @Test fun coverGridLinesHaveStableKeysAndTypes() {
         val rows = (1..9).map { "album-$it" }
         val state = androidx.compose.foundation.lazy.LazyListState()
