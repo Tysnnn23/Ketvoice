@@ -17,6 +17,7 @@ import androidx.compose.runtime.InternalComposeTracingApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.hasClickAction
@@ -211,6 +212,44 @@ class SmoothnessHostTest {
         }
         assertTrue("only the lines on screen are composed ($cells of 80)", cells in 2..20)
         image("smooth-library-albums")
+    }
+
+    /** One second of a title playing under the docked mini-player of a large window: how often [name] ran again. */
+    private fun dockRuns(name: String): Int {
+        AppSettings.reduceAnimations.value = false
+        val tracks = (1..3).map(::track)
+        player.value = PlayerUiState(queue = tracks, index = 0, isPlaying = true, playWhenReady = true, durationMs = 200_000)
+        compose.mainClock.autoAdvance = false
+        compose.setContent { KetvoiceTheme(useDark = true) { com.ketvoice.app.ui.tablet.TabletMiniPlayer(onOpen = {}) } }
+        compose.mainClock.advanceTimeBy(500)
+        Runs.counts.clear()
+        // Five of the player's 200 ms ticks, and the 60 frames of the glide between them.
+        repeat(5) { position.value = position.value + 200; compose.mainClock.advanceTimeBy(200) }
+        return Runs.of(name)
+    }
+
+    /** Until 6.6 the scrubber and its two times were composed again at every frame of the glide (about 60 a second). */
+    @Config(sdk = [35], qualifiers = "w1000dp-h700dp-mdpi")
+    @Test fun dockScrubberGlidesWithoutComposingAtEveryFrame() {
+        val runs = dockRuns("DockScrubber")
+        compose.onNodeWithTag("dock-scrubber").assertExists()
+        assertTrue("the scrubber follows the ticks and the seconds, not the frames ($runs)", runs in 1..10)
+        dockAt(80_000, "smooth-dock-scrubber")
+        compose.onNodeWithText("1:20").assertExists()
+        compose.onNodeWithText("-2:00").assertExists()
+    }
+
+    @Test fun dockProgressLineGlidesWithoutComposingAtEveryFrame() {
+        val runs = dockRuns("DockProgressLine")
+        assertTrue("the line follows the ticks, not the frames ($runs)", runs in 1..6)
+        dockAt(80_000, "smooth-dock-line")
+    }
+
+    /** The dock once its glide has reached [ms], drawn to a picture. */
+    private fun dockAt(ms: Long, name: String) {
+        position.value = ms
+        compose.mainClock.advanceTimeBy(700)
+        image(name)
     }
 
     @Test fun coverGridLinesHaveStableKeysAndTypes() {

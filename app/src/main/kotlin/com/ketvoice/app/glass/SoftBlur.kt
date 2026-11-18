@@ -20,6 +20,9 @@ import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.geometry.isSpecified
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalGraphicsContext
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
@@ -90,10 +93,12 @@ internal object SoftBlur {
         return IntArray(passes) { i -> ((if (i < m) wl else wu) - 1) / 2 }
     }
 
-    /** Blurs ARGB [pixels] ([width] × [height]) in place: a Gaussian of [sigma] pixels, edges clamped. */
-    fun blur(pixels: IntArray, width: Int, height: Int, sigma: Float) {
+    /**
+     * Blurs ARGB [pixels] ([width] × [height]) in place: a Gaussian of [sigma] pixels, edges clamped. [scratch] is
+     * working room of at least the same size, which a caller that blurs again and again keeps.
+     */
+    fun blur(pixels: IntArray, width: Int, height: Int, sigma: Float, scratch: IntArray = IntArray(pixels.size)) {
         if (width <= 0 || height <= 0 || sigma <= 0f) return
-        val scratch = IntArray(pixels.size)
         for (radius in boxRadii(sigma)) {
             if (radius <= 0) continue
             boxPass(pixels, scratch, width, height, radius, horizontal = true)
@@ -153,6 +158,31 @@ internal object SoftBlur {
 /** The API level the glass decides on: the device's, or one a host test sets to see Android 11's path. */
 internal object GlassCompat {
     @Volatile var api: Int = Build.VERSION.SDK_INT
+
+    /** Host tests only: the phone's pyramid on a software canvas, to count how often it is recorded. */
+    @Volatile var pyramidInSoftware: Boolean = false
+}
+
+/**
+ * Where each captured backdrop lies ([BackdropCapture], Android 11 only), so a glass can tell whether what is
+ * behind it is still the same part of the same page. Read and written while laying out and drawing (main thread).
+ */
+internal object BackdropPlaces {
+    private val captured = java.util.IdentityHashMap<Any, LayoutCoordinates>()
+
+    fun put(backdrop: Any, coordinates: LayoutCoordinates) { captured[backdrop] = coordinates }
+
+    fun forget(backdrop: Any) { captured.remove(backdrop) }
+
+    /**
+     * What the backdrop's picture is moved by under a glass laid out at [panel] (the backdrop library computes the
+     * same difference); unspecified while either is not laid out or the backdrop was not captured here.
+     */
+    fun offset(backdrop: Any?, panel: LayoutCoordinates?): Offset {
+        val layer = captured[backdrop] ?: return Offset.Unspecified
+        if (panel == null || !panel.isAttached || !layer.isAttached) return Offset.Unspecified
+        return layer.positionInWindow() - panel.positionInWindow()
+    }
 }
 
 /** The blurred backdrop of one glass panel; its layers and bitmap are kept from frame to frame. */
@@ -160,18 +190,42 @@ internal class BackdropBlur(private val graphics: GraphicsContext) {
     private val layers = ArrayList<GraphicsLayer>()
     private var bitmap: Bitmap? = null
     private var pixels: IntArray? = null
+    private var scratch: IntArray? = null
     private val softwareScope = CanvasDrawScope()
 
-    /** Draws [drawBackdrop] blurred by a RenderEffect radius of [radiusPx] pixels, through [filter]. */
-    fun DrawScope.drawBlurred(drawBackdrop: DrawScope.() -> Unit, radiusPx: Float, filter: ColorFilter?) {
+    /** Where the glass is laid out, set by its panel ([BackdropPlaces.offset] reads it). */
+    var panel: LayoutCoordinates? = null
+
+    /** The backdrop's own drawing, as last handed over: the first layer always calls the newest one. */
+    private var backdropDraw: (DrawScope.() -> Unit)? = null
+
+    // What the pyramid was last recorded for. While all of it holds, the layers are drawn again as they are:
+    // they refer to the backdrop's layer, so a page scrolling behind still shows through (the graphics chip
+    // renders them again only then), and a glass drawn again for another reason costs no new blur.
+    private var sizes: List<IntSize> = emptyList()
+    private var keptSource: Any? = null
+    private var keptPlace = Offset.Unspecified
+    private var keptSize = Size.Unspecified
+    private var keptSigma = 0f
+
+    /**
+     * Draws [drawBackdrop] blurred by a RenderEffect radius of [radiusPx] pixels, through [filter]. [source] is the
+     * backdrop it draws and [place] where that backdrop lies under this glass (unspecified: not known, so the
+     * blur is recorded at every call, as before 6.7).
+     */
+    fun DrawScope.drawBlurred(drawBackdrop: DrawScope.() -> Unit, radiusPx: Float, filter: ColorFilter?,
+                              source: Any? = null, place: Offset = Offset.Unspecified) {
         val sigma = SoftBlur.sigma(radiusPx)
         if (sigma <= 0f || size.width < 1f || size.height < 1f) return drawBackdrop()
         val ok = runCatching {
-            if (drawContext.canvas.nativeCanvas.isHardwareAccelerated) drawPyramid(drawBackdrop, sigma, filter)
+            if (GlassCompat.pyramidInSoftware || drawContext.canvas.nativeCanvas.isHardwareAccelerated)
+                drawPyramid(drawBackdrop, sigma, filter, source, place)
             else drawSoftware(drawBackdrop, sigma, filter)
         }.isSuccess
-        if (!ok) drawBackdrop()
+        if (!ok) { forgetPyramid(); drawBackdrop() }
     }
+
+    private fun forgetPyramid() { keptSource = null; keptPlace = Offset.Unspecified }
 
     private fun layer(index: Int): GraphicsLayer {
         while (layers.size <= index) layers += graphics.createGraphicsLayer().apply {
@@ -181,27 +235,34 @@ internal class BackdropBlur(private val graphics: GraphicsContext) {
     }
 
     /** The GPU path: down to 1/F in steps of two, back up the same way, then drawn at full size. */
-    private fun DrawScope.drawPyramid(drawBackdrop: DrawScope.() -> Unit, sigma: Float, filter: ColorFilter?) {
+    private fun DrawScope.drawPyramid(drawBackdrop: DrawScope.() -> Unit, sigma: Float, filter: ColorFilter?,
+                                      source: Any?, place: Offset) {
         val factor = SoftBlur.pyramidFactor(sigma)
         val first = SoftBlur.firstStep(factor)
         val margin = SoftBlur.margin(sigma, factor).toFloat()
-        val sizes = pyramidSizes(size.width + 2 * margin, size.height + 2 * margin, first, factor)
-        recordFirst(layer(0), sizes[0], first, margin, drawBackdrop)
-        for (i in 1 until sizes.size) recordScaled(layer(i), sizes[i], .5f, layer(i - 1))
-        var top = layer(sizes.size - 1)
-        for (i in sizes.size - 2 downTo 0) {
-            val up = layer(2 * sizes.size - 2 - i)
-            recordScaled(up, sizes[i], 2f, top)
-            top = up
+        backdropDraw = drawBackdrop
+        val sameShape = keptSize == size && keptSigma == sigma && sizes.isNotEmpty()
+        val kept = sameShape && place.isSpecified && keptPlace == place && keptSource === source
+        if (!kept) {
+            forgetPyramid()
+            if (!sameShape) sizes = pyramidSizes(size.width + 2 * margin, size.height + 2 * margin, first, factor)
+            val levels = sizes.size
+            recordFirst(layer(0), sizes[0], first, margin)
+            for (i in 1 until levels) recordScaled(layer(i), sizes[i], .5f, layer(i - 1))
+            // Back up: layer levels + k is level levels - 2 - k, drawn from the layer recorded just before it.
+            for (k in 0 until levels - 1) recordScaled(layer(levels + k), sizes[levels - 2 - k], 2f, layer(levels + k - 1))
+            keptSize = size; keptSigma = sigma; keptSource = source; keptPlace = place
+            recordings++
         }
+        // The last layer recorded: the one enlarged back to the first step, or the only one of a soft blur.
+        val top = layer(2 * sizes.size - 2)
         top.colorFilter = filter
         translate(-margin, -margin) { scale(first.toFloat(), first.toFloat(), Offset.Zero) { drawLayer(top) } }
     }
 
-    private fun DrawScope.recordFirst(target: GraphicsLayer, size: IntSize, step: Int, margin: Float,
-                                      drawBackdrop: DrawScope.() -> Unit) {
+    private fun DrawScope.recordFirst(target: GraphicsLayer, size: IntSize, step: Int, margin: Float) {
         target.record(this, layoutDirection, size) {
-            scale(1f / step, 1f / step, Offset.Zero) { translate(margin, margin) { drawBackdrop() } }
+            scale(1f / step, 1f / step, Offset.Zero) { translate(margin, margin) { backdropDraw?.invoke(this) } }
         }
     }
 
@@ -222,8 +283,9 @@ internal class BackdropBlur(private val graphics: GraphicsContext) {
             scale(1f / factor, 1f / factor, Offset.Zero) { translate(margin, margin) { drawBackdrop() } }
         }
         val px = pixels?.takeIf { it.size == w * h } ?: IntArray(w * h).also { pixels = it }
+        val room = scratch?.takeIf { it.size == w * h } ?: IntArray(w * h).also { scratch = it }
         target.getPixels(px, 0, w, 0, 0, w, h)
-        SoftBlur.blur(px, w, h, sigma / factor)
+        SoftBlur.blur(px, w, h, sigma / factor, room)
         target.setPixels(px, 0, w, 0, 0, w, h)
         drawImage(target.asImageBitmap(), IntOffset.Zero, IntSize(w, h),
             dstOffset = IntOffset(-margin.roundToInt(), -margin.roundToInt()),
@@ -240,10 +302,15 @@ internal class BackdropBlur(private val graphics: GraphicsContext) {
     fun release() {
         layers.forEach { graphics.releaseGraphicsLayer(it) }
         layers.clear()
-        bitmap?.recycle(); bitmap = null; pixels = null
+        sizes = emptyList(); forgetPyramid(); backdropDraw = null; panel = null
+        bitmap?.recycle(); bitmap = null; pixels = null; scratch = null
     }
 
     companion object {
+        /** How many times a pyramid was recorded since the start (host tests count it). */
+        @Volatile var recordings = 0
+            private set
+
         /** Sizes of the pyramid's levels: the first at 1/[first], then halved until 1/[factor]. */
         fun pyramidSizes(width: Float, height: Float, first: Int, factor: Int): List<IntSize> {
             val sizes = ArrayList<IntSize>()

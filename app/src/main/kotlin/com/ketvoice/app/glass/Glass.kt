@@ -69,7 +69,11 @@ fun BackdropCapture(
     modifier: Modifier = Modifier,
     content: @Composable BoxScope.() -> Unit
 ) {
-    Box(modifier.layerBackdrop(backdrop)) {
+    // Android 11: where this backdrop lies, for the glass over it (BackdropBlur keeps a blur whose place did not change).
+    val soft = SoftBlur.needed()
+    if (soft) androidx.compose.runtime.DisposableEffect(backdrop) { onDispose { BackdropPlaces.forget(backdrop) } }
+    Box(modifier.then(if (soft) Modifier.onGloballyPositioned { BackdropPlaces.put(backdrop, it) } else Modifier)
+        .layerBackdrop(backdrop)) {
         CompositionLocalProvider(LocalBackdropLayer provides null) { content() }
     }
 }
@@ -399,7 +403,9 @@ private fun GlassPanelBody(
         val softBlur = if (SoftBlur.needed()) rememberBackdropBlur() else null
         val softFilter = remember(params, softBlur) { softBlur?.let { glassSoftFilter(params) } }
         Box(
-            modifier = modifier.then(touchLight).drawBackdrop(
+            modifier = modifier.then(touchLight)
+                .then(if (softBlur != null) Modifier.onGloballyPositioned { softBlur.panel = it } else Modifier)
+                .drawBackdrop(
                 backdrop = backdrop,
                 shape = { shape },
                 effects = {
@@ -450,7 +456,9 @@ private fun GlassPanelBody(
                 shadow = { if (params.shadow) Shadow.Default else null },
                 innerShadow = { if (params.innerShadow && !agsl) InnerShadow.Default else null },
                 onDrawBackdrop = { drawBackdrop ->
-                    if (softBlur == null) drawBackdrop() else with(softBlur) { drawBlurred(drawBackdrop, blurAmount, softFilter) }
+                    if (softBlur == null) drawBackdrop() else with(softBlur) {
+                        drawBlurred(drawBackdrop, blurAmount, softFilter, backdrop, BackdropPlaces.offset(backdrop, panel))
+                    }
                 },
                 onDrawSurface = {
                     if (!agsl || !renderState.shaderApplied) {

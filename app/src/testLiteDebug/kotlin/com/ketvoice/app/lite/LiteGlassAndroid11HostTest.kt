@@ -62,6 +62,8 @@ class LiteGlassAndroid11HostTest {
 
     @After fun reset() {
         GlassCompat.api = android.os.Build.VERSION.SDK_INT
+        GlassCompat.pyramidInSoftware = false
+        nudge.value = 0
         AppSettings.highPerformanceMode.value = com.ketvoice.app.LiteTuning.defaultPerformanceMode()
         AppSettings.liquidGlass.value = true
     }
@@ -78,6 +80,9 @@ class LiteGlassAndroid11HostTest {
         }
     }
 
+    /** Moves the two panels down by this many dp (a layout change, as when the tab bar folds). */
+    private val nudge = androidx.compose.runtime.mutableStateOf(0)
+
     private fun scene(dark: Boolean) {
         compose.setContent { KetvoiceTheme(useDark = dark) {
             val backdrop = rememberLayerBackdrop { stripes() }
@@ -86,7 +91,7 @@ class LiteGlassAndroid11HostTest {
                     androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) { stripes() }
                 }
                 CompositionLocalProvider(LocalBackdropLayer provides backdrop) {
-                    Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.SpaceEvenly,
+                    Column(Modifier.fillMaxSize().padding(top = nudge.value.dp), verticalArrangement = Arrangement.SpaceEvenly,
                         horizontalAlignment = Alignment.CenterHorizontally) {
                         GlassPanel(Modifier.width(300.dp).height(64.dp).testTag("glass-pill"), RoundedCornerShape(32.dp),
                             GlassParams.pill(dark = dark)) {
@@ -177,6 +182,30 @@ class LiteGlassAndroid11HostTest {
         println("android11 light glass: roughness=$glassRough (page $pageRough) spread=$glassSpread")
         assertTrue("light glass must blur: $glassRough vs $pageRough", glassRough < pageRough / 4)
         assertTrue("light glass must show the colours behind it: $glassSpread", glassSpread > 40)
+    }
+
+    /**
+     * 6.7: a glass drawn again while nothing moved (a sibling animating in the same layer, the tilt highlight, the
+     * cover's colour) keeps the pyramid it recorded, so the graphics chip does not blur the same backdrop again;
+     * a glass that moved records it anew. The phone's path is taken here on the host's software canvas, where it
+     * draws nothing useful: only how often it records is counted.
+     */
+    @Test fun pyramidIsRecordedOnceWhileTheGlassStaysInPlace() {
+        AppSettings.highPerformanceMode.value = true
+        GlassCompat.pyramidInSoftware = true
+        scene(dark = true)
+        val before = BackdropBlur.recordings
+        render("pyramid-count-1")
+        val first = BackdropBlur.recordings - before
+        assertEquals("the pill and the card each record their pyramid", 2, first)
+        render("pyramid-count-2"); render("pyramid-count-3")
+        assertEquals("drawn again in place: nothing recorded again", first, BackdropBlur.recordings - before)
+        nudge.value = 24
+        compose.waitForIdle()
+        render("pyramid-count-moved")
+        assertEquals("moved: both record what is behind their new place", 2 * first, BackdropBlur.recordings - before)
+        render("pyramid-count-moved-again")
+        assertEquals(2 * first, BackdropBlur.recordings - before)
     }
 
     /**
