@@ -119,9 +119,13 @@ internal class DeckAutomation(
 
         val MUTE = DeckAutomation(Curve.flat(0f), Curve.flat(0f))
 
-        private fun fadeOut(x: Float) = cos(PI / 2 * x).toFloat().coerceAtLeast(0f).pow(POWER)
-        private fun fadeIn(x: Float) = sin(PI / 2 * x).toFloat().coerceAtLeast(0f).pow(POWER)
+        /** Ketmix's own crossing, or the one the listener chose in the DJ editor (see [MixShaping]). */
+        private fun fadeOut(x: Float, curve: VolumeCurve = VolumeCurve.Auto) =
+            if (curve != VolumeCurve.Auto) MixShaping.fall(x, curve) else cos(PI / 2 * x).toFloat().coerceAtLeast(0f).pow(POWER)
+        private fun fadeIn(x: Float, curve: VolumeCurve = VolumeCurve.Auto) =
+            if (curve != VolumeCurve.Auto) MixShaping.rise(x, curve) else sin(PI / 2 * x).toFloat().coerceAtLeast(0f).pow(POWER)
         private fun ease(x: Float) = (.5 - .5 * cos(PI * x)).toFloat()
+        private fun ease(x: Float, curve: VolumeCurve) = if (curve != VolumeCurve.Auto) MixShaping.rise(x, curve) else ease(x)
         private fun sweep(fromHz: Float, toHz: Float, x: Float) = exp(ln(fromHz) + (ln(toHz) - ln(fromHz)) * ease(x))
         private fun point(us: Long, value: Float) = longArrayOf(us) to floatArrayOf(value)
 
@@ -155,12 +159,12 @@ internal class DeckAutomation(
             val start = plan.outMs * 1000L
             val end = (plan.outMs + plan.overlapMs) * 1000L
             return when (plan.kind) {
-                MixKind.Beatmatch -> if (plan.swapMs < 0) plainOut(start, end) else withVoiceDown(blendOut(plan, start, end), plan)
+                MixKind.Beatmatch -> if (plan.swapMs < 0) plainOut(plan, start, end) else withVoiceDown(blendOut(plan, start, end), plan)
                 MixKind.Echo -> echoOut(plan, start, end)
                 MixKind.Rise -> riseOut(plan, start, end)
                 MixKind.Filter -> withVoiceDown(filterOut(plan, start, end), plan)
-                MixKind.Wash -> withVoiceDown(washOut(start, end), plan)
-                else -> plainOut(start, end)
+                MixKind.Wash -> withVoiceDown(washOut(start, end, plan.shape.volume), plan)
+                else -> plainOut(plan, start, end)
             }
         }
 
@@ -185,7 +189,7 @@ internal class DeckAutomation(
                 MixKind.Wash -> {
                     // Under the wash the title rises without its bass at first, so that the two do not blur.
                     val open = start + (end - start) * 55 / 100
-                    DeckAutomation(Curve.join(Curve.shaped(start, end) { plan.gain * fadeIn(it) }, settle),
+                    DeckAutomation(Curve.join(Curve.shaped(start, end) { plan.gain * fadeIn(it, plan.shape.volume) }, settle),
                         Curve.join(point(0L, 220f), Curve.shaped(start, open, 16) { sweep(220f, OPEN_HZ, it) }, point(open + 1, 0f)))
                 }
                 else -> plainIn(plan, start, end, settle)
@@ -207,11 +211,26 @@ internal class DeckAutomation(
         const val VOICE_DOWN = .8f
         private const val VOICE_DOWN_US = 3_000_000L
 
-        private fun plainOut(start: Long, end: Long) =
-            DeckAutomation(Curve.join(Curve.shaped(start, end, shape = ::fadeOut)), Curve.flat(0f))
+        private fun plainOut(plan: MixPlan, start: Long, end: Long) =
+            DeckAutomation(Curve.join(Curve.shaped(start, end) { fadeOut(it, plan.shape.volume) }), crossBass(plan, start, end, start, end, true))
 
-        private fun plainIn(plan: MixPlan, start: Long, end: Long, settle: Pair<LongArray, FloatArray>) =
-            DeckAutomation(Curve.join(Curve.shaped(start, end) { plan.gain * fadeIn(it) }, settle), Curve.flat(0f))
+        private fun plainIn(plan: MixPlan, start: Long, end: Long, settle: Pair<LongArray, FloatArray>): DeckAutomation {
+            val swap = ((plan.inMs + (plan.swapMs - plan.outMs) * plan.rate.toDouble()) * 1000.0).toLong()
+            return DeckAutomation(Curve.join(Curve.shaped(start, end) { plan.gain * fadeIn(it, plan.shape.volume) }, settle),
+                crossBass(plan, start, end, swap, end, false))
+        }
+
+        /**
+         * A plain crossing the listener gave a bass swap (DJ editor, 6.9): the outgoing bass goes and the incoming
+         * one comes at [swapUs] (a position of this deck); without one the high-pass stays open, as always.
+         */
+        private fun crossBass(plan: MixPlan, start: Long, end: Long, swapUs: Long, until: Long, outgoing: Boolean): Curve {
+            if (plan.kind != MixKind.Crossfade || plan.swapMs < 0 || end - start < 4) return Curve.flat(0f)
+            val swap = (if (outgoing) plan.swapMs * 1000L else swapUs).coerceIn(start + 2, until - 2)
+            val half = MixShaping.bassHalfUs(plan, 150_000L, minOf(swap - start, until - swap) - 1)
+            return if (outgoing) Curve.join(point(swap - half - 1, 0f), Curve.shaped(swap - half, swap + half, 16) { sweep(OPEN_HZ, BASS_HZ, it) })
+            else Curve.join(point(0L, BASS_HZ), Curve.shaped(swap - half, swap + half, 16) { sweep(BASS_HZ, OPEN_HZ, it) }, point(swap + half + 1, 0f))
+        }
 
         /**
          * Both titles in time: the outgoing one keeps its bass until the swap, then thins out.
@@ -219,13 +238,16 @@ internal class DeckAutomation(
          */
         private fun blendOut(plan: MixPlan, start: Long, end: Long): DeckAutomation {
             val swap = (plan.swapMs * 1000L).coerceIn(start + 1, end - 1)
-            val half = (plan.beatMs * 500f).toLong().coerceIn(120_000L, 400_000L)
+            val half = MixShaping.bassHalfUs(plan, (plan.beatMs * 500f).toLong().coerceIn(120_000L, 400_000L), minOf(swap - start, end - swap) / 2)
+            val curve = plan.shape.volume
             // Led down a little further when the incoming title is the quieter one, so that the two meet level.
             val meeting = MEETING * plan.outGain
             val gain = Curve.join(
-                Curve.shaped(start, swap, 16) { 1f - (1f - meeting) * ease(it) },
-                Curve.shaped(swap, end, 24) { meeting * fadeOut(it) })
+                Curve.shaped(start, swap, 16) { 1f - (1f - meeting) * ease(it, curve) },
+                Curve.shaped(swap, end, 24) { meeting * fadeOut(it, curve) })
             val bassAway = Curve.shaped(swap - half, swap + half, 16) { sweep(OPEN_HZ, BASS_HZ, it) }
+            // No sweep asked for: the bass goes and the rest simply fades.
+            if (plan.shape.filter == FilterSweep.Off) return DeckAutomation(gain, Curve.join(point(swap - half - 1, 0f), bassAway))
             if (plan.variant == 1) {
                 val sink = Curve.join(point(swap + half, 0f), point(swap + half + 1, TOP_HZ),
                     Curve.shaped(swap + half + 2, end, 24) { sweep(TOP_HZ, 1_400f, it) })
@@ -237,16 +259,17 @@ internal class DeckAutomation(
 
         private fun blendIn(plan: MixPlan, start: Long, end: Long, swapAt: Long, settle: Pair<LongArray, FloatArray>): DeckAutomation {
             val swap = swapAt.coerceIn(start + 1, end - 1)
-            val half = (plan.beatMs * 500f * plan.rate).toLong().coerceIn(120_000L, 400_000L)
+            val half = MixShaping.bassHalfUs(plan, (plan.beatMs * 500f * plan.rate).toLong().coerceIn(120_000L, 400_000L), minOf(swap - start, end - swap) / 2)
+            val curve = plan.shape.volume
             val gain = Curve.join(
-                Curve.shaped(start, swap, 24) { plan.gain * MEETING * fadeIn(it) },
-                Curve.shaped(swap, end, 16) { plan.gain * (MEETING + (1f - MEETING) * ease(it)) },
+                Curve.shaped(start, swap, 24) { plan.gain * MEETING * fadeIn(it, curve) },
+                Curve.shaped(swap, end, 16) { plan.gain * (MEETING + (1f - MEETING) * ease(it, curve)) },
                 settle)
             val bass = Curve.join(
                 point(0L, BASS_HZ),
                 Curve.shaped(swap - half, swap + half, 16) { sweep(BASS_HZ, OPEN_HZ, it) },
                 point(swap + half + 1, 0f))
-            if (plan.variant != 0) return DeckAutomation(gain, bass)
+            if (plan.variant != 0 || plan.shape.filter == FilterSweep.Off) return DeckAutomation(gain, bass)
             // Variant 0, the way DJs bring a title in: its highs first, then its mids, and its bass
             // last, on the swap. The high-pass comes down from the top of the mids to the bass line.
             val mids = (start + (swap - start) * 3 / 5).coerceAtMost(swap - half - 1)
@@ -307,7 +330,7 @@ internal class DeckAutomation(
          */
         private fun filterOut(plan: MixPlan, start: Long, end: Long): DeckAutomation {
             val held = start + ((end - start) * plan.hold.coerceIn(0f, .85f)).toLong()
-            val gain = Curve.join(point(held, 1f), Curve.shaped(held + 1, end, 24, ::fadeOut))
+            val gain = Curve.join(point(held, 1f), Curve.shaped(held + 1, end, 24) { fadeOut(it, plan.shape.volume) })
             return if (plan.variant == 1)
                 DeckAutomation(gain, Curve.flat(0f), Curve.join(point(start, 0f), point(start + 1, TOP_HZ),
                     Curve.shaped(start + 2, end, 32) { sweep(TOP_HZ, 260f, it) }), resonance = SWEEP_Q)
@@ -316,7 +339,7 @@ internal class DeckAutomation(
         }
 
         private fun filterIn(plan: MixPlan, start: Long, end: Long, settle: Pair<LongArray, FloatArray>): DeckAutomation {
-            val gain = Curve.join(Curve.shaped(start, end) { plan.gain * fadeIn(it) }, settle)
+            val gain = Curve.join(Curve.shaped(start, end) { plan.gain * fadeIn(it, plan.shape.volume) }, settle)
             val opened = start + (end - start) * 4 / 5
             return if (plan.variant == 1)
                 DeckAutomation(gain, Curve.join(point(0L, 1_200f), Curve.shaped(start, opened, 32) { sweep(1_200f, OPEN_HZ, it) }, point(opened + 1, 0f)),
@@ -327,12 +350,12 @@ internal class DeckAutomation(
         }
 
         /** The title dissolves into its own reverberation, which then fades. */
-        private fun washOut(start: Long, end: Long): DeckAutomation {
+        private fun washOut(start: Long, end: Long, curve: VolumeCurve): DeckAutomation {
             val length = end - start
             val send = Curve.join(point(start, 0f), Curve.shaped(start + 1, start + length * 35 / 100, 12, ::ease))
             val dry = Curve.join(point(start + length * 15 / 100, 1f),
                 Curve.shaped(start + length * 15 / 100 + 1, start + length * 60 / 100, 16) { 1f - ease(it) })
-            val gain = Curve.join(point(start + length / 2, 1f), Curve.shaped(start + length / 2 + 1, end, 24, ::fadeOut))
+            val gain = Curve.join(point(start + length / 2, 1f), Curve.shaped(start + length / 2 + 1, end, 24) { fadeOut(it, curve) })
             val thin = Curve.join(point(start, 0f), Curve.shaped(start + 1, start + length * 60 / 100, 16) { sweep(OPEN_HZ, 320f, it) })
             return DeckAutomation(gain, thin, dry = dry, reverb = send)
         }

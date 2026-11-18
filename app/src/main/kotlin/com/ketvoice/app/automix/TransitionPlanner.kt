@@ -85,7 +85,9 @@ internal enum class MixStyle { Auto, Tempo, Echo, Filters, Fade, Rise;
 }
 
 /** 0 = discreet, 1 = balanced, 2 = DJ. */
-internal data class MixSettings(val intensity: Int = 1, val style: MixStyle = MixStyle.Auto) {
+internal data class MixSettings(val intensity: Int = 1, val style: MixStyle = MixStyle.Auto,
+                                  /** « Calage du tempo » (DJ editor, 6.9): false = no title is sped up or slowed down for this transition. */
+                                  val tempoMatch: Boolean = true) {
     /**
      * How far from its own tempo a title may be played so that two titles meet in time (6.0.0 Beta 4, the
      * owner chose Apple Music's way: « Calage des temps »). The incoming title is given that speed while it
@@ -93,7 +95,7 @@ internal data class MixSettings(val intensity: Int = 1, val style: MixStyle = Mi
      * to be heard, its pitch kept (see [TempoReturn]). Before, it kept that speed to its end, so only 2–4 %
      * were allowed.
      */
-    val tempoRange: Float get() = when (intensity) { 0 -> .04f; 2 -> .08f; else -> .06f }
+    val tempoRange: Float get() = if (!tempoMatch) 0f else when (intensity) { 0 -> .04f; 2 -> .08f; else -> .06f }
     /**
      * Blends run up to 64 beats (16 bars, about 30 s at 128 BPM), the length DJs and Apple Music favour.
      */
@@ -184,7 +186,9 @@ internal data class MixPlan(
     val voiceDownMs: Long = -1,
     /** « Boucle » (6.9): the outgoing bar looped under the blend, from this position (µs) for [loopUs]; see [LoopBlend]. */
     val loopFromUs: Long = -1,
-    val loopUs: Long = 0
+    val loopUs: Long = 0,
+    /** The details the listener set in the DJ editor (6.9), see [MixShaping]; the default plays Ketmix's own. */
+    val shape: MixShape = MixShape.DEFAULT
 ) {
     val mixes: Boolean get() = kind != MixKind.None
     /** Position in the incoming title once the outgoing one is gone. */

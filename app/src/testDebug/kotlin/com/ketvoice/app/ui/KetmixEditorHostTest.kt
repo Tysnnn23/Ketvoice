@@ -113,37 +113,156 @@ class KetmixEditorHostTest {
         }
     }
 
-    @Test fun thePhoneEditorShowsBothTitlesAlignedOnTheMix() {
+    /** « Écouter » without the audio engine: what the editor asks of it. */
+    private class FakeEngine : com.ketvoice.app.automix.PreviewEngine {
+        val flow = kotlinx.coroutines.flow.MutableStateFlow(com.ketvoice.app.automix.PreviewState())
+        override val state: kotlinx.coroutines.flow.StateFlow<com.ketvoice.app.automix.PreviewState> = flow
+        var started: com.ketvoice.app.automix.MixPlan? = null
+        var plain = false
+        override fun available() = true
+        override fun start(from: Track, to: Track, plan: com.ketvoice.app.automix.MixPlan, plain: Boolean): Boolean {
+            started = plan; this.plain = plain
+            flow.value = com.ketvoice.app.automix.PreviewState(running = true, positionMs = plan.outMs + plan.overlapMs / 3, plain = plain)
+            return true
+        }
+        override fun stop() { flow.value = com.ketvoice.app.automix.PreviewState() }
+    }
+    private val fake = FakeEngine()
+    @Before fun engine() { com.ketvoice.app.automix.TransitionPreview.engine = fake }
+    @After fun realEngine() { com.ketvoice.app.automix.TransitionPreview.engine = com.ketvoice.app.automix.DeckPreview }
+
+    /** Where [ms] of the outgoing clock stands across the timeline, 0..1. */
+    private fun fraction(state: EditorState, ms: Long): Float {
+        val plan = state.plan()
+        val window = com.ketvoice.app.ui.player.TimelineWindow.of(plan, plan.outMs, wide = false, zoom = state.zoom)
+        return (ms - window.fromMs).toFloat() / window.spanMs
+    }
+
+    @Test fun thePhoneEditorShowsBothTitlesOnOneTimeline() {
         val state = state()
         compose.setContent { KetvoiceTheme(useDark = true) { KetmixEditorScreen(state, onClose = {}) } }
         compose.onNodeWithTag("ketmix-editor").assertIsDisplayed()
-        compose.onNodeWithTag("ketmix-lane-out").assertIsDisplayed()
-        compose.onNodeWithTag("ketmix-lane-in").assertIsDisplayed()
-        compose.onNodeWithText("Éditeur Ketmix").assertIsDisplayed()
+        compose.onNodeWithTag("ketmix-timeline").assertIsDisplayed()
+        compose.onNodeWithText(com.ketvoice.app.data.AppText.t("Éditeur Ketmix")).assertIsDisplayed()
+        compose.onNodeWithText(com.ketvoice.app.data.AppText.t("Bêta")).assertIsDisplayed()
         val auto = state.plan()
         assertTrue(auto.mixes)
         snapshot("ketmix-editor-phone")
 
-        // The listener drags the outgoing wave to the right: the mix starts earlier, on the grid, and it is remembered.
-        compose.onNodeWithTag("ketmix-lane-out").performTouchInput { swipe(center, center + androidx.compose.ui.geometry.Offset(160f, 0f), 400) }
+        // The outgoing wave, left of the box, dragged to the right: the mix starts earlier, on the grid.
+        compose.onNodeWithTag("ketmix-timeline").performTouchInput {
+            val y = height * .25f
+            swipe(androidx.compose.ui.geometry.Offset(width * .04f, y), androidx.compose.ui.geometry.Offset(width * .04f + 160f, y), 400)
+        }
         compose.waitForIdle()
         val chosen = state.choice.exitMs
         assertTrue("an exit was chosen ($chosen)", chosen in 0 until auto.outMs)
-        assertEquals("remembered", chosen, MixPointStore.exitOf("demo-out", 200_000L))
+        assertEquals("the entry stays", -1L, state.choice.entryMs)
         assertEquals("listener", state.plan().reason)
         val analysis = state.out.analysis!!
         val beats = (chosen - analysis.beatAtMs) / analysis.beatMs
         assertTrue("on a beat ($beats)", kotlin.math.abs(beats - Math.round(beats)) * analysis.beatMs < 2.0)
-        // A style for this pair.
+        assertEquals("not kept before « Enregistrer »", -1L, MixPointStore.exitOf("demo-out", 200_000L))
+        compose.onNodeWithTag("ketmix-save").performClick()
+        assertEquals("remembered", chosen, MixPointStore.exitOf("demo-out", 200_000L))
+        assertFalse(state.dirty)
+
+        // The box itself, dragged: the exit and the entry move together.
+        val before = state.plan()
+        val middle = fraction(state, before.outMs + before.overlapMs / 2)
+        compose.onNodeWithTag("ketmix-timeline").performTouchInput {
+            val x = width * middle; val y = height * .5f
+            swipe(androidx.compose.ui.geometry.Offset(x, y), androidx.compose.ui.geometry.Offset(x + 120f, y), 400)
+        }
+        compose.waitForIdle()
+        val moved = state.plan()
+        assertTrue("the exit moved later (${before.outMs} -> ${moved.outMs})", moved.outMs > before.outMs)
+        assertTrue("the entry moved with it (${before.inMs} -> ${moved.inMs})", moved.inMs > before.inMs)
+
+        // A preset re-plans at once; kept with the pair once saved.
         compose.onNodeWithTag("ketmix-style-Echo").performScrollTo().performClick()
-        assertEquals(MixStyle.Echo, MixPointStore.pair("demo-out", "demo-in")?.style)
-        compose.onNodeWithTag("ketmix-lane-out").performScrollTo()
+        assertEquals(MixStyle.Echo, state.choice.style)
+        assertEquals(com.ketvoice.app.automix.MixKind.Echo, state.plan().kind)
+        compose.onNodeWithTag("ketmix-style-Auto").performScrollTo().performClick()
+        assertNull(state.choice.style)
+        compose.onNodeWithTag("ketmix-style-Tempo").performScrollTo().performClick()
+        assertEquals(com.ketvoice.app.automix.MixKind.Beatmatch, state.plan().kind)
+        compose.onNodeWithTag("ketmix-save").performClick()
+        assertEquals(MixStyle.Tempo, MixPointStore.pair("demo-out", "demo-in")?.style)
+        compose.onNodeWithTag("ketmix-timeline").performScrollTo()
         snapshot("ketmix-editor-phone-edited")
-        // « Réinitialiser »: back to Ketmix's choice.
-        compose.onNodeWithTag("ketmix-reset").performScrollTo().performClick()
+
+        // « … » › « Revenir au choix de Ketmix », then saved: back to Ketmix's choice.
+        compose.onNodeWithTag("ketmix-more").performClick()
+        compose.onNodeWithTag("ketmix-reset").performClick()
         assertTrue(state.choice.automatic)
+        compose.onNodeWithTag("ketmix-save").performClick()
         assertEquals(-1L, MixPointStore.exitOf("demo-out", 200_000L))
         assertNull(MixPointStore.pair("demo-out", "demo-in"))
+    }
+
+    @Test fun theDetailRowsChangeWhatIsPlayedAndAreKeptWithThePair() {
+        val state = state()
+        compose.setContent { KetvoiceTheme(useDark = true) { KetmixEditorScreen(state, onClose = {}) } }
+        val auto = state.plan()
+        assertEquals(com.ketvoice.app.automix.MixKind.Beatmatch, auto.kind)
+        assertTrue(auto.swapMs >= 0)
+        compose.onNodeWithTag("ketmix-bass").performScrollTo().performClick()
+        compose.onNodeWithTag("ketmix-bass-Off").performClick()
+        assertEquals(com.ketvoice.app.automix.BassSwap.Off, state.choice.shape.bass)
+        assertEquals("no bass swap", -1L, state.plan().swapMs)
+        compose.onNodeWithTag("ketmix-filter").performScrollTo().performClick()
+        compose.onNodeWithTag("ketmix-filter-LowPass").performClick()
+        assertEquals("sinks through a low-pass", 1, state.plan().variant)
+        compose.onNodeWithTag("ketmix-volume").performScrollTo().performClick()
+        compose.onNodeWithTag("ketmix-volume-Linear").performClick()
+        compose.onNodeWithTag("ketmix-tempo").performScrollTo().performClick()
+        assertFalse(state.choice.shape.tempo)
+        assertNotEquals("124 and 126 BPM are not matched without tempo", com.ketvoice.app.automix.MixKind.Beatmatch, state.plan().kind)
+        compose.onNodeWithTag("ketmix-timeline").performScrollTo()
+        snapshot("ketmix-editor-phone-details")
+        compose.onNodeWithTag("ketmix-save").performClick()
+        val kept = MixPointStore.pair("demo-out", "demo-in")!!.shape
+        assertEquals(com.ketvoice.app.automix.MixShape(com.ketvoice.app.automix.VolumeCurve.Linear, com.ketvoice.app.automix.BassSwap.Off,
+            com.ketvoice.app.automix.FilterSweep.LowPass, tempo = false), kept)
+        // Read back as the editor opens it.
+        val again = state()
+        again.recall()
+        assertEquals(kept, again.choice.shape)
+    }
+
+    @Test fun listeningWorksWithoutTheTitlePlayingAndCanBeStopped() {
+        val state = state()
+        compose.setContent { KetvoiceTheme(useDark = true) { KetmixEditorScreen(state, onClose = {}) } }
+        assertNotEquals("the outgoing title is not the one playing", "demo-out", com.ketvoice.app.player.Player.state.value.current?.id)
+        compose.onNodeWithTag("ketmix-preview").performScrollTo().assertIsEnabled().performClick()
+        assertEquals(state.plan(), fake.started)
+        assertFalse(fake.plain)
+        compose.onNodeWithText(com.ketvoice.app.data.AppText.t("Arrêter")).assertExists()
+        compose.onNodeWithTag("ketmix-timeline").performScrollTo()
+        snapshot("ketmix-editor-phone-listening")
+        // « Sans mix »: the same moment as a plain cut, at once.
+        compose.onNodeWithTag("ketmix-ab-1").performScrollTo().performClick()
+        assertTrue(fake.plain)
+        compose.onNodeWithTag("ketmix-preview").performClick()
+        assertFalse(fake.state.value.running)
+    }
+
+    @Test fun closingWithChangesAsksFirst() {
+        val state = state()
+        var closed = false
+        compose.setContent { KetvoiceTheme(useDark = false) { KetmixEditorScreen(state, onClose = { closed = true }) } }
+        compose.onNodeWithTag("ketmix-close").performClick()
+        assertTrue("nothing changed: it closes", closed)
+        closed = false
+        state.commitStyle(MixStyle.Fade)
+        compose.onNodeWithTag("ketmix-close").performClick()
+        assertFalse(closed)
+        compose.onNodeWithText(com.ketvoice.app.data.AppText.t("Enregistrer cette transition ?")).assertIsDisplayed()
+        snapshot("ketmix-editor-phone-light-unsaved")
+        compose.onNodeWithText(com.ketvoice.app.data.AppText.t("Ne pas enregistrer")).performClick()
+        assertTrue(closed)
+        assertNull("nothing kept", MixPointStore.pair("demo-out", "demo-in"))
     }
 
     @Test fun aWaveBeingReadShowsItsProgress() {
@@ -151,7 +270,7 @@ class KetmixEditorHostTest {
         state.into.wave = null
         state.into.progress = .4f
         compose.setContent { KetvoiceTheme(useDark = false) { KetmixEditorScreen(state, onClose = {}) } }
-        compose.onNodeWithText("Lecture de l'onde… 40 %").assertExists()
+        compose.onNodeWithText(com.ketvoice.app.data.AppText.t("Lecture de l'onde… {0} %").replace("{0}", "40")).assertExists()
         snapshot("ketmix-editor-phone-light-loading")
     }
 
