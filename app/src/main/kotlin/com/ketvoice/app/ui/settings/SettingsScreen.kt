@@ -721,6 +721,7 @@ fun SettingsScreen() {
                     value = ""
                 ) { AppUi.pushOverlay(AppUi.DOWNLOADS) }
             }
+            Section("HORS LIGNE INTELLIGENT") { SmartOfflineRows { choice = it } }
 
             // ==================================================== MUSIQUE LOCALE
             val localFolderPicker = rememberLauncherForActivityResult(

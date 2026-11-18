@@ -9,7 +9,7 @@ internal enum class SettingsCategory(val title: String, val groups: Set<String>)
     Lyrics("Paroles", setOf("PAROLES")),
     Canvas("Canvas", setOf("KETVOICE API · CANVAS")),
     Sources("Sources", setOf("SOURCES")),
-    Downloads("Téléchargements", setOf("TÉLÉCHARGEMENTS")),
+    Downloads("Téléchargements", setOf("TÉLÉCHARGEMENTS", "HORS LIGNE INTELLIGENT")),
     LocalMusic("Musique locale", setOf("MUSIQUE LOCALE")),
     Storage("Stockage", setOf("STOCKAGE")),
     About("À propos", setOf("À PROPOS"));

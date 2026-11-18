@@ -28,6 +28,13 @@ object AppSettings {
     val downloadsWifiOnly = mutableStateOf(false)
     /** A title made a favourite is downloaded for listening offline. */
     val autoOfflineFavorites = mutableStateOf(true)
+    /** « Hors ligne intelligent » (7.0): what the listener plays most and their new favourites, downloaded on their own; off by default. */
+    val smartOffline = mutableStateOf(false)
+    /** Its room: 1, 2, 5 or 10 GB, or 0 for a share of the free storage ([smartOfflinePercent]). */
+    val smartOfflineGb = mutableStateOf(SmartOfflinePlan.DEFAULT_GB)
+    val smartOfflinePercent = mutableStateOf(SmartOfflinePlan.DEFAULT_PERCENT)
+    /** Its passes wait for the phone to charge (on by default). */
+    val smartOfflineCharging = mutableStateOf(true)
     val panoramicCanvas = mutableStateOf(false)
     val sonicCanvas = mutableStateOf(false)
     val albumColors = mutableStateOf(true)

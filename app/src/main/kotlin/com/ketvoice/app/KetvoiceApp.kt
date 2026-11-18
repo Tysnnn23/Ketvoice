@@ -55,6 +55,9 @@ class KetvoiceApp : Application(), ImageLoaderFactory {
         // New releases of the followed artists (6.3): checked twice a day in the background.
         if (android.os.Build.FINGERPRINT != "robolectric")
             start(LiteTuning.StartWork.DiscoverySchedule) { com.ketvoice.app.data.ReleaseWatch.schedule(this) }
+        // « Hors ligne intelligent » (7.0): its passes on an unmetered network, scheduled while it is on, cancelled otherwise.
+        if (android.os.Build.FINGERPRINT != "robolectric")
+            start(LiteTuning.StartWork.DiscoverySchedule) { com.ketvoice.app.data.SmartOffline.schedule(this) }
         // The Canvas of favourites and playlists are fetched ahead on Wi-Fi (6.2.3): its own coroutine, first run 45 s after the start.
         if (android.os.Build.FINGERPRINT != "robolectric") runCatching { com.ketvoice.app.data.CanvasPreload.start(this) }
         // Keeps a placed home-screen widget in step with playback (no work when none is placed).

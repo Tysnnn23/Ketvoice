@@ -62,6 +62,9 @@ object Downloader {
     private val _tasks = MutableStateFlow<Map<String, DownloadTask>>(emptyMap())
     val tasks: StateFlow<Map<String, DownloadTask>> = _tasks
     private val paused = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+    /** Automatic downloads ([SmartOffline], 7.0): no toasts, and they wait for Wi-Fi whatever the setting says. */
+    private val quiet = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+    private fun needsWifi(id: String): Boolean = AppSettings.downloadsWifiOnly.value || id in quiet
 
     /** Downloads that must survive process death; mirrored to `download-queue.json`. */
     @Volatile private var queueStore: DownloadQueueStore? = null
@@ -151,7 +154,7 @@ object Downloader {
             kotlinx.coroutines.currentCoroutineContext().ensureActive()
             val waiting = when {
                 id in paused -> DownloadPhase.Paused
-                AppSettings.downloadsWifiOnly.value && !wifiConnected() -> DownloadPhase.WaitingWifi
+                needsWifi(id) && !wifiConnected() -> DownloadPhase.WaitingWifi
                 else -> null
             }
             if (_tasks.value[id]?.phase != (waiting ?: phase)) task(id) { it.copy(phase = waiting ?: phase) }
@@ -181,13 +184,16 @@ object Downloader {
 
     fun itemFor(trackId: String): Item? = _items.value.firstOrNull { it.track.id == trackId }
 
-    @Synchronized fun download(track: Track, capsuleLimit: Long? = null): Job? {
+    /** [auto]: asked by [SmartOffline] or the favourites, not by the listener — quiet, and marked « Auto » by the caller. */
+    @Synchronized fun download(track: Track, capsuleLimit: Long? = null, auto: Boolean = false): Job? {
         val c = ctx ?: return null
+        if (!auto && capsuleLimit == null) runCatching { SmartOffline.noteManualDownload(track.id) }
         if (itemFor(track.id) != null) {
-            toast("Déjà téléchargé")
+            if (!auto) toast("Déjà téléchargé")
             return null
         }
-        jobs[track.id]?.let { return it }
+        jobs[track.id]?.let { if (!auto) quiet.remove(track.id); return it }
+        if (auto) quiet.add(track.id) else quiet.remove(track.id)
         // Capsule preparation is a transient bundle, not a user download.
         if (capsuleLimit == null) updateQueue(c) { DownloadQueue.withEntry(it, track) }
         return start(track, capsuleLimit, announce = true)
@@ -203,7 +209,7 @@ object Downloader {
             task(track.id) { it.copy(phase = DownloadPhase.Failed) }
             _busy.update { it - track.id }
             if (capsuleLimit == null) updateQueue(c) { DownloadQueue.withState(it, track.id, QueueState.Failed) }
-            if (announce) toast("Téléchargement existant illisible : aucun fichier remplacé")
+            if (announce) say(track.id, "Téléchargement existant illisible : aucun fichier remplacé")
             return null
         }
         _busy.update { it + track.id }
@@ -211,7 +217,7 @@ object Downloader {
         _progress.update { it + (track.id to 0) }
         paused.remove(track.id)
         task(track.id) { DownloadTask() }
-        if (announce) toast("Téléchargement de « ${track.title} »…")
+        if (announce) say(track.id, "Téléchargement de « ${track.title} »…")
         val job = scope.launch(start = kotlinx.coroutines.CoroutineStart.LAZY) {
             try {
                 awaitTransfer(track.id, DownloadPhase.Resolving)
@@ -290,7 +296,7 @@ object Downloader {
                 val selected = gotStream
                 if (file == null || selected == null) {
                     task(track.id) { it.copy(phase = DownloadPhase.Failed) }
-                    toast(if (dashPermissionMissing) "Autorisation de téléchargement non déclarée par la source"
+                    say(track.id, if (dashPermissionMissing) "Autorisation de téléchargement non déclarée par la source"
                         else "Échec du téléchargement (aucun flux lisible)")
                     return@launch
                 }
@@ -365,15 +371,16 @@ object Downloader {
                 persistMeta()
                 _progress.value = _progress.value + (track.id to 100)
                 refresh()
-                toast("« ${track.title} » téléchargé")
+                say(track.id, "« ${track.title} » téléchargé")
                 task(track.id) { it.copy(phase = DownloadPhase.Complete) }
             } catch (cancelled: CancellationException) {
                 task(track.id) { it.copy(phase = DownloadPhase.Cancelled) }
                 throw cancelled
             } catch (_: Exception) {
                 task(track.id) { it.copy(phase = DownloadPhase.Failed) }
-                toast("Échec du téléchargement")
+                say(track.id, "Échec du téléchargement")
             } finally {
+                quiet.remove(track.id)
                 _progress.update { it - track.id }
                 _busy.update { it - track.id }
                 if (_tasks.value[track.id]?.phase in setOf(DownloadPhase.Complete, DownloadPhase.Cancelled))
@@ -416,7 +423,7 @@ object Downloader {
             val lastDiskCheck = java.util.concurrent.atomic.AtomicLong(0L)
             val monitor = CoroutineScope(kotlinx.coroutines.currentCoroutineContext()).launch(Dispatchers.IO) {
                 while (isActive) {
-                    if (id in paused || (AppSettings.downloadsWifiOnly.value && !wifiConnected())) downloader.cancel()
+                    if (id in paused || (needsWifi(id) && !wifiConnected())) downloader.cancel()
                     kotlinx.coroutines.delay(250)
                 }
             }
@@ -429,24 +436,24 @@ object Downloader {
                     val checkDisk = now - lastDiskCheck.get() >= 1_000 && lastDiskCheck.getAndSet(now) != now
                     val lowDisk = checkDisk && runCatching { StatFs(context.filesDir.path).availableBytes < 64L * 1024 * 1024 }.getOrDefault(true)
                     if (downloaded > limit || contentLength > limit || lowDisk) exceeded.set(true)
-                    if (cancelled() || id in paused || (AppSettings.downloadsWifiOnly.value && !wifiConnected()) || exceeded.get())
+                    if (cancelled() || id in paused || (needsWifi(id) && !wifiConnected()) || exceeded.get())
                         downloader.cancel()
                 }
                 if (cancelled()) throw CancellationException()
                 if (exceeded.get()) return null
-                if (id in paused || (AppSettings.downloadsWifiOnly.value && !wifiConnected())) continue
+                if (id in paused || (needsWifi(id) && !wifiConnected())) continue
                 store.verify(id, manifestUrl)
                 val bytes = store.verifyOnce(id, manifestUrl)
                 return bytes.takeIf { it <= limit }
             } catch (cancelledException: CancellationException) {
                 if (cancelled() || !kotlinx.coroutines.currentCoroutineContext().isActive) throw cancelledException
                 if (exceeded.get()) return null
-                if (id in paused || (AppSettings.downloadsWifiOnly.value && !wifiConnected())) continue
+                if (id in paused || (needsWifi(id) && !wifiConnected())) continue
                 return null
             } catch (_: Exception) {
                 if (cancelled()) throw CancellationException()
                 if (exceeded.get()) return null
-                if (id in paused || (AppSettings.downloadsWifiOnly.value && !wifiConnected())) continue
+                if (id in paused || (needsWifi(id) && !wifiConnected())) continue
                 return null
             } finally {
                 monitor.cancel()
@@ -853,6 +860,8 @@ object Downloader {
         .digest(id.toByteArray())
         .joinToString("") { "%02x".format(it) }
         .take(24)
+
+    private fun say(id: String, message: String) { if (id !in quiet) toast(message) }
 
     private fun toast(message: String) {
         Handler(Looper.getMainLooper()).post {

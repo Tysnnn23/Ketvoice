@@ -8,12 +8,14 @@ import kotlinx.coroutines.launch
 
 /**
  * Titles made favourites are downloaded by themselves when the listener wants it (Settings →
- * Downloads): the Wi-Fi-only setting of downloads applies to them too.
+ * Downloads): the Wi-Fi-only setting of downloads applies to them too. Since 7.0 they are automatic downloads
+ * of [SmartOffline]: they carry the « Auto » badge, a favourite deleted by hand is not fetched again, and with
+ * « Hors ligne intelligent » on they wait for its next pass on an unmetered network, within its limit.
  */
 object FavoritesOffline {
     private var started = false
 
-    fun start() {
+    fun start(context: android.content.Context? = null) {
         if (started) return
         started = true
         CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate).launch {
@@ -21,10 +23,11 @@ object FavoritesOffline {
             snapshotFlow { AppSettings.favoriteIds.value }.collect { now ->
                 val previous = before
                 before = now
+                runCatching { SmartOffline.noteFavorites(now) }
                 if (previous == null || !AppSettings.autoOfflineFavorites.value) return@collect
                 for (id in added(previous, now)) {
                     val track = trackFor(id) ?: continue
-                    if (Downloader.itemFor(id) == null && id !in Downloader.busy.value) Downloader.download(track)
+                    SmartOffline.favoriteAdded(context, track)
                 }
             }
         }
