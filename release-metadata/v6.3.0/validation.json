@@ -1,0 +1,215 @@
+{
+  "schema": 8,
+  "version": "6.3.0",
+  "versionCode": 134,
+  "source_commit": "d90eb87618dae87390a559fed6c32ee3ed2e63f3",
+  "created_at": "2026-11-18T06:28:23.058463+00:00",
+  "build_origin": {
+    "kind": "github_actions_with_owner_discord_sdk",
+    "workflow": "android.yml",
+    "run_id": 44248582179,
+    "artifact": {
+      "id": 14403543656,
+      "sha256": "039a50adbd80212a50b8474c7714b2b3105c4bce16648633af539f7e3be4db77"
+    },
+    "gradle": "assembleMobileRelease assembleQuestRelease assembleLiteRelease",
+    "note": "Signed by CI with the pinned keystore secret; the Discord Social SDK AAR matched its pinned SHA-256."
+  },
+  "local_validation": {
+    "result": "debug JVM/Robolectric suites for the three flavors (mobile, quest, lite), release lint and the UI text audit passed in a cloud container without the Discord SDK",
+    "commands": [
+      "testMobileDebugUnitTest",
+      "testQuestDebugUnitTest",
+      "testLiteDebugUnitTest",
+      "lintMobileRelease",
+      "lintQuestRelease",
+      "lintLiteRelease",
+      "tools/test_verify_apk.py",
+      "tools/audit_ui_texts.py --check"
+    ],
+    "ci_validation": "run 44248582179: release builds, debug and release unit tests for both flavors, UI text audit, lint, APK signature pin and Discord bridge packaging passed",
+    "code_review": {
+      "kind": "none independent"
+    },
+    "host_previews": "Robolectric software renders on the host (not a phone), looked at by the sub-agents: Canvas cache settings and loading pill, Air Ket send/offer/receive/summary screens, shared playlist badge/share sheet/members sheet/menu, profile page and switches; glass draws flat on the host",
+    "host_previews_6_1_0": "Robolectric software renders on the host (not a phone), looked at by the sub-agents and the main agent: artist and album pages, discoveries card, Replay and Wrapped pages, Ketmix editor, Ketogether sheet and pills, lock-screen lyrics notification and widgets, settings rows, Vice City welcome screen (phone, tablet, landscape, large text), Vice City Home/player/settings, lyrics without halo; glass draws flat on the host",
+    "after_last_full_local_run": "the Air Ket loopback test moved to the debug-only tests (release builds refuse loopback by design); its debug and release Air Ket tests reran green, then CI run 44248582179 passed"
+  },
+  "server": {
+    "function": "ketvoice-content",
+    "deployed_version": 23,
+    "changed_in_this_version": false,
+    "database": "migration 20261118120000_shared_playlists_and_public_profiles applied by the owner in the SQL editor on 2026-11-18 (as five one-statement-per-line parts, the same 114 statements) and verified afterwards"
+  },
+  "tests": {
+    "mobile": {
+      "jvm": {
+        "tests": 1510,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 3
+      },
+      "android_15_emulator_compose": {
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "quest": {
+      "jvm": {
+        "tests": 1501,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 33
+      },
+      "android_15_emulator_compose": {
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "lite": {
+      "jvm": {
+        "tests": 1501,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 3
+      }
+    },
+    "dex_register_check": "tools/check_dex_registers.py passed on the three release APKs",
+    "sql": "the migrations 20261117120000, 20261117120100 and 20261118120000 and supabase/tests/shared_playlists_rls.sql ran on a local PostgreSQL 16 with auth/storage stubs (all assertions passed, migration re-run safe); the live project was checked after the owner applied it: 6 tables with RLS, 7 functions, 21 policies, 5 triggers, 2 private avatar buckets, no anon grant, owner address guard present"
+  },
+  "lint": {
+    "mobile": {
+      "Warning": 285,
+      "Hint": 26
+    },
+    "quest": {
+      "Warning": 285,
+      "Hint": 26
+    },
+    "lite": {
+      "Warning": 291,
+      "Hint": 26
+    },
+    "errors": 0
+  },
+  "apks": [
+    {
+      "name": "Ketvoice-6.3.0.apk",
+      "sha256": "ff6c976f02742a714a25e39c7a3672c1a997412335625ab99d68872bade87b32",
+      "bytes": 84214493,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "6.3.0",
+      "versionCode": 134,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-6.3.0-Quest.apk",
+      "sha256": "59af648394e2e0ebd2066159434fa6621c9165bf9bf16f7d0b1740101a6bf190",
+      "bytes": 100300224,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "6.3.0",
+      "versionCode": 134,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-6.3.0-Lite.apk",
+      "sha256": "9f777a4bd297ec4e5b54bdc8c04cd869c86df947b68dd429480723e791671a16",
+      "bytes": 32435863,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "6.3.0",
+      "versionCode": 134,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false,
+      "edition": "lite"
+    }
+  ],
+  "discord": {
+    "sdk_present_in_ci_build": true,
+    "sdk_sha256_pinned": true,
+    "bridge_and_native_libraries_verified": true,
+    "presence_mode": "unauthenticated_rpc_through_installed_discord_app"
+  },
+  "credential_scan": {
+    "entries": 4197,
+    "findings": 0,
+    "raw_pattern_findings": 1,
+    "scope": "the three release APKs (0 findings); the repository scan flags only the known image data URIs of Ketvoice-Liquid-Glass-V4.html",
+    "kind": "credential_patterns",
+    "explicit_private_provider_key_deny_list": false,
+    "triage": [
+      {
+        "file": "Ketvoice-Liquid-Glass-V4.html",
+        "classification": "embedded_image_false_positive",
+        "all_hits_inside_image_data_uris": true,
+        "rescanned_without_image_payloads": true
+      }
+    ]
+  },
+  "release_install_smoke": {
+    "mobile": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "quest": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "lite": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    }
+  },
+  "publication_override": {
+    "authorized_by_user": true,
+    "authorized_at": "2026-11-18T06:28:23.058463+00:00",
+    "kind": "standing_authorization",
+    "user_statement": "J'autorise TOUT devient maintenant une règle.",
+    "user_statement_date": "2026-11-14",
+    "in_reply_to": "The question whether versions may be published without phone or Quest testing without asking again for each version.",
+    "recorded_in": "AGENTS.md (commit aeeda8e)",
+    "reason": "The owner made publishing validated versions without phone or Quest testing a standing rule.",
+    "scope": "physical device installation and all on-device behaviour of 6.3.0 (mobile, Lite and Quest), including accounts and sync on devices"
+  },
+  "owner_requests_2026_11_18_6_3_0": {
+    "statements": [
+      "les canavs qui prennent plus de 5s a chargé ou ceux importer custom je veut que une fois chargé il se mettent en cache comme sa hors ligne et en ligne il charge rapidement et aussi quand on télécharger un son le canvas doit se faire télécharger aussi et donc si la personne télécharger le canvas d'un album sa téléchargera pour les autre son donc 1 canavs pour les autre a moins que un sois différent",
+      "Gérer le cache, Précharger en Wi-Fi, Pastille de chargement; Minuteur de sommeil (already existed); Playlists partagées, Profil public, Sorties d'artistes, Sauvegarde complète transferable lors que 2 appareil sont sur le meme wifi donc transfert Air Ket; Démarrage plus rapide"
+    ],
+    "done": {
+      "canvas": "link Canvas kept on the device, next titles fetched ahead, one Canvas per album for downloads, cache settings, Wi-Fi preload, loading pill",
+      "social": "shared playlists and public profiles (Supabase, member-only RLS)",
+      "airket": "LAN transfer of the personal backup and downloads",
+      "releases": "new-release notifications for followed artists",
+      "start": "settings files warmed off the main thread, late work after the first screen"
+    }
+  },
+  "not_validated": [
+    "physical phone, Lite or Quest installation, rendering and behaviour of 6.3.0",
+    "Air Ket between two real phones (NSD discovery, Wi-Fi binding, foreground service, camera opening the QR link)",
+    "shared playlists, invitations and public profiles between real accounts against the live project (client tested against a fake HTTP layer; SQL tested on a local PostgreSQL 16)",
+    "Canvas preload on real Wi-Fi/charging changes, the loading pill in place over the player and album hero",
+    "new-release notifications from the live catalogue, start-up time on a device (no measurement)",
+    "independent code review"
+  ],
+  "known_limitations": [
+    "No Wear OS app in this version.",
+    "Seasonal themes use code-drawn decor until the owner's pictures are added.",
+    "Android Auto's queue screen shows only the current song.",
+    "Switching between Ketvoice and Ketvoice Lite is a manual install of the other APK.",
+    "Ketogether guests hear titles their own sources can play; local files and private titles are shown as unavailable.",
+    "Launcher icons keep a background: Android fills adaptive icon backgrounds in black.",
+    "The signing certificate is the existing public Android debug identity, not a private production key."
+  ],
+  "canonical_banner_sha256": "ddc0e2c1270027f4b9dd92254374b79727ae9eaf8914e418b52e23c5b39b5966"
+}
