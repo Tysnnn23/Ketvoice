@@ -159,8 +159,10 @@ fun rememberCanvasAccent(path: String?): Pair<Color, Color>? {
  * is grey, not gold. Pages are tinted with it; the vivid accent stays for buttons and links.
  */
 object CoverTone {
-    private val cache = object : LinkedHashMap<String, Color>(24, .75f, true) {
-        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Color>?) = size > 48
+    // A colour is a few bytes: 48 entries (until 6.5) were fewer than the covers of Home alone, so scrolling back
+    // decoded each cover again and its shadow colour popped in a second time (6.6).
+    private val cache = object : LinkedHashMap<String, Color>(64, .75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Color>?) = size > 512
     }
     fun cached(key: String): Color? = synchronized(cache) { cache[key] }
     fun store(key: String, color: Color) { synchronized(cache) { cache[key] = color } }
