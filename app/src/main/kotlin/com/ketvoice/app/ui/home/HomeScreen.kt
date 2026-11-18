@@ -1,5 +1,7 @@
 package com.ketvoice.app.ui.home
 
+import com.ketvoice.app.ui.common.collectPick
+import com.ketvoice.app.ui.common.pick
 import com.ketvoice.app.theme.pageBackground
 import com.ketvoice.app.ui.common.asHeading
 import com.ketvoice.app.ui.motion.captureRevealOrigin
@@ -70,8 +72,8 @@ fun HomeScreen() {
     val youtube by YouTubeMusicSession.profile.collectAsState()
     // Only what Home shows of the player (6.6): the whole state also moves with buffering, quality and sources,
     // and each of those changes recomposed the whole page.
-    val playingId by remember { Player.state.map { it.current?.id }.distinctUntilChanged() }.collectAsState(Player.state.value.current?.id)
-    val isPlaying by remember { Player.state.map { it.isPlaying }.distinctUntilChanged() }.collectAsState(Player.state.value.isPlaying)
+    val playingId by remember { Player.state.pick { it.current?.id } }.collectPick()
+    val isPlaying by remember { Player.state.pick { it.isPlaying } }.collectPick()
     val playlists by PlaylistStore.lists.collectAsState()
     var grid by remember { mutableStateOf(false) }
     val layout = LocalAdaptiveLayout.current

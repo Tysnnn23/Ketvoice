@@ -88,10 +88,8 @@ fun DownloadCover(track: Track, url: String?, size: Dp, radius: Dp = 9.dp) {
 /** The veil and the filling arrow of a cover being downloaded: only these follow the download's progress. */
 @Composable
 private fun BoxScope.DownloadingOverlay(trackId: String, size: Dp, accent: Color) {
-    val percent by remember(trackId) { Downloader.progress.map { it[trackId] ?: 0 }.distinctUntilChanged() }
-        .collectAsState(Downloader.progress.value[trackId] ?: 0)
-    val phase by remember(trackId) { Downloader.tasks.map { it[trackId]?.phase }.distinctUntilChanged() }
-        .collectAsState(Downloader.tasks.value[trackId]?.phase)
+    val percent by remember(trackId) { Downloader.progress.pick { it[trackId] ?: 0 } }.collectPick()
+    val phase by remember(trackId) { Downloader.tasks.pick { it[trackId]?.phase } }.collectPick()
     Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .58f)))
     val waiting = phase == com.ketvoice.app.data.DownloadPhase.Paused || phase == com.ketvoice.app.data.DownloadPhase.WaitingWifi
     // Ket 27: the download arrow itself fills from the bottom as the file arrives.
