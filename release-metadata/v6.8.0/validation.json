@@ -2,8 +2,8 @@
   "schema": 8,
   "version": "6.8.0",
   "versionCode": 139,
-  "source_commit": "d73af9a",
-  "created_at": "2026-11-18T22:48:18.533062+00:00",
+  "source_commit": "d73af9a19b9e666e4467944972617f826a0edc46",
+  "created_at": "2026-11-18T22:53:49.458035+00:00",
   "build_origin": {
     "kind": "github_actions_with_owner_discord_sdk",
     "workflow": "android.yml",
@@ -168,7 +168,7 @@
   },
   "publication_override": {
     "authorized_by_user": true,
-    "authorized_at": "2026-11-18T22:48:18.533062+00:00",
+    "authorized_at": "2026-11-18T22:53:49.458035+00:00",
     "kind": "standing_authorization",
     "user_statement": "J'autorise TOUT devient maintenant une règle.",
     "user_statement_date": "2026-11-14",
