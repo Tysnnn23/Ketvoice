@@ -1,0 +1,213 @@
+{
+  "schema": 8,
+  "version": "6.8.0",
+  "versionCode": 139,
+  "source_commit": "d73af9a",
+  "created_at": "2026-11-18T22:48:18.533062+00:00",
+  "build_origin": {
+    "kind": "github_actions_with_owner_discord_sdk",
+    "workflow": "android.yml",
+    "run_id": 44410496121,
+    "artifact": {
+      "id": 14478412386,
+      "sha256": "2f1672a3d5d0caf97b5749d7d73b98313956c3bae17f1279ddad17a51507db48"
+    },
+    "gradle": "assembleMobileRelease assembleQuestRelease assembleLiteRelease",
+    "note": "Signed by CI with the pinned keystore secret; the Discord Social SDK AAR matched its pinned SHA-256."
+  },
+  "local_validation": {
+    "result": "debug JVM/Robolectric suites for the three flavors (mobile, quest, lite), release lint and the APK checker tests passed in a cloud container without the Discord SDK",
+    "commands": [
+      "testMobileDebugUnitTest",
+      "testQuestDebugUnitTest",
+      "testLiteDebugUnitTest -ProbolectricSdks=31,32,33,34,35,36",
+      "lintMobileRelease",
+      "lintQuestRelease",
+      "lintLiteRelease",
+      "tools/test_verify_apk.py"
+    ],
+    "ci_validation": "run 44410496121: release builds, debug and release unit tests, UI text audit, lint, APK signature pin and Discord bridge packaging passed",
+    "code_review": {
+      "kind": "none independent"
+    },
+    "host_previews": "none new: this version adds an optional model and a Settings row (checked by tests that read the Settings source, not by a render)",
+    "beat_model": "Beat This! small (MIT) converted by publish-beat-model.yml to a fixed [1, 500, 128] input with float16 weights, published as prerelease ketmix-beat-v1 (18,575,568 bytes, SHA-256 74cc5ee9...). It was compared with the original ONNX only on random input (mean relative difference about 0.5 percent on the matching outputs) and on a synthetic pulse (5 to 7 percent, only one clear peak, which was found). It was never fine-tuned, never run on a real song and never compared with Ketmix's own analysis, and it is not bundled in the APK. 30 s and 15 s windows were rejected: attention tensors grow with the square of the length (about 288 MB per tensor at 30 s). The pure-Kotlin log-mel front end matches a numpy re-implementation (max difference under 2e-3); its parameters come from the Beat This! source read on PyPI",
+    "after_local_run": "the full local run (mobile 1671, quest 1661, lite 1669 tests, lint without errors) had one failure, BeatModelTest.theRowHasItsTranslations reading a deleted pending file; the test now reads the bundled catalog, was rerun with BeatModelTest and BeatSettingsRowTest (18 tests) and passed in CI on the final commit",
+    "sdk_30": "Robolectric's Android 11 runtime could not be downloaded in the cloud container (Maven Central answered 429), so the Lite tests that declare sdk 30 ran on sdk 31 only; nothing ran on an Android 11 runtime",
+    "after_last_full_local_run": "nothing under app/ changed after the last complete local run"
+  },
+  "server": {
+    "function": "ketvoice-content",
+    "deployed_version": 23,
+    "changed_in_this_version": false,
+    "database": "no migration in this version"
+  },
+  "tests": {
+    "mobile": {
+      "jvm": {
+        "tests": 1671,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 3
+      },
+      "android_15_emulator_compose": {
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "quest": {
+      "jvm": {
+        "tests": 1661,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 43
+      },
+      "android_15_emulator_compose": {
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "lite": {
+      "jvm": {
+        "tests": 1669,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 3
+      },
+      "android_11_runtime": {
+        "status": "not_executed"
+      }
+    },
+    "dex_register_check": "tools/check_dex_registers.py ran in CI (Check method sizes against the Android verifier) on the three release APKs",
+    "apk_checker": "tools/test_verify_apk.py 12 tests (Lite minSdk 30 required)"
+  },
+  "lint": {
+    "mobile": {
+      "Warning": 307,
+      "Hint": 28
+    },
+    "quest": {
+      "Warning": 307,
+      "Hint": 28
+    },
+    "lite": {
+      "Warning": 329,
+      "Hint": 28
+    },
+    "errors": 0
+  },
+  "apks": [
+    {
+      "name": "Ketvoice-6.8.0.apk",
+      "sha256": "c7f0a15737eb1cf155c04437f8eec373295f784a980ba5ffc964484ab06d1116",
+      "bytes": 85088728,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "6.8.0",
+      "versionCode": 139,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-6.8.0-Quest.apk",
+      "sha256": "7243c454550eaf7aac9c26a1333fa07de6761c2c81956bbf70fd6105fa7fe0de",
+      "bytes": 101190203,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "6.8.0",
+      "versionCode": 139,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-6.8.0-Lite.apk",
+      "sha256": "a4d3487134aea7f4335f8ac8284ae9064f3123855caced45784c958bfa68c6fc",
+      "bytes": 32904923,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "6.8.0",
+      "versionCode": 139,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false,
+      "edition": "lite"
+    }
+  ],
+  "discord": {
+    "sdk_present_in_ci_build": true,
+    "sdk_sha256_pinned": true,
+    "bridge_and_native_libraries_verified": true,
+    "presence_mode": "unauthenticated_rpc_through_installed_discord_app"
+  },
+  "credential_scan": {
+    "entries": 4364,
+    "findings": 0,
+    "scope": "the three release APKs",
+    "kind": "credential_patterns",
+    "explicit_private_provider_key_deny_list": false,
+    "note": "run because publish-release requires it; the other manual checks were skipped at the owner's request"
+  },
+  "release_install_smoke": {
+    "mobile": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "quest": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "lite": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    }
+  },
+  "publication_override": {
+    "authorized_by_user": true,
+    "authorized_at": "2026-11-18T22:48:18.533062+00:00",
+    "kind": "standing_authorization",
+    "user_statement": "J'autorise TOUT devient maintenant une règle.",
+    "user_statement_date": "2026-11-14",
+    "in_reply_to": "The question whether versions may be published without phone or Quest testing without asking again for each version.",
+    "recorded_in": "AGENTS.md (commit aeeda8e)",
+    "reason": "The owner made publishing validated versions without phone or Quest testing a standing rule.",
+    "scope": "physical device installation and all on-device behaviour of 6.8.0 (mobile, Lite and Quest), including accounts and sync on devices"
+  },
+  "owner_requests_2026_11_18_6_8_0": {
+    "statements": [
+      "Selon toi lequel parmi eux serai rapide,peu encombrant et de qualité pour que les utilisateurs aiment a fond le ketmix ?",
+      "Ok intégré le,entraine le un peu , integre le bien etc pour avoir ketmix le meilleur dj ai au monde ! Fondu sur parole etc donc vasy intégré le la met le en modele optionnel mais si sa marche bien tu l'integrera directement dans le téléchargement de l'app fait sa rapidement s'il te plait avant 23:20"
+    ],
+    "done": {
+      "model": "Beat This! small as an optional download (Settings, Ketmix), analysis merged with Ketmix's own with a confidence rule, charging-only on Lite and modest devices"
+    },
+    "not_done": {
+      "training": "not fine-tuned: no GPU and no music here",
+      "bundled": "not in the APK: no evidence on real songs yet",
+      "fondu_sur_parole": "not done: exits waiting for the end of a sung line from synced lyrics",
+      "deadline": "the 23:20 deadline was missed: the version was released after it"
+    }
+  },
+  "not_validated": [
+    "physical phone, Lite, tablet or Quest installation, rendering and behaviour of 6.8.0",
+    "the beat model on any real song or on a device: speed, memory, battery, and whether its beats and bars beat Ketmix's own analysis",
+    "the model download from the release on a phone",
+    "Ketmix transitions by ear on any device",
+    "Robolectric runs on the Android 11 runtime (sdk 30)",
+    "independent code review"
+  ],
+  "known_limitations": [
+    "No Wear OS app in this version.",
+    "Seasonal themes use code-drawn decor until the owner's pictures are added.",
+    "Android Auto's queue screen shows only the current song.",
+    "Switching between Ketvoice and Ketvoice Lite is a manual install of the other APK.",
+    "Ketogether guests hear titles their own sources can play; local files and private titles are shown as unavailable.",
+    "Launcher icons keep a background: Android fills adaptive icon backgrounds in black.",
+    "The signing certificate is the existing public Android debug identity, not a private production key."
+  ],
+  "canonical_banner_sha256": "ddc0e2c1270027f4b9dd92254374b79727ae9eaf8914e418b52e23c5b39b5966"
+}
