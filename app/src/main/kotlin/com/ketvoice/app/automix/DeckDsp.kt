@@ -194,8 +194,10 @@ internal class DeckAutomation(
 
         /** When the blend starts under the last sung bars, the outgoing voice steps back over them. */
         private fun withVoiceDown(automation: DeckAutomation, plan: MixPlan): DeckAutomation {
-            if (plan.sungUntilMs <= plan.outMs) return automation
-            val start = plan.outMs * 1000L
+            // 6.9: from the end of the line being sung where the blend starts (MixPlan.voiceDownMs), never halfway into it.
+            val from = maxOf(plan.outMs, plan.voiceDownMs)
+            if (plan.sungUntilMs <= from) return automation
+            val start = from * 1000L
             // Over eight beats, or three seconds when the two titles are not in time.
             val over = if (plan.beatMs > 0f) (plan.beatMs * 8000f).toLong() else VOICE_DOWN_US
             val down = (start + over).coerceAtMost(maxOf(start + 1, plan.sungUntilMs * 1000L))
@@ -384,7 +386,8 @@ internal object Stems {
     }
 
     fun outgoing(automation: DeckAutomation, plan: MixPlan): DeckAutomation {
-        if (!kinds(plan)) return automation
+        // A looped bar has no voice, and its separation would follow the title's own positions rather than the loop (6.9).
+        if (!kinds(plan) || plan.loopUs > 0L) return automation
         val start = plan.outMs * 1000L
         val end = (plan.outMs + plan.overlapMs) * 1000L
         if (plan.mashup && end > start + MOVE_US) {

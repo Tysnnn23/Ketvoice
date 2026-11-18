@@ -143,6 +143,9 @@ internal object Automix {
     private var lastVariant = -1
     /** The last echo (1) or build (2), so that the next exit on the beat is the other one. */
     private var lastExit = 0
+    /** The kinds of the last transitions, oldest first, and whether the last one looped a bar (6.9, see [MixVariety]). */
+    private var recentKinds = emptyList<MixKind>()
+    private var loopedLast = false
 
     /** Everything a transition owns, so that giving it up is one call whatever the moment. */
     private class Session(val host: AutomixHost, val main: ExoPlayer, val next: Player.NextEntry) {
@@ -421,7 +424,7 @@ internal object Automix {
         // A transition that is not played in time leaves the incoming title on its own speed: when the outgoing
         // one plays a little off its own (a previous blend), the positions of the two do not run alike.
         fun planFor(effects: Boolean, beats: Boolean = true): MixPlan = TransitionPlanner.plan(out, incoming,
-            context.copy(effects = effects, beats = beats, lastVariant = lastVariant, lastExit = lastExit), settings)
+            context.copy(effects = effects, beats = beats, lastVariant = lastVariant, lastExit = lastExit, recentKinds = recentKinds, loopedLast = loopedLast), settings)
             .let { p -> if (p.mixes && p.kind != MixKind.Beatmatch && abs(outSpeed - 1f) > .0005f) p.copy(rate = 1f / outSpeed) else p }
             .let { p -> if (p.mixes && AppSettings.ketmixStems.value) p.copy(stems = true, voiceFromMs = incoming.vocalStartMs ?: -1L) else p }
         var plan = planFor(effects = clockOk)
@@ -487,6 +490,8 @@ internal object Automix {
         // sound a deck has already buffered when the mix starts then carries its level too.
         if (s.precise) {
             control.automation = DeckAutomation.incoming(plan); mainControl.automation = DeckAutomation.outgoing(plan)
+            // « Boucle » (6.9): the outgoing deck loops its clean bar under the blend; set with its automation, cleared with its reset.
+            mainControl.loop = plan.barLoop()
             // An echo is only played out on silence at the real end of the title, never at the drain a change of speed causes.
             // From the last note's measured end, not from the announced duration, which may be too long.
             mainControl.tailFromUs = if (plan.tail) (max(plan.outMs, plan.cutMs) - TAIL_END_MS) * 1000L else Long.MAX_VALUE
@@ -520,6 +525,8 @@ internal object Automix {
         // An echo and a build take turns: the next exit on the beat is the other one.
         if (plan.kind == MixKind.Echo) lastExit = 1
         if (plan.kind == MixKind.Rise) lastExit = 2
+        recentKinds = MixVariety.remember(recentKinds, plan)
+        loopedLast = plan.loopUs > 0L
         s.baseVolume = main.volume
         if (s.precise && !s.incomingPending) deck.volume = s.baseVolume
         deck.play()
@@ -540,7 +547,7 @@ internal object Automix {
                                 valid: () -> Boolean): Analysed? {
         val h = s.host
         val main = s.main
-        val voice = scope.async(Dispatchers.IO) { withTimeoutOrNull(6_000L) { runCatching { firstVoice(next.track) }.getOrNull() } }
+        val voice = scope.async(Dispatchers.IO) { withTimeoutOrNull(6_000L) { runCatching { firstLines(next.track, nextDuration) }.getOrNull() } }
         val clock = scope.async { clockConfirmed(main, mainControl) }
         // The body of each title, where its drums play, gives the tempo its ending and its intro are read against.
         suspend fun body(id: String, length: Long, media: MediaItem): BeatAnalysis.Hint? {
@@ -582,14 +589,14 @@ internal object Automix {
         // Where each title sings: from its lyrics, and from its separated voice when it has one (5.11.0),
         // so that a title without lyrics is not mixed over its last sung words either.
         val sung = if (!AppSettings.ketmixStems.value) null to null else withContext(Dispatchers.Default) {
-            runCatching { StemStore.load(current.id, duration, false)?.let(VoiceActivity::endMs) }.getOrNull() to
-                runCatching { StemStore.load(next.track.id, nextDuration, true)?.let(VoiceActivity::startMs) }.getOrNull()
+            runCatching { StemStore.load(current.id, duration, false)?.let { VoiceActivity.endMs(it) to VoiceActivity.passages(it) } }.getOrNull() to
+                runCatching { StemStore.load(next.track.id, nextDuration, true)?.let { VoiceActivity.startMs(it) to VoiceActivity.passages(it) } }.getOrNull()
         }
+        // « Fondu sur les paroles » (6.9): every sung line, from the lyrics shown for this very title (never another one's).
+        val lyrics = LyricsRepo.state.value.takeIf { it.trackId == current.id }?.lines.orEmpty()
         // The points the listener chose in the DJ editor (6.1), remembered per title.
-        val out = MixFacts(duration, outro, vocalEndMs = VoiceFacts.end(Vocals.endMs(LyricsRepo.state.value.lines, duration), sung.first),
-            userExitMs = MixPointStore.exitOf(current.id, duration))
-        val incoming = MixFacts(nextDuration, intro, vocalStartMs = VoiceFacts.start(voice.await(), sung.second),
-            userEntryMs = MixPointStore.entryOf(next.track.id, nextDuration))
+        val out = voiceOut(MixFacts(duration, outro, userExitMs = MixPointStore.exitOf(current.id, duration)), lyrics, sung.first)
+        val incoming = voiceIn(MixFacts(nextDuration, intro, userEntryMs = MixPointStore.entryOf(next.track.id, nextDuration)), voice.await(), sung.second)
         val clockOk = clock.await()
         if (clockOk) clockOf = java.lang.ref.WeakReference(main)
         note { it.copy(clock = clockOk, outBpm = outro?.bpm ?: 0f, outConfidence = outro?.confidence ?: 0f, outKey = outro?.key ?: MusicalKey.UNREAD,
@@ -1173,12 +1180,23 @@ internal object Automix {
         return abs(samples[samples.size / 2] - control.offsetUs) <= 45_000L
     }
 
-    /** Where the next title starts singing, from lyrics already on the device or its first lyrics source. */
-    private suspend fun firstVoice(track: Track): Long? {
+    /** Where the next title sings, line by line, from lyrics already on the device or its first lyrics source. */
+    private suspend fun firstLines(track: Track, durationMs: Long): List<LongRange>? {
         if (AppSettings.lyricsMode.value == 2 || AppSettings.lyricsSource.value == MusicApi.SRC_OFF) return null
-        Downloader.localLyrics(track.id)?.second?.takeIf { it.isNotEmpty() }?.let { return Vocals.startMs(it) }
-        return Vocals.startMs(MusicApi.lyrics(track, false, AppSettings.lyricsSource.value, false).second)
+        Downloader.localLyrics(track.id)?.second?.takeIf { it.isNotEmpty() }?.let { return LyricTimes.lines(it, durationMs) }
+        return LyricTimes.lines(MusicApi.lyrics(track, false, AppSettings.lyricsSource.value, false).second, durationMs)
     }
+
+    /** The outgoing title's voice: its last sung part from lyrics and separation (the later one), its lines from either. */
+    private fun voiceOut(facts: MixFacts, lyrics: List<MusicApi.LyricLine>, separated: Pair<Long?, List<LongRange>?>?): MixFacts {
+        val lines = LyricTimes.lines(lyrics, facts.durationMs)
+        return facts.copy(vocalEndMs = VoiceFacts.end(lines.lastOrNull()?.last, separated?.first), sungLines = LyricTimes.merge(lines, separated?.second))
+    }
+
+    /** The incoming title's voice: its first sung moment from lyrics and separation (the earlier one), its lines from either. */
+    private fun voiceIn(facts: MixFacts, lines: List<LongRange>?, separated: Pair<Long?, List<LongRange>?>?): MixFacts =
+        facts.copy(vocalStartMs = VoiceFacts.start(lines?.firstOrNull()?.first, separated?.first),
+            sungLines = LyricTimes.merge(lines.orEmpty(), separated?.second))
 }
 
 /**

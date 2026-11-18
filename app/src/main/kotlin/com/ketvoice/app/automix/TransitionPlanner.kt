@@ -43,7 +43,12 @@ internal data class MixFacts(
     /** Outgoing title: the exit the listener chose in the DJ editor (6.1), -1 = Ketmix's own. */
     val userExitMs: Long = -1,
     /** Incoming title: the entry the listener chose in the DJ editor (6.1), -1 = Ketmix's own. */
-    val userEntryMs: Long = -1
+    val userEntryMs: Long = -1,
+    /**
+     * Where each line is sung in the part of the title that is mixed (6.9, « fondu sur les paroles »), from its
+     * synchronised lyrics or else its separated voice; empty when unknown. See [LyricTimes].
+     */
+    val sungLines: List<LongRange> = emptyList()
 )
 
 internal data class MixContext(
@@ -67,7 +72,11 @@ internal data class MixContext(
     /** The last exit on the beat that needs no common tempo: 0 none yet, 1 an echo, 2 a build. They take turns. */
     val lastExit: Int = 0,
     /** How long both titles are heard, as the listener chose it for this pair in the DJ editor (6.1); -1 = Ketmix's. */
-    val userOverlapMs: Long = -1
+    val userOverlapMs: Long = -1,
+    /** The kinds of the last transitions of this listening, oldest first (6.9, see [MixVariety]). */
+    val recentKinds: List<MixKind> = emptyList(),
+    /** The last transition was a « boucle » blend: two in a row would be heard as a trick (see [LoopBlend]). */
+    val loopedLast: Boolean = false
 )
 
 /** The transition the listener prefers; [Auto] lets Ketmix choose for each pair of titles. */
@@ -167,7 +176,15 @@ internal data class MixPlan(
      * The incoming voice sings alone over the outgoing title's instrumental until the bass changes
      * hands (5.11.0). Only set once both separations are on the decks, see [Mashup].
      */
-    val mashup: Boolean = false
+    val mashup: Boolean = false,
+    /**
+     * Outgoing position (ms) from which its voice steps back when the blend starts under its last sung words,
+     * when not at [outMs]: the end of the line being sung there (6.9), so that no line is faded halfway; -1 = [outMs].
+     */
+    val voiceDownMs: Long = -1,
+    /** « Boucle » (6.9): the outgoing bar looped under the blend, from this position (µs) for [loopUs]; see [LoopBlend]. */
+    val loopFromUs: Long = -1,
+    val loopUs: Long = 0
 ) {
     val mixes: Boolean get() = kind != MixKind.None
     /** Position in the incoming title once the outgoing one is gone. */
@@ -235,16 +252,26 @@ internal object TransitionPlanner {
         val clash = relation == MusicalKey.Relation.Clash
         val variant = if (context.lastVariant == 0) 1 else 0
         val beats = context.effects && context.beats && !context.skipSilence
-        fun measured(plan: MixPlan) = checked(plan.copy(fromBpm = if (a.hasBeat) a.bpm else 0f, toBpm = if (b.hasBeat) b.bpm else 0f,
-            fromKey = a.key, toKey = b.key, loop = context.loop), out, incoming)
+        fun measured(plan: MixPlan) = checked(lyricAware(plan.copy(fromBpm = if (a.hasBeat) a.bpm else 0f, toBpm = if (b.hasBeat) b.bpm else 0f,
+            fromKey = a.key, toKey = b.key, loop = context.loop), out, incoming, sungUntil), out, incoming)
 
         // A plain fade was asked for: the same lengths and care for the singing, no effect.
         if (settings.style == MixStyle.Fade) return automatic(out, incoming, context.copy(effects = false), settings.copy(style = MixStyle.Auto), listener)
+        val echoAllowed = settings.style == MixStyle.Echo || (settings.style == MixStyle.Auto && settings.echo)
+        val riseAllowed = settings.style == MixStyle.Rise || (settings.style == MixStyle.Auto && settings.echo)
+        fun onTheBeat() = beatExit(a, b, context, settings, end, start, sungUntil, gain, variant, beats, echoAllowed, riseAllowed, ::measured)
+        // 0. Variety (6.9): after two blends in time running, a way out on the beat takes a turn when this pair has one.
+        if (settings.style == MixStyle.Auto && MixVariety.tired(context.recentKinds, MixKind.Beatmatch) && !(a.hardEnding && !a.fadeOut))
+            onTheBeat()?.let { return it }
         // 1. Both in time, the bass changing hands: the finest transition, when the tempos allow it.
         if (beats && a.hasBeat && b.hasBeat && settings.style != MixStyle.Echo && settings.style != MixStyle.Filters && settings.style != MixStyle.Rise) {
             val rate = BeatAnalysis.foldedRatio(a.bpm, b.bpm)
             // Measured from the incoming title's own tempo: what it will sound like for the rest of it.
             if (abs(context.speed * rate - 1f) <= settings.tempoRange) {
+                // A fade-out with clean bars before it: those bars are looped under the blend instead of the fade.
+                if (!context.loopedLast && !context.loop) LoopBlend.plan(a, b, out, settings, rate, gain, end, sungUntil, clash, variant,
+                    BlendFit.counts(settings, abs(context.speed * rate - 1f), clash, context.loop, BlendFit.levelGapDb(a, b)))
+                    ?.let { blend -> measured(blend).takeIf { it.mixes }?.let { return it } }
                 beatmatch(a, b, out, incoming, settings, rate, gain, end, start, sungUntil, clash, variant,
                     BlendFit.counts(settings, abs(context.speed * rate - 1f), clash, context.loop, BlendFit.levelGapDb(a, b)))
                     ?.let { blend -> measured(blend).takeIf { it.mixes }?.let { return it } }
@@ -253,7 +280,6 @@ internal object TransitionPlanner {
         // 2. A last note at full level is never covered: the next title starts right after it, on the beat
         // when there is one, and (unless discreet) the last note rings on in an echo over that start.
         val fullEnding = a.hardEnding && !a.fadeOut
-        val echoAllowed = settings.style == MixStyle.Echo || (settings.style == MixStyle.Auto && settings.echo)
         // Ringing out leaves the whole title heard: only the plain styles do without it.
         val ringAllowed = echoAllowed || (settings.style == MixStyle.Tempo && settings.echo)
         fun ending(): MixPlan {
@@ -264,13 +290,7 @@ internal object TransitionPlanner {
         if (fullEnding && !(settings.cutsFullEndings && beats && a.hasBeat)) return ending()
         // 3. A way out on the beat that needs no common tempo (asked for, or left to Ketmix): a build into
         // the next phrase, or an echo. Left to Ketmix, the two take turns from one transition to the next.
-        val riseAllowed = settings.style == MixStyle.Rise || (settings.style == MixStyle.Auto && settings.echo)
-        if (beats && (echoAllowed || riseAllowed) && a.hasBeat && !a.fadeOut) {
-            fun tryRise() = if (riseAllowed) rise(a, b, settings, end, start, sungUntil, gain, variant)?.let { measured(it) }?.takeIf { it.mixes } else null
-            fun tryEcho() = if (echoAllowed || settings.style == MixStyle.Rise) echo(a, b, settings, end, start, sungUntil, gain)?.let { measured(it) }?.takeIf { it.mixes } else null
-            val first = settings.style == MixStyle.Rise || (settings.style == MixStyle.Auto && context.lastExit == 1)
-            (if (first) tryRise() ?: tryEcho() else tryEcho() ?: tryRise())?.let { return it.copy(variant = variant) }
-        }
+        onTheBeat()?.let { return it }
         if (fullEnding) return ending()
 
         // 4. The ending fades or rings out: the next title comes up under it, within that ending.
@@ -312,6 +332,28 @@ internal object TransitionPlanner {
         val kind = if (!a.hasBeat && !a.fadeOut && settings.style != MixStyle.Filters) MixKind.Wash else MixKind.Filter
         return measured(MixPlan(kind, outMs = end - fade, inMs = start, overlapMs = fade, gain = gain, reason = reason,
             variant = variant, clash = clash, hold = hold, onPhrase = onPhrase, sungUntilMs = sungUntil?.takeIf { it > end - fade } ?: -1))
+    }
+
+    /** 3. of [automatic]: a build into the next phrase or an echo, taking turns; null when neither fits this pair. */
+    private fun beatExit(a: SegmentAnalysis, b: SegmentAnalysis, context: MixContext, settings: MixSettings, end: Long, start: Long,
+                         sungUntil: Long?, gain: Float, variant: Int, beats: Boolean, echoAllowed: Boolean, riseAllowed: Boolean,
+                         measured: (MixPlan) -> MixPlan): MixPlan? {
+        if (!beats || !(echoAllowed || riseAllowed) || !a.hasBeat || a.fadeOut) return null
+        fun tryRise() = if (riseAllowed) rise(a, b, settings, end, start, sungUntil, gain, variant)?.let(measured)?.takeIf { it.mixes } else null
+        fun tryEcho() = if (echoAllowed || settings.style == MixStyle.Rise) echo(a, b, settings, end, start, sungUntil, gain)?.let(measured)?.takeIf { it.mixes } else null
+        val first = settings.style == MixStyle.Rise || (settings.style == MixStyle.Auto && context.lastExit == 1)
+        return (if (first) tryRise() ?: tryEcho() else tryEcho() ?: tryRise())?.copy(variant = variant)
+    }
+
+    /**
+     * « Fondu sur les paroles » (6.9): an entry is moved back to the start of the line it would cut into, and the
+     * outgoing voice steps back from the end of the line being sung where the blend starts, never halfway into it.
+     */
+    private fun lyricAware(plan: MixPlan, out: MixFacts, incoming: MixFacts, sungUntil: Long?): MixPlan {
+        if (!plan.mixes || plan.kind == MixKind.Trim) return plan
+        val entered = LyricTimes.entry(plan, incoming.sungLines, sungUntil)
+        if (entered.sungUntilMs <= entered.outMs || out.sungLines.isEmpty()) return entered
+        return entered.copy(voiceDownMs = LyricTimes.voiceDownFrom(out.sungLines, entered.outMs))
     }
 
     /**
@@ -606,7 +648,7 @@ internal object MixWords {
     fun describe(plan: MixPlan): String = if (plan.loop) "en boucle · ${label(plan)}" else label(plan)
 
     fun label(plan: MixPlan): String = when (plan.kind) {
-        MixKind.Beatmatch -> "calé sur le tempo"
+        MixKind.Beatmatch -> if (plan.loopUs > 0L) "calé sur une boucle" else "calé sur le tempo"
         MixKind.Echo -> "sortie en écho"
         MixKind.Filter -> "croisement de filtres"
         MixKind.Wash -> "dissolution"
@@ -641,14 +683,11 @@ internal object Vocals {
 
     fun startMs(lines: List<MusicApi.LyricLine>): Long? = lines.firstOrNull(::sung)?.timeMs
 
-    /** End of the last sung line: its last word when words are timed, else a duration guessed from its length. */
-    fun endMs(lines: List<MusicApi.LyricLine>, durationMs: Long): Long? {
-        val last = lines.lastOrNull(::sung) ?: return null
-        val timedEnd = last.words.maxOfOrNull { if (it.endMs > 0) it.endMs else it.startMs }?.takeIf { it > last.timeMs }
-        val guessed = last.timeMs + (1_500L + 320L * last.text.split(' ').count { it.isNotBlank() }).coerceAtMost(7_000L)
-        val end = timedEnd ?: guessed
-        return if (durationMs > 0) end.coerceAtMost(durationMs) else end
-    }
+    /**
+     * End of the last sung line: its last word when words are timed, else where a rest line after it marks the
+     * end of the singing (6.9), else a duration guessed from its length. See [LyricTimes.lines].
+     */
+    fun endMs(lines: List<MusicApi.LyricLine>, durationMs: Long): Long? = LyricTimes.lines(lines, durationMs).lastOrNull()?.last
 }
 
 /** When a voice may sing over the other title's instrumental (5.11.0). */

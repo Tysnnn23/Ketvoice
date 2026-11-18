@@ -42,8 +42,10 @@ internal class DeckControl {
     @Volatile var voiceStageOn: Boolean = false
     /** The deck heard as the player (not a deck preparing a mix): its delay is the one the lyrics follow. */
     @Volatile var main: Boolean = true
+    /** « Boucle » (6.9): a bar of this title looped under a blend, played only while an [automation] is set. */
+    @Volatile var loop: BarLoop? = null
 
-    fun reset() { automation = null; tap = null; tailFromUs = Long.MAX_VALUE; stem = null }
+    fun reset() { automation = null; tap = null; tailFromUs = Long.MAX_VALUE; stem = null; loop = null }
 
     companion object { const val PLAYER_CLOCK_OFFSET_US = 1_000_000_000_000L }
 }
@@ -51,6 +53,8 @@ internal class DeckControl {
 /** The per-deck processor: taps the sound for analysis, then applies the transition's level and filter. */
 internal class DeckMixProcessor(private val control: DeckControl) : BaseAudioProcessor() {
     private var dsp: DeckDsp? = null
+    /** Plays a [DeckControl.loop]; kept, like the filters, through the flushes of a change of speed. */
+    private var loopFx: LoopFx? = null
     /** Turns the voice down when the title was separated whole; chosen at the start of a stream and kept to its end. */
     private var voice: com.ketvoice.app.stems.VoiceStage? = null
     private var cursorUs = C.TIME_UNSET
@@ -72,6 +76,7 @@ internal class DeckMixProcessor(private val control: DeckControl) : BaseAudioPro
         // each time, a filtered deck clicked and an echo lost its tail. They only start afresh after a jump in the title.
         val kept = dsp?.takeIf { usable && it.sampleRate == inputAudioFormat.sampleRate && it.channels == inputAudioFormat.channelCount }
         dsp = kept ?: if (usable) DeckDsp(inputAudioFormat.sampleRate, inputAudioFormat.channelCount) else null
+        loopFx = if (kept != null) loopFx else if (usable) LoopFx(inputAudioFormat.sampleRate, inputAudioFormat.channelCount) else null
         if (cursorUs != C.TIME_UNSET) resumeUs = cursorUs
         cursorUs = C.TIME_UNSET
         control.active = usable
@@ -100,7 +105,7 @@ internal class DeckMixProcessor(private val control: DeckControl) : BaseAudioPro
             if (cursorUs == C.TIME_UNSET || kotlin.math.abs(position - cursorUs) > 300_000L) {
                 // A real jump (a seek, another title): what the filters and the echo remember belongs elsewhere.
                 val from = if (cursorUs != C.TIME_UNSET) cursorUs else resumeUs
-                if (from != C.TIME_UNSET && kotlin.math.abs(position - from) > JUMP_US) { dsp?.reset(); voice?.reset() }
+                if (from != C.TIME_UNSET && kotlin.math.abs(position - from) > JUMP_US) { dsp?.reset(); voice?.reset(); loopFx?.reset() }
                 // A stream that starts from nothing (a first title, after a pause-free gap) starts the stage from silence.
                 if (from == C.TIME_UNSET) voice?.reset()
                 cursorUs = position
@@ -113,12 +118,19 @@ internal class DeckMixProcessor(private val control: DeckControl) : BaseAudioPro
         val output = replaceOutputBuffer(size)
         val engine = dsp
         if (engine == null) output.put(inputBuffer)
-        else try {
-            engine.process(inputBuffer, output, startUs, if (cursorUs == C.TIME_UNSET) null else control.automation, control.stem)
-        } catch (_: RuntimeException) {
-            // A transition must never cost the playback: drop it and pass the rest of the sound through.
-            control.automation = null
-            if (inputBuffer.remaining() <= output.remaining()) output.put(inputBuffer) else inputBuffer.position(inputBuffer.limit())
+        else {
+            val automation = if (cursorUs == C.TIME_UNSET) null else control.automation
+            // The loop of a « boucle » blend stands in for the title's own sound before levels and filters apply to it.
+            val source = if (automation == null) inputBuffer
+                else runCatching { loopFx?.process(inputBuffer, startUs, control.loop) }.getOrNull() ?: inputBuffer
+            try {
+                engine.process(source, output, startUs, automation, control.stem)
+            } catch (_: RuntimeException) {
+                // A transition must never cost the playback: drop it and pass the rest of the sound through.
+                control.automation = null
+                if (source.remaining() <= output.remaining()) output.put(source) else source.position(source.limit())
+            }
+            if (inputBuffer.hasRemaining()) inputBuffer.position(inputBuffer.limit())
         }
         val frames = size / (2 * channels)
         val stage = voice
