@@ -146,8 +146,9 @@ class UnifiedExperienceHostTest {
         compose.onNodeWithTag("library-categories").assertIsDisplayed()
         compose.onNodeWithText("Playlists").performClick()
         compose.waitForIdle()
-        compose.onNodeWithTag("library-list").performScrollToNode(hasContentDescription("Épingler"))
-        compose.onNodeWithContentDescription("Épingler").performClick()
+        // Pinning is in the playlist's « … » (its row in Library › Playlists).
+        compose.onNodeWithContentDescription("Options de Ma playlist").performClick()
+        compose.onNodeWithText("Épingler").performClick()
         compose.waitUntil(5000) { PlaylistStore.lists.value.single().pinned }
         assertEquals(id, PlaylistStore.lists.value.single().id)
         assertEquals(1, PlaylistStore.lists.value.single().entries.size)

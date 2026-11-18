@@ -75,7 +75,9 @@ object AppUi {
         /** 6.3: « Partager la playlist », « Membres » and « Rendre cette playlist publique ». */
         val onShare: () -> Unit = {},
         val onMembers: () -> Unit = {},
-        val onTogglePublic: () -> Unit = {}
+        val onTogglePublic: () -> Unit = {},
+        /** « Modifier l'ordre »: the playlist page's own editing of its order (absent where it cannot be reordered). */
+        val onReorder: (() -> Unit)? = null
     )
     val playlistMenu = androidx.compose.runtime.mutableStateOf<PlaylistMenuRequest?>(null)
     data class PlaylistResolution(val playlistId: String, val entryId: String)

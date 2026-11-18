@@ -111,11 +111,21 @@ object LargeScreen {
         return cell.coerceIn(phoneDp * .9f, phoneDp * 1.35f)
     }
 
-    /** Two panes for an album, playlist or artist page: the width of the sticky left pane, or null for one column. */
-    fun collectionPane(widthDp: Float, heightDp: Float): Float? {
-        if (!widthDp.isFinite() || !heightDp.isFinite() || widthDp < 840f || heightDp < 560f) return null
-        return (widthDp * .38f).coerceIn(320f, 440f)
-    }
+    /** The narrowest cover of an artwork grid (playlists, albums, Downloads) and the gap between covers. */
+    const val GRID_CELL_DP = 150f
+    const val GRID_GAP_DP = 18f
+
+    /**
+     * Columns of an artwork grid for a pane [paneDp] wide (its margins already taken off): two on a phone,
+     * then as many as keep each cover about [GRID_CELL_DP] — four on a tablet standing up, six lying down.
+     */
+    fun gridColumns(paneDp: Float): Int = columns(paneDp, GRID_CELL_DP, GRID_GAP_DP, min = 2, max = 8)
+
+    /** Rows of a list (playlists, Downloads) side by side: one column, two once the pane is wide enough for both to breathe. */
+    fun listColumns(paneDp: Float): Int = if (paneDp.isFinite() && paneDp >= 860f) 2 else 1
+
+    /** Side of the artwork beside the title of a collection page on a wide pane. */
+    fun headerArtwork(paneDp: Float): Float = (paneDp * .3f).coerceIn(200f, 300f)
 
     /** Search with its results beside the query: the width of the query pane, or null for one column. */
     fun searchPane(widthDp: Float, heightDp: Float): Float? {

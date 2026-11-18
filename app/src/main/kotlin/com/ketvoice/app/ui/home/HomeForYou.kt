@@ -51,13 +51,16 @@ internal fun EditorialHeader(title: String, modifier: Modifier = Modifier, subti
     Row(modifier.fillMaxWidth().headerReveal().padding(start = com.ketvoice.app.ui.common.pageMargin, end = 8.dp, top = 26.dp, bottom = 12.dp)
         .then(if (onMore != null) Modifier.clip(RoundedCornerShape(12.dp)).clickable(role = Role.Button, onClick = onMore) else Modifier),
         verticalAlignment = Alignment.CenterVertically) {
-        Column(Modifier.weight(1f, fill = false)) {
-            com.ketvoice.app.ui.common.SectionHeader(title)
-            if (subtitle != null) Text(subtitle, color = theme.secondary, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp))
+        // The title and its chevron take what the trailing button leaves: the button stays at the end of the line
+        // (two weights used to share the line, which left it in the middle of a wide page).
+        Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f, fill = false)) {
+                com.ketvoice.app.ui.common.SectionHeader(title)
+                if (subtitle != null) Text(subtitle, color = theme.secondary, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp))
+            }
+            if (onMore != null) Icon(KetIcons.ChevronRight, null, tint = theme.secondary,
+                modifier = Modifier.padding(start = 4.dp).size(20.dp).testTag("editorial-more"))
         }
-        if (onMore != null) Icon(KetIcons.ChevronRight, null, tint = theme.secondary,
-            modifier = Modifier.padding(start = 4.dp).size(20.dp).testTag("editorial-more"))
-        Spacer(Modifier.weight(1f, fill = onMore == null))
         trailing?.invoke()
     }
 }
