@@ -155,5 +155,5 @@
  "season-decor-{0}": "test tag of a seasonal theme's decor, never shown",
  "season-preview-{0}": "test tag of a seasonal theme's preview, never shown",
  "season_{0}_{1}": "drawable resource name of an optional seasonal picture, never shown",
- "VICE FM": "name of the Vice City theme's radio, the same in every language"
+ "Vice FM": "name of the Vice City theme's radio, the same in every language"
 }
