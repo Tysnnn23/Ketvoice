@@ -159,6 +159,8 @@ android {
     }
     testOptions {
         unitTests.isIncludeAndroidResources = true
+        // Host renders of tablet windows (6.6) outgrew Gradle's default 512 MB test heap on CI.
+        unitTests.all { it.maxHeapSize = "2g" }
         // -ProbolectricSdks=31 runs only those host SDKs (Lite's Android 11 tests also declare sdk 30, whose host
         // runtime Robolectric fetches on first use).
         val robolectricSdks = providers.gradleProperty("robolectricSdks").orNull
