@@ -16,14 +16,16 @@ class ApkGateTest(unittest.TestCase):
             for name in ('AndroidManifest.xml', 'classes.dex', 'resources.arsc'):
                 archive.writestr(name, b'test fixture')
 
-    def tools(self, certificate=CERTIFICATE, quest=False, version='3.0.0-Beta3', code=25, debug=False, label=None):
+    def tools(self, certificate=CERTIFICATE, quest=False, version='3.0.0-Beta3', code=25, debug=False, label=None,
+              min_sdk=None):
+        min_sdk = min_sdk or (32 if quest else 30 if label == 'Ketvoice Lite' else 31)
         def run(path, *args):
             if 'apksigner' in path.name:
                 return 'Signer #1 certificate SHA-256 digest: ' + certificate
             if 'zipalign' in path.name:
                 return 'Verification successful'
             return (f"package: name='com.ketvoice.app' versionCode='{code}' versionName='{version}'\n"
-                    f"sdkVersion:'{32 if quest else 31}'\ntargetSdkVersion:'{34 if quest else 36}'\n" +
+                    f"sdkVersion:'{min_sdk}'\ntargetSdkVersion:'{34 if quest else 36}'\n" +
                     (f"application-label:'{label}'\n" if label else '') +
                     ('application-debuggable' if debug else ''))
         return patch('verify_apk.run_tool', side_effect=run)
@@ -84,6 +86,9 @@ class ApkGateTest(unittest.TestCase):
             report = self.check(edition='lite')
         self.assertEqual('lite', report['edition'])
         self.assertEqual('com.ketvoice.app', report['package'])
+        # A Lite APK built for Android 12 only (or a mobile one relabelled) is refused.
+        with self.tools(label='Ketvoice Lite', min_sdk=31), self.assertRaises(ValueError):
+            self.check(edition='lite')
         # A mobile APK renamed -Lite (or an unlabelled one) is refused.
         for label in ('Ketvoice', None):
             with self.tools(label=label), self.assertRaises(ValueError):

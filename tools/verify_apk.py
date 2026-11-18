@@ -14,7 +14,8 @@ EDITIONS = {
     'mobile': {'sdk': ('31', '36'), 'label': 'Ketvoice'},
     'quest': {'sdk': ('32', '34'), 'label': 'Ketvoice Quest'},
     # Ketvoice Lite (6.1): the phone app, lighter; same package and signature so it replaces mobile in place.
-    'lite': {'sdk': ('31', '36'), 'label': 'Ketvoice Lite', 'abis': {'arm64-v8a'}},
+    # 6.5: Lite also installs on Android 11 (minSdk 30).
+    'lite': {'sdk': ('30', '36'), 'label': 'Ketvoice Lite', 'abis': {'arm64-v8a'}},
 }
 
 
