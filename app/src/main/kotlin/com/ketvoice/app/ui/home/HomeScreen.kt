@@ -121,11 +121,13 @@ fun HomeScreen() {
                     Column(Modifier.weight(1f)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Image(painterResource(R.drawable.logo_clean), null, Modifier.size(20.dp), contentScale = ContentScale.Fit)
-                            Text("KETVOICE", localize = false, color = theme.secondary, fontSize = 11.sp, fontWeight = FontWeight.Bold,
+                            // Vice City (6.3): the sign in neon pink, switching on with a flicker the first time Home shows.
+                            if (theme.viceCity) com.ketvoice.app.ui.vicecity.ViceCityWordmark(Modifier.padding(start = 8.dp))
+                            else Text("KETVOICE", localize = false, color = theme.secondary, fontSize = 11.sp, fontWeight = FontWeight.Bold,
                                 letterSpacing = 2.2.sp, modifier = Modifier.padding(start = 8.dp))
                         }
                         com.ketvoice.app.ui.common.PageTitle(greeting,
-                            Modifier.padding(top = 6.dp).asHeading().testTag("home-greeting"), maxLines = 2)
+                            Modifier.padding(top = 6.dp).asHeading().testTag("home-greeting"), maxLines = 2, neon = true)
                     }
                     if (!layout.hasRail) Box(Modifier.size(DesignTokens.Space.touch).clip(androidx.compose.foundation.shape.CircleShape)
                         .clickable(role = androidx.compose.ui.semantics.Role.Button) { AppUi.showAccount.value = true },
@@ -174,6 +176,8 @@ fun HomeScreen() {
                     }
                 }
             }
+            // Vice FM (6.3): the Vice City theme's radio, while the theme is on.
+            if (theme.viceCity) item(key = "vicefm") { com.ketvoice.app.ui.vicecity.ViceFmCard(Modifier.padding(top = 8.dp)) }
             // The week's discoveries (6.1): renewed every Monday, right under what was played last.
             item(key = "discoveries") { HomeDiscoveries() }
             if (playlists.any { it.pinned }) item(key = "pinned") {
