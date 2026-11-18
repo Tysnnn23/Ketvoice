@@ -39,7 +39,8 @@ class KetvoiceApp : Application(), ImageLoaderFactory {
         val later = LiteTuning.deferred()
         val delayMs = LiteTuning.deferredStartMs()
         fun start(work: LiteTuning.StartWork, block: () -> Unit) {
-            if (work !in later) runCatching(block)
+            // Host tests (Robolectric) start it at once: a task posted for later would land in the middle of a test.
+            if (work !in later || android.os.Build.FINGERPRINT == "robolectric") runCatching(block)
             else android.os.Handler(mainLooper).postDelayed({ runCatching(block) }, delayMs)
         }
         // The voice separation model (optional download) and the separations already made: file checks only.

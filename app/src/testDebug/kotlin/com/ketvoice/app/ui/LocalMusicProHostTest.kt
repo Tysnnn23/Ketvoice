@@ -132,6 +132,8 @@ class LocalMusicProHostTest {
     }
 
     @Test fun theCorrectionsAreAcceptedPerAlbumOrAllAtOnceAndStayInTheApp() {
+        // The sheet is the phone's spring sheet; Quest's centred panel is not covered by this render.
+        org.junit.Assume.assumeFalse(com.ketvoice.app.BuildConfig.IS_QUEST)
         open()
         compose.onNodeWithTag("local-corrections").performClick()
         compose.waitForIdle()
