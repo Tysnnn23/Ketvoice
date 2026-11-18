@@ -226,9 +226,8 @@ class SmoothnessHostTest {
         compose.waitForIdle()
         compose.runOnIdle {
             val keys = state.layoutInfo.visibleItemsInfo.map { it.key }
-            assertEquals(listOf("albums-grid:album-1", "albums-grid:album-3", "albums-grid:album-5", "albums-grid:album-7",
-                "albums-grid:album-9"), keys)
-            assertTrue(state.layoutInfo.visibleItemsInfo.all { it.contentType == "albums-grid" })
+            assertEquals(listOf("albums:album-1", "albums:album-3", "albums:album-5", "albums:album-7", "albums:album-9"), keys)
+            assertTrue(state.layoutInfo.visibleItemsInfo.all { it.contentType == "albums" })
         }
     }
 }

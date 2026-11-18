@@ -379,7 +379,7 @@ internal fun <T> LazyListScope.coverGridRows(name: String, rows: List<T>, column
                                              tag: String, key: (T) -> Any,
                                              cell: @Composable (T, androidx.compose.ui.unit.Dp) -> Unit) {
     val lines = rows.chunked(columns.coerceAtLeast(1))
-    itemsIndexed(lines, key = { _, line -> "$name-grid:${key(line.first())}" }, contentType = { _, _ -> "$name-grid" }) { index, line ->
+    itemsIndexed(lines, key = { _, line -> name + ':' + key(line.first()) }, contentType = { _, _ -> name }) { index, line ->
         Row(Modifier.fillMaxWidth().padding(start = 18.dp, end = 18.dp, top = if (index == 0) 0.dp else 18.dp)
             .then(if (index == 0) Modifier.testTag(tag) else Modifier), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             line.forEach { item -> Box(Modifier.width(side)) { cell(item, side) } }
