@@ -218,9 +218,11 @@ internal class DeckAutomation(
         private fun blendOut(plan: MixPlan, start: Long, end: Long): DeckAutomation {
             val swap = (plan.swapMs * 1000L).coerceIn(start + 1, end - 1)
             val half = (plan.beatMs * 500f).toLong().coerceIn(120_000L, 400_000L)
+            // Led down a little further when the incoming title is the quieter one, so that the two meet level.
+            val meeting = MEETING * plan.outGain
             val gain = Curve.join(
-                Curve.shaped(start, swap, 16) { 1f - (1f - MEETING) * ease(it) },
-                Curve.shaped(swap, end, 24) { MEETING * fadeOut(it) })
+                Curve.shaped(start, swap, 16) { 1f - (1f - meeting) * ease(it) },
+                Curve.shaped(swap, end, 24) { meeting * fadeOut(it) })
             val bassAway = Curve.shaped(swap - half, swap + half, 16) { sweep(OPEN_HZ, BASS_HZ, it) }
             if (plan.variant == 1) {
                 val sink = Curve.join(point(swap + half, 0f), point(swap + half + 1, TOP_HZ),

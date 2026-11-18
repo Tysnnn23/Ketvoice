@@ -120,6 +120,11 @@ internal data class MixPlan(
     val swapMs: Long = -1,
     /** Level of the incoming title during the overlap, so that it does not jump out. */
     val gain: Float = 1f,
+    /**
+     * Level the outgoing title is led down to where the two meet in a blend in time, when the incoming
+     * title is the quieter of the two (see [BlendFit.outGain]); 1 = left as it is.
+     */
+    val outGain: Float = 1f,
     /** Length of a beat of the outgoing title, when the transition is tied to its beats. */
     val beatMs: Float = 0f,
     val reason: String = "",
@@ -217,6 +222,10 @@ internal object TransitionPlanner {
         // next) is one piece of music: mixing over its joins would only cover them.
         // A pair the listener set by hand in the DJ editor is mixed where they chose, joins or not.
         if (context.sameAlbumInOrder && !listener && gapless(out.durationMs, a, b)) return MixPlan(MixKind.None, reason = "gapless album")
+        // An album without a steady beat played in order (a symphony, chamber music, a reading) is left as
+        // it was sequenced: Apple Music plays such albums without transitions, and nothing here could be tied
+        // to the music anyway.
+        if (context.sameAlbumInOrder && !listener && !a.hasBeat && !b.hasBeat) return MixPlan(MixKind.None, reason = "album in order")
         val gain = 10f.pow((a.loudnessDb - b.loudnessDb) / 20f).coerceIn(.5f, 1f)
         // A fade is almost silent in its last quarter: the incoming title must be in before that.
         val end = if (a.fadeOut) min(a.soundEndMs, a.fallMs + (a.soundEndMs - a.fallMs) * 3 / 4) else a.soundEndMs
@@ -236,7 +245,8 @@ internal object TransitionPlanner {
             val rate = BeatAnalysis.foldedRatio(a.bpm, b.bpm)
             // Measured from the incoming title's own tempo: what it will sound like for the rest of it.
             if (abs(context.speed * rate - 1f) <= settings.tempoRange) {
-                beatmatch(a, b, out, incoming, settings, rate, gain, end, start, sungUntil, clash, variant, context.loop, relation)
+                beatmatch(a, b, out, incoming, settings, rate, gain, end, start, sungUntil, clash, variant,
+                    BlendFit.counts(settings, abs(context.speed * rate - 1f), clash, context.loop, BlendFit.levelGapDb(a, b)))
                     ?.let { blend -> measured(blend).takeIf { it.mixes }?.let { return it } }
             }
         }
@@ -396,27 +406,22 @@ internal object TransitionPlanner {
 
     private fun beatmatch(a: SegmentAnalysis, b: SegmentAnalysis, out: MixFacts, incoming: MixFacts, settings: MixSettings,
                           rate: Float, gain: Float, end: Long, start: Long, sungUntil: Long?, clash: Boolean, variant: Int,
-                          loop: Boolean = false, relation: MusicalKey.Relation = MusicalKey.Relation.Unknown): MixPlan? {
+                          counts: IntArray): MixPlan? {
         val beat = pulse(a)
         // The incoming title enters on its first beat, or on its first downbeat when that is the next beat.
         val firstBeat = b.beatAtOrAfter(start - 20.0)
         val firstBar = if (b.barOffset >= 0) b.barAtOrAfter(start - 20.0) else firstBeat
         val inMs = (if (firstBar - firstBeat <= b.beatMs * 1.05) firstBar else firstBeat).roundToLong().coerceAtLeast(0L)
         val sungFrom = incoming.vocalStartMs
-        // Keys that do not go together are not left to rub against each other for long.
-        // Keys that clash are not left to rub for long; a title over its own start neither, since the
-        // same instruments slightly apart in time colour each other (comb filtering).
-        // Harmonic mixing: keys that clash never rub for long; keys that go together (the same, or
-        // neighbours on the circle of fifths) are blended the longest, with their mids left fuller (see
-        // DeckAutomation.withMids, 6.0.0 Beta 4).
-        val counts = if (clash || loop) settings.beatCounts.filter { it <= 16 }.toIntArray() else settings.beatCounts
+        // How long the two may be heard together is told by how well they fit: see BlendFit.counts.
+        // Two voices never sing over each other: the blend starts under the last sung words only as far
+        // as the incoming title stays without its voice.
+        val lead = BlendFit.voiceLeadMs(a, settings, beat, sungFrom?.let { (it - inMs) / rate })
         for ((index, count) in counts.withIndex()) {
             val overlap = (count * beat).roundToLong()
             val latest = end - overlap
             // The mix starts once the singing is over, or under its last bars with the voice softened;
             // without lyrics, where the level drops.
-            // A title that ends sung on a last note at full level keeps its ending whole.
-            val lead = if (a.hardEnding && !a.fadeOut) 0L else (settings.vocalLeadBeats * beat).roundToLong()
             val earliest = max(a.startMs + a.beatMs.toLong(), sungUntil?.let { it - lead } ?: a.fallMs)
             if (earliest > latest) continue
             // The incoming voice should arrive once the outgoing title is mostly gone.
@@ -432,21 +437,22 @@ internal object TransitionPlanner {
             // The start of a phrase of the outgoing title, when one is within reach, is where a DJ begins:
             // the incoming title then arrives as the music turns a page, not in the middle of a sentence.
             val phrase = a.phraseStarts(earliest - a.beatMs / 2.0, latest + 1.0).minByOrNull { abs(it - target) }
-            if (phrase != null) outMs = phrase
+            // The incoming title's first bar opens that phrase, so that the bars of both meet there too.
+            if (phrase != null) outMs = BlendFit.onPhrase(a, b, inMs, rate, phrase, earliest.toDouble(), latest.toDouble())
             // First beats of bars meet when both titles let their bars be told apart.
             else if (a.barOffset >= 0 && b.barOffset >= 0) {
-                val inBar = barIndex(b, inMs.toDouble())
+                val inBar = BlendFit.barIndex(b, inMs.toDouble())
                 var candidate = outMs
                 for (shift in 0 until 4) {
                     if (candidate > latest + 1) break
-                    if (barIndex(a, candidate) == inBar) { outMs = candidate; break }
+                    if (BlendFit.barIndex(a, candidate) == inBar) { outMs = candidate; break }
                     candidate += a.beatMs
                 }
             }
-            val middle = outMs + overlap / 2.0
-            val swap = a.beatAtOrAfter(middle - a.beatMs / 2.0)
+            // The bass changes hands in the middle, on the first beat of a bar.
+            val swap = BlendFit.swapBeat(a, outMs + overlap / 2.0)
             return MixPlan(MixKind.Beatmatch, outMs = outMs.roundToLong(), inMs = inMs, overlapMs = overlap, rate = rate,
-                swapMs = swap.roundToLong(), gain = gain, beatMs = beat, reason = "$count beats", variant = variant, clash = clash,
+                swapMs = swap.roundToLong(), gain = gain, outGain = BlendFit.outGain(a, b), beatMs = beat, reason = "$count beats", variant = variant, clash = clash,
                 onPhrase = phrase != null, sungUntilMs = sungUntil?.takeIf { it > outMs.roundToLong() } ?: -1)
         }
         return null
@@ -553,6 +559,7 @@ internal object TransitionPlanner {
         val gain = if (auto.mixes) auto.gain else if (a != null && b != null) 10f.pow((a.loudnessDb - b.loudnessDb) / 20f).coerceIn(.5f, 1f) else 1f
         val onPhrase = a?.phraseStarts(exit - 60.0, exit + 60.0)?.isNotEmpty() == true
         val plan = MixPlan(kind, outMs = exit, inMs = entry, overlapMs = overlap, rate = rate, swapMs = swap, gain = gain,
+            outGain = if (kind == MixKind.Beatmatch && a != null && b != null) BlendFit.outGain(a, b) else 1f,
             beatMs = if (kind == MixKind.Beatmatch || kind == MixKind.Echo || kind == MixKind.Rise || kind == MixKind.Trim) beat else 0f,
             reason = "listener", variant = if (auto.mixes) auto.variant else if (context.lastVariant == 0) 1 else 0,
             clash = auto.clash || (a != null && b != null && MusicalKey.relation(a.key, b.key) == MusicalKey.Relation.Clash),
@@ -563,18 +570,20 @@ internal object TransitionPlanner {
         return checked(plan, out, incoming)
     }
 
-    /** True when the end of one title and the start of the next leave no gap at all. */
+    /**
+     * True when the end of one title and the start of the next leave no gap at all: the two were cut
+     * from one piece of music.
+     *
+     * Either a last note at full level followed at once by a start at full level, or a sound that runs
+     * on across the join under the level of the music (the applause of a concert, a held chord, rain):
+     * the outgoing title is still heard at its very last sample, without having faded, and the next one
+     * starts without any silence.
+     */
     internal fun gapless(outDurationMs: Long, a: SegmentAnalysis, b: SegmentAnalysis): Boolean {
         val trailingSilence = outDurationMs - a.soundEndMs
-        val abruptEnd = a.hardEnding && !a.fadeOut && trailingSilence < 200L
-        val immediateStart = b.soundStartMs - b.startMs < 120L && b.riseMs - b.soundStartMs < 500L
-        return abruptEnd && immediateStart
-    }
-
-    /** Which beat of its bar (0..3) [positionMs] is, for a title whose bars are known. */
-    private fun barIndex(analysis: SegmentAnalysis, positionMs: Double): Int {
-        val beats = floor((positionMs - analysis.beatAtMs) / analysis.beatMs + .5).toLong()
-        return (((beats - analysis.barOffset) % 4) + 4).toInt() % 4
+        if (trailingSilence >= 200L || a.fadeOut) return false
+        val immediateStart = b.soundStartMs - b.startMs < 120L
+        return if (a.hardEnding) immediateStart && b.riseMs - b.soundStartMs < 500L else immediateStart
     }
 
     /** A plan that does not fit in the two titles is not played. */
