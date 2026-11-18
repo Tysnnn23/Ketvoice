@@ -1,0 +1,201 @@
+{
+  "schema": 8,
+  "version": "6.5.0",
+  "versionCode": 136,
+  "source_commit": "a1540bd2f0a26b3c52abfa739c1969589bf72a54",
+  "created_at": "2026-11-18T15:31:29.659328+00:00",
+  "build_origin": {
+    "kind": "github_actions_with_owner_discord_sdk",
+    "workflow": "android.yml",
+    "run_id": 44328334094,
+    "artifact": {
+      "id": 14439554065,
+      "sha256": "4e339d2a09bf7b46b05dc488334af009de7a8e6af339c667f24c7a21143d81f2"
+    },
+    "gradle": "assembleMobileRelease assembleQuestRelease assembleLiteRelease",
+    "note": "Signed by CI with the pinned keystore secret; the Discord Social SDK AAR matched its pinned SHA-256."
+  },
+  "local_validation": {
+    "result": "debug JVM/Robolectric suites for the three flavors (mobile, quest, lite), release lint and the APK checker tests passed in a cloud container without the Discord SDK",
+    "commands": [
+      "testMobileDebugUnitTest",
+      "testQuestDebugUnitTest",
+      "testLiteDebugUnitTest -ProbolectricSdks=31,32,33,34,35,36",
+      "lintMobileRelease",
+      "lintQuestRelease",
+      "lintLiteRelease",
+      "tools/test_verify_apk.py"
+    ],
+    "ci_validation": "run 44328334094: release builds, debug and release unit tests, UI text audit, lint, APK signature pin and Discord bridge packaging passed",
+    "code_review": {
+      "kind": "none independent"
+    },
+    "host_previews": "Robolectric software renders on the host (not a phone): Lite glass with the software blur (SoftBlur), blurred covers (SoftImage), rounded widget parts on Android 11 (WidgetCorners), Settings About Ketvoice Lite row, Lite tablet layouts; web player screenshots at 390 px and 1440 px",
+    "sdk_30": "Robolectric's Android 11 runtime could not be downloaded in the cloud container (Maven Central answered 429), so the Lite tests that declare sdk 30 ran on sdk 31 only; nothing ran on an Android 11 runtime",
+    "after_last_full_local_run": "nothing under app/ changed after the last complete local run"
+  },
+  "server": {
+    "function": "ketvoice-content",
+    "deployed_version": 23,
+    "changed_in_this_version": false,
+    "database": "no migration in this version; ketvoice-catalog (version 1) unchanged"
+  },
+  "tests": {
+    "mobile": {
+      "jvm": {
+        "tests": 1630,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 3
+      },
+      "android_15_emulator_compose": {
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "quest": {
+      "jvm": {
+        "tests": 1621,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 34
+      },
+      "android_15_emulator_compose": {
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "lite": {
+      "jvm": {
+        "tests": 1628,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 3
+      },
+      "android_11_runtime": {
+        "status": "not_executed"
+      }
+    },
+    "dex_register_check": "not run on the release APKs: the owner asked to publish directly without further checks (« Pas besoin de controller publie directrment. », 2026-11-18)",
+    "apk_checker": "tools/test_verify_apk.py 12 tests (Lite minSdk 30 required)"
+  },
+  "lint": {
+    "mobile": {
+      "Warning": 309,
+      "Hint": 28
+    },
+    "quest": {
+      "Warning": 309,
+      "Hint": 28
+    },
+    "lite": {
+      "Warning": 331,
+      "Hint": 28
+    },
+    "errors": 0
+  },
+  "apks": [
+    {
+      "name": "Ketvoice-6.5.0.apk",
+      "sha256": "01e316bb87aeb3171411e97a2fe29353b0f41a5029459d255467284f2bb4fb5d",
+      "bytes": 84996758,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "6.5.0",
+      "versionCode": 136,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-6.5.0-Quest.apk",
+      "sha256": "1c7054aa3cbf243205af6c34cebb9b95c97a030cd7bfb2fc1114ebe13af9334f",
+      "bytes": 101081845,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "6.5.0",
+      "versionCode": 136,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-6.5.0-Lite.apk",
+      "sha256": "416f69cf7f4492d1ed7b9c72d8bd5f9722cb7879efd6cd02403a2501d61fea20",
+      "bytes": 32903785,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "6.5.0",
+      "versionCode": 136,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false,
+      "edition": "lite"
+    }
+  ],
+  "discord": {
+    "sdk_present_in_ci_build": true,
+    "sdk_sha256_pinned": true,
+    "bridge_and_native_libraries_verified": true,
+    "presence_mode": "unauthenticated_rpc_through_installed_discord_app"
+  },
+  "credential_scan": {
+    "status": "not_run_on_release_apks",
+    "reason": "owner asked to publish directly without further checks (2026-11-18)"
+  },
+  "release_install_smoke": {
+    "mobile": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "quest": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "lite": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    }
+  },
+  "publication_override": {
+    "authorized_by_user": true,
+    "authorized_at": "2026-11-18T15:31:29.659328+00:00",
+    "kind": "standing_authorization",
+    "user_statement": "J'autorise TOUT devient maintenant une règle.",
+    "user_statement_date": "2026-11-14",
+    "in_reply_to": "The question whether versions may be published without phone or Quest testing without asking again for each version.",
+    "recorded_in": "AGENTS.md (commit aeeda8e)",
+    "reason": "The owner made publishing validated versions without phone or Quest testing a standing rule.",
+    "scope": "physical device installation and all on-device behaviour of 6.5.0 (mobile, Lite and Quest), including accounts and sync on devices"
+  },
+  "owner_requests_2026_11_18_6_5_0": {
+    "statements": [
+      "pour la prochaine version ketvoice lite ajouté un support complet pour les tablettes/téléphone avec peu de ram etc mais qui garde les meme effets et qui sont compatibles android 11. et concernant le site il faut 1:1 la interface mobile sur le site mais un peu style apple music macos pour ceux qui sont pc etc a toi fe tout faire Bien."
+    ],
+    "done": {
+      "lite": "minSdk 30, software/GPU blur without RenderEffect, blurred covers, rounded widgets on Android 11, modest-device tuning (bounded RGB_565 decodes, one Canvas at a time, quick stem model away from the charger), tablet layouts, About row",
+      "glass": "colorControls named arguments (Blur mode looks change on all phones)",
+      "web": "web player: Ket 27 interface on phones, Music-for-macOS layout on computers"
+    }
+  },
+  "not_validated": [
+    "physical phone, Lite or Quest installation, rendering and behaviour of 6.5.0",
+    "Lite on a real Android 11 device and on real 2-4 GB phones and tablets (memory, frame rate, GPU blur path)",
+    "Robolectric runs on the Android 11 runtime (sdk 30)",
+    "the changed Blur-mode glass on real phones",
+    "independent code review"
+  ],
+  "known_limitations": [
+    "No Wear OS app in this version.",
+    "Seasonal themes use code-drawn decor until the owner's pictures are added.",
+    "Android Auto's queue screen shows only the current song.",
+    "Switching between Ketvoice and Ketvoice Lite is a manual install of the other APK.",
+    "Ketogether guests hear titles their own sources can play; local files and private titles are shown as unavailable.",
+    "Launcher icons keep a background: Android fills adaptive icon backgrounds in black.",
+    "The signing certificate is the existing public Android debug identity, not a private production key."
+  ],
+  "canonical_banner_sha256": "ddc0e2c1270027f4b9dd92254374b79727ae9eaf8914e418b52e23c5b39b5966"
+}
