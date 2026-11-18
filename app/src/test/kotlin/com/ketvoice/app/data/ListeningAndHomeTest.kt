@@ -15,11 +15,31 @@ class ListeningAndHomeTest {
         // Seek ou saut de piste : delta nul ou négatif, jamais compté.
         ListeningHistory.addListenedMs(0)
         ListeningHistory.addListenedMs(-4_000)
-        assertEquals(400L, ListeningHistory.listenedMs.value)
+        // Shown every PUBLISH_MS of listening (6.6), or at once by a flush.
+        assertEquals(0L, ListeningHistory.listenedMs.value)
         ListeningHistory.flushListenedMs()
         assertEquals(400L, ListeningHistory.listenedMs.value)
         ListeningHistory.resetListenedMs()
         assertEquals(0L, ListeningHistory.listenedMs.value)
+    }
+
+    /** 6.6: the listening figures every page reads move every few seconds, not at each 200 ms tick of the player. */
+    @Test fun listeningFiguresMoveEveryFewSecondsNotAtEachTick() {
+        ListeningHistory.resetListenedMs()
+        val months0 = ListeningHistory.months.value
+        val days0 = ListeningHistory.days.value
+        val years0 = ListeningHistory.years.value
+        // 4.8 s of ticks: nothing published yet, so no page recomputes its week, month or year.
+        repeat(24) { ListeningHistory.addListenedMs(200) }
+        assertSame(months0, ListeningHistory.months.value)
+        assertSame(days0, ListeningHistory.days.value)
+        assertSame(years0, ListeningHistory.years.value)
+        assertEquals(0L, ListeningHistory.listenedMs.value)
+        // The 25th tick reaches PUBLISH_MS: everything moves at once, nothing lost.
+        ListeningHistory.addListenedMs(200)
+        assertEquals(ListeningHistory.PUBLISH_MS, ListeningHistory.listenedMs.value)
+        assertNotSame(months0, ListeningHistory.months.value)
+        ListeningHistory.resetListenedMs()
     }
 
     @Test fun actualRecentMovesToFrontWithoutDuplicates() {
