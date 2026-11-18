@@ -21,6 +21,14 @@
 
 ## Overview
 
+### 6.8.0 — A rhythm model for Ketmix
+
+Ketmix can download a small AI model (Beat This!) that finds beats and bars.
+[Mobile](https://github.com/Tysnnn23/Ketvoice/releases/download/v6.8.0/Ketvoice-6.8.0.apk)
+· [Lite](https://github.com/Tysnnn23/Ketvoice/releases/download/v6.8.0/Ketvoice-6.8.0-Lite.apk)
+· [Quest](https://github.com/Tysnnn23/Ketvoice/releases/download/v6.8.0/Ketvoice-6.8.0-Quest.apk)
+· [Release notes](docs/releases/v6.8.0.md).
+
 ### 6.7.0 — Ketmix blends like a DJ, a lighter Lite
 
 Ketmix fits each blend to its two songs, Ketvoice Lite starts faster, and the GTA VI welcome screen is back.

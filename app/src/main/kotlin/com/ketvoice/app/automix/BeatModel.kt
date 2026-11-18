@@ -15,8 +15,8 @@ import kotlin.math.min
  * The beat model as published by the beat workflow (tools/beat/expected.sha256). PLACEHOLDERS until the real
  * file is converted: the download fails its checksum, so nothing runs from them.
  */
-internal const val BEAT_BYTES = 10_400_000L
-internal const val BEAT_SHA = "0000000000000000000000000000000000000000000000000000000000000000"
+internal const val BEAT_BYTES = 18_575_568L
+internal const val BEAT_SHA = "74cc5ee960dbdbf75cef978e8e24a5308ef26f459f70494285f249a82a9c67d7"
 
 /** Runs the network on one chunk of [BeatPost.BEAT_FRAMES] frames of [BeatSpectrogram.MELS] values; returns the beat and the downbeat logits. */
 internal interface BeatRunner : AutoCloseable {

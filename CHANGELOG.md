@@ -7,6 +7,20 @@
 
 ---
 
+# Ketvoice 6.8.0
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 139** — Beat This! small as an optional Ketmix rhythm model.
+
+- `automix/BeatModel.kt`, `BeatSpectrogram.kt`, `BeatPost.kt`, `BeatMapping.kt`: pure-Kotlin log-mel front end (22.05 kHz, 1024/441, 128 slaney bands, `log1p(1000x)`), 500-frame (10 s) LiteRT windows with overlap, Beat This!'s minimal post-processing, a tempo/bar fit merged with the DSP analysis (model used when confidence ≥ .6 and it does not contradict a sure DSP result). `SegmentAnalysis.analyser` is stored as `"an"`. Always on mobile, charging only on Lite and modest devices. Settings → Ketmix: « Calage précis du rythme ».
+- Model: `.github/workflows/publish-beat-model.yml` converts Beat This! small (ONNX export, MIT) with a fixed input [1, 500, 128] and float16 weights, checks it against the original, and publishes `ketmix-beat-small0.tflite` (18,575,568 bytes, SHA-256 `74cc5ee9…`) as the `ketmix-beat-v1` prerelease. 30 s windows were not used: Beat This!'s attention tensors grow with the square of the length.
+- `tools/beat/` (prepare, check, reference), `BeatModelTest`, `BeatSettingsRowTest`.
+
+Full notes: [6.8.0](docs/releases/v6.8.0.md).
+
+---
+
 # Ketvoice 6.7.0
 
 ![Ketvoice](ketvoice-banner.png)
