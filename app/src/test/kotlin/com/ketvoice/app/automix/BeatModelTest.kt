@@ -234,9 +234,11 @@ class BeatSettingsRowTest {
     }
 
     @Test fun theRowHasItsTranslations() {
-        val file = File("../tools/pending-translations-beat68.json").takeIf { it.isFile } ?: File("tools/pending-translations-beat68.json")
-        val json = org.json.JSONObject(file.readText())
-        assertTrue(json.has("Calage précis du rythme (Ketmix)"))
-        for (key in json.keys()) assertEquals(10, json.getJSONObject(key).length())
+        val file = File("src/main/assets/translations.json").takeIf { it.isFile } ?: File("app/src/main/assets/translations.json")
+        val catalog = org.json.JSONObject(file.readText())
+        val languages = listOf("en", "hi", "ja", "zh", "ru", "it", "es", "de", "pt", "ko")
+        for (text in listOf("Calage précis du rythme (Ketmix)", "Un petit modèle d'IA trouve les temps et les mesures pour des mélanges mieux calés : {0}")) {
+            for (language in languages) assertTrue("$language misses « $text »", catalog.getJSONObject(language).has(text))
+        }
     }
 }
