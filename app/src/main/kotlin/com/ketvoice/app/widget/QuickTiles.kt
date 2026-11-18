@@ -52,7 +52,8 @@ internal object QuickTiles {
         runCatching { TileService.requestListeningState(context, ComponentName(context, KetmixTileService::class.java)) }
     }
 
-    /** Opens Ketvoice from a tile and folds the shade. */
+    /** Opens Ketvoice from a tile and folds the shade (with an Intent before Android 14, the only way there). */
+    @android.annotation.SuppressLint("StartActivityAndCollapseDeprecated")
     fun openApp(service: TileService, where: String? = null) {
         val intent = Intent(service, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
         where?.let { intent.putExtra(WidgetIntents.OPEN, it) }

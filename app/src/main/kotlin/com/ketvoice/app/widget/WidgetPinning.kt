@@ -50,7 +50,12 @@ internal object WidgetPinning {
 
     /** Asks the system to add a tile to the shade (Android 13+); [done] hears whether it was added. */
     fun addTile(context: Context, entry: TileEntry, label: String, done: (Boolean) -> Unit) {
-        if (!tilesSupported()) { done(false); return }
+        if (com.ketvoice.app.BuildConfig.IS_QUEST || Build.VERSION.SDK_INT < 33) { done(false); return }
+        requestTile(context, entry, label, done)
+    }
+
+    @androidx.annotation.RequiresApi(33)
+    private fun requestTile(context: Context, entry: TileEntry, label: String, done: (Boolean) -> Unit) {
         val manager = context.getSystemService(android.app.StatusBarManager::class.java) ?: run { done(false); return }
         runCatching {
             manager.requestAddTileService(ComponentName(context, entry.service), label,
