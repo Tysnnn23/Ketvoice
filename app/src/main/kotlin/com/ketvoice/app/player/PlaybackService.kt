@@ -381,6 +381,7 @@ class PlaybackService : MediaLibraryService() {
         player.addListener(object : androidx.media3.common.Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 if (owner === this@PlaybackService.player && !isPlaying) SonicMeter.reset()
+                if (owner === this@PlaybackService.player && isPlaying) PlaybackRevival.playing(this@PlaybackService)
                 if (owner === this@PlaybackService.player) lockLyrics.poke()
             }
             override fun onMediaItemTransition(mediaItem: androidx.media3.common.MediaItem?, reason: Int) {

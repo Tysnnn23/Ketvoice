@@ -12,11 +12,21 @@
     <string name="trending">인기</string>
     <string name="albums_singles">앨범 및 싱글</string>
     <string name="widget_glass_player">Ketvoice · 플레이어</string>
-    <string name="widget_glass_player_desc">큰 Liquid Glass 플레이어: 커버, 제목, 진행 상황, 컨트롤</string>
+    <string name="widget_glass_player_desc">큰 플레이어: 커버, 부르는 가사, 진행 상황, 컨트롤</string>
     <string name="widget_week">Ketvoice · 이번 주</string>
     <string name="widget_week_desc">이번 주 감상 시간과 이번 주의 아티스트</string>
     <string name="widget_mix">Ketvoice · 추천</string>
     <string name="widget_mix_desc">지금의 믹스: 탭하면 재생</string>
     <string name="widget_mini">Ketvoice · 미니</string>
     <string name="widget_mini_desc">커버, 재생/일시정지, 다음</string>
+    <string name="widget_now_playing">Ketvoice · 지금 재생 중</string>
+    <string name="widget_now_playing_desc">커버, 제목, 컨트롤을 모든 크기로</string>
+    <string name="widget_lyrics">Ketvoice · 실시간 가사</string>
+    <string name="widget_lyrics_desc">부르는 가사와 다음 가사를 실시간으로</string>
+    <string name="widget_ketmix">Ketvoice · Ketmix</string>
+    <string name="widget_ketmix_desc">Ketmix 스위치와 다음에 믹스될 곡</string>
+    <string name="widget_replay">Ketvoice · Replay</string>
+    <string name="widget_replay_desc">이번 달 감상 시간, 아티스트와 곡</string>
+    <string name="tile_play">Ketvoice 재생</string>
+    <string name="tile_ketmix">Ketmix</string>
 </resources>

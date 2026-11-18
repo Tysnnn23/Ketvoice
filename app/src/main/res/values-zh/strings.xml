@@ -12,11 +12,21 @@
     <string name="trending">热门</string>
     <string name="albums_singles">专辑和单曲</string>
     <string name="widget_glass_player">Ketvoice · 播放器</string>
-    <string name="widget_glass_player_desc">大号 Liquid Glass 播放器：封面、标题、进度和控制</string>
+    <string name="widget_glass_player_desc">大号播放器：封面、正在演唱的歌词、进度和控制</string>
     <string name="widget_week">Ketvoice · 你的一周</string>
     <string name="widget_week_desc">你本周的收听分钟数和本周艺人</string>
     <string name="widget_mix">Ketvoice · 为你推荐</string>
     <string name="widget_mix_desc">此刻的混音：轻点即可播放</string>
     <string name="widget_mini">Ketvoice · 迷你</string>
     <string name="widget_mini_desc">封面、播放/暂停和下一首</string>
+    <string name="widget_now_playing">Ketvoice · 正在播放</string>
+    <string name="widget_now_playing_desc">封面、标题和控制，适配所有尺寸</string>
+    <string name="widget_lyrics">Ketvoice · 实时歌词</string>
+    <string name="widget_lyrics_desc">正在演唱的歌词和下一句，实时显示</string>
+    <string name="widget_ketmix">Ketvoice · Ketmix</string>
+    <string name="widget_ketmix_desc">Ketmix 开关和下一首将被混音的歌曲</string>
+    <string name="widget_replay">Ketvoice · Replay</string>
+    <string name="widget_replay_desc">本月的收听分钟数、您的艺人和您的歌曲</string>
+    <string name="tile_play">Ketvoice 播放</string>
+    <string name="tile_ketmix">Ketmix</string>
 </resources>

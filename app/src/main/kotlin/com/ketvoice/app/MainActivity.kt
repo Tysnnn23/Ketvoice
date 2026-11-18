@@ -213,11 +213,18 @@ class MainActivity : ComponentActivity() {
         val open = intent.getStringExtra(com.ketvoice.app.widget.WidgetIntents.OPEN)
         intent.removeExtra(com.ketvoice.app.widget.WidgetIntents.MIX)
         intent.removeExtra(com.ketvoice.app.widget.WidgetIntents.OPEN)
-        if (open == "replay") AppUi.openReplay()
-        // The lock screen lyrics notification or the large player widget's line (6.1): the player, on its lyrics.
-        if (open == "lyrics" && com.ketvoice.app.player.Player.state.value.current != null) {
+        if (open == com.ketvoice.app.widget.WidgetIntents.OPEN_REPLAY) AppUi.openReplay()
+        // The lock screen lyrics notification or the lyrics widgets (6.1, 6.4): the player, on its lyrics.
+        val playing = com.ketvoice.app.player.Player.state.value
+        if (open == com.ketvoice.app.widget.WidgetIntents.OPEN_LYRICS && playing.current != null) {
             AppUi.showPlayer.value = true
             AppUi.showLyrics.value = true
+        }
+        // A player widget (6.4): the player; « Écouter » in an empty widget without a mix resumes what was loaded.
+        if (open == com.ketvoice.app.widget.WidgetIntents.OPEN_PLAYER && playing.current != null) AppUi.showPlayer.value = true
+        if (open == com.ketvoice.app.widget.WidgetIntents.OPEN_PLAY && mix.isNullOrBlank() && playing.current != null) {
+            if (!playing.playWhenReady) com.ketvoice.app.player.Player.toggle()
+            AppUi.showPlayer.value = true
         }
         if (mix.isNullOrBlank()) return
         lifecycleScope.launch {

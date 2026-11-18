@@ -197,7 +197,18 @@
             </intent-filter>
         </activity-alias>
 
-        <!-- Widgets of 5.9.0: large glass player, your week, mix of the moment, mini controls. -->
+        <!-- Home-screen widgets (5.9.0, redone in 6.4 with Paroles en direct, Ketmix and Replay; removed on Quest). -->
+        <receiver
+            android:name=".widget.NowPlayingWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_now_playing">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/now_playing_widget_info" />
+        </receiver>
         <receiver
             android:name=".widget.GlassPlayerWidgetReceiver"
             android:exported="true"
@@ -208,6 +219,39 @@
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/glass_player_widget_info" />
+        </receiver>
+        <receiver
+            android:name=".widget.LyricsWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_lyrics">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/lyrics_widget_info" />
+        </receiver>
+        <receiver
+            android:name=".widget.KetmixWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_ketmix">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/ketmix_widget_info" />
+        </receiver>
+        <receiver
+            android:name=".widget.ReplayWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_replay">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/replay_widget_info" />
         </receiver>
         <receiver
             android:name=".widget.WeekWidgetReceiver"
@@ -242,18 +286,33 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/mini_controls_widget_info" />
         </receiver>
-        <!-- Home-screen widget: now playing with transport. -->
-        <receiver
-            android:name=".widget.NowPlayingWidgetReceiver"
+        <!-- Quick Settings tiles (6.4; removed on Quest): play/pause with the title, and Ketmix. -->
+        <service
+            android:name=".widget.PlayPauseTileService"
             android:exported="true"
-            android:label="@string/app_name">
+            android:icon="@drawable/ic_widget_play"
+            android:label="@string/tile_play"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
             <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
             </intent-filter>
             <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/now_playing_widget_info" />
-        </receiver>
+                android:name="android.service.quicksettings.TOGGLEABLE_TILE"
+                android:value="true" />
+        </service>
+        <service
+            android:name=".widget.KetmixTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_widget_ketmix"
+            android:label="@string/tile_ketmix"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.service.quicksettings.TOGGLEABLE_TILE"
+                android:value="true" />
+        </service>
 
         <service
             android:name=".player.PlaybackService"

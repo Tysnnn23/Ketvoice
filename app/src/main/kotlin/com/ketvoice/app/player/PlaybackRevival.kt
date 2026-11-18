@@ -282,6 +282,14 @@ internal object PlaybackRevival {
         }
     }
 
+    /**
+     * Playback started by any other way (the media controls, a widget, a tile, the app): the offer to resume goes, so
+     * the shade and the lock screen never show two play buttons for the same music (6.4).
+     */
+    fun playing(context: Context) {
+        runCatching { NotificationManagerCompat.from(context.applicationContext).cancel(NOTIFICATION_ID) }
+    }
+
     /** The listener touched the notification or its button: playback resumes, whatever the time since it stopped. */
     suspend fun resumeAsked(context: Context) {
         val app = context.applicationContext

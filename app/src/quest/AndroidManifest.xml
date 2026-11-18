@@ -14,7 +14,16 @@
             <meta-data android:name="com.oculus.vrshell.free_resizing_limits" android:value="960,1920,600,1200" />
             <meta-data android:name="com.oculus.vrshell.free_resizing_lock_aspect_ratio" android:value="true" />
         </activity>
-        <!-- Horizon OS has no home-screen widgets. -->
+        <!-- Horizon OS has no home-screen widgets and no Quick Settings shade. -->
         <receiver android:name=".widget.NowPlayingWidgetReceiver" tools:node="remove" />
+        <receiver android:name=".widget.GlassPlayerWidgetReceiver" tools:node="remove" />
+        <receiver android:name=".widget.LyricsWidgetReceiver" tools:node="remove" />
+        <receiver android:name=".widget.KetmixWidgetReceiver" tools:node="remove" />
+        <receiver android:name=".widget.ReplayWidgetReceiver" tools:node="remove" />
+        <receiver android:name=".widget.WeekWidgetReceiver" tools:node="remove" />
+        <receiver android:name=".widget.MixWidgetReceiver" tools:node="remove" />
+        <receiver android:name=".widget.MiniControlsWidgetReceiver" tools:node="remove" />
+        <service android:name=".widget.PlayPauseTileService" tools:node="remove" />
+        <service android:name=".widget.KetmixTileService" tools:node="remove" />
     </application>
 </manifest>
