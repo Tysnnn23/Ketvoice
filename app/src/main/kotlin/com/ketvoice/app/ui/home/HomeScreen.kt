@@ -180,6 +180,8 @@ fun HomeScreen() {
             if (theme.viceCity) item(key = "vicefm") { com.ketvoice.app.ui.vicecity.ViceFmCard(Modifier.padding(top = 8.dp)) }
             // The week's discoveries (6.1): renewed every Monday, right under what was played last.
             item(key = "discoveries") { HomeDiscoveries() }
+            // What the public profiles the listener follows published and listened to (signed in, once there is some).
+            item(key = "friends") { com.ketvoice.app.ui.friends.FriendsHomeSection() }
             if (playlists.any { it.pinned }) item(key = "pinned") {
                 EditorialHeader("Épinglés", onMore = { AppUi.selectTab(AppUi.LIBRARY) })
                 PlaylistShelf(playlists.filter { it.pinned })

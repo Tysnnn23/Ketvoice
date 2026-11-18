@@ -89,8 +89,9 @@ fun ProfilePage(handle: String, modifier: Modifier = Modifier) {
         avatar = loaded?.avatarRef?.let { RemoteAvatars.get(RemoteAvatars.PUBLIC, it + ".jpg") }
     }
     BackHandler { ProfileUi.close() }
+    val follow = com.ketvoice.app.ui.friends.rememberProfileFollow(loaded)
     ProfileContent(handle, state, avatar, onPlay = ::playAll, onPlayTrack = ::playFrom, onRetry = { attempt++ },
-        onSignIn = { AppUi_showAccount() }, onBack = ProfileUi::close, modifier = modifier)
+        onSignIn = { AppUi_showAccount() }, onBack = ProfileUi::close, modifier = modifier, follow = follow)
 }
 
 private fun AppUi_showAccount() { com.ketvoice.app.ui.AppUi.showAccount.value = true }
@@ -111,7 +112,7 @@ private fun playFrom(playlist: PublicPlaylist, track: Track) {
 @Composable
 fun ProfileContent(handle: String, state: ProfileLoad, avatar: File?, onPlay: (PublicPlaylist) -> Unit,
                    onPlayTrack: (PublicPlaylist, Track) -> Unit, onRetry: () -> Unit, onSignIn: () -> Unit, onBack: () -> Unit,
-                   modifier: Modifier = Modifier) {
+                   modifier: Modifier = Modifier, follow: com.ketvoice.app.ui.friends.ProfileFollow? = null) {
     val theme = LocalTheme.current
     Column(modifier.fillMaxSize().background(theme.background).statusBarsPadding().testTag("profile-page")) {
         Ket27PageBar("Profil", onBack)
@@ -129,7 +130,7 @@ fun ProfileContent(handle: String, state: ProfileLoad, avatar: File?, onPlay: (P
                 Text("Impossible de charger ce profil pour le moment.", color = DESTRUCTIVE, textAlign = TextAlign.Center)
                 KetTextButton("Réessayer", onRetry, primary = true)
             }
-            is ProfileLoad.Loaded -> ProfileBody(state.profile, avatar, onPlay, onPlayTrack)
+            is ProfileLoad.Loaded -> ProfileBody(state.profile, avatar, onPlay, onPlayTrack, follow)
         }
     }
 }
@@ -141,7 +142,8 @@ private fun CenterNote(content: @Composable ColumnScope.() -> Unit) {
 }
 
 @Composable
-private fun ProfileBody(profile: PublicProfile, avatar: File?, onPlay: (PublicPlaylist) -> Unit, onPlayTrack: (PublicPlaylist, Track) -> Unit) {
+private fun ProfileBody(profile: PublicProfile, avatar: File?, onPlay: (PublicPlaylist) -> Unit, onPlayTrack: (PublicPlaylist, Track) -> Unit,
+                        follow: com.ketvoice.app.ui.friends.ProfileFollow? = null) {
     val theme = LocalTheme.current
     var open by remember(profile.handle) { mutableStateOf<String?>(null) }
     LazyColumn(Modifier.fillMaxSize().testTag("profile-list"), contentPadding = PaddingValues(bottom = 120.dp)) {
@@ -151,6 +153,7 @@ private fun ProfileBody(profile: PublicProfile, avatar: File?, onPlay: (PublicPl
                 Text(profile.displayName.ifBlank { profile.handle }, localize = false, color = theme.onBackground, style = Ket27.Type.largeTitle,
                     maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 14.dp).testTag("profile-name"))
                 Text("@" + profile.handle, localize = false, color = theme.secondary, style = Ket27.Type.subheadline, modifier = Modifier.testTag("profile-handle"))
+                if (follow != null) com.ketvoice.app.ui.friends.FollowButton(follow, Modifier.padding(top = 14.dp))
             }
         }
         profile.listening?.let { listening ->
@@ -179,6 +182,7 @@ private fun ProfileBody(profile: PublicProfile, avatar: File?, onPlay: (PublicPl
         items(profile.playlists, key = { it.id }) { playlist ->
             PlaylistLine(playlist, open == playlist.id, { open = if (open == playlist.id) null else playlist.id }, onPlay, onPlayTrack)
         }
+        if (follow != null) item(key = "block") { com.ketvoice.app.ui.friends.BlockProfileButton(follow) }
     }
 }
 

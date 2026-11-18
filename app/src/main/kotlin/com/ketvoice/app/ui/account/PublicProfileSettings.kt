@@ -57,7 +57,7 @@ internal fun PublicProfileSwitches(profile: AccountProfile, error: String?, modi
 }
 
 @Composable
-private fun SwitchRow(title: String, sub: String, checked: Boolean, enabled: Boolean, onChange: (Boolean) -> Unit, modifier: Modifier) {
+internal fun SwitchRow(title: String, sub: String, checked: Boolean, enabled: Boolean, onChange: (Boolean) -> Unit, modifier: Modifier) {
     val theme = LocalTheme.current
     val label = AppText.t(title)
     Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {

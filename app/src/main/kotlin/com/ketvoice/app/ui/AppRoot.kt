@@ -442,6 +442,8 @@ fun AppRoot() {
                 if (AppUi.showAccount.value) {
                     AccountDialog(Modifier.zIndex(8f))
                 }
+                // ---- Friends feed (6.4): the feed and the lists of followers, under a profile page ----
+                com.ketvoice.app.ui.friends.FriendsHost()
                 // ---- Profile page (6.3): from a link, a search by handle or a member's photo ----
                 com.ketvoice.app.ui.account.ProfileHost()
                 if (AppUi.showPublisher.value) {
