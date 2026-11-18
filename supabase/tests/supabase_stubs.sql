@@ -3,9 +3,13 @@
 -- auth.uid() (read from request.jwt.claims like Supabase does), storage.buckets / storage.objects with
 -- row level security and storage.foldername(), and Supabase's default privileges (everything created
 -- in `public` is granted to anon, authenticated and service_role unless a migration revokes it).
-create role anon nologin noinherit;
-create role authenticated nologin noinherit;
-create role service_role nologin noinherit bypassrls;
+-- Roles belong to the whole cluster: created once, kept for the next throwaway database.
+do $$
+begin
+  if not exists (select 1 from pg_roles where rolname = 'anon') then create role anon nologin noinherit; end if;
+  if not exists (select 1 from pg_roles where rolname = 'authenticated') then create role authenticated nologin noinherit; end if;
+  if not exists (select 1 from pg_roles where rolname = 'service_role') then create role service_role nologin noinherit bypassrls; end if;
+end $$;
 grant usage on schema public to anon, authenticated, service_role;
 alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
 alter default privileges in schema public grant all on functions to anon, authenticated, service_role;
