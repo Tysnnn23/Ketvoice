@@ -331,7 +331,7 @@ class PrismalHostRenderTest {
     @Test fun playlistHeaderScrollsAwayWithoutLeavingABlankHeaderArea() {
         playlistFixture()
         compose.setContent { KetvoiceTheme(useDark = true) { PlaylistScreen() } }
-        compose.onNodeWithText("Playlist").assertExists()
+        compose.onNodeWithTag("playlist-title").assertTextEquals("Playlist fixe")
         val cover = compose.onNodeWithTag("playlist-cover").fetchSemanticsNode().boundsInRoot
         var before = IntArray(0)
         image("playlist-scroll-before") { bitmap ->
@@ -361,7 +361,7 @@ class PrismalHostRenderTest {
     fun shortLandscapePlaylistScrollsItsHeaderAndKeepsTheListUsable() {
         playlistFixture()
         compose.setContent { KetvoiceTheme(useDark = true) { PlaylistScreen() } }
-        compose.onNodeWithText("Modifier l'ordre").assertIsDisplayed()
+        compose.onNodeWithTag("playlist-play").assertIsDisplayed()
         compose.onNodeWithTag("playlist-cover").assertIsDisplayed()
         assertTrue(compose.onNodeWithTag("playlist-tracks").fetchSemanticsNode().boundsInRoot.height > 100f)
         compose.onNodeWithTag("playlist-tracks").performScrollToIndex(25)
@@ -373,7 +373,10 @@ class PrismalHostRenderTest {
     @Test fun playlistDragMovesTheFirstTrackWithoutAHeaderIndexOffset() {
         playlistFixture()
         compose.setContent { KetvoiceTheme(useDark = true) { PlaylistScreen() } }
-        compose.onNodeWithText("Modifier l'ordre").performClick()
+        // « Modifier l'ordre » lives in the playlist's « … » sheet (drawn by AppRoot), as Apple Music's Edit.
+        compose.onNodeWithContentDescription("Actions de la playlist").performClick()
+        compose.runOnIdle { AppUi.playlistMenu.value!!.onReorder!!(); AppUi.playlistMenu.value = null }
+        compose.onNodeWithTag("playlist-reorder-done").assertIsDisplayed()
         val first = compose.onNodeWithContentDescription("Déplacer Titre 0", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
         val second = compose.onNodeWithContentDescription("Déplacer Titre 1", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
         val step = second.center.y - first.center.y

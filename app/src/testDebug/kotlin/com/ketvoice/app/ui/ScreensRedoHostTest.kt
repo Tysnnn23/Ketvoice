@@ -65,6 +65,8 @@ class ScreensRedoHostTest {
             intArrayOf(0xFF7F00FF.toInt(), 0xFFE100FF.toInt()), intArrayOf(0xFF11998E.toInt(), 0xFF38EF7D.toInt()),
             intArrayOf(0xFFF7971E.toInt(), 0xFFFFD200.toInt()), intArrayOf(0xFF232526.toInt(), 0xFF8E9EAB.toInt()))
         val cache = HashMap<Int, BitmapDrawable>()
+        // Read once here: an image may be asked for while a page measures (BoxWithConstraints), where the rule cannot sync.
+        val resources = compose.activity.resources
         fun cover(index: Int) = cache.getOrPut(index) {
             val bitmap = Bitmap.createBitmap(300, 300, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(bitmap)
@@ -74,7 +76,7 @@ class ScreensRedoHostTest {
             canvas.drawCircle(210f, 96f, 58f, ink)
             canvas.drawRect(36f, 190f, 160f, 206f, ink)
             canvas.drawRect(36f, 220f, 240f, 236f, ink)
-            BitmapDrawable(compose.activity.resources, bitmap)
+            BitmapDrawable(resources, bitmap)
         }
         coil.Coil.setImageLoader(coil.ImageLoader.Builder(compose.activity).components {
             add(coil.intercept.Interceptor { chain ->
@@ -231,7 +233,7 @@ class ScreensRedoHostTest {
         saved.value = offline()
         try {
             compose.setContent { KetvoiceTheme(useDark = false) { com.ketvoice.app.ui.sub.DownloadsScreen() } }
-            compose.onNodeWithTag("downloads-mosaic").assertIsDisplayed()
+            compose.onNodeWithTag("downloads-title").assertIsDisplayed()
             image("redo-downloads-top-light")
             compose.onNode(hasText("Albums") and hasAnyAncestor(hasTestTag("downloads-view"))).performScrollTo().performClick()
             compose.onAllNodesWithTag("saved-download").assertCountEquals(0)
@@ -260,10 +262,10 @@ class ScreensRedoHostTest {
         saved.value = offline() + (6..14).map { file(track("e$it", "Titre $it", "Artiste $it"), "FLAC", 10_000_000, it.toLong()) }
         try {
             compose.setContent { KetvoiceTheme(useDark = true) { com.ketvoice.app.ui.sub.DownloadsScreen() } }
-            val before = compose.onNodeWithTag("downloads-mosaic").fetchSemanticsNode().boundsInRoot
+            val before = compose.onNodeWithTag("downloads-title").fetchSemanticsNode().boundsInRoot
             compose.onNodeWithTag("downloads-list").performTouchInput { swipeUp(startY = bottom - 40f, endY = bottom - 240f) }
             compose.waitForIdle()
-            val after = compose.onNodeWithTag("downloads-mosaic").fetchSemanticsNode().boundsInRoot
+            val after = compose.onNodeWithTag("downloads-title").fetchSemanticsNode().boundsInRoot
             assertTrue("the header shrinks (${before.width} → ${after.width})", after.width < before.width - 1f)
             image("redo-downloads-scrolled-dark")
             // The swipe actions and the separated-music badge belong to the rows, which keep them.

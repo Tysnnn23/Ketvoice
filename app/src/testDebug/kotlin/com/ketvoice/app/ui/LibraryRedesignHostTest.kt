@@ -98,7 +98,9 @@ class LibraryRedesignHostTest {
         val item = file(track("keep", "À conserver"))
         saved.value = listOf(item)
         compose.setContent { KetvoiceTheme(useDark = false) { DownloadsScreen() } }
-        compose.onNodeWithTag("download-delete").performScrollTo().performClick()
+        // Removing is in the row's « … », as Apple Music offers it.
+        compose.onNodeWithTag("download-more").performScrollTo().performClick()
+        compose.onNodeWithTag("download-delete").performClick()
         compose.onNodeWithText("Supprimer").assertIsDisplayed()
         assertTrue("Opening the confirmation must not delete the file", item.file.exists())
         compose.onNodeWithText("Annuler").performClick()

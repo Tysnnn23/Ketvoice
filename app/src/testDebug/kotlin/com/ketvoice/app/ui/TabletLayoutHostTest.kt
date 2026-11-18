@@ -239,25 +239,34 @@ class TabletLayoutHostTest {
         image("player-portrait-lyrics-queue")
     }
 
-    @Test fun albumPageInTwoPanes() {
+    @Test fun albumPageHeaderBesideTheArtwork() {
         val album = tracks.take(14)
         page(true) {
             com.ketvoice.app.ui.sub.AlbumPage(com.ketvoice.app.data.CatalogRequest("album", "fixture:tablet", "Nuits d'été"),
                 com.ketvoice.app.data.CatalogPage("Nuits d'été", "Artiste 1", null, album, "2026"), album, false, {})
         }
-        compose.onNodeWithTag("album-list-pane").assertIsDisplayed()
+        // As Apple Music on iPad: the artwork beside the title, the titles across the page below.
+        val art = compose.onNodeWithTag("album-hero-visual").fetchSemanticsNode().boundsInRoot
+        val title = compose.onNodeWithTag("album-title").fetchSemanticsNode().boundsInRoot
         val play = compose.onNodeWithText("Lire").fetchSemanticsNode().boundsInRoot
         val first = compose.onNodeWithText("Titre 0").fetchSemanticsNode().boundsInRoot
-        assertTrue("the actions stay on the left, the titles on the right", play.right < first.left)
-        image("album-two-pane-dark")
+        assertTrue("the artwork stands beside the title", art.right < title.left)
+        assertTrue("the titles start below the header", first.top > play.bottom)
+        image("album-header-beside-dark")
     }
 
-    @Test fun playlistPageInTwoPanes() {
+    @Test fun playlistPageHeaderBesideTheArtwork() {
         playlists()
         AppUi.playlistId.value = "qa:p2"
         page(false) { com.ketvoice.app.ui.library.PlaylistScreen() }
-        compose.onNodeWithTag("playlist-tracks-pane").assertIsDisplayed()
-        image("playlist-two-pane-light")
+        val art = compose.onNodeWithTag("playlist-cover").fetchSemanticsNode().boundsInRoot
+        val title = compose.onNodeWithTag("playlist-title").fetchSemanticsNode().boundsInRoot
+        val first = compose.onNodeWithText("Titre 0").fetchSemanticsNode().boundsInRoot
+        assertTrue("the artwork stands beside the title", art.right < title.left)
+        assertTrue("the titles start below the header", first.top > art.bottom)
+        compose.onNodeWithTag("playlist-tracks").performScrollToKey("playlist-footer")
+        compose.onNodeWithTag("playlist-footer").assertTextContains("12 titres", substring = true)
+        image("playlist-header-beside-light")
     }
 
     @Test fun artistPageInTwoPanes() {

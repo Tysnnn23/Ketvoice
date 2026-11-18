@@ -31,8 +31,8 @@ import com.ketvoice.app.ui.account.ProfileContent
 import com.ketvoice.app.ui.account.ProfileLoad
 import com.ketvoice.app.ui.account.PublicProfileSwitches
 import com.ketvoice.app.ui.library.MembersSheet
-import com.ketvoice.app.ui.library.PlaylistGrid
 import com.ketvoice.app.ui.library.PlaylistMenuSheet
+import com.ketvoice.app.ui.library.playlistsSection
 import com.ketvoice.app.ui.library.PlaylistShelf
 import com.ketvoice.app.ui.library.SharedBadge
 import com.ketvoice.app.ui.library.ShareSheet
@@ -118,11 +118,15 @@ class SharedPlaylistsHostTest {
         page(true) { Column(Modifier.padding(vertical = 24.dp)) {
             PlaylistShelf(listOf(shared, own))
             Spacer(Modifier.height(24.dp))
-            PlaylistGrid(listOf(shared, own))
+            androidx.compose.foundation.lazy.LazyColumn(Modifier.height(260.dp)) {
+                playlistsSection(listOf(shared, own), grid = false, paneDp = 360f, owner = "Vous",
+                    enabled = true, onPin = null, onNew = {}, onImport = {})
+            }
             Spacer(Modifier.height(24.dp))
             Row(Modifier.padding(16.dp)) { SharedBadge() }
         } }
-        compose.onAllNodesWithTag("shared-badge").assertCountEquals(3)
+        // The row of Library › Playlists merges its badge into its own semantics: count the unmerged tree.
+        compose.onAllNodesWithTag("shared-badge", useUnmergedTree = true).assertCountEquals(3)
         image("shared-badge")
     }
 

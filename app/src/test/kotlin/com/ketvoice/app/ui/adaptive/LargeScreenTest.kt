@@ -67,14 +67,21 @@ class LargeScreenTest {
 
     // ---- Panes ----
 
-    @Test fun collectionPagesSplitOnlyWhenTheWindowIsWideAndTallEnough() {
-        assertNull(LargeScreen.collectionPane(400f, 900f))
-        // A phone on its side (the landscape phone renders) keeps one column.
-        assertNull(LargeScreen.collectionPane(900f, 480f))
-        assertNull(LargeScreen.collectionPane(839f, 1200f))
-        assertEquals(400f, LargeScreen.collectionPane(1054f, 1024f)!!, 1f)
-        assertEquals(440f, LargeScreen.collectionPane(1600f, 1024f)!!, 0f)
-        assertEquals(320f, LargeScreen.collectionPane(840f, 1100f)!!, 0f)
+    @Test fun artworkGridsKeepAboutTheSameCoverOnEveryWindow() {
+        // A phone: two covers; a tablet standing up: four; lying down beside the sidebar: six.
+        assertEquals(2, LargeScreen.gridColumns(358f))
+        assertEquals(2, LargeScreen.gridColumns(Float.NaN))
+        assertEquals(4, LargeScreen.gridColumns(682f))
+        assertEquals(6, LargeScreen.gridColumns(1030f))
+        listOf(358f, 682f, 1030f).forEach { pane ->
+            val cell = LargeScreen.cellWidth(pane, LargeScreen.gridColumns(pane), LargeScreen.GRID_GAP_DP)
+            assertTrue("covers stay between 150 and 175 dp ($pane → $cell)", cell in 150f..175f)
+        }
+        // Rows stand two by two only where both have room.
+        assertEquals(1, LargeScreen.listColumns(682f))
+        assertEquals(2, LargeScreen.listColumns(1030f))
+        assertEquals(200f, LargeScreen.headerArtwork(500f), 0f)
+        assertEquals(300f, LargeScreen.headerArtwork(1200f), 0f)
     }
 
     @Test fun searchKeepsTheQueryBesideTheResultsOnWidePanes() {

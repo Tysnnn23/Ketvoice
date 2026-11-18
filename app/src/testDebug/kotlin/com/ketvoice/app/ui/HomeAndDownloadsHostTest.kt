@@ -88,16 +88,19 @@ class HomeAndDownloadsHostTest {
         compose.setContent { KetvoiceTheme(useDark = true) { DownloadsScreen() } }
         compose.onNodeWithTag("downloads-summary").assertIsDisplayed()
         compose.onNodeWithText("3 titres", substring = true).assertIsDisplayed()
-        compose.onNodeWithTag("downloads-mosaic").assertIsDisplayed()
+        compose.onNodeWithTag("downloads-title").assertIsDisplayed()
         compose.onNodeWithText("Sans perte 2").assertIsDisplayed()
         compose.onNodeWithText("Compressé 1").assertIsDisplayed()
         fun order() = listOf("Alpha", "Bravo", "Charlie").sortedBy {
             compose.onNodeWithText(it).fetchSemanticsNode().boundsInRoot.top
         }
         assertEquals("Most recent file first by default", listOf("Alpha", "Charlie", "Bravo"), order())
-        compose.onNode(hasText("Titre") and hasAnyAncestor(hasTestTag("downloads-sort"))).performScrollTo().performClick()
+        // The order is chosen from the bar's « … » (Apple Music's sort menu).
+        compose.onNodeWithTag("downloads-menu").performClick()
+        compose.onNodeWithTag("downloads-sort:Title").performClick()
         assertEquals(listOf("Alpha", "Bravo", "Charlie"), order())
-        compose.onNode(hasText("Taille") and hasAnyAncestor(hasTestTag("downloads-sort"))).performScrollTo().performClick()
+        compose.onNodeWithTag("downloads-menu").performClick()
+        compose.onNodeWithTag("downloads-sort:Size").performClick()
         assertEquals(listOf("Charlie", "Bravo", "Alpha"), order())
         assertEquals("Sorting never changes the stored library", 3, saved.value.size)
         image("downloads-4-11-dark")

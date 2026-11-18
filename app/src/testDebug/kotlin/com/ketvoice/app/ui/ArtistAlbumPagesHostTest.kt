@@ -191,10 +191,12 @@ class ArtistAlbumPagesHostTest {
             com.ketvoice.app.ui.sub.AlbumPage(CatalogRequest("album", "MPREqaHorizons", "Horizons"),
                 CatalogPage("Horizons", "Nova Lune", "fixture:cover:0", album, "2025-03-14"), album, false, {})
         }
-        compose.onNodeWithTag("album-list-pane").assertIsDisplayed()
+        val art = compose.onNodeWithTag("album-hero-visual").fetchSemanticsNode().boundsInRoot
+        val title = compose.onNodeWithTag("album-title").fetchSemanticsNode().boundsInRoot
+        assertTrue("the artwork stands beside the title", art.right < title.left)
         image("album-tablet-1")
-        compose.waitUntil(5_000) { compose.onAllNodesWithTag("album-more").fetchSemanticsNodes().isNotEmpty() }
-        compose.onNodeWithTag("album-list").performScrollToKey("album-more")
+        // One column now: « Plus de … » waits at the foot of the list until it is scrolled to.
+        compose.waitUntil(5_000) { runCatching { compose.onNodeWithTag("album-list").performScrollToKey("album-more") }.isSuccess }
         image("album-tablet-2-more")
     }
 
