@@ -617,36 +617,38 @@ private fun RowScope.QueueSegment(active: Boolean, onClick: () -> Unit, effectKe
 @Composable
 fun NowPlayingBars(playing: Boolean, modifier: Modifier = Modifier) {
     if (!playing || Motion.reduced) {
-        NowPlayingBarsCanvas(.55f, .50f, .45f, .40f, modifier)
+        NowPlayingBarsCanvas({ .55f }, { .50f }, { .45f }, { .40f }, modifier)
         return
     }
     val transition = rememberInfiniteTransition(label = "bars")
-    val a by transition.animateFloat(
+    val a = transition.animateFloat(
         0.25f, 1f,
         infiniteRepeatable(tween(620, easing = LinearEasing), RepeatMode.Reverse), label = "a"
     )
-    val b by transition.animateFloat(
+    val b = transition.animateFloat(
         0.9f, 0.2f,
         infiniteRepeatable(tween(480, easing = LinearEasing), RepeatMode.Reverse), label = "b"
     )
-    val c by transition.animateFloat(
+    val c = transition.animateFloat(
         0.35f, 0.95f,
         infiniteRepeatable(tween(760, easing = LinearEasing), RepeatMode.Reverse), label = "c"
     )
-    val d by transition.animateFloat(
+    val d = transition.animateFloat(
         0.75f, 0.3f,
         infiniteRepeatable(tween(540, easing = LinearEasing), RepeatMode.Reverse), label = "d"
     )
-    NowPlayingBarsCanvas(a, b, c, d, modifier)
+    // The heights are read while drawing (6.6): passed as values they recomposed the bars, and the row holding
+    // them, every frame while a title played.
+    NowPlayingBarsCanvas({ a.value }, { b.value }, { c.value }, { d.value }, modifier)
 }
 
 @Composable
-private fun NowPlayingBarsCanvas(a: Float, b: Float, c: Float, d: Float, modifier: Modifier) {
+private fun NowPlayingBarsCanvas(a: () -> Float, b: () -> Float, c: () -> Float, d: () -> Float, modifier: Modifier) {
     Canvas(modifier.size(width = 26.dp, height = 22.dp)) {
         val gap = size.width / 5.2f
         val barW = 2.6.dp.toPx()
         repeat(4) { i ->
-            val h = size.height * when (i) { 0 -> a; 1 -> b; 2 -> c; else -> d }
+            val h = size.height * when (i) { 0 -> a(); 1 -> b(); 2 -> c(); else -> d() }
             drawLine(
                 Color.White,
                 Offset(gap * (i + 1), size.height - h / 2f),
@@ -791,8 +793,10 @@ internal fun KetmixMixingBadge(progress: Float?, tint: Color, modifier: Modifier
         if (Motion.reduced) androidx.compose.animation.core.snap() else androidx.compose.animation.core.spring(dampingRatio = .62f, stiffness = 380f),
         label = "ketmix-badge")
     if (presence <= .01f) return
-    val sheen = if (Motion.reduced) 0f else rememberInfiniteTransition(label = "ketmix-sheen").animateFloat(
-        -1f, 2f, infiniteRepeatable(androidx.compose.animation.core.tween(1_600, easing = LinearEasing)), label = "sheen").value
+    // Read while drawing (6.6): read here it recomposed the badge every frame of a mix.
+    val sheenState = if (Motion.reduced) null else rememberInfiniteTransition(label = "ketmix-sheen").animateFloat(
+        -1f, 2f, infiniteRepeatable(androidx.compose.animation.core.tween(1_600, easing = LinearEasing)), label = "sheen")
+    val sheen = { sheenState?.value ?: 0f }
     val label = com.ketvoice.app.data.AppText.t("Ketmix")
     Row(modifier.then(Modifier.ketmixBadgeTag()).graphicsLayer {
             alpha = presence.coerceIn(0f, 1f)
@@ -812,8 +816,9 @@ internal fun KetmixMixingBadge(progress: Float?, tint: Color, modifier: Modifier
 private fun Modifier.ketmixBadgeTag(): Modifier = this.testTag("ketmix-badge")
 
 /** A sheen that passes over what is drawn, inside its own letters only. */
-private fun Modifier.ketmixSheen(sheen: Float): Modifier = this.drawWithContent {
+private fun Modifier.ketmixSheen(sheenAt: () -> Float): Modifier = this.drawWithContent {
                     drawContent()
+                    val sheen = sheenAt()
                     if (sheen != 0f) drawRect(androidx.compose.ui.graphics.Brush.linearGradient(
                         0f to Color.White.copy(alpha = 0f), .5f to Color.White.copy(alpha = .9f), 1f to Color.White.copy(alpha = 0f),
                         start = Offset(size.width * (sheen - .35f), 0f), end = Offset(size.width * (sheen + .35f), size.height)),

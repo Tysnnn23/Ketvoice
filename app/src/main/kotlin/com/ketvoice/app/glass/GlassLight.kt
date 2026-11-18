@@ -111,8 +111,12 @@ class GlassTiltFilter {
         const val FULL_TILT = .34f
         const val RECENTER_SECONDS = 3.5f
         const val SMOOTH_SECONDS = .12f
-        /** Smallest change worth a redraw: under a quarter of a degree of light. */
-        const val STEP = .008f
+        /**
+         * Smallest change worth a redraw: about two thirds of a degree of light (0.4° of the phone). At a quarter of a
+         * degree (until 6.5) the tremor of a hand and the slow recentring kept every glass surface redrawing, blur and
+         * lens included, nearly fifty times a second whenever the phone was held (6.6).
+         */
+        const val STEP = .02f
     }
 }
 

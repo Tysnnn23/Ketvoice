@@ -16,6 +16,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.testTag
@@ -284,7 +285,7 @@ private fun ArtistPageContent(data: ArtistPage, listState: androidx.compose.foun
 @Composable
 private fun ArtistSkeleton(theme: com.ketvoice.app.theme.KetTheme) {
     val pulse = rememberInfiniteTransition(label = "artistSkeleton")
-    val alpha by if (Motion.reduced) {
+    val alpha: State<Float> = if (Motion.reduced) {
         remember { androidx.compose.runtime.mutableFloatStateOf(0.5f) }
     } else {
         pulse.animateFloat(
@@ -294,27 +295,29 @@ private fun ArtistSkeleton(theme: com.ketvoice.app.theme.KetTheme) {
             label = "artistSkeletonAlpha"
         )
     }
+    // The pulse is read while drawing (6.6): read in composition it recomposed the whole skeleton every frame
+    // while an artist page loaded.
+    fun Modifier.pulsing(factor: Float = 1f) = drawBehind { drawRect(theme.card.copy(alpha = alpha.value * factor)) }
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val wide = ArtistLayout.wide(maxWidth.value)
         val window = androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp.toFloat()
         val margin = ArtistLayout.margin(wide).dp
         val heroHeight = ArtistLayout.heroHeight(maxWidth.value, window, wide).dp
         Column(Modifier.fillMaxSize()) {
-            Box(Modifier.fillMaxWidth().height(heroHeight)
-                .background(theme.card.copy(alpha = alpha)))
+            Box(Modifier.fillMaxWidth().height(heroHeight).pulsing())
             Box(Modifier.padding(start = margin, top = 26.dp).width(190.dp).height(20.dp)
-                .clip(RoundedCornerShape(9.dp)).background(theme.card.copy(alpha = alpha)))
+                .clip(RoundedCornerShape(9.dp)).pulsing())
             repeat(5) { index ->
                 Row(Modifier.fillMaxWidth().padding(horizontal = margin, vertical = 9.dp),
                     verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(52.dp).clip(RoundedCornerShape(10.dp)).background(theme.card.copy(alpha = alpha)))
+                    Box(Modifier.size(52.dp).clip(RoundedCornerShape(10.dp)).pulsing())
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
                         Box(Modifier.fillMaxWidth(if (index % 2 == 0) 0.72f else 0.54f).height(13.dp)
-                            .clip(RoundedCornerShape(6.dp)).background(theme.card.copy(alpha = alpha)))
+                            .clip(RoundedCornerShape(6.dp)).pulsing())
                         Spacer(Modifier.height(7.dp))
                         Box(Modifier.fillMaxWidth(0.34f).height(10.dp)
-                            .clip(RoundedCornerShape(5.dp)).background(theme.card.copy(alpha = alpha * 0.8f)))
+                            .clip(RoundedCornerShape(5.dp)).pulsing(0.8f))
                     }
                 }
             }
