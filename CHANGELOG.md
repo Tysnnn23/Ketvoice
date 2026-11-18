@@ -7,6 +7,22 @@
 
 ---
 
+# Ketvoice 6.4.0
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 135** — friends feed, widget redesign, smart offline, local music pro, Vice City neon night.
+
+- Friends feed (`sync/FriendsClient.kt`, `sync/FriendsFeed.kt`, `ui/friends/*`): migration `20261119120000_friends_feed.sql` (follows, blocks, trigger-written activity, reactions; tables granted to no client role, only security definer RPCs; `ketvoice_public_profile` now honours blocks), tested with `supabase/tests/friends_feed_rls.sql` on a local PostgreSQL 16 (`supabase/tests/supabase_stubs.sql`).
+- Widgets (`widget/*`): Glance responsive layouts, cover-colour gradient, launcher radius, coalesced updates (`WidgetCoalescer`), new Live lyrics / Ketmix / Replay widgets, `QuickTiles`, pinning from Settings; `PlaybackRevival.playing` clears the resume notification.
+- Smart offline (`data/SmartOffline*.kt`): planner, WorkManager on unmetered networks (charging optional), auto marks, manual deletions remembered; keys `smartOffline`, `smartOfflineGb`, `smartOfflinePercent`, `smartOfflineCharging`.
+- Local music (`data/Local*.kt`): tags, grouping, catalogue matching as proposals, MP3/FLAC tag writing on request, covers, lyrics, four views.
+- Vice City: `SeasonLook.BottomDecor` synthwave floor, chrome titles (`PageTitle(neon)`), `ViceCityTheme.LocalNeon` player tints, `LyricsWords.glowColor`, `sheetEdge()`, `data/ViceFm.kt`.
+
+Full notes: [6.4.0](docs/releases/v6.4.0.md).
+
+---
+
 # Ketvoice 6.3.0
 
 ![Ketvoice](ketvoice-banner.png)
