@@ -11,6 +11,10 @@ on:
         description: "Publish the prerelease (false: convert and check only)"
         type: boolean
         default: false
+      frames:
+        description: "Input length in 50 Hz frames (1500 = 30 s)"
+        type: string
+        default: "1500"
 
 permissions:
   contents: write
@@ -20,6 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       TAG: ketmix-beat-v1
+      FRAMES: ${{ inputs.frames }}
       SOURCE: https://huggingface.co/ashudesai/songbird-models/resolve/main/small0.onnx
       LICENSE_URL: https://raw.githubusercontent.com/CPJKU/beat_this/main/LICENSE
     steps:
@@ -55,7 +60,7 @@ jobs:
           set -euo pipefail
           cd work
           mkdir -p out
-          onnx2tf -i small0_fixed.onnx -o tfl -ois spectrogram:1,1500,128 -kat spectrogram -n > convert.log 2>&1 || { tail -60 convert.log; exit 1; }
+          onnx2tf -i small0_fixed.onnx -o tfl -ois spectrogram:1,$FRAMES,128 -kat spectrogram -n > convert.log 2>&1 || { tail -60 convert.log; exit 1; }
           ls -l tfl
           if python ../tools/stems/w16.py tfl/small0_fixed_float32.tflite out/ketmix-beat-small0.tflite tfl/schema_generated.py; then
             echo "float16 weights"
@@ -63,14 +68,16 @@ jobs:
             echo "::warning::float16 weights failed, publishing the float32 model"
             cp tfl/small0_fixed_float32.tflite out/ketmix-beat-small0.tflite
           fi
+          cp tfl/small0_fixed_float32.tflite out/f32-for-diagnosis.tflite
           python ../tools/beat/check.py small0_fixed.onnx out/ketmix-beat-small0.tflite out/ketmix-beat-small0.io.json
           cp LICENSE-BEAT-THIS.txt out/
           cd out && sha256sum ketmix-beat-small0.tflite ketmix-beat-small0.io.json LICENSE-BEAT-THIS.txt | tee SHA256SUMS.txt && ls -l ketmix-beat-small0.tflite
 
       - name: Keep the converted files
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ketmix-beat-model
+          name: ketmix-beat-model-${{ inputs.frames }}
           path: work/out/
 
       - name: Publish the prerelease (never over an existing one)

@@ -1,6 +1,7 @@
 """Fixes Beat This! small's input to [1, 1500, 128] (30 s at 50 frames/s), folds the shape arithmetic into
 constants and checks that the result computes what the original ONNX model computes.
 Usage: prepare.py small0.onnx small0_fixed.onnx"""
+import os
 import sys
 import numpy as np
 import onnx
@@ -9,7 +10,7 @@ from onnx.tools import update_model_dims
 from onnxsim import simplify
 
 src, dst = sys.argv[1:3]
-FRAMES, MELS = 1500, 128
+FRAMES, MELS = int(os.environ.get("FRAMES", "1500")), 128
 model = onnx.load(src)
 model = update_model_dims.update_inputs_outputs_dims(
     model, {"spectrogram": [1, FRAMES, MELS]}, {"beat": [1, FRAMES], "downbeat": [1, FRAMES]})
