@@ -20,8 +20,9 @@ class KetvoiceApp : Application(), ImageLoaderFactory {
         instance = this
         // Every process keeps its crash reports from the very start (6.1.1).
         runCatching { com.ketvoice.app.util.Crash.install(this) }
-        // Ketvoice Lite: budgets follow the phone's memory (LiteTuning; mobile and Quest keep their values).
-        if (LiteTuning.lite) runCatching {
+        // Ketvoice Lite: budgets follow the phone's memory (LiteTuning). Since 6.6 the mobile edition finds a modest
+        // phone too, for the rules that change nothing one sees; Quest keeps its values.
+        if (!BuildConfig.IS_QUEST) runCatching {
             val am = getSystemService(android.app.ActivityManager::class.java)
             val info = android.app.ActivityManager.MemoryInfo().also { am.getMemoryInfo(it) }
             val gl = runCatching { am.deviceConfigurationInfo.reqGlEsVersion }.getOrDefault(0)
@@ -85,7 +86,7 @@ class KetvoiceApp : Application(), ImageLoaderFactory {
         // 6.1: the covers held in memory (up to a fifth of the app's memory) go once no screen of the app is shown:
         // the playing process stays small behind other apps, and they come back from the disk cache when it returns.
         // Ketvoice Lite on a modest device lets them go at the first warning (LiteTuning.releaseImagesAt).
-        val images = if (LiteTuning.lite) LiteTuning.releaseImagesAt(level) else MemoryRelief.releaseImages(level)
+        val images = LiteTuning.releaseImagesAt(level)
         if (images && !WorkProcess.isWork(getProcessName(), packageName))
             runCatching { coil.Coil.imageLoader(this).memoryCache?.clear() }
     }
@@ -95,7 +96,7 @@ class KetvoiceApp : Application(), ImageLoaderFactory {
         return ImageLoader.Builder(this)
             .components {
                 add(com.ketvoice.app.data.PermanentImageInterceptor(this@KetvoiceApp))
-                // Lite on a modest device: no picture is decoded larger than the screen (LiteTuning.decodeBoundPx).
+                // No picture is decoded larger than the screen (LiteTuning.decodeBoundPx; every edition since 6.6).
                 val metrics = resources.displayMetrics
                 LiteTuning.decodeBoundPx(maxOf(metrics.widthPixels, metrics.heightPixels))?.let { add(DecodeBound(it)) }
             }
@@ -122,7 +123,7 @@ class KetvoiceApp : Application(), ImageLoaderFactory {
     }
 }
 
-/** Bounds a decode to [bound] pixels on its longer side, a request without a size included (Ketvoice Lite). */
+/** Bounds a decode to [bound] pixels on its longer side, a request without a size included. */
 internal class DecodeBound(private val bound: Int) : coil.intercept.Interceptor {
     override suspend fun intercept(chain: coil.intercept.Interceptor.Chain): coil.request.ImageResult {
         val w = (chain.size.width as? coil.size.Dimension.Pixels)?.px ?: -1
