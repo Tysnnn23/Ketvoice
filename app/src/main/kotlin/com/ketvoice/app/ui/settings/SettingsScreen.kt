@@ -721,6 +721,7 @@ fun SettingsScreen() {
                     value = ""
                 ) { AppUi.pushOverlay(AppUi.DOWNLOADS) }
             }
+            Section("HORS LIGNE INTELLIGENT") { SmartOfflineRows { choice = it } }
 
             // ==================================================== MUSIQUE LOCALE
             val localFolderPicker = rememberLauncherForActivityResult(
@@ -750,7 +751,7 @@ fun SettingsScreen() {
                     }
                 }
                 SToggle(KetIcons.Sliders, "Correspondances musicales",
-                    "Complète artiste, album et pochette des fichiers locaux sans métadonnées. Les métadonnées existantes ne sont jamais remplacées.",
+                    "Compare tes fichiers au catalogue et propose artiste, album et pochette. Rien ne change sans ton accord, et tes fichiers restent intacts.",
                     AppSettings.localMusicEnrich.value) { AppSettings.localMusicEnrich.value = it; SettingsStore.save() }
             }
 

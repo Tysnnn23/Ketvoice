@@ -98,15 +98,15 @@ fun LocalMusicScreen() {
 
     LaunchedEffect(Unit) { LocalMusic.scan(context) }
 
+    // 7.0 « Musique locale pro »: real albums (album artist, discs, compilations), artists and folders from the cleaned-up tags.
+    val tags by LocalMusic.tags.collectAsState()
+    var correcting by rememberSaveable { mutableStateOf(false) }
     val matching = remember(tracks, query) { filterLocal(tracks, query) }
-    val albums = remember(matching) { localAlbums(matching) }
-    val artists = remember(matching) { localArtists(matching) }
-    val group = when (view) {
-        1 -> albums.firstOrNull { it.key == groupKey }
-        2 -> artists.firstOrNull { it.key == groupKey }
-        else -> null
-    }
-    val shown = remember(matching, sort, group) { sortLocal(group?.tracks ?: matching, sort) }
+    val library = remember(matching, tags) { LocalLibraryState(matching, tags) }
+    val group = library.page(view, groupKey)
+    // An album or a folder keeps its own order (disc, then track); the titles and an artist can be sorted.
+    val ordered = group != null && view != 2
+    val shown = remember(matching, sort, group) { if (ordered) group!!.tracks else sortLocal(group?.tracks ?: matching, sort) }
     val showTitles = view == 0 || group != null
 
     Column(Modifier.fillMaxSize().pageBackground(theme).statusBarsPadding()) {
@@ -193,31 +193,31 @@ fun LocalMusicScreen() {
                 item(key = "tools") {
                     Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        // An open page: the way back first, then (for an album) its cover, artist, year and discs.
+                        if (group != null) Row(verticalAlignment = Alignment.CenterVertically) {
+                            com.ketvoice.app.ui.common.BackLink(localViewName(view), { groupKey = null })
+                            if (group.album == null) Text(group.title, localize = false, color = theme.onBackground, fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                        if (group?.album != null) LocalAlbumHeader(group.album)
                         if (shown.isNotEmpty()) CollectionPlaybackActions(shown, Modifier.fillMaxWidth())
+                        if (group == null) LocalProTools { correcting = true }
                         CompactSearchField(query, { query = it; groupKey = null }, { keyboard?.hide() }, Modifier.testTag("local-search"))
-                        DownloadViewSwitch(view, tag = "local-view") { view = it; groupKey = null }
-                        if (showTitles && shown.size > 1) LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        LocalViewSwitch(view) { view = it; groupKey = null }
+                        if (showTitles && !ordered && shown.size > 1) LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalAlignment = Alignment.CenterVertically, modifier = Modifier.testTag("local-sort")) {
                             item { Text("Trier", color = theme.secondary, fontSize = 13.sp, modifier = Modifier.padding(end = 2.dp)) }
                             items(LocalSort.entries) { option ->
                                 CollectionFilter(option.label, sort == option, { sortName = option.name })
                             }
                         }
-                        if (group != null) Row(verticalAlignment = Alignment.CenterVertically) {
-                            com.ketvoice.app.ui.common.BackLink(if (view == 1) "Albums" else "Artistes", { groupKey = null })
-                            Text(group.title, localize = false, color = theme.onBackground, fontSize = 20.sp, fontWeight = FontWeight.Bold,
-                                maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        }
                     }
                 }
                 if (!showTitles) {
-                    val groups = if (view == 1) albums else artists
+                    val groups = library.pages(view)
                     items(groups, key = { "group:$view:${it.key}" }) { entry ->
                         Box(Modifier.padding(horizontal = 16.dp)) {
-                            DownloadGroupRow(
-                                title = entry.title, subtitle = entry.subtitle,
-                                meta = listOf(AppText.t(if (entry.tracks.size == 1) "1 titre" else "${entry.tracks.size} titres"),
-                                    playtimeLabel(entry.durationMs)).filter { it.isNotBlank() }.joinToString(" · "),
+                            DownloadGroupRow(title = entry.title, subtitle = entry.subtitle, meta = entry.meta,
                                 cover = entry.tracks.firstNotNullOfOrNull { it.coverUrl }, round = view == 2, checked = null) {
                                 groupKey = entry.key
                             }
@@ -228,11 +228,17 @@ fun LocalMusicScreen() {
                             modifier = Modifier.fillMaxWidth().padding(32.dp))
                     }
                 } else {
+                    val discs = group?.album?.discs?.takeIf { it.size > 1 }
                     itemsIndexed(shown, key = { _, t -> t.id }) { index, track ->
                         val active = player.current?.id == track.id
-                        SwipeTrackActions(track, if (Motion.reduced) Modifier else Modifier.animateItem()) {
-                            com.ketvoice.app.ui.common.TrackRow(track, track.coverUrl, active, player.isPlaying,
-                                { Player.playQueue(shown, index) }, Modifier.testTag("local-track"))
+                        Column(if (Motion.reduced) Modifier else Modifier.animateItem()) {
+                            discs?.firstOrNull { it.tracks.firstOrNull()?.id == track.id }?.let { LocalDiscHeading(it.number) }
+                            SwipeTrackActions(track, Modifier) {
+                                com.ketvoice.app.ui.common.TrackRow(track, track.coverUrl, active, player.isPlaying,
+                                    { Player.playQueue(shown, index) }, Modifier.testTag("local-track"),
+                                    rank = if (group?.album != null) tags[track.id]?.trackNo else null)
+                            }
+                            StreamingTwin(track, numbered = group?.album != null)
                         }
                     }
                     if (shown.isEmpty()) item(key = "no-match") {
@@ -243,6 +249,7 @@ fun LocalMusicScreen() {
             }
         }
     }
+    if (correcting) LocalCorrectionsSheet { correcting = false }
 }
 
 @Composable

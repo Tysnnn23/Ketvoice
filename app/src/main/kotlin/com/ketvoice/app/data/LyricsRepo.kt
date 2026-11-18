@@ -59,6 +59,12 @@ object LyricsRepo {
                 isTimed = lines.any { it.timeMs >= 0 }, wordTimed = lines.any { it.words.size >= 2 }, syllableTimed = lines.any { it.syllableTimed }, trackId = track.id)
             return
         }
+        // 7.0: a local file's own .lrc, or the lyrics fetched ahead for it.
+        if (!refresh) runCatching { LocalLyrics.lines(track.id) }.getOrNull()?.let { (label, lines) ->
+            _state.value = State(loading = false, source = label, sourceKey = source, lines = lines, isTimed = lines.any { it.timeMs >= 0 },
+                wordTimed = lines.any { it.words.size >= 2 }, syllableTimed = lines.any { it.syllableTimed }, trackId = track.id)
+            return
+        }
         if (!refresh) {
             val local = runCatching { Downloader.localLyrics(track.id) }.getOrNull()
             if (local != null && local.second.isNotEmpty()) {

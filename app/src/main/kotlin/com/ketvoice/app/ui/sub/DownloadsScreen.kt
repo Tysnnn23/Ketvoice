@@ -62,6 +62,10 @@ fun DownloadsScreen() {
     val busy by Downloader.busy.collectAsState()
     val artwork by ArtworkRepo.covers.collectAsState()
     val player by Player.state.collectAsState()
+    // 7.0: what « Hors ligne intelligent » downloaded carries « Auto »; Settings can open the list of those alone.
+    val autoIds by SmartOffline.autoIds.collectAsState()
+    val autoOnly = SmartOffline.showAutoOnly.value
+    DisposableEffect(Unit) { onDispose { SmartOffline.showAutoOnly.value = false } }
     var query by rememberSaveable { mutableStateOf("") }
     var deleteIds by rememberSaveable { mutableStateOf(listOf<String>()) }
     var selecting by rememberSaveable { mutableStateOf(false) }
@@ -81,7 +85,10 @@ fun DownloadsScreen() {
     val filter = if (active.isEmpty()) DownloadFilter.All
         else DownloadFilter.entries.firstOrNull { it.name == filterName } ?: DownloadFilter.All
     val sort = DownloadSort.entries.firstOrNull { it.name == sortName } ?: DownloadSort.Recent
-    val base = remember(saved, active, tasks, query, filter) { downloadSections(saved, active.values, tasks, query, filter) }
+    val base = remember(saved, active, tasks, query, filter, autoOnly, autoIds) {
+        if (autoOnly) downloadSections(saved.filter { it.track.id in autoIds }, emptyList(), tasks, query, filter)
+        else downloadSections(saved, active.values, tasks, query, filter)
+    }
     val groups = remember(base.saved) { localAlbums(base.saved.map { it.track }) }
     val artists = remember(base.saved) { downloadArtists(base.saved) }
     val chosen = groups.firstOrNull { it.key == albumKey }
@@ -161,6 +168,7 @@ fun DownloadsScreen() {
                         }
                     }
                     val crumb = chosen?.title ?: chosenArtist?.name
+                    if (crumb == null && autoOnly) SmartOfflineCrumb { SmartOffline.showAutoOnly.value = false }
                     if (crumb != null) Row(verticalAlignment = Alignment.CenterVertically) {
                         com.ketvoice.app.ui.common.BackLink(if (chosen != null) "Albums" else "Artistes", { albumKey = null; artistKey = null })
                         Text(crumb, localize = false, color = theme.onBackground, fontSize = 22.sp, fontWeight = FontWeight.Bold,
@@ -239,6 +247,7 @@ fun DownloadsScreen() {
                                 maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 QualityBadge(item.format)
+                                if (track.id in autoIds) AutoBadge()
                                 Text(size(item.bytes), localize = false, color = theme.secondary, fontSize = 12.sp, maxLines = 1)
                                 if (item.hasLyrics) Icon(KetIcons.Lyrics, "Paroles enregistrées", tint = theme.secondary,
                                     modifier = Modifier.size(14.dp))
@@ -293,6 +302,8 @@ fun DownloadsScreen() {
                 deleting = true
                 scope.launch {
                     val failed = withContext(Dispatchers.IO) { deleteItems.filterNot { runCatching { Downloader.delete(it) }.getOrDefault(false) } }
+                    // Deleted by hand: « Hors ligne intelligent » never brings these back on its own.
+                    SmartOffline.noteDeletedByHand(deleteItems.filterNot { it in failed }.map { it.track.id })
                     selected = failed.map { it.track.id }; selecting = failed.isNotEmpty(); deleteError = failed.isNotEmpty()
                     deleteIds = emptyList(); deleting = false
                 }

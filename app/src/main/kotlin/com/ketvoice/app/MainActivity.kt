@@ -93,7 +93,8 @@ class MainActivity : ComponentActivity() {
             runCatching { com.ketvoice.app.data.LyricsSearch.init(app) }
             runCatching { com.ketvoice.app.util.LauncherIcons.apply(app, iconVariant) }
         }, "ketvoice-startup").apply { priority = Thread.NORM_PRIORITY - 1 }.start()
-        com.ketvoice.app.data.FavoritesOffline.start()
+        runCatching { com.ketvoice.app.data.SmartOffline.init(this) }
+        com.ketvoice.app.data.FavoritesOffline.start(applicationContext)
 
         try {
             Player.connect(applicationContext)
