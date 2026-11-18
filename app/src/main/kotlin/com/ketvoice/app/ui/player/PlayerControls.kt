@@ -165,7 +165,7 @@ fun ArtworkCanvas(
                         // artwork region, blending into the separate blurred scene.
                         // FIT introduced the unwanted side bars in normal mode.
                         Box(placed) {
-                            CanvasVideo(path = data.canvas!!, playing = playing,
+                            CanvasVideo(path = data.canvas!!, playing = playing, cover = data.cover,
                                 modifier = Modifier.fillMaxSize(),
                                 resizeMode = CanvasPresentation.NORMAL_RESIZE_MODE,
                                 onFailure = onCanvasFailure, onAspect = measured)
@@ -211,11 +211,18 @@ fun ArtworkCanvas(
     }
 }
 
+/**
+ * Canvas videos shown at once (Ketvoice Lite on a modest device plays one: [LiteTuning.canvasAtOnce]); the
+ * newest shown has the decoder, the others show their cover meanwhile.
+ */
+internal object CanvasSlots {
+    val holders = androidx.compose.runtime.mutableStateListOf<Any>()
+    fun plays(token: Any, atOnce: Int): Boolean =
+        atOnce == Int.MAX_VALUE || holders.indexOf(token).let { it >= 0 && it >= holders.size - atOnce }
+}
+
 @Composable
-private fun CanvasVideo(path: String, playing: Boolean, modifier: Modifier = Modifier,
-                        resizeMode: Int = CanvasPresentation.NORMAL_RESIZE_MODE,
-                        onFailure: () -> Unit = {}, onAspect: ((Float) -> Unit)? = null) {
-    val context = LocalContext.current
+private fun rememberStarted(): Boolean {
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     var visible by remember(lifecycle) { mutableStateOf(lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) }
     DisposableEffect(lifecycle) {
@@ -223,6 +230,26 @@ private fun CanvasVideo(path: String, playing: Boolean, modifier: Modifier = Mod
         lifecycle.addObserver(observer)
         onDispose { lifecycle.removeObserver(observer) }
     }
+    return visible
+}
+
+@Composable
+private fun CanvasVideo(path: String, playing: Boolean, cover: String?, modifier: Modifier = Modifier,
+                        resizeMode: Int = CanvasPresentation.NORMAL_RESIZE_MODE,
+                        onFailure: () -> Unit = {}, onAspect: ((Float) -> Unit)? = null) {
+    val token = remember { Any() }
+    DisposableEffect(token) { CanvasSlots.holders.add(token); onDispose { CanvasSlots.holders.remove(token) } }
+    val visible = rememberStarted()
+    val decoder = CanvasSlots.plays(token, com.ketvoice.app.LiteTuning.canvasAtOnce()) &&
+        (visible || !com.ketvoice.app.LiteTuning.canvasReleasedWhenHidden())
+    if (decoder) CanvasVideoPlayer(path, playing, visible, modifier, resizeMode, onFailure, onAspect)
+    else if (cover != null) AsyncImage(cover, null, modifier, contentScale = ContentScale.Crop)
+}
+
+@Composable
+private fun CanvasVideoPlayer(path: String, playing: Boolean, visible: Boolean, modifier: Modifier,
+                              resizeMode: Int, onFailure: () -> Unit, onAspect: ((Float) -> Unit)?) {
+    val context = LocalContext.current
     val exo = remember(path) {
         ExoPlayer.Builder(context)
             .setAudioAttributes(
@@ -239,13 +266,19 @@ private fun CanvasVideo(path: String, playing: Boolean, modifier: Modifier = Mod
                         .setBufferDurationsMs(b.minMs, b.maxMs, b.playMs, b.rebufferMs)
                         .setTargetBufferBytes(b.bytes).setPrioritizeTimeOverSizeThresholds(false).build())
                 }
+                // On a modest device, a decoder that refuses a file hands it to the next one instead of failing.
+                if (com.ketvoice.app.LiteTuning.canvasMaxVideo() != null)
+                    setRenderersFactory(androidx.media3.exoplayer.DefaultRenderersFactory(context).setEnableDecoderFallback(true))
             }
             .build()
             .apply {
                 volume = 0f
                 // A Canvas is a silent loop: its sound track is never decoded (less work beside the music).
                 trackSelectionParameters = trackSelectionParameters.buildUpon()
-                    .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, true).build()
+                    .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, true)
+                    // A modest device takes a rendition every hardware decoder plays, when the Canvas offers several.
+                    .apply { com.ketvoice.app.LiteTuning.canvasMaxVideo()?.let { (w, h) -> setMaxVideoSize(w, h) } }
+                    .build()
                 repeatMode = androidx.media3.common.Player.REPEAT_MODE_ONE
                 // A published Canvas plays from its public HTTPS address; a cached or chosen one from its file.
                 setMediaItem(MediaItem.fromUri(if (path.startsWith("https://")) Uri.parse(path) else Uri.fromFile(File(path))))

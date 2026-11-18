@@ -806,6 +806,7 @@ fun SettingsScreen() {
                     sub = "YouTube Music · Ketvoice API · canvas · paroles",
                     value = com.ketvoice.app.BuildConfig.VERSION_NAME + com.ketvoice.app.Edition.current.label
                 ) {}
+                if (com.ketvoice.app.LiteTuning.lite) LiteAboutRow()
             }
 
             if (category == SettingsCategory.Sources) Text(
@@ -1093,6 +1094,19 @@ private fun Section(header: String, content: @Composable ColumnScope.() -> Unit)
     val margin = Ket27.Metrics.margin
     SettingsGroupHeading(header, Modifier.padding(horizontal = margin))
     Column(Modifier.padding(horizontal = margin).fillMaxWidth().settingsGroup(), content = content)
+}
+
+/**
+ * Ketvoice Lite in À propos (owner, 2026-11-18): which mode is active and why — « Ce téléphone a 2 Go de mémoire :
+ * effets allégés, identiques à l'œil » — and, on Android 11, that the glass is blurred by Ketvoice itself.
+ */
+@Composable
+private fun ColumnScope.LiteAboutRow() {
+    val tablet = androidx.compose.ui.platform.LocalConfiguration.current.smallestScreenWidthDp >= 600
+    val tuning = com.ketvoice.app.LiteTuning
+    val line = tuning.aboutLine(tablet = tablet)
+    val sub = if (com.ketvoice.app.glass.SoftBlur.needed()) line + "\n" + tuning.ANDROID_11_LINE else line
+    SRow(KetIcons.Sliders, "Ketvoice Lite", sub = sub, value = if (tuning.modest) "Mode allégé" else "Mode standard")
 }
 
 @Composable

@@ -24,7 +24,9 @@ class KetvoiceApp : Application(), ImageLoaderFactory {
         if (LiteTuning.lite) runCatching {
             val am = getSystemService(android.app.ActivityManager::class.java)
             val info = android.app.ActivityManager.MemoryInfo().also { am.getMemoryInfo(it) }
-            LiteTuning.modest = LiteTuning.modest(am.isLowRamDevice, info.totalMem)
+            val gl = runCatching { am.deviceConfigurationInfo.reqGlEsVersion }.getOrDefault(0)
+            LiteTuning.device = LiteTuning.device(am.isLowRamDevice, info.totalMem, gl)
+            LiteTuning.modest = LiteTuning.device.modest
         }
         // The work process (6.1, separation and Ketmix's preparation): only what its work reads, nothing that plays,
         // shows or writes the app's settings and journal.
@@ -82,14 +84,21 @@ class KetvoiceApp : Application(), ImageLoaderFactory {
                 .apply { isDaemon = true }.start()
         // 6.1: the covers held in memory (up to a fifth of the app's memory) go once no screen of the app is shown:
         // the playing process stays small behind other apps, and they come back from the disk cache when it returns.
-        if (MemoryRelief.releaseImages(level) && !WorkProcess.isWork(getProcessName(), packageName))
+        // Ketvoice Lite on a modest device lets them go at the first warning (LiteTuning.releaseImagesAt).
+        val images = if (LiteTuning.lite) LiteTuning.releaseImagesAt(level) else MemoryRelief.releaseImages(level)
+        if (images && !WorkProcess.isWork(getProcessName(), packageName))
             runCatching { coil.Coil.imageLoader(this).memoryCache?.clear() }
     }
 
     override fun newImageLoader(): ImageLoader {
         val dir = File(filesDir, "images").apply { if (!exists()) mkdirs() }
         return ImageLoader.Builder(this)
-            .components { add(com.ketvoice.app.data.PermanentImageInterceptor(this@KetvoiceApp)) }
+            .components {
+                add(com.ketvoice.app.data.PermanentImageInterceptor(this@KetvoiceApp))
+                // Lite on a modest device: no picture is decoded larger than the screen (LiteTuning.decodeBoundPx).
+                val metrics = resources.displayMetrics
+                LiteTuning.decodeBoundPx(maxOf(metrics.widthPixels, metrics.heightPixels))?.let { add(DecodeBound(it)) }
+            }
             .memoryCache {
                 MemoryCache.Builder(this)
                     .maxSizePercent(LiteTuning.imageMemoryPercent())
@@ -102,12 +111,25 @@ class KetvoiceApp : Application(), ImageLoaderFactory {
                     .build()
             }
             .apply { LiteTuning.imageDecoders()?.let { bitmapFactoryMaxParallelism(it) } }
+            // Lite on a modest device: covers without transparency in RGB_565, half the memory.
+            .allowRgb565(LiteTuning.imageRgb565())
             // In the performance mode images appear at once instead of fading in: one animated layer less per image.
             .crossfade(!runCatching {
                 getSharedPreferences("ketvoice_settings", MODE_PRIVATE)
                     .getBoolean("highPerformanceMode", LiteTuning.defaultPerformanceMode())
             }.getOrDefault(LiteTuning.defaultPerformanceMode()))
             .build()
+    }
+}
+
+/** Bounds a decode to [bound] pixels on its longer side, a request without a size included (Ketvoice Lite). */
+internal class DecodeBound(private val bound: Int) : coil.intercept.Interceptor {
+    override suspend fun intercept(chain: coil.intercept.Interceptor.Chain): coil.request.ImageResult {
+        val w = (chain.size.width as? coil.size.Dimension.Pixels)?.px ?: -1
+        val h = (chain.size.height as? coil.size.Dimension.Pixels)?.px ?: -1
+        val (bw, bh) = LiteTuning.boundedDecode(w, h, bound)
+        if (bw == w && bh == h) return chain.proceed(chain.request)
+        return chain.withSize(coil.size.Size(bw, bh)).proceed(chain.request)
     }
 }
 

@@ -37,16 +37,54 @@ object LiteTuning {
     val lite: Boolean get() = BuildConfig.IS_LITE
 
     /**
-     * A phone with little memory: Android's own low-RAM flag, or about 4 GB or less. Set once at start by
-     * [KetvoiceApp]; the budgets below read it.
+     * A modest phone or tablet (owner, 2026-11-18: « support complet pour les tablettes/téléphones avec peu de RAM
+     * etc., mais qui garde les mêmes effets »): Android's own low-RAM flag, about 3 GB or less, or about 4 GB with
+     * a modest graphics chip (no OpenGL ES 3.2). Every visible effect stays; what changes is how it is made
+     * (smaller offscreen pictures, smaller decodes and caches, one Canvas at a time, separation on the quick
+     * model away from the charger). Set once at start by [KetvoiceApp]; the budgets below read it.
      */
     @Volatile var modest: Boolean = false
         internal set
 
+    /** What [KetvoiceApp] found about this device at start (shown in Settings → À propos in Lite). */
+    @Volatile var device: Device = Device(modest = false, why = Why.Roomy, gigabytes = 0)
+        internal set
+
+    /** Why a device is modest, or not. */
+    enum class Why { LowRamFlag, Memory, MemoryAndGraphics, Roomy }
+
+    data class Device(val modest: Boolean, val why: Why, val gigabytes: Int)
+
+    /** About 3 GB: phones sold with 3 GB report 2.7 to 3.0 GB to apps. */
+    const val SMALL_TOTAL_BYTES = 3_300_000_000L
+
+    /** About 4 GB (3.6 to 3.9 GB reported). */
     const val MODEST_TOTAL_BYTES = 4_400_000_000L
 
-    fun modest(lowRamDevice: Boolean, totalMemBytes: Long): Boolean =
-        lowRamDevice || (totalMemBytes in 1 until MODEST_TOTAL_BYTES)
+    /** OpenGL ES 3.2 (`ConfigurationInfo.reqGlEsVersion`): graphics chips without it are the older, slower ones. */
+    const val GLES_3_2 = 0x30002
+
+    fun device(lowRamDevice: Boolean, totalMemBytes: Long, glEsVersion: Int = 0): Device {
+        val gigabytes = marketedGigabytes(totalMemBytes)
+        val known = totalMemBytes > 0
+        return when {
+            lowRamDevice -> Device(true, Why.LowRamFlag, gigabytes)
+            known && totalMemBytes < SMALL_TOTAL_BYTES -> Device(true, Why.Memory, gigabytes)
+            known && totalMemBytes < MODEST_TOTAL_BYTES && glEsVersion < GLES_3_2 -> Device(true, Why.MemoryAndGraphics, gigabytes)
+            else -> Device(false, Why.Roomy, gigabytes)
+        }
+    }
+
+    /** [glEsVersion] 0 (unknown) counts as a modest chip, as before 6.5 every 4 GB phone was modest. */
+    fun modest(lowRamDevice: Boolean, totalMemBytes: Long, glEsVersion: Int = 0): Boolean =
+        device(lowRamDevice, totalMemBytes, glEsVersion).modest
+
+    /** The memory a phone is sold with (2, 3, 4, 6 GB…) from what Android reports, which is always a little less. */
+    fun marketedGigabytes(totalMemBytes: Long): Int {
+        if (totalMemBytes <= 0) return 0
+        val reported = totalMemBytes / 1e9
+        return listOf(1, 2, 3, 4, 6, 8, 12, 16, 24, 32).firstOrNull { it >= reported } ?: kotlin.math.ceil(reported).toInt()
+    }
 
     // ------------------------------------------------------------------ settings defaults (fresh installs)
     // A listener's saved choices always win: switching edition keeps the settings (same application id).
@@ -72,6 +110,27 @@ object LiteTuning {
     /** Covers decoded at the same time: fewer large bitmaps in memory at once on a modest phone. Null keeps Coil's default. */
     fun imageDecoders(lite: Boolean = this.lite): Int? = if (lite) 2 else null
 
+    /** Opaque pictures (covers) in RGB_565 on a modest device: half the memory, the same look for a photo. */
+    fun imageRgb565(lite: Boolean = this.lite, modest: Boolean = this.modest): Boolean = lite && modest
+
+    /**
+     * The largest side a picture is decoded at on a modest device: the screen's longer side. A request without a
+     * size (an image in an unbounded row, a full-size request) is bounded by it too. Null: no bound (Coil's size).
+     */
+    fun decodeBoundPx(screenLongSidePx: Int, lite: Boolean = this.lite, modest: Boolean = this.modest): Int? =
+        if (lite && modest && screenLongSidePx > 0) screenLongSidePx else null
+
+    /** A requested decode of [width] × [height] (≤ 0: no size given), bounded to [bound] on its longer side. */
+    fun boundedDecode(width: Int, height: Int, bound: Int): Pair<Int, Int> {
+        if (width <= 0 && height <= 0) return bound to bound
+        if (width <= 0) return bound to minOf(height, bound)
+        if (height <= 0) return minOf(width, bound) to bound
+        val longer = maxOf(width, height)
+        if (longer <= bound) return width to height
+        val scale = bound.toDouble() / longer
+        return (width * scale).toInt().coerceAtLeast(1) to (height * scale).toInt().coerceAtLeast(1)
+    }
+
     // ------------------------------------------------------------------ Ketmix
 
     /** Titles Ketmix prepares ahead (their intro and their ending), before the metered-network rule (1). */
@@ -91,6 +150,62 @@ object LiteTuning {
 
     fun canvasBuffer(lite: Boolean = this.lite): CanvasBuffer? =
         if (lite) CanvasBuffer(minMs = 4_000, maxMs = 10_000, playMs = 1_000, rebufferMs = 1_500, bytes = 6 * 1024 * 1024) else null
+
+    /** Canvas videos playing at once: one on a modest device (one video decoder), the newest shown. */
+    fun canvasAtOnce(lite: Boolean = this.lite, modest: Boolean = this.modest): Int = if (lite && modest) 1 else Int.MAX_VALUE
+
+    /**
+     * The largest Canvas rendition chosen on a modest device (720 × 1280, what every hardware decoder plays), and
+     * a fallback decoder when the hardware one refuses a file. Null keeps Media3's choice.
+     */
+    fun canvasMaxVideo(lite: Boolean = this.lite, modest: Boolean = this.modest): Pair<Int, Int>? =
+        if (lite && modest) 720 to 1280 else null
+
+    /** A Canvas lets its decoder go while the app is out of sight on a modest device (it starts again on return). */
+    fun canvasReleasedWhenHidden(lite: Boolean = this.lite, modest: Boolean = this.modest): Boolean = lite && modest
+
+    // ------------------------------------------------------------------ separation
+
+    /**
+     * The separation model setting actually used (`ketmixStemsQuality`: 0 automatic, 1 always the best, 2 always
+     * quick): away from the charger a modest device separates with the quick model only, whatever the setting.
+     */
+    fun separationSetting(setting: Int, charging: Boolean, lite: Boolean = this.lite, modest: Boolean = this.modest): Int =
+        if (lite && modest && !charging) 2 else setting
+
+    // ------------------------------------------------------------------ memory warnings
+
+    /**
+     * Whether the pictures kept in memory go at this `onTrimMemory` level: on a modest device from the first
+     * warning (running moderate), elsewhere when memory runs low (see MemoryRelief).
+     */
+    @Suppress("DEPRECATION")
+    fun releaseImagesAt(level: Int, lite: Boolean = this.lite, modest: Boolean = this.modest): Boolean =
+        if (lite && modest) level >= android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_MODERATE
+        else level >= android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW
+
+    // ------------------------------------------------------------------ Settings → À propos
+
+    /**
+     * The line shown in Settings → À propos in Lite: which mode is active and why. French source text, read
+     * through AppText.t (the `{0}` templates are translated).
+     */
+    fun aboutLine(device: Device = this.device, tablet: Boolean = false): String {
+        val gb = device.gigabytes
+        return when (device.why) {
+            Why.LowRamFlag -> "Android indique peu de mémoire sur cet appareil : effets allégés, identiques à l'œil"
+            Why.Memory -> if (tablet) "Cette tablette a $gb Go de mémoire : effets allégés, identiques à l'œil"
+                else "Ce téléphone a $gb Go de mémoire : effets allégés, identiques à l'œil"
+            Why.MemoryAndGraphics -> if (tablet) "Cette tablette a $gb Go de mémoire et une puce graphique modeste : effets allégés, identiques à l'œil"
+                else "Ce téléphone a $gb Go de mémoire et une puce graphique modeste : effets allégés, identiques à l'œil"
+            Why.Roomy -> if (gb <= 0) "Mémoire suffisante : tous les effets, budgets de Ketvoice Lite"
+                else if (tablet) "Cette tablette a $gb Go de mémoire : tous les effets, budgets de Ketvoice Lite"
+                else "Ce téléphone a $gb Go de mémoire : tous les effets, budgets de Ketvoice Lite"
+        }
+    }
+
+    /** The second line on Android 11, which has no system blur. */
+    const val ANDROID_11_LINE = "Android 11 : le flou du verre est calculé par Ketvoice, même rendu"
 
     // ------------------------------------------------------------------ packaged images
 

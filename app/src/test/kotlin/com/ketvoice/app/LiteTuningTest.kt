@@ -65,4 +65,89 @@ class LiteTuningTest {
         assertEquals(if (BuildConfig.IS_LITE) Edition.Lite else if (BuildConfig.IS_QUEST) Edition.Quest else Edition.Mobile,
             Edition.current)
     }
+
+    // ---------------------------------------------------------------- 6.5: modest phones and tablets, Android 11
+
+    @Test fun modestIsLowRamThreeGigabytesOrFourWithAModestGraphicsChip() {
+        val fast = LiteTuning.GLES_3_2
+        assertEquals(LiteTuning.Why.LowRamFlag, LiteTuning.device(true, 8_000_000_000L, fast).why)
+        assertEquals(LiteTuning.Why.Memory, LiteTuning.device(false, 1_900_000_000L, fast).why)
+        assertEquals(LiteTuning.Why.Memory, LiteTuning.device(false, 2_900_000_000L, fast).why)
+        // 4 GB: modest only with an older chip (no OpenGL ES 3.2).
+        assertEquals(LiteTuning.Why.MemoryAndGraphics, LiteTuning.device(false, 3_700_000_000L, 0x30001).why)
+        assertFalse(LiteTuning.modest(false, 3_700_000_000L, fast))
+        assertTrue(LiteTuning.modest(false, 3_700_000_000L, 0x30001))
+        assertFalse(LiteTuning.modest(false, 5_700_000_000L, 0x30000))
+        assertEquals(LiteTuning.Why.Roomy, LiteTuning.device(false, 0L, 0).why)
+    }
+
+    @Test fun memoryIsShownAsTheSizeThePhoneIsSoldWith() {
+        assertEquals(2, LiteTuning.marketedGigabytes(1_880_000_000L))
+        assertEquals(3, LiteTuning.marketedGigabytes(2_800_000_000L))
+        assertEquals(4, LiteTuning.marketedGigabytes(3_750_000_000L))
+        assertEquals(6, LiteTuning.marketedGigabytes(5_700_000_000L))
+        assertEquals(8, LiteTuning.marketedGigabytes(7_600_000_000L))
+        assertEquals(0, LiteTuning.marketedGigabytes(0L))
+    }
+
+    @Test fun picturesAreDecodedNoLargerThanTheScreenOnModestDevices() {
+        assertNull(LiteTuning.decodeBoundPx(2400, lite = false, modest = true))
+        assertNull(LiteTuning.decodeBoundPx(2400, lite = true, modest = false))
+        assertEquals(2400, LiteTuning.decodeBoundPx(2400, lite = true, modest = true))
+        assertEquals(1200 to 1200, LiteTuning.boundedDecode(-1, -1, 1200))
+        assertEquals(1200 to 300, LiteTuning.boundedDecode(-1, 300, 1200))
+        assertEquals(400 to 400, LiteTuning.boundedDecode(400, 400, 1200))
+        assertEquals(1200 to 600, LiteTuning.boundedDecode(4000, 2000, 1200))
+        assertTrue(LiteTuning.imageRgb565(lite = true, modest = true))
+        assertFalse(LiteTuning.imageRgb565(lite = false, modest = true))
+        assertFalse(LiteTuning.imageRgb565(lite = true, modest = false))
+    }
+
+    @Test fun oneCanvasAtATimeOnAModestDevice() {
+        assertEquals(1, LiteTuning.canvasAtOnce(lite = true, modest = true))
+        assertEquals(Int.MAX_VALUE, LiteTuning.canvasAtOnce(lite = true, modest = false))
+        assertEquals(Int.MAX_VALUE, LiteTuning.canvasAtOnce(lite = false, modest = true))
+        assertEquals(720 to 1280, LiteTuning.canvasMaxVideo(lite = true, modest = true))
+        assertNull(LiteTuning.canvasMaxVideo(lite = false, modest = true))
+        assertTrue(LiteTuning.canvasReleasedWhenHidden(lite = true, modest = true))
+        assertFalse(LiteTuning.canvasReleasedWhenHidden(lite = false, modest = true))
+    }
+
+    @Test fun awayFromTheChargerAModestDeviceSeparatesWithTheQuickModel() {
+        assertEquals(2, LiteTuning.separationSetting(1, charging = false, lite = true, modest = true))
+        assertEquals(2, LiteTuning.separationSetting(0, charging = false, lite = true, modest = true))
+        assertEquals(1, LiteTuning.separationSetting(1, charging = true, lite = true, modest = true))
+        assertEquals(1, LiteTuning.separationSetting(1, charging = false, lite = true, modest = false))
+        assertEquals(1, LiteTuning.separationSetting(1, charging = false, lite = false, modest = true))
+    }
+
+    @Suppress("DEPRECATION")
+    @Test fun aModestDeviceLetsPicturesGoAtTheFirstMemoryWarning() {
+        val moderate = android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_MODERATE
+        val low = android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW
+        assertTrue(LiteTuning.releaseImagesAt(moderate, lite = true, modest = true))
+        assertFalse(LiteTuning.releaseImagesAt(moderate, lite = true, modest = false))
+        assertFalse(LiteTuning.releaseImagesAt(moderate, lite = false, modest = true))
+        // Elsewhere: as MemoryRelief always did.
+        for (level in listOf(moderate, low, 15, 20, 40, 60, 80))
+            assertEquals(MemoryRelief.releaseImages(level), LiteTuning.releaseImagesAt(level, lite = false, modest = false))
+    }
+
+    @Test fun aboutSaysWhichModeIsActiveAndWhy() {
+        val twoGb = LiteTuning.device(false, 1_900_000_000L, LiteTuning.GLES_3_2)
+        assertEquals("Ce téléphone a 2 Go de mémoire : effets allégés, identiques à l'œil", LiteTuning.aboutLine(twoGb))
+        assertEquals("Cette tablette a 2 Go de mémoire : effets allégés, identiques à l'œil", LiteTuning.aboutLine(twoGb, tablet = true))
+        val fourGb = LiteTuning.device(false, 3_700_000_000L, 0x30000)
+        assertTrue("puce graphique" in LiteTuning.aboutLine(fourGb))
+        assertTrue("Android" in LiteTuning.aboutLine(LiteTuning.device(true, 8_000_000_000L, 0)))
+        assertTrue("tous les effets" in LiteTuning.aboutLine(LiteTuning.device(false, 7_600_000_000L, LiteTuning.GLES_3_2)))
+    }
+
+    @Test fun liteKeepsTheGlassBlurOnALowRamPhoneMobileAsBefore() {
+        val blur = com.ketvoice.app.glass.GlassRenderMode.Blur
+        assertEquals(16f, com.ketvoice.app.glass.glassBlurRadius(16f, blur, lowMemory = true, reducedMotion = false, lite = true), 0f)
+        assertEquals(3f, com.ketvoice.app.glass.glassBlurRadius(16f, blur, lowMemory = true, reducedMotion = false, lite = false), 0f)
+        assertEquals(3f, com.ketvoice.app.glass.glassBlurRadius(16f, blur, lowMemory = false, reducedMotion = true, lite = true), 0f)
+        assertEquals(16f, com.ketvoice.app.glass.glassBlurRadius(16f, com.ketvoice.app.glass.GlassRenderMode.Optical, true, true, false), 0f)
+    }
 }

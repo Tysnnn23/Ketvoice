@@ -67,7 +67,11 @@ internal object StemEngine {
 
     /** Which model separates right now, from the setting and the charger; null when none is there. */
     fun wanted(): Int? = testUvr?.let { StemMask.HIGH } ?: testNet?.let { StemMask.FAST }
-        ?: StemModel.quality(com.ketvoice.app.data.AppSettings.ketmixStemsQuality.value, StemModel.charging())
+        ?: StemModel.charging().let { charging ->
+            // Ketvoice Lite on a modest device: the quick model only, away from the charger (LiteTuning).
+            StemModel.quality(com.ketvoice.app.LiteTuning.separationSetting(
+                com.ketvoice.app.data.AppSettings.ketmixStemsQuality.value, charging), charging)
+        }
 
     /** Separates [left]/[right] (44.1 kHz) with the model of [quality]. */
     internal fun separate(left: FloatArray, right: FloatArray, startUs: Long, quality: Int, cancelled: () -> Boolean): StemMask? {
