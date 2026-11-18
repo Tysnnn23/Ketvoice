@@ -1,0 +1,100 @@
+name: Publish Ketmix beat model
+
+# Builds Ketmix's optional rhythm model (6.8.0) from Beat This! small (CPJKU, ISMIR 2024, MIT) and publishes it as
+# the asset of the `ketmix-beat-v1` prerelease, which the app downloads on request and checks against the SHA-256
+# pinned in BeatModel.kt (and tools/beat/expected.sha256; a test keeps them equal). With `publish` false it only
+# converts and checks, and keeps the files as a workflow artifact. Never overwrites a published release.
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: "Publish the prerelease (false: convert and check only)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      TAG: ketmix-beat-v1
+      SOURCE: https://huggingface.co/ashudesai/songbird-models/resolve/main/small0.onnx
+      LICENSE_URL: https://raw.githubusercontent.com/CPJKU/beat_this/main/LICENSE
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install the pinned converter
+        run: |
+          python -m pip install --quiet "tensorflow==2.21.0" "onnx2tf==2.6.9" "onnx==1.20.1" "onnxruntime==1.26.0" \
+            "onnxsim" "onnx_graphsurgeon==0.6.1" "sng4onnx==2.0.1" "psutil==5.9.5" "ai-edge-litert==2.1.2" \
+            "flatbuffers==25.12.19" "numpy==2.2.6"
+
+      - name: Download Beat This! small (ONNX export) and its license
+        run: |
+          set -euo pipefail
+          mkdir -p work && cd work
+          curl -fsSL -o small0.onnx "$SOURCE"
+          echo "c462b064a4033050ca6a5354bf866ff4610ab1fd8f1dec1e494b20b22d870aea  small0.onnx" | sha256sum -c
+          curl -fsSL -o LICENSE-BEAT-THIS.txt "$LICENSE_URL"
+          head -3 LICENSE-BEAT-THIS.txt
+
+      - name: Fix the input size and check the simplified model against the original
+        run: |
+          set -euo pipefail
+          cd work
+          python ../tools/beat/prepare.py small0.onnx small0_fixed.onnx
+
+      - name: Convert to LiteRT and check against the original
+        run: |
+          set -euo pipefail
+          cd work
+          mkdir -p out
+          onnx2tf -i small0_fixed.onnx -o tfl -ois spectrogram:1,1500,128 -kat spectrogram -n > convert.log 2>&1 || { tail -60 convert.log; exit 1; }
+          ls -l tfl
+          if python ../tools/stems/w16.py tfl/small0_fixed_float32.tflite out/ketmix-beat-small0.tflite tfl/schema_generated.py; then
+            echo "float16 weights"
+          else
+            echo "::warning::float16 weights failed, publishing the float32 model"
+            cp tfl/small0_fixed_float32.tflite out/ketmix-beat-small0.tflite
+          fi
+          python ../tools/beat/check.py small0_fixed.onnx out/ketmix-beat-small0.tflite out/ketmix-beat-small0.io.json
+          cp LICENSE-BEAT-THIS.txt out/
+          cd out && sha256sum ketmix-beat-small0.tflite ketmix-beat-small0.io.json LICENSE-BEAT-THIS.txt | tee SHA256SUMS.txt && ls -l ketmix-beat-small0.tflite
+
+      - name: Keep the converted files
+        uses: actions/upload-artifact@v4
+        with:
+          name: ketmix-beat-model
+          path: work/out/
+
+      - name: Publish the prerelease (never over an existing one)
+        if: ${{ inputs.publish }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "::error::$TAG already exists; refusing to overwrite it."
+            exit 1
+          fi
+          cat > notes.md <<'NOTES'
+          Optional rhythm model for Ketmix (Settings → Ketmix). Downloaded by the app on request and checked against its
+          SHA-256; not an app version.
+
+          Converted from Beat This! small (Foscarin, Schlüter, Widmer, ISMIR 2024; MIT, see LICENSE-BEAT-THIS.txt)
+          through an ONNX export, by .github/workflows/publish-beat-model.yml. Input [1, 1500, 128] (30 s of log-mel
+          frames at 50 a second); outputs beat and downbeat logits [1, 1500] (ketmix-beat-small0.io.json).
+          NOTES
+          sed -i 's/^ *//' notes.md
+          gh release create "$TAG" --prerelease --latest=false --title "Ketmix beat model v1 (Beat This! small)" \
+            --notes-file notes.md work/out/ketmix-beat-small0.tflite work/out/ketmix-beat-small0.io.json work/out/LICENSE-BEAT-THIS.txt work/out/SHA256SUMS.txt
+          mkdir -p check && cd check
+          gh release download "$TAG" --pattern 'ketmix-beat-small0.tflite'
+          cmp ketmix-beat-small0.tflite ../work/out/ketmix-beat-small0.tflite
+          echo "published and verified $TAG"
