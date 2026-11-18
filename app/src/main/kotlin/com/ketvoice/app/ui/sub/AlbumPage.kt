@@ -283,11 +283,10 @@ private fun AlbumHero(title: String, artist: String, date: String?, cover: Strin
                 Box(Modifier.fillMaxWidth().height(height).clipToBounds().testTag("album-hero-visual")) {
                     if (whole) {
                         // Too wide for a square: the cover stays whole over a soft, enlarged copy of itself.
-                        if (cover != null) AsyncImage(remember(cover) {
+                        if (cover != null) com.ketvoice.app.glass.SoftBlurredImage(remember(cover) {
                             coil.request.ImageRequest.Builder(context).data(cover).size(40).crossfade(false).build()
-                        }, null, contentScale = ContentScale.Crop, filterQuality = androidx.compose.ui.graphics.FilterQuality.Low,
-                            modifier = Modifier.fillMaxSize().graphicsLayer { scaleX = 1.2f; scaleY = 1.2f; alpha = .75f }
-                                .blur(40.dp))
+                        }, 40.dp, filterQuality = androidx.compose.ui.graphics.FilterQuality.Low,
+                            modifier = Modifier.fillMaxSize().graphicsLayer { scaleX = 1.2f; scaleY = 1.2f; alpha = .75f })
                         Box(Modifier.size(height).align(Alignment.Center).clipToBounds()) { AlbumArtwork(cover, tracks.firstOrNull(), frame) }
                     } else AlbumArtwork(cover, tracks.firstOrNull(), frame)
                     // The floating buttons stay readable over a bright cover.

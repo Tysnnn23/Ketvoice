@@ -52,10 +52,8 @@ internal fun CollectionHero(
     val lead = covers.firstOrNull { !it.isNullOrBlank() }
     Box(Modifier.fillMaxWidth()) {
         if (lead != null) {
-            AsyncImage(model = lead, contentDescription = null, contentScale = ContentScale.Crop,
-                modifier = Modifier.matchParentSize()
-                    .graphicsLayer { scaleX = 1.35f; scaleY = 1.35f }
-                    .blur(44.dp, BlurredEdgeTreatment.Unbounded))
+            com.ketvoice.app.glass.SoftBlurredImage(lead, 44.dp, edge = BlurredEdgeTreatment.Unbounded,
+                modifier = Modifier.matchParentSize().graphicsLayer { scaleX = 1.35f; scaleY = 1.35f })
         }
         Box(Modifier.matchParentSize().background(Brush.verticalGradient(listOf(
             theme.background.copy(alpha = .55f), Color.Transparent,

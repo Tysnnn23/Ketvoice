@@ -49,7 +49,7 @@ internal fun AmbientArtwork(url: String?, ambience: CoverAmbience, playing: Bool
         // slowly. Off, the blurred artwork stands still as before.
         val flowing = url != null && com.ketvoice.app.data.AppSettings.meshBackground.value
         if (flowing) ArtworkFlowBackground(url, playing)
-        else if (url != null) AsyncImage(url, null, Modifier.fillMaxSize().blur(90.dp), contentScale = ContentScale.Crop, alpha = .88f)
+        else if (url != null) com.ketvoice.app.glass.SoftBlurredImage(url, 90.dp, Modifier.fillMaxSize(), alpha = .88f)
         // A lighter veil over the flowing colours: they are the show, the text still reads on them.
         val veil = if (flowing) (ambience.veil - .18f).coerceAtLeast(.30f) else ambience.veil
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(

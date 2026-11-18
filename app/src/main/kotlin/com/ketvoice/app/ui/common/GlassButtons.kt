@@ -180,13 +180,13 @@ internal fun CollectionAmbient(cover: String?, modifier: Modifier = Modifier, st
     }
     Box(modifier) {
         BackdropCapture(backdrop, Modifier.matchParentSize().bleedHorizontally(bleed).testTag("collection-ambient")) {
-            if (showImage) AsyncImage(request, null, contentScale = ContentScale.Crop,
+            if (showImage) com.ketvoice.app.glass.SoftBlurredImage(request, 56.dp,
                 filterQuality = androidx.compose.ui.graphics.FilterQuality.Low,
                 modifier = Modifier.matchParentSize().graphicsLayer {
                     // Larger than the header so the blur never shows a hard edge.
                     scaleX = 1.35f; scaleY = 1.35f
                     alpha = (if (theme.isDark) .62f else .40f) * strength.coerceIn(0f, 1f)
-                }.blur(56.dp))
+                })
             else Box(Modifier.matchParentSize().background(
                 Brush.verticalGradient(listOf(theme.accent.copy(alpha = .16f * strength.coerceIn(0f, 1f)), Color.Transparent))))
             // The page colour returns at the bottom: the list continues without a seam.

@@ -330,7 +330,7 @@ private fun GlassPanelBody(
     val backdrop = LocalBackdropLayer.current
     val context = LocalContext.current
     val lowMemory = remember(context) { isLowRamDevice(context) }
-    val mode = glassRenderMode(Build.VERSION.SDK_INT, backdrop != null, enabled && AppSettings.liquidGlass.value,
+    val mode = glassRenderMode(GlassCompat.api, backdrop != null, enabled && AppSettings.liquidGlass.value,
         captured, style == 2, AppSettings.reduceDynamicBlur.value, AppSettings.highPerformanceMode.value,
         lowMemory, Motion.reduced)
     if (fusion != null) {
@@ -393,6 +393,11 @@ private fun GlassPanelBody(
     } else Modifier
 
     if (dynamic && backdrop != null) {
+        val blurAmount = glassBlurRadius(params.blurPx, mode, lowMemory, Motion.reduced, com.ketvoice.app.LiteTuning.lite)
+        // Android 11 (Ketvoice Lite) has no RenderEffect: the backdrop is blurred by SoftBlur instead, so the glass
+        // still diffuses the colours behind it. Android 12+ never takes this path.
+        val softBlur = if (SoftBlur.needed()) rememberBackdropBlur() else null
+        val softFilter = remember(params, softBlur) { softBlur?.let { glassSoftFilter(params) } }
         Box(
             modifier = modifier.then(touchLight).drawBackdrop(
                 backdrop = backdrop,
@@ -400,8 +405,6 @@ private fun GlassPanelBody(
                 effects = {
                     // The shader owns saturation: stacking vibrancy here overcooks cover colours.
                     if (!agsl) vibrancy()
-                    val blurAmount = if (mode == GlassRenderMode.Blur && (lowMemory || Motion.reduced))
-                        minOf(params.blurPx, DesignTokens.Glass.LOW_COST_BLUR_PX) else params.blurPx
                     if (blurAmount > 0f) blur(blurAmount)
                     if (agsl) {
                         val bounds = size
@@ -415,7 +418,9 @@ private fun GlassPanelBody(
                         } else liquidGlass(forming, realRadii)
                     } else {
                         if (params.saturation != 1f || params.brightness != 1f || params.contrast != 1f) {
-                            colorControls(params.saturation, params.brightness, params.contrast)
+                            // Named: the library's order is (brightness, contrast, saturation), brightness an offset (0 = none).
+                            colorControls(brightness = params.brightness - 1f, contrast = params.contrast,
+                                saturation = params.saturation)
                         }
                         if (params.exposure != 0f) exposureAdjustment(params.exposure)
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && params.refractionPx > 0f) {
@@ -444,6 +449,9 @@ private fun GlassPanelBody(
                 },
                 shadow = { if (params.shadow) Shadow.Default else null },
                 innerShadow = { if (params.innerShadow && !agsl) InnerShadow.Default else null },
+                onDrawBackdrop = { drawBackdrop ->
+                    if (softBlur == null) drawBackdrop() else with(softBlur) { drawBlurred(drawBackdrop, blurAmount, softFilter) }
+                },
                 onDrawSurface = {
                     if (!agsl || !renderState.shaderApplied) {
                         // The captured backdrop remains visible; this veil is only as strong as

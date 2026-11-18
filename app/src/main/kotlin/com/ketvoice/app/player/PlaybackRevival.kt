@@ -187,15 +187,19 @@ internal object PlaybackRevival {
     private fun alarmIntent(context: Context): PendingIntent = PendingIntent.getBroadcast(context, 0,
         Intent(context, RevivalReceiver::class.java).setAction(ACTION_ALARM), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
 
-    /** Whether the alarm may be exact (Settings → Apps → Alarms and reminders). */
+    /**
+     * Whether the alarm may be exact (Settings → Apps → Alarms and reminders, Android 12+). Android 11 (Ketvoice
+     * Lite) has no such permission: exact alarms are always allowed there.
+     */
     fun exactAllowed(context: Context): Boolean =
-        runCatching { context.getSystemService(AlarmManager::class.java).canScheduleExactAlarms() }.getOrDefault(false)
+        android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.S ||
+            runCatching { context.getSystemService(AlarmManager::class.java).canScheduleExactAlarms() }.getOrDefault(false)
 
     private fun arm(context: Context) {
         runCatching {
             val alarms = context.getSystemService(AlarmManager::class.java) ?: return
             val at = SystemClock.elapsedRealtime() + ALARM_AFTER_MS
-            if (alarms.canScheduleExactAlarms()) alarms.setExactAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP, at, alarmIntent(context))
+            if (exactAllowed(context)) alarms.setExactAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP, at, alarmIntent(context))
             else alarms.setAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP, at, alarmIntent(context))
         }
     }

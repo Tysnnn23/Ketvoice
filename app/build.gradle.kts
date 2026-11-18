@@ -76,6 +76,9 @@ android {
             dimension = "device"
             buildConfigField("boolean", "IS_QUEST", "false")
             buildConfigField("boolean", "IS_LITE", "true")
+            // Android 11 too (owner, 2026-11-18: « compatible Android 11 »): every API 31+ call is guarded and has
+            // a fallback that looks the same (glass blur in software, see glass/SoftBlur.kt). Mobile stays at 31.
+            minSdk = 30
             // 64-bit ARM only, with or without the Discord SDK (LiteRT alone ships ~20 MB for the other three ABIs).
             ndk { abiFilters += listOf("arm64-v8a") }
         }
@@ -156,6 +159,10 @@ android {
     }
     testOptions {
         unitTests.isIncludeAndroidResources = true
+        // -ProbolectricSdks=31 runs only those host SDKs (Lite's Android 11 tests also declare sdk 30, whose host
+        // runtime Robolectric fetches on first use).
+        val robolectricSdks = providers.gradleProperty("robolectricSdks").orNull
+        if (robolectricSdks != null) unitTests.all { it.systemProperty("robolectric.enabledSdks", robolectricSdks) }
     }
     packaging {
         resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
