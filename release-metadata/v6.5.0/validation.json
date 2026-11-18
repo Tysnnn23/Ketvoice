@@ -3,7 +3,7 @@
   "version": "6.5.0",
   "versionCode": 136,
   "source_commit": "a1540bd2f0a26b3c52abfa739c1969589bf72a54",
-  "created_at": "2026-11-18T15:31:29.659328+00:00",
+  "created_at": "2026-11-18T15:32:35.864109+00:00",
   "build_origin": {
     "kind": "github_actions_with_owner_discord_sdk",
     "workflow": "android.yml",
@@ -143,8 +143,12 @@
     "presence_mode": "unauthenticated_rpc_through_installed_discord_app"
   },
   "credential_scan": {
-    "status": "not_run_on_release_apks",
-    "reason": "owner asked to publish directly without further checks (2026-11-18)"
+    "entries": 4370,
+    "findings": 0,
+    "scope": "the three release APKs",
+    "kind": "credential_patterns",
+    "explicit_private_provider_key_deny_list": false,
+    "note": "run because publish-release requires it; the other manual checks were skipped at the owner's request"
   },
   "release_install_smoke": {
     "mobile": {
@@ -162,7 +166,7 @@
   },
   "publication_override": {
     "authorized_by_user": true,
-    "authorized_at": "2026-11-18T15:31:29.659328+00:00",
+    "authorized_at": "2026-11-18T15:32:35.864109+00:00",
     "kind": "standing_authorization",
     "user_statement": "J'autorise TOUT devient maintenant une règle.",
     "user_statement_date": "2026-11-14",
