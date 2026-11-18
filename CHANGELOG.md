@@ -7,6 +7,21 @@
 
 ---
 
+# Ketvoice 6.6.0
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 137** — smoothness pass, Apple Music style Playlists/Downloads, large-window content layouts, calm Vice City.
+
+- Smoothness: `ListeningHistory` publishes its maps every 5 s of listening (was every 200 ms tick); Wrapped story progress, mini-player line, now-playing bars, indeterminate bar, artist skeleton, Ketogether dot and Ketmix sheen read their animations in the draw phase; Library Albums/Artists grids are lazy rows (`coverGridRows`) with keys and content types; `DownloadCover` and `rememberTrackCover` follow one title; Home reads only the playing title; tilt-light redraw threshold ~0.65°; friends feed refresh on IO; `UiTextDictionary` caches template results; cover-colour cache 512. Image decodes bounded to the screen on every edition; mobile detects modest phones like Lite and applies the invisible Lite rules there. `SmoothnessHostTest`, `MobileImageBudgetHostTest`.
+- Library: `PlaylistsView.kt` (list/grid, sort, filter, join, file import), `KetMenu.kt`; playlist page (centred artwork, Play/Shuffle, footer), reorder from the playlist menu; share/members/public actions wired from `AppRoot`. Downloads page restyled; remove from the row menu.
+- Large windows: `LargeScreen.gridColumns`/`listColumns`; one-column collection pages with the artwork beside the title; Library root hides categories beside the sidebar. `AppleLibraryHostTest`.
+- Vice City: `ViceCityNeon.kt`, `ViceCityDecor.kt`, neon hooks and the welcome/palm images removed; `ViceCityScene.kt` (flat sunset, day/dusk), accent `#AD2756` light / `#FF7AA8` dark; listener's light/dark kept.
+
+Full notes: [6.6.0](docs/releases/v6.6.0.md).
+
+---
+
 # Ketvoice 6.5.0
 
 ![Ketvoice](ketvoice-banner.png)

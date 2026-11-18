@@ -21,6 +21,14 @@
 
 ## Overview
 
+### 6.6.0 — Smoother, Apple Music style playlists and downloads
+
+A smoother app, Playlists and Downloads in the style of Apple Music, better tablet layouts and a quieter Vice City theme.
+[Mobile](https://github.com/Tysnnn23/Ketvoice/releases/download/v6.6.0/Ketvoice-6.6.0.apk)
+· [Lite](https://github.com/Tysnnn23/Ketvoice/releases/download/v6.6.0/Ketvoice-6.6.0-Lite.apk)
+· [Quest](https://github.com/Tysnnn23/Ketvoice/releases/download/v6.6.0/Ketvoice-6.6.0-Quest.apk)
+· [Release notes](docs/releases/v6.6.0.md).
+
 ### 6.5.0 — Lite for Android 11 and every phone
 
 Ketvoice Lite runs on Android 11 and is tuned for phones and tablets with little memory, with the same effects.
