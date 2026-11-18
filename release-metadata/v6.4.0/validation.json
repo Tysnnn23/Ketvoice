@@ -1,0 +1,217 @@
+{
+  "schema": 8,
+  "version": "6.4.0",
+  "versionCode": 135,
+  "source_commit": "f2b8834be45c53cdfbea80da7fe9c8ed1ed9af42",
+  "created_at": "2026-11-18T13:33:34.896503+00:00",
+  "build_origin": {
+    "kind": "github_actions_with_owner_discord_sdk",
+    "workflow": "android.yml",
+    "run_id": 44310638356,
+    "artifact": {
+      "id": 14430634486,
+      "sha256": "8f4119e1d2b0dadce5ef2cdcdc18b6e66f0e7fba6e95634db03e9e6a6a3e06e5"
+    },
+    "gradle": "assembleMobileRelease assembleQuestRelease assembleLiteRelease",
+    "note": "Signed by CI with the pinned keystore secret; the Discord Social SDK AAR matched its pinned SHA-256."
+  },
+  "local_validation": {
+    "result": "debug JVM/Robolectric suites for the three flavors (mobile, quest, lite), release lint and the UI text audit passed in a cloud container without the Discord SDK",
+    "commands": [
+      "testMobileDebugUnitTest",
+      "testQuestDebugUnitTest",
+      "testLiteDebugUnitTest",
+      "lintMobileRelease",
+      "lintQuestRelease",
+      "lintLiteRelease",
+      "tools/test_verify_apk.py",
+      "tools/audit_ui_texts.py --check"
+    ],
+    "ci_validation": "run 44310638356: release builds, debug and release unit tests for both flavors, UI text audit, lint, APK signature pin and Discord bridge packaging passed",
+    "code_review": {
+      "kind": "none independent"
+    },
+    "host_previews": "Robolectric software renders on the host (not a phone), looked at by the sub-agents and the main agent: Vice City Home/player/Vice FM, widget contact sheets (all sizes, light and dark), smart offline settings and Auto badge, local music pages and corrections sheet, friends feed Home section, feed page, profile follow, followers list; glass draws flat on the host",
+    "host_previews_6_1_0": "Robolectric software renders on the host (not a phone), looked at by the sub-agents and the main agent: artist and album pages, discoveries card, Replay and Wrapped pages, Ketmix editor, Ketogether sheet and pills, lock-screen lyrics notification and widgets, settings rows, Vice City welcome screen (phone, tablet, landscape, large text), Vice City Home/player/settings, lyrics without halo; glass draws flat on the host",
+    "after_last_full_local_run": "nothing under app/ changed after the last complete local run; CI run 44310638356 passed"
+  },
+  "server": {
+    "function": "ketvoice-content",
+    "deployed_version": 23,
+    "changed_in_this_version": false,
+    "database": "migration 20261119120000_friends_feed applied by the owner in the SQL editor on 2026-11-18 (five one-statement-per-line parts) and verified afterwards; new Edge Function ketvoice-catalog (version 1, read-only YouTube Music catalogue for the web player, separate from ketvoice-api) deployed and smoke-tested live"
+  },
+  "tests": {
+    "mobile": {
+      "jvm": {
+        "tests": 1610,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 3
+      },
+      "android_15_emulator_compose": {
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "quest": {
+      "jvm": {
+        "tests": 1601,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 34
+      },
+      "android_15_emulator_compose": {
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "lite": {
+      "jvm": {
+        "tests": 1601,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 3
+      }
+    },
+    "dex_register_check": "tools/check_dex_registers.py passed on the three release APKs",
+    "sql": "20261119120000_friends_feed.sql and its five phone parts ran twice on a local PostgreSQL 16 with supabase_stubs.sql (friends_feed_rls.sql 83 assertions and shared_playlists_rls.sql passed); the live project was checked after the owner applied the parts: 4 tables with RLS, 8 functions, no client table grants, no anon execute, owner address guard present",
+    "test_fixes": "host tests now start the deferred start work at once (a task posted 1.5 s later landed inside TabletLayoutHostTest and kept Compose busy); avatars decode in place in host tests (native graphics abort on a worker thread); the spring-sheet corrections render is phone-only"
+  },
+  "lint": {
+    "mobile": {
+      "Warning": 301,
+      "Hint": 28
+    },
+    "quest": {
+      "Warning": 301,
+      "Hint": 28
+    },
+    "lite": {
+      "Warning": 307,
+      "Hint": 28
+    },
+    "errors": 0
+  },
+  "apks": [
+    {
+      "name": "Ketvoice-6.4.0.apk",
+      "sha256": "84a4cc4ca140016df81e80bf6ae8ad955b46a80329f80b52f39ba6b8b16451ab",
+      "bytes": 84943422,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "6.4.0",
+      "versionCode": 135,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-6.4.0-Quest.apk",
+      "sha256": "0294ab783e9da29b336c4dc9fba8bf315b391cc291a2ee82d99c98eec53016bc",
+      "bytes": 101028509,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "6.4.0",
+      "versionCode": 135,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-6.4.0-Lite.apk",
+      "sha256": "eb0f86c6923efb83a557733aacd7f3beb613a14ee68888333bfee195572f85b9",
+      "bytes": 32722420,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "6.4.0",
+      "versionCode": 135,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false,
+      "edition": "lite"
+    }
+  ],
+  "discord": {
+    "sdk_present_in_ci_build": true,
+    "sdk_sha256_pinned": true,
+    "bridge_and_native_libraries_verified": true,
+    "presence_mode": "unauthenticated_rpc_through_installed_discord_app"
+  },
+  "credential_scan": {
+    "entries": 4197,
+    "findings": 0,
+    "raw_pattern_findings": 1,
+    "scope": "the three release APKs (0 findings); the repository scan flags only the known image data URIs of Ketvoice-Liquid-Glass-V4.html",
+    "kind": "credential_patterns",
+    "explicit_private_provider_key_deny_list": false,
+    "triage": [
+      {
+        "file": "Ketvoice-Liquid-Glass-V4.html",
+        "classification": "embedded_image_false_positive",
+        "all_hits_inside_image_data_uris": true,
+        "rescanned_without_image_payloads": true
+      }
+    ]
+  },
+  "release_install_smoke": {
+    "mobile": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "quest": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "lite": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    }
+  },
+  "publication_override": {
+    "authorized_by_user": true,
+    "authorized_at": "2026-11-18T13:33:34.896503+00:00",
+    "kind": "standing_authorization",
+    "user_statement": "J'autorise TOUT devient maintenant une règle.",
+    "user_statement_date": "2026-11-14",
+    "in_reply_to": "The question whether versions may be published without phone or Quest testing without asking again for each version.",
+    "recorded_in": "AGENTS.md (commit aeeda8e)",
+    "reason": "The owner made publishing validated versions without phone or Quest testing a standing rule.",
+    "scope": "physical device installation and all on-device behaviour of 6.4.0 (mobile, Lite and Quest), including accounts and sync on devices"
+  },
+  "owner_requests_2026_11_18_6_4_0": {
+    "statements": [
+      "Propose moi de ENORME amélioré sur toute l'app et aussi continue d'améliorer le theme vice city et le site internet avec du motion design.",
+      "chosen: Trouver un titre (micro) [later dropped: « On laisse tomber AudD c payant et le service de reconnaissance pour le moment »], refonte complète des widgets android, Fil des amis, Widgets & écran verrouillé, Lecteur web (iPhone/PC), Musique locale pro, Hors ligne intelligent",
+      "C'est fait mais juste pour le site trouve un système pour avoir le catalogue etc tout de ketvoice et le streaming."
+    ],
+    "done": {
+      "vicecity": "synthwave floor, chrome titles, neon player tints, neon held-note glow, neon sheets, flickering sign, Vice FM",
+      "widgets": "redesign, live lyrics/Ketmix/Replay widgets, Quick Settings tiles, pinning",
+      "library": "smart offline, local music pro",
+      "friends": "follows, blocks, activity, reactions",
+      "web": "motion design pass, web player with the Ketvoice API search and streaming and the ketvoice-catalog function"
+    }
+  },
+  "not_validated": [
+    "physical phone, Lite or Quest installation, rendering and behaviour of 6.4.0",
+    "widgets on a real launcher (resizing, pinning, Quick Settings tiles, lock screen)",
+    "smart offline under real Wi-Fi/charging conditions, local music scans and tag writing on real files",
+    "friends feed between real accounts against the live project (client tested against a fake HTTP layer; SQL on a local PostgreSQL 16)",
+    "the Quest centred corrections panel of local music (the render test is phone-only)",
+    "independent code review"
+  ],
+  "known_limitations": [
+    "No Wear OS app in this version.",
+    "Seasonal themes use code-drawn decor until the owner's pictures are added.",
+    "Android Auto's queue screen shows only the current song.",
+    "Switching between Ketvoice and Ketvoice Lite is a manual install of the other APK.",
+    "Ketogether guests hear titles their own sources can play; local files and private titles are shown as unavailable.",
+    "Launcher icons keep a background: Android fills adaptive icon backgrounds in black.",
+    "The signing certificate is the existing public Android debug identity, not a private production key."
+  ],
+  "canonical_banner_sha256": "ddc0e2c1270027f4b9dd92254374b79727ae9eaf8914e418b52e23c5b39b5966"
+}
