@@ -1,0 +1,210 @@
+{
+  "schema": 8,
+  "version": "6.6.0",
+  "versionCode": 137,
+  "source_commit": "6442f0027fe8d87ec306cce9302d1acbafb3e966",
+  "created_at": "2026-11-18T19:21:37.439887+00:00",
+  "build_origin": {
+    "kind": "github_actions_with_owner_discord_sdk",
+    "workflow": "android.yml",
+    "run_id": 44373775020,
+    "artifact": {
+      "id": 14463340090,
+      "sha256": "a827dc2d174fc16aa8a22624aaa4fd2116037a66c4b61e4f49227a7da7fa6a88"
+    },
+    "gradle": "assembleMobileRelease assembleQuestRelease assembleLiteRelease",
+    "note": "Signed by CI with the pinned keystore secret; the Discord Social SDK AAR matched its pinned SHA-256."
+  },
+  "local_validation": {
+    "result": "debug JVM/Robolectric suites for the three flavors (mobile, quest, lite), release lint and the APK checker tests passed in a cloud container without the Discord SDK",
+    "commands": [
+      "testMobileDebugUnitTest",
+      "testQuestDebugUnitTest",
+      "testLiteDebugUnitTest -ProbolectricSdks=31,32,33,34,35,36",
+      "lintMobileRelease",
+      "lintQuestRelease",
+      "lintLiteRelease",
+      "tools/test_verify_apk.py"
+    ],
+    "ci_validation": "run 44373775020: release builds, debug and release unit tests, UI text audit, lint, APK signature pin and Discord bridge packaging passed",
+    "code_review": {
+      "kind": "none independent"
+    },
+    "host_previews": "Robolectric software renders on the host (not a phone), looked at by the sub-agents and the main agent: calm Vice City (Home Vice FM card, welcome phone/tablet/landscape/large text, player, settings), Apple Music style Playlists list and grid, playlist page and footer, shared playlist, Downloads (phone dark/light, tablet portrait and landscape), large-window Home, Library, Search, album page, Library grids; glass draws flat on the host",
+    "smoothness": "composition counts measured on the host with the Compose tracer (SmoothnessHostTest): Home, week/Replay cards and recent covers do not recompose while the position ticks; now-playing bars, indeterminate bar and Wrapped story do not recompose per frame; Library composes only visible grid rows. No frame times were measured on a device",
+    "after_merge_fixes": "LiteResourcesTest record dropped the deleted Vice City images; host test heap raised to 2 GB after an OutOfMemoryError on CI; StateFlowValueCalledInComposition lint errors in HomeScreen and DownloadCover fixed (FlowPick); lint and the affected tests rerun",
+    "sdk_30": "Robolectric's Android 11 runtime could not be downloaded in the cloud container (Maven Central answered 429), so the Lite tests that declare sdk 30 ran on sdk 31 only; nothing ran on an Android 11 runtime",
+    "after_last_full_local_run": "nothing under app/ changed after the last complete local run"
+  },
+  "server": {
+    "function": "ketvoice-content",
+    "deployed_version": 23,
+    "changed_in_this_version": false,
+    "database": "no migration in this version"
+  },
+  "tests": {
+    "mobile": {
+      "jvm": {
+        "tests": 1639,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 3
+      },
+      "android_15_emulator_compose": {
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "quest": {
+      "jvm": {
+        "tests": 1629,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 43
+      },
+      "android_15_emulator_compose": {
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "lite": {
+      "jvm": {
+        "tests": 1636,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 3
+      },
+      "android_11_runtime": {
+        "status": "not_executed"
+      }
+    },
+    "dex_register_check": "tools/check_dex_registers.py ran in CI (Check method sizes against the Android verifier) on the three release APKs",
+    "apk_checker": "tools/test_verify_apk.py 12 tests (Lite minSdk 30 required)"
+  },
+  "lint": {
+    "mobile": {
+      "Warning": 307,
+      "Hint": 28
+    },
+    "quest": {
+      "Warning": 307,
+      "Hint": 28
+    },
+    "lite": {
+      "Warning": 331,
+      "Hint": 28
+    },
+    "errors": 0
+  },
+  "apks": [
+    {
+      "name": "Ketvoice-6.6.0.apk",
+      "sha256": "2adeb870d45f3cedf7d5a862c5a5797e00d807c78778adbf1b33160078ba3a62",
+      "bytes": 84857503,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "6.6.0",
+      "versionCode": 137,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-6.6.0-Quest.apk",
+      "sha256": "59eb9c9c04ede6131dd3df03291388138d22e0474df60ed1412edb36994f96cc",
+      "bytes": 100958982,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "6.6.0",
+      "versionCode": 137,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-6.6.0-Lite.apk",
+      "sha256": "3404bbf1664587d23ad23ec7b5e1e6335e9f87fe5fc924c011d0ae48e6b3b94b",
+      "bytes": 32814118,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "6.6.0",
+      "versionCode": 137,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false,
+      "edition": "lite"
+    }
+  ],
+  "discord": {
+    "sdk_present_in_ci_build": true,
+    "sdk_sha256_pinned": true,
+    "bridge_and_native_libraries_verified": true,
+    "presence_mode": "unauthenticated_rpc_through_installed_discord_app"
+  },
+  "credential_scan": {
+    "entries": 4361,
+    "findings": 0,
+    "scope": "the three release APKs",
+    "kind": "credential_patterns",
+    "explicit_private_provider_key_deny_list": false,
+    "note": "run because publish-release requires it; the other manual checks were skipped at the owner's request"
+  },
+  "release_install_smoke": {
+    "mobile": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "quest": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "lite": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    }
+  },
+  "publication_override": {
+    "authorized_by_user": true,
+    "authorized_at": "2026-11-18T19:21:37.439887+00:00",
+    "kind": "standing_authorization",
+    "user_statement": "J'autorise TOUT devient maintenant une règle.",
+    "user_statement_date": "2026-11-14",
+    "in_reply_to": "The question whether versions may be published without phone or Quest testing without asking again for each version.",
+    "recorded_in": "AGENTS.md (commit aeeda8e)",
+    "reason": "The owner made publishing validated versions without phone or Quest testing a standing rule.",
+    "scope": "physical device installation and all on-device behaviour of 6.6.0 (mobile, Lite and Quest), including accounts and sync on devices"
+  },
+  "owner_requests_2026_11_18_6_6_0": {
+    "statements": [
+      "Tout marche parfaitement sur android 11 mais juste l'app basique optimise la car elle continue de bugger cruellement sur lz page d'accueil,les chargements,wrapped, bibliothèque etc et aussi refait totalement l'ecran des playlist et téléchargement dans le style d'apple music ios 27 et aussi l'interface tablette la side bar est incroyable etc mais l'interface n'est pas ouf du tout et le theme vice city est HORRIBLE moche donc trouve sur le web je veut pas d'effet vibecoder je veut un simple decor mais rien qui fait vibecoder !",
+      "Installe les skilld joint : (a toi de decider quand les utiliser regarde sur github !)"
+    ],
+    "done": {
+      "smoothness": "listening stats every 5 s, draw-phase animations, lazy Library grids, per-title download/cover collectors, bounded decodes on every edition, Lite's invisible rules on modest mobile phones",
+      "library": "Apple Music style Playlists, playlist page and Downloads; share/members/public actions wired from the playlist page",
+      "tablet": "window-sized cover grids, two-column lists, one-column collection pages with artwork beside the title; sidebar unchanged",
+      "vicecity": "neon, glow, grid, chrome text, flicker and the synthwave images removed; one accent and one flat illustration",
+      "skills": "ten skills vendored in .claude/skills (VENDORED.md)"
+    }
+  },
+  "not_validated": [
+    "physical phone, Lite, tablet or Quest installation, rendering and behaviour of 6.6.0",
+    "frame times and jank on the owner's phone (only host composition counts)",
+    "drop-down menus rendered in popups (checked by tests, not in PNG captures)",
+    "Robolectric runs on the Android 11 runtime (sdk 30)",
+    "independent code review"
+  ],
+  "known_limitations": [
+    "No Wear OS app in this version.",
+    "Seasonal themes use code-drawn decor until the owner's pictures are added.",
+    "Android Auto's queue screen shows only the current song.",
+    "Switching between Ketvoice and Ketvoice Lite is a manual install of the other APK.",
+    "Ketogether guests hear titles their own sources can play; local files and private titles are shown as unavailable.",
+    "Launcher icons keep a background: Android fills adaptive icon backgrounds in black.",
+    "The signing certificate is the existing public Android debug identity, not a private production key."
+  ],
+  "canonical_banner_sha256": "ddc0e2c1270027f4b9dd92254374b79727ae9eaf8914e418b52e23c5b39b5966"
+}
