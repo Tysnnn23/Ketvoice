@@ -21,6 +21,14 @@
 
 ## Overview
 
+### 6.9.0 — A Ketmix editor you can hear, mixes that respect the lyrics
+
+A new Ketmix editor with one timeline, presets, details and a preview, plus lyric-aware mixing, a bar loop and variety.
+[Mobile](https://github.com/Tysnnn23/Ketvoice/releases/download/v6.9.0/Ketvoice-6.9.0.apk)
+· [Lite](https://github.com/Tysnnn23/Ketvoice/releases/download/v6.9.0/Ketvoice-6.9.0-Lite.apk)
+· [Quest](https://github.com/Tysnnn23/Ketvoice/releases/download/v6.9.0/Ketvoice-6.9.0-Quest.apk)
+· [Release notes](docs/releases/v6.9.0.md).
+
 ### 6.8.0 — A rhythm model for Ketmix
 
 Ketmix can download a small AI model (Beat This!) that finds beats and bars.

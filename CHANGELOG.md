@@ -7,6 +7,19 @@
 
 ---
 
+# Ketvoice 6.9.0
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 140** — Ketmix editor redesign and three Ketmix exclusives.
+
+- Editor (`ui/player/KetmixEditor.kt`, `KetmixPanel.kt`): one timeline on the outgoing clock, a draggable/resizable transition box (beat/bar/phrase snapping kept), the decks' real automation drawn (volume, bass, filter), bar numbers, `VoiceActivity` passages and lyric line starts, zoom; presets from `MixStyle.values()` through `presetOf()`; detail rows stored as `MixShape` in the pair choice (old choices still read, default identical: `MixShapeTest`), applied by `MixShaping.apply` and honoured by `DeckDsp`; staged choices written on « Enregistrer »; `automix/TransitionPreview.kt` plays the transition alone on two borrowed decks with an A/B plain cut and restores the main player (the old `Automix.preview` is gone).
+- Exclusives: `LyricTimes.kt` (sung lines from synced lyrics or separation; `MixPlan.voiceDownMs`; entries moved before a line; `Automix` reads lyrics only for the playing title), `LoopFx.kt` (`LoopBlend`: a clean 4/8-beat bar after the last sung line and before a fade, beat confidence ≥ .7, looped sample-accurately with 4 ms seams), `MixVariety.kt` (Auto only). `KetmixExclusivesTest`, `KetmixEditorHostTest`.
+
+Full notes: [6.9.0](docs/releases/v6.9.0.md).
+
+---
+
 # Ketvoice 6.8.0
 
 ![Ketvoice](ketvoice-banner.png)
