@@ -50,7 +50,9 @@ internal data class SegmentAnalysis(
      * The tempo of the body of the title this stretch was read against (see [BeatAnalysis.Hint]);
      * 0 when it was read on its own.
      */
-    val tempoHint: Float = 0f
+    val tempoHint: Float = 0f,
+    /** Who read the beats: 0 Ketmix's signal analysis, [BEAT_THIS] the Beat This! model, [BEAT_TRIED] the model was run and the signal analysis kept. */
+    val analyser: Int = 0
 ) {
     val beatMs: Float get() = if (bpm > 0f) 60_000f / bpm else 0f
     val hasBeat: Boolean get() = bpm > 0f && confidence >= MIN_CONFIDENCE
@@ -87,6 +89,8 @@ internal data class SegmentAnalysis(
 
     companion object {
         const val MIN_CONFIDENCE = .45f
+        const val BEAT_THIS = 1
+        const val BEAT_TRIED = 2
         /** Pop, dance and hip-hop are built on phrases of eight bars. */
         const val PHRASE_BARS = 8
     }
