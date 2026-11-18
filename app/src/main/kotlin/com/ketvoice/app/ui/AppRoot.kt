@@ -420,7 +420,9 @@ fun AppRoot() {
                                 onRename = { AppUi.playlistMenu.value = null; request.onRename() },
                                 onExportJson = { AppUi.playlistMenu.value = null; request.onExportJson() },
                                 onExportM3u = { AppUi.playlistMenu.value = null; request.onExportM3u() },
-                                onDelete = { AppUi.playlistMenu.value = null; request.onDelete() }
+                                onDelete = { AppUi.playlistMenu.value = null; request.onDelete() },
+                                onShare = request.onShare, onMembers = request.onMembers, onTogglePublic = request.onTogglePublic,
+                                onReorder = request.onReorder?.let { reorder -> { AppUi.playlistMenu.value = null; reorder() } }
                             )
                         }
                     }

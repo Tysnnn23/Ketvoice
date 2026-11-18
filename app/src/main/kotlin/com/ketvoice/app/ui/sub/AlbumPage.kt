@@ -162,10 +162,10 @@ internal fun AlbumPage(request: CatalogRequest, page: CatalogPage?, tracks: List
     CompositionLocalProvider(LocalTheme provides theme, LocalBackdropLayer provides backdrop) {
         Box(Modifier.fillMaxSize().background(theme.background)) {
             BackdropCapture(backdrop, Modifier.fillMaxSize()) {
-                // Wide: the hero stays on the left and the titles scroll on the right (ui/adaptive/CollectionPanes).
+                // Wide: the artwork stands beside the title and the titles take the whole width below (ui/adaptive/CollectionPanes).
                 com.ketvoice.app.ui.adaptive.CollectionPanes(Modifier.fillMaxSize(), list, "album-list",
                     contentPadding = PaddingValues(bottom = LocalAdaptiveLayout.current.bottomPaddingDp.dp + 20.dp),
-                    headerKey = "album-hero", listTop = top, header = {
+                    headerKey = "album-hero", header = {
                         AlbumHero(title, artist, page?.releaseDate, cover, tracks, savedIds, loading, top, refresh,
                             frame = draft ?: savedFrame)
                     }) {

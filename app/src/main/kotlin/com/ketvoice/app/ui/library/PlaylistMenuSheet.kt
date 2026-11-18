@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.DriveFileRenameOutline
 import androidx.compose.material.icons.filled.IosShare
 import androidx.compose.material.icons.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.UploadFile
+import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -53,7 +54,8 @@ fun PlaylistMenuSheet(
     onDelete: () -> Unit,
     onShare: () -> Unit = {},
     onMembers: () -> Unit = {},
-    onTogglePublic: () -> Unit = {}
+    onTogglePublic: () -> Unit = {},
+    onReorder: (() -> Unit)? = null
 ) {
     val shared = com.ketvoice.app.data.PlaylistRules.isShared(playlist.id)
     val owner = !shared || com.ketvoice.app.sync.SharedPlaylists.isOwner(playlist.id)
@@ -103,6 +105,7 @@ fun PlaylistMenuSheet(
             if (!shared) PlaylistMenuRow(if (published) "Retirer cette playlist de mon profil" else "Rendre cette playlist publique",
                 Icons.Filled.Public) { onTogglePublic(); onClose() }
             if (owner) PlaylistMenuRow("Renommer", Icons.Filled.DriveFileRenameOutline) { onRename(); onClose() }
+            if (onReorder != null) PlaylistMenuRow("Modifier l'ordre", Icons.Filled.SwapVert) { onReorder(); onClose() }
             PlaylistMenuRow("Exporter (.json)", Icons.Filled.UploadFile) { onExportJson(); onClose() }
             PlaylistMenuRow("Exporter (.m3u)", Icons.Filled.IosShare) { onExportM3u(); onClose() }
             PlaylistMenuRow(if (shared && !owner) "Quitter la playlist" else "Supprimer la playlist", Icons.Filled.Delete,

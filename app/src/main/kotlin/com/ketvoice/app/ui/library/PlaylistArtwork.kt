@@ -69,8 +69,9 @@ private fun MosaicTile(entry: PlaylistEntry?, modifier: Modifier = Modifier) {
  *  - plus jamais de couverture générique « KETVOICE M » ni de simple lettre.
  */
 @Composable
-fun PlaylistArtwork(playlist: LocalPlaylist?, label: String, modifier: Modifier = Modifier) {
-    Box(modifier.clip(RoundedCornerShape(18.dp))) {
+fun PlaylistArtwork(playlist: LocalPlaylist?, label: String, modifier: Modifier = Modifier,
+                    radius: androidx.compose.ui.unit.Dp = 18.dp) {
+    Box(modifier.clip(RoundedCornerShape(radius))) {
         val cover = playlist?.coverUrl
         if (cover != null) {
             AsyncImage(cover, label, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
