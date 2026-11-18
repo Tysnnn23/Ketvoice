@@ -7,6 +7,21 @@
 
 ---
 
+# Ketvoice 6.5.0
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 136** — Ketvoice Lite for Android 11 and low-memory devices.
+
+- `lite` flavour: `minSdk = 30` (mobile stays 31, Quest 32). `glass/SoftBlur.kt` blurs the backdrop without RenderEffect below Android 12 (a downscale pyramid of offscreen layers on the GPU, a three-box Gaussian in software); `glass/SoftImage.kt` blurs covers once from a 64 px copy; `widget/WidgetCorners.kt` rounds widget parts inside bitmaps on Android 11; `PlaybackRevival.exactAllowed` is true below 31.
+- `LiteTuning`: modest devices (low-RAM flag, < 3.3 GB, or < 4.4 GB without GLES 3.2) get RGB_565 opaque decodes bounded to the screen (`DecodeBound`), one Canvas video at a time (720×1280 cap), quick-model separation away from the charger, image memory freed at the first warning; Settings → À propos « Ketvoice Lite » row.
+- Glass: `colorControls` called with named arguments (Blur mode had saturation applied as brightness).
+- Host tests: `-ProbolectricSdks=31` forwards `robolectric.enabledSdks`; new Lite host tests declare `sdk = [30, 31]`.
+
+Full notes: [6.5.0](docs/releases/v6.5.0.md).
+
+---
+
 # Ketvoice 6.4.0
 
 ![Ketvoice](ketvoice-banner.png)

@@ -21,6 +21,14 @@
 
 ## Overview
 
+### 6.5.0 — Lite for Android 11 and every phone
+
+Ketvoice Lite runs on Android 11 and is tuned for phones and tablets with little memory, with the same effects.
+[Mobile](https://github.com/Tysnnn23/Ketvoice/releases/download/v6.5.0/Ketvoice-6.5.0.apk)
+· [Lite](https://github.com/Tysnnn23/Ketvoice/releases/download/v6.5.0/Ketvoice-6.5.0-Lite.apk)
+· [Quest](https://github.com/Tysnnn23/Ketvoice/releases/download/v6.5.0/Ketvoice-6.5.0-Quest.apk)
+· [Release notes](docs/releases/v6.5.0.md).
+
 ### 6.4.0 — Friends, widgets and a neon night
 
 Follow your friends' activity, redone widgets with live lyrics, Ketmix and Replay, smart offline downloads, cleaned-up local music, and the Vice City neon night with Vice FM.
