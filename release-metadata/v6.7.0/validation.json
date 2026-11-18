@@ -1,0 +1,215 @@
+{
+  "schema": 8,
+  "version": "6.7.0",
+  "versionCode": 138,
+  "source_commit": "daba9487c6421e65f88ae5ab3fc27a8837d72221",
+  "created_at": "2026-11-18T21:32:42.193724+00:00",
+  "build_origin": {
+    "kind": "github_actions_with_owner_discord_sdk",
+    "workflow": "android.yml",
+    "run_id": 44397423199,
+    "artifact": {
+      "id": 14473606321,
+      "sha256": "cbf99277edbdf0d594254d1b006e2ad07f55e6f388dc3dd698d2a26fdf498f92"
+    },
+    "gradle": "assembleMobileRelease assembleQuestRelease assembleLiteRelease",
+    "note": "Signed by CI with the pinned keystore secret; the Discord Social SDK AAR matched its pinned SHA-256."
+  },
+  "local_validation": {
+    "result": "debug JVM/Robolectric suites for the three flavors (mobile, quest, lite), release lint and the APK checker tests passed in a cloud container without the Discord SDK",
+    "commands": [
+      "testMobileDebugUnitTest",
+      "testQuestDebugUnitTest",
+      "testLiteDebugUnitTest -ProbolectricSdks=31,32,33,34,35,36",
+      "lintMobileRelease",
+      "lintQuestRelease",
+      "lintLiteRelease",
+      "tools/test_verify_apk.py"
+    ],
+    "ci_validation": "run 44397423199: release builds, debug and release unit tests, UI text audit, lint, APK signature pin and Discord bridge packaging passed",
+    "code_review": {
+      "kind": "none independent"
+    },
+    "host_previews": "Robolectric software renders on the host (not a phone), looked at by the main agent or the sub-agents: the restored GTA VI welcome (phone), tablet dock scrubber and line; web player lyrics screenshots at 390 px and 1440 px with a fixture title (Playwright)",
+    "ketmix": "planner rules only, checked by host tests on synthetic analyses (KetmixFitTest and the existing automix, stems and AudioChainPlaybackTest suites); nothing was listened to. Sources were Apple support pages, press reviews, user reports and DJ software notes; no official figures for Apple's transition lengths or tempo limits were found",
+    "host_tests_network": "before 6.7 the host tests could reach real services; TabletLayoutHostTest failed from about 20:00 UTC on 2026-11-18 on CI and locally (also on the 6.6.0 commit) because a real answer changed the lyrics shown; unit-test JVMs now use a dead local proxy, with Maven Central left reachable for Robolectric runtimes (added after the first CI run of 6.7.0 failed to fetch them; the full local run was before that one-line change, TabletLayoutHostTest and AppLaunchHostTest were rerun after it)",
+    "sdk_30": "Robolectric's Android 11 runtime could not be downloaded in the cloud container (Maven Central answered 429), so the Lite tests that declare sdk 30 ran on sdk 31 only; nothing ran on an Android 11 runtime",
+    "after_last_full_local_run": "nothing under app/ changed after the last complete local run"
+  },
+  "server": {
+    "function": "ketvoice-content",
+    "deployed_version": 23,
+    "changed_in_this_version": false,
+    "database": "no migration in this version"
+  },
+  "tests": {
+    "mobile": {
+      "jvm": {
+        "tests": 1653,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 3
+      },
+      "android_15_emulator_compose": {
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "quest": {
+      "jvm": {
+        "tests": 1643,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 43
+      },
+      "android_15_emulator_compose": {
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "lite": {
+      "jvm": {
+        "tests": 1651,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 3
+      },
+      "android_11_runtime": {
+        "status": "not_executed"
+      }
+    },
+    "dex_register_check": "tools/check_dex_registers.py ran in CI (Check method sizes against the Android verifier) on the three release APKs",
+    "apk_checker": "tools/test_verify_apk.py 12 tests (Lite minSdk 30 required)"
+  },
+  "lint": {
+    "mobile": {
+      "Warning": 307,
+      "Hint": 28
+    },
+    "quest": {
+      "Warning": 307,
+      "Hint": 28
+    },
+    "lite": {
+      "Warning": 329,
+      "Hint": 28
+    },
+    "errors": 0
+  },
+  "apks": [
+    {
+      "name": "Ketvoice-6.7.0.apk",
+      "sha256": "ffed2c7bc5fce38b84628cb4f5e1fb5fa760b91454f6bb017d965d08db798199",
+      "bytes": 85070152,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "6.7.0",
+      "versionCode": 138,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-6.7.0-Quest.apk",
+      "sha256": "7f19994a072c38f21a0f72c1af1a34bb873462a24c76df1495527b45bff68554",
+      "bytes": 101138859,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "6.7.0",
+      "versionCode": 138,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-6.7.0-Lite.apk",
+      "sha256": "37c62291c3541ad2bc9be064c39820fe89f882c78b3619655f2b0c49845d7ac8",
+      "bytes": 32902731,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "6.7.0",
+      "versionCode": 138,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false,
+      "edition": "lite"
+    }
+  ],
+  "discord": {
+    "sdk_present_in_ci_build": true,
+    "sdk_sha256_pinned": true,
+    "bridge_and_native_libraries_verified": true,
+    "presence_mode": "unauthenticated_rpc_through_installed_discord_app"
+  },
+  "credential_scan": {
+    "entries": 4364,
+    "findings": 0,
+    "scope": "the three release APKs",
+    "kind": "credential_patterns",
+    "explicit_private_provider_key_deny_list": false,
+    "note": "run because publish-release requires it; the other manual checks were skipped at the owner's request"
+  },
+  "release_install_smoke": {
+    "mobile": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "quest": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "lite": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    }
+  },
+  "publication_override": {
+    "authorized_by_user": true,
+    "authorized_at": "2026-11-18T21:32:42.193724+00:00",
+    "kind": "standing_authorization",
+    "user_statement": "J'autorise TOUT devient maintenant une règle.",
+    "user_statement_date": "2026-11-14",
+    "in_reply_to": "The question whether versions may be published without phone or Quest testing without asking again for each version.",
+    "recorded_in": "AGENTS.md (commit aeeda8e)",
+    "reason": "The owner made publishing validated versions without phone or Quest testing a standing rule.",
+    "scope": "physical device installation and all on-device behaviour of 6.7.0 (mobile, Lite and Quest), including accounts and sync on devices"
+  },
+  "owner_requests_2026_11_18_6_7_0": {
+    "statements": [
+      "Remet l’ancien ecran de enjoy GTA VI et aussi ameliore ketmix pour qu’il soit au meme niveau que celui d’apple music entraine toi sur des millier de donne que tu cherche sur PLEIN de site pour comprendre comment fonctionne automix d’apple music et les transitions etc pour faire ketmix une meilleur version continue d’optimiser l’app lite et le site web doit avoir les parole en syllabes etc. Ne n’utilise pas plus de 70% de mon quota de 5 heure."
+    ],
+    "done": {
+      "welcome": "the owner's GTA VI welcome picture and glass panel restored; theme unchanged",
+      "ketmix": "blend length by fit, vocal-over-vocal guards, pickup-aware bars, outgoing level lead-down, gapless and beatless albums left unmixed",
+      "lite": "lazy translations, kept blur pyramid on Android 11, tablet dock drawn in the draw phase",
+      "web": "word and syllable timed lyrics in the web player (deployed to the site; proposed server route not deployed)"
+    },
+    "not_done": {
+      "training": "no model was trained on data; web research was turned into explicit planner rules",
+      "quota": "the 70 % limit could not be measured from the session; three lean agents and one full validation were used",
+      "ketmix": "far-tempo pairs keep Echo/Rise instead of a plain crossfade; no outro looping"
+    }
+  },
+  "not_validated": [
+    "physical phone, Lite, tablet or Quest installation, rendering and behaviour of 6.7.0",
+    "Ketmix transitions by ear on any device",
+    "the kept blur pyramid on a real Android 11 device (relies on the renderer refreshing layers when the page scrolls behind)",
+    "frame times, start-up time and memory on devices",
+    "web player lyrics with real songs, on Safari/iOS and with YouTube-iframe playback",
+    "Robolectric runs on the Android 11 runtime (sdk 30)",
+    "independent code review"
+  ],
+  "known_limitations": [
+    "No Wear OS app in this version.",
+    "Seasonal themes use code-drawn decor until the owner's pictures are added.",
+    "Android Auto's queue screen shows only the current song.",
+    "Switching between Ketvoice and Ketvoice Lite is a manual install of the other APK.",
+    "Ketogether guests hear titles their own sources can play; local files and private titles are shown as unavailable.",
+    "Launcher icons keep a background: Android fills adaptive icon backgrounds in black.",
+    "The signing certificate is the existing public Android debug identity, not a private production key."
+  ],
+  "canonical_banner_sha256": "ddc0e2c1270027f4b9dd92254374b79727ae9eaf8914e418b52e23c5b39b5966"
+}
