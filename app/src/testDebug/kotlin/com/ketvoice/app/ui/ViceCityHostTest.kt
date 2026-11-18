@@ -120,7 +120,7 @@ class ViceCityHostTest {
             .assertTextEquals("Profitez de GTA VI en écoutant vos musiques sur Ketvoice !")
         compose.onNodeWithText("Nouveau : le thème Vice City, en édition limitée jusqu'au 10 décembre.").assertExists()
         compose.onNodeWithText("Ketvoice n'est pas affilié à Rockstar Games.").assertExists()
-        compose.onNodeWithTag("vicecity-welcome-scene", useUnmergedTree = true).assertExists()
+        compose.onNodeWithTag("vicecity-welcome").assertExists()
         compose.onNodeWithTag("vicecity-enjoy").assertHasClickAction()
         compose.onNodeWithTag("vicecity-keep").assertHasClickAction()
         // TalkBack reads the title, the line, then the two actions, then the small print.

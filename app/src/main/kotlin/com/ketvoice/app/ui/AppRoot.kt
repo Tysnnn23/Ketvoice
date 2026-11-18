@@ -100,6 +100,7 @@ fun AppRoot() {
     val effectiveDark = useDark ?: isSystemInDarkTheme()
     // Le lecteur / la file d'attente ont toujours un fond noir : icônes système claires.
     val darkSurface = AppUi.showPlayer.value || AppUi.overlay.value == AppUi.QUEUE ||
+        com.ketvoice.app.ui.vicecity.ViceCityWelcomeGate.visible.value ||
         com.ketvoice.app.ui.seasons.SeasonWelcomeGate.visible.value != null ||
         com.ketvoice.app.data.FirstRun.pending.value
 
