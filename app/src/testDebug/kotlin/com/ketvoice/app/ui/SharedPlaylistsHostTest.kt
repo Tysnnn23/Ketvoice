@@ -57,12 +57,13 @@ class SharedPlaylistsHostTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
 
     @Before fun setup() {
+        com.ketvoice.app.ui.library.AvatarDecode.dispatcher = kotlinx.coroutines.Dispatchers.Unconfined
         java.util.Locale.setDefault(java.util.Locale.FRANCE)
         AppSettings.language.value = com.ketvoice.app.data.AppLanguage.FRENCH.label
         AppSettings.reduceAnimations.value = true
     }
 
-    @After fun reset() {
+    @After fun reset() { com.ketvoice.app.ui.library.AvatarDecode.dispatcher = kotlinx.coroutines.Dispatchers.IO;
         AppSettings.reduceAnimations.value = false
         PublicProfiles.showForTest(emptySet())
     }

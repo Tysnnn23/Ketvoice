@@ -120,6 +120,9 @@ fun ShareSheet(playlistName: String, state: ShareState, onCopyCode: () -> Unit, 
     }
 }
 
+/** Where avatar photos are decoded: off the main thread; host tests decode in place (Robolectric's native graphics abort on a worker thread). */
+internal object AvatarDecode { @Volatile var dispatcher: kotlinx.coroutines.CoroutineDispatcher = Dispatchers.IO }
+
 /** A person's round photo, or their first letter on a colour taken from their name. */
 @Composable
 fun PersonAvatar(name: String, photo: File?, size: Dp, modifier: Modifier = Modifier) {
@@ -127,7 +130,7 @@ fun PersonAvatar(name: String, photo: File?, size: Dp, modifier: Modifier = Modi
     // A photo is at most 512 px (see AvatarImage): decoded off the main thread, drawn as a plain bitmap.
     val decoded by produceState<ImageBitmap?>(null, photo) {
         value = photo?.let { file ->
-            withContext(Dispatchers.IO) { runCatching { BitmapFactory.decodeFile(file.path)?.asImageBitmap() }.getOrNull() }
+            withContext(AvatarDecode.dispatcher) { runCatching { BitmapFactory.decodeFile(file.path)?.asImageBitmap() }.getOrNull() }
         }
     }
     Box(modifier.size(size).clip(CircleShape), contentAlignment = Alignment.Center) {

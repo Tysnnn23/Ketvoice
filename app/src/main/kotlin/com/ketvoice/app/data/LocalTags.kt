@@ -54,7 +54,7 @@ internal object LocalTagNormalizer {
 
     /** Trimmed, spaces collapsed, control characters and BOMs dropped; null for a placeholder. */
     fun clean(value: String?): String? {
-        val text = value?.replace("﻿", "")?.filterNot { it.isISOControl() }?.replace(Regex("\\s+"), " ")?.trim()
+        val text = value?.replace("\uFEFF", "")?.filterNot { it.isISOControl() }?.replace(Regex("\\s+"), " ")?.trim()
             ?: return null
         return text.takeUnless { it.lowercase(Locale.ROOT) in placeholders }
     }

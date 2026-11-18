@@ -60,12 +60,13 @@ class FriendsFeedHostTest {
     private val now = java.time.Instant.parse("2026-11-18T12:00:00Z").toEpochMilli()
 
     @Before fun setup() {
+        com.ketvoice.app.ui.library.AvatarDecode.dispatcher = kotlinx.coroutines.Dispatchers.Unconfined
         java.util.Locale.setDefault(java.util.Locale.FRANCE)
         AppSettings.language.value = com.ketvoice.app.data.AppLanguage.FRENCH.label
         AppSettings.reduceAnimations.value = true
     }
 
-    @After fun reset() { AppSettings.reduceAnimations.value = false }
+    @After fun reset() { com.ketvoice.app.ui.library.AvatarDecode.dispatcher = kotlinx.coroutines.Dispatchers.IO; AppSettings.reduceAnimations.value = false }
 
     private fun save(view: View, name: String) {
         val bitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
