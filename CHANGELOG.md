@@ -7,6 +7,21 @@
 
 ---
 
+# Ketvoice 6.7.0
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 138** — Ketmix fit rules, Lite pass 2, the GTA VI welcome restored, host tests off the network.
+
+- Ketmix: `automix/BlendFit.kt` (blend length from tempo stretch and level gap; vocal-over-vocal guards for beat-matched blends and phrase snapping; pickup-aware bar alignment, bass swap on a downbeat); `MixPlan.outGain` leads the outgoing title down to a quieter one (max 4.4 dB), no Rise into a title over 4 dB quieter; albums in order with running sound or no beat are not mixed. `KetmixFitTest`.
+- Lite: `AppText` reads no dictionary in French and streams one language otherwise; `SoftBlur` keeps its pyramid layers while size, blur, backdrop and place are unchanged (`BackdropPlaces`); `TabletMiniPlayer` scrubber and line drawn in the draw phase.
+- Vice City: `ViceCityWelcome.kt` and `vicecity_welcome.webp` restored from 6.5 with their own night and sunset colours; the theme stays one accent and one illustration.
+- Host tests run with a dead local proxy (`app/build.gradle.kts`): a real lyrics answer kept `TabletLayoutHostTest` from getting idle.
+
+Full notes: [6.7.0](docs/releases/v6.7.0.md).
+
+---
+
 # Ketvoice 6.6.0
 
 ![Ketvoice](ketvoice-banner.png)

@@ -21,6 +21,14 @@
 
 ## Overview
 
+### 6.7.0 — Ketmix blends like a DJ, a lighter Lite
+
+Ketmix fits each blend to its two songs, Ketvoice Lite starts faster, and the GTA VI welcome screen is back.
+[Mobile](https://github.com/Tysnnn23/Ketvoice/releases/download/v6.7.0/Ketvoice-6.7.0.apk)
+· [Lite](https://github.com/Tysnnn23/Ketvoice/releases/download/v6.7.0/Ketvoice-6.7.0-Lite.apk)
+· [Quest](https://github.com/Tysnnn23/Ketvoice/releases/download/v6.7.0/Ketvoice-6.7.0-Quest.apk)
+· [Release notes](docs/releases/v6.7.0.md).
+
 ### 6.6.0 — Smoother, Apple Music style playlists and downloads
 
 A smoother app, Playlists and Downloads in the style of Apple Music, better tablet layouts and a quieter Vice City theme.

@@ -26,8 +26,8 @@ android {
         applicationId = "com.ketvoice.app"
         minSdk = 31
         targetSdk = 36
-        versionCode = 137
-        versionName = "6.6.0"
+        versionCode = 138
+        versionName = "6.7.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         resourceConfigurations += listOf("fr", "en", "hi", "ja", "zh", "ru", "it", "es", "de", "pt", "ko")
         ndkVersion = "27.0.12077973"
@@ -161,6 +161,13 @@ android {
         unitTests.isIncludeAndroidResources = true
         // Host renders of tablet windows (6.6) outgrew Gradle's default 512 MB test heap on CI.
         unitTests.all { it.maxHeapSize = "2g" }
+        // Host tests never reach the network (6.7): a lyrics or cover answer from a real service changed what a
+        // screen showed and kept Compose busy, so the suite passed or failed with the hour. A dead local proxy
+        // refuses every outside connection at once; loopback servers of the tests stay reachable.
+        unitTests.all {
+            for (scheme in listOf("http", "https")) { it.systemProperty("$scheme.proxyHost", "127.0.0.1"); it.systemProperty("$scheme.proxyPort", "9") }
+            it.systemProperty("http.nonProxyHosts", "localhost|127.*|[::1]")
+        }
         // -ProbolectricSdks=31 runs only those host SDKs (Lite's Android 11 tests also declare sdk 30, whose host
         // runtime Robolectric fetches on first use).
         val robolectricSdks = providers.gradleProperty("robolectricSdks").orNull
