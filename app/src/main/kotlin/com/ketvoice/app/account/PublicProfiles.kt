@@ -26,7 +26,11 @@ data class PublicPlaylist(val id: String, val name: String, val coverUrl: String
 
 /** A public profile as the server's `ketvoice_public_profile` returns it: never an e-mail address or a user id. */
 data class PublicProfile(val handle: String, val displayName: String, val avatarRef: String?,
-                         val playlists: List<PublicPlaylist>, val listening: PublicListening?)
+                         val playlists: List<PublicPlaylist>, val listening: PublicListening?,
+                         /** The caller follows this profile (friends feed, 2026-11-19). */
+                         val following: Boolean = false,
+                         /** The caller's own profile: no « Suivre » on it. */
+                         val isMe: Boolean = false)
 
 internal object PublicProfileParser {
     /** Null for « no such public profile » (the server answers null for an unknown handle and for a private profile alike). */
@@ -37,7 +41,7 @@ internal object PublicProfileParser {
         PublicProfile(json.getString("handle"), json.optString("display_name"),
             json.optString("avatar_ref").takeIf { !json.isNull("avatar_ref") && it.matches(Regex("[0-9a-f-]{36}")) },
             (0 until minOf(lists.length(), 20)).mapNotNull { playlist(lists.getJSONObject(it)) },
-            json.optJSONObject("listening")?.let(::listening))
+            json.optJSONObject("listening")?.let(::listening), json.optBoolean("following"), json.optBoolean("is_me"))
     }.getOrNull()
 
     private fun playlist(json: JSONObject): PublicPlaylist? = runCatching {

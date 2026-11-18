@@ -111,6 +111,7 @@ object AccountSession {
         com.ketvoice.app.sync.NowPlayingSync.signedIn(context)
         com.ketvoice.app.sync.SharedPlaylists.signedIn(context)
         PublicProfiles.signedIn(context)
+        com.ketvoice.app.sync.FriendsFeed.signedIn(context)
     }
 
     /** Sends [call] with a valid token; on 401 the token is renewed once and the call sent again. */
@@ -147,6 +148,7 @@ object AccountSession {
             com.ketvoice.app.sync.NowPlayingSync.signedOut()
             com.ketvoice.app.sync.SharedPlaylists.signedOut(context)
             PublicProfiles.signedOut()
+            com.ketvoice.app.sync.FriendsFeed.signedOut(context)
             Profiles.signedOut(context)
         }
         _state.value = AccountState(message = message)
