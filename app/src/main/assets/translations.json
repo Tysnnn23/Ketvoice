@@ -2274,7 +2274,11 @@
   "Toutes les playlists": "All playlists",
   "Épinglée": "Pinned",
   "Épinglées": "Pinned",
-  "Rose flamant et coucher de soleil sur Ocean Drive. Votre thème clair ou sombre est gardé ; votre couleur d'accent revient quand vous le désactivez.": "Flamingo pink and a sunset on Ocean Drive. Your light or dark theme is kept; your accent colour comes back when you turn it off."
+  "Rose flamant et coucher de soleil sur Ocean Drive. Votre thème clair ou sombre est gardé ; votre couleur d'accent revient quand vous le désactivez.": "Flamingo pink and a sunset on Ocean Drive. Your light or dark theme is kept; your accent colour comes back when you turn it off.",
+  "Calage précis du rythme (Ketmix)": "Precise beat matching (Ketmix)",
+  "Un petit modèle d'IA trouve les temps et les mesures pour des mélanges mieux calés : {0}": "A small AI model finds the beats and bars for better-aligned mixes: {0}",
+  "Supprimer le modèle de rythme ?": "Delete the rhythm model?",
+  "Les mix reviennent au calage par analyse du son. Les titres déjà analysés restent.": "Mixes go back to aligning by sound analysis. Titles already analysed are kept."
  },
  "hi": {
   "Reverb": "रीवर्ब",
@@ -4551,7 +4555,11 @@
   "Toutes les playlists": "सभी प्लेलिस्ट",
   "Épinglée": "पिन की गई",
   "Épinglées": "पिन की गईं",
-  "Rose flamant et coucher de soleil sur Ocean Drive. Votre thème clair ou sombre est gardé ; votre couleur d'accent revient quand vous le désactivez.": "फ़्लेमिंगो गुलाबी और ओशन ड्राइव पर सूर्यास्त। आपकी लाइट या डार्क थीम बनी रहती है; इसे बंद करने पर आपका एक्सेंट रंग वापस आ जाता है।"
+  "Rose flamant et coucher de soleil sur Ocean Drive. Votre thème clair ou sombre est gardé ; votre couleur d'accent revient quand vous le désactivez.": "फ़्लेमिंगो गुलाबी और ओशन ड्राइव पर सूर्यास्त। आपकी लाइट या डार्क थीम बनी रहती है; इसे बंद करने पर आपका एक्सेंट रंग वापस आ जाता है।",
+  "Calage précis du rythme (Ketmix)": "सटीक बीट मिलान (Ketmix)",
+  "Un petit modèle d'IA trouve les temps et les mesures pour des mélanges mieux calés : {0}": "एक छोटा AI मॉडल बेहतर मिलान वाले मिक्स के लिए बीट और माप ढूँढता है: {0}",
+  "Supprimer le modèle de rythme ?": "रिदम मॉडल हटाएँ?",
+  "Les mix reviennent au calage par analyse du son. Les titres déjà analysés restent.": "मिक्स ध्वनि विश्लेषण से मिलान पर लौट आते हैं। पहले से विश्लेषित गाने बने रहते हैं।"
  },
  "ja": {
   "Reverb": "リバーブ",
@@ -6828,7 +6836,11 @@
   "Toutes les playlists": "すべてのプレイリスト",
   "Épinglée": "ピン留め済み",
   "Épinglées": "ピン留め",
-  "Rose flamant et coucher de soleil sur Ocean Drive. Votre thème clair ou sombre est gardé ; votre couleur d'accent revient quand vous le désactivez.": "フラミンゴピンクとオーシャン・ドライブの夕日。ライト／ダークのテーマはそのままで、オフにするとアクセントカラーが元に戻ります。"
+  "Rose flamant et coucher de soleil sur Ocean Drive. Votre thème clair ou sombre est gardé ; votre couleur d'accent revient quand vous le désactivez.": "フラミンゴピンクとオーシャン・ドライブの夕日。ライト／ダークのテーマはそのままで、オフにするとアクセントカラーが元に戻ります。",
+  "Calage précis du rythme (Ketmix)": "正確なビート合わせ (Ketmix)",
+  "Un petit modèle d'IA trouve les temps et les mesures pour des mélanges mieux calés : {0}": "小さなAIモデルが拍と小節を見つけ、より正確にそろったミックスにします: {0}",
+  "Supprimer le modèle de rythme ?": "リズムモデルを削除しますか？",
+  "Les mix reviennent au calage par analyse du son. Les titres déjà analysés restent.": "ミックスは音の分析によるそろえ方に戻ります。分析済みの曲はそのまま残ります。"
  },
  "zh": {
   "Reverb": "混响",
@@ -9105,7 +9117,11 @@
   "Toutes les playlists": "所有播放列表",
   "Épinglée": "已置顶",
   "Épinglées": "已置顶",
-  "Rose flamant et coucher de soleil sur Ocean Drive. Votre thème clair ou sombre est gardé ; votre couleur d'accent revient quand vous le désactivez.": "火烈鸟粉与海洋大道的日落。保留你的浅色或深色主题；关闭后，你的强调色会恢复。"
+  "Rose flamant et coucher de soleil sur Ocean Drive. Votre thème clair ou sombre est gardé ; votre couleur d'accent revient quand vous le désactivez.": "火烈鸟粉与海洋大道的日落。保留你的浅色或深色主题；关闭后，你的强调色会恢复。",
+  "Calage précis du rythme (Ketmix)": "精准节拍对齐 (Ketmix)",
+  "Un petit modèle d'IA trouve les temps et les mesures pour des mélanges mieux calés : {0}": "一个小型 AI 模型找出节拍和小节，让混音对得更准：{0}",
+  "Supprimer le modèle de rythme ?": "删除节奏模型？",
+  "Les mix reviennent au calage par analyse du son. Les titres déjà analysés restent.": "混音将恢复为通过声音分析来对齐。已分析的曲目会保留。"
  },
  "ru": {
   "Reverb": "Реверберация",
@@ -11382,7 +11398,11 @@
   "Toutes les playlists": "Все плейлисты",
   "Épinglée": "Закреплён",
   "Épinglées": "Закреплённые",
-  "Rose flamant et coucher de soleil sur Ocean Drive. Votre thème clair ou sombre est gardé ; votre couleur d'accent revient quand vous le désactivez.": "Розовый фламинго и закат на Оушен-драйв. Ваша светлая или тёмная тема сохраняется; цвет акцента вернётся, когда вы её выключите."
+  "Rose flamant et coucher de soleil sur Ocean Drive. Votre thème clair ou sombre est gardé ; votre couleur d'accent revient quand vous le désactivez.": "Розовый фламинго и закат на Оушен-драйв. Ваша светлая или тёмная тема сохраняется; цвет акцента вернётся, когда вы её выключите.",
+  "Calage précis du rythme (Ketmix)": "Точная подгонка ритма (Ketmix)",
+  "Un petit modèle d'IA trouve les temps et les mesures pour des mélanges mieux calés : {0}": "Небольшая ИИ-модель находит доли и такты для более точных миксов: {0}",
+  "Supprimer le modèle de rythme ?": "Удалить модель ритма?",
+  "Les mix reviennent au calage par analyse du son. Les titres déjà analysés restent.": "Миксы снова подгоняются по анализу звука. Уже проанализированные треки сохраняются."
  },
  "it": {
   "Reverb": "Riverbero",
@@ -13659,7 +13679,11 @@
   "Toutes les playlists": "Tutte le playlist",
   "Épinglée": "Fissata",
   "Épinglées": "Fissate",
-  "Rose flamant et coucher de soleil sur Ocean Drive. Votre thème clair ou sombre est gardé ; votre couleur d'accent revient quand vous le désactivez.": "Rosa fenicottero e un tramonto su Ocean Drive. Il tuo tema chiaro o scuro resta; il tuo colore di accento torna quando lo disattivi."
+  "Rose flamant et coucher de soleil sur Ocean Drive. Votre thème clair ou sombre est gardé ; votre couleur d'accent revient quand vous le désactivez.": "Rosa fenicottero e un tramonto su Ocean Drive. Il tuo tema chiaro o scuro resta; il tuo colore di accento torna quando lo disattivi.",
+  "Calage précis du rythme (Ketmix)": "Sincronizzazione precisa del ritmo (Ketmix)",
+  "Un petit modèle d'IA trouve les temps et les mesures pour des mélanges mieux calés : {0}": "Un piccolo modello di IA trova i tempi e le battute per mix meglio allineati: {0}",
+  "Supprimer le modèle de rythme ?": "Eliminare il modello del ritmo?",
+  "Les mix reviennent au calage par analyse du son. Les titres déjà analysés restent.": "I mix tornano ad allinearsi con l'analisi del suono. I brani già analizzati restano."
  },
  "es": {
   "Reverb": "Reverb",
@@ -15936,7 +15960,11 @@
   "Toutes les playlists": "Todas las listas",
   "Épinglée": "Fijada",
   "Épinglées": "Fijadas",
-  "Rose flamant et coucher de soleil sur Ocean Drive. Votre thème clair ou sombre est gardé ; votre couleur d'accent revient quand vous le désactivez.": "Rosa flamenco y una puesta de sol en Ocean Drive. Se mantiene tu tema claro u oscuro; tu color de acento vuelve cuando lo desactivas."
+  "Rose flamant et coucher de soleil sur Ocean Drive. Votre thème clair ou sombre est gardé ; votre couleur d'accent revient quand vous le désactivez.": "Rosa flamenco y una puesta de sol en Ocean Drive. Se mantiene tu tema claro u oscuro; tu color de acento vuelve cuando lo desactivas.",
+  "Calage précis du rythme (Ketmix)": "Ajuste preciso del ritmo (Ketmix)",
+  "Un petit modèle d'IA trouve les temps et les mesures pour des mélanges mieux calés : {0}": "Un pequeño modelo de IA encuentra los tiempos y los compases para mezclas mejor ajustadas: {0}",
+  "Supprimer le modèle de rythme ?": "¿Eliminar el modelo de ritmo?",
+  "Les mix reviennent au calage par analyse du son. Les titres déjà analysés restent.": "Las mezclas vuelven a ajustarse por análisis del sonido. Los temas ya analizados se conservan."
  },
  "de": {
   "Reverb": "Reverb",
@@ -18213,7 +18241,11 @@
   "Toutes les playlists": "Alle Playlists",
   "Épinglée": "Angeheftet",
   "Épinglées": "Angeheftet",
-  "Rose flamant et coucher de soleil sur Ocean Drive. Votre thème clair ou sombre est gardé ; votre couleur d'accent revient quand vous le désactivez.": "Flamingopink und ein Sonnenuntergang am Ocean Drive. Dein helles oder dunkles Design bleibt; deine Akzentfarbe kehrt zurück, wenn du es ausschaltest."
+  "Rose flamant et coucher de soleil sur Ocean Drive. Votre thème clair ou sombre est gardé ; votre couleur d'accent revient quand vous le désactivez.": "Flamingopink und ein Sonnenuntergang am Ocean Drive. Dein helles oder dunkles Design bleibt; deine Akzentfarbe kehrt zurück, wenn du es ausschaltest.",
+  "Calage précis du rythme (Ketmix)": "Präzises Beat-Matching (Ketmix)",
+  "Un petit modèle d'IA trouve les temps et les mesures pour des mélanges mieux calés : {0}": "Ein kleines KI-Modell findet Schläge und Takte für besser abgestimmte Mixe: {0}",
+  "Supprimer le modèle de rythme ?": "Rhythmusmodell löschen?",
+  "Les mix reviennent au calage par analyse du son. Les titres déjà analysés restent.": "Mixe richten sich wieder per Klanganalyse aus. Bereits analysierte Titel bleiben erhalten."
  },
  "pt": {
   "Reverb": "Reverb",
@@ -20490,7 +20522,11 @@
   "Toutes les playlists": "Todas as playlists",
   "Épinglée": "Fixada",
   "Épinglées": "Fixadas",
-  "Rose flamant et coucher de soleil sur Ocean Drive. Votre thème clair ou sombre est gardé ; votre couleur d'accent revient quand vous le désactivez.": "Rosa flamingo e um pôr do sol em Ocean Drive. Seu tema claro ou escuro é mantido; sua cor de destaque volta quando você o desativa."
+  "Rose flamant et coucher de soleil sur Ocean Drive. Votre thème clair ou sombre est gardé ; votre couleur d'accent revient quand vous le désactivez.": "Rosa flamingo e um pôr do sol em Ocean Drive. Seu tema claro ou escuro é mantido; sua cor de destaque volta quando você o desativa.",
+  "Calage précis du rythme (Ketmix)": "Ajuste preciso do ritmo (Ketmix)",
+  "Un petit modèle d'IA trouve les temps et les mesures pour des mélanges mieux calés : {0}": "Um pequeno modelo de IA encontra os tempos e os compassos para mixagens mais bem ajustadas: {0}",
+  "Supprimer le modèle de rythme ?": "Excluir o modelo de ritmo?",
+  "Les mix reviennent au calage par analyse du son. Les titres déjà analysés restent.": "As mixagens voltam ao ajuste por análise do som. As faixas já analisadas permanecem."
  },
  "ko": {
   "Reverb": "리버브",
@@ -22767,6 +22803,10 @@
   "Toutes les playlists": "모든 플레이리스트",
   "Épinglée": "고정됨",
   "Épinglées": "고정됨",
-  "Rose flamant et coucher de soleil sur Ocean Drive. Votre thème clair ou sombre est gardé ; votre couleur d'accent revient quand vous le désactivez.": "플라밍고 핑크와 오션 드라이브의 노을. 라이트 또는 다크 테마는 그대로 유지되며, 끄면 강조 색상이 돌아옵니다."
+  "Rose flamant et coucher de soleil sur Ocean Drive. Votre thème clair ou sombre est gardé ; votre couleur d'accent revient quand vous le désactivez.": "플라밍고 핑크와 오션 드라이브의 노을. 라이트 또는 다크 테마는 그대로 유지되며, 끄면 강조 색상이 돌아옵니다.",
+  "Calage précis du rythme (Ketmix)": "정밀 비트 맞춤 (Ketmix)",
+  "Un petit modèle d'IA trouve les temps et les mesures pour des mélanges mieux calés : {0}": "작은 AI 모델이 박자와 마디를 찾아 더 정확하게 맞는 믹스를 만듭니다: {0}",
+  "Supprimer le modèle de rythme ?": "리듬 모델을 삭제할까요?",
+  "Les mix reviennent au calage par analyse du son. Les titres déjà analysés restent.": "믹스는 소리 분석 방식으로 되돌아갑니다. 이미 분석된 곡은 그대로 남습니다."
  }
 }
