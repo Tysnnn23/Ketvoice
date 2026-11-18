@@ -1,0 +1,14 @@
+{
+ "calé sur une boucle": {
+  "en": "matched over a loop",
+  "hi": "लूप पर टेम्पो से मिलाया",
+  "ja": "ループに合わせてテンポ同期",
+  "zh": "在循环上对齐节拍",
+  "ru": "в такт на петле",
+  "it": "a tempo su un loop",
+  "es": "a tempo sobre un bucle",
+  "de": "im Takt über einer Schleife",
+  "pt": "no tempo sobre um loop",
+  "ko": "루프에 맞춰 템포 일치"
+ }
+}
