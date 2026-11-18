@@ -103,7 +103,7 @@ fun HomeScreen() {
             .collect { (index, offset) -> AppUi.bottomCollapsed.value = fold.update(index, offset) }
     }
     Box(Modifier.fillMaxSize().pageBackground(theme)) {
-        // A seasonal theme (Vice City's palms, 6.1; the others' decor, 6.2) frames the glow behind the greeting and leaves with it.
+        // A seasonal theme's decor (6.2) frames the glow behind the greeting and leaves with it.
         theme.season?.HomeDecor(Modifier, fade = {
             if (state.firstVisibleItemIndex > 0) 1f else state.firstVisibleItemScrollOffset / handover.coerceAtLeast(1f) })
         LazyColumn(state = state, modifier = Modifier.fillMaxSize().statusBarsPadding().testTag("home-list"),
@@ -121,13 +121,11 @@ fun HomeScreen() {
                     Column(Modifier.weight(1f)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Image(painterResource(R.drawable.logo_clean), null, Modifier.size(20.dp), contentScale = ContentScale.Fit)
-                            // Vice City (6.3): the sign in neon pink, switching on with a flicker the first time Home shows.
-                            if (theme.viceCity) com.ketvoice.app.ui.vicecity.ViceCityWordmark(Modifier.padding(start = 8.dp))
-                            else Text("KETVOICE", localize = false, color = theme.secondary, fontSize = 11.sp, fontWeight = FontWeight.Bold,
+                            Text("KETVOICE", localize = false, color = theme.secondary, fontSize = 11.sp, fontWeight = FontWeight.Bold,
                                 letterSpacing = 2.2.sp, modifier = Modifier.padding(start = 8.dp))
                         }
                         com.ketvoice.app.ui.common.PageTitle(greeting,
-                            Modifier.padding(top = 6.dp).asHeading().testTag("home-greeting"), maxLines = 2, neon = true)
+                            Modifier.padding(top = 6.dp).asHeading().testTag("home-greeting"), maxLines = 2)
                     }
                     if (!layout.hasRail) Box(Modifier.size(DesignTokens.Space.touch).clip(androidx.compose.foundation.shape.CircleShape)
                         .clickable(role = androidx.compose.ui.semantics.Role.Button) { AppUi.showAccount.value = true },
@@ -141,6 +139,8 @@ fun HomeScreen() {
             }
             // What another of the listener's devices plays, to resume here (signed in only).
             item(key = "resume-elsewhere") { ResumeElsewhereBanner() }
+            // The Vice City edition's one illustration, on its radio's card, while the theme is on.
+            if (theme.viceCity) item(key = "vicefm") { com.ketvoice.app.ui.vicecity.ViceFmCard() }
             // The owner removed the large For you card and the four shortcut tiles (5.9.0): the page goes
             // from the greeting straight to what was played last. Votre semaine stays further down.
             // What was played last, within a thumb's reach: tiles to start again from, or large covers.
@@ -176,8 +176,6 @@ fun HomeScreen() {
                     }
                 }
             }
-            // Vice FM (6.3): the Vice City theme's radio, while the theme is on.
-            if (theme.viceCity) item(key = "vicefm") { com.ketvoice.app.ui.vicecity.ViceFmCard(Modifier.padding(top = 8.dp)) }
             // The week's discoveries (6.1): renewed every Monday, right under what was played last.
             item(key = "discoveries") { HomeDiscoveries() }
             // What the public profiles the listener follows published and listened to (signed in, once there is some).

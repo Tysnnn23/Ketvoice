@@ -89,7 +89,7 @@ class SeasonsHostTest {
         Seasons.choose(season, true)
         compose.setContent { NoOverscroll { AppRoot() } }
         compose.waitForIdle()
-        val tag = if (id == "vicecity") "vicecity-palms" else "season-decor-$id"
+        val tag = if (id == "vicecity") "vicefm-card" else "season-decor-$id"
         compose.onNodeWithTag(tag).assertExists()
         image("home-$id")
     }

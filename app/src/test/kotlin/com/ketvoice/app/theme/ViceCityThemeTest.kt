@@ -1,64 +1,52 @@
 package com.ketvoice.app.theme
 
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.compositeOver
-import com.ketvoice.app.ui.vicecity.WELCOME_BODY_ALPHA
-import com.ketvoice.app.ui.vicecity.WELCOME_NOTE_ALPHA
-import com.ketvoice.app.ui.vicecity.WELCOME_VEIL
+import com.ketvoice.app.ui.seasons.SeasonLooks
 import org.junit.Assert.*
 import org.junit.Test
 
-/** The Vice City theme (6.1) keeps every text at WCAG AA, with the same checks as the cover colours ([CoverLegibility]). */
+/**
+ * The Vice City theme: the listener's light or dark Ket 27 theme with a flamingo accent that keeps every use of it at
+ * WCAG AA ([CoverLegibility]), and none of the seasonal night, glows or edges.
+ */
 class ViceCityThemeTest {
-    private val theme = ViceCityTheme.theme()
     private val aa = CoverLegibility.TEXT
 
-    @Test fun textsReadOnThePagesAndCards() {
-        assertTrue(theme.isDark && theme.viceCity)
-        for (surface in listOf(theme.background, theme.card)) {
-            assertTrue(CoverLegibility.contrast(theme.onBackground, surface) >= aa)
-            assertTrue("secondary text", CoverLegibility.contrast(theme.secondary, surface) >= aa)
+    @Test fun itKeepsTheListenersLightOrDarkTheme() {
+        for (dark in listOf(false, true)) {
+            val vice = ViceCityTheme.theme(dark)
+            val plain = Ket27.theme(dark, Color.Blue)
+            assertTrue(vice.viceCity)
+            assertEquals(dark, vice.isDark)
+            assertNull("no seasonal night, glow or edge", vice.season)
+            assertEquals(plain.copy(accent = vice.accent, viceCity = true), vice)
+        }
+        assertNull("Vice City is not a seasonal look any more", SeasonLooks.of(ViceCityTheme.ID))
+    }
+
+    @Test fun theAccentReadsAsItIsOnBothThemes() {
+        for (dark in listOf(false, true)) {
+            val theme = ViceCityTheme.theme(dark)
+            assertEquals("no correction needed", if (dark) ViceCityTheme.accentDark else ViceCityTheme.accentLight, theme.accent)
+            for (surface in listOf(theme.background, theme.card)) {
+                assertTrue("link on $surface", CoverLegibility.contrast(theme.accent, surface) >= aa)
+                assertTrue("tinted capsule on $surface",
+                    CoverLegibility.contrast(theme.accent, CoverLegibility.tinted(theme.accent, surface)) >= aa)
+            }
+            // « Profiter » and the filled buttons: their label reads on the accent.
+            assertTrue(CoverLegibility.contrast(CoverLegibility.onFill(theme.accent), theme.accent) >= aa)
         }
     }
 
-    @Test fun textsReadOnTheBrightestOfTheGlow() {
-        // The top glow's core at its strongest breath (magenta at .46 over the night).
-        val glow = ViceCityTheme.Colors.magenta.copy(alpha = .46f).compositeOver(theme.background)
-        assertTrue(CoverLegibility.contrast(theme.onBackground, glow) >= aa)
-        assertTrue(CoverLegibility.contrast(theme.secondary, glow) >= aa)
-        assertTrue(CoverLegibility.contrast(theme.accent, glow) >= 3f) // large titles and icons (WCAG AA large)
-    }
-
-    @Test fun theAccentNeedsNoCorrection() {
-        // Already readable as a link, in a capsule tinted with itself, and its own button label (black) reads on it.
-        assertEquals(theme.accent, CoverLegibility.readableAccent(theme.accent, theme.background, theme.card))
-        assertEquals(Color.Black, CoverLegibility.onFill(theme.accent))
-        assertTrue(CoverLegibility.contrast(Color.Black, theme.accent) >= aa)
-    }
-
-    @Test fun theSunsetButtonLabelReadsOnEveryColourOfIt() {
-        for (stop in listOf(ViceCityTheme.Colors.magenta, ViceCityTheme.Colors.accent, ViceCityTheme.Colors.orange)) {
-            assertTrue("$stop", CoverLegibility.contrast(ViceCityTheme.Colors.ink, stop) >= aa)
-            // With the light sheen of the top half of the button.
-            assertTrue("$stop", CoverLegibility.contrast(ViceCityTheme.Colors.ink, Color.White.copy(alpha = .22f).compositeOver(stop)) >= aa)
+    @Test fun theIllustrationIsFlatPastelWithADarkerPalm() {
+        for (scene in listOf(ViceCityTheme.day, ViceCityTheme.dusk)) {
+            // The palms stand out against the sun they cross and the sky they rise into.
+            assertTrue(CoverLegibility.contrast(scene.palm, scene.sun) >= 3f)
+            assertTrue(CoverLegibility.contrast(scene.palm, scene.skyLow) >= 3f)
+            assertTrue("the crowns, in the high sky", CoverLegibility.contrast(scene.palm, scene.skyHigh) >= 1.8f)
+            listOf(scene.skyHigh, scene.skyLow, scene.sun, scene.sea, scene.glint, scene.palm).forEach { assertEquals(1f, it.alpha) }
         }
-    }
-
-    /**
-     * The welcome panel over the brightest part of the owner's picture: its sun, blurred (measured on the picture
-     * blurred by 24 px: #FDD981). The panel's veil keeps the title, the line and the small print at AA.
-     */
-    @Test fun theWelcomePanelReadsEvenOverTheSun() {
-        val sun = Color(0xFFFDD981)
-        val panel = ViceCityTheme.Colors.night.copy(alpha = WELCOME_VEIL).compositeOver(sun)
-        assertTrue(CoverLegibility.contrast(Color.White, panel) >= aa)
-        assertTrue(CoverLegibility.contrast(Color.White.copy(alpha = WELCOME_BODY_ALPHA), panel) >= aa)
-        assertTrue(CoverLegibility.contrast(Color.White.copy(alpha = WELCOME_NOTE_ALPHA), panel) >= aa)
-        assertTrue(CoverLegibility.contrast(Color.White.copy(alpha = .92f), panel) >= aa)
-    }
-
-    @Test fun theGlowMovesSlowlyAndLessInThePerformanceMode() {
-        assertTrue(ViceCityTheme.stepMs(performance = true) > ViceCityTheme.stepMs(performance = false))
-        assertTrue(ViceCityTheme.CYCLE_MS >= 10_000L)
+        assertSame(ViceCityTheme.day, ViceCityTheme.scene(dark = false))
+        assertSame(ViceCityTheme.dusk, ViceCityTheme.scene(dark = true))
     }
 }

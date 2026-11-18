@@ -89,16 +89,17 @@ fun AppRoot() {
         AppSettings.glassTilt.value, AppSettings.liquidGlass.value, Motion.reduced,
         AppSettings.highPerformanceMode.value, com.ketvoice.app.BuildConfig.IS_QUEST))
     val themeMode = AppSettings.themeMode.value
-    // A seasonal theme (the Vice City edition, 6.1; the others, 6.2) is a dark look of its own while it is on;
-    // the listener's theme is kept.
-    val season = com.ketvoice.app.ui.seasons.SeasonLooks.of(com.ketvoice.app.data.Seasons.inEffect()?.id)
-    val viceCity = season != null
-    val useDark = if (viceCity) true else if (themeMode == 1) false else if (themeMode == 2) true else null
+    // A seasonal theme (6.2) is a dark look of its own while it is on; the Vice City edition keeps the listener's
+    // light or dark theme and only replaces the accent. Either way the listener's choices are kept.
+    val inEffect = com.ketvoice.app.data.Seasons.inEffect()
+    val season = com.ketvoice.app.ui.seasons.SeasonLooks.of(inEffect?.id)
+    val viceCity = inEffect?.ownWelcome == true
+    val seasonal = season != null || viceCity
+    val useDark = if (season != null) true else if (themeMode == 1) false else if (themeMode == 2) true else null
     val view = androidx.compose.ui.platform.LocalView.current
     val effectiveDark = useDark ?: isSystemInDarkTheme()
     // Le lecteur / la file d'attente ont toujours un fond noir : icônes système claires.
     val darkSurface = AppUi.showPlayer.value || AppUi.overlay.value == AppUi.QUEUE ||
-        com.ketvoice.app.ui.vicecity.ViceCityWelcomeGate.visible.value ||
         com.ketvoice.app.ui.seasons.SeasonWelcomeGate.visible.value != null ||
         com.ketvoice.app.data.FirstRun.pending.value
 
@@ -118,7 +119,7 @@ fun AppRoot() {
     // then the accent of the whole interface — buttons, links, sliders — follows the cover playing,
     // glides from one title's colour to the next and back to the chosen accent when it stops.
     val coverAccent = com.ketvoice.app.theme.rememberCoverAccent(
-        if (com.ketvoice.app.data.AppSettings.coverAccent.value && !viceCity) playingCover else null)?.first
+        if (com.ketvoice.app.data.AppSettings.coverAccent.value && !seasonal) playingCover else null)?.first
     val (accentColor, accentAmount) = com.ketvoice.app.theme.rememberCoverGlide(coverAccent, 700)
 
     // The playing cover lightly tints the optical glass (independent of the accent option).
@@ -127,10 +128,10 @@ fun AppRoot() {
     // "Fond selon la pochette" (5.9.1): the background of every page glides to the colour of the cover
     // playing, and back to the theme's own when nothing plays or the setting is turned off.
     val wantedTone = com.ketvoice.app.theme.rememberCoverTone(
-        if (com.ketvoice.app.data.AppSettings.coverBackground.value && !viceCity) playingCover else null)
+        if (com.ketvoice.app.data.AppSettings.coverBackground.value && !seasonal) playingCover else null)
     val (toneColor, toneAmount) = com.ketvoice.app.theme.rememberCoverGlide(wantedTone, 900)
     val cover = com.ketvoice.app.theme.CoverLook(toneColor, toneAmount, accentColor, accentAmount)
-    KetvoiceTheme(useDark = useDark, cover = cover, season = season) {
+    KetvoiceTheme(useDark = useDark, cover = cover, viceCity = viceCity, season = season) {
         if (season != null) com.ketvoice.app.theme.SeasonPulse.Pulse(Motion.reduced, AppSettings.highPerformanceMode.value)
         com.ketvoice.app.ui.player.PlaybackFeatureDialogs()
         BackgroundPlaybackOffer()
@@ -473,7 +474,7 @@ fun AppRoot() {
 @Composable
 private fun ScrollEdges(modifier: Modifier, bottom: Boolean) {
     val theme = LocalTheme.current
-    // A seasonal theme (Vice City, 6.1): the top edge keeps the glow's colour, and a glow rises behind the tab bar.
+    // A seasonal theme (6.2): the top edge keeps the glow's colour, and a glow rises behind the tab bar.
     val season = theme.season
     val background = if (season != null) androidx.compose.ui.graphics.lerp(theme.background, season.edgeTint, .16f) else theme.background
     Box(modifier.testTag("scroll-edges")) {
@@ -488,10 +489,6 @@ private fun ScrollEdges(modifier: Modifier, bottom: Boolean) {
         if (season != null && bottom) Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth()
             .drawBehind { with(season) { bottomGlow(com.ketvoice.app.theme.SeasonPulse.phase.floatValue) } }
             .navigationBarsPadding().height(150.dp))
-        // Vice City's neon floor (6.3), only where a bar covers the bottom of the page: the tab bar of a phone, or
-        // the mini-player docked along the bottom of a large window.
-        val barBelow = !LocalAdaptiveLayout.current.hasRail || Player.state.collectAsState().value.current != null
-        if (season != null && bottom && barBelow) season.BottomDecor(Modifier.align(Alignment.BottomCenter))
     }
 }
 

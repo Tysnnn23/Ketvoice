@@ -86,9 +86,7 @@ fun ScrubBar(
     // A seasonal theme fills the bar with its sunset, unless the caller chose its own colour (6.2.1).
     val season = com.ketvoice.app.theme.LocalTheme.current.season
     val seasonFill = fillColor == com.ketvoice.app.theme.LocalTheme.current.accent
-    // Inside the player, which keeps its own colours, the Vice City theme still fills the bar with its sunset (6.3).
     val fillBrush = if (!seasonFill) null else season?.fill
-        ?: if (com.ketvoice.app.theme.ViceCityTheme.LocalNeon.current) com.ketvoice.app.theme.ViceCityTheme.sunset else null
     val dur = durationMs.coerceAtLeast(1L)
     // Where the finger is while it drags (px); the value is read from the track as it is drawn, so
     // what lies under the finger is what is set, even while the track swells.
@@ -192,15 +190,11 @@ fun ScrubBar(
 
 private val DefaultTimeColor = Color.White.copy(alpha = 0.62f)
 
-/**
- * The times under the bar and, between them, Ketmix's sign while a mix plays. In the Vice City theme (6.3) the
- * elapsed time is light pink and the remaining time and Ketmix's sign cyan, unless the caller chose its own colour.
- */
+/** The times under the bar and, between them, Ketmix's sign while a mix plays. */
 @Composable
 private fun ScrubTimes(shown: Float, dur: Long, press: SliderPressState, mix: Float?, timeColor: Color) {
-    val neon = timeColor == DefaultTimeColor && com.ketvoice.app.theme.ViceCityTheme.neonHere()
-    val elapsed = if (neon) com.ketvoice.app.theme.ViceCityTheme.elapsedTime else timeColor
-    val remaining = if (neon) com.ketvoice.app.theme.ViceCityTheme.remainingTime else timeColor
+    val elapsed = timeColor
+    val remaining = timeColor
     Row(Modifier.fillMaxWidth().padding(top = 1.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
         // The times step aside as the bar reaches out, and grow a little while it is held.
         Text(formatSecs((shown * dur).toLong()), color = elapsed, fontSize = 11.sp,

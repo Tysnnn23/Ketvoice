@@ -64,7 +64,7 @@ object Seasons {
     private fun md(month: Int, day: Int): MonthDay = MonthDay.of(month, day)
 
     val VICE_CITY = SeasonalTheme("vicecity", "Thème Vice City", "Édition limitée, jusqu'au 10 décembre",
-        "Nuit violette, coucher de soleil rose et orange, néon discret. Votre thème et votre couleur d'accent reviennent quand vous le désactivez.",
+        "Rose flamant et coucher de soleil sur Ocean Drive. Votre thème clair ou sombre est gardé ; votre couleur d'accent revient quand vous le désactivez.",
         "Profitez de GTA VI en écoutant vos musiques sur Ketvoice !",
         SeasonWindow(md(11, 1), md(ViceCityEdition.THEME_LAST_DAY.monthValue, ViceCityEdition.THEME_LAST_DAY.dayOfMonth),
             ViceCityEdition.THEME_LAST_DAY.year),

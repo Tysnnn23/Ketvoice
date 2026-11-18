@@ -64,7 +64,7 @@ object SeasonPulse {
 /**
  * The look of one seasonal theme: its [KetTheme], the glows of the pages and of the tab bar, the edge of the
  * selected tab and of the main buttons, the decor of Home's header, its emblem and a small preview for Settings.
- * The glows and the edge are the Vice City edition's (6.1), drawn with the season's [palette]; a season draws its
+ * The glows and the edge were first drawn for the Vice City edition (6.1); each uses the season's [palette]; a season draws its
  * own decor ([HomeDecor]).
  */
 abstract class SeasonLook(val id: String, val palette: SeasonPalette) {
@@ -128,12 +128,6 @@ abstract class SeasonLook(val id: String, val palette: SeasonPalette) {
 
     /** The decor of Home's header, fading out with the large title ([fade], 0..1, read in the draw phase only). */
     @Composable abstract fun HomeDecor(modifier: Modifier, fade: () -> Float)
-
-    /**
-     * What a season lays at the very bottom of the pages, behind the tab bar, over the scroll edge (6.3): nothing by
-     * default; Vice City's neon floor. Decorative only, never under text that must be read.
-     */
-    @Composable open fun BottomDecor(modifier: Modifier) {}
 
     /** The season's badge, in a rounded square. */
     @Composable abstract fun Emblem(size: Dp, modifier: Modifier)

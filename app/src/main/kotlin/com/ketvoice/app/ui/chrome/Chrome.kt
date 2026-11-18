@@ -316,16 +316,13 @@ private fun MiniProgressLine(modifier: Modifier = Modifier) {
         else tween(durationMillis = 500, easing = androidx.compose.animation.core.LinearEasing),
         label = "miniProgress"
     )
-    // A hairline inset from the pill's edges: a faint track and the accent filling it. Vice City (6.3): the track is a
-    // faint neon underline and the sunset fills it.
-    val neon = LocalTheme.current.viceCity
+    // A hairline inset from the pill's edges: a faint track and the accent filling it.
     Box(
         modifier
             .padding(start = 18.dp, end = 18.dp, bottom = 3.dp)
             .height(2.5.dp)
             .clip(RoundedCornerShape(2.dp))
-            .then(if (neon) Modifier.background(com.ketvoice.app.ui.vicecity.MiniNeon.track)
-                else Modifier.background(LocalTheme.current.onBackground.copy(alpha = .10f)))
+            .background(LocalTheme.current.onBackground.copy(alpha = .10f))
             .testTag("mini-progress")
     ) {
         Box(
@@ -333,8 +330,7 @@ private fun MiniProgressLine(modifier: Modifier = Modifier) {
                 .fillMaxHeight()
                 .fillMaxWidth(smooth)
                 .clip(RoundedCornerShape(2.dp))
-                .then(if (neon) Modifier.background(com.ketvoice.app.theme.ViceCityTheme.sunset)
-                    else Modifier.background(LocalTheme.current.accent))
+                .background(LocalTheme.current.accent)
         )
     }
 }
@@ -641,7 +637,7 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier,
                             .size(width = slot * lens.span - 10.dp + grow.width, height = heightAnim - 10.dp + grow.height)
                             .align(Alignment.CenterStart)
                             .graphicsLayer { scaleX = bulge; scaleY = bulge * lens.squash }
-                            // A seasonal theme (Vice City, 6.1): the selection wears a thin neon edge.
+                            // A seasonal theme (6.2): the selection wears a thin edge of its colours.
                             .then(th.season?.let { look -> with(look) { Modifier.seasonEdge(pillShape, true) } } ?: Modifier),
                         shape = pillShape,
                         params = GlassParams.selection(dark = th.isDark).let { base ->

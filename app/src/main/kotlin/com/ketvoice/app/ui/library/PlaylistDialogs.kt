@@ -106,7 +106,7 @@ fun AddToPlaylistSheet(tracks: List<Track>, onClose: () -> Unit) {
     var savingId by remember { mutableStateOf<String?>(null) }
     val radius = with(androidx.compose.ui.platform.LocalDensity.current) { 28.dp.toPx() }
     GlassPanel(
-        modifier = Modifier.fillMaxWidth().padding(10.dp).then(com.ketvoice.app.ui.common.sheetEdge(RoundedCornerShape(28.dp))),
+        modifier = Modifier.fillMaxWidth().padding(10.dp),
         shape = RoundedCornerShape(28.dp),
         params = GlassParams.sheet(radius, dark = com.ketvoice.app.ui.common.sheetDark())
     ) {

@@ -345,8 +345,6 @@ fun PlayerTransport(
             playModifier
                 .pressScale(min = 0.88f, isPressed = playPressed)
                 .size(74.dp)
-                // Vice City (6.3): the play button wears the theme's neon ring; the player's layout stays as it is.
-                .then(viceCityRing())
                 .clip(CircleShape)
                 .semantics { stateDescription = playbackStateLabel }
                 .clickable(playSrc, null, role = androidx.compose.ui.semantics.Role.Button) { transportHaptic(com.ketvoice.app.ui.motion.Haptics.Kind.Press); onToggle() },
@@ -358,13 +356,6 @@ fun PlayerTransport(
             TransportGlyph("next", Modifier.size(48.dp))
         }
     }
-}
-
-/** The neon ring of the play button in the Vice City theme, nothing otherwise. */
-@Composable
-private fun viceCityRing(): Modifier {
-    if (!com.ketvoice.app.theme.ViceCityTheme.neonHere()) return Modifier
-    return with(com.ketvoice.app.theme.ViceCityTheme) { Modifier.viceCityNeon(CircleShape, true) }
 }
 
 @Composable

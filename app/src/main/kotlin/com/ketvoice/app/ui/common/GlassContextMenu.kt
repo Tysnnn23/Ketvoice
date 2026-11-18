@@ -231,7 +231,7 @@ internal fun ContextMenuHost(modifier: Modifier = Modifier) {
                 scaleX = unfolded; scaleY = unfolded
                 transformOrigin = TransformOrigin(if (placement.menuFromEnd) 1f else 0f, 0f)
                 alpha = (progress.value * 2.5f).coerceIn(0f, 1f)
-            }.testTag("context-menu-actions").then(sheetEdge(RoundedCornerShape(22.dp))),
+            }.testTag("context-menu-actions"),
             RoundedCornerShape(22.dp), GlassParams.sheet(with(density) { 22.dp.toPx() }, dark = theme.isDark)) {
             Column(Modifier.fillMaxWidth().background(theme.card.copy(alpha = if (theme.isDark) .34f else .5f))
                 .verticalScroll(rememberScrollState())) {

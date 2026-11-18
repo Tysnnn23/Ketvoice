@@ -8,7 +8,7 @@ import org.junit.Assert.*
 import org.junit.Test
 
 /**
- * Every seasonal theme (6.2) keeps its texts at WCAG AA with the same checks as Vice City's (ViceCityThemeTest):
+ * Every seasonal theme (6.2) keeps its texts at WCAG AA:
  * on the pages and cards, over the brightest breath of the glow, its accent as a link and a tinted capsule's label,
  * and the dark label of a filled button on every colour of its gradient.
  */
@@ -16,19 +16,11 @@ class SeasonPaletteTest {
     private val aa = CoverLegibility.TEXT
 
     @Test fun everySeasonOfTheRegistryHasALook() {
-        Seasons.all.forEach { assertNotNull(it.id, SeasonLooks.of(it.id)) }
-        assertSame(ViceCityTheme.look, SeasonLooks.of("vicecity"))
+        // Vice City is the exception: it keeps the listener's theme with its own accent (ViceCityThemeTest).
+        Seasons.all.filterNot { it.ownWelcome }.forEach { assertNotNull(it.id, SeasonLooks.of(it.id)) }
+        assertNull(SeasonLooks.of(Seasons.VICE_CITY.id))
         assertNull(SeasonLooks.of(null))
         assertNull(SeasonLooks.of("nimporte"))
-    }
-
-    @Test fun viceCityDrawsAsBefore() {
-        val look = ViceCityTheme.look
-        assertEquals(ViceCityTheme.Colors.magenta, look.palette.core)
-        assertEquals(ViceCityTheme.Colors.orange, look.palette.mid)
-        assertEquals(ViceCityTheme.Colors.violet, look.palette.far)
-        assertEquals(ViceCityTheme.Colors.cyan, look.palette.cool)
-        assertTrue(ViceCityTheme.theme().viceCity)
         assertFalse(SeasonLooks.noel.theme().viceCity)
     }
 

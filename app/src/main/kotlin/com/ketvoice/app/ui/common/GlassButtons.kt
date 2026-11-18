@@ -120,7 +120,7 @@ internal fun GlassCapsuleButton(
             scaleX = scaleWidth; scaleY = scaleHeight
             alpha = if (enabled) 1f else .45f
         }
-        // A seasonal theme (Vice City, 6.1; the others, 6.2): the main button wears a thin neon edge.
+        // A seasonal theme (6.2): the main button wears a thin edge of its colours.
         .then(theme.season?.let { look -> with(look) { Modifier.seasonEdge(shape, prominent) } } ?: Modifier)) {
         GlassPanel(Modifier.matchParentSize(), shape, GlassParams.pill(dark = theme.isDark).copy(
             highlightAngle = light, opticalPressure = pressure), enabled = AppSettings.liquidGlass.value) {}

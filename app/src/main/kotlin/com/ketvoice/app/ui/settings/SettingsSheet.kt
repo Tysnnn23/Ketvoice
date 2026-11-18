@@ -56,7 +56,7 @@ internal fun SettingsSheet(onDismiss: () -> Unit, content: @Composable ColumnSco
                     Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.BottomCenter) {
                         CompositionLocalProvider(LocalBackdropLayer provides backdrop) {
                             GlassPanel(Modifier.widthIn(max = 560.dp).fillMaxWidth().padding(horizontal = 12.dp).padding(top = 12.dp, bottom = 12.dp)
-                                .heightIn(max = room - 24.dp).then(com.ketvoice.app.ui.common.sheetEdge(RoundedCornerShape(com.ketvoice.app.theme.Ket27.Metrics.alertRadius))),
+                                .heightIn(max = room - 24.dp),
                                 RoundedCornerShape(com.ketvoice.app.theme.Ket27.Metrics.alertRadius),
                                 GlassParams.sheet(34f, dark = theme.isDark)) {
                                 Column(Modifier.fillMaxWidth().pointerInput(Unit) { detectTapGestures {} }) {
@@ -75,7 +75,7 @@ internal fun SettingsSheet(onDismiss: () -> Unit, content: @Composable ColumnSco
             BoxWithConstraints(Modifier.align(alignment).widthIn(max = 560.dp).fillMaxWidth()
                 .statusBarsPadding().imePadding().navigationBarsPadding().padding(horizontal = 12.dp, vertical = 12.dp)) {
                 CompositionLocalProvider(LocalBackdropLayer provides backdrop) {
-                    GlassPanel(Modifier.fillMaxWidth().heightIn(max = maxHeight).then(com.ketvoice.app.ui.common.sheetEdge(RoundedCornerShape(28.dp))), RoundedCornerShape(28.dp),
+                    GlassPanel(Modifier.fillMaxWidth().heightIn(max = maxHeight), RoundedCornerShape(28.dp),
                         GlassParams.sheet(28f, dark = theme.isDark)) {
                         Column(Modifier.fillMaxWidth().pointerInput(Unit) { detectTapGestures {} }) {
                             Box(Modifier.align(Alignment.CenterHorizontally).padding(top = 10.dp)

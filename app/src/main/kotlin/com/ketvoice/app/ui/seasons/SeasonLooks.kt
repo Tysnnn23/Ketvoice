@@ -32,15 +32,15 @@ import androidx.compose.ui.unit.dp
 import com.ketvoice.app.theme.SeasonLook
 import com.ketvoice.app.theme.SeasonPalette
 import com.ketvoice.app.theme.SeasonPulse
-import com.ketvoice.app.theme.ViceCityTheme
 import com.ketvoice.app.theme.seasonTopGlow
 
 /** Which drawing a season's decor uses (see `SeasonMotifs.kt`). */
 internal enum class Motif { Snow, Fireworks, Hearts, Blossom, Sun, Night }
 
 /**
- * The looks of the seasonal themes (6.2), by the registry's id ([com.ketvoice.app.data.Seasons]). Vice City keeps
- * its own ([ViceCityTheme.look]); every other season is a palette and a decor drawn in code, until the owner's
+ * The looks of the seasonal themes (6.2), by the registry's id ([com.ketvoice.app.data.Seasons]). Vice City is not
+ * one of them: it keeps the listener's theme with its own accent (`theme/ViceCityTheme.kt`). Every season here is a
+ * palette and a decor drawn in code, until the owner's
  * pictures are added under the names documented on [com.ketvoice.app.data.SeasonalTheme] — they are then shown
  * in place of the drawing, without a code change.
  */
@@ -83,7 +83,7 @@ object SeasonLooks {
         fill = listOf(c(0xFFFF8A1F), c(0xFFFFA43D), c(0xFFFFC456)), ink = c(0xFF120D0A),
         edge = listOf(c(0xFFFF8A1F), c(0xFFFFC456), c(0xFFB18CFF))))
 
-    val all: List<SeasonLook> get() = listOf(ViceCityTheme.look, noel, nouvelAn, saintValentin, printemps, ete, halloween)
+    val all: List<SeasonLook> get() = listOf(noel, nouvelAn, saintValentin, printemps, ete, halloween)
 
     /** The look of the season [id], or null (no season, or an unknown id). */
     fun of(id: String?): SeasonLook? = if (id == null) null else all.firstOrNull { it.id == id }

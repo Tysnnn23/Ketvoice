@@ -61,7 +61,7 @@ fun ExplorerScreen() {
     LaunchedEffect(attempt) { chart = CatalogRepo.chart() }
     Column(Modifier.fillMaxSize().pageBackground(theme).statusBarsPadding()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = com.ketvoice.app.ui.common.pageMargin, vertical = 18.dp), verticalAlignment = Alignment.CenterVertically) {
-            com.ketvoice.app.ui.common.PageTitle("Explorer", Modifier.weight(1f).asHeading(), neon = true)
+            com.ketvoice.app.ui.common.PageTitle("Explorer", Modifier.weight(1f).asHeading())
             if (!layout.hasRail) Box(Modifier.size(DesignTokens.Space.touch).clickable { AppUi.showAccount.value = true },
                 contentAlignment = Alignment.Center) { AccountAvatar("K", 36.dp) }
         }

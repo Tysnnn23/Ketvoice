@@ -73,7 +73,7 @@ fun TrackMenuSheet(track: Track, onClose: () -> Unit) {
     val cover = com.ketvoice.app.data.MediaOverrides.cover(track, art["t:${track.id}"] ?: track.coverUrl)
     val radius = with(LocalDensity.current) { 28.dp.toPx() }
     GlassPanel(
-        modifier = Modifier.fillMaxWidth().padding(10.dp).then(com.ketvoice.app.ui.common.sheetEdge(RoundedCornerShape(28.dp))),
+        modifier = Modifier.fillMaxWidth().padding(10.dp),
         shape = RoundedCornerShape(28.dp),
         params = GlassParams.sheet(radius, dark = com.ketvoice.app.ui.common.sheetDark())
     ) {
@@ -325,7 +325,7 @@ private fun MenuItemRow(
 fun AudioOutputSheet(onClose: () -> Unit) {
     val radius = with(LocalDensity.current) { 26.dp.toPx() }
     GlassPanel(
-        modifier = Modifier.fillMaxWidth().padding(10.dp).then(com.ketvoice.app.ui.common.sheetEdge(RoundedCornerShape(26.dp))),
+        modifier = Modifier.fillMaxWidth().padding(10.dp),
         shape = RoundedCornerShape(26.dp),
         params = GlassParams.sheet(radius, dark = com.ketvoice.app.ui.common.sheetDark())
     ) {

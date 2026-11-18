@@ -326,8 +326,7 @@ fun SettingsScreen() {
                 }
                 SRow(
                     KetIcons.Moon, "Thème",
-                    sub = if (com.ketvoice.app.data.ViceCityEdition.themeOn) "Le thème Vice City est sombre ; votre choix revient quand il est désactivé"
-                        else if (com.ketvoice.app.data.Seasons.inEffect() != null) "Le thème saisonnier est sombre ; votre choix revient quand il est désactivé"
+                    sub = if (com.ketvoice.app.data.Seasons.inEffect()?.ownWelcome == false) "Le thème saisonnier est sombre ; votre choix revient quand il est désactivé"
                         else "S'applique immédiatement à toute l'app",
                     value = themeLabel(AppSettings.themeMode.value)
                 ) {
@@ -1182,8 +1181,8 @@ private fun ColumnScope.LockscreenLyricsRows() {
 }
 
 /**
- * « Thème Vice City » (6.1, limited edition until 10 December): the switch, with a small picture of the theme.
- * It lays its own look over the listener's theme, accent and colours, which come back when it is turned off.
+ * « Thème Vice City » (6.1, limited edition until 10 December): the switch, with the edition's illustration. It keeps
+ * the listener's light or dark theme and replaces the accent, which comes back when it is turned off.
  */
 @Composable
 private fun ColumnScope.ViceCityThemeRow() {
@@ -1194,7 +1193,7 @@ private fun ColumnScope.ViceCityThemeRow() {
             tick(com.ketvoice.app.ui.motion.Haptics.Kind.Tick); AppSettings.viceCityTheme.value = it; SettingsStore.save()
         }).padding(horizontal = 16.dp, vertical = 12.dp).testTag("vicecity-theme-row")) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            com.ketvoice.app.ui.vicecity.ViceCityLogo(Ket27.Metrics.tile)
+            com.ketvoice.app.ui.vicecity.ViceCityTile(Ket27.Metrics.tile)
             Column(Modifier.weight(1f).padding(start = 12.dp, end = 14.dp)) {
                 Text("Thème Vice City", color = th.onBackground, fontSize = 17.sp, lineHeight = 22.sp)
                 Text("Édition limitée, jusqu'au 10 décembre", color = th.secondary, fontSize = 13.sp, lineHeight = 18.sp,
@@ -1202,9 +1201,9 @@ private fun ColumnScope.ViceCityThemeRow() {
             }
             com.ketvoice.app.ui.common.LiquidGlassSwitch(on, onCheckedChange = null)
         }
-        com.ketvoice.app.ui.vicecity.ViceCityPreview(Modifier.padding(top = 12.dp))
-        Text("Nuit violette, coucher de soleil rose et orange, néon discret. Votre thème et votre couleur d'accent reviennent quand vous le désactivez.",
-            color = th.secondary, fontSize = 13.sp, lineHeight = 18.sp, modifier = Modifier.padding(top = 10.dp))
+        com.ketvoice.app.ui.vicecity.ViceCityScene(Modifier.padding(top = 12.dp).fillMaxWidth().height(92.dp)
+            .clip(androidx.compose.foundation.shape.RoundedCornerShape(18.dp)), tag = "vicecity-preview")
+        Text(com.ketvoice.app.data.Seasons.VICE_CITY.description, color = th.secondary, fontSize = 13.sp, lineHeight = 18.sp, modifier = Modifier.padding(top = 10.dp))
     }
     SettingsCellDivider()
 }
