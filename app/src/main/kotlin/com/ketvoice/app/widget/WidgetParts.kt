@@ -8,6 +8,8 @@ import androidx.glance.ColorFilter
 import androidx.glance.GlanceModifier
 import androidx.glance.Image
 import androidx.glance.ImageProvider
+import androidx.glance.LocalContext
+import androidx.glance.LocalSize
 import androidx.glance.action.Action
 import androidx.glance.action.actionParametersOf
 import androidx.glance.action.actionStartActivity
@@ -61,12 +63,16 @@ internal val graphiteGround: Bitmap by lazy { WidgetLook.ground(null, WidgetLook
  */
 @Composable
 internal fun WidgetSurface(ground: Bitmap?, onClick: Action?, veil: Boolean = true, content: @Composable () -> Unit) {
+    // Android 11 (Ketvoice Lite) cannot round a view: the card's picture carries its corners and its veil.
+    val drawn = WidgetCorners.drawn()
     var outer = GlanceModifier.fillMaxSize().appWidgetBackground()
-        .cornerRadius(android.R.dimen.system_app_widget_background_radius)
-        .background(ImageProvider(ground ?: defaultGround), ContentScale.FillBounds)
+    outer = if (drawn) outer.background(ImageProvider(cardPicture(LocalContext.current, ground ?: defaultGround, veil,
+            LocalSize.current)), ContentScale.FillBounds)
+        else outer.cornerRadius(android.R.dimen.system_app_widget_background_radius)
+            .background(ImageProvider(ground ?: defaultGround), ContentScale.FillBounds)
     if (onClick != null) outer = outer.clickable(onClick)
     Box(outer) {
-        Box(if (veil) GlanceModifier.fillMaxSize().background(WidgetLook.veil) else GlanceModifier.fillMaxSize()) { content() }
+        Box(if (veil && !drawn) GlanceModifier.fillMaxSize().background(WidgetLook.veil) else GlanceModifier.fillMaxSize()) { content() }
     }
 }
 
@@ -87,13 +93,14 @@ internal fun Eyebrow(text: String, color: ColorProvider = WidgetLook.inkSoft) =
 @Composable
 internal fun WidgetCover(bitmap: Bitmap?, sizeDp: Int, radiusDp: Int = (sizeDp / 5).coerceIn(6, 22)) {
     val modifier = GlanceModifier.size(sizeDp.dp).cornerRadius(radiusDp.dp)
-    if (bitmap != null) Image(ImageProvider(bitmap), null, modifier, contentScale = ContentScale.Crop)
+    if (bitmap != null) Image(ImageProvider(if (WidgetCorners.drawn()) WidgetCorners.rounded(bitmap, radiusDp / sizeDp.toFloat())
+        else bitmap), null, modifier, contentScale = ContentScale.Crop)
     else NoteTile(sizeDp, radiusDp)
 }
 
 @Composable
 internal fun NoteTile(sizeDp: Int, radiusDp: Int = (sizeDp / 5).coerceIn(6, 22)) {
-    Box(GlanceModifier.size(sizeDp.dp).cornerRadius(radiusDp.dp).background(WidgetLook.chip), contentAlignment = Alignment.Center) {
+    Box(GlanceModifier.size(sizeDp.dp).roundFill(sizeDp, sizeDp, radiusDp.toFloat(), WidgetLook.chip), contentAlignment = Alignment.Center) {
         Image(ImageProvider(R.drawable.ic_widget_note), null, GlanceModifier.size((sizeDp * .44f).dp),
             colorFilter = ColorFilter.tint(WidgetLook.inkSoft))
     }
@@ -105,7 +112,7 @@ internal fun PlayButton(state: WidgetsState, sizeDp: Int) {
     val icon = if (state.playing) R.drawable.ic_widget_pause else R.drawable.ic_widget_play
     val label = if (state.playing) "Pause" else "Lecture"
     val glyph = (sizeDp * .46f).toInt()
-    Box(GlanceModifier.size(sizeDp.dp).cornerRadius((sizeDp / 2).dp).background(WidgetLook.ink)
+    Box(GlanceModifier.size(sizeDp.dp).roundFill(sizeDp, sizeDp, sizeDp / 2f, WidgetLook.ink)
         .clickable(WidgetActions.transport("toggle", state)), contentAlignment = Alignment.Center) {
         Image(ImageProvider(icon), AppText.t(label), GlanceModifier.size(glyph.dp), colorFilter = ColorFilter.tint(WidgetLook.onInk))
     }
@@ -127,7 +134,7 @@ internal fun SkipButton(next: Boolean, state: WidgetsState, sizeDp: Int) {
 internal fun PillButton(label: String, action: Action, onCover: Boolean = false) {
     val fill = if (onCover) WidgetLook.white else WidgetLook.ink
     val glyph = if (onCover) ColorProvider(androidx.compose.ui.graphics.Color(0xFF111114)) else WidgetLook.onInk
-    Box(GlanceModifier.height(34.dp).cornerRadius(17.dp).background(fill).clickable(action).padding(start = 12.dp, end = 15.dp),
+    Box(GlanceModifier.height(34.dp).capsuleFill(34, fill).clickable(action).padding(start = 12.dp, end = 15.dp),
         contentAlignment = Alignment.Center) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Image(ImageProvider(R.drawable.ic_widget_play), null, GlanceModifier.size(15.dp), colorFilter = ColorFilter.tint(glyph))
@@ -159,7 +166,7 @@ internal fun EmptyPrompt(state: WidgetsState, titleSp: Int, withButton: Boolean)
 /** Ketmix's glyph (two rings, as in the app) in a filled tile. */
 @Composable
 internal fun KetmixTile(sizeDp: Int) {
-    Box(GlanceModifier.size(sizeDp.dp).cornerRadius((sizeDp * .26f).dp).background(WidgetLook.ink), contentAlignment = Alignment.Center) {
+    Box(GlanceModifier.size(sizeDp.dp).roundFill(sizeDp, sizeDp, sizeDp * .26f, WidgetLook.ink), contentAlignment = Alignment.Center) {
         Image(ImageProvider(R.drawable.ic_widget_ketmix), null, GlanceModifier.size((sizeDp * .62f).dp), colorFilter = ColorFilter.tint(WidgetLook.onInk))
     }
 }
@@ -167,8 +174,8 @@ internal fun KetmixTile(sizeDp: Int) {
 /** A switch drawn as iOS draws one: a pill and its knob, green when on. */
 @Composable
 internal fun WidgetSwitch(on: Boolean, action: Action) {
-    Box(GlanceModifier.width(50.dp).height(30.dp).cornerRadius(15.dp).background(if (on) WidgetLook.switchOn else WidgetLook.switchOff)
+    Box(GlanceModifier.width(50.dp).height(30.dp).roundFill(50, 30, 15f, if (on) WidgetLook.switchOn else WidgetLook.switchOff)
         .clickable(action).padding(2.dp), contentAlignment = if (on) Alignment.CenterEnd else Alignment.CenterStart) {
-        Box(GlanceModifier.size(26.dp).cornerRadius(13.dp).background(WidgetLook.knob)) {}
+        Box(GlanceModifier.size(26.dp).roundFill(26, 26, 13f, WidgetLook.knob)) {}
     }
 }

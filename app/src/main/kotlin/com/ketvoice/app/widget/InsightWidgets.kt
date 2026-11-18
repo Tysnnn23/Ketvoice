@@ -148,7 +148,12 @@ internal fun MixContent(state: WidgetsState) {
 @Composable
 private fun MixPoster(state: WidgetsState, label: String, play: androidx.glance.action.Action, large: Boolean) {
     val cover = state.mixCover
-    if (cover != null) {
+    if (cover != null && WidgetCorners.drawn()) {
+        // Android 11: cover and scrim in one picture with the card's round corners (WidgetCorners).
+        val size = LocalSize.current
+        Image(ImageProvider(WidgetCorners.poster(cover, WidgetLook.scrim, size.width.value, size.height.value)), null,
+            GlanceModifier.fillMaxSize(), contentScale = ContentScale.FillBounds)
+    } else if (cover != null) {
         Image(ImageProvider(cover), null, GlanceModifier.fillMaxSize(), contentScale = ContentScale.Crop)
         Image(ImageProvider(WidgetLook.scrim), null, GlanceModifier.fillMaxSize(), contentScale = ContentScale.FillBounds)
     }
