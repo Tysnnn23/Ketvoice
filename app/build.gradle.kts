@@ -166,7 +166,8 @@ android {
         // refuses every outside connection at once; loopback servers of the tests stay reachable.
         unitTests.all {
             for (scheme in listOf("http", "https")) { it.systemProperty("$scheme.proxyHost", "127.0.0.1"); it.systemProperty("$scheme.proxyPort", "9") }
-            it.systemProperty("http.nonProxyHosts", "localhost|127.*|[::1]")
+            // Maven Central stays reachable: Robolectric fetches its Android runtimes there on a machine without them.
+            it.systemProperty("http.nonProxyHosts", "localhost|127.*|[::1]|repo1.maven.org|*.maven.org")
         }
         // -ProbolectricSdks=31 runs only those host SDKs (Lite's Android 11 tests also declare sdk 30, whose host
         // runtime Robolectric fetches on first use).
