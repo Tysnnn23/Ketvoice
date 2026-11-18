@@ -17,6 +17,7 @@ import androidx.compose.runtime.InternalComposeTracingApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.hasClickAction
@@ -233,11 +234,22 @@ class SmoothnessHostTest {
         val runs = dockRuns("DockScrubber")
         compose.onNodeWithTag("dock-scrubber").assertExists()
         assertTrue("the scrubber follows the ticks and the seconds, not the frames ($runs)", runs in 1..10)
+        dockAt(80_000, "smooth-dock-scrubber")
+        compose.onNodeWithText("1:20").assertExists()
+        compose.onNodeWithText("-2:00").assertExists()
     }
 
     @Test fun dockProgressLineGlidesWithoutComposingAtEveryFrame() {
         val runs = dockRuns("DockProgressLine")
         assertTrue("the line follows the ticks, not the frames ($runs)", runs in 1..6)
+        dockAt(80_000, "smooth-dock-line")
+    }
+
+    /** The dock once its glide has reached [ms], drawn to a picture. */
+    private fun dockAt(ms: Long, name: String) {
+        position.value = ms
+        compose.mainClock.advanceTimeBy(700)
+        image(name)
     }
 
     @Test fun coverGridLinesHaveStableKeysAndTypes() {
