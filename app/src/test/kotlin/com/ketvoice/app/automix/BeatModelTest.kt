@@ -221,3 +221,22 @@ class BeatModelTest {
         assertEquals("and stays on the model's bars", 0L, (model.outMs - 155_000L - 2 * 500L) % 2_000L)
     }
 }
+
+class BeatSettingsRowTest {
+    private val source = (File("src/main/kotlin/com/ketvoice/app/ui/settings/SettingsScreen.kt").takeIf { it.isFile }
+        ?: File("app/src/main/kotlin/com/ketvoice/app/ui/settings/SettingsScreen.kt")).readText()
+
+    @Test fun theBeatModelRowSitsWithTheVoiceSeparationModels() {
+        val rows = Regex("ModelRow\\(([\\w.]+),").findAll(source).map { it.groupValues[1] }.toList()
+        assertEquals(listOf("com.ketvoice.app.stems.StemModel.fast", "com.ketvoice.app.stems.StemModel.hq", "com.ketvoice.app.automix.BeatModel.pack"), rows)
+        assertTrue(source.contains("\"Calage précis du rythme (Ketmix)\""))
+        assertTrue(source.contains("Un petit modèle d'IA trouve les temps et les mesures pour des mélanges mieux calés"))
+    }
+
+    @Test fun theRowHasItsTranslations() {
+        val file = File("../tools/pending-translations-beat68.json").takeIf { it.isFile } ?: File("tools/pending-translations-beat68.json")
+        val json = org.json.JSONObject(file.readText())
+        assertTrue(json.has("Calage précis du rythme (Ketmix)"))
+        for (key in json.keys()) assertEquals(10, json.getJSONObject(key).length())
+    }
+}

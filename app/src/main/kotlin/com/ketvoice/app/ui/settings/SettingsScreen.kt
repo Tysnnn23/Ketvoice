@@ -1409,6 +1409,7 @@ private fun KetmixJournalPanel() {
 private fun ColumnScope.StemSettings() {
     val fast by com.ketvoice.app.stems.StemModel.fast.state.collectAsState()
     val hq by com.ketvoice.app.stems.StemModel.hq.state.collectAsState()
+    val beat by com.ketvoice.app.automix.BeatModel.pack.state.collectAsState()
     var usage by remember { mutableStateOf(0 to 0L) }
     var confirm by remember { mutableStateOf<com.ketvoice.app.stems.ModelPack?>(null) }
     var qualityOpen by remember { mutableStateOf(false) }
@@ -1438,6 +1439,8 @@ private fun ColumnScope.StemSettings() {
         "Séparation par IA sur le téléphone (Spleeter), téléchargée une fois : {0}")
     ModelRow(com.ketvoice.app.stems.StemModel.hq, hq, "Modèle haute qualité",
         "Voix et instrumentaux bien plus nets (UVR MDX-Net), environ dix fois plus lent : {0}. Il sert téléphone en charge et améliore alors les titres déjà séparés.")
+    ModelRow(com.ketvoice.app.automix.BeatModel.pack, beat, "Calage précis du rythme (Ketmix)",
+        "Un petit modèle d'IA trouve les temps et les mesures pour des mélanges mieux calés : {0}")
     SRow(KetIcons.Sliders, "Qualité de séparation",
         sub = "Quel modèle sépare les titres",
         value = when (AppSettings.ketmixStemsQuality.value) { 1 -> "Toujours la meilleure"; 2 -> "Toujours rapide"; else -> "Automatique" }) { qualityOpen = true }
@@ -1475,10 +1478,11 @@ private fun ColumnScope.StemSettings() {
             confirmButton = { com.ketvoice.app.ui.common.KetTextButton("Fermer", { qualityOpen = false }, primary = true) })
     }
     confirm?.let { pack ->
+        val rhythm = pack === com.ketvoice.app.automix.BeatModel.pack
         com.ketvoice.app.ui.common.AppAlertDialog(
             onDismissRequest = { confirm = null },
-            title = { Text(com.ketvoice.app.data.AppText.t("Supprimer le modèle de séparation ?")) },
-            text = { Text(com.ketvoice.app.data.AppText.t("Les mix atténueront la voix au lieu de la retirer. Les titres déjà séparés restent.")) },
+            title = { Text(com.ketvoice.app.data.AppText.t(if (rhythm) "Supprimer le modèle de rythme ?" else "Supprimer le modèle de séparation ?")) },
+            text = { Text(com.ketvoice.app.data.AppText.t(if (rhythm) "Les mix reviennent au calage par analyse du son. Les titres déjà analysés restent." else "Les mix atténueront la voix au lieu de la retirer. Les titres déjà séparés restent.")) },
             confirmButton = { com.ketvoice.app.ui.common.KetTextButton("Supprimer", { confirm = null; pack.delete() },
                 primary = true, destructive = true) },
             dismissButton = { com.ketvoice.app.ui.common.KetTextButton("Annuler", { confirm = null }) })
