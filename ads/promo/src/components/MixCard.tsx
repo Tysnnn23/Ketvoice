@@ -6,7 +6,7 @@ const BARS = 46;
 const amp = (seed: number, i: number) => 0.35 + 0.65 * Math.abs(Math.sin(i * 1.7 + seed) * Math.cos(i * 0.43 + seed * 2.1));
 
 /** The live mix under the phone: the outgoing title's wave fades as the incoming one rises, a playhead crosses both. */
-export const MixCard: React.FC<{ from: number; to: number }> = ({ from, to }) => {
+export const MixCard: React.FC<{ from: number; to: number; box?: React.CSSProperties }> = ({ from, to, box }) => {
   const f = useCurrentFrame();
   const { fps } = useVideoConfig();
   const enter = interpolate(f, [0, 16], [0, 1], { easing: theme.ease.out, extrapolateLeft: "clamp", extrapolateRight: "clamp" });
@@ -24,7 +24,7 @@ export const MixCard: React.FC<{ from: number; to: number }> = ({ from, to }) =>
     </div>
   );
   return (
-    <div style={{ position: "absolute", left: 80, right: 80, top: 1500, padding: "22px 34px", borderRadius: 40, fontFamily: theme.font,
+    <div style={{ position: "absolute", left: 80, right: 80, top: 1500, ...box, padding: "22px 34px", borderRadius: 40, fontFamily: theme.font,
       background: "rgba(255,255,255,0.06)", border: `1px solid ${theme.colors.hairline}`,
       opacity: enter * (1 - exit), transform: `translateY(${(1 - enter) * 50 + exit * 30}px)` }}>
       {row("Chicago", 1.3, 1 - mix * 0.92, "rgba(245,245,247,0.55)")}

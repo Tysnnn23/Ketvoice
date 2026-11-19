@@ -13,7 +13,7 @@ const Mic: React.FC<{ color: string }> = ({ color }) => (
  * Ketvoice's voice slider (the lyrics screen's vertical pill), drawn large: it swells under the finger like
  * Ket 27's sliders, the level glides down on the beat, and the percentage follows in tabular figures.
  */
-export const VoiceSlider: React.FC<{ downAt: number; upAt: number }> = ({ downAt, upAt }) => {
+export const VoiceSlider: React.FC<{ downAt: number; upAt: number; right?: number; top?: number; label?: string }> = ({ downAt, upAt, right = 120, top = 760, label = "voix" }) => {
   const f = useCurrentFrame();
   const { fps } = useVideoConfig();
   const enter = spring({ frame: f - 4, fps, config: theme.spring.smooth });
@@ -24,7 +24,7 @@ export const VoiceSlider: React.FC<{ downAt: number; upAt: number }> = ({ downAt
   const H = 470, W = 150;
   const breathe = Math.sin(f / 26) * 4;
   return (
-    <div style={{ position: "absolute", right: 120, top: 760 + breathe, width: W, fontFamily: theme.font,
+    <div style={{ position: "absolute", right, top: top + breathe, width: W, fontFamily: theme.font,
       opacity: enter, transform: `translateX(${interpolate(enter, [0, 1], [80, 0])}px) scale(${1 + 0.06 * press}, ${1 + 0.035 * press})` }}>
       <div style={{ position: "relative", width: W, height: H, borderRadius: W / 2, overflow: "hidden",
         background: "rgba(255,255,255,0.14)", border: `1px solid ${theme.colors.hairline}` }}>
@@ -36,7 +36,7 @@ export const VoiceSlider: React.FC<{ downAt: number; upAt: number }> = ({ downAt
       <div style={{ marginTop: 26, textAlign: "center", color: theme.colors.text, fontSize: 40, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
         {Math.round(level * 100)} %
       </div>
-      <div style={{ textAlign: "center", color: theme.colors.textDim, fontSize: 24, fontWeight: 500, marginTop: 4 }}>voix</div>
+      <div style={{ textAlign: "center", color: theme.colors.textDim, fontSize: 24, fontWeight: 500, marginTop: 4 }}>{label}</div>
     </div>
   );
 };
