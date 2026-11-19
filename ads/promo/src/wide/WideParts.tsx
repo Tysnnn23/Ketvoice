@@ -25,14 +25,16 @@ export const WordLight: React.FC<{ text: string; exitAt: number; top?: number; s
 export const Screen: React.FC<{ src: string; duration: number; rate?: number; x?: number; h?: number; zoom?: number; origin?: string }> = ({ src, duration, rate = 1, x = 960, h = 820, zoom = 1.05, origin = "50% 50%" }) => {
   const f = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const enter = spring({ frame: f, fps, config: theme.spring.smooth });
-  const out = interpolate(f, [duration - 9, duration - 1], [0, 1], { ...clamp, easing: theme.ease.in });
+  // Quick in, quicker out: the cut must not sit on black.
+  const enter = spring({ frame: f, fps, config: { damping: 17, stiffness: 190, mass: 0.6 } });
+  const wash = interpolate(f, [0, 5], [0, 1], clamp);
+  const out = interpolate(f, [duration - 6, duration - 1], [0, 1], { ...clamp, easing: theme.ease.in });
   const push = interpolate(f, [0, duration], [1, zoom], { ...clamp, easing: theme.ease.inOut });
   const w = (h * 870) / 1920;
   const video = <OffthreadVideo src={staticFile(src)} playbackRate={rate} muted style={{ width: "100%", height: "100%", objectFit: "cover" }} />;
   return (
     <AbsoluteFill>
-      <AbsoluteFill style={{ opacity: 0.55 * enter * (1 - out), filter: "blur(70px) saturate(1.3)", transform: "scale(1.3)" }}>{video}</AbsoluteFill>
+      <AbsoluteFill style={{ opacity: 0.55 * wash * (1 - out * 0.6), filter: "blur(70px) saturate(1.3)", transform: "scale(1.3)" }}>{video}</AbsoluteFill>
       <AbsoluteFill style={{ background: "rgba(0,0,0,0.5)" }} />
       <div style={{ position: "absolute", left: x - w / 2, top: 160 + (900 - h) / 2, width: w, height: h, borderRadius: 46, overflow: "hidden",
         border: "1px solid rgba(255,255,255,0.16)", boxShadow: "0 50px 100px -30px rgba(0,0,0,0.8)",
