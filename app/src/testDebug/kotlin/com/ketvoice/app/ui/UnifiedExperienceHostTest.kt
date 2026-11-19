@@ -203,10 +203,12 @@ class UnifiedExperienceHostTest {
         saved.value = items
         compose.setContent { KetvoiceTheme(useDark = false) { Box { DownloadsScreen(); com.ketvoice.app.ui.common.ContextMenuHost() } } }
         // 7.3: selecting starts from a title's long press; the selection's own menu deletes.
-        compose.onNodeWithText("Titre one").performScrollTo().performTouchInput { longClick() }
+        compose.onNodeWithTag("downloads-list").performScrollToNode(hasText("Titre one"))
+        compose.onNodeWithText("Titre one").performTouchInput { longClick() }
         compose.onNodeWithTag("download-select").performClick()
         compose.onNodeWithTag("downloads-select-all").performClick()
-        compose.onNodeWithText("Titre two").performScrollTo().performTouchInput { longClick() }
+        compose.onNodeWithTag("downloads-list").performScrollToNode(hasText("Titre two"))
+        compose.onNodeWithText("Titre two").performTouchInput { longClick() }
         compose.onNodeWithTag("selection-delete").performClick()
         compose.onNode(hasText("Annuler") and hasAnyAncestor(isDialog())).performClick()
         assertTrue(items.all { it.file.exists() })
