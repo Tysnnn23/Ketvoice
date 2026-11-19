@@ -1,0 +1,207 @@
+{
+  "schema": 8,
+  "version": "6.9.0",
+  "versionCode": 140,
+  "source_commit": "8da7f5d97366064f1f68d5af3ce60dfb20fac5be",
+  "created_at": "2026-11-19T01:35:31.135920+00:00",
+  "build_origin": {
+    "kind": "github_actions_with_owner_discord_sdk",
+    "workflow": "android.yml",
+    "run_id": 44433925306,
+    "artifact": {
+      "id": 14488408211,
+      "sha256": "7afe686b8ac4efebedb46753a314dd9eefc2ddd5c63f476daaa26c361271c427"
+    },
+    "gradle": "assembleMobileRelease assembleQuestRelease assembleLiteRelease",
+    "note": "Signed by CI with the pinned keystore secret; the Discord Social SDK AAR matched its pinned SHA-256."
+  },
+  "local_validation": {
+    "result": "debug JVM/Robolectric suites for the three flavors (mobile, quest, lite), release lint and the APK checker tests passed in a cloud container without the Discord SDK",
+    "commands": [
+      "testMobileDebugUnitTest",
+      "testQuestDebugUnitTest",
+      "testLiteDebugUnitTest -ProbolectricSdks=31,32,33,34,35,36",
+      "lintMobileRelease",
+      "lintQuestRelease",
+      "lintLiteRelease",
+      "tools/test_verify_apk.py"
+    ],
+    "ci_validation": "run 44433925306: release builds, debug and release unit tests, UI text audit, lint, APK signature pin and Discord bridge packaging passed",
+    "code_review": {
+      "kind": "none independent"
+    },
+    "host_previews": "Robolectric software renders on the host (not a phone), looked at by the sub-agent and the main agent: Ketmix editor phone dark (normal, details, listening), phone light (unsaved), tablet landscape; the Quest editor was not rendered",
+    "ketmix_6_9": "editor redesign (timeline, presets, MixShape details, TransitionPreview with A/B) and the exclusives (lyric-aware mixing LyricTimes, bar loop LoopFx, variety MixVariety) checked by host tests on synthetic analyses and fake decks (KetmixEditorHostTest, MixShapeTest, KetmixExclusivesTest, automix suite); nothing was listened to and the preview decks never ran on a device; listener-placed points are not snapped to lyrics",
+    "after_local_run": "the full local run (mobile 1688, quest 1678, lite 1686, 0 failures) found one lint error (StateFlowValueCalledInComposition in KetmixPanel), fixed and lint rerun without errors; mobile and quest release unit tests passed locally (1144 each). The first CI run of 6.9.0 stayed more than 40 minutes in testMobileDebugUnitTest without any failure and was cancelled; CI now names each test as it starts and fails a stuck test task after 40 minutes; the next run passed, so the stall was not reproduced or explained",
+    "sdk_30": "Robolectric's Android 11 runtime could not be downloaded in the cloud container (Maven Central answered 429), so the Lite tests that declare sdk 30 ran on sdk 31 only; nothing ran on an Android 11 runtime",
+    "after_last_full_local_run": "nothing under app/ changed after the last complete local run"
+  },
+  "server": {
+    "function": "ketvoice-content",
+    "deployed_version": 23,
+    "changed_in_this_version": false,
+    "database": "no migration in this version"
+  },
+  "tests": {
+    "mobile": {
+      "jvm": {
+        "tests": 1688,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 3
+      },
+      "android_15_emulator_compose": {
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "quest": {
+      "jvm": {
+        "tests": 1678,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 43
+      },
+      "android_15_emulator_compose": {
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "lite": {
+      "jvm": {
+        "tests": 1686,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 3
+      },
+      "android_11_runtime": {
+        "status": "not_executed"
+      }
+    },
+    "dex_register_check": "tools/check_dex_registers.py ran in CI (Check method sizes against the Android verifier) on the three release APKs",
+    "apk_checker": "tools/test_verify_apk.py 12 tests (Lite minSdk 30 required)"
+  },
+  "lint": {
+    "mobile": {
+      "Warning": 307,
+      "Hint": 28
+    },
+    "quest": {
+      "Warning": 307,
+      "Hint": 28
+    },
+    "lite": {
+      "Warning": 329,
+      "Hint": 28
+    },
+    "errors": 0
+  },
+  "apks": [
+    {
+      "name": "Ketvoice-6.9.0.apk",
+      "sha256": "1583cfa6aab467de992403b5a8c530b44fa997e13bbf964f4e02a538c06953b8",
+      "bytes": 85229448,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "6.9.0",
+      "versionCode": 140,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-6.9.0-Quest.apk",
+      "sha256": "73895795e3a4264514864cd60530eb4163aec63f94a874e1462de18430f0f65f",
+      "bytes": 101314539,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "6.9.0",
+      "versionCode": 140,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-6.9.0-Lite.apk",
+      "sha256": "cc16b76b0a3b437b1ea65f6a4230867defa31a6dd52e262a554110a53fdf6107",
+      "bytes": 32980107,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "6.9.0",
+      "versionCode": 140,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false,
+      "edition": "lite"
+    }
+  ],
+  "discord": {
+    "sdk_present_in_ci_build": true,
+    "sdk_sha256_pinned": true,
+    "bridge_and_native_libraries_verified": true,
+    "presence_mode": "unauthenticated_rpc_through_installed_discord_app"
+  },
+  "credential_scan": {
+    "entries": 4364,
+    "findings": 0,
+    "scope": "the three release APKs",
+    "kind": "credential_patterns",
+    "explicit_private_provider_key_deny_list": false,
+    "note": "run because publish-release requires it; the other manual checks were skipped at the owner's request"
+  },
+  "release_install_smoke": {
+    "mobile": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "quest": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "lite": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    }
+  },
+  "publication_override": {
+    "authorized_by_user": true,
+    "authorized_at": "2026-11-19T01:35:31.135920+00:00",
+    "kind": "standing_authorization",
+    "user_statement": "J'autorise TOUT devient maintenant une règle.",
+    "user_statement_date": "2026-11-14",
+    "in_reply_to": "The question whether versions may be published without phone or Quest testing without asking again for each version.",
+    "recorded_in": "AGENTS.md (commit aeeda8e)",
+    "reason": "The owner made publishing validated versions without phone or Quest testing a standing rule.",
+    "scope": "physical device installation and all on-device behaviour of 6.9.0 (mobile, Lite and Quest), including accounts and sync on devices"
+  },
+  "owner_requests_2026_11_19_6_9_0": {
+    "statements": [
+      "Les transitions sont beaucoup mieux amélioré encore explore plus de source sur les auto mix de différéntes app etc et aussi le mix custom la  Mix point rend le plus simple d'utilisation avec préview etc comme sur la capture de spotify mais en mieux ! et encore mieux et plus d'exclusivités de ketmix !"
+    ],
+    "done": {
+      "editor": "one timeline with a transition box, curves drawn from the decks' automation, bar numbers, voice and lyric marks, presets, volume/bass/filter/tempo details, preview anytime with A/B, save with unsaved-changes prompt",
+      "exclusives": "lyric-aware mixing (fondu sur parole), bar loop blend, variety between transitions"
+    }
+  },
+  "not_validated": [
+    "physical phone, Lite, tablet or Quest installation, rendering and behaviour of 6.9.0",
+    "Ketmix transitions, loops and the preview by ear on any device",
+    "the editor on Quest (compiled only)",
+    "the beat model on real songs",
+    "Robolectric runs on the Android 11 runtime (sdk 30)",
+    "independent code review"
+  ],
+  "known_limitations": [
+    "No Wear OS app in this version.",
+    "Seasonal themes use code-drawn decor until the owner's pictures are added.",
+    "Android Auto's queue screen shows only the current song.",
+    "Switching between Ketvoice and Ketvoice Lite is a manual install of the other APK.",
+    "Ketogether guests hear titles their own sources can play; local files and private titles are shown as unavailable.",
+    "Launcher icons keep a background: Android fills adaptive icon backgrounds in black.",
+    "The signing certificate is the existing public Android debug identity, not a private production key."
+  ],
+  "canonical_banner_sha256": "ddc0e2c1270027f4b9dd92254374b79727ae9eaf8914e418b52e23c5b39b5966"
+}
