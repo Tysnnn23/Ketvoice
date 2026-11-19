@@ -41,6 +41,14 @@ internal object TransitionPreview {
     /** The same moment without the mix: the outgoing title stops at the exit, the incoming one starts there at once. */
     fun cutOut(plan: MixPlan) = DeckAutomation(Curve(longArrayOf(plan.outMs * 1000L, plan.outMs * 1000L + 6_000L), floatArrayOf(1f, 0f)), Curve.flat(0f))
     fun cutIn(plan: MixPlan) = DeckAutomation(Curve(longArrayOf(plan.inMs * 1000L - 6_000L, plan.inMs * 1000L), floatArrayOf(0f, 1f)), Curve.flat(0f))
+    /**
+     * A deck's volume while « Écouter » plays: full once its processors carry the levels, else (a format that
+     * bypasses them, or before they join, which on a phone is only once the deck plays) its level on the volume.
+     * Set on every step: the incoming deck waits at its level before its entry (0) until its processors join,
+     * and was left silent for the whole preview when nothing gave it its volume back.
+     */
+    fun volume(processorsOn: Boolean, automation: DeckAutomation, positionMs: Long): Float =
+        if (processorsOn) 1f else automation.gain.at(positionMs * 1000L).coerceIn(0f, 1f)
 }
 
 /**
@@ -54,15 +62,23 @@ internal object DeckPreview : PreviewEngine {
     private var job: Job? = null
     private val _state = MutableStateFlow(PreviewState())
     override val state: StateFlow<PreviewState> = _state
+    /** Main thread. Whether what played before « Écouter » plays again after it; kept when « A/B » restarts a preview. */
+    private var resumeMain = false
+    /** Counts the starts: a preview replaced by the next one (« A/B » while it plays) leaves the state and the main title to it. */
+    private var generation = 0
 
     override fun available(): Boolean = Automix.previewHost() != null
 
     override fun start(from: Track, to: Track, plan: MixPlan, plain: Boolean): Boolean {
         val h = Automix.previewHost() ?: return false
         if (!plan.mixes) return false
-        job?.cancel()
+        val previous = job?.takeIf { it.isActive }
+        if (previous == null) resumeMain = Player.state.value.playWhenReady
+        previous?.cancel()
+        generation++
         _state.value = PreviewState(running = true, loading = true, plain = plain)
-        job = scope.launch { play(h, from, to, plan, plain) }
+        // The decks of the one before are given back before this one borrows its own.
+        job = scope.launch { previous?.join(); play(h, from, to, plan, plain) }
         return true
     }
 
@@ -73,9 +89,9 @@ internal object DeckPreview : PreviewEngine {
         return playbackMediaItem(track, source.url, source.cacheKey, source.stream, source.offlineDash)
     }
 
-    private suspend fun play(h: AutomixHost, from: Track, to: Track, plan: MixPlan, plain: Boolean) {
-        val wasPlaying = Player.state.value.playWhenReady
-        if (wasPlaying) Player.pause()
+    internal suspend fun play(h: AutomixHost, from: Track, to: Track, plan: MixPlan, plain: Boolean) {
+        val mine = generation
+        if (Player.state.value.playWhenReady) Player.pause()
         val out = h.standby()
         val into = h.standby()
         try {
@@ -83,8 +99,11 @@ internal object DeckPreview : PreviewEngine {
             _state.value = PreviewState(problem = problem)
         } finally {
             h.release(out); h.release(into)
-            if (_state.value.running) _state.value = PreviewState()
-            if (wasPlaying && !Player.state.value.playWhenReady) Player.toggle()
+            if (mine == generation) {
+                if (_state.value.running) _state.value = PreviewState()
+                if (resumeMain && !Player.state.value.playWhenReady) Player.toggle()
+                resumeMain = false
+            }
         }
     }
 
@@ -112,7 +131,8 @@ internal object DeckPreview : PreviewEngine {
             if (out.playerError != null || into.playerError != null || SystemClock.elapsedRealtime() > readyBy) return "Ce titre n'a pas pu être lu"
             delay(40)
         }
-        out.volume = 1f; into.volume = 1f
+        out.volume = TransitionPreview.volume(outControl.active, outAuto, span.first)
+        into.volume = TransitionPreview.volume(inControl.active, inAuto, inFrom.coerceAtLeast(0L))
         out.play()
         // The incoming title waits for its own start when the stretch begins before it.
         val waitMs = if (inFrom < 0) (-inFrom / rate).toLong() else 0L
@@ -135,9 +155,8 @@ internal object DeckPreview : PreviewEngine {
             val outPosition = if (outEnded) out.duration.coerceAtLeast(0L) + SystemClock.elapsedRealtime() - endedAt else out.currentPosition
             _state.value = PreviewState(running = true, positionMs = outPosition, plain = plain)
             if (!into.playWhenReady && outPosition >= span.first + waitMs) into.play()
-            // A format that bypasses the processors: the levels at least, on the decks' volume.
-            if (!outControl.active) out.volume = outAuto.gain.at(outPosition * 1000L).coerceIn(0f, 1f)
-            if (!inControl.active) into.volume = inAuto.gain.at(into.currentPosition * 1000L).coerceIn(0f, 1f)
+            out.volume = TransitionPreview.volume(outControl.active, outAuto, outPosition)
+            into.volume = TransitionPreview.volume(inControl.active, inAuto, into.currentPosition)
             if (!plain && plan.beatTied && into.isPlaying && !outEnded) {
                 val error = DeckSync.errorMs(plan, outPosition, into.currentPosition)
                 smoothed = if (smoothed.isNaN()) error else smoothed * .6 + error * .4
