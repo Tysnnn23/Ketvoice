@@ -61,9 +61,21 @@ data class PlayerUiState(
     /** Replays the whole queue from its first entry once the last one ends. */
     val repeatAll: Boolean = false,
     /** Entry ids in the order the queue had before shuffle; empty while not shuffled. */
-    val linearOrder: List<String> = emptyList()
+    val linearOrder: List<String> = emptyList(),
+    /** Entries Ketvoice added itself after the listener's queue (« Lecture automatique », 7.0). */
+    val autoEntryIds: Set<String> = emptySet()
 ) {
     val current: Track? get() = if (index in queue.indices) queue[index] else null
+    /**
+     * Where the « Lecture automatique » section starts: the run of [autoEntryIds] that ends the queue after
+     * the current title (an automatic title moved in front of the listener's ones joins their queue).
+     * [queue].size when there is none.
+     */
+    val autoStart: Int get() {
+        var i = queue.size
+        while (i - 1 > index && queueEntryIds.getOrNull(i - 1) in autoEntryIds) i--
+        return i
+    }
 }
 
 /**
@@ -242,7 +254,7 @@ object Player {
                 android.util.Log.i("KetvoicePlayback", "playing_state_ms=${android.os.SystemClock.elapsedRealtime() - resolveStartedAt}")
                 _state.value.current?.let { com.ketvoice.app.data.ListeningHistory.record(it) }
                 historyGeneration = generation
-                if (radio) topUpRadio()
+                if (radio) topUpRadio() else topUpAutoplay()
             }
             if (isPlaying) _state.value.current?.let { track ->
                 if (recordedListens.size > 500) recordedListens.clear()
@@ -675,6 +687,8 @@ object Player {
             repeatAll = prev.repeatAll,
             autoplay = prev.autoplay,
             linearOrder = ordered.linearOrder,
+            autoEntryIds = if (origin == QueueOrigin.External && !sameQueue) emptySet()
+                else prev.autoEntryIds.intersect(ordered.entryIds.toSet()),
             quality = "Connexion…",
             durationMs = resolvedTrack.durationMs
         )
@@ -1071,9 +1085,12 @@ object Player {
         }
         val q = s.queue.toMutableList()
         val keys = s.queueEntryIds.toMutableList()
+        // The listener's titles go before « Lecture automatique », as in Spotify.
+        var at = s.autoStart.coerceIn(0, q.size)
         tracks.forEach { track ->
-            q.add(track)
-            keys.add(java.util.UUID.randomUUID().toString())
+            q.add(at, track)
+            keys.add(at.coerceAtMost(keys.size), java.util.UUID.randomUUID().toString())
+            at++
         }
         _state.value = s.copy(queue = q, queueEntryIds = keys, linearOrder = QueueOrder.syncLinear(s.linearOrder, keys))
     }
@@ -1199,7 +1216,138 @@ object Player {
     }
 
     fun setAutoplay(on: Boolean) {
-        _state.value = _state.value.copy(autoplay = on)
+        _state.value = (if (on) _state.value else withoutAutoplay(_state.value)).copy(autoplay = on)
+        if (on) { autoplayHeldFor = null; topUpAutoplay() } else autoplayJob?.cancel()
+    }
+
+    /** Clears the « Lecture automatique » section; it comes back only once the next title starts. */
+    fun clearAutoplay() {
+        autoplayJob?.cancel()
+        autoplayHeldFor = _state.value.queueEntryIds.getOrNull(_state.value.index)
+        _state.value = withoutAutoplay(_state.value)
+    }
+
+    /** Puts back the section [clearAutoplay] removed from [before], as long as nothing else changed since. */
+    fun restoreAutoplay(before: PlayerUiState): Boolean {
+        val s = _state.value
+        if (s.queueEntryIds != before.queueEntryIds.take(before.autoStart) || s.index != before.index) return false
+        _state.value = s.copy(queue = before.queue, queueEntryIds = before.queueEntryIds, autoEntryIds = before.autoEntryIds,
+            linearOrder = before.linearOrder)
+        autoplayHeldFor = null
+        return true
+    }
+
+    /** [s] without the automatic titles still to come. */
+    private fun withoutAutoplay(s: PlayerUiState): PlayerUiState {
+        val start = s.autoStart
+        if (start >= s.queue.size) return s
+        warmedNextEntry = null
+        val keys = s.queueEntryIds.take(start)
+        return s.copy(queue = s.queue.take(start), queueEntryIds = keys, autoEntryIds = s.autoEntryIds.intersect(keys.toSet()),
+            linearOrder = s.linearOrder.filter { it in keys })
+    }
+
+    // ------------------------------------------------------------ Lecture automatique (7.0)
+    /** One « Lecture automatique » run: the title it grows from, its candidates and what it already queued. */
+    private class AutoplaySession(val seedEntry: String) {
+        val pool = ArrayList<Track>()
+        val fetched = HashSet<String>()
+        val heard = LinkedHashSet<String>()
+    }
+    @Volatile private var autoplaySession: AutoplaySession? = null
+    @Volatile private var autoplayJob: Job? = null
+    /** The entry playing when the listener cleared the section: no refill before the next title. */
+    @Volatile private var autoplayHeldFor: String? = null
+
+    /** True while this phone follows someone else's Ketogether session: the host decides what comes next. */
+    private fun ketogetherGuest(): Boolean = runCatching {
+        val ui = com.ketvoice.app.together.Ketogether.ui.value
+        ui.role == com.ketvoice.app.together.TogetherRole.Guest &&
+            ui.phase != com.ketvoice.app.together.TogetherPhase.Idle && ui.phase != com.ketvoice.app.together.TogetherPhase.Ended
+    }.getOrDefault(false)
+
+    /** Adds titles of the same style a few titles before the queue runs out, silently. */
+    private fun topUpAutoplay() {
+        val s = _state.value
+        if (!s.autoplay || radio || s.repeatAll || ketogetherGuest() || s.current == null) return
+        if (s.queue.size - 1 - s.index > AutoplayRules.AHEAD) return
+        val playing = s.queueEntryIds.getOrNull(s.index)
+        if (autoplayHeldFor != null && autoplayHeldFor == playing) return
+        autoplayHeldFor = null
+        if (autoplayJob?.isActive == true) return
+        autoplayJob = scope.launch {
+            val more = autoplayBatch() ?: return@launch
+            if (!_state.value.autoplay || radio || more.isEmpty()) return@launch
+            appendAutoplay(more)
+        }
+    }
+
+    private fun appendAutoplay(tracks: List<Track>) {
+        val s = _state.value
+        val keys = tracks.map { java.util.UUID.randomUUID().toString() }
+        val all = s.queueEntryIds + keys
+        _state.value = s.copy(queue = s.queue + tracks, queueEntryIds = all,
+            autoEntryIds = (s.autoEntryIds + keys).intersect(all.toSet()), linearOrder = QueueOrder.syncLinear(s.linearOrder, all))
+    }
+
+    /**
+     * The next automatic titles: YouTube Music's radio of the title the run grows from, then the
+     * catalogue's radio of its artist, then downloads alike when there is no network. Null when the
+     * queue changed meanwhile.
+     */
+    private suspend fun autoplayBatch(): List<Track>? {
+        val s = _state.value
+        if (s.queue.isEmpty()) return null
+        val seedAt = (s.autoStart - 1).coerceIn(0, s.queue.lastIndex)
+        val seedEntry = s.queueEntryIds.getOrNull(seedAt) ?: return null
+        val session = autoplaySession?.takeIf { it.seedEntry == seedEntry } ?: AutoplaySession(seedEntry).also { autoplaySession = it }
+        val seed = s.queue[seedAt]
+        val allows: (Track) -> Boolean = { com.ketvoice.app.data.ArtistPrefs.allows(it) }
+        val feel: (Track) -> AutoplayRules.Feel? = { t ->
+            runCatching { com.ketvoice.app.smartlib.SmartFacts.signals(t) }.getOrNull()?.let { AutoplayRules.Feel(it.bpm, it.loudnessDb) }
+        }
+        fun take(): List<Track> = AutoplayRules.pick(session.pool, seed, _state.value.queue, session.heard, allows, feel)
+        var batch = take()
+        // Once the seed's radio is used up, the titles the run queued lead it further (the latest first).
+        val leads = listOf(seed) + s.queue.drop(seedAt + 1).reversed()
+        for (lead in leads) {
+            if (batch.size >= AutoplayRules.BATCH / 2) break
+            if (!session.fetched.add(lead.id)) continue
+            session.pool += autoplayCandidates(lead)
+            batch = take()
+        }
+        if (batch.isEmpty()) batch = runCatching {
+            val downloads = com.ketvoice.app.data.Downloader.items.value.map { it.track }
+            val facts = com.ketvoice.app.smartlib.SmartFacts.build(downloads + seed)
+            AutoplayRules.offline(seed, downloads, facts, _state.value.queue, session.heard, allows, kotlin.random.Random(System.nanoTime()))
+        }.getOrDefault(emptyList())
+        if (seedEntry !in _state.value.queueEntryIds) return null
+        if (session.heard.size > 1_500) session.heard.clear()
+        batch.forEach { session.heard += AutoplayRules.heardKeys(it) }
+        return batch
+    }
+
+    /** Titles of the same style as [seed]: its YouTube Music radio, else its artist's catalogue radio. */
+    private suspend fun autoplayCandidates(seed: Track): List<Track> {
+        val video = seed.videoId?.takeIf { it.isNotBlank() } ?: seed.id.removePrefix("yt:").takeIf { seed.id.startsWith("yt:") }
+            ?: runCatching { autoplayVideoOf(seed) }.getOrNull()
+        val radio = video?.let { v ->
+            com.ketvoice.app.data.YouTubeApi.request("next", org.json.JSONObject().put("videoId", v).put("playlistId", "RDAMVM$v").put("isAudioOnly", true),
+                authenticated = false)?.let { runCatching { AutoplayRules.parseRadio(it, v) }.getOrNull() }
+        }.orEmpty()
+        if (radio.isNotEmpty()) return radio
+        val artist = com.ketvoice.app.data.MediaOverrides.mainArtist(seed.artist)
+        return runCatching { com.ketvoice.app.data.CatalogRepo.artistRadio(artist, seed.artistId?.takeIf { seed.addon == "um" }) }
+            .getOrDefault(emptyList())
+    }
+
+    /** The YouTube Music video of a title that has none (a catalogue or local title), when a search finds the same recording. */
+    private suspend fun autoplayVideoOf(seed: Track): String? {
+        val artist = com.ketvoice.app.data.MediaOverrides.mainArtist(seed.artist)
+        val found = MusicApi.searchYtMusic("${seed.title} $artist")
+        val same = com.ketvoice.app.data.WeeklyDiscoveries.recording(seed)
+        return (found.firstOrNull { com.ketvoice.app.data.WeeklyDiscoveries.recording(it) == same }
+            ?: found.firstOrNull { AutoplayRules.artistKey(it) == AutoplayRules.artistKey(seed) })?.videoId
     }
 
     private fun label(s: MusicApi.StreamInfo): String = when {
@@ -1367,14 +1515,15 @@ object Player {
         scope.launch {
             try {
                 val memory = radioMemory
-                val related = if (radio && memory != null) radioBatch(track, memory.apply { rememberAll(s.queue) }) else MusicApi.searchYtMusic(track.artist).filter { candidate ->
-                    // An artist the listener blocked is never added by Ketvoice itself.
-                    com.ketvoice.app.data.ArtistPrefs.allows(candidate) && s.queue.none { it.id == candidate.id || (it.title.equals(candidate.title, true) && it.artist.equals(candidate.artist, true)) }
-                }.take(8)
+                // Blocked artists are never added by Ketvoice itself (both the radio and autoplay filter them).
+                val related = if (radio && memory != null) radioBatch(track, memory.apply { rememberAll(s.queue) })
+                    else { autoplayJob?.cancel(); autoplayBatch().orEmpty() }
                 if (gen != generation) return@launch
                 if (related.isNotEmpty()) {
-                    val grown = _state.value.queue + related
-                    startPlayback(grown[_state.value.queue.size], grown, _state.value.queue.size, 0L, true, QueueOrigin.Internal)
+                    val end = _state.value.queue.size
+                    if (radio) enqueue(related) else appendAutoplay(related)
+                    val grown = _state.value
+                    startPlayback(grown.queue[end], grown.queue, end, 0L, true, QueueOrigin.Internal)
                 }
                 else _state.value = _state.value.copy(isPlaying = false, playWhenReady = false, buffering = false)
             } finally { extending = false }
@@ -1414,11 +1563,13 @@ object Player {
             _state.value = s.copy(shuffle = on, linearOrder = emptyList())
             return
         }
-        val order = if (on) QueueOrder.shuffle(s.queue, s.queueEntryIds, s.index,
+        // Only the listener's titles are shuffled: « Lecture automatique » is built again after them.
+        val mine = if (on) withoutAutoplay(s) else s
+        val order = if (on) QueueOrder.shuffle(mine.queue, mine.queueEntryIds, mine.index,
                 recent = recentlyHeard(), spread = AppSettings.smartShuffle.value)
             else QueueOrder.restore(s.queue, s.queueEntryIds, s.index, s.linearOrder)
         warmedNextEntry = null
-        _state.value = s.copy(shuffle = on, queue = order.queue, queueEntryIds = order.entryIds, index = order.index,
+        _state.value = mine.copy(shuffle = on, queue = order.queue, queueEntryIds = order.entryIds, index = order.index,
             linearOrder = order.linearOrder)
         // The new order has another next title: warm it, as at the start of a track.
         if (controller != null && !resolving) s.current?.let { prefetchNext(generation, it) }

@@ -97,6 +97,8 @@ internal fun QueuePane(state: PlayerUiState, modifier: Modifier = Modifier, show
     val track = state.current ?: return
     val art by ArtworkRepo.covers.collectAsState()
     val upcoming = state.queue.drop(state.index + 1)
+    // The listener's titles, then « Lecture automatique » (7.0), each its own section as in Spotify.
+    val autoFrom = (state.autoStart - state.index - 1).coerceIn(0, upcoming.size)
     val list = rememberLazyListState()
     val scope = rememberCoroutineScope()
     val haptic = rememberHaptics()
@@ -165,41 +167,10 @@ internal fun QueuePane(state: PlayerUiState, modifier: Modifier = Modifier, show
         }
     }
 
-    Column(modifier) {
-        // Inter is wide, so the name of the queue keeps a line of its own whenever the actions do not fit beside it.
-        QueueHeaderRow(title = {
-            Text("File d'attente", color = Color.White, style = com.ketvoice.app.theme.Ket27.Type.title3, maxLines = 1,
-                overflow = TextOverflow.Ellipsis, modifier = it.asHeading())
-        }) {
-            if (selecting) {
-                val all = state.queueEntryIds.drop(state.index + 1).toSet()
-                QueueAction(if (chosen.size == all.size && all.isNotEmpty()) "Aucun" else "Tout", tag = "queue-select-all") {
-                    chosen = if (chosen.size == all.size) emptySet() else all
-                }
-                QueueAction("Terminé", tag = "queue-select-done") { selecting = false; chosen = emptySet() }
-            } else {
-                if (upcoming.size > 1) QueueAction("Sélectionner", tag = "queue-select") { selecting = true }
-                if (state.queue.size > 1) QueueAction("Enregistrer", enabled = !saving, tag = "queue-save", onClick = ::save)
-                if (upcoming.isNotEmpty()) QueueAction("Vider", tag = "queue-clear", onClick = ::clear)
-            }
-        }
-        if (showModes) {
-            Spacer(Modifier.height(10.dp))
-            QueueModes(state)
-            // What Ketmix is about to do, right under its switch.
-            AutomixStatusLine(Modifier.padding(top = 8.dp).fillMaxWidth())
-        }
-        Spacer(Modifier.height(if (showModes) 12.dp else 17.dp))
-        Text("Lecture en cours", color = Color.White.copy(alpha = .78f), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-        Spacer(Modifier.height(10.dp))
-        QueueRow(track, com.ketvoice.app.data.MediaOverrides.cover(track, art["t:${track.id}"] ?: track.coverUrl), current = true, playing = state.isPlaying,
-            onPlay = { }, onRemove = { Player.removeAt(state.index) })
-        Spacer(Modifier.height(16.dp))
-        Text("À suivre depuis : ${track.artist}", color = Color(0xFFB7B7BD), fontSize = 14.sp,
-            fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        Spacer(Modifier.height(9.dp))
-        LazyColumn(Modifier.weight(1f).fillMaxWidth().testTag("queue-list"), state = list, contentPadding = PaddingValues(bottom = 12.dp)) {
-            itemsIndexed(upcoming, key = { i, t -> state.queueEntryIds.getOrNull(state.index + 1 + i) ?: "${t.id}:${state.index + 1 + i}" }) { i, t ->
+    /** Rows of the upcoming titles [part], [from] titles after the current one. */
+    fun androidx.compose.foundation.lazy.LazyListScope.queueRows(part: List<Track>, from: Int) {
+        itemsIndexed(part, key = { j, t -> state.queueEntryIds.getOrNull(state.index + 1 + from + j) ?: "${t.id}:${state.index + 1 + from + j}" }) { j, t ->
+                val i = from + j
                 val index = state.index + 1 + i
                 val key = state.queueEntryIds.getOrNull(index) ?: "${t.id}:$index"
                 val dragging = draggingKey == key
@@ -237,8 +208,56 @@ internal fun QueuePane(state: PlayerUiState, modifier: Modifier = Modifier, show
                     onLongPress = { if (!selecting) { selecting = true; chosen = setOf(key); haptic(Haptics.Kind.Tick) } },
                     onPlay = { if (selecting) chosen = if (key in chosen) chosen - key else chosen + key else Player.jumpTo(index) },
                     onRemove = { remove(index, t) })
+        }
+    }
+
+    Column(modifier) {
+        // Inter is wide, so the name of the queue keeps a line of its own whenever the actions do not fit beside it.
+        QueueHeaderRow(title = {
+            Text("File d'attente", color = Color.White, style = com.ketvoice.app.theme.Ket27.Type.title3, maxLines = 1,
+                overflow = TextOverflow.Ellipsis, modifier = it.asHeading())
+        }) {
+            if (selecting) {
+                val all = state.queueEntryIds.drop(state.index + 1).toSet()
+                QueueAction(if (chosen.size == all.size && all.isNotEmpty()) "Aucun" else "Tout", tag = "queue-select-all") {
+                    chosen = if (chosen.size == all.size) emptySet() else all
+                }
+                QueueAction("Terminé", tag = "queue-select-done") { selecting = false; chosen = emptySet() }
+            } else {
+                if (upcoming.size > 1) QueueAction("Sélectionner", tag = "queue-select") { selecting = true }
+                if (state.queue.size > 1) QueueAction("Enregistrer", enabled = !saving, tag = "queue-save", onClick = ::save)
+                if (upcoming.isNotEmpty()) QueueAction("Vider", tag = "queue-clear", onClick = ::clear)
             }
-            if (upcoming.isEmpty()) item {
+        }
+        if (showModes) {
+            Spacer(Modifier.height(10.dp))
+            QueueModes(state)
+            // What Ketmix is about to do, right under its switch.
+            AutomixStatusLine(Modifier.padding(top = 8.dp).fillMaxWidth())
+        }
+        Spacer(Modifier.height(if (showModes) 12.dp else 17.dp))
+        Text("Lecture en cours", color = Color.White.copy(alpha = .78f), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+        Spacer(Modifier.height(10.dp))
+        QueueRow(track, com.ketvoice.app.data.MediaOverrides.cover(track, art["t:${track.id}"] ?: track.coverUrl), current = true, playing = state.isPlaying,
+            onPlay = { }, onRemove = { Player.removeAt(state.index) })
+        Spacer(Modifier.height(16.dp))
+        if (autoFrom > 0 || !state.autoplay) {
+            Text("À suivre depuis : ${track.artist}", color = Color(0xFFB7B7BD), fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Spacer(Modifier.height(9.dp))
+        }
+        LazyColumn(Modifier.weight(1f).fillMaxWidth().testTag("queue-list"), state = list, contentPadding = PaddingValues(bottom = 12.dp)) {
+            queueRows(upcoming.take(autoFrom), 0)
+            if (!selecting) item(key = "autoplay-header") {
+                AutoplayHeader(state.autoplay, count = upcoming.size - autoFrom, spaced = autoFrom > 0,
+                    onClear = {
+                        val before = Player.state.value
+                        Player.clearAutoplay()
+                        announce("Lecture automatique effacée") { Player.restoreAutoplay(before) }
+                    })
+            }
+            queueRows(upcoming.drop(autoFrom), autoFrom)
+            if (upcoming.isEmpty() && !state.autoplay) item {
                 EmptyState("Aucun autre titre dans la file", "Choisissez un titre puis utilisez Lire ensuite pour préparer la suite.",
                     "Ajouter des titres", icon = com.ketvoice.app.ui.common.KetIcons.Playlist, onAction = ::openTrackSearch)
             }
@@ -286,6 +305,29 @@ private fun reorderWhileDragging(key: String, offset: Float, list: LazyListState
     if (row.index == first || row.index + step == first) list.requestScrollToItem(first, firstOffset)
     onStep()
     return if (step > 0) below!!.toFloat() else -above!!.toFloat()
+}
+
+/**
+ * The « Lecture automatique » section (7.0): what follows the listener's queue, with its switch and,
+ * when it holds titles, « Effacer ». Off, it says what turning it on does.
+ */
+@Composable
+private fun AutoplayHeader(on: Boolean, count: Int, spaced: Boolean, onClear: () -> Unit) {
+    Column(Modifier.fillMaxWidth().padding(top = if (spaced) 18.dp else 0.dp, bottom = 6.dp).testTag("queue-autoplay")) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("Lecture automatique", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1,
+                overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).asHeading())
+            if (on && count > 0) QueueAction("Effacer", tag = "queue-autoplay-clear", onClick = onClear)
+            com.ketvoice.app.ui.common.LiquidGlassSwitch(on, { Player.setAutoplay(it) },
+                Modifier.padding(start = 6.dp).testTag("queue-autoplay-switch"))
+        }
+        Text(when {
+            !on -> "Activez-la pour enchaîner des titres du même style après votre file."
+            count == 0 -> "Recherche de titres du même style…"
+            else -> "Des titres du même style suivent votre file."
+        }, color = Color.White.copy(alpha = .62f), fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(end = 70.dp))
+    }
 }
 
 @Composable
