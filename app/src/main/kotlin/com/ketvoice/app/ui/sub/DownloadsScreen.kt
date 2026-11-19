@@ -10,6 +10,7 @@ import com.ketvoice.app.ui.common.trackRowClick
 import com.ketvoice.app.ui.common.SwipeTrackActions
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
@@ -78,6 +79,8 @@ fun DownloadsScreen() {
     var filterName by rememberSaveable { mutableStateOf(DownloadFilter.All.name) }
     var sortName by rememberSaveable { mutableStateOf(DownloadSort.Recent.name) }
     var deleting by remember { mutableStateOf(false) }
+    // 7.3: the titles « Retélécharger en meilleure qualité » is checking, from the selection's menu.
+    var upgradeIds by remember { mutableStateOf<List<String>?>(null) }
     var deleteError by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val keyboard = LocalSoftwareKeyboardController.current
@@ -119,6 +122,42 @@ fun DownloadsScreen() {
             else p to com.ketvoice.app.ui.library.AlbumDownload(here, p.entries.size)
         }
     }
+    // 7.3: no « Sélectionner » in the bar any more. A long press on a title opens its menu with « Sélectionner »
+    // first; while selecting, taps tick titles and a long press opens one menu for the whole selection.
+    fun toggle(ids: List<String>) {
+        selected = if (ids.all { it in selected }) selected - ids.toSet() else (selected + ids).distinct()
+    }
+    fun chosenItems(): List<Downloader.Item> = (sections.saved + saved).distinctBy { it.track.id }.filter { it.track.id in selected }
+    fun openSelectionMenu(anchor: androidx.compose.ui.geometry.Rect?) {
+        val items = chosenItems()
+        val first = items.firstOrNull()?.track ?: return
+        ContextMenus.open(first, anchor, only = true,
+            headline = AppText.t(if (items.size == 1) "1 titre sélectionné" else "${items.size} titres sélectionnés"),
+            subline = items.map { it.track.artist }.distinct().take(3).joinToString(", "), extra = listOf(
+                ContextMenus.Item("Écouter", KetIcons.Play, tag = "selection-play") {
+                    Player.setShuffle(false); Player.playQueue(items.map { it.track }); selecting = false; selected = emptyList()
+                },
+                ContextMenus.Item("Ajouter à une playlist", KetIcons.Plus, tag = "selection-playlist") {
+                    AppUi.addTracksToPlaylist.value = items.map { it.track }; selecting = false; selected = emptyList()
+                },
+                ContextMenus.Item("Supprimer", KetIcons.Trash, destructive = true, tag = "selection-delete") { deleteIds = items.map { it.track.id } },
+                ContextMenus.Item("Retélécharger en meilleure qualité", KetIcons.Download, tag = "selection-upgrade") {
+                    upgradeIds = items.map { it.track.id }
+                }))
+    }
+    fun openTitleMenu(track: Track, anchor: androidx.compose.ui.geometry.Rect?) {
+        if (selecting) {
+            if (track.id !in selected) selected = selected + track.id
+            openSelectionMenu(anchor)
+        } else ContextMenus.open(track, anchor, listOf(ContextMenus.Item("Sélectionner", KetIcons.Check, tag = "download-select") {
+            selecting = true; selected = listOf(track.id)
+        }))
+    }
+    fun holdGroup(ids: List<String>) {
+        if (!selecting) { selecting = true; selected = ids }
+        else { selected = (selected + ids).distinct(); openSelectionMenu(null) }
+    }
+    androidx.activity.compose.BackHandler(enabled = selecting) { selecting = false; selected = emptyList() }
     // An album opens as an album (7.0): its cover, its titles and their download state, « Supprimer le téléchargement ».
     if (chosen != null && !selecting) {
         Box(Modifier.fillMaxSize().pageBackground(theme).statusBarsPadding()) {
@@ -186,14 +225,6 @@ fun DownloadsScreen() {
                                 })
                             }
                         }
-                        if (selecting) FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp),
-                            verticalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()
-                                .clip(RoundedCornerShape(16.dp)).background(theme.card).padding(horizontal = 8.dp)) {
-                            com.ketvoice.app.ui.common.KetTextButton("Tout sélectionner", { selected = sections.saved.map { it.track.id } })
-                            IconButton(onClick = { deleteIds = selected }, enabled = selected.isNotEmpty()) { Icon(KetIcons.Trash, "Supprimer", tint = DESTRUCTIVE) }
-                            Text(selected.size.toString(), localize = false, color = theme.secondary,
-                                modifier = Modifier.align(Alignment.CenterVertically))
-                        }
                     }
                     val crumb = chosen?.title ?: chosenArtist?.name
                     if (crumb == null && autoOnly) SmartOfflineCrumb { SmartOffline.showAutoOnly.value = false }
@@ -212,7 +243,8 @@ fun DownloadsScreen() {
                     Column(Modifier.fillMaxWidth().padding(vertical = 4.dp).clip(RoundedCornerShape(16.dp)).background(theme.card)
                         .padding(14.dp).testTag("transfer-download")) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Cover(track.title, com.ketvoice.app.data.MediaOverrides.cover(track, artwork["t:${track.id}"] ?: track.coverUrl), 48.dp, 6.dp)
+                            Cover(track.title, com.ketvoice.app.data.MediaOverrides.cover(track, artwork["t:${track.id}"] ?: track.coverUrl), 48.dp, 6.dp,
+                                Modifier.downloadFill(track.id, 6.dp))
                             Column(Modifier.padding(start = 12.dp).weight(1f)) {
                                 TrackTitle(track.title, color = theme.onBackground)
                                 Text(track.artist, localize = false, color = theme.secondary, fontSize = 13.sp,
@@ -242,8 +274,8 @@ fun DownloadsScreen() {
                         meta = size(base.saved.filter { it.track.id in ids }.sumOf { it.bytes }),
                         cover = ArtworkRepo.coverForTrack(group.tracks.first()) ?: group.tracks.first().coverUrl,
                         round = false, checked = if (selecting) ids.all { it in selected } else null,
-                        badge = com.ketvoice.app.ui.library.AlbumDownloads.state(group, downloadedIds)) {
-                        if (selecting) selected = if (ids.all { it in selected }) selected - ids.toSet() else (selected + ids).distinct()
+                        badge = com.ketvoice.app.ui.library.AlbumDownloads.state(group, downloadedIds), onLongClick = { holdGroup(ids) }) {
+                        if (selecting) toggle(ids)
                         else albumKey = group.key
                     }
                 }
@@ -253,8 +285,8 @@ fun DownloadsScreen() {
                         title = artist.name, subtitle = null,
                         meta = AppText.t(if (ids.size == 1) "1 titre" else "${ids.size} titres") + " · " + size(artist.bytes),
                         cover = artist.items.first().track.let { ArtworkRepo.coverForTrack(it) ?: it.coverUrl },
-                        round = true, checked = if (selecting) ids.all { it in selected } else null) {
-                        if (selecting) selected = if (ids.all { it in selected }) selected - ids.toSet() else (selected + ids).distinct()
+                        round = true, checked = if (selecting) ids.all { it in selected } else null, onLongClick = { holdGroup(ids) }) {
+                        if (selecting) toggle(ids)
                         else artistKey = artist.key
                     }
                 }
@@ -264,7 +296,7 @@ fun DownloadsScreen() {
                     SwipeTrackActions(track, if (Motion.reduced) Modifier else Modifier.animateItem(), enabled = !selecting) {
                         SavedDownloadRow(item, player.current?.id == track.id, track.id in autoIds, selecting, track.id in selected,
                             cover = com.ketvoice.app.data.MediaOverrides.cover(track, artwork["t:${track.id}"] ?: track.coverUrl),
-                            size = size(item.bytes),
+                            size = size(item.bytes), onMenu = { openTitleMenu(track, it) },
                             onClick = {
                                 if (selecting) selected = if (track.id in selected) selected - track.id else selected + track.id
                                 else {
@@ -292,17 +324,19 @@ fun DownloadsScreen() {
         }
     }
     CompositionLocalProvider(com.ketvoice.app.glass.LocalBackdropLayer provides backdrop) {
-        com.ketvoice.app.ui.common.CollectionTopBar(AppText.t("Téléchargements"), collapse, { AppUi.closeOverlay() },
-            onPlay = if (saved.isNotEmpty() && !selecting) ({ Player.setShuffle(false); Player.playQueue(saved.map { it.track }) }) else null,
-            titleTag = "downloads-collapsed-title") {
-            // Sized to its word, so the bar's capsule keeps the room to name the page once the header has gone.
-            if (saved.isNotEmpty()) LiquidGlassButton({ selecting = !selecting; selected = emptyList() },
-                Modifier.widthIn(min = 48.dp).width(IntrinsicSize.Max).height(48.dp), shape = RoundedCornerShape(24.dp)) {
-                Text(if (selecting) "Annuler" else "Sélectionner", color = theme.onBackground,
-                    fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 18.dp))
+        // 7.3 (owner): the bar names nothing and has no « Sélectionner »; while selecting it counts the titles
+        // ticked and offers « Tout » and « Annuler ».
+        com.ketvoice.app.ui.common.CollectionTopBar(
+            AppText.t(if (selected.size == 1) "1 sélectionné" else "${selected.size} sélectionnés"),
+            if (selecting) 1f else 0f, { if (selecting) { selecting = false; selected = emptyList() } else AppUi.closeOverlay() },
+            titleTag = "downloads-selection-count") {
+            if (selecting) {
+                val all = sections.saved.map { it.track.id }
+                SelectionBarButton("Tout", "downloads-select-all") { selected = (selected + all).distinct() }
+                SelectionBarButton("Annuler", "downloads-select-cancel") { selecting = false; selected = emptyList() }
             }
             // The order of the titles, from the bar's « … » as Apple Music sorts its lists.
-            if (saved.size > 1) com.ketvoice.app.ui.common.KetMenuButton(listOf(
+            else if (saved.size > 1) com.ketvoice.app.ui.common.KetMenuButton(listOf(
                 DownloadSort.entries.map { option ->
                     com.ketvoice.app.ui.common.KetMenuItem(option.label, checked = option == sort, tag = "downloads-sort:" + option.name) { sortName = option.name }
                 },
@@ -310,6 +344,11 @@ fun DownloadsScreen() {
                 "Options", tag = "downloads-menu")
         }
     }
+    }
+    upgradeIds?.let { ids ->
+        UpgradeDialog(saved.filter { it.track.id in ids }, onDismiss = { upgradeIds = null }) {
+            upgradeIds = null; selecting = false; selected = emptyList()
+        }
     }
     if (deleteItems.isNotEmpty()) {
         com.ketvoice.app.ui.common.AppAlertDialog(onDismissRequest = { if (!deleting) deleteIds = emptyList() },
@@ -340,17 +379,18 @@ fun DownloadsScreen() {
  */
 @Composable
 private fun SavedDownloadRow(item: Downloader.Item, current: Boolean, auto: Boolean, selecting: Boolean, checked: Boolean,
-                             cover: String?, size: String, onClick: () -> Unit, onDelete: () -> Unit) {
+                             cover: String?, size: String, onMenu: (androidx.compose.ui.geometry.Rect?) -> Unit,
+                             onClick: () -> Unit, onDelete: () -> Unit) {
     val theme = LocalTheme.current
     val track = item.track
     var menu by remember { mutableStateOf(false) }
     val menuAnchor = com.ketvoice.app.ui.common.rememberRowAnchor()
     Column(Modifier.fillMaxWidth().testTag("saved-download")) {
         Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
-            .then(if (selecting) Modifier.clickable(role = Role.Checkbox, onClick = onClick) else Modifier.trackRowClick(track, onClick = onClick))
+            .trackRowClick(track, role = if (selecting) Role.Checkbox else Role.Button, onMenu = onMenu, onClick = onClick)
             .padding(start = 4.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             if (selecting) com.ketvoice.app.ui.common.KetCheckbox(checked, onCheckedChange = null)
-            Cover(track.title, cover, 48.dp, 6.dp)
+            Cover(track.title, cover, 48.dp, 6.dp, Modifier.downloadFill(track.id, 6.dp))
             Column(Modifier.padding(start = 12.dp).weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
                 TrackTitle(track.title, color = if (current) theme.accent else theme.onBackground, selected = current, maxLines = 1)
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -441,6 +481,16 @@ private fun Legend(color: Color, label: String) {
     }
 }
 
+/** A word in the bar while selecting (« Tout », « Annuler »), sized to it. */
+@Composable
+private fun SelectionBarButton(label: String, tag: String, onClick: () -> Unit) {
+    LiquidGlassButton(onClick, Modifier.widthIn(min = 48.dp).width(IntrinsicSize.Max).height(48.dp).testTag(tag),
+        shape = RoundedCornerShape(24.dp)) {
+        Text(label, color = LocalTheme.current.onBackground, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(horizontal = 16.dp))
+    }
+}
+
 /** Titles, albums or artists: one segmented control whose selection is a sliding lens of glass. */
 @Composable
 internal fun DownloadViewSwitch(view: Int, tag: String = "downloads-view", modifier: Modifier = Modifier, onView: (Int) -> Unit) {
@@ -522,11 +572,16 @@ internal object DownloadsLayout {
  * While selecting, a tap ticks all of its titles, and the tick sits on the cover.
  */
 @Composable
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 internal fun DownloadCoverCell(title: String, subtitle: String?, meta: String, cover: String?, round: Boolean,
-                               checked: Boolean?, badge: com.ketvoice.app.ui.library.AlbumDownload? = null, onClick: () -> Unit) {
+                               checked: Boolean?, badge: com.ketvoice.app.ui.library.AlbumDownload? = null,
+                               onLongClick: (() -> Unit)? = null, onClick: () -> Unit) {
     val theme = LocalTheme.current
+    val haptic = com.ketvoice.app.ui.motion.rememberHaptics()
     Column(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 14.dp).clip(RoundedCornerShape(12.dp))
-        .clickable(role = if (checked != null) Role.Checkbox else Role.Button, onClick = onClick).testTag("download-cover-cell"),
+        .combinedClickable(role = if (checked != null) Role.Checkbox else Role.Button, onClick = onClick,
+            onLongClick = onLongClick?.let { hold -> { haptic(com.ketvoice.app.ui.motion.Haptics.Kind.Tick); hold() } })
+        .testTag("download-cover-cell"),
         horizontalAlignment = if (round) Alignment.CenterHorizontally else Alignment.Start) {
         BoxWithConstraints(Modifier.fillMaxWidth()) {
             val side = maxWidth

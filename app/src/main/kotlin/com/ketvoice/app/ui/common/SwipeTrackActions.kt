@@ -127,6 +127,8 @@ internal fun SwipeTrackActions(track: Track, modifier: Modifier = Modifier, enab
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun Modifier.trackRowClick(track: Track, enabled: Boolean = true, role: Role? = Role.Button,
+                                    /** 7.3: a page's own menu for the long press (Downloads adds « Sélectionner »), from the row's bounds. */
+                                    onMenu: ((androidx.compose.ui.geometry.Rect?) -> Unit)? = null,
                                     onClick: () -> Unit): Modifier {
     val haptic = rememberHaptics()
     // Held, the row lifts as a preview of itself and a glass menu unfolds from it; the "more" button still opens the full sheet.
@@ -137,8 +139,9 @@ internal fun Modifier.trackRowClick(track: Track, enabled: Boolean = true, role:
     val ink = LocalTheme.current.onBackground
     val highlight = remember(ink) { RowHighlight(ink) }
     val source = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-    return rowAnchor(anchor).largeScreenTrackRow(track) { ContextMenus.open(track, anchor.bounds()) }
+    val menu = onMenu ?: { bounds -> ContextMenus.open(track, bounds) }
+    return rowAnchor(anchor).largeScreenTrackRow(track) { menu(anchor.bounds()) }
         .combinedClickable(interactionSource = source, indication = highlight,
         enabled = enabled, role = role, onLongClickLabel = AppText.t("Options"),
-        onLongClick = { haptic(Haptics.Kind.Tick); ContextMenus.open(track, anchor.bounds()) }, onClick = onClick)
+        onLongClick = { haptic(Haptics.Kind.Tick); menu(anchor.bounds()) }, onClick = onClick)
 }
