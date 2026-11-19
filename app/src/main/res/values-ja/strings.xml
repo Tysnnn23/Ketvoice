@@ -19,6 +19,8 @@
     <string name="widget_mix_desc">今のミックス：タップで再生</string>
     <string name="widget_mini">Ketvoice · ミニ</string>
     <string name="widget_mini_desc">ジャケット、再生/一時停止、次へ</string>
+    <string name="widget_controls">Ketvoice · コントロール</string>
+    <string name="widget_controls_desc">前へ、再生/一時停止、次へ。最小サイズでも</string>
     <string name="widget_now_playing">Ketvoice · 再生中</string>
     <string name="widget_now_playing_desc">ジャケット、タイトル、操作。どのサイズでも</string>
     <string name="widget_lyrics">Ketvoice · ライブ歌詞</string>

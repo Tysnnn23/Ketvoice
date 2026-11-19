@@ -19,6 +19,8 @@
     <string name="widget_mix_desc">El mix del momento: un toque lo reproduce</string>
     <string name="widget_mini">Ketvoice · Mini</string>
     <string name="widget_mini_desc">Portada, reproducir/pausa y siguiente</string>
+    <string name="widget_controls">Ketvoice · Controles</string>
+    <string name="widget_controls_desc">Anterior, reproducir/pausa y siguiente, incluso en pequeño</string>
     <string name="widget_now_playing">Ketvoice · Reproduciendo</string>
     <string name="widget_now_playing_desc">Portada, título y controles, en todos los tamaños</string>
     <string name="widget_lyrics">Ketvoice · Letra en directo</string>

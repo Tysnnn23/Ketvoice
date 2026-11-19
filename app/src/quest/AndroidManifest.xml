@@ -23,6 +23,7 @@
         <receiver android:name=".widget.WeekWidgetReceiver" tools:node="remove" />
         <receiver android:name=".widget.MixWidgetReceiver" tools:node="remove" />
         <receiver android:name=".widget.MiniControlsWidgetReceiver" tools:node="remove" />
+        <receiver android:name=".widget.ControlsWidgetReceiver" tools:node="remove" />
         <service android:name=".widget.PlayPauseTileService" tools:node="remove" />
         <service android:name=".widget.KetmixTileService" tools:node="remove" />
     </application>

@@ -12,6 +12,7 @@ internal enum class WidgetKind(val spacingMs: Long) {
     NowPlaying(WidgetRefresh.TRACK_SPACING_MS),
     Player(WidgetRefresh.LYRIC_SPACING_MS),
     Mini(WidgetRefresh.TRACK_SPACING_MS),
+    Controls(WidgetRefresh.TRACK_SPACING_MS),
     Lyrics(WidgetRefresh.LYRIC_SPACING_MS),
     Ketmix(WidgetRefresh.TRACK_SPACING_MS),
     Week(WidgetRefresh.HISTORY_SPACING_MS),
@@ -21,7 +22,7 @@ internal enum class WidgetKind(val spacingMs: Long) {
 
 /** Why the widgets need redrawing; each reason touches only the widgets that show it. */
 internal enum class WidgetReason(val kinds: Set<WidgetKind>) {
-    Track(setOf(WidgetKind.NowPlaying, WidgetKind.Player, WidgetKind.Mini, WidgetKind.Lyrics, WidgetKind.Ketmix)),
+    Track(setOf(WidgetKind.NowPlaying, WidgetKind.Player, WidgetKind.Mini, WidgetKind.Controls, WidgetKind.Lyrics, WidgetKind.Ketmix)),
     Progress(setOf(WidgetKind.NowPlaying, WidgetKind.Player)),
     Lyric(setOf(WidgetKind.Player, WidgetKind.Lyrics)),
     Ketmix(setOf(WidgetKind.Ketmix)),

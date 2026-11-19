@@ -19,6 +19,8 @@
     <string name="widget_mix_desc">Der Mix des Moments: ein Tipp spielt ihn ab</string>
     <string name="widget_mini">Ketvoice · Mini</string>
     <string name="widget_mini_desc">Cover, Wiedergabe/Pause und Weiter</string>
+    <string name="widget_controls">Ketvoice · Steuerung</string>
+    <string name="widget_controls_desc">Zurück, Wiedergabe/Pause und Weiter, auch ganz klein</string>
     <string name="widget_now_playing">Ketvoice · Läuft gerade</string>
     <string name="widget_now_playing_desc">Cover, Titel und Steuerung, in jeder Größe</string>
     <string name="widget_lyrics">Ketvoice · Live-Songtext</string>

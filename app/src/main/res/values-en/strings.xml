@@ -19,6 +19,8 @@
     <string name="widget_mix_desc">The mix of the moment: one tap plays it</string>
     <string name="widget_mini">Ketvoice · Mini</string>
     <string name="widget_mini_desc">Cover, play/pause and next</string>
+    <string name="widget_controls">Ketvoice · Controls</string>
+    <string name="widget_controls_desc">Previous, play/pause and next, even at its smallest</string>
     <string name="widget_now_playing">Ketvoice · Now playing</string>
     <string name="widget_now_playing_desc">Cover, title and controls, at every size</string>
     <string name="widget_lyrics">Ketvoice · Live lyrics</string>

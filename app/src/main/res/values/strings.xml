@@ -19,6 +19,8 @@
     <string name="widget_mix_desc">Le mix du moment : un tap le lance</string>
     <string name="widget_mini">Ketvoice · Mini</string>
     <string name="widget_mini_desc">Pochette, lecture/pause et suivant</string>
+    <string name="widget_controls">Ketvoice · Commandes</string>
+    <string name="widget_controls_desc">Précédent, lecture/pause et suivant, même en tout petit</string>
     <string name="widget_now_playing">Ketvoice · Lecture en cours</string>
     <string name="widget_now_playing_desc">Pochette, titre et commandes, à toutes les tailles</string>
     <string name="widget_lyrics">Ketvoice · Paroles en direct</string>
