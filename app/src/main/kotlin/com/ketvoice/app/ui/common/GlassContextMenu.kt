@@ -60,7 +60,15 @@ import kotlinx.coroutines.launch
  */
 internal object ContextMenus {
     /** [anchor] is where the menu comes from; null opens it in the middle of the window. */
-    class Request(val track: Track, val anchor: Rect?)
+    class Request(val track: Track, val anchor: Rect?, val extra: List<Item> = emptyList(), val only: Boolean = false,
+                  val headline: String? = null, val subline: String? = null)
+
+    /**
+     * An action a page adds to the menu (7.3, Downloads): [extra] items come first; with `only` they
+     * replace the title's own actions (a menu for a whole selection), [headline]/[subline] then name it.
+     */
+    class Item(val label: String, val icon: ImageVector, val destructive: Boolean = false, val tag: String? = null,
+               val run: () -> Unit)
 
     val request = mutableStateOf<Request?>(null)
 
@@ -68,8 +76,9 @@ internal object ContextMenus {
      * Opens the menu of [track] from [anchor] (6.0.0: the glass menu is the only menu of a title,
      * from a long press or a "…" button; the full sheet opens from its "More" item).
      */
-    fun open(track: Track, anchor: Rect?) {
-        request.value = Request(track, anchor?.takeIf { it.width > 0f && it.height > 0f })
+    fun open(track: Track, anchor: Rect?, extra: List<Item> = emptyList(), only: Boolean = false,
+             headline: String? = null, subline: String? = null) {
+        request.value = Request(track, anchor?.takeIf { it.width > 0f && it.height > 0f }, extra, only, headline, subline)
     }
 
     /** The anchor of a menu opened from nowhere in particular: a row's width, centred, a third of the way down. */
@@ -129,7 +138,7 @@ internal fun rememberRowAnchor(): RowAnchor = remember { RowAnchor() }
 internal fun Modifier.rowAnchor(anchor: RowAnchor): Modifier = onGloballyPositioned { anchor.coordinates = it }
 
 private class MenuAction(val label: String, val icon: ImageVector, val enabled: Boolean = true, val tint: Color? = null,
-                         val run: () -> Unit)
+                         val tag: String? = null, val run: () -> Unit)
 
 /** Draws the context menu that was asked for, over everything else. Place it once, at the root. */
 @Composable
@@ -162,7 +171,8 @@ internal fun ContextMenuHost(modifier: Modifier = Modifier) {
     val favorite = track.id in AppSettings.favoriteIds.value
     val downloaded = Downloader.itemFor(track.id) != null
     val together = com.ketvoice.app.together.Ketogether.ui.collectAsState().value.active
-    val actions = listOfNotNull(
+    val extra = request.extra.map { MenuAction(it.label, it.icon, tint = if (it.destructive) DESTRUCTIVE else null, tag = it.tag, run = it.run) }
+    val actions = if (request.only) extra else extra + listOfNotNull(
         // Ketogether (6.1): in a session, the title goes to the shared queue (the host adds it, a guest proposes it).
         if (together) MenuAction("Ajouter à Ketogether", com.ketvoice.app.ui.together.KetogetherIcon) { com.ketvoice.app.together.Ketogether.add(track) } else null,
         MenuAction("Lire ensuite", Icons.AutoMirrored.Filled.PlaylistPlay) { Player.playNext(track) },
@@ -214,9 +224,9 @@ internal fun ContextMenuHost(modifier: Modifier = Modifier) {
             Cover(track.title, cover, size = 48.dp, radius = 10.dp)
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Text(track.title, localize = false, color = theme.onBackground, style = Ket27.Type.headline, maxLines = 1,
+                Text(request.headline ?: track.title, localize = false, color = theme.onBackground, style = Ket27.Type.headline, maxLines = 1,
                     overflow = TextOverflow.Ellipsis)
-                Text(track.artist, localize = false, color = theme.secondary, style = Ket27.Type.subheadline, maxLines = 1,
+                Text(request.subline ?: track.artist, localize = false, color = theme.secondary, style = Ket27.Type.subheadline, maxLines = 1,
                     overflow = TextOverflow.Ellipsis)
             }
         }
@@ -238,9 +248,9 @@ internal fun ContextMenuHost(modifier: Modifier = Modifier) {
                 actions.forEachIndexed { index, action ->
                     Row(Modifier.fillMaxWidth().clickable(enabled = action.enabled, role = Role.Button) {
                         haptic(Haptics.Kind.Press); close(action.run)
-                    }.heightIn(min = 46.dp).padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text(action.label, color = theme.onBackground.copy(alpha = if (action.enabled) 1f else .45f),
-                            style = Ket27.Type.body, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                    }.then(if (action.tag != null) Modifier.testTag(action.tag) else Modifier).heightIn(min = 46.dp).padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(action.label, color = (action.tint?.takeIf { it == DESTRUCTIVE } ?: theme.onBackground).copy(alpha = if (action.enabled) 1f else .45f),
+                            style = Ket27.Type.body, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                         Icon(action.icon, null, tint = (action.tint ?: theme.onBackground).copy(alpha = if (action.enabled) 1f else .45f),
                             modifier = Modifier.padding(start = 12.dp).size(20.dp))
                     }

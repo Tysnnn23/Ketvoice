@@ -292,7 +292,8 @@ class ScreensRedoHostTest {
     @Test fun downloadsShowAlbumsAndArtistsAsCoversAndKeepSelectionAndBadges() {
         saved.value = offline()
         try {
-            compose.setContent { KetvoiceTheme(useDark = false) { com.ketvoice.app.ui.sub.DownloadsScreen() } }
+            compose.setContent { KetvoiceTheme(useDark = false) { androidx.compose.foundation.layout.Box {
+                com.ketvoice.app.ui.sub.DownloadsScreen(); com.ketvoice.app.ui.common.ContextMenuHost() } } }
             compose.onNodeWithTag("downloads-title").assertIsDisplayed()
             image("redo-downloads-top-light")
             compose.onNode(hasText("Albums") and hasAnyAncestor(hasTestTag("downloads-view"))).performScrollTo().performClick()
@@ -303,14 +304,15 @@ class ScreensRedoHostTest {
             assertEquals("two on a line", cells[0].top, cells[1].top, 1f)
             image("redo-downloads-albums-light")
             // Selecting ticks a whole album from its cover; nothing is deleted without the alert.
-            compose.onNodeWithText("Sélectionner").performClick()
-            compose.onAllNodesWithTag("download-cover-cell").onFirst().performClick()
-            compose.onNodeWithContentDescription("Supprimer").performScrollTo().performClick()
+            // 7.3: a long press on a cover selects it; held again, the selection's menu deletes.
+            compose.onAllNodesWithTag("download-cover-cell").onFirst().performTouchInput { longClick() }
+            compose.onAllNodesWithTag("download-cover-cell").onFirst().performTouchInput { longClick() }
+            compose.onNodeWithTag("selection-delete").performClick()
             compose.onNodeWithTag("downloads-delete-alert").assertExists()
             compose.onNode(hasText("Annuler") and hasAnyAncestor(hasTestTag("downloads-delete-alert"))).performClick()
             assertEquals(5, saved.value.size)
             assertTrue(saved.value.all { it.file.exists() })
-            compose.onNodeWithText("Annuler").performClick()
+            compose.onNodeWithTag("downloads-select-cancel").performClick()
             compose.onNode(hasText("Artistes") and hasAnyAncestor(hasTestTag("downloads-view"))).performScrollTo().performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
             compose.onNodeWithText("Abel").performScrollTo().assertIsDisplayed()
             image("redo-downloads-artists-light")
