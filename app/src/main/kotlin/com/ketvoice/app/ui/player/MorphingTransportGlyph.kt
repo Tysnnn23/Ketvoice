@@ -49,20 +49,21 @@ internal fun TransportGlyphAt(progress: Float, modifier: Modifier = Modifier, ti
     Canvas(modifier) {
         val parts = TransportMorph.polygons(progress)
         val corner = if (rounded) size.minDimension * .07f else 0f
+        // Both halves in one path: drawn apart, their anti-aliased edges left a dark seam down the middle of play.
+        val p = Path()
         for (part in parts) {
-            val p = Path()
             for (i in 0..3) {
                 val x = part[i * 2] * size.width
                 val y = part[i * 2 + 1] * size.height
                 if (i == 0) p.moveTo(x, y) else p.lineTo(x, y)
             }
             p.close()
-            if (corner > 0f) {
-                // Filled, then stroked with round joins: the corners soften without the shape shrinking.
-                drawPath(p, tint, style = Fill)
-                drawPath(p, tint, style = Stroke(corner, join = StrokeJoin.Round, pathEffect = PathEffect.cornerPathEffect(corner)))
-            } else drawPath(p, tint)
         }
+        if (corner > 0f) {
+            // Filled, then stroked with round joins: the corners soften without the shape shrinking.
+            drawPath(p, tint, style = Fill)
+            drawPath(p, tint, style = Stroke(corner, join = StrokeJoin.Round, pathEffect = PathEffect.cornerPathEffect(corner)))
+        } else drawPath(p, tint)
     }
 }
 

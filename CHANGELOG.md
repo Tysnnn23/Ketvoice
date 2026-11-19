@@ -7,6 +7,22 @@
 
 ---
 
+# Ketvoice 7.0.0
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 141** — Home « Pour toi », Ket 27 identity pass, autoplay of the same style, Apple-Music-style Downloads and downloaded albums, Ketmix DJ set and the built-in rhythm model.
+
+- Identity (`theme/Ket27.kt`, `ui/motion/Motion.kt`, `KetIcons.kt`, `SpringSheet.kt`): secondary text 60 % → 73 % in light, `Ket27.Space`/`Ket27.Radius` scales, `Motion.Springs` (push, zoom, sheet, dismiss, appear), stroke 1.8 with solid Play/Pause, one sheet grabber. Home « Pour toi »: Reprendre, Mix du jour, moods by the hour, new releases of followed artists. `ui/common/FlowPick.kt` reads `StateFlow` parts in composition without `.value`.
+- « Lecture automatique » (`player/Player.kt`, `ui/player/QueuePane.kt`): InnerTube `next` with `RDAMVM<videoId>` (audio only), a YouTube Music search gives catalogue/local titles a video id; fallbacks: `CatalogRepo.artistRadio`, then offline same artist / same style (`SmartFacts`) / same feel. Batches of 10 when ≤ 3 remain; seed, queued and session titles, blocked artists and > 2 per artist left out; tempo/energy filter when Ketmix analysed both. `autoEntryIds` are not kept across a session restore. `AutoplayRulesTest`, `DownloadsAlbumsAutoplayHostTest`.
+- Downloads (`ui/sub/DownloadsScreen.kt`, `ui/library/LibraryScreen.kt`): Titres/Albums/Artistes/Playlists with counts; downloaded albums open on an album page with per-title state, « Télécharger les titres manquants », « Supprimer le téléchargement »; « X sur Y titres téléchargés » once the catalogue tracklist loaded.
+- Ketmix: the build fetches the pinned `ketmix-beat-small0.tflite` (size and SHA-256 checked) into generated assets, stored uncompressed, mobile and Quest only (+18.6 MB); `-PketvoiceWithoutBeatModel=true` builds offline; CI checks the APKs. `automix/DjSet.kt` (tempo, Camelot neighbours, energy peak at 70 %), `SetRender.kt`/`SetExport.kt` (offline render through `LoopFx`/`DeckDsp` to AAC/M4A 256 kb/s, WAV fallback; downloads and local files only; no tempo matching in the export).
+- Fixes: `TransportGlyphAt` draws both halves in one path (no seam down the play triangle); `MainActivity.openSharedTrack` opens `kind=artist` links from the website's public artist pages.
+
+Full notes: [7.0.0](docs/releases/v7.0.0.md).
+
+---
+
 # Ketvoice 6.9.0
 
 ![Ketvoice](ketvoice-banner.png)

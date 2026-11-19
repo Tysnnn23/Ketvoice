@@ -1,0 +1,40 @@
+# Ketvoice 7.0.0
+
+![Ketvoice](https://raw.githubusercontent.com/Tysnnn23/Ketvoice/main/ketvoice-banner.png)
+
+A new Home made for you, music that keeps going in the same style, Downloads laid out like Apple Music, and a Ketmix DJ set. Ket 27 stays, sharper.
+
+## A Home made for you
+
+- **Pour toi** opens on what you were playing (« Reprendre »), a mix of the day built from your listening, moods that follow the hour, and new releases from the artists you follow.
+
+## Ket 27, sharper
+
+- Clearer secondary text in light mode, a steadier spacing and corner scale, one set of springs for sheets, menus and pages, and solid Play and Pause buttons.
+
+## Music that keeps going
+
+- **Lecture automatique**: when your queue ends, Ketvoice adds songs in the same style as the one you started, ten at a time. They come from the song's own radio; without a network, from your downloads of the same artist or style.
+- Songs you add always come first. Blocked artists are left out, and no artist takes over the list.
+- The queue shows these songs in their own section, with a switch and « Effacer ».
+
+## Downloads like Apple Music
+
+- Downloads opens on Titles, Albums, Artists and Playlists, with counts. Playlists lists those that have songs on your phone.
+- A downloaded album now opens as a real album page, from Downloads or the Library: play, shuffle, the state of each song, « Télécharger les titres manquants » and « Supprimer le téléchargement ».
+- Albums that are only partly downloaded say how many songs are on the device.
+
+## Ketmix
+
+- **The rhythm model is built in**: the phone and Quest apps now ship Ketmix's beat and bar model, so precise beat matching works right away. The Lite app still downloads it when you ask.
+- **Mode DJ set**: play a playlist or your queue as a set. Ketmix orders it by tempo and key, builds the energy up to a peak and brings it down, and mixes every song, albums included.
+- **Export the set** to an M4A file you can share. Only downloaded and local songs go into the file.
+
+## Fixes
+
+- The large Play button no longer shows a thin dark line down its middle.
+- « Ouvrir dans Ketvoice » on the website's artist pages opens the artist in the app.
+
+## Install
+
+Download `Ketvoice-7.0.0.apk` (phone, Android 12 and up), `Ketvoice-7.0.0-Lite.apk` (lighter app, Android 11 and up) or `Ketvoice-7.0.0-Quest.apk` (Meta Quest) below and install it over your current version: your library, settings and downloads stay. The phone and Quest apps are about 19 MB larger because they include the rhythm model.

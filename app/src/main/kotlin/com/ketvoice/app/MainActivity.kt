@@ -307,6 +307,11 @@ class MainActivity : ComponentActivity() {
                 AppUi.openCatalog(com.ketvoice.app.data.CatalogRequest("album", id, title))
                 return@launch
             }
+            if (kind == "artist") {
+                // The website's public artist page (7.0): « Ouvrir dans Ketvoice » sends the artist's name in `artist`.
+                AppUi.openArtist(id, artist.ifBlank { title })
+                return@launch
+            }
             val resolved = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                 resolveSharedTrack(id, title, artist)
             }

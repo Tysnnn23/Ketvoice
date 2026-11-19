@@ -21,6 +21,14 @@
 
 ## Overview
 
+### 7.0.0 — A Home made for you, autoplay, Apple-Music-style Downloads, Ketmix DJ set
+
+« Pour toi » on Home, songs of the same style after your queue, downloaded albums as real albums, the rhythm model built in, and DJ sets you can export.
+[Mobile](https://github.com/Tysnnn23/Ketvoice/releases/download/v7.0.0/Ketvoice-7.0.0.apk)
+· [Lite](https://github.com/Tysnnn23/Ketvoice/releases/download/v7.0.0/Ketvoice-7.0.0-Lite.apk)
+· [Quest](https://github.com/Tysnnn23/Ketvoice/releases/download/v7.0.0/Ketvoice-7.0.0-Quest.apk)
+· [Release notes](docs/releases/v7.0.0.md).
+
 ### 6.9.0 — A Ketmix editor you can hear, mixes that respect the lyrics
 
 A new Ketmix editor with one timeline, presets, details and a preview, plus lyric-aware mixing, a bar loop and variety.
