@@ -69,8 +69,10 @@ internal object RadioMix {
      * [familiar] titles the listener already knows well. The picked titles are added to [memory].
      */
     fun pick(fresh: List<Track>, own: List<Track>, familiar: List<Track>, memory: RadioMemory, allows: (Track) -> Boolean,
-             random: kotlin.random.Random, batch: Int = BATCH): List<Track> {
-        val pools = listOf(fresh.shuffled(random).toMutableList(), own.shuffled(random).toMutableList(), familiar.shuffled(random).toMutableList())
+             random: kotlin.random.Random, batch: Int = BATCH, lately: (Track) -> Long? = { null }): List<Track> {
+        // 7.1: what was heard in the last hours stays out ([NoRepeatWindow]); it comes back below only if too little is left.
+        val heardLately = (fresh + own + familiar).filter { lately(it) != null }
+        val pools = listOf(fresh, own, familiar).map { pool -> pool.filter { lately(it) == null }.shuffled(random).toMutableList() }
         val recent = ArrayDeque(memory.lastArtists)
         val out = ArrayList<Track>()
         fun usable(t: Track) = t.id.isNotBlank() && !memory.played(t) && allows(t)
@@ -103,6 +105,13 @@ internal object RadioMix {
             recent.addLast(artistKey(picked))
             while (recent.size > ARTIST_MEMORY) recent.removeFirst()
             out += picked
+        }
+        // Too few titles not heard lately: those heard longest ago fill up to the minimum, never one twice.
+        if (out.size < minOf(batch, NoRepeatWindow.MINIMUM)) for (t in NoRepeatWindow.ordered(heardLately, lately).distinctBy { it.id }) {
+            if (out.size >= minOf(batch, NoRepeatWindow.MINIMUM)) break
+            if (!usable(t)) continue
+            memory.remember(t)
+            out += t
         }
         return out
     }

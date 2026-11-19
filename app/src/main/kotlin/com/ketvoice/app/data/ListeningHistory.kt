@@ -12,6 +12,28 @@ object ListeningHistory {
     val tracks: StateFlow<List<Track>> = _tracks
     private val _known = MutableStateFlow<List<Track>>(emptyList())
     val knownTracks: StateFlow<List<Track>> = _known
+    /**
+     * When each title was last heard (7.1, « Radio sans répétition »), by id and by recording ([heardKeys]),
+     * for the last [HEARD_KEEP_MS] only: the radio and autoplay leave out what was heard a few hours ago.
+     */
+    private val _heardAt = MutableStateFlow<Map<String, Long>>(emptyMap())
+    val heardAt: StateFlow<Map<String, Long>> = _heardAt
+    const val HEARD_KEEP_MS = 24 * 60 * 60 * 1000L
+    private const val HEARD_MAX = 1_200
+
+    /** The keys a hearing is remembered under: the id, and the recording (the same song under another id). */
+    fun heardKeys(track: Track): List<String> =
+        listOfNotNull(track.id.takeIf { it.isNotBlank() }, "r:" + WeeklyDiscoveries.recording(track))
+
+    /** [previous] with [track] heard at [now], older than [HEARD_KEEP_MS] dropped and at most [HEARD_MAX] kept. */
+    internal fun heardWith(previous: Map<String, Long>, track: Track?, now: Long): Map<String, Long> {
+        val next = LinkedHashMap<String, Long>()
+        previous.forEach { (key, at) -> if (now - at in 0 until HEARD_KEEP_MS) next[key] = at }
+        track?.let { heardKeys(it).forEach { key -> next.remove(key); next[key] = now } }
+        while (next.size > HEARD_MAX) next.remove(next.keys.first())
+        return next
+    }
+
     private val _playCounts = MutableStateFlow<Map<String, Int>>(emptyMap())
     val playCounts: StateFlow<Map<String, Int>> = _playCounts
 
@@ -47,6 +69,10 @@ object ListeningHistory {
             root.asJsonObject.entrySet().associate { (key, value) -> key to value.asInt }
         }.getOrDefault(emptyMap())
         _listenedMs.value = prefs!!.getLong("listenedMs", 0L)
+        _heardAt.value = runCatching {
+            val root = com.google.gson.JsonParser.parseString(prefs!!.getString("heardAt", "{}"))
+            heardWith(root.asJsonObject.entrySet().associate { (key, value) -> key to value.asLong }, null, System.currentTimeMillis())
+        }.getOrDefault(emptyMap())
         _days.value = ListeningWeek.trim(ListeningWeek.decode(prefs!!.getString("days", null)), today())
         _years.value = Wrapped.decode(prefs!!.getString("years", null))
         runCatching { loadMonths(prefs!!) }
@@ -155,6 +181,7 @@ object ListeningHistory {
             }
         }
         _playCounts.value = counts
+        _heardAt.value = heardWith(_heardAt.value, saved, System.currentTimeMillis())
         _days.value = ListeningWeek.addPlay(_days.value, today(), track.id)
         _years.value = Wrapped.addPlay(_years.value, year(), track.id)
         // The first title ever heard of an artist makes it a discovery of the month.
@@ -163,7 +190,7 @@ object ListeningHistory {
         if (seenArtists.size > MAX_SEEN_ARTISTS) seenArtists.iterator().let { it.next(); it.remove() }
         _months.value = ListeningMonths.addPlay(_months.value, today(), saved, newArtist)
         prefs?.edit()?.putString("tracks", gson.toJson(_tracks.value))
-            ?.putString("counts", gson.toJson(counts))?.putString("days", ListeningWeek.encode(_days.value))
+            ?.putString("counts", gson.toJson(counts))?.putString("heardAt", gson.toJson(_heardAt.value))?.putString("days", ListeningWeek.encode(_days.value))
             ?.putString("years", ListeningWeek.encode(_years.value))?.putString(monthPrefKey(), currentMonthJson())
             ?.also { if (newArtist != null) it.putString("artistsSeen", ListeningMonths.encodeSeen(seenArtists)) }?.apply()
         // Keep the recap projection warm so the stats screen opens instantly.
