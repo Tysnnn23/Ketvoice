@@ -1,3 +1,4 @@
+import java.time.Duration
 import java.io.File
 import java.util.Base64
 import java.util.zip.ZipEntry
@@ -165,7 +166,7 @@ android {
         // 40 minutes instead of holding the runner, so a stuck test can be found from the log.
         if (System.getenv("CI") != null) unitTests.all {
             it.testLogging { events("started", "failed", "skipped") }
-            it.timeout.set(java.time.Duration.ofMinutes(40))
+            it.timeout.set(Duration.ofMinutes(40))
         }
         // Host tests never reach the network (6.7): a lyrics or cover answer from a real service changed what a
         // screen showed and kept Compose busy, so the suite passed or failed with the hour. A dead local proxy
