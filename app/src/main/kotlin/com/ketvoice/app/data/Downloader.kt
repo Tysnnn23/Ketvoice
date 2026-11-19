@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.isActive
@@ -172,6 +173,7 @@ object Downloader {
     fun init(context: Context) {
         if (ctx != null) return
         ctx = context.applicationContext
+        runCatching { DownloadUpgrade.recover(dir(context.applicationContext)) }
         refresh()
         restoreQueue(context.applicationContext)
     }
@@ -501,6 +503,94 @@ object Downloader {
     }
 
     fun totalBytes(): Long = _items.value.sumOf { it.bytes }
+
+    private val _upgrading = MutableStateFlow<Set<String>>(emptySet())
+    /** Saved titles being downloaded again in a better quality (7.3); their [tasks] carry the progress. */
+    val upgrading: StateFlow<Set<String>> = _upgrading
+
+    /** What a saved title is now, and the best offer when it is better; nothing for DASH files and publications. */
+    internal data class UpgradeOffer(val item: Item, val saved: DownloadUpgrade.Rendition, val offer: MusicApi.StreamInfo?) {
+        val better: DownloadUpgrade.Rendition? get() = offer?.let(DownloadUpgrade::ofStream)
+    }
+
+    /**
+     * Asks the sources the player and the downloads use ([StreamResolver]) for [item] again and keeps the best
+     * plain-file offer if it beats the saved file. Null when nothing could be asked (DASH, publication).
+     */
+    internal suspend fun checkUpgrade(item: Item): UpgradeOffer? = withContext(Dispatchers.IO) {
+        val track = item.track
+        if (item.dashManifestUrl != null || track.addon == "upload" || track.id.startsWith("kv:upload:")) return@withContext null
+        val saved = DownloadUpgrade.ofSaved(item.format, DownloadUpgrade.head(item.file))
+        val asked = track.copy(streamUrl = null)
+        val offers = runCatching {
+            StreamResolver.collectWithin(StreamResolver.candidates(asked, download = true, lossless = true, race = true), 12_000L)
+        }.getOrDefault(emptyList())
+        val best = offers.map { upgradeStream(it.stream) }.firstOrNull { it != null }
+        UpgradeOffer(item, saved, best?.takeIf { DownloadUpgrade.better(saved, DownloadUpgrade.ofStream(it)) })
+    }
+
+    /** A candidate the upgrade can fetch as one file: DASH only through its direct address. */
+    private fun upgradeStream(stream: MusicApi.StreamInfo): MusicApi.StreamInfo? {
+        if (!stream.isDash) return stream.takeIf { listOfNotNull(stream.downloadUrl, stream.url).any { it.startsWith("https://") } }
+        val direct = stream.downloadUrl?.takeIf { it != stream.url && it.startsWith("https://") } ?: return null
+        return stream.copy(url = direct, downloadUrl = null, format = stream.format.takeUnless { it.equals("dash", true) }.orEmpty(), mimeType = null)
+    }
+
+    /**
+     * Downloads each offer beside the saved file, one after the other, and swaps it in only once complete and
+     * verified ([DownloadUpgrade.verified], [DownloadUpgrade.replace]); a failure leaves the saved title as it was.
+     */
+    internal fun upgrade(offers: List<UpgradeOffer>): Job? {
+        val c = ctx ?: return null
+        val todo = offers.filter { it.offer != null && it.item.track.id !in _upgrading.value && !jobs.containsKey(it.item.track.id) }
+        if (todo.isEmpty()) return null
+        _upgrading.update { it + todo.map { o -> o.item.track.id } }
+        return scope.launch {
+            var done = 0
+            for (offer in todo) {
+                val id = offer.item.track.id
+                try {
+                    if (runUpgrade(c, offer)) done++
+                } catch (cancelled: CancellationException) { throw cancelled
+                } catch (_: Exception) {
+                } finally {
+                    _tasks.update { it - id }
+                    _progress.update { it - id }
+                    _upgrading.update { it - id }
+                }
+            }
+            refresh()
+            toast(if (done == 0) "Aucun titre n'a pu être amélioré" else if (done == 1) "1 titre en meilleure qualité" else "$done titres en meilleure qualité")
+        }
+    }
+
+    private suspend fun runUpgrade(c: Context, offer: UpgradeOffer): Boolean {
+        val item = offer.item
+        val stream = offer.offer ?: return false
+        val id = item.track.id
+        task(id) { DownloadTask(DownloadPhase.Resolving) }
+        val extension = extOf(stream)
+        val stem = item.file.nameWithoutExtension
+        val fresh = File(dir(c), "$stem.upgrade.$extension")
+        val urls = listOfNotNull(stream.downloadUrl, stream.url).distinct().filter { it.startsWith("https://") }
+        var swapped = false
+        try {
+        val fetched = urls.any { fetch(it, fresh, id) }
+        if (!fetched || !DownloadUpgrade.verified(offer.saved, extension, DownloadUpgrade.ofStream(stream), DownloadUpgrade.head(fresh))) return false
+        task(id) { it.copy(phase = DownloadPhase.Finalizing) }
+        val metaFile = File(dir(c), "$stem.json")
+        val meta = JSONObject(metaFile.readText(Charsets.UTF_8))
+        val target = File(dir(c), "$stem.$extension")
+        meta.put("format", displayFormat(target, stream))
+        meta.put("quality", stream.quality)
+        meta.put("source", stream.quality)
+        meta.put("file", target.name)
+        meta.put("upgradedAt", System.currentTimeMillis())
+        swapped = DownloadUpgrade.replace(item.file, fresh, target, metaFile, meta.toString())
+        if (swapped) refresh()
+        return swapped
+        } finally { if (!swapped) fresh.delete() }
+    }
 
     fun localLyrics(trackId: String): Pair<String, List<MusicApi.LyricLine>>? {
         val item = itemFor(trackId) ?: return null
