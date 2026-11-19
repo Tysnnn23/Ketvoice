@@ -1,5 +1,7 @@
 package com.ketvoice.app.ui.player
 
+import com.ketvoice.app.ui.common.collectPick
+import com.ketvoice.app.ui.common.pick
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -88,12 +90,13 @@ internal fun EditorTopBar(state: EditorState, onClose: () -> Unit) {
             Text("Bêta", color = theme.secondary, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, maxLines = 1,
                 modifier = Modifier.padding(top = 1.dp).clip(RoundedCornerShape(6.dp)).background(theme.onBackground.copy(alpha = .09f)).padding(horizontal = 6.dp, vertical = 1.dp))
         }
+        val queueSize by remember { Player.state.pick { it.queue.size } }.collectPick()
         KetMenuButton(listOf(listOf(
             KetMenuItem(AppText.t("Revenir au choix de Ketmix"), KetIcons.Refresh, tag = "ketmix-reset", enabled = !state.choice.automatic) {
                 state.reset(); if (AppSettings.ketmixHaptics.value) haptic(Haptics.Kind.Confirm)
             },
             KetMenuItem(AppText.t("Appliquer à toute la file d'attente"), KetIcons.Playlist, tag = "ketmix-apply-queue",
-                enabled = state.pair && Player.state.value.queue.size > 2) {
+                enabled = state.pair && queueSize > 2) {
                 val count = applyToQueue(state)
                 scope.launch { say(AppText.t("Réglages appliqués à {0} transitions").replace("{0}", count.toString())) }
             })), AppText.t("Plus d'options"), tag = "ketmix-more")
