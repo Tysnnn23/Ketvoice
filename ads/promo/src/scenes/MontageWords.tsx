@@ -3,7 +3,7 @@ import { interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
 import { theme } from "../theme";
 import { BEAT_S } from "../timing";
 
-const WORDS = ["Canvas", "Paroles", "Découvertes", "Et bien plus."];
+const WORDS = ["Canvas", "Lyrics", "Discover", "And more."];
 
 /** One word per beat over the quick cuts. */
 export const MontageWords: React.FC = () => {

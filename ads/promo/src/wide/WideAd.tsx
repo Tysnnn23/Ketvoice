@@ -2,11 +2,11 @@ import React from "react";
 import { AbsoluteFill, Audio, interpolate, Sequence, spring, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 import "../fonts";
 import { KetmixGlyph } from "../components/KetmixGlyph";
-import { MixCard } from "../components/MixCard";
 import { VoiceSlider } from "../components/VoiceSlider";
 import { Finish } from "../components/Layers";
 import { theme } from "../theme";
 import { EndCard, FreeLines, HookTiles, LogoReveal, Screen, WordLight } from "./WideParts";
+import { CutBlur, Dim, Karaoke, MixPill, PopCard } from "../components/Studio";
 import { wb, wlen, WS, WTOTAL } from "./timing";
 
 const At: React.FC<{ s: readonly [number, number]; children: React.ReactNode }> = ({ s, children }) => (
@@ -65,16 +65,23 @@ export const KetvoiceAdWide: React.FC = () => (
   <AbsoluteFill style={{ background: "#000" }}>
     <At s={WS.hook}><Hook /></At>
     <At s={WS.logo}><LogoReveal darkAt={Math.round(1.5 * 29.03)} nameAt={Math.round(1.9 * 29.03)} /></At>
+    <CutBlur cuts={[wb(4), wb(10), wb(16), wb(22), wb(40)]}>
     <At s={WS.home}>
-      <Screen src="clips/s_home.mp4" duration={wlen(WS.home)} rate={1.25} />
+      <Screen src="clips/s_home.mp4" duration={wlen(WS.home)} rate={1.25} zoom={1} />
+      <Dim at={77} until={160} amount={0.4} />
+      <PopCard src="img/pop-home-card.png" ratio={796 / 452} from={{ x: 960, y: 489, w: 340 }} to={{ x: 1440, y: 470, w: 660 }} at={77} until={160} tilt={3} />
+      <PopCard src="img/pop-moods.png" ratio={832 / 392} from={{ x: 960, y: 731, w: 355 }} to={{ x: 470, y: 660, w: 640 }} at={92} until={163} tilt={-3} />
       <WordLight text="Made for you. Every single day." exitAt={wlen(WS.home)} />
     </At>
     <At s={WS.player}>
-      <Screen src="clips/s_player.mp4" duration={wlen(WS.player)} rate={1.15} zoom={1.08} origin="50% 30%" />
+      <Screen src="clips/s_player.mp4" duration={wlen(WS.player)} rate={1.15} zoom={1} />
+      <Dim at={52} until={160} amount={0.35} />
+      <PopCard src="img/pop-play.png" ratio={762 / 130} from={{ x: 960, y: 609, w: 325 }} to={{ x: 1450, y: 620, w: 660 }} at={52} until={160} radius={64} tilt={2} />
       <WordLight text="Every album, in full screen." exitAt={wlen(WS.player)} />
     </At>
     <At s={WS.lyrics}>
-      <Screen src="clips/s_lyrics2.mp4" duration={wlen(WS.lyrics)} zoom={1.12} origin="50% 35%" />
+      <Screen src="clips/s_lyrics2.mp4" duration={wlen(WS.lyrics)} x={660} zoom={1.04} />
+      <Karaoke lines={["Only love never", "hesitates"]} start={22} perWord={15} x={1010} y={420} size={84} />
       <WordLight text="Lyrics, synced word by word." exitAt={wlen(WS.lyrics)} />
     </At>
     <At s={WS.voice}>
@@ -84,14 +91,18 @@ export const KetvoiceAdWide: React.FC = () => (
     </At>
     <At s={WS.meet}><Meet /></At>
     <At s={WS.ketmix}>
-      <Screen src="clips/s_ketmix.mp4" duration={wlen(WS.ketmix)} x={640} />
-      <MixCard from={WS.ketmix[0]} to={WS.ketmix[1]} box={{ left: 940, right: 170, top: 470 }} />
+      <Screen src="clips/s_ketmix.mp4" duration={wlen(WS.ketmix)} x={640} zoom={1} />
+      <MixPill at={18} until={222} x={1330} y={470} scale={1.15} />
+      <PopCard src="img/pop-mixbar.png" ratio={740 / 60} from={{ x: 640, y: 704, w: 316 }} to={{ x: 1330, y: 660, w: 880 }} at={84} until={222} radius={14} tilt={0} />
       <WordLight text="Every song flows into the next." exitAt={wlen(WS.ketmix)} />
     </At>
     <At s={WS.editor}>
-      <Screen src="clips/s_editor.mp4" duration={wlen(WS.editor)} rate={1.34} h={880} zoom={1.32} origin="50% 34%" />
+      <Screen src="clips/s_editor.mp4" duration={wlen(WS.editor)} rate={1.34} h={880} zoom={1} />
+      <Dim at={96} until={168} amount={0.55} />
+      <PopCard src="img/pop-editor-box.png" ratio={796 / 530} from={{ x: 960, y: 533, w: 365 }} to={{ x: 960, y: 600, w: 1060 }} at={96} until={168} radius={26} tilt={-1.5} />
       <WordLight text="Or draw the transition yourself." exitAt={wlen(WS.editor)} />
     </At>
+    </CutBlur>
     <At s={WS.free}><FreeLines at={[2, Math.round(1.33 * 29.03), Math.round(2.66 * 29.03)]} exitAt={wlen(WS.free)} /></At>
     <At s={WS.end}><EndCard /></At>
 
@@ -108,6 +119,17 @@ export const KetvoiceAdWide: React.FC = () => (
     <Sfx at={wb(26.5) - 3} name="slider" volume={0.45} />
     <Sfx at={wb(28.95)} name="filter-sweep" volume={0.35} />
     <Sfx at={wb(32) - 1} name="impact" volume={0.65} />
+    <Sfx at={WS.home[0] + 74} name="swish" volume={0.5} />
+    <Sfx at={WS.home[0] + 86} name="pop" volume={0.45} />
+    <Sfx at={WS.home[0] + 101} name="pop" volume={0.35} />
+    <Sfx at={WS.player[0] + 49} name="swish" volume={0.5} />
+    <Sfx at={WS.player[0] + 61} name="pop" volume={0.45} />
+    <Sfx at={wb(16) + 22} name="shimmer" volume={0.2} />
+    <Sfx at={wb(32)} name="subdrop" volume={0.5} />
+    <Sfx at={WS.ketmix[0] + 16} name="pop" volume={0.5} />
+    <Sfx at={WS.ketmix[0] + 81} name="swish" volume={0.45} />
+    <Sfx at={WS.editor[0] + 93} name="swish" volume={0.5} />
+    <Sfx at={WS.editor[0] + 105} name="pop" volume={0.4} />
     {[46, 47.33, 48.66].map((n) => <Sfx key={n} at={wb(n) - 2} name="tap" volume={0.45} />)}
     <Sfx at={wb(50)} name="logo-sting" volume={0.7} />
     <Sfx at={wb(50) + 6} name="shimmer" volume={0.3} />

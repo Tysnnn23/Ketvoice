@@ -1,6 +1,6 @@
 import React from "react";
 import { interpolate, OffthreadVideo, spring, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
-import { Caption } from "../components/Caption";
+import { MaskTitle } from "../components/Studio";
 import { theme } from "../theme";
 
 /** We land inside the phone's screen: the editor fills the frame, then settles into a card. */
@@ -22,7 +22,7 @@ export const Editor: React.FC<{ duration: number }> = ({ duration }) => {
           <OffthreadVideo src={staticFile("clips/s_editor.mp4")} playbackRate={1.34} muted style={{ width: "100%", height: "100%", objectFit: "cover" }} />
         </div>
       </div>
-      <Caption kicker="ÉDITEUR KETMIX" title="Ou dessine ta transition" exitAt={duration} top={150} size={70} />
+      <MaskTitle kicker="KETMIX EDITOR" lines={["Or draw the", "transition yourself"]} exitAt={duration} top={130} size={74} />
     </>
   );
 };

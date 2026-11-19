@@ -29,10 +29,10 @@ export const Cta: React.FC = () => {
         })}
       </div>
       <div style={{ marginTop: 10, fontSize: 42, fontWeight: 520, color: theme.colors.textDim, opacity: line, transform: `translateY(${(1 - line) * 20}px)` }}>
-        Ta musique, mixée comme un DJ.
+        Your music, mixed like a DJ.
       </div>
       <div style={{ marginTop: 54, padding: "22px 46px", borderRadius: 999, background: theme.colors.hero, fontSize: 38, fontWeight: 700,
-        opacity: pill, transform: `scale(${interpolate(pill, [0, 1], [0.8, 1])})` }}>Gratuit sur Android</div>
+        opacity: pill, transform: `scale(${interpolate(pill, [0, 1], [0.8, 1])})` }}>Free on Android</div>
       <div style={{ marginTop: 30, fontSize: 34, fontWeight: 560, color: theme.colors.text, opacity: url * 0.9, letterSpacing: "0.01em",
         transform: `translateY(${(1 - url) * 16}px)` }}>ketvoice-web.vercel.app</div>
     </div>

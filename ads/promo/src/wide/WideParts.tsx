@@ -84,7 +84,10 @@ export const HookTiles: React.FC<{ popAt: number[]; mergeFrom: number; mergeTo: 
           <div key={t.name} style={{ position: "absolute", left: x - 70, top: y - 70, width: 140, height: 140, display: "flex", alignItems: "center", justifyContent: "center",
             opacity: p, transform: `scale(${interpolate(p, [0, 1], [0.3, 1]) * (1 + m * 1.4)})`, filter: `blur(${blur}px)` }}>
             <div style={{ position: "absolute", inset: 0, borderRadius: "50%", border: `2px solid ${t.color}`, opacity: (1 - ring) * 0.7, transform: `scale(${1 + ring * 0.7})` }} />
-            <div style={{ position: "absolute", inset: 10, borderRadius: "50%", background: t.color, opacity: 0.16 + m * 0.6 }} />
+            <div style={{ position: "absolute", inset: 8, borderRadius: "50%", opacity: 0.9,
+              background: `radial-gradient(circle at 35% 28%, rgba(255,255,255,0.22), rgba(255,255,255,0) 42%), radial-gradient(circle at 50% 60%, ${t.color}55, ${t.color}14 70%)`,
+              boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18), 0 18px 40px -12px ${t.color}66` }} />
+            <div style={{ position: "absolute", left: -90, top: -90, width: 320, height: 320, borderRadius: "50%", background: t.color, filter: "blur(60px)", opacity: m * 0.75 }} />
             <Glyph kind={i} color={t.color} size={88} />
           </div>
         );
@@ -121,6 +124,13 @@ export const LogoReveal: React.FC<{ darkAt: number; nameAt: number }> = ({ darkA
       </div>
       <div style={{ position: "absolute", left: 960 - 80, top: 540 - 95, fontFamily: theme.font, fontSize: 170, fontWeight: 800, letterSpacing: "-0.045em",
         color: "#F5F5F7", opacity: name, transform: `translateX(${interpolate(name, [0, 1], [40, 0])}px)` }}>Ketvoice</div>
+      <AbsoluteFill style={{ opacity: interpolate(f, [0, 4, 26], [0, 0.9, 0], clamp) }}>
+        {Array.from({ length: 36 }).map((_, i) => (
+          <div key={i} style={{ position: "absolute", left: 960, top: 540, width: 2, height: 900, marginLeft: -1, transformOrigin: "50% 0%",
+            transform: `rotate(${i * 10 + (i % 3) * 3}deg) translateY(${interpolate(f, [0, 26], [80, 260], clamp)}px)`,
+            background: "linear-gradient(180deg, rgba(255,255,255,0.9), rgba(255,255,255,0))", opacity: 0.35 + (i % 4) * 0.15 }} />
+        ))}
+      </AbsoluteFill>
       <AbsoluteFill style={{ background: "#fff", opacity: flash }} />
     </AbsoluteFill>
   );

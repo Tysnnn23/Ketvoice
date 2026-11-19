@@ -8,6 +8,7 @@ export const WIDTH = 1080;
 export const HEIGHT = 1920;
 
 /** Frame of beat n counted from the first drop (n may be negative or fractional). */
+export const PER = BEAT_S * FPS;
 export const beat = (n: number) => Math.round((DROP_S + n * BEAT_S) * FPS);
 
 export const S = {

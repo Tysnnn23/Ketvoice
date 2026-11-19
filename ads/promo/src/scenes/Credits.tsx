@@ -9,10 +9,10 @@ export const Credits: React.FC = () => {
   return (
     <AbsoluteFill style={{ background: "#000", alignItems: "center", justifyContent: "center", fontFamily: theme.font, textAlign: "center" }}>
       <div style={{ opacity: a, transform: `translateY(${(1 - a) * 14}px)`, color: theme.colors.textDim, fontSize: 30, lineHeight: 1.5 }}>
-        <div style={{ color: theme.colors.text, fontSize: 34, fontWeight: 650, marginBottom: 10 }}>Phone model : SabasGT</div>
+        <div style={{ color: theme.colors.text, fontSize: 34, fontWeight: 650, marginBottom: 10 }}>Phone model: SabasGT</div>
         <div>« Off-brand Android Smartphone » · sketchfab.com/sabasgme</div>
-        <div>CC BY 4.0 · couleurs modifiées</div>
-        <div style={{ marginTop: 34 }}>Musique : ElevenLabs Music</div>
+        <div>CC BY 4.0 · colours changed</div>
+        <div style={{ marginTop: 34 }}>Music: ElevenLabs Music</div>
       </div>
     </AbsoluteFill>
   );

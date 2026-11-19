@@ -15,8 +15,8 @@ export const Hook: React.FC = () => {
   return (
     <div style={{ position: "absolute", left: 90, right: 90, top: 180, fontFamily: theme.font, fontSize: 104, fontWeight: 760,
       letterSpacing: "-0.035em", lineHeight: 1.02, opacity: 1 - out, transform: `scale(${1 + out * 0.06})` }}>
-      {line("Ta musique.", 3)}
-      {line("Sans pause.", beat(-2), true)}
+      {line("Your music.", 3)}
+      {line("Nonstop.", beat(-2), true)}
     </div>
   );
 };

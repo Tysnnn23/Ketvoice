@@ -23,7 +23,7 @@ export const KetmixTitle: React.FC<{ from: number }> = ({ from }) => {
         })}
       </div>
       <div style={{ marginTop: 12, fontSize: 40, fontWeight: 520, color: theme.colors.textDim, opacity: sub,
-        transform: `translateY(${interpolate(sub, [0, 1], [22, 0])}px)` }}>Le DJ intégré à Ketvoice</div>
+        transform: `translateY(${interpolate(sub, [0, 1], [22, 0])}px)` }}>The DJ built into Ketvoice</div>
     </div>
   );
 };

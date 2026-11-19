@@ -83,7 +83,7 @@ const Env: React.FC = () => {
 /** Screen picture: the clip of the scene (frame-exact), or a dark glass when [src] is absent. */
 const useScreenMaterial = (tex: THREE.Texture | null, glow: number) =>
   useMemo(() => {
-    const mat = new THREE.MeshStandardMaterial({ color: "#000000", roughness: 0.06, metalness: 0, toneMapped: false });
+    const mat = new THREE.MeshPhysicalMaterial({ color: "#000000", roughness: 0.05, metalness: 0, clearcoat: 1, clearcoatRoughness: 0.04, toneMapped: false });
     if (tex) {
       tex.colorSpace = THREE.SRGBColorSpace;
       // The glTF screen UVs run along the long side; the 870×1920 clip is cropped to the screen's shape.
