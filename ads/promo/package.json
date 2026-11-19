@@ -1,0 +1,25 @@
+{
+  "name": "ketvoice-promo",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "studio": "remotion studio src/index.ts",
+    "still": "remotion still src/index.ts",
+    "render": "remotion render src/index.ts"
+  },
+  "dependencies": {
+    "@react-three/fiber": "^9.8.2",
+    "@remotion/cli": "^4.0.545",
+    "@remotion/media-utils": "^4.0.545",
+    "@remotion/motion-blur": "^4.0.545",
+    "@remotion/three": "^4.0.545",
+    "@remotion/transitions": "^4.0.545",
+    "@types/three": "^0.187.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "remotion": "^4.0.545",
+    "three": "^0.187.0",
+    "typescript": "^5.9.3"
+  }
+}
