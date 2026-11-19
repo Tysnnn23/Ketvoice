@@ -112,11 +112,7 @@ internal object PairFit {
 
     /** 0 for two titles alike; each term counts up to 1 (a clash 0.5). */
     fun distance(a: SegmentAnalysis, b: SegmentAnalysis): Float {
-        val tempo = when {
-            a.hasBeat && b.hasBeat -> (abs(BeatAnalysis.foldedRatio(a.bpm, b.bpm) - 1f) / .12f).coerceIn(0f, 1f)
-            a.hasBeat != b.hasBeat -> 1f
-            else -> 0f
-        }
+        val tempo = tempo(a, b)
         val level = ((BlendFit.levelGapDb(a, b) - 3f) / 6f).coerceIn(0f, 1f)
         val busy = if (a.activity > 0f && b.activity > 0f)
             ((abs(ln(a.activity / b.activity)) - ln(1.5f)) / ln(2f)).coerceIn(0f, 1f) else 0f
@@ -124,9 +120,19 @@ internal object PairFit {
         return tempo + level + busy + clash
     }
 
-    /** The radio change for a pair this far apart, or null when the two may be blended. */
+    /** How far apart the pulses are: 0 the same, 1 at 12 % or more, or one with a steady beat and one without. */
+    fun tempo(a: SegmentAnalysis, b: SegmentAnalysis): Float = when {
+        a.hasBeat && b.hasBeat -> (abs(BeatAnalysis.foldedRatio(a.bpm, b.bpm) - 1f) / .12f).coerceIn(0f, 1f)
+        a.hasBeat != b.hasBeat -> 1f
+        else -> 0f
+    }
+
+    /**
+     * The radio change for a pair this far apart, or null when the two may be blended. Two titles on nearly the
+     * same pulse are always left to a DJ blend: a quiet, sparse intro of a dance title is what such blends are for.
+     */
     fun radio(a: SegmentAnalysis, b: SegmentAnalysis, end: Long, gain: Float): MixPlan? {
-        if (distance(a, b) < RADIO) return null
+        if (tempo(a, b) < .5f || distance(a, b) < RADIO) return null
         val fade = RADIO_FADE_MS.coerceAtMost(max(1_000L, end - a.startMs))
         return MixPlan(MixKind.Crossfade, outMs = end - fade, inMs = b.soundStartMs, overlapMs = fade, gain = gain, reason = "far apart")
     }

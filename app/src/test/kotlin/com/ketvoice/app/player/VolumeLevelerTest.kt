@@ -36,6 +36,17 @@ class VolumeLevelerTest {
         assertTrue(kotlin.math.abs(l.gainDb - before) < 2f)
     }
 
+    @Test fun aKetmixTransitionIsNotLevelled() {
+        val l = VolumeLeveler(48_000)
+        repeat(300) { l.observe(.25, 4_800) }
+        val before = l.gainDb
+        // A fade dying away under a transition: neither measured nor followed.
+        repeat(100) { l.observe(.0005, 4_800, hold = true) }
+        assertEquals(before, l.gainDb, 0f)
+        repeat(100) { l.observe(.0005, 4_800) }
+        assertTrue("without a transition the same fade is followed", l.gainDb > before)
+    }
+
     @Test fun softClipKeepsRaisedPeaksUnderFullScale() {
         assertEquals(.5f, VolumeLeveler.soft(.5f), 0f)
         assertTrue(VolumeLeveler.soft(1.6f) < 1f); assertTrue(VolumeLeveler.soft(-1.6f) > -1f)

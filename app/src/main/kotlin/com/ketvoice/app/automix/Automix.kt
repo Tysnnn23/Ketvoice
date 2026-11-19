@@ -103,7 +103,8 @@ internal object Automix {
     /** How close to its end a title must be for its echo to be played out past it. */
     private const val TAIL_END_MS = 1_000L
 
-    private val _ui = MutableStateFlow(Ui())
+    // 7.1: the volume leveler holds still while a transition is heard (see LevelHold).
+    private val _ui = MutableStateFlow(Ui()).also { flow -> com.ketvoice.app.player.LevelHold.mixing = { flow.value.phase == Phase.Mixing } }
     val ui: StateFlow<Ui> = _ui
 
     /**

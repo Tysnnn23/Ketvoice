@@ -41,9 +41,13 @@ internal class VolumeLeveler(sampleRate: Int) {
     var gainDb = 0f
         private set
 
-    /** Measures one buffer of [frames] frames with mean square [meanSquare], then moves the gain. */
-    fun observe(meanSquare: Double, frames: Int) {
-        if (frames <= 0) return
+    /**
+     * Measures one buffer of [frames] frames with mean square [meanSquare], then moves the gain. While [hold]
+     * (7.1: a Ketmix transition is heard) neither moves: two titles crossing, or a fade dying away, are not
+     * levelled back up, so the crossing has no bump and an ending keeps the level it was mixed at.
+     */
+    fun observe(meanSquare: Double, frames: Int, hold: Boolean = false) {
+        if (frames <= 0 || hold) return
         val seconds = frames.toFloat() / rate
         if (db(meanSquare) > GATE_DB) {
             val a = 1.0 - exp(-seconds / MEASURE_SECONDS.toDouble())
@@ -52,6 +56,11 @@ internal class VolumeLeveler(sampleRate: Int) {
         val b = 1f - exp(-seconds / GAIN_SECONDS)
         gainDb += (wanted(db(power)) - gainDb) * b
     }
+}
+
+/** 7.1: tells whether a Ketmix transition is heard; null until Ketmix is first used. */
+internal object LevelHold {
+    @Volatile var mixing: (() -> Boolean)? = null
 }
 
 internal class LevelingAudioProcessor : BaseAudioProcessor() {
@@ -90,7 +99,8 @@ internal class LevelingAudioProcessor : BaseAudioProcessor() {
             sum += v * v; count++
         }
         inputBuffer.position(start)
-        level.observe(if (count > 0) sum / count else 0.0, count / channels)
+        level.observe(if (count > 0) sum / count else 0.0, count / channels,
+            hold = LevelHold.mixing?.invoke() == true)
         val target = VolumeLeveler.linear(level.gainDb)
         // The gain glides across the buffer from its last value: no step is ever heard.
         val from = appliedGain
