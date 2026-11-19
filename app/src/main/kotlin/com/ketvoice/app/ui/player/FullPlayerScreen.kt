@@ -448,7 +448,8 @@ fun FullPlayerScreen(
                             // Partage réel : lien listen.html → chez un ami avec
                             // l'app, la lecture démarre ; sans l'app, page web
                             // avec téléchargement.
-                            com.ketvoice.app.util.ShareLinks.shareTrack(context, track)
+                            // 7.3: the share card first, with the link still one touch away.
+                            com.ketvoice.app.ui.AppUi.shareCard.value = track
                         } else sheet = "track"
                     }, share = expanded, onCover = {
                         navigate(PlayerPage.ARTWORK)

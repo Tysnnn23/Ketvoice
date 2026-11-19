@@ -159,7 +159,7 @@ fun TrackMenuSheet(track: Track, onClose: () -> Unit) {
             // morceau, un navigateur affiche la page de téléchargement.
             QuickTrackAction("Partager", Icons.Filled.Share, Modifier.weight(1f)) {
                 onClose()
-                com.ketvoice.app.util.ShareLinks.shareTrack(shareContext, track)
+                com.ketvoice.app.ui.AppUi.shareCard.value = track
             }
         }
         if (com.ketvoice.app.together.Ketogether.ui.collectAsState().value.active) MenuItemRow("Ajouter à Ketogether", com.ketvoice.app.ui.together.KetogetherIcon) {

@@ -177,7 +177,7 @@ internal fun ContextMenuHost(modifier: Modifier = Modifier) {
             enabled = !downloaded) { Downloader.download(track) },
         MenuAction("Ajouter à une playlist", KetIcons.Plus) { AppUi.addToPlaylist.value = track },
         MenuAction("Lancer la radio", Icons.Filled.Radio) { Player.startRadio(track) },
-        MenuAction("Partager", KetIcons.Share) { com.ketvoice.app.util.ShareLinks.shareTrack(context, track) },
+        MenuAction("Partager", KetIcons.Share) { AppUi.shareCard.value = track },
         // The Ketmix DJ editor (6.1): where this title is left and entered in a mix.
         MenuAction("Point de mix…", KetIcons.Sliders) { com.ketvoice.app.ui.player.KetmixEditor.openFor(track) },
         MenuAction("Plus", KetIcons.More) { AppUi.trackMenuTrack.value = track })

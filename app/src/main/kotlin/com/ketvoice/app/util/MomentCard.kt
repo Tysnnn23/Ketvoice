@@ -150,7 +150,7 @@ object MomentCard {
     private fun ellipsize(text: String, paint: TextPaint, width: Float): String =
         android.text.TextUtils.ellipsize(text, paint, width, android.text.TextUtils.TruncateAt.END).toString()
 
-    private fun darken(color: Int, amount: Float): Int {
+    internal fun darken(color: Int, amount: Float): Int {
         val f = 1f - amount.coerceIn(0f, 1f)
         val r = ((color shr 16 and 0xFF) * f).toInt(); val g = ((color shr 8 and 0xFF) * f).toInt(); val b = ((color and 0xFF) * f).toInt()
         return (0xFF shl 24) or (r shl 16) or (g shl 8) or b

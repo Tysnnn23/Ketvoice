@@ -36,6 +36,8 @@
          open it before connecting the local presence session. -->
     <queries>
         <package android:name="com.discord" />
+        <!-- 7.3: the share card offers Instagram Stories when Instagram is installed. -->
+        <package android:name="com.instagram.android" />
         <!-- Manufacturer battery managers, opened from Settings → Playback (5.10.0). -->
         <package android:name="com.miui.securitycenter" />
         <package android:name="com.miui.powerkeeper" />

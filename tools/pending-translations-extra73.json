@@ -1,0 +1,50 @@
+{
+ "Story Instagram": {
+  "en": "Instagram Story",
+  "hi": "Instagram स्टोरी",
+  "ja": "Instagramストーリーズ",
+  "zh": "Instagram 快拍",
+  "ru": "История в Instagram",
+  "it": "Storia di Instagram",
+  "es": "Historia de Instagram",
+  "de": "Instagram-Story",
+  "pt": "Story do Instagram",
+  "ko": "Instagram 스토리"
+ },
+ "Partager l'image": {
+  "en": "Share image",
+  "hi": "छवि साझा करें",
+  "ja": "画像を共有",
+  "zh": "分享图片",
+  "ru": "Поделиться изображением",
+  "it": "Condividi immagine",
+  "es": "Compartir imagen",
+  "de": "Bild teilen",
+  "pt": "Compartilhar imagem",
+  "ko": "이미지 공유"
+ },
+ "Sans paroles": {
+  "en": "No lyrics",
+  "hi": "बोल के बिना",
+  "ja": "歌詞なし",
+  "zh": "不含歌词",
+  "ru": "Без текста",
+  "it": "Senza testo",
+  "es": "Sin letra",
+  "de": "Ohne Songtext",
+  "pt": "Sem letra",
+  "ko": "가사 없음"
+ },
+ "Carte de partage": {
+  "en": "Share card",
+  "hi": "साझा कार्ड",
+  "ja": "共有カード",
+  "zh": "分享卡片",
+  "ru": "Карточка для публикации",
+  "it": "Scheda di condivisione",
+  "es": "Tarjeta para compartir",
+  "de": "Teilen-Karte",
+  "pt": "Cartão de compartilhamento",
+  "ko": "공유 카드"
+ }
+}
