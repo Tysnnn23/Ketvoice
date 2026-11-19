@@ -23,6 +23,7 @@ internal object WidgetPinning {
         Entry(WidgetKind.Week, "Votre semaine", "Vos minutes d'écoute et votre artiste de la semaine", WeekWidgetReceiver::class.java),
         Entry(WidgetKind.Mix, "Pour vous", "Le mix du moment : un tap le lance", MixWidgetReceiver::class.java),
         Entry(WidgetKind.Mini, "Mini", "Pochette, lecture/pause et suivant", MiniControlsWidgetReceiver::class.java),
+        Entry(WidgetKind.Controls, "Commandes", "Précédent, lecture/pause et suivant, même en tout petit", ControlsWidgetReceiver::class.java),
     )
 
     /** Whether the launcher lets an app propose a widget (most do; some makers' launchers do not). */

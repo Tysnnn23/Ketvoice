@@ -1021,7 +1021,8 @@ object Player {
             .filter { ((counts[it.id] ?: 0) >= 2 || it.id in favorites) && RadioMix.artistKey(it) in circle }
             .let { com.ketvoice.app.data.PersonalMixes.withLocalFiles(it, com.ketvoice.app.data.LocalMusic.tracks.value) }
         RadioMix.pick(fresh, ownTracks.filter { RadioMix.artistKey(it) == currentKey }, familiar, memory,
-            com.ketvoice.app.data.ArtistPrefs::allows, kotlin.random.Random(from.id.hashCode().toLong() * 31 + memory.size))
+            com.ketvoice.app.data.ArtistPrefs::allows, kotlin.random.Random(from.id.hashCode().toLong() * 31 + memory.size),
+            lately = NoRepeatWindow.recent(com.ketvoice.app.data.ListeningHistory.heardAt.value, System.currentTimeMillis()))
     }
 
     /** A radio grows before it runs out: a few titles before the end of the queue, the next batch joins it. */
@@ -1306,7 +1307,11 @@ object Player {
         val feel: (Track) -> AutoplayRules.Feel? = { t ->
             runCatching { com.ketvoice.app.smartlib.SmartFacts.signals(t) }.getOrNull()?.let { AutoplayRules.Feel(it.bpm, it.loudnessDb) }
         }
-        fun take(): List<Track> = AutoplayRules.pick(session.pool, seed, _state.value.queue, session.heard, allows, feel)
+        // 7.1: never a title heard in the last hours, unless too few are left (NoRepeatWindow).
+        fun recent() = NoRepeatWindow.recent(com.ketvoice.app.data.ListeningHistory.heardAt.value, System.currentTimeMillis())
+        fun take(): List<Track> = NoRepeatWindow.pick(session.pool, recent()) { pool ->
+            AutoplayRules.pick(pool, seed, _state.value.queue, session.heard, allows, feel)
+        }
         var batch = take()
         // Once the seed's radio is used up, the titles the run queued lead it further (the latest first).
         val leads = listOf(seed) + s.queue.drop(seedAt + 1).reversed()
@@ -1319,7 +1324,10 @@ object Player {
         if (batch.isEmpty()) batch = runCatching {
             val downloads = com.ketvoice.app.data.Downloader.items.value.map { it.track }
             val facts = com.ketvoice.app.smartlib.SmartFacts.build(downloads + seed)
-            AutoplayRules.offline(seed, downloads, facts, _state.value.queue, session.heard, allows, kotlin.random.Random(System.nanoTime()))
+            val random = kotlin.random.Random(System.nanoTime())
+            NoRepeatWindow.pick(downloads, recent()) { pool ->
+                AutoplayRules.offline(seed, pool, facts, _state.value.queue, session.heard, allows, random)
+            }
         }.getOrDefault(emptyList())
         if (seedEntry !in _state.value.queueEntryIds) return null
         if (session.heard.size > 1_500) session.heard.clear()

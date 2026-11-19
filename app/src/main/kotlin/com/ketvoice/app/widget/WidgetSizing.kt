@@ -50,6 +50,19 @@ internal object WidgetSizing {
 
     /** The players: every shape, with a full-transport strip and a roomier medium card. */
     val players: Set<DpSize> = setOf(STRIP_NARROW, STRIP, STRIP_FULL, SMALL, MEDIUM, MEDIUM_ROOMY, LARGE)
+    /** « Commandes » (7.1): one row at any width; previous, play/pause and next at every one of them. */
+    val controls: Set<DpSize> = setOf(STRIP_NARROW, STRIP, STRIP_FULL)
+
+    /** What « Commandes » shows at a width: the transport always, the cover from [STRIP_LABELS_W], the title from [STRIP_FULL_W]. */
+    data class ControlsParts(val cover: Boolean, val labels: Boolean, val skipDp: Int, val playDp: Int)
+
+    fun controlsParts(widthDp: Float): ControlsParts {
+        val w = if (widthDp.isFinite()) widthDp else 0f
+        val roomy = w >= STRIP_LABELS_W
+        // Narrowest (two cells, resized down to 110 dp): three buttons and the padding still fit.
+        return ControlsParts(cover = roomy, labels = w >= STRIP_FULL_W, skipDp = if (roomy) 36 else 30, playDp = if (roomy) 40 else 34)
+    }
+
     /** The mini controls: one row at any width (taller places just centre it). */
     val mini: Set<DpSize> = setOf(STRIP_NARROW, STRIP, STRIP_FULL)
     /** Lyrics, Ketmix: a strip, a square and the two wide cards. */

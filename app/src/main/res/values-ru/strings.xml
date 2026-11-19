@@ -19,6 +19,8 @@
     <string name="widget_mix_desc">Микс момента: одно касание — и он играет</string>
     <string name="widget_mini">Ketvoice · Мини</string>
     <string name="widget_mini_desc">Обложка, воспроизведение/пауза и далее</string>
+    <string name="widget_controls">Ketvoice · Управление</string>
+    <string name="widget_controls_desc">Назад, воспроизведение/пауза и далее, даже в самом малом размере</string>
     <string name="widget_now_playing">Ketvoice · Сейчас играет</string>
     <string name="widget_now_playing_desc">Обложка, название и управление в любом размере</string>
     <string name="widget_lyrics">Ketvoice · Текст в реальном времени</string>

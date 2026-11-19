@@ -43,6 +43,8 @@ object SettingsStore {
         s.albumHeroCanvas.value = p.getBoolean("albumHeroCanvas", true)
         s.glassStyle.value = p.getInt("glassStyle", 0).coerceIn(0, com.ketvoice.app.glass.GlassStyles.MAX)
         s.glassTintLevel.value = glassTintLevel(p)
+        s.glassTinted.value = p.getBoolean("glassTinted", false)
+        s.trueBlack.value = p.getBoolean("trueBlack", false)
         s.glassTilt.value = p.getBoolean("glassTilt", true)
         s.downloadsWifiOnly.value = p.getBoolean("downloadsWifiOnly", false)
         s.panoramicCanvas.value = p.getBoolean("panoramicCanvas", false)
@@ -203,6 +205,8 @@ object SettingsStore {
             .putInt("glassTintLevel", com.ketvoice.app.glass.GlassClarity.sanitize(s.glassTintLevel.value))
             // The continuous tint of 5.x has been converted on loading; it is not written again.
             .remove("glassTint")
+            .putBoolean("glassTinted", s.glassTinted.value)
+            .putBoolean("trueBlack", s.trueBlack.value)
             .putBoolean("glassTilt", s.glassTilt.value)
             .putBoolean("downloadsWifiOnly", s.downloadsWifiOnly.value)
             .putBoolean("panoramicCanvas", s.panoramicCanvas.value)

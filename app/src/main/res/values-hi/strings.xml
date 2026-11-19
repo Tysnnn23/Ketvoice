@@ -19,6 +19,8 @@
     <string name="widget_mix_desc">इस समय का मिक्स: एक टैप में चलाएँ</string>
     <string name="widget_mini">Ketvoice · मिनी</string>
     <string name="widget_mini_desc">कवर, चलाएँ/रोकें और अगला</string>
+    <string name="widget_controls">Ketvoice · नियंत्रण</string>
+    <string name="widget_controls_desc">पिछला, चलाएँ/रोकें और अगला, सबसे छोटे आकार में भी</string>
     <string name="widget_now_playing">Ketvoice · अभी चल रहा है</string>
     <string name="widget_now_playing_desc">कवर, शीर्षक और नियंत्रण, हर आकार में</string>
     <string name="widget_lyrics">Ketvoice · लाइव गीत</string>

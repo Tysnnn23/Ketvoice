@@ -117,7 +117,8 @@ class GlassPreviewHostTest {
         compose.onNodeWithContentDescription("Transparence du verre").assertIsDisplayed()
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Standard"))
         compose.onNodeWithText("Transparent").assertExists()
-        compose.onNodeWithText("Teinté").assertExists()
+        // 7.1: the end of the slider (the Clair / Teinté choice above it is a tab).
+        compose.onNode(hasText("Teinté") and !hasClickAction()).assertExists()
     }
 
     @Test @Config(qualifiers = "w320dp-h480dp-mdpi")
@@ -128,7 +129,7 @@ class GlassPreviewHostTest {
             }
         } }
         compose.onNodeWithTag("glass-tint-slider").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("Teinté").performScrollTo().assertIsDisplayed()
+        compose.onNode(hasText("Teinté") and !hasClickAction()).performScrollTo().assertIsDisplayed()
     }
 
     @Test fun rtlSliderMapsPhysicalEdgesToLogicalValues() {

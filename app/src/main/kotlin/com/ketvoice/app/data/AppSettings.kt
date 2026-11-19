@@ -23,6 +23,10 @@ object AppSettings {
      * versions. Replaces the continuous `glassTint` of 5.x, converted once by [SettingsStore].
      */
     val glassTintLevel = mutableStateOf(com.ketvoice.app.glass.GlassClarity.DEFAULT)
+    /** « Teinté » (7.1): the glass is clearly more opaque and contrasted (off = « Clair»); the level above still applies. */
+    val glassTinted = mutableStateOf(false)
+    /** « Fond noir » (7.1, OLED): in dark mode, the pages stay pure black even under a cover's colours. */
+    val trueBlack = mutableStateOf(false)
     /** The reflections of the glass follow the phone's tilt (never on Quest, with reduced motion or in the performance mode). */
     val glassTilt = mutableStateOf(true)
     val downloadsWifiOnly = mutableStateOf(false)

@@ -18,6 +18,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -52,6 +53,9 @@ fun LibraryScreen() {
     var query by rememberSaveable { mutableStateOf("") }
     var view by rememberSaveable { mutableIntStateOf(0) }
     var order by rememberSaveable { mutableIntStateOf(0) }
+    // 7.1: Titles (Récents, Titre A–Z, Artiste A–Z) and Artists (Récents, Nom A–Z) sort by name too, with an A–Z index.
+    var trackOrder by rememberSaveable { mutableIntStateOf(0) }
+    var artistOrder by rememberSaveable { mutableIntStateOf(0) }
     var album by rememberSaveable { mutableStateOf<String?>(null) }
     var selecting by rememberSaveable { mutableStateOf(false) }
     var selected by rememberSaveable { mutableStateOf(listOf<String>()) }
@@ -74,13 +78,19 @@ fun LibraryScreen() {
     val albums = remember(groups, order) {
         val byTrack = groups.associateBy { it.tracks.first().id }
         AlbumOrder.sort(groups.map { it.tracks.first() }, order).mapNotNull { byTrack[it.id] }
+            .let { sorted -> if (order in 1..2) IndexLetters.grouped(sorted) { if (order == 1) it.title else it.artist } else sorted }
     }
     val chosen = remember(groups, album) { groups.firstOrNull { it.key == album } }
     // Worked out when what they come from changes, not at every recomposition of the page (6.6).
-    val shown = remember(chosen, all, query) {
+    val shown = remember(chosen, all, query, view, trackOrder) {
         val q = query.trim()
-        (chosen?.tracks ?: all).filter { track ->
+        val found = (chosen?.tracks ?: all).filter { track ->
             q.isEmpty() || track.title.contains(q, true) || track.artist.contains(q, true) || track.album.contains(q, true)
+        }
+        if (chosen != null || view != 3 || trackOrder !in 1..2) found
+        else {
+            val name: (Track) -> String = { if (trackOrder == 1) it.title else it.artist }
+            IndexLetters.grouped(found.sortedWith(compareBy(libraryCollator(), name)), name)
         }
     }
     val albumRows = remember(albums, query) {
@@ -88,9 +98,10 @@ fun LibraryScreen() {
         albums.filter { q.isEmpty() || it.title.contains(q, true) || it.artist.contains(q, true) }
     }
     val selectedTracks = remember(all, selected) { val ids = selected.toHashSet(); all.filter { it.id in ids } }
-    val artists = remember(all, query) {
+    val artists = remember(all, query, artistOrder) {
         all.filter { it.artist.isNotBlank() }.groupBy { it.artist.substringBefore(',').trim() }
             .filterKeys { query.isBlank() || it.contains(query.trim(), true) }.entries.toList()
+            .let { found -> if (artistOrder == 1) IndexLetters.grouped(found.sortedWith(compareBy(libraryCollator()) { it.key })) { it.key } else found }
     }
     // The library of Apple Music (Ket 27): categories in a list, then what was added lately.
     val appleRoot = view == 0 && query.isBlank() && chosen == null
@@ -261,6 +272,7 @@ fun LibraryScreen() {
         if ((view == 0 || view == 4) && chosen == null && !appleRoot) {
             if (artists.isNotEmpty()) item(key = "artists") {
                 LibrarySection("Artistes")
+                if (view == 4 && artists.size > 1) LibrarySortPills(listOf("Récents", "Nom A–Z"), artistOrder, "library-artist-sort") { artistOrder = it }
                 // The Artists view shows them as a grid of portraits (the rows below); "All" keeps a row.
                 if (view != 4) LazyRow(contentPadding = PaddingValues(horizontal = 18.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                     items(artists, key = { it.key }) { (name, tracks) ->
@@ -294,6 +306,8 @@ fun LibraryScreen() {
                     if (all.isNotEmpty()) com.ketvoice.app.ui.common.KetTextButton(if (selecting) "Annuler" else "Sélectionner",
                         { selecting = !selecting; selected = emptyList() })
                 }
+                if (view == 3 && chosen == null && all.size > 1 && !selecting)
+                    LibrarySortPills(AlbumOrder.labels, trackOrder, "library-track-sort") { trackOrder = it }
                 if (selecting) Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                     com.ketvoice.app.ui.common.KetTextButton("Tout sélectionner", { selected = shown.map { it.id } })
                     IconButton(onClick = { Player.playQueue(selectedTracks) }, enabled = selectedTracks.isNotEmpty()) { Icon(KetIcons.Play, "Lecture", tint = theme.accent) }
@@ -337,6 +351,28 @@ fun LibraryScreen() {
         else if (query.isNotBlank() && shown.isEmpty() && playlists.none { it.name.contains(query.trim(), true) }) item {
             EmptyState("Aucun résultat", "Essayez un autre titre ou artiste.", "Effacer", icon = KetIcons.Search, onAction = { query = "" })
         }
+    }
+    // The A–Z index (7.1): only on a list sorted by name, long enough to need it, without a search.
+    val jumps = remember(view, chosen, query, shown, albumRows, artists, order, trackOrder, artistOrder, gridColumns) {
+        when {
+            query.isNotBlank() || chosen != null -> null
+            view == 3 && trackOrder in 1..2 -> AlphaJumps(IndexLetters.firsts(shown) { if (trackOrder == 1) it.title else it.artist }, shown.size, 1)
+            view == 2 && order in 1..2 -> AlphaJumps(IndexLetters.firsts(albumRows) { if (order == 1) it.title else it.artist }, albumRows.size, gridColumns)
+            view == 4 && artistOrder == 1 -> AlphaJumps(IndexLetters.firsts(artists) { it.key }, artists.size, gridColumns)
+            else -> null
+        }?.takeIf { IndexLetters.shown(it.count, it.letters.size) }
+    }
+    // It comes in once the page's header has scrolled away, so it never lies over the title, the search or the filters.
+    val pastHeader by remember(list) { derivedStateOf { list.firstVisibleItemIndex > 0 } }
+    val indexShown by androidx.compose.animation.core.animateFloatAsState(if (jumps != null && pastHeader) 1f else 0f,
+        androidx.compose.animation.core.tween(com.ketvoice.app.ui.motion.Motion.fastMs()), label = "alphabet-index")
+    if (jumps != null && indexShown > 0f) {
+        val jumpScope = rememberCoroutineScope()
+        val bottom = LocalAdaptiveLayout.current.bottomPaddingDp.dp
+        AlphabetIndex(jumps.letters.map { it.first }, { i ->
+            jumpScope.launch { list.scrollToItem(jumps.item(list.layoutInfo.totalItemsCount, i)) }
+        }, Modifier.align(Alignment.CenterEnd).padding(top = 116.dp, bottom = bottom)
+            .graphicsLayer { alpha = indexShown }, available = maxHeight - 116.dp - bottom)
     }
     }
     }
@@ -475,5 +511,35 @@ private fun AppleLibraryCategories(columns: Int, rows: List<Triple<String, andro
         }
     }
     }
+    }
+}
+
+/**
+ * Where the A–Z index jumps (7.1): the first entry of each letter, in a section of [count] entries laid
+ * [columns] to a row. The section is the last of the list (nothing follows a non-empty sorted list), so
+ * its first row is [total] minus its rows.
+ */
+private class AlphaJumps(val letters: List<Pair<String, Int>>, val count: Int, val columns: Int) {
+    fun item(total: Int, letter: Int): Int {
+        val perRow = columns.coerceAtLeast(1)
+        val rows = (count + perRow - 1) / perRow
+        val position = letters.getOrNull(letter)?.second ?: 0
+        return ((total - rows).coerceAtLeast(0) + position / perRow).coerceIn(0, (total - 1).coerceAtLeast(0))
+    }
+}
+
+private fun libraryCollator(): java.util.Comparator<String> {
+    val collator = java.text.Collator.getInstance(java.util.Locale.getDefault()).apply { strength = java.text.Collator.PRIMARY }
+    return java.util.Comparator { a, b -> collator.compare(a, b) }
+}
+
+/** The orders of a Library section, as the plain filter capsules of the albums. */
+@Composable
+private fun LibrarySortPills(labels: List<String>, selected: Int, tag: String, onSelect: (Int) -> Unit) {
+    val theme = LocalTheme.current
+    LazyRow(Modifier.testTag(tag), contentPadding = PaddingValues(horizontal = 18.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        item { Text("Trier", color = theme.secondary, fontSize = 13.sp, modifier = Modifier.padding(end = 2.dp)) }
+        itemsIndexed(labels) { index, label -> CollectionFilter(label, selected == index, { onSelect(index) }) }
     }
 }

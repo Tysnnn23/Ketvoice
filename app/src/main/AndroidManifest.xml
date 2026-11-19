@@ -286,6 +286,18 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/mini_controls_widget_info" />
         </receiver>
+        <!-- 7.1: « Commandes », 4×1, keeps previous / play-pause / next at every width. -->
+        <receiver
+            android:name=".widget.ControlsWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_controls">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/controls_widget_info" />
+        </receiver>
         <!-- Quick Settings tiles (6.4; removed on Quest): play/pause with the title, and Ketmix. -->
         <service
             android:name=".widget.PlayPauseTileService"

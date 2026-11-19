@@ -27,8 +27,13 @@ data class CoverLook(
     val accent: Color? = null,
     val accentAmount: Float = 0f,
 ) {
-    fun apply(chosen: KetTheme): KetTheme {
+    fun apply(chosen: KetTheme, black: Boolean = false): KetTheme {
         val toned = tone?.takeIf { amount(toneAmount) > 0f }?.let { color ->
+            if (black && chosen.isDark) {
+                // Noir: the page stays pure black; only the cards take a hint of the cover, held as dim as a night page.
+                val card = lerp(chosen.card, com.ketvoice.app.ui.sub.PageTint.nightCap(lerp(chosen.card, color, .22f)), amount(toneAmount))
+                return@let chosen.copy(card = card, secondary = CoverLegibility.readableSecondary(chosen.secondary, chosen.background, card))
+            }
             val full = com.ketvoice.app.ui.sub.artistPageTint(chosen.background, color, chosen.isDark)
             val page = lerp(chosen.background, full, amount(toneAmount))
             val card = lerp(page, chosen.onBackground, if (chosen.isDark) .08f else .05f)

@@ -343,6 +343,10 @@ fun SettingsScreen() {
                         SettingsStore.save()
                     }
                 }
+                // Noir (7.1, OLED): beside the appearance, pure black pages in dark mode.
+                if (AppSettings.themeMode.value != 1) SToggle(KetIcons.Moon, "Fond noir",
+                    "En mode sombre, les pages restent noir pur, même sous la couleur d'une pochette (écrans OLED)",
+                    AppSettings.trueBlack.value) { AppSettings.trueBlack.value = it; SettingsStore.save() }
                 SRow(
                     KetIcons.Appearance, "Couleur d'accent",
                     sub = if (com.ketvoice.app.data.ViceCityEdition.themeOn) "Le rose Vice City la remplace tant que le thème est activé"

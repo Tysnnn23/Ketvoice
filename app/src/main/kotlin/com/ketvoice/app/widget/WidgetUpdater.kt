@@ -71,6 +71,7 @@ internal object KetvoiceWidgetsUpdater {
         WidgetKind.NowPlaying -> NowPlayingWidget()
         WidgetKind.Player -> GlassPlayerWidget()
         WidgetKind.Mini -> MiniControlsWidget()
+        WidgetKind.Controls -> ControlsWidget()
         WidgetKind.Lyrics -> LyricsWidget()
         WidgetKind.Ketmix -> KetmixWidget()
         WidgetKind.Week -> WeekWidget()

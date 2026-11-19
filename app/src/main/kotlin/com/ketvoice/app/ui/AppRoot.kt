@@ -88,6 +88,8 @@ fun AppRoot() {
     com.ketvoice.app.glass.ObserveGlassTilt(com.ketvoice.app.glass.GlassLight.tiltWanted(
         AppSettings.glassTilt.value, AppSettings.liquidGlass.value, Motion.reduced,
         AppSettings.highPerformanceMode.value, com.ketvoice.app.BuildConfig.IS_QUEST))
+    // Android's high-contrast text turns the tinted glass on (7.1).
+    com.ketvoice.app.glass.HighContrastText.Observe()
     val themeMode = AppSettings.themeMode.value
     // A seasonal theme (6.2) is a dark look of its own while it is on; the Vice City edition keeps the listener's
     // light or dark theme and only replaces the accent. Either way the listener's choices are kept.

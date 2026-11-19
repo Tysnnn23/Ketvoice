@@ -19,6 +19,8 @@
     <string name="widget_mix_desc">지금의 믹스: 탭하면 재생</string>
     <string name="widget_mini">Ketvoice · 미니</string>
     <string name="widget_mini_desc">커버, 재생/일시정지, 다음</string>
+    <string name="widget_controls">Ketvoice · 컨트롤</string>
+    <string name="widget_controls_desc">이전, 재생/일시정지, 다음. 가장 작은 크기에서도</string>
     <string name="widget_now_playing">Ketvoice · 지금 재생 중</string>
     <string name="widget_now_playing_desc">커버, 제목, 컨트롤을 모든 크기로</string>
     <string name="widget_lyrics">Ketvoice · 실시간 가사</string>

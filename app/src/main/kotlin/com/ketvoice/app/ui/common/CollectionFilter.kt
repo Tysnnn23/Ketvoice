@@ -43,12 +43,10 @@ fun CollectionFilter(label: String, selected: Boolean, onClick: () -> Unit, modi
     Box(modifier.heightIn(min = 48.dp).semantics { this.selected = selected }
         .graphicsLayer { scaleX = scale; scaleY = scale }
         .clickable(interaction, null, role = Role.Tab, onClick = onClick), contentAlignment = Alignment.Center) {
-        com.ketvoice.app.glass.GlassPanel(Modifier.heightIn(min = 38.dp), CircleShape,
-            com.ketvoice.app.glass.GlassParams.pill(dark = theme.isDark), enabled = com.ketvoice.app.data.AppSettings.liquidGlass.value) {
-            Box(Modifier.heightIn(min = 38.dp).clip(CircleShape).background(fill).padding(horizontal = 16.dp, vertical = 9.dp),
-                contentAlignment = Alignment.Center) {
-                Text(label, color = ink, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
-            }
+        // A filter of the page's content: a plain capsule, not glass (7.1).
+        Box(Modifier.heightIn(min = 38.dp).clip(CircleShape).background(plainFill(theme.isDark)).background(fill)
+            .padding(horizontal = 16.dp, vertical = 9.dp), contentAlignment = Alignment.Center) {
+            Text(label, color = ink, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
         }
     }
 }

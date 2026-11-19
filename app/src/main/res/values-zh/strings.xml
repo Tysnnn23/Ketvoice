@@ -19,6 +19,8 @@
     <string name="widget_mix_desc">此刻的混音：轻点即可播放</string>
     <string name="widget_mini">Ketvoice · 迷你</string>
     <string name="widget_mini_desc">封面、播放/暂停和下一首</string>
+    <string name="widget_controls">Ketvoice · 控制</string>
+    <string name="widget_controls_desc">上一首、播放/暂停和下一首，最小尺寸也有</string>
     <string name="widget_now_playing">Ketvoice · 正在播放</string>
     <string name="widget_now_playing_desc">封面、标题和控制，适配所有尺寸</string>
     <string name="widget_lyrics">Ketvoice · 实时歌词</string>

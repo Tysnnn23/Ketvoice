@@ -1,5 +1,7 @@
 package com.ketvoice.app.ui.tablet
 
+import com.ketvoice.app.ui.player.trackSwipe
+import com.ketvoice.app.ui.player.trackSwipeContent
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -75,6 +77,8 @@ fun TabletMiniPlayer(modifier: Modifier = Modifier, onOpen: () -> Unit) {
     val art by ArtworkRepo.covers.collectAsState()
     val cover = com.ketvoice.app.data.MediaOverrides.cover(current, art["t:${current.id}"] ?: current.coverUrl)
     val shape = RoundedCornerShape(32.dp)
+    // Swiped sideways, the cover and the title change track (7.1), as on the phone.
+    val swipe = com.ketvoice.app.ui.player.rememberTrackSwipe()
     BoxWithConstraints(modifier.widthIn(max = DockedMiniPlayer.MAX_WIDTH.dp).fillMaxWidth()) {
         val inside = DockedMiniPlayer.scrubberInside(maxWidth.value)
         GlassPanel(Modifier.fillMaxWidth().height(DockedMiniPlayer.HEIGHT.dp)
@@ -86,6 +90,7 @@ fun TabletMiniPlayer(modifier: Modifier = Modifier, onOpen: () -> Unit) {
                 Row(Modifier.fillMaxSize().padding(start = 8.dp, end = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                     // Cover and title: the part that opens the player.
                     Row(Modifier.weight(if (inside) .9f else 1f).fillMaxHeight().clip(RoundedCornerShape(24.dp))
+                        .trackSwipe(swipe, threshold = 64.dp, settle = { com.ketvoice.app.ui.player.miniSwipeSpring() })
                         .clickable(role = Role.Button, onClickLabel = AppText.t("Lecture en cours"), onClick = onOpen),
                         verticalAlignment = Alignment.CenterVertically) {
                         val canvases by com.ketvoice.app.data.CanvasRepo.paths.collectAsState()
@@ -100,6 +105,7 @@ fun TabletMiniPlayer(modifier: Modifier = Modifier, onOpen: () -> Unit) {
                             }
                         }
                         Column(Modifier.weight(1f).padding(start = 12.dp, end = 8.dp)
+                            .trackSwipeContent(swipe, travel = .55f)
                             .onGloballyPositioned { MiniPlayerAnchors.title = it.boundsInRoot() }) {
                             Text(current.title, localize = false, color = theme.onBackground, fontSize = 15.sp, fontWeight = FontWeight.SemiBold,
                                 maxLines = 1, overflow = TextOverflow.Ellipsis)

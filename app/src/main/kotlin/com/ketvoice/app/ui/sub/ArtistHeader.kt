@@ -57,6 +57,8 @@ import com.ketvoice.app.ui.motion.ZoomTarget
  */
 internal fun artistPageTint(background: Color, tone: Color?, dark: Boolean): Color {
     if (tone == null) return background
+    // Noir (7.1): dark pages stay pure black; the cover's colours remain in the header's ambient and the accent.
+    if (dark && com.ketvoice.app.data.AppSettings.trueBlack.value && background.luminance() < .2f) return background
     val tinted = androidx.compose.ui.graphics.lerp(background, tone, if (dark) .30f else .38f)
     // A dark page, not a light page shown with dark controls, is held down at night.
     if (dark && background.luminance() < .2f) return PageTint.nightCap(tinted)
@@ -250,7 +252,7 @@ private fun ArtistFavouriteButton(artist: MusicArtist) {
     com.ketvoice.app.ui.common.LiquidGlassButton({
         haptic(com.ketvoice.app.ui.motion.Haptics.Kind.Tick)
         ArtistPrefs.setFavourite(entry, !favourite)
-    }, Modifier.size(56.dp).testTag("artist-follow")) {
+    }, Modifier.size(56.dp).testTag("artist-follow"), plain = true) {
         if (favourite) Box(Modifier.matchParentSize().clip(CircleShape).background(theme.accent.copy(alpha = .20f)))
         Icon(KetIcons.Heart, if (favourite) "Retirer des favoris" else "Mettre en favori",
             tint = if (favourite) theme.accent else theme.onBackground, modifier = Modifier.size(24.dp))

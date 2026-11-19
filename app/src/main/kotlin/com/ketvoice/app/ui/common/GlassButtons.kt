@@ -73,9 +73,17 @@ internal fun glassPressSpec(pressed: Boolean, liquid27: Boolean): FiniteAnimatio
 internal fun onAccent(accent: Color): Color = if (accent.luminance() > .179f) Color.Black else Color.White
 
 /**
+ * The fill of a button that is not glass (7.1, « verre que pour la navigation »): a button in a page's
+ * content, or one sitting on a glass panel, takes iOS's secondary system fill instead of a second layer
+ * of glass. Translucent, so it keeps the hue of what it sits on (a cover's ambient, a card).
+ */
+internal fun plainFill(dark: Boolean): Color = Color(0xFF787880).copy(alpha = if (dark) .32f else .16f)
+
+/**
  * The two buttons of the system: a **prominent** one for the main action of a page
- * (tinted with the accent colour) and a plain glass one for the others. Both are
- * capsules of the same height, so a pair reads as one control group.
+ * (filled with the accent colour) and a plain one for the others. Both are capsules of
+ * the same height, so a pair reads as one control group. They belong to a page's content,
+ * so they are solid, not glass (glass stays on the navigation layer, 7.1).
  */
 @Composable
 internal fun GlassCapsuleButton(
@@ -94,20 +102,9 @@ internal fun GlassCapsuleButton(
     val liquid27 = isLiquid27Glass()
     val pressed by interactions.collectIsPressedAsState()
     val haptic = rememberHaptics()
-    var bounds by remember { mutableStateOf(IntSize.Zero) }
-    var reflection by remember { mutableFloatStateOf(45f) }
     LaunchedEffect(interactions) {
-        interactions.interactions.collect { event ->
-            if (event is PressInteraction.Press) haptic(Haptics.Kind.Press)
-            // The rim light turns towards the finger while it is down.
-            reflection = if (event is PressInteraction.Press) {
-                val x = bounds.width / 2f - event.pressPosition.x
-                val y = bounds.height / 2f - event.pressPosition.y
-                if (x * x + y * y < 1f) 45f else Math.toDegrees(kotlin.math.atan2(y, x).toDouble()).toFloat()
-            } else 45f
-        }
+        interactions.interactions.collect { event -> if (event is PressInteraction.Press) haptic(Haptics.Kind.Press) }
     }
-    val light by animateFloatAsState(if (Motion.reduced) 45f else reflection, Motion.pressSpring(pressed), label = "capsule-light")
     val pressure by animateFloatAsState(if (pressed && !Motion.reduced) 1f else 0f,
         glassPressSpec(pressed, liquid27), label = "capsule-pressure")
     val (scaleWidth, scaleHeight) = glassPressScale(pressure, liquid27)
@@ -115,30 +112,17 @@ internal fun GlassCapsuleButton(
         prominent -> onAccent(theme.accent)
         else -> theme.onBackground
     }
-    Box(modifier.heightIn(min = minHeight).onSizeChanged { bounds = it }
+    Box(modifier.heightIn(min = minHeight)
         .graphicsLayer {
             scaleX = scaleWidth; scaleY = scaleHeight
             alpha = if (enabled) 1f else .45f
         }
         // A seasonal theme (6.2): the main button wears a thin edge of its colours.
         .then(theme.season?.let { look -> with(look) { Modifier.seasonEdge(shape, prominent) } } ?: Modifier)) {
-        GlassPanel(Modifier.matchParentSize(), shape, GlassParams.pill(dark = theme.isDark).copy(
-            highlightAngle = light, opticalPressure = pressure), enabled = AppSettings.liquidGlass.value) {}
-        // A plain glass button keeps a faint body, so it still reads as a button on a flat page.
-        if (!prominent) Box(Modifier.matchParentSize().clip(shape).background(theme.onBackground.copy(alpha = .06f))
-            .border(.8.dp, Brush.verticalGradient(listOf(theme.onBackground.copy(alpha = .16f),
-                theme.onBackground.copy(alpha = .04f))), shape))
-        if (prominent) {
-            // Tinted glass: the accent fills the body, the rim and the top light stay glass.
-            Box(Modifier.matchParentSize().clip(shape)
-                // A seasonal theme: filled with its gradient, its dark label reads on every colour of it.
-                .then(if (theme.season != null) Modifier.background(theme.season.fill, alpha = if (liquid27) .92f else 1f)
-                    else Modifier.background(theme.accent.copy(alpha = if (liquid27) .88f else 1f)))
-                .background(Brush.verticalGradient(0f to Color.White.copy(alpha = if (liquid27) .22f else .08f),
-                    .5f to Color.Transparent, 1f to Color.Black.copy(alpha = if (liquid27) .10f else .04f)))
-                .then(if (liquid27) Modifier.border(.8.dp, Brush.verticalGradient(
-                    listOf(Color.White.copy(alpha = .55f), Color.White.copy(alpha = .08f))), shape) else Modifier))
-        }
+        if (!prominent) Box(Modifier.matchParentSize().clip(shape).background(plainFill(theme.isDark)))
+        // The main action: filled with the accent (a seasonal theme: its gradient, which its dark label reads on).
+        else Box(Modifier.matchParentSize().clip(shape)
+            .then(if (theme.season != null) Modifier.background(theme.season.fill) else Modifier.background(theme.accent)))
         Row(Modifier.fillMaxWidth().heightIn(min = minHeight).clip(shape)
             .clickable(interactions, null, enabled = enabled, role = Role.Button, onClick = onClick)
             .padding(horizontal = 18.dp, vertical = 12.dp)
@@ -206,8 +190,9 @@ internal class PadAction(val icon: ImageVector, val label: String, val tag: Stri
                          val onClick: () -> Unit)
 
 /**
- * Several actions in one capsule of glass, side by side with nothing between them: one
- * object to look at instead of a row of separate bubbles. Each icon keeps a full touch target.
+ * Several actions in one capsule, side by side with nothing between them: one object to look
+ * at instead of a row of separate bubbles. Each icon keeps a full touch target. It sits in a
+ * page's content, so it is a plain fill, not glass (7.1); [captured] is kept for its callers.
  */
 @Composable
 internal fun GlassButtonPad(actions: List<PadAction>, modifier: Modifier = Modifier, height: Dp = 48.dp, captured: Boolean = false,
@@ -215,8 +200,8 @@ internal fun GlassButtonPad(actions: List<PadAction>, modifier: Modifier = Modif
     if (actions.isEmpty()) return
     val theme = LocalTheme.current
     val haptic = rememberHaptics()
-    GlassPanel(modifier.then(if (tag != null) Modifier.testTag(tag) else Modifier), RoundedCornerShape(999.dp),
-        GlassParams.pill(dark = theme.isDark), captured = captured) {
+    Box(modifier.then(if (tag != null) Modifier.testTag(tag) else Modifier).clip(RoundedCornerShape(999.dp))
+        .background(plainFill(theme.isDark))) {
         Row(Modifier.padding(horizontal = if (actions.size > 1) 3.dp else 0.dp), verticalAlignment = Alignment.CenterVertically) {
             actions.forEach { action ->
                 Box(Modifier.size(width = if (actions.size > 1) 44.dp else height, height = height).clip(RoundedCornerShape(999.dp))
