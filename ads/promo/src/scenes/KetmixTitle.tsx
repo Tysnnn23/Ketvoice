@@ -3,10 +3,12 @@ import { interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
 import { KetmixGlyph } from "../components/KetmixGlyph";
 import { theme } from "../theme";
 import { beat } from "../timing";
+import { useT } from "../i18n";
 
 /** The breakdown: the phone steps back, Ketmix's sign draws itself, its name lands letter by letter. */
 export const KetmixTitle: React.FC<{ from: number }> = ({ from }) => {
   const f = useCurrentFrame();
+  const t = useT();
   const { fps } = useVideoConfig();
   const at = beat(28.95) - from;
   const end = beat(32) - from;
@@ -23,7 +25,7 @@ export const KetmixTitle: React.FC<{ from: number }> = ({ from }) => {
         })}
       </div>
       <div style={{ marginTop: 12, fontSize: 40, fontWeight: 520, color: theme.colors.textDim, opacity: sub,
-        transform: `translateY(${interpolate(sub, [0, 1], [22, 0])}px)` }}>The DJ built into Ketvoice</div>
+        transform: `translateY(${interpolate(sub, [0, 1], [22, 0])}px)` }}>{t.dj}</div>
     </div>
   );
 };

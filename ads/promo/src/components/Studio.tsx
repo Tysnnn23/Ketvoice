@@ -127,3 +127,35 @@ export const Karaoke: React.FC<{ lines: string[]; start: number; perWord: number
     </div>
   );
 };
+
+/** On a drop the whole picture kicks forward for a quarter of a second, with a breath of white. */
+export const Punch: React.FC<{ at: number[]; children: React.ReactNode; amount?: number }> = ({ at, children, amount = 0.035 }) => {
+  const f = useCurrentFrame();
+  let k = 0;
+  at.forEach((a) => { if (f >= a && f < a + 16) k = Math.max(k, (1 - (f - a) / 16) ** 3); });
+  return (
+    <AbsoluteFill style={{ transform: `scale(${1 + k * amount})` }}>
+      {children}
+      <AbsoluteFill style={{ background: "#fff", opacity: k * 0.14, pointerEvents: "none" }} />
+    </AbsoluteFill>
+  );
+};
+
+const rnd = (i: number, k: number) => { const x = Math.sin(i * 127.1 + k * 311.7) * 43758.5453; return x - Math.floor(x); };
+
+/** A few soft specks drifting up, out of focus: depth behind the subject, never a pattern. */
+export const Dust: React.FC<{ w: number; h: number; count?: number }> = ({ w, h, count = 22 }) => {
+  const f = useCurrentFrame();
+  return (
+    <AbsoluteFill style={{ pointerEvents: "none" }}>
+      {Array.from({ length: count }).map((_, i) => {
+        const size = 4 + rnd(i, 1) * 9;
+        const speed = 0.12 + rnd(i, 2) * 0.3;
+        const x = rnd(i, 3) * w + Math.sin(f / (70 + rnd(i, 4) * 60) + i) * 26;
+        const y = (((rnd(i, 5) * h - f * speed) % h) + h) % h;
+        return <div key={i} style={{ position: "absolute", left: x, top: y, width: size, height: size, borderRadius: "50%", background: "#fff",
+          opacity: 0.035 + rnd(i, 6) * 0.09, filter: `blur(${1.5 + rnd(i, 7) * 3}px)` }} />;
+      })}
+    </AbsoluteFill>
+  );
+};

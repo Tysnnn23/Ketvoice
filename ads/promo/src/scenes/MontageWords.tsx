@@ -2,12 +2,13 @@ import React from "react";
 import { interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
 import { theme } from "../theme";
 import { BEAT_S } from "../timing";
+import { useT } from "../i18n";
 
-const WORDS = ["Canvas", "Lyrics", "Discover", "And more."];
 
 /** One word per beat over the quick cuts. */
 export const MontageWords: React.FC = () => {
   const f = useCurrentFrame();
+  const WORDS = useT().words;
   const { fps } = useVideoConfig();
   const per = BEAT_S * fps;
   const i = Math.min(WORDS.length - 1, Math.floor(f / per));

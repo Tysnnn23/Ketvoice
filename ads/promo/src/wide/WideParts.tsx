@@ -1,6 +1,7 @@
 import React from "react";
 import { AbsoluteFill, Img, interpolate, OffthreadVideo, spring, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 import { theme } from "../theme";
+import { useT } from "../i18n";
 
 const clamp = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
 
@@ -54,18 +55,14 @@ const Glyph: React.FC<{ kind: number; color: string; size: number }> = ({ kind, 
   }
 };
 
-export const TILES = [
-  { name: "Streaming", color: "#2A8CFF" },
-  { name: "Lyrics", color: "#FF8D28" },
-  { name: "DJ mixes", color: "#FA2D48" },
-  { name: "Karaoke", color: "#7C6BFF" },
-  { name: "Offline", color: "#34C759" },
-];
+const TILE_COLORS = ["#2A8CFF", "#FF8D28", "#FA2D48", "#7C6BFF", "#34C759"];
 
 /** The hook: five jobs, five icons popping on the beat, then they melt into one. */
 export const HookTiles: React.FC<{ popAt: number[]; mergeFrom: number; mergeTo: number }> = ({ popAt, mergeFrom, mergeTo }) => {
   const f = useCurrentFrame();
   const { fps } = useVideoConfig();
+  const names = useT().wTiles;
+  const TILES = TILE_COLORS.map((color, i) => ({ color, name: names[i] }));
   const m = interpolate(f, [mergeFrom, mergeTo], [0, 1], { ...clamp, easing: theme.ease.inOut });
   const last = popAt.filter((a) => f >= a).length - 1;
   const labelP = last >= 0 ? spring({ frame: f - popAt[last], fps, config: theme.spring.snappy }) : 0;
@@ -139,7 +136,7 @@ export const LogoReveal: React.FC<{ darkAt: number; nameAt: number }> = ({ darkA
 /** "Free. No ads. No subscription." Each line lights up on its beat. */
 export const FreeLines: React.FC<{ at: number[]; exitAt: number }> = ({ at, exitAt }) => {
   const f = useCurrentFrame();
-  const lines = ["Free.", "No ads.", "No subscription."];
+  const lines = useT().wFree;
   const out = interpolate(f, [exitAt - 9, exitAt - 1], [0, 1], { ...clamp, easing: theme.ease.in });
   return (
     <AbsoluteFill style={{ background: "#000" }}>
@@ -158,6 +155,7 @@ export const FreeLines: React.FC<{ at: number[]; exitAt: number }> = ({ at, exit
 /** The end card: K + name, address, where it runs, and the one red pill. */
 export const EndCard: React.FC = () => {
   const f = useCurrentFrame();
+  const t = useT();
   const { fps } = useVideoConfig();
   const a = spring({ frame: f - 2, fps, config: theme.spring.smooth });
   const b = spring({ frame: f - 14, fps, config: theme.spring.smooth });
@@ -175,10 +173,10 @@ export const EndCard: React.FC = () => {
       </div>
       <div style={{ position: "absolute", left: 0, right: 0, top: 520, textAlign: "center", opacity: b, transform: `translateY(${(1 - b) * 16}px)` }}>
         <div style={{ fontSize: 44, fontWeight: 650 }}>ketvoice-web.vercel.app</div>
-        <div style={{ fontSize: 28, fontWeight: 500, color: theme.colors.textDim, marginTop: 14 }}>Android · Meta Quest · Web player</div>
+        <div style={{ fontSize: 28, fontWeight: 500, color: theme.colors.textDim, marginTop: 14 }}>{t.wWhere}</div>
       </div>
       <div style={{ position: "absolute", left: 0, right: 0, top: 700, display: "flex", justifyContent: "center", opacity: c, transform: `scale(${interpolate(c, [0, 1], [0.85, 1])})` }}>
-        <div style={{ padding: "18px 40px", borderRadius: 999, background: theme.colors.hero, fontSize: 32, fontWeight: 700 }}>Free on Android</div>
+        <div style={{ padding: "18px 40px", borderRadius: 999, background: theme.colors.hero, fontSize: 32, fontWeight: 700 }}>{t.free}</div>
       </div>
     </AbsoluteFill>
   );

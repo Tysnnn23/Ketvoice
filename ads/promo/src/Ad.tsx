@@ -3,7 +3,8 @@ import { AbsoluteFill, Audio, Sequence, staticFile } from "remotion";
 import "./fonts";
 import { Background, Finish } from "./components/Layers";
 import { MixCard } from "./components/MixCard";
-import { CutBlur, Dim, MaskTitle, MixPill, PopCard } from "./components/Studio";
+import { CutBlur, Dim, Dust, MaskTitle, MixPill, PopCard, Punch } from "./components/Studio";
+import { LangCtx, useT, type Lang } from "./i18n";
 import { VoiceSlider } from "./components/VoiceSlider";
 import { Credits } from "./scenes/Credits";
 import { Cta } from "./scenes/Cta";
@@ -26,9 +27,13 @@ const b = (n: number) => Math.round(n * PER); // beats inside a scene
 
 const CUTS = [beat(8), beat(16), beat(24), beat(52), beat(53), beat(54), beat(55)];
 
-export const KetvoiceAd: React.FC = () => (
+const Body: React.FC = () => {
+  const t = useT();
+  return (
   <AbsoluteFill style={{ background: "#060608" }}>
+    <Punch at={[beat(0), beat(32)]}>
     <Background />
+    <Dust w={1080} h={1920} />
 
     <CutBlur cuts={CUTS}>
       <PhoneShot from={S.hook[0]} to={S.hook[1]} src={null} />
@@ -48,21 +53,21 @@ export const KetvoiceAd: React.FC = () => (
     <At s={S.home}>
       <Dim at={b(2.5)} until={b(6.6)} amount={0.35} />
       <PopCard src="img/pop-home-card.png" ratio={796 / 452} from={{ x: 540, y: 880, w: 300 }} to={{ x: 590, y: 1330, w: 780 }} at={b(2.5)} until={b(6.6)} />
-      <MaskTitle kicker="FOR YOU" lines={["A home that", "knows you"]} exitAt={len(S.home)} />
+      <MaskTitle kicker={t.home.k} lines={[...t.home.l]} exitAt={len(S.home)} />
     </At>
     <At s={S.player}>
       <Dim at={b(2.2)} until={b(6.4)} amount={0.3} />
       <PopCard src="img/pop-play.png" ratio={762 / 130} from={{ x: 540, y: 1150, w: 380 }} to={{ x: 540, y: 1500, w: 880 }} at={b(2.2)} until={b(6.4)} radius={64} tilt={3} />
-      <MaskTitle kicker="PLAYER" lines={["Your sound,", "full screen"]} exitAt={len(S.player)} />
+      <MaskTitle kicker={t.player.k} lines={[...t.player.l]} exitAt={len(S.player)} />
     </At>
     <At s={S.lyrics}>
-      <MaskTitle kicker="VOICE LEVEL" lines={["Turn the vocals", "down. Sing."]} exitAt={len(S.lyrics)} />
-      <VoiceSlider downAt={beat(18) - S.lyrics[0]} upAt={beat(21) - S.lyrics[0]} label="vocals" />
+      <MaskTitle kicker={t.voice.k} lines={[...t.voice.l]} exitAt={len(S.lyrics)} />
+      <VoiceSlider downAt={beat(18) - S.lyrics[0]} upAt={beat(21) - S.lyrics[0]} label={t.vocals} />
     </At>
-    <At s={S.stats}><MaskTitle kicker="REPLAY" lines={["Your month", "in music"]} exitAt={len(S.stats)} /></At>
+    <At s={S.stats}><MaskTitle kicker={t.replay.k} lines={[...t.replay.l]} exitAt={len(S.stats)} /></At>
     <At s={S.ketmixTitle}><KetmixTitle from={S.ketmixTitle[0]} /></At>
     <At s={S.ketmix}>
-      <MaskTitle kicker="KETMIX" lines={["Every song mixes", "into the next"]} exitAt={len(S.ketmix) - 14} size={76} />
+      <MaskTitle kicker={t.ketmix.k} lines={[...t.ketmix.l]} exitAt={len(S.ketmix) - 14} size={76} />
       <MixPill at={b(0.6)} until={b(10.6)} x={540} y={520} scale={1.05} />
       <MixCard from={S.ketmix[0]} to={S.ketmix[1]} />
     </At>
@@ -73,6 +78,7 @@ export const KetvoiceAd: React.FC = () => (
     </At>
     <At s={S.montage}><MontageWords /></At>
     <At s={S.cta}><Cta /></At>
+    </Punch>
     <At s={S.credits}><Credits /></At>
 
     <Finish />
@@ -101,4 +107,9 @@ export const KetvoiceAd: React.FC = () => (
     <Sfx at={beat(56)} name="logo-sting" volume={0.7} />
     <Sfx at={beat(56) + 8} name="shimmer" volume={0.3} />
   </AbsoluteFill>
+  );
+};
+
+export const KetvoiceAd: React.FC<{ lang: Lang }> = ({ lang }) => (
+  <LangCtx.Provider value={lang}><Body /></LangCtx.Provider>
 );

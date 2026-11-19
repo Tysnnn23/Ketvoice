@@ -18,6 +18,14 @@ Scene cuts (`ffmpeg -ss <start> -t <len> -i captures/clipN.mp4 -an -vf fps=60,sc
 `s_home` clip1 0–5.2, `s_player` clip2 2.0–6.1, `s_lyrics` clip7 0.4–4.6, `s_stats` clip6 0.2–2.5,
 `s_ketmix` clip5 2.6–8.6, `s_editor` clip4 1.3–6.7, `m1` clip3 3.0, `m2` clip1 6.4, `m3` clip5 11.0, `m4` clip3 12.0 (0.8 s each).
 
+## Cuts and languages
+
+- `KetvoiceAd` (9:16, 34.5 s, 3D phone), `KetvoiceAdWide` (16:9, 34.9 s, ElevenLabs music) and `KetvoiceAdWideRef`
+  (16:9, 24.5 s, cut on the sound of the owner's reference video, `music/track-ref.wav`; that sound is someone
+  else's work: the owner asked for this variant and was told it may be claimed or muted).
+- Language: `--props='{"lang":"fr"}'` (default `en`); strings in `src/i18n.tsx`.
+- `./render.sh <composition> <en|fr> <name>` renders and masters the sound (-14 LUFS, -1 dBTP) into `out/final/`.
+
 ## Timing
 
 `src/timing.ts`: drop 1 at 1.935 s, breakdown at beat 28.95, drop 2 at beat 32, CTA at beat 56, credits after beat 64.
