@@ -1,0 +1,226 @@
+{
+  "schema": 8,
+  "version": "7.0.0",
+  "versionCode": 141,
+  "source_commit": "e8f6b7706b7f52c9f49d4f957a15f1c3856685af",
+  "created_at": "2026-11-19T07:33:57.165500+00:00",
+  "build_origin": {
+    "kind": "github_actions_with_owner_discord_sdk",
+    "workflow": "android.yml",
+    "run_id": 44476445126,
+    "artifact": {
+      "id": 14507423749,
+      "sha256": "1cc8455e66d9bf5afcb873284cf962641791a3fb9b63304298627454440afb6b"
+    },
+    "gradle": "assembleMobileRelease assembleQuestRelease assembleLiteRelease",
+    "note": "Signed by CI with the pinned keystore secret; the Discord Social SDK AAR matched its pinned SHA-256."
+  },
+  "local_validation": {
+    "result": "debug JVM/Robolectric suites for the three flavors (mobile, quest, lite), release lint and the APK checker tests passed in a cloud container without the Discord SDK",
+    "commands": [
+      "testMobileDebugUnitTest",
+      "testQuestDebugUnitTest",
+      "testLiteDebugUnitTest -ProbolectricSdks=31,32,33,34,35,36",
+      "lintMobileRelease",
+      "lintQuestRelease",
+      "lintLiteRelease",
+      "tools/test_verify_apk.py"
+    ],
+    "ci_validation": "run 44476445126: release builds, debug and release unit tests, UI text audit, lint, APK signature pin and Discord bridge packaging passed",
+    "code_review": {
+      "kind": "none independent"
+    },
+    "host_previews": "Robolectric software renders on the host (not a phone), looked at by the sub-agents: Home « Pour toi » phone light/dark and tablet landscape, Downloads phone light/dark and tablet, downloaded album page light/dark/tablet, queue with autoplay on/off, DJ set queue header; Quest screens were not rendered",
+    "features_7_0": "Home « Pour toi », Ket 27 identity pass, autoplay of the same style (AutoplayRulesTest with fake InnerTube answers, no network), Apple-Music-style Downloads and downloaded album pages (DownloadsAlbumsAutoplayHostTest), DJ set ordering and offline export (host tests), beat model bundled in mobile/Quest (CI checks the APKs); autoplay picks were never fetched from the real YouTube Music or catalogue, nothing was listened to, nothing ran on a device",
+    "after_local_run": "the full local run (mobile 1718, quest 1708, lite 1716) had two failures caused by the tests themselves: StemWorkTest built readings without the rhythm model, which is now built in and makes such readings stale, and a Home tablet layout test ran on Quest where large layouts are off by design; both tests fixed and rerun (16 tests, 0 failures on mobile and Quest). Lint had no errors. The first 7.0.0 CI run failed on the same StemWorkTest",
+    "sdk_30": "Robolectric's Android 11 runtime could not be downloaded in the cloud container (Maven Central answered 429), so the Lite tests that declare sdk 30 ran on sdk 31 only; nothing ran on an Android 11 runtime",
+    "after_last_full_local_run": "after the full local run only the two test files changed; the play glyph seam fix and the artist link change were compiled by the Quest and Lite steps of that run (the mobile compile ran before them) and by CI"
+  },
+  "server": {
+    "function": "ketvoice-content",
+    "deployed_version": 23,
+    "changed_in_this_version": false,
+    "database": "no migration in this version"
+  },
+  "tests": {
+    "mobile": {
+      "jvm": {
+        "tests": 1718,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 3
+      },
+      "android_15_emulator_compose": {
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "quest": {
+      "jvm": {
+        "tests": 1708,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 44
+      },
+      "android_15_emulator_compose": {
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "lite": {
+      "jvm": {
+        "tests": 1716,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 3
+      },
+      "android_11_runtime": {
+        "status": "not_executed"
+      }
+    },
+    "dex_register_check": "tools/check_dex_registers.py ran in CI (Check method sizes against the Android verifier) on the three release APKs",
+    "apk_checker": "tools/test_verify_apk.py 12 tests (Lite minSdk 30 required)"
+  },
+  "lint": {
+    "mobile": {
+      "Warning": 308,
+      "Hint": 28
+    },
+    "quest": {
+      "Warning": 308,
+      "Hint": 28
+    },
+    "lite": {
+      "Warning": 330,
+      "Hint": 28
+    },
+    "errors": 0
+  },
+  "apks": [
+    {
+      "name": "Ketvoice-7.0.0.apk",
+      "sha256": "518e99a7cb4a41b8247f34f6c0e615e1218c19387d8446641ddec65ea31fcd83",
+      "bytes": 104041315,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "7.0.0",
+      "versionCode": 141,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-7.0.0-Quest.apk",
+      "sha256": "e496f7b15176cf782af2e235dbbe65581fbaf525c2b8347839b3565baf612d51",
+      "bytes": 120126406,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "7.0.0",
+      "versionCode": 141,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-7.0.0-Lite.apk",
+      "sha256": "aac875e31caef49b9f609a6bcc6eeb5ab468732e678e5326a58aa5a686da40f7",
+      "bytes": 33068795,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "7.0.0",
+      "versionCode": 141,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false,
+      "edition": "lite"
+    }
+  ],
+  "discord": {
+    "sdk_present_in_ci_build": true,
+    "sdk_sha256_pinned": true,
+    "bridge_and_native_libraries_verified": true,
+    "presence_mode": "unauthenticated_rpc_through_installed_discord_app"
+  },
+  "credential_scan": {
+    "entries": 4366,
+    "findings": 0,
+    "scope": "the three release APKs",
+    "kind": "credential_patterns",
+    "explicit_private_provider_key_deny_list": false,
+    "note": "run because publish-release requires it; the other manual checks were skipped at the owner's request"
+  },
+  "release_install_smoke": {
+    "mobile": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "quest": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "lite": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    }
+  },
+  "publication_override": {
+    "authorized_by_user": true,
+    "authorized_at": "2026-11-19T07:33:57.165500+00:00",
+    "kind": "standing_authorization",
+    "user_statement": "J'autorise TOUT devient maintenant une règle.",
+    "user_statement_date": "2026-11-14",
+    "in_reply_to": "The question whether versions may be published without phone or Quest testing without asking again for each version.",
+    "recorded_in": "AGENTS.md (commit aeeda8e)",
+    "reason": "The owner made publishing validated versions without phone or Quest testing a standing rule.",
+    "scope": "physical device installation and all on-device behaviour of 7.0.0 (mobile, Lite and Quest), including accounts and sync on devices"
+  },
+  "owner_requests_2026_11_19_7_0_0": {
+    "statements": [
+      "Propose moi des améliorations visuel du site,de l'app,des fontions bref la total car le passage en 7.0.0 sa doit être un gross changement !",
+      "Accueil personnel \"Pour toi\"",
+      "Identité 7.0 complète",
+      "identité 7.0 mais toujours en ket27 mais juste en beaucoup mieux",
+      "Quand on recherche et lance un son comme dans spotify la file d'attente doit lancer un son du exactement le meme style etc comme spotify",
+      "Refonte de l'écran de téléchargement refait le comme apple music et de même pour quand on télécharge des albums dans la bibliothèque",
+      "Modèle rythme intégré",
+      "Mode DJ set",
+      "Lecteur web complet",
+      "Démo Ketmix en ligne",
+      "Pages artistes & partage"
+    ],
+    "done": {
+      "app": "Home « Pour toi », Ket 27 identity pass, Lecture automatique, Downloads and downloaded albums, bundled beat model, Mode DJ set with export",
+      "website": "full web player (library sync, Ketmix in the browser, installable), Ketmix demo, public artist/album/profile pages with link previews (Vercel function)"
+    },
+    "not_done": [
+      "per-title previews for links the app shares (the app still shares the GitHub Pages address)",
+      "profile links in the app (they fall back to a search)",
+      "display name in profile previews (needs tools/proposed-public-profile-card.sql on the website repo, not applied)"
+    ]
+  },
+  "not_validated": [
+    "physical phone, Lite, tablet or Quest installation, rendering and behaviour of 7.0.0",
+    "Ketmix transitions, DJ sets and their export by ear on any device",
+    "autoplay picks from the real YouTube Music radio and catalogue",
+    "the new screens on Quest (compiled only)",
+    "the bundled beat model on real songs and devices",
+    "Robolectric runs on the Android 11 runtime (sdk 30)",
+    "independent code review"
+  ],
+  "known_limitations": [
+    "No Wear OS app in this version.",
+    "Seasonal themes use code-drawn decor until the owner's pictures are added.",
+    "Android Auto's queue screen shows only the current song.",
+    "Switching between Ketvoice and Ketvoice Lite is a manual install of the other APK.",
+    "Ketogether guests hear titles their own sources can play; local files and private titles are shown as unavailable.",
+    "Lecture automatique: which queue titles were added automatically is not kept across a session restore.",
+    "A Ketmix DJ set export takes downloaded and local titles only, without tempo matching.",
+    "The mobile and Quest APKs are about 18.6 MB larger because they include the rhythm model.",
+    "Launcher icons keep a background: Android fills adaptive icon backgrounds in black.",
+    "The signing certificate is the existing public Android debug identity, not a private production key."
+  ],
+  "canonical_banner_sha256": "ddc0e2c1270027f4b9dd92254374b79727ae9eaf8914e418b52e23c5b39b5966"
+}
