@@ -1,0 +1,213 @@
+{
+  "schema": 8,
+  "version": "7.2.0",
+  "versionCode": 143,
+  "source_commit": "f44e705c55f5d59de46783052d1cb8cf5371ae86",
+  "created_at": "2026-11-19T22:33:18.136006+00:00",
+  "build_origin": {
+    "kind": "github_actions_with_owner_discord_sdk",
+    "workflow": "android.yml",
+    "run_id": 44624518269,
+    "artifact": {
+      "id": 14580207159,
+      "sha256": "e9524462a5befeef78e7141ac7a8cc723d0bbbaeed8bd4552fc3f7d8678eb99e"
+    },
+    "gradle": "assembleMobileRelease assembleQuestRelease assembleLiteRelease",
+    "note": "Signed by CI with the pinned keystore secret; the Discord Social SDK AAR matched its pinned SHA-256."
+  },
+  "local_validation": {
+    "result": "debug JVM/Robolectric suites for the three flavors (mobile, quest, lite), release lint and the APK checker tests passed in a cloud container without the Discord SDK",
+    "commands": [
+      "testMobileDebugUnitTest",
+      "testQuestDebugUnitTest",
+      "testLiteDebugUnitTest -ProbolectricSdks=31,32,33,34,35,36",
+      "lintMobileRelease",
+      "lintQuestRelease",
+      "lintLiteRelease",
+      "tools/test_verify_apk.py"
+    ],
+    "ci_validation": "run 44624518269: release builds, debug and release unit tests, UI text audit, lint, APK signature pin and Discord bridge packaging passed",
+    "code_review": {
+      "kind": "none independent"
+    },
+    "host_previews": "Robolectric software renders on the host, looked at by the UI sub-agent: Home light/dark, Favourites light/dark, Downloads with 4 and with 2 distinct covers, Library with playlists, an album bottom with recommended titles, Lossless badges; Quest screens not rendered",
+    "features_7_2": "progressive upgrade (ProgressiveHandoffTest: 400 random lag cases switch in simulation), StartupOrder, Canvas re-encode policy (CanvasCompactTest; MediaCodec encoder device-only, never run), Sync button on IO (SyncButtonTest fails without the fix), search ranking (SearchRankTest), Recommender (RecommenderTest), web player change checks (node tests); nothing ran on a device, against real Supabase or in a browser; load-time gains are a model, not a measurement",
+    "after_local_run": "full local run on the release commit: mobile 1778, quest 1768 (44 skipped), lite 1776 tests, 0 failures; lint 0 errors; UI text audit clean",
+    "sdk_30": "Robolectric's Android 11 runtime could not be downloaded in the cloud container (Maven Central answered 429), so the Lite tests that declare sdk 30 ran on sdk 31 only; nothing ran on an Android 11 runtime",
+    "after_last_full_local_run": "nothing under app/ changed after the last complete local run"
+  },
+  "server": {
+    "function": "ketvoice-content",
+    "deployed_version": 23,
+    "changed_in_this_version": false,
+    "database": "no migration in this version"
+  },
+  "tests": {
+    "mobile": {
+      "jvm": {
+        "tests": 1778,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 3
+      },
+      "android_15_emulator_compose": {
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "quest": {
+      "jvm": {
+        "tests": 1768,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 44
+      },
+      "android_15_emulator_compose": {
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "lite": {
+      "jvm": {
+        "tests": 1776,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 3
+      },
+      "android_11_runtime": {
+        "status": "not_executed"
+      }
+    },
+    "dex_register_check": "tools/check_dex_registers.py ran in CI (Check method sizes against the Android verifier) on the three release APKs",
+    "apk_checker": "tools/test_verify_apk.py 12 tests (Lite minSdk 30 required)"
+  },
+  "lint": {
+    "mobile": {
+      "Warning": 311,
+      "Hint": 28
+    },
+    "quest": {
+      "Warning": 311,
+      "Hint": 28
+    },
+    "lite": {
+      "Warning": 335,
+      "Hint": 28
+    },
+    "errors": 0
+  },
+  "apks": [
+    {
+      "name": "Ketvoice-7.2.0.apk",
+      "sha256": "74f32a4576b384d8d0ad642a210540a531bb444b394b1e2a80cfb45d0ccd4d4b",
+      "bytes": 104257427,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "7.2.0",
+      "versionCode": 143,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-7.2.0-Quest.apk",
+      "sha256": "f7fd3d69742860f74de153ee8fd4da6dafd144b212ce3d090e619155ae15179a",
+      "bytes": 120358850,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "7.2.0",
+      "versionCode": 143,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-7.2.0-Lite.apk",
+      "sha256": "11c72b34df7bf76e9f6389648b5f7ce9fbf482aaa9598827551a3fb2ed672595",
+      "bytes": 33153831,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "7.2.0",
+      "versionCode": 143,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false,
+      "edition": "lite"
+    }
+  ],
+  "discord": {
+    "sdk_present_in_ci_build": true,
+    "sdk_sha256_pinned": true,
+    "bridge_and_native_libraries_verified": true,
+    "presence_mode": "unauthenticated_rpc_through_installed_discord_app"
+  },
+  "credential_scan": {
+    "entries": 4369,
+    "findings": 0,
+    "scope": "the three release APKs",
+    "kind": "credential_patterns",
+    "explicit_private_provider_key_deny_list": false,
+    "note": "run because publish-release requires it; the other manual checks were skipped at the owner's request"
+  },
+  "release_install_smoke": {
+    "mobile": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "quest": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "lite": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    }
+  },
+  "publication_override": {
+    "authorized_by_user": true,
+    "authorized_at": "2026-11-19T22:33:18.136006+00:00",
+    "kind": "standing_authorization",
+    "user_statement": "J'autorise TOUT devient maintenant une règle.",
+    "user_statement_date": "2026-11-14",
+    "in_reply_to": "The question whether versions may be published without phone or Quest testing without asking again for each version.",
+    "recorded_in": "AGENTS.md (commit aeeda8e)",
+    "reason": "The owner made publishing validated versions without phone or Quest testing a standing rule.",
+    "scope": "physical device installation and all on-device behaviour of 7.2.0 (mobile, Lite and Quest), including accounts and sync on devices"
+  },
+  "owner_requests_2026_11_19_7_2_0": {
+    "statements": [
+      "Fait fonctionner le flux progresssif réellement amélioré encore les animations,optimisation,recommandation personnalisé,fait un accueil plus apple music like et Aussi l'ecran j'aime et téléchargement refait les totalement dzns un style d'apple music et spotify (Cover coeur pour les like et pour les téléchargement les 4 covers des 4 premier sons (ne peut pas être les 2-3-4 meme) et aussi j'aimerais que les playlist s'affiche dans la bibliothèque directement au lieu de la petite section bibliothèque re organise la bibliothèque) aussi pour les sons en lossless/Hi res met le meme indicateur que apple music.",
+      "Améliore grandement la vitesse de chargement de musique et aussi introduction du cache de canvas pour les gros canvas ... synchronise les donné mobile et web lorsque qu'il y'a des changements (Changement canvas,pdp profil etc)",
+      "Aussi sur le profil le bouton sync ne fonctionne pas sa met offline alors que j'ai du wifi.",
+      "Aussi les recherches sont peu pertinentes je trouve , quand on descend tout en bas d'une playlist fait comme spotify des sons du même artiste/style etc peuvent se proposer en bas de la page d'album."
+    ],
+    "done": "all items; web player change checks deployed with this release"
+  },
+  "not_validated": [
+    "physical phone, Lite, tablet or Quest installation, rendering and behaviour of 7.2.0",
+    "Ketmix transitions and the editor preview by ear on any device",
+    "the 4x1 widget on a launcher",
+    "the progressive switch on ExoPlayer and the Canvas re-encoder on real codecs",
+    "sync and search against the real Supabase and catalogue",
+    "Android high-contrast text detection on real phones (hidden secure setting before Android 16)",
+    "the new screens on Quest (compiled only)",
+    "the bundled beat model on real songs and devices",
+    "Robolectric runs on the Android 11 runtime (sdk 30)",
+    "independent code review"
+  ],
+  "known_limitations": [
+    "No Wear OS app in this version.",
+    "Seasonal themes use code-drawn decor until the owner's pictures are added.",
+    "Android Auto's queue screen shows only the current song.",
+    "Switching between Ketvoice and Ketvoice Lite is a manual install of the other APK.",
+    "Ketogether guests hear titles their own sources can play; local files and private titles are shown as unavailable.",
+    "Lecture automatique: which queue titles were added automatically is not kept across a session restore.",
+    "The mobile and Quest APKs are about 18.6 MB larger because they include the rhythm model.",
+    "Launcher icons keep a background: Android fills adaptive icon backgrounds in black.",
+    "The signing certificate is the existing public Android debug identity, not a private production key."
+  ],
+  "canonical_banner_sha256": "ddc0e2c1270027f4b9dd92254374b79727ae9eaf8914e418b52e23c5b39b5966"
+}
