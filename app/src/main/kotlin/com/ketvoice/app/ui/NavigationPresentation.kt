@@ -57,19 +57,19 @@ internal fun NavigationPresentation(
                     }
                     if (closing) {
                         fadeIn(tween(240)).togetherWith(
-                            scaleOut(spring(dampingRatio = .92f, stiffness = 430f), targetScale = scale) +
-                                slideOut(spring(dampingRatio = .92f, stiffness = 430f), targetOffset = travel) + fadeOut(tween(220))
+                            scaleOut(com.ketvoice.app.ui.motion.Motion.Springs.ZOOM.spec(), targetScale = scale) +
+                                slideOut(com.ketvoice.app.ui.motion.Motion.Springs.ZOOM.spec(), targetOffset = travel) + fadeOut(tween(220))
                         ).apply { targetContentZIndex = -1f }
                     } else {
-                        (scaleIn(spring(dampingRatio = .92f, stiffness = 430f), initialScale = scale) +
-                            slideIn(spring(dampingRatio = .92f, stiffness = 430f), initialOffset = travel) + fadeIn(tween(200)))
+                        (scaleIn(com.ketvoice.app.ui.motion.Motion.Springs.ZOOM.spec(), initialScale = scale) +
+                            slideIn(com.ketvoice.app.ui.motion.Motion.Springs.ZOOM.spec(), initialOffset = travel) + fadeIn(tween(200)))
                             .togetherWith(fadeOut(tween(260)))
                     }
                 } else {
                     // A push as on iOS: the new page slides in from the edge on a critically damped
                     // spring while the page underneath recedes a little and dims; back reverses it,
                     // with the leaving page kept on top.
-                    val push = spring<IntOffset>(dampingRatio = 1f, stiffness = 420f, visibilityThreshold = IntOffset(1, 1))
+                    val push = com.ketvoice.app.ui.motion.Motion.Springs.PUSH.spec(IntOffset(1, 1))
                     if (closing) {
                         (slideInHorizontally(push) { -it / 4 } + fadeIn(tween(Motion.duration(280)), initialAlpha = .55f))
                             .togetherWith(slideOutHorizontally(push) { it } + fadeOut(tween(Motion.duration(320)), targetAlpha = .9f))
@@ -86,7 +86,7 @@ internal fun NavigationPresentation(
             // small and straighten as it fills the screen; closing it folds it back into the card.
             val card = entry.isArtworkDetail() && !Motion.reduced
             // Read in the layer only: the opening never recomposes the page, one frame after another.
-            val opened = transition.animateFloat(transitionSpec = { spring(dampingRatio = .92f, stiffness = 430f) }, label = "page-card") {
+            val opened = transition.animateFloat(transitionSpec = { com.ketvoice.app.ui.motion.Motion.Springs.ZOOM.spec() }, label = "page-card") {
                 if (it == EnterExitState.Visible) 1f else 0f
             }
             androidx.compose.foundation.layout.Box(if (!card) Modifier else Modifier.graphicsLayer {

@@ -60,9 +60,7 @@ internal fun SettingsSheet(onDismiss: () -> Unit, content: @Composable ColumnSco
                                 RoundedCornerShape(com.ketvoice.app.theme.Ket27.Metrics.alertRadius),
                                 GlassParams.sheet(34f, dark = theme.isDark)) {
                                 Column(Modifier.fillMaxWidth().pointerInput(Unit) { detectTapGestures {} }) {
-                                    Box(Modifier.align(Alignment.CenterHorizontally).padding(top = 6.dp)
-                                        .width(36.dp).height(5.dp).clip(CircleShape)
-                                        .background(theme.secondary.copy(alpha = .4f)))
+                                    com.ketvoice.app.ui.common.SheetGrabber(Modifier.align(Alignment.CenterHorizontally))
                                     content()
                                 }
                             }
@@ -75,12 +73,10 @@ internal fun SettingsSheet(onDismiss: () -> Unit, content: @Composable ColumnSco
             BoxWithConstraints(Modifier.align(alignment).widthIn(max = 560.dp).fillMaxWidth()
                 .statusBarsPadding().imePadding().navigationBarsPadding().padding(horizontal = 12.dp, vertical = 12.dp)) {
                 CompositionLocalProvider(LocalBackdropLayer provides backdrop) {
-                    GlassPanel(Modifier.fillMaxWidth().heightIn(max = maxHeight), RoundedCornerShape(28.dp),
-                        GlassParams.sheet(28f, dark = theme.isDark)) {
+                    GlassPanel(Modifier.fillMaxWidth().heightIn(max = maxHeight), RoundedCornerShape(com.ketvoice.app.theme.Ket27.Radius.sheet),
+                        GlassParams.sheet(34f, dark = theme.isDark)) {
                         Column(Modifier.fillMaxWidth().pointerInput(Unit) { detectTapGestures {} }) {
-                            Box(Modifier.align(Alignment.CenterHorizontally).padding(top = 10.dp)
-                                .width(32.dp).height(4.dp).clip(CircleShape)
-                                .background(theme.secondary.copy(alpha = .3f)))
+                            com.ketvoice.app.ui.common.SheetGrabber(Modifier.align(Alignment.CenterHorizontally).padding(top = 4.dp))
                             content()
                         }
                     }
@@ -95,8 +91,7 @@ internal fun SettingsSheetHeader(title: String, subtitle: String = "", onClose: 
     val theme = LocalTheme.current
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
         Column(Modifier.weight(1f).padding(top = 5.dp, end = 8.dp)) {
-            Text(title, color = theme.onBackground, fontSize = 22.sp, lineHeight = 28.sp,
-                fontWeight = FontWeight.SemiBold, letterSpacing = (-.4).sp)
+            Text(title, color = theme.onBackground, style = com.ketvoice.app.theme.Ket27.Type.title2)
             if (subtitle.isNotBlank()) Text(subtitle, color = theme.secondary, fontSize = 13.sp,
                 lineHeight = 19.sp, modifier = Modifier.padding(top = 6.dp))
         }

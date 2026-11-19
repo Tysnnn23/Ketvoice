@@ -9,12 +9,21 @@ import androidx.compose.ui.graphics.vector.PathBuilder
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.unit.dp
 
-/** One optical weight and rounded geometry; vectors are built once, never during drawing. */
+/**
+ * One optical weight and rounded geometry; vectors are built once, never during drawing.
+ * 7.0: every outline is drawn at [STROKE] on the 24 grid; the transport glyphs (play, pause) are solid,
+ * as on iOS, so they keep their weight on the small white discs that carry them.
+ */
 object KetIcons {
-    private fun glyph(name: String, mirrored: Boolean = false, draw: PathBuilder.() -> Unit): ImageVector =
+    /** The stroke of every outlined glyph, on the 24 grid (1.7 before 7.0: 1 dp at 14 dp read as hairline). */
+    const val STROKE = 1.8f
+
+    private fun glyph(name: String, mirrored: Boolean = false, solid: Boolean = false, draw: PathBuilder.() -> Unit): ImageVector =
         ImageVector.Builder(name = "Ket.$name", defaultWidth = 24.dp, defaultHeight = 24.dp,
             viewportWidth = 24f, viewportHeight = 24f, autoMirror = mirrored).apply {
-            path(fill = null, stroke = SolidColor(Color.Black), strokeLineWidth = 1.7f,
+            if (solid) path(fill = SolidColor(Color.Black), stroke = SolidColor(Color.Black), strokeLineWidth = 1.2f,
+                strokeLineJoin = StrokeJoin.Round, pathBuilder = draw)
+            else path(fill = null, stroke = SolidColor(Color.Black), strokeLineWidth = STROKE,
                 strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round, pathBuilder = draw)
         }.build()
 
@@ -42,18 +51,25 @@ object KetIcons {
         circle(10.5f, 10.5f, 6.5f); moveTo(15.2f, 15.2f); lineTo(20f, 20f)
     } }
     val More: ImageVector by lazy { glyph("More") {
-        circle(5f, 12f, .65f); circle(12f, 12f, .65f); circle(19f, 12f, .65f)
+        circle(5.5f, 12f, .8f); circle(12f, 12f, .8f); circle(18.5f, 12f, .8f)
     } }
     val Close: ImageVector by lazy { glyph("Close") {
         moveTo(6f, 6f); lineTo(18f, 18f); moveTo(18f, 6f); lineTo(6f, 18f)
     } }
-    val Play: ImageVector by lazy { glyph("Play") {
-        moveTo(8f, 5f); curveTo(8f, 4.4f, 8.5f, 4.2f, 9f, 4.5f)
-        lineTo(19f, 11.3f); curveTo(19.6f, 11.7f, 19.6f, 12.3f, 19f, 12.7f)
-        lineTo(9f, 19.5f); curveTo(8.5f, 19.8f, 8f, 19.6f, 8f, 19f); close()
+    val Play: ImageVector by lazy { glyph("Play", solid = true) {
+        moveTo(7.5f, 5.2f); curveTo(7.5f, 4.4f, 8.3f, 4f, 9f, 4.4f)
+        lineTo(19.2f, 11.1f); curveTo(19.9f, 11.5f, 19.9f, 12.5f, 19.2f, 12.9f)
+        lineTo(9f, 19.6f); curveTo(8.3f, 20f, 7.5f, 19.6f, 7.5f, 18.8f); close()
     } }
-    val Pause: ImageVector by lazy { glyph("Pause") {
-        moveTo(8f, 5f); lineTo(8f, 19f); moveTo(16f, 5f); lineTo(16f, 19f)
+    val Pause: ImageVector by lazy { glyph("Pause", solid = true) {
+        moveTo(6.5f, 5.5f); curveTo(6.5f, 4.9f, 6.9f, 4.5f, 7.5f, 4.5f); lineTo(9.5f, 4.5f)
+        curveTo(10.1f, 4.5f, 10.5f, 4.9f, 10.5f, 5.5f); lineTo(10.5f, 18.5f)
+        curveTo(10.5f, 19.1f, 10.1f, 19.5f, 9.5f, 19.5f); lineTo(7.5f, 19.5f)
+        curveTo(6.9f, 19.5f, 6.5f, 19.1f, 6.5f, 18.5f); close()
+        moveTo(13.5f, 5.5f); curveTo(13.5f, 4.9f, 13.9f, 4.5f, 14.5f, 4.5f); lineTo(16.5f, 4.5f)
+        curveTo(17.1f, 4.5f, 17.5f, 4.9f, 17.5f, 5.5f); lineTo(17.5f, 18.5f)
+        curveTo(17.5f, 19.1f, 17.1f, 19.5f, 16.5f, 19.5f); lineTo(14.5f, 19.5f)
+        curveTo(13.9f, 19.5f, 13.5f, 19.1f, 13.5f, 18.5f); close()
     } }
     val Shuffle: ImageVector by lazy { glyph("Shuffle") {
         moveTo(3f, 6f); lineTo(5f, 6f); curveTo(10f, 6f, 11f, 18f, 16f, 18f); lineTo(21f, 18f)

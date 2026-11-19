@@ -50,16 +50,16 @@ internal fun FloatingSheet(onDismiss: () -> Unit, modifier: Modifier, scrim: Flo
     val scope = rememberCoroutineScope()
     // Where it was asked for, in window px; read once, when the sheet opens.
     val anchor = remember { if (style == SheetStyle.Anchored) com.ketvoice.app.ui.AppUi.lastTouch else null }
-    LaunchedEffect(Unit) { if (!reduced) appear.animateTo(1f, spring(dampingRatio = .8f, stiffness = 420f)) }
+    LaunchedEffect(Unit) { if (!reduced) appear.animateTo(1f, com.ketvoice.app.ui.motion.Motion.Springs.SHEET.spec()) }
     fun close() {
         if (closing) return
         closing = true
         scope.launch {
-            if (!Motion.reduced) appear.animateTo(0f, spring(dampingRatio = 1f, stiffness = 600f))
+            if (!Motion.reduced) appear.animateTo(0f, com.ketvoice.app.ui.motion.Motion.Springs.DISMISS.spec())
             dismiss()
             kotlinx.coroutines.delay(com.ketvoice.app.ui.common.SheetDetents.REFUSED_AFTER_MS)
             closing = false
-            if (Motion.reduced) appear.snapTo(1f) else appear.animateTo(1f, spring(dampingRatio = .8f, stiffness = 420f))
+            if (Motion.reduced) appear.snapTo(1f) else appear.animateTo(1f, com.ketvoice.app.ui.motion.Motion.Springs.SHEET.spec())
         }
     }
     val closeLabel = com.ketvoice.app.data.AppText.t("Fermer")

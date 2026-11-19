@@ -50,7 +50,7 @@ internal fun TrackRow(
     Row(modifier.fillMaxWidth().trackRowClick(track, onClick = onClick).padding(start = pageMargin, end = 6.dp, top = 7.dp, bottom = 7.dp),
         verticalAlignment = Alignment.CenterVertically) {
         if (rank != null) Text("$rank", localize = false, color = theme.secondary, fontSize = 13.sp, modifier = Modifier.width(26.dp))
-        DownloadCover(track, cover, 52.dp, 10.dp)
+        DownloadCover(track, cover, 52.dp, com.ketvoice.app.theme.Ket27.Radius.thumb)
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             TrackTitle((if (track.explicit) "ᴱ  " else "") + track.title,
@@ -58,13 +58,13 @@ internal fun TrackRow(
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 savedFormatBadge(Downloader.itemFor(track.id)?.format)?.let { badge ->
                     val lossless = isLosslessFormat(badge)
-                    Text(badge, localize = false, color = if (lossless) theme.accent else theme.secondary, fontSize = 9.sp,
+                    Text(badge, localize = false, color = if (lossless) theme.accent else theme.secondary, fontSize = 10.sp,
                         fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.clip(RoundedCornerShape(4.dp))
                             .background((if (lossless) theme.accent else theme.onBackground).copy(alpha = .12f))
                             .padding(horizontal = 5.dp, vertical = 1.dp))
                 }
-                Text(track.artist, localize = false, color = theme.secondary, fontSize = small, maxLines = 1,
-                    overflow = TextOverflow.Ellipsis)
+                Text(track.artist, localize = false, color = theme.secondary, style = com.ketvoice.app.theme.Ket27.Type.footnote,
+                    fontSize = small, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
         if (active) NowPlayingBars(playing, Modifier.padding(horizontal = 6.dp))
@@ -74,7 +74,7 @@ internal fun TrackRow(
         val menuAnchor = rememberRowAnchor()
         Box(Modifier.size(48.dp).then(menuAnchor.modifier).clip(CircleShape).clickable(role = Role.Button) { menuAnchor.open(track) },
             contentAlignment = Alignment.Center) {
-            Icon(Icons.Filled.MoreVert, "Options", tint = theme.secondary, modifier = Modifier.size(22.dp))
+            Icon(KetIcons.More, "Options", tint = theme.secondary, modifier = Modifier.size(22.dp))
         }
     }
 }

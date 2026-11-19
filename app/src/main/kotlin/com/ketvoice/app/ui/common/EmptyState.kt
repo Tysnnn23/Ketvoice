@@ -49,7 +49,7 @@ fun EmptyState(title: String, description: String, action: String, modifier: Mod
     val theme = LocalTheme.current
     val reduced = Motion.reduced
     val appear = remember { Animatable(if (reduced) 1f else 0f) }
-    LaunchedEffect(Unit) { if (!reduced) appear.animateTo(1f, spring(dampingRatio = .86f, stiffness = 380f)) }
+    LaunchedEffect(Unit) { if (!reduced) appear.animateTo(1f, com.ketvoice.app.ui.motion.Motion.Springs.APPEAR.spec()) }
     val quest = BuildConfig.IS_QUEST
     Column(modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 28.dp).testTag("empty-state")
         .graphicsLayer {
@@ -64,11 +64,12 @@ fun EmptyState(title: String, description: String, action: String, modifier: Mod
             Icon(icon, null, tint = theme.secondary, modifier = Modifier.size(EmptyStateLook.symbolDp(quest).dp))
         }
         Spacer(Modifier.height(16.dp))
-        Text(title, color = theme.onBackground, fontSize = if (quest) 21.sp else 20.sp, fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center, lineHeight = 25.sp,
+        Text(title, color = theme.onBackground, style = com.ketvoice.app.theme.Ket27.Type.title3,
+            fontSize = if (quest) 21.sp else 20.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center,
             modifier = Modifier.widthIn(max = EmptyStateLook.MAX_TEXT_WIDTH_DP.dp).semantics { heading() })
         Spacer(Modifier.height(6.dp))
-        Text(description, color = theme.secondary, fontSize = if (quest) 16.sp else 15.sp, lineHeight = 20.sp,
+        Text(description, color = theme.secondary, style = com.ketvoice.app.theme.Ket27.Type.subheadline,
+            fontSize = if (quest) 16.sp else 15.sp,
             textAlign = TextAlign.Center, modifier = Modifier.widthIn(max = EmptyStateLook.MAX_TEXT_WIDTH_DP.dp))
         Spacer(Modifier.height(14.dp))
         KetTextButton(action, onAction, Modifier.heightIn(min = 48.dp), primary = true)

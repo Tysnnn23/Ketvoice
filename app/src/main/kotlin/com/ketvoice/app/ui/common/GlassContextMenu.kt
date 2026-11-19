@@ -144,13 +144,13 @@ internal fun ContextMenuHost(modifier: Modifier = Modifier) {
     var closing by remember(request) { mutableStateOf(false) }
     LaunchedEffect(request) {
         if (Motion.reduced) progress.snapTo(1f)
-        else progress.animateTo(1f, spring(dampingRatio = .72f, stiffness = 340f))
+        else progress.animateTo(1f, com.ketvoice.app.ui.motion.Motion.Springs.SHEET.spec())
     }
     fun close(then: () -> Unit = {}) {
         if (closing) return
         closing = true
         scope.launch {
-            if (!Motion.reduced) progress.animateTo(0f, spring(dampingRatio = 1f, stiffness = 520f))
+            if (!Motion.reduced) progress.animateTo(0f, com.ketvoice.app.ui.motion.Motion.Springs.DISMISS.spec())
             ContextMenus.request.value = null
             then()
         }

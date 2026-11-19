@@ -75,6 +75,28 @@ object Motion {
     fun bouncySpring(): FiniteAnimationSpec<Float> =
         if (reduced) snap() else spring(dampingRatio = 0.5f, stiffness = 380f)
 
+    /**
+     * 7.0: the one set of springs every shared surface moves with. Things arrive with a trace of
+     * settle and leave without any, quicker than they came; a pushed page never overshoots.
+     * Each caller still snaps under [reduced].
+     */
+    data class Tuning(val damping: Float, val stiffness: Float) {
+        fun <T> spec(visibilityThreshold: T? = null): androidx.compose.animation.core.SpringSpec<T> =
+            spring(dampingRatio = damping, stiffness = stiffness, visibilityThreshold = visibilityThreshold)
+    }
+    object Springs {
+        /** A page pushed or popped: critically damped, no overshoot. */
+        val PUSH = Tuning(1f, 420f)
+        /** A page or card grown out of its cover, and folded back into it. */
+        val ZOOM = Tuning(.92f, 430f)
+        /** A sheet rising to a detent, a floating sheet or a menu opening (was .72–.82 / 340–420). */
+        val SHEET = Tuning(.84f, 400f)
+        /** Anything leaving: a sheet or a menu closing (was 1 / 520–600). */
+        val DISMISS = Tuning(1f, 600f)
+        /** Content that appears once: an empty state, a card filling in. */
+        val APPEAR = Tuning(.88f, 380f)
+    }
+
     /* ── Convenience tween durations that already clamp for reduce-motion ── */
     fun fastMs(): Int = duration(FAST)
     fun normalMs(): Int = duration(NORMAL)

@@ -13,6 +13,10 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.height
+import androidx.compose.ui.draw.clip
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -62,8 +66,9 @@ internal object SheetDetents {
     const val CLOSE_SHARE = .3f
     /** A release faster than this (dp per second) goes to the next detent in its direction. */
     const val FLING_DP = 700f
-    const val DAMPING = .82f
-    const val STIFFNESS = 380f
+    /** The rise to a detent (7.0: Motion.Springs.SHEET, was .82 / 380). */
+    val DAMPING: Float get() = com.ketvoice.app.ui.motion.Motion.Springs.SHEET.damping
+    val STIFFNESS: Float get() = com.ketvoice.app.ui.motion.Motion.Springs.SHEET.stiffness
     /** A sheet whose owner has not removed it this long after being asked to close was refused, and returns. */
     const val REFUSED_AFTER_MS = 700L
 
@@ -242,6 +247,15 @@ internal fun SpringSheet(onDismiss: () -> Unit, modifier: Modifier = Modifier, s
             }
         }
     }
+}
+
+/** 7.0: the grabber at the top of every sheet, one size (36 × 5 dp, as on iOS) instead of one per sheet. */
+@Composable
+internal fun SheetGrabber(modifier: Modifier = Modifier) {
+    val theme = com.ketvoice.app.theme.LocalTheme.current
+    Box(modifier.padding(top = 6.dp).width(36.dp).height(5.dp)
+        .clip(androidx.compose.foundation.shape.CircleShape)
+        .background(theme.secondary.copy(alpha = if (theme.isDark) .5f else .38f)))
 }
 
 /** The ink of a menu sheet: a sheet takes the colours of what it lies over, as on iOS. */
