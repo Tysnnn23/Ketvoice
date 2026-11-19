@@ -427,7 +427,8 @@ class PlaybackService : MediaLibraryService() {
                 reason: Int
             ) {
                 if (owner === this@PlaybackService.player) {
-                    playbackRevision++
+                    // A skipped silence is not a jump the listener made: it does not stop a quality handoff (7.2).
+                    if (reason != androidx.media3.common.Player.DISCONTINUITY_REASON_SILENCE_SKIP) playbackRevision++
                     SonicMeter.reset()
                     lockLyrics.poke()
                 }
@@ -471,6 +472,71 @@ class PlaybackService : MediaLibraryService() {
      * (6.0.0 Beta 4): two seconds a little ahead of what is heard are recorded from both decks' processors
      * and their loudness envelopes compared. Null when the decks' processors do not see the sound.
      */
+    /**
+     * Brings the muted better stream [next] to where the heard [old] is, by its sound, then crossfades to it (7.2).
+     * False when they are not the same recording, or could not be brought close enough: nothing changes then.
+     */
+    private suspend fun bringTogether(old: ExoPlayer, next: ExoPlayer, volume: Float, valid: () -> Boolean): Boolean {
+        // Muted pre-roll uses a separate decoder; seek/buffering never touches old.
+        suspend fun ready(): Boolean {
+            delay(120)
+            while (next.playbackState != androidx.media3.common.Player.STATE_READY) {
+                if (!valid() || next.playerError != null) return false
+                delay(20)
+            }
+            return true
+        }
+        next.seekTo(old.currentPosition)
+        next.playWhenReady = old.isPlaying
+        if (!ready() || !valid() || (old.playWhenReady && (!old.isPlaying || !next.isPlaying))) return false
+        // 6.0.0 Beta 4: positions only roughly agree between two encodes (priming, estimated seeks): the sound
+        // of both tells where, in the better stream, what is heard now really is. 7.2: that lag belongs to the
+        // two files and is measured once; the decks are then brought together step by step (QualityHandoff.step).
+        val found = measureOffset(old, next)
+        if (found != null && found.second < QualityHandoff.SAME_RECORDING) return false
+        // Without a measure (a format the deck's processor does not read), the old rule: close lengths.
+        if (found == null && !QualityHandoff.compatible(old.duration, next.duration, old.currentPosition)) return false
+        val lagMs = found?.first ?: 0.0
+        val base = old.playbackParameters
+        for (attempt in 0 until QualityHandoff.MAX_STEPS) {
+            if (!valid()) return false
+            when (val step = QualityHandoff.step(lagMs - skewMs(old, next))) {
+                QualityHandoff.Step.Done -> break
+                is QualityHandoff.Step.Seek -> {
+                    next.seekTo((next.currentPosition + step.byMs).coerceAtLeast(0L))
+                    if (!ready()) return false
+                }
+                is QualityHandoff.Step.Nudge -> {
+                    // Muted, a slightly faster or slower better stream is not heard, and it closes the gap smoothly.
+                    if (!old.isPlaying) break
+                    next.playbackParameters = androidx.media3.common.PlaybackParameters(base.speed * step.factor, base.pitch)
+                    try { delay((step.forMs / base.speed).toLong()) } finally { next.playbackParameters = base }
+                    delay(QualityHandoff.SETTLE_MS)
+                }
+            }
+        }
+        if (!valid()) return false
+        val errorMs = lagMs - skewMs(old, next)
+        if (!QualityHandoff.acceptable(errorMs)) return false
+        // The same recording, aligned: a short equal-power crossfade, no dip and no click.
+        val fadeSteps = (QualityHandoff.crossfadeMs(errorMs) / 12L).toInt()
+        for (step in 1..fadeSteps) {
+            if (!valid()) return false
+            val x = step / fadeSteps.toFloat()
+            old.volume = volume * kotlin.math.cos(x * Math.PI / 2).toFloat()
+            next.volume = volume * kotlin.math.sin(x * Math.PI / 2).toFloat()
+            delay(12)
+        }
+        return true
+    }
+
+    /** How far ahead (+) the better stream plays than the heard one, ms of the title: paired readings, 15 ms apart. */
+    private suspend fun skewMs(old: ExoPlayer, next: ExoPlayer): Double {
+        val pairs = ArrayList<Pair<Long, Long>>(7)
+        repeat(7) { if (it > 0) delay(15); pairs += old.currentPosition to next.currentPosition }
+        return QualityHandoff.skew(pairs)
+    }
+
     private suspend fun measureOffset(old: ExoPlayer, next: ExoPlayer): Pair<Double, Float>? {
         val oldControl = decks[old] ?: return null
         val nextControl = decks[next] ?: return null
@@ -517,7 +583,8 @@ class PlaybackService : MediaLibraryService() {
             var success = false
             var promoted = false
             try {
-                success = withTimeoutOrNull(30_000) {
+                // Preparing, one sound measure (~5 s) and up to six steps of about three seconds.
+                success = withTimeoutOrNull(45_000) {
                     val next = buildPlayer(standby = true)
                     candidate = next
                     next.volume = 0f
@@ -538,51 +605,8 @@ class PlaybackService : MediaLibraryService() {
                     // Two renditions may differ by a few seconds of silence at their ends; once their sound is
                     // measured and aligned (below) that is allowed, otherwise their lengths must agree closely.
                     if (!QualityHandoff.compatible(old.duration, next.duration, old.currentPosition, QualityHandoff.ALIGNED_DURATION_MS)) return@withTimeoutOrNull false
-                    // Muted pre-roll uses a separate decoder; seek/buffering never touches old.
-                    var aligned = false
-                    for (attempt in 0..2) {
-                        if (!valid()) return@withTimeoutOrNull false
-                        next.seekTo(old.currentPosition)
-                        next.playWhenReady = old.isPlaying
-                        delay(120)
-                        while (next.playbackState != androidx.media3.common.Player.STATE_READY) {
-                            if (!valid() || next.playerError != null) return@withTimeoutOrNull false
-                            delay(20)
-                        }
-                        if (QualityHandoff.aligned(old.currentPosition, next.currentPosition)) { aligned = true; break }
-                    }
-                    if (!aligned || !valid() || (old.playWhenReady && (!old.isPlaying || !next.isPlaying))) return@withTimeoutOrNull false
-                    // 6.0.0 Beta 4: positions only roughly agree between two encodes (priming, estimated seeks):
-                    // the sound of both is compared and the better stream moved until they are heard as one.
-                    var heardAligned = false
-                    var measured = false
-                    for (attempt in 0..2) {
-                        if (!valid()) return@withTimeoutOrNull false
-                        val found = measureOffset(old, next) ?: break
-                        measured = true
-                        val (lagMs, likeness) = found
-                        if (likeness < QualityHandoff.SAME_RECORDING) return@withTimeoutOrNull false
-                        if (kotlin.math.abs(lagMs) <= QualityHandoff.HEARD_ALIGNED_MS) { heardAligned = true; break }
-                        next.seekTo((next.currentPosition + Math.round(lagMs)).coerceAtLeast(0L))
-                        delay(120)
-                        while (next.playbackState != androidx.media3.common.Player.STATE_READY) {
-                            if (!valid() || next.playerError != null) return@withTimeoutOrNull false
-                            delay(20)
-                        }
-                    }
-                    // Without a measure (a format the deck's processor does not read), the old rule: close lengths.
-                    if (measured && !heardAligned) return@withTimeoutOrNull false
-                    if (!measured && !QualityHandoff.compatible(old.duration, next.duration, old.currentPosition)) return@withTimeoutOrNull false
                     val volume = old.volume
-                    // The same recording, aligned: a short equal-power crossfade, no dip and no click.
-                    for (step in 1..8) {
-                        if (!valid()) return@withTimeoutOrNull false
-                        val x = step / 8f
-                        old.volume = volume * kotlin.math.cos(x * Math.PI / 2).toFloat()
-                        next.volume = volume * kotlin.math.sin(x * Math.PI / 2).toFloat()
-                        delay(12)
-                    }
-                    if (!valid()) return@withTimeoutOrNull false
+                    if (!bringTogether(old, next, volume, ::valid) || !valid()) return@withTimeoutOrNull false
                     next.repeatMode = old.repeatMode
                     next.shuffleModeEnabled = old.shuffleModeEnabled
                     next.skipSilenceEnabled = old.skipSilenceEnabled

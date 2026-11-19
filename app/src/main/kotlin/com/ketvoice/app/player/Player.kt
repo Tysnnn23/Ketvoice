@@ -94,6 +94,8 @@ object Player {
     private const val TOTAL_RESOLVE_BUDGET_MS = 40_000L
     /** The next entry is resolved again when the current track has this long left. */
     private const val WARM_NEXT_WINDOW_MS = 25_000L
+    /** How long better streams found for a title may still be handed over (7.2). */
+    private const val UPGRADE_WINDOW_MS = 120_000L
 
     private var controller: MediaController? = null
     /** How a play request relates to the queue order already on screen. */
@@ -539,6 +541,35 @@ object Player {
         scope.launch { LyricsRepo.load(track) }
         scope.launch { ArtworkRepo.enrich(listOf(track)) }
         prefetchNext(generation, track)
+        searchBetterAfterMix(track, source)
+    }
+
+    /**
+     * A title Ketmix brought in plays the stream resolved ahead, which is the first that answered: it still
+     * looks for better, like a title started by hand (7.2; before, a mixed-in title never got better). The
+     * handoff waits for the end of the transition.
+     */
+    private fun searchBetterAfterMix(track: Track, source: DeckSource) {
+        val stream = source.stream ?: return
+        val sourceId = source.sourceId ?: return
+        if (stream.isDash || !AppSettings.progressiveQuality.value || qualitySetting() == "Normal" ||
+            AppSettings.bitPerfect.value || !hasInternet()) return
+        val c = controller ?: return
+        val gen = generation
+        val better = QualityHandoff.BetterStream<StreamResolver.Candidate>({ StreamQuality.rank(it.stream) },
+            StreamResolver.Candidate(sourceId, 0, stream))
+        val searchOver = java.util.concurrent.atomic.AtomicBoolean(false)
+        resolutionJob = scope.launch {
+            try {
+                withTimeoutOrNull(TOTAL_RESOLVE_BUDGET_MS) {
+                    StreamResolver.candidates(track, download = false, lossless = wantsLossless(), race = true, excluded = setOf(stream.url))
+                        .collect { if (gen == generation) better.offer(it) }
+                }
+            } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+            catch (_: Exception) { /* The stream heard stays. */ }
+            finally { searchOver.set(true) }
+        }
+        handOverBetter(c, gen, track.id, better) { !searchOver.get() }
     }
 
     private fun tryOfflineFallback(track: Track, position: Long, failed: MusicApi.StreamInfo?): Boolean {
@@ -694,8 +725,14 @@ object Player {
         )
         _position.value = startPositionMs.coerceAtLeast(0)
 
-        // Canvas + paroles démarrent sans attendre la résolution audio.
-        scope.launch { CanvasRepo.resolve(resolvedTrack) }
+        // Canvas + paroles démarrent sans attendre la résolution audio. 7.2: a Canvas already on the device shows at
+        // once; one still to fetch waits for the first sound (a few seconds at most), so its video never takes the
+        // network from the audio's first bytes.
+        scope.launch {
+            if (!StartupOrder.mayLoadBeforeSound(StartupOrder.Load.Canvas, CanvasRepo.localPath(resolvedTrack.id) != null))
+                awaitSound(gen, StartupOrder.WAIT_FOR_SOUND_MS)
+            if (gen == generation) CanvasRepo.resolve(resolvedTrack)
+        }
         scope.launch { LyricsRepo.load(resolvedTrack) }
         scope.launch { ArtworkRepo.enrich(listOf(resolvedTrack)) }
 
@@ -715,6 +752,8 @@ object Player {
             if (local != null && !explicit) {
                 startDownloaded(c, resolvedTrack, local, startPositionMs.coerceAtLeast(0), desiredPlay)
                 _state.value = _state.value.copy(quality = "Téléchargé · ${local.format}", audioSource = "Téléchargé")
+                // 7.2: a streamed title after a downloaded one is resolved ahead too (it waited for the last 25 s).
+                afterFirstSound(gen, resolvedTrack, null)
                 return@launch
             }
 
@@ -743,12 +782,22 @@ object Player {
                 }
                 return false
             }
+            // Ordered mode respects the source priority; progressive mode races
+            // sources and may upgrade the already playing stream.
+            val progressive = AppSettings.progressiveQuality.value
+            val highQuality = progressive && qualitySetting() != "Normal" && !AppSettings.bitPerfect.value
+            var seededStream: MusicApi.StreamInfo? = null
+            var seededSource = ""
             if (cached != null && !explicit && !waitForLossless && com.ketvoice.app.data.ImportedSong.id(resolvedTrack) == null) {
                 start(cached)
                 _state.value = _state.value.copy(quality = "En cache · ${label(cached)}", audioSource = "En cache")
-                return@launch
+                afterFirstSound(gen, resolvedTrack, null)
+                // 7.2: a title in the cache at a lower quality than asked still looks for better, on a free network.
+                if (!QualityHandoff.keepLookingFromCache(highQuality, hasInternet(), isMetered(), wantsLossless(), StreamQuality.rank(cached)))
+                    return@launch
+                seededStream = cached
             }
-            val ahead = prefetched.remove(track.id)?.takeIf {
+            val ahead = if (seededStream != null) null else prefetched.remove(track.id)?.takeIf {
                 StreamResolver.prefetchedFresh(it.candidate.stream.isDash, android.os.SystemClock.elapsedRealtime() - it.at) &&
                     SourcePriority.entries().any { entry -> entry.id == it.candidate.sourceId && entry.enabled } &&
                     StreamResolver.canUsePrefetched(AppSettings.progressiveQuality.value,
@@ -757,19 +806,18 @@ object Player {
             }?.candidate
             // A stream resolved ahead of time starts at once. Outside DASH it is only the
             // first candidate, so the better sources are still collected below.
-            var seededStream: MusicApi.StreamInfo? = null
             if (ahead != null && (!explicit || ahead.sourceId == resolvedTrack.sourceOverride) &&
                 com.ketvoice.app.data.ImportedSong.id(resolvedTrack) == null) {
                 start(ahead.stream, sourceId = ahead.sourceId)
                 _state.value = _state.value.copy(audioSource = sourceLabel(ahead.sourceId, ahead.stream))
-                if (!ahead.stream.isDash) AudioCache.cacheWhole(track.id, ahead.stream)
-                prefetchNext(gen, resolvedTrack)
-                val keepLooking = !ahead.stream.isDash && AppSettings.progressiveQuality.value &&
-                    qualitySetting() != "Normal" && !AppSettings.bitPerfect.value
+                val keepLooking = !ahead.stream.isDash && highQuality
+                afterFirstSound(gen, resolvedTrack, ahead.stream.takeUnless { keepLooking })
                 if (!keepLooking) return@launch
                 seededStream = ahead.stream
+                seededSource = ahead.sourceId
             }
             if (resolvedTrack.addon == "upload" || resolvedTrack.id.startsWith("kv:upload:")) {
+                if (seededStream != null) return@launch
                 val stream = PublicationApi.stream(resolvedTrack, cached)
                 if (stream == null) {
                     resolving = false
@@ -778,60 +826,23 @@ object Player {
                 }
                 start(stream)
                 _state.value = _state.value.copy(audioSource = "Publication Ketvoice")
-                AudioCache.cacheWhole(track.id, stream)
+                afterFirstSound(gen, resolvedTrack, stream)
                 return@launch
             }
-            // Ordered mode respects the source priority; progressive mode races
-            // sources and may upgrade the already playing stream.
-            val progressive = AppSettings.progressiveQuality.value
-            val highQuality = progressive && qualitySetting() != "Normal" && !AppSettings.bitPerfect.value
             _state.value = _state.value.copy(searchingBetter = highQuality)
+            // The handoffs run beside this search (not inside it) and stop once it is over and nothing better waits.
+            val searchOver = java.util.concurrent.atomic.AtomicBoolean(false)
             kotlinx.coroutines.currentCoroutineContext()[Job]?.invokeOnCompletion {
+                searchOver.set(true)
                 if (gen == generation) _state.value = _state.value.copy(searchingBetter = false)
             }
             var currentStream: MusicApi.StreamInfo? = seededStream
-            suspend fun switchTo(stream: MusicApi.StreamInfo, sourceId: String): Boolean {
-                if (gen != generation || StreamQuality.rank(stream) <= (currentStream?.let(StreamQuality::rank) ?: 0)) return gen == generation
-                val future = c.sendCustomCommand(androidx.media3.session.SessionCommand(PlaybackService.CMD_UPGRADE, Bundle.EMPTY),
-                    Bundle().apply {
-                        putString("id", track.id); putString("url", stream.url)
-                        putString("cacheKey", if (stream.isDash) null else AudioCache.key(track.id, stream))
-                        putString("mimeType", if (stream.isDash) androidx.media3.common.MimeTypes.APPLICATION_MPD
-                            else stream.mimeType?.substringBefore(';')?.trim())
-                    })
-                val switched = kotlinx.coroutines.suspendCancellableCoroutine<Boolean> { continuation ->
-                    future.addListener({
-                        if (continuation.isActive) continuation.resumeWith(Result.success(
-                            runCatching { future.get().resultCode == androidx.media3.session.SessionResult.RESULT_SUCCESS }.getOrDefault(false)))
-                    }, androidx.core.content.ContextCompat.getMainExecutor(appContext!!))
-                    continuation.invokeOnCancellation { future.cancel(false) }
-                }
-                if (!switched || gen != generation) {
-                    // A failed standby decoder must never interrupt the audible stream.
-                    return false
-                }
-                currentStream = stream
-                activeStream = stream
-                activeSourceId = sourceId
-                _state.value = _state.value.copy(quality = label(stream), audioSource = sourceLabel(sourceId, stream))
-                AudioCache.cacheWhole(track.id, stream)
-                return true
-            }
-            suspend fun upgrade(stream: MusicApi.StreamInfo, sourceId: String) {
-                if (AppSettings.bitPerfect.value || !highQuality || stream.url == currentStream?.url || gen != generation ||
-                    StreamQuality.rank(stream) <= (currentStream?.let(StreamQuality::rank) ?: 0)) return
-                // 6.0.0 Beta 4: the better stream often answers while the first one is still buffering, and a switch
-                // is only made once the sound plays; it waits for that, then tries twice, instead of being lost.
-                for (attempt in 0..1) {
-                    withTimeoutOrNull(15_000) {
-                        while (gen == generation && !(c.isPlaying || (!c.playWhenReady && c.playbackState == androidx.media3.common.Player.STATE_READY)))
-                            kotlinx.coroutines.delay(150)
-                    }
-                    if (gen != generation) return
-                    if (switchTo(stream, sourceId)) return
-                    kotlinx.coroutines.delay(3_000)
-                }
-            }
+            // 7.2: better streams wait here and are handed over by their own coroutine, the best first. Before,
+            // each was tried inside the search (up to 15 s of waiting, then a handoff), which held back the next
+            // answers, so a lossless stream found meanwhile could reach the 40 s budget and be cancelled.
+            val better = QualityHandoff.BetterStream<StreamResolver.Candidate>({ StreamQuality.rank(it.stream) },
+                seededStream?.let { StreamResolver.Candidate(seededSource, 0, it) })
+            if (highQuality && seededStream != null) handOverBetter(c, gen, track.id, better) { !searchOver.get() }
             val candidates = StreamResolver.candidates(resolvedTrack, download = false, lossless = wantsLossless(), race = progressive)
             if (StreamResolver.sources(resolvedTrack, download = false, lossless = wantsLossless()).isEmpty()) {
                 if (fallbackOffline()) return@launch
@@ -852,12 +863,15 @@ object Player {
                             currentStream = candidate.stream
                             _state.value = _state.value.copy(audioSource = sourceLabel(candidate.sourceId, candidate.stream))
                             // Playback starts on the first real audio byte; ExoPlayer keeps
-                            // filling its buffer while the rest of the file and the next two
-                            // queue items are prepared in the background.
+                            // filling its buffer, and once the sound is heard the rest of the file
+                            // and the next two queue items are prepared in the background.
                             start(candidate.stream, sourceId = candidate.sourceId)
-                            AudioCache.cacheWhole(track.id, candidate.stream)
-                            prefetchNext(gen, resolvedTrack)
-                        } else upgrade(candidate.stream, candidate.sourceId)
+                            afterFirstSound(gen, resolvedTrack, candidate.stream.takeUnless { highQuality })
+                            if (highQuality) {
+                                better.heard(candidate)
+                                handOverBetter(c, gen, track.id, better) { !searchOver.get() }
+                            }
+                        } else if (highQuality && candidate.stream.url != currentStream?.url) better.offer(candidate)
                     }
                     true
                 }
@@ -896,6 +910,76 @@ object Player {
                 _state.value = _state.value.copy(isPlaying = false, playWhenReady = false, buffering = false, quality = "Aucun flux disponible", failed = true)
             }
         }
+    }
+
+    /** Waits, at most [maxMs], until the title of [gen] is heard. */
+    private suspend fun awaitSound(gen: Int, maxMs: Long) {
+        withTimeoutOrNull(maxMs) { while (gen == generation && controller?.isPlaying != true) kotlinx.coroutines.delay(100) }
+    }
+
+    /**
+     * Once the title is heard (or after a few seconds): the next titles are prepared and [whole], when given, is
+     * kept whole in the audio cache. Before 7.2 both started with the first byte: a second download of the same
+     * file and the next titles' files took the network from the bytes the first sound waits for.
+     */
+    private fun afterFirstSound(gen: Int, track: Track, whole: MusicApi.StreamInfo?) {
+        scope.launch {
+            awaitSound(gen, StartupOrder.WAIT_FOR_SOUND_MS)
+            if (gen != generation) return@launch
+            whole?.let { AudioCache.cacheWhole(track.id, it) }
+            prefetchNext(gen, track)
+        }
+    }
+
+    /** Asks the service to hand the title over to [stream] (same recording, better quality); true once it is heard. */
+    private suspend fun handOver(c: MediaController, gen: Int, trackId: String, stream: MusicApi.StreamInfo, sourceId: String): Boolean {
+        if (gen != generation) return false
+        val future = c.sendCustomCommand(androidx.media3.session.SessionCommand(PlaybackService.CMD_UPGRADE, Bundle.EMPTY),
+            Bundle().apply {
+                putString("id", trackId); putString("url", stream.url)
+                putString("cacheKey", if (stream.isDash) null else AudioCache.key(trackId, stream))
+                putString("mimeType", if (stream.isDash) androidx.media3.common.MimeTypes.APPLICATION_MPD
+                    else stream.mimeType?.substringBefore(';')?.trim())
+            })
+        val switched = kotlinx.coroutines.suspendCancellableCoroutine<Boolean> { continuation ->
+            future.addListener({
+                if (continuation.isActive) continuation.resumeWith(Result.success(
+                    runCatching { future.get().resultCode == androidx.media3.session.SessionResult.RESULT_SUCCESS }.getOrDefault(false)))
+            }, androidx.core.content.ContextCompat.getMainExecutor(appContext!!))
+            continuation.invokeOnCancellation { future.cancel(false) }
+        }
+        // A failed standby decoder never interrupts the audible stream.
+        if (!switched || gen != generation) return false
+        activeStream = stream
+        activeSourceId = sourceId
+        _state.value = _state.value.copy(quality = label(stream), audioSource = sourceLabel(sourceId, stream))
+        return true
+    }
+
+    /**
+     * Hands the title over to the better streams [better] receives, one at a time and the best first, once the sound
+     * plays and no Ketmix transition runs (7.2). Ends when [searching] is over and nothing waits; the stream that
+     * stays is then kept whole in the audio cache.
+     */
+    private fun handOverBetter(c: MediaController, gen: Int, trackId: String,
+                               better: QualityHandoff.BetterStream<StreamResolver.Candidate>, searching: () -> Boolean) = scope.launch {
+        withTimeoutOrNull(UPGRADE_WINDOW_MS) {
+            while (gen == generation) {
+                val target = better.next()
+                if (target == null) { if (!searching()) break; kotlinx.coroutines.delay(150); continue }
+                withTimeoutOrNull(15_000) {
+                    while (gen == generation && (com.ketvoice.app.automix.Automix.mixing ||
+                            !(c.isPlaying || (!c.playWhenReady && c.playbackState == androidx.media3.common.Player.STATE_READY))))
+                        kotlinx.coroutines.delay(150)
+                }
+                if (gen != generation) break
+                if (handOver(c, gen, trackId, target.stream, target.sourceId)) better.heard(target)
+                else if (better.failed(target)) kotlinx.coroutines.delay(QualityHandoff.BetterStream.RETRY_MS)
+            }
+        }
+        if (gen != generation) return@launch
+        awaitSound(gen, StartupOrder.WAIT_FOR_SOUND_MS)
+        activeStream?.takeIf { gen == generation }?.let { AudioCache.cacheWhole(trackId, it) }
     }
 
     /**

@@ -5,6 +5,81 @@ import kotlin.math.ln
 import kotlin.math.sqrt
 
 internal object QualityHandoff {
+    // ---- 7.2: the two renditions are brought together in time, not only measured.
+    // The sound measure (offset) is made in each title's own time: it tells where the better stream must be
+    // (the old position plus the lag), and it does not change when one of them moves. Before 7.2 the better
+    // stream was moved by the lag and the sound measured again, which gave the same lag, so it was moved again,
+    // and after three tries the handoff was given up: renditions of two different encoders never switched.
+    // Now the lag is measured once and the gap between the two decks is read from their positions.
+
+    /** A gap above this is closed by a seek; below, by playing the muted better stream a little faster or slower. */
+    const val SEEK_ABOVE_MS = 400.0
+    /** After the last step the two may still be this far apart: the crossfade is then longer, so no echo is heard. */
+    const val ACCEPT_MS = 20.0
+    /** Steps tried before the handoff is given up. */
+    const val MAX_STEPS = 6
+    /** A changed speed reaches the ear after what the audio track holds (up to a second): positions are read after. */
+    const val SETTLE_MS = 1_200L
+    /** Equal-power crossfade, ms: short when the two are heard as one, longer when they are only close. */
+    fun crossfadeMs(errorMs: Double): Long = if (abs(errorMs) <= HEARD_ALIGNED_MS) 96L else 240L
+    fun acceptable(errorMs: Double): Boolean = abs(errorMs) <= ACCEPT_MS
+
+    /** What to do next, given [errorMs] = where the better stream must be minus where it is, in ms of the title. */
+    sealed interface Step {
+        data object Done : Step
+        data class Seek(val byMs: Long) : Step
+        /** Play at [factor] times the listener's speed for [forMs] ms (of the title) while muted. */
+        data class Nudge(val factor: Float, val forMs: Long) : Step
+    }
+
+    fun step(errorMs: Double): Step {
+        val gap = abs(errorMs)
+        if (gap <= HEARD_ALIGNED_MS) return Step.Done
+        if (gap > SEEK_ABOVE_MS) return Step.Seek(Math.round(errorMs))
+        // About two seconds per step, gentler for small gaps so that the last one lands precisely.
+        val rate = (gap / 2_000.0).coerceIn(.02, .15)
+        val factor = (if (errorMs > 0) 1.0 + rate else 1.0 - rate).toFloat()
+        return Step.Nudge(factor, kotlin.math.ceil(gap / rate).toLong())
+    }
+
+    /** Where the better stream is against the heard one, ms: the median of paired readings (old, next), which are noisy. */
+    fun skew(pairs: List<Pair<Long, Long>>): Double {
+        val d = pairs.map { (old, next) -> (next - old).toDouble() }.sorted()
+        if (d.isEmpty()) return 0.0
+        return if (d.size % 2 == 1) d[d.size / 2] else (d[d.size / 2 - 1] + d[d.size / 2]) / 2
+    }
+
+    /** The rank of the stream heard and the best one found since: one handoff at a time, the best first. */
+    class BetterStream<T : Any>(private val rank: (T) -> Int, heard: T? = null) {
+        private var playing = heard?.let(rank) ?: 0
+        private var waiting: T? = null
+        private var failures = 0
+        /** Whether [candidate] becomes the one to try: better than what plays and than what already waits. */
+        @Synchronized fun offer(candidate: T): Boolean {
+            val r = rank(candidate)
+            if (r <= playing || r <= (waiting?.let(rank) ?: 0)) return false
+            waiting = candidate; failures = 0
+            return true
+        }
+        @Synchronized fun next(): T? = waiting
+        @Synchronized fun heard(stream: T) {
+            playing = rank(stream)
+            if (waiting?.let(rank)?.let { it <= playing } != false) { waiting = null; failures = 0 }
+        }
+        /** A handoff that did not happen; false once [candidate] is given up (after [MAX_TRIES]). */
+        @Synchronized fun failed(candidate: T): Boolean {
+            if (waiting !== candidate) return true
+            if (++failures < MAX_TRIES) return true
+            waiting = null; failures = 0
+            return false
+        }
+        companion object { const val MAX_TRIES = 3; const val RETRY_MS = 3_000L }
+    }
+
+    /** A title started from the audio cache still looks for better on a free network (7.2: before, it never did). */
+    fun keepLookingFromCache(highQuality: Boolean, online: Boolean, metered: Boolean, lossless: Boolean, cachedRank: Int): Boolean =
+        highQuality && online && !metered && cachedRank < (if (lossless) 10_000 else 256)
+
     /** How far apart two renditions' durations may be once their sound is aligned by ear (6.0.0 Beta 4). */
     const val ALIGNED_DURATION_MS = 4_000L
     /** Without a measure of the sound, the durations must agree this closely. */
