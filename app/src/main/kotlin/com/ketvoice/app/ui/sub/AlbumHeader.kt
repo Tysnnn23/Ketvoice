@@ -77,6 +77,8 @@ internal fun BoxScope.HeaderCanvasBackdrop(track: Track, canvas: String, extendU
     val theme = LocalTheme.current
     Box(Modifier.matchParentSize().extendUp(extendUp).clipToBounds().testTag("header-canvas")) {
         com.ketvoice.app.ui.player.ArtworkCanvas(track, canvas, playing = true, forceCanvas = true, modifier = Modifier.fillMaxSize())
+        // A light dim keeps the words and buttons readable over a bright Canvas.
+        Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .16f)))
         Box(Modifier.fillMaxWidth().height(120.dp).background(Brush.verticalGradient(
             listOf(Color.Black.copy(alpha = .30f), Color.Transparent))))
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(

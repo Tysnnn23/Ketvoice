@@ -286,7 +286,7 @@ private fun AlbumHero(title: String, artist: String, date: String?, cover: Strin
             AlbumPlaybackActions(tracks, savedIds, loading, stacked, onRefresh, Modifier.widthIn(max = 560.dp).fillMaxWidth())
         } else if (style != HeaderStyle.Canvas) Box(Modifier.fillMaxWidth().testTag("album-header-" + style.name.lowercase())) {
             if (style == HeaderStyle.CoverOnCanvas && canvas != null && tracks.isNotEmpty())
-                HeaderCanvasBackdrop(tracks.first(), canvas, fadeFrom = .40f)
+                HeaderCanvasBackdrop(tracks.first(), canvas, fadeFrom = .24f)
             CollectionHero(cover, top, title, eyebrow = "Album", titleTag = "album-title",
                 subtitle = artist.takeIf { it.isNotBlank() },
                 onSubtitle = { AppUi.openArtist(tracks.firstOrNull()?.artistId.orEmpty(), artist) },

@@ -365,7 +365,7 @@ private fun PlaylistHeader(playlist: LocalPlaylist, playable: List<Track>, owner
         if (canvas != null && lead != null && style != com.ketvoice.app.ui.sub.HeaderStyle.Cover) 
             HeaderCanvasBackdrop(lead, canvas,
                 WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 64.dp,
-                if (style == com.ketvoice.app.ui.sub.HeaderStyle.Canvas) .50f else .40f)
+                if (style == com.ketvoice.app.ui.sub.HeaderStyle.Canvas) .50f else .24f)
         Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(top = 6.dp, bottom = 20.dp).testTag("playlist-header"),
         horizontalAlignment = Alignment.CenterHorizontally) {
         artwork()
