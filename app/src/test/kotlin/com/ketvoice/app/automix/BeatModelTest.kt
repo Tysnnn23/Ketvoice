@@ -202,6 +202,15 @@ class BeatModelTest {
         assertTrue(BeatModel.allowed(lite = true, modest = true, charging = true))
     }
 
+    @Test fun theBundledModelFollowsItsSwitchAndTheDownloadedOneItsFile() {
+        // 7.0.0: mobile and Quest carry the model (the switch decides), Lite downloads it (the file decides).
+        assertTrue(BeatModel.present(bundled = true, switchedOn = true, downloaded = false))
+        assertTrue(!BeatModel.present(bundled = true, switchedOn = false, downloaded = true))
+        assertTrue(BeatModel.present(bundled = false, switchedOn = false, downloaded = true))
+        assertTrue(!BeatModel.present(bundled = false, switchedOn = true, downloaded = false))
+        assertEquals("beat/" + BeatModel.pack.parts.single().name, BeatModel.ASSET)
+    }
+
     @Test fun theStoreKeepsWhoReadTheBeats() {
         val a = dsp.copy(analyser = SegmentAnalysis.BEAT_THIS)
         assertEquals(SegmentAnalysis.BEAT_THIS, AnalysisStore.decode(AnalysisStore.encode(a))!!.analyser)

@@ -511,6 +511,10 @@ fun SettingsScreen() {
                 SToggle(KetIcons.Audio, "Séparer les voix",
                     "Pendant un mix, la voix du titre en cours s'arrête et le suivant continue sur son instrumental, puis sa voix le rejoint ; quand tempo et tonalité s'accordent, la voix du suivant chante sur l'instrumental de celui en cours. Avec le modèle de séparation, la voix est vraiment retirée ; sans lui, elle est seulement atténuée.",
                     AppSettings.ketmixStems.value) { AppSettings.ketmixStems.value = it; SettingsStore.save() }
+                // 7.0.0: the rhythm model is in the mobile and Quest APKs, a switch rather than a download.
+                if (com.ketvoice.app.automix.BeatModel.bundled) SToggle(KetIcons.Sliders, "Calage précis du rythme",
+                    "Un petit modèle d'IA intégré trouve les temps et les mesures pour des mélanges mieux calés.",
+                    AppSettings.ketmixBeatModel.value) { AppSettings.ketmixBeatModel.value = it; SettingsStore.save() }
                 if (AppSettings.ketmixStems.value) StemSettings()
                 SToggle(KetIcons.Shuffle, "File intelligente",
                     "En lecture aléatoire, le titre suivant est choisi parmi les prochains pour s'accorder au tempo et à la tonalité de celui en cours. Une file que vous avez ordonnée et un titre demandé « à la suite » ne bougent jamais.",
@@ -1439,7 +1443,8 @@ private fun ColumnScope.StemSettings() {
         "Séparation par IA sur le téléphone (Spleeter), téléchargée une fois : {0}")
     ModelRow(com.ketvoice.app.stems.StemModel.hq, hq, "Modèle haute qualité",
         "Voix et instrumentaux bien plus nets (UVR MDX-Net), environ dix fois plus lent : {0}. Il sert téléphone en charge et améliore alors les titres déjà séparés.")
-    ModelRow(com.ketvoice.app.automix.BeatModel.pack, beat, "Calage précis du rythme (Ketmix)",
+    // 7.0.0: the mobile and Quest APKs carry the rhythm model (its switch is above); Lite still downloads it.
+    if (!com.ketvoice.app.automix.BeatModel.bundled) ModelRow(com.ketvoice.app.automix.BeatModel.pack, beat, "Calage précis du rythme (Ketmix)",
         "Un petit modèle d'IA trouve les temps et les mesures pour des mélanges mieux calés : {0}")
     SRow(KetIcons.Sliders, "Qualité de séparation",
         sub = "Quel modèle sépare les titres",

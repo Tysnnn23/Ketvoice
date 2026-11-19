@@ -1,4 +1,7 @@
 import java.time.Duration
+import java.net.HttpURLConnection
+import java.net.URI
+import java.security.MessageDigest
 import java.io.File
 import java.util.Base64
 import java.util.zip.ZipEntry
@@ -184,6 +187,10 @@ android {
     packaging {
         resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
     }
+    // The bundled rhythm model (7.0.0) is memory-mapped straight from the APK: it must be stored uncompressed.
+    androidResources {
+        noCompress += "tflite"
+    }
 }
 
 // ============================================================================ Ketvoice Lite
@@ -314,6 +321,84 @@ androidComponents {
     }
 }
 // ========================================================================== end Ketvoice Lite
+
+// ================================================================ Ketmix rhythm model (7.0.0)
+// Beat This! small is delivered inside the mobile and Quest APKs (owner, 7.0.0: « Modèle rythme intégré »). Like the
+// Discord SDK it never goes through Git: the build fetches exactly the file pinned in automix/BeatModel.kt and
+// tools/beat/expected.sha256 from the prerelease ketmix-beat-v1, checks its size and SHA-256, keeps it in the Gradle
+// user home (~/.gradle/caches/ketvoice-models, cached on CI) and hands it to the variant as a generated asset.
+// Lite keeps it as an optional download. -PketvoiceWithoutBeatModel=true builds without it (offline): the app then
+// offers the download, as Lite does. A debug build that cannot reach the prerelease warns and goes on without it;
+// a release build fails, so that no published APK lacks it.
+val beatModelSkipped = providers.gradleProperty("ketvoiceWithoutBeatModel").map { it.equals("true", ignoreCase = true) }.getOrElse(false)
+
+// Not a build-cache task: a debug build that went without the model must try again next time. The file itself is
+// cached in the Gradle user home by its SHA-256, and the task is up to date while its output holds it.
+abstract class BeatModelAsset : DefaultTask() {
+    @get:Input abstract val url: Property<String>
+    @get:Input abstract val sha256: Property<String>
+    @get:Input abstract val bytes: Property<Long>
+    @get:Input abstract val required: Property<Boolean>
+    @get:Internal abstract val cache: Property<String>
+    @get:OutputDirectory abstract val output: DirectoryProperty
+
+    init { outputs.upToDateWhen { (it as BeatModelAsset).packaged().isFile } }
+
+    private fun name() = url.get().substringAfterLast('/')
+    fun packaged(): File = output.get().file("beat/${name()}").asFile
+
+    private fun digest(file: File): String {
+        val md = MessageDigest.getInstance("SHA-256")
+        file.inputStream().use { input -> val buffer = ByteArray(1 shl 16); while (true) { val n = input.read(buffer); if (n < 0) break; md.update(buffer, 0, n) } }
+        return md.digest().joinToString("") { "%02x".format(it) }
+    }
+
+    private fun good(file: File) = file.isFile && file.length() == bytes.get() && digest(file) == sha256.get()
+
+    private fun download(target: File) {
+        val tmp = File(target.parentFile, target.name + ".part")
+        val connection = URI(url.get()).toURL().openConnection() as HttpURLConnection
+        connection.connectTimeout = 20_000; connection.readTimeout = 60_000
+        connection.setRequestProperty("User-Agent", "Ketvoice-build")
+        if (connection.responseCode != 200) throw GradleException("Ketmix rhythm model: HTTP ${connection.responseCode} from ${url.get()}")
+        connection.inputStream.use { input -> tmp.outputStream().use { input.copyTo(it, 1 shl 16) } }
+        if (!good(tmp)) { tmp.delete(); throw GradleException("Ketmix rhythm model: the downloaded file does not match its pinned size and SHA-256") }
+        if (!tmp.renameTo(target)) throw GradleException("Ketmix rhythm model: cannot write $target")
+    }
+
+    @TaskAction
+    fun fetch() {
+        val out = packaged()
+        out.parentFile.deleteRecursively(); out.parentFile.mkdirs()
+        val cached = File(cache.get(), "${sha256.get()}.tflite").apply { parentFile.mkdirs() }
+        try {
+            if (!good(cached)) { cached.delete(); download(cached) }
+            cached.copyTo(out, overwrite = true)
+            logger.lifecycle("Ketmix rhythm model packaged: ${out.length()} bytes, SHA-256 ${sha256.get()}")
+        } catch (failure: Exception) {
+            if (required.get()) throw GradleException("Ketmix rhythm model could not be fetched (${failure.message}). " +
+                "Build offline with -PketvoiceWithoutBeatModel=true (the APK then offers it as a download).", failure)
+            logger.warn("Ketmix rhythm model not packaged (${failure.message}); this debug build offers it as a download.")
+        }
+    }
+}
+
+androidComponents {
+    onVariants { variant ->
+        if (beatModelSkipped || variant.productFlavors.any { it.second == "lite" }) return@onVariants
+        val name = variant.name.replaceFirstChar { it.uppercase() }
+        val task = tasks.register<BeatModelAsset>("ketmixBeatModel$name") {
+            description = "Fetches and checks the Ketmix rhythm model for ${variant.name}."
+            url.set("https://github.com/Tysnnn23/Ketvoice/releases/download/ketmix-beat-v1/ketmix-beat-small0.tflite")
+            sha256.set("74cc5ee960dbdbf75cef978e8e24a5308ef26f459f70494285f249a82a9c67d7")
+            bytes.set(18_575_568L)
+            required.set(variant.buildType == "release")
+            cache.set(File(gradle.gradleUserHomeDir, "caches/ketvoice-models").absolutePath)
+        }
+        variant.sources.assets?.addGeneratedSourceDirectory(task, BeatModelAsset::output)
+    }
+}
+// ============================================================ end Ketmix rhythm model
 
 dependencies {
     if (discordSdkAvailable) {
