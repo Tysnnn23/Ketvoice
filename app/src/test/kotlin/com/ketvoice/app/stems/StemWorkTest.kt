@@ -127,8 +127,8 @@ class StemWorkTest {
     @Test fun measurementsOfBothProcessesAreKept() {
         val store = com.ketvoice.app.automix.AnalysisStore
         val id = "qa:measured-${System.nanoTime()}"
-        val mine = com.ketvoice.app.automix.SegmentAnalysis(0L, 40_000L, bpm = 124f)
-        val theirs = com.ketvoice.app.automix.SegmentAnalysis(0L, 40_000L, bpm = 90f)
+        val mine = com.ketvoice.app.automix.SegmentAnalysis(0L, 40_000L, bpm = 124f, analyser = 1)
+        val theirs = com.ketvoice.app.automix.SegmentAnalysis(0L, 40_000L, bpm = 90f, analyser = 1)
         store.put(id, 200_000L, true, mine)
         synchronized(store) { store.merge(mapOf("i|200|$id" to theirs, "o|200|$id" to theirs)) }
         assertEquals("this process's own measure stays", 124f, store.intro(id, 200_000L)!!.bpm)

@@ -203,6 +203,8 @@ class ScreensRedoHostTest {
 
     @Test @Config(qualifiers = "w1280dp-h800dp-land-mdpi")
     fun homeForYouSetsItsTwoCardsSideBySideOnALandscapeTablet() {
+        // Quest keeps its own window: large-screen layouts are off there by design (LargeScreen.isLarge).
+        org.junit.Assume.assumeFalse(com.ketvoice.app.BuildConfig.IS_QUEST)
         history()
         // The smart library's ambiances, as it builds them from what is on the device.
         com.ketvoice.app.ui.smartlib.SmartLibrary.setMixesForTests(listOf(com.ketvoice.app.smartlib.Mood.Calm,
