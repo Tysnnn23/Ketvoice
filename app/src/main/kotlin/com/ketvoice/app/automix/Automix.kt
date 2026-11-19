@@ -359,7 +359,7 @@ internal object Automix {
         h.exact || AppSettings.bitPerfect.value -> "sortie bit-perfect"
         state.repeatOne && !AppSettings.ketmixLoops.value -> "titre répété"
         SleepTimer.endOfTrack.value || SleepTimer.remainingSeconds.value in 1..180 -> "minuterie active"
-        !state.repeatOne && !AppSettings.automixAlbums.value && !state.shuffle && sameAlbum(current, next.track) -> "album joué dans l'ordre"
+        !state.repeatOne && !AppSettings.automixAlbums.value && !state.shuffle && sameAlbum(current, next.track) && !DjSet.on(state) -> "album joué dans l'ordre"
         next.track.durationMs in 1 until 30_000L -> "titre suivant trop court"
         else -> null
     }
@@ -374,7 +374,8 @@ internal object Automix {
             Player.automixNext()?.entryId == next.entryId && main.playerError == null && !s.closed
         val state = Player.state.value
         val context = MixContext(
-            sameAlbumInOrder = !state.repeatOne && !state.shuffle && sameAlbum(current, next.track),
+            // « Mode DJ set » (7.0.0): every title of a set is mixed, an album's too.
+            sameAlbumInOrder = !state.repeatOne && !state.shuffle && sameAlbum(current, next.track) && !DjSet.on(state),
             repeatOne = state.repeatOne,
             loop = state.repeatOne && AppSettings.ketmixLoops.value && next.track.id == current.id,
             stopAfterCurrent = SleepTimer.endOfTrack.value || SleepTimer.remainingSeconds.value in 1..180,
