@@ -7,6 +7,21 @@
 
 ---
 
+# Ketvoice 7.1.0
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 142** — Ketmix quality pass from listener complaints about other automixes, the editor preview fixed, glass on navigation only, Clear/Tinted glass, true black, mini-player swipe, A–Z index, a 4×1 widget, a radio without repeats; the DJ set mode removed.
+
+- Ketmix (`automix/CutBudget.kt`): `CutBudget` checks every automatic plan (listener editor points exempt) and falls back to a shorter transition; `Endings.afterGap` plans false endings and hidden tracks on the music after the silence; `PairFit` turns distant pairs with really different tempos into a 3 s fade. `BeatAnalysis.structure` finds the last ≥ 2 s silence and spectral flux (stored by `AnalysisStore`; older readings lack them until re-read). `BlendFit.steady`: both grids at confidence ≥ .55; no beatmatch start under a voice beyond 3.5 %. `MixPlan.voicesMeet`: outgoing mids −7.5 dB when sung lines meet in a filter/wash crossing. `VolumeLeveler` holds during a transition (`LevelHold`). `KetmixBudgetTest`.
+- Editor preview (`automix/TransitionPreview.kt`): `TransitionPreview.volume` gives a deck full volume once its processors carry the levels (the incoming deck stayed at 0 before); a start generation and one `resumeMain` flag end the A/B race. `TransitionPreviewPlaybackTest` plays two generated WAVs through the service's audio chain.
+- Design: content buttons use solid fills (`LiquidGlassButton(plain = true)`, `LocalOnGlass` inside glass panels); `glassTinted` (Clear/Tinted, minimum opacity 62–72 %, on with Android's high-contrast text); menus and sheets at least 84 % (93 % tinted); `trueBlack`; mini-player keeps Next and swipes titles (phone and tablet); A–Z index on name-sorted Library lists of 30+; Glance widget « Commandes » (4×1, down to 110 dp, not on Quest); radio and autoplay skip titles heard in the last 4 hours (`heardAt`, kept one day). `Design71Test`, `Design71HostTest`.
+- Removed: « Mode DJ set » (`DjSet`, `SetRender`, `SetExport`, `DjSetPanel` and their strings).
+
+Full notes: [7.1.0](docs/releases/v7.1.0.md).
+
+---
+
 # Ketvoice 7.0.0
 
 ![Ketvoice](ketvoice-banner.png)

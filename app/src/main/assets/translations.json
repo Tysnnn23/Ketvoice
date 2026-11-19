@@ -2332,7 +2332,15 @@
   "Télécharger les {0} titres manquants": "Download the {0} missing songs",
   "Télécharger {0}": "Download {0}",
   "sur l'appareil": "on this device",
-  "{0} sur {1} titres téléchargés": "{0} of {1} songs downloaded"
+  "{0} sur {1} titres téléchargés": "{0} of {1} songs downloaded",
+  "Le texte à contraste élevé d'Android garde le verre teinté.": "Android's high-contrast text keeps the glass tinted.",
+  "Fond noir": "Black background",
+  "En mode sombre, les pages restent noir pur, même sous la couleur d'une pochette (écrans OLED)": "In dark mode, pages stay pure black, even under a cover's colour (OLED screens)",
+  "Aller à cette lettre": "Go to this letter",
+  "Autres noms": "Other names",
+  "Nom A–Z": "Name A–Z",
+  "Commandes": "Controls",
+  "Précédent, lecture/pause et suivant, même en tout petit": "Previous, play/pause and next, even at its smallest"
  },
  "hi": {
   "Reverb": "रीवर्ब",
@@ -4667,7 +4675,15 @@
   "Télécharger les {0} titres manquants": "छूटे हुए {0} गाने डाउनलोड करें",
   "Télécharger {0}": "{0} डाउनलोड करें",
   "sur l'appareil": "इस डिवाइस पर",
-  "{0} sur {1} titres téléchargés": "{1} में से {0} गाने डाउनलोड हुए"
+  "{0} sur {1} titres téléchargés": "{1} में से {0} गाने डाउनलोड हुए",
+  "Le texte à contraste élevé d'Android garde le verre teinté.": "Android का हाई-कॉन्ट्रास्ट टेक्स्ट ग्लास को टिंटेड रखता है।",
+  "Fond noir": "काला बैकग्राउंड",
+  "En mode sombre, les pages restent noir pur, même sous la couleur d'une pochette (écrans OLED)": "डार्क मोड में पेज पूरी तरह काले रहते हैं, कवर के रंग के साथ भी (OLED स्क्रीन)",
+  "Aller à cette lettre": "इस अक्षर पर जाएँ",
+  "Autres noms": "अन्य नाम",
+  "Nom A–Z": "नाम A–Z",
+  "Commandes": "नियंत्रण",
+  "Précédent, lecture/pause et suivant, même en tout petit": "पिछला, चलाएँ/रोकें और अगला, सबसे छोटे आकार में भी"
  },
  "ja": {
   "Reverb": "リバーブ",
@@ -7002,7 +7018,15 @@
   "Télécharger les {0} titres manquants": "残りの{0}曲をダウンロード",
   "Télécharger {0}": "{0}をダウンロード",
   "sur l'appareil": "このデバイス上",
-  "{0} sur {1} titres téléchargés": "{1}曲中{0}曲をダウンロード済み"
+  "{0} sur {1} titres téléchargés": "{1}曲中{0}曲をダウンロード済み",
+  "Le texte à contraste élevé d'Android garde le verre teinté.": "Androidの高コントラストテキストがオンのため、ガラスは色付きのままです。",
+  "Fond noir": "黒い背景",
+  "En mode sombre, les pages restent noir pur, même sous la couleur d'une pochette (écrans OLED)": "ダークモードでは、ジャケットの色があってもページは純粋な黒のままです（有機ELディスプレイ）",
+  "Aller à cette lettre": "この文字へ移動",
+  "Autres noms": "その他の名前",
+  "Nom A–Z": "名前 A–Z",
+  "Commandes": "コントロール",
+  "Précédent, lecture/pause et suivant, même en tout petit": "前へ、再生/一時停止、次へ。最小サイズでも"
  },
  "zh": {
   "Reverb": "混响",
@@ -9337,7 +9361,15 @@
   "Télécharger les {0} titres manquants": "下载缺少的 {0} 首歌曲",
   "Télécharger {0}": "下载 {0}",
   "sur l'appareil": "在此设备上",
-  "{0} sur {1} titres téléchargés": "已下载 {0}/{1} 首歌曲"
+  "{0} sur {1} titres téléchargés": "已下载 {0}/{1} 首歌曲",
+  "Le texte à contraste élevé d'Android garde le verre teinté.": "Android 的高对比度文字会让玻璃保持着色。",
+  "Fond noir": "纯黑背景",
+  "En mode sombre, les pages restent noir pur, même sous la couleur d'une pochette (écrans OLED)": "深色模式下，即使有封面颜色，页面也保持纯黑（OLED 屏幕）",
+  "Aller à cette lettre": "跳到此字母",
+  "Autres noms": "其他名称",
+  "Nom A–Z": "名称 A–Z",
+  "Commandes": "控制",
+  "Précédent, lecture/pause et suivant, même en tout petit": "上一首、播放/暂停和下一首，最小尺寸也有"
  },
  "ru": {
   "Reverb": "Реверберация",
@@ -11672,7 +11704,15 @@
   "Télécharger les {0} titres manquants": "Скачать недостающие треки: {0}",
   "Télécharger {0}": "Скачать {0}",
   "sur l'appareil": "на устройстве",
-  "{0} sur {1} titres téléchargés": "Скачано треков: {0} из {1}"
+  "{0} sur {1} titres téléchargés": "Скачано треков: {0} из {1}",
+  "Le texte à contraste élevé d'Android garde le verre teinté.": "Высококонтрастный текст Android оставляет стекло тонированным.",
+  "Fond noir": "Чёрный фон",
+  "En mode sombre, les pages restent noir pur, même sous la couleur d'une pochette (écrans OLED)": "В тёмном режиме страницы остаются чисто чёрными даже под цветом обложки (OLED-экраны)",
+  "Aller à cette lettre": "Перейти к этой букве",
+  "Autres noms": "Другие названия",
+  "Nom A–Z": "Имя A–Z",
+  "Commandes": "Управление",
+  "Précédent, lecture/pause et suivant, même en tout petit": "Назад, воспроизведение/пауза и далее, даже в самом малом размере"
  },
  "it": {
   "Reverb": "Riverbero",
@@ -14007,7 +14047,15 @@
   "Télécharger les {0} titres manquants": "Scarica i {0} brani mancanti",
   "Télécharger {0}": "Scarica {0}",
   "sur l'appareil": "sul dispositivo",
-  "{0} sur {1} titres téléchargés": "{0} di {1} brani scaricati"
+  "{0} sur {1} titres téléchargés": "{0} di {1} brani scaricati",
+  "Le texte à contraste élevé d'Android garde le verre teinté.": "Il testo ad alto contrasto di Android mantiene il vetro colorato.",
+  "Fond noir": "Sfondo nero",
+  "En mode sombre, les pages restent noir pur, même sous la couleur d'une pochette (écrans OLED)": "In modalità scura le pagine restano nero puro, anche sotto il colore di una copertina (schermi OLED)",
+  "Aller à cette lettre": "Vai a questa lettera",
+  "Autres noms": "Altri nomi",
+  "Nom A–Z": "Nome A–Z",
+  "Commandes": "Comandi",
+  "Précédent, lecture/pause et suivant, même en tout petit": "Precedente, play/pausa e successivo, anche piccolissimo"
  },
  "es": {
   "Reverb": "Reverb",
@@ -16342,7 +16390,15 @@
   "Télécharger les {0} titres manquants": "Descargar las {0} canciones que faltan",
   "Télécharger {0}": "Descargar {0}",
   "sur l'appareil": "en el dispositivo",
-  "{0} sur {1} titres téléchargés": "{0} de {1} canciones descargadas"
+  "{0} sur {1} titres téléchargés": "{0} de {1} canciones descargadas",
+  "Le texte à contraste élevé d'Android garde le verre teinté.": "El texto de alto contraste de Android mantiene el cristal tintado.",
+  "Fond noir": "Fondo negro",
+  "En mode sombre, les pages restent noir pur, même sous la couleur d'une pochette (écrans OLED)": "En modo oscuro, las páginas siguen en negro puro, incluso con el color de una portada (pantallas OLED)",
+  "Aller à cette lettre": "Ir a esta letra",
+  "Autres noms": "Otros nombres",
+  "Nom A–Z": "Nombre A–Z",
+  "Commandes": "Controles",
+  "Précédent, lecture/pause et suivant, même en tout petit": "Anterior, reproducir/pausa y siguiente, incluso en pequeño"
  },
  "de": {
   "Reverb": "Reverb",
@@ -18677,7 +18733,15 @@
   "Télécharger les {0} titres manquants": "{0} fehlende Titel laden",
   "Télécharger {0}": "{0} laden",
   "sur l'appareil": "auf dem Gerät",
-  "{0} sur {1} titres téléchargés": "{0} von {1} Titeln geladen"
+  "{0} sur {1} titres téléchargés": "{0} von {1} Titeln geladen",
+  "Le texte à contraste élevé d'Android garde le verre teinté.": "Der kontrastreiche Text von Android hält das Glas getönt.",
+  "Fond noir": "Schwarzer Hintergrund",
+  "En mode sombre, les pages restent noir pur, même sous la couleur d'une pochette (écrans OLED)": "Im dunklen Modus bleiben die Seiten tiefschwarz, auch unter der Farbe eines Covers (OLED-Displays)",
+  "Aller à cette lettre": "Zu diesem Buchstaben springen",
+  "Autres noms": "Andere Namen",
+  "Nom A–Z": "Name A–Z",
+  "Commandes": "Steuerung",
+  "Précédent, lecture/pause et suivant, même en tout petit": "Zurück, Wiedergabe/Pause und Weiter, auch ganz klein"
  },
  "pt": {
   "Reverb": "Reverb",
@@ -21012,7 +21076,15 @@
   "Télécharger les {0} titres manquants": "Baixar as {0} músicas que faltam",
   "Télécharger {0}": "Baixar {0}",
   "sur l'appareil": "no dispositivo",
-  "{0} sur {1} titres téléchargés": "{0} de {1} músicas baixadas"
+  "{0} sur {1} titres téléchargés": "{0} de {1} músicas baixadas",
+  "Le texte à contraste élevé d'Android garde le verre teinté.": "O texto de alto contraste do Android mantém o vidro colorido.",
+  "Fond noir": "Fundo preto",
+  "En mode sombre, les pages restent noir pur, même sous la couleur d'une pochette (écrans OLED)": "No modo escuro, as páginas ficam em preto puro, mesmo com a cor de uma capa (telas OLED)",
+  "Aller à cette lettre": "Ir para esta letra",
+  "Autres noms": "Outros nomes",
+  "Nom A–Z": "Nome A–Z",
+  "Commandes": "Controles",
+  "Précédent, lecture/pause et suivant, même en tout petit": "Anterior, reproduzir/pausar e próxima, mesmo bem pequeno"
  },
  "ko": {
   "Reverb": "리버브",
@@ -23347,6 +23419,14 @@
   "Télécharger les {0} titres manquants": "빠진 곡 {0}개 다운로드",
   "Télécharger {0}": "{0} 다운로드",
   "sur l'appareil": "기기에 저장됨",
-  "{0} sur {1} titres téléchargés": "{1}곡 중 {0}곡 다운로드됨"
+  "{0} sur {1} titres téléchargés": "{1}곡 중 {0}곡 다운로드됨",
+  "Le texte à contraste élevé d'Android garde le verre teinté.": "Android의 고대비 텍스트가 켜져 있어 유리가 색조로 유지됩니다.",
+  "Fond noir": "검은색 배경",
+  "En mode sombre, les pages restent noir pur, même sous la couleur d'une pochette (écrans OLED)": "다크 모드에서는 커버 색상이 있어도 페이지가 완전한 검은색으로 유지됩니다 (OLED 화면)",
+  "Aller à cette lettre": "이 글자로 이동",
+  "Autres noms": "기타 이름",
+  "Nom A–Z": "이름 A–Z",
+  "Commandes": "컨트롤",
+  "Précédent, lecture/pause et suivant, même en tout petit": "이전, 재생/일시정지, 다음. 가장 작은 크기에서도"
  }
 }
