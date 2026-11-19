@@ -1,0 +1,220 @@
+{
+  "schema": 8,
+  "version": "7.1.0",
+  "versionCode": 142,
+  "source_commit": "cef2f126470601039bcd850d9318ed2c00fedb98",
+  "created_at": "2026-11-19T12:35:26.463860+00:00",
+  "build_origin": {
+    "kind": "github_actions_with_owner_discord_sdk",
+    "workflow": "android.yml",
+    "run_id": 44520370770,
+    "artifact": {
+      "id": 14529378510,
+      "sha256": "cf63cdececf71cf3bbab58e8099a7293107cbc44a2736f610dc24d67af2c0aae"
+    },
+    "gradle": "assembleMobileRelease assembleQuestRelease assembleLiteRelease",
+    "note": "Signed by CI with the pinned keystore secret; the Discord Social SDK AAR matched its pinned SHA-256."
+  },
+  "local_validation": {
+    "result": "debug JVM/Robolectric suites for the three flavors (mobile, quest, lite), release lint and the APK checker tests passed in a cloud container without the Discord SDK",
+    "commands": [
+      "testMobileDebugUnitTest",
+      "testQuestDebugUnitTest",
+      "testLiteDebugUnitTest -ProbolectricSdks=31,32,33,34,35,36",
+      "lintMobileRelease",
+      "lintQuestRelease",
+      "lintLiteRelease",
+      "tools/test_verify_apk.py"
+    ],
+    "ci_validation": "run 44520370770: release builds, debug and release unit tests, UI text audit, lint, APK signature pin and Discord bridge packaging passed",
+    "code_review": {
+      "kind": "none independent"
+    },
+    "host_previews": "Robolectric software renders on the host (not a phone, glass drawn flat), looked at by the design sub-agent: Library light/dark/Noir with the A-Z index, Home dark vs Noir, context menu and sheet over a very light cover (body text contrast measured >= 4.5:1), folded mini player, Clear vs Tinted in the real shader; the 4x1 Glance widget was not rendered; Quest screens were not rendered",
+    "features_7_1": "Ketmix CutBudget, false endings/hidden tracks (Endings.afterGap), PairFit radio change, grid confidence gate, 3.5 % cap under a voice, mids cut when voices meet, leveler hold, checked by KetmixBudgetTest and the automix suite on synthetic analyses; the editor preview fix checked by TransitionPreviewPlaybackTest (two generated WAVs through the service audio chain under Robolectric, where audio runs faster than real time, so the exact moment the incoming deck becomes audible is not measured); the thresholds (8 bars, 3.5 %, .55, pair weights) were never judged by ear; nothing ran on a device",
+    "after_local_run": "full local run on the release commit: mobile 1731, quest 1721 (44 skipped), lite 1729 tests, 0 failures; lint 0 errors; UI text audit clean",
+    "sdk_30": "Robolectric's Android 11 runtime could not be downloaded in the cloud container (Maven Central answered 429), so the Lite tests that declare sdk 30 ran on sdk 31 only; nothing ran on an Android 11 runtime",
+    "after_last_full_local_run": "nothing under app/ changed after the last complete local run"
+  },
+  "server": {
+    "function": "ketvoice-content",
+    "deployed_version": 23,
+    "changed_in_this_version": false,
+    "database": "no migration in this version"
+  },
+  "tests": {
+    "mobile": {
+      "jvm": {
+        "tests": 1731,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 3
+      },
+      "android_15_emulator_compose": {
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "quest": {
+      "jvm": {
+        "tests": 1721,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 44
+      },
+      "android_15_emulator_compose": {
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "lite": {
+      "jvm": {
+        "tests": 1729,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 3
+      },
+      "android_11_runtime": {
+        "status": "not_executed"
+      }
+    },
+    "dex_register_check": "tools/check_dex_registers.py ran in CI (Check method sizes against the Android verifier) on the three release APKs",
+    "apk_checker": "tools/test_verify_apk.py 12 tests (Lite minSdk 30 required)"
+  },
+  "lint": {
+    "mobile": {
+      "Warning": 307,
+      "Hint": 28
+    },
+    "quest": {
+      "Warning": 307,
+      "Hint": 28
+    },
+    "lite": {
+      "Warning": 331,
+      "Hint": 28
+    },
+    "errors": 0
+  },
+  "apks": [
+    {
+      "name": "Ketvoice-7.1.0.apk",
+      "sha256": "952f2bb908092f3ae9561cb2ec6fedbbe6067e46bae9102fc834c49a860d7de1",
+      "bytes": 104026543,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "7.1.0",
+      "versionCode": 142,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-7.1.0-Quest.apk",
+      "sha256": "462afe5759bd7ed5f95421b8def82d41efbcfd6bfe71319b2b6675f32da4e768",
+      "bytes": 120127966,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "7.1.0",
+      "versionCode": 142,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-7.1.0-Lite.apk",
+      "sha256": "7f20106af294e54ced08f06ac3a00377c8d638213b8f9d261c326139fcdaede0",
+      "bytes": 33070403,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "7.1.0",
+      "versionCode": 142,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false,
+      "edition": "lite"
+    }
+  ],
+  "discord": {
+    "sdk_present_in_ci_build": true,
+    "sdk_sha256_pinned": true,
+    "bridge_and_native_libraries_verified": true,
+    "presence_mode": "unauthenticated_rpc_through_installed_discord_app"
+  },
+  "credential_scan": {
+    "entries": 4369,
+    "findings": 0,
+    "scope": "the three release APKs",
+    "kind": "credential_patterns",
+    "explicit_private_provider_key_deny_list": false,
+    "note": "run because publish-release requires it; the other manual checks were skipped at the owner's request"
+  },
+  "release_install_smoke": {
+    "mobile": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "quest": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "lite": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    }
+  },
+  "publication_override": {
+    "authorized_by_user": true,
+    "authorized_at": "2026-11-19T12:35:26.463860+00:00",
+    "kind": "standing_authorization",
+    "user_statement": "J'autorise TOUT devient maintenant une règle.",
+    "user_statement_date": "2026-11-14",
+    "in_reply_to": "The question whether versions may be published without phone or Quest testing without asking again for each version.",
+    "recorded_in": "AGENTS.md (commit aeeda8e)",
+    "reason": "The owner made publishing validated versions without phone or Quest testing a standing rule.",
+    "scope": "physical device installation and all on-device behaviour of 7.1.0 (mobile, Lite and Quest), including accounts and sync on devices"
+  },
+  "owner_requests_2026_11_19_7_1_0": {
+    "statements": [
+      "Supprime dj set et cherche sur le web et propose de vrai améliorations liquid glass,layout, theme,logo etc pour améliorer l'app au max et cherche même z comparer avecdes avis utilisateur de plein d'autre app etc mais surtout améliore z fond le ketmix !!!",
+      "Aussi durant le Mix custom la bah le son du prochain son ne se lance pas dans le préview.",
+      "picks: Verre que pour la navigation, Mode « Teinté » bien visible, Menus et feuilles plus opaques, Mini-lecteur garde « Suivant », Défilement rapide A–Z, Fond noir OLED, Widget compact 4×1, Radio sans répétition"
+    ],
+    "done": {
+      "removed": "Mode DJ set",
+      "ketmix": "cut budget, false endings, pair fit, grid gate, voice stretch cap, mids cut, leveler hold",
+      "preview": "incoming deck volume and A/B race fixed",
+      "design": "glass on navigation only, Clear/Tinted (glassTinted), opaque menus and sheets, trueBlack, mini player next + swipe, A-Z index, 4x1 widget, radio without repeats (4 h)"
+    },
+    "research": "web research from search-result excerpts (direct page fetches were blocked in the session; Reddit read only through press reports)",
+    "not_done": [
+      "Ketmix off for podcasts/audiobooks (tracks carry no such marker)",
+      "key confidence from the gap between the two best keys"
+    ]
+  },
+  "not_validated": [
+    "physical phone, Lite, tablet or Quest installation, rendering and behaviour of 7.1.0",
+    "Ketmix transitions and the editor preview by ear on any device",
+    "the 4x1 widget on a launcher",
+    "Android high-contrast text detection on real phones (hidden secure setting before Android 16)",
+    "the new screens on Quest (compiled only)",
+    "the bundled beat model on real songs and devices",
+    "Robolectric runs on the Android 11 runtime (sdk 30)",
+    "independent code review"
+  ],
+  "known_limitations": [
+    "No Wear OS app in this version.",
+    "Seasonal themes use code-drawn decor until the owner's pictures are added.",
+    "Android Auto's queue screen shows only the current song.",
+    "Switching between Ketvoice and Ketvoice Lite is a manual install of the other APK.",
+    "Ketogether guests hear titles their own sources can play; local files and private titles are shown as unavailable.",
+    "Lecture automatique: which queue titles were added automatically is not kept across a session restore.",
+    "The mobile and Quest APKs are about 18.6 MB larger because they include the rhythm model.",
+    "Launcher icons keep a background: Android fills adaptive icon backgrounds in black.",
+    "The signing certificate is the existing public Android debug identity, not a private production key."
+  ],
+  "canonical_banner_sha256": "ddc0e2c1270027f4b9dd92254374b79727ae9eaf8914e418b52e23c5b39b5966"
+}
