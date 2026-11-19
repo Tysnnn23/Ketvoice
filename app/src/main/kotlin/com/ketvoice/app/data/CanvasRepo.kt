@@ -72,6 +72,8 @@ object CanvasRepo {
             }
             _paths.value = map
         }
+        // 7.2: big Canvas are encoded again, smaller and as sharp, while the phone charges.
+        if (android.os.Build.FINGERPRINT != "robolectric") runCatching { CanvasCompactWorker.schedule(context) }
     }
 
     /**
