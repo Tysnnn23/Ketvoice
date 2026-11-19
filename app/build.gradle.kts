@@ -161,6 +161,12 @@ android {
         unitTests.isIncludeAndroidResources = true
         // Host renders of tablet windows (6.6) outgrew Gradle's default 512 MB test heap on CI.
         unitTests.all { it.maxHeapSize = "2g" }
+        // On CI (6.9): every test is named when it starts, and a test task that stops progressing fails after
+        // 40 minutes instead of holding the runner, so a stuck test can be found from the log.
+        if (System.getenv("CI") != null) unitTests.all {
+            it.testLogging { events("started", "failed", "skipped") }
+            it.timeout.set(java.time.Duration.ofMinutes(40))
+        }
         // Host tests never reach the network (6.7): a lyrics or cover answer from a real service changed what a
         // screen showed and kept Compose busy, so the suite passed or failed with the hour. A dead local proxy
         // refuses every outside connection at once; loopback servers of the tests stay reachable.
