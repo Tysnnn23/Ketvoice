@@ -142,6 +142,7 @@ class DownloadsAlbumsAutoplayHostTest {
         }
         image("downloads-phone-light")
         compose.onNode(hasText("Albums") and hasAnyAncestor(hasTestTag("downloads-view"))).performScrollTo().performClick()
+        compose.onNodeWithTag("downloads-list").performScrollToNode(hasTestTag("download-cover-cell"))
         compose.onAllNodesWithTag("album-downloaded", useUnmergedTree = true).fetchSemanticsNodes().let { assertTrue("albums marked downloaded (${it.size})", it.size >= 2) }
         image("downloads-albums-light")
         // Nakamura is 3 of 5 titles once the catalogue's tracklist is known: shown as partly downloaded.
@@ -149,7 +150,8 @@ class DownloadsAlbumsAutoplayHostTest {
         compose.runOnIdle { AlbumDownloads.remember(nakamura.key, nakamura.tracks + track("r1", "Copines", "Aya Nakamura", "Nakamura") +
             track("r2", "Sucette", "Aya Nakamura", "Nakamura")) }
         compose.onNodeWithTag("album-partly-downloaded", useUnmergedTree = true).assertExists()
-        compose.onNode(hasTestTag("download-cover-cell") and hasText("Nakamura")).performScrollTo().performClick()
+        compose.onNodeWithTag("downloads-list").performScrollToNode(hasTestTag("download-cover-cell") and hasText("Nakamura"))
+        compose.onNode(hasTestTag("download-cover-cell") and hasText("Nakamura")).performClick()
         compose.onNodeWithTag("album-page").assertIsDisplayed()
         compose.onNodeWithText("3 sur 5 titres téléchargés").assertIsDisplayed()
         compose.onAllNodesWithTag("album-track-downloaded").assertCountEquals(3)
@@ -167,7 +169,8 @@ class DownloadsAlbumsAutoplayHostTest {
         compose.setContent { KetvoiceTheme(useDark = true) { DownloadsScreen() } }
         image("downloads-phone-dark")
         compose.onNode(hasText("Albums") and hasAnyAncestor(hasTestTag("downloads-view"))).performScrollTo().performClick()
-        compose.onNode(hasTestTag("download-cover-cell") and hasText("Nakamura")).performScrollTo().performClick()
+        compose.onNodeWithTag("downloads-list").performScrollToNode(hasTestTag("download-cover-cell") and hasText("Nakamura"))
+        compose.onNode(hasTestTag("download-cover-cell") and hasText("Nakamura")).performClick()
         compose.onNodeWithTag("album-page").assertIsDisplayed()
         compose.onNodeWithText("Téléchargé").assertIsDisplayed()
         image("downloaded-album-dark")
@@ -179,7 +182,8 @@ class DownloadsAlbumsAutoplayHostTest {
         compose.onNodeWithTag("downloads-view").assertExists()
         image("downloads-tablet-dark")
         compose.onNode(hasText("Albums") and hasAnyAncestor(hasTestTag("downloads-view"))).performScrollTo().performClick()
-        compose.onNode(hasTestTag("download-cover-cell") and hasText("Nakamura")).performScrollTo().performClick()
+        compose.onNodeWithTag("downloads-list").performScrollToNode(hasTestTag("download-cover-cell") and hasText("Nakamura"))
+        compose.onNode(hasTestTag("download-cover-cell") and hasText("Nakamura")).performClick()
         image("downloaded-album-tablet-dark")
     }
 }

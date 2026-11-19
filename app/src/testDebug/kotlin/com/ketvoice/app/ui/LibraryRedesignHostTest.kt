@@ -89,7 +89,8 @@ class LibraryRedesignHostTest {
         compose.setContent { KetvoiceTheme(useDark = true) { DownloadsScreen() } }
         compose.onNodeWithTag("transfer-download").assertExists()
         compose.onAllNodes(hasText("En pause") and hasAnyAncestor(hasTestTag("transfer-download"))).assertCountEquals(1)
-        compose.onNodeWithText("Une piste hors ligne").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("downloads-list").performScrollToNode(hasText("Une piste hors ligne"))
+        compose.onNodeWithText("Une piste hors ligne").assertIsDisplayed()
         compose.onAllNodesWithTag("saved-download").assertCountEquals(1)
         image("downloads-redesign-dark")
     }
@@ -99,7 +100,8 @@ class LibraryRedesignHostTest {
         saved.value = listOf(item)
         compose.setContent { KetvoiceTheme(useDark = false) { DownloadsScreen() } }
         // Removing is in the row's « … », as Apple Music offers it.
-        compose.onNodeWithTag("download-more").performScrollTo().performClick()
+        compose.onNodeWithTag("downloads-list").performScrollToNode(hasTestTag("download-more"))
+        compose.onNodeWithTag("download-more").performClick()
         compose.onNodeWithTag("download-delete").performClick()
         compose.onNodeWithText("Supprimer").assertIsDisplayed()
         assertTrue("Opening the confirmation must not delete the file", item.file.exists())
@@ -124,7 +126,8 @@ class LibraryRedesignHostTest {
         saved.value = listOf(file(track("a", "Première piste")), file(track("b", "Deuxième piste")))
         compose.setContent { KetvoiceTheme(useDark = false) { DownloadsScreen() } }
         compose.onNode(hasSetTextAction()).performTextInput("Deuxième")
-        compose.onNodeWithText("Deuxième piste").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("downloads-list").performScrollToNode(hasText("Deuxième piste"))
+        compose.onNodeWithText("Deuxième piste").assertIsDisplayed()
         compose.onNodeWithText("Première piste").assertDoesNotExist()
         assertEquals(2, saved.value.size)
         image("downloads-search-light")

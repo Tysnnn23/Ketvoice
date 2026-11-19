@@ -111,15 +111,18 @@ class HomeAndDownloadsHostTest {
         compose.setContent { KetvoiceTheme(useDark = false) { DownloadsScreen() } }
         compose.onNode(hasText("Artistes") and hasAnyAncestor(hasTestTag("downloads-view"))).performScrollTo().performClick()
         compose.onAllNodesWithTag("saved-download").assertCountEquals(0)
-        compose.onNodeWithText("Abel").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("Zed").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("downloads-list").performScrollToNode(hasText("Abel"))
+        compose.onNodeWithText("Abel").assertIsDisplayed()
+        compose.onNodeWithTag("downloads-list").performScrollToNode(hasText("Zed"))
+        compose.onNodeWithText("Zed").assertIsDisplayed()
         image("downloads-4-11-artists-light")
         compose.onNodeWithText("Abel").performClick()
         compose.onAllNodesWithTag("saved-download").assertCountEquals(2)
         compose.onNodeWithText("Bravo").assertDoesNotExist()
         compose.onNode(hasText("Artistes") and hasClickAction() and !hasAnyAncestor(hasTestTag("downloads-view")))
             .performScrollTo().performClick()
-        compose.onNodeWithText("Zed").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("downloads-list").performScrollToNode(hasText("Zed"))
+        compose.onNodeWithText("Zed").assertIsDisplayed()
     }
 
     @Test fun transferFiltersOnlyAppearWhileSomethingIsTransferring() {

@@ -56,7 +56,10 @@ internal fun TrackRow(
             TrackTitle((if (track.explicit) "ᴱ  " else "") + track.title,
                 color = if (active) theme.accent else theme.onBackground, selected = active)
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                savedFormatBadge(Downloader.itemFor(track.id)?.format)?.let { badge ->
+                // 7.2: a lossless file wears the Lossless mark (its own header tells Lossless from Hi-Res Lossless).
+                val grade = rememberSavedGrade(track.id)
+                if (grade != null) LosslessBadge(grade, compact = true)
+                else savedFormatBadge(Downloader.itemFor(track.id)?.format)?.let { badge ->
                     val lossless = isLosslessFormat(badge)
                     Text(badge, localize = false, color = if (lossless) theme.accent else theme.secondary, fontSize = 10.sp,
                         fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.clip(RoundedCornerShape(4.dp))

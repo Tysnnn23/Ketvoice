@@ -146,15 +146,20 @@ object Player {
 
     /** Decoder-selected format only. Provider labels are not proof of lossless audio. */
     fun decodedAudioInfo(): String {
-        val group = controller?.currentTracks?.groups?.firstOrNull {
-            it.type == androidx.media3.common.C.TRACK_TYPE_AUDIO && it.isSelected
-        } ?: return "Format audio en attente"
-        val index = (0 until group.length).firstOrNull { group.isTrackSelected(it) } ?: return "Format audio en attente"
-        val format = group.getTrackFormat(index)
+        val format = decodedAudioFormat() ?: return "Format audio en attente"
         return listOfNotNull(format.sampleMimeType,
             format.sampleRate.takeIf { it > 0 }?.let { "$it Hz" },
             format.bitrate.takeIf { it > 0 }?.let { "${it / 1000} kb/s" },
             format.channelCount.takeIf { it > 0 }?.let { "$it ch" }).joinToString(" · ")
+    }
+
+    /** The decoder-selected audio format, or null before one is chosen (the Lossless badge, ui/common/LosslessBadge). */
+    fun decodedAudioFormat(): androidx.media3.common.Format? {
+        val group = controller?.currentTracks?.groups?.firstOrNull {
+            it.type == androidx.media3.common.C.TRACK_TYPE_AUDIO && it.isSelected
+        } ?: return null
+        val index = (0 until group.length).firstOrNull { group.isTrackSelected(it) } ?: return null
+        return group.getTrackFormat(index)
     }
 
     private var lastEndedKey: Pair<String?, Int>? = null
@@ -1419,8 +1424,8 @@ object Player {
         return batch
     }
 
-    /** Titles of the same style as [seed]: its YouTube Music radio, else its artist's catalogue radio. */
-    private suspend fun autoplayCandidates(seed: Track): List<Track> {
+    /** Titles of the same style as [seed]: its YouTube Music radio, else its artist's catalogue radio (also « Dans le même style », ui/sub/MoreLikeThis). */
+    internal suspend fun autoplayCandidates(seed: Track): List<Track> {
         val video = seed.videoId?.takeIf { it.isNotBlank() } ?: seed.id.removePrefix("yt:").takeIf { seed.id.startsWith("yt:") }
             ?: runCatching { autoplayVideoOf(seed) }.getOrNull()
         val radio = video?.let { v ->
