@@ -138,10 +138,6 @@ fun PlaylistScreen() {
                 PlaylistHeader(playlist, playable, owner, beside, side, editing, error,
                     onPlay = { Player.setShuffle(false); Player.playQueue(playable) }, onShuffle = { Player.playShuffled(playable) })
             }
-            // « Mode DJ set » (7.0.0).
-            if (playable.size >= 3 && !editing) item(key = "playlist-dj-set") {
-                com.ketvoice.app.ui.player.DjSetLaunchButton(playable, Modifier.padding(horizontal = pageMargin).padding(bottom = 14.dp))
-            }
             if (playlist.entries.isEmpty()) {
                 item(key = "playlist-empty") {
                     Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
