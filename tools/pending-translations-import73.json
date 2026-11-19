@@ -1,0 +1,98 @@
+{
+ "Par lien public, sans compte ni clé : Ketvoice ne garde aucun accès à ces services.": {
+  "en": "By public link, with no account or key: Ketvoice keeps no access to these services.",
+  "hi": "सार्वजनिक लिंक से, बिना खाते या कुंजी के: Ketvoice इन सेवाओं तक कोई पहुँच नहीं रखता।",
+  "ja": "公開リンクから、アカウントやキーなしで。Ketvoice はこれらのサービスへのアクセスを一切保持しません。",
+  "zh": "通过公开链接，无需账户或密钥：Ketvoice 不会保留对这些服务的任何访问权限。",
+  "ru": "По публичной ссылке, без аккаунта и ключа: Ketvoice не сохраняет доступа к этим сервисам.",
+  "it": "Tramite link pubblico, senza account né chiave: Ketvoice non conserva alcun accesso a questi servizi.",
+  "es": "Mediante enlace público, sin cuenta ni clave: Ketvoice no conserva ningún acceso a estos servicios.",
+  "de": "Per öffentlichem Link, ohne Konto oder Schlüssel: Ketvoice behält keinen Zugriff auf diese Dienste.",
+  "pt": "Por link público, sem conta nem chave: o Ketvoice não mantém nenhum acesso a esses serviços.",
+  "ko": "공개 링크로, 계정이나 키 없이: Ketvoice는 이 서비스들에 대한 어떤 접근 권한도 보관하지 않습니다."
+ },
+ "Lien de la playlist": {
+  "en": "Playlist link",
+  "hi": "प्लेलिस्ट का लिंक",
+  "ja": "プレイリストのリンク",
+  "zh": "播放列表链接",
+  "ru": "Ссылка на плейлист",
+  "it": "Link della playlist",
+  "es": "Enlace de la playlist",
+  "de": "Link zur Playlist",
+  "pt": "Link da playlist",
+  "ko": "플레이리스트 링크"
+ },
+ "Collez un lien de playlist publique Spotify, Deezer, Apple Music, Tidal ou SoundCloud": {
+  "en": "Paste a link to a public Spotify, Deezer, Apple Music, Tidal or SoundCloud playlist",
+  "hi": "किसी सार्वजनिक Spotify, Deezer, Apple Music, Tidal या SoundCloud प्लेलिस्ट का लिंक पेस्ट करें",
+  "ja": "Spotify、Deezer、Apple Music、Tidal、SoundCloud の公開プレイリストのリンクを貼り付けてください",
+  "zh": "请粘贴 Spotify、Deezer、Apple Music、Tidal 或 SoundCloud 公开播放列表的链接",
+  "ru": "Вставьте ссылку на публичный плейлист Spotify, Deezer, Apple Music, Tidal или SoundCloud",
+  "it": "Incolla il link di una playlist pubblica Spotify, Deezer, Apple Music, Tidal o SoundCloud",
+  "es": "Pega el enlace de una playlist pública de Spotify, Deezer, Apple Music, Tidal o SoundCloud",
+  "de": "Füge den Link einer öffentlichen Spotify-, Deezer-, Apple Music-, Tidal- oder SoundCloud-Playlist ein",
+  "pt": "Cole o link de uma playlist pública do Spotify, Deezer, Apple Music, Tidal ou SoundCloud",
+  "ko": "공개된 Spotify, Deezer, Apple Music, Tidal 또는 SoundCloud 플레이리스트 링크를 붙여 넣으세요"
+ },
+ "Ce lien ne mène pas à une playlist": {
+  "en": "This link does not lead to a playlist",
+  "hi": "यह लिंक किसी प्लेलिस्ट तक नहीं ले जाता",
+  "ja": "このリンクはプレイリストではありません",
+  "zh": "此链接并不指向播放列表",
+  "ru": "Эта ссылка не ведёт на плейлист",
+  "it": "Questo link non porta a una playlist",
+  "es": "Este enlace no lleva a una playlist",
+  "de": "Dieser Link führt nicht zu einer Playlist",
+  "pt": "Este link não leva a uma playlist",
+  "ko": "이 링크는 플레이리스트로 연결되지 않습니다"
+ },
+ "Playlist introuvable ou privée. Vérifiez qu'elle est publique.": {
+  "en": "Playlist not found or private. Check that it is public.",
+  "hi": "प्लेलिस्ट नहीं मिली या निजी है। जाँचें कि यह सार्वजनिक है।",
+  "ja": "プレイリストが見つからないか非公開です。公開されているか確認してください。",
+  "zh": "找不到播放列表或其为私密。请确认它是公开的。",
+  "ru": "Плейлист не найден или скрыт. Проверьте, что он публичный.",
+  "it": "Playlist non trovata o privata. Verifica che sia pubblica.",
+  "es": "Playlist no encontrada o privada. Comprueba que sea pública.",
+  "de": "Playlist nicht gefunden oder privat. Prüfe, ob sie öffentlich ist.",
+  "pt": "Playlist não encontrada ou privada. Verifique se ela é pública.",
+  "ko": "플레이리스트를 찾을 수 없거나 비공개입니다. 공개 상태인지 확인하세요."
+ },
+ "Cette page a changé de format : l'import n'est plus possible pour le moment.": {
+  "en": "This page has changed its format: importing is not possible for now.",
+  "hi": "इस पेज का प्रारूप बदल गया है: अभी इम्पोर्ट संभव नहीं है।",
+  "ja": "このページの形式が変わりました。現在はインポートできません。",
+  "zh": "此页面的格式已更改：目前无法导入。",
+  "ru": "Формат этой страницы изменился: импорт пока невозможен.",
+  "it": "Il formato di questa pagina è cambiato: per ora l'importazione non è possibile.",
+  "es": "El formato de esta página ha cambiado: por ahora no es posible importar.",
+  "de": "Das Format dieser Seite hat sich geändert: Der Import ist derzeit nicht möglich.",
+  "pt": "O formato desta página mudou: a importação não é possível por enquanto.",
+  "ko": "이 페이지의 형식이 바뀌었습니다. 지금은 가져올 수 없습니다."
+ },
+ "Ce service ne montre publiquement que {0} titres sur {1}. Seuls ceux-ci seront importés.": {
+  "en": "This service only shows {0} of {1} songs publicly. Only those will be imported.",
+  "hi": "यह सेवा सार्वजनिक रूप से {1} में से केवल {0} गाने दिखाती है। केवल वही इम्पोर्ट होंगे।",
+  "ja": "このサービスが公開しているのは {1} 曲中 {0} 曲だけです。それらの曲だけがインポートされます。",
+  "zh": "此服务仅公开显示 {1} 首中的 {0} 首歌曲。只会导入这些歌曲。",
+  "ru": "Этот сервис публично показывает только {0} из {1} треков. Будут импортированы только они.",
+  "it": "Questo servizio mostra pubblicamente solo {0} brani su {1}. Verranno importati solo quelli.",
+  "es": "Este servicio solo muestra públicamente {0} de {1} canciones. Solo se importarán esas.",
+  "de": "Dieser Dienst zeigt öffentlich nur {0} von {1} Titeln. Nur diese werden importiert.",
+  "pt": "Este serviço mostra publicamente apenas {0} de {1} músicas. Só essas serão importadas.",
+  "ko": "이 서비스는 {1}곡 중 {0}곡만 공개합니다. 그 곡들만 가져옵니다."
+ },
+ "Ce service ne montre publiquement qu'une partie de cette playlist. Seuls ces titres seront importés.": {
+  "en": "This service only shows part of this playlist publicly. Only these songs will be imported.",
+  "hi": "यह सेवा इस प्लेलिस्ट का केवल एक हिस्सा सार्वजनिक रूप से दिखाती है। केवल ये गाने इम्पोर्ट होंगे।",
+  "ja": "このサービスはこのプレイリストの一部しか公開していません。これらの曲だけがインポートされます。",
+  "zh": "此服务仅公开显示此播放列表的一部分。只会导入这些歌曲。",
+  "ru": "Этот сервис публично показывает только часть плейлиста. Будут импортированы только эти треки.",
+  "it": "Questo servizio mostra pubblicamente solo una parte di questa playlist. Verranno importati solo questi brani.",
+  "es": "Este servicio solo muestra públicamente una parte de esta playlist. Solo se importarán estas canciones.",
+  "de": "Dieser Dienst zeigt öffentlich nur einen Teil dieser Playlist. Nur diese Titel werden importiert.",
+  "pt": "Este serviço mostra publicamente apenas parte desta playlist. Só estas músicas serão importadas.",
+  "ko": "이 서비스는 이 플레이리스트의 일부만 공개합니다. 이 곡들만 가져옵니다."
+ }
+}

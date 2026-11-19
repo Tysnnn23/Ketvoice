@@ -184,4 +184,18 @@ class SmartLibraryHostTest {
         image("import-result")
         compose.onNodeWithText("Créer avec les titres affichés").assertIsEnabled()
     }
+
+    @Test fun importListsTheFiveSourcesAndSaysWhenAListIsPartial() {
+        AppSettings.liquidGlass.value = false
+        val songs = (1..50).map { ImportSong("td:$it", "Titre $it", "Artiste $it", 200_000) }
+        val preview = ImportPreview(ImportService.Tidal, "New Arrivals", "https://tidal.com/playlist/1", null, songs, false, publishedCount = 100)
+        val state = PlaylistImportState().apply { link = "https://tidal.com/browse/playlist/1b418bb8-90a7-4f87-901d-707993838346"; this.preview = preview }
+        compose.setContent { KetvoiceTheme(useDark = true) { PlaylistImportSheet({}, state) } }
+        for (name in listOf("Spotify", "Deezer", "Apple Music", "Tidal", "SoundCloud")) compose.onNodeWithText(name).assertExists()
+        compose.onNodeWithTag("playlist-import-partial").assertExists()
+        compose.onNodeWithText("Ce service ne montre publiquement que 50 titres sur 100. Seuls ceux-ci seront importés.").assertExists()
+        compose.runOnIdle { state.matches = songs.map { ImportMatch(it, Track("um:${it.sourceId}", it.title, it.artist, ""), 1f) } }
+        compose.onNodeWithText("Créer avec les titres affichés").assertIsNotEnabled()
+        image("import-partial")
+    }
 }

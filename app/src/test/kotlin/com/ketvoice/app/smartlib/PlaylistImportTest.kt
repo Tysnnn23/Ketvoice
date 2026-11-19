@@ -95,6 +95,21 @@ class PlaylistImportTest {
         assertEquals("Introuvable", entries[2].title)
     }
 
+    @Test fun anIsrcFindsTheCatalogueTitleFirstAndALengthGapRulesOut() = runBlocking {
+        val withCode = ImportSong("sc:1", "BbY WOW (John Summit Remix)", "KAROL G, John Summit", 218_826, isrc = "USA2P2684089")
+        val plain = ImportSong("sc:2", "Eternity", "Levity", 205_241)
+        val byCode = Track("um:9", "BbY WOW - John Summit Remix", "KAROL G", "", durationMs = 219_000, addon = "um", isrc = "USA2P2684089")
+        val extended = Track("um:10", "Eternity", "Levity", "", durationMs = 305_000, addon = "um")
+        val asked = mutableListOf<String>()
+        val matches = PlaylistImport.resolve(ImportPreview(ImportService.SoundCloud, "Set", "https://soundcloud.com/a/sets/b", null, listOf(withCode, plain), false),
+            search = { asked += it; listOf(extended) }, byIsrc = { if (it == "USA2P2684089") byCode else null }) { _, _ -> }
+        assertEquals("um:9", matches[0].track?.id)
+        assertEquals(1f, matches[0].score)
+        assertEquals("The ISRC answer spares a search", 1, asked.size)
+        assertNull("A title 100 s longer is another recording", matches[1].track)
+        assertTrue(PlaylistImport.score(plain, extended.copy(durationMs = 206_000)) > PlaylistImport.MATCH_FROM)
+    }
+
     @Test fun catalogueAlbumsGiveStylesAndYear() {
         val facts = SmartFacts.parseAlbum(fixture("deezer-album.json"))!!
         assertEquals(setOf(Genre.Rap), facts.genres)

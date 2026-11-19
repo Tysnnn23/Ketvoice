@@ -20,23 +20,31 @@ import java.net.HttpURLConnection
 import java.net.URI
 import java.net.URL
 
-enum class ImportService(val label: String) { Spotify("Spotify"), Deezer("Deezer") }
+enum class ImportService(val label: String) {
+    Spotify("Spotify"), Deezer("Deezer"), AppleMusic("Apple Music"), Tidal("Tidal"), SoundCloud("SoundCloud")
+}
 
 /** A title of an imported playlist; [catalogue] is set when the service's title is already one of Ketvoice's catalogue. */
 data class ImportSong(val sourceId: String, val title: String, val artist: String, val durationMs: Long,
                       val isrc: String? = null, val catalogue: Track? = null)
 
-/** A public playlist read from its link. [complete] is false when the service shows only part of it (Spotify's preview). */
+/**
+ * A public playlist read from its link. [complete] is false when the service shows only part of it
+ * (Spotify's preview, Tidal's first 50, SoundCloud's first titles); [publishedCount] is the size the
+ * service announces for the whole playlist, when it does.
+ */
 data class ImportPreview(val service: ImportService, val name: String, val url: String, val cover: String?,
-                         val songs: List<ImportSong>, val complete: Boolean)
+                         val songs: List<ImportSong>, val complete: Boolean, val publishedCount: Int? = null)
 
 /** What was found in Ketvoice for one imported title, and how sure the match is (0..1). */
 data class ImportMatch(val song: ImportSong, val track: Track?, val score: Float)
 
 /**
- * Imports public Spotify and Deezer playlists from their links, without an account or a developer
- * key: Spotify's public embed page, Deezer's public API. Each title is then looked for in Ketvoice's
- * catalogue and scored on its title, artist and length.
+ * Imports public Spotify, Deezer, Apple Music, Tidal and SoundCloud playlists from their links, without
+ * an account or a developer key: Spotify's public embed page, Deezer's public API, and the public web
+ * pages of the three others ([AppleMusicImport], [TidalImport], [SoundCloudImport]). Each title is then
+ * looked for in Ketvoice's catalogue (by its ISRC first when the service gives one) and scored on its
+ * title, artist and length.
  */
 object PlaylistImport {
     const val MAX_SONGS = 500
@@ -52,7 +60,10 @@ object PlaylistImport {
         return when (host) {
             "open.spotify.com" -> ImportService.Spotify
             in deezerHosts, in shortHosts -> ImportService.Deezer
-            else -> throw IllegalArgumentException("Collez un lien de playlist Spotify ou Deezer publique")
+            in AppleMusicImport.hosts -> ImportService.AppleMusic
+            in TidalImport.hosts -> ImportService.Tidal
+            in SoundCloudImport.hosts, SoundCloudImport.SHORT_HOST -> ImportService.SoundCloud
+            else -> throw IllegalArgumentException("Collez un lien de playlist publique Spotify, Deezer, Apple Music, Tidal ou SoundCloud")
         }
     }
 
@@ -106,7 +117,7 @@ object PlaylistImport {
     }
 
     /** Reads the playlist behind [link]. [get] fetches a page (tests give recorded pages). */
-    suspend fun preview(link: String, get: suspend (String) -> String? = ::download): ImportPreview = withContext(Dispatchers.IO) {
+    suspend fun preview(link: String, get: suspend (String) -> String? = ::open): ImportPreview = withContext(Dispatchers.IO) {
         when (serviceOf(link)) {
             ImportService.Spotify -> {
                 val id = SpotifyPlaylistImport.playlistId(link)
@@ -115,7 +126,28 @@ object PlaylistImport {
                 fromSpotify(html, id)
             }
             ImportService.Deezer -> deezer(deezerId(link) ?: expandShort(link), get)
+            ImportService.AppleMusic -> AppleMusicImport.pageUrl(link).let { url ->
+                AppleMusicImport.parse(get(url) ?: throw IllegalStateException(PublicPage.NOT_FOUND), url)
+            }
+            ImportService.Tidal -> TidalImport.playlistId(link).let { id ->
+                val page = get(TidalImport.pageUrl(id)) ?: throw IllegalStateException(PublicPage.NOT_FOUND)
+                TidalImport.parse(page, get(TidalImport.embedUrl(id)) ?: throw IllegalStateException(PublicPage.NOT_FOUND), id)
+            }
+            ImportService.SoundCloud -> {
+                val full = if (!SoundCloudImport.isShort(link)) link
+                    else PublicPage.fetch(link.trim(), SoundCloudImport.hosts + SoundCloudImport.SHORT_HOST)?.first
+                        ?: throw IllegalStateException(PublicPage.NOT_FOUND)
+                val path = SoundCloudImport.setPath(full)
+                SoundCloudImport.parse(get(SoundCloudImport.pageUrl(path)) ?: throw IllegalStateException(PublicPage.NOT_FOUND), path)
+            }
         }
+    }
+
+    /** A page of one of the five services; Apple Music, Tidal and SoundCloud may redirect within their own sites. */
+    private suspend fun open(address: String): String? {
+        val host = hostOf(address)
+        val hosts = listOf(AppleMusicImport.hosts, TidalImport.hosts, SoundCloudImport.hosts).firstOrNull { host in it }
+        return if (hosts == null) download(address) else PublicPage.fetch(address, hosts)?.second
     }
 
     private suspend fun deezer(id: String, get: suspend (String) -> String?): ImportPreview {
@@ -181,7 +213,10 @@ object PlaylistImport {
         val title = titleScore(song.title, track.title)
         val artist = artistScore(song.artist, track.artist)
         if (title < .6f || artist < .5f) return 0f
-        return .55f * title + .3f * artist + .15f * lengthScore(song.durationMs, track.durationMs)
+        val score = .55f * title + .3f * artist + .15f * lengthScore(song.durationMs, track.durationMs)
+        // Both lengths known and 45 s apart: an extended mix, an edit or a live take, not the same recording.
+        val apart = song.durationMs > 0 && track.durationMs > 0 && kotlin.math.abs(song.durationMs - track.durationMs) > 45_000
+        return if (apart) score * .8f else score
     }
 
     private fun titleScore(a: String, b: String): Float {
@@ -220,8 +255,12 @@ object PlaylistImport {
             streamUrl = null, downloadUrl = null), ranked?.second?.coerceAtMost(1f) ?: 0f)
     }
 
-    /** Looks every title up, three at a time, telling [progress] how many are done; the playlist's order is kept. */
+    /**
+     * Looks every title up, three at a time, telling [progress] how many are done; the playlist's order is
+     * kept. A title with an ISRC is first asked of the catalogue by that code ([byIsrc]).
+     */
     suspend fun resolve(preview: ImportPreview, search: suspend (String) -> List<Track>,
+                        byIsrc: suspend (String) -> Track? = ::catalogueByIsrc,
                         progress: (Int, Int) -> Unit): List<ImportMatch> = coroutineScope {
         val gate = Semaphore(3)
         val lock = Mutex()
@@ -229,19 +268,33 @@ object PlaylistImport {
         val total = preview.songs.size
         preview.songs.map { song ->
             async {
-                val match = gate.withPermit { matchOne(song, search) }
+                val match = gate.withPermit { matchOne(song, search, byIsrc) }
                 lock.withLock { done++; progress(done, total) }
                 match
             }
         }.awaitAll()
     }
 
-    private suspend fun matchOne(song: ImportSong, search: suspend (String) -> List<Track>): ImportMatch {
+    private suspend fun matchOne(song: ImportSong, search: suspend (String) -> List<Track>,
+                                 byIsrc: suspend (String) -> Track?): ImportMatch {
         if (song.catalogue != null) return best(song, emptyList())
+        if (song.isrc != null) {
+            val found = try { byIsrc(song.isrc) } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+                catch (_: Exception) { null }
+            if (found != null && found.isrc.equals(song.isrc, ignoreCase = true)) return best(song.copy(catalogue = found), emptyList())
+        }
         val candidates = try { search("${song.title} ${Duplicates.baseArtist(song.artist)}") }
             catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
             catch (_: Exception) { emptyList() }
         return best(song, candidates)
+    }
+
+    /** The catalogue's title for an ISRC, through Deezer's public API (no account, no key). */
+    private suspend fun catalogueByIsrc(isrc: String): Track? {
+        if (!isrc.matches(Regex("[A-Za-z]{2}[A-Za-z0-9]{3}\\d{7}"))) return null
+        val json = download(api("track/isrc:${isrc.uppercase()}")) ?: return null
+        val item = runCatching { JSONObject(json) }.getOrNull()?.takeIf { !it.has("error") } ?: return null
+        return CatalogRepo.parseTracks(JSONArray().put(item)).firstOrNull()
     }
 
     /** The entries of the new playlist: every title, those not found kept visible without a playable title. */
