@@ -1,0 +1,13 @@
+renders/
+captures/
+music/
+sfx/
+models/
+out/
+node_modules/
+*.mp4
+*.mov
+*.wav
+*.mp3
+*.glb
+*.gltf

@@ -1,0 +1,11 @@
+{
+  "name": "@iart-ai/talking-head-skill",
+  "version": "0.1.1",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "dependencies": {
+    "@fal-ai/client": "1.10.1",
+    "@napi-rs/canvas": "1.0.13"
+  }
+}
