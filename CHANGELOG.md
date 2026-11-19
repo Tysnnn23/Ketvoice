@@ -7,6 +7,22 @@
 
 ---
 
+# Ketvoice 7.2.0
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 143** — Apple-Music-style Home and Library, Favourites and Downloads pages, Lossless badges, « Titres recommandés », progressive quality that really switches, faster start, compact Canvas, the Sync button fixed, phone↔web change checks, search ranking, recommendations.
+
+- UI (`ui/library/LikedSongsScreen.kt`, `CollectionCovers.kt`, `ui/home/HomeLibraryShelf.kt`, `ui/common/LosslessBadge.kt`, `ui/sub/MoreLikeThis.kt`): heart cover drawn in code; Downloads mosaic of up to four distinct covers (same picture or album skipped); Library root with Favourites/Downloads first and the playlist list; Lossless/Hi-Res (> 48 kHz) only from the decoder's codec or a saved FLAC header; « Titres recommandés » from `Player.autoplayCandidates` + `AutoplayRules.pick`, lazy and cached per session.
+- Playback (`QualityHandoff`, `PlaybackService.prepareUpgrade`, `BetterStream`, `StartupOrder`): the lag is measured once and the deck gap closed by seek (> 400 ms) or a muted speed nudge, then a 96/240 ms crossfade; Ketmix-adopted and cache-started titles look for better; first sound gets the network for up to 4 s. `ProgressiveHandoffTest`.
+- Canvas (`data/CanvasCompact.kt`, `util/CanvasTranscoder.kt`): large files re-encoded at screen resolution (HEVC 0.07 / H.264 0.10 bpp·frame, 1.5–8 Mb/s) by a charging WorkManager job, replaced under the same name only after a check. `CanvasCompactTest`.
+- Sync: the profile button ran `LibrarySync.syncNow()` on the main thread (`NetworkOnMainThreadException` reported as offline); now on IO with offline / session expired / server error states. Revision checks on resume and every 3 min (app) or every minute and on tab focus (web). `SyncButtonTest`.
+- Search (`data/SearchRank.kt`) and recommendations (`Recommender`, early-skip memory on the device). `SearchRankTest`, `RecommenderTest`.
+
+Full notes: [7.2.0](docs/releases/v7.2.0.md).
+
+---
+
 # Ketvoice 7.1.0
 
 ![Ketvoice](ketvoice-banner.png)

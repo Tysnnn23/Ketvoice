@@ -1,0 +1,31 @@
+# Ketvoice 7.2.0
+
+![Ketvoice](https://raw.githubusercontent.com/Tysnnn23/Ketvoice/main/ketvoice-banner.png)
+
+Better sound sooner, a Library laid out like Apple Music, new Favourites and Downloads pages, and search that finds what you mean.
+
+## Home and Library
+
+- Home reads more like Apple Music: « Reprendre » and the mix of the day side by side in one row, and a « Votre bibliothèque » shelf with Favourites, Downloads and your pinned playlists.
+- The Library opens on Favourites and Downloads with their covers, then Artists, Albums, Songs, local music and Replay, then all your playlists right there.
+- **Favourites** has its own page with a heart cover, the number of songs and total time, Play, Shuffle, search and three sorts.
+- **Downloads** has a cover made of four different album covers from your latest downloads.
+- **Lossless** and **Hi-Res Lossless** badges appear in the player, in song rows and in downloads when the file really is lossless.
+- At the end of an album or playlist, « Titres recommandés » suggests songs by the same artist and in the same style.
+
+## Sound
+
+- **Better quality really kicks in**: the app now switches to the better stream once it is ready, smoothly, including for songs brought in by Ketmix.
+- **Songs start faster**: the first sound gets the connection to itself; the next songs, the full copy and a missing Canvas wait a few seconds.
+- **Large Canvas take less space**: while the phone charges, big Canvas videos are saved again smaller at screen quality, and stay available offline.
+
+## Sync and search
+
+- The **Sync** button on your profile works again. It used to say « Offline » even on Wi-Fi; it now tells you whether you are offline, signed out or the server had an error.
+- Your phone and the web player follow each other's changes: likes, playlists, name, photo and Canvas.
+- **Search** puts exact titles and artists first, ignores accents, forgives a typo, groups duplicates and places karaoke or remix versions after the original.
+- **Recommendations** learn from the artists you play, your likes and the songs you skip early.
+
+## Install
+
+Download `Ketvoice-7.2.0.apk` (phone, Android 12 and up), `Ketvoice-7.2.0-Lite.apk` (lighter app, Android 11 and up) or `Ketvoice-7.2.0-Quest.apk` (Meta Quest) below and install it over your current version: your library, settings and downloads stay.

@@ -21,6 +21,14 @@
 
 ## Overview
 
+### 7.2.0 — A Library like Apple Music, better sound sooner, search that finds what you mean
+
+Favourites and Downloads pages, playlists in the Library, Lossless badges, recommended songs after albums, quality upgrades that really happen, faster start, compact Canvas and a working Sync button.
+[Mobile](https://github.com/Tysnnn23/Ketvoice/releases/download/v7.2.0/Ketvoice-7.2.0.apk)
+· [Lite](https://github.com/Tysnnn23/Ketvoice/releases/download/v7.2.0/Ketvoice-7.2.0-Lite.apk)
+· [Quest](https://github.com/Tysnnn23/Ketvoice/releases/download/v7.2.0/Ketvoice-7.2.0-Quest.apk)
+· [Release notes](docs/releases/v7.2.0.md).
+
 ### 7.1.0 — Ketmix that keeps your endings, readable glass, true black
 
 Ketmix mixes more carefully, the editor preview plays both songs again, glass stays on navigation, a Tinted mode, a black theme, a compact widget and a radio without repeats.

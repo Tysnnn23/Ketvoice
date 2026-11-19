@@ -2340,7 +2340,15 @@
   "Autres noms": "Other names",
   "Nom A–Z": "Name A–Z",
   "Commandes": "Controls",
-  "Précédent, lecture/pause et suivant, même en tout petit": "Previous, play/pause and next, even at its smallest"
+  "Précédent, lecture/pause et suivant, même en tout petit": "Previous, play/pause and next, even at its smallest",
+  "Session expirée · reconnectez-vous": "Session expired · sign in again",
+  "Erreur du serveur · nouvel essai bientôt": "Server error · trying again soon",
+  "Titres recommandés": "Recommended songs",
+  "D'après cet album": "Based on this album",
+  "D'après cette playlist": "Based on this playlist",
+  "Lossless": "Lossless",
+  "Hi-Res Lossless": "Hi-Res Lossless",
+  "Hi-Res": "Hi-Res"
  },
  "hi": {
   "Reverb": "रीवर्ब",
@@ -4683,7 +4691,15 @@
   "Autres noms": "अन्य नाम",
   "Nom A–Z": "नाम A–Z",
   "Commandes": "नियंत्रण",
-  "Précédent, lecture/pause et suivant, même en tout petit": "पिछला, चलाएँ/रोकें और अगला, सबसे छोटे आकार में भी"
+  "Précédent, lecture/pause et suivant, même en tout petit": "पिछला, चलाएँ/रोकें और अगला, सबसे छोटे आकार में भी",
+  "Session expirée · reconnectez-vous": "सत्र समाप्त · फिर से साइन इन करें",
+  "Erreur du serveur · nouvel essai bientôt": "सर्वर त्रुटि · जल्द ही फिर से कोशिश होगी",
+  "Titres recommandés": "सुझाए गए गाने",
+  "D'après cet album": "इस एल्बम के आधार पर",
+  "D'après cette playlist": "इस प्लेलिस्ट के आधार पर",
+  "Lossless": "Lossless",
+  "Hi-Res Lossless": "Hi-Res Lossless",
+  "Hi-Res": "Hi-Res"
  },
  "ja": {
   "Reverb": "リバーブ",
@@ -7026,7 +7042,15 @@
   "Autres noms": "その他の名前",
   "Nom A–Z": "名前 A–Z",
   "Commandes": "コントロール",
-  "Précédent, lecture/pause et suivant, même en tout petit": "前へ、再生/一時停止、次へ。最小サイズでも"
+  "Précédent, lecture/pause et suivant, même en tout petit": "前へ、再生/一時停止、次へ。最小サイズでも",
+  "Session expirée · reconnectez-vous": "セッションの有効期限切れ · もう一度サインインしてください",
+  "Erreur du serveur · nouvel essai bientôt": "サーバーエラー · まもなく再試行します",
+  "Titres recommandés": "おすすめの曲",
+  "D'après cet album": "このアルバムに基づく",
+  "D'après cette playlist": "このプレイリストに基づく",
+  "Lossless": "ロスレス",
+  "Hi-Res Lossless": "ハイレゾロスレス",
+  "Hi-Res": "ハイレゾ"
  },
  "zh": {
   "Reverb": "混响",
@@ -9369,7 +9393,15 @@
   "Autres noms": "其他名称",
   "Nom A–Z": "名称 A–Z",
   "Commandes": "控制",
-  "Précédent, lecture/pause et suivant, même en tout petit": "上一首、播放/暂停和下一首，最小尺寸也有"
+  "Précédent, lecture/pause et suivant, même en tout petit": "上一首、播放/暂停和下一首，最小尺寸也有",
+  "Session expirée · reconnectez-vous": "会话已过期 · 请重新登录",
+  "Erreur du serveur · nouvel essai bientôt": "服务器错误 · 稍后将重试",
+  "Titres recommandés": "推荐歌曲",
+  "D'après cet album": "根据这张专辑",
+  "D'après cette playlist": "根据这个播放列表",
+  "Lossless": "无损",
+  "Hi-Res Lossless": "高解析度无损",
+  "Hi-Res": "高解析度"
  },
  "ru": {
   "Reverb": "Реверберация",
@@ -11712,7 +11744,15 @@
   "Autres noms": "Другие названия",
   "Nom A–Z": "Имя A–Z",
   "Commandes": "Управление",
-  "Précédent, lecture/pause et suivant, même en tout petit": "Назад, воспроизведение/пауза и далее, даже в самом малом размере"
+  "Précédent, lecture/pause et suivant, même en tout petit": "Назад, воспроизведение/пауза и далее, даже в самом малом размере",
+  "Session expirée · reconnectez-vous": "Сеанс истёк · войдите снова",
+  "Erreur du serveur · nouvel essai bientôt": "Ошибка сервера · скоро новая попытка",
+  "Titres recommandés": "Рекомендуемые треки",
+  "D'après cet album": "На основе этого альбома",
+  "D'après cette playlist": "На основе этого плейлиста",
+  "Lossless": "Lossless",
+  "Hi-Res Lossless": "Hi-Res Lossless",
+  "Hi-Res": "Hi-Res"
  },
  "it": {
   "Reverb": "Riverbero",
@@ -14055,7 +14095,15 @@
   "Autres noms": "Altri nomi",
   "Nom A–Z": "Nome A–Z",
   "Commandes": "Comandi",
-  "Précédent, lecture/pause et suivant, même en tout petit": "Precedente, play/pausa e successivo, anche piccolissimo"
+  "Précédent, lecture/pause et suivant, même en tout petit": "Precedente, play/pausa e successivo, anche piccolissimo",
+  "Session expirée · reconnectez-vous": "Sessione scaduta · accedi di nuovo",
+  "Erreur du serveur · nouvel essai bientôt": "Errore del server · nuovo tentativo a breve",
+  "Titres recommandés": "Brani consigliati",
+  "D'après cet album": "In base a questo album",
+  "D'après cette playlist": "In base a questa playlist",
+  "Lossless": "Lossless",
+  "Hi-Res Lossless": "Hi-Res Lossless",
+  "Hi-Res": "Hi-Res"
  },
  "es": {
   "Reverb": "Reverb",
@@ -16398,7 +16446,15 @@
   "Autres noms": "Otros nombres",
   "Nom A–Z": "Nombre A–Z",
   "Commandes": "Controles",
-  "Précédent, lecture/pause et suivant, même en tout petit": "Anterior, reproducir/pausa y siguiente, incluso en pequeño"
+  "Précédent, lecture/pause et suivant, même en tout petit": "Anterior, reproducir/pausa y siguiente, incluso en pequeño",
+  "Session expirée · reconnectez-vous": "Sesión caducada · vuelve a iniciar sesión",
+  "Erreur du serveur · nouvel essai bientôt": "Error del servidor · se reintentará pronto",
+  "Titres recommandés": "Canciones recomendadas",
+  "D'après cet album": "Según este álbum",
+  "D'après cette playlist": "Según esta playlist",
+  "Lossless": "Lossless",
+  "Hi-Res Lossless": "Hi-Res Lossless",
+  "Hi-Res": "Hi-Res"
  },
  "de": {
   "Reverb": "Reverb",
@@ -18741,7 +18797,15 @@
   "Autres noms": "Andere Namen",
   "Nom A–Z": "Name A–Z",
   "Commandes": "Steuerung",
-  "Précédent, lecture/pause et suivant, même en tout petit": "Zurück, Wiedergabe/Pause und Weiter, auch ganz klein"
+  "Précédent, lecture/pause et suivant, même en tout petit": "Zurück, Wiedergabe/Pause und Weiter, auch ganz klein",
+  "Session expirée · reconnectez-vous": "Sitzung abgelaufen · bitte erneut anmelden",
+  "Erreur du serveur · nouvel essai bientôt": "Serverfehler · neuer Versuch in Kürze",
+  "Titres recommandés": "Empfohlene Titel",
+  "D'après cet album": "Basierend auf diesem Album",
+  "D'après cette playlist": "Basierend auf dieser Playlist",
+  "Lossless": "Lossless",
+  "Hi-Res Lossless": "Hi-Res Lossless",
+  "Hi-Res": "Hi-Res"
  },
  "pt": {
   "Reverb": "Reverb",
@@ -21084,7 +21148,15 @@
   "Autres noms": "Outros nomes",
   "Nom A–Z": "Nome A–Z",
   "Commandes": "Controles",
-  "Précédent, lecture/pause et suivant, même en tout petit": "Anterior, reproduzir/pausar e próxima, mesmo bem pequeno"
+  "Précédent, lecture/pause et suivant, même en tout petit": "Anterior, reproduzir/pausar e próxima, mesmo bem pequeno",
+  "Session expirée · reconnectez-vous": "Sessão expirada · inicie sessão novamente",
+  "Erreur du serveur · nouvel essai bientôt": "Erro do servidor · nova tentativa em breve",
+  "Titres recommandés": "Músicas recomendadas",
+  "D'après cet album": "Com base neste álbum",
+  "D'après cette playlist": "Com base nesta playlist",
+  "Lossless": "Lossless",
+  "Hi-Res Lossless": "Hi-Res Lossless",
+  "Hi-Res": "Hi-Res"
  },
  "ko": {
   "Reverb": "리버브",
@@ -23427,6 +23499,14 @@
   "Autres noms": "기타 이름",
   "Nom A–Z": "이름 A–Z",
   "Commandes": "컨트롤",
-  "Précédent, lecture/pause et suivant, même en tout petit": "이전, 재생/일시정지, 다음. 가장 작은 크기에서도"
+  "Précédent, lecture/pause et suivant, même en tout petit": "이전, 재생/일시정지, 다음. 가장 작은 크기에서도",
+  "Session expirée · reconnectez-vous": "세션 만료 · 다시 로그인하세요",
+  "Erreur du serveur · nouvel essai bientôt": "서버 오류 · 곧 다시 시도합니다",
+  "Titres recommandés": "추천 곡",
+  "D'après cet album": "이 앨범 기반",
+  "D'après cette playlist": "이 플레이리스트 기반",
+  "Lossless": "무손실",
+  "Hi-Res Lossless": "고해상도 무손실",
+  "Hi-Res": "고해상도"
  }
 }
