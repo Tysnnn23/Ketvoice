@@ -87,7 +87,10 @@ fun KetvoiceTheme(
     val isDark = season != null || (useDark ?: sysDark)
     val chosenAccent = dynamicAccent ?: Color(com.ketvoice.app.data.AppSettings.accentArgb.value.toInt())
     // Like an album page, the whole app takes the colour of what plays: the same tint, held dim at night.
-    val th = season?.theme() ?: cover.apply(if (viceCity) ViceCityTheme.theme(isDark) else Ket27.theme(isDark, chosenAccent))
+    // Noir (7.1): pure black pages in dark mode, whatever the cover; the cards stay apart from them.
+    val black = isDark && com.ketvoice.app.data.AppSettings.trueBlack.value
+    val th = season?.theme() ?: cover.apply((if (viceCity) ViceCityTheme.theme(isDark) else Ket27.theme(isDark, chosenAccent))
+        .let { if (black) it.copy(background = Color.Black) else it }, black)
     val accent = th.accent
     androidx.compose.runtime.CompositionLocalProvider(
         LocalTheme provides th,
