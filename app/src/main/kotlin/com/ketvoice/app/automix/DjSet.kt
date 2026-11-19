@@ -220,6 +220,9 @@ internal object DjSet {
 
     fun stop() { measureJob?.cancel(); _live.value = null }
 
+    /** Host renders of the queue's header. */
+    internal fun showForTest(set: Live?) { _live.value = set }
+
     private fun start(tracks: List<Track>) {
         if (!AppSettings.automix.value) { AppSettings.automix.value = true; SettingsStore.save() }
         _live.value = Live(tracks.map { it.id }.toSet(), energies(tracks))
