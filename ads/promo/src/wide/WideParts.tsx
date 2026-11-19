@@ -46,53 +46,53 @@ export const Screen: React.FC<{ src: string; duration: number; rate?: number; x?
   );
 };
 
-const Glyph: React.FC<{ kind: number; color: string; size: number }> = ({ kind, color, size }) => {
-  const common = { width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: color, strokeWidth: 1.9, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
-  switch (kind) {
-    case 0: return <svg {...common}><path d="M8 5.5v13l10.5-6.5z" fill={color} /></svg>;
-    case 1: return <svg {...common}><path d="M4 7h16M4 12h11M4 17h7" /></svg>;
-    case 2: return <svg {...common}><circle cx="9" cy="12" r="5" /><circle cx="15" cy="12" r="5" /></svg>;
-    case 3: return <svg {...common}><rect x="9" y="3" width="6" height="11" rx="3" fill={color} stroke="none" /><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21" /></svg>;
-    default: return <svg {...common}><path d="M12 4v11M7 10.5l5 5 5-5M5 20h14" /></svg>;
-  }
-};
-
-const TILE_COLORS = ["#2A8CFF", "#FF8D28", "#FA2D48", "#7C6BFF", "#34C759"];
+// The owner's five logos, in the owner's order (their marks belong to their owners; used to name the apps).
+const TILES = [
+  { name: "Apple Music", color: "#FC3C44", src: "img/logo-1-apple.png" },
+  { name: "Spotify", color: "#1ED760", src: "img/logo-2-spotify.png" },
+  { name: "Deezer", color: "#A238FF", src: "img/logo-3-deezer.png" },
+  { name: "SoundCloud", color: "#FF5500", src: "img/logo-4-soundcloud.png" },
+  { name: "YouTube Music", color: "#FF0000", src: "img/logo-5-ytmusic.png" },
+];
 
 /** The hook: five jobs, five icons popping on the beat, then they melt into one. */
 export const HookTiles: React.FC<{ popAt: number[]; mergeFrom: number; mergeTo: number }> = ({ popAt, mergeFrom, mergeTo }) => {
   const f = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const names = useT().wTiles;
-  const TILES = TILE_COLORS.map((color, i) => ({ color, name: names[i] }));
   const m = interpolate(f, [mergeFrom, mergeTo], [0, 1], { ...clamp, easing: theme.ease.inOut });
   const last = popAt.filter((a) => f >= a).length - 1;
   const labelP = last >= 0 ? spring({ frame: f - popAt[last], fps, config: theme.spring.snappy }) : 0;
   return (
     <AbsoluteFill>
+      {/* Each app's colour as a soft light; they add up (screen) as the five turn into one. */}
+      {TILES.map((t, i) => {
+        const ang = m * Math.PI * 1.6 + i * 1.25;
+        const rad = m * (1 - m) * 300 + (1 - m) * 0;
+        const x = (960 + (i - 2) * 230) * (1 - m) + (960 + Math.cos(ang) * (rad + 70 * (1 - m * m))) * m;
+        const y = 520 * (1 - m) + (540 + Math.sin(ang) * (rad * 0.6 + 50 * (1 - m * m))) * m;
+        const size = 300 + m * 260;
+        return <div key={t.name} style={{ position: "absolute", left: x - size / 2, top: y - size / 2, width: size, height: size, borderRadius: "50%",
+          background: `radial-gradient(circle, ${t.color} 0%, ${t.color}00 68%)`, mixBlendMode: "screen", opacity: Math.min(1, m * 1.6) * 0.9 }} />;
+      })}
       {TILES.map((t, i) => {
         const p = spring({ frame: f - popAt[i], fps, config: theme.spring.bouncy });
         const ring = interpolate(f - popAt[i], [0, 22], [0, 1], clamp);
-        const baseX = 960 + (i - 2) * 210, baseY = 520;
+        const baseX = 960 + (i - 2) * 230, baseY = 520;
         const ang = m * Math.PI * 1.6 + i * 1.25;
         const rad = (1 - m) * 0 + m * (1 - m) * 260;
         const x = baseX * (1 - m) + (960 + Math.cos(ang) * rad) * m;
         const y = baseY * (1 - m) + (540 + Math.sin(ang) * rad * 0.6) * m;
-        const blur = m * 38;
+        const blur = m * 14;
         return (
-          <div key={t.name} style={{ position: "absolute", left: x - 70, top: y - 70, width: 140, height: 140, display: "flex", alignItems: "center", justifyContent: "center",
-            opacity: p, transform: `scale(${interpolate(p, [0, 1], [0.3, 1]) * (1 + m * 1.4)})`, filter: `blur(${blur}px)` }}>
+          <div key={t.name} style={{ position: "absolute", left: x - 85, top: y - 85, width: 170, height: 170, display: "flex", alignItems: "center", justifyContent: "center",
+            opacity: p * (1 - interpolate(m, [0.5, 0.95], [0, 1], clamp)), transform: `scale(${interpolate(p, [0, 1], [0.3, 1]) * (1 - m * 0.35)})`, filter: `blur(${blur}px)` }}>
             <div style={{ position: "absolute", inset: 0, borderRadius: "50%", border: `2px solid ${t.color}`, opacity: (1 - ring) * 0.7, transform: `scale(${1 + ring * 0.7})` }} />
-            <div style={{ position: "absolute", inset: 8, borderRadius: "50%", opacity: 0.9,
-              background: `radial-gradient(circle at 35% 28%, rgba(255,255,255,0.22), rgba(255,255,255,0) 42%), radial-gradient(circle at 50% 60%, ${t.color}55, ${t.color}14 70%)`,
-              boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18), 0 18px 40px -12px ${t.color}66` }} />
-            <div style={{ position: "absolute", left: -90, top: -90, width: 320, height: 320, borderRadius: "50%", background: t.color, filter: "blur(60px)", opacity: m * 0.75 }} />
-            <Glyph kind={i} color={t.color} size={88} />
+            <Img src={staticFile(t.src)} style={{ width: 148, height: 148, position: "relative", filter: `drop-shadow(0 16px 28px ${t.color}55)` }} />
           </div>
         );
       })}
       {last >= 0 && (
-        <div style={{ position: "absolute", left: 0, right: 0, top: 650, textAlign: "center", fontFamily: theme.font, fontSize: 40, fontWeight: 650,
+        <div style={{ position: "absolute", left: 0, right: 0, top: 670, textAlign: "center", fontFamily: theme.font, fontSize: 40, fontWeight: 650,
           color: theme.colors.text, opacity: labelP * (1 - m * 3), transform: `translateY(${(1 - labelP) * 14}px)` }}>{TILES[last].name}</div>
       )}
       <div style={{ position: "absolute", left: 960 - 30, top: 540 - 30, width: 60, height: 60, borderRadius: "50%", background: "#fff",
