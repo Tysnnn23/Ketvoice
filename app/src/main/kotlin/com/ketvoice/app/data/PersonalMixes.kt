@@ -53,14 +53,18 @@ object PersonalMixes {
 
     private fun recording(track: Track) = "${track.title.trim().lowercase()}|${primaryArtist(track).lowercase()}"
 
-    /** Artists ordered by how much they were played; a favourite counts as one more play. */
-    internal fun topArtists(known: List<Track>, counts: Map<String, Int>, favorites: Set<String>): List<ArtistTaste> =
+    /**
+     * Artists ordered by how much they were played; a favourite counts as one more play and (7.2) each
+     * title of theirs left early ([TasteSignals]) as one less.
+     */
+    internal fun topArtists(known: List<Track>, counts: Map<String, Int>, favorites: Set<String>,
+                            skips: Map<String, TasteSignals.Skip> = emptyMap()): List<ArtistTaste> =
         known.filter { primaryArtist(it).isNotBlank() && primaryArtist(it).lowercase() !in placeholders }
             .groupBy { primaryArtist(it).lowercase() }
             .map { (_, tracks) ->
                 val ordered = tracks.sortedWith(compareByDescending<Track> { counts[it.id] ?: 0 }.thenBy { it.id })
                 ArtistTaste(primaryArtist(ordered.first()),
-                    tracks.sumOf { (counts[it.id] ?: 0) + if (it.id in favorites) 1 else 0 }, ordered,
+                    tracks.sumOf { (counts[it.id] ?: 0) + (if (it.id in favorites) 1 else 0) - (skips[it.id]?.count ?: 0) }, ordered,
                     ordered.firstOrNull(::fromCatalogue)?.artistId)
             }
             .filter { it.plays > 0 }
@@ -86,7 +90,7 @@ object PersonalMixes {
                 seed: Long = sessionSeed, limit: Int = MAX_CARDS): List<MixCard> {
         if (counts.values.sum() < MIN_TOTAL_PLAYS) return emptyList()
         fun covers(tracks: List<Track>) = tracks.map { it.coverUrl }.filter { !it.isNullOrBlank() }.distinct().take(4)
-        val artists = topArtists(known, counts, favorites).filter { it.plays >= MIN_ARTIST_PLAYS }.take(5)
+        val artists = topArtists(known, counts, favorites, TasteSignals.skips()).filter { it.plays >= MIN_ARTIST_PLAYS }.take(5)
         val cards = mutableListOf<MixCard>()
         var spare: ArtistTaste? = null
         if (artists.isNotEmpty()) {
@@ -147,12 +151,17 @@ object PersonalMixes {
                 val own = mine()
                 blend(own, CatalogRepo.artistTop(name, own.firstOrNull(::fromCatalogue)?.artistId)).ifEmpty { null }
             }
-            "style" -> CatalogRepo.artistRadio(name, mine().firstOrNull(::fromCatalogue)?.artistId).take(MIX_SIZE).ifEmpty { null }
+            // The artist's radio in the listener's order (7.2): what they like first, what they refuse later, varied.
+            "style" -> CatalogRepo.artistRadio(name, mine().firstOrNull(::fromCatalogue)?.artistId)
+                .let { radio -> Recommender.rank(radio, Recommender.liveSignals(), MIX_SIZE, perArtist = 6).map { it.track } }.ifEmpty { null }
             // The week's discoveries: kept on the device for the week, made now when missing.
             WeeklyDiscoveries.MIX_ID -> WeeklyDiscoveries.ensureNow()?.tracks
             else -> null
         }
         // Proposed by Ketvoice: the artists the listener blocked are left out.
-        return result?.filter(ArtistPrefs::allows)?.ifEmpty { null }?.let { withLocalFiles(it, LocalMusic.tracks.value) }
+        // and (7.2) a title left early twice or more is not proposed again.
+        val refused = TasteSignals.skips()
+        return result?.filter { ArtistPrefs.allows(it) && (refused[it.id]?.count ?: 0) < 2 }?.ifEmpty { null }
+            ?.let { withLocalFiles(it, LocalMusic.tracks.value) }
     }
 }

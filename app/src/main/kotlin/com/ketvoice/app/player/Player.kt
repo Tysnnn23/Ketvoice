@@ -1454,6 +1454,7 @@ object Player {
 
     fun next() {
         if (transportGate?.invoke("next", 0L) == true) return
+        _state.value.let { s -> com.ketvoice.app.data.TasteSignals.skipped(s.queue.getOrNull(s.index), _position.value) }
         // Ketmix au skip (5.9.0): with Ketmix on, a manual skip is a short transition instead of a hard
         // cut — the title fades out in a third of a second, the next one rises in under one.
         val c = controller

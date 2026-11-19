@@ -60,6 +60,7 @@ object ListeningHistory {
     fun init(context: Context) {
         if (prefs != null) return
         prefs = context.getSharedPreferences("listening-history", Context.MODE_PRIVATE)
+        TasteSignals.init(context)
         _tracks.value = runCatching { gson.fromJson(prefs!!.getString("tracks", "[]"), Array<Track>::class.java).toList() }
             .getOrDefault(emptyList())
         _known.value = runCatching { gson.fromJson(prefs!!.getString("known", "[]"), Array<Track>::class.java).toList() }
