@@ -183,8 +183,11 @@ fun SearchScreen() {
                 customSources.filter { it.enabled }.forEach { source -> searches += { CustomSources.search(source, asked) } }
                 playlists = emptyList()
                 launch {
-                    SearchGroups.collectProgressively(searches) { tracks ->
+                    // 7.2: one order for every source (text match first, then what the listener plays and likes).
+                    val taste = com.ketvoice.app.data.SearchRank.liveTaste()
+                    SearchGroups.collectProgressively(searches) { found ->
                         gotTracks = true
+                        val tracks = com.ketvoice.app.data.SearchRank.rank(q, found, taste)
                         results = smart?.let { com.ketvoice.app.ui.smartlib.SmartSearch.refineNow(tracks, it) } ?: tracks
                         allResults = tracks
                     }
@@ -192,7 +195,7 @@ fun SearchScreen() {
                 }
                 if (segment == 0) {
                     launch {
-                        artists = try { YouTubeCatalog.searchArtists(q) }
+                        artists = try { com.ketvoice.app.data.SearchRank.artistsFirst(q, YouTubeCatalog.searchArtists(q)) { it.name } }
                             catch (cancelled: CancellationException) { throw cancelled }
                             catch (_: Exception) { emptyList() /* Tracks remain available. */ }
                     }

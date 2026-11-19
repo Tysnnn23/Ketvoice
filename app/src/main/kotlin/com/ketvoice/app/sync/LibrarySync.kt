@@ -23,8 +23,37 @@ import org.json.JSONObject
 import java.io.File
 import java.io.IOException
 
+/** Why the last sync round failed: the account sheet tells the listener which one, not always « offline ». */
+enum class SyncProblem { NONE, OFFLINE, SIGNED_OUT, SERVER }
+
 /** Where the library's sync stands, for the account sheet. */
-data class SyncStatus(val running: Boolean = false, val lastSuccess: Long = 0L, val offline: Boolean = false)
+data class SyncStatus(val running: Boolean = false, val lastSuccess: Long = 0L, val problem: SyncProblem = SyncProblem.NONE) {
+    val offline: Boolean get() = problem == SyncProblem.OFFLINE
+}
+
+/** The server answered a library call with an error status (not a network failure). */
+internal class CloudHttpError(val status: Int, message: String) : IOException(message)
+
+internal object SyncProblems {
+    /**
+     * Only a failure to reach the server is « offline ». A refused session asks to sign in again; anything
+     * else (an error status, an unexpected answer, a bug such as network on the main thread) is a server or
+     * app problem that the next round retries: it must never read as « offline » on a working Wi-Fi.
+     */
+    fun of(error: Throwable): SyncProblem {
+        var e: Throwable? = error
+        repeat(4) {
+            when (val cur = e ?: return SyncProblem.SERVER) {
+                is com.ketvoice.app.account.SessionRejected -> return SyncProblem.SIGNED_OUT
+                is CloudHttpError -> return if (cur.status == 401 || cur.status == 403) SyncProblem.SIGNED_OUT else SyncProblem.SERVER
+                is java.net.UnknownHostException, is java.net.ConnectException, is java.net.NoRouteToHostException,
+                is java.net.SocketTimeoutException, is java.net.SocketException, is javax.net.ssl.SSLHandshakeException -> return SyncProblem.OFFLINE
+                else -> e = cur.cause?.takeIf { it !== cur }
+            }
+        }
+        return SyncProblem.SERVER
+    }
+}
 
 /** What the cloud side of a sync round needs (the real table, or a fake one in tests). */
 internal interface CloudPort {
@@ -84,17 +113,23 @@ object LibrarySync {
     private var prefsListener: SharedPreferences.OnSharedPreferenceChangeListener? = null
     private var context: Context? = null
     private var failures = 0
+    private var poller: Job? = null
+    private var libraryToken: String? = null
+    private var foregroundRefreshAt = 0L
+    /** The account's table; host tests put a fake one here. */
+    internal var cloud: CloudPort = RealCloud
+    private const val POLL_MS = 3 * 60_000L
 
     internal fun signedIn(context: Context, fresh: Boolean) {
         this.context = context.applicationContext
         SyncedTracks.init(context)
-        _status.value = _status.value.copy(lastSuccess = SyncStore.lastSuccess(context))
+        _status.value = SyncStatus(lastSuccess = SyncStore.lastSuccess(context))
         watch(context.applicationContext)
         request(if (fresh) 0L else 1_500L)
     }
 
     internal fun signedOut(context: Context) {
-        pending?.cancel(); watchers?.cancel(); watchers = null
+        pending?.cancel(); watchers?.cancel(); watchers = null; poller?.cancel(); poller = null; libraryToken = null
         prefsListener?.let { context.getSharedPreferences("ketvoice_settings", Context.MODE_PRIVATE).unregisterOnSharedPreferenceChangeListener(it) }
         prefsListener = null
         SyncStore.forget(context)
@@ -102,14 +137,39 @@ object LibrarySync {
         _status.value = SyncStatus()
     }
 
-    /** The app came to the front: what other devices changed meanwhile comes in. */
+    /**
+     * The app came to the front: what other devices (or the web player) changed meanwhile comes in: the
+     * library, the profile (name, photo) and the catalogue's Canvas and covers. While it stays in front, a
+     * small check of the account's revisions every few minutes brings later changes.
+     */
     fun onForeground() {
-        if (AccountSession.userId() != null) { request(800L); SharedPlaylists.onForeground() }
+        val now = System.currentTimeMillis()
+        if (now - foregroundRefreshAt > 60_000L) {
+            foregroundRefreshAt = now
+            // Public catalogue overrides (Canvas, covers): their files are named per upload, so a new one is a new address.
+            scope.launch { runCatching { com.ketvoice.app.data.MediaOverrides.refresh() } }
+        }
+        if (AccountSession.userId() == null) return
+        request(800L); SharedPlaylists.onForeground()
+        scope.launch { runCatching { com.ketvoice.app.account.Profiles.refresh() } }
+        poller?.cancel()
+        poller = scope.launch { while (true) { delay(POLL_MS); runCatching { poll() } } }
     }
 
     /** The app goes to the background: what changed here goes out now. */
     fun onBackground() {
+        poller?.cancel(); poller = null
         if (AccountSession.userId() != null) { request(0L); SharedPlaylists.onBackground() }
+    }
+
+    /** One small read (each kind's revision); a full round only when another device wrote since the last look. */
+    private suspend fun poll() {
+        if (AccountSession.userId() == null) return
+        val token = CloudLibrary.revisions(kinds.map { it.name })
+        if (ChangeToken.changed(libraryToken, token)) request(0L)
+        libraryToken = token
+        // The profile row is as small; its photo is named per upload, so only a new photo is downloaded.
+        com.ketvoice.app.account.Profiles.refresh()
     }
 
     fun request(delayMs: Long = DEBOUNCE_MS) {
@@ -136,26 +196,39 @@ object LibrarySync {
         context.getSharedPreferences("ketvoice_settings", Context.MODE_PRIVATE).registerOnSharedPreferenceChangeListener(listener)
     }
 
-    suspend fun syncNow() = syncAll()
+    /**
+     * The « Synchroniser » button. It is called from the screen's (main-thread) scope: the round runs on
+     * the IO dispatcher, or Android refuses the network call on the main thread, which used to be caught
+     * and shown as « offline » on a working Wi-Fi. A manual round starts the retry delay over.
+     */
+    suspend fun syncNow(): SyncProblem {
+        pending?.cancel()
+        failures = 0
+        return syncAll()
+    }
 
-    private suspend fun syncAll() = mutex.withLock {
-        val ctx = context ?: return@withLock
-        val uid = AccountSession.userId() ?: return@withLock
+    private suspend fun syncAll(): SyncProblem = withContext(Dispatchers.IO) { mutex.withLock {
+        val ctx = context ?: return@withLock SyncProblem.NONE
+        val uid = AccountSession.userId() ?: return@withLock SyncProblem.SIGNED_OUT
         _status.value = _status.value.copy(running = true)
         try {
-            val round = SyncRound(RealCloud, DeviceIdentity.id(ctx), ServerClock::now)
+            val round = SyncRound(cloud, DeviceIdentity.id(ctx), ServerClock::now)
             val again = kinds.map { kind -> syncKind(ctx, uid, kind, round) }.any { it }
             failures = 0
             val at = System.currentTimeMillis()
             SyncStore.markSuccess(ctx, at)
             _status.value = SyncStatus(lastSuccess = at)
             if (again) request()
+            SyncProblem.NONE
         } catch (error: Exception) {
             if (error is kotlinx.coroutines.CancellationException) throw error
-            _status.value = _status.value.copy(running = false, offline = true)
-            retryLater()
+            val problem = SyncProblems.of(error)
+            _status.value = _status.value.copy(running = false, problem = problem)
+            // A refused session waits for the listener to sign in again; the rest is retried later.
+            if (problem != SyncProblem.SIGNED_OUT) retryLater()
+            problem
         }
-    }
+    } }
 
     /** Returns true when this device changed during the round: its changes go out in the next one. */
     private suspend fun syncKind(context: Context, uid: String, kind: SyncKind, round: SyncRound): Boolean {
