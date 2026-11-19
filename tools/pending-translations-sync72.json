@@ -1,0 +1,26 @@
+{
+ "Session expirée · reconnectez-vous": {
+  "en": "Session expired · sign in again",
+  "hi": "सत्र समाप्त · फिर से साइन इन करें",
+  "ja": "セッションの有効期限切れ · もう一度サインインしてください",
+  "zh": "会话已过期 · 请重新登录",
+  "ru": "Сеанс истёк · войдите снова",
+  "it": "Sessione scaduta · accedi di nuovo",
+  "es": "Sesión caducada · vuelve a iniciar sesión",
+  "de": "Sitzung abgelaufen · bitte erneut anmelden",
+  "pt": "Sessão expirada · inicie sessão novamente",
+  "ko": "세션 만료 · 다시 로그인하세요"
+ },
+ "Erreur du serveur · nouvel essai bientôt": {
+  "en": "Server error · trying again soon",
+  "hi": "सर्वर त्रुटि · जल्द ही फिर से कोशिश होगी",
+  "ja": "サーバーエラー · まもなく再試行します",
+  "zh": "服务器错误 · 稍后将重试",
+  "ru": "Ошибка сервера · скоро новая попытка",
+  "it": "Errore del server · nuovo tentativo a breve",
+  "es": "Error del servidor · se reintentará pronto",
+  "de": "Serverfehler · neuer Versuch in Kürze",
+  "pt": "Erro do servidor · nova tentativa em breve",
+  "ko": "서버 오류 · 곧 다시 시도합니다"
+ }
+}
