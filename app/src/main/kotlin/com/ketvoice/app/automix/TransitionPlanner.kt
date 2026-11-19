@@ -188,7 +188,12 @@ internal data class MixPlan(
     val loopFromUs: Long = -1,
     val loopUs: Long = 0,
     /** The details the listener set in the DJ editor (6.9), see [MixShaping]; the default plays Ketmix's own. */
-    val shape: MixShape = MixShape.DEFAULT
+    val shape: MixShape = MixShape.DEFAULT,
+    /**
+     * 7.1: a sung line of each title is still heard over the other in this crossing (known from their lyrics or
+     * separated voices): the outgoing title's mids, where its voice lives, step back (see [DeckAutomation.withMids]).
+     */
+    val voicesMeet: Boolean = false
 ) {
     val mixes: Boolean get() = kind != MixKind.None
     /** Position in the incoming title once the outgoing one is gone. */
@@ -262,6 +267,7 @@ internal object TransitionPlanner {
         fun measured(plan: MixPlan) = checked(lyricAware(plan.copy(fromBpm = if (a.hasBeat) a.bpm else 0f, toBpm = if (b.hasBeat) b.bpm else 0f,
             fromKey = a.key, toKey = b.key, loop = context.loop), out, incoming, sungUntil), out, incoming)
             .let { CutBudget.keep(it, a, b, incoming, context.speed) }
+            .let { if (it.mixes && LyricTimes.voicesMeet(it, out.sungLines, incoming.sungLines)) it.copy(voicesMeet = true) else it }
 
         // A plain fade was asked for: the same lengths and care for the singing, no effect.
         if (settings.style == MixStyle.Fade) return automatic(out, incoming, context.copy(effects = false), settings.copy(style = MixStyle.Auto), listener)

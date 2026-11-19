@@ -144,6 +144,7 @@ internal class DeckAutomation(
          * so that the two sets of chords and voices are never both at full. Other transitions are left as they are.
          */
         internal fun withMids(automation: DeckAutomation, plan: MixPlan, outgoing: Boolean): DeckAutomation {
+            if (outgoing && plan.voicesMeet && (plan.kind == MixKind.Filter || plan.kind == MixKind.Wash)) return voiceMids(automation, plan)
             if (plan.kind != MixKind.Beatmatch || plan.swapMs < 0 || plan.overlapMs <= 0) return automation
             val depth = if (plan.clash) MID_CLASH_DB else MID_DOWN_DB
             fun at(outMs: Long): Long = if (outgoing) outMs * 1000L
@@ -153,6 +154,20 @@ internal class DeckAutomation(
             val curve = if (outgoing) Curve.join(point(start, 0f), point(swap, 0f), Curve.shaped(swap + 1, end, 16) { depth * ease(it) })
                 else Curve.join(point(start, depth), point(swap, depth), Curve.shaped(swap + 1, end, 16) { depth * (1f - ease(it)) }, point(end + 1, 0f))
             return automation.copyWith(midDb = curve)
+        }
+
+        /** How far the outgoing mids step back when two voices meet in a crossing that is not in time (7.1). */
+        const val MID_VOICES_DB = -7.5f
+
+        /**
+         * 7.1: two sung lines still meet in a crossing that is not in time: rather than two voices stacked, the
+         * outgoing title's mids (where its voice and chords live) step back over the first quarter of the crossing.
+         */
+        private fun voiceMids(automation: DeckAutomation, plan: MixPlan): DeckAutomation {
+            val start = plan.outMs * 1000L
+            val down = start + plan.overlapMs * 250L
+            if (down <= start) return automation
+            return automation.copyWith(midDb = Curve.join(point(start, 0f), Curve.shaped(start + 1, down, 12) { MID_VOICES_DB * ease(it) }))
         }
 
         private fun outgoingMix(plan: MixPlan): DeckAutomation {

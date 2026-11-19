@@ -110,4 +110,18 @@ class KetmixBudgetTest {
         assertTrue(PairFit.distance(outro(activity = 4f), intro(activity = 5f)) < 1f)
         assertNotEquals("far apart", plan(ballad, loud, style = MixStyle.Filters).reason)
     }
+
+    @Test fun twoVoicesThatStillMeetTakeTheOutgoingMidsDown() {
+        val p = MixPlan(MixKind.Filter, outMs = 180_000, inMs = 300, overlapMs = 8_000)
+        assertEquals(0f, DeckAutomation.outgoing(p).midDb.at(183_000_000L), 1e-6f)
+        val met = p.copy(voicesMeet = true)
+        assertEquals(DeckAutomation.MID_VOICES_DB, DeckAutomation.outgoing(met).midDb.at(183_000_000L), .01f)
+        assertEquals("not before the crossing", 0f, DeckAutomation.outgoing(met).midDb.at(179_000_000L), 1e-6f)
+        assertEquals("the incoming title keeps its own", 0f, DeckAutomation.incoming(met).midDb.at(3_000_000L), 1e-6f)
+        // The planner marks a crossing where both sing.
+        val outLines = listOf(150_000L..198_000L)
+        val sung = TransitionPlanner.plan(MixFacts(duration, outro(bpm = 0f, confidence = 0f), vocalEndMs = 198_000, sungLines = outLines),
+            MixFacts(duration, intro(bpm = 0f, confidence = 0f), vocalStartMs = 400, sungLines = listOf(400L..9_000L)), MixContext(), MixSettings(1))
+        assertEquals(LyricTimes.voicesMeet(sung, outLines, listOf(400L..9_000L)), sung.voicesMeet)
+    }
 }
