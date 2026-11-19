@@ -597,16 +597,20 @@ internal fun PlayerTitle(track: Track, compact: Boolean, cover: String?, sheetAc
                 TrackTitle(track.title, color = Color.White, fontSize = if (compact) 20.sp else 22.sp,
                     selected = true, maxLines = if (compact) 1 else 2)
             }
-            // Nom d'artiste cliquable → ouvre la page artiste
+            // Nom d'artiste cliquable → ouvre la page artiste; 7.2: the Lossless mark follows it when the audio is.
+            Row(verticalAlignment = Alignment.CenterVertically) {
             Text(track.artist, localize = false, color = Color.White.copy(alpha = .82f), fontSize = 17.sp, letterSpacing = (-.5).sp,
                 maxLines = 1, overflow = TextOverflow.Ellipsis,
                 modifier = Modifier
-                    .fillMaxWidth()
+                    .weight(1f, fill = false)
                     // On n'exige plus un artistId : sans lui le clic ne faisait
                     // strictement rien. openArtist résout désormais par nom.
                     .clickable { AppUi.openArtist(track.artistId.orEmpty(), track.artist) }
                     .semantics { contentDescription = com.ketvoice.app.data.AppText.t("Ouvrir la page de ${track.artist}") }
             )
+            com.ketvoice.app.ui.common.LosslessBadge(com.ketvoice.app.ui.common.rememberPlayingGrade(track.id),
+                Modifier.padding(start = 8.dp), tint = Color.White.copy(alpha = .72f))
+            }
         }
         }
         Spacer(Modifier.width(8.dp))

@@ -74,14 +74,23 @@ internal fun HomeForYouLead(recent: List<Track>, hasResume: Boolean, daily: Pair
         if (daily != null) HomeDailyMix(daily, Modifier.weight(1f), height = WIDE_CARD, large = true)
         // Alone, a card keeps its half of the page rather than stretching across a wide window.
         if (!hasResume || daily == null) Spacer(Modifier.weight(1f))
-    } else Column(modifier.fillMaxWidth().padding(horizontal = pageMargin).padding(top = Ket27.Space.xs).testTag("home-for-you"),
-        verticalArrangement = Arrangement.spacedBy(Ket27.Space.s)) {
-        if (hasResume) HomeResumeCard(recent)
-        if (daily != null) HomeDailyMix(daily, height = 196.dp)
+    } else if (!hasResume || daily == null) Box(modifier.fillMaxWidth().padding(horizontal = pageMargin).padding(top = Ket27.Space.xs)
+        .testTag("home-for-you")) {
+        if (hasResume) HomeResumeCard(recent, height = PHONE_CARD, artSide = 124.dp)
+        if (daily != null) HomeDailyMix(daily, height = PHONE_CARD)
+    } else BoxWithConstraints(modifier.fillMaxWidth().padding(top = Ket27.Space.xs).testTag("home-for-you")) {
+        // 7.2, Apple Music's lead: the two large cards side by side in a row that rests on a whole card, the
+        // second one peeking at the edge.
+        val card = (maxWidth - pageMargin * 2) * .92f
+        HomeRow {
+            item(key = "resume") { HomeResumeCard(recent, Modifier.width(card), height = PHONE_CARD, artSide = 124.dp) }
+            item(key = "daily") { HomeDailyMix(daily, Modifier.width(card), height = PHONE_CARD) }
+        }
     }
 }
 
 private val WIDE_CARD = 212.dp
+private val PHONE_CARD = 204.dp
 
 /**
  * « Reprendre »: the title playing, or the last one listened to, on a plain card — its cover, its name,
@@ -89,7 +98,7 @@ private val WIDE_CARD = 212.dp
  * recomposes as the title plays.
  */
 @Composable
-internal fun HomeResumeCard(recent: List<Track>, modifier: Modifier = Modifier, height: Dp? = null) {
+internal fun HomeResumeCard(recent: List<Track>, modifier: Modifier = Modifier, height: Dp? = null, artSide: Dp? = null) {
     val theme = LocalTheme.current
     val current by remember { Player.state.pick { it.current } }.collectPick()
     val playing by remember { Player.state.pick { it.isPlaying } }.collectPick()
@@ -101,7 +110,7 @@ internal fun HomeResumeCard(recent: List<Track>, modifier: Modifier = Modifier, 
     val shape = RoundedCornerShape(Ket27.Radius.card)
     val start = { if (live) Player.toggle() else Player.playQueue(recent, 0) }
     // In a large window the card is as tall as the mix beside it: the cover fills its height.
-    val art = if (height != null) height - Ket27.Space.s * 2 else 88.dp
+    val art = artSide ?: if (height != null) height - Ket27.Space.s * 2 else 88.dp
     Row(modifier.fillMaxWidth().then(if (height != null) Modifier.height(height) else Modifier).clip(shape).background(theme.card)
         .clickable(role = Role.Button) { if (live) AppUi.showPlayer.value = true else start() }
         .padding(Ket27.Space.s).testTag("home-resume"), verticalAlignment = Alignment.CenterVertically) {

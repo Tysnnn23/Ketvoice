@@ -1,0 +1,74 @@
+{
+ "Titres recommandés": {
+  "en": "Recommended songs",
+  "hi": "सुझाए गए गाने",
+  "ja": "おすすめの曲",
+  "zh": "推荐歌曲",
+  "ru": "Рекомендуемые треки",
+  "it": "Brani consigliati",
+  "es": "Canciones recomendadas",
+  "de": "Empfohlene Titel",
+  "pt": "Músicas recomendadas",
+  "ko": "추천 곡"
+ },
+ "D'après cet album": {
+  "en": "Based on this album",
+  "hi": "इस एल्बम के आधार पर",
+  "ja": "このアルバムに基づく",
+  "zh": "根据这张专辑",
+  "ru": "На основе этого альбома",
+  "it": "In base a questo album",
+  "es": "Según este álbum",
+  "de": "Basierend auf diesem Album",
+  "pt": "Com base neste álbum",
+  "ko": "이 앨범 기반"
+ },
+ "D'après cette playlist": {
+  "en": "Based on this playlist",
+  "hi": "इस प्लेलिस्ट के आधार पर",
+  "ja": "このプレイリストに基づく",
+  "zh": "根据这个播放列表",
+  "ru": "На основе этого плейлиста",
+  "it": "In base a questa playlist",
+  "es": "Según esta playlist",
+  "de": "Basierend auf dieser Playlist",
+  "pt": "Com base nesta playlist",
+  "ko": "이 플레이리스트 기반"
+ },
+ "Lossless": {
+  "en": "Lossless",
+  "hi": "Lossless",
+  "ja": "ロスレス",
+  "zh": "无损",
+  "ru": "Lossless",
+  "it": "Lossless",
+  "es": "Lossless",
+  "de": "Lossless",
+  "pt": "Lossless",
+  "ko": "무손실"
+ },
+ "Hi-Res Lossless": {
+  "en": "Hi-Res Lossless",
+  "hi": "Hi-Res Lossless",
+  "ja": "ハイレゾロスレス",
+  "zh": "高解析度无损",
+  "ru": "Hi-Res Lossless",
+  "it": "Hi-Res Lossless",
+  "es": "Hi-Res Lossless",
+  "de": "Hi-Res Lossless",
+  "pt": "Hi-Res Lossless",
+  "ko": "고해상도 무손실"
+ },
+ "Hi-Res": {
+  "en": "Hi-Res",
+  "hi": "Hi-Res",
+  "ja": "ハイレゾ",
+  "zh": "高解析度",
+  "ru": "Hi-Res",
+  "it": "Hi-Res",
+  "es": "Hi-Res",
+  "de": "Hi-Res",
+  "pt": "Hi-Res",
+  "ko": "고해상도"
+ }
+}

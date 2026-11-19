@@ -198,6 +198,9 @@ fun PlaylistScreen() {
                         modifier = Modifier.fillMaxWidth().padding(start = pageMargin, end = pageMargin, top = 18.dp, bottom = 8.dp)
                             .testTag("playlist-footer"))
                 }
+                if (playable.isNotEmpty() && !editing) item(key = "playlist-more-like-this", contentType = "more-like-this") {
+                    com.ketvoice.app.ui.sub.MoreLikeThisSection("playlist:" + playlist.id, playable, fromPlaylist = true)
+                }
             }
         }
         if (rename) SettingsSheet(onDismiss = { if (!busy) rename = false }) {

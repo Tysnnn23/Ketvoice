@@ -197,6 +197,10 @@ internal fun AlbumPage(album: LocalAlbum, onBack: () -> Unit, modifier: Modifier
                         modifier = Modifier.testTag("album-delete-download"))
                 }
             }
+            // 7.2: the same « Titres recommandés » as a catalogue album closes with.
+            if (titles.isNotEmpty()) item(key = "album-more-like-this", contentType = "more-like-this") {
+                com.ketvoice.app.ui.sub.MoreLikeThisSection("local:" + album.key, titles, fromPlaylist = false)
+            }
         }
     }
     if (confirm && onDevice.isNotEmpty()) AppAlertDialog(onDismissRequest = { if (!deleting) confirm = false },

@@ -186,6 +186,10 @@ internal fun AlbumPage(request: CatalogRequest, page: CatalogPage?, tracks: List
                     }
                     // The foot of the album, as Apple Music closes it: the release date, then its titles and length.
                     if (!loading && tracks.isNotEmpty()) item(key = "album-footer") { AlbumFooter(page?.releaseDate, tracks) }
+                    // 7.2, as Spotify closes an album: titles of the same artist and style, asked once this comes near.
+                    if (!loading && tracks.isNotEmpty()) item(key = "album-more-like-this", contentType = "more-like-this") {
+                        MoreLikeThisSection("album:" + request.id, tracks, fromPlaylist = false)
+                    }
                     // « Plus de … »: the artist's other releases, when the catalogue knows them.
                     if (moreBy.isNotEmpty()) item(key = "album-more") {
                         val wideRows = com.ketvoice.app.ui.adaptive.LocalLargeScreen.current != null

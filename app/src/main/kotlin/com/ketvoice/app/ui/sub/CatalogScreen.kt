@@ -94,6 +94,11 @@ fun CatalogScreen(request: CatalogRequest? = AppUi.catalogRequest.value) {
         AlbumPage(request, page, tracks, loading, onRetry = { attempt++ })
         return
     }
+    // Favoris (7.2): their own page, the heart cover over the titles, as Apple Music and Spotify show liked songs.
+    if (request.kind == "favorites") {
+        com.ketvoice.app.ui.library.LikedSongsScreen(tracks)
+        return
+    }
     // Canvas du hero : résolu pour le premier titre quand les Canvas sont actifs.
     val shareContext = androidx.compose.ui.platform.LocalContext.current
     val saveScope = rememberCoroutineScope()

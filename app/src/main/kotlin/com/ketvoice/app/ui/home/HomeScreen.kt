@@ -1,5 +1,7 @@
 package com.ketvoice.app.ui.home
 
+import com.ketvoice.app.ui.motion.StaggeredReveal
+
 import com.ketvoice.app.ui.common.collectPick
 import com.ketvoice.app.ui.common.pick
 import com.ketvoice.app.theme.pageBackground
@@ -156,15 +158,17 @@ fun HomeScreen() {
             item(key = "resume-elsewhere") { ResumeElsewhereBanner() }
             // 7.0 « Pour toi »: what was playing and the mix of the day, as two large calm cards.
             item(key = "for-you") {
-                HomeForYouLead(recent, hasResume = playingId != null || recent.isNotEmpty(), daily = daily, wide = wide)
+                StaggeredReveal(order = 0) {
+                    HomeForYouLead(recent, hasResume = playingId != null || recent.isNotEmpty(), daily = daily, wide = wide)
+                }
             }
             // The Vice City edition's one illustration, on its radio's card, while the theme is on.
             if (theme.viceCity) item(key = "vicefm") { com.ketvoice.app.ui.vicecity.ViceFmCard() }
             // The ambiances of the smart library, in the order that suits the hour.
-            item(key = "moods") { HomeMoods(hour) }
+            item(key = "moods") { StaggeredReveal(order = 1) { HomeMoods(hour) } }
             // New releases of the artists followed and played most: a fixed place now, right under the moods.
             if (releases.isNotEmpty()) item(key = "home-releases") {
-                HomeReleasesShelf(releases, Modifier.learnsOpens(HomeBlock.Releases.learningKey))
+                StaggeredReveal(order = 2) { HomeReleasesShelf(releases, Modifier.learnsOpens(HomeBlock.Releases.learningKey)) }
             }
             // What was played last, within a thumb's reach: tiles to start again from, or large covers.
             item(key = "recent-heading") {
@@ -181,8 +185,10 @@ fun HomeScreen() {
                     modifier = Modifier.padding(horizontal = 18.dp, vertical = 18.dp))
             } else if (!grid) item(key = "recent-carousel") {
                 // Large covers to start again from, the way a record shelf reads: the title playing wears its bars.
-                RecentCarousel(recent.take(20), playingId, isPlaying,
-                    onPlay = { index -> Player.playQueue(recent, index) })
+                StaggeredReveal(order = 3) {
+                    RecentCarousel(recent.take(20), playingId, isPlaying,
+                        onPlay = { index -> Player.playQueue(recent, index) })
+                }
             } else item(key = "recent-grid") {
                 BoxWithConstraints(Modifier.fillMaxWidth().padding(horizontal = com.ketvoice.app.ui.common.pageMargin).testTag("home-recent-grid")) {
                     val columns = recentColumns(maxWidth.value)
@@ -199,6 +205,8 @@ fun HomeScreen() {
                     }
                 }
             }
+            // 7.2: Favoris, Téléchargements and the pinned playlists, with their covers (replaces « Épinglés »).
+            item(key = "home-library") { StaggeredReveal(order = 4) { HomeLibraryShelf() } }
             // The week's discoveries (6.1): renewed every Monday.
             item(key = "discoveries") { HomeDiscoveries() }
             // What the public profiles the listener follows published and listened to (signed in, once there is some).
@@ -207,10 +215,6 @@ fun HomeScreen() {
             item(key = "mixes") { HomeMixes(Modifier.padding(bottom = 6.dp), exclude = daily?.first?.id) }
             item(key = "week") { HomeWeekCard() }
             item(key = "replay") { HomeReplayLink() }
-            if (playlists.any { it.pinned }) item(key = "pinned") {
-                EditorialHeader("Épinglés", onMore = { AppUi.selectTab(AppUi.LIBRARY) })
-                PlaylistShelf(playlists.filter { it.pinned })
-            }
             // The first personal shelf always leads; the album row and the other shelves
             // take turns from one launch to the next, and never move while browsing.
             // Fewer sections fighting for attention (7.0): the catalogue's albums and two shelves close the page.

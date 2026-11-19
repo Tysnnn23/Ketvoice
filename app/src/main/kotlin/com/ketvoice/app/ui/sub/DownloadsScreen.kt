@@ -105,6 +105,7 @@ fun DownloadsScreen() {
     val adaptive = LocalAdaptiveLayout.current
     val large = com.ketvoice.app.ui.adaptive.LocalLargeScreen.current != null
     val summary = remember(saved) { downloadSummary(saved) }
+    val mosaic = remember(saved, artwork) { com.ketvoice.app.ui.library.downloadMosaic(saved) }
     val freeBytes = remember(saved) { runCatching { android.os.StatFs(context.filesDir.path).availableBytes }.getOrDefault(0L) }
     fun size(bytes: Long) = android.text.format.Formatter.formatShortFileSize(context, bytes)
     val showTitles = view == 0 || chosen != null || chosenArtist != null
@@ -145,36 +146,33 @@ fun DownloadsScreen() {
         LazyVerticalGrid(columns = GridCells.Fixed(columns), state = grid,
             modifier = Modifier.fillMaxSize().testTag("downloads-list"),
             contentPadding = PaddingValues(start = DownloadsLayout.EDGE_DP.dp, end = DownloadsLayout.EDGE_DP.dp,
-                top = top + 4.dp, bottom = adaptive.bottomPaddingDp.dp),
+                top = 0.dp, bottom = adaptive.bottomPaddingDp.dp),
             horizontalArrangement = Arrangement.spacedBy(DownloadsLayout.GAP_DP.dp), verticalArrangement = Arrangement.spacedBy(0.dp)) {
             item(span = { GridItemSpan(maxLineSpan) }, key = "summary", contentType = "downloads-header") {
                 Column(Modifier.fillMaxWidth().padding(bottom = 8.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Column {
-                        com.ketvoice.app.ui.common.PageTitle("Téléchargements", Modifier.shrinkingTitle { collapse }.asHeading()
-                            .testTag("downloads-title"), maxLines = 2)
-                        Text(listOf(AppText.t(if (summary.count == 1) "1 titre" else "${summary.count} titres"),
-                            size(summary.bytes).takeIf { summary.count > 0 }.orEmpty(), playtimeLabel(summary.durationMs))
-                            .filter { it.isNotBlank() }.joinToString(" · "), localize = false, color = theme.secondary,
-                            style = com.ketvoice.app.theme.Ket27.Type.subheadline, modifier = Modifier.padding(top = 2.dp).testTag("downloads-meta"))
-                    }
-                    // On a wide pane Play/Shuffle and the storage stand side by side; on a phone, one above the other.
-                    val play: @Composable (Modifier) -> Unit = { place ->
+                    // 7.2, after Apple Music and Spotify: a mosaic of the latest titles' covers (distinct pictures),
+                    // the name, what is saved, Play and Shuffle; the categories and the storage follow.
+                    val meta = listOf(AppText.t(if (summary.count == 1) "1 titre" else "${summary.count} titres"),
+                        size(summary.bytes).takeIf { summary.count > 0 }.orEmpty(), playtimeLabel(summary.durationMs))
+                        .filter { it.isNotBlank() }.joinToString(" · ")
+                    val wideHeader = large && paneDp >= 700f
+                    com.ketvoice.app.ui.common.CollectionHero(cover = mosaic.firstOrNull(), top = top, title = AppText.t("Téléchargements"),
+                        titleTag = "downloads-title", meta = meta, artworkTag = "downloads-cover", shrink = { collapse },
+                        beside = wideHeader, bleed = DownloadsLayout.EDGE_DP.dp, artworkSide = if (wideHeader) null else 184.dp,
+                        artwork = { com.ketvoice.app.ui.library.MosaicCover(mosaic) }) {
                         if (saved.isNotEmpty()) com.ketvoice.app.ui.common.CollectionActionPair(
                             { Player.setShuffle(false); Player.playQueue(saved.map { it.track }) },
-                            { Player.playShuffled(saved.map { it.track }) }, place, minHeight = 50.dp)
+                            { Player.playShuffled(saved.map { it.track }) }, Modifier.widthIn(max = 440.dp).fillMaxWidth(), minHeight = 50.dp)
                     }
                     // As under Apple Music's « Téléchargé »: the categories come right after Play and Shuffle.
                     val categories: @Composable (Modifier) -> Unit = { place ->
                         if (saved.isNotEmpty()) DownloadCategories(view, listOf(base.saved.size, groups.size, artists.size, offlinePlaylists.size),
                             place) { view = it; albumKey = null; artistKey = null }
                     }
-                    if (large && paneDp >= 700f) Row(horizontalArrangement = Arrangement.spacedBy(24.dp), verticalAlignment = Alignment.Top) {
-                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            play(Modifier.widthIn(max = 440.dp)); categories(Modifier)
-                        }
+                    if (wideHeader) Row(horizontalArrangement = Arrangement.spacedBy(24.dp), verticalAlignment = Alignment.Top) {
+                        categories(Modifier.weight(1f))
                         DownloadSummaryCard(summary, freeBytes, ::size, Modifier.weight(1f)) { AppUi.showCapsule.value = true }
                     } else {
-                        play(Modifier.widthIn(max = 640.dp))
                         categories(Modifier.widthIn(max = 640.dp))
                         DownloadSummaryCard(summary, freeBytes, ::size, Modifier.widthIn(max = 640.dp)) { AppUi.showCapsule.value = true }
                     }
@@ -362,7 +360,7 @@ private fun SavedDownloadRow(item: Downloader.Item, current: Boolean, auto: Bool
                 }
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
                     modifier = Modifier.padding(top = 2.dp)) {
-                    QualityBadge(item.format)
+                    QualityBadge(item.format, item.track.id)
                     if (auto) AutoBadge()
                     Text(size, localize = false, color = theme.secondary, fontSize = 12.sp, maxLines = 1)
                     if (item.hasLyrics) Icon(KetIcons.Lyrics, "Paroles enregistrées", tint = theme.secondary,
@@ -471,9 +469,15 @@ internal fun DownloadGroupRow(title: String, subtitle: String?, meta: String, co
 
 /** The real stored format; lossless files stand out in the accent colour. */
 @Composable
-private fun QualityBadge(format: String) {
+private fun QualityBadge(format: String, trackId: String) {
     val theme = LocalTheme.current
     val lossless = isLosslessFormat(format)
+    // 7.2: lossless files wear the Lossless mark; Hi-Res Lossless once their header says more than 48 kHz.
+    if (lossless) {
+        com.ketvoice.app.ui.common.LosslessBadge(com.ketvoice.app.ui.common.rememberSavedGrade(trackId)
+            ?: com.ketvoice.app.ui.common.AudioGrade.Lossless, compact = true)
+        return
+    }
     val tone = if (lossless) theme.accent else theme.secondary
     Text(formatBadge(format), localize = false, color = tone,
         fontSize = 10.sp, fontWeight = FontWeight.Bold, maxLines = 1,
