@@ -199,8 +199,11 @@ private fun TabletArtwork(track: Track, canvas: String?, playing: Boolean, side:
                           travels: Boolean, reveal: () -> Float, dismissDrag: Modifier) {
     val shape = RoundedCornerShape(if (side >= 400.dp) 26.dp else 18.dp)
     val canvasLabel = AppText.t("Voir le Canvas en plein écran")
+    // The breathing artwork (7.3), as on the phone: smaller while paused, read in the layer.
+    val breath = rememberArtworkBreath(com.ketvoice.app.player.Player.state.collectAsState().value.playWhenReady)
     Box(Modifier.size(side)
         .then(if (travels) Modifier.travelFromMini({ AppUi.miniCoverBounds.value }, reveal) else Modifier)
+        .graphicsLayer { val s = pausedArtworkScale(breath.value); scaleX = s; scaleY = s }
         .shadow(28.dp, shape, ambientColor = Color.Black.copy(alpha = .5f), spotColor = Color.Black.copy(alpha = .5f))
         .clip(shape)
         .then(dismissDrag)

@@ -157,5 +157,10 @@
  "season-decor-{0}": "test tag of a seasonal theme's decor, never shown",
  "season-preview-{0}": "test tag of a seasonal theme's preview, never shown",
  "season_{0}_{1}": "drawable resource name of an optional seasonal picture, never shown",
- "Vice FM": "name of the Vice City theme's radio, the same in every language"
+ "Vice FM": "name of the Vice City theme's radio, the same in every language",
+ "Featured": "role name read from the catalogue's JSON (Deezer contributors), never shown",
+ "search-category-{0}": "test tag of a search category tile, never shown",
+ "search-recent-{0}": "test tag of a recently played title on the search page, never shown",
+ "{0} BPM": "tempo value in the credits sheet; BPM is the same unit in every language",
+ "{0} kb/s": "bitrate value in the credits sheet; a unit, the same in every language"
 }

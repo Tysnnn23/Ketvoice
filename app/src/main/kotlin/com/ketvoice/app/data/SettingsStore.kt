@@ -41,6 +41,7 @@ object SettingsStore {
         s.classicGradient.value = p.getBoolean("classicGradient", s.classicGradient.value)
         s.animatedArtwork.value = p.getBoolean("animatedArtwork", s.animatedArtwork.value)
         s.albumHeroCanvas.value = p.getBoolean("albumHeroCanvas", true)
+        s.albumHeader.value = runCatching { p.getInt("albumHeader", 0) }.getOrDefault(0).coerceIn(0, 2)
         s.glassStyle.value = p.getInt("glassStyle", 0).coerceIn(0, com.ketvoice.app.glass.GlassStyles.MAX)
         s.glassTintLevel.value = glassTintLevel(p)
         s.glassTinted.value = p.getBoolean("glassTinted", false)
@@ -201,6 +202,7 @@ object SettingsStore {
             .putBoolean("classicGradient", s.classicGradient.value)
             .putBoolean("animatedArtwork", s.animatedArtwork.value)
             .putBoolean("albumHeroCanvas", s.albumHeroCanvas.value)
+            .putInt("albumHeader", s.albumHeader.value.coerceIn(0, 2))
             .putInt("glassStyle", s.glassStyle.value)
             .putInt("glassTintLevel", com.ketvoice.app.glass.GlassClarity.sanitize(s.glassTintLevel.value))
             // The continuous tint of 5.x has been converted on loading; it is not written again.

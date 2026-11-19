@@ -16,6 +16,8 @@ object AppSettings {
     val animatedArtwork = mutableStateOf(true)
     /** Album/collection pages may show the album Canvas instead of the cover. */
     val albumHeroCanvas = mutableStateOf(true)
+    /** 7.3: album and playlist headers — 0 centred cover (default), 1 full-screen Canvas, 2 cover over the Canvas (ui/sub/AlbumHeader). */
+    val albumHeader = mutableStateOf(0)
     /** 0 clear optical glass, 1 frosted, 2 opaque accessibility material. */
     val glassStyle = mutableStateOf(0)
     /**

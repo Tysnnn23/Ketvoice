@@ -171,6 +171,9 @@ fun TrackMenuSheet(track: Track, onClose: () -> Unit) {
         MenuItemRow("Lancer la radio", androidx.compose.material.icons.Icons.Filled.Radio) {
             onClose(); Player.startRadio(track)
         }
+        MenuItemRow("À propos de ce titre", com.ketvoice.app.ui.common.KetIcons.Info) {
+            onClose(); com.ketvoice.app.ui.common.TrackCredits.open.value = track
+        }
         // A story card of the line being sung (if this title is playing), else of the title alone.
         val momentScope = androidx.compose.runtime.rememberCoroutineScope()
         val momentAccent = com.ketvoice.app.theme.rememberCoverAccent(cover)?.first

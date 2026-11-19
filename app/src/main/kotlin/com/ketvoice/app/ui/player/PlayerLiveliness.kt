@@ -178,3 +178,60 @@ internal object FlowBreath {
     /** The energy 0..1 a bass level brings: the quiet floor stays still. */
     fun energy(low: Float): Float = if (!low.isFinite()) 0f else ((low - .15f) / .85f).coerceIn(0f, 1f)
 }
+
+/**
+ * « Pochette qui respire » (7.3, Apple Music): paused, the artwork steps back gently, without a bounce; played again,
+ * it springs forward to full size with a small overshoot. The numbers apart so they can be checked.
+ */
+internal object ArtworkBreath {
+    /** The ease into the paused size. */
+    const val PAUSE_MS = 560
+    /** The spring back to full size: a little under-damped, so it lands with a soft overshoot. */
+    const val PLAY_DAMPING = .58f
+    const val PLAY_STIFFNESS = 300f
+
+    /** The pause amount to go to: none playing and none under reduced motion (the artwork then stays still). */
+    fun target(playWhenReady: Boolean, reduced: Boolean): Float = if (playWhenReady || reduced) 0f else 1f
+}
+
+/** The pause amount of the artwork (0 playing, 1 paused), for [pausedArtworkScale]; read it in a layer. */
+@Composable
+internal fun rememberArtworkBreath(playWhenReady: Boolean): androidx.compose.animation.core.Animatable<Float, androidx.compose.animation.core.AnimationVector1D> {
+    val paused = remember { androidx.compose.animation.core.Animatable(ArtworkBreath.target(playWhenReady, Motion.reduced)) }
+    LaunchedEffect(playWhenReady, Motion.reduced) {
+        val target = ArtworkBreath.target(playWhenReady, Motion.reduced)
+        when {
+            Motion.reduced -> paused.snapTo(target)
+            target > 0f -> paused.animateTo(target, tween(Motion.duration(ArtworkBreath.PAUSE_MS), easing = Motion.EASE_STANDARD))
+            else -> paused.animateTo(target, spring(ArtworkBreath.PLAY_DAMPING, ArtworkBreath.PLAY_STIFFNESS))
+        }
+    }
+    return paused
+}
+
+/**
+ * Like [rememberPlaybackClock], but the time slows to a stop when [running] ends and gathers speed again when it
+ * starts (over [easeMs]), so the player's colours never freeze or jump at a pause (7.3). Read in the draw phase.
+ */
+@Composable
+internal fun rememberEasedPlaybackClock(running: Boolean, every: Int, easeMs: Int = 1400): MutableFloatState {
+    val seconds = remember { mutableFloatStateOf(0f) }
+    val speed = remember { androidx.compose.animation.core.Animatable(if (running) 1f else 0f) }
+    LaunchedEffect(running) {
+        val target = if (running) 1f else 0f
+        if (Motion.reduced) speed.snapTo(target) else speed.animateTo(target, tween(Motion.duration(easeMs), easing = Motion.EASE_STANDARD))
+    }
+    LaunchedEffect(running, every) {
+        var last = 0L
+        var pending = 0f
+        var frame = 0
+        while (running || speed.value > 0f) {
+            androidx.compose.runtime.withFrameNanos { now ->
+                if (last != 0L) pending += ((now - last) / 1e9f).coerceIn(0f, .1f) * speed.value
+                last = now
+                if (frame++ % every == 0) { seconds.floatValue += pending; pending = 0f }
+            }
+        }
+    }
+    return seconds
+}

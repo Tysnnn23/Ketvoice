@@ -103,7 +103,6 @@ fun SearchScreen() {
     val art by ArtworkRepo.covers.collectAsState()
     val customSources by CustomSources.sources.collectAsState()
     val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
-    val recentQueries by SearchHistory.queries.collectAsState()
     var lastSubmitted by rememberSaveable { mutableStateOf("") }
     fun submitSearch(force: Boolean = false) {
         val q = query.trim()
@@ -226,8 +225,7 @@ fun SearchScreen() {
 
     // Wide: the query and the recent searches on the left, the results beside them (ui/adaptive/SearchPanes).
     com.ketvoice.app.ui.adaptive.SearchPanes(Modifier.fillMaxSize().pageBackground(th),
-        idle = query.trim().length < 2 && segment != 1, recent = recentQueries,
-        onRecent = { previous -> query = previous; SearchHistory.record(previous); YouTubeMusicSession.submitSearch(previous) },
+        idle = query.trim().length < 2 && segment == 0,
         head = {
         if (!layout.hasRail) {
             Row(
@@ -270,49 +268,26 @@ fun SearchScreen() {
                 if (segment == 1) {
                     SourcesCard()
                 } else {
-                    val favourites = com.ketvoice.app.data.ArtistPrefs.favourites
-                    if (favourites.isNotEmpty()) {
-                        com.ketvoice.app.ui.common.SectionHeader("Vos artistes favoris", Modifier.padding(horizontal = 20.dp, vertical = 6.dp))
-                        LazyRow(contentPadding = PaddingValues(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(18.dp),
-                            modifier = Modifier.testTag("search-favourite-artists")) {
-                            itemsIndexed(favourites, key = { _, a -> a.key }) { _, entry ->
-                                SearchArtistCircle(com.ketvoice.app.data.MusicArtist(entry.id, entry.name, entry.photo)) { origin ->
-                                    AppUi.openArtist(entry.id, entry.name, origin)
+                    // 7.3 (owner: « pas les recherches, je veux les sons écoutés en premier »): what was played last,
+                    // then the categories; the library scope keeps its one-line hint.
+                    if (segment == 2) Text("Recherchez dans vos téléchargements, playlists, fichiers locaux et titres écoutés.",
+                        color = th.secondary, modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp))
+                    // Your favourite artists sit between the titles played and the categories.
+                    else SearchStart(middle = {
+                            val favourites = com.ketvoice.app.data.ArtistPrefs.favourites
+                            if (favourites.isNotEmpty()) {
+                                com.ketvoice.app.ui.common.SectionHeader("Vos artistes favoris", Modifier.padding(horizontal = 20.dp, vertical = 6.dp))
+                                LazyRow(contentPadding = PaddingValues(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(18.dp),
+                                    modifier = Modifier.testTag("search-favourite-artists")) {
+                                    itemsIndexed(favourites, key = { _, a -> a.key }) { _, entry ->
+                                        SearchArtistCircle(com.ketvoice.app.data.MusicArtist(entry.id, entry.name, entry.photo)) { origin ->
+                                            AppUi.openArtist(entry.id, entry.name, origin)
+                                        }
+                                    }
                                 }
+                                Spacer(Modifier.height(16.dp))
                             }
-                        }
-                        Spacer(Modifier.height(16.dp))
-                    }
-                    com.ketvoice.app.ui.common.SectionHeader("Recherches récentes", Modifier.padding(horizontal = 20.dp))
-                    Spacer(Modifier.height(6.dp))
-                    if (recentQueries.isEmpty()) Text(
-                        if (segment == 2) "Recherchez dans vos téléchargements, playlists, fichiers locaux et titres écoutés."
-                        else "Vos recherches apparaîtront ici.",
-                        color = th.secondary,
-                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp)
-                    )
-                    if (recentQueries.isNotEmpty()) Text("Effacer l'historique", color = th.secondary,
-                        modifier = Modifier.clickable { SearchHistory.clear() }.padding(horizontal = 20.dp, vertical = 8.dp))
-                    recentQueries.forEach { previousQuery ->
-                        Row(
-                            Modifier
-                                .fillMaxWidth()
-                                .clickable(
-                                    interactionSource = remember { MutableInteractionSource() },
-                                    indication = null
-                                ) {
-                                    query = previousQuery
-                                    SearchHistory.record(previousQuery)
-                                    YouTubeMusicSession.submitSearch(previousQuery)
-                                }
-                                .padding(horizontal = 20.dp, vertical = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(Icons.Filled.Search, null, tint = th.secondary, modifier = Modifier.size(20.dp))
-                            Spacer(Modifier.width(12.dp))
-                            Text(previousQuery, localize = false, color = th.onBackground, fontSize = 16.sp)
-                        }
-                    }
+                    })
                 }
             }
 

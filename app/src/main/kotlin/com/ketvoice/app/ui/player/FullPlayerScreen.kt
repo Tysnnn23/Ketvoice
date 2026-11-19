@@ -376,12 +376,8 @@ fun FullPlayerScreen(
                     val artworkHeight = if (wide) safeHeight else tabletop?.sceneHeightDp?.dp ?: (safeHeight * .55f)
                     // Swipe the artwork sideways to change track; a vertical drag still closes the player.
                     val trackSwipe = rememberTrackSwipe()
-                    val pauseShrink = remember { androidx.compose.animation.core.Animatable(if (state.playWhenReady) 0f else 1f) }
-                    LaunchedEffect(state.playWhenReady, Motion.reduced) {
-                        val target = if (state.playWhenReady || Motion.reduced) 0f else 1f
-                        if (Motion.reduced) pauseShrink.snapTo(target)
-                        else pauseShrink.animateTo(target, androidx.compose.animation.core.spring(dampingRatio = .62f, stiffness = 260f))
-                    }
+                    // The breathing artwork (7.3): a gentle step back on pause, a spring forward on play.
+                    val pauseShrink = rememberArtworkBreath(state.playWhenReady)
                     // The living artwork: a pulse with the bass, read in the layer so that it never recomposes the page.
                     val living = AppSettings.livingArtwork.value && !Motion.reduced && !AppSettings.highPerformanceMode.value && state.isPlaying
                     val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle

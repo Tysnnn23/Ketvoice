@@ -85,12 +85,20 @@ internal fun CollectionHero(
     titleSlot: (@Composable (centred: Boolean) -> Unit)? = null,
     /** While the page scrolls, 0 → 1: the artwork and the words shrink and clear over the colours that stay. Read in a layer. */
     shrink: (() -> Float)? = null,
+    /** 7.3: the artwork's own colour for its soft shadow (Apple Music); black when unknown. */
+    shadowTint: Color? = null,
+    /** False when something else (a Canvas) already fills the space behind the header. */
+    ambient: Boolean = true,
     artwork: @Composable BoxScope.() -> Unit,
     actions: @Composable ColumnScope.() -> Unit
 ) {
     val theme = LocalTheme.current
     val density = LocalDensity.current
-    CollectionAmbient(cover, modifier.fillMaxWidth(), bleed = bleed) {
+    val behind: @Composable (@Composable BoxScope.() -> Unit) -> Unit = { body ->
+        if (ambient) CollectionAmbient(cover, modifier.fillMaxWidth(), bleed = bleed, content = body)
+        else Box(modifier.fillMaxWidth(), content = body)
+    }
+    behind {
         BoxWithConstraints(Modifier.fillMaxWidth().then(if (shrink == null) Modifier else Modifier.graphicsLayer {
             val c = shrink().let { if (it.isFinite()) it.coerceIn(0f, 1f) else 0f }
             val scale = heroShrinkScale(c)
@@ -110,8 +118,9 @@ internal fun CollectionHero(
             val frame: @Composable () -> Unit = {
                 Box(Modifier.size(side).zoomTarget(zoom)
                     .graphicsLayer { scaleX = entry.value; scaleY = entry.value; alpha = zoom.alpha() }
-                    .shadow(if (side < 140.dp) 10.dp else 26.dp, shape, ambientColor = Color.Black.copy(alpha = .40f),
-                        spotColor = Color.Black.copy(alpha = .55f))
+                    .shadow(if (side < 140.dp) 10.dp else if (shadowTint != null) 34.dp else 26.dp, shape,
+                        ambientColor = (shadowTint ?: Color.Black).copy(alpha = if (shadowTint != null) .60f else .40f),
+                        spotColor = (shadowTint ?: Color.Black).copy(alpha = if (shadowTint != null) .85f else .55f))
                     .clip(shape).background(theme.card)
                     .then(if (artworkTag != null) Modifier.testTag(artworkTag) else Modifier),
                     contentAlignment = Alignment.Center, content = artwork)

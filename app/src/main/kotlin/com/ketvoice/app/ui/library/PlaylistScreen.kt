@@ -49,6 +49,7 @@ import com.ketvoice.app.ui.common.*
 import com.ketvoice.app.ui.settings.SettingsAction
 import com.ketvoice.app.ui.settings.SettingsSheet
 import com.ketvoice.app.ui.motion.zoomTarget
+import com.ketvoice.app.ui.sub.HeaderCanvasBackdrop
 import kotlinx.coroutines.launch
 
 /** The playlist page, worked out without a screen. */
@@ -314,12 +315,20 @@ private fun PlaylistHeader(playlist: LocalPlaylist, playable: List<Track>, owner
         AppText.t("${playable.size} / ${playlist.entries.size} titres disponibles").takeIf { playable.size < playlist.entries.size })
         .joinToString(" · ")
     val zoom = com.ketvoice.app.ui.motion.rememberZoomTarget(12.dp)
+    // 7.3 (ui/sub/AlbumHeader): the first title's Canvas behind the header when the listener chose it, and the
+    // artwork's own colour for its soft shadow.
+    val lead = playable.firstOrNull()
+    val canvas = com.ketvoice.app.ui.sub.rememberHeaderCanvas(lead).takeIf { !beside }
+    val style = com.ketvoice.app.ui.sub.AlbumHeader.style(AppSettings.albumHeader.value, canvas != null && lead != null)
+    val leadCover = lead?.let { ArtworkRepo.coverForTrack(it) ?: it.coverUrl }
+    val tint = com.ketvoice.app.theme.rememberCoverAccent(leadCover)?.first ?: Color.Black
     val artwork: @Composable () -> Unit = {
         val shape = RoundedCornerShape(if (side < 140.dp) 8.dp else 12.dp)
-        Box(Modifier.size(side).zoomTarget(zoom)
+        if (style == com.ketvoice.app.ui.sub.HeaderStyle.Canvas) Spacer(Modifier.size(side * 1.12f).testTag("playlist-canvas-space"))
+        else Box(Modifier.size(side).zoomTarget(zoom)
             .graphicsLayer { alpha = zoom.alpha() }
-            .shadow(if (side < 140.dp) 8.dp else 22.dp, shape, ambientColor = Color.Black.copy(alpha = .22f),
-                spotColor = Color.Black.copy(alpha = .32f))
+            .shadow(if (side < 140.dp) 8.dp else 30.dp, shape, ambientColor = tint.copy(alpha = if (tint == Color.Black) .22f else .55f),
+                spotColor = tint.copy(alpha = if (tint == Color.Black) .32f else .80f))
             .testTag("playlist-cover")) {
             PlaylistArtwork(playlist, playlist.name, Modifier.fillMaxSize(), if (side < 140.dp) 8.dp else 12.dp)
         }
@@ -352,7 +361,12 @@ private fun PlaylistHeader(playlist: LocalPlaylist, playable: List<Track>, owner
             Spacer(Modifier.height(if (side < 140.dp) 10.dp else 18.dp))
             actions(Modifier.widthIn(max = 420.dp))
         }
-    } else Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(top = 6.dp, bottom = 20.dp).testTag("playlist-header"),
+    } else Box(Modifier.fillMaxWidth()) {
+        if (canvas != null && lead != null && style != com.ketvoice.app.ui.sub.HeaderStyle.Cover) 
+            HeaderCanvasBackdrop(lead, canvas,
+                WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 64.dp,
+                if (style == com.ketvoice.app.ui.sub.HeaderStyle.Canvas) .50f else .40f)
+        Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(top = 6.dp, bottom = 20.dp).testTag("playlist-header"),
         horizontalAlignment = Alignment.CenterHorizontally) {
         artwork()
         Text(playlist.name, localize = false, color = th.onBackground, fontSize = 24.sp, lineHeight = 29.sp, fontWeight = FontWeight.Bold,
@@ -367,6 +381,7 @@ private fun PlaylistHeader(playlist: LocalPlaylist, playable: List<Track>, owner
         note(TextAlign.Center)
         Spacer(Modifier.height(18.dp))
         actions(Modifier.widthIn(max = 520.dp))
+    }
     }
 }
 

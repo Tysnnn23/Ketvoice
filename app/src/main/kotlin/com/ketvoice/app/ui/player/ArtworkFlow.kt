@@ -103,8 +103,9 @@ internal fun ArtworkFlowBackground(url: String?, playing: Boolean, modifier: Mod
     val moving = playing && !Motion.reduced && !com.ketvoice.app.BuildConfig.IS_QUEST
     // The performance mode keeps the colours moving, at a quarter of the frames.
     val every = if (AppSettings.highPerformanceMode.value) 4 else 2
-    // The clock only runs while a title plays: paused, the colours hold still where they were.
-    val seconds = rememberPlaybackClock(moving, every)
+    // The clock runs while a title plays: paused, the colours slow down and hold where they were.
+    // 7.3: at a pause they slow to a stop instead of freezing, and gather speed again on play.
+    val seconds = rememberEasedPlaybackClock(moving, every)
     val energy = rememberFlowBreath(moving)
     val shown = fields.shown ?: return
     Canvas(modifier.fillMaxSize()) {

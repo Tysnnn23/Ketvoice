@@ -22,7 +22,7 @@ object CatalogRepo {
     private var genreCache: List<CatalogGenre> = emptyList()
     private var chartCache: Pair<Long, CatalogChart>? = null
     private const val CHART_TTL_MS = 30 * 60_000L
-    private fun get(path: String): JSONObject? {
+    internal fun get(path: String): JSONObject? {
         var c: HttpURLConnection? = null
         return try {
             c = URL(ProviderConfig.publicUrl("https://api.deezer.com/$path") ?: return null).openConnection() as HttpURLConnection

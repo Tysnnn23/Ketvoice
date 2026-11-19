@@ -180,6 +180,7 @@ internal fun ContextMenuHost(modifier: Modifier = Modifier) {
         MenuAction("Partager", KetIcons.Share) { com.ketvoice.app.util.ShareLinks.shareTrack(context, track) },
         // The Ketmix DJ editor (6.1): where this title is left and entered in a mix.
         MenuAction("Point de mix…", KetIcons.Sliders) { com.ketvoice.app.ui.player.KetmixEditor.openFor(track) },
+        MenuAction("À propos de ce titre", KetIcons.Info) { TrackCredits.open.value = track },
         MenuAction("Plus", KetIcons.More) { AppUi.trackMenuTrack.value = track })
     val closeLabel = AppText.t("Fermer")
     BoxWithConstraints(modifier.fillMaxSize().testTag("context-menu")) {

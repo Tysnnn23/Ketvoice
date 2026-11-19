@@ -305,6 +305,11 @@ fun SettingsScreen() {
                 SToggle(KetIcons.Canvas, "Canvas sur les pages d'album",
                     "Affiche la vidéo de l'album à la place de la pochette, en plein cadre. Indépendant du Canvas du lecteur.",
                     AppSettings.albumHeroCanvas.value) { AppSettings.albumHeroCanvas.value = it; SettingsStore.save() }
+                // 7.3: how album and playlist pages open; a page without a Canvas always shows the centred cover.
+                SRow(KetIcons.Album, "En-tête des albums et playlists", sub = "Sans Canvas, la pochette centrée s'affiche",
+                    value = com.ketvoice.app.ui.sub.AlbumHeader.LABELS[AppSettings.albumHeader.value.coerceIn(0, 2)]) {
+                    AppSettings.albumHeader.value = (AppSettings.albumHeader.value + 1) % 3; SettingsStore.save()
+                }
                 SToggle(KetIcons.Canvas, "Fond animé du lecteur",
                     "Dégradé lent aux couleurs de la pochette derrière le lecteur, qui suit doucement la musique",
                     AppSettings.meshBackground.value) { AppSettings.meshBackground.value = it; SettingsStore.save() }
