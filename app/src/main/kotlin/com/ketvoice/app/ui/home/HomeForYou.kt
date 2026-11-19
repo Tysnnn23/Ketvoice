@@ -48,7 +48,8 @@ internal fun EditorialHeader(title: String, modifier: Modifier = Modifier, subti
                              trailing: (@Composable () -> Unit)? = null) {
     val theme = LocalTheme.current
     // Ket 27: the header rises into place as it comes up from the bottom of the window.
-    Row(modifier.fillMaxWidth().headerReveal().padding(start = com.ketvoice.app.ui.common.pageMargin, end = 8.dp, top = 26.dp, bottom = 12.dp)
+    Row(modifier.fillMaxWidth().headerReveal().padding(start = com.ketvoice.app.ui.common.pageMargin, end = 8.dp,
+        top = com.ketvoice.app.theme.Ket27.Space.sectionTop, bottom = com.ketvoice.app.theme.Ket27.Space.sectionBottom)
         .then(if (onMore != null) Modifier.clip(RoundedCornerShape(12.dp)).clickable(role = Role.Button, onClick = onMore) else Modifier),
         verticalAlignment = Alignment.CenterVertically) {
         // The title and its chevron take what the trailing button leaves: the button stays at the end of the line
@@ -56,7 +57,7 @@ internal fun EditorialHeader(title: String, modifier: Modifier = Modifier, subti
         Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f, fill = false)) {
                 com.ketvoice.app.ui.common.SectionHeader(title)
-                if (subtitle != null) Text(subtitle, color = theme.secondary, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp))
+                if (subtitle != null) Text(subtitle, color = theme.secondary, style = com.ketvoice.app.theme.Ket27.Type.footnote, modifier = Modifier.padding(top = 2.dp))
             }
             if (onMore != null) Icon(KetIcons.ChevronRight, null, tint = theme.secondary,
                 modifier = Modifier.padding(start = 4.dp).size(20.dp).testTag("editorial-more"))
@@ -209,14 +210,15 @@ private fun ForYouCard(label: String, title: String, subtitle: String, covers: L
 internal fun HomeReleasesShelf(releases: List<CatalogAlbum>, modifier: Modifier = Modifier) {
     val theme = LocalTheme.current
     Column(modifier.testTag("home-releases")) {
-        EditorialHeader("Sorties de vos artistes", subtitle = "Les nouveautés de ceux que vous écoutez le plus")
+        // 7.0: the artists the listener follows first, then those played most (HomeReleases.watched).
+        EditorialHeader("Nouveautés de vos artistes")
         val cell = com.ketvoice.app.ui.adaptive.shelfCell(156.dp, com.ketvoice.app.ui.common.pageMargin, HomeLayout.gap)
         HomeRow {
             items(releases, key = { it.id }) { album ->
                 Column(Modifier.width(cell).clip(RoundedCornerShape(14.dp)).clickable(role = Role.Button) {
                     AppUi.openCatalog(CatalogRequest("album", album.id, album.title))
                 }.padding(bottom = 4.dp)) {
-                    Cover(album.title, com.ketvoice.app.data.MediaOverrides.albumCover(album.title, album.artist, album.cover), cell, 16.dp)
+                    Cover(album.title, com.ketvoice.app.data.MediaOverrides.albumCover(album.title, album.artist, album.cover), cell, com.ketvoice.app.theme.Ket27.Radius.artwork)
                     Text(album.title, localize = false, color = theme.onBackground, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
                         maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))
                     Text(listOfNotNull(album.artist, album.releaseDate?.take(4)).joinToString(" · "), localize = false,

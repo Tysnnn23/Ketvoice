@@ -41,4 +41,28 @@ class HomePersonalTest {
         assertEquals("En boucle", mixTitle(MixCard("repeat", MixKind.OnRepeat, null, emptyList())))
         assertEquals("À redécouvrir", mixTitle(MixCard("rediscover", MixKind.Rediscover, null, emptyList())))
     }
+
+    // 7.0 « Pour toi »
+    private fun mood(m: com.ketvoice.app.smartlib.Mood, n: Int = 3) = com.ketvoice.app.smartlib.MoodMix(m,
+        (1..n).map { com.ketvoice.app.data.Track("${m.name}$it", "T$it", "A$it", "Al") })
+
+    @Test fun theAmbiancesFollowTheHour() {
+        val all = com.ketvoice.app.smartlib.Mood.values().map { mood(it) }
+        assertEquals(com.ketvoice.app.smartlib.Mood.Energy, moodsForHour(8, all).first().mood)
+        assertEquals(com.ketvoice.app.smartlib.Mood.Focus, moodsForHour(14, all).first().mood)
+        assertEquals(com.ketvoice.app.smartlib.Mood.Party, moodsForHour(20, all).first().mood)
+        assertEquals(com.ketvoice.app.smartlib.Mood.Calm, moodsForHour(2, all).first().mood)
+        assertEquals("every ambiance stays", all.size, moodsForHour(2, all).size)
+        assertTrue("an empty ambiance is not shown", moodsForHour(8, listOf(mood(com.ketvoice.app.smartlib.Mood.Energy, 0))).isEmpty())
+    }
+
+    @Test fun theNewReleasesWatchTheFollowedArtistsFirst() {
+        val followed = listOf(com.ketvoice.app.data.ArtistPrefs.Entry("Nova", "UC1"), com.ketvoice.app.data.ArtistPrefs.Entry("Alpha"))
+        val top = listOf(com.ketvoice.app.data.PersonalMixes.ArtistTaste("alpha", 9, emptyList()),
+            com.ketvoice.app.data.PersonalMixes.ArtistTaste("Beta", 4, emptyList()),
+            com.ketvoice.app.data.PersonalMixes.ArtistTaste("Once", 1, emptyList()))
+        val watched = com.ketvoice.app.data.HomeReleases.watched(followed, top)
+        assertEquals(listOf("Nova", "Alpha", "Beta"), watched.map { it.name })
+        assertEquals("UC1", watched.first().catalogId)
+    }
 }

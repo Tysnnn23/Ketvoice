@@ -148,13 +148,22 @@ class ScreensRedoHostTest {
             compose.setContent { KetvoiceTheme(useDark = true) { com.ketvoice.app.ui.home.HomeScreen() } }
             compose.onNodeWithTag("home-greeting").assertIsDisplayed()
             compose.onNodeWithTag("home-inline-title").assertDoesNotExist()
-            // The owner removed the For you card and the shortcut tiles (5.9.0): they stay away.
+            // 7.0 « Pour toi »: under the greeting, what was playing and the mix of the day, as two large cards.
+            compose.onNodeWithTag("home-resume").assertIsDisplayed()
+            compose.onNodeWithTag("home-resume-play", useUnmergedTree = true).assertHasClickAction()
+            compose.onNodeWithTag("home-daily-mix").assertIsDisplayed()
+            val resume = compose.onNodeWithTag("home-resume").fetchSemanticsNode().boundsInRoot
+            val daily = compose.onNodeWithTag("home-daily-mix").fetchSemanticsNode().boundsInRoot
+            assertEquals("aligned with the page's margin", 16f, resume.left, 1f)
+            assertEquals("the whole width of the page", 400f - 32f, daily.width, 1f)
+            assertTrue("stacked on a phone", daily.top >= resume.bottom)
+            // The old For you card (removed in 5.9.0) and the shortcut tiles stay away.
             compose.onNodeWithTag("for-you-mix").assertDoesNotExist()
             compose.onNodeWithTag("for-you-resume").assertDoesNotExist()
             compose.onAllNodesWithTag("home-shortcut").assertCountEquals(0)
             image("redo-home-top-dark")
-            // Scrolled to the mixes, the greeting has left: the bar names the page in small.
-            compose.onNodeWithTag("home-list").performScrollToIndex(3)
+            // Scrolled to the other mixes, the greeting has left: the bar names the page in small.
+            compose.onNodeWithTag("home-list").performScrollToNode(hasTestTag("home-mixes"))
             compose.onNodeWithTag("home-inline-title").assertExists()
             val card = compose.onAllNodesWithTag("home-mix").onFirst().fetchSemanticsNode().boundsInRoot
             assertEquals("a large card", com.ketvoice.app.ui.home.HomeLayout.featureWidth.value, card.width, 1f)
@@ -163,6 +172,7 @@ class ScreensRedoHostTest {
             image("redo-home-mixes-dark")
             compose.onNodeWithTag("home-list").performScrollToNode(hasTestTag("home-recent-carousel"))
             compose.onNodeWithTag("home-recent-carousel").assertIsDisplayed()
+            image("redo-home-recents-dark")
         } finally { known.value = emptyList(); recent.value = emptyList(); counts.value = emptyMap() }
     }
 
@@ -170,9 +180,54 @@ class ScreensRedoHostTest {
         history()
         try {
             compose.setContent { KetvoiceTheme(useDark = false) { com.ketvoice.app.ui.home.HomeScreen() } }
-            compose.onNodeWithTag("home-list").performScrollToIndex(3)
+            compose.onNodeWithTag("home-resume").assertIsDisplayed()
+            image("redo-home-top-light")
+            compose.onNodeWithTag("home-list").performScrollToNode(hasTestTag("home-mixes"))
             image("redo-home-mixes-light")
         } finally { known.value = emptyList(); recent.value = emptyList(); counts.value = emptyMap() }
+    }
+
+    @Test fun theResumeCardTakesUpTheTitlePlayingAndNamesItsAction() {
+        history()
+        val tracks = recent.value
+        player.value = PlayerUiState(queue = tracks, queueEntryIds = tracks.map { it.id }, index = 2, isPlaying = false, durationMs = 200_000)
+        try {
+            compose.setContent { KetvoiceTheme(useDark = true) { com.ketvoice.app.ui.home.HomeScreen() } }
+            compose.onNode(hasText(tracks[2].title) and hasAnyAncestor(hasTestTag("home-resume")), useUnmergedTree = true).assertIsDisplayed()
+            compose.onNodeWithTag("home-resume-progress", useUnmergedTree = true).assertExists()
+            compose.onNode(hasText("Reprendre") and hasAnyAncestor(hasTestTag("home-resume")), useUnmergedTree = true).assertExists()
+            assertEquals("Pause", com.ketvoice.app.ui.home.resumeAction(live = true, playing = true))
+            assertEquals("Reprendre", com.ketvoice.app.ui.home.resumeAction(live = false, playing = false))
+        } finally { known.value = emptyList(); recent.value = emptyList(); counts.value = emptyMap() }
+    }
+
+    @Test @Config(qualifiers = "w1280dp-h800dp-land-mdpi")
+    fun homeForYouSetsItsTwoCardsSideBySideOnALandscapeTablet() {
+        history()
+        // The smart library's ambiances, as it builds them from what is on the device.
+        com.ketvoice.app.ui.smartlib.SmartLibrary.setMixesForTests(listOf(com.ketvoice.app.smartlib.Mood.Calm,
+            com.ketvoice.app.smartlib.Mood.Energy, com.ketvoice.app.smartlib.Mood.Focus, com.ketvoice.app.smartlib.Mood.Party)
+            .map { mood -> com.ketvoice.app.smartlib.MoodMix(mood, recent.value.take(4)) })
+        try {
+            compose.setContent {
+                KetvoiceTheme(useDark = true) {
+                    androidx.compose.runtime.CompositionLocalProvider(
+                        com.ketvoice.app.ui.adaptive.LocalAdaptiveLayout provides com.ketvoice.app.ui.adaptive.AdaptiveLayout(1280f, 800f)) {
+                        com.ketvoice.app.ui.home.HomeScreen()
+                    }
+                }
+            }
+            val resume = compose.onNodeWithTag("home-resume").fetchSemanticsNode().boundsInRoot
+            val daily = compose.onNodeWithTag("home-daily-mix").fetchSemanticsNode().boundsInRoot
+            assertEquals("side by side", resume.top, daily.top, 1f)
+            assertEquals("the same height", resume.height, daily.height, 1f)
+            assertTrue(daily.left > resume.right)
+            compose.onNodeWithTag("home-moods").assertExists()
+            image("redo-home-tablet-landscape-dark")
+        } finally {
+            known.value = emptyList(); recent.value = emptyList(); counts.value = emptyMap()
+            com.ketvoice.app.ui.smartlib.SmartLibrary.setMixesForTests(emptyList())
+        }
     }
 
     @Test fun theTitleHandoverAndTheHeaderRiseFollowTheScroll() {

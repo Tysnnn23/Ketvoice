@@ -150,7 +150,7 @@ private fun Shortcut(tile: ShortcutTile, modifier: Modifier) {
  * reshuffled at the next launch.
  */
 @Composable
-internal fun HomeMixes(modifier: Modifier = Modifier) {
+internal fun HomeMixes(modifier: Modifier = Modifier, exclude: String? = null) {
     val known by ListeningHistory.knownTracks.collectAsState()
     val recent by ListeningHistory.tracks.collectAsState()
     val counts by ListeningHistory.playCounts.collectAsState()
@@ -158,7 +158,7 @@ internal fun HomeMixes(modifier: Modifier = Modifier) {
     val blockedArtists = com.ketvoice.app.data.ArtistPrefs.blocked
     val cards = remember(known, recent, counts, favorites, blockedArtists) {
         PersonalMixes.propose(known.filter(com.ketvoice.app.data.ArtistPrefs::allows), recent.filter(com.ketvoice.app.data.ArtistPrefs::allows), counts, favorites)
-    }
+    }.filter { it.id != exclude }
     if (cards.isEmpty()) return
     Column(modifier.testTag("home-mixes")) {
         EditorialHeader("Vos mix", subtitle = "Composés d'après vos écoutes")

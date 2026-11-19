@@ -88,7 +88,7 @@ fun HomeScreen() {
     val shelfRows = remember(shelves, leadId) {
         val seen = mutableSetOf<String>().apply { leadId?.let(::add) }
         shelves.map { shelf -> shelf to shelf.tracks.filter { seen.add(it.id) } }
-            .filter { it.second.isNotEmpty() }.take(3)
+            .filter { it.second.isNotEmpty() }.take(2)
     }
     LaunchedEffect(Unit) { HomeFeed.start(context); HomeLearning.init(context) }
     // New releases of the artists played most: loaded beside the page, never blocking it.
@@ -100,6 +100,14 @@ fun HomeScreen() {
         loadedReleases = runCatching { HomeReleases.load(known, counts, AppSettings.favoriteIds.value) }.getOrDefault(emptyList())
     }
     val learned = HomeLearning.scores
+    // « Mix du jour »: the personal mix that suits the hour (computed from ListeningHistory, as the mix row is).
+    val favorites = AppSettings.favoriteIds.value
+    val daily = remember(known, recent, counts, favorites, blockedArtists, hour) {
+        mixForHour(hour, PersonalMixes.propose(known.filter(com.ketvoice.app.data.ArtistPrefs::allows),
+            recent.filter(com.ketvoice.app.data.ArtistPrefs::allows), counts, favorites))
+    }
+    // Large windows (LargeScreen.isLarge: the window, not the device) set the two lead cards side by side.
+    val wide = com.ketvoice.app.ui.adaptive.LargeScreen.isLarge(layout.widthDp, layout.heightDp, com.ketvoice.app.BuildConfig.IS_QUEST)
     LaunchedEffect(recent) { ArtworkRepo.enrich(recent.take(20)) }
     // Ket 27: the large title hands over to a small one in the bar as the page scrolls (read in layers only).
     val handover = with(androidx.compose.ui.platform.LocalDensity.current) { HomeLayout.titleHandover.toPx() }
@@ -146,10 +154,18 @@ fun HomeScreen() {
             }
             // What another of the listener's devices plays, to resume here (signed in only).
             item(key = "resume-elsewhere") { ResumeElsewhereBanner() }
+            // 7.0 « Pour toi »: what was playing and the mix of the day, as two large calm cards.
+            item(key = "for-you") {
+                HomeForYouLead(recent, hasResume = playingId != null || recent.isNotEmpty(), daily = daily, wide = wide)
+            }
             // The Vice City edition's one illustration, on its radio's card, while the theme is on.
             if (theme.viceCity) item(key = "vicefm") { com.ketvoice.app.ui.vicecity.ViceFmCard() }
-            // The owner removed the large For you card and the four shortcut tiles (5.9.0): the page goes
-            // from the greeting straight to what was played last. Votre semaine stays further down.
+            // The ambiances of the smart library, in the order that suits the hour.
+            item(key = "moods") { HomeMoods(hour) }
+            // New releases of the artists followed and played most: a fixed place now, right under the moods.
+            if (releases.isNotEmpty()) item(key = "home-releases") {
+                HomeReleasesShelf(releases, Modifier.learnsOpens(HomeBlock.Releases.learningKey))
+            }
             // What was played last, within a thumb's reach: tiles to start again from, or large covers.
             item(key = "recent-heading") {
                 EditorialHeader("Récents", onMore = if (recent.isNotEmpty()) ({
@@ -183,25 +199,25 @@ fun HomeScreen() {
                     }
                 }
             }
-            // The week's discoveries (6.1): renewed every Monday, right under what was played last.
+            // The week's discoveries (6.1): renewed every Monday.
             item(key = "discoveries") { HomeDiscoveries() }
             // What the public profiles the listener follows published and listened to (signed in, once there is some).
             item(key = "friends") { com.ketvoice.app.ui.friends.FriendsHomeSection() }
+            // The other personal mixes (the mix of the day leads the page).
+            item(key = "mixes") { HomeMixes(Modifier.padding(bottom = 6.dp), exclude = daily?.first?.id) }
+            item(key = "week") { HomeWeekCard() }
+            item(key = "replay") { HomeReplayLink() }
             if (playlists.any { it.pinned }) item(key = "pinned") {
                 EditorialHeader("Épinglés", onMore = { AppUi.selectTab(AppUi.LIBRARY) })
                 PlaylistShelf(playlists.filter { it.pinned })
             }
-            // Personal mixes appear once enough music has been played, and rotate at each launch.
-            item(key = "mixes") { HomeMixes(Modifier.padding(bottom = 6.dp)) }
-            item(key = "week") { HomeWeekCard() }
-            item(key = "replay") { HomeReplayLink() }
             // The first personal shelf always leads; the album row and the other shelves
             // take turns from one launch to the next, and never move while browsing.
-            homeBlockOrder(PersonalMixes.sessionSeed, shelfRows.size, albums.isNotEmpty(), releases.isNotEmpty(), learned).forEach { block ->
+            // Fewer sections fighting for attention (7.0): the catalogue's albums and two shelves close the page.
+            homeBlockOrder(PersonalMixes.sessionSeed, shelfRows.size, albums.isNotEmpty(), false, learned).forEach { block ->
                 when (block) {
-                    HomeBlock.Releases -> item(key = "home-releases") {
-                        HomeReleasesShelf(releases, Modifier.learnsOpens(block.learningKey))
-                    }
+                    // Placed under the moods since 7.0, never rotated.
+                    HomeBlock.Releases -> Unit
                     HomeBlock.Albums -> if (albums.isNotEmpty()) item(key = "home-albums") {
                         Column(Modifier.learnsOpens(block.learningKey)) {
                         EditorialHeader("Albums du catalogue", onMore = { AppUi.selectTab(AppUi.EXPLORER) })
@@ -209,11 +225,11 @@ fun HomeScreen() {
                         HomeRow {
                             itemsIndexed(albums, key = { _, album -> album.id }) { _, album ->
                                 val albumCover = com.ketvoice.app.data.MediaOverrides.albumCover(album.title, album.artist, album.coverUrl)
-                                val zoom = com.ketvoice.app.ui.motion.rememberZoomSource(albumCover, 16.dp)
+                                val zoom = com.ketvoice.app.ui.motion.rememberZoomSource(albumCover, com.ketvoice.app.theme.Ket27.Radius.artwork)
                                 Column(Modifier.width(cell).clickable {
                                     zoom.openCatalog(CatalogRequest("album", album.id, album.title))
                                 }) {
-                                    Cover(album.title, albumCover, cell, 16.dp, modifier = com.ketvoice.app.ui.motion.zoomSourceOf(zoom))
+                                    Cover(album.title, albumCover, cell, com.ketvoice.app.theme.Ket27.Radius.artwork, modifier = com.ketvoice.app.ui.motion.zoomSourceOf(zoom))
                                     Text(album.title, localize = false, color = theme.onBackground, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
                                         maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))
                                     Text(album.artist, localize = false, color = theme.secondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -270,17 +286,17 @@ private fun RecentCover(track: Track, side: androidx.compose.ui.unit.Dp, active:
     val menuAnchor = com.ketvoice.app.ui.common.rememberRowAnchor()
     val theme = LocalTheme.current
     val cover = com.ketvoice.app.ui.common.rememberTrackCover(track)
-    val glow = com.ketvoice.app.theme.rememberCoverTone(cover) ?: theme.onBackground
-    val shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
+    val shape = androidx.compose.foundation.shape.RoundedCornerShape(com.ketvoice.app.theme.Ket27.Radius.artwork)
     val options = AppText.t("Options de ${track.title}")
     val haptic = com.ketvoice.app.ui.motion.rememberHaptics()
     Column(Modifier.width(side).then(menuAnchor.modifier).clip(androidx.compose.foundation.shape.RoundedCornerShape(18.dp))
         .combinedClickable(role = androidx.compose.ui.semantics.Role.Button, onLongClickLabel = options,
             onLongClick = { haptic(com.ketvoice.app.ui.motion.Haptics.Kind.Tick); menuAnchor.open(track) }, onClick = onPlay)
         .testTag("home-recent")) {
-        Box(Modifier.size(side).shadow(if (theme.isDark) 18.dp else 10.dp, shape, clip = false,
-            ambientColor = glow, spotColor = glow)) {
-            com.ketvoice.app.ui.common.DownloadCover(track, cover, side, 16.dp)
+        // 7.0: a soft neutral shadow under the cover (a halo of its own colour read as a glow); none on black.
+        Box(Modifier.size(side).then(if (theme.isDark) Modifier else Modifier.shadow(6.dp, shape, clip = false,
+            ambientColor = Color.Black.copy(alpha = .18f), spotColor = Color.Black.copy(alpha = .22f)))) {
+            com.ketvoice.app.ui.common.DownloadCover(track, cover, side, com.ketvoice.app.theme.Ket27.Radius.artwork)
             // A thin light rim: the cover reads as an object on a dark page.
             Box(Modifier.matchParentSize().border(.8.dp, Color.White.copy(alpha = if (theme.isDark) .10f else .0f), shape))
             if (active) Box(Modifier.align(Alignment.BottomStart).padding(8.dp).clip(androidx.compose.foundation.shape.CircleShape)
@@ -306,13 +322,13 @@ private fun TrackCarousel(tracks: List<Track>) {
     HomeRow {
         itemsIndexed(tracks, key = { _, t -> t.id }) { i, track ->
             Column(Modifier.width(cell).clickable { Player.playQueue(tracks, i) }) {
-                com.ketvoice.app.ui.common.DownloadCover(track, com.ketvoice.app.ui.common.rememberTrackCover(track), cell, 16.dp)
+                com.ketvoice.app.ui.common.DownloadCover(track, com.ketvoice.app.ui.common.rememberTrackCover(track), cell, com.ketvoice.app.theme.Ket27.Radius.artwork)
                 Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(track.title, localize = false, color = theme.onBackground, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
                         maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                     val menuAnchor = com.ketvoice.app.ui.common.rememberRowAnchor()
                     Box(Modifier.size(DesignTokens.Space.touch).then(menuAnchor.modifier).clickable { menuAnchor.open(track) }, contentAlignment = Alignment.Center) {
-                        Icon(Icons.Filled.MoreVert, "Options de ${track.title}", tint = theme.secondary, modifier = Modifier.size(22.dp))
+                        Icon(com.ketvoice.app.ui.common.KetIcons.More, "Options de ${track.title}", tint = theme.secondary, modifier = Modifier.size(22.dp))
                     }
                 }
                 Text(track.artist, localize = false, color = theme.secondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)

@@ -54,7 +54,7 @@ object HomeReleases {
 
     suspend fun load(known: List<Track>, counts: Map<String, Int>, favorites: Set<String>,
                      nowMs: Long = System.currentTimeMillis()): List<CatalogAlbum> {
-        val artists = PersonalMixes.topArtists(known, counts, favorites).filter { it.plays >= 2 }.take(6)
+        val artists = watched(ArtistPrefs.favourites, PersonalMixes.topArtists(known, counts, favorites))
         val key = artists.map { it.name.lowercase() }
         cache?.takeIf { nowMs - it.first in 0..TTL_MS && key == cacheKey }?.let { return it.second }
         val found = artists.flatMap { artist ->
@@ -64,6 +64,15 @@ object HomeReleases {
         cache = nowMs to result; cacheKey = key
         return result
     }
+
+    /**
+     * 7.0 « Nouveautés de vos artistes »: the artists the listener follows (the ones ReleaseWatch watches)
+     * come first, then those played most; eight at most, each once.
+     */
+    internal fun watched(followed: List<ArtistPrefs.Entry>, top: List<PersonalMixes.ArtistTaste>): List<PersonalMixes.ArtistTaste> =
+        (followed.take(4).map { PersonalMixes.ArtistTaste(it.name, plays = 0, tracks = emptyList(), catalogId = it.id.ifBlank { null }) } +
+            top.filter { it.plays >= 2 }.take(6))
+            .filter { it.name.isNotBlank() }.distinctBy { it.name.lowercase() }.take(8)
 
     /** Newest first, at most one year old, no album twice, ten at most. */
     internal fun newest(albums: List<CatalogAlbum>, today: java.time.LocalDate): List<CatalogAlbum> {

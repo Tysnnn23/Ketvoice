@@ -1,0 +1,38 @@
+{
+ "Mix du jour": {
+  "en": "Mix of the day",
+  "hi": "आज का मिक्स",
+  "ja": "今日のミックス",
+  "zh": "今日混音",
+  "ru": "Микс дня",
+  "it": "Mix del giorno",
+  "es": "Mix del día",
+  "de": "Mix des Tages",
+  "pt": "Mix do dia",
+  "ko": "오늘의 믹스"
+ },
+ "Selon votre humeur": {
+  "en": "For your mood",
+  "hi": "आपके मूड के अनुसार",
+  "ja": "今の気分で",
+  "zh": "随心情而听",
+  "ru": "Под настроение",
+  "it": "Secondo il tuo umore",
+  "es": "Según tu estado de ánimo",
+  "de": "Passend zu deiner Stimmung",
+  "pt": "De acordo com o seu humor",
+  "ko": "기분에 따라"
+ },
+ "Nouveautés de vos artistes": {
+  "en": "New from your artists",
+  "hi": "आपके कलाकारों की नई रिलीज़",
+  "ja": "あなたのアーティストの新作",
+  "zh": "你的艺人新作",
+  "ru": "Новинки ваших артистов",
+  "it": "Novità dei tuoi artisti",
+  "es": "Novedades de tus artistas",
+  "de": "Neues von deinen Künstlern",
+  "pt": "Novidades dos seus artistas",
+  "ko": "내 아티스트의 신곡"
+ }
+}
