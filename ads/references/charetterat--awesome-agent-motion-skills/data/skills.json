@@ -1,0 +1,141 @@
+{
+  "_comment": "Single source of truth for awesome-agent-motion-skills. Verified live on 2026-10-08 via GitHub API through HK proxy. Every entry represents an actionable Agent Skill for Coding Agents (Claude Code / Codex / Cursor).",
+  "updated": "2026-11-05",
+  "skills": [
+    {
+      "name": "huashu-art-motion",
+      "repo": "alchaincyf/huashu-art-motion",
+      "url": "https://github.com/alchaincyf/huashu-art-motion",
+      "stars": 1909,
+      "category": "Art & Gallery Motion",
+      "primary_stack": "HTML5 / Canvas / SVG / CSS",
+      "output_format": "Interactive Web Pages & Exportable Clips",
+      "install_cmd": "npx skills add alchaincyf/huashu-art-motion",
+      "what": "35 curated artistic animation styles (Monet, Egyptian, Cyberpunk, 8-bit Mario, Ukiyo-e) and 9 spoken commentary animation grammars. Direct code generation without cloud GPU rendering.",
+      "best_for": "Topic explainer videos, artistic galleries, storybook narration, retro game animations",
+      "prerequisites": "None (runs purely in-browser & locally via agent-generated code)",
+      "limitations": "Audio-less output by default; voiceover must be synced separately."
+    },
+    {
+      "name": "transitions.dev",
+      "repo": "Jakubantalik/transitions.dev",
+      "url": "https://github.com/Jakubantalik/transitions.dev",
+      "stars": 4577,
+      "category": "UI & Interaction Transitions",
+      "primary_stack": "Framer Motion / Tailwind / GSAP",
+      "output_format": "React / Web Component Micro-interactions",
+      "install_cmd": "npx skills add Jakubantalik/transitions.dev",
+      "what": "Curated library of 43+ production-grade UI transitions (morphing trays, page sweeps, micro-interactions, modal dissolves) designed specifically for AI agents to embed into web apps.",
+      "best_for": "SaaS dashboards, landing page interactive elements, native-feeling app screen transitions",
+      "prerequisites": "Node.js environment; Framer Motion or GSAP installed in target project",
+      "limitations": "Focuses strictly on UI state transitions, not full-length narrative videos."
+    },
+    {
+      "name": "video-shotcraft",
+      "repo": "Vincentwei1021/video-shotcraft",
+      "url": "https://github.com/Vincentwei1021/video-shotcraft",
+      "stars": 10751,
+      "category": "Cinematic Product Video",
+      "primary_stack": "Remotion / React / Three.js",
+      "output_format": "MP4 / ProRes Video (Rendered)",
+      "install_cmd": "npx skills add Vincentwei1021/video-shotcraft",
+      "what": "Studio-grade cinematic video skill for Claude Code & Codex: 152 camera movement recipe cards and 209 motion previews. Generates complete code-driven Remotion video projects.",
+      "best_for": "Hardware/software product launch videos, promotional 3D teasers, cinematic sizzle reels",
+      "prerequisites": "Remotion environment; Chrome for server-side frame rendering",
+      "limitations": "Requires local render time via Remotion CLI; high CPU/GPU overhead during export."
+    },
+    {
+      "name": "onetake",
+      "repo": "feitangyuan/onetake",
+      "url": "https://github.com/feitangyuan/onetake",
+      "stars": 1900,
+      "category": "Continuous Camera Motion",
+      "primary_stack": "HTML5 / GSAP / SVG",
+      "output_format": "Seamless Interactive Presentation / Video",
+      "install_cmd": "npx skills add feitangyuan/onetake",
+      "what": "Continuous-camera motion films that never cut between slides. Every beat dynamically morphs from the previous frame in a single uninterrupted spatial journey.",
+      "best_for": "Technical deep-dives, architecture pitch decks, investor presentations that flow continuously",
+      "prerequisites": "Modern browser supporting SVG morphing and Web Animations API",
+      "limitations": "Requires strict script structuring; hard cuts are disallowed by design."
+    },
+    {
+      "name": "video-talkcraft",
+      "repo": "Vincentwei1021/video-talkcraft",
+      "url": "https://github.com/Vincentwei1021/video-talkcraft",
+      "stars": 1410,
+      "category": "Voiceover Explainer Studio",
+      "primary_stack": "Remotion / Whisper / TTS API",
+      "output_format": "Narrated Explainer Videos (MP4)",
+      "install_cmd": "npx skills add Vincentwei1021/video-talkcraft",
+      "what": "Turns coding agents into a full motion-design studio for voiceover-driven explainers with word-level phonetic subtitle syncing, kinetic typography, and B-roll callouts.",
+      "best_for": "Educational tutorials, YouTube/Bilibili tech breakdown videos, documentation explainers",
+      "prerequisites": "Audio file or TTS provider key (OpenAI/ElevenLabs); Remotion CLI",
+      "limitations": "Heavy dependency on precise word-level audio alignment."
+    },
+    {
+      "name": "motion-design-skill",
+      "repo": "LottieFiles/motion-design-skill",
+      "url": "https://github.com/LottieFiles/motion-design-skill",
+      "stars": 1969,
+      "category": "Physics & Disney Animation Principles",
+      "primary_stack": "Lottie / dotLottie / CSS Keyframes",
+      "output_format": "Lottie JSON / CSS Keyframe animations",
+      "install_cmd": "npx skills add LottieFiles/motion-design-skill",
+      "what": "Adapts Disney's 12 basic principles of animation (anticipation, squash & stretch, follow-through) and physics-based spring curves specifically into prompts and rules for AI agents.",
+      "best_for": "Ensuring agent-generated web animations don't look robotic; organic icon & button physics",
+      "prerequisites": "Lottie web player or native CSS animations",
+      "limitations": "Provides principles and curve definitions rather than full pre-built video templates."
+    },
+    {
+      "name": "motionmaxxing",
+      "repo": "Tejashmakwana/motionmaxxing",
+      "url": "https://github.com/Tejashmakwana/motionmaxxing",
+      "stars": 86,
+      "category": "Motion Polish & Slop Cleaner",
+      "primary_stack": "GSAP / Remotion / CSS",
+      "output_format": "Refactored Animation Code",
+      "install_cmd": "npx skills add Tejashmakwana/motionmaxxing",
+      "what": "Agent skill focused on elevating AI-generated motion graphics: fixes pacing, adjusts spring dampening, eliminates jarring jump-cuts, and injects professional easing curves.",
+      "best_for": "Second-pass audit and aesthetic upgrade for raw animations generated by LLMs",
+      "prerequisites": "Compatible with any web animation framework (GSAP/CSS/Remotion)",
+      "limitations": "Designed as an optimization pass; does not generate initial compositions from scratch."
+    }
+  ],
+  "verification_sources": [
+    {
+      "name": "huashu-art-motion repo",
+      "url": "https://github.com/alchaincyf/huashu-art-motion",
+      "expected_token": "huashu-art-motion"
+    },
+    {
+      "name": "transitions.dev repo",
+      "url": "https://github.com/Jakubantalik/transitions.dev",
+      "expected_token": "transitions"
+    },
+    {
+      "name": "video-shotcraft repo",
+      "url": "https://github.com/Vincentwei1021/video-shotcraft",
+      "expected_token": "Remotion"
+    },
+    {
+      "name": "onetake repo",
+      "url": "https://github.com/feitangyuan/onetake",
+      "expected_token": "camera"
+    },
+    {
+      "name": "video-talkcraft repo",
+      "url": "https://github.com/Vincentwei1021/video-talkcraft",
+      "expected_token": "talkcraft"
+    },
+    {
+      "name": "motion-design-skill repo",
+      "url": "https://github.com/LottieFiles/motion-design-skill",
+      "expected_token": "Lottie"
+    },
+    {
+      "name": "motionmaxxing repo",
+      "url": "https://github.com/Tejashmakwana/motionmaxxing",
+      "expected_token": "motionmaxxing"
+    }
+  ]
+}
