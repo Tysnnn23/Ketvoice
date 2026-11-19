@@ -63,9 +63,9 @@ export const KetvoiceAd: React.FC = () => (
     <Finish />
 
     {/* Sound: the music, then effects that start 2–3 frames before what they mark. */}
-    <Audio src={staticFile("music/track.wav")} volume={0.9} />
+    <Audio src={staticFile("music/track.wav")} volume={0.78} />
     <Sfx at={beat(0) - 122} name="riser" volume={0.45} />
-    <Sfx at={beat(0) - 1} name="impact" volume={0.75} />
+    <Sfx at={beat(0) - 1} name="impact" volume={0.55} />
     <Sfx at={beat(0) + 2} name="shimmer" volume={0.25} />
     <Sfx at={beat(8) - 9} name="whoosh" volume={0.4} />
     <Sfx at={beat(8) + 28} name="tap" volume={0.55} />
@@ -74,7 +74,7 @@ export const KetvoiceAd: React.FC = () => (
     <Sfx at={beat(21) - 3} name="slider" volume={0.45} />
     <Sfx at={beat(24) - 9} name="whoosh" volume={0.4} />
     <Sfx at={beat(28.9)} name="filter-sweep" volume={0.35} />
-    <Sfx at={beat(32) - 1} name="impact" volume={0.9} />
+    <Sfx at={beat(32) - 1} name="impact" volume={0.65} />
     <Sfx at={beat(44) - 14} name="whoosh" volume={0.5} />
     <Sfx at={beat(44) + 150} name="tap" volume={0.55} />
     {[52, 53, 54, 55].map((n) => <Sfx key={n} at={beat(n) - 3} name="whoosh" volume={0.22} />)}

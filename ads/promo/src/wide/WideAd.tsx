@@ -57,7 +57,7 @@ const Meet: React.FC = () => {
 
 const Music: React.FC = () => {
   const f = useCurrentFrame();
-  const v = interpolate(f, [WTOTAL - 75, WTOTAL - 5], [0.9, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const v = interpolate(f, [WTOTAL - 75, WTOTAL - 5], [0.78, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
   return <Audio src={staticFile("music/track-wide.wav")} volume={v} />;
 };
 
@@ -101,13 +101,13 @@ export const KetvoiceAdWide: React.FC = () => (
     {[-12, -10.5, -9, -7.5, -6].map((n) => <Sfx key={n} at={wb(n) - 2} name="tap" volume={0.5} />)}
     <Sfx at={wb(-3.6) - 3} name="whoosh" volume={0.45} />
     <Sfx at={wb(0) - 122} name="riser" volume={0.45} />
-    <Sfx at={wb(0) - 1} name="impact" volume={0.75} />
+    <Sfx at={wb(0) - 1} name="impact" volume={0.55} />
     <Sfx at={wb(0) + 2} name="shimmer" volume={0.35} />
     {[4, 10, 16, 22, 40].map((n) => <Sfx key={n} at={wb(n) - 8} name="whoosh" volume={0.35} />)}
     <Sfx at={wb(24) - 3} name="slider" volume={0.6} />
     <Sfx at={wb(26.5) - 3} name="slider" volume={0.45} />
     <Sfx at={wb(28.95)} name="filter-sweep" volume={0.35} />
-    <Sfx at={wb(32) - 1} name="impact" volume={0.9} />
+    <Sfx at={wb(32) - 1} name="impact" volume={0.65} />
     {[46, 47.33, 48.66].map((n) => <Sfx key={n} at={wb(n) - 2} name="tap" volume={0.45} />)}
     <Sfx at={wb(50)} name="logo-sting" volume={0.7} />
     <Sfx at={wb(50) + 6} name="shimmer" volume={0.3} />
