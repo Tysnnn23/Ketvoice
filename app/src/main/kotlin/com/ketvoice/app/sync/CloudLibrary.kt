@@ -14,16 +14,25 @@ internal data class CloudDoc(val doc: JSONObject, val revision: Long, val device
  * lets an account read and write its own rows only. A write names the revision it read; when another
  * device wrote first, nothing is changed and the caller merges again.
  */
+/** A short text that changes when any kind's revision changes (the server counts one per write). */
+internal object ChangeToken {
+    fun of(rows: JSONArray): String = (0 until rows.length()).mapNotNull { rows.optJSONObject(it) }
+        .map { it.optString("kind") + "=" + it.optLong("revision") }.sorted().joinToString(";")
+
+    /** The first look only records the token: the round at the front already brought everything in. */
+    fun changed(previous: String?, next: String): Boolean = previous != null && previous != next
+}
+
 internal object CloudLibrary {
     private const val TABLE = "/rest/v1/ketvoice_library"
 
-    private fun uid(): String = AccountSession.userId() ?: throw IOException("Signed out")
+    private fun uid(): String = AccountSession.userId() ?: throw com.ketvoice.app.account.SessionRejected("Connexion requise")
 
     suspend fun fetch(kind: String): CloudDoc? {
         val response = AccountSession.authorized { token ->
             SupabaseHttp.request("GET", "$TABLE?select=doc,revision,device_id,updated_at&user_id=eq.${uid()}&kind=eq.$kind", token = token)
         }
-        if (!response.ok) throw IOException("Library read failed: ${response.status}")
+        if (!response.ok) throw CloudHttpError(response.status, "Library read failed: ${response.status}")
         val rows = JSONArray(response.text)
         if (rows.length() == 0) return null
         val row = rows.getJSONObject(0)
@@ -37,7 +46,7 @@ internal object CloudLibrary {
             SupabaseHttp.request("POST", TABLE, body.toString().toByteArray(), token, headers = mapOf("Prefer" to "return=minimal"))
         }
         if (response.status == 409) return false
-        if (!response.ok) throw IOException("Library write failed: ${response.status}")
+        if (!response.ok) throw CloudHttpError(response.status, "Library write failed: ${response.status}")
         return true
     }
 
@@ -48,8 +57,17 @@ internal object CloudLibrary {
             SupabaseHttp.request("PATCH", "$TABLE?user_id=eq.${uid()}&kind=eq.$kind&revision=eq.$revision&select=revision",
                 body.toString().toByteArray(), token, headers = mapOf("Prefer" to "return=representation"))
         }
-        if (!response.ok) throw IOException("Library write failed: ${response.status}")
+        if (!response.ok) throw CloudHttpError(response.status, "Library write failed: ${response.status}")
         return JSONArray(response.text).length() > 0
+    }
+
+    /** Each kind's revision, in one small read: what the change check compares between two looks. */
+    suspend fun revisions(kinds: List<String>): String {
+        val response = AccountSession.authorized { token ->
+            SupabaseHttp.request("GET", "$TABLE?select=kind,revision&user_id=eq.${uid()}&kind=in.(${kinds.joinToString(",")})", token = token)
+        }
+        if (!response.ok) throw CloudHttpError(response.status, "Library read failed: ${response.status}")
+        return ChangeToken.of(JSONArray(response.text))
     }
 
     /** What plays now, written over whatever another device wrote (the latest listening wins). */

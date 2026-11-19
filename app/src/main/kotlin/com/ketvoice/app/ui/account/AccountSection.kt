@@ -165,13 +165,15 @@ private fun SyncLine() {
     val status by LibrarySync.status.collectAsState()
     val text = when {
         status.running -> AppText.t("Synchronisation…")
-        status.offline -> AppText.t("Hors ligne · vos changements partiront plus tard")
+        status.problem == com.ketvoice.app.sync.SyncProblem.OFFLINE -> AppText.t("Hors ligne · vos changements partiront plus tard")
+        status.problem == com.ketvoice.app.sync.SyncProblem.SIGNED_OUT -> AppText.t("Session expirée · reconnectez-vous")
+        status.problem == com.ketvoice.app.sync.SyncProblem.SERVER -> AppText.t("Erreur du serveur · nouvel essai bientôt")
         status.lastSuccess > 0 -> AppText.t("Synchronisé") + " · " + android.text.format.DateUtils.getRelativeTimeSpanString(
             status.lastSuccess, System.currentTimeMillis(), android.text.format.DateUtils.MINUTE_IN_MILLIS)
         else -> AppText.t("Synchronisation en attente")
     }
     Row(Modifier.padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(7.dp).clip(CircleShape).background(if (status.offline) Color(0xFFFF9F0A) else Color(0xFF34C759)))
+        Box(Modifier.size(7.dp).clip(CircleShape).background(if (status.problem != com.ketvoice.app.sync.SyncProblem.NONE) Color(0xFFFF9F0A) else Color(0xFF34C759)))
         Text(text, localize = false, color = theme.secondary, style = Ket27.Type.footnote, modifier = Modifier.padding(start = 8.dp).weight(1f))
         val scope = rememberCoroutineScope()
         KetTextButton("Synchroniser", { scope.launch { runCatching { LibrarySync.syncNow() } } }, enabled = !status.running)
