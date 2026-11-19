@@ -1,6 +1,5 @@
 package com.ketvoice.app.data
 
-import java.util.Locale
 import kotlin.math.abs
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.coroutineScope
@@ -13,7 +12,8 @@ import kotlinx.coroutines.sync.withLock
 internal object SearchGroups {
     data class Group(val tracks: List<Track>) { val primary: Track get() = tracks.first() }
 
-    private fun normalized(value: String): String = value.trim().lowercase(Locale.ROOT).replace(Regex("\\s+"), " ")
+    // Accents, case and punctuation do not make another recording (« Beyoncé » on one source, « Beyonce » on another).
+    private fun normalized(value: String): String = SearchRank.fold(value)
 
     internal fun sameRecording(a: Track, b: Track): Boolean {
         if (a.explicit != b.explicit) return false
