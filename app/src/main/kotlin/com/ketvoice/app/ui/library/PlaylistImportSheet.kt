@@ -68,9 +68,9 @@ class PlaylistImportState {
 }
 
 /**
- * « Importer des playlists »: a public Spotify or Deezer playlist, by its link, without an account or a
- * key. Its titles are looked for in Ketvoice's catalogue with a progress bar; those not found are listed
- * and stay in the new playlist as names, never announced as playable.
+ * « Importer des playlists »: a public Spotify, Deezer, Apple Music, Tidal or SoundCloud playlist, by its
+ * link, without an account or a key. Its titles are looked for in Ketvoice's catalogue with a progress bar;
+ * those not found are listed and stay in the new playlist as names, never announced as playable.
  */
 @Composable
 fun PlaylistImportSheet(onClose: () -> Unit, state: PlaylistImportState = remember { PlaylistImportState() }) {
@@ -79,7 +79,8 @@ fun PlaylistImportSheet(onClose: () -> Unit, state: PlaylistImportState = rememb
         Column(Modifier.fillMaxWidth().heightIn(max = com.ketvoice.app.ui.common.sheetMaxHeight())
             .verticalScroll(rememberScrollState()).padding(20.dp).testTag("playlist-import"), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Importer des playlists", color = theme.onBackground, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-            Text("Spotify ou Deezer, par lien public. Sans compte ni clé : Ketvoice ne garde aucun accès à ces services.", color = theme.secondary)
+            Text("Par lien public, sans compte ni clé : Ketvoice ne garde aucun accès à ces services.", color = theme.secondary)
+            ImportSources(state.link)
             ImportLinkStep(state)
             state.preview?.let { ImportPreviewStep(state, it) }
             if (state.busy) KetProgressBar(if (state.total > 0 && state.done > 0) ({ state.done.toFloat() / state.total }) else null,
@@ -91,10 +92,29 @@ fun PlaylistImportSheet(onClose: () -> Unit, state: PlaylistImportState = rememb
     }
 }
 
+/** The five services, names only (no brand logos); the one the typed link belongs to is marked. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ImportSources(link: String) {
+    val theme = LocalTheme.current
+    val current = remember(link) { runCatching { PlaylistImport.serviceOf(link) }.getOrNull() }
+    FlowRow(Modifier.fillMaxWidth().testTag("playlist-import-sources"), horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        ImportService.entries.forEach { service ->
+            val on = service == current
+            Box(Modifier.clip(RoundedCornerShape(50)).background(if (on) theme.accent.copy(alpha = .16f) else theme.onBackground.copy(alpha = .06f))
+                .padding(horizontal = 12.dp, vertical = 6.dp)) {
+                Text(service.label, localize = false, color = if (on) theme.accent else theme.onBackground, fontSize = 13.sp,
+                    fontWeight = if (on) FontWeight.SemiBold else FontWeight.Medium)
+            }
+        }
+    }
+}
+
 @Composable
 private fun ImportLinkStep(state: PlaylistImportState) {
     val scope = rememberCoroutineScope()
-    SettingsTextInput(state.link, state::edit, "Lien de la playlist (Spotify ou Deezer)", !state.busy, Modifier.testTag("playlist-import-link"))
+    SettingsTextInput(state.link, state::edit, "Lien de la playlist", !state.busy, Modifier.testTag("playlist-import-link"))
     SettingsAction("Charger l'aperçu", { state.run(scope) { state.preview = PlaylistImport.preview(state.link); state.matches = emptyList(); state.done = 0 } },
         enabled = !state.busy && state.link.isNotBlank(), primary = state.preview == null)
 }
@@ -111,7 +131,7 @@ private fun ImportPreviewStep(state: PlaylistImportState, source: ImportPreview)
             Text(AppText.t("${source.songs.size} titres") + " · " + source.service.label, localize = false, color = theme.secondary, fontSize = 13.sp)
         }
     }
-    if (!source.complete) SpotifyNotice(state)
+    if (!source.complete) PartialNotice(state, source)
     if (state.matches.isEmpty()) SettingsAction("Retrouver les titres dans Ketvoice", {
         state.run(scope) { state.matches = PlaylistImport.resolve(source, MusicApi::searchAll) { done, _ -> state.done = done } }
     }, enabled = !state.busy, primary = true)
@@ -120,15 +140,23 @@ private fun ImportPreviewStep(state: PlaylistImportState, source: ImportPreview)
 }
 
 @Composable
-private fun SpotifyNotice(state: PlaylistImportState) {
+private fun PartialNotice(state: PlaylistImportState, source: ImportPreview) {
     val theme = LocalTheme.current
-    Text("Spotify ne garantit pas que cet aperçu contient toute la playlist. Les titres privés ou absents ne sont pas inventés.", color = theme.secondary)
+    val total = source.publishedCount
+    if (total != null && total > source.songs.size) {
+        Text(AppText.t("Ce service ne montre publiquement que ${source.songs.size} titres sur $total. Seuls ceux-ci seront importés."),
+            localize = false, color = theme.secondary, modifier = Modifier.testTag("playlist-import-partial"))
+    } else if (source.service != ImportService.Spotify) {
+        Text("Ce service ne montre publiquement qu'une partie de cette playlist. Seuls ces titres seront importés.", color = theme.secondary)
+    } else {
+        Text("Spotify ne garantit pas que cet aperçu contient toute la playlist. Les titres privés ou absents ne sont pas inventés.", color = theme.secondary)
+    }
     Row(Modifier.fillMaxWidth().toggleable(state.acknowledged, enabled = !state.busy, role = Role.Checkbox) { state.acknowledged = it }
         .heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.size(24.dp).clip(RoundedCornerShape(7.dp)).background(if (state.acknowledged) theme.accent else theme.onBackground.copy(alpha = .12f)),
             contentAlignment = Alignment.Center) { if (state.acknowledged) Text("✓", localize = false, color = Color.White, fontWeight = FontWeight.Bold) }
         Spacer(Modifier.width(10.dp))
-        Text("J'accepte d'importer cet aperçu, qui peut être incomplet", modifier = Modifier.weight(1f))
+        Text("J'accepte d'importer cet aperçu, qui peut être incomplet", color = theme.onBackground, modifier = Modifier.weight(1f))
     }
 }
 
