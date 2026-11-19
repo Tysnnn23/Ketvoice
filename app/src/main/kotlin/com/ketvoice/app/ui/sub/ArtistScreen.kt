@@ -106,10 +106,13 @@ internal fun ArtistPageFrame(request: AppUi.ArtistRequest, page: ArtistPage?, lo
     val pageTint by androidx.compose.animation.animateColorAsState(
         artistPageTint(baseTheme.background, portraitTone.takeIf { AppSettings.albumColors.value }, baseTheme.isDark),
         tween(Motion.duration(520)), label = "artist-page-tint")
+    val pageCard = androidx.compose.ui.graphics.lerp(pageTint, baseTheme.onBackground, if (baseTheme.isDark) .08f else .05f)
     val theme = baseTheme.copy(
         background = pageTint,
-        card = androidx.compose.ui.graphics.lerp(pageTint, baseTheme.onBackground, if (baseTheme.isDark) .08f else .05f),
-        accent = if (AppSettings.albumColors.value) accent ?: baseTheme.accent else baseTheme.accent
+        card = pageCard,
+        // 7.3: the portrait's colour, always readable on this page; the app's accent without one.
+        accent = if (AppSettings.albumColors.value) com.ketvoice.app.theme.CoverLegibility.pageAccent(accent, baseTheme.accent, pageTint, pageCard)
+            else baseTheme.accent
     )
     val context = androidx.compose.ui.platform.LocalContext.current
     val artist = page?.artist
@@ -127,7 +130,7 @@ internal fun ArtistPageFrame(request: AppUi.ArtistRequest, page: ArtistPage?, lo
             }
         }
     }
-    CompositionLocalProvider(LocalTheme provides theme) {
+    CompositionLocalProvider(LocalTheme provides theme, *com.ketvoice.app.theme.coverAccentLocals(theme.accent)) {
     Box(Modifier.fillMaxSize().background(theme.background)) {
         when {
             loading -> ArtistSkeleton(theme)

@@ -110,6 +110,8 @@ internal fun GlassCapsuleButton(
     val (scaleWidth, scaleHeight) = glassPressScale(pressure, liquid27)
     val ink = when {
         prominent -> onAccent(theme.accent)
+        // A page wearing its cover's colour (7.3): Shuffle and the other capsules take its accent too.
+        com.ketvoice.app.theme.LocalCoverAccentMarks.current -> theme.accent
         else -> theme.onBackground
     }
     Box(modifier.heightIn(min = minHeight)

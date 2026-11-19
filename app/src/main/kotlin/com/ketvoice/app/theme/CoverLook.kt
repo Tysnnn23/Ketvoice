@@ -60,6 +60,13 @@ object CoverLegibility {
         return if (a > b) a / b else b / a
     }
 
+    /**
+     * The accent of an album or artist page (7.3): its cover's colour made readable on the page and its
+     * cards (see [readableAccent]), or [fallback], the app's accent, when the cover gives none.
+     */
+    fun pageAccent(cover: Color?, fallback: Color, background: Color, card: Color): Color =
+        cover?.let { readableAccent(it, background, card) } ?: fallback
+
     /** Opacity of the accent behind the label of a tinted capsule button (`Ket27AlertButtons`). */
     const val CAPSULE_TINT = .16f
 
@@ -173,3 +180,15 @@ object CoverGlide {
     /** How long the last cover colour is held while the next title's colour is read. */
     const val GAP_MS = 650L
 }
+
+/**
+ * True inside a page that wears its cover's accent (7.3, album and artist pages): the Lossless mark and
+ * the secondary capsule buttons take [KetTheme.accent] there instead of the neutral inks.
+ */
+val LocalCoverAccentMarks = androidx.compose.runtime.staticCompositionLocalOf { false }
+
+/** What a page wearing its cover's [accent] provides: the marks above and the text selection in that colour. */
+fun coverAccentLocals(accent: Color): Array<androidx.compose.runtime.ProvidedValue<*>> = arrayOf(
+    LocalCoverAccentMarks provides true,
+    androidx.compose.foundation.text.selection.LocalTextSelectionColors provides
+        androidx.compose.foundation.text.selection.TextSelectionColors(handleColor = accent, backgroundColor = accent.copy(alpha = .32f)))

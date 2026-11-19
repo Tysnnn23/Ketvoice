@@ -606,9 +606,9 @@ private fun RowScope.QueueSegment(active: Boolean, onClick: () -> Unit, effectKe
 }
 
 @Composable
-fun NowPlayingBars(playing: Boolean, modifier: Modifier = Modifier) {
+fun NowPlayingBars(playing: Boolean, modifier: Modifier = Modifier, color: Color = Color.White) {
     if (!playing || Motion.reduced) {
-        NowPlayingBarsCanvas({ .55f }, { .50f }, { .45f }, { .40f }, modifier)
+        NowPlayingBarsCanvas({ .55f }, { .50f }, { .45f }, { .40f }, modifier, color)
         return
     }
     val transition = rememberInfiniteTransition(label = "bars")
@@ -630,18 +630,18 @@ fun NowPlayingBars(playing: Boolean, modifier: Modifier = Modifier) {
     )
     // The heights are read while drawing (6.6): passed as values they recomposed the bars, and the row holding
     // them, every frame while a title played.
-    NowPlayingBarsCanvas({ a.value }, { b.value }, { c.value }, { d.value }, modifier)
+    NowPlayingBarsCanvas({ a.value }, { b.value }, { c.value }, { d.value }, modifier, color)
 }
 
 @Composable
-private fun NowPlayingBarsCanvas(a: () -> Float, b: () -> Float, c: () -> Float, d: () -> Float, modifier: Modifier) {
+private fun NowPlayingBarsCanvas(a: () -> Float, b: () -> Float, c: () -> Float, d: () -> Float, modifier: Modifier, color: Color) {
     Canvas(modifier.size(width = 26.dp, height = 22.dp)) {
         val gap = size.width / 5.2f
         val barW = 2.6.dp.toPx()
         repeat(4) { i ->
             val h = size.height * when (i) { 0 -> a(); 1 -> b(); 2 -> c(); else -> d() }
             drawLine(
-                Color.White,
+                color,
                 Offset(gap * (i + 1), size.height - h / 2f),
                 Offset(gap * (i + 1), size.height / 2f + h / 2f),
                 strokeWidth = barW,
