@@ -194,6 +194,7 @@ internal object AnalysisStore {
         .put("r", a.barOffset).put("d", a.loudnessDb.toDouble()).put("ss", a.soundStartMs).put("se", a.soundEndMs)
         .put("ri", a.riseMs).put("fa", a.fallMs).put("fo", a.fadeOut).put("he", a.hardEnding)
         .put("k", a.key).put("ks", a.keyStrength.toDouble()).put("ph", a.phraseAtMs).put("h", a.tempoHint.toDouble()).put("an", a.analyser)
+        .put("gf", a.gapFromMs).put("gu", a.gapUntilMs).put("ac", a.activity.toDouble())
 
     internal fun decode(o: JSONObject?): SegmentAnalysis? {
         o ?: return null
@@ -210,7 +211,16 @@ internal object AnalysisStore {
             o.optInt("k", MusicalKey.UNREAD).coerceIn(MusicalKey.UNREAD, 23), o.optDouble("ks", 0.0).toFloat().coerceIn(0f, 1f),
             o.optDouble("ph", -1.0).takeIf { it.isFinite() && it >= 0.0 && it <= end } ?: -1.0,
             o.optDouble("h", 0.0).toFloat().takeIf { it.isFinite() && it in 0f..400f } ?: 0f,
-            o.optInt("an", 0).coerceIn(0, SegmentAnalysis.BEAT_TRIED))
+            o.optInt("an", 0).coerceIn(0, SegmentAnalysis.BEAT_TRIED)).withGap(o)
+    }
+
+    /** 7.1 fields; readings saved before 7.1 have none (no gap, activity unknown). */
+    private fun SegmentAnalysis.withGap(o: JSONObject): SegmentAnalysis {
+        val end = startMs + lengthMs
+        val from = o.optLong("gf", -1); val until = o.optLong("gu", -1)
+        val gap = from in startMs..end && until in from..end
+        val activity = o.optDouble("ac", 0.0).toFloat().takeIf { it.isFinite() && it in 0f..1_000f } ?: 0f
+        return copy(gapFromMs = if (gap) from else -1L, gapUntilMs = if (gap) until else -1L, activity = activity)
     }
 }
 

@@ -74,12 +74,23 @@ internal object BlendFit {
      * [voiceAfterMs] is how long after its entry the incoming voice starts (null when unknown), and the
      * blend never starts so early that both would sing together.
      */
-    fun voiceLeadMs(a: SegmentAnalysis, settings: MixSettings, beatMs: Float, voiceAfterMs: Float?): Long {
+    fun voiceLeadMs(a: SegmentAnalysis, settings: MixSettings, beatMs: Float, voiceAfterMs: Float?, rate: Float = 1f): Long {
         // A title that ends sung on a last note at full level keeps its ending whole.
         if (a.hardEnding && !a.fadeOut) return 0L
+        // 7.1: a stretched incoming title is not blended under the last sung words (see CutBudget.VOICE_STRETCH).
+        if (abs(rate - 1f) > CutBudget.VOICE_STRETCH + 1e-4f) return 0L
         val lead = (settings.vocalLeadBeats * beatMs).roundToLong()
         return if (voiceAfterMs == null) lead else lead.coerceAtMost(max(0L, voiceAfterMs.toLong()))
     }
+
+    /**
+     * 7.1: grids steady enough to play two titles in time for many bars. Under this the beats were read, but
+     * not regularly enough (rubato, a live band, a drifting tempo): an echo or a fade is played instead.
+     */
+    const val STEADY_GRID = .55f
+
+    fun steady(a: SegmentAnalysis, b: SegmentAnalysis): Boolean =
+        a.hasBeat && b.hasBeat && a.confidence >= STEADY_GRID && b.confidence >= STEADY_GRID
 
     /** Which beat of its bar (0..3) [positionMs] is, for a title whose bars are known. */
     fun barIndex(analysis: SegmentAnalysis, positionMs: Double): Int {

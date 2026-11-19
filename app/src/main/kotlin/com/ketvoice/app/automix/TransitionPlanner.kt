@@ -224,7 +224,10 @@ internal object TransitionPlanner {
         if (context.sameAlbumInOrder && !context.albumsMixed) return MixPlan(MixKind.None, reason = "album in order")
         if (out.durationMs < MIN_TITLE_MS || incoming.durationMs < MIN_TITLE_MS) return MixPlan(MixKind.None, reason = "short title")
         val listener = listener(out, incoming, context)
-        val auto = automatic(out, incoming, context, settings, listener)
+        // 7.1: after a false ending or before a hidden title, Ketmix's own plans only look at what follows the silence.
+        val restart = Endings.restarts(out.analysis)
+        val auto = automatic(if (restart) out.copy(analysis = Endings.afterGap(out.analysis!!)) else out, incoming, context, settings, listener)
+            .let { if (restart && it.mixes) it.copy(reason = it.reason + " · after a silence") else it }
         return if (listener) honour(auto, out, incoming, context, settings) else auto
     }
 
@@ -258,17 +261,21 @@ internal object TransitionPlanner {
         val beats = context.effects && context.beats && !context.skipSilence
         fun measured(plan: MixPlan) = checked(lyricAware(plan.copy(fromBpm = if (a.hasBeat) a.bpm else 0f, toBpm = if (b.hasBeat) b.bpm else 0f,
             fromKey = a.key, toKey = b.key, loop = context.loop), out, incoming, sungUntil), out, incoming)
+            .let { CutBudget.keep(it, a, b, incoming, context.speed) }
 
         // A plain fade was asked for: the same lengths and care for the singing, no effect.
         if (settings.style == MixStyle.Fade) return automatic(out, incoming, context.copy(effects = false), settings.copy(style = MixStyle.Auto), listener)
         val echoAllowed = settings.style == MixStyle.Echo || (settings.style == MixStyle.Auto && settings.echo)
         val riseAllowed = settings.style == MixStyle.Rise || (settings.style == MixStyle.Auto && settings.echo)
         fun onTheBeat() = beatExit(a, b, context, settings, end, start, sungUntil, gain, variant, beats, echoAllowed, riseAllowed, ::measured)
+        // 7.1: two titles too far apart change over as on the radio; a last note at full level still rings out whole.
+        if (settings.style == MixStyle.Auto && !context.loop && !(a.hardEnding && !a.fadeOut))
+            PairFit.radio(a, b, end, gain)?.let { p -> measured(p).takeIf { it.mixes }?.let { return it } }
         // 0. Variety (6.9): after two blends in time running, a way out on the beat takes a turn when this pair has one.
         if (settings.style == MixStyle.Auto && MixVariety.tired(context.recentKinds, MixKind.Beatmatch) && !(a.hardEnding && !a.fadeOut))
             onTheBeat()?.let { return it }
         // 1. Both in time, the bass changing hands: the finest transition, when the tempos allow it.
-        if (beats && a.hasBeat && b.hasBeat && settings.style != MixStyle.Echo && settings.style != MixStyle.Filters && settings.style != MixStyle.Rise) {
+        if (beats && BlendFit.steady(a, b) && settings.style != MixStyle.Echo && settings.style != MixStyle.Filters && settings.style != MixStyle.Rise) {
             val rate = BeatAnalysis.foldedRatio(a.bpm, b.bpm)
             // Measured from the incoming title's own tempo: what it will sound like for the rest of it.
             if (abs(context.speed * rate - 1f) <= settings.tempoRange) {
@@ -465,7 +472,9 @@ internal object TransitionPlanner {
         // How long the two may be heard together is told by how well they fit: see BlendFit.counts.
         // Two voices never sing over each other: the blend starts under the last sung words only as far
         // as the incoming title stays without its voice.
-        val lead = BlendFit.voiceLeadMs(a, settings, beat, sungFrom?.let { (it - inMs) / rate })
+        val lead = BlendFit.voiceLeadMs(a, settings, beat, sungFrom?.let { (it - inMs) / rate }, rate)
+        // 7.1: played off its tempo by more than that, the incoming title meets no voice in the blend (see CutBudget).
+        val stretched = abs(rate - 1f) > CutBudget.VOICE_STRETCH + 1e-4f
         for ((index, count) in counts.withIndex()) {
             val overlap = (count * beat).roundToLong()
             val latest = end - overlap
@@ -474,12 +483,12 @@ internal object TransitionPlanner {
             val earliest = max(a.startMs + a.beatMs.toLong(), sungUntil?.let { it - lead } ?: a.fallMs)
             if (earliest > latest) continue
             // The incoming voice should arrive once the outgoing title is mostly gone.
-            if (sungFrom != null && sungUntil == null) {
+            if (sungFrom != null && (sungUntil == null || stretched)) {
                 val voiceAfter = (sungFrom - inMs) / rate
-                val share = if (index == counts.lastIndex) .4f else .6f
+                val share = if (stretched) 1f else if (index == counts.lastIndex) .4f else .6f
                 if (voiceAfter < overlap * share) continue
             }
-            val target = max(earliest, latest - settings.skippableOutroMs).toDouble()
+            val target = max(earliest, latest - CutBudget.skippableMs(a, settings)).toDouble()
             var outMs = a.beatAtOrAfter(target)
             if (outMs > latest) outMs = a.beatAtOrAfter(latest.toDouble()) - a.beatMs
             if (outMs < earliest - a.beatMs / 2 || outMs > latest + 1) continue

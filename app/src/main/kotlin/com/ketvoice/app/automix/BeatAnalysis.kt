@@ -52,7 +52,15 @@ internal data class SegmentAnalysis(
      */
     val tempoHint: Float = 0f,
     /** Who read the beats: 0 Ketmix's signal analysis, [BEAT_THIS] the Beat This! model, [BEAT_TRIED] the model was run and the signal analysis kept. */
-    val analyser: Int = 0
+    val analyser: Int = 0,
+    /**
+     * 7.1: the last silence of 2 s or more inside the stretch that the music comes back after (a false ending, or
+     * a hidden title after a long silence): from where to where, -1 when there is none. A mix never starts in it.
+     */
+    val gapFromMs: Long = -1,
+    val gapUntilMs: Long = -1,
+    /** 7.1: how busy the sound is (mean spectral flux of its audible part, see [OnsetTracker]); 0 when unknown. */
+    val activity: Float = 0f
 ) {
     val beatMs: Float get() = if (bpm > 0f) 60_000f / bpm else 0f
     val hasBeat: Boolean get() = bpm > 0f && confidence >= MIN_CONFIDENCE
@@ -143,7 +151,10 @@ internal object BeatAnalysis {
             fadeOut = shape.fadeOut, hardEnding = shape.hardEnding, key = key, keyStrength = keyStrength,
             phraseAtMs = tempo?.takeIf { it.barOffset >= 0 && it.confidence >= SegmentAnalysis.MIN_CONFIDENCE }
                 ?.let { phrase(envelope, it) }?.let { startMs + envelope.timeOf(it) * 1000.0 } ?: -1.0,
-            tempoHint = if (followed) usable?.bpm ?: 0f else 0f)
+            tempoHint = if (followed) usable?.bpm ?: 0f else 0f,
+            gapFromMs = if (shape.gapFrom >= 0) ms(shape.gapFrom.toFloat()) else -1L,
+            gapUntilMs = if (shape.gapUntil >= 0) ms(shape.gapUntil.toFloat()) else -1L,
+            activity = shape.activity)
     }
 
     /**
@@ -405,7 +416,8 @@ internal object BeatAnalysis {
     // ---------------------------------------------------------------- level, intro and outro
 
     internal class Shape(val loudnessDb: Float, val soundStart: Int, val soundEnd: Int, val rise: Int, val fall: Int,
-                         val fadeOut: Boolean, val hardEnding: Boolean)
+                         val fadeOut: Boolean, val hardEnding: Boolean,
+                         val gapFrom: Int = -1, val gapUntil: Int = -1, val activity: Float = 0f)
 
     private fun db(power: Double): Float = (10.0 * log10(power + 1e-12)).toFloat()
 
@@ -452,7 +464,33 @@ internal object BeatAnalysis {
             for (i in 0 until third) { early += long[fall + i]; late += long[soundEnd - i] }
             fadeOut = late / third < early / third - 6f
         }
-        return Shape(loudness, soundStart, soundEnd, rise, fall, fadeOut, hardEnding)
+        val gap = lastGap(short, soundStart, soundEnd, silence, fps)
+        return Shape(loudness, soundStart, soundEnd, rise, fall, fadeOut, hardEnding, gap?.first ?: -1, gap?.last ?: -1,
+            activity(envelope, soundStart, soundEnd))
+    }
+
+    /** A silence this long inside a stretch, with music after it, is a false ending (or a hidden title), not a pause. */
+    const val GAP_SECONDS = 2f
+
+    /** 7.1: the last run of frames under [silence] of [GAP_SECONDS] or more between two sounds, as a range of frames. */
+    internal fun lastGap(short: FloatArray, soundStart: Int, soundEnd: Int, silence: Float, fps: Float): IntRange? {
+        val needed = (GAP_SECONDS * fps).roundToInt()
+        var i = soundEnd
+        while (i > soundStart) {
+            if (short[i] > silence) { i--; continue }
+            var from = i
+            while (from > soundStart && short[from - 1] <= silence) from--
+            if (i - from + 1 >= needed) return from..(i + 1)
+            i = from - 1
+        }
+        return null
+    }
+
+    private fun activity(envelope: OnsetEnvelope, from: Int, until: Int): Float {
+        if (until <= from) return 0f
+        var sum = 0.0
+        for (i in from..until) sum += envelope.flux[i]
+        return (sum / (until - from + 1)).toFloat()
     }
 
     /** Tempos that are the same pulse counted twice as fast or as slow are brought together. */
