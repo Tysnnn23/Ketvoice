@@ -119,6 +119,16 @@ fun LibraryScreen() {
     } }
     // The large title names what is shown: the library, or the category open in it.
     val pageTitle = when (view) { 1 -> "Playlists"; 2 -> "Albums"; 3 -> "Titres"; 4 -> "Artistes"; else -> "Bibliothèque" }
+    // 7.0: what each album holds on the device, for the sign under its cover.
+    val downloadedIds = remember(downloads) { downloads.mapTo(HashSet()) { it.track.id } }
+    // An album opens as a real album page, with the download state of the album and of each title (7.0).
+    if (chosen != null) {
+        Box(Modifier.fillMaxSize().pageBackground(theme).statusBarsPadding()) {
+            AlbumPage(chosen, { album = null }, backLabel = if (view == 2) "Albums" else "Bibliothèque",
+                bottomPadding = LocalAdaptiveLayout.current.bottomPaddingDp.dp)
+        }
+        return
+    }
     val backdrop = com.ketvoice.app.glass.rememberGlassBackdrop(theme.background)
     BoxWithConstraints(Modifier.fillMaxSize().pageBackground(theme)) {
     // The width the page's rows and covers share, its margins taken off.
@@ -186,6 +196,7 @@ fun LibraryScreen() {
                         Text(group.title, localize = false, color = theme.onBackground, fontWeight = FontWeight.Medium,
                             fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 7.dp))
                         Text(group.artist, localize = false, color = theme.secondary, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        AlbumDownloadBadge(AlbumDownloads.state(group, downloadedIds), Modifier.padding(top = 2.dp))
                     }
                 }
             }
@@ -229,6 +240,7 @@ fun LibraryScreen() {
                             Text(group.title, localize = false, color = theme.onBackground, fontWeight = FontWeight.SemiBold,
                                 fontSize = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))
                             Text(group.artist, localize = false, color = theme.secondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            AlbumDownloadBadge(AlbumDownloads.state(group, downloadedIds), Modifier.padding(top = 2.dp))
                         }
                     }
                 }
@@ -239,6 +251,7 @@ fun LibraryScreen() {
                     Text(group.title, localize = false, color = theme.onBackground, fontWeight = FontWeight.SemiBold,
                         fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))
                     Text(group.artist, localize = false, color = theme.secondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    AlbumDownloadBadge(AlbumDownloads.state(group, downloadedIds), Modifier.padding(top = 2.dp))
                 }
             }
             if (view == 2 && chosen == null && albums.isEmpty()) item(key = "no-albums") {
