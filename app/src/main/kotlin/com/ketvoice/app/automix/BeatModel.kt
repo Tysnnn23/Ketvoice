@@ -2,6 +2,7 @@ package com.ketvoice.app.automix
 
 import android.content.Context
 import com.ketvoice.app.LiteTuning
+import com.ketvoice.app.data.AppSettings
 import com.ketvoice.app.stems.ModelPack
 import com.ketvoice.app.stems.Resampler
 import com.ketvoice.app.stems.StemModel
@@ -12,8 +13,8 @@ import kotlin.math.max
 import kotlin.math.min
 
 /**
- * The beat model as published by the beat workflow (tools/beat/expected.sha256). PLACEHOLDERS until the real
- * file is converted: the download fails its checksum, so nothing runs from them.
+ * The beat model as published by the beat workflow (tools/beat/expected.sha256). Since 7.0.0 the mobile and Quest
+ * APKs carry this very file (app/build.gradle.kts fetches and checks it at build time); Lite downloads it.
  */
 internal const val BEAT_BYTES = 18_575_568L
 internal const val BEAT_SHA = "74cc5ee960dbdbf75cef978e8e24a5308ef26f459f70494285f249a82a9c67d7"
@@ -25,9 +26,10 @@ internal interface BeatRunner : AutoCloseable {
 }
 
 /** Beat This! small (CPJKU, ISMIR 2024, MIT; 2.1 M parameters) converted to LiteRT with a fixed input [1, BEAT_FRAMES, 128]. */
-internal class LiteRtBeatNet(file: File, threads: Int = 2) : BeatRunner {
-    private val interpreter = org.tensorflow.lite.Interpreter(file,
-        org.tensorflow.lite.Interpreter.Options().setNumThreads(threads).setUseXNNPACK(true))
+internal class LiteRtBeatNet private constructor(private val interpreter: org.tensorflow.lite.Interpreter) : BeatRunner {
+    constructor(file: File, threads: Int = 2) : this(org.tensorflow.lite.Interpreter(file, options(threads)))
+    /** The model memory-mapped from the APK's assets (7.0.0); [model] must stay mapped while this runs. */
+    constructor(model: ByteBuffer, threads: Int = 2) : this(org.tensorflow.lite.Interpreter(model, options(threads)))
     private val order = BeatModel.pick((0 until interpreter.outputTensorCount).map { interpreter.getOutputTensor(it).name() })
     private val input = ByteBuffer.allocateDirect(4 * BeatPost.BEAT_FRAMES * BeatSpectrogram.MELS).order(ByteOrder.nativeOrder())
 
@@ -50,6 +52,10 @@ internal class LiteRtBeatNet(file: File, threads: Int = 2) : BeatRunner {
     }
 
     override fun close() = interpreter.close()
+
+    private companion object {
+        fun options(threads: Int) = org.tensorflow.lite.Interpreter.Options().setNumThreads(threads).setUseXNNPACK(true)
+    }
 }
 
 /** The mono sound of a stretch as it is decoded, at the decoder's own rate, kept for the model (the audio is never stored). */
@@ -92,10 +98,39 @@ internal object BeatModel {
     val pack = ModelPack("https://github.com/Tysnnn23/Ketvoice/releases/download/ketmix-beat-v1/",
         listOf(ModelPack.Part("ketmix-beat-small0.tflite", BEAT_BYTES, BEAT_SHA)), "beat/model")
 
-    fun init(context: Context) = pack.init(context.filesDir)
+    /** Where the mobile and Quest APKs carry the model (stored uncompressed, see app/build.gradle.kts). */
+    const val ASSET = "beat/ketmix-beat-small0.tflite"
 
-    /** The model is on the phone and may run now: on Lite and on modest phones only while charging. */
-    fun usable(): Boolean = pack.ready && allowed(LiteTuning.lite, LiteTuning.modest, StemModel.charging())
+    /** True when this APK carries the model: no download then, a switch in the settings instead (7.0.0). */
+    @Volatile var bundled = false
+        private set
+    @Volatile private var assets: android.content.res.AssetManager? = null
+    @Volatile private var mapped: ByteBuffer? = null
+
+    fun init(context: Context) {
+        pack.init(context.filesDir)
+        assets = context.assets
+        bundled = runCatching { context.assets.openFd(ASSET).use { it.length == BEAT_BYTES } }.getOrDefault(false)
+        // A copy downloaded before 7.0.0 is no longer needed: the APK has the same file.
+        if (bundled) pack.parts.forEach { part -> pack.file(part)?.takeIf { it.isFile }?.delete() }
+    }
+
+    /** The model may run now: carried by the APK and switched on, or downloaded; on Lite and on modest phones only while charging. */
+    fun usable(): Boolean = present(bundled, AppSettings.ketmixBeatModel.value, pack.ready) &&
+        allowed(LiteTuning.lite, LiteTuning.modest, StemModel.charging())
+
+    internal fun present(bundled: Boolean, switchedOn: Boolean, downloaded: Boolean) = if (bundled) switchedOn else downloaded
+
+    /** The bundled model, mapped once from the APK (no copy in memory or on disk). */
+    private fun asset(): ByteBuffer? = mapped ?: synchronized(this) {
+        mapped ?: runCatching {
+            assets?.openFd(ASSET)?.use { fd ->
+                java.io.FileInputStream(fd.fileDescriptor).channel.use { channel ->
+                    channel.map(java.nio.channels.FileChannel.MapMode.READ_ONLY, fd.startOffset, fd.declaredLength)
+                }
+            }
+        }.getOrNull()?.also { mapped = it }
+    }
 
     internal fun allowed(lite: Boolean, modest: Boolean, charging: Boolean) = !(lite || modest) || charging
 
@@ -112,7 +147,8 @@ internal object BeatModel {
 
     /** Test seam: where the network comes from. */
     @Volatile internal var open: () -> BeatRunner? = {
-        pack.file(pack.parts.single())?.takeIf { it.isFile }?.let { LiteRtBeatNet(it) }
+        if (bundled) asset()?.let { LiteRtBeatNet(it) }
+        else pack.file(pack.parts.single())?.takeIf { it.isFile }?.let { LiteRtBeatNet(it) }
     }
 
     /** [dsp] with the model's beats and bars where it is sure of them; [dsp] as it was (marked as tried) otherwise. Never throws. */

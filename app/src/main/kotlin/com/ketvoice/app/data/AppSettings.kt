@@ -57,6 +57,8 @@ object AppSettings {
     val voiceLevel = mutableStateOf(100)
     /** In shuffle, the next title is the one that mixes best with the current one (5.11.0). */
     val ketmixSmartQueue = mutableStateOf(true)
+    /** « Calage précis du rythme » (7.0.0): the rhythm model carried by the mobile and Quest APKs runs; Lite downloads it instead. */
+    val ketmixBeatModel = mutableStateOf(true)
     /** Downloaded titles are measured and separated ahead while the phone charges (5.11.0). */
     val ketmixLibrary = mutableStateOf(true)
     /** Playback that Android or a battery manager stopped while it played comes back at the same title and place (6.1). */

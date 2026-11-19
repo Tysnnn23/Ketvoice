@@ -194,6 +194,8 @@ internal fun QueuePane(state: PlayerUiState, modifier: Modifier = Modifier, show
         Spacer(Modifier.height(10.dp))
         QueueRow(track, com.ketvoice.app.data.MediaOverrides.cover(track, art["t:${track.id}"] ?: track.coverUrl), current = true, playing = state.isPlaying,
             onPlay = { }, onRemove = { Player.removeAt(state.index) })
+        // « Mode DJ set » (7.0.0): its header while a set plays, else the button that starts one.
+        DjSetQueueSection(state, Modifier.padding(top = 10.dp))
         Spacer(Modifier.height(16.dp))
         Text("À suivre depuis : ${track.artist}", color = Color(0xFFB7B7BD), fontSize = 14.sp,
             fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)

@@ -154,6 +154,7 @@ internal object StemModel {
         fast.init(context.filesDir)
         hq.init(context.filesDir)
         com.ketvoice.app.automix.BeatModel.init(context)
+        com.ketvoice.app.automix.DjSet.init(context)
     }
 
     /** Whether the phone is plugged in. */

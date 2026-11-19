@@ -323,6 +323,19 @@ jobs:
             echo "$apk contains the Discord bridge."
           done
 
+      # 7.0.0: the build fetches the pinned Ketmix rhythm model (app/build.gradle.kts, BeatModelAsset); Lite keeps it as a download.
+      - name: Verify the Ketmix rhythm model is packaged (mobile, Quest) and left out of Lite
+        run: |
+          set -euo pipefail
+          for apk in app/build/outputs/apk/mobile/release/*.apk app/build/outputs/apk/quest/release/*.apk; do
+            unzip -Zv "$apk" assets/beat/ketmix-beat-small0.tflite | grep -q "none (stored)" \
+              || { echo "::error::$apk lacks the rhythm model or stores it compressed (it is memory-mapped)."; exit 1; }
+            echo "$apk contains the rhythm model."
+          done
+          for apk in app/build/outputs/apk/lite/release/*.apk; do
+            if unzip -Z1 "$apk" | grep -q "^assets/beat/"; then echo "::error::$apk ships the rhythm model."; exit 1; fi
+          done
+
       - name: Upload verified APK artifacts
         uses: actions/upload-artifact@v4
         with:
