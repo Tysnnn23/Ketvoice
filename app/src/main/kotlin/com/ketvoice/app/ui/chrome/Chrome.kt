@@ -118,7 +118,7 @@ fun MiniPlayerPill(
     val cover = com.ketvoice.app.data.MediaOverrides.cover(current, art["t:${current.id}"] ?: current.coverUrl)
 
     val pillShape = RoundedCornerShape(27.dp)
-    // Swipe the pill sideways to change track; the collapsed pill is too small for it.
+    // Swipe the pill sideways to change track, docked (collapsed) too (7.1), with a short spring.
     val swipe = com.ketvoice.app.ui.player.rememberTrackSwipe()
     GlassPanel(
         modifier = modifier
@@ -139,7 +139,7 @@ fun MiniPlayerPill(
             Row(
                 Modifier
                     .fillMaxSize()
-                    .then(if (compact) Modifier else Modifier.trackSwipe(swipe))
+                    .trackSwipe(swipe, threshold = if (compact) 44.dp else 64.dp, settle = { com.ketvoice.app.ui.player.miniSwipeSpring() })
                     .semantics {
                         customActions = listOf(
                             androidx.compose.ui.semantics.CustomAccessibilityAction(com.ketvoice.app.data.AppText.t("Suivant")) { Player.next(); true },
@@ -203,7 +203,9 @@ fun MiniPlayerPill(
                     MiniTransportButton(playing = ps.playWhenReady, size = playSize)
                 }
                 Spacer(Modifier.width(2.dp))
-                Box(Modifier.onGloballyPositioned { com.ketvoice.app.ui.player.MiniPlayerAnchors.next = it.boundsInRoot() }) {
+                // Next stays when the tab bar folds (7.1): iOS 26's Music lost it there.
+                Box(Modifier.onGloballyPositioned { com.ketvoice.app.ui.player.MiniPlayerAnchors.next = it.boundsInRoot() }
+                    .testTag("mini-next")) {
                     MiniTransportNext()
                 }
             }

@@ -41,12 +41,21 @@ internal class TrackSwipeState {
 @Composable
 internal fun rememberTrackSwipe(): TrackSwipeState = remember { TrackSwipeState() }
 
+/** The short spring of the mini-player's swipe (7.1): the title settles quickly, without a wobble; snapped under reduced motion. */
+internal fun miniSwipeSpring(): androidx.compose.animation.core.FiniteAnimationSpec<Float> =
+    if (Motion.reduced) androidx.compose.animation.core.snap()
+    else androidx.compose.animation.core.spring(dampingRatio = MINI_SWIPE_DAMPING, stiffness = MINI_SWIPE_STIFFNESS)
+
+internal const val MINI_SWIPE_DAMPING = .86f
+internal const val MINI_SWIPE_STIFFNESS = 900f
+
 /**
  * Swipe sideways to change track. The gesture only claims horizontal drags, so a
  * vertical drag on the same surface still closes or opens the player.
  */
 @Composable
-internal fun Modifier.trackSwipe(state: TrackSwipeState, threshold: Dp = 72.dp): Modifier {
+internal fun Modifier.trackSwipe(state: TrackSwipeState, threshold: Dp = 72.dp,
+                                 settle: () -> androidx.compose.animation.core.FiniteAnimationSpec<Float> = { Motion.gentleSpring() }): Modifier {
     val scope = rememberCoroutineScope()
     val haptic = rememberHaptics()
     val thresholdPx = with(LocalDensity.current) { threshold.toPx() }
@@ -64,12 +73,12 @@ internal fun Modifier.trackSwipe(state: TrackSwipeState, threshold: Dp = 72.dp):
                 if (past && !armed) haptic(Haptics.Kind.Tick)
                 armed = past
             },
-            onDragCancel = { scope.launch { state.offset.animateTo(0f, Motion.gentleSpring()) } },
+            onDragCancel = { scope.launch { state.offset.animateTo(0f, settle()) } },
             onDragEnd = {
                 val skip = swipeSkip(state.offset.value, thresholdPx)
                 scope.launch {
                     if (skip == SwipeSkip.None) {
-                        state.offset.animateTo(0f, Motion.gentleSpring())
+                        state.offset.animateTo(0f, settle())
                         return@launch
                     }
                     val direction = if (skip == SwipeSkip.Next) -1f else 1f
@@ -77,7 +86,7 @@ internal fun Modifier.trackSwipe(state: TrackSwipeState, threshold: Dp = 72.dp):
                     if (!Motion.reduced) state.offset.animateTo(direction * thresholdPx * 2.2f, tween(110))
                     if (skip == SwipeSkip.Next) Player.next() else Player.previous()
                     if (!Motion.reduced) state.offset.snapTo(-direction * thresholdPx * 1.1f)
-                    state.offset.animateTo(0f, Motion.gentleSpring())
+                    state.offset.animateTo(0f, settle())
                 }
             })
     }
