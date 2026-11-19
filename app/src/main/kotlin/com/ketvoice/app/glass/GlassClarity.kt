@@ -25,6 +25,30 @@ object GlassClarity {
     /** The level every glass surface draws with right now. */
     val level: Int get() = sanitize(AppSettings.glassTintLevel.value)
 
+    /**
+     * « Teinté » (7.1): the listener's Clair / Teinté choice ([AppSettings.glassTinted]), or Android's
+     * high-contrast text ([HighContrastText]), which asks for the tinted glass whatever the choice.
+     * Apple's Tinted mode of iOS 26.1 was found too close to Clear: here it is clearly more opaque.
+     */
+    val tinted: Boolean get() = AppSettings.glassTinted.value || HighContrastText.on.value
+
+    /** The frost a surface draws with: the level's own, lifted to at least [TINTED_FROST] when [tinted]. */
+    fun frostFor(level: Int, tinted: Boolean): Float = if (tinted) maxOf(frost(level), TINTED_FROST) else frost(level)
+
+    /** Tinted glass is never clearer than the default. */
+    fun clarityFor(level: Int, tinted: Boolean): Float = if (tinted) 0f else clarity(level)
+
+    /**
+     * The least share of milk a surface keeps over what lies behind it, whatever the backdrop. Menus,
+     * sheets and dialogs ([GlassRole.Sheet]) always keep far more than the navigation (which keeps none
+     * in Clair), so their text reads over any artwork; Teinté lifts both.
+     */
+    fun body(role: GlassRole, tinted: Boolean, level: Int = this.level): Float = when {
+        role == GlassRole.Sheet -> if (tinted) SHEET_TINTED_BODY else SHEET_BODY
+        tinted -> TINTED_BODY + (TINTED_BODY_MAX - TINTED_BODY) * frost(level)
+        else -> 0f
+    }
+
     /** 0..1: how far towards tinted glass; 0 at the default level and clearer ones. */
     fun frost(level: Int = this.level): Float {
         val l = sanitize(level)
@@ -50,8 +74,9 @@ object GlassClarity {
     fun minimumBlurPx(level: Int = this.level): Float = Ket27Glass.MIN_BLUR_PX - (Ket27Glass.MIN_BLUR_PX - CLEAREST_BLUR_PX) * clarity(level)
 
     /** Strength of the veil of the blurred fallback (below Android 13, performance mode). */
-    fun fallbackVeil(dark: Boolean, level: Int = this.level): Float =
-        GlassTuning.fallbackTint(frost(level), dark) * (1f - FALLBACK_CLEARING * clarity(level))
+    fun fallbackVeil(dark: Boolean, level: Int = this.level, tinted: Boolean = false, role: GlassRole = GlassRole.Control): Float =
+        maxOf(GlassTuning.fallbackTint(frostFor(level, tinted), dark) * (1f - FALLBACK_CLEARING * clarityFor(level, tinted)),
+            body(role, tinted, level))
 
     /** Opacity lost by the static glass at clearer levels (added back to its base by [frost]). */
     fun staticClearing(level: Int = this.level): Float = STATIC_CLEARING * clarity(level)
@@ -68,6 +93,11 @@ object GlassClarity {
     }
 
     const val CLEAREST_BLUR_PX = 5f
+    const val TINTED_FROST = .75f
+    const val TINTED_BODY = .62f
+    const val TINTED_BODY_MAX = .72f
+    const val SHEET_BODY = .84f
+    const val SHEET_TINTED_BODY = .93f
     private const val FALLBACK_CLEARING = .45f
     private const val STATIC_CLEARING = .16f
 }

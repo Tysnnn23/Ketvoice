@@ -48,7 +48,8 @@ internal fun ResumeCard(session: RemoteSession, modifier: Modifier = Modifier) {
     val theme = LocalTheme.current
     val shape = RoundedCornerShape(22.dp)
     GlassPanel(modifier.fillMaxWidth().padding(horizontal = com.ketvoice.app.ui.common.pageMargin, vertical = 6.dp).testTag("resume-elsewhere"),
-        shape, GlassParams.sheet(22f, dark = theme.isDark)) {
+        // A card of Home's content: solid, not glass (7.1).
+        shape, GlassParams.card(22f, dark = theme.isDark)) {
         Column(Modifier.fillMaxWidth().padding(start = 14.dp, end = 8.dp, top = 8.dp, bottom = 12.dp)) {
             // Where it plays, on a line of its own so a long device name is never cut by the button.
             Row(verticalAlignment = Alignment.CenterVertically) {

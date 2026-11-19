@@ -169,8 +169,9 @@ fun GlassFusionLayer(fusion: GlassFusion, dark: Boolean, modifier: Modifier = Mo
         effects = {
             // The same transparency as every other glass surface (GlassClarity), read here in the draw phase.
             val level = GlassClarity.level
-            val frost = GlassClarity.frost(level)
-            val clarity = GlassClarity.clarity(level)
+            val tinted = GlassClarity.tinted
+            val frost = GlassClarity.frostFor(level, tinted)
+            val clarity = GlassClarity.clarityFor(level, tinted)
             blur(liquid27BlurPx(frost, GlassRole.Control))
             val shapes = fusedShapesFor(fusion.shapes.values, origin)
             // A failed pass must not leave an unshaded blurred rectangle: fall back to panels.

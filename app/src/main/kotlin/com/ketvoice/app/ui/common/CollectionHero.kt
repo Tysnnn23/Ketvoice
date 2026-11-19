@@ -251,8 +251,8 @@ internal fun CollectionTopBar(
 }
 
 /**
- * A segmented choice whose selection is a lens of glass that slides from one segment
- * to the next, like the selection of the navigation bar.
+ * A segmented choice whose selection slides from one segment to the next. It sits in a page's
+ * content, so the selection is a plain fill, not glass (7.1).
  */
 @Composable
 internal fun GlassSegmentedControl(labels: List<String>, selected: Int, onSelect: (Int) -> Unit,
@@ -265,11 +265,9 @@ internal fun GlassSegmentedControl(labels: List<String>, selected: Int, onSelect
         val segment = maxWidth / count
         val x by animateDpAsState(segment * selected.coerceIn(0, count - 1),
             if (Motion.reduced) snap() else spring(dampingRatio = .78f, stiffness = 420f), label = "segment-lens")
-        // The lens: glass where glass is on, a quiet fill otherwise.
-        GlassPanel(Modifier.offset(x = x).width(segment).height(44.dp), RoundedCornerShape(14.dp),
-            GlassParams.selection(dark = theme.isDark), enabled = AppSettings.liquidGlass.value) {
-            Box(Modifier.fillMaxSize().background(theme.onBackground.copy(alpha = .08f)))
-        }
+        // The selected segment: a plain fill on the card, not glass (content, 7.1).
+        Box(Modifier.offset(x = x).width(segment).height(44.dp).clip(RoundedCornerShape(14.dp))
+            .background(plainFill(theme.isDark)))
         Row(Modifier.fillMaxWidth()) {
             labels.forEachIndexed { index, label ->
                 val active = selected == index

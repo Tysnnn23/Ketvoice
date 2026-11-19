@@ -29,13 +29,18 @@ import com.ketvoice.app.glass.*
 import com.ketvoice.app.theme.LocalTheme
 import com.ketvoice.app.ui.motion.Motion
 
-/** Only interactive controls get the optical material; content stays matte. */
+/**
+ * Only the navigation layer (top bars, floating buttons) gets the optical material; content stays matte.
+ * [plain]: a button of a page's content, or one already on glass (a sheet, a menu, the mini-player), takes
+ * a plain fill instead of a second layer of glass (7.1).
+ */
 @Composable
 fun LiquidGlassButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     shape: Shape = CircleShape,
     enabled: Boolean = true,
+    plain: Boolean = LocalOnGlass.current,
     content: @Composable BoxScope.() -> Unit
 ) {
     val theme = LocalTheme.current
@@ -61,7 +66,9 @@ fun LiquidGlassButton(
         glassPressSpec(pressed, liquid27), label = "glass-button-pressure")
     val (scaleWidth, scaleHeight) = glassPressScale(pressure, liquid27)
     Box(modifier.onSizeChanged { bounds = it }) {
-        GlassPanel(Modifier.matchParentSize().graphicsLayer {
+        if (plain) Box(Modifier.matchParentSize().graphicsLayer { scaleX = scaleWidth; scaleY = scaleHeight }
+            .clip(shape).background(plainFill(theme.isDark)))
+        else GlassPanel(Modifier.matchParentSize().graphicsLayer {
             scaleX = scaleWidth
             scaleY = scaleHeight
         }, shape, GlassParams.circle(dark = theme.isDark).copy(

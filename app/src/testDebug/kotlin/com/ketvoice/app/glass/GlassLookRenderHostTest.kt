@@ -40,7 +40,8 @@ class GlassLookRenderHostTest {
         return b
     }
 
-    private fun render(name: String, dark: Boolean, level: Int, tiltX: Float = 0f, tiltY: Float = 0f): Bitmap {
+    private fun render(name: String, dark: Boolean, level: Int, tiltX: Float = 0f, tiltY: Float = 0f,
+                       tinted: Boolean = false, role: GlassRole = GlassRole.Control): Bitmap {
         val source = backdrop()
         val out = source.copy(Bitmap.Config.ARGB_8888, true)
         val canvas = Canvas(out)
@@ -49,10 +50,13 @@ class GlassLookRenderHostTest {
         shader.setInputShader("content", BitmapShader(source, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP).apply {
             setLocalMatrix(android.graphics.Matrix().apply { setTranslate(-left, -top) })
         })
-        val params = Ket27Glass.regular(GlassParams.pill(dark = dark), level)
+        val base = if (role == GlassRole.Sheet) GlassParams.sheet(60f, dark = dark) else GlassParams.pill(dark = dark)
+        com.ketvoice.app.data.AppSettings.glassTinted.value = tinted
+        val params = Ket27Glass.regular(base, level, tinted)
         val (lx, ly) = GlassLight.direction(GlassLight.degrees(tiltX))
-        applyLiquid27Uniforms(shader, panelW, panelH, 0f, 2f, params, glassCornerRadiiOf(9999f), GlassClarity.frost(level),
-            Liquid27Light(lx, ly, 0f, 0f, 0f, GlassLight.glint(tiltY)), GlassClarity.clarity(level))
+        applyLiquid27Uniforms(shader, panelW, panelH, 0f, 2f, params, glassCornerRadiiOf(9999f), GlassClarity.frostFor(level, tinted),
+            Liquid27Light(lx, ly, 0f, 0f, 0f, GlassLight.glint(tiltY)), GlassClarity.clarityFor(level, tinted))
+        com.ketvoice.app.data.AppSettings.glassTinted.value = false
         canvas.save(); canvas.translate(left, top)
         canvas.drawRect(0f, 0f, panelW, panelH, Paint().apply { this.shader = shader })
         canvas.restore()
@@ -62,6 +66,30 @@ class GlassLookRenderHostTest {
     }
 
     private fun luma(c: Int) = .2126f * Color.red(c) + .7152f * Color.green(c) + .0722f * Color.blue(c)
+
+    /** 7.1: Teinté is clearly more opaque than Clair, menus and sheets more than the tab bar, and their text reads on anything. */
+    @Test fun tintedAndSheetsAreClearlyMoreOpaqueAndReadable() {
+        val x = (left + panelW / 2).toInt().let { it - it % 36 + 4 }
+        val y = (top + panelH / 2).toInt()
+        for (dark in listOf(false, true)) {
+            val tag = if (dark) "dark" else "light"
+            val clear = render("mode-$tag-clear", dark, GlassClarity.DEFAULT)
+            val tinted = render("mode-$tag-tinted", dark, GlassClarity.DEFAULT, tinted = true)
+            val sheet = render("mode-$tag-sheet", dark, GlassClarity.DEFAULT, role = GlassRole.Sheet)
+            if (!dark) {
+                // Over the black stripe: the milk of Teinté shows far more than Clair's, a sheet's more still.
+                assertTrue("tinted ${luma(tinted.getPixel(x, y))} vs clear ${luma(clear.getPixel(x, y))}",
+                    luma(tinted.getPixel(x, y)) > luma(clear.getPixel(x, y)) + 40f)
+                assertTrue(luma(sheet.getPixel(x, y)) > luma(tinted.getPixel(x, y)))
+            }
+            // Body text on the sheet, across the whole panel (stripes, red, yellow, blue): at least 4.5:1.
+            val ink = if (dark) androidx.compose.ui.graphics.Color.White else androidx.compose.ui.graphics.Color.Black
+            for (px in (left.toInt() + 30) until (left + panelW).toInt() - 30 step 3) {
+                val ratio = com.ketvoice.app.theme.Contrast.contrastRatio(ink, androidx.compose.ui.graphics.Color(sheet.getPixel(px, y)))
+                assertTrue("$tag sheet at $px: $ratio", ratio >= 4.5f)
+            }
+        }
+    }
 
     @Test fun everyLevelCompilesAndClearerLevelsShowMoreOfTheBackdrop() {
         // A black stripe crossing the middle of the panel: clear glass lets it show, tinted glass milks it.

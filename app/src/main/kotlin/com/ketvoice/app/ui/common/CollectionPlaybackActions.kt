@@ -43,10 +43,10 @@ internal fun CollectionPlaybackActions(tracks: List<Track>, modifier: Modifier =
 @Composable
 internal fun CollectionQuickActions(tracks: List<Track>, enabled: Boolean = true) {
     val theme = LocalTheme.current
-    LiquidGlassButton({ Player.setShuffle(false); Player.playQueue(tracks) }, Modifier.size(48.dp), enabled = enabled) {
+    LiquidGlassButton({ Player.setShuffle(false); Player.playQueue(tracks) }, Modifier.size(48.dp), plain = true, enabled = enabled) {
         Icon(KetIcons.Play, "Lecture", tint = theme.accent)
     }
-    LiquidGlassButton({ Player.playShuffled(tracks) }, Modifier.size(48.dp), enabled = enabled) {
+    LiquidGlassButton({ Player.playShuffled(tracks) }, Modifier.size(48.dp), plain = true, enabled = enabled) {
         Icon(KetIcons.Shuffle, "Aléatoire", tint = theme.accent, modifier = Modifier.size(20.dp))
     }
 }

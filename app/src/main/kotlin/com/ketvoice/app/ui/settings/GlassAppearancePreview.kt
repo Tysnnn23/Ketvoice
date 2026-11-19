@@ -72,6 +72,11 @@ internal fun GlassTransparencyCard(modifier: Modifier = Modifier) {
         }
         Text(if (cover != null) "Aperçu sur la pochette en cours" else "Aperçu sur le logo Ketvoice", color = theme.secondary,
             style = Ket27.Type.footnote)
+        // Clair / Teinté (7.1): Teinté is clearly more opaque and contrasted; Android's high-contrast text asks for it too.
+        com.ketvoice.app.ui.common.GlassSegmentedControl(listOf("Clair", "Teinté"), if (AppSettings.glassTinted.value) 1 else 0,
+            { AppSettings.glassTinted.value = it == 1; SettingsStore.save() }, Modifier.padding(top = 4.dp), tag = "glass-mode")
+        if (com.ketvoice.app.glass.HighContrastText.on.value && !AppSettings.glassTinted.value)
+            Text("Le texte à contraste élevé d'Android garde le verre teinté.", color = theme.secondary, style = Ket27.Type.footnote)
         Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             Text("Transparence du verre", color = theme.onBackground, style = Ket27.Type.body, modifier = Modifier.weight(1f))
             Text(GlassClarity.label(level), color = theme.secondary, style = Ket27.Type.body,

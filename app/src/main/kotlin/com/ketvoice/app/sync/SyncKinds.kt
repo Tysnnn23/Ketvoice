@@ -146,7 +146,7 @@ internal object ArtistsKind : SyncKind {
  */
 internal object SettingsKind : SyncKind {
     override val name = "settings"
-    val keys = setOf("themeMode", "accentArgb", "glassStyle", "glassTintLevel", "glassTilt", "coverAccent", "coverBackground",
+    val keys = setOf("themeMode", "accentArgb", "glassStyle", "glassTintLevel", "glassTinted", "glassTilt", "trueBlack", "coverAccent", "coverBackground",
         "coverTintedGlass", "meshBackground", "albumColors", "animatedArtwork", "albumHeroCanvas", "artworkDepth", "livingArtwork",
         "fullArtwork", "panoramicCanvas", "sonicCanvas", "artistPhotos", "lyricsTextSize", "lyricsMode", "syncedLyrics",
         "lyricsSource", "translateLanguage", "translationSource", "lockscreenLyrics", "automixOn", "automixIntensity",
