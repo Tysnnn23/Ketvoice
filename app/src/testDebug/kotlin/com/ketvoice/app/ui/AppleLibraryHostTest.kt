@@ -210,8 +210,9 @@ class AppleLibraryHostTest {
         page(true) { com.ketvoice.app.ui.sub.DownloadsScreen() }
         compose.onNodeWithTag("downloads-title").assertIsDisplayed()
         compose.onNodeWithTag("downloads-summary").assertIsDisplayed()
-        compose.onAllNodesWithTag("download-badge", useUnmergedTree = true).onFirst().assertExists()
         image("phone/downloads-dark")
+        compose.onNodeWithTag("downloads-list").performScrollToKey(saved.value[0].track.id)
+        compose.onAllNodesWithTag("download-badge", useUnmergedTree = true).onFirst().assertExists()
         compose.onNodeWithTag("downloads-list").performScrollToKey(saved.value[4].track.id)
         image("phone/downloads-rows-dark")
     }

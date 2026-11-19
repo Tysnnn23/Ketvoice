@@ -155,8 +155,11 @@ class ScreensRedoHostTest {
             val resume = compose.onNodeWithTag("home-resume").fetchSemanticsNode().boundsInRoot
             val daily = compose.onNodeWithTag("home-daily-mix").fetchSemanticsNode().boundsInRoot
             assertEquals("aligned with the page's margin", 16f, resume.left, 1f)
-            assertEquals("the whole width of the page", 400f - 32f, daily.width, 1f)
-            assertTrue("stacked on a phone", daily.top >= resume.bottom)
+            // 7.2: on a phone the two lead cards share one row (Apple Music), the second peeking at the edge.
+            assertEquals("most of the page's width", (400f - 32f) * .92f, resume.width, 1f)
+            assertEquals("one row", resume.top, daily.top, 1f)
+            assertTrue("the mix follows", daily.left > resume.right)
+            // 7.2: no longer stacked on a phone, see above.
             // The old For you card (removed in 5.9.0) and the shortcut tiles stay away.
             compose.onNodeWithTag("for-you-mix").assertDoesNotExist()
             compose.onNodeWithTag("for-you-resume").assertDoesNotExist()
@@ -294,6 +297,7 @@ class ScreensRedoHostTest {
             image("redo-downloads-top-light")
             compose.onNode(hasText("Albums") and hasAnyAncestor(hasTestTag("downloads-view"))).performScrollTo().performClick()
             compose.onAllNodesWithTag("saved-download").assertCountEquals(0)
+            compose.onNodeWithTag("downloads-list").performScrollToNode(hasTestTag("download-cover-cell"))
             val cells = compose.onAllNodesWithTag("download-cover-cell").fetchSemanticsNodes().map { it.boundsInRoot }
             assertTrue("a grid of covers (${cells.size})", cells.size >= 2)
             assertEquals("two on a line", cells[0].top, cells[1].top, 1f)
@@ -307,10 +311,10 @@ class ScreensRedoHostTest {
             assertEquals(5, saved.value.size)
             assertTrue(saved.value.all { it.file.exists() })
             compose.onNodeWithText("Annuler").performClick()
-            compose.onNode(hasText("Artistes") and hasAnyAncestor(hasTestTag("downloads-view"))).performScrollTo().performClick()
+            compose.onNode(hasText("Artistes") and hasAnyAncestor(hasTestTag("downloads-view"))).performScrollTo().performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
             compose.onNodeWithText("Abel").performScrollTo().assertIsDisplayed()
             image("redo-downloads-artists-light")
-            compose.onNodeWithText("Abel").performClick()
+            compose.onNodeWithText("Abel").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
             compose.onAllNodesWithTag("saved-download").assertCountEquals(2)
         } finally { saved.value = emptyList() }
     }

@@ -154,10 +154,10 @@ class UnifiedExperienceHostTest {
         assertEquals(1, PlaylistStore.lists.value.single().entries.size)
         val disk = org.json.JSONArray(File(compose.activity.filesDir, "playlists-v1.json").readText())
         assertTrue("The pin must survive the modeled atomic write", disk.getJSONObject(0).getBoolean("pinned"))
-        // Back at the root, the pinned playlist has its own shelf.
+        // Back at the root (7.2: the playlists are listed there), the pinned playlist wears its pin.
         compose.onNodeWithText("Tout").performClick()
         compose.waitForIdle()
-        compose.onNodeWithTag("library-list").performScrollToNode(hasText("Épinglés"))
+        compose.onNodeWithTag("library-list").performScrollToNode(hasContentDescription("Épinglée"))
         image("library-pinned-light")
     }
 
