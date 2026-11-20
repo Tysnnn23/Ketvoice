@@ -32,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
@@ -132,7 +133,11 @@ fun ScrubBar(
     // During a mix a second, finer line runs above the bar: the transition's own progress.
     val mix = rememberMixProgress()
 
+    // 7.5: held, a small glass lens forms where the bar's fill ends (PressLens), on this capture of the bar.
+    val lensTrack = com.ketvoice.app.glass.rememberGlassBackdrop(Color.Transparent)
     Column(modifier = modifier.fillMaxWidth()) {
+      androidx.compose.foundation.layout.Box(Modifier.fillMaxWidth().height(26.dp)) {
+      com.ketvoice.app.glass.BackdropCapture(lensTrack, Modifier.matchParentSize()) {
         Canvas(
             Modifier
                 .fillMaxWidth()
@@ -184,6 +189,12 @@ fun ScrubBar(
                     strokeWidth = 2.dp.toPx(), cap = StrokeCap.Round)
             }
         }
+      }
+        com.ketvoice.app.ui.common.PressLens(press, lensTrack, com.ketvoice.app.ui.common.PressLensWidth,
+            com.ketvoice.app.ui.common.PressLensHeight, dark = trackColor.luminance() > .5f) { box ->
+            Offset(trackFor(box.width.toFloat()).xOf(shown), box.height / 2f)
+        }
+      }
         if (showTimes) ScrubTimes(shown, dur, press, mix.value, timeColor)
     }
 }
@@ -252,9 +263,12 @@ fun VolumeRail(
         SliderPress.track(SliderPress.Volume, density, 2.dp.toPx(), width - 2.dp.toPx(),
             press.expansion, if (withStretch) press.stretch else 0f, reduced)
     }
+    val lensTrack = com.ketvoice.app.glass.rememberGlassBackdrop(Color.Transparent)
+    androidx.compose.foundation.layout.Box(modifier.height(30.dp)) {
+    com.ketvoice.app.glass.BackdropCapture(lensTrack, Modifier.matchParentSize()) {
     Canvas(
-        modifier
-            .height(30.dp)
+        Modifier
+            .matchParentSize()
             .sliderPress(press)
             .pointerInput(Unit) {
                 detectTapGestures { off ->
@@ -282,6 +296,15 @@ fun VolumeRail(
         val track = trackFor(size.width)
         val shownValue = dragX?.let { trackFor(size.width, withStretch = false).fractionAt(it) } ?: value
         drawPressTrack(track, shownValue.coerceIn(0f, 1f), trackColor, fillColor, press.expansion, highlight = false)
+    }
+    }
+    // 7.5: held, the end of the fill turns into a small glass lens (PressLens).
+    com.ketvoice.app.ui.common.PressLens(press, lensTrack, com.ketvoice.app.ui.common.PressLensWidth,
+        com.ketvoice.app.ui.common.PressLensHeight, dark = trackColor.luminance() > .5f) { box ->
+        val w = box.width.toFloat()
+        val x = dragX?.let { trackFor(w, withStretch = false).fractionAt(it) } ?: value
+        Offset(trackFor(w).xOf(x.coerceIn(0f, 1f)), box.height / 2f)
+    }
     }
 }
 

@@ -118,6 +118,8 @@ fun VoiceSlider(trackId: String?, modifier: Modifier = Modifier, width: Dp = 52.
     fun save() { AppSettings.voiceLevel.value = Math.round(level * 100); SettingsStore.save() }
     val press = com.ketvoice.app.ui.common.rememberSliderPress()
     var raw by remember { mutableFloatStateOf(level) }
+    val lensTrack = com.ketvoice.app.glass.rememberGlassBackdrop(Color.Transparent)
+    val lensDensity = androidx.compose.ui.platform.LocalDensity.current.density
     val description = AppText.t("Niveau de la voix")
     val preparing = AppText.t("Préparation de la voix…")
     val busy = working != null || (afterDownload && downloading)
@@ -151,6 +153,7 @@ fun VoiceSlider(trackId: String?, modifier: Modifier = Modifier, width: Dp = 52.
             }
         }, contentAlignment = Alignment.TopCenter) {
         // Held, the pill swells a little (iOS 26/27); pulled past an end it stretches that way and springs back.
+        com.ketvoice.app.glass.BackdropCapture(lensTrack, Modifier.size(width, height)) {
         Canvas(Modifier.size(width, height).graphicsLayer {
             val e = if (Motion.reduced) 0f else press.expansion
             val stretch = press.stretch
@@ -158,6 +161,13 @@ fun VoiceSlider(trackId: String?, modifier: Modifier = Modifier, width: Dp = 52.
             scaleY = 1f + .03f * e + (if (size.height > 0f) kotlin.math.abs(stretch) / size.height else 0f)
             transformOrigin = androidx.compose.ui.graphics.TransformOrigin(.5f, if (stretch > 0f) 1f else if (stretch < 0f) 0f else .5f)
         }) { drawVoicePill(shown) }
+        }
+        // 7.5: held, the level's edge turns into a small glass lens across the pill (PressLens).
+        com.ketvoice.app.ui.common.PressLens(press, lensTrack, width - 6.dp, 26.dp, dark = true,
+            Modifier.size(width, height)) { box ->
+            val edge = 13f * lensDensity
+            androidx.compose.ui.geometry.Offset(box.width / 2f, (box.height * (1f - shown)).coerceIn(edge, maxOf(edge, box.height - edge)))
+        }
         // While the title is being separated (or the model arrives): a small spinner at the top of the pill.
         if (busy) com.ketvoice.app.ui.common.ActivitySpinner(Modifier.padding(top = 10.dp).testTag("voice-slider-preparing"),
             size = 18.dp, color = if (shown > .78f) Color.Black.copy(alpha = .6f) else Color.White)
