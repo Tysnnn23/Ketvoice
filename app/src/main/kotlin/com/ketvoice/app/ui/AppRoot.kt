@@ -382,6 +382,7 @@ fun AppRoot() {
                 }
 
                 // ---- Dialog compte ----
+                com.ketvoice.app.ui.player.CastMessages()
                 androidx.compose.material3.SnackbarHost(
                     com.ketvoice.app.ui.common.TrackActionFeedback.snackbar,
                     Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 150.dp).zIndex(12f)) {

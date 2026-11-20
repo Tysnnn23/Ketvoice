@@ -126,6 +126,13 @@ internal object LiveLyrics {
      * The line for these inputs and how long until it changes (null: only an event can change it). No line when the
      * lyrics belong to another title (still loading), are not timed, or the listener paused.
      */
+    /** 7.5: with « Prononciation » on and no translation shown, the lock screen gives the line's pronunciation. */
+    private fun romanized(lines: List<com.ketvoice.app.data.MusicApi.LyricLine>, text: String): String? {
+        if (!com.ketvoice.app.data.AppSettings.lyricsRomanization.value) return null
+        val japanese = lines.any { l -> l.text.any { com.ketvoice.app.util.Romanizer.scriptOf(it) == com.ketvoice.app.util.Romanizer.Script.Kana } }
+        return com.ketvoice.app.util.Romanizer.line(text, japanese)
+    }
+
     fun lineFor(head: Playhead?, lyrics: LyricsRepo.State, userOffsetMs: Int, stageDelayMs: Int,
                 translation: LyricsTranslation.Live?): Pair<LiveLine?, Long?> {
         if (head == null || !head.playWhenReady) return null to null
@@ -134,6 +141,7 @@ internal object LiveLyrics {
         val moment = LyricTimeline.at(lyrics.lines, position) ?: return null to null
         val translated = translation?.takeIf { it.trackId == head.mediaId }?.lines?.get(moment.index)
             ?.trim()?.takeIf { it.isNotEmpty() && it != moment.current }
+            ?: romanized(lyrics.lines, moment.current)
         val line = LiveLine(head.mediaId, head.title, head.artist, moment.index, moment.current, moment.next, translated)
         val wait = moment.endsAt?.takeIf { head.playing }?.let { LyricTimeline.wallDelay(it, position, head.speed) }
         return line to wait

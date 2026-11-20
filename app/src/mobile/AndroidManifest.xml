@@ -26,6 +26,11 @@
             android:authorities="${applicationId}.autoart"
             android:exported="true" />
 
+        <!-- Google Cast (7.5): the Default Media Receiver, see cast/CastOptionsProvider. -->
+        <meta-data
+            android:name="com.google.android.gms.cast.framework.OPTIONS_PROVIDER_CLASS_NAME"
+            android:value="com.ketvoice.app.cast.CastOptionsProvider" />
+
         <meta-data
             android:name="com.google.android.gms.car.application"
             android:resource="@xml/automotive_app_desc" />

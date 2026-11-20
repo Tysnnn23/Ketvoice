@@ -262,7 +262,7 @@ internal object Automix {
             delay(250)
             val target = host ?: continue
             // A Ketogether guest follows the host's music: no Ketmix of its own meanwhile (6.1).
-            if (!AppSettings.automix.value || com.ketvoice.app.together.Ketogether.holdsKetmix) { if (job != null || session != null) cancel(); say(""); continue }
+            if (!AppSettings.automix.value || com.ketvoice.app.together.Ketogether.holdsKetmix || com.ketvoice.app.cast.CastState.active) { if (job != null || session != null) cancel(); say(""); continue }
             if (job?.isActive == true) continue
             val state = Player.state.value
             val current = state.current

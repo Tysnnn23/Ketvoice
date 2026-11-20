@@ -442,7 +442,7 @@ fun PlayerBottomBar(
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    Icons.Filled.PhoneAndroid,
+                    castOutputIcon(),
                     "Sortie audio",
                     tint = Color.White,
                     modifier = Modifier.size(22.dp)
