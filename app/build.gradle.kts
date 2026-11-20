@@ -56,6 +56,9 @@ android {
         sourceSets["main"].java.srcDir("src/discord/kotlin")
     }
 
+    // The Cast SDK (7.5) brings AppCompat and its lint checks; widget layouts are RemoteViews, where only
+    // android:tint works (app:tint needs AppCompat views, which Ketvoice does not use).
+    lint { disable += "UseAppTint" }
     flavorDimensions += "device"
     productFlavors {
         create("mobile") {
