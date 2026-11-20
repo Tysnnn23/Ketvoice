@@ -4,58 +4,67 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.asImageBitmap
+import com.ketvoice.app.ui.motion.Motion
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
-import androidx.core.graphics.drawable.toBitmap
-import coil.compose.AsyncImage
-import coil.imageLoader
-import coil.request.ImageRequest
-import coil.request.SuccessResult
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
-data class CoverAmbience(val color: Color = Color(0xFF20212A), val veil: Float = .62f, val accent: Color? = null)
+/** The player's colours for a cover; [mean] is the cover's mean relative luminance. */
+data class CoverAmbience(val color: Color = Color(0xFF20212A), val veil: Float = .62f, val accent: Color? = null,
+                         val mean: Float = .2f)
 
+/**
+ * The colours of [url] for the player (7.4): kept from memory when already read, and the previous title's kept
+ * until the new ones are known, so the background glides from one to the other instead of dipping to grey.
+ * A cover that cannot be read gives the neutral colours, never the previous title's.
+ */
 @Composable
 internal fun rememberCoverAmbience(url: String?): CoverAmbience {
     val context = LocalContext.current
-    return produceState(CoverAmbience(), url) {
-        value = CoverAmbience()
-        if (url == null) return@produceState
-        val result = context.imageLoader.execute(ImageRequest.Builder(context).data(url).size(64).allowHardware(false).build()) as? SuccessResult
-            ?: return@produceState
-        value = withContext(Dispatchers.Default) {
-            val bitmap = result.drawable.toBitmap(48, 48)
-            val pixels = mutableListOf<Int>()
-            for (y in 0 until bitmap.height step 2) for (x in 0 until bitmap.width step 2) {
-                pixels += bitmap.getPixel(x, y)
-            }
-            val dominant = AlbumColors.dominant(pixels.toIntArray()) ?: return@withContext CoverAmbience()
-            val sampled = Color(dominant)
-            CoverAmbience(Color(sampled.red * .55f, sampled.green * .55f, sampled.blue * .55f),
-                accent = Color(AlbumColors.readableAccent(dominant)))
-        }
-    }.value
+    val state = remember { mutableStateOf(url?.let(PlayerColors::cached) ?: CoverAmbience()) }
+    LaunchedEffect(url) {
+        state.value = if (url == null) CoverAmbience()
+            else runCatching { PlayerColors.load(context, url) }.getOrNull() ?: CoverAmbience()
+    }
+    return state.value
 }
 
 @Composable
 internal fun AmbientArtwork(url: String?, ambience: CoverAmbience, playing: Boolean = false) {
     Box(Modifier.fillMaxSize().background(ambience.color)) {
         // "Fond animé" (5.9.0): the cover's colours flow as in Apple Music — three blurred copies turning
-        // slowly. Off, the blurred artwork stands still as before.
+        // slowly. Off, the blurred artwork stands still (7.4: the same soft field, still, instead of a live blur
+        // of the full picture: no seam at the edges, a crossfade between titles, and far cheaper).
         val flowing = url != null && com.ketvoice.app.data.AppSettings.meshBackground.value
-        if (flowing) ArtworkFlowBackground(url, playing)
-        else if (url != null) com.ketvoice.app.glass.SoftBlurredImage(url, 90.dp, Modifier.fillMaxSize(), alpha = .88f)
-        // A lighter veil over the flowing colours: they are the show, the text still reads on them.
-        val veil = if (flowing) (ambience.veil - .18f).coerceAtLeast(.30f) else ambience.veil
-        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(
-            Color.Black.copy(alpha = veil),
-            ambience.color.copy(alpha = if (flowing) .22f else .40f),
-            Color.Black.copy(alpha = veil + .12f)
-        ))))
+        if (url != null) ArtworkFlowBackground(url, playing, still = !flowing)
+        // The veil follows the cover's lightness, and glides with the colours.
+        val veil by animateFloatAsState(PlayerColors.veil(ambience.mean, flowing),
+            tween(Motion.duration(PlayerColors.GLIDE_MS)), label = "player-veil")
+        val scrim = PlayerColors.scrim(ambience.color)
+        Box(Modifier.fillMaxSize().drawBehind {
+            drawRect(scrim, alpha = veil)
+            // A little more at the top (the status bar) and at the bottom (the controls), none in the middle.
+            drawRect(Brush.verticalGradient(0f to Color.Black.copy(alpha = .14f), .42f to Color.Transparent,
+                .62f to Color.Transparent, 1f to Color.Black.copy(alpha = .26f)))
+            // A faint grain breaks the 8-bit steps of the dark gradients (no banding on large, dim screens).
+            drawRect(Dither.brush, alpha = Dither.ALPHA)
+        })
+    }
+}
+
+/** A tiled noise of one or two levels, laid over dim gradients so their 8-bit steps never show as bands. */
+internal object Dither {
+    const val ALPHA = .022f
+    private const val SIDE = 64
+    val brush: androidx.compose.ui.graphics.ShaderBrush by lazy {
+        val random = java.util.Random(74)
+        val pixels = IntArray(SIDE * SIDE) { val v = random.nextInt(256); (255 shl 24) or (v shl 16) or (v shl 8) or v }
+        val bitmap = android.graphics.Bitmap.createBitmap(pixels, SIDE, SIDE, android.graphics.Bitmap.Config.ARGB_8888)
+        androidx.compose.ui.graphics.ShaderBrush(androidx.compose.ui.graphics.ImageShader(bitmap.asImageBitmap(),
+            androidx.compose.ui.graphics.TileMode.Repeated, androidx.compose.ui.graphics.TileMode.Repeated))
     }
 }

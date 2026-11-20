@@ -157,7 +157,7 @@ internal fun LyricsMesh(visible: Boolean, cover: String?, ambience: CoverAmbienc
     if (!visible && shown.value <= 0f) return
     val vivid = com.ketvoice.app.theme.rememberCoverAccent(cover)
     val target = meshColors(ambience.color, ambience.accent, vivid)
-    val glide = androidx.compose.animation.core.tween<Color>(Motion.duration(700))
+    val glide = androidx.compose.animation.core.tween<Color>(Motion.duration(PlayerColors.GLIDE_MS))
     val colors = target.mapIndexed { index, color ->
         androidx.compose.animation.animateColorAsState(color, glide, label = "lyrics-mesh-$index").value
     }

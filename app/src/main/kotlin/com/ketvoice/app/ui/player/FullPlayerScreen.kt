@@ -114,13 +114,17 @@ fun FullPlayerScreen(
     val lyrics by LyricsRepo.state.collectAsState()
     val cover = com.ketvoice.app.data.MediaOverrides.cover(track, covers["t:${track.id}"] ?: track.coverUrl)
     val sampled = rememberCoverAmbience(cover)
-    val ambientColor by animateColorAsState(sampled.color, tween(Motion.duration(420)), label = "album-background")
+    // 7.4: background and accent glide together, over the same time as the colour fields.
+    val ambientColor by animateColorAsState(sampled.color, tween(Motion.duration(PlayerColors.GLIDE_MS)), label = "album-background")
     val ambience = sampled.copy(color = ambientColor)
     val preferredAccent = LocalTheme.current.accent
     val albumAccent by animateColorAsState(
         if (AppSettings.albumColors.value) sampled.accent ?: preferredAccent else preferredAccent,
-        tween(Motion.duration(420)), label = "album-accent")
+        tween(Motion.duration(PlayerColors.GLIDE_MS)), label = "album-accent")
     val context = LocalContext.current
+    // The next title's colours are read ahead, so a change of title glides at once instead of after its cover loads.
+    val nextCover = state.queue.getOrNull(state.index + 1)?.let { ArtworkRepo.coverForTrack(it) }
+    LaunchedEffect(nextCover) { PlayerColors.warm(context, nextCover) }
     val backdrop = rememberGlassBackdrop(Color.Black)
     val controlsBackdrop = rememberGlassBackdrop(Color.Black)
     val adaptivePlayer = LocalAdaptiveLayout.current.adaptivePlayer
