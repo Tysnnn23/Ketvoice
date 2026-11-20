@@ -49,7 +49,7 @@ object CoverPalette {
         small.getPixels(px, 0, w, 0, 0, w, h)
         if (small !== bitmap) small.recycle()
         // One hue of the cover, never an average of two (see CoverColors); a grey cover keeps the chosen accent.
-        val found = CoverColors.analyze(px)?.takeIf { it.colourful } ?: return@withContext null
+        val found = CoverColors.analyze(px, w)?.takeIf { it.colourful } ?: return@withContext null
         val primary = tune(Color(found.base))
         val secondary = found.second?.let { tune(Color(it)) } ?: shiftHue(primary, 0.12f)
         primary to secondary
@@ -167,8 +167,8 @@ object CoverTone {
     fun cached(key: String): Color? = synchronized(cache) { cache[key] }
     fun store(key: String, color: Color) { synchronized(cache) { cache[key] = color } }
 
-    /** The colour the cover is made of: its main hue's own pixels, or its greys when it has almost no colour. */
-    fun dominant(pixels: IntArray): Color? = CoverColors.analyze(pixels)?.let { Color(it.base) }
+    /** The colour of the region the cover is mostly made of ([CoverColors.Result.background]). */
+    fun dominant(pixels: IntArray, width: Int = 0): Color? = CoverColors.analyze(pixels, width)?.let { Color(it.background) }
 
     suspend fun of(bitmap: Bitmap): Color? = withContext(Dispatchers.Default) {
         val w = 32
@@ -177,7 +177,7 @@ object CoverTone {
         val px = IntArray(w * h)
         small.getPixels(px, 0, w, 0, 0, w, h)
         if (small !== bitmap) small.recycle()
-        dominant(px)
+        dominant(px, w)
     }
 }
 

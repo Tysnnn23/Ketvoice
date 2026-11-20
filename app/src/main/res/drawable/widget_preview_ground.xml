@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- 7.4: the preview's card: the colours WidgetPalette takes from widget_preview_cover (NowPlayingWidgetsHostTest keeps them equal). -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
-    <gradient android:angle="315" android:startColor="#FF82312B" android:endColor="#FF673C22" />
+    <gradient android:angle="315" android:startColor="#FF81322C" android:endColor="#FF6B4D24" />
 </shape>
