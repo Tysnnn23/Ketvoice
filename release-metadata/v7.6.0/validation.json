@@ -1,0 +1,213 @@
+{
+  "schema": 8,
+  "version": "7.6.0",
+  "versionCode": 147,
+  "source_commit": "94f07baea032d3f758438ebc58d768b9e60cff37",
+  "created_at": "2026-11-20T22:04:14.353944+00:00",
+  "build_origin": {
+    "kind": "github_actions_with_owner_discord_sdk",
+    "workflow": "android.yml",
+    "run_id": 44820959431,
+    "artifact": {
+      "id": 14672934000,
+      "sha256": "dc46f8b26a523c60a2040f12bda9bb2f6cd895a03dbfb059bff94bb2feb474eb"
+    },
+    "gradle": "assembleMobileRelease assembleQuestRelease assembleLiteRelease",
+    "note": "Signed by CI with the pinned keystore secret; the Discord Social SDK AAR matched its pinned SHA-256."
+  },
+  "local_validation": {
+    "result": "debug JVM/Robolectric suites for the three flavors (mobile, quest, lite), release lint and the APK checker tests passed in a cloud container without the Discord SDK",
+    "commands": [
+      "testMobileDebugUnitTest",
+      "testQuestDebugUnitTest",
+      "testLiteDebugUnitTest -ProbolectricSdks=31,32,33,34,35,36",
+      "lintMobileRelease",
+      "lintQuestRelease",
+      "lintLiteRelease",
+      "tools/test_verify_apk.py"
+    ],
+    "ci_validation": "run 44820959431: release builds, debug and release unit tests, UI text audit, lint, APK signature pin and Discord bridge packaging passed",
+    "code_review": {
+      "kind": "none independent"
+    },
+    "host_previews": "Robolectric software renders on the host, looked at by the sub-agents and the lead: Canvas fit on the album header (upright and wide, light/dark), full player and standby (video stills only, no decoding on the host); the volume-keyframe sheet on both song pages and the timeline; the Ketmix style picker phone/tablet; the onboarding step (nothing installed, downloading, all installed), its alert and the icon chooser; no renders for the performance pass (look unchanged); Quest screens not rendered",
+    "features_7_6": "Canvas: second pass of an album with 0 lookups and 0 downloads and stills at once, each title its own Canvas (CanvasPlayerReplayHostTest, fails on 7.5 code), one-time 7.5 stand-in migration, fit rules (Canvas76HostTest); real catalogue Canvas of Legends Never Die checked (4 distinct, ~828 KB each); performance: recomposition, wake-up, start-up I/O and cache counts on the host (PerfRecompositionHostTest, PerfBackgroundHostTest, StartupIoHostTest with -Djava.security.manager=allow), no device frame times; voice: streaming separation scheduling with a fake source and DASH rendition choice (StreamSeparationTest), keyframes interpolation/storage/engine on PCM fixtures (MixKeysTest, KetmixKeysHostTest), HLS not supported; Ketmix: offline two-deck render metrics on synthetic fixtures (KetmixRenderQualityTest, MixBench) — clicks above 4 kHz -30..-38 -> -73..-97 dBFS, in-time dip 2.3-4.0 -> 1.7-3.4 LU, never listened to by ear; onboarding and GTA VI icon default (OnboardingHostTest, AppIconPickerHostTest), a listener who chose Liquid Glass before 7.6 also moves to the GTA VI icon; nothing ran on a device",
+    "after_local_run": "full local run on the release commit's parent: mobile 1878, quest 1860 (45 skipped), lite 1868 tests with one Lite-only failure (standby Canvas test under Lite's default performance mode), fixed in cd6a7df; CI then failed one timing-sensitive Canvas replay test that passed locally, made to wait for background stills in 94f07ba and passed three times locally; release lint 0 errors; UI text audit clean",
+    "sdk_30": "Robolectric's Android 11 runtime could not be downloaded in the cloud container (Maven Central answered 429), so the Lite tests that declare sdk 30 ran on sdk 31 only; nothing ran on an Android 11 runtime",
+    "after_last_full_local_run": "only two test files changed after the last complete local run; CI run 44820959431 ran every suite on the release commit and passed"
+  },
+  "server": {
+    "function": "ketvoice-content",
+    "deployed_version": 23,
+    "changed_in_this_version": false,
+    "database": "no migration in this version"
+  },
+  "tests": {
+    "mobile": {
+      "jvm": {
+        "tests": 1878,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 3
+      },
+      "android_15_emulator_compose": {
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "quest": {
+      "jvm": {
+        "tests": 1860,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 45
+      },
+      "android_15_emulator_compose": {
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "lite": {
+      "jvm": {
+        "tests": 1868,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 3
+      },
+      "android_11_runtime": {
+        "status": "not_executed"
+      }
+    },
+    "dex_register_check": "tools/check_dex_registers.py ran in CI (Check method sizes against the Android verifier) on the three release APKs",
+    "apk_checker": "tools/test_verify_apk.py 12 tests (Lite minSdk 30 required)"
+  },
+  "lint": {
+    "mobile": {
+      "Warning": 343,
+      "Hint": 29
+    },
+    "quest": {
+      "Warning": 339,
+      "Hint": 29
+    },
+    "lite": {
+      "Warning": 361,
+      "Hint": 29
+    },
+    "errors": 0
+  },
+  "apks": [
+    {
+      "name": "Ketvoice-7.6.0.apk",
+      "sha256": "da6f36f6751b1be07ddc63daeff9edbe2de3ba029b017d63c528c149c38bf883",
+      "bytes": 106038802,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "7.6.0",
+      "versionCode": 147,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-7.6.0-Quest.apk",
+      "sha256": "1a503e9902e6471c627bdc65d685d3a9bc4ea5872dfd6b30a8c0d2f206ffa738",
+      "bytes": 118324476,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "7.6.0",
+      "versionCode": 147,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-7.6.0-Lite.apk",
+      "sha256": "63251dec5dcad173d00a3d5e46fa915fdf24d6f112f7e6c9d442158b3c8e729e",
+      "bytes": 34140772,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "7.6.0",
+      "versionCode": 147,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false,
+      "edition": "lite"
+    }
+  ],
+  "discord": {
+    "sdk_present_in_ci_build": true,
+    "sdk_sha256_pinned": true,
+    "bridge_and_native_libraries_verified": true,
+    "presence_mode": "unauthenticated_rpc_through_installed_discord_app"
+  },
+  "credential_scan": {
+    "entries": 3990,
+    "findings": 0,
+    "scope": "the three release APKs",
+    "kind": "credential_patterns",
+    "explicit_private_provider_key_deny_list": false,
+    "note": "run because publish-release requires it; the other manual checks were skipped at the owner's request"
+  },
+  "release_install_smoke": {
+    "mobile": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "quest": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "lite": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    }
+  },
+  "publication_override": {
+    "authorized_by_user": true,
+    "authorized_at": "2026-11-20T22:04:14.353944+00:00",
+    "kind": "standing_authorization",
+    "user_statement": "J'autorise TOUT devient maintenant une règle.",
+    "user_statement_date": "2026-11-14",
+    "in_reply_to": "The question whether versions may be published without phone or Quest testing without asking again for each version.",
+    "recorded_in": "AGENTS.md (commit aeeda8e)",
+    "reason": "The owner made publishing validated versions without phone or Quest testing a standing rule.",
+    "scope": "physical device installation and all on-device behaviour of 7.6.0 (mobile, Lite and Quest), including accounts and sync on devices"
+  },
+  "owner_requests_2026_11_20_7_6_0": {
+    "statements": [
+      "Ok c'est franchement pas mal mais met un scale intelligent sur les canavs etc pour qu'on voit bien le canvas sans que sa cache et que sa ne rend pas trop grand mais le canvas est complet. Le cache de canvas ne fonctionnent pas apres avoir écouté un album entier le canvas continuer de se charger au lieu d'utiliser le cache. Et optimise a fond l'app tout en gardant les meme choses car actuellement l'app manque cruellement d'optimisation et aussi enleve l'événement gta 6 mais laisse l'icone d'app gta 6 par défaut. Dans le onnboarding ajoute un ecran \"Amélioré votre expérience d'ecoute\" et les modèles de séparation,scan musique s'affiche et son proposé et si l'utilisateur passe au suivant sans télécharger l'un d'entre eux un avertissement style ios 27 se met \"Etes vous sur de ne pas vouloir \" bon met les truc que tu veux et aussi rend possible l'écoute de voix en streaming et si possible dans le mix manuel quand les voix et l'instrumental sont séparés je veut que tu rajoutes deja que on peut mettre des keyframe de volume pour régler le niveau de volume de voix, instrument ou simplement la musique\" sur les deux musique donc le keyframe se place et apres si tu reclique sur le keyframe tu a Le nom de lz première musique et si tu defile ta la deuxième et tu regle le volume comme sa les utilisateurs peuvent directement Faire des vrai mix perso et aussi ne met jamais de mot Français dans les changelog et n'oublie pas les traductions ! Ameliore les type de transition disponible dans ketmix et améliore encore plus ketmix pour avoir de meilleures rendu !"
+    ],
+    "done": "all items; French UI labels were also removed from the 7.0-7.5 notes, changelog and README in the repository (published GitHub release bodies were left as published)"
+  },
+  "not_validated": [
+    "physical phone, Lite, tablet or Quest installation, rendering and behaviour of 7.6.0",
+    "Canvas decoding, fit and screen-off Wi-Fi caching on a device; real Wi-Fi/metered detection",
+    "frame times, battery and real start-up time after the performance pass",
+    "streaming voice separation on real streams and DASH renditions, CPU and battery use",
+    "keyframes and the new Ketmix styles by ear on real songs",
+    "the onboarding downloads, the local-scan permission flow and the default launcher icon on real launchers",
+    "Robolectric runs on the Android 11 runtime (sdk 30)",
+    "independent code review"
+  ],
+  "known_limitations": [
+    "No Wear OS app in this version.",
+    "Seasonal themes use code-drawn decor until the owner's pictures are added.",
+    "Widgets placed with an earlier version other than the 2x2 now-playing one disappear from the home screen and must be added again.",
+    "Romanization does not read Japanese kanji; Hebrew and Arabic show consonants only.",
+    "Streaming voice separation does not cover HLS streams.",
+    "A listener who picked the Liquid Glass icon before 7.6 is moved to the GTA VI icon like everyone else.",
+    "The mobile APK is about 4 MB larger and Lite about 2 MB larger because of the Cast SDK.",
+    "Android Auto's queue screen shows only the current song.",
+    "Switching between Ketvoice and Ketvoice Lite is a manual install of the other APK.",
+    "Ketogether guests hear titles their own sources can play; local files and private titles are shown as unavailable.",
+    "Lecture automatique: which queue titles were added automatically is not kept across a session restore.",
+    "The mobile and Quest APKs are about 18.6 MB larger because they include the rhythm model.",
+    "Launcher icons keep a background: Android fills adaptive icon backgrounds in black.",
+    "The signing certificate is the existing public Android debug identity, not a private production key."
+  ],
+  "canonical_banner_sha256": "ddc0e2c1270027f4b9dd92254374b79727ae9eaf8914e418b52e23c5b39b5966"
+}
