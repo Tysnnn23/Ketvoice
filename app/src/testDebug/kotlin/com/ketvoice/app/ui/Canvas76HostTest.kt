@@ -93,6 +93,8 @@ class Canvas76HostTest {
 
     @Test @Config(qualifiers = "w860dp-h400dp-land-mdpi")
     fun standbyUpright() {
+        // Lite turns performance mode on by default, and standby keeps the Canvas still there; this test checks the fit.
+        com.ketvoice.app.data.AppSettings.highPerformanceMode.value = false
         val video = kept(tracks[1], upright = true)
         field<Map<String, String>>(CanvasRepo::class.java, "_paths").value = mapOf(tracks[1].id to video.absolutePath)
         val clock = java.util.Calendar.getInstance().apply { set(java.util.Calendar.HOUR_OF_DAY, 14); set(java.util.Calendar.MINUTE, 7) }
