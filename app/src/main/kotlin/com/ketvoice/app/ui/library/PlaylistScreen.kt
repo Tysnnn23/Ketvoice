@@ -410,12 +410,13 @@ private fun PlaylistHeader(playlist: LocalPlaylist, playable: List<Track>, owner
         // 7.5 motion75: as an album, the Canvas is the header itself, from the top of the screen (the list starts below the bar).
         val motion = canvas != null && style == com.ketvoice.app.ui.sub.HeaderStyle.Canvas
         val window = androidx.compose.ui.platform.LocalConfiguration.current
-        val motionHeight = (com.ketvoice.app.ui.sub.AlbumHeader.motionHeight(window.screenWidthDp.toFloat(), window.screenHeightDp.toFloat()).dp - top)
+        val motionHeight = (com.ketvoice.app.ui.sub.AlbumHeader.motionHeight(window.screenWidthDp.toFloat(), window.screenHeightDp.toFloat(),
+            com.ketvoice.app.ui.sub.canvasShape(canvas), WindowInsets.statusBars.asPaddingValues().calculateTopPadding().value).dp - top)
             .coerceAtLeast(160.dp)
         if (motion) com.ketvoice.app.ui.sub.MotionHeaderArtwork(canvas!!, motionHeight, playing = true, scroll = scroll, pull = pull,
             cover = leadCover, extendUp = top)
         Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp)
-            .padding(top = if (motion) (motionHeight - 118.dp).coerceAtLeast(6.dp) else 6.dp, bottom = 12.dp).testTag("playlist-header"),
+            .padding(top = if (motion) (motionHeight - com.ketvoice.app.ui.sub.AlbumHeader.wordsOverlapDp(false).dp).coerceAtLeast(6.dp) else 6.dp, bottom = 12.dp).testTag("playlist-header"),
         horizontalAlignment = Alignment.CenterHorizontally) {
         artwork()
         // 7.5: name, curator and details as one block (album page proportions).

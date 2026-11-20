@@ -1,5 +1,8 @@
 package com.ketvoice.app.ui.sub
 
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Image
@@ -69,9 +72,22 @@ internal object AlbumHeader {
     /** Whether the listener wants a Canvas in headers at all: Canvas on pages on, the Canvas style chosen, motion allowed. */
     fun wantsCanvas(pagesCanvas: Boolean, choice: Int, reduced: Boolean): Boolean = pagesCanvas && normalize(choice) == 1 && !reduced
 
-    /** Height of the motion artwork on a phone: about 72 % of the window, as Apple Music, at most 1.8 × its width. */
-    fun motionHeight(widthDp: Float, windowHeightDp: Float): Float =
-        (windowHeightDp * .72f).coerceIn(minOf(320f, widthDp * 1.8f), widthDp * 1.8f)
+    /**
+     * Height of the motion artwork on a phone (7.6): the whole Canvas ([aspect], width over height) at full width under
+     * the status bar ([insetDp]) and the floating buttons, and its foot, where the words start; at most 72 % of the window (the Canvas is then shown
+     * whole at that height, its colours extended at the sides), at least 240 dp.
+     */
+    fun motionHeight(widthDp: Float, windowHeightDp: Float, aspect: Float = 9f / 16f, insetDp: Float = 0f): Float {
+        val whole = insetDp + BUTTONS_DP + widthDp / aspect.coerceAtLeast(.2f) + FOOT_DP
+        return whole.coerceIn(minOf(240f, windowHeightDp * .5f), maxOf(240f, windowHeightDp * .72f))
+    }
+
+    /** The band under the Canvas where it dissolves into the page and the words begin (7.6: never over the video). */
+    const val FOOT_DP = 44f
+    /** The row of floating buttons over the top of the header (back, share…): the Canvas starts under it (7.6). */
+    const val BUTTONS_DP = 56f
+    /** How far the words rise into the header: onto the foot only; with the owner's framing, onto the fade as in 7.5. */
+    fun wordsOverlapDp(framed: Boolean): Float = if (framed) 112f else 28f
 
     /** How far the artwork moves down while the page scrolls by [scrollPx]: a slight parallax, none with reduced motion. */
     fun parallax(scrollPx: Float, reduced: Boolean): Float = if (reduced || !scrollPx.isFinite()) 0f else scrollPx.coerceAtLeast(0f) * .3f
@@ -192,20 +208,29 @@ internal fun MotionHeaderArtwork(path: String, height: Dp, playing: Boolean, scr
                                  extendUp: Dp = 0.dp) {
     val theme = LocalTheme.current
     val reduced = Motion.reduced
+    val status = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     Box(modifier.fillMaxWidth().height(height).testTag("header-canvas")) {
         Box(Modifier.matchParentSize().extendUp(extendUp).clipToBounds()) {
-            MotionArtwork(path, playing, Modifier.fillMaxSize().graphicsLayer {
+            val moving = Modifier.fillMaxSize().graphicsLayer {
                 translationY = AlbumHeader.parallax(scroll(), reduced)
                 val zoom = AlbumHeader.stretch(pull(), size.height)
                 scaleX = zoom; scaleY = zoom
                 transformOrigin = TransformOrigin(.5f, 0f)
-            }, frame, cover)
+            }
+            // 7.6: the owner's framing fills the header as before; otherwise the whole Canvas, under the status bar and
+            // above the words (CanvasFit), on the page colour until its still is there.
+            if (frame != null) MotionArtwork(path, playing, moving, frame, cover)
+            else com.ketvoice.app.ui.player.FittedCanvas(path, playing, theme.background, moving,
+                safe = androidx.compose.foundation.layout.PaddingValues(top = status + AlbumHeader.BUTTONS_DP.dp, bottom = AlbumHeader.FOOT_DP.dp))
             // The floating buttons stay readable over a bright Canvas.
             Box(Modifier.fillMaxWidth().height(110.dp).background(Brush.verticalGradient(
                 listOf(Color.Black.copy(alpha = .26f), Color.Transparent))))
         }
-        // A long, smooth dissolve into the page colour: the title, artist and details sit on it.
-        Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(height * .46f).background(Brush.verticalGradient(
+        // A smooth dissolve into the page colour: the title, artist and details sit on it (7.6: only the foot, under
+        // a whole Canvas; with the owner's framing, the long 7.5 fade).
+        if (frame == null) Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height((AlbumHeader.FOOT_DP + 28f).dp)
+            .background(Brush.verticalGradient(0f to Color.Transparent, .45f to theme.background.copy(alpha = .7f), 1f to theme.background)))
+        else Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(height * .46f).background(Brush.verticalGradient(
             0f to Color.Transparent,
             .30f to theme.background.copy(alpha = .20f),
             .58f to theme.background.copy(alpha = .62f),

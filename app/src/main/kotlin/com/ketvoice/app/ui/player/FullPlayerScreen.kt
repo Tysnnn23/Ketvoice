@@ -400,7 +400,7 @@ fun FullPlayerScreen(
                             beat.animateTo(LivingArtwork.target(low), tween(LivingArtwork.FOLLOW_MS))
                         }
                     }
-                    PlayerArtworkFrame(inlineCanvas, ambience.color,
+                    PlayerArtworkFrame(inlineCanvas && artworkFrame == null, ambience.color,
                         Modifier.width(sceneWidth).height(artworkHeight)
                         // Shared element: the artwork grows out of the mini-player cover on the
                         // reveal timeline, and returns to it during a dismissal or a back gesture.
@@ -425,7 +425,10 @@ fun FullPlayerScreen(
                         Box(Modifier.fillMaxSize()) {
                             ArtworkCanvas(track, if (canvasFocus || panoramicCanvasActive(canvasPath)) null else canvasPath,
                                 state.isPlaying && !canvasFocus, Modifier.fillMaxSize().trackSwipeContent(trackSwipe), depth = true,
-                                onCanvasFailure = { failedCanvas = true }, frame = artworkFrame)
+                                onCanvasFailure = { failedCanvas = true }, frame = artworkFrame,
+                                // 7.6: whole, below « Lecture depuis » and the buttons, above the title.
+                                fit = PaddingValues(start = 12.dp, end = 12.dp, top = topInset + 52.dp,
+                                    bottom = (artworkHeight - titleTop + 8.dp).coerceAtLeast(8.dp)), ambient = ambience.color)
                             // Under « Lecture depuis », far from the controls: only when the Canvas is late (6.2.3).
                             com.ketvoice.app.ui.common.CanvasLoadingPill(track,
                                 wanted = AppSettings.animatedArtwork.value && track.id !in canvasExcluded &&

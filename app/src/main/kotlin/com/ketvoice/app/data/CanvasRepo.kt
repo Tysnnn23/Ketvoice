@@ -54,6 +54,9 @@ object CanvasRepo {
     internal var lookup: suspend (Track) -> KetvoiceApi.CanvasResult? = { KetvoiceApi.canvas(it) }
     internal var fetchFile: (String, File, Long) -> File? = { url, dest, max -> download(url, dest, max) }
     internal var mayFetch: (Context, Boolean) -> Boolean = { context, ahead -> mayDownload(context, ahead) }
+    /** The network as the rule below sees it (unmetered Wi-Fi, allowed for Canvas); replaced by the host tests. */
+    internal var unmeteredNow: (Context) -> Boolean = { unmetered(it) }
+    internal var allowedNow: (Context) -> Boolean = { networkAllowed(it) }
 
     /** Forgets cached paths whose file was removed by the disk budget; they resolve again on demand. */
     fun dropMissing() {
@@ -69,6 +72,7 @@ object CanvasRepo {
         appContext = context.applicationContext
         runCatching {
             val prefs = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            forgetStandIns(prefs)
             _excluded.value = prefs.getStringSet(EXCLUDED_KEY, emptySet()).orEmpty().toSet()
             val dir = canvasDir(context.applicationContext)
             val map = mutableMapOf<String, String>()
@@ -94,6 +98,35 @@ object CanvasRepo {
         localPath(track.id)?.let { DiskBudget.touch(it); posterSoon(it); return resolveNow(track, force, again = true, ahead = ahead) }
         setLoading(track.id, true)
         try { resolveNow(track, force, again = true, ahead = ahead) } finally { setLoading(track.id, false) }
+    }
+
+    /** Marks that [forgetStandIns] ran, with the versionCode it ran on (an Int: init's path loop reads Strings only). */
+    internal const val STAND_INS_FIXED = "migration:stand-ins"
+
+    /**
+     * 7.6, once (the first start of a version that has this, then never again): until 7.5 a title with no catalogue id
+     * of its own took its album's Canvas for good, and « Legends Never Dies » showed its first title's Canvas on every
+     * title. Every title mapped to its album's Canvas forgets that mapping: the album's Canvas then only stands in at
+     * once while the title's own is looked up (one lookup per title; no download when it is that same file). Files,
+     * album keys, page keys and the « none » entries stay (those were only written after a real lookup said none).
+     */
+    internal fun forgetStandIns(prefs: android.content.SharedPreferences) {
+        if (prefs.contains(STAND_INS_FIXED)) return
+        fun catalogue(name: String) = !name.startsWith("kvov-") && !name.startsWith("kvpub-") && !name.startsWith("kvlink-")
+        val entries = prefs.all
+        val albumCanvas = entries.filter { (k, v) -> k.startsWith("album:") && v is String && catalogue(v) }.values.toSet()
+        val edit = prefs.edit()
+        entries.forEach { (key, value) ->
+            val keyed = key.startsWith("album:") || key.startsWith("page:") || key.startsWith(NONE_PREFIX) || key.startsWith("migration:")
+            if (!keyed && value is String && value in albumCanvas) edit.remove(key)
+        }
+        edit.putInt(STAND_INS_FIXED, com.ketvoice.app.BuildConfig.VERSION_CODE).commit()
+    }
+
+    /** The player's look ahead when a title starts: the next two titles of the queue, so each opens with its Canvas. */
+    suspend fun aheadOf(queue: List<Track>, index: Int) {
+        // 7.6: ahead, so on Wi-Fi they are kept even while the album plays screen off (mobile data waits for the screen).
+        (1..2).mapNotNull { queue.getOrNull(index + it) }.forEach { runCatching { resolve(it, ahead = true) } }
     }
 
     /** Track ids whose Canvas is being looked up or downloaded now (6.2.3). */
@@ -211,9 +244,8 @@ object CanvasRepo {
                 var spotifyId = catalogueName(track.spotifyId) ?: catalogueName(prefs.getString(track.id, null))
                 var dest: File? = spotifyId?.let { File(canvasDir(ctx), "$it.mp4") }
 
-                if (dest?.exists() != true && spotifyId == null && albumSpotifyId != null) {
-                    dest = File(canvasDir(ctx), "$albumSpotifyId.mp4")
-                }
+                // 7.6: a title with no id of its own no longer takes its album's Canvas for good (« Legends Never Dies »
+                // showed its first title's on every title): the album's stands in (fromDevice) while its own is asked.
                 val alreadyDownloaded = dest?.let { it.exists() && it.length() > 10_000 } == true
 
                 if (!alreadyDownloaded) {
@@ -226,9 +258,9 @@ object CanvasRepo {
                         return@withLock
                     }
                     spotifyId = resolved.spotifyId
-                    prefs.edit()
-                        .putString(track.id, spotifyId)
-                        .putString(albumKey, spotifyId)
+                    // The album's stand-in is the first Canvas found for it, not whichever title was asked last.
+                    prefs.edit().putString(track.id, spotifyId)
+                        .apply { if (albumSpotifyId == null || !File(canvasDir(ctx), "$albumSpotifyId.mp4").isFile) putString(albumKey, spotifyId) }
                         .apply()
                     val target = File(canvasDir(ctx), "$spotifyId.mp4")
                     dest = target
@@ -367,8 +399,9 @@ object CanvasRepo {
         val ownFile = usable(own)
         val file = ownFile ?: usable(album) ?: return
         DiskBudget.touch(file)
-        // A title with no catalogue id of its own takes its album's for good, as before; one with an id may have its own.
-        if (ownFile != null || own == null) { prefs.edit().putString(track.id, file.nameWithoutExtension).apply(); put(track.id, file.absolutePath) }
+        // 7.6: the album's Canvas only stands in, with or without a catalogue id: the title's own is still asked for
+        // (once; « none » is remembered for NONE_FOR_MS), as 6.3 asked: « 1 canvas pour les autres à moins que un soit différent ».
+        if (ownFile != null) { prefs.edit().putString(track.id, file.nameWithoutExtension).apply(); put(track.id, file.absolutePath) }
         else put(track.id, file.absolutePath, album = true)
     }
 
@@ -514,8 +547,11 @@ object CanvasRepo {
     }
 
     /** A Canvas only shows on screen, so it is fetched in front; ahead of time (preload) the caller's conditions decide, on an unmetered network only. */
-    private fun mayDownload(context: Context, ahead: Boolean): Boolean =
-        if (ahead) unmetered(context) else networkAllowed(context) && com.ketvoice.app.automix.Automix.appInFront
+    internal fun mayDownload(context: Context, ahead: Boolean): Boolean =
+        if (ahead) unmeteredNow(context)
+        // 7.6: a title that plays screen off keeps its Canvas on unmetered Wi-Fi (about 1 MB, after its first sound), so
+        // an album heard in the pocket opens with every Canvas next time; on mobile data it still waits for the screen.
+        else allowedNow(context) && (com.ketvoice.app.automix.Automix.appInFront || unmeteredNow(context))
 
     private fun networkAllowed(context: Context): Boolean {
         if (AppSettings.canvasWithMobileData.value) return true

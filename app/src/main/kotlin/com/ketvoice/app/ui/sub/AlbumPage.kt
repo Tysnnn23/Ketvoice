@@ -114,7 +114,8 @@ internal fun AlbumPage(request: CatalogRequest, page: CatalogPage?, tracks: List
     // Only the motion artwork zooms when pulled; a cover page keeps the usual overscroll.
     pull.enabled = motionHeader && !Motion.reduced
     val titlePassesPx = with(density) {
-        (AlbumHeader.motionHeight(screen.screenWidthDp.toFloat(), screen.screenHeightDp.toFloat()).dp - MOTION_WORDS_OVERLAP - top).toPx() }
+        (AlbumHeader.motionHeight(screen.screenWidthDp.toFloat(), screen.screenHeightDp.toFloat(), canvasShape(heroCanvas),
+            WindowInsets.statusBars.asPaddingValues().calculateTopPadding().value).dp - AlbumHeader.wordsOverlapDp(false).dp - top).toPx() }
     val collapse = remember(motionHeader, titlePassesPx) { derivedStateOf {
         val hero = list.layoutInfo.visibleItemsInfo.firstOrNull { it.key == "album-hero" }
         if (motionHeader) AlbumHeader.titleCollapse(hero?.offset, titlePassesPx, with(density) { 44.dp.toPx() }, list.firstVisibleItemIndex)
@@ -316,13 +317,14 @@ private fun AlbumHero(title: String, artist: String, date: String?, cover: Strin
             val window = androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp.toFloat()
             // 7.5 motion75, as Apple Music's motion artwork: the Canvas is the header, edge to edge from the top of the
             // screen (the owner's framing applies), its foot dissolving into the page colour under the words.
-            val height = AlbumHeader.motionHeight(maxWidth.value, window).dp
+            val height = AlbumHeader.motionHeight(maxWidth.value, window, canvasShape(canvas),
+                WindowInsets.statusBars.asPaddingValues().calculateTopPadding().value).dp
             Column(Modifier.fillMaxWidth().testTag("album-header-canvas"), horizontalAlignment = Alignment.CenterHorizontally) {
                 MotionHeaderArtwork(canvas, height, playing = true, scroll = scroll, pull = pull, frame = frame, cover = cover,
                     modifier = Modifier.testTag("album-hero-visual"))
                 // Compact identity block: title, artist and details read as one group.
                 // The words sit on the Canvas's fade, as the Canvas reaches the top of the screen.
-                Column(Modifier.fillMaxWidth().pullUp(MOTION_WORDS_OVERLAP).padding(start = 24.dp, end = 24.dp, bottom = 12.dp),
+                Column(Modifier.fillMaxWidth().pullUp(AlbumHeader.wordsOverlapDp(frame != null).dp).padding(start = 24.dp, end = 24.dp, bottom = 12.dp),
                     horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(title, localize = false, color = theme.onBackground, fontSize = 30.sp, fontWeight = FontWeight.Bold,
                         letterSpacing = (-.8).sp, lineHeight = 34.sp, maxLines = 3, overflow = TextOverflow.Ellipsis,
@@ -346,7 +348,10 @@ private fun AlbumHero(title: String, artist: String, date: String?, cover: Strin
 }
 
 /** How far the title, artist and details reach up over the motion artwork's fade (7.5 motion75). */
-private val MOTION_WORDS_OVERLAP = 112.dp
+/** Width over height of a header's Canvas, read from its still (7.6); upright until the still exists. */
+@Composable
+internal fun canvasShape(path: String?): Float =
+    rememberCanvasPoster(path)?.let { it.width.toFloat() / it.height.coerceAtLeast(1) } ?: com.ketvoice.app.ui.player.CanvasFit.UPRIGHT
 
 /** The cover, or its Canvas when the listener enabled it, inside the floating frame. */
 @Composable
