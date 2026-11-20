@@ -113,7 +113,8 @@ object ListeningHistory {
     /** A transition Ketmix really mixed, counted for the month's Replay and Wrapped. */
     @Synchronized fun noteKetmixMix() {
         _months.value = ListeningMonths.addMix(_months.value, today())
-        prefs?.edit()?.putString(monthPrefKey(), currentMonthJson())?.apply()
+        _days.value = ListeningWeek.addMix(_days.value, today())
+        prefs?.edit()?.putString(monthPrefKey(), currentMonthJson())?.putString("days", ListeningWeek.encode(_days.value))?.apply()
     }
 
     /**
@@ -140,9 +141,10 @@ object ListeningHistory {
         if (deltaMs <= 0L) return
         pendingMs = 0L
         _listenedMs.value = _listenedMs.value + deltaMs
-        _days.value = ListeningWeek.addTime(_days.value, today(), deltaMs)
+        val hour = java.time.LocalTime.now().hour
+        _days.value = ListeningWeek.addTime(_days.value, today(), deltaMs, hour)
         _years.value = Wrapped.addTime(_years.value, year(), deltaMs)
-        _months.value = ListeningMonths.addTime(_months.value, today(), java.time.LocalTime.now().hour, deltaMs)
+        _months.value = ListeningMonths.addTime(_months.value, today(), hour, deltaMs)
         unflushedMs += deltaMs
         if (unflushedMs >= 15_000L) persistListened()
     }
@@ -183,12 +185,12 @@ object ListeningHistory {
         }
         _playCounts.value = counts
         _heardAt.value = heardWith(_heardAt.value, saved, System.currentTimeMillis())
-        _days.value = ListeningWeek.addPlay(_days.value, today(), track.id)
-        _years.value = Wrapped.addPlay(_years.value, year(), track.id)
         // The first title ever heard of an artist makes it a discovery of the month.
         val newArtist = artistKey(saved)?.takeIf { prefs != null && seenArtists.add(it) }
             ?.let { PersonalMixes.primaryArtist(saved) }
         if (seenArtists.size > MAX_SEEN_ARTISTS) seenArtists.iterator().let { it.next(); it.remove() }
+        _days.value = ListeningWeek.addPlay(_days.value, today(), track.id, newArtist != null)
+        _years.value = Wrapped.addPlay(_years.value, year(), track.id)
         _months.value = ListeningMonths.addPlay(_months.value, today(), saved, newArtist)
         prefs?.edit()?.putString("tracks", gson.toJson(_tracks.value))
             ?.putString("counts", gson.toJson(counts))?.putString("heardAt", gson.toJson(_heardAt.value))?.putString("days", ListeningWeek.encode(_days.value))
