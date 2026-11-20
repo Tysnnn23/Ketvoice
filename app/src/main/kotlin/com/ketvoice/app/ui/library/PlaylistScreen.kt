@@ -1,5 +1,6 @@
 package com.ketvoice.app.ui.library
 
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import com.ketvoice.app.theme.pageBackground
 import androidx.compose.ui.draw.shadow
 import com.ketvoice.app.ui.common.trackRowClick
@@ -49,7 +50,6 @@ import com.ketvoice.app.ui.common.*
 import com.ketvoice.app.ui.settings.SettingsAction
 import com.ketvoice.app.ui.settings.SettingsSheet
 import com.ketvoice.app.ui.motion.zoomTarget
-import com.ketvoice.app.ui.sub.HeaderCanvasBackdrop
 import kotlinx.coroutines.launch
 
 /** The playlist page, worked out without a screen. */
@@ -147,10 +147,17 @@ fun PlaylistScreen() {
         var dragMovePending by remember { mutableStateOf(false) }
 
         // One column on every window: the header (artwork beside its title on a wide pane) scrolls away with the titles.
-        LazyColumn(Modifier.fillMaxSize().testTag("playlist-tracks"), state = list,
+        // 7.5 motion75: pulling past the top zooms the Canvas header a little (ui/sub/AlbumHeader).
+        val pull = com.ketvoice.app.ui.sub.rememberHeaderPull().also {
+            it.enabled = !beside && com.ketvoice.app.ui.sub.AlbumHeader.wantsCanvas(AppSettings.albumHeroCanvas.value,
+                AppSettings.albumHeader.value, com.ketvoice.app.ui.motion.Motion.reduced)
+        }
+        LazyColumn(Modifier.fillMaxSize().nestedScroll(pull).testTag("playlist-tracks"), state = list,
             contentPadding = PaddingValues(top = top, bottom = LocalAdaptiveLayout.current.bottomPaddingDp.dp)) {
             item(key = "playlist-hero", contentType = "playlist-hero") {
-                PlaylistHeader(playlist, playable, owner, beside, side, editing, error,
+                PlaylistHeader(playlist, playable, owner, beside, side, editing, error, top,
+                    scroll = { if (list.firstVisibleItemIndex == 0) list.firstVisibleItemScrollOffset.toFloat() else 0f },
+                    pull = { pull.value },
                     onPlay = { Player.setShuffle(false); Player.playQueue(orderedPlayable) }, onShuffle = { Player.playShuffled(playable) })
             }
             if (playlist.entries.size > 1 && !editing) item(key = "playlist-tools", contentType = "playlist-tools") {
@@ -337,7 +344,8 @@ internal object PlaylistOrder {
  */
 @Composable
 private fun PlaylistHeader(playlist: LocalPlaylist, playable: List<Track>, owner: String, beside: Boolean, side: Dp,
-                           editing: Boolean, error: String, onPlay: () -> Unit, onShuffle: () -> Unit) {
+                           editing: Boolean, error: String, top: Dp, scroll: () -> Float, pull: () -> Float,
+                           onPlay: () -> Unit, onShuffle: () -> Unit) {
     val th = LocalTheme.current
     val shared = PlaylistRules.isShared(playlist.id)
     val mine = !shared || com.ketvoice.app.sync.SharedPlaylists.isOwner(playlist.id)
@@ -360,7 +368,8 @@ private fun PlaylistHeader(playlist: LocalPlaylist, playable: List<Track>, owner
     val tint = com.ketvoice.app.theme.rememberCoverAccent(leadCover)?.first ?: Color.Black
     val artwork: @Composable () -> Unit = {
         val shape = RoundedCornerShape(if (side < 140.dp) 8.dp else 12.dp)
-        if (style == com.ketvoice.app.ui.sub.HeaderStyle.Canvas) Spacer(Modifier.size(side * 1.12f).testTag("playlist-canvas-space"))
+        // With the motion artwork (7.5 motion75) the Canvas above is the artwork.
+        if (style == com.ketvoice.app.ui.sub.HeaderStyle.Canvas) Unit
         else Box(Modifier.size(side).zoomTarget(zoom)
             .graphicsLayer { alpha = zoom.alpha() }
             .shadow(if (side < 140.dp) 8.dp else 30.dp, shape, ambientColor = tint.copy(alpha = if (tint == Color.Black) .22f else .55f),
@@ -398,11 +407,15 @@ private fun PlaylistHeader(playlist: LocalPlaylist, playable: List<Track>, owner
             actions(Modifier.widthIn(max = 420.dp))
         }
     } else Box(Modifier.fillMaxWidth()) {
-        if (canvas != null && lead != null && style != com.ketvoice.app.ui.sub.HeaderStyle.Cover) 
-            HeaderCanvasBackdrop(lead, canvas,
-                WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 64.dp,
-                if (style == com.ketvoice.app.ui.sub.HeaderStyle.Canvas) .50f else .24f)
-        Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(top = 6.dp, bottom = 12.dp).testTag("playlist-header"),
+        // 7.5 motion75: as an album, the Canvas is the header itself, from the top of the screen (the list starts below the bar).
+        val motion = canvas != null && style == com.ketvoice.app.ui.sub.HeaderStyle.Canvas
+        val window = androidx.compose.ui.platform.LocalConfiguration.current
+        val motionHeight = (com.ketvoice.app.ui.sub.AlbumHeader.motionHeight(window.screenWidthDp.toFloat(), window.screenHeightDp.toFloat()).dp - top)
+            .coerceAtLeast(160.dp)
+        if (motion) com.ketvoice.app.ui.sub.MotionHeaderArtwork(canvas!!, motionHeight, playing = true, scroll = scroll, pull = pull,
+            cover = leadCover, extendUp = top)
+        Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp)
+            .padding(top = if (motion) (motionHeight - 118.dp).coerceAtLeast(6.dp) else 6.dp, bottom = 12.dp).testTag("playlist-header"),
         horizontalAlignment = Alignment.CenterHorizontally) {
         artwork()
         // 7.5: name, curator and details as one block (album page proportions).

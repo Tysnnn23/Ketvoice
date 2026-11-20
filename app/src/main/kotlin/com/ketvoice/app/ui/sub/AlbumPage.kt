@@ -1,5 +1,7 @@
 package com.ketvoice.app.ui.sub
 
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.draw.blur
 import com.ketvoice.app.ui.common.CollectionTopBar
@@ -81,7 +83,9 @@ internal fun AlbumPage(request: CatalogRequest, page: CatalogPage?, tracks: List
     LaunchedEffect(pageAlbumKey, tracks) { if (pageAlbumKey != null && tracks.isNotEmpty()) com.ketvoice.app.data.MediaOverrides.linkAlbum(tracks, pageAlbumKey) }
     val framingCanvas = tracks.firstOrNull()?.takeIf { !com.ketvoice.app.data.MediaOverrides.canvasDisabled(it) }?.let { canvasPaths[it.id] }.takeIf { heroCanvasOn }
     // 7.3: the Canvas the header shows, only when the listener chose a Canvas style (ui/sub/AlbumHeader).
-    val heroCanvas = rememberHeaderCanvas(tracks.firstOrNull())
+    // 7.5 motion75: remembered under the page's id too, so that a second opening shows it before the titles arrive.
+    val heroCanvas = rememberHeaderCanvas(tracks.firstOrNull(), request.id.takeIf { it.isNotBlank() })
+    val pull = rememberHeaderPull()
     // The page takes its colour from what its hero shows: the Canvas while one plays there (the
     // cover's until a frame of it is read), the cover as soon as the Canvas is off or gone.
     val coverAccent = com.ketvoice.app.theme.rememberCoverAccent(cover)?.first
@@ -102,9 +106,19 @@ internal fun AlbumPage(request: CatalogRequest, page: CatalogPage?, tracks: List
         accent = if (AppSettings.albumColors.value) com.ketvoice.app.theme.CoverLegibility.pageAccent(accent, baseTheme.accent, pageTint, pageCard)
             else baseTheme.accent)
     val top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 64.dp
-    val collapse = remember { derivedStateOf {
+    // 7.5 motion75: over the motion artwork the bar takes the title once the large title has passed under it.
+    val density = LocalDensity.current
+    val screen = androidx.compose.ui.platform.LocalConfiguration.current
+    val motionHeader = heroCanvas != null && AlbumHeader.style(AppSettings.albumHeader.value, true) == HeaderStyle.Canvas &&
+        !AlbumPresentation.sideBySide(screen.screenWidthDp.toFloat(), density.fontScale)
+    // Only the motion artwork zooms when pulled; a cover page keeps the usual overscroll.
+    pull.enabled = motionHeader && !Motion.reduced
+    val titlePassesPx = with(density) {
+        (AlbumHeader.motionHeight(screen.screenWidthDp.toFloat(), screen.screenHeightDp.toFloat()).dp - MOTION_WORDS_OVERLAP - top).toPx() }
+    val collapse = remember(motionHeader, titlePassesPx) { derivedStateOf {
         val hero = list.layoutInfo.visibleItemsInfo.firstOrNull { it.key == "album-hero" }
-        AlbumPresentation.collapse(hero?.offset, hero?.size ?: 0, list.firstVisibleItemIndex)
+        if (motionHeader) AlbumHeader.titleCollapse(hero?.offset, titlePassesPx, with(density) { 44.dp.toPx() }, list.firstVisibleItemIndex)
+        else AlbumPresentation.collapse(hero?.offset, hero?.size ?: 0, list.firstVisibleItemIndex)
     } }
     val scroll = remember { derivedStateOf {
         if (list.firstVisibleItemIndex == 0) list.firstVisibleItemScrollOffset.toFloat() else 0f
@@ -166,14 +180,14 @@ internal fun AlbumPage(request: CatalogRequest, page: CatalogPage?, tracks: List
     }
     CompositionLocalProvider(LocalTheme provides theme, LocalBackdropLayer provides backdrop,
         *com.ketvoice.app.theme.coverAccentLocals(theme.accent)) {
-        Box(Modifier.fillMaxSize().background(theme.background)) {
+        Box(Modifier.fillMaxSize().background(theme.background).nestedScroll(pull)) {
             BackdropCapture(backdrop, Modifier.fillMaxSize()) {
                 // Wide: the artwork stands beside the title and the titles take the whole width below (ui/adaptive/CollectionPanes).
                 com.ketvoice.app.ui.adaptive.CollectionPanes(Modifier.fillMaxSize(), list, "album-list",
                     contentPadding = PaddingValues(bottom = LocalAdaptiveLayout.current.bottomPaddingDp.dp + 20.dp),
                     headerKey = "album-hero", header = {
                         AlbumHero(title, artist, page?.releaseDate, cover, tracks, savedIds, loading, top, refresh,
-                            frame = draft ?: savedFrame, canvas = heroCanvas)
+                            frame = draft ?: savedFrame, canvas = heroCanvas, scroll = { scroll.value }, pull = { pull.value })
                     }) {
                     if (loading) items(5, key = { "album-loading:$it" }) { CatalogSkeletonRow(it) }
                     else if (tracks.isEmpty()) item {
@@ -266,7 +280,8 @@ internal fun AlbumPage(request: CatalogRequest, page: CatalogPage?, tracks: List
 private fun AlbumHero(title: String, artist: String, date: String?, cover: String?,
                       tracks: List<Track>, savedIds: Set<String>, loading: Boolean,
                       top: androidx.compose.ui.unit.Dp, onRefresh: () -> Unit,
-                      frame: com.ketvoice.app.data.Frame? = null, canvas: String? = null) {
+                      frame: com.ketvoice.app.data.Frame? = null, canvas: String? = null,
+                      scroll: () -> Float = { 0f }, pull: () -> Float = { 0f }) {
     val density = LocalDensity.current
     val context = LocalContext.current
     val duration = remember(tracks) { AlbumPresentation.totalDuration(tracks) }?.let(AppText::t)
@@ -287,54 +302,30 @@ private fun AlbumHero(title: String, artist: String, date: String?, cover: Strin
             meta = meta, explicit = !loading && tracks.any { it.explicit }, beside = true, artworkTag = "album-hero-visual",
             artwork = { AlbumArtwork(cover, tracks.firstOrNull(), frame, canvas) }) {
             AlbumPlaybackActions(tracks, savedIds, loading, stacked, onRefresh, Modifier.widthIn(max = 560.dp).fillMaxWidth())
-        } else if (style != HeaderStyle.Canvas) Box(Modifier.fillMaxWidth().testTag("album-header-" + style.name.lowercase())) {
-            if (style == HeaderStyle.CoverOnCanvas && canvas != null && tracks.isNotEmpty())
-                HeaderCanvasBackdrop(tracks.first(), canvas, fadeFrom = .24f)
+        } else if (style != HeaderStyle.Canvas || canvas == null) Box(Modifier.fillMaxWidth().testTag("album-header-cover")) {
             CollectionHero(cover, top, title, eyebrow = "Album", titleTag = "album-title",
                 subtitle = artist.takeIf { it.isNotBlank() },
                 onSubtitle = { AppUi.openArtist(tracks.firstOrNull()?.artistId.orEmpty(), artist) },
                 meta = meta, explicit = !loading && tracks.any { it.explicit }, artworkTag = "album-hero-visual",
-                shadowTint = shadow, ambient = style == HeaderStyle.Cover,
+                shadowTint = shadow, ambient = true,
                 artwork = { AlbumArtwork(cover, tracks.firstOrNull(), null, null) }) {
                 AlbumPlaybackActions(tracks, savedIds, loading, stacked, onRefresh, Modifier.widthIn(max = 560.dp).fillMaxWidth())
             }
         } else {
             val theme = LocalTheme.current
             val window = androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp.toFloat()
-            // A framed picture gives the hero the shape of its rectangle, within what a page allows.
-            val height = (if (frame != null) Framing.heroHeightDp(frame, maxWidth.value, window)
-                else AlbumPresentation.heroHeight(maxWidth.value, window)).dp
-            val whole = frame == null && AlbumPresentation.showsWholeCover(maxWidth.value, height.value)
+            // 7.5 motion75, as Apple Music's motion artwork: the Canvas is the header, edge to edge from the top of the
+            // screen (the owner's framing applies), its foot dissolving into the page colour under the words.
+            val height = AlbumHeader.motionHeight(maxWidth.value, window).dp
             Column(Modifier.fillMaxWidth().testTag("album-header-canvas"), horizontalAlignment = Alignment.CenterHorizontally) {
-                Box(Modifier.fillMaxWidth().height(height).clipToBounds().testTag("album-hero-visual")) {
-                    if (whole) {
-                        // Too wide for a square: the cover stays whole over a soft, enlarged copy of itself.
-                        if (cover != null) com.ketvoice.app.glass.SoftBlurredImage(remember(cover) {
-                            coil.request.ImageRequest.Builder(context).data(cover).size(40).crossfade(false).build()
-                        }, 40.dp, filterQuality = androidx.compose.ui.graphics.FilterQuality.Low,
-                            modifier = Modifier.fillMaxSize().graphicsLayer { scaleX = 1.2f; scaleY = 1.2f; alpha = .75f })
-                        Box(Modifier.size(height).align(Alignment.Center).clipToBounds()) { AlbumArtwork(cover, tracks.firstOrNull(), frame, canvas) }
-                    } else AlbumArtwork(cover, tracks.firstOrNull(), frame, canvas)
-                    // The floating buttons stay readable over a bright cover.
-                    Box(Modifier.fillMaxWidth().height(96.dp).background(Brush.verticalGradient(
-                        listOf(Color.Black.copy(alpha = .28f), Color.Transparent))))
-                    // A long dissolve into the page colour: no line where the cover ends.
-                    Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(height * .46f).background(
-                        Brush.verticalGradient(
-                            0f to Color.Transparent,
-                            .24f to theme.background.copy(alpha = .10f),
-                            .52f to theme.background.copy(alpha = .46f),
-                            .80f to theme.background.copy(alpha = .86f),
-                            1f to theme.background)))
-                }
+                MotionHeaderArtwork(canvas, height, playing = true, scroll = scroll, pull = pull, frame = frame, cover = cover,
+                    modifier = Modifier.testTag("album-hero-visual"))
                 // Compact identity block: title, artist and details read as one group.
                 // The words sit on the Canvas's fade, as the Canvas reaches the top of the screen.
-                Column(Modifier.fillMaxWidth().pullUp(56.dp).padding(start = 24.dp, end = 24.dp, bottom = 12.dp),
+                Column(Modifier.fillMaxWidth().pullUp(MOTION_WORDS_OVERLAP).padding(start = 24.dp, end = 24.dp, bottom = 12.dp),
                     horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text("Album", color = theme.secondary, fontSize = 12.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp,
-                        lineHeight = 16.sp)
-                    Text(title, localize = false, color = theme.onBackground, fontSize = 28.sp, fontWeight = FontWeight.Bold,
-                        letterSpacing = (-.7).sp, lineHeight = 32.sp, maxLines = 3, overflow = TextOverflow.Ellipsis,
+                    Text(title, localize = false, color = theme.onBackground, fontSize = 30.sp, fontWeight = FontWeight.Bold,
+                        letterSpacing = (-.8).sp, lineHeight = 34.sp, maxLines = 3, overflow = TextOverflow.Ellipsis,
                         textAlign = TextAlign.Center, modifier = Modifier.testTag("album-title"))
                     if (artist.isNotBlank()) Text(artist, localize = false, color = theme.accent, fontSize = 17.sp,
                         fontWeight = FontWeight.SemiBold, lineHeight = 21.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
@@ -353,6 +344,9 @@ private fun AlbumHero(title: String, artist: String, date: String?, cover: Strin
         }
     }
 }
+
+/** How far the title, artist and details reach up over the motion artwork's fade (7.5 motion75). */
+private val MOTION_WORDS_OVERLAP = 112.dp
 
 /** The cover, or its Canvas when the listener enabled it, inside the floating frame. */
 @Composable
@@ -378,9 +372,8 @@ private fun BoxScope.AlbumArtwork(cover: String?, track: Track?, frame: com.ketv
     if (cover == null || failed) Icon(KetIcons.Album, null, tint = theme.secondary.copy(alpha = .32f),
         modifier = Modifier.fillMaxSize(.42f).align(Alignment.Center))
     when {
-        video -> com.ketvoice.app.ui.player.ArtworkCanvas(
-            track!!, canvas, playing = true, forceCanvas = true, modifier = framing,
-            onMediaAspect = { aspect = it })
+        video -> MotionArtwork(canvas!!, playing = true, modifier = Modifier.fillMaxSize(), frame = frame, cover = cover,
+            onAspect = { aspect = it })
         cover != null -> AsyncImage(image, null, contentScale = ContentScale.Crop,
             onSuccess = { loaded ->
                 ready = true; failed = false

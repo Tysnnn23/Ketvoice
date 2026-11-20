@@ -307,8 +307,9 @@ fun SettingsScreen() {
                     AppSettings.albumHeroCanvas.value) { AppSettings.albumHeroCanvas.value = it; SettingsStore.save() }
                 // 7.3: how album and playlist pages open; a page without a Canvas always shows the centred cover.
                 SRow(KetIcons.Album, "En-tête des albums et playlists", sub = "Sans Canvas, la pochette centrée s'affiche",
-                    value = com.ketvoice.app.ui.sub.AlbumHeader.LABELS[AppSettings.albumHeader.value.coerceIn(0, 2)]) {
-                    AppSettings.albumHeader.value = (AppSettings.albumHeader.value + 1) % 3; SettingsStore.save()
+                    value = com.ketvoice.app.ui.sub.AlbumHeader.LABELS[com.ketvoice.app.ui.sub.AlbumHeader.normalize(AppSettings.albumHeader.value)]) {
+                    // 7.5 motion75: two choices, the cover or the animated Canvas as Apple Music shows it.
+                    AppSettings.albumHeader.value = 1 - com.ketvoice.app.ui.sub.AlbumHeader.normalize(AppSettings.albumHeader.value); SettingsStore.save()
                 }
                 SToggle(KetIcons.Canvas, "Fond animé du lecteur",
                     "Dégradé lent aux couleurs de la pochette derrière le lecteur, qui suit doucement la musique",

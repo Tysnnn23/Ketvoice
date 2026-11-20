@@ -70,6 +70,8 @@ internal object PersonalBackup {
         key == "appIconVariant" -> (raw as? Number)?.toInt()
             ?.takeIf { it in integers.getValue(key) && ViceCityEdition.iconAllowed(it) }
         key in booleans || key.startsWith("design212_") && DesignChoices.all.any { "design212_${it.code}" == key } -> raw as? Boolean
+        // 7.5 motion75: « Pochette et Canvas » (2) became the animated Canvas (1), in backups and in sync alike.
+        key == "albumHeader" -> (raw as? Number)?.toInt()?.takeIf { it in integers.getValue(key) }?.let(com.ketvoice.app.ui.sub.AlbumHeader::normalize)
         key in integers -> (raw as? Number)?.toInt()?.takeIf { it in integers.getValue(key) }
         key == "accentArgb" -> (raw as? Number)?.toLong()?.takeIf { it in 0L..0xffffffffL }
         key == "cacheBytes" -> (raw as? Number)?.toLong()?.takeIf { it in 500_000_000L..10_000_000_000L }

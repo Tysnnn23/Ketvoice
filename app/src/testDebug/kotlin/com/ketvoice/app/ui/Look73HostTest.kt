@@ -78,7 +78,8 @@ class Look73HostTest {
     @Test fun headerStylesFallBackToTheCover() {
         assertEquals(com.ketvoice.app.ui.sub.HeaderStyle.Cover, com.ketvoice.app.ui.sub.AlbumHeader.style(1, hasCanvas = false))
         assertEquals(com.ketvoice.app.ui.sub.HeaderStyle.Canvas, com.ketvoice.app.ui.sub.AlbumHeader.style(1, hasCanvas = true))
-        assertEquals(com.ketvoice.app.ui.sub.HeaderStyle.CoverOnCanvas, com.ketvoice.app.ui.sub.AlbumHeader.style(2, hasCanvas = true))
+        // 7.5 motion75: « Pochette et Canvas » (2) was removed; a stored 2 is the animated Canvas.
+        assertEquals(com.ketvoice.app.ui.sub.HeaderStyle.Canvas, com.ketvoice.app.ui.sub.AlbumHeader.style(2, hasCanvas = true))
         assertTrue(!com.ketvoice.app.ui.sub.AlbumHeader.wantsCanvas(true, 2, reduced = true))
         assertTrue(!com.ketvoice.app.ui.sub.AlbumHeader.wantsCanvas(false, 1, reduced = false))
     }
@@ -87,7 +88,6 @@ class Look73HostTest {
 
     @Test fun albumHeaderCanvas() = album(1, "album-header-canvas", "look73-album-2-canvas")
 
-    @Test fun albumHeaderCoverOnCanvas() = album(2, "album-header-coveroncanvas", "look73-album-3-cover-canvas")
 
     private fun album(style: Int, tag: String, name: String) {
         AppSettings.albumHeader.value = style
