@@ -46,6 +46,21 @@ internal object VoiceSeparation {
 
     /** The playback service loaded [trackId] from [uri]. */
     fun heard(trackId: String, uri: Uri) { synchronized(addresses) { addresses[trackId] = uri } }
+
+    /** 7.6 (voice76): DASH manifests the players loaded, and the audio rendition each one plays (its format id). */
+    private val manifests = object : LinkedHashMap<String, Uri>(16, .75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Uri>?) = size > 12
+    }
+    private val renditions = java.util.concurrent.ConcurrentHashMap<String, String>()
+    /** The playback service loaded [trackId] from the DASH manifest [uri]. */
+    fun heardDash(trackId: String, uri: Uri) { synchronized(addresses) { manifests[trackId] = uri } }
+    /** The player of [trackId] plays its audio rendition [formatId]. */
+    fun rendition(trackId: String, formatId: String?) { if (formatId != null) { if (renditions.size > 24) renditions.clear(); renditions[trackId] = formatId } }
+
+    /** Where the title is being heard, for a stream separated from the playhead on; 0 for another title. */
+    internal var playheadOf: (String) -> Long = { id ->
+        runCatching { val p = com.ketvoice.app.player.Player; if (p.state.value.current?.id == id) p.positionMs.value else 0L }.getOrDefault(0L)
+    }
     /** While true the library's own work waits: the listener is waiting for this one. */
     @Volatile var busy = false
         private set
@@ -145,9 +160,30 @@ internal object VoiceSeparation {
 
     /** Asks the work process ([StemWork]) for the whole separation of [trackId]; [quiet] keeps the slider's progress as it is. */
     private suspend fun separate(trackId: String, quality: Int, quiet: Boolean): StemWork.Outcome {
-        val uri = source(trackId) ?: return StemWork.Outcome.Failed
-        return StemWork.whole(trackId, uri, quality) { fraction ->
-            if (!quiet) _state.value = State.Working(trackId, fraction.coerceIn(0f, 1f))
+        val depth = runCatching { com.ketvoice.app.automix.AnalysisDepth.of(com.ketvoice.app.data.AppSettings.ketmixAnalysis.value) }
+            .getOrDefault(com.ketvoice.app.automix.AnalysisDepth.Balanced)
+        val startAt = if (quiet) 0L else playheadOf(trackId)
+        fun shown(fraction: Float) { if (!quiet) _state.value = State.Working(trackId, fraction.coerceIn(0f, 1f)) }
+        // 7.6: each piece done ahead of the playhead is taken up by the voice stage at once.
+        val partial = { if (!quiet) _separated.tryEmit(trackId) }
+        source(trackId)?.let { uri ->
+            return StemWork.whole(trackId, uri, quality, ::shown, StemWork.StreamWork(startAt, 0L, depth)) { partial() }
         }
+        // A stream of several files (DASH): its audio rendition, read in place or copied in order first.
+        val manifest = synchronized(addresses) { manifests[trackId] } ?: return StemWork.Outcome.Failed
+        val context = appContext ?: return StemWork.Outcome.Failed
+        val ctx = coroutineContext
+        val dash = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            runCatching {
+                StreamSeparation.dash(StreamSeparation.factoryFor(context, trackId), manifest, renditions[trackId], StemWork.pcmDir(context),
+                    { shown(it * StreamSeparation.COPY_SHARE) }, { ctx.isActive })
+            }.getOrNull()
+        } ?: return StemWork.Outcome.Failed
+        val copied = dash.file != null
+        val uri = dash.remote ?: Uri.fromFile(dash.file ?: return StemWork.Outcome.Failed)
+        return try {
+            StemWork.whole(trackId, uri, quality, { f -> shown(if (copied) StreamSeparation.COPY_SHARE + f * (1f - StreamSeparation.COPY_SHARE) else f) },
+                StemWork.StreamWork(startAt, dash.durationMs, depth)) { partial() }
+        } finally { dash.file?.delete() }
     }
 }

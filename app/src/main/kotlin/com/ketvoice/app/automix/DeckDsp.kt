@@ -90,16 +90,19 @@ internal class DeckAutomation(
      * the bass the high-pass hands over and the highs the sweeps open. Taken down where two titles would
      * rub (their chords and voices live there), more when their keys clash.
      */
-    val midDb: Curve = Curve.flat(0f)
+    val midDb: Curve = Curve.flat(0f),
+    /** 7.6: the listener's keyframes for this deck (see [MixKeys]); the music level is applied here, voice and instruments in the voice stage. */
+    val levels: KeyLevels? = null
 ) {
-    val endUs: Long get() = maxOf(maxOf(gain.endUs, highPassHz.endUs, lowPassHz.endUs), maxOf(dry.endUs, echo.endUs, reverb.endUs), maxOf(vocalCut.endUs, vocalSolo.endUs, midDb.endUs))
+    val endUs: Long get() = maxOf(maxOf(gain.endUs, highPassHz.endUs, lowPassHz.endUs), maxOf(dry.endUs, echo.endUs, reverb.endUs),
+        maxOf(vocalCut.endUs, vocalSolo.endUs, midDb.endUs), levels?.endUs ?: 0L)
     val usesMids: Boolean get() = midDb.endUs > 0L || midDb.at(0L) != 0f
     val usesVocalCut: Boolean get() = vocalCut.endUs > 0L
     val usesVocalSolo: Boolean get() = vocalSolo.endUs > 0L
     val usesEcho: Boolean get() = echoDelayUs > 0L
 
     fun copyWith(vocalCut: Curve = this.vocalCut, vocalSolo: Curve = this.vocalSolo, midDb: Curve = this.midDb) =
-        DeckAutomation(gain, highPassHz, lowPassHz, dry, echo, reverb, echoDelayUs, echoFeedback, resonance, vocalCut, noise, noiseHz, vocalSolo, midDb)
+        DeckAutomation(gain, highPassHz, lowPassHz, dry, echo, reverb, echoDelayUs, echoFeedback, resonance, vocalCut, noise, noiseHz, vocalSolo, midDb, levels)
     val usesNoise: Boolean get() = noise.endUs > 0L
     val usesReverb: Boolean get() = reverb.endUs > 0L
 
@@ -136,7 +139,15 @@ internal class DeckAutomation(
         const val MID_CLASH_DB = -8f
 
         /** The title that leaves. */
-        fun outgoing(plan: MixPlan): DeckAutomation = withMids(Stems.outgoing(outgoingMix(plan), plan), plan, outgoing = true)
+        fun outgoing(plan: MixPlan): DeckAutomation = withKeys(withMids(Stems.outgoing(outgoingMix(plan), plan), plan, outgoing = true), plan, true)
+
+        /** 7.6 (voice76): the listener's volume keyframes join the deck's automation. */
+        private fun withKeys(automation: DeckAutomation, plan: MixPlan, outgoing: Boolean): DeckAutomation {
+            val levels = MixKeys.curves(plan, outgoing) ?: return automation
+            return DeckAutomation(automation.gain, automation.highPassHz, automation.lowPassHz, automation.dry, automation.echo, automation.reverb,
+                automation.echoDelayUs, automation.echoFeedback, automation.resonance, automation.vocalCut, automation.noise, automation.noiseHz,
+                automation.vocalSolo, automation.midDb, levels)
+        }
 
         /**
          * The three-band equaliser of a blend in time (6.0.0 Beta 4): before the bass changes hands the
@@ -184,7 +195,7 @@ internal class DeckAutomation(
         }
 
         /** The title that arrives. Its positions run [MixPlan.rate] times faster than the outgoing clock. */
-        fun incoming(plan: MixPlan): DeckAutomation = withMids(Stems.incoming(incomingMix(plan), plan), plan, outgoing = false)
+        fun incoming(plan: MixPlan): DeckAutomation = withKeys(withMids(Stems.incoming(incomingMix(plan), plan), plan, outgoing = false), plan, false)
 
         private fun incomingMix(plan: MixPlan): DeckAutomation {
             fun position(outMs: Long) = ((plan.inMs + (outMs - plan.outMs) * plan.rate.toDouble()) * 1000.0).toLong()
@@ -454,6 +465,8 @@ internal class DeckDsp(val sampleRate: Int, val channels: Int) {
     private val voiceLow = Biquad(1)
     private var gain = Float.NaN
     private var dry = 1f
+    /** The listener's « Musique » keyframe level (7.6), ramped sample by sample like [gain]. */
+    private var music = 1f
     private var echo: Echo? = null
     private var reverb: Reverb? = null
     private val frame = FloatArray(channels)
@@ -462,7 +475,7 @@ internal class DeckDsp(val sampleRate: Int, val channels: Int) {
 
     fun reset() {
         high.clear(); low.clear(); voiceHigh.clear(); voiceLow.clear(); hiss.clear(); mids.clear()
-        gain = Float.NaN; dry = 1f
+        gain = Float.NaN; dry = 1f; music = 1f
         echo = null; reverb = null
     }
 
@@ -489,7 +502,9 @@ internal class DeckDsp(val sampleRate: Int, val channels: Int) {
             val endUs = startUs + (done + block) * 1_000_000L / sampleRate
             val middleUs = (blockUs + endUs) / 2
             val target = automation.gain.at(endUs)
-            if (gain.isNaN()) { gain = automation.gain.at(blockUs); dry = automation.dry.at(blockUs) }
+            if (gain.isNaN()) { gain = automation.gain.at(blockUs); dry = automation.dry.at(blockUs); music = automation.levels?.music?.at(blockUs) ?: 1f }
+            val musicTarget = automation.levels?.music?.at(endUs) ?: 1f
+            val musicStep = (musicTarget - music) / block
             val step = (target - gain) / block
             val dryTarget = automation.dry.at(endUs)
             val dryStep = (dryTarget - dry) / block
@@ -511,7 +526,7 @@ internal class DeckDsp(val sampleRate: Int, val channels: Int) {
             val breath = if (automation.usesNoise) automation.noise.at(middleUs) * 32_767f else 0f
             if (breath > 0f) hiss.follow(automation.noiseHz.at(middleUs), .7071f, sampleRate, highPass = true)
             for (i in 0 until block) {
-                gain += step; dry += dryStep
+                gain += step; dry += dryStep; music += musicStep
                 for (c in 0 until channels) {
                     var x = input.short.toFloat()
                     if (stemAt >= 0 && stemPcm != null && voice > 0f) x += voice * (stemPcm[2 * (stemAt + i) + c] - x)
@@ -535,12 +550,12 @@ internal class DeckDsp(val sampleRate: Int, val channels: Int) {
                     var y = x * dry
                     if (repeats != null) y += repeats.run(x * send, c)
                     if (room != null && c < 2) y += room.run(x * wash, c)
-                    val v = y * gain + n
+                    val v = y * gain * music + n
                     output.putShort((if (breath > 0f) softClip(v) else v).toInt().coerceIn(-32768, 32767).toShort())
                 }
                 repeats?.advance()
             }
-            gain = target; dry = dryTarget
+            gain = target; dry = dryTarget; music = musicTarget
             done += block
         }
         // A trailing partial frame is passed on as it came.

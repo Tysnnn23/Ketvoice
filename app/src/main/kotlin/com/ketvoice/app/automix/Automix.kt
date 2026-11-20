@@ -430,6 +430,9 @@ internal object Automix {
             .let { p -> MixShaping.apply(p, shape, effects) }
             .let { p -> if (p.mixes && p.kind != MixKind.Beatmatch && abs(outSpeed - 1f) > .0005f) p.copy(rate = 1f / outSpeed) else p }
             .let { p -> if (p.mixes && AppSettings.ketmixStems.value) p.copy(stems = true, voiceFromMs = incoming.vocalStartMs ?: -1L) else p }
+            // 7.6 (voice76): the listener's volume keyframes of this pair, played by the decks' automations.
+            // No new local here: this method stays under Android's register limit (see 6.1.2 above).
+            .let { p -> if (!p.mixes) p else MixPointStore.pair(current.id, next.track.id)?.keys?.takeIf { it.isNotEmpty() }?.let { p.copy(keys = it) } ?: p }
         var plan = planFor(effects = clockOk)
         if (!plan.mixes) return skip(plan.reason)
         // The incoming voice alone is only rendered when this pair may be mixed voice over instrumental.

@@ -21,8 +21,10 @@ internal data class TitlePoints(val exitMs: Long = -1, val entryMs: Long = -1, v
 }
 
 /** What the listener chose for one pair of titles: the style of its transition and how long both are heard (-1 = Ketmix's). */
-internal data class PairChoice(val style: MixStyle? = null, val overlapMs: Long = -1, val shape: MixShape = MixShape.DEFAULT) {
-    val empty: Boolean get() = style == null && overlapMs <= 0 && shape.isDefault
+internal data class PairChoice(val style: MixStyle? = null, val overlapMs: Long = -1, val shape: MixShape = MixShape.DEFAULT,
+                               /** Volume keyframes of the blend (7.6, see [MixKeys]); stored from format version 2. */
+                               val keys: List<LevelKey> = emptyList()) {
+    val empty: Boolean get() = style == null && overlapMs <= 0 && shape.isDefault && keys.isEmpty()
 }
 
 /**
@@ -170,16 +172,27 @@ internal object MixPointStore {
         if (exit < -1 || entry < -1 || exit > MAX_POSITION_MS || entry > MAX_POSITION_MS || duration > MAX_POSITION_MS) return null
         return TitlePoints(exit, entry, duration).takeIf { !it.empty }
     }
+    /** Since 7.6 a pair may carry volume keyframes after [VERSION_2]; choices without any keep the format of before. */
+    private const val VERSION_2 = "|v2|"
     internal fun encodePair(c: PairChoice): String = "${c.style?.ordinal ?: -1},${c.overlapMs.coerceIn(-1, 60_000)}" +
-        if (c.shape.isDefault) "" else ",${c.shape.code()}"
+        (if (c.shape.isDefault) "" else ",${c.shape.code()}") + if (c.keys.isEmpty()) "" else VERSION_2 + MixKeys.encode(c.keys)
     internal fun decodePair(text: String?): PairChoice? {
-        if (text == null || !pairPattern.matches(text)) return null
+        if (text == null) return null
+        val versioned = text.indexOf(VERSION_2)
+        if (versioned >= 0) {
+            val keys = MixKeys.decode(text.substring(versioned + VERSION_2.length)) ?: return null
+            return decodeBase(text.substring(0, versioned), allowEmpty = true)?.copy(keys = keys)?.takeIf { !it.empty }
+        }
+        return decodeBase(text, allowEmpty = false)
+    }
+    private fun decodeBase(text: String, allowEmpty: Boolean): PairChoice? {
+        if (!pairPattern.matches(text)) return null
         val parts = text.split(',').map { it.toLong() }
         val (style, overlap) = parts
         if (overlap < -1 || overlap > 60_000) return null
         // Choices saved before 6.9 have no shape: Ketmix's own.
         val shape = parts.getOrNull(2)?.let { MixShape.of(it.toInt()) ?: return null } ?: MixShape.DEFAULT
-        return PairChoice(if (style < 0) null else MixStyle.values().getOrNull(style.toInt()) ?: return null, overlap, shape).takeIf { !it.empty }
+        return PairChoice(if (style < 0) null else MixStyle.values().getOrNull(style.toInt()) ?: return null, overlap, shape).takeIf { allowEmpty || !it.empty }
     }
 
     /** True for a key and value a backup may bring back. */

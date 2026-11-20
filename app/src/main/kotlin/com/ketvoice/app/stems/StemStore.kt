@@ -73,8 +73,32 @@ internal object StemStore {
         val tmp = File(f.parentFile, f.name + ".tmp")
         tmp.writeBytes(encode(mask))
         if (!tmp.renameTo(f)) { tmp.delete(); return }
+        partialFile(trackId)?.delete()
         trim()
     }
+
+    /**
+     * 7.6 (voice76): the part of a whole separation done so far, while a streamed title is separated ahead of the
+     * playhead; the voice level works from it until the whole one replaces it. Its frames start at [StemMask.startUs].
+     */
+    private fun partialFile(trackId: String): File? = wholeFile(trackId)?.let { File(it.parentFile, it.name.replace("-w.kvs", "-p.kvs")) }
+
+    fun savePartial(trackId: String, mask: StemMask) {
+        val f = partialFile(trackId) ?: return
+        val tmp = File(f.parentFile, f.name + ".tmp")
+        tmp.writeBytes(encode(mask))
+        if (!tmp.renameTo(f)) tmp.delete()
+    }
+
+    fun hasPartial(trackId: String): Boolean = partialFile(trackId)?.isFile == true
+
+    fun loadPartial(trackId: String): StemMask? {
+        val f = partialFile(trackId)?.takeIf { it.isFile } ?: return null
+        return runCatching { decode(f.readBytes()) }.getOrElse { f.delete(); null }
+    }
+
+    /** The whole separation, or the part done so far. */
+    fun loadBest(trackId: String): StemMask? = loadWhole(trackId) ?: loadPartial(trackId)
 
     /** The model that found the stored separation of this part ([StemMask.FAST] or [StemMask.HIGH]), or null when there is none. */
     fun quality(trackId: String, durationMs: Long, intro: Boolean): Int? {

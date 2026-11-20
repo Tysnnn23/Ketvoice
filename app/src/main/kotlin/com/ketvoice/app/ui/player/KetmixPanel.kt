@@ -117,7 +117,7 @@ internal fun applyToQueue(state: EditorState): Int {
         val from = queue[i].id; val to = queue[i + 1].id
         if (from == to) continue
         val kept = MixPointStore.pair(from, to)
-        MixPointStore.setPair(from, to, PairChoice(state.choice.style, kept?.overlapMs ?: -1L, state.choice.shape))
+        MixPointStore.setPair(from, to, PairChoice(state.choice.style, kept?.overlapMs ?: -1L, state.choice.shape, kept?.keys.orEmpty()))
         count++
     }
     return count

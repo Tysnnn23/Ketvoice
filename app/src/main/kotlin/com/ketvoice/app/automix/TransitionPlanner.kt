@@ -193,7 +193,9 @@ internal data class MixPlan(
      * 7.1: a sung line of each title is still heard over the other in this crossing (known from their lyrics or
      * separated voices): the outgoing title's mids, where its voice lives, step back (see [DeckAutomation.withMids]).
      */
-    val voicesMeet: Boolean = false
+    val voicesMeet: Boolean = false,
+    /** 7.6: the listener's volume keyframes over the blend (voice, instruments, whole title of each), see [MixKeys]. */
+    val keys: List<LevelKey>? = null
 ) {
     val mixes: Boolean get() = kind != MixKind.None
     /** Position in the incoming title once the outgoing one is gone. */
