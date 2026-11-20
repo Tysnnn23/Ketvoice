@@ -46,6 +46,14 @@ object CanvasRepo {
     private val keeping = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
     private var appContext: Context? = null
     private val failed = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    /** Titles showing their album's Canvas (7.5) while their own, if any, is looked for. */
+    private val shared = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+    /** A title the catalogue knows no Canvas for is not asked again before this long (7.5). */
+    internal const val NONE_FOR_MS = 3L * 24 * 60 * 60 * 1000
+    /** The network, replaced by the host tests (a fake that counts requests and bytes). */
+    internal var lookup: suspend (Track) -> KetvoiceApi.CanvasResult? = { KetvoiceApi.canvas(it) }
+    internal var fetchFile: (String, File, Long) -> File? = { url, dest, max -> download(url, dest, max) }
+    internal var mayFetch: (Context, Boolean) -> Boolean = { context, ahead -> mayDownload(context, ahead) }
 
     /** Forgets cached paths whose file was removed by the disk budget; they resolve again on demand. */
     fun dropMissing() {
@@ -82,7 +90,8 @@ object CanvasRepo {
      */
     suspend fun resolve(track: Track, force: Boolean = false, ahead: Boolean = false): Unit {
         // A title that has its Canvas is not "loading": the pill of the player only shows while one is being fetched.
-        if (localPath(track.id) != null) return resolveNow(track, force, again = true, ahead = ahead)
+        // 7.5: a Canvas that is used is touched, so the cache limit lets the least used go first, not the oldest.
+        localPath(track.id)?.let { DiskBudget.touch(it); return resolveNow(track, force, again = true, ahead = ahead) }
         setLoading(track.id, true)
         try { resolveNow(track, force, again = true, ahead = ahead) } finally { setLoading(track.id, false) }
     }
@@ -133,18 +142,22 @@ object CanvasRepo {
         fun dropStale() {
             val current = _paths.value[track.id] ?: return
             val currentName = File(current).nameWithoutExtension
-            if (!givesWay(current, curated, curatedName)) return
-            _paths.value = _paths.value - track.id
+            if (!givesWay(current, curated, curatedName, track.canvasUrl)) return
+            _paths.value = _paths.value - track.id; shared.remove(track.id)
             if (currentName.startsWith("kvov-") || currentName.startsWith("kvlink-")) ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().remove(track.id).apply()
             if (curatedName != null) failed.remove(track.id)
         }
         dropStale()
-        if (localPath(track.id) != null || (!force && recentlyFailed())) return@withContext
+        // 7.5: what is on the device shows at once, before the lock (another title's lookup may hold it for a minute)
+        // and before any request. The album's Canvas stands in for a title whose own is not known yet.
+        if (localPath(track.id) == null) fromDevice(ctx, track, curated, curatedName)
+        fun known() = localPath(track.id) != null && (track.id !in shared || knownWithout(ctx, track.id))
+        if (known() || (!force && recentlyFailed())) return@withContext
         mutex.withLock {
             // Another resolution may have run while this one waited: what is shown is checked again against the choice of now.
             curated = MediaOverrides.canvas(track); curatedName = curated?.let { "kvov-" + sha(it) }
             dropStale()
-            if (localPath(track.id) != null || (!force && recentlyFailed())) return@withLock
+            if (known() || (!force && recentlyFailed())) return@withLock
             try {
                 val prefs = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
                 // A canvas published for the album by its owner takes priority:
@@ -157,38 +170,37 @@ object CanvasRepo {
                     val target = File(canvasDir(ctx), "$name.mp4")
                     if (target.exists() && target.length() > 10_000) {
                         prefs.edit().putString(track.id, name).apply()
-                        _paths.value = _paths.value + (track.id to target.absolutePath)
+                        put(track.id, target.absolutePath)
                         return@withLock
                     }
                     if (force) {
                         // A download keeps the Canvas with the song: it is fetched now, or the link stays as it was.
-                        if (download(published, target, LINK_MAX_BYTES) != null) {
+                        if (fetchFile(published, target, LINK_MAX_BYTES) != null) {
                             prefs.edit().putString(track.id, name).apply()
-                            _paths.value = _paths.value + (track.id to target.absolutePath)
-                        } else _paths.value = _paths.value + (track.id to published)
+                            put(track.id, target.absolutePath)
+                        } else put(track.id, published)
                         return@withLock
                     }
-                    _paths.value = _paths.value + (track.id to published)
+                    put(track.id, published)
                     if (networkAllowed(ctx)) this@CanvasRepo.scope.launch { keepLink(track.id, published, target, name) }
                     return@withLock
                 }
                 if (published != null) {
-                    val name = curatedName ?: ("kvpub-" + (track.addonId ?: track.id)
-                        .replace(Regex("[^A-Za-z0-9_-]"), "_").take(72))
+                    val name = curatedName ?: publishedName(track)
                     val target = File(canvasDir(ctx), "$name.mp4")
                     if (target.exists() && target.length() > 10_000) {
                         prefs.edit().putString(track.id, name).apply()
-                        _paths.value = _paths.value + (track.id to target.absolutePath)
+                        put(track.id, target.absolutePath)
                         return@withLock
                     }
                     // A Canvas only shows on screen: behind other apps it is not downloaded, so that the stream being heard keeps the network.
-                    if (!force && !mayDownload(ctx, ahead)) return@withLock
-                    if (download(published, target) == null) {
+                    if (!force && !mayFetch(ctx, ahead)) return@withLock
+                    if (fetchFile(published, target, Long.MAX_VALUE) == null) {
                         failed[track.id] = System.currentTimeMillis()
                         return@withLock
                     }
                     prefs.edit().putString(track.id, name).apply()
-                    _paths.value = _paths.value + (track.id to target.absolutePath)
+                    put(track.id, target.absolutePath)
                     return@withLock
                 }
                 // A file named after an owner's choice ("kvov-…", or a published "kvpub-…") is never taken
@@ -206,9 +218,11 @@ object CanvasRepo {
 
                 if (!alreadyDownloaded) {
                     // A Canvas only shows on screen: behind other apps it is not downloaded, so that the stream being heard keeps the network.
-                    if (!force && !mayDownload(ctx, ahead)) return@withLock
-                    val resolved = KetvoiceApi.canvas(track.copy(spotifyId = spotifyId)) ?: run {
+                    if (!force && !mayFetch(ctx, ahead)) return@withLock
+                    val resolved = lookup(track.copy(spotifyId = spotifyId)) ?: run {
                         failed[track.id] = System.currentTimeMillis()
+                        // Its album's Canvas stays; the catalogue is not asked again for this title for a while.
+                        if (track.id in shared) prefs.edit().putLong(NONE_PREFIX + track.id, System.currentTimeMillis()).apply()
                         return@withLock
                     }
                     spotifyId = resolved.spotifyId
@@ -219,7 +233,7 @@ object CanvasRepo {
                     val target = File(canvasDir(ctx), "$spotifyId.mp4")
                     dest = target
                     if (!target.exists() || target.length() < 10_000) {
-                        download(resolved.url, target) ?: run {
+                        fetchFile(resolved.url, target, Long.MAX_VALUE) ?: run {
                             failed[track.id] = System.currentTimeMillis()
                             return@withLock
                         }
@@ -228,7 +242,7 @@ object CanvasRepo {
                 dest?.let {
 
                     prefs.edit().putString(track.id, it.nameWithoutExtension).apply()
-                    _paths.value = _paths.value + (track.id to it.absolutePath)
+                    put(track.id, it.absolutePath)
                 }
             } catch (_: Exception) {
                 failed[track.id] = System.currentTimeMillis()
@@ -245,13 +259,52 @@ object CanvasRepo {
     private suspend fun keepLink(trackId: String, url: String, target: File, name: String) {
         if (!keeping.add(name)) return
         try {
-            if (download(url, target, LINK_MAX_BYTES) == null) return
+            if (fetchFile(url, target, LINK_MAX_BYTES) == null) return
             val ctx = appContext ?: return
             ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(trackId, name).apply()
             // Only while the title still shows this very link: a new choice made meanwhile is left alone.
-            if (_paths.value[trackId] == url) _paths.value = _paths.value + (trackId to target.absolutePath)
+            if (_paths.value[trackId] == url) put(trackId, target.absolutePath)
         } finally { keeping.remove(name) }
     }
+
+    private const val NONE_PREFIX = "none:"
+
+    /** Shows [path] for [trackId]: its own Canvas, unless [album] says it is its album's, standing in. */
+    private fun put(trackId: String, path: String, album: Boolean = false) {
+        if (album) shared.add(trackId) else shared.remove(trackId)
+        _paths.value = _paths.value + (trackId to path)
+    }
+
+    /** The catalogue said lately that this title has no Canvas of its own. */
+    private fun knownWithout(ctx: Context, trackId: String): Boolean =
+        System.currentTimeMillis() - ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getLong(NONE_PREFIX + trackId, 0L) < NONE_FOR_MS
+
+    /**
+     * The Canvas of [track] already on the device, shown without the network (7.5): the owner's choice or the
+     * published Canvas kept as a file, the title's own catalogue Canvas, else its album's (one for all its titles).
+     */
+    private fun fromDevice(ctx: Context, track: Track, curated: String?, curatedName: String?) {
+        val dir = canvasDir(ctx)
+        fun usable(name: String?) = name?.let { File(dir, "$it.mp4") }?.takeIf { it.isFile && it.length() > 10_000 }
+        val prefs = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val published = curated ?: track.canvasUrl?.takeIf { it.startsWith("https://") }
+        if (published != null) {
+            val name = if (streamedFromItsLink(published)) linkName(published) else curatedName ?: publishedName(track)
+            usable(name)?.let { DiskBudget.touch(it); prefs.edit().putString(track.id, name).apply(); put(track.id, it.absolutePath) }
+            return
+        }
+        fun catalogueName(name: String?) = name?.takeUnless { it.startsWith("kvov-") || it.startsWith("kvpub-") || it.startsWith("kvlink-") }
+        val own = catalogueName(track.spotifyId) ?: catalogueName(prefs.getString(track.id, null))
+        val album = catalogueName(prefs.getString(albumKey(track), null))
+        val ownFile = usable(own)
+        val file = ownFile ?: usable(album) ?: return
+        DiskBudget.touch(file)
+        // A title with no catalogue id of its own takes its album's for good, as before; one with an id may have its own.
+        if (ownFile != null || own == null) { prefs.edit().putString(track.id, file.nameWithoutExtension).apply(); put(track.id, file.absolutePath) }
+        else put(track.id, file.absolutePath, album = true)
+    }
+
+    private fun publishedName(track: Track): String = "kvpub-" + (track.addonId ?: track.id).replace(Regex("[^A-Za-z0-9_-]"), "_").take(72)
 
     /** A Canvas file received from another phone (Air Ket, 7.0) becomes the title's and its album's. */
     internal fun adopt(trackId: String, album: String, artist: String, name: String) {
@@ -259,7 +312,7 @@ object CanvasRepo {
         val file = File(canvasDir(ctx), "$name.mp4").takeIf { it.isFile && it.length() > 10_000 } ?: return
         val prefs = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         prefs.edit().putString(trackId, name).apply { if (album.isNotBlank() && !prefs.contains(albumKey(album, artist))) putString(albumKey(album, artist), name) }.apply()
-        _paths.value = _paths.value + (trackId to file.absolutePath)
+        put(trackId, file.absolutePath)
     }
 
     /** The Canvas already on the device for an album (one for all its titles), or null. */
@@ -271,8 +324,12 @@ object CanvasRepo {
     }
 
     /** True when the Canvas shown for a title ([current], a file or a link) is not the one the owner's choice ([curated]) calls for. */
-    internal fun givesWay(current: String, curated: String?, curatedName: String?): Boolean {
+    internal fun givesWay(current: String, curated: String?, curatedName: String?, catalogueLink: String? = null): Boolean {
         val name = File(current).nameWithoutExtension
+        // 7.5: a published Canvas given as a link and kept on the device is the catalogue's own, not a stale choice
+        // (it was dropped and put back on every look, and the page waited behind the lock in between).
+        if (curated == null && catalogueLink != null && streamedFromItsLink(catalogueLink) &&
+            (current == catalogueLink || name == linkName(catalogueLink))) return false
         if (curated == null) return current.startsWith("https://") || name.startsWith("kvov-") || name.startsWith("kvlink-")
         // A link's Canvas kept on the device (kvlink-…) is the same choice as the link itself.
         return if (streamedFromItsLink(curated)) current != curated && name != linkName(curated) else name != curatedName
