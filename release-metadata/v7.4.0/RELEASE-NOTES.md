@@ -1,0 +1,31 @@
+# Ketvoice 7.4.0
+
+![Ketvoice](https://raw.githubusercontent.com/Tysnnn23/Ketvoice/main/ketvoice-banner.png)
+
+Two new home-screen widgets that really control your music, an immersive artist page, smoother player colours, and bigger covers on Downloads and Favourites.
+
+## Widgets
+
+- **Two new widgets replace the old ones**: « En cours » (2×2) and « En cours + contrôles » (4×2).
+- Play, pause, previous, next and the heart work right from the home screen, without opening the app. When nothing is playing, Play picks up your last queue.
+- The widgets follow playback live: the title, cover, heart and progress change as you listen, in the app, from the notification or from your headphones.
+- Their background takes the colours of the cover, with text that stays readable.
+- The widget picker shows a preview of each widget.
+
+## Pages
+
+- **Downloads and Favourites** open on a much bigger cover, and the header now scrolls away with the list instead of fading out.
+- On Downloads, the ⋯ on a song opens the same menu as a long press, and the ⋯ at the top opens the page menu (select, sort).
+- Song lists are airier: taller rows, softly rounded covers and thin separators that start after the cover.
+- « Découvertes de la semaine » is removed.
+
+## Artist page and player
+
+- **Artist pages** open on the artist's photo, up to the top of the screen, with the name large over it. The photo moves gently as you scroll.
+- **Player colours** no longer flash grey between songs. They glide from one song to the next, keep the cover's own hue and stay readable on white covers.
+- The blurred background is smoother, without bands or hard edges, and the Canvas fades in over the cover's colours instead of showing black.
+- The player opens already in the colours of the song playing, and the status bar icons stay readable over artist photos.
+
+## Install
+
+Download `Ketvoice-7.4.0.apk` (phone, Android 12 and up), `Ketvoice-7.4.0-Lite.apk` (lighter app, Android 11 and up) or `Ketvoice-7.4.0-Quest.apk` (Meta Quest) below and install it over your current version: your library, settings and downloads stay. Widgets from earlier versions may need to be added again.

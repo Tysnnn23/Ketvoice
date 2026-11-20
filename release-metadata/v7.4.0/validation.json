@@ -1,0 +1,215 @@
+{
+  "schema": 8,
+  "version": "7.4.0",
+  "versionCode": 145,
+  "source_commit": "da85407ebf64b02afbaa4c4bcd4b2edd5f33c4c4",
+  "created_at": "2026-11-20T12:45:05.389141+00:00",
+  "build_origin": {
+    "kind": "github_actions_with_owner_discord_sdk",
+    "workflow": "android.yml",
+    "run_id": 44734371637,
+    "artifact": {
+      "id": 14628419957,
+      "sha256": "ce94ef090e0533a1f791cbcdd555d77b72b6c7676098b9d47aa1572558cb8fda"
+    },
+    "gradle": "assembleMobileRelease assembleQuestRelease assembleLiteRelease",
+    "note": "Signed by CI with the pinned keystore secret; the Discord Social SDK AAR matched its pinned SHA-256."
+  },
+  "local_validation": {
+    "result": "debug JVM/Robolectric suites for the three flavors (mobile, quest, lite), release lint and the APK checker tests passed in a cloud container without the Discord SDK",
+    "commands": [
+      "testMobileDebugUnitTest",
+      "testQuestDebugUnitTest",
+      "testLiteDebugUnitTest -ProbolectricSdks=31,32,33,34,35,36",
+      "lintMobileRelease",
+      "lintQuestRelease",
+      "lintLiteRelease",
+      "tools/test_verify_apk.py"
+    ],
+    "ci_validation": "run 44734371637: release builds, debug and release unit tests, UI text audit, lint, APK signature pin and Discord bridge packaging passed",
+    "code_review": {
+      "kind": "none independent"
+    },
+    "host_previews": "Robolectric software renders on the host, looked at by the three sub-agents: both widgets for dark, pale, warm, grey and empty covers and both picker previews; Downloads and Favourites top and scrolled, rows, the row glass menu, Home without discoveries, tablet; artist page with and without photo, light and dark, top and scrolled; player on light and dark covers, still background, panoramic and inline Canvas loading state; Quest screens not rendered",
+    "features_7_4": "widgets as RemoteViews (NowPlayingWidgetsHostTest: playing, paused, empty, like, compact height, every button target, legibility over a grid of cover colours, preview colours), weekly discoveries removed (worker cancelled, data deleted), Downloads row and top-bar menus (Pages74HostTest fails without the fix), airier TrackRow, artist hero (ArtistHeroTest), player colour decisions (PlayerColorsTest), renders (Feel74HostTest); one older Downloads header test changed from shrink to no-shrink as the owner asked; nothing ran on a device or launcher: background start of playback from a widget tap after the service stopped, launcher sizes, picker preview display, Lite corner images, update frequency in practice, status-bar icon colour",
+    "after_local_run": "full local run on the release commit's parent: mobile 1813, quest 1803 (44 skipped), lite 1811 tests with 2-3 failures (an older test expecting the Downloads header to shrink, the Lite copies of the two widget preview images, and the widget button test running on Quest where widgets are removed); fixed in da85407 and those three suites passed on mobile, quest and lite; release lint 0 errors; UI text audit clean",
+    "sdk_30": "Robolectric's Android 11 runtime could not be downloaded in the cloud container (Maven Central answered 429), so the Lite tests that declare sdk 30 ran on sdk 31 only; nothing ran on an Android 11 runtime",
+    "after_last_full_local_run": "only two test files and the Lite resource copies changed after the last complete local run; CI run 44734371637 ran every suite on the release commit and passed"
+  },
+  "server": {
+    "function": "ketvoice-content",
+    "deployed_version": 23,
+    "changed_in_this_version": false,
+    "database": "no migration in this version"
+  },
+  "tests": {
+    "mobile": {
+      "jvm": {
+        "tests": 1813,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 3
+      },
+      "android_15_emulator_compose": {
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "quest": {
+      "jvm": {
+        "tests": 1803,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 44
+      },
+      "android_15_emulator_compose": {
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "lite": {
+      "jvm": {
+        "tests": 1811,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 3
+      },
+      "android_11_runtime": {
+        "status": "not_executed"
+      }
+    },
+    "dex_register_check": "tools/check_dex_registers.py ran in CI (Check method sizes against the Android verifier) on the three release APKs",
+    "apk_checker": "tools/test_verify_apk.py 12 tests (Lite minSdk 30 required)"
+  },
+  "lint": {
+    "mobile": {
+      "Warning": 320,
+      "Hint": 29
+    },
+    "quest": {
+      "Warning": 320,
+      "Hint": 29
+    },
+    "lite": {
+      "Warning": 335,
+      "Hint": 29
+    },
+    "errors": 0
+  },
+  "apks": [
+    {
+      "name": "Ketvoice-7.4.0.apk",
+      "sha256": "0ee6f6ebf7c888da0c5a6dbbc632e68d1eaafde50437680a135711a9429b4e08",
+      "bytes": 101958782,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "7.4.0",
+      "versionCode": 145,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-7.4.0-Quest.apk",
+      "sha256": "17b9a44f9c79dc736842d9be5ba7ddad6522e0f7b6eaeeb7380e63752a4b7ef2",
+      "bytes": 118060545,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "7.4.0",
+      "versionCode": 145,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-7.4.0-Lite.apk",
+      "sha256": "3925aec3b8adbc1d52d4c3713fe7cf253a757cc8ad9bd73cfa90031681e98524",
+      "bytes": 32015447,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "7.4.0",
+      "versionCode": 145,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false,
+      "edition": "lite"
+    }
+  ],
+  "discord": {
+    "sdk_present_in_ci_build": true,
+    "sdk_sha256_pinned": true,
+    "bridge_and_native_libraries_verified": true,
+    "presence_mode": "unauthenticated_rpc_through_installed_discord_app"
+  },
+  "credential_scan": {
+    "entries": 1752,
+    "findings": 0,
+    "scope": "the three release APKs",
+    "kind": "credential_patterns",
+    "explicit_private_provider_key_deny_list": false,
+    "note": "run because publish-release requires it; the other manual checks were skipped at the owner's request"
+  },
+  "release_install_smoke": {
+    "mobile": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "quest": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "lite": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    }
+  },
+  "publication_override": {
+    "authorized_by_user": true,
+    "authorized_at": "2026-11-20T12:45:05.389141+00:00",
+    "kind": "standing_authorization",
+    "user_statement": "J'autorise TOUT devient maintenant une règle.",
+    "user_statement_date": "2026-11-14",
+    "in_reply_to": "The question whether versions may be published without phone or Quest testing without asking again for each version.",
+    "recorded_in": "AGENTS.md (commit aeeda8e)",
+    "reason": "The owner made publishing validated versions without phone or Quest testing a standing rule.",
+    "scope": "physical device installation and all on-device behaviour of 7.4.0 (mobile, Lite and Quest), including accounts and sync on devices"
+  },
+  "owner_requests_2026_11_20_7_4_0": {
+    "statements": [
+      "Retire le discoveries of the week et refait totalement les widget je veux les meme widgets que apple music et qui fonctionnent réellement car juste avoir un widget sans vie qui t'ammene simple a l'app sa nan je veux des vrai widget ! aussi dans l'ecran pour ajouter les widget je veut qu'il y'ai un aperçu. Avant de faire sa propose moi des améliorations de l'app visuel et design. Aussi sur la page des téléchargements rend plus grosse la cover et de meme pour les like et quand on défilé je veux que tu retire l'effet de sa disparaît. Aussi sur l'écran des download quand on clique sur les 3 petit point sa n'ouvre pas le bon menu.",
+      "Et aussi je veut que tu amélioré le blur du music player etc sur le choix/les couleur dynamique qui changent si le canvas est activé ou pas des petite amélioration comme sa mais aui ameliore le ressenti !"
+    ],
+    "picks": [
+      "En cours (petit 2×2)",
+      "En cours + contrôles",
+      "Couleurs de la pochette",
+      "Listes plus aérées",
+      "Page artiste immersive"
+    ],
+    "done": "all items; the nine earlier widgets were removed (Lecture en cours, Lecteur, Paroles en direct, Ketmix, Replay, Votre semaine, Pour vous, Mini, Commandes), the 2x2 keeps the NowPlayingWidgetReceiver name"
+  },
+  "not_validated": [
+    "physical phone, Lite, tablet or Quest installation, rendering and behaviour of 7.4.0",
+    "widgets on a real launcher: playback started from a widget tap after the service stopped, sizes, corner clipping, picker previews, update frequency, Android 11 (Lite) corners",
+    "the artist page and player colours on real covers, Canvas and status bar",
+    "Ketmix transitions by ear on any device",
+    "Robolectric runs on the Android 11 runtime (sdk 30)",
+    "independent code review"
+  ],
+  "known_limitations": [
+    "No Wear OS app in this version.",
+    "Seasonal themes use code-drawn decor until the owner's pictures are added.",
+    "Widgets placed with an earlier version other than the 2x2 now-playing one disappear from the home screen and must be added again.",
+    "Android Auto's queue screen shows only the current song.",
+    "Switching between Ketvoice and Ketvoice Lite is a manual install of the other APK.",
+    "Ketogether guests hear titles their own sources can play; local files and private titles are shown as unavailable.",
+    "Lecture automatique: which queue titles were added automatically is not kept across a session restore.",
+    "The mobile and Quest APKs are about 18.6 MB larger because they include the rhythm model.",
+    "Launcher icons keep a background: Android fills adaptive icon backgrounds in black.",
+    "The signing certificate is the existing public Android debug identity, not a private production key."
+  ],
+  "canonical_banner_sha256": "ddc0e2c1270027f4b9dd92254374b79727ae9eaf8914e418b52e23c5b39b5966"
+}
