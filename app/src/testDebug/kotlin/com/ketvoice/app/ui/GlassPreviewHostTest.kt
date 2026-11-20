@@ -52,12 +52,12 @@ class GlassPreviewHostTest {
         SettingsStore.load(compose.activity)
         AppSettings.languageChosen.value = true
         AppSettings.language.value = AppLanguage.FRENCH.label
-        AppSettings.glassTintLevel.value = GlassClarity.DEFAULT
+        AppSettings.glassIntensity.value = GlassClarity.DEFAULT
         SettingsStore.save()
     }
 
     @After fun reset() {
-        AppSettings.glassTintLevel.value = GlassClarity.DEFAULT
+        AppSettings.glassIntensity.value = GlassClarity.DEFAULT
         SettingsStore.save()
     }
 
@@ -66,59 +66,59 @@ class GlassPreviewHostTest {
             .padding(16.dp)) { GlassTransparencyCard() }
     }
 
-    private fun reload(): Int {
-        compose.runOnIdle { AppSettings.glassTintLevel.value = -1; SettingsStore.load(compose.activity) }
-        return AppSettings.glassTintLevel.value
+    private fun reload(): Float {
+        compose.runOnIdle { AppSettings.glassIntensity.value = -1f; SettingsStore.load(compose.activity) }
+        return AppSettings.glassIntensity.value
     }
 
-    @Test fun theDefaultIsTodaysLookInTheMiddleOfAStoppedSlider() {
+    @Test fun theDefaultIsTodaysLookOnAContinuousSlider() {
         compose.setContent { Card(false) }
         compose.onNodeWithTag("glass-tint-level").assertTextEquals("Standard")
         val info = compose.onNodeWithTag("glass-tint-slider").fetchSemanticsNode().config[SemanticsProperties.ProgressBarRangeInfo]
-        assertEquals(GlassClarity.DEFAULT.toFloat(), info.current, 0f)
-        assertEquals("one stop per level", GlassClarity.STEPS - 1, info.steps)
+        assertEquals(GlassClarity.DEFAULT, info.current, 1e-4f)
+        assertEquals("continuous (7.5)", 0, info.steps)
+        // The Clair / Teinté tabs of 7.1 are gone: the slider is the one control.
+        compose.onNode(hasText("Clair") and hasClickAction()).assertDoesNotExist()
     }
 
-    @Test fun theSliderOnlyLandsOnStopsAndSavesTheLevel() {
+    @Test fun theSliderSetsAnyIntensityAndSavesIt() {
         compose.setContent { Card(false) }
         compose.onNodeWithTag("glass-tint-slider")
-            .performSemanticsAction(SemanticsActions.SetProgress) { assertTrue(it(4.4f)) }
-        compose.runOnIdle { assertEquals("snapped to the nearest stop", 4, AppSettings.glassTintLevel.value) }
+            .performSemanticsAction(SemanticsActions.SetProgress) { assertTrue(it(.47f)) }
+        compose.runOnIdle { assertEquals("not snapped", .47f, AppSettings.glassIntensity.value, 1e-4f) }
         compose.onNodeWithTag("glass-tint-level").assertTextEquals("Teinté")
-        assertEquals("saved when released", 4, reload())
+        assertEquals("saved when released", .47f, reload(), 1e-4f)
         compose.onNodeWithTag("glass-tint-slider")
             .performSemanticsAction(SemanticsActions.SetProgress) { assertTrue(it(0f)) }
-        compose.runOnIdle { assertEquals(GlassClarity.MIN, AppSettings.glassTintLevel.value) }
+        compose.runOnIdle { assertEquals(GlassClarity.MIN, AppSettings.glassIntensity.value, 0f) }
         compose.onNodeWithTag("glass-tint-level").assertTextEquals("Très transparent")
-        assertEquals(GlassClarity.MIN, reload())
+        assertEquals(GlassClarity.MIN, reload(), 0f)
     }
 
-    @Test fun aTapAnywhereOnTheTravelLandsOnAStop() {
+    @Test fun aTapAtTheEndIsTheMostOpaque() {
         compose.setContent { Card(true) }
         compose.onNodeWithTag("glass-tint-slider").performScrollTo().performTouchInput { click(centerRight.copy(x = width - 2f)) }
-        compose.runOnIdle { assertEquals(GlassClarity.MAX, AppSettings.glassTintLevel.value) }
-        compose.onNodeWithTag("glass-tint-slider").performTouchInput { click(center) }
-        compose.runOnIdle { assertEquals(3, AppSettings.glassTintLevel.value) }
+        compose.runOnIdle { assertEquals(GlassClarity.MAX, AppSettings.glassIntensity.value, .01f) }
+        compose.onNodeWithTag("glass-tint-level").assertTextEquals("Le plus lisible")
     }
 
     @OptIn(ExperimentalTestApi::class)
-    @Test fun keyboardArrowsMoveOneStopAndPersist() {
+    @Test fun keyboardArrowsMoveAndPersist() {
         compose.setContent { Card(false) }
         compose.onNodeWithTag("glass-tint-slider").performSemanticsAction(SemanticsActions.RequestFocus)
             .performKeyInput { pressKey(Key.DirectionRight) }
-        compose.runOnIdle { assertEquals(GlassClarity.DEFAULT + 1, AppSettings.glassTintLevel.value) }
+        compose.runOnIdle { assertEquals(GlassClarity.DEFAULT + .05f, AppSettings.glassIntensity.value, 1e-3f) }
         compose.onNodeWithTag("glass-tint-slider").performKeyInput { pressKey(Key.DirectionLeft); pressKey(Key.DirectionLeft) }
-        compose.runOnIdle { assertEquals(GlassClarity.DEFAULT - 1, AppSettings.glassTintLevel.value) }
-        assertEquals(GlassClarity.DEFAULT - 1, reload())
+        compose.runOnIdle { assertEquals(GlassClarity.DEFAULT - .05f, AppSettings.glassIntensity.value, 1e-3f) }
+        assertEquals(GlassClarity.DEFAULT - .05f, reload(), 1e-3f)
     }
 
     @Test fun theSliderIsNamedAndSaysItsLevel() {
         compose.setContent { Card(true) }
-        compose.onNodeWithContentDescription("Transparence du verre").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Intensité du verre").assertIsDisplayed()
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Standard"))
         compose.onNodeWithText("Transparent").assertExists()
-        // 7.1: the end of the slider (the Clair / Teinté choice above it is a tab).
-        compose.onNode(hasText("Teinté") and !hasClickAction()).assertExists()
+        compose.onNodeWithText("Opaque").assertExists()
     }
 
     @Test @Config(qualifiers = "w320dp-h480dp-mdpi")
@@ -129,7 +129,7 @@ class GlassPreviewHostTest {
             }
         } }
         compose.onNodeWithTag("glass-tint-slider").performScrollTo().assertIsDisplayed()
-        compose.onNode(hasText("Teinté") and !hasClickAction()).performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Opaque").performScrollTo().assertIsDisplayed()
     }
 
     @Test fun rtlSliderMapsPhysicalEdgesToLogicalValues() {
@@ -150,7 +150,7 @@ class GlassPreviewHostTest {
         var dark by mutableStateOf(false)
         compose.setContent { Card(dark) }
         for (theme in listOf(false, true)) for (level in listOf(GlassClarity.MIN, GlassClarity.DEFAULT, GlassClarity.MAX)) {
-            compose.runOnIdle { dark = theme; AppSettings.glassTintLevel.value = level }
+            compose.runOnIdle { dark = theme; AppSettings.glassIntensity.value = level }
             compose.waitForIdle()
             compose.onNodeWithTag("glass-tint-level").assertTextEquals(GlassClarity.label(level))
             image("glass-transparency-${if (theme) "dark" else "light"}-$level")

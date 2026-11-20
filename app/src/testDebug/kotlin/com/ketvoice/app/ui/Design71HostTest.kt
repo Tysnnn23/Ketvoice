@@ -82,7 +82,7 @@ class Design71HostTest {
         recent.value = emptyList(); known.value = emptyList()
         player.value = PlayerUiState()
         AppSettings.trueBlack.value = false
-        AppSettings.glassTinted.value = false
+        AppSettings.glassIntensity.value = com.ketvoice.app.glass.GlassClarity.DEFAULT
         AppSettings.reduceAnimations.value = false
         AppSettings.glassStyle.value = 0
         ContextMenus.request.value = null
@@ -230,8 +230,9 @@ class Design71HostTest {
             }
         } }
         image("glass-clear")
-        compose.onAllNodesWithText("Teinté")[0].performClick()
-        compose.runOnIdle { assertTrue(AppSettings.glassTinted.value) }
+        // 7.5: the opaque end of the intensity slider replaces the Teinté tab.
+        compose.onNodeWithTag("glass-tint-slider").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.SetProgress) { it(1f) }
+        compose.runOnIdle { assertTrue(AppSettings.glassIntensity.value == 1f) }
         image("glass-tinted")
     }
 }

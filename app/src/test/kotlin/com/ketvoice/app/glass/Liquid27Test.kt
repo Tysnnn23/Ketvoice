@@ -75,20 +75,21 @@ class Liquid27Test {
         assertEquals(0f, c.frost(c.DEFAULT), 0f); assertEquals(0f, c.clarity(c.DEFAULT), 0f)
         assertEquals(Ket27Glass.MIN_BLUR_PX, c.minimumBlurPx(c.DEFAULT), 0f)
         assertEquals(GlassTuning.fallbackTint(0f, true), c.fallbackVeil(true, c.DEFAULT), 0f)
-        assertEquals(0f, c.staticClearing(c.DEFAULT), 0f)
-        assertEquals(1f, c.clarity(c.MIN), 0f); assertEquals(1f, c.frost(c.MAX), 0f)
-        for (l in c.MIN until c.MAX) {
-            assertTrue("frost rises", c.frost(l + 1) >= c.frost(l))
-            assertTrue("clarity falls", c.clarity(l + 1) <= c.clarity(l))
-            assertTrue("blur floor rises", c.minimumBlurPx(l + 1) >= c.minimumBlurPx(l))
-            assertTrue("fallback veil rises", c.fallbackVeil(false, l + 1) > c.fallbackVeil(false, l))
-            assertTrue(Ket27Glass.surface(l + 1) > Ket27Glass.surface(l))
+        assertEquals(0f, c.staticShift(c.DEFAULT), 0f)
+        assertEquals(1f, c.clarity(c.MIN), 0f); assertEquals(1f, c.frost(c.MAX), 0f); assertEquals(1f, c.opacity(c.MAX), 0f)
+        for (i in 0 until 20) {
+            val l = i / 20f; val n = (i + 1) / 20f
+            assertTrue("frost rises", c.frost(n) >= c.frost(l))
+            assertTrue("clarity falls", c.clarity(n) <= c.clarity(l))
+            assertTrue("blur floor rises", c.minimumBlurPx(n) >= c.minimumBlurPx(l))
+            assertTrue("fallback veil rises", c.fallbackVeil(false, n) >= c.fallbackVeil(false, l))
+            assertTrue("static glass thickens", c.staticShift(n) >= c.staticShift(l))
+            assertTrue(Ket27Glass.surface(n) >= Ket27Glass.surface(l))
         }
-        assertEquals(c.MIN, c.sanitize(-4)); assertEquals(c.MAX, c.sanitize(99))
-        // The continuous tint of 5.x lands on the nearest step; untouched stays the default.
-        assertEquals(c.DEFAULT, c.fromLegacyTint(0f)); assertEquals(c.MAX, c.fromLegacyTint(1f))
-        assertEquals(4, c.fromLegacyTint(.5f)); assertEquals(c.DEFAULT, c.fromLegacyTint(Float.NaN))
-        assertEquals(7, (c.MIN..c.MAX).map(c::label).toSet().size)
+        assertEquals(c.MIN, c.sanitize(-4f)); assertEquals(c.MAX, c.sanitize(99f)); assertEquals(c.DEFAULT, c.sanitize(Float.NaN))
+        // The continuous tint of 5.x lands between the default and fully frosted; untouched stays the default.
+        assertEquals(c.DEFAULT, c.fromLegacyTint(0f), 0f); assertEquals(c.FROSTED, c.fromLegacyTint(1f), 1e-4f)
+        assertEquals(c.DEFAULT, c.fromLegacyTint(Float.NaN), 0f)
     }
 
     /** A misspelt uniform makes setFloatUniform throw and silently drops to the fallback. */

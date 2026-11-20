@@ -14,7 +14,7 @@ import androidx.compose.ui.platform.LocalContext
 
 /**
  * Android's « Texte à contraste élevé » (7.1): while it is on, every glass surface uses the tinted,
- * more opaque glass ([GlassClarity.tinted]). Android 16 reports it through [AccessibilityManager];
+ * at least the opaque glass of « Teinté » ([GlassClarity.position]). Android 16 reports it through [AccessibilityManager];
  * earlier versions keep it in a secure setting that apps may read.
  */
 object HighContrastText {

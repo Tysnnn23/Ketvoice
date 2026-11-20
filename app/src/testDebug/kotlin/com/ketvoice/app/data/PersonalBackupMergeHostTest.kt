@@ -160,20 +160,26 @@ class PersonalBackupMergeHostTest {
         SettingsStore.load(context)
         fun backup(settings: Map<String, Any>) = PersonalBackupData(emptyList(), emptySet(), settings, emptyList(), emptyList(), emptyMap(), 0)
         // Exported and restored as they are.
-        AppSettings.glassTintLevel.value = 5; AppSettings.glassTilt.value = false
+        AppSettings.glassIntensity.value = .73f; AppSettings.glassTilt.value = false
         SettingsStore.save()
         val exported = PersonalBackup.collect(context).settings
-        assertEquals(5, exported["glassTintLevel"]); assertEquals(false, exported["glassTilt"])
+        assertEquals(.73f, (exported["glassIntensity"] as Number).toFloat(), 1e-4f); assertEquals(false, exported["glassTilt"])
         assertFalse("the retired continuous tint is never exported", "glassTint" in exported)
-        AppSettings.glassTintLevel.value = 2; AppSettings.glassTilt.value = true
+        assertFalse("nor the levels and Teinté of 6.0 to 7.4", "glassTintLevel" in exported || "glassTinted" in exported)
+        AppSettings.glassIntensity.value = .2f; AppSettings.glassTilt.value = true
         SettingsStore.save()
-        PersonalBackup.merge(context, backup(mapOf("glassTintLevel" to 5, "glassTilt" to false)))
-        assertEquals(5, AppSettings.glassTintLevel.value); assertFalse(AppSettings.glassTilt.value)
+        PersonalBackup.merge(context, backup(mapOf("glassIntensity" to .73f, "glassTilt" to false)))
+        assertEquals(.73f, AppSettings.glassIntensity.value, 1e-4f); assertFalse(AppSettings.glassTilt.value)
         // Out of range is refused, never clamped into something the listener did not choose.
+        PersonalBackup.merge(context, backup(mapOf("glassIntensity" to 9f)))
+        assertEquals(.73f, AppSettings.glassIntensity.value, 1e-4f)
         PersonalBackup.merge(context, backup(mapOf("glassTintLevel" to 9)))
-        assertEquals(5, AppSettings.glassTintLevel.value)
-        // A backup of 5.x: its continuous tint lands on the nearest step.
+        assertEquals(.73f, AppSettings.glassIntensity.value, 1e-4f)
+        // A backup of 7.1 to 7.4 with Teinté lands near the opaque end; one of 5.x between the default and frosted.
+        PersonalBackup.merge(context, backup(mapOf("glassTintLevel" to 2, "glassTinted" to true)))
+        assertEquals(com.ketvoice.app.glass.GlassClarity.TINTED, AppSettings.glassIntensity.value, 1e-4f)
+        SettingsStore.save()
         PersonalBackup.merge(context, backup(mapOf("glassTint" to .5f)))
-        assertEquals(4, AppSettings.glassTintLevel.value)
+        assertEquals(.4f, AppSettings.glassIntensity.value, 1e-4f)
     }
 }

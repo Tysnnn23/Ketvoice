@@ -9,13 +9,16 @@ object SettingsStore {
     private var prefs: SharedPreferences? = null
 
     /**
-     * The stepped glass transparency. A listener who only ever set the continuous tint of 5.x keeps
-     * it on the nearest step. Wrong preference types never crash loading.
+     * The glass intensity (7.5). A listener of 6.0 to 7.4 keeps the stepped transparency and the Clair / Teinté
+     * choice they had, and one of 5.x their continuous tint. Wrong preference types never crash loading.
      */
-    internal fun glassTintLevel(p: SharedPreferences): Int {
+    internal fun glassIntensity(p: SharedPreferences): Float {
         val glass = com.ketvoice.app.glass.GlassClarity
-        if (p.contains("glassTintLevel")) return glass.sanitize(
-            runCatching { p.getInt("glassTintLevel", glass.DEFAULT) }.getOrDefault(glass.DEFAULT))
+        if (p.contains("glassIntensity")) return glass.sanitize(
+            runCatching { p.getFloat("glassIntensity", glass.DEFAULT) }.getOrDefault(glass.DEFAULT))
+        val tinted = runCatching { p.getBoolean("glassTinted", false) }.getOrDefault(false)
+        if (p.contains("glassTintLevel") || tinted) return glass.fromLevel(
+            runCatching { p.getInt("glassTintLevel", 2) }.getOrDefault(2), tinted)
         return glass.fromLegacyTint(runCatching { p.getFloat("glassTint", 0f) }.getOrDefault(0f))
     }
 
@@ -43,8 +46,7 @@ object SettingsStore {
         s.albumHeroCanvas.value = p.getBoolean("albumHeroCanvas", true)
         s.albumHeader.value = runCatching { p.getInt("albumHeader", 0) }.getOrDefault(0).coerceIn(0, 2)
         s.glassStyle.value = p.getInt("glassStyle", 0).coerceIn(0, com.ketvoice.app.glass.GlassStyles.MAX)
-        s.glassTintLevel.value = glassTintLevel(p)
-        s.glassTinted.value = p.getBoolean("glassTinted", false)
+        s.glassIntensity.value = glassIntensity(p)
         s.trueBlack.value = p.getBoolean("trueBlack", false)
         s.glassTilt.value = p.getBoolean("glassTilt", true)
         s.downloadsWifiOnly.value = p.getBoolean("downloadsWifiOnly", false)
@@ -67,6 +69,7 @@ object SettingsStore {
         s.autoResume.value = p.getBoolean("autoResume", true)
         s.lyricVideoSound.value = p.getBoolean("lyricVideoSound", true)
         s.lockscreenLyrics.value = p.getBoolean("lockscreenLyrics", true)
+        s.standbyMode.value = runCatching { p.getBoolean("standbyMode", false) }.getOrDefault(false)
         s.autoOfflineFavorites.value = p.getBoolean("autoOfflineFavorites", true)
         s.smartOffline.value = p.getBoolean("smartOffline", false)
         s.smartOfflineGb.value = SmartOfflinePlan.clampGb(p.getInt("smartOfflineGb", SmartOfflinePlan.DEFAULT_GB))
@@ -204,10 +207,9 @@ object SettingsStore {
             .putBoolean("albumHeroCanvas", s.albumHeroCanvas.value)
             .putInt("albumHeader", s.albumHeader.value.coerceIn(0, 2))
             .putInt("glassStyle", s.glassStyle.value)
-            .putInt("glassTintLevel", com.ketvoice.app.glass.GlassClarity.sanitize(s.glassTintLevel.value))
-            // The continuous tint of 5.x has been converted on loading; it is not written again.
-            .remove("glassTint")
-            .putBoolean("glassTinted", s.glassTinted.value)
+            .putFloat("glassIntensity", com.ketvoice.app.glass.GlassClarity.sanitize(s.glassIntensity.value))
+            // The tint of 5.x, the levels of 6.0 and Teinté of 7.1 have been converted on loading; they are not written again.
+            .remove("glassTint").remove("glassTintLevel").remove("glassTinted")
             .putBoolean("trueBlack", s.trueBlack.value)
             .putBoolean("glassTilt", s.glassTilt.value)
             .putBoolean("downloadsWifiOnly", s.downloadsWifiOnly.value)
@@ -229,6 +231,7 @@ object SettingsStore {
             .putBoolean("autoResume", s.autoResume.value)
             .putBoolean("lyricVideoSound", s.lyricVideoSound.value)
             .putBoolean("lockscreenLyrics", s.lockscreenLyrics.value)
+            .putBoolean("standbyMode", s.standbyMode.value)
             .putBoolean("autoOfflineFavorites", s.autoOfflineFavorites.value)
             .putBoolean("smartOffline", s.smartOffline.value)
             .putInt("smartOfflineGb", s.smartOfflineGb.value)

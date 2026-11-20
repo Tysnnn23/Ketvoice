@@ -27,47 +27,61 @@ import org.junit.Test
 /** 7.1 design picks: tinted glass, opaque menus, A–Z index, Noir and the radio without repeats. */
 class Design71Test {
     @After fun reset() {
-        AppSettings.glassTinted.value = false
+        AppSettings.glassIntensity.value = GlassClarity.DEFAULT
         AppSettings.trueBlack.value = false
         HighContrastText.on.value = false
     }
 
     // ---- Liquid Glass
 
-    @Test fun tintedIsClearlyMoreOpaqueAndHighContrastTextTurnsItOn() {
-        assertFalse(GlassClarity.tinted)
+    @Test fun theOpaqueEndIsClearlyMoreOpaqueAndHighContrastTextLiftsToIt() {
+        AppSettings.glassIntensity.value = GlassClarity.DEFAULT
+        assertEquals(GlassClarity.DEFAULT, GlassClarity.position, 0f)
         HighContrastText.on.value = true
-        assertTrue(GlassClarity.tinted)
+        assertEquals(GlassClarity.TINTED, GlassClarity.position, 0f)
+        AppSettings.glassIntensity.value = 1f
+        assertEquals("never lowers a more opaque choice", 1f, GlassClarity.position, 0f)
         HighContrastText.on.value = false
-        AppSettings.glassTinted.value = true
-        assertTrue(GlassClarity.tinted)
-        for (level in GlassClarity.MIN..GlassClarity.MAX) {
-            // Clear keeps the navigation as it was; Tinted adds a body of milk well over any level of Clear.
-            assertEquals(0f, GlassClarity.body(GlassRole.Control, false, level), 0f)
-            assertTrue(GlassClarity.body(GlassRole.Control, true, level) >= GlassClarity.TINTED_BODY)
-            assertTrue(GlassClarity.frostFor(level, true) >= GlassClarity.TINTED_FROST)
-            assertEquals(0f, GlassClarity.clarityFor(level, true), 0f)
-            // The old values keep their meaning in Clear.
-            assertEquals(GlassClarity.frost(level), GlassClarity.frostFor(level, false), 0f)
+        // 7.1's Teinté lands near the opaque end, with at least the milk it had.
+        val tinted = GlassClarity.fromLevel(2, tinted = true)
+        assertEquals(GlassClarity.TINTED, tinted, 1e-4f)
+        assertTrue(GlassClarity.body(GlassRole.Control, tinted) >= .6f)
+        assertEquals(1f, GlassClarity.frost(tinted), 0f); assertEquals(0f, GlassClarity.clarity(tinted), 0f)
+        for (level in 0..6) {
+            // Clair keeps the navigation as it was: the old levels on the first part of the travel, no milk.
+            val clear = GlassClarity.fromLevel(level, tinted = false)
+            assertEquals(0f, GlassClarity.body(GlassRole.Control, clear), 0f)
+            assertTrue(GlassClarity.fromLevel(level, tinted = true) >= GlassClarity.TINTED)
         }
+        assertEquals(GlassClarity.DEFAULT, GlassClarity.fromLevel(2, tinted = false), 1e-4f)
+        assertEquals(GlassClarity.MIN, GlassClarity.fromLevel(0, tinted = false), 0f)
+        assertEquals(GlassClarity.FROSTED, GlassClarity.fromLevel(6, tinted = false), 1e-4f)
+        // The milk rises without a jump along the whole travel.
+        var last = 0f
+        for (i in 0..100) {
+            val body = GlassClarity.body(GlassRole.Control, i / 100f)
+            assertTrue(body >= last && body - last < .2f); last = body
+        }
+        assertEquals(GlassClarity.OPAQUE_BODY, last, 1e-4f)
     }
 
     @Test fun menusAndSheetsAreMoreOpaqueThanTheTabBarAndReadOverAnyArtwork() {
-        for (tinted in listOf(false, true)) for (level in GlassClarity.MIN..GlassClarity.MAX) {
-            val sheet = GlassClarity.body(GlassRole.Sheet, tinted, level)
+        for (step in 0..20) {
+            val level = step / 20f
+            val sheet = GlassClarity.body(GlassRole.Sheet, level)
             // The tab bar's milk never exceeds .6 in the shader (Clear) or its tinted body.
-            assertTrue(sheet > maxOf(.6f, GlassClarity.body(GlassRole.Control, tinted, level)) + .1f)
+            assertTrue(sheet > maxOf(.6f, GlassClarity.body(GlassRole.Control, level)) + .1f)
             for (dark in listOf(false, true)) {
                 val milk = if (dark) Color(.24f, .24f, .27f) else Color.White
                 val ink = Ket27.theme(dark, Color.Red).onBackground
                 // Worst backdrops: pure white under a dark sheet, pure black under a light one (before the legibility veil).
                 for (backdrop in listOf(Color.White, Color.Black, Color(0xFFFFE9A8), Color(0xFF1B1B5E))) {
                     val surface = lerp(backdrop, milk, sheet)
-                    assertTrue("dark=$dark tinted=$tinted on $backdrop", Contrast.contrastRatio(ink, surface) >= 4.5f)
+                    assertTrue("dark=$dark level=$level on $backdrop", Contrast.contrastRatio(ink, surface) >= 4.5f)
                 }
             }
             // The fallback veil (below Android 13, performance mode) keeps the same floor.
-            assertTrue(GlassClarity.fallbackVeil(true, level, tinted, GlassRole.Sheet) >= sheet)
+            assertTrue(GlassClarity.fallbackVeil(true, level, GlassRole.Sheet) >= sheet)
         }
     }
 

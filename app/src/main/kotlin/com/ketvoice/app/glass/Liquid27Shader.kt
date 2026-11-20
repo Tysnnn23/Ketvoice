@@ -34,7 +34,7 @@ uniform float frost;
 // 0..1: clearer than the default glass (the clear end of the transparency setting): less milk, a lighter veil.
 uniform float clarity;
 uniform float4 milk;
-// The least milk the surface keeps whatever the backdrop (GlassClarity.body): sheets and Teinté.
+// The least milk the surface keeps whatever the backdrop (GlassClarity.body): sheets and opaque glass.
 uniform float milkFloor;
 uniform float saturation;
 uniform float materialDark;
@@ -261,7 +261,7 @@ internal fun applyLiquid27Material(shader: android.graphics.RuntimeShader, w: Fl
     // Lighter dark material than the other styles; the cover may tint it slightly.
     val milk = GlassTint.milk(params.dark)
     shader.setFloatUniform("milk", milk[0], milk[1], milk[2], (if (params.dark) .10f else .06f) * clear)
-    shader.setFloatUniform("milkFloor", GlassClarity.body(params.role, GlassClarity.tinted) * clear)
+    shader.setFloatUniform("milkFloor", GlassClarity.body(params.role) * clear)
     shader.setFloatUniform("saturation", if (params.dark) 1.18f else 1.24f)
     shader.setFloatUniform("materialDark", if (params.dark) 1f else 0f)
     shader.setFloatUniform("lightDir", light.lightX, light.lightY)
