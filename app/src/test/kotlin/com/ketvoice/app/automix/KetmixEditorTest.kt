@@ -222,7 +222,7 @@ class KetmixEditorTest {
         assertNull(MixPointStore.decodeTitle("-1,-1,200000"))
         assertNull(MixPointStore.decodeTitle("1,2"))
         assertNull(MixPointStore.decodeTitle("-5,2,3"))
-        assertNull(MixPointStore.decodePair("8,1000"))
+        assertNull(MixPointStore.decodePair("9,1000"))
         assertNull(MixPointStore.decodePair("-1,-1"))
         assertFalse(MixPointStore.validEntry("x:" + "a".repeat(64), "1,2,3"))
     }

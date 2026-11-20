@@ -9,6 +9,7 @@ import kotlin.math.exp
 import kotlin.math.ln
 import kotlin.math.pow
 import kotlin.math.sin
+import kotlin.math.sqrt
 
 /** A value that changes over the positions of a title: straight lines between its points, flat outside them. */
 internal class Curve(private val timesUs: LongArray, private val values: FloatArray) {
@@ -92,7 +93,9 @@ internal class DeckAutomation(
      */
     val midDb: Curve = Curve.flat(0f),
     /** 7.6: the listener's keyframes for this deck (see [MixKeys]); the music level is applied here, voice and instruments in the voice stage. */
-    val levels: KeyLevels? = null
+    val levels: KeyLevels? = null,
+    /** 7.6: the transition this deck plays its part of; the two decks of one share it and their sum is guarded ([MixBus]). */
+    val pair: Any? = null
 ) {
     val endUs: Long get() = maxOf(maxOf(gain.endUs, highPassHz.endUs, lowPassHz.endUs), maxOf(dry.endUs, echo.endUs, reverb.endUs),
         maxOf(vocalCut.endUs, vocalSolo.endUs, midDb.endUs), levels?.endUs ?: 0L)
@@ -101,8 +104,8 @@ internal class DeckAutomation(
     val usesVocalSolo: Boolean get() = vocalSolo.endUs > 0L
     val usesEcho: Boolean get() = echoDelayUs > 0L
 
-    fun copyWith(vocalCut: Curve = this.vocalCut, vocalSolo: Curve = this.vocalSolo, midDb: Curve = this.midDb) =
-        DeckAutomation(gain, highPassHz, lowPassHz, dry, echo, reverb, echoDelayUs, echoFeedback, resonance, vocalCut, noise, noiseHz, vocalSolo, midDb, levels)
+    fun copyWith(vocalCut: Curve = this.vocalCut, vocalSolo: Curve = this.vocalSolo, midDb: Curve = this.midDb, pair: Any? = this.pair) =
+        DeckAutomation(gain, highPassHz, lowPassHz, dry, echo, reverb, echoDelayUs, echoFeedback, resonance, vocalCut, noise, noiseHz, vocalSolo, midDb, levels, pair)
     val usesNoise: Boolean get() = noise.endUs > 0L
     val usesReverb: Boolean get() = reverb.endUs > 0L
 
@@ -139,14 +142,14 @@ internal class DeckAutomation(
         const val MID_CLASH_DB = -8f
 
         /** The title that leaves. */
-        fun outgoing(plan: MixPlan): DeckAutomation = withKeys(withMids(Stems.outgoing(outgoingMix(plan), plan), plan, outgoing = true), plan, true)
+        fun outgoing(plan: MixPlan): DeckAutomation = withKeys(withMids(Stems.outgoing(outgoingMix(plan), plan), plan, outgoing = true), plan, true).copyWith(pair = plan)
 
         /** 7.6 (voice76): the listener's volume keyframes join the deck's automation. */
         private fun withKeys(automation: DeckAutomation, plan: MixPlan, outgoing: Boolean): DeckAutomation {
             val levels = MixKeys.curves(plan, outgoing) ?: return automation
             return DeckAutomation(automation.gain, automation.highPassHz, automation.lowPassHz, automation.dry, automation.echo, automation.reverb,
                 automation.echoDelayUs, automation.echoFeedback, automation.resonance, automation.vocalCut, automation.noise, automation.noiseHz,
-                automation.vocalSolo, automation.midDb, levels)
+                automation.vocalSolo, automation.midDb, levels, automation.pair)
         }
 
         /**
@@ -195,7 +198,7 @@ internal class DeckAutomation(
         }
 
         /** The title that arrives. Its positions run [MixPlan.rate] times faster than the outgoing clock. */
-        fun incoming(plan: MixPlan): DeckAutomation = withKeys(withMids(Stems.incoming(incomingMix(plan), plan), plan, outgoing = false), plan, false)
+        fun incoming(plan: MixPlan): DeckAutomation = withKeys(withMids(Stems.incoming(incomingMix(plan), plan), plan, outgoing = false), plan, false).copyWith(pair = plan)
 
         private fun incomingMix(plan: MixPlan): DeckAutomation {
             fun position(outMs: Long) = ((plan.inMs + (outMs - plan.outMs) * plan.rate.toDouble()) * 1000.0).toLong()
@@ -207,8 +210,8 @@ internal class DeckAutomation(
                 MixKind.Beatmatch -> if (plan.swapMs < 0) plainIn(plan, start, end, settle)
                     else blendIn(plan, start, end, position(plan.swapMs), settle)
                 MixKind.Echo, MixKind.Rise -> {
-                    // It comes in on the beat where the outgoing title is cut: at once, not faded.
-                    val attack = start + 30_000L
+                    // It comes in on the beat where the outgoing title is cut: at once, not faded (7.6: a cut keeps its kick's attack).
+                    val attack = start + if (plan.cut) CUT_ATTACK_US else 30_000L
                     DeckAutomation(Curve.join(point(start, 0f), point(attack, plan.gain), point(end, plan.gain), settle), Curve.flat(0f))
                 }
                 MixKind.Filter -> filterIn(plan, start, end, settle)
@@ -269,7 +272,7 @@ internal class DeckAutomation(
             // Led down a little further when the incoming title is the quieter one, so that the two meet level.
             val meeting = MEETING * plan.outGain
             val gain = Curve.join(
-                Curve.shaped(start, swap, 16) { 1f - (1f - meeting) * ease(it, curve) },
+                Curve.shaped(start, swap, 24) { 1f - (1f - meeting) * beforeSwap(it, curve) },
                 Curve.shaped(swap, end, 24) { meeting * fadeOut(it, curve) })
             val bassAway = Curve.shaped(swap - half, swap + half, 16) { sweep(OPEN_HZ, BASS_HZ, it) }
             // No sweep asked for: the bass goes and the rest simply fades.
@@ -283,13 +286,23 @@ internal class DeckAutomation(
             return DeckAutomation(gain, Curve.join(point(swap - half - 1, 0f), bassAway, air), resonance = SWEEP_Q)
         }
 
+        /**
+         * 7.6: once it carries the bass the incoming title is the music: it reaches its full level within the first
+         * [TAKE_OVER] of the rest of the blend (it rose over the whole of it before, a 2–3 LU hole while the outgoing
+         * title, thinned, was already going). A curve the listener chose keeps its own course.
+         */
+        private fun afterSwap(x: Float, curve: VolumeCurve) = if (curve != VolumeCurve.Auto) ease(x, curve) else ease((x / TAKE_OVER).coerceAtMost(1f))
+        private const val TAKE_OVER = .4f
+        /** 7.6: the outgoing title, the only one with its bass until the swap, keeps its level longer and meets the other late. */
+        private fun beforeSwap(x: Float, curve: VolumeCurve) = if (curve != VolumeCurve.Auto) ease(x, curve) else ease(x * x * x)
+
         private fun blendIn(plan: MixPlan, start: Long, end: Long, swapAt: Long, settle: Pair<LongArray, FloatArray>): DeckAutomation {
             val swap = swapAt.coerceIn(start + 1, end - 1)
             val half = MixShaping.bassHalfUs(plan, (plan.beatMs * 500f * plan.rate).toLong().coerceIn(120_000L, 400_000L), minOf(swap - start, end - swap) / 2)
             val curve = plan.shape.volume
             val gain = Curve.join(
                 Curve.shaped(start, swap, 24) { plan.gain * MEETING * fadeIn(it, curve) },
-                Curve.shaped(swap, end, 16) { plan.gain * (MEETING + (1f - MEETING) * ease(it, curve)) },
+                Curve.shaped(swap, end, 16) { plan.gain * (MEETING + (1f - MEETING) * afterSwap(it, curve)) },
                 settle)
             val bass = Curve.join(
                 point(0L, BASS_HZ),
@@ -329,6 +342,7 @@ internal class DeckAutomation(
          * rises with it. On the cut the title stops at once, leaving two beats of its reverberation.
          */
         private fun riseOut(plan: MixPlan, start: Long, end: Long): DeckAutomation {
+            if (plan.cut) return cutOut(plan, start, end)
             val from = start - plan.buildMs * 1000L
             val climb = Curve.join(point(from, 0f), Curve.shaped(from + 1, start, 32) { sweep(OPEN_HZ, RISE_TOP_HZ, it * it) })
             val noise = Curve.join(point(from, 0f), Curve.shaped(from + 1, start, 24) { RISE_NOISE * it * it * it }, point(start + 15_000L, 0f))
@@ -341,6 +355,19 @@ internal class DeckAutomation(
                 Curve.shaped(start + 1, end, 16) { RISE_FLOOR * fadeOut(it) })
             return DeckAutomation(gain, climb, dry = dry, reverb = send, resonance = RISE_Q, noise = noise, noiseHz = noiseHz)
         }
+        /**
+         * 7.6 « Coupe » / « Sur le drop »: the title stops on the beat over [CUT_US] (equal power against the incoming
+         * attack, no click), and only its reverberation of the last beat rings on, fading over the overlap.
+         */
+        private fun cutOut(plan: MixPlan, start: Long, end: Long): DeckAutomation {
+            val beat = (plan.beatMs * 1000f).toLong().coerceIn(250_000L, 1_200_000L)
+            val send = Curve.join(point(start - beat, 0f), point(start - beat / 4, .8f), point(start, .8f), point(start + CUT_US, 0f))
+            val dry = Curve.join(point(start - CUT_US / 3, 1f), Curve.shaped(start - CUT_US / 3 + 1, start + CUT_US * 2 / 3, 8) { fadeOut(it) })
+            val gain = Curve.join(point(start, 1f), Curve.shaped(start + 1, maxOf(start + 2, end), 16) { fadeOut(it) })
+            return DeckAutomation(gain, Curve.flat(0f), dry = dry, reverb = send)
+        }
+        private const val CUT_US = 12_000L
+        private const val CUT_ATTACK_US = 6_000L
         private const val RISE_TOP_HZ = 2_200f
         private const val RISE_Q = 1.6f
         /** The noise at its loudest, a share of full scale: present under the music, never over it. */
@@ -350,6 +377,9 @@ internal class DeckAutomation(
         private const val RISE_NOISE_TO_HZ = 7_500f
 
         /**
+         * 7.6: the outgoing sweep keeps most of its body for the first half and goes late, the incoming one opens early,
+         * so that the two are never thin at the same time (a 2–3 LU hole in the middle before).
+         *
          * A crossing of spectra rather than of levels. Variant 0: the outgoing title rises into
          * the air while the next one grows from its low end. Variant 1: it sinks while the next
          * one comes down from the top. [MixPlan.hold] keeps its level while it fades by itself.
@@ -359,8 +389,8 @@ internal class DeckAutomation(
             val gain = Curve.join(point(held, 1f), Curve.shaped(held + 1, end, 24) { fadeOut(it, plan.shape.volume) })
             return if (plan.variant == 1)
                 DeckAutomation(gain, Curve.flat(0f), Curve.join(point(start, 0f), point(start + 1, TOP_HZ),
-                    Curve.shaped(start + 2, end, 32) { sweep(TOP_HZ, 260f, it) }), resonance = SWEEP_Q)
-            else DeckAutomation(gain, Curve.join(point(start, 0f), Curve.shaped(start + 1, end, 32) { sweep(OPEN_HZ, 1_500f, it) }),
+                    Curve.shaped(start + 2, end, 32) { sweep(TOP_HZ, 260f, it * it) }), resonance = SWEEP_Q)
+            else DeckAutomation(gain, Curve.join(point(start, 0f), Curve.shaped(start + 1, end, 32) { sweep(OPEN_HZ, 1_500f, it * it) }),
                 resonance = SWEEP_Q)
         }
 
@@ -368,10 +398,10 @@ internal class DeckAutomation(
             val gain = Curve.join(Curve.shaped(start, end) { plan.gain * fadeIn(it, plan.shape.volume) }, settle)
             val opened = start + (end - start) * 4 / 5
             return if (plan.variant == 1)
-                DeckAutomation(gain, Curve.join(point(0L, 1_200f), Curve.shaped(start, opened, 32) { sweep(1_200f, OPEN_HZ, it) }, point(opened + 1, 0f)),
+                DeckAutomation(gain, Curve.join(point(0L, 1_200f), Curve.shaped(start, opened, 32) { sweep(1_200f, OPEN_HZ, sqrt(it)) }, point(opened + 1, 0f)),
                     resonance = SWEEP_Q)
             else DeckAutomation(gain, Curve.flat(0f),
-                Curve.join(point(0L, 380f), Curve.shaped(start, opened, 32) { sweep(380f, TOP_HZ, it) }, point(opened + 1, 0f)),
+                Curve.join(point(0L, 380f), Curve.shaped(start, opened, 32) { sweep(380f, TOP_HZ, sqrt(it)) }, point(opened + 1, 0f)),
                 resonance = SWEEP_Q)
         }
 
@@ -470,6 +500,9 @@ internal class DeckDsp(val sampleRate: Int, val channels: Int) {
     private var echo: Echo? = null
     private var reverb: Reverb? = null
     private val frame = FloatArray(channels)
+    private val pending = FloatArray(BLOCK * channels)
+    /** 7.6: the share of full scale this deck leaves to the other one of the transition (see [MixBus]). */
+    private val bus = MixBus.Deck()
     private val hiss = Biquad(1)
     private var seed = 0x2545F491
 
@@ -477,6 +510,7 @@ internal class DeckDsp(val sampleRate: Int, val channels: Int) {
         high.clear(); low.clear(); voiceHigh.clear(); voiceLow.clear(); hiss.clear(); mids.clear()
         gain = Float.NaN; dry = 1f; music = 1f
         echo = null; reverb = null
+        bus.leave()
     }
 
     /**
@@ -486,7 +520,7 @@ internal class DeckDsp(val sampleRate: Int, val channels: Int) {
     fun process(input: ByteBuffer, output: ByteBuffer, startUs: Long, automation: DeckAutomation?,
                 stem: com.ketvoice.app.stems.StemAudio? = null) {
         if (automation == null) {
-            if (!gain.isNaN() || high.cutoff > 0f || low.cutoff > 0f || echo != null || reverb != null || hiss.cutoff > 0f) reset()
+            if (!gain.isNaN() || high.active || low.active || echo != null || reverb != null || hiss.active) reset()
             output.put(input)
             return
         }
@@ -531,8 +565,8 @@ internal class DeckDsp(val sampleRate: Int, val channels: Int) {
                     var x = input.short.toFloat()
                     if (stemAt >= 0 && stemPcm != null && voice > 0f) x += voice * (stemPcm[2 * (stemAt + i) + c] - x)
                     if (soloPcm != null) x += solo * (soloPcm[2 * (stemAt + i) + c] - x)
-                    if (high.cutoff > 0f) x = high.run(x, c)
-                    if (low.cutoff > 0f) x = low.run(x, c)
+                    if (high.active) x = high.run(x, c)
+                    if (low.active) x = low.run(x, c)
                     if (mids.active) x = mids.run(x, c)
                     frame[c] = x
                 }
@@ -551,10 +585,11 @@ internal class DeckDsp(val sampleRate: Int, val channels: Int) {
                     if (repeats != null) y += repeats.run(x * send, c)
                     if (room != null && c < 2) y += room.run(x * wash, c)
                     val v = y * gain * music + n
-                    output.putShort((if (breath > 0f) softClip(v) else v).toInt().coerceIn(-32768, 32767).toShort())
+                    pending[i * channels + c] = if (breath > 0f) softClip(v) else v
                 }
                 repeats?.advance()
             }
+            bus.write(pending, block * channels, output, automation.pair)
             gain = target; dry = dryTarget; music = musicTarget
             done += block
         }
@@ -626,12 +661,21 @@ internal class DeckDsp(val sampleRate: Int, val channels: Int) {
 
         private val fresh = BooleanArray(channels) { true }
         private var passesLow = false
+        /**
+         * 7.6: share of the filtered sound in the output. A filter joins and leaves the path over [JOIN] samples:
+         * dropped at once, even a 28 Hz high-pass shifts a bass note's phase enough for a click.
+         */
+        private var wet = 0f
+        private var wetTarget = 0f
+        /** The filter is in the path, or still leaving it. */
+        val active: Boolean get() = cutoff > 0f || wet > 0f
 
-        fun clear() { x1.fill(0f); x2.fill(0f); y1.fill(0f); y2.fill(0f); fresh.fill(true); cutoff = 0f }
+        fun clear() { x1.fill(0f); x2.fill(0f); y1.fill(0f); y2.fill(0f); fresh.fill(true); cutoff = 0f; wet = 0f; wetTarget = 0f }
 
         fun follow(hz: Float, q: Float, sampleRate: Int, highPass: Boolean) {
-            if (hz <= 0f) { if (cutoff > 0f) clear(); return }
-            if (abs(hz - cutoff) <= cutoff * .01f) return
+            if (hz <= 0f) { if (cutoff > 0f) wetTarget = 0f; return }
+            if (wetTarget < 1f) { if (wet <= 0f) fresh.fill(true); wetTarget = 1f }
+            if (cutoff > 0f && abs(hz - cutoff) <= cutoff * .01f) return
             cutoff = hz
             passesLow = !highPass
             val w = 2.0 * PI * hz.coerceIn(10f, sampleRate * .45f) / sampleRate
@@ -649,8 +693,17 @@ internal class DeckDsp(val sampleRate: Int, val channels: Int) {
             if (fresh[c]) { fresh[c] = false; x1[c] = x; x2[c] = x; val settled = if (passesLow) x else 0f; y1[c] = settled; y2[c] = settled }
             val v = b0 * x + b1 * x1[c] + b2 * x2[c] - a1 * y1[c] - a2 * y2[c]
             x2[c] = x1[c]; x1[c] = x; y2[c] = y1[c]; y1[c] = v
-            return v
+            val heard = if (wet >= 1f) v else x + wet * (v - x)
+            if (c == x1.size - 1 && wet != wetTarget) step()
+            return heard
         }
+
+        private fun step() {
+            wet = if (wetTarget > wet) minOf(wetTarget, wet + 1f / JOIN) else maxOf(wetTarget, wet - 1f / JOIN)
+            if (wet <= 0f && wetTarget <= 0f) clear()
+        }
+
+        private companion object { const val JOIN = 512f }
     }
 
     /**

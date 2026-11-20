@@ -255,7 +255,9 @@ internal fun presetOf(style: MixStyle): Preset = when (style) {
     MixStyle.Filters -> Preset(style, "Filtres")
     MixStyle.Fade -> Preset(style, "Fondu")
     MixStyle.Rise -> Preset(style, "Montée")
-    else -> Preset(style, style.name)
+    MixStyle.Cut -> Preset(style, "Coupe")
+    MixStyle.Drop -> Preset(style, "Sur le drop")
+    MixStyle.Voices -> Preset(style, "Relais des voix")
 }
 
 internal fun presets(): List<Preset> = MixStyle.values().map(::presetOf)
@@ -276,7 +278,15 @@ private fun DrawScope.presetGlyph(style: MixStyle?, color: Color) {
         MixStyle.Fade -> { line(.08f, .2f, .92f, .8f); line(.08f, .8f, .92f, .2f) }
         MixStyle.Rise -> { drawPath(Path().apply { moveTo(w * .06f, h * .85f); quadraticBezierTo(w * .6f, h * .8f, w * .8f, h * .15f) },
             color, style = Stroke(stroke, cap = StrokeCap.Round)); line(.8f, .15f, .8f, .85f) }
-        else -> drawCircle(color, w * .32f, style = Stroke(stroke))
+        // A level that stops on a beat, the next one starting on it.
+        MixStyle.Cut -> { line(.06f, .18f, .4f, .18f); line(.5f, .06f, .5f, .94f); line(.6f, .82f, .94f, .82f) }
+        // A quiet intro, then the whole groove from the downbeat.
+        MixStyle.Drop -> { line(.08f, .62f, .38f, .62f); line(.5f, .1f, .5f, .9f); for (i in 0..2) { val x = .64f + i * .14f; line(x, .2f, x, .8f) } }
+        // One voice falls as the other rises.
+        MixStyle.Voices -> {
+            drawPath(Path().apply { moveTo(w * .06f, h * .25f); quadraticBezierTo(w * .45f, h * .25f, w * .6f, h * .85f) }, color, style = Stroke(stroke, cap = StrokeCap.Round))
+            drawPath(Path().apply { moveTo(w * .4f, h * .85f); quadraticBezierTo(w * .55f, h * .25f, w * .94f, h * .25f) }, color, style = Stroke(stroke, cap = StrokeCap.Round))
+        }
     }
 }
 
