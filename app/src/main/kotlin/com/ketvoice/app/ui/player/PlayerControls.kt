@@ -165,6 +165,10 @@ fun ArtworkCanvas(
                         // artwork region, blending into the separate blurred scene.
                         // FIT introduced the unwanted side bars in normal mode.
                         Box(placed) {
+                            // 7.5 motion75: the Canvas's still shows at once while its video starts (no empty frame).
+                            com.ketvoice.app.ui.sub.rememberCanvasPoster(data.canvas)?.let { still ->
+                                androidx.compose.foundation.Image(still, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                            }
                             CanvasVideo(path = data.canvas!!, playing = playing, cover = data.cover,
                                 modifier = Modifier.fillMaxSize(),
                                 resizeMode = CanvasPresentation.NORMAL_RESIZE_MODE,
@@ -212,6 +216,40 @@ fun ArtworkCanvas(
 }
 
 /**
+ * 7.5 motion75: the last Canvas player let go, kept prepared and paused for a short while, so that the same Canvas
+ * shown again (an album page reopened, the player opened over it) starts from a decoded frame instead of a cold
+ * start. One at most; anything else is released at once.
+ */
+internal object CanvasPlayerPark {
+    private const val KEEP_MS = 20_000L
+    private val handler by lazy { android.os.Handler(android.os.Looper.getMainLooper()) }
+    private var parked: Pair<String, ExoPlayer>? = null
+    private val expire = Runnable { drop() }
+
+    fun take(path: String): ExoPlayer? {
+        val (where, exo) = parked ?: return null
+        if (where != path) return null
+        parked = null; handler.removeCallbacks(expire)
+        return exo
+    }
+
+    fun park(path: String, exo: ExoPlayer) {
+        // A player that failed, or a Lite device short of decoders, is not kept.
+        if (exo.playerError != null || com.ketvoice.app.LiteTuning.canvasReleasedWhenHidden()) { runCatching { exo.release() }; return }
+        drop()
+        runCatching { exo.playWhenReady = false; exo.clearVideoSurface() }
+        parked = path to exo
+        handler.postDelayed(expire, KEEP_MS)
+    }
+
+    fun drop() {
+        handler.removeCallbacks(expire)
+        parked?.second?.let { runCatching { it.release() } }
+        parked = null
+    }
+}
+
+/**
  * Canvas videos shown at once (Ketvoice Lite on a modest device plays one: [LiteTuning.canvasAtOnce]); the
  * newest shown has the decoder, the others show their cover meanwhile.
  */
@@ -234,7 +272,7 @@ private fun rememberStarted(): Boolean {
 }
 
 @Composable
-private fun CanvasVideo(path: String, playing: Boolean, cover: String?, modifier: Modifier = Modifier,
+internal fun CanvasVideo(path: String, playing: Boolean, cover: String?, modifier: Modifier = Modifier,
                         resizeMode: Int = CanvasPresentation.NORMAL_RESIZE_MODE,
                         onFailure: () -> Unit = {}, onAspect: ((Float) -> Unit)? = null) {
     val token = remember { Any() }
@@ -250,7 +288,8 @@ private fun CanvasVideo(path: String, playing: Boolean, cover: String?, modifier
 private fun CanvasVideoPlayer(path: String, playing: Boolean, visible: Boolean, modifier: Modifier,
                               resizeMode: Int, onFailure: () -> Unit, onAspect: ((Float) -> Unit)?) {
     val context = LocalContext.current
-    val exo = remember(path) {
+    // 7.5 motion75: a page closed a moment ago left its player prepared; the same Canvas opened again takes it.
+    val exo = remember(path) { CanvasPlayerPark.take(path) ?: run {
         ExoPlayer.Builder(context)
             .setAudioAttributes(
                 AudioAttributes.Builder()
@@ -284,13 +323,16 @@ private fun CanvasVideoPlayer(path: String, playing: Boolean, visible: Boolean, 
                 setMediaItem(MediaItem.fromUri(if (path.startsWith("https://")) Uri.parse(path) else Uri.fromFile(File(path))))
                 prepare()
             }
-    }
+    } }
     LaunchedEffect(playing, visible, exo) { exo.playWhenReady = playing && visible }
+    // 7.5 motion75: the video shows once a frame of it is drawn; until then what lies under it (its still) stays.
+    var drawn by remember(exo) { mutableStateOf(false) }
     val latestFailure by rememberUpdatedState(onFailure)
     val latestAspect by rememberUpdatedState(onAspect)
     DisposableEffect(exo) {
         val listener = object : androidx.media3.common.Player.Listener {
             override fun onPlayerError(error: androidx.media3.common.PlaybackException) { latestFailure() }
+            override fun onRenderedFirstFrame() { drawn = true }
             override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) {
                 if (videoSize.width > 0 && videoSize.height > 0)
                     latestAspect?.invoke(videoSize.width * videoSize.pixelWidthHeightRatio / videoSize.height)
@@ -299,7 +341,7 @@ private fun CanvasVideoPlayer(path: String, playing: Boolean, visible: Boolean, 
         exo.addListener(listener)
         onDispose { exo.removeListener(listener) }
     }
-    DisposableEffect(exo) { onDispose { runCatching { exo.release() } } }
+    DisposableEffect(exo) { onDispose { CanvasPlayerPark.park(path, exo) } }
     AndroidView(
         factory = { ctx ->
             (LayoutInflater.from(ctx).inflate(R.layout.canvas_view, null) as PlayerView).apply {
@@ -308,7 +350,7 @@ private fun CanvasVideoPlayer(path: String, playing: Boolean, visible: Boolean, 
                 player = exo
             }
         },
-        modifier = modifier,
+        modifier = modifier.graphicsLayer { alpha = if (drawn) 1f else 0f },
         onReset = null,
         onRelease = { it.player = null },
         update = { it.player = exo; it.resizeMode = resizeMode }

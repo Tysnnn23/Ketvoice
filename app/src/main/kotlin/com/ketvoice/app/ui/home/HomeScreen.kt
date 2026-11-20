@@ -228,6 +228,8 @@ fun HomeScreen() {
                             itemsIndexed(albums, key = { _, album -> album.id }) { _, album ->
                                 val albumCover = com.ketvoice.app.data.MediaOverrides.albumCover(album.title, album.artist, album.coverUrl)
                                 val zoom = com.ketvoice.app.ui.motion.rememberZoomSource(albumCover, com.ketvoice.app.theme.Ket27.Radius.artwork)
+                                // 7.5 motion75: its Canvas is fetched ahead on Wi-Fi while the tile is on screen.
+                                com.ketvoice.app.ui.sub.PrefetchAlbumCanvas(CatalogRequest("album", album.id, album.title))
                                 Column(Modifier.width(cell).clickable {
                                     zoom.openCatalog(CatalogRequest("album", album.id, album.title))
                                 }) {

@@ -215,6 +215,7 @@ internal fun HomeReleasesShelf(releases: List<CatalogAlbum>, modifier: Modifier 
         val cell = com.ketvoice.app.ui.adaptive.shelfCell(156.dp, com.ketvoice.app.ui.common.pageMargin, HomeLayout.gap)
         HomeRow {
             items(releases, key = { it.id }) { album ->
+                com.ketvoice.app.ui.sub.PrefetchAlbumCanvas(CatalogRequest("album", album.id, album.title))
                 Column(Modifier.width(cell).clip(RoundedCornerShape(14.dp)).clickable(role = Role.Button) {
                     AppUi.openCatalog(CatalogRequest("album", album.id, album.title))
                 }.padding(bottom = 4.dp)) {

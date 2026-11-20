@@ -96,7 +96,10 @@ object DiskBudget {
     /** The Canvas files downloaded titles depend on: their own, and their album's. */
     internal fun canvasKept(refs: DownloadRefs, albumFile: (String, String) -> File?): (File) -> Boolean {
         val albumPaths = refs.albums.mapNotNull { (album, artist) -> albumFile(album, artist)?.absolutePath }.toSet()
-        return { it.absolutePath in refs.canvasPaths || "spotify:${it.nameWithoutExtension}" in refs.canvasPaths ||
-            it.absolutePath in albumPaths }
+        // 7.5 motion75: the still of a kept Canvas (« <name>.poster.jpg ») is kept with it.
+        return { found -> (if (found.name.endsWith(CanvasRepo.POSTER_SUFFIX))
+            File(found.parentFile, found.name.removeSuffix(CanvasRepo.POSTER_SUFFIX) + ".mp4") else found).let {
+            it.absolutePath in refs.canvasPaths || "spotify:${it.nameWithoutExtension}" in refs.canvasPaths ||
+                it.absolutePath in albumPaths } }
     }
 }

@@ -249,6 +249,7 @@ fun LibraryScreen() {
                 if (view != 2) LazyRow(Modifier.testTag("library-albums"), contentPadding = PaddingValues(horizontal = 18.dp),
                     horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                     items(rows, key = { it.key }) { group ->
+                        com.ketvoice.app.ui.sub.PrefetchAlbumCanvas(group.tracks.first())
                         Column(Modifier.width(148.dp).clickable(role = Role.Button) { album = group.key }) {
                             Cover(group.title, ArtworkRepo.coverForTrack(group.tracks.first()) ?: group.tracks.first().coverUrl, 148.dp, 18.dp)
                             Text(group.title, localize = false, color = theme.onBackground, fontWeight = FontWeight.SemiBold,

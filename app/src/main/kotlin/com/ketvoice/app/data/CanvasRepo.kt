@@ -91,7 +91,7 @@ object CanvasRepo {
     suspend fun resolve(track: Track, force: Boolean = false, ahead: Boolean = false): Unit {
         // A title that has its Canvas is not "loading": the pill of the player only shows while one is being fetched.
         // 7.5: a Canvas that is used is touched, so the cache limit lets the least used go first, not the oldest.
-        localPath(track.id)?.let { DiskBudget.touch(it); return resolveNow(track, force, again = true, ahead = ahead) }
+        localPath(track.id)?.let { DiskBudget.touch(it); posterSoon(it); return resolveNow(track, force, again = true, ahead = ahead) }
         setLoading(track.id, true)
         try { resolveNow(track, force, again = true, ahead = ahead) } finally { setLoading(track.id, false) }
     }
@@ -273,6 +273,74 @@ object CanvasRepo {
     private fun put(trackId: String, path: String, album: Boolean = false) {
         if (album) shared.add(trackId) else shared.remove(trackId)
         _paths.value = _paths.value + (trackId to path)
+        if (!path.startsWith("https://")) posterSoon(File(path))
+    }
+
+    // 7.5 motion75: a still of each kept Canvas's first frame, next to its file (« <name>.poster.jpg »), shown at
+    // once while the video starts. CanvasCompact only reads « .mp4 » files, so the still keeps its name.
+    internal const val POSTER_SUFFIX = ".poster.jpg"
+    /** Bumped whenever a still is written, so a page waiting for one shows it. */
+    val posters: StateFlow<Int> get() = _posters
+    private val _posters = MutableStateFlow(0)
+    private val postering = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+    /** Reads the first frame of a video; replaced by the host tests (no decoder there). */
+    internal var extractFrame: (File) -> android.graphics.Bitmap? = ::firstFrame
+
+    /** The still kept for the Canvas file at [path], or null (a link, or not written yet). */
+    fun posterOf(path: String?): File? {
+        if (path == null || path.startsWith("https://")) return null
+        val video = File(path)
+        return File(video.parentFile, video.nameWithoutExtension + POSTER_SUFFIX).takeIf { it.isFile && it.length() > 0 }
+    }
+
+    /** The page key under which an album page remembers the Canvas its header showed (7.5 motion75). */
+    fun pageKey(pageId: String): String = "page:$pageId"
+
+    /**
+     * An album page remembers the Canvas its header showed, under the page's own id: the next opening shows it (and
+     * its still) before the catalogue has even sent the page's titles.
+     */
+    fun rememberPage(pageId: String, path: String) {
+        val ctx = appContext ?: return
+        if (pageId.isBlank() || path.startsWith("https://") || _paths.value[pageKey(pageId)] == path) return
+        val file = File(path).takeIf { it.isFile && it.length() > 10_000 } ?: return
+        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(pageKey(pageId), file.nameWithoutExtension).apply()
+        _paths.value = _paths.value + (pageKey(pageId) to file.absolutePath)
+    }
+
+    /** The Canvas file an album page showed last time, when it is still on the device. */
+    fun pageFile(pageId: String): File? = localPath(pageKey(pageId))
+
+    /** Writes the still of [video] in the background when it has none. */
+    internal fun posterSoon(video: File) {
+        if (posterOf(video.absolutePath) != null || !postering.add(video.absolutePath)) return
+        scope.launch { try { ensurePoster(video) } finally { postering.remove(video.absolutePath) } }
+    }
+
+    /** Writes the still of [video] now (call off the main thread). Returns it, or null when no frame could be read. */
+    internal fun ensurePoster(video: File): File? = synchronized(postering) {
+        posterOf(video.absolutePath)?.let { return it }
+        if (!video.isFile || video.length() <= 10_000) return null
+        val frame = runCatching { extractFrame(video) }.getOrNull() ?: return null
+        val target = File(video.parentFile, video.nameWithoutExtension + POSTER_SUFFIX)
+        val tmp = File(video.parentFile, target.name + ".part")
+        return try {
+            val scaled = CanvasPosterSize.fit(frame.width, frame.height).let { (w, h) ->
+                if (w == frame.width && h == frame.height) frame else android.graphics.Bitmap.createScaledBitmap(frame, w, h, true) }
+            tmp.outputStream().use { scaled.compress(android.graphics.Bitmap.CompressFormat.JPEG, 82, it) }
+            if (scaled !== frame) scaled.recycle()
+            if (!tmp.renameTo(target)) { tmp.copyTo(target, overwrite = true); tmp.delete() }
+            _posters.value = _posters.value + 1
+            target
+        } catch (_: Exception) { tmp.delete(); null } finally { frame.recycle() }
+    }
+
+    private fun firstFrame(video: File): android.graphics.Bitmap? {
+        val retriever = android.media.MediaMetadataRetriever()
+        return try {
+            retriever.setDataSource(video.absolutePath)
+            retriever.getFrameAtTime(0, android.media.MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
+        } catch (_: Exception) { null } finally { runCatching { retriever.release() } }
     }
 
     /** The catalogue said lately that this title has no Canvas of its own. */
@@ -457,5 +525,16 @@ object CanvasRepo {
         return caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
             caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) ||
             caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)
+    }
+}
+
+/** The size a Canvas still is kept at: its long side at most [LONG_SIDE] px (enough under a video that starts). */
+internal object CanvasPosterSize {
+    const val LONG_SIDE = 960
+    fun fit(width: Int, height: Int): Pair<Int, Int> {
+        val long = maxOf(width, height)
+        if (long <= LONG_SIDE || width <= 0 || height <= 0) return width to height
+        val scale = LONG_SIDE.toFloat() / long
+        return (width * scale).toInt().coerceAtLeast(1) to (height * scale).toInt().coerceAtLeast(1)
     }
 }

@@ -60,11 +60,12 @@ fun CatalogScreen(request: CatalogRequest? = AppUi.catalogRequest.value) {
     val downloads by Downloader.items.collectAsState()
     val art by ArtworkRepo.covers.collectAsState()
     val player by Player.state.collectAsState()
-    var page by remember(request) { mutableStateOf<CatalogPage?>(null) }
-    var loading by remember(request) { mutableStateOf(request.kind in listOf("album", "genre", "mix")) }
+    // 7.5 motion75: an album fetched a moment ago (or ahead from its tile) opens with its titles at once.
+    var page by remember(request) { mutableStateOf(if (request.kind == "album") CatalogPageCache.get(request) else null) }
+    var loading by remember(request) { mutableStateOf(page == null && request.kind in listOf("album", "genre", "mix")) }
     var attempt by remember { mutableIntStateOf(0) }
     LaunchedEffect(request, attempt) {
-        if (request.kind in listOf("album", "genre", "mix")) {
+        if (request.kind in listOf("album", "genre", "mix") && !(attempt == 0 && page != null)) {
             loading = true
             try {
                 page = if (request.kind == "mix") {
@@ -73,6 +74,7 @@ fun CatalogScreen(request: CatalogRequest? = AppUi.catalogRequest.value) {
                 } else if (request.kind == "album" && request.id.startsWith("MPRE")) {
                     YouTubeCatalog.album(request.id)
                 } else CatalogRepo.page(request)
+                if (request.kind == "album") page?.let { CatalogPageCache.put(request, it) }
             } catch (cancelled: kotlinx.coroutines.CancellationException) {
                 throw cancelled
             } catch (_: Exception) {
