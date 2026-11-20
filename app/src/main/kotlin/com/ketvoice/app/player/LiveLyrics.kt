@@ -16,7 +16,7 @@ import kotlin.math.ceil
 
 /**
  * The sung line outside the app (6.1, owner's choice « Paroles sur l'écran verrouillé »): the lock screen and
- * shade notification ([LockscreenLyrics]) and the large player widget read it from here.
+ * shade notification ([LockscreenLyrics]) reads it from here.
  *
  * Nothing polls. The line is worked out when something changes (a title, its lyrics, a seek, a pause, the speed,
  * the voice stage delay, a translation, the screen coming on) and then once at the moment the line changes, from
@@ -114,17 +114,13 @@ internal object LiveLyrics {
     val state: StateFlow<LiveState> = _state
     internal fun publish(value: LiveState) { _state.value = value }
 
-    /** Who wants the line: the lock screen notification and/or the large player widget. */
-    data class Demand(val notification: Boolean, val widget: Boolean) { val any get() = notification || widget }
+    /** Who wants the line: the lock screen notification (the lyrics widgets of 6.4 are gone since 7.4). */
+    data class Demand(val notification: Boolean) { val any get() = notification }
 
     /** Settings or permissions changed: the line is worked out again. */
     private val _demandEpoch = MutableStateFlow(0)
     val demandEpoch: StateFlow<Int> = _demandEpoch
     fun demandChanged() { _demandEpoch.value++ }
-
-    /** Set by the widgets while a large player widget is placed. */
-    @Volatile var widgetWants = false
-        set(value) { if (field != value) { field = value; demandChanged() } }
 
     /**
      * The line for these inputs and how long until it changes (null: only an event can change it). No line when the

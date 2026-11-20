@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 7.4: the progress of « En cours + contrôles »: white ink, on a dark card. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:id="@android:id/background">
+        <shape android:shape="rectangle"><corners android:radius="2dp" /><solid android:color="#4DFFFFFF" /></shape>
+    </item>
+    <item android:id="@android:id/progress">
+        <clip><shape android:shape="rectangle"><corners android:radius="2dp" /><solid android:color="#FFFFFFFF" /></shape></clip>
+    </item>
+</layer-list>

@@ -11,24 +11,10 @@
     <string name="recents">हाल का</string>
     <string name="trending">ट्रेंडिंग</string>
     <string name="albums_singles">एल्बम और एकल</string>
-    <string name="widget_glass_player">Ketvoice · प्लेयर</string>
-    <string name="widget_glass_player_desc">बड़ा प्लेयर: कवर, गाई जा रही पंक्ति, प्रगति और नियंत्रण</string>
-    <string name="widget_week">Ketvoice · आपका सप्ताह</string>
-    <string name="widget_week_desc">आपके सुनने के मिनट और सप्ताह के कलाकार</string>
-    <string name="widget_mix">Ketvoice · आपके लिए</string>
-    <string name="widget_mix_desc">इस समय का मिक्स: एक टैप में चलाएँ</string>
-    <string name="widget_mini">Ketvoice · मिनी</string>
-    <string name="widget_mini_desc">कवर, चलाएँ/रोकें और अगला</string>
-    <string name="widget_controls">Ketvoice · नियंत्रण</string>
-    <string name="widget_controls_desc">पिछला, चलाएँ/रोकें और अगला, सबसे छोटे आकार में भी</string>
     <string name="widget_now_playing">Ketvoice · अभी चल रहा है</string>
-    <string name="widget_now_playing_desc">कवर, शीर्षक और नियंत्रण, हर आकार में</string>
-    <string name="widget_lyrics">Ketvoice · लाइव गीत</string>
-    <string name="widget_lyrics_desc">गाई जा रही पंक्ति और अगली पंक्ति, लाइव</string>
-    <string name="widget_ketmix">Ketvoice · Ketmix</string>
-    <string name="widget_ketmix_desc">Ketmix का स्विच और अगला मिक्स होने वाला गाना</string>
-    <string name="widget_replay">Ketvoice · Replay</string>
-    <string name="widget_replay_desc">इस महीने के आपके मिनट, आपका कलाकार और आपका गाना</string>
+    <string name="widget_now_playing_desc">बड़ा कवर, शीर्षक और ऐप खोले बिना चलाएँ/रोकें</string>
+    <string name="widget_now_playing_controls">Ketvoice · अभी चल रहा है + नियंत्रण</string>
+    <string name="widget_now_playing_controls_desc">कवर, प्रगति, पिछला, चलाएँ/रोकें, अगला और पसंद</string>
     <string name="tile_play">Ketvoice प्लेबैक</string>
     <string name="tile_ketmix">Ketmix</string>
 </resources>

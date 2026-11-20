@@ -6,24 +6,18 @@ import android.content.Context
 import android.os.Build
 
 /**
- * « Ajouter le widget » in Settings (6.4): every widget, offered to the launcher with
+ * « Ajouter le widget » in Settings (6.4; the two widgets of 7.4): offered to the launcher with
  * [AppWidgetManager.requestPinAppWidget] (the launcher asks the listener where to put it), and both tiles offered
  * to the shade with StatusBarManager.requestAddTileService (Android 13+).
  */
 internal object WidgetPinning {
     /** A widget as Settings lists it: its name and what it shows (French, translated where shown). */
-    data class Entry(val kind: WidgetKind, val name: String, val description: String, val receiver: Class<*>)
+    data class Entry(val name: String, val description: String, val receiver: Class<*>)
 
     val widgets: List<Entry> = listOf(
-        Entry(WidgetKind.NowPlaying, "Lecture en cours", "Pochette, titre et commandes, à toutes les tailles", NowPlayingWidgetReceiver::class.java),
-        Entry(WidgetKind.Player, "Lecteur", "Grand lecteur avec la ligne chantée et la progression", GlassPlayerWidgetReceiver::class.java),
-        Entry(WidgetKind.Lyrics, "Paroles en direct", "La ligne chantée et la suivante", LyricsWidgetReceiver::class.java),
-        Entry(WidgetKind.Ketmix, "Ketmix", "L'interrupteur et le prochain titre mixé", KetmixWidgetReceiver::class.java),
-        Entry(WidgetKind.Replay, "Replay", "Vos minutes du mois, votre artiste et votre titre", ReplayWidgetReceiver::class.java),
-        Entry(WidgetKind.Week, "Votre semaine", "Vos minutes d'écoute et votre artiste de la semaine", WeekWidgetReceiver::class.java),
-        Entry(WidgetKind.Mix, "Pour vous", "Le mix du moment : un tap le lance", MixWidgetReceiver::class.java),
-        Entry(WidgetKind.Mini, "Mini", "Pochette, lecture/pause et suivant", MiniControlsWidgetReceiver::class.java),
-        Entry(WidgetKind.Controls, "Commandes", "Précédent, lecture/pause et suivant, même en tout petit", ControlsWidgetReceiver::class.java),
+        Entry("En cours", "La pochette en grand, le titre et lecture/pause sans ouvrir l'app", NowPlayingWidgetReceiver::class.java),
+        Entry("En cours + contrôles", "Pochette, progression, précédent, lecture/pause, suivant et J'aime",
+            NowPlayingControlsWidgetReceiver::class.java),
     )
 
     /** Whether the launcher lets an app propose a widget (most do; some makers' launchers do not). */

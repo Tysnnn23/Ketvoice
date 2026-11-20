@@ -8,7 +8,6 @@ import com.ketvoice.app.ui.player.ArtworkFlow
 import com.ketvoice.app.ui.player.EqualizerCurveMath
 import com.ketvoice.app.ui.player.LyricsWords
 import com.ketvoice.app.ui.sub.WrappedPages
-import com.ketvoice.app.widget.weekBars
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -76,9 +75,4 @@ class FeaturesFiveNineTest {
         assertEquals(.707f, SkipFade.level(0f, 1f, .5f), .01f)
     }
 
-    @Test fun weekWidgetBarsAreSharesOfTheLongestDay() {
-        assertEquals(List(7) { 0f }, weekBars(List(7) { 0L }))
-        val bars = weekBars(listOf(0L, 10L, 100L, 0, 0, 0, 50))
-        assertEquals(1f, bars[2], 0f); assertEquals(.5f, bars[6], 1e-6f); assertEquals(.1f, bars[1], 1e-6f); assertEquals(0f, bars[0], 0f)
-    }
 }

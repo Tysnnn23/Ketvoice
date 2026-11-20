@@ -199,7 +199,8 @@
             </intent-filter>
         </activity-alias>
 
-        <!-- Home-screen widgets (5.9.0, redone in 6.4 with Paroles en direct, Ketmix and Replay; removed on Quest). -->
+        <!-- Home-screen widgets (7.4, removed on Quest): « En cours » 2×2 and « En cours + contrôles » 4×2, drawn with
+             RemoteViews by NowPlayingWidgets; their buttons go to WidgetActionReceiver, which plays without the app. -->
         <receiver
             android:name=".widget.NowPlayingWidgetReceiver"
             android:exported="true"
@@ -212,94 +213,19 @@
                 android:resource="@xml/now_playing_widget_info" />
         </receiver>
         <receiver
-            android:name=".widget.GlassPlayerWidgetReceiver"
+            android:name=".widget.NowPlayingControlsWidgetReceiver"
             android:exported="true"
-            android:label="@string/widget_glass_player">
+            android:label="@string/widget_now_playing_controls">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
-                android:resource="@xml/glass_player_widget_info" />
+                android:resource="@xml/now_playing_controls_widget_info" />
         </receiver>
         <receiver
-            android:name=".widget.LyricsWidgetReceiver"
-            android:exported="true"
-            android:label="@string/widget_lyrics">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/lyrics_widget_info" />
-        </receiver>
-        <receiver
-            android:name=".widget.KetmixWidgetReceiver"
-            android:exported="true"
-            android:label="@string/widget_ketmix">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/ketmix_widget_info" />
-        </receiver>
-        <receiver
-            android:name=".widget.ReplayWidgetReceiver"
-            android:exported="true"
-            android:label="@string/widget_replay">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/replay_widget_info" />
-        </receiver>
-        <receiver
-            android:name=".widget.WeekWidgetReceiver"
-            android:exported="true"
-            android:label="@string/widget_week">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/week_widget_info" />
-        </receiver>
-        <receiver
-            android:name=".widget.MixWidgetReceiver"
-            android:exported="true"
-            android:label="@string/widget_mix">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/mix_widget_info" />
-        </receiver>
-        <receiver
-            android:name=".widget.MiniControlsWidgetReceiver"
-            android:exported="true"
-            android:label="@string/widget_mini">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/mini_controls_widget_info" />
-        </receiver>
-        <!-- 7.1: « Commandes », 4×1, keeps previous / play-pause / next at every width. -->
-        <receiver
-            android:name=".widget.ControlsWidgetReceiver"
-            android:exported="true"
-            android:label="@string/widget_controls">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/controls_widget_info" />
-        </receiver>
+            android:name=".widget.WidgetActionReceiver"
+            android:exported="false" />
         <!-- Quick Settings tiles (6.4; removed on Quest): play/pause with the title, and Ketmix. -->
         <service
             android:name=".widget.PlayPauseTileService"
