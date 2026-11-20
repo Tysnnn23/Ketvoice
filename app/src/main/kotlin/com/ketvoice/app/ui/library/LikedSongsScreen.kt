@@ -25,24 +25,14 @@ import com.ketvoice.app.ui.common.*
 import com.ketvoice.app.ui.motion.Motion
 import com.ketvoice.app.ui.sub.AlbumPresentation
 
-/** How Favoris can be sorted: the latest liked first (as they were added), by title, by artist. */
+/** How Favoris can be searched and sorted (7.5, the sorts every list shares): the latest liked first by default. */
 internal object LikedOrder {
-    val labels = listOf("Récents", "Titre A–Z", "Artiste A–Z")
+    val sorts = com.ketvoice.app.data.ListSort.entries - com.ketvoice.app.data.ListSort.Size
+    val default = com.ketvoice.app.data.ListOrder(com.ketvoice.app.data.ListSort.Added)
 
-    fun arrange(tracks: List<Track>, likedOrder: Collection<String>, query: String, order: Int): List<Track> {
-        val q = query.trim()
-        val found = if (q.isEmpty()) tracks else tracks.filter {
-            it.title.contains(q, true) || it.artist.contains(q, true) || it.album.contains(q, true)
-        }
-        val collator = java.text.Collator.getInstance().apply { strength = java.text.Collator.PRIMARY }
-        return when (order) {
-            1 -> found.sortedWith(compareBy(collator) { it.title })
-            2 -> found.sortedWith(compareBy<Track, String>(collator) { it.artist }.thenBy(collator) { it.title })
-            else -> {
-                val rank = HashMap<String, Int>(likedOrder.size * 2).apply { likedOrder.forEachIndexed { i, id -> put(id, i) } }
-                found.sortedByDescending { rank[it.id] ?: -1 }
-            }
-        }
+    fun arrange(tracks: List<Track>, likedOrder: Collection<String>, query: String, order: com.ketvoice.app.data.ListOrder): List<Track> {
+        val rank = HashMap<String, Long>(likedOrder.size * 2).apply { likedOrder.forEachIndexed { i, id -> put(id, i.toLong()) } }
+        return com.ketvoice.app.data.ListOrders.arrange(tracks, query, order, com.ketvoice.app.data.ListOrders.tracks { rank[it.id] ?: -1L })
     }
 }
 
@@ -56,9 +46,8 @@ internal fun LikedSongsScreen(tracks: List<Track>) {
     val art by ArtworkRepo.covers.collectAsState()
     val playingId by remember { Player.state.pick { it.current?.id } }.collectPick()
     val isPlaying by remember { Player.state.pick { it.isPlaying } }.collectPick()
-    val keyboard = LocalSoftwareKeyboardController.current
     var query by rememberSaveable { mutableStateOf("") }
-    var order by rememberSaveable { mutableIntStateOf(0) }
+    var order by rememberListOrder("liked", LikedOrder.default)
     val liked = AppSettings.favoriteIds.value
     val shown = remember(tracks, liked, query, order) { LikedOrder.arrange(tracks, liked, query, order) }
     val list = rememberLazyListState()
@@ -90,14 +79,8 @@ internal fun LikedSongsScreen(tracks: List<Track>) {
                 }
             }
             if (tracks.size > 1) item(key = "liked-tools", contentType = "liked-tools") {
-                Column(Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 6.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    CompactSearchField(query, { query = it }, { keyboard?.hide() },
-                        Modifier.padding(horizontal = pageMargin).testTag("liked-search"))
-                    LazyRow(Modifier.testTag("liked-sort"), contentPadding = PaddingValues(horizontal = pageMargin),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        itemsIndexed(LikedOrder.labels) { index, label -> CollectionFilter(label, order == index, { order = index }) }
-                    }
-                }
+                ListTools(query, { query = it }, order, LikedOrder.sorts, "liked", { order = it },
+                    Modifier.padding(top = 4.dp, bottom = 6.dp))
             }
             if (tracks.isEmpty()) item(key = "liked-empty") {
                 EmptyState("Aucun titre dans cette collection.", "Ajoutez des titres avec l'étoile du lecteur pour les retrouver ici.",

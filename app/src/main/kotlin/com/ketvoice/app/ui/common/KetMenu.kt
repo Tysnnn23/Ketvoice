@@ -64,12 +64,13 @@ internal fun KetMenu(expanded: Boolean, onDismiss: () -> Unit, sections: List<Li
 /** The round « … » button of a page bar and the menu it pulls down. */
 @Composable
 internal fun KetMenuButton(sections: List<List<KetMenuItem>>, description: String, modifier: Modifier = Modifier,
-                           tag: String? = null, enabled: Boolean = true) {
+                           tag: String? = null, enabled: Boolean = true,
+                           icon: androidx.compose.ui.graphics.vector.ImageVector = KetIcons.More) {
     val theme = LocalTheme.current
     var open by remember { mutableStateOf(false) }
     Box(modifier) {
         LiquidGlassButton({ open = true }, Modifier.size(48.dp).then(if (tag != null) Modifier.testTag(tag) else Modifier), enabled = enabled) {
-            Icon(KetIcons.More, description, tint = theme.onBackground, modifier = Modifier.size(22.dp))
+            Icon(icon, description, tint = theme.onBackground, modifier = Modifier.size(22.dp))
         }
         KetMenu(open, { open = false }, sections)
     }

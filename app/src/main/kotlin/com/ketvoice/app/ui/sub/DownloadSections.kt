@@ -14,8 +14,8 @@ internal fun downloadSections(saved: List<Downloader.Item>, active: Collection<T
                               tasks: Map<String, DownloadTask>, query: String, filter: DownloadFilter = DownloadFilter.All): DownloadSections {
     val savedIds = saved.mapTo(hashSetOf()) { it.track.id }
     val term = query.trim()
-    fun matches(track: Track) = term.isEmpty() || track.title.contains(term, ignoreCase = true) ||
-        track.artist.contains(term, ignoreCase = true) || track.album.contains(term, ignoreCase = true)
+    // 7.5: accents and case aside, every word (as in a playlist and Favoris).
+    fun matches(track: Track) = term.isEmpty() || com.ketvoice.app.data.ListOrders.matches(term, track.title, track.artist, track.album)
     return DownloadSections(saved.filter { (filter == DownloadFilter.All || filter == DownloadFilter.Offline) && matches(it.track) }, active.distinctBy { it.id }.filter {
         val phase = tasks[it.id]?.phase
         val included = when (filter) {
@@ -30,13 +30,15 @@ internal fun downloadSections(saved: List<Downloader.Item>, active: Collection<T
 }
 
 /** How the saved titles are ordered. "Recent" uses the file date, the only download date kept. */
-internal enum class DownloadSort(val label: String) { Recent("Récents"), Title("Titre"), Artist("Artiste"), Size("Taille") }
+/** The sorts of Téléchargements (7.4, the shared list sorts since 7.5): the newest file first by default. */
+internal val DownloadSorts = com.ketvoice.app.data.ListSort.entries
+internal val DefaultDownloadOrder = com.ketvoice.app.data.ListOrder(com.ketvoice.app.data.ListSort.Added)
 
-internal fun sortDownloads(items: List<Downloader.Item>, sort: DownloadSort): List<Downloader.Item> = when (sort) {
-    DownloadSort.Recent -> items.sortedByDescending { it.file.lastModified() }
-    DownloadSort.Title -> items.sortedBy { it.track.title.lowercase() }
-    DownloadSort.Artist -> items.sortedWith(compareBy({ it.track.artist.lowercase() }, { it.track.album.lowercase() }, { it.track.title.lowercase() }))
-    DownloadSort.Size -> items.sortedByDescending { it.bytes }
+internal fun sortDownloads(items: List<Downloader.Item>, order: com.ketvoice.app.data.ListOrder): List<Downloader.Item> {
+    // A file's date is read once per sort, not at each comparison.
+    val dates = if (order.sort == com.ketvoice.app.data.ListSort.Added) items.associate { it.track.id to it.file.lastModified() } else emptyMap()
+    return com.ketvoice.app.data.ListOrders.arrange(items, "", order, com.ketvoice.app.data.ListFields({ it.track.title },
+        { it.track.artist }, { it.track.album }, { it.track.durationMs }, { dates[it.track.id] ?: 0L }, { it.bytes }))
 }
 
 internal fun isLosslessFormat(format: String): Boolean =
