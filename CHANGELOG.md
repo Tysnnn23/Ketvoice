@@ -7,6 +7,21 @@
 
 ---
 
+# Ketvoice 7.3.0
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 144** — Downloads selection and better-quality re-download, live download rings, playlist import from Apple Music/Tidal/SoundCloud, Apple-style album header with Canvas options, search start page, breathing artwork, song credits, double mini-player during Ketmix mixes, share card, per-album accent.
+
+- Downloads (`data/DownloadUpgrade.kt`, `ui/sub/DownloadSelection.kt`): selection starts from the long-press menu; the selection menu plays, adds, deletes or upgrades. An upgrade is offered only for lossy → lossless, a known higher lossless sample rate, or +64 kb/s lossy; the new file must pass a header check and the old one is removed only after the metadata points to the new one (rollback and crash cleanup). DASH and owner uploads are excluded. `DownloadUpgradeTest`, `DownloadsSelectionHostTest`.
+- Import (`smartlib/PublicPage.kt`, `AppleMusicImport.kt`, `TidalImport.kt`, `SoundCloudImport.kt`): public pages only (page data, JSON-LD, embed player), no keys or tokens; Tidal embed lists 50 titles, SoundCloud's page about 20, reported as partial with counts. ISRC lookup through Deezer's public API; a length gap over 45 s scores below the threshold.
+- Look (`ui/sub/AlbumHeader.kt`, `ui/overlay/SearchStart.kt`, `ui/common/TrackCredits.kt`): setting `albumHeader` (0 cover, 1 Canvas, 2 cover + Canvas, cover fallback); search start without recent searches; `rememberArtworkBreath`; credits from catalogue data and real codec data. `Look73HostTest`.
+- Extras (`ui/player/MiniMixCovers.kt`, `util/ShareCard.kt`, `CoverLegibility.pageAccent`): mini player follows `Automix.ui`; 1080×1920 share card with Instagram Stories intent and fallbacks; cover accent on album and artist pages under the WCAG rules. `MixShareAccentHostTest`.
+
+Full notes: [7.3.0](docs/releases/v7.3.0.md).
+
+---
+
 # Ketvoice 7.2.0
 
 ![Ketvoice](ketvoice-banner.png)

@@ -21,6 +21,14 @@
 
 ## Overview
 
+### 7.3.0 — Select and upgrade downloads, import from Apple Music, Tidal and SoundCloud
+
+Downloads selection with better-quality re-download, live download rings, three new import sources, album pages with a floating cover or Canvas, a breathing player, song credits, a double mini player during Ketmix mixes and a share card for Stories.
+[Mobile](https://github.com/Tysnnn23/Ketvoice/releases/download/v7.3.0/Ketvoice-7.3.0.apk)
+· [Lite](https://github.com/Tysnnn23/Ketvoice/releases/download/v7.3.0/Ketvoice-7.3.0-Lite.apk)
+· [Quest](https://github.com/Tysnnn23/Ketvoice/releases/download/v7.3.0/Ketvoice-7.3.0-Quest.apk)
+· [Release notes](docs/releases/v7.3.0.md).
+
 ### 7.2.0 — A Library like Apple Music, better sound sooner, search that finds what you mean
 
 Favourites and Downloads pages, playlists in the Library, Lossless badges, recommended songs after albums, quality upgrades that really happen, faster start, compact Canvas and a working Sync button.
