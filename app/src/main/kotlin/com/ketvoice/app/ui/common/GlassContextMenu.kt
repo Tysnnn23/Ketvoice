@@ -143,6 +143,7 @@ private class MenuAction(val label: String, val icon: ImageVector, val enabled: 
 /** Draws the context menu that was asked for, over everything else. Place it once, at the root. */
 @Composable
 internal fun ContextMenuHost(modifier: Modifier = Modifier) {
+    com.ketvoice.app.ui.sub.SingleUpgradeHost()
     val request = ContextMenus.request.value ?: return
     val theme = LocalTheme.current
     val density = LocalDensity.current
@@ -185,6 +186,10 @@ internal fun ContextMenuHost(modifier: Modifier = Modifier) {
         },
         MenuAction(if (downloaded) "Téléchargé" else "Télécharger", if (downloaded) KetIcons.Check else KetIcons.Download,
             enabled = !downloaded) { Downloader.download(track) },
+        // 7.5: a saved title is checked and upgraded alone, without selecting it first.
+        if (downloaded) MenuAction("Améliorer la qualité", KetIcons.Download, tag = "menu-upgrade") {
+            com.ketvoice.app.ui.sub.UpgradeChecks.single.value = track.id
+        } else null,
         MenuAction("Ajouter à une playlist", KetIcons.Plus) { AppUi.addToPlaylist.value = track },
         MenuAction("Lancer la radio", Icons.Filled.Radio) { Player.startRadio(track) },
         MenuAction("Partager", KetIcons.Share) { AppUi.shareCard.value = track },

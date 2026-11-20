@@ -78,14 +78,29 @@ internal fun Modifier.downloadFill(trackId: String, radius: Dp): Modifier {
 /** What « Retélécharger en meilleure qualité » asks for each title; the host tests put their own answer here. */
 internal object UpgradeChecks {
     var check: suspend (Downloader.Item) -> Downloader.UpgradeOffer? = { Downloader.checkUpgrade(it) }
+    /** What the upgrade starts with the offers found; the host tests watch it. */
+    var start: (List<Downloader.UpgradeOffer>) -> Unit = { Downloader.upgrade(it) }
+    /** 7.5: the title whose own menu asked « Améliorer la qualité »: checked alone and, when better exists, upgraded at once. */
+    val single = mutableStateOf<String?>(null)
+}
+
+/** The alert of « Améliorer la qualité » from a title's own menu (7.5), drawn once with the context menu. */
+@Composable
+internal fun SingleUpgradeHost() {
+    val id = UpgradeChecks.single.value ?: return
+    val item = remember(id) { Downloader.itemFor(id) }
+    if (item == null) { LaunchedEffect(id) { UpgradeChecks.single.value = null }; return }
+    val items = remember(id) { listOf(item) }
+    UpgradeDialog(items, direct = true, onDismiss = { UpgradeChecks.single.value = null }, onStarted = {})
 }
 
 /**
  * Checks each of [items] for a better rendition (three at a time), then says how many can be improved and
  * offers to download those again; titles with nothing better are left as they are, and the alert says so.
+ * [direct] (7.5, one title from its own menu): what is better is downloaded at once, the alert only says what.
  */
 @Composable
-internal fun UpgradeDialog(items: List<Downloader.Item>, onDismiss: () -> Unit, onStarted: () -> Unit) {
+internal fun UpgradeDialog(items: List<Downloader.Item>, onDismiss: () -> Unit, direct: Boolean = false, onStarted: () -> Unit) {
     val theme = LocalTheme.current
     var checked by remember(items) { mutableIntStateOf(0) }
     var results by remember(items) { mutableStateOf<List<Downloader.UpgradeOffer?>?>(null) }
@@ -96,6 +111,7 @@ internal fun UpgradeDialog(items: List<Downloader.Item>, onDismiss: () -> Unit, 
     val found = results
     val better = found.orEmpty().filterNotNull().filter { it.offer != null }
     val unknown = found.orEmpty().count { it == null }
+    LaunchedEffect(found) { if (direct && better.isNotEmpty()) { UpgradeChecks.start(better); onStarted() } }
     AppAlertDialog(onDismissRequest = onDismiss, modifier = Modifier.testTag("downloads-upgrade-alert"),
         title = { Text("Meilleure qualité") },
         text = {
@@ -109,14 +125,16 @@ internal fun UpgradeDialog(items: List<Downloader.Item>, onDismiss: () -> Unit, 
                     better.isEmpty() -> Text(if (items.size == 1) "Aucune meilleure qualité disponible pour ce titre : il reste tel quel."
                         else "Aucune meilleure qualité disponible pour ces titres : ils restent tels quels.")
                     else -> {
-                        Text(AppText.t(if (better.size == 1) "1 titre sur ${items.size} peut être amélioré" else "${better.size} titres sur ${items.size} peuvent être améliorés"),
+                        if (!direct) Text(AppText.t(if (better.size == 1) "1 titre sur ${items.size} peut être amélioré" else "${better.size} titres sur ${items.size} peuvent être améliorés"),
                             localize = false)
                         better.take(4).forEach { o ->
                             Text("${o.item.track.title} · ${o.saved.label} → ${o.better?.label}", localize = false, color = theme.secondary,
                                 fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.testTag("upgrade-line"))
                         }
                         if (better.size > 4) Text("…", localize = false, color = theme.secondary, fontSize = 13.sp)
-                        Text("Les autres restent tels quels. Le fichier actuel est gardé tant que le nouveau n'est pas complet et vérifié.",
+                        if (direct) Text("Le titre se télécharge en meilleure qualité. Le fichier actuel est gardé tant que le nouveau n'est pas complet et vérifié.",
+                            color = theme.secondary, fontSize = 12.sp, modifier = Modifier.testTag("upgrade-started"))
+                        else Text("Les autres restent tels quels. Le fichier actuel est gardé tant que le nouveau n'est pas complet et vérifié.",
                             color = theme.secondary, fontSize = 12.sp)
                     }
                 }
@@ -125,9 +143,9 @@ internal fun UpgradeDialog(items: List<Downloader.Item>, onDismiss: () -> Unit, 
             }
         },
         confirmButton = {
-            if (better.isNotEmpty()) KetTextButton("Retélécharger", { Downloader.upgrade(better); onStarted() }, primary = true,
+            if (better.isNotEmpty() && !direct) KetTextButton("Retélécharger", { UpgradeChecks.start(better); onStarted() }, primary = true,
                 modifier = Modifier.testTag("upgrade-confirm"))
-            else KetTextButton("OK", onDismiss, enabled = found != null)
+            else KetTextButton("OK", onDismiss, enabled = found != null, modifier = Modifier.testTag("upgrade-ok"))
         },
-        dismissButton = if (better.isNotEmpty() || found == null) ({ KetTextButton("Annuler", onDismiss) }) else null)
+        dismissButton = if ((better.isNotEmpty() && !direct) || found == null) ({ KetTextButton("Annuler", onDismiss) }) else null)
 }

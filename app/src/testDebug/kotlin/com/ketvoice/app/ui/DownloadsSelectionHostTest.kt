@@ -167,6 +167,36 @@ class DownloadsSelectionHostTest {
         compose.onNodeWithTag("upgrade-confirm").assertDoesNotExist()
     }
 
+    /** 7.5: « Améliorer la qualité » in a title's own menu checks that title alone and starts at once, no selection. */
+    @Test fun oneTitleIsImprovedFromItsOwnMenu() {
+        saved.value = library()
+        val started = mutableListOf<String>()
+        val defaultStart = UpgradeChecks.start
+        UpgradeChecks.start = { offers -> started += offers.map { it.item.track.title } }
+        UpgradeChecks.check = { item ->
+            val now = DownloadUpgrade.ofSaved(item.format, null)
+            val offer = MusicApi.StreamInfo("https://example.invalid/x.flac", "flac", "FLAC")
+            Downloader.UpgradeOffer(item, now, offer.takeIf { DownloadUpgrade.better(now, DownloadUpgrade.ofStream(it)) })
+        }
+        try {
+            show()
+            hold("Alpha"); compose.onNodeWithTag("menu-upgrade").performClick()
+            compose.waitForIdle()
+            compose.onNodeWithText("Alpha · 128 kb/s → FLAC").assertExists()
+            compose.onNodeWithTag("upgrade-started").assertExists()
+            compose.onNodeWithTag("upgrade-confirm").assertDoesNotExist()
+            assertEquals(listOf("Alpha"), started)
+            image("dl75-upgrade-one-light", dialog = true)
+            compose.onNodeWithTag("upgrade-ok").performClick()
+            compose.waitForIdle()
+            // A lossless file: nothing better, nothing started.
+            hold("Bravo"); compose.onNodeWithTag("menu-upgrade").performClick()
+            compose.waitForIdle()
+            compose.onNodeWithText("Aucune meilleure qualité disponible pour ce titre : il reste tel quel.").assertExists()
+            assertEquals(listOf("Alpha"), started)
+        } finally { UpgradeChecks.start = defaultStart; UpgradeChecks.single.value = null }
+    }
+
     @Test @Config(qualifiers = "w400dp-h1600dp-mdpi")
     fun aDownloadingTitleFillsItsCoverLikeTheAppStore() {
         val moving = track("m", "En route", "Zed")
