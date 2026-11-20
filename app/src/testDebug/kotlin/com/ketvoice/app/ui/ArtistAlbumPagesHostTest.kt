@@ -96,9 +96,10 @@ class ArtistAlbumPagesHostTest {
         image("artist-phone-1-hero")
         // Five popular titles, then all of them.
         compose.onNodeWithText("Titres populaires").performScrollTo()
+        // 7.4: the taller hero leaves the fifth title below the screen until the section comes up.
+        compose.onNodeWithTag("artist-list").performScrollToKey("artist-popular-title")
         compose.onNodeWithText("Métropole").assertExists()
         compose.onAllNodesWithText("Écho").assertCountEquals(0)
-        compose.onNodeWithTag("artist-list").performScrollToKey("artist-popular-title")
         image("artist-phone-2-popular")
         compose.onNodeWithTag("artist-show-all").performClick()
         compose.waitForIdle()

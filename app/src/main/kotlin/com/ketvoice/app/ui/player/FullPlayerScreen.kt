@@ -436,6 +436,9 @@ fun FullPlayerScreen(
                     Text("Lecture depuis ${track.artist}", color = Color(0xFFCBCDD6), fontSize = 10.sp,
                         fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis,
                         textAlign = TextAlign.Center,
+                        // 7.4: a soft shade keeps it readable over a very light cover or Canvas.
+                        style = androidx.compose.ui.text.TextStyle(shadow = androidx.compose.ui.graphics.Shadow(
+                            Color.Black.copy(alpha = .45f), blurRadius = 10f)),
                         modifier = Modifier.width(sceneWidth).padding(top = topInset + 32.dp))
                     PlayerTitle(track, false, cover, sheetAction = { sheet = "track" },
                         modifier = Modifier.width(sceneWidth).offset(y = titleTop).padding(horizontal = margin),

@@ -10,7 +10,6 @@ import coil.request.ImageRequest
 import coil.request.SuccessResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import kotlin.math.pow
 
 /**
  * How the full player takes its colours from the cover (7.4). The background colour keeps the cover's hue
@@ -30,16 +29,25 @@ internal object PlayerColors {
     const val VEIL_DARK = .50f
     const val VEIL_LIGHT = .80f
 
+    /** Flowing colours never take less veil than this: a dark cover with one bright spot must not light the screen. */
+    const val FLOWING_FLOOR = .40f
+
     /** The background colour of a cover whose main colour is [dominant]: its hue, dim. */
     fun ambient(dominant: Int): Color {
         val color = Color(dominant or (255 shl 24))
         val luminance = color.luminance()
-        if (luminance < .0005f) return Color(0xFF16161A)
+        // A black cover: a neutral dark of the band's floor, a touch cool.
+        if (luminance < .0005f) return ambient(0xFF40404A.toInt())
         val target = (luminance * .35f).coerceIn(AMBIENT_MIN, AMBIENT_MAX)
-        // Luminance follows the components roughly to the power 2.2: scale them by its root.
-        val factor = (target / luminance).toDouble().pow(1 / 2.2).toFloat()
-        return Color((color.red * factor).coerceAtMost(1f), (color.green * factor).coerceAtMost(1f),
-            (color.blue * factor).coerceAtMost(1f))
+        // The scale that brings the colour to the target, found by halving (the sRGB curve is linear near black).
+        fun scaled(k: Float) = Color(color.red * k, color.green * k, color.blue * k)
+        var low = 0f
+        var high = 1f / maxOf(color.red, color.green, color.blue)
+        repeat(16) {
+            val mid = (low + high) / 2f
+            if (scaled(mid).luminance() < target) low = mid else high = mid
+        }
+        return scaled((low + high) / 2f)
     }
 
     /**
@@ -49,7 +57,7 @@ internal object PlayerColors {
     fun veil(mean: Float, flowing: Boolean): Float {
         val m = mean.coerceIn(0f, 1f)
         val base = VEIL_DARK + (VEIL_LIGHT - VEIL_DARK) * m
-        return if (flowing) base - .18f * (1f - m) else base
+        return if (flowing) maxOf(FLOWING_FLOOR, base - .14f * (1f - m)) else base
     }
 
     /** The colour of the veil: black, warmed a little by the cover's own colour so the scrim never reads grey. */
