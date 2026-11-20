@@ -14,6 +14,8 @@ internal object MixEditor {
     const val HEAD_MS = 60_000L
     /** Each step of the editor's arrows when a title has no beat grid. */
     const val FREE_STEP_MS = 250L
+    /** The longest blend the editor makes (its box's longest drag). */
+    const val MAX_BLEND_MS = 30_000L
 
     /** One end of a title as the editor shows it: the length it is filed under, its wave and its analysis when known. */
     data class Side(val trackId: String, val durationMs: Long, val wave: Wave? = null, val analysis: SegmentAnalysis? = null)
@@ -21,17 +23,19 @@ internal object MixEditor {
     /** The listener's choice for a transition; -1 / null = left to Ketmix. */
     data class Choice(val exitMs: Long = -1, val entryMs: Long = -1, val overlapMs: Long = -1, val style: MixStyle? = null,
                       /** Volume curve, bass, filter and tempo (6.9); the default is Ketmix's own. */
-                      val shape: MixShape = MixShape.DEFAULT) {
-        val automatic: Boolean get() = exitMs < 0 && entryMs < 0 && overlapMs <= 0 && style == null && shape.isDefault
+                      val shape: MixShape = MixShape.DEFAULT,
+                      /** Volume keyframes of both titles over the blend (7.6, see [MixKeys]). */
+                      val keys: List<LevelKey> = emptyList()) {
+        val automatic: Boolean get() = exitMs < 0 && entryMs < 0 && overlapMs <= 0 && style == null && shape.isDefault && keys.isEmpty()
         /** What is remembered for the pair (the points belong to each title). */
-        val pairChoice: PairChoice get() = PairChoice(style, overlapMs, shape)
+        val pairChoice: PairChoice get() = PairChoice(style, overlapMs, shape, keys)
     }
 
     /** What is remembered for the transition from [fromId] into [toId] (a title alone when both are the same). */
     fun remembered(fromId: String, fromDurationMs: Long, toId: String, toDurationMs: Long, pair: Boolean): Choice {
         val choice = if (pair) MixPointStore.pair(fromId, toId) else null
         return Choice(MixPointStore.exitOf(fromId, fromDurationMs), MixPointStore.entryOf(toId, toDurationMs),
-            choice?.overlapMs ?: -1, choice?.style, choice?.shape ?: MixShape.DEFAULT)
+            choice?.overlapMs ?: -1, choice?.style, choice?.shape ?: MixShape.DEFAULT, choice?.keys.orEmpty())
     }
 
     /**
@@ -46,6 +50,7 @@ internal object MixEditor {
             MixContext(loop = out.trackId == into.trackId, userOverlapMs = choice.overlapMs),
             MixSettings(intensity, choice.style ?: defaultStyle, tempoMatch = choice.shape.tempo))
             .let { MixShaping.apply(it, choice.shape) }
+            .let { if (it.mixes && choice.keys.isNotEmpty()) it.copy(keys = choice.keys) else it }
 
     /** Ketmix's own plan for the same pair: where the editor draws the automatic points. */
     fun automatic(out: Side, into: Side, intensity: Int, defaultStyle: MixStyle, vocalEndMs: Long? = null, vocalStartMs: Long? = null): MixPlan =

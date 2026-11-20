@@ -121,16 +121,28 @@ internal object StemWork {
     }
 
     /** Separates a whole title read from [uri] with the model of [quality] and stores it; [progress] hears the share done. */
-    suspend fun whole(trackId: String, uri: Uri, quality: Int, progress: (Float) -> Unit): Outcome {
+    suspend fun whole(trackId: String, uri: Uri, quality: Int, progress: (Float) -> Unit, stream: StreamWork = StreamWork(),
+                      partial: () -> Unit = {}): Outcome {
         if (inProcess) {
             val context = appContext ?: return Outcome.Failed
             val ctx = currentCoroutineContext()
-            return if (StemJobs.whole(context, trackId, uri, quality, { ctx.isActive }, progress)) Outcome.Done else Outcome.Failed
+            return if (StemJobs.whole(context, trackId, uri, quality, { ctx.isActive }, progress, stream) { partial() }) Outcome.Done else Outcome.Failed
         }
-        return request(MSG_WHOLE, Bundle().apply { putString("id", trackId); putString("uri", uri.toString()); putInt("quality", quality) }) {
+        return request(MSG_WHOLE, Bundle().apply {
+            putString("id", trackId); putString("uri", uri.toString()); putInt("quality", quality)
+            putLong("startAtMs", stream.startAtMs); putLong("durationMs", stream.durationMs); putInt("depth", stream.depth.ordinal)
+        }) {
             progress(it.getFloat("fraction"))
+            if (it.getBoolean("partial")) partial()
         }
     }
+
+    /**
+     * 7.6 (voice76): how a whole separation of a stream runs: from [startAtMs] (the playhead), with [durationMs] when the
+     * file does not say it (a DASH copy), resting on battery as [depth] asks ([StreamSeparation.restMs]).
+     */
+    data class StreamWork(val startAtMs: Long = 0L, val durationMs: Long = 0L,
+                          val depth: com.ketvoice.app.automix.AnalysisDepth = com.ketvoice.app.automix.AnalysisDepth.Maximum)
 
     /** Prepares downloaded titles while the phone charges ([StemLibrary.runItems]); [progress] hears titles done and found. */
     suspend fun library(context: Context, items: List<StemLibrary.LibraryItem>, depth: AnalysisDepth, separate: Boolean,
@@ -294,7 +306,8 @@ internal object StemJobs {
     }.onFailure { android.util.Log.w("KetvoiceStems", "separation failed: ${it.javaClass.simpleName}") }.getOrDefault(false)
 
     /** Reads a whole title from [uri] (a downloaded file, or the address it is streamed from) and separates it. */
-    fun whole(context: Context, trackId: String, uri: Uri, quality: Int, goOn: () -> Boolean, progress: (Float) -> Unit): Boolean {
+    fun whole(context: Context, trackId: String, uri: Uri, quality: Int, goOn: () -> Boolean, progress: (Float) -> Unit,
+              stream: StemWork.StreamWork = StemWork.StreamWork(), partial: () -> Unit = {}): Boolean {
         val extractor = MediaExtractor()
         try {
             extractor.setDataSource(context, uri, null)
@@ -303,10 +316,17 @@ internal object StemJobs {
             } ?: return false
             val format = extractor.getTrackFormat(index)
             if (StemLibrary.channels(format) != 2) return false
-            val durationMs = if (format.containsKey(MediaFormat.KEY_DURATION)) format.getLong(MediaFormat.KEY_DURATION) / 1000L else return false
+            // A DASH copy (fragmented MP4) may not say its length: the manifest's is used then.
+            val durationMs = if (format.containsKey(MediaFormat.KEY_DURATION)) format.getLong(MediaFormat.KEY_DURATION) / 1000L else stream.durationMs
             if (durationMs <= 0) return false
             extractor.selectTrack(index)
-            return StemLibrary.separateWhole(extractor, format, trackId, durationMs, quality, goOn) { progress(it.coerceIn(0f, 1f)) }
+            return StemLibrary.separateWhole(extractor, format, trackId, durationMs, quality, goOn, { progress(it.coerceIn(0f, 1f)) },
+                startAtMs = stream.startAtMs,
+                partial = { mask -> StemStore.savePartial(trackId, mask); partial() },
+                rest = { workMs, first ->
+                    var left = StreamSeparation.restMs(workMs, stream.depth, StemModel.charging(), first)
+                    while (left > 0 && goOn()) { Thread.sleep(minOf(left, 250L)); left -= 250L }
+                })
         } catch (_: java.io.IOException) {
             return false
         } finally {

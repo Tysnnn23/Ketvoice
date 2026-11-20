@@ -239,7 +239,8 @@ class PlaybackService : MediaLibraryService() {
     private fun takeUpVoice(trackId: String) {
         if (AppSettings.bitPerfect.value || !::player.isInitialized) return
         serviceScope.launch {
-            val mask = withContext(Dispatchers.IO) { runCatching { com.ketvoice.app.stems.StemStore.loadWhole(trackId) }.getOrNull() } ?: return@launch
+            // 7.6: the whole separation, or the part done so far ahead of the playhead while a stream is separated.
+            val mask = withContext(Dispatchers.IO) { runCatching { com.ketvoice.app.stems.StemStore.loadBest(trackId) }.getOrNull() } ?: return@launch
             val main = player
             if (main.currentMediaItem?.mediaId != trackId || com.ketvoice.app.automix.Automix.mixing) return@launch
             val control = decks[main] ?: return@launch
@@ -351,14 +352,17 @@ class PlaybackService : MediaLibraryService() {
                     val pieces = local?.mimeType == androidx.media3.common.MimeTypes.APPLICATION_MPD ||
                         local?.mimeType == androidx.media3.common.MimeTypes.APPLICATION_M3U8
                     if (uri != null && !pieces) com.ketvoice.app.stems.VoiceSeparation.heard(id, uri)
+                    // 7.6 (voice76): a DASH title is separated from the audio rendition the player uses.
+                    if (uri != null && local.mimeType == androidx.media3.common.MimeTypes.APPLICATION_MPD) com.ketvoice.app.stems.VoiceSeparation.heardDash(id, uri)
                 }
                 if (id != null && !exactRequested) serviceScope.launch(Dispatchers.IO) {
                     val mask = runCatching { com.ketvoice.app.stems.StemStore.loadWhole(id) }.getOrNull()
+                        ?: runCatching { com.ketvoice.app.stems.StemStore.loadPartial(id) }.getOrNull()
                     withContext(Dispatchers.Main) {
                         if (owner.currentMediaItem?.mediaId == id) deck.voiceMask = mask
                         // A listener who turned the voice down keeps it down: each new title is separated as it starts.
                         // Not while the app is away on battery (background thrift): the slider asks again when it is shown.
-                        if (mask == null && owner.currentMediaItem?.mediaId == id && com.ketvoice.app.stems.VoiceLevel.level < .99f &&
+                        if ((mask == null || !com.ketvoice.app.stems.StemStore.hasWhole(id)) && owner.currentMediaItem?.mediaId == id && com.ketvoice.app.stems.VoiceLevel.level < .99f &&
                             com.ketvoice.app.stems.VoiceSeparation.modelReady && !com.ketvoice.app.automix.BackgroundThrift.active())
                             com.ketvoice.app.stems.VoiceSeparation.request(id)
                     }
@@ -368,6 +372,12 @@ class PlaybackService : MediaLibraryService() {
                 // A title that starts over on repeat is the same title, heard on: its speed is left alone.
                 if (::player.isInitialized && owner === this@PlaybackService.player && !com.ketvoice.app.automix.Automix.mixing &&
                     reason != androidx.media3.common.Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT && owner.playbackParameters.speed != 1f) owner.playbackParameters = androidx.media3.common.PlaybackParameters.DEFAULT
+            }
+            // 7.6 (voice76): the audio rendition a DASH title plays, read again for its voice separation.
+            override fun onAudioInputFormatChanged(eventTime: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime,
+                                                   format: androidx.media3.common.Format,
+                                                   decoderReuseEvaluation: androidx.media3.exoplayer.DecoderReuseEvaluation?) {
+                owner.currentMediaItem?.mediaId?.let { com.ketvoice.app.stems.VoiceSeparation.rendition(it, format.id) }
             }
             override fun onLoadCompleted(eventTime: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime,
                                          loadEventInfo: androidx.media3.exoplayer.source.LoadEventInfo,

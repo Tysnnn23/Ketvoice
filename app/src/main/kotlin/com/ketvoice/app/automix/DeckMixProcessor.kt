@@ -137,7 +137,9 @@ internal class DeckMixProcessor(private val control: DeckControl) : BaseAudioPro
         if (stage != null) {
             // Once running, the stage processes every buffer (its delay must stay the same); the separation is read live.
             val mask = if (cursorUs != C.TIME_UNSET) control.voiceMask else null
-            try { stage.process(output, 0, frames, startUs, mask, com.ketvoice.app.stems.VoiceLevel.level) }
+            // 7.6: the listener's voice and instrument keyframes of a mix act here, through the same separation.
+            val keys = if (cursorUs != C.TIME_UNSET) control.automation?.levels else null
+            try { stage.process(output, 0, frames, startUs, mask, com.ketvoice.app.stems.VoiceLevel.level, keys) }
             catch (_: RuntimeException) { control.voiceMask = null }
         }
         if (cursorUs != C.TIME_UNSET) cursorUs += frames * 1_000_000L / rate

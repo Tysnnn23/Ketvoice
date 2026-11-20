@@ -194,7 +194,7 @@ internal object StemLibrary {
         val quality = StemEngine.wanted() ?: return
         val stored = StemStore.wholeQuality(id)
         if (stored != null && stored >= quality) return
-        separateWhole(extractor, format, id, durationMs, quality, goOn) {}
+        separateWhole(extractor, format, id, durationMs, quality, goOn, {})
     }
 
     /**
@@ -205,7 +205,8 @@ internal object StemLibrary {
      * half-way. [progress] hears the share done, 0..1. True when the separation was stored.
      */
     internal fun separateWhole(extractor: MediaExtractor, format: MediaFormat, id: String, durationMs: Long, quality: Int,
-                               goOn: () -> Boolean, progress: (Float) -> Unit): Boolean {
+                               goOn: () -> Boolean, progress: (Float) -> Unit, startAtMs: Long = 0L,
+                               partial: ((StemMask) -> Unit)? = null, rest: (Long, Boolean) -> Unit = { _, _ -> }): Boolean {
         val hop = StemDsp.HOP
         val samples = (durationMs * StemDsp.RATE / 1000L).toInt()
         val total = StemDsp.frames(samples)
@@ -214,10 +215,10 @@ internal object StemLibrary {
         val share = ByteArray(total); val level = ByteArray(total)
         val pieces = (total + WHOLE_PIECE_FRAMES - 1) / WHOLE_PIECE_FRAMES
         val per = (total + pieces - 1) / pieces
-        var first = 0
-        while (first < total) {
-            if (!goOn()) return false
-            val last = minOf(total, first + per)
+        // 7.6 (voice76): on a stream the piece under the playhead goes first, and each piece done is taken up live.
+        val start = StreamSeparation.pieceAt(startAtMs, per.toLong() * hop * 1000L / StemDsp.RATE, pieces)
+        val half = StemDsp.NET_BINS / 2
+        val done = StreamSeparation.run(total, per, start, goOn, { System.nanoTime() / 1_000_000L }, rest, work = { first, last ->
             val regionFrame = maxOf(0, first - WHOLE_MARGIN_FRAMES)
             val regionStart = regionFrame * hop
             val regionEnd = minOf(samples, (last + WHOLE_MARGIN_FRAMES - 1) * hop + StemDsp.N_FFT)
@@ -225,7 +226,7 @@ internal object StemLibrary {
             val untilUs = regionEnd * 1_000_000L / StemDsp.RATE
             val capture = PcmCapture(fromUs, untilUs)
             decode(extractor, format, fromUs, untilUs, capture)
-            val pcm = capture.pcm() ?: return false
+            val pcm = capture.pcm() ?: return@run false
             val l = Resampler.resample(pcm, 0, 2, capture.rate, StemDsp.RATE)
             val r = Resampler.resample(pcm, 1, 2, capture.rate, StemDsp.RATE)
             // The recording starts on the decoder's buffer that holds the region's start, a little before it.
@@ -233,16 +234,21 @@ internal object StemLibrary {
             val length = regionEnd - regionStart
             val left = FloatArray(length) { i -> l.getOrElse(i + skip) { 0f } }
             val right = FloatArray(length) { i -> r.getOrElse(i + skip) { 0f } }
-            val mask = StemEngine.separate(left, right, fromUs, quality) { !goOn() } ?: return false
+            val mask = StemEngine.separate(left, right, fromUs, quality) { !goOn() } ?: return@run false
             for (f in first until last) {
                 val j = f - regionFrame
                 if (j !in 0 until mask.frames) continue
-                System.arraycopy(mask.packed, j * StemDsp.NET_BINS / 2, packed, f * StemDsp.NET_BINS / 2, StemDsp.NET_BINS / 2)
+                System.arraycopy(mask.packed, j * half, packed, f * half, half)
                 mask.voiceShare?.let { share[f] = it[j] }; mask.voiceLevel?.let { level[f] = it[j] }
             }
-            first = last
-            progress(first.toFloat() / total)
-        }
+            true
+        }, publish = { from, until ->
+            if (partial != null) runCatching {
+                partial(StemMask(from.toLong() * hop * 1_000_000L / StemDsp.RATE, until - from, packed.copyOfRange(from * half, until * half),
+                    share.copyOfRange(from, until), level.copyOfRange(from, until), quality))
+            }
+        }, progress = progress)
+        if (!done) return false
         StemStore.saveWhole(id, StemMask(0L, total, packed, share, level, quality))
         return true
     }

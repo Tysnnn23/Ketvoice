@@ -87,7 +87,7 @@ internal fun DrawScope.curveEffect(line: CurveLine): PathEffect? = when (line) {
 }
 
 /** What the box of the transition is grabbed by. */
-private enum class Grip { Box, Start, End, Out, In }
+private enum class Grip { Box, Start, End, Out, In, Key }
 
 /**
  * One gesture on the timeline: the box moves the exit and the entry together, its edges change how long both are
@@ -107,8 +107,18 @@ private class TimelineDrag(val state: EditorState, plan: MixPlan, val grip: Grip
     private fun exitAt(ms: Long, range: LongRange = MixEditor.exitRange(state.out.durationMs)) = place(state.out.analysis, ms, range)
     private fun entryAt(ms: Long) = place(state.into.analysis, ms, MixEditor.entryRange(state.into.planDurationMs))
 
+    /** 7.6: the keyframe being dragged, and where it was. */
+    var key = -1
+    private val key0 = state.choice.keys.getOrNull(state.keyGrabbed)?.atMs ?: 0L
+
     fun move(dxPx: Float) {
         val dt = (dxPx * msPerPx).roundToLong()
+        if (grip == Grip.Key) {
+            // A keyframe moves in time inside the blend, freely: a level may change off the beat.
+            key = state.keyGrabbed
+            state.dragKey = key to (key0 + dt).coerceIn(0L, overlap0)
+            return
+        }
         val placed = when (grip) {
             // The wave follows the finger: moved right, the mix starts earlier in that title.
             Grip.Out -> exitAt(exit0 - dt).also { state.dragExit = it.ms }
@@ -123,11 +133,14 @@ private class TimelineDrag(val state: EditorState, plan: MixPlan, val grip: Grip
                 state.dragOverlap = (exit0 + overlap0 - e.ms).coerceIn(MIN_MS, MAX_MS)
                 state.dragEntry = entryAt(entry0 + ((e.ms - exit0) * rate).toLong()).ms
             }
+            Grip.Key -> return
         }
         if (placed.ms != last) { last = placed.ms; tick(placed.kind) }
     }
 
     fun end() {
+        state.dragKey?.let { (i, at) -> state.choice = state.choice.copy(keys = com.ketvoice.app.automix.MixKeys.move(state.choice.keys, i, at, overlap0)) }
+        state.dragKey = null
         state.dragExit?.let(state::commitExit)
         state.dragEntry?.let(state::commitEntry)
         state.dragOverlap?.let(state::commitOverlap)
@@ -141,8 +154,13 @@ private class TimelineDrag(val state: EditorState, plan: MixPlan, val grip: Grip
 }
 
 /** Which part of the timeline [x], [y] falls on. */
-private fun gripAt(x: Float, y: Float, plan: MixPlan, toX: (Long) -> Float, height: Int, edgePx: Float): Grip {
+private fun gripAt(x: Float, y: Float, plan: MixPlan, toX: (Long) -> Float, height: Int, edgePx: Float, state: EditorState): Grip {
     if (plan.mixes) {
+        // 7.6: a keyframe, on the line between the two titles.
+        val key = state.keys.indices.filter { abs(toX(plan.outMs + state.keys[it].atMs) - x) <= edgePx && abs(y - height / 2f) <= edgePx * 1.6f }
+            .minByOrNull { abs(toX(plan.outMs + state.keys[it].atMs) - x) }
+        state.keyGrabbed = key ?: -1
+        if (key != null) return Grip.Key
         val x0 = toX(plan.outMs)
         val x1 = toX(plan.outMs + plan.overlapMs)
         val sized = plan.kind !in setOf(MixKind.Echo, MixKind.Rise, MixKind.Trim) && x1 - x0 > edgePx * 2.5f
@@ -160,7 +178,7 @@ private fun Modifier.timelineGestures(state: EditorState, plan: () -> MixPlan, w
         val p = plan(); val w = window()
         val width = size.width.coerceAtLeast(1)
         val toX = { t: Long -> (t - w.fromMs).toFloat() / w.spanMs * width }
-        val grip = gripAt(down.position.x, down.position.y, p, toX, size.height, edgePx)
+        val grip = gripAt(down.position.x, down.position.y, p, toX, size.height, edgePx, state)
         var drag: TimelineDrag? = null
         var pinch = false
         while (true) {
@@ -183,12 +201,20 @@ private fun Modifier.timelineGestures(state: EditorState, plan: () -> MixPlan, w
                 val free = change.uptimeMillis - down.uptimeMillis >= viewConfiguration.longPressTimeoutMillis
                 drag = TimelineDrag(state, p, grip, free, w.spanMs.toFloat() / width, pullPx, tick)
                 // Dragging the box, the timeline stays still under the finger.
-                if (grip == Grip.Box || grip == Grip.Start || grip == Grip.End) onFreeze(w)
+                if (grip == Grip.Box || grip == Grip.Start || grip == Grip.End || grip == Grip.Key) onFreeze(w)
             }
             drag.move(d.x)
             change.consume()
         }
         drag?.end()
+        // 7.6: a touch that did not move: on a keyframe, its sheet; elsewhere inside the transition, a new keyframe.
+        if (drag == null && !pinch && p.mixes && state.pair) {
+            if (grip == Grip.Key && state.keyGrabbed >= 0) state.keyOpen = state.keyGrabbed
+            else if (grip == Grip.Box || grip == Grip.Start || grip == Grip.End) {
+                val rel = w.fromMs + (down.position.x / width * w.spanMs).toLong() - p.outMs
+                if (rel in 0..p.overlapMs) state.addKey(rel, p.overlapMs).takeIf { it >= 0 }?.let { state.keyOpen = it }
+            }
+        }
         onFreeze(null)
     }
 }
@@ -265,6 +291,7 @@ private fun DrawScope.drawScene(s: TimelineScene, auto: MixPlan, curves: Pair<De
     drawVoice(s, ink, top = false)
     drawAutoPoints(s, auto, ink)
     if (curves != null) drawCurves(s, curves, ink, ruler)
+    drawKeyCurves(s.state.keys, s.plan, s::toX, s.width, ruler, s.half, s.height - ruler, ink.box, s.state.keyOpen)
     if (playheadMs != null) {
         val x = s.toX(playheadMs)
         if (x in 0f..s.width) {

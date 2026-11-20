@@ -87,7 +87,8 @@ fun VoiceSlider(trackId: String?, modifier: Modifier = Modifier, width: Dp = 52.
     val separation by VoiceSeparation.state.collectAsState()
     val model by StemModel.fast.state.collectAsState()
     val ready by produceState(false, trackId, separation) {
-        value = trackId != null && withContext(Dispatchers.IO) { runCatching { StemStore.hasWhole(trackId) }.getOrDefault(false) }
+        // 7.6: a stream being separated ahead of the playhead can be turned down from its first piece on.
+        value = trackId != null && withContext(Dispatchers.IO) { runCatching { StemStore.hasWhole(trackId) || StemStore.hasPartial(trackId) }.getOrDefault(false) }
     }
     val working = (separation as? VoiceSeparation.State.Working)?.takeIf { it.trackId == trackId }
     val unavailable = (separation as? VoiceSeparation.State.Unavailable)?.trackId == trackId && !ready
@@ -121,7 +122,8 @@ fun VoiceSlider(trackId: String?, modifier: Modifier = Modifier, width: Dp = 52.
     val lensTrack = com.ketvoice.app.glass.rememberGlassBackdrop(Color.Transparent)
     val lensDensity = androidx.compose.ui.platform.LocalDensity.current.density
     val description = AppText.t("Niveau de la voix")
-    val preparing = AppText.t("Préparation de la voix…")
+    val percent = working?.let { Math.round(it.fraction * 100f) }
+    val preparing = AppText.t("Préparation de la voix…") + (percent?.let { " $it %" } ?: "")
     val busy = working != null || (afterDownload && downloading)
     Box(modifier.size(width, height).testTag("voice-slider")
         .graphicsLayer { alpha = if (ready || busy) 1f else if (unavailable) .45f else .8f }
@@ -169,8 +171,13 @@ fun VoiceSlider(trackId: String?, modifier: Modifier = Modifier, width: Dp = 52.
             androidx.compose.ui.geometry.Offset(box.width / 2f, (box.height * (1f - shown)).coerceIn(edge, maxOf(edge, box.height - edge)))
         }
         // While the title is being separated (or the model arrives): a small spinner at the top of the pill.
-        if (busy) com.ketvoice.app.ui.common.ActivitySpinner(Modifier.padding(top = 10.dp).testTag("voice-slider-preparing"),
-            size = 18.dp, color = if (shown > .78f) Color.Black.copy(alpha = .6f) else Color.White)
+        if (busy) androidx.compose.foundation.layout.Column(Modifier.padding(top = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            val ink = if (shown > .78f) Color.Black.copy(alpha = .6f) else Color.White
+            com.ketvoice.app.ui.common.ActivitySpinner(Modifier.testTag("voice-slider-preparing"), size = 18.dp, color = ink)
+            // 7.6: how much is separated, under the spinner (the whole sentence is said by TalkBack).
+            if (percent != null) com.ketvoice.app.ui.common.Text("$percent %", color = ink, fontSize = androidx.compose.ui.unit.TextUnit(10f, androidx.compose.ui.unit.TextUnitType.Sp), maxLines = 1,
+                modifier = Modifier.padding(top = 3.dp).testTag("voice-slider-percent"))
+        }
     }
     if (askModel) com.ketvoice.app.ui.common.AppAlertDialog(
         onDismissRequest = { askModel = false },

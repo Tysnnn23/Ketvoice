@@ -89,9 +89,13 @@ class StemWorkService : Service() {
                 val ctx = currentCoroutineContext()
                 voices.incrementAndGet()
                 try {
-                    StemJobs.whole(applicationContext, id, uri, data.getInt("quality"), { ctx.isActive }) { f ->
+                    var last = 0f
+                    val stream = StemWork.StreamWork(data.getLong("startAtMs"), data.getLong("durationMs"),
+                        com.ketvoice.app.automix.AnalysisDepth.values().getOrElse(data.getInt("depth", 2)) { com.ketvoice.app.automix.AnalysisDepth.Maximum })
+                    StemJobs.whole(applicationContext, id, uri, data.getInt("quality"), { ctx.isActive }, { f ->
+                        last = f
                         progress(Bundle().apply { putFloat("fraction", f) })
-                    }
+                    }, stream) { progress(Bundle().apply { putFloat("fraction", last); putBoolean("partial", true) }) }
                 } finally { voices.decrementAndGet() }
             }
             StemWork.MSG_LIBRARY -> start(token, reply, libraryLane, data) { progress ->

@@ -1,0 +1,86 @@
+{
+ "Instruments": {
+  "en": "Instruments",
+  "hi": "वाद्य",
+  "ja": "楽器",
+  "zh": "乐器",
+  "ru": "Инструменты",
+  "it": "Strumenti",
+  "es": "Instrumentos",
+  "de": "Instrumente",
+  "pt": "Instrumentos",
+  "ko": "악기"
+ },
+ "Musique": {
+  "en": "Music",
+  "hi": "संगीत",
+  "ja": "音楽",
+  "zh": "音乐",
+  "ru": "Музыка",
+  "it": "Musica",
+  "es": "Música",
+  "de": "Musik",
+  "pt": "Música",
+  "ko": "음악"
+ },
+ "Supprimer le point": {
+  "en": "Delete point",
+  "hi": "पॉइंट हटाएँ",
+  "ja": "ポイントを削除",
+  "zh": "删除该点",
+  "ru": "Удалить точку",
+  "it": "Elimina punto",
+  "es": "Eliminar punto",
+  "de": "Punkt löschen",
+  "pt": "Excluir ponto",
+  "ko": "포인트 삭제"
+ },
+ "Point de volume": {
+  "en": "Volume point",
+  "hi": "वॉल्यूम पॉइंट",
+  "ja": "音量ポイント",
+  "zh": "音量点",
+  "ru": "Точка громкости",
+  "it": "Punto di volume",
+  "es": "Punto de volumen",
+  "de": "Lautstärkepunkt",
+  "pt": "Ponto de volume",
+  "ko": "볼륨 포인트"
+ },
+ "Points de volume": {
+  "en": "Volume points",
+  "hi": "वॉल्यूम पॉइंट",
+  "ja": "音量ポイント",
+  "zh": "音量点",
+  "ru": "Точки громкости",
+  "it": "Punti di volume",
+  "es": "Puntos de volumen",
+  "de": "Lautstärkepunkte",
+  "pt": "Pontos de volume",
+  "ko": "볼륨 포인트"
+ },
+ "Séparez les deux titres pour régler leur voix et leurs instruments.": {
+  "en": "Separate both songs to set their vocals and instruments.",
+  "hi": "दोनों गानों की आवाज़ और वाद्य सेट करने के लिए उन्हें अलग करें।",
+  "ja": "両方の曲を分離すると、ボーカルと楽器を個別に調整できます。",
+  "zh": "分离两首歌曲后即可分别调节人声和乐器。",
+  "ru": "Разделите обе песни, чтобы настроить их вокал и инструменты.",
+  "it": "Separa i due brani per regolare la voce e gli strumenti.",
+  "es": "Separa las dos canciones para ajustar su voz y sus instrumentos.",
+  "de": "Trenne beide Songs, um Gesang und Instrumente einzustellen.",
+  "pt": "Separe as duas músicas para ajustar a voz e os instrumentos.",
+  "ko": "두 곡을 분리하면 보컬과 악기를 따로 조절할 수 있어요."
+ },
+ "Touchez la transition pour placer un point de volume, puis touchez-le pour régler la voix, les instruments et la musique des deux titres.": {
+  "en": "Tap the transition to place a volume point, then tap it to set the vocals, instruments and music of both songs.",
+  "hi": "वॉल्यूम पॉइंट रखने के लिए ट्रांज़िशन पर टैप करें, फिर दोनों गानों की आवाज़, वाद्य और संगीत सेट करने के लिए उस पर टैप करें।",
+  "ja": "トランジションをタップして音量ポイントを置き、もう一度タップすると両方の曲のボーカル・楽器・音楽を調整できます。",
+  "zh": "轻点过渡即可放置音量点，再轻点该点即可调节两首歌曲的人声、乐器和音乐。",
+  "ru": "Коснитесь перехода, чтобы поставить точку громкости, затем коснитесь её, чтобы настроить вокал, инструменты и музыку обеих песен.",
+  "it": "Tocca la transizione per inserire un punto di volume, poi toccalo per regolare voce, strumenti e musica dei due brani.",
+  "es": "Toca la transición para colocar un punto de volumen y luego tócalo para ajustar la voz, los instrumentos y la música de las dos canciones.",
+  "de": "Tippe auf den Übergang, um einen Lautstärkepunkt zu setzen, und dann darauf, um Gesang, Instrumente und Musik beider Songs einzustellen.",
+  "pt": "Toque na transição para colocar um ponto de volume e depois toque nele para ajustar a voz, os instrumentos e a música das duas músicas.",
+  "ko": "전환을 탭해 볼륨 포인트를 놓고, 그 포인트를 탭해 두 곡의 보컬, 악기, 음악을 조절하세요."
+ }
+}

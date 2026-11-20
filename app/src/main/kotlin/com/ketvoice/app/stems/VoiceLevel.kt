@@ -78,7 +78,8 @@ internal class VoiceStage(val rate: Int, private val channels: Int) {
      * Processes [frames] interleaved 16-bit stereo frames of [buffer] in place, from byte [offset]; the
      * first is at [startUs]. Without a [mask] the sound only goes through (delayed, unchanged).
      */
-    fun process(buffer: ByteBuffer, offset: Int, frames: Int, startUs: Long, mask: StemMask?, level: Float) {
+    fun process(buffer: ByteBuffer, offset: Int, frames: Int, startUs: Long, mask: StemMask?, level: Float,
+                keys: com.ketvoice.app.automix.KeyLevels? = null) {
         if (channels != 2) return
         val b = buffer.duplicate().order(ByteOrder.LITTLE_ENDIAN)
         val size = outL.size
@@ -87,7 +88,7 @@ internal class VoiceStage(val rate: Int, private val channels: Int) {
             inL[inAt] = b.getShort(at) / 32768f; inR[inAt] = b.getShort(at + 2) / 32768f
             inAt = (inAt + 1) % n
             newestUs = startUs + i * 1_000_000L / rate
-            if (++filled == hop) { filled = 0; frame(mask, level) }
+            if (++filled == hop) { filled = 0; frame(mask, level, keys) }
             b.putShort(at, (outL[outRead] * 32768f).toInt().coerceIn(-32768, 32767).toShort())
             b.putShort(at + 2, (outR[outRead] * 32768f).toInt().coerceIn(-32768, 32767).toShort())
             outL[outRead] = 0f; outR[outRead] = 0f
@@ -96,8 +97,8 @@ internal class VoiceStage(val rate: Int, private val channels: Int) {
     }
 
     /** The gains of one frame centred at [centreUs] in the title; false when every gain is 1. */
-    internal fun gainsAt(centreUs: Long, mask: StemMask?, level: Float, into: FloatArray = gains): Boolean {
-        if (mask == null || level >= .999f) return false
+    internal fun gainsAt(centreUs: Long, mask: StemMask?, level: Float, into: FloatArray = gains, instruments: Float = 1f): Boolean {
+        if (mask == null || (level >= .999f && instruments >= .999f)) return false
         // The separation's frames, 1024 samples apart at 44.1 kHz; this frame falls between two of them.
         val position = ((centreUs - mask.startUs) * StemDsp.RATE / 1_000_000.0 - n / 2) / hop
         if (position < -1.0 || position > mask.frames.toDouble()) return false
@@ -111,18 +112,21 @@ internal class VoiceStage(val rate: Int, private val channels: Int) {
         val count = (StemDsp.NET_BINS - from).toFloat()
         val upper = (top0 / count) * (1f - t) + (top1 / count) * t
         val keep = level.coerceIn(0f, 1f)
+        val band = instruments.coerceIn(0f, 1f)
         for (k in into.indices) {
             val k44 = bin44[k]
             val kept = if (k44 >= StemDsp.NET_BINS) upper else mask.value(f0, k44) * (1f - t) + mask.value(f1, k44) * t
-            into[k] = kept + keep * (1f - kept)
+            into[k] = band * kept + keep * (1f - kept)
         }
         return true
     }
 
-    private fun frame(mask: StemMask?, level: Float) {
+    private fun frame(mask: StemMask?, level: Float, keys: com.ketvoice.app.automix.KeyLevels?) {
         // Centre of the window in the title.
         val centreUs = newestUs - (n / 2) * 1_000_000L / rate
-        val shaped = gainsAt(centreUs, mask, level)
+        // 7.6: a mix's voice and instrument keyframes, hop by hop; the overlap-add crossfades each change over the window.
+        val voice = level * (keys?.voice?.at(centreUs) ?: 1f)
+        val shaped = gainsAt(centreUs, mask, voice, instruments = keys?.instruments?.at(centreUs) ?: 1f)
         // Oldest sample first: the ring starts at the next write position.
         for (j in 0 until n) { val s = (inAt + j) % n; re[j] = inL[s] * window[j]; im[j] = inR[s] * window[j] }
         if (shaped) {

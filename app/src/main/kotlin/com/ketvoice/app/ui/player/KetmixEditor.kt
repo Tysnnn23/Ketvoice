@@ -143,10 +143,19 @@ internal class EditorState(val from: Track, to: Track?, outDurationMs: Long, inD
     var zoom by mutableFloatStateOf(1f)
     /** « A/B »: « Écouter » plays the same moment as a plain cut. */
     var plainCut by mutableStateOf(false)
+    /** 7.6 (voice76): the volume keyframe whose sheet is open, and the one being dragged (its index and new time). */
+    var keyOpen by mutableStateOf<Int?>(null)
+    var dragKey by mutableStateOf<Pair<Int, Long>?>(null)
+    /** The keyframe under the finger that went down on the timeline, or -1. */
+    var keyGrabbed = -1
+    /** Whether each title is separated whole: its voice and instruments can then be set at a keyframe. */
+    var outSeparated by mutableStateOf(false)
+    var inSeparated by mutableStateOf(false)
 
     val dirty: Boolean get() = choice != saved
     val effective: MixEditor.Choice get() = choice.copy(exitMs = dragExit ?: choice.exitMs, entryMs = dragEntry ?: choice.entryMs,
-        overlapMs = dragOverlap ?: choice.overlapMs)
+        overlapMs = dragOverlap ?: choice.overlapMs,
+        keys = dragKey?.let { (i, at) -> com.ketvoice.app.automix.MixKeys.move(choice.keys, i, at, MixEditor.MAX_BLEND_MS) } ?: choice.keys)
     fun plan(): MixPlan = MixEditor.plan(out.side(), into.side(), effective, intensity, defaultStyle, vocalEndMs)
     fun automatic(): MixPlan = MixEditor.automatic(out.side(), into.side(), intensity, defaultStyle, vocalEndMs)
 
@@ -196,6 +205,11 @@ internal fun KetmixEditorHost(modifier: Modifier = Modifier) {
         for (side in listOf(state.out, state.into)) load(side)
         state.recall()
         for (side in listOf(state.out, state.into)) voices(side)
+    }
+    // 7.6: voice and instruments at a keyframe need both separations; one done meanwhile is taken up here.
+    LaunchedEffect(request) {
+        state.readSeparations()
+        com.ketvoice.app.stems.VoiceSeparation.separated.collect { state.readSeparations() }
     }
     KetmixEditorScreen(state, onClose = { KetmixEditor.close() }, modifier = modifier)
 }
@@ -278,6 +292,7 @@ internal fun KetmixEditorScreen(state: EditorState, onClose: () -> Unit, modifie
                 }
             }
         }
+        state.keyOpen?.let { KeyframeSheet(state, it) }
     }
     if (asking) AppAlertDialog(onDismissRequest = { asking = false },
         confirmButton = { KetTextButton("Enregistrer", onClick = { asking = false; state.save(); onClose() }, primary = true) },
