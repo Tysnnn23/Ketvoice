@@ -181,7 +181,7 @@ private fun TabletPlayerBar(plan: LargeScreen.PlayerPlan, onClose: () -> Unit, d
                 QueueGlyph(Modifier.size(22.dp).semantics { contentDescription = AppText.t("File d'attente") }.testTag("tablet-player-queue"), ink)
             }
             SmallCircleButton(onOutput, size = 40.dp, transparent = true) { ink ->
-                Icon(Icons.Filled.PhoneAndroid, "Sortie audio", tint = ink, modifier = Modifier.size(20.dp))
+                Icon(castOutputIcon(), "Sortie audio", tint = ink, modifier = Modifier.size(20.dp))
             }
             val menuAnchor = com.ketvoice.app.ui.common.rememberRowAnchor()
             Box(menuAnchor.modifier) {

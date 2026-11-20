@@ -442,6 +442,9 @@ dependencies {
     implementation("androidx.media3:media3-ui:1.6.1")
     implementation("androidx.media3:media3-exoplayer-dash:1.6.1")
     implementation("androidx.media:media:1.7.0")
+    // Google Cast (7.5): phones only; Quest has no Play services. CastPlayer drives the Default Media Receiver.
+    "mobileImplementation"("androidx.media3:media3-cast:1.6.1")
+    "liteImplementation"("androidx.media3:media3-cast:1.6.1")
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
     implementation("io.coil-kt:coil-compose:2.7.0")

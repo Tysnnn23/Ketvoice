@@ -179,6 +179,7 @@ class PlaybackService : MediaLibraryService() {
         com.ketvoice.app.automix.WaveStore.init(applicationContext)
         com.ketvoice.app.automix.MixPointStore.init(applicationContext)
         com.ketvoice.app.automix.Automix.attach(automixHost)
+        com.ketvoice.app.cast.CastFlavor.attach(this, castHost)
         // 6.1: Android refused to let playback start from the background (a resume after Android ended the app,
         // with no exemption at that moment): paused rather than frozen, and a notification offers to resume.
         setListener(object : Listener {
@@ -261,7 +262,13 @@ class PlaybackService : MediaLibraryService() {
             p.playbackParameters.speed, meta.title?.toString().orEmpty(), meta.artist?.toString().orEmpty())
     }
 
-    private fun sessionPlayer(engine: ExoPlayer): androidx.media3.common.Player = QueueBridgePlayer(engine,
+    /** Google Cast (7.5): while casting, the session shows the Cast device instead of the engine (cast/CastState). */
+    private val castHost = object : com.ketvoice.app.cast.CastHost {
+        override val local: ExoPlayer get() = player
+        override fun refreshSession() { mediaSession?.setPlayer(sessionPlayer(player)) }
+    }
+
+    private fun sessionPlayer(engine: ExoPlayer): androidx.media3.common.Player = QueueBridgePlayer(com.ketvoice.app.cast.CastState.remote ?: engine,
         onNext = { Player.connect(applicationContext); Player.next() },
         onPrevious = { Player.connect(applicationContext); Player.previous() })
 
@@ -566,6 +573,8 @@ class PlaybackService : MediaLibraryService() {
         if (AppSettings.bitPerfect.value) return Futures.immediateFuture(SessionResult(SessionError.ERROR_NOT_SUPPORTED))
         // Two titles are being mixed: no deck is swapped for a better stream in the middle of it.
         if (com.ketvoice.app.automix.Automix.mixing) return Futures.immediateFuture(SessionResult(SessionError.ERROR_INVALID_STATE))
+        // Casting: the receiver plays its own stream; the phone's deck is not swapped.
+        if (com.ketvoice.app.cast.CastState.active) return Futures.immediateFuture(SessionResult(SessionError.ERROR_INVALID_STATE))
         upgradeJob?.cancel()
         val result = SettableFuture.create<SessionResult>()
         val old = player
@@ -659,6 +668,7 @@ class PlaybackService : MediaLibraryService() {
         // An end the app chose (nothing plays any more): nothing to resume.
         PlaybackRevival.stopped(this)
         com.ketvoice.app.automix.Automix.detach(automixHost)
+        com.ketvoice.app.cast.CastFlavor.detach()
         getSystemService(android.media.AudioManager::class.java).unregisterAudioDeviceCallback(audioDevices)
         BitPerfectState.report(ExactAudioStatus())
         lockLyrics.stop()

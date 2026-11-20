@@ -326,6 +326,7 @@ private fun MenuItemRow(
 
 @Composable
 fun AudioOutputSheet(onClose: () -> Unit) {
+    val castingTo by com.ketvoice.app.cast.CastState.connected.collectAsState()
     val radius = with(LocalDensity.current) { 26.dp.toPx() }
     GlassPanel(
         modifier = Modifier.fillMaxWidth().padding(10.dp),
@@ -358,9 +359,10 @@ fun AudioOutputSheet(onClose: () -> Unit) {
             title = if (com.ketvoice.app.BuildConfig.IS_QUEST) "Ce casque" else "Ce téléphone",
             sub = "Haut-parleur, écouteurs ou Bluetooth",
             icon = Icons.Filled.Smartphone,
-            trailing = { Icon(Icons.Filled.Check, null, tint = LocalTheme.current.accent) },
-            onClick = onClose
+            trailing = { if (castingTo == null) Icon(Icons.Filled.Check, null, tint = LocalTheme.current.accent) },
+            onClick = { if (castingTo != null) com.ketvoice.app.cast.CastFlavor.disconnect(); onClose() }
         )
+        CastDevicesSection(onClose)
 
         Box(
             Modifier
