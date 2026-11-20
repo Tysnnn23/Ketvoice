@@ -71,15 +71,27 @@ internal object StreamResolver {
         progressive || !lossless || !online || !hasLosslessSource || StreamQuality.rank(cached) >= 10_000
 
     /** Stops as soon as every source answered, or after [windowMs], then ranks them. */
-    suspend fun collectWithin(candidates: Flow<Candidate>, windowMs: Long): List<Candidate> = coroutineScope {
-        val collected = mutableListOf<Candidate>()
+    /**
+     * The candidates found within [windowMs], ranked. 7.5: once [enough] says what came is all that is needed
+     * (a lossless offer for a lossy file), the others get [graceMs] more instead of the rest of the window.
+     */
+    suspend fun collectWithin(candidates: Flow<Candidate>, windowMs: Long, graceMs: Long = 1_500L,
+                              enough: ((List<Candidate>) -> Boolean)? = null): List<Candidate> = coroutineScope {
+        val collected = java.util.Collections.synchronizedList(mutableListOf<Candidate>())
         val done = kotlinx.coroutines.CompletableDeferred<Unit>()
+        val settled = kotlinx.coroutines.CompletableDeferred<Unit>()
         val job = launch {
-            try { candidates.collect { collected += it } } finally { done.complete(Unit) }
+            try { candidates.collect { collected += it; if (enough?.invoke(collected.toList()) == true) settled.complete(Unit) } }
+            finally { done.complete(Unit) }
         }
-        withTimeoutOrNull(windowMs) { done.await() }
+        val started = System.nanoTime()
+        withTimeoutOrNull(windowMs) { kotlinx.coroutines.selects.select<Unit> { done.onAwait {}; settled.onAwait {} } }
+        if (!done.isCompleted && settled.isCompleted) {
+            val left = windowMs - (System.nanoTime() - started) / 1_000_000
+            withTimeoutOrNull(minOf(graceMs, left).coerceAtLeast(0)) { done.await() }
+        }
         job.cancel()
-        ranked(collected)
+        ranked(collected.toList())
     }
 
     suspend fun bestWithin(candidates: Flow<Candidate>, windowMs: Long): Candidate? =

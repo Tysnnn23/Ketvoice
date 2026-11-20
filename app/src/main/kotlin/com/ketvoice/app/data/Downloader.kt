@@ -8,6 +8,7 @@ import android.os.StatFs
 import android.os.Handler
 import android.os.Looper
 import android.widget.Toast
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -277,7 +278,9 @@ object Downloader {
                     val window = when (mode) { 0 -> 12_000L; 1 -> 5_000L; else -> 0L }
                     val flow = StreamResolver.candidates(track, download = true, lossless = preferFlac,
                         race = window > 0L || AppSettings.progressiveQuality.value)
-                    if (window == 0L) flow.take(1).toList() else StreamResolver.collectWithin(flow, window)
+                    // 7.5: « Meilleure qualité » stops waiting once a lossless candidate came (and a short grace).
+                    if (window == 0L) flow.take(1).toList() else StreamResolver.collectWithin(flow, window,
+                        enough = if (preferFlac) { found -> found.any { DownloadUpgrade.ofStream(it.stream).lossless } } else null)
                 }
                 // Try the best verified candidate first, then the next ones: one
                 // failing URL must never end the download.
@@ -523,7 +526,9 @@ object Downloader {
         val saved = DownloadUpgrade.ofSaved(item.format, DownloadUpgrade.head(item.file))
         val asked = track.copy(streamUrl = null)
         val offers = runCatching {
-            StreamResolver.collectWithin(StreamResolver.candidates(asked, download = true, lossless = true, race = true), 12_000L)
+            // 7.5: a lossy file is done waiting as soon as a lossless offer came (and a short grace for a richer one).
+            StreamResolver.collectWithin(StreamResolver.candidates(asked, download = true, lossless = true, race = true), 12_000L,
+                enough = if (saved.lossless) null else { found -> found.any { c -> upgradeStream(c.stream)?.let { DownloadUpgrade.ofStream(it).lossless } == true } })
         }.getOrDefault(emptyList())
         val best = offers.map { upgradeStream(it.stream) }.firstOrNull { it != null }
         UpgradeOffer(item, saved, best?.takeIf { DownloadUpgrade.better(saved, DownloadUpgrade.ofStream(it)) })
@@ -546,11 +551,13 @@ object Downloader {
         if (todo.isEmpty()) return null
         _upgrading.update { it + todo.map { o -> o.item.track.id } }
         return scope.launch {
-            var done = 0
-            for (offer in todo) {
+            // 7.5: two titles at a time (each may itself come in parts), instead of one after the other.
+            val gate = kotlinx.coroutines.sync.Semaphore(UPGRADES_AT_ONCE)
+            val done = java.util.concurrent.atomic.AtomicInteger()
+            kotlinx.coroutines.coroutineScope { for (offer in todo) launch { gate.withPermit {
                 val id = offer.item.track.id
                 try {
-                    if (runUpgrade(c, offer)) done++
+                    if (runUpgrade(c, offer)) done.incrementAndGet()
                 } catch (cancelled: CancellationException) { throw cancelled
                 } catch (_: Exception) {
                 } finally {
@@ -558,11 +565,14 @@ object Downloader {
                     _progress.update { it - id }
                     _upgrading.update { it - id }
                 }
-            }
+            } } }
             refresh()
-            toast(if (done == 0) "Aucun titre n'a pu être amélioré" else if (done == 1) "1 titre en meilleure qualité" else "$done titres en meilleure qualité")
+            val count = done.get()
+            toast(if (count == 0) "Aucun titre n'a pu être amélioré" else if (count == 1) "1 titre en meilleure qualité" else "$count titres en meilleure qualité")
         }
     }
+
+    private const val UPGRADES_AT_ONCE = 2
 
     private suspend fun runUpgrade(c: Context, offer: UpgradeOffer): Boolean {
         val item = offer.item
@@ -778,10 +788,31 @@ object Downloader {
         catch (failure: Exception) { atomic.failWrite(out); throw failure }
     }
 
+    /** One part of a file (7.5, [RangedDownload]): exactly [range] of the same [total], or null. */
+    private fun openRange(url: URL, range: LongRange, validator: String?, total: Long): java.io.InputStream? {
+        val conn = openAudioConnection(url).apply {
+            connectTimeout = 15_000
+            readTimeout = 90_000
+            instanceFollowRedirects = false
+            setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Mobile Safari/537.36")
+            setRequestProperty("Accept", "audio/*,*/*;q=0.8")
+            setRequestProperty("Accept-Encoding", "identity")
+            setRequestProperty("Range", "bytes=${range.first}-${range.last}")
+            validator?.let { setRequestProperty("If-Range", it) }
+        }
+        val match = runCatching { conn.responseCode }.getOrDefault(0).takeIf { it == 206 }
+            ?.let { conn.getHeaderField("Content-Range") }?.let { Regex("bytes (\\d+)-(\\d+)/(\\d+)").matchEntire(it) }
+        if (match == null || match.groupValues[1].toLong() != range.first || match.groupValues[2].toLong() != range.last ||
+            match.groupValues[3].toLong() != total) { conn.disconnect(); return null }
+        return conn.inputStream
+    }
+
     internal suspend fun fetch(url: String, dest: File, id: String, limit: Long = Long.MAX_VALUE, cancelled: () -> Boolean = { false }): Boolean {
         val tmp = File(dest.parentFile, dest.name + ".part")
         tmp.delete()
         var validator: String? = null
+        // 7.5: parts at once are tried once per file; any trouble goes back to one connection.
+        var single = false
         try {
         repeat(3) {
           awaitTransfer(id, DownloadPhase.Transferring)
@@ -839,7 +870,26 @@ object Downloader {
             val total = if (ranged) range!!.groupValues[3].toLong() else c.contentLengthLong
             task(id) { it.copy(total = total.takeIf { it > 0 }, restarted = it.restarted || (offset > 0 && !resumed)) }
             if (total > limit) { tmp.delete(); return false }
-            val buf = ByteArray(128 * 1024)
+            fun tick(written: Long) {
+                if (total > 0) _progress.update { it + (id to (written * 98 / total).toInt().coerceIn(0, 98)) }
+                task(id) { it.copy(bytes = written) }
+            }
+            if (!resumed && !single && RangedDownload.worth(total, c.getHeaderField("Accept-Ranges"), ranged)) {
+                single = true
+                val from = current
+                val got = java.util.concurrent.atomic.AtomicLong()
+                val tickAt = java.util.concurrent.atomic.AtomicLong()
+                val whole = try {
+                    RangedDownload.fetch(c.inputStream, total, tmp, open = { r -> openRange(from, r, validator, total) },
+                        onBytes = { n ->
+                            val written = got.addAndGet(n)
+                            val now = System.currentTimeMillis()
+                            if (now - tickAt.get() > 200) { tickAt.set(now); tick(written) }
+                        }, cancelled = { cancelled() || id in paused })
+                } catch (stop: CancellationException) { if (cancelled()) throw stop; false } catch (_: Exception) { false }
+                if (!whole) { tmp.delete(); validator = null; return@repeat }
+            } else {
+            val buf = ByteArray(256 * 1024)
             var written = if (resumed) offset else 0L
             var lastTick = 0L
             c.inputStream.use { input ->
@@ -853,16 +903,10 @@ object Downloader {
                         out.write(buf, 0, n)
                         written += n
                         val now = System.currentTimeMillis()
-                        if (now - lastTick > 200) {
-                            lastTick = now
-                            if (total > 0) {
-                                val percent = (written * 98 / total).toInt().coerceIn(0, 98)
-                                _progress.update { it + (id to percent) }
-                            }
-                            task(id) { it.copy(bytes = written) }
-                        }
+                        if (now - lastTick > 200) { lastTick = now; tick(written) }
                     }
                 }
+            }
             }
             if (!DownloadValidation.complete(tmp.length(), total)) return@repeat
             if (!looksLikeAudio(tmp)) {
