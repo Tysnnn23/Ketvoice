@@ -45,9 +45,14 @@ import com.ketvoice.app.ui.motion.Motion
 import com.ketvoice.app.ui.motion.rememberZoomTarget
 import com.ketvoice.app.ui.motion.zoomTarget
 
-/** Side of the floating artwork for a header [width] dp wide: large, never wider than the text needs. */
-internal fun heroArtworkSide(width: Float, beside: Boolean): Float =
-    if (beside) (width * .32f).coerceIn(120f, 300f) else (width * .62f).coerceIn(168f, 300f)
+/**
+ * Side of the floating artwork for a header [width] dp wide. 7.5 (owner: « rends plus grande la cover »): centred,
+ * three quarters of a phone's width, as Apple Music, capped on tablets; beside the text on a wide pane.
+ */
+internal fun heroArtworkSide(width: Float, beside: Boolean, windowHeight: Float = Float.MAX_VALUE): Float =
+    if (beside) (width * .32f).coerceIn(120f, 300f)
+    // A short window (a phone on its side) keeps the cover within about half its height.
+    else minOf((width * .75f).coerceIn(200f, 380f), maxOf(200f, windowHeight * .46f))
 
 /**
  * 7.4 (owner): Downloads and Favourites lead with a bigger cover, as Apple Music: about two thirds of a phone's
@@ -55,9 +60,6 @@ internal fun heroArtworkSide(width: Float, beside: Boolean): Float =
  */
 internal fun libraryArtworkSide(pageWidth: Float, beside: Boolean): Float =
     if (beside) (pageWidth * .34f).coerceIn(160f, 320f) else (pageWidth * .66f).coerceIn(200f, 340f)
-
-/** The header's scale while its page scrolls ([collapse] 0 → 1): down to 86 % before the bar takes over. */
-internal fun heroShrinkScale(collapse: Float): Float = 1f - .14f * (if (collapse.isFinite()) collapse.coerceIn(0f, 1f) else 0f)
 
 /**
  * Scale the artwork starts from when its page was opened from a card: the size of
@@ -90,8 +92,6 @@ internal fun CollectionHero(
     artworkSide: Dp? = null,
     bleed: Dp = 0.dp,
     titleSlot: (@Composable (centred: Boolean) -> Unit)? = null,
-    /** While the page scrolls, 0 → 1: the artwork and the words shrink and clear over the colours that stay. Read in a layer. */
-    shrink: (() -> Float)? = null,
     /** 7.3: the artwork's own colour for its soft shadow (Apple Music); black when unknown. */
     shadowTint: Color? = null,
     /** False when something else (a Canvas) already fills the space behind the header. */
@@ -106,14 +106,10 @@ internal fun CollectionHero(
         else Box(modifier.fillMaxWidth(), content = body)
     }
     behind {
-        BoxWithConstraints(Modifier.fillMaxWidth().then(if (shrink == null) Modifier else Modifier.graphicsLayer {
-            val c = shrink().let { if (it.isFinite()) it.coerceIn(0f, 1f) else 0f }
-            val scale = heroShrinkScale(c)
-            scaleX = scale; scaleY = scale
-            transformOrigin = androidx.compose.ui.graphics.TransformOrigin(.5f, 0f)
-            alpha = 1f - .9f * c
-        })) {
-            val side = artworkSide ?: heroArtworkSide(maxWidth.value, beside).dp
+        // 7.5 (owner): the header scrolls away with the list, as Downloads and Favourites (7.4): no shrink, no fade.
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+            val side = artworkSide ?: heroArtworkSide(maxWidth.value, beside,
+                androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp.toFloat()).dp
             val shape: Shape = if (round) CircleShape else RoundedCornerShape(if (side < 140.dp) 16.dp else 24.dp)
             // The page opened from a card: the artwork continues that movement into its place.
             val origin = remember { AppUi.revealOrigin.value }
@@ -132,43 +128,45 @@ internal fun CollectionHero(
                     .then(if (artworkTag != null) Modifier.testTag(artworkTag) else Modifier),
                     contentAlignment = Alignment.Center, content = artwork)
             }
+            // 7.5 (owner: « resserre un peu les textes »): the name, the artist and the details read as one block, as
+            // Apple Music sets them. The artist link stays a 48 dp target: Compose widens a small target's touch
+            // area to the minimum around it, over the words above and below, which take no touch.
             val identity: @Composable ColumnScope.(Boolean) -> Unit = { centred ->
                 val align = if (centred) TextAlign.Center else TextAlign.Start
                 if (eyebrow != null) Text(eyebrow, color = theme.secondary, fontSize = 12.sp, fontWeight = FontWeight.Medium,
-                    letterSpacing = 1.sp, textAlign = align)
+                    letterSpacing = 1.sp, lineHeight = 16.sp, textAlign = align, modifier = Modifier.padding(bottom = 2.dp))
                 // An artist may be named by a signature or a logo instead of plain text.
                 if (titleSlot != null) titleSlot(centred)
                 else Text(title, localize = false, color = theme.onBackground, fontSize = if (side < 140.dp) 22.sp else 28.sp,
-                    fontWeight = FontWeight.Bold, letterSpacing = (-.7).sp, lineHeight = if (side < 140.dp) 27.sp else 34.sp,
+                    fontWeight = FontWeight.Bold, letterSpacing = (-.7).sp, lineHeight = if (side < 140.dp) 26.sp else 32.sp,
                     maxLines = 3, overflow = TextOverflow.Ellipsis, textAlign = align,
                     modifier = Modifier.asHeading().then(if (titleTag != null) Modifier.testTag(titleTag) else Modifier))
                 if (!subtitle.isNullOrBlank()) Text(subtitle, localize = false, color = theme.accent, fontSize = 17.sp,
-                    fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = align,
-                    modifier = Modifier.then(if (onSubtitle != null) Modifier.clip(RoundedCornerShape(12.dp))
+                    fontWeight = FontWeight.SemiBold, lineHeight = 21.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = align,
+                    modifier = Modifier.padding(top = 2.dp).then(if (onSubtitle != null) Modifier.clip(RoundedCornerShape(10.dp))
                         .clickable(role = Role.Button, onClick = onSubtitle) else Modifier)
-                        .heightIn(min = if (onSubtitle != null) 48.dp else 0.dp).wrapContentHeight(Alignment.CenterVertically)
-                        .padding(horizontal = if (onSubtitle != null) 8.dp else 0.dp))
-                if (!meta.isNullOrBlank() || explicit) Row(verticalAlignment = Alignment.CenterVertically,
+                        .padding(horizontal = if (onSubtitle != null) 8.dp else 0.dp, vertical = if (onSubtitle != null) 2.dp else 0.dp))
+                if (!meta.isNullOrBlank() || explicit) Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (!meta.isNullOrBlank()) Text(meta, localize = false, color = theme.secondary, fontSize = 13.sp,
-                        lineHeight = 19.sp, textAlign = align)
+                        lineHeight = 17.sp, textAlign = align)
                     if (explicit) EBadge()
                 }
             }
             if (beside) Row(Modifier.fillMaxWidth().padding(start = 24.dp, end = 24.dp, top = top + 8.dp, bottom = 20.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(24.dp)) {
                 frame()
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Column(Modifier.weight(1f)) {
                     identity(false)
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(14.dp))
                     actions()
                 }
-            } else Column(Modifier.fillMaxWidth().padding(start = 24.dp, end = 24.dp, top = top + 4.dp, bottom = 16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            } else Column(Modifier.fillMaxWidth().padding(start = 24.dp, end = 24.dp, top = top + 4.dp, bottom = 12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally) {
                 frame()
-                Spacer(Modifier.height(14.dp))
+                Spacer(Modifier.height(18.dp))
                 identity(true)
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(14.dp))
                 actions()
             }
         }

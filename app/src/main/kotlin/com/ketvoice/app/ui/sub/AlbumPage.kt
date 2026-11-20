@@ -173,7 +173,7 @@ internal fun AlbumPage(request: CatalogRequest, page: CatalogPage?, tracks: List
                     contentPadding = PaddingValues(bottom = LocalAdaptiveLayout.current.bottomPaddingDp.dp + 20.dp),
                     headerKey = "album-hero", header = {
                         AlbumHero(title, artist, page?.releaseDate, cover, tracks, savedIds, loading, top, refresh,
-                            frame = draft ?: savedFrame, canvas = heroCanvas, collapse = { collapse.value })
+                            frame = draft ?: savedFrame, canvas = heroCanvas)
                     }) {
                     if (loading) items(5, key = { "album-loading:$it" }) { CatalogSkeletonRow(it) }
                     else if (tracks.isEmpty()) item {
@@ -266,8 +266,7 @@ internal fun AlbumPage(request: CatalogRequest, page: CatalogPage?, tracks: List
 private fun AlbumHero(title: String, artist: String, date: String?, cover: String?,
                       tracks: List<Track>, savedIds: Set<String>, loading: Boolean,
                       top: androidx.compose.ui.unit.Dp, onRefresh: () -> Unit,
-                      frame: com.ketvoice.app.data.Frame? = null, canvas: String? = null,
-                      collapse: () -> Float = { 0f }) {
+                      frame: com.ketvoice.app.data.Frame? = null, canvas: String? = null) {
     val density = LocalDensity.current
     val context = LocalContext.current
     val duration = remember(tracks) { AlbumPresentation.totalDuration(tracks) }?.let(AppText::t)
@@ -295,7 +294,7 @@ private fun AlbumHero(title: String, artist: String, date: String?, cover: Strin
                 subtitle = artist.takeIf { it.isNotBlank() },
                 onSubtitle = { AppUi.openArtist(tracks.firstOrNull()?.artistId.orEmpty(), artist) },
                 meta = meta, explicit = !loading && tracks.any { it.explicit }, artworkTag = "album-hero-visual",
-                shrink = collapse, shadowTint = shadow, ambient = style == HeaderStyle.Cover,
+                shadowTint = shadow, ambient = style == HeaderStyle.Cover,
                 artwork = { AlbumArtwork(cover, tracks.firstOrNull(), null, null) }) {
                 AlbumPlaybackActions(tracks, savedIds, loading, stacked, onRefresh, Modifier.widthIn(max = 560.dp).fillMaxWidth())
             }
@@ -330,23 +329,24 @@ private fun AlbumHero(title: String, artist: String, date: String?, cover: Strin
                 }
                 // Compact identity block: title, artist and details read as one group.
                 // The words sit on the Canvas's fade, as the Canvas reaches the top of the screen.
-                Column(Modifier.fillMaxWidth().pullUp(56.dp).padding(start = 24.dp, end = 24.dp),
+                Column(Modifier.fillMaxWidth().pullUp(56.dp).padding(start = 24.dp, end = 24.dp, bottom = 12.dp),
                     horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text("Album", color = theme.secondary, fontSize = 12.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp)
+                    Text("Album", color = theme.secondary, fontSize = 12.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp,
+                        lineHeight = 16.sp)
                     Text(title, localize = false, color = theme.onBackground, fontSize = 28.sp, fontWeight = FontWeight.Bold,
-                        letterSpacing = (-.7).sp, lineHeight = 34.sp, maxLines = 3, overflow = TextOverflow.Ellipsis,
+                        letterSpacing = (-.7).sp, lineHeight = 32.sp, maxLines = 3, overflow = TextOverflow.Ellipsis,
                         textAlign = TextAlign.Center, modifier = Modifier.testTag("album-title"))
                     if (artist.isNotBlank()) Text(artist, localize = false, color = theme.accent, fontSize = 17.sp,
-                        fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center,
-                        modifier = Modifier.clip(RoundedCornerShape(12.dp))
+                        fontWeight = FontWeight.SemiBold, lineHeight = 21.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                        textAlign = TextAlign.Center, modifier = Modifier.clip(RoundedCornerShape(10.dp))
                             .clickable(role = Role.Button) { AppUi.openArtist(tracks.firstOrNull()?.artistId.orEmpty(), artist) }
-                            .heightIn(min = 44.dp).wrapContentHeight(Alignment.CenterVertically).padding(horizontal = 8.dp))
+                            .padding(horizontal = 8.dp, vertical = 2.dp))
                     if (!meta.isNullOrBlank()) Row(verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.testTag("album-metadata")) {
-                        Text(meta, localize = false, color = theme.secondary, fontSize = 13.sp, lineHeight = 19.sp, textAlign = TextAlign.Center)
+                        Text(meta, localize = false, color = theme.secondary, fontSize = 13.sp, lineHeight = 17.sp, textAlign = TextAlign.Center)
                         if (tracks.any { it.explicit }) EBadge()
                     }
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(12.dp))
                     AlbumPlaybackActions(tracks, savedIds, loading, stacked, onRefresh, Modifier.widthIn(max = 560.dp).fillMaxWidth())
                 }
             }
@@ -402,10 +402,10 @@ private fun AlbumPlaybackActions(tracks: List<Track>, savedIds: Set<String>, loa
     val theme = LocalTheme.current
     val enabled = !loading && tracks.isNotEmpty()
     val missing = remember(tracks, savedIds) { tracks.distinctBy { it.id }.filter { it.id !in savedIds && !it.id.startsWith("local:") } }
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         com.ketvoice.app.ui.common.CollectionActionPair({ Player.setShuffle(false); Player.playQueue(tracks) },
             { Player.playShuffled(tracks) }, enabled = enabled, playTag = "album-play", shuffleTag = "album-shuffle",
-            stacked = stacked)
+            minHeight = 50.dp, stacked = stacked)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically) {
             // Download and refresh share one capsule, like the actions at the top of the page.
