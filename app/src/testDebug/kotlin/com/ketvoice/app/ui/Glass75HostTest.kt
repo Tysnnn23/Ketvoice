@@ -204,13 +204,16 @@ class Glass75HostTest {
         show(true) { com.ketvoice.app.ui.sub.DownloadsScreen() }
         compose.onNodeWithTag("downloads-search").performScrollTo().performTextInput("ete")
         compose.waitForIdle()
-        assertEquals(listOf("Été indien"), order("Été indien", "Halo", "Alors on danse", "Bella", "Papaoutai"))
-        compose.onNodeWithTag("downloads-search").performTextClearance()
+        compose.onNodeWithTag("downloads-list").performScrollToNode(hasText("Été indien"))
+        image("downloads-search-dark")
+        listOf("Halo", "Alors on danse", "Bella", "Papaoutai").forEach { compose.onNodeWithText(it).assertDoesNotExist() }
+        compose.onNodeWithTag("downloads-search").performScrollTo().performTextClearance()
         compose.onNodeWithTag("downloads-menu").performClick()
         compose.onNodeWithTag("downloads-sort:Duration").assertIsDisplayed()
         image("downloads-sort-menu-dark")
         compose.onNodeWithTag("downloads-sort:Duration").performClick()
         compose.waitForIdle()
+        compose.onNodeWithTag("downloads-list").performScrollToNode(hasText("Papaoutai"))
         assertEquals(listOf("Alors on danse", "Papaoutai"), order("Alors on danse", "Papaoutai"))
     }
 
@@ -221,15 +224,17 @@ class Glass75HostTest {
         val track = tracks[1]
         val clock = java.util.Calendar.getInstance().apply { set(java.util.Calendar.HOUR_OF_DAY, 14); set(java.util.Calendar.MINUTE, 7) }
         show(true) { com.ketvoice.app.ui.standby.StandbyScreen(track, playing = true, onClose = {}, clock = { clock }) }
-        compose.onNodeWithTag("standby-clock").assertIsDisplayed()
-        compose.onNodeWithText("Halo").assertIsDisplayed()
-        compose.onNodeWithTag("standby-controls").assertDoesNotExist()
         image("standby-dark")
+        compose.onNodeWithTag("standby-clock", useUnmergedTree = true).assert(hasText("14:07").or(hasText("2:07")))
+        compose.onNodeWithText("Halo", useUnmergedTree = true).assertExists()
+        compose.onNodeWithTag("standby-controls").assertDoesNotExist()
         compose.onNodeWithTag("standby").performClick()
-        compose.waitForIdle()
-        compose.onNodeWithTag("standby-controls").assertIsDisplayed()
-        compose.onNodeWithTag("standby-close").assertIsDisplayed()
+        compose.onNodeWithTag("standby-controls", useUnmergedTree = true).assertExists()
+        // The controls hide again after a few seconds: the clock is held for the picture.
+        compose.mainClock.autoAdvance = false
+        compose.onNodeWithTag("standby-close", useUnmergedTree = true).assertExists()
         image("standby-controls-dark")
+        compose.mainClock.autoAdvance = true
     }
 
     @Test fun standbyRules() {

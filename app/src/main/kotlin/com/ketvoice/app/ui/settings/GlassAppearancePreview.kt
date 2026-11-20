@@ -91,7 +91,7 @@ internal fun GlassTransparencyCard(modifier: Modifier = Modifier) {
             })
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text("Transparent", color = theme.secondary, style = Ket27.Type.footnote)
-            Text("Opaque", color = theme.secondary, style = Ket27.Type.footnote)
+            Text("Teinté", color = theme.secondary, style = Ket27.Type.footnote)
         }
         if (com.ketvoice.app.glass.HighContrastText.on.value && level < GlassClarity.TINTED)
             Text("Le texte à contraste élevé d'Android garde le verre teinté.", color = theme.secondary, style = Ket27.Type.footnote)

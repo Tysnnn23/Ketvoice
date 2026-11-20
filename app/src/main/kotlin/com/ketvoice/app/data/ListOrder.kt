@@ -35,14 +35,17 @@ object ListOrders {
 
     /**
      * Whether an entry matches a search: every word of [query], accents and case aside ([SearchRank.fold]),
-     * is found in its title, artist or album. « beyonce » finds « Beyoncé », « halo bey » finds « Halo · Beyoncé ».
+     * starts a word of its title, artist or album. « beyonce » finds « Beyoncé », « halo bey » finds « Halo · Beyoncé ».
      */
     fun matches(query: String, title: String, artist: String, album: String): Boolean {
-        val words = SearchRank.fold(query).split(' ').filter { it.isNotEmpty() }
+        val words = fold(query).split(' ').filter { it.isNotEmpty() }
         if (words.isEmpty()) return true
-        val text = SearchRank.fold("$title $artist $album")
-        return words.all { it in text }
+        val text = fold("$title $artist $album").split(' ')
+        return words.all { word -> text.any { it.startsWith(word) } }
     }
+
+    /** [SearchRank.fold], with « Œ » and « Æ » read as the two letters people type: « oeuvre » finds « Œuvre ». */
+    private fun fold(value: String): String = SearchRank.fold(value.replace("Œ", "oe").replace("œ", "oe").replace("Æ", "ae").replace("æ", "ae"))
 
     /** The entries matching [query], in [order]. Sorting is stable: equal entries keep the list's own order. */
     fun <T> arrange(items: List<T>, query: String, order: ListOrder, fields: ListFields<T>): List<T> {

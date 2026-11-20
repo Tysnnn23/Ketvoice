@@ -118,7 +118,7 @@ class GlassPreviewHostTest {
         compose.onNodeWithContentDescription("Intensité du verre").assertIsDisplayed()
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Standard"))
         compose.onNodeWithText("Transparent").assertExists()
-        compose.onNodeWithText("Opaque").assertExists()
+        compose.onNodeWithText("Teinté").assertExists()
     }
 
     @Test @Config(qualifiers = "w320dp-h480dp-mdpi")
@@ -129,7 +129,7 @@ class GlassPreviewHostTest {
             }
         } }
         compose.onNodeWithTag("glass-tint-slider").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("Opaque").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Teinté").performScrollTo().assertIsDisplayed()
     }
 
     @Test fun rtlSliderMapsPhysicalEdgesToLogicalValues() {
