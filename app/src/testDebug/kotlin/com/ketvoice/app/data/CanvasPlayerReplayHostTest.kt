@@ -101,6 +101,30 @@ class CanvasPlayerReplayHostTest {
         }
     }
 
+    @Test fun titlesGivenTheirAlbumsCanvasIn75GetTheirOwnAfterTheUpdate() = runBlocking {
+        // The state 7.5 left: the first title's Canvas downloaded, and every later title mapped to it for good.
+        val first = canvasOf.getValue(album[0].title)
+        val dir = File(context.filesDir, "canvas").apply { mkdirs() }
+        File(dir, "$first.mp4").writeBytes(ByteArray(828_241).also { b -> "\u0000\u0000\u0000\u0018ftypmp42".toByteArray(Charsets.ISO_8859_1).copyInto(b) })
+        val prefs = context.getSharedPreferences("ketvoice_canvas", Context.MODE_PRIVATE)
+        prefs.edit().clear().apply { album.forEach { putString(it.id, first) } }
+            .putString("album:juice wrld:legends never dies", first).putString("page:MPREqaLegends", first).commit()
+        restart() // the first start of 7.6
+        assertTrue("the 7.5 title-to-album mappings are forgotten", album.all { CanvasRepo.paths.value[it.id] == null })
+        album.forEach { CanvasRepo.resolve(it) }
+        println("canvas-replay[7.5 state]: after the update ${lookups.get()} lookups ${downloads.get()} downloads")
+        album.forEach { t ->
+            assertEquals("${t.title} shows its own Canvas", canvasOf.getValue(t.title) + ".mp4", CanvasRepo.paths.value[t.id]?.let { File(it).name })
+        }
+        assertEquals("the first title's file was kept, not fetched again", album.size - 1, downloads.get())
+        assertEquals("the page still remembers its Canvas", first, prefs.getString("page:MPREqaLegends", null))
+        // Once only: a later start changes nothing.
+        restart()
+        assertNotNull(prefs.getString(album[1].id, null).also { assertEquals(canvasOf.getValue(album[1].title), it) })
+        album.forEach { CanvasRepo.resolve(it) }
+        assertEquals(0, lookups.get())
+    }
+
     @Test fun anAlbumHeardScreenOffOnWifiReplaysFromTheDevice() {
         runBlocking { Automix.appInFront = false; album.indices.forEach { play(it) } }
         secondPass("screen off", lookups.get(), downloads.get())

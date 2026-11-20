@@ -72,6 +72,7 @@ object CanvasRepo {
         appContext = context.applicationContext
         runCatching {
             val prefs = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            forgetStandIns(prefs)
             _excluded.value = prefs.getStringSet(EXCLUDED_KEY, emptySet()).orEmpty().toSet()
             val dir = canvasDir(context.applicationContext)
             val map = mutableMapOf<String, String>()
@@ -97,6 +98,29 @@ object CanvasRepo {
         localPath(track.id)?.let { DiskBudget.touch(it); posterSoon(it); return resolveNow(track, force, again = true, ahead = ahead) }
         setLoading(track.id, true)
         try { resolveNow(track, force, again = true, ahead = ahead) } finally { setLoading(track.id, false) }
+    }
+
+    /** Marks that [forgetStandIns] ran, with the versionCode it ran on (an Int: init's path loop reads Strings only). */
+    internal const val STAND_INS_FIXED = "migration:stand-ins"
+
+    /**
+     * 7.6, once (the first start of a version that has this, then never again): until 7.5 a title with no catalogue id
+     * of its own took its album's Canvas for good, and « Legends Never Dies » showed its first title's Canvas on every
+     * title. Every title mapped to its album's Canvas forgets that mapping: the album's Canvas then only stands in at
+     * once while the title's own is looked up (one lookup per title; no download when it is that same file). Files,
+     * album keys, page keys and the « none » entries stay (those were only written after a real lookup said none).
+     */
+    internal fun forgetStandIns(prefs: android.content.SharedPreferences) {
+        if (prefs.contains(STAND_INS_FIXED)) return
+        fun catalogue(name: String) = !name.startsWith("kvov-") && !name.startsWith("kvpub-") && !name.startsWith("kvlink-")
+        val entries = prefs.all
+        val albumCanvas = entries.filter { (k, v) -> k.startsWith("album:") && v is String && catalogue(v) }.values.toSet()
+        val edit = prefs.edit()
+        entries.forEach { (key, value) ->
+            val keyed = key.startsWith("album:") || key.startsWith("page:") || key.startsWith(NONE_PREFIX) || key.startsWith("migration:")
+            if (!keyed && value is String && value in albumCanvas) edit.remove(key)
+        }
+        edit.putInt(STAND_INS_FIXED, com.ketvoice.app.BuildConfig.VERSION_CODE).commit()
     }
 
     /** The player's look ahead when a title starts: the next two titles of the queue, so each opens with its Canvas. */
