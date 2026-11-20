@@ -996,8 +996,7 @@ object Player {
         val state = _state.value
         // The next titles' Canvas are fetched while this one plays: each opens with its Canvas already on the device.
         if (targets == null) {
-            val ahead = (1..2).mapNotNull { state.queue.getOrNull(state.index + it) }
-            if (ahead.isNotEmpty()) scope.launch { ahead.forEach { runCatching { CanvasRepo.resolve(it) } } }
+            scope.launch { CanvasRepo.aheadOf(state.queue, state.index) }
         }
         val upcoming = (targets ?: (1..2).mapNotNull { offset -> state.queue.getOrNull(state.index + offset) })
             .filter { it.id != current.id && !it.id.startsWith("local:") && Downloader.itemFor(it.id) == null }
