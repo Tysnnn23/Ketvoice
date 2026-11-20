@@ -7,6 +7,22 @@
 
 ---
 
+# Ketvoice 7.6.0
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 147** — whole-Canvas fit, per-title Canvas cache in the player, performance pass, streaming voice separation, volume keyframes in the mix editor, three new Ketmix styles and a render guard, the "Improve your listening" welcome step, the GTA VI event removed with its icon as the default.
+
+- Canvas (`ui/player/CanvasFit.kt`, `CanvasRepo.aheadOf`, `CanvasRepo.forgetStandIns`): a Canvas within 12 % of its space's shape fills it, any other is shown whole with its edge colours run to the border (owner framing wins); album headers keep the words under the video. The playing title's Canvas is kept screen off on unmetered Wi-Fi and the next two are prefetched; the album Canvas only stands in while a title's own is looked up; a one-time migration forgets 7.5 stand-in mappings. `CanvasPlayerReplayHostTest`, `Canvas76HostTest`.
+- Performance (`PlayerSliders`, `Chrome`, `LyricsView`, `Player` position loop, `AppText.warm`, `Downloader.newestFirst`, `CoverPalette`): scrub bar and mini-player progress read in layout/draw (full player 15 759 → 70 composable runs in 5 s on the host), paused position ticks 300 → 6 per minute, translations warmed off the main thread, start-up file operations 758 → 445 with 40 downloads, cover accent cache 32 → 256 with misses remembered. `PerfRecompositionHostTest`, `PerfBackgroundHostTest`, `StartupIoHostTest` (unit-test JVMs get `-Djava.security.manager=allow`).
+- Voice (`stems/StreamSeparation.kt`, `StemStore.savePartial`, `automix/MixKeys.kt`): streaming separation from the playhead with partial masks taken up live, DASH audio renditions (HLS not supported); keyframes (voice, instruments, music for both titles) stored in `PairChoice` as `base|v2|…` (old data readable), music level in `DeckDsp`, voice/instruments in `VoiceStage`. `MixKeysTest`, `StreamSeparationTest`, `KetmixKeysHostTest`.
+- Ketmix (`MixStyle` 6 Cut, 7 On the drop, 8 Vocal handoff; `StyleCuts`, `MixBus`): filters cross-faded over 12 ms (clicks above 4 kHz −30…−38 → −73…−97 dBFS on synthetic fixtures), earlier incoming level after the bass swap, a linked bus keeps both decks under −1 dBFS. Automatic mode may pick On the drop only; `ketmixStyle` range 0..8. `KetmixRenderQualityTest`, `KetmixStylePickerHostTest`.
+- Welcome (`ui/onboarding`): an "Improve your listening" step and Settings sheet for the separation models, the rhythm model where not bundled and the local scan, with a warning on leaving without any. Vice City edition removed (`ViceCityEdition`, Vice FM, theme; `viceCityTheme` retired); `.LauncherViceCity` is the default icon (`LauncherIcons.DEFAULT` 4, `appIconDefault76` marker).
+
+Full notes: [7.6.0](docs/releases/v7.6.0.md).
+
+---
+
 # Ketvoice 7.5.0
 
 ![Ketvoice](ketvoice-banner.png)

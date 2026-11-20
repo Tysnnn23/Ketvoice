@@ -21,6 +21,14 @@
 
 ## Overview
 
+### 7.6.0 — Canvas shown whole and kept, a lighter app, your own mix levels
+
+Canvas shown complete and saved for every song, a much lighter player, voice level while streaming, volume points in the mix editor, three new Ketmix transitions and a welcome step that installs the extras.
+[Mobile](https://github.com/Tysnnn23/Ketvoice/releases/download/v7.6.0/Ketvoice-7.6.0.apk)
+· [Lite](https://github.com/Tysnnn23/Ketvoice/releases/download/v7.6.0/Ketvoice-7.6.0-Lite.apk)
+· [Quest](https://github.com/Tysnnn23/Ketvoice/releases/download/v7.6.0/Ketvoice-7.6.0-Quest.apk)
+· [Release notes](docs/releases/v7.6.0.md).
+
 ### 7.5.0 — Cast, lyrics you can pronounce, truer album colours, faster everything
 
 Google Cast, lyric romanization, a standby screen while charging, album pages with better colours and a bigger cover, artwork and Canvas that stay cached, faster downloads and analysis, one glass slider and search inside your lists.
