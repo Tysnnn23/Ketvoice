@@ -164,7 +164,9 @@ class DeckDspTest {
         assertEquals("The outgoing title keeps its level while it dies away by itself", 1f, out.gain.at(194_000_000), 1e-3f)
         assertEquals(0f, out.gain.at(198_000_000), 1e-3f)
         assertEquals(0f, out.highPassHz.at(189_000_000), 0f)
-        assertTrue("it rises into the air", out.highPassHz.at(194_000_000) in 100f..600f)
+        // 7.6: it keeps its body for the first half and rises into the air in the second, while the next one has opened.
+        assertTrue("it keeps its body half-way", out.highPassHz.at(194_000_000) in 30f..150f)
+        assertTrue("then rises into the air", out.highPassHz.at(196_500_000) in 250f..900f)
         assertEquals(1_500f, out.highPassHz.at(198_000_000), 3f)
         assertEquals("the next one grows from its low end", 380f, into.lowPassHz.at(300_000), 2f)
         assertTrue(into.lowPassHz.at(4_000_000) in 1_000f..12_000f)
