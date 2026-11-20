@@ -106,6 +106,8 @@ object AppSettings {
     val lyricaUrl = mutableStateOf("")
     val translationSource = mutableStateOf("en")
     val translateLanguage = mutableStateOf("Français")
+    /** 7.5: pronunciation (romanization) under each lyric line written in another script. */
+    val lyricsRomanization = mutableStateOf(false)
 
     val favoriteIds = mutableStateOf<Set<String>>(emptySet())
 

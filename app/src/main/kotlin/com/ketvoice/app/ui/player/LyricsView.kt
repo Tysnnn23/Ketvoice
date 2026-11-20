@@ -139,6 +139,7 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
     // à chaque arrivée — c'était la principale source de lag du suivi traduit.
     val translated = remember(track.id, lyrics.lines) { mutableStateMapOf<Int, String>() }
     var translating by remember(track.id) { mutableStateOf(false) }
+    val romanized by rememberRomanized(lyrics.lines, AppSettings.lyricsRomanization.value)
     val target = TranslationLanguages.code(AppSettings.translateLanguage.value)
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -286,6 +287,7 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
                             ) {
                                 val nearActive = active < 0 || abs(index - active) <= 1
                                 LyricVoices(line, current, lyrics.isTimed, fontScale, lineColor, nearActive = nearActive)
+                                romanized.getOrNull(index)?.let { RomanizedLine(it, lineColor, fontScale) }
 
                                 AnimatedVisibility(
                                     visible = translationEnabled && translated[index] != null && (current || !lyrics.isTimed),
@@ -718,7 +720,10 @@ internal fun LyricsSourceSheet(track: Track, onClose: () -> Unit) {
             Text("Sources des paroles", color = Color.White, style = com.ketvoice.app.theme.Ket27.Type.title3)
             Text("Syllabes natives → mots natifs → lignes → texte", color = Color.White.copy(alpha = .78f),
                 style = if (com.ketvoice.app.BuildConfig.IS_QUEST) com.ketvoice.app.theme.Ket27.Type.subheadline else com.ketvoice.app.theme.Ket27.Type.footnote,
-                modifier = Modifier.padding(top = 5.dp, bottom = 12.dp))
+                modifier = Modifier.padding(top = 5.dp, bottom = 4.dp))
+            // 7.5 (owner: « en haut tu mets un switch Romanisation »): first in the lyrics source menu.
+            RomanizationOption()
+            Spacer(Modifier.height(10.dp))
             Text("Décalage des paroles", color = Color.White, style = com.ketvoice.app.theme.Ket27.Type.headline)
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 com.ketvoice.app.ui.common.KetTextButton("Retarder", { LyricsOffsets.set(track.id, offset - 100) }, Modifier.heightIn(min = 48.dp), tint = Color.White)

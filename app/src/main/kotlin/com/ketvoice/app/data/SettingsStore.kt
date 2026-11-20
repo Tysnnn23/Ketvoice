@@ -97,6 +97,7 @@ object SettingsStore {
         }
         s.favoriteIds.value = p.getStringSet("favoriteIds", emptySet())?.toSet() ?: emptySet()
         s.translateLanguage.value = p.getString("translateLanguage", s.translateLanguage.value) ?: "Français"
+        s.lyricsRomanization.value = p.getBoolean("lyricsRomanization", false)
         s.betterLyricsKey.value = p.getString("betterLyricsKey", "").orEmpty()
         s.lyricaUrl.value = p.getString("lyricaUrl", "").orEmpty()
         s.translationSource.value = p.getString("translationSource", "en").orEmpty()
@@ -254,6 +255,7 @@ object SettingsStore {
             .putString("lyricsSource", s.lyricsSource.value)
             .putStringSet("favoriteIds", s.favoriteIds.value)
             .putString("translateLanguage", s.translateLanguage.value)
+            .putBoolean("lyricsRomanization", s.lyricsRomanization.value)
             .putString("betterLyricsKey", s.betterLyricsKey.value)
             .putString("lyricaUrl", s.lyricaUrl.value)
             .putString("translationSource", s.translationSource.value)
