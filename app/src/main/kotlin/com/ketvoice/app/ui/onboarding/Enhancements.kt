@@ -115,7 +115,6 @@ internal object Enhancements {
 
     /** Whether this build asks for the audio permission at all (every flavour does today, Quest included). */
     fun localSupported(context: Context): Boolean = runCatching {
-        @Suppress("DEPRECATION")
         context.packageManager.getPackageInfo(context.packageName, android.content.pm.PackageManager.GET_PERMISSIONS)
             .requestedPermissions?.contains(LocalMusic.permission) == true
     }.getOrDefault(false)
