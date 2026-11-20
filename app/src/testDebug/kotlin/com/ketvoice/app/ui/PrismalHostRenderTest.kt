@@ -337,7 +337,7 @@ class PrismalHostRenderTest {
         image("playlist-scroll-before") { bitmap ->
             before = IntArray(80 * 80); bitmap.getPixels(before, 0, 80, cover.left.toInt() + 10, cover.top.toInt() + 10, 80, 80)
         }
-        compose.onNodeWithTag("playlist-tracks").performScrollToIndex(25)
+        compose.onNodeWithTag("playlist-tracks").performScrollToIndex(26) // 7.5: hero, then the search/sort row, then the titles
         compose.onNodeWithText("Titre 25").assertIsDisplayed()
         compose.onNodeWithText("Playlist fixe").assertExists()
         // The hero is a normal list item now: it scrolls out of the viewport.
