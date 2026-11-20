@@ -98,6 +98,9 @@ fun PlaylistScreen() {
     var deleting by remember { mutableStateOf(false) }
     var name by remember(playlist?.id) { mutableStateOf(playlist?.name.orEmpty()) }
     var editing by remember { mutableStateOf(false) }
+    // 7.5: search and sort inside the playlist; the order is remembered per playlist, the search is not.
+    var query by androidx.compose.runtime.saveable.rememberSaveable(AppUi.playlistId.value) { mutableStateOf("") }
+    var order by com.ketvoice.app.ui.common.rememberListOrder("playlist:" + AppUi.playlistId.value.orEmpty(), PlaylistOrder.default)
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf("") }
     val player by Player.state.collectAsState()
@@ -131,6 +134,13 @@ fun PlaylistScreen() {
         }
     } else {
         val playable = playlist.entries.mapNotNull { it.track }
+        // Reordering by hand works on the playlist's own order: while editing, no search and no sort.
+        val ordered = remember(playlist.entries, order, editing) {
+            if (editing) playlist.entries else PlaylistOrder.arrange(playlist.entries, "", order)
+        }
+        val shownEntries = remember(ordered, query, editing) { if (editing) ordered else PlaylistOrder.arrange(ordered, query, null) }
+        val orderedPlayable = remember(ordered) { ordered.mapNotNull { it.track } }
+        val shownPlayable = remember(shownEntries) { shownEntries.mapNotNull { it.track } }
         val totalMs = remember(playable) { playable.sumOf { it.durationMs.coerceAtLeast(0L) } }
         var dragIndex by remember { mutableIntStateOf(-1) }
         var dragOffset by remember { mutableFloatStateOf(0f) }
@@ -141,7 +151,11 @@ fun PlaylistScreen() {
             contentPadding = PaddingValues(top = top, bottom = LocalAdaptiveLayout.current.bottomPaddingDp.dp)) {
             item(key = "playlist-hero", contentType = "playlist-hero") {
                 PlaylistHeader(playlist, playable, owner, beside, side, editing, error,
-                    onPlay = { Player.setShuffle(false); Player.playQueue(playable) }, onShuffle = { Player.playShuffled(playable) })
+                    onPlay = { Player.setShuffle(false); Player.playQueue(orderedPlayable) }, onShuffle = { Player.playShuffled(playable) })
+            }
+            if (playlist.entries.size > 1 && !editing) item(key = "playlist-tools", contentType = "playlist-tools") {
+                com.ketvoice.app.ui.common.ListTools(query, { query = it }, order, PlaylistOrder.sorts, "playlist", { order = it },
+                    Modifier.padding(top = 2.dp, bottom = 8.dp))
             }
             if (playlist.entries.isEmpty()) {
                 item(key = "playlist-empty") {
@@ -152,7 +166,11 @@ fun PlaylistScreen() {
                     }
                 }
             } else {
-                itemsIndexed(playlist.entries, key = { _, entry -> entry.id }, contentType = { _, _ -> "playlist-entry" }) { index, entry ->
+                if (shownEntries.isEmpty()) item(key = "playlist-none") {
+                    EmptyState("Aucun résultat", "Essayez un autre titre ou artiste.", "Effacer",
+                        icon = com.ketvoice.app.ui.common.KetIcons.Search, onAction = { query = "" })
+                }
+                itemsIndexed(shownEntries, key = { _, entry -> entry.id }, contentType = { _, _ -> "playlist-entry" }) { index, entry ->
                     val currentIndex by rememberUpdatedState(index)
                     val rowModifier = if (index == dragIndex) Modifier.graphicsLayer { translationY = dragOffset } else Modifier
                     PlaylistRow(entry, editing, busy, large && beside, th, rowModifier
@@ -187,7 +205,7 @@ fun PlaylistScreen() {
                                 onDragCancel = { dragIndex = -1; dragOffset = 0f })
                         },
                         onPlay = {
-                            if (entry.track != null) Player.playQueue(playable, playlist.entries.take(index).count { it.track != null })
+                            if (entry.track != null) Player.playQueue(shownPlayable, shownEntries.take(index).count { it.track != null })
                             else {
                                 AppUi.playlistResolution.value = AppUi.PlaylistResolution(playlist.id, entry.id)
                                 AppUi.pushOverlay(AppUi.SEARCH)
@@ -295,6 +313,20 @@ fun PlaylistScreen() {
             Icon(Icons.Filled.MoreHoriz, "Actions de la playlist", tint = th.onBackground, modifier = Modifier.size(22.dp))
         }
     }
+    }
+}
+
+/** How a playlist can be searched and sorted (7.5): its own order (as the titles were added) by default. */
+internal object PlaylistOrder {
+    val sorts = com.ketvoice.app.data.ListSort.entries - com.ketvoice.app.data.ListSort.Size
+    val default = com.ketvoice.app.data.ListOrder(com.ketvoice.app.data.ListSort.Added, descending = false)
+
+    /** [order] null keeps the entries' order and only searches. */
+    fun arrange(entries: List<PlaylistEntry>, query: String, order: com.ketvoice.app.data.ListOrder?): List<PlaylistEntry> {
+        val rank = HashMap<String, Long>(entries.size * 2).apply { entries.forEachIndexed { i, e -> put(e.id, i.toLong()) } }
+        val fields = com.ketvoice.app.data.ListFields<PlaylistEntry>({ it.track?.title ?: it.title }, { it.track?.artist ?: it.artist },
+            { it.track?.album.orEmpty() }, { it.track?.durationMs ?: 0L }, { rank[it.id] ?: 0L })
+        return com.ketvoice.app.data.ListOrders.arrange(entries, query, order ?: default, fields)
     }
 }
 

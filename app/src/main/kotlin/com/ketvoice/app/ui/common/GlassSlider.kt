@@ -26,6 +26,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.input.pointer.pointerInput
@@ -82,6 +83,7 @@ fun GlassSlider(
     val press = rememberSliderPress()
     var rawFraction by remember { mutableFloatStateOf(fraction) }
     val reduced = com.ketvoice.app.ui.motion.Motion.reduced
+    val lens = PressLensLook.available()
     val change by rememberUpdatedState(onValueChange)
     val finished by rememberUpdatedState(onValueChangeFinished)
     LaunchedEffect(fraction, dragging) { if (!dragging) dragFraction = fraction }
@@ -217,12 +219,19 @@ fun GlassSlider(
                             val physical = if (direction == LayoutDirection.Rtl) 1f - displayedFraction else displayedFraction
                             placeable.place((railFor(widthPx.toFloat()).xOf(physical) - placeable.width / 2f).roundToIntSafe(), 0)
                         }
-                    },
+                    }
+                    // 7.5: held, the thumb hands over to its lens (PressLens), which grows out of it.
+                    .graphicsLayer { alpha = if (lens) 1f - PressLensLook.alpha(press.expansion) else 1f },
                 CircleShape,
                 GlassParams.circle(dark = theme.isDark).copy(blurPx = 2f, tintAlpha = .16f,
                     opticalPressure = pressure),
                 enabled = AppSettings.liquidGlass.value
             ) {}
+        }
+        // 7.5 « Contrôles qui deviennent verre »: under the finger the thumb becomes a lens over the rail.
+        PressLens(press, track, thumb + 16.dp, thumbHeight + 10.dp, theme.isDark, Modifier.matchParentSize()) { box ->
+            val physical = if (direction == LayoutDirection.Rtl) 1f - displayedFraction else displayedFraction
+            androidx.compose.ui.geometry.Offset(railFor(box.width.toFloat()).xOf(physical), box.height / 2f)
         }
     }
 }

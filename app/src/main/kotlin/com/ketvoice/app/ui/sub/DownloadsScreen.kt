@@ -77,7 +77,7 @@ fun DownloadsScreen() {
     var albumKey by rememberSaveable { mutableStateOf<String?>(null) }
     var artistKey by rememberSaveable { mutableStateOf<String?>(null) }
     var filterName by rememberSaveable { mutableStateOf(DownloadFilter.All.name) }
-    var sortName by rememberSaveable { mutableStateOf(DownloadSort.Recent.name) }
+    var order by com.ketvoice.app.ui.common.rememberListOrder("downloads", DefaultDownloadOrder)
     var deleting by remember { mutableStateOf(false) }
     // 7.3: the titles « Retélécharger en meilleure qualité » is checking, from the selection's menu.
     var upgradeIds by remember { mutableStateOf<List<String>?>(null) }
@@ -88,7 +88,6 @@ fun DownloadsScreen() {
     // Transfer states only matter while something is being transferred.
     val filter = if (active.isEmpty()) DownloadFilter.All
         else DownloadFilter.entries.firstOrNull { it.name == filterName } ?: DownloadFilter.All
-    val sort = DownloadSort.entries.firstOrNull { it.name == sortName } ?: DownloadSort.Recent
     val base = remember(saved, active, tasks, query, filter, autoOnly, autoIds) {
         if (autoOnly) downloadSections(saved.filter { it.track.id in autoIds }, emptyList(), tasks, query, filter)
         else downloadSections(saved, active.values, tasks, query, filter)
@@ -102,7 +101,7 @@ fun DownloadsScreen() {
         chosenArtist != null -> base.copy(saved = chosenArtist.items, transfers = emptyList())
         else -> base
     }
-    val sections = remember(narrowed, sort) { narrowed.copy(saved = sortDownloads(narrowed.saved, sort)) }
+    val sections = remember(narrowed, order) { narrowed.copy(saved = sortDownloads(narrowed.saved, order)) }
     val deleteItems = saved.filter { it.track.id in deleteIds }
     LaunchedEffect(saved) { selected = selected.filter { id -> saved.any { it.track.id == id } } }
     val adaptive = LocalAdaptiveLayout.current
@@ -337,8 +336,8 @@ fun DownloadsScreen() {
             }
             // 7.4: the bar's « … » is the page's own menu (select, the order of the titles as Apple Music sorts
             // its lists, the capsule); a title's « … » opens that title's glass menu.
-            else if (saved.isNotEmpty()) com.ketvoice.app.ui.common.KetMenuButton(downloadsPageMenu(saved.size, sort,
-                onSelect = { selecting = true; selected = emptyList() }, onSort = { sortName = it.name },
+            else if (saved.isNotEmpty()) com.ketvoice.app.ui.common.KetMenuButton(downloadsPageMenu(saved.size, order,
+                onSelect = { selecting = true; selected = emptyList() }, onSort = { order = it },
                 onCapsule = { AppUi.showCapsule.value = true }), "Options", tag = "downloads-menu")
         }
     }
@@ -622,10 +621,10 @@ internal fun DownloadCategories(view: Int, counts: List<Int>, modifier: Modifier
 }
 
 /** The bar's « … » of Downloads: select, the order of the titles (when there is more than one), the capsule. */
-internal fun downloadsPageMenu(count: Int, sort: DownloadSort, onSelect: () -> Unit, onSort: (DownloadSort) -> Unit,
-                               onCapsule: () -> Unit): List<List<com.ketvoice.app.ui.common.KetMenuItem>> = listOfNotNull(
-    listOf(com.ketvoice.app.ui.common.KetMenuItem("Sélectionner", KetIcons.Check, tag = "downloads-menu-select", onClick = onSelect)),
-    if (count > 1) DownloadSort.entries.map { option ->
-        com.ketvoice.app.ui.common.KetMenuItem(option.label, checked = option == sort, tag = "downloads-sort:" + option.name) { onSort(option) }
-    } else null,
-    listOf(com.ketvoice.app.ui.common.KetMenuItem("Préparer une capsule hors ligne", KetIcons.Storage, onClick = onCapsule)))
+internal fun downloadsPageMenu(count: Int, order: com.ketvoice.app.data.ListOrder, onSelect: () -> Unit,
+                               onSort: (com.ketvoice.app.data.ListOrder) -> Unit,
+                               onCapsule: () -> Unit): List<List<com.ketvoice.app.ui.common.KetMenuItem>> = listOf(
+    listOf(com.ketvoice.app.ui.common.KetMenuItem("Sélectionner", KetIcons.Check, tag = "downloads-menu-select", onClick = onSelect))) +
+    // The same sorts as a playlist and Favoris (7.5), with the size of the files besides.
+    (if (count > 1) com.ketvoice.app.ui.common.listSortItems(order, DownloadSorts, "downloads-sort", onSort) else emptyList()) +
+    listOf(listOf(com.ketvoice.app.ui.common.KetMenuItem("Préparer une capsule hors ligne", KetIcons.Storage, onClick = onCapsule)))

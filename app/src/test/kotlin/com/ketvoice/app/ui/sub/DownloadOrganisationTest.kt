@@ -22,11 +22,13 @@ class DownloadOrganisationTest {
 
     @Test fun eachSortOrdersTheSameTitles() {
         val items = library()
-        assertEquals(listOf("2", "3", "1", "4"), sortDownloads(items, DownloadSort.Recent).map { it.track.id })
-        assertEquals(listOf("2", "1", "3", "4"), sortDownloads(items, DownloadSort.Title).map { it.track.id })
-        assertEquals(listOf("4", "3", "2", "1"), sortDownloads(items, DownloadSort.Artist).map { it.track.id })
-        assertEquals(listOf("3", "1", "2", "4"), sortDownloads(items, DownloadSort.Size).map { it.track.id })
-        DownloadSort.entries.forEach { assertEquals(items.toSet(), sortDownloads(items, it).toSet()) }
+        assertEquals(listOf("2", "3", "1", "4"), sortDownloads(items, DefaultDownloadOrder).map { it.track.id })
+        assertEquals(listOf("2", "1", "3", "4"), sortDownloads(items, com.ketvoice.app.data.ListOrder(com.ketvoice.app.data.ListSort.Title)).map { it.track.id })
+        assertEquals(listOf("4", "3", "2", "1"), sortDownloads(items, com.ketvoice.app.data.ListOrder(com.ketvoice.app.data.ListSort.Artist)).map { it.track.id })
+        assertEquals(listOf("3", "1", "2", "4"), sortDownloads(items, com.ketvoice.app.data.ListOrder(com.ketvoice.app.data.ListSort.Size)).map { it.track.id })
+        DownloadSorts.forEach { sort -> for (down in listOf(false, true)) assertEquals(items.toSet(), sortDownloads(items, com.ketvoice.app.data.ListOrder(sort, down)).toSet()) }
+        // 7.5: album and duration too, and every sort turns around.
+        assertEquals(listOf("4", "3", "1", "2"), sortDownloads(items, com.ketvoice.app.data.ListOrder(com.ketvoice.app.data.ListSort.Title, descending = true)).map { it.track.id })
     }
 
     @Test fun summaryCountsBytesPlaytimeAndTheLosslessShare() {

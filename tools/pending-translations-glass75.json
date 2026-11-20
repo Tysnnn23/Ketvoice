@@ -1,0 +1,74 @@
+{
+ "Intensité du verre": {
+  "en": "Glass intensity",
+  "hi": "काँच की तीव्रता",
+  "ja": "ガラスの濃さ",
+  "zh": "玻璃强度",
+  "ru": "Интенсивность стекла",
+  "it": "Intensità del vetro",
+  "es": "Intensidad del cristal",
+  "de": "Glasintensität",
+  "pt": "Intensidade do vidro",
+  "ko": "유리 강도"
+ },
+ "Date d'ajout": {
+  "en": "Date added",
+  "hi": "जोड़ने की तारीख",
+  "ja": "追加日",
+  "zh": "添加日期",
+  "ru": "Дата добавления",
+  "it": "Data di aggiunta",
+  "es": "Fecha de adición",
+  "de": "Hinzugefügt am",
+  "pt": "Data de adição",
+  "ko": "추가한 날짜"
+ },
+ "Croissant": {
+  "en": "Ascending",
+  "hi": "आरोही",
+  "ja": "昇順",
+  "zh": "升序",
+  "ru": "По возрастанию",
+  "it": "Crescente",
+  "es": "Ascendente",
+  "de": "Aufsteigend",
+  "pt": "Crescente",
+  "ko": "오름차순"
+ },
+ "Décroissant": {
+  "en": "Descending",
+  "hi": "अवरोही",
+  "ja": "降順",
+  "zh": "降序",
+  "ru": "По убыванию",
+  "it": "Decrescente",
+  "es": "Descendente",
+  "de": "Absteigend",
+  "pt": "Decrescente",
+  "ko": "내림차순"
+ },
+ "Mode veille au chargement": {
+  "en": "Standby while charging",
+  "hi": "चार्जिंग के दौरान स्टैंडबाय",
+  "ja": "充電中のスタンバイ",
+  "zh": "充电时待机模式",
+  "ru": "Режим ожидания при зарядке",
+  "it": "Standby durante la ricarica",
+  "es": "Modo reposo al cargar",
+  "de": "Standby beim Laden",
+  "pt": "Modo de espera ao carregar",
+  "ko": "충전 중 스탠바이"
+ },
+ "En charge et à l'horizontale pendant l'écoute : la pochette ou le Canvas, l'heure et les paroles en plein écran. Aussi proposé comme économiseur d'écran d'Android.": {
+  "en": "While charging on its side during playback: the artwork or Canvas, the time and the lyrics full screen. Also offered as an Android screen saver.",
+  "hi": "सुनते समय चार्जिंग पर और आड़ा रखे जाने पर: कवर या Canvas, समय और बोल फ़ुल स्क्रीन में। Android स्क्रीन सेवर के रूप में भी उपलब्ध।",
+  "ja": "再生中に横向きで充電しているとき、アートワークまたは Canvas、時刻、歌詞を全画面で表示します。Android のスクリーンセーバーとしても使えます。",
+  "zh": "播放时横放充电：全屏显示封面或 Canvas、时间和歌词。也可作为 Android 屏幕保护程序使用。",
+  "ru": "Во время зарядки в горизонтальном положении при прослушивании: обложка или Canvas, время и текст песни на весь экран. Также доступно как заставка Android.",
+  "it": "In carica e in orizzontale durante l'ascolto: copertina o Canvas, ora e testi a schermo intero. Disponibile anche come salvaschermo di Android.",
+  "es": "Cargando y en horizontal mientras escuchas: la portada o el Canvas, la hora y la letra a pantalla completa. También disponible como salvapantallas de Android.",
+  "de": "Beim Laden im Querformat während der Wiedergabe: Cover oder Canvas, Uhrzeit und Songtext im Vollbild. Auch als Android-Bildschirmschoner verfügbar.",
+  "pt": "Carregando e na horizontal durante a reprodução: a capa ou o Canvas, a hora e a letra em tela cheia. Também disponível como protetor de tela do Android.",
+  "ko": "재생 중 가로로 충전할 때 커버 또는 Canvas, 시간, 가사를 전체 화면으로 표시합니다. Android 화면 보호기로도 사용할 수 있습니다."
+ }
+}

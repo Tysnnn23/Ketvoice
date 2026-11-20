@@ -40,7 +40,7 @@ class GlassLookRenderHostTest {
         return b
     }
 
-    private fun render(name: String, dark: Boolean, level: Int, tiltX: Float = 0f, tiltY: Float = 0f,
+    private fun render(name: String, dark: Boolean, at: Float, tiltX: Float = 0f, tiltY: Float = 0f,
                        tinted: Boolean = false, role: GlassRole = GlassRole.Control): Bitmap {
         val source = backdrop()
         val out = source.copy(Bitmap.Config.ARGB_8888, true)
@@ -51,12 +51,14 @@ class GlassLookRenderHostTest {
             setLocalMatrix(android.graphics.Matrix().apply { setTranslate(-left, -top) })
         })
         val base = if (role == GlassRole.Sheet) GlassParams.sheet(60f, dark = dark) else GlassParams.pill(dark = dark)
-        com.ketvoice.app.data.AppSettings.glassTinted.value = tinted
-        val params = Ket27Glass.regular(base, level, tinted)
+        // 7.5: Teinté of 7.1 is the opaque part of the one intensity.
+        val level = if (tinted) GlassClarity.TINTED else at
+        com.ketvoice.app.data.AppSettings.glassIntensity.value = level
+        val params = Ket27Glass.regular(base, level)
         val (lx, ly) = GlassLight.direction(GlassLight.degrees(tiltX))
-        applyLiquid27Uniforms(shader, panelW, panelH, 0f, 2f, params, glassCornerRadiiOf(9999f), GlassClarity.frostFor(level, tinted),
-            Liquid27Light(lx, ly, 0f, 0f, 0f, GlassLight.glint(tiltY)), GlassClarity.clarityFor(level, tinted))
-        com.ketvoice.app.data.AppSettings.glassTinted.value = false
+        applyLiquid27Uniforms(shader, panelW, panelH, 0f, 2f, params, glassCornerRadiiOf(9999f), GlassClarity.frost(level),
+            Liquid27Light(lx, ly, 0f, 0f, 0f, GlassLight.glint(tiltY)), GlassClarity.clarity(level))
+        com.ketvoice.app.data.AppSettings.glassIntensity.value = GlassClarity.DEFAULT
         canvas.save(); canvas.translate(left, top)
         canvas.drawRect(0f, 0f, panelW, panelH, Paint().apply { this.shader = shader })
         canvas.restore()
@@ -96,14 +98,14 @@ class GlassLookRenderHostTest {
         val x = (left + panelW / 2).toInt().let { it - it % 36 + 4 }
         val y = (top + panelH / 2).toInt()
         for (dark in listOf(false, true)) {
-            val probes = (GlassClarity.MIN..GlassClarity.MAX).map { level ->
-                luma(render("level-${if (dark) "dark" else "light"}-$level", dark, level).getPixel(x, y))
+            val probes = (0..6).map { level ->
+                luma(render("level-${if (dark) "dark" else "light"}-$level", dark, GlassClarity.fromLevel(level, false)).getPixel(x, y))
             }
             if (!dark) {
                 // Light glass lifts dark content less the clearer it is.
                 for (i in 0 until probes.lastIndex) assertTrue("light: level $i (${probes[i]}) ≤ level ${i + 1} (${probes[i + 1]})", probes[i] <= probes[i + 1] + .5f)
-                assertTrue("The clearest glass is clearly clearer than the default (${probes[0]} vs ${probes[GlassClarity.DEFAULT]})",
-                    probes[0] < probes[GlassClarity.DEFAULT] - 8f)
+                assertTrue("The clearest glass is clearly clearer than the default (${probes[0]} vs ${probes[2]})",
+                    probes[0] < probes[2] - 8f)
             }
         }
     }
@@ -134,10 +136,10 @@ class GlassLookRenderHostTest {
 
     @Test fun theHighlightMovesWithTheTilt() {
         // The lit rim at the top-left of the capsule against the top-right, as the phone turns.
-        val rest = render("tilt-rest", dark = true, level = GlassClarity.DEFAULT)
-        val turned = render("tilt-right", dark = true, level = GlassClarity.DEFAULT, tiltX = 1f)
-        val back = render("tilt-left", dark = true, level = GlassClarity.DEFAULT, tiltX = -1f)
-        val tipped = render("tilt-towards", dark = true, level = GlassClarity.DEFAULT, tiltY = 1f)
+        val rest = render("tilt-rest", dark = true, at = GlassClarity.DEFAULT)
+        val turned = render("tilt-right", dark = true, at = GlassClarity.DEFAULT, tiltX = 1f)
+        val back = render("tilt-left", dark = true, at = GlassClarity.DEFAULT, tiltX = -1f)
+        val tipped = render("tilt-towards", dark = true, at = GlassClarity.DEFAULT, tiltY = 1f)
         // Sum the rim band along the top edge.
         fun rimTop(b: Bitmap, from: Float, to: Float): Float {
             var sum = 0f

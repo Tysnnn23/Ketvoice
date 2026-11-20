@@ -21,12 +21,10 @@ object AppSettings {
     /** 0 clear optical glass, 1 frosted, 2 opaque accessibility material. */
     val glassStyle = mutableStateOf(0)
     /**
-     * Transparency of the glass, 0 (very clear) .. 6 (tinted, most legible); 2 is the look of earlier
-     * versions. Replaces the continuous `glassTint` of 5.x, converted once by [SettingsStore].
+     * The intensity of the glass (7.5), 0 very clear .. 1 opaque, continuous ([com.ketvoice.app.glass.GlassClarity]).
+     * Replaces `glassTintLevel` (6.0, 0..6) and `glassTinted` (7.1), converted once by [SettingsStore].
      */
-    val glassTintLevel = mutableStateOf(com.ketvoice.app.glass.GlassClarity.DEFAULT)
-    /** « Teinté » (7.1): the glass is clearly more opaque and contrasted (off = « Clair»); the level above still applies. */
-    val glassTinted = mutableStateOf(false)
+    val glassIntensity = mutableStateOf(com.ketvoice.app.glass.GlassClarity.DEFAULT)
     /** « Fond noir » (7.1, OLED): in dark mode, the pages stay pure black even under a cover's colours. */
     val trueBlack = mutableStateOf(false)
     /** The reflections of the glass follow the phone's tilt (never on Quest, with reduced motion or in the performance mode). */
@@ -73,6 +71,8 @@ object AppSettings {
     val autoResume = mutableStateOf(true)
     /** The sung line in a notification of its own, on the lock screen and in the shade (6.1). */
     val lockscreenLyrics = mutableStateOf(true)
+    /** « Mode veille au chargement » (7.5): an ambient Now Playing while charging in landscape; off by default. */
+    val standbyMode = mutableStateOf(false)
     /** Lyrics videos carry the song's sound (5.10.0). */
     val lyricVideoSound = mutableStateOf(true)
     val systemReduceMotion = mutableStateOf(false)

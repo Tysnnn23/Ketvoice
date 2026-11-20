@@ -47,7 +47,7 @@ class FusedChromeHostTest {
         AppSettings.languageChosen.value = true
         AppSettings.language.value = com.ketvoice.app.data.AppLanguage.FRENCH.label
         AppSettings.glassStyle.value = GlassStyles.LIQUID_27
-        AppSettings.glassTintLevel.value = 4
+        AppSettings.glassIntensity.value = com.ketvoice.app.glass.GlassClarity.fromLevel(4, false)
         AppSettings.liquidGlass.value = true
         AppSettings.reduceAnimations.value = false
         AppUi.selectTab(AppUi.LIBRARY)
@@ -58,7 +58,7 @@ class FusedChromeHostTest {
 
     @After fun reset() {
         AppSettings.glassStyle.value = 0
-        AppSettings.glassTintLevel.value = com.ketvoice.app.glass.GlassClarity.DEFAULT
+        AppSettings.glassIntensity.value = com.ketvoice.app.glass.GlassClarity.DEFAULT
         AppUi.closeOverlays()
         AppUi.selectTab(AppUi.HOME)
         @Suppress("UNCHECKED_CAST")

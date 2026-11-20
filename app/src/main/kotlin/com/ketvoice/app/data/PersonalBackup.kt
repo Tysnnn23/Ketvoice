@@ -30,13 +30,13 @@ internal object PersonalBackup {
     const val MAX_BYTES = 16 * 1024 * 1024
     private val booleans = setOf("reduceAnimations", "reduceDynamicBlur", "liquidGlass", "fullArtwork",
         "classicGradient", "animatedArtwork", "albumHeroCanvas", "downloadsWifiOnly", "panoramicCanvas",
-        "sonicCanvas", "albumColors", "artworkDepth", "livingArtwork", "coverAccent", "volumeLeveling", "coverBackground", "ketmixStems", "ketmixStemsCharging", "ketmixSmartQueue", "ketmixOnSkip", "ketmixLibrary", "autoResume", "lyricVideoSound", "lockscreenLyrics", "autoOfflineFavorites", "smartOffline", "smartOfflineCharging", "canvasWithMobileData", "canvasPreloadWifi", "artistPhotos", "highRefreshRate",
+        "sonicCanvas", "albumColors", "artworkDepth", "livingArtwork", "coverAccent", "volumeLeveling", "coverBackground", "ketmixStems", "ketmixStemsCharging", "ketmixSmartQueue", "ketmixOnSkip", "ketmixLibrary", "autoResume", "lyricVideoSound", "lockscreenLyrics", "standbyMode", "autoOfflineFavorites", "smartOffline", "smartOfflineCharging", "canvasWithMobileData", "canvasPreloadWifi", "artistPhotos", "highRefreshRate",
         "syncedLyrics", "lyricsRomanization", "skipSilence", "equalizerEnabled", "progressiveQuality",
         "highPerformanceMode", "questKeepAwake", "filterNonAudio", "localMusicEnrich", "playNextOnSwipe",
         "noRepeatSuggestions", "stopOnSwipeFromRecents", "hideVolumeBar", "hideStatusBarInPlayer",
         "showQueueHistory", "hideTitleStatus", "languageChosen", "lastfmGenres", "smartAudioAlignment", "techStats",
         "haptics", "coverTintedGlass", "glassTilt", "glassTinted", "trueBlack", "meshBackground", "automixOn", "automixAlbums", "ketmixLoops", "smartShuffle", "ketmixHaptics")
-    private val integers = mapOf("themeMode" to 0..2, "glassStyle" to 0..com.ketvoice.app.glass.GlassStyles.MAX, "glassTintLevel" to com.ketvoice.app.glass.GlassClarity.MIN..com.ketvoice.app.glass.GlassClarity.MAX, "lyricsTextSize" to 0..2, "albumHeader" to 0..2,
+    private val integers = mapOf("themeMode" to 0..2, "glassStyle" to 0..com.ketvoice.app.glass.GlassStyles.MAX, "glassTintLevel" to 0..6, "lyricsTextSize" to 0..2, "albumHeader" to 0..2,
         "reverbAmount" to 0..100, "reverbSize" to 0..100, "reverbDamping" to 0..100,
         "lyricsMode" to 0..2, "automixIntensity" to 0..2, "ketmixAnalysis" to 0..2, "ketmixStyle" to 0..5, "ketmixStemsQuality" to 0..2, "voiceLevel" to 0..100, "canvasCacheMb" to 256..2048, "smartOfflineGb" to 0..10, "smartOfflinePercent" to 10..50, "downloadQualityMode" to 0..2, "appIconVariant" to 0..ViceCityEdition.ICON_VARIANT)
     private val longs = setOf("accentArgb", "cacheBytes")
@@ -74,6 +74,7 @@ internal object PersonalBackup {
         key == "accentArgb" -> (raw as? Number)?.toLong()?.takeIf { it in 0L..0xffffffffL }
         key == "cacheBytes" -> (raw as? Number)?.toLong()?.takeIf { it in 500_000_000L..10_000_000_000L }
         key == "glassTint" -> (raw as? Number)?.toFloat()?.takeIf { it.isFinite() && it in 0f..1f }
+        key == "glassIntensity" -> (raw as? Number)?.toFloat()?.takeIf { it.isFinite() && it in 0f..1f }
         key in strings -> (raw as? String)?.takeIf { value ->
             when (key) {
                 "wifiQuality", "mobileQuality" -> value in setOf("Normal", "Élevé", "Sans perte")
@@ -246,13 +247,9 @@ internal object PersonalBackup {
         withContext(Dispatchers.IO) { ListeningHistory.mergeBackup(checked.recent, checked.known, checked.counts, checked.listenedMs) }
         val prefs = context.applicationContext.getSharedPreferences("ketvoice_settings", Context.MODE_PRIVATE)
         val editor = prefs.edit()
-        // A backup of 5.x carries the continuous glass tint: it lands on the nearest step of the transparency.
-        val legacyTint = checked.settings["glassTint"] as? Float
-        if (legacyTint != null && "glassTintLevel" !in checked.settings) {
-            editor.putInt("glassTintLevel", com.ketvoice.app.glass.GlassClarity.fromLegacyTint(legacyTint))
-        }
+        // A backup of 5.x to 7.4 carries the glass tint, levels or Teinté: the intensity is worked out again from them.
+        if (com.ketvoice.app.glass.GlassClarity.legacyKeys(checked.settings.filter { (key, raw) -> setting(key, raw) != null }.keys) != null) editor.remove("glassIntensity")
         checked.settings.forEach { (key, raw) ->
-            if (key == "glassTint") return@forEach
             when (val value = setting(key, raw)) {
                 is Boolean -> editor.putBoolean(key, value)
                 is Int -> editor.putInt(key, value)

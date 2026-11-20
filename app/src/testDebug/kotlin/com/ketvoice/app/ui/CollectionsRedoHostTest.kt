@@ -152,7 +152,9 @@ class CollectionsRedoHostTest {
         compose.onNodeWithTag("liked-play").assertIsDisplayed()
         compose.onNodeWithTag("liked-shuffle").assertIsDisplayed()
         image("liked-dark")
-        compose.onNodeWithText("Titre A–Z").performScrollTo().performClick()
+        // 7.5: the sorts are in the menu beside the search, as in a playlist.
+        compose.onNodeWithTag("liked-sort").performScrollTo().performClick()
+        compose.onNodeWithTag("liked-sort:Title").performClick()
         compose.onNodeWithTag("liked-list").performScrollToNode(hasText("Favori 7"))
         image("liked-sorted-dark")
         show(false) { com.ketvoice.app.ui.sub.CatalogScreen(CatalogRequest("favorites", "local", "Favoris")) }

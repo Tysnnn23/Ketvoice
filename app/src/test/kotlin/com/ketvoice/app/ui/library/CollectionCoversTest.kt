@@ -47,9 +47,9 @@ class CollectionCoversTest {
         val b = t("b", "Abel", "", null).copy(title = "Alpha")
         val c = t("c", "Moe", "", null).copy(title = "Charlie")
         val liked = listOf("b", "c", "a")
-        assertEquals(listOf("a", "c", "b"), LikedOrder.arrange(listOf(a, b, c), liked, "", 0).map { it.id })
-        assertEquals(listOf("b", "a", "c"), LikedOrder.arrange(listOf(a, b, c), liked, "", 1).map { it.id })
-        assertEquals(listOf("b", "c", "a"), LikedOrder.arrange(listOf(a, b, c), liked, "", 2).map { it.id })
-        assertEquals(listOf("c"), LikedOrder.arrange(listOf(a, b, c), liked, "moe", 0).map { it.id })
+        assertEquals(listOf("a", "c", "b"), LikedOrder.arrange(listOf(a, b, c), liked, "", LikedOrder.default).map { it.id })
+        assertEquals(listOf("b", "a", "c"), LikedOrder.arrange(listOf(a, b, c), liked, "", com.ketvoice.app.data.ListOrder(com.ketvoice.app.data.ListSort.Title)).map { it.id })
+        assertEquals(listOf("b", "c", "a"), LikedOrder.arrange(listOf(a, b, c), liked, "", com.ketvoice.app.data.ListOrder(com.ketvoice.app.data.ListSort.Artist)).map { it.id })
+        assertEquals(listOf("c"), LikedOrder.arrange(listOf(a, b, c), liked, "moe", LikedOrder.default).map { it.id })
     }
 }

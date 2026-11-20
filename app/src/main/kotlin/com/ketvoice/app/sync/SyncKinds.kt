@@ -146,7 +146,7 @@ internal object ArtistsKind : SyncKind {
  */
 internal object SettingsKind : SyncKind {
     override val name = "settings"
-    val keys = setOf("themeMode", "accentArgb", "glassStyle", "glassTintLevel", "glassTinted", "glassTilt", "trueBlack", "coverAccent", "coverBackground",
+    val keys = setOf("themeMode", "accentArgb", "glassStyle", "glassIntensity", "glassTintLevel", "glassTinted", "glassTilt", "trueBlack", "coverAccent", "coverBackground",
         "coverTintedGlass", "meshBackground", "albumColors", "animatedArtwork", "albumHeroCanvas", "albumHeader", "artworkDepth", "livingArtwork",
         "fullArtwork", "panoramicCanvas", "sonicCanvas", "artistPhotos", "lyricsTextSize", "lyricsMode", "syncedLyrics",
         "lyricsSource", "translateLanguage", "translationSource", "lyricsRomanization", "lockscreenLyrics", "automixOn", "automixIntensity",
@@ -173,9 +173,12 @@ internal object SettingsKind : SyncKind {
                 is Boolean -> editor.putBoolean(key, value)
                 is Int -> editor.putInt(key, value)
                 is Long -> editor.putLong(key, value)
+                is Float -> editor.putFloat(key, value)
                 is String -> editor.putString(key, value)
             }
         }
+        // A device still on 7.4 sends its levels and Teinté: the intensity is worked out again from them.
+        com.ketvoice.app.glass.GlassClarity.legacyKeys(values.filter { (key, text) -> key in keys && parse(key, text) != null }.keys)?.let { editor.remove("glassIntensity") }
         editor.commit()
         com.ketvoice.app.data.SettingsStore.load(context)
     }

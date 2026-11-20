@@ -591,6 +591,9 @@ fun SettingsScreen() {
                     }
                 }
                 if (!com.ketvoice.app.BuildConfig.IS_QUEST) LockscreenLyricsRows()
+                if (!com.ketvoice.app.BuildConfig.IS_QUEST) SToggle(KetIcons.Clock, "Mode veille au chargement",
+                    "En charge et à l'horizontale pendant l'écoute : la pochette ou le Canvas, l'heure et les paroles en plein écran. Aussi proposé comme économiseur d'écran d'Android.",
+                    AppSettings.standbyMode.value) { AppSettings.standbyMode.value = it; SettingsStore.save() }
                 SRow(KetIcons.Lyrics, "Clé BetterLyrics (facultative)",
                     sub = "Cache public ; certaines recherches exigent une clé",
                     value = if (AppSettings.betterLyricsKey.value.isBlank()) "Non définie" else "Définie"

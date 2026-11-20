@@ -148,6 +148,8 @@ class MainActivity : ComponentActivity() {
                         AppRoot()
                     }
                     com.ketvoice.app.ui.update.UpdateHost()
+                    // 7.5: the ambient Now Playing while charging in landscape (off unless the listener turned it on).
+                    com.ketvoice.app.ui.standby.StandbyHost()
                     // The first-launch welcome of a new install (6.2) comes first, then the Vice City welcome (6.1)
                     // and a season's offer (6.2): after the splash, never over a crash report.
                     com.ketvoice.app.ui.onboarding.OnboardingHost(ready = !splash && !crashReport)
