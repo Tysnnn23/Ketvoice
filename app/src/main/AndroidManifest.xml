@@ -265,6 +265,17 @@
 
         <!-- 6.1: voice separation and Ketmix's preparation of downloads run in their own process. A battery
              manager or Android's memory killer that stops it leaves the music playing; the work is asked again. -->
+        <!-- 7.5: « Ketvoice » as Android's screen saver while charging (the standby mode's system variant). -->
+        <service
+            android:name=".ui.standby.StandbyDream"
+            android:exported="true"
+            android:label="Ketvoice"
+            android:permission="android.permission.BIND_DREAM_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.dreams.DreamService" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </service>
         <service
             android:name=".stems.StemWorkService"
             android:exported="false"
