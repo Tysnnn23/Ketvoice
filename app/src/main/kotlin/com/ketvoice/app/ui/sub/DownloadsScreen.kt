@@ -151,6 +151,8 @@ fun DownloadsScreen() {
             openSelectionMenu(anchor)
         } else ContextMenus.open(track, anchor, listOf(ContextMenus.Item("Sélectionner", KetIcons.Check, tag = "download-select") {
             selecting = true; selected = listOf(track.id)
+        }, ContextMenus.Item("Supprimer le téléchargement", KetIcons.Trash, destructive = true, tag = "download-delete") {
+            deleteIds = listOf(track.id)
         }))
     }
     fun holdGroup(ids: List<String>) {
@@ -171,13 +173,9 @@ fun DownloadsScreen() {
     BoxWithConstraints(Modifier.fillMaxSize().pageBackground(theme)) {
     // The width the rows and covers share once the page's margins are taken off.
     val paneDp = maxWidth.value - 2 * DownloadsLayout.EDGE_DP
+    val pageDp = maxWidth.value
     val columns = DownloadsLayout.columns(paneDp)
     val grid = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
-    val handover = with(androidx.compose.ui.platform.LocalDensity.current) { 72.dp.toPx() }
-    // 0 while the large title is in view, 1 once it has scrolled away: the bar then names the page.
-    val collapse by remember { androidx.compose.runtime.derivedStateOf {
-        ScrollTitle.collapse(grid.firstVisibleItemIndex, grid.firstVisibleItemScrollOffset, handover)
-    } }
     val top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 64.dp
     com.ketvoice.app.glass.BackdropCapture(backdrop, Modifier.fillMaxSize()) {
         // Ket 27, after Apple Music's « Téléchargé »: a large title, Play and Shuffle, the storage, then the list.
@@ -196,8 +194,10 @@ fun DownloadsScreen() {
                         .filter { it.isNotBlank() }.joinToString(" · ")
                     val wideHeader = large && paneDp >= 700f
                     com.ketvoice.app.ui.common.CollectionHero(cover = mosaic.firstOrNull(), top = top, title = AppText.t("Téléchargements"),
-                        titleTag = "downloads-title", meta = meta, artworkTag = "downloads-cover", shrink = { collapse },
-                        beside = wideHeader, bleed = DownloadsLayout.EDGE_DP.dp, artworkSide = if (wideHeader) null else 184.dp,
+                        titleTag = "downloads-title", meta = meta, artworkTag = "downloads-cover",
+                        // 7.4 (owner): a bigger cover, and the header scrolls away with the list instead of fading.
+                        beside = wideHeader, bleed = DownloadsLayout.EDGE_DP.dp,
+                        artworkSide = com.ketvoice.app.ui.common.libraryArtworkSide(pageDp, wideHeader).dp,
                         artwork = { com.ketvoice.app.ui.library.MosaicCover(mosaic) }) {
                         if (saved.isNotEmpty()) com.ketvoice.app.ui.common.CollectionActionPair(
                             { Player.setShuffle(false); Player.playQueue(saved.map { it.track }) },
@@ -304,7 +304,7 @@ fun DownloadsScreen() {
                                     Player.setShuffle(false)
                                     Player.playQueue(tracks, tracks.indexOfFirst { it.id == track.id }.coerceAtLeast(0))
                                 }
-                            }, onDelete = { deleteIds = listOf(track.id) })
+                            })
                     }
                 }
                 if (view == 1 && chosen == null && groups.isEmpty()) item(span = { GridItemSpan(maxLineSpan) }, key = "no-albums") {
@@ -335,13 +335,11 @@ fun DownloadsScreen() {
                 SelectionBarButton("Tout", "downloads-select-all") { selected = (selected + all).distinct() }
                 SelectionBarButton("Annuler", "downloads-select-cancel") { selecting = false; selected = emptyList() }
             }
-            // The order of the titles, from the bar's « … » as Apple Music sorts its lists.
-            else if (saved.size > 1) com.ketvoice.app.ui.common.KetMenuButton(listOf(
-                DownloadSort.entries.map { option ->
-                    com.ketvoice.app.ui.common.KetMenuItem(option.label, checked = option == sort, tag = "downloads-sort:" + option.name) { sortName = option.name }
-                },
-                listOf(com.ketvoice.app.ui.common.KetMenuItem("Préparer une capsule hors ligne", KetIcons.Storage) { AppUi.showCapsule.value = true })),
-                "Options", tag = "downloads-menu")
+            // 7.4: the bar's « … » is the page's own menu (select, the order of the titles as Apple Music sorts
+            // its lists, the capsule); a title's « … » opens that title's glass menu.
+            else if (saved.isNotEmpty()) com.ketvoice.app.ui.common.KetMenuButton(downloadsPageMenu(saved.size, sort,
+                onSelect = { selecting = true; selected = emptyList() }, onSort = { sortName = it.name },
+                onCapsule = { AppUi.showCapsule.value = true }), "Options", tag = "downloads-menu")
         }
     }
     }
@@ -380,18 +378,18 @@ fun DownloadsScreen() {
 @Composable
 private fun SavedDownloadRow(item: Downloader.Item, current: Boolean, auto: Boolean, selecting: Boolean, checked: Boolean,
                              cover: String?, size: String, onMenu: (androidx.compose.ui.geometry.Rect?) -> Unit,
-                             onClick: () -> Unit, onDelete: () -> Unit) {
+                             onClick: () -> Unit) {
     val theme = LocalTheme.current
     val track = item.track
-    var menu by remember { mutableStateOf(false) }
     val menuAnchor = com.ketvoice.app.ui.common.rememberRowAnchor()
     Column(Modifier.fillMaxWidth().testTag("saved-download")) {
         Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
             .trackRowClick(track, role = if (selecting) Role.Checkbox else Role.Button, onMenu = onMenu, onClick = onClick)
-            .padding(start = 4.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            .padding(start = 4.dp, top = TrackRowLook.padV, bottom = TrackRowLook.padV), verticalAlignment = Alignment.CenterVertically) {
             if (selecting) com.ketvoice.app.ui.common.KetCheckbox(checked, onCheckedChange = null)
-            Cover(track.title, cover, 48.dp, 6.dp, Modifier.downloadFill(track.id, 6.dp))
-            Column(Modifier.padding(start = 12.dp).weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
+            val radius = com.ketvoice.app.theme.Ket27.Radius.thumb
+            Cover(track.title, cover, TrackRowLook.cover, radius, Modifier.downloadFill(track.id, radius))
+            Column(Modifier.padding(start = TrackRowLook.gap).weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 TrackTitle(track.title, color = if (current) theme.accent else theme.onBackground, selected = current, maxLines = 1)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(KetIcons.Download, "Téléchargé", tint = theme.secondary, modifier = Modifier.padding(end = 4.dp).size(12.dp).testTag("download-badge"))
@@ -412,20 +410,15 @@ private fun SavedDownloadRow(item: Downloader.Item, current: Boolean, auto: Bool
                         modifier = Modifier.size(14.dp).testTag("download-separated"))
                 }
             }
-            if (!selecting) Box {
-                IconButton(onClick = { menu = true }, modifier = Modifier.size(48.dp).then(menuAnchor.modifier).testTag("download-more")) {
-                    Icon(KetIcons.More, "Options de ${track.title}", tint = theme.secondary, modifier = Modifier.size(20.dp))
-                }
-                com.ketvoice.app.ui.common.KetMenu(menu, { menu = false }, listOf(
-                    listOf(com.ketvoice.app.ui.common.KetMenuItem("Lire ensuite", androidx.compose.material.icons.Icons.AutoMirrored.Filled.PlaylistPlay) {
-                        Player.queueWithUndo(track, true) },
-                        com.ketvoice.app.ui.common.KetMenuItem("Plus d'options", KetIcons.More) { menuAnchor.open(track) }),
-                    listOf(com.ketvoice.app.ui.common.KetMenuItem("Supprimer le téléchargement", KetIcons.Trash, destructive = true,
-                        tag = "download-delete", onClick = onDelete))))
+            // 7.4: the same glass menu as a long press (it was a small menu of its own).
+            if (!selecting) IconButton(onClick = { onMenu(menuAnchor.bounds()) },
+                modifier = Modifier.size(48.dp).then(menuAnchor.modifier).testTag("download-more")) {
+                Icon(KetIcons.More, "Options de ${track.title}", tint = theme.secondary, modifier = Modifier.size(20.dp))
             }
         }
         // The hairline starts under the title, past the artwork.
-        Box(Modifier.padding(start = if (selecting) 116.dp else 64.dp).fillMaxWidth().height(.5.dp).background(theme.hairline))
+        Box(Modifier.padding(start = (if (selecting) 52.dp else 0.dp) + 4.dp + TrackRowLook.cover + TrackRowLook.gap)
+            .fillMaxWidth().height(.5.dp).background(theme.hairline))
     }
 }
 
@@ -627,3 +620,12 @@ internal fun DownloadCategories(view: Int, counts: List<Int>, modifier: Modifier
         }
     }
 }
+
+/** The bar's « … » of Downloads: select, the order of the titles (when there is more than one), the capsule. */
+internal fun downloadsPageMenu(count: Int, sort: DownloadSort, onSelect: () -> Unit, onSort: (DownloadSort) -> Unit,
+                               onCapsule: () -> Unit): List<List<com.ketvoice.app.ui.common.KetMenuItem>> = listOfNotNull(
+    listOf(com.ketvoice.app.ui.common.KetMenuItem("Sélectionner", KetIcons.Check, tag = "downloads-menu-select", onClick = onSelect)),
+    if (count > 1) DownloadSort.entries.map { option ->
+        com.ketvoice.app.ui.common.KetMenuItem(option.label, checked = option == sort, tag = "downloads-sort:" + option.name) { onSort(option) }
+    } else null,
+    listOf(com.ketvoice.app.ui.common.KetMenuItem("Préparer une capsule hors ligne", KetIcons.Storage, onClick = onCapsule)))

@@ -11,6 +11,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -25,6 +28,17 @@ import com.ketvoice.app.ui.player.NowPlayingBars
 import com.ketvoice.app.ui.player.formatSecs
 import com.ketvoice.app.ui.sub.formatBadge
 import com.ketvoice.app.ui.sub.isLosslessFormat
+
+/**
+ * 7.4 « Listes plus aérées » (owner's pick, after Apple Music): rows a little taller, the row artwork's Ket 27
+ * radius, and a hairline that starts after the artwork, never under it.
+ */
+internal object TrackRowLook {
+    val cover = 52.dp
+    val gap = 14.dp
+    /** Above and under the artwork: a 72 dp row. */
+    val padV = 10.dp
+}
 
 /** The codec badge of a saved title ("FLAC", "MP3"), or null when the title is not on the device. */
 internal fun savedFormatBadge(format: String?): String? = format?.takeIf { it.isNotBlank() }?.let(::formatBadge)
@@ -43,16 +57,25 @@ internal fun TrackRow(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     rank: Int? = null,
+    divider: Boolean = true,
     trailing: (@Composable RowScope.() -> Unit)? = null
 ) {
     val theme = LocalTheme.current
     val small = if (BuildConfig.IS_QUEST) 14.sp else 13.sp
-    Row(modifier.fillMaxWidth().trackRowClick(track, onClick = onClick).padding(start = pageMargin, end = 6.dp, top = 7.dp, bottom = 7.dp),
+    val inset = pageMargin + (if (rank != null) 26.dp else 0.dp) + TrackRowLook.cover + TrackRowLook.gap
+    val line = theme.hairline
+    Row(modifier.fillMaxWidth().trackRowClick(track, onClick = onClick)
+        .then(if (divider) Modifier.drawBehind {
+            val y = size.height - .5.dp.toPx() / 2f
+            val start = if (layoutDirection == LayoutDirection.Rtl) size.width - inset.toPx() else inset.toPx()
+            drawLine(line, Offset(start, y), Offset(if (layoutDirection == LayoutDirection.Rtl) 0f else size.width, y), .5.dp.toPx())
+        } else Modifier)
+        .padding(start = pageMargin, end = 6.dp, top = TrackRowLook.padV, bottom = TrackRowLook.padV),
         verticalAlignment = Alignment.CenterVertically) {
         if (rank != null) Text("$rank", localize = false, color = theme.secondary, fontSize = 13.sp, modifier = Modifier.width(26.dp))
-        DownloadCover(track, cover, 52.dp, com.ketvoice.app.theme.Ket27.Radius.thumb)
-        Spacer(Modifier.width(12.dp))
-        Column(Modifier.weight(1f)) {
+        DownloadCover(track, cover, TrackRowLook.cover, com.ketvoice.app.theme.Ket27.Radius.thumb)
+        Spacer(Modifier.width(TrackRowLook.gap))
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             TrackTitle((if (track.explicit) "ᴱ  " else "") + track.title,
                 color = if (active) theme.accent else theme.onBackground, selected = active)
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {

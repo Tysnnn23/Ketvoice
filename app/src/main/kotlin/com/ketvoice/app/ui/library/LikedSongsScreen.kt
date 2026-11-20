@@ -72,13 +72,17 @@ internal fun LikedSongsScreen(tracks: List<Track>) {
         AlbumPresentation.totalDuration(tracks)?.let(AppText::t)).joinToString(" · ")
     fun play() { if (shown.isNotEmpty()) { Player.setShuffle(false); Player.playQueue(shown, 0) } }
     val top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 56.dp
-    Box(Modifier.fillMaxSize().pageBackground(theme)) {
+    androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize().pageBackground(theme)) {
+        val wide = com.ketvoice.app.ui.adaptive.LocalLargeScreen.current != null
+        val pageDp = maxWidth.value
         LazyColumn(Modifier.fillMaxSize().testTag("liked-list"), state = list,
             contentPadding = PaddingValues(bottom = LocalAdaptiveLayout.current.bottomPaddingDp.dp + 20.dp)) {
             item(key = "liked-hero", contentType = "liked-hero") {
                 CollectionHero(cover = null, top = top, title = title, titleTag = "liked-title", meta = meta,
-                    artworkTag = "liked-cover", shrink = { collapse },
-                    beside = com.ketvoice.app.ui.adaptive.LocalLargeScreen.current != null,
+                    // 7.4 (owner): a bigger cover, and the header scrolls away with the list instead of fading;
+                    // the name still folds into the bar.
+                    artworkTag = "liked-cover", beside = wide,
+                    artworkSide = com.ketvoice.app.ui.common.libraryArtworkSide(pageDp, wide).dp,
                     artwork = { LikedCover() }) {
                     CollectionActionPair(::play, { if (shown.isNotEmpty()) Player.playShuffled(shown) },
                         Modifier.widthIn(max = 440.dp).fillMaxWidth(), enabled = tracks.isNotEmpty(),

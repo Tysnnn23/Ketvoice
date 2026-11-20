@@ -98,8 +98,10 @@ class LibraryRedesignHostTest {
     @Test fun deletionNeedsConfirmationAndCancelKeepsTheActualFile() {
         val item = file(track("keep", "À conserver"))
         saved.value = listOf(item)
-        compose.setContent { KetvoiceTheme(useDark = false) { DownloadsScreen() } }
-        // Removing is in the row's « … », as Apple Music offers it.
+        compose.setContent { KetvoiceTheme(useDark = false) {
+            Box(Modifier.fillMaxSize()) { DownloadsScreen(); com.ketvoice.app.ui.common.ContextMenuHost() }
+        } }
+        // Removing is in the row's « … » (7.4: the title's glass menu, as a long press opens it).
         compose.onNodeWithTag("downloads-list").performScrollToNode(hasTestTag("download-more"))
         compose.onNodeWithTag("download-more").performClick()
         compose.onNodeWithTag("download-delete").performClick()

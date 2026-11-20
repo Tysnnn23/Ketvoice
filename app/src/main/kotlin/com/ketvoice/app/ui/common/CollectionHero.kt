@@ -49,6 +49,13 @@ import com.ketvoice.app.ui.motion.zoomTarget
 internal fun heroArtworkSide(width: Float, beside: Boolean): Float =
     if (beside) (width * .32f).coerceIn(120f, 300f) else (width * .62f).coerceIn(168f, 300f)
 
+/**
+ * 7.4 (owner): Downloads and Favourites lead with a bigger cover, as Apple Music: about two thirds of a phone's
+ * width (from the page's whole width), bounded on tablets; beside the text on a wide pane.
+ */
+internal fun libraryArtworkSide(pageWidth: Float, beside: Boolean): Float =
+    if (beside) (pageWidth * .34f).coerceIn(160f, 320f) else (pageWidth * .66f).coerceIn(200f, 340f)
+
 /** The header's scale while its page scrolls ([collapse] 0 → 1): down to 86 % before the bar takes over. */
 internal fun heroShrinkScale(collapse: Float): Float = 1f - .14f * (if (collapse.isFinite()) collapse.coerceIn(0f, 1f) else 0f)
 
