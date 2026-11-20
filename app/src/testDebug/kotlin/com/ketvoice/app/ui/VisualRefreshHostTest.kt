@@ -83,8 +83,10 @@ class VisualRefreshHostTest {
         } }
         compose.waitUntil(10_000) { compose.onAllNodesWithTag("album-artwork-loaded").fetchSemanticsNodes().isNotEmpty() }
         val bounds = compose.onNodeWithTag("album-hero-visual").fetchSemanticsNode().boundsInRoot
-        assertEquals("The artwork starts at the left edge", 0f, bounds.left, 1f)
-        assertTrue("The artwork reaches the right edge", bounds.width >= 400f - 1f)
+        // 7.3: the cover floats centred, a square, instead of spanning the width.
+        assertEquals("The cover is centred", 400f / 2f, (bounds.left + bounds.right) / 2f, 1.5f)
+        assertEquals("The cover is a square", bounds.width, bounds.height, 1.5f)
+        assertTrue("The cover is large", bounds.width >= 400f * .55f)
         assertTrue("The artwork is never oversized", bounds.height <= 421f)
         val b = image("album-edge-light-no-white-veil")
         val sample = b.getPixel(200, (bounds.top + bounds.height * .82f).toInt())

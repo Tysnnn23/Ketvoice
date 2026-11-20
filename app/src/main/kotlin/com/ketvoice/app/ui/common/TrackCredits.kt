@@ -103,6 +103,7 @@ internal object TrackCredits {
 
 /** The quality line: the Lossless grade when the codec says so, else what the decoder reads for the title playing. */
 @Composable
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 private fun rememberQualityLine(track: Track): String? {
     val playing = com.ketvoice.app.player.Player.state.collectAsState().value.current?.id == track.id
     val grade = if (playing) rememberPlayingGrade(track.id) else rememberSavedGrade(track.id)

@@ -543,7 +543,7 @@ class PrismalHostRenderTest {
             } }
             compose.waitUntil(10_000) { compose.onAllNodesWithTag("album-artwork-loaded").fetchSemanticsNodes().isNotEmpty() }
             val hero = compose.onNodeWithTag("album-hero-visual").fetchSemanticsNode().boundsInRoot
-            assertEquals("The hero takes the shape of the framed band", 200f, hero.height, 2f)
+            assertEquals("The centred cover stays square", hero.width, hero.height, 2f)
             // The three actions of the owner sit in one capsule.
             val pad = compose.onNodeWithTag("album-actions").fetchSemanticsNode().boundsInRoot
             for (tag in listOf("album-visuals", "album-framing", "album-share")) {
@@ -566,7 +566,6 @@ class PrismalHostRenderTest {
             compose.onNodeWithTag("framing-cancel").performClick()
             compose.onNodeWithTag("album-framing-cancel").performClick()
             compose.onAllNodesWithTag("album-framing-bar").assertCountEquals(0)
-            assertEquals(200f, compose.onNodeWithTag("album-hero-visual").fetchSemanticsNode().boundsInRoot.height, 2f)
         } finally {
             allowed.value = false
             com.ketvoice.app.data.MediaOverrides.replaceForTest(emptyList())
@@ -620,7 +619,6 @@ class PrismalHostRenderTest {
         compose.waitUntil(10_000) { compose.onAllNodesWithTag("album-artwork-loaded").fetchSemanticsNodes().isNotEmpty() }
         val hero = compose.onNodeWithTag("album-hero-visual").fetchSemanticsNode().boundsInRoot
         val cover = compose.onNodeWithTag("album-artwork-loaded").fetchSemanticsNode().boundsInRoot
-        assertEquals("The header still spans the window", 600f, hero.width, 1f)
         assertTrue("and is capped by the window height", hero.height <= 800f * .46f + 1f)
         assertEquals("The cover itself stays a whole square", cover.width, cover.height, 1f)
         assertEquals("centred in the header", 300f, (cover.left + cover.right) / 2f, 1.5f)
@@ -639,8 +637,10 @@ class PrismalHostRenderTest {
         } }
         val hero = compose.onNodeWithTag("album-hero-visual").fetchSemanticsNode().boundsInRoot
         val width = compose.activity.window.decorView.width.toFloat()
-        assertEquals("The artwork starts at the left edge", 0f, hero.left, 1f)
-        assertTrue("The artwork reaches the right edge", hero.width >= width - 1f)
+        // 7.3: the cover floats centred, a square, instead of spanning the width.
+        assertEquals("The cover is centred", width / 2f, (hero.left + hero.right) / 2f, 1.5f)
+        assertEquals("The cover is a square", hero.width, hero.height, 1.5f)
+        assertTrue("The cover is large", hero.width >= width * .55f)
         assertTrue("The artwork is never oversized", hero.height <= 421f)
         image("album-hero-full-bleed")
     }

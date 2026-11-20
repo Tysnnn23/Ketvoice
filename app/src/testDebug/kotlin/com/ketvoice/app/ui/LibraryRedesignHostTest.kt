@@ -206,8 +206,10 @@ class LibraryRedesignHostTest {
         } }
         compose.waitUntil(10_000) { compose.onAllNodesWithTag("album-artwork-loaded").fetchSemanticsNodes().isNotEmpty() }
         val art = compose.onNodeWithTag("album-hero-visual").fetchSemanticsNode().boundsInRoot
-        assertEquals("The artwork starts at the left edge", 0f, art.left, 1f)
-        assertTrue("The artwork reaches the right edge", art.width >= 400f - 1f)
+        // 7.3: the cover floats centred, a square, instead of spanning the width.
+        assertEquals("The cover is centred", 400f / 2f, (art.left + art.right) / 2f, 1.5f)
+        assertEquals("The cover is a square", art.width, art.height, 1.5f)
+        assertTrue("The cover is large", art.width >= 400f * .55f)
         assertTrue("The artwork is never oversized", art.height <= 421f)
         image("album-redesign-local-artwork-light")
     }
