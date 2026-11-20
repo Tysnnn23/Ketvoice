@@ -124,8 +124,8 @@ class LiveLyricsTest {
         assertFalse(LockscreenLyricsGate.wanted(setting = false, quest = false, allowed = true))
         assertFalse("no lock screen on Quest", LockscreenLyricsGate.wanted(setting = true, quest = true, allowed = true))
         assertFalse("notifications refused", LockscreenLyricsGate.wanted(setting = true, quest = false, allowed = false))
-        assertFalse(LiveLyrics.Demand(notification = false, widget = false).any)
-        assertTrue(LiveLyrics.Demand(notification = false, widget = true).any)
+        assertFalse(LiveLyrics.Demand(notification = false).any)
+        assertTrue(LiveLyrics.Demand(notification = true).any)
     }
 
     /** A deck moving in the test's virtual time. */
@@ -141,7 +141,7 @@ class LiveLyricsTest {
     @Test fun theEngineWakesOnlyAtLineChanges() = runTest {
         val deck = FakeDeck(this)
         var screen = true
-        var demand = LiveLyrics.Demand(notification = true, widget = false)
+        var demand = LiveLyrics.Demand(notification = true)
         val inputs = MutableStateFlow(LyricsInputs(state(), emptyMap(), 0, null, 0))
         val engine = LiveLyricsEngine(backgroundScope, deck::head, { screen }, { demand }, inputs)
         engine.start(); runCurrent()
@@ -185,8 +185,8 @@ class LiveLyricsTest {
         inputs.value = inputs.value.copy(lyrics = state(id = "t2")); runCurrent()
         assertEquals(LyricTimeline.REST, LiveLyrics.state.value.line!!.current)
 
-        // Nobody wants the line (setting off, no widget): nothing, and no work.
-        demand = LiveLyrics.Demand(notification = false, widget = false)
+        // Nobody wants the line (setting off): nothing, and no work.
+        demand = LiveLyrics.Demand(notification = false)
         inputs.value = inputs.value.copy(demandEpoch = 1); runCurrent()
         assertNull(LiveLyrics.state.value.line)
         val off = engine.wakeups

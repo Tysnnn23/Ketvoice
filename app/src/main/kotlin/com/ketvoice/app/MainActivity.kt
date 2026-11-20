@@ -206,36 +206,21 @@ class MainActivity : ComponentActivity() {
         runCatching { com.ketvoice.app.discord.Discord.onForeground() }
     }
 
-    /** A home-screen widget opened the app: the mix it showed is played, or "Votre semaine" opens Replay. */
+    /** A home-screen widget, a tile or the lyrics notification opened the app: the player, or its lyrics. */
     private fun handleWidgetIntent(intent: Intent?) {
         intent ?: return
-        val mix = intent.getStringExtra(com.ketvoice.app.widget.WidgetIntents.MIX)
         val open = intent.getStringExtra(com.ketvoice.app.widget.WidgetIntents.OPEN)
-        intent.removeExtra(com.ketvoice.app.widget.WidgetIntents.MIX)
         intent.removeExtra(com.ketvoice.app.widget.WidgetIntents.OPEN)
-        if (open == com.ketvoice.app.widget.WidgetIntents.OPEN_REPLAY) AppUi.openReplay()
-        // The lock screen lyrics notification or the lyrics widgets (6.1, 6.4): the player, on its lyrics.
+        // The lock screen lyrics notification (6.1): the player, on its lyrics.
         val playing = com.ketvoice.app.player.Player.state.value
         if (open == com.ketvoice.app.widget.WidgetIntents.OPEN_LYRICS && playing.current != null) {
             AppUi.showPlayer.value = true
             AppUi.showLyrics.value = true
         }
-        // A player widget (6.4): the player; « Écouter » in an empty widget without a mix resumes what was loaded.
+        // A widget (7.4): the player; the play tile without a queue resumes what was loaded.
         if (open == com.ketvoice.app.widget.WidgetIntents.OPEN_PLAYER && playing.current != null) AppUi.showPlayer.value = true
-        if (open == com.ketvoice.app.widget.WidgetIntents.OPEN_PLAY && mix.isNullOrBlank() && playing.current != null) {
+        if (open == com.ketvoice.app.widget.WidgetIntents.OPEN_PLAY && playing.current != null) {
             if (!playing.playWhenReady) com.ketvoice.app.player.Player.toggle()
-            AppUi.showPlayer.value = true
-        }
-        if (mix.isNullOrBlank()) return
-        lifecycleScope.launch {
-            val tracks = runCatching { com.ketvoice.app.data.PersonalMixes.tracks(mix) }.getOrNull()
-            if (tracks.isNullOrEmpty()) {
-                val title = intent.getStringExtra(com.ketvoice.app.widget.WidgetIntents.MIX_TITLE).orEmpty()
-                AppUi.openCatalog(com.ketvoice.app.data.CatalogRequest("mix", mix, title))
-                return@launch
-            }
-            com.ketvoice.app.player.Player.setShuffle(false)
-            com.ketvoice.app.player.Player.playQueue(tracks)
             AppUi.showPlayer.value = true
         }
     }

@@ -187,8 +187,7 @@ internal class LockscreenLyrics(
 
     fun demand(): LiveLyrics.Demand = LiveLyrics.Demand(
         notification = LockscreenLyricsGate.wanted(AppSettings.lockscreenLyrics.value, com.ketvoice.app.BuildConfig.IS_QUEST,
-            LyricsNotification.allowed(context)),
-        widget = LiveLyrics.widgetWants)
+            LyricsNotification.allowed(context)))
 
     fun start() {
         if (sink != null) return

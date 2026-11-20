@@ -11,24 +11,10 @@
     <string name="recents">Recente</string>
     <string name="trending">Di tendenza</string>
     <string name="albums_singles">Album e singoli</string>
-    <string name="widget_glass_player">Ketvoice · Lettore</string>
-    <string name="widget_glass_player_desc">Grande lettore: copertina, riga cantata, avanzamento e comandi</string>
-    <string name="widget_week">Ketvoice · La tua settimana</string>
-    <string name="widget_week_desc">I tuoi minuti di ascolto e il tuo artista della settimana</string>
-    <string name="widget_mix">Ketvoice · Per te</string>
-    <string name="widget_mix_desc">Il mix del momento: un tocco lo avvia</string>
-    <string name="widget_mini">Ketvoice · Mini</string>
-    <string name="widget_mini_desc">Copertina, play/pausa e successivo</string>
-    <string name="widget_controls">Ketvoice · Comandi</string>
-    <string name="widget_controls_desc">Precedente, play/pausa e successivo, anche piccolissimo</string>
     <string name="widget_now_playing">Ketvoice · In riproduzione</string>
-    <string name="widget_now_playing_desc">Copertina, titolo e comandi, in ogni dimensione</string>
-    <string name="widget_lyrics">Ketvoice · Testi in diretta</string>
-    <string name="widget_lyrics_desc">La riga cantata e la successiva, in diretta</string>
-    <string name="widget_ketmix">Ketvoice · Ketmix</string>
-    <string name="widget_ketmix_desc">L\'interruttore di Ketmix e il prossimo brano mixato</string>
-    <string name="widget_replay">Ketvoice · Replay</string>
-    <string name="widget_replay_desc">I tuoi minuti del mese, il tuo artista e il tuo brano</string>
+    <string name="widget_now_playing_desc">La copertina in grande, il titolo e play/pausa senza aprire l\'app</string>
+    <string name="widget_now_playing_controls">Ketvoice · In riproduzione + controlli</string>
+    <string name="widget_now_playing_controls_desc">Copertina, avanzamento, precedente, play/pausa, successivo e Mi piace</string>
     <string name="tile_play">Riproduzione Ketvoice</string>
     <string name="tile_ketmix">Ketmix</string>
 </resources>

@@ -11,24 +11,10 @@
     <string name="recents">Recente</string>
     <string name="trending">Em alta</string>
     <string name="albums_singles">Álbuns e singles</string>
-    <string name="widget_glass_player">Ketvoice · Player</string>
-    <string name="widget_glass_player_desc">Grande player: capa, linha cantada, progresso e controles</string>
-    <string name="widget_week">Ketvoice · Sua semana</string>
-    <string name="widget_week_desc">Seus minutos de escuta e seu artista da semana</string>
-    <string name="widget_mix">Ketvoice · Para você</string>
-    <string name="widget_mix_desc">O mix do momento: um toque o reproduz</string>
-    <string name="widget_mini">Ketvoice · Mini</string>
-    <string name="widget_mini_desc">Capa, reproduzir/pausar e próxima</string>
-    <string name="widget_controls">Ketvoice · Controles</string>
-    <string name="widget_controls_desc">Anterior, reproduzir/pausar e próxima, mesmo bem pequeno</string>
     <string name="widget_now_playing">Ketvoice · Tocando agora</string>
-    <string name="widget_now_playing_desc">Capa, título e controles, em todos os tamanhos</string>
-    <string name="widget_lyrics">Ketvoice · Letra ao vivo</string>
-    <string name="widget_lyrics_desc">A linha cantada e a próxima, ao vivo</string>
-    <string name="widget_ketmix">Ketvoice · Ketmix</string>
-    <string name="widget_ketmix_desc">O botão do Ketmix e a próxima música que ele vai mixar</string>
-    <string name="widget_replay">Ketvoice · Replay</string>
-    <string name="widget_replay_desc">Seus minutos do mês, seu artista e sua música</string>
+    <string name="widget_now_playing_desc">A capa em destaque, o título e reproduzir/pausar sem abrir o app</string>
+    <string name="widget_now_playing_controls">Ketvoice · Tocando agora + controles</string>
+    <string name="widget_now_playing_controls_desc">Capa, progresso, anterior, reproduzir/pausar, próxima e Curtir</string>
     <string name="tile_play">Reprodução do Ketvoice</string>
     <string name="tile_ketmix">Ketmix</string>
 </resources>

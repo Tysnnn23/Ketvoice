@@ -17,7 +17,6 @@ import com.ketvoice.app.theme.Contrast
 import com.ketvoice.app.theme.CoverLook
 import com.ketvoice.app.theme.Ket27
 import com.ketvoice.app.ui.common.IndexLetters
-import com.ketvoice.app.widget.WidgetSizing
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -25,7 +24,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** 7.1 design picks: tinted glass, opaque menus, A–Z index, Noir, the 4×1 widget and the radio without repeats. */
+/** 7.1 design picks: tinted glass, opaque menus, A–Z index, Noir and the radio without repeats. */
 class Design71Test {
     @After fun reset() {
         AppSettings.glassTinted.value = false
@@ -111,21 +110,6 @@ class Design71Test {
         assertEquals(0, IndexLetters.at(-5f, 270f, 27))
         assertEquals(26, IndexLetters.at(900f, 270f, 27))
         assertEquals(12, IndexLetters.at(125f, 270f, 27))
-    }
-
-    // ---- 4×1 widget
-
-    @Test fun controlsWidgetKeepsTheTransportAtEveryWidth() {
-        for (width in listOf(100f, 110f, 179f, 180f, 250f, 400f)) {
-            val parts = WidgetSizing.controlsParts(width)
-            // Previous, play/pause and next always fit (the narrowest a launcher may resize it to is 110 dp).
-            val transport = parts.skipDp * 2 + parts.playDp + (if (parts.cover) 16 + 48 else 8)
-            assertTrue("$width", transport <= maxOf(width, 110f))
-            assertTrue(parts.skipDp >= 30 && parts.playDp >= 34)
-        }
-        assertFalse(WidgetSizing.controlsParts(100f).labels)
-        assertTrue(WidgetSizing.controlsParts(250f).labels)
-        assertEquals(WidgetSizing.controls, setOf(WidgetSizing.STRIP_NARROW, WidgetSizing.STRIP, WidgetSizing.STRIP_FULL))
     }
 
     // ---- Radio without repeats

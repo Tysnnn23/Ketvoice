@@ -11,24 +11,10 @@
     <string name="recents">Недавний</string>
     <string name="trending">В тренде</string>
     <string name="albums_singles">Альбомы и синглы</string>
-    <string name="widget_glass_player">Ketvoice · Плеер</string>
-    <string name="widget_glass_player_desc">Большой плеер: обложка, текущая строка, прогресс и управление</string>
-    <string name="widget_week">Ketvoice · Ваша неделя</string>
-    <string name="widget_week_desc">Ваши минуты прослушивания и артист недели</string>
-    <string name="widget_mix">Ketvoice · Для вас</string>
-    <string name="widget_mix_desc">Микс момента: одно касание — и он играет</string>
-    <string name="widget_mini">Ketvoice · Мини</string>
-    <string name="widget_mini_desc">Обложка, воспроизведение/пауза и далее</string>
-    <string name="widget_controls">Ketvoice · Управление</string>
-    <string name="widget_controls_desc">Назад, воспроизведение/пауза и далее, даже в самом малом размере</string>
     <string name="widget_now_playing">Ketvoice · Сейчас играет</string>
-    <string name="widget_now_playing_desc">Обложка, название и управление в любом размере</string>
-    <string name="widget_lyrics">Ketvoice · Текст в реальном времени</string>
-    <string name="widget_lyrics_desc">Текущая строка и следующая, в реальном времени</string>
-    <string name="widget_ketmix">Ketvoice · Ketmix</string>
-    <string name="widget_ketmix_desc">Переключатель Ketmix и следующий трек для микса</string>
-    <string name="widget_replay">Ketvoice · Replay</string>
-    <string name="widget_replay_desc">Ваши минуты за месяц, ваш исполнитель и ваш трек</string>
+    <string name="widget_now_playing_desc">Большая обложка, название и пуск/пауза без открытия приложения</string>
+    <string name="widget_now_playing_controls">Ketvoice · Сейчас играет + управление</string>
+    <string name="widget_now_playing_controls_desc">Обложка, прогресс, назад, пуск/пауза, вперёд и «Нравится»</string>
     <string name="tile_play">Воспроизведение Ketvoice</string>
     <string name="tile_ketmix">Ketmix</string>
 </resources>

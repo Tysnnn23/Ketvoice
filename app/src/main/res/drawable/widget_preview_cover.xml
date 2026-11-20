@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 7.4: the sample artwork of the widget picker's preview (a warm sunset). -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:width="120dp" android:height="120dp">
+        <shape android:shape="rectangle"><corners android:radius="14dp" />
+            <gradient android:angle="315" android:startColor="#FFE8846B" android:endColor="#FF7B3B6B" /></shape>
+    </item>
+    <item android:width="40dp" android:height="40dp" android:gravity="top|end" android:top="22dp" android:right="24dp">
+        <shape android:shape="oval"><solid android:color="#FFFFD59A" /></shape>
+    </item>
+</layer-list>

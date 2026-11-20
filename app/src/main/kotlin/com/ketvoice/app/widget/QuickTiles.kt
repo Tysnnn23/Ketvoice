@@ -67,6 +67,21 @@ internal object QuickTiles {
     }
 }
 
+/** Ketmix on or off, from its tile (the tile and the app follow). */
+internal object KetmixSwitch {
+    fun flip(context: Context): Boolean {
+        val app = context.applicationContext
+        if (!SettingsStore.loaded) runCatching { SettingsStore.load(app) }
+        val next = !AppSettings.automix.value
+        AppSettings.automix.value = next
+        SettingsStore.save()
+        // Outside a screen of the app, nothing else sends the state's change notifications.
+        runCatching { androidx.compose.runtime.snapshots.Snapshot.sendApplyNotifications() }
+        QuickTiles.refresh(app)
+        return next
+    }
+}
+
 /** The base of both tiles: a scope that lives while the shade shows the tile. */
 abstract class KetvoiceTileService : TileService() {
     private var scope: CoroutineScope? = null

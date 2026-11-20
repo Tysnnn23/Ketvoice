@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 7.4 « En cours » (2×2): the cover large with play/pause beside it, then the title and the artist. Also the picker's
+     preview (previewLayout): its defaults are a sample title; WidgetViews sets every one of them on a real widget. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@android:id/background"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_background"
+    android:clipToOutline="true">
+
+    <ImageView
+        android:id="@+id/widget_ground"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:importantForAccessibility="no"
+        android:scaleType="fitXY"
+        android:src="@drawable/widget_preview_ground" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="14dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="horizontal">
+
+            <ImageView
+                android:id="@+id/widget_cover"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:importantForAccessibility="no"
+                android:scaleType="fitStart"
+                android:src="@drawable/widget_preview_cover" />
+
+            <FrameLayout
+                android:id="@+id/widget_play"
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:layout_gravity="top"
+                android:layout_marginStart="8dp">
+
+                <ImageView
+                    android:id="@+id/widget_play_disc"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/widget_circle" />
+
+                <ImageView
+                    android:id="@+id/widget_play_glyph"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:importantForAccessibility="no"
+                    android:padding="11dp"
+                    android:src="@drawable/ic_widget_pause"
+                    android:tint="#FF673C22" />
+            </FrameLayout>
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/widget_title"
+            style="@style/WidgetTitle"
+            android:layout_marginTop="10dp"
+            android:text="@string/widget_preview_title" />
+
+        <TextView
+            android:id="@+id/widget_artist"
+            style="@style/WidgetArtist"
+            android:text="@string/widget_preview_artist" />
+    </LinearLayout>
+</FrameLayout>

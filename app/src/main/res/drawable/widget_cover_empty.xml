@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 7.4: the cover of « Rien en lecture »: a quiet tile with a note. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:width="120dp" android:height="120dp">
+        <shape android:shape="rectangle"><corners android:radius="14dp" /><solid android:color="#26FFFFFF" /></shape>
+    </item>
+    <item android:width="44dp" android:height="44dp" android:gravity="center">
+        <vector android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
+            <path android:fillColor="#99FFFFFF"
+                android:pathData="M12,3v10.55c-0.59,-0.34 -1.27,-0.55 -2,-0.55 -2.21,0 -4,1.79 -4,4s1.79,4 4,4 4,-1.79 4,-4V7h4V3h-6z" />
+        </vector>
+    </item>
+</layer-list>

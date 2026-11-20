@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 7.4 « En cours + contrôles » (4×2): cover, title, artist, J'aime, the progress and previous / play-pause / next.
+     Also the picker's preview (previewLayout): its defaults are a sample; WidgetViews sets each of them on a real
+     widget (the times are text while paused and in the preview, ticking chronometers while playing). -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@android:id/background"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_background"
+    android:clipToOutline="true">
+
+    <ImageView
+        android:id="@+id/widget_ground"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:importantForAccessibility="no"
+        android:scaleType="fitXY"
+        android:src="@drawable/widget_preview_ground" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="horizontal"
+        android:padding="14dp">
+
+        <ImageView
+            android:id="@+id/widget_cover"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:adjustViewBounds="true"
+            android:importantForAccessibility="no"
+            android:scaleType="fitCenter"
+            android:src="@drawable/widget_preview_cover" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_marginStart="14dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/widget_title"
+                        style="@style/WidgetTitle"
+                        android:text="@string/widget_preview_title" />
+
+                    <TextView
+                        android:id="@+id/widget_artist"
+                        style="@style/WidgetArtist"
+                        android:text="@string/widget_preview_artist" />
+                </LinearLayout>
+
+                <ImageView
+                    android:id="@+id/widget_like"
+                    android:layout_width="34dp"
+                    android:layout_height="34dp"
+                    android:layout_marginStart="4dp"
+                    android:layout_marginTop="-4dp"
+                    android:layout_marginEnd="-6dp"
+                    android:padding="7dp"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/ic_widget_heart_filled"
+                    android:tint="#FFFFFFFF" />
+            </LinearLayout>
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
+
+            <FrameLayout
+                android:id="@+id/widget_progress_box"
+                android:layout_width="match_parent"
+                android:layout_height="4dp">
+
+                <ProgressBar
+                    android:id="@+id/widget_progress_light"
+                    style="?android:attr/progressBarStyleHorizontal"
+                    android:layout_width="match_parent"
+                    android:layout_height="4dp"
+                    android:max="1000"
+                    android:maxHeight="4dp"
+                    android:minHeight="4dp"
+                    android:progress="380"
+                    android:progressDrawable="@drawable/widget_progress_light" />
+
+                <ProgressBar
+                    android:id="@+id/widget_progress_dark"
+                    style="?android:attr/progressBarStyleHorizontal"
+                    android:layout_width="match_parent"
+                    android:layout_height="4dp"
+                    android:max="1000"
+                    android:maxHeight="4dp"
+                    android:minHeight="4dp"
+                    android:progressDrawable="@drawable/widget_progress_dark"
+                    android:visibility="gone" />
+            </FrameLayout>
+
+            <LinearLayout
+                android:id="@+id/widget_times"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="5dp"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/widget_elapsed"
+                    style="@style/WidgetTime"
+                    android:text="@string/widget_preview_elapsed" />
+
+                <Chronometer
+                    android:id="@+id/widget_elapsed_clock"
+                    style="@style/WidgetTime"
+                    android:visibility="gone" />
+
+                <FrameLayout
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"
+                    android:layout_weight="1" />
+
+                <TextView
+                    android:id="@+id/widget_remaining"
+                    style="@style/WidgetTime"
+                    android:text="@string/widget_preview_remaining" />
+
+                <Chronometer
+                    android:id="@+id/widget_remaining_clock"
+                    style="@style/WidgetTime"
+                    android:visibility="gone" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/widget_transport"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:layout_marginTop="6dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <FrameLayout
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1">
+
+                    <ImageView
+                        android:id="@+id/widget_previous"
+                        style="@style/WidgetGlyph"
+                        android:src="@drawable/ic_widget_previous" />
+                </FrameLayout>
+
+                <FrameLayout
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1">
+
+                    <FrameLayout
+                        android:id="@+id/widget_play"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:layout_gravity="center">
+
+                        <ImageView
+                            android:id="@+id/widget_play_disc"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/widget_circle" />
+
+                        <ImageView
+                            android:id="@+id/widget_play_glyph"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:importantForAccessibility="no"
+                            android:padding="11dp"
+                            android:src="@drawable/ic_widget_pause"
+                            android:tint="#FF673C22" />
+                    </FrameLayout>
+                </FrameLayout>
+
+                <FrameLayout
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1">
+
+                    <ImageView
+                        android:id="@+id/widget_next"
+                        style="@style/WidgetGlyph"
+                        android:src="@drawable/ic_widget_next" />
+                </FrameLayout>
+            </LinearLayout>
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>
