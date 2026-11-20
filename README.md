@@ -21,6 +21,14 @@
 
 ## Overview
 
+### 7.5.0 — Cast, lyrics you can pronounce, truer album colours, faster everything
+
+Google Cast, lyric romanization, a standby screen while charging, album pages with better colours and a bigger cover, artwork and Canvas that stay cached, faster downloads and analysis, one glass slider and search inside your lists.
+[Mobile](https://github.com/Tysnnn23/Ketvoice/releases/download/v7.5.0/Ketvoice-7.5.0.apk)
+· [Lite](https://github.com/Tysnnn23/Ketvoice/releases/download/v7.5.0/Ketvoice-7.5.0-Lite.apk)
+· [Quest](https://github.com/Tysnnn23/Ketvoice/releases/download/v7.5.0/Ketvoice-7.5.0-Quest.apk)
+· [Release notes](docs/releases/v7.5.0.md).
+
 ### 7.4.0 — Widgets that really play, an immersive artist page, calmer player colours
 
 Two home-screen widgets with live controls and previews, artist pages that open on the artist's photo, player colours that glide between songs, bigger covers on Downloads and Favourites, airier lists.

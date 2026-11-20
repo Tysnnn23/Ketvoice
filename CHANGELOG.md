@@ -7,6 +7,22 @@
 
 ---
 
+# Ketvoice 7.5.0
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 146** — Google Cast, lyric romanization, standby mode, new cover-colour picker, bigger album cover without the scroll fade, Canvas/cover cache fixes, ranged downloads, faster analysis, one-song quality upgrade, pause/resume fade, Ketmix-on-skip switch, one glass-intensity slider, glass lens on held sliders, search and sort inside lists.
+
+- Cast (`cast/`, mobile and Lite; Quest gets a stand-in): `CastPlayer` behind the media session with the Default Media Receiver, one title at a time, downloads and local covers from a token-path LAN server that lives only while casting; Ketmix and quality upgrades pause. `CastPlanAndServerTest`, `CastItemsTest`, `Cast75HostTest`. Lint `UseAppTint` off (RemoteViews need `android:tint`).
+- Romanization (key `lyricsRomanization`, switch at the top of the lyrics source menu): ICU transliterators plus an own Revised Romanization for Hangul; kanji lines left without a reading. `RomanizerTest`.
+- Colours (`CoverColors.analyze`): OKLab clustering weighted by area and saturation, frames and fine detail discounted, near-black/near-white only when dominant; 13 fixtures with a contact sheet. `CoverPickerFixturesTest`, `Album75HostTest`. Header cover 75 % width (≤ 380 dp, ≤ 46 % height), `heroShrinkScale` removed.
+- Speed (`CanvasRepo`, `RangedDownload.kt`, `StreamResolver`, `PauseFade.kt`, `stems/StemDsp.kt`, `automix/BeatSpectrogram.kt`): local Canvas without lock or request, album Canvas stands in, « none » kept 3 days, use refreshes eviction age; 4-part ranged downloads from 6 MB; lossless offer ends the probe after 1.5 s; two upgrades at once; polyphase resampler weights per phase and sparse mel sums (JVM: 1000 → 265 ms on 75 s). Keys `ketmixOnSkip` (on). `CanvasReopenHostTest`, `CoverCacheHostTest`, `DownloadSpeedHostTest`, `PauseFadeHostTest`, `AnalysisSpeedBenchmarkTest`.
+- Glass and lists (`GlassClarity`, `ui/common/PressLens.kt`, `data/ListOrder.kt`, `ui/common/ListTools.kt`, `ui/standby/Standby.kt`, `StandbyDream`): key `glassIntensity` (0..1) replaces `glassTintLevel` + `glassTinted` (migrated from prefs, backups and sync); `standbyMode` (off). `DownloadSort` removed. `Glass75HostTest`.
+
+Full notes: [7.5.0](docs/releases/v7.5.0.md).
+
+---
+
 # Ketvoice 7.4.0
 
 ![Ketvoice](ketvoice-banner.png)
