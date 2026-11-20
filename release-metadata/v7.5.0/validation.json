@@ -1,0 +1,223 @@
+{
+  "schema": 8,
+  "version": "7.5.0",
+  "versionCode": 146,
+  "source_commit": "4d3814c701a70b01b894542e264daab24000c8b9",
+  "created_at": "2026-11-20T19:32:54.664293+00:00",
+  "build_origin": {
+    "kind": "github_actions_with_owner_discord_sdk",
+    "workflow": "android.yml",
+    "run_id": 44797885315,
+    "artifact": {
+      "id": 14662470264,
+      "sha256": "892433727860c8d5ff6dde9c33b960259646d61959aa95306c1cff2ee5cce80e"
+    },
+    "gradle": "assembleMobileRelease assembleQuestRelease assembleLiteRelease",
+    "note": "Signed by CI with the pinned keystore secret; the Discord Social SDK AAR matched its pinned SHA-256."
+  },
+  "local_validation": {
+    "result": "debug JVM/Robolectric suites for the three flavors (mobile, quest, lite), release lint and the APK checker tests passed in a cloud container without the Discord SDK",
+    "commands": [
+      "testMobileDebugUnitTest",
+      "testQuestDebugUnitTest",
+      "testLiteDebugUnitTest -ProbolectricSdks=31,32,33,34,35,36",
+      "lintMobileRelease",
+      "lintQuestRelease",
+      "lintLiteRelease",
+      "tools/test_verify_apk.py"
+    ],
+    "ci_validation": "run 44797885315: release builds, debug and release unit tests, UI text audit, lint, APK signature pin and Discord bridge packaging passed",
+    "code_review": {
+      "kind": "none independent"
+    },
+    "host_previews": "Robolectric software renders on the host, looked at by the sub-agents and the lead: album pages for The Party Never Ends (light/dark), 1989, a black cover with a green speck, the cover-colour contact sheet; Cast device sheet; lyrics with romanization (Japanese, Korean, Chinese, Russian) and the lyrics source menu switch; glass slider at both ends, held slider/volume/switch lens (refraction draws flat on the host), list search/sort, standby screen; the Apple-Music motion header top/scrolled light/dark with a poster frame; one-song upgrade sheet; Quest screens not rendered",
+    "features_7_5": "Cast: queue to MediaInfo mapping, LAN server token/path rules, cast decision (CastPlanAndServerTest, CastItemsTest, Cast75HostTest), never connected to a Cast device; romanization per script (RomanizerTest), kanji not read; cover colours on 13 fixtures (CoverPickerFixturesTest), the Party Never Ends cover fetched once from Deezer's public API and kept as a 64 px test fixture; Canvas cache second-open with no request and a poster (CanvasReopenHostTest, Motion75HostTest; real catalogue URL for Legends Never Die checked stable, 3,113,426 B), cover cache, ranged downloads and lossless early stop on fakes (DownloadSpeedHostTest: 8 MB at 4 MB/s per connection 2091 -> 530 ms), pause fade ramp (PauseFadeHostTest), analysis JVM benchmark 1000.1 -> 265.0 ms on 75 s (AnalysisSpeedBenchmarkTest; beat-model inference not measured), glass intensity migration and list order (Glass75HostTest); Studio: the owner's album framing still applies to the motion header; nothing ran on a device",
+    "after_local_run": "full local run on the release commit: mobile 1867, quest 1849 (45 skipped), lite 1857 tests, 0 failures; release lint 0 errors (lint UseAppTint disabled because the Cast SDK brings AppCompat and widget layouts are RemoteViews); UI text audit clean; an earlier full run on the parent found one stale playlist test index (the new search/sort row), fixed in 17af43a",
+    "sdk_30": "Robolectric's Android 11 runtime could not be downloaded in the cloud container (Maven Central answered 429), so the Lite tests that declare sdk 30 ran on sdk 31 only; nothing ran on an Android 11 runtime",
+    "after_last_full_local_run": "nothing under app/ changed after the last complete local run; CI run 44797885315 ran every suite on the release commit and passed"
+  },
+  "server": {
+    "function": "ketvoice-content",
+    "deployed_version": 23,
+    "changed_in_this_version": false,
+    "database": "no migration in this version"
+  },
+  "tests": {
+    "mobile": {
+      "jvm": {
+        "tests": 1867,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 3
+      },
+      "android_15_emulator_compose": {
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "quest": {
+      "jvm": {
+        "tests": 1849,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 45
+      },
+      "android_15_emulator_compose": {
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "lite": {
+      "jvm": {
+        "tests": 1857,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 3
+      },
+      "android_11_runtime": {
+        "status": "not_executed"
+      }
+    },
+    "dex_register_check": "tools/check_dex_registers.py ran in CI (Check method sizes against the Android verifier) on the three release APKs",
+    "apk_checker": "tools/test_verify_apk.py 12 tests (Lite minSdk 30 required)"
+  },
+  "lint": {
+    "mobile": {
+      "Warning": 340,
+      "Hint": 29
+    },
+    "quest": {
+      "Warning": 336,
+      "Hint": 29
+    },
+    "lite": {
+      "Warning": 358,
+      "Hint": 29
+    },
+    "errors": 0
+  },
+  "apks": [
+    {
+      "name": "Ketvoice-7.5.0.apk",
+      "sha256": "f19bc400d58896fd13d8345f8f67d65f264175c97e8a2f5734b99443710a4193",
+      "bytes": 106062283,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "7.5.0",
+      "versionCode": 146,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-7.5.0-Quest.apk",
+      "sha256": "35145d6bc2c7f3149fa086490dce8cd18cbd59175fd00237bc1d486ce14250c7",
+      "bytes": 118331553,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "7.5.0",
+      "versionCode": 146,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-7.5.0-Lite.apk",
+      "sha256": "bc6775ed7ed0bce5d86c401751d2f26286f354094a64b64a4c4734c78d1a0cd2",
+      "bytes": 34154901,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "7.5.0",
+      "versionCode": 146,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false,
+      "edition": "lite"
+    }
+  ],
+  "discord": {
+    "sdk_present_in_ci_build": true,
+    "sdk_sha256_pinned": true,
+    "bridge_and_native_libraries_verified": true,
+    "presence_mode": "unauthenticated_rpc_through_installed_discord_app"
+  },
+  "credential_scan": {
+    "entries": 3993,
+    "findings": 0,
+    "scope": "the three release APKs",
+    "kind": "credential_patterns",
+    "explicit_private_provider_key_deny_list": false,
+    "note": "run because publish-release requires it; the other manual checks were skipped at the owner's request"
+  },
+  "release_install_smoke": {
+    "mobile": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "quest": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "lite": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    }
+  },
+  "publication_override": {
+    "authorized_by_user": true,
+    "authorized_at": "2026-11-20T19:32:54.664293+00:00",
+    "kind": "standing_authorization",
+    "user_statement": "J'autorise TOUT devient maintenant une règle.",
+    "user_statement_date": "2026-11-14",
+    "in_reply_to": "The question whether versions may be published without phone or Quest testing without asking again for each version.",
+    "recorded_in": "AGENTS.md (commit aeeda8e)",
+    "reason": "The owner made publishing validated versions without phone or Quest testing a standing rule.",
+    "scope": "physical device installation and all on-device behaviour of 7.5.0 (mobile, Lite and Quest), including accounts and sync on devices"
+  },
+  "owner_requests_2026_11_20_7_5_0": {
+    "statements": [
+      "Aussi la page d'album est bien mais ke trouve le color picker assez nul car les couleurs sont mal choisi des fois comme sur The Party Never ends de juice wrld et aussi ressere un peu les texte car je les trouve trop espacé et sa rend moche, l'animation de défilement et l'album disparaît retire la et rend plus grande la cover. Le cache de artwork (non anime et animé ne marche pas car je dois toujours attendre aussi longtemps pour charger le canvas de Legends never dies) Avant de faire sa explore plusieurs site,github,reddit etc et propose moi des améliorations autant Visuel, animation,onglet, liquid glass, fonctionnalités etc pour ketvoice qui doivent absolument etre la qui plairait grandement au utilisateurs. Je veut aussi quand on améliore la qualité de son existant de rendre le chargement plus rapide et les téléchargement aussi et l'analyse aussi et si possible j'aimerais que on ne soit pas obligé de sélectionner plusieurs sons pour améliorer la qualité d'un seul.",
+      "Pour quand on passe au son prochain et sa met ketmix je veut que tu le met optionnel cette feature dzns les paramètres car desfois c'est embêtant.",
+      "Concernant la romanisation sa doit etre dans le menu des source de lyrics en haut tu met un switch romanisation",
+      "Concernant les Canvas etc plein écran c'est absolument pas ceque je voulais je voulais quelques chose comme apple muzic et aussi le cache de canvas n'est meme pas fonctionnel !"
+    ],
+    "picks": [
+      "Google Cast",
+      "Paroles en romanisation",
+      "Recherche et tri dans les listes",
+      "Curseur d'intensité du verre",
+      "Contrôles qui deviennent verre",
+      "Mode veille au chargement",
+      "Fondu à la pause et à la reprise"
+    ],
+    "research": "public pages and GitHub issue reactions only (Reddit refused automated access); scratch report, not committed",
+    "done": "all items; the album header choice « Pochette et Canvas » was replaced by an Apple-Music-style « Canvas animé » after the owner's screenshot"
+  },
+  "not_validated": [
+    "physical phone, Lite, tablet or Quest installation, rendering and behaviour of 7.5.0",
+    "Google Cast with a real receiver: discovery, plain-http LAN files and stream URLs accepted by the Default Media Receiver, volume, seek, auto-advance, network loss, handback, notification and lock screen",
+    "Canvas decoder start and first-frame time on a device, warm player reuse, Wi-Fi prefetch conditions, real catalogue page load time",
+    "glass lens refraction, standby mode with real charging and screensaver, pause fade by ear",
+    "download speed and quality upgrades against real sources",
+    "Robolectric runs on the Android 11 runtime (sdk 30)",
+    "independent code review"
+  ],
+  "known_limitations": [
+    "No Wear OS app in this version.",
+    "Seasonal themes use code-drawn decor until the owner's pictures are added.",
+    "Widgets placed with an earlier version other than the 2x2 now-playing one disappear from the home screen and must be added again.",
+    "Romanization does not read Japanese kanji; Hebrew and Arabic show consonants only.",
+    "The mobile APK is about 4 MB larger and Lite about 2 MB larger because of the Cast SDK.",
+    "Android Auto's queue screen shows only the current song.",
+    "Switching between Ketvoice and Ketvoice Lite is a manual install of the other APK.",
+    "Ketogether guests hear titles their own sources can play; local files and private titles are shown as unavailable.",
+    "Lecture automatique: which queue titles were added automatically is not kept across a session restore.",
+    "The mobile and Quest APKs are about 18.6 MB larger because they include the rhythm model.",
+    "Launcher icons keep a background: Android fills adaptive icon backgrounds in black.",
+    "The signing certificate is the existing public Android debug identity, not a private production key."
+  ],
+  "canonical_banner_sha256": "ddc0e2c1270027f4b9dd92254374b79727ae9eaf8914e418b52e23c5b39b5966"
+}
