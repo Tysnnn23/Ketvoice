@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 6.1: the owner's Vice City K (limited edition until 10 December 2026). The whole picture is the background
+<!-- The owner's GTA VI / Vice City K (6.1), the default icon since 7.6. The whole picture is the background
      layer, the K kept inside the part every launcher mask shows; the foreground stays empty. -->
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
     <background android:drawable="@drawable/ic_launcher_vicecity_bg" />

@@ -84,7 +84,7 @@ internal enum class OnboardingPage { Language, Playlists, Features }
 
 /**
  * Shows the welcome of a new install (6.2, [FirstRun]) once [ready] (the splash gone, no crash report). It is
- * drawn over the app, before the Vice City welcome and any season's offer.
+ * drawn over the app, before any season's offer.
  */
 @Composable
 fun OnboardingHost(ready: Boolean) {

@@ -38,8 +38,8 @@ import com.ketvoice.app.theme.seasonTopGlow
 internal enum class Motif { Snow, Fireworks, Hearts, Blossom, Sun, Night }
 
 /**
- * The looks of the seasonal themes (6.2), by the registry's id ([com.ketvoice.app.data.Seasons]). Vice City is not
- * one of them: it keeps the listener's theme with its own accent (`theme/ViceCityTheme.kt`). Every season here is a
+ * The looks of the seasonal themes (6.2), by the registry's id ([com.ketvoice.app.data.Seasons]). Every
+ * season here is a
  * palette and a decor drawn in code, until the owner's
  * pictures are added under the names documented on [com.ketvoice.app.data.SeasonalTheme] — they are then shown
  * in place of the drawing, without a code change.

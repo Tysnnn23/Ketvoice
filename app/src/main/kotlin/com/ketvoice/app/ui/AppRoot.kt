@@ -91,18 +91,15 @@ fun AppRoot() {
     // Android's high-contrast text turns the tinted glass on (7.1).
     com.ketvoice.app.glass.HighContrastText.Observe()
     val themeMode = AppSettings.themeMode.value
-    // A seasonal theme (6.2) is a dark look of its own while it is on; the Vice City edition keeps the listener's
-    // light or dark theme and only replaces the accent. Either way the listener's choices are kept.
+    // A seasonal theme (6.2) is a dark look of its own while it is on; the listener's choices are kept.
     val inEffect = com.ketvoice.app.data.Seasons.inEffect()
     val season = com.ketvoice.app.ui.seasons.SeasonLooks.of(inEffect?.id)
-    val viceCity = inEffect?.ownWelcome == true
-    val seasonal = season != null || viceCity
+    val seasonal = season != null
     val useDark = if (season != null) true else if (themeMode == 1) false else if (themeMode == 2) true else null
     val view = androidx.compose.ui.platform.LocalView.current
     val effectiveDark = useDark ?: isSystemInDarkTheme()
     // Le lecteur / la file d'attente ont toujours un fond noir : icônes système claires.
     val darkSurface = AppUi.showPlayer.value || AppUi.overlay.value == AppUi.QUEUE ||
-        com.ketvoice.app.ui.vicecity.ViceCityWelcomeGate.visible.value ||
         com.ketvoice.app.ui.seasons.SeasonWelcomeGate.visible.value != null ||
         com.ketvoice.app.data.FirstRun.pending.value
     // 7.4: light icons over the artist page's photo while it is under the status bar.
@@ -139,7 +136,7 @@ fun AppRoot() {
         if (com.ketvoice.app.data.AppSettings.coverBackground.value && !seasonal) playingCover else null)
     val (toneColor, toneAmount) = com.ketvoice.app.theme.rememberCoverGlide(wantedTone, 900)
     val cover = com.ketvoice.app.theme.CoverLook(toneColor, toneAmount, accentColor, accentAmount)
-    KetvoiceTheme(useDark = useDark, cover = cover, viceCity = viceCity, season = season) {
+    KetvoiceTheme(useDark = useDark, cover = cover, season = season) {
         if (season != null) com.ketvoice.app.theme.SeasonPulse.Pulse(Motion.reduced, AppSettings.highPerformanceMode.value)
         com.ketvoice.app.ui.player.PlaybackFeatureDialogs()
         BackgroundPlaybackOffer()

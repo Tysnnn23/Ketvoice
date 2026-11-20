@@ -9,7 +9,6 @@ import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import com.ketvoice.app.data.AppSettings
 import com.ketvoice.app.data.Seasons
-import com.ketvoice.app.data.ViceCityEdition
 import com.ketvoice.app.theme.KetvoiceTheme
 import com.ketvoice.app.ui.seasons.SeasonLooks
 import com.ketvoice.app.ui.seasons.SeasonWelcome
@@ -44,22 +43,21 @@ class SeasonsHostTest {
         AppSettings.language.value = com.ketvoice.app.data.AppLanguage.FRENCH.label
         AppSettings.reduceAnimations.value = true
         AppSettings.reduceDynamicBlur.value = true
-        ViceCityEdition.zone = { paris }
+        Seasons.zone = { paris }
     }
 
     @After fun reset() {
         AppSettings.reduceAnimations.value = false
         AppSettings.reduceDynamicBlur.value = false
-        AppSettings.viceCityTheme.value = false
         AppSettings.seasonTheme.value = ""
-        ViceCityEdition.clock = { System.currentTimeMillis() }
-        ViceCityEdition.zone = { ZoneId.systemDefault() }
+        Seasons.clock = { System.currentTimeMillis() }
+        Seasons.zone = { ZoneId.systemDefault() }
         com.ketvoice.app.ui.seasons.SeasonWelcomeGate.visible.value = null
         AppUi.closeOverlays(); AppUi.selectTab(AppUi.HOME)
     }
 
     private fun on(day: String) {
-        ViceCityEdition.clock = { LocalDateTime.parse("${day}T10:00").atZone(paris).toInstant().toEpochMilli() }
+        Seasons.clock = { LocalDateTime.parse("${day}T10:00").atZone(paris).toInstant().toEpochMilli() }
     }
 
     private fun image(name: String) {
@@ -89,12 +87,10 @@ class SeasonsHostTest {
         Seasons.choose(season, true)
         compose.setContent { NoOverscroll { AppRoot() } }
         compose.waitForIdle()
-        val tag = if (id == "vicecity") "vicefm-card" else "season-decor-$id"
-        compose.onNodeWithTag(tag).assertExists()
+        compose.onNodeWithTag("season-decor-$id").assertExists()
         image("home-$id")
     }
 
-    @Test fun homeViceCity() = home("vicecity", "2026-11-25")
     @Test fun homeNoel() = home("noel", "2026-12-20")
     @Test fun homeNouvelAn() = home("nouvelan", "2026-12-31")
     @Test fun homeSaintValentin() = home("saintvalentin", "2027-02-12")
@@ -156,7 +152,6 @@ class SeasonsHostTest {
         compose.waitForIdle()
         compose.onNodeWithTag("settings-category-Appearance").performClick()
         compose.waitForIdle()
-        compose.onNodeWithTag("vicecity-theme-row").assertDoesNotExist()
         compose.onNodeWithTag("season-theme-row").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Thème Saint-Valentin").assertIsDisplayed()
         image("settings-saintvalentin")

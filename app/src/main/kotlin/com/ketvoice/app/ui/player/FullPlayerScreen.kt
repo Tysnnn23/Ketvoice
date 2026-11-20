@@ -151,7 +151,7 @@ fun FullPlayerScreen(
         }
     }
 
-    // The player keeps its own colours and the accent (the Vice City pink while that theme is on).
+    // The player keeps its own colours and the accent.
     CompositionLocalProvider(LocalTheme provides KetTheme.dark().copy(accent = albumAccent, secondary = Color.White.copy(alpha = .78f))) {
     MaterialTheme(colorScheme = darkColorScheme(primary = albumAccent,
         onPrimary = if (albumAccent.luminance() > .179f) Color.Black else Color.White,

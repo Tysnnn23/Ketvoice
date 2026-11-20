@@ -253,12 +253,7 @@ fun SettingsScreen() {
                 Text("Le texte reste toujours lisible : chaque couleur est ajustée au thème clair ou sombre.",
                     color = th.secondary, fontSize = 13.sp, lineHeight = 18.sp,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp))
-                // Vice City keeps its colours on the pages; the cover still colours the player and the glass.
-                if (com.ketvoice.app.data.ViceCityEdition.themeOn) Text(
-                    "Avec le thème Vice City, les pages gardent ses couleurs ; la pochette colore toujours le lecteur et le verre.",
-                    color = th.secondary, fontSize = 13.sp, lineHeight = 18.sp,
-                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 10.dp).testTag("vicecity-cover-note"))
-                else if (com.ketvoice.app.data.Seasons.inEffect() != null) Text(
+                if (com.ketvoice.app.data.Seasons.inEffect() != null) Text(
                     "Avec un thème saisonnier, les pages gardent ses couleurs ; la pochette colore toujours le lecteur et le verre.",
                     color = th.secondary, fontSize = 13.sp, lineHeight = 18.sp,
                     modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 10.dp).testTag("season-cover-note"))
@@ -273,10 +268,8 @@ fun SettingsScreen() {
                     AppSettings.albumColors.value) { AppSettings.albumColors.value = it; SettingsStore.save() }
             }
             Section("APPARENCE") {
-                // The seasonal theme of the moment (the Vice City edition, 6.1; the others, 6.2): here only while it lasts.
-                com.ketvoice.app.data.Seasons.active()?.let { season ->
-                    if (season.ownWelcome) ViceCityThemeRow() else SeasonThemeRow(season)
-                }
+                // The seasonal theme of the moment (6.2): here only while it lasts.
+                com.ketvoice.app.data.Seasons.active()?.let { season -> SeasonThemeRow(season) }
                 SToggle(KetIcons.Info, "Stats info", "Informations audio réelles, uniquement dans le lecteur", AppSettings.techStats.value) {
                     AppSettings.techStats.value = it; SettingsStore.save()
                 }
@@ -332,7 +325,7 @@ fun SettingsScreen() {
                 }
                 SRow(
                     KetIcons.Moon, "Thème",
-                    sub = if (com.ketvoice.app.data.Seasons.inEffect()?.ownWelcome == false) "Le thème saisonnier est sombre ; votre choix revient quand il est désactivé"
+                    sub = if (com.ketvoice.app.data.Seasons.inEffect() != null) "Le thème saisonnier est sombre ; votre choix revient quand il est désactivé"
                         else "S'applique immédiatement à toute l'app",
                     value = themeLabel(AppSettings.themeMode.value)
                 ) {
@@ -355,8 +348,7 @@ fun SettingsScreen() {
                     AppSettings.trueBlack.value) { AppSettings.trueBlack.value = it; SettingsStore.save() }
                 SRow(
                     KetIcons.Appearance, "Couleur d'accent",
-                    sub = if (com.ketvoice.app.data.ViceCityEdition.themeOn) "Le rose Vice City la remplace tant que le thème est activé"
-                        else if (com.ketvoice.app.data.Seasons.inEffect() != null) "La couleur du thème saisonnier la remplace tant qu'il est activé"
+                    sub = if (com.ketvoice.app.data.Seasons.inEffect() != null) "La couleur du thème saisonnier la remplace tant qu'il est activé"
                         else "Barre de lecture, scrub, boutons et progression",
                     value = accentLabel(AppSettings.accentArgb.value)
                 ) { accentOpen = true }
@@ -885,26 +877,23 @@ private fun lyricsModeLabel(value: Int) = when (value) {
     else -> "Synchronisées"
 }
 
-private fun appIconLabel(value: Int) = AppIcons.options.firstOrNull { it.id == value }?.label ?: "Liquid Glass"
+private fun appIconLabel(value: Int) = AppIcons.options.firstOrNull { it.id == value }?.label ?: "GTA VI"
 
-/** The launcher icons of 6.0.0 Beta 4 (the owner's glass K, without a background), with their previews. */
+/** The launcher icons: the GTA VI K (6.1, the default since 7.6) and the owner's glass K of 6.0.0 Beta 4. */
 internal object AppIcons {
     /**
      * [ground] is the colour Android draws under the glass (an adaptive icon's background is always filled);
-     * a [fullBleed] preview is the whole icon, background included (the Vice City K, 6.1).
+     * a [fullBleed] preview is the whole icon, background included (the GTA VI K). A [brand] label is not translated.
      */
     class Option(val id: Int, val label: String, val preview: Int, val ground: Long, val fullBleed: Boolean = false,
-                 val note: String? = null)
-    private val regular = listOf(
+                 val note: String? = null, val brand: Boolean = false)
+    val options: List<Option> = listOf(
+        Option(com.ketvoice.app.util.LauncherIcons.DEFAULT, "GTA VI", com.ketvoice.app.R.drawable.vicecity_logo, 0xFF120A22,
+            fullBleed = true, note = "Par défaut", brand = true),
         Option(1, "Liquid Glass", com.ketvoice.app.R.drawable.icon_preview_glass, 0xFF000000),
         Option(3, "Clair", com.ketvoice.app.R.drawable.icon_preview_light, 0xFFF4F6F8),
         Option(2, "Teinté", com.ketvoice.app.R.drawable.icon_preview_tinted, 0xFF000000),
         Option(0, "Transparent", com.ketvoice.app.R.drawable.icon_preview_clear, 0xFFF4F6F8))
-    private val viceCity = Option(com.ketvoice.app.data.ViceCityEdition.ICON_VARIANT, "Vice City",
-        com.ketvoice.app.R.drawable.vicecity_logo, 0xFF120A22, fullBleed = true, note = "Jusqu'au 10 décembre")
-    /** The icons offered now: the Vice City one only while its edition lasts. */
-    val options: List<Option> get() =
-        if (com.ketvoice.app.data.ViceCityEdition.themeAvailable()) regular + viceCity else regular
 }
 
 /** The icon chooser: each icon shown as on a home screen, over a wallpaper, the chosen one ringed. */
@@ -938,12 +927,15 @@ internal fun AppIconPicker(current: Int, onPick: (Int) -> Unit, onClose: () -> U
                                         .border(3.dp, theme.accent, RoundedCornerShape(26.dp)))
                                 }
                                 Text(option.label, fontSize = 13.sp, color = if (selected) theme.accent else theme.onBackground,
-                                    modifier = Modifier.padding(top = 6.dp), maxLines = 1, localize = option.note == null)
+                                    modifier = Modifier.padding(top = 6.dp), maxLines = 1, localize = !option.brand)
                                 option.note?.let { Text(it, fontSize = 11.sp, color = theme.secondary, maxLines = 1) }
                             }
                         }
                     }
                 }
+                // The GTA VI K is fan art: said under the icons whenever it is shown.
+                Text("Ketvoice n'est pas affilié à Rockstar Games.", fontSize = 12.sp, lineHeight = 16.sp,
+                    color = theme.secondary, modifier = Modifier.testTag("icon-rockstar-note"))
             }
         },
         confirmButton = { com.ketvoice.app.ui.common.KetTextButton("OK", onClose, primary = true) })
@@ -1198,34 +1190,6 @@ private fun ColumnScope.LockscreenLyricsRows() {
                 .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
         }
     }
-}
-
-/**
- * « Thème Vice City » (6.1, limited edition until 10 December): the switch, with the edition's illustration. It keeps
- * the listener's light or dark theme and replaces the accent, which comes back when it is turned off.
- */
-@Composable
-private fun ColumnScope.ViceCityThemeRow() {
-    val th = LocalTheme.current
-    val tick = com.ketvoice.app.ui.motion.rememberHaptics()
-    val on = AppSettings.viceCityTheme.value
-    Column(Modifier.fillMaxWidth().toggleable(on, role = Role.Switch, onValueChange = {
-            tick(com.ketvoice.app.ui.motion.Haptics.Kind.Tick); AppSettings.viceCityTheme.value = it; SettingsStore.save()
-        }).padding(horizontal = 16.dp, vertical = 12.dp).testTag("vicecity-theme-row")) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            com.ketvoice.app.ui.vicecity.ViceCityTile(Ket27.Metrics.tile)
-            Column(Modifier.weight(1f).padding(start = 12.dp, end = 14.dp)) {
-                Text("Thème Vice City", color = th.onBackground, fontSize = 17.sp, lineHeight = 22.sp)
-                Text("Édition limitée, jusqu'au 10 décembre", color = th.secondary, fontSize = 13.sp, lineHeight = 18.sp,
-                    modifier = Modifier.padding(top = 3.dp))
-            }
-            com.ketvoice.app.ui.common.LiquidGlassSwitch(on, onCheckedChange = null)
-        }
-        com.ketvoice.app.ui.vicecity.ViceCityScene(Modifier.padding(top = 12.dp).fillMaxWidth().height(92.dp)
-            .clip(androidx.compose.foundation.shape.RoundedCornerShape(18.dp)), tag = "vicecity-preview")
-        Text(com.ketvoice.app.data.Seasons.VICE_CITY.description, color = th.secondary, fontSize = 13.sp, lineHeight = 18.sp, modifier = Modifier.padding(top = 10.dp))
-    }
-    SettingsCellDivider()
 }
 
 /**

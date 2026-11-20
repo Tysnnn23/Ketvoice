@@ -184,10 +184,6 @@
    "sha256": "8923d9821be784f2115f1d4b3689b4cfbc10444fb688fac922b96763aa24797b",
    "source": "src/main/res/drawable-nodpi/vicecity_logo.webp"
   },
-  "src/lite/res/drawable-nodpi/vicecity_welcome.webp": {
-   "sha256": "b4b3c2632d12931f8fc4058c3455ebadd7d6af416e915210125177aa7a38e17d",
-   "source": "src/main/res/drawable-nodpi/vicecity_welcome.webp"
-  },
   "src/lite/res/drawable-xhdpi/ic_launcher_vicecity_bg.webp": {
    "sha256": "bd5416eb4c6a3e899cc7ea6320169eb6e5cd5857840eada5da855fcdc37fff28",
    "source": "src/main/res/drawable-xhdpi/ic_launcher_vicecity_bg.webp"

@@ -62,8 +62,8 @@ object SeasonWelcomeGate {
 
 /**
  * Offers the season that has just begun (6.2), once per occurrence ([Seasons.offerDue]), once [ready]: after the
- * splash, the first-launch welcome and the Vice City welcome. With the owner's picture (`season_<id>_welcome`) it
- * is a full-screen welcome like Vice City's; until then a small card over the app.
+ * splash and the first-launch welcome. With the owner's picture (`season_<id>_welcome`) it
+ * is a full-screen welcome; until then a small card over the app.
  */
 @Composable
 fun SeasonWelcomeHost(ready: Boolean) {
@@ -92,7 +92,7 @@ fun SeasonWelcomeHost(ready: Boolean) {
     }
 }
 
-/** The veil of the panel over a picture, as on the Vice City welcome. */
+/** The veil of the panel over a picture. */
 internal const val SEASON_VEIL = .66f
 
 /**

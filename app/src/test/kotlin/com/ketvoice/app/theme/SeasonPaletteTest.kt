@@ -16,12 +16,11 @@ class SeasonPaletteTest {
     private val aa = CoverLegibility.TEXT
 
     @Test fun everySeasonOfTheRegistryHasALook() {
-        // Vice City is the exception: it keeps the listener's theme with its own accent (ViceCityThemeTest).
-        Seasons.all.filterNot { it.ownWelcome }.forEach { assertNotNull(it.id, SeasonLooks.of(it.id)) }
-        assertNull(SeasonLooks.of(Seasons.VICE_CITY.id))
+        Seasons.all.forEach { assertNotNull(it.id, SeasonLooks.of(it.id)) }
+        // 7.6: the Vice City edition is gone from the registry and has no look.
+        assertNull(SeasonLooks.of("vicecity"))
         assertNull(SeasonLooks.of(null))
         assertNull(SeasonLooks.of("nimporte"))
-        assertFalse(SeasonLooks.noel.theme().viceCity)
     }
 
     @Test fun textsReadOnThePagesCardsAndGlow() {
