@@ -55,7 +55,11 @@ internal object MixKeys {
             val v = pick(if (outgoing) k.out else k.into).coerceIn(0, 100).toFloat()
             if (out.isNotEmpty() && at <= out.last().first) out[out.size - 1] = out.last().first to v else out += at to v
         }
-        if (!outgoing && out.isNotEmpty()) out += (maxOf(out.last().first, end) + RETURN_MS) to 100f
+        if (!outgoing && out.isNotEmpty()) {
+            // Held to the end of the blend, then back to the title as recorded.
+            if (out.last().first < end) out += end to out.last().second
+            out += (end + RETURN_MS) to 100f
+        }
         return out
     }
 

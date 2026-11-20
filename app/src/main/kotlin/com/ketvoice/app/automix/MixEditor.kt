@@ -14,6 +14,8 @@ internal object MixEditor {
     const val HEAD_MS = 60_000L
     /** Each step of the editor's arrows when a title has no beat grid. */
     const val FREE_STEP_MS = 250L
+    /** The longest blend the editor makes (its box's longest drag). */
+    const val MAX_BLEND_MS = 30_000L
 
     /** One end of a title as the editor shows it: the length it is filed under, its wave and its analysis when known. */
     data class Side(val trackId: String, val durationMs: Long, val wave: Wave? = null, val analysis: SegmentAnalysis? = null)

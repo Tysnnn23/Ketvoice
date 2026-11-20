@@ -137,6 +137,7 @@ internal fun TimelineCaption(state: EditorState) {
             LegendItem("Basses", ink.bass, CurveLine.Dashed)
             LegendItem("Filtre", ink.filter, CurveLine.Dotted)
             LegendItem("Chant", ink.voice, null)
+            if (state.choice.keys.isNotEmpty()) LegendItem("Points de volume", ink.box, CurveLine.Solid)
         }
         ZoomButton(plus = false, enabled = state.zoom > TimelineWindow.ZOOM_MIN) { state.zoom = (state.zoom / 1.5f).coerceAtLeast(TimelineWindow.ZOOM_MIN) }
         ZoomButton(plus = true, enabled = state.zoom < TimelineWindow.ZOOM_MAX) { state.zoom = (state.zoom * 1.5f).coerceAtMost(TimelineWindow.ZOOM_MAX) }
@@ -439,4 +440,9 @@ internal fun Settings(state: EditorState, plan: MixPlan, wide: Boolean) {
     Spacer(Modifier.height(16.dp))
     Text("Glissez la boîte pour déplacer la transition, ses bords pour changer sa durée, une onde pour déplacer son titre seul. Tout se cale sur les temps et les phrases ; maintenez avant de glisser pour placer librement. Pincez pour zoomer.",
         color = theme.secondary, style = Ket27.Type.footnote)
+    if (state.pair) {
+        Spacer(Modifier.height(8.dp))
+        Text("Touchez la transition pour placer un point de volume, puis touchez-le pour régler la voix, les instruments et la musique des deux titres.",
+            color = theme.secondary, style = Ket27.Type.footnote)
+    }
 }
