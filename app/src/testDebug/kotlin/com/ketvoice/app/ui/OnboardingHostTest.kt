@@ -9,6 +9,9 @@ import com.ketvoice.app.data.AppSettings
 import com.ketvoice.app.theme.KetvoiceTheme
 import com.ketvoice.app.ui.onboarding.Onboarding
 import com.ketvoice.app.ui.onboarding.OnboardingChoices
+import com.ketvoice.app.ui.onboarding.EnhanceKind
+import com.ketvoice.app.ui.onboarding.EnhanceState
+import com.ketvoice.app.ui.onboarding.Enhancement
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
@@ -22,8 +25,10 @@ import org.robolectric.util.ReflectionHelpers
 import java.io.File
 
 /**
- * The first-launch welcome (6.2) drawn on the host in software, not on a device: its three pages on a phone, in a
- * tablet's landscape window (also Quest's window shape) and with large text, and what it does.
+ * The first-launch welcome (6.2) drawn on the host in software, not on a device: its pages on a phone, in a
+ * tablet's landscape window (also Quest's window shape) and with large text, and what it does. 7.6 adds
+ * « Améliorez votre expérience d'écoute » (nothing installed, downloading, all installed) and its skip warning;
+ * the rows are given here, the real ones follow the models and the scan.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], qualifiers = "w400dp-h860dp-xhdpi")
@@ -55,6 +60,17 @@ class OnboardingHostTest {
             val canvas = Canvas(bitmap)
             ReflectionHelpers.setField(canvas, "mAllowHwFeaturesInSwMode", true)
             view.draw(canvas)
+            // An alert has its own window: drawn over the page.
+            val windows = ReflectionHelpers.callStaticMethod<Any>(Class.forName("android.view.WindowManagerGlobal"), "getInstance")
+            @Suppress("UNCHECKED_CAST")
+            val views = ReflectionHelpers.getField<java.util.ArrayList<android.view.View>>(windows, "mViews")
+            views.filter { it !== view && it.width > 0 }.forEach { window ->
+                canvas.drawColor(0x33000000)
+                canvas.save()
+                canvas.translate((view.width - window.width) / 2f, (view.height - window.height) / 2f)
+                window.draw(canvas)
+                canvas.restore()
+            }
             val file = File("build/host-ui-preview/${com.ketvoice.app.BuildConfig.FLAVOR}/onboarding/$name.png")
             file.parentFile?.mkdirs()
             file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
@@ -62,10 +78,32 @@ class OnboardingHostTest {
         }
     }
 
-    private fun show(dark: Boolean = false, importAvailable: Boolean = false) {
+    private val nothing = listOf(
+        Enhancement(EnhanceKind.VoiceQuick, EnhanceState.Available, 39_364_064L),
+        Enhancement(EnhanceKind.VoiceHq, EnhanceState.Available, 33_429_300L),
+        Enhancement(EnhanceKind.LocalMusic, EnhanceState.Available))
+    private val downloading = listOf(
+        Enhancement(EnhanceKind.VoiceQuick, EnhanceState.Working(.42f), 39_364_064L),
+        Enhancement(EnhanceKind.VoiceHq, EnhanceState.Available, 33_429_300L),
+        Enhancement(EnhanceKind.LocalMusic, EnhanceState.Working(null)))
+    private val installed = listOf(
+        Enhancement(EnhanceKind.VoiceQuick, EnhanceState.Done(), 39_364_064L),
+        Enhancement(EnhanceKind.VoiceHq, EnhanceState.Done(), 33_429_300L),
+        Enhancement(EnhanceKind.Rhythm, EnhanceState.Done(), 2_100_000L),
+        Enhancement(EnhanceKind.LocalMusic, EnhanceState.Done(128)))
+
+    private fun show(dark: Boolean = false, importAvailable: Boolean = false, items: List<Enhancement> = nothing, startPage: Int = 0) {
         compose.setContent { KetvoiceTheme(useDark = dark) {
-            Onboarding(onFinish = { finished = it }, importAvailable = importAvailable)
+            Onboarding(onFinish = { finished = it }, importAvailable = importAvailable, startPage = startPage,
+                enhancements = { items })
         } }
+        compose.waitForIdle()
+    }
+
+    /** From the last page with nothing chosen: the warning, then « Continuer sans ». */
+    private fun leaveWithoutEnhancements() {
+        next()
+        compose.onNodeWithTag("enhance-skip-continue").performClick()
         compose.waitForIdle()
     }
 
@@ -82,6 +120,10 @@ class OnboardingHostTest {
         next()
         compose.onNodeWithTag("onboarding-title").assertTextEquals("Ketmix et voix")
         image("$prefix-3-features")
+        next()
+        compose.onNodeWithTag("onboarding-title").assertTextEquals("Améliorez votre expérience d'écoute")
+        compose.onNodeWithTag("enhance-list").assertExists()
+        image("$prefix-4-enhance")
     }
 
     @Test fun threePagesOnAPhone() = allPages("phone")
@@ -115,12 +157,19 @@ class OnboardingHostTest {
         compose.onNodeWithTag("onboarding-voice").performClick()
         compose.onNodeWithTag("onboarding-voice").performClick()
         next()
+        leaveWithoutEnhancements()
         compose.runOnIdle { assertEquals(OnboardingChoices(ketmix = true, voice = false, importPlaylists = false), finished) }
     }
 
-    @Test fun itCanBeSkippedFromTheFirstPage() {
+    @Test fun skippingGoesToTheEnhancementsThenEnds() {
         show()
         compose.onNodeWithTag("onboarding-skip").performClick()
+        compose.waitForIdle()
+        compose.onNodeWithTag("onboarding-title").assertTextEquals("Améliorez votre expérience d'écoute")
+        compose.onNodeWithTag("onboarding-skip").performClick()
+        compose.waitForIdle()
+        compose.onNodeWithTag("enhance-skip-alert").assertExists()
+        compose.onNodeWithTag("enhance-skip-continue").performClick()
         compose.runOnIdle { assertEquals(OnboardingChoices(ketmix = false, voice = false, importPlaylists = false), finished) }
     }
 
@@ -137,6 +186,7 @@ class OnboardingHostTest {
         compose.onNodeWithTag("onboarding-import-switch").assertIsDisplayed().performClick()
         image("phone-2-playlists-import")
         next(); next()
+        leaveWithoutEnhancements()
         compose.runOnIdle { assertTrue(finished!!.importPlaylists) }
     }
 
@@ -157,5 +207,74 @@ class OnboardingHostTest {
         compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
         compose.waitForIdle()
         compose.onNodeWithTag("onboarding-title").assertTextEquals("Bienvenue sur Ketvoice")
+    }
+
+    // ------------------------------------------------------------------ 7.6: « Améliorez votre expérience d'écoute »
+
+    @Test fun enhancementsNothingInstalled() {
+        show(startPage = 3)
+        compose.onNodeWithTag("enhance-action-VoiceQuick").assertIsDisplayed()
+        compose.onNodeWithText("Séparation des voix").assertIsDisplayed()
+        image("phone-4-enhance-nothing")
+    }
+
+    @Test fun enhancementsDownloadingShowTheirProgress() {
+        show(items = downloading, startPage = 3)
+        compose.onNodeWithTag("enhance-progress-VoiceQuick").assertExists()
+        compose.onNodeWithText("42 %").assertExists()
+        image("phone-4-enhance-downloading")
+        // Something is on its way: leaving does not warn.
+        next()
+        compose.onNodeWithTag("enhance-skip-alert").assertDoesNotExist()
+        compose.runOnIdle { assertNotNull(finished) }
+    }
+
+    @Test fun enhancementsAllInstalled() {
+        show(dark = true, items = installed, startPage = 3)
+        compose.onNodeWithText("128 titres").assertExists()
+        image("phone-4-enhance-installed-dark")
+        next()
+        compose.runOnIdle { assertNotNull(finished) }
+    }
+
+    @Test fun leavingWithNothingAsksFirstAndBackStays() {
+        show(startPage = 3)
+        next()
+        compose.onNodeWithTag("enhance-skip-alert").assertExists()
+        compose.onNodeWithText("Continuer sans les améliorations ?").assertExists()
+        image("phone-4-enhance-alert")
+        compose.onNodeWithTag("enhance-skip-back").performClick()
+        compose.waitForIdle()
+        compose.onNodeWithTag("enhance-skip-alert").assertDoesNotExist()
+        compose.onNodeWithTag("onboarding-title").assertTextEquals("Améliorez votre expérience d'écoute")
+        compose.runOnIdle { assertNull(finished) }
+    }
+
+    @Test fun theVoiceSwitchCountsAsAChoice() {
+        show()
+        next(); next()
+        compose.onNodeWithTag("onboarding-voice").performClick()
+        next(); next()
+        compose.onNodeWithTag("enhance-skip-alert").assertDoesNotExist()
+        compose.runOnIdle { assertTrue(finished!!.voice) }
+    }
+
+    @Test fun liteAndModestPhonesAreOfferedLess() {
+        val full = com.ketvoice.app.ui.onboarding.Enhancements.kinds(lite = false, rhythmBundled = true, localSupported = true)
+        assertEquals(listOf(EnhanceKind.VoiceQuick, EnhanceKind.VoiceHq, EnhanceKind.LocalMusic), full)
+        val lite = com.ketvoice.app.ui.onboarding.Enhancements.kinds(lite = true, rhythmBundled = false, localSupported = false)
+        assertEquals(listOf(EnhanceKind.VoiceQuick, EnhanceKind.Rhythm), lite)
+        assertFalse(com.ketvoice.app.ui.onboarding.Enhancements.chosen(nothing))
+        assertTrue(com.ketvoice.app.ui.onboarding.Enhancements.chosen(downloading))
+    }
+
+    @Test fun settingsOpensTheSameRows() {
+        compose.setContent { KetvoiceTheme(useDark = false) { com.ketvoice.app.ui.settings.SettingsScreen() } }
+        compose.waitForIdle()
+        compose.onNodeWithTag("settings-enhance").assertIsDisplayed().performClick()
+        compose.waitForIdle()
+        compose.onNodeWithTag("enhance-sheet").assertExists()
+        compose.onNodeWithTag("enhance-action-VoiceQuick").assertExists()
+        image("settings-enhance-sheet")
     }
 }

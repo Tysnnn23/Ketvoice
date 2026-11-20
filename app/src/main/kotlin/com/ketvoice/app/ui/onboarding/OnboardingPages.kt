@@ -207,6 +207,7 @@ internal fun PageArt(page: OnboardingPage, modifier: Modifier) {
             OnboardingPage.Language -> globe(th, t.value)
             OnboardingPage.Playlists -> covers(th, t.value)
             OnboardingPage.Features -> decks(th, t.value)
+            OnboardingPage.Enhance -> layers(th, t.value)
         }
     }
 }
@@ -270,6 +271,22 @@ private fun DrawScope.decks(th: KetTheme, t: Float) {
     record(right, r, th.secondary.copy(alpha = .4f + .6f * mix), -t)
     wave(left.x + r * 1.1f, right.x - r * 1.1f, center.y, r * .6f * (1f - mix), th.accent, t)
     wave(left.x + r * 1.1f, right.x - r * 1.1f, center.y, r * .6f * mix, th.secondary, t + .25f)
+}
+
+/** One title's bars parting into two layers, the voice above and the music below, then joining again. */
+private fun DrawScope.layers(th: KetTheme, t: Float) {
+    val bars = 9
+    val step = size.width * .7f / bars
+    val left = center.x - step * (bars - 1) / 2f
+    val part = (.5f - .5f * cos(TAU * t)) * size.minDimension * .08f
+    for (i in 0 until bars) {
+        val x = left + i * step
+        val voice = size.minDimension * (.10f + .16f * abs(sin(i * 1.7f + 1f)))
+        val music = size.minDimension * (.12f + .14f * abs(cos(i * 1.3f + .4f)))
+        val w = step * .52f
+        drawLine(th.accent, Offset(x, center.y - part - voice), Offset(x, center.y - part - w * .5f), w, StrokeCap.Round)
+        drawLine(th.secondary.copy(alpha = .65f), Offset(x, center.y + part + w * .5f), Offset(x, center.y + part + music), w, StrokeCap.Round)
+    }
 }
 
 private fun DrawScope.record(at: Offset, r: Float, colour: Color, turn: Float) {

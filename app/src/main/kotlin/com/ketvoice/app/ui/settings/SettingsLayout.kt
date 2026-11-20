@@ -130,6 +130,20 @@ internal fun SettingsHome(connected: Boolean, name: String, onCategory: (Setting
             }
             Icon(KetIcons.ChevronRight, null, tint = theme.secondary, modifier = Modifier.size(18.dp))
         }
+        // 7.6: the welcome's last page, again — the optional models and the local scan.
+        var enhance by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
+        Row(Modifier.padding(top = 14.dp).fillMaxWidth().settingsGroup().testTag("settings-enhance")
+            .rowPress { enhance = true }.heightIn(min = 60.dp)
+            .padding(horizontal = 16.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
+            Ket27Tile(KetIcons.Download, 7)
+            Column(Modifier.weight(1f).padding(start = 12.dp, end = 14.dp)) {
+                Text("Améliorez votre expérience d'écoute", color = theme.onBackground, fontSize = 17.sp, lineHeight = 22.sp)
+                Text("Séparation des voix, rythme Ketmix, musique de l'appareil", color = theme.secondary, fontSize = 13.sp,
+                    lineHeight = 18.sp, modifier = Modifier.padding(top = 1.dp))
+            }
+            Icon(KetIcons.ChevronRight, null, tint = theme.secondary.copy(alpha = .8f), modifier = Modifier.size(18.dp))
+        }
+        if (enhance) com.ketvoice.app.ui.onboarding.EnhanceSheet(onClose = { enhance = false })
         SettingsGroupHeading("Apparence et lecture")
         SettingsCategoryGroup(listOf(SettingsCategory.Appearance, SettingsCategory.Playback, SettingsCategory.Lyrics, SettingsCategory.Canvas), onCategory)
         SettingsGroupHeading("Votre musique")
