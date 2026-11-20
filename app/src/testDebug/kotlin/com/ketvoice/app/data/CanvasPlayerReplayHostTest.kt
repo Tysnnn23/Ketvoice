@@ -79,7 +79,13 @@ class CanvasPlayerReplayHostTest {
         CanvasRepo.aheadOf(album, index)
     }
 
-    private suspend fun postersWritten() { repeat(100) { if (album.all { CanvasRepo.posterOf(CanvasRepo.paths.value[it.id]) != null }) return; delay(20) } }
+    /** Stills are written off the caller's thread; a slow machine (CI) needs more than a moment. */
+    private suspend fun postersWritten() {
+        repeat(500) {
+            if (CanvasRepo.loading.value.isEmpty() && album.all { CanvasRepo.posterOf(CanvasRepo.paths.value[it.id]) != null }) return
+            delay(20)
+        }
+    }
 
     private fun secondPass(label: String, firstLookups: Int, firstDownloads: Int) = runBlocking {
         postersWritten()
