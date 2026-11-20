@@ -4,6 +4,8 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculateCentroid
+import androidx.compose.foundation.gestures.calculatePan
 import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -14,6 +16,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.isSpecified
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
@@ -58,7 +61,9 @@ internal class TimelineWindow(val fromMs: Long, val untilMs: Long) {
 
     companion object {
         const val ZOOM_MIN = .5f
-        const val ZOOM_MAX = 4f
+        const val ZOOM_MAX = 6f
+        /** 8.0: how far two fingers pan the timeline from the exit, either way. */
+        const val PAN_MAX_MS = 45_000L
 
         fun of(plan: MixPlan, exitMs: Long, wide: Boolean, zoom: Float): TimelineWindow {
             val view = MixEditor.view(plan, wide)
@@ -115,8 +120,13 @@ private class TimelineDrag(val state: EditorState, plan: MixPlan, val grip: Grip
         val dt = (dxPx * msPerPx).roundToLong()
         if (grip == Grip.Key) {
             // A keyframe moves in time inside the blend, freely: a level may change off the beat.
+            // 8.0: with the magnet, on the outgoing title's beats (held before moving, free).
             key = state.keyGrabbed
-            state.dragKey = key to (key0 + dt).coerceIn(0L, overlap0)
+            val raw = (key0 + dt).coerceIn(0L, overlap0)
+            val at = if (free) raw else com.ketvoice.app.automix.StudioSnap.key(state.out.analysis, exit0, raw, overlap0,
+                MixEditor.tolerance(state.out.analysis, msPerPx, pullPx))
+            if (at != last) { last = at; if (at != raw) tick(GridSnap.kindAt(state.out.analysis, exit0 + at)) }
+            state.dragKey = key to at
             return
         }
         val placed = when (grip) {
@@ -157,7 +167,8 @@ private class TimelineDrag(val state: EditorState, plan: MixPlan, val grip: Grip
 private fun gripAt(x: Float, y: Float, plan: MixPlan, toX: (Long) -> Float, height: Int, edgePx: Float, state: EditorState): Grip {
     if (plan.mixes) {
         // 7.6: a keyframe, on the line between the two titles.
-        val key = state.keys.indices.filter { abs(toX(plan.outMs + state.keys[it].atMs) - x) <= edgePx && abs(y - height / 2f) <= edgePx * 1.6f }
+        // 8.0: its large handle on the line between the two titles, a finger's width around it.
+        val key = state.keys.indices.filter { abs(toX(plan.outMs + state.keys[it].atMs) - x) <= edgePx && abs(y - height / 2f) <= edgePx * 2f }
             .minByOrNull { abs(toX(plan.outMs + state.keys[it].atMs) - x) }
         state.keyGrabbed = key ?: -1
         if (key != null) return Grip.Key
@@ -171,7 +182,7 @@ private fun gripAt(x: Float, y: Float, plan: MixPlan, toX: (Long) -> Float, heig
     return if (y < height / 2f) Grip.Out else Grip.In
 }
 
-private fun Modifier.timelineGestures(state: EditorState, plan: () -> MixPlan, window: () -> TimelineWindow, edgePx: Float, pullPx: Float,
+private fun Modifier.timelineGestures(state: EditorState, plan: () -> MixPlan, window: () -> TimelineWindow, wide: Boolean, edgePx: Float, pullPx: Float,
                                       onFreeze: (TimelineWindow?) -> Unit, tick: (GridSnap.Kind) -> Unit): Modifier = pointerInput(state) {
     awaitEachGesture {
         val down = awaitFirstDown(requireUnconsumed = false)
@@ -186,8 +197,18 @@ private fun Modifier.timelineGestures(state: EditorState, plan: () -> MixPlan, w
             if (event.changes.none { it.pressed }) break
             if (event.changes.count { it.pressed } >= 2 && drag == null) {
                 // Two fingers: more or less of the music in the same width.
+                // 8.0: zoomed around the fingers and moved with them (panned), within reach of the exit.
                 pinch = true
+                val exit = state.exitOf(p)
+                fun now() = TimelineWindow.of(p, exit + state.panMs, wide, state.zoom)
+                val before = now()
+                val centre = event.calculateCentroid(useCurrent = true)
+                val cx = if (centre.isSpecified) centre.x else width / 2f
+                val t = before.fromMs + ((cx - event.calculatePan().x) / width * before.spanMs).toLong()
                 state.zoom = (state.zoom * event.calculateZoom()).coerceIn(TimelineWindow.ZOOM_MIN, TimelineWindow.ZOOM_MAX)
+                val after = now()
+                val anchor = exit + state.panMs - after.fromMs
+                state.panMs = (t - (cx / width * after.spanMs).toLong() - exit + anchor).coerceIn(-TimelineWindow.PAN_MAX_MS, TimelineWindow.PAN_MAX_MS)
                 event.changes.forEach { it.consume() }
                 continue
             }
@@ -198,7 +219,7 @@ private fun Modifier.timelineGestures(state: EditorState, plan: () -> MixPlan, w
                 // A vertical move belongs to the page.
                 if (abs(d.y) > viewConfiguration.touchSlop && abs(d.y) > abs(d.x)) return@awaitEachGesture
                 if (abs(d.x) <= viewConfiguration.touchSlop) continue
-                val free = change.uptimeMillis - down.uptimeMillis >= viewConfiguration.longPressTimeoutMillis
+                val free = change.uptimeMillis - down.uptimeMillis >= viewConfiguration.longPressTimeoutMillis || !state.magnet
                 drag = TimelineDrag(state, p, grip, free, w.spanMs.toFloat() / width, pullPx, tick)
                 // Dragging the box, the timeline stays still under the finger.
                 if (grip == Grip.Box || grip == Grip.Start || grip == Grip.End || grip == Grip.Key) onFreeze(w)
@@ -212,7 +233,7 @@ private fun Modifier.timelineGestures(state: EditorState, plan: () -> MixPlan, w
             if (grip == Grip.Key && state.keyGrabbed >= 0) state.keyOpen = state.keyGrabbed
             else if (grip == Grip.Box || grip == Grip.Start || grip == Grip.End) {
                 val rel = w.fromMs + (down.position.x / width * w.spanMs).toLong() - p.outMs
-                if (rel in 0..p.overlapMs) state.addKey(rel, p.overlapMs).takeIf { it >= 0 }?.let { state.keyOpen = it }
+                if (rel in 0..p.overlapMs) state.addKey(state.snapKey(p, rel, w.spanMs.toFloat() / width, pullPx), p.overlapMs).takeIf { it >= 0 }?.let { state.keyOpen = it }
             }
         }
         onFreeze(null)
@@ -225,7 +246,8 @@ private fun Modifier.timelineGestures(state: EditorState, plan: () -> MixPlan, w
  * plays for this plan ([DeckAutomation], the very automation of the decks).
  */
 @Composable
-internal fun KetmixTimeline(state: EditorState, plan: MixPlan, auto: MixPlan, window: TimelineWindow, height: Dp, tick: (GridSnap.Kind) -> Unit) {
+internal fun KetmixTimeline(state: EditorState, plan: MixPlan, auto: MixPlan, window: TimelineWindow, height: Dp, tick: (GridSnap.Kind) -> Unit,
+                            wide: Boolean = false) {
     val theme = LocalTheme.current
     val ink = TimelineInk.of(theme)
     val preview by TransitionPreview.engine.state.collectAsState()
@@ -242,7 +264,7 @@ internal fun KetmixTimeline(state: EditorState, plan: MixPlan, auto: MixPlan, wi
     Box(Modifier.fillMaxWidth().height(height).clip(RoundedCornerShape(20.dp))
         .background(theme.onBackground.copy(alpha = if (theme.isDark) .06f else .045f)).testTag("ketmix-timeline")
         .semantics { contentDescription = description; stateDescription = "${MixEditor.clock(exitMs)} → ${MixEditor.clock(entryMs)}" }
-        .timelineGestures(state, { planNow }, { windowNow }, with(density) { 18.dp.toPx() }, 14f * density.density, { frozen = it }, tick)) {
+        .timelineGestures(state, { planNow }, { windowNow }, wide, with(density) { 18.dp.toPx() }, 14f * density.density, { frozen = it }, tick)) {
         Canvas(Modifier.fillMaxSize()) {
             val scene = TimelineScene(state, plan, shown, exitMs, entryMs, size.width, size.height)
             drawScene(scene, auto, curves, ink, measurer, preview.positionMs.takeIf { preview.running && !preview.loading })

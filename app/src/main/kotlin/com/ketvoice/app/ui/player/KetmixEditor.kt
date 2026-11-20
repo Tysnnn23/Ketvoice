@@ -66,7 +66,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
- * « Éditeur Ketmix » (6.1, redone in 6.9 after the owner's « rends-le plus simple d'utilisation avec preview »):
+ * « Ketmix Studio » (« Éditeur Ketmix » of 6.1, redone in 6.9 after the owner's « rends-le plus simple d'utilisation avec preview »):
  * one timeline where the outgoing title's ending lies over the incoming title's start on the same clock, the
  * transition a box to drag and resize, the curves Ketmix will play drawn over the waves, presets, the details of
  * the blend, and « Écouter » that plays the transition alone. Choices are kept with « Enregistrer ».
@@ -131,8 +131,30 @@ internal class EditorState(val from: Track, to: Track?, outDurationMs: Long, inD
     val pair: Boolean = to != null && to.id != from.id
     val out = EditorSide(from, tail = true, outDurationMs)
     val into = EditorSide(to ?: from, tail = false, if (to == null) outDurationMs else inDurationMs)
-    var choice by mutableStateOf(MixEditor.Choice())
+    private var current by mutableStateOf(MixEditor.Choice())
+    /** 8.0 (Studio): every change of the choice can be undone (« Annuler ») and redone (« Rétablir »). */
+    internal val history = com.ketvoice.app.automix.EditHistory<MixEditor.Choice>()
+    var canUndo by mutableStateOf(false); private set
+    var canRedo by mutableStateOf(false); private set
+    var choice: MixEditor.Choice
+        get() = current
+        set(value) {
+            if (value == current) return
+            history.record(current); current = value; steps()
+        }
     var saved by mutableStateOf(MixEditor.Choice())
+    /** 8.0: points and keyframes land on the grid while the magnet is on; held before moving, a point is free anyway. */
+    var magnet by mutableStateOf(true)
+    /** 8.0: how far the timeline is panned from the exit, on the outgoing clock (two fingers, or the overview). */
+    var panMs by mutableLongStateOf(0L)
+    /** 8.0: « Mes préréglages » is open. */
+    var presetsOpen by mutableStateOf(false)
+    /** 8.0: « Importer un mix » is open. */
+    var importOpen by mutableStateOf(false)
+
+    private fun steps() { canUndo = history.canUndo; canRedo = history.canRedo }
+    fun undo() { history.undo(current)?.let { current = it; keyOpen = null }; steps() }
+    fun redo() { history.redo(current)?.let { current = it; keyOpen = null }; steps() }
     var dragExit by mutableStateOf<Long?>(null)
     var dragEntry by mutableStateOf<Long?>(null)
     var dragOverlap by mutableStateOf<Long?>(null)
@@ -160,8 +182,10 @@ internal class EditorState(val from: Track, to: Track?, outDurationMs: Long, inD
     fun automatic(): MixPlan = MixEditor.automatic(out.side(), into.side(), intensity, defaultStyle, vocalEndMs)
 
     fun recall() {
-        choice = MixEditor.remembered(from.id, out.planDurationMs, into.track.id, into.planDurationMs, pair)
-        saved = choice
+        current = MixEditor.remembered(from.id, out.planDurationMs, into.track.id, into.planDurationMs, pair)
+        saved = current
+        // What was kept is where undo stops.
+        history.clear(); steps()
     }
 
     fun commitExit(ms: Long) { choice = choice.copy(exitMs = ms) }
@@ -197,7 +221,9 @@ internal fun KetmixEditorHost(modifier: Modifier = Modifier) {
     LaunchedEffect(request) {
         withContext(Dispatchers.IO) {
             AnalysisStore.init(context); WaveStore.init(context); MixPointStore.init(context)
+            com.ketvoice.app.automix.MixPresetStore.init(context)
         }
+        state.magnet = com.ketvoice.app.automix.MixPresetStore.magnet
         state.recall()
         // Where the outgoing title stops singing, as Ketmix reads it (lyrics of the title playing).
         if (Player.state.value.current?.id == state.from.id)
@@ -267,10 +293,13 @@ internal fun KetmixEditorScreen(state: EditorState, onClose: () -> Unit, modifie
     DisposableEffect(Unit) { onDispose { if (TransitionPreview.engine.state.value.running) TransitionPreview.engine.stop() } }
     BoxWithConstraints(modifier.fillMaxSize().background(theme.background).testTag("ketmix-editor")) {
         val wide = LargeScreen.isLarge(maxWidth.value, maxHeight.value, BuildConfig.IS_QUEST)
-        val timelineHeight = if (wide) (maxHeight - 330.dp).coerceIn(220.dp, 420.dp) else 232.dp
+        // 8.0: the Studio toolbar (and its hint) stands above, so « Écouter » stays in sight on a wide window.
+        val timelineHeight = if (wide) (maxHeight - 450.dp).coerceIn(200.dp, 420.dp) else 232.dp
         Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
             EditorTopBar(state, onClose = close)
             val plan = state.plan()
+            // 8.0 (Studio): undo, redo, the magnet and « + Point » always in sight, above the scrolled part.
+            StudioToolbar(state, plan, Modifier.padding(horizontal = if (wide) 24.dp else Ket27.Metrics.margin))
             if (wide) {
                 // A wide window: the timeline takes the room, the controls stand in a column beside it.
                 Row(Modifier.fillMaxSize().padding(horizontal = 24.dp), horizontalArrangement = Arrangement.spacedBy(28.dp)) {
@@ -293,6 +322,8 @@ internal fun KetmixEditorScreen(state: EditorState, onClose: () -> Unit, modifie
             }
         }
         state.keyOpen?.let { KeyframeSheet(state, it) }
+        if (state.presetsOpen) PresetsSheet(state)
+        if (state.importOpen) ImportMixDialog(state)
     }
     if (asking) AppAlertDialog(onDismissRequest = { asking = false },
         confirmButton = { KetTextButton("Enregistrer", onClick = { asking = false; state.save(); onClose() }, primary = true) },
@@ -327,7 +358,7 @@ private fun TimelineBlock(state: EditorState, plan: MixPlan, wide: Boolean, heig
     val exitMs = state.exitOf(plan)
     val entryMs = state.entryOf(plan)
     val rate = if (plan.mixes) plan.rate else 1f
-    val window = TimelineWindow.of(plan, exitMs, wide, state.zoom)
+    val window = TimelineWindow.of(plan, exitMs + state.panMs, wide, state.zoom)
     PointHeader("Sortie", state.out.track, exitMs, GridSnap.kindAt(state.out.analysis, exitMs), listenerSet = state.effective.exitMs >= 0,
         onStep = { forward ->
             val next = MixEditor.step(state.out.analysis, exitMs, forward, MixEditor.exitRange(state.out.durationMs))
@@ -336,15 +367,15 @@ private fun TimelineBlock(state: EditorState, plan: MixPlan, wide: Boolean, heig
     Spacer(Modifier.height(6.dp))
     Overview(state.out, pointMs = exitMs, autoMs = auto.outMs.takeIf { auto.mixes }, visible = window.fromMs..window.untilMs,
         range = MixEditor.exitRange(state.out.durationMs), palette = palette, tag = "ketmix-overview-out",
-        onMove = { ms, kind -> state.dragExit = ms; tick(kind) }, onEnd = { state.dragExit?.let(state::commitExit); state.dragExit = null })
+        onMove = { ms, kind -> state.dragExit = ms; tick(kind) }, onEnd = { state.dragExit?.let(state::commitExit); state.dragExit = null }, magnet = state.magnet)
     Spacer(Modifier.height(4.dp))
     TimelineCaption(state)
-    KetmixTimeline(state, plan, auto, window, height, tick)
+    KetmixTimeline(state, plan, auto, window, height, tick, wide)
     Spacer(Modifier.height(8.dp))
     Overview(state.into, pointMs = entryMs, autoMs = auto.inMs.takeIf { auto.mixes },
         visible = (entryMs + ((window.fromMs - exitMs) * rate).toLong())..(entryMs + ((window.untilMs - exitMs) * rate).toLong()),
         range = MixEditor.entryRange(state.into.planDurationMs), palette = palette, tag = "ketmix-overview-in",
-        onMove = { ms, kind -> state.dragEntry = ms; tick(kind) }, onEnd = { state.dragEntry?.let(state::commitEntry); state.dragEntry = null })
+        onMove = { ms, kind -> state.dragEntry = ms; tick(kind) }, onEnd = { state.dragEntry?.let(state::commitEntry); state.dragEntry = null }, magnet = state.magnet)
     Spacer(Modifier.height(6.dp))
     PointHeader("Entrée", state.into.track, entryMs, GridSnap.kindAt(state.into.analysis, entryMs), listenerSet = state.effective.entryMs >= 0,
         onStep = { forward ->
@@ -415,7 +446,7 @@ internal fun LaneState(side: EditorSide, modifier: Modifier) {
  */
 @Composable
 internal fun Overview(side: EditorSide, pointMs: Long, autoMs: Long?, visible: LongRange, range: LongRange, palette: WavePalette, tag: String,
-                     onMove: (Long, GridSnap.Kind) -> Unit, onEnd: () -> Unit) {
+                     onMove: (Long, GridSnap.Kind) -> Unit, onEnd: () -> Unit, magnet: Boolean = true) {
     val theme = LocalTheme.current
     val window = side.window
     val length = (window.last - window.first).coerceAtLeast(1L)
@@ -445,7 +476,7 @@ internal fun Overview(side: EditorSide, pointMs: Long, autoMs: Long?, visible: L
                     moved = awaitHorizontalTouchSlopOrCancellation(down.id) { change, _ -> change.consume() }
                     true
                 }
-                free = decided == null
+                free = decided == null || !magnet
                 last = -1L
                 x = down.position.x
                 if (decided != null && moved == null) {

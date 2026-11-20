@@ -124,12 +124,21 @@ internal fun DrawScope.drawKeyCurves(keys: List<LevelKey>, plan: MixPlan, toX: (
                 style = Stroke(if (line == CurveLine.Solid) 2.2.dp.toPx() else 1.8.dp.toPx(), cap = StrokeCap.Round, pathEffect = curveEffect(line)))
         }
     }
-    // The keyframes themselves, on the line between the two titles.
+    // The keyframes themselves (8.0: large handles, as the owner could not find them): a stem over both titles, a
+    // knob on each title's music level, and a numbered one on the line between them, where a finger takes it.
     for ((i, key) in keys.withIndex()) {
         val x = toX(from + key.atMs.coerceIn(0L, span))
-        if (x !in -8f..width + 8f) continue
-        drawLine(color.copy(alpha = .35f), Offset(x, top), Offset(x, bottom), 1.dp.toPx())
-        val r = if (i == selected) 7.dp.toPx() else 6.dp.toPx()
+        if (x !in -12f..width + 12f) continue
+        val on = i == selected
+        drawLine(color.copy(alpha = if (on) .8f else .5f), Offset(x, top), Offset(x, bottom), (if (on) 2f else 1.5f).dp.toPx())
+        for (outgoing in listOf(true, false)) {
+            val y0 = if (outgoing) top else half + 4.dp.toPx()
+            val y1 = if (outgoing) half - 4.dp.toPx() else bottom
+            val y = y1 - (y1 - y0) * ((if (outgoing) key.out else key.into).music / 100f)
+            drawCircle(androidx.compose.ui.graphics.Color.White, 6.dp.toPx(), Offset(x, y))
+            drawCircle(color, 4.5.dp.toPx(), Offset(x, y))
+        }
+        val r = if (on) 12.dp.toPx() else 10.dp.toPx()
         drawCircle(androidx.compose.ui.graphics.Color.White, r + 2.dp.toPx(), Offset(x, half))
         drawCircle(color, r, Offset(x, half))
     }

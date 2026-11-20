@@ -143,7 +143,7 @@ class KetmixEditorHostTest {
         compose.setContent { KetvoiceTheme(useDark = true) { KetmixEditorScreen(state, onClose = {}) } }
         compose.onNodeWithTag("ketmix-editor").assertIsDisplayed()
         compose.onNodeWithTag("ketmix-timeline").assertIsDisplayed()
-        compose.onNodeWithText(com.ketvoice.app.data.AppText.t("Éditeur Ketmix")).assertIsDisplayed()
+        compose.onNodeWithText(com.ketvoice.app.data.AppText.t("Ketmix Studio")).assertIsDisplayed()
         compose.onNodeWithText(com.ketvoice.app.data.AppText.t("Bêta")).assertIsDisplayed()
         val auto = state.plan()
         assertTrue(auto.mixes)

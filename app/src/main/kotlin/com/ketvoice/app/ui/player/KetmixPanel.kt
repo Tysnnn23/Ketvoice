@@ -79,6 +79,7 @@ internal fun EditorTopBar(state: EditorState, onClose: () -> Unit) {
     val theme = LocalTheme.current
     val scope = rememberCoroutineScope()
     val haptic = rememberHaptics()
+    val context = androidx.compose.ui.platform.LocalContext.current
     Row(Modifier.fillMaxWidth().height(58.dp).padding(horizontal = Ket27.Metrics.margin), verticalAlignment = Alignment.CenterVertically) {
         LiquidGlassButton(onClick = onClose, modifier = Modifier.size(44.dp).testTag("ketmix-close")) {
             Icon(KetIcons.Close, AppText.t("Fermer"), tint = theme.onBackground, modifier = Modifier.size(18.dp))
@@ -86,7 +87,7 @@ internal fun EditorTopBar(state: EditorState, onClose: () -> Unit) {
         Spacer(Modifier.width(12.dp))
         // The name over its « Bêta » mark: on a phone the bar has no room for both on one line beside « Enregistrer ».
         Column(Modifier.weight(1f)) {
-            Text("Éditeur Ketmix", color = theme.onBackground, style = Ket27.Type.headline, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text("Ketmix Studio", color = theme.onBackground, style = Ket27.Type.headline, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text("Bêta", color = theme.secondary, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, maxLines = 1,
                 modifier = Modifier.padding(top = 1.dp).clip(RoundedCornerShape(6.dp)).background(theme.onBackground.copy(alpha = .09f)).padding(horizontal = 6.dp, vertical = 1.dp))
         }
@@ -99,7 +100,7 @@ internal fun EditorTopBar(state: EditorState, onClose: () -> Unit) {
                 enabled = state.pair && queueSize > 2) {
                 val count = applyToQueue(state)
                 scope.launch { say(AppText.t("Réglages appliqués à {0} transitions").replace("{0}", count.toString())) }
-            })), AppText.t("Plus d'options"), tag = "ketmix-more")
+            }), studioMenu(state, context)), AppText.t("Plus d'options"), tag = "ketmix-more")
         Spacer(Modifier.width(8.dp))
         GlassCapsuleButton("Enregistrer", null, onClick = {
             state.save(); if (AppSettings.ketmixHaptics.value) haptic(Haptics.Kind.Confirm)
