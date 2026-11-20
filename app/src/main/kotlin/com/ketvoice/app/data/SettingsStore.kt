@@ -62,6 +62,7 @@ object SettingsStore {
         s.voiceLevel.value = p.getInt("voiceLevel", 100).coerceIn(0, 100)
         com.ketvoice.app.stems.VoiceLevel.level = s.voiceLevel.value / 100f
         s.ketmixSmartQueue.value = p.getBoolean("ketmixSmartQueue", true)
+        s.ketmixOnSkip.value = p.getBoolean("ketmixOnSkip", true)
         s.ketmixBeatModel.value = p.getBoolean("ketmixBeatModel", true)
         s.ketmixLibrary.value = p.getBoolean("ketmixLibrary", true)
         s.autoResume.value = p.getBoolean("autoResume", true)
@@ -224,6 +225,7 @@ object SettingsStore {
             .putInt("ketmixStemsQuality", s.ketmixStemsQuality.value)
             .putInt("voiceLevel", s.voiceLevel.value)
             .putBoolean("ketmixSmartQueue", s.ketmixSmartQueue.value)
+            .putBoolean("ketmixOnSkip", s.ketmixOnSkip.value)
             .putBoolean("ketmixBeatModel", s.ketmixBeatModel.value)
             .putBoolean("ketmixLibrary", s.ketmixLibrary.value)
             .putBoolean("autoResume", s.autoResume.value)

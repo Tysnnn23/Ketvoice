@@ -15,10 +15,15 @@ import java.lang.reflect.Proxy
  */
 @UnstableApi
 internal class QueueBridgePlayer(
-    player: Player,
+    private val engine: Player,
     private val onNext: () -> Unit,
-    private val onPrevious: () -> Unit
-) : ForwardingPlayer(player) {
+    private val onPrevious: () -> Unit,
+    /** Whether a pause or a resume may fade now (7.5, [PauseFade.applies]); the host tests say yes. */
+    private val fades: () -> Boolean = {
+        PauseFade.applies(audible = true, bitPerfect = com.ketvoice.app.data.AppSettings.bitPerfect.value,
+            mixing = com.ketvoice.app.automix.Automix.mixing)
+    }
+) : ForwardingPlayer(engine) {
     // Keyed by equality: the session removes a listener through a new wrapper that is
     // only equal to the one it added, never the same instance.
     private val listeners = HashMap<Player.Listener, Player.Listener>()
@@ -29,6 +34,97 @@ internal class QueueBridgePlayer(
 
     override fun hasNextMediaItem(): Boolean = true
     override fun hasPreviousMediaItem(): Boolean = true
+
+    // ---- 7.5: fade on pause and resume ([PauseFade]).
+
+    private val handler by lazy { android.os.Handler(engine.applicationLooper) }
+    /** The fade under way, null when none. */
+    private var fade: Fade? = null
+    /** The volume asked for (by the app, a skip fade): what a fade starts from and comes back to. */
+    private var asked = 1f
+
+    private inner class Fade(val out: Boolean, val from: Float) : Runnable {
+        private val steps = PauseFade.steps()
+        private var step = 0
+        var level = from
+        override fun run() {
+            if (fade !== this) return
+            step++
+            level = PauseFade.level(from, if (out) 0f else 1f, step / steps.toFloat())
+            engine.volume = asked * level
+            if (step < steps) handler.postDelayed(this, PauseFade.STEP_MS) else finish()
+        }
+        fun finish() {
+            if (fade !== this) return
+            fade = null
+            handler.removeCallbacks(this)
+            if (out) engine.playWhenReady = false
+            // Paused (silent) or fully back: the volume is the one asked for again.
+            engine.volume = asked
+        }
+    }
+
+    private fun start(out: Boolean, from: Float) {
+        fade?.let { handler.removeCallbacks(it) }
+        val next = Fade(out, from)
+        fade = next
+        handler.postDelayed(next, PauseFade.STEP_MS)
+    }
+
+    private fun cancelFade() {
+        val current = fade ?: return
+        fade = null
+        handler.removeCallbacks(current)
+        engine.volume = asked
+    }
+
+    /** The pause is shown at once, while the sound still glides down: the session and the app see it now. */
+    private fun announce(playWhenReady: Boolean, isPlaying: Boolean) {
+        val events = Player.Events(androidx.media3.common.FlagSet.Builder()
+            .addAll(Player.EVENT_PLAY_WHEN_READY_CHANGED, Player.EVENT_IS_PLAYING_CHANGED).build())
+        listeners.keys.toList().forEach { listener ->
+            listener.onPlayWhenReadyChanged(playWhenReady, Player.PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST)
+            listener.onIsPlayingChanged(isPlaying)
+            listener.onEvents(this, events)
+        }
+    }
+
+    override fun play() = setPlayWhenReady(true)
+    override fun pause() = setPlayWhenReady(false)
+
+    override fun setPlayWhenReady(playWhenReady: Boolean) {
+        val current = fade
+        if (!playWhenReady) {
+            if (current?.out == true) return
+            if (!engine.isPlaying || !fades()) { cancelFade(); engine.playWhenReady = false; return }
+            if (current == null) asked = engine.volume
+            start(out = true, from = current?.level ?: 1f)
+            announce(playWhenReady = false, isPlaying = false)
+            return
+        }
+        if (current != null && !current.out) return
+        if (current?.out == true) {
+            // Resumed while it was still fading out: the sound never stopped, it rises again from where it is.
+            start(out = false, from = current.level)
+            announce(playWhenReady = true, isPlaying = engine.isPlaying)
+            return
+        }
+        if (engine.playWhenReady || engine.playbackState != Player.STATE_READY || !fades()) { engine.playWhenReady = true; return }
+        asked = engine.volume
+        engine.volume = 0f
+        engine.playWhenReady = true
+        start(out = false, from = 0f)
+    }
+
+    override fun getPlayWhenReady(): Boolean = if (fade?.out == true) false else super.getPlayWhenReady()
+    override fun isPlaying(): Boolean = if (fade?.out == true) false else super.isPlaying()
+    override fun getVolume(): Float = if (fade != null) asked else super.getVolume()
+    override fun setVolume(volume: Float) {
+        val current = fade
+        if (current == null) super.setVolume(volume) else { asked = volume; engine.volume = volume * current.level }
+    }
+    override fun stop() { cancelFade(); super.stop() }
+    override fun release() { cancelFade(); super.release() }
 
     override fun seekToNext() = onNext()
     override fun seekToNextMediaItem() = onNext()

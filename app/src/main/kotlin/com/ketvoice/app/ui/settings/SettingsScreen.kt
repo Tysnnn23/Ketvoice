@@ -528,6 +528,9 @@ fun SettingsScreen() {
                 SToggle(KetIcons.Shuffle, "File intelligente",
                     "En lecture aléatoire, le titre suivant est choisi parmi les prochains pour s'accorder au tempo et à la tonalité de celui en cours. Une file que vous avez ordonnée et un titre demandé « à la suite » ne bougent jamais.",
                     AppSettings.ketmixSmartQueue.value) { AppSettings.ketmixSmartQueue.value = it; SettingsStore.save() }
+                SToggle(KetIcons.Play, "Mixer quand je passe au suivant",
+                    "Activé : « Suivant » enchaîne avec un vrai mix. Désactivé : le titre suivant démarre tout de suite, avec un fondu très court ; les fins de titres restent mixées.",
+                    AppSettings.ketmixOnSkip.value) { AppSettings.ketmixOnSkip.value = it; SettingsStore.save() }
                 KetmixLibraryRow()
                 SToggle(KetIcons.Refresh, "Mixer aussi un titre en boucle",
                     "Quand un titre est répété, sa fin se mêle à son propre début, sur le temps, au lieu de repartir après un blanc.",

@@ -150,7 +150,7 @@ internal object SettingsKind : SyncKind {
         "coverTintedGlass", "meshBackground", "albumColors", "animatedArtwork", "albumHeroCanvas", "albumHeader", "artworkDepth", "livingArtwork",
         "fullArtwork", "panoramicCanvas", "sonicCanvas", "artistPhotos", "lyricsTextSize", "lyricsMode", "syncedLyrics",
         "lyricsSource", "translateLanguage", "translationSource", "lockscreenLyrics", "automixOn", "automixIntensity",
-        "automixAlbums", "ketmixLoops", "ketmixStyle", "ketmixSmartQueue", "ketmixHaptics", "smartShuffle", "volumeLeveling",
+        "automixAlbums", "ketmixLoops", "ketmixStyle", "ketmixSmartQueue", "ketmixOnSkip", "ketmixHaptics", "smartShuffle", "volumeLeveling",
         "skipSilence", "equalizerEnabled", "equalizerGains", "reverbAmount", "reverbSize", "reverbDamping", "voiceLevel",
         "noRepeatSuggestions", "playNextOnSwipe", "haptics", "autoOfflineFavorites")
 

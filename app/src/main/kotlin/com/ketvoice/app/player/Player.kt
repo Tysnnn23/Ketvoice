@@ -1556,13 +1556,15 @@ object Player {
         skipFade = scope.launch {
             try {
                 // 5.11.0: a prepared next title is mixed in for real, over a few seconds, instead of faded to.
-                if (runCatching { com.ketvoice.app.automix.Automix.skipMix() }.getOrDefault(false)) return@launch
-                SkipFade.ramp(c.volume, 0f, SkipFade.OUT_MS) { c.volume = it }
+                // 7.5: « Mixer quand je passe au suivant » off: no mix, a cut with the short fade of a pause.
+                val mix = AppSettings.ketmixOnSkip.value
+                if (mix && runCatching { com.ketvoice.app.automix.Automix.skipMix() }.getOrDefault(false)) return@launch
+                SkipFade.ramp(c.volume, 0f, if (mix) SkipFade.OUT_MS else PauseFade.MS) { c.volume = it }
                 advance(ended = false)
                 // The next title starts silent and rises once it really plays (or after a few seconds anyway).
                 c.volume = 0f
                 kotlinx.coroutines.withTimeoutOrNull(6_000) { _state.first { it.isPlaying } }
-                SkipFade.ramp(0f, 1f, SkipFade.IN_MS) { c.volume = it }
+                SkipFade.ramp(0f, 1f, if (mix) SkipFade.IN_MS else PauseFade.MS) { c.volume = it }
             } finally {
                 runCatching { c.volume = 1f }
             }
