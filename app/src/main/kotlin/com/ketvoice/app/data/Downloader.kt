@@ -179,6 +179,13 @@ object Downloader {
         restoreQueue(context.applicationContext)
     }
 
+    /**
+     * [items] with the newest file first, each file's date read once (7.6): sorted by `lastModified()` itself, the
+     * date was read again at each comparison — about n·log n disk reads on the main thread at every start.
+     */
+    internal fun newestFirst(items: List<Item>): List<Item> =
+        items.map { it to it.file.lastModified() }.sortedByDescending { it.second }.map { it.first }
+
     /** Reads the downloads folder again (after Air Ket put titles there, 7.0). */
     internal fun reload() { refresh() }
 
@@ -776,7 +783,7 @@ object Downloader {
                 )
             }
         }
-        _items.value = list.sortedByDescending { it.file.lastModified() }
+        _items.value = newestFirst(list)
     }
 
     private class LimitExceeded : Exception()

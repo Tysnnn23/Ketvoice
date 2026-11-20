@@ -134,6 +134,6 @@ internal fun MosaicCover(covers: List<String>, modifier: Modifier = Modifier) {
 
 /** The covers the Téléchargements mosaic shows: the latest saved titles first, distinct pictures only. */
 internal fun downloadMosaic(items: List<com.ketvoice.app.data.Downloader.Item>): List<String> =
-    CoverMosaic.distinct(items.sortedByDescending { it.file.lastModified() }.map { it.track }, {
+    CoverMosaic.distinct(com.ketvoice.app.data.Downloader.newestFirst(items).map { it.track }, {
         com.ketvoice.app.data.ArtworkRepo.coverForTrack(it) ?: it.coverUrl
     })

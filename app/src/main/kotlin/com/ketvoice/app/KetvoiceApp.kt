@@ -36,6 +36,8 @@ class KetvoiceApp : Application(), ImageLoaderFactory {
             return
         }
         com.ketvoice.app.data.AppText.init(this)
+        // The listener's language is read beside the main thread, before the first screen asks for a text (7.6).
+        if (android.os.Build.FINGERPRINT != "robolectric") com.ketvoice.app.data.AppText.warm(this)
         // The settings and the lists the first screen reads are loaded beside the main thread, which would wait for them.
         com.ketvoice.app.util.PrefsWarmup.start(this)
         // What the first screen does not need starts after it: a few seconds later in Lite, 1.5 s later elsewhere (6.2.2).

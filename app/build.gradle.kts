@@ -181,6 +181,9 @@ android {
             for (scheme in listOf("http", "https")) { it.systemProperty("$scheme.proxyHost", "127.0.0.1"); it.systemProperty("$scheme.proxyPort", "9") }
             // Maven Central stays reachable: Robolectric fetches its Android runtimes there on a machine without them.
             it.systemProperty("http.nonProxyHosts", "localhost|127.*|[::1]|repo1.maven.org|*.maven.org")
+            // 7.6: StartupIoHostTest counts the main thread's file reads with a SecurityManager (StrictMode's
+            // disk checks do not run on the JVM); Java 21 lets a test install one only with this flag.
+            it.jvmArgs("-Djava.security.manager=allow")
         }
         // -ProbolectricSdks=31 runs only those host SDKs (Lite's Android 11 tests also declare sdk 30, whose host
         // runtime Robolectric fetches on first use).
