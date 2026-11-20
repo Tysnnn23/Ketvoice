@@ -63,7 +63,7 @@ Ketmix mixes more carefully, the editor preview plays both songs again, glass st
 
 ### 7.0.0 — A Home made for you, autoplay, Apple-Music-style Downloads, Ketmix DJ set
 
-« Pour toi » on Home, songs of the same style after your queue, downloaded albums as real albums, the rhythm model built in, and DJ sets you can export.
+“For You” on Home, songs of the same style after your queue, downloaded albums as real albums, the rhythm model built in, and DJ sets you can export.
 [Mobile](https://github.com/Tysnnn23/Ketvoice/releases/download/v7.0.0/Ketvoice-7.0.0.apk)
 · [Lite](https://github.com/Tysnnn23/Ketvoice/releases/download/v7.0.0/Ketvoice-7.0.0-Lite.apk)
 · [Quest](https://github.com/Tysnnn23/Ketvoice/releases/download/v7.0.0/Ketvoice-7.0.0-Quest.apk)
