@@ -105,12 +105,14 @@ fun AppRoot() {
         com.ketvoice.app.ui.vicecity.ViceCityWelcomeGate.visible.value ||
         com.ketvoice.app.ui.seasons.SeasonWelcomeGate.visible.value != null ||
         com.ketvoice.app.data.FirstRun.pending.value
+    // 7.4: light icons over the artist page's photo while it is under the status bar.
+    val overPicture = com.ketvoice.app.ui.common.SystemBarTint.lightIconsOnTop.value && AppUi.overlay.value == AppUi.ARTIST
 
     androidx.compose.runtime.SideEffect {
         val controller = androidx.core.view.WindowCompat.getInsetsController(
             (view.context as? android.app.Activity)?.window ?: return@SideEffect, view
         )
-        controller.isAppearanceLightStatusBars = !(effectiveDark || darkSurface)
+        controller.isAppearanceLightStatusBars = !(effectiveDark || darkSurface || overPicture)
         controller.isAppearanceLightNavigationBars = !(effectiveDark || darkSurface)
     }
 
@@ -118,6 +120,9 @@ fun AppRoot() {
     // page and the player take their colours from the artwork (Album colours); they do it locally.
     val playingForAccent by Player.state.collectAsState()
     val playingCover = playingForAccent.current?.let { ArtworkRepo.coverForTrack(it) }
+    // 7.4: the player's colours are read while the mini-player shows, so the player opens already in them.
+    val warmContext = androidx.compose.ui.platform.LocalContext.current
+    LaunchedEffect(playingCover) { com.ketvoice.app.ui.player.PlayerColors.warm(warmContext, playingCover) }
     // Except when the listener asked for it (Settings → Appearance, "Couleur de la pochette", 5.9.0):
     // then the accent of the whole interface — buttons, links, sliders — follows the cover playing,
     // glides from one title's colour to the next and back to the chosen accent when it stops.

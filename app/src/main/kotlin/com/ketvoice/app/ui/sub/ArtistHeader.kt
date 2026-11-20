@@ -119,15 +119,17 @@ internal fun rememberArtistArtwork(name: String, revision: Int = 0): ArtistArtwo
  */
 @Composable
 internal fun ArtistHeader(page: ArtistPage, collapse: () -> Float = { 0f }, artwork: ArtistArtwork? = null,
-                          onTone: (Color?) -> Unit = {}) {
+                          onTone: (Color?) -> Unit = {}, scrolled: () -> Float = { 0f }) {
     val theme = LocalTheme.current
     val art = artwork ?: rememberArtistArtwork(page.artist.name)
     val sourcePhoto = page.artist.photo?.takeIf { it.isNotBlank() }
     // A photo the owner chose for this artist comes first.
     val curated = MediaOverrides.artistHero(page.artist.name)
     val hero = curated ?: art.hero ?: sourcePhoto
-    // The page takes its colour from the portrait: the photo and the page read as one surface.
-    val tone = com.ketvoice.app.theme.rememberCoverAccent(hero)?.first
+    // 7.4: without any photo, the artist's best-known cover fills the hero instead of an empty silhouette.
+    val fallbackCover = if (hero == null) ArtistHero.fallbackCover(page) else null
+    // The page takes its colour from the portrait (or that cover): the picture and the page read as one surface.
+    val tone = com.ketvoice.app.theme.rememberCoverAccent(hero ?: fallbackCover)?.first
     LaunchedEffect(tone) { onTone(tone) }
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         val wide = ArtistLayout.wide(maxWidth.value)
@@ -139,36 +141,46 @@ internal fun ArtistHeader(page: ArtistPage, collapse: () -> Float = { 0f }, artw
             // 6.0.0: the artist's circle that was touched grows into this portrait (ui/motion/CoverZoom).
             val zoom = com.ketvoice.app.ui.motion.rememberZoomTarget()
             Box(Modifier.fillMaxWidth().height(height).zoomTarget(zoom).clipToBounds().testTag("artist-portrait")) {
-                ArtistHeroVisual(page, hero, curated != null, wide, collapse, zoom)
+                ArtistHeroVisual(page, hero, fallbackCover, curated != null, wide, scrolled, zoom)
                 // The floating back button stays readable over a bright photo.
                 Box(Modifier.fillMaxWidth().height(110.dp).background(Brush.verticalGradient(
                     listOf(Color.Black.copy(alpha = .30f), Color.Transparent))))
                 // The legibility gradient: the photo dissolves into the page colour under the name, with no line
                 // where it ends, so the name reads in the page's own ink in light and dark alike.
-                Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().fillMaxHeight(if (wide) .80f else .62f).background(
+                Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().fillMaxHeight(if (wide) .70f else .46f).background(
                     Brush.verticalGradient(
                         0f to Color.Transparent,
-                        .28f to theme.background.copy(alpha = .26f),
-                        .56f to theme.background.copy(alpha = .72f),
-                        .78f to theme.background.copy(alpha = .93f),
+                        .30f to theme.background.copy(alpha = .22f),
+                        .58f to theme.background.copy(alpha = .68f),
+                        .82f to theme.background.copy(alpha = .94f),
                         1f to theme.background)))
-                Column(Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(horizontal = margin).padding(bottom = 16.dp)) {
+                Column(Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(horizontal = margin).padding(bottom = 10.dp)
+                    .graphicsLayer {
+                        // 7.4: the name folds into the bar as the page goes up: it fades and narrows towards its start
+                        // while the bar's title comes in (reduced motion: a fade only).
+                        val c = collapse().coerceIn(0f, 1f)
+                        alpha = ArtistHero.nameAlpha(c)
+                        val k = if (Motion.reduced) 1f else 1f - .10f * c
+                        scaleX = k; scaleY = k
+                        transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 1f)
+                    }) {
                     StaggeredReveal(order = 0) { ArtistIdentity(page.artist.name, art.logo, startAligned = true) }
                     val meta = listOf(page.listeners, "YouTube Music").filter { it.isNotBlank() }.joinToString(" · ")
                     StaggeredReveal(order = 1) {
                         Text(meta, localize = false, color = theme.secondary, fontSize = 13.sp, maxLines = 1,
                             overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 2.dp))
                     }
-                    StaggeredReveal(order = 2, modifier = Modifier.fillMaxWidth().padding(top = 14.dp)) {
-                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            if (page.tracks.isNotEmpty()) com.ketvoice.app.ui.common.CollectionActionPair(
-                                { Player.setShuffle(false); Player.playQueue(page.tracks) }, { Player.playShuffled(page.tracks) },
-                                Modifier.weight(1f, fill = false).widthIn(max = 440.dp), playLabel = "Écouter",
-                                playTag = "artist-play", shuffleTag = "artist-shuffle", stacked = stacked)
-                            ArtistFavouriteButton(page.artist)
-                        }
-                    }
+                }
+            }
+            // Listen, Shuffle and the favourite, just under the picture (7.4): the picture keeps only the name.
+            StaggeredReveal(order = 2, modifier = Modifier.fillMaxWidth().padding(horizontal = margin).padding(top = 4.dp)) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    if (page.tracks.isNotEmpty()) com.ketvoice.app.ui.common.CollectionActionPair(
+                        { Player.setShuffle(false); Player.playQueue(page.tracks) }, { Player.playShuffled(page.tracks) },
+                        Modifier.weight(1f, fill = false).widthIn(max = 440.dp), playLabel = "Écouter",
+                        playTag = "artist-play", shuffleTag = "artist-shuffle", stacked = stacked)
+                    ArtistFavouriteButton(page.artist)
                 }
             }
             // The artist's radio, under the buttons: it only exists when the artist has titles to start it from.
@@ -188,8 +200,8 @@ internal fun ArtistHeader(page: ArtistPage, collapse: () -> Float = { 0f }, artw
  * in performance mode or without living artwork the photo holds still.
  */
 @Composable
-private fun BoxScope.ArtistHeroVisual(page: ArtistPage, hero: String?, curated: Boolean, wide: Boolean,
-                                      collapse: () -> Float, zoom: ZoomTarget) {
+private fun BoxScope.ArtistHeroVisual(page: ArtistPage, hero: String?, fallbackCover: String?, curated: Boolean, wide: Boolean,
+                                      scrolled: () -> Float, zoom: ZoomTarget) {
     val theme = LocalTheme.current
     val context = LocalContext.current
     val moving = !Motion.reduced && !AppSettings.highPerformanceMode.value && AppSettings.livingArtwork.value
@@ -207,12 +219,28 @@ private fun BoxScope.ArtistHeroVisual(page: ArtistPage, hero: String?, curated: 
             modifier = Modifier.fillMaxSize().graphicsLayer {
                 alpha = zoom.alpha()
                 val d = drift?.value ?: 0f
+                val (shift, tighten) = ArtistHero.parallax(scrolled(), size.height, Motion.reduced)
                 // A slight overscan hides any seam; the drift adds to it and pans across the photo.
-                val scale = 1.02f + .07f * d
+                val scale = (1.02f + .07f * d) * tighten
                 scaleX = scale; scaleY = scale
                 translationX = (d - .5f) * size.width * .025f
-                translationY = (if (Motion.reduced) 0f else collapse().coerceIn(0f, 1f) * size.height * .07f) - d * size.height * .012f
+                translationY = shift - d * size.height * .012f
             })
+    } else if (fallbackCover != null) {
+        // No photo: the artist's best-known cover, blurred to fill the hero, and the cover itself, centred.
+        com.ketvoice.app.glass.SoftBlurredImage(fallbackCover, 36.dp, Modifier.fillMaxSize().graphicsLayer {
+            val (shift, tighten) = ArtistHero.parallax(scrolled(), size.height, Motion.reduced)
+            scaleX = 1.15f * tighten; scaleY = 1.15f * tighten; translationY = shift; alpha = zoom.alpha()
+        })
+        Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = if (theme.isDark) .28f else .12f)))
+        val coverSide = if (wide) 200.dp else 172.dp
+        AsyncImage(remember(fallbackCover) { ImageRequest.Builder(context).data(fallbackCover).crossfade(Motion.duration(280)).build() },
+            null, contentScale = ContentScale.Crop,
+            modifier = Modifier.align(BiasAlignment(if (wide) .6f else 0f, if (wide) -.1f else -.28f)).size(coverSide)
+                .graphicsLayer {
+                    translationY = ArtistHero.parallax(scrolled(), size.height * 3f, Motion.reduced).first * .5f
+                    shadowElevation = 18.dp.toPx(); shape = RoundedCornerShape(10.dp); clip = true
+                }.testTag("artist-hero-cover"))
     } else {
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(
             theme.accent.copy(alpha = if (theme.isDark) .30f else .20f), theme.background))))
@@ -238,8 +266,39 @@ private fun BoxScope.ArtistHeroVisual(page: ArtistPage, hero: String?, curated: 
         val reveal by animateFloatAsState(if (shown) 1f else 0f, tween(Motion.duration(900)), label = "artist-canvas-reveal")
         if (canvas != null) com.ketvoice.app.ui.player.ArtworkCanvas(lead, canvas, playing = true, forceCanvas = true,
             onMediaAspect = { shown = true },
-            modifier = Modifier.fillMaxSize().graphicsLayer { alpha = reveal * zoom.alpha() }.testTag("artist-hero-canvas"))
+            modifier = Modifier.fillMaxSize().graphicsLayer {
+                alpha = reveal * zoom.alpha()
+                val (shift, tighten) = ArtistHero.parallax(scrolled(), size.height, Motion.reduced)
+                translationY = shift; scaleX = tighten; scaleY = tighten
+            }.testTag("artist-hero-canvas"))
     }
+}
+
+/** The immersive hero's arithmetic (7.4), kept apart so it is tested on the JVM. */
+internal object ArtistHero {
+    /** Share of the scroll the picture follows downwards: it moves at a little more than half the page's speed. */
+    const val PARALLAX = .45f
+
+    /** How much larger the picture grows by the time it has scrolled away. */
+    const val TIGHTEN = .08f
+
+    /**
+     * The picture's shift down and its scale when the page has scrolled by [scrolledPx] over a hero [heightPx]
+     * tall. Reduced motion: no parallax and no scale. Pulling the page down (a negative scroll) changes nothing.
+     */
+    fun parallax(scrolledPx: Float, heightPx: Float, reduced: Boolean): Pair<Float, Float> {
+        if (reduced || heightPx <= 0f) return 0f to 1f
+        val s = scrolledPx.coerceIn(0f, heightPx)
+        return s * PARALLAX to 1f + TIGHTEN * (s / heightPx)
+    }
+
+    /** The name over the picture, gone a little before the bar's title is fully in. */
+    fun nameAlpha(collapse: Float): Float = (1f - collapse.coerceIn(0f, 1f) * 1.4f).coerceIn(0f, 1f)
+
+    /** The cover standing in for a missing photo: the most popular title's, else the latest release's. */
+    fun fallbackCover(page: ArtistPage): String? =
+        page.tracks.firstNotNullOfOrNull { it.coverUrl?.takeIf(String::isNotBlank) }
+            ?: page.albums.firstNotNullOfOrNull { it.coverUrl?.takeIf(String::isNotBlank) }
 }
 
 /** Keeps the artist as a favourite, or no longer: one glass circle beside Listen and Shuffle. */

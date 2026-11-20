@@ -72,9 +72,14 @@ internal object ArtistLayout {
      */
     fun heroHeight(widthDp: Float, windowHeightDp: Float, wide: Boolean): Float {
         val window = if (windowHeightDp.isFinite() && windowHeightDp > 0f) windowHeightDp else 800f
-        return if (wide) minOf(widthDp * .42f, window * .56f).coerceIn(300f, 560f)
-        else minOf(widthDp * 1.12f, window * .66f).coerceIn(300f, 560f)
+        // 7.4: an upright phone opens on the photo over about 58 % of its height, up under the status bar;
+        // a wide or landscape window (tablet, Quest, a phone on its side) keeps a capped banner.
+        return if (wide || widthDp > window) minOf(widthDp * .42f, window * .56f).coerceIn(300f, 560f)
+        else minOf(window * PHONE_SHARE, widthDp * 1.6f).coerceIn(340f, 640f)
     }
+
+    /** Share of an upright phone's window the hero takes. */
+    const val PHONE_SHARE = .58f
 
     /** How many columns the popular titles take in an area [areaDp] wide: two once a row keeps 380 dp. */
     fun popularColumns(areaDp: Float): Int = if (areaDp >= 760f) 2 else 1

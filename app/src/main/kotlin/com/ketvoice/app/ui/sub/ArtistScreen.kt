@@ -100,7 +100,9 @@ fun ArtistScreen(request: AppUi.ArtistRequest? = AppUi.artistRequest.value) {
 internal fun ArtistPageFrame(request: AppUi.ArtistRequest, page: ArtistPage?, loading: Boolean, failed: Boolean,
                              revision: Int, onRetry: () -> Unit, onRefresh: () -> Unit) {
     val baseTheme = LocalTheme.current
-    val accent = com.ketvoice.app.theme.rememberCoverAccent(page?.artist?.photo)?.first
+    // The per-artist accent (7.3) from the portrait; without one, from the cover standing in for it (7.4).
+    val accent = com.ketvoice.app.theme.rememberCoverAccent(page?.artist?.photo?.takeIf { it.isNotBlank() }
+        ?: page?.let(ArtistHero::fallbackCover))?.first
     // The page takes its colour from the portrait: the header reports it once it is known.
     var portraitTone by remember(request) { mutableStateOf<androidx.compose.ui.graphics.Color?>(null) }
     val pageTint by androidx.compose.animation.animateColorAsState(
@@ -130,6 +132,20 @@ internal fun ArtistPageFrame(request: AppUi.ArtistRequest, page: ArtistPage?, lo
             }
         }
     }
+    // How far the hero has gone up, in pixels: the picture's parallax follows it (7.4).
+    val scrolledPx = remember {
+        derivedStateOf {
+            val header = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.key == "artist-header" }
+            if (header == null) Float.MAX_VALUE else (-header.offset).toFloat()
+        }
+    }
+    // While the picture is under the status bar, its icons are light (7.4); the page's own colours once it has gone.
+    // Read through a derived boolean: scrolling does not recompose the page.
+    val overPicture by remember(page, loading) { derivedStateOf { page != null && !loading && collapse.value < .85f } }
+    DisposableEffect(overPicture) {
+        com.ketvoice.app.ui.common.SystemBarTint.lightIconsOnTop.value = overPicture
+        onDispose { com.ketvoice.app.ui.common.SystemBarTint.lightIconsOnTop.value = false }
+    }
     CompositionLocalProvider(LocalTheme provides theme, *com.ketvoice.app.theme.coverAccentLocals(theme.accent)) {
     Box(Modifier.fillMaxSize().background(theme.background)) {
         when {
@@ -143,7 +159,7 @@ internal fun ArtistPageFrame(request: AppUi.ArtistRequest, page: ArtistPage?, lo
                 Text("Réessayer", color = theme.accent, fontWeight = FontWeight.Bold,
                     modifier = Modifier.clickable(onClick = onRetry).padding(top = 20.dp, bottom = 12.dp))
             }
-            else -> ArtistPageContent(page!!, listState, { collapse.value }, revision, onRefresh) { portraitTone = it }
+            else -> ArtistPageContent(page!!, listState, { collapse.value }, { scrolledPx.value }, revision, onRefresh) { portraitTone = it }
         }
         // The bar: back, then the owner's visuals and Share in one capsule of glass; once the hero has scrolled
         // away, the name settles in the middle over the page's faded edge and a small Play joins them.
@@ -200,7 +216,7 @@ internal fun barSidePadding(padActions: Int, play: Boolean): Dp {
 
 @Composable
 private fun ArtistPageContent(data: ArtistPage, listState: androidx.compose.foundation.lazy.LazyListState,
-                              collapse: () -> Float, revision: Int, onRefresh: () -> Unit,
+                              collapse: () -> Float, scrolled: () -> Float, revision: Int, onRefresh: () -> Unit,
                               onTone: (androidx.compose.ui.graphics.Color?) -> Unit) {
     val theme = LocalTheme.current
     val art by ArtworkRepo.covers.collectAsState()
@@ -224,7 +240,7 @@ private fun ArtistPageContent(data: ArtistPage, listState: androidx.compose.foun
             }
         }
         LazyColumn(Modifier.fillMaxSize().testTag("artist-list"), state = listState, contentPadding = PaddingValues(bottom = bottom)) {
-            item(key = "artist-header") { ArtistHeader(data, collapse, artwork, onTone) }
+            item(key = "artist-header") { ArtistHeader(data, collapse, artwork, onTone, scrolled) }
             if (wide && (data.tracks.isNotEmpty() || latest != null)) item(key = "artist-top") {
                 // The room of a wide window: the latest release beside the popular titles, in columns.
                 Row(Modifier.fillMaxWidth().padding(horizontal = margin).testTag("artist-list-pane"),
