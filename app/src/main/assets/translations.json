@@ -2410,7 +2410,8 @@
   "Mixer quand je passe au suivant": "Mix when I skip to the next song",
   "Activé : « Suivant » enchaîne avec un vrai mix. Désactivé : le titre suivant démarre tout de suite, avec un fondu très court ; les fins de titres restent mixées.": "On: “Next” moves on with a real mix. Off: the next song starts right away with a very short fade; the ends of songs are still mixed.",
   "Améliorer la qualité": "Improve quality",
-  "Le titre se télécharge en meilleure qualité. Le fichier actuel est gardé tant que le nouveau n'est pas complet et vérifié.": "The song is downloading in better quality. The current file is kept until the new one is complete and checked."
+  "Le titre se télécharge en meilleure qualité. Le fichier actuel est gardé tant que le nouveau n'est pas complet et vérifié.": "The song is downloading in better quality. The current file is kept until the new one is complete and checked.",
+  "Canvas animé": "Animated Canvas"
  },
  "hi": {
   "Reverb": "रीवर्ब",
@@ -4823,7 +4824,8 @@
   "Mixer quand je passe au suivant": "अगले गाने पर जाने पर मिक्स करें",
   "Activé : « Suivant » enchaîne avec un vrai mix. Désactivé : le titre suivant démarre tout de suite, avec un fondu très court ; les fins de titres restent mixées.": "चालू: « अगला » असली मिक्स के साथ आगे बढ़ता है। बंद: अगला गाना तुरंत, बहुत छोटे फ़ेड के साथ शुरू होता है; गानों के अंत अब भी मिक्स होते हैं।",
   "Améliorer la qualité": "गुणवत्ता बेहतर करें",
-  "Le titre se télécharge en meilleure qualité. Le fichier actuel est gardé tant que le nouveau n'est pas complet et vérifié.": "गाना बेहतर गुणवत्ता में डाउनलोड हो रहा है। नई फ़ाइल पूरी और जाँची जाने तक मौजूदा फ़ाइल रखी जाती है।"
+  "Le titre se télécharge en meilleure qualité. Le fichier actuel est gardé tant que le nouveau n'est pas complet et vérifié.": "गाना बेहतर गुणवत्ता में डाउनलोड हो रहा है। नई फ़ाइल पूरी और जाँची जाने तक मौजूदा फ़ाइल रखी जाती है।",
+  "Canvas animé": "एनिमेटेड Canvas"
  },
  "ja": {
   "Reverb": "リバーブ",
@@ -7236,7 +7238,8 @@
   "Mixer quand je passe au suivant": "次の曲へスキップしたときにミックス",
   "Activé : « Suivant » enchaîne avec un vrai mix. Désactivé : le titre suivant démarre tout de suite, avec un fondu très court ; les fins de titres restent mixées.": "オン：「次へ」で本格的なミックスでつなぎます。オフ：次の曲がごく短いフェードですぐに始まります。曲の終わりは引き続きミックスされます。",
   "Améliorer la qualité": "音質を向上",
-  "Le titre se télécharge en meilleure qualité. Le fichier actuel est gardé tant que le nouveau n'est pas complet et vérifié.": "より高い音質でダウンロードしています。新しいファイルが完全に揃って確認されるまで、現在のファイルは残ります。"
+  "Le titre se télécharge en meilleure qualité. Le fichier actuel est gardé tant que le nouveau n'est pas complet et vérifié.": "より高い音質でダウンロードしています。新しいファイルが完全に揃って確認されるまで、現在のファイルは残ります。",
+  "Canvas animé": "アニメーションCanvas"
  },
  "zh": {
   "Reverb": "混响",
@@ -9649,7 +9652,8 @@
   "Mixer quand je passe au suivant": "切到下一首时混音",
   "Activé : « Suivant » enchaîne avec un vrai mix. Désactivé : le titre suivant démarre tout de suite, avec un fondu très court ; les fins de titres restent mixées.": "开启：“下一首”以真正的混音衔接。关闭：下一首立即开始，只有很短的淡入淡出；歌曲结尾仍会混音。",
   "Améliorer la qualité": "提升音质",
-  "Le titre se télécharge en meilleure qualité. Le fichier actuel est gardé tant que le nouveau n'est pas complet et vérifié.": "正在以更高音质下载此歌曲。在新文件下载完整并通过校验之前，会保留当前文件。"
+  "Le titre se télécharge en meilleure qualité. Le fichier actuel est gardé tant que le nouveau n'est pas complet et vérifié.": "正在以更高音质下载此歌曲。在新文件下载完整并通过校验之前，会保留当前文件。",
+  "Canvas animé": "动态 Canvas"
  },
  "ru": {
   "Reverb": "Реверберация",
@@ -12062,7 +12066,8 @@
   "Mixer quand je passe au suivant": "Сводить при переходе к следующему треку",
   "Activé : « Suivant » enchaîne avec un vrai mix. Désactivé : le titre suivant démarre tout de suite, avec un fondu très court ; les fins de titres restent mixées.": "Вкл.: «Далее» переходит с настоящим сведением. Выкл.: следующий трек начинается сразу, с очень коротким затуханием; концовки треков по-прежнему сводятся.",
   "Améliorer la qualité": "Улучшить качество",
-  "Le titre se télécharge en meilleure qualité. Le fichier actuel est gardé tant que le nouveau n'est pas complet et vérifié.": "Трек загружается в лучшем качестве. Текущий файл сохраняется, пока новый не будет загружен полностью и проверен."
+  "Le titre se télécharge en meilleure qualité. Le fichier actuel est gardé tant que le nouveau n'est pas complet et vérifié.": "Трек загружается в лучшем качестве. Текущий файл сохраняется, пока новый не будет загружен полностью и проверен.",
+  "Canvas animé": "Анимированный Canvas"
  },
  "it": {
   "Reverb": "Riverbero",
@@ -14475,7 +14480,8 @@
   "Mixer quand je passe au suivant": "Mixa quando passo al brano successivo",
   "Activé : « Suivant » enchaîne avec un vrai mix. Désactivé : le titre suivant démarre tout de suite, avec un fondu très court ; les fins de titres restent mixées.": "Attivo: «Successivo» passa con un vero mix. Disattivo: il brano successivo parte subito, con una dissolvenza brevissima; i finali dei brani restano mixati.",
   "Améliorer la qualité": "Migliora la qualità",
-  "Le titre se télécharge en meilleure qualité. Le fichier actuel est gardé tant que le nouveau n'est pas complet et vérifié.": "Il brano si sta scaricando in qualità migliore. Il file attuale resta finché il nuovo non è completo e verificato."
+  "Le titre se télécharge en meilleure qualité. Le fichier actuel est gardé tant que le nouveau n'est pas complet et vérifié.": "Il brano si sta scaricando in qualità migliore. Il file attuale resta finché il nuovo non è completo e verificato.",
+  "Canvas animé": "Canvas animato"
  },
  "es": {
   "Reverb": "Reverb",
@@ -16888,7 +16894,8 @@
   "Mixer quand je passe au suivant": "Mezclar al pasar a la siguiente canción",
   "Activé : « Suivant » enchaîne avec un vrai mix. Désactivé : le titre suivant démarre tout de suite, avec un fondu très court ; les fins de titres restent mixées.": "Activado: «Siguiente» enlaza con una mezcla real. Desactivado: la siguiente canción empieza enseguida, con un fundido muy corto; los finales de las canciones se siguen mezclando.",
   "Améliorer la qualité": "Mejorar la calidad",
-  "Le titre se télécharge en meilleure qualité. Le fichier actuel est gardé tant que le nouveau n'est pas complet et vérifié.": "La canción se está descargando con mejor calidad. El archivo actual se conserva hasta que el nuevo esté completo y verificado."
+  "Le titre se télécharge en meilleure qualité. Le fichier actuel est gardé tant que le nouveau n'est pas complet et vérifié.": "La canción se está descargando con mejor calidad. El archivo actual se conserva hasta que el nuevo esté completo y verificado.",
+  "Canvas animé": "Canvas animado"
  },
  "de": {
   "Reverb": "Reverb",
@@ -19301,7 +19308,8 @@
   "Mixer quand je passe au suivant": "Beim Überspringen zum nächsten Titel mixen",
   "Activé : « Suivant » enchaîne avec un vrai mix. Désactivé : le titre suivant démarre tout de suite, avec un fondu très court ; les fins de titres restent mixées.": "An: „Weiter“ geht mit einem echten Mix über. Aus: Der nächste Titel startet sofort mit einer sehr kurzen Blende; Titelenden werden weiterhin gemixt.",
   "Améliorer la qualité": "Qualität verbessern",
-  "Le titre se télécharge en meilleure qualité. Le fichier actuel est gardé tant que le nouveau n'est pas complet et vérifié.": "Der Titel wird in besserer Qualität geladen. Die aktuelle Datei bleibt, bis die neue vollständig und geprüft ist."
+  "Le titre se télécharge en meilleure qualité. Le fichier actuel est gardé tant que le nouveau n'est pas complet et vérifié.": "Der Titel wird in besserer Qualität geladen. Die aktuelle Datei bleibt, bis die neue vollständig und geprüft ist.",
+  "Canvas animé": "Animiertes Canvas"
  },
  "pt": {
   "Reverb": "Reverb",
@@ -21714,7 +21722,8 @@
   "Mixer quand je passe au suivant": "Mixar ao passar para a próxima música",
   "Activé : « Suivant » enchaîne avec un vrai mix. Désactivé : le titre suivant démarre tout de suite, avec un fondu très court ; les fins de titres restent mixées.": "Ativado: «Seguinte» passa com uma mixagem real. Desativado: a próxima música começa na hora, com um fade muito curto; os finais das músicas continuam mixados.",
   "Améliorer la qualité": "Melhorar a qualidade",
-  "Le titre se télécharge en meilleure qualité. Le fichier actuel est gardé tant que le nouveau n'est pas complet et vérifié.": "A música está a ser transferida com melhor qualidade. O ficheiro atual é mantido até o novo estar completo e verificado."
+  "Le titre se télécharge en meilleure qualité. Le fichier actuel est gardé tant que le nouveau n'est pas complet et vérifié.": "A música está a ser transferida com melhor qualidade. O ficheiro atual é mantido até o novo estar completo e verificado.",
+  "Canvas animé": "Canvas animado"
  },
  "ko": {
   "Reverb": "리버브",
@@ -24127,6 +24136,7 @@
   "Mixer quand je passe au suivant": "다음 곡으로 넘길 때 믹스",
   "Activé : « Suivant » enchaîne avec un vrai mix. Désactivé : le titre suivant démarre tout de suite, avec un fondu très court ; les fins de titres restent mixées.": "켜짐: ‘다음’을 누르면 실제 믹스로 넘어갑니다. 꺼짐: 다음 곡이 아주 짧은 페이드와 함께 바로 시작되며, 곡의 끝부분은 계속 믹스됩니다.",
   "Améliorer la qualité": "음질 향상",
-  "Le titre se télécharge en meilleure qualité. Le fichier actuel est gardé tant que le nouveau n'est pas complet et vérifié.": "더 좋은 음질로 다운로드하는 중입니다. 새 파일이 완전히 받아지고 확인될 때까지 현재 파일은 그대로 유지됩니다."
+  "Le titre se télécharge en meilleure qualité. Le fichier actuel est gardé tant que le nouveau n'est pas complet et vérifié.": "더 좋은 음질로 다운로드하는 중입니다. 새 파일이 완전히 받아지고 확인될 때까지 현재 파일은 그대로 유지됩니다.",
+  "Canvas animé": "애니메이션 Canvas"
  }
 }
