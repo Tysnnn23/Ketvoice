@@ -21,6 +21,14 @@
 
 ## Overview
 
+### 7.4.0 — Widgets that really play, an immersive artist page, calmer player colours
+
+Two home-screen widgets with live controls and previews, artist pages that open on the artist's photo, player colours that glide between songs, bigger covers on Downloads and Favourites, airier lists.
+[Mobile](https://github.com/Tysnnn23/Ketvoice/releases/download/v7.4.0/Ketvoice-7.4.0.apk)
+· [Lite](https://github.com/Tysnnn23/Ketvoice/releases/download/v7.4.0/Ketvoice-7.4.0-Lite.apk)
+· [Quest](https://github.com/Tysnnn23/Ketvoice/releases/download/v7.4.0/Ketvoice-7.4.0-Quest.apk)
+· [Release notes](docs/releases/v7.4.0.md).
+
 ### 7.3.0 — Select and upgrade downloads, import from Apple Music, Tidal and SoundCloud
 
 Downloads selection with better-quality re-download, live download rings, three new import sources, album pages with a floating cover or Canvas, a breathing player, song credits, a double mini player during Ketmix mixes and a share card for Stories.

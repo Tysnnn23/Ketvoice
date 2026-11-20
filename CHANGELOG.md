@@ -7,6 +7,20 @@
 
 ---
 
+# Ketvoice 7.4.0
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 145** — two real home-screen widgets with picker previews, immersive artist page, player colours and blur without flashes, bigger Downloads/Favourites covers without the scroll fade, the Downloads ⋯ menus fixed, airier song rows, weekly discoveries removed.
+
+- Widgets (`widget/NowPlayingWidgets.kt`, `WidgetViews.kt`, `WidgetPalette.kt`, `WidgetState.kt`, `WidgetActionReceiver`): the nine Glance widgets are replaced by RemoteViews « En cours » 2×2 (receiver name `NowPlayingWidgetReceiver` kept) and « En cours + contrôles » 4×2; buttons reach `Player` through a non-exported receiver (session read from disk; empty state resumes through the Android Auto path); chronometers while playing, bar refresh every 3 s only with the screen on; cover colours under `CoverLegibility`; `previewLayout` + host-rendered `previewImage`. Glance removed. `NowPlayingWidgetsHostTest`.
+- Pages (`common/CollectionHero.libraryArtworkSide`, `common/TrackRow.kt`, `data/Recordings.kt`): weekly discoveries, their worker and `MixKind.Discover` removed (old work cancelled, data deleted); Downloads/Favourites cover about 66 % of the width with no fade; row ⋯ opens the glass menu, top-bar ⋯ the page menu; 72 dp rows with inset separators. `Pages74HostTest`.
+- Feel (`ui/common/SystemBarTint.kt`, artist hero, player colours): artist photo hero (58 % height, parallax 45 %, cover fallback); player colours cached, held until the next are ready and read ahead, fixed dim band per hue, veil from cover lightness, pre-blurred still background with crossfade, feathered layers and grain, Canvas fades in, 700 ms glides. `PlayerColorsTest`, `ArtistHeroTest`, `Feel74HostTest`.
+
+Full notes: [7.4.0](docs/releases/v7.4.0.md).
+
+---
+
 # Ketvoice 7.3.0
 
 ![Ketvoice](ketvoice-banner.png)
