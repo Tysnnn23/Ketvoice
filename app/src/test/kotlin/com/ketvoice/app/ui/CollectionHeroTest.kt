@@ -13,9 +13,11 @@ import org.junit.Test
 
 class CollectionHeroTest {
     @Test fun floatingArtworkIsLargeButNeverFillsThePage() {
-        assertEquals(248f, heroArtworkSide(400f, beside = false), .5f)
-        assertEquals("A small phone keeps a readable cover", 198.4f, heroArtworkSide(320f, beside = false), .5f)
-        assertEquals("A tablet does not blow the cover up", 300f, heroArtworkSide(1200f, beside = false), 0f)
+        // 7.5 (owner: « rends plus grande la cover »): three quarters of a phone, capped on tablets.
+        assertEquals(300f, heroArtworkSide(400f, beside = false), .5f)
+        assertEquals("A small phone keeps a readable cover", 240f, heroArtworkSide(320f, beside = false), .5f)
+        assertEquals("A tablet does not blow the cover up", 380f, heroArtworkSide(1200f, beside = false), 0f)
+        assertEquals("A short window keeps it within half its height", 368f, heroArtworkSide(600f, beside = false, windowHeight = 800f), .5f)
         assertEquals(288f, heroArtworkSide(900f, beside = true), .5f)
         assertEquals(120f, heroArtworkSide(300f, beside = true), 0f)
     }

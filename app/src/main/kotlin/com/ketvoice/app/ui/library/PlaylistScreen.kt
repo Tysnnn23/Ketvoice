@@ -58,11 +58,15 @@ internal object PlaylistPage {
     fun beside(widthDp: Float, heightDp: Float, large: Boolean): Boolean =
         (large && widthDp >= 700f) || (heightDp < 600f && widthDp > heightDp && widthDp >= 600f)
 
-    /** Side of the artwork: large and centred on a phone, beside the text on a wide pane, small on a short window. */
+    /**
+     * Side of the artwork: large and centred on a phone, beside the text on a wide pane, small on a short window.
+     * 7.5 (owner: « rends plus grande la cover »): [widthDp] is the page within its margins, so a phone's cover
+     * spans about three quarters of the screen, as the album page; capped on tablets.
+     */
     fun artwork(widthDp: Float, heightDp: Float, beside: Boolean): Float = when {
         beside && heightDp < 600f -> 112f
         beside -> com.ketvoice.app.ui.adaptive.LargeScreen.headerArtwork(widthDp)
-        else -> (widthDp * .64f).coerceIn(180f, 280f)
+        else -> (widthDp * .82f).coerceIn(200f, 380f)
     }
 
     /** The foot of the list, as Apple Music closes a playlist: « 12 titres, 1 h 3 min » (French parts, translated at display). */
@@ -366,20 +370,21 @@ private fun PlaylistHeader(playlist: LocalPlaylist, playable: List<Track>, owner
             HeaderCanvasBackdrop(lead, canvas,
                 WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 64.dp,
                 if (style == com.ketvoice.app.ui.sub.HeaderStyle.Canvas) .50f else .24f)
-        Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(top = 6.dp, bottom = 20.dp).testTag("playlist-header"),
+        Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(top = 6.dp, bottom = 12.dp).testTag("playlist-header"),
         horizontalAlignment = Alignment.CenterHorizontally) {
         artwork()
-        Text(playlist.name, localize = false, color = th.onBackground, fontSize = 24.sp, lineHeight = 29.sp, fontWeight = FontWeight.Bold,
+        // 7.5: name, curator and details as one block (album page proportions).
+        Text(playlist.name, localize = false, color = th.onBackground, fontSize = 24.sp, lineHeight = 28.sp, fontWeight = FontWeight.Bold,
             letterSpacing = (-.4).sp, maxLines = 3, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center,
-            modifier = Modifier.padding(top = 22.dp).asHeading().testTag("playlist-title"))
+            modifier = Modifier.padding(top = 18.dp).asHeading().testTag("playlist-title"))
         Text(curator, localize = false, color = th.accent, style = Ket27.Type.title3, maxLines = 1, overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center, modifier = Modifier.padding(top = 2.dp))
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
             if (meta.isNotBlank()) Text(meta, localize = false, color = th.secondary, style = Ket27.Type.footnote, textAlign = TextAlign.Center)
             if (shared) SharedBadge(Modifier.padding(start = 8.dp))
         }
         note(TextAlign.Center)
-        Spacer(Modifier.height(18.dp))
+        Spacer(Modifier.height(14.dp))
         actions(Modifier.widthIn(max = 520.dp))
     }
     }

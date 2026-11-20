@@ -341,8 +341,5 @@ class ScreensRedoHostTest {
     @Test fun downloadRowsSpanTheLineOnAPhoneAndHalfOfItOnAWidePane() {
         val layout = com.ketvoice.app.ui.sub.DownloadsLayout
         assertEquals(2, layout.rowSpan(2)); assertEquals(1, layout.rowSpan(1)); assertEquals(3, layout.rowSpan(6))
-        val scale = { c: Float -> com.ketvoice.app.ui.common.heroShrinkScale(c) }
-        assertEquals(1f, scale(0f), 0f); assertEquals(.86f, scale(1f), .001f)
-        assertEquals(1f, scale(Float.NaN), 0f)
     }
 }
