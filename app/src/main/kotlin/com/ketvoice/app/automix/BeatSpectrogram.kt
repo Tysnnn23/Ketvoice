@@ -37,6 +37,14 @@ internal object BeatSpectrogram {
         Array(MELS) { m -> filterRow(points, m) }
     }
 
+    /** 7.5: the bins where each row is not zero; the rest of a row adds nothing (about 1/25 of each row is used). */
+    private val spans: Array<IntArray> by lazy {
+        Array(MELS) { m -> filters[m].let { row ->
+            val first = row.indexOfFirst { it != 0f }
+            if (first < 0) intArrayOf(0, 0) else intArrayOf(first, row.indexOfLast { it != 0f } + 1)
+        } }
+    }
+
     private fun filterRow(points: DoubleArray, m: Int): FloatArray {
         val area = 2.0 / (points[m + 2] - points[m])
         return FloatArray(BINS) { bin ->
@@ -69,7 +77,9 @@ internal object BeatSpectrogram {
     /** One windowed frame, centred on t * HOP, reflected at both ends of the signal. */
     private fun frame(x: FloatArray, t: Int, re: FloatArray, im: FloatArray) {
         val start = t * HOP - N_FFT / 2
-        for (i in 0 until N_FFT) re[i] = at(x, start + i) * window[i]
+        // Inside the signal (all frames but the first and last few) no reflection is needed.
+        if (start >= 0 && start + N_FFT <= x.size) for (i in 0 until N_FFT) re[i] = x[start + i] * window[i]
+        else for (i in 0 until N_FFT) re[i] = at(x, start + i) * window[i]
         java.util.Arrays.fill(im, 0f)
     }
 
@@ -83,8 +93,9 @@ internal object BeatSpectrogram {
     private fun mel(magnitude: FloatArray, out: FloatArray, offset: Int) {
         for (m in 0 until MELS) {
             val row = filters[m]
+            val span = spans[m]
             var sum = 0f
-            for (k in 0 until BINS) { val w = row[k]; if (w != 0f) sum += w * magnitude[k] }
+            for (k in span[0] until span[1]) { val w = row[k]; if (w != 0f) sum += w * magnitude[k] }
             out[offset + m] = ln(1.0 + 1000.0 * sum).toFloat()
         }
     }

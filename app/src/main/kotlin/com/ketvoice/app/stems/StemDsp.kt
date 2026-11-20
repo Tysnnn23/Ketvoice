@@ -170,7 +170,69 @@ internal object Resampler {
         return if (from == to) mono else resample(mono, from, to)
     }
 
+    /** 7.5: one row of normalised weights per output phase, for ratios that repeat after few outputs. */
+    private class Phases(val taps: Int, val period: Int, val weights: FloatArray)
+    private val phaseTables = java.util.concurrent.ConcurrentHashMap<Long, Phases>()
+    private const val MAX_PHASES = 2048
+
+    private fun phases(from: Int, to: Int): Phases? {
+        val g = gcd(from, to)
+        val period = to / g
+        if (period > MAX_PHASES) return null
+        return phaseTables.getOrPut(from.toLong() shl 32 or to.toLong()) {
+            val k = kernel(from, to)
+            val taps = k.taps
+            val table = k.values
+            val limit = taps * PHASES
+            val ratio = to.toDouble() / from
+            val weights = FloatArray(period * 2 * taps)
+            for (r in 0 until period) {
+                // The same position as the direct path computes for an output of this phase.
+                val center = r / ratio
+                val base = floor(center).toInt()
+                var norm = 0f
+                for (j in 0 until 2 * taps) {
+                    val pos = kotlin.math.abs(center - (base - taps + 1 + j)) * PHASES
+                    val p = pos.toInt()
+                    if (p >= limit) continue
+                    val w = table[p] + (table[p + 1] - table[p]) * (pos - p).toFloat()
+                    weights[r * 2 * taps + j] = w; norm += w
+                }
+                if (norm > 0f) for (j in 0 until 2 * taps) weights[r * 2 * taps + j] /= norm
+            }
+            Phases(taps, period, weights)
+        }
+    }
+
+    private tailrec fun gcd(a: Int, b: Int): Int = if (b == 0) a else gcd(b, a % b)
+
     fun resample(input: FloatArray, from: Int, to: Int): FloatArray {
+        if (from == to || input.isEmpty()) return input.copyOf()
+        phases(from, to)?.let { return resampled(input, from, to, it) }
+        return resampleDirect(input, from, to)
+    }
+
+    /** Output o sits at o * from / to in the input: its phase is (o mod period), its base an exact integer step. */
+    private fun resampled(input: FloatArray, from: Int, to: Int, ph: Phases): FloatArray {
+        val outSize = floor(input.size * (to.toDouble() / from)).toInt()
+        val out = FloatArray(outSize)
+        val taps2 = 2 * ph.taps
+        val w = ph.weights
+        val step = from / gcd(from, to)
+        for (o in 0 until outSize) {
+            val r = o % ph.period
+            val base = (o / ph.period) * step + floor(r * from.toDouble() / to).toInt()
+            val first = base - ph.taps + 1
+            val row = r * taps2
+            var acc = 0f
+            if (first >= 0 && first + taps2 <= input.size) for (j in 0 until taps2) acc += input[first + j] * w[row + j]
+            else for (j in 0 until taps2) { val i = first + j; if (i >= 0 && i < input.size) acc += input[i] * w[row + j] }
+            out[o] = acc
+        }
+        return out
+    }
+
+    internal fun resampleDirect(input: FloatArray, from: Int, to: Int): FloatArray {
         if (from == to || input.isEmpty()) return input.copyOf()
         val ratio = to.toDouble() / from
         val outSize = floor(input.size * ratio).toInt()
