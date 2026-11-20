@@ -192,6 +192,14 @@
    "sha256": "bd5416eb4c6a3e899cc7ea6320169eb6e5cd5857840eada5da855fcdc37fff28",
    "source": "src/main/res/drawable-xhdpi/ic_launcher_vicecity_bg.webp"
   },
+  "src/lite/res/drawable-xhdpi/widget_preview_controls.webp": {
+   "sha256": "dba6ef8e5da553abd64811b5830c276526320e6fa7af1dd9673070da0ec3fc7a",
+   "source": "src/main/res/drawable-xhdpi/widget_preview_controls.webp"
+  },
+  "src/lite/res/drawable-xhdpi/widget_preview_small.webp": {
+   "sha256": "9a44d0889d6670157640066153cc035ed1279e36277cf6e1674098cb4b563bbf",
+   "source": "src/main/res/drawable-xhdpi/widget_preview_small.webp"
+  },
   "src/lite/res/drawable-xxhdpi/ic_launcher_vicecity_bg.webp": {
    "sha256": "f8a6f005db392ce268a5f63b3d96d48de4731938b06d38f80f75c27c98492364",
    "source": "src/main/res/drawable-xxhdpi/ic_launcher_vicecity_bg.webp"

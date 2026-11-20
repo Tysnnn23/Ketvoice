@@ -321,7 +321,7 @@ class ScreensRedoHostTest {
         } finally { saved.value = emptyList() }
     }
 
-    @Test fun downloadsHeaderShrinksAsTheListScrolls() {
+    @Test fun downloadsHeaderScrollsAwayWithoutShrinking() {
         saved.value = offline() + (6..14).map { file(track("e$it", "Titre $it", "Artiste $it"), "FLAC", 10_000_000, it.toLong()) }
         try {
             compose.setContent { KetvoiceTheme(useDark = true) { com.ketvoice.app.ui.sub.DownloadsScreen() } }
@@ -329,7 +329,9 @@ class ScreensRedoHostTest {
             compose.onNodeWithTag("downloads-list").performTouchInput { swipeUp(startY = bottom - 40f, endY = bottom - 240f) }
             compose.waitForIdle()
             val after = compose.onNodeWithTag("downloads-title").fetchSemanticsNode().boundsInRoot
-            assertTrue("the header shrinks (${before.width} → ${after.width})", after.width < before.width - 1f)
+            // 7.4: the header keeps its size and scrolls away with the list (no shrink, no fade).
+            assertEquals("the header keeps its size", before.width, after.width, 1f)
+            assertTrue("the header moved up with the list", after.top < before.top - 1f)
             image("redo-downloads-scrolled-dark")
             // The swipe actions and the separated-music badge belong to the rows, which keep them.
             compose.onAllNodesWithTag("saved-download").onFirst().assertExists()

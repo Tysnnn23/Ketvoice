@@ -136,6 +136,8 @@ class NowPlayingWidgetsHostTest {
     }
 
     @Test fun everyButtonActsThroughTheReceiverAndTheCardOpensThePlayer() {
+        // Quest has no home-screen widgets: its manifest removes the receivers.
+        org.junit.Assume.assumeFalse(com.ketvoice.app.BuildConfig.IS_QUEST)
         val view = controls(playing())
         assertEquals(WidgetActionReceiver.TOGGLE, clickBroadcast(view, R.id.widget_play))
         assertEquals(WidgetActionReceiver.NEXT, clickBroadcast(view, R.id.widget_next))
