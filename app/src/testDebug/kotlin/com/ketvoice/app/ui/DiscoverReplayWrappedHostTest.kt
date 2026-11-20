@@ -18,8 +18,6 @@ import androidx.compose.ui.unit.dp
 import com.ketvoice.app.data.*
 import com.ketvoice.app.theme.KetvoiceTheme
 import com.ketvoice.app.theme.LocalTheme
-import com.ketvoice.app.ui.home.DiscoveriesCard
-import com.ketvoice.app.ui.home.HomeDiscoveries
 import com.ketvoice.app.ui.sub.ReplayScreen
 import com.ketvoice.app.ui.sub.WrappedCard
 import com.ketvoice.app.ui.sub.WrappedPage
@@ -37,7 +35,7 @@ import org.robolectric.util.ReflectionHelpers
 import java.io.File
 import java.time.LocalDate
 
-/** Weekly discoveries, monthly Replay and Wrapped pages, rendered on the host (software Skia), not on a phone. */
+/** Monthly Replay and Wrapped pages, rendered on the host (software Skia), not on a phone. */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], qualifiers = "w400dp-h860dp-xhdpi")
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -59,7 +57,6 @@ class DiscoverReplayWrappedHostTest {
     @After fun clear() {
         coil.Coil.reset()
         known.value = emptyList(); counts.value = emptyMap(); months.value = emptyMap()
-        WeeklyDiscoveries.useStore(null)
         AppUi.closeOverlays(); AppUi.selectTab(AppUi.HOME); AppUi.catalogRequest.value = null
     }
 
@@ -107,50 +104,6 @@ class DiscoverReplayWrappedHostTest {
 
     private fun track(id: String, title: String, artist: String, album: String, cover: String?) =
         Track("fixture:$id", title, artist, album, durationMs = 200_000, coverUrl = cover)
-
-    @Test fun theWeeksDiscoveriesLeadWithTheirCoversAndOpenTheirPage() {
-        val c = covers()
-        val week = WeeklyDiscoveries.Week(WeeklyDiscoveries.weekOf(today),
-            (1..30).map { track("d$it", "Découverte $it", "Artiste $it", "LP", c[it % 4]) }, 1L)
-        WeeklyDiscoveries.useStore(object : WeeklyDiscoveries.Store {
-            override fun load() = week
-            override fun save(week: WeeklyDiscoveries.Week) = Unit
-        })
-        compose.setContent { KetvoiceTheme(useDark = true) {
-            Column(Modifier.fillMaxSize().background(LocalTheme.current.background).padding(top = 24.dp)) { HomeDiscoveries() }
-        } }
-        compose.onNodeWithTag("home-discoveries").assertIsDisplayed()
-        compose.onNodeWithText("Découvertes de la semaine").assertIsDisplayed()
-        compose.onNodeWithText("30 titres", substring = true).assertIsDisplayed()
-        compose.onNodeWithTag("home-discoveries-play").assertIsDisplayed()
-        image("discoveries-card-dark")
-        compose.onNodeWithTag("home-discoveries").performClick()
-        compose.runOnIdle {
-            assertEquals(AppUi.CATALOG, AppUi.overlay.intValue)
-            assertEquals(CatalogRequest("mix", WeeklyDiscoveries.MIX_ID, "Découvertes de la semaine"), AppUi.catalogRequest.value)
-        }
-    }
-
-    @Test fun lastWeeksSelectionIsNotShownAsThisWeeks() {
-        val old = WeeklyDiscoveries.Week(WeeklyDiscoveries.weekOf(today).minusWeeks(1),
-            (1..30).map { track("d$it", "Ancienne $it", "Artiste $it", "LP", null) }, 1L)
-        WeeklyDiscoveries.useStore(object : WeeklyDiscoveries.Store {
-            override fun load() = old
-            override fun save(week: WeeklyDiscoveries.Week) = Unit
-        })
-        compose.setContent { KetvoiceTheme(useDark = true) { HomeDiscoveries() } }
-        compose.onNodeWithTag("home-discoveries").assertDoesNotExist()
-    }
-
-    @Test fun theCardWithoutCoversInLightMode() {
-        compose.setContent { KetvoiceTheme(useDark = false) {
-            Box(Modifier.fillMaxSize().background(LocalTheme.current.background).padding(top = 24.dp)) {
-                DiscoveriesCard(emptyList(), 28, LocalDate.of(2026, 11, 16), {}, {})
-            }
-        } }
-        compose.onNodeWithTag("home-discoveries-art", useUnmergedTree = true).assertIsDisplayed()
-        image("discoveries-card-light-no-cover")
-    }
 
     private fun fixtureMonths(): List<Track> {
         val c = covers()

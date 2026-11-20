@@ -52,10 +52,12 @@ class KetvoiceApp : Application(), ImageLoaderFactory {
         start(LiteTuning.StartWork.StemLibrary) { com.ketvoice.app.stems.StemLibrary.init(this) }
         runCatching { com.ketvoice.app.stems.VoiceSeparation.init(this) }
         runCatching { com.ketvoice.app.data.PlaybackJournal.init(this) }
-        // The week's discoveries (6.1): read at once, renewed in the background on an unmetered network.
-        runCatching { com.ketvoice.app.data.WeeklyDiscoveries.init(this) }
+        // Weekly discoveries were removed in 7.4: their background pass and their saved week go with them.
         if (android.os.Build.FINGERPRINT != "robolectric")
-            start(LiteTuning.StartWork.DiscoverySchedule) { com.ketvoice.app.data.DiscoveryWork.schedule(this) }
+            start(LiteTuning.StartWork.DiscoverySchedule) {
+                runCatching { androidx.work.WorkManager.getInstance(this).cancelUniqueWork("weekly-discoveries") }
+                runCatching { deleteSharedPreferences("weekly-discoveries") }
+            }
         // New releases of the followed artists (6.3): checked twice a day in the background.
         if (android.os.Build.FINGERPRINT != "robolectric")
             start(LiteTuning.StartWork.DiscoverySchedule) { com.ketvoice.app.data.ReleaseWatch.schedule(this) }

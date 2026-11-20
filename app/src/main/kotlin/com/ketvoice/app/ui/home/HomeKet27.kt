@@ -150,5 +150,4 @@ internal fun mixGlyph(kind: MixKind) = when (kind) {
     MixKind.Style -> KetIcons.Globe
     MixKind.OnRepeat -> KetIcons.Refresh
     MixKind.Rediscover -> KetIcons.Clock
-    MixKind.Discover -> androidx.compose.material.icons.Icons.Filled.AutoAwesome
 }

@@ -76,7 +76,7 @@ object ViceFm {
         val longest = groups.maxOfOrNull { it.size } ?: 0
         for (i in 0 until longest) for (group in groups) {
             val track = group.getOrNull(i) ?: continue
-            if (allows(track) && seen.add(WeeklyDiscoveries.recording(track))) out += track
+            if (allows(track) && seen.add(Recordings.of(track))) out += track
         }
         return com.ketvoice.app.smartlib.MoodMixes.spreadArtists(out)
     }

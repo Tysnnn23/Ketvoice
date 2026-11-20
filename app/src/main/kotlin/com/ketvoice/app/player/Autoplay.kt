@@ -2,7 +2,7 @@ package com.ketvoice.app.player
 
 import com.ketvoice.app.data.MediaOverrides
 import com.ketvoice.app.data.Track
-import com.ketvoice.app.data.WeeklyDiscoveries
+import com.ketvoice.app.data.Recordings
 import com.ketvoice.app.data.YouTubeJson
 import com.ketvoice.app.smartlib.TrackFacts
 import org.json.JSONArray
@@ -31,7 +31,7 @@ internal object AutoplayRules {
     data class Feel(val bpm: Float?, val loudnessDb: Float?)
 
     fun artistKey(track: Track): String = MediaOverrides.normalize(MediaOverrides.mainArtist(track.artist))
-    private fun recording(track: Track): String = WeeklyDiscoveries.recording(track)
+    private fun recording(track: Track): String = Recordings.of(track)
 
     /** True when both titles were measured and their tempo or energy is very different. */
     fun tooFar(a: Feel?, b: Feel?): Boolean {

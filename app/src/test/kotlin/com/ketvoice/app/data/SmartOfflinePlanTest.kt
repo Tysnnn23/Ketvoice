@@ -52,13 +52,6 @@ class SmartOfflinePlanTest {
         assertEquals(1, SmartOfflinePlan.topPlaylists(listOf(silent, heard), mapOf("p1" to 1)).size)
     }
 
-    @Test fun startedDiscoveriesGiveTheirNextTitlesOnly() {
-        val week = (1..10).map { t("d$it") }
-        assertTrue(SmartOfflinePlan.rank(Signals(discoveries = week), emptySet(), now).isEmpty())
-        val ranked = SmartOfflinePlan.rank(Signals(discoveries = week, played = setOf("d1", "d3")), emptySet(), now)
-        assertEquals(listOf("d4", "d5", "d6", "d7", "d8"), ranked.map { it.track.id })
-        assertTrue(ranked.all { it.reason == Reason.Discovery })
-    }
 
     // ------------------------------------------------------------------ the plan
 

@@ -2,7 +2,7 @@ package com.ketvoice.app.player
 
 import com.ketvoice.app.data.MediaOverrides
 import com.ketvoice.app.data.Track
-import com.ketvoice.app.data.WeeklyDiscoveries
+import com.ketvoice.app.data.Recordings
 import org.junit.Assert.*
 import org.junit.Test
 import kotlin.random.Random
@@ -24,7 +24,7 @@ class RadioMixTest {
         val played = mutableListOf(seedTrack)
         repeat(6) { played += RadioMix.pick(fresh, own, familiar, memory, { true }, random) }
         assertEquals("no id twice", played.size, played.map { it.id }.toSet().size)
-        assertEquals("no recording twice", played.size, played.map(WeeklyDiscoveries::recording).toSet().size)
+        assertEquals("no recording twice", played.size, played.map(Recordings::of).toSet().size)
         assertFalse("the seedTrack's own title never comes back", played.drop(1).any { it.title == "Own 1" })
         // Once every title was played, the radio has nothing left rather than repeating.
         assertTrue(RadioMix.pick(fresh, own, familiar, memory, { true }, random).isEmpty())

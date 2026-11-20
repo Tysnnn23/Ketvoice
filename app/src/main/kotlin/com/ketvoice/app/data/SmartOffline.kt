@@ -159,9 +159,7 @@ object SmartOffline {
         val favorites = AppSettings.favoriteIds.value.mapNotNull { id -> known[id]?.let { it to (seen[id] ?: 0L) } }
         val recent = SmartOfflinePlan.recentPlays(ListeningHistory.months.value, LocalDate.now())
         val playlists = PlaylistStore.lists.value.map { list -> list.entries.mapNotNull { it.track } }
-        val week = runCatching { WeeklyDiscoveries.current()?.tracks }.getOrNull().orEmpty()
-        val played = ListeningHistory.tracks.value.mapTo(HashSet()) { it.id }
-        return SmartOfflinePlan.Signals(favorites, recent, playlists, week, played, known)
+        return SmartOfflinePlan.Signals(favorites, recent, playlists, known)
     }
 
     /** Every title object Ketvoice knows without asking the network, by id. */
@@ -284,7 +282,6 @@ class SmartOfflineWorker(context: Context, params: WorkerParameters) : Coroutine
             if (!AppSettings.smartOffline.value) return Result.success()
             ListeningHistory.init(app)
             PlaylistStore.init(app)
-            WeeklyDiscoveries.init(app)
             SmartOffline.run(app) { !isStopped }
             Result.success()
         } catch (cancelled: CancellationException) { throw cancelled }

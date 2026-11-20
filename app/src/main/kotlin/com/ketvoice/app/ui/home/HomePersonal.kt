@@ -77,7 +77,6 @@ internal fun mixTitle(card: MixCard): String = when (card.kind) {
     MixKind.Style -> "Dans le style de ${card.artist.orEmpty()}"
     MixKind.OnRepeat -> "En boucle"
     MixKind.Rediscover -> "À redécouvrir"
-    MixKind.Discover -> "Découvertes de la semaine"
 }
 
 internal fun mixSubtitle(card: MixCard): String = when (card.kind) {
@@ -85,7 +84,6 @@ internal fun mixSubtitle(card: MixCard): String = when (card.kind) {
     MixKind.Style -> "Des artistes proches à découvrir"
     MixKind.OnRepeat -> "Ce que vous écoutez le plus"
     MixKind.Rediscover -> "Écoutés avant, oubliés depuis"
-    MixKind.Discover -> "Nouveau chaque lundi, d'après vos écoutes"
 }
 
 /** Shortcuts built only from what exists on this device: no dead button, no empty page. */

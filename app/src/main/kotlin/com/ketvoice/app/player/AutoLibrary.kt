@@ -533,10 +533,6 @@ internal class AppAutoSource(private val context: Context) : AutoSource {
         // Opening the app does the same: the stores, artwork, overrides and the restored session.
         Player.connect(context)
         runCatching { ArtistPrefs.init(context) }
-        // The week's discoveries lead the car's Home too: made now when the week has none yet (6.1).
-        runCatching { com.ketvoice.app.data.WeeklyDiscoveries.init(context) }
-        if (com.ketvoice.app.data.WeeklyDiscoveries.current() == null && !com.ketvoice.app.data.WeeklyDiscoveries.building.value)
-            kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch { com.ketvoice.app.data.WeeklyDiscoveries.ensureNow() }
     }
 
     private fun live(tracks: List<Track>) = PersonalMixes.withLocalFiles(tracks, LocalMusic.tracks.value)
@@ -553,7 +549,7 @@ internal class AppAutoSource(private val context: Context) : AutoSource {
     override fun downloads(): List<Track> = Downloader.items.value.map { it.track }
     override fun isDownloaded(trackId: String): Boolean = Downloader.itemFor(trackId) != null
 
-    override fun mixes(): List<MixCard> = listOfNotNull(runCatching { com.ketvoice.app.data.WeeklyDiscoveries.card() }.getOrNull()) + runCatching {
+    override fun mixes(): List<MixCard> = runCatching {
         PersonalMixes.propose(ListeningHistory.knownTracks.value.filter(ArtistPrefs::allows),
             ListeningHistory.tracks.value.filter(ArtistPrefs::allows), ListeningHistory.playCounts.value, AppSettings.favoriteIds.value)
     }.getOrDefault(emptyList())

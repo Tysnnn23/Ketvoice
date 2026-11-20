@@ -11,7 +11,7 @@ object PrefsWarmup {
     /** The files the first screen and the playback service read, most needed first. */
     val NAMES = listOf(
         "ketvoice_settings", "ketvoice-account", "ketvoice-account-sync", "home-feed-v1", "home-learning",
-        "listening-history", "weekly-discoveries", "for-you", "artist-prefs", "ketvoice_custom_sources",
+        "listening-history", "for-you", "artist-prefs", "ketvoice_custom_sources",
         "custom-lyrics", "ketvoice_overrides", "ketvoice_canvas", "ketvoice_art", "ketvoice-editions",
         "playback-revival", "background-playback", "ketmix-points-v1", "ketvoice-smartlib", "ketvoice_updates",
     )

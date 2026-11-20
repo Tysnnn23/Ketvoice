@@ -23,7 +23,7 @@ object ListeningHistory {
 
     /** The keys a hearing is remembered under: the id, and the recording (the same song under another id). */
     fun heardKeys(track: Track): List<String> =
-        listOfNotNull(track.id.takeIf { it.isNotBlank() }, "r:" + WeeklyDiscoveries.recording(track))
+        listOfNotNull(track.id.takeIf { it.isNotBlank() }, "r:" + Recordings.of(track))
 
     /** [previous] with [track] heard at [now], older than [HEARD_KEEP_MS] dropped and at most [HEARD_MAX] kept. */
     internal fun heardWith(previous: Map<String, Long>, track: Track?, now: Long): Map<String, Long> {

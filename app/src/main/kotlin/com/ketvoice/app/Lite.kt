@@ -227,7 +227,7 @@ object LiteTuning {
 
     /**
      * Work that need not run before the first screen: in Lite it starts a few seconds later, once the
-     * first frame is drawn (a placed widget is brought up to date then; weekly discoveries are scheduled then).
+     * first frame is drawn (a placed widget is brought up to date then).
      */
     enum class StartWork { StemLibrary, DiscoverySchedule, NowPlayingWidget, Widgets }
 

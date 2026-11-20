@@ -2,7 +2,7 @@ package com.ketvoice.app.player
 
 import com.ketvoice.app.data.MediaOverrides
 import com.ketvoice.app.data.Track
-import com.ketvoice.app.data.WeeklyDiscoveries
+import com.ketvoice.app.data.Recordings
 
 /**
  * What a radio remembers while it plays (6.1): every title and recording it has queued, so a
@@ -16,7 +16,7 @@ internal class RadioMemory(val seed: RadioSeed) {
 
     fun remember(track: Track) {
         ids += track.id
-        recordings += WeeklyDiscoveries.recording(track)
+        recordings += Recordings.of(track)
         artists.addLast(RadioMix.artistKey(track))
         while (artists.size > RadioMix.ARTIST_MEMORY) artists.removeFirst()
         if (ids.size > LIMIT) ids.remove(ids.first())
@@ -24,7 +24,7 @@ internal class RadioMemory(val seed: RadioSeed) {
     }
 
     fun rememberAll(tracks: List<Track>) = tracks.forEach(::remember)
-    fun played(track: Track): Boolean = track.id in ids || WeeklyDiscoveries.recording(track) in recordings
+    fun played(track: Track): Boolean = track.id in ids || Recordings.of(track) in recordings
     /** Artists of the last titles, the most recent last. */
     val lastArtists: List<String> get() = artists.toList()
     val size: Int get() = ids.size

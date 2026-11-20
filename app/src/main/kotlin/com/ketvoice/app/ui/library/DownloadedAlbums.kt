@@ -25,7 +25,7 @@ import com.ketvoice.app.data.CatalogRequest
 import com.ketvoice.app.data.Downloader
 import com.ketvoice.app.data.SmartOffline
 import com.ketvoice.app.data.Track
-import com.ketvoice.app.data.WeeklyDiscoveries
+import com.ketvoice.app.data.Recordings
 import com.ketvoice.app.player.Player
 import com.ketvoice.app.theme.Ket27
 import com.ketvoice.app.theme.LocalTheme
@@ -64,7 +64,7 @@ internal object AlbumDownloads {
         val local = album.tracks
         val used = HashSet<String>()
         val ordered = tracklist.map { remote ->
-            val mine = local.firstOrNull { it.id !in used && (it.id == remote.id || WeeklyDiscoveries.recording(it) == WeeklyDiscoveries.recording(remote)) }
+            val mine = local.firstOrNull { it.id !in used && (it.id == remote.id || Recordings.of(it) == Recordings.of(remote)) }
             if (mine != null) { used += mine.id; mine } else remote
         }
         return ordered + local.filter { it.id !in used }

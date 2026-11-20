@@ -34,7 +34,7 @@ import kotlinx.coroutines.withContext
 internal fun ColumnScope.SmartOfflineRows(onChoice: (ChoiceSpec) -> Unit) {
     val ctx = LocalContext.current
     SToggle(KetIcons.Download, "Hors ligne intelligent",
-        "Télécharge tout seul, en Wi-Fi, ce que tu écoutes le plus, tes nouveaux favoris et la suite de tes découvertes.",
+        "Télécharge tout seul, en Wi-Fi, ce que tu écoutes le plus et tes nouveaux favoris.",
         AppSettings.smartOffline.value) {
         AppSettings.smartOffline.value = it; SettingsStore.save(); SmartOffline.settingsChanged(ctx)
     }

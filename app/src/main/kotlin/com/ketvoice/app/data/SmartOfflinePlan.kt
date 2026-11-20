@@ -13,7 +13,7 @@ import java.time.LocalDate
  */
 internal object SmartOfflinePlan {
     /** Why a title is wanted offline; the strongest reason is the one shown. */
-    enum class Reason { Favorite, Played, Playlist, Discovery }
+    enum class Reason { Favorite, Played, Playlist }
 
     data class Candidate(val track: Track, val score: Double, val reason: Reason)
 
@@ -28,9 +28,6 @@ internal object SmartOfflinePlan {
         val recentPlays: Map<String, Int> = emptyMap(),
         /** Titles of each of the listener's playlists. */
         val playlists: List<List<Track>> = emptyList(),
-        /** The week's discoveries, in their order, and the ids the listener has already played. */
-        val discoveries: List<Track> = emptyList(),
-        val played: Set<String> = emptySet(),
         /** Title objects for the ids of [recentPlays]. */
         val known: Map<String, Track> = emptyMap(),
     )
@@ -41,7 +38,6 @@ internal object SmartOfflinePlan {
     private const val DAY_MS = 24L * 60 * 60 * 1000
     const val TOP_PLAYLISTS = 3
     const val PLAYLIST_TITLES = 50
-    const val DISCOVERIES_AHEAD = 5
     /** At most this many new titles per pass: a pass stays short and gentle on the battery. */
     const val MAX_NEW_PER_RUN = 25
     /** Room always left free on the device, whatever the limit says. */
@@ -61,7 +57,6 @@ internal object SmartOfflinePlan {
         favoriteScores(signals, now).forEach { (t, s) -> add(t, s, Reason.Favorite) }
         playedScores(signals).forEach { (t, s) -> add(t, s, Reason.Played) }
         playlistScores(signals).forEach { (t, s) -> add(t, s, Reason.Playlist) }
-        discoveryScores(signals).forEach { (t, s) -> add(t, s, Reason.Discovery) }
         return parts.map { (id, list) -> combine(tracks.getValue(id), list) }
             .sortedWith(compareByDescending<Candidate> { it.score }.thenBy { it.track.id })
     }
@@ -100,14 +95,6 @@ internal object SmartOfflinePlan {
         .filter { it.second > 0 }
         .sortedByDescending { it.second }
         .take(TOP_PLAYLISTS).map { it.first }
-
-    /** The week's discoveries started: the next five titles after the furthest one heard, 35 then 3 less each. */
-    private fun discoveryScores(s: Signals): List<Pair<Track, Double>> {
-        val heard = s.discoveries.indexOfLast { it.id in s.played || (s.recentPlays[it.id] ?: 0) > 0 }
-        if (heard < 0) return emptyList()
-        return s.discoveries.drop(heard + 1).filter { it.id !in s.played }.take(DISCOVERIES_AHEAD)
-            .mapIndexed { k, t -> t to 35.0 - 3.0 * k }
-    }
 
     // ------------------------------------------------------------------ the plan
 

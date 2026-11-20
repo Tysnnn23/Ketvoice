@@ -207,8 +207,6 @@ fun HomeScreen() {
             }
             // 7.2: Favoris, Téléchargements and the pinned playlists, with their covers (replaces « Épinglés »).
             item(key = "home-library") { StaggeredReveal(order = 4) { HomeLibraryShelf() } }
-            // The week's discoveries (6.1): renewed every Monday.
-            item(key = "discoveries") { HomeDiscoveries() }
             // What the public profiles the listener follows published and listened to (signed in, once there is some).
             item(key = "friends") { com.ketvoice.app.ui.friends.FriendsHomeSection() }
             // The other personal mixes (the mix of the day leads the page).

@@ -1,6 +1,6 @@
 package com.ketvoice.app.data
 
-enum class MixKind { Artist, Style, OnRepeat, Rediscover, Discover }
+enum class MixKind { Artist, Style, OnRepeat, Rediscover }
 
 /** A proposed mix: enough to draw its card; its tracks are built when it is opened. */
 data class MixCard(val id: String, val kind: MixKind, val artist: String?, val covers: List<String?>)
@@ -154,8 +154,6 @@ object PersonalMixes {
             // The artist's radio in the listener's order (7.2): what they like first, what they refuse later, varied.
             "style" -> CatalogRepo.artistRadio(name, mine().firstOrNull(::fromCatalogue)?.artistId)
                 .let { radio -> Recommender.rank(radio, Recommender.liveSignals(), MIX_SIZE, perArtist = 6).map { it.track } }.ifEmpty { null }
-            // The week's discoveries: kept on the device for the week, made now when missing.
-            WeeklyDiscoveries.MIX_ID -> WeeklyDiscoveries.ensureNow()?.tracks
             else -> null
         }
         // Proposed by Ketvoice: the artists the listener blocked are left out.

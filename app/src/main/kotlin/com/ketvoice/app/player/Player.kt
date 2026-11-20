@@ -1442,8 +1442,8 @@ object Player {
     private suspend fun autoplayVideoOf(seed: Track): String? {
         val artist = com.ketvoice.app.data.MediaOverrides.mainArtist(seed.artist)
         val found = MusicApi.searchYtMusic("${seed.title} $artist")
-        val same = com.ketvoice.app.data.WeeklyDiscoveries.recording(seed)
-        return (found.firstOrNull { com.ketvoice.app.data.WeeklyDiscoveries.recording(it) == same }
+        val same = com.ketvoice.app.data.Recordings.of(seed)
+        return (found.firstOrNull { com.ketvoice.app.data.Recordings.of(it) == same }
             ?: found.firstOrNull { AutoplayRules.artistKey(it) == AutoplayRules.artistKey(seed) })?.videoId
     }
 
