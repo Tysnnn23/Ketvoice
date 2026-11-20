@@ -194,15 +194,7 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
                     .drawWithContent {
                         drawContent()
                         if (!reduced) {
-                            drawRect(
-                                brush = Brush.verticalGradient(
-                                    0f to Color.Transparent,
-                                    .09f to Color.Black,
-                                    .84f to Color.Black,
-                                    1f to Color.Transparent
-                                ),
-                                blendMode = BlendMode.DstIn
-                            )
+                            drawRect(brush = LyricsEdgeFade, blendMode = BlendMode.DstIn)
                         }
                     }
                     .pointerInput(Unit) {
@@ -834,3 +826,10 @@ internal object LyricsWords {
     }
 }
 
+/** The lyrics' top and bottom fade, made once (7.6): built inside the draw, it was a new gradient at every frame. */
+private val LyricsEdgeFade = Brush.verticalGradient(
+    0f to Color.Transparent,
+    .09f to Color.Black,
+    .84f to Color.Black,
+    1f to Color.Transparent
+)

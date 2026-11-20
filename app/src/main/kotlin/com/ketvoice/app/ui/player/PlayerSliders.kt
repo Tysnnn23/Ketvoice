@@ -22,7 +22,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -38,6 +37,9 @@ import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -81,7 +83,8 @@ fun ScrubBar(
     showTimes: Boolean = true,
     onSeek: (Long) -> Unit
 ) {
-    val posMs by Player.positionMs.collectAsState()
+    // 7.6: the position is followed in an effect and read while drawing: until 7.5 the bar and its times were
+    // composed again at every frame of the glide (300 times in five seconds, PerfRecompositionHostTest).
     val trackId = Player.state.collectAsState().value.current?.id
     val latestSeek by rememberUpdatedState(onSeek)
     // A seasonal theme fills the bar with its sunset, unless the caller chose its own colour (6.2.1).
@@ -99,29 +102,25 @@ fun ScrubBar(
     val press = rememberSliderPress()
     val density = androidx.compose.ui.platform.LocalDensity.current
     val reduced = Motion.reduced
-    val fraction = (posMs.toFloat() / dur).coerceIn(0f, 1f)
-    val seekEpoch by Player.seekEpoch.collectAsState()
-    var lastSeek by remember(trackId) { mutableLongStateOf(seekEpoch) }
 
     fun trackFor(width: Float, withStretch: Boolean = true) = SliderPress.track(SliderPress.Scrub, density, 0f, width,
         press.expansion, if (withStretch) press.stretch else 0f, reduced)
     fun fractionAt(x: Float, width: Float) = trackFor(width, withStretch = false).fractionAt(x)
 
-    LaunchedEffect(durationMs) { anim.snapTo(fraction) }
-    LaunchedEffect(fraction, seekEpoch, Motion.reduced) {
-        if (dragX == null) {
-            if (Motion.reduced || lastSeek != seekEpoch || kotlin.math.abs(fraction - anim.value) > .04f ||
-                kotlin.math.abs(fraction - anim.value) < 0.0005f) {
-                anim.snapTo(fraction)
-            } else {
-                anim.animateTo(fraction, tween(230, easing = LinearEasing))
+    LaunchedEffect(durationMs) { anim.snapTo(scrubFraction(Player.positionMs.value, dur)) }
+    LaunchedEffect(dur, trackId, reduced) {
+        var lastSeek = Player.seekEpoch.value
+        Player.positionMs.combine(Player.seekEpoch) { p, epoch -> scrubFraction(p, dur) to epoch }.distinctUntilChanged()
+            .collectLatest { (fraction, epoch) ->
+                if (dragX != null) return@collectLatest
+                val jumped = lastSeek != epoch
+                lastSeek = epoch
+                anim.follow(fraction, jumped || reduced)
             }
-            lastSeek = seekEpoch
-        }
     }
 
-    val dragFraction = dragX?.let { fractionAt(it, widthPx.toFloat()) }
-    val shown = (dragFraction ?: anim.value).coerceIn(0f, 1f)
+    // Read only while drawing and placing: the glide never composes the bar again.
+    fun shown() = (dragX?.let { fractionAt(it, widthPx.toFloat()) } ?: anim.value).coerceIn(0f, 1f)
     // Ket 27: the progress bar of iOS 27 — a capsule that swells under the finger, without a knob, and a
     // tick in the hand at each twentieth of the title that the finger crosses.
     var lastScrubStep by remember(trackId) { mutableIntStateOf(-1) }
@@ -178,7 +177,7 @@ fun ScrubBar(
                 }
         ) {
             val track = trackFor(size.width)
-            drawPressTrack(track, shown, trackColor, fillColor, press.expansion, fillBrush = fillBrush)
+            drawPressTrack(track, shown(), trackColor, fillColor, press.expansion, fillBrush = fillBrush)
             mix.value?.let { progress ->
                 val w = size.width
                 val lineY = size.height / 2f - 8.dp.toPx()
@@ -192,29 +191,44 @@ fun ScrubBar(
       }
         com.ketvoice.app.ui.common.PressLens(press, lensTrack, com.ketvoice.app.ui.common.PressLensWidth,
             com.ketvoice.app.ui.common.PressLensHeight, dark = trackColor.luminance() > .5f) { box ->
-            Offset(trackFor(box.width.toFloat()).xOf(shown), box.height / 2f)
+            Offset(trackFor(box.width.toFloat()).xOf(shown()), box.height / 2f)
         }
       }
-        if (showTimes) ScrubTimes(shown, dur, press, mix.value, timeColor)
+        if (showTimes) ScrubTimes(::shown, dur, press, mix, timeColor)
     }
 }
+
+private fun scrubFraction(positionMs: Long, dur: Long) = (positionMs.toFloat() / dur).coerceIn(0f, 1f)
+
+/** Glides to [fraction] between two position ticks, or jumps there after a seek, a large gap or under reduced motion. */
+private suspend fun Animatable<Float, *>.follow(fraction: Float, jump: Boolean) {
+    val gap = kotlin.math.abs(fraction - value)
+    if (jump || gap > .04f || gap < 0.0005f) snapTo(fraction) else animateTo(fraction, tween(230, easing = LinearEasing))
+}
+
+/** Ketmix's sign follows the mix at each frame on its own, without the times around it. */
+@Composable
+private fun MixingBadgeSlot(mix: androidx.compose.runtime.State<Float?>, tint: Color) = KetmixMixingBadge(mix.value, tint)
 
 private val DefaultTimeColor = Color.White.copy(alpha = 0.62f)
 
 /** The times under the bar and, between them, Ketmix's sign while a mix plays. */
 @Composable
-private fun ScrubTimes(shown: Float, dur: Long, press: SliderPressState, mix: Float?, timeColor: Color) {
+private fun ScrubTimes(shown: () -> Float, dur: Long, press: SliderPressState, mix: androidx.compose.runtime.State<Float?>, timeColor: Color) {
+    // Whole seconds: the times are composed again once a second, not at each frame of the glide.
+    val elapsedS by remember(shown, dur) { androidx.compose.runtime.derivedStateOf { (shown() * dur).toLong() / 1000 } }
+    val remainingS by remember(shown, dur) { androidx.compose.runtime.derivedStateOf { ((1f - shown()) * dur).toLong() / 1000 } }
     val elapsed = timeColor
     val remaining = timeColor
     Row(Modifier.fillMaxWidth().padding(top = 1.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
         // The times step aside as the bar reaches out, and grow a little while it is held.
-        Text(formatSecs((shown * dur).toLong()), color = elapsed, fontSize = 11.sp,
+        Text(formatSecs(elapsedS * 1000), color = elapsed, fontSize = 11.sp,
             modifier = Modifier.pressLabel(press, outwards = -1f).testTag("scrub-elapsed"))
         // Between the two times, where Apple Music says it is mixing (6.0.0 Beta 5): Ketmix's sign while a mix plays.
         androidx.compose.foundation.layout.Box(Modifier.weight(1f), contentAlignment = androidx.compose.ui.Alignment.Center) {
-            KetmixMixingBadge(mix, remaining)
+            MixingBadgeSlot(mix, remaining)
         }
-        Text("-" + formatSecs(((1f - shown) * dur).toLong()), color = remaining, fontSize = 11.sp,
+        Text("-" + formatSecs(remainingS * 1000), color = remaining, fontSize = 11.sp,
             modifier = Modifier.pressLabel(press, outwards = 1f).testTag("scrub-remaining"))
     }
 }

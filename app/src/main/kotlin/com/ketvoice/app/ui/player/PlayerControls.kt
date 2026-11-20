@@ -703,12 +703,15 @@ private fun NowPlayingBarsCanvas(a: () -> Float, b: () -> Float, c: () -> Float,
 @Composable
 fun LyricsPreviewLine(onOpen: () -> Unit) {
     val lyrics by com.ketvoice.app.data.LyricsRepo.state.collectAsState()
-    val posMs by Player.positionMs.collectAsState()
-    val playback by Player.state.collectAsState()
+    val position = Player.positionMs.collectAsState()
+    val trackId = Player.state.collectAsState().value.current?.id
     val offsets by com.ketvoice.app.data.LyricsOffsets.values.collectAsState()
-    val offsetKey = remember(playback.current?.id) { playback.current?.id?.let(com.ketvoice.app.data.LyricsOffsets::key) }
+    val offsetKey = remember(trackId) { trackId?.let(com.ketvoice.app.data.LyricsOffsets::key) }
     val offset = offsetKey?.let { offsets[it] } ?: 0
-    val activeText = lyrics.activeText(com.ketvoice.app.data.LyricsOffsets.adjustedPosition(posMs, offset))
+    // 7.6: composed again when the sung line changes, not at each 200 ms position tick.
+    val activeText by remember(lyrics, offset) { androidx.compose.runtime.derivedStateOf {
+        lyrics.activeText(com.ketvoice.app.data.LyricsOffsets.adjustedPosition(position.value, offset))
+    } }
     val text = activeText
         ?: if (AppSettings.lyricsMode.value == 2 || AppSettings.lyricsSource.value == "off")
             "Paroles désactivées"

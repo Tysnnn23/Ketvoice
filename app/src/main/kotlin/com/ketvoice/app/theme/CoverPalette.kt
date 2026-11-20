@@ -27,12 +27,22 @@ import kotlin.math.abs
  */
 object CoverPalette {
 
-    /** In-memory cache: artwork URL -> extracted accent pair (primary, secondary). */
-    private val cache = object : LinkedHashMap<String, Pair<Color, Color>>(24, 0.75f, true) {
-        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Pair<Color, Color>>?) = size > 32
+    /**
+     * In-memory cache: artwork URL -> extracted accent pair (primary, secondary). A pair is a few bytes: 32 entries
+     * (until 7.5) were fewer than the covers one scrolls past, so coming back fetched, decoded and analysed each again.
+     */
+    private val cache = object : LinkedHashMap<String, Pair<Color, Color>>(64, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Pair<Color, Color>>?) = size > CACHE_SIZE
     }
+    /** Covers already read that carry no usable colour (greyscale): not fetched and analysed again each time (7.6). */
+    private val colourless = object : LinkedHashMap<String, Boolean>(32, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Boolean>?) = size > CACHE_SIZE
+    }
+    internal const val CACHE_SIZE = 256
 
     fun cached(url: String?): Pair<Color, Color>? = url?.let { synchronized(cache) { cache[it] } }
+    fun isColourless(url: String): Boolean = synchronized(cache) { colourless[url] == true }
+    fun markColourless(url: String) { synchronized(cache) { colourless[url] = true } }
 
     /**
      * Extract a vivid-but-readable (primary, secondary) accent pair from a bitmap.
@@ -105,7 +115,7 @@ object CoverPalette {
 fun rememberCoverAccent(url: String?): Pair<Color, Color>? {
     if (url.isNullOrBlank()) return null
     var accent by remember(url) { mutableStateOf(CoverPalette.cached(url)) }
-    if (accent != null) return accent
+    if (accent != null || CoverPalette.isColourless(url)) return accent
     val ctx = LocalContext.current
     LaunchedEffect(url) {
         val request = ImageRequest.Builder(ctx).data(url).allowHardware(false).size(120).build()
@@ -118,7 +128,7 @@ fun rememberCoverAccent(url: String?): Pair<Color, Color>? {
             if (pair != null) {
                 CoverPalette.store(url, pair)
                 accent = pair
-            }
+            } else CoverPalette.markColourless(url)
         }
     }
     return accent
@@ -134,7 +144,7 @@ fun rememberCanvasAccent(path: String?): Pair<Color, Color>? {
     if (path.isNullOrBlank()) return null
     val key = "canvas:$path"
     var accent by remember(key) { mutableStateOf(CoverPalette.cached(key)) }
-    if (accent != null) return accent
+    if (accent != null || CoverPalette.isColourless(key)) return accent
     LaunchedEffect(key) {
         val frame = withContext(Dispatchers.IO) {
             val reader = android.media.MediaMetadataRetriever()
@@ -147,7 +157,7 @@ fun rememberCanvasAccent(path: String?): Pair<Color, Color>? {
         if (frame != null) {
             val pair = CoverPalette.extract(frame)
             frame.recycle()
-            if (pair != null) { CoverPalette.store(key, pair); accent = pair }
+            if (pair != null) { CoverPalette.store(key, pair); accent = pair } else CoverPalette.markColourless(key)
         }
     }
     return accent

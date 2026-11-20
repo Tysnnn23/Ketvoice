@@ -362,12 +362,9 @@ object Player {
         }, androidx.core.content.ContextCompat.getMainExecutor(context))
 
         // Lightweight position updates for the time rail and synchronized lyrics.
+        // Behind other apps nothing shows the position: a second is enough for the listening time; paused, no tick.
         scope.launch {
-            while (true) {
-                if (controller?.isPlaying == true) positionNow()
-                // Behind other apps nothing shows the position: a second is enough for the listening time.
-                delay(if (com.ketvoice.app.automix.Automix.appInFront) 200 else 1_000)
-            }
+            PositionTicks.run(_state, { controller?.isPlaying == true }, { com.ketvoice.app.automix.Automix.appInFront }) { positionNow() }
         }
     }
 

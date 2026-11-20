@@ -26,6 +26,19 @@ object AppText {
         assets = context.applicationContext.assets
     }
 
+    /**
+     * Faster first frame (7.6): the chosen language's dictionary (a pass over the 2 MB file) is read on a thread of its
+     * own as the app starts, instead of on the main thread at the first text of the first screen. French reads nothing.
+     */
+    fun warm(context: Context): Thread {
+        val app = context.applicationContext
+        return Thread({ runCatching { preload((AppLocales.chosenLanguage(app) ?: AppLocales.systemLanguage()).code) } },
+            "ketvoice-text-warmup").apply { isDaemon = true; priority = Thread.NORM_PRIORITY - 1; start() }
+    }
+
+    /** Reads [code]'s dictionary now unless it is French or already read; true when it is in memory. */
+    internal fun preload(code: String): Boolean = code != AppLanguage.FRENCH.code && dictionary(code) != null
+
     fun language(): AppLanguage {
         val label = AppSettings.language.value
         known?.let { if (it.first == label) return it.second }

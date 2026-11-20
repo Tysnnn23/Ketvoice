@@ -10,6 +10,10 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.FastOutSlowInEasing
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -310,18 +314,9 @@ private fun MiniTransportNext(size: androidx.compose.ui.unit.Dp = DesignTokens.S
 /** Fine ligne de progression sous le mini-lecteur — collecte la position indépendamment. */
 @Composable
 private fun MiniProgressLine(modifier: Modifier = Modifier) {
-    val posMs by Player.positionMs.collectAsState()
-    val durationMs = Player.state.collectAsState().value.durationMs.coerceAtLeast(1L)
-    val fraction = (posMs.toFloat() / durationMs).coerceIn(0f, 1f)
     // Interpolation linéaire continue : plus aucun saut entre les tics de position.
-    // Read while drawing (6.6): the glide never stops while a title plays, and read here it recomposed and measured
-    // the line again at every frame, on every page.
-    val smooth = animateFloatAsState(
-        targetValue = fraction,
-        animationSpec = if (Motion.reduced) androidx.compose.animation.core.snap()
-        else tween(durationMillis = 500, easing = androidx.compose.animation.core.LinearEasing),
-        label = "miniProgress"
-    )
+    // Read while drawing (6.6), and followed in an effect (7.6): the line is no longer composed at each 200 ms tick.
+    val smooth = rememberProgressGlide()
     // A hairline inset from the pill's edges: a faint track and the accent filling it.
     val accent = LocalTheme.current.accent
     Box(
@@ -846,4 +841,23 @@ internal fun dropLens(lead: Float, trail: Float): DropLens {
     val b = if (trail.isFinite()) trail else a
     val stretch = kotlin.math.abs(a - b).coerceAtMost(1.2f)
     return DropLens(minOf(a, b), 1f + stretch, 1f - (stretch * .1f).coerceAtMost(.08f))
+}
+
+/**
+ * The playing title's progress (0..1), gliding linearly between the position ticks (7.6). Read it while drawing:
+ * it changes at every frame while a title plays, and the composable holding it is never composed again for it.
+ */
+@Composable
+internal fun rememberProgressGlide(): androidx.compose.runtime.State<Float> {
+    val glide = remember { androidx.compose.animation.core.Animatable(0f) }
+    val reduced = Motion.reduced
+    LaunchedEffect(reduced) {
+        val durations = Player.state.map { it.durationMs.coerceAtLeast(1L) }.distinctUntilChanged()
+        Player.positionMs.combine(durations) { p, d -> (p.toFloat() / d).coerceIn(0f, 1f) }.distinctUntilChanged()
+            .collectLatest { f ->
+                if (reduced) glide.snapTo(f)
+                else glide.animateTo(f, tween(durationMillis = 500, easing = androidx.compose.animation.core.LinearEasing))
+            }
+    }
+    return glide.asState()
 }
