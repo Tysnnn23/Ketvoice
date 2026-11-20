@@ -162,8 +162,6 @@ fun HomeScreen() {
                     HomeForYouLead(recent, hasResume = playingId != null || recent.isNotEmpty(), daily = daily, wide = wide)
                 }
             }
-            // The Vice City edition's one illustration, on its radio's card, while the theme is on.
-            if (theme.viceCity) item(key = "vicefm") { com.ketvoice.app.ui.vicecity.ViceFmCard() }
             // The ambiances of the smart library, in the order that suits the hour.
             item(key = "moods") { StaggeredReveal(order = 1) { HomeMoods(hour) } }
             // New releases of the artists followed and played most: a fixed place now, right under the moods.

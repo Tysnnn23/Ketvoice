@@ -38,7 +38,7 @@ internal object PersonalBackup {
         "haptics", "coverTintedGlass", "glassTilt", "glassTinted", "trueBlack", "meshBackground", "automixOn", "automixAlbums", "ketmixLoops", "smartShuffle", "ketmixHaptics")
     private val integers = mapOf("themeMode" to 0..2, "glassStyle" to 0..com.ketvoice.app.glass.GlassStyles.MAX, "glassTintLevel" to 0..6, "lyricsTextSize" to 0..2, "albumHeader" to 0..2,
         "reverbAmount" to 0..100, "reverbSize" to 0..100, "reverbDamping" to 0..100,
-        "lyricsMode" to 0..2, "automixIntensity" to 0..2, "ketmixAnalysis" to 0..2, "ketmixStyle" to 0..5, "ketmixStemsQuality" to 0..2, "voiceLevel" to 0..100, "canvasCacheMb" to 256..2048, "smartOfflineGb" to 0..10, "smartOfflinePercent" to 10..50, "downloadQualityMode" to 0..2, "appIconVariant" to 0..ViceCityEdition.ICON_VARIANT)
+        "lyricsMode" to 0..2, "automixIntensity" to 0..2, "ketmixAnalysis" to 0..2, "ketmixStyle" to 0..5, "ketmixStemsQuality" to 0..2, "voiceLevel" to 0..100, "canvasCacheMb" to 256..2048, "smartOfflineGb" to 0..10, "smartOfflinePercent" to 10..50, "downloadQualityMode" to 0..2, "appIconVariant" to 0..com.ketvoice.app.util.LauncherIcons.LAST)
     private val longs = setOf("accentArgb", "cacheBytes")
     private val strings = setOf("lyricsSource", "translateLanguage", "translationSource", "wifiQuality",
         "mobileQuality", "equalizerGains", "language")
@@ -63,12 +63,8 @@ internal object PersonalBackup {
 
     /** The checked value of a setting a backup (or the account's sync) may carry, or null. */
     internal fun setting(key: String, raw: Any?): Any? = when {
-        // The Vice City edition (6.1) is saved and restored only while it lasts; turning it off always goes through.
-        key == "viceCityTheme" -> (raw as? Boolean)?.takeIf { !it || ViceCityEdition.themeAvailable() }
         // A season (6.2) is restored only while it lasts; turning it off always goes through.
         key == "seasonTheme" -> (raw as? String)?.takeIf { Seasons.storable(it) }
-        key == "appIconVariant" -> (raw as? Number)?.toInt()
-            ?.takeIf { it in integers.getValue(key) && ViceCityEdition.iconAllowed(it) }
         key in booleans || key.startsWith("design212_") && DesignChoices.all.any { "design212_${it.code}" == key } -> raw as? Boolean
         // 7.5 motion75: « Pochette et Canvas » (2) became the animated Canvas (1), in backups and in sync alike.
         key == "albumHeader" -> (raw as? Number)?.toInt()?.takeIf { it in integers.getValue(key) }?.let(com.ketvoice.app.ui.sub.AlbumHeader::normalize)

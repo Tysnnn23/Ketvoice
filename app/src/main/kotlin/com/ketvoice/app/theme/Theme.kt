@@ -24,9 +24,7 @@ data class KetTheme(
     val accent: Color,
     val glassDefault: Boolean = true,
     /** A seasonal theme is on (6.2, [SeasonLook]): its glows, edges and decor are drawn. */
-    val season: SeasonLook? = null,
-    /** The Vice City limited edition is on ([ViceCityTheme]): its accent, and its illustration on Home. */
-    val viceCity: Boolean = false
+    val season: SeasonLook? = null
 ) {
     companion object {
         fun light() = KetTheme(
@@ -74,12 +72,7 @@ fun KetvoiceTheme(
      * animated by the root; [CoverLook.apply] keeps every label readable on them.
      */
     cover: CoverLook = CoverLook(),
-    /**
-     * The Vice City limited edition: the listener's light or dark theme with its flamingo accent. The listener's
-     * accent is kept for when it ends.
-     */
-    viceCity: Boolean = false,
-    /** A seasonal theme (6.2): like Vice City, its own dark look and accent over the listener's choices. */
+    /** A seasonal theme (6.2): its own dark look and accent over the listener's choices. */
     season: SeasonLook? = null,
     content: @Composable () -> Unit
 ) {
@@ -89,7 +82,7 @@ fun KetvoiceTheme(
     // Like an album page, the whole app takes the colour of what plays: the same tint, held dim at night.
     // Noir (7.1): pure black pages in dark mode, whatever the cover; the cards stay apart from them.
     val black = isDark && com.ketvoice.app.data.AppSettings.trueBlack.value
-    val th = season?.theme() ?: cover.apply((if (viceCity) ViceCityTheme.theme(isDark) else Ket27.theme(isDark, chosenAccent))
+    val th = season?.theme() ?: cover.apply(Ket27.theme(isDark, chosenAccent)
         .let { if (black) it.copy(background = Color.Black) else it }, black)
     val accent = th.accent
     androidx.compose.runtime.CompositionLocalProvider(

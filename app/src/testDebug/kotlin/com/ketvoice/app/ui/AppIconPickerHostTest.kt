@@ -26,8 +26,11 @@ class AppIconPickerHostTest {
 
     @Test fun eachIconIsShownAndPicked() {
         var picked = -1
-        compose.setContent { KetvoiceTheme(useDark = true) { AppIconPicker(1, onPick = { picked = it }, onClose = {}) } }
-        for (id in 0..3) compose.onNodeWithTag("icon-option-$id").assertExists()
+        compose.setContent { KetvoiceTheme(useDark = true) { AppIconPicker(com.ketvoice.app.util.LauncherIcons.DEFAULT, onPick = { picked = it }, onClose = {}) } }
+        for (id in 0..4) compose.onNodeWithTag("icon-option-$id").assertExists()
+        // 7.6: the GTA VI icon is the default one, always offered, with the notice under the icons.
+        compose.onNodeWithText("GTA VI").assertExists()
+        compose.onNodeWithTag("icon-rockstar-note").assertExists()
         compose.onNodeWithTag("icon-option-2").performClick()
         compose.runOnIdle { assertEquals(2, picked) }
         // The dialog has its own window: draw that one.

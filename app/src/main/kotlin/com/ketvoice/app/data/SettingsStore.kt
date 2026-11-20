@@ -181,14 +181,15 @@ object SettingsStore {
         s.smartAudioAlignment.value = p.getBoolean("smartAudioAlignment", s.smartAudioAlignment.value)
         s.techStats.value = p.getBoolean("techStats", s.techStats.value)
         s.bitPerfect.value = p.getBoolean("bitPerfect", false)
-        s.appIconVariant.value = p.getInt("appIconVariant", s.appIconVariant.value).coerceIn(0, ViceCityEdition.ICON_VARIANT)
-        s.viceCityTheme.value = p.getBoolean("viceCityTheme", false)
+        // 7.6: the GTA VI icon is the default; the old default stored before 7.6 moves to it once (LauncherIcons.loaded).
+        // `viceCityTheme` (the 6.1 edition's theme) is retired: never read, written or backed up.
+        s.appIconVariant.value = com.ketvoice.app.util.LauncherIcons.loaded(
+            if (p.contains("appIconVariant")) runCatching { p.getInt("appIconVariant", -1) }.getOrDefault(-1) else null,
+            p.getBoolean(com.ketvoice.app.util.LauncherIcons.MIGRATED_KEY, false))
         s.seasonTheme.value = runCatching { p.getString("seasonTheme", "") }.getOrNull().orEmpty()
-        // The Vice City edition or a season is over: its theme and icon go back to the listener's look, silently.
+        // A season is over: its theme goes back to the listener's look, silently.
         if (Seasons.expire()) p.edit()
-            .putBoolean("viceCityTheme", s.viceCityTheme.value)
             .putString("seasonTheme", s.seasonTheme.value)
-            .putInt("appIconVariant", s.appIconVariant.value)
             .apply()
     }
 
@@ -303,7 +304,7 @@ object SettingsStore {
             .putBoolean("techStats", s.techStats.value)
             .putBoolean("bitPerfect", s.bitPerfect.value)
             .putInt("appIconVariant", s.appIconVariant.value)
-            .putBoolean("viceCityTheme", s.viceCityTheme.value)
+            .putBoolean(com.ketvoice.app.util.LauncherIcons.MIGRATED_KEY, true)
             .putString("seasonTheme", s.seasonTheme.value)
             .also { editor -> DesignChoices.all.forEach { editor.putBoolean("design212_${it.code}", DesignChoices.enabled(it.code)) } }
             .apply()

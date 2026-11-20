@@ -131,7 +131,7 @@
         <activity-alias
             android:name=".LauncherDefault"
             android:targetActivity=".MainActivity"
-            android:enabled="true"
+            android:enabled="false"
             android:exported="true"
             android:icon="@mipmap/ic_launcher"
             android:roundIcon="@mipmap/ic_launcher_round"
@@ -184,11 +184,11 @@
             </intent-filter>
         </activity-alias>
 
-        <!-- 6.1: the Vice City limited-edition icon (until 10 December 2026, see ViceCityEdition). -->
+        <!-- The GTA VI icon (6.1's Vice City edition), the default one since 7.6 (LauncherIcons.DEFAULT). -->
         <activity-alias
             android:name=".LauncherViceCity"
             android:targetActivity=".MainActivity"
-            android:enabled="false"
+            android:enabled="true"
             android:exported="true"
             android:icon="@mipmap/ic_launcher_vicecity"
             android:roundIcon="@mipmap/ic_launcher_vicecity_round"

@@ -17,14 +17,13 @@ class SeasonsTest {
     private fun on(day: String) = Seasons.activeOn(LocalDate.parse(day))?.first?.id
 
     @After fun reset() {
-        AppSettings.viceCityTheme.value = false
         AppSettings.seasonTheme.value = ""
-        AppSettings.appIconVariant.value = 1
     }
 
     @Test fun eachSeasonHasItsWindowLastDayIncluded() {
-        assertEquals("vicecity", on("2026-11-17"))
-        assertEquals("vicecity", on("2026-12-10"))
+        // 7.6: the Vice City edition is gone, nothing fills its weeks.
+        assertNull(on("2026-11-17"))
+        assertNull(on("2026-12-10"))
         assertEquals("noel", on("2026-12-11"))
         assertEquals("noel", on("2026-12-30"))
         assertEquals("saintvalentin", on("2027-02-07"))
@@ -42,8 +41,8 @@ class SeasonsTest {
         assertNull(on("2027-11-03"))
     }
 
-    @Test fun viceCityHappensOnceAndNoelEveryYear() {
-        assertNull("Vice City is not back in 2027", on("2027-11-20"))
+    @Test fun noelComesBackEveryYear() {
+        assertNull(on("2027-11-20"))
         assertEquals("noel", on("2027-12-11"))
         assertEquals("noel", on("2031-12-24"))
     }
@@ -69,9 +68,9 @@ class SeasonsTest {
     @Test fun theDayIsTheListenersOwn() {
         // 10 December 23:30 in Paris is already the 11th in Tokyo and still the 10th in Los Angeles.
         val moment = at("2026-12-10T23:30", paris)
-        assertEquals("vicecity", Seasons.active(moment, paris)?.id)
+        assertNull(Seasons.active(moment, paris))
         assertEquals("noel", Seasons.active(moment, tokyo)?.id)
-        assertEquals("vicecity", Seasons.active(moment, losAngeles)?.id)
+        assertNull(Seasons.active(moment, losAngeles))
         // New Year's Eve begins at local midnight.
         val eve = at("2026-12-30T20:00", losAngeles)
         assertEquals("noel", Seasons.active(eve, losAngeles)?.id)
@@ -88,13 +87,6 @@ class SeasonsTest {
         assertEquals("", AppSettings.seasonTheme.value)
     }
 
-    @Test fun viceCityStillUsesItsOwnKey() {
-        Seasons.choose(Seasons.VICE_CITY, true)
-        assertTrue(AppSettings.viceCityTheme.value)
-        assertEquals("", AppSettings.seasonTheme.value)
-        assertEquals("vicecity", Seasons.inEffect(at("2026-11-25T12:00", paris), paris)?.id)
-    }
-
     @Test fun aSeasonIsSwitchedOffOnceOver() {
         AppSettings.seasonTheme.value = "noel"
         assertFalse("nothing changes while it lasts", Seasons.expire(at("2026-12-31T00:00", tokyo).minus(60_000), tokyo))
@@ -104,7 +96,7 @@ class SeasonsTest {
         assertFalse("once is enough", Seasons.expire(at("2026-12-31T00:00", paris), paris))
     }
 
-    @Test fun anUnknownOrViceCityValueIsNeverKeptInSeasonTheme() {
+    @Test fun anUnknownOrRetiredValueIsNeverKeptInSeasonTheme() {
         val day = at("2026-12-20T12:00", paris)
         assertTrue(Seasons.storable("", day, paris))
         assertTrue(Seasons.storable("noel", day, paris))
@@ -125,7 +117,7 @@ class SeasonsTest {
         assertNull("nothing between seasons", Seasons.offerDue({ false }, at("2027-05-10T09:00", paris), paris))
     }
 
-    @Test fun viceCityKeepsItsOwnWelcomeAndAChosenSeasonIsNotOfferedAgain() {
+    @Test fun nothingIsOfferedOutsideASeasonAndAChosenSeasonIsNotOfferedAgain() {
         assertNull(Seasons.offerDue({ false }, at("2026-11-25T09:00", paris), paris))
         AppSettings.seasonTheme.value = "halloween"
         assertNull(Seasons.offerDue({ false }, at("2027-10-25T09:00", paris), paris))
