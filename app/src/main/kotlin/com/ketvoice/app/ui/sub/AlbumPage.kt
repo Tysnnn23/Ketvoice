@@ -94,10 +94,13 @@ internal fun AlbumPage(request: CatalogRequest, page: CatalogPage?, tracks: List
     val pageTint by androidx.compose.animation.animateColorAsState(
         artistPageTint(baseTheme.background, (tone ?: accent).takeIf { AppSettings.albumColors.value }, baseTheme.isDark),
         tween(Motion.duration(520)), label = "album-page-tint")
+    val pageCard = androidx.compose.ui.graphics.lerp(pageTint, baseTheme.onBackground, if (baseTheme.isDark) .08f else .05f)
+    // 7.3: the cover's colour for Play, Shuffle, links, marks and selection, always readable on this page.
     val theme = baseTheme.copy(
         background = pageTint,
-        card = androidx.compose.ui.graphics.lerp(pageTint, baseTheme.onBackground, if (baseTheme.isDark) .08f else .05f),
-        accent = if (AppSettings.albumColors.value) accent ?: baseTheme.accent else baseTheme.accent)
+        card = pageCard,
+        accent = if (AppSettings.albumColors.value) com.ketvoice.app.theme.CoverLegibility.pageAccent(accent, baseTheme.accent, pageTint, pageCard)
+            else baseTheme.accent)
     val top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 64.dp
     val collapse = remember { derivedStateOf {
         val hero = list.layoutInfo.visibleItemsInfo.firstOrNull { it.key == "album-hero" }
@@ -161,7 +164,8 @@ internal fun AlbumPage(request: CatalogRequest, page: CatalogPage?, tracks: List
         val artistPage = ArtistPages.cachedOrFetch(artistId, mainArtist, network = catalogue)
         value = AlbumPresentation.moreBy(artistPage?.albums.orEmpty(), request.id, title)
     }
-    CompositionLocalProvider(LocalTheme provides theme, LocalBackdropLayer provides backdrop) {
+    CompositionLocalProvider(LocalTheme provides theme, LocalBackdropLayer provides backdrop,
+        *com.ketvoice.app.theme.coverAccentLocals(theme.accent)) {
         Box(Modifier.fillMaxSize().background(theme.background)) {
             BackdropCapture(backdrop, Modifier.fillMaxSize()) {
                 // Wide: the artwork stands beside the title and the titles take the whole width below (ui/adaptive/CollectionPanes).
@@ -447,7 +451,7 @@ private fun AlbumTrackRow(track: Track, index: Int, active: Boolean, downloaded:
         .padding(start = 20.dp, end = 6.dp, top = 4.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.width(28.dp), contentAlignment = Alignment.Center) {
             if (active) com.ketvoice.app.ui.player.NowPlayingBars(
-                com.ketvoice.app.player.Player.state.collectAsState().value.isPlaying)
+                com.ketvoice.app.player.Player.state.collectAsState().value.isPlaying, color = theme.accent)
             else Text("${index + 1}", localize = false, color = theme.secondary, fontSize = 15.sp, textAlign = TextAlign.Center)
         }
         Column(Modifier.weight(1f).padding(start = 14.dp, top = 2.dp, bottom = 2.dp),

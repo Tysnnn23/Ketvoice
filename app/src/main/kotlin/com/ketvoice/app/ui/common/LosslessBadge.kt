@@ -132,7 +132,9 @@ internal fun rememberPlayingGrade(trackId: String?): AudioGrade? {
 internal fun LosslessBadge(grade: AudioGrade?, modifier: Modifier = Modifier, tint: Color = androidx.compose.ui.graphics.Color.Unspecified,
                            compact: Boolean = false) {
     grade ?: return
-    val ink = if (tint == Color.Unspecified) com.ketvoice.app.theme.LocalTheme.current.secondary else tint
+    val theme = com.ketvoice.app.theme.LocalTheme.current
+    // On a page wearing its cover's colour (7.3) the mark takes that accent.
+    val ink = if (tint != Color.Unspecified) tint else if (com.ketvoice.app.theme.LocalCoverAccentMarks.current) theme.accent else theme.secondary
     val shape = RoundedCornerShape(5.dp)
     Row(modifier.border(.8.dp, ink.copy(alpha = .7f), shape).padding(horizontal = if (compact) 4.dp else 5.dp, vertical = 1.dp)
         .semantics { contentDescription = com.ketvoice.app.data.AppText.t(grade.label) }.testTag("lossless-badge"),

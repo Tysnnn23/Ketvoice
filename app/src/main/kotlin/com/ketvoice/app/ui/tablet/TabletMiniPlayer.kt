@@ -96,12 +96,12 @@ fun TabletMiniPlayer(modifier: Modifier = Modifier, onOpen: () -> Unit) {
                         val canvases by com.ketvoice.app.data.CanvasRepo.paths.collectAsState()
                         val canvas = canvases[current.id]?.takeIf { !com.ketvoice.app.data.MediaOverrides.canvasHiddenInPlayer(current) }
                             ?.takeIf { AppSettings.animatedArtwork.value && !Motion.reduced && !AppSettings.highPerformanceMode.value }
-                        Box(Modifier.size(48.dp).clip(RoundedCornerShape(10.dp))
-                            .onGloballyPositioned { AppUi.miniCoverBounds.value = it.boundsInRoot() }) {
-                            if (canvas != null) com.ketvoice.app.ui.player.ArtworkCanvas(current.copy(coverUrl = cover), canvas, state.isPlaying, Modifier.fillMaxSize())
-                            else {
-                                Cover(current.title, cover, size = 48.dp, radius = 10.dp)
-                                com.ketvoice.app.ui.player.MixArtworkOverlay(current)
+                        // During a Ketmix mix (7.3): both covers side by side with a wave between them.
+                        com.ketvoice.app.ui.player.MiniMixCovers(current, 48.dp, 10.dp) {
+                            Box(Modifier.size(48.dp).clip(RoundedCornerShape(10.dp))
+                                .onGloballyPositioned { AppUi.miniCoverBounds.value = it.boundsInRoot() }) {
+                                if (canvas != null) com.ketvoice.app.ui.player.ArtworkCanvas(current.copy(coverUrl = cover), canvas, state.isPlaying, Modifier.fillMaxSize())
+                                else Cover(current.title, cover, size = 48.dp, radius = 10.dp)
                             }
                         }
                         Column(Modifier.weight(1f).padding(start = 12.dp, end = 8.dp)

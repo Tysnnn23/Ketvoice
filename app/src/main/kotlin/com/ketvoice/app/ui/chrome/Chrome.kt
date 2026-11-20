@@ -155,13 +155,14 @@ fun MiniPlayerPill(
                     AppSettings.animatedArtwork.value && !Motion.reduced && !AppSettings.highPerformanceMode.value
                 }
                 val coverPlace = Modifier.onGloballyPositioned { AppUi.miniCoverBounds.value = it.boundsInRoot() }
-                if (canvas != null) Box(coverPlace.size(coverSize).clip(RoundedCornerShape(if (compact) 999.dp else 9.dp))
-                    .testTag("mini-canvas")) {
-                    com.ketvoice.app.ui.player.ArtworkCanvas(current.copy(coverUrl = cover), canvas, ps.isPlaying, Modifier.fillMaxSize())
-                } else Box(coverPlace.size(coverSize).clip(RoundedCornerShape(if (compact) 999.dp else 9.dp))) {
-                    Cover(current.title, cover, size = coverSize, radius = if (compact) 999.dp else 9.dp)
-                    // The mini-player shows the mix too: the next cover dissolves over this one.
-                    com.ketvoice.app.ui.player.MixArtworkOverlay(current)
+                // The mini-player shows the mix too (7.3): both covers side by side with a wave between them.
+                com.ketvoice.app.ui.player.MiniMixCovers(current, coverSize, if (compact) 999.dp else 9.dp) {
+                    if (canvas != null) Box(coverPlace.size(coverSize).clip(RoundedCornerShape(if (compact) 999.dp else 9.dp))
+                        .testTag("mini-canvas")) {
+                        com.ketvoice.app.ui.player.ArtworkCanvas(current.copy(coverUrl = cover), canvas, ps.isPlaying, Modifier.fillMaxSize())
+                    } else Box(coverPlace.size(coverSize).clip(RoundedCornerShape(if (compact) 999.dp else 9.dp))) {
+                        Cover(current.title, cover, size = coverSize, radius = if (compact) 999.dp else 9.dp)
+                    }
                 }
                 Spacer(Modifier.width(if (compact) 4.dp else 11.dp))
                 Column(
