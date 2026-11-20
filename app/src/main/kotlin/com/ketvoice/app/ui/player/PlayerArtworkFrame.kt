@@ -16,18 +16,22 @@ import androidx.compose.ui.graphics.graphicsLayer
 @Composable
 internal fun PlayerArtworkFrame(video: Boolean, ambience: Color, modifier: Modifier = Modifier,
                                 content: @Composable () -> Unit) {
+    // 7.6: a Canvas is shown whole above the title (CanvasFit), so only the foot of its extension dissolves.
     val coverFade = Modifier
         .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
         .drawWithContent {
             drawContent()
-            drawRect(Brush.verticalGradient(
+            drawRect(if (video) Brush.verticalGradient(0f to Color.White, .90f to Color.White, 1f to Color.Transparent)
+            else Brush.verticalGradient(
                 0f to Color.White, .36f to Color.White, .52f to Color.White.copy(alpha = .98f),
                 .66f to Color.White.copy(alpha = .82f), .79f to Color.White.copy(alpha = .48f),
                 .90f to Color.White.copy(alpha = .16f), 1f to Color.Transparent), blendMode = BlendMode.DstIn)
         }
     Box(modifier.then(coverFade)) {
         content()
-        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(
+        Box(Modifier.fillMaxSize().background(if (video) Brush.verticalGradient(
+            0f to Color.Black.copy(alpha = .16f), .14f to Color.Transparent, .90f to Color.Transparent, 1f to ambience.copy(alpha = .6f))
+        else Brush.verticalGradient(
             0f to Color.Black.copy(alpha = .16f), .52f to Color.Transparent,
             .83f to ambience.copy(alpha = .45f), 1f to ambience.copy(alpha = .85f))))
     }

@@ -124,7 +124,11 @@ fun ArtworkCanvas(
     /** Told the width over height of the picture or video once it is known. */
     onMediaAspect: ((Float) -> Unit)? = null,
     /** The rectangle of the picture or video to show, filling the artwork; null shows it as it comes. */
-    frame: com.ketvoice.app.data.Frame? = null
+    frame: com.ketvoice.app.data.Frame? = null,
+    /** 7.6: shows a Canvas whole inside these insets (what buttons and words cover), see [CanvasFit]; null fills the box. */
+    fit: androidx.compose.foundation.layout.PaddingValues? = null,
+    /** The cover's colour, under a fitted Canvas until its still is there. */
+    ambient: Color = Color(0xFF1C1C1E)
 ) {
     val art by ArtworkRepo.covers.collectAsState()
     val cover = com.ketvoice.app.data.MediaOverrides.cover(track, art["t:${track.id}"] ?: track.coverUrl)
@@ -160,6 +164,9 @@ fun ArtworkCanvas(
                 else Modifier.fillMaxSize().framedPicture(frame, if (aspect > 0f) aspect else if (video) 9f / 16f else 1f)
             Box(Modifier.fillMaxSize().then(if (frame != null) Modifier.clipToBounds() else Modifier)) {
                 when {
+                    // 7.6: the owner's framing wins; otherwise the whole Canvas, placed by CanvasFit.
+                    video && frame == null && fit != null -> FittedCanvas(data.canvas!!, playing, ambient, Modifier.fillMaxSize(),
+                        fit, onCanvasFailure, measured)
                     video -> run {
                         // Match the banner-era player: edge-to-edge video in the
                         // artwork region, blending into the separate blurred scene.

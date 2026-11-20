@@ -219,9 +219,13 @@ internal fun StandbyScreen(track: Track, playing: Boolean, onClose: (() -> Unit)
             .padding(horizontal = 40.dp, vertical = 28.dp)) {
             val side = minOf(maxHeight, maxWidth * .42f)
             Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(side).clip(RoundedCornerShape(18.dp)).background(Color(0xFF1C1C1E)).testTag("standby-artwork")) {
+                // 7.6: an upright Canvas gets an upright tile, whole and as tall as the cover's (no lit bands on the
+                // night screen); a wide one is shown whole inside the square.
+                val canvasShape by com.ketvoice.app.ui.player.rememberCanvasAspectRatio(canvas)
+                val tileWidth = if (canvas == null) side else side * (canvasShape ?: com.ketvoice.app.ui.player.CanvasFit.UPRIGHT).coerceIn(.4f, 1f)
+                Box(Modifier.height(side).width(tileWidth).clip(RoundedCornerShape(18.dp)).background(Color(0xFF1C1C1E)).testTag("standby-artwork")) {
                     if (canvas != null) com.ketvoice.app.ui.player.ArtworkCanvas(track.copy(coverUrl = cover), canvas, playing,
-                        Modifier.fillMaxSize())
+                        Modifier.fillMaxSize(), fit = androidx.compose.foundation.layout.PaddingValues(0.dp))
                     else if (cover != null) AsyncImage(cover, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                 }
                 Spacer(Modifier.width(40.dp))
