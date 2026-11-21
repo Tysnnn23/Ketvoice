@@ -25426,5 +25426,113 @@
   "de": "Herunterladen · 10 MB",
   "pt": "Baixar · 10 MB",
   "ko": "다운로드 · 10MB"
+ },
+ "Vos appareils": {
+  "en": "Your devices",
+  "hi": "आपके डिवाइस",
+  "ja": "あなたのデバイス",
+  "zh": "你的设备",
+  "ru": "Ваши устройства",
+  "it": "I tuoi dispositivi",
+  "es": "Tus dispositivos",
+  "de": "Deine Geräte",
+  "pt": "Seus dispositivos",
+  "ko": "내 기기"
+ },
+ "Ouvrez Ketvoice sur un autre appareil connecté à votre compte pour le contrôler d'ici.": {
+  "en": "Open Ketvoice on another device signed in to your account to control it from here.",
+  "hi": "यहाँ से नियंत्रित करने के लिए अपने खाते से साइन इन किए गए किसी दूसरे डिवाइस पर Ketvoice खोलें।",
+  "ja": "ここから操作するには、同じアカウントでサインインした別のデバイスで Ketvoice を開いてください。",
+  "zh": "在已登录你账户的另一台设备上打开 Ketvoice，即可在这里控制它。",
+  "ru": "Откройте Ketvoice на другом устройстве, где выполнен вход в ваш аккаунт, чтобы управлять им отсюда.",
+  "it": "Apri Ketvoice su un altro dispositivo collegato al tuo account per controllarlo da qui.",
+  "es": "Abre Ketvoice en otro dispositivo con tu cuenta para controlarlo desde aquí.",
+  "de": "Öffne Ketvoice auf einem anderen Gerät mit deinem Konto, um es von hier aus zu steuern.",
+  "pt": "Abra o Ketvoice em outro dispositivo conectado à sua conta para controlá-lo daqui.",
+  "ko": "계정에 로그인된 다른 기기에서 Ketvoice를 열면 여기서 제어할 수 있습니다."
+ },
+ "Position": {
+  "en": "Position",
+  "hi": "स्थिति",
+  "ja": "再生位置",
+  "zh": "播放位置",
+  "ru": "Позиция",
+  "it": "Posizione",
+  "es": "Posición",
+  "de": "Position",
+  "pt": "Posição",
+  "ko": "재생 위치"
+ },
+ "Transférer la lecture": {
+  "en": "Move playback there",
+  "hi": "प्लेबैक वहाँ भेजें",
+  "ja": "再生をそちらへ移す",
+  "zh": "将播放转到该设备",
+  "ru": "Перенести воспроизведение",
+  "it": "Sposta la riproduzione",
+  "es": "Pasar la reproducción",
+  "de": "Wiedergabe übertragen",
+  "pt": "Transferir a reprodução",
+  "ko": "재생 옮기기"
+ },
+ "Contrôle du téléphone": {
+  "en": "Phone control",
+  "hi": "फ़ोन नियंत्रण",
+  "ja": "スマホの操作",
+  "zh": "手机控制",
+  "ru": "Управление телефоном",
+  "it": "Controllo del telefono",
+  "es": "Control del teléfono",
+  "de": "Handysteuerung",
+  "pt": "Controle do telefone",
+  "ko": "휴대폰 제어"
+ },
+ "Cet ordinateur": {
+  "en": "This computer",
+  "hi": "यह कंप्यूटर",
+  "ja": "このコンピュータ",
+  "zh": "这台电脑",
+  "ru": "Этот компьютер",
+  "it": "Questo computer",
+  "es": "Este ordenador",
+  "de": "Dieser Computer",
+  "pt": "Este computador",
+  "ko": "이 컴퓨터"
+ },
+ "Connectez-vous à votre compte Ketvoice pour voir et contrôler votre téléphone d'ici.": {
+  "en": "Sign in to your Ketvoice account to see and control your phone from here.",
+  "hi": "यहाँ से अपना फ़ोन देखने और नियंत्रित करने के लिए अपने Ketvoice खाते में साइन इन करें।",
+  "ja": "ここからスマホを確認・操作するには、Ketvoice アカウントにサインインしてください。",
+  "zh": "登录你的 Ketvoice 账户，即可在这里查看并控制你的手机。",
+  "ru": "Войдите в аккаунт Ketvoice, чтобы видеть телефон и управлять им отсюда.",
+  "it": "Accedi al tuo account Ketvoice per vedere e controllare il telefono da qui.",
+  "es": "Inicia sesión en tu cuenta de Ketvoice para ver y controlar tu teléfono desde aquí.",
+  "de": "Melde dich bei deinem Ketvoice-Konto an, um dein Handy von hier aus zu sehen und zu steuern.",
+  "pt": "Entre na sua conta Ketvoice para ver e controlar seu telefone daqui.",
+  "ko": "Ketvoice 계정에 로그인하면 여기서 휴대폰을 보고 제어할 수 있습니다."
+ },
+ "Ouvrez Ketvoice sur votre téléphone, connecté au même compte, pour le contrôler d'ici.": {
+  "en": "Open Ketvoice on your phone, signed in to the same account, to control it from here.",
+  "hi": "यहाँ से नियंत्रित करने के लिए उसी खाते से साइन इन करके अपने फ़ोन पर Ketvoice खोलें।",
+  "ja": "ここから操作するには、同じアカウントでサインインしたスマホで Ketvoice を開いてください。",
+  "zh": "在登录同一账户的手机上打开 Ketvoice，即可在这里控制它。",
+  "ru": "Откройте Ketvoice на телефоне с тем же аккаунтом, чтобы управлять им отсюда.",
+  "it": "Apri Ketvoice sul telefono, con lo stesso account, per controllarlo da qui.",
+  "es": "Abre Ketvoice en tu teléfono, con la misma cuenta, para controlarlo desde aquí.",
+  "de": "Öffne Ketvoice auf deinem Handy mit demselben Konto, um es von hier aus zu steuern.",
+  "pt": "Abra o Ketvoice no seu telefone, com a mesma conta, para controlá-lo daqui.",
+  "ko": "같은 계정으로 로그인한 휴대폰에서 Ketvoice를 열면 여기서 제어할 수 있습니다."
+ },
+ "Connexion à vos appareils…": {
+  "en": "Connecting to your devices…",
+  "hi": "आपके डिवाइस से कनेक्ट हो रहा है…",
+  "ja": "デバイスに接続しています…",
+  "zh": "正在连接你的设备…",
+  "ru": "Подключение к вашим устройствам…",
+  "it": "Connessione ai tuoi dispositivi…",
+  "es": "Conectando con tus dispositivos…",
+  "de": "Verbindung mit deinen Geräten…",
+  "pt": "Conectando aos seus dispositivos…",
+  "ko": "기기에 연결하는 중…"
  }
 }
