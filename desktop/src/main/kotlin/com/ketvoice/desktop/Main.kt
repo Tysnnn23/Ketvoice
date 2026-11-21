@@ -103,6 +103,15 @@ fun main(args: Array<String>) {
         SingleInstance.Result.Forwarded -> { AppLog.i("instance", "handed to the running Ketvoice"); exitProcess(0) }
         SingleInstance.Result.Unreachable -> { AppLog.w("instance", "the running Ketvoice did not answer; starting alone"); null }
     }
+    // Tray, media keys and the Windows media controls drive the player.
+    DesktopPlatform.bridge = object : com.ketvoice.desktop.platform.PlatformBridge {
+        override fun toggle() = com.ketvoice.app.player.Player.toggle()
+        override fun play() = com.ketvoice.app.player.Player.play()
+        override fun pause() = com.ketvoice.app.player.Player.pause()
+        override fun next() = com.ketvoice.app.player.Player.next()
+        override fun previous() = com.ketvoice.app.player.Player.previous()
+        override fun seekTo(ms: Long) = com.ketvoice.app.player.Player.seekTo(ms)
+    }
     DesktopPlatform.open(InstanceMessage.openable(argList))
     DesktopPrefs.autostart.refresh()
     val autostarted = Autostart.FLAG in argList
