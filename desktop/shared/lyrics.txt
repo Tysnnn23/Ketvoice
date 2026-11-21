@@ -8,3 +8,5 @@ data/LyricsSearch.kt
 data/ExtraLyricsProviders.kt
 data/CustomLyrics.kt
 data/LocalLyrics.kt
+data/LyricsTranslation.kt
+data/TranslationLanguages.kt
