@@ -74,7 +74,7 @@ internal fun TabletPlayer(
     onTrackMenu: () -> Unit, onSources: () -> Unit, onOutput: () -> Unit,
     onCanvas: (() -> Unit)? = null
 ) {
-    val backdrop = rememberGlassBackdrop(Color.Black)
+    val backdrop = rememberGlassBackdrop(Color.Black, moving = true)
     val lyrics by LyricsRepo.state.collectAsState()
     // Lyrics show unless the listener hides them; with none found they make room, unless asked for (to pick a source).
     var lyricsHidden by rememberSaveable { mutableStateOf(false) }

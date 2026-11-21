@@ -51,7 +51,7 @@ internal fun QuestLandscapePlayer(
     onTrackMenu: () -> Unit, onSources: () -> Unit, onOutput: () -> Unit,
     onCanvas: (() -> Unit)? = null
 ) {
-    val backdrop = rememberGlassBackdrop(Color.Black)
+    val backdrop = rememberGlassBackdrop(Color.Black, moving = true)
     val companion = page != PlayerPage.ARTWORK
     val duration = Motion.duration(280)
     CompositionLocalProvider(LocalBackdropLayer provides backdrop) {

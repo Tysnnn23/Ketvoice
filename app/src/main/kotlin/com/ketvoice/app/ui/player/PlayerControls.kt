@@ -289,6 +289,8 @@ internal fun CanvasVideo(path: String, playing: Boolean, cover: String?, modifie
     val visible = rememberStarted()
     val decoder = CanvasSlots.plays(token, com.ketvoice.app.LiteTuning.canvasAtOnce()) &&
         (visible || !com.ketvoice.app.LiteTuning.canvasReleasedWhenHidden())
+    // 8.3: a menu opened while a Canvas plays keeps the live glass over it.
+    com.ketvoice.app.glass.CanvasMotion(decoder && playing)
     if (decoder) CanvasVideoPlayer(path, playing, visible, modifier, resizeMode, onFailure, onAspect)
     else if (cover != null) AsyncImage(cover, null, modifier, contentScale = ContentScale.Crop)
 }

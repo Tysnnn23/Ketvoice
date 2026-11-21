@@ -67,6 +67,8 @@ internal fun KetMenu(expanded: Boolean, onDismiss: () -> Unit, sections: List<Li
     }
     androidx.compose.ui.window.Popup(popupPositionProvider = position, onDismissRequest = onDismiss,
         properties = androidx.compose.ui.window.PopupProperties(focusable = true)) {
+        // 8.3: glass over a still copy of the page taken as it opens, so the blur does not swim while it grows.
+        com.ketvoice.app.glass.FrozenBackdrop {
         val shape = RoundedCornerShape(16.dp)
         com.ketvoice.app.glass.GlassPanel(modifier.growContainer(grow, 16.dp).testTag("ket-menu"), shape,
             com.ketvoice.app.glass.GlassParams.sheet(with(density) { 16.dp.toPx() }, dark = theme.isDark)) {
@@ -99,6 +101,7 @@ internal fun KetMenu(expanded: Boolean, onDismiss: () -> Unit, sections: List<Li
                     }
                 }
             }
+        }
         }
     }
 }

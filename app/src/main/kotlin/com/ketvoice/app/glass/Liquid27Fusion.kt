@@ -86,6 +86,8 @@ class GlassFusion internal constructor() {
     internal var active by mutableStateOf(false)
     /** A device that rejected the fused shader once keeps its separate panels. */
     internal var failed = false
+    /** 8.3: where the fused body is also recorded, for a lens above it (set by the control that asks for it). */
+    internal var export by mutableStateOf<com.kyant.backdrop.backdrops.LayerBackdrop?>(null)
 
     internal fun report(key: Any, bounds: Rect, radiusPx: Float) {
         val next = FusedShape(bounds, radiusPx)
@@ -170,15 +172,19 @@ fun GlassFusionLayer(fusion: GlassFusion, dark: Boolean, modifier: Modifier = Mo
     var origin by remember { mutableStateOf(Offset.Zero) }
     val params = remember(dark) { GlassParams.navigation(dark = dark) }
     val spec = currentRefractionSpec(mode)
+    // 8.3: the fused body, the largest glass of the app, blurs what is behind at a fraction of its size (GlassResolution).
+    val reduced = rememberReducedBackdrop(backdrop, FusedBlur, PerformanceMode)
     Box(modifier.onGloballyPositioned { origin = it.positionInRoot() }.drawBackdrop(
-        backdrop = backdrop,
+        backdrop = reduced,
         shape = { RectangleShape },
+        exportedBackdrop = fusion.export,
         effects = {
             // The same transparency as every other glass surface (GlassClarity), read here in the draw phase.
             val level = GlassClarity.position
             val frost = GlassClarity.frost(level)
             val clarity = GlassClarity.clarity(level)
-            blur(liquid27BlurPx(frost, GlassRole.Control))
+            val radius = liquid27BlurPx(frost, GlassRole.Control)
+            if (reduced.blursItself(radius)) blur(radius)
             val shapes = fusedShapesFor(fusion.shapes.values, origin)
             // A failed pass must not leave an unshaded blurred rectangle: fall back to panels.
             if (shapes.isNotEmpty() && !liquid27Fused(params, shapes, fusion.strengthOf?.invoke() ?: fusion.strengthPx, frost, liquid27Light(0f, 0f, 0f), clarity, spec)) {
@@ -191,6 +197,9 @@ fun GlassFusionLayer(fusion: GlassFusion, dark: Boolean, modifier: Modifier = Mo
         innerShadow = { null }
     ))
 }
+
+/** The blur under the fused body, read while drawing (the transparency slider moves it). */
+private val FusedBlur: () -> Float = { liquid27BlurPx(GlassClarity.frost(GlassClarity.position), GlassRole.Control) }
 
 /** Exposed for [GlassFusionLayer] and the chrome: the mode a control would render in right now. */
 @Composable

@@ -144,8 +144,8 @@ fun FullPlayerScreen(
     // The next title's colours are read ahead, so a change of title glides at once instead of after its cover loads.
     val nextCover = state.queue.getOrNull(state.index + 1)?.let { ArtworkRepo.coverForTrack(it) }
     LaunchedEffect(nextCover) { PlayerColors.warm(context, nextCover) }
-    val backdrop = rememberGlassBackdrop(Color.Black)
-    val controlsBackdrop = rememberGlassBackdrop(Color.Black)
+    val backdrop = rememberGlassBackdrop(Color.Black, moving = true)
+    val controlsBackdrop = rememberGlassBackdrop(Color.Black, moving = true)
     val adaptivePlayer = LocalAdaptiveLayout.current.adaptivePlayer
     fun navigate(next: PlayerPage) {
         if (next != PlayerPage.ARTWORK) paneShown = next
