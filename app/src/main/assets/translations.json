@@ -2580,7 +2580,17 @@
   "Le fichier SHA256SUMS.txt ne contient pas l'installateur.": "SHA256SUMS.txt does not list the installer.",
   "Les empreintes de l'installateur ne concordent pas.": "The installer's checksums do not match.",
   "L'installateur téléchargé est altéré (SHA-256 différent).": "The downloaded installer is damaged (SHA-256 mismatch).",
-  "La mise à jour a échoué.": "The update failed."
+  "La mise à jour a échoué.": "The update failed.",
+  "Mode économie auto": "Auto power saving",
+  "Batterie à 20 % ou moins hors charge, ou appareil très chaud : le mode performance s'active le temps qu'il faut": "Battery at 20% or less and not charging, or a very hot device: performance mode turns on for as long as needed",
+  "Mode économie activé : batterie faible": "Power saving on: low battery",
+  "Mode économie activé : appareil chaud": "Power saving on: device is hot",
+  "Mode économie terminé": "Power saving off",
+  "Diagnostic intégré": "Built-in diagnostics",
+  "Note sur cet appareil les saccades, le démarrage, le délai avant le son, les chargements et la mémoire. Rien n'est envoyé, aucune donnée personnelle": "Records stutters, startup, time to first sound, loading and memory on this device. Nothing is sent, no personal data",
+  "Partager le diagnostic": "Share diagnostics",
+  "Par le menu de partage, seulement quand vous le choisissez": "Through the share sheet, only when you choose to",
+  "Rien n'est encore enregistré": "Nothing recorded yet"
  },
  "hi": {
   "Reverb": "रीवर्ब",
@@ -5163,7 +5173,17 @@
   "Le fichier SHA256SUMS.txt ne contient pas l'installateur.": "SHA256SUMS.txt में इंस्टॉलर शामिल नहीं है।",
   "Les empreintes de l'installateur ne concordent pas.": "इंस्टॉलर के चेकसम मेल नहीं खाते।",
   "L'installateur téléchargé est altéré (SHA-256 différent).": "डाउनलोड किया गया इंस्टॉलर खराब है (SHA-256 मेल नहीं खाता)।",
-  "La mise à jour a échoué.": "अपडेट विफल रहा।"
+  "La mise à jour a échoué.": "अपडेट विफल रहा।",
+  "Mode économie auto": "स्वचालित बचत मोड",
+  "Batterie à 20 % ou moins hors charge, ou appareil très chaud : le mode performance s'active le temps qu'il faut": "चार्ज न होते समय बैटरी 20% या कम, या डिवाइस बहुत गर्म: ज़रूरत रहने तक परफ़ॉर्मेंस मोड चालू रहता है",
+  "Mode économie activé : batterie faible": "बचत मोड चालू: बैटरी कम",
+  "Mode économie activé : appareil chaud": "बचत मोड चालू: डिवाइस गर्म है",
+  "Mode économie terminé": "बचत मोड बंद",
+  "Diagnostic intégré": "बिल्ट-इन डायग्नॉस्टिक",
+  "Note sur cet appareil les saccades, le démarrage, le délai avant le son, les chargements et la mémoire. Rien n'est envoyé, aucune donnée personnelle": "इस डिवाइस पर अटकन, स्टार्टअप, पहली आवाज़ तक का समय, लोडिंग और मेमोरी दर्ज करता है। कुछ भी भेजा नहीं जाता, कोई निजी डेटा नहीं",
+  "Partager le diagnostic": "डायग्नॉस्टिक शेयर करें",
+  "Par le menu de partage, seulement quand vous le choisissez": "शेयर मेनू से, सिर्फ़ जब आप चुनें",
+  "Rien n'est encore enregistré": "अभी तक कुछ दर्ज नहीं हुआ"
  },
  "ja": {
   "Reverb": "リバーブ",
@@ -7746,7 +7766,17 @@
   "Le fichier SHA256SUMS.txt ne contient pas l'installateur.": "SHA256SUMS.txt にインストーラーが記載されていません。",
   "Les empreintes de l'installateur ne concordent pas.": "インストーラーのチェックサムが一致しません。",
   "L'installateur téléchargé est altéré (SHA-256 différent).": "ダウンロードしたインストーラーが破損しています（SHA-256 不一致）。",
-  "La mise à jour a échoué.": "アップデートに失敗しました。"
+  "La mise à jour a échoué.": "アップデートに失敗しました。",
+  "Mode économie auto": "自動省電力モード",
+  "Batterie à 20 % ou moins hors charge, ou appareil très chaud : le mode performance s'active le temps qu'il faut": "充電していない状態でバッテリーが20%以下、またはデバイスが非常に熱いとき、必要な間だけパフォーマンスモードがオンになります",
+  "Mode économie activé : batterie faible": "省電力モード オン：バッテリー残量低下",
+  "Mode économie activé : appareil chaud": "省電力モード オン：デバイスの高温",
+  "Mode économie terminé": "省電力モード終了",
+  "Diagnostic intégré": "内蔵診断",
+  "Note sur cet appareil les saccades, le démarrage, le délai avant le son, les chargements et la mémoire. Rien n'est envoyé, aucune donnée personnelle": "カクつき、起動、最初の音までの時間、読み込み、メモリをこのデバイスに記録します。何も送信されず、個人データも含みません",
+  "Partager le diagnostic": "診断を共有",
+  "Par le menu de partage, seulement quand vous le choisissez": "共有メニューから、選んだときだけ",
+  "Rien n'est encore enregistré": "まだ何も記録されていません"
  },
  "zh": {
   "Reverb": "混响",
@@ -10329,7 +10359,17 @@
   "Le fichier SHA256SUMS.txt ne contient pas l'installateur.": "SHA256SUMS.txt 中没有列出安装程序。",
   "Les empreintes de l'installateur ne concordent pas.": "安装程序的校验值不一致。",
   "L'installateur téléchargé est altéré (SHA-256 différent).": "下载的安装程序已损坏（SHA-256 不一致）。",
-  "La mise à jour a échoué.": "更新失败。"
+  "La mise à jour a échoué.": "更新失败。",
+  "Mode économie auto": "自动省电模式",
+  "Batterie à 20 % ou moins hors charge, ou appareil très chaud : le mode performance s'active le temps qu'il faut": "未充电且电量不高于 20%，或设备过热时，性能模式会在需要期间自动开启",
+  "Mode économie activé : batterie faible": "已开启省电模式：电量低",
+  "Mode économie activé : appareil chaud": "已开启省电模式：设备过热",
+  "Mode économie terminé": "省电模式已结束",
+  "Diagnostic intégré": "内置诊断",
+  "Note sur cet appareil les saccades, le démarrage, le délai avant le son, les chargements et la mémoire. Rien n'est envoyé, aucune donnée personnelle": "在本设备上记录卡顿、启动、首次出声时间、加载和内存。不会发送任何内容，不含个人数据",
+  "Partager le diagnostic": "分享诊断",
+  "Par le menu de partage, seulement quand vous le choisissez": "通过分享菜单，仅在你选择时",
+  "Rien n'est encore enregistré": "尚未记录任何内容"
  },
  "ru": {
   "Reverb": "Реверберация",
@@ -12912,7 +12952,17 @@
   "Le fichier SHA256SUMS.txt ne contient pas l'installateur.": "В SHA256SUMS.txt нет установщика.",
   "Les empreintes de l'installateur ne concordent pas.": "Контрольные суммы установщика не совпадают.",
   "L'installateur téléchargé est altéré (SHA-256 différent).": "Загруженный установщик повреждён (SHA-256 не совпадает).",
-  "La mise à jour a échoué.": "Не удалось обновить."
+  "La mise à jour a échoué.": "Не удалось обновить.",
+  "Mode économie auto": "Автоэкономия",
+  "Batterie à 20 % ou moins hors charge, ou appareil très chaud : le mode performance s'active le temps qu'il faut": "Заряд 20 % или меньше без зарядки или сильный нагрев устройства: режим производительности включается на нужное время",
+  "Mode économie activé : batterie faible": "Экономия включена: низкий заряд",
+  "Mode économie activé : appareil chaud": "Экономия включена: устройство нагрелось",
+  "Mode économie terminé": "Экономия выключена",
+  "Diagnostic intégré": "Встроенная диагностика",
+  "Note sur cet appareil les saccades, le démarrage, le délai avant le son, les chargements et la mémoire. Rien n'est envoyé, aucune donnée personnelle": "Записывает на этом устройстве рывки, запуск, задержку до звука, загрузку и память. Ничего не отправляется, никаких личных данных",
+  "Partager le diagnostic": "Поделиться диагностикой",
+  "Par le menu de partage, seulement quand vous le choisissez": "Через меню «Поделиться», только когда вы решите",
+  "Rien n'est encore enregistré": "Пока ничего не записано"
  },
  "it": {
   "Reverb": "Riverbero",
@@ -15495,7 +15545,17 @@
   "Le fichier SHA256SUMS.txt ne contient pas l'installateur.": "SHA256SUMS.txt non elenca il programma di installazione.",
   "Les empreintes de l'installateur ne concordent pas.": "I checksum del programma di installazione non corrispondono.",
   "L'installateur téléchargé est altéré (SHA-256 différent).": "Il programma di installazione scaricato è danneggiato (SHA-256 diverso).",
-  "La mise à jour a échoué.": "Aggiornamento non riuscito."
+  "La mise à jour a échoué.": "Aggiornamento non riuscito.",
+  "Mode économie auto": "Risparmio automatico",
+  "Batterie à 20 % ou moins hors charge, ou appareil très chaud : le mode performance s'active le temps qu'il faut": "Batteria al 20% o meno senza ricarica, o dispositivo molto caldo: la modalità prestazioni si attiva per il tempo necessario",
+  "Mode économie activé : batterie faible": "Risparmio attivo: batteria scarica",
+  "Mode économie activé : appareil chaud": "Risparmio attivo: dispositivo caldo",
+  "Mode économie terminé": "Risparmio terminato",
+  "Diagnostic intégré": "Diagnostica integrata",
+  "Note sur cet appareil les saccades, le démarrage, le délai avant le son, les chargements et la mémoire. Rien n'est envoyé, aucune donnée personnelle": "Registra su questo dispositivo scatti, avvio, tempo prima del suono, caricamenti e memoria. Non viene inviato nulla, nessun dato personale",
+  "Partager le diagnostic": "Condividi diagnostica",
+  "Par le menu de partage, seulement quand vous le choisissez": "Dal menu di condivisione, solo quando lo scegli",
+  "Rien n'est encore enregistré": "Ancora nessuna registrazione"
  },
  "es": {
   "Reverb": "Reverb",
@@ -18078,7 +18138,17 @@
   "Le fichier SHA256SUMS.txt ne contient pas l'installateur.": "SHA256SUMS.txt no incluye el instalador.",
   "Les empreintes de l'installateur ne concordent pas.": "Las sumas de comprobación del instalador no coinciden.",
   "L'installateur téléchargé est altéré (SHA-256 différent).": "El instalador descargado está dañado (SHA-256 distinto).",
-  "La mise à jour a échoué.": "La actualización ha fallado."
+  "La mise à jour a échoué.": "La actualización ha fallado.",
+  "Mode économie auto": "Ahorro automático",
+  "Batterie à 20 % ou moins hors charge, ou appareil très chaud : le mode performance s'active le temps qu'il faut": "Batería al 20 % o menos sin cargar, o dispositivo muy caliente: el modo rendimiento se activa el tiempo necesario",
+  "Mode économie activé : batterie faible": "Ahorro activado: batería baja",
+  "Mode économie activé : appareil chaud": "Ahorro activado: dispositivo caliente",
+  "Mode économie terminé": "Ahorro desactivado",
+  "Diagnostic intégré": "Diagnóstico integrado",
+  "Note sur cet appareil les saccades, le démarrage, le délai avant le son, les chargements et la mémoire. Rien n'est envoyé, aucune donnée personnelle": "Registra en este dispositivo tirones, inicio, tiempo hasta el sonido, cargas y memoria. No se envía nada, sin datos personales",
+  "Partager le diagnostic": "Compartir diagnóstico",
+  "Par le menu de partage, seulement quand vous le choisissez": "Desde el menú de compartir, solo cuando tú lo eliges",
+  "Rien n'est encore enregistré": "Aún no hay nada registrado"
  },
  "de": {
   "Reverb": "Reverb",
@@ -20661,7 +20731,17 @@
   "Le fichier SHA256SUMS.txt ne contient pas l'installateur.": "SHA256SUMS.txt enthält das Installationsprogramm nicht.",
   "Les empreintes de l'installateur ne concordent pas.": "Die Prüfsummen des Installationsprogramms stimmen nicht überein.",
   "L'installateur téléchargé est altéré (SHA-256 différent).": "Das heruntergeladene Installationsprogramm ist beschädigt (SHA-256 abweichend).",
-  "La mise à jour a échoué.": "Das Update ist fehlgeschlagen."
+  "La mise à jour a échoué.": "Das Update ist fehlgeschlagen.",
+  "Mode économie auto": "Automatisches Energiesparen",
+  "Batterie à 20 % ou moins hors charge, ou appareil très chaud : le mode performance s'active le temps qu'il faut": "Akku bei 20 % oder weniger ohne Laden oder ein sehr heißes Gerät: Der Leistungsmodus schaltet sich so lange wie nötig ein",
+  "Mode économie activé : batterie faible": "Energiesparen an: Akku schwach",
+  "Mode économie activé : appareil chaud": "Energiesparen an: Gerät ist heiß",
+  "Mode économie terminé": "Energiesparen beendet",
+  "Diagnostic intégré": "Integrierte Diagnose",
+  "Note sur cet appareil les saccades, le démarrage, le délai avant le son, les chargements et la mémoire. Rien n'est envoyé, aucune donnée personnelle": "Zeichnet auf diesem Gerät Ruckler, Start, Zeit bis zum ersten Ton, Ladezeiten und Speicher auf. Nichts wird gesendet, keine persönlichen Daten",
+  "Partager le diagnostic": "Diagnose teilen",
+  "Par le menu de partage, seulement quand vous le choisissez": "Über das Teilen-Menü, nur wenn du es wählst",
+  "Rien n'est encore enregistré": "Noch nichts aufgezeichnet"
  },
  "pt": {
   "Reverb": "Reverb",
@@ -23244,7 +23324,17 @@
   "Le fichier SHA256SUMS.txt ne contient pas l'installateur.": "O SHA256SUMS.txt não lista o instalador.",
   "Les empreintes de l'installateur ne concordent pas.": "As somas de verificação do instalador não coincidem.",
   "L'installateur téléchargé est altéré (SHA-256 différent).": "O instalador baixado está danificado (SHA-256 diferente).",
-  "La mise à jour a échoué.": "A atualização falhou."
+  "La mise à jour a échoué.": "A atualização falhou.",
+  "Mode économie auto": "Economia automática",
+  "Batterie à 20 % ou moins hors charge, ou appareil très chaud : le mode performance s'active le temps qu'il faut": "Bateria em 20% ou menos sem carregar, ou aparelho muito quente: o modo desempenho liga pelo tempo necessário",
+  "Mode économie activé : batterie faible": "Economia ativada: bateria fraca",
+  "Mode économie activé : appareil chaud": "Economia ativada: aparelho quente",
+  "Mode économie terminé": "Economia desativada",
+  "Diagnostic intégré": "Diagnóstico integrado",
+  "Note sur cet appareil les saccades, le démarrage, le délai avant le son, les chargements et la mémoire. Rien n'est envoyé, aucune donnée personnelle": "Registra neste aparelho travamentos, inicialização, tempo até o som, carregamentos e memória. Nada é enviado, sem dados pessoais",
+  "Partager le diagnostic": "Compartilhar diagnóstico",
+  "Par le menu de partage, seulement quand vous le choisissez": "Pelo menu de compartilhamento, só quando você escolher",
+  "Rien n'est encore enregistré": "Nada registrado ainda"
  },
  "ko": {
   "Reverb": "리버브",
@@ -25827,6 +25917,16 @@
   "Le fichier SHA256SUMS.txt ne contient pas l'installateur.": "SHA256SUMS.txt에 설치 프로그램이 없습니다.",
   "Les empreintes de l'installateur ne concordent pas.": "설치 프로그램의 체크섬이 일치하지 않습니다.",
   "L'installateur téléchargé est altéré (SHA-256 différent).": "다운로드한 설치 프로그램이 손상되었습니다(SHA-256 불일치).",
-  "La mise à jour a échoué.": "업데이트에 실패했습니다."
+  "La mise à jour a échoué.": "업데이트에 실패했습니다.",
+  "Mode économie auto": "자동 절전 모드",
+  "Batterie à 20 % ou moins hors charge, ou appareil très chaud : le mode performance s'active le temps qu'il faut": "충전 중이 아닐 때 배터리 20% 이하 또는 기기가 매우 뜨거우면 필요한 동안 성능 모드가 켜집니다",
+  "Mode économie activé : batterie faible": "절전 모드 켜짐: 배터리 부족",
+  "Mode économie activé : appareil chaud": "절전 모드 켜짐: 기기 과열",
+  "Mode économie terminé": "절전 모드 종료",
+  "Diagnostic intégré": "내장 진단",
+  "Note sur cet appareil les saccades, le démarrage, le délai avant le son, les chargements et la mémoire. Rien n'est envoyé, aucune donnée personnelle": "이 기기에 끊김, 시작, 첫 소리까지의 시간, 로딩, 메모리를 기록합니다. 아무것도 전송되지 않으며 개인 정보는 없습니다",
+  "Partager le diagnostic": "진단 공유",
+  "Par le menu de partage, seulement quand vous le choisissez": "공유 메뉴를 통해, 원할 때만",
+  "Rien n'est encore enregistré": "아직 기록된 내용이 없습니다"
  }
 }
