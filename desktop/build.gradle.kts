@@ -43,6 +43,7 @@ dependencies {
     testImplementation(kotlin("test-junit"))
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
+    testImplementation(compose.desktop.uiTestJUnit4) // runComposeUiTest, headless
 }
 
 // Shared sources stay in the Android app and are compiled here in place. Each
@@ -86,7 +87,9 @@ kotlin {
 val smtcDll = file(providers.gradleProperty("smtcDll").orNull ?: "../native/smtc/build/Release/ketvoice_smtc.dll")
 val requireSmtc = providers.gradleProperty("requireSmtc").orNull == "true"
 tasks.processResources {
-    from("../app/src/main/assets") { include("provider_registry.json", "translations.json"); into("assets") }
+    from("../app/src/main/assets") { include("provider_registry.json", "translations.json", "visual-refresh-translations.json"); into("assets") }
+    // Ket 27's typeface (Inter, SIL OFL), read by the desktop theme.
+    from("../app/src/main/res/font") { include("inter_variable.ttf"); into("font") }
     from("../docs/licenses") { include("FFmpeg-*.txt", "ONNXRuntime-*.txt", "JNA-*.txt", "ICU4J-*.txt"); into("licenses") }
     from("icons") { include("ketvoice.png"); into("icons") }
     from(smtcDll) { into("native") }
