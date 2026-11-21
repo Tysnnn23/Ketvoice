@@ -43,6 +43,7 @@ dependencies {
     testImplementation(kotlin("test-junit"))
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
+    testImplementation(compose.desktop.uiTestJUnit4) // runComposeUiTest, headless
 }
 
 // Shared sources stay in the Android app and are compiled here in place. Each
@@ -82,7 +83,9 @@ kotlin {
 
 // The app's assets the shared code opens through Context.assets.
 tasks.processResources {
-    from("../app/src/main/assets") { include("provider_registry.json", "translations.json"); into("assets") }
+    from("../app/src/main/assets") { include("provider_registry.json", "translations.json", "visual-refresh-translations.json"); into("assets") }
+    // Ket 27's typeface (Inter, SIL OFL), read by the desktop theme.
+    from("../app/src/main/res/font") { include("inter_variable.ttf"); into("font") }
 }
 
 tasks.test {
