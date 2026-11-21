@@ -49,6 +49,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -94,6 +95,23 @@ fun FullPlayerScreen(
         return
     }
     var page by remember { mutableStateOf(if (AppUi.showLyrics.value) PlayerPage.LYRICS else initialPage) }
+    // 8.0: the morph between the artwork and the small header (see PlayerMorph): a spring that a new page, or a
+    // drag, takes over from wherever it is.
+    val morph = remember { Animatable(if (page != PlayerPage.ARTWORK) 1f else 0f) }
+    val morphProgress: () -> Float = remember { { PlayerMorph.pinned.value ?: morph.value } }
+    val morphScope = rememberCoroutineScope()
+    var morphDragging by remember { mutableStateOf(false) }
+    var morphVelocity by remember { mutableFloatStateOf(0f) }
+    // The pane that rises into the header layout: kept while the artwork grows back, so it can leave.
+    var paneShown by remember { mutableStateOf(if (page == PlayerPage.QUEUE) PlayerPage.QUEUE else PlayerPage.LYRICS) }
+    LaunchedEffect(page, morphDragging) {
+        if (morphDragging) return@LaunchedEffect
+        val target = if (page == PlayerPage.ARTWORK) 0f else 1f
+        val velocity = morphVelocity
+        morphVelocity = 0f
+        // Reduced motion: no travel, a short fade through (PlayerMorph.shape / fade).
+        if (Motion.reduced) morph.animateTo(target, tween(220)) else morph.animateTo(target, PlayerMorph.spring(), velocity)
+    }
     var expanded by remember { mutableStateOf(false) }
     var sheet by remember { mutableStateOf("") }
     var interaction by remember { mutableLongStateOf(0L) }
@@ -129,6 +147,7 @@ fun FullPlayerScreen(
     val controlsBackdrop = rememberGlassBackdrop(Color.Black)
     val adaptivePlayer = LocalAdaptiveLayout.current.adaptivePlayer
     fun navigate(next: PlayerPage) {
+        if (next != PlayerPage.ARTWORK) paneShown = next
         page = next
         expanded = false
         canvasFocus = false
@@ -368,63 +387,116 @@ fun FullPlayerScreen(
                     if (!AppSettings.sonicCanvas.value) LyricsMesh(page == PlayerPage.LYRICS, cover, ambience, state.isPlaying)
                 }
 
-                AnimatedContent(page, transitionSpec = {
-                    (fadeIn(tween(Motion.duration())) + slideInVertically(tween(Motion.duration())) { it / 35 })
-                        .togetherWith(fadeOut(tween(Motion.duration())))
-                }, label = "player-page", modifier = Modifier.fillMaxSize()) { shownPage ->
-                Box(Modifier.fillMaxSize()) {
-                if (shownPage == PlayerPage.ARTWORK) {
-                    val inlineCanvas = canvasPath != null && AppSettings.animatedArtwork.value && !panoramicCanvasActive(canvasPath)
-                    val titleTop = if (wide) safeHeight - 66.dp else tabletop?.let { it.sceneHeightDp.dp - 66.dp }
-                        ?: minOf(safeHeight * .514f, contentBottom - 61.dp)
-                    val artworkHeight = if (wide) safeHeight else tabletop?.sceneHeightDp?.dp ?: (safeHeight * .55f)
-                    // Swipe the artwork sideways to change track; a vertical drag still closes the player.
-                    val trackSwipe = rememberTrackSwipe()
-                    // The breathing artwork (7.3): a gentle step back on pause, a spring forward on play.
-                    val pauseShrink = rememberArtworkBreath(state.playWhenReady)
-                    // The living artwork: a pulse with the bass, read in the layer so that it never recomposes the page.
-                    val living = AppSettings.livingArtwork.value && !Motion.reduced && !AppSettings.highPerformanceMode.value && state.isPlaying
-                    val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
-                    DisposableEffect(lifecycle, living) {
-                        fun update() = com.ketvoice.app.player.SonicMeter.observe("living-artwork",
-                            living && lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED))
-                        val observer = androidx.lifecycle.LifecycleEventObserver { _, _ -> update() }
-                        lifecycle.addObserver(observer); update()
-                        onDispose { lifecycle.removeObserver(observer); com.ketvoice.app.player.SonicMeter.observe("living-artwork", false) }
+                // ---- 8.0: the player that morphs ----
+                // One progress (0 artwork, 1 header) moves the artwork into the header beside the title, the title
+                // beside it and the lyrics or queue into the freed space; read in layout and draw only.
+                val reduced = Motion.reduced
+                val inlineCanvas = canvasPath != null && AppSettings.animatedArtwork.value && !panoramicCanvasActive(canvasPath)
+                val titleTop = if (wide) safeHeight - 66.dp else tabletop?.let { it.sceneHeightDp.dp - 66.dp }
+                    ?: minOf(safeHeight * .514f, contentBottom - 61.dp)
+                val artworkHeight = if (wide) safeHeight else tabletop?.sceneHeightDp?.dp ?: (safeHeight * .55f)
+                val headerPad = if (wide) 18.dp else margin
+                val density = LocalDensity.current
+                val fitTop = topInset + 52.dp
+                val fitBottom = titleTop - 8.dp
+                val squarePx = with(density) { PlayerMorph.square(sceneWidth.toPx(), fitTop.toPx(), fitBottom.toPx(), 12.dp.toPx()) }
+                val slotPx = with(density) {
+                    androidx.compose.ui.geometry.Rect(headerPad.toPx(), (headerTop + (headerHeight - PlayerMorph.SLOT_DP.dp) / 2).toPx(),
+                        (headerPad + PlayerMorph.SLOT_DP.dp).toPx(), (headerTop + (headerHeight + PlayerMorph.SLOT_DP.dp) / 2).toPx())
+                }
+                val slotRadiusPx = with(density) { PlayerMorph.SLOT_RADIUS_DP.dp.toPx() }
+                val riseDistancePx = with(density) { (titleTop - headerTop).toPx().coerceAtLeast(1f) }
+                // Composition only learns when the artwork starts leaving and when it has settled in the header.
+                val leaving by remember { derivedStateOf { morphProgress() > .001f } }
+                val settled by remember { derivedStateOf { page != PlayerPage.ARTWORK && morphProgress() >= .999f } }
+                // A drag up on the artwork pulls the lyrics in; a drag down still closes the player.
+                val artworkDrag = Modifier.playerDismissDrag(dismissOffset = dismissOffset, maxPx = screenH,
+                    onSettle = { settleDismiss() }, onDismiss = { completeDismiss() },
+                    rise = if (page != PlayerPage.ARTWORK || adaptivePlayer) null else MorphDrag(
+                        onDrag = { delta ->
+                            morphDragging = true
+                            morphScope.launch { morph.snapTo(PlayerMorph.clamp(morph.value + delta / riseDistancePx)) }
+                        },
+                        onEnd = { velocityPx ->
+                            val velocity = velocityPx / riseDistancePx
+                            morphVelocity = velocity
+                            if (PlayerMorph.commits(morph.value, velocity)) navigate(PlayerPage.LYRICS)
+                            morphDragging = false
+                        }))
+                // Swipe the artwork sideways to change track; a vertical drag still closes the player.
+                val trackSwipe = rememberTrackSwipe()
+                // The breathing artwork (7.3): a gentle step back on pause, a spring forward on play.
+                val pauseShrink = rememberArtworkBreath(state.playWhenReady)
+                // The living artwork: a pulse with the bass, read in the layer so that it never recomposes the page.
+                val living = AppSettings.livingArtwork.value && !Motion.reduced && !AppSettings.highPerformanceMode.value && state.isPlaying && !leaving
+                val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
+                DisposableEffect(lifecycle, living) {
+                    fun update() = com.ketvoice.app.player.SonicMeter.observe("living-artwork",
+                        living && lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED))
+                    val observer = androidx.lifecycle.LifecycleEventObserver { _, _ -> update() }
+                    lifecycle.addObserver(observer); update()
+                    onDispose { lifecycle.removeObserver(observer); com.ketvoice.app.player.SonicMeter.observe("living-artwork", false) }
+                }
+                val sonic = com.ketvoice.app.player.SonicMeter.levels.collectAsState()
+                val beat = remember { androidx.compose.animation.core.Animatable(0f) }
+                LaunchedEffect(living) {
+                    if (!living) { beat.animateTo(0f, tween(Motion.duration(240))); return@LaunchedEffect }
+                    androidx.compose.runtime.snapshotFlow { sonic.value.low }.collect { low ->
+                        beat.animateTo(LivingArtwork.target(low), tween(LivingArtwork.FOLLOW_MS))
                     }
-                    val sonic = com.ketvoice.app.player.SonicMeter.levels.collectAsState()
-                    val beat = remember { androidx.compose.animation.core.Animatable(0f) }
-                    LaunchedEffect(living) {
-                        if (!living) { beat.animateTo(0f, tween(Motion.duration(240))); return@LaunchedEffect }
-                        androidx.compose.runtime.snapshotFlow { sonic.value.low }.collect { low ->
-                            beat.animateTo(LivingArtwork.target(low), tween(LivingArtwork.FOLLOW_MS))
+                }
+                val artworkTap = when {
+                    page != PlayerPage.ARTWORK -> Modifier.clickable(interactionSource = artInteraction, indication = null,
+                        onClickLabel = AppText.t("Revenir à la pochette")) { navigate(PlayerPage.ARTWORK) }
+                        .semantics { contentDescription = AppText.t("Revenir à la pochette") }
+                    canvasReady -> Modifier.clickable(interactionSource = artInteraction, indication = null,
+                        onClickLabel = AppText.t("Voir le Canvas en plein écran")) { canvasFocus = true }
+                        .semantics { contentDescription = AppText.t("Voir le Canvas en plein écran") }
+                    else -> Modifier
+                }
+                Box(Modifier.width(sceneWidth).height(artworkHeight)
+                    .graphicsLayer {
+                        val raw = morphProgress()
+                        val p = PlayerMorph.shape(raw, reduced)
+                        alpha = PlayerMorph.fade(raw, reduced)
+                        if (p > 0f) {
+                            val art = PlayerMorph.artwork(size, squarePx, slotPx, slotRadiusPx, p)
+                            transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0f)
+                            scaleX = art.scale; scaleY = art.scale
+                            translationX = art.translationX; translationY = art.translationY
+                            shape = PlayerMorph.ClipShape(art.clip, art.radius)
+                            clip = true
+                        } else {
+                            scaleX = 1f; scaleY = 1f; translationX = 0f; translationY = 0f
+                            clip = false
                         }
                     }
-                    PlayerArtworkFrame(inlineCanvas && artworkFrame == null, ambience.color,
-                        Modifier.width(sceneWidth).height(artworkHeight)
+                    .then(artworkDrag).trackSwipe(trackSwipe, threshold = 84.dp).then(artworkTap)) {
+                    if (!settled) PlayerArtworkFrame(inlineCanvas && artworkFrame == null, ambience.color,
+                        Modifier.fillMaxSize()
                         // Shared element: the artwork grows out of the mini-player cover on the
                         // reveal timeline, and returns to it during a dismissal or a back gesture.
                         .graphicsLayer {
-                            val morph = sharedCoverMorph(AppUi.miniCoverBounds.value, size.width, size.height, revealProgress())
+                            val k = 1f - PlayerMorph.shape(morphProgress(), reduced)
+                            val morphFromMini = sharedCoverMorph(AppUi.miniCoverBounds.value, size.width, size.height, revealProgress())
                             // Paused, the artwork steps back with a small bounce; playing, it comes forward again.
                             val rest = pausedArtworkScale(pauseShrink.value) * (1f + beat.value)
-                            scaleX = morph.scale * rest; scaleY = morph.scale * rest
-                            translationX = morph.translationX; translationY = morph.translationY
-                            if (pauseShrink.value > .01f) {
-                                shape = androidx.compose.foundation.shape.RoundedCornerShape((28f * pauseShrink.value.coerceIn(0f, 1f)).dp)
+                            val scale = PlayerMorph.lerp(1f, morphFromMini.scale * rest, k)
+                            scaleX = scale; scaleY = scale
+                            translationX = morphFromMini.translationX * k; translationY = morphFromMini.translationY * k
+                            // Near the header, the whole cover takes over from the large artwork.
+                            alpha = 1f - PlayerMorph.ramp(PlayerMorph.shape(morphProgress(), reduced), .55f, 1f)
+                            if (pauseShrink.value > .01f && k > 0f) {
+                                shape = androidx.compose.foundation.shape.RoundedCornerShape((28f * pauseShrink.value.coerceIn(0f, 1f) * k).dp)
                                 clip = true
-                            }
-                        }
-                        .then(dismissDrag).trackSwipe(trackSwipe, threshold = 84.dp).then(if (canvasReady) Modifier.clickable(
-                            interactionSource = artInteraction,
-                            indication = null,
-                            onClickLabel = AppText.t("Voir le Canvas en plein écran")
-                        ) { canvasFocus = true }.semantics {
-                            contentDescription = AppText.t("Voir le Canvas en plein écran")
-                        } else Modifier)) {
+                            } else clip = false
+                        },
+                        solid = { PlayerMorph.shape(morphProgress(), reduced) }) {
                         Box(Modifier.fillMaxSize()) {
                             ArtworkCanvas(track, if (canvasFocus || panoramicCanvasActive(canvasPath)) null else canvasPath,
-                                state.isPlaying && !canvasFocus, Modifier.fillMaxSize().trackSwipeContent(trackSwipe), depth = true,
+                                // Performance mode: the Canvas holds its frame while it travels and in the header.
+                                state.isPlaying && !canvasFocus && !(AppSettings.highPerformanceMode.value && leaving),
+                                Modifier.fillMaxSize().trackSwipeContent(trackSwipe), depth = true,
                                 onCanvasFailure = { failedCanvas = true }, frame = artworkFrame,
                                 // 7.6: whole, below « Lecture depuis » and the buttons, above the title.
                                 fit = PaddingValues(start = 12.dp, end = 12.dp, top = topInset + 52.dp,
@@ -433,66 +505,95 @@ fun FullPlayerScreen(
                             com.ketvoice.app.ui.common.CanvasLoadingPill(track,
                                 wanted = AppSettings.animatedArtwork.value && track.id !in canvasExcluded &&
                                     !com.ketvoice.app.data.MediaOverrides.canvasUnused(track) && !com.ketvoice.app.data.MediaOverrides.canvasHiddenInPlayer(track),
-                                modifier = Modifier.align(Alignment.TopCenter).padding(top = topInset + 58.dp))
+                                modifier = Modifier.align(Alignment.TopCenter).padding(top = topInset + 58.dp)
+                                    .graphicsLayer { alpha = 1f - PlayerMorph.ramp(morphProgress(), 0f, .3f) })
                         }
                     }
-                    Text("Lecture depuis ${track.artist}", color = Color(0xFFCBCDD6), fontSize = 10.sp,
-                        fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                        textAlign = TextAlign.Center,
-                        // 7.4: a soft shade keeps it readable over a very light cover or Canvas.
-                        style = androidx.compose.ui.text.TextStyle(shadow = androidx.compose.ui.graphics.Shadow(
-                            Color.Black.copy(alpha = .45f), blurRadius = 10f)),
-                        modifier = Modifier.width(sceneWidth).padding(top = topInset + 32.dp))
-                    PlayerTitle(track, false, cover, sheetAction = { sheet = "track" },
-                        modifier = Modifier.width(sceneWidth).offset(y = titleTop).padding(horizontal = margin),
+                    // The header's cover: the whole artwork, riding the same square, fading in as it arrives.
+                    if (leaving) with(density) {
+                        Cover(track.title, cover, size = squarePx.width.toDp(), radius = 0.dp,
+                            modifier = Modifier.offset(squarePx.left.toDp(), squarePx.top.toDp())
+                                .graphicsLayer { alpha = PlayerMorph.ramp(PlayerMorph.shape(morphProgress(), reduced), .45f, .95f) })
+                    }
+                }
+                Text("Lecture depuis ${track.artist}", color = Color(0xFFCBCDD6), fontSize = 10.sp,
+                    fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    textAlign = TextAlign.Center,
+                    // 7.4: a soft shade keeps it readable over a very light cover or Canvas.
+                    style = androidx.compose.ui.text.TextStyle(shadow = androidx.compose.ui.graphics.Shadow(
+                        Color.Black.copy(alpha = .45f), blurRadius = 10f)),
+                    modifier = Modifier.width(sceneWidth).padding(top = topInset + 32.dp).graphicsLayer {
+                        val raw = morphProgress()
+                        alpha = (1f - PlayerMorph.ramp(PlayerMorph.shape(raw, reduced), 0f, .35f)) * PlayerMorph.fade(raw, reduced)
+                    })
+                // One title row: under the artwork it is the large title; in the header it sits beside the small cover.
+                PlayerTitle(track, false, cover, sheetAction = {
+                    if (expanded && page != PlayerPage.ARTWORK) {
+                        // 7.3: the share card first, with the link still one touch away.
+                        com.ketvoice.app.ui.AppUi.shareCard.value = track
+                    } else sheet = "track"
+                }, share = expanded && page != PlayerPage.ARTWORK, titleLines = if (page == PlayerPage.ARTWORK) 2 else 1,
+                    modifier = Modifier.width(sceneWidth)
+                        .layout { measurable, constraints ->
+                            val p = PlayerMorph.shape(morphProgress(), reduced)
+                            val pad = PlayerMorph.lerp(margin.toPx(), headerPad.toPx(), p).toInt()
+                            val placeable = measurable.measure(constraints.copy(minWidth = 0,
+                                maxWidth = (constraints.maxWidth - 2 * pad).coerceAtLeast(0)))
+                            val headerY = headerTop.toPx() + (headerHeight.toPx() - placeable.height) / 2f
+                            layout(constraints.maxWidth, placeable.height) {
+                                placeable.place(pad, PlayerMorph.lerp(titleTop.toPx(), headerY, p).toInt())
+                            }
+                        }
+                        .graphicsLayer { alpha = PlayerMorph.fade(morphProgress(), reduced) }
+                        .then(if (page != PlayerPage.ARTWORK) dismissDrag else Modifier),
+                    // The title and artist make room for the small cover, a little smaller, in one movement.
+                    textModifier = Modifier
+                        .layout { measurable, constraints ->
+                            val inset = (PlayerMorph.shape(morphProgress(), reduced) * PlayerMorph.TITLE_INSET_DP.dp.toPx()).toInt()
+                                .coerceAtMost(constraints.maxWidth)
+                            val placeable = measurable.measure(constraints.copy(minWidth = 0, maxWidth = constraints.maxWidth - inset))
+                            layout(constraints.maxWidth, placeable.height) { placeable.place(inset, 0) }
+                        }
+                        .graphicsLayer {
+                            val s = PlayerMorph.lerp(1f, PlayerMorph.HEADER_TITLE_SCALE, PlayerMorph.shape(morphProgress(), reduced))
+                            scaleX = s; scaleY = s
+                            transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, .5f)
+                        }
                         // Ket 27: the title and the artist travel up from the mini-player; the buttons beside them fade in.
-                        textModifier = if (travels) Modifier.travelFromMini({ MiniPlayerAnchors.title }, revealProgress, anchorStart = true) else Modifier,
-                        actionsModifier = lateRise)
-                } else {
-                    PlayerTitle(track, true, cover, sheetAction = {
-                        if (expanded) {
-                            // Partage réel : lien listen.html → chez un ami avec
-                            // l'app, la lecture démarre ; sans l'app, page web
-                            // avec téléchargement.
-                            // 7.3: the share card first, with the link still one touch away.
-                            com.ketvoice.app.ui.AppUi.shareCard.value = track
-                        } else sheet = "track"
-                    }, share = expanded, onCover = {
-                        navigate(PlayerPage.ARTWORK)
-                    },
-                        modifier = Modifier.width(sceneWidth).offset(y = headerTop).padding(horizontal = if (wide) 18.dp else margin)
-                            .height(headerHeight).then(dismissDrag))
-                }
-                }
-                }
+                        .then(if (travels) Modifier.travelFromMini({ MiniPlayerAnchors.title }, revealProgress, anchorStart = true) else Modifier),
+                    actionsModifier = lateRise)
 
                 // Dismiss gestures are limited to the handle. No fullscreen
                 // detector can consume taps, seek drags or lyric scrolling.
                 PlayerHandle(Modifier.offset(x = (sceneWidth - 120.dp) / 2).padding(top = topInset),
                     onClose = { close() }, drag = dismissDrag)
 
-                AnimatedVisibility(
-                    visible = page != PlayerPage.ARTWORK,
-                    enter = fadeIn(tween(Motion.duration())) +
-                        slideInVertically(tween(Motion.duration())) { it / 10 } +
-                        scaleIn(initialScale = if(Motion.reduced) 1f else .98f, animationSpec = tween(Motion.duration())),
-                    exit = fadeOut(tween(Motion.duration())) +
-                        slideOutVertically(tween(Motion.duration())) { it / 10 } +
-                        scaleOut(targetScale = if(Motion.reduced) 1f else .98f, animationSpec = tween(Motion.duration()))
-                ) {
+                // The lyrics or the queue rise into the space the artwork left; between them the header stays.
+                val paneVisible by remember { derivedStateOf { page != PlayerPage.ARTWORK || morphProgress() > .001f } }
+                if (paneVisible) {
                     val sceneEnd by animateDpAsState(if (expanded || wide) safeHeight - 12.dp else contentBottom,
                         tween(Motion.duration(360), easing = androidx.compose.animation.core.CubicBezierEasing(.22f, 1f, .36f, 1f)), label = "lyrics-viewport")
-                    Box(Modifier.offset(y = sceneTop).height((sceneEnd - sceneTop).coerceAtLeast(80.dp)).width(sceneWidth)) {
-                        if (page == PlayerPage.QUEUE) QueuePane(state, Modifier.fillMaxSize().padding(horizontal = if (wide) 18.dp else margin))
-                         else LyricsPane(track, expanded, onSource = { sheet = "sources" },
-                            onEmptyTap = {
-                                if (expanded) {
-                                    expanded = false
-                                    interaction = android.os.SystemClock.uptimeMillis()
-                                }
-                            },
-                            modifier = Modifier.fillMaxSize().padding(horizontal = if (wide) 18.dp else margin * .8f),
-                            fontScale = com.ketvoice.app.ui.quest.QuestLayout.lyricsScale(AppSettings.lyricsTextSize.value))
+                    Box(Modifier.offset(y = sceneTop).height((sceneEnd - sceneTop).coerceAtLeast(80.dp)).width(sceneWidth)
+                        .graphicsLayer {
+                            val raw = morphProgress()
+                            val p = PlayerMorph.shape(raw, reduced)
+                            alpha = if (reduced) p * PlayerMorph.fade(raw, true) else PlayerMorph.ramp(raw, .45f, 1f)
+                            translationY = (1f - p) * 56.dp.toPx()
+                        }) {
+                        AnimatedContent(paneShown, transitionSpec = {
+                            fadeIn(tween(Motion.duration())).togetherWith(fadeOut(tween(Motion.duration())))
+                        }, label = "player-pane", modifier = Modifier.fillMaxSize()) { pane ->
+                            if (pane == PlayerPage.QUEUE) QueuePane(state, Modifier.fillMaxSize().padding(horizontal = if (wide) 18.dp else margin))
+                            else LyricsPane(track, expanded, onSource = { sheet = "sources" },
+                                onEmptyTap = {
+                                    if (expanded) {
+                                        expanded = false
+                                        interaction = android.os.SystemClock.uptimeMillis()
+                                    }
+                                },
+                                modifier = Modifier.fillMaxSize().padding(horizontal = if (wide) 18.dp else margin * .8f),
+                                fontScale = com.ketvoice.app.ui.quest.QuestLayout.lyricsScale(AppSettings.lyricsTextSize.value))
+                        }
                     }
                 }
 
@@ -580,7 +681,8 @@ private fun PlayerHandle(modifier: Modifier, onClose: () -> Unit, drag: Modifier
 @Composable
 internal fun PlayerTitle(track: Track, compact: Boolean, cover: String?, sheetAction: () -> Unit,
                          modifier: Modifier = Modifier, share: Boolean = false, onCover: () -> Unit = {},
-                         textModifier: Modifier = Modifier, actionsModifier: Modifier = Modifier) {
+                         textModifier: Modifier = Modifier, actionsModifier: Modifier = Modifier,
+                         titleLines: Int = if (compact) 1 else 2) {
     val favorite = track.id in AppSettings.favoriteIds.value
     var favoriteTap by remember(track.id) { mutableIntStateOf(0) }
     val favoriteHaptic = com.ketvoice.app.ui.motion.rememberHaptics()
@@ -602,7 +704,7 @@ internal fun PlayerTitle(track: Track, compact: Boolean, cover: String?, sheetAc
                     Spacer(Modifier.width(5.dp))
                 }
                 TrackTitle(track.title, color = Color.White, fontSize = if (compact) 20.sp else 22.sp,
-                    selected = true, maxLines = if (compact) 1 else 2)
+                    selected = true, maxLines = titleLines)
             }
             // Nom d'artiste cliquable → ouvre la page artiste; 7.2: the Lossless mark follows it when the audio is.
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -658,20 +760,28 @@ internal fun Modifier.playerDismissDrag(
     dismissOffset: androidx.compose.animation.core.Animatable<Float, *>,
     maxPx: Float,
     onSettle: () -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    /** 8.0: when set, a drag that starts upward drives the player's morph instead (see [MorphDrag]). */
+    rise: MorphDrag? = null
 ): Modifier {
     val settle by rememberUpdatedState(onSettle)
     val dismiss by rememberUpdatedState(onDismiss)
+    val riser by rememberUpdatedState(rise)
     // snapTo/animateTo sont suspendus : les callbacks de drag passent par un scope.
     val scope = rememberCoroutineScope()
     val fling = with(LocalDensity.current) { PlayerDismiss.FLING_DP.dp.toPx() }
     return this.pointerInput(maxPx) {
         val tracker = androidx.compose.ui.input.pointer.util.VelocityTracker()
+        // The first movement decides: up (with a morph to drive) pulls the lyrics in, anything else closes.
+        var rising: MorphDrag? = null
+        var decided = false
         detectVerticalDragGestures(
-            onDragStart = { tracker.resetTracking() },
+            onDragStart = { tracker.resetTracking(); rising = null; decided = false },
             onVerticalDrag = { change, dy ->
                 tracker.addPosition(change.uptimeMillis, change.position)
                 change.consume()
+                if (!decided) { decided = true; rising = riser?.takeIf { dy < 0f && dismissOffset.value <= 0f } }
+                rising?.let { it.onDrag(-dy); return@detectVerticalDragGestures }
                 val next = dismissOffset.value + dy
                 // Résistance : au-delà de 75 % de l'écran, le doigt « appuie ».
                 val resisted = if (next < maxPx * 0.75f) next
@@ -679,6 +789,7 @@ internal fun Modifier.playerDismissDrag(
                 scope.launch { dismissOffset.snapTo(resisted.coerceIn(0f, maxPx)) }
             },
             onDragEnd = {
+                rising?.let { it.onEnd(-tracker.calculateVelocity().y); rising = null; return@detectVerticalDragGestures }
                 // Ket 27: a flick down closes the player from anywhere, a flick up keeps it; the spring leaves at the finger's speed.
                 val velocity = tracker.calculateVelocity().y
                 if (PlayerDismiss.closes(dismissOffset.value, velocity, maxPx, fling, velocityAware = true)) {
@@ -686,10 +797,13 @@ internal fun Modifier.playerDismissDrag(
                     dismiss()
                 } else settle()
             },
-            onDragCancel = { settle() }
+            onDragCancel = { rising?.let { it.onEnd(0f); rising = null } ?: settle() }
         )
     }
 }
+
+/** A drag up on the artwork, in px: [onDrag] gets each upward step, [onEnd] the release speed (px per second, up > 0). */
+internal class MorphDrag(val onDrag: (Float) -> Unit, val onEnd: (Float) -> Unit)
 
 /** The living artwork's pulse: a breath with the bass, at most two and a half percent. */
 internal object LivingArtwork {
