@@ -1,0 +1,80 @@
+{
+  "schema": 1,
+  "version": "1.0.0",
+  "platform": "windows",
+  "tag": "windows-v1.0.0",
+  "source_commit": "2a3b06f98c4074490faa37981266f5cc65e39b54",
+  "created_at": "2026-11-21T06:27:04.700279+00:00",
+  "build_origin": "publish-windows-release.yml on windows-latest builds the MSI from source_commit; it refuses to run if desktop/, app/src/main, native/ or docs/licenses changed since",
+  "tests": {
+    "desktop_suite_local_linux": {
+      "run": 476,
+      "failed": 0,
+      "skipped": 6,
+      "commit": "2a3b06f98c4074490faa37981266f5cc65e39b54"
+    },
+    "windows_ci": {
+      "workflow": "windows.yml",
+      "run_id": 44874253854,
+      "conclusion": "success",
+      "commit": "2a3b06f98c4074490faa37981266f5cc65e39b54",
+      "steps": "desktop tests, MSI packaging, silent install, Ketvoice.exe --smoke (ONNX Runtime, LGPL FFmpeg, SMTC DLL), uninstall"
+    },
+    "android_ci_shared_code": {
+      "workflow": "android.yml",
+      "run_id": 44872147917,
+      "conclusion": "success",
+      "note": "shared app sources the desktop compiles"
+    }
+  },
+  "ui_text_audit": "tools/audit_ui_texts.py --check: 0 unaccounted; all new desktop strings carry 10 translations",
+  "license_check": "checkNoGpl: no -gpl artifact in the runtime; FFmpeg is the JavaCPP LGPL v3 build; notices installed under app/resources/licenses",
+  "credential_scan": {
+    "findings": 0,
+    "scope": "desktop distributable built from source_commit (createDistributable, 203 files/archive entries, incl. the bundled Java runtime)",
+    "kind": "credential_patterns (tools/scan_release.py)",
+    "reviewed_false_positives": [
+      {
+        "file": "Ketvoice/lib/runtime/lib/modules",
+        "pattern": "AQ[A-Za-z0-9_-]{90,}",
+        "match_length": 1205,
+        "reason": "OpenJDK's java.util.LocaleISOData ISO-3166 country-code table, a run of capital letters; not a credential"
+      }
+    ]
+  },
+  "models": {
+    "ketmix-stems-onnx-v1": "published 2026-11-21 as a prerelease, not latest; assets match tools/stems/expected-onnx.sha256",
+    "beat_model": "downloaded on request from ketmix-beat-v1's pinned source with SHA-256 c462b064…aea"
+  },
+  "release_policy": {
+    "make_latest": false,
+    "reason": "the Android in-app updater and the website read the latest release (v8.0.0)"
+  },
+  "publication_override": {
+    "authorized_by_user": true,
+    "kind": "standing_authorization",
+    "user_statement": "J'autorise TOUT devient maintenant une règle.",
+    "user_statement_date": "2026-11-14",
+    "owner_request": "« Quand tu auras fini ça fait la version la première 1.0.0 Windows de Ketvoice » (2026-11-20)",
+    "recorded_in": "AGENTS.md",
+    "reason": "The owner made publishing validated versions without device testing a standing rule.",
+    "scope": "installation and use on the owner's own Windows computer"
+  },
+  "not_validated": [
+    "No person has installed or used the app on a real Windows PC; only the GitHub windows-latest runner installed it silently, ran --smoke and uninstalled it.",
+    "No sound was heard on a real Windows sound card (playback, gapless, Ketmix mixes, voice level, equalizer).",
+    "Sign-in, library sync and Discord sign-in against the live Supabase were not tried; Discord needs the loopback redirect URLs added by the owner.",
+    "Phone control between two real devices over Supabase Realtime was not tried; the phone side ships only with the next Android version.",
+    "Live catalogue search, streaming, downloads, lyrics sources, Canvas downloads and playlist imports were not tried from Windows (host tests never reach the network).",
+    "The in-app updater has never upgraded a real installation (tested with a fake release feed).",
+    "The MSI is not code-signed; Windows SmartScreen will warn about an unknown publisher.",
+    "The mini-player window, focus behaviour, file associations and Start-menu shortcut were not checked by a person.",
+    "Separation quality on real songs was not measured on Windows."
+  ],
+  "known_limitations": [
+    "Library pre-separation and streaming separation ahead of the playhead are not ported to Windows.",
+    "Ketmix bar loop and the Ketmix Studio editor are not on Windows yet.",
+    "The phone is only reachable for phone control while its app is open or playing."
+  ],
+  "canonical_banner_sha256": "ddc0e2c1270027f4b9dd92254374b79727ae9eaf8914e418b52e23c5b39b5966"
+}
