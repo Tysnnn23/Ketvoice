@@ -174,9 +174,35 @@ tasks.matching { it.name == "prepareAppResources" }.configureEach { dependsOn(li
 tasks.matching { it.name.startsWith("package") || it.name.startsWith("createDistributable") || it.name.startsWith("createRuntimeImage") }
     .configureEach { dependsOn(checkNoGpl) }
 
+// Fast start (Windows 1.1): the runtime image gets the JDK's base class-data archive, and the packaged launcher
+// keeps an archive of the app's own classes in <install root>\Data\cds (the per-user MSI's root is
+// %LOCALAPPDATA%\Ketvoice): the JVM writes it when the app quits and maps it on every later start, and rewrites it
+// by itself after an update. `run` and the tests do not use it (there is no $APPDIR there).
+val cdsArchive = "\$APPDIR/../Data/cds/ketvoice.jsa"
+tasks.withType<org.jetbrains.compose.desktop.application.tasks.AbstractJLinkTask>().configureEach {
+    // jlink's --generate-cds-archive runs the image's own java, which Compose's --strip-native-commands removes
+    // first; that switch has no DSL, so it is turned off through its (internal) property when it can be.
+    @Suppress("UNCHECKED_CAST")
+    val strip = runCatching { javaClass.getMethod("getStripNativeCommands\$compose").invoke(this) as Property<Boolean> }.getOrNull()
+    if (strip != null) { strip.set(false); freeArgs.add("--generate-cds-archive") }
+    else logger.warn("createRuntimeImage: no base class-data archive (Compose's jlink options changed)")
+}
+tasks.withType<org.jetbrains.compose.desktop.application.tasks.AbstractJPackageTask>()
+    .matching { it.name.startsWith("createDistributable") || it.name.startsWith("createReleaseDistributable") }
+    .configureEach {
+        for (option in listOf("-XX:+AutoCreateSharedArchive", "-XX:SharedArchiveFile=$cdsArchive", "-Dketvoice.cdsArchive=$cdsArchive")) {
+            freeArgs.addAll("--java-options", option)
+        }
+    }
+
 compose.desktop {
     application {
         mainClass = "com.ketvoice.desktop.MainKt"
+        // Less memory (Windows 1.1): G1 with a capped heap that it gives back to Windows when idle (periodic GC,
+        // tight free ratios). Covers are bounded by bytes (Covers.BUDGET_BYTES); separation and Ketmix analysis
+        // work in chunks, so 1.5 GB is head room, not a target.
+        jvmArgs += listOf("-XX:+UseG1GC", "-Xms64m", "-Xmx1536m", "-XX:MinHeapFreeRatio=10", "-XX:MaxHeapFreeRatio=30",
+            "-XX:G1PeriodicGCInterval=120000", "-XX:+ExplicitGCInvokesConcurrent", "-XX:+UseStringDeduplication")
         nativeDistributions {
             targetFormats(TargetFormat.Msi, TargetFormat.Exe)
             packageName = "Ketvoice"

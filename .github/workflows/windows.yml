@@ -95,6 +95,32 @@ jobs:
           if ($run.ExitCode -ne 0) { throw "Ketvoice.exe --smoke exit $($run.ExitCode)" }
           if (-not (Select-String -Path $log -Pattern "^smtc (ok|skipped)" -Quiet)) { throw "--smoke printed no SMTC line" }
 
+          # Cold start to the first frame (--startup-probe writes startup.log, then quits): without class-data
+          # sharing (as 1.0.0), then with the app archive the first normal run writes at exit. Reported, not fatal.
+          $cfg = Join-Path $exe.DirectoryName "app\Ketvoice.cfg"
+          $startupLog = "$env:LOCALAPPDATA\Ketvoice\Data\startup.log"
+          $jsa = Join-Path $exe.DirectoryName "Data\cds\ketvoice.jsa"
+          function Probe($label) {
+            Remove-Item $startupLog -ErrorAction SilentlyContinue
+            $sw = [Diagnostics.Stopwatch]::StartNew()
+            $p = Start-Process $exe.FullName -ArgumentList "--startup-probe" -PassThru
+            if (-not $p.WaitForExit(120000)) { $p.Kill(); return "| $label | timed out | |" }
+            $line = if (Test-Path $startupLog) { (Get-Content $startupLog -Raw).Trim() } else { "no startup.log (exit $($p.ExitCode))" }
+            "| $label | $($sw.ElapsedMilliseconds) ms | $line |"
+          }
+          $original = Get-Content $cfg -Raw
+          $rows = @("", "**Cold start** (process start to first frame)", "", "| Run | Process | Probe |", "|---|---|---|")
+          Set-Content $cfg ($original.TrimEnd() + "`njava-options=-Xshare:off`n") -NoNewline
+          $rows += Probe "before, no CDS (1)"
+          $rows += Probe "before, no CDS (2)"
+          Set-Content $cfg $original -NoNewline
+          Remove-Item $jsa -ErrorAction SilentlyContinue
+          $rows += Probe "first run, writes the archive"
+          $rows += Probe "after, CDS (1)"
+          $rows += Probe "after, CDS (2)"
+          $rows += "", "Archive: $(if (Test-Path $jsa) { "$([math]::Round((Get-Item $jsa).Length / 1MB)) MB" } else { 'not written' })"
+          $rows | Tee-Object -FilePath $env:GITHUB_STEP_SUMMARY -Append
+
           $u = Start-Process msiexec.exe -ArgumentList "/x `"$($msi.FullName)`" /qn /norestart" -Wait -PassThru
           if ($u.ExitCode -ne 0) { throw "msiexec uninstall exit $($u.ExitCode)" }
           if (Test-Path $exe.FullName) { throw "Ketvoice.exe still present after uninstall" }

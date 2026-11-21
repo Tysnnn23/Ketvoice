@@ -411,3 +411,24 @@ Android in-app updater skips those tags, as it skips the model tags).
   `-gpl` artifact is on the runtime classpath; `--smoke` fails unless `avutil_license()` is LGPL.
 - **Shortcuts and files**: Start menu « Ketvoice » and a desktop shortcut; « Ouvrir avec » for mp3, flac, m4a, aac,
   ogg, opus, wav and aiff. An opened file reaches the running window through the single instance (`OpenFiles`) and plays.
+
+## Start-up, rendering and memory (Windows 1.1, `winperf`)
+
+- **Class data sharing.** `createRuntimeImage` runs jlink with `--generate-cds-archive` (the JDK's base archive; Compose's
+  `--strip-native-commands` is turned off for it, see `build.gradle.kts`). The packaged launcher adds
+  `-XX:+AutoCreateSharedArchive -XX:SharedArchiveFile=$APPDIR/../Data/cds/ketvoice.jsa`: with the per-user MSI that is
+  `%LOCALAPPDATA%\Ketvoice\Data\cds`. The JVM writes the archive (about 50 MB) when the app quits and maps it on later
+  starts; after an update it notices the changed jars and writes a new one. `run` and the tests do not use it.
+- **`--startup-probe`.** A normal start that quits after the first frame and writes `Data\startup.log` (time since the
+  process started, render API, heap, CDS state). `windows.yml` times it after the install: twice with `-Xshare:off`
+  (as 1.0.0), once to write the archive, twice with it. The same line is logged at every start (`start:` in the log).
+  On the Linux build here, under Xvfb: 2.0–2.7 s to the first frame without CDS, 1.0–1.2 s with it.
+- **Rendering** (`platform/Startup.kt`). Direct3D with vsync on Windows; if it cannot start, skiko falls back to OpenGL
+  and then software, and the first-frame line says which one draws (a warning when it is not Direct3D).
+  `SKIKO_RENDER_API` still overrides it.
+- **Memory.** `Covers` is bounded by decoded bytes (160 MB, least recently used first out) instead of 400 entries, and
+  decodes at most 1280 px on the long side. Decoded covers are Skia memory outside the Java heap and are freed only when
+  the GC collects their wrappers, so the cache asks for a concurrent GC after every 64 MB it evicts. 15 s in the tray or
+  minimised, the cache is emptied and the heap shrinks. The launcher runs G1 with `-Xms64m -Xmx1536m`, tight free ratios
+  and a periodic GC every 2 min, so an idle app gives memory back to Windows. Pages are disposed when left
+  (`AnimatedContent`), which `MemoryBudgetTest` checks with the heap and resident memory after browsing.
