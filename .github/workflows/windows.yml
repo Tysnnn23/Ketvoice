@@ -94,6 +94,7 @@ jobs:
           if (Test-Path $log) { Get-Content $log | Tee-Object -FilePath $env:GITHUB_STEP_SUMMARY -Append }
           if ($run.ExitCode -ne 0) { throw "Ketvoice.exe --smoke exit $($run.ExitCode)" }
           if (-not (Select-String -Path $log -Pattern "^smtc (ok|skipped)" -Quiet)) { throw "--smoke printed no SMTC line" }
+          if (-not (Select-String -Path $log -Pattern "^thumbbar ok" -Quiet)) { throw "--smoke printed no thumbnail toolbar line" }
 
           $u = Start-Process msiexec.exe -ArgumentList "/x `"$($msi.FullName)`" /qn /norestart" -Wait -PassThru
           if ($u.ExitCode -ne 0) { throw "msiexec uninstall exit $($u.ExitCode)" }

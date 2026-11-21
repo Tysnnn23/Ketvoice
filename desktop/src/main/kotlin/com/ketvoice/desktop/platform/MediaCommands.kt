@@ -66,6 +66,7 @@ object MediaCommands {
         4 -> MediaCommand.Previous
         5 -> MediaCommand.Seek(value.coerceAtLeast(0))
         6 -> MediaCommand.Stop
+        7 -> MediaCommand.Toggle // the taskbar thumbnail's play/pause button
         else -> null
     }
 
