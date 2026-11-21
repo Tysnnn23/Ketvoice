@@ -187,13 +187,25 @@ tasks.withType<org.jetbrains.compose.desktop.application.tasks.AbstractJLinkTask
     if (strip != null) { strip.set(false); freeArgs.add("--generate-cds-archive") }
     else logger.warn("createRuntimeImage: no base class-data archive (Compose's jlink options changed)")
 }
+// jpackage's own --java-options (freeArgs) never reached the launcher's Ketvoice.cfg (Windows CI, 1.1 work), so the
+// options are written into the app image's cfg once it exists, after the last java-options line Compose wrote.
+val cdsOptions = listOf("-XX:+AutoCreateSharedArchive", "-XX:SharedArchiveFile=$cdsArchive", "-Dketvoice.cdsArchive=$cdsArchive")
 tasks.withType<org.jetbrains.compose.desktop.application.tasks.AbstractJPackageTask>()
     .matching { it.name.startsWith("createDistributable") || it.name.startsWith("createReleaseDistributable") }
     .configureEach {
-        for (option in listOf("-XX:+AutoCreateSharedArchive", "-XX:SharedArchiveFile=$cdsArchive", "-Dketvoice.cdsArchive=$cdsArchive")) {
-            freeArgs.addAll("--java-options", option)
+        val image = destinationDir
+        doLast {
+            val cfgs = image.get().asFile.walkTopDown().filter { it.isFile && it.extension == "cfg" && it.parentFile.name == "app" }.toList()
+            if (cfgs.isEmpty()) throw GradleException("$name: no launcher cfg in ${image.get().asFile}")
+            for (cfg in cfgs) cfg.writeText(withCdsOptions(cfg.readText()))
         }
     }
+fun withCdsOptions(text: String): String {
+    val lines = text.lines().filterNot { line -> cdsOptions.any { line.trim() == "java-options=$it" } }.toMutableList()
+    val at = lines.indexOfLast { it.startsWith("java-options=") }.takeIf { it >= 0 } ?: throw GradleException("launcher cfg has no java-options")
+    lines.addAll(at + 1, cdsOptions.map { "java-options=$it" })
+    return lines.joinToString("\n")
+}
 
 compose.desktop {
     application {
