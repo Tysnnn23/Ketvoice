@@ -344,7 +344,7 @@ private fun GlassPanelBody(
     val lowMemory = remember(context) { isLowRamDevice(context) }
     val mode = glassRenderMode(GlassCompat.api, backdrop != null, enabled && AppSettings.liquidGlass.value,
         captured, style == 2, AppSettings.reduceDynamicBlur.value, AppSettings.highPerformanceMode.value,
-        lowMemory, Motion.reduced)
+        lowMemory, Motion.reduced, com.ketvoice.app.LiteTuning.lite)
     if (fusion != null) {
         val key = remember { Any() }
         androidx.compose.runtime.DisposableEffect(fusion, key) { onDispose { fusion.forget(key) } }

@@ -13,9 +13,10 @@ import java.io.File
  */
 class GlassMaterialPathTest {
     private fun path(api: Int = 35, performance: Boolean = false, reducedTransparency: Boolean = false,
-                     backdrop: Boolean = true, reducedMotion: Boolean = false, lowMemory: Boolean = false): GlassMaterialPath {
+                     backdrop: Boolean = true, reducedMotion: Boolean = false, lowMemory: Boolean = false,
+                     lite: Boolean = false): GlassMaterialPath {
         val mode = glassRenderMode(api, backdrop, enabled = true, captured = false, opaque = false, reduceBlur = false,
-            highPerformance = performance, lowMemory = lowMemory, reducedMotion = reducedMotion)
+            highPerformance = performance, lowMemory = lowMemory, reducedMotion = reducedMotion, lite = lite)
         return glassMaterialPath(api, mode, performance, reducedTransparency)
     }
 
@@ -26,6 +27,10 @@ class GlassMaterialPathTest {
         assertEquals(GlassMaterialPath.Blur, path(api = 31))
         assertEquals(GlassMaterialPath.Blur, path(api = 32, performance = true))
         assertEquals(GlassMaterialPath.SoftBlur, path(api = 30))
+        assertEquals(GlassMaterialPath.SoftBlur, path(api = 30, performance = true, lite = true))
+        // Ketvoice Lite keeps the blur in its performance mode, on by default there; without it, it refracts.
+        assertEquals(GlassMaterialPath.Blur, path(api = 34, performance = true, lite = true))
+        assertEquals(GlassMaterialPath.Refractive, path(api = 34, lite = true))
         assertEquals(GlassMaterialPath.Blur, path(reducedMotion = true))
         assertEquals(GlassMaterialPath.Blur, path(lowMemory = true))
         assertEquals(GlassMaterialPath.Static, path(backdrop = false))

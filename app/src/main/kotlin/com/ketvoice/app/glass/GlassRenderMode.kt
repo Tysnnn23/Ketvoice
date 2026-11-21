@@ -5,11 +5,12 @@ internal enum class GlassRenderMode { Static, Blur, Optical }
 
 internal fun glassRenderMode(api: Int, hasBackdrop: Boolean, enabled: Boolean, captured: Boolean,
                              opaque: Boolean, reduceBlur: Boolean, highPerformance: Boolean,
-                             lowMemory: Boolean, reducedMotion: Boolean): GlassRenderMode = when {
+                             lowMemory: Boolean, reducedMotion: Boolean, lite: Boolean = false): GlassRenderMode = when {
     !hasBackdrop || !enabled || captured || opaque || reduceBlur -> GlassRenderMode.Static
     // 8.0 (« Vrai verre réfractif »): the performance mode keeps the refractive material on Android 13+, in its
     // cheaper form ([RefractionSpec.forPath]: no dispersion, one backdrop tap, a narrower lens). 5.9.2 dropped it.
-    api < 33 || lowMemory || reducedMotion -> GlassRenderMode.Blur
+    // Ketvoice Lite, made for modest devices, keeps the blur in its performance mode (on by default there).
+    api < 33 || lowMemory || reducedMotion || highPerformance && lite -> GlassRenderMode.Blur
     else -> GlassRenderMode.Optical
 }
 

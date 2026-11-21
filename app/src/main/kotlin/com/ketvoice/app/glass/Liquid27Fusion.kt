@@ -198,7 +198,7 @@ internal fun currentGlassRenderMode(style: Int, enabled: Boolean, captured: Bool
     val lowMemory = remember(context) { isLowRamDevice(context) }
     return glassRenderMode(GlassCompat.api, backdrop != null, enabled && AppSettings.liquidGlass.value,
         captured, style == GlassStyles.OPAQUE, AppSettings.reduceDynamicBlur.value, AppSettings.highPerformanceMode.value,
-        lowMemory, com.ketvoice.app.ui.motion.Motion.reduced)
+        lowMemory, com.ketvoice.app.ui.motion.Motion.reduced, com.ketvoice.app.LiteTuning.lite)
 }
 
 /** The refractive material's settings for a surface drawn in [mode] right now (8.0, [glassMaterialPath]). */
