@@ -2590,7 +2590,8 @@
   "Note sur cet appareil les saccades, le démarrage, le délai avant le son, les chargements et la mémoire. Rien n'est envoyé, aucune donnée personnelle": "Records stutters, startup, time to first sound, loading and memory on this device. Nothing is sent, no personal data",
   "Partager le diagnostic": "Share diagnostics",
   "Par le menu de partage, seulement quand vous le choisissez": "Through the share sheet, only when you choose to",
-  "Rien n'est encore enregistré": "Nothing recorded yet"
+  "Rien n'est encore enregistré": "Nothing recorded yet",
+  "À la une": "Featured"
  },
  "hi": {
   "Reverb": "रीवर्ब",
@@ -5183,7 +5184,8 @@
   "Note sur cet appareil les saccades, le démarrage, le délai avant le son, les chargements et la mémoire. Rien n'est envoyé, aucune donnée personnelle": "इस डिवाइस पर अटकन, स्टार्टअप, पहली आवाज़ तक का समय, लोडिंग और मेमोरी दर्ज करता है। कुछ भी भेजा नहीं जाता, कोई निजी डेटा नहीं",
   "Partager le diagnostic": "डायग्नॉस्टिक शेयर करें",
   "Par le menu de partage, seulement quand vous le choisissez": "शेयर मेनू से, सिर्फ़ जब आप चुनें",
-  "Rien n'est encore enregistré": "अभी तक कुछ दर्ज नहीं हुआ"
+  "Rien n'est encore enregistré": "अभी तक कुछ दर्ज नहीं हुआ",
+  "À la une": "विशेष"
  },
  "ja": {
   "Reverb": "リバーブ",
@@ -7776,7 +7778,8 @@
   "Note sur cet appareil les saccades, le démarrage, le délai avant le son, les chargements et la mémoire. Rien n'est envoyé, aucune donnée personnelle": "カクつき、起動、最初の音までの時間、読み込み、メモリをこのデバイスに記録します。何も送信されず、個人データも含みません",
   "Partager le diagnostic": "診断を共有",
   "Par le menu de partage, seulement quand vous le choisissez": "共有メニューから、選んだときだけ",
-  "Rien n'est encore enregistré": "まだ何も記録されていません"
+  "Rien n'est encore enregistré": "まだ何も記録されていません",
+  "À la une": "注目"
  },
  "zh": {
   "Reverb": "混响",
@@ -10369,7 +10372,8 @@
   "Note sur cet appareil les saccades, le démarrage, le délai avant le son, les chargements et la mémoire. Rien n'est envoyé, aucune donnée personnelle": "在本设备上记录卡顿、启动、首次出声时间、加载和内存。不会发送任何内容，不含个人数据",
   "Partager le diagnostic": "分享诊断",
   "Par le menu de partage, seulement quand vous le choisissez": "通过分享菜单，仅在你选择时",
-  "Rien n'est encore enregistré": "尚未记录任何内容"
+  "Rien n'est encore enregistré": "尚未记录任何内容",
+  "À la une": "精选"
  },
  "ru": {
   "Reverb": "Реверберация",
@@ -12962,7 +12966,8 @@
   "Note sur cet appareil les saccades, le démarrage, le délai avant le son, les chargements et la mémoire. Rien n'est envoyé, aucune donnée personnelle": "Записывает на этом устройстве рывки, запуск, задержку до звука, загрузку и память. Ничего не отправляется, никаких личных данных",
   "Partager le diagnostic": "Поделиться диагностикой",
   "Par le menu de partage, seulement quand vous le choisissez": "Через меню «Поделиться», только когда вы решите",
-  "Rien n'est encore enregistré": "Пока ничего не записано"
+  "Rien n'est encore enregistré": "Пока ничего не записано",
+  "À la une": "В центре внимания"
  },
  "it": {
   "Reverb": "Riverbero",
@@ -15555,7 +15560,8 @@
   "Note sur cet appareil les saccades, le démarrage, le délai avant le son, les chargements et la mémoire. Rien n'est envoyé, aucune donnée personnelle": "Registra su questo dispositivo scatti, avvio, tempo prima del suono, caricamenti e memoria. Non viene inviato nulla, nessun dato personale",
   "Partager le diagnostic": "Condividi diagnostica",
   "Par le menu de partage, seulement quand vous le choisissez": "Dal menu di condivisione, solo quando lo scegli",
-  "Rien n'est encore enregistré": "Ancora nessuna registrazione"
+  "Rien n'est encore enregistré": "Ancora nessuna registrazione",
+  "À la une": "In primo piano"
  },
  "es": {
   "Reverb": "Reverb",
@@ -18148,7 +18154,8 @@
   "Note sur cet appareil les saccades, le démarrage, le délai avant le son, les chargements et la mémoire. Rien n'est envoyé, aucune donnée personnelle": "Registra en este dispositivo tirones, inicio, tiempo hasta el sonido, cargas y memoria. No se envía nada, sin datos personales",
   "Partager le diagnostic": "Compartir diagnóstico",
   "Par le menu de partage, seulement quand vous le choisissez": "Desde el menú de compartir, solo cuando tú lo eliges",
-  "Rien n'est encore enregistré": "Aún no hay nada registrado"
+  "Rien n'est encore enregistré": "Aún no hay nada registrado",
+  "À la une": "Destacado"
  },
  "de": {
   "Reverb": "Reverb",
@@ -20741,7 +20748,8 @@
   "Note sur cet appareil les saccades, le démarrage, le délai avant le son, les chargements et la mémoire. Rien n'est envoyé, aucune donnée personnelle": "Zeichnet auf diesem Gerät Ruckler, Start, Zeit bis zum ersten Ton, Ladezeiten und Speicher auf. Nichts wird gesendet, keine persönlichen Daten",
   "Partager le diagnostic": "Diagnose teilen",
   "Par le menu de partage, seulement quand vous le choisissez": "Über das Teilen-Menü, nur wenn du es wählst",
-  "Rien n'est encore enregistré": "Noch nichts aufgezeichnet"
+  "Rien n'est encore enregistré": "Noch nichts aufgezeichnet",
+  "À la une": "Im Fokus"
  },
  "pt": {
   "Reverb": "Reverb",
@@ -23334,7 +23342,8 @@
   "Note sur cet appareil les saccades, le démarrage, le délai avant le son, les chargements et la mémoire. Rien n'est envoyé, aucune donnée personnelle": "Registra neste aparelho travamentos, inicialização, tempo até o som, carregamentos e memória. Nada é enviado, sem dados pessoais",
   "Partager le diagnostic": "Compartilhar diagnóstico",
   "Par le menu de partage, seulement quand vous le choisissez": "Pelo menu de compartilhamento, só quando você escolher",
-  "Rien n'est encore enregistré": "Nada registrado ainda"
+  "Rien n'est encore enregistré": "Nada registrado ainda",
+  "À la une": "Em destaque"
  },
  "ko": {
   "Reverb": "리버브",
@@ -25927,6 +25936,7 @@
   "Note sur cet appareil les saccades, le démarrage, le délai avant le son, les chargements et la mémoire. Rien n'est envoyé, aucune donnée personnelle": "이 기기에 끊김, 시작, 첫 소리까지의 시간, 로딩, 메모리를 기록합니다. 아무것도 전송되지 않으며 개인 정보는 없습니다",
   "Partager le diagnostic": "진단 공유",
   "Par le menu de partage, seulement quand vous le choisissez": "공유 메뉴를 통해, 원할 때만",
-  "Rien n'est encore enregistré": "아직 기록된 내용이 없습니다"
+  "Rien n'est encore enregistré": "아직 기록된 내용이 없습니다",
+  "À la une": "주목할 만한"
  }
 }
