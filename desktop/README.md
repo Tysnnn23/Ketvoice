@@ -411,3 +411,29 @@ Android in-app updater skips those tags, as it skips the model tags).
   `-gpl` artifact is on the runtime classpath; `--smoke` fails unless `avutil_license()` is LGPL.
 - **Shortcuts and files**: Start menu « Ketvoice » and a desktop shortcut; « Ouvrir avec » for mp3, flac, m4a, aac,
   ogg, opus, wav and aiff. An opened file reaches the running window through the single instance (`OpenFiles`) and plays.
+
+## Windows 11 look (Windows 1.1.0, `winlook11`)
+
+- **« Verre Windows 11 »** (`platform/WindowGlass.kt`): DWM `DWMWA_SYSTEMBACKDROP_TYPE` = `DWMSBT_MAINWINDOW` (Mica) on
+  build 22621 and later, the older `DWMWA_MICA_EFFECT` on 22000–22620, through JNA; `DwmExtendFrameIntoClientArea(-1)` and
+  a transparent skiko `SkiaLayer` let it through (the window keeps its system frame, so `ComposeWindow.isTransparent`,
+  which needs an undecorated window, is not used). The shell then reads `KetColors.glass`: the window transparent, the
+  pages on WinUI's layer fill, the sidebar, bar and side panel as in-app Acrylic (its luminosity tint plus a 2 % grain,
+  `ui/Acrylic.kt`); cards, menus and the players stay solid. Solid colours as before on Windows 10, with « Effets de
+  transparence » off, in high contrast, when Settings › Windows › « Verre Windows 11 » is off, or when a DWM call fails.
+  Checked again when the theme or the setting changes and when the window comes to the front.
+- **« Lecteur plein écran »** (`ui/FullScreenPlayer.kt`): F11 or the full player's button; the window goes
+  `WindowPlacement.Fullscreen` and comes back to its placement on Esc, F11 or the exit button (never saved as the window
+  state). The cover or Canvas edge to edge on the left (the screen's height, at most 54 % of its width, cropped, feathered
+  into the cover colours), Cascade lyrics (`LyricsLook.Full`) and the voice level on the right, `CoverFlowBackground` behind,
+  title and transport over the foot of the cover. A still pointer for 3 s while it plays fades the controls and hides the
+  cursor.
+- **« Boutons dans la miniature »** (`platform/ThumbBar.kt`, `native/smtc`): `kv_thumb_init/update/cover/shutdown` in
+  `ketvoice_smtc.dll`. The DLL subclasses the window procedure and makes every `ITaskbarList3` and DWM call on the
+  window's own thread: previous, play/pause and next (`ThumbBarAddButtons`, again on `TaskbarButtonCreated`), glyphs drawn
+  by `ThumbIcons` at the window's DPI (dark on a light taskbar), localized tooltips, disabled with nothing to play. While
+  the window is minimised the cover (at most 320 px) is its iconic thumbnail and peek (`DwmSetIconicThumbnail`,
+  `DwmSetIconicLivePreviewBitmap`). `--smoke` prints `thumbbar ok` when the exports are in the packaged DLL; CI requires it.
+- Tests: `WinLookTest` (backdrop choice, glass colours, F11/Esc and the buttons, glyphs, cover reduction; renders
+  `w11-*.png` in `build/desktop-ui-preview/`: the shell over a Mica stand-in, the full-screen player at 1920 × 1080 and
+  1366 × 768 with cover and Canvas, the glyphs). Only Windows shows the real Mica, taskbar and DWM thumbnails.

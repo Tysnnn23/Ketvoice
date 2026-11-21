@@ -81,8 +81,21 @@ data class KetColors(
     val hover: Color,
     val selected: Color,
     val fill: Color,
+    /** Under the whole window: the ground, or transparent where Windows 11's Mica shows through ([glass]). */
+    val window: Color = ground,
+    /** The sidebar and top bar are Acrylic (tint and grain over the Mica) rather than a flat material. */
+    val acrylic: Boolean = false,
 ) {
     companion object {
+        /**
+         * « Verre Windows 11 »: the window is Mica, the pages lie on WinUI's layer fill and the sidebar and the bar
+         * are in-app Acrylic (its luminosity tint; the grain is drawn by `acrylic`). Cards and menus stay solid.
+         */
+        fun glass(dark: Boolean, accent: Color = DesignTokens.Color.accent) = of(dark, accent).let { solid ->
+            if (dark) solid.copy(window = Color.Transparent, ground = Color(0x4C3A3A3A), material = Color(0x9E202020), acrylic = true)
+            else solid.copy(window = Color.Transparent, ground = Color(0x80FFFFFF), material = Color(0xB8F3F3F3), acrylic = true)
+        }
+
         fun of(dark: Boolean, accent: Color = DesignTokens.Color.accent) = if (dark) KetColors(
             dark = true, ground = Color(0xFF1C1C1E), material = Color(0xCC232326), card = Color(0xFF2C2C2E),
             raised = Color(0xFF2C2C2E), label = Color.White, secondary = Color(0xB3EBEBF5), tertiary = Color(0x4DEBEBF5),
@@ -101,8 +114,8 @@ val LocalKet = staticCompositionLocalOf { KetColors.of(dark = true) }
 
 /** Ket 27 for the window: Inter everywhere, the system's light or dark look unless [dark] is given. */
 @Composable
-fun KetDesktopTheme(dark: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
-    val colors = KetColors.of(dark)
+fun KetDesktopTheme(dark: Boolean = isSystemInDarkTheme(), glass: Boolean = false, content: @Composable () -> Unit) {
+    val colors = if (glass) KetColors.glass(dark) else KetColors.of(dark)
     val scheme = if (dark) darkColorScheme(primary = colors.accent, background = colors.ground, surface = colors.card, onSurface = colors.label)
     else lightColorScheme(primary = colors.accent, background = colors.ground, surface = colors.card, onSurface = colors.label)
     MaterialTheme(colorScheme = scheme) {

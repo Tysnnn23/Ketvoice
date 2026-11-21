@@ -99,6 +99,8 @@ fun KetvoiceShell(
     initialSidebar: Dp = 248.dp,
     initialQuery: String = "",
     initialFullPlayer: Boolean = false,
+    /** « Verre Windows 11 » is showing (WindowGlass.active): Mica under the window, Acrylic sidebar and bar. */
+    glass: Boolean = false,
 ) {
     val content: @Composable () -> Unit = {
         val search = remember { SearchState().apply { query = initialQuery } }
@@ -112,7 +114,7 @@ fun KetvoiceShell(
             LocalTrackDrag provides drag, LocalTrackActions provides actions,
         ) { ShellLayout(initialPanel, initialSidebar, initialFullPlayer) }
     }
-    if (dark == null) KetDesktopTheme(content = content) else KetDesktopTheme(dark, content)
+    if (dark == null) KetDesktopTheme(glass = glass, content = content) else KetDesktopTheme(dark, glass, content)
 }
 
 @Composable
@@ -144,7 +146,7 @@ private fun ShellLayout(initialPanel: Panel, initialSidebar: Dp, initialFullPlay
     }
     fun onKey(e: KeyEvent): Boolean = Shortcuts.handle(e, player, actions, keys)
 
-    Box(Modifier.fillMaxSize().background(ket.ground).onPreviewKeyEvent(::onKey).focusRequester(rootFocus).focusable().testTag("shell")) {
+    Box(Modifier.fillMaxSize().background(ket.window).onPreviewKeyEvent(::onKey).focusRequester(rootFocus).focusable().testTag("shell")) {
         Backdrop(state.current?.coverUrl)
         Row(Modifier.fillMaxSize()) {
             Sidebar(sidebar, searchFocus, onSearchFocus = { searchFocused = it })
@@ -156,7 +158,7 @@ private fun ShellLayout(initialPanel: Panel, initialSidebar: Dp, initialFullPlay
                 Box(Modifier.align(Alignment.Center).width(.5.dp).fillMaxHeight().background(ket.hairline))
             }
             Column(Modifier.weight(1f).fillMaxHeight()) {
-                Box(Modifier.fillMaxWidth().background(ket.material.copy(alpha = ket.material.alpha * .6f))) {
+                Box(Modifier.fillMaxWidth().material(ket, if (ket.acrylic) ket.material else ket.material.copy(alpha = ket.material.alpha * .6f))) {
                     NowPlayingBar(panel, { panel = it }, onOpenPlayer = { fullPlayer = true })
                 }
                 Box(Modifier.fillMaxWidth().height(.5.dp).background(ket.hairline))
@@ -165,7 +167,7 @@ private fun ShellLayout(initialPanel: Panel, initialSidebar: Dp, initialFullPlay
                     val width by animateDpAsState(if (panel == Panel.NONE) 0.dp else 330.dp, Motion.Springs.SHEET.motion())
                     if (width > 0.dp) Row(Modifier.width(width).fillMaxHeight()) {
                         Box(Modifier.width(.5.dp).fillMaxHeight().background(ket.hairline))
-                        Box(Modifier.width(330.dp).fillMaxHeight().background(ket.material)) {
+                        Box(Modifier.width(330.dp).fillMaxHeight().material(ket)) {
                             when (panel) { Panel.QUEUE -> QueuePanel(); Panel.LYRICS -> LyricsPanel(); Panel.NONE -> {} }
                         }
                     }
@@ -176,6 +178,7 @@ private fun ShellLayout(initialPanel: Panel, initialSidebar: Dp, initialFullPlay
         AnimatedVisibility(fullPlayer, enter = EnterTransition.None, exit = fadeOut(Motion.Springs.DISMISS.motion())) {
             FullPlayer(onClose = { fullPlayer = false })
         }
+        if (PlayerFullScreen.on.value) FullScreenPlayer(onExit = { PlayerFullScreen.on.value = false })
         PlaybackToast()
         if (ImportDialog.open.value) ImportPlaylistDialog(onDismiss = { ImportDialog.open.value = false })
         com.ketvoice.desktop.update.Updates.dialog.value?.let { release ->
@@ -243,7 +246,7 @@ private fun Sidebar(width: Dp, searchFocus: FocusRequester, onSearchFocus: (Bool
     val nav = LocalNavigator.current
     val library = LocalLibrary.current
     val playlists by library.playlists.collectAsState()
-    Column(Modifier.width(width).fillMaxHeight().background(ket.material).testTag("sidebar")) {
+    Column(Modifier.width(width).fillMaxHeight().material(ket).testTag("sidebar")) {
         SearchField(searchFocus, onSearchFocus)
         LazyColumn(Modifier.weight(1f).padding(horizontal = 10.dp)) {
             item { SideItem(Ket27Glyphs.Home, "Accueil", Route.Home) }

@@ -376,6 +376,10 @@ fun SettingsPage() {
                 ToggleRow("Démarrer avec Windows", DesktopPrefs.startWithWindows.value, "start-with-windows") { DesktopPrefs.setStartWithWindows(it) }
                 Hairline()
                 ToggleRow("Mini-lecteur", MiniPlayer.open.value, "mini-player") { MiniPlayer.open.value = it }
+                Hairline()
+                ToggleRow("Verre Windows 11", com.ketvoice.desktop.platform.WindowGlass.enabled.value, "window-glass") {
+                    com.ketvoice.desktop.platform.WindowGlass.setEnabled(it)
+                }
             }
         }
         item { SectionHeader("Raccourcis clavier") }

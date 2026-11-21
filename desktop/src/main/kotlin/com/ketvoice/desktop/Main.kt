@@ -35,6 +35,8 @@ import com.ketvoice.desktop.platform.MediaCommands
 import com.ketvoice.desktop.platform.MediaControls
 import com.ketvoice.desktop.platform.SingleInstance
 import com.ketvoice.desktop.platform.WindowChrome
+import com.ketvoice.desktop.platform.WindowGlass
+import com.ketvoice.desktop.ui.PlayerFullScreen
 import com.ketvoice.desktop.platform.WindowStore
 import com.ketvoice.desktop.player.DesktopStreams
 import com.ketvoice.desktop.ui.KetvoiceShell
@@ -158,12 +160,30 @@ fun main(args: Array<String>) {
                 window.minimumSize = java.awt.Dimension(900, 600)
                 // Back at the front: what other devices changed comes in (at most once a minute).
                 window.addWindowFocusListener(object : java.awt.event.WindowAdapter() {
-                    override fun windowGainedFocus(e: java.awt.event.WindowEvent?) = com.ketvoice.desktop.library.DesktopAccount.foreground()
+                    override fun windowGainedFocus(e: java.awt.event.WindowEvent?) {
+                        com.ketvoice.desktop.library.DesktopAccount.foreground()
+                        // Transparency effects or high contrast may have changed while away.
+                        if (window.isDisplayable) WindowGlass.apply(window)
+                    }
                 })
             }
-            LaunchedEffect(dark) {
+            val glassWanted = WindowGlass.enabled.value
+            LaunchedEffect(dark, glassWanted) {
                 while (!window.isDisplayable) delay(50)
                 WindowChrome.setDarkTitleBar(window, dark)
+                // « Verre Windows 11 »: Mica under the window when the system allows it, else the solid colours.
+                WindowGlass.apply(window)
+            }
+            // « Lecteur plein écran »: the window goes full screen with it, and comes back as it was.
+            LaunchedEffect(Unit) {
+                var before = state.placement
+                snapshotFlow { PlayerFullScreen.on.value }.collect { on ->
+                    if (on && state.placement != WindowPlacement.Fullscreen) { before = state.placement; state.placement = WindowPlacement.Fullscreen }
+                    else if (!on && state.placement == WindowPlacement.Fullscreen) state.placement = before
+                }
+            }
+            LaunchedEffect(Unit) {
+                snapshotFlow { state.placement }.collect { if (it != WindowPlacement.Fullscreen) PlayerFullScreen.on.value = false }
             }
             LaunchedEffect(Unit) {
                 awtWindow = window
@@ -183,16 +203,27 @@ fun main(args: Array<String>) {
                     }
                 }
                 AppLog.i("media", "media controls: ${controls.name}")
+                // Previous, play/pause and next under the taskbar thumbnail, and the cover as the minimised thumbnail.
+                val thumbs = withContext(Dispatchers.IO) {
+                    com.ketvoice.desktop.platform.ThumbBar.start(WindowChrome.hwnd(window), window.graphicsConfiguration?.defaultTransform?.scaleX ?: 1.0) { cmd ->
+                        EventQueue.invokeLater { MediaCommands.dispatch(cmd, DesktopPlatform.bridge) }
+                    }
+                }
+                AppLog.i("media", "thumbnail toolbar: ${if (thumbs != null) "on" else "off"}")
                 try {
                     MediaControls.bind(this, controls, Player.state)
+                    thumbs?.let { com.ketvoice.desktop.platform.ThumbBar.bind(this, it, Player.state) { url -> com.ketvoice.desktop.ui.Covers.load(url) } }
                     awaitCancellation()
                 } finally {
                     controls.stop()
+                    thumbs?.stop()
                 }
             }
             // Size, position and maximised state, kept for the next launch.
             LaunchedEffect(state) {
                 snapshotFlow { listOf(state.placement, state.isMinimized, state.position, state.size) }.collectLatest {
+                    // Full screen is the player's, not a window state to come back to.
+                    if (state.placement == WindowPlacement.Fullscreen) return@collectLatest
                     val pos = state.position
                     val floating = state.placement == WindowPlacement.Floating && !state.isMinimized
                     val next = WindowStore.merge(lastSaved[0], floating, state.placement == WindowPlacement.Maximized,
@@ -205,7 +236,7 @@ fun main(args: Array<String>) {
                     }
                 }
             }
-            KetvoiceShell(dark = dark)
+            KetvoiceShell(dark = dark, glass = WindowGlass.active.value)
         }
         com.ketvoice.desktop.ui.MiniPlayerWindow(icon, when (com.ketvoice.app.data.AppSettings.themeMode.value) { 1 -> false; 2 -> true; else -> isSystemInDarkTheme() }, ::show)
     }
