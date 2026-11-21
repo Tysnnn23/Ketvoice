@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -40,6 +41,9 @@ object CanvasRepo {
     }
 
     private val mutex = Mutex()
+    /** 8.1: the look-ahead's own lane (the next titles, album tiles), so the title on screen never queues behind it. */
+    private val aheadMutex = Mutex()
+    private val resolvingNow = java.util.concurrent.ConcurrentHashMap<String, CompletableDeferred<Unit>>()
     private val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.IO)
     /** A Canvas fetched from another site is kept up to this size; a larger one keeps streaming. */
     private const val LINK_MAX_BYTES = 40L * 1024 * 1024
@@ -186,7 +190,11 @@ object CanvasRepo {
         if (localPath(track.id) == null) fromDevice(ctx, track, curated, curatedName)
         fun known() = localPath(track.id) != null && (track.id !in shared || knownWithout(ctx, track.id))
         if (known() || (!force && recentlyFailed())) return@withContext
-        mutex.withLock {
+        // 8.1: the same title already on its way (fetched ahead, then tapped) is awaited, never fetched twice; and the
+        // title being played or shown no longer waits behind the look-ahead's lookups and files (a lane of its own).
+        resolvingNow[track.id]?.let { other -> other.await(); if (known() || (!force && recentlyFailed())) return@withContext }
+        val mine = CompletableDeferred<Unit>().also { resolvingNow[track.id] = it }
+        try { (if (ahead) aheadMutex else mutex).withLock {
             // Another resolution may have run while this one waited: what is shown is checked again against the choice of now.
             curated = MediaOverrides.canvas(track); curatedName = curated?.let { "kvov-" + sha(it) }
             dropStale()
@@ -279,7 +287,7 @@ object CanvasRepo {
             } catch (_: Exception) {
                 failed[track.id] = System.currentTimeMillis()
             }
-        }
+        } } finally { resolvingNow.remove(track.id, mine); mine.complete(Unit) }
         // The owner changed the choice while this resolution ran: once more, for the choice of now.
         if (again && MediaOverrides.canvas(track) != curated) resolveNow(track, force, again = false, ahead = ahead)
     }
@@ -511,7 +519,7 @@ object CanvasRepo {
             }
             // A link of another site may be anything: one that announces more than the limit is left to stream.
             if (conn.contentLengthLong > maxBytes) { conn.disconnect(); return null }
-            val tmp = File(dest.parentFile, dest.name + ".part")
+            val tmp = File(dest.parentFile, dest.name + "." + Thread.currentThread().id + ".part")
             if (tmp.exists()) tmp.delete()
             conn.inputStream.use { input -> tmp.outputStream().use { out ->
                 val buffer = ByteArray(64 * 1024); var total = 0L
