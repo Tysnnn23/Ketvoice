@@ -62,7 +62,8 @@ class FfmpegAudioEngine(
             mixer.current = d; heard = d; frozen = false
             mark(written, d, d.positionFrames, Kind.Jump)
             pendingMs = -1
-            wantPlay = play
+            wantPlay = play && outputReady()
+            if (!wantPlay) playing = false
             mixer.gain.set(0f); if (play) mixer.gain.fadeTo(1f, Gain.DECLICK_MS)
             if (!buffering) { buffering = true; emit(AudioEvent.Buffering(true)) }
         }
@@ -76,7 +77,7 @@ class FfmpegAudioEngine(
     override fun play() {
         playing = true
         post {
-            if (mixer.current == null) { playing = false; return@post }
+            if (mixer.current == null || !outputReady()) { playing = false; return@post }
             wantPlay = true
             mixer.gain.fadeTo(1f, Gain.PAUSE_FADE_MS)
         }
@@ -142,14 +143,22 @@ class FfmpegAudioEngine(
 
     private fun emit(event: AudioEvent) { _events.tryEmit(event) }
 
+    private var sinkOpen = false
+
+    /** Opens the output when it is not (no sound card, or it went away); false with an Error event when it cannot. */
+    private fun outputReady(): Boolean {
+        if (sinkOpen) return true
+        return try {
+            sink.open(RATE, 2); sinkOpen = true; true
+        } catch (t: Throwable) {
+            emit(AudioEvent.Error("audio output: ${t.message ?: t}")); false
+        }
+    }
+
     private fun active() = mixer.current != null && (wantPlay || mixer.gain.fading)
 
     private fun loop() {
-        try {
-            sink.open(RATE, 2)
-        } catch (t: Throwable) {
-            emit(AudioEvent.Error("audio output: ${t.message ?: t}"))
-        }
+        outputReady()
         try {
             while (!released) {
                 val command = if (active()) commands.poll() else commands.poll(20, TimeUnit.MILLISECONDS)
@@ -195,7 +204,15 @@ class FfmpegAudioEngine(
             val v = (buf[i] * 32767f).roundToInt().coerceIn(-32768, 32767)
             pcm[i * 2] = v.toByte(); pcm[i * 2 + 1] = (v shr 8).toByte()
         }
-        sink.write(pcm, frames * 4)
+        try {
+            sink.write(pcm, frames * 4)
+        } catch (t: Throwable) {
+            // The device went away: stop here (the next play opens it again) rather than race through the queue.
+            runCatching { sink.close() }; sinkOpen = false
+            wantPlay = false; playing = false; mixer.gain.set(0f)
+            emit(AudioEvent.Error("audio output: ${t.message ?: t}"))
+            return
+        }
         written += frames
         announce()
     }
