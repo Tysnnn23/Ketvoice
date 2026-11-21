@@ -29,6 +29,28 @@ HPLcom/ketvoice/app/ui/player/**;->**(**)**
 HPLcom/ketvoice/app/ui/library/**;->**(**)**
 HPLcom/ketvoice/app/ui/explorer/**;->**(**)**
 HPLcom/ketvoice/app/ui/overlay/**;->**(**)**
+# 8.2 (perf82): the hot paths named one by one. Still hand-written: no device was available to record a profile with
+# Macrobenchmark, so these are rules read from the code, not a capture. Startup (S): what the first frame and the
+# first Home rows run, the shared answers (RecentAnswers) and the cover colours. Hot (H) from the first tap: the
+# playback service, its buffer rules and the stream resolution.
+HSPLcom/ketvoice/app/util/PrefsWarmup;->**(**)**
+HSPLcom/ketvoice/app/util/EconomyMode;->**(**)**
+HSPLcom/ketvoice/app/data/Downloader;->**(**)**
+HSPLcom/ketvoice/app/data/HomeFeed;->**(**)**
+HSPLcom/ketvoice/app/data/RecentAnswers;->**(**)**
+HSPLcom/ketvoice/app/data/CatalogRepo;->**(**)**
+HSPLcom/ketvoice/app/data/ArtistCache;->**(**)**
+HSPLcom/ketvoice/app/theme/CoverColors;->**(**)**
+HSPLcom/ketvoice/app/ui/common/TrackRowKt;->**(**)**
+HPLcom/ketvoice/app/player/PlaybackService;->**(**)**
+HPLcom/ketvoice/app/player/PlaybackBuffer;->**(**)**
+HPLcom/ketvoice/app/data/StreamResolver;->**(**)**
+HPLcom/ketvoice/app/data/SmartPrefetch;->**(**)**
+Lcom/ketvoice/app/player/Player;
+Lcom/ketvoice/app/player/PlaybackService;
+Lcom/ketvoice/app/data/HomeFeed;
+Lcom/ketvoice/app/data/RecentAnswers;
+Lcom/ketvoice/app/theme/CoverColors;
 Lcom/ketvoice/app/KetvoiceApp;
 Lcom/ketvoice/app/MainActivity;
 Lcom/ketvoice/app/ui/**;
