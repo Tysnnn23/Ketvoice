@@ -83,6 +83,20 @@ object Motion {
     data class Tuning(val damping: Float, val stiffness: Float) {
         fun <T> spec(visibilityThreshold: T? = null): androidx.compose.animation.core.SpringSpec<T> =
             spring(dampingRatio = damping, stiffness = stiffness, visibilityThreshold = visibilityThreshold)
+
+        /** [spec], or a snap under reduced motion: what a call site that moves something on a tap wants. */
+        fun <T> motion(visibilityThreshold: T? = null): FiniteAnimationSpec<T> = if (reduced) snap() else spec(visibilityThreshold)
+
+        companion object {
+            /**
+             * 8.0: a spring written the way iOS 27 writes one, `spring(duration:bounce:)`: [duration] is the
+             * perceived time in seconds, [bounce] 0 (none) .. 1. Stiffness (2π / duration)², damping 1 − bounce.
+             */
+            fun of(duration: Float, bounce: Float = 0f): Tuning {
+                val omega = 2f * Math.PI.toFloat() / duration.coerceAtLeast(.05f)
+                return Tuning((1f - bounce).coerceIn(.05f, 1f), omega * omega)
+            }
+        }
     }
     object Springs {
         /** A page pushed or popped: critically damped, no overshoot. */
@@ -95,6 +109,19 @@ object Motion {
         val DISMISS = Tuning(1f, 600f)
         /** Content that appears once: an empty state, a card filling in. */
         val APPEAR = Tuning(.88f, 380f)
+
+        /*
+         * 8.0 (« Ressorts partout »): the timings of iOS 27, four presets for everything that moves on a touch.
+         * Every one is interruptible: an Animatable sent elsewhere mid-flight keeps its value and velocity.
+         */
+        /** A control answering a tap: a toggle, a symbol replaced, a chip, a press released (0.3 s, a trace of bounce). */
+        val SNAPPY = Tuning.of(.3f, .15f)
+        /** Something that must not overshoot: fades, cross-fades, a page's content, a list row arriving (0.4 s). */
+        val SMOOTH = Tuning.of(.4f, 0f)
+        /** A symbol that reacts: the heart of a like, the plus of an add, a tab icon selected (0.45 s, visible bounce). */
+        val BOUNCY = Tuning.of(.45f, .32f)
+        /** A menu, a sheet or an alert growing out of the button that opened it (0.38 s, a slight settle). */
+        val GROW = Tuning.of(.38f, .12f)
     }
 
     /* ── Convenience tween durations that already clamp for reduce-motion ── */

@@ -55,7 +55,7 @@ internal fun Modifier.downloadFill(trackId: String, radius: Dp): Modifier {
     val waiting = task?.phase == DownloadPhase.Paused || task?.phase == DownloadPhase.WaitingWifi
     val shown = remember(trackId) { Animatable(target) }
     LaunchedEffect(target) {
-        if (Motion.reduced) shown.snapTo(target) else shown.animateTo(target, tween(Motion.duration(260), easing = LinearOutSlowInEasing))
+        if (Motion.reduced) shown.snapTo(target) else shown.animateTo(target, Motion.Springs.SMOOTH.spec())
     }
     return testTag("download-fill").drawWithContent {
         drawContent()

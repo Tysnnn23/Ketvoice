@@ -126,8 +126,8 @@ fun TabletNavigation(info: LargeScreenInfo, width: Dp, modifier: Modifier = Modi
             Modifier.clip(RoundedCornerShape(30.dp)).background(theme.card))) {
             // The two forms cross-fade while the panel springs to its new width (nothing moves under reduced motion).
             AnimatedContent(sidebar, transitionSpec = {
-                fadeIn(androidx.compose.animation.core.tween(com.ketvoice.app.ui.motion.Motion.duration(180)))
-                    .togetherWith(fadeOut(androidx.compose.animation.core.tween(com.ketvoice.app.ui.motion.Motion.duration(120))))
+                fadeIn(com.ketvoice.app.ui.motion.Motion.Springs.SMOOTH.motion<Float>())
+                    .togetherWith(fadeOut(com.ketvoice.app.ui.motion.Motion.Springs.DISMISS.motion<Float>()))
             }, label = "sidebar-fold") { open ->
                 if (open) SidebarContent(info) { SidebarPrefs.toggle(context, info) }
                 else RailContent(info) { SidebarPrefs.toggle(context, info) }

@@ -1,5 +1,6 @@
 package com.ketvoice.app.ui.common
 
+import com.ketvoice.app.ui.motion.growSource
 import androidx.compose.ui.layout.layout
 import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.animateFloatAsState
@@ -126,7 +127,7 @@ internal fun GlassCapsuleButton(
         else Box(Modifier.matchParentSize().clip(shape)
             .then(if (theme.season != null) Modifier.background(theme.season.fill) else Modifier.background(theme.accent)))
         Row(Modifier.fillMaxWidth().heightIn(min = minHeight).clip(shape)
-            .clickable(interactions, null, enabled = enabled, role = Role.Button, onClick = onClick)
+            .growSource().clickable(interactions, null, enabled = enabled, role = Role.Button, onClick = onClick)
             .padding(horizontal = 18.dp, vertical = 12.dp)
             .then(if (tag != null) Modifier.testTag(tag) else Modifier),
             horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {

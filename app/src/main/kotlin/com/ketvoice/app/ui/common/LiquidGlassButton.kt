@@ -1,5 +1,6 @@
 package com.ketvoice.app.ui.common
 
+import com.ketvoice.app.ui.motion.growSource
 import com.ketvoice.app.ui.adaptive.hoverHighlight
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
@@ -65,7 +66,7 @@ fun LiquidGlassButton(
     val pressure by animateFloatAsState(if (pressed && !Motion.reduced) 1f else 0f,
         glassPressSpec(pressed, liquid27), label = "glass-button-pressure")
     val (scaleWidth, scaleHeight) = glassPressScale(pressure, liquid27)
-    Box(modifier.onSizeChanged { bounds = it }) {
+    Box(modifier.onSizeChanged { bounds = it }.growSource()) {
         if (plain) Box(Modifier.matchParentSize().graphicsLayer { scaleX = scaleWidth; scaleY = scaleHeight }
             .clip(shape).background(plainFill(theme.isDark)))
         else GlassPanel(Modifier.matchParentSize().graphicsLayer {

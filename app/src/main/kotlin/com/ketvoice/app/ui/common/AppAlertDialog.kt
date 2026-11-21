@@ -1,5 +1,6 @@
 package com.ketvoice.app.ui.common
 
+import com.ketvoice.app.ui.motion.growSource
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.heightIn
@@ -38,7 +39,7 @@ fun KetTextButton(label: String, onClick: () -> Unit, modifier: Modifier = Modif
         destructive -> DESTRUCTIVE
         else -> tint ?: theme.accent
     }
-    Box(modifier.heightIn(min = 44.dp).clickable(enabled = enabled, role = Role.Button, onClick = onClick)
+    Box(modifier.heightIn(min = 44.dp).growSource().clickable(enabled = enabled, role = Role.Button, onClick = onClick)
         .padding(horizontal = 12.dp, vertical = 10.dp), contentAlignment = Alignment.Center) {
         Text(label, localize = localize, color = color, style = Ket27.Type.body,
             fontWeight = if (primary) FontWeight.SemiBold else FontWeight.Normal, textAlign = TextAlign.Center,

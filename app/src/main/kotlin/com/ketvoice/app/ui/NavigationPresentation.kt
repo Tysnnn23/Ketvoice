@@ -44,10 +44,11 @@ internal fun NavigationPresentation(
                     fadeIn(tween(0)).togetherWith(fadeOut(tween(0)))
                 } else if (tabOnly) {
                     val direction = targetState.first.compareTo(initialState.first)
-                    (fadeIn(tween(260, easing = Motion.EASE_STANDARD)) +
-                        slideInHorizontally(tween(300, easing = Motion.EASE_STANDARD)) { direction * it / 10 })
-                        .togetherWith(fadeOut(tween(170, easing = Motion.EASE_ACCELERATE)) +
-                            slideOutHorizontally(tween(220, easing = Motion.EASE_ACCELERATE)) { -direction * it / 14 })
+                    // 8.0: springs (were 170–300 ms tweens): a tab tapped mid-transition carries on from where the pages are.
+                    (fadeIn(com.ketvoice.app.ui.motion.Motion.Springs.SMOOTH.spec<Float>()) +
+                        slideInHorizontally(com.ketvoice.app.ui.motion.Motion.Springs.SMOOTH.spec(IntOffset(1, 1))) { direction * it / 10 })
+                        .togetherWith(fadeOut(com.ketvoice.app.ui.motion.Motion.Springs.DISMISS.spec<Float>()) +
+                            slideOutHorizontally(com.ketvoice.app.ui.motion.Motion.Springs.DISMISS.spec(IntOffset(1, 1))) { -direction * it / 14 })
                 } else if (detail.isArtworkDetail() && AppUi.navKind.intValue != AppUi.NAV_JUMP) {
                     val origin = detail.origin?.translate(-bounds.left, -bounds.top)
                     val scale = revealTransform(origin, width, 1f, 0f).scale
@@ -56,14 +57,14 @@ internal fun NavigationPresentation(
                         IntOffset(t.translateX.toInt(), t.translateY.toInt())
                     }
                     if (closing) {
-                        fadeIn(tween(240)).togetherWith(
+                        fadeIn(com.ketvoice.app.ui.motion.Motion.Springs.SMOOTH.spec<Float>()).togetherWith(
                             scaleOut(com.ketvoice.app.ui.motion.Motion.Springs.ZOOM.spec(), targetScale = scale) +
-                                slideOut(com.ketvoice.app.ui.motion.Motion.Springs.ZOOM.spec(), targetOffset = travel) + fadeOut(tween(220))
+                                slideOut(com.ketvoice.app.ui.motion.Motion.Springs.ZOOM.spec(), targetOffset = travel) + fadeOut(com.ketvoice.app.ui.motion.Motion.Springs.DISMISS.spec<Float>())
                         ).apply { targetContentZIndex = -1f }
                     } else {
                         (scaleIn(com.ketvoice.app.ui.motion.Motion.Springs.ZOOM.spec(), initialScale = scale) +
-                            slideIn(com.ketvoice.app.ui.motion.Motion.Springs.ZOOM.spec(), initialOffset = travel) + fadeIn(tween(200)))
-                            .togetherWith(fadeOut(tween(260)))
+                            slideIn(com.ketvoice.app.ui.motion.Motion.Springs.ZOOM.spec(), initialOffset = travel) + fadeIn(com.ketvoice.app.ui.motion.Motion.Springs.SNAPPY.spec<Float>()))
+                            .togetherWith(fadeOut(com.ketvoice.app.ui.motion.Motion.Springs.SMOOTH.spec<Float>()))
                     }
                 } else {
                     // A push as on iOS: the new page slides in from the edge on a critically damped
@@ -71,12 +72,12 @@ internal fun NavigationPresentation(
                     // with the leaving page kept on top.
                     val push = com.ketvoice.app.ui.motion.Motion.Springs.PUSH.spec(IntOffset(1, 1))
                     if (closing) {
-                        (slideInHorizontally(push) { -it / 4 } + fadeIn(tween(Motion.duration(280)), initialAlpha = .55f))
-                            .togetherWith(slideOutHorizontally(push) { it } + fadeOut(tween(Motion.duration(320)), targetAlpha = .9f))
+                        (slideInHorizontally(push) { -it / 4 } + fadeIn(com.ketvoice.app.ui.motion.Motion.Springs.SMOOTH.spec<Float>(), initialAlpha = .55f))
+                            .togetherWith(slideOutHorizontally(push) { it } + fadeOut(com.ketvoice.app.ui.motion.Motion.Springs.SMOOTH.spec<Float>(), targetAlpha = .9f))
                             .apply { targetContentZIndex = -1f }
                     } else {
-                        (slideInHorizontally(push) { it } + fadeIn(tween(Motion.duration(160)), initialAlpha = .9f))
-                            .togetherWith(slideOutHorizontally(push) { -it / 4 } + fadeOut(tween(Motion.duration(320)), targetAlpha = .55f))
+                        (slideInHorizontally(push) { it } + fadeIn(com.ketvoice.app.ui.motion.Motion.Springs.SNAPPY.spec<Float>(), initialAlpha = .9f))
+                            .togetherWith(slideOutHorizontally(push) { -it / 4 } + fadeOut(com.ketvoice.app.ui.motion.Motion.Springs.SMOOTH.spec<Float>(), targetAlpha = .55f))
                     }
                 }
             },

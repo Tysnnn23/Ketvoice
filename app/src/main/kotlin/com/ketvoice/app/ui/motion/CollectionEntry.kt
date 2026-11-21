@@ -23,7 +23,7 @@ fun Modifier.collectionEntry(key: String, seen: MutableSet<String>, ordinal: Int
         val first = seen.add(key)
         if (reduced || !first) progress.snapTo(1f) else {
             delay(ordinal.coerceIn(0, 4) * 45L)
-            progress.animateTo(1f, tween(Motion.FADE))
+            progress.animateTo(1f, Motion.Springs.APPEAR.spec())
         }
     }
     this.graphicsLayer {

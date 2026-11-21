@@ -1,5 +1,6 @@
 package com.ketvoice.app.ui.common
 
+import com.ketvoice.app.ui.motion.symbolBounce
 import com.ketvoice.app.ui.adaptive.largeScreenTrackRow
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -106,7 +107,9 @@ internal fun SwipeTrackActions(track: Track, modifier: Modifier = Modifier, enab
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = if (next) Arrangement.Start else Arrangement.End) {
                 Icon(if (next) Icons.AutoMirrored.Filled.PlaylistPlay else Icons.AutoMirrored.Filled.PlaylistAdd, null,
-                    tint = theme.accent, modifier = Modifier.size(22.dp).graphicsLayer {
+                    // 8.0: the symbol bounces the moment the swipe arms the action.
+                    tint = theme.accent, modifier = Modifier.size(22.dp)
+                        .symbolBounce(progress >= 1f, enabled = progress >= 1f).graphicsLayer {
                         val grow = if (Motion.reduced) 1f else .8f + .2f * progress
                         scaleX = grow; scaleY = grow
                     })

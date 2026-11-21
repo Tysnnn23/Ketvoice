@@ -72,8 +72,8 @@ fun DownloadCover(track: Track, url: String?, size: Dp, radius: Dp = 9.dp) {
         Cover(track.title, url, size, radius)
         if (active) DownloadingOverlay(track.id, size, accent)
         AnimatedVisibility(visible = complete, modifier = Modifier.align(Alignment.BottomEnd),
-            enter = fadeIn(tween(Motion.duration())) + scaleIn(initialScale = .85f, animationSpec = tween(Motion.duration())),
-            exit = fadeOut(tween(Motion.duration()))) {
+            enter = fadeIn(com.ketvoice.app.ui.motion.Motion.Springs.SMOOTH.motion<Float>()) + scaleIn(initialScale = .85f, animationSpec = com.ketvoice.app.ui.motion.Motion.Springs.BOUNCY.motion<Float>()),
+            exit = fadeOut(com.ketvoice.app.ui.motion.Motion.Springs.DISMISS.motion<Float>())) {
             Box(Modifier.padding(3.dp).size(24.dp).clip(CircleShape)
                 .background(Color(0xFF173F2B)), contentAlignment = Alignment.Center) {
                 val drawn by animateFloatAsState(if (complete) 1f else 0f,

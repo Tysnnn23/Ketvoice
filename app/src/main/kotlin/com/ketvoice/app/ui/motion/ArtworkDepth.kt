@@ -24,8 +24,8 @@ fun Modifier.artworkDepth(): Modifier = composed {
     val enabled = AppSettings.artworkDepth.value && !Motion.reduced
     var point by remember { mutableStateOf(Offset.Zero) }
     var size by remember { mutableStateOf(IntSize.Zero) }
-    val x by animateFloatAsState(if (enabled) point.x else 0f, tween(Motion.duration(180)), label = "art-depth-x")
-    val y by animateFloatAsState(if (enabled) point.y else 0f, tween(Motion.duration(180)), label = "art-depth-y")
+    val x by animateFloatAsState(if (enabled) point.x else 0f, Motion.Springs.SNAPPY.motion(), label = "art-depth-x")
+    val y by animateFloatAsState(if (enabled) point.y else 0f, Motion.Springs.SNAPPY.motion(), label = "art-depth-y")
     this.onSizeChanged { size = it }.pointerInput(enabled) {
         point = Offset.Zero
         if (enabled) awaitPointerEventScope {

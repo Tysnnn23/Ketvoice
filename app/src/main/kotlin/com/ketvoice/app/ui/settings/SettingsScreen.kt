@@ -1,5 +1,7 @@
 ﻿package com.ketvoice.app.ui.settings
 
+import com.ketvoice.app.ui.motion.symbolBounce
+import com.ketvoice.app.ui.motion.symbolWiggle
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
@@ -1239,7 +1241,9 @@ internal fun ColumnScope.SToggle(
             .heightIn(min = Ket27.Metrics.row).padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Ket27Tile(icon, title.length + title.first().code)
+        // 8.0: switched on, the symbol reacts — the bell of new releases rings, any other bounces.
+        Box(if (icon == KetIcons.Bell) Modifier.symbolWiggle(checked, enabled = checked)
+            else Modifier.symbolBounce(checked, enabled = checked)) { Ket27Tile(icon, title.length + title.first().code) }
         Column(Modifier.weight(1f).padding(start = 12.dp, end = 14.dp)) {
             Text(title, color = th.onBackground, fontSize = 17.sp, lineHeight = 22.sp, fontWeight = FontWeight.Normal)
             Text(sub, color = th.secondary, fontSize = 13.sp, lineHeight = 18.sp, modifier = Modifier.padding(top = 3.dp))

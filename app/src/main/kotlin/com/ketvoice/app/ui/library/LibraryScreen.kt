@@ -370,7 +370,7 @@ fun LibraryScreen() {
     // It comes in once the page's header has scrolled away, so it never lies over the title, the search or the filters.
     val pastHeader by remember(list) { derivedStateOf { list.firstVisibleItemIndex > 0 } }
     val indexShown by androidx.compose.animation.core.animateFloatAsState(if (jumps != null && pastHeader) 1f else 0f,
-        androidx.compose.animation.core.tween(com.ketvoice.app.ui.motion.Motion.fastMs()), label = "alphabet-index")
+        com.ketvoice.app.ui.motion.Motion.Springs.SMOOTH.motion(), label = "alphabet-index")
     if (jumps != null && indexShown > 0f) {
         val jumpScope = rememberCoroutineScope()
         val bottom = LocalAdaptiveLayout.current.bottomPaddingDp.dp
