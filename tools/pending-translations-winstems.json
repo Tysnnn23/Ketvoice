@@ -1,0 +1,14 @@
+{
+ "Pour régler la voix, Ketvoice télécharge une seule fois le modèle de séparation ({0} Mo). Ensuite, chaque titre est séparé sur cet ordinateur, une seule fois.": {
+  "en": "To adjust the vocals, Ketvoice downloads the separation model once ({0} MB). After that, each song is separated on this computer, only once.",
+  "hi": "आवाज़ समायोजित करने के लिए, Ketvoice पृथक्करण मॉडल एक बार डाउनलोड करता है ({0} MB)। उसके बाद, हर गाना इसी कंप्यूटर पर, केवल एक बार, अलग किया जाता है।",
+  "ja": "ボーカルを調整するために、Ketvoice は分離モデルを一度だけダウンロードします（{0} MB）。その後、各曲はこのコンピュータ上で一度だけ分離されます。",
+  "zh": "为了调整人声，Ketvoice 会下载一次分离模型（{0} MB）。之后，每首歌曲都会在这台电脑上分离，且只分离一次。",
+  "ru": "Чтобы настроить вокал, Ketvoice один раз загружает модель разделения ({0} МБ). После этого каждый трек разделяется на этом компьютере, только один раз.",
+  "it": "Per regolare la voce, Ketvoice scarica una sola volta il modello di separazione ({0} MB). Poi ogni brano viene separato su questo computer, una sola volta.",
+  "es": "Para ajustar la voz, Ketvoice descarga una sola vez el modelo de separación ({0} MB). Después, cada canción se separa en este ordenador, una sola vez.",
+  "de": "Um den Gesang einzustellen, lädt Ketvoice das Trennungsmodell einmalig herunter ({0} MB). Danach wird jeder Titel auf diesem Computer getrennt, nur ein einziges Mal.",
+  "pt": "Para ajustar a voz, o Ketvoice baixa o modelo de separação uma única vez ({0} MB). Depois, cada música é separada neste computador, uma única vez.",
+  "ko": "보컬을 조절하기 위해 Ketvoice는 분리 모델을 한 번만 다운로드합니다({0} MB). 그 후 각 곡은 이 컴퓨터에서 한 번만 분리됩니다."
+ }
+}

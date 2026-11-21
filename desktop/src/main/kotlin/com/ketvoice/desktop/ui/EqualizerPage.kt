@@ -91,8 +91,9 @@ fun EqualizerPage() {
             SettingsCard {
                 Row(Modifier.fillMaxWidth().padding(start = 12.dp, end = 20.dp, top = 18.dp, bottom = 12.dp).alpha(if (enabled) 1f else .5f),
                     verticalAlignment = Alignment.Top) {
-                    // The scale, beside the sliders' travel.
-                    Column(Modifier.width(34.dp).height(SLIDER_H.dp + 20.dp).padding(top = 10.dp), verticalArrangement = Arrangement.SpaceBetween,
+                    // The scale, centred on the top, the zero and the bottom of the sliders' travel (16 dp of gain label,
+                    // 6 dp of padding, then 9 dp to the travel's end; caption lines are 16 dp tall).
+                    Column(Modifier.padding(top = 23.dp).width(34.dp).height((SLIDER_H - 18 + 16).dp), verticalArrangement = Arrangement.SpaceBetween,
                         horizontalAlignment = Alignment.End) {
                         for (db in listOf("+12", "0", "−12")) KText(db, Ket27Desk.Type.caption, color = ket.tertiary, translate = false, weight = FontWeight.Normal)
                     }

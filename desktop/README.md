@@ -66,8 +66,8 @@ that is true on the desktop. The Android app is never changed for the desktop bu
 
 | File | Blocker | Phase |
 |---|---|---|
-| `stems/VoiceLevel` | `StemModel` (LiteRT interpreter) | 3 (ONNX) |
-| `stems/StemModel`, `Uvr`, `StemEngine`, `StemLibrary`, `VoiceSeparation`, `StreamSeparation` | LiteRT, Android services | 3 |
+| `stems/StemModel`, `StemEngine`, `StemLibrary` | LiteRT | desktop counterparts (Phase 3, ONNX) |
+| `stems/VoiceSeparation`, `StreamSeparation`, `StemWork*` | Android services | replaced by `DesktopVoice` (Phase 3) |
 | `automix/BeatModel` | LiteRT, APK assets | ONNX counterpart (Phase 2) |
 | `automix/DeckMixProcessor`, `Automix` | Media3 audio processors and player | replaced by `DesktopMixer` + `DesktopAutomix` |
 | `data/CanvasRepo` | MediaMetadataRetriever, Bitmap, ConnectivityManager | desktop counterpart (Phase 2) |
@@ -244,6 +244,42 @@ into the next, and « Suivant » blends. `BeatModelOnnxTest` checks the pinned d
   (the app's `albumHeader` choice has no desktop setting).
 - Tests: `CanvasVideoTest` (a clip made by the build's own `ffmpeg` program), `CascadeLyricsTest`,
   `CascadeScreenshots` (lyrics panel, player with lyrics, player with Canvas, album motion header).
+
+## Voice separation, voice level and equalizer (Phase 3, winstems)
+
+- **Models**: the phone's two networks as the ONNX files sherpa-onnx publishes (the sources of the phone's LiteRT
+  conversions), run by ONNX Runtime on the CPU behind the shared pipeline (`Separator`, `Uvr.kt`'s `UvrSeparator`,
+  `StemStore`, `VoiceLevel`'s `VoiceStage`, all compiled in place). Desktop `stems/StemModel.kt` (`ModelPack`: download on
+  request to `files/stems/model-onnx` and `model-hq-onnx`, kept only with the pinned size and SHA-256 of
+  `tools/stems/expected-onnx.sha256`; first from the `ketmix-stems-onnx-v1` prerelease, then from the Hugging Face source,
+  same bytes) and `stems/StemEngine.kt` (`OnnxStemNet`: Spleeter `x`/`y` `[2, 1, 512, 1024]`; `OnnxUvrNet`: `input`/`output`
+  `[1, 4, 3072, 256]`; the phone's rules for which model separates, « en charge » being mains power through
+  `GetSystemPowerStatus`). `src/compat/kotlin/org/tensorflow/lite/Interpreter.kt` only lets `Uvr.kt` compile; it throws.
+- **Publishing**: `.github/workflows/publish-stem-models-onnx.yml` (manual) downloads the three files, checks the pins,
+  runs each once in ONNX Runtime and creates the NEW prerelease `ketmix-stems-onnx-v1` (refuses if it exists; the phone's
+  tags are never touched). Until it is run the app takes the same files from their source.
+- **Voice level**: `DeskVoiceSlider` (`ui/VoiceSlider.kt`) at the right of the lyrics in the panel and the full player:
+  drag, wheel, or a click on the microphone (all / none). The first touch on a title separates it whole
+  (`stems/DesktopVoice.kt`: the source the Player resolved, decoded by FFmpeg, the quick model first; stored as `-w.kvs`),
+  or offers the quick model's download. `DesktopMixer` runs the shared `VoiceStage` on the current deck from the moment a
+  model is installed (4096 frames of delay, taken off the reported position), with the title's mask; it lets the sound
+  through during a transition. Key `voiceLevel`.
+- **Ketmix voices**: with « Séparer les voix » on and a model installed, `PartStems` separates the ending and the next
+  title's start (at most 50 s each, once per title, 30 s at most before the transition gives up waiting) and the decks'
+  `Lane.stem` carry the instrumentals into the shared `DeckDsp`: `vocalCut`, `vocalSolo`, and the mashup when
+  `Mashup.fits` and both parts cover the blend. Sung moments come from `VoiceActivity`. Without a model the band cut stays.
+- **Equalizer**: Settings › Lecteur › « Égaliseur » opens `EqualizerPage`: on/off, the presets of `EqualizerProfile`, ten
+  vertical sliders (−12…+12 dB, double-click for 0), « Réinitialiser »; `DesktopEqualizer` plays `equalizerEnabled`/
+  `equalizerGains` on the engine (also at start).
+- **Settings › Séparation des voix**: the switch, both models (download, progress, delete) and « Qualité de séparation ».
+- **Tests**: `StemsOnnxTest` (tiny ONNX stand-ins made by `tools/stems/tiny_onnx.py` against the same networks in Kotlin,
+  through `Separator.mask` and `UvrSeparator`; pins against the workflow; download fallback and digest; the mixer's voice
+  stage; a lane's stem), the shared `StemsTest`, `UvrTest`, `VoiceActivityTest`, `StemQualityTest`, `MixKeysTest`
+  (`StemModelPinTest` pins the phone's LiteRT files and is excluded), `StemsScreenshots` (renders and drives the slider and
+  the equalizer). Opt-in: `KETVOICE_STEMS_ONNX=<folder with the three files>` runs the real networks on a generated clip
+  (here: Spleeter 12 s of sound in about 0.9 s, UVR in about 10 s, CPU).
+- Not on the desktop yet: separating the library ahead (`StemLibrary`), separating streams ahead of the playhead, and the
+  lyrics following the stage's 85 ms delay (`VoiceLevel.delayMs` is not read by `ui/Lyrics.kt`).
 
 ## Done in Phase 1
 
