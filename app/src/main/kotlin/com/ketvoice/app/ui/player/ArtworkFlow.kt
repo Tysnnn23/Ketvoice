@@ -33,12 +33,12 @@ import kotlin.math.max
 import kotlin.math.sin
 
 /**
- * The player's moving background when a title has no Canvas, the way Apple Music does it: three
- * copies of the cover, blurred to colour fields, larger than the screen and turning slowly in
- * opposite directions, so that the colours of the artwork flow into each other.
+ * The player's living background, the way Apple Music does it: three copies of the cover's colour
+ * field (8.2: its colours only, see [colourField], no longer the blurred picture), larger than the
+ * screen and turning slowly in opposite directions, so that the colours of the artwork flow into each other.
  *
- * The blur is done once, on a 48 px copy (a few box-blur passes); each frame only draws three
- * small bitmaps scaled up and rotated, which costs the GPU almost nothing and never recomposes.
+ * The field is made once per title, on a 48 px copy; each frame only draws three small bitmaps
+ * scaled up and rotated, which costs the GPU almost nothing and never recomposes.
  */
 internal object ArtworkFlow {
     const val SIDE = 48
@@ -94,7 +94,7 @@ internal object ArtworkFlow {
             val small = result.drawable.toBitmap(SIDE, SIDE, Bitmap.Config.ARGB_8888)
             val pixels = IntArray(SIDE * SIDE)
             small.getPixels(pixels, 0, SIDE, 0, 0, SIDE, SIDE)
-            blur(pixels, SIDE)
+            colourField(pixels, SIDE)
             val base = Bitmap.createBitmap(pixels, SIDE, SIDE, Bitmap.Config.ARGB_8888)
             feather(pixels, SIDE)
             val soft = Bitmap.createBitmap(pixels, SIDE, SIDE, Bitmap.Config.ARGB_8888)
@@ -102,6 +102,46 @@ internal object ArtworkFlow {
         }
         synchronized(cache) { cache[url] = fields }
         return fields
+    }
+
+    /**
+     * 8.2 « Fond de lecteur vivant »: the cover reduced to a smooth field of its colours, in place. Each of [grid]×[grid]
+     * cells keeps the mean colour of that part of the cover (so the field keeps where its colours are), the
+     * [CoverColors][com.ketvoice.app.theme.CoverColors] accent and second colour pull the cells nearest to them (so a
+     * vivid detail is not averaged away), and the cells blend into each other with no picture left: a face or a word on
+     * the cover never shows behind the controls. Done once per title, off the main thread.
+     */
+    fun colourField(pixels: IntArray, side: Int, grid: Int = 3) {
+        val cells = Array(grid * grid) { FloatArray(3) }
+        val counts = IntArray(grid * grid)
+        for (y in 0 until side) for (x in 0 until side) {
+            val cell = (y * grid / side) * grid + x * grid / side
+            val p = pixels[y * side + x]
+            cells[cell][0] += (p shr 16 and 255).toFloat(); cells[cell][1] += (p shr 8 and 255).toFloat(); cells[cell][2] += (p and 255).toFloat()
+            counts[cell]++
+        }
+        cells.forEachIndexed { i, c -> val n = counts[i].coerceAtLeast(1); for (k in 0..2) c[k] /= n }
+        val palette = com.ketvoice.app.theme.CoverColors.analyze(pixels, side)
+        val taken = BooleanArray(cells.size)
+        listOfNotNull(palette?.base, palette?.second).forEach { colour ->
+            val rgb = floatArrayOf((colour shr 16 and 255).toFloat(), (colour shr 8 and 255).toFloat(), (colour and 255).toFloat())
+            val nearest = cells.indices.filter { !taken[it] }.minByOrNull { i -> (0..2).sumOf { k -> ((cells[i][k] - rgb[k]) * (cells[i][k] - rgb[k])).toDouble() } } ?: return@forEach
+            taken[nearest] = true
+            for (k in 0..2) cells[nearest][k] += (rgb[k] - cells[nearest][k]) * .7f
+        }
+        fun smooth(t: Float) = t * t * (3f - 2f * t)
+        for (y in 0 until side) for (x in 0 until side) {
+            val gx = ((x + .5f) / side * grid - .5f).coerceIn(0f, grid - 1f)
+            val gy = ((y + .5f) / side * grid - .5f).coerceIn(0f, grid - 1f)
+            val ix = gx.toInt().coerceAtMost(grid - 2); val iy = gy.toInt().coerceAtMost(grid - 2)
+            val tx = smooth(gx - ix); val ty = smooth(gy - iy)
+            val a = cells[iy * grid + ix]; val b = cells[iy * grid + ix + 1]
+            val c = cells[(iy + 1) * grid + ix]; val d = cells[(iy + 1) * grid + ix + 1]
+            fun mix(k: Int) = ((a[k] + (b[k] - a[k]) * tx) * (1f - ty) + (c[k] + (d[k] - c[k]) * tx) * ty).toInt().coerceIn(0, 255)
+            pixels[y * side + x] = (255 shl 24) or (mix(0) shl 16) or (mix(1) shl 8) or mix(2)
+        }
+        // A last soft pass: the cell centres never show as flat spots.
+        blur(pixels, side, radius = 3, passes = 2)
     }
 
     /** Box blur of [pixels] (ARGB, [side]×[side]) by [radius], in place, [passes] times: close to a gaussian. */
@@ -141,9 +181,9 @@ internal fun ArtworkFlowBackground(url: String?, playing: Boolean, modifier: Mod
     // The colours of one title glide into the next one's (6.2): the old fields stay until the new ones are ready,
     // then fade out under them. The performance mode drops the cross-fade, as it does for images.
     val fields = rememberFieldCrossfade(loaded)
-    val moving = !still && playing && !Motion.reduced && !com.ketvoice.app.BuildConfig.IS_QUEST
-    // The performance mode keeps the colours moving, at a quarter of the frames.
-    val every = if (AppSettings.highPerformanceMode.value) 4 else 2
+    // 8.2: the field holds still under reduced motion and in the performance mode (it was a quarter of the frames).
+    val moving = !still && playing && !Motion.reduced && !AppSettings.highPerformanceMode.value && !com.ketvoice.app.BuildConfig.IS_QUEST
+    val every = 2
     // The clock runs while a title plays: paused, the colours slow down and hold where they were.
     // 7.3: at a pause they slow to a stop instead of freezing, and gather speed again on play.
     val seconds = rememberEasedPlaybackClock(moving, every)

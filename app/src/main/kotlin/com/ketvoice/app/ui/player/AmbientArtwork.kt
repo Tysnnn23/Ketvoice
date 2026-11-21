@@ -36,7 +36,7 @@ internal fun rememberCoverAmbience(url: String?): CoverAmbience {
 @Composable
 internal fun AmbientArtwork(url: String?, ambience: CoverAmbience, playing: Boolean = false) {
     Box(Modifier.fillMaxSize().background(ambience.color)) {
-        // "Fond animé" (5.9.0): the cover's colours flow as in Apple Music — three blurred copies turning
+        // "Fond animé" (5.9.0): the cover's colours flow as in Apple Music — three copies of its colour field (8.2) turning
         // slowly. Off, the blurred artwork stands still (7.4: the same soft field, still, instead of a live blur
         // of the full picture: no seam at the edges, a crossfade between titles, and far cheaper).
         val flowing = url != null && com.ketvoice.app.data.AppSettings.meshBackground.value
