@@ -55,6 +55,27 @@ object LyricsMotion {
     fun enter(elapsedMs: Long): Float = smooth(elapsedMs / 340f)
 
     fun targetIndex(active: Int, timed: Boolean): Int = if (active < 0) 0 else active + if (timed) 1 else 0
+
+    /** 8.3: an instrumental break this long or longer is filled by the intro's dots. */
+    const val BREAK_MIN_MS = 4_000L
+
+    /**
+     * 8.3: the instrumental breaks of a timed song, by the index of the line they follow: from the end of that line's
+     * last word (or the time of an empty line, which marks a break) to the next line. A line timed only by its
+     * start has no known end, so no break is guessed after it.
+     */
+    fun breaks(lines: List<com.ketvoice.app.data.MusicApi.LyricLine>): Map<Int, LongRange> {
+        val out = HashMap<Int, LongRange>()
+        for (i in 0 until lines.size - 1) {
+            val line = lines[i]
+            val next = lines[i + 1].timeMs
+            if (line.timeMs < 0 || next < 0) continue
+            val from = if (line.text.isBlank()) line.timeMs
+                else line.words.maxOfOrNull { it.endMs }?.takeIf { it > line.timeMs } ?: continue
+            if (next - from >= BREAK_MIN_MS) out[i] = from until next
+        }
+        return out
+    }
 }
 
 /** Cascade, how lyrics are shown: how far the other lines step back and how the wave travels. */

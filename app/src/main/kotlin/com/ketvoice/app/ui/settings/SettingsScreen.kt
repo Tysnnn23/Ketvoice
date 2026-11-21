@@ -595,6 +595,10 @@ fun SettingsScreen() {
                     }
                 }
                 if (!com.ketvoice.app.BuildConfig.IS_QUEST) LockscreenLyricsRows()
+                // 8.3: offered where it is drawn (Android 12 and later, not on Quest, not on a modest phone in Lite).
+                if (com.ketvoice.app.ui.player.LyricsBlur.deviceSupported()) SToggle(KetIcons.Lyrics, "Flou des paroles",
+                    "Les lignes éloignées de celle chantée s'estompent dans un léger flou.",
+                    AppSettings.lyricsBlur.value) { AppSettings.lyricsBlur.value = it; SettingsStore.save() }
                 if (!com.ketvoice.app.BuildConfig.IS_QUEST) SToggle(KetIcons.Clock, "Mode veille au chargement",
                     "En charge et à l'horizontale pendant l'écoute : la pochette ou le Canvas, l'heure et les paroles en plein écran. Aussi proposé comme économiseur d'écran d'Android.",
                     AppSettings.standbyMode.value) { AppSettings.standbyMode.value = it; SettingsStore.save() }

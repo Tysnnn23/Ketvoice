@@ -131,6 +131,9 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
     } }
     val list = rememberLazyListState()
     var following by remember(track.id) { mutableStateOf(true) }
+    // 8.3: the instrumental breaks of 4 s or more, each filled by the intro's dots under the line before it.
+    val breaks = remember(lyrics.lines, lyrics.isTimed) { if (lyrics.isTimed) LyricsMotion.breaks(lyrics.lines) else emptyMap() }
+    val blurSupported = remember { LyricsBlur.deviceSupported() }
     val revealed = remember(track.id, lyrics.lines) { mutableSetOf<Int>() }
     val seekEpoch by Player.seekEpoch.collectAsState()
     val reduced = Motion.reduced
@@ -220,9 +223,14 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
                         itemsIndexed(lyrics.lines, key = { i, l -> "$i:${l.timeMs}" }) { index, line ->
                             val current = index == active
                             val below = index > active
-                            val distance = if (active < 0) 1 else abs(index - active)
-                            // 6.1 (owner, 2026-11-17: « supprime tout effet de blur sur les paroles sauf quand une note
-                            // est maintenue »): no line is blurred any more; only a held note glows (see LyricsWords.glow).
+                            // 8.3 « Flou des paroles » (the owner lifts the 6.1 rule): the lines away from the sung one are
+                            // softly blurred by distance, coming and going with their dimming. The radius is a layer
+                            // property: once it has settled, the line's filtered picture is kept and not blurred again.
+                            val blur = animateFloatAsState(LyricsBlur.radiusDp(if (active < 0) index + 1 else abs(index - active),
+                                AppSettings.lyricsBlur.value, lyrics.isTimed, browsing = !following || moment.isNotEmpty(), reduced,
+                                AppSettings.highPerformanceMode.value, blurSupported),
+                                tween(Motion.duration(LyricsBlur.FADE_MS)), label = "lyricBlur")
+                            val blurEffect = remember { LyricBlurEffect() }
                             val entry = remember(index, track.id, lyrics.lines) { Animatable(if (index in revealed || reduced) 1f else 0f) }
                             LaunchedEffect(index, reduced, revealed) {
                                 if (reduced || !revealed.add(index)) entry.snapTo(1f)
@@ -281,6 +289,7 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
                                     scaleX = lineScale.value * breathe
                                     scaleY = lineScale.value * breathe
                                     transformOrigin = TransformOrigin(if (otherSide) 1f else 0f, .5f)
+                                    renderEffect = blurEffect.at(blur.value.dp.toPx())
                                 }
                             ) {
                                 val nearActive = active < 0 || abs(index - active) <= 1
@@ -305,6 +314,7 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
                                         )
                                     }
                                 }
+                                breaks[index]?.let { pause -> BreakDots(pause, position, offsetMs) }
                             }
                         }
                     }
@@ -369,6 +379,17 @@ private fun FollowCapsule(label: String, modifier: Modifier = Modifier, onClick:
         Text(label, color = Color.White, style = if (com.ketvoice.app.BuildConfig.IS_QUEST) com.ketvoice.app.theme.Ket27.Type.subheadline else com.ketvoice.app.theme.Ket27.Type.footnote,
             fontWeight = FontWeight.SemiBold, modifier = Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(999.dp))
                 .background(Color.White.copy(alpha = .16f)).padding(horizontal = 14.dp, vertical = 7.dp))
+    }
+}
+
+/** 8.3: the intro's dots, under a line followed by an instrumental break, for as long as the break lasts. */
+@Composable
+private fun BreakDots(pause: LongRange, position: State<Long>, offsetMs: Int) {
+    val resting by remember(pause, offsetMs) { derivedStateOf { LyricsOffsets.adjustedPosition(position.value, offsetMs) in pause } }
+    AnimatedVisibility(resting,
+        enter = fadeIn(tween(Motion.duration(260))) + expandVertically(tween(Motion.duration(320)), expandFrom = Alignment.Top),
+        exit = fadeOut(tween(Motion.duration(200))) + shrinkVertically(tween(Motion.duration(280)), shrinkTowards = Alignment.Top)) {
+        Box(Modifier.padding(top = 14.dp).height(36.dp)) { IntroDots(pause.last + 1, pause.first) }
     }
 }
 
@@ -498,10 +519,14 @@ private fun BackingVocal(
     // it has actually finished even if the next line already began.
     val visible = !timed || (nearActive && position != Long.MIN_VALUE &&
         position >= start - 200L && position <= end + 500L)
+    // 8.3: the back opens under its line, rising a few dp into place and growing from 94 %.
     AnimatedVisibility(
         visible = visible,
-        enter = fadeIn(tween(180)) + expandVertically(tween(180), expandFrom = Alignment.Top),
-        exit = fadeOut(tween(220)) + shrinkVertically(tween(220), shrinkTowards = Alignment.Top)
+        enter = fadeIn(tween(Motion.duration(220))) + expandVertically(tween(Motion.duration(240)), expandFrom = Alignment.Top) +
+            androidx.compose.animation.slideInVertically(tween(Motion.duration(280))) { if (Motion.reduced) 0 else it / 4 } +
+            androidx.compose.animation.scaleIn(tween(Motion.duration(280)), initialScale = if (Motion.reduced) 1f else .94f,
+                transformOrigin = TransformOrigin(if (across) 1f else 0f, 0f)),
+        exit = fadeOut(tween(Motion.duration(220))) + shrinkVertically(tween(Motion.duration(220)), shrinkTowards = Alignment.Top)
     ) {
         Box(Modifier.fillMaxWidth().padding(top = 7.dp).testTag("backing-vocal")) {
             // A backing vocal stays a backing vocal; it only sits on the side of the line it belongs to.
@@ -517,14 +542,8 @@ private fun BackingVocal(
 @Composable
 internal fun KaraokeLine(line: MusicApi.LyricLine, modifier: Modifier, fontScale: Float = 1f,
                          backing: Boolean = false, dim: Boolean = false, end: Boolean = false) {
-    val clock = remember(line) { mutableLongStateOf(Player.currentPositionMs()) }
     val offset = LocalLyricsOffset.current
-    val playing by remember { Player.state.map { it.isPlaying }.distinctUntilChanged() }.collectAsState(false)
-    LaunchedEffect(line, playing) {
-        clock.longValue = Player.currentPositionMs()
-        if (playing) while (true) { withFrameNanos { clock.longValue = Player.currentPositionMs() } }
-        else Player.positionMs.collect { clock.longValue = it }
-    }
+    val clock = rememberKaraokeClock(line, offset)
     var layout by remember(line.text) { mutableStateOf<TextLayoutResult?>(null) }
 
     // Providers do not always ship word text that concatenates back to the line
@@ -533,29 +552,16 @@ internal fun KaraokeLine(line: MusicApi.LyricLine, modifier: Modifier, fontScale
     // "buggy foreign lyrics" symptom. If the mapping is impossible, highlight the
     // whole line instead of lighting random characters.
     val alignedWords = remember(line) { LyricsPresentation.aligned(line) }
-
-    val masks = remember(layout, line, alignedWords) { layout?.let { measured ->
-        var offset = 0
-        alignedWords.map { word ->
-            val start = offset
-            val end = (start + word.text.length).coerceAtMost(line.text.length)
-            offset = end
-            val slices = if (start >= end) emptyList() else (0 until measured.lineCount).mapNotNull { row ->
-                val from = maxOf(start, measured.getLineStart(row))
-                val to = minOf(end, measured.getLineEnd(row))
-                if (from < to) {
-                    val path = measured.getPathForRange(from, to)
-                    LyricMaskSlice(path, path.getBounds(), measured.getBidiRunDirection(from) == ResolvedTextDirection.Rtl)
-                } else null
-            }
-            LyricWordMask(word.startMs, word.endMs, slices, slices.sumOf { it.bounds.width.toDouble() }.toFloat())
-        }
-    }.orEmpty() }
+    val masks = remember(layout, line, alignedWords) { layout?.let { karaokeMasks(it, line.text, alignedWords) }.orEmpty() }
     // Apple-style words (5.9.0): each word rises a little as it is sung and a held note glows. The
     // words are then drawn by the canvas, dim and lit parts moving together; when the word timing
     // does not cover the line's letters, the line keeps the flat drawing so that nothing disappears.
     val pendingAlpha = if (backing) .36f else if (dim) .30f else .40f
     val lifting = remember(line, alignedWords) { !Motion.reduced && LyricsWords.covers(line.text, alignedWords.map { it.text }) }
+    // 8.3: a held note's glow is a blurred copy of its letters (Android 12 and later, outside the performance mode);
+    // the layer is blurred only while a held word is in its hold, and holds nothing otherwise.
+    val blurGlow = lifting && !backing && android.os.Build.VERSION.SDK_INT >= LyricsBlur.MIN_API && !AppSettings.highPerformanceMode.value
+    val holding = remember(masks, offset) { derivedStateOf { masks.isNotEmpty() && heldNow(masks, LyricsOffsets.adjustedPosition(clock.longValue, offset)) } }
     Box(modifier) {
         // One shaped layout for both the pending glyphs and the sung overlay.
         // No remeasurement, shifted word copy, scaling or disappearing held glyph.
@@ -566,89 +572,76 @@ internal fun KaraokeLine(line: MusicApi.LyricLine, modifier: Modifier, fontScale
             letterSpacing = (-.3).sp, fontWeight = if (backing) FontWeight.Bold else FontWeight.Black,
             textAlign = if (end) androidx.compose.ui.text.style.TextAlign.End else null,
             onTextLayout = { layout = it }, modifier = Modifier.fillMaxWidth())
+        if (blurGlow && masks.any { it.letters.isNotEmpty() }) HeldGlow(layout, masks, clock, offset, holding)
         Canvas(Modifier.matchParentSize()) {
             val measured = layout ?: return@Canvas
             val now = LyricsOffsets.adjustedPosition(clock.longValue, offset)
-            val liftPx = LyricsWords.LIFT_DP.dp.toPx()
-            masks.forEach { word ->
-                val progress = segmentProgress(now, word.start, word.end)
-                val ink = Color.White.copy(alpha = if (dim) .82f else 1f)
-                if (lifting) {
-                    val rise = LyricsWords.lift(progress) * liftPx
-                    val glow = LyricsWords.glow(progress, word.end - word.start)
-                    // 8.2: the word being sung grows a little about its own centre, then settles back once sung.
-                    val grow = LyricsWords.grow(progress, now - word.end)
-                    translate(top = -rise) {
-                        var remaining = word.width * progress
-                        word.slices.forEach { slice ->
-                            val bounds = slice.bounds
-                            val fill = remaining.coerceIn(0f, bounds.width)
-                            remaining -= bounds.width
-                            scale(grow, grow, bounds.center) {
-                                clipPath(slice.path) {
-                                    drawText(measured, color = Color.White.copy(alpha = pendingAlpha))
-                                    if (fill > 0f) {
-                                        val left = if (slice.rtl) bounds.right - fill else bounds.left
-                                        val right = if (slice.rtl) bounds.right else bounds.left + fill
-                                        clipRect(left, bounds.top, right, bounds.bottom) {
-                                            drawText(measured, color = ink, shadow = if (glow > .01f) androidx.compose.ui.graphics.Shadow(
-                                                LyricsWords.glowColor(glow), blurRadius = 14f * glow) else null)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    return@forEach
-                }
-                if (progress <= 0f) return@forEach
-                var remaining = word.width * progress
-                word.slices.forEach { slice ->
-                    val bounds = slice.bounds
-                    val fill = remaining.coerceIn(0f, bounds.width)
-                    remaining -= bounds.width
-                    if (fill > 0f) {
-                        val left = if (slice.rtl) bounds.right - fill else bounds.left
-                        val right = if (slice.rtl) bounds.right else bounds.left + fill
-                        clipPath(slice.path) {
-                            clipRect(left, bounds.top, right, bounds.bottom) {
-                                drawText(measured, color = ink)
-                            }
-                        }
-                    }
-                }
+            val ink = Color.White.copy(alpha = if (dim) .82f else 1f)
+            if (lifting) {
+                val k = karaokeInk(ink, Color.White.copy(alpha = pendingAlpha), shadowGlow = !blurGlow)
+                masks.forEach { drawLiftedWord(measured, it, now, k) }
+            } else {
+                val feather = LyricsWords.FEATHER_DP.dp.toPx()
+                masks.forEach { drawFlatWord(measured, it, now, ink, feather) }
             }
         }
     }
 }
 
-internal data class LyricMaskSlice(val path: androidx.compose.ui.graphics.Path, val bounds: androidx.compose.ui.geometry.Rect, val rtl: Boolean)
-internal data class LyricWordMask(
-    val start: Long,
-    val end: Long,
-    val slices: List<LyricMaskSlice>,
-    val width: Float
-)
+/** The blurred copy of a held note's letters, behind the line; a plain layer holding nothing outside a hold. */
+@Composable
+private fun BoxScope.HeldGlow(layout: TextLayoutResult?, masks: List<LyricWordMask>, clock: androidx.compose.runtime.LongState,
+                              offset: Int, holding: State<Boolean>) {
+    val effects = remember { LyricBlurEffect() }
+    Canvas(Modifier.matchParentSize().graphicsLayer {
+        renderEffect = if (holding.value) effects.at(LyricsWords.GLOW_RADIUS_DP.dp.toPx()) else null
+    }) {
+        if (!holding.value) return@Canvas
+        val measured = layout ?: return@Canvas
+        drawHeldGlow(measured, masks, LyricsOffsets.adjustedPosition(clock.longValue, offset), karaokeInk(Color.White, null, false))
+    }
+}
 
+/**
+ * The transport position a karaoke line draws from, updated on every frame while playing — but only while the
+ * line is inside its own time (from just before its first word to [LyricsWords.REST_MS] after its last): before
+ * and after, its drawing does not change, so the clock is left alone and the line (and any blur over it) is not
+ * drawn again. Crossing from one side to the other without passing through still updates it once.
+ */
+@Composable
+private fun rememberKaraokeClock(line: MusicApi.LyricLine, offset: Int): androidx.compose.runtime.LongState {
+    val clock = remember(line) { mutableLongStateOf(Player.currentPositionMs()) }
+    val playing by remember { Player.state.map { it.isPlaying }.distinctUntilChanged() }.collectAsState(false)
+    val window = remember(line) { LyricsWords.window(line) }
+    LaunchedEffect(line, playing, offset) {
+        var side = Int.MIN_VALUE
+        fun take(raw: Long) {
+            val now = LyricsWords.side(LyricsOffsets.adjustedPosition(raw, offset), window)
+            if (now == 0 || now != side) clock.longValue = raw
+            side = now
+        }
+        take(Player.currentPositionMs())
+        if (playing) while (true) { withFrameNanos { take(Player.currentPositionMs()) } }
+        else Player.positionMs.collect { take(it) }
+    }
+    return clock
+}
 
+/** How far into a word, 0..1, at [now]: one constant pace from its start to its end (8.3: no easing inside a word). */
 internal fun segmentProgress(now: Long, start: Long, end: Long): Float = when {
     now < start -> 0f
     end <= start -> 1f
-    else -> {
-        val t = ((now - start).toFloat() / (end - start)).coerceIn(0f, 1f)
-        // Courbe smoothstep fluide : élimine les à-coups du word-by-word
-        // pour une glisse continue et naturelle, alignée sur le rendu syllabique.
-        t * t * (3f - 2f * t)
-    }
+    else -> ((now - start).toFloat() / (end - start)).coerceIn(0f, 1f)
 }
 
 /**
  * The wait before the first line: three dots that fill one after the other, breathe while
  * they wait, then swell and vanish as the line arrives. Position and clock are read while
  * drawing only, so the dots move on every frame without recomposing the lyrics.
+ * 8.3: the same dots fill every instrumental break, from [fromMs] (the end of the line before) to [firstLineMs].
  */
 @Composable
-internal fun IntroDots(firstLineMs: Long) {
+internal fun IntroDots(firstLineMs: Long, fromMs: Long = 0L) {
     val offset = LocalLyricsOffset.current
     val reduced = Motion.reduced
     val shown = remember { mutableLongStateOf(LyricsOffsets.adjustedPosition(Player.positionMs.value, offset)) }
@@ -668,9 +661,10 @@ internal fun IntroDots(firstLineMs: Long) {
         }
     }
     Canvas(Modifier.padding(start = 6.dp).size(width = 68.dp, height = 36.dp).testTag("intro-dots")) {
-        val position = shown.longValue
+        val position = shown.longValue - fromMs
+        val span = firstLineMs - fromMs
         val elapsed = clock.longValue
-        val exit = if (reduced) 0f else LyricsMotion.dotExit(position, firstLineMs)
+        val exit = if (reduced) 0f else LyricsMotion.dotExit(position, span)
         val enter = if (reduced) 1f else LyricsMotion.enter(elapsed)
         val group = if (reduced) 1f else LyricsMotion.exitScale(exit) * (.6f + .4f * enter)
         val fade = LyricsMotion.exitAlpha(exit) * enter
@@ -678,8 +672,8 @@ internal fun IntroDots(firstLineMs: Long) {
         val gap = 20.dp.toPx()
         val middle = Offset(radius * 1.3f + gap, size.height / 2f)
         for (index in 0 until 3) {
-            val fill = if (reduced) (if (index < LyricsMotion.litDots(position, firstLineMs)) 1f else 0f)
-                else LyricsMotion.dotFill(index, position, firstLineMs)
+            val fill = if (reduced) (if (index < LyricsMotion.litDots(position, span)) 1f else 0f)
+                else LyricsMotion.dotFill(index, position, span)
             val breath = if (reduced) 1f else LyricsMotion.breath(elapsed, index)
             drawCircle(Color.White.copy(alpha = ((.26f + .74f * fill) * fade).coerceIn(0f, 1f)),
                 radius * group * breath * (.84f + .16f * fill),
@@ -819,11 +813,65 @@ internal object LyricsWords {
     /** The sung line's breath for a bass level of 0..1: at most one and a half percent. */
     fun breath(low: Float): Float = if (!low.isFinite()) 0f else (((low - .2f) / .8f).coerceIn(0f, 1f).let { it * it }) * .015f
 
-    /** A word rises while it is sung and stays risen: an ease-out of its progress. */
-    fun lift(progress: Float): Float {
-        val p = if (progress.isFinite()) progress.coerceIn(0f, 1f) else 0f
-        return 1f - (1f - p) * (1f - p)
+    /** 8.3: a very short word only nudges up by this part of [LIFT_DP]; one of [LIFT_FULL_MS] or more goes the whole way. */
+    const val LIFT_FLOOR = .25f
+    const val LIFT_QUICK_MS = 160L
+    const val LIFT_FULL_MS = 900L
+    /** The rise takes the word's own time, within these bounds; the word settles back over [FALL_MS] once sung. */
+    const val RISE_MIN_MS = 250L
+    const val RISE_MAX_MS = 700L
+    const val FALL_MS = 450L
+
+    private fun smooth(x: Float): Float { val t = x.coerceIn(0f, 1f); return t * t * (3f - 2f * t) }
+
+    /** How high a word of [durationMs] goes at most, 0..1 of [LIFT_DP]: smooth between a quick word and a held one. */
+    fun liftHeight(durationMs: Long): Float =
+        LIFT_FLOOR + (1f - LIFT_FLOOR) * smooth((durationMs - LIFT_QUICK_MS).toFloat() / (LIFT_FULL_MS - LIFT_QUICK_MS))
+
+    /**
+     * 8.3: how far a word is lifted, 0..1 of [LIFT_DP], [sinceStartMs] after it starts: it rises over its own time
+     * (kept between [RISE_MIN_MS] and [RISE_MAX_MS]) to [liftHeight], then settles back over [FALL_MS] after its end.
+     */
+    fun lift(sinceStartMs: Long, durationMs: Long): Float {
+        if (sinceStartMs <= 0L) return 0f
+        val duration = durationMs.coerceAtLeast(0L)
+        val up = smooth(sinceStartMs.toFloat() / duration.coerceIn(RISE_MIN_MS, RISE_MAX_MS))
+        val down = if (sinceStartMs <= duration) 0f else smooth((sinceStartMs - duration).toFloat() / FALL_MS)
+        return liftHeight(duration) * up * (1f - down)
     }
+
+    /** 8.3: the fill's leading edge is feathered over this many dp (a soft front instead of a cut). */
+    const val FEATHER_DP = 30f
+    /** Once a word is sung, the feather behind its edge finishes within these bounds (during the pause, if any). */
+    const val TAIL_MIN_MS = 60L
+    const val TAIL_MAX_MS = 300L
+
+    /**
+     * 8.3: where the fill's leading edge is, in px from the word's leading side, [sinceStartMs] into a word of
+     * [durationMs] and [widthPx]: it moves at one constant pace through the word (no easing inside it). Past the
+     * word's end it goes on for one feather ([featherPx]), so the word's last letters light fully: at the word's
+     * own pace, but within the pause before the next word ([pauseMs], negative when unknown) and [TAIL_MIN_MS]..
+     * [TAIL_MAX_MS]. 0 before the word; widthPx + featherPx once it is all lit.
+     */
+    fun edgePx(sinceStartMs: Long, durationMs: Long, widthPx: Float, featherPx: Float, pauseMs: Long = -1L): Float {
+        if (sinceStartMs < 0L || !(widthPx > 0f)) return 0f
+        val feather = featherPx.coerceAtLeast(0f)
+        if (durationMs <= 0L) return widthPx + feather
+        if (sinceStartMs <= durationMs) return widthPx * sinceStartMs / durationMs
+        val tail = tailMs(durationMs, widthPx, feather, pauseMs)
+        return widthPx + feather * ((sinceStartMs - durationMs).toFloat() / tail).coerceIn(0f, 1f)
+    }
+
+    /** How long a word's feather takes to finish after its end (see [edgePx]). */
+    fun tailMs(durationMs: Long, widthPx: Float, featherPx: Float, pauseMs: Long = -1L): Long {
+        val pace = if (widthPx > 0f) featherPx * durationMs / widthPx else 0f
+        val within = if (pauseMs > 0L) minOf(pace, pauseMs.toFloat()) else pace
+        return within.toLong().coerceIn(TAIL_MIN_MS, TAIL_MAX_MS)
+    }
+
+    /** The ink, 0..1, [d] px from the word's leading side when the edge is at [edgePx]: full a feather behind it. */
+    fun ink(d: Float, edgePx: Float, featherPx: Float): Float =
+        if (featherPx <= 0f) (if (d < edgePx) 1f else 0f) else ((edgePx - d) / featherPx).coerceIn(0f, 1f)
 
     /** 8.2: how much larger the word being sung is drawn, at most (owner: « très légèrement », ≤ 4 %). */
     const val GROW = .035f
@@ -835,7 +883,6 @@ internal object LyricsWords {
     fun grow(progress: Float, sinceEndMs: Long): Float {
         val p = if (progress.isFinite()) progress.coerceIn(0f, 1f) else 0f
         if (p <= 0f) return 1f
-        fun smooth(x: Float): Float { val t = x.coerceIn(0f, 1f); return t * t * (3f - 2f * t) }
         val settle = if (sinceEndMs <= 0L) 1f else 1f - smooth(sinceEndMs / SETTLE_MS.toFloat())
         return 1f + GROW * smooth(p / .3f) * settle
     }
@@ -844,13 +891,85 @@ internal object LyricsWords {
     /** The glow of a held note: strongest in the middle of the note, nothing for short words. */
     fun glow(progress: Float, durationMs: Long): Float {
         if (durationMs < GLOW_FROM_MS || !(progress > 0f && progress < 1f)) return 0f
-        val strength = ((durationMs - GLOW_FROM_MS) / 1_100f + .5f).coerceIn(.5f, 1f)
-        return kotlin.math.sin(progress * Math.PI).toFloat() * strength
+        return kotlin.math.sin(progress * Math.PI).toFloat() * heldStrength(durationMs)
     }
 
-
-    /** The colour of a held note's glow of strength [glow]; its size never changes (owner, 6.1: only a held note glows, a little). */
+    /** The colour of the lower-cost glow of a held note (below Android 12 and in performance mode). */
     fun glowColor(glow: Float): Color = Color.White.copy(alpha = .42f * glow.coerceIn(0f, 1f))
+
+    /** 8.3: a held note's letters swell one after another; only short words held at least [GLOW_FROM_MS] do. */
+    const val HELD_MAX_LETTERS = 7
+    /** How much larger a letter is at the top of its swell, how far it leans out from the word's middle and up. */
+    const val SWELL = .045f
+    const val LEAN_DP = 1.4f
+    const val LETTER_RISE_DP = 1.2f
+    /** The last letters finish their swell this long after the word's end. */
+    const val HELD_TAIL_MS = 200L
+    /** Each letter starts at most this long after the one before it. */
+    const val STAGGER_MAX_MS = 110L
+    /** The glow of a held note: a blurred copy of its letters at about this alpha, blurred by this radius. */
+    const val GLOW_ALPHA = .6f
+    const val GLOW_RADIUS_DP = 9f
+    /** In, hold and out of each letter's swell, as parts of its window. */
+    private const val SWELL_IN = .32f
+    private const val SWELL_HOLD = .58f
+    /**
+     * Everything a word does (fill tail, lift, growth, swell, glow) is over this long after its end, so a line is
+     * drawn exactly the same from then on.
+     */
+    const val REST_MS = 600L
+
+    /** How strong a held note's swell and glow are for its length: half at [GLOW_FROM_MS], all from two seconds. */
+    fun heldStrength(durationMs: Long): Float = ((durationMs - GLOW_FROM_MS) / 1_100f + .5f).coerceIn(.5f, 1f)
+
+    /**
+     * 8.3: whether a word swells letter by letter: held [GLOW_FROM_MS] or longer, one to [HELD_MAX_LETTERS] letters,
+     * and written in Latin, Greek or Cyrillic only (never Chinese, Japanese, Korean, Arabic, Hebrew or other scripts
+     * whose letters join or stack: their glyphs cannot be drawn one by one).
+     */
+    fun holds(text: String, durationMs: Long): Boolean {
+        if (durationMs < GLOW_FROM_MS) return false
+        val letters = text.filterNot { it.isWhitespace() }
+        if (letters.isEmpty() || letters.length > HELD_MAX_LETTERS || letters.none { it.isLetter() }) return false
+        return letters.all(::separable)
+    }
+
+    private fun separable(c: Char): Boolean = !c.isSurrogate() && when (Character.UnicodeScript.of(c.code)) {
+        Character.UnicodeScript.LATIN, Character.UnicodeScript.GREEK, Character.UnicodeScript.CYRILLIC,
+        Character.UnicodeScript.COMMON -> true
+        else -> false
+    }
+
+    /** While a held word's letters may still move: from its start to [HELD_TAIL_MS] after its end. */
+    fun inHold(sinceStartMs: Long, durationMs: Long): Boolean = sinceStartMs >= 0L && sinceStartMs < durationMs + HELD_TAIL_MS
+
+    /**
+     * The swell of letter [index] of [count], 0..1, [sinceStartMs] into a held word of [durationMs]: each letter
+     * starts a little after the one before, rises, holds, then falls back to 0 by [HELD_TAIL_MS] after the end.
+     */
+    fun swell(index: Int, count: Int, sinceStartMs: Long, durationMs: Long): Float {
+        if (count <= 0 || durationMs <= 0L) return 0f
+        val total = (durationMs + HELD_TAIL_MS).toFloat()
+        val stagger = if (count > 1) minOf(STAGGER_MAX_MS.toFloat(), total * .35f / (count - 1)) else 0f
+        val window = total - stagger * (count - 1)
+        val p = (sinceStartMs - index.coerceIn(0, count - 1) * stagger) / window
+        return when {
+            !(p > 0f) || p >= 1f -> 0f
+            p < SWELL_IN -> smooth(p / SWELL_IN)
+            p < SWELL_HOLD -> 1f
+            else -> 1f - smooth((p - SWELL_HOLD) / (1f - SWELL_HOLD))
+        }
+    }
+
+    /** The time a karaoke line changes in: from just before its first word to [REST_MS] after its last. */
+    fun window(line: MusicApi.LyricLine): LongRange {
+        val first = line.words.minOfOrNull { it.startMs } ?: line.timeMs
+        val last = maxOf(line.words.maxOfOrNull { maxOf(it.endMs, it.startMs) } ?: first, first)
+        return (first - 50L)..(last + REST_MS)
+    }
+
+    /** -1 before [window], 0 inside it, 1 after it. */
+    fun side(now: Long, window: LongRange): Int = when { now < window.first -> -1; now > window.last -> 1; else -> 0 }
 
     /** True when the words, joined, hold every visible letter of the line (so drawing words alone loses nothing). */
     fun covers(line: String, words: List<String>): Boolean {
