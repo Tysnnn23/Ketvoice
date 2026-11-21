@@ -1,0 +1,9 @@
+JavaCPP and the JavaCPP Presets (Ketvoice for Windows)
+
+Ketvoice for Windows reaches FFmpeg through JavaCPP 1.5.13 (org.bytedeco:javacpp) and the JavaCPP
+Presets for FFmpeg 8.0.1-1.5.13 (org.bytedeco:ffmpeg), https://github.com/bytedeco/javacpp and
+https://github.com/bytedeco/javacpp-presets, Copyright (C) Samuel Audet and the bytedeco
+contributors. They are offered under the Apache License, version 2.0, or the GNU General Public
+License, version 2, with the Classpath exception, at the user's choice. Ketvoice uses them under
+the Apache License, version 2.0, whose text is in Apache-2.0.txt. The FFmpeg libraries inside the
+presets keep their own licence (FFmpeg-LGPL-3.0.txt).

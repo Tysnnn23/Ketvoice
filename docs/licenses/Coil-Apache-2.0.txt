@@ -1,0 +1,5 @@
+Coil (Ketvoice for Windows)
+
+Ketvoice for Windows loads images with Coil 3.4.0 (io.coil-kt.coil3:coil-compose-jvm,
+coil-network-okhttp-jvm), https://coil-kt.github.io/coil/, Copyright 2025 Coil Contributors.
+Licensed under the Apache License, version 2.0, whose text is in Apache-2.0.txt.

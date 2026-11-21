@@ -178,6 +178,9 @@ private fun ShellLayout(initialPanel: Panel, initialSidebar: Dp, initialFullPlay
         }
         PlaybackToast()
         if (ImportDialog.open.value) ImportPlaylistDialog(onDismiss = { ImportDialog.open.value = false })
+        com.ketvoice.desktop.update.Updates.dialog.value?.let { release ->
+            UpdateDialog(release, com.ketvoice.desktop.update.Updates.updater) { com.ketvoice.desktop.update.Updates.dialog.value = null }
+        }
         ContextMenuHost(menu)
     }
     // A new search from the field opens the search page; clearing it keeps the start page.

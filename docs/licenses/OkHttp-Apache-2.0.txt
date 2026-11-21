@@ -1,0 +1,5 @@
+OkHttp and Okio (Ketvoice for Windows)
+
+Ketvoice for Windows reaches the network with OkHttp 4.12.0 (com.squareup.okhttp3:okhttp) and
+Okio (com.squareup.okio:okio), https://square.github.io/okhttp/, Copyright 2019 Square, Inc.
+Licensed under the Apache License, version 2.0, whose text is in Apache-2.0.txt.

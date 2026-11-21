@@ -1,0 +1,5 @@
+JSON-Java (Ketvoice for Windows)
+
+Ketvoice for Windows reads JSON with JSON-Java 20240303 (org.json:json),
+https://github.com/stleary/JSON-java. Since version 20231013 the project is dedicated to the public
+domain; no conditions apply.

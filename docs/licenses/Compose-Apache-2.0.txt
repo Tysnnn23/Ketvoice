@@ -1,0 +1,9 @@
+Compose Multiplatform, Kotlin and AndroidX (Ketvoice for Windows)
+
+Ketvoice for Windows draws its window with Compose Multiplatform 1.12.2 (org.jetbrains.compose,
+with Skiko, Material 3 and the AndroidX libraries it brings, such as navigation-compose 2.10.0 and
+lifecycle) and runs on the Kotlin 2.2.21 standard library and kotlinx.coroutines 1.11.0,
+https://github.com/JetBrains/compose-multiplatform, https://kotlinlang.org, Copyright JetBrains
+s.r.o. and contributors, and The Android Open Source Project. Licensed under the Apache License,
+version 2.0, whose text is in Apache-2.0.txt. Skia, inside Skiko, is Copyright Google LLC under a
+BSD 3-clause licence (https://skia.googlesource.com/skia/+/main/LICENSE).

@@ -382,3 +382,32 @@ Android in-app updater skips those tags, as it skips the model tags).
   « Réessayer »; playback errors (`PlayerControls.errors` ← `Player.error`) show as a toast.
 - Tests: `PolishTest` (shortcuts, album menu order, live language switch, ICU dates, import flow, offline pages,
   library search, colour fields); renders: `PolishScreenshots` (`p3-*.png`).
+
+## Release tooling (Phase 4, `winrelease`)
+
+- **Version**: `-PappVersion=1.2.3` (default 1.0.0) sets the MSI's ProductVersion and a generated `BuildConfig`
+  (`build/generated/buildconfig`); MAJOR.MINOR.PATCH only, as Windows Installer reads it. The UpgradeCode never changes.
+- **In-app updates** (`update/`): `WindowsUpdater` reads the public releases of Tysnnn23/Ketvoice without a token, at
+  most once per 6 h (the last feed is kept in `Data\updates`), or at once from Settings › À propos › « Mises à jour ».
+  Only `windows-v<semver>` tags count (Android `v*` and model tags, drafts and prereleases are ignored), never an older
+  or equal version. `Ketvoice-<ver>.msi` is checked against the release's `SHA256SUMS.txt` (and GitHub's asset digest),
+  then `msiexec /i … /passive /norestart` runs and the app quits; the same UpgradeCode upgrades in place. The dialog
+  shows the English notes (`ReleaseNotes`: headings, bullets, bold, code). Tests: `WindowsUpdateTest` (fake feed).
+- **Publishing**: `.github/workflows/publish-windows-release.yml` (dispatched with `version`) needs
+  `docs/releases/windows-v<ver>.md` and `release-metadata/windows-v<ver>/validation.json` (`version`,
+  `source_commit`, `credential_scan.findings == 0`, optional authorized `publication_override`); desktop, shared app
+  sources, native and licences must be unchanged since `source_commit`. It refuses an existing tag or release, tests,
+  packages, checks the MSI identity twice (`tools/verify_msi.py` and Windows Installer), installs it silently, checks
+  the Start-menu and desktop shortcuts and the installed licences, runs `--smoke` (LGPL FFmpeg, app version),
+  uninstalls, writes `SHA256SUMS.txt`, creates a draft with `make_latest: false`, re-downloads and compares, publishes
+  (still not latest: the Android updater and the website read the latest release) and verifies the public download.
+- **`tools/verify_msi.py`**: `release <ver>` downloads and checks a published MSI; `local`, `identity`, `sums-write`,
+  `sums-check`, `validation`. ProductVersion/UpgradeCode come from `msiinfo` when installed, else from the MSI's OLE
+  property table (stdlib only). Tests: `python3 -m unittest tools/test_verify_msi.py` (builds a real MSI with `wixl`).
+- **Licences**: the JavaCPP FFmpeg build is configured with `--enable-version3`, so it ships under the LGPL v3
+  (`docs/licenses/FFmpeg-LGPL-3.0.txt`, with the GPL v3 text it refers to). Notices for JavaCPP, ONNX Runtime, Compose,
+  Coil, OkHttp, JNA, ICU4J, Gson, JSON-Java, Inter and the OpenJDK runtime, and one Apache 2.0 text. « À propos » lists
+  them; the MSI installs them in `app\resources\licenses`. `checkNoGpl` fails the tests and every package task when a
+  `-gpl` artifact is on the runtime classpath; `--smoke` fails unless `avutil_license()` is LGPL.
+- **Shortcuts and files**: Start menu « Ketvoice » and a desktop shortcut; « Ouvrir avec » for mp3, flac, m4a, aac,
+  ogg, opus, wav and aiff. An opened file reaches the running window through the single instance (`OpenFiles`) and plays.
