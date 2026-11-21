@@ -1,0 +1,120 @@
+{
+  "schema": 1,
+  "version": "1.1.0",
+  "platform": "windows",
+  "tag": "windows-v1.1.0",
+  "source_commit": "f09ddaa86a084bf28e56a6fab08b7b81cc7da12d",
+  "created_at": "2026-11-21T15:56:04.944511+00:00",
+  "build_origin": "publish-windows-release.yml on windows-latest builds the MSI from source_commit; it refuses to run if desktop/, app/src/main, native/ or docs/licenses changed since",
+  "tests": {
+    "desktop_suite_local_linux": {
+      "run": 500,
+      "failed": 0,
+      "skipped": 6,
+      "commit": "f09ddaa86a084bf28e56a6fab08b7b81cc7da12d"
+    },
+    "windows_ci": {
+      "workflow": "windows.yml",
+      "run_id": 44918859735,
+      "conclusion": "success",
+      "commit": "d0592e6f0887f24a968633b1ee54c3988d5e4eff",
+      "note": "same desktop/, app/src/main, native/ and docs/licenses tree as source_commit (only release notes changed since)",
+      "steps": "desktop tests, MSI packaging, silent install, Ketvoice.exe --smoke (ONNX Runtime, LGPL FFmpeg, SMTC DLL, thumbnail toolbar exports), cold-start probe, uninstall"
+    },
+    "android_ci_shared_code": {
+      "workflow": "android.yml",
+      "run_id": 44914438381,
+      "conclusion": "success",
+      "commit": "2290aee04f0f88d72b04a891b394a1cdef3da50f",
+      "note": "shared app sources the desktop compiles; app/src/main unchanged since"
+    }
+  },
+  "ui_text_audit": "tools/audit_ui_texts.py --check: 0 unaccounted; new desktop strings carry 10 translations",
+  "license_check": "checkNoGpl: no -gpl artifact in the runtime; FFmpeg is the JavaCPP LGPL v3 build; notices installed under app/resources/licenses",
+  "credential_scan": {
+    "findings": 0,
+    "scope": "desktop distributable built from the source tree (createDistributable, 208 files/archive entries, incl. the bundled Java runtime and its class-data archives)",
+    "kind": "credential_patterns (tools/scan_release.py)",
+    "reviewed_false_positives": [
+      {
+        "file": "Ketvoice/lib/runtime/lib/modules",
+        "pattern": "AQ[A-Za-z0-9_-]{90,}",
+        "match_length": 1205,
+        "reason": "OpenJDK's java.util.LocaleISOData ISO-3166 country-code table, a run of capital letters; not a credential"
+      },
+      {
+        "file": "Ketvoice/lib/runtime/lib/server/classes.jsa",
+        "pattern": "AQ[A-Za-z0-9_-]{90,}",
+        "match_length": 1205,
+        "reason": "OpenJDK's java.util.LocaleISOData ISO-3166 country-code table, a run of capital letters; not a credential"
+      },
+      {
+        "file": "Ketvoice/lib/runtime/lib/server/classes_nocoops.jsa",
+        "pattern": "AQ[A-Za-z0-9_-]{90,}",
+        "match_length": 1205,
+        "reason": "OpenJDK's java.util.LocaleISOData ISO-3166 country-code table, a run of capital letters; not a credential"
+      }
+    ]
+  },
+  "models": {
+    "ketmix-stems-onnx-v1": "published 2026-11-21 as a prerelease, not latest; assets match tools/stems/expected-onnx.sha256",
+    "beat_model": "downloaded on request from ketmix-beat-v1's pinned source with SHA-256 c462b064…aea"
+  },
+  "release_policy": {
+    "make_latest": false,
+    "reason": "the Android in-app updater and the website read the latest release (v8.1.0, v8.2.0 once published)"
+  },
+  "publication_override": {
+    "authorized_by_user": true,
+    "kind": "standing_authorization",
+    "user_statement": "J'autorise TOUT devient maintenant une règle.",
+    "user_statement_date": "2026-11-14",
+    "owner_request": "« Propose moi des améliorations visuel et optimisation mobile/pc » (2026-11-21); the owner picked every PC option: Verre Windows 11, Lecteur plein écran, Ketmix Studio sur PC, Boutons dans la miniature, Voix prêtes à l'avance, Moins de mémoire, Rendu GPU fluide, Démarrage rapide",
+    "recorded_in": "AGENTS.md",
+    "reason": "The owner made publishing validated versions without device testing a standing rule.",
+    "scope": "installation and use on the owner's own Windows computer"
+  },
+  "not_validated": [
+    "No person has installed or used 1.1.0 on a real Windows PC; only the GitHub windows-latest runner installed it silently, ran --smoke and the start-up probe, and uninstalled it.",
+    "Mica and Acrylic were never seen on a real Windows 11 desktop; the CI runner is Windows Server 2025 without a visible session. A black or opaque window surface on some GPUs or drivers is possible and was not checked.",
+    "The full-screen player, the taskbar thumbnail buttons and the cover peek were not checked by a person.",
+    "Ketmix Studio was not used with a mouse by a person, and no sound from its preview was heard.",
+    "Preset sync between a real phone and Windows through the live account was not tried.",
+    "Voice separation ahead on mains power was not run on real downloads on Windows.",
+    "Direct3D with vsync was not checked on real GPUs; frame times were not measured.",
+    "Memory use was measured in MemoryBudgetTest on the host, not over a long session on Windows.",
+    "No faster start was measured on Windows (see startup_measurement).",
+    "Upgrading a real 1.0.0 installation to 1.1.0 (MSI major upgrade or the in-app updater) was not tried.",
+    "The MSI is not code-signed; Windows SmartScreen will warn about an unknown publisher.",
+    "Independent code review."
+  ],
+  "known_limitations": [
+    "Library pre-separation follows the phone's rules only on mains power; streaming separation ahead of the playhead is not ported to Windows.",
+    "Ketmix bar loop is not on Windows yet.",
+    "The phone is only reachable for phone control while its app is open or playing."
+  ],
+  "canonical_banner_sha256": "ddc0e2c1270027f4b9dd92254374b79727ae9eaf8914e418b52e23c5b39b5966",
+  "features_1_1": {
+    "glass": "DWM Mica (DWMWA_SYSTEMBACKDROP_TYPE, or the 21H2 attribute) behind a transparent skiko layer, in-app Acrylic sidebar and bar; solid colours on Windows 10, with transparency off, in high contrast, with the setting off or on any DWM failure",
+    "full_screen_player": "F11 or the player's button, Esc to leave; cover or Canvas edge to edge with Cascade lyrics",
+    "thumbnail_toolbar": "ITaskbarList3 in ketvoice_smtc.dll: previous, play/pause, next and the cover as iconic thumbnail; --smoke checks the exports",
+    "ketmix_studio": "shared automix editor code (MixEditor, MixStudio), presets in ketmix-presets-v1 synced through the account settings document (add-only adoption), KM1. codes, preview through the desktop mixer",
+    "voices_ahead": "downloads separated ahead on mains power (StemLibrary rules: 300 titles, quick model first)",
+    "rendering": "Direct3D with vsync on Windows; skiko falls back to OpenGL, then software; the API that draws is logged",
+    "memory": "covers bounded by bytes (160 MB), decoded at most 1280 px; G1 -Xms64m -Xmx1536m with tight free ratios and periodic GC; MemoryBudgetTest",
+    "class_data_sharing": "jlink base archive plus an app archive the launcher writes in <install root>\\Data\\ketvoice.jsa (AutoCreateSharedArchive through jvmArgs)"
+  },
+  "startup_measurement": {
+    "run_id": 44918859735,
+    "first_frame_ms": {
+      "no_cds_1": 3984,
+      "no_cds_2": 3085,
+      "first_run_with_archive": 2973,
+      "with_archive_1": 2853,
+      "with_archive_2": 3230
+    },
+    "archive_mb": 9,
+    "finding": "the archive is written and mapped (cds log shows the dynamic regions), but on the warm CI runner the time to the first frame does not change beyond run-to-run noise; no faster start is claimed in the release notes",
+    "linux_headless_local": "first frame 4842 ms on the run that wrote the archive, then 1714 and 1878 ms with it (software rendering, cold file cache on the first run, so not a clean comparison)"
+  }
+}
