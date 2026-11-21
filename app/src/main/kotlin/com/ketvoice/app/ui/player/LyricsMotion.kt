@@ -67,8 +67,13 @@ internal object LyricsCascade {
     fun waveStartDp(distance: Int): Float = 6f * distance.coerceIn(0, 4)
     /** Each line follows the one above after a short delay, so the block moves like a wave. */
     fun waveDelayMs(distance: Int): Long = 26L * distance.coerceIn(0, 5)
-    const val WAVE_MS = 560
-    val GLIDE = androidx.compose.animation.core.CubicBezierEasing(.2f, .8f, .2f, 1f)
+    /** 8.2: each line springs into place (a whisper of give, about 1 dp on the farthest line). */
+    val WAVE_SPRING = androidx.compose.animation.core.spring<Float>(dampingRatio = .74f, stiffness = 190f)
+    /** 8.2: the block follows the sung line on a spring that settles in about half a second. */
+    val SCROLL_SPRING = androidx.compose.animation.core.spring<Float>(dampingRatio = .92f, stiffness = 120f)
+    /** 8.2: lines already sung fade softly, a little more the further up they are, never below the lines to come. */
+    fun pastAlpha(distance: Int): Float = maxOf(INACTIVE_ALPHA + .04f, .66f - .12f * (distance.coerceAtLeast(1) - 1))
+    const val PAST_FADE_MS = 900
     /** A line before the one being sung has been sung. */
     fun sung(index: Int, active: Int): Boolean = active >= 0 && index < active
 }
