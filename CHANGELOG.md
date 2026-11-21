@@ -7,6 +7,22 @@
 
 ---
 
+# Ketvoice 8.0.0
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 148** — refractive Liquid Glass paths and a melting tab bar, menus that grow from their button, springs and animated icons, the morphing player, duet lyrics, Ketmix Studio and live statistics.
+
+- Glass (`glass/GlassRenderMode.glassMaterialPath`, `Liquid27Shader`, `Liquid27Fusion`, `ui/chrome/Chrome.kt`, `ChromeCollapse`): material paths Refractive, RefractiveLite (performance mode on API 33+: no dispersion, one luminance sample, lens 0.7), Opaque, Blur, SoftBlur, Static; dispersion kept to the outer rim; tabs fold into the current-tab capsule on a velocity-seeded spring. `GlassMaterialPathTest`, `ChromeMorphTest`, `ChromeMorphHostTest`.
+- Motion (`ui/motion/GrowFromSource.kt`, `Motion.Springs` SNAPPY/SMOOTH/BOUNCY/GROW, `SymbolEffects`): context menu, `KetMenu` (own popup on `GlassPanel`), `SpringSheet` and alerts grow from the pressed control; 39 tweens replaced by springs; slide/ring/breathe/replace icon effects. `Motion80HostTest`.
+- Player (`ui/player/PlayerMorph.kt`, `FullPlayerScreen`): one spring value morphs the artwork into a 56 dp header for lyrics and queue, drag-driven; reduced motion fades. Duets (`data/LyricsDuet.kt`, `LyricLine.singer`): TTML `ttm:agent`, enhanced LRC `v1:`/`v2:`/`F:`/`M:`/`D:`, custom JSON, or section headers naming a featured artist; never guessed. `LyricsDuetTest`, `PlayerMorphTest`, `Player80HostTest`.
+- Ketmix Studio (`automix/MixStudio.kt`, `ui/player/KetmixStudio.kt`): fixed toolbar with undo/redo (60 states, 600 ms grouping), beat magnet and “+ Point”; pinch zoom 0.5–6×; presets in `ketmix-presets-v1`; `KM1.` share codes. Pair storage formats unchanged. `MixStudioTest`, `KetmixStudioHostTest`.
+- Statistics (`data/LiveStats.kt`, `ui/stats/StatsScreen.kt`, `util/StatsShareCard.kt`): week/month/year/all with like-for-like deltas, tops, hour histogram, streak, new artists, Ketmix mixes; days keep hours and first listens, months keep per-day minutes (old data loads). `LiveStatsTest`, `StatsHostTest`.
+
+Full notes: [8.0.0](docs/releases/v8.0.0.md).
+
+---
+
 # Ketvoice 7.6.0
 
 ![Ketvoice](ketvoice-banner.png)

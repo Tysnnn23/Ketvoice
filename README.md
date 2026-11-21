@@ -21,6 +21,14 @@
 
 ## Overview
 
+### 8.0.0 — Refractive glass, a player that folds, Ketmix Studio
+
+Glass that bends light, a tab bar that melts into one capsule, menus that grow out of the button, springs and animated icons, a player that folds into the lyrics, duet lyrics, Ketmix Studio with presets and shareable mixes, and live statistics.
+[Mobile](https://github.com/Tysnnn23/Ketvoice/releases/download/v8.0.0/Ketvoice-8.0.0.apk)
+· [Lite](https://github.com/Tysnnn23/Ketvoice/releases/download/v8.0.0/Ketvoice-8.0.0-Lite.apk)
+· [Quest](https://github.com/Tysnnn23/Ketvoice/releases/download/v8.0.0/Ketvoice-8.0.0-Quest.apk)
+· [Release notes](docs/releases/v8.0.0.md).
+
 ### 7.6.0 — Canvas shown whole and kept, a lighter app, your own mix levels
 
 Canvas shown complete and saved for every song, a much lighter player, voice level while streaming, volume points in the mix editor, three new Ketmix transitions and a welcome step that installs the extras.
