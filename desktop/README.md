@@ -278,9 +278,33 @@ into the next, and « Suivant » blends. `BeatModelOnnxTest` checks the pinned d
   (`StemModelPinTest` pins the phone's LiteRT files and is excluded), `StemsScreenshots` (renders and drives the slider and
   the equalizer). Opt-in: `KETVOICE_STEMS_ONNX=<folder with the three files>` runs the real networks on a generated clip
   (here: Spleeter 12 s of sound in about 0.9 s, UVR in about 10 s, CPU).
-- Not on the desktop yet: separating the library ahead (`StemLibrary`) and separating streams ahead of the playhead (a
-  title is separated whole once its slider is touched). The lyrics need no `VoiceLevel.delayMs`: the engine's position
+- Not on the desktop yet: separating streams ahead of the playhead (a title is separated whole once its slider is
+  touched; downloads are separated ahead, see « Voix prêtes à l'avance » below). The lyrics need no `VoiceLevel.delayMs`: the engine's position
   already leaves the stage's delay out.
+
+## Ketmix Studio and « Voix prêtes à l'avance » (Windows 1.1, winstudio)
+
+- **Studio** (`ketmix/StudioState.kt`, `ui/KetmixStudio.kt`): the phone's editor state restated over the shared code only
+  (`MixEditor`, `MixStudio`'s `EditHistory`/`StudioSnap`/`MixPresetStore`/`MixShare`, `MixKeys`, `MixShape`, `PairChoice`).
+  One timeline on the outgoing clock: both waves (`WaveBuilder` over `DesktopVoice.decode`, kept in `WaveStore`) with their
+  bars and phrases, the transition box (drag = exit, right edge = length, lower wave = entry, magnet on the grid), the
+  keyframe lane (double-click adds, drag moves, click opens voice/instruments/music of both titles), style and details,
+  undo/redo (Ctrl+Z/Ctrl+Y), presets in `ketmix-presets-v1` (the phone's format), `KM1.` codes copied to the clipboard
+  and imported. « Enregistrer » writes `MixPointStore` (`ketmix-points-v1`, now opened at start); `DesktopAutomix` applies
+  the pair's keyframes and `pointsChanged()` re-plans the next transition. Opened from a right click on the bar's Ketmix
+  switch and from a title's menu (« Ketmix Studio »: the title into the next one in the queue). Keys: Space listens,
+  Delete removes the open keyframe, Escape closes (asks to save when changed).
+- **Écouter** (`ketmix/StudioPreview.kt`): the plan played by a second `FfmpegAudioEngine` through `mixIntoNext` (the same
+  decks and `DeckDsp` automation as a real mix), 5 s before the blend to 4 s after; the music pauses and resumes.
+- **Voix prêtes à l'avance** (`app/stems/StemLibrary.kt`, desktop counterpart; Settings › Séparation des voix, key
+  `ketmixLibrary`): on mains power, the 300 most recent downloads are separated whole, the quick model over all of them
+  first, then the best model where `StemEngine.wanted()` asks for it; one title at a time on a low-priority thread, held
+  while a voice is awaited or Ketmix prepares or mixes, stopped off mains. Unlike the phone it does not need Ketmix on
+  (the voice level uses the separations too).
+- **Presets shared with the phone** need an app-side change (`SettingsKind` carrying each preset as a
+  `ketmixPreset.<hash>` item); the desktop already uses the same store and the shared sync code.
+- Tests: `KetmixStudioTest` (mouse edits, undo, save, presets in the real prefs file, `KM1.` round trip, preview through
+  the engine into a capture, library order and power rule), `MixStudioTest` (shared), `StudioScreenshots` (`studio-*.png`).
 
 ## Done in Phase 1
 

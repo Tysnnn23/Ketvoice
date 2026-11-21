@@ -1,0 +1,86 @@
+{
+ "Voix prêtes à l'avance": {
+  "en": "Voices ready ahead",
+  "hi": "पहले से तैयार आवाज़ें",
+  "ja": "ボーカルを事前に準備",
+  "zh": "提前准备人声",
+  "ru": "Голос заранее",
+  "it": "Voci pronte in anticipo",
+  "es": "Voces listas de antemano",
+  "de": "Stimmen vorab bereit",
+  "pt": "Vozes prontas antecipadamente",
+  "ko": "보컬 미리 준비"
+ },
+ "Sur secteur, les titres téléchargés sont séparés à l'avance (300 au plus, le modèle rapide d'abord) : leur voix et leurs mix sont prêts tout de suite.": {
+  "en": "On mains power, downloaded songs are separated ahead of time (up to 300, the quick model first): their voice and mixes are ready right away.",
+  "hi": "बिजली से जुड़े रहने पर, डाउनलोड किए गए गाने पहले से अलग किए जाते हैं (अधिकतम 300, पहले तेज़ मॉडल): उनकी आवाज़ और मिक्स तुरंत तैयार रहते हैं।",
+  "ja": "電源接続中は、ダウンロードした曲を事前に分離します（最大300曲、まず高速モデルで）。ボーカルとミックスがすぐに使えます。",
+  "zh": "接通电源时，已下载的歌曲会提前分离（最多 300 首，先用快速模型）：人声和混音随时可用。",
+  "ru": "При питании от сети скачанные треки разделяются заранее (до 300, сначала быстрой моделью): голос и миксы готовы сразу.",
+  "it": "Con l'alimentazione collegata, i brani scaricati vengono separati in anticipo (fino a 300, prima con il modello rapido): voce e mix sono subito pronti.",
+  "es": "Con el equipo enchufado, las canciones descargadas se separan de antemano (hasta 300, primero con el modelo rápido): su voz y sus mezclas están listas al instante.",
+  "de": "Am Stromnetz werden heruntergeladene Titel vorab getrennt (bis zu 300, zuerst mit dem schnellen Modell): Stimme und Mixe sind sofort bereit.",
+  "pt": "Ligado à corrente, as músicas baixadas são separadas antecipadamente (até 300, primeiro com o modelo rápido): a voz e os mixes ficam prontos na hora.",
+  "ko": "전원에 연결되어 있으면 다운로드한 곡을 미리 분리합니다(최대 300곡, 빠른 모델 먼저). 보컬과 믹스가 바로 준비됩니다."
+ },
+ "Code du mix copié dans le presse-papiers": {
+  "en": "Mix code copied to the clipboard",
+  "hi": "मिक्स कोड क्लिपबोर्ड पर कॉपी हो गया",
+  "ja": "ミックスコードをクリップボードにコピーしました",
+  "zh": "混音代码已复制到剪贴板",
+  "ru": "Код микса скопирован в буфер обмена",
+  "it": "Codice del mix copiato negli appunti",
+  "es": "Código de la mezcla copiado al portapapeles",
+  "de": "Mix-Code in die Zwischenablage kopiert",
+  "pt": "Código do mix copiado para a área de transferência",
+  "ko": "믹스 코드를 클립보드에 복사했습니다"
+ },
+ "Double-cliquez sous les ondes pour placer un point, faites-le glisser pour le déplacer.": {
+  "en": "Double-click under the waves to place a point; drag it to move it.",
+  "hi": "पॉइंट लगाने के लिए तरंगों के नीचे डबल-क्लिक करें, उसे खिसकाने के लिए खींचें।",
+  "ja": "波形の下をダブルクリックしてポイントを置き、ドラッグして動かします。",
+  "zh": "在波形下方双击放置一个点，拖动即可移动。",
+  "ru": "Дважды щёлкните под волнами, чтобы поставить точку, и перетащите её, чтобы сдвинуть.",
+  "it": "Fai doppio clic sotto le onde per aggiungere un punto, trascinalo per spostarlo.",
+  "es": "Haz doble clic bajo las ondas para colocar un punto y arrástralo para moverlo.",
+  "de": "Doppelklicken Sie unter die Wellen, um einen Punkt zu setzen, und ziehen Sie ihn, um ihn zu verschieben.",
+  "pt": "Clique duas vezes sob as ondas para colocar um ponto e arraste-o para movê-lo.",
+  "ko": "파형 아래를 더블클릭해 포인트를 놓고, 드래그해서 옮기세요."
+ },
+ "Transition": {
+  "en": "Transition",
+  "hi": "ट्रांज़िशन",
+  "ja": "トランジション",
+  "zh": "过渡",
+  "ru": "Переход",
+  "it": "Transizione",
+  "es": "Transición",
+  "de": "Übergang",
+  "pt": "Transição",
+  "ko": "전환"
+ },
+ "+ Point": {
+  "en": "+ Point",
+  "hi": "+ पॉइंट",
+  "ja": "+ ポイント",
+  "zh": "+ 点",
+  "ru": "+ Точка",
+  "it": "+ Punto",
+  "es": "+ Punto",
+  "de": "+ Punkt",
+  "pt": "+ Ponto",
+  "ko": "+ 포인트"
+ },
+ "Ctrl+Z · Ctrl+Y · Espace · Suppr": {
+  "en": "Ctrl+Z · Ctrl+Y · Space · Del",
+  "hi": "Ctrl+Z · Ctrl+Y · Space · Del",
+  "ja": "Ctrl+Z · Ctrl+Y · Space · Del",
+  "zh": "Ctrl+Z · Ctrl+Y · 空格 · Del",
+  "ru": "Ctrl+Z · Ctrl+Y · Пробел · Del",
+  "it": "Ctrl+Z · Ctrl+Y · Spazio · Canc",
+  "es": "Ctrl+Z · Ctrl+Y · Espacio · Supr",
+  "de": "Strg+Z · Strg+Y · Leertaste · Entf",
+  "pt": "Ctrl+Z · Ctrl+Y · Espaço · Del",
+  "ko": "Ctrl+Z · Ctrl+Y · Space · Del"
+ }
+}

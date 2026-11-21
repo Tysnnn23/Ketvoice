@@ -9,6 +9,7 @@ automix/KetmixFiveElevenTest.kt
 automix/KetmixRenderQualityTest.kt
 automix/MixBench.kt
 automix/MixShapeTest.kt
+automix/MixStudioTest.kt
 automix/MusicalKeyTest.kt
 automix/TransitionPlannerTest.kt
 data/AppLanguageTest.kt

@@ -83,6 +83,12 @@ fun main(args: Array<String>) {
     com.ketvoice.desktop.remote.DesktopRemote.start(context, scope)
     // Ketmix: the shared planning played by the engine's two decks (off until the listener switches it on).
     com.ketvoice.desktop.ketmix.DesktopAutomix.attach(engine, scope)
+    // Ketmix Studio: the listener's mix points and presets (`ketmix-presets-v1`, as on the phone) and the waves it draws.
+    com.ketvoice.app.automix.MixPointStore.init(context)
+    com.ketvoice.app.automix.MixPresetStore.init(context)
+    com.ketvoice.app.automix.WaveStore.init(context)
+    // « Voix prêtes à l'avance »: downloads separated ahead while on mains power.
+    com.ketvoice.app.stems.StemLibrary.start()
     // Tray, media keys and the Windows media controls drive the player.
     DesktopPlatform.bridge = object : com.ketvoice.desktop.platform.PlatformBridge {
         override fun toggle() = Player.toggle()
