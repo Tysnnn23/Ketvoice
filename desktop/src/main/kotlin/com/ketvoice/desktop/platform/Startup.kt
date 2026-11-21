@@ -9,7 +9,7 @@ import java.time.Instant
  *
  * - Rendering: Direct3D with vsync on Windows. If Direct3D cannot start, skiko itself falls back to OpenGL, then
  *   software; [firstFrame] logs which one draws. `SKIKO_RENDER_API` (environment) or `-Dskiko.renderApi` still win.
- * - Class data: the packaged launcher runs with `-XX:+AutoCreateSharedArchive -XX:SharedArchiveFile=<data>\cds\ketvoice.jsa`
+ * - Class data: the packaged launcher runs with `-XX:+AutoCreateSharedArchive -XX:SharedArchiveFile=<data>\ketvoice.jsa`
  *   (build.gradle.kts). The JVM writes the archive when the app quits and maps it on the next start; it only needs
  *   the folder to exist, which [prepareArchive] makes.
  * - `--startup-probe`: a normal start that quits after the first frame and writes `startup.log` (Windows CI times it).

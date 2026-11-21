@@ -100,7 +100,7 @@ jobs:
           # sharing (as 1.0.0), then with the app archive the first normal run writes at exit. Reported, not fatal.
           $cfg = Join-Path $exe.DirectoryName "app\Ketvoice.cfg"
           $startupLog = "$env:LOCALAPPDATA\Ketvoice\Data\startup.log"
-          $jsa = Join-Path $exe.DirectoryName "Data\cds\ketvoice.jsa"
+          $jsa = Join-Path $exe.DirectoryName "Data\ketvoice.jsa"
           function Probe($label) {
             Remove-Item $startupLog -ErrorAction SilentlyContinue
             $sw = [Diagnostics.Stopwatch]::StartNew()

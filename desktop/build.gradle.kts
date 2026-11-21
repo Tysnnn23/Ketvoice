@@ -175,10 +175,10 @@ tasks.matching { it.name.startsWith("package") || it.name.startsWith("createDist
     .configureEach { dependsOn(checkNoGpl) }
 
 // Fast start (Windows 1.1): the runtime image gets the JDK's base class-data archive, and the packaged launcher
-// keeps an archive of the app's own classes in <install root>\Data\cds (the per-user MSI's root is
+// keeps an archive of the app's own classes in <install root>\Data, which must exist when the JVM starts (the app makes it on its first run; the per-user MSI's root is
 // %LOCALAPPDATA%\Ketvoice): the JVM writes it when the app quits and maps it on every later start, and rewrites it
 // by itself after an update. `run` and the tests do not use it (there is no $APPDIR there).
-val cdsArchive = "\$APPDIR/../Data/cds/ketvoice.jsa"
+val cdsArchive = "\$APPDIR/../Data/ketvoice.jsa"
 tasks.withType<org.jetbrains.compose.desktop.application.tasks.AbstractJLinkTask>().configureEach {
     // jlink's --generate-cds-archive runs the image's own java, which Compose's --strip-native-commands removes
     // first; that switch has no DSL, so it is turned off through its (internal) property when it can be.

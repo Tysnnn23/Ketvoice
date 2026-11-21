@@ -466,8 +466,8 @@ Android in-app updater skips those tags, as it skips the model tags).
 
 - **Class data sharing.** `createRuntimeImage` runs jlink with `--generate-cds-archive` (the JDK's base archive; Compose's
   `--strip-native-commands` is turned off for it, see `build.gradle.kts`). The packaged launcher adds
-  `-XX:+AutoCreateSharedArchive -XX:SharedArchiveFile=$APPDIR/../Data/cds/ketvoice.jsa`: with the per-user MSI that is
-  `%LOCALAPPDATA%\Ketvoice\Data\cds`. The JVM writes the archive (about 50 MB) when the app quits and maps it on later
+  `-XX:+AutoCreateSharedArchive -XX:SharedArchiveFile=$APPDIR/../Data/ketvoice.jsa`: with the per-user MSI that is
+  `%LOCALAPPDATA%\Ketvoice\Data (it must exist when the JVM starts, which it does from the second launch)`. The JVM writes the archive (about 50 MB) when the app quits and maps it on later
   starts; after an update it notices the changed jars and writes a new one. `run` and the tests do not use it.
 - **`--startup-probe`.** A normal start that quits after the first frame and writes `Data\startup.log` (time since the
   process started, render API, heap, CDS state). `windows.yml` times it after the install: twice with `-Xshare:off`
