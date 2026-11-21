@@ -22,6 +22,8 @@ internal data class MonthStat(
     val tracks: Map<String, Track> = emptyMap(),
     /** Transitions Ketmix mixed this month. */
     val mixes: Int = 0,
+    /** 8.0: listening time of each day of the month (index 0 is the 1st), for the weekly bars and the streak. */
+    val days: List<Long> = emptyList(),
 )
 
 internal object ListeningMonths {
@@ -43,7 +45,9 @@ internal object ListeningMonths {
         val hours = stat.hours.toMutableList().also { if (it.size != 24) { it.clear(); repeat(24) { _ -> it += 0L } } }
         val h = hour.mod(24)
         hours[h] = hours[h] + deltaMs
-        return months + (k to stat.copy(ms = stat.ms + deltaMs, hours = hours))
+        val days = (if (stat.days.size == 31) stat.days.toMutableList() else MutableList(31) { i -> stat.days.getOrElse(i) { 0L } })
+            .also { it[date.dayOfMonth - 1] += deltaMs }
+        return months + (k to stat.copy(ms = stat.ms + deltaMs, hours = hours, days = days))
     }
 
     /**
@@ -99,6 +103,7 @@ internal object ListeningMonths {
         put("hours", JSONArray(stat.hours))
         put("new", JSONArray(stat.newArtists))
         put("mixes", stat.mixes)
+        if (stat.days.any { it > 0L }) put("days", JSONArray(stat.days))
         put("tracks", JSONArray().apply { stat.tracks.values.forEach { put(trackJson(it)) } })
     }.toString()
 
@@ -112,7 +117,9 @@ internal object ListeningMonths {
         val names = (0 until newJson.length()).mapNotNull { newJson.optString(it).takeIf(String::isNotBlank) }.take(MAX_NEW_ARTISTS)
         val tracksJson = o.optJSONArray("tracks") ?: JSONArray()
         val tracks = (0 until tracksJson.length()).mapNotNull { track(tracksJson.optJSONObject(it)) }.associateBy { it.id }
-        MonthStat(o.optLong("ms").coerceAtLeast(0L), plays, hours, names, tracks, o.optInt("mixes").coerceAtLeast(0))
+        val daysJson = o.optJSONArray("days")
+        val days = if (daysJson == null) emptyList() else List(31) { i -> daysJson.optLong(i).coerceAtLeast(0L) }
+        MonthStat(o.optLong("ms").coerceAtLeast(0L), plays, hours, names, tracks, o.optInt("mixes").coerceAtLeast(0), days)
     }.getOrNull()
 
     internal fun trackJson(t: Track) = JSONObject().put("id", t.id).put("title", t.title).put("artist", t.artist).put("album", t.album)

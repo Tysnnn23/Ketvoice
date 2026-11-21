@@ -87,7 +87,7 @@ internal object Wrapped {
                 rows.firstNotNullOfOrNull { coverOf(it.first) }) }
             .sortedWith(compareByDescending<Album> { it.plays }.thenBy { it.title })
 
-    private fun catalogId(track: Track): String? =
+    internal fun catalogId(track: Track): String? =
         track.artistId?.takeIf { track.addon == "um" && it.isNotBlank() && it.all(Char::isDigit) }
 
     private fun rank(plays: Map<String, Int>, byId: Map<String, Track>): List<Pair<Track, Int>> =

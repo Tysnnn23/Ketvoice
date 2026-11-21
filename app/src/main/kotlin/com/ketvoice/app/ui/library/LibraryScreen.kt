@@ -193,7 +193,8 @@ fun LibraryScreen() {
                     Triple("Artistes", KetIcons.Account) { view = 4 }, Triple("Albums", KetIcons.Album) { view = 2 },
                     Triple("Titres", KetIcons.Lyrics) { view = 3 },
                     Triple("Musique locale", KetIcons.Folder) { AppUi.openLocalFiles() },
-                    Triple("Replay", KetIcons.Clock) { AppUi.openReplay() }))
+                    Triple("Replay", KetIcons.Clock) { AppUi.openReplay() },
+                    Triple("Statistiques", com.ketvoice.app.ui.stats.StatsIcon) { AppUi.openStats() }))
             }
             item(key = "library-playlists-heading") { LibrarySection("Playlists", onMore = { view = 1 }) }
             playlistsSection(PlaylistsLayout.arrange(playlists, "", playlistSort, PlaylistFilter.All), false, paneDp, owner,

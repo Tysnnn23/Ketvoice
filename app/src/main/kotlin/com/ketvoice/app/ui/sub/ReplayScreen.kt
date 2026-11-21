@@ -200,6 +200,14 @@ private fun MonthReplay(key: String, inProgress: Boolean, onWrapped: (Wrapped.Re
                     Text(AppText.t("Wrapped du mois"), localize = false, color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(start = 8.dp))
                 }
+                // 8.0: the live statistics (week, month, year), without waiting for the month's end.
+                if (inProgress) Row(Modifier.padding(top = 10.dp).clip(RoundedCornerShape(999.dp)).background(Color.White.copy(alpha = .16f))
+                    .clickable(role = Role.Button) { AppUi.openStats() }.heightIn(min = 44.dp).padding(horizontal = 18.dp)
+                    .testTag("replay-month-stats"), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(com.ketvoice.app.ui.stats.StatsIcon, null, tint = Color.White, modifier = Modifier.size(16.dp))
+                    Text(AppText.t("Statistiques en direct"), localize = false, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(start = 8.dp))
+                }
             }
         }
         Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
