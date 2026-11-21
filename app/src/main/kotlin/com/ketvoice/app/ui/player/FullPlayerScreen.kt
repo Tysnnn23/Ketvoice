@@ -274,7 +274,7 @@ fun FullPlayerScreen(
             }
         }
         val lowerHeight = if (wide) (safeHeight - topInset - 6.dp) else tabletop?.controlsHeightDp?.dp
-            ?: (safeHeight * .405f).coerceAtLeast(300.dp)
+            ?: PlayerArtworkSize.controlsDp(safeHeight.value).dp
         val contentBottom = safeHeight - lowerHeight
         val headerTop = if (wide) topInset + 20.dp else (safeHeight * .093f).coerceAtLeast(topInset + 35.dp)
         val headerHeight = 58.dp
@@ -395,11 +395,14 @@ fun FullPlayerScreen(
                 val inlineCanvas = canvasPath != null && AppSettings.animatedArtwork.value && !panoramicCanvasActive(canvasPath)
                 val titleTop = if (wide) safeHeight - 66.dp else tabletop?.let { it.sceneHeightDp.dp - 66.dp }
                     ?: minOf(safeHeight * .514f, contentBottom - 61.dp)
-                val artworkHeight = if (wide) safeHeight else tabletop?.sceneHeightDp?.dp ?: (safeHeight * .55f)
+                // 8.3: the artwork takes the height of what it shows, down to the controls (the title sits on its foot).
+                val artwork = rememberArtworkHeight(track.id, if (canvasFocus || panoramicCanvasActive(canvasPath)) null else canvasPath,
+                    sceneWidth, cap = tabletop?.sceneHeightDp?.dp ?: contentBottom, frame = artworkFrame, canvasAspect = canvasAspect,
+                    fixed = if (wide) safeHeight else null)
                 val headerPad = if (wide) 18.dp else margin
                 val density = LocalDensity.current
                 val fitTop = topInset + 52.dp
-                val fitBottom = titleTop - 8.dp
+                val fitBottom = minOf(titleTop - 8.dp, artwork.target)
                 val squarePx = with(density) { PlayerMorph.square(sceneWidth.toPx(), fitTop.toPx(), fitBottom.toPx(), 12.dp.toPx()) }
                 val slotPx = with(density) {
                     androidx.compose.ui.geometry.Rect(headerPad.toPx(), (headerTop + (headerHeight - PlayerMorph.SLOT_DP.dp) / 2).toPx(),
@@ -455,7 +458,7 @@ fun FullPlayerScreen(
                         .semantics { contentDescription = AppText.t("Voir le Canvas en plein écran") }
                     else -> Modifier
                 }
-                Box(Modifier.width(sceneWidth).height(artworkHeight)
+                Box(Modifier.width(sceneWidth).artworkHeight(artwork).testTag("player-artwork")
                     .graphicsLayer {
                         val raw = morphProgress()
                         val p = PlayerMorph.shape(raw, reduced)
@@ -492,7 +495,8 @@ fun FullPlayerScreen(
                                 clip = true
                             } else clip = false
                         },
-                        solid = { PlayerMorph.shape(morphProgress(), reduced) }) {
+                        solid = { PlayerMorph.shape(morphProgress(), reduced) },
+                        footFromPx = if (wide) 0f else with(density) { titleTop.toPx() }) {
                         Box(Modifier.fillMaxSize()) {
                             ArtworkCanvas(track, if (canvasFocus || panoramicCanvasActive(canvasPath)) null else canvasPath,
                                 // Performance mode: the Canvas holds its frame while it travels and in the header.
@@ -500,7 +504,7 @@ fun FullPlayerScreen(
                                 Modifier.fillMaxSize().trackSwipeContent(trackSwipe), depth = true,
                                 onCanvasFailure = { failedCanvas = true }, frame = artworkFrame,
                                 // 8.1: edge to edge again, as before 7.6 (the owner no longer wants the whole, squared Canvas).
-                                fit = null, ambient = ambience.color)
+                                fit = null, ambient = ambience.color, onMediaAspect = artwork.onAspect, anchorTop = !wide)
                             // Under « Lecture depuis », far from the controls: only when the Canvas is late (6.2.3).
                             com.ketvoice.app.ui.common.CanvasLoadingPill(track,
                                 wanted = AppSettings.animatedArtwork.value && track.id !in canvasExcluded &&

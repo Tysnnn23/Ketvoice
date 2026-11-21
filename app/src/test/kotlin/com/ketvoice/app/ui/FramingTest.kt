@@ -163,8 +163,8 @@ class FramingTest {
         // The Canvas is off, or was removed: the cover's, whatever was read of a Canvas before.
         assertEquals("cover", AlbumPresentation.pageAccent(false, "canvas", "cover"))
         assertNull(AlbumPresentation.pageAccent(false, "canvas", null))
-        // The player's artwork: the width over 55 % of the height on a phone, a square on a wide or lying window.
-        assertEquals(400f / (900f * .55f), AlbumPresentation.playerArtworkAspect(400f, 900f), 1e-4f)
+        // The player's artwork (8.3): the width over its tallest (down to the controls) on a phone, a square on a wide or lying window.
+        assertEquals(400f / (900f - 900f * .405f), AlbumPresentation.playerArtworkAspect(400f, 900f), 1e-4f)
         assertEquals(1f, AlbumPresentation.playerArtworkAspect(1280f, 800f), 0f)
         assertEquals(1f, AlbumPresentation.playerArtworkAspect(800f, 1280f), 0f)
         assertEquals(1f, AlbumPresentation.playerArtworkAspect(400f, 0f), 0f)
