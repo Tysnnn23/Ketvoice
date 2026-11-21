@@ -46,9 +46,11 @@ internal class FakeEngine : AudioEngine {
 
     /** The current deck reaches its end: the held one follows without a gap. */
     fun end() {
-        current = next; next = null; position = 0L
+        val held = next
+        current = held; next = null; position = 0L
         playing = current != null
-        events.tryEmit(AudioEvent.Ended)
+        // Like FfmpegAudioEngine: a gapless takeover is Advanced, a real end (nothing held) is Ended.
+        events.tryEmit(if (held != null) AudioEvent.Advanced(held) else AudioEvent.Ended)
     }
 }
 

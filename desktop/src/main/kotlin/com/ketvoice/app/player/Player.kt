@@ -363,7 +363,9 @@ object Player {
 
     private fun onEvent(event: AudioEvent) = synchronized(this) {
         when (event) {
-            AudioEvent.Ended -> onEnded()
+            // The engine reports a gapless takeover as Advanced and a real end (nothing preloaded followed) as Ended.
+            is AudioEvent.Advanced -> onEnded()
+            AudioEvent.Ended -> { preloadedEntry = null; preloadedSource = null; onEnded() }
             is AudioEvent.Error -> if (loadedEntry != null) { _loading.value = false; failed() }
             is AudioEvent.Buffering -> { val (buffering) = event; _loading.value = buffering }
             else -> Unit

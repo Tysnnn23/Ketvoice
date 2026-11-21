@@ -5,3 +5,4 @@ player/QueueEntryIds.kt
 player/Autoplay.kt
 player/NoRepeat.kt
 player/Radio.kt
+player/EqualizerProfile.kt  # ten-band frequencies for the desktop equalizer (winaudio)

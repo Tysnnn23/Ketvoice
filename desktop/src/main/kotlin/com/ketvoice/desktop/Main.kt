@@ -269,6 +269,7 @@ internal object Smoke {
             say("avformat ${version(org.bytedeco.ffmpeg.global.avformat.avformat_version())}, " +
                 "swresample ${version(org.bytedeco.ffmpeg.global.swresample.swresample_version())}")
             say("license ${org.bytedeco.ffmpeg.global.avutil.avutil_license().string}")
+            say(com.ketvoice.desktop.audio.AudioSmoke.run())
             say("os ${System.getProperty("os.name")} ${System.getProperty("os.arch")}, java ${System.getProperty("java.version")}")
             if (!com.ketvoice.desktop.platform.PlatformSmoke.check(::say)) error("SMTC check failed")
             say("smoke ok")
