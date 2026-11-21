@@ -27,7 +27,7 @@ object LyricsDiskCache {
             MusicApi.LyricLine(l.getLong("at"), l.getString("text"), (0 until w.length()).map { j ->
                 val word = w.getJSONObject(j)
                 MusicApi.LyricWord(word.getLong("at"), word.getString("text"), word.optLong("end", -1))
-            }, l.optBoolean("syllable"), native)
+            }, l.optBoolean("syllable"), native, l.optString("singer").ifBlank { null })
         }
     }.getOrNull()
     @Synchronized
@@ -37,7 +37,7 @@ object LyricsDiskCache {
             val f = file(key) ?: return
             val o = JSONObject().put("source", result.first).put("lines", JSONArray().apply {
                 result.second.forEach { line -> put(JSONObject().put("at", line.timeMs).put("text", line.text)
-                    .put("syllable", line.syllableTimed).put("translations", JSONObject(line.translations)).put("words", JSONArray().apply {
+                    .put("syllable", line.syllableTimed).apply { line.singer?.let { put("singer", it) } }.put("translations", JSONObject(line.translations)).put("words", JSONArray().apply {
                         line.words.forEach { w -> put(JSONObject().put("at", w.startMs).put("text", w.text).put("end", w.endMs)) }
                     })) }
             })

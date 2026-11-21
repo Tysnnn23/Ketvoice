@@ -50,8 +50,11 @@ internal fun SyncedTranslation(
     line: MusicApi.LyricLine,
     text: String,
     active: Boolean,
-    dimAlpha: Float
+    dimAlpha: Float,
+    /** 8.0: under a line of the other singer, on the right as that line is. */
+    end: Boolean = false
 ) {
+    val align = if (end) androidx.compose.ui.text.style.TextAlign.End else null
     val style = Modifier.fillMaxWidth().padding(top = 7.dp)
 
     // Position lissée : en lecture, elle suit vsync (fluide) ; en pause ou
@@ -78,6 +81,7 @@ internal fun SyncedTranslation(
             lineHeight = 22.sp,
             letterSpacing = (-.3).sp,
             fontWeight = FontWeight.Black,
+            textAlign = align,
             modifier = style
         )
         return
@@ -144,7 +148,7 @@ internal fun SyncedTranslation(
         lineHeight = 22.sp,
         letterSpacing = (-.3).sp,
         fontWeight = FontWeight.Black,
-        style = androidx.compose.ui.text.TextStyle(textDirection = TextDirection.Ltr),
+        style = androidx.compose.ui.text.TextStyle(textDirection = TextDirection.Ltr, textAlign = align ?: androidx.compose.ui.text.style.TextAlign.Unspecified),
         modifier = style
     )
 }

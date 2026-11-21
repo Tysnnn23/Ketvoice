@@ -44,6 +44,28 @@ object LyricsFormats {
                         nativeTranslations.getOrPut(key) { mutableMapOf() }[language] = entry.textContent.trim()
                 }
             }
+            // 8.0: duets. <ttm:agent xml:id="v2" type="person"><ttm:name>…</ttm:name></ttm:agent>; a line names its singer
+            // with ttm:agent on the <p> or its <div>. A "group" agent (everyone) is nobody in particular: null.
+            val agents = mutableMapOf<String, String?>()
+            val agentNodes = doc.getElementsByTagNameNS("*", "agent")
+            for (i in 0 until agentNodes.length) {
+                val agent = agentNodes.item(i) as Element
+                val id = agent.getAttributeNS("http://www.w3.org/XML/1998/namespace", "id").ifBlank { agent.getAttribute("xml:id") }
+                if (id.isBlank()) continue
+                val name = agent.getElementsByTagNameNS("*", "name").item(0)?.textContent?.trim().orEmpty()
+                agents[id] = if (agent.getAttribute("type").equals("group", true)) null else name.ifBlank { id }
+            }
+            fun singerOf(element: Element): String? {
+                var node: Node? = element
+                while (node is Element) {
+                    val attributes = node.attributes
+                    val id = (0 until attributes.length).map { attributes.item(it) }
+                        .firstOrNull { it.localName == "agent" }?.nodeValue?.trim().orEmpty()
+                    if (id.isNotEmpty()) return if (id in agents) agents[id] else id
+                    node = node.parentNode
+                }
+                return null
+            }
             val paragraphs = doc.getElementsByTagNameNS("*", "p")
             (0 until paragraphs.length).mapNotNull { i ->
                 val p = paragraphs.item(i) as Element
@@ -99,7 +121,7 @@ object LyricsFormats {
                 val key = (0 until p.attributes.length).map { p.attributes.item(it) }
                     .firstOrNull { it.localName == "key" }?.nodeValue.orEmpty()
                 if (full.isBlank()) null else MusicApi.LyricLine(start, full, aligned,
-                    aligned.isNotEmpty() && (nestedSyllables || subWord), nativeTranslations[key].orEmpty())
+                    aligned.isNotEmpty() && (nestedSyllables || subWord), nativeTranslations[key].orEmpty(), singerOf(p))
             }.sortedBy { it.timeMs }
         }.getOrDefault(emptyList())
     }

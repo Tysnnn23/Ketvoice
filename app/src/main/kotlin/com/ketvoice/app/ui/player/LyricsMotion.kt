@@ -61,6 +61,8 @@ object LyricsMotion {
 internal object LyricsCascade {
     const val INACTIVE_ALPHA = .32f
     const val INACTIVE_SCALE = .955f
+    /** 8.0: how much further in a line of the other singer of a duet starts (it sits on the right). */
+    const val DUET_INSET_DP = 36f
     /** Lines further below start a little lower, up to four lines away. */
     fun waveStartDp(distance: Int): Float = 6f * distance.coerceIn(0, 4)
     /** Each line follows the one above after a short delay, so the block moves like a wave. */
