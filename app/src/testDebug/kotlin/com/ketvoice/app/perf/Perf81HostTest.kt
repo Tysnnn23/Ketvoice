@@ -125,6 +125,9 @@ class Perf81HostTest {
     /** Mean wall time of a software draw of the whole window (glass draws flat on the host). */
     private fun drawMs(name: String, times: Int = 20): Double {
         var ms = 0.0
+        // Lite's glass backdrop layer cannot be replayed into a software View.draw on the host (as in
+        // NavigationAnimationsHostTest); the recomposition counts, which are what this test checks, still run.
+        if (com.ketvoice.app.BuildConfig.FLAVOR == "lite") { note("$name: software draw skipped on lite"); return ms }
         compose.runOnIdle {
             val view = compose.activity.window.decorView
             val bitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
