@@ -104,7 +104,7 @@ jobs:
           function Probe($label) {
             Remove-Item $startupLog -ErrorAction SilentlyContinue
             $sw = [Diagnostics.Stopwatch]::StartNew()
-            $p = Start-Process $exe.FullName -ArgumentList "--startup-probe" -PassThru
+            $p = Start-Process $exe.FullName -ArgumentList "--startup-probe" -WorkingDirectory $env:RUNNER_TEMP -PassThru
             if (-not $p.WaitForExit(120000)) { $p.Kill(); return "| $label | timed out | |" }
             $line = if (Test-Path $startupLog) { (Get-Content $startupLog -Raw).Trim() } else { "no startup.log (exit $($p.ExitCode))" }
             "| $label | $($sw.ElapsedMilliseconds) ms | $line |"
@@ -116,11 +116,18 @@ jobs:
           $rows += Probe "before, no CDS (2)"
           Set-Content $cfg $original -NoNewline
           Remove-Item $jsa -ErrorAction SilentlyContinue
+          # The run that should write the archive logs what the JVM does with class data (cds.log, beside the summary).
+          Set-Content $cfg ($original.TrimEnd() + "`njava-options=-Xlog:cds=info,cds+dynamic=info:file=cds.log`n") -NoNewline
           $rows += Probe "first run, writes the archive"
+          Set-Content $cfg $original -NoNewline
           $rows += Probe "after, CDS (1)"
           $rows += Probe "after, CDS (2)"
           $rows += "", "Archive: $(if (Test-Path $jsa) { "$([math]::Round((Get-Item $jsa).Length / 1MB)) MB" } else { 'not written' })"
           $rows | Tee-Object -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          $rows | ForEach-Object { Write-Host $_ }
+          Write-Host "java-options in Ketvoice.cfg:"; Select-String -Path $cfg -Pattern "java-options" | ForEach-Object { Write-Host "  $($_.Line)" }
+          $cdsLog = Join-Path $env:RUNNER_TEMP "cds.log"
+          if (Test-Path $cdsLog) { Write-Host "cds.log (last 60 lines):"; Get-Content $cdsLog -Tail 60 | ForEach-Object { Write-Host "  $_" } } else { Write-Host "no cds.log" }
 
           $u = Start-Process msiexec.exe -ArgumentList "/x `"$($msi.FullName)`" /qn /norestart" -Wait -PassThru
           if ($u.ExitCode -ne 0) { throw "msiexec uninstall exit $($u.ExitCode)" }
