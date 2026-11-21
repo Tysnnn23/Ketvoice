@@ -1,5 +1,7 @@
 package com.ketvoice.app.data
 
+import com.ketvoice.app.util.moveOver
+
 import android.content.Context
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -68,7 +70,7 @@ object LyricsSearch {
                 }
             }.toString()
         }
-        runCatching { File(target.path + ".part").apply { writeText(json); renameTo(target) } }
+        runCatching { File(target.path + ".part").apply { writeText(json); moveOver(target) } }
     }
 
     /** Titles on the device whose lyrics hold [query]: the exact words in a row first, then all of its words. */

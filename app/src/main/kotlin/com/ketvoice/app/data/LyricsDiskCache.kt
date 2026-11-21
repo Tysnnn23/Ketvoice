@@ -1,5 +1,7 @@
 package com.ketvoice.app.data
 
+import com.ketvoice.app.util.moveOver
+
 import android.content.Context
 import org.json.JSONArray
 import org.json.JSONObject
@@ -43,7 +45,7 @@ object LyricsDiskCache {
             })
             val tmp = File(f.path + ".part")
             tmp.writeText(o.toString())
-            tmp.renameTo(f)
+            tmp.moveOver(f)
         }
     }
 }

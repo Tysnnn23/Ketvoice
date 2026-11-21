@@ -1,5 +1,7 @@
 package com.ketvoice.app.stems
 
+import com.ketvoice.app.util.moveOver
+
 import java.io.ByteArrayOutputStream
 import java.io.DataInputStream
 import java.io.DataOutputStream
@@ -72,7 +74,7 @@ internal object StemStore {
         val f = wholeFile(trackId) ?: return
         val tmp = File(f.parentFile, f.name + ".tmp")
         tmp.writeBytes(encode(mask))
-        if (!tmp.renameTo(f)) { tmp.delete(); return }
+        if (!tmp.moveOver(f)) { tmp.delete(); return }
         partialFile(trackId)?.delete()
         trim()
     }
@@ -87,7 +89,7 @@ internal object StemStore {
         val f = partialFile(trackId) ?: return
         val tmp = File(f.parentFile, f.name + ".tmp")
         tmp.writeBytes(encode(mask))
-        if (!tmp.renameTo(f)) tmp.delete()
+        if (!tmp.moveOver(f)) tmp.delete()
     }
 
     fun hasPartial(trackId: String): Boolean = partialFile(trackId)?.isFile == true
@@ -125,7 +127,7 @@ internal object StemStore {
         val f = file(trackId, durationMs, intro) ?: return
         val tmp = File(f.parentFile, f.name + ".tmp")
         tmp.writeBytes(encode(mask))
-        if (!tmp.renameTo(f)) { tmp.delete(); return }
+        if (!tmp.moveOver(f)) { tmp.delete(); return }
         trim()
     }
 

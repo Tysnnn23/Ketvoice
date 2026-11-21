@@ -1,5 +1,7 @@
 package com.ketvoice.app.data
 
+import com.ketvoice.app.util.moveOver
+
 import java.io.File
 
 /**
@@ -90,7 +92,7 @@ internal object DownloadUpgrade {
             fresh.delete(); return false
         }
         val pending = File(meta.path + ".new")
-        val written = runCatching { pending.writeText(metadata, Charsets.UTF_8); moveOver(pending, meta) }.getOrDefault(false)
+        val written = runCatching { pending.writeText(metadata, Charsets.UTF_8); pending.moveOver(meta) }.getOrDefault(false)
         if (!written) {
             pending.delete(); target.delete()
             if (sameName) backup.renameTo(old)
@@ -99,16 +101,6 @@ internal object DownloadUpgrade {
         if (sameName) backup.delete() else old.delete()
         return true
     }
-
-    /** Renames [from] onto [to], replacing it: `File.renameTo` will not replace a file on Windows. */
-    private fun moveOver(from: File, to: File): Boolean = runCatching {
-        java.nio.file.Files.move(from.toPath(), to.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING,
-            java.nio.file.StandardCopyOption.ATOMIC_MOVE)
-        true
-    }.recoverCatching {
-        java.nio.file.Files.move(from.toPath(), to.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING)
-        true
-    }.getOrDefault(false)
 
     /** After a crash in the middle of [replace]: a « .bak » whose file is gone goes back; one whose file is there is spare. */
     fun recover(dir: File) {

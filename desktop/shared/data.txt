@@ -35,6 +35,7 @@ data/ImportedSong.kt
 data/Recordings.kt
 data/RangedDownload.kt
 util/Romanizer.kt
+util/FileMoves.kt
 data/MediaOverrides.kt
 data/ListeningHistory.kt
 data/ListeningWeek.kt
