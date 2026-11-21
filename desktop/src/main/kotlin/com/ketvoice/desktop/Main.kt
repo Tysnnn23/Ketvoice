@@ -33,7 +33,38 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.awt.ComposeWindow
+import androidx.compose.ui.graphics.painter.BitmapPainter
+import androidx.compose.ui.graphics.toComposeImageBitmap
+import androidx.compose.ui.window.Tray
+import androidx.compose.ui.window.WindowPlacement
+import androidx.compose.ui.window.WindowPosition
+import com.ketvoice.app.player.Player
+import com.ketvoice.desktop.platform.AppLog
+import com.ketvoice.desktop.platform.Autostart
+import com.ketvoice.desktop.platform.CrashHandler
+import com.ketvoice.desktop.platform.DesktopPlatform
+import com.ketvoice.desktop.platform.DesktopPrefs
+import com.ketvoice.desktop.platform.InstanceMessage
+import com.ketvoice.desktop.platform.MediaCommands
+import com.ketvoice.desktop.platform.MediaControls
+import com.ketvoice.desktop.platform.PlatformText
+import com.ketvoice.desktop.platform.SingleInstance
+import com.ketvoice.desktop.platform.WindowChrome
+import com.ketvoice.desktop.platform.WindowStore
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONObject
+import java.awt.EventQueue
 import kotlin.system.exitProcess
 
 /** Ket 27's dark tokens (theme/Ket27.kt in the app), for the desktop shell. */
@@ -63,12 +94,110 @@ private object Strings {
 
 fun main(args: Array<String>) {
     if ("--smoke" in args) exitProcess(Smoke.run())
+    AppLog.init()
+    CrashHandler.install()
+    val argList = args.toList()
+    // One Ketvoice per user: a second launch hands its arguments to the first and exits.
+    val instance = when (val r = SingleInstance.acquire(android.content.Context.app.dataDir, argList, WindowChrome::allowOthersToForeground)) {
+        is SingleInstance.Result.Primary -> r.instance
+        SingleInstance.Result.Forwarded -> { AppLog.i("instance", "handed to the running Ketvoice"); exitProcess(0) }
+        SingleInstance.Result.Unreachable -> { AppLog.w("instance", "the running Ketvoice did not answer; starting alone"); null }
+    }
+    DesktopPlatform.open(InstanceMessage.openable(argList))
+    DesktopPrefs.autostart.refresh()
+    val autostarted = Autostart.FLAG in argList
+    val saved = WindowStore.fit(WindowStore.load(), WindowStore.awtScreens())
+    val icon = runCatching {
+        BitmapPainter(javax.imageio.ImageIO.read(Smoke::class.java.getResourceAsStream("/icons/ketvoice.png")).toComposeImageBitmap())
+    }.getOrNull()
+
     application {
+        // Started with Windows: straight to the tray when closing goes there, else minimised.
+        var visible by remember { mutableStateOf(!(autostarted && DesktopPrefs.closeToTray.value)) }
+        val state = rememberWindowState(
+            placement = if (saved.maximized) WindowPlacement.Maximized else WindowPlacement.Floating,
+            isMinimized = autostarted && !DesktopPrefs.closeToTray.value,
+            position = if (saved.x != null && saved.y != null) WindowPosition(saved.x.dp, saved.y.dp) else WindowPosition(Alignment.Center),
+            size = DpSize(saved.width.dp, saved.height.dp),
+        )
+        val lastSaved = remember { arrayOf(saved) }
+        var awtWindow by remember { mutableStateOf<ComposeWindow?>(null) }
+        val playing = Player.state.collectAsState().value.isPlaying
+        fun show() {
+            visible = true
+            EventQueue.invokeLater { awtWindow?.let(WindowChrome::bringToFront) }
+        }
+        fun quit() {
+            WindowStore.save(lastSaved[0])
+            instance?.close()
+            exitApplication()
+        }
+
+        if (icon != null) Tray(
+            icon = icon,
+            tooltip = "Ketvoice",
+            onAction = ::show,
+            menu = {
+                Item(PlatformText.t(if (playing) "Pause" else "Lire"), onClick = { DesktopPlatform.bridge.toggle() })
+                Item(PlatformText.t("Suivant"), onClick = { DesktopPlatform.bridge.next() })
+                Item(PlatformText.t("Précédent"), onClick = { DesktopPlatform.bridge.previous() })
+                Separator()
+                Item(PlatformText.t("Ouvrir"), onClick = ::show)
+                Item(PlatformText.t("Quitter"), onClick = ::quit)
+            },
+        )
+
         Window(
-            onCloseRequest = ::exitApplication,
+            onCloseRequest = { if (DesktopPrefs.closeToTray.value) visible = false else quit() },
+            visible = visible,
             title = "Ketvoice",
-            state = rememberWindowState(size = DpSize(1180.dp, 760.dp)),
+            icon = icon,
+            state = state,
         ) {
+            val dark = when (com.ketvoice.app.data.AppSettings.themeMode.value) { 1 -> false; 2 -> true; else -> isSystemInDarkTheme() }
+            LaunchedEffect(dark) {
+                while (!window.isDisplayable) delay(50)
+                WindowChrome.setDarkTitleBar(window, dark)
+            }
+            LaunchedEffect(Unit) {
+                awtWindow = window
+                // A later launch: open what it was given and come forward.
+                instance?.onActivate { args ->
+                    DesktopPlatform.open(InstanceMessage.openable(args))
+                    EventQueue.invokeLater { show() }
+                }
+            }
+            // System media controls (SMTC, or the media keys as hotkeys), fed by the player's state.
+            LaunchedEffect(Unit) {
+                withTimeoutOrNull(3000) { while (!window.isDisplayable) delay(50) }
+                val controls = withContext(Dispatchers.IO) {
+                    MediaControls.start(WindowChrome.hwnd(window)) { cmd ->
+                        EventQueue.invokeLater { MediaCommands.dispatch(cmd, DesktopPlatform.bridge) }
+                    }
+                }
+                AppLog.i("media", "media controls: ${controls.name}")
+                try {
+                    MediaControls.bind(this, controls, Player.state)
+                    awaitCancellation()
+                } finally {
+                    controls.stop()
+                }
+            }
+            // Size, position and maximised state, kept for the next launch.
+            LaunchedEffect(state) {
+                snapshotFlow { listOf(state.placement, state.isMinimized, state.position, state.size) }.collectLatest {
+                    val pos = state.position
+                    val floating = state.placement == WindowPlacement.Floating && !state.isMinimized
+                    val next = WindowStore.merge(lastSaved[0], floating, state.placement == WindowPlacement.Maximized,
+                        pos.x.value.takeIf { pos.isSpecified }, pos.y.value.takeIf { pos.isSpecified },
+                        state.size.width.value, state.size.height.value)
+                    if (next != lastSaved[0]) {
+                        lastSaved[0] = next
+                        delay(500)
+                        withContext(Dispatchers.IO) { WindowStore.save(next) }
+                    }
+                }
+            }
             MaterialTheme(colorScheme = darkColorScheme(primary = Ket.accent, background = Ket.ground, surface = Ket.sidebar)) {
                 Shell()
             }
@@ -132,6 +261,7 @@ internal object Smoke {
                 "swresample ${version(org.bytedeco.ffmpeg.global.swresample.swresample_version())}")
             say("license ${org.bytedeco.ffmpeg.global.avutil.avutil_license().string}")
             say("os ${System.getProperty("os.name")} ${System.getProperty("os.arch")}, java ${System.getProperty("java.version")}")
+            if (!com.ketvoice.desktop.platform.PlatformSmoke.check(::say)) error("SMTC check failed")
             say("smoke ok")
             0
         } catch (t: Throwable) {

@@ -1,0 +1,26 @@
+{
+ "Ketvoice pour Windows": {
+  "en": "Ketvoice for Windows",
+  "hi": "Windows के लिए Ketvoice",
+  "ja": "Ketvoice for Windows",
+  "zh": "Ketvoice Windows 版",
+  "ru": "Ketvoice для Windows",
+  "it": "Ketvoice per Windows",
+  "es": "Ketvoice para Windows",
+  "de": "Ketvoice für Windows",
+  "pt": "Ketvoice para Windows",
+  "ko": "Windows용 Ketvoice"
+ },
+ "Ketvoice utilise ces logiciels libres. Leurs licences suivent.": {
+  "en": "Ketvoice uses this open-source software. Their licences follow.",
+  "hi": "Ketvoice इन ओपन-सोर्स सॉफ़्टवेयर का उपयोग करता है। उनके लाइसेंस नीचे दिए गए हैं।",
+  "ja": "Ketvoice は以下のオープンソースソフトウェアを使用しています。各ライセンスを以下に示します。",
+  "zh": "Ketvoice 使用以下开源软件，其许可证附后。",
+  "ru": "Ketvoice использует это свободное ПО. Ниже приведены его лицензии.",
+  "it": "Ketvoice usa questo software libero. Le relative licenze seguono.",
+  "es": "Ketvoice usa este software libre. Sus licencias figuran a continuación.",
+  "de": "Ketvoice verwendet diese freie Software. Ihre Lizenzen folgen.",
+  "pt": "O Ketvoice usa este software livre. As respetivas licenças seguem-se.",
+  "ko": "Ketvoice는 다음 오픈 소스 소프트웨어를 사용합니다. 각 라이선스는 아래와 같습니다."
+ }
+}
