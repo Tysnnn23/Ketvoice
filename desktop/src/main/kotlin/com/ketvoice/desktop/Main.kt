@@ -8,6 +8,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.awt.ComposeWindow
 import androidx.compose.ui.graphics.painter.BitmapPainter
@@ -34,6 +35,7 @@ import com.ketvoice.desktop.platform.InstanceMessage
 import com.ketvoice.desktop.platform.MediaCommands
 import com.ketvoice.desktop.platform.MediaControls
 import com.ketvoice.desktop.platform.SingleInstance
+import com.ketvoice.desktop.platform.Startup
 import com.ketvoice.desktop.platform.WindowChrome
 import com.ketvoice.desktop.platform.WindowGlass
 import com.ketvoice.desktop.ui.PlayerFullScreen
@@ -53,6 +55,10 @@ import kotlin.system.exitProcess
 
 fun main(args: Array<String>) {
     if ("--smoke" in args) exitProcess(Smoke.run())
+    // Windows 1.1: Direct3D with vsync (skiko falls back by itself), the class-data archive's folder, the probe.
+    Startup.begin()
+    val renderWanted = Startup.configureRendering()
+    val probe = Startup.PROBE in args
     AppLog.init()
     CrashHandler.install()
     val argList = args.toList()
@@ -186,6 +192,18 @@ fun main(args: Array<String>) {
                 snapshotFlow { state.placement }.collect { if (it != WindowPlacement.Fullscreen) PlayerFullScreen.on.value = false }
             }
             LaunchedEffect(Unit) {
+                withFrameNanos { }; withFrameNanos { } // the first frame has been drawn once the second one is asked for
+                Startup.firstFrame(window.renderApi.name, renderWanted, probe, context.dataDir)
+                if (probe) EventQueue.invokeLater { quit() }
+            }
+            // In the tray or minimised for a while: decoded covers go, and the heap gives memory back to Windows.
+            LaunchedEffect(visible, state.isMinimized) {
+                if (visible && !state.isMinimized) return@LaunchedEffect
+                delay(15_000)
+                com.ketvoice.desktop.ui.Covers.trim()
+                withContext(Dispatchers.Default) { System.gc() }
+            }
+            LaunchedEffect(Unit) {
                 awtWindow = window
                 com.ketvoice.desktop.update.Updates.quit = { EventQueue.invokeLater { quit() } }
                 // A later launch: open what it was given and come forward.
@@ -240,6 +258,8 @@ fun main(args: Array<String>) {
         }
         com.ketvoice.desktop.ui.MiniPlayerWindow(icon, when (com.ketvoice.app.data.AppSettings.themeMode.value) { 1 -> false; 2 -> true; else -> isSystemInDarkTheme() }, ::show)
     }
+    // The probe ends here even if a library thread lingers (the class-data archive is written on this exit).
+    if (probe) exitProcess(0)
 }
 
 /**

@@ -248,7 +248,7 @@ fun CascadeLyrics(track: Track, look: LyricsLook, modifier: Modifier = Modifier)
                 val anchor = -(viewport * .22f).toInt()
                 val item = list.layoutInfo.visibleItemsInfo.firstOrNull { it.index == index }
                 if (reduced || item == null || active < 0) list.scrollToItem(index, if (active < 0) 0 else anchor)
-                else list.animateScrollBy((item.offset + anchor).toFloat(), tween(Motion.duration(540), easing = LyricsCascade.GLIDE))
+                else list.animateScrollBy((item.offset + anchor).toFloat(), LyricsCascade.SCROLL_SPRING)
             }
             LazyColumn(state = list, modifier = Modifier.fillMaxSize().testTag("lyrics-list")
                 // The lines fade into the ground at the top and bottom instead of being cut by the edges (as on the phone).
@@ -326,7 +326,7 @@ private fun LyricLineView(line: MusicApi.LyricLine, index: Int, active: Int, cur
         if (reduced || !timed || index < active) return@LaunchedEffect
         wave.snapTo(LyricsCascade.waveStartDp(distance))
         delay(LyricsCascade.waveDelayMs(distance))
-        wave.animateTo(0f, tween(LyricsCascade.WAVE_MS, easing = LyricsCascade.GLIDE))
+        wave.animateTo(0f, LyricsCascade.WAVE_SPRING)
     }
     val (hover, hovered) = rememberHover()
     val align = if (other) TextAlign.End else TextAlign.Start
