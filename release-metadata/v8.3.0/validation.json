@@ -1,0 +1,225 @@
+{
+  "schema": 8,
+  "version": "8.3.0",
+  "versionCode": 151,
+  "source_commit": "edea3e4ddeef7930cb6a822a4525f153b38da93a",
+  "created_at": "2026-11-21T23:44:00.312258+00:00",
+  "build_origin": {
+    "kind": "github_actions_with_owner_discord_sdk",
+    "workflow": "android.yml",
+    "run_id": 44959574803,
+    "artifact": {
+      "id": 14730435481,
+      "sha256": "db3d198ddc37afc1b4e1a01a5a34e8f37dec609860f61ad918a5345ee935ae27"
+    },
+    "gradle": "assembleMobileRelease assembleQuestRelease assembleLiteRelease",
+    "note": "Signed by CI with the pinned keystore secret; the Discord Social SDK AAR matched its pinned SHA-256."
+  },
+  "local_validation": {
+    "result": "debug JVM/Robolectric suites for the three flavors (mobile, quest, lite), release lint and the APK checker tests passed in a cloud container without the Discord SDK",
+    "commands": [
+      "testMobileDebugUnitTest",
+      "testQuestDebugUnitTest",
+      "testLiteDebugUnitTest -ProbolectricSdks=31,32,33,34,35,36",
+      "lintMobileRelease",
+      "lintQuestRelease",
+      "lintLiteRelease",
+      "tools/test_verify_apk.py"
+    ],
+    "ci_validation": "run 44959574803: release builds, debug and release unit tests, UI text audit, lint, APK signature pin and Discord bridge packaging passed",
+    "code_review": {
+      "kind": "none independent"
+    },
+    "host_previews": "Robolectric software renders on the host, looked at by the sub-agents and the lead: the phone player with a 9:16 Canvas, a square cover, a 16:9 cover and a short 360x640 screen (Player83HostTest); Robolectric does not draw RenderEffect blur, so the distant-line blur, the held-note glow and the reduced-resolution glass blur were never seen rendered; nothing ran on a device",
+    "features_8_3": "lyrics: constant-pace fill inside each word with a 30 dp feathered edge (KaraokeDraw.kt), lift scaled by word length 0.25..1 that settles back, held words of 1-7 Latin/Greek/Cyrillic letters held >= 900 ms swell letter by letter with a 9 dp RenderEffect glow on API 31+, backing vocals open with a rise, break dots before gaps >= 4 s, inactive lines blurred 0/1/1/1.7/2.4 dp by distance (key lyricsBlur, on; off on the sung line, while scrolling, under reduced motion/performance/economy, below API 31, on Quest and on low-RAM Lite phones), karaoke lines read the clock only inside their window (LivelyLyricsTest, LivelyLyricsHostTest); player artwork: full width, top aligned, height = width / media aspect between 220 dp and the top of the controls, aspect from Studio framing, Media3 video size, Canvas still, metadata or cover, no-overshoot spring, tablet/Quest/landscape unchanged, fit = null kept (Player83HostTest); glass: backdrop blur on a 1/3 copy (1/4 in performance mode/economy, ~0.73 for the clearest navigation glass) with matched radius, opaque floor in every captured backdrop, menus/sheets/alerts blur a frozen 1/3 still (live over a playing Canvas and on API 30), tab pill with integrated springs (travel 380/0.86, lift 520/0.5, squash <= 12 %), backdrop dependency kept at 1.0.0-rc02 (GlassResolutionHostTest, ChromePillPhysicsHostTest)",
+    "after_local_run": "full local runs on edea3e4 (the release tree): mobile 2020 tests 0 failures (3 skipped); quest 2002 tests 0 failures (52 skipped); lite 2010 tests 0 failures (3 skipped); release lint 0 errors on the three flavors; UI text audit clean; each part was also tested on its own branch before merging (artwork 200/170/171, lyrics 114 per flavor plus related suites, glass 100/96/100)",
+    "sdk_30": "Robolectric's Android 11 runtime could not be downloaded in the cloud container (Maven Central answered 429), so the Lite tests that declare sdk 30 ran on sdk 31 only; nothing ran on an Android 11 runtime",
+    "after_last_full_local_run": "the full local runs were made on the release commit itself; CI run 44959574803 ran every suite on it and passed"
+  },
+  "server": {
+    "function": "ketvoice-content",
+    "deployed_version": 23,
+    "changed_in_this_version": false,
+    "database": "no migration in this version"
+  },
+  "tests": {
+    "mobile": {
+      "jvm": {
+        "tests": 2020,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 3
+      },
+      "android_15_emulator_compose": {
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "quest": {
+      "jvm": {
+        "tests": 2002,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 52
+      },
+      "android_15_emulator_compose": {
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "lite": {
+      "jvm": {
+        "tests": 2010,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 3
+      },
+      "android_11_runtime": {
+        "status": "not_executed"
+      }
+    },
+    "dex_register_check": "tools/check_dex_registers.py ran in CI (Check method sizes against the Android verifier) on the three release APKs",
+    "apk_checker": "tools/test_verify_apk.py 12 tests (Lite minSdk 30 required)"
+  },
+  "lint": {
+    "mobile": {
+      "Warning": 357,
+      "Hint": 30
+    },
+    "quest": {
+      "Warning": 353,
+      "Hint": 30
+    },
+    "lite": {
+      "Warning": 374,
+      "Hint": 30
+    },
+    "errors": 0
+  },
+  "apks": [
+    {
+      "name": "Ketvoice-8.3.0.apk",
+      "sha256": "37075ebcabd3909abdb3ad86f01d56e488f11261175aee350178663f8fbc277e",
+      "bytes": 106769317,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "8.3.0",
+      "versionCode": 151,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-8.3.0-Quest.apk",
+      "sha256": "57e132cd923a343e4b800eac24f862f4b147eb6c69f9dcb48621cba626404766",
+      "bytes": 119071383,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "8.3.0",
+      "versionCode": 151,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-8.3.0-Lite.apk",
+      "sha256": "8da1fb64c83fddfef1f34c9a50fdc5f658acb9ab19e987ddf47c06e35b2f020b",
+      "bytes": 34478121,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "8.3.0",
+      "versionCode": 151,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false,
+      "edition": "lite"
+    }
+  ],
+  "discord": {
+    "sdk_present_in_ci_build": true,
+    "sdk_sha256_pinned": true,
+    "bridge_and_native_libraries_verified": true,
+    "presence_mode": "unauthenticated_rpc_through_installed_discord_app"
+  },
+  "credential_scan": {
+    "entries": 3994,
+    "findings": 0,
+    "scope": "the three release APKs",
+    "kind": "credential_patterns",
+    "explicit_private_provider_key_deny_list": false,
+    "note": "run because publish-release requires it; the other manual checks were skipped at the owner's request"
+  },
+  "release_install_smoke": {
+    "mobile": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "quest": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "lite": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    }
+  },
+  "publication_override": {
+    "authorized_by_user": true,
+    "authorized_at": "2026-11-21T23:44:00.312258+00:00",
+    "kind": "standing_authorization",
+    "user_statement": "J'autorise TOUT devient maintenant une règle.",
+    "user_statement_date": "2026-11-14",
+    "in_reply_to": "The question whether versions may be published without phone or Quest testing without asking again for each version.",
+    "recorded_in": "AGENTS.md (commit aeeda8e)",
+    "reason": "The owner made publishing validated versions without phone or Quest testing a standing rule.",
+    "scope": "physical device installation and all on-device behaviour of 8.3.0 (mobile, Lite and Quest), including accounts and sync on devices"
+  },
+  "owner_requests_2026_11_21_8_3_0": {
+    "statements": [
+      "On a third-party open-source player: « ils font tres bien les animations de liquid glass 27 et les scale des canvas/cover on les voit bien rien n'est coupé et pourtant ils ont pas rajouté de chose artificiel, aussi leur animation de passage a la ligne et blur des paroles est incroyable lis leur code et propose moi des choses de similaire/mieux que on pourrait ajouter a ketvoice sans jamais le mentionner dans les changelog »",
+      "« Pour le moment on laisse tomber la version windows plus de nouvelles versions. »"
+    ],
+    "picks": [
+      "Remplissage plus doux",
+      "Notes tenues vivantes",
+      "Flou des lignes éloignées",
+      "Hauteur selon le format",
+      "Pastille physique",
+      "Verre plus propre",
+      "Verre plus fluide"
+    ],
+    "rule_change": "the owner lifted the 6.1 rule against blur on lyrics by picking the distant-line blur, told that it lifts that rule",
+    "licence": "the reference app is GPL-3.0: its code was read to understand the behaviour and never copied; the implementation is Ketvoice's own",
+    "done": "all picks; nothing was seen rendered on a device"
+  },
+  "not_validated": [
+    "physical phone, Lite, tablet or Quest installation, rendering and behaviour of 8.3.0",
+    "the distant-line lyric blur, the held-note glow and the reduced-resolution glass blur as drawn by RenderEffect on a real GPU (Robolectric does not draw RenderEffect)",
+    "frame times of the lyrics, the glass and the tab pill physics on a device",
+    "whether the lifted tab pill is clipped by an ancestor on a real screen",
+    "the player artwork height with real catalogue Canvas videos and covers of many shapes",
+    "frozen menu backdrops on real windows (popups, dialogs) and their memory use",
+    "Robolectric runs on the Android 11 runtime (sdk 30)",
+    "independent code review"
+  ],
+  "known_limitations": [
+    "No Wear OS app in this version.",
+    "Seasonal themes use code-drawn decor until the owner's pictures are added.",
+    "Widgets placed with an earlier version other than the 2x2 now-playing one disappear from the home screen and must be added again.",
+    "Romanization does not read Japanese kanji; Hebrew and Arabic show consonants only.",
+    "Streaming voice separation does not cover HLS streams.",
+    "A listener who picked the Liquid Glass icon before 7.6 is moved to the GTA VI icon like everyone else.",
+    "The mobile APK is about 4 MB larger and Lite about 2 MB larger because of the Cast SDK.",
+    "Android Auto's queue screen shows only the current song.",
+    "Switching between Ketvoice and Ketvoice Lite is a manual install of the other APK.",
+    "Ketogether guests hear titles their own sources can play; local files and private titles are shown as unavailable.",
+    "Lecture automatique: which queue titles were added automatically is not kept across a session restore.",
+    "The mobile and Quest APKs are about 18.6 MB larger because they include the rhythm model.",
+    "Launcher icons keep a background: Android fills adaptive icon backgrounds in black.",
+    "The signing certificate is the existing public Android debug identity, not a private production key."
+  ],
+  "canonical_banner_sha256": "ddc0e2c1270027f4b9dd92254374b79727ae9eaf8914e418b52e23c5b39b5966"
+}
