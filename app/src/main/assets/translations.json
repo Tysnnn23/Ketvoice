@@ -2591,7 +2591,9 @@
   "Partager le diagnostic": "Share diagnostics",
   "Par le menu de partage, seulement quand vous le choisissez": "Through the share sheet, only when you choose to",
   "Rien n'est encore enregistré": "Nothing recorded yet",
-  "À la une": "Featured"
+  "À la une": "Featured",
+  "Lecteur plein écran": "Full-screen player",
+  "Verre Windows 11": "Windows 11 glass"
  },
  "hi": {
   "Reverb": "रीवर्ब",
@@ -5185,7 +5187,9 @@
   "Partager le diagnostic": "डायग्नॉस्टिक शेयर करें",
   "Par le menu de partage, seulement quand vous le choisissez": "शेयर मेनू से, सिर्फ़ जब आप चुनें",
   "Rien n'est encore enregistré": "अभी तक कुछ दर्ज नहीं हुआ",
-  "À la une": "विशेष"
+  "À la une": "विशेष",
+  "Lecteur plein écran": "फ़ुल-स्क्रीन प्लेयर",
+  "Verre Windows 11": "Windows 11 ग्लास"
  },
  "ja": {
   "Reverb": "リバーブ",
@@ -7779,7 +7783,9 @@
   "Partager le diagnostic": "診断を共有",
   "Par le menu de partage, seulement quand vous le choisissez": "共有メニューから、選んだときだけ",
   "Rien n'est encore enregistré": "まだ何も記録されていません",
-  "À la une": "注目"
+  "À la une": "注目",
+  "Lecteur plein écran": "フルスクリーンプレーヤー",
+  "Verre Windows 11": "Windows 11 のガラス効果"
  },
  "zh": {
   "Reverb": "混响",
@@ -10373,7 +10379,9 @@
   "Partager le diagnostic": "分享诊断",
   "Par le menu de partage, seulement quand vous le choisissez": "通过分享菜单，仅在你选择时",
   "Rien n'est encore enregistré": "尚未记录任何内容",
-  "À la une": "精选"
+  "À la une": "精选",
+  "Lecteur plein écran": "全屏播放器",
+  "Verre Windows 11": "Windows 11 玻璃效果"
  },
  "ru": {
   "Reverb": "Реверберация",
@@ -12967,7 +12975,9 @@
   "Partager le diagnostic": "Поделиться диагностикой",
   "Par le menu de partage, seulement quand vous le choisissez": "Через меню «Поделиться», только когда вы решите",
   "Rien n'est encore enregistré": "Пока ничего не записано",
-  "À la une": "В центре внимания"
+  "À la une": "В центре внимания",
+  "Lecteur plein écran": "Полноэкранный плеер",
+  "Verre Windows 11": "Стекло Windows 11"
  },
  "it": {
   "Reverb": "Riverbero",
@@ -15561,7 +15571,9 @@
   "Partager le diagnostic": "Condividi diagnostica",
   "Par le menu de partage, seulement quand vous le choisissez": "Dal menu di condivisione, solo quando lo scegli",
   "Rien n'est encore enregistré": "Ancora nessuna registrazione",
-  "À la une": "In primo piano"
+  "À la une": "In primo piano",
+  "Lecteur plein écran": "Player a schermo intero",
+  "Verre Windows 11": "Vetro di Windows 11"
  },
  "es": {
   "Reverb": "Reverb",
@@ -18155,7 +18167,9 @@
   "Partager le diagnostic": "Compartir diagnóstico",
   "Par le menu de partage, seulement quand vous le choisissez": "Desde el menú de compartir, solo cuando tú lo eliges",
   "Rien n'est encore enregistré": "Aún no hay nada registrado",
-  "À la une": "Destacado"
+  "À la une": "Destacado",
+  "Lecteur plein écran": "Reproductor a pantalla completa",
+  "Verre Windows 11": "Cristal de Windows 11"
  },
  "de": {
   "Reverb": "Reverb",
@@ -20749,7 +20763,9 @@
   "Partager le diagnostic": "Diagnose teilen",
   "Par le menu de partage, seulement quand vous le choisissez": "Über das Teilen-Menü, nur wenn du es wählst",
   "Rien n'est encore enregistré": "Noch nichts aufgezeichnet",
-  "À la une": "Im Fokus"
+  "À la une": "Im Fokus",
+  "Lecteur plein écran": "Vollbild-Player",
+  "Verre Windows 11": "Windows 11-Glas"
  },
  "pt": {
   "Reverb": "Reverb",
@@ -23343,7 +23359,9 @@
   "Partager le diagnostic": "Compartilhar diagnóstico",
   "Par le menu de partage, seulement quand vous le choisissez": "Pelo menu de compartilhamento, só quando você escolher",
   "Rien n'est encore enregistré": "Nada registrado ainda",
-  "À la une": "Em destaque"
+  "À la une": "Em destaque",
+  "Lecteur plein écran": "Player em tela cheia",
+  "Verre Windows 11": "Vidro do Windows 11"
  },
  "ko": {
   "Reverb": "리버브",
@@ -25937,6 +25955,8 @@
   "Partager le diagnostic": "진단 공유",
   "Par le menu de partage, seulement quand vous le choisissez": "공유 메뉴를 통해, 원할 때만",
   "Rien n'est encore enregistré": "아직 기록된 내용이 없습니다",
-  "À la une": "주목할 만한"
+  "À la une": "주목할 만한",
+  "Lecteur plein écran": "전체 화면 플레이어",
+  "Verre Windows 11": "Windows 11 글래스"
  }
 }
