@@ -61,7 +61,9 @@ object MusicApi {
 
         val words: List<LyricWord> = emptyList(),
         val syllableTimed: Boolean = false,
-        val translations: Map<String, String> = emptyMap()
+        val translations: Map<String, String> = emptyMap(),
+        /** 8.0: who sings the line when the source says so (a TTML agent's name or id, an enhanced LRC "v2:"); see LyricsDuet. */
+        val singer: String? = null
     )
 
     data class ProviderStatus(
@@ -802,6 +804,7 @@ object MusicApi {
     }
 
     private val lrcLineRe = Regex("\\[(\\d{1,2}):(\\d{2})(?:[.:](\\d{1,3}))?](.*)")
+    private val lrcSingerRe = Regex("^\\s*(v\\d{1,4}|[FMD])\\s*:\\s*")
     private val lrcWordTagRe = Regex("<(\\d{1,2}):(\\d{2})(?:[.:](\\d{1,3}))?>")
     private val yrcLineRe = Regex("^\\[(\\d+),(\\d+)]\\s*(.*)$")
     private val yrcWordRe = Regex("\\((\\d+),(\\d+),(-?\\d+)\\)(.*?)(?=\\(\\d+,\\d+,-?\\d+\\)|$)")
@@ -844,7 +847,10 @@ object MusicApi {
             val line = raw.trim()
             val m = lrcLineRe.find(line) ?: continue
             val time = lrcTime(m.groupValues)
-            val body = m.groupValues[4]
+            // Enhanced LRC duets mark the singer before the words: "v1:", "v2:" (or "F:", "M:", and "D:" for both).
+            val marker = lrcSingerRe.find(m.groupValues[4])
+            val body = if (marker != null) m.groupValues[4].substring(marker.range.last + 1) else m.groupValues[4]
+            val singer = marker?.groupValues?.get(1)?.takeUnless { it == "D" }
             val tags = lrcWordTagRe.findAll(body).toList()
             val words = if (tags.isNotEmpty() &&
                 body.substring(0, tags.first().range.first).isBlank()
@@ -864,7 +870,7 @@ object MusicApi {
                 body.replace(lrcWordTagRe, "").trim()
             }
             if (text.isEmpty() || isCredit(text)) continue
-            out += LyricLine(time, text, words)
+            out += LyricLine(time, text, words, singer = singer)
         }
         // Déduplication : certaines sources renvoient deux fois la même ligne
         // (même horodatage + même texte), ce qui affichait des lignes fantômes.

@@ -48,7 +48,7 @@ internal fun RomanizationOption() {
  * colour, so it follows the Cascade dimming of lines still to come.
  */
 @Composable
-internal fun RomanizedLine(text: String, lineColor: Color, fontScale: Float) {
+internal fun RomanizedLine(text: String, lineColor: Color, fontScale: Float, end: Boolean = false) {
     Text(
         text,
         localize = false,
@@ -57,6 +57,7 @@ internal fun RomanizedLine(text: String, lineColor: Color, fontScale: Float) {
         lineHeight = (22f * fontScale).sp,
         letterSpacing = (-.1).sp,
         fontWeight = FontWeight.SemiBold,
+        textAlign = if (end) androidx.compose.ui.text.style.TextAlign.End else null,
         modifier = Modifier.fillMaxWidth().padding(top = 3.dp)
     )
 }

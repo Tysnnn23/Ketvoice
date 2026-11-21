@@ -202,6 +202,8 @@ object CustomLyrics {
         for (i in 0 until array.length()) {
             val o = array.optJSONObject(i) ?: continue
             val start = timeOf(o, "startTimeMs", "startMs", "start", "time", "ts", "timeMs", "begin") ?: -1L
+            // 8.0: a line's singer, when the file names one (Apple-style "agent", or "singer" / "vocalist").
+            val singer = listOf("agent", "singer", "vocalist").firstNotNullOfOrNull { k -> o.optString(k).takeIf { it.isNotBlank() && o.opt(k) is String } }
             val parts = o.optJSONArray("l") ?: o.optJSONArray("syllables")
             if (parts != null && start >= 0) {
                 // Musixmatch richsync: characters with offsets in seconds from the line's start.
@@ -211,12 +213,12 @@ object CustomLyrics {
                     MusicApi.LyricWord(start + (p.optDouble("o", 0.0) * 1000).toLong(), c)
                 }
                 val joined = words.joinToString("") { it.text }.trim()
-                if (joined.isNotEmpty()) { out += MusicApi.LyricLine(start, joined, words); continue }
+                if (joined.isNotEmpty()) { out += MusicApi.LyricLine(start, joined, words, singer = singer); continue }
             }
             val words = listOf("words", "text", "line", "lyrics", "x", "content").firstNotNullOfOrNull { k ->
                 o.optString(k).takeIf { it.isNotBlank() && o.opt(k) is String }
             } ?: continue
-            out += MusicApi.LyricLine(start, words.trim())
+            out += MusicApi.LyricLine(start, words.trim(), singer = singer)
         }
         return if (out.any { it.timeMs >= 0 }) out.sortedBy { it.timeMs } else out
     }

@@ -634,7 +634,8 @@ object Downloader {
                     syllableTimed = o.optBoolean("syllableTimed", false),
                     translations = o.optJSONObject("translations")?.let { translations ->
                         translations.keys().asSequence().associateWith { translations.optString(it) }
-                    }.orEmpty()
+                    }.orEmpty(),
+                    singer = o.optString("singer").ifBlank { null }
                 )
             }
             if (lines.isEmpty()) null else source to lines
@@ -658,6 +659,7 @@ object Downloader {
                         put("timeMs", line.timeMs)
                         put("text", line.text)
                         put("syllableTimed", line.syllableTimed)
+                        line.singer?.let { put("singer", it) }
                         if (line.translations.isNotEmpty()) put("translations", JSONObject(line.translations))
                         if (line.words.isNotEmpty()) put("words", JSONArray().apply {
                             line.words.forEach { word ->

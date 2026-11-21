@@ -140,6 +140,8 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
     val translated = remember(track.id, lyrics.lines) { mutableStateMapOf<Int, String>() }
     var translating by remember(track.id) { mutableStateOf(false) }
     val romanized by rememberRomanized(lyrics.lines, AppSettings.lyricsRomanization.value)
+    // 8.0: lines of a featured singer go to the right, as in Apple Music (see LyricsDuet).
+    val across = remember(lyrics.lines, track.title, track.artist) { LyricsDuet.sides(lyrics.lines, track.title, track.artist) }
     val target = TranslationLanguages.code(AppSettings.translateLanguage.value)
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -257,7 +259,10 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
                                 wave.animateTo(0f, tween(LyricsCascade.WAVE_MS, easing = LyricsCascade.GLIDE))
                             }
                             val held = index in moment
+                            val otherSide = across.getOrElse(index) { false }
                             val lineModifier = Modifier.fillMaxWidth()
+                                // The other singer's lines start a little further in, so that both voices read apart.
+                                .padding(start = if (otherSide) LyricsCascade.DUET_INSET_DP.dp else 0.dp)
                                 .then(if (held) Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(14.dp))
                                     .background(Color.White.copy(alpha = .14f)) else Modifier)
                                 .momentClickable(onClick = {
@@ -274,12 +279,12 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
                                     val breathe = if (current) 1f + breath.value else 1f
                                     scaleX = lineScale * breathe
                                     scaleY = lineScale * breathe
-                                    transformOrigin = TransformOrigin(0f, .5f)
+                                    transformOrigin = TransformOrigin(if (otherSide) 1f else 0f, .5f)
                                 }
                             ) {
                                 val nearActive = active < 0 || abs(index - active) <= 1
-                                LyricVoices(line, current, lyrics.isTimed, fontScale, lineColor, nearActive = nearActive)
-                                romanized.getOrNull(index)?.let { RomanizedLine(it, lineColor, fontScale) }
+                                LyricVoices(line, current, lyrics.isTimed, fontScale, lineColor, nearActive = nearActive, end = otherSide)
+                                romanized.getOrNull(index)?.let { RomanizedLine(it, lineColor, fontScale, end = otherSide) }
 
                                 AnimatedVisibility(
                                     visible = translationEnabled && translated[index] != null && (current || !lyrics.isTimed),
@@ -291,7 +296,8 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
                                             line = line,
                                             text = subtitle,
                                             active = current && lyrics.isTimed,
-                                            dimAlpha = if (current || !lyrics.isTimed) .82f else .43f
+                                            dimAlpha = if (current || !lyrics.isTimed) .82f else .43f,
+                                            end = otherSide
                                         )
                                     }
                                 }
@@ -431,7 +437,8 @@ private fun MomentBar(track: Track, lines: List<MusicApi.LyricLine>, nextMs: Lon
 
 @Composable
 internal fun LyricVoices(line: MusicApi.LyricLine, active: Boolean, timed: Boolean, fontScale: Float = 1f,
-                         color: Color = Color.White, nearActive: Boolean = true) {
+                         color: Color = Color.White, nearActive: Boolean = true, end: Boolean = false) {
+    val align = if (end) androidx.compose.ui.text.style.TextAlign.End else null
     val voices = remember(line) { LyricsPresentation.split(line) }
     // Only the active line and its immediate neighbours need the transport clock.
     // This keeps the other visible lines cheap while still letting an unfinished
@@ -447,15 +454,15 @@ internal fun LyricVoices(line: MusicApi.LyricLine, active: Boolean, timed: Boole
     Column(Modifier.fillMaxWidth()) {
         if (voices.lead.text.isNotBlank()) {
             if ((active || leadSinging) && voices.lead.words.isNotEmpty())
-                KaraokeLine(voices.lead, Modifier.fillMaxWidth(), fontScale, dim = !active)
+                KaraokeLine(voices.lead, Modifier.fillMaxWidth(), fontScale, dim = !active, end = end)
             else Text(voices.lead.text, localize = false, color = color,
                 fontSize = (33f * fontScale).sp, lineHeight = (41f * fontScale).sp,
-                letterSpacing = (-.3).sp, fontWeight = FontWeight.Black,
+                letterSpacing = (-.3).sp, fontWeight = FontWeight.Black, textAlign = align,
                 modifier = Modifier.fillMaxWidth())
         }
         val leadStart = voices.lead.words.minOfOrNull { it.startMs } ?: line.timeMs
         voices.backs.forEach { back ->
-            BackingVocal(back, active, timed, fontScale, nearActive, position, leadStart, leadEnd)
+            BackingVocal(back, active, timed, fontScale, nearActive, position, leadStart, leadEnd, end)
         }
     }
 }
@@ -469,7 +476,8 @@ private fun BackingVocal(
     nearActive: Boolean,
     position: Long,
     parentStart: Long,
-    parentEnd: Long
+    parentEnd: Long,
+    across: Boolean = false
 ) {
     // Word timings are optional on backs. Without them, follow the parent line
     // window instead of collapsing to a single instant (which made the row flash).
@@ -491,17 +499,19 @@ private fun BackingVocal(
         exit = fadeOut(tween(220)) + shrinkVertically(tween(220), shrinkTowards = Alignment.Top)
     ) {
         Box(Modifier.fillMaxWidth().padding(top = 7.dp).testTag("backing-vocal")) {
-            if (timed && line.words.isNotEmpty()) KaraokeLine(line, Modifier.fillMaxWidth(), fontScale, backing = true)
+            // A backing vocal stays a backing vocal; it only sits on the side of the line it belongs to.
+            if (timed && line.words.isNotEmpty()) KaraokeLine(line, Modifier.fillMaxWidth(), fontScale, backing = true, end = across)
             else Text(line.text, localize = false, color = Color.White.copy(alpha = .80f),
                 fontSize = (24f * fontScale).sp, lineHeight = (31f * fontScale).sp,
-                fontWeight = FontWeight.Bold, letterSpacing = (-.2).sp)
+                fontWeight = FontWeight.Bold, letterSpacing = (-.2).sp,
+                textAlign = if (across) androidx.compose.ui.text.style.TextAlign.End else null, modifier = Modifier.fillMaxWidth())
         }
     }
 }
 
 @Composable
 internal fun KaraokeLine(line: MusicApi.LyricLine, modifier: Modifier, fontScale: Float = 1f,
-                         backing: Boolean = false, dim: Boolean = false) {
+                         backing: Boolean = false, dim: Boolean = false, end: Boolean = false) {
     val clock = remember(line) { mutableLongStateOf(Player.currentPositionMs()) }
     val offset = LocalLyricsOffset.current
     val playing by remember { Player.state.map { it.isPlaying }.distinctUntilChanged() }.collectAsState(false)
@@ -549,6 +559,7 @@ internal fun KaraokeLine(line: MusicApi.LyricLine, modifier: Modifier, fontScale
             fontSize = ((if (backing) 24 else 33) * fontScale).sp,
             lineHeight = ((if (backing) 31 else 41) * fontScale).sp,
             letterSpacing = (-.3).sp, fontWeight = if (backing) FontWeight.Bold else FontWeight.Black,
+            textAlign = if (end) androidx.compose.ui.text.style.TextAlign.End else null,
             onTextLayout = { layout = it }, modifier = Modifier.fillMaxWidth())
         Canvas(Modifier.matchParentSize()) {
             val measured = layout ?: return@Canvas
