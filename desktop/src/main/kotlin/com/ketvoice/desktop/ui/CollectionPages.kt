@@ -220,13 +220,21 @@ fun PlaylistPage(id: String) {
     val p = playlists.firstOrNull { it.id == id }
     val ket = LocalKet.current
     var renaming by remember(id) { mutableStateOf(false) }
+    var deleting by remember(id) { mutableStateOf(false) }
+    val nav = LocalNavigator.current
     if (p == null) { Page(null, "playlist") { item { EmptyMessage("Playlist introuvable", "Cette playlist a été supprimée.") } }; return }
     Page(null, "playlist") {
         item("header") {
             CollectionHeader({ Mosaic(p.tracks, 240.dp) }, "Playlist", p.name, AppText.t("Vous"), null,
                 if (p.tracks.isEmpty()) AppText.t("Aucun titre") else durationLabel(p.tracks), ket.accent, p.tracks,
                 titleSlot = if (!renaming) null else { { RenameField(p.name) { name -> renaming = false; if (name.isNotBlank() && name != p.name) library.renamePlaylist(p.id, name) } } },
-                extraButtons = { CapsuleButton("Renommer", null, { renaming = true }, filled = false, accent = ket.accent, modifier = Modifier.testTag("rename-playlist")) })
+                extraButtons = {
+                    CapsuleButton("Renommer", null, { renaming = true }, filled = false, accent = ket.accent, modifier = Modifier.testTag("rename-playlist"))
+                    CapsuleButton("Supprimer", KetIcons.Trash, { deleting = true }, filled = false, accent = destructiveRed, modifier = Modifier.testTag("delete-playlist"))
+                })
+            if (deleting) ConfirmDialog(AppText.t("Supprimer la playlist"),
+                AppText.t("« {0} » sera supprimée de votre bibliothèque.").replace("{0}", p.name), "Supprimer",
+                onConfirm = { library.deletePlaylist(p.id); if (!nav.back()) nav.root(Route.Home) }, onDismiss = { deleting = false })
         }
         if (p.tracks.isEmpty()) { item { EmptyMessage("Playlist vide", "Faites glisser des titres sur la playlist dans la barre latérale, ou ajoutez-les depuis leur menu.") }; return@Page }
         item("rule") { Box(Modifier.fillMaxWidth().height(.5.dp).background(ket.hairline)) }

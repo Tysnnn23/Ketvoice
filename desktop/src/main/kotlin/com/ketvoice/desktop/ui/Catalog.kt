@@ -107,7 +107,7 @@ internal fun String.isSingle() = contains("single", ignoreCase = true) || contai
 /** The library's views (Apple Music's « Titres », « Albums », « Artistes ») over the listener's titles. */
 object LibraryViews {
     fun songs(lib: LibraryStore): List<Track> =
-        (lib.favourites.value + lib.playlists.value.flatMap { it.tracks } + lib.downloads.value.map { it.track }).distinctBy { it.id }
+        (lib.favourites.value + lib.playlists.value.flatMap { it.tracks } + lib.downloads.value.map { it.track } + lib.localTracks.value).distinctBy { it.id }
 
     fun albums(songs: List<Track>): List<AlbumRef> = songs.filter { it.album.isNotBlank() }
         .groupBy { it.album.lowercase() to it.artist.substringBefore(',').trim().lowercase() }

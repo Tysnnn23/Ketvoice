@@ -72,7 +72,9 @@ that is true on the desktop. The Android app is never changed for the desktop bu
 | `automix/DeckMixProcessor`, `Automix` | Media3 audio processors and player | 1–2 |
 | `data/CanvasRepo` | MediaMetadataRetriever, Bitmap, ConnectivityManager | 1 |
 | `data/Downloader` | Media3 DASH downloader, StatFs, Toast | 1 |
-| `data/LocalMusic` | MediaStore, DocumentsContract | 1 |
+| `data/LocalMusic` | MediaStore, DocumentsContract | counterpart (Phase 2: `LocalFolders`) |
+| `data/SettingsStore`, `data/PersonalBackup` | launcher icons, seasons, design choices, glass styles | counterparts (Phase 2) |
+| `account/AccountSession`, `Profiles`, `sync/SharedPlaylists`, `NowPlayingSync` | Android intents, avatars, phone control | counterparts (Phase 2) |
 | `glass/GlassClarity` (rendering half) | Android glass and contrast APIs | UI phase |
 | `data/AppLocales` | Android per-app locales | counterpart kept |
 
@@ -99,7 +101,11 @@ left out because they need deferred code: `TransitionPlannerTest` (`TempoReturn`
 - `data/AppLocales.kt`, `util/LauncherIcons.kt`, `glass/GlassClarity.kt` — the values shared settings need.
 - `ui/motion/Motion.kt` — the app's motion values (springs, reduced motion) without Android's.
 - `data/DesktopSeams.kt` — `CanvasRepo`, `LocalMusic`, `Downloader`: the members the shared code calls.
-  Downloads are `DesktopDownloader`'s; Canvas and local files are not on the desktop yet.
+  Downloads are `DesktopDownloader`'s; local files are `LocalFolders`'; Canvas is not on the desktop yet.
+- `data/DesktopSettings.kt` — `SettingsStore` (every `AppSettings` field under its Android key in `ketvoice_settings`,
+  read at start, saved 400 ms after a change and at quit) and `PersonalBackup.setting` (the check the settings sync calls).
+- `account/AccountSession.kt` — the account (shared `AuthApi`, `AccountTokens`, `SupabaseHttp`), Discord through
+  `LoopbackRedirect`, `Profiles` (name only); `sync/DesktopSyncSeams.kt` — `SharedPlaylists`/`NowPlayingSync` stubs.
 
 ## Compat shims (`src/compat/kotlin/`)
 
@@ -107,11 +113,12 @@ Only what the compiled files use: `android.content.Context` (filesDir, cacheDir,
 contentResolver, getSharedPreferences; data in `%LOCALAPPDATA%\Ketvoice\Data` on Windows — the
 per-user MSI installs the program in `%LOCALAPPDATA%\Ketvoice` — and `$XDG_DATA_HOME/ketvoice` or
 `~/.local/share/ketvoice` elsewhere; `-Dketvoice.dataDir=` overrides), `SharedPreferences` + `Editor`
-(one typed JSON file per name, atomic temp-file + move writes, ordered background `apply`),
+(one typed JSON file per name, atomic temp-file + move writes, background `apply` that always writes the
+latest values; as on Android only real changes are written and announced to listeners),
 `androidx.core.content.edit`, `ContentResolver` + `Cursor` + `OpenableColumns` (picked files are
 `file:` URIs), `res.AssetManager` (the app's `provider_registry.json` and `translations.json` on the
 classpath), `ComponentCallbacks2` constants, `android.util.AtomicFile`, `android.os.SystemClock`,
-`android.net.Uri`, `android.icu.text.Transliterator` (real ICU4J), `android.webkit.CookieManager`
+`android.os.Build` (the system's name as the model), `android.net.Uri`, `android.icu.text.Transliterator` (real ICU4J), `android.webkit.CookieManager`
 (no browser cookie store on the desktop), `android.util.Log` (stderr) and `android.util.JsonReader`.
 
 ## Build and test
@@ -189,6 +196,24 @@ Lossless badge from a FLAC `Format`). `ShellScreenshots` renders the window to
   menus, drag onto playlists, keyboard shortcuts), Settings (language, appearance, « Fermer dans la
   zone de notification », « Démarrer avec Windows », « À propos » with the licences).
 - Windows: single instance, tray, media keys and SMTC, window state, autostart, logs, `--smoke`.
+
+## Done in Phase 2 (winaccount)
+
+- **Account**: Settings › « Compte Ketvoice » signs in with e-mail and password (or creates the account) and with
+  Discord: the browser opens Supabase's authorize page (PKCE) and the answer comes back to a one-shot server on
+  `http://127.0.0.1:47821/callback` (then `47822`, `47823` when taken). **These three addresses must be added to the
+  Supabase project's Auth › URL Configuration › Redirect URLs**, or Supabase sends Discord's answer to the site URL
+  instead. The session is sealed with DPAPI. A listener account never gains a publishing right.
+- **Library sync**: the shared `LibrarySync`/`SyncKinds`/`CloudLibrary` as on the phone (favourites, playlists,
+  artists, settings): a round at sign-in and a few seconds after a change, a revision check every 3 minutes (a full
+  round only when another device wrote), and when the window comes to the front (at most once a minute). Shared
+  playlists and « now playing » stay on the phone and the web (Phase 4).
+- **Statistiques**: `StatsPage` computes the shared `LiveStats` over the local history, live while music plays.
+- **Settings persist**: `SettingsStore` (above); the shim's `apply` ordering and change notifications fixed.
+- **Local music**: Settings › « Musique locale » keeps folders; `LocalFolders` scans them (FFmpeg tags, embedded
+  covers, an index of path/size/date in `files/local-music-v1.json`); titles have `local:file:` ids (never synced)
+  and `file:` addresses played as `AudioSource.LocalFile`; they show in Titres, Albums and Artistes.
+- **Playlists** can be deleted from their page, after a confirmation.
 
 ## Plan
 

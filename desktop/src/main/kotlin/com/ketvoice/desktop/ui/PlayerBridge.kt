@@ -65,11 +65,16 @@ interface LibraryStore {
     /** Creates a playlist holding [tracks]; [onCreated] gets its id on the UI thread. */
     fun createPlaylist(name: String, tracks: List<Track> = emptyList(), onCreated: (String) -> Unit = {})
     fun renamePlaylist(playlistId: String, name: String)
+    fun deletePlaylist(playlistId: String)
+    /** Titles in the music folders of this computer (Settings › Musique locale). */
+    val localTracks: StateFlow<List<Track>> get() = NoLocalTracks
     fun addToPlaylist(playlistId: String, track: Track)
     fun removeFromPlaylist(playlistId: String, index: Int)
     fun movePlaylistEntry(playlistId: String, from: Int, to: Int)
     fun download(track: Track)
 }
+
+private val NoLocalTracks: StateFlow<List<Track>> = MutableStateFlow(emptyList())
 
 val LocalPlayer = staticCompositionLocalOf<PlayerControls> { PlayerBridge }
 val LocalLibrary = staticCompositionLocalOf<LibraryStore> { LibraryBridge }
@@ -123,6 +128,8 @@ object LibraryBridge : LibraryStore {
         }
     }
     override fun renamePlaylist(playlistId: String, name: String) { io.launch { runCatching { DesktopLibrary.renamePlaylist(playlistId, name) } } }
+    override fun deletePlaylist(playlistId: String) { io.launch { runCatching { DesktopLibrary.deletePlaylist(playlistId) } } }
+    override val localTracks: StateFlow<List<Track>> get() = com.ketvoice.desktop.library.LocalFolders.tracks
     // Each title once in a playlist, as the shared store's addAll keeps it.
     override fun addToPlaylist(playlistId: String, track: Track) { io.launch { DesktopLibrary.addAllToPlaylist(playlistId, listOf(track)) } }
     override fun removeFromPlaylist(playlistId: String, index: Int) {
@@ -181,6 +188,7 @@ open class MemoryLibrary : LibraryStore {
         onCreated(p.id)
     }
     override fun renamePlaylist(playlistId: String, name: String) { if (name.isNotBlank()) edit(playlistId) { it.copy(name = name.trim()) } }
+    override fun deletePlaylist(playlistId: String) = _playlists.update { all -> all.filterNot { it.id == playlistId } }
     override fun addToPlaylist(playlistId: String, track: Track) {
         edit(playlistId) { if (it.tracks.none { t -> t.id == track.id }) it.copy(tracks = it.tracks + track) else it }
         noteAdded(track)
