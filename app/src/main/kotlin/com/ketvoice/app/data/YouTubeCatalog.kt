@@ -17,8 +17,13 @@ data class ArtistPage(
 
 object YouTubeCatalog {
 
-    suspend fun searchArtists(query: String): List<MusicArtist> {
-        if (query.isBlank()) return emptyList()
+    // 8.1: the search page and an artist opened by its name ask the same names; kept a few minutes.
+    private val artistSearches = RecentAnswers<List<MusicArtist>>(5 * 60_000L) { it.isNotEmpty() }
+
+    suspend fun searchArtists(query: String): List<MusicArtist> =
+        if (query.isBlank()) emptyList() else artistSearches.get(query.trim().lowercase()) { searchArtistsNow(query) }
+
+    private suspend fun searchArtistsNow(query: String): List<MusicArtist> {
         val filtered = YouTubeApi.request("search", JSONObject().put("query", query)
             .put("params", "EgWKAQIgAWoKEAkQChAFEAMQBA%3D%3D"), authenticated = false)
         val filteredRows = filtered?.let(::artistRows).orEmpty()

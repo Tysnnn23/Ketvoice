@@ -1,6 +1,8 @@
 package com.ketvoice.app.data
 
 import android.content.Context
+import kotlinx.coroutines.async
+import kotlinx.coroutines.sync.withPermit
 import org.json.JSONObject
 
 /**
@@ -57,8 +59,13 @@ object HomeReleases {
         val artists = watched(ArtistPrefs.favourites, PersonalMixes.topArtists(known, counts, favorites))
         val key = artists.map { it.name.lowercase() }
         cache?.takeIf { nowMs - it.first in 0..TTL_MS && key == cacheKey }?.let { return it.second }
-        val found = artists.flatMap { artist ->
-            runCatching { CatalogRepo.artistReleases(artist.name, artist.catalogId) }.getOrDefault(emptyList()).take(2)
+        // 8.1: the artists are asked together (four at a time), no longer one after the other (eight artists, two
+        // requests each, took seconds before the shelf showed).
+        val permits = kotlinx.coroutines.sync.Semaphore(4)
+        val found = kotlinx.coroutines.coroutineScope {
+            artists.map { artist -> async { permits.withPermit {
+                runCatching { CatalogRepo.artistReleases(artist.name, artist.catalogId) }.getOrDefault(emptyList()).take(2)
+            } } }.flatMap { it.await() }
         }
         val result = newest(found, java.time.LocalDate.now())
         cache = nowMs to result; cacheKey = key

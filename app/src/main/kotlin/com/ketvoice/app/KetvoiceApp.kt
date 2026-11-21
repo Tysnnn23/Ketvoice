@@ -40,6 +40,8 @@ class KetvoiceApp : Application(), ImageLoaderFactory {
         if (android.os.Build.FINGERPRINT != "robolectric") com.ketvoice.app.data.AppText.warm(this)
         // The settings and the lists the first screen reads are loaded beside the main thread, which would wait for them.
         com.ketvoice.app.util.PrefsWarmup.start(this)
+        // 8.1: the downloads folder too (each title's description, sizes and dates), read once the first screen asks.
+        runCatching { com.ketvoice.app.data.Downloader.warm(this) }
         // What the first screen does not need starts after it: a few seconds later in Lite, 1.5 s later elsewhere (6.2.2).
         val later = LiteTuning.deferred()
         val delayMs = LiteTuning.deferredStartMs()

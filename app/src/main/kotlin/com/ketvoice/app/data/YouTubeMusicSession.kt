@@ -27,6 +27,9 @@ object YouTubeMusicSession {
         cookie = store?.get("youtube-cookie")
         if (!cookie.isNullOrBlank()) scope.launch { validate(cookie.orEmpty(), false) }
     }
+    /** A session is remembered on this device or confirmed now (8.1: Home shows its last YouTube home at once). */
+    fun remembered(): Boolean = !cookie.isNullOrBlank() || _profile.value.connected
+
     fun headers(override: String? = null): Map<String, String> {
         val value = override ?: cookie?.takeIf { _profile.value.connected } ?: return emptyMap()
         return sessionHeaders(value, System.currentTimeMillis() / 1000)
