@@ -7,6 +7,20 @@
 
 ---
 
+# Ketvoice 8.3.0
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 151** — smoother lyrics with lively held notes and a distance blur, player artwork sized by its shape, and lighter, cleaner, more physical glass.
+
+- Lyrics (`KaraokeDraw.kt`, `LyricsBlur.kt`, `LyricsView`/`LyricsMotion`): the fill moves at one constant pace inside each word with a 30 dp feathered edge; the lift follows the word's length (0.25 to 1) and settles back; words of 1–7 Latin, Greek or Cyrillic letters held ≥ 900 ms swell letter by letter with a 9 dp blurred glow on Android 12+; backing vocals open with a rise; break dots before every instrumental gap of 4 s or more. Inactive lines blur 0/1/1/1.7/2.4 dp by distance (key `lyricsBlur`, on), never on the sung line, while scrolling, under reduced motion, performance mode or economy, below Android 12, on Quest or on low-RAM Lite phones; lines outside their animation window no longer redraw every frame. `LivelyLyricsTest`, `LivelyLyricsHostTest`.
+- Player artwork (`PlayerArtworkSize.kt`, `FullPlayerScreen`, `PlayerArtworkFrame`): the phone player's artwork is full width, top aligned, with height = width ÷ media aspect between 220 dp and the top of the controls; the aspect comes from the Studio framing, Media3's video size, the Canvas still, its metadata or the cover; when capped the bottom is trimmed; a no-overshoot spring between shapes. Tablet, Quest and landscape layouts unchanged. `Player83HostTest`.
+- Glass (`GlassResolution.kt`, `FrozenBackdrop.kt`, `PillPhysics.kt`, `Chrome.kt`): the backdrop blur runs on a 1/3 copy (1/4 in performance mode or economy; about 0.73 for the clearest navigation glass) with a matched radius, the shader and rim stay full size; the captured backdrop always has an opaque floor; menus, sheets and alerts blur a still copy of the page (live over a playing Canvas and on Android 11); the tab selection pill uses integrated springs (travel 380/0.86, lift 520/0.5), squash capped at 12 %, a lens over the bar's own glass while lifted, and a plain move under reduced motion. `GlassResolutionHostTest`, `ChromePillPhysicsHostTest`.
+
+Full notes: [8.3.0](docs/releases/v8.3.0.md).
+
+---
+
 # Ketvoice 8.2.0
 
 ![Ketvoice](ketvoice-banner.png)
