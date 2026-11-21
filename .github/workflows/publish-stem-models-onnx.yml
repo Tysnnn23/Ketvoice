@@ -1,0 +1,96 @@
+name: Publish voice separation models (ONNX, Windows)
+
+# Publishes the voice separation models of Ketvoice for Windows (1.0.0) as the assets of the NEW
+# `ketmix-stems-onnx-v1` prerelease: the ONNX files sherpa-onnx exports of Deezer's Spleeter 2 stems and of
+# UVR-MDX-NET Voc FT, the very sources the phone's LiteRT conversions start from
+# (publish-stem-models.yml, publish-stem-model-hq.yml). Nothing is converted: each file is downloaded, checked against its pinned SHA-256 (the digests of
+# tools/stems/expected-onnx.sha256, repeated in desktop/src/main/kotlin/com/ketvoice/app/stems/StemModel.kt; a
+# desktop test keeps the three equal) and published as it is. The app downloads them on request and checks them
+# again. It never overwrites a published release and never touches the phone's tags.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      TAG: ketmix-stems-onnx-v1
+      SPLEETER: https://huggingface.co/csukuangfj/sherpa-onnx-spleeter-2stems/resolve/main
+      UVR: https://huggingface.co/k2-fsa/sherpa-onnx-models/resolve/main/source-separation-models/UVR-MDX-NET-Voc_FT.onnx
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Download the ONNX exports of sherpa-onnx and check them
+        run: |
+          set -euo pipefail
+          mkdir -p work/out && cd work/out
+          curl -fsSL -o spleeter-2stems-vocals.onnx "$SPLEETER/vocals.onnx"
+          curl -fsSL -o spleeter-2stems-accompaniment.onnx "$SPLEETER/accompaniment.onnx"
+          curl -fsSL -o uvr-mdx-net-voc-ft.onnx "$UVR"
+          # The pinned digests (also in tools/stems/expected-onnx.sha256 and in the publishing workflows of the phone).
+          cat > SOURCES.sha256 <<'EOF'
+          bdc16ab6bf6117ddd4842c19e80e40e2be188fc555295064d424616b0224ac97  spleeter-2stems-vocals.onnx
+          671ace17acd3720674a2bc14de32ac6292453dec20d9eb0ba4255d4ad8e3d8c0  spleeter-2stems-accompaniment.onnx
+          e411182ce2c53541fefdcc99a8f46f2fe03978eb22038b9497c1d9d95a00fad4  uvr-mdx-net-voc-ft.onnx
+          EOF
+          sed -i 's/^ *//' SOURCES.sha256
+          sha256sum -c SOURCES.sha256
+          sha256sum -c ../../tools/stems/expected-onnx.sha256
+          rm SOURCES.sha256
+          ls -l *.onnx
+
+      - name: Run them once with ONNX Runtime on their pinned input shapes
+        run: |
+          set -euo pipefail
+          python -m pip install --quiet "onnxruntime==1.26.0" "numpy==2.2.6"
+          cd work/out
+          python - <<'EOF'
+          import numpy as np, onnxruntime as ort
+          for name, shape in [("spleeter-2stems-vocals.onnx", (2, 1, 512, 1024)), ("spleeter-2stems-accompaniment.onnx", (2, 1, 512, 1024)),
+                              ("uvr-mdx-net-voc-ft.onnx", (1, 4, 3072, 256))]:
+              s = ort.InferenceSession(name, providers=["CPUExecutionProvider"])
+              x = np.random.default_rng(0).random(shape, dtype=np.float32)
+              y = s.run(None, {s.get_inputs()[0].name: x})[0]
+              assert y.shape == shape and np.isfinite(y).all(), (name, y.shape)
+              print(name, s.get_inputs()[0].name, "->", s.get_outputs()[0].name, y.shape)
+          EOF
+
+      - name: Licences and digests
+        run: |
+          set -euo pipefail
+          cd work/out
+          cp ../../docs/licenses/Spleeter-MIT.txt LICENSE-Spleeter.txt
+          cp ../../docs/licenses/UVR-MIT.txt LICENSE-UVR.txt
+          sha256sum *.onnx LICENSE-*.txt | tee SHA256SUMS.txt
+
+      - name: Publish the prerelease (never over an existing one)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "::error::$TAG already exists; refusing to overwrite it."
+            exit 1
+          fi
+          cat > notes.md <<'NOTES'
+          Optional voice separation models for Ketvoice for Windows (Settings, voice separation). Downloaded by the app on
+          request and checked against their SHA-256; not an app version.
+
+          The ONNX exports of sherpa-onnx, unchanged: Deezer's Spleeter 2 stems (MIT, see LICENSE-Spleeter.txt) and
+          UVR-MDX-NET Voc FT by Ultimate Vocal Remover (MIT, see LICENSE-UVR.txt), by .github/workflows/publish-stem-models-onnx.yml.
+          NOTES
+          sed -i 's/^ *//' notes.md
+          gh release create "$TAG" --prerelease --latest=false --title "Ketmix voice separation models (ONNX, Windows)" \
+            --notes-file notes.md work/out/spleeter-2stems-vocals.onnx work/out/spleeter-2stems-accompaniment.onnx \
+            work/out/uvr-mdx-net-voc-ft.onnx work/out/LICENSE-Spleeter.txt work/out/LICENSE-UVR.txt work/out/SHA256SUMS.txt
+          mkdir -p check && cd check
+          gh release download "$TAG" --pattern '*.onnx'
+          sha256sum -c ../tools/stems/expected-onnx.sha256
+          echo "published and verified $TAG"

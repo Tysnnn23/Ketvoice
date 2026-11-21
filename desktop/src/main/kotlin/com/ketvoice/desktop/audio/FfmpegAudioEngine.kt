@@ -59,6 +59,7 @@ class FfmpegAudioEngine(
         post {
             declickOut()
             mixer.cancelMix()
+            mixer.resetVoice()
             mixer.current?.close(); mixer.next?.close(); mixer.next = null
             val d = Deck(source, start, open)
             mixer.current = d; heard = d; frozen = false
@@ -100,6 +101,7 @@ class FfmpegAudioEngine(
         post {
             declickOut()
             mixer.cancelMix()
+            mixer.resetVoice()
             // A pending transition seeked the next deck to its entry: back to its start for the gapless end.
             mixer.next?.let { if (it.positionFrames != 0L) it.seek(0) }
             mixer.current?.lane?.reset()
@@ -119,7 +121,7 @@ class FfmpegAudioEngine(
 
     override fun positionMs(): Long {
         pendingMs.let { if (it >= 0) return it }
-        val played = written - sink.queuedFrames()
+        val played = written - sink.queuedFrames() - mixer.voiceDelayFrames
         val frames = synchronized(timeline) {
             val last = timeline.lastOrNull() ?: return 0
             if (last.kind == Kind.Jump && last.start > played) last.frame
@@ -262,13 +264,18 @@ class FfmpegAudioEngine(
      * deck starts [preRollMs] before [MixPlan.outMs], silent until its automation lets it in, sample-locked
      * to the outgoing one and at the plan's speed. [onResult] says (on the writer thread) whether it is set.
      */
-    internal fun mixIntoNext(plan: com.ketvoice.app.automix.MixPlan, preRollMs: Long, onResult: (Boolean) -> Unit = {}) = post {
+    internal fun mixIntoNext(plan: com.ketvoice.app.automix.MixPlan, preRollMs: Long,
+                             stems: Pair<com.ketvoice.app.stems.StemAudio?, com.ketvoice.app.stems.StemAudio?>? = null,
+                             onResult: (Boolean) -> Unit = {}) = post {
         val cur = mixer.current
         val incoming = mixer.next
         if (cur == null || incoming == null || incoming.error != null) { onResult(false); return@post }
         val speed = com.ketvoice.app.automix.DeckSync.speedOf(plan, cur.lane.speed)
         val startMs = plan.outMs - preRollMs
         incoming.lane.reset()
+        // The separated ending and start (Ketmix « Séparer les voix »): the voice moves really take the voice out.
+        cur.lane.stem = stems?.first
+        incoming.lane.stem = stems?.second
         incoming.seek((plan.inMs - preRollMs * plan.rate.toDouble()).toLong().coerceAtLeast(0L))
         val outAutomation = com.ketvoice.app.automix.DeckAutomation.outgoing(plan)
         val inAutomation = com.ketvoice.app.automix.DeckAutomation.incoming(plan)
@@ -303,7 +310,7 @@ class FfmpegAudioEngine(
 
     /** Events for what has just become audible; the format and errors of the heard deck. */
     private fun announce() {
-        val played = written - sink.queuedFrames()
+        val played = written - sink.queuedFrames() - mixer.voiceDelayFrames
         synchronized(timeline) {
             for (s in timeline) {
                 if (s.start > played) break

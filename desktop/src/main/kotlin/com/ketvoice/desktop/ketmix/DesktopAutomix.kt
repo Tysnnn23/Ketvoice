@@ -24,6 +24,11 @@ import com.ketvoice.desktop.audio.Deck
 import com.ketvoice.desktop.audio.FfmpegAudioEngine
 import com.ketvoice.desktop.audio.FfmpegDecoder
 import com.ketvoice.desktop.platform.AppLog
+import com.ketvoice.desktop.stems.DesktopVoice
+import com.ketvoice.app.stems.StemAudio
+import com.ketvoice.app.stems.StemEngine
+import com.ketvoice.app.stems.StemStore
+import com.ketvoice.app.stems.VoiceActivity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -57,6 +62,8 @@ object DesktopAutomix {
     private const val PREP_MS = 25_000L
     private const val SKIP_OVERLAP_MS = 3_200L
     private const val SKIP_LEAD_MS = 600L
+    /** The longest a transition waits for its separations (the quick model takes a few seconds). */
+    private const val STEM_WAIT_MS = 30_000L
 
     @Volatile private var engine: FfmpegAudioEngine? = null
     private var scope: CoroutineScope? = null
@@ -147,6 +154,14 @@ object DesktopAutomix {
             Triple(outro, intro, nextDuration.takeIf { it > 0 } ?: 600_000L)
         }
         if (!stillPair(key) || e.mixStatus.value.phase != FfmpegAudioEngine.MixPhase.Idle) { _ui.value = Ui(); return }
+        // « Séparer les voix »: the ending and the start are separated (once per title) while there is time for it.
+        val stems = if (!AppSettings.ketmixStems.value || !com.ketvoice.app.stems.StemModel.anyReady) null else {
+            val budget = (duration - depth.outroMs - e.renderedMs() - 3_000L).coerceIn(0L, STEM_WAIT_MS)
+            kotlinx.coroutines.withTimeoutOrNull(budget) {
+                withContext(Dispatchers.Default) { PartStems.read(current.id, duration, outSource, next.id, nextDuration, inSource, depth) }
+            }
+        }
+        if (!stillPair(key) || e.mixStatus.value.phase != FfmpegAudioEngine.MixPhase.Idle) { _ui.value = Ui(); return }
         val state = Player.state.value
         val shape = MixPointStore.pair(current.id, next.id)?.shape ?: MixShape.DEFAULT
         val outSpeed = e.speed()
@@ -164,19 +179,24 @@ object DesktopAutomix {
             loopedLast = true)
         val settings = MixSettings(AppSettings.automixIntensity.value,
             MixPointStore.pair(current.id, next.id)?.style ?: MixStyle.of(AppSettings.ketmixStyle.value), tempoMatch = shape.tempo)
-        val out = MixFacts(duration, outro, userExitMs = MixPointStore.exitOf(current.id, duration))
-        val incoming = MixFacts(nextDuration, intro, userEntryMs = MixPointStore.entryOf(next.id, nextDuration))
+        val out = MixFacts(duration, outro, userExitMs = MixPointStore.exitOf(current.id, duration), vocalEndMs = stems?.sungUntilMs,
+            sungLines = stems?.outLines.orEmpty())
+        val incoming = MixFacts(nextDuration, intro, userEntryMs = MixPointStore.entryOf(next.id, nextDuration), vocalStartMs = stems?.sungFromMs,
+            sungLines = stems?.inLines.orEmpty())
         fun planFor(beats: Boolean): MixPlan = TransitionPlanner.plan(out, incoming, context.copy(beats = beats), settings)
             .let { MixShaping.apply(it, shape, true) }
             .let { p -> if (p.mixes && p.kind != MixKind.Beatmatch && abs(outSpeed - 1f) > .0005f) p.copy(rate = 1f / outSpeed) else p }
+            .let { p -> if (p.mixes && AppSettings.ketmixStems.value) p.copy(stems = true, voiceFromMs = incoming.vocalStartMs ?: -1L) else p }
         var plan = planFor(beats = true)
         if (plan.mixes && plan.beatTied && e.renderedMs() > plan.outMs - preRoll(plan) - 1_000L) plan = planFor(beats = false)
         if (!plan.mixes || e.renderedMs() > plan.outMs - preRoll(plan) - 300L) {
             AppLog.i("ketmix", "no mix: ${plan.reason.ifBlank { "late" }}")
             _ui.value = Ui(); return
         }
+        // The incoming voice over the outgoing instrumental, when both separations cover the blend (the phone's rule).
+        if (stems != null && PartStems.mashup(plan, stems)) plan = plan.copy(mashup = true)
         pair = current to next
-        e.mixIntoNext(plan, preRoll(plan)) { ok -> if (!ok) { _ui.value = Ui() } }
+        e.mixIntoNext(plan, preRoll(plan), stems?.let { it.out to it.incoming }) { ok -> if (!ok) { _ui.value = Ui() } }
         if (plan.kind == MixKind.Beatmatch || plan.kind == MixKind.Filter) lastVariant = plan.variant
         if (plan.kind == MixKind.Echo) lastExit = 1
         if (plan.kind == MixKind.Rise) lastExit = 2
@@ -268,5 +288,36 @@ internal object Segments {
             tap.pcm(buffer, frame * 1_000_000L / rate, rate, 2)
             frame += n
         }
+    }
+}
+
+/** The two separated parts of a transition, as the phone's `startStems`/`joinStems` make them. */
+internal object PartStems {
+    class Parts(val out: StemAudio?, val incoming: StemAudio?, val sungUntilMs: Long?, val sungFromMs: Long?,
+                val outLines: List<LongRange>, val inLines: List<LongRange>)
+
+    fun read(outId: String, duration: Long, outSource: AudioSource, inId: String, inDuration: Long, inSource: AudioSource,
+             depth: AnalysisDepth): Parts {
+        val outFrom = maxOf(duration - depth.outroMs, duration - StemEngine.MAX_PART_MS, 0L)
+        val inUntil = minOf(depth.introMs, StemEngine.MAX_PART_MS)
+        fun part(id: String, length: Long, source: AudioSource, intro: Boolean, from: Long, until: Long): StemAudio? {
+            val pcm = DesktopVoice.decode(source, from, until) ?: return null
+            return runCatching { StemEngine.instrumental(id, length, intro, pcm, FfmpegDecoder.OUT_RATE, from * 1000L, compute = true, withVocals = intro) }
+                .onFailure { AppLog.w("ketmix", "separation failed: $it") }.getOrNull()
+        }
+        val out = part(outId, duration, outSource, false, outFrom, duration)
+        val incoming = part(inId, inDuration, inSource, true, 0L, inUntil)
+        val outMask = StemStore.load(outId, duration, false)
+        val inMask = StemStore.load(inId, inDuration, true)
+        return Parts(out, incoming, outMask?.let { VoiceActivity.endMs(it) }, inMask?.let { VoiceActivity.startMs(it) },
+            outMask?.let { VoiceActivity.passages(it) }.orEmpty(), inMask?.let { VoiceActivity.passages(it) }.orEmpty())
+    }
+
+    fun mashup(plan: MixPlan, p: Parts): Boolean {
+        val outStem = p.out ?: return false
+        val inStem = p.incoming?.takeIf { it.vocals != null } ?: return false
+        return com.ketvoice.app.automix.Mashup.fits(plan) &&
+            outStem.covers(plan.outMs * 1000L, (plan.outMs + plan.overlapMs) * 1000L - 200_000L) &&
+            inStem.covers((plan.inMs + 150L) * 1000L, (plan.inMs + ((plan.swapMs - plan.outMs) * plan.rate).toLong() + 1_500L) * 1000L)
     }
 }

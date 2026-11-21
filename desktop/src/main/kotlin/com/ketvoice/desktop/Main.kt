@@ -71,7 +71,11 @@ fun main(args: Array<String>) {
     // The real engine plays what the Player resolves (downloads first, then the app's sources).
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     val engine = FfmpegAudioEngine()
-    Player.attach(engine, DesktopStreams::source, scope)
+    // Each resolved source is remembered with its title, for the voice level's separations.
+    Player.attach(engine, { t -> DesktopStreams.source(t)?.also { com.ketvoice.desktop.stems.DesktopVoice.remember(it, t.id) } }, scope)
+    com.ketvoice.desktop.audio.DesktopEqualizer.attach(engine)
+    com.ketvoice.app.stems.StemModel.init(context)
+    com.ketvoice.desktop.stems.DesktopVoice.attach(engine, scope)
     com.ketvoice.app.data.SettingsStore.watch(scope)
     com.ketvoice.desktop.library.LocalFolders.init(context, scope)
     com.ketvoice.desktop.library.DesktopAccount.start(context)

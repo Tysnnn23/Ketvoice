@@ -222,6 +222,7 @@ private fun Pages() {
                 Route.Downloads -> DownloadsPage()
                 Route.Stats -> StatsPage()
                 Route.Settings -> SettingsPage()
+                Route.Equalizer -> EqualizerPage()
                 is Route.Playlist -> PlaylistPage(route.id)
                 is Route.Album -> AlbumPage(route.ref)
                 is Route.Artist -> ArtistPage(route.ref)

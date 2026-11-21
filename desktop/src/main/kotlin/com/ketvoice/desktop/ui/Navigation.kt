@@ -23,6 +23,7 @@ sealed interface Route {
     data object Downloads : Route
     data object Stats : Route
     data object Settings : Route
+    data object Equalizer : Route
     data class Playlist(val id: String) : Route
     data class Album(val ref: AlbumRef) : Route
     data class Artist(val ref: ArtistRef) : Route

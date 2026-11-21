@@ -99,6 +99,8 @@ tasks.processResources {
 
 tasks.test {
     useJUnit()
+    // The phone's LiteRT model pins; the desktop runs (and pins) the ONNX sources instead (StemsOnnxTest).
+    filter { excludeTestsMatching("com.ketvoice.app.stems.StemModelPinTest") }
     // Some reused tests write fixtures through the compat Context: keep them in build/.
     systemProperty("ketvoice.dataDir", layout.buildDirectory.dir("test-data").get().asFile.absolutePath)
     maxHeapSize = "2g"

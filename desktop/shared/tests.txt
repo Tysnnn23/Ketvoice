@@ -37,3 +37,8 @@ data/StreamQualityTest.kt
 data/StreamResolverTest.kt
 player/QueueEntryIdsTest.kt
 player/QueueOrderTest.kt
+# Phase 3 (winstems): the shared separation tests, on the desktop StemEngine/StemModel (ONNX). StemModelPinTest
+# pins the LiteRT files and is excluded in build.gradle.kts; desktop StemsOnnxTest pins the ONNX ones.
+stems/StemsTest.kt
+stems/UvrTest.kt
+automix/MixKeysTest.kt
