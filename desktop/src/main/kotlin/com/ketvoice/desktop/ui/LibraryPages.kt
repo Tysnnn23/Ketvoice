@@ -133,8 +133,9 @@ fun AlbumsPage() {
     val songs = librarySongs()
     val albums = remember(songs) { LibraryViews.albums(songs) }
     Grid("Albums", "albums", albums, 180.dp, "Les albums de vos titres apparaissent ici.") { a ->
-        androidx.compose.foundation.layout.BoxWithConstraints { AlbumCard(a, maxWidth, { nav.push(Route.Album(a)) }, {
-            val list = songs.filter { it.album.equals(a.title, true) }; actions.play(list, 0) }) }
+        val list = { songs.filter { it.album.equals(a.title, true) } }
+        androidx.compose.foundation.layout.BoxWithConstraints { AlbumCard(a, maxWidth, { nav.push(Route.Album(a)) }, { actions.play(list(), 0) },
+            menu = { actions.collectionMenu { list() } }) }
     }
 }
 
@@ -145,8 +146,10 @@ fun RecentlyAddedPage() {
     val added by lib.added.collectAsState()
     val songs = librarySongs()
     val albums = remember(songs, added) { LibraryViews.recentlyAdded(songs, added) }
+    val actions = LocalTrackActions.current
     Grid("Récemment ajouté", "recent", albums, 180.dp, "Ce que vous ajoutez à votre bibliothèque apparaît ici.") { a ->
-        androidx.compose.foundation.layout.BoxWithConstraints { AlbumCard(a, maxWidth, { nav.push(Route.Album(a)) }) }
+        androidx.compose.foundation.layout.BoxWithConstraints { AlbumCard(a, maxWidth, { nav.push(Route.Album(a)) },
+            menu = { actions.collectionMenu { songs.filter { it.album.equals(a.title, true) } } }) }
     }
 }
 

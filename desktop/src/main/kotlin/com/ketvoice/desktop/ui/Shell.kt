@@ -104,7 +104,8 @@ fun KetvoiceShell(
         val search = remember { SearchState().apply { query = initialQuery } }
         val menu = remember { MenuState() }
         val drag = remember { TrackDrag() }
-        val actions = remember(player, library, navigator) { TrackActions(player, library, navigator) }
+        val scope = androidx.compose.runtime.rememberCoroutineScope()
+        val actions = remember(player, library, navigator) { TrackActions(player, library, navigator, scope) }
         CompositionLocalProvider(
             LocalPlayer provides player, LocalLibrary provides library, LocalCatalog provides catalog,
             LocalNavigator provides navigator, LocalSearch provides search, LocalMenu provides menu,
@@ -131,22 +132,17 @@ private fun ShellLayout(initialPanel: Panel, initialSidebar: Dp, initialFullPlay
     val searchFocus = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { rootFocus.requestFocus() } }
 
-    fun onKey(e: KeyEvent): Boolean {
-        if (e.type != KeyEventType.KeyDown) return false
-        val ctrl = e.isCtrlPressed || e.isMetaPressed
-        return when {
-            ctrl && e.key == Key.F -> { runCatching { searchFocus.requestFocus() }; true }
-            e.key == Key.Escape && fullPlayer -> { fullPlayer = false; true }
-            e.key == Key.Escape && searchFocused -> { runCatching { rootFocus.requestFocus() }; true }
-            searchFocused -> false
-            e.key == Key.Spacebar && !ctrl && !e.isAltPressed -> { player.toggle(); true }
-            ctrl && e.key == Key.DirectionLeft -> { player.previous(); true }
-            ctrl && e.key == Key.DirectionRight -> { player.next(); true }
-            ctrl && e.key == Key.L -> { state.current?.let(actions::like); true }
-            e.isAltPressed && e.key == Key.DirectionLeft -> nav.back()
-            else -> false
-        }
+    // The window's shortcuts (Shortcuts.list, shown in Settings); text fields keep Space and the arrows.
+    val keys = object : Shortcuts.Target {
+        override val typing get() = searchFocused || TextEntry.active
+        override val fullPlayer get() = fullPlayer
+        override fun focusSearch() { runCatching { searchFocus.requestFocus() } }
+        override fun leaveField() { runCatching { rootFocus.requestFocus() } }
+        override fun setFullPlayer(open: Boolean) { fullPlayer = open }
+        override fun settings() { nav.root(Route.Settings) }
+        override fun back() = nav.back()
     }
+    fun onKey(e: KeyEvent): Boolean = Shortcuts.handle(e, player, actions, keys)
 
     Box(Modifier.fillMaxSize().background(ket.ground).onPreviewKeyEvent(::onKey).focusRequester(rootFocus).focusable().testTag("shell")) {
         Backdrop(state.current?.coverUrl)
@@ -180,6 +176,8 @@ private fun ShellLayout(initialPanel: Panel, initialSidebar: Dp, initialFullPlay
         AnimatedVisibility(fullPlayer, enter = EnterTransition.None, exit = fadeOut(Motion.Springs.DISMISS.motion())) {
             FullPlayer(onClose = { fullPlayer = false })
         }
+        PlaybackToast()
+        if (ImportDialog.open.value) ImportPlaylistDialog(onDismiss = { ImportDialog.open.value = false })
         ContextMenuHost(menu)
     }
     // A new search from the field opens the search page; clearing it keeps the start page.
@@ -255,6 +253,8 @@ private fun Sidebar(width: Dp, searchFocus: FocusRequester, onSearchFocus: (Bool
             item { SideItem(DeskGlyphs.Stats, "Statistiques", Route.Stats) }
             item {
                 SideHeader("Playlists") {
+                    KetIconButton(KetIcons.Link, "Importer des playlists", { ImportDialog.open.value = true },
+                        size = 22.dp, glyph = 13.dp, modifier = Modifier.testTag("import-playlist"))
                     KetIconButton(KetIcons.Plus, "Nouvelle playlist", {
                         library.createPlaylist(AppText.t("Nouvelle playlist")) { id -> nav.root(Route.Playlist(id)) }
                     }, size = 22.dp, glyph = 13.dp, modifier = Modifier.testTag("new-playlist"))

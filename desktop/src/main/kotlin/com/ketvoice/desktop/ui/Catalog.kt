@@ -1,5 +1,10 @@
 package com.ketvoice.desktop.ui
 
+import com.ketvoice.app.data.ArtistPrefs
+import com.ketvoice.app.data.SearchGroups
+import com.ketvoice.app.data.SearchRank
+import kotlinx.coroutines.async
+
 import androidx.compose.runtime.staticCompositionLocalOf
 import com.ketvoice.app.data.CatalogRepo
 import com.ketvoice.app.data.HomeFeed
@@ -18,7 +23,8 @@ data class Shelf(val title: String, val subtitle: String = "", val tracks: List<
 data class HomeData(val forYou: List<Track>, val recent: List<Track>, val shelves: List<Shelf>)
 data class SearchResults(val tracks: List<Track>, val albums: List<AlbumRef>, val artists: List<ArtistRef>)
 data class AlbumData(val ref: AlbumRef, val tracks: List<Track>, val recommended: List<Track>)
-data class ArtistData(val ref: ArtistRef, val top: List<Track>, val albums: List<AlbumRef>, val singles: List<AlbumRef>)
+data class ArtistData(val ref: ArtistRef, val top: List<Track>, val albums: List<AlbumRef>, val singles: List<AlbumRef>,
+                      val about: String = "", val listeners: String = "", val related: List<ArtistRef> = emptyList())
 data class Category(val id: String, val title: String, val cover: String?)
 
 /** Where the pages read the catalogue from: the app's shared catalogue code, or fixtures in tests. */
@@ -29,6 +35,8 @@ interface CatalogSource {
     suspend fun artist(ref: ArtistRef): ArtistData?
     suspend fun categories(): List<Category>
     suspend fun category(category: Category): List<Track>
+    /** False when the catalogue cannot be reached at all: the pages then show the offline state. */
+    suspend fun online(): Boolean = true
 }
 
 val LocalCatalog = staticCompositionLocalOf<CatalogSource> { LiveCatalog }
@@ -47,6 +55,7 @@ object LiveCatalog : CatalogSource {
             runCatching { ListeningHistory.init(context) }
             runCatching { com.ketvoice.app.data.TasteSignals.init(context) }
             runCatching { HomeFeed.start(context) }
+            runCatching { com.ketvoice.app.data.SearchHistory.init(context) }
             started = true
         }
     }
@@ -65,14 +74,36 @@ object LiveCatalog : CatalogSource {
         )
     }
 
-    override suspend fun search(query: String): SearchResults {
+    /**
+     * The phone's « Tout » search: the catalogue, the published titles and the add-ons together, in one order
+     * (SearchRank: text match first, then what the listener plays and likes), versions of one recording grouped
+     * (SearchGroups), and artists whose name is the query first.
+     */
+    override suspend fun search(query: String): SearchResults = kotlinx.coroutines.coroutineScope {
         start()
-        val tracks = runCatching { MusicApi.searchAll(query) }.getOrDefault(emptyList())
-        val albums = runCatching { CatalogRepo.searchAlbums(query) }.getOrDefault(emptyList())
-            .map { AlbumRef(it.id, it.title, it.artist, it.cover, it.releaseDate?.take(4)) }
-        val artists = runCatching { YouTubeCatalog.searchArtists(query) }.getOrDefault(emptyList())
-            .map { ArtistRef(it.id, it.name, it.photo) }
-        return SearchResults(tracks, albums.ifEmpty { tracks.map { it.albumRef() }.distinctBy { it.title + it.artist }.take(8) }, artists)
+        val yt = async { safe { MusicApi.searchYtMusic(query) } }
+        val published = async { safe { com.ketvoice.app.data.PublicationApi.search(query) } }
+        val addons = async { safe { MusicApi.searchAddons(query) } }
+        val albumsAsync = async { safe { CatalogRepo.searchAlbums(query) } }
+        val artistsAsync = async { safe { YouTubeCatalog.searchArtists(query) } }
+        val found = yt.await() + published.await() + addons.await()
+        val taste = runCatching { SearchRank.liveTaste() }.getOrDefault(SearchRank.Taste())
+        val tracks = SearchGroups.group(SearchRank.rank(query, found, taste).filter(ArtistPrefs::allows)).map { it.primary }
+        val albums = albumsAsync.await().map { AlbumRef(it.id, it.title, it.artist, it.cover, it.releaseDate?.take(4)) }
+        val artists = SearchRank.artistsFirst(query, artistsAsync.await()) { it.name }.map { ArtistRef(it.id, it.name, it.photo) }
+        SearchResults(tracks, albums.ifEmpty { tracks.map { it.albumRef() }.distinctBy { it.title + it.artist }.take(8) }, artists)
+    }
+
+    private suspend fun <T> safe(block: suspend () -> List<T>): List<T> =
+        try { block() } catch (c: kotlinx.coroutines.CancellationException) { throw c } catch (_: Exception) { emptyList() }
+
+    /** One short request to the catalogue's host: does the network reach it at all? */
+    override suspend fun online(): Boolean = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        runCatching {
+            val c = java.net.URL("https://music.youtube.com/").openConnection() as java.net.HttpURLConnection
+            c.requestMethod = "HEAD"; c.connectTimeout = 4000; c.readTimeout = 4000; c.instanceFollowRedirects = false
+            try { c.responseCode > 0 } finally { c.disconnect() }
+        }.getOrDefault(false)
     }
 
     override suspend fun album(ref: AlbumRef): AlbumData? {
@@ -92,7 +123,9 @@ object LiveCatalog : CatalogSource {
         val releases = page?.albums.orEmpty().map { AlbumRef(it.id, it.title, it.artist, it.coverUrl, type = it.type) }
         val top = page?.tracks ?: runCatching { CatalogRepo.artistTop(ref.name) }.getOrDefault(emptyList())
         return ArtistData(ref.copy(id = id, picture = page?.artist?.photo ?: ref.picture), top,
-            releases.filterNot { it.type.isSingle() }, releases.filter { it.type.isSingle() })
+            releases.filterNot { it.type.isSingle() }, releases.filter { it.type.isSingle() },
+            about = page?.description.orEmpty(), listeners = page?.listeners.orEmpty(),
+            related = page?.related.orEmpty().map { ArtistRef(it.id, it.name, it.photo) })
     }
 
     override suspend fun categories(): List<Category> =
@@ -120,6 +153,17 @@ object LibraryViews {
     fun recentlyAdded(songs: List<Track>, added: List<String>): List<AlbumRef> {
         val order = added.withIndex().associate { it.value to it.index }
         return songs.sortedBy { order[it.id] ?: Int.MAX_VALUE }.map { it.albumRef() }.distinctBy { it.title.lowercase() + "|" + it.artist.lowercase() }
+    }
+
+    /** The phone's « Bibliothèque » search: the listener's titles and the ones heard, matching every word, in SearchRank's order. */
+    fun search(lib: LibraryStore, query: String): List<Track> {
+        val words = SearchRank.fold(query).split(' ').filter { it.isNotBlank() }
+        if (words.isEmpty()) return emptyList()
+        val pool = (songs(lib) + lib.history.value).distinctBy { it.id }.filter { t ->
+            val text = SearchRank.fold("${t.title} ${t.artist} ${t.album}")
+            words.all { text.contains(it) }
+        }
+        return SearchRank.rank(query, pool)
     }
 
     enum class SortKey { TITLE, ARTIST, ALBUM, DURATION }

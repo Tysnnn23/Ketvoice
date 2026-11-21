@@ -89,7 +89,9 @@ object FixtureCatalog : CatalogSource {
     override suspend fun artist(ref: ArtistRef): ArtistData? {
         val a = Fixtures.artists.firstOrNull { it.name == ref.name } ?: return null
         val mine = Fixtures.refs.filter { it.artist == a.name }
-        return ArtistData(a, Fixtures.tracks.filter { it.artist.startsWith(a.name) }, mine.filter { it.type == "Album" }, mine.filter { it.type != "Album" })
+        return ArtistData(a, Fixtures.tracks.filter { it.artist.startsWith(a.name) }, mine.filter { it.type == "Album" }, mine.filter { it.type != "Album" },
+            about = "${a.name} écrit des chansons au bord de l'eau depuis dix ans : des guitares claires, une voix proche, des disques enregistrés en une prise.",
+            listeners = "1,2 M d'auditeurs mensuels", related = Fixtures.artists.filterNot { it.name == a.name })
     }
     override suspend fun categories() = listOf("Pop", "Hip-hop", "Électro", "Rock", "Jazz", "Chill", "R&B", "Classique")
         .mapIndexed { i, t -> Category("c$i", t, "fixture:cover:${i % 6}") }
