@@ -40,11 +40,12 @@ internal object AlbumPresentation {
         if (canvasShown) canvasAccent ?: coverAccent else coverAccent
 
     /**
-     * Width over height of the artwork in the music player on a window of this size: the full
-     * width over 55 % of the height on a phone, a square on a wide or lying window.
+     * Width over height of the artwork in the music player on a window of this size: on a phone the full
+     * width over the tallest the artwork goes (down to the controls, 8.3), a square on a wide or lying window.
      */
     fun playerArtworkAspect(widthDp: Float, heightDp: Float): Float =
-        if (widthDp >= 720f || widthDp >= heightDp || heightDp <= 0f) 1f else (widthDp / (heightDp * .55f)).coerceIn(.5f, 1.6f)
+        if (widthDp >= 720f || widthDp >= heightDp || heightDp <= 0f) 1f
+        else (widthDp / com.ketvoice.app.ui.player.PlayerArtworkSize.capDp(heightDp)).coerceIn(.5f, 1.6f)
 
     /**
      * The total length of an album, written in French as the page writes it (« 1 h 17 min », « 42 min »),

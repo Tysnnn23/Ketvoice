@@ -130,7 +130,9 @@ fun ArtworkCanvas(
     /** 7.6: shows a Canvas whole inside these insets (what buttons and words cover), see [CanvasFit]; null fills the box. */
     fit: androidx.compose.foundation.layout.PaddingValues? = null,
     /** The cover's colour, under a fitted Canvas until its still is there. */
-    ambient: Color = Color(0xFF1C1C1E)
+    ambient: Color = Color(0xFF1C1C1E),
+    /** 8.3: the picture or video at its own shape from the top of the box, only its foot cut (the phone player). */
+    anchorTop: Boolean = false
 ) {
     val art by ArtworkRepo.covers.collectAsState()
     val cover = com.ketvoice.app.data.MediaOverrides.cover(track, art["t:${track.id}"] ?: track.coverUrl)
@@ -161,10 +163,10 @@ fun ArtworkCanvas(
             // Width over height of what is shown, once known: a Canvas is upright and a cover square until then.
             var aspect by remember(data) { mutableFloatStateOf(0f) }
             val measured: (Float) -> Unit = { value -> if (value.isFinite() && value > 0f) aspect = value; onMediaAspect?.invoke(value) }
+            val poster = if (video) com.ketvoice.app.ui.sub.rememberCanvasPoster(data.canvas) else null
             // Framed: the whole picture is laid out at its own shape, then moved so that the rectangle fills the artwork.
-            val placed = if (frame == null) Modifier.fillMaxSize()
-                else Modifier.fillMaxSize().framedPicture(frame, if (aspect > 0f) aspect else if (video) 9f / 16f else 1f)
-            Box(Modifier.fillMaxSize().then(if (frame != null) Modifier.clipToBounds() else Modifier)) {
+            val placed = artworkPlacement(frame, anchorTop, mediaShape(aspect, video, poster))
+            Box(Modifier.fillMaxSize().then(if (frame != null || anchorTop) Modifier.clipToBounds() else Modifier)) {
                 when {
                     // 7.6: the owner's framing wins; otherwise the whole Canvas, placed by CanvasFit.
                     video && frame == null && fit != null -> FittedCanvas(data.canvas!!, playing, ambient, Modifier.fillMaxSize(),
@@ -175,7 +177,7 @@ fun ArtworkCanvas(
                         // FIT introduced the unwanted side bars in normal mode.
                         Box(placed) {
                             // 7.5 motion75: the Canvas's still shows at once while its video starts (no empty frame).
-                            com.ketvoice.app.ui.sub.rememberCanvasPoster(data.canvas)?.let { still ->
+                            poster?.let { still ->
                                 androidx.compose.foundation.Image(still, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                             }
                             CanvasVideo(path = data.canvas!!, playing = playing, cover = data.cover,
@@ -222,6 +224,21 @@ fun ArtworkCanvas(
             )
         }
     }
+}
+
+/** Width over height of what an artwork shows: as measured, else the Canvas's still, else upright or square. */
+private fun mediaShape(measured: Float, video: Boolean, poster: androidx.compose.ui.graphics.ImageBitmap?): Float = when {
+    measured > 0f -> measured
+    video && poster != null && poster.width > 0 && poster.height > 0 -> poster.width.toFloat() / poster.height
+    video -> 9f / 16f
+    else -> 1f
+}
+
+/** Where the picture goes in its box: the owner's [frame] wins, else from the top ([anchorTop], 8.3), else filling it. */
+private fun artworkPlacement(frame: com.ketvoice.app.data.Frame?, anchorTop: Boolean, shape: Float): Modifier = when {
+    frame != null -> Modifier.fillMaxSize().framedPicture(frame, shape)
+    anchorTop -> Modifier.fillMaxSize().topAnchoredCrop(shape)
+    else -> Modifier.fillMaxSize()
 }
 
 /**
