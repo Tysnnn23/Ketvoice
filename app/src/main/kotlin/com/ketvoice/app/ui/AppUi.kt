@@ -105,6 +105,8 @@ object AppUi {
         request: com.ketvoice.app.data.CatalogRequest,
         origin: androidx.compose.ui.geometry.Rect? = null
     ) {
+        // 8.1: the album's page is asked from the tap, not once its screen is built.
+        if (com.ketvoice.app.data.CatalogPageCache.get(request) == null) com.ketvoice.app.data.CatalogRepo.prefetch(request)
         push(OverlayEntry(CATALOG, null, null, null, ""))
         catalogRequest.value = request
         revealOrigin.value = origin
@@ -123,6 +125,7 @@ object AppUi {
         // toujours, et le `return` silencieux faisait échouer l'ouverture sans
         // aucun retour visuel. On accepte donc tout identifiant exploitable.
         if (id.isBlank() && name.isBlank()) return
+        com.ketvoice.app.data.ArtistPages.prefetch(id, name)
         push(OverlayEntry(ARTIST, null, null, null, ""))
         artistRequest.value = ArtistRequest(id, name)
         revealOrigin.value = origin

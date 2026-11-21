@@ -153,16 +153,20 @@ object MusicApi {
         null
     }
 
-    suspend fun searchYtMusic(q: String): List<Track> = withContext(Dispatchers.IO) {
-        if (q.isBlank()) return@withContext emptyList()
+    // 8.1: the search page, the player (a title's video) and the radio ask the same queries; kept a few minutes.
+    private val ytSearches = RecentAnswers<List<Track>?>(5 * 60_000L, max = 96) { !it.isNullOrEmpty() }
 
+    suspend fun searchYtMusic(q: String): List<Track> = if (q.isBlank()) emptyList()
+        else ytSearches.get(q.trim().lowercase()) { searchYtMusicNow(q) }.orEmpty()
+
+    private suspend fun searchYtMusicNow(q: String): List<Track>? = withContext(Dispatchers.IO) {
         val fields = JSONObject().put("query", q).put("params", OfficialMusicParser.SONGS_FILTER)
         val raw = YouTubeApi.request("search", fields, authenticated = false)
         val songs = raw?.let { OfficialMusicParser.parse(it.toString(), q) }.orEmpty()
         if (songs.isNotEmpty()) return@withContext songs
 
         YouTubeApi.request("search", JSONObject().put("query", q), authenticated = false)
-            ?.let { OfficialMusicParser.parse(it.toString(), q) }.orEmpty()
+            ?.let { OfficialMusicParser.parse(it.toString(), q) }
     }
 
     suspend fun searchAddon(base: String, tag: String, q: String): List<Track> =
@@ -206,7 +210,7 @@ object MusicApi {
         val videoId = track.videoId?.takeIf { track.youtubeCatalogVerified }
             ?: bestMatch(searchYtMusic("${track.title} ${track.artist}"), track)?.videoId
             ?: return@withContext null
-        val clients = listOf("IOS" to "20.10.4", "ANDROID_VR" to "1.60.19")
+        val clients = listOf("IOS" to "20.10.4", "ANDROID_VR" to "1.60.19").sortedBy { if (it.first == lastPlayerClient) 0 else 1 }
         for ((name, version) in clients) {
             val payload = JSONObject().put("videoId", videoId).put("contentCheckOk", true).put("racyCheckOk", true)
                 .put("context", JSONObject().put("client", JSONObject().put("clientName", name)
@@ -225,6 +229,7 @@ object MusicApi {
                 .filter { it.optString("mimeType").startsWith("audio/") && it.optString("url").startsWith("https://") }
                 .maxByOrNull { it.optLong("bitrate") } ?: continue
             val url = audio.getString("url")
+            lastPlayerClient = name
 
             // StreamResolver performs one common, cancellable audio-byte probe.
             run {
@@ -241,6 +246,12 @@ object MusicApi {
         }
         null
     }
+
+    /**
+     * 8.1: YouTube's player answers one of its clients and refuses the other for weeks at a time; the one that gave the
+     * last stream is asked first, so a title does not wait for a refusal before its sound.
+     */
+    @Volatile private var lastPlayerClient: String? = null
 
     suspend fun addonStream(track: Track, tag: String): StreamInfo? =
         KetvoiceApi.stream(track, tag)

@@ -1,6 +1,7 @@
 package com.ketvoice.app.data
 
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import org.json.JSONArray
@@ -39,7 +40,21 @@ object CatalogRepo {
             CatalogGenre(o.optString("id"), o.optString("name"), o.optString("picture_xl").takeIf { it.startsWith("https://") })
         }.also { genreCache = it }
     }
-    suspend fun page(request: CatalogRequest): CatalogPage? = withContext(Dispatchers.IO) {
+    // 8.1: an album tile fetches its page ahead (AlbumCanvasPrefetch); the page opened meanwhile waits for that answer.
+    private val albums = RecentAnswers<CatalogPage?>(30 * 60_000L, max = 16) { it != null && it.tracks.isNotEmpty() }
+
+    private val prefetchScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.IO)
+
+    /** An album is opened: its page is asked from the tap, while its screen is built (the screen joins that answer). */
+    fun prefetch(request: CatalogRequest) {
+        if (request.kind != "album" || request.id.isBlank()) return
+        prefetchScope.launch { runCatching { page(request) } }
+    }
+
+    suspend fun page(request: CatalogRequest): CatalogPage? =
+        if (request.kind == "album") albums.get(request.id) { pageNow(request) } else pageNow(request)
+
+    private suspend fun pageNow(request: CatalogRequest): CatalogPage? = withContext(Dispatchers.IO) {
         if (request.kind == "album" && request.id.startsWith("MPRE")) return@withContext YouTubeCatalog.album(request.id)
         if (!request.id.all { it.isDigit() } || request.id.isBlank()) return@withContext null
         when (request.kind) {
@@ -70,10 +85,14 @@ object CatalogRepo {
         }
     }
     /** Albums of the public catalogue matching [query]; empty when unavailable. */
+    private val albumSearches = RecentAnswers<List<CatalogAlbum>>(5 * 60_000L) { it.isNotEmpty() }
+
     suspend fun searchAlbums(query: String): List<CatalogAlbum> = withContext(Dispatchers.IO) {
         val term = query.trim().take(80)
         if (term.length < 2) return@withContext emptyList()
-        parseAlbums(get("search/album?q=${java.net.URLEncoder.encode(term, "UTF-8")}&limit=12")?.optJSONArray("data"))
+        albumSearches.get(term.lowercase()) {
+            parseAlbums(get("search/album?q=${java.net.URLEncoder.encode(term, "UTF-8")}&limit=12")?.optJSONArray("data"))
+        }
     }
 
     /** The catalogue's current chart, kept for half an hour; null when it cannot be read. */
@@ -121,9 +140,16 @@ object CatalogRepo {
      * requested name: the first hit of a homonym or of a loosely related artist would
      * fill a mix with someone else's music.
      */
-    private fun artistId(name: String, knownId: String?): String? {
+    // 8.1: Home's releases, the mixes and the radio ask the id of the same artists, each before its own request.
+    private val artistIds = RecentAnswers<String?>(6 * 3_600_000L, max = 200) { it != null }
+
+    private suspend fun artistId(name: String, knownId: String?): String? {
         knownId?.takeIf { it.isNotBlank() && it.all(Char::isDigit) }?.let { return it }
         if (name.isBlank()) return null
+        return artistIds.get(name.trim().lowercase()) { lookUpArtistId(name) }
+    }
+
+    private fun lookUpArtistId(name: String): String? {
         val hits = get("search/artist?q=${java.net.URLEncoder.encode(name.take(80), "UTF-8")}&limit=5")
             ?.optJSONArray("data") ?: return null
         for (index in 0 until hits.length()) {

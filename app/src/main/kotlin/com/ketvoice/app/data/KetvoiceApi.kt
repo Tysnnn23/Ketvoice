@@ -61,12 +61,20 @@ object KetvoiceApi {
         getJson("/health")?.optBoolean("ok") == true
     }
 
+    // 8.1: a query typed again (a letter erased and typed back, the search reopened) is answered from memory.
+    private val searches = RecentAnswers<List<Track>?>(5 * 60_000L) { it != null }
+
     suspend fun search(query: String): List<Track> = withContext(Dispatchers.IO) {
         if (query.trim().length < 2) return@withContext emptyList()
         val publicTracks = async { PublicationApi.search(query) }
-        val root = getJson("/search?q=${encode(query.trim())}")
-        val tracks = root?.optJSONArray("tracks") ?: JSONArray()
-        publicTracks.await() + (0 until tracks.length()).mapNotNull { index ->
+        val found = searches.get(query.trim().lowercase()) { catalogue(query) }.orEmpty()
+        publicTracks.await() + found
+    }
+
+    private suspend fun catalogue(query: String): List<Track>? {
+        val root = getJson("/search?q=${encode(query.trim())}") ?: return null
+        val tracks = root.optJSONArray("tracks") ?: JSONArray()
+        return (0 until tracks.length()).mapNotNull { index ->
             val item = tracks.optJSONObject(index) ?: return@mapNotNull null
             val addon = item.optString("source")
             val addonId = item.optString("addonId")

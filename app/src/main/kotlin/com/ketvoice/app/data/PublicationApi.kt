@@ -62,10 +62,17 @@ object PublicationApi {
         return try { response(c) } catch (_: Exception) { null } finally { c.disconnect() }
     }
 
-    suspend fun search(query: String): List<Track> = withContext(Dispatchers.IO) {
-        val rows = get("/search?q=${enc(query)}")?.optJSONArray("tracks") ?: JSONArray()
-        (0 until rows.length()).mapNotNull { i -> rows.optJSONObject(i)?.let(::track) }
-    }
+    // 8.1: the search page and the Ketvoice API search both ask this; one request per query, kept a few minutes.
+    private val searches = RecentAnswers<List<Track>?>(5 * 60_000L) { it != null }
+
+    suspend fun search(query: String): List<Track> = searches.get(query.trim().lowercase()) {
+        withContext(Dispatchers.IO) {
+            get("/search?q=${enc(query)}")?.let { root ->
+                val rows = root.optJSONArray("tracks") ?: JSONArray()
+                (0 until rows.length()).mapNotNull { i -> rows.optJSONObject(i)?.let(::track) }
+            }
+        }
+    }.orEmpty()
 
     private fun track(item: JSONObject): Track? {
         val id = item.optString("id")
