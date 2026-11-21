@@ -157,8 +157,14 @@ internal object SettingsKind : SyncKind {
     override fun snapshot(context: Context, previous: SyncDoc): Map<String, String> {
         com.ketvoice.app.data.SettingsStore.save()
         val prefs = context.getSharedPreferences("ketvoice_settings", Context.MODE_PRIVATE).all
-        return keys.mapNotNull { key -> com.ketvoice.app.data.PersonalBackup.setting(key, prefs[key])?.let { key to Canonical.text(it) } }.toMap()
+        val values = keys.mapNotNull { key -> com.ketvoice.app.data.PersonalBackup.setting(key, prefs[key])?.let { key to Canonical.text(it) } }.toMap()
+        // Phone control's secret rides in this owner-only document (see RemoteKeyStore); no setting holds it.
+        val uid = com.ketvoice.app.account.AccountSession.userId() ?: return values
+        val remote = com.ketvoice.app.remote.RemoteKeyStore
+        return values + (remote.KEY to Canonical.text(remote.ensure(context, uid, previous.live[remote.KEY]?.let(::remoteKey))))
     }
+
+    private fun remoteKey(text: String): String? = runCatching { JSONArray("[$text]").getString(0) }.getOrNull()
 
     fun parse(key: String, text: String): Any? = runCatching {
         com.ketvoice.app.data.PersonalBackup.setting(key, JSONArray("[$text]").get(0))
@@ -166,6 +172,9 @@ internal object SettingsKind : SyncKind {
 
     /** A setting missing from the account (or removed) stays as this device has it. */
     override suspend fun apply(context: Context, values: Map<String, String>) {
+        val uid = com.ketvoice.app.account.AccountSession.userId()
+        val remote = values[com.ketvoice.app.remote.RemoteKeyStore.KEY]?.let(::remoteKey)
+        if (uid != null && remote != null) com.ketvoice.app.remote.RemoteKeyStore.adopt(context, uid, remote)
         val editor = context.getSharedPreferences("ketvoice_settings", Context.MODE_PRIVATE).edit()
         values.forEach { (key, text) ->
             if (key !in keys) return@forEach

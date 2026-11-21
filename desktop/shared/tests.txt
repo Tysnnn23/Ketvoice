@@ -37,3 +37,4 @@ data/StreamQualityTest.kt
 data/StreamResolverTest.kt
 player/QueueEntryIdsTest.kt
 player/QueueOrderTest.kt
+remote/RemoteControlTest.kt

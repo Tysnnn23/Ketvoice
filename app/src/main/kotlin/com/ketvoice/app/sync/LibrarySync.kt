@@ -134,6 +134,7 @@ object LibrarySync {
         prefsListener = null
         SyncStore.forget(context)
         SyncedTracks.forget(context)
+        com.ketvoice.app.remote.RemoteKeyStore.forget(context)
         _status.value = SyncStatus()
     }
 

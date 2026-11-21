@@ -9,3 +9,13 @@ sync/SyncedTracks.kt
 sync/CloudLibrary.kt
 sync/LibrarySync.kt
 sync/DeviceIdentity.kt
+# Phase 3 (winremote): phone control over Ketogether's Realtime transport.
+together/RealtimeTransport.kt
+together/TogetherRoom.kt
+together/TogetherSession.kt
+together/TogetherModel.kt
+together/TogetherClock.kt
+handoff/HandoffMessage.kt
+remote/RemoteWire.kt
+remote/RemoteSession.kt
+remote/RemoteControl.kt
