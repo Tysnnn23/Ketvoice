@@ -50,3 +50,5 @@ data/Playlists.kt
 smartlib/TrackFacts.kt
 smartlib/SmartText.kt
 smartlib/QueryFilters.kt
+# Phase 2 (winaccount): what the account's settings sync checks (SettingsStore and PersonalBackup are desktop counterparts).
+data/TranslationLanguages.kt

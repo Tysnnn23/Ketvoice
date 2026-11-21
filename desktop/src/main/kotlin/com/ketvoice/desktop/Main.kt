@@ -62,13 +62,19 @@ fun main(args: Array<String>) {
     }
     // French is the source language; the others come from the app's translations.json on the classpath.
     val context = android.content.Context.app
+    // Every setting as the listener left it (the language included, before the texts load).
+    com.ketvoice.app.data.SettingsStore.load(context)
     AppText.init(context)
     runCatching { MusicApi.init(context) }.onFailure { AppLog.w("start", "catalogue: $it") }
     DesktopLibrary.init(context)
+    com.ketvoice.app.data.ArtistPrefs.init(context)
     // The real engine plays what the Player resolves (downloads first, then the app's sources).
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     val engine = FfmpegAudioEngine()
     Player.attach(engine, DesktopStreams::source, scope)
+    com.ketvoice.app.data.SettingsStore.watch(scope)
+    com.ketvoice.desktop.library.LocalFolders.init(context, scope)
+    com.ketvoice.desktop.library.DesktopAccount.start(context)
     // Tray, media keys and the Windows media controls drive the player.
     DesktopPlatform.bridge = object : com.ketvoice.desktop.platform.PlatformBridge {
         override fun toggle() = Player.toggle()
@@ -105,6 +111,9 @@ fun main(args: Array<String>) {
         fun quit() {
             WindowStore.save(lastSaved[0])
             runCatching { Player.pause() }
+            runCatching { com.ketvoice.app.data.SettingsStore.save() }
+            runCatching { com.ketvoice.desktop.library.DesktopAccount.quit() }
+            runCatching { android.content.FileSharedPreferences.flush() }
             runCatching { engine.release() }
             instance?.close()
             exitApplication()
@@ -132,7 +141,13 @@ fun main(args: Array<String>) {
             state = state,
         ) {
             val dark = when (com.ketvoice.app.data.AppSettings.themeMode.value) { 1 -> false; 2 -> true; else -> isSystemInDarkTheme() }
-            LaunchedEffect(Unit) { window.minimumSize = java.awt.Dimension(900, 600) }
+            LaunchedEffect(Unit) {
+                window.minimumSize = java.awt.Dimension(900, 600)
+                // Back at the front: what other devices changed comes in (at most once a minute).
+                window.addWindowFocusListener(object : java.awt.event.WindowAdapter() {
+                    override fun windowGainedFocus(e: java.awt.event.WindowEvent?) = com.ketvoice.desktop.library.DesktopAccount.foreground()
+                })
+            }
             LaunchedEffect(dark) {
                 while (!window.isDisplayable) delay(50)
                 WindowChrome.setDarkTitleBar(window, dark)

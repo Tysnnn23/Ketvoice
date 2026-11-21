@@ -1,1 +1,11 @@
-# Phase 4: sync / phone control. Nothing shared yet.
+# Phase 2 (winaccount): the account (Supabase Auth over REST) and the library sync, as on Android.
+# AccountSession, Profiles, SharedPlaylists and NowPlayingSync have desktop counterparts.
+account/AuthApi.kt
+account/AccountTokens.kt
+account/SupabaseHttp.kt
+sync/SyncDoc.kt
+sync/SyncKinds.kt
+sync/SyncedTracks.kt
+sync/CloudLibrary.kt
+sync/LibrarySync.kt
+sync/DeviceIdentity.kt
