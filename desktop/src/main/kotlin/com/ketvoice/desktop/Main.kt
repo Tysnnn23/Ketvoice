@@ -92,7 +92,11 @@ fun main(args: Array<String>) {
         override fun previous() = Player.previous()
         override fun seekTo(ms: Long) = Player.seekTo(ms)
     }
+    // Audio files opened with Ketvoice (file associations), from this launch and later ones.
+    com.ketvoice.desktop.library.OpenFiles.start(scope, java.io.File(context.cacheDir, "local-covers")) { Player.playQueue(it, 0) }
     DesktopPlatform.open(InstanceMessage.openable(argList))
+    // Updates from the windows-v* releases (at most once per 6 h; Settings › À propos checks now).
+    com.ketvoice.desktop.update.Updates.start(scope)
     DesktopPrefs.autostart.refresh()
     val autostarted = Autostart.FLAG in argList
     val saved = WindowStore.fit(WindowStore.load(), WindowStore.awtScreens())
@@ -163,6 +167,7 @@ fun main(args: Array<String>) {
             }
             LaunchedEffect(Unit) {
                 awtWindow = window
+                com.ketvoice.desktop.update.Updates.quit = { EventQueue.invokeLater { quit() } }
                 // A later launch: open what it was given and come forward.
                 instance?.onActivate { args ->
                     DesktopPlatform.open(InstanceMessage.openable(args))
@@ -224,7 +229,11 @@ internal object Smoke {
             say("ffmpeg ${org.bytedeco.ffmpeg.global.avutil.av_version_info().string}")
             say("avformat ${version(org.bytedeco.ffmpeg.global.avformat.avformat_version())}, " +
                 "swresample ${version(org.bytedeco.ffmpeg.global.swresample.swresample_version())}")
-            say("license ${org.bytedeco.ffmpeg.global.avutil.avutil_license().string}")
+            val license = org.bytedeco.ffmpeg.global.avutil.avutil_license().string
+            say("license $license")
+            // Shipped under the LGPL v3 notice (docs/licenses/FFmpeg-LGPL-3.0.txt): a GPL build must never pass.
+            if (!license.startsWith("LGPL")) error("FFmpeg is not the LGPL build: $license")
+            say("app version ${com.ketvoice.app.BuildConfig.VERSION_NAME}")
             say(com.ketvoice.desktop.audio.AudioSmoke.run())
             say("os ${System.getProperty("os.name")} ${System.getProperty("os.arch")}, java ${System.getProperty("java.version")}")
             if (!com.ketvoice.desktop.platform.PlatformSmoke.check(::say)) error("SMTC check failed")

@@ -1,0 +1,7 @@
+Java runtime (Ketvoice for Windows)
+
+Ketvoice for Windows runs on a reduced Java 21 runtime made with jlink from Eclipse Temurin
+(OpenJDK), https://adoptium.net. OpenJDK is licensed under the GNU General Public License,
+version 2, with the Classpath Exception, which lets applications run on it under their own terms.
+The runtime is not modified; its licence texts and third-party notices are in the runtime\legal
+folder of the installed app, and its source code is at https://github.com/adoptium/jdk21u.

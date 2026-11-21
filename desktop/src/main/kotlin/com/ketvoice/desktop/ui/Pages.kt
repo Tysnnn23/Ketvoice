@@ -384,6 +384,8 @@ fun SettingsPage() {
         item { SectionHeader("À propos") }
         item {
             SettingsCard {
+                UpdateRow(com.ketvoice.desktop.update.Updates.updater) { com.ketvoice.desktop.update.Updates.dialog.value = it }
+                Hairline()
                 Row(Modifier.fillMaxWidth().height(44.dp).clickable { about = !about }.padding(horizontal = 16.dp).testTag("about"),
                     verticalAlignment = Alignment.CenterVertically) {
                     KText("Version", Ket27Desk.Type.subheadline, Modifier.weight(1f))
