@@ -1,5 +1,9 @@
 package com.ketvoice.app.ui.common
 
+import com.ketvoice.app.ui.motion.growContainer
+import com.ketvoice.app.ui.motion.growContent
+import kotlinx.coroutines.launch
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.semantics.Role
@@ -8,6 +12,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -116,11 +127,18 @@ internal fun Ket27AlertButtons(confirmButton: @Composable () -> Unit, dismissBut
 @Composable
 internal fun Ket27DialogCard(onDismissRequest: () -> Unit, modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
     val theme = LocalTheme.current
-    Dialog(onDismissRequest) {
+    // 8.0: the card grows out of the button that asked for it; dismissed by back or a tap outside, it folds back into it.
+    val grow = com.ketvoice.app.ui.motion.rememberGrowTransition()
+    val scope = rememberCoroutineScope()
+    val dismiss by rememberUpdatedState(onDismissRequest)
+    var leaving by remember { mutableStateOf(false) }
+    Dialog({ if (!leaving) { leaving = true; scope.launch { grow.close(); leaving = false; dismiss() } } }) {
+        LaunchedEffect(Unit) { grow.open() }
         val shape = RoundedCornerShape(Ket27.Metrics.alertRadius)
-        GlassPanel(modifier.widthIn(max = 320.dp).fillMaxWidth(), shape, GlassParams.sheet(34f, dark = theme.isDark)) {
+        GlassPanel(modifier.widthIn(max = 320.dp).fillMaxWidth().growContainer(grow, Ket27.Metrics.alertRadius), shape,
+            GlassParams.sheet(34f, dark = theme.isDark)) {
             Column(Modifier.fillMaxWidth().background(theme.card.copy(alpha = if (theme.isDark) .82f else .9f))
-                .padding(start = 18.dp, end = 18.dp, top = 22.dp, bottom = 16.dp), content = content)
+                .growContent(grow).padding(start = 18.dp, end = 18.dp, top = 22.dp, bottom = 16.dp), content = content)
         }
     }
 }

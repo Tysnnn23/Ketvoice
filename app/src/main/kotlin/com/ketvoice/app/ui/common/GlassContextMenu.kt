@@ -50,6 +50,8 @@ import com.ketvoice.app.theme.LocalTheme
 import com.ketvoice.app.ui.AppUi
 import com.ketvoice.app.ui.motion.Haptics
 import com.ketvoice.app.ui.motion.Motion
+import com.ketvoice.app.ui.motion.growContainer
+import com.ketvoice.app.ui.motion.growContent
 import com.ketvoice.app.ui.motion.rememberHaptics
 import kotlinx.coroutines.launch
 
@@ -150,17 +152,20 @@ internal fun ContextMenuHost(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val haptic = rememberHaptics()
-    val progress = remember(request) { Animatable(0f) }
-    var closing by remember(request) { mutableStateOf(false) }
-    LaunchedEffect(request) {
-        if (Motion.reduced) progress.snapTo(1f)
-        else progress.animateTo(1f, com.ketvoice.app.ui.motion.Motion.Springs.SHEET.spec())
+    // 8.0: the menu grows out of the row or the "…" button it was opened from (GrowFromSource), and folds back into it.
+    val root = com.ketvoice.app.ui.motion.rootOnScreen()
+    val corner = with(density) { 22.dp.toPx() }
+    val grow = com.ketvoice.app.ui.motion.rememberGrowTransition(request) {
+        request.anchor?.let { com.ketvoice.app.ui.motion.GrowSource(it.translate(root), minOf(it.height / 2f, corner)) }
     }
+    val progress = grow.progress
+    var closing by remember(request) { mutableStateOf(false) }
+    LaunchedEffect(request) { grow.open() }
     fun close(then: () -> Unit = {}) {
         if (closing) return
         closing = true
         scope.launch {
-            if (!Motion.reduced) progress.animateTo(0f, com.ketvoice.app.ui.motion.Motion.Springs.DISMISS.spec())
+            grow.close()
             ContextMenus.request.value = null
             then()
         }
@@ -242,15 +247,10 @@ internal fun ContextMenuHost(modifier: Modifier = Modifier) {
             .width(with(density) { menuWidth.toDp() })
             .heightIn(max = with(density) { (height - insetBottom - placement.menuTop).coerceAtLeast(120.dp.toPx()).toDp() })
             .onSizeChanged { menuHeight = it.height }
-            .graphicsLayer {
-                val unfolded = ContextMenus.unfold(progress.value)
-                scaleX = unfolded; scaleY = unfolded
-                transformOrigin = TransformOrigin(if (placement.menuFromEnd) 1f else 0f, 0f)
-                alpha = (progress.value * 2.5f).coerceIn(0f, 1f)
-            }.testTag("context-menu-actions"),
+            .growContainer(grow, 22.dp).testTag("context-menu-actions"),
             RoundedCornerShape(22.dp), GlassParams.sheet(with(density) { 22.dp.toPx() }, dark = theme.isDark)) {
             Column(Modifier.fillMaxWidth().background(theme.card.copy(alpha = if (theme.isDark) .34f else .5f))
-                .verticalScroll(rememberScrollState())) {
+                .growContent(grow).verticalScroll(rememberScrollState())) {
                 actions.forEachIndexed { index, action ->
                     Row(Modifier.fillMaxWidth().clickable(enabled = action.enabled, role = Role.Button) {
                         haptic(Haptics.Kind.Press); close(action.run)

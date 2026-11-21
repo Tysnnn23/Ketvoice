@@ -1,5 +1,7 @@
 package com.ketvoice.app.ui.common
 
+import com.ketvoice.app.ui.motion.growContainer
+
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
@@ -150,6 +152,9 @@ internal fun SpringSheet(onDismiss: () -> Unit, modifier: Modifier = Modifier, s
     // The detent the sheet is meant to rest on, kept when its content changes height under it.
     var atFull by remember { mutableStateOf(startFull) }
     val closeLabel = com.ketvoice.app.data.AppText.t("Fermer")
+    // 8.0: a sheet opened by a button grows out of it instead of rising from the edge, and folds back into it.
+    val grow = com.ketvoice.app.ui.motion.rememberGrowTransition()
+    val growing = remember { grow.hasSource && !grow.reduced }
 
     /**
      * Asks the owner to close the sheet, which has just gone under the edge. An owner may refuse (a save
@@ -159,6 +164,7 @@ internal fun SpringSheet(onDismiss: () -> Unit, modifier: Modifier = Modifier, s
         dismiss()
         kotlinx.coroutines.delay(SheetDetents.REFUSED_AFTER_MS)
         closing = false
+        if (growing && grow.progress.value < 1f) scope.launch { grow.open() }
         val back = SheetDetents.opening(detents, atFull)
         if (Motion.reduced) visible.snapTo(back)
         else visible.animateTo(back, spring(dampingRatio = SheetDetents.DAMPING, stiffness = SheetDetents.STIFFNESS))
@@ -184,7 +190,8 @@ internal fun SpringSheet(onDismiss: () -> Unit, modifier: Modifier = Modifier, s
         if (closing) return
         closing = true
         scope.launch {
-            if (!Motion.reduced) visible.animateTo(0f, spring(dampingRatio = 1f, stiffness = SheetDetents.STIFFNESS))
+            if (growing && grow.progress.value > 0f) { grow.close(); visible.snapTo(0f) }
+            else if (!Motion.reduced) visible.animateTo(0f, spring(dampingRatio = 1f, stiffness = SheetDetents.STIFFNESS))
             leave()
         }
     }
@@ -213,8 +220,12 @@ internal fun SpringSheet(onDismiss: () -> Unit, modifier: Modifier = Modifier, s
         }
     }
     Box(modifier.fillMaxSize()) {
+        // Read while drawing: the veil follows the sheet without recomposing the page.
         if (scrim > 0f) Box(Modifier.fillMaxSize()
-            .background(Color.Black.copy(alpha = scrim * SheetDetents.scrim(visible.value, detents))))
+            .graphicsLayer {
+                alpha = scrim * SheetDetents.scrim(visible.value, detents) *
+                    (if (growing) grow.shownProgress().coerceIn(0f, 1f) else 1f)
+            }.background(Color.Black))
         Box(Modifier.fillMaxSize().semantics { contentDescription = closeLabel }
             .clickable(remember { MutableInteractionSource() }, null) { close() })
         BoxWithConstraints(Modifier.fillMaxSize().then(insets)) {
@@ -230,6 +241,7 @@ internal fun SpringSheet(onDismiss: () -> Unit, modifier: Modifier = Modifier, s
                 if (kotlin.math.abs(target - visible.value) < 1f) { opened = true; return@LaunchedEffect }
                 val rising = !opened
                 opened = true
+                if (rising && growing) { visible.snapTo(target); scope.launch { grow.open() }; return@LaunchedEffect }
                 if (Motion.reduced) visible.snapTo(target)
                 else visible.animateTo(target, spring(dampingRatio = if (rising) SheetDetents.DAMPING else 1f, stiffness = SheetDetents.STIFFNESS))
             }
@@ -239,6 +251,7 @@ internal fun SpringSheet(onDismiss: () -> Unit, modifier: Modifier = Modifier, s
                     // at all (it would otherwise show in the strip of the navigation bar).
                     .offset { IntOffset(0, (contentPx - visible.value).toInt().coerceAtLeast(0)) }
                     .graphicsLayer { alpha = if (visible.value < 1f) 0f else 1f }
+                    .then(if (growing) Modifier.growContainer(grow, com.ketvoice.app.theme.Ket27.Radius.sheet) else Modifier)
                     .onSizeChanged { contentPx = it.height }
                     .nestedScroll(connection)
                     .draggable(rememberDraggableState { delta -> drag(delta) }, Orientation.Vertical,

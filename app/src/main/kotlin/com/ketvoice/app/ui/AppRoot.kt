@@ -1,5 +1,6 @@
 package com.ketvoice.app.ui
 
+import com.ketvoice.app.ui.motion.growTouches
 import androidx.compose.ui.graphics.toArgb
 import com.ketvoice.app.theme.pageBackground
 import androidx.compose.ui.input.pointer.pointerInput
@@ -207,7 +208,7 @@ fun AppRoot() {
             com.ketvoice.app.ui.adaptive.LocalLargeScreen provides largeScreen) {
             // Every touch is noted, never consumed: a menu opened by it grows out of that place.
             Box(Modifier.fillMaxSize().keyboardShortcuts(largeScreen != null) {
-                com.ketvoice.app.ui.tablet.SidebarPrefs.toggle(context, largeScreen) }.pointerInput(Unit) {
+                com.ketvoice.app.ui.tablet.SidebarPrefs.toggle(context, largeScreen) }.growTouches().pointerInput(Unit) {
                 awaitPointerEventScope {
                     while (true) {
                         val event = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
@@ -311,9 +312,9 @@ fun AppRoot() {
                 androidx.compose.runtime.SideEffect { playerWasShown.value = AppUi.showPlayer.value }
                 AnimatedVisibility(
                     visible = chromeVisible,
-                    enter = if (morphing) fadeIn(tween(90)) else fadeIn(tween(Motion.duration())) + slideInVertically(tween(Motion.duration())) { it / 3 },
+                    enter = if (morphing) fadeIn(tween(90)) else fadeIn(com.ketvoice.app.ui.motion.Motion.Springs.SMOOTH.motion<Float>()) + slideInVertically(com.ketvoice.app.ui.motion.Motion.Springs.SHEET.motion(androidx.compose.ui.unit.IntOffset(1, 1))) { it / 3 },
                     exit = if (morphing) fadeOut(tween(120, delayMillis = 140))
-                        else fadeOut(tween(Motion.duration())) + slideOutVertically(tween(Motion.duration())) { it / 3 },
+                        else fadeOut(com.ketvoice.app.ui.motion.Motion.Springs.DISMISS.motion<Float>()) + slideOutVertically(com.ketvoice.app.ui.motion.Motion.Springs.DISMISS.motion(androidx.compose.ui.unit.IntOffset(1, 1))) { it / 3 },
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .padding(start = navigationWidth)
@@ -359,7 +360,7 @@ fun AppRoot() {
                             }
                         }
                         AppUi.closeOverlay()
-                        backScope.launch { backProgress.animateTo(0f, tween(Motion.duration(220), easing = Motion.EASE_STANDARD)) }
+                        backScope.launch { backProgress.animateTo(0f, com.ketvoice.app.ui.motion.Motion.Springs.PUSH.motion<Float>()) }
                     } catch (cancelled: kotlinx.coroutines.CancellationException) {
                         backScope.launch { backProgress.animateTo(0f, Motion.gentleSpring()) }
                         throw cancelled
@@ -387,7 +388,7 @@ fun AppRoot() {
                 }
                 AnimatedContent(AppUi.trackMenuTrack.value,
                     modifier = Modifier.fillMaxSize().zIndex(7f),
-                    transitionSpec = { fadeIn(tween(Motion.duration(240))).togetherWith(fadeOut(tween(Motion.duration(220)))) },
+                    transitionSpec = { fadeIn(com.ketvoice.app.ui.motion.Motion.Springs.SMOOTH.motion<Float>()).togetherWith(fadeOut(com.ketvoice.app.ui.motion.Motion.Springs.DISMISS.motion<Float>())) },
                     label = "global-track-menu") { track ->
                     if (track != null) Box(Modifier.fillMaxSize()) {
                         androidx.activity.compose.BackHandler { AppUi.trackMenuTrack.value = null }
@@ -532,8 +533,8 @@ private fun CompactTabTitle(title: String, visible: Boolean, modifier: Modifier 
     val theme = LocalTheme.current
     AnimatedVisibility(
         visible = visible,
-        enter = fadeIn(tween(Motion.duration(200))) + slideInVertically(tween(Motion.duration(260), easing = Motion.EASE_DECELERATE)) { -it / 2 },
-        exit = fadeOut(tween(Motion.duration(160))) + slideOutVertically(tween(Motion.duration(200), easing = Motion.EASE_ACCELERATE)) { -it / 2 },
+        enter = fadeIn(com.ketvoice.app.ui.motion.Motion.Springs.SMOOTH.motion<Float>()) + slideInVertically(com.ketvoice.app.ui.motion.Motion.Springs.SNAPPY.motion(androidx.compose.ui.unit.IntOffset(1, 1))) { -it / 2 },
+        exit = fadeOut(com.ketvoice.app.ui.motion.Motion.Springs.DISMISS.motion<Float>()) + slideOutVertically(com.ketvoice.app.ui.motion.Motion.Springs.DISMISS.motion(androidx.compose.ui.unit.IntOffset(1, 1))) { -it / 2 },
         modifier = modifier
     ) {
         com.ketvoice.app.glass.GlassPanel(
