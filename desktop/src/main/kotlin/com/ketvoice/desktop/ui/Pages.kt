@@ -497,6 +497,8 @@ private fun StemSettings() {
         Hairline()
         ChoiceRow("Qualité de séparation", AppSettings.ketmixStemsQuality.value, listOf("Automatique", "Toujours la meilleure", "Toujours rapide"),
             "stems-quality") { AppSettings.ketmixStemsQuality.value = it }
+        Hairline()
+        LibraryVoicesRow()
     }
     confirm?.let { pack ->
         ConfirmDialog(com.ketvoice.app.data.AppText.t("Supprimer le modèle de séparation ?"),

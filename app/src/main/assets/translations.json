@@ -2593,7 +2593,14 @@
   "Rien n'est encore enregistré": "Nothing recorded yet",
   "À la une": "Featured",
   "Lecteur plein écran": "Full-screen player",
-  "Verre Windows 11": "Windows 11 glass"
+  "Verre Windows 11": "Windows 11 glass",
+  "Voix prêtes à l'avance": "Voices ready ahead",
+  "Sur secteur, les titres téléchargés sont séparés à l'avance (300 au plus, le modèle rapide d'abord) : leur voix et leurs mix sont prêts tout de suite.": "On mains power, downloaded songs are separated ahead of time (up to 300, the quick model first): their voice and mixes are ready right away.",
+  "Code du mix copié dans le presse-papiers": "Mix code copied to the clipboard",
+  "Double-cliquez sous les ondes pour placer un point, faites-le glisser pour le déplacer.": "Double-click under the waves to place a point; drag it to move it.",
+  "Transition": "Transition",
+  "+ Point": "+ Point",
+  "Ctrl+Z · Ctrl+Y · Espace · Suppr": "Ctrl+Z · Ctrl+Y · Space · Del"
  },
  "hi": {
   "Reverb": "रीवर्ब",
@@ -5189,7 +5196,14 @@
   "Rien n'est encore enregistré": "अभी तक कुछ दर्ज नहीं हुआ",
   "À la une": "विशेष",
   "Lecteur plein écran": "फ़ुल-स्क्रीन प्लेयर",
-  "Verre Windows 11": "Windows 11 ग्लास"
+  "Verre Windows 11": "Windows 11 ग्लास",
+  "Voix prêtes à l'avance": "पहले से तैयार आवाज़ें",
+  "Sur secteur, les titres téléchargés sont séparés à l'avance (300 au plus, le modèle rapide d'abord) : leur voix et leurs mix sont prêts tout de suite.": "बिजली से जुड़े रहने पर, डाउनलोड किए गए गाने पहले से अलग किए जाते हैं (अधिकतम 300, पहले तेज़ मॉडल): उनकी आवाज़ और मिक्स तुरंत तैयार रहते हैं।",
+  "Code du mix copié dans le presse-papiers": "मिक्स कोड क्लिपबोर्ड पर कॉपी हो गया",
+  "Double-cliquez sous les ondes pour placer un point, faites-le glisser pour le déplacer.": "पॉइंट लगाने के लिए तरंगों के नीचे डबल-क्लिक करें, उसे खिसकाने के लिए खींचें।",
+  "Transition": "ट्रांज़िशन",
+  "+ Point": "+ पॉइंट",
+  "Ctrl+Z · Ctrl+Y · Espace · Suppr": "Ctrl+Z · Ctrl+Y · Space · Del"
  },
  "ja": {
   "Reverb": "リバーブ",
@@ -7785,7 +7799,14 @@
   "Rien n'est encore enregistré": "まだ何も記録されていません",
   "À la une": "注目",
   "Lecteur plein écran": "フルスクリーンプレーヤー",
-  "Verre Windows 11": "Windows 11 のガラス効果"
+  "Verre Windows 11": "Windows 11 のガラス効果",
+  "Voix prêtes à l'avance": "ボーカルを事前に準備",
+  "Sur secteur, les titres téléchargés sont séparés à l'avance (300 au plus, le modèle rapide d'abord) : leur voix et leurs mix sont prêts tout de suite.": "電源接続中は、ダウンロードした曲を事前に分離します（最大300曲、まず高速モデルで）。ボーカルとミックスがすぐに使えます。",
+  "Code du mix copié dans le presse-papiers": "ミックスコードをクリップボードにコピーしました",
+  "Double-cliquez sous les ondes pour placer un point, faites-le glisser pour le déplacer.": "波形の下をダブルクリックしてポイントを置き、ドラッグして動かします。",
+  "Transition": "トランジション",
+  "+ Point": "+ ポイント",
+  "Ctrl+Z · Ctrl+Y · Espace · Suppr": "Ctrl+Z · Ctrl+Y · Space · Del"
  },
  "zh": {
   "Reverb": "混响",
@@ -10381,7 +10402,14 @@
   "Rien n'est encore enregistré": "尚未记录任何内容",
   "À la une": "精选",
   "Lecteur plein écran": "全屏播放器",
-  "Verre Windows 11": "Windows 11 玻璃效果"
+  "Verre Windows 11": "Windows 11 玻璃效果",
+  "Voix prêtes à l'avance": "提前准备人声",
+  "Sur secteur, les titres téléchargés sont séparés à l'avance (300 au plus, le modèle rapide d'abord) : leur voix et leurs mix sont prêts tout de suite.": "接通电源时，已下载的歌曲会提前分离（最多 300 首，先用快速模型）：人声和混音随时可用。",
+  "Code du mix copié dans le presse-papiers": "混音代码已复制到剪贴板",
+  "Double-cliquez sous les ondes pour placer un point, faites-le glisser pour le déplacer.": "在波形下方双击放置一个点，拖动即可移动。",
+  "Transition": "过渡",
+  "+ Point": "+ 点",
+  "Ctrl+Z · Ctrl+Y · Espace · Suppr": "Ctrl+Z · Ctrl+Y · 空格 · Del"
  },
  "ru": {
   "Reverb": "Реверберация",
@@ -12977,7 +13005,14 @@
   "Rien n'est encore enregistré": "Пока ничего не записано",
   "À la une": "В центре внимания",
   "Lecteur plein écran": "Полноэкранный плеер",
-  "Verre Windows 11": "Стекло Windows 11"
+  "Verre Windows 11": "Стекло Windows 11",
+  "Voix prêtes à l'avance": "Голос заранее",
+  "Sur secteur, les titres téléchargés sont séparés à l'avance (300 au plus, le modèle rapide d'abord) : leur voix et leurs mix sont prêts tout de suite.": "При питании от сети скачанные треки разделяются заранее (до 300, сначала быстрой моделью): голос и миксы готовы сразу.",
+  "Code du mix copié dans le presse-papiers": "Код микса скопирован в буфер обмена",
+  "Double-cliquez sous les ondes pour placer un point, faites-le glisser pour le déplacer.": "Дважды щёлкните под волнами, чтобы поставить точку, и перетащите её, чтобы сдвинуть.",
+  "Transition": "Переход",
+  "+ Point": "+ Точка",
+  "Ctrl+Z · Ctrl+Y · Espace · Suppr": "Ctrl+Z · Ctrl+Y · Пробел · Del"
  },
  "it": {
   "Reverb": "Riverbero",
@@ -15573,7 +15608,14 @@
   "Rien n'est encore enregistré": "Ancora nessuna registrazione",
   "À la une": "In primo piano",
   "Lecteur plein écran": "Player a schermo intero",
-  "Verre Windows 11": "Vetro di Windows 11"
+  "Verre Windows 11": "Vetro di Windows 11",
+  "Voix prêtes à l'avance": "Voci pronte in anticipo",
+  "Sur secteur, les titres téléchargés sont séparés à l'avance (300 au plus, le modèle rapide d'abord) : leur voix et leurs mix sont prêts tout de suite.": "Con l'alimentazione collegata, i brani scaricati vengono separati in anticipo (fino a 300, prima con il modello rapido): voce e mix sono subito pronti.",
+  "Code du mix copié dans le presse-papiers": "Codice del mix copiato negli appunti",
+  "Double-cliquez sous les ondes pour placer un point, faites-le glisser pour le déplacer.": "Fai doppio clic sotto le onde per aggiungere un punto, trascinalo per spostarlo.",
+  "Transition": "Transizione",
+  "+ Point": "+ Punto",
+  "Ctrl+Z · Ctrl+Y · Espace · Suppr": "Ctrl+Z · Ctrl+Y · Spazio · Canc"
  },
  "es": {
   "Reverb": "Reverb",
@@ -18169,7 +18211,14 @@
   "Rien n'est encore enregistré": "Aún no hay nada registrado",
   "À la une": "Destacado",
   "Lecteur plein écran": "Reproductor a pantalla completa",
-  "Verre Windows 11": "Cristal de Windows 11"
+  "Verre Windows 11": "Cristal de Windows 11",
+  "Voix prêtes à l'avance": "Voces listas de antemano",
+  "Sur secteur, les titres téléchargés sont séparés à l'avance (300 au plus, le modèle rapide d'abord) : leur voix et leurs mix sont prêts tout de suite.": "Con el equipo enchufado, las canciones descargadas se separan de antemano (hasta 300, primero con el modelo rápido): su voz y sus mezclas están listas al instante.",
+  "Code du mix copié dans le presse-papiers": "Código de la mezcla copiado al portapapeles",
+  "Double-cliquez sous les ondes pour placer un point, faites-le glisser pour le déplacer.": "Haz doble clic bajo las ondas para colocar un punto y arrástralo para moverlo.",
+  "Transition": "Transición",
+  "+ Point": "+ Punto",
+  "Ctrl+Z · Ctrl+Y · Espace · Suppr": "Ctrl+Z · Ctrl+Y · Espacio · Supr"
  },
  "de": {
   "Reverb": "Reverb",
@@ -20765,7 +20814,14 @@
   "Rien n'est encore enregistré": "Noch nichts aufgezeichnet",
   "À la une": "Im Fokus",
   "Lecteur plein écran": "Vollbild-Player",
-  "Verre Windows 11": "Windows 11-Glas"
+  "Verre Windows 11": "Windows 11-Glas",
+  "Voix prêtes à l'avance": "Stimmen vorab bereit",
+  "Sur secteur, les titres téléchargés sont séparés à l'avance (300 au plus, le modèle rapide d'abord) : leur voix et leurs mix sont prêts tout de suite.": "Am Stromnetz werden heruntergeladene Titel vorab getrennt (bis zu 300, zuerst mit dem schnellen Modell): Stimme und Mixe sind sofort bereit.",
+  "Code du mix copié dans le presse-papiers": "Mix-Code in die Zwischenablage kopiert",
+  "Double-cliquez sous les ondes pour placer un point, faites-le glisser pour le déplacer.": "Doppelklicken Sie unter die Wellen, um einen Punkt zu setzen, und ziehen Sie ihn, um ihn zu verschieben.",
+  "Transition": "Übergang",
+  "+ Point": "+ Punkt",
+  "Ctrl+Z · Ctrl+Y · Espace · Suppr": "Strg+Z · Strg+Y · Leertaste · Entf"
  },
  "pt": {
   "Reverb": "Reverb",
@@ -23361,7 +23417,14 @@
   "Rien n'est encore enregistré": "Nada registrado ainda",
   "À la une": "Em destaque",
   "Lecteur plein écran": "Player em tela cheia",
-  "Verre Windows 11": "Vidro do Windows 11"
+  "Verre Windows 11": "Vidro do Windows 11",
+  "Voix prêtes à l'avance": "Vozes prontas antecipadamente",
+  "Sur secteur, les titres téléchargés sont séparés à l'avance (300 au plus, le modèle rapide d'abord) : leur voix et leurs mix sont prêts tout de suite.": "Ligado à corrente, as músicas baixadas são separadas antecipadamente (até 300, primeiro com o modelo rápido): a voz e os mixes ficam prontos na hora.",
+  "Code du mix copié dans le presse-papiers": "Código do mix copiado para a área de transferência",
+  "Double-cliquez sous les ondes pour placer un point, faites-le glisser pour le déplacer.": "Clique duas vezes sob as ondas para colocar um ponto e arraste-o para movê-lo.",
+  "Transition": "Transição",
+  "+ Point": "+ Ponto",
+  "Ctrl+Z · Ctrl+Y · Espace · Suppr": "Ctrl+Z · Ctrl+Y · Espaço · Del"
  },
  "ko": {
   "Reverb": "리버브",
@@ -25957,6 +26020,13 @@
   "Rien n'est encore enregistré": "아직 기록된 내용이 없습니다",
   "À la une": "주목할 만한",
   "Lecteur plein écran": "전체 화면 플레이어",
-  "Verre Windows 11": "Windows 11 글래스"
+  "Verre Windows 11": "Windows 11 글래스",
+  "Voix prêtes à l'avance": "보컬 미리 준비",
+  "Sur secteur, les titres téléchargés sont séparés à l'avance (300 au plus, le modèle rapide d'abord) : leur voix et leurs mix sont prêts tout de suite.": "전원에 연결되어 있으면 다운로드한 곡을 미리 분리합니다(최대 300곡, 빠른 모델 먼저). 보컬과 믹스가 바로 준비됩니다.",
+  "Code du mix copié dans le presse-papiers": "믹스 코드를 클립보드에 복사했습니다",
+  "Double-cliquez sous les ondes pour placer un point, faites-le glisser pour le déplacer.": "파형 아래를 더블클릭해 포인트를 놓고, 드래그해서 옮기세요.",
+  "Transition": "전환",
+  "+ Point": "+ 포인트",
+  "Ctrl+Z · Ctrl+Y · Espace · Suppr": "Ctrl+Z · Ctrl+Y · Space · Del"
  }
 }

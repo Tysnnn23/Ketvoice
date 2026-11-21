@@ -91,6 +91,12 @@ class TrackActions(private val player: PlayerControls, private val library: Libr
                 MenuItem("Nouvelle playlist", KetIcons.Plus, "new-playlist") {
                     library.createPlaylist(com.ketvoice.app.data.AppText.t("Nouvelle playlist"), listOf(track))
                 }))
+        // Ketmix Studio: this title into the one after it in the queue.
+        com.ketvoice.desktop.ketmix.StudioState.pairFor(track, player.state.value.queue)?.let { (from, to) ->
+            add(MenuItem("Ketmix Studio", com.ketvoice.desktop.ui.theme.DeskGlyphs.Ketmix, "open-studio", translate = false) {
+                com.ketvoice.desktop.ketmix.KetmixStudioDesk.request.value = com.ketvoice.desktop.ketmix.KetmixStudioDesk.Request(from, to)
+            })
+        }
         add(MenuItem("-"))
         add(MenuItem("Télécharger", KetIcons.Download, "download") { library.download(track) })
         if (track.album.isNotBlank()) add(MenuItem("Aller à l'album", KetIcons.Album, "go-album") { openAlbum(track) })

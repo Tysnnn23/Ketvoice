@@ -160,8 +160,11 @@ private fun KetmixSwitch() {
     val knob by androidx.compose.animation.core.animateDpAsState(if (on) 11.dp else 1.dp,
         if (Motion.reduced) androidx.compose.animation.core.snap() else androidx.compose.animation.core.spring(dampingRatio = .8f, stiffness = 700f))
     val (source, hovered) = rememberHover()
+    val menu = LocalMenu.current
     Tooltip(if (on) "Ketmix actif" else "Ketmix désactivé") {
         Row(Modifier.height(18.dp).clip(RoundedCornerShape(9.dp)).background(if (hovered) ket.hover else Color.Transparent)
+            // A right click opens Ketmix Studio on the transition about to play.
+            .contextMenu(menu) { listOf(MenuItem("Ketmix Studio", DeskGlyphs.Ketmix, "open-studio", translate = false) { com.ketvoice.desktop.ketmix.KetmixStudioDesk.openNext() }) }
             .hoverable(source).clickable { AppSettings.automix.value = !on }.padding(horizontal = 6.dp).testTag("ketmix"),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
             Icon(DeskGlyphs.Ketmix, null, Modifier.size(11.dp), tint = if (on) ket.accent else ket.secondary)

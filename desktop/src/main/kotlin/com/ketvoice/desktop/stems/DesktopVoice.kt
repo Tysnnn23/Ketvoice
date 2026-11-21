@@ -94,22 +94,36 @@ object DesktopVoice {
         val source = Player.loadedSource()?.takeIf { ids[it] == track.id }
             ?: ids.entries.firstOrNull { it.value == track.id }?.key
             ?: withContext(Dispatchers.IO) { com.ketvoice.desktop.player.DesktopStreams.source(track) } ?: return false
-        val pcm = withContext(Dispatchers.IO) { decode(source, 0L, MAX_MS) } ?: return false
         val quality = StemEngine.forMix() ?: return false
-        val left = Resampler.resample(pcm, 0, 2, FfmpegDecoder.OUT_RATE, StemDsp.RATE)
-        val right = Resampler.resample(pcm, 1, 2, FfmpegDecoder.OUT_RATE, StemDsp.RATE)
-        val frames = StemDsp.frames(left.size).coerceAtLeast(1)
-        var blocks = 0
         val ctx = kotlinx.coroutines.currentCoroutineContext()
-        val mask = StemEngine.separate(left, right, 0L, quality) {
-            // The quick model asks once per block of frames: that is how far it is.
-            if (quality == StemMask.FAST) _state.value = State.Working(track.id, (++blocks * StemDsp.NET_FRAMES / frames.toFloat()).coerceAtMost(1f))
-            else _state.value = State.Working(track.id, null)
-            !ctx.isActive
+        val mask = withContext(Dispatchers.IO) { decode(source, 0L, MAX_MS) }?.let { pcm ->
+            separatePcm(pcm, quality, { f -> _state.value = State.Working(track.id, f) }) { !ctx.isActive }
         } ?: return false
         StemStore.saveWhole(track.id, mask)
         masks[track.id] = mask
         return true
+    }
+
+    /**
+     * [pcm] (the decks' 48 kHz interleaved stereo, a whole title) separated with the model of [quality]; [progress]
+     * hears the share done (null when the model does not say), [cancelled] stops it. Null when it was stopped.
+     */
+    internal fun separatePcm(pcm: ShortArray, quality: Int, progress: (Float?) -> Unit, cancelled: () -> Boolean): StemMask? {
+        val left = Resampler.resample(pcm, 0, 2, FfmpegDecoder.OUT_RATE, StemDsp.RATE)
+        val right = Resampler.resample(pcm, 1, 2, FfmpegDecoder.OUT_RATE, StemDsp.RATE)
+        val frames = StemDsp.frames(left.size).coerceAtLeast(1)
+        var blocks = 0
+        return StemEngine.separate(left, right, 0L, quality) {
+            // The quick model asks once per block of frames: that is how far it is.
+            progress(if (quality == StemMask.FAST) (++blocks * StemDsp.NET_FRAMES / frames.toFloat()).coerceAtMost(1f) else null)
+            cancelled()
+        }
+    }
+
+    /** A title separated by the library's preparation: the voice level takes it up if it is playing or next. */
+    internal fun adopt(trackId: String, mask: StemMask) {
+        val s = Player.state.value
+        if (trackId == s.current?.id || trackId == s.queue.getOrNull(s.index + 1)?.id) masks[trackId] = mask
     }
 
     /**

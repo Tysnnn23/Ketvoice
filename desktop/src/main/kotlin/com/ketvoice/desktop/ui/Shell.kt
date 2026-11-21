@@ -144,7 +144,8 @@ private fun ShellLayout(initialPanel: Panel, initialSidebar: Dp, initialFullPlay
         override fun settings() { nav.root(Route.Settings) }
         override fun back() = nav.back()
     }
-    fun onKey(e: KeyEvent): Boolean = Shortcuts.handle(e, player, actions, keys)
+    fun onKey(e: KeyEvent): Boolean = if (com.ketvoice.desktop.ketmix.KetmixStudioDesk.request.value != null) StudioKeys.handle(e)
+        else Shortcuts.handle(e, player, actions, keys)
 
     Box(Modifier.fillMaxSize().background(ket.window).onPreviewKeyEvent(::onKey).focusRequester(rootFocus).focusable().testTag("shell")) {
         Backdrop(state.current?.coverUrl)
@@ -179,6 +180,7 @@ private fun ShellLayout(initialPanel: Panel, initialSidebar: Dp, initialFullPlay
             FullPlayer(onClose = { fullPlayer = false })
         }
         if (PlayerFullScreen.on.value) FullScreenPlayer(onExit = { PlayerFullScreen.on.value = false })
+        KetmixStudioHost()
         PlaybackToast()
         if (ImportDialog.open.value) ImportPlaylistDialog(onDismiss = { ImportDialog.open.value = false })
         com.ketvoice.desktop.update.Updates.dialog.value?.let { release ->

@@ -187,6 +187,8 @@ object DesktopAutomix {
             .let { MixShaping.apply(it, shape, true) }
             .let { p -> if (p.mixes && p.kind != MixKind.Beatmatch && abs(outSpeed - 1f) > .0005f) p.copy(rate = 1f / outSpeed) else p }
             .let { p -> if (p.mixes && AppSettings.ketmixStems.value) p.copy(stems = true, voiceFromMs = incoming.vocalStartMs ?: -1L) else p }
+            // The volume keyframes set in Ketmix Studio (as the phone's MixEditor.plan applies them).
+            .let { p -> val keys = MixPointStore.pair(current.id, next.id)?.keys.orEmpty(); if (p.mixes && keys.isNotEmpty()) p.copy(keys = keys) else p }
         var plan = planFor(beats = true)
         if (plan.mixes && plan.beatTied && e.renderedMs() > plan.outMs - preRoll(plan) - 1_000L) plan = planFor(beats = false)
         if (!plan.mixes || e.renderedMs() > plan.outMs - preRoll(plan) - 300L) {
@@ -240,6 +242,19 @@ object DesktopAutomix {
             if (!ok) scope?.launch { bypass = true; try { Player.next() } finally { bypass = false } }
         }
         return true
+    }
+
+    /**
+     * Ketmix Studio saved a transition: the one about to play is planned again with it (a mix already under way
+     * keeps going, as on the phone).
+     */
+    fun pointsChanged() {
+        val e = engine ?: return
+        when (e.mixStatus.value.phase) {
+            FfmpegAudioEngine.MixPhase.Scheduled -> e.cancelMix()
+            FfmpegAudioEngine.MixPhase.Idle -> doneKey = null
+            FfmpegAudioEngine.MixPhase.Mixing -> {}
+        }
     }
 
     /** Test and render seam: shows [ui] as if the engine played it. */

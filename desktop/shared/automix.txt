@@ -19,3 +19,4 @@ automix/MixPoints.kt
 automix/Waveform.kt
 automix/TransitionPlanner.kt
 automix/AnalysisStore.kt
+automix/MixStudio.kt
