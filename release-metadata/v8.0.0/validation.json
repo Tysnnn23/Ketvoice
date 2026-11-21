@@ -1,0 +1,224 @@
+{
+  "schema": 8,
+  "version": "8.0.0",
+  "versionCode": 148,
+  "source_commit": "c6b7e663b06f02573ffe5f42b4c0769f4970c700",
+  "created_at": "2026-11-21T01:52:13.624932+00:00",
+  "build_origin": {
+    "kind": "github_actions_with_owner_discord_sdk",
+    "workflow": "android.yml",
+    "run_id": 44849736338,
+    "artifact": {
+      "id": 14685363811,
+      "sha256": "f14834a6d805235dfa42d84ca7d101f8701b15eae4d9bd675ca0b6bed66490eb"
+    },
+    "gradle": "assembleMobileRelease assembleQuestRelease assembleLiteRelease",
+    "note": "Signed by CI with the pinned keystore secret; the Discord Social SDK AAR matched its pinned SHA-256."
+  },
+  "local_validation": {
+    "result": "debug JVM/Robolectric suites for the three flavors (mobile, quest, lite), release lint and the APK checker tests passed in a cloud container without the Discord SDK",
+    "commands": [
+      "testMobileDebugUnitTest",
+      "testQuestDebugUnitTest",
+      "testLiteDebugUnitTest -ProbolectricSdks=31,32,33,34,35,36",
+      "lintMobileRelease",
+      "lintQuestRelease",
+      "lintLiteRelease",
+      "tools/test_verify_apk.py"
+    ],
+    "ci_validation": "run 44849736338: release builds, debug and release unit tests, UI text audit, lint, APK signature pin and Discord bridge packaging passed",
+    "code_review": {
+      "kind": "none independent"
+    },
+    "host_previews": "Robolectric software renders on the host, looked at by the sub-agents and the lead: player morph at 0/0.5/1 for lyrics and queue (light/dark) and a duet driven by section headers; tab bar expanded/melting/collapsed/search/mini-player detaching (static glass: the AGSL shader cannot run on the host); menu growth at 0/50/100 %; Ketmix Studio phone/zoomed/presets/tablet; Statistics week/month/empty, tablet and share cards; Quest screens not rendered",
+    "features_8_0": "glass material path per API/mode and the AGSL uniforms checked on the JVM (GlassMaterialPathTest), fold recompositions 25,914 vs 28,634 on 7.6 (ChromeMorphTest/HostTest), real refraction never seen; menus grow from the pressed control and interrupted springs continue (Motion80HostTest), 39 tweens replaced; player morph (PlayerMorphTest, Player80HostTest), duet parsing for TTML agents, enhanced LRC markers, custom JSON and featured-artist headers (LyricsDuetTest); Ketmix Studio '+ Point' places a keyframe (KetmixStudioHostTest fails on 7.6), undo/redo, snap, presets and share codes (MixStudioTest); live statistics aggregation (LiveStatsTest) and a live update on screen (StatsHostTest); fix80: motion80 had widened the glass buttons' hit area to the unclipped square (artist 'Show all' captured by the top-bar Play button), reduced motion now snaps the chrome; Lite skips five chrome pictures in NavigationAnimationsHostTest because its glass backdrop layer cannot be replayed into a software View.draw (positions still checked); nothing ran on a device",
+    "after_local_run": "full local runs: mobile 1948 tests (0 failures, 3 skipped) after fix80, quest 1930 (45 skipped) 0 failures, lite 1938 with 2 failures (chrome pictures in a software canvas), then NavigationAnimationsHostTest 9/9 on lite and mobile after c6b7e66; release lint 0 errors; UI text audit clean",
+    "sdk_30": "Robolectric's Android 11 runtime could not be downloaded in the cloud container (Maven Central answered 429), so the Lite tests that declare sdk 30 ran on sdk 31 only; nothing ran on an Android 11 runtime",
+    "after_last_full_local_run": "after the last complete Lite run only NavigationAnimationsHostTest changed (re-run on lite and mobile); CI run 44849736338 ran every suite on the release commit and passed"
+  },
+  "server": {
+    "function": "ketvoice-content",
+    "deployed_version": 23,
+    "changed_in_this_version": false,
+    "database": "no migration in this version"
+  },
+  "tests": {
+    "mobile": {
+      "jvm": {
+        "tests": 1948,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 3
+      },
+      "android_15_emulator_compose": {
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "quest": {
+      "jvm": {
+        "tests": 1930,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 45
+      },
+      "android_15_emulator_compose": {
+        "status": "not_executed"
+      },
+      "instrumentation": "compiled_not_executed"
+    },
+    "lite": {
+      "jvm": {
+        "tests": 1938,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 3
+      },
+      "android_11_runtime": {
+        "status": "not_executed"
+      }
+    },
+    "dex_register_check": "tools/check_dex_registers.py ran in CI (Check method sizes against the Android verifier) on the three release APKs",
+    "apk_checker": "tools/test_verify_apk.py 12 tests (Lite minSdk 30 required)"
+  },
+  "lint": {
+    "mobile": {
+      "Warning": 348,
+      "Hint": 30
+    },
+    "quest": {
+      "Warning": 344,
+      "Hint": 30
+    },
+    "lite": {
+      "Warning": 366,
+      "Hint": 30
+    },
+    "errors": 0
+  },
+  "apks": [
+    {
+      "name": "Ketvoice-8.0.0.apk",
+      "sha256": "b1174b228deb271756fe5614be168ab1deba7a4787a25dcf7aac6bdeb6cbea3a",
+      "bytes": 106395062,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "8.0.0",
+      "versionCode": 148,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-8.0.0-Quest.apk",
+      "sha256": "0e0c7a261139df9025266e8833cdc4fd530517794bf344601c094281ffd73b80",
+      "bytes": 118680736,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "8.0.0",
+      "versionCode": 148,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false
+    },
+    {
+      "name": "Ketvoice-8.0.0-Lite.apk",
+      "sha256": "850f3041947b879ab0fdaca1b8cd45ffce18e182028d2aa8085419c90bc0827e",
+      "bytes": 34300424,
+      "certificate_sha256": "ae25a19cee8ac781f30de4c933541257fdd46a6ea7fca6f7ab021f68221f37a9",
+      "package": "com.ketvoice.app",
+      "version": "8.0.0",
+      "versionCode": 148,
+      "zip_crc": "passed",
+      "signature": "passed",
+      "alignment_16kb": "passed",
+      "debuggable": false,
+      "edition": "lite"
+    }
+  ],
+  "discord": {
+    "sdk_present_in_ci_build": true,
+    "sdk_sha256_pinned": true,
+    "bridge_and_native_libraries_verified": true,
+    "presence_mode": "unauthenticated_rpc_through_installed_discord_app"
+  },
+  "credential_scan": {
+    "entries": 3990,
+    "findings": 0,
+    "scope": "the three release APKs",
+    "kind": "credential_patterns",
+    "explicit_private_provider_key_deny_list": false,
+    "note": "run because publish-release requires it; the other manual checks were skipped at the owner's request"
+  },
+  "release_install_smoke": {
+    "mobile": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "quest": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    },
+    "lite": {
+      "installed_and_launched": false,
+      "status": "not_validated"
+    }
+  },
+  "publication_override": {
+    "authorized_by_user": true,
+    "authorized_at": "2026-11-21T01:52:13.624932+00:00",
+    "kind": "standing_authorization",
+    "user_statement": "J'autorise TOUT devient maintenant une règle.",
+    "user_statement_date": "2026-11-14",
+    "in_reply_to": "The question whether versions may be published without phone or Quest testing without asking again for each version.",
+    "recorded_in": "AGENTS.md (commit aeeda8e)",
+    "reason": "The owner made publishing validated versions without phone or Quest testing a standing rule.",
+    "scope": "physical device installation and all on-device behaviour of 8.0.0 (mobile, Lite and Quest), including accounts and sync on devices"
+  },
+  "owner_requests_2026_11_20_8_0_0": {
+    "statements": [
+      "Le boutons de keyframe ne s'affiche pas et donc impossible de tester le volume,avant de faire sa proposemoi d'énormes Changement, améliorations,liquid glass ios 27,ios27,ket 27 car on va passer en 8.0.0"
+    ],
+    "picks": [
+      "Vrai verre réfractif",
+      "Menus qui sortent du bouton",
+      "Barre d'onglets qui se transforme",
+      "Lecteur qui se transforme",
+      "Icônes animées",
+      "Ketmix Studio",
+      "Replay en direct",
+      "Ressorts partout",
+      "Pour les paroles 8.0 non je n'en veux pas mais j'aimerais quand il y a un feat et que le deuxième chanteur chante que les LYRICS ne soient pas du même côté comme Apple Music"
+    ],
+    "done": "all items; Ketmix Studio has no audio-file export of a transition; studio presets are not in the personal backup"
+  },
+  "not_validated": [
+    "physical phone, Lite, tablet or Quest installation, rendering and behaviour of 8.0.0",
+    "the refractive glass, rim dispersion, liquid neck and the performance-mode shader cost on real GPUs",
+    "the feel of springs, the menu growth, the player morph drag and the tab bar fold on a device",
+    "duet lyrics with real lyrics sources",
+    "Ketmix Studio pinch zoom, share sheet and paste on a device",
+    "statistics genre lookups over the network and share delivery",
+    "Robolectric runs on the Android 11 runtime (sdk 30)",
+    "independent code review"
+  ],
+  "known_limitations": [
+    "No Wear OS app in this version.",
+    "Seasonal themes use code-drawn decor until the owner's pictures are added.",
+    "Widgets placed with an earlier version other than the 2x2 now-playing one disappear from the home screen and must be added again.",
+    "Romanization does not read Japanese kanji; Hebrew and Arabic show consonants only.",
+    "Streaming voice separation does not cover HLS streams.",
+    "A listener who picked the Liquid Glass icon before 7.6 is moved to the GTA VI icon like everyone else.",
+    "The mobile APK is about 4 MB larger and Lite about 2 MB larger because of the Cast SDK.",
+    "Android Auto's queue screen shows only the current song.",
+    "Switching between Ketvoice and Ketvoice Lite is a manual install of the other APK.",
+    "Ketogether guests hear titles their own sources can play; local files and private titles are shown as unavailable.",
+    "Lecture automatique: which queue titles were added automatically is not kept across a session restore.",
+    "The mobile and Quest APKs are about 18.6 MB larger because they include the rhythm model.",
+    "Launcher icons keep a background: Android fills adaptive icon backgrounds in black.",
+    "The signing certificate is the existing public Android debug identity, not a private production key."
+  ],
+  "canonical_banner_sha256": "ddc0e2c1270027f4b9dd92254374b79727ae9eaf8914e418b52e23c5b39b5966"
+}
