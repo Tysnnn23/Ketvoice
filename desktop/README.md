@@ -278,8 +278,9 @@ into the next, and « Suivant » blends. `BeatModelOnnxTest` checks the pinned d
   (`StemModelPinTest` pins the phone's LiteRT files and is excluded), `StemsScreenshots` (renders and drives the slider and
   the equalizer). Opt-in: `KETVOICE_STEMS_ONNX=<folder with the three files>` runs the real networks on a generated clip
   (here: Spleeter 12 s of sound in about 0.9 s, UVR in about 10 s, CPU).
-- Not on the desktop yet: separating the library ahead (`StemLibrary`), separating streams ahead of the playhead, and the
-  lyrics following the stage's 85 ms delay (`VoiceLevel.delayMs` is not read by `ui/Lyrics.kt`).
+- Not on the desktop yet: separating the library ahead (`StemLibrary`) and separating streams ahead of the playhead (a
+  title is separated whole once its slider is touched). The lyrics need no `VoiceLevel.delayMs`: the engine's position
+  already leaves the stage's delay out.
 
 ## Done in Phase 1
 
