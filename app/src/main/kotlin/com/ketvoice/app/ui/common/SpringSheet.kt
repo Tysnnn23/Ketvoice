@@ -256,7 +256,10 @@ internal fun SpringSheet(onDismiss: () -> Unit, modifier: Modifier = Modifier, s
                     .nestedScroll(connection)
                     .draggable(rememberDraggableState { delta -> drag(delta) }, Orientation.Vertical,
                         onDragStopped = { velocity -> settle(velocity) })
-                    .testTag("spring-sheet")) { content(room) }
+                    .testTag("spring-sheet")) {
+                    // 8.3: a sheet growing out of a button lies on a still copy of the page (FrozenBackdrop).
+                    if (growing) com.ketvoice.app.glass.FrozenBackdrop { content(room) } else content(room)
+                }
             }
         }
     }

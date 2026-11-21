@@ -164,8 +164,9 @@ internal object GlassCompat {
 }
 
 /**
- * Where each captured backdrop lies ([BackdropCapture], Android 11 only), so a glass can tell whether what is
- * behind it is still the same part of the same page. Read and written while laying out and drawing (main thread).
+ * Where each captured backdrop lies ([BackdropCapture]), so a glass on Android 11 can tell whether what is behind it
+ * is still the same part of the same page, and a menu can take a still copy of it ([FrozenBackdrop]). Read and
+ * written while laying out and drawing (main thread).
  */
 internal object BackdropPlaces {
     private val captured = java.util.IdentityHashMap<Any, LayoutCoordinates>()
@@ -173,6 +174,9 @@ internal object BackdropPlaces {
     fun put(backdrop: Any, coordinates: LayoutCoordinates) { captured[backdrop] = coordinates }
 
     fun forget(backdrop: Any) { captured.remove(backdrop) }
+
+    /** Where [backdrop] is laid out, while it is. */
+    fun place(backdrop: Any): LayoutCoordinates? = captured[backdrop]?.takeIf { it.isAttached }
 
     /**
      * What the backdrop's picture is moved by under a glass laid out at [panel] (the backdrop library computes the

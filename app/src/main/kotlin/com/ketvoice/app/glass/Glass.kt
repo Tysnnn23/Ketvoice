@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.animation.core.Animatable
@@ -69,19 +70,37 @@ fun BackdropCapture(
     modifier: Modifier = Modifier,
     content: @Composable BoxScope.() -> Unit
 ) {
-    // Android 11: where this backdrop lies, for the glass over it (BackdropBlur keeps a blur whose place did not change).
-    val soft = SoftBlur.needed()
-    if (soft) androidx.compose.runtime.DisposableEffect(backdrop) { onDispose { BackdropPlaces.forget(backdrop) } }
-    Box(modifier.then(if (soft) Modifier.onGloballyPositioned { BackdropPlaces.put(backdrop, it) } else Modifier)
-        .layerBackdrop(backdrop)) {
+    // Where this backdrop lies: for the glass over it on Android 11 (BackdropBlur keeps a blur whose place did not
+    // change) and for the still copy a menu takes when it opens (FrozenBackdrop, 8.3).
+    androidx.compose.runtime.DisposableEffect(backdrop) { onDispose { BackdropPlaces.forget(backdrop) } }
+    Box(modifier.onGloballyPositioned { BackdropPlaces.put(backdrop, it) }.layerBackdrop(backdrop)) {
         CompositionLocalProvider(LocalBackdropLayer provides null) { content() }
     }
 }
 
+/**
+ * The capture of a page for the glass over it. Its floor is opaque (8.3 « Verre plus propre »): the page's background
+ * is laid down first, so where a page draws nothing the glass blurs that background instead of showing, sharp,
+ * whatever lies behind the capture. Only a fully transparent [background] keeps no floor: the small captures a
+ * slider's lens magnifies, which never lie over text. [moving]: what this captures keeps moving (a playing Canvas,
+ * the player's living background), so a menu opened over it keeps the live glass ([FrozenBackdrop]).
+ */
 @Composable
-fun rememberGlassBackdrop(background: Color) = rememberLayerBackdrop {
-    drawRect(background)
-    drawContent()
+fun rememberGlassBackdrop(background: Color, moving: Boolean = false): LayerBackdrop {
+    val floor = glassFloor(background, LocalTheme.current.background)
+    val backdrop = rememberLayerBackdrop {
+        drawRect(floor)
+        drawContent()
+    }
+    if (moving) MovingBackdrops.mark(backdrop)
+    return backdrop
+}
+
+/** The floor of a capture: [background] made opaque over [base] (itself made opaque); transparent stays transparent. */
+internal fun glassFloor(background: Color, base: Color): Color = when {
+    background.alpha <= 0f -> Color.Transparent
+    background.alpha >= 1f -> background
+    else -> background.compositeOver(base.copy(alpha = 1f))
 }
 
 /**
@@ -285,14 +304,16 @@ fun GlassPanel(
     enabled: Boolean = true,
     captured: Boolean = false,
     styleOverride: Int? = null,
+    /** 8.3: where this glass is also recorded, as drawn, so that a lens above it can bend it (the tab bar's pill). */
+    export: LayerBackdrop? = null,
     content: @Composable () -> Unit
 ) {
     // A fusion host is consumed by the first panel on a branch: nested panels (a
     // selection lens inside a capsule) keep their own glass.
     val fusion = LocalGlassFusion.current
-    if (fusion == null) GlassPanelBody(modifier, shape, params, enabled, captured, styleOverride, null, content)
+    if (fusion == null) GlassPanelBody(modifier, shape, params, enabled, captured, styleOverride, null, export, content)
     else CompositionLocalProvider(LocalGlassFusion provides null) {
-        GlassPanelBody(modifier, shape, params, enabled, captured, styleOverride, fusion, content)
+        GlassPanelBody(modifier, shape, params, enabled, captured, styleOverride, fusion, export, content)
     }
 }
 
@@ -305,6 +326,7 @@ private fun GlassPanelBody(
     captured: Boolean,
     styleOverride: Int?,
     fusion: GlassFusion?,
+    export: LayerBackdrop?,
     content: @Composable () -> Unit
 ) {
     val style = styleOverride ?: GlassStyles.current
@@ -350,7 +372,11 @@ private fun GlassPanelBody(
         androidx.compose.runtime.DisposableEffect(fusion, key) { onDispose { fusion.forget(key) } }
         if (fusion.active && liquid27 && styleOverride == null && enabled && mode == GlassRenderMode.Optical) {
             // Fused: this control only reports where it is. The single Liquid 27 body
-            // drawn by GlassFusionLayer is its glass.
+            // drawn by GlassFusionLayer is its glass (and is what it exports).
+            if (export != null) androidx.compose.runtime.DisposableEffect(fusion, export) {
+                fusion.export = export
+                onDispose { if (fusion.export === export) fusion.export = null }
+            }
             val density = androidx.compose.ui.platform.LocalDensity.current
             val direction = androidx.compose.ui.platform.LocalLayoutDirection.current
             Box(modifier.onGloballyPositioned { coordinates ->
@@ -411,16 +437,20 @@ private fun GlassPanelBody(
         // still diffuses the colours behind it. Android 12+ never takes this path.
         val softBlur = if (SoftBlur.needed()) rememberBackdropBlur() else null
         val softFilter = remember(params, softBlur) { softBlur?.let { glassSoftFilter(params) } }
+        // 8.3: Android 12+ blurs what is behind at a third of its size (GlassResolution); Android 11 keeps SoftBlur.
+        val reduced = if (softBlur == null) rememberReducedBackdrop(backdrop, remember(blurAmount) { { blurAmount } }, PerformanceMode)
+            else null
         Box(
             modifier = modifier.then(touchLight)
                 .then(if (softBlur != null) Modifier.onGloballyPositioned { softBlur.panel = it } else Modifier)
                 .drawBackdrop(
-                backdrop = backdrop,
+                backdrop = reduced ?: backdrop,
                 shape = { shape },
+                exportedBackdrop = export,
                 effects = {
                     // The shader owns saturation: stacking vibrancy here overcooks cover colours.
                     if (!agsl) vibrancy()
-                    if (blurAmount > 0f) blur(blurAmount)
+                    if (blurAmount > 0f && reduced?.blursItself(blurAmount) != false) blur(blurAmount)
                     if (agsl) {
                         val bounds = size
                         // The outline is measured again only when the panel's size changes, not at every frame.
@@ -498,6 +528,9 @@ private fun GlassPanelBody(
     }
     }
 }
+
+/** Read while drawing: whether the performance mode (or the automatic economy mode) is on. */
+internal val PerformanceMode: () -> Boolean = { AppSettings.highPerformanceMode.value }
 
 private class GlassRenderState(var shaderApplied: Boolean = false) {
     private var width = -1f

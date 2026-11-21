@@ -135,10 +135,13 @@ internal fun Ket27DialogCard(onDismissRequest: () -> Unit, modifier: Modifier = 
     Dialog({ if (!leaving) { leaving = true; scope.launch { grow.close(); leaving = false; dismiss() } } }) {
         LaunchedEffect(Unit) { grow.open() }
         val shape = RoundedCornerShape(Ket27.Metrics.alertRadius)
-        GlassPanel(modifier.widthIn(max = 320.dp).fillMaxWidth().growContainer(grow, Ket27.Metrics.alertRadius), shape,
-            GlassParams.sheet(34f, dark = theme.isDark)) {
-            Column(Modifier.fillMaxWidth().background(theme.card.copy(alpha = if (theme.isDark) .82f else .9f))
-                .growContent(grow).padding(start = 18.dp, end = 18.dp, top = 22.dp, bottom = 16.dp), content = content)
+        // 8.3: glass over a still copy of the page taken as it opens (FrozenBackdrop).
+        com.ketvoice.app.glass.FrozenBackdrop {
+            GlassPanel(modifier.widthIn(max = 320.dp).fillMaxWidth().growContainer(grow, Ket27.Metrics.alertRadius), shape,
+                GlassParams.sheet(34f, dark = theme.isDark)) {
+                Column(Modifier.fillMaxWidth().background(theme.card.copy(alpha = if (theme.isDark) .82f else .9f))
+                    .growContent(grow).padding(start = 18.dp, end = 18.dp, top = 22.dp, bottom = 16.dp), content = content)
+            }
         }
     }
 }

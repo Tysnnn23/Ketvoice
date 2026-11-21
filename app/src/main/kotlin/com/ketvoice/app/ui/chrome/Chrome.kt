@@ -567,14 +567,6 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier,
     val haptic = com.ketvoice.app.ui.motion.rememberHaptics()
     var held by remember { mutableStateOf(false) }
     var hover by remember { mutableFloatStateOf(0f) }
-    val bulge by animateFloatAsState(if (held && !Motion.reduced) 1.055f else 1f,
-        if (Motion.reduced) androidx.compose.animation.core.snap() else spring(dampingRatio = .82f, stiffness = 500f), label = "held-glass")
-    // Held, the selection becomes a lens as on iOS: it swells to the height of the bar, turns clear and
-    // magnifies the tab under it, with a little overshoot, then settles back into a selection when let go.
-    val lensLift by animateFloatAsState(if (held && !Motion.reduced) 1f else 0f,
-        if (Motion.reduced) androidx.compose.animation.core.snap() else spring(dampingRatio = HeldLens.DAMPING, stiffness = HeldLens.STIFFNESS),
-        label = "held-lens")
-    val lastHoverTab = remember { mutableIntStateOf(-1) }
     // Ket 27 draws its own symbols, in the manner of iOS.
     val tabs = listOf(
         TabSpec(com.ketvoice.app.ui.common.Ket27Glyphs.Home, "Accueil", AppUi.HOME),
@@ -605,8 +597,26 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier,
             dampingRatio = DesignTokens.Motion.CHROME_DAMPING, stiffness = DesignTokens.Motion.CHROME_STIFFNESS),
         label = "tabHeight"
     )
+    val folded = homeOnly && !melting
+    val full = !folded && (!collapsed || homeOnly)
+    // 8.3 « Pastille physique »: the selection is moved by PillPhysics; held, it follows the finger as a lens.
+    val current = tabs.indexOfFirst { it.index == AppUi.tab.value }.coerceAtLeast(0)
+    val selected = if (held) kotlin.math.round(hover).toInt() else current
+    val pill = remember { PillMotion(current.toFloat()) }
+    val reduced = Motion.reduced
+    androidx.compose.runtime.SideEffect {
+        pill.target = if (held) hover else selected.toFloat(); pill.held = held; pill.reduced = reduced
+    }
+    LaunchedEffect(pill) { pill.run() }
+    // Lifted, the pill bends the bar's own glass (recorded into barGlass while it is up); the refractive glass only.
+    val optical = com.ketvoice.app.glass.currentGlassRenderMode(com.ketvoice.app.glass.GlassStyles.current,
+        AppSettings.liquidGlass.value, captured = false) == com.ketvoice.app.glass.GlassRenderMode.Optical
+    val lifted by remember(pill) { androidx.compose.runtime.derivedStateOf { pill.lift > TabPill.LENS_FROM } }
+    val barGlass = com.kyant.backdrop.backdrops.rememberLayerBackdrop()
+    // The bar records its glass for the lens only while the pill is up: at rest it costs nothing.
+    val lens = full && optical && lifted
 
-    GlassPanel(
+    Box(
         modifier = modifier
             .layout { measurable, constraints ->
                 val w = widthState.value.roundToPx().coerceIn(constraints.minWidth, constraints.maxWidth)
@@ -649,250 +659,278 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier,
                     }
                     held = false
                 }
-            },
-        shape = RoundedCornerShape(30.dp),
-        params = GlassParams.navigation(dark = th.isDark),
-        enabled = AppSettings.liquidGlass.value
+            }
     ) {
-        if (homeOnly && !melting) {
-            // Folded (Settings → "Barre d'onglets réductible", iOS 26): the bar is a pill showing the tab
-            // you are on; a touch unfolds it again where the page is.
-            val current = tabs.firstOrNull { it.index == AppUi.tab.value } ?: tabs.first()
-            val src = remember { MutableInteractionSource() }
-            val pressed by src.collectIsPressedAsState()
-            val press by animateFloatAsState(
-                targetValue = if (pressed) 0.94f else 1f,
-                animationSpec = Motion.pressSpring(pressed),
-                label = "homePress"
-            )
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .graphicsLayer { scaleX = press; scaleY = press }
-                    .testTag("folded-tab-pill")
-                    .clickable(interactionSource = src, indication = null, role = Role.Button,
-                        onClickLabel = com.ketvoice.app.data.AppText.t(pillLabel)) {
-                        focus.clearFocus()
-                        haptic(Haptics.Kind.Tick)
-                        onPill()
+        GlassPanel(
+            modifier = Modifier.matchParentSize(),
+            shape = RoundedCornerShape(30.dp),
+            params = GlassParams.navigation(dark = th.isDark),
+            enabled = AppSettings.liquidGlass.value,
+            export = if (lens) barGlass else null
+        ) {
+            if (folded) FoldedTabPill(tabs, onPill, pillLabel)
+            else if (!full) CompactTabs(tabs, heightState)
+        }
+        // The full bar draws over its glass, outside it: the lifted pill rises a little past the bar's edges.
+        if (full) androidx.compose.runtime.CompositionLocalProvider(com.ketvoice.app.glass.LocalGlassFusion provides null,
+            com.ketvoice.app.glass.LocalOnGlass provides true) {
+            FullTabs(Modifier.matchParentSize(), tabs, pill, held, selected, hover, heightState, melt, barGlass.takeIf { optical })
+        }
+    }
+}
+
+/**
+ * Folded (Settings → "Barre d'onglets réductible", iOS 26): the bar is a pill showing the tab you are on; a touch
+ * unfolds it again where the page is.
+ */
+@Composable
+private fun FoldedTabPill(tabs: List<TabSpec>, onPill: () -> Unit, pillLabel: String) {
+    val th = LocalTheme.current
+    val focus = androidx.compose.ui.platform.LocalFocusManager.current
+    val haptic = com.ketvoice.app.ui.motion.rememberHaptics()
+    val current = tabs.firstOrNull { it.index == AppUi.tab.value } ?: tabs.first()
+    val src = remember { MutableInteractionSource() }
+    val pressed by src.collectIsPressedAsState()
+    val press by animateFloatAsState(
+        targetValue = if (pressed) 0.94f else 1f,
+        animationSpec = Motion.pressSpring(pressed),
+        label = "homePress"
+    )
+    Box(
+        Modifier
+            .fillMaxSize()
+            .graphicsLayer { scaleX = press; scaleY = press }
+            .testTag("folded-tab-pill")
+            .clickable(interactionSource = src, indication = null, role = Role.Button,
+                onClickLabel = com.ketvoice.app.data.AppText.t(pillLabel)) {
+                focus.clearFocus()
+                haptic(Haptics.Kind.Tick)
+                onPill()
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        // The selected tab's tint, as in the bar it melted from.
+        Icon(
+            current.icon,
+            contentDescription = current.label,
+            tint = th.accent,
+            modifier = Modifier.size(24.dp)
+        )
+    }
+}
+
+/**
+ * Where the selection pill is drawn: a third of the capsule per tab, flowing to the middle one as the bar melts,
+ * taller and wider as it lifts, stretched by its acceleration. Read while laying out and drawing only.
+ */
+private fun Modifier.tabPill(pill: PillMotion, height: androidx.compose.runtime.State<Dp>, melt: () -> Float): Modifier = this
+    .layout { measurable, constraints ->
+        val slot = constraints.maxWidth / 3f
+        val lift = pill.lift
+        val growW = TabPill.LIFT_WIDTH_DP.dp.toPx() * lift
+        val w = (slot - 10.dp.toPx() + growW).roundToInt().coerceAtLeast(0)
+        val h = ((height.value - 10.dp).toPx() + TabPill.LIFT_HEIGHT_DP.dp.toPx() * lift).roundToInt().coerceAtLeast(0)
+        val placeable = measurable.measure(androidx.compose.ui.unit.Constraints.fixed(w, h))
+        val x = slot * pill.x + 5.dp.toPx() - growW / 2f + TabMelt.towardsMiddle(pill.x, slot, melt())
+        layout(constraints.maxWidth, constraints.maxHeight) {
+            placeable.place(x.roundToInt(), (constraints.maxHeight - h) / 2)
+        }
+    }
+    .graphicsLayer {
+        scaleX = pill.stretchX; scaleY = pill.stretchY
+        alpha = TabMelt.lensAlpha(melt())
+    }
+
+/** Places its content only while the pill is lifted: at rest the lens is not drawn at all. */
+private fun Modifier.whileLifted(pill: PillMotion): Modifier = this
+    .layout { measurable, constraints ->
+        val placeable = measurable.measure(constraints)
+        layout(placeable.width, placeable.height) { if (pill.lift > TabPill.LENS_FROM) placeable.place(0, 0) }
+    }
+    .then(Modifier.testTag("tab-pill-lens"))
+
+/** The full bar's selection (flat pill and, while lifted, its lens over [barGlass]), its three tabs and, held, its dots. */
+@Composable
+private fun FullTabs(modifier: Modifier, tabs: List<TabSpec>, pill: PillMotion, held: Boolean, selected: Int, hover: Float,
+                     height: androidx.compose.runtime.State<Dp>, melt: () -> Float,
+                     barGlass: com.kyant.backdrop.backdrops.LayerBackdrop?) {
+    val th = LocalTheme.current
+    val haptic = com.ketvoice.app.ui.motion.rememberHaptics()
+    val lastHoverTab = remember { mutableIntStateOf(-1) }
+    // Each tab crossed by the held lens is felt, as on iOS.
+    if (held) {
+        val over = kotlin.math.round(hover).toInt().coerceIn(0, 2)
+        LaunchedEffect(over) { if (lastHoverTab.intValue != -1 && lastHoverTab.intValue != over) haptic(Haptics.Kind.Tick); lastHoverTab.intValue = over }
+    } else lastHoverTab.intValue = -1
+    Box(modifier) {
+        val pillShape = RoundedCornerShape(999.dp)
+        // The flat pill: a real GlassPanel over the page (refraction, rim light, shadow), not a white capsule.
+        GlassPanel(
+            modifier = Modifier.tabPill(pill, height, melt)
+                // A seasonal theme (6.2): the selection wears a thin edge of its colours.
+                .then(th.season?.let { look -> with(look) { Modifier.seasonEdge(pillShape, true) } } ?: Modifier),
+            shape = pillShape,
+            params = GlassParams.selection(dark = th.isDark),
+            enabled = AppSettings.liquidGlass.value
+        ) {}
+        // Lifted, a lens of clear glass over the bar's own glass takes over, and hands back to the flat pill as it sinks.
+        // It stays composed (its glass has formed once) and is laid out only while the pill is up.
+        if (barGlass != null) androidx.compose.runtime.CompositionLocalProvider(com.ketvoice.app.glass.LocalBackdropLayer provides barGlass) {
+            val lensParams = remember(th.isDark) { TabPill.lensParams(th.isDark) }
+            GlassPanel(
+                modifier = Modifier.whileLifted(pill).tabPill(pill, height, melt).graphicsLayer { alpha = TabPill.lensAlpha(pill.lift) },
+                shape = pillShape, params = lensParams, enabled = AppSettings.liquidGlass.value
+            ) {}
+        }
+        Row(Modifier.fillMaxSize().padding(horizontal = 4.dp).selectableGroup()) {
+            tabs.forEach { tab -> FullTab(tab, selected == tab.index, pill, melt) }
+        }
+        if (held) Row(Modifier.align(Alignment.BottomCenter).padding(bottom = 2.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            repeat(3) { dot -> Box(Modifier.size(3.dp).clip(CircleShape)
+                .background(th.onBackground.copy(alpha = if (dot == selected) .9f else .3f))) }
+        }
+    }
+}
+
+/** One tab of the full bar: its symbol and label, magnified under the held lens. */
+@Composable
+private fun androidx.compose.foundation.layout.RowScope.FullTab(tab: TabSpec, isSel: Boolean, pill: PillMotion, melt: () -> Float) {
+    val th = LocalTheme.current
+    val focus = androidx.compose.ui.platform.LocalFocusManager.current
+    val haptic = com.ketvoice.app.ui.motion.rememberHaptics()
+    val tabSource = remember(tab.index) { MutableInteractionSource() }
+    val pressed by tabSource.collectIsPressedAsState()
+    val press by animateFloatAsState(
+        targetValue = if (pressed) 0.93f else 1f,
+        animationSpec = Motion.pressSpring(pressed),
+        label = "tabPress"
+    )
+    val iconScale by animateFloatAsState(
+        targetValue = if (isSel) 1.07f else 1f,
+        animationSpec = if (Motion.reduced) androidx.compose.animation.core.snap() else spring(dampingRatio = 0.78f, stiffness = 620f),
+        label = "tabIcon"
+    )
+    val iconAlpha by animateFloatAsState(
+        targetValue = if (isSel) 1f else 0.66f,
+        animationSpec = tween(Motion.duration(190)),
+        label = "tabIconAlpha"
+    )
+    val lift by animateFloatAsState(
+        targetValue = if (isSel) 1.2f else 0f,
+        animationSpec = if (Motion.reduced) androidx.compose.animation.core.snap() else spring(dampingRatio = 0.8f, stiffness = 600f),
+        label = "tabLift"
+    )
+    // iOS tints the selected tab with the app's colour.
+    val contentColor by animateColorAsState(
+        targetValue = if (isSel) th.accent else th.onBackground.copy(alpha = 0.76f),
+        animationSpec = tween(Motion.duration(180)),
+        label = "tabColor"
+    )
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+        modifier = Modifier
+            .weight(1f)
+            .fillMaxHeight()
+            .graphicsLayer {
+                scaleX = press; scaleY = press
+                // Melting: every tab flows to the middle, the others fade, the current one stays.
+                val m = melt()
+                translationX = TabMelt.towardsMiddle(tab.index.toFloat(), size.width, m)
+                alpha = if (isSel) 1f else TabMelt.otherAlpha(m)
+            }
+            .selectable(isSel, tabSource, null, role = Role.Tab) {
+                focus.clearFocus()
+                if (!isSel) haptic(Haptics.Kind.Tick)
+                AppUi.selectTab(tab.index)
+            }
+    ) {
+        Icon(
+            tab.icon,
+            contentDescription = tab.label,
+            tint = contentColor.copy(alpha = iconAlpha),
+            modifier = Modifier
+                .size(23.dp).symbolBounce(isSel, enabled = isSel)
+                .graphicsLayer {
+                    // Under the held lens the tab is magnified, the more the closer the lens.
+                    val magnified = 1f + HeldLens.magnify(pill.held, pill.lift, pill.x, tab.index)
+                    scaleX = iconScale * magnified
+                    scaleY = iconScale * magnified
+                    // The icon settles to the middle of the capsule as its label leaves.
+                    translationY = (-lift + TabMelt.ICON_DROP_DP * melt()) * density
+                }
+        )
+        Spacer(Modifier.height(3.dp))
+        Text(
+            tab.label,
+            modifier = Modifier.graphicsLayer { alpha = TabMelt.labelAlpha(melt()) },
+            fontSize = 10.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = contentColor.copy(alpha = iconAlpha),
+            maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+/** The collapsed bar: three symbols and the same lens language on a smaller scale. */
+@Composable
+private fun CompactTabs(tabs: List<TabSpec>, height: androidx.compose.runtime.State<Dp>) {
+    val th = LocalTheme.current
+    val focus = androidx.compose.ui.platform.LocalFocusManager.current
+    val haptic = com.ketvoice.app.ui.motion.rememberHaptics()
+    val selected = tabs.indexOfFirst { it.index == AppUi.tab.value }.coerceAtLeast(0)
+    val pos by animateFloatAsState(
+        targetValue = selected.toFloat(),
+        animationSpec = if (Motion.reduced) androidx.compose.animation.core.snap()
+        else spring(dampingRatio = 0.86f, stiffness = 520f),
+        label = "compactLens"
+    )
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val slot = maxWidth / 3
+        // The same lens language survives the collapsed state instead of
+        // turning into three static icons.
+        GlassPanel(
+            Modifier
+                .offset(x = slot * pos + 5.dp)
+                .size(width = slot - 10.dp, height = height.value - 14.dp)
+                .align(Alignment.CenterStart)
+                .then(th.season?.let { look -> with(look) { Modifier.seasonEdge(RoundedCornerShape(999.dp), true) } } ?: Modifier),
+            RoundedCornerShape(999.dp),
+            GlassParams.selection(dark = th.isDark),
+            enabled = AppSettings.liquidGlass.value
+        ) {}
+        Row(Modifier.fillMaxSize().selectableGroup()) {
+            tabs.forEach { tab ->
+                val isSel = AppUi.tab.value == tab.index
+                val tabSource = remember(tab.index) { MutableInteractionSource() }
+                val pressed by tabSource.collectIsPressedAsState()
+                val scale by animateFloatAsState(
+                    targetValue = when {
+                        pressed -> 0.9f
+                        isSel -> 1.06f
+                        else -> 1f
                     },
-                contentAlignment = Alignment.Center
-            ) {
-                // The selected tab's tint, as in the bar it melted from.
-                Icon(
-                    current.icon,
-                    contentDescription = current.label,
-                    tint = th.accent,
-                    modifier = Modifier.size(24.dp)
+                    animationSpec = Motion.pressSpring(pressed),
+                    label = "compactIcon"
                 )
-            }
-        } else if (!collapsed || homeOnly) {
-            // Sélection glissante : la pilule se déplace d'onglet en onglet.
-            val selected = if (held) kotlin.math.round(hover).toInt() else tabs.indexOfFirst { it.index == AppUi.tab.value }.coerceAtLeast(0)
-            // Droplet lens: the edge facing the destination leaves first on a stiff spring,
-            // the other edge follows on a softer one, so the lens stretches like a drop
-            // pulled between two tabs and then gathers itself at the destination.
-            val lensTarget = if (held) hover else selected.toFloat()
-            val lensLead by animateFloatAsState(
-                targetValue = lensTarget,
-                animationSpec = if (Motion.reduced) androidx.compose.animation.core.snap() else spring(dampingRatio = 0.82f, stiffness = 900f),
-                label = "lensLead"
-            )
-            val lensTrail by animateFloatAsState(
-                targetValue = lensTarget,
-                animationSpec = if (Motion.reduced) androidx.compose.animation.core.snap() else spring(dampingRatio = 0.9f, stiffness = 330f),
-                label = "lensTrail"
-            )
-            Box(Modifier.fillMaxSize()) {
-                // 8.1: a plain box measured at each frame of the fold, not a BoxWithConstraints composed again at each one.
-                Box(Modifier.fillMaxSize()) {
-                    // Lentille de verre mobile : un vrai GlassPanel (réfraction,
-                    // reflets, ombre), pas une capsule blanche. Elle s'étire un
-                    // peu pendant le déplacement puis se stabilise.
-                    val pillShape = RoundedCornerShape(999.dp)
-                    val lens = dropLens(lensLead, lensTrail)
-                    // Each tab crossed by the held lens is felt, as on iOS.
-                    if (held) {
-                        val over = kotlin.math.round(hover).toInt().coerceIn(0, 2)
-                        LaunchedEffect(over) { if (lastHoverTab.intValue != -1 && lastHoverTab.intValue != over) haptic(Haptics.Kind.Tick); lastHoverTab.intValue = over }
-                    } else lastHoverTab.intValue = -1
-                    val grow = HeldLens.grow(lensLift)
-                    GlassPanel(
-                        modifier = Modifier
-                            .layout { measurable, constraints ->
-                                // A third of the capsule per tab; the lens flows to the middle one as the bar melts.
-                                val slot = constraints.maxWidth / 3f
-                                val w = (slot * lens.span - 10.dp.toPx() + grow.width.toPx()).roundToInt().coerceAtLeast(0)
-                                val h = (heightState.value - 10.dp + grow.height).roundToPx().coerceAtLeast(0)
-                                val placeable = measurable.measure(androidx.compose.ui.unit.Constraints.fixed(w, h))
-                                val x = slot * lens.start + 5.dp.toPx() - grow.width.toPx() / 2f + TabMelt.towardsMiddle(lensLead, slot, melt())
-                                layout(constraints.maxWidth, constraints.maxHeight) {
-                                    placeable.place(x.roundToInt(), (constraints.maxHeight - h) / 2)
-                                }
-                            }
-                            .graphicsLayer {
-                                scaleX = bulge; scaleY = bulge * lens.squash
-                                alpha = TabMelt.lensAlpha(melt())
-                            }
-                            // A seasonal theme (6.2): the selection wears a thin edge of its colours.
-                            .then(th.season?.let { look -> with(look) { Modifier.seasonEdge(pillShape, true) } } ?: Modifier),
-                        shape = pillShape,
-                        params = GlassParams.selection(dark = th.isDark).let { base ->
-                            if (lensLift <= 0f) base else base.copy(opticalPressure = lensLift.coerceIn(0f, 1f), lens = lensLift.coerceIn(0f, 1f),
-                                blurPx = base.blurPx * (1f - lensLift.coerceIn(0f, 1f)), tintAlpha = base.tintAlpha * (1f - .8f * lensLift.coerceIn(0f, 1f)),
-                                refractionHeightDp = base.refractionHeightDp + 4f * lensLift, refractionAmountDp = base.refractionAmountDp + 9f * lensLift,
-                                highlightAlpha = base.highlightAlpha + .2f * lensLift.coerceIn(0f, 1f))
-                        },
-                        enabled = AppSettings.liquidGlass.value
-                    ) {}
-                }
-                Row(
-                    Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 4.dp).selectableGroup()
-                ) {
-                    tabs.forEach { tab ->
-                        val isSel = selected == tab.index
-                        val tabSource = remember(tab.index) { MutableInteractionSource() }
-                        val pressed by tabSource.collectIsPressedAsState()
-                        val press by animateFloatAsState(
-                            targetValue = if (pressed) 0.93f else 1f,
-                            animationSpec = Motion.pressSpring(pressed),
-                            label = "tabPress"
-                        )
-                        // Under the held lens the tab is magnified, the more the closer the lens.
-                        val under = if (held) (1f - kotlin.math.abs(hover - tab.index)).coerceIn(0f, 1f) else 0f
-                        val magnified = 1f + HeldLens.MAGNIFY * lensLift * under
-                        val iconScale by animateFloatAsState(
-                            targetValue = (if (isSel) 1.07f else 1f) * magnified,
-                            animationSpec = if (Motion.reduced) androidx.compose.animation.core.snap() else spring(dampingRatio = 0.78f, stiffness = 620f),
-                            label = "tabIcon"
-                        )
-                        val iconAlpha by animateFloatAsState(
-                            targetValue = if (isSel) 1f else 0.66f,
-                            animationSpec = tween(Motion.duration(190)),
-                            label = "tabIconAlpha"
-                        )
-                        val lift by animateFloatAsState(
-                            targetValue = if (isSel) 1.2f else 0f,
-                            animationSpec = if (Motion.reduced) androidx.compose.animation.core.snap() else spring(dampingRatio = 0.8f, stiffness = 600f),
-                            label = "tabLift"
-                        )
-                        val targetContentColor = when {
-                            // iOS tints the selected tab with the app's colour.
-                            isSel -> th.accent
-                            else -> th.onBackground.copy(alpha = 0.76f)
+                val alpha by animateFloatAsState(
+                    targetValue = if (isSel) 1f else 0.68f,
+                    animationSpec = tween(Motion.duration(180)),
+                    label = "compactAlpha"
+                )
+                Box(Modifier.weight(1f).fillMaxHeight()
+                    .selectable(isSel, tabSource, null, role = Role.Tab) {
+                        focus.clearFocus(); if (!isSel) haptic(Haptics.Kind.Tick); AppUi.selectTab(tab.index)
+                    }, contentAlignment = Alignment.Center) {
+                    Icon(
+                        tab.icon, tab.label,
+                        tint = th.onBackground.copy(alpha = alpha),
+                        modifier = Modifier.size(25.dp).symbolBounce(isSel, enabled = isSel).graphicsLayer {
+                            scaleX = scale
+                            scaleY = scale
                         }
-                        val contentColor by animateColorAsState(
-                            targetValue = targetContentColor,
-                            animationSpec = tween(Motion.duration(180)),
-                            label = "tabColor"
-                        )
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center,
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxHeight()
-                                .graphicsLayer {
-                                    scaleX = press; scaleY = press
-                                    // Melting: every tab flows to the middle, the others fade, the current one stays.
-                                    val m = melt()
-                                    translationX = TabMelt.towardsMiddle(tab.index.toFloat(), size.width, m)
-                                    alpha = if (isSel) 1f else TabMelt.otherAlpha(m)
-                                }
-                                .selectable(isSel, tabSource, null, role = Role.Tab) {
-                                    focus.clearFocus()
-                                    if (!isSel) haptic(Haptics.Kind.Tick)
-                                    AppUi.selectTab(tab.index)
-                                }
-                        ) {
-                            Icon(
-                                tab.icon,
-                                contentDescription = tab.label,
-                                tint = contentColor.copy(alpha = iconAlpha),
-                                modifier = Modifier
-                                    .size(23.dp).symbolBounce(isSel, enabled = isSel)
-                                    .graphicsLayer {
-                                        scaleX = iconScale
-                                        scaleY = iconScale
-                                        // The icon settles to the middle of the capsule as its label leaves.
-                                        translationY = (-lift + TabMelt.ICON_DROP_DP * melt()) * density
-                                    }
-                            )
-                            Spacer(Modifier.height(3.dp))
-                            Text(
-                                tab.label,
-                                modifier = Modifier.graphicsLayer { alpha = TabMelt.labelAlpha(melt()) },
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = contentColor.copy(alpha = iconAlpha),
-                                maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                    }
-                }
-                if (held) Row(Modifier.align(Alignment.BottomCenter).padding(bottom = 2.dp),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    repeat(3) { dot -> Box(Modifier.size(3.dp).clip(CircleShape)
-                        .background(th.onBackground.copy(alpha = if (dot == selected) .9f else .3f))) }
-                }
-            }
-        } else {
-            val selected = tabs.indexOfFirst { it.index == AppUi.tab.value }.coerceAtLeast(0)
-            val pos by animateFloatAsState(
-                targetValue = selected.toFloat(),
-                animationSpec = if (Motion.reduced) androidx.compose.animation.core.snap()
-                else spring(dampingRatio = 0.86f, stiffness = 520f),
-                label = "compactLens"
-            )
-            BoxWithConstraints(Modifier.fillMaxSize()) {
-                val slot = maxWidth / 3
-                // The same lens language survives the collapsed state instead of
-                // turning into three static icons.
-                GlassPanel(
-                    Modifier
-                        .offset(x = slot * pos + 5.dp)
-                        .size(width = slot - 10.dp, height = heightState.value - 14.dp)
-                        .align(Alignment.CenterStart)
-                        .then(th.season?.let { look -> with(look) { Modifier.seasonEdge(RoundedCornerShape(999.dp), true) } } ?: Modifier),
-                    RoundedCornerShape(999.dp),
-                    GlassParams.selection(dark = th.isDark),
-                    enabled = AppSettings.liquidGlass.value
-                ) {}
-                Row(Modifier.fillMaxSize().selectableGroup()) {
-                    tabs.forEach { tab ->
-                        val isSel = AppUi.tab.value == tab.index
-                        val tabSource = remember(tab.index) { MutableInteractionSource() }
-                        val pressed by tabSource.collectIsPressedAsState()
-                        val scale by animateFloatAsState(
-                            targetValue = when {
-                                pressed -> 0.9f
-                                isSel -> 1.06f
-                                else -> 1f
-                            },
-                            animationSpec = Motion.pressSpring(pressed),
-                            label = "compactIcon"
-                        )
-                        val alpha by animateFloatAsState(
-                            targetValue = if (isSel) 1f else 0.68f,
-                            animationSpec = tween(Motion.duration(180)),
-                            label = "compactAlpha"
-                        )
-                        Box(Modifier.weight(1f).fillMaxHeight()
-                            .selectable(isSel, tabSource, null, role = Role.Tab) {
-                                focus.clearFocus(); if (!isSel) haptic(Haptics.Kind.Tick); AppUi.selectTab(tab.index)
-                            }, contentAlignment = Alignment.Center) {
-                            Icon(
-                                tab.icon, tab.label,
-                                tint = th.onBackground.copy(alpha = alpha),
-                                modifier = Modifier.size(25.dp).symbolBounce(isSel, enabled = isSel).graphicsLayer {
-                                    scaleX = scale
-                                    scaleY = scale
-                                }
-                            )
-                        }
-                    }
+                    )
                 }
             }
         }
@@ -945,30 +983,17 @@ private fun Modifier.graphicsLayerScale(scale: Float): Modifier =
         }
     )
 
-/** Droplet lens geometry, in tab slots: where it starts, how many slots it spans, and its squash. */
-internal data class DropLens(val start: Float, val span: Float, val squash: Float)
-
-/** The selection of the tab bar held under a finger (iOS 26 and 27): a lens that swells, clears and magnifies. */
+/** The selection of the tab bar held under a finger (iOS 26 and 27): a lens that clears and magnifies. */
 internal object HeldLens {
-    const val STIFFNESS = 420f
-    /** A little overshoot: the lens swells past its size, then settles, like a drop. */
-    const val DAMPING = .58f
     /** How much the tab under the lens is magnified. */
     const val MAGNIFY = .32f
-    data class Grow(val width: androidx.compose.ui.unit.Dp, val height: androidx.compose.ui.unit.Dp)
-    /** How much wider and taller the lens is than the selection, for a lift of 0..1 (more during the overshoot). */
-    fun grow(lift: Float): Grow { val l = if (lift.isFinite()) lift.coerceIn(0f, 1.25f) else 0f; return Grow((16f * l).dp, (8f * l).dp) }
-}
 
-/**
- * The lens spans from its slower edge to its faster edge plus one slot. At rest both edges
- * agree and it is exactly one slot wide; mid-flight it is longer and slightly thinner.
- */
-internal fun dropLens(lead: Float, trail: Float): DropLens {
-    val a = if (lead.isFinite()) lead else 0f
-    val b = if (trail.isFinite()) trail else a
-    val stretch = kotlin.math.abs(a - b).coerceAtMost(1.2f)
-    return DropLens(minOf(a, b), 1f + stretch, 1f - (stretch * .1f).coerceAtMost(.08f))
+    /** How much the symbol of tab [index] is magnified: only under a held lens at [x] (slots), as far as it is lifted. */
+    fun magnify(held: Boolean, lift: Float, x: Float, index: Int): Float {
+        if (!held || !lift.isFinite() || !x.isFinite()) return 0f
+        val under = (1f - kotlin.math.abs(x - index)).coerceIn(0f, 1f)
+        return MAGNIFY * lift.coerceIn(0f, 1f) * under
+    }
 }
 
 /**

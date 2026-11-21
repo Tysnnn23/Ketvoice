@@ -241,8 +241,8 @@ internal fun ContextMenuHost(modifier: Modifier = Modifier) {
                     overflow = TextOverflow.Ellipsis)
             }
         }
-        // The menu unfolds from the corner that touches the preview.
-        GlassPanel(Modifier
+        // The menu unfolds from the corner that touches the preview, on a still copy of the page (8.3).
+        com.ketvoice.app.glass.FrozenBackdrop { GlassPanel(Modifier
             .offset { IntOffset(placement.menuLeft.toInt(), placement.menuTop.toInt()) }
             .width(with(density) { menuWidth.toDp() })
             .heightIn(max = with(density) { (height - insetBottom - placement.menuTop).coerceAtLeast(120.dp.toPx()).toDp() })
@@ -263,6 +263,6 @@ internal fun ContextMenuHost(modifier: Modifier = Modifier) {
                     if (index != actions.lastIndex) Box(Modifier.fillMaxWidth().height(.5.dp).background(theme.hairline))
                 }
             }
-        }
+        } }
     }
 }
