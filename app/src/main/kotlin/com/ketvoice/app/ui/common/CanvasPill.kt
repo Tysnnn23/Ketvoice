@@ -64,7 +64,7 @@ fun CanvasLoadingPill(track: Track?, wanted: Boolean, modifier: Modifier = Modif
         if (waiting) { delay(CanvasPill.DELAY_MS); shown = true } else shown = false
     }
     val alpha by animateFloatAsState(if (shown) 1f else 0f,
-        if (Motion.reduced) snap() else tween(Motion.duration(260)), label = "canvas-pill")
+        com.ketvoice.app.ui.motion.Motion.Springs.SMOOTH.motion(), label = "canvas-pill")
     if (alpha <= .01f) return
     CanvasPillBody(modifier.graphicsLayer { this.alpha = alpha })
 }

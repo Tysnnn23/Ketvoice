@@ -64,11 +64,11 @@ fun StaggeredReveal(
     content: @Composable BoxScope.() -> Unit
 ) {
     var shown by rememberSaveable { mutableStateOf(false) }
-    LaunchedEffect(Unit) { shown = true }
+    // 8.0: the stagger waits, then the row arrives on a spring (was a 380 ms tween with the delay in it).
+    LaunchedEffect(Unit) { if (!Motion.reduced) kotlinx.coroutines.delay((order * 45L).coerceAtMost(260L)); shown = true }
     val a by animateFloatAsState(
         targetValue = if (shown) 1f else 0f,
-        animationSpec = if (Motion.reduced) snap()
-        else tween(durationMillis = 380, delayMillis = (order * 45).coerceAtMost(260), easing = Motion.EASE_STANDARD),
+        animationSpec = Motion.Springs.SMOOTH.motion(),
         label = "stagger$order"
     )
     Box(

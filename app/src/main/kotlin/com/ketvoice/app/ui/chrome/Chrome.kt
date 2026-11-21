@@ -1,5 +1,7 @@
 package com.ketvoice.app.ui.chrome
 
+import com.ketvoice.app.ui.motion.symbolBounce
+import com.ketvoice.app.ui.motion.symbolSlide
 import androidx.compose.ui.platform.testTag
 import android.os.Build
 import androidx.annotation.RequiresApi
@@ -294,19 +296,20 @@ private fun MiniTransportNext(size: androidx.compose.ui.unit.Dp = DesignTokens.S
     val src = remember { MutableInteractionSource() }
     val pressed by src.collectIsPressedAsState()
     val haptic = com.ketvoice.app.ui.motion.rememberHaptics()
+    var taps by remember { mutableIntStateOf(0) }
     Box(
         Modifier
             .pressScale(min = 0.82f, isPressed = pressed)
             .size(size)
             .clip(CircleShape)
-            .clickable(src, null) { haptic(Haptics.Kind.Press); Player.next() },
+            .clickable(src, null) { taps++; haptic(Haptics.Kind.Press); Player.next() },
         contentAlignment = Alignment.Center
     ) {
         Icon(
             Icons.Filled.SkipNext,
             contentDescription = "Suivant",
             tint = th.onBackground,
-            modifier = Modifier.size(28.dp)
+            modifier = Modifier.size(28.dp).symbolSlide(taps, 1)
         )
     }
 }
@@ -709,7 +712,7 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier,
                                 contentDescription = tab.label,
                                 tint = contentColor.copy(alpha = iconAlpha),
                                 modifier = Modifier
-                                    .size(23.dp)
+                                    .size(23.dp).symbolBounce(isSel, enabled = isSel)
                                     .graphicsLayer {
                                         scaleX = iconScale
                                         scaleY = iconScale
@@ -781,7 +784,7 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier,
                             Icon(
                                 tab.icon, tab.label,
                                 tint = th.onBackground.copy(alpha = alpha),
-                                modifier = Modifier.size(25.dp).graphicsLayer {
+                                modifier = Modifier.size(25.dp).symbolBounce(isSel, enabled = isSel).graphicsLayer {
                                     scaleX = scale
                                     scaleY = scale
                                 }

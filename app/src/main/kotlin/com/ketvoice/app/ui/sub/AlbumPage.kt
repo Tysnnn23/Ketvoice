@@ -361,7 +361,7 @@ private fun BoxScope.AlbumArtwork(cover: String?, track: Track?, frame: com.ketv
     var ready by remember(cover) { mutableStateOf(false) }
     var failed by remember(cover) { mutableStateOf(false) }
     val alpha by animateFloatAsState(if (ready) 1f else 0f,
-        tween(Motion.duration(420), easing = Motion.EASE_STANDARD), label = "albumArtworkReveal")
+        Motion.Springs.SMOOTH.motion(), label = "albumArtworkReveal")
     val image = remember(context, cover) { coil.request.ImageRequest.Builder(context).data(cover).crossfade(false).build() }
     // The Canvas comes resolved from the page (ui/sub/AlbumHeader), only when the listener chose a Canvas style.
     val canvasEnabled = AlbumHeader.wantsCanvas(AppSettings.albumHeroCanvas.value, AppSettings.albumHeader.value, Motion.reduced)

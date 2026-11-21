@@ -2,6 +2,8 @@
 
 package com.ketvoice.app.ui.player
 
+import com.ketvoice.app.ui.motion.symbolBreathe
+import com.ketvoice.app.ui.motion.symbolSlide
 import com.ketvoice.app.ui.adaptive.hoverHighlight
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -383,8 +385,11 @@ fun PlayerTransport(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        TransportButton(onPrevious, previousModifier) {
-            TransportGlyph("previous", Modifier.size(48.dp))
+        // 8.0: the arrows dart the way they go on every tap (symbolSlide).
+        var previousTaps by remember { mutableIntStateOf(0) }
+        var nextTaps by remember { mutableIntStateOf(0) }
+        TransportButton({ previousTaps++; onPrevious() }, previousModifier) {
+            TransportGlyph("previous", Modifier.size(48.dp).symbolSlide(previousTaps, -1))
         }
         val playSrc = remember { MutableInteractionSource() }
         val playPressed by playSrc.collectIsPressedAsState()
@@ -401,8 +406,8 @@ fun PlayerTransport(
         ) {
             MorphingTransportGlyph(playing, Modifier.size(46.dp))
         }
-        TransportButton(onNext, nextModifier) {
-            TransportGlyph("next", Modifier.size(48.dp))
+        TransportButton({ nextTaps++; onNext() }, nextModifier) {
+            TransportGlyph("next", Modifier.size(48.dp).symbolSlide(nextTaps, 1))
         }
     }
 }
@@ -600,7 +605,8 @@ fun QueueActionsBar(
             }
             // Off, the whole queue, then the current title.
             QueueSegment(repeatOne || repeatAll, onRepeat, effectKey = if (repeatOne) 2 else if (repeatAll) 1 else 0, spin = true) {
-                Icon(
+                // 8.0: "repeat" becomes "repeat one" through a replace, as SF Symbols do.
+                com.ketvoice.app.ui.motion.ReplaceSymbol(
                     if (repeatOne) Icons.Filled.RepeatOne else Icons.Filled.Repeat,
                     repeatLabel(repeatOne, repeatAll),
                     tint = it,
@@ -848,7 +854,7 @@ internal fun KetmixMixingBadge(progress: Float?, tint: Color, modifier: Modifier
             translationY = (1f - presence) * 6.dp.toPx()
         }.semantics { contentDescription = com.ketvoice.app.data.AppText.t("Ketmix mixe les titres") },
         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-        AutomixGlyph(tint.copy(alpha = .95f), Modifier.size(14.dp), overlap = MixVisuals.ringOverlap(progress))
+        AutomixGlyph(tint.copy(alpha = .95f), Modifier.size(14.dp).symbolBreathe(visible), overlap = MixVisuals.ringOverlap(progress))
         Spacer(Modifier.width(4.dp))
         Text(label, color = tint, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, localize = false,
             modifier = Modifier.graphicsLayer { compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen }
