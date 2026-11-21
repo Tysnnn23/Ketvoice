@@ -20,7 +20,9 @@ class GlassRenderModeTest {
     @Test fun reducedMotionAndLowMemoryUseBoundedBlurWithoutAnimatedRefraction() {
         assertEquals(GlassRenderMode.Blur, mode(reduced = true))
         assertEquals(GlassRenderMode.Blur, mode(lowMemory = true))
-        assertEquals(GlassRenderMode.Blur, mode(performance = true))
+        // 8.0: the performance mode keeps the refractive material, in its cheaper form (GlassMaterialPathTest).
+        assertEquals(GlassRenderMode.Optical, mode(performance = true))
+        assertEquals(GlassRenderMode.Blur, mode(api = 32, performance = true))
         assertEquals(GlassRenderMode.Static, mode(reduceBlur = true))
         assertEquals(GlassRenderMode.Static, mode(opaque = true))
         assertEquals(GlassRenderMode.Static, mode(enabled = false))

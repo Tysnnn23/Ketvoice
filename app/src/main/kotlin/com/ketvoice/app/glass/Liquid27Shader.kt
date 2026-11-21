@@ -44,6 +44,8 @@ uniform float pixelScale;
 uniform float3 touch;
 // 0..1: the glass is held as a lens (the selection of the tab bar under a finger): clear, and magnifying.
 uniform float lensPress;
+// 8.0: 1 the full material, 0 the performance mode's (one backdrop tap for the luminance).
+uniform float quality;
 
 // Continuous corner: a superellipse (n = 2.6) whose radius is widened so the curve
 // starts earlier along the edge but never leaves the circular clip of the shape.
@@ -131,11 +133,18 @@ float4 main(float2 coord) {
         // Squircle bezel: the bend leaves the flat centre gently and rises sharply at the rim.
         float x2 = x * x;
         float bend = (1.0 - pow(max(1.0 - x2 * x2, 0.0), 0.25)) * lensAmount * (1.0 + press * 0.22);
-        float2 r = body + n * bend * (1.0 - dispersion);
         float2 gC = body + n * bend;
-        float2 b = body + n * bend * (1.0 + dispersion);
         float4 green = sampleClamped(gC);
-        color = float4(sampleClamped(r).r, green.g, sampleClamped(b).b, green.a);
+        // Dispersion on the rim only (8.0): the outer part of the lens splits red and blue a little, the
+        // rest of the band and the centre stay colour-true. A faint fringe, never a rainbow.
+        float split = dispersion * smoothstep(0.6, 1.0, x);
+        if (split > 0.00005) {
+            float2 r = body + n * bend * (1.0 - split);
+            float2 b = body + n * bend * (1.0 + split);
+            color = float4(sampleClamped(r).r, green.g, sampleClamped(b).b, green.a);
+        } else {
+            color = green;
+        }
     } else {
         color = sampleClamped(body);
     }
@@ -147,9 +156,12 @@ float4 main(float2 coord) {
     // Backdrop luminance under the whole control (five taps, not per-pixel).
     float2 c0 = coord - p;
     float2 q = halfSize * 0.5;
-    float bg = (lumaOf(sampleClamped(c0).rgb) + lumaOf(sampleClamped(c0 + q).rgb) +
-                lumaOf(sampleClamped(c0 - q).rgb) + lumaOf(sampleClamped(c0 + float2(q.x, -q.y)).rgb) +
-                lumaOf(sampleClamped(c0 + float2(-q.x, q.y)).rgb)) * 0.2;
+    float bg = lumaOf(sampleClamped(c0).rgb);
+    if (quality > 0.5) {
+        bg = (bg + lumaOf(sampleClamped(c0 + q).rgb) +
+              lumaOf(sampleClamped(c0 - q).rgb) + lumaOf(sampleClamped(c0 + float2(q.x, -q.y)).rgb) +
+              lumaOf(sampleClamped(c0 + float2(-q.x, q.y)).rgb)) * 0.2;
+    }
 
     // Clear ↔ Tinted: milk opacity grows with frost; a bright backdrop needs less
     // milk in light mode, a dark backdrop needs less in dark mode.
@@ -205,6 +217,8 @@ float4 main(float2 coord) {
 """
 
 internal const val LIQUID27_AGSL = LIQUID27_COMMON + LIQUID27_SINGLE_SCENE + LIQUID27_MATERIAL
+internal const val LIQUID27_KEY = "kv-liquid-27"
+internal const val LIQUID27_FUSED_KEY = "kv-liquid-27-fused"
 
 /** Uniform values for one Liquid 27 pass. */
 internal data class Liquid27Light(val lightX: Float, val lightY: Float, val touchX: Float, val touchY: Float, val press: Float,
@@ -220,11 +234,12 @@ internal fun liquid27BlurPx(frost: Float, role: GlassRole): Float {
 }
 
 internal fun BackdropEffectScope.liquid27Glass(params: GlassParams, radii: FloatArray, frost: Float, light: Liquid27Light,
-                                               clarity: Float = 0f): Boolean {
+                                               clarity: Float = 0f, spec: RefractionSpec = RefractionSpec.forPath(GlassMaterialPath.Refractive)): Boolean {
     if (Build.VERSION.SDK_INT < 33) return false
-    val shader = runCatching { obtainRuntimeShader("kv-liquid-27", LIQUID27_AGSL) }.getOrNull() ?: return false
+    // One shader for every glass surface, compiled once and kept by the backdrop under this key.
+    val shader = runCatching { obtainRuntimeShader(LIQUID27_KEY, LIQUID27_AGSL) }.getOrNull() ?: return false
     return runCatching {
-        applyLiquid27Uniforms(shader, size.width, size.height, padding, density, params, radii, frost, light, clarity)
+        applyLiquid27Uniforms(shader, size.width, size.height, padding, density, params, radii, frost, light, clarity, spec)
         effect(RenderEffect.createRuntimeShaderEffect(shader, "content"))
         true
     }.getOrDefault(false)
@@ -234,17 +249,17 @@ internal fun BackdropEffectScope.liquid27Glass(params: GlassParams, radii: Float
 @androidx.annotation.RequiresApi(33)
 internal fun applyLiquid27Uniforms(shader: android.graphics.RuntimeShader, w: Float, h: Float, pad: Float, density: Float,
                                    params: GlassParams, radii: FloatArray, frost: Float, light: Liquid27Light,
-                                   clarity: Float = 0f) {
+                                   clarity: Float = 0f, spec: RefractionSpec = RefractionSpec.forPath(GlassMaterialPath.Refractive)) {
     shader.setFloatUniform("size", w, h)
     shader.setFloatUniform("cornerRadii", radii)
-    applyLiquid27Material(shader, w, h, minOf(w, h), pad, density, params, frost, light, clarity)
+    applyLiquid27Material(shader, w, h, minOf(w, h), pad, density, params, frost, light, clarity, spec)
 }
 
 /** Material uniforms common to the single-shape and fused passes; [lensEdgePx] bounds the lens band. */
 @androidx.annotation.RequiresApi(33)
 internal fun applyLiquid27Material(shader: android.graphics.RuntimeShader, w: Float, h: Float, lensEdgePx: Float, pad: Float,
                                    density: Float, params: GlassParams, frost: Float, light: Liquid27Light,
-                                   clarity: Float = 0f) {
+                                   clarity: Float = 0f, spec: RefractionSpec = RefractionSpec.forPath(GlassMaterialPath.Refractive)) {
     // Uniform refraction: a wider band than the Prismal controls, still bounded by the control.
     val lens = ControlLens.forControl(lensEdgePx, density, params.refractionHeightDp * 2.2f, params.refractionAmountDp * 1.6f)
     // Same capture coordinate contract as the Prismal pass: padding is negative.
@@ -252,8 +267,9 @@ internal fun applyLiquid27Material(shader: android.graphics.RuntimeShader, w: Fl
     shader.setFloatUniform("contentSize", w + pad * 2f, h + pad * 2f)
     shader.setFloatUniform("lensHeight", lens.heightPx)
     // Materialize: the glass forms by bending the light in, not by fading in.
-    shader.setFloatUniform("lensAmount", lens.amountPx * params.materialize.coerceIn(0f, 1f))
-    shader.setFloatUniform("dispersion", DesignTokens.Glass.DISPERSION * 1.5f)
+    shader.setFloatUniform("lensAmount", lens.amountPx * params.materialize.coerceIn(0f, 1f) * spec.lens)
+    shader.setFloatUniform("dispersion", DesignTokens.Glass.DISPERSION * 1.5f * spec.dispersion)
+    shader.setFloatUniform("quality", spec.quality)
     // Held as a lens, the glass clears: no frost, almost no milk.
     val clear = 1f - params.lens.let { if (it.isFinite()) it.coerceIn(0f, 1f) else 0f } * .85f
     shader.setFloatUniform("frost", GlassTuning.sanitize(frost) * clear)

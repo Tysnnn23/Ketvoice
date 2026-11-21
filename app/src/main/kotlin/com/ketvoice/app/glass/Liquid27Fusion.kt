@@ -118,14 +118,17 @@ internal fun fusedShapesFor(shapes: Collection<FusedShape>, origin: Offset): Lis
 @androidx.annotation.RequiresApi(33)
 internal fun applyLiquid27FusedUniforms(shader: android.graphics.RuntimeShader, w: Float, h: Float, pad: Float, density: Float,
                                         params: GlassParams, shapes: List<FusedShape>, fusePx: Float, frost: Float,
-                                        light: Liquid27Light, clarity: Float = 0f) {
-    fun rect(index: Int): FloatArray {
-        val shape = shapes.getOrNull(index) ?: return floatArrayOf(0f, 0f, 0f, 0f)
-        return floatArrayOf(shape.bounds.center.x, shape.bounds.center.y, shape.bounds.width / 2f, shape.bounds.height / 2f)
+                                        light: Liquid27Light, clarity: Float = 0f,
+                                        spec: RefractionSpec = RefractionSpec.forPath(GlassMaterialPath.Refractive)) {
+    // Four floats per shape, no array per frame.
+    fun rect(name: String, index: Int) {
+        val shape = shapes.getOrNull(index)
+        if (shape == null) shader.setFloatUniform(name, 0f, 0f, 0f, 0f)
+        else shader.setFloatUniform(name, shape.bounds.center.x, shape.bounds.center.y, shape.bounds.width / 2f, shape.bounds.height / 2f)
     }
-    shader.setFloatUniform("rect0", rect(0))
-    shader.setFloatUniform("rect1", rect(1))
-    shader.setFloatUniform("rect2", rect(2))
+    rect("rect0", 0)
+    rect("rect1", 1)
+    rect("rect2", 2)
     shader.setFloatUniform("radii", shapes.getOrNull(0)?.radiusPx ?: 0f, shapes.getOrNull(1)?.radiusPx ?: 0f,
         shapes.getOrNull(2)?.radiusPx ?: 0f)
     shader.setFloatUniform("present", if (shapes.size > 0) 1f else 0f, if (shapes.size > 1) 1f else 0f,
@@ -133,15 +136,16 @@ internal fun applyLiquid27FusedUniforms(shader: android.graphics.RuntimeShader, 
     shader.setFloatUniform("fuse", if (fusePx.isFinite()) fusePx.coerceAtLeast(0f) else 0f)
     // The lens band is bounded by the thinnest control so small buttons keep a quiet centre.
     val thinnest = shapes.minOfOrNull { minOf(it.bounds.width, it.bounds.height) } ?: 0f
-    applyLiquid27Material(shader, w, h, thinnest, pad, density, params, frost, light, clarity)
+    applyLiquid27Material(shader, w, h, thinnest, pad, density, params, frost, light, clarity, spec)
 }
 
 internal fun BackdropEffectScope.liquid27Fused(params: GlassParams, shapes: List<FusedShape>, fusePx: Float, frost: Float,
-                                               light: Liquid27Light, clarity: Float = 0f): Boolean {
+                                               light: Liquid27Light, clarity: Float = 0f,
+                                               spec: RefractionSpec = RefractionSpec.forPath(GlassMaterialPath.Refractive)): Boolean {
     if (Build.VERSION.SDK_INT < 33 || shapes.isEmpty()) return false
-    val shader = runCatching { obtainRuntimeShader("kv-liquid-27-fused", LIQUID27_FUSED_AGSL) }.getOrNull() ?: return false
+    val shader = runCatching { obtainRuntimeShader(LIQUID27_FUSED_KEY, LIQUID27_FUSED_AGSL) }.getOrNull() ?: return false
     return runCatching {
-        applyLiquid27FusedUniforms(shader, size.width, size.height, padding, density, params, shapes, fusePx, frost, light, clarity)
+        applyLiquid27FusedUniforms(shader, size.width, size.height, padding, density, params, shapes, fusePx, frost, light, clarity, spec)
         effect(RenderEffect.createRuntimeShaderEffect(shader, "content"))
         true
     }.getOrDefault(false)
@@ -163,6 +167,7 @@ fun GlassFusionLayer(fusion: GlassFusion, dark: Boolean, modifier: Modifier = Mo
     if (!available || backdrop == null) return
     var origin by remember { mutableStateOf(Offset.Zero) }
     val params = remember(dark) { GlassParams.navigation(dark = dark) }
+    val spec = currentRefractionSpec(mode)
     Box(modifier.onGloballyPositioned { origin = it.positionInRoot() }.drawBackdrop(
         backdrop = backdrop,
         shape = { RectangleShape },
@@ -174,7 +179,7 @@ fun GlassFusionLayer(fusion: GlassFusion, dark: Boolean, modifier: Modifier = Mo
             blur(liquid27BlurPx(frost, GlassRole.Control))
             val shapes = fusedShapesFor(fusion.shapes.values, origin)
             // A failed pass must not leave an unshaded blurred rectangle: fall back to panels.
-            if (shapes.isNotEmpty() && !liquid27Fused(params, shapes, fusion.strengthPx, frost, liquid27Light(0f, 0f, 0f), clarity)) {
+            if (shapes.isNotEmpty() && !liquid27Fused(params, shapes, fusion.strengthPx, frost, liquid27Light(0f, 0f, 0f), clarity, spec)) {
                 fusion.failed = true
                 fusion.active = false
             }
@@ -191,10 +196,16 @@ internal fun currentGlassRenderMode(style: Int, enabled: Boolean, captured: Bool
     val backdrop = LocalBackdropLayer.current
     val context = androidx.compose.ui.platform.LocalContext.current
     val lowMemory = remember(context) { isLowRamDevice(context) }
-    return glassRenderMode(Build.VERSION.SDK_INT, backdrop != null, enabled && AppSettings.liquidGlass.value,
+    return glassRenderMode(GlassCompat.api, backdrop != null, enabled && AppSettings.liquidGlass.value,
         captured, style == GlassStyles.OPAQUE, AppSettings.reduceDynamicBlur.value, AppSettings.highPerformanceMode.value,
         lowMemory, com.ketvoice.app.ui.motion.Motion.reduced)
 }
+
+/** The refractive material's settings for a surface drawn in [mode] right now (8.0, [glassMaterialPath]). */
+@Composable
+internal fun currentRefractionSpec(mode: GlassRenderMode): RefractionSpec =
+    RefractionSpec.forPath(glassMaterialPath(GlassCompat.api, mode, AppSettings.highPerformanceMode.value,
+        glassReducedTransparency(AppSettings.glassIntensity.value, HighContrastText.on.value)))
 
 internal fun isLowRamDevice(context: android.content.Context): Boolean = runCatching {
     (context.getSystemService(android.content.Context.ACTIVITY_SERVICE) as? android.app.ActivityManager)?.isLowRamDevice == true
