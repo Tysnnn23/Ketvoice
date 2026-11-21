@@ -98,6 +98,7 @@ fun KetvoiceShell(
     initialPanel: Panel = Panel.NONE,
     initialSidebar: Dp = 248.dp,
     initialQuery: String = "",
+    initialFullPlayer: Boolean = false,
 ) {
     val content: @Composable () -> Unit = {
         val search = remember { SearchState().apply { query = initialQuery } }
@@ -108,13 +109,13 @@ fun KetvoiceShell(
             LocalPlayer provides player, LocalLibrary provides library, LocalCatalog provides catalog,
             LocalNavigator provides navigator, LocalSearch provides search, LocalMenu provides menu,
             LocalTrackDrag provides drag, LocalTrackActions provides actions,
-        ) { ShellLayout(initialPanel, initialSidebar) }
+        ) { ShellLayout(initialPanel, initialSidebar, initialFullPlayer) }
     }
     if (dark == null) KetDesktopTheme(content = content) else KetDesktopTheme(dark, content)
 }
 
 @Composable
-private fun ShellLayout(initialPanel: Panel, initialSidebar: Dp) {
+private fun ShellLayout(initialPanel: Panel, initialSidebar: Dp, initialFullPlayer: Boolean) {
     val ket = LocalKet.current
     val player = LocalPlayer.current
     val nav = LocalNavigator.current
@@ -123,7 +124,7 @@ private fun ShellLayout(initialPanel: Panel, initialSidebar: Dp) {
     val actions = LocalTrackActions.current
     val state by player.state.collectAsState()
     var panel by remember { mutableStateOf(initialPanel) }
-    var fullPlayer by remember { mutableStateOf(false) }
+    var fullPlayer by remember { mutableStateOf(initialFullPlayer) }
     var sidebar by remember { mutableStateOf(initialSidebar) }
     var searchFocused by remember { mutableStateOf(false) }
     val rootFocus = remember { FocusRequester() }
@@ -255,7 +256,7 @@ private fun Sidebar(width: Dp, searchFocus: FocusRequester, onSearchFocus: (Bool
             item {
                 SideHeader("Playlists") {
                     KetIconButton(KetIcons.Plus, "Nouvelle playlist", {
-                        val p = library.createPlaylist(AppText.t("Nouvelle playlist")); nav.root(Route.Playlist(p.id))
+                        library.createPlaylist(AppText.t("Nouvelle playlist")) { id -> nav.root(Route.Playlist(id)) }
                     }, size = 22.dp, glyph = 13.dp, modifier = Modifier.testTag("new-playlist"))
                 }
             }

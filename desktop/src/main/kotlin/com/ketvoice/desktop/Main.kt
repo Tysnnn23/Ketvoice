@@ -33,7 +33,6 @@ import com.ketvoice.desktop.platform.DesktopPrefs
 import com.ketvoice.desktop.platform.InstanceMessage
 import com.ketvoice.desktop.platform.MediaCommands
 import com.ketvoice.desktop.platform.MediaControls
-import com.ketvoice.desktop.platform.PlatformText
 import com.ketvoice.desktop.platform.SingleInstance
 import com.ketvoice.desktop.platform.WindowChrome
 import com.ketvoice.desktop.platform.WindowStore
@@ -116,12 +115,12 @@ fun main(args: Array<String>) {
             tooltip = "Ketvoice",
             onAction = ::show,
             menu = {
-                Item(PlatformText.t(if (playing) "Pause" else "Lire"), onClick = { DesktopPlatform.bridge.toggle() })
-                Item(PlatformText.t("Suivant"), onClick = { DesktopPlatform.bridge.next() })
-                Item(PlatformText.t("Précédent"), onClick = { DesktopPlatform.bridge.previous() })
+                Item(AppText.t(if (playing) "Pause" else "Lire"), onClick = { DesktopPlatform.bridge.toggle() })
+                Item(AppText.t("Suivant"), onClick = { DesktopPlatform.bridge.next() })
+                Item(AppText.t("Précédent"), onClick = { DesktopPlatform.bridge.previous() })
                 Separator()
-                Item(PlatformText.t("Ouvrir"), onClick = ::show)
-                Item(PlatformText.t("Quitter"), onClick = ::quit)
+                Item(AppText.t("Ouvrir"), onClick = ::show)
+                Item(AppText.t("Quitter"), onClick = ::quit)
             },
         )
 

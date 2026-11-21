@@ -103,7 +103,7 @@ class RecordingPlayer : PlayerControls {
     override val state: StateFlow<PlayerUiState> = _state
     override val volume = MutableStateFlow(.7f)
     override val loading = MutableStateFlow(false)
-    override val format = MutableStateFlow<AudioFormatInfo?>(null)
+    override val format = MutableStateFlow<com.ketvoice.desktop.audio.AudioEvent.Format?>(null)
     private fun ids(q: List<Track>) = q.indices.map { "e$it-${q[it].id}" }
 
     override fun playQueue(tracks: List<Track>, index: Int) { calls += "playQueue:${tracks[index].id}"; _state.value = _state.value.copy(queue = tracks, queueEntryIds = ids(tracks), index = index, isPlaying = true, durationMs = tracks[index].durationMs) }
@@ -126,7 +126,7 @@ class RecordingPlayer : PlayerControls {
     fun playing(): RecordingPlayer = apply {
         val q = Fixtures.albumTracks(0)
         _state.value = PlayerUiState(q, ids(q), 3, isPlaying = true, positionMs = 62_000, durationMs = q[3].durationMs, repeatAll = true)
-        format.value = AudioFormatInfo("flac", 44_100, 16, 2, 0)
+        format.value = com.ketvoice.desktop.audio.AudioEvent.Format("flac", 44_100, 16, 2, 0)
         calls.clear()
     }
 }

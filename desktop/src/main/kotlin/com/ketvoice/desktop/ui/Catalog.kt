@@ -56,7 +56,8 @@ object LiveCatalog : CatalogSource {
         // The feed fills in the background; wait a moment for its first shelves.
         val shelves = withTimeoutOrNull(8_000) { HomeFeed.shelves.first { it.isNotEmpty() } } ?: HomeFeed.shelves.value
         val pool = shelves.flatMap { it.tracks }
-        val recent = ListeningHistory.tracks.value.take(24)
+        // One title per album heard lately (DesktopLibrary), as Apple Music's « Récemment écouté ».
+        val recent = com.ketvoice.desktop.library.DesktopLibrary.recentlyPlayed.value.ifEmpty { ListeningHistory.tracks.value }.take(24)
         return HomeData(
             forYou = runCatching { Recommender.forYou(pool, 12) }.getOrDefault(emptyList()).ifEmpty { pool.take(12) },
             recent = recent,

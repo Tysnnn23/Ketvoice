@@ -48,13 +48,13 @@ import com.ketvoice.desktop.ui.theme.LocalKet
 /** Context menu, double-click to play and drag onto a playlist, shared by every title row. */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun Modifier.trackInteractions(track: Track, list: List<Track>, index: Int, onSelect: () -> Unit = {}): Modifier {
+fun Modifier.trackInteractions(track: Track, list: List<Track>, index: Int, onSelect: () -> Unit = {}, extraMenu: List<MenuItem> = emptyList()): Modifier {
     val actions = LocalTrackActions.current
     val menu = LocalMenu.current
     val drag = LocalTrackDrag.current
     val library = LocalLibrary.current
     return this
-        .contextMenu(menu) { onSelect(); actions.menu(track) { actions.play(list, index) } }
+        .contextMenu(menu) { onSelect(); actions.menu(track) { actions.play(list, index) } + extraMenu }
         .draggableTrack(track, drag) { id, t -> library.addToPlaylist(id, t) }
         .combinedClickable(onClick = onSelect, onDoubleClick = { actions.play(list, index) })
 }
@@ -71,7 +71,8 @@ fun isCurrent(track: Track): Boolean {
  * differs from the album's, duration, and the ⋯ menu on hover.
  */
 @Composable
-fun NumberedTrackRow(track: Track, list: List<Track>, index: Int, showArtist: Boolean, accent: Color, modifier: Modifier = Modifier) {
+fun NumberedTrackRow(track: Track, list: List<Track>, index: Int, showArtist: Boolean, accent: Color, modifier: Modifier = Modifier,
+                     extraMenu: List<MenuItem> = emptyList()) {
     val ket = LocalKet.current
     val (source, hovered) = rememberHover()
     val actions = LocalTrackActions.current
@@ -80,7 +81,7 @@ fun NumberedTrackRow(track: Track, list: List<Track>, index: Int, showArtist: Bo
     Row(
         modifier.fillMaxWidth().height(48.dp).clip(RoundedCornerShape(8.dp))
             .background(if (hovered) ket.hover else Color.Transparent)
-            .hoverable(source).trackInteractions(track, list, index).padding(horizontal = 12.dp).testTag("track:${track.id}"),
+            .hoverable(source).trackInteractions(track, list, index, extraMenu = extraMenu).padding(horizontal = 12.dp).testTag("track:${track.id}"),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Modifier.width(28.dp), contentAlignment = Alignment.Center) {
@@ -103,7 +104,7 @@ fun NumberedTrackRow(track: Track, list: List<Track>, index: Int, showArtist: Bo
         val at = androidx.compose.runtime.remember { arrayOf(androidx.compose.ui.geometry.Offset.Zero) }
         Box(Modifier.size(28.dp).onGloballyPositioned { at[0] = it.positionInWindow() }) {
             if (hovered) KetIconButton(KetIcons.More, "Plus d'options", {
-                menu.open(actions.menu(track) { actions.play(list, index) }, androidx.compose.ui.unit.IntOffset(at[0].x.toInt() - 200, at[0].y.toInt() + 30))
+                menu.open(actions.menu(track) { actions.play(list, index) } + extraMenu, androidx.compose.ui.unit.IntOffset(at[0].x.toInt() - 200, at[0].y.toInt() + 30))
             }, size = 28.dp, glyph = 16.dp, modifier = Modifier.testTag("more:${track.id}"))
         }
     }

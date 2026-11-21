@@ -31,10 +31,10 @@ class ShellScreenshots {
         } finally { scene.close() }
     }
 
-    private fun both(name: String, route: Route, panel: Panel = Panel.NONE, query: String = "") {
+    private fun both(name: String, route: Route, panel: Panel = Panel.NONE, query: String = "", full: Boolean = false) {
         for (dark in listOf(true, false)) shoot("$name-${if (dark) "dark" else "light"}") {
             KetvoiceShell(RecordingPlayer().playing(), Fixtures.library(), FixtureCatalog, dark = dark,
-                navigator = remember { Navigator(route) }, initialPanel = panel, initialQuery = query)
+                navigator = remember { Navigator(route) }, initialPanel = panel, initialQuery = query, initialFullPlayer = full)
         }
     }
 
@@ -45,6 +45,8 @@ class ShellScreenshots {
         both("artist", Route.Artist(Fixtures.artists[0]))
         both("songs", Route.Songs)
         both("queue", Route.Home, panel = Panel.QUEUE)
+        both("nowplaying", Route.Home, full = true)
+        both("settings", Route.Settings)
         assertTrue(File(out, "album-dark.png").length() > 10_000)
     }
 }

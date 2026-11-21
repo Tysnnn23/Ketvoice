@@ -146,10 +146,11 @@ private fun Lcd(onOpenPlayer: () -> Unit) {
 }
 
 @Composable
-private fun LosslessMark(hiRes: Boolean) {
-    val ket = LocalKet.current
-    Box(Modifier.padding(start = 6.dp).border(.8.dp, ket.secondary, RoundedCornerShape(3.dp)).padding(horizontal = 3.dp).testTag("lossless-badge")) {
-        KText(if (hiRes) "Hi-Res" else "Lossless", Ket27Desk.Type.caption2.copy(fontSize = Ket27Desk.Type.caption2.fontSize * .82f), color = ket.secondary, translate = false)
+private fun LosslessMark(hiRes: Boolean, tint: Color = LocalKet.current.secondary, large: Boolean = false, tag: String = "lossless-badge") {
+    val style = if (large) Ket27Desk.Type.caption else Ket27Desk.Type.caption2.copy(fontSize = Ket27Desk.Type.caption2.fontSize * .82f)
+    Box(Modifier.padding(start = if (large) 0.dp else 6.dp).border(.8.dp, tint, RoundedCornerShape(if (large) 4.dp else 3.dp))
+        .padding(horizontal = if (large) 5.dp else 3.dp, vertical = if (large) 1.dp else 0.dp).testTag(tag)) {
+        KText(if (hiRes) "Hi-Res" else "Lossless", style, color = tint, translate = false, weight = FontWeight.SemiBold)
     }
 }
 
@@ -295,6 +296,11 @@ fun FullPlayer(onClose: () -> Unit) {
             Column(Modifier.width(420.dp)) {
                 KText(track.title, Ket27Desk.Type.largeTitle, color = Color.White, maxLines = 2, translate = false)
                 KText(track.artist, Ket27Desk.Type.title3, color = Color.White.copy(alpha = .7f), translate = false, weight = FontWeight.Medium)
+                val format by player.format.collectAsState()
+                format?.takeIf { it.lossless }?.let { f ->
+                    Spacer(Modifier.height(10.dp))
+                    LosslessMark(f.hiRes, Color.White.copy(alpha = .7f), large = true, tag = "lossless-badge-full")
+                }
                 Spacer(Modifier.height(28.dp))
                 Seek(state.positionMs, state.durationMs.takeIf { it > 0 } ?: track.durationMs, compact = false, color = Color.White, secondary = Color.White.copy(alpha = .6f))
                 Spacer(Modifier.height(18.dp))

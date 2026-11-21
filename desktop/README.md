@@ -1,8 +1,9 @@
 # Ketvoice for Windows
 
 A native Compose Desktop app (Kotlin/JVM) that shares the Android app's pure Kotlin code in place.
-This is **Phase 0**: the build, the shared-source closure with its tests, a placeholder Ket 27
-window, the MSI packaging and its CI. Version 1.0.0.
+Version 1.0.0. **Phase 1 is in**: an Apple-Music-like Ket 27 window that plays real music through
+FFmpeg, with the library on disk, downloads, the tray, media keys and the Windows media controls.
+Phase 0 (the build, the shared-source closure, MSI packaging and CI) is below it.
 
 ## Layout
 
@@ -11,9 +12,16 @@ desktop/
   settings.gradle.kts, build.gradle.kts   standalone Gradle build (the root build does not include it)
   shared/*.txt                            include manifests: which app sources are compiled here
   src/compat/kotlin/                      same-name shims of the android.* / androidx.core APIs used
-  src/main/kotlin/com/ketvoice/desktop/   the desktop app (Main.kt: window and --smoke)
-  src/main/kotlin/com/ketvoice/app/...    desktop counterparts of Android-bound app objects
-  src/test/kotlin/                        desktop-only tests (CompatTest)
+  src/main/kotlin/com/ketvoice/desktop/   the desktop app
+    Main.kt                               single instance, engine + Player, tray, SMTC, window state, --smoke
+    audio/                                AudioEngine contract, FfmpegAudioEngine (decks, mixer, gapless, EQ,
+                                          ranged HTTP with a disk cache), PcmSink (sound card, CaptureSink), FakeAudioEngine
+    player/DesktopStreams.kt              a Track to what the engine reads (download, then the app's sources)
+    library/                              DesktopLibrary (favourites, playlists, history), DesktopDownloader
+    platform/                             tray/SMTC/media keys, single instance, WindowStore, autostart, logs, About
+    ui/                                   the Ket 27 shell: sidebar, bar, pages, queue/lyrics panels, full player
+  src/main/kotlin/com/ketvoice/app/...    desktop counterparts of Android-bound app objects (Player facade…)
+  src/test/kotlin/                        desktop tests (engine, player, library, platform, shell, renders)
   icons/ketvoice.ico, ketvoice.png        made from app/src/main/res/drawable-nodpi/vicecity_logo.webp
 ```
 
@@ -26,6 +34,9 @@ under `desktop/src` is always in. Nothing is copied, so a fix in the app is a fi
 Each manifest holds one path or Gradle glob per line, relative to the app's `com/ketvoice/app/`
 package; `#` starts a comment. Main sources: `audio`, `automix`, `stems`, `data`, `lyrics`, `sync`,
 `ui` (concatenated). Tests: `tests.txt` (relative to `app/src/test/kotlin/com/ketvoice/app/`).
+`ui.txt` brings the Ket 27 pieces the shell reuses as they are: `CoverColors`, `DesignTokens`,
+`KetIcons`, `Ket27Glyphs`, `LocalizedIcon`, `SymbolEffects`, and `AppText` + `UiTextDictionary`
+(every visible string, the window's and the platform's alike, goes through `AppText.t`).
 
 Rules for adding a file: add it to a manifest, run `./gradlew -p desktop compileKotlin`, and follow
 the unresolved names. When a file needs Android-only code (Media3, LiteRT, MediaStore, Bitmap,
@@ -73,8 +84,12 @@ left out because they need deferred code: `TransitionPlannerTest` (`TempoReturn`
 
 ### Desktop counterparts (`src/main/kotlin/com/ketvoice/app/`)
 
-- `player/Player.kt` — the queue facade Ketmix reads (`state`, `automixNext`, `automixUpcoming`,
-  `pinnedNext`, `moveQueue`, `playNext`, `refreshPublication`), same rules as the Android `Player`.
+- `player/Player.kt` — the facade the UI, tray and media controls drive: queue (`playQueue`, `setQueue`,
+  `enqueue`, `playNext`, `removeAt`, `moveQueue`, shuffle/repeat, autoplay radio), transport
+  (`toggle`, `play`, `pause`, `next`, `previous`, `seekTo`, `setVolume`), `state` with the position
+  4 times a second, `loading`, `error`, and `format` (the engine's `AudioEvent.Format`, reset on each
+  load, for the Lossless badge). `attach(engine, resolve, scope)` plugs the engine in; a gapless
+  takeover (`AudioEvent.Advanced`) moves the queue on. Ketmix reads `automixNext`/`automixUpcoming`.
 - `BuildConfig.kt` — `FLAVOR = "desktop"`, not Quest, not Lite, version 1.0.0.
 - `automix/DeckTap.kt` — the `PcmTap` contract (lives in the Android `DeckMixProcessor.kt`).
 - `automix/BeatModel.kt` — no rhythm model yet: `usable()` is false, Ketmix keeps its own analysis
@@ -82,8 +97,9 @@ left out because they need deferred code: `TransitionPlannerTest` (`TempoReturn`
 - `data/SecureSessionStore.kt` — sessions sealed with Windows DPAPI (AES-GCM with a user-only key
   file on other systems, for tests).
 - `data/AppLocales.kt`, `util/LauncherIcons.kt`, `glass/GlassClarity.kt` — the values shared settings need.
-- `data/DesktopSeams.kt` — `CanvasRepo`, `LocalMusic`, `Downloader`: the members the shared code calls,
-  saying truthfully that the desktop has no Canvas, local files or downloads yet. Phase 1 replaces them.
+- `ui/motion/Motion.kt` — the app's motion values (springs, reduced motion) without Android's.
+- `data/DesktopSeams.kt` — `CanvasRepo`, `LocalMusic`, `Downloader`: the members the shared code calls.
+  Downloads are `DesktopDownloader`'s; Canvas and local files are not on the desktop yet.
 
 ## Compat shims (`src/compat/kotlin/`)
 
@@ -96,7 +112,7 @@ per-user MSI installs the program in `%LOCALAPPDATA%\Ketvoice` — and `$XDG_DAT
 `file:` URIs), `res.AssetManager` (the app's `provider_registry.json` and `translations.json` on the
 classpath), `ComponentCallbacks2` constants, `android.util.AtomicFile`, `android.os.SystemClock`,
 `android.net.Uri`, `android.icu.text.Transliterator` (real ICU4J), `android.webkit.CookieManager`
-(no browser cookie store on the desktop). `android.util.Base64` and `Log` were not needed.
+(no browser cookie store on the desktop), `android.util.Log` (stderr) and `android.util.JsonReader`.
 
 ## Build and test
 
@@ -136,15 +152,53 @@ silent `msiexec /qn` install, the installed `Ketvoice.exe --smoke` (its output i
 `%LOCALAPPDATA%\Ketvoice\Data\smoke.log`, since the windowed launcher has no console), the
 uninstall, and uploads the MSI. It runs on pushes touching `desktop/**` or the workflow, and by hand.
 
+## How the pieces connect (Phase 1)
+
+```
+main()  AppText.init · MusicApi.init · DesktopLibrary.init (+ DesktopDownloader)
+        FfmpegAudioEngine()  ──  Player.attach(engine, DesktopStreams::source, scope)
+        DesktopPlatform.bridge = Player  (tray menu, media keys, SMTC)
+        Window(min 900×600) { KetvoiceShell() }        quit: Player.pause, engine.release
+
+KetvoiceShell ── LocalPlayer  = PlayerBridge   → Player (contract names only; format → Lossless badge)
+              ── LocalLibrary = LibraryBridge  → DesktopLibrary (favourites, PlaylistStore, history,
+                                                 recently played) + DesktopDownloader (items + live tasks)
+              ── LocalCatalog = LiveCatalog    → HomeFeed, Recommender, MusicApi, CatalogRepo, YouTubeCatalog
+Player.playQueue → DesktopStreams.source(track): downloaded file, else StreamResolver's first source
+                   (a DASH offer becomes its single-file audio rendition) → engine.load
+engine.events: Format → Player.format · Advanced/Ended → next title · Buffering → loading · Error → skip
+```
+
+Tests use fixtures (`FixtureCatalog`, `MemoryLibrary`, `RecordingPlayer`, `FakeAudioEngine`) and
+never reach the network. `ShellPlayerIntegrationTest` runs the shell over the real `Player` with
+`FakeAudioEngine` (double-click loads the resolved source, the bar follows, next/previous, the
+Lossless badge from a FLAC `Format`). `ShellScreenshots` renders the window to
+`build/desktop-ui-preview/`. Opt-in live checks: `KETVOICE_LIVE=1 ./gradlew -p desktop test --tests
+'*LiveStreamCheck*' --tests '*LivePlaybackCheck*'` (one known song resolved, 5 s decoded to a
+`CaptureSink`).
+
+## Done in Phase 1
+
+- Audio: FFmpeg engine (decks, mixer, gapless preload, 10-band EQ, ranged HTTP with a disk cache,
+  device loss handled), real codec format for the Lossless/Hi-Res badge.
+- Player facade with queue, shuffle/repeat, history, autoplay radio, position ticks; downloads first.
+- Library on disk: favourites, playlists (create, rename, add, remove, reorder; shared
+  `playlists-v1.json`), downloads with live progress, history and recently played.
+- Window: Apple-Music-like Ket 27 shell (sidebar with library and playlists, Home, Explore, Search,
+  Album, Artist, Titres/Albums/Artistes, Downloads, queue and lyrics panels, full player, context
+  menus, drag onto playlists, keyboard shortcuts), Settings (language, appearance, « Fermer dans la
+  zone de notification », « Démarrer avec Windows », « À propos » with the licences).
+- Windows: single instance, tray, media keys and SMTC, window state, autostart, logs, `--smoke`.
+
 ## Plan
 
-**Phase 1 — audio engine and library.** JavaCPP FFmpeg in-process: a custom `AVIOContext` reading
-the resolved stream (`StreamResolver`, `RangedDownload`) or a file, decode, `swresample` to 48 kHz
-stereo 16-bit, out through a `javax.sound.sampled.SourceDataLine`, with the `Player` facade driving
-it. Desktop `CanvasRepo` (posters through FFmpeg), `Downloader`, `LocalMusic` (folder scan, tags
-through FFmpeg) replace `DesktopSeams.kt`; then the Ket 27 UI (Apple-Music-like sidebar layout).
+**Phase 2 — Ketmix and the rest of the app.** Ketmix on the desktop mixer (below); synced lyrics in
+the lyrics panel (the shared `LyricsRepo` is compiled, the panel still says they arrive later);
+statistics (`LiveStats` over the local history); settings persisted through the shared settings
+store; Canvas (`CanvasRepo` with FFmpeg posters) and local music (`LocalMusic`, folder scan with
+FFmpeg tags) in place of `DesktopSeams.kt`; account sign-in and sync of the library.
 
-**Phase 2 — Ketmix.** A `DesktopMixer` with two decks feeding the shared `DeckDsp`/`MixBus` and the
+Ketmix itself: a `DesktopMixer` with two decks feeding the shared `DeckDsp`/`MixBus` and the
 `PcmTap` taps, a port of Sonic for tempo changes with pitch kept (`TempoReturn`), and a
 `DesktopAutomix` playing what `TransitionPlanner` plans; bring in `TransitionPlannerTest`,
 `MixKeysTest`, `StemsTest`.

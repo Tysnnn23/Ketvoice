@@ -10,6 +10,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performMouseInput
+import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.runComposeUiTest
 import androidx.compose.ui.test.withKeyDown
@@ -147,7 +148,27 @@ class ShellUiTest {
         val byDuration = LibraryViews.sort(songs, LibraryViews.SortKey.DURATION, ascending = false)
         assertTrue(byDuration.zipWithNext().all { (a, b) -> a.durationMs >= b.durationMs })
         assertTrue(LibraryViews.artists(songs).none { it.name.contains(',') })
-        assertTrue(AudioFormatInfo("flac", 96_000, 24, 2, 0).hiRes)
-        assertTrue(!AudioFormatInfo("aac", 44_100, 16, 2, 256_000).lossless)
+        assertTrue(com.ketvoice.desktop.audio.AudioEvent.Format("flac", 96_000, 24, 2, 0).hiRes)
+        assertTrue(!com.ketvoice.desktop.audio.AudioEvent.Format("aac", 44_100, 16, 2, 256_000).lossless)
+    }
+
+    @Test fun playlistRenamesReordersAndRemoves() = runComposeUiTest {
+        val player = RecordingPlayer(); val library = Fixtures.library()
+        setContent { KetvoiceShell(player, library, FixtureCatalog, dark = true, navigator = androidx.compose.runtime.remember { Navigator(Route.Playlist("pl-road")) }) }
+        fun road() = library.playlists.value.first { it.id == "pl-road" }
+        onNodeWithTag("rename-playlist").performClick()
+        onNodeWithTag("rename-field").performTextReplacement("Nuit blanche")
+        onNodeWithTag("rename-field").performKeyInput { pressKey(Key.Enter) }
+        assertEquals("Nuit blanche", road().name)
+        val (first, second) = road().tracks
+        fun menu(id: String, item: String) {
+            onNodeWithTag("track:$id").performMouseInput { moveTo(center); press(MouseButton.Secondary); release(MouseButton.Secondary) }
+            onNodeWithTag("menu:$item").performClick()
+        }
+        menu(first.id, "move-down")
+        assertEquals(listOf(second.id, first.id), road().tracks.take(2).map { it.id })
+        menu(first.id, "remove-from-playlist")
+        assertTrue(road().tracks.none { it.id == first.id })
+        assertEquals(5, road().tracks.size)
     }
 }

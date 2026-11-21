@@ -1,29 +1,39 @@
 package com.ketvoice.desktop.ui
 
 import androidx.compose.runtime.staticCompositionLocalOf
+import com.ketvoice.app.data.DownloadPhase
+import com.ketvoice.app.data.LocalPlaylist
 import com.ketvoice.app.data.Track
 import com.ketvoice.app.player.Player
 import com.ketvoice.app.player.PlayerUiState
+import com.ketvoice.desktop.audio.AudioEvent
+import com.ketvoice.desktop.library.DesktopDownloader
+import com.ketvoice.desktop.library.DesktopLibrary
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.swing.Swing
 import java.util.UUID
 
-/** What the decoder reports about the current title (AudioEngine's `AudioEvent.Format`). */
-data class AudioFormatInfo(val codec: String, val sampleRate: Int, val bitDepth: Int, val channels: Int, val bitrate: Int) {
-    /** A lossless codec, as the app's Lossless badge grades it; Hi-Res above 48 kHz. */
-    val lossless: Boolean get() = codec.lowercase().removePrefix("audio/").let { c -> c in LOSSLESS || c.startsWith("pcm") }
-    val hiRes: Boolean get() = lossless && (sampleRate > 48_000 || bitDepth > 16)
-    private companion object { val LOSSLESS = setOf("flac", "x-flac", "alac", "wav", "x-wav", "raw", "aiff") }
-}
+/** Hi-Res, as the app grades it: lossless above 48 kHz or 16 bits. */
+val AudioEvent.Format.hiRes: Boolean get() = lossless && (sampleRate > 48_000 || bitDepth > 16)
 
 /** The player as the desktop UI drives it: `Player`'s contract names only (see win-common, « Contract »). */
 interface PlayerControls {
     val state: StateFlow<PlayerUiState>
     val volume: StateFlow<Float>
     val loading: StateFlow<Boolean>
-    val format: StateFlow<AudioFormatInfo?>
+    /** The engine's real format of the title heard (the Lossless badge); null until it reports one. */
+    val format: StateFlow<AudioEvent.Format?>
     fun playQueue(tracks: List<Track>, index: Int)
     fun toggle()
     fun next()
@@ -52,8 +62,12 @@ interface LibraryStore {
     /** Ids of the library's titles, newest addition first. */
     val added: StateFlow<List<String>>
     fun toggleFavourite(track: Track)
-    fun createPlaylist(name: String): UserPlaylist
+    /** Creates a playlist holding [tracks]; [onCreated] gets its id on the UI thread. */
+    fun createPlaylist(name: String, tracks: List<Track> = emptyList(), onCreated: (String) -> Unit = {})
+    fun renamePlaylist(playlistId: String, name: String)
     fun addToPlaylist(playlistId: String, track: Track)
+    fun removeFromPlaylist(playlistId: String, index: Int)
+    fun movePlaylistEntry(playlistId: String, from: Int, to: Int)
     fun download(track: Track)
 }
 
@@ -65,8 +79,7 @@ object PlayerBridge : PlayerControls {
     override val state: StateFlow<PlayerUiState> get() = Player.state
     override val volume: StateFlow<Float> get() = Player.volume
     override val loading: StateFlow<Boolean> get() = Player.loading
-    // Merge: fed from AudioEngine's AudioEvent.Format once `winaudio` and `winplayer` land.
-    override val format: StateFlow<AudioFormatInfo?> = MutableStateFlow(null)
+    override val format: StateFlow<AudioEvent.Format?> get() = Player.format
     override fun playQueue(tracks: List<Track>, index: Int) = Player.playQueue(tracks, index)
     override fun toggle() = Player.toggle()
     override fun next() = Player.next()
@@ -81,30 +94,67 @@ object PlayerBridge : PlayerControls {
     override fun setRepeat(one: Boolean, all: Boolean) = Player.setRepeat(one, all)
 }
 
-/*
- * Stubs of the contract members `winplayer` adds to `Player` (playQueue, toggle, next, previous,
- * seekTo, setVolume, volume, enqueue, removeAt, loading). Once its `Player` is merged its members
- * shadow these extensions: delete this block, nothing else changes.
- */
-private val stubVolume = MutableStateFlow(1f)
-private val stubLoading = MutableStateFlow(false)
-val Player.volume: StateFlow<Float> get() = stubVolume
-val Player.loading: StateFlow<Boolean> get() = stubLoading
-fun Player.playQueue(tracks: List<Track>, index: Int) = setQueue(tracks, index)
-fun Player.toggle() {}
-fun Player.next() {}
-fun Player.previous() {}
-fun Player.seekTo(ms: Long) {}
-fun Player.setVolume(v: Float) { stubVolume.value = v.coerceIn(0f, 1f) }
-fun Player.enqueue(track: Track) { if (state.value.queue.isEmpty()) setQueue(listOf(track)) }
-fun Player.removeAt(index: Int) {}
-
 /**
- * The library until `winplayer`'s DesktopLibrary is merged: kept in memory. At the merge each
- * member forwards to DesktopLibrary's flow or function of the same meaning.
+ * The library on disk: [DesktopLibrary] (favourites, the shared playlist store, history) and
+ * [DesktopDownloader] (saved files plus the ones in progress). Writes run off the UI thread.
  */
-object LibraryBridge : MemoryLibrary()
+object LibraryBridge : LibraryStore {
+    private val io = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
+    override val favourites: StateFlow<List<Track>> get() = DesktopLibrary.favorites
+    override val playlists: StateFlow<List<UserPlaylist>> by lazy {
+        DesktopLibrary.playlists.map { it.map(::toUi) }.stateIn(io, SharingStarted.Eagerly, DesktopLibrary.playlists.value.map(::toUi))
+    }
+    override val downloads: StateFlow<List<DownloadItem>> by lazy {
+        combine(DesktopDownloader.items, DesktopDownloader.tasks, ::downloadsOf)
+            .stateIn(io, SharingStarted.Eagerly, downloadsOf(DesktopDownloader.items.value, DesktopDownloader.tasks.value))
+    }
+    override val history: StateFlow<List<Track>> get() = DesktopLibrary.history
+    override val added: StateFlow<List<String>> by lazy {
+        combine(DesktopLibrary.favorites, DesktopLibrary.playlists, DesktopDownloader.items, ::addedOf)
+            .stateIn(io, SharingStarted.Eagerly, addedOf(DesktopLibrary.favorites.value, DesktopLibrary.playlists.value, DesktopDownloader.items.value))
+    }
+
+    override fun toggleFavourite(track: Track) { DesktopLibrary.toggleFavorite(track) }
+    override fun createPlaylist(name: String, tracks: List<Track>, onCreated: (String) -> Unit) {
+        io.launch {
+            val id = DesktopLibrary.createPlaylist(name, tracks)
+            launch(Dispatchers.Swing) { onCreated(id) }
+        }
+    }
+    override fun renamePlaylist(playlistId: String, name: String) { io.launch { runCatching { DesktopLibrary.renamePlaylist(playlistId, name) } } }
+    // Each title once in a playlist, as the shared store's addAll keeps it.
+    override fun addToPlaylist(playlistId: String, track: Track) { io.launch { DesktopLibrary.addAllToPlaylist(playlistId, listOf(track)) } }
+    override fun removeFromPlaylist(playlistId: String, index: Int) {
+        val entry = DesktopLibrary.playlists.value.firstOrNull { it.id == playlistId }?.entries?.getOrNull(index) ?: return
+        io.launch { DesktopLibrary.removeFromPlaylist(playlistId, entry.id) }
+    }
+    override fun movePlaylistEntry(playlistId: String, from: Int, to: Int) { io.launch { DesktopLibrary.movePlaylistEntry(playlistId, from, to) } }
+    override fun download(track: Track) = DesktopDownloader.download(track)
+
+    /** An imported entry the catalogue has not matched yet still shows by its title and artist. */
+    internal fun toUi(p: LocalPlaylist) = UserPlaylist(p.id, p.name, p.entries.map { e ->
+        e.track ?: Track("entry:${e.id}", e.title, e.artist, "")
+    })
+
+    internal fun downloadsOf(items: List<DesktopDownloader.Item>, tasks: Map<String, com.ketvoice.app.data.DownloadTask>): List<DownloadItem> {
+        val saved = items.map { DownloadItem(it.track, 1f) }
+        val going = tasks.filterKeys { id -> items.none { it.track.id == id } }
+            .filterValues { it.phase != DownloadPhase.Cancelled && it.phase != DownloadPhase.Complete }
+            .mapNotNull { (id, task) ->
+                val track = DesktopDownloader.trackOf(id) ?: return@mapNotNull null
+                val total = task.total?.takeIf { it > 0 }
+                DownloadItem(track, if (total == null) 0f else (task.bytes.toFloat() / total).coerceIn(0f, .99f))
+            }
+        return going + saved
+    }
+
+    private fun addedOf(favourites: List<Track>, playlists: List<LocalPlaylist>, items: List<DesktopDownloader.Item>): List<String> =
+        (items.sortedByDescending { it.downloadedAt }.map { it.track.id } + favourites.map { it.id } +
+            playlists.flatMap { p -> p.entries.asReversed().mapNotNull { it.track?.id } }).distinct()
+}
+
+/** The library in memory, for tests and previews. */
 open class MemoryLibrary : LibraryStore {
     private val _favourites = MutableStateFlow<List<Track>>(emptyList())
     private val _playlists = MutableStateFlow<List<UserPlaylist>>(emptyList())
@@ -118,16 +168,28 @@ open class MemoryLibrary : LibraryStore {
     override val added = _added.asStateFlow()
 
     private fun noteAdded(track: Track) = _added.update { listOf(track.id) + it.filterNot { id -> id == track.id } }
+    private fun edit(id: String, block: (UserPlaylist) -> UserPlaylist) = _playlists.update { all -> all.map { if (it.id == id) block(it) else it } }
 
     override fun toggleFavourite(track: Track) {
         _favourites.update { list -> if (list.any { it.id == track.id }) list.filterNot { it.id == track.id } else listOf(track) + list }
         if (_favourites.value.any { it.id == track.id }) noteAdded(track)
     }
-    override fun createPlaylist(name: String): UserPlaylist =
-        UserPlaylist(UUID.randomUUID().toString(), name).also { p -> _playlists.update { it + p } }
+    override fun createPlaylist(name: String, tracks: List<Track>, onCreated: (String) -> Unit) {
+        val p = UserPlaylist(UUID.randomUUID().toString(), name, tracks.distinctBy { it.id })
+        _playlists.update { it + p }
+        tracks.forEach(::noteAdded)
+        onCreated(p.id)
+    }
+    override fun renamePlaylist(playlistId: String, name: String) { if (name.isNotBlank()) edit(playlistId) { it.copy(name = name.trim()) } }
     override fun addToPlaylist(playlistId: String, track: Track) {
-        _playlists.update { all -> all.map { if (it.id == playlistId && it.tracks.none { t -> t.id == track.id }) it.copy(tracks = it.tracks + track) else it } }
+        edit(playlistId) { if (it.tracks.none { t -> t.id == track.id }) it.copy(tracks = it.tracks + track) else it }
         noteAdded(track)
+    }
+    override fun removeFromPlaylist(playlistId: String, index: Int) =
+        edit(playlistId) { p -> p.copy(tracks = p.tracks.filterIndexed { i, _ -> i != index }) }
+    override fun movePlaylistEntry(playlistId: String, from: Int, to: Int) = edit(playlistId) { p ->
+        if (from !in p.tracks.indices || to !in p.tracks.indices) p
+        else p.copy(tracks = p.tracks.toMutableList().apply { add(to, removeAt(from)) })
     }
     override fun download(track: Track) {
         if (_downloads.value.none { it.track.id == track.id }) _downloads.update { it + DownloadItem(track, 0f) }

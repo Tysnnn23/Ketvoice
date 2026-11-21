@@ -61,6 +61,9 @@ object Player {
     private val _error = MutableSharedFlow<String>(extraBufferCapacity = 16)
     /** French messages for the UI (it localizes them); a failed title is skipped already. */
     val error: SharedFlow<String> = _error
+    private val _format = MutableStateFlow<AudioEvent.Format?>(null)
+    /** What the decoder reports about the title heard (the Lossless badge); null until it says, reset on each load. */
+    val format: StateFlow<AudioEvent.Format?> = _format
 
     internal const val UNAVAILABLE = "Flux indisponible · réessayez"
     internal const val NOTHING_PLAYABLE = "Aucun flux disponible"
@@ -343,6 +346,7 @@ object Player {
         loadJob?.cancel()
         _state.value = s.copy(index = index, positionMs = startMs, durationMs = track.durationMs, isPlaying = false, playWhenReady = play)
         _loading.value = true
+        _format.value = null
         loadJob = scope.launch {
             val source = try { resolve(track) } catch (c: CancellationException) { throw c } catch (_: Exception) { null }
             synchronized(this@Player) {
@@ -364,7 +368,8 @@ object Player {
     private fun onEvent(event: AudioEvent) = synchronized(this) {
         when (event) {
             // The engine reports a gapless takeover as Advanced and a real end (nothing preloaded followed) as Ended.
-            is AudioEvent.Advanced -> onEnded()
+            is AudioEvent.Advanced -> { _format.value = null; onEnded() }
+            is AudioEvent.Format -> _format.value = event
             AudioEvent.Ended -> { preloadedEntry = null; preloadedSource = null; onEnded() }
             is AudioEvent.Error -> if (loadedEntry != null) { _loading.value = false; failed() }
             is AudioEvent.Buffering -> { val (buffering) = event; _loading.value = buffering }
@@ -460,6 +465,7 @@ object Player {
         if (preloadedEntry != null) engine?.preloadNext(null)
         loadedEntry = null; preloadedEntry = null; currentSource = null
         _loading.value = false
+        _format.value = null
     }
 
     /** One play in the history (plays, days, recents) per title that really starts. */
@@ -561,6 +567,6 @@ object Player {
         history.clear(); linearOrder = emptyList(); autoEntries.clear(); autoplayHeard.clear(); failures = 0
         synchronized(pinnedEntries) { pinnedEntries.clear() }
         autoplayCandidates = ::radioOf
-        _state.value = PlayerUiState(); _loading.value = false; _volume.value = 1f
+        _state.value = PlayerUiState(); _loading.value = false; _volume.value = 1f; _format.value = null
     }
 }

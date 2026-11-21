@@ -20,6 +20,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -84,7 +92,8 @@ private fun durationLabel(tracks: List<Track>): String {
 /** The header shared by albums and playlists: large cover with a soft shadow, title, link, Play/Shuffle. */
 @Composable
 private fun CollectionHeader(cover: @Composable () -> Unit, kind: String, title: String, subtitle: String, onSubtitle: (() -> Unit)?,
-                             meta: String, accent: Color, tracks: List<Track>) {
+                             meta: String, accent: Color, tracks: List<Track>,
+                             titleSlot: (@Composable () -> Unit)? = null, extraButtons: @Composable () -> Unit = {}) {
     val ket = LocalKet.current
     val actions = LocalTrackActions.current
     Row(Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 26.dp), verticalAlignment = Alignment.Bottom) {
@@ -93,7 +102,7 @@ private fun CollectionHeader(cover: @Composable () -> Unit, kind: String, title:
         Column(Modifier.weight(1f)) {
             KText(kind, Ket27Desk.Type.caption2, color = ket.secondary)
             Spacer(Modifier.height(4.dp))
-            KText(title, Ket27Desk.Type.largeTitle, maxLines = 2, translate = false)
+            if (titleSlot != null) titleSlot() else KText(title, Ket27Desk.Type.largeTitle, maxLines = 2, translate = false)
             KText(subtitle, Ket27Desk.Type.title3, Modifier.then(if (onSubtitle != null) Modifier.clickable(onClick = onSubtitle) else Modifier),
                 color = accent, translate = false, weight = FontWeight.Medium)
             Spacer(Modifier.height(6.dp))
@@ -102,6 +111,7 @@ private fun CollectionHeader(cover: @Composable () -> Unit, kind: String, title:
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 CapsuleButton("Lecture", KetIcons.Play, { if (tracks.isNotEmpty()) actions.play(tracks, 0) }, filled = true, accent = accent, modifier = Modifier.testTag("play-all"))
                 CapsuleButton("Aléatoire", KetIcons.Shuffle, { actions.playShuffled(tracks) }, filled = false, accent = accent, modifier = Modifier.testTag("shuffle-all"))
+                extraButtons()
             }
         }
     }
@@ -205,17 +215,56 @@ fun Mosaic(tracks: List<Track>, size: androidx.compose.ui.unit.Dp) {
 
 @Composable
 fun PlaylistPage(id: String) {
-    val playlists by LocalLibrary.current.playlists.collectAsState()
+    val library = LocalLibrary.current
+    val playlists by library.playlists.collectAsState()
     val p = playlists.firstOrNull { it.id == id }
     val ket = LocalKet.current
+    var renaming by remember(id) { mutableStateOf(false) }
     if (p == null) { Page(null, "playlist") { item { EmptyMessage("Playlist introuvable", "Cette playlist a été supprimée.") } }; return }
     Page(null, "playlist") {
         item("header") {
             CollectionHeader({ Mosaic(p.tracks, 240.dp) }, "Playlist", p.name, AppText.t("Vous"), null,
-                if (p.tracks.isEmpty()) AppText.t("Aucun titre") else durationLabel(p.tracks), ket.accent, p.tracks)
+                if (p.tracks.isEmpty()) AppText.t("Aucun titre") else durationLabel(p.tracks), ket.accent, p.tracks,
+                titleSlot = if (!renaming) null else { { RenameField(p.name) { name -> renaming = false; if (name.isNotBlank() && name != p.name) library.renamePlaylist(p.id, name) } } },
+                extraButtons = { CapsuleButton("Renommer", null, { renaming = true }, filled = false, accent = ket.accent, modifier = Modifier.testTag("rename-playlist")) })
         }
         if (p.tracks.isEmpty()) { item { EmptyMessage("Playlist vide", "Faites glisser des titres sur la playlist dans la barre latérale, ou ajoutez-les depuis leur menu.") }; return@Page }
         item("rule") { Box(Modifier.fillMaxWidth().height(.5.dp).background(ket.hairline)) }
-        p.tracks.forEachIndexed { i, t -> item("t$i-${t.id}") { NumberedTrackRow(t, p.tracks, i, showArtist = true, accent = ket.accent) } }
+        p.tracks.forEachIndexed { i, t ->
+            item("t$i-${t.id}") {
+                NumberedTrackRow(t, p.tracks, i, showArtist = true, accent = ket.accent, extraMenu = buildList {
+                    add(MenuItem("-"))
+                    if (i > 0) add(MenuItem("Monter", null, "move-up") { library.movePlaylistEntry(p.id, i, i - 1) })
+                    if (i < p.tracks.lastIndex) add(MenuItem("Descendre", null, "move-down") { library.movePlaylistEntry(p.id, i, i + 1) })
+                    add(MenuItem("Retirer de la playlist", KetIcons.Trash, "remove-from-playlist") { library.removeFromPlaylist(p.id, i) })
+                })
+            }
+        }
     }
+}
+
+/** The playlist's name, edited in place: Enter or leaving the field keeps it, Escape gives up. */
+@Composable
+private fun RenameField(current: String, onDone: (String) -> Unit) {
+    val ket = LocalKet.current
+    var text by remember { mutableStateOf(androidx.compose.ui.text.input.TextFieldValue(current, androidx.compose.ui.text.TextRange(0, current.length))) }
+    val focus = remember { androidx.compose.ui.focus.FocusRequester() }
+    var focused by remember { mutableStateOf(false) }
+    androidx.compose.runtime.LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
+    androidx.compose.foundation.text.BasicTextField(
+        text, { text = it },
+        Modifier.fillMaxWidth().focusRequester(focus).testTag("rename-field")
+            .onFocusChanged { if (focused && !it.isFocused) onDone(text.text.trim()); focused = it.isFocused }
+            .onPreviewKeyEvent { e ->
+                if (e.type != androidx.compose.ui.input.key.KeyEventType.KeyDown) false
+                else when (e.key) {
+                    androidx.compose.ui.input.key.Key.Enter -> { onDone(text.text.trim()); true }
+                    androidx.compose.ui.input.key.Key.Escape -> { onDone(current); true }
+                    else -> false
+                }
+            },
+        textStyle = Ket27Desk.Type.largeTitle.copy(color = ket.label),
+        singleLine = true,
+        cursorBrush = androidx.compose.ui.graphics.SolidColor(ket.accent),
+    )
 }

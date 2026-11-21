@@ -63,8 +63,7 @@ class TrackActions(private val player: PlayerControls, private val library: Libr
         add(MenuItem("Ajouter à une playlist", KetIcons.Playlist, "add-to-playlist", children =
             library.playlists.value.map { p -> MenuItem(p.name, null, "playlist") { library.addToPlaylist(p.id, track) } } +
                 MenuItem("Nouvelle playlist", KetIcons.Plus, "new-playlist") {
-                    val p = library.createPlaylist(com.ketvoice.app.data.AppText.t("Nouvelle playlist"))
-                    library.addToPlaylist(p.id, track)
+                    library.createPlaylist(com.ketvoice.app.data.AppText.t("Nouvelle playlist"), listOf(track))
                 }))
         add(MenuItem("-"))
         add(MenuItem("Télécharger", KetIcons.Download, "download") { library.download(track) })

@@ -52,6 +52,8 @@ import com.ketvoice.app.data.Track
 import com.ketvoice.app.ui.motion.Motion
 import com.ketvoice.desktop.ui.theme.Ket27Desk
 import com.ketvoice.desktop.ui.theme.LocalKet
+import com.ketvoice.desktop.platform.About
+import com.ketvoice.desktop.platform.DesktopPrefs
 import kotlinx.coroutines.delay
 
 /** The search field's text, shared by the sidebar and the search page. */
@@ -269,18 +271,52 @@ fun StatsPage() {
 @Composable
 fun SettingsPage() {
     val ket = LocalKet.current
+    var about by remember { mutableStateOf(false) }
     Page("Réglages", "settings") {
         item { SectionHeader("Général") }
         item {
-            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(Ket27Desk.Radius.menu)).background(ket.card)) {
+            SettingsCard {
                 SettingRow("Langue", AppSettings.language.value)
-                Box(Modifier.fillMaxWidth().padding(start = 16.dp).height(.5.dp).background(ket.hairline))
+                Hairline()
                 SettingRow("Apparence", com.ketvoice.app.data.AppText.t(if (ket.dark) "Sombre (suit Windows)" else "Clair (suit Windows)"))
-                Box(Modifier.fillMaxWidth().padding(start = 16.dp).height(.5.dp).background(ket.hairline))
-                SettingRow("Version", BuildConfig.VERSION_NAME)
+            }
+        }
+        item { SectionHeader("Windows") }
+        item {
+            SettingsCard {
+                ToggleRow("Fermer dans la zone de notification", DesktopPrefs.closeToTray.value, "close-to-tray") { DesktopPrefs.setCloseToTray(it) }
+                Hairline()
+                ToggleRow("Démarrer avec Windows", DesktopPrefs.startWithWindows.value, "start-with-windows") { DesktopPrefs.setStartWithWindows(it) }
+            }
+        }
+        item { SectionHeader("À propos") }
+        item {
+            SettingsCard {
+                Row(Modifier.fillMaxWidth().height(44.dp).clickable { about = !about }.padding(horizontal = 16.dp).testTag("about"),
+                    verticalAlignment = Alignment.CenterVertically) {
+                    KText("Version", Ket27Desk.Type.subheadline, Modifier.weight(1f))
+                    KText(BuildConfig.VERSION_NAME, Ket27Desk.Type.subheadline, color = ket.secondary, translate = false, weight = FontWeight.Normal)
+                }
+                if (about) {
+                    Hairline()
+                    androidx.compose.material3.Text(About.text(), Modifier.fillMaxWidth().padding(16.dp).testTag("about-text"),
+                        color = ket.secondary, style = Ket27Desk.Type.footnote.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace))
+                }
             }
         }
     }
+}
+
+@Composable
+private fun SettingsCard(content: @Composable () -> Unit) {
+    val ket = LocalKet.current
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(Ket27Desk.Radius.menu)).background(ket.card)) { content() }
+}
+
+@Composable
+private fun Hairline() {
+    val ket = LocalKet.current
+    Box(Modifier.fillMaxWidth().padding(start = 16.dp).height(.5.dp).background(ket.hairline))
 }
 
 @Composable
@@ -289,6 +325,21 @@ private fun SettingRow(label: String, value: String) {
     Row(Modifier.fillMaxWidth().height(44.dp).padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
         KText(label, Ket27Desk.Type.subheadline, Modifier.weight(1f))
         KText(value, Ket27Desk.Type.subheadline, color = ket.secondary, translate = false, weight = FontWeight.Normal)
+    }
+}
+
+/** A setting that is on or off: the whole row toggles, the switch shows it. */
+@Composable
+private fun ToggleRow(label: String, on: Boolean, tag: String, onChange: (Boolean) -> Unit) {
+    val ket = LocalKet.current
+    val knob by androidx.compose.animation.core.animateDpAsState(if (on) 18.dp else 2.dp,
+        if (Motion.reduced) androidx.compose.animation.core.snap() else androidx.compose.animation.core.spring(dampingRatio = .8f, stiffness = 700f))
+    Row(Modifier.fillMaxWidth().height(44.dp).clickable { onChange(!on) }.padding(horizontal = 16.dp).testTag("toggle:$tag"),
+        verticalAlignment = Alignment.CenterVertically) {
+        KText(label, Ket27Desk.Type.subheadline, Modifier.weight(1f))
+        Box(Modifier.size(38.dp, 22.dp).clip(RoundedCornerShape(11.dp)).background(if (on) ket.accent else ket.hairline)) {
+            Box(Modifier.padding(start = knob, top = 2.dp).size(18.dp).clip(RoundedCornerShape(9.dp)).background(Color.White))
+        }
     }
 }
 

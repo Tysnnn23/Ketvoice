@@ -111,6 +111,9 @@ object DesktopDownloader {
     /** The saved audio of a title, or null. */
     fun fileOf(id: String): File? = _items.value.firstOrNull { it.track.id == id }?.file?.takeIf { it.isFile }
 
+    /** The title of a download that is running, waiting or paused (or saved), or null. */
+    fun trackOf(id: String): Track? = tracks[id] ?: _items.value.firstOrNull { it.track.id == id }?.track
+
     /** One title's download as it goes: null when none is running or waiting. */
     fun progress(id: String): StateFlow<DownloadTask?> = perTitle.getOrPut(id) { MutableStateFlow(_tasks.value[id]) }
 
