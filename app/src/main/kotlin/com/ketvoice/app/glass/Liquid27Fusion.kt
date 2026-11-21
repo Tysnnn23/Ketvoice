@@ -80,6 +80,8 @@ class GlassFusion internal constructor() {
     internal val shapes = SnapshotStateMap<Any, FusedShape>()
     /** Reach of the liquid bridge in pixels. 0 keeps the controls separate. */
     var strengthPx by androidx.compose.runtime.mutableFloatStateOf(0f)
+    /** When set, the reach is read from this while drawing (an animation's value) instead of [strengthPx]. */
+    var strengthOf: (() -> Float)? = null
     /** False when this frame cannot draw the fused pass; panels then draw themselves. */
     internal var active by mutableStateOf(false)
     /** A device that rejected the fused shader once keeps its separate panels. */
@@ -179,7 +181,7 @@ fun GlassFusionLayer(fusion: GlassFusion, dark: Boolean, modifier: Modifier = Mo
             blur(liquid27BlurPx(frost, GlassRole.Control))
             val shapes = fusedShapesFor(fusion.shapes.values, origin)
             // A failed pass must not leave an unshaded blurred rectangle: fall back to panels.
-            if (shapes.isNotEmpty() && !liquid27Fused(params, shapes, fusion.strengthPx, frost, liquid27Light(0f, 0f, 0f), clarity, spec)) {
+            if (shapes.isNotEmpty() && !liquid27Fused(params, shapes, fusion.strengthOf?.invoke() ?: fusion.strengthPx, frost, liquid27Light(0f, 0f, 0f), clarity, spec)) {
                 fusion.failed = true
                 fusion.active = false
             }

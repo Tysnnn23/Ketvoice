@@ -160,7 +160,16 @@ internal fun Modifier.travelFromMini(from: () -> Rect?, progress: () -> Float, a
 
 /** Clip a stable full-size player instead of stretching its text/video between aspect ratios. */
 @Composable
-internal fun PlayerPresentation(visible: Boolean, origin: Rect?, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+internal fun PlayerPresentation(visible: Boolean, origin: Rect?, modifier: Modifier = Modifier, content: @Composable () -> Unit) =
+    PlayerPresentation(visible, { origin }, modifier, content)
+
+/**
+ * [origin] is read only when the player starts to open (8.1): the mini-player's bounds move at every frame while the
+ * tab bar folds or the chrome slides back, and reading them in composition composed the whole app again at each of
+ * those frames. The reveal is read in the layer only, so opening and closing do not compose this at every frame.
+ */
+@Composable
+internal fun PlayerPresentation(visible: Boolean, origin: () -> Rect?, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
     val reveal = remember { Animatable(0f) }
     val drag = remember { Animatable(0f) }
     var anchor by remember { mutableStateOf<Rect?>(null) }
@@ -171,7 +180,7 @@ internal fun PlayerPresentation(visible: Boolean, origin: Rect?, modifier: Modif
         LaunchedEffect(visible, reduced) {
             if (visible) {
                 if (reveal.value == 0f) {
-                    anchor = origin?.takeIf { it.width > 0 && it.height > 0 && it.top < h }
+                    anchor = origin()?.takeIf { it.width > 0 && it.height > 0 && it.top < h }
                     drag.snapTo(0f)
                 }
             } else {
@@ -190,28 +199,29 @@ internal fun PlayerPresentation(visible: Boolean, origin: Rect?, modifier: Modif
                     initialVelocity = if (visible) 0f else -(thrown / h).coerceIn(0f, 12f))
             }
         }
-        if (visible || reveal.value > 0f) {
-            val p = presentationProgress(reveal.value, drag.value, h)
+        val shown by remember { derivedStateOf { reveal.value > 0f } }
+        if (visible || shown) {
             val start = anchor ?: Rect(w * .08f, h * .89f, w * .92f, h * .96f)
             val radius = with(androidx.compose.ui.platform.LocalDensity.current) { 27.dp.toPx() }
-            val mask = remember(start, p, radius) {
-                object : Shape {
-                    override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline {
-                        val rect = presentationBounds(start, size.width, size.height, p)
-                        return Outline.Generic(Path().apply { addRoundRect(RoundRect(rect, CornerRadius(radius * (1f - p)))) })
-                    }
-                }
-            }
             // The shared elements may pass their place a little before they settle (the spring's overshoot).
             val springy = !reduced
             val progress = remember(h, springy) { { presentationProgress(reveal.value, drag.value, h, if (springy) PlayerDismiss.OVERSHOOT else 1f) } }
             CompositionLocalProvider(LocalPlayerDismissOffset provides drag, LocalPlayerReveal provides progress) {
                 Box(Modifier.fillMaxSize().graphicsLayer {
-                    shape = mask; clip = true
+                    val p = presentationProgress(reveal.value, drag.value, h)
+                    shape = PresentationMask(start, p, radius); clip = true
                     alpha = if (reduced) 1f else (p * 4f).coerceIn(0f, 1f)
                 }) { content() }
             }
         }
+    }
+}
+
+/** The rounded window the player grows through, from the mini-player ([start]) to the whole screen. */
+private data class PresentationMask(val start: Rect, val progress: Float, val radius: Float) : Shape {
+    override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline {
+        val rect = presentationBounds(start, size.width, size.height, progress)
+        return Outline.Generic(Path().apply { addRoundRect(RoundRect(rect, CornerRadius(radius * (1f - progress)))) })
     }
 }
 
