@@ -7,6 +7,21 @@
 
 ---
 
+# Ketvoice 8.1.0
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 149** — performance and latency pass, Canvas edge to edge again, a tap on the header cover returns to the player, and phone control with Ketvoice for Windows.
+
+- Smoothness (`ui/chrome/Chrome.kt`, `ui/player/PlayerPresentation.kt`, `glass/Liquid27Fusion.kt`, `ui/AppRoot.kt`): the tab bar fold and the player presentation read their springs in layout, offset and draw instead of composition; `AppRoot` no longer recomposes on mini-player bounds. Home scroll with the fold: 15,934 → 1,079 recompositions (19 → 3 composed frames); player opening 28 → 5–6 composed frames of 60. `Perf81HostTest`.
+- Loading (`data/RecentAnswers.kt`, `HomeFeed`, `CatalogRepo`, `ArtistPages`, `MusicApi`, `YouTubeCatalog`, `CanvasRepo`, `Downloader`): in-flight requests are shared and recent answers kept a few minutes; album and artist pages load from the tap; the personal YouTube Music Home is kept on disk; YouTube's player asks the last working client first; the Canvas on screen has its own lane; the downloads folder is read off the main thread. Measured on a fake 4G network (`LoadLatencyHostTest`): artist releases 3.0 → 1.0 s, replayed title 1.16 → 0.35 s, repeated search 0.7 s → immediate, Canvas on screen 3.6 → 1.8 s.
+- Player: the Canvas is edge to edge again in the player and album header (`CanvasFit` no longer used there); a tap on the header cover over the lyrics or the queue returns to the player (`Player80HostTest`).
+- Your devices (`remote/RemoteWire`, `RemoteSession`, `RemoteControl`, `PhoneRemote`, `ui/player/RemoteDevices.kt`): control between the listener's devices over the Ketogether Realtime transport; the channel comes from a per-account key in the owner-only settings document; HMAC-signed messages with a timestamp and nonce; no SQL change. `RemoteControlTest`, `RemoteDevicesHostTest`.
+
+Full notes: [8.1.0](docs/releases/v8.1.0.md).
+
+---
+
 # Ketvoice 8.0.0
 
 ![Ketvoice](ketvoice-banner.png)
