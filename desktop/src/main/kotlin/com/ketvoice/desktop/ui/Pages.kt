@@ -55,6 +55,10 @@ import com.ketvoice.desktop.ui.theme.LocalKet
 import com.ketvoice.desktop.platform.About
 import com.ketvoice.desktop.platform.DesktopPrefs
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
+import com.ketvoice.desktop.ui.theme.DeskGlyphs
 
 /** The search field's text, shared by the sidebar and the search page. */
 @Stable
@@ -273,6 +277,8 @@ fun SettingsPage() {
                 SettingRow("Apparence", com.ketvoice.app.data.AppText.t(if (ket.dark) "Sombre (suit Windows)" else "Clair (suit Windows)"))
             }
         }
+        item { SectionHeader("Ketmix") }
+        item { KetmixSettings() }
         item { SectionHeader("Windows") }
         item {
             SettingsCard {
@@ -297,6 +303,69 @@ fun SettingsPage() {
                 }
             }
         }
+    }
+}
+
+/** Ketmix (the phone's settings and words): on/off, style, length of the transitions, analysis, skips, rhythm model. */
+@Composable
+private fun KetmixSettings() {
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    var downloading by remember { mutableStateOf<Float?>(null) }
+    var failed by remember { mutableStateOf(false) }
+    var ready by remember { mutableStateOf(com.ketvoice.app.automix.BeatModel.ready) }
+    SettingsCard {
+        ToggleRow("Ketmix", AppSettings.automix.value, "ketmix") { AppSettings.automix.value = it }
+        Hairline()
+        ChoiceRow("Style de transition", AppSettings.ketmixStyle.value, listOf("Automatique", "Calé sur le tempo", "Écho", "Filtres", "Fondu",
+            "Montée", "Coupe", "Sur le drop", "Relais des voix"), "ketmix-style") { AppSettings.ketmixStyle.value = it }
+        Hairline()
+        ChoiceRow("Intensité du mix", AppSettings.automixIntensity.value, listOf("Discret", "Équilibré", "DJ"), "ketmix-intensity") {
+            AppSettings.automixIntensity.value = it
+        }
+        Hairline()
+        ChoiceRow("Analyse des titres", AppSettings.ketmixAnalysis.value, listOf("Légère", "Équilibrée", "Maximale"), "ketmix-analysis") {
+            AppSettings.ketmixAnalysis.value = it
+        }
+        Hairline()
+        ToggleRow("Mixer quand je passe au suivant", AppSettings.ketmixOnSkip.value, "ketmix-skip") { AppSettings.ketmixOnSkip.value = it }
+        Hairline()
+        if (ready) {
+            ToggleRow("Calage précis du rythme", AppSettings.ketmixBeatModel.value, "ketmix-beat") { AppSettings.ketmixBeatModel.value = it }
+        } else {
+            val ket = LocalKet.current
+            Row(Modifier.fillMaxWidth().height(44.dp).clickable(enabled = downloading == null) {
+                failed = false; downloading = 0f
+                scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                    val ok = com.ketvoice.app.automix.BeatModel.download({ downloading = it })
+                    downloading = null; failed = !ok; ready = ok
+                    if (ok) AppSettings.ketmixBeatModel.value = true
+                }
+            }.padding(horizontal = 16.dp).testTag("ketmix-beat-download"), verticalAlignment = Alignment.CenterVertically) {
+                KText("Calage précis du rythme", Ket27Desk.Type.subheadline, Modifier.weight(1f))
+                val p = downloading
+                KText(when { p != null -> "${(p * 100).toInt()} %"; failed -> "Échec du téléchargement"; else -> "Télécharger · 10 Mo" },
+                    Ket27Desk.Type.subheadline, color = if (p == null && !failed) ket.accent else ket.secondary, weight = FontWeight.Normal,
+                    translate = p == null)
+            }
+        }
+    }
+}
+
+/** A setting with a few named values: the current one on the right, the others in the window's menu. */
+@Composable
+private fun ChoiceRow(label: String, selected: Int, options: List<String>, tag: String, onPick: (Int) -> Unit) {
+    val ket = LocalKet.current
+    val menu = LocalMenu.current
+    val origin = remember { arrayOf(androidx.compose.ui.geometry.Offset.Zero) }
+    Row(Modifier.fillMaxWidth().height(44.dp)
+        .onGloballyPositioned { origin[0] = it.positionInWindow() + androidx.compose.ui.geometry.Offset(it.size.width.toFloat() - 240f, it.size.height.toFloat()) }
+        .clickable {
+            menu.open(options.mapIndexed { i, o -> MenuItem(o, if (i == selected) com.ketvoice.app.ui.common.KetIcons.Check else null, tag = "$tag:$i") { onPick(i) } },
+                androidx.compose.ui.unit.IntOffset(origin[0].x.toInt(), origin[0].y.toInt()))
+        }.padding(horizontal = 16.dp).testTag("choice:$tag"), verticalAlignment = Alignment.CenterVertically) {
+        KText(label, Ket27Desk.Type.subheadline, Modifier.weight(1f))
+        KText(options.getOrElse(selected) { options.first() }, Ket27Desk.Type.subheadline, color = ket.secondary, weight = FontWeight.Normal)
+        com.ketvoice.app.ui.common.Icon(DeskGlyphs.ChevronDown, null, Modifier.padding(start = 6.dp).size(12.dp), tint = ket.tertiary)
     }
 }
 

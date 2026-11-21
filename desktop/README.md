@@ -68,8 +68,8 @@ that is true on the desktop. The Android app is never changed for the desktop bu
 |---|---|---|
 | `stems/VoiceLevel` | `StemModel` (LiteRT interpreter) | 3 (ONNX) |
 | `stems/StemModel`, `Uvr`, `StemEngine`, `StemLibrary`, `VoiceSeparation`, `StreamSeparation` | LiteRT, Android services | 3 |
-| `automix/BeatModel` | LiteRT, APK assets | 3 (desktop counterpart for now) |
-| `automix/DeckMixProcessor`, `Automix` | Media3 audio processors and player | 1–2 |
+| `automix/BeatModel` | LiteRT, APK assets | ONNX counterpart (Phase 2) |
+| `automix/DeckMixProcessor`, `Automix` | Media3 audio processors and player | replaced by `DesktopMixer` + `DesktopAutomix` |
 | `data/CanvasRepo` | MediaMetadataRetriever, Bitmap, ConnectivityManager | 1 |
 | `data/Downloader` | Media3 DASH downloader, StatFs, Toast | 1 |
 | `data/LocalMusic` | MediaStore, DocumentsContract | counterpart (Phase 2: `LocalFolders`) |
@@ -79,8 +79,7 @@ that is true on the desktop. The Android app is never changed for the desktop bu
 | `data/AppLocales` | Android per-app locales | counterpart kept |
 
 Not tried yet: `TransitionPreview`, `MixStudio`, `KetmixJournal`, and the UI packages. Reused tests
-left out because they need deferred code: `TransitionPlannerTest` (`TempoReturn` in `Automix`),
-`MixKeysTest` and `StemsTest` (`VoiceStage`, `StemEngine`, `StemModel`), `MediaOverridesTest`
+left out because they need deferred code: `MixKeysTest` and `StemsTest` (`VoiceStage`, `StemEngine`, `StemModel`), `MediaOverridesTest`
 (`PersonalBackup`), `SearchRankTest` (`SearchGroups`), `CanvasCachePlanTest` (`CanvasRepo`),
 `LiteTuningTest` (`MemoryRelief`, glass render modes).
 
@@ -94,8 +93,12 @@ left out because they need deferred code: `TransitionPlannerTest` (`TempoReturn`
   takeover (`AudioEvent.Advanced`) moves the queue on. Ketmix reads `automixNext`/`automixUpcoming`.
 - `BuildConfig.kt` — `FLAVOR = "desktop"`, not Quest, not Lite, version 1.0.0.
 - `automix/DeckTap.kt` — the `PcmTap` contract (lives in the Android `DeckMixProcessor.kt`).
-- `automix/BeatModel.kt` — no rhythm model yet: `usable()` is false, Ketmix keeps its own analysis
-  (as a phone without the optional model).
+- `automix/BeatModel.kt` — Beat This! small through ONNX Runtime (`OnnxBeatNet`, CPU, 2 threads), with the
+  phone's `BeatPcm`/`refine` and the shared `BeatSpectrogram`/`BeatPost`/`BeatMapping`. Downloaded on request
+  (Settings → Ketmix → « Calage précis du rythme ») to `files/beat/ketmix-beat-small0.onnx` and kept only when
+  its SHA-256 is `c462b064…aea` (the `small0.onnx` that `publish-beat-model.yml` pins). It is fetched from the
+  `ketmix-beat-v1` prerelease first, then from that file's source on Hugging Face (same bytes, same hash).
+- `automix/TempoReturn.kt` — the Android object restated (it lives in `Automix.kt`, which is Media3-bound).
 - `data/SecureSessionStore.kt` — sessions sealed with Windows DPAPI (AES-GCM with a user-only key
   file on other systems, for tests).
 - `data/AppLocales.kt`, `util/LauncherIcons.kt`, `glass/GlassClarity.kt` — the values shared settings need.
@@ -184,6 +187,40 @@ Lossless badge from a FLAC `Format`). `ShellScreenshots` renders the window to
 '*LiveStreamCheck*' --tests '*LivePlaybackCheck*'` (one known song resolved, 5 s decoded to a
 `CaptureSink`).
 
+## Ketmix (Phase 2)
+
+```
+DesktopAutomix (ketmix/)  every 250 ms while a title plays with Ketmix on:
+   near the end (analysis window + 25 s): Segments.read decodes the ending and the next title's start
+   straight from their sources (FfmpegDecoder, faster than real time) into the shared AnalysisTap
+   (+ BeatModel when downloaded) → AnalysisStore → TransitionPlanner.plan + MixShaping (style, intensity,
+   analysis from AppSettings) → engine.mixIntoNext(plan, preRoll)
+   « Suivant » (Player.skipHook, ketmixOnSkip): the phone's 3.2 s filter blend into the held next title
+FfmpegAudioEngine.mixIntoNext → DesktopMixer.Mix: the Player's preloaded deck is seeked to the plan's
+   entry and started when the outgoing title reaches outMs − preRoll, in the same render block, so the
+   two decks are sample-locked (no drift correction needed). Each deck reads through its Lane:
+   TimeStretch (WSOLA, pitch kept) when off its own speed → the shared DeckDsp with
+   DeckAutomation.outgoing/incoming(plan) (gain, bass swap high-pass, filters, echo, reverb, mids,
+   MixBus guard on the sum). At the plan's promote point the engine emits Advanced (the Player moves its
+   queue as for a gapless takeover); past the outgoing automation's end that deck is closed and the
+   incoming one glides back to speed 1 in TempoReturn's steps. Positions carry the rate per segment.
+UI: the « Ketmix » switch under the transport, « Mix en cours » beside the title during a mix, and
+   Settings → Ketmix (on/off, style, « Intensité du mix », « Analyse des titres », mix on skip, beat model).
+```
+
+Tempo uses a WSOLA stretcher in Kotlin (`audio/TimeStretch.kt`, the method of FFmpeg's `atempo`) rather
+than `atempo` through avfilter: it keeps the exact title position of every output frame (the automation
+is keyed on it), is sample-exact at speed 1 (a deck keeps it after the glide back without a click), and
+needs no native graph. Not on the desktop yet: the bar loop (« boucle »; the planner is told one was just
+played so it picks another), voice separation (`stems`), sung-line facts from lyrics, the DJ editor.
+
+Tests: `KetmixRenderTest` renders real mixes of two FLAC tones through the engine into a `CaptureSink`
+and checks the gain curves (Goertzel), the crossing, the length, the pitch at 1.04× and the glide back,
+and that the worst second difference stays at a clean tone's level (no click). `DesktopAutomixTest` runs
+the Player, the engine (paced 10×) and the controller over three generated grooves: the end of one mixes
+into the next, and « Suivant » blends. `BeatModelOnnxTest` checks the pinned download; with
+`KETVOICE_BEAT_ONNX=/path/small0.onnx` it runs the real network on a 120 BPM click track.
+
 ## Done in Phase 1
 
 - Audio: FFmpeg engine (decks, mixer, gapless preload, 10-band EQ, ranged HTTP with a disk cache,
@@ -217,19 +254,16 @@ Lossless badge from a FLAC `Format`). `ShellScreenshots` renders the window to
 
 ## Plan
 
-**Phase 2 — Ketmix and the rest of the app.** Ketmix on the desktop mixer (below); synced lyrics in
+**Phase 2 — Ketmix and the rest of the app.** Ketmix on the desktop mixer (done, see above); synced lyrics in
 the lyrics panel (the shared `LyricsRepo` is compiled, the panel still says they arrive later);
 statistics (`LiveStats` over the local history); settings persisted through the shared settings
 store; Canvas (`CanvasRepo` with FFmpeg posters) and local music (`LocalMusic`, folder scan with
 FFmpeg tags) in place of `DesktopSeams.kt`; account sign-in and sync of the library.
 
-Ketmix itself: a `DesktopMixer` with two decks feeding the shared `DeckDsp`/`MixBus` and the
-`PcmTap` taps, a port of Sonic for tempo changes with pitch kept (`TempoReturn`), and a
-`DesktopAutomix` playing what `TransitionPlanner` plans; bring in `TransitionPlannerTest`,
-`MixKeysTest`, `StemsTest`.
+Ketmix left for later: `MixKeysTest` and `StemsTest` (they need the stems), the bar loop, lyrics facts.
 
-**Phase 3 — models.** Beat This! and the separation models through ONNX Runtime (CPU, DirectML
-later), replacing the desktop `BeatModel`; then `StemModel`, `VoiceLevel` and the voice slider.
+**Phase 3 — models.** The separation models through ONNX Runtime (CPU, DirectML later; Beat This!
+already runs there since Phase 2); then `StemModel`, `VoiceLevel` and the voice slider.
 
 **Phase 4 — Windows integration.** A small native DLL for System Media Transport Controls (media
 keys, the volume flyout's now-playing card); sign-in through the system browser with a loopback

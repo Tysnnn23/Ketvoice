@@ -25414,5 +25414,17 @@
   "de": "Titel aus diesen Ordnern erscheinen unter Titel, Alben und Künstler. Sie bleiben auf diesem Computer.",
   "pt": "As músicas destas pastas aparecem em Músicas, Álbuns e Artistas. Elas ficam neste computador.",
   "ko": "이 폴더의 노래는 노래, 앨범, 아티스트에 표시됩니다. 노래는 이 컴퓨터에만 남습니다."
+ },
+ "Télécharger · 10 Mo": {
+  "en": "Download · 10 MB",
+  "hi": "डाउनलोड करें · 10 MB",
+  "ja": "ダウンロード · 10 MB",
+  "zh": "下载 · 10 MB",
+  "ru": "Скачать · 10 МБ",
+  "it": "Scarica · 10 MB",
+  "es": "Descargar · 10 MB",
+  "de": "Herunterladen · 10 MB",
+  "pt": "Baixar · 10 MB",
+  "ko": "다운로드 · 10MB"
  }
 }

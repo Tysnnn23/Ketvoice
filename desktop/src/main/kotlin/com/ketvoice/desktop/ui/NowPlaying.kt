@@ -74,7 +74,8 @@ fun NowPlayingBar(panel: Panel, onPanel: (Panel) -> Unit, onOpenPlayer: () -> Un
     val volume by player.volume.collectAsState()
     val repeatIcon = if (state.repeatOne) DeskGlyphs.RepeatOne else DeskGlyphs.Repeat
     Row(Modifier.fillMaxWidth().height(64.dp).padding(horizontal = 16.dp).testTag("bar"), verticalAlignment = Alignment.CenterVertically) {
-        Row(Modifier.width(228.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        Column(Modifier.width(228.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             KetIconButton(KetIcons.Shuffle, "Lecture aléatoire", { player.setShuffle(!state.shuffle) }, active = state.shuffle, glyph = 16.dp,
                 modifier = Modifier.testTag("shuffle").symbolBounce(state.shuffle))
             KetIconButton(DeskGlyphs.Previous, "Précédent", { player.previous() }, size = 36.dp, glyph = 20.dp, modifier = Modifier.testTag("previous"))
@@ -83,6 +84,8 @@ fun NowPlayingBar(panel: Panel, onPanel: (Panel) -> Unit, onOpenPlayer: () -> Un
             KetIconButton(repeatIcon, "Répéter", {
                 when { state.repeatOne -> player.setRepeat(false, false); state.repeatAll -> player.setRepeat(true, false); else -> player.setRepeat(false, true) }
             }, active = state.repeatAll || state.repeatOne, glyph = 16.dp, modifier = Modifier.testTag("repeat").symbolBounce(state.repeatOne))
+        }
+            KetmixSwitch()
         }
         Box(Modifier.weight(1f), contentAlignment = Alignment.Center) { Lcd(onOpenPlayer) }
         Row(Modifier.width(300.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.End) {
@@ -93,8 +96,6 @@ fun NowPlayingBar(panel: Panel, onPanel: (Panel) -> Unit, onOpenPlayer: () -> Un
                 active = panel == Panel.LYRICS, glyph = 17.dp, modifier = Modifier.testTag("toggle-lyrics"))
             KetIconButton(DeskGlyphs.Queue, "À suivre", { onPanel(if (panel == Panel.QUEUE) Panel.NONE else Panel.QUEUE) },
                 active = panel == Panel.QUEUE, glyph = 17.dp, modifier = Modifier.testTag("toggle-queue"))
-            KetIconButton(DeskGlyphs.Ketmix, "Ketmix", { AppSettings.automix.value = !AppSettings.automix.value },
-                active = AppSettings.automix.value, glyph = 17.dp, modifier = Modifier.testTag("ketmix"))
             OutputButton()
         }
     }
@@ -137,11 +138,47 @@ private fun Lcd(onOpenPlayer: () -> Unit) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 KText(track.title, Ket27Desk.Type.footnote, weight = FontWeight.SemiBold, translate = false)
                 if (format?.lossless == true) LosslessMark(format!!.hiRes)
+                MixMark()
             }
             KText(listOf(track.artist, track.album).filter { it.isNotBlank() }.joinToString(" — "), Ket27Desk.Type.caption, color = ket.secondary, translate = false)
             Seek(state.positionMs, state.durationMs.takeIf { it > 0 } ?: track.durationMs, compact = true)
         }
         if (loading) Spinner(Modifier.padding(end = 10.dp).size(16.dp))
+    }
+}
+
+/** Ketmix on or off, under the transport: the whole little row toggles, a small switch shows it. */
+@Composable
+private fun KetmixSwitch() {
+    val ket = LocalKet.current
+    val on = AppSettings.automix.value
+    val knob by androidx.compose.animation.core.animateDpAsState(if (on) 11.dp else 1.dp,
+        if (Motion.reduced) androidx.compose.animation.core.snap() else androidx.compose.animation.core.spring(dampingRatio = .8f, stiffness = 700f))
+    val (source, hovered) = rememberHover()
+    Tooltip(if (on) "Ketmix actif" else "Ketmix désactivé") {
+        Row(Modifier.height(18.dp).clip(RoundedCornerShape(9.dp)).background(if (hovered) ket.hover else Color.Transparent)
+            .hoverable(source).clickable { AppSettings.automix.value = !on }.padding(horizontal = 6.dp).testTag("ketmix"),
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+            Icon(DeskGlyphs.Ketmix, null, Modifier.size(11.dp), tint = if (on) ket.accent else ket.secondary)
+            KText("Ketmix", Ket27Desk.Type.caption2, color = if (on) ket.label else ket.secondary, translate = false, weight = FontWeight.SemiBold)
+            Box(Modifier.size(22.dp, 12.dp).clip(RoundedCornerShape(6.dp)).background(if (on) ket.accent else ket.hairline).testTag("ketmix-switch")) {
+                Box(Modifier.padding(start = knob, top = 1.dp).size(10.dp).clip(RoundedCornerShape(5.dp)).background(Color.White))
+            }
+        }
+    }
+}
+
+/** « Mix en cours » beside the title while Ketmix plays two titles together. */
+@Composable
+private fun MixMark() {
+    val ui by com.ketvoice.desktop.ketmix.DesktopAutomix.ui.collectAsState()
+    if (ui.phase != com.ketvoice.desktop.ketmix.DesktopAutomix.Phase.Mixing) return
+    val ket = LocalKet.current
+    Row(Modifier.padding(start = 6.dp).clip(RoundedCornerShape(3.dp)).background(ket.accent.copy(alpha = .14f))
+        .padding(horizontal = 4.dp).testTag("mix-badge"), verticalAlignment = Alignment.CenterVertically) {
+        Icon(DeskGlyphs.Ketmix, null, Modifier.size(9.dp), tint = ket.accent)
+        KText("Mix en cours", Ket27Desk.Type.caption2.copy(fontSize = Ket27Desk.Type.caption2.fontSize * .82f), Modifier.padding(start = 3.dp),
+            color = ket.accent, weight = FontWeight.SemiBold)
     }
 }
 

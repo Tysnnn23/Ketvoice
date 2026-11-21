@@ -170,6 +170,8 @@ object Player {
 
     @Synchronized
     fun next() {
+        // Ketmix: « Suivant » may mix into the next title instead of cutting to it (ketmixOnSkip).
+        if (runCatching { skipHook?.invoke() }.getOrNull() == true) return
         val s = _state.value
         when (val step = QueueSteps.next(s.queue.size, s.index, s.repeatOne, s.repeatAll, s.autoplay, ended = false)) {
             is QueueStep.Jump -> startAt(step.index)
@@ -306,6 +308,15 @@ object Player {
     }
 
     /** The listener asked for this entry to play next (see [playNext]). */
+    /** Ketmix on the desktop: asked first when the listener skips; true when it mixes into the next title instead. */
+    @Volatile internal var skipHook: (() -> Boolean)? = null
+
+    /** What the engine plays now. */
+    @Synchronized internal fun loadedSource(): AudioSource? = currentSource.takeIf { loadedEntry != null }
+
+    /** The source the engine holds ready after the current title when it is [entryId] (what a Ketmix transition plays into). */
+    @Synchronized internal fun preloadedSource(entryId: String): AudioSource? = preloadedSource.takeIf { preloadedEntry == entryId }
+
     internal fun pinnedNext(entryId: String): Boolean = synchronized(pinnedEntries) { entryId in pinnedEntries }
 
     /** A publication was edited: the queue shows its new title, cover and audio. */

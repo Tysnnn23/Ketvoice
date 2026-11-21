@@ -75,6 +75,8 @@ fun main(args: Array<String>) {
     com.ketvoice.app.data.SettingsStore.watch(scope)
     com.ketvoice.desktop.library.LocalFolders.init(context, scope)
     com.ketvoice.desktop.library.DesktopAccount.start(context)
+    // Ketmix: the shared planning played by the engine's two decks (off until the listener switches it on).
+    com.ketvoice.desktop.ketmix.DesktopAutomix.attach(engine, scope)
     // Tray, media keys and the Windows media controls drive the player.
     DesktopPlatform.bridge = object : com.ketvoice.desktop.platform.PlatformBridge {
         override fun toggle() = Player.toggle()
