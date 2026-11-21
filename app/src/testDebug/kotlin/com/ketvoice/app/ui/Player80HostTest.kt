@@ -30,6 +30,9 @@ import com.ketvoice.app.ui.player.PlayerPage
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.After
 import org.junit.Assert.*
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.performClick
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -103,6 +106,22 @@ class Player80HostTest {
     @Test fun queueMorph() = morph(PlayerPage.QUEUE, dark = true, "queue")
     @Test fun lyricsMorphLight() = morph(PlayerPage.LYRICS, dark = false, "lyrics-light", listOf(1f))
     @Test fun queueMorphLight() = morph(PlayerPage.QUEUE, dark = false, "queue-light", listOf(1f))
+
+    /** 8.1: a tap on the header's small cover over the lyrics or the queue brings the player back to its main screen. */
+    @Test fun headerCoverLeavesTheLyrics() = headerCoverReturns(PlayerPage.LYRICS)
+    @Test fun headerCoverLeavesTheQueue() = headerCoverReturns(PlayerPage.QUEUE)
+
+    private fun headerCoverReturns(page: PlayerPage) {
+        AppUi.showLyrics.value = page == PlayerPage.LYRICS
+        PlayerMorph.pinned.value = null
+        compose.mainClock.autoAdvance = true
+        compose.setContent { KetvoiceTheme(useDark = true) { FullPlayerScreen(initialPage = page, onDismiss = {}) } }
+        compose.waitForIdle()
+        compose.onNodeWithTag("header-cover-back", useUnmergedTree = true).performClick()
+        compose.waitForIdle()
+        assertTrue(compose.onAllNodesWithTag("header-cover-back", useUnmergedTree = true).fetchSemanticsNodes().isEmpty())
+        assertTrue(!AppUi.showLyrics.value)
+    }
 
     private fun morph(page: PlayerPage, dark: Boolean, name: String, steps: List<Float> = listOf(0f, .5f, 1f)) {
         AppUi.showLyrics.value = page == PlayerPage.LYRICS

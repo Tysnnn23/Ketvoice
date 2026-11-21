@@ -54,6 +54,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -594,6 +595,16 @@ fun FullPlayerScreen(
                                 fontScale = com.ketvoice.app.ui.quest.QuestLayout.lyricsScale(AppSettings.lyricsTextSize.value))
                         }
                     }
+                }
+
+                // 8.1 (owner: « quand on clique sur la cover dans l'écran des lyrics ou file d'attente, ça te remet à
+                // l'écran principal »): the header's small cover, above the pane that would otherwise take the touch.
+                if (page != PlayerPage.ARTWORK) with(density) {
+                    Box(Modifier.offset(slotPx.left.toDp(), slotPx.top.toDp()).size(slotPx.width.toDp(), slotPx.height.toDp())
+                        .clickable(interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null,
+                            onClickLabel = AppText.t("Revenir à la pochette")) { navigate(PlayerPage.ARTWORK) }
+                        .semantics { contentDescription = AppText.t("Revenir à la pochette") }
+                        .testTag("header-cover-back"))
                 }
 
                 CompositionLocalProvider(LocalBackdropLayer provides controlsBackdrop) {
