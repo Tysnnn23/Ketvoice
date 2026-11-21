@@ -1,8 +1,6 @@
 package com.ketvoice.app.data
 
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import java.io.File
 
 /*
@@ -23,14 +21,16 @@ object CanvasRepo {
     suspend fun resolve(track: Track, force: Boolean = false, ahead: Boolean = false): Unit = Unit
 }
 
-/** Music files on this computer. The folder scan (FFmpeg tags) is still to come; none are known yet. */
+/** Music files on this computer: the folders chosen in Settings, scanned with FFmpeg ([com.ketvoice.desktop.library.LocalFolders]). */
 object LocalMusic {
-    private val _tracks = MutableStateFlow<List<Track>>(emptyList())
-    val tracks: StateFlow<List<Track>> = _tracks.asStateFlow()
+    val tracks: StateFlow<List<Track>> get() = com.ketvoice.desktop.library.LocalFolders.tracks
 }
 
 /** Downloads: the desktop downloader (`com.ketvoice.desktop.library.DesktopDownloader`) keeps them. */
 object Downloader {
+    /** The saved files (each with its [com.ketvoice.desktop.library.DesktopDownloader.Item.track]), as the account sync looks titles up. */
+    val items: StateFlow<List<com.ketvoice.desktop.library.DesktopDownloader.Item>> get() = com.ketvoice.desktop.library.DesktopDownloader.items
+
     fun localLyrics(trackId: String): Pair<String, List<MusicApi.LyricLine>>? =
         com.ketvoice.desktop.library.DesktopDownloader.localLyrics(trackId)
 }
