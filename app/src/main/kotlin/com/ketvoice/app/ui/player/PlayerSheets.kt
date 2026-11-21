@@ -337,6 +337,7 @@ fun AudioOutputSheet(onClose: () -> Unit) {
             Modifier
                 .fillMaxWidth()
                 .pointerInput(Unit) { detectTapGestures {} }
+                .verticalScroll(androidx.compose.foundation.rememberScrollState())
         ) {
         Box(Modifier.fillMaxWidth().padding(top = 8.dp), contentAlignment = Alignment.Center) {
             Box(
@@ -363,6 +364,7 @@ fun AudioOutputSheet(onClose: () -> Unit) {
             onClick = { if (castingTo != null) com.ketvoice.app.cast.CastFlavor.disconnect(); onClose() }
         )
         CastDevicesSection(onClose)
+        RemoteDevicesSection(onClose)
 
         Box(
             Modifier

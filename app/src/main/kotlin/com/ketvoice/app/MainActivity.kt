@@ -350,6 +350,8 @@ class MainActivity : ComponentActivity() {
         com.ketvoice.app.automix.Automix.appInFront = true
         com.ketvoice.app.sync.LibrarySync.onForeground()
         com.ketvoice.app.sync.NowPlayingSync.refresh()
+        com.ketvoice.app.remote.PhoneRemote.watch(this)
+        com.ketvoice.app.remote.PhoneRemote.inFront(true)
         // A season may end while the app lives: its theme then goes back, silently.
         if (com.ketvoice.app.data.Seasons.expire()) runCatching { com.ketvoice.app.data.SettingsStore.save() }
     }
@@ -359,6 +361,7 @@ class MainActivity : ComponentActivity() {
         com.ketvoice.app.automix.Automix.appInFront = false
         runCatching { com.ketvoice.app.data.SettingsStore.save() }
         com.ketvoice.app.sync.LibrarySync.onBackground()
+        com.ketvoice.app.remote.PhoneRemote.inFront(false)
     }
 }
 
