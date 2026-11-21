@@ -1,0 +1,3 @@
+# Phase 1 brings the desktop audio engine (FFmpeg in-process); for now only the queue order.
+player/QueueOrder.kt
+player/QueueEntryIds.kt

@@ -1,0 +1,10 @@
+data/LyricsRepo.kt
+data/LyricsDuet.kt
+data/LyricsFormats.kt
+data/LyricsOffsets.kt
+data/ImportedLyrics.kt
+data/LyricsDiskCache.kt
+data/LyricsSearch.kt
+data/ExtraLyricsProviders.kt
+data/CustomLyrics.kt
+data/LocalLyrics.kt
