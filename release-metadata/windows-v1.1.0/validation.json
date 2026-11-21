@@ -3,7 +3,7 @@
   "version": "1.1.0",
   "platform": "windows",
   "tag": "windows-v1.1.0",
-  "source_commit": "f09ddaa86a084bf28e56a6fab08b7b81cc7da12d",
+  "source_commit": "1eee86ec6eac867b721798ef808cefb790642b66",
   "created_at": "2026-11-21T15:56:04.944511+00:00",
   "build_origin": "publish-windows-release.yml on windows-latest builds the MSI from source_commit; it refuses to run if desktop/, app/src/main, native/ or docs/licenses changed since",
   "tests": {
@@ -11,14 +11,16 @@
       "run": 500,
       "failed": 0,
       "skipped": 6,
-      "commit": "f09ddaa86a084bf28e56a6fab08b7b81cc7da12d"
+      "commit": "1eee86ec6eac867b721798ef808cefb790642b66",
+      "app_version_property": "1.1.0",
+      "note": "first publish attempt (run 44921816063) stopped at PlatformTest.logRollsAndCrashReportsAreKept, which expected a hard-coded 1.0.0 in the crash report; the test now reads the build's version, and the whole suite passed with -PappVersion=1.1.0"
     },
     "windows_ci": {
       "workflow": "windows.yml",
       "run_id": 44918859735,
       "conclusion": "success",
       "commit": "d0592e6f0887f24a968633b1ee54c3988d5e4eff",
-      "note": "same desktop/, app/src/main, native/ and docs/licenses tree as source_commit (only release notes changed since)",
+      "note": "same desktop/src/main, app/src/main, native/ and docs/licenses tree as source_commit; only PlatformTest and release notes changed since",
       "steps": "desktop tests, MSI packaging, silent install, Ketvoice.exe --smoke (ONNX Runtime, LGPL FFmpeg, SMTC DLL, thumbnail toolbar exports), cold-start probe, uninstall"
     },
     "android_ci_shared_code": {
