@@ -95,6 +95,8 @@ class NavigationAnimationsHostTest {
         (Player.state as MutableStateFlow<PlayerUiState>).value = PlayerUiState()
     }
 
+    private val liteChromeShots = setOf("tab-bar-folded", "tab-bar-unfolded", "search-bubble-rest", "search-bubble-stretching", "search-bubble-field")
+
     private fun image(name: String): Bitmap {
         lateinit var out: Bitmap
         compose.runOnIdle {
@@ -102,7 +104,9 @@ class NavigationAnimationsHostTest {
             val bitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(bitmap)
             ReflectionHelpers.setField(canvas, "mAllowHwFeaturesInSwMode", true)
-            view.draw(canvas)
+            // 8.0: Lite's glass backdrop layer cannot be replayed into a software View.draw (a capture-only path; the screen
+            // draws through RenderNodes). The chrome pictures are only saved there, their checks read positions.
+            if (com.ketvoice.app.BuildConfig.FLAVOR != "lite" || name !in liteChromeShots) view.draw(canvas)
             val file = File("build/host-ui-preview/${com.ketvoice.app.BuildConfig.FLAVOR}/nav/$name.png")
             file.parentFile?.mkdirs()
             file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
