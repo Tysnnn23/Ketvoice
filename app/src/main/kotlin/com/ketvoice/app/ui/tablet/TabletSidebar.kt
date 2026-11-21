@@ -164,7 +164,9 @@ private fun librarySections(): List<SidebarDestination> {
             AppUi.selectTab(AppUi.LIBRARY); AppUi.openCatalog(CatalogRequest("favorites", "local", "Favoris")) },
         SidebarDestination("Téléchargements", KetIcons.Download, "sidebar-downloads", overlay == AppUi.DOWNLOADS) { AppUi.selectTab(AppUi.LIBRARY); AppUi.openDownloads() },
         SidebarDestination("Musique locale", KetIcons.Folder, "sidebar-local", overlay == AppUi.LOCAL_FILES) { AppUi.selectTab(AppUi.LIBRARY); AppUi.openLocalFiles() },
-        SidebarDestination("Replay", KetIcons.Clock, "sidebar-replay", overlay == AppUi.REPLAY) { AppUi.selectTab(AppUi.LIBRARY); AppUi.openReplay() })
+        SidebarDestination("Replay", KetIcons.Clock, "sidebar-replay", overlay == AppUi.REPLAY) { AppUi.selectTab(AppUi.LIBRARY); AppUi.openReplay() },
+        SidebarDestination("Statistiques", com.ketvoice.app.ui.stats.StatsIcon, "sidebar-stats", overlay == AppUi.STATS) {
+            AppUi.selectTab(AppUi.LIBRARY); AppUi.closeOverlays(); AppUi.openStats() })
 }
 
 private fun openLibrary(section: Int) {

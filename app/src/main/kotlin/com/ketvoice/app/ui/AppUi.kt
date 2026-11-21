@@ -36,6 +36,8 @@ object AppUi {
     val MOOD = 19
     /** The review of titles saved several times. */
     val DUPLICATES = 20
+    /** « Statistiques » (8.0): the live statistics, see [openStats]. */
+    val STATS = 21
     val playlistId = androidx.compose.runtime.mutableStateOf<String?>(null)
     val showCreatePlaylist = androidx.compose.runtime.mutableStateOf(false)
     val showSpotifyImport = androidx.compose.runtime.mutableStateOf(false)
@@ -234,7 +236,7 @@ object AppUi {
             val entry = OverlayEntry(item.optInt("overlay", NONE), playlist, catalog, artist,
                 item.optString("searchSeed").take(200))
             when (entry.overlay) {
-                NONE, SEARCH, SETTINGS, DOWNLOADS, LOCAL_FILES, ADDONS_SEARCH, LYRICS_SOURCES, REPLAY, EXPORT, IMPORT,
+                NONE, SEARCH, SETTINGS, DOWNLOADS, LOCAL_FILES, ADDONS_SEARCH, LYRICS_SOURCES, REPLAY, EXPORT, IMPORT, STATS,
                 LANGUAGE, APP_ICON, CANVAS_CONFIG, lyricsSourcesList, SOURCES -> entry
                 PLAYLIST -> entry.takeIf { playlist != null }
                 CATALOG -> entry.takeIf { catalog != null }
@@ -349,6 +351,8 @@ object AppUi {
     fun openLocalFiles() = jump(LOCAL_FILES)
     fun openSources() = jump(SOURCES)
     fun openReplay() = jump(REPLAY)
+    /** The live statistics, over the current page (back returns to it: Library, Replay). */
+    fun openStats() { pushOverlay(STATS); showPlayer.value = false; bottomCollapsed.value = false }
     fun openQueue() = jump(QUEUE)
 
     /** Ouvre un overlay en gardant le courant dans la pile (retour possible). */

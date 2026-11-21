@@ -57,17 +57,7 @@ object ShareCard {
         val canvas = Canvas(bitmap)
         val w = WIDTH.toFloat(); val h = HEIGHT.toFloat()
         val base = accent ?: 0xFF2C2C34.toInt()
-        // The field: the cover reduced to a few colour patches and stretched, so its own colours make the background.
-        canvas.drawRect(0f, 0f, w, h, Paint().apply {
-            shader = LinearGradient(0f, 0f, 0f, h, base, MomentCard.darken(base, .6f), Shader.TileMode.CLAMP)
-        })
-        if (cover != null) {
-            canvas.drawBitmap(cover.scale(3, 5).scale(WIDTH / 8, HEIGHT / 8).scale(WIDTH, HEIGHT), 0f, 0f, Paint(Paint.FILTER_BITMAP_FLAG))
-        }
-        // A quiet shade, deeper at the foot, so the white words read whatever the cover.
-        canvas.drawRect(0f, 0f, w, h, Paint().apply {
-            shader = LinearGradient(0f, 0f, 0f, h, intArrayOf(0x26000000, 0x40000000, 0x8C000000.toInt()), floatArrayOf(0f, .45f, 1f), Shader.TileMode.CLAMP)
-        })
+        drawField(canvas, cover, accent)
         val words = MomentCard.text(listOf(line))
         val rect = coverRect(words.isNotEmpty())
         val radius = 36f
@@ -104,12 +94,36 @@ object ShareCard {
                 .setEllipsize(android.text.TextUtils.TruncateAt.END).build()
             canvas.save(); canvas.translate(100f, y + 90f); layout.draw(canvas); canvas.restore()
         }
+        drawMark(canvas)
+        return bitmap
+    }
+
+    /**
+     * The field of a card: the cover reduced to a few colour patches and stretched, so its own colours make the
+     * background, under a quiet shade deeper at the foot so white words read whatever the cover. Shared with the
+     * statistics cards (8.0).
+     */
+    fun drawField(canvas: Canvas, cover: Bitmap?, accent: Int?) {
+        val w = WIDTH.toFloat(); val h = HEIGHT.toFloat()
+        val base = accent ?: 0xFF2C2C34.toInt()
+        canvas.drawRect(0f, 0f, w, h, Paint().apply {
+            shader = LinearGradient(0f, 0f, 0f, h, base, MomentCard.darken(base, .6f), Shader.TileMode.CLAMP)
+        })
+        if (cover != null) {
+            canvas.drawBitmap(cover.scale(3, 5).scale(WIDTH / 8, HEIGHT / 8).scale(WIDTH, HEIGHT), 0f, 0f, Paint(Paint.FILTER_BITMAP_FLAG))
+        }
+        canvas.drawRect(0f, 0f, w, h, Paint().apply {
+            shader = LinearGradient(0f, 0f, 0f, h, intArrayOf(0x26000000, 0x40000000, 0x8C000000.toInt()), floatArrayOf(0f, .45f, 1f), Shader.TileMode.CLAMP)
+        })
+    }
+
+    /** Ketvoice's mark at the foot of a card. */
+    fun drawMark(canvas: Canvas) {
         val brand = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = ink; alpha = 200; textSize = 32f; letterSpacing = .32f; typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            color = 0xFFFFFFFF.toInt(); alpha = 200; textSize = 32f; letterSpacing = .32f; typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
             textAlign = Paint.Align.CENTER
         }
-        canvas.drawText("KETVOICE", w / 2f, h - 150f, brand)
-        return bitmap
+        canvas.drawText("KETVOICE", WIDTH / 2f, HEIGHT - 150f, brand)
     }
 
     /** Keeps [card] as the only share card in the cache's exports. */
