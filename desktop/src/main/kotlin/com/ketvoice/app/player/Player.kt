@@ -137,9 +137,10 @@ object Player {
             index = if (tracks.isEmpty()) -1 else index.coerceIn(0, tracks.lastIndex),
             positionMs = 0L,
             durationMs = tracks.getOrNull(index.coerceAtLeast(0))?.durationMs ?: 0L,
+            isPlaying = false,
+            playWhenReady = false,
         )
-        if (tracks.isEmpty()) stopEngine()
-        planPreload()
+        stopEngine()
     }
 
     @Synchronized fun toggle() { if (_state.value.isPlaying) pause() else play() }
