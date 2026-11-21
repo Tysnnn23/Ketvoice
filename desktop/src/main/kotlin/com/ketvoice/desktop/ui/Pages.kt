@@ -356,12 +356,16 @@ fun SettingsPage() {
         }
         item { SectionHeader("Ketmix") }
         item { KetmixSettings() }
+        item { SectionHeader("Séparation des voix") }
+        item { StemSettings() }
         item { SectionHeader("Lecteur") }
         item {
             SettingsCard {
                 ToggleRow("Activer les Canvas vidéo", AppSettings.animatedArtwork.value, "canvas-player") { AppSettings.animatedArtwork.value = it }
                 Hairline()
                 ToggleRow("Canvas sur les pages d'album", AppSettings.albumHeroCanvas.value, "canvas-album") { AppSettings.albumHeroCanvas.value = it }
+                Hairline()
+                EqualizerRow()
             }
         }
         item { SectionHeader("Windows") }
@@ -452,6 +456,70 @@ private fun LanguageRow() {
     ChoiceRow("Langue", selected, options, "language", translate = false) { i ->
         if (i == 0) { AppSettings.languageChosen.value = false; AppSettings.language.value = com.ketvoice.app.data.AppLocales.systemLanguage().label }
         else { AppSettings.language.value = com.ketvoice.app.data.AppLanguage.all[i - 1].label; AppSettings.languageChosen.value = true }
+    }
+}
+
+/** Lecteur › Égaliseur: what it plays now, and its page. */
+@Composable
+private fun EqualizerRow() {
+    val ket = LocalKet.current
+    val nav = LocalNavigator.current
+    Row(Modifier.fillMaxWidth().height(44.dp).clickable { nav.push(Route.Equalizer) }.padding(horizontal = 16.dp).testTag("open-equalizer"),
+        verticalAlignment = Alignment.CenterVertically) {
+        KText("Égaliseur", Ket27Desk.Type.subheadline, Modifier.weight(1f))
+        KText(if (!AppSettings.equalizerEnabled.value) "Désactivé" else EqLogic.preset(AppSettings.equalizerGains.value) ?: "Personnalisé",
+            Ket27Desk.Type.subheadline, color = ket.secondary, weight = FontWeight.Normal)
+        com.ketvoice.app.ui.common.Icon(com.ketvoice.app.ui.common.KetIcons.ChevronRight, null, Modifier.padding(start = 6.dp).size(12.dp), tint = ket.tertiary)
+    }
+}
+
+/**
+ * « Séparation des voix » (the phone's rows): the voices in Ketmix's transitions, the two models (downloaded once,
+ * checked against their pinned SHA-256) and which one separates. The voice level beside the lyrics uses them too.
+ */
+@Composable
+private fun StemSettings() {
+    val fast by com.ketvoice.app.stems.StemModel.fast.state.collectAsState()
+    val hq by com.ketvoice.app.stems.StemModel.hq.state.collectAsState()
+    var confirm by remember { mutableStateOf<com.ketvoice.app.stems.ModelPack?>(null) }
+    SettingsCard {
+        ToggleRow("Séparer les voix", AppSettings.ketmixStems.value, "ketmix-stems") { AppSettings.ketmixStems.value = it }
+        Hairline()
+        ModelRow("Modèle de séparation", com.ketvoice.app.stems.StemModel.fast, fast, "stems-fast") { confirm = it }
+        Hairline()
+        ModelRow("Modèle haute qualité", com.ketvoice.app.stems.StemModel.hq, hq, "stems-hq") { confirm = it }
+        Hairline()
+        ChoiceRow("Qualité de séparation", AppSettings.ketmixStemsQuality.value, listOf("Automatique", "Toujours la meilleure", "Toujours rapide"),
+            "stems-quality") { AppSettings.ketmixStemsQuality.value = it }
+    }
+    confirm?.let { pack ->
+        ConfirmDialog(com.ketvoice.app.data.AppText.t("Supprimer le modèle de séparation ?"),
+            com.ketvoice.app.data.AppText.t("Les mix atténueront la voix au lieu de la retirer. Les titres déjà séparés restent."),
+            "Supprimer", { pack.delete() }, { confirm = null })
+    }
+}
+
+/** A model: « Télécharger · n Mo », the progress (a click cancels), « Prêt » (a click offers to delete it), or the failure. */
+@Composable
+private fun ModelRow(label: String, pack: com.ketvoice.app.stems.ModelPack, state: com.ketvoice.app.stems.ModelPack.State, tag: String,
+                     onDelete: (com.ketvoice.app.stems.ModelPack) -> Unit) {
+    val ket = LocalKet.current
+    Row(Modifier.fillMaxWidth().height(44.dp).clickable {
+        when (state) {
+            com.ketvoice.app.stems.ModelPack.State.Ready -> onDelete(pack)
+            is com.ketvoice.app.stems.ModelPack.State.Downloading -> pack.cancel()
+            else -> pack.download()
+        }
+    }.padding(horizontal = 16.dp).testTag("model:$tag"), verticalAlignment = Alignment.CenterVertically) {
+        KText(label, Ket27Desk.Type.subheadline, Modifier.weight(1f))
+        val t = com.ketvoice.app.data.AppText
+        val (text, accent) = when (state) {
+            com.ketvoice.app.stems.ModelPack.State.Missing -> t.t("Télécharger") + " · ${pack.totalBytes / 1_000_000L} Mo" to true
+            is com.ketvoice.app.stems.ModelPack.State.Downloading -> "${(state.fraction * 100).toInt()} %" to false
+            com.ketvoice.app.stems.ModelPack.State.Ready -> t.t("Prêt") to false
+            is com.ketvoice.app.stems.ModelPack.State.Failed -> t.t("Échec · réessayer") to true
+        }
+        KText(text, Ket27Desk.Type.subheadline, color = if (accent) ket.accent else ket.secondary, weight = FontWeight.Normal, translate = false)
     }
 }
 

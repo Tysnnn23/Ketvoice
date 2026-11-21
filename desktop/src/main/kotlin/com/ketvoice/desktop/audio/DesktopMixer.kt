@@ -98,7 +98,10 @@ class DesktopMixer(val sampleRate: Int = FfmpegDecoder.OUT_RATE) {
     fun render(out: FloatArray, frames: Int, block: Block, wait: (Deck, Int) -> Boolean) {
         block.reset()
         val m = mix
+        val before = current
+        val beforeAt = before?.lane?.titleFrame ?: 0L
         if (m == null) mixDecks(out, 0, frames, block, wait) else mixTwo(m, out, frames, block, wait)
+        voice(out, frames, block, m ?: mix, before, beforeAt)
         glide(frames, block)
         equalizer.process(out, frames)
         gain.process(out, frames)
@@ -177,6 +180,46 @@ class DesktopMixer(val sampleRate: Int = FfmpegDecoder.OUT_RATE) {
         }
     }
 
+    /**
+     * The voice level (« Niveau de la voix », Phase 3): the shared `VoiceStage` on what the current deck plays,
+     * with its title's whole separation from [voiceMask]. It runs from the first block a separation model is
+     * installed (or a separation is found) and then stays, so the slider or a separation arriving never makes the
+     * sound jump; it delays the sound by [voiceDelayFrames], which the engine takes off what it reports as heard.
+     * During a Ketmix transition and while a deck glides back to its own speed it lets the sound through.
+     */
+    @Volatile internal var voiceMask: (Deck) -> com.ketvoice.app.stems.StemMask? = { null }
+    private var stage: com.ketvoice.app.stems.VoiceStage? = null
+    private var stageBytes = java.nio.ByteBuffer.allocate(0)
+    /** Frames the voice stage holds back (0 while it is off). */
+    @Volatile var voiceDelayFrames = 0; private set
+
+    /** A cut (seek, new title): what the voice stage still holds of the sound before it is dropped. */
+    fun resetVoice() { stage?.reset() }
+
+    private fun voice(out: FloatArray, frames: Int, block: Block, m: Mix?, before: Deck?, beforeAt: Long) {
+        val d = current
+        val mask = if (d != null && m == null && d.lane.speed == 1f && before?.lane?.speed ?: 1f == 1f) voiceMask(d) else null
+        if (stage == null) {
+            if (!com.ketvoice.app.stems.VoiceLevel.stageWanted(mask != null)) return
+            stage = com.ketvoice.app.stems.VoiceStage(sampleRate, 2)
+            voiceDelayFrames = com.ketvoice.app.stems.StemDsp.N_FFT
+        }
+        val s = stage!!
+        if (stageBytes.capacity() < frames * 4) stageBytes = java.nio.ByteBuffer.allocate(frames * 4).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+        val b = stageBytes
+        for (k in 0 until frames * 2) b.putShort(k * 2, (out[k] * 32767f).toInt().coerceIn(-32768, 32767).toShort())
+        val level = com.ketvoice.app.stems.VoiceLevel.level
+        // A gapless switch inside the block: the frames before it belong to the title that ended.
+        val split = if (block.switchedAt in 1 until frames && m == null) block.switchedAt else 0
+        if (split > 0) {
+            val old = if (before != null && before !== d) voiceMask(before) else null
+            s.process(b, 0, split, beforeAt * 1_000_000L / sampleRate, old, level)
+        }
+        val at = if (split == 0 && d === before) beforeAt else (d?.lane?.titleFrame ?: 0L) - (frames - split - block.starved)
+        s.process(b, split * 4, frames - split, at.coerceAtLeast(0L) * 1_000_000L / sampleRate, mask, level)
+        for (k in 0 until frames * 2) out[k] = b.getShort(k * 2) / 32768f
+    }
+
     /** The glide back to the title's own speed after a mix in time, in `TempoReturn`'s steps. */
     private fun glide(frames: Int, block: Block) {
         settling?.let { if (it !== current || mix != null) settling = null else if (it.lane.titleFrame >= settleFrame) { it.lane.automation = null; settling = null } }
@@ -197,6 +240,8 @@ class DesktopMixer(val sampleRate: Int = FfmpegDecoder.OUT_RATE) {
 class Lane internal constructor(private val deck: Deck) {
     /** The transition's levels and filters for this deck, keyed on its title position; null = untouched. */
     internal var automation: com.ketvoice.app.automix.DeckAutomation? = null
+    /** The separated part of this deck's title a transition plays its voice moves with (null: the band cut). */
+    @Volatile internal var stem: com.ketvoice.app.stems.StemAudio? = null
     private var dsp: com.ketvoice.app.automix.DeckDsp? = null
     private var stretch: TimeStretch? = null
     private var inBytes = java.nio.ByteBuffer.allocate(0)
@@ -235,7 +280,7 @@ class Lane internal constructor(private val deck: Deck) {
     }
 
     /** A seek or a new start: whatever a transition left on this deck is gone. */
-    fun reset() { automation = null; dsp = null; stretch = null; silentFrames = 0 }
+    fun reset() { automation = null; stem = null; dsp = null; stretch = null; silentFrames = 0 }
 
     private fun effects(buf: FloatArray, offset: Int, frames: Int, titleFrame: Long) {
         val a = automation
@@ -250,7 +295,7 @@ class Lane internal constructor(private val deck: Deck) {
         input.clear(); output.clear()
         for (k in 0 until frames * 2) input.putShort((buf[offset * 2 + k] * 32767f).toInt().coerceIn(-32768, 32767).toShort())
         input.flip()
-        proc.process(input, output, titleFrame * 1_000_000L / FfmpegDecoder.OUT_RATE, a)
+        proc.process(input, output, titleFrame * 1_000_000L / FfmpegDecoder.OUT_RATE, a, stem)
         output.flip()
         for (k in 0 until frames * 2) buf[offset * 2 + k] = output.short / 32768f
         // Without an automation the processor has reset itself and let the sound through: it is dropped.

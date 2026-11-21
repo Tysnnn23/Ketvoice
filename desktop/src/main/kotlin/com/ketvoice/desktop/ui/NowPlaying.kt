@@ -334,7 +334,10 @@ fun FullPlayer(onClose: () -> Unit) {
                 PlayerControlsBlock(track, compact = lyrics)
                 if (lyrics) {
                     Spacer(Modifier.height(10.dp))
-                    CascadeLyrics(track, LyricsLook.Full, Modifier.fillMaxWidth().weight(1f))
+                    Row(Modifier.fillMaxWidth().weight(1f)) {
+                        CascadeLyrics(track, LyricsLook.Full, Modifier.weight(1f).fillMaxHeight())
+                        Box(Modifier.fillMaxHeight().padding(start = 12.dp), contentAlignment = Alignment.Center) { DeskVoiceSlider(track, onDark = true) }
+                    }
                 }
             }
         }

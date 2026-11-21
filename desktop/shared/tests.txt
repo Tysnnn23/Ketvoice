@@ -44,3 +44,8 @@ data/SearchGroupsTest.kt
 smartlib/AppleMusicImportTest.kt
 smartlib/TidalImportTest.kt
 smartlib/SoundCloudImportTest.kt
+# Phase 3 (winstems): the shared separation tests, on the desktop StemEngine/StemModel (ONNX). StemModelPinTest
+# pins the LiteRT files and is excluded in build.gradle.kts; desktop StemsOnnxTest pins the ONNX ones.
+stems/StemsTest.kt
+stems/UvrTest.kt
+automix/MixKeysTest.kt

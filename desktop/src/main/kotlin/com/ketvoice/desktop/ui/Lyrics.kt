@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -175,7 +176,11 @@ fun LyricsPanel() {
             Icon(KetIcons.Lyrics, null, Modifier.size(34.dp), tint = ket.tertiary)
             Spacer(Modifier.height(14.dp))
             KText("Paroles", Ket27Desk.Type.headline)
-        } else CascadeLyrics(track, LyricsLook.Panel, Modifier.fillMaxSize())
+        } else androidx.compose.foundation.layout.Row(Modifier.fillMaxSize()) {
+            CascadeLyrics(track, LyricsLook.Panel, Modifier.weight(1f).fillMaxHeight())
+            // The voice level at the right of the lyrics, as on the phone.
+            Box(Modifier.fillMaxHeight().padding(end = 12.dp), contentAlignment = Alignment.Center) { DeskVoiceSlider(track, onDark = ket.dark) }
+        }
     }
 }
 
