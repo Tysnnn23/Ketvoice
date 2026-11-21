@@ -75,6 +75,8 @@ fun main(args: Array<String>) {
     com.ketvoice.app.data.SettingsStore.watch(scope)
     com.ketvoice.desktop.library.LocalFolders.init(context, scope)
     com.ketvoice.desktop.library.DesktopAccount.start(context)
+    // Phone control: this PC joins the account's private room while signed in.
+    com.ketvoice.desktop.remote.DesktopRemote.start(context, scope)
     // Ketmix: the shared planning played by the engine's two decks (off until the listener switches it on).
     com.ketvoice.desktop.ketmix.DesktopAutomix.attach(engine, scope)
     // Tray, media keys and the Windows media controls drive the player.
@@ -113,6 +115,7 @@ fun main(args: Array<String>) {
         fun quit() {
             WindowStore.save(lastSaved[0])
             runCatching { Player.pause() }
+            runCatching { com.ketvoice.app.remote.RemoteControl.stop() }
             runCatching { com.ketvoice.app.data.SettingsStore.save() }
             runCatching { com.ketvoice.desktop.library.DesktopAccount.quit() }
             runCatching { android.content.FileSharedPreferences.flush() }

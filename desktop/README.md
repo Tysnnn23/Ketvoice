@@ -276,6 +276,26 @@ into the next, and « Suivant » blends. `BeatModelOnnxTest` checks the pinned d
   and `file:` addresses played as `AudioSource.LocalFile`; they show in Titres, Albums and Artistes.
 - **Playlists** can be deleted from their page, after a confirmation.
 
+## Phone control (Phase 3, winremote)
+
+Both ways, like Spotify Connect, with no new SQL:
+- **Secret**: `remote/RemoteKeyStore` keeps 32 random bytes per account (own preferences file, tied to the user id,
+  wiped at sign-out). It travels to the account's other devices as the `remoteControlKey` item of the existing
+  owner-only `settings` library document (`SettingsKind`); a new `SyncKinds` kind would have needed SQL, because
+  `ketvoice_library.kind` has a check constraint. Two devices that each made one converge on the merged copy.
+- **Room**: Ketogether's `RealtimeTransport` on `realtime:ketremote:<hex of HMAC(secret, "room")>` (public broadcast
+  + presence, no table). Presence key = `DeviceIdentity.id`.
+- **Messages** (`remote/RemoteWire`, `RemoteSession`): `{v, b, s}`, `s` = HMAC-SHA256 of the body with a key drawn
+  from the secret; the body has sender, optional recipient, time and a 12-byte nonce. Dropped when the HMAC is
+  wrong, more than 60 s off the server-corrected clock, the nonce was seen, it is this device's own or for another.
+  Types: `hi`, `st` (title, play state, position, volume, the next 25 titles), `cmd` (toggle, next, previous,
+  seek, volume, jump, remove), `take`/`give` (the queue around the current title, never local files). Nothing else.
+- **Windows**: `desktop/remote/DesktopRemote` (in the room while signed in), the bar's devices button and popover
+  (`ui/Devices.kt`), `Player.resumeFrom`/`jumpTo`. **Android**: `remote/PhoneRemote` (in the room while signed in
+  and the app is in front or plays), « Vos appareils » in « Sortie audio » (`ui/player/RemoteDevices.kt`).
+- Tests: `RemoteControlTest` (shared), `DesktopRemoteTest` (key store, the PC's player, popover renders),
+  `RemoteDevicesHostTest` (Android render).
+
 ## Plan
 
 **Phase 2 — Ketmix and the rest of the app.** Ketmix on the desktop mixer (done, see above); synced lyrics in

@@ -68,6 +68,20 @@ object DeskGlyphs {
         curveTo(9f, 12.8f, 10.3f, 11.5f, 12f, 11.5f); curveTo(13.7f, 11.5f, 15f, 12.8f, 15f, 14.5f); close()
         moveTo(12f, 7f); lineTo(12f, 7.2f)
     } }
+    /** Phone control: a screen and a phone side by side. */
+    val Devices: ImageVector by lazy { glyph("Devices") {
+        moveTo(3f, 5f); lineTo(15f, 5f); lineTo(15f, 14f); lineTo(3f, 14f); close()
+        moveTo(9f, 14f); lineTo(9f, 17.5f); moveTo(6f, 18f); lineTo(12f, 18f)
+        moveTo(17.5f, 9f); lineTo(21f, 9f); lineTo(21f, 19f); lineTo(17.5f, 19f); close()
+    } }
+    val Phone: ImageVector by lazy { glyph("Phone") {
+        moveTo(8f, 3f); lineTo(16f, 3f); lineTo(16f, 21f); lineTo(8f, 21f); close()
+        moveTo(11f, 18f); lineTo(13f, 18f)
+    } }
+    val Computer: ImageVector by lazy { glyph("Computer") {
+        moveTo(3f, 4.5f); lineTo(21f, 4.5f); lineTo(21f, 15.5f); lineTo(3f, 15.5f); close()
+        moveTo(12f, 15.5f); lineTo(12f, 19f); moveTo(8.5f, 19.5f); lineTo(15.5f, 19.5f)
+    } }
     /** Ketmix: two decks crossing. */
     val Ketmix: ImageVector by lazy { glyph("Ketmix") {
         moveTo(3.5f, 8f); curveTo(9f, 8f, 11f, 16f, 20.5f, 16f)

@@ -96,6 +96,7 @@ fun NowPlayingBar(panel: Panel, onPanel: (Panel) -> Unit, onOpenPlayer: () -> Un
                 active = panel == Panel.LYRICS, glyph = 17.dp, modifier = Modifier.testTag("toggle-lyrics"))
             KetIconButton(DeskGlyphs.Queue, "À suivre", { onPanel(if (panel == Panel.QUEUE) Panel.NONE else Panel.QUEUE) },
                 active = panel == Panel.QUEUE, glyph = 17.dp, modifier = Modifier.testTag("toggle-queue"))
+            DevicesButton()
             OutputButton()
         }
     }

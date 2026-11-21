@@ -146,6 +146,19 @@ object Player {
         stopEngine()
     }
 
+    /** Phone control: the queue another device played, from where it stood there. */
+    @Synchronized
+    fun resumeFrom(tracks: List<Track>, index: Int, positionMs: Long, play: Boolean) {
+        if (tracks.isEmpty()) return
+        setQueue(tracks, index)
+        _state.value = _state.value.copy(positionMs = positionMs.coerceAtLeast(0L))
+        if (play) play()
+    }
+
+    /** Plays the queue's title at [index]; the queue stays as it is. */
+    @Synchronized
+    fun jumpTo(index: Int) { if (index in _state.value.queue.indices) startAt(index) }
+
     @Synchronized fun toggle() { if (_state.value.isPlaying) pause() else play() }
 
     @Synchronized
