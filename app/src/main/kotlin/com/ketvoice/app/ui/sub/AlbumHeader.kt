@@ -219,18 +219,15 @@ internal fun MotionHeaderArtwork(path: String, height: Dp, playing: Boolean, scr
             }
             // 7.6: the owner's framing fills the header as before; otherwise the whole Canvas, under the status bar and
             // above the words (CanvasFit), on the page colour until its still is there.
-            if (frame != null) MotionArtwork(path, playing, moving, frame, cover)
-            else com.ketvoice.app.ui.player.FittedCanvas(path, playing, theme.background, moving,
-                safe = androidx.compose.foundation.layout.PaddingValues(top = status + AlbumHeader.BUTTONS_DP.dp, bottom = AlbumHeader.FOOT_DP.dp))
+            // 8.1 (owner: « je ne veux plus que les Canvas s'affichent en carré, remets le mode d'avant »): the Canvas
+            // fills the header edge to edge again, as before 7.6; the owner's framing still places it.
+            MotionArtwork(path, playing, moving, frame, cover)
             // The floating buttons stay readable over a bright Canvas.
             Box(Modifier.fillMaxWidth().height(110.dp).background(Brush.verticalGradient(
                 listOf(Color.Black.copy(alpha = .26f), Color.Transparent))))
         }
-        // A smooth dissolve into the page colour: the title, artist and details sit on it (7.6: only the foot, under
-        // a whole Canvas; with the owner's framing, the long 7.5 fade).
-        if (frame == null) Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height((AlbumHeader.FOOT_DP + 28f).dp)
-            .background(Brush.verticalGradient(0f to Color.Transparent, .45f to theme.background.copy(alpha = .7f), 1f to theme.background)))
-        else Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(height * .46f).background(Brush.verticalGradient(
+        // A smooth dissolve into the page colour: the title, artist and details sit on it (the long 7.5 fade, back in 8.1).
+        Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(height * .46f).background(Brush.verticalGradient(
             0f to Color.Transparent,
             .30f to theme.background.copy(alpha = .20f),
             .58f to theme.background.copy(alpha = .62f),

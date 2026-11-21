@@ -498,9 +498,8 @@ fun FullPlayerScreen(
                                 state.isPlaying && !canvasFocus && !(AppSettings.highPerformanceMode.value && leaving),
                                 Modifier.fillMaxSize().trackSwipeContent(trackSwipe), depth = true,
                                 onCanvasFailure = { failedCanvas = true }, frame = artworkFrame,
-                                // 7.6: whole, below « Lecture depuis » and the buttons, above the title.
-                                fit = PaddingValues(start = 12.dp, end = 12.dp, top = topInset + 52.dp,
-                                    bottom = (artworkHeight - titleTop + 8.dp).coerceAtLeast(8.dp)), ambient = ambience.color)
+                                // 8.1: edge to edge again, as before 7.6 (the owner no longer wants the whole, squared Canvas).
+                                fit = null, ambient = ambience.color)
                             // Under « Lecture depuis », far from the controls: only when the Canvas is late (6.2.3).
                             com.ketvoice.app.ui.common.CanvasLoadingPill(track,
                                 wanted = AppSettings.animatedArtwork.value && track.id !in canvasExcluded &&

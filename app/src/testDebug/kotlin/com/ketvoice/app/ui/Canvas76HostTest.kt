@@ -110,7 +110,9 @@ class Canvas76HostTest {
         show(dark) { com.ketvoice.app.ui.sub.AlbumPage(request, page, tracks, false, {}) }
         compose.mainClock.advanceTimeBy(1_500)
         compose.onNodeWithTag("canvas-poster", useUnmergedTree = true).assertExists()
-        compose.onNodeWithTag(if (upright) "canvas-whole" else "canvas-fill", useUnmergedTree = true).assertExists()
+        // 8.1: the header Canvas fills edge to edge again (never shown whole in a smaller box).
+        compose.onNodeWithTag("motion-artwork", useUnmergedTree = true).assertExists()
+        compose.onAllNodesWithTag("canvas-whole", useUnmergedTree = true).assertCountEquals(0)
         image(name)
     }
 
@@ -121,7 +123,9 @@ class Canvas76HostTest {
         compose.mainClock.autoAdvance = false
         compose.setContent { KetvoiceTheme(useDark = true) { com.ketvoice.app.ui.player.FullPlayerScreen(onDismiss = {}) } }
         repeat(6) { compose.mainClock.advanceTimeBy(400) }
-        compose.onNodeWithTag("canvas-whole", useUnmergedTree = true).assertExists()
+        // 8.1: the player's Canvas is edge to edge again, as before 7.6.
+        compose.onAllNodesWithTag("canvas-whole", useUnmergedTree = true).assertCountEquals(0)
+        compose.onAllNodesWithTag("fitted-canvas", useUnmergedTree = true).assertCountEquals(0)
         image(name)
     }
 
