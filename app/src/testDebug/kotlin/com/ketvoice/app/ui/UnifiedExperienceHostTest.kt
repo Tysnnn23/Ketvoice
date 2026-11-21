@@ -115,6 +115,9 @@ class UnifiedExperienceHostTest {
             compose.setContent { KetvoiceTheme(useDark = true) {
                 Box(Modifier.fillMaxSize().background(Color.Black).padding(24.dp)) { KaraokeLine(line, Modifier.fillMaxWidth()) }
             } }
+            // 8.2: the sung word grows a little and settles back over LyricsWords.SETTLE_MS after its end; once
+            // settled, the line must be exactly what it is a second later (no copy of the word left behind).
+            compose.runOnIdle { position.value = 3000L + com.ketvoice.app.ui.player.LyricsWords.SETTLE_MS + 10L }
             val atEnd = image("lyrics-clean-at-end")
             compose.runOnIdle { position.value = 4000L }
             val after = image("lyrics-clean-after-hold")
