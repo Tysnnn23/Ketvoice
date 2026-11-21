@@ -81,8 +81,17 @@ kotlin {
 }
 
 // The app's assets the shared code opens through Context.assets.
+// Platform files: the licences « À propos » shows, the tray icon, and ketvoice_smtc.dll (built
+// from native/smtc by Windows CI before the tests and packageMsi; -PrequireSmtc=true fails without it).
+val smtcDll = file(providers.gradleProperty("smtcDll").orNull ?: "../native/smtc/build/Release/ketvoice_smtc.dll")
+val requireSmtc = providers.gradleProperty("requireSmtc").orNull == "true"
 tasks.processResources {
     from("../app/src/main/assets") { include("provider_registry.json", "translations.json"); into("assets") }
+    from("../docs/licenses") { include("FFmpeg-*.txt", "ONNXRuntime-*.txt", "JNA-*.txt", "ICU4J-*.txt"); into("licenses") }
+    from("icons") { include("ketvoice.png"); into("icons") }
+    from(smtcDll) { into("native") }
+    inputs.property("requireSmtc", requireSmtc)
+    doFirst { if (requireSmtc && !smtcDll.isFile) throw GradleException("ketvoice_smtc.dll missing: $smtcDll (build native/smtc first)") }
 }
 
 tasks.test {

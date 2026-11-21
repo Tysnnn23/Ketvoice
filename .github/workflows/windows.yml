@@ -6,6 +6,8 @@ on:
   push:
     paths:
       - "desktop/**"
+      - "native/**"
+      - "docs/licenses/**"
       - ".github/workflows/windows.yml"
   workflow_dispatch:
 
@@ -43,8 +45,19 @@ jobs:
             if ($wix) { "$($wix.FullName)\bin" | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8 }
           }
 
+      # System Media Transport Controls: a small C++/WinRT DLL packaged into the app's resources.
+      - name: SMTC DLL (native/smtc, MSVC + C++/WinRT)
+        run: |
+          cmake -S native/smtc -B native/smtc/build -A x64
+          if ($LASTEXITCODE -ne 0) { throw "cmake configure failed" }
+          cmake --build native/smtc/build --config Release
+          if ($LASTEXITCODE -ne 0) { throw "cmake build failed" }
+          $dll = "native/smtc/build/Release/ketvoice_smtc.dll"
+          if (-not (Test-Path $dll)) { throw "ketvoice_smtc.dll was not built" }
+          "ketvoice_smtc.dll: $((Get-Item $dll).Length) bytes" | Tee-Object -FilePath $env:GITHUB_STEP_SUMMARY -Append
+
       - name: Desktop tests
-        run: ./gradlew -p desktop --no-daemon test
+        run: ./gradlew -p desktop --no-daemon test -PrequireSmtc=true
 
       - name: Test report
         if: always()
@@ -55,7 +68,7 @@ jobs:
           "Desktop tests: $t run, $f failed" | Tee-Object -FilePath $env:GITHUB_STEP_SUMMARY -Append
 
       - name: Package MSI
-        run: ./gradlew -p desktop --no-daemon packageMsi
+        run: ./gradlew -p desktop --no-daemon packageMsi -PrequireSmtc=true
 
       - name: Install, smoke, uninstall
         run: |
@@ -77,6 +90,7 @@ jobs:
           $log = "$env:LOCALAPPDATA\Ketvoice\Data\smoke.log"
           if (Test-Path $log) { Get-Content $log | Tee-Object -FilePath $env:GITHUB_STEP_SUMMARY -Append }
           if ($run.ExitCode -ne 0) { throw "Ketvoice.exe --smoke exit $($run.ExitCode)" }
+          if (-not (Select-String -Path $log -Pattern "^smtc (ok|skipped)" -Quiet)) { throw "--smoke printed no SMTC line" }
 
           $u = Start-Process msiexec.exe -ArgumentList "/x `"$($msi.FullName)`" /qn /norestart" -Wait -PassThru
           if ($u.ExitCode -ne 0) { throw "msiexec uninstall exit $($u.ExitCode)" }
