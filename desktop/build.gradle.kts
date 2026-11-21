@@ -187,25 +187,11 @@ tasks.withType<org.jetbrains.compose.desktop.application.tasks.AbstractJLinkTask
     if (strip != null) { strip.set(false); freeArgs.add("--generate-cds-archive") }
     else logger.warn("createRuntimeImage: no base class-data archive (Compose's jlink options changed)")
 }
-// jpackage's own --java-options (freeArgs) never reached the launcher's Ketvoice.cfg (Windows CI, 1.1 work), so the
-// options are written into the app image's cfg once it exists, after the last java-options line Compose wrote.
+// The launcher reads these from Ketvoice.cfg, so they go in with jvmArgs (packageMsi writes its own cfg from
+// them; jpackage --java-options in freeArgs and an edited app image never reached it, Windows CI 1.1 work).
+// `run` has no $APPDIR, so it gets them without these three.
 val cdsOptions = listOf("-XX:+AutoCreateSharedArchive", "-XX:SharedArchiveFile=$cdsArchive", "-Dketvoice.cdsArchive=$cdsArchive")
-tasks.withType<org.jetbrains.compose.desktop.application.tasks.AbstractJPackageTask>()
-    .matching { it.name.startsWith("createDistributable") || it.name.startsWith("createReleaseDistributable") }
-    .configureEach {
-        val image = destinationDir
-        doLast {
-            val cfgs = image.get().asFile.walkTopDown().filter { it.isFile && it.extension == "cfg" && it.parentFile.name == "app" }.toList()
-            if (cfgs.isEmpty()) throw GradleException("$name: no launcher cfg in ${image.get().asFile}")
-            for (cfg in cfgs) cfg.writeText(withCdsOptions(cfg.readText()))
-        }
-    }
-fun withCdsOptions(text: String): String {
-    val lines = text.lines().filterNot { line -> cdsOptions.any { line.trim() == "java-options=$it" } }.toMutableList()
-    val at = lines.indexOfLast { it.startsWith("java-options=") }.takeIf { it >= 0 } ?: throw GradleException("launcher cfg has no java-options")
-    lines.addAll(at + 1, cdsOptions.map { "java-options=$it" })
-    return lines.joinToString("\n")
-}
+tasks.withType<JavaExec>().configureEach { doFirst { jvmArgs = jvmArgs.orEmpty().filterNot { "\$APPDIR" in it } } }
 
 compose.desktop {
     application {
@@ -214,7 +200,7 @@ compose.desktop {
         // tight free ratios). Covers are bounded by bytes (Covers.BUDGET_BYTES); separation and Ketmix analysis
         // work in chunks, so 1.5 GB is head room, not a target.
         jvmArgs += listOf("-XX:+UseG1GC", "-Xms64m", "-Xmx1536m", "-XX:MinHeapFreeRatio=10", "-XX:MaxHeapFreeRatio=30",
-            "-XX:G1PeriodicGCInterval=120000", "-XX:+ExplicitGCInvokesConcurrent", "-XX:+UseStringDeduplication")
+            "-XX:G1PeriodicGCInterval=120000", "-XX:+ExplicitGCInvokesConcurrent", "-XX:+UseStringDeduplication") + cdsOptions
         nativeDistributions {
             targetFormats(TargetFormat.Msi, TargetFormat.Exe)
             packageName = "Ketvoice"
