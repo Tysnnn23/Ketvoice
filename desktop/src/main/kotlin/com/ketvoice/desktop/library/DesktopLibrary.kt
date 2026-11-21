@@ -67,7 +67,9 @@ object DesktopLibrary {
 
     /** The account sync set [ids]: new ones (known through the shared title lookup) come first, removed ones go. */
     @Synchronized
-    internal fun adoptIds(ids: Set<String>) {
+    internal fun adoptIds(@Suppress("UNUSED_PARAMETER") seen: Set<String>) {
+        // The flow can hand over a value older than one written since: always adopt what is there now.
+        val ids = AppSettings.favoriteIds.value
         val now = _favorites.value
         if (now.mapTo(LinkedHashSet()) { it.id } + hidden == ids) return
         val byId = now.associateBy { it.id }
