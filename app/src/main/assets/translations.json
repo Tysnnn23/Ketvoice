@@ -25318,5 +25318,101 @@
   "Les artistes de vos titres apparaissent ici.": "내 노래의 아티스트가 여기에 표시됩니다.",
   "Ketvoice pour Windows": "Windows용 Ketvoice",
   "Ketvoice utilise ces logiciels libres. Leurs licences suivent.": "Ketvoice는 다음 오픈 소스 소프트웨어를 사용합니다. 각 라이선스는 아래와 같습니다."
+ },
+ "Requis": {
+  "en": "Required",
+  "hi": "आवश्यक",
+  "ja": "必須",
+  "zh": "必填",
+  "ru": "Обязательно",
+  "it": "Obbligatorio",
+  "es": "Obligatorio",
+  "de": "Erforderlich",
+  "pt": "Obrigatório",
+  "ko": "필수"
+ },
+ "Analyse des fichiers…": {
+  "en": "Scanning files…",
+  "hi": "फ़ाइलें स्कैन हो रही हैं…",
+  "ja": "ファイルをスキャン中…",
+  "zh": "正在扫描文件…",
+  "ru": "Сканирование файлов…",
+  "it": "Analisi dei file…",
+  "es": "Analizando archivos…",
+  "de": "Dateien werden durchsucht…",
+  "pt": "Analisando arquivos…",
+  "ko": "파일 검색 중…"
+ },
+ "{0} titres sur cet ordinateur": {
+  "en": "{0} songs on this computer",
+  "hi": "इस कंप्यूटर पर {0} गाने",
+  "ja": "このコンピュータに{0}曲",
+  "zh": "此电脑上有 {0} 首歌曲",
+  "ru": "Треков на этом компьютере: {0}",
+  "it": "{0} brani su questo computer",
+  "es": "{0} canciones en este ordenador",
+  "de": "{0} Titel auf diesem Computer",
+  "pt": "{0} músicas neste computador",
+  "ko": "이 컴퓨터의 노래 {0}곡"
+ },
+ "Terminez la connexion dans votre navigateur.": {
+  "en": "Finish signing in in your browser.",
+  "hi": "अपने ब्राउज़र में साइन इन पूरा करें।",
+  "ja": "ブラウザでサインインを完了してください。",
+  "zh": "请在浏览器中完成登录。",
+  "ru": "Завершите вход в браузере.",
+  "it": "Completa l'accesso nel browser.",
+  "es": "Termina de iniciar sesión en tu navegador.",
+  "de": "Schließe die Anmeldung in deinem Browser ab.",
+  "pt": "Conclua o login no seu navegador.",
+  "ko": "브라우저에서 로그인을 완료하세요."
+ },
+ "Connexion réussie. Vous pouvez fermer cet onglet et revenir à Ketvoice.": {
+  "en": "Signed in. You can close this tab and go back to Ketvoice.",
+  "hi": "साइन इन हो गया। आप यह टैब बंद करके Ketvoice पर लौट सकते हैं।",
+  "ja": "サインインしました。このタブを閉じて Ketvoice に戻れます。",
+  "zh": "登录成功。你可以关闭此标签页并返回 Ketvoice。",
+  "ru": "Вход выполнен. Можно закрыть эту вкладку и вернуться в Ketvoice.",
+  "it": "Accesso effettuato. Puoi chiudere questa scheda e tornare a Ketvoice.",
+  "es": "Sesión iniciada. Puedes cerrar esta pestaña y volver a Ketvoice.",
+  "de": "Angemeldet. Du kannst diesen Tab schließen und zu Ketvoice zurückkehren.",
+  "pt": "Login concluído. Você pode fechar esta aba e voltar ao Ketvoice.",
+  "ko": "로그인되었습니다. 이 탭을 닫고 Ketvoice로 돌아가세요."
+ },
+ "Page introuvable.": {
+  "en": "Page not found.",
+  "hi": "पेज नहीं मिला।",
+  "ja": "ページが見つかりません。",
+  "zh": "找不到页面。",
+  "ru": "Страница не найдена.",
+  "it": "Pagina non trovata.",
+  "es": "Página no encontrada.",
+  "de": "Seite nicht gefunden.",
+  "pt": "Página não encontrada.",
+  "ko": "페이지를 찾을 수 없습니다."
+ },
+ "« {0} » sera supprimée de votre bibliothèque.": {
+  "en": "“{0}” will be deleted from your library.",
+  "hi": "“{0}” आपकी लाइब्रेरी से हटा दी जाएगी।",
+  "ja": "「{0}」はライブラリから削除されます。",
+  "zh": "“{0}”将从你的资料库中删除。",
+  "ru": "«{0}» будет удален из медиатеки.",
+  "it": "“{0}” verrà eliminata dalla tua libreria.",
+  "es": "“{0}” se eliminará de tu biblioteca.",
+  "de": "„{0}“ wird aus deiner Mediathek gelöscht.",
+  "pt": "“{0}” será excluída da sua biblioteca.",
+  "ko": "‘{0}’이(가) 보관함에서 삭제됩니다."
+ },
+ "Les titres de ces dossiers apparaissent dans Titres, Albums et Artistes. Ils restent sur cet ordinateur.": {
+  "en": "Songs in these folders appear in Songs, Albums and Artists. They stay on this computer.",
+  "hi": "इन फ़ोल्डरों के गाने गाने, एल्बम और कलाकार में दिखते हैं। वे इसी कंप्यूटर पर रहते हैं।",
+  "ja": "これらのフォルダの曲は「曲」「アルバム」「アーティスト」に表示されます。曲はこのコンピュータに残ります。",
+  "zh": "这些文件夹中的歌曲会显示在“歌曲”、“专辑”和“艺人”中，并只保留在此电脑上。",
+  "ru": "Треки из этих папок появляются в разделах «Треки», «Альбомы» и «Артисты». Они остаются на этом компьютере.",
+  "it": "I brani di queste cartelle compaiono in Brani, Album e Artisti. Restano su questo computer.",
+  "es": "Las canciones de estas carpetas aparecen en Canciones, Álbumes y Artistas. Se quedan en este ordenador.",
+  "de": "Titel aus diesen Ordnern erscheinen unter Titel, Alben und Künstler. Sie bleiben auf diesem Computer.",
+  "pt": "As músicas destas pastas aparecem em Músicas, Álbuns e Artistas. Elas ficam neste computador.",
+  "ko": "이 폴더의 노래는 노래, 앨범, 아티스트에 표시됩니다. 노래는 이 컴퓨터에만 남습니다."
  }
 }
