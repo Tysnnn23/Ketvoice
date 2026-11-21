@@ -156,6 +156,10 @@ fun HomeScreen() {
             }
             // What another of the listener's devices plays, to resume here (signed in only).
             item(key = "resume-elsewhere") { ResumeElsewhereBanner() }
+            // 8.2 « À la une »: large cards; only the one in the middle plays its Canvas (see HomeFeaturedRow).
+            if (featured.isNotEmpty()) item(key = "featured") {
+                StaggeredReveal(order = 0) { HomeFeaturedRow(featured, onScreen = { homeItemMostlyShown(state, "featured") }) }
+            }
             // 7.0 « Pour toi »: what was playing and the mix of the day, as two large calm cards.
             item(key = "for-you") {
                 StaggeredReveal(order = 0) {
