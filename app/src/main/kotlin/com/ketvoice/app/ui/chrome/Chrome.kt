@@ -65,6 +65,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.text.font.FontWeight
@@ -340,6 +341,11 @@ private data class TabSpec(val icon: ImageVector, val label: String, val index: 
 /**
  * Chrome flottant complet : mini-lecteur + navigation + recherche.
  * `collapsed` (scroll vers le bas) condense tout en une seule rangée.
+ *
+ * 8.0 « Barre d'onglets qui se transforme »: the fold is a spring that starts with the page's own scroll speed
+ * ([ChromeCollapse.flingVelocity]) and can be caught and reversed half-way; the tabs melt into one capsule
+ * ([GlassTabCapsule]), the mini-player leaves the bar and joins the folded row through the liquid bridge of the
+ * fused glass. Under reduced motion the two layouts crossfade instead.
  */
 @Composable
 fun FloatingChrome(collapsed: Boolean, onOpenPlayer: () -> Unit, searching: Boolean = false, typing: Boolean = false) {
@@ -347,58 +353,79 @@ fun FloatingChrome(collapsed: Boolean, onOpenPlayer: () -> Unit, searching: Bool
         // Le repli Accueil + mini + Recherche tient dès 320 dp (52+8+176+8+52+24).
         // L'ancien seuil de 380 dp empêchait l'animation sur les téléphones 360 dp.
         val compact = collapsed && !searching && maxWidth >= 320.dp
-        // Base compactness on the actual pane, not the device's full window width.
-        val fraction by animateFloatAsState(if (compact) 1f else 0f,
-            if (Motion.reduced) androidx.compose.animation.core.snap() else spring(
-                dampingRatio = DesignTokens.Motion.CHROME_DAMPING,
-                stiffness = DesignTokens.Motion.CHROME_STIFFNESS), label = "chrome-morph")
-        // Phones (6.0.0): the search bubble stretches into the field, a little past it and back, like a drop.
-        val stretch by animateFloatAsState(if (searching) 1f else 0f,
-            if (Motion.reduced) androidx.compose.animation.core.snap() else spring(dampingRatio = .78f, stiffness = 360f),
-            label = "search-stretch")
         val width = maxWidth
-        val f = fraction
         val hasTrack = Player.state.collectAsState().value.current != null
         // While the keyboard is up only the field stays, just above it.
         val miniShown = hasTrack && !typing
-        // The tab bar is 62 dp high, as on iOS 27.
-        val fullHeight = (if (miniShown) 126.dp else 64.dp) + 2.dp
-        val height = fullHeight + (58.dp - fullHeight) * f
-        // Replié : Accueil (52 dp) + 8 dp + mini-lecteur + 8 dp + Recherche (52 dp).
-        val miniWidth = maxWidth - 144.dp * f
-        val miniX = 72.dp * f
-        val miniHeight = 54.dp - 6.dp * f
-        val coverSize = 44.dp - 12.dp * f
-        // The labels fade out while the pill moves, and the title comes back once it has docked (iOS 26).
-        val labelAlpha = if (f < .5f) (1f - f * 2f) else ((f - .5f) * 2f).coerceIn(0f, 1f)
-        val navigationY = if (miniShown) 66.dp * (1f - f) else 0.dp
-        // Liquid 27: Home, the mini-player and Search are one glass body. At rest they
-        // are separate; while the chrome morphs they pull liquid bridges and merge like
-        // droplets, then split again. Other styles and fallbacks keep three panels.
-        val fusion = com.ketvoice.app.glass.rememberGlassFusion()
-        val fuseReach = with(androidx.compose.ui.platform.LocalDensity.current) { 26.dp.toPx() }
-        val morph = maxOf(f, kotlin.math.sin(Math.PI * stretch.coerceIn(0f, 1f)).toFloat() * .8f)
-        fusion.strengthPx = if (Motion.reduced) 0f else com.ketvoice.app.glass.fusionStrength(morph, fuseReach)
-        Box(Modifier.fillMaxWidth().height(height)) {
-            com.ketvoice.app.glass.GlassFusionLayer(fusion, LocalTheme.current.isDark, Modifier.matchParentSize())
-            androidx.compose.runtime.CompositionLocalProvider(com.ketvoice.app.glass.LocalGlassFusion provides fusion) {
-            GlassTabCapsule(compact, Modifier.offset(x = 12.dp, y = navigationY),
-                availableWidth = width, homeOnly = compact || searching,
-                onPill = if (searching) ({ AppUi.closeOverlay(); Unit }) else ({ ChromeCollapse.restoreAll() }),
-                pillLabel = if (searching) "Fermer la recherche" else "Afficher les onglets")
-            if (miniShown) MiniPlayerPill(
-                Modifier.offset(x = miniX).width(miniWidth),
-                compact = f > .65f,
-                height = miniHeight,
-                coverSize = coverSize,
-                labelAlpha = labelAlpha,
-                onOpen = onOpenPlayer)
-            val restSide = 60f - 8f * f.coerceIn(0f, 1f)
-            val bubble = FloatingSearch.bubble(stretch, width.value, restSide, width.value - 76f + 12f * f, pillEnd = 72f, margin = 16f)
-            SearchBubble(stretch, searching,
-                Modifier.offset(x = bubble.x.dp, y = navigationY + ((restSide - bubble.height) / 2f).coerceAtLeast(0f).dp)
-                    .size(bubble.width.dp, bubble.height.dp))
+        if (Motion.reduced) {
+            androidx.compose.animation.Crossfade(compact to searching, animationSpec = tween(REDUCED_CROSSFADE_MS),
+                label = "chrome-crossfade") { (folded, search) ->
+                ChromeBody(width, if (folded) 1f else 0f, if (search) 1f else 0f, folded, search, miniShown, onOpenPlayer)
             }
+            return@BoxWithConstraints
+        }
+        val target = if (compact) 1f else 0f
+        val morph = remember { androidx.compose.animation.core.Animatable(target) }
+        val travelPx = with(androidx.compose.ui.platform.LocalDensity.current) { MINI_TRAVEL.toPx() }
+        LaunchedEffect(target) {
+            // Interruptible: a new target takes over from the current position and speed.
+            morph.animateTo(target, spring(dampingRatio = DesignTokens.Motion.CHROME_DAMPING,
+                stiffness = DesignTokens.Motion.CHROME_STIFFNESS),
+                initialVelocity = morph.velocity + ChromeCollapse.flingVelocity(target, ChromeCollapse.scrollVelocity, travelPx))
+        }
+        // Phones (6.0.0): the search bubble stretches into the field, a little past it and back, like a drop.
+        val stretch by animateFloatAsState(if (searching) 1f else 0f,
+            spring(dampingRatio = .78f, stiffness = 360f), label = "search-stretch")
+        ChromeBody(width, morph.value, stretch, compact, searching, miniShown, onOpenPlayer)
+    }
+}
+
+/** The mini-player's way down from above the bar into the folded row. */
+private val MINI_TRAVEL = 66.dp
+private const val REDUCED_CROSSFADE_MS = 180
+
+@Composable
+private fun ChromeBody(width: Dp, fraction: Float, stretch: Float, compact: Boolean, searching: Boolean,
+                       miniShown: Boolean, onOpenPlayer: () -> Unit) {
+    // The spring may pass its end a little; the layout stays within the fold.
+    val f = fraction.coerceIn(0f, 1f)
+    // The tab bar is 62 dp high, as on iOS 27.
+    val fullHeight = (if (miniShown) 126.dp else 64.dp) + 2.dp
+    val height = fullHeight + (58.dp - fullHeight) * f
+    // Replié : Accueil (52 dp) + 8 dp + mini-lecteur + 8 dp + Recherche (52 dp).
+    val miniWidth = width - 144.dp * f
+    val miniX = 72.dp * f
+    val miniHeight = 54.dp - 6.dp * f
+    val coverSize = 44.dp - 12.dp * f
+    // The labels fade out while the pill moves, and the title comes back once it has docked (iOS 26).
+    val labelAlpha = if (f < .5f) (1f - f * 2f) else ((f - .5f) * 2f).coerceIn(0f, 1f)
+    val navigationY = if (miniShown) MINI_TRAVEL * (1f - f) else 0.dp
+    // Liquid 27: Home, the mini-player and Search are one glass body. At rest they
+    // are separate; while the chrome morphs they pull liquid bridges and merge like
+    // droplets (the mini-player's neck as it leaves the bar), then split again.
+    val fusion = com.ketvoice.app.glass.rememberGlassFusion()
+    val fuseReach = with(androidx.compose.ui.platform.LocalDensity.current) { 26.dp.toPx() }
+    val morph = maxOf(f, kotlin.math.sin(Math.PI * stretch.coerceIn(0f, 1f)).toFloat() * .8f)
+    fusion.strengthPx = if (Motion.reduced) 0f else com.ketvoice.app.glass.fusionStrength(morph, fuseReach)
+    Box(Modifier.fillMaxWidth().height(height)) {
+        com.ketvoice.app.glass.GlassFusionLayer(fusion, LocalTheme.current.isDark, Modifier.matchParentSize())
+        androidx.compose.runtime.CompositionLocalProvider(com.ketvoice.app.glass.LocalGlassFusion provides fusion) {
+        GlassTabCapsule(compact, Modifier.offset(x = 12.dp, y = navigationY),
+            availableWidth = width, homeOnly = compact || searching,
+            onPill = if (searching) ({ AppUi.closeOverlay(); Unit }) else ({ ChromeCollapse.restoreAll() }),
+            pillLabel = if (searching) "Fermer la recherche" else "Afficher les onglets")
+        if (miniShown) MiniPlayerPill(
+            Modifier.offset(x = miniX).width(miniWidth),
+            compact = f > .65f,
+            height = miniHeight,
+            coverSize = coverSize,
+            labelAlpha = labelAlpha,
+            onOpen = onOpenPlayer)
+        val restSide = 60f - 8f * f
+        val bubble = FloatingSearch.bubble(stretch, width.value, restSide, width.value - 76f + 12f * f, pillEnd = 72f, margin = 16f)
+        SearchBubble(stretch, searching,
+            Modifier.offset(x = bubble.x.dp, y = navigationY + ((restSide - bubble.height) / 2f).coerceAtLeast(0f).dp)
+                .size(bubble.width.dp, bubble.height.dp))
         }
     }
 }
@@ -508,16 +535,22 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier,
         TabSpec(com.ketvoice.app.ui.common.Ket27Glyphs.Library, "Bibliothèque", AppUi.LIBRARY)
     )
 
-    val widthAnim by animateDpAsState(
+    val fullWidth = (availableWidth - 92.dp).coerceIn(144.dp, 310.dp)
+    // Read in the layout and draw phases only: the folding bar is not composed again at every frame.
+    val widthState = animateDpAsState(
         targetValue = when {
-            homeOnly -> 52.dp
+            homeOnly -> FOLDED_SIDE
             collapsed -> 144.dp
-            else -> (availableWidth - 92.dp).coerceIn(144.dp, 310.dp)
+            else -> fullWidth
         },
         animationSpec = if (Motion.reduced) androidx.compose.animation.core.snap() else spring(
             dampingRatio = DesignTokens.Motion.CHROME_DAMPING, stiffness = DesignTokens.Motion.CHROME_STIFFNESS),
         label = "tabWidth"
     )
+    // 8.0: 0 the full bar .. 1 folded into one capsule, from its width; the tabs melt along it.
+    val melt = { TabMelt.fold(widthState.value.value, fullWidth.value, FOLDED_SIDE.value) }
+    // While the capsule is still wider than its folded size the tabs stay, melting; then the pill takes over.
+    val melting by remember(fullWidth) { androidx.compose.runtime.derivedStateOf { melt() < TabMelt.PILL_FROM } }
     val heightAnim by animateDpAsState(
         targetValue = if (homeOnly || collapsed) 52.dp else Ket27.Metrics.tabBar,
         animationSpec = if (Motion.reduced) androidx.compose.animation.core.snap() else spring(
@@ -527,7 +560,11 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier,
 
     GlassPanel(
         modifier = modifier
-            .width(widthAnim)
+            .layout { measurable, constraints ->
+                val w = widthState.value.roundToPx().coerceIn(constraints.minWidth, constraints.maxWidth)
+                val placeable = measurable.measure(constraints.copy(minWidth = w, maxWidth = w))
+                layout(placeable.width, placeable.height) { placeable.place(0, 0) }
+            }
             .height(heightAnim)
             .pointerInput(collapsed, homeOnly) {
                 if (homeOnly || collapsed) return@pointerInput
@@ -569,7 +606,7 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier,
         params = GlassParams.navigation(dark = th.isDark),
         enabled = AppSettings.liquidGlass.value
     ) {
-        if (homeOnly) {
+        if (homeOnly && !melting) {
             // Folded (Settings → "Barre d'onglets réductible", iOS 26): the bar is a pill showing the tab
             // you are on; a touch unfolds it again where the page is.
             val current = tabs.firstOrNull { it.index == AppUi.tab.value } ?: tabs.first()
@@ -593,14 +630,15 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier,
                     },
                 contentAlignment = Alignment.Center
             ) {
+                // The selected tab's tint, as in the bar it melted from.
                 Icon(
                     current.icon,
                     contentDescription = current.label,
-                    tint = th.onBackground,
+                    tint = th.accent,
                     modifier = Modifier.size(24.dp)
                 )
             }
-        } else if (!collapsed) {
+        } else if (!collapsed || homeOnly) {
             // Sélection glissante : la pilule se déplace d'onglet en onglet.
             val selected = if (held) kotlin.math.round(hover).toInt() else tabs.indexOfFirst { it.index == AppUi.tab.value }.coerceAtLeast(0)
             // Droplet lens: the edge facing the destination leaves first on a stiff spring,
@@ -636,7 +674,12 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier,
                             .offset { androidx.compose.ui.unit.IntOffset((slot * lens.start + 5.dp - grow.width / 2).roundToPx(), 0) }
                             .size(width = slot * lens.span - 10.dp + grow.width, height = heightAnim - 10.dp + grow.height)
                             .align(Alignment.CenterStart)
-                            .graphicsLayer { scaleX = bulge; scaleY = bulge * lens.squash }
+                            .graphicsLayer {
+                                scaleX = bulge; scaleY = bulge * lens.squash
+                                val m = melt()
+                                translationX = TabMelt.towardsMiddle(lensLead, slot.toPx(), m)
+                                alpha = TabMelt.lensAlpha(m)
+                            }
                             // A seasonal theme (6.2): the selection wears a thin edge of its colours.
                             .then(th.season?.let { look -> with(look) { Modifier.seasonEdge(pillShape, true) } } ?: Modifier),
                         shape = pillShape,
@@ -697,7 +740,13 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier,
                             modifier = Modifier
                                 .weight(1f)
                                 .fillMaxHeight()
-                                .graphicsLayer { scaleX = press; scaleY = press }
+                                .graphicsLayer {
+                                    scaleX = press; scaleY = press
+                                    // Melting: every tab flows to the middle, the others fade, the current one stays.
+                                    val m = melt()
+                                    translationX = TabMelt.towardsMiddle(tab.index.toFloat(), size.width, m)
+                                    alpha = if (isSel) 1f else TabMelt.otherAlpha(m)
+                                }
                                 .selectable(isSel, tabSource, null, role = Role.Tab) {
                                     focus.clearFocus()
                                     if (!isSel) haptic(Haptics.Kind.Tick)
@@ -713,12 +762,14 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier,
                                     .graphicsLayer {
                                         scaleX = iconScale
                                         scaleY = iconScale
-                                        translationY = -lift * density
+                                        // The icon settles to the middle of the capsule as its label leaves.
+                                        translationY = (-lift + TabMelt.ICON_DROP_DP * melt()) * density
                                     }
                             )
                             Spacer(Modifier.height(3.dp))
                             Text(
                                 tab.label,
+                                modifier = Modifier.graphicsLayer { alpha = TabMelt.labelAlpha(melt()) },
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = contentColor.copy(alpha = iconAlpha),
@@ -805,6 +856,29 @@ fun GlassBottomBar(
         Spacer(Modifier.width(10.dp))
         SearchCircleButton(size = if (collapsed) 52.dp else 60.dp)
     }
+}
+
+private val FOLDED_SIDE = 52.dp
+
+/**
+ * 8.0: the tabs melting into one capsule as the bar folds. [fold] 0 is the full bar, 1 the folded capsule; every
+ * tab flows towards the middle slot, the labels leave first, the other tabs fade, and once the capsule is nearly
+ * folded ([PILL_FROM]) the single pill of the current tab takes over.
+ */
+internal object TabMelt {
+    const val PILL_FROM = .92f
+    /** Half the label and its gap: the icon's way down to the capsule's middle. */
+    const val ICON_DROP_DP = 8f
+
+    fun fold(width: Float, full: Float, folded: Float): Float =
+        if (full <= folded || !width.isFinite()) 0f else ((full - width) / (full - folded)).coerceIn(0f, 1f)
+
+    /** Offset of the item in slot [index] (0..2) towards the middle slot, [slotPx] wide. */
+    fun towardsMiddle(index: Float, slotPx: Float, fold: Float): Float = (1f - index) * slotPx * fold
+
+    fun labelAlpha(fold: Float): Float = (1f - fold * 2.5f).coerceIn(0f, 1f)
+    fun otherAlpha(fold: Float): Float = (1f - fold * 1.7f).coerceIn(0f, 1f)
+    fun lensAlpha(fold: Float): Float = (1f - fold * 1.4f).coerceIn(0f, 1f)
 }
 
 internal fun lensPosition(x: Float, width: Float): Float = (x * 3f / width.coerceAtLeast(1f) - .5f).coerceIn(0f, 2f)

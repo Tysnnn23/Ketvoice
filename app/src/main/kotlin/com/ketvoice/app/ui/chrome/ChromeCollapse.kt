@@ -11,6 +11,7 @@ internal class ChromeCollapse(private val foldAfterPx: Int = 36, private val unf
     private var lastIndex = -1
     private var lastOffset = 0
     private var travel = 0
+    private var lastNanos = 0L
     var collapsed = false
         private set
     private var seenRestore = restoreCount
@@ -29,12 +30,17 @@ internal class ChromeCollapse(private val foldAfterPx: Int = 36, private val unf
                 index > lastIndex -> (index - lastIndex) * rowPx
                 else -> -(lastIndex - index) * rowPx
             }
+            // 8.0: how fast the page moves (px/s, smoothed), so the bar folds with the scroll's momentum.
+            val now = System.nanoTime()
+            val dt = (now - lastNanos) / 1e9f
+            scrollVelocity = if (step != 0 && dt in .001f..MAX_FRAME_GAP_S) scrollVelocity * .5f + step / dt * .5f
+                else if (dt > MAX_FRAME_GAP_S) 0f else scrollVelocity
             // A change of direction starts the count again.
             travel = if (step == 0) travel else if ((step > 0) == (travel > 0) || travel == 0) travel + step else step
             if (!collapsed && travel >= foldAfterPx) { collapsed = true; travel = 0 }
             else if (collapsed && -travel >= unfoldAfterPx) { collapsed = false; travel = 0 }
         }
-        lastIndex = index; lastOffset = offset
+        lastIndex = index; lastOffset = offset; lastNanos = System.nanoTime()
         return collapsed
     }
 
@@ -43,8 +49,27 @@ internal class ChromeCollapse(private val foldAfterPx: Int = 36, private val unf
         @Volatile var restoreCount = 0
             private set
 
+        /** The page's latest scroll speed in px/s, positive downwards (read once when the bar starts to move). */
+        @Volatile var scrollVelocity = 0f
+            private set
+
+        private const val MAX_FRAME_GAP_S = .25f
+        /** The most the scroll may push the fold, in fractions of the whole fold per second. */
+        const val MAX_FLING = 6f
+
+        /**
+         * The speed the fold starts with (fractions per second) when it heads to [target] (1 folded, 0 open): the
+         * page's own speed over the bar's travel, only when it goes the same way (down folds, up unfolds), so a
+         * quick flick folds the bar quickly and a slow scroll gently. A touch on the bar adds nothing.
+         */
+        fun flingVelocity(target: Float, scrollPxPerSecond: Float, travelPx: Float): Float {
+            if (!scrollPxPerSecond.isFinite() || travelPx <= 0f) return 0f
+            val v = (scrollPxPerSecond / travelPx).coerceIn(-MAX_FLING, MAX_FLING)
+            return if (target >= .5f && v > 0f || target < .5f && v < 0f) v else 0f
+        }
+
         /** The bar unfolds now (a touch on it), whatever the page's scroll. */
-        fun restoreAll() { restoreCount++; com.ketvoice.app.ui.AppUi.bottomCollapsed.value = false }
+        fun restoreAll() { restoreCount++; scrollVelocity = 0f; com.ketvoice.app.ui.AppUi.bottomCollapsed.value = false }
 
         /**
          * Whether the floating bar shows folded: only when the listener turned it on (Settings → Appearance,
