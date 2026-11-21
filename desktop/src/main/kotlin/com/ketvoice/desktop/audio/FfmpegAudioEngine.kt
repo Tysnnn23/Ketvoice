@@ -33,7 +33,8 @@ class FfmpegAudioEngine(
     @Volatile private var heard: Deck? = null
 
     private enum class Kind { Jump, Run, Frozen, Advanced, Ended }
-    private class Segment(val start: Long, val deck: Deck?, val frame: Long, val kind: Kind) { var announced = false }
+    /** From written frame [start], [deck] is heard from title frame [frame], [rate] title frames per frame. */
+    private class Segment(val start: Long, val deck: Deck?, val frame: Long, val kind: Kind, val rate: Double = 1.0) { var announced = false }
     private val timeline = ArrayDeque<Segment>()
 
     // Writer thread only.
@@ -57,6 +58,7 @@ class FfmpegAudioEngine(
         pendingMs = start; playing = play
         post {
             declickOut()
+            mixer.cancelMix()
             mixer.current?.close(); mixer.next?.close(); mixer.next = null
             val d = Deck(source, start, open)
             mixer.current = d; heard = d; frozen = false
@@ -70,6 +72,7 @@ class FfmpegAudioEngine(
     }
 
     override fun preloadNext(source: AudioSource?) = post {
+        if (mixer.mix?.let { !it.started && it.incoming === mixer.next } == true) mixer.cancelMix()
         mixer.next?.close()
         mixer.next = source?.let { Deck(it, 0, open) }
     }
@@ -96,6 +99,10 @@ class FfmpegAudioEngine(
         pendingMs = to
         post {
             declickOut()
+            mixer.cancelMix()
+            // A pending transition seeked the next deck to its entry: back to its start for the gapless end.
+            mixer.next?.let { if (it.positionFrames != 0L) it.seek(0) }
+            mixer.current?.lane?.reset()
             var d = mixer.current
             if (d == null) {
                 // Played to the end: the same source again, from there.
@@ -120,7 +127,7 @@ class FfmpegAudioEngine(
                 val seg = timeline.lastOrNull { it.start <= played } ?: timeline.first()
                 when (seg.kind) {
                     Kind.Frozen, Kind.Ended -> seg.frame
-                    else -> seg.frame + (played - seg.start).coerceAtLeast(0)
+                    else -> seg.frame + ((played - seg.start).coerceAtLeast(0) * seg.rate).toLong()
                 }
             }
         }
@@ -185,18 +192,21 @@ class FfmpegAudioEngine(
     private fun render(frames: Int) {
         val before = mixer.current
         if (frozen && before != null && (before.availableFrames > 0 || before.ended)) {
-            mark(written, before, before.positionFrames, Kind.Run); frozen = false
+            mark(written, before, before.lane.titleFrame, Kind.Run, before.lane.speed.toDouble()); frozen = false
         }
+        val mixBefore = mixer.mix
         mixer.render(buf, frames, block, ::waitFor)
-        if (block.switchedAt >= 0) mark(written + block.switchedAt, block.switchedTo, 0, Kind.Advanced)
+        if (block.switchedAt >= 0) mark(written + block.switchedAt, block.switchedTo, block.switchedFrame, Kind.Advanced, block.switchedRate)
+        if (block.retimed) mixer.current?.let { mark(written + frames, it, it.lane.titleFrame, Kind.Run, it.lane.speed.toDouble()) }
+        if (mixBefore != null || mixer.mix != null) publishMix()
         if (block.endedAt >= 0) {
             val last = block.switchedTo ?: before
-            mark(written + block.endedAt, last, last?.positionFrames ?: 0, Kind.Ended)
+            mark(written + block.endedAt, last, last?.lane?.titleFrame ?: 0, Kind.Ended)
             wantPlay = false; frozen = false
             if (block.failed) playing = false
         } else if (block.starved > 0) {
             val d = mixer.current
-            if (!frozen && d != null) { mark(written + frames - block.starved, d, d.positionFrames, Kind.Frozen); frozen = true }
+            if (!frozen && d != null) { mark(written + frames - block.starved, d, d.lane.titleFrame, Kind.Frozen); frozen = true }
             if (!buffering) { buffering = true; emit(AudioEvent.Buffering(true)) }
         } else if (buffering) { buffering = false; emit(AudioEvent.Buffering(false)) }
         if (block.endedAt == 0 && block.switchedAt < 0) { announce(); return } // nothing left to hear in this block
@@ -227,8 +237,68 @@ class FfmpegAudioEngine(
         return true
     }
 
-    private fun mark(start: Long, deck: Deck?, frame: Long, kind: Kind) = synchronized(timeline) {
-        timeline.addLast(Segment(start, deck, frame, kind))
+    private fun mark(start: Long, deck: Deck?, frame: Long, kind: Kind, rate: Double = 1.0) = synchronized(timeline) {
+        timeline.addLast(Segment(start, deck, frame, kind, rate))
+    }
+
+    // ------------------------------------------------------------ Ketmix
+
+    /** Where a Ketmix transition stands, for the controller and the badge. */
+    internal data class MixStatus(val phase: MixPhase = MixPhase.Idle, val plan: com.ketvoice.app.automix.MixPlan? = null, val promoted: Boolean = false)
+    enum class MixPhase { Idle, Scheduled, Mixing }
+
+    private val _mixStatus: kotlinx.coroutines.flow.MutableStateFlow<MixStatus> = kotlinx.coroutines.flow.MutableStateFlow(MixStatus())
+    internal val mixStatus: kotlinx.coroutines.flow.StateFlow<MixStatus> = _mixStatus
+    @Volatile private var mixPlan: com.ketvoice.app.automix.MixPlan? = null
+
+    /** Position the writer has reached in the current title (ahead of what is heard by the device's buffer). */
+    fun renderedMs(): Long = mixer.current?.lane?.titleFrame?.let { it * 1000 / RATE } ?: positionMs()
+
+    /** Speed the current title plays at (off 1 after a mix in time, until its glide back ends). */
+    fun speed(): Float = mixer.current?.lane?.speed ?: 1f
+
+    /**
+     * Plays [plan] from the current title into the preloaded one (the Player's next title): the incoming
+     * deck starts [preRollMs] before [MixPlan.outMs], silent until its automation lets it in, sample-locked
+     * to the outgoing one and at the plan's speed. [onResult] says (on the writer thread) whether it is set.
+     */
+    internal fun mixIntoNext(plan: com.ketvoice.app.automix.MixPlan, preRollMs: Long, onResult: (Boolean) -> Unit = {}) = post {
+        val cur = mixer.current
+        val incoming = mixer.next
+        if (cur == null || incoming == null || incoming.error != null) { onResult(false); return@post }
+        val speed = com.ketvoice.app.automix.DeckSync.speedOf(plan, cur.lane.speed)
+        val startMs = plan.outMs - preRollMs
+        incoming.lane.reset()
+        incoming.seek((plan.inMs - preRollMs * plan.rate.toDouble()).toLong().coerceAtLeast(0L))
+        val outAutomation = com.ketvoice.app.automix.DeckAutomation.outgoing(plan)
+        val inAutomation = com.ketvoice.app.automix.DeckAutomation.incoming(plan)
+        val promoteMs = when {
+            plan.kind == com.ketvoice.app.automix.MixKind.Beatmatch && plan.swapMs >= 0 -> plan.swapMs + (plan.beatMs / 2f).toLong()
+            plan.kind == com.ketvoice.app.automix.MixKind.Trim || plan.kind == com.ketvoice.app.automix.MixKind.Echo ||
+                plan.kind == com.ketvoice.app.automix.MixKind.Rise -> plan.outMs
+            else -> plan.outMs + plan.overlapMs * 55 / 100
+        }
+        val endMs = maxOf(outAutomation.endUs / 1000L, plan.outMs + plan.overlapMs) + 300L
+        val m = DesktopMixer.Mix(incoming, startMs * RATE / 1000, speed, outAutomation, inAutomation, promoteMs * RATE / 1000, endMs * RATE / 1000)
+        val ok = mixer.startMix(m)
+        if (!ok) incoming.seek(0)
+        mixPlan = if (ok) plan else null
+        publishMix()
+        onResult(ok)
+    }
+
+    /** Drops a transition that is set or playing (the title heard plays on alone). */
+    fun cancelMix() = post { mixer.cancelMix(); publishMix() }
+
+    private fun publishMix() {
+        val m = mixer.mix
+        val status = when {
+            m == null || m.finished -> MixStatus()
+            !m.started -> MixStatus(MixPhase.Scheduled, mixPlan)
+            else -> MixStatus(MixPhase.Mixing, mixPlan, m.promoted)
+        }
+        if (status.phase == MixPhase.Idle) mixPlan = null
+        if (_mixStatus.value != status) _mixStatus.value = status
     }
 
     /** Events for what has just become audible; the format and errors of the heard deck. */

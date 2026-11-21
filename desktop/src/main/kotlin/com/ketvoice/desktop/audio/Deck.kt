@@ -37,6 +37,9 @@ class Deck(
     /** Frames (48 kHz) from the track's start of the next frame [read] returns. */
     @Volatile var positionFrames: Long = startMs.coerceAtLeast(0) * FfmpegDecoder.OUT_RATE / 1000; private set
 
+    /** How the mixer reads this deck (Ketmix levels, filters and tempo); writer thread only. */
+    val lane = Lane(this)
+
     private val thread = Thread(::decodeLoop, "ketvoice-deck").apply { isDaemon = true; priority = Thread.NORM_PRIORITY + 2; start() }
     private var byteSource: ByteSource? = null
 
