@@ -112,6 +112,8 @@ class Player80HostTest {
     @Test fun headerCoverLeavesTheQueue() = headerCoverReturns(PlayerPage.QUEUE)
 
     private fun headerCoverReturns(page: PlayerPage) {
+        // The Quest's landscape player has no header cover: lyrics and queue sit beside the artwork.
+        org.junit.Assume.assumeFalse(com.ketvoice.app.BuildConfig.IS_QUEST)
         AppUi.showLyrics.value = page == PlayerPage.LYRICS
         PlayerMorph.pinned.value = null
         compose.mainClock.autoAdvance = true

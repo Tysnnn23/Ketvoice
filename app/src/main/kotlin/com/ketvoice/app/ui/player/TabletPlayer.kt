@@ -209,9 +209,9 @@ private fun TabletArtwork(track: Track, canvas: String?, playing: Boolean, side:
         .then(dismissDrag)
         .then(if (onCanvas != null) Modifier.clickable(onClick = onCanvas).semantics { contentDescription = canvasLabel } else Modifier)
         .testTag("tablet-player-artwork")) {
-        // 7.6: the whole Canvas in the square tile, its colours extended at the sides (CanvasFit).
+        // 8.1: the Canvas fills the tile edge to edge again (no whole Canvas with stretched sides).
         ArtworkCanvas(track, if (panoramicCanvasActive(canvas)) null else canvas, playing, Modifier.fillMaxSize(), depth = true,
-            frame = com.ketvoice.app.data.MediaOverrides.playerFrame(track), fit = PaddingValues(0.dp))
+            frame = com.ketvoice.app.data.MediaOverrides.playerFrame(track), fit = null)
     }
 }
 
