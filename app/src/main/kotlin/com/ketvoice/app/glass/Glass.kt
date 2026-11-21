@@ -344,7 +344,7 @@ private fun GlassPanelBody(
     val lowMemory = remember(context) { isLowRamDevice(context) }
     val mode = glassRenderMode(GlassCompat.api, backdrop != null, enabled && AppSettings.liquidGlass.value,
         captured, style == 2, AppSettings.reduceDynamicBlur.value, AppSettings.highPerformanceMode.value,
-        lowMemory, Motion.reduced)
+        lowMemory, Motion.reduced, com.ketvoice.app.LiteTuning.lite)
     if (fusion != null) {
         val key = remember { Any() }
         androidx.compose.runtime.DisposableEffect(fusion, key) { onDispose { fusion.forget(key) } }
@@ -368,6 +368,7 @@ private fun GlassPanelBody(
     // (réfraction + dispersion + teinte + liseré). Les pinceaux de surface et le
     // Highlight de la lib ne servent plus que de repli pré-33.
     val agsl = mode == GlassRenderMode.Optical
+    val spec = currentRefractionSpec(mode)
     val renderState = remember { GlassRenderState() }
     // Liquid Glass materializes: on its first frame a panel bends nothing, then the lens forms
     // over half a second (Apple's "smooth" spring: 0.5 s, no bounce). Read in the draw phase only.
@@ -422,13 +423,15 @@ private fun GlassPanelBody(
                     if (blurAmount > 0f) blur(blurAmount)
                     if (agsl) {
                         val bounds = size
-                        val realRadii = glassRoundedShapeRadii(
-                            shape, bounds.width, bounds.height, this, layoutDirection
-                        ) ?: glassCornerRadiiOf(params.cornerRadiusPx)
+                        // The outline is measured again only when the panel's size changes, not at every frame.
+                        val realRadii = renderState.radii(bounds.width, bounds.height, shape) {
+                            glassRoundedShapeRadii(shape, bounds.width, bounds.height, this, layoutDirection)
+                                ?: glassCornerRadiiOf(params.cornerRadiusPx)
+                        }
                         val forming = params.copy(materialize = formed.value)
                         renderState.shaderApplied = if (liquid27) {
                             liquid27Glass(forming, realRadii, tint,
-                                liquid27Light(touch.position.x, touch.position.y, touch.press.value), clarity)
+                                liquid27Light(touch.position.x, touch.position.y, touch.press.value), clarity, spec)
                         } else liquidGlass(forming, realRadii)
                     } else {
                         if (params.saturation != 1f || params.brightness != 1f || params.contrast != 1f) {
@@ -496,7 +499,18 @@ private fun GlassPanelBody(
     }
 }
 
-private class GlassRenderState(var shaderApplied: Boolean = false)
+private class GlassRenderState(var shaderApplied: Boolean = false) {
+    private var width = -1f
+    private var height = -1f
+    private var key: Any? = null
+    private var cached = FloatArray(4)
+
+    /** The corner radii of the panel's outline, measured again only when its size or shape changes. */
+    inline fun radii(w: Float, h: Float, shape: Any, measure: () -> FloatArray): FloatArray {
+        if (w != width || h != height || shape !== key) { cached = measure(); width = w; height = h; key = shape }
+        return cached
+    }
+}
 
 /**
  * Motion of the glass. Reviews of iOS 26 singled out "jelly" controls that wobble: a

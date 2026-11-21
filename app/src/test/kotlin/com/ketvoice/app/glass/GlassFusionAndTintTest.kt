@@ -45,7 +45,7 @@ class GlassFusionAndTintTest {
 
     /** A misspelt uniform makes setFloatUniform throw and silently drops the fused pass. */
     @Test fun everyFusedUniformSetFromKotlinIsDeclared() {
-        fun names(path: String) = Regex("setFloatUniform\\(\"(\\w+)\"")
+        fun names(path: String) = Regex("(?:setFloatUniform|rect)\\(\"(\\w+)\"")
             .findAll(File(path).readText()).map { it.groupValues[1] }.toSet()
         val set = names("src/main/kotlin/com/ketvoice/app/glass/Liquid27Fusion.kt") +
             names("src/main/kotlin/com/ketvoice/app/glass/Liquid27Shader.kt") - setOf("size", "cornerRadii")
