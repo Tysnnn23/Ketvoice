@@ -281,6 +281,14 @@ fun SettingsPage() {
                 SettingRow("Apparence", com.ketvoice.app.data.AppText.t(if (ket.dark) "Sombre (suit Windows)" else "Clair (suit Windows)"))
             }
         }
+        item { SectionHeader("Lecteur") }
+        item {
+            SettingsCard {
+                ToggleRow("Activer les Canvas vidéo", AppSettings.animatedArtwork.value, "canvas-player") { AppSettings.animatedArtwork.value = it }
+                Hairline()
+                ToggleRow("Canvas sur les pages d'album", AppSettings.albumHeroCanvas.value, "canvas-album") { AppSettings.albumHeroCanvas.value = it }
+            }
+        }
         item { SectionHeader("Windows") }
         item {
             SettingsCard {

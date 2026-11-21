@@ -7,21 +7,8 @@ import java.io.File
 
 /*
  * Desktop counterparts of Android-only data objects, reduced to the members the shared sources call.
- * Each says what the desktop has today (see desktop/README.md).
+ * Each says what the desktop has today (see desktop/README.md). Canvas is CanvasRepo.kt (FFmpeg).
  */
-
-/**
- * Canvas videos. The Android CanvasRepo decodes posters with MediaMetadataRetriever and Bitmap and
- * watches ConnectivityManager; the desktop gets Canvas with the FFmpeg engine. Until then no Canvas
- * is stored, so there is none to find, drop or fetch.
- */
-object CanvasRepo {
-    internal const val POSTER_SUFFIX = ".poster.jpg"
-
-    fun albumFile(album: String, artist: String): File? = null
-    fun dropMissing() = Unit
-    suspend fun resolve(track: Track, force: Boolean = false, ahead: Boolean = false): Unit = Unit
-}
 
 /** Music files on this computer. The folder scan (FFmpeg tags) is still to come; none are known yet. */
 object LocalMusic {
