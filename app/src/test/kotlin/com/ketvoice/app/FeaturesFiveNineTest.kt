@@ -43,8 +43,9 @@ class FeaturesFiveNineTest {
     }
 
     @Test fun sungWordsRiseAndOnlyHeldNotesGlow() {
-        assertEquals(0f, LyricsWords.lift(0f), 0f); assertEquals(1f, LyricsWords.lift(1f), 1e-6f)
-        assertTrue(LyricsWords.lift(.5f) > .5f)
+        // 8.3: a word rises over its own time and settles back once sung (it no longer stays risen).
+        assertEquals(0f, LyricsWords.lift(0, 1_000), 0f); assertEquals(1f, LyricsWords.lift(1_000, 1_000), 1e-6f)
+        assertEquals(0f, LyricsWords.lift(1_000 + LyricsWords.FALL_MS, 1_000), 1e-6f)
         assertEquals(0f, LyricsWords.glow(.5f, 300), 0f)
         assertTrue(LyricsWords.glow(.5f, 1_500) > .5f); assertEquals(0f, LyricsWords.glow(1f, 1_500), 0f)
         assertEquals(0f, LyricsWords.breath(Float.NaN), 0f); assertTrue(LyricsWords.breath(1f) <= .015f + 1e-6f)

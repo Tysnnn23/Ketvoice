@@ -30,7 +30,7 @@ internal object PersonalBackup {
     const val MAX_BYTES = 16 * 1024 * 1024
     private val booleans = setOf("reduceAnimations", "reduceDynamicBlur", "liquidGlass", "fullArtwork",
         "classicGradient", "animatedArtwork", "albumHeroCanvas", "downloadsWifiOnly", "panoramicCanvas",
-        "sonicCanvas", "albumColors", "artworkDepth", "livingArtwork", "coverAccent", "volumeLeveling", "coverBackground", "ketmixStems", "ketmixStemsCharging", "ketmixSmartQueue", "ketmixOnSkip", "ketmixLibrary", "autoResume", "lyricVideoSound", "lockscreenLyrics", "standbyMode", "autoOfflineFavorites", "smartOffline", "smartOfflineCharging", "canvasWithMobileData", "canvasPreloadWifi", "artistPhotos", "highRefreshRate",
+        "sonicCanvas", "albumColors", "artworkDepth", "livingArtwork", "coverAccent", "volumeLeveling", "coverBackground", "ketmixStems", "ketmixStemsCharging", "ketmixSmartQueue", "ketmixOnSkip", "ketmixLibrary", "autoResume", "lyricVideoSound", "lockscreenLyrics", "lyricsBlur", "standbyMode", "autoOfflineFavorites", "smartOffline", "smartOfflineCharging", "canvasWithMobileData", "canvasPreloadWifi", "artistPhotos", "highRefreshRate",
         "syncedLyrics", "lyricsRomanization", "skipSilence", "equalizerEnabled", "progressiveQuality",
         "highPerformanceMode", "autoEconomy", "questKeepAwake", "filterNonAudio", "localMusicEnrich", "playNextOnSwipe",
         "noRepeatSuggestions", "stopOnSwipeFromRecents", "hideVolumeBar", "hideStatusBarInPlayer",

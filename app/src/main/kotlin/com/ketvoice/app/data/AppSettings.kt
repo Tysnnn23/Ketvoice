@@ -71,6 +71,8 @@ object AppSettings {
     val autoResume = mutableStateOf(true)
     /** The sung line in a notification of its own, on the lock screen and in the shade (6.1). */
     val lockscreenLyrics = mutableStateOf(true)
+    /** « Flou des paroles » (8.3, owner lifts the 6.1 rule): lines away from the sung one are softly blurred. */
+    val lyricsBlur = mutableStateOf(true)
     /** « Mode veille au chargement » (7.5): an ambient Now Playing while charging in landscape; off by default. */
     val standbyMode = mutableStateOf(false)
     /** Lyrics videos carry the song's sound (5.10.0). */

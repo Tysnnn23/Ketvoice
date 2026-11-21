@@ -2600,7 +2600,9 @@
   "Double-cliquez sous les ondes pour placer un point, faites-le glisser pour le déplacer.": "Double-click under the waves to place a point; drag it to move it.",
   "Transition": "Transition",
   "+ Point": "+ Point",
-  "Ctrl+Z · Ctrl+Y · Espace · Suppr": "Ctrl+Z · Ctrl+Y · Space · Del"
+  "Ctrl+Z · Ctrl+Y · Espace · Suppr": "Ctrl+Z · Ctrl+Y · Space · Del",
+  "Flou des paroles": "Lyrics blur",
+  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "Lines away from the one being sung fade into a soft blur."
  },
  "hi": {
   "Reverb": "रीवर्ब",
@@ -5203,7 +5205,9 @@
   "Double-cliquez sous les ondes pour placer un point, faites-le glisser pour le déplacer.": "पॉइंट लगाने के लिए तरंगों के नीचे डबल-क्लिक करें, उसे खिसकाने के लिए खींचें।",
   "Transition": "ट्रांज़िशन",
   "+ Point": "+ पॉइंट",
-  "Ctrl+Z · Ctrl+Y · Espace · Suppr": "Ctrl+Z · Ctrl+Y · Space · Del"
+  "Ctrl+Z · Ctrl+Y · Espace · Suppr": "Ctrl+Z · Ctrl+Y · Space · Del",
+  "Flou des paroles": "बोलों का धुंधलापन",
+  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "गाई जा रही पंक्ति से दूर की पंक्तियाँ हल्के धुंधलेपन में खो जाती हैं।"
  },
  "ja": {
   "Reverb": "リバーブ",
@@ -7806,7 +7810,9 @@
   "Double-cliquez sous les ondes pour placer un point, faites-le glisser pour le déplacer.": "波形の下をダブルクリックしてポイントを置き、ドラッグして動かします。",
   "Transition": "トランジション",
   "+ Point": "+ ポイント",
-  "Ctrl+Z · Ctrl+Y · Espace · Suppr": "Ctrl+Z · Ctrl+Y · Space · Del"
+  "Ctrl+Z · Ctrl+Y · Espace · Suppr": "Ctrl+Z · Ctrl+Y · Space · Del",
+  "Flou des paroles": "歌詞のぼかし",
+  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "歌っている行から離れた行が、やわらかくぼやけます。"
  },
  "zh": {
   "Reverb": "混响",
@@ -10409,7 +10415,9 @@
   "Double-cliquez sous les ondes pour placer un point, faites-le glisser pour le déplacer.": "在波形下方双击放置一个点，拖动即可移动。",
   "Transition": "过渡",
   "+ Point": "+ 点",
-  "Ctrl+Z · Ctrl+Y · Espace · Suppr": "Ctrl+Z · Ctrl+Y · 空格 · Del"
+  "Ctrl+Z · Ctrl+Y · Espace · Suppr": "Ctrl+Z · Ctrl+Y · 空格 · Del",
+  "Flou des paroles": "歌词模糊",
+  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "远离正在演唱的那一行的歌词会柔和地变模糊。"
  },
  "ru": {
   "Reverb": "Реверберация",
@@ -13012,7 +13020,9 @@
   "Double-cliquez sous les ondes pour placer un point, faites-le glisser pour le déplacer.": "Дважды щёлкните под волнами, чтобы поставить точку, и перетащите её, чтобы сдвинуть.",
   "Transition": "Переход",
   "+ Point": "+ Точка",
-  "Ctrl+Z · Ctrl+Y · Espace · Suppr": "Ctrl+Z · Ctrl+Y · Пробел · Del"
+  "Ctrl+Z · Ctrl+Y · Espace · Suppr": "Ctrl+Z · Ctrl+Y · Пробел · Del",
+  "Flou des paroles": "Размытие текста песни",
+  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "Строки вдали от исполняемой мягко размываются."
  },
  "it": {
   "Reverb": "Riverbero",
@@ -15615,7 +15625,9 @@
   "Double-cliquez sous les ondes pour placer un point, faites-le glisser pour le déplacer.": "Fai doppio clic sotto le onde per aggiungere un punto, trascinalo per spostarlo.",
   "Transition": "Transizione",
   "+ Point": "+ Punto",
-  "Ctrl+Z · Ctrl+Y · Espace · Suppr": "Ctrl+Z · Ctrl+Y · Spazio · Canc"
+  "Ctrl+Z · Ctrl+Y · Espace · Suppr": "Ctrl+Z · Ctrl+Y · Spazio · Canc",
+  "Flou des paroles": "Sfocatura del testo",
+  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "Le righe lontane da quella cantata sfumano in una leggera sfocatura."
  },
  "es": {
   "Reverb": "Reverb",
@@ -18218,7 +18230,9 @@
   "Double-cliquez sous les ondes pour placer un point, faites-le glisser pour le déplacer.": "Haz doble clic bajo las ondas para colocar un punto y arrástralo para moverlo.",
   "Transition": "Transición",
   "+ Point": "+ Punto",
-  "Ctrl+Z · Ctrl+Y · Espace · Suppr": "Ctrl+Z · Ctrl+Y · Espacio · Supr"
+  "Ctrl+Z · Ctrl+Y · Espace · Suppr": "Ctrl+Z · Ctrl+Y · Espacio · Supr",
+  "Flou des paroles": "Desenfoque de la letra",
+  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "Las líneas alejadas de la que se canta se difuminan suavemente."
  },
  "de": {
   "Reverb": "Reverb",
@@ -20821,7 +20835,9 @@
   "Double-cliquez sous les ondes pour placer un point, faites-le glisser pour le déplacer.": "Doppelklicken Sie unter die Wellen, um einen Punkt zu setzen, und ziehen Sie ihn, um ihn zu verschieben.",
   "Transition": "Übergang",
   "+ Point": "+ Punkt",
-  "Ctrl+Z · Ctrl+Y · Espace · Suppr": "Strg+Z · Strg+Y · Leertaste · Entf"
+  "Ctrl+Z · Ctrl+Y · Espace · Suppr": "Strg+Z · Strg+Y · Leertaste · Entf",
+  "Flou des paroles": "Songtext-Unschärfe",
+  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "Zeilen fern der gesungenen verschwimmen leicht."
  },
  "pt": {
   "Reverb": "Reverb",
@@ -23424,7 +23440,9 @@
   "Double-cliquez sous les ondes pour placer un point, faites-le glisser pour le déplacer.": "Clique duas vezes sob as ondas para colocar um ponto e arraste-o para movê-lo.",
   "Transition": "Transição",
   "+ Point": "+ Ponto",
-  "Ctrl+Z · Ctrl+Y · Espace · Suppr": "Ctrl+Z · Ctrl+Y · Espaço · Del"
+  "Ctrl+Z · Ctrl+Y · Espace · Suppr": "Ctrl+Z · Ctrl+Y · Espaço · Del",
+  "Flou des paroles": "Desfoque da letra",
+  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "As linhas afastadas da que está sendo cantada se desfocam levemente."
  },
  "ko": {
   "Reverb": "리버브",
@@ -26027,6 +26045,8 @@
   "Double-cliquez sous les ondes pour placer un point, faites-le glisser pour le déplacer.": "파형 아래를 더블클릭해 포인트를 놓고, 드래그해서 옮기세요.",
   "Transition": "전환",
   "+ Point": "+ 포인트",
-  "Ctrl+Z · Ctrl+Y · Espace · Suppr": "Ctrl+Z · Ctrl+Y · Space · Del"
+  "Ctrl+Z · Ctrl+Y · Espace · Suppr": "Ctrl+Z · Ctrl+Y · Space · Del",
+  "Flou des paroles": "가사 흐림",
+  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "부르는 줄에서 먼 줄은 부드럽게 흐려집니다."
  }
 }
