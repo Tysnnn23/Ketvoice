@@ -144,6 +144,34 @@ internal object MixPresetStore {
         return kept
     }
 
+    // ---- Settings sync (8.2, Windows 1.1): the presets travel in the account's settings document ----
+
+    /** The key of a preset in the settings document: from its content, so every device names it the same. */
+    const val SYNC_PREFIX = "ketmixPreset."
+    internal fun syncKey(value: String): String = SYNC_PREFIX + java.security.MessageDigest.getInstance("SHA-256")
+        .digest(value.toByteArray(Charsets.UTF_8)).take(8).joinToString("") { "%02x".format(it) }
+
+    /** This device's presets as settings-document items. */
+    fun syncEntries(): Map<String, String> = all().map(::encode).associateBy(::syncKey)
+
+    /**
+     * The account's presets missing here are added. Nothing is ever removed here from what the account lacks: a device
+     * on a version without preset sync sends a document without them, and that must not delete anyone's presets.
+     * (A preset deleted on one device can therefore come back from another; deleting it there too keeps it gone.)
+     */
+    @Synchronized fun adoptSynced(values: Map<String, String>) {
+        val target = backend ?: return
+        val wanted = values.filterKeys { it.startsWith(SYNC_PREFIX) }.values.filter { decode("", it) != null }.toSet()
+        val kept = all()
+        var next = (kept.maxOfOrNull { it.id.removePrefix("u:").toLongOrNull() ?: 0L } ?: 0L) + 1
+        var count = kept.size
+        for (value in wanted - kept.map(::encode).toSet()) {
+            if (count >= LIMIT) break
+            target.put("u:${next++}", value); count++
+        }
+        _revision.value++
+    }
+
     @Synchronized fun rename(id: String, name: String) { all().firstOrNull { it.id == id }?.let { save(it.copy(name = name)) } }
     @Synchronized fun delete(id: String) { backend?.put(id, null); _revision.value++ }
 

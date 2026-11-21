@@ -157,7 +157,11 @@ internal object SettingsKind : SyncKind {
     override fun snapshot(context: Context, previous: SyncDoc): Map<String, String> {
         com.ketvoice.app.data.SettingsStore.save()
         val prefs = context.getSharedPreferences("ketvoice_settings", Context.MODE_PRIVATE).all
-        val values = keys.mapNotNull { key -> com.ketvoice.app.data.PersonalBackup.setting(key, prefs[key])?.let { key to Canonical.text(it) } }.toMap()
+        // Ketmix Studio's presets (`ketmix-presets-v1`) ride along, one item each; the store is opened first, so an
+        // unopened store never reads as « every preset removed ».
+        com.ketvoice.app.automix.MixPresetStore.init(context)
+        val values = keys.mapNotNull { key -> com.ketvoice.app.data.PersonalBackup.setting(key, prefs[key])?.let { key to Canonical.text(it) } }.toMap() +
+            com.ketvoice.app.automix.MixPresetStore.syncEntries().mapValues { Canonical.text(it.value) }
         // Phone control's secret rides in this owner-only document (see RemoteKeyStore); no setting holds it.
         val uid = com.ketvoice.app.account.AccountSession.userId() ?: return values
         val remote = com.ketvoice.app.remote.RemoteKeyStore
@@ -187,6 +191,9 @@ internal object SettingsKind : SyncKind {
             }
         }
         // A device still on 7.4 sends its levels and Teinté: the intensity is worked out again from them.
+        com.ketvoice.app.automix.MixPresetStore.init(context)
+        com.ketvoice.app.automix.MixPresetStore.adoptSynced(values.filterKeys { it.startsWith(com.ketvoice.app.automix.MixPresetStore.SYNC_PREFIX) }
+            .mapNotNull { (k, text) -> runCatching { JSONArray("[$text]").getString(0) }.getOrNull()?.let { k to it } }.toMap())
         com.ketvoice.app.glass.GlassClarity.legacyKeys(values.filter { (key, text) -> key in keys && parse(key, text) != null }.keys)?.let { editor.remove("glassIntensity") }
         editor.commit()
         com.ketvoice.app.data.SettingsStore.load(context)

@@ -191,6 +191,7 @@ object LibrarySync {
             launch { snapshotFlow { com.ketvoice.app.data.AppSettings.favoriteIds.value }.drop(1).collect { request() } }
             launch { com.ketvoice.app.data.PlaylistStore.lists.drop(1).collect { request() } }
             launch { snapshotFlow { com.ketvoice.app.data.ArtistPrefs.blocked to com.ketvoice.app.data.ArtistPrefs.favourites }.drop(1).collect { request() } }
+            launch { com.ketvoice.app.automix.MixPresetStore.revision.drop(1).collect { request() } }
         }
         val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key -> if (key in SettingsKind.keys) request() }
         prefsListener = listener
