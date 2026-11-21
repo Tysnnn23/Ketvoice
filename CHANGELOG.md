@@ -7,6 +7,20 @@
 
 ---
 
+# Ketvoice 8.2.0
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 150** — living cover-colour player background, livelier Cascade lyrics, featured Home cards, startup profile rules, smart prefetch on Wi-Fi, automatic power saving, an opt-in diagnostic, and Ketmix Studio presets in the account.
+
+- Look (`ArtworkFlow.colourField`, `PlayerSceneBackground`, `LyricsView`/`LyricsMotion`, `HomeFeatured.kt`): the three turning layers are a 3×3 cover-colour field built once per title off the main thread and animated in draw; stopped in performance mode, under reduced motion, on Quest and behind a Canvas. Lyrics settle on `WAVE_SPRING`/`SCROLL_SPRING`, the sung word grows ≤ 3.5 % (`LyricsWords.grow`), past lines fade to .66–.36 (`pastAlpha`), read in the layer; no blur. Five featured cards; only the centred one plays its Canvas. `Look82HostTest`.
+- Performance (`baseline-prof.txt`, `util/EconomyMode.kt`, `data/SmartPrefetch.kt`, `util/Diagnostics.kt`): named hot-path rules (handwritten); economy mode at battery ≤ 20 % or thermal ≥ SEVERE, never saved, key `autoEconomy`; prefetch on unmetered networks only, bounded (3 queue covers, 18 Home covers, album and artist of the playing title); diagnostic (key `diagnostics`, off) as capped JSON lines with hashed track ids, shared through the share sheet. `Perf82Test`.
+- Ketmix Studio presets (`MixPresetStore.syncEntries`/`adoptSynced`): carried in the settings document as `ketmixPreset.<hash>` items; adoption only adds, so a device on an older version never deletes presets. `MixPresetSyncTest`.
+
+Full notes: [8.2.0](docs/releases/v8.2.0.md).
+
+---
+
 # Ketvoice 8.1.0
 
 ![Ketvoice](ketvoice-banner.png)
