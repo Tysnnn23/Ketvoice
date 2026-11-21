@@ -42,3 +42,11 @@ data/PersonalMixes.kt
 data/Recommender.kt
 data/CanvasCachePlan.kt
 data/SearchRank.kt
+# Phase 1 (winplayer): downloads and library.
+data/DownloadQueue.kt
+data/DownloadTask.kt
+data/DownloadUpgrade.kt
+data/Playlists.kt
+smartlib/TrackFacts.kt
+smartlib/SmartText.kt
+smartlib/QueryFilters.kt

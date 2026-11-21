@@ -1,3 +1,7 @@
 # Phase 1 brings the desktop audio engine (FFmpeg in-process); for now only the queue order.
 player/QueueOrder.kt
 player/QueueEntryIds.kt
+# Phase 1 (winplayer): autoplay rules for the desktop Player facade.
+player/Autoplay.kt
+player/NoRepeat.kt
+player/Radio.kt
