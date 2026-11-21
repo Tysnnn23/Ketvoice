@@ -82,6 +82,8 @@ object DesktopAutomix {
     }
 
     private fun publish(status: FfmpegAudioEngine.MixStatus) {
+        // A transition set and then dropped (a seek, a queue change) may be planned again.
+        if (status.phase == FfmpegAudioEngine.MixPhase.Idle && _ui.value.phase == Phase.Ready) doneKey = null
         val p = pair
         _ui.value = when (status.phase) {
             FfmpegAudioEngine.MixPhase.Idle -> if (_ui.value.phase == Phase.Preparing) _ui.value else Ui()

@@ -27,6 +27,9 @@ class DesktopMixer(val sampleRate: Int = FfmpegDecoder.OUT_RATE) {
     /** After a mix in time: the deck gliding back to its own speed, and frames until its next step. */
     private var gliding: Deck? = null
     private var glideIn = 0L
+    /** After a mix: the deck whose automation is dropped once its title passes [settleFrame] (it ends at the title's own level). */
+    private var settling: Deck? = null
+    private var settleFrame = 0L
     private var other = FloatArray(0)
 
     /**
@@ -82,8 +85,10 @@ class DesktopMixer(val sampleRate: Int = FfmpegDecoder.OUT_RATE) {
         mix = null
         m.finished = true
         if (m.started) { if (m.promoted) m.outgoing?.close() else m.incoming.close() }
+        // Not started: the next deck goes back to its start, for an ordinary gapless end.
+        else if (next === m.incoming) { m.incoming.lane.reset(); m.incoming.seek(0) }
         current?.lane?.let { it.automation = null; if (m.started) it.speed = 1f }
-        gliding = null
+        gliding = null; settling = null
     }
 
     /**
@@ -168,11 +173,13 @@ class DesktopMixer(val sampleRate: Int = FfmpegDecoder.OUT_RATE) {
             outgoing.close()
             mix = null; m.finished = true
             if (incoming.lane.speed != 1f) { gliding = incoming; glideIn = com.ketvoice.app.automix.TempoReturn.WAIT_MS * sampleRate / 1000 }
+            settling = incoming; settleFrame = (m.inAutomation.endUs / 1000L + 600L) * sampleRate / 1000
         }
     }
 
     /** The glide back to the title's own speed after a mix in time, in `TempoReturn`'s steps. */
     private fun glide(frames: Int, block: Block) {
+        settling?.let { if (it !== current || mix != null) settling = null else if (it.lane.titleFrame >= settleFrame) { it.lane.automation = null; settling = null } }
         val d = gliding ?: return
         if (d !== current || mix != null) { gliding = null; return }
         glideIn -= frames
