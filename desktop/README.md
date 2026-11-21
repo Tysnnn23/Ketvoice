@@ -80,7 +80,7 @@ that is true on the desktop. The Android app is never changed for the desktop bu
 
 Not tried yet: `TransitionPreview`, `MixStudio`, `KetmixJournal`, and the UI packages. Reused tests
 left out because they need deferred code: `MixKeysTest` and `StemsTest` (`VoiceStage`, `StemEngine`, `StemModel`), `MediaOverridesTest`
-(`PersonalBackup`), `SearchRankTest` (`SearchGroups`), `CanvasCachePlanTest` (`CanvasRepo`),
+(`PersonalBackup`), `CanvasCachePlanTest` (`CanvasRepo`),
 `LiteTuningTest` (`MemoryRelief`, glass render modes).
 
 ### Desktop counterparts (`src/main/kotlin/com/ketvoice/app/`)
@@ -294,3 +294,34 @@ keys, the volume flyout's now-playing card); sign-in through the system browser 
 redirect (no embedded WebView); phone control over a private Supabase Realtime channel bound to the
 listener's account; auto-update from GitHub releases tagged `windows-v*` (first check that the
 Android in-app updater skips those tags, as it skips the model tags).
+
+## Polish (Phase 3, `winpolish`)
+
+- **Search** (`LiveCatalog.search`): the phone's « Tout » — YouTube Music, published titles and add-ons together, ordered by
+  `SearchRank` (with `liveTaste`), versions grouped by `SearchGroups`, blocked artists left out, artists named like the
+  query first. A « Tout / Bibliothèque » switch (`SearchScope`; `LibraryViews.search` matches every word of the
+  listener's titles and history). Recent searches (`SearchHistory`) on the start page; a search is kept when it found
+  titles. Shared code added: `data/SearchGroups`, and the tests `SearchRankTest`, `SearchGroupsTest`.
+- **Playlist import** (`ui/ImportPlaylist.kt`, the link button beside « Playlists »): the shared `smartlib/PlaylistImport`
+  with `AppleMusicImport`, `TidalImport`, `SoundCloudImport`, `PublicPage`, `Duplicates` and `data/SpotifyPlaylistImport`
+  (public pages only, no account); preview, matching (`MusicApi.searchAll`), then `LibraryStore.importPlaylist` keeps the
+  titles not found as named entries (`PlaylistStore.create`). Tests: the three services' parser tests.
+- **Album and artist pages**: « Plus de <artiste> », the release footer, a ⋯ menu; artist listeners, shuffle, ⋯,
+  « Artistes similaires », « À propos » (`ArtistPage.description`, `related`, `listeners`).
+- **Menus**: `TrackActions.collectionMenu` (play, shuffle, « Lire ensuite » in order, queue, playlist, download) on
+  album cards (right click), album/playlist/artist headers, and the title menu on the bar's LCD and the full player's ⋯.
+- **Shortcuts** (`ui/Shortcuts.kt`, listed in Settings): Space, ←/→ ±10 s, Ctrl+←/→, ↑/↓ volume, Ctrl+F, Ctrl+L,
+  Ctrl+P, Ctrl+M, Ctrl+,, Alt+←, Escape. Text fields marked with `Modifier.textEntry()` keep their keys.
+- **Mini-player** (`ui/MiniPlayer.kt`): an optional always-on-top 380×132 window (Ctrl+M, Settings › Windows, the
+  full player's top bar).
+- **Dates**: `LocalDates` takes short day and month names from ICU4J in the app language (the packaged runtime has
+  no `jdk.localedata`, so the JDK gave « Mon Tue » everywhere).
+- **Full player**: `CoverFlowBackground`, the phone's `ArtworkFlow` restated (three blurred cover fields turning and
+  drifting, eased to a stop on pause, one still field under reduced motion, a glide between titles).
+- **Language**: Settings › Langue lists the system language and the 11 languages by their own names; every text reads
+  `AppSettings.language` through `AppText.t`, so the window switches at once.
+- **States** (`ui/States.kt`): `rememberLoad` + `LoadState` give each catalogue page a spinner, an offline state
+  (`CatalogSource.online()`: one HEAD to the catalogue host; Downloads stay one click away) or an error state with
+  « Réessayer »; playback errors (`PlayerControls.errors` ← `Player.error`) show as a toast.
+- Tests: `PolishTest` (shortcuts, album menu order, live language switch, ICU dates, import flow, offline pages,
+  library search, colour fields); renders: `PolishScreenshots` (`p3-*.png`).
