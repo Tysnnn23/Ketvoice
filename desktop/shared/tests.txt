@@ -10,6 +10,7 @@ automix/KetmixRenderQualityTest.kt
 automix/MixBench.kt
 automix/MixShapeTest.kt
 automix/MusicalKeyTest.kt
+automix/TransitionPlannerTest.kt
 data/AppLanguageTest.kt
 data/ArtistPrefsTest.kt
 data/ArtistSignaturesTest.kt

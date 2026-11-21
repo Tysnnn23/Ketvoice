@@ -47,6 +47,13 @@ class ShellScreenshots {
         both("queue", Route.Home, panel = Panel.QUEUE)
         both("nowplaying", Route.Home, full = true)
         both("settings", Route.Settings)
+        // Ketmix on, mixing: the switch under the transport and the badge beside the title.
+        AppSettings.automix.value = true
+        com.ketvoice.desktop.ketmix.DesktopAutomix.preview(com.ketvoice.desktop.ketmix.DesktopAutomix.Ui(com.ketvoice.desktop.ketmix.DesktopAutomix.Phase.Mixing))
+        try { both("ketmix-mixing", Route.Home) } finally {
+            AppSettings.automix.value = false
+            com.ketvoice.desktop.ketmix.DesktopAutomix.preview(com.ketvoice.desktop.ketmix.DesktopAutomix.Ui())
+        }
         assertTrue(File(out, "album-dark.png").length() > 10_000)
     }
 }

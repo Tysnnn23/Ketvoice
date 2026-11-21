@@ -69,6 +69,8 @@ fun main(args: Array<String>) {
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     val engine = FfmpegAudioEngine()
     Player.attach(engine, DesktopStreams::source, scope)
+    // Ketmix: the shared planning played by the engine's two decks (off until the listener switches it on).
+    com.ketvoice.desktop.ketmix.DesktopAutomix.attach(engine, scope)
     // Tray, media keys and the Windows media controls drive the player.
     DesktopPlatform.bridge = object : com.ketvoice.desktop.platform.PlatformBridge {
         override fun toggle() = Player.toggle()
