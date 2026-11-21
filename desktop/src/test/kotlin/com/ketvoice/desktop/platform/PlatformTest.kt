@@ -196,7 +196,7 @@ class PlatformTest {
         assertEquals(10, reports.size)
         assertEquals("crash-20261121-100002.txt", reports.first())
         val text = File(dir, reports.last()).readText()
-        assertTrue("thread: AWT-EventQueue-0" in text && "IllegalStateException: boom" in text && "Ketvoice 1.0.0" in text)
+        assertTrue("thread: AWT-EventQueue-0" in text && "IllegalStateException: boom" in text && "Ketvoice ${com.ketvoice.app.BuildConfig.VERSION_NAME} crash report" in text)
     }
 
     @Test fun aboutShowsEveryLicence() {
