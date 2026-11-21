@@ -371,7 +371,7 @@ fun AppRoot() {
                 //      progressive interne (drag) puis fondu ----
                 com.ketvoice.app.ui.player.PlayerPresentation(
                     visible = AppUi.showPlayer.value,
-                    origin = AppUi.miniPlayerBounds.value,
+                    origin = { AppUi.miniPlayerBounds.value },
                     modifier = Modifier.fillMaxSize().zIndex(6f)
                 ) {
                     Box(Modifier.fillMaxSize()) {

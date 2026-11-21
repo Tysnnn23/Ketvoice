@@ -68,6 +68,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.layout
+import kotlin.math.roundToInt
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.text.font.FontWeight
@@ -112,12 +113,13 @@ private val noRipple: MutableInteractionSource = MutableInteractionSource()
 fun MiniPlayerPill(
     modifier: Modifier = Modifier,
     compact: Boolean = false,
-    height: Dp = 54.dp,
-    coverSize: Dp = 44.dp,
+    /** 0 above the tab bar .. 1 docked in the folded row; read while measuring and drawing only (8.1). */
+    fold: () -> Float = { 0f },
     playSize: Dp = DesignTokens.Space.touch,
-    labelAlpha: Float = 1f,
     onOpen: () -> Unit
 ) {
+    // The cover is laid out at its full size and scaled down as the pill docks (44 → 32 dp).
+    val coverSize = MINI_COVER
     val ps = Player.state.collectAsState().value
     val th = LocalTheme.current
     val current = ps.current ?: return
@@ -131,7 +133,11 @@ fun MiniPlayerPill(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 10.dp, vertical = 4.dp)
-            .height(height)
+            .layout { measurable, constraints ->
+                val h = (54.dp - 6.dp * fold()).roundToPx().coerceIn(constraints.minHeight, constraints.maxHeight)
+                val placeable = measurable.measure(constraints.copy(minHeight = h, maxHeight = h))
+                layout(placeable.width, placeable.height) { placeable.place(0, 0) }
+            }
             .onGloballyPositioned { AppUi.miniPlayerBounds.value = it.boundsInRoot() }
             .shadow(
                 elevation = if (th.isDark) 2.dp else 4.dp,
@@ -163,6 +169,7 @@ fun MiniPlayerPill(
                 }
                 val coverPlace = Modifier.onGloballyPositioned { AppUi.miniCoverBounds.value = it.boundsInRoot() }
                 // The mini-player shows the mix too (7.3): both covers side by side with a wave between them.
+                Box(Modifier.foldScale { (MINI_COVER - 12.dp * fold()) / MINI_COVER }) {
                 com.ketvoice.app.ui.player.MiniMixCovers(current, coverSize, if (compact) 999.dp else 9.dp) {
                     if (canvas != null) Box(coverPlace.size(coverSize).clip(RoundedCornerShape(if (compact) 999.dp else 9.dp))
                         .testTag("mini-canvas")) {
@@ -171,9 +178,10 @@ fun MiniPlayerPill(
                         Cover(current.title, cover, size = coverSize, radius = if (compact) 999.dp else 9.dp)
                     }
                 }
+                }
                 Spacer(Modifier.width(if (compact) 4.dp else 11.dp))
                 Column(
-                    Modifier.weight(1f).graphicsLayer { alpha = labelAlpha }
+                    Modifier.weight(1f).graphicsLayer { alpha = miniLabelAlpha(fold().coerceIn(0f, 1f)) }
                         .trackSwipeContent(swipe, travel = .55f)
                         .onGloballyPositioned { com.ketvoice.app.ui.player.MiniPlayerAnchors.title = it.boundsInRoot() }
                 ) {
@@ -362,7 +370,9 @@ fun FloatingChrome(collapsed: Boolean, onOpenPlayer: () -> Unit, searching: Bool
         val miniShown = hasTrack && !typing
         if (Motion.reduced) {
             // Motion snaps under reduced motion (Ket 27): the other layout is simply there, one body, no crossfade.
-            ChromeBody(width, if (compact) 1f else 0f, if (searching) 1f else 0f, compact, searching, miniShown, onOpenPlayer)
+            val fold = if (compact) 1f else 0f
+            val open = if (searching) 1f else 0f
+            ChromeBody(width, { fold }, { open }, compact, searching, miniShown, onOpenPlayer)
             return@BoxWithConstraints
         }
         val target = if (compact) 1f else 0f
@@ -375,9 +385,12 @@ fun FloatingChrome(collapsed: Boolean, onOpenPlayer: () -> Unit, searching: Bool
                 initialVelocity = morph.velocity + ChromeCollapse.flingVelocity(target, ChromeCollapse.scrollVelocity, travelPx))
         }
         // Phones (6.0.0): the search bubble stretches into the field, a little past it and back, like a drop.
-        val stretch by animateFloatAsState(if (searching) 1f else 0f,
+        val stretch = animateFloatAsState(if (searching) 1f else 0f,
             spring(dampingRatio = .78f, stiffness = 360f), label = "search-stretch")
-        ChromeBody(width, morph.value, stretch, compact, searching, miniShown, onOpenPlayer)
+        // 8.1: the springs are read while measuring and drawing; until then the whole chrome (both glass
+        // capsules, the mini-player and every tab) was composed again at each frame of the fold.
+        ChromeBody(width, remember(morph) { { morph.value } }, remember(stretch) { { stretch.value } },
+            compact, searching, miniShown, onOpenPlayer)
     }
 }
 
@@ -385,47 +398,79 @@ fun FloatingChrome(collapsed: Boolean, onOpenPlayer: () -> Unit, searching: Bool
 private val MINI_TRAVEL = 66.dp
 
 @Composable
-private fun ChromeBody(width: Dp, fraction: Float, stretch: Float, compact: Boolean, searching: Boolean,
+private fun ChromeBody(width: Dp, fraction: () -> Float, stretch: () -> Float, compact: Boolean, searching: Boolean,
                        miniShown: Boolean, onOpenPlayer: () -> Unit) {
     // The spring may pass its end a little; the layout stays within the fold.
-    val f = fraction.coerceIn(0f, 1f)
+    val f = { fraction().coerceIn(0f, 1f) }
     // The tab bar is 62 dp high, as on iOS 27.
     val fullHeight = (if (miniShown) 126.dp else 64.dp) + 2.dp
-    val height = fullHeight + (58.dp - fullHeight) * f
     // Replié : Accueil (52 dp) + 8 dp + mini-lecteur + 8 dp + Recherche (52 dp).
-    val miniWidth = width - 144.dp * f
-    val miniX = 72.dp * f
-    val miniHeight = 54.dp - 6.dp * f
-    val coverSize = 44.dp - 12.dp * f
-    // The labels fade out while the pill moves, and the title comes back once it has docked (iOS 26).
-    val labelAlpha = if (f < .5f) (1f - f * 2f) else ((f - .5f) * 2f).coerceIn(0f, 1f)
-    val navigationY = if (miniShown) MINI_TRAVEL * (1f - f) else 0.dp
+    val navigationY = { if (miniShown) MINI_TRAVEL * (1f - f()) else 0.dp }
     // Liquid 27: Home, the mini-player and Search are one glass body. At rest they
     // are separate; while the chrome morphs they pull liquid bridges and merge like
     // droplets (the mini-player's neck as it leaves the bar), then split again.
     val fusion = com.ketvoice.app.glass.rememberGlassFusion()
     val fuseReach = with(androidx.compose.ui.platform.LocalDensity.current) { 26.dp.toPx() }
-    val morph = maxOf(f, kotlin.math.sin(Math.PI * stretch.coerceIn(0f, 1f)).toFloat() * .8f)
-    fusion.strengthPx = if (Motion.reduced) 0f else com.ketvoice.app.glass.fusionStrength(morph, fuseReach)
-    Box(Modifier.fillMaxWidth().height(height)) {
+    val reduced = Motion.reduced
+    fusion.strengthOf = {
+        val morph = maxOf(f(), kotlin.math.sin(Math.PI * stretch().coerceIn(0f, 1f)).toFloat() * .8f)
+        if (reduced) 0f else com.ketvoice.app.glass.fusionStrength(morph, fuseReach)
+    }
+    // Docked once the pill is two thirds of the way: composed again once, not at every frame.
+    val compactPill by remember { androidx.compose.runtime.derivedStateOf { f() > .65f } }
+    Box(Modifier.fillMaxWidth().layout { measurable, constraints ->
+        val h = (fullHeight + (58.dp - fullHeight) * f()).roundToPx().coerceIn(constraints.minHeight, constraints.maxHeight)
+        val placeable = measurable.measure(constraints.copy(minHeight = h, maxHeight = h))
+        layout(placeable.width, placeable.height) { placeable.place(0, 0) }
+    }) {
         com.ketvoice.app.glass.GlassFusionLayer(fusion, LocalTheme.current.isDark, Modifier.matchParentSize())
         androidx.compose.runtime.CompositionLocalProvider(com.ketvoice.app.glass.LocalGlassFusion provides fusion) {
-        GlassTabCapsule(compact, Modifier.offset(x = 12.dp, y = navigationY),
+        GlassTabCapsule(compact, Modifier.offset { androidx.compose.ui.unit.IntOffset(12.dp.roundToPx(), navigationY().roundToPx()) },
             availableWidth = width, homeOnly = compact || searching,
             onPill = if (searching) ({ AppUi.closeOverlay(); Unit }) else ({ ChromeCollapse.restoreAll() }),
             pillLabel = if (searching) "Fermer la recherche" else "Afficher les onglets")
         if (miniShown) MiniPlayerPill(
-            Modifier.offset(x = miniX).width(miniWidth),
-            compact = f > .65f,
-            height = miniHeight,
-            coverSize = coverSize,
-            labelAlpha = labelAlpha,
+            Modifier.layout { measurable, constraints ->
+                val w = (width - 144.dp * f()).roundToPx().coerceIn(constraints.minWidth, constraints.maxWidth)
+                val placeable = measurable.measure(constraints.copy(minWidth = w, maxWidth = w))
+                layout(placeable.width, placeable.height) { placeable.place((72.dp * f()).roundToPx(), 0) }
+            },
+            compact = compactPill,
+            fold = f,
             onOpen = onOpenPlayer)
-        val restSide = 60f - 8f * f
-        val bubble = FloatingSearch.bubble(stretch, width.value, restSide, width.value - 76f + 12f * f, pillEnd = 72f, margin = 16f)
         SearchBubble(stretch, searching,
-            Modifier.offset(x = bubble.x.dp, y = navigationY + ((restSide - bubble.height) / 2f).coerceAtLeast(0f).dp)
-                .size(bubble.width.dp, bubble.height.dp))
+            Modifier.layout { measurable, constraints ->
+                val fold = f()
+                val restSide = 60f - 8f * fold
+                val bubble = FloatingSearch.bubble(stretch(), width.value, restSide, width.value - 76f + 12f * fold, pillEnd = 72f, margin = 16f)
+                val bw = bubble.width.dp.roundToPx().coerceIn(constraints.minWidth, constraints.maxWidth)
+                val bh = bubble.height.dp.roundToPx().coerceIn(constraints.minHeight, constraints.maxHeight)
+                val placeable = measurable.measure(androidx.compose.ui.unit.Constraints.fixed(bw, bh))
+                layout(placeable.width, placeable.height) {
+                    placeable.place(bubble.x.dp.roundToPx(),
+                        (navigationY() + ((restSide - bubble.height) / 2f).coerceAtLeast(0f).dp).roundToPx())
+                }
+            })
+        }
+    }
+}
+
+/** The mini-player's labels fade out while the pill moves, and the title comes back once it has docked (iOS 26). */
+internal fun miniLabelAlpha(f: Float): Float = if (f < .5f) (1f - f * 2f) else ((f - .5f) * 2f).coerceIn(0f, 1f)
+
+private val MINI_COVER = 44.dp
+
+/**
+ * Lays its content out at full size and shows it scaled by [scale] from the top start corner, taking only the scaled
+ * room: a size that follows an animation without composing the content again.
+ */
+private fun Modifier.foldScale(scale: () -> Float): Modifier = layout { measurable, constraints ->
+    val placeable = measurable.measure(constraints)
+    val k = scale().let { if (it.isFinite()) it.coerceIn(0f, 1f) else 1f }
+    layout((placeable.width * k).roundToInt(), (placeable.height * k).roundToInt()) {
+        placeable.placeWithLayer(0, 0) {
+            scaleX = k; scaleY = k
+            transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0f)
         }
     }
 }
@@ -435,15 +480,17 @@ private fun ChromeBody(width: Dp, fraction: Float, stretch: Float, compact: Bool
  * the search page; stretched, it holds the field shared with that page ([FloatingSearch.query]).
  */
 @Composable
-private fun SearchBubble(stretch: Float, searching: Boolean, modifier: Modifier = Modifier) {
+private fun SearchBubble(stretchOf: () -> Float, searching: Boolean, modifier: Modifier = Modifier) {
     val th = LocalTheme.current
     val src = remember { MutableInteractionSource() }
     val pressed by src.collectIsPressedAsState()
     val haptic = com.ketvoice.app.ui.motion.rememberHaptics()
     val shape = RoundedCornerShape(percent = 50)
     // The glyph leaves early and the field arrives late, so the two never read over each other.
-    val fieldAlpha = ((stretch - .5f) / .4f).coerceIn(0f, 1f)
-    val glyphAlpha = (1f - stretch * 2.2f).coerceIn(0f, 1f)
+    val fieldAlpha = { ((stretchOf() - .5f) / .4f).coerceIn(0f, 1f) }
+    val glyphAlpha = { (1f - stretchOf() * 2.2f).coerceIn(0f, 1f) }
+    val glyphShown by remember { androidx.compose.runtime.derivedStateOf { glyphAlpha() > 0f } }
+    val fieldShown by remember { androidx.compose.runtime.derivedStateOf { stretchOf() > .01f } }
     Box(modifier
         .pressScale(min = .9f, isPressed = pressed && !searching)
         .shadow(if (th.isDark) 0.dp else 2.5.dp, shape, spotColor = Color.Black.copy(alpha = 0.12f))
@@ -452,13 +499,13 @@ private fun SearchBubble(stretch: Float, searching: Boolean, modifier: Modifier 
         // The glyph gives way to the field as the bubble stretches.
         val glyph: @Composable (String?) -> Unit = { label ->
             Icon(com.ketvoice.app.ui.common.Ket27Glyphs.Search, contentDescription = label, tint = th.onBackground,
-                modifier = Modifier.size(25.dp).graphicsLayer { alpha = glyphAlpha })
+                modifier = Modifier.size(25.dp).graphicsLayer { alpha = glyphAlpha() })
         }
         if (!searching) Box(Modifier.matchParentSize().clip(shape)
             .clickable(src, null, role = Role.Button) { haptic(Haptics.Kind.Press); FloatingSearch.open() },
             contentAlignment = Alignment.Center) { glyph("Rechercher") }
-        else if (glyphAlpha > 0f) Box(Modifier.matchParentSize(), contentAlignment = Alignment.Center) { glyph(null) }
-        if (searching || stretch > .01f) {
+        else if (glyphShown) Box(Modifier.matchParentSize(), contentAlignment = Alignment.Center) { glyph(null) }
+        if (searching || fieldShown) {
             val requester = remember { androidx.compose.ui.focus.FocusRequester() }
             val focus = androidx.compose.ui.platform.LocalFocusManager.current
             val asked = FloatingSearch.focusAsked.value
@@ -473,7 +520,7 @@ private fun SearchBubble(stretch: Float, searching: Boolean, modifier: Modifier 
             }
             com.ketvoice.app.ui.common.CompactSearchField(FloatingSearch.query.value, { FloatingSearch.query.value = it },
                 { FloatingSearch.onSubmit?.invoke() },
-                Modifier.matchParentSize().graphicsLayer { alpha = fieldAlpha }
+                Modifier.matchParentSize().graphicsLayer { alpha = fieldAlpha() }
                     .focusRequester(requester).testTag("floating-search-field"),
                 filled = false)
         }
@@ -551,7 +598,8 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier,
     val melt = { TabMelt.fold(widthState.value.value, fullWidth.value, FOLDED_SIDE.value) }
     // While the capsule is still wider than its folded size the tabs stay, melting; then the pill takes over.
     val melting by remember(fullWidth) { androidx.compose.runtime.derivedStateOf { melt() < TabMelt.PILL_FROM } }
-    val heightAnim by animateDpAsState(
+    // Read while measuring (8.1): the capsule is not composed again at each frame of its fold.
+    val heightState = animateDpAsState(
         targetValue = if (homeOnly || collapsed) 52.dp else Ket27.Metrics.tabBar,
         animationSpec = if (Motion.reduced) androidx.compose.animation.core.snap() else spring(
             dampingRatio = DesignTokens.Motion.CHROME_DAMPING, stiffness = DesignTokens.Motion.CHROME_STIFFNESS),
@@ -562,10 +610,10 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier,
         modifier = modifier
             .layout { measurable, constraints ->
                 val w = widthState.value.roundToPx().coerceIn(constraints.minWidth, constraints.maxWidth)
-                val placeable = measurable.measure(constraints.copy(minWidth = w, maxWidth = w))
+                val h = heightState.value.roundToPx().coerceIn(constraints.minHeight, constraints.maxHeight)
+                val placeable = measurable.measure(constraints.copy(minWidth = w, maxWidth = w, minHeight = h, maxHeight = h))
                 layout(placeable.width, placeable.height) { placeable.place(0, 0) }
             }
-            .height(heightAnim)
             .pointerInput(collapsed, homeOnly) {
                 if (homeOnly || collapsed) return@pointerInput
                 // One gesture grabs the lens: a hold, or a slide along the bar. A plain tap is left to the tabs.
@@ -656,8 +704,8 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier,
                 label = "lensTrail"
             )
             Box(Modifier.fillMaxSize()) {
-                BoxWithConstraints(Modifier.fillMaxSize()) {
-                    val slot = maxWidth / 3
+                // 8.1: a plain box measured at each frame of the fold, not a BoxWithConstraints composed again at each one.
+                Box(Modifier.fillMaxSize()) {
                     // Lentille de verre mobile : un vrai GlassPanel (réfraction,
                     // reflets, ombre), pas une capsule blanche. Elle s'étire un
                     // peu pendant le déplacement puis se stabilise.
@@ -671,14 +719,20 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier,
                     val grow = HeldLens.grow(lensLift)
                     GlassPanel(
                         modifier = Modifier
-                            .offset { androidx.compose.ui.unit.IntOffset((slot * lens.start + 5.dp - grow.width / 2).roundToPx(), 0) }
-                            .size(width = slot * lens.span - 10.dp + grow.width, height = heightAnim - 10.dp + grow.height)
-                            .align(Alignment.CenterStart)
+                            .layout { measurable, constraints ->
+                                // A third of the capsule per tab; the lens flows to the middle one as the bar melts.
+                                val slot = constraints.maxWidth / 3f
+                                val w = (slot * lens.span - 10.dp.toPx() + grow.width.toPx()).roundToInt().coerceAtLeast(0)
+                                val h = (heightState.value - 10.dp + grow.height).roundToPx().coerceAtLeast(0)
+                                val placeable = measurable.measure(androidx.compose.ui.unit.Constraints.fixed(w, h))
+                                val x = slot * lens.start + 5.dp.toPx() - grow.width.toPx() / 2f + TabMelt.towardsMiddle(lensLead, slot, melt())
+                                layout(constraints.maxWidth, constraints.maxHeight) {
+                                    placeable.place(x.roundToInt(), (constraints.maxHeight - h) / 2)
+                                }
+                            }
                             .graphicsLayer {
                                 scaleX = bulge; scaleY = bulge * lens.squash
-                                val m = melt()
-                                translationX = TabMelt.towardsMiddle(lensLead, slot.toPx(), m)
-                                alpha = TabMelt.lensAlpha(m)
+                                alpha = TabMelt.lensAlpha(melt())
                             }
                             // A seasonal theme (6.2): the selection wears a thin edge of its colours.
                             .then(th.season?.let { look -> with(look) { Modifier.seasonEdge(pillShape, true) } } ?: Modifier),
@@ -799,7 +853,7 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier,
                 GlassPanel(
                     Modifier
                         .offset(x = slot * pos + 5.dp)
-                        .size(width = slot - 10.dp, height = heightAnim - 14.dp)
+                        .size(width = slot - 10.dp, height = heightState.value - 14.dp)
                         .align(Alignment.CenterStart)
                         .then(th.season?.let { look -> with(look) { Modifier.seasonEdge(RoundedCornerShape(999.dp), true) } } ?: Modifier),
                     RoundedCornerShape(999.dp),
