@@ -10,6 +10,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import com.ketvoice.app.data.Track
 import com.ketvoice.app.ui.common.Ket27Glyphs
 import com.ketvoice.app.ui.common.KetIcons
+import kotlinx.coroutines.launch
 
 /** The pages of the window. */
 sealed interface Route {
@@ -48,13 +49,37 @@ class Navigator(start: Route = Route.Home) {
 val LocalNavigator = staticCompositionLocalOf { Navigator() }
 
 /** The actions of a title, as its context menu, double-click and shortcuts call them. */
-class TrackActions(private val player: PlayerControls, private val library: LibraryStore, private val nav: Navigator) {
+class TrackActions(private val player: PlayerControls, private val library: LibraryStore, private val nav: Navigator,
+                   private val scope: kotlinx.coroutines.CoroutineScope = kotlinx.coroutines.MainScope()) {
     fun play(list: List<Track>, index: Int) = player.playQueue(list, index)
     fun playShuffled(list: List<Track>) { if (list.isEmpty()) return; player.setShuffle(true); player.playQueue(list.shuffled(), 0) }
     fun like(track: Track) = library.toggleFavourite(track)
     fun liked(track: Track) = library.favourites.value.any { it.id == track.id }
     fun openAlbum(track: Track) = nav.push(Route.Album(AlbumRef(track.albumId, track.album, track.artist.substringBefore(',').trim(), track.coverUrl)))
     fun openArtist(track: Track) = nav.push(Route.Artist(ArtistRef(track.artistId, track.artist.substringBefore(',').trim())))
+
+    /**
+     * The menu of several titles at once (an album card, an album or playlist page, the selection): play, « Lire
+     * ensuite » in their order, the queue, a playlist, download. [load] fetches them (an album card's titles come
+     * from the catalogue only when an action is chosen).
+     */
+    fun collectionMenu(load: suspend () -> List<Track>): List<MenuItem> {
+        fun run(action: (List<Track>) -> Unit): () -> Unit = {
+            scope.launch { val tracks = runCatching { load() }.getOrDefault(emptyList()); if (tracks.isNotEmpty()) action(tracks) }
+        }
+        return listOf(
+            MenuItem("Lecture", KetIcons.Play, "play-all", action = run { play(it, 0) }),
+            MenuItem("Lecture aléatoire", KetIcons.Shuffle, "shuffle-all", action = run(::playShuffled)),
+            MenuItem("Lire ensuite", KetIcons.Playlist, "play-next", action = run { list -> list.asReversed().forEach(player::playNext) }),
+            MenuItem("Ajouter à la file d'attente", KetIcons.Plus, "enqueue", action = run { list -> list.forEach(player::enqueue) }),
+            MenuItem("Ajouter à une playlist", KetIcons.Playlist, "add-to-playlist", children =
+                library.playlists.value.map { p -> MenuItem(p.name, null, "playlist", action = run { library.addAllToPlaylist(p.id, it) }) } +
+                    MenuItem("Nouvelle playlist", KetIcons.Plus, "new-playlist",
+                        action = run { library.createPlaylist(com.ketvoice.app.data.AppText.t("Nouvelle playlist"), it) })),
+            MenuItem("-"),
+            MenuItem("Télécharger", KetIcons.Download, "download", action = run { list -> list.forEach(library::download) }),
+        )
+    }
 
     fun menu(track: Track, onPlay: (() -> Unit)? = null): List<MenuItem> = buildList {
         if (onPlay != null) add(MenuItem("Lecture", KetIcons.Play, "play", action = onPlay))

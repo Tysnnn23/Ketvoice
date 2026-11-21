@@ -195,6 +195,7 @@ fun main(args: Array<String>) {
             }
             KetvoiceShell(dark = dark)
         }
+        com.ketvoice.desktop.ui.MiniPlayerWindow(icon, when (com.ketvoice.app.data.AppSettings.themeMode.value) { 1 -> false; 2 -> true; else -> isSystemInDarkTheme() }, ::show)
     }
 }
 

@@ -1,5 +1,7 @@
 package com.ketvoice.desktop.ui
 
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -111,6 +113,7 @@ private fun CollectionHeader(cover: (@Composable () -> Unit)?, kind: String, tit
                 CapsuleButton("Lecture", KetIcons.Play, { if (tracks.isNotEmpty()) actions.play(tracks, 0) }, filled = true, accent = accent, modifier = Modifier.testTag("play-all"))
                 CapsuleButton("Aléatoire", KetIcons.Shuffle, { actions.playShuffled(tracks) }, filled = false, accent = accent, modifier = Modifier.testTag("shuffle-all"))
                 extraButtons()
+                if (tracks.isNotEmpty()) MoreButton(accent) { actions.collectionMenu { tracks } }
             }
         }
     }
@@ -121,7 +124,8 @@ fun AlbumPage(ref: AlbumRef) {
     val catalog = LocalCatalog.current
     val nav = LocalNavigator.current
     val ket = LocalKet.current
-    val data by produceState<AlbumData?>(null, ref) { value = runCatching { catalog.album(ref) }.getOrNull() }
+    val loader = rememberLoad(ref, empty = { it.tracks.isEmpty() }) { album(ref) }
+    val data = loader.value
     val cover = data?.ref?.cover ?: ref.cover
     val (wash, accent) = coverTint(cover)
     // Apple Music's motion artwork: the album's Canvas edge to edge at the top, the words under it.
@@ -136,8 +140,8 @@ fun AlbumPage(ref: AlbumRef) {
                     r.type, r.title, r.artist, { nav.push(Route.Artist(ArtistRef(null, r.artist))) },
                     listOfNotNull(r.year, if (tracks.isNotEmpty()) durationLabel(tracks) else null).joinToString(" · "), accent, tracks)
             }
-            val d = data
-            if (d == null) { item { Box(Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) { Spinner() } }; return@Page }
+            loadStates(loader)
+            val d = data ?: return@Page
             if (d.tracks.isEmpty()) { item { EmptyMessage("Aucun titre", "Les titres de cet album ne sont pas disponibles.") }; return@Page }
             item("rule") { Box(Modifier.fillMaxWidth().height(.5.dp).background(ket.hairline)) }
             val albumArtist = d.ref.artist.lowercase()
@@ -146,6 +150,11 @@ fun AlbumPage(ref: AlbumRef) {
                     NumberedTrackRow(t, d.tracks, i, showArtist = !t.artist.lowercase().startsWith(albumArtist), accent = accent)
                 }
             }
+            item("footer") {
+                KText(listOfNotNull(d.ref.year, durationLabel(d.tracks)).joinToString(" · "), Ket27Desk.Type.footnote,
+                    Modifier.padding(top = 14.dp, start = 4.dp).testTag("album-footer"), color = ket.secondary, translate = false)
+            }
+            item("more") { MoreByArtist(d.ref) }
             if (d.recommended.isNotEmpty()) {
                 item("rec-h") { SectionHeader("Titres recommandés") }
                 item("rec") { TrackColumns(d.recommended, columns = 3, rows = 3) }
@@ -160,7 +169,8 @@ fun ArtistPage(ref: ArtistRef) {
     val actions = LocalTrackActions.current
     val nav = LocalNavigator.current
     val ket = LocalKet.current
-    val data by produceState<ArtistData?>(null, ref) { value = runCatching { catalog.artist(ref) }.getOrNull() }
+    val loader = rememberLoad(ref, empty = { it.top.isEmpty() && it.albums.isEmpty() && it.singles.isEmpty() }) { artist(ref) }
+    val data = loader.value
     val photo = data?.ref?.picture ?: ref.picture
     val image = rememberCover(photo)
     // The play button sits on the photo's dark scrim: legible on black in both themes.
@@ -179,14 +189,27 @@ fun ArtistPage(ref: ArtistRef) {
                         com.ketvoice.app.ui.common.Icon(KetIcons.Play, AppText.t("Lecture"), Modifier.size(20.dp), tint = Color.White)
                     }
                     Spacer(Modifier.width(16.dp))
-                    KText(data?.ref?.name ?: ref.name, Ket27Desk.Type.largeTitle.copy(fontSize = Ket27Desk.Type.largeTitle.fontSize * 1.4f),
-                        color = Color.White, translate = false)
+                    Column(Modifier.weight(1f)) {
+                        KText(data?.ref?.name ?: ref.name, Ket27Desk.Type.largeTitle.copy(fontSize = Ket27Desk.Type.largeTitle.fontSize * 1.4f),
+                            color = Color.White, translate = false)
+                        val listeners = data?.listeners.orEmpty()
+                        if (listeners.isNotBlank()) KText(listeners, Ket27Desk.Type.subheadline, color = Color.White.copy(alpha = .75f), translate = false)
+                    }
+                    if (top.isNotEmpty()) {
+                        KetIconButton(KetIcons.Shuffle, "Lecture aléatoire", { actions.playShuffled(top) }, Modifier.testTag("artist-shuffle"),
+                            size = 40.dp, glyph = 18.dp, tint = Color.White)
+                        Spacer(Modifier.width(4.dp))
+                        MoreButton(Color.White) { actions.collectionMenu { top } }
+                    }
                 }
             }
         }
-        val d = data
-        if (d == null) { item { Box(Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) { Spinner() } }; return@LazyColumn }
         val pad = Modifier.padding(horizontal = Ket27Desk.Space.page)
+        if (loader.state !is Load.Ready) { item("state") { Box(pad) { LoadState(loader) } }; return@LazyColumn }
+        val d = data ?: return@LazyColumn
+        if (d.top.isEmpty() && d.albums.isEmpty() && d.singles.isEmpty()) {
+            item("empty") { Box(pad) { EmptyMessage("Aucun titre", "Le catalogue n'a encore rien de cet artiste.") } }
+        }
         if (d.top.isNotEmpty()) {
             item("top-h") { Box(pad) { SectionHeader("Top titres") } }
             item("top") { Box(pad) { TrackColumns(d.top, columns = 3, rows = 4) } }
@@ -198,6 +221,19 @@ fun ArtistPage(ref: ArtistRef) {
         if (d.singles.isNotEmpty()) {
             item("si-h") { Box(pad) { SectionHeader("Singles et EP") } }
             item("si") { Box(pad) { AlbumShelf(d.singles) } }
+        }
+        if (d.related.isNotEmpty()) {
+            item("rel-h") { Box(pad) { SectionHeader("Artistes similaires") } }
+            item("rel") {
+                androidx.compose.foundation.lazy.LazyRow(contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = Ket27Desk.Space.page),
+                    horizontalArrangement = Arrangement.spacedBy(Ket27Desk.Space.l)) {
+                    items(d.related.size) { i -> val a = d.related[i]; ArtistCard(a, 150.dp) { nav.push(Route.Artist(a)) } }
+                }
+            }
+        }
+        if (d.about.isNotBlank()) {
+            item("about-h") { Box(pad) { SectionHeader("À propos") } }
+            item("about") { Box(pad) { AboutCard(d.about) } }
         }
         item("end") { Spacer(Modifier.height(48.dp)) }
     }
@@ -263,7 +299,7 @@ private fun RenameField(current: String, onDone: (String) -> Unit) {
     androidx.compose.runtime.LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
     androidx.compose.foundation.text.BasicTextField(
         text, { text = it },
-        Modifier.fillMaxWidth().focusRequester(focus).testTag("rename-field")
+        Modifier.fillMaxWidth().focusRequester(focus).textEntry().testTag("rename-field")
             .onFocusChanged { if (focused && !it.isFocused) onDone(text.text.trim()); focused = it.isFocused }
             .onPreviewKeyEvent { e ->
                 if (e.type != androidx.compose.ui.input.key.KeyEventType.KeyDown) false
@@ -277,4 +313,45 @@ private fun RenameField(current: String, onDone: (String) -> Unit) {
         singleLine = true,
         cursorBrush = androidx.compose.ui.graphics.SolidColor(ket.accent),
     )
+}
+
+/** A round « ⋯ » that opens [items] under it. */
+@Composable
+internal fun MoreButton(tint: Color, items: () -> List<MenuItem>) {
+    val menu = LocalMenu.current
+    val at = remember { arrayOf(androidx.compose.ui.geometry.Offset.Zero) }
+    Box(Modifier.onGloballyPositioned { at[0] = it.positionInWindow() }) {
+        KetIconButton(KetIcons.More, "Plus d'options", {
+            menu.open(items(), androidx.compose.ui.unit.IntOffset(at[0].x.toInt(), at[0].y.toInt() + 40))
+        }, Modifier.testTag("collection-more"), size = 36.dp, glyph = 18.dp, tint = tint)
+    }
+}
+
+/** Apple Music's « Plus de <artiste> »: the artist's other releases under an album. */
+@Composable
+private fun MoreByArtist(album: AlbumRef) {
+    val catalog = LocalCatalog.current
+    val others by produceState<List<AlbumRef>>(emptyList(), album.artist) {
+        val page = runCatching { catalog.artist(ArtistRef(null, album.artist)) }.getOrNull()
+        value = page?.let { it.albums + it.singles }.orEmpty().filterNot { it.title.equals(album.title, ignoreCase = true) }.take(12)
+    }
+    if (others.isEmpty()) return
+    Column {
+        SectionHeader(AppText.t("Plus de {0}").replace("{0}", album.artist))
+        AlbumShelf(others)
+    }
+}
+
+/** The artist's biography, a few lines; the whole text on a click. */
+@Composable
+private fun AboutCard(text: String) {
+    val ket = LocalKet.current
+    var open by remember { mutableStateOf(false) }
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(Ket27Desk.Radius.menu)).background(ket.card).clickable { open = !open }
+        .padding(18.dp).testTag("artist-about")) {
+        androidx.compose.material3.Text(text, color = ket.label, maxLines = if (open) Int.MAX_VALUE else 4,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            style = androidx.compose.material3.LocalTextStyle.current.merge(Ket27Desk.Type.subheadline))
+        if (!open) { Spacer(Modifier.height(6.dp)); KText("Plus", Ket27Desk.Type.subheadline, color = ket.accent, weight = FontWeight.SemiBold) }
+    }
 }

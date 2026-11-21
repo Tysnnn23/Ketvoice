@@ -52,3 +52,12 @@ smartlib/SmartText.kt
 smartlib/QueryFilters.kt
 # Phase 2 (winaccount): what the account's settings sync checks (SettingsStore and PersonalBackup are desktop counterparts).
 data/TranslationLanguages.kt
+# Phase 3 (winpolish): the phone's search order and version groups, and playlist import from public links.
+data/SearchGroups.kt
+smartlib/Duplicates.kt
+smartlib/PlaylistImport.kt
+smartlib/AppleMusicImport.kt
+smartlib/TidalImport.kt
+smartlib/SoundCloudImport.kt
+data/SpotifyPlaylistImport.kt
+smartlib/PublicPage.kt

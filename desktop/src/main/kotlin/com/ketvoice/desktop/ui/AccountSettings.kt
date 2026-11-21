@@ -179,7 +179,7 @@ private fun Field(label: String, value: String, tag: String, secret: Boolean = f
         KText(label, Ket27Desk.Type.subheadline, Modifier.width(150.dp))
         Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
         if (value.isEmpty()) KText(hint, Ket27Desk.Type.subheadline, color = ket.tertiary, translate = hint != EMAIL_HINT)
-        BasicTextField(value, { onChange(it.take(200)) }, Modifier.fillMaxWidth().testTag(tag), singleLine = true,
+        BasicTextField(value, { onChange(it.take(200)) }, Modifier.fillMaxWidth().textEntry().testTag(tag), singleLine = true,
             textStyle = androidx.compose.material3.LocalTextStyle.current.merge(Ket27Desk.Type.subheadline).copy(color = ket.label),
             cursorBrush = SolidColor(ket.accent),
             visualTransformation = if (secret) PasswordVisualTransformation() else VisualTransformation.None,

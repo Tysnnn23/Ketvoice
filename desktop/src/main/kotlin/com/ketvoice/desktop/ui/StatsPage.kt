@@ -226,8 +226,8 @@ internal fun deltaText(r: LiveStats.Result): String? {
 
 private fun barLabel(period: Period, key: String): String = runCatching {
     when (period) {
-        Period.Week -> LocalDate.parse(key).dayOfWeek.getDisplayName(TextStyle.SHORT, locale())
+        Period.Week -> LocalDates.weekday(LocalDate.parse(key).dayOfWeek)
         Period.Month -> AppText.t("Sem. {0}").replace("{0}", key.removePrefix("S"))
-        Period.Year, Period.All -> YearMonth.parse(key).month.getDisplayName(TextStyle.SHORT, locale())
+        Period.Year, Period.All -> LocalDates.month(YearMonth.parse(key).monthValue)
     }
 }.getOrDefault(key)

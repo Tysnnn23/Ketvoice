@@ -97,6 +97,9 @@ tasks.processResources {
     doFirst { if (requireSmtc && !smtcDll.isFile) throw GradleException("ketvoice_smtc.dll missing: $smtcDll (build native/smtc first)") }
 }
 
+// The shared import parsers' tests read the public pages saved under the app's test resources (Phase 3).
+tasks.processTestResources { from("../app/src/test/resources") { include("smartlib/**") } }
+
 tasks.test {
     useJUnit()
     // Some reused tests write fixtures through the compat Context: keep them in build/.

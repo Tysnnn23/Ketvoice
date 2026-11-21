@@ -167,11 +167,13 @@ fun TrackColumns(tracks: List<Track>, columns: Int = 3, rows: Int = 4) {
 
 /** A cover with its title and artist; Play appears on hover. */
 @Composable
-fun AlbumCard(album: AlbumRef, width: Dp, onOpen: () -> Unit, onPlay: (() -> Unit)? = null, subtitle: String = album.artist) {
+fun AlbumCard(album: AlbumRef, width: Dp, onOpen: () -> Unit, onPlay: (() -> Unit)? = null, subtitle: String = album.artist,
+              menu: (() -> List<MenuItem>)? = null) {
     val ket = LocalKet.current
     val (source, hovered) = rememberHover()
     val lift by animateFloatAsState(if (hovered) 1.015f else 1f, Motion.Springs.SNAPPY.motion())
-    Column(Modifier.width(width).hoverable(source).testTag("album:${album.title}")) {
+    val menuState = LocalMenu.current
+    Column(Modifier.width(width).hoverable(source).then(if (menu != null) Modifier.contextMenu(menuState, menu) else Modifier).testTag("album:${album.title}")) {
         Box(Modifier.graphicsLayer { scaleX = lift; scaleY = lift }.androidxClickable(onOpen)) {
             Artwork(album.cover, width, radius = Ket27Desk.Radius.artwork, shadow = if (hovered) 10.dp else 2.dp)
             if (hovered && onPlay != null) Box(Modifier.align(Alignment.BottomStart).padding(10.dp).size(34.dp)
@@ -204,10 +206,13 @@ fun ArtistCard(artist: ArtistRef, width: Dp, onOpen: () -> Unit) {
 @Composable
 fun AlbumShelf(albums: List<AlbumRef>, onPlay: ((AlbumRef) -> Unit)? = null) {
     val nav = LocalNavigator.current
+    val catalog = LocalCatalog.current
+    val actions = LocalTrackActions.current
+    fun items(a: AlbumRef) = actions.collectionMenu { catalog.album(a)?.tracks.orEmpty() }
     LazyRow(horizontalArrangement = Arrangement.spacedBy(Ket27Desk.Space.l)) {
         items(albums, key = { it.title + "|" + it.artist + "|" + it.id }) { a ->
-            AlbumCard(a, 176.dp, onOpen = { nav.push(Route.Album(a)) }, onPlay = onPlay?.let { { it(a) } },
-                subtitle = listOfNotNull(a.year, a.artist.takeIf { a.year == null }).joinToString(" · "))
+            AlbumCard(a, 176.dp, onOpen = { nav.push(Route.Album(a)) }, onPlay = { onPlay?.invoke(a) ?: items(a).first().action() },
+                subtitle = listOfNotNull(a.year, a.artist.takeIf { a.year == null }).joinToString(" · "), menu = { items(a) })
         }
     }
 }
@@ -229,10 +234,10 @@ fun TrackShelf(tracks: List<Track>, width: Dp = 176.dp) {
 
 /** The big centred message of an empty page. */
 @Composable
-fun EmptyMessage(title: String, message: String, modifier: Modifier = Modifier) {
+fun EmptyMessage(title: String, message: String, modifier: Modifier = Modifier, icon: androidx.compose.ui.graphics.vector.ImageVector = KetIcons.Music) {
     val ket = LocalKet.current
     Column(modifier.fillMaxWidth().padding(vertical = 80.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Icon(KetIcons.Music, null, Modifier.size(40.dp), tint = ket.tertiary)
+        Icon(icon, null, Modifier.size(40.dp), tint = ket.tertiary)
         Spacer(Modifier.height(14.dp))
         KText(title, Ket27Desk.Type.title3)
         Spacer(Modifier.height(6.dp))

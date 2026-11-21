@@ -1,5 +1,7 @@
 package com.ketvoice.desktop.ui
 
+import com.ketvoice.app.ui.common.KetIcons
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -97,12 +99,16 @@ private fun Loading() { Box(Modifier.fillMaxWidth().padding(vertical = 60.dp), c
 
 @Composable
 fun HomePage() {
-    val catalog = LocalCatalog.current
     val history by LocalLibrary.current.history.collectAsState()
-    val data by produceState<HomeData?>(null) { value = runCatching { catalog.home() }.getOrNull() ?: HomeData(emptyList(), emptyList(), emptyList()) }
+    val loader = rememberLoad(Unit, empty = { it.forYou.isEmpty() && it.shelves.isEmpty() }) { home() }
     Page("Accueil", "home") {
-        val home = data
-        if (home == null) { item { Loading() }; return@Page }
+        // Offline, what was heard here still shows above the offline state.
+        if (loader.state is Load.Failed && history.isNotEmpty()) {
+            item("rec-h") { SectionHeader("Écoutés récemment") }
+            item("rec") { TrackShelf(history.take(20)) }
+        }
+        loadStates(loader)
+        val home = loader.value ?: return@Page
         val recent = (history + home.recent).distinctBy { it.id }
         if (home.forYou.isEmpty() && recent.isEmpty() && home.shelves.isEmpty()) {
             item { EmptyMessage("Accueil", "Écoutez quelques titres : Ketvoice prépare ici vos sélections.") }
@@ -130,6 +136,9 @@ fun HomePage() {
 
 /* ── Rechercher ── */
 
+/** The search page's scope, as on the phone: the whole catalogue, or the listener's library only. */
+object SearchScope { val library = mutableStateOf(false) }
+
 @Composable
 fun SearchPage() {
     val search = LocalSearch.current
@@ -137,30 +146,54 @@ fun SearchPage() {
     val library = LocalLibrary.current
     val nav = LocalNavigator.current
     val query = search.query.trim()
+    var inLibrary by SearchScope.library
     var results by remember { mutableStateOf<Pair<String, SearchResults>?>(null) }
-    LaunchedEffect(query) {
-        if (query.isEmpty()) return@LaunchedEffect
+    var offline by remember { mutableStateOf(false) }
+    var attempt by remember { mutableStateOf(0) }
+    LaunchedEffect(query, inLibrary, attempt) {
+        if (query.isEmpty() || inLibrary) return@LaunchedEffect
         delay(220) // live results: wait for a pause in typing
-        results = query to runCatching { catalog.search(query) }.getOrDefault(SearchResults(emptyList(), emptyList(), emptyList()))
+        val r = runCatching { catalog.search(query) }.getOrDefault(SearchResults(emptyList(), emptyList(), emptyList()))
+        offline = r.tracks.isEmpty() && r.albums.isEmpty() && r.artists.isEmpty() && !catalog.online()
+        results = query to r
+    }
+    // A search that found something is kept in the recent searches (the phone's SearchHistory).
+    val latest by androidx.compose.runtime.rememberUpdatedState(results)
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        onDispose { latest?.let { (q, r) -> if (q.length >= 2 && r.tracks.isNotEmpty()) com.ketvoice.app.data.SearchHistory.record(q) } }
     }
     if (query.isEmpty()) { SearchStart(); return }
     val playlists by library.playlists.collectAsState()
     Page(null, "search") {
-        item { KText(com.ketvoice.app.data.AppText.t("Résultats pour") + " « $query »", Ket27Desk.Type.title1, Modifier.padding(bottom = 4.dp), translate = false) }
+        item("head") {
+            Row(Modifier.fillMaxWidth().padding(bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                KText(com.ketvoice.app.data.AppText.t("Résultats pour") + " « $query »", Ket27Desk.Type.title1, Modifier.weight(1f), translate = false)
+                Segments(listOf("Tout", "Bibliothèque"), if (inLibrary) 1 else 0, "search-scope") { inLibrary = it == 1 }
+            }
+        }
+        val lists = playlists.filter { com.ketvoice.app.data.SearchRank.fold(it.name).contains(com.ketvoice.app.data.SearchRank.fold(query)) }
+        if (inLibrary) {
+            val mine = LibraryViews.search(library, query)
+            if (mine.isEmpty() && lists.isEmpty()) {
+                item { EmptyMessage("Aucun résultat", "Rien dans votre bibliothèque ne correspond. Cherchez dans tout le catalogue avec « Tout ».") }
+                return@Page
+            }
+            if (mine.isNotEmpty()) {
+                item("lt-h") { SectionHeader("Titres") }
+                item("lt") { TrackColumns(mine, columns = 3, rows = (mine.size + 2) / 3) }
+            }
+            playlistResults(lists, nav)
+            return@Page
+        }
         val r = results?.takeIf { it.first == query }?.second
         if (r == null) { item { Loading() }; return@Page }
-        val lists = playlists.filter { it.name.contains(query, ignoreCase = true) }
         if (r.tracks.isEmpty() && r.albums.isEmpty() && r.artists.isEmpty() && lists.isEmpty()) {
-            item { EmptyMessage("Aucun résultat", "Vérifiez l'orthographe ou essayez d'autres mots.") }
+            item { if (offline) OfflineMessage { attempt++ } else EmptyMessage("Aucun résultat", "Vérifiez l'orthographe ou essayez d'autres mots.", icon = KetIcons.Search) }
             return@Page
         }
         if (r.tracks.isNotEmpty()) {
             item("t-h") { SectionHeader("Titres") }
             item("t") { TrackColumns(r.tracks, columns = 3, rows = 4) }
-        }
-        if (r.albums.isNotEmpty()) {
-            item("a-h") { SectionHeader("Albums") }
-            item("a") { AlbumShelf(r.albums) }
         }
         if (r.artists.isNotEmpty()) {
             item("ar-h") { SectionHeader("Artistes") }
@@ -170,35 +203,82 @@ fun SearchPage() {
                 }
             }
         }
-        if (lists.isNotEmpty()) {
-            item("p-h") { SectionHeader("Playlists") }
-            item("p") {
-                androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(Ket27Desk.Space.l)) {
-                    items(lists.size) { i -> val p = lists[i]
-                        AlbumCard(AlbumRef(p.id, p.name, "", p.tracks.firstOrNull()?.coverUrl), 176.dp, { nav.push(Route.Playlist(p.id)) },
-                            subtitle = com.ketvoice.app.data.AppText.t("${p.tracks.size} titres"))
-                    }
-                }
+        if (r.albums.isNotEmpty()) {
+            item("a-h") { SectionHeader("Albums") }
+            item("a") { AlbumShelf(r.albums) }
+        }
+        if (r.tracks.size > 12) {
+            item("more-h") { SectionHeader("Autres titres") }
+            item("more") { TrackColumns(r.tracks.drop(12), columns = 3, rows = minOf(6, (r.tracks.size - 12 + 2) / 3)) }
+        }
+        playlistResults(lists, nav)
+    }
+}
+
+private fun androidx.compose.foundation.lazy.LazyListScope.playlistResults(lists: List<UserPlaylist>, nav: Navigator) {
+    if (lists.isEmpty()) return
+    item("p-h") { SectionHeader("Playlists") }
+    item("p") {
+        androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(Ket27Desk.Space.l)) {
+            items(lists.size) { i -> val p = lists[i]
+                AlbumCard(AlbumRef(p.id, p.name, "", p.tracks.firstOrNull()?.coverUrl), 176.dp, { nav.push(Route.Playlist(p.id)) },
+                    subtitle = com.ketvoice.app.data.AppText.t("${p.tracks.size} titres"))
             }
         }
     }
 }
 
-/** 7.3's search start page: recently played titles, then the catalogue's categories as tiles. */
+/** Ket 27's segmented control, desktop size. */
+@Composable
+internal fun Segments(options: List<String>, selected: Int, tag: String, onPick: (Int) -> Unit) {
+    val ket = LocalKet.current
+    Row(Modifier.height(28.dp).clip(RoundedCornerShape(8.dp)).background(ket.fill).padding(2.dp)) {
+        options.forEachIndexed { i, o ->
+            val on = i == selected
+            Box(Modifier.fillMaxHeight().clip(RoundedCornerShape(6.dp)).background(if (on) ket.raised else Color.Transparent)
+                .clickable { onPick(i) }.padding(horizontal = 14.dp).testTag("$tag:$i"), contentAlignment = Alignment.Center) {
+                KText(o, Ket27Desk.Type.footnote, color = if (on) ket.label else ket.secondary, weight = if (on) FontWeight.SemiBold else FontWeight.Medium)
+            }
+        }
+    }
+}
+
+/** 7.3's search start page: recent searches, recently played titles, then the catalogue's categories as tiles. */
 @Composable
 private fun SearchStart() {
-    val catalog = LocalCatalog.current
     val nav = LocalNavigator.current
+    val search = LocalSearch.current
+    val ket = LocalKet.current
     val history by LocalLibrary.current.history.collectAsState()
-    val categories by produceState<List<Category>?>(null) { value = runCatching { catalog.categories() }.getOrDefault(emptyList()) }
+    val recentQueries by com.ketvoice.app.data.SearchHistory.queries.collectAsState()
+    val loader = rememberLoad(Unit, empty = { it.isEmpty() }) { categories() }
     Page("Rechercher", "search-start") {
+        if (recentQueries.isNotEmpty()) {
+            item("q-h") {
+                SectionHeader("Recherches récentes") {
+                    KetTextLink("Effacer", "clear-searches") { com.ketvoice.app.data.SearchHistory.clear() }
+                }
+            }
+            item("q") {
+                androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    recentQueries.take(12).forEach { q ->
+                        Row(Modifier.height(30.dp).clip(RoundedCornerShape(15.dp)).background(ket.fill).clickable { search.query = q }
+                            .padding(horizontal = 12.dp).testTag("recent-search"), verticalAlignment = Alignment.CenterVertically) {
+                            com.ketvoice.app.ui.common.Icon(KetIcons.Clock, null, Modifier.size(12.dp), tint = ket.secondary)
+                            Spacer(Modifier.width(6.dp))
+                            KText(q, Ket27Desk.Type.footnote, translate = false)
+                        }
+                    }
+                }
+            }
+        }
         if (history.isNotEmpty()) {
             item("h-h") { SectionHeader("Écoutés récemment") }
             item("h") { TrackColumns(history, columns = 3, rows = 2) }
         }
         item("c-h") { SectionHeader("Catégories") }
-        val list = categories
-        if (list == null) { item { Loading() }; return@Page }
+        loadStates(loader)
+        val list = loader.value ?: return@Page
         item("c") { CategoryTiles(list) { nav.push(Route.Category(it)) } }
     }
 }
@@ -235,15 +315,12 @@ private val TILES = listOf(Color(0xFF0071E3), Color(0xFFE0284A), Color(0xFF248A3
 
 @Composable
 fun CategoryPage(category: Category) {
-    val catalog = LocalCatalog.current
-    val tracks by produceState<List<Track>?>(null, category) { value = runCatching { catalog.category(category) }.getOrDefault(emptyList()) }
+    val loader = rememberLoad(category, empty = { it.isEmpty() }) { category(category) }
     Page(category.title, "category") {
-        val list = tracks
-        when {
-            list == null -> item { Loading() }
-            list.isEmpty() -> item { EmptyMessage("Aucun résultat", "Cette catégorie est vide pour le moment.") }
-            else -> item { TrackColumns(list, columns = 3, rows = (list.size + 2) / 3) }
-        }
+        loadStates(loader)
+        val list = loader.value ?: return@Page
+        if (list.isEmpty()) item { EmptyMessage("Aucun résultat", "Cette catégorie est vide pour le moment.") }
+        else item { TrackColumns(list, columns = 3, rows = (list.size + 2) / 3) }
     }
 }
 
@@ -251,13 +328,13 @@ fun CategoryPage(category: Category) {
 
 @Composable
 fun ExplorePage() {
-    val catalog = LocalCatalog.current
     val nav = LocalNavigator.current
-    val categories by produceState<List<Category>?>(null) { value = runCatching { catalog.categories() }.getOrDefault(emptyList()) }
+    val loader = rememberLoad(Unit, empty = { it.isEmpty() }) { categories() }
     Page("Explorer", "explore") {
         item { SectionHeader("Catégories") }
-        val list = categories
-        if (list == null) item { Loading() } else item { CategoryTiles(list) { nav.push(Route.Category(it)) } }
+        loadStates(loader)
+        val list = loader.value ?: return@Page
+        item { CategoryTiles(list) { nav.push(Route.Category(it)) } }
     }
 }
 
@@ -272,7 +349,7 @@ fun SettingsPage() {
         item { SectionHeader("Général") }
         item {
             SettingsCard {
-                SettingRow("Langue", AppSettings.language.value)
+                LanguageRow()
                 Hairline()
                 SettingRow("Apparence", com.ketvoice.app.data.AppText.t(if (ket.dark) "Sombre (suit Windows)" else "Clair (suit Windows)"))
             }
@@ -293,8 +370,12 @@ fun SettingsPage() {
                 ToggleRow("Fermer dans la zone de notification", DesktopPrefs.closeToTray.value, "close-to-tray") { DesktopPrefs.setCloseToTray(it) }
                 Hairline()
                 ToggleRow("Démarrer avec Windows", DesktopPrefs.startWithWindows.value, "start-with-windows") { DesktopPrefs.setStartWithWindows(it) }
+                Hairline()
+                ToggleRow("Mini-lecteur", MiniPlayer.open.value, "mini-player") { MiniPlayer.open.value = it }
             }
         }
+        item { SectionHeader("Raccourcis clavier") }
+        item { ShortcutsCard() }
         localMusicSettings()
         item { SectionHeader("À propos") }
         item {
@@ -359,20 +440,35 @@ private fun KetmixSettings() {
     }
 }
 
+/**
+ * The interface language: the system's, or one of the app's 11 (each in its own name). Every page reads
+ * `AppText.t` through `AppSettings.language`, so the window changes language at once, without a restart.
+ */
+@Composable
+private fun LanguageRow() {
+    val options = listOf(com.ketvoice.app.data.AppText.t("Langue du système")) + com.ketvoice.app.data.AppLanguage.all.map { it.nativeName }
+    val chosen = AppSettings.languageChosen.value
+    val selected = if (!chosen) 0 else 1 + com.ketvoice.app.data.AppLanguage.all.indexOf(com.ketvoice.app.data.AppLanguage.fromLabel(AppSettings.language.value)).coerceAtLeast(0)
+    ChoiceRow("Langue", selected, options, "language", translate = false) { i ->
+        if (i == 0) { AppSettings.languageChosen.value = false; AppSettings.language.value = com.ketvoice.app.data.AppLocales.systemLanguage().label }
+        else { AppSettings.language.value = com.ketvoice.app.data.AppLanguage.all[i - 1].label; AppSettings.languageChosen.value = true }
+    }
+}
+
 /** A setting with a few named values: the current one on the right, the others in the window's menu. */
 @Composable
-private fun ChoiceRow(label: String, selected: Int, options: List<String>, tag: String, onPick: (Int) -> Unit) {
+private fun ChoiceRow(label: String, selected: Int, options: List<String>, tag: String, translate: Boolean = true, onPick: (Int) -> Unit) {
     val ket = LocalKet.current
     val menu = LocalMenu.current
     val origin = remember { arrayOf(androidx.compose.ui.geometry.Offset.Zero) }
     Row(Modifier.fillMaxWidth().height(44.dp)
         .onGloballyPositioned { origin[0] = it.positionInWindow() + androidx.compose.ui.geometry.Offset(it.size.width.toFloat() - 240f, it.size.height.toFloat()) }
         .clickable {
-            menu.open(options.mapIndexed { i, o -> MenuItem(o, if (i == selected) com.ketvoice.app.ui.common.KetIcons.Check else null, tag = "$tag:$i") { onPick(i) } },
+            menu.open(options.mapIndexed { i, o -> MenuItem(o, if (i == selected) com.ketvoice.app.ui.common.KetIcons.Check else null, tag = "$tag:$i", translate = translate) { onPick(i) } },
                 androidx.compose.ui.unit.IntOffset(origin[0].x.toInt(), origin[0].y.toInt()))
         }.padding(horizontal = 16.dp).testTag("choice:$tag"), verticalAlignment = Alignment.CenterVertically) {
         KText(label, Ket27Desk.Type.subheadline, Modifier.weight(1f))
-        KText(options.getOrElse(selected) { options.first() }, Ket27Desk.Type.subheadline, color = ket.secondary, weight = FontWeight.Normal)
+        KText(options.getOrElse(selected) { options.first() }, Ket27Desk.Type.subheadline, color = ket.secondary, weight = FontWeight.Normal, translate = translate)
         com.ketvoice.app.ui.common.Icon(DeskGlyphs.ChevronDown, null, Modifier.padding(start = 6.dp).size(12.dp), tint = ket.tertiary)
     }
 }

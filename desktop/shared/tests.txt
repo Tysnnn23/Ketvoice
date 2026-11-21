@@ -37,3 +37,9 @@ data/StreamQualityTest.kt
 data/StreamResolverTest.kt
 player/QueueEntryIdsTest.kt
 player/QueueOrderTest.kt
+# Phase 3 (winpolish)
+data/SearchRankTest.kt
+data/SearchGroupsTest.kt
+smartlib/AppleMusicImportTest.kt
+smartlib/TidalImportTest.kt
+smartlib/SoundCloudImportTest.kt

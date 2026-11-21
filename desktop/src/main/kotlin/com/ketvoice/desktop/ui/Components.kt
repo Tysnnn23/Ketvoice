@@ -265,7 +265,7 @@ fun Modifier.dropTarget(id: String, drag: TrackDrag): Modifier = onGloballyPosit
 /* ── Context menus ── */
 
 data class MenuItem(val label: String, val icon: ImageVector? = null, val tag: String = label, val children: List<MenuItem> = emptyList(),
-                    val action: () -> Unit = {})
+                    val translate: Boolean = true, val action: () -> Unit = {})
 
 /** Opens [items] where the secondary button was pressed. */
 @OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
@@ -350,7 +350,7 @@ private fun MenuRow(item: MenuItem, onPick: () -> Unit, onHover: () -> Unit) {
     ) {
         val fg = if (hovered) Color.White else ket.label
         if (item.icon != null) { Icon(item.icon, null, Modifier.size(15.dp), tint = fg); Spacer(Modifier.width(10.dp)) }
-        KText(item.label, Ket27Desk.Type.subheadline, Modifier.weight(1f), color = fg, translate = item.tag != "playlist")
+        KText(item.label, Ket27Desk.Type.subheadline, Modifier.weight(1f), color = fg, translate = item.translate && item.tag != "playlist")
         if (item.children.isNotEmpty()) Icon(com.ketvoice.app.ui.common.KetIcons.ChevronRight, null, Modifier.size(12.dp), tint = fg)
     }
 }

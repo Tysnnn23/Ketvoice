@@ -46,7 +46,11 @@ interface PlayerControls {
     fun moveQueue(from: Int, to: Int)
     fun setShuffle(on: Boolean)
     fun setRepeat(one: Boolean, all: Boolean)
+    /** Playback problems for the listener (« Flux indisponible · réessayez »), in French: the toast translates them. */
+    val errors: kotlinx.coroutines.flow.SharedFlow<String> get() = NoErrors
 }
+
+private val NoErrors = kotlinx.coroutines.flow.MutableSharedFlow<String>()
 
 data class UserPlaylist(val id: String, val name: String, val tracks: List<Track> = emptyList())
 
@@ -69,6 +73,11 @@ interface LibraryStore {
     /** Titles in the music folders of this computer (Settings › Musique locale). */
     val localTracks: StateFlow<List<Track>> get() = NoLocalTracks
     fun addToPlaylist(playlistId: String, track: Track)
+    /** Adds [tracks] in their order (an album, a whole selection). */
+    fun addAllToPlaylist(playlistId: String, tracks: List<Track>) = tracks.forEach { addToPlaylist(playlistId, it) }
+    /** A playlist imported from a link: its titles found in Ketvoice, the others kept as named entries. */
+    fun importPlaylist(name: String, entries: List<com.ketvoice.app.data.PlaylistEntry>, cover: String?, onCreated: (String) -> Unit = {}) =
+        createPlaylist(name, entries.mapNotNull { it.track }, onCreated)
     fun removeFromPlaylist(playlistId: String, index: Int)
     fun movePlaylistEntry(playlistId: String, from: Int, to: Int)
     fun download(track: Track)
@@ -97,6 +106,7 @@ object PlayerBridge : PlayerControls {
     override fun moveQueue(from: Int, to: Int) = Player.moveQueue(from, to)
     override fun setShuffle(on: Boolean) = Player.setShuffle(on)
     override fun setRepeat(one: Boolean, all: Boolean) = Player.setRepeat(one, all)
+    override val errors: kotlinx.coroutines.flow.SharedFlow<String> get() = Player.error
 }
 
 /**
@@ -132,6 +142,13 @@ object LibraryBridge : LibraryStore {
     override val localTracks: StateFlow<List<Track>> get() = com.ketvoice.desktop.library.LocalFolders.tracks
     // Each title once in a playlist, as the shared store's addAll keeps it.
     override fun addToPlaylist(playlistId: String, track: Track) { io.launch { DesktopLibrary.addAllToPlaylist(playlistId, listOf(track)) } }
+    override fun addAllToPlaylist(playlistId: String, tracks: List<Track>) { io.launch { DesktopLibrary.addAllToPlaylist(playlistId, tracks) } }
+    override fun importPlaylist(name: String, entries: List<com.ketvoice.app.data.PlaylistEntry>, cover: String?, onCreated: (String) -> Unit) {
+        io.launch {
+            val id = runCatching { com.ketvoice.app.data.PlaylistStore.create(name, entries, null, cover) }.getOrNull() ?: return@launch
+            launch(Dispatchers.Swing) { onCreated(id) }
+        }
+    }
     override fun removeFromPlaylist(playlistId: String, index: Int) {
         val entry = DesktopLibrary.playlists.value.firstOrNull { it.id == playlistId }?.entries?.getOrNull(index) ?: return
         io.launch { DesktopLibrary.removeFromPlaylist(playlistId, entry.id) }

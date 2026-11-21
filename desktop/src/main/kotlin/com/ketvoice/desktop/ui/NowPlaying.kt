@@ -123,10 +123,14 @@ private fun Lcd(onOpenPlayer: () -> Unit) {
     val format by player.format.collectAsState()
     val loading by player.loading.collectAsState()
     val track = state.current
+    val actions = LocalTrackActions.current
+    val menu = LocalMenu.current
     val shape = RoundedCornerShape(8.dp)
     Row(Modifier.widthIn(max = 640.dp).fillMaxWidth().height(50.dp).clip(shape)
         .background(if (ket.dark) Color.White.copy(alpha = .06f) else Color.Black.copy(alpha = .035f))
-        .border(.5.dp, ket.hairline, shape).testTag("lcd"), verticalAlignment = Alignment.CenterVertically) {
+        .border(.5.dp, ket.hairline, shape)
+        .then(if (track != null) Modifier.contextMenu(menu) { actions.menu(track) } else Modifier)
+        .testTag("lcd"), verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.size(50.dp).clickable(enabled = track != null, onClick = onOpenPlayer).testTag("lcd-artwork")) {
             Artwork(track?.coverUrl, 50.dp, radius = 0.dp)
         }
@@ -307,11 +311,14 @@ fun FullPlayer(onClose: () -> Unit) {
     LaunchedEffect(Unit) { rise.animateTo(0f, Motion.Springs.SHEET.motion()) }
     val canvas = rememberPlayerCanvas(track, state.queue, state.index)
     var lyrics by FullPlayerLyrics.shown
+    val actions = LocalTrackActions.current
     Box(Modifier.fillMaxSize().graphicsLayer { translationY = rise.value * size.height * .08f; alpha = 1f - rise.value }
         .background(ground).testTag("full-player")) {
-        // The cover itself, blurred far, as the room's light (where Skia blurs; flat colour otherwise).
-        if (image != null) Image(image, null, Modifier.fillMaxSize().blur(120.dp).graphicsLayer { alpha = .55f }, contentScale = ContentScale.Crop)
-        Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .25f)))
+        // The cover's colours turning slowly into each other (the phone's ArtworkFlow), under a veil for the white text.
+        CoverFlowBackground(track.coverUrl, state.isPlaying)
+        Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .30f)))
+        Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.verticalGradient(
+            listOf(Color.Black.copy(alpha = .10f), Color.Transparent, Color.Black.copy(alpha = .28f)))))
         Row(Modifier.fillMaxSize()) {
             // The artwork's place: the cover, or the Canvas placed as CanvasFit places it, its colours around it.
             Box(Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.Center) {
@@ -331,7 +338,9 @@ fun FullPlayer(onClose: () -> Unit) {
             }
         }
         KetIconButton(DeskGlyphs.ChevronDown, "Fermer", onClose, Modifier.padding(16.dp).testTag("close-player"), size = 36.dp, glyph = 20.dp, tint = Color.White)
-        Box(Modifier.align(Alignment.TopEnd).padding(16.dp)) {
+        Row(Modifier.align(Alignment.TopEnd).padding(16.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            MoreButton(Color.White.copy(alpha = .6f)) { actions.menu(track) }
+            MiniPlayerButton(Color.White.copy(alpha = .6f))
             KetIconButton(KetIcons.Lyrics, "Paroles", { lyrics = !lyrics }, Modifier.testTag("full-lyrics"),
                 size = 36.dp, glyph = 18.dp, tint = if (lyrics) Color.White else Color.White.copy(alpha = .6f))
         }
