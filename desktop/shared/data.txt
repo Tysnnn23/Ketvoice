@@ -4,6 +4,7 @@ data/AppSettings.kt
 data/AppLanguage.kt
 data/SmartOfflinePlan.kt
 data/MusicApi.kt
+data/RecentAnswers.kt
 data/KetvoiceApi.kt
 data/PublicationApi.kt
 data/PublisherAccess.kt
