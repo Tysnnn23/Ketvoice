@@ -11,6 +11,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
@@ -34,19 +35,49 @@ object HomeFeed {
     private var localShelves: List<HomeShelf> = emptyList()
     private val _origin = MutableStateFlow("Sélections locales")
     val origin: StateFlow<String> = _origin
+    @Volatile private var prefs: android.content.SharedPreferences? = null
+    private const val YOUTUBE_KEY = "youtube-home"
+
     fun refreshYouTube() {
         scope.launch {
             if (!AppSettings.personalizedYouTubeHome.value) return@launch
             val data = YouTubeCatalog.personalHome()
             if (data.isNotEmpty() && YouTubeMusicSession.profile.value.connected) {
-                _shelves.value = data
-                personal = true
-                _origin.value = "Accueil YouTube Music personnel"
+                showYouTube(data)
+                // 8.1: the next start shows this home at once from the disk, then asks YouTube Music again.
+                prefs?.edit()?.putString(YOUTUBE_KEY, Gson().toJson(data))?.apply()
                 ArtworkRepo.enrich(data.flatMap { it.tracks })
             }
         }
     }
-    fun clearPersonalized() { personal = false; _shelves.value = localShelves; _origin.value = "Sélections locales" }
+
+    private fun showYouTube(data: List<HomeShelf>) {
+        _shelves.value = data
+        personal = true
+        _origin.value = "Accueil YouTube Music personnel"
+    }
+
+    /** Back to Ketvoice's own shelves; [forget] (sign-out, the setting turned off) also removes the saved YouTube home. */
+    fun clearPersonalized(forget: Boolean = true) {
+        personal = false; _shelves.value = localShelves; _origin.value = "Sélections locales"
+        if (forget) prefs?.edit()?.remove(YOUTUBE_KEY)?.apply()
+    }
+
+    /**
+     * 8.1: the YouTube Music home of the last start, shown at once while the remembered session is confirmed again.
+     * If YouTube does not confirm it within a while, Ketvoice's own shelves come back (the saved copy stays for later).
+     */
+    private fun showSavedYouTube(prefs: android.content.SharedPreferences, gson: Gson) {
+        if (!AppSettings.personalizedYouTubeHome.value || !YouTubeMusicSession.remembered()) return
+        val saved = runCatching { gson.fromJson(prefs.getString(YOUTUBE_KEY, null) ?: return, Array<HomeShelf>::class.java).toList() }
+            .getOrNull()?.filter { it.tracks.isNotEmpty() }.orEmpty()
+        if (saved.isEmpty()) return
+        showYouTube(saved)
+        scope.launch {
+            val confirmed = kotlinx.coroutines.withTimeoutOrNull(20_000) { YouTubeMusicSession.profile.first { it.connected } } != null
+            if (!confirmed && personal && _shelves.value === saved) clearPersonalized(forget = false)
+        }
+    }
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val random = Random(System.nanoTime())
 
@@ -72,6 +103,7 @@ object HomeFeed {
         if (started) return
         started = true
         val prefs = context.getSharedPreferences("home-feed-v1", Context.MODE_PRIVATE)
+        this.prefs = prefs
         val gson = Gson()
         val previous = prefs.getStringSet("previous", emptySet()).orEmpty().toSet()
         val poolLock = Any()
@@ -104,6 +136,9 @@ object HomeFeed {
                     Album(it.albumId!!, it.album, it.artist, "Sortie du catalogue", it.coverUrl)
                 }
         }
+        showSavedYouTube(prefs, gson)
+        // 8.1: the personal YouTube home is asked beside the catalogue, no longer after it.
+        refreshYouTube()
         scope.launch {
             combine(ListeningHistory.tracks, snapshotFlow { AppSettings.favoriteIds.value }) { history, _ -> history }
                 .drop(1).collect { history ->
@@ -142,7 +177,11 @@ object HomeFeed {
                 }
             } catch (_: Exception) {
 
-            } finally { _loading.value = false; refreshYouTube() }
+            } finally {
+                _loading.value = false
+                // A session confirmed meanwhile already asked for its home (YouTubeMusicSession); one more try otherwise.
+                if (!personal) refreshYouTube()
+            }
         }
     }
 
