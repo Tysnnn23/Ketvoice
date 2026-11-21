@@ -1,0 +1,214 @@
+name: Publish Windows release
+
+# Ketvoice for Windows: builds the MSI for one version, tests it, installs it silently, runs the installed
+# app's --smoke, uninstalls, then publishes it as the GitHub release windows-v<version> with SHA256SUMS.txt.
+# The in-app updater (desktop/.../update/) reads exactly these assets. The release is never marked "latest":
+# the Android in-app updater and the website read the latest release. An existing tag or release is never
+# touched. Mirrors publish-release.yml: draft first, upload, re-download comparison, then publish.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Windows version, e.g. 1.0.0 (tag windows-v1.0.0)"
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publish-windows-release
+  cancel-in-progress: false
+
+env:
+  VERSION: ${{ inputs.version }}
+  TAG: windows-v${{ inputs.version }}
+  UPGRADE_CODE: "{5319BA3F-92FE-494B-97B3-BDF702D3D01E}"
+
+jobs:
+  publish:
+    runs-on: windows-latest
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Refuse a bad version or an existing tag or release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if ($env:VERSION -notmatch '^(\d{1,3})\.(\d{1,3})\.(\d{1,5})$' -or [int]$Matches[1] -lt 1 -or [int]$Matches[1] -gt 255 -or [int]$Matches[2] -gt 255) {
+            throw "Bad version '$env:VERSION': MAJOR.MINOR.PATCH, as an MSI ProductVersion takes it"
+          }
+          git ls-remote --exit-code --tags origin "refs/tags/$env:TAG" *> $null
+          if ($LASTEXITCODE -eq 0) { throw "Tag $env:TAG already exists; a published version is never rebuilt or overwritten." }
+          gh release view $env:TAG *> $null
+          if ($LASTEXITCODE -eq 0) { throw "A release (or draft) $env:TAG already exists; delete the draft or use a new version." }
+          $global:LASTEXITCODE = 0
+          "Publishing $env:TAG from $env:GITHUB_SHA" | Tee-Object -FilePath $env:GITHUB_STEP_SUMMARY -Append
+
+      - name: Release notes and validation record
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          $notes = "docs/releases/$env:TAG.md"
+          $meta = "release-metadata/$env:TAG/validation.json"
+          foreach ($f in @($notes, $meta)) { if (-not (Test-Path $f)) { throw "$f is missing" } }
+          if ((Get-Content $notes -Raw).Trim().Length -lt 40) { throw "$notes is too short to be release notes" }
+          python tools/verify_msi.py validation $meta $env:VERSION
+          # The validated source must be what is built here: same desktop, shared app sources, native code and licences.
+          $source = python -c "import json,sys;print(json.load(open(sys.argv[1]))['source_commit'])" $meta
+          git merge-base --is-ancestor $source HEAD
+          git diff --quiet $source HEAD -- desktop app/src/main native docs/licenses
+          "Validated source $source; nothing built from it changed since." | Tee-Object -FilePath $env:GITHUB_STEP_SUMMARY -Append
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: WiX Toolset
+        run: |
+          if (Get-Command candle.exe -ErrorAction SilentlyContinue) {
+            Write-Host "WiX found: $((Get-Command candle.exe).Source)"
+          } else {
+            choco install wixtoolset --version 3.14.1 -y --no-progress
+            $wix = Get-ChildItem "${env:ProgramFiles(x86)}" -Directory -Filter "WiX Toolset*" | Select-Object -First 1
+            if ($wix) { "$($wix.FullName)\bin" | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8 }
+          }
+
+      - name: SMTC DLL (native/smtc)
+        run: |
+          cmake -S native/smtc -B native/smtc/build -A x64
+          if ($LASTEXITCODE -ne 0) { throw "cmake configure failed" }
+          cmake --build native/smtc/build --config Release
+          if ($LASTEXITCODE -ne 0) { throw "cmake build failed" }
+          if (-not (Test-Path native/smtc/build/Release/ketvoice_smtc.dll)) { throw "ketvoice_smtc.dll was not built" }
+
+      # checkNoGpl runs before the tests and the packaging: a -gpl artifact fails the build.
+      - name: Desktop tests
+        run: |
+          ./gradlew -p desktop --no-daemon test -PrequireSmtc=true "-PappVersion=$env:VERSION"
+          if ($LASTEXITCODE -ne 0) { throw "desktop tests failed" }
+          $t = 0; $f = 0
+          foreach ($x in Get-ChildItem desktop/build/test-results/test -Filter *.xml) { $s = ([xml](Get-Content $x.FullName)).testsuite; $t += [int]$s.tests; $f += [int]$s.failures + [int]$s.errors }
+          "Desktop tests: $t run, $f failed" | Tee-Object -FilePath $env:GITHUB_STEP_SUMMARY -Append
+
+      - name: Package MSI
+        run: |
+          ./gradlew -p desktop --no-daemon packageMsi -PrequireSmtc=true "-PappVersion=$env:VERSION"
+          if ($LASTEXITCODE -ne 0) { throw "packageMsi failed" }
+          $msi = @(Get-ChildItem desktop/build/compose/binaries/main/msi -Filter *.msi)
+          if ($msi.Count -ne 1) { throw "expected one MSI, found $($msi.Count)" }
+          New-Item -ItemType Directory -Force stage | Out-Null
+          Copy-Item $msi[0].FullName "stage/Ketvoice-$env:VERSION.msi"
+          "MSI: Ketvoice-$env:VERSION.msi ($([math]::Round($msi[0].Length / 1MB, 1)) MB)" | Tee-Object -FilePath $env:GITHUB_STEP_SUMMARY -Append
+
+      - name: MSI identity (Python parser and Windows Installer)
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          $msi = (Resolve-Path "stage/Ketvoice-$env:VERSION.msi").Path
+          python tools/verify_msi.py identity $msi --version $env:VERSION --upgrade-code $env:UPGRADE_CODE
+          # Cross-check with Windows Installer itself.
+          $installer = New-Object -ComObject WindowsInstaller.Installer
+          $db = $installer.GetType().InvokeMember("OpenDatabase", "InvokeMethod", $null, $installer, @($msi, 0))
+          function Prop($name) {
+            $view = $db.GetType().InvokeMember("OpenView", "InvokeMethod", $null, $db, @("SELECT Value FROM Property WHERE Property='$name'"))
+            $view.GetType().InvokeMember("Execute", "InvokeMethod", $null, $view, $null) | Out-Null
+            $rec = $view.GetType().InvokeMember("Fetch", "InvokeMethod", $null, $view, $null)
+            $rec.GetType().InvokeMember("StringData", "GetProperty", $null, $rec, 1)
+          }
+          $pv = Prop "ProductVersion"; $uc = Prop "UpgradeCode"
+          if ($pv -ne $env:VERSION) { throw "Windows Installer: ProductVersion $pv, expected $env:VERSION" }
+          if ($uc -ne $env:UPGRADE_CODE) { throw "Windows Installer: UpgradeCode $uc, expected $env:UPGRADE_CODE" }
+          "Windows Installer: ProductVersion $pv, UpgradeCode $uc" | Tee-Object -FilePath $env:GITHUB_STEP_SUMMARY -Append
+
+      - name: Install, check shortcuts and licences, smoke, uninstall
+        run: |
+          $msi = (Resolve-Path "stage/Ketvoice-$env:VERSION.msi").Path
+          $p = Start-Process msiexec.exe -ArgumentList "/i `"$msi`" /qn /norestart /l*v install.log" -Wait -PassThru
+          if ($p.ExitCode -ne 0) { Get-Content install.log -Tail 60; throw "msiexec install exit $($p.ExitCode)" }
+          $roots = @("$env:LOCALAPPDATA\Ketvoice", "$env:LOCALAPPDATA\Programs\Ketvoice", "$env:ProgramFiles\Ketvoice")
+          $exe = $roots | Where-Object { Test-Path $_ } | ForEach-Object { Get-ChildItem $_ -Recurse -Filter Ketvoice.exe } | Select-Object -First 1
+          if (-not $exe) { throw "Ketvoice.exe not found after install" }
+          $appDir = $exe.Directory.FullName
+
+          # Start menu « Ketvoice » and the desktop shortcut.
+          $menus = @("$env:APPDATA\Microsoft\Windows\Start Menu\Programs", "$env:ProgramData\Microsoft\Windows\Start Menu\Programs")
+          $menu = $menus | Where-Object { Test-Path $_ } | ForEach-Object { Get-ChildItem $_ -Recurse -Filter "Ketvoice.lnk" } | Select-Object -First 1
+          if (-not $menu) { throw "no Start menu shortcut named Ketvoice" }
+          $desktops = @([Environment]::GetFolderPath("Desktop"), [Environment]::GetFolderPath("CommonDesktopDirectory"))
+          $desk = $desktops | Where-Object { $_ -and (Test-Path (Join-Path $_ "Ketvoice.lnk")) } | Select-Object -First 1
+          if (-not $desk) { throw "no desktop shortcut Ketvoice.lnk" }
+          "Shortcuts: $($menu.FullName), $desk\Ketvoice.lnk" | Tee-Object -FilePath $env:GITHUB_STEP_SUMMARY -Append
+
+          # Licences installed beside the app (Compose app resources).
+          $lic = Get-ChildItem $appDir -Recurse -Filter "FFmpeg-LGPL-3.0.txt" | Select-Object -First 1
+          if (-not $lic) { throw "FFmpeg-LGPL-3.0.txt is not installed" }
+          "Licences: $($lic.Directory.FullName) ($((Get-ChildItem $lic.Directory -Filter *.txt).Count) files)" | Tee-Object -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          $gpl = Get-ChildItem $appDir -Recurse -Filter *.jar | Where-Object { $_.Name -match '(^|[-_.])gpl([-_.]|$)' }
+          if ($gpl) { throw "GPL artifacts installed: $($gpl.Name -join ', ')" }
+
+          # File associations (optional feature): print what Windows registered.
+          foreach ($ext in @(".mp3", ".flac")) {
+            $k = "HKCU:\Software\Classes\$ext\OpenWithProgids"
+            if (Test-Path $k) { "$ext open-with: $((Get-Item $k).Property -join ', ')" | Tee-Object -FilePath $env:GITHUB_STEP_SUMMARY -Append }
+            else { "${ext}: no per-user OpenWithProgids key" | Tee-Object -FilePath $env:GITHUB_STEP_SUMMARY -Append }
+          }
+
+          $run = Start-Process $exe.FullName -ArgumentList "--smoke" -Wait -PassThru
+          $log = "$env:LOCALAPPDATA\Ketvoice\Data\smoke.log"
+          if (Test-Path $log) { Get-Content $log | Tee-Object -FilePath $env:GITHUB_STEP_SUMMARY -Append }
+          if ($run.ExitCode -ne 0) { throw "Ketvoice.exe --smoke exit $($run.ExitCode)" }
+          if (-not (Select-String -Path $log -Pattern "^smtc (ok|skipped)" -Quiet)) { throw "--smoke printed no SMTC line" }
+          if (-not (Select-String -Path $log -Pattern "^license LGPL" -Quiet)) { throw "--smoke: FFmpeg is not the LGPL build" }
+          if (-not (Select-String -Path $log -SimpleMatch "app version $env:VERSION" -Quiet)) { throw "--smoke: the installed app is not $env:VERSION" }
+
+          $u = Start-Process msiexec.exe -ArgumentList "/x `"$msi`" /qn /norestart" -Wait -PassThru
+          if ($u.ExitCode -ne 0) { throw "msiexec uninstall exit $($u.ExitCode)" }
+          if (Test-Path $exe.FullName) { throw "Ketvoice.exe still present after uninstall" }
+
+      - name: Stage notes, validation record and SHA256SUMS.txt
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          Copy-Item "docs/releases/$env:TAG.md" stage/RELEASE-NOTES.md
+          Copy-Item "release-metadata/$env:TAG/validation.json" stage/validation.json
+          python tools/verify_msi.py sums-write stage "Ketvoice-$env:VERSION.msi" RELEASE-NOTES.md validation.json
+          Get-Content stage/SHA256SUMS.txt | Tee-Object -FilePath $env:GITHUB_STEP_SUMMARY -Append
+
+      - name: Create draft, upload, re-download, publish (never latest)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $repo = $env:GITHUB_REPOSITORY
+          # Checked again: another run may have published meanwhile.
+          git ls-remote --exit-code --tags origin "refs/tags/$env:TAG" *> $null
+          if ($LASTEXITCODE -eq 0) { throw "Tag $env:TAG appeared during the build; refusing to overwrite." }
+          gh release view $env:TAG *> $null
+          if ($LASTEXITCODE -eq 0) { throw "A release $env:TAG appeared during the build; refusing to overwrite." }
+          $global:LASTEXITCODE = 0
+          $PSNativeCommandUseErrorActionPreference = $true
+          $release = gh api "repos/$repo/releases" -X POST -f tag_name=$env:TAG -f target_commitish=$env:GITHUB_SHA `
+            -f name="Ketvoice for Windows $env:VERSION" -F draft=true -F prerelease=false -f make_latest=false `
+            -F body=@stage/RELEASE-NOTES.md | ConvertFrom-Json
+          gh release upload $env:TAG "stage/Ketvoice-$env:VERSION.msi" stage/RELEASE-NOTES.md stage/validation.json stage/SHA256SUMS.txt
+          New-Item -ItemType Directory -Force check | Out-Null
+          gh release download $env:TAG --dir check
+          $got = (Get-ChildItem check | ForEach-Object Name | Sort-Object) -join ","
+          $want = (@("Ketvoice-$env:VERSION.msi", "RELEASE-NOTES.md", "SHA256SUMS.txt", "validation.json") | Sort-Object) -join ","
+          if ($got -ne $want) { throw "release assets are [$got], expected [$want]" }
+          python tools/verify_msi.py sums-check check/SHA256SUMS.txt check
+          python tools/verify_msi.py sums-check stage/SHA256SUMS.txt check
+          gh api "repos/$repo/releases/$($release.id)" -X PATCH -F draft=false -f make_latest=false | Out-Null
+          $latest = gh api "repos/$repo/releases/latest" --jq .tag_name
+          if ($latest -eq $env:TAG) { throw "GitHub marked $env:TAG as latest; mark the Android release as latest again." }
+          "Published $env:TAG (latest stays $latest)." | Tee-Object -FilePath $env:GITHUB_STEP_SUMMARY -Append
+
+      - name: Verify the published release
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          python tools/verify_msi.py release $env:VERSION --repo $env:GITHUB_REPOSITORY --upgrade-code $env:UPGRADE_CODE
