@@ -64,7 +64,10 @@ object PhoneRemote {
         val main = android.os.Handler(android.os.Looper.getMainLooper())
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
         scope.launch {
-            AccountSession.state.map { it.userId }.distinctUntilChanged().collect { uid -> RemoteKeyStore.load(app, uid) }
+            // Its preferences file is read off the UI thread (8.1): the first read waits on the disk.
+            AccountSession.state.map { it.userId }.distinctUntilChanged().collect { uid ->
+                kotlinx.coroutines.withContext(Dispatchers.IO) { RemoteKeyStore.load(app, uid) }
+            }
         }
         scope.launch {
             combine(AccountSession.state.map { it.userId }, RemoteKeyStore.secret, front,
