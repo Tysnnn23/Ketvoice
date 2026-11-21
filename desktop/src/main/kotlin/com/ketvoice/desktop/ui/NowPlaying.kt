@@ -345,6 +345,8 @@ fun FullPlayer(onClose: () -> Unit) {
         Row(Modifier.align(Alignment.TopEnd).padding(16.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             MoreButton(Color.White.copy(alpha = .6f)) { actions.menu(track) }
             MiniPlayerButton(Color.White.copy(alpha = .6f))
+            KetIconButton(DeskGlyphs.EnterFullScreen, "Plein écran", { PlayerFullScreen.on.value = true }, Modifier.testTag("enter-fullscreen"),
+                size = 36.dp, glyph = 18.dp, tint = Color.White.copy(alpha = .6f))
             KetIconButton(KetIcons.Lyrics, "Paroles", { lyrics = !lyrics }, Modifier.testTag("full-lyrics"),
                 size = 36.dp, glyph = 18.dp, tint = if (lyrics) Color.White else Color.White.copy(alpha = .6f))
         }
@@ -353,7 +355,7 @@ fun FullPlayer(onClose: () -> Unit) {
 
 /** Title, artist, the seek bar, the transport and the volume; smaller over the lyrics. */
 @Composable
-private fun PlayerControlsBlock(track: com.ketvoice.app.data.Track, compact: Boolean) {
+internal fun PlayerControlsBlock(track: com.ketvoice.app.data.Track, compact: Boolean) {
     val player = LocalPlayer.current
     val state by player.state.collectAsState()
     val volume by player.volume.collectAsState()

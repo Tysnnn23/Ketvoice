@@ -90,6 +90,15 @@ object DeskGlyphs {
         moveTo(18f, 13.5f); lineTo(20.5f, 16f); lineTo(18f, 18.5f)
     } }
     val ChevronDown: ImageVector by lazy { glyph("ChevronDown") { moveTo(6f, 9f); lineTo(12f, 15f); lineTo(18f, 9f) } }
+    /** Full screen: the four corners pointing out, and back in. */
+    val EnterFullScreen: ImageVector by lazy { glyph("EnterFullScreen") {
+        moveTo(4f, 9f); lineTo(4f, 4f); lineTo(9f, 4f); moveTo(15f, 4f); lineTo(20f, 4f); lineTo(20f, 9f)
+        moveTo(20f, 15f); lineTo(20f, 20f); lineTo(15f, 20f); moveTo(9f, 20f); lineTo(4f, 20f); lineTo(4f, 15f)
+    } }
+    val ExitFullScreen: ImageVector by lazy { glyph("ExitFullScreen") {
+        moveTo(9f, 4f); lineTo(9f, 9f); lineTo(4f, 9f); moveTo(20f, 9f); lineTo(15f, 9f); lineTo(15f, 4f)
+        moveTo(15f, 20f); lineTo(15f, 15f); lineTo(20f, 15f); moveTo(4f, 15f); lineTo(9f, 15f); lineTo(9f, 20f)
+    } }
     val ChevronUp: ImageVector by lazy { glyph("ChevronUp") { moveTo(6f, 15f); lineTo(12f, 9f); lineTo(18f, 15f) } }
     val Stats: ImageVector by lazy { glyph("Stats") {
         moveTo(5f, 19f); lineTo(5f, 12f); moveTo(10f, 19f); lineTo(10f, 6f); moveTo(15f, 19f); lineTo(15f, 10f); moveTo(20f, 19f); lineTo(20f, 4f)

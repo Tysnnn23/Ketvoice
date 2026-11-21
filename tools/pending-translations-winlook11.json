@@ -1,0 +1,26 @@
+{
+ "Lecteur plein écran": {
+  "en": "Full-screen player",
+  "hi": "फ़ुल-स्क्रीन प्लेयर",
+  "ja": "フルスクリーンプレーヤー",
+  "zh": "全屏播放器",
+  "ru": "Полноэкранный плеер",
+  "it": "Player a schermo intero",
+  "es": "Reproductor a pantalla completa",
+  "de": "Vollbild-Player",
+  "pt": "Player em tela cheia",
+  "ko": "전체 화면 플레이어"
+ },
+ "Verre Windows 11": {
+  "en": "Windows 11 glass",
+  "hi": "Windows 11 ग्लास",
+  "ja": "Windows 11 のガラス効果",
+  "zh": "Windows 11 玻璃效果",
+  "ru": "Стекло Windows 11",
+  "it": "Vetro di Windows 11",
+  "es": "Cristal de Windows 11",
+  "de": "Windows 11-Glas",
+  "pt": "Vidro do Windows 11",
+  "ko": "Windows 11 글래스"
+ }
+}

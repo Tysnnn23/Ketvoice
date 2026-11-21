@@ -1,4 +1,5 @@
-# ketvoice_smtc.dll: System Media Transport Controls for Ketvoice for Windows (C ABI, loaded with JNA).
+# ketvoice_smtc.dll: System Media Transport Controls and the taskbar thumbnail toolbar for Ketvoice
+# for Windows (C ABI, loaded with JNA).
 # Built on windows-latest with MSVC and the Windows SDK's C++/WinRT headers:
 #   cmake -S native/smtc -B native/smtc/build -A x64
 #   cmake --build native/smtc/build --config Release
@@ -21,6 +22,6 @@ if(CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION)
     target_include_directories(ketvoice_smtc SYSTEM PRIVATE "${KV_CPPWINRT}")
   endif()
 endif()
-target_link_libraries(ketvoice_smtc PRIVATE windowsapp user32 ole32)
+target_link_libraries(ketvoice_smtc PRIVATE windowsapp user32 ole32 gdi32 dwmapi uuid)
 # The JVM loads it from an extracted copy: link the CRT statically so no VC++ runtime is needed.
 set_property(TARGET ketvoice_smtc PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded")

@@ -38,6 +38,7 @@ object Shortcuts {
         Entry("Ctrl + F", "Rechercher"),
         Entry("Ctrl + L", "Ajouter le titre écouté aux favoris"),
         Entry("Ctrl + P", "Ouvrir ou fermer le lecteur"),
+        Entry("F11", "Lecteur plein écran"),
         Entry("Ctrl + M", "Mini-lecteur"),
         Entry("Ctrl + ,", "Réglages"),
         Entry("Alt + ←", "Retour"),
@@ -51,9 +52,11 @@ object Shortcuts {
     interface Target {
         val typing: Boolean
         val fullPlayer: Boolean
+        val fullScreen: Boolean get() = PlayerFullScreen.on.value
         fun focusSearch()
         fun leaveField()
         fun setFullPlayer(open: Boolean)
+        fun setFullScreen(on: Boolean) { PlayerFullScreen.on.value = on }
         fun settings()
         fun back(): Boolean
     }
@@ -67,6 +70,8 @@ object Shortcuts {
             ctrl && e.key == Key.M -> { MiniPlayer.toggle(); true }
             ctrl && e.key == Key.Comma -> { t.settings(); true }
             ctrl && e.key == Key.P -> { if (state.current != null || t.fullPlayer) t.setFullPlayer(!t.fullPlayer); true }
+            e.key == Key.F11 -> { if (state.current != null || t.fullScreen) t.setFullScreen(!t.fullScreen); true }
+            e.key == Key.Escape && t.fullScreen -> { t.setFullScreen(false); true }
             e.key == Key.Escape && t.fullPlayer -> { t.setFullPlayer(false); true }
             e.key == Key.Escape && t.typing -> { t.leaveField(); true }
             t.typing -> false

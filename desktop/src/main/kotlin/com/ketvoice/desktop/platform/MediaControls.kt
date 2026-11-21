@@ -78,6 +78,11 @@ internal interface SmtcLibrary : Library {
     fun kv_smtc_update(title: WString, artist: WString, album: WString, artPath: WString?, playing: Int, positionMs: Long, durationMs: Long): Int
     fun kv_smtc_clear()
     fun kv_smtc_shutdown()
+    // The taskbar's thumbnail toolbar (ThumbBar.kt); missing from a DLL older than Windows 1.1.0.
+    fun kv_thumb_init(hwnd: Pointer?, callback: SmtcCallback?, size: Int, icons: IntArray?): Int
+    fun kv_thumb_update(playing: Int, enabled: Int, tipPrevious: WString, tipToggle: WString, tipNext: WString): Int
+    fun kv_thumb_cover(argb: IntArray?, width: Int, height: Int): Int
+    fun kv_thumb_shutdown()
 }
 
 internal fun interface SmtcCallback : Callback {

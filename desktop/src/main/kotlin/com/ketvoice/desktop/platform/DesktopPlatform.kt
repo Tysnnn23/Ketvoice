@@ -33,13 +33,13 @@ object PlatformSmoke {
         if (init != 0) {
             // Some Windows editions (Server Core, N without the Media Feature Pack) have no SMTC.
             say("smtc skipped: dll loaded, init with its own hidden window returned 0x%08X".format(init))
-            return true
+            return ThumbBar.smoke(lib, say)
         }
         val update = lib.kv_smtc_update(WString("Ketvoice"), WString("Smoke"), WString("Ketvoice for Windows"), null, 0, 1_000, 10_000)
         lib.kv_smtc_clear()
         lib.kv_smtc_shutdown()
         if (update != 0) { say("smtc failed: update returned 0x%08X".format(update)); return false }
         say("smtc ok (dll loaded, init/update/clear/shutdown without a window)")
-        return true
+        return ThumbBar.smoke(lib, say)
     }
 }
