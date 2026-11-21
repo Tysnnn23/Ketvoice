@@ -125,13 +125,15 @@ internal class FileSharedPreferences private constructor(private val file: File)
         override fun remove(key: String) = also { changes[key] = null }
         override fun clear() = also { clearAll = true }
 
-        private fun merge(): Pair<String, List<String>> {
-            val changed = synchronized(lock) {
-                if (clearAll) values.clear()
-                for ((k, v) in changes) if (v == null) values.remove(k) else values[k] = v
-                changes.keys.toList()
+        /** As on Android, only keys whose value really changed are written and announced. */
+        private fun merge(): List<String> = synchronized(lock) {
+            val changed = LinkedHashSet<String>()
+            if (clearAll && values.isNotEmpty()) { changed += values.keys; values.clear() }
+            for ((k, v) in changes) {
+                if (v == null) { if (values.remove(k) != null) changed += k }
+                else if (values[k] != v) { values[k] = v; changed += k }
             }
-            return snapshot() to changed
+            changed.toList()
         }
 
         private fun notify(keys: List<String>) {
@@ -139,15 +141,16 @@ internal class FileSharedPreferences private constructor(private val file: File)
         }
 
         override fun commit(): Boolean {
-            val (text, keys) = merge()
-            val ok = synchronized(writeLock) { write(text) }
+            val keys = merge()
+            val ok = keys.isEmpty() || synchronized(writeLock) { write(snapshot()) }
             notify(keys)
             return ok
         }
 
+        // The writer takes the values as they are when it runs, so two quick applies never land out of order.
         override fun apply() {
-            val (text, keys) = merge()
-            writer.execute { synchronized(writeLock) { write(text) } }
+            val keys = merge()
+            if (keys.isNotEmpty()) writer.execute { synchronized(writeLock) { write(snapshot()) } }
             notify(keys)
         }
     }

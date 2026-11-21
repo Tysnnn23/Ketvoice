@@ -14,4 +14,8 @@ object GlassClarity {
     const val TICKS = 20
 
     fun sanitize(position: Float): Float = if (position.isFinite()) position.coerceIn(MIN, MAX) else DEFAULT
+
+    /** As on Android: a device still on 7.4 synced its levels and Teinté, not an intensity. */
+    fun legacyKeys(keys: Collection<String>): List<String>? =
+        if ("glassIntensity" in keys) null else listOf("glassTint", "glassTintLevel", "glassTinted").filter { it in keys }.takeIf { it.isNotEmpty() }
 }

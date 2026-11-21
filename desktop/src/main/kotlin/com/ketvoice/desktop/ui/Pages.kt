@@ -257,15 +257,6 @@ fun ExplorePage() {
     }
 }
 
-/* ── Statistiques (phase 2) ── */
-
-@Composable
-fun StatsPage() {
-    Page("Statistiques", "stats") {
-        item { EmptyMessage("Statistiques", "Vos statistiques d'écoute arrivent dans une prochaine version de Ketvoice pour Windows.") }
-    }
-}
-
 /* ── Réglages ── */
 
 @Composable
@@ -273,6 +264,7 @@ fun SettingsPage() {
     val ket = LocalKet.current
     var about by remember { mutableStateOf(false) }
     Page("Réglages", "settings") {
+        accountSettings()
         item { SectionHeader("Général") }
         item {
             SettingsCard {
@@ -289,6 +281,7 @@ fun SettingsPage() {
                 ToggleRow("Démarrer avec Windows", DesktopPrefs.startWithWindows.value, "start-with-windows") { DesktopPrefs.setStartWithWindows(it) }
             }
         }
+        localMusicSettings()
         item { SectionHeader("À propos") }
         item {
             SettingsCard {
@@ -308,19 +301,19 @@ fun SettingsPage() {
 }
 
 @Composable
-private fun SettingsCard(content: @Composable () -> Unit) {
+internal fun SettingsCard(content: @Composable () -> Unit) {
     val ket = LocalKet.current
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(Ket27Desk.Radius.menu)).background(ket.card)) { content() }
 }
 
 @Composable
-private fun Hairline() {
+internal fun Hairline() {
     val ket = LocalKet.current
     Box(Modifier.fillMaxWidth().padding(start = 16.dp).height(.5.dp).background(ket.hairline))
 }
 
 @Composable
-private fun SettingRow(label: String, value: String) {
+internal fun SettingRow(label: String, value: String) {
     val ket = LocalKet.current
     Row(Modifier.fillMaxWidth().height(44.dp).padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
         KText(label, Ket27Desk.Type.subheadline, Modifier.weight(1f))
@@ -330,7 +323,7 @@ private fun SettingRow(label: String, value: String) {
 
 /** A setting that is on or off: the whole row toggles, the switch shows it. */
 @Composable
-private fun ToggleRow(label: String, on: Boolean, tag: String, onChange: (Boolean) -> Unit) {
+internal fun ToggleRow(label: String, on: Boolean, tag: String, onChange: (Boolean) -> Unit) {
     val ket = LocalKet.current
     val knob by androidx.compose.animation.core.animateDpAsState(if (on) 18.dp else 2.dp,
         if (Motion.reduced) androidx.compose.animation.core.snap() else androidx.compose.animation.core.spring(dampingRatio = .8f, stiffness = 700f))

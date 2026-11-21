@@ -48,7 +48,8 @@ import com.ketvoice.desktop.ui.theme.LocalKet
 private fun librarySongs(): List<Track> {
     val lib = LocalLibrary.current
     val f by lib.favourites.collectAsState(); val p by lib.playlists.collectAsState(); val d by lib.downloads.collectAsState()
-    return remember(f, p, d) { LibraryViews.songs(lib) }
+    val l by lib.localTracks.collectAsState()
+    return remember(f, p, d, l) { LibraryViews.songs(lib) }
 }
 
 /** « Titres »: Music for macOS's table — sortable columns, striped rows, double-click plays. */
