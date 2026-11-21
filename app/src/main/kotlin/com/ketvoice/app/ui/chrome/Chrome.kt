@@ -348,7 +348,7 @@ private data class TabSpec(val icon: ImageVector, val label: String, val index: 
  * 8.0 « Barre d'onglets qui se transforme »: the fold is a spring that starts with the page's own scroll speed
  * ([ChromeCollapse.flingVelocity]) and can be caught and reversed half-way; the tabs melt into one capsule
  * ([GlassTabCapsule]), the mini-player leaves the bar and joins the folded row through the liquid bridge of the
- * fused glass. Under reduced motion the two layouts crossfade instead.
+ * fused glass. Under reduced motion the chrome snaps to the other layout.
  */
 @Composable
 fun FloatingChrome(collapsed: Boolean, onOpenPlayer: () -> Unit, searching: Boolean = false, typing: Boolean = false) {
@@ -361,10 +361,8 @@ fun FloatingChrome(collapsed: Boolean, onOpenPlayer: () -> Unit, searching: Bool
         // While the keyboard is up only the field stays, just above it.
         val miniShown = hasTrack && !typing
         if (Motion.reduced) {
-            androidx.compose.animation.Crossfade(compact to searching, animationSpec = tween(REDUCED_CROSSFADE_MS),
-                label = "chrome-crossfade") { (folded, search) ->
-                ChromeBody(width, if (folded) 1f else 0f, if (search) 1f else 0f, folded, search, miniShown, onOpenPlayer)
-            }
+            // Motion snaps under reduced motion (Ket 27): the other layout is simply there, one body, no crossfade.
+            ChromeBody(width, if (compact) 1f else 0f, if (searching) 1f else 0f, compact, searching, miniShown, onOpenPlayer)
             return@BoxWithConstraints
         }
         val target = if (compact) 1f else 0f
@@ -385,7 +383,6 @@ fun FloatingChrome(collapsed: Boolean, onOpenPlayer: () -> Unit, searching: Bool
 
 /** The mini-player's way down from above the bar into the folded row. */
 private val MINI_TRAVEL = 66.dp
-private const val REDUCED_CROSSFADE_MS = 180
 
 @Composable
 private fun ChromeBody(width: Dp, fraction: Float, stretch: Float, compact: Boolean, searching: Boolean,

@@ -66,7 +66,7 @@ fun LiquidGlassButton(
     val pressure by animateFloatAsState(if (pressed && !Motion.reduced) 1f else 0f,
         glassPressSpec(pressed, liquid27), label = "glass-button-pressure")
     val (scaleWidth, scaleHeight) = glassPressScale(pressure, liquid27)
-    Box(modifier.onSizeChanged { bounds = it }.growSource()) {
+    Box(modifier.onSizeChanged { bounds = it }) {
         if (plain) Box(Modifier.matchParentSize().graphicsLayer { scaleX = scaleWidth; scaleY = scaleHeight }
             .clip(shape).background(plainFill(theme.isDark)))
         else GlassPanel(Modifier.matchParentSize().graphicsLayer {
@@ -81,6 +81,8 @@ fun LiquidGlassButton(
             if (liquid27) { scaleX = scaleWidth; scaleY = scaleHeight }
         }
             .hoverHighlight(interactions, shape)
+            // Inside the clip: a touch on the square corners around the circle still reaches what lies beneath.
+            .growSource()
             .clickable(interactions, null, enabled = enabled, role = Role.Button, onClick = onClick),
             contentAlignment = Alignment.Center, content = content)
     }

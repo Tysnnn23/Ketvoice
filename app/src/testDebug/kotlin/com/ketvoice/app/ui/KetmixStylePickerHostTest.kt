@@ -74,6 +74,10 @@ class KetmixStylePickerHostTest {
     fun theTabletPickerShowsEveryStyle() {
         val state = state()
         compose.setContent { KetvoiceTheme(useDark = true) { KetmixEditorScreen(state, onClose = {}) } }
+        // 8.0: the Studio toolbar and its hint stand above the page, so on Quest (the phone layout in a short landscape
+        // window) the chips start below the fold. performScrollTo only moves the nearest scroller (the chips' own row):
+        // bring the section into the page's view first.
+        compose.onNodeWithText("Détails").performScrollTo()
         compose.onNodeWithTag("ketmix-style-Voices").performScrollTo().performClick()
         compose.waitForIdle()
         assertEquals(MixStyle.Voices, state.choice.style)
