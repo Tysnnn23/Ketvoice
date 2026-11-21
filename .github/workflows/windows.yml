@@ -6,6 +6,9 @@ on:
   push:
     paths:
       - "desktop/**"
+      - "app/src/main/kotlin/**"
+      - "app/src/test/kotlin/**"
+      - "app/src/main/assets/translations.json"
       - "native/**"
       - "docs/licenses/**"
       - ".github/workflows/windows.yml"
