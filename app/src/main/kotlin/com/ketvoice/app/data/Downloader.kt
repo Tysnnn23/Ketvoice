@@ -174,7 +174,8 @@ object Downloader {
     fun init(context: Context) {
         if (ctx != null) return
         ctx = context.applicationContext
-        runCatching { DownloadUpgrade.recover(dir(context.applicationContext)) }
+        // The start's reading (warm) puts back an interrupted upgrade itself before it reads the folder.
+        if (warming == null) runCatching { DownloadUpgrade.recover(dir(context.applicationContext)) }
         refresh()
         restoreQueue(context.applicationContext)
     }
@@ -183,8 +184,8 @@ object Downloader {
      * [items] with the newest file first, each file's date read once (7.6): sorted by `lastModified()` itself, the
      * date was read again at each comparison — about n·log n disk reads on the main thread at every start.
      */
-    internal fun newestFirst(items: List<Item>): List<Item> =
-        items.map { it to it.file.lastModified() }.sortedByDescending { it.second }.map { it.first }
+    internal fun newestFirst(items: List<Item>, modified: (File) -> Long = File::lastModified): List<Item> =
+        items.map { it to modified(it.file) }.sortedByDescending { it.second }.map { it.first }
 
     /** Reads the downloads folder again (after Air Ket put titles there, 7.0). */
     internal fun reload() { refresh() }
@@ -729,13 +730,52 @@ object Downloader {
     private fun fileFor(c: Context, id: String, extension: String): File =
         File(dir(c), key(id) + "." + extension)
 
+    /** What a start reads of the downloads folder: each title's description and its files' sizes and dates. */
+    internal class Scan(val dir: File, val metas: List<Pair<File, String>>, val lengths: Map<String, Long>, val modified: Map<String, Long>)
+
+    internal fun scan(dir: File): Scan {
+        val lengths = HashMap<String, Long>(); val modified = HashMap<String, Long>()
+        val metas = dir.listFiles { f -> f.extension == "json" && !f.name.endsWith(".lyrics.json") }.orEmpty().mapNotNull { meta ->
+            val text = runCatching { meta.readText(Charsets.UTF_8) }.getOrNull() ?: return@mapNotNull null
+            runCatching {
+                val o = JSONObject(text)
+                val file = File(dir, o.optString("file"))
+                lengths[file.path] = file.length(); modified[file.path] = file.lastModified()
+                File(dir, file.nameWithoutExtension + ".cover.jpg").let { lengths[it.path] = it.length() }
+                o.optString("lyricsFile").takeIf { it.isNotEmpty() }?.let { File(dir, it) }?.let { lengths[it.path] = it.length() }
+            }
+            meta to text
+        }
+        return Scan(dir, metas, lengths, modified)
+    }
+
+    /**
+     * 8.1: the downloads folder is read beside the main thread as the app starts (a library of hundreds of titles made
+     * the first screen wait for as many files); the first [refresh] takes that reading, or waits for it to end.
+     */
+    @Volatile private var warming: java.util.concurrent.FutureTask<Scan>? = null
+
+    fun warm(context: Context) {
+        if (ctx != null || warming != null) return
+        val dir = dir(context.applicationContext)
+        val task = java.util.concurrent.FutureTask { runCatching { DownloadUpgrade.recover(dir) }; scan(dir) }
+        warming = task
+        Thread(task, "ketvoice-downloads-warmup").apply { isDaemon = true; priority = Thread.NORM_PRIORITY - 1 }.start()
+    }
+
     private fun refresh() {
         val c = ctx ?: return
         val dir = dir(c)
         val list = mutableListOf<Item>()
-        dir.listFiles { f -> f.extension == "json" && !f.name.endsWith(".lyrics.json") }?.forEach { metaFile ->
+        // Only the start's reading puts back an interrupted upgrade (as init did): a later reading never touches one running.
+        val warmTask = warming.also { warming = null }
+        val scan = warmTask?.let { task -> runCatching { task.get(3, java.util.concurrent.TimeUnit.SECONDS) }.getOrNull()?.takeIf { it.dir == dir }
+            ?: run { runCatching { DownloadUpgrade.recover(dir) }; scan(dir) } } ?: scan(dir)
+        // A size read before the start (0 for a file that is missing), the disk otherwise.
+        fun len(f: File): Long = scan.lengths[f.path] ?: f.length()
+        scan.metas.forEach { (_, text) ->
             runCatching {
-                val o = JSONObject(metaFile.readText(Charsets.UTF_8))
+                val o = JSONObject(text)
                 val file = File(dir, o.optString("file"))
                 val id = o.getString("id")
                 val rawDash = o.optString("dashManifestUrl").takeIf { it.isNotBlank() }
@@ -746,10 +786,10 @@ object Downloader {
                         file.readText(Charsets.US_ASCII) != "KETVOICE_DASH_OFFLINE_V1") return@runCatching
                     runCatching { OfflineDashStore.get(c).verifyOnce(id, dash) }.getOrNull() ?: return@runCatching
                 } else {
-                    if (!file.exists() || file.length() < 10_000) return@runCatching
+                    if (len(file) < 10_000) return@runCatching
                     0L
                 }
-                val coverFile = File(dir, file.nameWithoutExtension + ".cover.jpg").takeIf { it.isFile && it.length() > 0 }
+                val coverFile = File(dir, file.nameWithoutExtension + ".cover.jpg").takeIf { len(it) > 0 }
                 val cover = coverFile?.let { Uri.fromFile(it).toString() } ?: o.optString("coverUrl").takeIf { it.isNotEmpty() }
                 val lyricsFile = o.optString("lyricsFile").takeIf { it.isNotEmpty() }?.let { File(dir, it) }
                 val canvasName = o.optString("canvasFile").takeIf { it.isNotEmpty() }
@@ -776,16 +816,16 @@ object Downloader {
                     track = track,
                     file = file,
                     format = o.optString("format", "MP3"),
-                    bytes = file.length() + dashBytes,
-                    lyricsFile = lyricsFile?.takeIf { it.exists() && it.length() > 0 },
+                    bytes = len(file) + dashBytes,
+                    lyricsFile = lyricsFile?.takeIf { len(it) > 0 },
                     canvasFile = canvasFile?.takeIf { it.exists() && it.length() > 10_000 },
-                    hasLyrics = lyricsFile?.let { it.exists() && it.length() > 0 } == true,
+                    hasLyrics = lyricsFile?.let { len(it) > 0 } == true,
                     hasCanvas = canvasFile?.let { it.exists() && it.length() > 10_000 } == true,
                     dashManifestUrl = dash
                 )
             }
         }
-        _items.value = newestFirst(list)
+        _items.value = newestFirst(list) { scan.modified[it.path] ?: it.lastModified() }
     }
 
     private class LimitExceeded : Exception()
