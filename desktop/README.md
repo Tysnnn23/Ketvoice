@@ -70,7 +70,7 @@ that is true on the desktop. The Android app is never changed for the desktop bu
 | `stems/StemModel`, `Uvr`, `StemEngine`, `StemLibrary`, `VoiceSeparation`, `StreamSeparation` | LiteRT, Android services | 3 |
 | `automix/BeatModel` | LiteRT, APK assets | ONNX counterpart (Phase 2) |
 | `automix/DeckMixProcessor`, `Automix` | Media3 audio processors and player | replaced by `DesktopMixer` + `DesktopAutomix` |
-| `data/CanvasRepo` | MediaMetadataRetriever, Bitmap, ConnectivityManager | 1 |
+| `data/CanvasRepo` | MediaMetadataRetriever, Bitmap, ConnectivityManager | desktop counterpart (Phase 2) |
 | `data/Downloader` | Media3 DASH downloader, StatFs, Toast | 1 |
 | `data/LocalMusic` | MediaStore, DocumentsContract | counterpart (Phase 2: `LocalFolders`) |
 | `data/SettingsStore`, `data/PersonalBackup` | launcher icons, seasons, design choices, glass styles | counterparts (Phase 2) |
@@ -103,12 +103,13 @@ left out because they need deferred code: `MixKeysTest` and `StemsTest` (`VoiceS
   file on other systems, for tests).
 - `data/AppLocales.kt`, `util/LauncherIcons.kt`, `glass/GlassClarity.kt` — the values shared settings need.
 - `ui/motion/Motion.kt` — the app's motion values (springs, reduced motion) without Android's.
-- `data/DesktopSeams.kt` — `CanvasRepo`, `LocalMusic`, `Downloader`: the members the shared code calls.
-  Downloads are `DesktopDownloader`'s; local files are `LocalFolders`'; Canvas is not on the desktop yet.
+- `data/DesktopSeams.kt` — `LocalMusic`, `Downloader`: the members the shared code calls.
+  Downloads are `DesktopDownloader`'s; local files are `LocalFolders`'.
 - `data/DesktopSettings.kt` — `SettingsStore` (every `AppSettings` field under its Android key in `ketvoice_settings`,
   read at start, saved 400 ms after a change and at quit) and `PersonalBackup.setting` (the check the settings sync calls).
 - `account/AccountSession.kt` — the account (shared `AuthApi`, `AccountTokens`, `SupabaseHttp`), Discord through
   `LoopbackRedirect`, `Profiles` (name only); `sync/DesktopSyncSeams.kt` — `SharedPlaylists`/`NowPlayingSync` stubs.
+- `data/CanvasRepo.kt` — Canvas on disk with the phone's rules (see « Lyrics and Canvas » below).
 
 ## Compat shims (`src/compat/kotlin/`)
 
@@ -220,6 +221,29 @@ and that the worst second difference stays at a clean tone's level (no click). `
 the Player, the engine (paced 10×) and the controller over three generated grooves: the end of one mixes
 into the next, and « Suivant » blends. `BeatModelOnnxTest` checks the pinned download; with
 `KETVOICE_BEAT_ONNX=/path/small0.onnx` it runs the real network on a 120 BPM click track.
+## Lyrics and Canvas (Phase 2, winlyrics)
+
+- Shared code added to the build: `data/LyricsTranslation`, `data/TranslationLanguages` (lyrics.txt),
+  `ui/player/LyricsMotion` (`LyricsMotion`, `LyricsCascade`) and `ui/player/LyricsPresentation` (ui.txt).
+- `ui/Lyrics.kt` — Cascade (`CascadeLyrics`) in the right panel and in the full player (its lyrics button):
+  the sung line lit word by word, a glow on held notes only (no blur), other lines stepped back with the
+  wave, duet sides from `LyricsDuet`, romanization (`Romanizer`, switch at the top of the source menu),
+  translation (`LyricsTranslation`), a click on a line seeks, scrolling pauses the following (« Suivre la
+  lecture », or by itself after 4 s). Lines come from `LyricsRepo` through `LocalLyricsFeed` (tests use a
+  fixture). `DeskLyricsWords` repeats the app's `LyricsWords`, which lives inside the Android `LyricsView.kt`.
+- `canvas/VideoFrames.kt` — FFmpeg (avformat, avcodec, swscale; LGPL build) decodes a Canvas to BGRA at the
+  size it is shown, never above the source, looping. `canvas/CanvasPlayback.kt` plays it on its own thread
+  with three buffers; `ui/CanvasViews.kt` draws the frames (`CanvasVideo`), places them with the app's
+  `CanvasFit` rule (`DeskCanvasFit`, `FittedCanvas`: fill when close in shape, else whole with an extension
+  of its colours) in the full player, and as the album page's motion header (`MotionHeader`).
+- `data/CanvasRepo.kt` — the phone's cache: `<data>/files/canvas/<name>.mp4`, names in `ketvoice_canvas`
+  (per title, `album:` stand-in during a lookup, `page:`, `none:`), owner's and published Canvas, a
+  first-frame still `<name>.poster.jpg` (FFmpeg + Skia JPEG) shown until the video draws.
+- Settings › Lecteur: « Activer les Canvas vidéo » (`animatedArtwork`) and « Canvas sur les pages d'album »
+  (`albumHeroCanvas`); reduced motion keeps the still. The album header follows `albumHeroCanvas` only
+  (the app's `albumHeader` choice has no desktop setting).
+- Tests: `CanvasVideoTest` (a clip made by the build's own `ffmpeg` program), `CascadeLyricsTest`,
+  `CascadeScreenshots` (lyrics panel, player with lyrics, player with Canvas, album motion header).
 
 ## Done in Phase 1
 

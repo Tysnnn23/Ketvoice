@@ -91,14 +91,13 @@ private fun durationLabel(tracks: List<Track>): String {
 
 /** The header shared by albums and playlists: large cover with a soft shadow, title, link, Play/Shuffle. */
 @Composable
-private fun CollectionHeader(cover: @Composable () -> Unit, kind: String, title: String, subtitle: String, onSubtitle: (() -> Unit)?,
+private fun CollectionHeader(cover: (@Composable () -> Unit)?, kind: String, title: String, subtitle: String, onSubtitle: (() -> Unit)?,
                              meta: String, accent: Color, tracks: List<Track>,
                              titleSlot: (@Composable () -> Unit)? = null, extraButtons: @Composable () -> Unit = {}) {
     val ket = LocalKet.current
     val actions = LocalTrackActions.current
     Row(Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 26.dp), verticalAlignment = Alignment.Bottom) {
-        cover()
-        Spacer(Modifier.width(30.dp))
+        if (cover != null) { cover(); Spacer(Modifier.width(30.dp)) }
         Column(Modifier.weight(1f)) {
             KText(kind, Ket27Desk.Type.caption2, color = ket.secondary)
             Spacer(Modifier.height(4.dp))
@@ -125,12 +124,15 @@ fun AlbumPage(ref: AlbumRef) {
     val data by produceState<AlbumData?>(null, ref) { value = runCatching { catalog.album(ref) }.getOrNull() }
     val cover = data?.ref?.cover ?: ref.cover
     val (wash, accent) = coverTint(cover)
+    // Apple Music's motion artwork: the album's Canvas edge to edge at the top, the words under it.
+    val motion = rememberHeaderCanvas(data?.tracks?.firstOrNull(), ref.id)
     Box(Modifier.fillMaxSize().background(wash)) {
         Page(null, "album") {
+            if (motion != null) item("motion") { MotionHeader(motion, wash) }
             item("header") {
                 val r = data?.ref ?: ref
                 val tracks = data?.tracks.orEmpty()
-                CollectionHeader({ Artwork(cover, 270.dp, radius = Ket27Desk.Radius.artwork, shadow = 24.dp) },
+                CollectionHeader(if (motion != null) null else ({ Artwork(cover, 270.dp, radius = Ket27Desk.Radius.artwork, shadow = 24.dp) }),
                     r.type, r.title, r.artist, { nav.push(Route.Artist(ArtistRef(null, r.artist))) },
                     listOfNotNull(r.year, if (tracks.isNotEmpty()) durationLabel(tracks) else null).joinToString(" · "), accent, tracks)
             }

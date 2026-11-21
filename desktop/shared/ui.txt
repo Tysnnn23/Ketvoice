@@ -7,3 +7,6 @@ ui/common/LocalizedIcon.kt
 ui/motion/SymbolEffects.kt
 data/AppText.kt
 data/UiTextDictionary.kt
+# Cascade lyrics (winlyrics): the motion values and the word alignment, pure Kotlin.
+ui/player/LyricsMotion.kt
+ui/player/LyricsPresentation.kt

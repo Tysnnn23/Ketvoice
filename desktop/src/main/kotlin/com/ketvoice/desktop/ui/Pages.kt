@@ -279,6 +279,14 @@ fun SettingsPage() {
         }
         item { SectionHeader("Ketmix") }
         item { KetmixSettings() }
+        item { SectionHeader("Lecteur") }
+        item {
+            SettingsCard {
+                ToggleRow("Activer les Canvas vidéo", AppSettings.animatedArtwork.value, "canvas-player") { AppSettings.animatedArtwork.value = it }
+                Hairline()
+                ToggleRow("Canvas sur les pages d'album", AppSettings.albumHeroCanvas.value, "canvas-album") { AppSettings.albumHeroCanvas.value = it }
+            }
+        }
         item { SectionHeader("Windows") }
         item {
             SettingsCard {

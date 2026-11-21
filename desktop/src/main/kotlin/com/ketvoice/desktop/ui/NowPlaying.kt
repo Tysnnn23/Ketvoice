@@ -290,24 +290,10 @@ private fun ReorderableRow(track: Track, index: Int, queue: List<Track>, onMove:
 
 private fun Modifier.zIndexIf(on: Boolean) = if (on) zIndex(1f) else this
 
-/** Lyrics arrive with Cascade in Phase 2: a quiet pane that says so, with the title. */
-@Composable
-fun LyricsPanel() {
-    val ket = LocalKet.current
-    val state by LocalPlayer.current.state.collectAsState()
-    Column(Modifier.fillMaxSize().padding(24.dp).testTag("panel:lyrics"), horizontalAlignment = Alignment.CenterHorizontally) {
-        Spacer(Modifier.height(60.dp))
-        Icon(KetIcons.Lyrics, null, Modifier.size(34.dp), tint = ket.tertiary)
-        Spacer(Modifier.height(14.dp))
-        KText(state.current?.title ?: "Paroles", Ket27Desk.Type.headline, translate = state.current == null)
-        Spacer(Modifier.height(6.dp))
-        androidx.compose.material3.Text(AppText.t("Les paroles synchronisées arrivent dans une prochaine version de Ketvoice pour Windows."),
-            style = androidx.compose.material3.LocalTextStyle.current.merge(Ket27Desk.Type.footnote), color = ket.secondary,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-    }
-}
-
 /* ── Full-window player ── */
+
+/** The full player's lyrics switch, kept while the app runs. */
+object FullPlayerLyrics { val shown = mutableStateOf(false) }
 
 @Composable
 fun FullPlayer(onClose: () -> Unit) {
@@ -319,45 +305,71 @@ fun FullPlayer(onClose: () -> Unit) {
     val ground = (colors?.first ?: Color(0xFF2C2C2E)).let { androidx.compose.ui.graphics.lerp(it, Color.Black, .45f) }
     val rise = remember { Animatable(if (Motion.reduced) 0f else 1f) }
     LaunchedEffect(Unit) { rise.animateTo(0f, Motion.Springs.SHEET.motion()) }
-    val volume by player.volume.collectAsState()
+    val canvas = rememberPlayerCanvas(track, state.queue, state.index)
+    var lyrics by FullPlayerLyrics.shown
     Box(Modifier.fillMaxSize().graphicsLayer { translationY = rise.value * size.height * .08f; alpha = 1f - rise.value }
         .background(ground).testTag("full-player")) {
         // The cover itself, blurred far, as the room's light (where Skia blurs; flat colour otherwise).
         if (image != null) Image(image, null, Modifier.fillMaxSize().blur(120.dp).graphicsLayer { alpha = .55f }, contentScale = ContentScale.Crop)
         Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .25f)))
-        KetIconButton(DeskGlyphs.ChevronDown, "Fermer", onClose, Modifier.padding(16.dp).testTag("close-player"), size = 36.dp, glyph = 20.dp, tint = Color.White)
-        Row(Modifier.fillMaxSize().padding(horizontal = 80.dp, vertical = 60.dp), verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center) {
-            Artwork(track.coverUrl, 440.dp, radius = Ket27Desk.Radius.card, shadow = 40.dp)
-            Spacer(Modifier.width(60.dp))
-            Column(Modifier.width(420.dp)) {
-                KText(track.title, Ket27Desk.Type.largeTitle, color = Color.White, maxLines = 2, translate = false)
-                KText(track.artist, Ket27Desk.Type.title3, color = Color.White.copy(alpha = .7f), translate = false, weight = FontWeight.Medium)
-                val format by player.format.collectAsState()
-                format?.takeIf { it.lossless }?.let { f ->
+        Row(Modifier.fillMaxSize()) {
+            // The artwork's place: the cover, or the Canvas placed as CanvasFit places it, its colours around it.
+            Box(Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.Center) {
+                if (canvas != null) FittedCanvas(canvas, state.isPlaying, ground, Modifier.fillMaxSize(), shade = .18f)
+                else androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize().padding(start = 64.dp, end = 32.dp, top = 64.dp, bottom = 64.dp),
+                    contentAlignment = Alignment.Center) {
+                    Artwork(track.coverUrl, minOf(maxWidth, maxHeight, 460.dp), radius = Ket27Desk.Radius.card, shadow = 40.dp)
+                }
+            }
+            Column((if (lyrics) Modifier.weight(1f) else Modifier.width(460.dp)).fillMaxHeight().padding(start = 28.dp, end = 56.dp, top = 56.dp, bottom = 40.dp),
+                verticalArrangement = if (lyrics) Arrangement.Top else Arrangement.Center) {
+                PlayerControlsBlock(track, compact = lyrics)
+                if (lyrics) {
                     Spacer(Modifier.height(10.dp))
-                    LosslessMark(f.hiRes, Color.White.copy(alpha = .7f), large = true, tag = "lossless-badge-full")
-                }
-                Spacer(Modifier.height(28.dp))
-                Seek(state.positionMs, state.durationMs.takeIf { it > 0 } ?: track.durationMs, compact = false, color = Color.White, secondary = Color.White.copy(alpha = .6f))
-                Spacer(Modifier.height(18.dp))
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
-                    KetIconButton(KetIcons.Shuffle, "Lecture aléatoire", { player.setShuffle(!state.shuffle) }, active = state.shuffle, tint = Color.White.copy(alpha = .8f))
-                    KetIconButton(DeskGlyphs.Previous, "Précédent", { player.previous() }, size = 52.dp, glyph = 30.dp, tint = Color.White)
-                    PlayPause(state.isPlaying, { player.toggle() }, 64.dp, 40.dp, tint = Color.White)
-                    KetIconButton(DeskGlyphs.Next, "Suivant", { player.next() }, size = 52.dp, glyph = 30.dp, tint = Color.White)
-                    KetIconButton(if (state.repeatOne) DeskGlyphs.RepeatOne else DeskGlyphs.Repeat, "Répéter", {
-                        when { state.repeatOne -> player.setRepeat(false, false); state.repeatAll -> player.setRepeat(true, false); else -> player.setRepeat(false, true) }
-                    }, active = state.repeatAll || state.repeatOne, tint = Color.White.copy(alpha = .8f))
-                }
-                Spacer(Modifier.height(18.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(DeskGlyphs.Mute, null, Modifier.size(15.dp), tint = Color.White.copy(alpha = .6f))
-                    ThinSlider(volume, { player.setVolume(it) }, Modifier.weight(1f).padding(horizontal = 10.dp), tag = "full-volume",
-                        color = Color.White, track = Color.White.copy(alpha = .25f))
-                    Icon(DeskGlyphs.Volume, null, Modifier.size(15.dp), tint = Color.White.copy(alpha = .6f))
+                    CascadeLyrics(track, LyricsLook.Full, Modifier.fillMaxWidth().weight(1f))
                 }
             }
         }
+        KetIconButton(DeskGlyphs.ChevronDown, "Fermer", onClose, Modifier.padding(16.dp).testTag("close-player"), size = 36.dp, glyph = 20.dp, tint = Color.White)
+        Box(Modifier.align(Alignment.TopEnd).padding(16.dp)) {
+            KetIconButton(KetIcons.Lyrics, "Paroles", { lyrics = !lyrics }, Modifier.testTag("full-lyrics"),
+                size = 36.dp, glyph = 18.dp, tint = if (lyrics) Color.White else Color.White.copy(alpha = .6f))
+        }
+    }
+}
+
+/** Title, artist, the seek bar, the transport and the volume; smaller over the lyrics. */
+@Composable
+private fun PlayerControlsBlock(track: com.ketvoice.app.data.Track, compact: Boolean) {
+    val player = LocalPlayer.current
+    val state by player.state.collectAsState()
+    val volume by player.volume.collectAsState()
+    KText(track.title, if (compact) Ket27Desk.Type.title2 else Ket27Desk.Type.largeTitle, color = Color.White, maxLines = if (compact) 1 else 2, translate = false)
+    KText(track.artist, if (compact) Ket27Desk.Type.headline else Ket27Desk.Type.title3, color = Color.White.copy(alpha = .7f), translate = false, weight = FontWeight.Medium)
+    val format by player.format.collectAsState()
+    format?.takeIf { it.lossless && !compact }?.let { f ->
+        Spacer(Modifier.height(10.dp))
+        LosslessMark(f.hiRes, Color.White.copy(alpha = .7f), large = true, tag = "lossless-badge-full")
+    }
+    Spacer(Modifier.height(if (compact) 14.dp else 28.dp))
+    Seek(state.positionMs, state.durationMs.takeIf { it > 0 } ?: track.durationMs, compact = compact, color = Color.White, secondary = Color.White.copy(alpha = .6f))
+    Spacer(Modifier.height(if (compact) 8.dp else 18.dp))
+    val big = if (compact) 40.dp else 52.dp
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
+        KetIconButton(KetIcons.Shuffle, "Lecture aléatoire", { player.setShuffle(!state.shuffle) }, active = state.shuffle, tint = Color.White.copy(alpha = .8f))
+        KetIconButton(DeskGlyphs.Previous, "Précédent", { player.previous() }, size = big, glyph = big * .58f, tint = Color.White)
+        PlayPause(state.isPlaying, { player.toggle() }, if (compact) 50.dp else 64.dp, if (compact) 30.dp else 40.dp, tint = Color.White)
+        KetIconButton(DeskGlyphs.Next, "Suivant", { player.next() }, size = big, glyph = big * .58f, tint = Color.White)
+        KetIconButton(if (state.repeatOne) DeskGlyphs.RepeatOne else DeskGlyphs.Repeat, "Répéter", {
+            when { state.repeatOne -> player.setRepeat(false, false); state.repeatAll -> player.setRepeat(true, false); else -> player.setRepeat(false, true) }
+        }, active = state.repeatAll || state.repeatOne, tint = Color.White.copy(alpha = .8f))
+    }
+    if (compact) return
+    Spacer(Modifier.height(18.dp))
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(DeskGlyphs.Mute, null, Modifier.size(15.dp), tint = Color.White.copy(alpha = .6f))
+        ThinSlider(volume, { player.setVolume(it) }, Modifier.weight(1f).padding(horizontal = 10.dp), tag = "full-volume",
+            color = Color.White, track = Color.White.copy(alpha = .25f))
+        Icon(DeskGlyphs.Volume, null, Modifier.size(15.dp), tint = Color.White.copy(alpha = .6f))
     }
 }
