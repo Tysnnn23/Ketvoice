@@ -49,7 +49,8 @@ internal fun PlayerSceneBackground(track: Track, canvas: String?, playing: Boole
         if (simple) {
             Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(ambience.color, Color.Black))))
             Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .48f)))
-        } else AmbientArtwork(cover, ambience, moving)
+        // 8.2: a Canvas in the artwork is the one moving picture; the colours behind it slow to a stop.
+        } else AmbientArtwork(cover, ambience, moving && !(canvas != null && AppSettings.animatedArtwork.value))
     }
 }
 

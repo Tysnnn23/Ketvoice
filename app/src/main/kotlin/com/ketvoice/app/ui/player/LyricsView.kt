@@ -56,6 +56,7 @@ import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.withTransform
+import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -177,10 +178,8 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
             val anchor = -(viewportPx * .18f).toInt()
             val item = list.layoutInfo.visibleItemsInfo.firstOrNull { it.index == targetIndex }
             if (reduced || item == null || active < 0) list.scrollToItem(targetIndex, if (active < 0) 0 else anchor)
-            else list.animateScrollBy(
-                (item.offset + anchor).toFloat(),
-                tween(Motion.duration(540), easing = androidx.compose.animation.core.CubicBezierEasing(0.22f, 1f, 0.36f, 1f))
-            )
+            // 8.2: the block follows the song on a spring (about half a second, no overshoot to speak of).
+            else list.animateScrollBy((item.offset + anchor).toFloat(), LyricsCascade.SCROLL_SPRING)
         }
         Column(Modifier.fillMaxSize()) {
             if (lyrics.lines.isNotEmpty()) {
@@ -235,28 +234,30 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
                                     entry.animateTo(1f, tween(420, easing = CubicBezierEasing(.16f, .84f, .28f, 1f)))
                                 }
                             }
-                            val lineColor by animateColorAsState(
-                                // Lines already sung stay white; only what is still to come is dimmed.
-                                targetValue = if (current || !lyrics.isTimed || LyricsCascade.sung(index, active)) Color.White
-                                    else Color.White.copy(alpha = LyricsCascade.INACTIVE_ALPHA),
-                                animationSpec = tween(Motion.duration(320)),
-                                label = "lyricColor"
-                            )
+                            // 8.2: what is still to come is dimmed and the lines already sung fade softly as they
+                            // move up. Read in the line's layer: a fade never recomposes the line.
+                            val past = lyrics.isTimed && LyricsCascade.sung(index, active)
+                            val lineAlpha = animateFloatAsState(
+                                targetValue = if (current || !lyrics.isTimed) 1f
+                                    else if (past) LyricsCascade.pastAlpha(active - index) else LyricsCascade.INACTIVE_ALPHA,
+                                animationSpec = tween(Motion.duration(if (past) LyricsCascade.PAST_FADE_MS else 320)))
+                            val lineColor = Color.White
                             // Cascade, the only lyrics style: the sung line alone stands forward; the others step
                             // back a little and catch up in a wave, each a few milliseconds after the one above.
                             // With reduced motion the lines keep their size and place: only their colour changes.
-                            val lineScale by animateFloatAsState(
+                            val lineScale = animateFloatAsState(
                                 if (lyrics.isTimed && !current && !reduced) LyricsCascade.INACTIVE_SCALE else 1f,
                                 if (reduced) androidx.compose.animation.core.snap() else androidx.compose.animation.core.spring(dampingRatio = 1f, stiffness = 170f),
                                 label = "lyricScale")
                             val wave = remember(index, track.id) { Animatable(0f) }
                             LaunchedEffect(active, reduced) {
-                                if (reduced || active < 0 || index < active) { wave.animateTo(0f, tween(Motion.duration(260))); return@LaunchedEffect }
-                                // The lines below hold back a little, then glide into place one after
-                                // the other: a smooth ease-out, no overshoot and no jump.
+                                if (reduced) { wave.snapTo(0f); return@LaunchedEffect }
+                                if (active < 0 || index < active) { wave.animateTo(0f, LyricsCascade.WAVE_SPRING); return@LaunchedEffect }
+                                // 8.2: the lines below hold back a little, then spring into place one after the other,
+                                // settling with the faintest give (a dp at most), never a bounce.
                                 wave.snapTo(maxOf(wave.value, LyricsCascade.waveStartDp(index - active)))
                                 delay(LyricsCascade.waveDelayMs(index - active))
-                                wave.animateTo(0f, tween(LyricsCascade.WAVE_MS, easing = LyricsCascade.GLIDE))
+                                wave.animateTo(0f, LyricsCascade.WAVE_SPRING)
                             }
                             val held = index in moment
                             val otherSide = across.getOrElse(index) { false }
@@ -277,14 +278,17 @@ internal fun LyricsPane(track: Track, expanded: Boolean, onSource: () -> Unit,
                                     alpha = entry.value
                                     translationY = if (reduced) 0f else (1f - entry.value) * 16.dp.toPx() + wave.value.dp.toPx()
                                     val breathe = if (current) 1f + breath.value else 1f
-                                    scaleX = lineScale * breathe
-                                    scaleY = lineScale * breathe
+                                    scaleX = lineScale.value * breathe
+                                    scaleY = lineScale.value * breathe
                                     transformOrigin = TransformOrigin(if (otherSide) 1f else 0f, .5f)
                                 }
                             ) {
                                 val nearActive = active < 0 || abs(index - active) <= 1
-                                LyricVoices(line, current, lyrics.isTimed, fontScale, lineColor, nearActive = nearActive, end = otherSide)
-                                romanized.getOrNull(index)?.let { RomanizedLine(it, lineColor, fontScale, end = otherSide) }
+                                // The fade dims the flat drawing only: a line drawn word by word keeps its own pending ink.
+                                LyricVoices(line, current, lyrics.isTimed, fontScale, lineColor, nearActive = nearActive, end = otherSide,
+                                    fade = { lineAlpha.value })
+                                romanized.getOrNull(index)?.let { Box(Modifier.graphicsLayer { alpha = lineAlpha.value }) {
+                                    RomanizedLine(it, lineColor, fontScale, end = otherSide) } }
 
                                 AnimatedVisibility(
                                     visible = translationEnabled && translated[index] != null && (current || !lyrics.isTimed),
@@ -437,7 +441,8 @@ private fun MomentBar(track: Track, lines: List<MusicApi.LyricLine>, nextMs: Lon
 
 @Composable
 internal fun LyricVoices(line: MusicApi.LyricLine, active: Boolean, timed: Boolean, fontScale: Float = 1f,
-                         color: Color = Color.White, nearActive: Boolean = true, end: Boolean = false) {
+                         color: Color = Color.White, nearActive: Boolean = true, end: Boolean = false,
+                         fade: (() -> Float)? = null) {
     val align = if (end) androidx.compose.ui.text.style.TextAlign.End else null
     val voices = remember(line) { LyricsPresentation.split(line) }
     // Only the active line and its immediate neighbours need the transport clock.
@@ -458,7 +463,7 @@ internal fun LyricVoices(line: MusicApi.LyricLine, active: Boolean, timed: Boole
             else Text(voices.lead.text, localize = false, color = color,
                 fontSize = (33f * fontScale).sp, lineHeight = (41f * fontScale).sp,
                 letterSpacing = (-.3).sp, fontWeight = FontWeight.Black, textAlign = align,
-                modifier = Modifier.fillMaxWidth())
+                modifier = Modifier.fillMaxWidth().then(if (fade != null) Modifier.graphicsLayer { alpha = fade() } else Modifier))
         }
         val leadStart = voices.lead.words.minOfOrNull { it.startMs } ?: line.timeMs
         voices.backs.forEach { back ->
@@ -571,18 +576,20 @@ internal fun KaraokeLine(line: MusicApi.LyricLine, modifier: Modifier, fontScale
                 if (lifting) {
                     val rise = LyricsWords.lift(progress) * liftPx
                     val glow = LyricsWords.glow(progress, word.end - word.start)
+                    // 8.2: the word being sung grows a little about its own centre, then settles back once sung.
+                    val grow = LyricsWords.grow(progress, now - word.end)
                     translate(top = -rise) {
-                        word.slices.forEach { slice -> clipPath(slice.path) { drawText(measured, color = Color.White.copy(alpha = pendingAlpha)) } }
-                        if (progress > 0f) {
-                            var remaining = word.width * progress
-                            word.slices.forEach { slice ->
-                                val bounds = slice.bounds
-                                val fill = remaining.coerceIn(0f, bounds.width)
-                                remaining -= bounds.width
-                                if (fill > 0f) {
-                                    val left = if (slice.rtl) bounds.right - fill else bounds.left
-                                    val right = if (slice.rtl) bounds.right else bounds.left + fill
-                                    clipPath(slice.path) {
+                        var remaining = word.width * progress
+                        word.slices.forEach { slice ->
+                            val bounds = slice.bounds
+                            val fill = remaining.coerceIn(0f, bounds.width)
+                            remaining -= bounds.width
+                            scale(grow, grow, bounds.center) {
+                                clipPath(slice.path) {
+                                    drawText(measured, color = Color.White.copy(alpha = pendingAlpha))
+                                    if (fill > 0f) {
+                                        val left = if (slice.rtl) bounds.right - fill else bounds.left
+                                        val right = if (slice.rtl) bounds.right else bounds.left + fill
                                         clipRect(left, bounds.top, right, bounds.bottom) {
                                             drawText(measured, color = ink, shadow = if (glow > .01f) androidx.compose.ui.graphics.Shadow(
                                                 LyricsWords.glowColor(glow), blurRadius = 14f * glow) else null)
@@ -817,6 +824,22 @@ internal object LyricsWords {
         val p = if (progress.isFinite()) progress.coerceIn(0f, 1f) else 0f
         return 1f - (1f - p) * (1f - p)
     }
+
+    /** 8.2: how much larger the word being sung is drawn, at most (owner: « très légèrement », ≤ 4 %). */
+    const val GROW = .035f
+
+    /**
+     * The scale of a word [progress] (0..1) into its singing, [sinceEndMs] after its end (negative before): it grows
+     * over the first third of the word and settles back over [SETTLE_MS] once sung. 1 for a word not reached yet.
+     */
+    fun grow(progress: Float, sinceEndMs: Long): Float {
+        val p = if (progress.isFinite()) progress.coerceIn(0f, 1f) else 0f
+        if (p <= 0f) return 1f
+        fun smooth(x: Float): Float { val t = x.coerceIn(0f, 1f); return t * t * (3f - 2f * t) }
+        val settle = if (sinceEndMs <= 0L) 1f else 1f - smooth(sinceEndMs / SETTLE_MS.toFloat())
+        return 1f + GROW * smooth(p / .3f) * settle
+    }
+    const val SETTLE_MS = 320L
 
     /** The glow of a held note: strongest in the middle of the note, nothing for short words. */
     fun glow(progress: Float, durationMs: Long): Float {
