@@ -52,8 +52,11 @@ class StartupIoHostTest {
         val roots = listOfNotNull(app.dataDir, app.cacheDir, app.getExternalFilesDir(null)?.parentFile).map { it.absolutePath }
         val counter = Counter(Thread.currentThread(), roots)
         System.setSecurityManager(counter)
+        val started = System.nanoTime()
+        var setupMs = 0L
         val controller = try {
             Robolectric.buildActivity(MainActivity::class.java).setup().also {
+                setupMs = (System.nanoTime() - started) / 1_000_000
                 repeat(8) { shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(250)) }
             }
         } finally { counter.on = false; System.setSecurityManager(null) }
@@ -61,7 +64,7 @@ class StartupIoHostTest {
         val hits = counter.hits.toList()
         val report = hits.groupingBy { it }.eachCount().entries.sortedByDescending { it.value }.joinToString("\n") { "${it.value}x ${it.key}" }
         File("build/perf76").apply { mkdirs() }.resolve("startup-io.txt").writeText("main-thread file operations: ${hits.size}\n$report\n")
-        println("perf76 startup main-thread file operations: ${hits.size}")
+        println("perf76 startup main-thread file operations: ${hits.size}, onCreate to first frame on the host: $setupMs ms")
         org.junit.Assert.assertTrue("main-thread file operations at start: ${hits.size}\n$report", hits.size <= LIMIT)
     }
 
