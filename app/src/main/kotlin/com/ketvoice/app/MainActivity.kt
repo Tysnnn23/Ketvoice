@@ -163,6 +163,8 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+        // 8.2: the opt-in diagnostic (cold start, jank); measures nothing while it is off.
+        com.ketvoice.app.util.Diagnostics.attach(this, cold = savedInstanceState == null)
         handleAuthIntent(intent)
         handleWidgetIntent(intent)
         com.ketvoice.app.player.AutoVoice.handle(this, intent, lifecycleScope)
@@ -352,6 +354,7 @@ class MainActivity : ComponentActivity() {
         com.ketvoice.app.sync.NowPlayingSync.refresh()
         com.ketvoice.app.remote.PhoneRemote.watch(this)
         com.ketvoice.app.remote.PhoneRemote.inFront(true)
+        com.ketvoice.app.util.EconomyMode.watch(this)
         // A season may end while the app lives: its theme then goes back, silently.
         if (com.ketvoice.app.data.Seasons.expire()) runCatching { com.ketvoice.app.data.SettingsStore.save() }
     }
@@ -362,6 +365,8 @@ class MainActivity : ComponentActivity() {
         runCatching { com.ketvoice.app.data.SettingsStore.save() }
         com.ketvoice.app.sync.LibrarySync.onBackground()
         com.ketvoice.app.remote.PhoneRemote.inFront(false)
+        com.ketvoice.app.util.EconomyMode.unwatch(this)
+        com.ketvoice.app.util.Diagnostics.flush()
     }
 }
 

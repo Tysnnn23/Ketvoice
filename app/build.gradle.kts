@@ -429,6 +429,8 @@ dependencies {
     // Already shipped through Glance; declared for the weekly discoveries worker (same version, nothing new downloaded).
     implementation("androidx.work:work-runtime-ktx:2.7.1")
     implementation("androidx.profileinstaller:profileinstaller:1.4.1")
+    // 8.2 « Diagnostic intégré »: real jank, measured only while the listener has switched it on.
+    implementation("androidx.metrics:metrics-performance:1.0.0-beta02")
 
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")

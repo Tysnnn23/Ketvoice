@@ -32,7 +32,7 @@ internal object PersonalBackup {
         "classicGradient", "animatedArtwork", "albumHeroCanvas", "downloadsWifiOnly", "panoramicCanvas",
         "sonicCanvas", "albumColors", "artworkDepth", "livingArtwork", "coverAccent", "volumeLeveling", "coverBackground", "ketmixStems", "ketmixStemsCharging", "ketmixSmartQueue", "ketmixOnSkip", "ketmixLibrary", "autoResume", "lyricVideoSound", "lockscreenLyrics", "standbyMode", "autoOfflineFavorites", "smartOffline", "smartOfflineCharging", "canvasWithMobileData", "canvasPreloadWifi", "artistPhotos", "highRefreshRate",
         "syncedLyrics", "lyricsRomanization", "skipSilence", "equalizerEnabled", "progressiveQuality",
-        "highPerformanceMode", "questKeepAwake", "filterNonAudio", "localMusicEnrich", "playNextOnSwipe",
+        "highPerformanceMode", "autoEconomy", "questKeepAwake", "filterNonAudio", "localMusicEnrich", "playNextOnSwipe",
         "noRepeatSuggestions", "stopOnSwipeFromRecents", "hideVolumeBar", "hideStatusBarInPlayer",
         "showQueueHistory", "hideTitleStatus", "languageChosen", "lastfmGenres", "smartAudioAlignment", "techStats",
         "haptics", "coverTintedGlass", "glassTilt", "glassTinted", "trueBlack", "meshBackground", "automixOn", "automixAlbums", "ketmixLoops", "smartShuffle", "ketmixHaptics")

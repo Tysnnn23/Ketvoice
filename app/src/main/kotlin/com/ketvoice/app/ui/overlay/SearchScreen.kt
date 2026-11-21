@@ -148,6 +148,7 @@ fun SearchScreen() {
         // no longer blanks the page at every letter. Another scope starts from nothing.
         if (segment != shownSegment) { clear(); shownSegment = segment }
         delay(220)
+        val askedAt = com.ketvoice.app.util.Diagnostics.now()
         val smart = if (segment == 1) null else com.ketvoice.app.ui.smartlib.SmartSearch.understand(q, dismissed)
         understood = smart
         if (segment != 1) {
@@ -185,6 +186,7 @@ fun SearchScreen() {
                     // 7.2: one order for every source (text match first, then what the listener plays and likes).
                     val taste = com.ketvoice.app.data.SearchRank.liveTaste()
                     SearchGroups.collectProgressively(searches) { found ->
+                        if (!gotTracks) com.ketvoice.app.util.Diagnostics.load("search", askedAt)
                         gotTracks = true
                         val tracks = com.ketvoice.app.data.SearchRank.rank(q, found, taste)
                         results = smart?.let { com.ketvoice.app.ui.smartlib.SmartSearch.refineNow(tracks, it) } ?: tracks

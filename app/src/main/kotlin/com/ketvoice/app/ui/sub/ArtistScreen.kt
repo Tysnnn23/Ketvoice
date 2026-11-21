@@ -71,7 +71,9 @@ fun ArtistScreen(request: AppUi.ArtistRequest? = AppUi.artistRequest.value) {
         }
         runCatching {
             // A title does not always carry a channel id: the artist is then found by name (data/ArtistPages).
+            val askedAt = com.ketvoice.app.util.Diagnostics.now()
             val resolved = ArtistPages.fetch(request.id, request.name)
+            com.ketvoice.app.util.Diagnostics.load("artist", askedAt, resolved != null)
             if (resolved == null && cached == null) ArtistCache.put(request.id, request.name, null)
             if (resolved != null) {
                 ArtistCache.put(request.id, request.name, resolved)

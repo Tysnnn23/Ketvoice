@@ -363,7 +363,13 @@ fun SettingsScreen() {
                     KetIcons.Sliders, "Mode performance",
                     "Garde les effets visibles et allège ceux qu'on remarque à peine : verre sans réfraction, paroles sans flou, fond animé à cadence réduite, images sans fondu",
                     AppSettings.highPerformanceMode.value
-                ) { AppSettings.highPerformanceMode.value = it; SettingsStore.save() }
+                ) { com.ketvoice.app.util.EconomyMode.manual(it); AppSettings.highPerformanceMode.value = it; SettingsStore.save() }
+                // 8.2: low battery or a hot device holds performance mode on for as long as it lasts.
+                SToggle(
+                    KetIcons.Sliders, "Mode économie auto",
+                    "Batterie à 20 % ou moins hors charge, ou appareil très chaud : le mode performance s'active le temps qu'il faut",
+                    AppSettings.autoEconomy.value
+                ) { AppSettings.autoEconomy.value = it; com.ketvoice.app.util.EconomyMode.autoChanged(); SettingsStore.save() }
                 SToggle(
                     KetIcons.Appearance, "Flou dynamique",
                     "Réfraction en temps réel derrière les panneaux",
@@ -823,6 +829,7 @@ fun SettingsScreen() {
                     value = com.ketvoice.app.BuildConfig.VERSION_NAME + com.ketvoice.app.Edition.current.label
                 ) {}
                 if (com.ketvoice.app.LiteTuning.lite) LiteAboutRow()
+                DiagnosticRows()
             }
 
             if (category == SettingsCategory.Sources) Text(

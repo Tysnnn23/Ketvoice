@@ -154,6 +154,10 @@ object AppSettings {
 
     /** On by default in Ketvoice Lite (LiteTuning): visible effects stay, barely visible ones are lightened. */
     val highPerformanceMode = mutableStateOf(com.ketvoice.app.LiteTuning.defaultPerformanceMode())
+    /** 8.2: low battery or a hot phone switches performance mode on for as long as it lasts (util/EconomyMode). */
+    val autoEconomy = mutableStateOf(true)
+    /** 8.2 « Diagnostic intégré »: opt-in, written to a local file only (util/Diagnostics). */
+    val diagnostics = mutableStateOf(false)
 
     val lyricsTextSize = mutableStateOf(0)
     val questLyricsSize = lyricsTextSize

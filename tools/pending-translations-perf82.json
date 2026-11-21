@@ -1,0 +1,122 @@
+{
+ "Mode économie auto": {
+  "en": "Auto power saving",
+  "hi": "स्वचालित बचत मोड",
+  "ja": "自動省電力モード",
+  "zh": "自动省电模式",
+  "ru": "Автоэкономия",
+  "it": "Risparmio automatico",
+  "es": "Ahorro automático",
+  "de": "Automatisches Energiesparen",
+  "pt": "Economia automática",
+  "ko": "자동 절전 모드"
+ },
+ "Batterie à 20 % ou moins hors charge, ou appareil très chaud : le mode performance s'active le temps qu'il faut": {
+  "en": "Battery at 20% or less and not charging, or a very hot device: performance mode turns on for as long as needed",
+  "hi": "चार्ज न होते समय बैटरी 20% या कम, या डिवाइस बहुत गर्म: ज़रूरत रहने तक परफ़ॉर्मेंस मोड चालू रहता है",
+  "ja": "充電していない状態でバッテリーが20%以下、またはデバイスが非常に熱いとき、必要な間だけパフォーマンスモードがオンになります",
+  "zh": "未充电且电量不高于 20%，或设备过热时，性能模式会在需要期间自动开启",
+  "ru": "Заряд 20 % или меньше без зарядки или сильный нагрев устройства: режим производительности включается на нужное время",
+  "it": "Batteria al 20% o meno senza ricarica, o dispositivo molto caldo: la modalità prestazioni si attiva per il tempo necessario",
+  "es": "Batería al 20 % o menos sin cargar, o dispositivo muy caliente: el modo rendimiento se activa el tiempo necesario",
+  "de": "Akku bei 20 % oder weniger ohne Laden oder ein sehr heißes Gerät: Der Leistungsmodus schaltet sich so lange wie nötig ein",
+  "pt": "Bateria em 20% ou menos sem carregar, ou aparelho muito quente: o modo desempenho liga pelo tempo necessário",
+  "ko": "충전 중이 아닐 때 배터리 20% 이하 또는 기기가 매우 뜨거우면 필요한 동안 성능 모드가 켜집니다"
+ },
+ "Mode économie activé : batterie faible": {
+  "en": "Power saving on: low battery",
+  "hi": "बचत मोड चालू: बैटरी कम",
+  "ja": "省電力モード オン：バッテリー残量低下",
+  "zh": "已开启省电模式：电量低",
+  "ru": "Экономия включена: низкий заряд",
+  "it": "Risparmio attivo: batteria scarica",
+  "es": "Ahorro activado: batería baja",
+  "de": "Energiesparen an: Akku schwach",
+  "pt": "Economia ativada: bateria fraca",
+  "ko": "절전 모드 켜짐: 배터리 부족"
+ },
+ "Mode économie activé : appareil chaud": {
+  "en": "Power saving on: device is hot",
+  "hi": "बचत मोड चालू: डिवाइस गर्म है",
+  "ja": "省電力モード オン：デバイスの高温",
+  "zh": "已开启省电模式：设备过热",
+  "ru": "Экономия включена: устройство нагрелось",
+  "it": "Risparmio attivo: dispositivo caldo",
+  "es": "Ahorro activado: dispositivo caliente",
+  "de": "Energiesparen an: Gerät ist heiß",
+  "pt": "Economia ativada: aparelho quente",
+  "ko": "절전 모드 켜짐: 기기 과열"
+ },
+ "Mode économie terminé": {
+  "en": "Power saving off",
+  "hi": "बचत मोड बंद",
+  "ja": "省電力モード終了",
+  "zh": "省电模式已结束",
+  "ru": "Экономия выключена",
+  "it": "Risparmio terminato",
+  "es": "Ahorro desactivado",
+  "de": "Energiesparen beendet",
+  "pt": "Economia desativada",
+  "ko": "절전 모드 종료"
+ },
+ "Diagnostic intégré": {
+  "en": "Built-in diagnostics",
+  "hi": "बिल्ट-इन डायग्नॉस्टिक",
+  "ja": "内蔵診断",
+  "zh": "内置诊断",
+  "ru": "Встроенная диагностика",
+  "it": "Diagnostica integrata",
+  "es": "Diagnóstico integrado",
+  "de": "Integrierte Diagnose",
+  "pt": "Diagnóstico integrado",
+  "ko": "내장 진단"
+ },
+ "Note sur cet appareil les saccades, le démarrage, le délai avant le son, les chargements et la mémoire. Rien n'est envoyé, aucune donnée personnelle": {
+  "en": "Records stutters, startup, time to first sound, loading and memory on this device. Nothing is sent, no personal data",
+  "hi": "इस डिवाइस पर अटकन, स्टार्टअप, पहली आवाज़ तक का समय, लोडिंग और मेमोरी दर्ज करता है। कुछ भी भेजा नहीं जाता, कोई निजी डेटा नहीं",
+  "ja": "カクつき、起動、最初の音までの時間、読み込み、メモリをこのデバイスに記録します。何も送信されず、個人データも含みません",
+  "zh": "在本设备上记录卡顿、启动、首次出声时间、加载和内存。不会发送任何内容，不含个人数据",
+  "ru": "Записывает на этом устройстве рывки, запуск, задержку до звука, загрузку и память. Ничего не отправляется, никаких личных данных",
+  "it": "Registra su questo dispositivo scatti, avvio, tempo prima del suono, caricamenti e memoria. Non viene inviato nulla, nessun dato personale",
+  "es": "Registra en este dispositivo tirones, inicio, tiempo hasta el sonido, cargas y memoria. No se envía nada, sin datos personales",
+  "de": "Zeichnet auf diesem Gerät Ruckler, Start, Zeit bis zum ersten Ton, Ladezeiten und Speicher auf. Nichts wird gesendet, keine persönlichen Daten",
+  "pt": "Registra neste aparelho travamentos, inicialização, tempo até o som, carregamentos e memória. Nada é enviado, sem dados pessoais",
+  "ko": "이 기기에 끊김, 시작, 첫 소리까지의 시간, 로딩, 메모리를 기록합니다. 아무것도 전송되지 않으며 개인 정보는 없습니다"
+ },
+ "Partager le diagnostic": {
+  "en": "Share diagnostics",
+  "hi": "डायग्नॉस्टिक शेयर करें",
+  "ja": "診断を共有",
+  "zh": "分享诊断",
+  "ru": "Поделиться диагностикой",
+  "it": "Condividi diagnostica",
+  "es": "Compartir diagnóstico",
+  "de": "Diagnose teilen",
+  "pt": "Compartilhar diagnóstico",
+  "ko": "진단 공유"
+ },
+ "Par le menu de partage, seulement quand vous le choisissez": {
+  "en": "Through the share sheet, only when you choose to",
+  "hi": "शेयर मेनू से, सिर्फ़ जब आप चुनें",
+  "ja": "共有メニューから、選んだときだけ",
+  "zh": "通过分享菜单，仅在你选择时",
+  "ru": "Через меню «Поделиться», только когда вы решите",
+  "it": "Dal menu di condivisione, solo quando lo scegli",
+  "es": "Desde el menú de compartir, solo cuando tú lo eliges",
+  "de": "Über das Teilen-Menü, nur wenn du es wählst",
+  "pt": "Pelo menu de compartilhamento, só quando você escolher",
+  "ko": "공유 메뉴를 통해, 원할 때만"
+ },
+ "Rien n'est encore enregistré": {
+  "en": "Nothing recorded yet",
+  "hi": "अभी तक कुछ दर्ज नहीं हुआ",
+  "ja": "まだ何も記録されていません",
+  "zh": "尚未记录任何内容",
+  "ru": "Пока ничего не записано",
+  "it": "Ancora nessuna registrazione",
+  "es": "Aún no hay nada registrado",
+  "de": "Noch nichts aufgezeichnet",
+  "pt": "Nada registrado ainda",
+  "ko": "아직 기록된 내용이 없습니다"
+ }
+}

@@ -259,6 +259,7 @@ object Player {
             com.ketvoice.app.data.ActiveListenerTracker.onPlaybackStateChanged(_state.value.current, isPlaying)
             if (isPlaying && historyGeneration != generation) {
                 android.util.Log.i("KetvoicePlayback", "playing_state_ms=${android.os.SystemClock.elapsedRealtime() - resolveStartedAt}")
+                com.ketvoice.app.util.Diagnostics.firstSound(_state.value.current?.id, android.os.SystemClock.elapsedRealtime() - resolveStartedAt)
                 _state.value.current?.let { com.ketvoice.app.data.ListeningHistory.record(it) }
                 historyGeneration = generation
                 if (radio) topUpRadio() else topUpAutoplay()

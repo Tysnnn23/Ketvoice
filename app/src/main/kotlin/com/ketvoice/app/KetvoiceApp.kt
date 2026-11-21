@@ -70,6 +70,8 @@ class KetvoiceApp : Application(), ImageLoaderFactory {
             start(LiteTuning.StartWork.DiscoverySchedule) { com.ketvoice.app.data.SmartOffline.schedule(this) }
         // The Canvas of favourites and playlists are fetched ahead on Wi-Fi (6.2.3): its own coroutine, first run 45 s after the start.
         if (android.os.Build.FINGERPRINT != "robolectric") runCatching { com.ketvoice.app.data.CanvasPreload.start(this) }
+        // 8.2: on Wi-Fi, the pages and covers likely to be opened next (bounded, cancelled when the title changes).
+        if (android.os.Build.FINGERPRINT != "robolectric") runCatching { com.ketvoice.app.data.SmartPrefetch.start(this) }
         // Keeps the placed home-screen widgets in step with playback (7.4: no drawing while none is placed).
         if (!BuildConfig.IS_QUEST) start(LiteTuning.StartWork.Widgets) { com.ketvoice.app.widget.NowPlayingWidgets.start(this) }
         // Bound the re-fetchable caches once per process, off the main thread and after startup.

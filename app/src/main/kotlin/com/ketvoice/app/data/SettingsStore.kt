@@ -134,6 +134,8 @@ object SettingsStore {
         s.downloadQualityMode.value = p.getInt("downloadQualityMode", s.downloadQualityMode.value)
 
         s.highPerformanceMode.value = p.getBoolean("highPerformanceMode", s.highPerformanceMode.value)
+        s.autoEconomy.value = p.getBoolean("autoEconomy", true)
+        s.diagnostics.value = p.getBoolean("diagnostics", false)
         s.lyricsTextSize.value = p.getInt("lyricsTextSize", p.getInt("questLyricsSize", 0)).coerceIn(0, 2)
         s.questKeepAwake.value = p.getBoolean("questKeepAwake", true)
         s.localMusicFolder.value = p.getString("localMusicFolder", s.localMusicFolder.value)
@@ -283,7 +285,10 @@ object SettingsStore {
             .putBoolean("wifiHandoffEnabled", s.wifiHandoffEnabled.value)
             .putInt("lyricsMode", s.lyricsMode.value)
             .putInt("downloadQualityMode", s.downloadQualityMode.value)
-            .putBoolean("highPerformanceMode", s.highPerformanceMode.value)
+            // 8.2: while the automatic economy holds it on, the listener's own choice is what is kept.
+            .putBoolean("highPerformanceMode", com.ketvoice.app.util.EconomyMode.stored(s.highPerformanceMode.value))
+            .putBoolean("autoEconomy", s.autoEconomy.value)
+            .putBoolean("diagnostics", s.diagnostics.value)
             .putInt("questLyricsSize", s.questLyricsSize.value)
             .putBoolean("questKeepAwake", s.questKeepAwake.value)
             .putString("localMusicFolder", s.localMusicFolder.value)

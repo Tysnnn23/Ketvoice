@@ -67,6 +67,7 @@ fun CatalogScreen(request: CatalogRequest? = AppUi.catalogRequest.value) {
     LaunchedEffect(request, attempt) {
         if (request.kind in listOf("album", "genre", "mix") && !(attempt == 0 && page != null)) {
             loading = true
+            val askedAt = com.ketvoice.app.util.Diagnostics.now()
             try {
                 page = if (request.kind == "mix") {
                     // A personal mix: built from the listening history, completed by the catalogue.
@@ -79,7 +80,7 @@ fun CatalogScreen(request: CatalogRequest? = AppUi.catalogRequest.value) {
                 throw cancelled
             } catch (_: Exception) {
                 page = null
-            } finally { loading = false }
+            } finally { loading = false; com.ketvoice.app.util.Diagnostics.load(request.kind, askedAt, page != null) }
         }
     }
     val syncedTracks by com.ketvoice.app.sync.SyncedTracks.tracks.collectAsState()
