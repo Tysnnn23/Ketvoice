@@ -7,6 +7,21 @@
 
 ---
 
+# Ketvoice 8.4.0
+
+![Ketvoice](ketvoice-banner.png)
+
+**versionCode 152** — Crystal glass look, a full Android Auto experience, Ketmix's loop bridge and sub-frame beats, a real audio output picker, settings search, playlist updates, a recap soundtrack, Ketogether host controls and a lyrics source order.
+
+- Crystal (`glass/CristalGlass.kt`, `ui/chrome/CristalChrome.kt`, `CristalPill.kt`, `ui/common/CristalMenus.kt`): a second glass look, key `glassLook` (0 Liquid 27, default and unchanged; 1 Crystal; synced and backed up). Control glass: saturation 1.5, blur 8 dp, lens 24/24 dp with depth and fringing on API 33+, rim 0.5 dp at 45°, shadow 24 dp, tint 40 %, sampled at 0.33 (0.25 in performance mode, no lens); menu frost saturation 1.8, blur 24 dp; selection pill springs travel 280/31.4, lift 250/19–22.1, material 1000/63.3, squash ≤ 12 %. Built on backdrop 1.0.0-rc02's public API. `CristalGlassTest`, `CristalGlassMenuTest`, `CristalChromePillTest`, `CristalGlassSettingsHostTest`, `CristalChromeRenderHostTest`.
+- Android Auto (`player/AutoLibrary.kt`, `AutoSession.kt`, `AutoCollections.kt`, `AutoVoiceMatch.kt`, `CarControls.kt`, `QueueWindows.kt`): play-from-search with artist/album/title/genre/playlist extras, likes, downloads, mixes, radio and shuffle phrases in the ten languages, resume on an empty request; four tabs (Home, Library, Radio, Downloads) with content-style hints, “Play all”/“Shuffle” rows, explicit and downloaded badges, paging at 100; the car's queue shows up to 150 titles around the current one; custom commands Like, Shuffle, Repeat, Radio and Ketmix on the shared session; covers through a disk cache. Mobile flavour only. `AutoTreeTest`, `CarControlsTest`, `QueueTimelineTest`, `AutoCarSessionTest`.
+- Ketmix (`automix/LoopBridge.kt`, `BeatPost.kt`, `TransitionPlanner.kt`, `Automix.kt`): `MixStyle.Bridge` (ordinal 9) — four instrumental bars chosen from lyrics and the voice mask, one tempo glide of at most 2.5 BPM per bar with half/double folding, bass swap half-way, high-pass exit, then `TempoReturn`; chosen automatically only when the gap exceeds `tempoRange`. Beats and downbeats refined between frames (log-activation parabola); the window length is read from the model (the published model stays at 500 frames). `BeatPrecisionTest`, `KetmixLoopBridgeTest`; `tools/beat/phase.py`.
+- Everyday (`player/AudioOutputs.kt`, `ui/settings/SettingsSearch.kt`, `data/PlaylistUpdates.kt`, `ui/sub/WrappedSoundtrack.kt`, `together/`, `data/LyricsOrder.kt`): per-device output routing through `setPreferredAudioDevice` on every deck (not saved); an accent-insensitive index of about 110 settings rows; a WorkManager check every 6 hours (key `playlistUpdates`, on); recap clips on separate players with a 1.2 s equal-power crossfade (key `wrappedSound`); Ketogether party limit 2–10, signed removal, a 2-minute away state, an 8-entry activity log and drift in pings (no SQL change); a draggable lyrics provider order (key `lyricsOrder`). `AudioOutputsTest`, `SettingsSearchTest`, `PlaylistUpdatesTest`, `RecapSoundtrackTest`, `TogetherHostRulesTest`, `LyricsOrderTest` and their host tests.
+
+Full notes: [8.4.0](docs/releases/v8.4.0.md).
+
+---
+
 # Ketvoice 8.3.0
 
 ![Ketvoice](ketvoice-banner.png)
