@@ -134,6 +134,7 @@ object SettingsStore {
         s.coverTintedGlass.value = p.getBoolean("coverTintedGlass", true)
         s.equalizerGains.value = com.ketvoice.app.player.EqualizerProfile.normalize(
             p.getString("equalizerGains", "").orEmpty().split(',').mapNotNull { it.toIntOrNull() })
+        loadHeadphoneEq(p)
         s.wifiHandoffEnabled.value = p.getBoolean("wifiHandoffEnabled", false)
         s.lyricsMode.value = p.getInt("lyricsMode", s.lyricsMode.value)
         s.downloadQualityMode.value = p.getInt("downloadQualityMode", s.downloadQualityMode.value)
@@ -198,6 +199,17 @@ object SettingsStore {
         if (Seasons.expire()) p.edit()
             .putString("seasonTheme", s.seasonTheme.value)
             .apply()
+    }
+
+    /** « Égaliseur par casque » (9.0): what is not a readable list is left out, never half read. */
+    private fun loadHeadphoneEq(p: android.content.SharedPreferences) {
+        val s = AppSettings
+        s.headphoneEq.value = p.getBoolean("headphoneEq", true)
+        s.headphoneProfiles.value = runCatching { p.getString("headphoneProfiles", "") }.getOrNull().orEmpty()
+            .takeIf(com.ketvoice.app.player.HeadphoneProfiles::valid).orEmpty()
+        s.headphoneLinks.value = runCatching { p.getString("headphoneLinks", "") }.getOrNull().orEmpty()
+            .takeIf(com.ketvoice.app.player.HeadphoneEq::validLinks).orEmpty()
+        com.ketvoice.app.player.HeadphoneEq.changed()
     }
 
     fun save() {
@@ -292,6 +304,9 @@ object SettingsStore {
             .putBoolean("meshBackground", s.meshBackground.value)
             .putBoolean("coverTintedGlass", s.coverTintedGlass.value)
             .putString("equalizerGains", s.equalizerGains.value.joinToString(","))
+            .putBoolean("headphoneEq", s.headphoneEq.value)
+            .putString("headphoneProfiles", s.headphoneProfiles.value)
+            .putString("headphoneLinks", s.headphoneLinks.value)
             .putBoolean("wifiHandoffEnabled", s.wifiHandoffEnabled.value)
             .putInt("lyricsMode", s.lyricsMode.value)
             .putInt("downloadQualityMode", s.downloadQualityMode.value)

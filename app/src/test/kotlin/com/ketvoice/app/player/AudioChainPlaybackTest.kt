@@ -53,7 +53,17 @@ class AudioChainPlaybackTest {
         try { play(mask) } finally { com.ketvoice.app.stems.VoiceLevel.level = 1f }
     }
 
-    private fun play(voiceMask: com.ketvoice.app.stems.StemMask? = null) {
+    /** « Égaliseur par casque » (9.0): a correction of ten filters with its preamp in the chain, on every deck. */
+    @Test fun aLocalFilePlaysWithAHeadphoneCorrection() {
+        val profile = HeadphoneProfiles.parse("""Preamp: -6.4 dB
+            Filter 1: ON LSC Fc 105 Hz Gain 6.0 dB Q 0.70
+            Filter 2: ON PK Fc 220 Hz Gain 4.0 dB Q 1.40
+            Filter 3: ON PK Fc 3000 Hz Gain -3.0 dB Q 2.00
+            Filter 4: ON HSC Fc 10000 Hz Gain 2.0 dB Q 0.70""".trimIndent(), "QA")
+        play(correction = profile)
+    }
+
+    private fun play(voiceMask: com.ketvoice.app.stems.StemMask? = null, correction: HeadphoneProfile? = null) {
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
         val deck = com.ketvoice.app.automix.DeckControl().also { it.voiceMask = voiceMask }
         val renderers = object : DefaultRenderersFactory(context) {
@@ -62,7 +72,7 @@ class AudioChainPlaybackTest {
                     .setMinPcmBufferDurationUs(PlaybackService.AUDIO_BUFFER_MIN_US).setMaxPcmBufferDurationUs(PlaybackService.AUDIO_BUFFER_MAX_US).build()
                 return ProcessingAudioSink(DefaultAudioSink.Builder(context).setEnableFloatOutput(false)
                     .setAudioTrackBufferSizeProvider(buffers)
-                    .setAudioProcessors(arrayOf(com.ketvoice.app.automix.DeckMixProcessor(deck), LevelingAudioProcessor(), ReverbAudioProcessor {},
+                    .setAudioProcessors(arrayOf(com.ketvoice.app.automix.DeckMixProcessor(deck), HeadphoneEqProcessor { correction }, LevelingAudioProcessor(), ReverbAudioProcessor {},
                         TeeAudioProcessor(SonicMeter))).build(), deck)
             }
         }

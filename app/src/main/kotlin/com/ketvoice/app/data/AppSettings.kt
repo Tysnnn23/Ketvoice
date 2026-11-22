@@ -161,6 +161,12 @@ object AppSettings {
     /** Start on the first stream found, then switch to the best one without a gap (on by default since 6.0.0 Beta 4). */
     val progressiveQuality = mutableStateOf(true)
     val equalizerGains = mutableStateOf(List(10) { 0 })
+    /** « Égaliseur par casque » (9.0): the corrections linked to outputs are played (player/HeadphoneEq). */
+    val headphoneEq = mutableStateOf(true)
+    /** The listener's headphone corrections ([com.ketvoice.app.player.HeadphoneProfiles.encode]). */
+    val headphoneProfiles = mutableStateOf("")
+    /** Which output plays which correction ([com.ketvoice.app.player.HeadphoneEq.encodeLinks]; digests, never addresses). */
+    val headphoneLinks = mutableStateOf("")
     val wifiHandoffEnabled = mutableStateOf(false)
     val spatialAudio = mutableStateOf(false)
     val downloadQuality = mutableStateOf("~35MB par piste")

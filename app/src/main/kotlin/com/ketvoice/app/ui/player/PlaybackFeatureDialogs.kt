@@ -153,6 +153,8 @@ private fun EqualizerDialog(onClose:()->Unit){
                     enabled=status.available&&AppSettings.equalizerEnabled.value)
             }
             Text("Les gains sont adaptés aux bandes et à la plage réellement prises en charge par l'appareil.",color=theme.secondary,fontSize=11.sp)
+            // 9.0: the correction of the headphones playing, in Ketvoice's own audio chain (before the limiter).
+            HeadphoneEqSection()
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.End) { SettingsAction("Fermer", ::finish, primary=true) }
         }
     }
