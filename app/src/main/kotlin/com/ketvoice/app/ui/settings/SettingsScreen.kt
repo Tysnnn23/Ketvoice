@@ -501,7 +501,7 @@ fun SettingsScreen() {
                 }
                 SRow(KetIcons.Shuffle, "Style de transition",
                     sub = "Comment un titre passe au suivant",
-                    value = when (AppSettings.ketmixStyle.value) { 1 -> "Calé sur le tempo"; 2 -> "Écho"; 3 -> "Filtres"; 4 -> "Fondu"; 5 -> "Montée"; 6 -> "Coupe"; 7 -> "Sur le drop"; 8 -> "Relais des voix"; else -> "Automatique" }) {
+                    value = when (AppSettings.ketmixStyle.value) { 1 -> "Calé sur le tempo"; 2 -> "Écho"; 3 -> "Filtres"; 4 -> "Fondu"; 5 -> "Montée"; 6 -> "Coupe"; 7 -> "Sur le drop"; 8 -> "Relais des voix"; 9 -> "Pont en boucle"; else -> "Automatique" }) {
                     choice = ChoiceSpec("Style de transition", "Ketmix garde toujours le chant intact et repasse à un autre style quand celui-ci ne convient pas aux deux titres.",
                         AppSettings.ketmixStyle.value.toString(), listOf(
                             ChoiceOption("0", "Automatique", "Ketmix choisit pour chaque paire de titres, d'après ce qu'il a mesuré"),
@@ -512,8 +512,9 @@ fun SettingsScreen() {
                             ChoiceOption("5", "Montée", "Le titre monte en tension sur ses dernières mesures, le suivant tombe sur le premier temps"),
                             ChoiceOption("6", "Coupe", "Le titre s'arrête net sur le premier temps d'une phrase et le suivant part sur ce temps"),
                             ChoiceOption("7", "Sur le drop", "Le titre s'arrête sur une phrase et le suivant entre là où tout son rythme démarre"),
-                            ChoiceOption("8", "Relais des voix", "Les deux titres se croisent et la voix qui part laisse la place à celle qui arrive"))
-                    ) { id -> AppSettings.ketmixStyle.value = id.toIntOrNull()?.coerceIn(0, 8) ?: 0; SettingsStore.save() }
+                            ChoiceOption("8", "Relais des voix", "Les deux titres se croisent et la voix qui part laisse la place à celle qui arrive"),
+                            ChoiceOption("9", "Pont en boucle", "Le titre tourne sur quatre mesures sans chant pendant que le tempo glisse jusqu'à celui du suivant, même très éloigné"))
+                    ) { id -> AppSettings.ketmixStyle.value = id.toIntOrNull()?.coerceIn(0, 9) ?: 0; SettingsStore.save() }
                 }
                 SToggle(KetIcons.Album, "Mixer aussi les albums",
                     "Les titres d'un album écouté dans l'ordre sont mixés aussi, sauf si l'album n'a aucun blanc entre ses titres.",

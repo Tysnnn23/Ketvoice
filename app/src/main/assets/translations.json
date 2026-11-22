@@ -2602,7 +2602,10 @@
   "+ Point": "+ Point",
   "Ctrl+Z · Ctrl+Y · Espace · Suppr": "Ctrl+Z · Ctrl+Y · Space · Del",
   "Flou des paroles": "Lyrics blur",
-  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "Lines away from the one being sung fade into a soft blur."
+  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "Lines away from the one being sung fade into a soft blur.",
+  "Pont en boucle": "Loop bridge",
+  "pont en boucle": "loop bridge",
+  "Le titre tourne sur quatre mesures sans chant pendant que le tempo glisse jusqu'à celui du suivant, même très éloigné": "The title turns on four bars without singing while the tempo glides to the next one's, even when it is far off"
  },
  "hi": {
   "Reverb": "रीवर्ब",
@@ -5207,7 +5210,10 @@
   "+ Point": "+ पॉइंट",
   "Ctrl+Z · Ctrl+Y · Espace · Suppr": "Ctrl+Z · Ctrl+Y · Space · Del",
   "Flou des paroles": "बोलों का धुंधलापन",
-  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "गाई जा रही पंक्ति से दूर की पंक्तियाँ हल्के धुंधलेपन में खो जाती हैं।"
+  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "गाई जा रही पंक्ति से दूर की पंक्तियाँ हल्के धुंधलेपन में खो जाती हैं।",
+  "Pont en boucle": "लूप ब्रिज",
+  "pont en boucle": "लूप ब्रिज",
+  "Le titre tourne sur quatre mesures sans chant pendant que le tempo glisse jusqu'à celui du suivant, même très éloigné": "शीर्षक बिना गायन वाले चार बार पर घूमता रहता है, जबकि टेम्पो अगले शीर्षक के टेम्पो तक धीरे-धीरे खिसकता है, चाहे वह कितना भी दूर हो"
  },
  "ja": {
   "Reverb": "リバーブ",
@@ -7812,7 +7818,10 @@
   "+ Point": "+ ポイント",
   "Ctrl+Z · Ctrl+Y · Espace · Suppr": "Ctrl+Z · Ctrl+Y · Space · Del",
   "Flou des paroles": "歌詞のぼかし",
-  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "歌っている行から離れた行が、やわらかくぼやけます。"
+  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "歌っている行から離れた行が、やわらかくぼやけます。",
+  "Pont en boucle": "ループブリッジ",
+  "pont en boucle": "ループブリッジ",
+  "Le titre tourne sur quatre mesures sans chant pendant que le tempo glisse jusqu'à celui du suivant, même très éloigné": "テンポが次の曲のテンポへなめらかに移る間、曲は歌のない4小節をループします。テンポが大きく離れていても使えます"
  },
  "zh": {
   "Reverb": "混响",
@@ -10417,7 +10426,10 @@
   "+ Point": "+ 点",
   "Ctrl+Z · Ctrl+Y · Espace · Suppr": "Ctrl+Z · Ctrl+Y · 空格 · Del",
   "Flou des paroles": "歌词模糊",
-  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "远离正在演唱的那一行的歌词会柔和地变模糊。"
+  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "远离正在演唱的那一行的歌词会柔和地变模糊。",
+  "Pont en boucle": "循环桥接",
+  "pont en boucle": "循环桥接",
+  "Le titre tourne sur quatre mesures sans chant pendant que le tempo glisse jusqu'à celui du suivant, même très éloigné": "在节奏逐渐滑向下一首曲目的节奏时,当前曲目循环播放四个没有人声的小节,即使两者节奏相差很远"
  },
  "ru": {
   "Reverb": "Реверберация",
@@ -13022,7 +13034,10 @@
   "+ Point": "+ Точка",
   "Ctrl+Z · Ctrl+Y · Espace · Suppr": "Ctrl+Z · Ctrl+Y · Пробел · Del",
   "Flou des paroles": "Размытие текста песни",
-  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "Строки вдали от исполняемой мягко размываются."
+  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "Строки вдали от исполняемой мягко размываются.",
+  "Pont en boucle": "Петля-мост",
+  "pont en boucle": "петля-мост",
+  "Le titre tourne sur quatre mesures sans chant pendant que le tempo glisse jusqu'à celui du suivant, même très éloigné": "Трек повторяет четыре такта без вокала, пока темп плавно переходит к темпу следующего, даже очень далёкому"
  },
  "it": {
   "Reverb": "Riverbero",
@@ -15627,7 +15642,10 @@
   "+ Point": "+ Punto",
   "Ctrl+Z · Ctrl+Y · Espace · Suppr": "Ctrl+Z · Ctrl+Y · Spazio · Canc",
   "Flou des paroles": "Sfocatura del testo",
-  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "Le righe lontane da quella cantata sfumano in una leggera sfocatura."
+  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "Le righe lontane da quella cantata sfumano in una leggera sfocatura.",
+  "Pont en boucle": "Ponte in loop",
+  "pont en boucle": "ponte in loop",
+  "Le titre tourne sur quatre mesures sans chant pendant que le tempo glisse jusqu'à celui du suivant, même très éloigné": "Il brano gira su quattro battute senza canto mentre il tempo scivola fino a quello del successivo, anche se molto lontano"
  },
  "es": {
   "Reverb": "Reverb",
@@ -18232,7 +18250,10 @@
   "+ Point": "+ Punto",
   "Ctrl+Z · Ctrl+Y · Espace · Suppr": "Ctrl+Z · Ctrl+Y · Espacio · Supr",
   "Flou des paroles": "Desenfoque de la letra",
-  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "Las líneas alejadas de la que se canta se difuminan suavemente."
+  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "Las líneas alejadas de la que se canta se difuminan suavemente.",
+  "Pont en boucle": "Puente en bucle",
+  "pont en boucle": "puente en bucle",
+  "Le titre tourne sur quatre mesures sans chant pendant que le tempo glisse jusqu'à celui du suivant, même très éloigné": "El tema gira sobre cuatro compases sin canto mientras el tempo se desliza hasta el del siguiente, aunque esté muy lejos"
  },
  "de": {
   "Reverb": "Reverb",
@@ -20837,7 +20858,10 @@
   "+ Point": "+ Punkt",
   "Ctrl+Z · Ctrl+Y · Espace · Suppr": "Strg+Z · Strg+Y · Leertaste · Entf",
   "Flou des paroles": "Songtext-Unschärfe",
-  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "Zeilen fern der gesungenen verschwimmen leicht."
+  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "Zeilen fern der gesungenen verschwimmen leicht.",
+  "Pont en boucle": "Loop-Brücke",
+  "pont en boucle": "Loop-Brücke",
+  "Le titre tourne sur quatre mesures sans chant pendant que le tempo glisse jusqu'à celui du suivant, même très éloigné": "Der Titel kreist über vier Takte ohne Gesang, während das Tempo zu dem des nächsten gleitet, auch wenn es weit entfernt ist"
  },
  "pt": {
   "Reverb": "Reverb",
@@ -23442,7 +23466,10 @@
   "+ Point": "+ Ponto",
   "Ctrl+Z · Ctrl+Y · Espace · Suppr": "Ctrl+Z · Ctrl+Y · Espaço · Del",
   "Flou des paroles": "Desfoque da letra",
-  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "As linhas afastadas da que está sendo cantada se desfocam levemente."
+  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "As linhas afastadas da que está sendo cantada se desfocam levemente.",
+  "Pont en boucle": "Ponte em loop",
+  "pont en boucle": "ponte em loop",
+  "Le titre tourne sur quatre mesures sans chant pendant que le tempo glisse jusqu'à celui du suivant, même très éloigné": "A faixa gira em quatro compassos sem canto enquanto o tempo desliza até o da seguinte, mesmo que esteja muito distante"
  },
  "ko": {
   "Reverb": "리버브",
@@ -26047,6 +26074,9 @@
   "+ Point": "+ 포인트",
   "Ctrl+Z · Ctrl+Y · Espace · Suppr": "Ctrl+Z · Ctrl+Y · Space · Del",
   "Flou des paroles": "가사 흐림",
-  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "부르는 줄에서 먼 줄은 부드럽게 흐려집니다."
+  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "부르는 줄에서 먼 줄은 부드럽게 흐려집니다.",
+  "Pont en boucle": "루프 브리지",
+  "pont en boucle": "루프 브리지",
+  "Le titre tourne sur quatre mesures sans chant pendant que le tempo glisse jusqu'à celui du suivant, même très éloigné": "템포가 다음 곡의 템포로 천천히 옮겨 가는 동안 곡은 노래 없는 네 마디를 반복합니다. 템포 차이가 커도 됩니다"
  }
 }

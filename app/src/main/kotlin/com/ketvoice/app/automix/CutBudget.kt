@@ -54,10 +54,21 @@ internal object CutBudget {
 
     /** True when a voice is heard while the incoming title plays off its tempo by more than [VOICE_STRETCH]. */
     fun stretchedUnderVoice(plan: MixPlan, incoming: MixFacts, speed: Float): Boolean {
+        if (plan.glide != null) return glideUnderVoice(plan, incoming, speed)
         if (plan.kind != MixKind.Beatmatch || abs(speed * plan.rate - 1f) <= VOICE_STRETCH + 1e-4f) return false
         val outSings = plan.sungUntilMs > plan.outMs
         val inSings = incoming.vocalStartMs?.let { it < plan.inEndMs } == true
         return outSings || inSings
+    }
+
+    /**
+     * 8.4: over a « pont en boucle » the speeds glide ([LoopBridge]): the outgoing title is heard only over its loop,
+     * where nobody sings, and the incoming voice must not start before the glide has brought it within [VOICE_STRETCH].
+     */
+    private fun glideUnderVoice(plan: MixPlan, incoming: MixFacts, speed: Float): Boolean {
+        if (plan.sungUntilMs > plan.outMs) return true
+        val voice = incoming.vocalStartMs?.takeIf { it < plan.inEndMs } ?: return false
+        return abs(LoopBridge.incomingSpeedAt(plan, maxOf(voice, plan.inMs), speed) - 1f) > VOICE_STRETCH + 1e-4f
     }
 
     /** Why [plan] breaks the budget, or null when it keeps to it. */

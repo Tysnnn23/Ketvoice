@@ -19,19 +19,22 @@ import kotlin.math.min
 internal const val BEAT_BYTES = 18_575_568L
 internal const val BEAT_SHA = "74cc5ee960dbdbf75cef978e8e24a5308ef26f459f70494285f249a82a9c67d7"
 
-/** Runs the network on one chunk of [BeatPost.BEAT_FRAMES] frames of [BeatSpectrogram.MELS] values; returns the beat and the downbeat logits. */
+/** Runs the network on one chunk of [frames] frames of [BeatSpectrogram.MELS] values; returns the beat and the downbeat logits. */
 internal interface BeatRunner : AutoCloseable {
+    /** How many frames the network takes at once (8.4: read from the model, so that a 30 s export is cut as such). */
+    val frames: Int get() = BeatPost.BEAT_FRAMES
     fun run(spect: FloatArray): Pair<FloatArray, FloatArray>
     override fun close() {}
 }
 
-/** Beat This! small (CPJKU, ISMIR 2024, MIT; 2.1 M parameters) converted to LiteRT with a fixed input [1, BEAT_FRAMES, 128]. */
+/** Beat This! small (CPJKU, ISMIR 2024, MIT; 2.1 M parameters) converted to LiteRT with a fixed input [1, frames, 128] (500 in `ketmix-beat-v1`). */
 internal class LiteRtBeatNet private constructor(private val interpreter: org.tensorflow.lite.Interpreter) : BeatRunner {
     constructor(file: File, threads: Int = 2) : this(org.tensorflow.lite.Interpreter(file, options(threads)))
     /** The model memory-mapped from the APK's assets (7.0.0); [model] must stay mapped while this runs. */
     constructor(model: ByteBuffer, threads: Int = 2) : this(org.tensorflow.lite.Interpreter(model, options(threads)))
     private val order = BeatModel.pick((0 until interpreter.outputTensorCount).map { interpreter.getOutputTensor(it).name() })
-    private val input = ByteBuffer.allocateDirect(4 * BeatPost.BEAT_FRAMES * BeatSpectrogram.MELS).order(ByteOrder.nativeOrder())
+    override val frames: Int = interpreter.getInputTensor(0).shape().getOrNull(1)?.takeIf { it > 2 * BeatPost.BORDER } ?: BeatPost.BEAT_FRAMES
+    private val input = ByteBuffer.allocateDirect(4 * frames * BeatSpectrogram.MELS).order(ByteOrder.nativeOrder())
 
     override fun run(spect: FloatArray): Pair<FloatArray, FloatArray> {
         input.clear(); input.asFloatBuffer().put(spect); input.rewind()
@@ -47,7 +50,7 @@ internal class LiteRtBeatNet private constructor(private val interpreter: org.te
         buffer.rewind()
         val out = FloatArray(buffer.remaining() / 4)
         buffer.asFloatBuffer().get(out)
-        check(out.size == BeatPost.BEAT_FRAMES) { "unexpected output size ${out.size}" }
+        check(out.size == frames) { "unexpected output size ${out.size}" }
         return out
     }
 
@@ -88,7 +91,7 @@ internal class BeatPcm(private val rate: Int, private val channels: Int, private
 
     companion object {
         const val CAP_SECONDS = 90
-        /** Six chunks of the network at most (see [BeatPost.starts]). */
+        /** Six chunks of the 10 s network at most, two of a 30 s one (see [BeatPost.starts]). */
         const val MAX_SECONDS = 45.0
         const val MIN_SECONDS = 8
     }
@@ -163,8 +166,10 @@ internal object BeatModel {
     internal fun predict(net: BeatRunner, samples: FloatArray): BeatPost.Times {
         val spect = BeatSpectrogram.compute(samples)
         val frames = spect.size / BeatSpectrogram.MELS
-        val starts = BeatPost.starts(frames)
-        val outputs = starts.map { net.run(BeatPost.chunk(spect, frames, it)) }
-        return BeatPost.peaks(BeatPost.aggregate(outputs.map { it.first }, starts, frames), BeatPost.aggregate(outputs.map { it.second }, starts, frames))
+        val window = BeatPost.Window(net.frames)
+        val starts = BeatPost.starts(frames, window)
+        val outputs = starts.map { net.run(BeatPost.chunk(spect, frames, it, window)) }
+        return BeatPost.peaks(BeatPost.aggregate(outputs.map { it.first }, starts, frames, window),
+            BeatPost.aggregate(outputs.map { it.second }, starts, frames, window))
     }
 }

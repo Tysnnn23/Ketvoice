@@ -592,7 +592,7 @@ private fun Panel(modifier: Modifier, title: String, content: @Composable Column
     }
 }
 
-private val styleLabels = listOf("Automatique", "Calé sur le tempo", "Écho", "Filtres", "Fondu", "Montée", "Coupe", "Sur le drop", "Relais des voix")
+private val styleLabels = listOf("Automatique", "Calé sur le tempo", "Écho", "Filtres", "Fondu", "Montée", "Coupe", "Sur le drop", "Relais des voix", "Pont en boucle")
 private val volumeLabels = listOf("Automatique", "Doux", "Linéaire", "Rapide")
 private val bassLabels = listOf("Automatique", "Échange court", "Échange moyen", "Échange long", "Aucun échange")
 private val filterLabels = listOf("Automatique", "Aucun", "Passe-haut", "Passe-bas")

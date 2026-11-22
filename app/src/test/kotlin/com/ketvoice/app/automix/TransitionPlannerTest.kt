@@ -436,7 +436,7 @@ class TransitionPlannerTest {
         // Whatever the style, a last note is never covered and singing is never mixed over.
         assertEquals(MixKind.Trim, styled(MixStyle.Fade, a = outro(120f, hard = true)).kind)
         assertTrue(styled(MixStyle.Echo, sung = 196_000).let { it.kind != MixKind.Echo })
-        assertEquals(MixStyle.Auto, MixStyle.of(9)); assertEquals(MixStyle.Fade, MixStyle.of(4))
+        assertEquals(MixStyle.Bridge, MixStyle.of(9)); assertEquals(MixStyle.Auto, MixStyle.of(10)); assertEquals(MixStyle.Fade, MixStyle.of(4))
     }
 
     @Test fun theMomentTheBassChangesHandsIsKnownForTheStrip() {

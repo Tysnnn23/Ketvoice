@@ -259,6 +259,7 @@ internal fun presetOf(style: MixStyle): Preset = when (style) {
     MixStyle.Cut -> Preset(style, "Coupe")
     MixStyle.Drop -> Preset(style, "Sur le drop")
     MixStyle.Voices -> Preset(style, "Relais des voix")
+    MixStyle.Bridge -> Preset(style, "Pont en boucle")
 }
 
 internal fun presets(): List<Preset> = MixStyle.values().map(::presetOf)
@@ -287,6 +288,11 @@ private fun DrawScope.presetGlyph(style: MixStyle?, color: Color) {
         MixStyle.Voices -> {
             drawPath(Path().apply { moveTo(w * .06f, h * .25f); quadraticBezierTo(w * .45f, h * .25f, w * .6f, h * .85f) }, color, style = Stroke(stroke, cap = StrokeCap.Round))
             drawPath(Path().apply { moveTo(w * .4f, h * .85f); quadraticBezierTo(w * .55f, h * .25f, w * .94f, h * .25f) }, color, style = Stroke(stroke, cap = StrokeCap.Round))
+        }
+        // A loop turning on itself, then a line that climbs to another level.
+        MixStyle.Bridge -> {
+            drawCircle(color, radius = w * .2f, center = Offset(w * .26f, h * .58f), style = Stroke(stroke))
+            drawPath(Path().apply { moveTo(w * .46f, h * .58f); quadraticBezierTo(w * .7f, h * .58f, w * .94f, h * .22f) }, color, style = Stroke(stroke, cap = StrokeCap.Round))
         }
     }
 }

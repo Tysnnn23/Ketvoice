@@ -94,7 +94,7 @@ object SettingsStore {
         s.ketmixAnalysis.value = p.getInt("ketmixAnalysis", s.ketmixAnalysis.value).coerceIn(0, 2)
         s.ketmixLoops.value = p.getBoolean("ketmixLoops", true)
         s.smartShuffle.value = p.getBoolean("smartShuffle", true)
-        s.ketmixStyle.value = p.getInt("ketmixStyle", 0).coerceIn(0, 8)
+        s.ketmixStyle.value = p.getInt("ketmixStyle", 0).coerceIn(0, 9)
         s.ketmixHaptics.value = p.getBoolean("ketmixHaptics", false)
         s.lyricsSource.value = p.getString("lyricsSource", s.lyricsSource.value) ?: "auto"
         if (s.lyricsSource.value !in MusicApi.lyricSources + listOf("auto", "off")) {
