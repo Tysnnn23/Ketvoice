@@ -1,0 +1,112 @@
+{
+  "schema": 1,
+  "version": "1.2.0",
+  "platform": "windows",
+  "tag": "windows-v1.2.0",
+  "source_commit": "f9bd521f688d767897675b22041debefadd20bfd",
+  "created_at": "2026-11-22T22:44:37.038293+00:00",
+  "build_origin": "publish-windows-release.yml on windows-latest builds the MSI from source_commit; it refuses to run if desktop/, app/src/main, native/ or docs/licenses changed since",
+  "tests": {
+    "desktop_suite_local_linux": {
+      "run": 578,
+      "failed": 0,
+      "skipped": 6,
+      "commit": "d17b641",
+      "note": "whole suite on the merged tree (d17b641; f9bd521 only adds release notes); the three parts were also tested on their own branches, package by package, because three test JVMs at once ran out of memory"
+    },
+    "windows_ci": {
+      "workflow": "windows.yml",
+      "run_id": 45073160407,
+      "conclusion": "success",
+      "commit": "f9bd521f688d767897675b22041debefadd20bfd",
+      "steps": "desktop tests, MSI packaging, silent install, Ketvoice.exe --smoke (ONNX Runtime, LGPL FFmpeg, SMTC DLL, thumbnail toolbar exports), cold-start probe, uninstall"
+    },
+    "android_ci_shared_code": {
+      "workflow": "android.yml",
+      "run_id": 45075400570,
+      "conclusion": "success",
+      "commit": "f9bd521f688d767897675b22041debefadd20bfd",
+      "note": "pure helpers moved out of Android files for the desktop (theme guard and fonts, lyrics words, artwork math, headphone EQ cascade and links, settings matching, playlist follow); all mobile, Quest and Lite unit tests and release lint on that commit"
+    },
+    "mobile_targeted_local": "theme.*, LivelyLyrics, LyricsDraft, LyricsEditorSave, PersonalizationRender, Player83, HeadphoneEq*, AudioChainPlaybackTest, PersonalBackup*, PlaylistUpdates, SettingsSearch, LayoutSettings: 130 tests, 0 failures, on the agent branches"
+  },
+  "ui_text_audit": "tools/audit_ui_texts.py --check: 0 unaccounted; 15 new strings, each with 10 translations; every other desktop string reuses an existing key",
+  "license_check": "checkNoGpl: no -gpl artifact in the runtime; FFmpeg is the JavaCPP LGPL v3 build; notices installed under app/resources/licenses; the four added fonts (Manrope, Atkinson Hyperlegible Next, Nunito, Lora) are SIL OFL 1.1, their licences shown in About",
+  "credential_scan": {
+    "findings": 0,
+    "scope": "desktop distributable built from the source tree with -PappVersion=1.2.0 (createDistributable, 211 files/archive entries, incl. the bundled Java runtime and its class-data archives)",
+    "kind": "credential_patterns (tools/scan_release.py)",
+    "reviewed_false_positives": [
+      {
+        "file": "Ketvoice/lib/runtime/lib/modules",
+        "pattern": "AQ[A-Za-z0-9_-]{90,}",
+        "match_length": 1205,
+        "reason": "OpenJDK's java.util.LocaleISOData ISO-3166 country-code table, a run of capital letters; not a credential"
+      },
+      {
+        "file": "Ketvoice/lib/runtime/lib/server/classes.jsa",
+        "pattern": "AQ[A-Za-z0-9_-]{90,}",
+        "match_length": 1205,
+        "reason": "OpenJDK's java.util.LocaleISOData ISO-3166 country-code table, a run of capital letters; not a credential"
+      },
+      {
+        "file": "Ketvoice/lib/runtime/lib/server/classes_nocoops.jsa",
+        "pattern": "AQ[A-Za-z0-9_-]{90,}",
+        "match_length": 1205,
+        "reason": "OpenJDK's java.util.LocaleISOData ISO-3166 country-code table, a run of capital letters; not a credential"
+      }
+    ],
+    "findings_raw": 3
+  },
+  "models": {
+    "ketmix-stems-onnx-v1": "published 2026-11-21 as a prerelease, not latest; assets match tools/stems/expected-onnx.sha256",
+    "beat_model": "downloaded on request from ketmix-beat-v1's pinned source with SHA-256 c462b064…aea"
+  },
+  "release_policy": {
+    "make_latest": false,
+    "reason": "the Android in-app updater and the website read the latest release (v9.0.0)"
+  },
+  "publication_override": {
+    "authorized_by_user": true,
+    "kind": "standing_authorization",
+    "user_statement": "J'autorise TOUT devient maintenant une règle.",
+    "user_statement_date": "2026-11-14",
+    "owner_request": "« Ok maintenant fait tous les changements sur la version Windows … fait l'APK, publie, puis tu fais l'app PC » (2026-11-22): every mobile change since Windows 1.1.0 (8.2 to 9.0) on Windows",
+    "recorded_in": "AGENTS.md",
+    "reason": "The owner made publishing validated versions without device testing a standing rule.",
+    "scope": "installation and use on the owner's own Windows computer"
+  },
+  "not_validated": [
+    "No person has installed or used 1.2.0 on a real Windows PC; only the GitHub windows-latest runner installed it silently, ran --smoke and the start-up probe, and uninstalled it.",
+    "Custom themes, fonts, text and corner scales were seen only in host screenshots; many hard-coded radii and colours do not follow every setting.",
+    "The headphone EQ was not heard on real headphones; Java Sound device names (DirectSound) were not checked for truncation or stability on real hardware, nor unplugging mid-playback.",
+    "The output picker cannot link a profile to the system default output, because Java Sound does not name it.",
+    "The Ketmix loop bridge was rendered in tests only; no person listened to it on Windows.",
+    "The lyrics editor was not used with a keyboard and real playback by a person; a whole-shell test with the editor preview open raised a Compose test-harness layout error that was not reproduced in the running app.",
+    "Layout and appearance sync between a real phone and Windows through the live account was not tried.",
+    "Upgrading a real 1.1.0 installation to 1.2.0 (MSI major upgrade or the in-app updater) was not tried.",
+    "The MSI is not code-signed; Windows SmartScreen will warn about an unknown publisher.",
+    "Independent code review."
+  ],
+  "known_limitations": [
+    "Library pre-separation follows the phone's rules only on mains power; streaming separation ahead of the playhead is not ported to Windows.",
+    "No light/dark/system theme choice on Windows: the window follows Windows.",
+    "No recap soundtrack and no Ketogether host controls on Windows (neither feature exists there).",
+    "The album header still fits its Canvas instead of using the artwork-by-format rule.",
+    "The phone is only reachable for phone control while its app is open or playing."
+  ],
+  "canonical_banner_sha256": "ddc0e2c1270027f4b9dd92254374b79727ae9eaf8914e418b52e23c5b39b5966",
+  "features_1_2": {
+    "personalisation": "shared ThemeColors/Appearance/Personalization: custom colours through ThemeGuard (WCAG AA), presets and KT1. codes, five fonts from the app's .ttf files, text scale 85-130 %, corner scale on Ket27Desk.Radius, list density on title rows; defaults give the 1.1.0 look exactly",
+    "lyrics": "shared KaraokeDraw and LyricsBlur in the desktop lyrics (feathered fill, living held notes, blur of far lines) and every lyrics style setting",
+    "artwork": "player artwork and Canvas at the height of their own shape (shared PlayerArtworkMath); the windowed player's Canvas fills its column edge to edge, its foot fading into the background",
+    "lyrics_editor": "shared LyricsDraft; line or word timing on the heard position, keyboard (Space, arrows, Ctrl+Z, Ctrl+S, Esc), preview, save through CustomLyrics, LRC/enhanced LRC export",
+    "layout": "the phone's layout keys read for the window: sidebar entries, Home sections, player-bar buttons (2-5, queue required), library grid/list and opening order, title menu order; empty values give the 1.1.0 layout",
+    "settings_search": "shared SettingsMatch; scrolls to the section and highlights the row",
+    "playlist_updates": "shared PlaylistFollow; checked every six hours and three minutes after a remote change; offered in a card",
+    "headphone_eq": "shared Biquad, HeadphoneProfile, EqCascade, HeadphoneLinks; imported parametric profiles linked per Windows output (key btn:+digest of the device name, valid on the phone), after the decks and voice level, before the ten-band equaliser, safe preamp, 60 ms crossfade",
+    "audio_output": "Java Sound devices able to play 48 kHz stereo, live switch with fades, remembered by name, default while it is missing",
+    "ketmix": "LoopFx on each deck before the time-stretch, the Bridge style planned (loopedLast tracked) and rendered with GlideDriver on both decks, lyric-aware voice facts, beat model frame count read from the ONNX input",
+    "lyrics_order": "the lyrics source order setting in Settings"
+  }
+}
