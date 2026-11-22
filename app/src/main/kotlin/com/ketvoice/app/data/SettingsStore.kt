@@ -47,6 +47,7 @@ object SettingsStore {
         s.albumHeader.value = com.ketvoice.app.ui.sub.AlbumHeader.normalize(runCatching { p.getInt("albumHeader", 0) }.getOrDefault(0))
         s.glassStyle.value = p.getInt("glassStyle", 0).coerceIn(0, com.ketvoice.app.glass.GlassStyles.MAX)
         s.glassIntensity.value = glassIntensity(p)
+        s.glassLook.value = runCatching { p.getInt("glassLook", 0) }.getOrDefault(0).coerceIn(0, com.ketvoice.app.glass.GlassLook.MAX)
         s.trueBlack.value = p.getBoolean("trueBlack", false)
         s.glassTilt.value = p.getBoolean("glassTilt", true)
         s.downloadsWifiOnly.value = p.getBoolean("downloadsWifiOnly", false)
@@ -213,6 +214,7 @@ object SettingsStore {
             .putBoolean("albumHeroCanvas", s.albumHeroCanvas.value)
             .putInt("albumHeader", com.ketvoice.app.ui.sub.AlbumHeader.normalize(s.albumHeader.value))
             .putInt("glassStyle", s.glassStyle.value)
+            .putInt("glassLook", s.glassLook.value.coerceIn(0, com.ketvoice.app.glass.GlassLook.MAX))
             .putFloat("glassIntensity", com.ketvoice.app.glass.GlassClarity.sanitize(s.glassIntensity.value))
             // The tint of 5.x, the levels of 6.0 and Teinté of 7.1 have been converted on loading; they are not written again.
             .remove("glassTint").remove("glassTintLevel").remove("glassTinted")

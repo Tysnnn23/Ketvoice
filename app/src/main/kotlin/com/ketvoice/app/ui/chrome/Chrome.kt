@@ -360,6 +360,8 @@ private data class TabSpec(val icon: ImageVector, val label: String, val index: 
  */
 @Composable
 fun FloatingChrome(collapsed: Boolean, onOpenPlayer: () -> Unit, searching: Boolean = false, typing: Boolean = false) {
+    // 8.4: the Cristal look has its own bar; Liquid 27 keeps this one, unchanged.
+    if (com.ketvoice.app.glass.GlassLook.cristal) { CristalChrome(collapsed, onOpenPlayer, searching, typing); return }
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         // Le repli Accueil + mini + Recherche tient dès 320 dp (52+8+176+8+52+24).
         // L'ancien seuil de 380 dp empêchait l'animation sur les téléphones 360 dp.

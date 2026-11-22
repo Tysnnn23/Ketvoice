@@ -2602,7 +2602,13 @@
   "+ Point": "+ Point",
   "Ctrl+Z · Ctrl+Y · Espace · Suppr": "Ctrl+Z · Ctrl+Y · Space · Del",
   "Flou des paroles": "Lyrics blur",
-  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "Lines away from the one being sung fade into a soft blur."
+  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "Lines away from the one being sung fade into a soft blur.",
+  "Style du verre": "Glass style",
+  "La matière du verre et ses animations": "The glass material and its animations",
+  "Choisissez la matière et les animations du verre.": "Choose the glass material and animations.",
+  "Cristal": "Crystal",
+  "Verre limpide et léger, pastille élastique, menus qui jaillissent du bouton": "Clear, light glass, a springy tab pill, menus that spring from their button",
+  "Le verre habituel de Ketvoice, par défaut": "Ketvoice's usual glass, the default"
  },
  "hi": {
   "Reverb": "रीवर्ब",
@@ -5207,7 +5213,13 @@
   "+ Point": "+ पॉइंट",
   "Ctrl+Z · Ctrl+Y · Espace · Suppr": "Ctrl+Z · Ctrl+Y · Space · Del",
   "Flou des paroles": "बोलों का धुंधलापन",
-  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "गाई जा रही पंक्ति से दूर की पंक्तियाँ हल्के धुंधलेपन में खो जाती हैं।"
+  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "गाई जा रही पंक्ति से दूर की पंक्तियाँ हल्के धुंधलेपन में खो जाती हैं।",
+  "Style du verre": "ग्लास शैली",
+  "La matière du verre et ses animations": "ग्लास की सामग्री और उसके एनिमेशन",
+  "Choisissez la matière et les animations du verre.": "ग्लास की सामग्री और एनिमेशन चुनें।",
+  "Cristal": "क्रिस्टल",
+  "Verre limpide et léger, pastille élastique, menus qui jaillissent du bouton": "साफ़ और हल्का ग्लास, लचीली टैब पिल, बटन से उभरते मेनू",
+  "Le verre habituel de Ketvoice, par défaut": "Ketvoice का सामान्य ग्लास, डिफ़ॉल्ट"
  },
  "ja": {
   "Reverb": "リバーブ",
@@ -7812,7 +7824,13 @@
   "+ Point": "+ ポイント",
   "Ctrl+Z · Ctrl+Y · Espace · Suppr": "Ctrl+Z · Ctrl+Y · Space · Del",
   "Flou des paroles": "歌詞のぼかし",
-  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "歌っている行から離れた行が、やわらかくぼやけます。"
+  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "歌っている行から離れた行が、やわらかくぼやけます。",
+  "Style du verre": "ガラスのスタイル",
+  "La matière du verre et ses animations": "ガラスの質感とアニメーション",
+  "Choisissez la matière et les animations du verre.": "ガラスの質感とアニメーションを選びます。",
+  "Cristal": "クリスタル",
+  "Verre limpide et léger, pastille élastique, menus qui jaillissent du bouton": "澄んだ軽いガラス、弾むタブのピル、ボタンから飛び出すメニュー",
+  "Le verre habituel de Ketvoice, par défaut": "Ketvoice のいつものガラス(標準)"
  },
  "zh": {
   "Reverb": "混响",
@@ -10417,7 +10435,13 @@
   "+ Point": "+ 点",
   "Ctrl+Z · Ctrl+Y · Espace · Suppr": "Ctrl+Z · Ctrl+Y · 空格 · Del",
   "Flou des paroles": "歌词模糊",
-  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "远离正在演唱的那一行的歌词会柔和地变模糊。"
+  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "远离正在演唱的那一行的歌词会柔和地变模糊。",
+  "Style du verre": "玻璃风格",
+  "La matière du verre et ses animations": "玻璃的材质与动画",
+  "Choisissez la matière et les animations du verre.": "选择玻璃的材质和动画。",
+  "Cristal": "水晶",
+  "Verre limpide et léger, pastille élastique, menus qui jaillissent du bouton": "清透轻盈的玻璃、弹性的标签药丸、从按钮弹出的菜单",
+  "Le verre habituel de Ketvoice, par défaut": "Ketvoice 的常规玻璃(默认)"
  },
  "ru": {
   "Reverb": "Реверберация",
@@ -13022,7 +13046,13 @@
   "+ Point": "+ Точка",
   "Ctrl+Z · Ctrl+Y · Espace · Suppr": "Ctrl+Z · Ctrl+Y · Пробел · Del",
   "Flou des paroles": "Размытие текста песни",
-  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "Строки вдали от исполняемой мягко размываются."
+  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "Строки вдали от исполняемой мягко размываются.",
+  "Style du verre": "Стиль стекла",
+  "La matière du verre et ses animations": "Материал стекла и его анимации",
+  "Choisissez la matière et les animations du verre.": "Выберите материал и анимации стекла.",
+  "Cristal": "Кристалл",
+  "Verre limpide et léger, pastille élastique, menus qui jaillissent du bouton": "Прозрачное лёгкое стекло, упругая капсула вкладок, меню, вырастающие из кнопки",
+  "Le verre habituel de Ketvoice, par défaut": "Привычное стекло Ketvoice, по умолчанию"
  },
  "it": {
   "Reverb": "Riverbero",
@@ -15627,7 +15657,13 @@
   "+ Point": "+ Punto",
   "Ctrl+Z · Ctrl+Y · Espace · Suppr": "Ctrl+Z · Ctrl+Y · Spazio · Canc",
   "Flou des paroles": "Sfocatura del testo",
-  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "Le righe lontane da quella cantata sfumano in una leggera sfocatura."
+  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "Le righe lontane da quella cantata sfumano in una leggera sfocatura.",
+  "Style du verre": "Stile del vetro",
+  "La matière du verre et ses animations": "Il materiale del vetro e le sue animazioni",
+  "Choisissez la matière et les animations du verre.": "Scegli il materiale e le animazioni del vetro.",
+  "Cristal": "Cristallo",
+  "Verre limpide et léger, pastille élastique, menus qui jaillissent du bouton": "Vetro limpido e leggero, pillola elastica, menu che scaturiscono dal pulsante",
+  "Le verre habituel de Ketvoice, par défaut": "Il vetro abituale di Ketvoice, predefinito"
  },
  "es": {
   "Reverb": "Reverb",
@@ -18232,7 +18268,13 @@
   "+ Point": "+ Punto",
   "Ctrl+Z · Ctrl+Y · Espace · Suppr": "Ctrl+Z · Ctrl+Y · Espacio · Supr",
   "Flou des paroles": "Desenfoque de la letra",
-  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "Las líneas alejadas de la que se canta se difuminan suavemente."
+  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "Las líneas alejadas de la que se canta se difuminan suavemente.",
+  "Style du verre": "Estilo del cristal",
+  "La matière du verre et ses animations": "El material del cristal y sus animaciones",
+  "Choisissez la matière et les animations du verre.": "Elige el material y las animaciones del cristal.",
+  "Cristal": "Cristal",
+  "Verre limpide et léger, pastille élastique, menus qui jaillissent du bouton": "Cristal limpio y ligero, píldora elástica, menús que surgen del botón",
+  "Le verre habituel de Ketvoice, par défaut": "El cristal habitual de Ketvoice, predeterminado"
  },
  "de": {
   "Reverb": "Reverb",
@@ -20837,7 +20879,13 @@
   "+ Point": "+ Punkt",
   "Ctrl+Z · Ctrl+Y · Espace · Suppr": "Strg+Z · Strg+Y · Leertaste · Entf",
   "Flou des paroles": "Songtext-Unschärfe",
-  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "Zeilen fern der gesungenen verschwimmen leicht."
+  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "Zeilen fern der gesungenen verschwimmen leicht.",
+  "Style du verre": "Glasstil",
+  "La matière du verre et ses animations": "Das Glasmaterial und seine Animationen",
+  "Choisissez la matière et les animations du verre.": "Wähle das Glasmaterial und die Animationen.",
+  "Cristal": "Kristall",
+  "Verre limpide et léger, pastille élastique, menus qui jaillissent du bouton": "Klares, leichtes Glas, federnde Tab-Pille, Menüs, die aus ihrer Taste wachsen",
+  "Le verre habituel de Ketvoice, par défaut": "Das gewohnte Glas von Ketvoice, Standard"
  },
  "pt": {
   "Reverb": "Reverb",
@@ -23442,7 +23490,13 @@
   "+ Point": "+ Ponto",
   "Ctrl+Z · Ctrl+Y · Espace · Suppr": "Ctrl+Z · Ctrl+Y · Espaço · Del",
   "Flou des paroles": "Desfoque da letra",
-  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "As linhas afastadas da que está sendo cantada se desfocam levemente."
+  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "As linhas afastadas da que está sendo cantada se desfocam levemente.",
+  "Style du verre": "Estilo do vidro",
+  "La matière du verre et ses animations": "O material do vidro e as suas animações",
+  "Choisissez la matière et les animations du verre.": "Escolha o material e as animações do vidro.",
+  "Cristal": "Cristal",
+  "Verre limpide et léger, pastille élastique, menus qui jaillissent du bouton": "Vidro límpido e leve, pílula elástica, menus que surgem do botão",
+  "Le verre habituel de Ketvoice, par défaut": "O vidro habitual do Ketvoice, predefinido"
  },
  "ko": {
   "Reverb": "리버브",
@@ -26047,6 +26101,12 @@
   "+ Point": "+ 포인트",
   "Ctrl+Z · Ctrl+Y · Espace · Suppr": "Ctrl+Z · Ctrl+Y · Space · Del",
   "Flou des paroles": "가사 흐림",
-  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "부르는 줄에서 먼 줄은 부드럽게 흐려집니다."
+  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "부르는 줄에서 먼 줄은 부드럽게 흐려집니다.",
+  "Style du verre": "유리 스타일",
+  "La matière du verre et ses animations": "유리의 질감과 애니메이션",
+  "Choisissez la matière et les animations du verre.": "유리의 질감과 애니메이션을 선택하세요.",
+  "Cristal": "크리스털",
+  "Verre limpide et léger, pastille élastique, menus qui jaillissent du bouton": "맑고 가벼운 유리, 탄력 있는 탭 알약, 버튼에서 솟아나는 메뉴",
+  "Le verre habituel de Ketvoice, par défaut": "Ketvoice의 기본 유리, 기본값"
  }
 }

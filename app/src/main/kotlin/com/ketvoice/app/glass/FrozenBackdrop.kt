@@ -104,7 +104,7 @@ internal suspend fun freezeBackdrop(source: LayerBackdrop, place: LayoutCoordina
  * allowed ([MovingBackdrops.mayFreeze]); until the copy is ready, and wherever it is not allowed, the live one.
  */
 @Composable
-internal fun FrozenBackdrop(content: @Composable () -> Unit) {
+internal fun FrozenBackdrop(scale: Float = GlassResolution.NORMAL, content: @Composable () -> Unit) {
     val live = LocalBackdropLayer.current
     val source = live as? LayerBackdrop
     var still by remember(source) { mutableStateOf<Backdrop?>(null) }
@@ -112,10 +112,20 @@ internal fun FrozenBackdrop(content: @Composable () -> Unit) {
         val graphics = LocalGraphicsContext.current
         val density = LocalDensity.current
         LaunchedEffect(source) {
-            val place = BackdropPlaces.place(source) ?: return@LaunchedEffect
-            still = freezeBackdrop(source, place, graphics, density, GlassResolution.NORMAL)
+            FrozenStills.taking.intValue++
+            try {
+                val place = BackdropPlaces.place(source) ?: return@LaunchedEffect
+                still = freezeBackdrop(source, place, graphics, density, scale)
+            } finally {
+                FrozenStills.taking.intValue = (FrozenStills.taking.intValue - 1).coerceAtLeast(0)
+            }
         }
     }
     val shown = still?.takeIf { source != null && !MovingBackdrops.moving(source) } ?: live
     CompositionLocalProvider(LocalBackdropLayer provides shown) { content() }
+}
+
+/** How many still copies are being taken right now: a Cristal menu waits (150 ms at most) for its own (8.4). */
+internal object FrozenStills {
+    val taking = mutableIntStateOf(0)
 }

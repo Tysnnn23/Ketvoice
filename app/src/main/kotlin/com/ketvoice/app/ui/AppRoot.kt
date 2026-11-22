@@ -322,8 +322,15 @@ fun AppRoot() {
                         .zIndex(3f)
                 ) {
                     Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    // 8.4 Cristal: the bar's foot is 6 dp above the navigation inset, never lower than a gesture bar's.
+                    val cristalFoot = !layout.hasRail && com.ketvoice.app.glass.GlassLook.cristal
                     Column(Modifier.widthIn(max = if (layout.hasRail) 1072.dp else 560.dp).fillMaxWidth()
-                        .imePadding().navigationBarsPadding().padding(bottom = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        .imePadding()
+                        .then(if (cristalFoot) Modifier.windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.navigationBars
+                            .union(androidx.compose.foundation.layout.WindowInsets(bottom = com.ketvoice.app.ui.chrome.CristalBar.GESTURE_FLOOR.dp)))
+                            .padding(bottom = com.ketvoice.app.ui.chrome.CristalBar.LIFT.dp)
+                            else Modifier.navigationBarsPadding().padding(bottom = 12.dp)),
+                        horizontalAlignment = Alignment.CenterHorizontally) {
                         if (layout.hasRail) {
                             // Docked along the bottom of the page, beside the sidebar; it unfolds into the player.
                             com.ketvoice.app.ui.tablet.TabletMiniPlayer(Modifier.padding(horizontal = 16.dp)) { AppUi.showPlayer.value = true }

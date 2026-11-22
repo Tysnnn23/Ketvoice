@@ -3,6 +3,7 @@ package com.ketvoice.app.ui.common
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
@@ -35,6 +36,9 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.input.pointer.pointerInput
+import kotlin.math.roundToInt
 import androidx.compose.ui.unit.dp
 import com.ketvoice.app.data.AppSettings
 import com.ketvoice.app.data.AppText
@@ -43,6 +47,8 @@ import com.ketvoice.app.data.Downloader
 import com.ketvoice.app.data.SettingsStore
 import com.ketvoice.app.data.Track
 import com.ketvoice.app.glass.GlassPanel
+import com.ketvoice.app.glass.cristalMenuShadow
+import com.ketvoice.app.glass.cristalVeil
 import com.ketvoice.app.glass.GlassParams
 import com.ketvoice.app.player.Player
 import com.ketvoice.app.theme.Ket27
@@ -147,6 +153,8 @@ private class MenuAction(val label: String, val icon: ImageVector, val enabled: 
 internal fun ContextMenuHost(modifier: Modifier = Modifier) {
     com.ketvoice.app.ui.sub.SingleUpgradeHost()
     val request = ContextMenus.request.value ?: return
+    // 8.4: the Cristal look lifts the title as a plate and opens its own menu.
+    if (com.ketvoice.app.glass.GlassLook.cristal) { CristalHeldMenuHost(request, modifier); return }
     val theme = LocalTheme.current
     val density = LocalDensity.current
     val context = LocalContext.current
@@ -174,34 +182,7 @@ internal fun ContextMenuHost(modifier: Modifier = Modifier) {
     val track = request.track
     val art by ArtworkRepo.covers.collectAsState()
     val cover = com.ketvoice.app.data.MediaOverrides.cover(track, art["t:${track.id}"] ?: track.coverUrl)
-    val favorite = track.id in AppSettings.favoriteIds.value
-    val downloaded = Downloader.itemFor(track.id) != null
-    val together = com.ketvoice.app.together.Ketogether.ui.collectAsState().value.active
-    val extra = request.extra.map { MenuAction(it.label, it.icon, tint = if (it.destructive) DESTRUCTIVE else null, tag = it.tag, run = it.run) }
-    val actions = if (request.only) extra else extra + listOfNotNull(
-        // Ketogether (6.1): in a session, the title goes to the shared queue (the host adds it, a guest proposes it).
-        if (together) MenuAction("Ajouter à Ketogether", com.ketvoice.app.ui.together.KetogetherIcon) { com.ketvoice.app.together.Ketogether.add(track) } else null,
-        MenuAction("Lire ensuite", Icons.AutoMirrored.Filled.PlaylistPlay) { Player.playNext(track) },
-        MenuAction("Ajouter à la file", Icons.AutoMirrored.Filled.PlaylistAdd) { Player.enqueue(listOf(track)) },
-        MenuAction(if (favorite) "Retirer des favoris" else "Ajouter aux favoris",
-            if (favorite) Ket27Glyphs.HeartFilled else Ket27Glyphs.Heart, tint = if (favorite) theme.accent else null) {
-            if (!favorite) haptic(Haptics.Kind.Confirm)
-            AppSettings.favoriteIds.value = if (favorite) AppSettings.favoriteIds.value - track.id else AppSettings.favoriteIds.value + track.id
-            SettingsStore.save()
-        },
-        MenuAction(if (downloaded) "Téléchargé" else "Télécharger", if (downloaded) KetIcons.Check else KetIcons.Download,
-            enabled = !downloaded) { Downloader.download(track) },
-        // 7.5: a saved title is checked and upgraded alone, without selecting it first.
-        if (downloaded) MenuAction("Améliorer la qualité", KetIcons.Download, tag = "menu-upgrade") {
-            com.ketvoice.app.ui.sub.UpgradeChecks.single.value = track.id
-        } else null,
-        MenuAction("Ajouter à une playlist", KetIcons.Plus) { AppUi.addToPlaylist.value = track },
-        MenuAction("Lancer la radio", Icons.Filled.Radio) { Player.startRadio(track) },
-        MenuAction("Partager", KetIcons.Share) { AppUi.shareCard.value = track },
-        // The Ketmix DJ editor (6.1): where this title is left and entered in a mix.
-        MenuAction("Point de mix…", KetIcons.Sliders) { com.ketvoice.app.ui.player.KetmixEditor.openFor(track) },
-        MenuAction("À propos de ce titre", KetIcons.Info) { TrackCredits.open.value = track },
-        MenuAction("Plus", KetIcons.More) { AppUi.trackMenuTrack.value = track })
+    val actions = menuActions(request, haptic)
     val closeLabel = AppText.t("Fermer")
     BoxWithConstraints(modifier.fillMaxSize().testTag("context-menu")) {
         val width = constraints.maxWidth.toFloat()
@@ -266,3 +247,172 @@ internal fun ContextMenuHost(modifier: Modifier = Modifier) {
         } }
     }
 }
+
+/** The actions of a title's menu: the page's own first, then the title's (both looks). */
+@Composable
+private fun menuActions(request: ContextMenus.Request, haptic: (Haptics.Kind) -> Unit): List<MenuAction> {
+    val theme = LocalTheme.current
+    val track = request.track
+    val favorite = track.id in AppSettings.favoriteIds.value
+    val downloaded = Downloader.itemFor(track.id) != null
+    val together = com.ketvoice.app.together.Ketogether.ui.collectAsState().value.active
+    val extra = request.extra.map { MenuAction(it.label, it.icon, tint = if (it.destructive) DESTRUCTIVE else null, tag = it.tag, run = it.run) }
+    return if (request.only) extra else extra + listOfNotNull(
+        // Ketogether (6.1): in a session, the title goes to the shared queue (the host adds it, a guest proposes it).
+        if (together) MenuAction("Ajouter à Ketogether", com.ketvoice.app.ui.together.KetogetherIcon) { com.ketvoice.app.together.Ketogether.add(track) } else null,
+        MenuAction("Lire ensuite", Icons.AutoMirrored.Filled.PlaylistPlay) { Player.playNext(track) },
+        MenuAction("Ajouter à la file", Icons.AutoMirrored.Filled.PlaylistAdd) { Player.enqueue(listOf(track)) },
+        MenuAction(if (favorite) "Retirer des favoris" else "Ajouter aux favoris",
+            if (favorite) Ket27Glyphs.HeartFilled else Ket27Glyphs.Heart, tint = if (favorite) theme.accent else null) {
+            if (!favorite) haptic(Haptics.Kind.Confirm)
+            AppSettings.favoriteIds.value = if (favorite) AppSettings.favoriteIds.value - track.id else AppSettings.favoriteIds.value + track.id
+            SettingsStore.save()
+        },
+        MenuAction(if (downloaded) "Téléchargé" else "Télécharger", if (downloaded) KetIcons.Check else KetIcons.Download,
+            enabled = !downloaded) { Downloader.download(track) },
+        // 7.5: a saved title is checked and upgraded alone, without selecting it first.
+        if (downloaded) MenuAction("Améliorer la qualité", KetIcons.Download, tag = "menu-upgrade") {
+            com.ketvoice.app.ui.sub.UpgradeChecks.single.value = track.id
+        } else null,
+        MenuAction("Ajouter à une playlist", KetIcons.Plus) { AppUi.addToPlaylist.value = track },
+        MenuAction("Lancer la radio", Icons.Filled.Radio) { Player.startRadio(track) },
+        MenuAction("Partager", KetIcons.Share) { AppUi.shareCard.value = track },
+        // The Ketmix DJ editor (6.1): where this title is left and entered in a mix.
+        MenuAction("Point de mix…", KetIcons.Sliders) { com.ketvoice.app.ui.player.KetmixEditor.openFor(track) },
+        MenuAction("À propos de ce titre", KetIcons.Info) { TrackCredits.open.value = track },
+        MenuAction("Plus", KetIcons.More) { AppUi.trackMenuTrack.value = track })
+}
+
+/**
+ * A title's menu in the Cristal look (8.4): the page blurs and dims, the title is lifted out of it as a plate (to the
+ * width of the window, less 12 dp each side) and the menu opens from the plate's nearest corner, from 55 % of its
+ * size, on the held menu's spring ([CristalMenuMotion]); both come from where the title was.
+ */
+@Composable
+private fun CristalHeldMenuHost(request: ContextMenus.Request, modifier: Modifier) {
+    val scope = rememberCoroutineScope()
+    val haptic = rememberHaptics()
+    val reduced = Motion.reduced
+    val progress = remember(request) { Animatable(0f) }
+    var closing by remember(request) { mutableStateOf(false) }
+    LaunchedEffect(request) { progress.animateTo(1f, CristalMenuMotion.heldOpen(reduced)) }
+    val close: (() -> Unit) -> Unit = close@{ then ->
+        if (closing) return@close
+        closing = true
+        scope.launch {
+            progress.animateTo(0f, CristalMenuMotion.heldClose(reduced))
+            ContextMenus.request.value = null
+            then()
+        }
+    }
+    androidx.activity.compose.BackHandler { close {} }
+    val actions = menuActions(request, haptic)
+    com.ketvoice.app.glass.FrozenBackdrop(scale = com.ketvoice.app.glass.Cristal.MENU_SCALE) {
+        CristalHeldMenuLayout(request, progress, reduced, modifier, { close {} }) {
+            val ink = CristalMenuInk.of(LocalTheme.current.isDark)
+            actions.forEach { action ->
+                CristalMenuRow(action.label, action.icon, ink, tint = action.tint?.takeIf { it == DESTRUCTIVE },
+                    iconTint = action.tint, enabled = action.enabled,
+                    modifier = if (action.tag != null) Modifier.testTag(action.tag) else Modifier) {
+                    haptic(Haptics.Kind.Press); close(action.run)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CristalHeldMenuLayout(request: ContextMenus.Request, progress: Animatable<Float, *>, reduced: Boolean, modifier: Modifier,
+                                  onDismiss: () -> Unit, rows: @Composable () -> Unit) {
+    val theme = LocalTheme.current
+    val dark = theme.isDark
+    val density = LocalDensity.current
+    val reduceBlur = AppSettings.reduceDynamicBlur.value
+    val plate = (if (dark) Color.Black else Color.White).copy(alpha = if (reduceBlur) com.ketvoice.app.glass.Cristal.PLATE_ALPHA_SOLID
+        else com.ketvoice.app.glass.Cristal.PLATE_ALPHA)
+    val hairline = com.ketvoice.app.glass.Cristal.menuRim(dark)
+    val scrim = Color.Black.copy(alpha = when {
+        reduceBlur && dark -> .62f
+        reduceBlur -> .36f
+        dark -> .30f
+        else -> .10f
+    })
+    val plateShape = RoundedCornerShape(CristalMenuMotion.PLATE_CORNER_DP.dp)
+    val menuShape = RoundedCornerShape(CristalMenuMotion.CORNER_DP.dp)
+    val insetTop = WindowInsets.safeDrawing.getTop(density)
+    val insetBottom = WindowInsets.safeDrawing.getBottom(density)
+    val closeLabel = AppText.t("Fermer")
+    val track = request.track
+    val art by ArtworkRepo.covers.collectAsState()
+    val cover = com.ketvoice.app.data.MediaOverrides.cover(track, art["t:${track.id}"] ?: track.coverUrl)
+    androidx.compose.ui.layout.Layout(modifier = modifier.fillMaxSize().testTag("context-menu"), content = {
+        Box(Modifier.fillMaxSize().graphicsLayer { alpha = progress.value.coerceIn(0f, 1f) }
+            .then(if (reduceBlur) Modifier else Modifier.cristalVeil())
+            .background(scrim)
+            .semantics { contentDescription = closeLabel }
+            .clickable(remember { MutableInteractionSource() }, null) { onDismiss() })
+        Box(Modifier.then(if (reduced) Modifier else Modifier.shadow(CristalMenuMotion.PLATE_SHADOW_DP.dp, plateShape, clip = false))
+            .clip(plateShape).background(plate).border(.5.dp, hairline, plateShape)
+            .padding(CristalMenuMotion.PLATE_PADDING_DP.dp).testTag("context-menu-preview")) {
+            Row(Modifier.fillMaxSize().padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                Cover(track.title, cover, size = 48.dp, radius = 10.dp)
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(request.headline ?: track.title, localize = false, color = theme.onBackground, style = Ket27.Type.headline, maxLines = 1,
+                        overflow = TextOverflow.Ellipsis)
+                    Text(request.subline ?: track.artist, localize = false, color = theme.secondary, style = Ket27.Type.subheadline, maxLines = 1,
+                        overflow = TextOverflow.Ellipsis)
+                }
+            }
+        }
+        Column(Modifier.pointerInput(Unit) {}.cristalMenuShadow(menuShape).clip(menuShape).background(plate)
+            .border(.5.dp, hairline, menuShape).verticalScroll(rememberScrollState()).padding(vertical = 8.dp)
+            .testTag("context-menu-actions")) { rows() }
+    }) { measurables, constraints ->
+        val width = constraints.maxWidth
+        val height = constraints.maxHeight
+        val margin = CristalMenuMotion.HELD_MARGIN_DP.dp.roundToPx()
+        val gap = CristalMenuMotion.HELD_GAP_DP.dp.roundToPx()
+        val pad = CristalMenuMotion.PLATE_PADDING_DP.dp.roundToPx()
+        val top = insetTop + CristalMenuMotion.HELD_EDGE_DP.dp.roundToPx()
+        val bottom = height - insetBottom - CristalMenuMotion.HELD_EDGE_DP.dp.roundToPx()
+        val veil = measurables[0].measure(Constraints.fixed(width, height))
+        val itemH = 68.dp.toPx()
+        val anchor = request.anchor ?: ContextMenus.centred(width.toFloat(), height.toFloat(), 320.dp.toPx(), itemH)
+        val itemW = maxOf(anchor.width, 280.dp.toPx()).coerceAtMost(width.toFloat())
+        val item = Rect(anchor.center.x - itemW / 2f, anchor.center.y - itemH / 2f, anchor.center.x + itemW / 2f, anchor.center.y + itemH / 2f)
+        val plateW = (item.width.roundToInt() + pad * 2).coerceAtLeast(1)
+        val plateH = (item.height.roundToInt() + pad * 2).coerceAtLeast(1)
+        val card = measurables[1].measure(Constraints.fixed(plateW, plateH))
+        val lift = ((width - margin * 2f) / plateW).coerceAtMost(1f)
+        val menuW = (width - margin * 2).coerceAtMost(CristalMenuMotion.WIDTH_DP.dp.roundToPx()).coerceAtLeast(0)
+        val menu = measurables[2].measure(Constraints(minWidth = menuW, maxWidth = menuW,
+            maxHeight = (bottom - top - (plateH * lift).roundToInt() - gap).coerceAtLeast(0)))
+        val at = CristalMenuMotion.placeHeld(item, width, plateW, plateH, menuW, menu.height, margin, gap, top, bottom)
+        layout(width, height) {
+            veil.place(0, 0)
+            card.placeWithLayer(at.plateX, at.plateY) { plateLayer(progress.value, at, reduced) }
+            menu.placeWithLayer(at.menuX, at.menuY) { heldMenuLayer(progress.value, at, reduced) }
+        }
+    }
+}
+
+private fun androidx.compose.ui.graphics.GraphicsLayerScope.plateLayer(p: Float, at: CristalMenuMotion.HeldPlace, reduced: Boolean) {
+    if (reduced) { scaleX = at.scale; scaleY = at.scale; alpha = p.coerceIn(0f, 1f); return }
+    val s = androidx.compose.ui.util.lerp(1f, at.scale, p)
+    scaleX = s; scaleY = s
+    translationX = androidx.compose.ui.util.lerp(at.fromX, 0f, p)
+    translationY = androidx.compose.ui.util.lerp(at.fromY, 0f, p)
+    alpha = CristalMenuMotion.plateAlpha(p)
+}
+
+private fun androidx.compose.ui.graphics.GraphicsLayerScope.heldMenuLayer(p: Float, at: CristalMenuMotion.HeldPlace, reduced: Boolean) {
+    alpha = CristalMenuMotion.heldMenuAlpha(p)
+    if (reduced) return
+    transformOrigin = TransformOrigin(if (at.alignEnd) 1f else 0f, if (at.below) 0f else 1f)
+    val s = CristalMenuMotion.heldMenuScale(p)
+    scaleX = s; scaleY = s
+    translationX = androidx.compose.ui.util.lerp(at.fromX, 0f, p)
+    translationY = androidx.compose.ui.util.lerp(at.fromY, 0f, p)
+}
+

@@ -242,6 +242,21 @@ fun SettingsScreen() {
                 }
             }
             Section("VERRE") {
+                // 8.4: the look of the glass — Liquid 27 (default) or Cristal, each with its own material and motion.
+                SRow(KetIcons.Appearance, "Style du verre", sub = "La matière du verre et ses animations",
+                    value = com.ketvoice.app.glass.GlassLook.labels[AppSettings.glassLook.value.coerceIn(0, com.ketvoice.app.glass.GlassLook.MAX)]) {
+                    choice = ChoiceSpec(
+                        "Style du verre", "Choisissez la matière et les animations du verre.",
+                        AppSettings.glassLook.value.toString(),
+                        listOf(
+                            ChoiceOption("0", "Liquid 27", "Le verre habituel de Ketvoice, par défaut"),
+                            ChoiceOption("1", "Cristal", "Verre limpide et léger, pastille élastique, menus qui jaillissent du bouton")
+                        )
+                    ) { id ->
+                        AppSettings.glassLook.value = (id.toIntOrNull() ?: 0).coerceIn(0, com.ketvoice.app.glass.GlassLook.MAX)
+                        SettingsStore.save()
+                    }
+                }
                 GlassTransparencyCard()
                 // A headset's window has no tilt to follow: the switch is not offered on Quest.
                 if (!com.ketvoice.app.BuildConfig.IS_QUEST) SToggle(KetIcons.Appearance, "Reflets selon l'inclinaison",

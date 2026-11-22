@@ -21,6 +21,11 @@ object AppSettings {
     /** 0 clear optical glass, 1 frosted, 2 opaque accessibility material. */
     val glassStyle = mutableStateOf(0)
     /**
+     * The look of the glass (8.4): 0 Liquid 27 (the default, unchanged), 1 « Cristal » — a lighter optical glass with its
+     * own motion ([com.ketvoice.app.glass.GlassLook]). A new key: `glassStyle` holds values of older versions.
+     */
+    val glassLook = mutableStateOf(0)
+    /**
      * The intensity of the glass (7.5), 0 very clear .. 1 opaque, continuous ([com.ketvoice.app.glass.GlassClarity]).
      * Replaces `glassTintLevel` (6.0, 0..6) and `glassTinted` (7.1), converted once by [SettingsStore].
      */

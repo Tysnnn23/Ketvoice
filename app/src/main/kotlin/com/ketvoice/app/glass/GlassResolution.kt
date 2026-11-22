@@ -65,17 +65,19 @@ internal object GlassResolution {
  * it itself ([blursItself]).
  */
 internal class ReducedBackdrop(private val source: Backdrop, private val layer: GraphicsLayer,
-                               private val blurPx: () -> Float, private val economy: () -> Boolean) : Backdrop {
+                               private val blurPx: () -> Float, private val economy: () -> Boolean,
+                               /** The fraction for a blur and the economy mode; Cristal (8.4) keeps its own fixed ones. */
+                               private val scaleOf: (Float, Boolean) -> Float = DefaultScale) : Backdrop {
     override val isCoordinatesDependent: Boolean get() = source.isCoordinatesDependent
     private var effectRadius = -1f
 
     /** Whether the glass must still blur what this hands it (the full-size path). */
-    fun blursItself(radiusPx: Float = blurPx()): Boolean = GlassResolution.scale(radiusPx, economy()) >= 1f
+    fun blursItself(radiusPx: Float = blurPx()): Boolean = scaleOf(radiusPx, economy()) >= 1f
 
     override fun DrawScope.drawBackdrop(density: Density, coordinates: LayoutCoordinates?,
                                         layerBlock: (GraphicsLayerScope.() -> Unit)?) {
         val radius = blurPx()
-        val s = GlassResolution.scale(radius, economy())
+        val s = scaleOf(radius, economy())
         if (s >= 1f) return with(source) { drawBackdrop(density, coordinates, layerBlock) }
         val small = GlassResolution.smallRadius(radius, s)
         if (small != effectRadius) {
@@ -91,7 +93,10 @@ internal class ReducedBackdrop(private val source: Backdrop, private val layer: 
 
 /** One [ReducedBackdrop] per glass surface, its small layer released with it. */
 @Composable
-internal fun rememberReducedBackdrop(source: Backdrop, blurPx: () -> Float, economy: () -> Boolean): ReducedBackdrop {
+internal fun rememberReducedBackdrop(source: Backdrop, blurPx: () -> Float, economy: () -> Boolean,
+                                     scaleOf: (Float, Boolean) -> Float = DefaultScale): ReducedBackdrop {
     val layer = rememberGraphicsLayer()
-    return remember(source, layer, blurPx, economy) { ReducedBackdrop(source, layer, blurPx, economy) }
+    return remember(source, layer, blurPx, economy, scaleOf) { ReducedBackdrop(source, layer, blurPx, economy, scaleOf) }
 }
+
+private val DefaultScale: (Float, Boolean) -> Float = { blurPx, economy -> GlassResolution.scale(blurPx, economy) }

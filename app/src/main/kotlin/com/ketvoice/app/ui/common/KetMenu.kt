@@ -37,6 +37,8 @@ internal class KetMenuItem(val label: String, val icon: ImageVector? = null, val
  */
 @Composable
 internal fun KetMenu(expanded: Boolean, onDismiss: () -> Unit, sections: List<List<KetMenuItem>>, modifier: Modifier = Modifier) {
+    // 8.4: the Cristal look has its own menu, frost grown from the button's corner.
+    if (com.ketvoice.app.glass.GlassLook.cristal) { CristalPageMenu(expanded, onDismiss, sections); return }
     val theme = LocalTheme.current
     val density = androidx.compose.ui.platform.LocalDensity.current
     // Shown while it opens, while it is open and while it folds back; gone once it is back in the button.

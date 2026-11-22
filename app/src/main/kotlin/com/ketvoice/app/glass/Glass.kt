@@ -329,6 +329,11 @@ private fun GlassPanelBody(
     export: LayerBackdrop?,
     content: @Composable () -> Unit
 ) {
+    // 8.4: the Cristal look draws its own material; content cards (the Panel role) stay plain cards in both looks.
+    if (styleOverride == null && GlassLook.cristal && params.role != GlassRole.Panel) {
+        CristalPanel(modifier, shape, params, enabled, captured, export, content)
+        return
+    }
     val style = styleOverride ?: GlassStyles.current
     val liquid27 = style == GlassStyles.LIQUID_27
     // The listener's transparency: the one value every glass surface reads (GlassClarity).

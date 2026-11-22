@@ -166,7 +166,7 @@ fun GlassFusionLayer(fusion: GlassFusion, dark: Boolean, modifier: Modifier = Mo
     val backdrop = LocalBackdropLayer.current
     val mode = currentGlassRenderMode(GlassStyles.current, enabled = true, captured = false)
     val available = backdrop != null && mode == GlassRenderMode.Optical && !fusion.failed &&
-        GlassStyles.current == GlassStyles.LIQUID_27
+        GlassStyles.current == GlassStyles.LIQUID_27 && !GlassLook.cristal
     fusion.active = available
     if (!available || backdrop == null) return
     var origin by remember { mutableStateOf(Offset.Zero) }
