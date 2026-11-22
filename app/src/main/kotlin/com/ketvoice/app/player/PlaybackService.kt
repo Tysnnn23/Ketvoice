@@ -21,6 +21,7 @@ import com.google.common.util.concurrent.ListenableFuture
 import com.ketvoice.app.MainActivity
 import com.ketvoice.app.data.AppSettings
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.distinctUntilChanged
 import com.google.common.util.concurrent.SettableFuture
 import java.nio.ByteBuffer
 
@@ -108,7 +109,11 @@ class PlaybackService : MediaLibraryService() {
         // A title separated while it plays (the voice slider, 6.0.0 Beta 3) has its voice level at once.
         serviceScope.launch { com.ketvoice.app.stems.VoiceSeparation.separated.collect { takeUpVoice(it) } }
         // A library session (Android Auto, 6.0.0): the browse tree and the car's requests live in AutoLibrary.kt.
-        val session = AutoLibrarySessionBuilder(this, sessionPlayer(player))
+        val builder = AutoLibrarySessionBuilder(this, sessionPlayer(player))
+        // 8.4: covers of the car (and lock screen) from the car's disk cache, so a cover seen once also shows offline.
+        if (carControls) builder.setBitmapLoader(androidx.media3.session.CacheBitmapLoader(
+            CarBitmapLoader(this, androidx.media3.datasource.DataSourceBitmapLoader(this))))
+        val session = builder
             .setSessionActivity(
                 PendingIntent.getActivity(
                     this, 0,
@@ -117,25 +122,16 @@ class PlaybackService : MediaLibraryService() {
                 )
             )
             .setCallback(object : AutoLibraryCallback(this@PlaybackService) {
-                override fun onConnect(session: MediaSession, controller: MediaSession.ControllerInfo): MediaSession.ConnectionResult {
-                    if (controller.packageName != packageName) return super.onConnect(session, controller)
-                    val commands = MediaSession.ConnectionResult.DEFAULT_SESSION_AND_LIBRARY_COMMANDS.buildUpon()
-                        .add(SessionCommand(CMD_SKIP_SILENCE, Bundle.EMPTY))
-                        .add(SessionCommand(CMD_EQUALIZER, Bundle.EMPTY))
-                        .add(SessionCommand(CMD_REVERB, Bundle.EMPTY))
-                        .add(SessionCommand(CMD_UPGRADE, Bundle.EMPTY))
-                        .add(SessionCommand(CMD_CANCEL_UPGRADE, Bundle.EMPTY))
-                        .add(SessionCommand(CMD_BIT_PERFECT, Bundle.EMPTY))
-                        .build()
-                    return MediaSession.ConnectionResult.AcceptedResultBuilder(session)
-                        .setAvailableSessionCommands(commands).build()
-                }
+                override fun onConnect(session: MediaSession, controller: MediaSession.ControllerInfo): MediaSession.ConnectionResult =
+                    connection(session, controller)
                 override fun onCustomCommand(
                     session: MediaSession,
                     controller: MediaSession.ControllerInfo,
                     command: SessionCommand,
                     args: Bundle
                 ): ListenableFuture<SessionResult> {
+                    // 8.4: the car's Now Playing buttons, from any controller (AutoLibraryCallback carries them out).
+                    if (command.customAction in CarControls.ACTIONS) return super.onCustomCommand(session, controller, command, args)
                     if (controller.packageName != packageName) return Futures.immediateFuture(
                         SessionResult(SessionError.ERROR_PERMISSION_DENIED))
                     if (command.customAction == CMD_BIT_PERFECT) {
@@ -173,6 +169,7 @@ class PlaybackService : MediaLibraryService() {
             })
             .build()
         mediaSession = session
+        if (carControls) watchCar(session)
         lockLyrics.start()
         com.ketvoice.app.automix.AnalysisStore.init(applicationContext)
         // The DJ editor's waves and the listener's mix points (6.1).
@@ -271,7 +268,58 @@ class PlaybackService : MediaLibraryService() {
 
     private fun sessionPlayer(engine: ExoPlayer): androidx.media3.common.Player = QueueBridgePlayer(com.ketvoice.app.cast.CastState.remote ?: engine,
         onNext = { Player.connect(applicationContext); Player.next() },
-        onPrevious = { Player.connect(applicationContext); Player.previous() })
+        onPrevious = { Player.connect(applicationContext); Player.previous() },
+        host = queueHost)
+
+    /** Android Auto is declared (the mobile flavour): the queue, the car's buttons and covers are shown to it (8.4). */
+    private val carControls: Boolean by lazy { AutoArtwork.declared(this) }
+    private val queueHost: QueueHost? by lazy {
+        if (carControls) PlayerQueueHost(applicationContext) { PlayerQueueHost.outside(mediaSession, packageName) } else null
+    }
+
+    /**
+     * Who may do what. The app's own controller keeps its commands and still sees the single item the engine plays
+     * (the queue it shows is its own); the system's controls and the car also get the car's buttons, and see the queue.
+     */
+    internal fun connection(session: MediaSession, controller: MediaSession.ControllerInfo): MediaSession.ConnectionResult {
+        val own = controller.packageName == packageName
+        val app = own && !session.isMediaNotificationController(controller)
+        var commands = if (own) appCommands() else MediaSession.ConnectionResult.DEFAULT_SESSION_AND_LIBRARY_COMMANDS
+        if (carControls && !app) commands = CarControls.withCommands(commands)
+        val result = MediaSession.ConnectionResult.AcceptedResultBuilder(session).setAvailableSessionCommands(commands)
+        if (carControls && app) result.setAvailablePlayerCommands(MediaSession.ConnectionResult.DEFAULT_PLAYER_COMMANDS.buildUpon()
+            .remove(androidx.media3.common.Player.COMMAND_GET_TIMELINE).build())
+        if (carControls && !app) result.setMediaButtonPreferences(carButtons())
+        return result.build()
+    }
+
+    private fun appCommands() = MediaSession.ConnectionResult.DEFAULT_SESSION_AND_LIBRARY_COMMANDS.buildUpon()
+        .add(SessionCommand(CMD_SKIP_SILENCE, Bundle.EMPTY))
+        .add(SessionCommand(CMD_EQUALIZER, Bundle.EMPTY))
+        .add(SessionCommand(CMD_REVERB, Bundle.EMPTY))
+        .add(SessionCommand(CMD_UPGRADE, Bundle.EMPTY))
+        .add(SessionCommand(CMD_CANCEL_UPGRADE, Bundle.EMPTY))
+        .add(SessionCommand(CMD_BIT_PERFECT, Bundle.EMPTY))
+        .build()
+
+    private fun carLook() = CarControls.look(Player.state.value, AppSettings.favoriteIds.value, AppSettings.automix.value)
+    private fun carButtons() = CarControls.buttons(carLook(), com.ketvoice.app.data.AppText::t)
+
+    /** The queue and the car's buttons follow the app live: a change of queue, mode, like or Ketmix is sent once. */
+    private fun watchCar(session: MediaSession) {
+        session.setMediaButtonPreferences(carButtons())
+        serviceScope.launch {
+            Player.state.collect { (mediaSession?.player as? QueueBridgePlayer)?.queueChanged() }
+        }
+        serviceScope.launch {
+            kotlinx.coroutines.flow.combine(Player.state, androidx.compose.runtime.snapshotFlow { AppSettings.favoriteIds.value },
+                androidx.compose.runtime.snapshotFlow { AppSettings.automix.value }) { state, liked, ketmix ->
+                CarControls.look(state, liked, ketmix)
+            }.distinctUntilChanged().collect { look ->
+                mediaSession?.setMediaButtonPreferences(CarControls.buttons(look, com.ketvoice.app.data.AppText::t))
+            }
+        }
+    }
 
     private fun buildPlayer(standby: Boolean = false): ExoPlayer {
         val exactRequested = AppSettings.bitPerfect.value

@@ -31,6 +31,19 @@ internal class FakeAutoSource : AutoSource {
     var catalogueDelayMs = 0L
     var catalogueCalls = 0
     var mixCalls = 0
+    var shelves = emptyList<com.ketvoice.app.data.HomeShelf>()
+    var stations = AutoStations()
+    var current: Track? = null
+    var playing = false
+    var online = true
+    var local = emptyList<Track>()
+
+    override fun library() = (favorites + downloads + playlists.flatMap { p -> p.entries.mapNotNull { it.track } } + local).distinctBy { it.id }
+    override fun shelves() = shelves
+    override fun stations() = stations
+    override fun current() = current
+    override fun playing() = playing
+    override fun online() = online
 
     override fun recent() = recent
     override fun favorites() = favorites
@@ -55,12 +68,16 @@ internal class FakeAutoPlayback : AutoPlayback {
     val played = mutableListOf<Pair<List<String>, Int>>()
     val shuffled = mutableListOf<List<String>>()
     val queued = mutableListOf<List<String>>()
+    val radios = mutableListOf<String>()
+    val artistRadios = mutableListOf<Pair<String, List<String>>>()
     var canResume = false
     var resumed = 0
     override fun play(tracks: List<Track>, index: Int) { played += tracks.map { it.id } to index }
     override fun shuffle(tracks: List<Track>) { shuffled += tracks.map { it.id } }
     override fun enqueue(tracks: List<Track>) { queued += tracks.map { it.id } }
     override suspend fun resume(): Boolean { resumed++; return canResume }
+    override fun radio(seed: Track) { radios += seed.id }
+    override fun artistRadio(name: String, catalogId: String?, tracks: List<Track>) { artistRadios += name to tracks.map { it.id } }
 }
 
 internal fun track(id: String, title: String = "Titre $id", artist: String = "Artiste", explicit: Boolean = false) =
@@ -81,18 +98,23 @@ class AutoLibraryTest {
 
     @Test fun theRootHasFourBrowsableTabsEvenWithNothingSaved() {
         val tabs = children(AutoIds.ROOT)!!
-        assertEquals(listOf(AutoIds.HOME, AutoIds.FAVORITES, AutoIds.PLAYLISTS, AutoIds.DOWNLOADS), tabs.map { it.mediaId })
-        assertEquals(listOf("Accueil", "Favoris", "Playlists", "Téléchargements"), tabs.map { it.mediaMetadata.title.toString() })
+        assertEquals(listOf(AutoIds.HOME, AutoIds.LIBRARY, AutoIds.RADIO, AutoIds.DOWNLOADS), tabs.map { it.mediaId })
+        assertEquals(listOf("Accueil", "Bibliothèque", "Radio", "Téléchargements"), tabs.map { it.mediaMetadata.title.toString() })
         assertTrue(tabs.all { it.mediaMetadata.isBrowsable == true && it.mediaMetadata.isPlayable == false })
-        // Playlists are covers in a grid; titles stay a list.
-        assertEquals(MediaConstants.EXTRAS_VALUE_CONTENT_STYLE_GRID_ITEM,
-            tabs[2].mediaMetadata.extras!!.getInt(MediaConstants.EXTRAS_KEY_CONTENT_STYLE_BROWSABLE))
-        assertEquals(MediaConstants.EXTRAS_VALUE_CONTENT_STYLE_LIST_ITEM,
-            tabs[1].mediaMetadata.extras!!.getInt(MediaConstants.EXTRAS_KEY_CONTENT_STYLE_PLAYABLE))
+        // Home's mixes are covers in a grid, the library a list of categories, radio stations a grid; titles stay a list.
+        fun style(item: MediaItem, key: String) = item.mediaMetadata.extras!!.getInt(key)
+        assertEquals(MediaConstants.EXTRAS_VALUE_CONTENT_STYLE_GRID_ITEM, style(tabs[0], MediaConstants.EXTRAS_KEY_CONTENT_STYLE_BROWSABLE))
+        assertEquals(MediaConstants.EXTRAS_VALUE_CONTENT_STYLE_CATEGORY_LIST_ITEM, style(tabs[1], MediaConstants.EXTRAS_KEY_CONTENT_STYLE_BROWSABLE))
+        assertEquals(MediaConstants.EXTRAS_VALUE_CONTENT_STYLE_GRID_ITEM, style(tabs[2], MediaConstants.EXTRAS_KEY_CONTENT_STYLE_PLAYABLE))
+        assertEquals(MediaConstants.EXTRAS_VALUE_CONTENT_STYLE_LIST_ITEM, style(tabs[3], MediaConstants.EXTRAS_KEY_CONTENT_STYLE_PLAYABLE))
         assertEquals(MediaConstants.EXTRAS_VALUE_CONTENT_STYLE_GRID_ITEM,
             library.rootExtras().getInt(MediaConstants.EXTRAS_KEY_CONTENT_STYLE_BROWSABLE))
-        // Nothing listened, liked, saved or downloaded: every tab is an empty list, never an error.
-        listOf(AutoIds.HOME, AutoIds.FAVORITES, AutoIds.PLAYLISTS, AutoIds.DOWNLOADS).forEach { assertEquals(it, emptyList<MediaItem>(), children(it)) }
+        // A car that shows fewer tabs gets the first ones.
+        assertEquals(listOf(AutoIds.HOME, AutoIds.LIBRARY, AutoIds.RADIO), runBlocking { library.children(AutoIds.ROOT, 0, 10, 3) }!!.map { it.mediaId })
+        // Nothing listened, liked, saved or downloaded: every list is empty, never an error.
+        listOf(AutoIds.HOME, AutoIds.RADIO, AutoIds.FAVORITES, AutoIds.PLAYLISTS, AutoIds.ALBUMS, AutoIds.ARTISTS, AutoIds.SONGS,
+            AutoIds.DOWNLOADS).forEach { assertEquals(it, emptyList<MediaItem>(), children(it)) }
+        assertEquals(6, children(AutoIds.LIBRARY)!!.size)
         assertNull(children("ketvoice.auto.nothing"))
         assertTrue(library.root().mediaMetadata.isBrowsable == true)
     }
@@ -122,8 +144,10 @@ class AutoLibraryTest {
     @Test fun listsArePagedAndCappedForTheCar() {
         source.favorites = (1..250).map { track("f$it") }
         assertEquals(AutoLibrary.MAX_ITEMS, children(AutoIds.FAVORITES)!!.size)
-        assertEquals((1..30).map { AutoIds.track(AutoIds.FAVORITES, "f$it") }, children(AutoIds.FAVORITES, 0, 30)!!.map { it.mediaId })
-        assertEquals((91..100).map { AutoIds.track(AutoIds.FAVORITES, "f$it") }, children(AutoIds.FAVORITES, 3, 30)!!.map { it.mediaId })
+        // « Tout lire » and « Lecture aléatoire » lead the list, then its titles.
+        assertEquals(listOf(AutoIds.all(AutoIds.FAVORITES), AutoIds.shuffle(AutoIds.FAVORITES)) +
+            (1..28).map { AutoIds.track(AutoIds.FAVORITES, "f$it") }, children(AutoIds.FAVORITES, 0, 30)!!.map { it.mediaId })
+        assertEquals((89..98).map { AutoIds.track(AutoIds.FAVORITES, "f$it") }, children(AutoIds.FAVORITES, 3, 30)!!.map { it.mediaId })
         assertEquals(emptyList<MediaItem>(), children(AutoIds.FAVORITES, 4, 30))
         // Media3's « everything » request on a later page must not overflow.
         assertEquals(emptyList<MediaItem>(), children(AutoIds.FAVORITES, 2, Int.MAX_VALUE))
@@ -135,9 +159,9 @@ class AutoLibraryTest {
         source.favorites = (1..10).map { track("f$it") }
         children(AutoIds.FAVORITES, 0, 5)
         source.favorites = (11..20).map { track("f$it") }
-        assertEquals(AutoIds.track(AutoIds.FAVORITES, "f6"), children(AutoIds.FAVORITES, 1, 5)!!.first().mediaId)
+        assertEquals(AutoIds.track(AutoIds.FAVORITES, "f4"), children(AutoIds.FAVORITES, 1, 5)!!.first().mediaId)
         now += AutoLibrary.LOCAL_TTL_MS + 1
-        assertEquals(AutoIds.track(AutoIds.FAVORITES, "f16"), children(AutoIds.FAVORITES, 1, 5)!!.first().mediaId)
+        assertEquals(AutoIds.track(AutoIds.FAVORITES, "f14"), children(AutoIds.FAVORITES, 1, 5)!!.first().mediaId)
     }
 
     @Test fun playlistsAreFoldersOfTheirFoundTitles() {
@@ -151,7 +175,8 @@ class AutoLibraryTest {
         assertEquals("0 titres", lists[0].mediaMetadata.subtitle.toString())
         assertEquals("https://img.example/cover.jpg", lists[0].mediaMetadata.artworkUri.toString())
         assertEquals("https://img.example/p1.jpg", lists[1].mediaMetadata.artworkUri.toString())
-        assertEquals(listOf(AutoIds.track(AutoIds.playlist("l1"), "p1"), AutoIds.track(AutoIds.playlist("l1"), "p2")),
+        assertEquals(listOf(AutoIds.all(AutoIds.playlist("l1")), AutoIds.shuffle(AutoIds.playlist("l1")),
+            AutoIds.track(AutoIds.playlist("l1"), "p1"), AutoIds.track(AutoIds.playlist("l1"), "p2")),
             children(AutoIds.playlist("l1"))!!.map { it.mediaId })
         assertNull(children(AutoIds.playlist("gone")))
         assertEquals("Route", runBlocking { library.item(AutoIds.playlist("l1")) }!!.mediaMetadata.title.toString())
@@ -168,7 +193,9 @@ class AutoLibraryTest {
     @Test fun aMixIsLoadedOnceAndAnUnansweredOneIsAnError() {
         source.mixes = listOf(MixCard("style:Adele", MixKind.Style, "Adele", emptyList()))
         source.mixTracks = mapOf("style:Adele" to listOf(track("m1"), track("m2")))
-        assertEquals(2, children(AutoIds.mix("style:Adele"))!!.size)
+        assertEquals(listOf(AutoIds.all(AutoIds.mix("style:Adele")), AutoIds.shuffle(AutoIds.mix("style:Adele")),
+            AutoIds.track(AutoIds.mix("style:Adele"), "m1"), AutoIds.track(AutoIds.mix("style:Adele"), "m2")),
+            children(AutoIds.mix("style:Adele"))!!.map { it.mediaId })
         children(AutoIds.mix("style:Adele"), 0, 1)
         assertEquals(1, source.mixCalls)
         // The catalogue did not answer in time: an error for the car, not an endless spinner.

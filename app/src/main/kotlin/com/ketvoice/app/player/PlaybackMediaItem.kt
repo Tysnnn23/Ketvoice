@@ -23,8 +23,9 @@ internal fun playbackMediaItem(track: Track, url: String, cacheKey: String?, str
         .setCustomCacheKey(if (stream?.isDash == true) null else cacheKey)
         .setMediaMetadata(MediaMetadata.Builder().setTitle(track.title).setArtist(track.artist)
             .setAlbumTitle(track.album)
-            // Same artwork as the app (the enriched cover when known) for the notification and lock screen.
-            .setArtworkUri((com.ketvoice.app.data.ArtworkRepo.coverForTrack(track) ?: track.coverUrl)?.let(Uri::parse))
+            // Same artwork as the app (the enriched cover when known) for the notification, lock screen and car;
+            // a download's saved cover first (8.4), so it shows offline too.
+            .setArtworkUri(playbackCover(track)?.let(Uri::parse))
             .setExtras(if (offlineDash) Bundle().apply { putBoolean(OFFLINE_DASH_EXTRA, true) } else null).build())
         .build()
 
