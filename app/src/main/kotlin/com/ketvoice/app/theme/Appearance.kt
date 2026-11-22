@@ -1,31 +1,28 @@
 package com.ketvoice.app.theme
 
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontVariation
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.ketvoice.app.R
 import com.ketvoice.app.data.AppSettings
 
 /**
  * « Police, taille et arrondis » (owner, 2026-11-22): the typefaces Ketvoice ships, all under the SIL Open Font
  * License (each with its licence in `docs/licenses`). Inter stays the default and the only one the interface was drawn for;
- * the others are variable fonts too, so every weight of the Ket 27 text styles exists.
+ * the others are variable fonts too, so every weight of the Ket 27 text styles exists. [Choice.file] is the font's
+ * file in `res/font` (without `.ttf`); `AppFontFiles.kt` turns a choice into its family on each platform.
  */
 object AppFonts {
-    data class Choice(val id: String, val name: String, val res: Int, val weights: IntRange)
+    data class Choice(val id: String, val name: String, val file: String, val weights: IntRange)
 
     const val INTER = "inter"
     val all = listOf(
-        Choice(INTER, "Inter", R.font.inter_variable, 100..900),
-        Choice("manrope", "Manrope", R.font.manrope_variable, 200..800),
-        Choice("atkinson", "Atkinson Hyperlegible", R.font.atkinson_hyperlegible_next_variable, 200..800),
-        Choice("nunito", "Nunito", R.font.nunito_variable, 200..1000),
-        Choice("lora", "Lora", R.font.lora_variable, 400..700)
+        Choice(INTER, "Inter", "inter_variable", 100..900),
+        Choice("manrope", "Manrope", "manrope_variable", 200..800),
+        Choice("atkinson", "Atkinson Hyperlegible", "atkinson_hyperlegible_next_variable", 200..800),
+        Choice("nunito", "Nunito", "nunito_variable", 200..1000),
+        Choice("lora", "Lora", "lora_variable", 400..700)
     )
     private val ids = all.map { it.id }.toSet()
 
@@ -34,16 +31,9 @@ object AppFonts {
 
     private val families = HashMap<String, FontFamily>()
 
-    @OptIn(androidx.compose.ui.text.ExperimentalTextApi::class)
     fun family(id: String): FontFamily = synchronized(families) {
         val choice = choice(id)
-        families.getOrPut(choice.id) {
-            FontFamily(listOf(100, 200, 300, 400, 500, 600, 700, 800, 900).map { weight ->
-                // A weight outside the font's axis is drawn at its nearest end (Lora's Black is its Bold).
-                val axis = weight.coerceIn(choice.weights.first, choice.weights.last)
-                Font(choice.res, FontWeight(weight), variationSettings = FontVariation.Settings(FontVariation.weight(axis)))
-            })
-        }
+        families.getOrPut(choice.id) { appFontFamily(choice) }
     }
 }
 
@@ -81,7 +71,7 @@ object LyricsLook {
     val sungLabels = listOf("Blanc", "Accent", "Pochette", "Autre")
 
     /** The lyrics' own font: empty follows the interface's font. */
-    fun font(): FontFamily = AppSettings.lyricsFont.value.takeIf(AppFonts::valid)?.let(AppFonts::family) ?: Ket27.font
+    fun font(): FontFamily = AppFonts.family(AppSettings.lyricsFont.value.takeIf(AppFonts::valid) ?: AppSettings.appFont.value)
     fun sizeScale(percent: Int = AppSettings.lyricsScale.value): Float = percent.coerceIn(SIZE_MIN, SIZE_MAX) / 100f
     val centred: Boolean get() = AppSettings.lyricsAlign.value == CENTRE
 
