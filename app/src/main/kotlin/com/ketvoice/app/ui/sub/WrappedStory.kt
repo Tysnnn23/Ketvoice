@@ -30,6 +30,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.VolumeOff
+import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -153,15 +156,28 @@ internal fun measuredBpm(track: Track): Float? = runCatching {
 /** Ketvoice Wrapped, as stories: the year — or a month — in pages over the flowing colours of the most played cover. */
 @Composable
 internal fun WrappedStory(recap: Wrapped.Recap, onClose: () -> Unit) {
+    val context = androidx.compose.ui.platform.LocalContext.current.applicationContext
     Dialog(onClose, DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
-        WrappedStoryContent(recap, onClose)
+        // 8.4: each page plays the best part of its title (« Bande-son du récap annuel »).
+        WrappedStoryContent(recap, onClose, soundtrack = { clips, scope ->
+            RecapSoundtrack(scope, clips, ListenerPlayer, { ExoClipDeck(context, scope) }, ::recapClipStart)
+        })
     }
 }
 
 @Composable
-internal fun WrappedStoryContent(recap: Wrapped.Recap, onClose: () -> Unit, startPage: Int = 0, autoAdvance: Boolean = true) {
+internal fun WrappedStoryContent(recap: Wrapped.Recap, onClose: () -> Unit, startPage: Int = 0, autoAdvance: Boolean = true,
+                                 soundtrack: ((List<Track?>, kotlinx.coroutines.CoroutineScope) -> RecapSoundtrack)? = null) {
     val pages = remember(recap) { WrappedPages.of(recap) }
     var page by remember { mutableIntStateOf(startPage.coerceIn(0, pages.lastIndex)) }
+    val soundScope = androidx.compose.runtime.rememberCoroutineScope()
+    val sound = remember(recap) { soundtrack?.invoke(RecapClips.forPages(pages, recap), soundScope) }
+    var muted by remember { mutableStateOf(!com.ketvoice.app.data.AppSettings.wrappedSound.value) }
+    DisposableEffect(sound) {
+        sound?.open(page.coerceIn(0, pages.lastIndex), muted)
+        onDispose { sound?.close() }
+    }
+    LaunchedEffect(page, sound) { if (page < pages.size) sound?.show(page) }
     val progress = remember { Animatable(0f) }
     LaunchedEffect(page) {
         if (page >= pages.size) { onClose(); return@LaunchedEffect }
@@ -207,6 +223,20 @@ internal fun WrappedStoryContent(recap: Wrapped.Recap, onClose: () -> Unit, star
             Row(Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(WrappedPeriod.brand(recap), localize = false, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold,
                     letterSpacing = 2.sp, modifier = Modifier.weight(1f))
+                if (sound != null) {
+                    // 8.4: the soundtrack's switch, kept for the next stories (`wrappedSound`).
+                    Box(Modifier.size(44.dp).clip(CircleShape).background(Color.White.copy(alpha = .22f))
+                        .clickable(role = Role.Button) {
+                            muted = !muted
+                            com.ketvoice.app.data.AppSettings.wrappedSound.value = !muted
+                            com.ketvoice.app.data.SettingsStore.save()
+                            sound.mute(muted)
+                        }.testTag("wrapped-sound"), contentAlignment = Alignment.Center) {
+                        Icon(if (muted) Icons.Filled.VolumeOff else Icons.Filled.VolumeUp,
+                            if (muted) "Activer le son" else "Couper le son", tint = Color.White, modifier = Modifier.size(20.dp))
+                    }
+                    Spacer(Modifier.width(8.dp))
+                }
                 // Ket 27: the round 44 dp button of an iOS story.
                 Box(Modifier.size(44.dp).clip(CircleShape).background(Color.White.copy(alpha = .22f))
                     .clickable(role = Role.Button, onClick = onClose).testTag("wrapped-close"), contentAlignment = Alignment.Center) {

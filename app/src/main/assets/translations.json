@@ -2626,7 +2626,9 @@
   "{0} nouveaux titres : touchez pour les télécharger": "{0} new songs: tap to download them",
   "Playlists téléchargées": "Downloaded playlists",
   "Playlists téléchargées à jour": "Keep downloaded playlists up to date",
-  "Une notification quand une playlist téléchargée reçoit de nouveaux titres : touchez-la pour télécharger seulement ceux-là": "A notification when a downloaded playlist gets new songs: tap it to download only those"
+  "Une notification quand une playlist téléchargée reçoit de nouveaux titres : touchez-la pour télécharger seulement ceux-là": "A notification when a downloaded playlist gets new songs: tap it to download only those",
+  "Activer le son": "Turn sound on",
+  "Couper le son": "Mute"
  },
  "hi": {
   "Reverb": "रीवर्ब",
@@ -5255,7 +5257,9 @@
   "{0} nouveaux titres : touchez pour les télécharger": "{0} नए गाने: डाउनलोड करने के लिए टैप करें",
   "Playlists téléchargées": "डाउनलोड की गई प्लेलिस्ट",
   "Playlists téléchargées à jour": "डाउनलोड की गई प्लेलिस्ट अपडेट रखें",
-  "Une notification quand une playlist téléchargée reçoit de nouveaux titres : touchez-la pour télécharger seulement ceux-là": "जब डाउनलोड की गई प्लेलिस्ट में नए गाने आएँ तो सूचना: केवल उन्हें डाउनलोड करने के लिए टैप करें"
+  "Une notification quand une playlist téléchargée reçoit de nouveaux titres : touchez-la pour télécharger seulement ceux-là": "जब डाउनलोड की गई प्लेलिस्ट में नए गाने आएँ तो सूचना: केवल उन्हें डाउनलोड करने के लिए टैप करें",
+  "Activer le son": "आवाज़ चालू करें",
+  "Couper le son": "आवाज़ बंद करें"
  },
  "ja": {
   "Reverb": "リバーブ",
@@ -7884,7 +7888,9 @@
   "{0} nouveaux titres : touchez pour les télécharger": "新しい曲が{0}曲あります。タップしてダウンロード",
   "Playlists téléchargées": "ダウンロード済みのプレイリスト",
   "Playlists téléchargées à jour": "ダウンロード済みプレイリストを最新に保つ",
-  "Une notification quand une playlist téléchargée reçoit de nouveaux titres : touchez-la pour télécharger seulement ceux-là": "ダウンロード済みのプレイリストに新しい曲が追加されると通知します。タップするとその曲だけをダウンロードします"
+  "Une notification quand une playlist téléchargée reçoit de nouveaux titres : touchez-la pour télécharger seulement ceux-là": "ダウンロード済みのプレイリストに新しい曲が追加されると通知します。タップするとその曲だけをダウンロードします",
+  "Activer le son": "サウンドをオン",
+  "Couper le son": "消音"
  },
  "zh": {
   "Reverb": "混响",
@@ -10513,7 +10519,9 @@
   "{0} nouveaux titres : touchez pour les télécharger": "{0} 首新歌曲：轻触即可下载",
   "Playlists téléchargées": "已下载的播放列表",
   "Playlists téléchargées à jour": "让已下载的播放列表保持最新",
-  "Une notification quand une playlist téléchargée reçoit de nouveaux titres : touchez-la pour télécharger seulement ceux-là": "已下载的播放列表有新歌曲时发出通知：轻触即可只下载这些歌曲"
+  "Une notification quand une playlist téléchargée reçoit de nouveaux titres : touchez-la pour télécharger seulement ceux-là": "已下载的播放列表有新歌曲时发出通知：轻触即可只下载这些歌曲",
+  "Activer le son": "开启声音",
+  "Couper le son": "静音"
  },
  "ru": {
   "Reverb": "Реверберация",
@@ -13142,7 +13150,9 @@
   "{0} nouveaux titres : touchez pour les télécharger": "Новых треков: {0}. Нажмите, чтобы скачать",
   "Playlists téléchargées": "Скачанные плейлисты",
   "Playlists téléchargées à jour": "Обновлять скачанные плейлисты",
-  "Une notification quand une playlist téléchargée reçoit de nouveaux titres : touchez-la pour télécharger seulement ceux-là": "Уведомление, когда в скачанном плейлисте появляются новые треки: нажмите, чтобы скачать только их"
+  "Une notification quand une playlist téléchargée reçoit de nouveaux titres : touchez-la pour télécharger seulement ceux-là": "Уведомление, когда в скачанном плейлисте появляются новые треки: нажмите, чтобы скачать только их",
+  "Activer le son": "Включить звук",
+  "Couper le son": "Выключить звук"
  },
  "it": {
   "Reverb": "Riverbero",
@@ -15771,7 +15781,9 @@
   "{0} nouveaux titres : touchez pour les télécharger": "{0} nuovi brani: tocca per scaricarli",
   "Playlists téléchargées": "Playlist scaricate",
   "Playlists téléchargées à jour": "Playlist scaricate sempre aggiornate",
-  "Une notification quand une playlist téléchargée reçoit de nouveaux titres : touchez-la pour télécharger seulement ceux-là": "Una notifica quando una playlist scaricata riceve nuovi brani: toccala per scaricare solo quelli"
+  "Une notification quand une playlist téléchargée reçoit de nouveaux titres : touchez-la pour télécharger seulement ceux-là": "Una notifica quando una playlist scaricata riceve nuovi brani: toccala per scaricare solo quelli",
+  "Activer le son": "Attiva l'audio",
+  "Couper le son": "Disattiva l'audio"
  },
  "es": {
   "Reverb": "Reverb",
@@ -18400,7 +18412,9 @@
   "{0} nouveaux titres : touchez pour les télécharger": "{0} canciones nuevas: toca para descargarlas",
   "Playlists téléchargées": "Playlists descargadas",
   "Playlists téléchargées à jour": "Playlists descargadas al día",
-  "Une notification quand une playlist téléchargée reçoit de nouveaux titres : touchez-la pour télécharger seulement ceux-là": "Una notificación cuando una playlist descargada recibe canciones nuevas: tócala para descargar solo esas"
+  "Une notification quand une playlist téléchargée reçoit de nouveaux titres : touchez-la pour télécharger seulement ceux-là": "Una notificación cuando una playlist descargada recibe canciones nuevas: tócala para descargar solo esas",
+  "Activer le son": "Activar el sonido",
+  "Couper le son": "Silenciar"
  },
  "de": {
   "Reverb": "Reverb",
@@ -21029,7 +21043,9 @@
   "{0} nouveaux titres : touchez pour les télécharger": "{0} neue Songs: Tippen zum Herunterladen",
   "Playlists téléchargées": "Heruntergeladene Playlists",
   "Playlists téléchargées à jour": "Heruntergeladene Playlists aktuell halten",
-  "Une notification quand une playlist téléchargée reçoit de nouveaux titres : touchez-la pour télécharger seulement ceux-là": "Eine Benachrichtigung, wenn eine heruntergeladene Playlist neue Songs erhält: Tippe darauf, um nur diese herunterzuladen"
+  "Une notification quand une playlist téléchargée reçoit de nouveaux titres : touchez-la pour télécharger seulement ceux-là": "Eine Benachrichtigung, wenn eine heruntergeladene Playlist neue Songs erhält: Tippe darauf, um nur diese herunterzuladen",
+  "Activer le son": "Ton einschalten",
+  "Couper le son": "Stummschalten"
  },
  "pt": {
   "Reverb": "Reverb",
@@ -23658,7 +23674,9 @@
   "{0} nouveaux titres : touchez pour les télécharger": "{0} músicas novas: toque para as transferir",
   "Playlists téléchargées": "Playlists transferidas",
   "Playlists téléchargées à jour": "Playlists transferidas sempre atualizadas",
-  "Une notification quand une playlist téléchargée reçoit de nouveaux titres : touchez-la pour télécharger seulement ceux-là": "Uma notificação quando uma playlist transferida recebe músicas novas: toque nela para transferir só essas"
+  "Une notification quand une playlist téléchargée reçoit de nouveaux titres : touchez-la pour télécharger seulement ceux-là": "Uma notificação quando uma playlist transferida recebe músicas novas: toque nela para transferir só essas",
+  "Activer le son": "Ativar o som",
+  "Couper le son": "Silenciar"
  },
  "ko": {
   "Reverb": "리버브",
@@ -26287,6 +26305,8 @@
   "{0} nouveaux titres : touchez pour les télécharger": "새로운 곡 {0}개: 탭하여 다운로드",
   "Playlists téléchargées": "다운로드한 플레이리스트",
   "Playlists téléchargées à jour": "다운로드한 플레이리스트 최신 상태로 유지",
-  "Une notification quand une playlist téléchargée reçoit de nouveaux titres : touchez-la pour télécharger seulement ceux-là": "다운로드한 플레이리스트에 새로운 곡이 추가되면 알려 줍니다. 탭하면 그 곡만 다운로드합니다"
+  "Une notification quand une playlist téléchargée reçoit de nouveaux titres : touchez-la pour télécharger seulement ceux-là": "다운로드한 플레이리스트에 새로운 곡이 추가되면 알려 줍니다. 탭하면 그 곡만 다운로드합니다",
+  "Activer le son": "소리 켜기",
+  "Couper le son": "음소거"
  }
 }

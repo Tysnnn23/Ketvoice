@@ -79,6 +79,8 @@ object AppSettings {
     val standbyMode = mutableStateOf(false)
     /** Lyrics videos carry the song's sound (5.10.0). */
     val lyricVideoSound = mutableStateOf(true)
+    /** « Bande-son du récap annuel » (8.4): Wrapped's pages play the best part of their titles; the story's mute button turns it off. */
+    val wrappedSound = mutableStateOf(true)
     val systemReduceMotion = mutableStateOf(false)
     val canvasWithMobileData = mutableStateOf(false)
     /** A notification when an artist the listener follows puts out a release (6.3, see ReleaseWatch). */
