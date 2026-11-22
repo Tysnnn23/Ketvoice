@@ -20,7 +20,8 @@ import com.ketvoice.app.theme.LocalTheme
 
 @Composable
 internal fun CompactSearchField(query: String, onQueryChange: (String) -> Unit, onSearch: () -> Unit,
-                                modifier: Modifier = Modifier, filled: Boolean = true) {
+                                modifier: Modifier = Modifier, filled: Boolean = true,
+                                placeholder: String = "Rechercher un titre ou un artiste…") {
     val theme = LocalTheme.current
     BasicTextField(query, { onQueryChange(it.replace('\r', ' ').replace('\n', ' ')) },
         modifier.widthIn(max = 640.dp).fillMaxWidth()
@@ -36,7 +37,7 @@ internal fun CompactSearchField(query: String, onQueryChange: (String) -> Unit, 
                 Icon(KetIcons.Search, null, tint = theme.secondary, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(10.dp))
                 Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
-                    if (query.isEmpty()) Text("Rechercher un titre ou un artiste…", color = theme.secondary,
+                    if (query.isEmpty()) Text(placeholder, color = theme.secondary,
                         fontSize = 16.sp, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
                     input()
                 }

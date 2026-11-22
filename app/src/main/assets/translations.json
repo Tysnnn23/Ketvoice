@@ -2612,7 +2612,9 @@
   "Haut-parleur": "Speaker",
   "Sortie USB": "USB output",
   "USB": "USB",
-  "Écouteurs filaires": "Wired headphones"
+  "Écouteurs filaires": "Wired headphones",
+  "Aucun réglage ne correspond à « {0} »": "No setting matches “{0}”",
+  "Rechercher un réglage": "Search settings"
  },
  "hi": {
   "Reverb": "रीवर्ब",
@@ -5227,7 +5229,9 @@
   "Haut-parleur": "स्पीकर",
   "Sortie USB": "USB आउटपुट",
   "USB": "USB",
-  "Écouteurs filaires": "वायर्ड हेडफ़ोन"
+  "Écouteurs filaires": "वायर्ड हेडफ़ोन",
+  "Aucun réglage ne correspond à « {0} »": "“{0}” से कोई सेटिंग मेल नहीं खाती",
+  "Rechercher un réglage": "सेटिंग खोजें"
  },
  "ja": {
   "Reverb": "リバーブ",
@@ -7842,7 +7846,9 @@
   "Haut-parleur": "スピーカー",
   "Sortie USB": "USB出力",
   "USB": "USB",
-  "Écouteurs filaires": "有線ヘッドホン"
+  "Écouteurs filaires": "有線ヘッドホン",
+  "Aucun réglage ne correspond à « {0} »": "「{0}」に一致する設定はありません",
+  "Rechercher un réglage": "設定を検索"
  },
  "zh": {
   "Reverb": "混响",
@@ -10457,7 +10463,9 @@
   "Haut-parleur": "扬声器",
   "Sortie USB": "USB 输出",
   "USB": "USB",
-  "Écouteurs filaires": "有线耳机"
+  "Écouteurs filaires": "有线耳机",
+  "Aucun réglage ne correspond à « {0} »": "没有与“{0}”匹配的设置",
+  "Rechercher un réglage": "搜索设置"
  },
  "ru": {
   "Reverb": "Реверберация",
@@ -13072,7 +13080,9 @@
   "Haut-parleur": "Динамик",
   "Sortie USB": "USB-выход",
   "USB": "USB",
-  "Écouteurs filaires": "Проводные наушники"
+  "Écouteurs filaires": "Проводные наушники",
+  "Aucun réglage ne correspond à « {0} »": "Нет настроек по запросу «{0}»",
+  "Rechercher un réglage": "Поиск настроек"
  },
  "it": {
   "Reverb": "Riverbero",
@@ -15687,7 +15697,9 @@
   "Haut-parleur": "Altoparlante",
   "Sortie USB": "Uscita USB",
   "USB": "USB",
-  "Écouteurs filaires": "Cuffie con cavo"
+  "Écouteurs filaires": "Cuffie con cavo",
+  "Aucun réglage ne correspond à « {0} »": "Nessuna impostazione corrisponde a «{0}»",
+  "Rechercher un réglage": "Cerca un'impostazione"
  },
  "es": {
   "Reverb": "Reverb",
@@ -18302,7 +18314,9 @@
   "Haut-parleur": "Altavoz",
   "Sortie USB": "Salida USB",
   "USB": "USB",
-  "Écouteurs filaires": "Auriculares con cable"
+  "Écouteurs filaires": "Auriculares con cable",
+  "Aucun réglage ne correspond à « {0} »": "Ningún ajuste coincide con «{0}»",
+  "Rechercher un réglage": "Buscar un ajuste"
  },
  "de": {
   "Reverb": "Reverb",
@@ -20917,7 +20931,9 @@
   "Haut-parleur": "Lautsprecher",
   "Sortie USB": "USB-Ausgang",
   "USB": "USB",
-  "Écouteurs filaires": "Kabelgebundene Kopfhörer"
+  "Écouteurs filaires": "Kabelgebundene Kopfhörer",
+  "Aucun réglage ne correspond à « {0} »": "Keine Einstellung passt zu „{0}“",
+  "Rechercher un réglage": "Einstellung suchen"
  },
  "pt": {
   "Reverb": "Reverb",
@@ -23532,7 +23548,9 @@
   "Haut-parleur": "Altifalante",
   "Sortie USB": "Saída USB",
   "USB": "USB",
-  "Écouteurs filaires": "Auscultadores com fios"
+  "Écouteurs filaires": "Auscultadores com fios",
+  "Aucun réglage ne correspond à « {0} »": "Nenhuma definição corresponde a “{0}”",
+  "Rechercher un réglage": "Pesquisar definições"
  },
  "ko": {
   "Reverb": "리버브",
@@ -26147,6 +26165,8 @@
   "Haut-parleur": "스피커",
   "Sortie USB": "USB 출력",
   "USB": "USB",
-  "Écouteurs filaires": "유선 헤드폰"
+  "Écouteurs filaires": "유선 헤드폰",
+  "Aucun réglage ne correspond à « {0} »": "‘{0}’와(과) 일치하는 설정이 없습니다",
+  "Rechercher un réglage": "설정 검색"
  }
 }

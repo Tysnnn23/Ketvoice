@@ -105,8 +105,10 @@ fun SettingsScreen() {
         else -> categoryKey = null
     } }
     androidx.activity.compose.BackHandler(enabled = category != null) { back() }
-    SettingsLayout(category, onBack = ::back) {
-        if (category == null) SettingsHome(youtube.connected, youtube.name) { categoryKey = it.name }
+    val focus = remember { mutableStateOf<String?>(null) }
+    SettingsLayout(category, onBack = ::back, focus = focus) {
+        if (category == null) SettingsHome(youtube.connected, youtube.name,
+            onResult = { focus.value = it.title; categoryKey = it.category.name }) { categoryKey = it.name }
         else key(category) {
         Column(
             Modifier
@@ -1146,7 +1148,7 @@ internal fun ColumnScope.SRow(
 ) {
     val th = LocalTheme.current
     Row(
-        Modifier.fillMaxWidth()
+        Modifier.fillMaxWidth().settingsTarget(title)
             .then(if (onClick != null) Modifier.rowPress(onClick = onClick) else Modifier)
             .heightIn(min = Ket27.Metrics.row).padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -1247,7 +1249,7 @@ internal fun ColumnScope.SToggle(
     // Ket 27: flipping a switch is felt, as on iOS.
     val tick = com.ketvoice.app.ui.motion.rememberHaptics()
     Row(
-        Modifier.fillMaxWidth().toggleable(checked, role = Role.Switch,
+        Modifier.fillMaxWidth().settingsTarget(title).toggleable(checked, role = Role.Switch,
             onValueChange = { tick(com.ketvoice.app.ui.motion.Haptics.Kind.Tick); onChecked(it) })
             .heightIn(min = Ket27.Metrics.row).padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
