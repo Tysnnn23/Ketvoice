@@ -59,6 +59,7 @@ internal object SettingsSearch {
         ap("Fond noir", "En mode sombre, les pages restent noir pur, même sous la couleur d'une pochette (écrans OLED)"),
         ap("Couleur d'accent", "Barre de lecture, scrub, boutons et progression"),
         ap("Verre liquide", "Flou, réfraction et reflets sur l'interface"),
+        ap("Style du verre", "La matière du verre et ses animations"),
         ap("Mode performance", "Garde les effets visibles et allège ceux qu'on remarque à peine : verre sans réfraction, paroles sans flou, fond animé à cadence réduite, images sans fondu"),
         ap("Mode économie auto", "Batterie à 20 % ou moins hors charge, ou appareil très chaud : le mode performance s'active le temps qu'il faut"),
         ap("Flou dynamique", "Réfraction en temps réel derrière les panneaux"),
