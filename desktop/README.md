@@ -230,12 +230,12 @@ into the next, and « Suivant » blends. `BeatModelOnnxTest` checks the pinned d
   wave, duet sides from `LyricsDuet`, romanization (`Romanizer`, switch at the top of the source menu),
   translation (`LyricsTranslation`), a click on a line seeks, scrolling pauses the following (« Suivre la
   lecture », or by itself after 4 s). Lines come from `LyricsRepo` through `LocalLyricsFeed` (tests use a
-  fixture). `DeskLyricsWords` repeats the app's `LyricsWords`, which lives inside the Android `LyricsView.kt`.
+  fixture). The sung line is drawn by the shared `KaraokeDraw` and `LyricsWords` since 9.0 (see below).
 - `canvas/VideoFrames.kt` — FFmpeg (avformat, avcodec, swscale; LGPL build) decodes a Canvas to BGRA at the
   size it is shown, never above the source, looping. `canvas/CanvasPlayback.kt` plays it on its own thread
   with three buffers; `ui/CanvasViews.kt` draws the frames (`CanvasVideo`), places them with the app's
   `CanvasFit` rule (`DeskCanvasFit`, `FittedCanvas`: fill when close in shape, else whole with an extension
-  of its colours) in the full player, and as the album page's motion header (`MotionHeader`).
+  of its colours) in the album page's motion header (`MotionHeader`); the players size it by format (9.0, below).
 - `data/CanvasRepo.kt` — the phone's cache: `<data>/files/canvas/<name>.mp4`, names in `ketvoice_canvas`
   (per title, `album:` stand-in during a lookup, `page:`, `none:`), owner's and published Canvas, a
   first-frame still `<name>.poster.jpg` (FFmpeg + Skia JPEG) shown until the video draws.
@@ -482,3 +482,44 @@ Android in-app updater skips those tags, as it skips the model tags).
   minimised, the cache is emptied and the heap shrinks. The launcher runs G1 with `-Xms64m -Xmx1536m`, tight free ratios
   and a periodic GC every 2 min, so an idle app gives memory back to Windows. Pages are disposed when left
   (`AnimatedContent`), which `MemoryBudgetTest` checks with the heap and resident memory after browsing.
+
+## Personnalisation, lyrics 8.3/9.0, artwork by format and the lyrics editor (Windows, 9.0 port)
+
+- **Shared code moved out of Android files** (the phone's behaviour unchanged): `theme/CoverLegibility.kt` (from
+  `CoverLook.kt`), `ThemeGuard.guarded` (the colours `ThemeGuard.theme` builds its `KetTheme` from, now an extension in
+  `Theme.kt`), `theme/AppFontFiles.kt` (the font resources; `AppFonts.Choice.file` names the file), `ui/player/LyricsWords.kt`
+  (`LyricsWords` and `segmentProgress`, from `LyricsView.kt`) and `ui/player/PlayerArtworkMath.kt` (`PlayerArtworkSize`).
+  The desktop compiles `ThemeColors`, `Appearance`, `Personalization`, `KaraokeDraw`, `LyricsBlur` and `LyricsDraft` as
+  they are; `app/theme/AppFontFiles.kt` is the desktop counterpart (the same five `.ttf` from `app/src/main/res/font`,
+  copied to `font/` by `processResources`; their SIL OFL texts are in « À propos »). `android.os.Build.VERSION.SDK_INT`
+  is 35 in the shim (the blur effects exist).
+- **Theme** (`ui/theme/DesktopKet27.kt`): `DesktopTheme.colors` gives `KetColors.of`/`glass` exactly while
+  `themeColors` is empty and `accentArgb` is the stored default (the desktop keeps its own red then); a custom theme
+  goes through `ThemeGuard.guarded` (page = ground, surfaces = cards and menus, text = labels, AA for text, secondary
+  and accent), translucent over the Mica with « Verre Windows 11 ». « Taille du texte » scales `LocalDensity.fontScale`,
+  `Ket27Desk.Radius` follows « Arrondis », `Ket27Desk.Metrics` the « Densité des listes » (title rows 40/48/56 dp,
+  compact rows 48/56/64), `Ket27Desk.font` the listener's font (Inter keeps its 300–800 weights).
+- **Settings › Personnalisation** (`ui/PersonalizePage.kt`, `ui/ColorPicker.kt`; one line in `SettingsPage`): live
+  preview, presets, light/dark side, the four colours with the picker (field, hue, swatches, hex, contrast on each
+  ground), the guard's note, « Partager le thème » (copies the `KT1.` code with the phone's message), « Importer un
+  thème », fonts, text size (applied on release), corners, density; lyrics font, size, alignment, sung colour (custom
+  colour picker), blur level, word motion; « Tout réinitialiser ». The store saves every key under its Android name;
+  `sanitizeAppearance` refuses values out of range at load and `PersonalBackup` accepts the phone's synced looks.
+- **Lyrics** (`ui/Lyrics.kt`): the sung line is the phone's 8.3 drawing (feathered fill at one pace, the word lifting
+  and growing ≤ 3.5 %, held notes swelling letter by letter with a blurred glow), far lines blur by distance
+  (`LyricsBlur`, off while scrolling, under reduced motion or the performance mode), and « Paroles à ton goût »
+  applies: font, size, centred or left, sung colour (`deskSungInk`: over the full player as on the phone; in the panel
+  « Blanc » is the theme's ink and the other colours are made AA on the panel), blur level and motion.
+- **Artwork by format** (`ui/PlayerArtwork.kt`): the windowed player's Canvas is the left column's full width from its
+  top at its own height (capped by the window, then only its foot is cut, the foot fading into the moving colours); the
+  full-screen column is as wide as the media's shape at the screen's height, at most 54 % of the width (a cover keeps
+  the square column). Never bars, never stretched; the shape glides.
+- **Lyrics editor** (`ui/LyricsEditor.kt`, `ui/LyricsEditorModel.kt`): opened from a title's menu (« Éditer les
+  paroles… ») and the lyrics' source menu. Text step (paste, current lyrics, open a file, type), then timing on the
+  heard position (the lyrics clock) by line or by word: Space or the round button stamps, ←/→ ±50 ms (Shift ±10 ms),
+  ↑/↓ move the cursor, Ctrl+Z undo, Ctrl+S save, Esc close (asks when times would be lost); preview through Cascade;
+  « Enregistrer » keeps the title's own lyrics (`CustomLyrics`, enhanced LRC when words are timed, offset reset);
+  « Exporter » writes LRC or enhanced LRC through a save dialog (`LyricsEditorIo`, faked in tests).
+- Tests: `PersonalizeTest` (defaults identical, guarded custom themes, accent, sizes, fonts and licences, settings kept
+  and sanitized, sync checks, share code, the page in the shell, sung ink, full-screen sizes), `LyricsEditorDeskTest`
+  (model, file seam, keys through the window, preview, close dialog, menus), shared `LivelyLyricsTest`, `LyricsDraftTest`.

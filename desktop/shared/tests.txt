@@ -50,3 +50,6 @@ smartlib/SoundCloudImportTest.kt
 stems/StemsTest.kt
 stems/UvrTest.kt
 automix/MixKeysTest.kt
+# Windows 9.0 port: lyrics 8.3 values and the lyrics editor's draft.
+ui/player/LivelyLyricsTest.kt
+data/LyricsDraftTest.kt

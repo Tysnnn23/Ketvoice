@@ -97,6 +97,7 @@ class TrackActions(private val player: PlayerControls, private val library: Libr
                 com.ketvoice.desktop.ketmix.KetmixStudioDesk.request.value = com.ketvoice.desktop.ketmix.KetmixStudioDesk.Request(from, to)
             })
         }
+        add(MenuItem("Éditer les paroles…", KetIcons.Lyrics, "lyrics-editor") { LyricsEditorDesk.open(track) })
         add(MenuItem("-"))
         add(MenuItem("Télécharger", KetIcons.Download, "download") { library.download(track) })
         if (track.album.isNotBlank()) add(MenuItem("Aller à l'album", KetIcons.Album, "go-album") { openAlbum(track) })

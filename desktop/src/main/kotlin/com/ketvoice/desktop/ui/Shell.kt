@@ -145,6 +145,7 @@ private fun ShellLayout(initialPanel: Panel, initialSidebar: Dp, initialFullPlay
         override fun back() = nav.back()
     }
     fun onKey(e: KeyEvent): Boolean = if (com.ketvoice.desktop.ketmix.KetmixStudioDesk.request.value != null) StudioKeys.handle(e)
+        else if (LyricsEditorDesk.request.value != null) LyricsEditorKeys.handle(e)
         else Shortcuts.handle(e, player, actions, keys)
 
     Box(Modifier.fillMaxSize().background(ket.window).onPreviewKeyEvent(::onKey).focusRequester(rootFocus).focusable().testTag("shell")) {
@@ -181,6 +182,7 @@ private fun ShellLayout(initialPanel: Panel, initialSidebar: Dp, initialFullPlay
         }
         if (PlayerFullScreen.on.value) FullScreenPlayer(onExit = { PlayerFullScreen.on.value = false })
         KetmixStudioHost()
+        LyricsEditorHost()
         PlaybackToast()
         if (ImportDialog.open.value) ImportPlaylistDialog(onDismiss = { ImportDialog.open.value = false })
         com.ketvoice.desktop.update.Updates.dialog.value?.let { release ->

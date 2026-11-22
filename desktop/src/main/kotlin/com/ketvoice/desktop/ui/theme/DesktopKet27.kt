@@ -12,29 +12,35 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.platform.Font
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.ketvoice.app.data.AppSettings
+import com.ketvoice.app.theme.AppFonts
+import com.ketvoice.app.theme.AppShape
+import com.ketvoice.app.theme.CoverLegibility
 import com.ketvoice.app.theme.DesignTokens
+import com.ketvoice.app.theme.ThemeCodec
+import com.ketvoice.app.theme.ThemeColors
+import com.ketvoice.app.theme.ThemeGuard
+import com.ketvoice.app.theme.ThemePresets
 
 /**
  * Ket 27 on the desktop. The app's `theme/Ket27.kt` loads Inter through an Android font resource
  * (`R.font.inter_variable`), which Compose Desktop has no form of, so its tokens are repeated here
  * unchanged (colours, the San Francisco text styles set for Inter, the 4 dp spacing grid, the radii);
- * Inter itself is the same file, read from the classpath. Keep both in step.
+ * the fonts are the same files, read from the classpath (`AppFontFiles.kt`). Keep both in step.
+ * « Personnalisation » (9.0): the font is the listener's ([AppFonts]), the radii follow « Arrondis » and the rows
+ * « Densité des listes » ([AppShape]); every default is the look the desktop always had.
  */
 object Ket27Desk {
-    @OptIn(androidx.compose.ui.text.ExperimentalTextApi::class)
-    val font: FontFamily by lazy {
-        val bytes = Ket27Desk::class.java.classLoader.getResourceAsStream("font/inter_variable.ttf")?.use { it.readBytes() }
-            ?: return@lazy FontFamily.SansSerif
-        FontFamily(listOf(300, 400, 500, 600, 700, 800).map { w ->
-            Font("Inter-$w", bytes, FontWeight(w), variationSettings = FontVariation.Settings(FontVariation.weight(w)))
-        })
-    }
+    /** The interface's typeface: Inter, or the one picked in « Personnalisation ». Read in composition, it follows the setting. */
+    val font: FontFamily get() = AppFonts.family(AppSettings.appFont.value)
 
     object Type {
         val largeTitle = TextStyle(fontWeight = FontWeight.Bold, fontSize = 34.sp, lineHeight = 41.sp, letterSpacing = (-.5).sp)
@@ -57,10 +63,23 @@ object Ket27Desk {
         val page = 32.dp
     }
 
+    /** The radii of the Ket 27 ladder, scaled by « Arrondis » (0 % square, 200 % twice as round). */
     object Radius {
-        val thumb = 10.dp; val artwork = 14.dp; val card = 24.dp; val group = 26.dp; val sheet = 34.dp
+        val thumb: Dp get() = AppShape.radius(10.dp)
+        val artwork: Dp get() = AppShape.radius(14.dp)
+        val card: Dp get() = AppShape.radius(24.dp)
+        val group: Dp get() = AppShape.radius(26.dp)
+        val sheet: Dp get() = AppShape.radius(34.dp)
         /** A desktop menu or tooltip (smaller than a phone sheet). */
-        val menu = 12.dp
+        val menu: Dp get() = AppShape.radius(12.dp)
+        /** The hover shape of a title row. */
+        val row: Dp get() = AppShape.radius(8.dp)
+    }
+
+    /** Row heights by « Densité des listes »: the album row (48 dp) and the compact row with artwork (56 dp). */
+    object Metrics {
+        val trackRow: Dp get() = when (AppSettings.listDensity.value) { AppShape.COMPACT -> 40.dp; AppShape.AIRY -> 56.dp; else -> 48.dp }
+        val compactRow: Dp get() = when (AppSettings.listDensity.value) { AppShape.COMPACT -> 48.dp; AppShape.AIRY -> 64.dp; else -> 56.dp }
     }
 }
 
@@ -110,16 +129,54 @@ data class KetColors(
     }
 }
 
+/**
+ * The window's colours from the settings: Ket 27's own (exactly [KetColors.of] / [KetColors.glass]) unless the listener
+ * made a theme (« Thèmes complets », [themeColors] as stored) or picked an accent ([accentArgb]; the stored default
+ * keeps the desktop's own red). A custom theme goes through the app's contrast guard ([ThemeGuard]): text, secondary
+ * text and the accent keep WCAG AA on the page and on the cards.
+ */
+object DesktopTheme {
+    fun colors(dark: Boolean, glass: Boolean, themeColors: String = AppSettings.themeColors.value,
+               accentArgb: Long = AppSettings.accentArgb.value): KetColors {
+        val custom = ThemeCodec.parse(themeColors)
+        val chosen = if (accentArgb == ThemePresets.DEFAULT_ACCENT) null else Color(accentArgb.toInt()).copy(alpha = 1f)
+        if (custom == null) {
+            val base = if (glass) KetColors.glass(dark) else KetColors.of(dark)
+            return chosen?.let { base.copy(accent = CoverLegibility.readableAccent(it, KetColors.of(dark).ground, base.card)) } ?: base
+        }
+        return custom(custom, dark, glass, chosen ?: DesignTokens.Color.accent)
+    }
+
+    /** A listener's theme, guarded, as the desktop's surfaces: page = ground, surfaces = cards and menus, text = labels. */
+    fun custom(theme: ThemeColors, dark: Boolean, glass: Boolean, accent: Color): KetColors {
+        val g = ThemeGuard.guarded(theme.side(dark), dark, accent)
+        val ink = g.text
+        val solid = KetColors(dark = g.isDark, ground = g.background, material = lerp(g.background, g.surface, .5f).copy(alpha = if (g.isDark) .8f else .85f),
+            card = g.surface, raised = g.surface, label = ink, secondary = g.secondary, tertiary = ink.copy(alpha = .3f),
+            hairline = g.hairline, accent = g.accent, hover = ink.copy(alpha = if (g.isDark) .08f else .04f),
+            selected = ink.copy(alpha = if (g.isDark) .14f else .08f), fill = ink.copy(alpha = if (g.isDark) .14f else .10f))
+        return if (!glass) solid else solid.copy(window = Color.Transparent, ground = g.background.copy(alpha = .6f),
+            material = g.surface.copy(alpha = .72f), acrylic = true)
+    }
+
+    /** « Taille du texte » on top of the system's own scale; at 100 % the density is left as it is. */
+    fun scaled(density: Density, percent: Int = AppSettings.textScale.value): Density {
+        val k = AppShape.textScale(percent)
+        return if (k == 1f) density else Density(density.density, density.fontScale * k)
+    }
+}
+
 val LocalKet = staticCompositionLocalOf { KetColors.of(dark = true) }
 
-/** Ket 27 for the window: Inter everywhere, the system's light or dark look unless [dark] is given. */
+/** Ket 27 for the window: the listener's font and colours, the system's light or dark look unless [dark] is given. */
 @Composable
 fun KetDesktopTheme(dark: Boolean = isSystemInDarkTheme(), glass: Boolean = false, content: @Composable () -> Unit) {
-    val colors = if (glass) KetColors.glass(dark) else KetColors.of(dark)
+    val colors = DesktopTheme.colors(dark, glass)
     val scheme = if (dark) darkColorScheme(primary = colors.accent, background = colors.ground, surface = colors.card, onSurface = colors.label)
     else lightColorScheme(primary = colors.accent, background = colors.ground, surface = colors.card, onSurface = colors.label)
     MaterialTheme(colorScheme = scheme) {
         CompositionLocalProvider(
+            LocalDensity provides DesktopTheme.scaled(LocalDensity.current),
             LocalKet provides colors,
             LocalContentColor provides colors.label,
             LocalTextStyle provides Ket27Desk.Type.body.copy(fontFamily = Ket27Desk.font, color = colors.label),

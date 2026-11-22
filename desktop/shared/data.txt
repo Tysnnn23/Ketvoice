@@ -63,3 +63,5 @@ smartlib/TidalImport.kt
 smartlib/SoundCloudImport.kt
 data/SpotifyPlaylistImport.kt
 smartlib/PublicPage.kt
+# Lyrics editor (Windows, 9.0): the pure draft, LRC and enhanced LRC.
+data/LyricsDraft.kt

@@ -46,6 +46,23 @@ object SettingsStore {
         // A value of the wrong type (written by an older or newer version) keeps the default instead of failing.
         for ((key, state) in entries) if (key in p) runCatching { read(p, key, state.value) }.getOrNull()?.let { state.value = it }
         AppSettings.glassIntensity.value = com.ketvoice.app.glass.GlassClarity.sanitize(AppSettings.glassIntensity.value)
+        sanitizeAppearance()
+    }
+
+    /** « Personnalisation » values read back as the Android store reads them: out of range or unknown is the default. */
+    internal fun sanitizeAppearance() {
+        val s = AppSettings
+        if (!com.ketvoice.app.theme.ThemeCodec.valid(s.themeColors.value)) s.themeColors.value = ""
+        if (!com.ketvoice.app.theme.AppFonts.valid(s.appFont.value)) s.appFont.value = com.ketvoice.app.theme.AppFonts.INTER
+        if (s.lyricsFont.value.isNotEmpty() && !com.ketvoice.app.theme.AppFonts.valid(s.lyricsFont.value)) s.lyricsFont.value = ""
+        fun clamp(state: MutableState<Int>, range: IntRange, default: Int) { if (state.value !in range) state.value = default }
+        clamp(s.textScale, com.ketvoice.app.theme.AppShape.TEXT_MIN..com.ketvoice.app.theme.AppShape.TEXT_MAX, 100)
+        clamp(s.cornerScale, com.ketvoice.app.theme.AppShape.CORNER_MIN..com.ketvoice.app.theme.AppShape.CORNER_MAX, 100)
+        clamp(s.listDensity, 0..2, 1)
+        clamp(s.lyricsScale, com.ketvoice.app.theme.LyricsLook.SIZE_MIN..com.ketvoice.app.theme.LyricsLook.SIZE_MAX, 100)
+        clamp(s.lyricsAlign, 0..1, 0); clamp(s.lyricsSung, 0..3, 0)
+        clamp(s.lyricsBlurLevel, 0..100, 100); clamp(s.lyricsMotion, 0..100, 100)
+        if (s.lyricsSungArgb.value !in 0L..0xFFFFFFFFL) s.lyricsSungArgb.value = 0xFFFFFFFFL
     }
 
     private fun read(p: SharedPreferences, key: String, current: Any?): Any? = when (current) {
@@ -107,15 +124,21 @@ object PersonalBackup {
         "albumHeader" to 0..2, "reverbAmount" to 0..100, "reverbSize" to 0..100, "reverbDamping" to 0..100,
         "lyricsMode" to 0..2, "automixIntensity" to 0..2, "ketmixAnalysis" to 0..2, "ketmixStyle" to 0..9, "ketmixStemsQuality" to 0..2,
         "voiceLevel" to 0..100, "canvasCacheMb" to 256..2048, "smartOfflineGb" to 0..10, "smartOfflinePercent" to 10..50,
-        "downloadQualityMode" to 0..2)
-    private val strings = setOf("lyricsSource", "translateLanguage", "translationSource", "wifiQuality", "mobileQuality", "equalizerGains", "language")
+        "downloadQualityMode" to 0..2,
+        // « Personnalisation » (9.0), as on Android.
+        "textScale" to com.ketvoice.app.theme.AppShape.TEXT_MIN..com.ketvoice.app.theme.AppShape.TEXT_MAX,
+        "cornerScale" to com.ketvoice.app.theme.AppShape.CORNER_MIN..com.ketvoice.app.theme.AppShape.CORNER_MAX, "listDensity" to 0..2,
+        "lyricsScale" to com.ketvoice.app.theme.LyricsLook.SIZE_MIN..com.ketvoice.app.theme.LyricsLook.SIZE_MAX, "lyricsAlign" to 0..1,
+        "lyricsSung" to 0..3, "lyricsBlurLevel" to 0..100, "lyricsMotion" to 0..100)
+    private val strings = setOf("lyricsSource", "translateLanguage", "translationSource", "wifiQuality", "mobileQuality", "equalizerGains", "language",
+        "themeColors", "appFont", "lyricsFont")
 
     internal fun setting(key: String, raw: Any?): Any? = when {
         key in booleans -> raw as? Boolean
         // « Pochette et Canvas » (2) became the animated Canvas (1), as AlbumHeader.normalize does.
         key == "albumHeader" -> (raw as? Number)?.toInt()?.takeIf { it in 0..2 }?.let { if (it == 2) 1 else it }
         key in integers -> (raw as? Number)?.toInt()?.takeIf { it in integers.getValue(key) }
-        key == "accentArgb" -> (raw as? Number)?.toLong()?.takeIf { it in 0L..0xffffffffL }
+        key == "accentArgb" || key == "lyricsSungArgb" -> (raw as? Number)?.toLong()?.takeIf { it in 0L..0xffffffffL }
         key == "cacheBytes" -> (raw as? Number)?.toLong()?.takeIf { it in 500_000_000L..10_000_000_000L }
         key == "glassTint" || key == "glassIntensity" -> (raw as? Number)?.toFloat()?.takeIf { it.isFinite() && it in 0f..1f }
         key in strings -> (raw as? String)?.takeIf { value ->
@@ -124,6 +147,9 @@ object PersonalBackup {
                 "lyricsSource" -> value in MusicApi.lyricSources + listOf("auto", "off")
                 "language" -> AppLanguage.all.any { it.label == value }
                 "equalizerGains" -> value.matches(Regex("-?\\d{1,2}(,-?\\d{1,2}){0,9}"))
+                "themeColors" -> com.ketvoice.app.theme.ThemeCodec.valid(value)
+                "appFont" -> com.ketvoice.app.theme.AppFonts.valid(value)
+                "lyricsFont" -> value.isEmpty() || com.ketvoice.app.theme.AppFonts.valid(value)
                 "translateLanguage", "translationSource" -> value in TranslationLanguages.codes ||
                     TranslationLanguages.codes.any { TranslationLanguages.name(it) == value }
                 else -> false

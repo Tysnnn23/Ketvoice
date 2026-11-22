@@ -10,3 +10,14 @@ data/UiTextDictionary.kt
 # Cascade lyrics (winlyrics): the motion values and the word alignment, pure Kotlin.
 ui/player/LyricsMotion.kt
 ui/player/LyricsPresentation.kt
+# Personnalisation (Windows, 9.0): theme colours and codes, contrast guard, fonts, sizes, corners and the lyrics' look.
+# Appearance.kt draws its fonts through AppFontFiles.kt, which has a desktop counterpart (classpath fonts).
+theme/CoverLegibility.kt
+theme/ThemeColors.kt
+theme/Appearance.kt
+theme/Personalization.kt
+# Lyrics 8.3 and 9.0: softer fill, living held notes, blur of far lines; artwork height by format.
+ui/player/LyricsWords.kt
+ui/player/KaraokeDraw.kt
+ui/player/LyricsBlur.kt
+ui/player/PlayerArtworkMath.kt

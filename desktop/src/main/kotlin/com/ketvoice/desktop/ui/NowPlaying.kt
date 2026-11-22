@@ -324,9 +324,9 @@ fun FullPlayer(onClose: () -> Unit) {
         Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.verticalGradient(
             listOf(Color.Black.copy(alpha = .10f), Color.Transparent, Color.Black.copy(alpha = .28f)))))
         Row(Modifier.fillMaxSize()) {
-            // The artwork's place: the cover, or the Canvas placed as CanvasFit places it, its colours around it.
+            // The artwork's place: the cover, or the Canvas edge to edge at the height of its format (8.3).
             Box(Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.Center) {
-                if (canvas != null) FittedCanvas(canvas, state.isPlaying, ground, Modifier.fillMaxSize(), shade = .18f)
+                if (canvas != null) PlayerCanvasByFormat(canvas, state.isPlaying, Modifier.fillMaxSize())
                 else androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize().padding(start = 64.dp, end = 32.dp, top = 64.dp, bottom = 64.dp),
                     contentAlignment = Alignment.Center) {
                     Artwork(track.coverUrl, minOf(maxWidth, maxHeight, 460.dp), radius = Ket27Desk.Radius.card, shadow = 40.dp)

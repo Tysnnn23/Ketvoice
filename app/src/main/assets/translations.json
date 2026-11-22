@@ -2843,7 +2843,9 @@
   "grille": "grid",
   "liste": "list",
   "{0} sections sur {1}": "{0} of {1} sections",
-  "{0} éléments": "{0} items"
+  "{0} éléments": "{0} items",
+  "Fermer l'éditeur ?": "Close the editor?",
+  "Espace : caler · ← → : ±50 ms · ↑ ↓ : ligne · Ctrl+Z : annuler": "Space: time · ← →: ±50 ms · ↑ ↓: line · Ctrl+Z: undo"
  },
  "hi": {
   "Reverb": "रीवर्ब",
@@ -5689,7 +5691,9 @@
   "grille": "ग्रिड",
   "liste": "सूची",
   "{0} sections sur {1}": "{1} में से {0} सेक्शन",
-  "{0} éléments": "{0} आइटम"
+  "{0} éléments": "{0} आइटम",
+  "Fermer l'éditeur ?": "संपादक बंद करें?",
+  "Espace : caler · ← → : ±50 ms · ↑ ↓ : ligne · Ctrl+Z : annuler": "Space: समय दें · ← →: ±50 ms · ↑ ↓: पंक्ति · Ctrl+Z: पूर्ववत करें"
  },
  "ja": {
   "Reverb": "リバーブ",
@@ -8535,7 +8539,9 @@
   "grille": "グリッド",
   "liste": "リスト",
   "{0} sections sur {1}": "{1}セクション中{0}",
-  "{0} éléments": "{0}項目"
+  "{0} éléments": "{0}項目",
+  "Fermer l'éditeur ?": "エディタを閉じますか？",
+  "Espace : caler · ← → : ±50 ms · ↑ ↓ : ligne · Ctrl+Z : annuler": "スペース：タイミングを打つ · ← →：±50 ms · ↑ ↓：行 · Ctrl+Z：元に戻す"
  },
  "zh": {
   "Reverb": "混响",
@@ -11381,7 +11387,9 @@
   "grille": "网格",
   "liste": "列表",
   "{0} sections sur {1}": "{1} 个版块中的 {0} 个",
-  "{0} éléments": "{0} 项"
+  "{0} éléments": "{0} 项",
+  "Fermer l'éditeur ?": "关闭编辑器？",
+  "Espace : caler · ← → : ±50 ms · ↑ ↓ : ligne · Ctrl+Z : annuler": "空格：对时 · ← →：±50 毫秒 · ↑ ↓：行 · Ctrl+Z：撤销"
  },
  "ru": {
   "Reverb": "Реверберация",
@@ -14227,7 +14235,9 @@
   "grille": "сетка",
   "liste": "список",
   "{0} sections sur {1}": "Разделов: {0} из {1}",
-  "{0} éléments": "Пунктов: {0}"
+  "{0} éléments": "Пунктов: {0}",
+  "Fermer l'éditeur ?": "Закрыть редактор?",
+  "Espace : caler · ← → : ±50 ms · ↑ ↓ : ligne · Ctrl+Z : annuler": "Пробел: отметить · ← →: ±50 мс · ↑ ↓: строка · Ctrl+Z: отменить"
  },
  "it": {
   "Reverb": "Riverbero",
@@ -17073,7 +17083,9 @@
   "grille": "griglia",
   "liste": "elenco",
   "{0} sections sur {1}": "{0} sezioni su {1}",
-  "{0} éléments": "{0} voci"
+  "{0} éléments": "{0} voci",
+  "Fermer l'éditeur ?": "Chiudere l'editor?",
+  "Espace : caler · ← → : ±50 ms · ↑ ↓ : ligne · Ctrl+Z : annuler": "Spazio: sincronizza · ← →: ±50 ms · ↑ ↓: riga · Ctrl+Z: annulla"
  },
  "es": {
   "Reverb": "Reverb",
@@ -19919,7 +19931,9 @@
   "grille": "cuadrícula",
   "liste": "lista",
   "{0} sections sur {1}": "{0} de {1} secciones",
-  "{0} éléments": "{0} elementos"
+  "{0} éléments": "{0} elementos",
+  "Fermer l'éditeur ?": "¿Cerrar el editor?",
+  "Espace : caler · ← → : ±50 ms · ↑ ↓ : ligne · Ctrl+Z : annuler": "Espacio: marcar · ← →: ±50 ms · ↑ ↓: línea · Ctrl+Z: deshacer"
  },
  "de": {
   "Reverb": "Reverb",
@@ -22765,7 +22779,9 @@
   "grille": "Raster",
   "liste": "Liste",
   "{0} sections sur {1}": "{0} von {1} Abschnitten",
-  "{0} éléments": "{0} Einträge"
+  "{0} éléments": "{0} Einträge",
+  "Fermer l'éditeur ?": "Editor schließen?",
+  "Espace : caler · ← → : ±50 ms · ↑ ↓ : ligne · Ctrl+Z : annuler": "Leertaste: timen · ← →: ±50 ms · ↑ ↓: Zeile · Strg+Z: rückgängig"
  },
  "pt": {
   "Reverb": "Reverb",
@@ -25611,7 +25627,9 @@
   "grille": "grade",
   "liste": "lista",
   "{0} sections sur {1}": "{0} de {1} seções",
-  "{0} éléments": "{0} itens"
+  "{0} éléments": "{0} itens",
+  "Fermer l'éditeur ?": "Fechar o editor?",
+  "Espace : caler · ← → : ±50 ms · ↑ ↓ : ligne · Ctrl+Z : annuler": "Espaço: marcar · ← →: ±50 ms · ↑ ↓: linha · Ctrl+Z: desfazer"
  },
  "ko": {
   "Reverb": "리버브",
@@ -28457,6 +28475,8 @@
   "grille": "격자",
   "liste": "목록",
   "{0} sections sur {1}": "{1}개 섹션 중 {0}개",
-  "{0} éléments": "{0}개 항목"
+  "{0} éléments": "{0}개 항목",
+  "Fermer l'éditeur ?": "편집기를 닫을까요?",
+  "Espace : caler · ← → : ±50 ms · ↑ ↓ : ligne · Ctrl+Z : annuler": "스페이스: 타이밍 찍기 · ← →: ±50 ms · ↑ ↓: 줄 · Ctrl+Z: 실행 취소"
  }
 }

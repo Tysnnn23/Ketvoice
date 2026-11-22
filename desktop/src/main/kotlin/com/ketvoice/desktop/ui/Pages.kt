@@ -354,6 +354,7 @@ fun SettingsPage() {
                 SettingRow("Apparence", com.ketvoice.app.data.AppText.t(if (ket.dark) "Sombre (suit Windows)" else "Clair (suit Windows)"))
             }
         }
+        personalizeSettings()
         item { SectionHeader("Ketmix") }
         item { KetmixSettings() }
         item { SectionHeader("Séparation des voix") }

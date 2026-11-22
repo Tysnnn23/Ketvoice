@@ -81,9 +81,10 @@ class CascadeLyricsTest {
     }
 
     @Test fun onlyAHeldNoteGlows() {
-        assertEquals(0f, DeskLyricsWords.glow(.5f, 600))
-        assertTrue(DeskLyricsWords.glow(.5f, 2_400) > .9f)
-        assertEquals(0f, DeskLyricsWords.glow(1f, 2_400))
-        assertEquals(1f, DeskLyricsWords.lift(1f))
+        val w = com.ketvoice.app.ui.player.LyricsWords
+        assertEquals(0f, w.glow(.5f, 600))
+        assertTrue(w.glow(.5f, 2_400) > .9f)
+        assertEquals(0f, w.glow(1f, 2_400))
+        assertEquals(1f, w.lift(900, 900))
     }
 }
