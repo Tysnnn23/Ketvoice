@@ -155,7 +155,10 @@ internal object SettingsKind : SyncKind {
         "noRepeatSuggestions", "playNextOnSwipe", "haptics", "autoOfflineFavorites", "playlistUpdates", "wrappedSound",
         // « Personnalisation » (2026-11-22). An older version's apply() skips keys it does not list.
         "themeColors", "appFont", "textScale", "cornerScale", "listDensity", "lyricsFont", "lyricsScale", "lyricsAlign",
-        "lyricsSung", "lyricsSungArgb", "lyricsBlurLevel", "lyricsMotion")
+        "lyricsSung", "lyricsSungArgb", "lyricsBlurLevel", "lyricsMotion") +
+        // 9.0 « Disposition » (data/LayoutSettings.kt; spelled out here: the desktop build shares this file, not that one).
+        setOf("layoutTabs", "layoutHome", "layoutPlayer", "layoutMini", "layoutArtwork", "layoutCanvas", "layoutLibraryViews",
+            "layoutLibrarySorts", "layoutMenu", "layoutSwipeEnd", "layoutSwipeStart")
 
     override fun snapshot(context: Context, previous: SyncDoc): Map<String, String> {
         com.ketvoice.app.data.SettingsStore.save()

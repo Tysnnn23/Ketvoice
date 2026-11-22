@@ -142,7 +142,7 @@ fun HomeScreen() {
                                 letterSpacing = 2.2.sp, modifier = Modifier.padding(start = 8.dp))
                         }
                         com.ketvoice.app.ui.common.PageTitle(greeting,
-                            Modifier.padding(top = 6.dp).asHeading().testTag("home-greeting"), maxLines = 2)
+                            Modifier.padding(top = 6.dp).asHeading().homeEditGesture().testTag("home-greeting"), maxLines = 2)
                     }
                     if (!layout.hasRail) Box(Modifier.size(DesignTokens.Space.touch).clip(androidx.compose.foundation.shape.CircleShape)
                         .clickable(role = androidx.compose.ui.semantics.Role.Button) { AppUi.showAccount.value = true },
@@ -156,102 +156,35 @@ fun HomeScreen() {
             }
             // What another of the listener's devices plays, to resume here (signed in only).
             item(key = "resume-elsewhere") { ResumeElsewhereBanner() }
-            // 8.2 « À la une »: large cards; only the one in the middle plays its Canvas (see HomeFeaturedRow).
-            if (featured.isNotEmpty()) item(key = "featured") {
-                StaggeredReveal(order = 0) { HomeFeaturedRow(featured, onScreen = { homeItemMostlyShown(state, "featured") }) }
-            }
-            // 7.0 « Pour toi »: what was playing and the mix of the day, as two large calm cards.
-            item(key = "for-you") {
-                StaggeredReveal(order = 0) {
-                    HomeForYouLead(recent, hasResume = playingId != null || recent.isNotEmpty(), daily = daily, wide = wide)
-                }
-            }
-            // The ambiances of the smart library, in the order that suits the hour.
-            item(key = "moods") { StaggeredReveal(order = 1) { HomeMoods(hour) } }
-            // New releases of the artists followed and played most: a fixed place now, right under the moods.
-            if (releases.isNotEmpty()) item(key = "home-releases") {
-                StaggeredReveal(order = 2) { HomeReleasesShelf(releases, Modifier.learnsOpens(HomeBlock.Releases.learningKey)) }
-            }
-            // What was played last, within a thumb's reach: tiles to start again from, or large covers.
-            item(key = "recent-heading") {
-                EditorialHeader("Récents", onMore = if (recent.isNotEmpty()) ({
-                    AppUi.openCatalog(CatalogRequest("history", "history", "Historique"))
-                }) else null) {
-                    androidx.compose.material3.IconButton(onClick = { grid = !grid }, modifier = Modifier.size(48.dp)) {
-                        Icon(Icons.Filled.GridView, "Changer la présentation des récents", tint = theme.secondary, modifier = Modifier.size(22.dp))
+            // 9.0 « Accueil modulable »: the sections in the listener's order, the hidden ones left out (today's order by default).
+            HomeSections.shown(com.ketvoice.app.data.LayoutSettings.home.value).forEach { section ->
+                when (section) {
+                    // 8.2 « À la une »: large cards; only the one in the middle plays its Canvas (see HomeFeaturedRow).
+                    HomeSection.Featured -> if (featured.isNotEmpty()) item(key = "featured") {
+                        StaggeredReveal(order = 0) { HomeFeaturedRow(featured, onScreen = { homeItemMostlyShown(state, "featured") }) }
                     }
-                }
-            }
-            if (recent.isEmpty()) item {
-                Text("Vos titres écoutés apparaîtront ici.", color = theme.secondary, fontSize = 13.sp,
-                    modifier = Modifier.padding(horizontal = 18.dp, vertical = 18.dp))
-            } else if (!grid) item(key = "recent-carousel") {
-                // Large covers to start again from, the way a record shelf reads: the title playing wears its bars.
-                StaggeredReveal(order = 3) {
-                    RecentCarousel(recent.take(20), playingId, isPlaying,
-                        onPlay = { index -> Player.playQueue(recent, index) })
-                }
-            } else item(key = "recent-grid") {
-                BoxWithConstraints(Modifier.fillMaxWidth().padding(horizontal = com.ketvoice.app.ui.common.pageMargin).testTag("home-recent-grid")) {
-                    val columns = recentColumns(maxWidth.value)
-                    val side = (maxWidth - 12.dp * (columns - 1)) / columns
-                    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                        recent.take(columns * 2).chunked(columns).forEachIndexed { line, tracks ->
-                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                tracks.forEachIndexed { column, track ->
-                                    RecentCover(track, side, playingId == track.id, isPlaying,
-                                        onPlay = { Player.playQueue(recent, line * columns + column) })
-                                }
-                            }
+                    // 7.0 « Pour toi »: what was playing and the mix of the day, as two large calm cards.
+                    HomeSection.ForYou -> item(key = "for-you") {
+                        StaggeredReveal(order = 0) {
+                            HomeForYouLead(recent, hasResume = playingId != null || recent.isNotEmpty(), daily = daily, wide = wide)
                         }
                     }
-                }
-            }
-            // 7.2: Favoris, Téléchargements and the pinned playlists, with their covers (replaces « Épinglés »).
-            item(key = "home-library") { StaggeredReveal(order = 4) { HomeLibraryShelf() } }
-            // What the public profiles the listener follows published and listened to (signed in, once there is some).
-            item(key = "friends") { com.ketvoice.app.ui.friends.FriendsHomeSection() }
-            // The other personal mixes (the mix of the day leads the page).
-            item(key = "mixes") { HomeMixes(Modifier.padding(bottom = 6.dp), exclude = daily?.first?.id) }
-            item(key = "week") { HomeWeekCard() }
-            item(key = "replay") { HomeReplayLink() }
-            // The first personal shelf always leads; the album row and the other shelves
-            // take turns from one launch to the next, and never move while browsing.
-            // Fewer sections fighting for attention (7.0): the catalogue's albums and two shelves close the page.
-            homeBlockOrder(PersonalMixes.sessionSeed, shelfRows.size, albums.isNotEmpty(), false, learned).forEach { block ->
-                when (block) {
-                    // Placed under the moods since 7.0, never rotated.
-                    HomeBlock.Releases -> Unit
-                    HomeBlock.Albums -> if (albums.isNotEmpty()) item(key = "home-albums") {
-                        Column(Modifier.learnsOpens(block.learningKey)) {
-                        EditorialHeader("Albums du catalogue", onMore = { AppUi.selectTab(AppUi.EXPLORER) })
-                        val cell = com.ketvoice.app.ui.adaptive.shelfCell(156.dp, com.ketvoice.app.ui.common.pageMargin, HomeLayout.gap)
-                        HomeRow {
-                            itemsIndexed(albums, key = { _, album -> album.id }) { _, album ->
-                                val albumCover = com.ketvoice.app.data.MediaOverrides.albumCover(album.title, album.artist, album.coverUrl)
-                                val zoom = com.ketvoice.app.ui.motion.rememberZoomSource(albumCover, com.ketvoice.app.theme.Ket27.Radius.artwork)
-                                // 7.5 motion75: its Canvas is fetched ahead on Wi-Fi while the tile is on screen.
-                                com.ketvoice.app.ui.sub.PrefetchAlbumCanvas(CatalogRequest("album", album.id, album.title))
-                                Column(Modifier.width(cell).clickable {
-                                    zoom.openCatalog(CatalogRequest("album", album.id, album.title))
-                                }) {
-                                    Cover(album.title, albumCover, cell, com.ketvoice.app.theme.Ket27.Radius.artwork, modifier = com.ketvoice.app.ui.motion.zoomSourceOf(zoom))
-                                    Text(album.title, localize = false, color = theme.onBackground, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
-                                        maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))
-                                    Text(album.artist, localize = false, color = theme.secondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                }
-                            }
-                        }
-                        }
+                    // The ambiances of the smart library, in the order that suits the hour.
+                    HomeSection.Moods -> item(key = "moods") { StaggeredReveal(order = 1) { HomeMoods(hour) } }
+                    // New releases of the artists followed and played most: a fixed place now, right under the moods.
+                    HomeSection.Releases -> if (releases.isNotEmpty()) item(key = "home-releases") {
+                        StaggeredReveal(order = 2) { HomeReleasesShelf(releases, Modifier.learnsOpens(HomeBlock.Releases.learningKey)) }
                     }
-                    else -> shelfRows.getOrNull(block.ordinal - 1)?.let { (shelf, shown) ->
-                        if (shown.isNotEmpty()) item(key = "home-shelf:${block.ordinal - 1}:${shelf.title}") {
-                            Column(Modifier.learnsOpens(block.learningKey)) {
-                                EditorialHeader(shelf.title, subtitle = shelf.subtitle)
-                                TrackCarousel(shown)
-                            }
-                        }
-                    }
+                    HomeSection.Recent -> homeRecent(recent, playingId, isPlaying, grid) { grid = !grid }
+                    // 7.2: Favoris, Téléchargements and the pinned playlists, with their covers (replaces « Épinglés »).
+                    HomeSection.Library -> item(key = "home-library") { StaggeredReveal(order = 4) { HomeLibraryShelf() } }
+                    // What the public profiles the listener follows published and listened to (signed in, once there is some).
+                    HomeSection.Friends -> item(key = "friends") { com.ketvoice.app.ui.friends.FriendsHomeSection() }
+                    // The other personal mixes (the mix of the day leads the page).
+                    HomeSection.Mixes -> item(key = "mixes") { HomeMixes(Modifier.padding(bottom = 6.dp), exclude = daily?.first?.id) }
+                    HomeSection.Week -> item(key = "week") { HomeWeekCard() }
+                    HomeSection.Replay -> item(key = "replay") { HomeReplayLink() }
+                    HomeSection.Catalog -> homeCatalog(albums, shelfRows, learned)
                 }
             }
             if (shelves.isEmpty()) item {
@@ -263,6 +196,93 @@ fun HomeScreen() {
             }
         }
         HomeInlineTitle(greeting, collapse, Modifier.align(Alignment.TopCenter))
+    }
+    // 9.0: a long press on the greeting opens « Modifier l'accueil » (the same editor as in Settings).
+    if (HomeSections.editing.value) com.ketvoice.app.ui.settings.HomeSectionsSheet(onClose = { HomeSections.editing.value = false })
+}
+
+/** « Récents » (9.0: one movable section of Home): the heading with its layout switch, then tiles or large covers. */
+private fun androidx.compose.foundation.lazy.LazyListScope.homeRecent(recent: List<Track>, playingId: String?, isPlaying: Boolean,
+                                                                      grid: Boolean, onGrid: () -> Unit) {
+    // What was played last, within a thumb's reach: tiles to start again from, or large covers.
+    item(key = "recent-heading") {
+        EditorialHeader("Récents", onMore = if (recent.isNotEmpty()) ({
+            AppUi.openCatalog(CatalogRequest("history", "history", "Historique"))
+        }) else null) {
+            androidx.compose.material3.IconButton(onClick = { onGrid() }, modifier = Modifier.size(48.dp)) {
+                Icon(Icons.Filled.GridView, "Changer la présentation des récents", tint = LocalTheme.current.secondary, modifier = Modifier.size(22.dp))
+            }
+        }
+    }
+    if (recent.isEmpty()) item {
+        Text("Vos titres écoutés apparaîtront ici.", color = LocalTheme.current.secondary, fontSize = 13.sp,
+            modifier = Modifier.padding(horizontal = 18.dp, vertical = 18.dp))
+    } else if (!grid) item(key = "recent-carousel") {
+        // Large covers to start again from, the way a record shelf reads: the title playing wears its bars.
+        StaggeredReveal(order = 3) {
+            RecentCarousel(recent.take(20), playingId, isPlaying,
+                onPlay = { index -> Player.playQueue(recent, index) })
+        }
+    } else item(key = "recent-grid") {
+        BoxWithConstraints(Modifier.fillMaxWidth().padding(horizontal = com.ketvoice.app.ui.common.pageMargin).testTag("home-recent-grid")) {
+            val columns = recentColumns(maxWidth.value)
+            val side = (maxWidth - 12.dp * (columns - 1)) / columns
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                recent.take(columns * 2).chunked(columns).forEachIndexed { line, tracks ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        tracks.forEachIndexed { column, track ->
+                            RecentCover(track, side, playingId == track.id, isPlaying,
+                                onPlay = { Player.playQueue(recent, line * columns + column) })
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** The catalogue's albums and the personal shelves that close Home (9.0: one movable section). */
+private fun androidx.compose.foundation.lazy.LazyListScope.homeCatalog(albums: List<Album>,
+                                                                       shelfRows: List<Pair<HomeShelf, List<Track>>>,
+                                                                       learned: Map<String, Double>) {
+    // The first personal shelf always leads; the album row and the other shelves
+    // take turns from one launch to the next, and never move while browsing.
+    // Fewer sections fighting for attention (7.0): the catalogue's albums and two shelves close the page.
+    homeBlockOrder(PersonalMixes.sessionSeed, shelfRows.size, albums.isNotEmpty(), false, learned).forEach { block ->
+        when (block) {
+            // Placed under the moods since 7.0, never rotated.
+            HomeBlock.Releases -> Unit
+            HomeBlock.Albums -> if (albums.isNotEmpty()) item(key = "home-albums") {
+                Column(Modifier.learnsOpens(block.learningKey)) {
+                EditorialHeader("Albums du catalogue", onMore = { AppUi.selectTab(AppUi.EXPLORER) })
+                val cell = com.ketvoice.app.ui.adaptive.shelfCell(156.dp, com.ketvoice.app.ui.common.pageMargin, HomeLayout.gap)
+                HomeRow {
+                    itemsIndexed(albums, key = { _, album -> album.id }) { _, album ->
+                        val albumCover = com.ketvoice.app.data.MediaOverrides.albumCover(album.title, album.artist, album.coverUrl)
+                        val zoom = com.ketvoice.app.ui.motion.rememberZoomSource(albumCover, com.ketvoice.app.theme.Ket27.Radius.artwork)
+                        // 7.5 motion75: its Canvas is fetched ahead on Wi-Fi while the tile is on screen.
+                        com.ketvoice.app.ui.sub.PrefetchAlbumCanvas(CatalogRequest("album", album.id, album.title))
+                        Column(Modifier.width(cell).clickable {
+                            zoom.openCatalog(CatalogRequest("album", album.id, album.title))
+                        }) {
+                            Cover(album.title, albumCover, cell, com.ketvoice.app.theme.Ket27.Radius.artwork, modifier = com.ketvoice.app.ui.motion.zoomSourceOf(zoom))
+                            Text(album.title, localize = false, color = LocalTheme.current.onBackground, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
+                                maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))
+                            Text(album.artist, localize = false, color = LocalTheme.current.secondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                    }
+                }
+                }
+            }
+            else -> shelfRows.getOrNull(block.ordinal - 1)?.let { (shelf, shown) ->
+                if (shown.isNotEmpty()) item(key = "home-shelf:${block.ordinal - 1}:${shelf.title}") {
+                    Column(Modifier.learnsOpens(block.learningKey)) {
+                        EditorialHeader(shelf.title, subtitle = shelf.subtitle)
+                        TrackCarousel(shown)
+                    }
+                }
+            }
+        }
     }
 }
 

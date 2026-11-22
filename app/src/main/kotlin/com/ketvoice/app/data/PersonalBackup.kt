@@ -70,6 +70,8 @@ internal object PersonalBackup {
     internal fun setting(key: String, raw: Any?): Any? = when {
         // A season (6.2) is restored only while it lasts; turning it off always goes through.
         key == "seasonTheme" -> (raw as? String)?.takeIf { Seasons.storable(it) }
+        // 9.0 « Disposition »: each layout key is checked against the ids and limits this version knows.
+        key in LayoutSettings.keys -> LayoutSettings.checked(key, raw)
         key in booleans || key.startsWith("design212_") && DesignChoices.all.any { "design212_${it.code}" == key } -> raw as? Boolean
         // 7.5 motion75: « Pochette et Canvas » (2) became the animated Canvas (1), in backups and in sync alike.
         key == "albumHeader" -> (raw as? Number)?.toInt()?.takeIf { it in integers.getValue(key) }?.let(com.ketvoice.app.ui.sub.AlbumHeader::normalize)

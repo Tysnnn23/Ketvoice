@@ -486,14 +486,21 @@ private fun TransportButton(onClick: () -> Unit, modifier: Modifier = Modifier, 
 }
 
 @Composable
-fun PlayerBottomBar(
+internal fun PlayerBottomBar(
     lyricsActive: Boolean = false,
     onLyrics: () -> Unit,
     onOutput: () -> Unit,
     onProfile: () -> Unit,
     onQueue: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /** 9.0 « Lecteur modulable »: the listener's buttons; the default is this row as it always was. */
+    actions: List<PlayerAction> = PlayerLayout.DEFAULT_BAR,
+    track: com.ketvoice.app.data.Track? = null
 ) {
+    if (actions != PlayerLayout.DEFAULT_BAR) {
+        CustomPlayerBottomBar(actions, track, lyricsActive, PlayerActionHandlers(onLyrics, onOutput, onProfile, onQueue), modifier)
+        return
+    }
     Row(
         modifier
             .fillMaxWidth()
@@ -542,6 +549,28 @@ fun PlayerBottomBar(
         SmallCircleButton(onClick = onQueue, active = false, transparent = true) { tint ->
             QueueGlyph(Modifier.size(25.dp).semantics { contentDescription = com.ketvoice.app.data.AppText.t("File d'attente") }, tint)
         }
+    }
+}
+
+/** The bottom row with the listener's buttons: one round button at each end, those between in the glass capsule. */
+@Composable
+private fun CustomPlayerBottomBar(actions: List<PlayerAction>, track: com.ketvoice.app.data.Track?, lyricsActive: Boolean,
+                                  handlers: PlayerActionHandlers, modifier: Modifier) {
+    val row = PlayerLayout.row(actions)
+    Row(modifier.fillMaxWidth().padding(vertical = 2.dp).testTag("player-bottom-row"), verticalAlignment = Alignment.CenterVertically) {
+        row.start?.let { PlayerActionCircle(it, track, lyricsActive, handlers) }
+        Spacer(Modifier.weight(1f))
+        if (row.middle.isNotEmpty()) GlassPanel(Modifier.height(48.dp).playerCapsuleWidth(row.middle.size), RoundedCornerShape(999.dp),
+            GlassParams.navigation(dark = true), enabled = AppSettings.liquidGlass.value) {
+            Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
+                row.middle.forEachIndexed { i, action ->
+                    if (i > 0) CapsuleDivider()
+                    PlayerActionSegment(action, track, handlers)
+                }
+            }
+        }
+        Spacer(Modifier.weight(1f))
+        row.end?.let { PlayerActionCircle(it, track, lyricsActive, handlers) }
     }
 }
 

@@ -171,5 +171,12 @@
  "Ket 27": "name of the design language, never translated",
  "personalize-colour-{0}": "test tag of a Personalisation row",
  "preset-{0}": "test tag of a theme preset",
- "{0}-value": "test tag of a slider value"
+ "{0}-value": "test tag of a slider value",
+ "forYou": "stored id of a layout choice (9.0 Disposition), never shown",
+ "mixPoint": "stored id of a layout choice (9.0 Disposition), never shown",
+ "playNext": "stored id of a layout choice (9.0 Disposition), never shown",
+ "removeDownload": "stored id of a layout choice (9.0 Disposition), never shown",
+ "layout-sort-{0}": "test tag of a library order row in Settings, never shown",
+ "layout-view-{0}": "test tag of a library view row in Settings, never shown",
+ "lyricsEditor": "stored id of a layout choice (9.0 Disposition), never shown"
 }

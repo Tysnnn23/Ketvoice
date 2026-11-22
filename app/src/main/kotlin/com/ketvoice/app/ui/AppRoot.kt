@@ -91,6 +91,8 @@ fun AppRoot() {
         AppSettings.highPerformanceMode.value, com.ketvoice.app.BuildConfig.IS_QUEST))
     // Android's high-contrast text turns the tinted glass on (7.1).
     com.ketvoice.app.glass.HighContrastText.Observe()
+    // 9.0 « Onglets à la carte »: without Home in the bar the app opens on the bar's first page.
+    LaunchedEffect(Unit) { com.ketvoice.app.ui.chrome.TabLayout.openStart() }
     val themeMode = AppSettings.themeMode.value
     // A seasonal theme (6.2) is a dark look of its own while it is on; the listener's choices are kept.
     val inEffect = com.ketvoice.app.data.Seasons.inEffect()

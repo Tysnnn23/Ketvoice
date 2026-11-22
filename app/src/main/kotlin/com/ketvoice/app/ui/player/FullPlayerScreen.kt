@@ -122,7 +122,9 @@ fun FullPlayerScreen(
     val canvasExcluded by CanvasRepo.excluded.collectAsState()
     // Exclusion par morceau (menu •••) : pochette statique uniquement.
     val mixing = com.ketvoice.app.automix.Automix.ui.collectAsState().value.phase == com.ketvoice.app.automix.Automix.Phase.Mixing
-    val canvasPath = canvas[track.id]?.takeIf { track.id !in canvasExcluded && !com.ketvoice.app.data.MediaOverrides.canvasHiddenInPlayer(track) }
+    // 9.0: « Canvas dans le lecteur » off shows the cover in the player (the Canvas stays on the device and elsewhere).
+    val canvasPath = canvas[track.id]?.takeIf { track.id !in canvasExcluded && !com.ketvoice.app.data.MediaOverrides.canvasHiddenInPlayer(track) &&
+        com.ketvoice.app.data.LayoutSettings.canvas.value }
     // How the owner framed this album's artwork for the player (or for its page, which the player follows).
     val artworkFrame = com.ketvoice.app.data.MediaOverrides.playerFrame(track)
     // Only a verified portrait 9:16 clip can enter the full-window mode.
@@ -398,7 +400,8 @@ fun FullPlayerScreen(
                 // 8.3: the artwork takes the height of what it shows, down to the controls (the title sits on its foot).
                 val artwork = rememberArtworkHeight(track.id, if (canvasFocus || panoramicCanvasActive(canvasPath)) null else canvasPath,
                     sceneWidth, cap = tabletop?.sceneHeightDp?.dp ?: contentBottom, frame = artworkFrame, canvasAspect = canvasAspect,
-                    fixed = if (wide) safeHeight else null)
+                    fixed = if (wide) safeHeight else null,
+                    scale = if (tabletop == null) PlayerLayout.artworkScale(com.ketvoice.app.data.LayoutSettings.artwork.intValue) else 1f)
                 val headerPad = if (wide) 18.dp else margin
                 val density = LocalDensity.current
                 val fitTop = topInset + 52.dp
@@ -654,7 +657,8 @@ fun FullPlayerScreen(
                             onLyrics = { navigate(if (page == PlayerPage.LYRICS) PlayerPage.ARTWORK else PlayerPage.LYRICS) },
                             onOutput = { sheet = "audio" },
                             onProfile = { AppUi.showAccount.value = true },
-                            onQueue = { navigate(PlayerPage.QUEUE) }, modifier = lateRise)
+                            onQueue = { navigate(PlayerPage.QUEUE) }, modifier = lateRise,
+                            actions = PlayerLayout.bar(com.ketvoice.app.data.LayoutSettings.player.value), track = track)
                         // Ketogether (6.1): during a session the device label is the session's live pill.
                         com.ketvoice.app.ui.together.KetogetherDeviceLabel(Modifier.align(Alignment.CenterHorizontally).padding(top = 12.dp, bottom = 13.dp).then(lateRise)) {
                         Text(if (com.ketvoice.app.BuildConfig.IS_QUEST) "Ce casque" else "Ce téléphone", color = Color(0xFF777984), fontSize = 10.sp,

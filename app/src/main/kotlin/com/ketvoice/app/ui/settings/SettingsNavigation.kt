@@ -14,7 +14,7 @@ internal enum class SettingsCategory(val title: String, val groups: Set<String>)
     Storage("Stockage", setOf("STOCKAGE")),
     About("À propos", setOf("À PROPOS")),
     /** « Personnalisation » (2026-11-22): its own page ([PersonalizePage]), last so the other pages keep their tiles' colours. */
-    Personalize("Personnalisation", emptySet());
+    Personalize("Personnalisation", setOf("DISPOSITION"));
 
     companion object {
         fun fromKey(key: String?): SettingsCategory? = entries.firstOrNull { it.name == key }

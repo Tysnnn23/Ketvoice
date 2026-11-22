@@ -196,6 +196,8 @@ object SettingsStore {
             p.getBoolean(com.ketvoice.app.util.LauncherIcons.MIGRATED_KEY, false))
         s.seasonTheme.value = runCatching { p.getString("seasonTheme", "") }.getOrNull().orEmpty()
         loadPersonalization(p)
+        // 9.0 « Disposition »: tabs, Home, player, library, menu and swipes (empty or missing: today's layout).
+        LayoutSettings.load(p)
         // A season is over: its theme goes back to the listener's look, silently.
         if (Seasons.expire()) p.edit()
             .putString("seasonTheme", s.seasonTheme.value)
@@ -339,6 +341,7 @@ object SettingsStore {
             .putString("seasonTheme", s.seasonTheme.value)
             .also { editor -> DesignChoices.all.forEach { editor.putBoolean("design212_${it.code}", DesignChoices.enabled(it.code)) } }
             .also(::savePersonalization)
+            .also(LayoutSettings::save)
             .apply()
     }
 
