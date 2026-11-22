@@ -95,6 +95,7 @@ internal object SettingsSearch {
         p("Préparer les titres téléchargés", "Téléphone en charge, les titres téléchargés sont analysés (et leurs voix séparées si le modèle est là) avant même d'être joués : leurs mix sont prêts tout de suite."),
         l("Diagnostic des sources", "Teste chaque source sur le titre en cours"),
         l("Source des paroles", "Priorité : syllabes natives, mots, lignes, texte"),
+        l("Ordre des sources de paroles", "Les sources sont essayées dans cet ordre : la première qui a des paroles gagne"),
         l("Mode des paroles", "Syllabes ou mots seulement si la source les fournit"),
         l("Paroles sur l'écran verrouillé", "La ligne chantée dans une notification silencieuse, sur l'écran verrouillé et dans le volet ; la suivante en dessous.", notQuest),
         l("Flou des paroles", "Les lignes éloignées de celle chantée s'estompent dans un léger flou."),

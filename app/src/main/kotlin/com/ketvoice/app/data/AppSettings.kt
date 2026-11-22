@@ -106,6 +106,8 @@ object AppSettings {
     /** A light vibration when the bass passes from one title to the next (app in front only). */
     val ketmixHaptics = mutableStateOf(false)
     val lyricsSource = mutableStateOf("auto")
+    /** « Ordre des sources de paroles » (8.4): the automatic lookup's order, ids joined by commas; empty is the default ([LyricsOrder]). */
+    val lyricsOrder = mutableStateOf("")
     val betterLyricsKey = mutableStateOf("")
     val lyricaUrl = mutableStateOf("")
     val translationSource = mutableStateOf("en")

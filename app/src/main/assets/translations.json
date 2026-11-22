@@ -2614,7 +2614,13 @@
   "USB": "USB",
   "Écouteurs filaires": "Wired headphones",
   "Aucun réglage ne correspond à « {0} »": "No setting matches “{0}”",
-  "Rechercher un réglage": "Search settings"
+  "Rechercher un réglage": "Search settings",
+  "Déplacer": "Move",
+  "Les sources sont essayées dans cet ordre : la première qui a des paroles gagne": "Sources are tried in this order: the first one with lyrics wins",
+  "Les sources sont essayées dans cet ordre : la première qui a des paroles gagne. Faites glisser une source pour la déplacer.": "Sources are tried in this order: the first one with lyrics wins. Drag a source to move it.",
+  "Ordre des sources de paroles": "Lyrics source order",
+  "Rétablir l'ordre par défaut": "Restore the default order",
+  "Une source choisie dans « Source des paroles » est utilisée seule : cet ordre sert à la source Automatique.": "A source picked in “Lyrics source” is used on its own: this order applies to the Automatic source."
  },
  "hi": {
   "Reverb": "रीवर्ब",
@@ -5231,7 +5237,13 @@
   "USB": "USB",
   "Écouteurs filaires": "वायर्ड हेडफ़ोन",
   "Aucun réglage ne correspond à « {0} »": "“{0}” से कोई सेटिंग मेल नहीं खाती",
-  "Rechercher un réglage": "सेटिंग खोजें"
+  "Rechercher un réglage": "सेटिंग खोजें",
+  "Déplacer": "खिसकाएँ",
+  "Les sources sont essayées dans cet ordre : la première qui a des paroles gagne": "स्रोत इसी क्रम में आज़माए जाते हैं: जिसमें पहले बोल मिलें, वही चुना जाता है",
+  "Les sources sont essayées dans cet ordre : la première qui a des paroles gagne. Faites glisser une source pour la déplacer.": "स्रोत इसी क्रम में आज़माए जाते हैं: जिसमें पहले बोल मिलें, वही चुना जाता है। किसी स्रोत को खिसकाने के लिए उसे खींचें।",
+  "Ordre des sources de paroles": "बोल स्रोतों का क्रम",
+  "Rétablir l'ordre par défaut": "डिफ़ॉल्ट क्रम पुनर्स्थापित करें",
+  "Une source choisie dans « Source des paroles » est utilisée seule : cet ordre sert à la source Automatique.": "“बोल स्रोत” में चुना गया स्रोत अकेले उपयोग होता है: यह क्रम स्वचालित स्रोत पर लागू होता है।"
  },
  "ja": {
   "Reverb": "リバーブ",
@@ -7848,7 +7860,13 @@
   "USB": "USB",
   "Écouteurs filaires": "有線ヘッドホン",
   "Aucun réglage ne correspond à « {0} »": "「{0}」に一致する設定はありません",
-  "Rechercher un réglage": "設定を検索"
+  "Rechercher un réglage": "設定を検索",
+  "Déplacer": "移動",
+  "Les sources sont essayées dans cet ordre : la première qui a des paroles gagne": "ソースはこの順に試され、最初に歌詞が見つかったものが使われます",
+  "Les sources sont essayées dans cet ordre : la première qui a des paroles gagne. Faites glisser une source pour la déplacer.": "ソースはこの順に試され、最初に歌詞が見つかったものが使われます。ドラッグして並べ替えられます。",
+  "Ordre des sources de paroles": "歌詞ソースの順序",
+  "Rétablir l'ordre par défaut": "デフォルトの順序に戻す",
+  "Une source choisie dans « Source des paroles » est utilisée seule : cet ordre sert à la source Automatique.": "「歌詞のソース」で選んだソースは単独で使われます。この順序は「自動」に適用されます。"
  },
  "zh": {
   "Reverb": "混响",
@@ -10465,7 +10483,13 @@
   "USB": "USB",
   "Écouteurs filaires": "有线耳机",
   "Aucun réglage ne correspond à « {0} »": "没有与“{0}”匹配的设置",
-  "Rechercher un réglage": "搜索设置"
+  "Rechercher un réglage": "搜索设置",
+  "Déplacer": "移动",
+  "Les sources sont essayées dans cet ordre : la première qui a des paroles gagne": "按此顺序尝试各来源：第一个有歌词的来源胜出",
+  "Les sources sont essayées dans cet ordre : la première qui a des paroles gagne. Faites glisser une source pour la déplacer.": "按此顺序尝试各来源：第一个有歌词的来源胜出。拖动来源即可调整位置。",
+  "Ordre des sources de paroles": "歌词来源顺序",
+  "Rétablir l'ordre par défaut": "恢复默认顺序",
+  "Une source choisie dans « Source des paroles » est utilisée seule : cet ordre sert à la source Automatique.": "在“歌词来源”中选定的来源会单独使用：此顺序仅适用于“自动”来源。"
  },
  "ru": {
   "Reverb": "Реверберация",
@@ -13082,7 +13106,13 @@
   "USB": "USB",
   "Écouteurs filaires": "Проводные наушники",
   "Aucun réglage ne correspond à « {0} »": "Нет настроек по запросу «{0}»",
-  "Rechercher un réglage": "Поиск настроек"
+  "Rechercher un réglage": "Поиск настроек",
+  "Déplacer": "Переместить",
+  "Les sources sont essayées dans cet ordre : la première qui a des paroles gagne": "Источники проверяются в этом порядке: побеждает первый, где есть текст",
+  "Les sources sont essayées dans cet ordre : la première qui a des paroles gagne. Faites glisser une source pour la déplacer.": "Источники проверяются в этом порядке: побеждает первый, где есть текст. Перетащите источник, чтобы переместить его.",
+  "Ordre des sources de paroles": "Порядок источников текста",
+  "Rétablir l'ordre par défaut": "Вернуть порядок по умолчанию",
+  "Une source choisie dans « Source des paroles » est utilisée seule : cet ordre sert à la source Automatique.": "Источник, выбранный в «Источник текста», используется отдельно: этот порядок действует для автоматического источника."
  },
  "it": {
   "Reverb": "Riverbero",
@@ -15699,7 +15729,13 @@
   "USB": "USB",
   "Écouteurs filaires": "Cuffie con cavo",
   "Aucun réglage ne correspond à « {0} »": "Nessuna impostazione corrisponde a «{0}»",
-  "Rechercher un réglage": "Cerca un'impostazione"
+  "Rechercher un réglage": "Cerca un'impostazione",
+  "Déplacer": "Sposta",
+  "Les sources sont essayées dans cet ordre : la première qui a des paroles gagne": "Le fonti vengono provate in quest'ordine: vince la prima che ha il testo",
+  "Les sources sont essayées dans cet ordre : la première qui a des paroles gagne. Faites glisser une source pour la déplacer.": "Le fonti vengono provate in quest'ordine: vince la prima che ha il testo. Trascina una fonte per spostarla.",
+  "Ordre des sources de paroles": "Ordine delle fonti dei testi",
+  "Rétablir l'ordre par défaut": "Ripristina l'ordine predefinito",
+  "Une source choisie dans « Source des paroles » est utilisée seule : cet ordre sert à la source Automatique.": "Una fonte scelta in «Fonte dei testi» viene usata da sola: quest'ordine vale per la fonte Automatica."
  },
  "es": {
   "Reverb": "Reverb",
@@ -18316,7 +18352,13 @@
   "USB": "USB",
   "Écouteurs filaires": "Auriculares con cable",
   "Aucun réglage ne correspond à « {0} »": "Ningún ajuste coincide con «{0}»",
-  "Rechercher un réglage": "Buscar un ajuste"
+  "Rechercher un réglage": "Buscar un ajuste",
+  "Déplacer": "Mover",
+  "Les sources sont essayées dans cet ordre : la première qui a des paroles gagne": "Las fuentes se prueban en este orden: gana la primera que tenga letra",
+  "Les sources sont essayées dans cet ordre : la première qui a des paroles gagne. Faites glisser une source pour la déplacer.": "Las fuentes se prueban en este orden: gana la primera que tenga letra. Arrastra una fuente para moverla.",
+  "Ordre des sources de paroles": "Orden de las fuentes de letras",
+  "Rétablir l'ordre par défaut": "Restablecer el orden predeterminado",
+  "Une source choisie dans « Source des paroles » est utilisée seule : cet ordre sert à la source Automatique.": "Una fuente elegida en «Fuente de la letra» se usa sola: este orden se aplica a la fuente Automática."
  },
  "de": {
   "Reverb": "Reverb",
@@ -20933,7 +20975,13 @@
   "USB": "USB",
   "Écouteurs filaires": "Kabelgebundene Kopfhörer",
   "Aucun réglage ne correspond à « {0} »": "Keine Einstellung passt zu „{0}“",
-  "Rechercher un réglage": "Einstellung suchen"
+  "Rechercher un réglage": "Einstellung suchen",
+  "Déplacer": "Verschieben",
+  "Les sources sont essayées dans cet ordre : la première qui a des paroles gagne": "Die Quellen werden in dieser Reihenfolge versucht: Die erste mit Liedtext gewinnt",
+  "Les sources sont essayées dans cet ordre : la première qui a des paroles gagne. Faites glisser une source pour la déplacer.": "Die Quellen werden in dieser Reihenfolge versucht: Die erste mit Liedtext gewinnt. Ziehe eine Quelle, um sie zu verschieben.",
+  "Ordre des sources de paroles": "Reihenfolge der Liedtextquellen",
+  "Rétablir l'ordre par défaut": "Standardreihenfolge wiederherstellen",
+  "Une source choisie dans « Source des paroles » est utilisée seule : cet ordre sert à la source Automatique.": "Eine unter „Liedtextquelle“ gewählte Quelle wird allein verwendet: Diese Reihenfolge gilt für die automatische Quelle."
  },
  "pt": {
   "Reverb": "Reverb",
@@ -23550,7 +23598,13 @@
   "USB": "USB",
   "Écouteurs filaires": "Auscultadores com fios",
   "Aucun réglage ne correspond à « {0} »": "Nenhuma definição corresponde a “{0}”",
-  "Rechercher un réglage": "Pesquisar definições"
+  "Rechercher un réglage": "Pesquisar definições",
+  "Déplacer": "Mover",
+  "Les sources sont essayées dans cet ordre : la première qui a des paroles gagne": "As fontes são tentadas por esta ordem: ganha a primeira que tiver letra",
+  "Les sources sont essayées dans cet ordre : la première qui a des paroles gagne. Faites glisser une source pour la déplacer.": "As fontes são tentadas por esta ordem: ganha a primeira que tiver letra. Arraste uma fonte para a mover.",
+  "Ordre des sources de paroles": "Ordem das fontes de letras",
+  "Rétablir l'ordre par défaut": "Repor a ordem predefinida",
+  "Une source choisie dans « Source des paroles » est utilisée seule : cet ordre sert à la source Automatique.": "Uma fonte escolhida em «Fonte da letra» é usada sozinha: esta ordem aplica-se à fonte Automática."
  },
  "ko": {
   "Reverb": "리버브",
@@ -26167,6 +26221,12 @@
   "USB": "USB",
   "Écouteurs filaires": "유선 헤드폰",
   "Aucun réglage ne correspond à « {0} »": "‘{0}’와(과) 일치하는 설정이 없습니다",
-  "Rechercher un réglage": "설정 검색"
+  "Rechercher un réglage": "설정 검색",
+  "Déplacer": "이동",
+  "Les sources sont essayées dans cet ordre : la première qui a des paroles gagne": "이 순서대로 소스를 시도하며, 가사가 있는 첫 번째 소스가 사용됩니다",
+  "Les sources sont essayées dans cet ordre : la première qui a des paroles gagne. Faites glisser une source pour la déplacer.": "이 순서대로 소스를 시도하며, 가사가 있는 첫 번째 소스가 사용됩니다. 소스를 끌어서 옮기세요.",
+  "Ordre des sources de paroles": "가사 소스 순서",
+  "Rétablir l'ordre par défaut": "기본 순서로 되돌리기",
+  "Une source choisie dans « Source des paroles » est utilisée seule : cet ordre sert à la source Automatique.": "‘가사 소스’에서 고른 소스는 단독으로 사용됩니다. 이 순서는 자동 소스에 적용됩니다."
  }
 }

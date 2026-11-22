@@ -82,6 +82,11 @@ object LyricsRepo {
             }
         }
         _state.value = State(loading = true, sourceKey = source, trackId = track.id)
+        val order = AppSettings.lyricsOrder.value
+        if (source == MusicApi.SRC_AUTO && LyricsOrder.custom(order)) {
+            job = scope.launch { inOrder(track, LyricsOrder.parse(order), mode == 1, refresh, gen, source) }
+            return
+        }
         job = scope.launch {
             var bestRank = -1
             var bestPriority = Int.MAX_VALUE
@@ -107,6 +112,20 @@ object LyricsRepo {
             if (gen == generation && _state.value.loading) _state.value = State(source = MusicApi.sourceName(source), sourceKey = source, trackId = track.id)
         }
     }
+    /**
+     * « Ordre des sources de paroles » (8.4): the sources are asked together, but the lyrics shown are those of the
+     * first source in the listener's order that has some; the sources after it are then stopped.
+     */
+    private suspend fun inOrder(track: Track, sources: List<String>, plain: Boolean, refresh: Boolean, gen: Int, sourceKey: String) {
+        val result = LyricsOrder.firstInOrder(sources, { it.second.isNotEmpty() }) { src -> MusicApi.lyrics(track, plain, src, refresh) }?.second
+        if (result != null) synchronized(lock) {
+            if (gen != generation || currentTrackId != track.id) return@synchronized
+            _state.value = State(false, result.first, sourceKey, result.second, result.second.any { it.timeMs >= 0 },
+                result.second.any { it.words.size >= 2 }, result.second.any { it.syllableTimed }, trackId = track.id)
+        }
+        if (gen == generation && _state.value.loading) _state.value = State(source = MusicApi.sourceName(sourceKey), sourceKey = sourceKey, trackId = track.id)
+    }
+
     fun clear() {
         generation++
         job?.cancel()

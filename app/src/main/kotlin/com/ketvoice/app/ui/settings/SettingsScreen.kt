@@ -88,6 +88,7 @@ fun SettingsScreen() {
     var editSetting by remember { mutableStateOf("") }
     var accentOpen by remember { mutableStateOf(false) }
     var lyricsDiag by remember { mutableStateOf(false) }
+    var lyricsOrderOpen by remember { mutableStateOf(false) }
     var backupOpen by rememberSaveable { mutableStateOf(false) }
     var categoryKey by rememberSaveable { mutableStateOf<String?>(null) }
     val category = SettingsCategory.fromKey(categoryKey)
@@ -577,6 +578,11 @@ fun SettingsScreen() {
                         Player.state.value.current?.let { LyricsRepo.load(it, force = true) }
                     }
                 }
+                // 8.4: the order the automatic lookup tries the sources in.
+                SRow(KetIcons.Lyrics, "Ordre des sources de paroles",
+                    sub = "Les sources sont essayées dans cet ordre : la première qui a des paroles gagne",
+                    value = if (com.ketvoice.app.data.LyricsOrder.custom(AppSettings.lyricsOrder.value)) "Personnalisé" else "Par défaut"
+                ) { lyricsOrderOpen = true }
                 SRow(
                     KetIcons.Lyrics, "Mode des paroles",
                     sub = "Syllabes ou mots seulement si la source les fournit",
@@ -851,6 +857,7 @@ fun SettingsScreen() {
     }
 
     if (lyricsDiag) LyricsDiagnosticsDialog(onClose = { lyricsDiag = false })
+    if (lyricsOrderOpen) LyricsOrderSheet(onClose = { lyricsOrderOpen = false })
     if (backupOpen) PersonalBackupSheet(onClose = { backupOpen = false })
 
     if (editSetting.isNotBlank()) {

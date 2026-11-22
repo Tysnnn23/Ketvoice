@@ -100,6 +100,7 @@ object SettingsStore {
         if (s.lyricsSource.value !in MusicApi.lyricSources + listOf("auto", "off")) {
             s.lyricsSource.value = "auto"
         }
+        s.lyricsOrder.value = runCatching { p.getString("lyricsOrder", "") }.getOrNull().orEmpty().let { if (LyricsOrder.valid(it)) LyricsOrder.encode(LyricsOrder.parse(it)) else "" }
         s.favoriteIds.value = p.getStringSet("favoriteIds", emptySet())?.toSet() ?: emptySet()
         s.translateLanguage.value = p.getString("translateLanguage", s.translateLanguage.value) ?: "Français"
         s.lyricsRomanization.value = p.getBoolean("lyricsRomanization", false)
@@ -263,6 +264,7 @@ object SettingsStore {
             .putInt("ketmixStyle", s.ketmixStyle.value)
             .putBoolean("ketmixHaptics", s.ketmixHaptics.value)
             .putString("lyricsSource", s.lyricsSource.value)
+            .putString("lyricsOrder", s.lyricsOrder.value)
             .putStringSet("favoriteIds", s.favoriteIds.value)
             .putString("translateLanguage", s.translateLanguage.value)
             .putBoolean("lyricsRomanization", s.lyricsRomanization.value)
