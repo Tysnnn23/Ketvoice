@@ -1686,6 +1686,10 @@ object Player {
 
     fun setRepeatOne(on: Boolean) = setRepeat(all = false, one = on)
 
+    /** A repeat mode asked from outside the app (a car, an assistant, 8.4), in Media3's terms. */
+    fun setRepeatMode(mode: Int) = setRepeat(all = mode == androidx.media3.common.Player.REPEAT_MODE_ALL,
+        one = mode == androidx.media3.common.Player.REPEAT_MODE_ONE)
+
     /** Off, then the whole queue, then the current title. */
     fun cycleRepeat() {
         val s = _state.value

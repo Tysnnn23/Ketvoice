@@ -78,15 +78,17 @@ class AutoLegacyBrowserTest {
                 override fun onChildrenLoaded(parentId: String, children: MutableList<MediaBrowserCompat.MediaItem>) { tabs = children }
             })
             idleUntil("tabs") { tabs != null }
-            assertEquals(listOf("Accueil", "Favoris", "Playlists", "Téléchargements"), tabs!!.map { it.description.title.toString() })
+            assertEquals(listOf("Accueil", "Bibliothèque", "Radio", "Téléchargements"), tabs!!.map { it.description.title.toString() })
             assertTrue(tabs!!.all { it.isBrowsable && !it.isPlayable })
+            // Tab icons reach the car as resource addresses of the app.
+            assertTrue(tabs!!.all { it.description.iconUri.toString().startsWith("android.resource://${app.packageName}/drawable/") })
 
             var favorites: List<MediaBrowserCompat.MediaItem>? = null
             browser.subscribe(AutoIds.FAVORITES, object : MediaBrowserCompat.SubscriptionCallback() {
                 override fun onChildrenLoaded(parentId: String, children: MutableList<MediaBrowserCompat.MediaItem>) { favorites = children }
             })
             idleUntil("favorites") { favorites != null }
-            assertEquals(listOf("Hello", "Skyfall"), favorites!!.map { it.description.title.toString() })
+            assertEquals(listOf("Tout lire", "Lecture aléatoire", "Hello", "Skyfall"), favorites!!.map { it.description.title.toString() })
             assertTrue(favorites!!.all { it.isPlayable })
 
             var results: List<MediaBrowserCompat.MediaItem>? = null

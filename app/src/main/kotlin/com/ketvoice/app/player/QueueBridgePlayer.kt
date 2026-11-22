@@ -1,7 +1,11 @@
 package com.ketvoice.app.player
 
+import androidx.media3.common.C
 import androidx.media3.common.ForwardingPlayer
+import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
+import androidx.media3.common.Timeline
 import androidx.media3.common.util.UnstableApi
 import java.lang.reflect.InvocationHandler
 import java.lang.reflect.InvocationTargetException
@@ -18,6 +22,8 @@ internal class QueueBridgePlayer(
     private val engine: Player,
     private val onNext: () -> Unit,
     private val onPrevious: () -> Unit,
+    /** The app's queue, shown to cars and other controllers as the session's timeline (8.4); null keeps a single item. */
+    private val host: QueueHost? = null,
     /** Whether a pause or a resume may fade now (7.5, [PauseFade.applies]); the host tests say yes. */
     private val fades: () -> Boolean = {
         PauseFade.applies(audible = true, bitPerfect = com.ketvoice.app.data.AppSettings.bitPerfect.value,
@@ -28,9 +34,13 @@ internal class QueueBridgePlayer(
     // only equal to the one it added, never the same instance.
     private val listeners = HashMap<Player.Listener, Player.Listener>()
 
-    override fun getAvailableCommands(): Player.Commands = withQueueCommands(super.getAvailableCommands())
+    private val queueCommands = if (host == null) QUEUE_COMMANDS else QUEUE_COMMANDS + SHOWN_QUEUE_COMMANDS
 
-    override fun isCommandAvailable(command: Int): Boolean = command in QUEUE_COMMANDS || super.isCommandAvailable(command)
+    override fun getAvailableCommands(): Player.Commands = withCommands(super.getAvailableCommands())
+
+    override fun isCommandAvailable(command: Int): Boolean = command in queueCommands || super.isCommandAvailable(command)
+
+    private fun withCommands(commands: Player.Commands): Player.Commands = commands.buildUpon().addAll(*queueCommands).build()
 
     override fun hasNextMediaItem(): Boolean = true
     override fun hasPreviousMediaItem(): Boolean = true
@@ -155,9 +165,10 @@ internal class QueueBridgePlayer(
                 }
                 // onAvailableCommandsChanged is the only callback that carries the command set.
                 values.size == 1 && values[0] is Player.Commands -> {
-                    listener.onAvailableCommandsChanged(withQueueCommands(values[0] as Player.Commands))
+                    listener.onAvailableCommandsChanged(withCommands(values[0] as Player.Commands))
                     null
                 }
+                host != null && rewrites(listener, method.name, values) -> null
                 else -> try {
                     method.invoke(listener, *values)
                 } catch (error: InvocationTargetException) {
@@ -169,7 +180,107 @@ internal class QueueBridgePlayer(
             as Player.Listener
     }
 
+    // ---- 8.4: the app's queue as the session's timeline (Android Auto's queue screen, Bluetooth browsing).
+
+    private val shown = QueueWindows()
+    /** What [queueChanged] last announced, so an unchanged queue is not sent again. */
+    private var announced: Any? = null
+
+    private fun windows(): QueueWindows.View? {
+        val queue = host ?: return null
+        return shown.view(queue.state(), engine.currentTimeline, engine.currentMediaItemIndex, engine.currentMediaItem, queue::artwork)
+    }
+
+    override fun getCurrentTimeline(): Timeline = windows()?.timeline ?: super.getCurrentTimeline()
+    override fun getMediaItemCount(): Int = windows()?.timeline?.windowCount ?: super.getMediaItemCount()
+    override fun getMediaItemAt(index: Int): MediaItem = windows()?.item(index) ?: super.getMediaItemAt(index)
+    override fun getCurrentMediaItemIndex(): Int = windows()?.current ?: super.getCurrentMediaItemIndex()
+    @Deprecated("Deprecated in Media3", ReplaceWith("currentMediaItemIndex"))
+    override fun getCurrentWindowIndex(): Int = currentMediaItemIndex
+    override fun getCurrentPeriodIndex(): Int = windows()?.current ?: super.getCurrentPeriodIndex()
+    override fun getNextMediaItemIndex(): Int = windows()?.next() ?: super.getNextMediaItemIndex()
+    override fun getPreviousMediaItemIndex(): Int = windows()?.previous() ?: super.getPreviousMediaItemIndex()
+
+    override fun getShuffleModeEnabled(): Boolean = host?.state()?.shuffle ?: super.getShuffleModeEnabled()
+    override fun getRepeatMode(): Int = host?.state()?.let(::repeatModeOf) ?: super.getRepeatMode()
+    override fun getPlaylistMetadata(): MediaMetadata =
+        host?.let { MediaMetadata.Builder().setTitle(it.queueTitle()).build() } ?: super.getPlaylistMetadata()
+
+    /** A car or an assistant turns shuffle on or off: the app's visible shuffle, not the engine's flag. */
+    override fun setShuffleModeEnabled(shuffleModeEnabled: Boolean) {
+        val queue = host
+        if (queue != null && queue.fromOutside()) queue.setShuffle(shuffleModeEnabled) else super.setShuffleModeEnabled(shuffleModeEnabled)
+    }
+
+    /** The same for repeat: the queue, the title or off, as the app's own repeat button does. */
+    override fun setRepeatMode(repeatMode: Int) {
+        val queue = host
+        if (queue != null && queue.fromOutside()) queue.setRepeat(repeatMode) else super.setRepeatMode(repeatMode)
+    }
+
+    /** A title chosen in the car's queue: the app's queue jumps to it; the title playing is only sought. */
+    override fun seekToDefaultPosition(mediaItemIndex: Int) = seekToItem(mediaItemIndex, C.TIME_UNSET)
+    override fun seekTo(mediaItemIndex: Int, positionMs: Long) = seekToItem(mediaItemIndex, positionMs)
+
+    private fun seekToItem(index: Int, positionMs: Long) {
+        val view = windows()
+        if (view == null) {
+            if (positionMs == C.TIME_UNSET) super.seekToDefaultPosition(index) else super.seekTo(index, positionMs)
+            return
+        }
+        if (index != view.current) { view.queueIndex(index)?.let { host?.jumpTo(it) }; return }
+        if (positionMs == C.TIME_UNSET) engine.seekToDefaultPosition() else engine.seekTo(positionMs)
+    }
+
+    /** Called when the app's queue or its modes changed: the session (and the car) hear of it, once. */
+    fun queueChanged() {
+        val queue = host ?: return
+        val state = queue.state()
+        val signature = listOf(windows()?.signature, state.shuffle, repeatModeOf(state))
+        if (signature == announced) return
+        announced = signature
+        val timeline = currentTimeline
+        val events = Player.Events(androidx.media3.common.FlagSet.Builder().addAll(Player.EVENT_TIMELINE_CHANGED,
+            Player.EVENT_SHUFFLE_MODE_ENABLED_CHANGED, Player.EVENT_REPEAT_MODE_CHANGED).build())
+        listeners.keys.toList().forEach { listener ->
+            listener.onTimelineChanged(timeline, Player.TIMELINE_CHANGE_REASON_PLAYLIST_CHANGED)
+            listener.onShuffleModeEnabledChanged(shuffleModeEnabled)
+            listener.onRepeatModeChanged(repeatMode)
+            listener.onEvents(this, events)
+        }
+    }
+
+    /** The engine's own news told in the queue's terms: its timeline, its positions and the app's modes. */
+    private fun rewrites(listener: Player.Listener, name: String, values: Array<out Any?>): Boolean {
+        when {
+            name == "onTimelineChanged" && values.size == 2 -> listener.onTimelineChanged(currentTimeline, values[1] as Int)
+            name == "onPositionDiscontinuity" && values.size == 3 -> listener.onPositionDiscontinuity(
+                inQueue(values[0] as Player.PositionInfo), inQueue(values[1] as Player.PositionInfo), values[2] as Int)
+            name == "onShuffleModeEnabledChanged" && values.size == 1 -> listener.onShuffleModeEnabledChanged(shuffleModeEnabled)
+            name == "onRepeatModeChanged" && values.size == 1 -> listener.onRepeatModeChanged(repeatMode)
+            else -> return false
+        }
+        return true
+    }
+
+    private fun inQueue(position: Player.PositionInfo): Player.PositionInfo {
+        val view = windows() ?: return position
+        if (position.mediaItemIndex != engine.currentMediaItemIndex) return position
+        val uid = view.uid(view.current)
+        return Player.PositionInfo(uid, view.current, position.mediaItem, uid, view.current, position.positionMs,
+            position.contentPositionMs, position.adGroupIndex, position.adIndexInAdGroup)
+    }
+
     companion object {
+        /** Jumping to a title of the queue: offered once the queue is shown. */
+        val SHOWN_QUEUE_COMMANDS = intArrayOf(Player.COMMAND_SEEK_TO_MEDIA_ITEM)
+
+        fun repeatModeOf(state: PlayerUiState): Int = when {
+            state.repeatOne -> Player.REPEAT_MODE_ONE
+            state.repeatAll -> Player.REPEAT_MODE_ALL
+            else -> Player.REPEAT_MODE_OFF
+        }
+
         val QUEUE_COMMANDS = intArrayOf(Player.COMMAND_SEEK_TO_NEXT, Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM,
             Player.COMMAND_SEEK_TO_PREVIOUS, Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM)
 

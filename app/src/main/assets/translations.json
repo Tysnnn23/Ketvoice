@@ -2659,7 +2659,15 @@
   "{0} est absent · place gardée": "{0} is away · place kept",
   "{0} est de retour": "{0} is back",
   "{0} est passé au titre suivant": "{0} skipped to the next song",
-  "{0} est revenu au titre précédent": "{0} went back to the previous song"
+  "{0} est revenu au titre précédent": "{0} went back to the previous song",
+  "Radio": "Radio",
+  "Tout lire": "Play all",
+  "D'après vos écoutes": "Based on your listening",
+  "Lire vos téléchargements": "Play your downloads",
+  "Hors ligne : la radio a besoin d'une connexion": "Offline: radio needs a connection",
+  "Aléatoire activé": "Shuffle on",
+  "Aléatoire désactivé": "Shuffle off",
+  "Répétition désactivée": "Repeat off"
  },
  "hi": {
   "Reverb": "रीवर्ब",
@@ -5321,7 +5329,15 @@
   "{0} est absent · place gardée": "{0} अनुपस्थित हैं · जगह सुरक्षित",
   "{0} est de retour": "{0} वापस आ गए",
   "{0} est passé au titre suivant": "{0} अगले गाने पर गए",
-  "{0} est revenu au titre précédent": "{0} पिछले गाने पर लौटे"
+  "{0} est revenu au titre précédent": "{0} पिछले गाने पर लौटे",
+  "Radio": "रेडियो",
+  "Tout lire": "सभी चलाएँ",
+  "D'après vos écoutes": "आपकी सुनी गई चीज़ों के आधार पर",
+  "Lire vos téléchargements": "अपने डाउनलोड चलाएँ",
+  "Hors ligne : la radio a besoin d'une connexion": "ऑफ़लाइन: रेडियो के लिए कनेक्शन चाहिए",
+  "Aléatoire activé": "शफ़ल चालू",
+  "Aléatoire désactivé": "शफ़ल बंद",
+  "Répétition désactivée": "रिपीट बंद"
  },
  "ja": {
   "Reverb": "リバーブ",
@@ -7983,7 +7999,15 @@
   "{0} est absent · place gardée": "{0}は不在です · 席を確保中",
   "{0} est de retour": "{0}が戻りました",
   "{0} est passé au titre suivant": "{0}が次の曲にスキップしました",
-  "{0} est revenu au titre précédent": "{0}が前の曲に戻りました"
+  "{0} est revenu au titre précédent": "{0}が前の曲に戻りました",
+  "Radio": "ラジオ",
+  "Tout lire": "すべて再生",
+  "D'après vos écoutes": "再生履歴にもとづく",
+  "Lire vos téléchargements": "ダウンロードを再生",
+  "Hors ligne : la radio a besoin d'une connexion": "オフライン：ラジオには接続が必要です",
+  "Aléatoire activé": "シャッフル オン",
+  "Aléatoire désactivé": "シャッフル オフ",
+  "Répétition désactivée": "リピート オフ"
  },
  "zh": {
   "Reverb": "混响",
@@ -10645,7 +10669,15 @@
   "{0} est absent · place gardée": "{0} 暂时离开 · 保留位置",
   "{0} est de retour": "{0} 回来了",
   "{0} est passé au titre suivant": "{0} 切到了下一首",
-  "{0} est revenu au titre précédent": "{0} 回到了上一首"
+  "{0} est revenu au titre précédent": "{0} 回到了上一首",
+  "Radio": "电台",
+  "Tout lire": "全部播放",
+  "D'après vos écoutes": "根据你的收听",
+  "Lire vos téléchargements": "播放你的下载",
+  "Hors ligne : la radio a besoin d'une connexion": "离线：电台需要网络连接",
+  "Aléatoire activé": "随机播放已开启",
+  "Aléatoire désactivé": "随机播放已关闭",
+  "Répétition désactivée": "重复播放已关闭"
  },
  "ru": {
   "Reverb": "Реверберация",
@@ -13307,7 +13339,15 @@
   "{0} est absent · place gardée": "{0} отошёл(-ла) · место сохранено",
   "{0} est de retour": "{0} вернулся(-ась)",
   "{0} est passé au titre suivant": "{0} переключил(а) на следующий трек",
-  "{0} est revenu au titre précédent": "{0} вернулся(-ась) к предыдущему треку"
+  "{0} est revenu au titre précédent": "{0} вернулся(-ась) к предыдущему треку",
+  "Radio": "Радио",
+  "Tout lire": "Воспроизвести все",
+  "D'après vos écoutes": "На основе ваших прослушиваний",
+  "Lire vos téléchargements": "Слушать загрузки",
+  "Hors ligne : la radio a besoin d'une connexion": "Нет сети: для радио нужно подключение",
+  "Aléatoire activé": "Перемешивание включено",
+  "Aléatoire désactivé": "Перемешивание выключено",
+  "Répétition désactivée": "Повтор выключен"
  },
  "it": {
   "Reverb": "Riverbero",
@@ -15969,7 +16009,15 @@
   "{0} est absent · place gardée": "{0} è assente · posto tenuto",
   "{0} est de retour": "{0} è tornato",
   "{0} est passé au titre suivant": "{0} è passato al brano successivo",
-  "{0} est revenu au titre précédent": "{0} è tornato al brano precedente"
+  "{0} est revenu au titre précédent": "{0} è tornato al brano precedente",
+  "Radio": "Radio",
+  "Tout lire": "Riproduci tutto",
+  "D'après vos écoutes": "In base ai tuoi ascolti",
+  "Lire vos téléchargements": "Riproduci i tuoi download",
+  "Hors ligne : la radio a besoin d'une connexion": "Offline: la radio richiede una connessione",
+  "Aléatoire activé": "Riproduzione casuale attiva",
+  "Aléatoire désactivé": "Riproduzione casuale disattivata",
+  "Répétition désactivée": "Ripetizione disattivata"
  },
  "es": {
   "Reverb": "Reverb",
@@ -18631,7 +18679,15 @@
   "{0} est absent · place gardée": "{0} está ausente · plaza guardada",
   "{0} est de retour": "{0} ha vuelto",
   "{0} est passé au titre suivant": "{0} pasó a la siguiente canción",
-  "{0} est revenu au titre précédent": "{0} volvió a la canción anterior"
+  "{0} est revenu au titre précédent": "{0} volvió a la canción anterior",
+  "Radio": "Radio",
+  "Tout lire": "Reproducir todo",
+  "D'après vos écoutes": "Según lo que escuchas",
+  "Lire vos téléchargements": "Reproducir tus descargas",
+  "Hors ligne : la radio a besoin d'une connexion": "Sin conexión: la radio necesita conexión",
+  "Aléatoire activé": "Aleatorio activado",
+  "Aléatoire désactivé": "Aleatorio desactivado",
+  "Répétition désactivée": "Repetición desactivada"
  },
  "de": {
   "Reverb": "Reverb",
@@ -21293,7 +21349,15 @@
   "{0} est absent · place gardée": "{0} ist abwesend · Platz frei gehalten",
   "{0} est de retour": "{0} ist zurück",
   "{0} est passé au titre suivant": "{0} ist zum nächsten Song gesprungen",
-  "{0} est revenu au titre précédent": "{0} ist zum vorherigen Song zurückgegangen"
+  "{0} est revenu au titre précédent": "{0} ist zum vorherigen Song zurückgegangen",
+  "Radio": "Radio",
+  "Tout lire": "Alle abspielen",
+  "D'après vos écoutes": "Basierend auf deinem Hörverhalten",
+  "Lire vos téléchargements": "Deine Downloads abspielen",
+  "Hors ligne : la radio a besoin d'une connexion": "Offline: Das Radio braucht eine Verbindung",
+  "Aléatoire activé": "Zufallswiedergabe an",
+  "Aléatoire désactivé": "Zufallswiedergabe aus",
+  "Répétition désactivée": "Wiederholen aus"
  },
  "pt": {
   "Reverb": "Reverb",
@@ -23955,7 +24019,15 @@
   "{0} est absent · place gardée": "{0} está ausente · lugar guardado",
   "{0} est de retour": "{0} voltou",
   "{0} est passé au titre suivant": "{0} passou para a música seguinte",
-  "{0} est revenu au titre précédent": "{0} voltou à música anterior"
+  "{0} est revenu au titre précédent": "{0} voltou à música anterior",
+  "Radio": "Rádio",
+  "Tout lire": "Reproduzir tudo",
+  "D'après vos écoutes": "Com base no que você ouve",
+  "Lire vos téléchargements": "Reproduzir seus downloads",
+  "Hors ligne : la radio a besoin d'une connexion": "Offline: o rádio precisa de conexão",
+  "Aléatoire activé": "Aleatório ativado",
+  "Aléatoire désactivé": "Aleatório desativado",
+  "Répétition désactivée": "Repetição desativada"
  },
  "ko": {
   "Reverb": "리버브",
@@ -26617,6 +26689,14 @@
   "{0} est absent · place gardée": "{0}님이 자리를 비웠습니다 · 자리 유지",
   "{0} est de retour": "{0}님이 돌아왔습니다",
   "{0} est passé au titre suivant": "{0}님이 다음 곡으로 넘겼습니다",
-  "{0} est revenu au titre précédent": "{0}님이 이전 곡으로 돌아갔습니다"
+  "{0} est revenu au titre précédent": "{0}님이 이전 곡으로 돌아갔습니다",
+  "Radio": "라디오",
+  "Tout lire": "모두 재생",
+  "D'après vos écoutes": "감상 기록 기반",
+  "Lire vos téléchargements": "다운로드한 음악 재생",
+  "Hors ligne : la radio a besoin d'une connexion": "오프라인: 라디오는 연결이 필요합니다",
+  "Aléatoire activé": "셔플 켜짐",
+  "Aléatoire désactivé": "셔플 꺼짐",
+  "Répétition désactivée": "반복 꺼짐"
  }
 }

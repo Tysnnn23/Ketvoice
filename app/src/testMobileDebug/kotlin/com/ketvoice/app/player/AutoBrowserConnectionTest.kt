@@ -95,12 +95,14 @@ class AutoBrowserConnectionTest {
                 MediaLibraryService.LibraryParams.Builder().setOffline(true).build())).value!!.mediaId)
 
             val tabs = await(browser.getChildren(AutoIds.ROOT, 0, 10, null)).value!!
-            assertEquals(listOf(AutoIds.HOME, AutoIds.FAVORITES, AutoIds.PLAYLISTS, AutoIds.DOWNLOADS), tabs.map { it.mediaId })
+            assertEquals(listOf(AutoIds.HOME, AutoIds.LIBRARY, AutoIds.RADIO, AutoIds.DOWNLOADS), tabs.map { it.mediaId })
+            assertEquals(6, await(browser.getChildren(AutoIds.LIBRARY, 0, 10, null)).value!!.size)
 
-            val favorites = await(browser.getChildren(AutoIds.FAVORITES, 0, 1, null)).value!!
-            assertEquals(listOf(AutoIds.track(AutoIds.FAVORITES, "f1")), favorites.map { it.mediaId })
-            assertEquals("Hello", favorites.single().mediaMetadata.title.toString())
-            assertEquals(1, await(browser.getChildren(AutoIds.FAVORITES, 1, 1, null)).value!!.size)
+            // « Tout lire », « Lecture aléatoire », then the titles, page by page.
+            val favorites = await(browser.getChildren(AutoIds.FAVORITES, 1, 2, null)).value!!
+            assertEquals(listOf(AutoIds.track(AutoIds.FAVORITES, "f1"), AutoIds.track(AutoIds.FAVORITES, "f2")), favorites.map { it.mediaId })
+            assertEquals("Hello", favorites.first().mediaMetadata.title.toString())
+            assertEquals(AutoIds.all(AutoIds.FAVORITES), await(browser.getChildren(AutoIds.FAVORITES, 0, 1, null)).value!!.single().mediaId)
             assertEquals(LibraryResult.RESULT_SUCCESS, await(browser.getChildren(AutoIds.PLAYLISTS, 0, 10, null)).resultCode)
             assertTrue(await(browser.getChildren(AutoIds.PLAYLISTS, 0, 10, null)).value!!.isEmpty())
             assertNotEquals(LibraryResult.RESULT_SUCCESS, await(browser.getChildren("ketvoice.auto.nothing", 0, 10, null)).resultCode)

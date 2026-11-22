@@ -70,6 +70,9 @@ internal object AutoArtwork {
         context.packageManager.resolveContentProvider(authority(context), 0) != null
     }.getOrDefault(false).also { available = it }
 
+    /** Whether this build declares Android Auto (the mobile flavour declares the cover provider with it). */
+    fun declared(context: Context): Boolean = providerAvailable(context)
+
     /** The cover as a car can read it, or null when there is none. */
     fun uri(context: Context, source: String?): Uri? {
         val value = source?.trim()?.takeIf { it.isNotEmpty() } ?: return null
