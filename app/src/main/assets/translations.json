@@ -2602,7 +2602,17 @@
   "+ Point": "+ Point",
   "Ctrl+Z · Ctrl+Y · Espace · Suppr": "Ctrl+Z · Ctrl+Y · Space · Del",
   "Flou des paroles": "Lyrics blur",
-  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "Lines away from the one being sung fade into a soft blur."
+  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "Lines away from the one being sung fade into a soft blur.",
+  "Appareil Bluetooth": "Bluetooth device",
+  "Appareils auditifs": "Hearing aids",
+  "Bluetooth": "Bluetooth",
+  "En lecture ici": "Playing here",
+  "Filaire": "Wired",
+  "HDMI": "HDMI",
+  "Haut-parleur": "Speaker",
+  "Sortie USB": "USB output",
+  "USB": "USB",
+  "Écouteurs filaires": "Wired headphones"
  },
  "hi": {
   "Reverb": "रीवर्ब",
@@ -5207,7 +5217,17 @@
   "+ Point": "+ पॉइंट",
   "Ctrl+Z · Ctrl+Y · Espace · Suppr": "Ctrl+Z · Ctrl+Y · Space · Del",
   "Flou des paroles": "बोलों का धुंधलापन",
-  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "गाई जा रही पंक्ति से दूर की पंक्तियाँ हल्के धुंधलेपन में खो जाती हैं।"
+  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "गाई जा रही पंक्ति से दूर की पंक्तियाँ हल्के धुंधलेपन में खो जाती हैं।",
+  "Appareil Bluetooth": "ब्लूटूथ डिवाइस",
+  "Appareils auditifs": "श्रवण यंत्र",
+  "Bluetooth": "ब्लूटूथ",
+  "En lecture ici": "यहाँ चल रहा है",
+  "Filaire": "वायर्ड",
+  "HDMI": "HDMI",
+  "Haut-parleur": "स्पीकर",
+  "Sortie USB": "USB आउटपुट",
+  "USB": "USB",
+  "Écouteurs filaires": "वायर्ड हेडफ़ोन"
  },
  "ja": {
   "Reverb": "リバーブ",
@@ -7812,7 +7832,17 @@
   "+ Point": "+ ポイント",
   "Ctrl+Z · Ctrl+Y · Espace · Suppr": "Ctrl+Z · Ctrl+Y · Space · Del",
   "Flou des paroles": "歌詞のぼかし",
-  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "歌っている行から離れた行が、やわらかくぼやけます。"
+  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "歌っている行から離れた行が、やわらかくぼやけます。",
+  "Appareil Bluetooth": "Bluetoothデバイス",
+  "Appareils auditifs": "補聴器",
+  "Bluetooth": "Bluetooth",
+  "En lecture ici": "ここで再生中",
+  "Filaire": "有線",
+  "HDMI": "HDMI",
+  "Haut-parleur": "スピーカー",
+  "Sortie USB": "USB出力",
+  "USB": "USB",
+  "Écouteurs filaires": "有線ヘッドホン"
  },
  "zh": {
   "Reverb": "混响",
@@ -10417,7 +10447,17 @@
   "+ Point": "+ 点",
   "Ctrl+Z · Ctrl+Y · Espace · Suppr": "Ctrl+Z · Ctrl+Y · 空格 · Del",
   "Flou des paroles": "歌词模糊",
-  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "远离正在演唱的那一行的歌词会柔和地变模糊。"
+  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "远离正在演唱的那一行的歌词会柔和地变模糊。",
+  "Appareil Bluetooth": "蓝牙设备",
+  "Appareils auditifs": "助听器",
+  "Bluetooth": "蓝牙",
+  "En lecture ici": "正在此处播放",
+  "Filaire": "有线",
+  "HDMI": "HDMI",
+  "Haut-parleur": "扬声器",
+  "Sortie USB": "USB 输出",
+  "USB": "USB",
+  "Écouteurs filaires": "有线耳机"
  },
  "ru": {
   "Reverb": "Реверберация",
@@ -13022,7 +13062,17 @@
   "+ Point": "+ Точка",
   "Ctrl+Z · Ctrl+Y · Espace · Suppr": "Ctrl+Z · Ctrl+Y · Пробел · Del",
   "Flou des paroles": "Размытие текста песни",
-  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "Строки вдали от исполняемой мягко размываются."
+  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "Строки вдали от исполняемой мягко размываются.",
+  "Appareil Bluetooth": "Bluetooth-устройство",
+  "Appareils auditifs": "Слуховые аппараты",
+  "Bluetooth": "Bluetooth",
+  "En lecture ici": "Играет здесь",
+  "Filaire": "Проводные",
+  "HDMI": "HDMI",
+  "Haut-parleur": "Динамик",
+  "Sortie USB": "USB-выход",
+  "USB": "USB",
+  "Écouteurs filaires": "Проводные наушники"
  },
  "it": {
   "Reverb": "Riverbero",
@@ -15627,7 +15677,17 @@
   "+ Point": "+ Punto",
   "Ctrl+Z · Ctrl+Y · Espace · Suppr": "Ctrl+Z · Ctrl+Y · Spazio · Canc",
   "Flou des paroles": "Sfocatura del testo",
-  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "Le righe lontane da quella cantata sfumano in una leggera sfocatura."
+  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "Le righe lontane da quella cantata sfumano in una leggera sfocatura.",
+  "Appareil Bluetooth": "Dispositivo Bluetooth",
+  "Appareils auditifs": "Apparecchi acustici",
+  "Bluetooth": "Bluetooth",
+  "En lecture ici": "In riproduzione qui",
+  "Filaire": "Cablato",
+  "HDMI": "HDMI",
+  "Haut-parleur": "Altoparlante",
+  "Sortie USB": "Uscita USB",
+  "USB": "USB",
+  "Écouteurs filaires": "Cuffie con cavo"
  },
  "es": {
   "Reverb": "Reverb",
@@ -18232,7 +18292,17 @@
   "+ Point": "+ Punto",
   "Ctrl+Z · Ctrl+Y · Espace · Suppr": "Ctrl+Z · Ctrl+Y · Espacio · Supr",
   "Flou des paroles": "Desenfoque de la letra",
-  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "Las líneas alejadas de la que se canta se difuminan suavemente."
+  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "Las líneas alejadas de la que se canta se difuminan suavemente.",
+  "Appareil Bluetooth": "Dispositivo Bluetooth",
+  "Appareils auditifs": "Audífonos",
+  "Bluetooth": "Bluetooth",
+  "En lecture ici": "Sonando aquí",
+  "Filaire": "Con cable",
+  "HDMI": "HDMI",
+  "Haut-parleur": "Altavoz",
+  "Sortie USB": "Salida USB",
+  "USB": "USB",
+  "Écouteurs filaires": "Auriculares con cable"
  },
  "de": {
   "Reverb": "Reverb",
@@ -20837,7 +20907,17 @@
   "+ Point": "+ Punkt",
   "Ctrl+Z · Ctrl+Y · Espace · Suppr": "Strg+Z · Strg+Y · Leertaste · Entf",
   "Flou des paroles": "Songtext-Unschärfe",
-  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "Zeilen fern der gesungenen verschwimmen leicht."
+  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "Zeilen fern der gesungenen verschwimmen leicht.",
+  "Appareil Bluetooth": "Bluetooth-Gerät",
+  "Appareils auditifs": "Hörgeräte",
+  "Bluetooth": "Bluetooth",
+  "En lecture ici": "Wird hier abgespielt",
+  "Filaire": "Kabelgebunden",
+  "HDMI": "HDMI",
+  "Haut-parleur": "Lautsprecher",
+  "Sortie USB": "USB-Ausgang",
+  "USB": "USB",
+  "Écouteurs filaires": "Kabelgebundene Kopfhörer"
  },
  "pt": {
   "Reverb": "Reverb",
@@ -23442,7 +23522,17 @@
   "+ Point": "+ Ponto",
   "Ctrl+Z · Ctrl+Y · Espace · Suppr": "Ctrl+Z · Ctrl+Y · Espaço · Del",
   "Flou des paroles": "Desfoque da letra",
-  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "As linhas afastadas da que está sendo cantada se desfocam levemente."
+  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "As linhas afastadas da que está sendo cantada se desfocam levemente.",
+  "Appareil Bluetooth": "Dispositivo Bluetooth",
+  "Appareils auditifs": "Aparelhos auditivos",
+  "Bluetooth": "Bluetooth",
+  "En lecture ici": "A tocar aqui",
+  "Filaire": "Com fios",
+  "HDMI": "HDMI",
+  "Haut-parleur": "Altifalante",
+  "Sortie USB": "Saída USB",
+  "USB": "USB",
+  "Écouteurs filaires": "Auscultadores com fios"
  },
  "ko": {
   "Reverb": "리버브",
@@ -26047,6 +26137,16 @@
   "+ Point": "+ 포인트",
   "Ctrl+Z · Ctrl+Y · Espace · Suppr": "Ctrl+Z · Ctrl+Y · Space · Del",
   "Flou des paroles": "가사 흐림",
-  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "부르는 줄에서 먼 줄은 부드럽게 흐려집니다."
+  "Les lignes éloignées de celle chantée s'estompent dans un léger flou.": "부르는 줄에서 먼 줄은 부드럽게 흐려집니다.",
+  "Appareil Bluetooth": "블루투스 기기",
+  "Appareils auditifs": "보청기",
+  "Bluetooth": "블루투스",
+  "En lecture ici": "여기에서 재생 중",
+  "Filaire": "유선",
+  "HDMI": "HDMI",
+  "Haut-parleur": "스피커",
+  "Sortie USB": "USB 출력",
+  "USB": "USB",
+  "Écouteurs filaires": "유선 헤드폰"
  }
 }

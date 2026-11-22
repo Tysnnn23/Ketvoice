@@ -25,6 +25,12 @@ import androidx.compose.material.icons.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Smartphone
+import androidx.compose.material.icons.filled.Headphones
+import androidx.compose.material.icons.filled.Usb
+import androidx.compose.material.icons.filled.Bluetooth
+import androidx.compose.material.icons.filled.Hearing
+import androidx.compose.material.icons.filled.Tv
+import androidx.compose.ui.platform.testTag
 import androidx.compose.material.icons.filled.Equalizer
 import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.Tune
@@ -356,13 +362,7 @@ fun AudioOutputSheet(onClose: () -> Unit) {
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp)
         )
 
-        OutputCard(
-            title = if (com.ketvoice.app.BuildConfig.IS_QUEST) "Ce casque" else "Ce téléphone",
-            sub = "Haut-parleur, écouteurs ou Bluetooth",
-            icon = Icons.Filled.Smartphone,
-            trailing = { if (castingTo == null) Icon(Icons.Filled.Check, null, tint = LocalTheme.current.accent) },
-            onClick = { if (castingTo != null) com.ketvoice.app.cast.CastFlavor.disconnect(); onClose() }
-        )
+        LocalOutputs(castingTo != null, onClose)
         CastDevicesSection(onClose)
         RemoteDevicesSection(onClose)
 
@@ -403,16 +403,77 @@ fun AudioOutputSheet(onClose: () -> Unit) {
     }
 }
 
+/**
+ * « Choix de la sortie audio » (8.4): every real output of the phone, the one Ketvoice plays to ticked. Kept
+ * current while the sheet is open; a choice moves only Ketvoice's music ([com.ketvoice.app.player.AudioOutputs]).
+ */
+@Composable
+private fun LocalOutputs(casting: Boolean, onClose: () -> Unit) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val outputs by remember(context) { com.ketvoice.app.player.AudioOutputs.watch(context) }
+        .collectAsState(initial = remember(context) { com.ketvoice.app.player.AudioOutputs.read(context) })
+    val chosen by com.ketvoice.app.player.AudioOutputs.chosen.collectAsState()
+    val active = if (casting) null else com.ketvoice.app.player.AudioOutputs.active(outputs, chosen)
+    // Nothing read (a host without audio devices): the phone itself, as before.
+    val shown = outputs.ifEmpty { listOf(com.ketvoice.app.player.AudioOutput(-1, 0, com.ketvoice.app.player.OutputKind.Phone, "")) }
+    shown.forEach { output ->
+        OutputCard(
+            title = outputTitle(output),
+            sub = outputSub(output, (!casting && output == active) || (active == null && !casting && output.id == -1)),
+            icon = outputIcon(output.kind),
+            trailing = { if (!casting && (output == active || (active == null && output.id == -1)))
+                Icon(Icons.Filled.Check, null, tint = LocalTheme.current.accent) },
+            onClick = {
+                if (casting) com.ketvoice.app.cast.CastFlavor.disconnect()
+                com.ketvoice.app.player.AudioOutputs.choose(output.takeIf { it.id >= 0 })
+                onClose()
+            },
+            modifier = Modifier.testTag("audio-output-" + output.kind.name)
+        )
+    }
+}
+
+internal fun outputTitle(output: com.ketvoice.app.player.AudioOutput): String = when (output.kind) {
+    com.ketvoice.app.player.OutputKind.Phone -> if (com.ketvoice.app.BuildConfig.IS_QUEST) "Ce casque" else "Ce téléphone"
+    com.ketvoice.app.player.OutputKind.Wired -> output.name.takeIf { it.isNotBlank() && !it.equals(Build.MODEL, true) } ?: "Écouteurs filaires"
+    com.ketvoice.app.player.OutputKind.Usb -> output.name.ifBlank { "Sortie USB" }
+    com.ketvoice.app.player.OutputKind.Bluetooth -> output.name.ifBlank { "Appareil Bluetooth" }
+    com.ketvoice.app.player.OutputKind.HearingAid -> output.name.ifBlank { "Appareils auditifs" }
+    com.ketvoice.app.player.OutputKind.Hdmi -> output.name.ifBlank { "HDMI" }
+}
+
+private fun outputSub(output: com.ketvoice.app.player.AudioOutput, active: Boolean): String {
+    val kind = when (output.kind) {
+        com.ketvoice.app.player.OutputKind.Phone -> "Haut-parleur"
+        com.ketvoice.app.player.OutputKind.Wired -> "Filaire"
+        com.ketvoice.app.player.OutputKind.Usb -> "USB"
+        com.ketvoice.app.player.OutputKind.Bluetooth -> "Bluetooth"
+        com.ketvoice.app.player.OutputKind.HearingAid -> "Appareils auditifs"
+        com.ketvoice.app.player.OutputKind.Hdmi -> "HDMI"
+    }
+    return if (active) com.ketvoice.app.data.AppText.t(kind) + " · " + com.ketvoice.app.data.AppText.t("En lecture ici") else kind
+}
+
+private fun outputIcon(kind: com.ketvoice.app.player.OutputKind): androidx.compose.ui.graphics.vector.ImageVector = when (kind) {
+    com.ketvoice.app.player.OutputKind.Phone -> Icons.Filled.Smartphone
+    com.ketvoice.app.player.OutputKind.Wired -> Icons.Filled.Headphones
+    com.ketvoice.app.player.OutputKind.Usb -> Icons.Filled.Usb
+    com.ketvoice.app.player.OutputKind.Bluetooth -> Icons.Filled.Bluetooth
+    com.ketvoice.app.player.OutputKind.HearingAid -> Icons.Filled.Hearing
+    com.ketvoice.app.player.OutputKind.Hdmi -> Icons.Filled.Tv
+}
+
 @Composable
 private fun OutputCard(
     title: String,
     sub: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     trailing: @Composable () -> Unit,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Row(
-        Modifier
+        modifier
             .fillMaxWidth()
             .padding(horizontal = 14.dp, vertical = 7.dp)
             .clip(RoundedCornerShape(16.dp))
