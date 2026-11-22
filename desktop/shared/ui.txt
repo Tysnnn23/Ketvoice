@@ -10,3 +10,5 @@ data/UiTextDictionary.kt
 # Cascade lyrics (winlyrics): the motion values and the word alignment, pure Kotlin.
 ui/player/LyricsMotion.kt
 ui/player/LyricsPresentation.kt
+# Windows 9.0 port: how the settings search matches a row.
+ui/settings/SettingsMatch.kt

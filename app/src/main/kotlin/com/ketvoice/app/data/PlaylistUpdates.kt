@@ -17,8 +17,8 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
-import org.json.JSONArray
-import org.json.JSONObject
+import com.ketvoice.app.data.PlaylistFollow.Check
+import com.ketvoice.app.data.PlaylistFollow.Update
 import java.util.concurrent.TimeUnit
 
 /**
@@ -44,12 +44,6 @@ object PlaylistUpdates {
     private const val WORK = "playlist-updates"
     private const val WORK_SOON = "playlist-updates-soon"
 
-    /** New titles of one downloaded playlist: what a notification carries. */
-    data class Update(val playlistId: String, val name: String, val trackIds: List<String>)
-
-    /** What a check finds, and what it remembers afterwards (playlist id → its titles at this check). */
-    data class Check(val updates: List<Update>, val known: Map<String, Set<String>>)
-
     @Volatile private var prefs: SharedPreferences? = null
     @Volatile private var app: Context? = null
 
@@ -63,44 +57,15 @@ object PlaylistUpdates {
     /** The playlists changed from elsewhere (the account's sync, a shared playlist): a check soon, if the app set one up. */
     fun changedElsewhere() { val context = app ?: return; runCatching { checkSoon(context) } }
 
-    private fun ids(playlist: LocalPlaylist): List<String> =
-        playlist.entries.mapNotNull { it.track?.id }.filter { it.isNotBlank() && !it.startsWith("local:") }.distinct()
-
-    /**
-     * The check itself, without Android: for every followed playlist, the titles not known at the last check and not
-     * on the device or on their way ([downloaded]). A playlist not followed yet starts to be when it is wholly
-     * downloaded (nothing announced then).
-     */
-    fun diff(playlists: List<LocalPlaylist>, downloaded: Set<String>, known: Map<String, Set<String>>): Check {
-        val next = HashMap<String, Set<String>>()
-        val updates = mutableListOf<Update>()
-        for (playlist in playlists) {
-            val titles = ids(playlist)
-            val before = known[playlist.id]
-            if (before == null) {
-                if (titles.isNotEmpty() && titles.all { it in downloaded }) next[playlist.id] = titles.toSet()
-                continue
-            }
-            // Every download of it removed: the listener let it go.
-            if (titles.isNotEmpty() && titles.none { it in downloaded }) continue
-            val fresh = titles.filter { it !in before && it !in downloaded }
-            if (fresh.isNotEmpty()) updates += Update(playlist.id, playlist.name, fresh)
-            next[playlist.id] = titles.toSet()
-        }
-        return Check(updates, next)
-    }
+    /** The check itself, without Android ([PlaylistFollow.diff], shared with the Windows app). */
+    fun diff(playlists: List<LocalPlaylist>, downloaded: Set<String>, known: Map<String, Set<String>>): Check =
+        PlaylistFollow.diff(playlists, downloaded, known)
 
     // ------------------------------------------------------------------ what is remembered
 
-    internal fun decode(text: String?): Map<String, Set<String>> = runCatching {
-        val root = JSONObject(text ?: return emptyMap())
-        root.keys().asSequence().associateWith { key ->
-            root.getJSONArray(key).let { a -> (0 until a.length()).map { a.getString(it) }.toSet() }
-        }
-    }.getOrDefault(emptyMap())
+    internal fun decode(text: String?): Map<String, Set<String>> = PlaylistFollow.decode(text)
 
-    internal fun encode(known: Map<String, Set<String>>): String =
-        JSONObject().apply { known.forEach { (id, titles) -> put(id, JSONArray(titles.sorted())) } }.toString()
+    internal fun encode(known: Map<String, Set<String>>): String = PlaylistFollow.encode(known)
 
     private fun known(): Map<String, Set<String>> = decode(prefs?.getString(KNOWN, null))
 
@@ -110,13 +75,10 @@ object PlaylistUpdates {
     }
 
     /** « Télécharger » from a playlist's menu: the playlist is followed from now on, with the titles it holds. */
-    fun follow(playlist: LocalPlaylist) = remember { it + (playlist.id to ids(playlist).toSet()) }
+    fun follow(playlist: LocalPlaylist) = remember { PlaylistFollow.followed(it, playlist) }
 
     /** Titles the listener added to a playlist themselves: never announced as new. */
-    fun noteAdded(playlistId: String, trackIds: Collection<String>) = remember { known ->
-        val before = known[playlistId] ?: return@remember known
-        known + (playlistId to before + trackIds)
-    }
+    fun noteAdded(playlistId: String, trackIds: Collection<String>) = remember { PlaylistFollow.added(it, playlistId, trackIds) }
 
     /** The titles on this device, and those waiting in the download queue: they are on their way. */
     private fun downloadedHere(): Set<String> = Downloader.items.value.mapTo(HashSet()) { it.track.id } + Downloader.busy.value

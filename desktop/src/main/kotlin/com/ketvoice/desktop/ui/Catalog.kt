@@ -166,7 +166,40 @@ object LibraryViews {
         return SearchRank.rank(query, pool)
     }
 
+    /** Where each title stands in [added] (newest first); a title never added goes last. */
+    private fun addedRank(added: List<String>): Map<String, Int> = added.withIndex().associate { it.value to it.index }
+
+    private fun <K> firstAdded(songs: List<Track>, added: List<String>, key: (Track) -> K): Map<K, Int> {
+        val rank = addedRank(added)
+        return songs.groupBy(key).mapValues { (_, t) -> t.minOf { rank[it.id] ?: Int.MAX_VALUE } }
+    }
+
+    /** Albums in the order Settings › Disposition chose: "0" newest added first, "1" title A–Z (as always), "2" artist A–Z. */
+    fun albums(songs: List<Track>, sort: String, added: List<String>): List<AlbumRef> {
+        val all = albums(songs)
+        return when (sort) {
+            "0" -> firstAdded(songs, added) { it.album.lowercase() + "|" + it.artist.substringBefore(',').trim().lowercase() }
+                .let { rank -> all.sortedBy { rank[it.title.lowercase() + "|" + it.artist.lowercase()] ?: Int.MAX_VALUE } }
+            "2" -> all.sortedWith(compareBy({ it.artist.lowercase() }, { it.title.lowercase() }))
+            else -> all
+        }
+    }
+
+    /** Artists in the order Settings › Disposition chose: "0" newest added first, "1" name A–Z (as always). */
+    fun artists(songs: List<Track>, sort: String, added: List<String>): List<ArtistRef> {
+        val all = artists(songs)
+        if (sort != "0") return all
+        val rank = firstAdded(songs, added) { it.artist.substringBefore(',').trim() }
+        return all.sortedBy { rank[it.name] ?: Int.MAX_VALUE }
+    }
+
+    /** Titles newest added first (« Récents »). */
+    fun byAdded(songs: List<Track>, added: List<String>): List<Track> = addedRank(added).let { rank -> songs.sortedBy { rank[it.id] ?: Int.MAX_VALUE } }
+
     enum class SortKey { TITLE, ARTIST, ALBUM, DURATION }
+
+    /** The column « Titres » opens sorted by: null for « Récents » (newest added first). */
+    fun initialKey(sort: String): SortKey? = when (sort) { "0" -> null; "2" -> SortKey.ARTIST; else -> SortKey.TITLE }
     fun sort(songs: List<Track>, key: SortKey, ascending: Boolean): List<Track> {
         val sorted = when (key) {
             SortKey.TITLE -> songs.sortedBy { it.title.lowercase() }

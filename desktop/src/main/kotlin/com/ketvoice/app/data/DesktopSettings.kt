@@ -46,6 +46,8 @@ object SettingsStore {
         // A value of the wrong type (written by an older or newer version) keeps the default instead of failing.
         for ((key, state) in entries) if (key in p) runCatching { read(p, key, state.value) }.getOrNull()?.let { state.value = it }
         AppSettings.glassIntensity.value = com.ketvoice.app.glass.GlassClarity.sanitize(AppSettings.glassIntensity.value)
+        // 9.0 « Disposition »: the phone's layout keys, read for the window (empty or missing: the window as it was).
+        com.ketvoice.desktop.ui.DeskLayout.load(p)
     }
 
     private fun read(p: SharedPreferences, key: String, current: Any?): Any? = when (current) {
@@ -72,13 +74,14 @@ object SettingsStore {
             is List<*> -> editor.putString(key, v.joinToString(","))
             null -> editor.remove(key)
         }
+        LayoutSettings.save(editor)
         editor.apply()
     }
 
     /** Saves a moment after any setting changes; the first look is the value just loaded. */
     @OptIn(FlowPreview::class)
     fun watch(scope: CoroutineScope): Job = scope.launch {
-        snapshotFlow { entries.map { it.second.value } }.drop(1).debounce(400).collect { save() }
+        snapshotFlow { entries.map { it.second.value } + com.ketvoice.desktop.ui.DeskLayout.states }.drop(1).debounce(400).collect { save() }
     }
 
     /** Tests: forget the store (the file stays). */
@@ -101,17 +104,21 @@ object PersonalBackup {
         "noRepeatSuggestions", "stopOnSwipeFromRecents", "hideVolumeBar", "hideStatusBarInPlayer",
         "showQueueHistory", "hideTitleStatus", "languageChosen", "lastfmGenres", "smartAudioAlignment", "techStats",
         "haptics", "coverTintedGlass", "glassTilt", "glassTinted", "trueBlack", "meshBackground", "automixOn", "automixAlbums",
-        "ketmixLoops", "smartShuffle", "ketmixHaptics")
+        "ketmixLoops", "smartShuffle", "ketmixHaptics",
+        // 8.4: kept and carried even where the window has no use for them, so a sync never drops the phone's choice.
+        "playlistUpdates", "wrappedSound")
     // glassStyle: up to GlassStyles.LIQUID_27 (3) on Android.
     private val integers = mapOf("themeMode" to 0..2, "glassStyle" to 0..3, "glassLook" to 0..1, "glassTintLevel" to 0..6, "lyricsTextSize" to 0..2,
         "albumHeader" to 0..2, "reverbAmount" to 0..100, "reverbSize" to 0..100, "reverbDamping" to 0..100,
         "lyricsMode" to 0..2, "automixIntensity" to 0..2, "ketmixAnalysis" to 0..2, "ketmixStyle" to 0..9, "ketmixStemsQuality" to 0..2,
         "voiceLevel" to 0..100, "canvasCacheMb" to 256..2048, "smartOfflineGb" to 0..10, "smartOfflinePercent" to 10..50,
         "downloadQualityMode" to 0..2)
-    private val strings = setOf("lyricsSource", "translateLanguage", "translationSource", "wifiQuality", "mobileQuality", "equalizerGains", "language")
+    private val strings = setOf("lyricsSource", "lyricsOrder", "translateLanguage", "translationSource", "wifiQuality", "mobileQuality", "equalizerGains", "language")
 
     internal fun setting(key: String, raw: Any?): Any? = when {
         key in booleans -> raw as? Boolean
+        // 9.0 « Disposition »: checked against the ids and limits the phone and the window share.
+        key in LayoutSettings.keys -> LayoutSettings.checked(key, raw)
         // « Pochette et Canvas » (2) became the animated Canvas (1), as AlbumHeader.normalize does.
         key == "albumHeader" -> (raw as? Number)?.toInt()?.takeIf { it in 0..2 }?.let { if (it == 2) 1 else it }
         key in integers -> (raw as? Number)?.toInt()?.takeIf { it in integers.getValue(key) }
@@ -122,6 +129,7 @@ object PersonalBackup {
             when (key) {
                 "wifiQuality", "mobileQuality" -> value in setOf("Normal", "Élevé", "Sans perte")
                 "lyricsSource" -> value in MusicApi.lyricSources + listOf("auto", "off")
+                "lyricsOrder" -> LyricsOrder.valid(value)
                 "language" -> AppLanguage.all.any { it.label == value }
                 "equalizerGains" -> value.matches(Regex("-?\\d{1,2}(,-?\\d{1,2}){0,9}"))
                 "translateLanguage", "translationSource" -> value in TranslationLanguages.codes ||

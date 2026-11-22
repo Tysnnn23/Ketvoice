@@ -85,6 +85,8 @@ fun main(args: Array<String>) {
     com.ketvoice.app.stems.StemModel.init(context)
     com.ketvoice.desktop.stems.DesktopVoice.attach(engine, scope)
     com.ketvoice.app.data.SettingsStore.watch(scope)
+    // « Playlists téléchargées à jour »: new titles of downloaded playlists are offered in the window.
+    com.ketvoice.desktop.library.PlaylistWatch.start(context, scope)
     com.ketvoice.desktop.library.LocalFolders.init(context, scope)
     com.ketvoice.desktop.library.DesktopAccount.start(context)
     // Phone control: this PC joins the account's private room while signed in.

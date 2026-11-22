@@ -94,7 +94,7 @@ fun KetvoiceShell(
     library: LibraryStore = LibraryBridge,
     catalog: CatalogSource = LiveCatalog,
     dark: Boolean? = null,
-    navigator: Navigator = remember { Navigator() },
+    navigator: Navigator = remember { Navigator(DeskLayout.startRoute()) },
     initialPanel: Panel = Panel.NONE,
     initialSidebar: Dp = 248.dp,
     initialQuery: String = "",
@@ -182,6 +182,7 @@ private fun ShellLayout(initialPanel: Panel, initialSidebar: Dp, initialFullPlay
         if (PlayerFullScreen.on.value) FullScreenPlayer(onExit = { PlayerFullScreen.on.value = false })
         KetmixStudioHost()
         PlaybackToast()
+        PlaylistUpdateCard()
         if (ImportDialog.open.value) ImportPlaylistDialog(onDismiss = { ImportDialog.open.value = false })
         com.ketvoice.desktop.update.Updates.dialog.value?.let { release ->
             UpdateDialog(release, com.ketvoice.desktop.update.Updates.updater) { com.ketvoice.desktop.update.Updates.dialog.value = null }
@@ -226,6 +227,7 @@ private fun Pages() {
                 Route.Albums -> AlbumsPage()
                 Route.Songs -> SongsPage()
                 Route.Downloads -> DownloadsPage()
+                Route.Favorites -> FavoritesPage()
                 Route.Stats -> StatsPage()
                 Route.Settings -> SettingsPage()
                 Route.Equalizer -> EqualizerPage()
@@ -251,15 +253,8 @@ private fun Sidebar(width: Dp, searchFocus: FocusRequester, onSearchFocus: (Bool
     Column(Modifier.width(width).fillMaxHeight().material(ket).testTag("sidebar")) {
         SearchField(searchFocus, onSearchFocus)
         LazyColumn(Modifier.weight(1f).padding(horizontal = 10.dp)) {
-            item { SideItem(Ket27Glyphs.Home, "Accueil", Route.Home) }
-            item { SideItem(Ket27Glyphs.Explore, "Explorer", Route.Explore) }
-            item { SideHeader("Bibliothèque") }
-            item { SideItem(KetIcons.Clock, "Récemment ajouté", Route.RecentlyAdded) }
-            item { SideItem(KetIcons.Account, "Artistes", Route.Artists) }
-            item { SideItem(KetIcons.Album, "Albums", Route.Albums) }
-            item { SideItem(KetIcons.Music, "Titres", Route.Songs) }
-            item { SideItem(KetIcons.Download, "Téléchargements", Route.Downloads) }
-            item { SideItem(DeskGlyphs.Stats, "Statistiques", Route.Stats) }
+            // Settings › Disposition: the sidebar's entries in the listener's order (`layoutTabs`, as the phone's tabs).
+            DeskLayout.sidebarRows().forEach { row -> item("side:$row") { SidebarRow(row) } }
             item {
                 SideHeader("Playlists") {
                     KetIconButton(KetIcons.Link, "Importer des playlists", { ImportDialog.open.value = true },
@@ -269,7 +264,7 @@ private fun Sidebar(width: Dp, searchFocus: FocusRequester, onSearchFocus: (Bool
                     }, size = 22.dp, glyph = 13.dp, modifier = Modifier.testTag("new-playlist"))
                 }
             }
-            playlists.forEach { p -> item(p.id) { PlaylistItem(p) } }
+            DeskLayout.sortedPlaylists(playlists).forEach { p -> item(p.id) { PlaylistItem(p) } }
         }
         Box(Modifier.fillMaxWidth().height(.5.dp).background(ket.hairline))
         Box(Modifier.padding(10.dp)) { SideItem(KetIcons.Settings, "Réglages", Route.Settings) }
@@ -317,6 +312,24 @@ private fun SideRow(icon: ImageVector?, label: String, selected: Boolean, tag: S
         if (leading != null) leading() else if (icon != null) Icon(icon, null, Modifier.size(17.dp), tint = ket.accent)
         Spacer(Modifier.width(10.dp))
         KText(label, Ket27Desk.Type.subheadline, color = ket.label, weight = if (selected) FontWeight.SemiBold else null, translate = translate)
+    }
+}
+
+/** One row of the sidebar's upper part ([DeskLayout.sidebarRows]). */
+@Composable
+private fun SidebarRow(row: String) {
+    when (row) {
+        "home" -> SideItem(Ket27Glyphs.Home, "Accueil", Route.Home)
+        "explore" -> SideItem(Ket27Glyphs.Explore, "Explorer", Route.Explore)
+        "search" -> SideItem(KetIcons.Search, "Rechercher", Route.Search)
+        "favorites" -> SideItem(Ket27Glyphs.Heart, "Favoris", Route.Favorites)
+        "header" -> SideHeader("Bibliothèque")
+        "recent" -> SideItem(KetIcons.Clock, "Récemment ajouté", Route.RecentlyAdded)
+        "artists" -> SideItem(KetIcons.Account, "Artistes", Route.Artists)
+        "albums" -> SideItem(KetIcons.Album, "Albums", Route.Albums)
+        "songs" -> SideItem(KetIcons.Music, "Titres", Route.Songs)
+        "downloads" -> SideItem(KetIcons.Download, "Téléchargements", Route.Downloads)
+        "stats" -> SideItem(DeskGlyphs.Stats, "Statistiques", Route.Stats)
     }
 }
 

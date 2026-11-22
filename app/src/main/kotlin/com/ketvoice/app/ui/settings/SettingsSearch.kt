@@ -1,7 +1,5 @@
 package com.ketvoice.app.ui.settings
 
-import java.text.Normalizer
-
 /** A row of Settings as the search knows it: its French title and description (the source texts) and where it lives. */
 internal data class SettingEntry(val title: String, val sub: String, val category: SettingsCategory, val shown: () -> Boolean = { true })
 
@@ -167,26 +165,18 @@ internal object SettingsSearch {
         "Rétablir la disposition" to "Onglets, accueil, lecteur, bibliothèque, menu et gestes d'origine",
     ).map { (title, sub) -> SettingEntry(title, sub, SettingsCategory.Personalize) }
 
-    /** [text] without accents, apostrophes told apart or case: « Égaliseur » and « egaliseur » are one word. */
-    fun fold(text: String): String = Normalizer.normalize(text, Normalizer.Form.NFD)
-        .replace(Regex("\\p{Mn}+"), "")
-        .replace('’', '\'').replace('œ', 'o').replace('Œ', 'o')
-        .lowercase(java.util.Locale.ROOT)
+    /** [text] without accents, apostrophes told apart or case ([SettingsMatch.fold]). */
+    fun fold(text: String): String = SettingsMatch.fold(text)
 
     /**
      * The rows [query] finds, best first: every word of the query must be in the row's title or description as
      * [translate] gives them (the interface language). A title that starts with the query comes first.
      */
     fun search(query: String, entries: List<SettingEntry> = this.entries, translate: (String) -> String = com.ketvoice.app.data.AppText::t): List<SettingEntry> {
-        val words = fold(query).split(' ', '\'', '-').filter { it.isNotBlank() }
+        val words = SettingsMatch.words(query)
         if (words.isEmpty()) return emptyList()
-        val whole = fold(query.trim())
         return entries.filter { it.shown() }.mapNotNull { entry ->
-            val title = fold(translate(entry.title))
-            val text = title + " " + fold(if (entry.sub.isEmpty()) "" else translate(entry.sub))
-            if (words.any { it !in text }) return@mapNotNull null
-            val rank = when { title.startsWith(whole) -> 0; whole in title -> 1; words.all { it in title } -> 2; else -> 3 }
-            entry to rank
+            SettingsMatch.rank(query, words, translate(entry.title), if (entry.sub.isEmpty()) "" else translate(entry.sub))?.let { entry to it }
         }.sortedBy { it.second }.map { it.first }.distinctBy { it.title to it.category }
     }
 }
