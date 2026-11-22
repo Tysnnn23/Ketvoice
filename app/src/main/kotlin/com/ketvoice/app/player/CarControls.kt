@@ -38,6 +38,7 @@ internal object CarControls {
     /** What the buttons show: one value per state the listener can see on the car. */
     data class Look(val hasTitle: Boolean, val liked: Boolean, val shuffle: Boolean, val repeat: Int, val ketmix: Boolean)
 
+    @androidx.annotation.OptIn(UnstableApi::class)
     fun look(state: PlayerUiState, liked: Set<String>, ketmix: Boolean): Look {
         val current = state.current
         return Look(current != null, current != null && current.id in liked, state.shuffle, QueueBridgePlayer.repeatModeOf(state), ketmix)
@@ -123,6 +124,7 @@ internal class PlayerQueueHost(private val context: Context, private val outside
 
     companion object {
         /** A request from outside the app: any package but Ketvoice's, or the system's controls (the notification's controller). */
+        @androidx.annotation.OptIn(UnstableApi::class)
         fun outside(session: MediaSession?, packageName: String): Boolean {
             val s = session ?: return false
             val controller = s.controllerForCurrentRequest ?: return false
