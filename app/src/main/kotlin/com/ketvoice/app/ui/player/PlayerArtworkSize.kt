@@ -45,6 +45,19 @@ internal object PlayerArtworkSize {
     }
 
     /**
+     * 9.0 « Taille de la pochette »: the same height scaled by [scale] (.85 smaller, 1.15 larger; 1 is [heightDp]).
+     * Still full width and top aligned, still never past the controls: a smaller box cuts the media's foot, a larger
+     * one its sides — never bars, never a stretched picture.
+     */
+    fun heightDp(widthDp: Float, aspect: Float?, capDp: Float, scale: Float): Float {
+        if (scale == 1f || !scale.isFinite() || scale <= 0f) return heightDp(widthDp, aspect, capDp)
+        val shape = aspect?.takeIf { it.isFinite() && it > 0f } ?: 1f
+        val cap = capDp.coerceAtLeast(1f)
+        val top = if (scale < 1f) cap * scale else cap
+        return (widthDp / shape * scale).coerceIn(min(MIN_DP * scale, top), top)
+    }
+
+    /**
      * Size of a media of [aspect] covering a box of [boxWidth] × [boxHeight] px: the full width at its own shape,
      * or, for a media wider than the box, the full height (its sides cut evenly).
      */
@@ -66,13 +79,13 @@ internal class ArtworkHeight(val target: Dp, val height: Animatable<Dp, Animatio
  */
 @Composable
 internal fun rememberArtworkHeight(trackId: String, canvas: String?, width: Dp, cap: Dp, frame: Frame?,
-                                   canvasAspect: Float?, fixed: Dp? = null): ArtworkHeight {
+                                   canvasAspect: Float?, fixed: Dp? = null, scale: Float = 1f): ArtworkHeight {
     val video = canvas?.takeIf { AppSettings.animatedArtwork.value }
     var reported by remember(trackId, video) { mutableFloatStateOf(0f) }
     val poster = com.ketvoice.app.ui.sub.rememberCanvasPoster(video)
     val posterAspect = poster?.takeIf { it.width > 0 && it.height > 0 }?.let { it.width.toFloat() / it.height }
     val aspect = frame?.aspect ?: reported.takeIf { it > 0f } ?: video?.let { posterAspect ?: canvasAspect }
-    val target = fixed ?: PlayerArtworkSize.heightDp(width.value, aspect, cap.value).dp
+    val target = fixed ?: PlayerArtworkSize.heightDp(width.value, aspect, cap.value, scale).dp
     val height = remember { Animatable(target, Dp.VectorConverter) }
     LaunchedEffect(target) {
         if (Motion.reduced || fixed != null) height.snapTo(target) else height.animateTo(target, Motion.Springs.SMOOTH.spec())

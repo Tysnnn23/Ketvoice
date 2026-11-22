@@ -234,6 +234,9 @@ fun SettingsScreen() {
                 }
             }
 
+            // ==================================================== PERSONNALISATION · DISPOSITION (9.0)
+            Section("DISPOSITION") { LayoutCustomizationRows() }
+
             // ==================================================== APPARENCE
             Section("DESIGN KETVOICE") {
                 Text("Chaque finition peut être retirée séparément, sans modifier vos playlists ni votre musique.", color = th.secondary)
@@ -1019,7 +1022,7 @@ private fun qualityChoice(title: String, current: String, onSelect: (String) -> 
 )
 
 @Composable
-private fun ChoiceDialog(spec: ChoiceSpec, onDismiss: () -> Unit) {
+internal fun ChoiceDialog(spec: ChoiceSpec, onDismiss: () -> Unit) {
     val th = LocalTheme.current
     // Ket 27: the picker of iOS 27 — an inset group of 52 dp rows on the glass sheet, the choice
     // marked in the app's colour, and a tick in the hand when it is made.

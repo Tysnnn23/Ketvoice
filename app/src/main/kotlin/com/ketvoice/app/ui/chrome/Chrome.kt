@@ -215,15 +215,15 @@ fun MiniPlayerPill(
                     }
                 }
                 Spacer(Modifier.width(4.dp))
+                // 9.0 « Lecteur modulable »: the listener's buttons beside play/pause (Next alone by default).
+                val extras = com.ketvoice.app.ui.player.PlayerLayout.mini(com.ketvoice.app.data.LayoutSettings.mini.value)
+                com.ketvoice.app.ui.player.PlayerLayout.miniBefore(extras).forEach {
+                    com.ketvoice.app.ui.player.MiniActionButton(it, th.onBackground, DesignTokens.Space.touch, 26.dp)
+                }
                 Box(Modifier.onGloballyPositioned { com.ketvoice.app.ui.player.MiniPlayerAnchors.play = it.boundsInRoot() }) {
                     MiniTransportButton(playing = ps.playWhenReady, size = playSize)
                 }
-                Spacer(Modifier.width(2.dp))
-                // Next stays when the tab bar folds (7.1): iOS 26's Music lost it there.
-                Box(Modifier.onGloballyPositioned { com.ketvoice.app.ui.player.MiniPlayerAnchors.next = it.boundsInRoot() }
-                    .testTag("mini-next")) {
-                    MiniTransportNext()
-                }
+                MiniExtras(extras)
             }
 
             // Ligne de progression animée (composant isolé du tic)
@@ -323,6 +323,22 @@ private fun MiniTransportNext(size: androidx.compose.ui.unit.Dp = DesignTokens.S
     }
 }
 
+/** The mini-player's buttons after play/pause; Next keeps its anchor for the player's opening (7.1: it stays when the bar folds). */
+@Composable
+private fun MiniExtras(extras: List<com.ketvoice.app.ui.player.MiniAction>) {
+    val th = LocalTheme.current
+    if (com.ketvoice.app.ui.player.MiniAction.Next !in extras) androidx.compose.runtime.SideEffect { com.ketvoice.app.ui.player.MiniPlayerAnchors.next = null }
+    com.ketvoice.app.ui.player.PlayerLayout.miniAfter(extras).forEach { action ->
+        Spacer(Modifier.width(2.dp))
+        // Next stays when the tab bar folds (7.1): iOS 26's Music lost it there.
+        if (action == com.ketvoice.app.ui.player.MiniAction.Next) Box(Modifier
+            .onGloballyPositioned { com.ketvoice.app.ui.player.MiniPlayerAnchors.next = it.boundsInRoot() }
+            .testTag("mini-next")) {
+            MiniTransportNext()
+        } else com.ketvoice.app.ui.player.MiniActionButton(action, th.onBackground, DesignTokens.Space.touch, 26.dp)
+    }
+}
+
 /** Fine ligne de progression sous le mini-lecteur — collecte la position indépendamment. */
 @Composable
 private fun MiniProgressLine(modifier: Modifier = Modifier) {
@@ -347,7 +363,15 @@ private fun MiniProgressLine(modifier: Modifier = Modifier) {
     )
 }
 
-private data class TabSpec(val icon: ImageVector, val label: String, val index: Int)
+/** A tab of the bar: [index] is its slot (0 at the start), [destination] where it leads (9.0 « Onglets à la carte »). */
+private data class TabSpec(val icon: ImageVector, val label: String, val index: Int, val destination: TabDestination)
+
+/** The listener's tabs, in their order (Home, Explore, Library unless changed in Settings). */
+@Composable
+private fun rememberTabSpecs(): List<TabSpec> {
+    val order = com.ketvoice.app.data.LayoutSettings.tabs.value
+    return remember(order) { TabLayout.parse(order).mapIndexed { i, d -> TabSpec(d.icon, d.label, i, d) } }
+}
 
 /**
  * Chrome flottant complet : mini-lecteur + navigation + recherche.
@@ -420,6 +444,9 @@ private fun ChromeBody(width: Dp, fraction: () -> Float, stretch: () -> Float, c
     }
     // Docked once the pill is two thirds of the way: composed again once, not at every frame.
     val compactPill by remember { androidx.compose.runtime.derivedStateOf { f() > .65f } }
+    // 9.0: with Search among the tabs, the bubble only comes with the folded row and the search field.
+    val searchTab = TabDestination.Search in TabLayout.parse(com.ketvoice.app.data.LayoutSettings.tabs.value)
+    val bubbleShown by remember(searchTab, searching) { androidx.compose.runtime.derivedStateOf { !searchTab || searching || f() > 0f } }
     Box(Modifier.fillMaxWidth().layout { measurable, constraints ->
         val h = (fullHeight + (58.dp - fullHeight) * f()).roundToPx().coerceIn(constraints.minHeight, constraints.maxHeight)
         val placeable = measurable.measure(constraints.copy(minHeight = h, maxHeight = h))
@@ -428,7 +455,7 @@ private fun ChromeBody(width: Dp, fraction: () -> Float, stretch: () -> Float, c
         com.ketvoice.app.glass.GlassFusionLayer(fusion, LocalTheme.current.isDark, Modifier.matchParentSize())
         androidx.compose.runtime.CompositionLocalProvider(com.ketvoice.app.glass.LocalGlassFusion provides fusion) {
         GlassTabCapsule(compact, Modifier.offset { androidx.compose.ui.unit.IntOffset(12.dp.roundToPx(), navigationY().roundToPx()) },
-            availableWidth = width, homeOnly = compact || searching,
+            availableWidth = width, homeOnly = compact || searching, bubbleRoom = !searchTab,
             onPill = if (searching) ({ AppUi.closeOverlay(); Unit }) else ({ ChromeCollapse.restoreAll() }),
             pillLabel = if (searching) "Fermer la recherche" else "Afficher les onglets")
         if (miniShown) MiniPlayerPill(
@@ -440,8 +467,8 @@ private fun ChromeBody(width: Dp, fraction: () -> Float, stretch: () -> Float, c
             compact = compactPill,
             fold = f,
             onOpen = onOpenPlayer)
-        SearchBubble(stretch, searching,
-            Modifier.layout { measurable, constraints ->
+        if (bubbleShown) SearchBubble(stretch, searching,
+            Modifier.then(if (searchTab && !searching) Modifier.graphicsLayer { alpha = f() } else Modifier).layout { measurable, constraints ->
                 val fold = f()
                 val restSide = 60f - 8f * fold
                 val bubble = FloatingSearch.bubble(stretch(), width.value, restSide, width.value - 76f + 12f * fold, pillEnd = 72f, margin = 16f)
@@ -563,20 +590,19 @@ private fun SearchCircleButton(size: androidx.compose.ui.unit.Dp, modifier: Modi
 internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier,
                              availableWidth: Dp = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp.dp,
                              homeOnly: Boolean = false, onPill: () -> Unit = { ChromeCollapse.restoreAll() },
-                             pillLabel: String = "Afficher les onglets") {
+                             pillLabel: String = "Afficher les onglets",
+                             /** False when Search is a tab: no bubble beside the bar, which then takes its room (9.0). */
+                             bubbleRoom: Boolean = true) {
     val th = LocalTheme.current
     val focus = androidx.compose.ui.platform.LocalFocusManager.current
     val haptic = com.ketvoice.app.ui.motion.rememberHaptics()
     var held by remember { mutableStateOf(false) }
     var hover by remember { mutableFloatStateOf(0f) }
-    // Ket 27 draws its own symbols, in the manner of iOS.
-    val tabs = listOf(
-        TabSpec(com.ketvoice.app.ui.common.Ket27Glyphs.Home, "Accueil", AppUi.HOME),
-        TabSpec(com.ketvoice.app.ui.common.Ket27Glyphs.Explore, "Explorer", AppUi.EXPLORER),
-        TabSpec(com.ketvoice.app.ui.common.Ket27Glyphs.Library, "Bibliothèque", AppUi.LIBRARY)
-    )
+    // Ket 27 draws its own symbols, in the manner of iOS; the tabs are the listener's (9.0).
+    val tabs = rememberTabSpecs()
+    val count = tabs.size
 
-    val fullWidth = (availableWidth - 92.dp).coerceIn(144.dp, 310.dp)
+    val fullWidth = if (bubbleRoom) (availableWidth - 92.dp).coerceIn(144.dp, 310.dp) else (availableWidth - 24.dp).coerceIn(144.dp, 400.dp)
     // Read in the layout and draw phases only: the folding bar is not composed again at every frame.
     val widthState = animateDpAsState(
         targetValue = when {
@@ -602,7 +628,7 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier,
     val folded = homeOnly && !melting
     val full = !folded && (!collapsed || homeOnly)
     // 8.3 « Pastille physique »: the selection is moved by PillPhysics; held, it follows the finger as a lens.
-    val current = tabs.indexOfFirst { it.index == AppUi.tab.value }.coerceAtLeast(0)
+    val current = TabLayout.selectedNow(tabs.map { it.destination })
     val selected = if (held) kotlin.math.round(hover).toInt() else current
     val pill = remember { PillMotion(current.toFloat()) }
     val reduced = Motion.reduced
@@ -646,18 +672,18 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier,
                     } ?: true
                     if (!grabbed) return@awaitEachGesture
                     held = true
-                    hover = lensPosition(down.position.x, size.width.toFloat())
+                    hover = lensPosition(down.position.x, size.width.toFloat(), count)
                     var released = false
                     while (!released) {
                         // Read before the tabs, so that letting go of the lens is not also a tap on a tab.
                         val change = awaitPointerEvent(PointerEventPass.Initial).changes.firstOrNull { it.id == down.id } ?: break
                         change.consume()
-                        if (change.pressed) hover = lensPosition(change.position.x, size.width.toFloat()) else released = true
+                        if (change.pressed) hover = lensPosition(change.position.x, size.width.toFloat(), count) else released = true
                     }
                     if (released) {
                         focus.clearFocus()
                         haptic(Haptics.Kind.Tick)
-                        AppUi.selectTab(kotlin.math.round(hover).toInt().coerceIn(0, 2))
+                        TabLayout.open(tabs[kotlin.math.round(hover).toInt().coerceIn(0, count - 1)].destination)
                     }
                     held = false
                 }
@@ -670,7 +696,7 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier,
             enabled = AppSettings.liquidGlass.value,
             export = if (lens) barGlass else null
         ) {
-            if (folded) FoldedTabPill(tabs, onPill, pillLabel)
+            if (folded) FoldedTabPill(tabs, current, onPill, pillLabel)
             else if (!full) CompactTabs(tabs, heightState)
         }
         // The full bar draws over its glass, outside it: the lifted pill rises a little past the bar's edges.
@@ -686,11 +712,11 @@ internal fun GlassTabCapsule(collapsed: Boolean, modifier: Modifier = Modifier,
  * unfolds it again where the page is.
  */
 @Composable
-private fun FoldedTabPill(tabs: List<TabSpec>, onPill: () -> Unit, pillLabel: String) {
+private fun FoldedTabPill(tabs: List<TabSpec>, selected: Int, onPill: () -> Unit, pillLabel: String) {
     val th = LocalTheme.current
     val focus = androidx.compose.ui.platform.LocalFocusManager.current
     val haptic = com.ketvoice.app.ui.motion.rememberHaptics()
-    val current = tabs.firstOrNull { it.index == AppUi.tab.value } ?: tabs.first()
+    val current = tabs.getOrNull(selected) ?: tabs.first()
     val src = remember { MutableInteractionSource() }
     val pressed by src.collectIsPressedAsState()
     val press by animateFloatAsState(
@@ -725,15 +751,15 @@ private fun FoldedTabPill(tabs: List<TabSpec>, onPill: () -> Unit, pillLabel: St
  * Where the selection pill is drawn: a third of the capsule per tab, flowing to the middle one as the bar melts,
  * taller and wider as it lifts, stretched by its acceleration. Read while laying out and drawing only.
  */
-private fun Modifier.tabPill(pill: PillMotion, height: androidx.compose.runtime.State<Dp>, melt: () -> Float): Modifier = this
+private fun Modifier.tabPill(pill: PillMotion, height: androidx.compose.runtime.State<Dp>, melt: () -> Float, count: Int): Modifier = this
     .layout { measurable, constraints ->
-        val slot = constraints.maxWidth / 3f
+        val slot = constraints.maxWidth / count.coerceAtLeast(1).toFloat()
         val lift = pill.lift
         val growW = TabPill.LIFT_WIDTH_DP.dp.toPx() * lift
         val w = (slot - 10.dp.toPx() + growW).roundToInt().coerceAtLeast(0)
         val h = ((height.value - 10.dp).toPx() + TabPill.LIFT_HEIGHT_DP.dp.toPx() * lift).roundToInt().coerceAtLeast(0)
         val placeable = measurable.measure(androidx.compose.ui.unit.Constraints.fixed(w, h))
-        val x = slot * pill.x + 5.dp.toPx() - growW / 2f + TabMelt.towardsMiddle(pill.x, slot, melt())
+        val x = slot * pill.x + 5.dp.toPx() - growW / 2f + TabMelt.towardsMiddle(pill.x, slot, melt(), count)
         layout(constraints.maxWidth, constraints.maxHeight) {
             placeable.place(x.roundToInt(), (constraints.maxHeight - h) / 2)
         }
@@ -761,14 +787,14 @@ private fun FullTabs(modifier: Modifier, tabs: List<TabSpec>, pill: PillMotion, 
     val lastHoverTab = remember { mutableIntStateOf(-1) }
     // Each tab crossed by the held lens is felt, as on iOS.
     if (held) {
-        val over = kotlin.math.round(hover).toInt().coerceIn(0, 2)
+        val over = kotlin.math.round(hover).toInt().coerceIn(0, tabs.size - 1)
         LaunchedEffect(over) { if (lastHoverTab.intValue != -1 && lastHoverTab.intValue != over) haptic(Haptics.Kind.Tick); lastHoverTab.intValue = over }
     } else lastHoverTab.intValue = -1
     Box(modifier) {
         val pillShape = RoundedCornerShape(999.dp)
         // The flat pill: a real GlassPanel over the page (refraction, rim light, shadow), not a white capsule.
         GlassPanel(
-            modifier = Modifier.tabPill(pill, height, melt)
+            modifier = Modifier.tabPill(pill, height, melt, tabs.size)
                 // A seasonal theme (6.2): the selection wears a thin edge of its colours.
                 .then(th.season?.let { look -> with(look) { Modifier.seasonEdge(pillShape, true) } } ?: Modifier),
             shape = pillShape,
@@ -780,16 +806,16 @@ private fun FullTabs(modifier: Modifier, tabs: List<TabSpec>, pill: PillMotion, 
         if (barGlass != null) androidx.compose.runtime.CompositionLocalProvider(com.ketvoice.app.glass.LocalBackdropLayer provides barGlass) {
             val lensParams = remember(th.isDark) { TabPill.lensParams(th.isDark) }
             GlassPanel(
-                modifier = Modifier.whileLifted(pill).tabPill(pill, height, melt).graphicsLayer { alpha = TabPill.lensAlpha(pill.lift) },
+                modifier = Modifier.whileLifted(pill).tabPill(pill, height, melt, tabs.size).graphicsLayer { alpha = TabPill.lensAlpha(pill.lift) },
                 shape = pillShape, params = lensParams, enabled = AppSettings.liquidGlass.value
             ) {}
         }
         Row(Modifier.fillMaxSize().padding(horizontal = 4.dp).selectableGroup()) {
-            tabs.forEach { tab -> FullTab(tab, selected == tab.index, pill, melt) }
+            tabs.forEach { tab -> FullTab(tab, selected == tab.index, pill, melt, tabs.size) }
         }
         if (held) Row(Modifier.align(Alignment.BottomCenter).padding(bottom = 2.dp),
             horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            repeat(3) { dot -> Box(Modifier.size(3.dp).clip(CircleShape)
+            repeat(tabs.size) { dot -> Box(Modifier.size(3.dp).clip(CircleShape)
                 .background(th.onBackground.copy(alpha = if (dot == selected) .9f else .3f))) }
         }
     }
@@ -797,7 +823,7 @@ private fun FullTabs(modifier: Modifier, tabs: List<TabSpec>, pill: PillMotion, 
 
 /** One tab of the full bar: its symbol and label, magnified under the held lens. */
 @Composable
-private fun androidx.compose.foundation.layout.RowScope.FullTab(tab: TabSpec, isSel: Boolean, pill: PillMotion, melt: () -> Float) {
+private fun androidx.compose.foundation.layout.RowScope.FullTab(tab: TabSpec, isSel: Boolean, pill: PillMotion, melt: () -> Float, count: Int) {
     val th = LocalTheme.current
     val focus = androidx.compose.ui.platform.LocalFocusManager.current
     val haptic = com.ketvoice.app.ui.motion.rememberHaptics()
@@ -839,13 +865,13 @@ private fun androidx.compose.foundation.layout.RowScope.FullTab(tab: TabSpec, is
                 scaleX = press; scaleY = press
                 // Melting: every tab flows to the middle, the others fade, the current one stays.
                 val m = melt()
-                translationX = TabMelt.towardsMiddle(tab.index.toFloat(), size.width, m)
+                translationX = TabMelt.towardsMiddle(tab.index.toFloat(), size.width, m, count)
                 alpha = if (isSel) 1f else TabMelt.otherAlpha(m)
             }
             .selectable(isSel, tabSource, null, role = Role.Tab) {
                 focus.clearFocus()
                 if (!isSel) haptic(Haptics.Kind.Tick)
-                AppUi.selectTab(tab.index)
+                TabLayout.open(tab.destination)
             }
     ) {
         Icon(
@@ -881,7 +907,7 @@ private fun CompactTabs(tabs: List<TabSpec>, height: androidx.compose.runtime.St
     val th = LocalTheme.current
     val focus = androidx.compose.ui.platform.LocalFocusManager.current
     val haptic = com.ketvoice.app.ui.motion.rememberHaptics()
-    val selected = tabs.indexOfFirst { it.index == AppUi.tab.value }.coerceAtLeast(0)
+    val selected = TabLayout.selectedNow(tabs.map { it.destination })
     val pos by animateFloatAsState(
         targetValue = selected.toFloat(),
         animationSpec = if (Motion.reduced) androidx.compose.animation.core.snap()
@@ -889,7 +915,7 @@ private fun CompactTabs(tabs: List<TabSpec>, height: androidx.compose.runtime.St
         label = "compactLens"
     )
     BoxWithConstraints(Modifier.fillMaxSize()) {
-        val slot = maxWidth / 3
+        val slot = maxWidth / tabs.size.coerceAtLeast(1)
         // The same lens language survives the collapsed state instead of
         // turning into three static icons.
         GlassPanel(
@@ -904,7 +930,7 @@ private fun CompactTabs(tabs: List<TabSpec>, height: androidx.compose.runtime.St
         ) {}
         Row(Modifier.fillMaxSize().selectableGroup()) {
             tabs.forEach { tab ->
-                val isSel = AppUi.tab.value == tab.index
+                val isSel = selected == tab.index
                 val tabSource = remember(tab.index) { MutableInteractionSource() }
                 val pressed by tabSource.collectIsPressedAsState()
                 val scale by animateFloatAsState(
@@ -923,7 +949,7 @@ private fun CompactTabs(tabs: List<TabSpec>, height: androidx.compose.runtime.St
                 )
                 Box(Modifier.weight(1f).fillMaxHeight()
                     .selectable(isSel, tabSource, null, role = Role.Tab) {
-                        focus.clearFocus(); if (!isSel) haptic(Haptics.Kind.Tick); AppUi.selectTab(tab.index)
+                        focus.clearFocus(); if (!isSel) haptic(Haptics.Kind.Tick); TabLayout.open(tab.destination)
                     }, contentAlignment = Alignment.Center) {
                     Icon(
                         tab.icon, tab.label,
@@ -967,15 +993,16 @@ internal object TabMelt {
     fun fold(width: Float, full: Float, folded: Float): Float =
         if (full <= folded || !width.isFinite()) 0f else ((full - width) / (full - folded)).coerceIn(0f, 1f)
 
-    /** Offset of the item in slot [index] (0..2) towards the middle slot, [slotPx] wide. */
-    fun towardsMiddle(index: Float, slotPx: Float, fold: Float): Float = (1f - index) * slotPx * fold
+    /** Offset of the item in slot [index] (0..[count] - 1) towards the middle of the bar, [slotPx] wide. */
+    fun towardsMiddle(index: Float, slotPx: Float, fold: Float, count: Int = 3): Float = ((count - 1) / 2f - index) * slotPx * fold
 
     fun labelAlpha(fold: Float): Float = (1f - fold * 2.5f).coerceIn(0f, 1f)
     fun otherAlpha(fold: Float): Float = (1f - fold * 1.7f).coerceIn(0f, 1f)
     fun lensAlpha(fold: Float): Float = (1f - fold * 1.4f).coerceIn(0f, 1f)
 }
 
-internal fun lensPosition(x: Float, width: Float): Float = (x * 3f / width.coerceAtLeast(1f) - .5f).coerceIn(0f, 2f)
+internal fun lensPosition(x: Float, width: Float, count: Int = 3): Float =
+    (x * count / width.coerceAtLeast(1f) - .5f).coerceIn(0f, (count - 1).coerceAtLeast(0).toFloat())
 
 private fun Modifier.graphicsLayerScale(scale: Float): Modifier =
     this.then(

@@ -138,7 +138,7 @@ internal object CristalBar {
     const val INLINE_SIDE = 48f
     const val SELECTED_SCALE = 1.08f
     const val UNSELECTED_ALPHA = .65f
-    /** The tabs of the capsule: Home, Explore, Library, then Search. */
+    /** The cells of the capsule by default: Home, Explore, Library, then Search (9.0: the listener's tabs, then Search). */
     const val TABS = 4
 
     // ---- Motion.
@@ -203,9 +203,9 @@ internal object CristalBar {
     }
 
     /** The selected glyph's centre, from its tab of the capsule to the folded circle; y measured up from the foot. */
-    fun glyphCenter(width: Float, track: Boolean, selected: Int, f: Float): Offset {
+    fun glyphCenter(width: Float, track: Boolean, selected: Int, f: Float, cells: Int = TABS): Offset {
         val a = expanded(width, track).tabs
-        val cell = (a.w - 2 * INSET) / TABS
+        val cell = (a.w - 2 * INSET) / cells.coerceAtLeast(1)
         val from = Offset(a.x + INSET + cell * (selected + .5f), HEIGHT - INSET - TAB_PADDING - ICON / 2f)
         val b = inline(width, track).tabs
         val to = Offset(b.x + b.w / 2f, b.bottom + b.h / 2f)
@@ -228,7 +228,10 @@ internal object CristalBar {
     fun foldSpring(): AnimationSpec<Float> = spring(dampingRatio = FOLD_DAMPING, stiffness = FOLD_STIFFNESS)
 }
 
-private data class CristalTab(val icon: ImageVector, val label: String, val index: Int)
+/** A cell of the capsule: a tab of the bar, or Search, which closes the row unless it is one of the tabs (9.0). */
+private data class CristalTab(val icon: ImageVector, val label: String, val destination: TabDestination) {
+    val search: Boolean get() = destination == TabDestination.Search
+}
 
 /** The phone chrome in the Cristal look ([com.ketvoice.app.glass.GlassLook]); [FloatingChrome] hands over to it. */
 @Composable
@@ -277,11 +280,13 @@ private fun Modifier.cristalPlace(place: () -> CristalBar.Place): Modifier = lay
 @Composable
 private fun CristalTabs(width: Float, track: Boolean, frame: () -> CristalBar.Frame, inlineAmount: () -> Float,
                         inlineTarget: Boolean, searching: Boolean, reduced: Boolean, dark: Boolean) {
-    val tabs = remember {
-        listOf(CristalTab(Ket27Glyphs.Home, "Accueil", AppUi.HOME), CristalTab(Ket27Glyphs.Explore, "Explorer", AppUi.EXPLORER),
-            CristalTab(Ket27Glyphs.Library, "Bibliothèque", AppUi.LIBRARY), CristalTab(Ket27Glyphs.Search, "Rechercher", -1))
+    // 9.0 « Onglets à la carte »: the listener's tabs, then Search unless it is one of them.
+    val order = com.ketvoice.app.data.LayoutSettings.tabs.value
+    val chosen = remember(order) { TabLayout.parse(order) }
+    val tabs = remember(chosen) {
+        (chosen + listOfNotNull(TabDestination.Search.takeIf { it !in chosen })).map { CristalTab(it.icon, it.label, it) }
     }
-    val selected = tabs.indexOfFirst { it.index == AppUi.tab.value }.coerceIn(0, 2)
+    val selected = TabLayout.selectedNow(chosen)
     val shape = remember { RoundedCornerShape(percent = 50) }
     val haptic = rememberHaptics()
     val focus = LocalFocusManager.current
@@ -314,23 +319,25 @@ private fun CristalTabs(width: Float, track: Boolean, frame: () -> CristalBar.Fr
                 focus.clearFocus(); haptic(Haptics.Kind.Tick)
                 if (searching) AppUi.closeOverlay() else ChromeCollapse.restoreAll()
             } else Modifier)) {
-            if (!inlineTarget) CristalTabRow(width, tabs, selected, pill, enter, atRest, reduced, dark, glassPill, tabRow)
+            if (!inlineTarget) CristalTabRow(width, tabs, chosen.size, selected, pill, enter, atRest, reduced, dark, glassPill, tabRow)
         }
-        if (lensUp && backdrop != null) CristalLensPill(pill, width, backdrop, barGlass, tabRow, dark)
+        if (lensUp && backdrop != null) CristalLensPill(pill, width, tabs.size, backdrop, barGlass, tabRow, dark)
     }
-    if (!atRest) CristalTravellingGlyph(width, track, tabs[selected], selected, inlineAmount, inlineTarget, searching, dark)
+    if (!atRest) CristalTravellingGlyph(width, track, tabs[selected], selected, tabs.size, inlineAmount, inlineTarget, searching, dark)
 }
 
 /** The tab row of the expanded capsule, laid out at its full size inside the capsule whatever the capsule's size. */
 @Composable
-private fun CristalTabRow(width: Float, tabs: List<CristalTab>, selected: Int, pill: CristalPillMotion, enter: Animatable<Float, *>,
+private fun CristalTabRow(width: Float, tabs: List<CristalTab>, chosen: Int, selected: Int, pill: CristalPillMotion, enter: Animatable<Float, *>,
                           atRest: Boolean, reduced: Boolean, dark: Boolean, glassPill: Boolean, tabRow: LayerBackdrop) {
     val density = LocalDensity.current
     val haptic = rememberHaptics()
     val focus = LocalFocusManager.current
     val innerW = (width - 2 * CristalBar.GUTTER - 2 * CristalBar.INSET).coerceAtLeast(0f)
     val innerH = CristalBar.HEIGHT - 2 * CristalBar.INSET
-    val step = innerW / CristalBar.TABS
+    val step = innerW / tabs.size.coerceAtLeast(1)
+    // The selection travels over the tabs only, never onto the Search cell that closes the row.
+    val lastSlot = (chosen - 1).coerceAtLeast(0).toFloat()
     pill.stepDp = step
     LaunchedEffect(selected) { pill.select(selected) }
     val stepPx = with(density) { step.dp.toPx() }
@@ -359,15 +366,15 @@ private fun CristalTabRow(width: Float, tabs: List<CristalTab>, selected: Int, p
                 onDragEnd = {
                     if (!holding) return@detectHorizontalDragGestures
                     holding = false
-                    val next = (start + total / currentStep).coerceIn(0f, 2f).roundToInt()
+                    val next = (start + total / currentStep).coerceIn(0f, lastSlot).roundToInt()
                     pill.letGo(next)
-                    if (next != currentSelected) { focus.clearFocus(); AppUi.selectTab(tabs[next].index) }
+                    if (next != currentSelected) { focus.clearFocus(); TabLayout.open(tabs[next].destination) }
                 },
                 onHorizontalDrag = { change, dx ->
                     if (!holding) return@detectHorizontalDragGestures
                     change.consume()
                     total += dx
-                    val at = (start + total / currentStep).coerceIn(0f, 2f)
+                    val at = (start + total / currentStep).coerceIn(0f, lastSlot)
                     pill.hold(at)
                     if (at.roundToInt() != lastTick) { haptic(Haptics.Kind.Tick); lastTick = at.roundToInt() }
                 })
@@ -375,8 +382,8 @@ private fun CristalTabRow(width: Float, tabs: List<CristalTab>, selected: Int, p
             tabs.forEachIndexed { i, tab ->
                 CristalTabCell(tab, i == selected, glyphShown = i != selected || atRest, enter, reduced, dark) {
                     focus.clearFocus()
-                    if (tab.index < 0) { haptic(Haptics.Kind.Press); FloatingSearch.open() }
-                    else { if (i != selected) haptic(Haptics.Kind.Tick); AppUi.selectTab(tab.index) }
+                    if (tab.search) { haptic(Haptics.Kind.Press); FloatingSearch.open() }
+                    else { if (i != selected) haptic(Haptics.Kind.Tick); TabLayout.open(tab.destination) }
                 }
             }
         }
@@ -407,9 +414,9 @@ private fun RowScope.CristalTabCell(tab: CristalTab, selected: Boolean, glyphSho
     val entering: GraphicsLayerScope.() -> Unit = { applyEnter(enter.value, density) }
     Column(
         Modifier.weight(1f).fillMaxSize().clip(CircleShape)
-            .clickable(remember { MutableInteractionSource() }, androidx.compose.material3.ripple(), role = if (tab.index < 0) Role.Button else Role.Tab,
+            .clickable(remember { MutableInteractionSource() }, androidx.compose.material3.ripple(), role = if (tab.search) Role.Button else Role.Tab,
                 onClick = onClick)
-            .semantics { this.selected = selected && tab.index >= 0 }
+            .semantics { this.selected = selected && !tab.search }
             .padding(vertical = CristalBar.TAB_PADDING.dp),
         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center
     ) {
@@ -435,14 +442,14 @@ private fun GraphicsLayerScope.applyEnter(ms: Float, density: Float) {
 
 /** The selected glyph on its way between its tab and the folded circle, over everything else. */
 @Composable
-private fun CristalTravellingGlyph(width: Float, track: Boolean, tab: CristalTab, selected: Int, inlineAmount: () -> Float,
+private fun CristalTravellingGlyph(width: Float, track: Boolean, tab: CristalTab, selected: Int, cells: Int, inlineAmount: () -> Float,
                                    inlineTarget: Boolean, searching: Boolean, dark: Boolean) {
     val scale = if (inlineTarget) 1f else CristalBar.SELECTED_SCALE
     Icon(tab.icon, contentDescription = null, tint = Cristal.content(dark), modifier = Modifier.layout { measurable, constraints ->
         val side = CristalBar.ICON.dp.roundToPx()
         val placeable = measurable.measure(Constraints.fixed(side, side))
         layout(constraints.maxWidth, constraints.maxHeight) {
-            val c = CristalBar.glyphCenter(width, track, selected, inlineAmount())
+            val c = CristalBar.glyphCenter(width, track, selected, inlineAmount(), cells)
             placeable.place((c.x.dp.toPx() - side / 2f).roundToInt(), (constraints.maxHeight - c.y.dp.toPx() - side / 2f).roundToInt())
         }
     }.graphicsLayer { scaleX = scale; scaleY = scale }.testTag(if (searching) "cristal-search-close" else "cristal-folded-tab"))
@@ -455,7 +462,7 @@ private fun CristalTravellingGlyph(width: Float, track: Boolean, tab: CristalTab
  * and keeps its fill. Android 12 draws no lens either (it needs Android 13).
  */
 @Composable
-private fun CristalLensPill(pill: CristalPillMotion, width: Float, page: Backdrop, barGlass: LayerBackdrop, tabRow: LayerBackdrop,
+private fun CristalLensPill(pill: CristalPillMotion, width: Float, cells: Int, page: Backdrop, barGlass: LayerBackdrop, tabRow: LayerBackdrop,
                             dark: Boolean) {
     val density = LocalDensity.current
     val indicator = Cristal.indicator(dark)
@@ -466,7 +473,7 @@ private fun CristalLensPill(pill: CristalPillMotion, width: Float, page: Backdro
         }
     }
     val innerW = (width - 2 * CristalBar.GUTTER - 2 * CristalBar.INSET).coerceAtLeast(0f)
-    val step = innerW / CristalBar.TABS
+    val step = innerW / cells.coerceAtLeast(1)
     val rowH = CristalBar.HEIGHT - 2 * CristalBar.INSET
     Box(Modifier.fillMaxSize().layout { measurable, constraints ->
         val rest = Size(step.dp.toPx(), rowH.dp.toPx())
@@ -616,21 +623,34 @@ private fun CristalNowPlaying(inline: Boolean, dark: Boolean, onOpen: () -> Unit
                 }
                 FadingLine(current.artist, TextStyle(fontSize = 12.sp, letterSpacing = .35.sp), secondary)
             }
+            // 9.0 « Lecteur modulable »: the listener's buttons beside play/pause (Next alone by default), expanded only.
+            val extras = if (inline) emptyList() else com.ketvoice.app.ui.player.PlayerLayout.mini(com.ketvoice.app.data.LayoutSettings.mini.value)
+            com.ketvoice.app.ui.player.PlayerLayout.miniBefore(extras).forEach {
+                com.ketvoice.app.ui.player.MiniActionButton(it, content, 40.dp, 25.dp)
+            }
             Box(Modifier.size(glyphSlot).onGloballyPositioned { com.ketvoice.app.ui.player.MiniPlayerAnchors.play = it.boundsInRoot() }
                 .clip(CircleShape).clickable(remember { MutableInteractionSource() }, null) { haptic(Haptics.Kind.Press); Player.toggle() },
                 contentAlignment = Alignment.Center) {
                 com.ketvoice.app.ui.player.MorphingTransportGlyph(ps.playWhenReady, Modifier.size(glyph), content)
             }
-            if (!inline) {
-                Spacer(Modifier.width(4.dp))
-                var taps by remember { mutableIntStateOf(0) }
-                Box(Modifier.size(40.dp).onGloballyPositioned { com.ketvoice.app.ui.player.MiniPlayerAnchors.next = it.boundsInRoot() }
-                    .clip(CircleShape).clickable(remember { MutableInteractionSource() }, null) { taps++; haptic(Haptics.Kind.Press); Player.next() }
-                    .testTag("mini-next"), contentAlignment = Alignment.Center) {
-                    Icon(Icons.Filled.SkipNext, contentDescription = "Suivant", tint = content,
-                        modifier = Modifier.size(25.dp).symbolSlide(taps, 1))
-                }
-            }
+            if (!inline) CristalMiniExtras(extras, content, haptic)
+        }
+    }
+}
+
+/** The accessory's buttons after play/pause; Next keeps its anchor for the player's opening. */
+@Composable
+private fun CristalMiniExtras(extras: List<com.ketvoice.app.ui.player.MiniAction>, content: Color, haptic: (Haptics.Kind) -> Unit) {
+    if (com.ketvoice.app.ui.player.MiniAction.Next !in extras) androidx.compose.runtime.SideEffect { com.ketvoice.app.ui.player.MiniPlayerAnchors.next = null }
+    com.ketvoice.app.ui.player.PlayerLayout.miniAfter(extras).forEach { action ->
+        Spacer(Modifier.width(4.dp))
+        if (action != com.ketvoice.app.ui.player.MiniAction.Next) { com.ketvoice.app.ui.player.MiniActionButton(action, content, 40.dp, 25.dp); return@forEach }
+        var taps by remember { mutableIntStateOf(0) }
+        Box(Modifier.size(40.dp).onGloballyPositioned { com.ketvoice.app.ui.player.MiniPlayerAnchors.next = it.boundsInRoot() }
+            .clip(CircleShape).clickable(remember { MutableInteractionSource() }, null) { taps++; haptic(Haptics.Kind.Press); Player.next() }
+            .testTag("mini-next"), contentAlignment = Alignment.Center) {
+            Icon(Icons.Filled.SkipNext, contentDescription = "Suivant", tint = content,
+                modifier = Modifier.size(25.dp).symbolSlide(taps, 1))
         }
     }
 }

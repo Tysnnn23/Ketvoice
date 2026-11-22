@@ -7,9 +7,15 @@ class SettingsNavigationTest {
     @Test fun allExistingGroupsHaveExactlyOneDestination() {
         val groups = listOf("QUEST · CONFORT", "YOUTUBE MUSIC", "DISCORD", "PUBLICATIONS KETVOICE API",
             "LANGUE DE L'APPLICATION", "DESIGN KETVOICE", "APPARENCE", "VERRE", "COULEURS DE LA POCHETTE", "LECTURE", "KETMIX (BÊTA)", "PAROLES",
-            "KETVOICE API · CANVAS", "SOURCES", "TÉLÉCHARGEMENTS", "HORS LIGNE INTELLIGENT", "MUSIQUE LOCALE", "STOCKAGE", "À PROPOS", "WIDGETS")
+            "KETVOICE API · CANVAS", "SOURCES", "TÉLÉCHARGEMENTS", "HORS LIGNE INTELLIGENT", "MUSIQUE LOCALE", "STOCKAGE", "À PROPOS", "WIDGETS",
+            "DISPOSITION")
         assertEquals(groups.toSet(), SettingsCategory.entries.flatMap { it.groups }.toSet())
         groups.forEach { assertEquals(1, SettingsCategory.entries.count { category -> it in category.groups }) }
+    }
+    @Test fun theLayoutHasItsOwnPersonalizationPage() {
+        // 9.0: « Disposition » (tabs, Home, player, library, menus) is a section of Personnalisation, apart from Apparence.
+        assertEquals(SettingsCategory.Personalization, SettingsCategory.forGroup("DISPOSITION"))
+        assertEquals("Personnalisation", SettingsCategory.Personalization.title)
     }
     @Test fun savedCategoryKeysRoundTripWithoutDependingOnTranslatedTitles() {
         SettingsCategory.entries.forEach { assertEquals(it, SettingsCategory.fromKey(it.name)) }

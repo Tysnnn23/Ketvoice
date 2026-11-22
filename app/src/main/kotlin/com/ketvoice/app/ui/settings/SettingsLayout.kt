@@ -175,7 +175,7 @@ internal fun SettingsHome(connected: Boolean, name: String, onResult: (SettingEn
         }
         if (enhance) com.ketvoice.app.ui.onboarding.EnhanceSheet(onClose = { enhance = false })
         SettingsGroupHeading("Apparence et lecture")
-        SettingsCategoryGroup(listOf(SettingsCategory.Appearance, SettingsCategory.Playback, SettingsCategory.Lyrics, SettingsCategory.Canvas), onCategory)
+        SettingsCategoryGroup(listOf(SettingsCategory.Appearance, SettingsCategory.Personalization, SettingsCategory.Playback, SettingsCategory.Lyrics, SettingsCategory.Canvas), onCategory)
         SettingsGroupHeading("Votre musique")
         SettingsCategoryGroup(listOf(SettingsCategory.Sources, SettingsCategory.Downloads, SettingsCategory.LocalMusic, SettingsCategory.Storage), onCategory)
         SettingsGroupHeading("Ketvoice")
@@ -267,6 +267,7 @@ private fun SettingsCategory.supportingText(): String = when (this) {
     SettingsCategory.Account -> "Comptes, synchronisation et publications"
     SettingsCategory.Appearance -> "Thème, verre et personnalisation"
     SettingsCategory.Design -> "Chaque finition peut être retirée séparément"
+    SettingsCategory.Personalization -> "Onglets, accueil, lecteur, bibliothèque et menus"
     SettingsCategory.Playback -> "Qualité audio, égaliseur et sortie"
     SettingsCategory.Lyrics -> "Sources, karaoké et traduction"
     SettingsCategory.Canvas -> "Vidéo et fonds réactifs à la musique"
@@ -281,6 +282,7 @@ private fun SettingsCategory.icon(): ImageVector = when (this) {
     SettingsCategory.Account -> KetIcons.Account
     SettingsCategory.Appearance -> KetIcons.Appearance
     SettingsCategory.Design -> KetIcons.Sliders
+    SettingsCategory.Personalization -> KetIcons.Library
     SettingsCategory.Playback -> KetIcons.Audio
     SettingsCategory.Lyrics -> KetIcons.Lyrics
     SettingsCategory.Canvas -> KetIcons.Canvas

@@ -164,5 +164,11 @@
  "GTA VI": "name of the GTA VI launcher icon (fan art), the same in every language",
  "enhance-{0}": "test tag of an onboarding enhancement row, never shown",
  "enhance-action-{0}": "test tag of an onboarding enhancement button, never shown",
- "enhance-progress-{0}": "test tag of an onboarding enhancement progress bar, never shown"
+ "enhance-progress-{0}": "test tag of an onboarding enhancement progress bar, never shown",
+ "forYou": "stored id of a layout choice (9.0 Disposition), never shown",
+ "mixPoint": "stored id of a layout choice (9.0 Disposition), never shown",
+ "playNext": "stored id of a layout choice (9.0 Disposition), never shown",
+ "removeDownload": "stored id of a layout choice (9.0 Disposition), never shown",
+ "layout-sort-{0}": "test tag of a library order row in Settings, never shown",
+ "layout-view-{0}": "test tag of a library view row in Settings, never shown"
 }

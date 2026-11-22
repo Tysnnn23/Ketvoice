@@ -137,36 +137,62 @@ fun TabletNavigation(info: LargeScreenInfo, width: Dp, modifier: Modifier = Modi
     }
 }
 
+/**
+ * The tabs of the bar, in the listener's order (9.0 « Onglets à la carte »): Home, Explore and Library by default.
+ * Search keeps its own field at the top; Favourites and Downloads, when they are tabs, move up from the library's list.
+ */
 @Composable
 private fun destinations(): List<SidebarDestination> {
-    val overlay = AppUi.overlay.intValue
-    val tab = AppUi.tab.intValue
-    val section = LargeScreenNav.shownLibrarySection.intValue
-    return listOf(
-        SidebarDestination("Accueil", Ket27Glyphs.Home, "sidebar-home", tab == AppUi.HOME && overlay == AppUi.NONE) { AppUi.selectTab(AppUi.HOME) },
-        SidebarDestination("Explorer", Ket27Glyphs.Explore, "sidebar-explorer", tab == AppUi.EXPLORER && overlay == AppUi.NONE) { AppUi.selectTab(AppUi.EXPLORER) },
-        SidebarDestination("Bibliothèque", Ket27Glyphs.Library, "sidebar-library",
-            tab == AppUi.LIBRARY && overlay == AppUi.NONE && section == 0) { openLibrary(0) })
+    val order = com.ketvoice.app.data.LayoutSettings.tabs.value
+    val tabs = remember(order) { com.ketvoice.app.ui.chrome.TabLayout.parse(order) }
+    return tabs.mapNotNull { destination(it) }
 }
+
+@Composable
+private fun destination(tab: com.ketvoice.app.ui.chrome.TabDestination): SidebarDestination? {
+    val overlay = AppUi.overlay.intValue
+    val root = AppUi.tab.intValue
+    val section = LargeScreenNav.shownLibrarySection.intValue
+    return when (tab) {
+        com.ketvoice.app.ui.chrome.TabDestination.Home ->
+            SidebarDestination("Accueil", Ket27Glyphs.Home, "sidebar-home", root == AppUi.HOME && overlay == AppUi.NONE) { AppUi.selectTab(AppUi.HOME) }
+        com.ketvoice.app.ui.chrome.TabDestination.Explore ->
+            SidebarDestination("Explorer", Ket27Glyphs.Explore, "sidebar-explorer", root == AppUi.EXPLORER && overlay == AppUi.NONE) { AppUi.selectTab(AppUi.EXPLORER) }
+        com.ketvoice.app.ui.chrome.TabDestination.Library -> SidebarDestination("Bibliothèque", Ket27Glyphs.Library, "sidebar-library",
+            root == AppUi.LIBRARY && overlay == AppUi.NONE && section == 0) { openLibrary(0) }
+        com.ketvoice.app.ui.chrome.TabDestination.Favorites -> favoritesDestination()
+        com.ketvoice.app.ui.chrome.TabDestination.Downloads -> downloadsDestination()
+        com.ketvoice.app.ui.chrome.TabDestination.Search -> null
+    }
+}
+
+@Composable
+private fun favoritesDestination(): SidebarDestination =
+    SidebarDestination("Favoris", KetIcons.Heart, "sidebar-favorites", AppUi.overlay.intValue == AppUi.CATALOG && AppUi.catalogRequest.value?.kind == "favorites") {
+        AppUi.selectTab(AppUi.LIBRARY); AppUi.openCatalog(CatalogRequest("favorites", "local", "Favoris")) }
+
+@Composable
+private fun downloadsDestination(): SidebarDestination =
+    SidebarDestination("Téléchargements", KetIcons.Download, "sidebar-downloads", AppUi.overlay.intValue == AppUi.DOWNLOADS) {
+        AppUi.selectTab(AppUi.LIBRARY); AppUi.openDownloads() }
 
 @Composable
 private fun librarySections(): List<SidebarDestination> {
     val overlay = AppUi.overlay.intValue
     val library = AppUi.tab.intValue == AppUi.LIBRARY && overlay == AppUi.NONE
     val section = LargeScreenNav.shownLibrarySection.intValue
-    val catalog = AppUi.catalogRequest.value
+    val inTabs = com.ketvoice.app.ui.chrome.TabLayout.parse(com.ketvoice.app.data.LayoutSettings.tabs.value)
     return listOf(
         SidebarDestination("Playlists", KetIcons.Playlist, "sidebar-playlists", library && section == SidebarSections.PLAYLISTS) { openLibrary(SidebarSections.PLAYLISTS) },
         SidebarDestination("Artistes", KetIcons.Account, "sidebar-artists", library && section == SidebarSections.ARTISTS) { openLibrary(SidebarSections.ARTISTS) },
         SidebarDestination("Albums", KetIcons.Album, "sidebar-albums", library && section == SidebarSections.ALBUMS) { openLibrary(SidebarSections.ALBUMS) },
         SidebarDestination("Titres", KetIcons.Music, "sidebar-titles", library && section == SidebarSections.TITLES) { openLibrary(SidebarSections.TITLES) },
-        SidebarDestination("Favoris", KetIcons.Heart, "sidebar-favorites", overlay == AppUi.CATALOG && catalog?.kind == "favorites") {
-            AppUi.selectTab(AppUi.LIBRARY); AppUi.openCatalog(CatalogRequest("favorites", "local", "Favoris")) },
-        SidebarDestination("Téléchargements", KetIcons.Download, "sidebar-downloads", overlay == AppUi.DOWNLOADS) { AppUi.selectTab(AppUi.LIBRARY); AppUi.openDownloads() },
+        favoritesDestination().takeIf { com.ketvoice.app.ui.chrome.TabDestination.Favorites !in inTabs },
+        downloadsDestination().takeIf { com.ketvoice.app.ui.chrome.TabDestination.Downloads !in inTabs },
         SidebarDestination("Musique locale", KetIcons.Folder, "sidebar-local", overlay == AppUi.LOCAL_FILES) { AppUi.selectTab(AppUi.LIBRARY); AppUi.openLocalFiles() },
         SidebarDestination("Replay", KetIcons.Clock, "sidebar-replay", overlay == AppUi.REPLAY) { AppUi.selectTab(AppUi.LIBRARY); AppUi.openReplay() },
         SidebarDestination("Statistiques", com.ketvoice.app.ui.stats.StatsIcon, "sidebar-stats", overlay == AppUi.STATS) {
-            AppUi.selectTab(AppUi.LIBRARY); AppUi.closeOverlays(); AppUi.openStats() })
+            AppUi.selectTab(AppUi.LIBRARY); AppUi.closeOverlays(); AppUi.openStats() }).filterNotNull()
 }
 
 private fun openLibrary(section: Int) {

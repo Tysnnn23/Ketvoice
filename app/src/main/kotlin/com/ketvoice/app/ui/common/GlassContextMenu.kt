@@ -257,30 +257,34 @@ private fun menuActions(request: ContextMenus.Request, haptic: (Haptics.Kind) ->
     val downloaded = Downloader.itemFor(track.id) != null
     val together = com.ketvoice.app.together.Ketogether.ui.collectAsState().value.active
     val extra = request.extra.map { MenuAction(it.label, it.icon, tint = if (it.destructive) DESTRUCTIVE else null, tag = it.tag, run = it.run) }
-    return if (request.only) extra else extra + listOfNotNull(
-        // Ketogether (6.1): in a session, the title goes to the shared queue (the host adds it, a guest proposes it).
-        if (together) MenuAction("Ajouter à Ketogether", com.ketvoice.app.ui.together.KetogetherIcon) { com.ketvoice.app.together.Ketogether.add(track) } else null,
-        MenuAction("Lire ensuite", Icons.AutoMirrored.Filled.PlaylistPlay) { Player.playNext(track) },
-        MenuAction("Ajouter à la file", Icons.AutoMirrored.Filled.PlaylistAdd) { Player.enqueue(listOf(track)) },
-        MenuAction(if (favorite) "Retirer des favoris" else "Ajouter aux favoris",
+    if (request.only) return extra
+    val own = mapOf(
+        "playNext" to listOf(MenuAction("Lire ensuite", Icons.AutoMirrored.Filled.PlaylistPlay) { Player.playNext(track) }),
+        "enqueue" to listOf(MenuAction("Ajouter à la file", Icons.AutoMirrored.Filled.PlaylistAdd) { Player.enqueue(listOf(track)) }),
+        "favorite" to listOf(MenuAction(if (favorite) "Retirer des favoris" else "Ajouter aux favoris",
             if (favorite) Ket27Glyphs.HeartFilled else Ket27Glyphs.Heart, tint = if (favorite) theme.accent else null) {
             if (!favorite) haptic(Haptics.Kind.Confirm)
             AppSettings.favoriteIds.value = if (favorite) AppSettings.favoriteIds.value - track.id else AppSettings.favoriteIds.value + track.id
             SettingsStore.save()
-        },
-        MenuAction(if (downloaded) "Téléchargé" else "Télécharger", if (downloaded) KetIcons.Check else KetIcons.Download,
+        }),
+        "download" to listOfNotNull(MenuAction(if (downloaded) "Téléchargé" else "Télécharger", if (downloaded) KetIcons.Check else KetIcons.Download,
             enabled = !downloaded) { Downloader.download(track) },
-        // 7.5: a saved title is checked and upgraded alone, without selecting it first.
-        if (downloaded) MenuAction("Améliorer la qualité", KetIcons.Download, tag = "menu-upgrade") {
-            com.ketvoice.app.ui.sub.UpgradeChecks.single.value = track.id
-        } else null,
-        MenuAction("Ajouter à une playlist", KetIcons.Plus) { AppUi.addToPlaylist.value = track },
-        MenuAction("Lancer la radio", Icons.Filled.Radio) { Player.startRadio(track) },
-        MenuAction("Partager", KetIcons.Share) { AppUi.shareCard.value = track },
+            // 7.5: a saved title is checked and upgraded alone, without selecting it first.
+            if (downloaded) MenuAction("Améliorer la qualité", KetIcons.Download, tag = "menu-upgrade") {
+                com.ketvoice.app.ui.sub.UpgradeChecks.single.value = track.id
+            } else null),
+        "playlist" to listOf(MenuAction("Ajouter à une playlist", KetIcons.Plus) { AppUi.addToPlaylist.value = track }),
+        "radio" to listOf(MenuAction("Lancer la radio", Icons.Filled.Radio) { Player.startRadio(track) }),
+        "share" to listOf(MenuAction("Partager", KetIcons.Share) { AppUi.shareCard.value = track }),
         // The Ketmix DJ editor (6.1): where this title is left and entered in a mix.
-        MenuAction("Point de mix…", KetIcons.Sliders) { com.ketvoice.app.ui.player.KetmixEditor.openFor(track) },
-        MenuAction("À propos de ce titre", KetIcons.Info) { TrackCredits.open.value = track },
-        MenuAction("Plus", KetIcons.More) { AppUi.trackMenuTrack.value = track })
+        "mixPoint" to listOf(MenuAction("Point de mix…", KetIcons.Sliders) { com.ketvoice.app.ui.player.KetmixEditor.openFor(track) }),
+        "about" to listOf(MenuAction("À propos de ce titre", KetIcons.Info) { TrackCredits.open.value = track }))
+    // 9.0 « Bibliothèque et menus »: the listener's order, the hidden items left out; « Plus » always closes the menu.
+    return extra + listOfNotNull(
+        // Ketogether (6.1): in a session, the title goes to the shared queue (the host adds it, a guest proposes it).
+        if (together) MenuAction("Ajouter à Ketogether", com.ketvoice.app.ui.together.KetogetherIcon) { com.ketvoice.app.together.Ketogether.add(track) } else null) +
+        TitleMenuLayout.shown(com.ketvoice.app.data.LayoutSettings.menu.value).flatMap { own[it].orEmpty() } +
+        MenuAction("Plus", KetIcons.More) { AppUi.trackMenuTrack.value = track }
 }
 
 /**

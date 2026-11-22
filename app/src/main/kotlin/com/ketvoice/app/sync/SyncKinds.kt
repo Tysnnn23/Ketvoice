@@ -152,7 +152,10 @@ internal object SettingsKind : SyncKind {
         "lyricsSource", "lyricsOrder", "translateLanguage", "translationSource", "lyricsRomanization", "lockscreenLyrics", "lyricsBlur", "automixOn", "automixIntensity",
         "automixAlbums", "ketmixLoops", "ketmixStyle", "ketmixSmartQueue", "ketmixOnSkip", "ketmixHaptics", "smartShuffle", "volumeLeveling",
         "skipSilence", "equalizerEnabled", "equalizerGains", "reverbAmount", "reverbSize", "reverbDamping", "voiceLevel",
-        "noRepeatSuggestions", "playNextOnSwipe", "haptics", "autoOfflineFavorites", "playlistUpdates", "wrappedSound")
+        "noRepeatSuggestions", "playNextOnSwipe", "haptics", "autoOfflineFavorites", "playlistUpdates", "wrappedSound") +
+        // 9.0 « Disposition » (data/LayoutSettings.kt; spelled out here: the desktop build shares this file, not that one).
+        setOf("layoutTabs", "layoutHome", "layoutPlayer", "layoutMini", "layoutArtwork", "layoutCanvas", "layoutLibraryViews",
+            "layoutLibrarySorts", "layoutMenu", "layoutSwipeEnd", "layoutSwipeStart")
 
     override fun snapshot(context: Context, previous: SyncDoc): Map<String, String> {
         com.ketvoice.app.data.SettingsStore.save()

@@ -52,16 +52,17 @@ fun LibraryScreen() {
     var error by remember { mutableStateOf("") }
     var query by rememberSaveable { mutableStateOf("") }
     var view by rememberSaveable { mutableIntStateOf(0) }
-    var order by rememberSaveable { mutableIntStateOf(0) }
+    // 9.0 « Bibliothèque et menus »: each section opens in the view and the order chosen in Settings.
+    var order by rememberSaveable { mutableIntStateOf(LibraryLayout.sort("albums")) }
     // 7.1: Titles (Récents, Titre A–Z, Artiste A–Z) and Artists (Récents, Nom A–Z) sort by name too, with an A–Z index.
-    var trackOrder by rememberSaveable { mutableIntStateOf(0) }
-    var artistOrder by rememberSaveable { mutableIntStateOf(0) }
+    var trackOrder by rememberSaveable { mutableIntStateOf(LibraryLayout.sort("titles")) }
+    var artistOrder by rememberSaveable { mutableIntStateOf(LibraryLayout.sort("artists")) }
     var album by rememberSaveable { mutableStateOf<String?>(null) }
     var selecting by rememberSaveable { mutableStateOf(false) }
     var selected by rememberSaveable { mutableStateOf(listOf<String>()) }
     // Library › Playlists (Apple Music): a list or a grid, its order and its filter, from the « … » of the bar.
-    var playlistGrid by rememberSaveable { mutableStateOf(false) }
-    var playlistSortName by rememberSaveable { mutableStateOf(PlaylistSort.Recent.name) }
+    var playlistGrid by rememberSaveable { mutableStateOf(LibraryLayout.grid("playlists")) }
+    var playlistSortName by rememberSaveable { mutableStateOf(LibraryLayout.playlistSort().name) }
     var playlistFilterName by rememberSaveable { mutableStateOf(PlaylistFilter.All.name) }
     val playlistSort = PlaylistSort.entries.firstOrNull { it.name == playlistSortName } ?: PlaylistSort.Recent
     val playlistFilter = PlaylistFilter.entries.firstOrNull { it.name == playlistFilterName } ?: PlaylistFilter.All
@@ -153,6 +154,12 @@ fun LibraryScreen() {
     val gridColumns = if (large != null) com.ketvoice.app.ui.adaptive.LargeScreen.gridColumns(maxWidth.value - 36f)
         else coverGridColumns(maxWidth.value)
     val gridSide = (maxWidth - 36.dp - gridGap * (gridColumns - 1)) / gridColumns
+    // Albums and Artists as a list (9.0): one line per row, the same lazy rows and A–Z index.
+    val albumsAsList = !LibraryLayout.grid("albums")
+    val artistsAsList = !LibraryLayout.grid("artists")
+    val albumColumns = if (albumsAsList) 1 else gridColumns
+    val artistColumns = if (artistsAsList) 1 else gridColumns
+    val lineWidth = maxWidth - 36.dp
     LazyColumn(Modifier.fillMaxSize().statusBarsPadding().testTag("library-list"), state = list,
         contentPadding = PaddingValues(top = 70.dp, bottom = LocalAdaptiveLayout.current.bottomPaddingDp.dp)) {
         item(key = "header") {
@@ -261,7 +268,11 @@ fun LibraryScreen() {
                     }
                 }
             }
-            if (view == 2 && chosen == null) coverGridRows("albums", rows, gridColumns, gridSide, gridGap, "library-albums", { it.key }) { group, side ->
+            if (view == 2 && chosen == null && albumsAsList) coverGridRows("albums", rows, 1, lineWidth, gridGap, "library-albums",
+                { it.key }, lineGap = 6.dp) { group, _ ->
+                LibraryAlbumLine(group, AlbumDownloads.state(group, downloadedIds)) { album = group.key }
+            }
+            else if (view == 2 && chosen == null) coverGridRows("albums", rows, gridColumns, gridSide, gridGap, "library-albums", { it.key }) { group, side ->
                 Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).clickable(role = Role.Button) { album = group.key }) {
                     Cover(group.title, ArtworkRepo.coverForTrack(group.tracks.first()) ?: group.tracks.first().coverUrl, side, 18.dp)
                     Text(group.title, localize = false, color = theme.onBackground, fontWeight = FontWeight.SemiBold,
@@ -292,7 +303,11 @@ fun LibraryScreen() {
                     }
                 }
             }
-            if (view == 4) coverGridRows("artists", artists, gridColumns, gridSide, gridGap, "library-artist-grid", { it.key }) { (name, tracks), side ->
+            if (view == 4 && artistsAsList) coverGridRows("artists", artists, 1, lineWidth, gridGap, "library-artist-grid",
+                { it.key }, lineGap = 6.dp) { (name, tracks), _ ->
+                LibraryArtistLine(name, tracks) { AppUi.openArtist(tracks.first().artistId.orEmpty(), name) }
+            }
+            else if (view == 4) coverGridRows("artists", artists, gridColumns, gridSide, gridGap, "library-artist-grid", { it.key }) { (name, tracks), side ->
                 Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).clickable(role = Role.Button) {
                     AppUi.openArtist(tracks.first().artistId.orEmpty(), name)
                 }, horizontalAlignment = Alignment.CenterHorizontally) {
@@ -358,12 +373,12 @@ fun LibraryScreen() {
         }
     }
     // The A–Z index (7.1): only on a list sorted by name, long enough to need it, without a search.
-    val jumps = remember(view, chosen, query, shown, albumRows, artists, order, trackOrder, artistOrder, gridColumns) {
+    val jumps = remember(view, chosen, query, shown, albumRows, artists, order, trackOrder, artistOrder, albumColumns, artistColumns) {
         when {
             query.isNotBlank() || chosen != null -> null
             view == 3 && trackOrder in 1..2 -> AlphaJumps(IndexLetters.firsts(shown) { if (trackOrder == 1) it.title else it.artist }, shown.size, 1)
-            view == 2 && order in 1..2 -> AlphaJumps(IndexLetters.firsts(albumRows) { if (order == 1) it.title else it.artist }, albumRows.size, gridColumns)
-            view == 4 && artistOrder == 1 -> AlphaJumps(IndexLetters.firsts(artists) { it.key }, artists.size, gridColumns)
+            view == 2 && order in 1..2 -> AlphaJumps(IndexLetters.firsts(albumRows) { if (order == 1) it.title else it.artist }, albumRows.size, albumColumns)
+            view == 4 && artistOrder == 1 -> AlphaJumps(IndexLetters.firsts(artists) { it.key }, artists.size, artistColumns)
             else -> null
         }?.takeIf { IndexLetters.shown(it.count, it.letters.size) }
     }
@@ -475,10 +490,11 @@ internal fun <T> CoverGrid(rows: List<T>, modifier: Modifier = Modifier, cell: @
  */
 internal fun <T> LazyListScope.coverGridRows(name: String, rows: List<T>, columns: Int, side: androidx.compose.ui.unit.Dp,
                                              gap: androidx.compose.ui.unit.Dp = 14.dp, tag: String, key: (T) -> Any,
+                                             lineGap: androidx.compose.ui.unit.Dp = 18.dp,
                                              cell: @Composable (T, androidx.compose.ui.unit.Dp) -> Unit) {
     val lines = rows.chunked(columns.coerceAtLeast(1))
     itemsIndexed(lines, key = { _, line -> name + ':' + key(line.first()) }, contentType = { _, _ -> name }) { index, line ->
-        Row(Modifier.fillMaxWidth().padding(start = 18.dp, end = 18.dp, top = if (index == 0) 0.dp else 18.dp)
+        Row(Modifier.fillMaxWidth().padding(start = 18.dp, end = 18.dp, top = if (index == 0) 0.dp else lineGap)
             .then(if (index == 0) Modifier.testTag(tag) else Modifier), horizontalArrangement = Arrangement.spacedBy(gap)) {
             line.forEach { item -> Box(Modifier.width(side)) { cell(item, side) } }
         }

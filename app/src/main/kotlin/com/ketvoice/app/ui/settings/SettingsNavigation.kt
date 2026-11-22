@@ -5,6 +5,8 @@ internal enum class SettingsCategory(val title: String, val groups: Set<String>)
     Account("Compte", setOf("YOUTUBE MUSIC", "DISCORD", "PUBLICATIONS KETVOICE API")),
     Appearance("Apparence", setOf("APPARENCE", "VERRE", "COULEURS DE LA POCHETTE", "LANGUE DE L'APPLICATION", "QUEST · CONFORT", "WIDGETS")),
     Design("DESIGN KETVOICE", setOf("DESIGN KETVOICE")),
+    /** 9.0: what the listener rearranges; « Disposition » is its layout section (tabs, Home, player, library, menus). */
+    Personalization("Personnalisation", setOf("DISPOSITION")),
     Playback("Lecture", setOf("LECTURE", "KETMIX (BÊTA)")),
     Lyrics("Paroles", setOf("PAROLES")),
     Canvas("Canvas", setOf("KETVOICE API · CANVAS")),

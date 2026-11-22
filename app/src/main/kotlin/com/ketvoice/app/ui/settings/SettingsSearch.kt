@@ -140,7 +140,22 @@ internal object SettingsSearch {
         SettingEntry("Ketvoice Lite", "", SettingsCategory.About, liteOnly),
         SettingEntry("Diagnostic intégré", "Note sur cet appareil les saccades, le démarrage, le délai avant le son, les chargements et la mémoire. Rien n'est envoyé, aucune donnée personnelle", SettingsCategory.About),
         SettingEntry("Partager le diagnostic", "Par le menu de partage, seulement quand vous le choisissez", SettingsCategory.About),
-    )
+    ) + layout
+
+    /** Personnalisation › Disposition (9.0, `LayoutCustomization.kt`). */
+    private val layout: List<SettingEntry> get() = listOf(
+        "Onglets à la carte" to "Les onglets de la barre et leur ordre ; la barre latérale des tablettes suit le même ordre",
+        "Accueil modulable" to "Afficher, masquer et réordonner les sections de l'accueil",
+        "Boutons du lecteur" to "La rangée de boutons sous la barre de lecture",
+        "Boutons du mini-lecteur" to "À côté de lecture/pause, jusqu'à deux",
+        "Taille de la pochette" to "Dans le lecteur, toujours bord à bord",
+        "Canvas dans le lecteur" to "Désactivé, le lecteur montre la pochette. Les Canvas restent sur l'appareil et ailleurs dans l'app.",
+        "Bibliothèque" to "Liste ou grille, et l'ordre de chaque section à l'ouverture",
+        "Menu des titres" to "Ordre et éléments du menu d'un titre ; « Plus » reste à la fin",
+        "Balayer vers la droite" to "Sur une ligne de titre",
+        "Balayer vers la gauche" to "Sur une ligne de titre",
+        "Rétablir la disposition" to "Onglets, accueil, lecteur, bibliothèque, menu et gestes d'origine",
+    ).map { (title, sub) -> SettingEntry(title, sub, SettingsCategory.Personalization) }
 
     /** [text] without accents, apostrophes told apart or case: « Égaliseur » and « egaliseur » are one word. */
     fun fold(text: String): String = Normalizer.normalize(text, Normalizer.Form.NFD)
