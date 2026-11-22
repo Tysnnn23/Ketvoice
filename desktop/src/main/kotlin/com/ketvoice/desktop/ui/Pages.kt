@@ -41,6 +41,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
@@ -69,8 +70,8 @@ val LocalSearch = staticCompositionLocalOf { SearchState() }
 
 /** A page: its large title, then [content], with the window's page margins. */
 @Composable
-fun Page(title: String?, tag: String, content: LazyListScope.() -> Unit) {
-    LazyColumn(Modifier.fillMaxSize().testTag("page:$tag"),
+fun Page(title: String?, tag: String, state: androidx.compose.foundation.lazy.LazyListState? = null, content: LazyListScope.() -> Unit) {
+    LazyColumn(Modifier.fillMaxSize().testTag("page:$tag"), state = state ?: androidx.compose.foundation.lazy.rememberLazyListState(),
         contentPadding = PaddingValues(start = Ket27Desk.Space.page, end = Ket27Desk.Space.page, top = 22.dp, bottom = 48.dp)) {
         if (title != null) item("title") { KText(title, Ket27Desk.Type.largeTitle, Modifier.padding(bottom = 4.dp)) }
         content()
@@ -114,21 +115,36 @@ fun HomePage() {
             item { EmptyMessage("Accueil", "Écoutez quelques titres : Ketvoice prépare ici vos sélections.") }
             return@Page
         }
-        if (home.forYou.isNotEmpty()) {
-            item("fy-h") { SectionHeader("Pour toi") }
-            item("fy") { TrackShelf(home.forYou, 220.dp) }
+        // Settings › Disposition: the sections in the listener's order (`layoutHome`, as the phone's Home).
+        DeskLayout.homeSections().forEach { section ->
+            when (section) {
+                "forYou" -> forYouSection(home)
+                "recent" -> recentSection(recent)
+                "catalog" -> shelvesSection(home)
+            }
         }
-        if (recent.isNotEmpty()) {
-            item("rec-h") { SectionHeader("Écoutés récemment") }
-            item("rec") { TrackShelf(recent.take(20)) }
-        }
-        home.shelves.forEach { s ->
-            item("s-${s.title}") {
-                Column {
-                    SectionHeader(s.title)
-                    if (s.subtitle.isNotBlank()) KText(s.subtitle, Ket27Desk.Type.subheadline, Modifier.padding(bottom = 10.dp), color = LocalKet.current.secondary)
-                    if (s.albums.isNotEmpty()) AlbumShelf(s.albums) else TrackShelf(s.tracks)
-                }
+    }
+}
+
+private fun LazyListScope.forYouSection(home: HomeData) {
+    if (home.forYou.isEmpty()) return
+    item("fy-h") { SectionHeader("Pour toi") }
+    item("fy") { TrackShelf(home.forYou, 220.dp) }
+}
+
+private fun LazyListScope.recentSection(recent: List<Track>) {
+    if (recent.isEmpty()) return
+    item("rec-h") { SectionHeader("Écoutés récemment") }
+    item("rec") { TrackShelf(recent.take(20)) }
+}
+
+private fun LazyListScope.shelvesSection(home: HomeData) {
+    home.shelves.forEach { s ->
+        item("s-${s.title}") {
+            Column {
+                SectionHeader(s.title)
+                if (s.subtitle.isNotBlank()) KText(s.subtitle, Ket27Desk.Type.subheadline, Modifier.padding(bottom = 10.dp), color = LocalKet.current.secondary)
+                if (s.albums.isNotEmpty()) AlbumShelf(s.albums) else TrackShelf(s.tracks)
             }
         }
     }
@@ -344,9 +360,12 @@ fun ExplorePage() {
 fun SettingsPage() {
     val ket = LocalKet.current
     var about by remember { mutableStateOf(false) }
-    Page("Réglages", "settings") {
+    val list = androidx.compose.foundation.lazy.rememberLazyListState()
+    SettingsFindEffect(list)
+    Page("Réglages", "settings", list) {
+        settingsSearch()
         accountSettings()
-        item { SectionHeader("Général") }
+        item("h:Général") { SectionHeader("Général") }
         item {
             SettingsCard {
                 LanguageRow()
@@ -354,11 +373,11 @@ fun SettingsPage() {
                 SettingRow("Apparence", com.ketvoice.app.data.AppText.t(if (ket.dark) "Sombre (suit Windows)" else "Clair (suit Windows)"))
             }
         }
-        item { SectionHeader("Ketmix") }
+        item("h:Ketmix") { SectionHeader("Ketmix") }
         item { KetmixSettings() }
-        item { SectionHeader("Séparation des voix") }
+        item("h:Séparation des voix") { SectionHeader("Séparation des voix") }
         item { StemSettings() }
-        item { SectionHeader("Lecteur") }
+        item("h:Lecteur") { SectionHeader("Lecteur") }
         item {
             SettingsCard {
                 ToggleRow("Activer les Canvas vidéo", AppSettings.animatedArtwork.value, "canvas-player") { AppSettings.animatedArtwork.value = it }
@@ -368,7 +387,10 @@ fun SettingsPage() {
                 EqualizerRow()
             }
         }
-        item { SectionHeader("Windows") }
+        lyricsSettings()
+        downloadSettings()
+        layoutSettings()
+        item("h:Windows") { SectionHeader("Windows") }
         item {
             SettingsCard {
                 ToggleRow("Fermer dans la zone de notification", DesktopPrefs.closeToTray.value, "close-to-tray") { DesktopPrefs.setCloseToTray(it) }
@@ -382,15 +404,15 @@ fun SettingsPage() {
                 }
             }
         }
-        item { SectionHeader("Raccourcis clavier") }
+        item("h:Raccourcis clavier") { SectionHeader("Raccourcis clavier") }
         item { ShortcutsCard() }
         localMusicSettings()
-        item { SectionHeader("À propos") }
+        item("h:À propos") { SectionHeader("À propos") }
         item {
             SettingsCard {
                 UpdateRow(com.ketvoice.desktop.update.Updates.updater) { com.ketvoice.desktop.update.Updates.dialog.value = it }
                 Hairline()
-                Row(Modifier.fillMaxWidth().height(44.dp).clickable { about = !about }.padding(horizontal = 16.dp).testTag("about"),
+                Row(Modifier.fillMaxWidth().height(44.dp).settingTarget("Version").clickable { about = !about }.padding(horizontal = 16.dp).testTag("about"),
                     verticalAlignment = Alignment.CenterVertically) {
                     KText("Version", Ket27Desk.Type.subheadline, Modifier.weight(1f))
                     KText(BuildConfig.VERSION_NAME, Ket27Desk.Type.subheadline, color = ket.secondary, translate = false, weight = FontWeight.Normal)
@@ -470,7 +492,7 @@ private fun LanguageRow() {
 private fun EqualizerRow() {
     val ket = LocalKet.current
     val nav = LocalNavigator.current
-    Row(Modifier.fillMaxWidth().height(44.dp).clickable { nav.push(Route.Equalizer) }.padding(horizontal = 16.dp).testTag("open-equalizer"),
+    Row(Modifier.fillMaxWidth().height(44.dp).settingTarget("Égaliseur").clickable { nav.push(Route.Equalizer) }.padding(horizontal = 16.dp).testTag("open-equalizer"),
         verticalAlignment = Alignment.CenterVertically) {
         KText("Égaliseur", Ket27Desk.Type.subheadline, Modifier.weight(1f))
         KText(if (!AppSettings.equalizerEnabled.value) "Désactivé" else EqLogic.preset(AppSettings.equalizerGains.value) ?: "Personnalisé",
@@ -512,7 +534,7 @@ private fun StemSettings() {
 private fun ModelRow(label: String, pack: com.ketvoice.app.stems.ModelPack, state: com.ketvoice.app.stems.ModelPack.State, tag: String,
                      onDelete: (com.ketvoice.app.stems.ModelPack) -> Unit) {
     val ket = LocalKet.current
-    Row(Modifier.fillMaxWidth().height(44.dp).clickable {
+    Row(Modifier.fillMaxWidth().height(44.dp).settingTarget(label).clickable {
         when (state) {
             com.ketvoice.app.stems.ModelPack.State.Ready -> onDelete(pack)
             is com.ketvoice.app.stems.ModelPack.State.Downloading -> pack.cancel()
@@ -533,11 +555,11 @@ private fun ModelRow(label: String, pack: com.ketvoice.app.stems.ModelPack, stat
 
 /** A setting with a few named values: the current one on the right, the others in the window's menu. */
 @Composable
-private fun ChoiceRow(label: String, selected: Int, options: List<String>, tag: String, translate: Boolean = true, onPick: (Int) -> Unit) {
+internal fun ChoiceRow(label: String, selected: Int, options: List<String>, tag: String, translate: Boolean = true, onPick: (Int) -> Unit) {
     val ket = LocalKet.current
     val menu = LocalMenu.current
     val origin = remember { arrayOf(androidx.compose.ui.geometry.Offset.Zero) }
-    Row(Modifier.fillMaxWidth().height(44.dp)
+    Row(Modifier.fillMaxWidth().height(44.dp).settingTarget(label)
         .onGloballyPositioned { origin[0] = it.positionInWindow() + androidx.compose.ui.geometry.Offset(it.size.width.toFloat() - 240f, it.size.height.toFloat()) }
         .clickable {
             menu.open(options.mapIndexed { i, o -> MenuItem(o, if (i == selected) com.ketvoice.app.ui.common.KetIcons.Check else null, tag = "$tag:$i", translate = translate) { onPick(i) } },
@@ -564,7 +586,7 @@ internal fun Hairline() {
 @Composable
 internal fun SettingRow(label: String, value: String) {
     val ket = LocalKet.current
-    Row(Modifier.fillMaxWidth().height(44.dp).padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().height(44.dp).settingTarget(label).padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
         KText(label, Ket27Desk.Type.subheadline, Modifier.weight(1f))
         KText(value, Ket27Desk.Type.subheadline, color = ket.secondary, translate = false, weight = FontWeight.Normal)
     }
@@ -573,15 +595,22 @@ internal fun SettingRow(label: String, value: String) {
 /** A setting that is on or off: the whole row toggles, the switch shows it. */
 @Composable
 internal fun ToggleRow(label: String, on: Boolean, tag: String, onChange: (Boolean) -> Unit) {
+    Row(Modifier.fillMaxWidth().height(44.dp).settingTarget(label).clickable { onChange(!on) }.padding(horizontal = 16.dp).testTag("toggle:$tag"),
+        verticalAlignment = Alignment.CenterVertically) {
+        KText(label, Ket27Desk.Type.subheadline, Modifier.weight(1f))
+        KetSwitch(on)
+    }
+}
+
+/** The switch of a setting; dimmed when it cannot change. */
+@Composable
+internal fun KetSwitch(on: Boolean, enabled: Boolean = true) {
     val ket = LocalKet.current
     val knob by androidx.compose.animation.core.animateDpAsState(if (on) 18.dp else 2.dp,
         if (Motion.reduced) androidx.compose.animation.core.snap() else androidx.compose.animation.core.spring(dampingRatio = .8f, stiffness = 700f))
-    Row(Modifier.fillMaxWidth().height(44.dp).clickable { onChange(!on) }.padding(horizontal = 16.dp).testTag("toggle:$tag"),
-        verticalAlignment = Alignment.CenterVertically) {
-        KText(label, Ket27Desk.Type.subheadline, Modifier.weight(1f))
-        Box(Modifier.size(38.dp, 22.dp).clip(RoundedCornerShape(11.dp)).background(if (on) ket.accent else ket.hairline)) {
-            Box(Modifier.padding(start = knob, top = 2.dp).size(18.dp).clip(RoundedCornerShape(9.dp)).background(Color.White))
-        }
+    Box(Modifier.size(38.dp, 22.dp).alpha(if (enabled) 1f else .45f).clip(RoundedCornerShape(11.dp))
+        .background(if (on) ket.accent else ket.hairline)) {
+        Box(Modifier.padding(start = knob, top = 2.dp).size(18.dp).clip(RoundedCornerShape(9.dp)).background(Color.White))
     }
 }
 

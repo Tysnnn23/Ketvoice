@@ -92,14 +92,58 @@ fun NowPlayingBar(panel: Panel, onPanel: (Panel) -> Unit, onOpenPlayer: () -> Un
             KetIconButton(if (volume <= 0f) DeskGlyphs.Mute else DeskGlyphs.Volume, "Volume", { player.setVolume(if (volume > 0f) 0f else 1f) }, glyph = 17.dp)
             ThinSlider(volume, { player.setVolume(it) }, Modifier.width(92.dp), tag = "volume")
             Spacer(Modifier.width(10.dp))
-            KetIconButton(KetIcons.Lyrics, "Paroles", { onPanel(if (panel == Panel.LYRICS) Panel.NONE else Panel.LYRICS) },
-                active = panel == Panel.LYRICS, glyph = 17.dp, modifier = Modifier.testTag("toggle-lyrics"))
-            KetIconButton(DeskGlyphs.Queue, "À suivre", { onPanel(if (panel == Panel.QUEUE) Panel.NONE else Panel.QUEUE) },
-                active = panel == Panel.QUEUE, glyph = 17.dp, modifier = Modifier.testTag("toggle-queue"))
-            DevicesButton()
-            OutputButton()
+            // Settings › Disposition: the buttons in the listener's order (`layoutPlayer`, as the phone's player row).
+            DeskLayout.barButtons().forEach { BarButton(it, panel, onPanel, state.current) }
         }
     }
+}
+
+/** One of the bar's right-hand buttons ([DeskLayout.barButtons]). */
+@Composable
+private fun BarButton(id: String, panel: Panel, onPanel: (Panel) -> Unit, track: Track?) {
+    when (id) {
+        "lyrics" -> KetIconButton(KetIcons.Lyrics, "Paroles", { onPanel(if (panel == Panel.LYRICS) Panel.NONE else Panel.LYRICS) },
+            active = panel == Panel.LYRICS, glyph = 17.dp, modifier = Modifier.testTag("toggle-lyrics"))
+        "queue" -> KetIconButton(DeskGlyphs.Queue, "À suivre", { onPanel(if (panel == Panel.QUEUE) Panel.NONE else Panel.QUEUE) },
+            active = panel == Panel.QUEUE, glyph = 17.dp, modifier = Modifier.testTag("toggle-queue"))
+        "account" -> DevicesButton()
+        "output" -> OutputButton()
+        "like" -> LikeButton(track)
+        "playlist" -> PlaylistButton(track)
+        "download" -> DownloadButton(track)
+    }
+}
+
+@Composable
+private fun LikeButton(track: Track?) {
+    val library = LocalLibrary.current
+    val liked by library.favourites.collectAsState()
+    val on = track != null && liked.any { it.id == track.id }
+    KetIconButton(if (on) com.ketvoice.app.ui.common.Ket27Glyphs.HeartFilled else com.ketvoice.app.ui.common.Ket27Glyphs.Heart,
+        if (on) "Retirer des favoris" else "J'aime", { track?.let(library::toggleFavourite) }, active = on, glyph = 17.dp,
+        modifier = Modifier.testTag("bar-like"))
+}
+
+@Composable
+private fun PlaylistButton(track: Track?) {
+    val menu = LocalMenu.current
+    val actions = LocalTrackActions.current
+    var at by remember { mutableStateOf(IntOffset.Zero) }
+    Box(Modifier.androidxPosition { at = it }) {
+        KetIconButton(KetIcons.Plus, "Ajouter à une playlist", {
+            track?.let { t -> menu.open(actions.playlistChoices(t), IntOffset(at.x - 180, at.y + 34)) }
+        }, glyph = 17.dp, modifier = Modifier.testTag("bar-playlist"))
+    }
+}
+
+@Composable
+private fun DownloadButton(track: Track?) {
+    val library = LocalLibrary.current
+    val downloads by library.downloads.collectAsState()
+    val done = track != null && downloads.any { it.track.id == track.id && it.done }
+    KetIconButton(if (done) KetIcons.Check else KetIcons.Download, if (done) "Téléchargé" else "Télécharger",
+        { if (track != null && downloads.none { it.track.id == track.id }) library.download(track) }, glyph = 17.dp,
+        modifier = Modifier.testTag("bar-download"))
 }
 
 @Composable

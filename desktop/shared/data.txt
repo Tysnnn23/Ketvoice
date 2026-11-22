@@ -63,3 +63,6 @@ smartlib/TidalImport.kt
 smartlib/SoundCloudImport.kt
 data/SpotifyPlaylistImport.kt
 smartlib/PublicPage.kt
+# Windows 9.0 port: the layout keys (Disposition) and the pure half of downloaded playlists kept up to date.
+data/LayoutSettings.kt
+data/PlaylistFollow.kt

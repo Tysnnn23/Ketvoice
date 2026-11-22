@@ -514,3 +514,27 @@ Android in-app updater skips those tags, as it skips the model tags).
   minimised, the cache is emptied and the heap shrinks. The launcher runs G1 with `-Xms64m -Xmx1536m`, tight free ratios
   and a periodic GC every 2 min, so an idle app gives memory back to Windows. Pages are disposed when left
   (`AnimatedContent`), which `MemoryBudgetTest` checks with the heap and resident memory after browsing.
+
+## Layout, settings search and downloaded playlists (the 8.4–9.0 port)
+
+- **Disposition** (Settings › Disposition, `ui/DeskLayout.kt`, `ui/LayoutPage.kt`). The phone's 9.0 layout keys, read
+  for the window, so the account's settings sync carries them both ways (`PersonalBackup.setting` checks them with the
+  shared `data/LayoutSettings.kt`): `layoutTabs` is the sidebar (Home, Explore, the Library group; Search, Downloads
+  and Favourites can be entries of their own, Downloads then leaving the group; Home or the Library always shown; the
+  window opens on the first entry when Home is hidden), `layoutHome` Home's sections (For you, Recently played, the
+  catalogue's shelves), `layoutPlayer` the bar's right-hand buttons (lyrics, queue, phone control as the phone's
+  `account`, output; like, add to a playlist, download), `layoutMenu` a title's menu (« Aller à l'album/l'artiste » stay
+  with Télécharger; `lyricsEditor` is a slot filled through `TrackMenuSlots.lyricsEditor`), `layoutLibraryViews` grid
+  or list for Albums and Artists, `layoutLibrarySorts` the order each library page opens with. Every list keeps the
+  phone's ids and limits; ids the window has no button for keep their slots. Empty values are the window as before;
+  the bar and the menu have the window's own default order, so their stored text is read as it is (the phone's reading
+  would empty an arrangement equal to the phone's default). The phone's swipes, mini-player, artwork and Canvas keys are
+  kept and synced untouched; the window has no swipes, and hover buttons in their place would change its default rows.
+- **Settings search** (`ui/SettingsFind.kt`). A field at the top of Settings matches the rows' names and sections with
+  the phone's `ui/settings/SettingsMatch.kt`; a result scrolls the lazy page to its section (item keys `h:…`) and lights
+  its row (`Modifier.settingTarget`). New rows join the index through `SettingsFind.more`.
+- **Downloaded playlists kept up to date** (`library/PlaylistWatch.kt`). The phone's rules (`data/PlaylistFollow.kt`)
+  every six hours and three minutes after the playlists change from elsewhere; new titles are offered in a card at the
+  bottom right of the window (Télécharger / Plus tard). Key `playlistUpdates`. The lyrics source order (`lyricsOrder`,
+  shared `LyricsOrder`) is in Settings › Paroles.
+- Not ported: the recap's soundtrack (the window has no recap) and Ketogether's host controls (no Ketogether here).

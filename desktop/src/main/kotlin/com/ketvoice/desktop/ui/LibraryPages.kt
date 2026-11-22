@@ -57,10 +57,12 @@ private fun librarySongs(): List<Track> {
 fun SongsPage() {
     val ket = LocalKet.current
     val songs = librarySongs()
-    var key by remember { mutableStateOf(SortKey.TITLE) }
+    val added by LocalLibrary.current.added.collectAsState()
+    // Settings › Disposition: the order « Titres » opens with (`layoutLibrarySorts`, A–Z by title as always).
+    var key by remember { mutableStateOf(LibraryViews.initialKey(DeskLayout.librarySort("titles"))) }
     var ascending by remember { mutableStateOf(true) }
     var selected by remember { mutableStateOf<String?>(null) }
-    val sorted = remember(songs, key, ascending) { LibraryViews.sort(songs, key, ascending) }
+    val sorted = remember(songs, key, ascending, added) { key?.let { LibraryViews.sort(songs, it, ascending) } ?: LibraryViews.byAdded(songs, added) }
     fun sortBy(k: SortKey) { if (key == k) ascending = !ascending else { key = k; ascending = true } }
     Column(Modifier.fillMaxSize().padding(horizontal = Ket27Desk.Space.page).testTag("page:songs")) {
         Spacer(Modifier.height(22.dp))
@@ -84,7 +86,7 @@ fun SongsPage() {
 }
 
 @Composable
-private fun HeaderCell(label: String, k: SortKey, current: SortKey, ascending: Boolean, modifier: Modifier, onClick: (SortKey) -> Unit) {
+private fun HeaderCell(label: String, k: SortKey, current: SortKey?, ascending: Boolean, modifier: Modifier, onClick: (SortKey) -> Unit) {
     val ket = LocalKet.current
     Row(modifier.clickable { onClick(k) }.testTag("sort:${k.name}"), verticalAlignment = Alignment.CenterVertically) {
         KText(label, Ket27Desk.Type.caption, color = if (k == current) ket.label else ket.secondary, weight = FontWeight.SemiBold)
@@ -114,9 +116,17 @@ private fun TableRow(t: Track, list: List<Track>, index: Int, striped: Boolean, 
 private fun Cell(text: String, modifier: Modifier, color: Color, weight: FontWeight? = null) =
     KText(text, Ket27Desk.Type.footnote, modifier.padding(end = 12.dp), color = color, weight = weight, translate = false)
 
-/** Albums and artists as Music's grids: covers sized to the window. */
+/** Albums and artists as Music's grids (covers sized to the window), or as lines when Settings › Disposition says so. */
 @Composable
-private fun <T> Grid(title: String, tag: String, items: List<T>, min: androidx.compose.ui.unit.Dp, empty: String, cell: @Composable (T) -> Unit) {
+private fun <T> Grid(title: String, tag: String, items: List<T>, min: androidx.compose.ui.unit.Dp, empty: String, grid: Boolean = true,
+                     line: @Composable (T) -> Unit = {}, cell: @Composable (T) -> Unit) {
+    if (!grid) {
+        Page(title, tag) {
+            if (items.isEmpty()) item { EmptyMessage(title, empty) }
+            items.forEach { item { line(it) } }
+        }
+        return
+    }
     LazyVerticalGrid(GridCells.Adaptive(min), Modifier.fillMaxSize().testTag("page:$tag"),
         contentPadding = PaddingValues(start = Ket27Desk.Space.page, end = Ket27Desk.Space.page, top = 22.dp, bottom = 48.dp),
         horizontalArrangement = Arrangement.spacedBy(Ket27Desk.Space.l), verticalArrangement = Arrangement.spacedBy(Ket27Desk.Space.xl)) {
@@ -131,8 +141,13 @@ fun AlbumsPage() {
     val nav = LocalNavigator.current
     val actions = LocalTrackActions.current
     val songs = librarySongs()
-    val albums = remember(songs) { LibraryViews.albums(songs) }
-    Grid("Albums", "albums", albums, 180.dp, "Les albums de vos titres apparaissent ici.") { a ->
+    val added by LocalLibrary.current.added.collectAsState()
+    val sort = DeskLayout.librarySort("albums")
+    val albums = remember(songs, sort, added) { LibraryViews.albums(songs, sort, added) }
+    Grid("Albums", "albums", albums, 180.dp, "Les albums de vos titres apparaissent ici.", DeskLayout.libraryGrid("albums"),
+        line = { a -> LibraryLine(a.title, a.artist, a.cover, round = false, "album-line:${a.title}", { nav.push(Route.Album(a)) }) {
+            actions.collectionMenu { songs.filter { it.album.equals(a.title, true) } }
+        } }) { a ->
         val list = { songs.filter { it.album.equals(a.title, true) } }
         androidx.compose.foundation.layout.BoxWithConstraints { AlbumCard(a, maxWidth, { nav.push(Route.Album(a)) }, { actions.play(list(), 0) },
             menu = { actions.collectionMenu { list() } }) }
@@ -157,8 +172,15 @@ fun RecentlyAddedPage() {
 fun ArtistsPage() {
     val nav = LocalNavigator.current
     val songs = librarySongs()
-    val artists = remember(songs) { LibraryViews.artists(songs) }
-    Grid("Artistes", "artists", artists, 160.dp, "Les artistes de vos titres apparaissent ici.") { a ->
+    val added by LocalLibrary.current.added.collectAsState()
+    val sort = DeskLayout.librarySort("artists")
+    val artists = remember(songs, sort, added) { LibraryViews.artists(songs, sort, added) }
+    Grid("Artistes", "artists", artists, 160.dp, "Les artistes de vos titres apparaissent ici.", DeskLayout.libraryGrid("artists"),
+        line = { a ->
+            val theirs = songs.filter { it.artist.substringBefore(',').trim() == a.name }
+            LibraryLine(a.name, com.ketvoice.app.data.AppText.t(if (theirs.size == 1) "1 titre" else "${theirs.size} titres"), a.picture ?: theirs.firstOrNull()?.coverUrl,
+                round = true, "artist-line:${a.name}", { nav.push(Route.Artist(a)) })
+        }) { a ->
         androidx.compose.foundation.layout.BoxWithConstraints { ArtistCard(a, maxWidth) { nav.push(Route.Artist(a)) } }
     }
 }
@@ -189,3 +211,32 @@ fun DownloadsPage() {
     }
 }
 
+
+/** An album or an artist of the library as a line (Settings › Disposition › Bibliothèque › Liste). */
+@Composable
+private fun LibraryLine(title: String, subtitle: String, cover: String?, round: Boolean, tag: String, onOpen: () -> Unit,
+                        menu: (() -> List<MenuItem>)? = null) {
+    val ket = LocalKet.current
+    val (source, hovered) = rememberHover()
+    val menus = LocalMenu.current
+    Row(Modifier.fillMaxWidth().height(64.dp).clip(RoundedCornerShape(8.dp)).background(if (hovered) ket.hover else Color.Transparent)
+        .hoverable(source).then(if (menu != null) Modifier.contextMenu(menus, menu) else Modifier).clickable(onClick = onOpen)
+        .padding(horizontal = 8.dp).testTag(tag), verticalAlignment = Alignment.CenterVertically) {
+        Artwork(cover, 48.dp, radius = if (round) 24.dp else 6.dp)
+        Spacer(Modifier.width(14.dp))
+        Column(Modifier.weight(1f)) {
+            KText(title, Ket27Desk.Type.subheadline, weight = FontWeight.Medium, translate = false)
+            KText(subtitle, Ket27Desk.Type.footnote, color = ket.secondary, translate = false)
+        }
+    }
+}
+
+/** « Favoris », from the sidebar when Settings › Disposition gives it an entry: the titles the listener likes. */
+@Composable
+fun FavoritesPage() {
+    val favourites by LocalLibrary.current.favourites.collectAsState()
+    Page("Favoris", "favorites") {
+        if (favourites.isEmpty()) { item { EmptyMessage("Aucun favori", "Les titres que vous aimez apparaissent ici.") }; return@Page }
+        favourites.forEachIndexed { i, t -> item(t.id) { CompactTrackRow(t, favourites, i) } }
+    }
+}

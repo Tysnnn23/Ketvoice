@@ -46,7 +46,7 @@ class PlaylistUpdatesTest {
         // The sync brought two titles; one of them is already downloaded (from an album, say) and a local file never counts.
         val grown = playlist("p1", track(1), track(2), track(3), track(4), Track("local:9", "Mine", "Me", ""))
         val check = PlaylistUpdates.diff(listOf(grown), setOf(track(1).id, track(2).id, track(4).id), known)
-        assertEquals(listOf(PlaylistUpdates.Update("p1", "Road trip", listOf(track(3).id))), check.updates)
+        assertEquals(listOf(PlaylistFollow.Update("p1", "Road trip", listOf(track(3).id))), check.updates)
         // The next check does not announce it again, even while it is still not downloaded.
         val again = PlaylistUpdates.diff(listOf(grown), setOf(track(1).id, track(2).id, track(4).id), check.known)
         assertTrue(again.updates.isEmpty())
@@ -68,7 +68,7 @@ class PlaylistUpdatesTest {
 
     @Test fun theNotificationCarriesThePlaylistAndOnlyItsNewTitles() {
         shadowOf(context as android.app.Application).grantPermissions(android.Manifest.permission.POST_NOTIFICATIONS)
-        val update = PlaylistUpdates.Update("p1", "Road trip", listOf(track(3).id, track(4).id))
+        val update = PlaylistFollow.Update("p1", "Road trip", listOf(track(3).id, track(4).id))
         val intent = PlaylistUpdates.intent(context, update)
         assertEquals(PlaylistUpdates.ACTION, intent.action)
         assertEquals("p1", intent.getStringExtra(PlaylistUpdates.EXTRA_PLAYLIST))

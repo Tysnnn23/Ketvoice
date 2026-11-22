@@ -22,6 +22,7 @@ sealed interface Route {
     data object Albums : Route
     data object Songs : Route
     data object Downloads : Route
+    data object Favorites : Route
     data object Stats : Route
     data object Settings : Route
     data object Equalizer : Route
@@ -64,7 +65,7 @@ class TrackActions(private val player: PlayerControls, private val library: Libr
      * ensuite » in their order, the queue, a playlist, download. [load] fetches them (an album card's titles come
      * from the catalogue only when an action is chosen).
      */
-    fun collectionMenu(load: suspend () -> List<Track>): List<MenuItem> {
+    fun collectionMenu(onDownload: (() -> Unit)? = null, load: suspend () -> List<Track>): List<MenuItem> {
         fun run(action: (List<Track>) -> Unit): () -> Unit = {
             scope.launch { val tracks = runCatching { load() }.getOrDefault(emptyList()); if (tracks.isNotEmpty()) action(tracks) }
         }
@@ -78,33 +79,52 @@ class TrackActions(private val player: PlayerControls, private val library: Libr
                     MenuItem("Nouvelle playlist", KetIcons.Plus, "new-playlist",
                         action = run { library.createPlaylist(com.ketvoice.app.data.AppText.t("Nouvelle playlist"), it) })),
             MenuItem("-"),
-            MenuItem("Télécharger", KetIcons.Download, "download", action = run { list -> list.forEach(library::download) }),
+            MenuItem("Télécharger", KetIcons.Download, "download", action = run { list -> onDownload?.invoke(); list.forEach(library::download) }),
         )
     }
 
-    fun menu(track: Track, onPlay: (() -> Unit)? = null): List<MenuItem> = buildList {
-        if (onPlay != null) add(MenuItem("Lecture", KetIcons.Play, "play", action = onPlay))
-        add(MenuItem("Lire ensuite", KetIcons.Playlist, "play-next") { player.playNext(track) })
-        add(MenuItem("Ajouter à la file d'attente", KetIcons.Plus, "enqueue") { player.enqueue(track) })
-        add(MenuItem("Ajouter à une playlist", KetIcons.Playlist, "add-to-playlist", children =
-            library.playlists.value.map { p -> MenuItem(p.name, null, "playlist") { library.addToPlaylist(p.id, track) } } +
-                MenuItem("Nouvelle playlist", KetIcons.Plus, "new-playlist") {
-                    library.createPlaylist(com.ketvoice.app.data.AppText.t("Nouvelle playlist"), listOf(track))
-                }))
-        // Ketmix Studio: this title into the one after it in the queue.
-        com.ketvoice.desktop.ketmix.StudioState.pairFor(track, player.state.value.queue)?.let { (from, to) ->
-            add(MenuItem("Ketmix Studio", com.ketvoice.desktop.ui.theme.DeskGlyphs.Ketmix, "open-studio", translate = false) {
-                com.ketvoice.desktop.ketmix.KetmixStudioDesk.request.value = com.ketvoice.desktop.ketmix.KetmixStudioDesk.Request(from, to)
-            })
-        }
-        add(MenuItem("-"))
-        add(MenuItem("Télécharger", KetIcons.Download, "download") { library.download(track) })
-        if (track.album.isNotBlank()) add(MenuItem("Aller à l'album", KetIcons.Album, "go-album") { openAlbum(track) })
-        add(MenuItem("Aller à l'artiste", KetIcons.Account, "go-artist") { openArtist(track) })
-        add(MenuItem("-"))
-        add(if (liked(track)) MenuItem("Retirer des favoris", Ket27Glyphs.HeartFilled, "like") { like(track) }
-        else MenuItem("J'aime", Ket27Glyphs.Heart, "like") { like(track) })
+    /**
+     * A title's menu: « Lecture » when [onPlay] is given, then the items in the order Settings › Disposition chose
+     * (`layoutMenu`, as the phone's title menu); « Aller à l'album/l'artiste » stay with Télécharger.
+     */
+    fun menu(track: Track, onPlay: (() -> Unit)? = null): List<MenuItem> {
+        val items = DeskLayout.menuPlan(DeskLayout.menuItems()).mapNotNull { id -> if (id == "-") MenuItem("-") else item(id, track) }
+        return listOfNotNull(onPlay?.let { MenuItem("Lecture", KetIcons.Play, "play", action = it) }) + DeskLayout.tidy(items) { it.label == "-" }
     }
+
+    /** The playlists a title can go to, and a new one. */
+    fun playlistChoices(track: Track): List<MenuItem> =
+        library.playlists.value.map { p -> MenuItem(p.name, null, "playlist") { library.addToPlaylist(p.id, track) } } +
+            MenuItem("Nouvelle playlist", KetIcons.Plus, "new-playlist") {
+                library.createPlaylist(com.ketvoice.app.data.AppText.t("Nouvelle playlist"), listOf(track))
+            }
+
+    private fun item(id: String, track: Track): MenuItem? = when (id) {
+        "playNext" -> MenuItem("Lire ensuite", KetIcons.Playlist, "play-next") { player.playNext(track) }
+        "enqueue" -> MenuItem("Ajouter à la file d'attente", KetIcons.Plus, "enqueue") { player.enqueue(track) }
+        "playlist" -> MenuItem("Ajouter à une playlist", KetIcons.Playlist, "add-to-playlist", children = playlistChoices(track))
+        "mixPoint" -> studioItem(track)
+        "lyricsEditor" -> TrackMenuSlots.lyricsEditor?.invoke(track)
+        "download" -> MenuItem("Télécharger", KetIcons.Download, "download") { library.download(track) }
+        "goAlbum" -> if (track.album.isBlank()) null else MenuItem("Aller à l'album", KetIcons.Album, "go-album") { openAlbum(track) }
+        "goArtist" -> MenuItem("Aller à l'artiste", KetIcons.Account, "go-artist") { openArtist(track) }
+        "favorite" -> if (liked(track)) MenuItem("Retirer des favoris", Ket27Glyphs.HeartFilled, "like") { like(track) }
+            else MenuItem("J'aime", Ket27Glyphs.Heart, "like") { like(track) }
+        else -> null
+    }
+
+    /** Ketmix Studio: this title into the one after it in the queue. */
+    private fun studioItem(track: Track): MenuItem? = com.ketvoice.desktop.ketmix.StudioState.pairFor(track, player.state.value.queue)?.let { (from, to) ->
+        MenuItem("Ketmix Studio", com.ketvoice.desktop.ui.theme.DeskGlyphs.Ketmix, "open-studio", translate = false) {
+            com.ketvoice.desktop.ketmix.KetmixStudioDesk.request.value = com.ketvoice.desktop.ketmix.KetmixStudioDesk.Request(from, to)
+        }
+    }
+}
+
+/** Items of a title's menu that other features provide, each in its place of [DeskLayout.menu]. */
+object TrackMenuSlots {
+    /** « Éditer les paroles… » (id `lyricsEditor`): set by the lyrics editor; until then the menu and Settings leave it out. */
+    @Volatile var lyricsEditor: ((Track) -> MenuItem?)? = null
 }
 
 val LocalTrackActions = staticCompositionLocalOf<TrackActions> { error("No TrackActions") }

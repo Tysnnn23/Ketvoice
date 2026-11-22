@@ -95,7 +95,8 @@ private fun durationLabel(tracks: List<Track>): String {
 @Composable
 private fun CollectionHeader(cover: (@Composable () -> Unit)?, kind: String, title: String, subtitle: String, onSubtitle: (() -> Unit)?,
                              meta: String, accent: Color, tracks: List<Track>,
-                             titleSlot: (@Composable () -> Unit)? = null, extraButtons: @Composable () -> Unit = {}) {
+                             titleSlot: (@Composable () -> Unit)? = null, extraButtons: @Composable () -> Unit = {},
+                             onDownload: (() -> Unit)? = null) {
     val ket = LocalKet.current
     val actions = LocalTrackActions.current
     Row(Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 26.dp), verticalAlignment = Alignment.Bottom) {
@@ -113,7 +114,7 @@ private fun CollectionHeader(cover: (@Composable () -> Unit)?, kind: String, tit
                 CapsuleButton("Lecture", KetIcons.Play, { if (tracks.isNotEmpty()) actions.play(tracks, 0) }, filled = true, accent = accent, modifier = Modifier.testTag("play-all"))
                 CapsuleButton("Aléatoire", KetIcons.Shuffle, { actions.playShuffled(tracks) }, filled = false, accent = accent, modifier = Modifier.testTag("shuffle-all"))
                 extraButtons()
-                if (tracks.isNotEmpty()) MoreButton(accent) { actions.collectionMenu { tracks } }
+                if (tracks.isNotEmpty()) MoreButton(accent) { actions.collectionMenu(onDownload) { tracks } }
             }
         }
     }
@@ -269,7 +270,9 @@ fun PlaylistPage(id: String) {
                 extraButtons = {
                     CapsuleButton("Renommer", null, { renaming = true }, filled = false, accent = ket.accent, modifier = Modifier.testTag("rename-playlist"))
                     CapsuleButton("Supprimer", KetIcons.Trash, { deleting = true }, filled = false, accent = destructiveRed, modifier = Modifier.testTag("delete-playlist"))
-                })
+                },
+                // « Playlists téléchargées à jour »: a playlist downloaded from its menu is followed from then on.
+                onDownload = { com.ketvoice.app.data.PlaylistStore.lists.value.firstOrNull { it.id == p.id }?.let(com.ketvoice.desktop.library.PlaylistWatch::follow) })
             if (deleting) ConfirmDialog(AppText.t("Supprimer la playlist"),
                 AppText.t("« {0} » sera supprimée de votre bibliothèque.").replace("{0}", p.name), "Supprimer",
                 onConfirm = { library.deletePlaylist(p.id); if (!nav.back()) nav.root(Route.Home) }, onDismiss = { deleting = false })
