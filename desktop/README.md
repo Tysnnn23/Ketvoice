@@ -212,15 +212,47 @@ UI: the « Ketmix » switch under the transport, « Mix en cours » beside the t
 Tempo uses a WSOLA stretcher in Kotlin (`audio/TimeStretch.kt`, the method of FFmpeg's `atempo`) rather
 than `atempo` through avfilter: it keeps the exact title position of every output frame (the automation
 is keyed on it), is sample-exact at speed 1 (a deck keeps it after the glide back without a click), and
-needs no native graph. Not on the desktop yet: the bar loop (« boucle »; the planner is told one was just
-played so it picks another), voice separation (`stems`), sung-line facts from lyrics, the DJ editor.
+needs no native graph. Since Windows 1.2 the bar loop is played too (the shared `LoopFx` in `Lane`, on the title's
+own frames before the stretcher, as on the phone, where it comes before the change of speed), so the 6.9 « boucle »
+and the 8.4 « Pont en boucle » (`MixStyle.Bridge`, `LoopBridge`) are planned and rendered: `DesktopAutomix` tracks
+`loopedLast` as the phone does, reads where each title sings from its lyrics (`LyricsRepo` for the outgoing one, the
+first lyrics source for the next) and its separation (`voiceLines`), and during a bridge `DesktopMixer.steer` gives both
+decks the shared `GlideDriver`'s speeds on the mixer's clock (both decks are read in the same block, so no drift
+correction); a bridge given up half-way glides back through `TempoReturn`. The desktop `BeatRunner` reads the network's
+frame count from the ONNX input (`BeatPost.Window`), and `BeatPost.peaks` places beats between frames.
 
 Tests: `KetmixRenderTest` renders real mixes of two FLAC tones through the engine into a `CaptureSink`
 and checks the gain curves (Goertzel), the crossing, the length, the pitch at 1.04× and the glide back,
 and that the worst second difference stays at a clean tone's level (no click). `DesktopAutomixTest` runs
 the Player, the engine (paced 10×) and the controller over three generated grooves: the end of one mixes
 into the next, and « Suivant » blends. `BeatModelOnnxTest` checks the pinned download; with
-`KETVOICE_BEAT_ONNX=/path/small0.onnx` it runs the real network on a 120 BPM click track.
+`KETVOICE_BEAT_ONNX=/path/small0.onnx` it runs the real network on a 120 BPM click track. `KetmixRenderTest`'s bridge
+case checks that the looped bar hides what follows it in the title, the glide's steps and the pitch;
+`DesktopAutomixTest` plans the bridge from lyrics (chosen style and automatic mode) and never twice running. The
+phone's `KetmixLoopBridgeTest` is not reused (it reads the phone's Ketmix panel); `BeatPrecisionTest` is.
+
+## Audio output and headphone EQ (Windows 1.2)
+
+- **Sortie audio** (`audio/OutputDevices.kt`): `OutputDevices` lists the Java Sound mixers that can open a 48 kHz stereo
+  line (without « Primary Sound Driver » and other aliases of the default); `DesktopOutput` keeps the listener's pick by
+  device name in the `desktop` preferences (`audioOutput`), polls the devices every 2.5 s and points the engine at the
+  chosen device while it is connected, else at the system's default (the choice is kept and comes back with its device).
+  `FfmpegAudioEngine.setOutput` switches live: a 5 ms fade, the old line drained, the new one opened and faded in; a
+  write that fails on a chosen device falls back to the default without stopping. `engine.output` is the device playing.
+  The bar's output button and the equalizer page open the same menu.
+- **Égaliseur par casque** (the phone's 9.0): shared `player/Biquad.kt`, `HeadphoneProfile.kt`, `HeadphoneLinks.kt`
+  (`HeadphoneLink`, `HeadphoneLinks`, `HeadphoneStore`) and `EqCascade.kt` (`EqCascade` and the 60 ms `EqCrossfade`, also
+  used by the phone's `HeadphoneEqProcessor`). `DesktopMixer.headphone` (`HeadphoneStage`) runs after the decks and the
+  voice level, before the ten-band equalizer and the volume — the phone's place, after `DeckMixProcessor` and before
+  the leveler. `DesktopHeadphoneEq` links a profile to the device playing by `btn:` + a digest of its name (the form the
+  phone uses for an output known by name, so the phone keeps the PC's links when it edits its own and the sync of
+  `headphoneLinks` holds); the system's default cannot be linked. The equalizer page lists, searches, imports
+  (`JFileChooser`, Equalizer APO parametric text, 64 KB at most), links, compares and unlinks; no measurements ship
+  (`docs/licenses/AutoEq-review.md`). Keys `headphoneEq`, `headphoneProfiles`, `headphoneLinks` (backed by
+  `PersonalBackup.setting`, synced by the shared `SettingsKind`).
+- Tests: `HeadphoneEqDesktopTest` (Cookbook responses, an APO file, Windows keys the phone's check accepts, the
+  correction following the device and its fallback, the output list, the remembered choice moving the engine and back,
+  the stage's pass-through, safe preamp and crossfade, the engine playing the preamp), `HeadphoneEqPageTest` (the page).
 ## Lyrics and Canvas (Phase 2, winlyrics)
 
 - Shared code added to the build: `data/LyricsTranslation`, `data/TranslationLanguages` (lyrics.txt),

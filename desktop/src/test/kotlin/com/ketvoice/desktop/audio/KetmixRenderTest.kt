@@ -123,4 +123,42 @@ class KetmixRenderTest {
         println("tempo mix: worst second difference $bend")
         assertTrue(bend < 400, "click: second difference $bend")
     }
+
+    /**
+     * 8.4 « Pont en boucle »: the outgoing title (440 Hz, turning to 550 Hz at 7 s) loops its bar from 5 s, so the
+     * 550 Hz is never heard; both decks glide together (the outgoing one from 1 to 0.95, the incoming one 1.08 times
+     * as fast) in small steps with the pitch kept, and the incoming title then glides back to its own tempo.
+     */
+    @Test fun loopBridgeLoopsTheBarAndGlidesBothDecks() {
+        val two = AudioFixtures.pcm(rate, 16_000, signal = { i -> .5 * sin(2 * PI * (if (i < rate * 7) 440.0 else 550.0) * i / rate) })
+        val a = AudioFixtures.encode("ketmix-bridge-a", "flac", AudioFixtures.wav("ketmix-bridge-a", rate, two))
+        val b = title("ketmix-b660-long", 660.0, 30_000)
+        val glide = com.ketvoice.app.automix.TempoGlide(5_000, 13_000, 1f, .95f)
+        val plan = MixPlan(MixKind.Beatmatch, outMs = 5_000, inMs = 1_000, overlapMs = 8_000, rate = 1.08f, swapMs = 9_000, beatMs = 500f,
+            reason = "loop bridge", loopFromUs = 5_000_000, loopUs = 2_000_000, glide = glide)
+        val run = mix(a, b, plan, preRollMs = 1_500)
+        val x = run.x
+        val s = { t: Int -> t * rate / 1000 }
+        for (t in 4_000..14_000 step 1_000) println("bridge %5.1f s: 440 %.3f  550 %.3f  660 %.3f".format(t / 1000.0,
+            level(x, 440.0, s(t)), level(x, 550.0, s(t)), level(x, 660.0, s(t))))
+        // The bar from 5 s plays again and again: what follows it in the title (550 Hz) is never heard.
+        for (t in 7_300..10_000 step 300) {
+            assertTrue(level(x, 550.0, s(t)) < .01, "the title's own sound at $t ms instead of its loop: ${level(x, 550.0, s(t))}")
+            assertTrue(level(x, 440.0, s(t)) > .05, "the loop is not heard at $t ms")
+        }
+        // The outgoing deck glides from 1 to 0.95 in steps too small to hear, never a jump.
+        val outgoing = run.speeds.filter { it.first < s(9_000) }.map { it.second }
+        assertEquals(1f, outgoing.first(), 0f)
+        // Half-way through its title positions (9 s of output is about 8.9 s of the title): about 0.975.
+        assertTrue(outgoing.min() < .98f, "the outgoing title did not glide: $outgoing")
+        assertTrue(outgoing.zipWithNext().all { (p, q) -> q <= p + 1e-6f && p - q < .005f }, "speeds: $outgoing")
+        // Once alone the incoming title (at 0.95 × 1.08) glides back to its own tempo, its pitch kept.
+        val last = run.speeds.last { it.first < x.size - s(500) }.second
+        assertEquals(1f, last, "did not glide back: ${run.speeds.takeLast(5)}")
+        val hz = AudioFixtures.frequency(x, rate, s(15_000), s(16_000))
+        assertTrue(abs(hz - 660) < 5, "pitch moved: $hz Hz")
+        val bend = worstBend(x, 0, AudioFixtures.lastLoud(x, 200))
+        println("bridge: worst second difference $bend")
+        assertTrue(bend < 400, "click: second difference $bend")
+    }
 }

@@ -50,3 +50,6 @@ smartlib/SoundCloudImportTest.kt
 stems/StemsTest.kt
 stems/UvrTest.kt
 automix/MixKeysTest.kt
+# Windows 1.2: Ketmix 8.4 sub-frame beats. KetmixLoopBridgeTest reads the phone's Ketmix panel (ui/player): the desktop
+# covers the bridge in DesktopAutomixTest (planning) and KetmixRenderTest (rendering).
+automix/BeatPrecisionTest.kt

@@ -217,21 +217,17 @@ fun Seek(positionMs: Long, durationMs: Long, compact: Boolean, color: Color = Co
     }
 }
 
-/** The output devices (Windows' playback devices through Java Sound). */
+/** « Sortie audio »: Windows' playback devices through Java Sound; a pick moves the music there at once and is remembered. */
 @Composable
 private fun OutputButton() {
     val menu = LocalMenu.current
     var at by remember { mutableStateOf(IntOffset.Zero) }
+    val chosen by com.ketvoice.desktop.audio.DesktopOutput.chosen.collectAsState()
     Box(Modifier.androidxPosition { at = it }) {
         KetIconButton(DeskGlyphs.Output, "Sortie audio", {
-            val names = runCatching {
-                javax.sound.sampled.AudioSystem.getMixerInfo().filter { info ->
-                    javax.sound.sampled.AudioSystem.getMixer(info).sourceLineInfo.any { it.lineClass == javax.sound.sampled.SourceDataLine::class.java }
-                }.map { it.name }.filterNot { it.startsWith("Port ") }.distinct()
-            }.getOrDefault(emptyList())
-            menu.open(listOf(MenuItem("Sortie par défaut du système", KetIcons.Check, "output-default")) +
-                names.map { MenuItem(it, null, "playlist") }, IntOffset(at.x - 180, at.y + 34))
-        }, glyph = 17.dp, modifier = Modifier.testTag("output"))
+            val devices = com.ketvoice.desktop.audio.DesktopOutput.devices.value
+            menu.open(HeadphoneEqLogic.outputItems(devices, chosen, com.ketvoice.desktop.audio.DesktopOutput::choose), IntOffset(at.x - 180, at.y + 34))
+        }, glyph = 17.dp, active = chosen != null, modifier = Modifier.testTag("output"))
     }
 }
 

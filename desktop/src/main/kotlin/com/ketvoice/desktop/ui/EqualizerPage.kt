@@ -110,6 +110,8 @@ fun EqualizerPage() {
                 }
             }
         }
+        item { Gap(18.dp) }
+        headphoneEq()
     }
 }
 

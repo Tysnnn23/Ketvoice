@@ -82,6 +82,9 @@ fun main(args: Array<String>) {
     // Each resolved source is remembered with its title, for the voice level's separations.
     Player.attach(engine, { t -> DesktopStreams.source(t)?.also { com.ketvoice.desktop.stems.DesktopVoice.remember(it, t.id) } }, scope)
     com.ketvoice.desktop.audio.DesktopEqualizer.attach(engine)
+    // « Sortie audio » (the device remembered by name) and « Égaliseur par casque » (the correction linked to it).
+    com.ketvoice.desktop.audio.DesktopOutput.attach(engine, scope)
+    com.ketvoice.desktop.audio.DesktopHeadphoneEq.attach(engine, scope)
     com.ketvoice.app.stems.StemModel.init(context)
     com.ketvoice.desktop.stems.DesktopVoice.attach(engine, scope)
     com.ketvoice.app.data.SettingsStore.watch(scope)

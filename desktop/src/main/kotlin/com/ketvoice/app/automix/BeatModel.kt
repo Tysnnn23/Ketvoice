@@ -24,8 +24,10 @@ internal const val BEAT_ONNX_BYTES = 10_401_044L
 /** `small0.onnx` as `.github/workflows/publish-beat-model.yml` pins it (the source of the phone's LiteRT file). */
 internal const val BEAT_ONNX_SHA = "c462b064a4033050ca6a5354bf866ff4610ab1fd8f1dec1e494b20b22d870aea"
 
-/** Runs the network on one chunk of [BeatPost.BEAT_FRAMES] frames of [BeatSpectrogram.MELS] values; returns the beat and the downbeat logits. */
+/** Runs the network on one chunk of [frames] frames of [BeatSpectrogram.MELS] values; returns the beat and the downbeat logits. */
 internal interface BeatRunner : AutoCloseable {
+    /** How many frames the network takes at once (8.4: read from the model, so that a 30 s export is cut as such). */
+    val frames: Int get() = BeatPost.BEAT_FRAMES
     fun run(spect: FloatArray): Pair<FloatArray, FloatArray>
     override fun close() {}
 }
@@ -37,6 +39,10 @@ internal class OnnxBeatNet(file: File) : BeatRunner {
     private val input = session.inputNames.first()
     private val outputs = session.outputNames.toList()
     private val order = BeatModel.pick(outputs)
+    /** The input's frame count when the export fixes it (`ketmix-beat-v1`: 500), else the 10 s window. */
+    override val frames: Int = runCatching {
+        (session.inputInfo.getValue(input).info as ai.onnxruntime.TensorInfo).shape.getOrNull(1)?.toInt()
+    }.getOrNull()?.takeIf { it > 2 * BeatPost.BORDER } ?: BeatPost.BEAT_FRAMES
 
     override fun run(spect: FloatArray): Pair<FloatArray, FloatArray> {
         val shape = longArrayOf(1, (spect.size / BeatSpectrogram.MELS).toLong(), BeatSpectrogram.MELS.toLong())
@@ -45,7 +51,7 @@ internal class OnnxBeatNet(file: File) : BeatRunner {
                 fun floats(i: Int): FloatArray {
                     val t = result.get(outputs[i]).get() as OnnxTensor
                     val out = FloatArray(t.floatBuffer.remaining()).also { t.floatBuffer.get(it) }
-                    check(out.size == BeatPost.BEAT_FRAMES) { "unexpected output size ${out.size}" }
+                    check(out.size == frames) { "unexpected output size ${out.size}" }
                     return out
                 }
                 return floats(order.first) to floats(order.second)
@@ -177,8 +183,10 @@ internal object BeatModel {
     internal fun predict(net: BeatRunner, samples: FloatArray): BeatPost.Times {
         val spect = BeatSpectrogram.compute(samples)
         val frames = spect.size / BeatSpectrogram.MELS
-        val starts = BeatPost.starts(frames)
-        val outputs = starts.map { net.run(BeatPost.chunk(spect, frames, it)) }
-        return BeatPost.peaks(BeatPost.aggregate(outputs.map { it.first }, starts, frames), BeatPost.aggregate(outputs.map { it.second }, starts, frames))
+        val window = BeatPost.Window(net.frames)
+        val starts = BeatPost.starts(frames, window)
+        val outputs = starts.map { net.run(BeatPost.chunk(spect, frames, it, window)) }
+        return BeatPost.peaks(BeatPost.aggregate(outputs.map { it.first }, starts, frames, window),
+            BeatPost.aggregate(outputs.map { it.second }, starts, frames, window))
     }
 }

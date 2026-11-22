@@ -2843,7 +2843,11 @@
   "grille": "grid",
   "liste": "list",
   "{0} sections sur {1}": "{0} of {1} sections",
-  "{0} éléments": "{0} items"
+  "{0} éléments": "{0} items",
+  "Choisissez une sortie ci-dessus pour lier une correction": "Choose an output above to link a correction",
+  "Profils de casque": "Headphone profiles",
+  "Choisir un profil de casque": "Choose a headphone profile",
+  "Non connectée": "Not connected"
  },
  "hi": {
   "Reverb": "रीवर्ब",
@@ -5689,7 +5693,11 @@
   "grille": "ग्रिड",
   "liste": "सूची",
   "{0} sections sur {1}": "{1} में से {0} सेक्शन",
-  "{0} éléments": "{0} आइटम"
+  "{0} éléments": "{0} आइटम",
+  "Choisissez une sortie ci-dessus pour lier une correction": "सुधार जोड़ने के लिए ऊपर कोई आउटपुट चुनें",
+  "Profils de casque": "हेडफ़ोन प्रोफ़ाइल",
+  "Choisir un profil de casque": "हेडफ़ोन प्रोफ़ाइल चुनें",
+  "Non connectée": "कनेक्ट नहीं है"
  },
  "ja": {
   "Reverb": "リバーブ",
@@ -8535,7 +8543,11 @@
   "grille": "グリッド",
   "liste": "リスト",
   "{0} sections sur {1}": "{1}セクション中{0}",
-  "{0} éléments": "{0}項目"
+  "{0} éléments": "{0}項目",
+  "Choisissez une sortie ci-dessus pour lier une correction": "補正をリンクするには、上で出力を選んでください",
+  "Profils de casque": "ヘッドホンのプロファイル",
+  "Choisir un profil de casque": "ヘッドホンのプロファイルを選択",
+  "Non connectée": "未接続"
  },
  "zh": {
   "Reverb": "混响",
@@ -11381,7 +11393,11 @@
   "grille": "网格",
   "liste": "列表",
   "{0} sections sur {1}": "{1} 个版块中的 {0} 个",
-  "{0} éléments": "{0} 项"
+  "{0} éléments": "{0} 项",
+  "Choisissez une sortie ci-dessus pour lier une correction": "请在上方选择一个输出以关联校正",
+  "Profils de casque": "耳机配置文件",
+  "Choisir un profil de casque": "选择耳机配置文件",
+  "Non connectée": "未连接"
  },
  "ru": {
   "Reverb": "Реверберация",
@@ -14227,7 +14243,11 @@
   "grille": "сетка",
   "liste": "список",
   "{0} sections sur {1}": "Разделов: {0} из {1}",
-  "{0} éléments": "Пунктов: {0}"
+  "{0} éléments": "Пунктов: {0}",
+  "Choisissez une sortie ci-dessus pour lier une correction": "Выберите выход выше, чтобы привязать коррекцию",
+  "Profils de casque": "Профили наушников",
+  "Choisir un profil de casque": "Выбрать профиль наушников",
+  "Non connectée": "Не подключено"
  },
  "it": {
   "Reverb": "Riverbero",
@@ -17073,7 +17093,11 @@
   "grille": "griglia",
   "liste": "elenco",
   "{0} sections sur {1}": "{0} sezioni su {1}",
-  "{0} éléments": "{0} voci"
+  "{0} éléments": "{0} voci",
+  "Choisissez une sortie ci-dessus pour lier une correction": "Scegli un'uscita qui sopra per collegare una correzione",
+  "Profils de casque": "Profili delle cuffie",
+  "Choisir un profil de casque": "Scegli un profilo delle cuffie",
+  "Non connectée": "Non collegata"
  },
  "es": {
   "Reverb": "Reverb",
@@ -19919,7 +19943,11 @@
   "grille": "cuadrícula",
   "liste": "lista",
   "{0} sections sur {1}": "{0} de {1} secciones",
-  "{0} éléments": "{0} elementos"
+  "{0} éléments": "{0} elementos",
+  "Choisissez une sortie ci-dessus pour lier une correction": "Elige una salida arriba para vincular una corrección",
+  "Profils de casque": "Perfiles de auriculares",
+  "Choisir un profil de casque": "Elegir un perfil de auriculares",
+  "Non connectée": "No conectada"
  },
  "de": {
   "Reverb": "Reverb",
@@ -22765,7 +22793,11 @@
   "grille": "Raster",
   "liste": "Liste",
   "{0} sections sur {1}": "{0} von {1} Abschnitten",
-  "{0} éléments": "{0} Einträge"
+  "{0} éléments": "{0} Einträge",
+  "Choisissez une sortie ci-dessus pour lier une correction": "Wähle oben eine Ausgabe, um eine Korrektur zu verknüpfen",
+  "Profils de casque": "Kopfhörerprofile",
+  "Choisir un profil de casque": "Kopfhörerprofil auswählen",
+  "Non connectée": "Nicht verbunden"
  },
  "pt": {
   "Reverb": "Reverb",
@@ -25611,7 +25643,11 @@
   "grille": "grade",
   "liste": "lista",
   "{0} sections sur {1}": "{0} de {1} seções",
-  "{0} éléments": "{0} itens"
+  "{0} éléments": "{0} itens",
+  "Choisissez une sortie ci-dessus pour lier une correction": "Escolha uma saída acima para vincular uma correção",
+  "Profils de casque": "Perfis de fone",
+  "Choisir un profil de casque": "Escolher um perfil de fone",
+  "Non connectée": "Não conectada"
  },
  "ko": {
   "Reverb": "리버브",
@@ -28457,6 +28493,10 @@
   "grille": "격자",
   "liste": "목록",
   "{0} sections sur {1}": "{1}개 섹션 중 {0}개",
-  "{0} éléments": "{0}개 항목"
+  "{0} éléments": "{0}개 항목",
+  "Choisissez une sortie ci-dessus pour lier une correction": "보정을 연결하려면 위에서 출력을 선택하세요",
+  "Profils de casque": "헤드폰 프로필",
+  "Choisir un profil de casque": "헤드폰 프로필 선택",
+  "Non connectée": "연결되지 않음"
  }
 }

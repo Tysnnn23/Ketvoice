@@ -143,4 +143,39 @@ class DesktopAutomixTest {
         val measured = crossings / 2.0 / ((got - 9_601) / 48_000.0)
         assertTrue(abs(measured - hz) < 3, "pitch $measured Hz")
     }
+
+    /**
+     * 8.4 « Pont en boucle » on the desktop: planned from the titles' lyrics (as on the phone), in the listener's style
+     * and by the automatic mode when the tempos are too far apart; never twice running, like any bar loop.
+     */
+    @Test fun theLoopBridgeIsPlannedAndNeverTwiceRunning() {
+        val duration = 240_000L
+        val outro = com.ketvoice.app.automix.SegmentAnalysis(195_000, 45_000, 128f, 195_000.0, .9f, 0, -14f, 195_000, 239_000, 195_000, 236_000)
+        val intro = com.ketvoice.app.automix.SegmentAnalysis(0, 40_000, 108f, 500.0, .9f, 0, -14f, 300, 40_000, 8_000, 40_000)
+        val (out, incoming) = DesktopAutomix.voiced(com.ketvoice.app.automix.MixFacts(duration, outro), com.ketvoice.app.automix.MixFacts(duration, intro),
+            listOf(180_000L..190_000L, 192_000L..200_000L), listOf(32_000L..36_000L), stems = null)
+        assertEquals(200_000L, out.vocalEndMs); assertEquals(32_000L, incoming.vocalStartMs)
+        val a = Track("a", "Titre a", "Artiste a", "", durationMs = duration)
+        val b = Track("b", "Titre b", "Artiste b", "", durationMs = duration)
+        val state = com.ketvoice.app.player.PlayerUiState(queue = listOf(a, b), index = 0, isPlaying = true)
+        for (style in listOf(com.ketvoice.app.automix.MixStyle.Bridge, com.ketvoice.app.automix.MixStyle.Auto)) {
+            AppSettings.ketmixStyle.value = style.ordinal
+            DesktopAutomix.resetForTest()
+            val context = DesktopAutomix.contextFor(state, a, b, 1f)
+            assertEquals(false, context.loopedLast)
+            val plan = DesktopAutomix.planFor(out, incoming, context, null, 1f, beats = true)
+            assertTrue(plan.glide != null && plan.loopUs > 0L, "$style: ${plan.kind} ${plan.reason}")
+            assertEquals("pont en boucle", com.ketvoice.app.automix.MixWords.label(plan))
+            DesktopAutomix.remember(plan)
+            val after = DesktopAutomix.planFor(out, incoming, DesktopAutomix.contextFor(state, a, b, 1f), null, 1f, beats = true)
+            assertTrue(after.glide == null && after.loopUs == 0L, "$style twice running: ${after.reason}")
+        }
+        // Nobody knows where either title sings (no lyrics, no separation): no bridge.
+        AppSettings.ketmixStyle.value = com.ketvoice.app.automix.MixStyle.Bridge.ordinal
+        DesktopAutomix.resetForTest()
+        val (bareOut, bareIn) = DesktopAutomix.voiced(com.ketvoice.app.automix.MixFacts(duration, outro), com.ketvoice.app.automix.MixFacts(duration, intro),
+            emptyList(), emptyList(), stems = null)
+        assertEquals(null, DesktopAutomix.planFor(bareOut, bareIn, DesktopAutomix.contextFor(state, a, b, 1f), null, 1f, beats = true).glide)
+        AppSettings.ketmixStyle.value = 0
+    }
 }

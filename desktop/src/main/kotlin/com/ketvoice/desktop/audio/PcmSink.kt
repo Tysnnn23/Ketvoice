@@ -18,22 +18,44 @@ interface PcmSink : Closeable {
     fun queuedFrames(): Int
     /** Drops what was written and not heard yet. */
     fun flush() {}
+    /** Blocks until what was written has been heard. */
+    fun drain() {}
+    /** The output device this sink plays to now, by name (null: the system's default). */
+    val device: String? get() = null
+    /** Plays to the device called [name] from the next [open] (null: the system's default); false when this sink has no devices to choose. */
+    fun select(name: String?): Boolean = false
 }
 
-/** The sound card through Java Sound: 48 kHz 16-bit stereo, about 170 ms of buffer. */
+/**
+ * The sound card through Java Sound: 48 kHz 16-bit stereo, about 170 ms of buffer, on the device [select] named
+ * (« Sortie audio », see [OutputDevices]); a device that is gone or refuses to open gives way to the system's default.
+ */
 class LineSink(private val bufferMs: Int = 170) : PcmSink {
     private var line: SourceDataLine? = null
     private var frameBytes = 4
+    @Volatile private var wanted: String? = null
+    @Volatile override var device: String? = null; private set
     override val realtime = true
+
+    override fun select(name: String?): Boolean { wanted = name; return true }
 
     override fun open(sampleRate: Int, channels: Int) {
         val format = AudioFormat(sampleRate.toFloat(), 16, channels, true, false)
         frameBytes = 2 * channels
-        val l = AudioSystem.getSourceDataLine(format)
+        val name = wanted
+        val named = name?.let { runCatching { start(OutputDevices.line(it, format), format, sampleRate) }.getOrNull() }
+        line = named ?: start(AudioSystem.getSourceDataLine(format), format, sampleRate)
+        device = if (named != null) name else null
+    }
+
+    private fun start(l: SourceDataLine?, format: AudioFormat, sampleRate: Int): SourceDataLine {
+        checkNotNull(l) { "no such output" }
         l.open(format, sampleRate * bufferMs / 1000 * frameBytes)
         l.start()
-        line = l
+        return l
     }
+
+    override fun drain() { line?.drain() }
 
     override fun write(pcm: ByteArray, length: Int) { line?.write(pcm, 0, length) }
 
@@ -41,7 +63,7 @@ class LineSink(private val bufferMs: Int = 170) : PcmSink {
 
     override fun flush() { line?.flush() }
 
-    override fun close() { line?.let { runCatching { it.stop(); it.close() } }; line = null }
+    override fun close() { line?.let { runCatching { it.stop(); it.close() } }; line = null; device = null }
 }
 
 /** Swallows the sound (smoke runs, headless hosts); counts the frames. */

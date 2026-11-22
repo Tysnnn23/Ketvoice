@@ -1,5 +1,6 @@
 package com.ketvoice.desktop.audio
 
+import com.ketvoice.app.automix.barLoop
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -153,16 +154,51 @@ class FfmpegAudioEngine(
     private fun emit(event: AudioEvent) { _events.tryEmit(event) }
 
     private var sinkOpen = false
+    private val _output = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
+    /** The output device playing now, by name (null: the system's default). */
+    val output: kotlinx.coroutines.flow.StateFlow<String?> = _output
 
     /** Opens the output when it is not (no sound card, or it went away); false with an Error event when it cannot. */
     private fun outputReady(): Boolean {
         if (sinkOpen) return true
         return try {
-            sink.open(RATE, 2); sinkOpen = true; true
+            sink.open(RATE, 2); sinkOpen = true; _output.value = sink.device; true
         } catch (t: Throwable) {
             emit(AudioEvent.Error("audio output: ${t.message ?: t}")); false
         }
     }
+
+    /**
+     * « Sortie audio »: plays to the device called [name] (null: the system's default) from now on. While music plays,
+     * what the old device holds is played out after a short fade, then the new one takes over and fades in.
+     */
+    fun setOutput(name: String?) = post {
+        if (sinkOpen && sink.device == name) return@post
+        if (!sink.select(name)) return@post
+        reopen()
+    }
+
+    private fun reopen() {
+        if (sinkOpen) {
+            declickOut()
+            runCatching { sink.drain() }
+            runCatching { sink.close() }; sinkOpen = false
+        }
+        if (!outputReady()) { wantPlay = false; playing = false; return }
+        if (wantPlay) { mixer.gain.set(0f); mixer.gain.fadeTo(1f, Gain.DECLICK_MS) }
+    }
+
+    /** The device that played went away mid-block: the system's default takes over, or false when there is none either. */
+    private fun fallBack(): Boolean {
+        runCatching { sink.close() }; sinkOpen = false
+        if (_output.value == null) return false
+        if (!sink.select(null) || !outputReady()) return false
+        if (wantPlay) { mixer.gain.set(0f); mixer.gain.fadeTo(1f, Gain.DECLICK_MS) }
+        return true
+    }
+
+    /** « Égaliseur par casque »: the correction played on the mixed decks from now on (null: none), crossfaded. */
+    fun setHeadphoneCorrection(profile: com.ketvoice.app.player.HeadphoneProfile?) { mixer.headphone.profile = profile }
 
     private fun active() = mixer.current != null && (wantPlay || mixer.gain.fading)
 
@@ -219,6 +255,8 @@ class FfmpegAudioEngine(
         try {
             sink.write(pcm, frames * 4)
         } catch (t: Throwable) {
+            // A chosen device went away: the system's default plays on (this block is lost).
+            if (fallBack()) return
             // The device went away: stop here (the next play opens it again) rather than race through the queue.
             runCatching { sink.close() }; sinkOpen = false
             wantPlay = false; playing = false; mixer.gain.set(0f)
@@ -286,7 +324,8 @@ class FfmpegAudioEngine(
             else -> plan.outMs + plan.overlapMs * 55 / 100
         }
         val endMs = maxOf(outAutomation.endUs / 1000L, plan.outMs + plan.overlapMs) + 300L
-        val m = DesktopMixer.Mix(incoming, startMs * RATE / 1000, speed, outAutomation, inAutomation, promoteMs * RATE / 1000, endMs * RATE / 1000)
+        val m = DesktopMixer.Mix(incoming, startMs * RATE / 1000, speed, outAutomation, inAutomation, promoteMs * RATE / 1000, endMs * RATE / 1000,
+            loop = plan.barLoop(), glide = plan.glide, plan = plan)
         val ok = mixer.startMix(m)
         if (!ok) incoming.seek(0)
         mixPlan = if (ok) plan else null

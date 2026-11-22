@@ -20,6 +20,8 @@ class DesktopMixer(val sampleRate: Int = FfmpegDecoder.OUT_RATE) {
     @Volatile var next: Deck? = null
     val equalizer = Equalizer(sampleRate)
     val gain = Gain(sampleRate)
+    /** « Égaliseur par casque » (9.0): after the decks and the voice level, before the equalizer, as on the phone. */
+    val headphone = HeadphoneStage(sampleRate)
 
     /** The transition being played (writer thread only). */
     @Volatile var mix: Mix? = null
@@ -45,7 +47,14 @@ class DesktopMixer(val sampleRate: Int = FfmpegDecoder.OUT_RATE) {
         internal val inAutomation: com.ketvoice.app.automix.DeckAutomation,
         val promoteFrame: Long,
         val endFrame: Long,
+        /** « Boucle » (6.9) and « Pont en boucle » (8.4): the outgoing title's bar looped under the blend. */
+        internal val loop: com.ketvoice.app.automix.BarLoop? = null,
+        /** « Pont en boucle »: both decks' speeds glide from one tempo to the other, the incoming one [rate] times as fast. */
+        internal val glide: com.ketvoice.app.automix.TempoGlide? = null,
+        internal val plan: com.ketvoice.app.automix.MixPlan? = null,
     ) {
+        /** Steps the glide's speeds (set when the transition starts). */
+        internal var glider: com.ketvoice.app.automix.GlideDriver? = null
         @Volatile var outgoing: Deck? = null; internal set
         @Volatile var started = false; internal set
         @Volatile var promoted = false; internal set
@@ -71,6 +80,7 @@ class DesktopMixer(val sampleRate: Int = FfmpegDecoder.OUT_RATE) {
         if (cur.lane.titleFrame > m.startFrame) return false
         cancelMix()
         cur.lane.automation = m.outAutomation
+        cur.lane.loop = m.loop
         m.outgoing = cur
         mix = m
         return true
@@ -87,9 +97,15 @@ class DesktopMixer(val sampleRate: Int = FfmpegDecoder.OUT_RATE) {
         if (m.started) { if (m.promoted) m.outgoing?.close() else m.incoming.close() }
         // Not started: the next deck goes back to its start, for an ordinary gapless end.
         else if (next === m.incoming) { m.incoming.lane.reset(); m.incoming.seek(0) }
-        current?.lane?.let { it.automation = null; if (m.started) it.speed = 1f }
         gliding = null; settling = null
+        val d = current ?: return
+        d.lane.automation = null; d.lane.loop = null
+        if (!m.started) return
+        // A « pont en boucle » given up half-way glides back to the title's own tempo, as the phone's does.
+        if (m.glide != null && d.lane.speed != 1f) glideBack(d) else d.lane.speed = 1f
     }
+
+    private fun glideBack(d: Deck) { gliding = d; glideIn = com.ketvoice.app.automix.TempoReturn.WAIT_MS * sampleRate / 1000 }
 
     /**
      * Renders [frames] stereo frames into [out]. [wait] is asked what to do when the deck has no
@@ -103,8 +119,10 @@ class DesktopMixer(val sampleRate: Int = FfmpegDecoder.OUT_RATE) {
         if (m == null) mixDecks(out, 0, frames, block, wait) else mixTwo(m, out, frames, block, wait)
         voice(out, frames, block, m ?: mix, before, beforeAt)
         glide(frames, block)
+        headphone.process(out, frames)
         equalizer.process(out, frames)
         gain.process(out, frames)
+        clockFrames += frames
     }
 
     private fun mixDecks(out: FloatArray, from: Int, frames: Int, block: Block, wait: (Deck, Int) -> Boolean): Int {
@@ -147,6 +165,7 @@ class DesktopMixer(val sampleRate: Int = FfmpegDecoder.OUT_RATE) {
             m.incoming.lane.automation = m.inAutomation
             m.incoming.lane.speed = m.speed
             m.started = true
+            if (m.glide != null && m.plan != null) m.glider = com.ketvoice.app.automix.GlideDriver(m.plan, m.glide, cur.lane.speed, m.speed)
         }
         val outgoing = m.outgoing!!
         val incoming = m.incoming
@@ -165,6 +184,7 @@ class DesktopMixer(val sampleRate: Int = FfmpegDecoder.OUT_RATE) {
             mix = null; m.finished = true; incoming.close(); outgoing.lane.automation = null
             return
         }
+        steer(m, outgoing, incoming, block)
         val outAt = outgoing.lane.titleFrame
         if (!m.promoted && (outAt >= m.promoteFrame || outgoing.lane.ended)) {
             m.promoted = true
@@ -175,10 +195,27 @@ class DesktopMixer(val sampleRate: Int = FfmpegDecoder.OUT_RATE) {
         if (m.promoted && (outAt >= m.endFrame || outgoing.lane.silentFrames > sampleRate * 6L)) {
             outgoing.close()
             mix = null; m.finished = true
-            if (incoming.lane.speed != 1f) { gliding = incoming; glideIn = com.ketvoice.app.automix.TempoReturn.WAIT_MS * sampleRate / 1000 }
+            if (incoming.lane.speed != 1f) glideBack(incoming)
             settling = incoming; settleFrame = (m.inAutomation.endUs / 1000L + 600L) * sampleRate / 1000
         }
     }
+
+    /**
+     * One step of a « pont en boucle »'s glide (8.4): both decks take the shared [com.ketvoice.app.automix.GlideDriver]'s
+     * speeds, read at the outgoing title's position on the mixer's own clock. Both decks are read sample for sample in
+     * the same block, so they never drift apart and no correction is needed.
+     */
+    private fun steer(m: Mix, outgoing: Deck, incoming: Deck, block: Block) {
+        val driver = m.glider ?: return
+        val outMs = outgoing.lane.titleFrame * 1000 / sampleRate
+        if (!driver.step(clockFrames * 1000 / sampleRate, outMs, 0.0, audible = true)) return
+        outgoing.lane.speed = driver.outSpeed
+        incoming.lane.speed = driver.inSpeed
+        block.retimed = true
+    }
+
+    /** Frames rendered since the mixer was made: the clock a glide steps on. */
+    private var clockFrames = 0L
 
     /**
      * The voice level (« Niveau de la voix », Phase 3): the shared `VoiceStage` on what the current deck plays,
@@ -242,6 +279,14 @@ class Lane internal constructor(private val deck: Deck) {
     internal var automation: com.ketvoice.app.automix.DeckAutomation? = null
     /** The separated part of this deck's title a transition plays its voice moves with (null: the band cut). */
     @Volatile internal var stem: com.ketvoice.app.stems.StemAudio? = null
+    /**
+     * A bar of this title looped under a blend (« Boucle », « Pont en boucle »), played only while an [automation] is
+     * set. It is applied to the title's own frames, before the stretcher, so the loop keeps its place on the title's
+     * beat grid whatever speed the deck plays at (on the phone, too, it comes before the change of speed).
+     */
+    internal var loop: com.ketvoice.app.automix.BarLoop? = null
+    private var loopFx: com.ketvoice.app.automix.LoopFx? = null
+    private var loopBytes = java.nio.ByteBuffer.allocate(0)
     private var dsp: com.ketvoice.app.automix.DeckDsp? = null
     private var stretch: TimeStretch? = null
     private var inBytes = java.nio.ByteBuffer.allocate(0)
@@ -254,7 +299,7 @@ class Lane internal constructor(private val deck: Deck) {
         get() = stretch?.speed ?: 1f
         set(value) {
             if (stretch == null && value == 1f) return
-            val s = stretch ?: TimeStretch(deck::read, { deck.ended }, deck.positionFrames).also { stretch = it }
+            val s = stretch ?: TimeStretch(::source, { deck.ended }, deck.positionFrames).also { stretch = it }
             s.speed = value
         }
 
@@ -266,9 +311,32 @@ class Lane internal constructor(private val deck: Deck) {
     /** Frames into [out] at frame [offset], with the automation applied; fewer when the deck has none yet. */
     fun read(out: FloatArray, offset: Int, frames: Int): Int {
         val from = titleFrame
-        val n = stretch?.process(out, offset, frames) ?: deck.read(out, offset, frames)
+        val n = stretch?.process(out, offset, frames) ?: source(out, offset, frames)
         if (n > 0) effects(out, offset, n, from)
         return n
+    }
+
+    /** The deck's own frames, with the [loop] in place while a transition carries it. */
+    private fun source(out: FloatArray, offset: Int, frames: Int): Int {
+        val from = deck.positionFrames
+        val n = deck.read(out, offset, frames)
+        val bar = loop
+        if (n > 0 && bar != null && automation != null) looped(out, offset, n, from, bar)
+        return n
+    }
+
+    private fun looped(buf: FloatArray, offset: Int, frames: Int, from: Long, bar: com.ketvoice.app.automix.BarLoop) {
+        val fx = loopFx ?: com.ketvoice.app.automix.LoopFx(FfmpegDecoder.OUT_RATE, 2).also { loopFx = it }
+        val bytes = frames * 4
+        if (loopBytes.capacity() < bytes) loopBytes = java.nio.ByteBuffer.allocate(bytes).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+        val input = loopBytes
+        input.clear()
+        for (k in 0 until frames * 2) input.putShort((buf[offset * 2 + k] * 32767f).toInt().coerceIn(-32768, 32767).toShort())
+        input.flip()
+        val output = fx.process(input, from * 1_000_000L / FfmpegDecoder.OUT_RATE, bar)
+        if (output === input) return
+        val o = output.duplicate().order(java.nio.ByteOrder.LITTLE_ENDIAN)
+        for (k in 0 until frames * 2) buf[offset * 2 + k] = o.getShort(o.position() + k * 2) / 32768f
     }
 
     /** [frames] of silence through the deck's effects, the title being over (its echo and reverb ring out). */
@@ -280,7 +348,7 @@ class Lane internal constructor(private val deck: Deck) {
     }
 
     /** A seek or a new start: whatever a transition left on this deck is gone. */
-    fun reset() { automation = null; stem = null; dsp = null; stretch = null; silentFrames = 0 }
+    fun reset() { automation = null; stem = null; dsp = null; stretch = null; silentFrames = 0; loop = null; loopFx = null }
 
     private fun effects(buf: FloatArray, offset: Int, frames: Int, titleFrame: Long) {
         val a = automation
@@ -424,5 +492,27 @@ class Equalizer(private val sampleRate: Int) {
             if (m <= .9f) return x
             return Math.signum(x) * (.9f + .1f * tanh((m - .9f) / .1f))
         }
+    }
+}
+
+/**
+ * « Égaliseur par casque » (the phone's 9.0 correction) on the mixed stereo: the shared Audio EQ Cookbook cascade with
+ * its safe preamp ([com.ketvoice.app.player.EqCascade]), and the shared 60 ms crossfade when [profile] changes. The
+ * filters are linear, so correcting the sum of the decks is correcting each of them, as the phone does per deck.
+ */
+class HeadphoneStage(private val sampleRate: Int) {
+    /** The correction to play (null: none); read by the writer thread at each block. */
+    @Volatile var profile: com.ketvoice.app.player.HeadphoneProfile? = null
+    private val eq = com.ketvoice.app.player.EqCrossfade()
+
+    fun process(buf: FloatArray, frames: Int) {
+        eq.follow(profile, sampleRate, 2)
+        if (eq.idle) return
+        for (f in 0 until frames) {
+            buf[f * 2] = eq.sample(buf[f * 2].toDouble(), 0).toFloat()
+            buf[f * 2 + 1] = eq.sample(buf[f * 2 + 1].toDouble(), 1).toFloat()
+            eq.frameDone()
+        }
+        eq.settle()
     }
 }

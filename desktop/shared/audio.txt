@@ -6,3 +6,8 @@ player/Autoplay.kt
 player/NoRepeat.kt
 player/Radio.kt
 player/EqualizerProfile.kt  # ten-band frequencies for the desktop equalizer (winaudio)
+# Windows 1.2: the phone's 9.0 headphone correction (biquads, profiles, links, the crossfade).
+player/Biquad.kt
+player/HeadphoneProfile.kt
+player/HeadphoneLinks.kt
+player/EqCascade.kt

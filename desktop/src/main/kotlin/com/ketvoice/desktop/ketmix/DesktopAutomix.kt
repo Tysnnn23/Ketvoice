@@ -4,6 +4,8 @@ import com.ketvoice.app.automix.AnalysisDepth
 import com.ketvoice.app.automix.AnalysisStore
 import com.ketvoice.app.automix.AnalysisTap
 import com.ketvoice.app.automix.BeatModel
+import com.ketvoice.app.automix.LyricTimes
+import com.ketvoice.app.automix.VoiceFacts
 import com.ketvoice.app.automix.MixContext
 import com.ketvoice.app.automix.MixFacts
 import com.ketvoice.app.automix.MixKind
@@ -75,6 +77,8 @@ object DesktopAutomix {
     private var lastVariant = -1
     private var lastExit = 0
     private var recentKinds: List<MixKind> = emptyList()
+    /** The last transition looped a bar: the next one does not. */
+    @Volatile private var loopedLast = false
 
     fun attach(engine: FfmpegAudioEngine, scope: CoroutineScope) {
         jobs.forEach { it.cancel() }
@@ -162,35 +166,16 @@ object DesktopAutomix {
             }
         }
         if (!stillPair(key) || e.mixStatus.value.phase != FfmpegAudioEngine.MixPhase.Idle) { _ui.value = Ui(); return }
-        val state = Player.state.value
-        val shape = MixPointStore.pair(current.id, next.id)?.shape ?: MixShape.DEFAULT
+        val inLyrics = withContext(Dispatchers.IO) { firstLines(next, nextDuration) }
+        val outLyrics = com.ketvoice.app.data.LyricsRepo.state.value.takeIf { it.trackId == current.id }?.lines.orEmpty()
+        val (out, incoming) = voiced(MixFacts(duration, outro, userExitMs = MixPointStore.exitOf(current.id, duration)),
+            MixFacts(nextDuration, intro, userEntryMs = MixPointStore.entryOf(next.id, nextDuration)),
+            LyricTimes.lines(outLyrics, duration), inLyrics, stems)
         val outSpeed = e.speed()
-        val context = MixContext(
-            sameAlbumInOrder = !state.repeatOne && !state.shuffle && current.album.isNotBlank() &&
-                current.album.equals(next.album, ignoreCase = true) && current.artist.equals(next.artist, ignoreCase = true),
-            repeatOne = state.repeatOne,
-            loop = state.repeatOne && AppSettings.ketmixLoops.value && next.id == current.id,
-            skipSilence = AppSettings.skipSilence.value,
-            albumsMixed = AppSettings.automixAlbums.value,
-            speed = outSpeed,
-            lastVariant = lastVariant, lastExit = lastExit, recentKinds = recentKinds,
-            userOverlapMs = MixPointStore.pair(current.id, next.id)?.overlapMs ?: -1L,
-            // The desktop decks have no bar loop (the « boucle » blend): told as if one had just been played, the planner picks another.
-            loopedLast = true)
-        val settings = MixSettings(AppSettings.automixIntensity.value,
-            MixPointStore.pair(current.id, next.id)?.style ?: MixStyle.of(AppSettings.ketmixStyle.value), tempoMatch = shape.tempo)
-        val out = MixFacts(duration, outro, userExitMs = MixPointStore.exitOf(current.id, duration), vocalEndMs = stems?.sungUntilMs,
-            sungLines = stems?.outLines.orEmpty())
-        val incoming = MixFacts(nextDuration, intro, userEntryMs = MixPointStore.entryOf(next.id, nextDuration), vocalStartMs = stems?.sungFromMs,
-            sungLines = stems?.inLines.orEmpty())
-        fun planFor(beats: Boolean): MixPlan = TransitionPlanner.plan(out, incoming, context.copy(beats = beats), settings)
-            .let { MixShaping.apply(it, shape, true) }
-            .let { p -> if (p.mixes && p.kind != MixKind.Beatmatch && abs(outSpeed - 1f) > .0005f) p.copy(rate = 1f / outSpeed) else p }
-            .let { p -> if (p.mixes && AppSettings.ketmixStems.value) p.copy(stems = true, voiceFromMs = incoming.vocalStartMs ?: -1L) else p }
-            // The volume keyframes set in Ketmix Studio (as the phone's MixEditor.plan applies them).
-            .let { p -> val keys = MixPointStore.pair(current.id, next.id)?.keys.orEmpty(); if (p.mixes && keys.isNotEmpty()) p.copy(keys = keys) else p }
-        var plan = planFor(beats = true)
-        if (plan.mixes && plan.beatTied && e.renderedMs() > plan.outMs - preRoll(plan) - 1_000L) plan = planFor(beats = false)
+        val choice = MixPointStore.pair(current.id, next.id)
+        var plan = planFor(out, incoming, contextFor(Player.state.value, current, next, outSpeed), choice, outSpeed, beats = true)
+        if (plan.mixes && plan.beatTied && e.renderedMs() > plan.outMs - preRoll(plan) - 1_000L)
+            plan = planFor(out, incoming, contextFor(Player.state.value, current, next, outSpeed), choice, outSpeed, beats = false)
         if (!plan.mixes || e.renderedMs() > plan.outMs - preRoll(plan) - 300L) {
             AppLog.i("ketmix", "no mix: ${plan.reason.ifBlank { "late" }}")
             _ui.value = Ui(); return
@@ -199,11 +184,70 @@ object DesktopAutomix {
         if (stems != null && PartStems.mashup(plan, stems)) plan = plan.copy(mashup = true)
         pair = current to next
         e.mixIntoNext(plan, preRoll(plan), stems?.let { it.out to it.incoming }) { ok -> if (!ok) { _ui.value = Ui() } }
+        remember(plan)
+        AppLog.i("ketmix", "mix planned: ${plan.kind} at ${plan.outMs} ms into ${plan.inMs} ms, ${plan.overlapMs} ms, speed ${plan.rate}")
+    }
+
+    /** What the next plans vary on: this one's kind and variant, and whether it looped a bar (never twice running). */
+    internal fun remember(plan: MixPlan) {
         if (plan.kind == MixKind.Beatmatch || plan.kind == MixKind.Filter) lastVariant = plan.variant
         if (plan.kind == MixKind.Echo) lastExit = 1
         if (plan.kind == MixKind.Rise) lastExit = 2
         recentKinds = MixVariety.remember(recentKinds, plan)
-        AppLog.i("ketmix", "mix planned: ${plan.kind} at ${plan.outMs} ms into ${plan.inMs} ms, ${plan.overlapMs} ms, speed ${plan.rate}")
+        loopedLast = plan.loopUs > 0L
+    }
+
+    /** The pair's context for the planner, from the queue and the settings. */
+    internal fun contextFor(state: com.ketvoice.app.player.PlayerUiState, current: Track, next: Track, outSpeed: Float): MixContext = MixContext(
+        sameAlbumInOrder = !state.repeatOne && !state.shuffle && current.album.isNotBlank() &&
+            current.album.equals(next.album, ignoreCase = true) && current.artist.equals(next.artist, ignoreCase = true),
+        repeatOne = state.repeatOne,
+        loop = state.repeatOne && AppSettings.ketmixLoops.value && next.id == current.id,
+        skipSilence = AppSettings.skipSilence.value,
+        albumsMixed = AppSettings.automixAlbums.value,
+        speed = outSpeed,
+        lastVariant = lastVariant, lastExit = lastExit, recentKinds = recentKinds,
+        userOverlapMs = MixPointStore.pair(current.id, next.id)?.overlapMs ?: -1L,
+        // The desktop decks loop bars as the phone's do (« Boucle », « Pont en boucle »): never twice running.
+        loopedLast = loopedLast)
+
+    /**
+     * The plan for a pair, as the phone makes it: the planner (the « Pont en boucle » included), the listener's shape,
+     * the speed of a title still gliding back, the separated voices and the keyframes of Ketmix Studio.
+     */
+    internal fun planFor(out: MixFacts, incoming: MixFacts, context: MixContext, choice: com.ketvoice.app.automix.PairChoice?,
+                         outSpeed: Float, beats: Boolean): MixPlan {
+        val shape = choice?.shape ?: MixShape.DEFAULT
+        val settings = MixSettings(AppSettings.automixIntensity.value, choice?.style ?: MixStyle.of(AppSettings.ketmixStyle.value), tempoMatch = shape.tempo)
+        return TransitionPlanner.plan(out, incoming, context.copy(beats = beats), settings)
+            .let { MixShaping.apply(it, shape, true) }
+            .let { p -> if (p.mixes && p.kind != MixKind.Beatmatch && abs(outSpeed - 1f) > .0005f) p.copy(rate = 1f / outSpeed) else p }
+            .let { p -> if (p.mixes && AppSettings.ketmixStems.value) p.copy(stems = true, voiceFromMs = incoming.vocalStartMs ?: -1L) else p }
+            // The volume keyframes set in Ketmix Studio (as the phone's MixEditor.plan applies them).
+            .let { p -> val keys = choice?.keys.orEmpty(); if (p.mixes && keys.isNotEmpty()) p.copy(keys = keys) else p }
+    }
+
+    /**
+     * Where each title sings, as the phone reads it: its synchronised lyrics and its separated voice (the cautious one
+     * of the two for the edges; the lyrics' lines when there are some, else the voice's), and the voice's passages
+     * apart, which a « Pont en boucle » reads beside the lyrics.
+     */
+    internal fun voiced(out: MixFacts, incoming: MixFacts, outLyrics: List<LongRange>, inLyrics: List<LongRange>,
+                        stems: PartStems.Parts?): Pair<MixFacts, MixFacts> =
+        out.copy(vocalEndMs = VoiceFacts.end(outLyrics.lastOrNull()?.last, stems?.sungUntilMs),
+            sungLines = LyricTimes.merge(outLyrics, stems?.outLines), voiceLines = stems?.outLines) to
+            incoming.copy(vocalStartMs = VoiceFacts.start(inLyrics.firstOrNull()?.first, stems?.sungFromMs),
+                sungLines = LyricTimes.merge(inLyrics, stems?.inLines), voiceLines = stems?.inLines)
+
+    /** Where the next title sings, line by line, from lyrics already on this PC or its first lyrics source (the phone's rule). */
+    private suspend fun firstLines(track: Track, durationMs: Long): List<LongRange> {
+        if (AppSettings.lyricsMode.value == 2 || AppSettings.lyricsSource.value == com.ketvoice.app.data.MusicApi.SRC_OFF) return emptyList()
+        return try {
+            val local = com.ketvoice.app.data.Downloader.localLyrics(track.id)?.second?.takeIf { it.isNotEmpty() }
+            LyricTimes.lines(local ?: com.ketvoice.app.data.MusicApi.lyrics(track, false, AppSettings.lyricsSource.value, false).second, durationMs)
+        } catch (c: kotlinx.coroutines.CancellationException) { throw c } catch (t: Throwable) {
+            AppLog.w("ketmix", "lyrics of the next title: $t"); emptyList()
+        }
     }
 
     /** How long before the plan's exit the incoming deck starts, silent (as on Android). */
@@ -261,7 +305,7 @@ object DesktopAutomix {
     internal fun preview(ui: Ui) { _ui.value = ui }
 
     /** Test seam. */
-    internal fun resetForTest() { jobs.forEach { it.cancel() }; jobs = emptyList(); engine = null; doneKey = null; pair = null; _ui.value = Ui(); Player.skipHook = null }
+    internal fun resetForTest() { jobs.forEach { it.cancel() }; jobs = emptyList(); engine = null; doneKey = null; pair = null; loopedLast = false; _ui.value = Ui(); Player.skipHook = null }
 }
 
 /** Decodes a stretch of a title straight from its source and measures it with the shared analysis. */
@@ -308,8 +352,9 @@ internal object Segments {
 
 /** The two separated parts of a transition, as the phone's `startStems`/`joinStems` make them. */
 internal object PartStems {
+    /** [outLines] and [inLines]: where each separated voice sings, null when that title has no separation. */
     class Parts(val out: StemAudio?, val incoming: StemAudio?, val sungUntilMs: Long?, val sungFromMs: Long?,
-                val outLines: List<LongRange>, val inLines: List<LongRange>)
+                val outLines: List<LongRange>?, val inLines: List<LongRange>?)
 
     fun read(outId: String, duration: Long, outSource: AudioSource, inId: String, inDuration: Long, inSource: AudioSource,
              depth: AnalysisDepth): Parts {
@@ -325,7 +370,7 @@ internal object PartStems {
         val outMask = StemStore.load(outId, duration, false)
         val inMask = StemStore.load(inId, inDuration, true)
         return Parts(out, incoming, outMask?.let { VoiceActivity.endMs(it) }, inMask?.let { VoiceActivity.startMs(it) },
-            outMask?.let { VoiceActivity.passages(it) }.orEmpty(), inMask?.let { VoiceActivity.passages(it) }.orEmpty())
+            outMask?.let { VoiceActivity.passages(it) }, inMask?.let { VoiceActivity.passages(it) })
     }
 
     fun mashup(plan: MixPlan, p: Parts): Boolean {
