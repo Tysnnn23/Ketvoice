@@ -337,7 +337,7 @@ class LayoutCustomizationHostTest {
     @Test fun thePersonalizationPageEditsTheLayout() {
         compose.setContent { KetvoiceTheme(useDark = true) { com.ketvoice.app.ui.settings.SettingsScreen() } }
         compose.waitForIdle()
-        compose.onNodeWithTag("settings-category-Personalization").performScrollTo().performClick()
+        compose.onNodeWithTag("settings-category-Personalize").performScrollTo().performClick()
         compose.waitForIdle()
         listOf("Onglets à la carte", "Accueil modulable", "Boutons du lecteur", "Menu des titres").forEach {
             compose.onNodeWithText(it).performScrollTo().assertIsDisplayed()

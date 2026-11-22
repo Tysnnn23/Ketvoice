@@ -36,7 +36,7 @@ class LayoutSettingsTest {
         assertEquals(listOf(PlayerAction.Lyrics, PlayerAction.Output, PlayerAction.Account, PlayerAction.Queue), PlayerLayout.bar(""))
         assertEquals(PlayerLayout.DEFAULT_BAR, PlayerLayout.bar(LayoutSettings.player.value))
         assertEquals(listOf(MiniAction.Next), PlayerLayout.mini(""))
-        assertEquals(listOf("playNext", "enqueue", "favorite", "download", "playlist", "radio", "share", "mixPoint", "about"),
+        assertEquals(listOf("playNext", "enqueue", "favorite", "download", "playlist", "radio", "share", "mixPoint", "lyricsEditor", "about"),
             TitleMenuLayout.shown(""))
         assertEquals(SwipeAction.PlayNext, SwipeAction.toEnd())
         assertEquals(SwipeAction.Enqueue, SwipeAction.toStart())

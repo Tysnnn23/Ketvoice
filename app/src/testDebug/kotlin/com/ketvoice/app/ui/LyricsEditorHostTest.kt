@@ -43,9 +43,11 @@ class LyricsEditorHostTest {
         AppSettings.reduceAnimations.value = true
         state.value = PlayerUiState(queue = listOf(track), index = 0, durationMs = 200_000)
         position.value = 0L
+        com.ketvoice.app.ui.player.LyricsEditor.position = { position.value }
     }
 
     @After fun reset() {
+        com.ketvoice.app.ui.player.LyricsEditor.position = { Player.currentPositionMs() }
         AppSettings.reduceAnimations.value = false
         state.value = PlayerUiState(); position.value = 0L
     }

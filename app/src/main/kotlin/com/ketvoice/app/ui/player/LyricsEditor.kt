@@ -53,7 +53,10 @@ internal object LyricsEditor {
     fun close() { request.value = null }
 
     /** Where the sound heard is in the title: the player's position less the voice stage's delay (as the lyrics view reads it). */
-    fun heardMs(): Long = (Player.currentPositionMs() - com.ketvoice.app.stems.VoiceLevel.delayMs.value).coerceAtLeast(0L)
+    fun heardMs(): Long = (position() - com.ketvoice.app.stems.VoiceLevel.delayMs.value).coerceAtLeast(0L)
+
+    /** Where the player is; host tests replace it, since another test's controller may still be bound. */
+    internal var position: () -> Long = { Player.currentPositionMs() }
 
     /** The text kept for the title: enhanced LRC when any word was timed, LRC otherwise. */
     fun fileText(draft: LyricsDraft, track: Track): String = if (draft.lines.any { it.wordsTimed })
