@@ -78,8 +78,12 @@ object Ketogether {
     }
 
     fun savedPolicy(context: Context): Policy = prefs(context).let {
-        Policy(it.getBoolean("everyoneControls", false), it.getBoolean("everyoneAdds", true))
+        Policy(it.getBoolean("everyoneControls", false), it.getBoolean("everyoneAdds", true),
+            Policy.limit(runCatching { it.getInt("limit", Policy.MAX_LIMIT) }.getOrDefault(Policy.MAX_LIMIT)))
     }
+
+    /** Sessions this phone was taken out of (8.4): it does not join them again. Kept while the app runs. */
+    private val removedFrom = HashSet<String>()
 
     // ---------------------------------------------------------------- rooms
     fun create(context: Context, name: String) {
@@ -91,6 +95,7 @@ object Ketogether {
     fun join(context: Context, code: String, name: String, fingerprint: String? = null) {
         if (active) return
         invitation.value = null
+        if (code in removedFrom) { _ui.value = TogetherUi(TogetherPhase.Ended, TogetherRole.Guest, code, endReason = "removed"); return }
         open(context.applicationContext, TogetherRole.Guest, code, name, fingerprint)
     }
 
@@ -101,7 +106,10 @@ object Ketogether {
         val key = if (role == TogetherRole.Host) HostKey.generate() else null
         val policy = if (role == TogetherRole.Host) savedPolicy(app) else Policy()
         val created = TogetherSession(role, me, name, code, port, { payload -> transport?.send(payload) == true },
-            { next -> _ui.value = next; if (next.phase == TogetherPhase.Ended) onEnded() }, key, fingerprint, policy,
+            { next ->
+                _ui.value = next
+                if (next.phase == TogetherPhase.Ended) { if (next.endReason == "removed") removedFrom += code; onEnded() }
+            }, key, fingerprint, policy,
             shareable = { track -> TrackRef.of(track, com.ketvoice.app.data.ArtworkRepo.covers.value["t:${track.id}"] ?: track.coverUrl) })
         session = created
         _ui.value = created.ui
@@ -173,11 +181,14 @@ object Ketogether {
 
     fun setPolicy(policy: Policy) {
         val s = session ?: return
-        context?.let { prefs(it).edit().putBoolean("everyoneControls", policy.everyoneControls).putBoolean("everyoneAdds", policy.everyoneAdds).apply() }
+        context?.let { prefs(it).edit().putBoolean("everyoneControls", policy.everyoneControls).putBoolean("everyoneAdds", policy.everyoneAdds)
+            .putInt("limit", Policy.limit(policy.limit)).apply() }
         s.setPolicy(policy, now())
     }
 
     fun accept(proposal: String) { session?.accept(proposal, now()) }
+    /** The host takes a listener out of the session (8.4). */
+    fun remove(memberId: String) { session?.remove(memberId, now()) }
     fun refuse(proposal: String) { session?.refuse(proposal, now()) }
     fun skip() { applyingDo { session?.skip() } }
     fun react(emoji: String) { session?.react(emoji, now()) }

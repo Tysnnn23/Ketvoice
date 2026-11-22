@@ -83,6 +83,42 @@ class KetogetherHostTest {
         }
     }
 
+    @Test fun theHostSeesPlacesActivityAndSyncAndRemovesAListener() {
+        var removed: String? = null
+        var limit = 0
+        val ui = hostUi.copy(members = listOf(members[0], members[1].copy(syncMs = 38), members[2].copy(away = true)),
+            policy = hostUi.policy.copy(limit = 4),
+            log = listOf(Activity("pause", "Tom"), Activity("add", "Sam K", "Proposed tone"), Activity("away", "Sam K")))
+        compose.setContent { Sheet(dark = true) {
+            KetogetherSheetContent(ui, null, "", {}, null, "", {}, invited = false,
+                actions = KetogetherActions(remove = { removed = it }, policy = { limit = it.limit }))
+        } }
+        compose.onNodeWithText("Synchronisé · 38 ms").assertIsDisplayed()
+        compose.onNodeWithText("Participants · 3/4").assertIsDisplayed()
+        compose.onNodeWithText("Absent · place gardée").assertIsDisplayed()
+        compose.onNodeWithText("Tom a mis en pause").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Sam K a ajouté Proposed tone").assertIsDisplayed()
+        save("ketogether-host-rules")
+        compose.onNodeWithTag("ketogether-limit-value").performScrollTo().assertTextEquals("4")
+        compose.onNodeWithContentDescription("Plus de participants").performClick()
+        assertEquals(5, limit)
+        compose.onAllNodesWithTag("ketogether-member")[1].performScrollTo().performClick()
+        compose.onNodeWithText("Retirer Tom de la session ?").assertIsDisplayed()
+        compose.onNodeWithText("Retirer").performClick()
+        assertEquals("guest00001", removed)
+    }
+
+    @Test fun aGuestSeesItsOwnSync() {
+        compose.setContent { Sheet(dark = false) {
+            KetogetherSheetContent(hostUi.copy(role = TogetherRole.Guest, members = members.map { it.copy(me = it.id == "guest00001", host = it.id == "host000001") },
+                driftMs = -64), null, "", {}, null, "", {}, invited = false, actions = KetogetherActions())
+        } }
+        compose.onNodeWithText("Synchronisé · 64 ms").assertIsDisplayed()
+        // A guest cannot remove anyone nor change the size.
+        compose.onNodeWithTag("ketogether-limit").assertDoesNotExist()
+        compose.onAllNodesWithTag("ketogether-member")[0].assertHasNoClickAction()
+    }
+
     @Test fun theStartOfTheSheetCreatesOrJoins() {
         var created = false
         var joined = false

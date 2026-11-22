@@ -3,6 +3,7 @@ package com.ketvoice.app.together
 import com.ketvoice.app.data.Track
 import org.json.JSONObject
 import java.security.SecureRandom
+import kotlin.math.abs
 
 /** What the session needs of the player; [Ketogether] binds it to [com.ketvoice.app.player.Player], tests to a fake. */
 interface PlayerPort {
@@ -109,14 +110,19 @@ class TogetherSession(
         if (role == TogetherRole.Host && ui.phase == TogetherPhase.Connecting && presence.any { it.host }) collision = true
         if (role == TogetherRole.Host) {
             if (presence.isEmpty()) { if (aloneSince == null) aloneSince = now } else aloneSince = null
+            seatPresence(now)
         }
         publishMembers()
     }
 
     private fun publishMembers() {
-        val mine = Member(me, myName, role == TogetherRole.Host, me = true)
-        val others = presence.map { Member(it.id, it.name, host = role == TogetherRole.Guest && it.id == hostId) }
-        val all = (listOf(mine) + others).sortedWith(compareByDescending<Member> { it.host }.thenByDescending { it.me })
+        val mine = Member(me, myName, role == TogetherRole.Host, me = true, syncMs = if (role == TogetherRole.Guest) drift.lastDrift?.let(::abs) else null)
+        val others = presence.filter { !blocked(it.id) }
+            .map { Member(it.id, it.name, host = role == TogetherRole.Guest && it.id == hostId, syncMs = seats[it.id]?.syncMs) }
+        // 8.4: who dropped a moment ago keeps a place, shown « absent ».
+        val away = (if (role == TogetherRole.Host) seats.filter { it.value.awaySince != null }.map { it.key to it.value.name } else guestAway)
+            .filter { (id, _) -> id != me && presence.none { it.id == id } }.map { (id, name) -> Member(id, name, host = false, away = true) }
+        val all = (listOf(mine) + others + away).sortedWith(compareByDescending<Member> { it.host }.thenByDescending { it.me }.thenBy { it.away })
         publish(ui.copy(members = all, hostName = if (role == TogetherRole.Guest) (others.firstOrNull { it.host }?.name ?: ui.hostName) else myName))
     }
 
@@ -141,7 +147,8 @@ class TogetherSession(
                 if (!trustHost(envelope)) return
                 hostMessage(envelope.from, msg, now)
             }
-            else -> if (role == TogetherRole.Host && !signedByHost) guestMessage(envelope.from, msg, now)
+            is TogetherMsg.Remove -> if (signedByHost && role == TogetherRole.Guest && trustHost(envelope)) hostMessage(envelope.from, msg, now)
+            else -> if (role == TogetherRole.Host && !signedByHost && !blocked(envelope.from)) guestMessage(envelope.from, msg, now)
         }
     }
 
@@ -196,6 +203,7 @@ class TogetherSession(
     private fun hostTick(now: Long) {
         val since = downSince
         if (since != null && now - since > HOST_OFFLINE_END_MS) { finish("connection", now, announce = false); return }
+        dropLongAway(now)
         aloneSince?.let { if (now - it > EMPTY_ROOM_MS) { finish("expired", now, announce = true); return } }
         if (ui.phase == TogetherPhase.Connecting) {
             val joined = joinedAt ?: return
@@ -212,6 +220,7 @@ class TogetherSession(
         val changed = previous == null || previous.entry != snap.entry || previous.playing != view.playWhenReady ||
             previous.buffering != snap.buffering || snap.qv != lastSentQv || jumped ||
             (!view.playWhenReady && kotlin.math.abs(view.positionMs - previous.positionMs) > JUMP_MS)
+        noteHostChanges(view, snap, now)
         publishHost(view, snap)
         when {
             (stateDue || changed) && now - lastStateAt >= MIN_STATE_GAP_MS -> sendState(view, snap, now)
@@ -232,7 +241,8 @@ class TogetherSession(
 
     private fun sendState(view: PlayerView, snap: HostSnapshot, now: Long) {
         val msg = TogetherMsg.State(sid, ++seq, now, myName, snap.ref, snap.entry, !snap.unavailable,
-            view.positionMs.coerceIn(0, 86_400_000), view.playWhenReady, snap.buffering, snap.upcoming, pending.toList(), ui.policy, snap.qv)
+            view.positionMs.coerceIn(0, 86_400_000), view.playWhenReady, snap.buffering, snap.upcoming, pending.toList(), ui.policy, snap.qv,
+            seats.filter { it.value.awaySince != null }.map { it.key to it.value.name }, ui.log)
         if (out(msg, now)) {
             stateDue = false; lastStateAt = now; lastSentAt = now; lastSentQv = snap.qv; lastSentPlaying = view.playWhenReady
             lastSent = Anchor(snap.entry, view.positionMs, now, view.playWhenReady, snap.buffering)
@@ -242,10 +252,16 @@ class TogetherSession(
     private fun guestMessage(from: String, msg: TogetherMsg, now: Long) {
         when (msg) {
             is TogetherMsg.Hello -> { names[from] = msg.name; stateDue = true }
-            is TogetherMsg.Ping -> out(TogetherMsg.Pong(sid, ++seq, from, msg.client, now), now)
+            is TogetherMsg.Ping -> {
+                out(TogetherMsg.Pong(sid, ++seq, from, msg.client, now), now)
+                seats[from]?.let { seat -> msg.driftMs?.let { seat.syncMs = abs(it); publishMembers() } }
+            }
             is TogetherMsg.Request -> {
                 // A guest may only ask for playback, and only when the host lets everyone control.
                 if (!ui.policy.everyoneControls) return
+                // 8.4: said in the activity, once (the change it makes is not said again as the host's).
+                record(msg.action, nameOf(from), now = now)
+                cause = now + CAUSE_MS
                 when (msg.action) {
                     "play" -> port.setPlaying(true)
                     "pause" -> port.setPlaying(false)
@@ -263,7 +279,7 @@ class TogetherSession(
                 if (pending.any { it.id == msg.id }) return
                 if (ui.policy.everyoneAdds) {
                     val entry = port.enqueue(msg.ref.toTrack())
-                    if (entry != null) by[entry] = name
+                    if (entry != null) { by[entry] = name; record("add", name, msg.ref.title, now) }
                     out(TogetherMsg.Answer(sid, ++seq, from, msg.id, entry != null), now)
                 } else {
                     if (pending.size >= TogetherCodec.MAX_PENDING || pending.count { it.from == from } >= MAX_PENDING_PER_MEMBER) {
@@ -285,7 +301,7 @@ class TogetherSession(
         val p = pending.firstOrNull { it.id == id } ?: return
         pending.remove(p)
         val entry = if (accepted) port.enqueue(p.ref.toTrack()) else null
-        if (entry != null) by[entry] = p.fromName
+        if (entry != null) { by[entry] = p.fromName; record("add", p.fromName, p.ref.title, now) }
         out(TogetherMsg.Answer(sid, ++seq, p.from, p.id, entry != null), now, force = true)
         stateDue = true
     }
@@ -299,6 +315,84 @@ class TogetherSession(
 
     /** The host passes over a title the guests cannot have. */
     fun skip() { if (role == TogetherRole.Host) port.next() }
+
+    // ---------------------------------------------------------------- host: places, removals, activity (8.4)
+    private class Seat(val name: String, var awaySince: Long? = null, var syncMs: Long? = null)
+    /** The guests who hold a place, in their order of arrival, present or away. */
+    private val seats = LinkedHashMap<String, Seat>()
+    /** Taken out by the host (`removed`) or refused because the session was full (`full`), with when that was last said. */
+    private val refused = HashMap<String, Pair<String, Long>>()
+    private val activity = ArrayDeque<Activity>()
+    /** Until when a change of the player was asked by a guest, and already said in the activity. */
+    private var cause = Long.MIN_VALUE
+    private var seenEntry: String? = null
+    private var seenPlaying: Boolean? = null
+    private var seenPosition = 0L
+    private var seenDuration = 0L
+
+    private fun blocked(id: String): Boolean = id in refused
+
+    private fun nameOf(id: String): String = seats[id]?.name ?: names[id] ?: presence.firstOrNull { it.id == id }?.name ?: "?"
+
+    private fun record(kind: String, name: String, title: String? = null, now: Long) {
+        activity.addFirst(Activity(kind, name, title))
+        while (activity.size > TogetherCodec.MAX_LOG) activity.removeLast()
+        publish(ui.copy(log = activity.toList()))
+        stateDue = true
+    }
+
+    /** Who arrived takes a place if one is free; who went away keeps theirs a while; who comes back finds it. */
+    private fun seatPresence(now: Long) {
+        val here = presence.filter { !it.host }
+        for (p in here) {
+            if (blocked(p.id)) { tellRefused(p.id, now); continue }
+            val seat = seats[p.id]
+            when {
+                seat == null && seats.size + 1 >= ui.policy.limit -> { refused[p.id] = "full" to Long.MIN_VALUE / 2; tellRefused(p.id, now) }
+                seat == null -> { seats[p.id] = Seat(p.name); record("join", p.name, now = now) }
+                seat.awaySince != null -> { seat.awaySince = null; record("back", seat.name, now = now) }
+            }
+        }
+        seats.forEach { (id, seat) -> if (seat.awaySince == null && here.none { it.id == id }) { seat.awaySince = now; record("away", seat.name, now = now) } }
+    }
+
+    private fun dropLongAway(now: Long) {
+        val gone = seats.filter { (_, seat) -> seat.awaySince?.let { now - it > AWAY_KEEP_MS } == true }
+        gone.forEach { (id, seat) -> seats.remove(id); record("leave", seat.name, now = now) }
+        if (gone.isNotEmpty()) publishMembers()
+    }
+
+    private fun tellRefused(id: String, now: Long) {
+        val (reason, at) = refused[id] ?: return
+        if (now - at < REMOVE_RESEND_MS) return
+        if (out(TogetherMsg.Remove(sid, ++seq, id, reason), now, force = true)) refused[id] = reason to now
+    }
+
+    /** The host takes [memberId] out of the session: their phone leaves it and they cannot come back into it. */
+    fun remove(memberId: String, now: Long) {
+        if (role != TogetherRole.Host || ended || memberId == me) return
+        val name = nameOf(memberId)
+        refused[memberId] = "removed" to Long.MIN_VALUE / 2
+        seats.remove(memberId)
+        pending.removeAll { it.from == memberId }
+        tellRefused(memberId, now)
+        record("removed", name, now = now)
+        publishMembers()
+    }
+
+    /** The host's own pauses, resumes and skips, said in the activity (a guest's request already was). */
+    private fun noteHostChanges(view: PlayerView, snap: HostSnapshot, now: Long) {
+        val wasPlaying = seenPlaying
+        if (wasPlaying != null && now > cause) {
+            val skipped = seenEntry != null && snap.entry != null && seenEntry != snap.entry &&
+                seenDuration > 0 && seenPosition < seenDuration - NATURAL_END_MS
+            when {
+                skipped -> record("next", myName, now = now)
+                seenEntry == snap.entry && wasPlaying != view.playWhenReady -> record(if (view.playWhenReady) "play" else "pause", myName, now = now)
+            }
+        } else if (wasPlaying != null && (seenEntry != snap.entry || wasPlaying != view.playWhenReady)) cause = Long.MIN_VALUE
+        seenPlaying = view.playWhenReady; seenEntry = snap.entry; seenPosition = view.positionMs; seenDuration = view.durationMs
+    }
 
     // ---------------------------------------------------------------- guest
     private val clock = ClockOffset()
@@ -320,6 +414,7 @@ class TogetherSession(
     private var gaveUp: String? = null
     private var localWanted = false
     private val mine = HashMap<Long, Long>()
+    private var guestAway: List<Pair<String, String>> = emptyList()
 
     private fun trustHost(envelope: TogetherWire.Envelope): Boolean {
         val key = envelope.key ?: return false
@@ -340,6 +435,7 @@ class TogetherSession(
             is TogetherMsg.Pong -> msg.sid to msg.seq
             is TogetherMsg.End -> msg.sid to msg.seq
             is TogetherMsg.Answer -> msg.sid to msg.seq
+            is TogetherMsg.Remove -> msg.sid to msg.seq
             else -> return
         }
         if (hostSid == null) hostSid = sid
@@ -352,10 +448,11 @@ class TogetherSession(
                 setAnchor(Anchor(msg.entry, msg.positionMs, msg.at, msg.playing, msg.buffering))
                 hostQv = msg.qv
                 val wasLive = ui.phase == TogetherPhase.Live
+                guestAway = msg.away
                 publish(ui.copy(phase = if (downSince == null) TogetherPhase.Live else ui.phase, hostName = msg.hostName,
                     nowPlaying = msg.current, available = msg.available, playing = msg.playing,
-                    upcoming = msg.upcoming, pending = msg.pending, policy = msg.policy))
-                if (!wasLive) publishMembers()
+                    upcoming = msg.upcoming, pending = msg.pending, policy = msg.policy, log = msg.log))
+                publishMembers()
                 applyHost(now)
             }
             is TogetherMsg.Tick -> {
@@ -371,6 +468,7 @@ class TogetherSession(
             }
             is TogetherMsg.Answer -> if (msg.to == me) notice(if (msg.accepted) "Titre ajouté à Ketogether" else "L'hôte n'a pas ajouté ce titre", now)
             is TogetherMsg.End -> finish(if (msg.reason == "expired") "expired" else "hostEnded", now, announce = false)
+            is TogetherMsg.Remove -> if (msg.to == me) finish(msg.reason, now, announce = false)
             else -> Unit
         }
     }
@@ -400,7 +498,7 @@ class TogetherSession(
             if (hostId != null && silent > HOST_SILENT_MS && ui.notice == null && downSince == null) notice("L'hôte ne répond plus…", now)
         }
         if (downSince == null && now >= nextPingAt) {
-            if (out(TogetherMsg.Ping(now), now)) {
+            if (out(TogetherMsg.Ping(now, drift.lastDrift), now)) {
                 mine[now] = now
                 mine.keys.filter { now - it > ClockOffset.MAX_RTT_MS }.forEach { mine.remove(it) }
             }
@@ -459,7 +557,7 @@ class TogetherSession(
         }
         if (!a.playing || a.buffering || !view.playing || view.buffering) return
         val target = drift.judge(view.positionMs, expected, now, duration)
-        if (drift.lastDrift != ui.driftMs) publish(ui.copy(driftMs = drift.lastDrift))
+        if (drift.lastDrift != ui.driftMs) { publish(ui.copy(driftMs = drift.lastDrift)); publishMembers() }
         if (target != null) port.seek(target)
     }
 
@@ -485,6 +583,7 @@ class TogetherSession(
         if (ref == null) { notice("Ce titre ne peut pas être partagé", now); return false }
         if (role == TogetherRole.Host) {
             if (port.enqueue(track) == null) return false
+            record("add", myName, ref.title, now)
             stateDue = true
             notice("Titre ajouté à Ketogether", now)
             return true
@@ -522,5 +621,10 @@ class TogetherSession(
         const val HOST_LOST_MS = 90_000L
         const val NOT_FOUND_MS = 12_000L
         const val LOAD_GIVE_UP_MS = 20_000L
+        /** How long a guest who dropped keeps their place (8.4, « absent, place gardée »). */
+        const val AWAY_KEEP_MS = 2 * 60_000L
+        const val REMOVE_RESEND_MS = 5_000L
+        const val CAUSE_MS = 2_000L
+        const val NATURAL_END_MS = 4_000L
     }
 }
