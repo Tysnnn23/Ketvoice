@@ -149,10 +149,10 @@ internal object SettingsKind : SyncKind {
     val keys = setOf("themeMode", "accentArgb", "glassStyle", "glassLook", "glassIntensity", "glassTintLevel", "glassTinted", "glassTilt", "trueBlack", "coverAccent", "coverBackground",
         "coverTintedGlass", "meshBackground", "albumColors", "animatedArtwork", "albumHeroCanvas", "albumHeader", "artworkDepth", "livingArtwork",
         "fullArtwork", "panoramicCanvas", "sonicCanvas", "artistPhotos", "lyricsTextSize", "lyricsMode", "syncedLyrics",
-        "lyricsSource", "translateLanguage", "translationSource", "lyricsRomanization", "lockscreenLyrics", "lyricsBlur", "automixOn", "automixIntensity",
+        "lyricsSource", "lyricsOrder", "translateLanguage", "translationSource", "lyricsRomanization", "lockscreenLyrics", "lyricsBlur", "automixOn", "automixIntensity",
         "automixAlbums", "ketmixLoops", "ketmixStyle", "ketmixSmartQueue", "ketmixOnSkip", "ketmixHaptics", "smartShuffle", "volumeLeveling",
         "skipSilence", "equalizerEnabled", "equalizerGains", "reverbAmount", "reverbSize", "reverbDamping", "voiceLevel",
-        "noRepeatSuggestions", "playNextOnSwipe", "haptics", "autoOfflineFavorites")
+        "noRepeatSuggestions", "playNextOnSwipe", "haptics", "autoOfflineFavorites", "playlistUpdates", "wrappedSound")
 
     override fun snapshot(context: Context, previous: SyncDoc): Map<String, String> {
         com.ketvoice.app.data.SettingsStore.save()

@@ -51,6 +51,7 @@ object SettingsStore {
         s.trueBlack.value = p.getBoolean("trueBlack", false)
         s.glassTilt.value = p.getBoolean("glassTilt", true)
         s.downloadsWifiOnly.value = p.getBoolean("downloadsWifiOnly", false)
+        s.playlistUpdates.value = runCatching { p.getBoolean("playlistUpdates", true) }.getOrDefault(true)
         s.panoramicCanvas.value = p.getBoolean("panoramicCanvas", false)
         s.sonicCanvas.value = p.getBoolean("sonicCanvas", false)
         s.albumColors.value = p.getBoolean("albumColors", true)
@@ -70,6 +71,7 @@ object SettingsStore {
         s.ketmixLibrary.value = p.getBoolean("ketmixLibrary", true)
         s.autoResume.value = p.getBoolean("autoResume", true)
         s.lyricVideoSound.value = p.getBoolean("lyricVideoSound", true)
+        s.wrappedSound.value = runCatching { p.getBoolean("wrappedSound", true) }.getOrDefault(true)
         s.lockscreenLyrics.value = p.getBoolean("lockscreenLyrics", true)
         s.lyricsBlur.value = p.getBoolean("lyricsBlur", true)
         s.standbyMode.value = runCatching { p.getBoolean("standbyMode", false) }.getOrDefault(false)
@@ -101,6 +103,7 @@ object SettingsStore {
         if (s.lyricsSource.value !in MusicApi.lyricSources + listOf("auto", "off")) {
             s.lyricsSource.value = "auto"
         }
+        s.lyricsOrder.value = runCatching { p.getString("lyricsOrder", "") }.getOrNull().orEmpty().let { if (LyricsOrder.valid(it)) LyricsOrder.encode(LyricsOrder.parse(it)) else "" }
         s.favoriteIds.value = p.getStringSet("favoriteIds", emptySet())?.toSet() ?: emptySet()
         s.translateLanguage.value = p.getString("translateLanguage", s.translateLanguage.value) ?: "Français"
         s.lyricsRomanization.value = p.getBoolean("lyricsRomanization", false)
@@ -221,6 +224,7 @@ object SettingsStore {
             .putBoolean("trueBlack", s.trueBlack.value)
             .putBoolean("glassTilt", s.glassTilt.value)
             .putBoolean("downloadsWifiOnly", s.downloadsWifiOnly.value)
+            .putBoolean("playlistUpdates", s.playlistUpdates.value)
             .putBoolean("panoramicCanvas", s.panoramicCanvas.value)
             .putBoolean("sonicCanvas", s.sonicCanvas.value)
             .putBoolean("albumColors", s.albumColors.value)
@@ -239,6 +243,7 @@ object SettingsStore {
             .putBoolean("ketmixLibrary", s.ketmixLibrary.value)
             .putBoolean("autoResume", s.autoResume.value)
             .putBoolean("lyricVideoSound", s.lyricVideoSound.value)
+            .putBoolean("wrappedSound", s.wrappedSound.value)
             .putBoolean("lockscreenLyrics", s.lockscreenLyrics.value)
             .putBoolean("lyricsBlur", s.lyricsBlur.value)
             .putBoolean("standbyMode", s.standbyMode.value)
@@ -265,6 +270,7 @@ object SettingsStore {
             .putInt("ketmixStyle", s.ketmixStyle.value)
             .putBoolean("ketmixHaptics", s.ketmixHaptics.value)
             .putString("lyricsSource", s.lyricsSource.value)
+            .putString("lyricsOrder", s.lyricsOrder.value)
             .putStringSet("favoriteIds", s.favoriteIds.value)
             .putString("translateLanguage", s.translateLanguage.value)
             .putBoolean("lyricsRomanization", s.lyricsRomanization.value)

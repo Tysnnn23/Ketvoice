@@ -68,10 +68,30 @@ data class QueueItem(val entry: String, val ref: TrackRef?, val by: String? = nu
 /** A title a guest asked for, waiting for the host when « Tout le monde peut ajouter » is off. */
 data class Proposal(val id: String, val from: String, val fromName: String, val ref: TrackRef)
 
-/** The host's rules: who drives the playback, who adds titles without asking. */
-data class Policy(val everyoneControls: Boolean = false, val everyoneAdds: Boolean = true)
+/**
+ * The host's rules: who drives the playback, who adds titles without asking, and (8.4) how many people the session
+ * holds, the host included ([MIN_LIMIT]..[MAX_LIMIT]).
+ */
+data class Policy(val everyoneControls: Boolean = false, val everyoneAdds: Boolean = true, val limit: Int = MAX_LIMIT) {
+    companion object {
+        const val MIN_LIMIT = 2
+        const val MAX_LIMIT = 10
+        fun limit(value: Int): Int = value.coerceIn(MIN_LIMIT, MAX_LIMIT)
+    }
+}
 
-data class Member(val id: String, val name: String, val host: Boolean, val me: Boolean = false)
+/**
+ * Someone in the session. [away] (8.4): dropped a moment ago, their place kept ([TogetherSession.AWAY_KEEP_MS]).
+ * [syncMs]: how far their playback was from the host's at their last report.
+ */
+data class Member(val id: String, val name: String, val host: Boolean, val me: Boolean = false, val away: Boolean = false,
+                  val syncMs: Long? = null)
+
+/**
+ * A line of the session's recent activity (8.4): who paused, skipped, added a title, joined, left. [kind] is one of
+ * [TogetherCodec.activities]; [title] is the title added.
+ */
+data class Activity(val kind: String, val name: String, val title: String? = null)
 
 /** A reaction seen in the session, kept a few seconds for the pill and the sheet. */
 data class Reaction(val emoji: String, val name: String, val at: Long, val serial: Long)
@@ -100,7 +120,9 @@ data class TogetherUi(
     val endReason: String? = null,
     val offsetMs: Long? = null,
     val rttMs: Long? = null,
-    val driftMs: Long? = null
+    val driftMs: Long? = null,
+    /** Recent activity, newest first (8.4). */
+    val log: List<Activity> = emptyList()
 ) {
     val active: Boolean get() = phase == TogetherPhase.Connecting || phase == TogetherPhase.Live || phase == TogetherPhase.Reconnecting
     val canControl: Boolean get() = role == TogetherRole.Host || policy.everyoneControls
@@ -112,15 +134,20 @@ sealed interface TogetherMsg {
     data class State(val sid: String, val seq: Long, val at: Long, val hostName: String, val current: TrackRef?,
                      val entry: String?, val available: Boolean, val positionMs: Long, val playing: Boolean,
                      val buffering: Boolean, val upcoming: List<QueueItem>, val pending: List<Proposal>,
-                     val policy: Policy, val qv: Int) : TogetherMsg
+                     val policy: Policy, val qv: Int,
+                     /** 8.4: who dropped a moment ago with their place kept, and the recent activity, newest first. */
+                     val away: List<Pair<String, String>> = emptyList(), val log: List<Activity> = emptyList()) : TogetherMsg
     /** The host's heartbeat: where it is now. */
     data class Tick(val sid: String, val seq: Long, val at: Long, val entry: String?, val positionMs: Long,
                     val playing: Boolean, val buffering: Boolean, val qv: Int) : TogetherMsg
     data class Pong(val sid: String, val seq: Long, val to: String, val client: Long, val host: Long) : TogetherMsg
     data class End(val sid: String, val seq: Long, val reason: String) : TogetherMsg
     data class Answer(val sid: String, val seq: Long, val to: String, val proposal: String, val accepted: Boolean) : TogetherMsg
+    /** 8.4: the host takes a guest out of the session ([reason] `removed`), or refuses one because it is full (`full`). */
+    data class Remove(val sid: String, val seq: Long, val to: String, val reason: String) : TogetherMsg
     data class Hello(val name: String) : TogetherMsg
-    data class Ping(val client: Long) : TogetherMsg
+    /** [driftMs] (8.4): how far the guest's playback is from the host's, for the host's « Synchronisé » status. */
+    data class Ping(val client: Long, val driftMs: Long? = null) : TogetherMsg
     data class Request(val action: String, val positionMs: Long = 0L) : TogetherMsg
     data class Propose(val id: String, val ref: TrackRef) : TogetherMsg
     data class React(val emoji: String) : TogetherMsg
@@ -133,13 +160,20 @@ object TogetherCodec {
     const val MAX_TEXT = 16_000
     val reactions = listOf("❤️", "🔥", "👏", "😂", "🎶", "😮")
     val actions = setOf("play", "pause", "next", "previous", "seek")
+    const val MAX_LOG = 8
+    val activities = setOf("play", "pause", "next", "previous", "seek", "add", "join", "away", "back", "leave", "removed")
+    val removals = setOf("removed", "full")
     private val token = Regex("[A-Za-z0-9_-]{1,40}")
 
     fun encode(msg: TogetherMsg): String = when (msg) {
         is TogetherMsg.State -> JSONObject().put("t", "state").put("sid", msg.sid).put("seq", msg.seq).put("at", msg.at)
             .put("hn", msg.hostName).put("av", msg.available).put("pos", msg.positionMs).put("pl", msg.playing)
             .put("bu", msg.buffering).put("qv", msg.qv)
-            .put("pc", msg.policy.everyoneControls).put("pa", msg.policy.everyoneAdds)
+            .put("pc", msg.policy.everyoneControls).put("pa", msg.policy.everyoneAdds).put("lim", msg.policy.limit)
+            .put("aw", JSONArray().apply { msg.away.take(Policy.MAX_LIMIT).forEach { (id, name) -> put(JSONObject().put("i", id).put("n", name)) } })
+            .put("log", JSONArray().apply { msg.log.take(MAX_LOG).forEach { a ->
+                put(JSONObject().put("k", a.kind).put("n", a.name).apply { a.title?.let { put("ti", it) } })
+            } })
             .apply { msg.current?.let { put("cur", it.json()) }; msg.entry?.let { put("e", it) } }
             .put("up", JSONArray().apply { msg.upcoming.take(MAX_UPCOMING).forEach { item ->
                 put(JSONObject().put("e", item.entry).apply { item.ref?.let { put("r", it.json()) }; item.by?.let { put("by", it) } })
@@ -155,8 +189,9 @@ object TogetherCodec {
         is TogetherMsg.End -> JSONObject().put("t", "end").put("sid", msg.sid).put("seq", msg.seq).put("why", msg.reason)
         is TogetherMsg.Answer -> JSONObject().put("t", "answer").put("sid", msg.sid).put("seq", msg.seq).put("to", msg.to)
             .put("p", msg.proposal).put("ok", msg.accepted)
+        is TogetherMsg.Remove -> JSONObject().put("t", "rm").put("sid", msg.sid).put("seq", msg.seq).put("to", msg.to).put("why", msg.reason)
         is TogetherMsg.Hello -> JSONObject().put("t", "hello").put("n", msg.name)
-        is TogetherMsg.Ping -> JSONObject().put("t", "ping").put("c", msg.client)
+        is TogetherMsg.Ping -> JSONObject().put("t", "ping").put("c", msg.client).apply { msg.driftMs?.let { put("d", it) } }
         is TogetherMsg.Request -> JSONObject().put("t", "req").put("a", msg.action).put("pos", msg.positionMs)
         is TogetherMsg.Propose -> JSONObject().put("t", "prop").put("id", msg.id).put("r", msg.ref.json())
         is TogetherMsg.React -> JSONObject().put("t", "react").put("e", msg.emoji)
@@ -166,6 +201,21 @@ object TogetherCodec {
     private fun JSONObject.seqOf(): Long = getLong("seq").also { require(it >= 0) }
     private fun JSONObject.bool(key: String): Boolean = get(key).let { require(it is Boolean); it as Boolean }
     private fun JSONObject.position(key: String): Long = getLong(key).also { require(it in 0..86_400_000) }
+
+    private fun away(rows: JSONArray?): List<Pair<String, String>> {
+        if (rows == null) return emptyList()
+        require(rows.length() <= Policy.MAX_LIMIT)
+        return (0 until rows.length()).map { i -> rows.getJSONObject(i).let { it.tokenOf("i") to (Names.clean(it.getString("n")) ?: error("name")) } }
+    }
+
+    private fun activity(rows: JSONArray?): List<Activity> {
+        if (rows == null) return emptyList()
+        require(rows.length() <= MAX_LOG)
+        return (0 until rows.length()).map { i -> rows.getJSONObject(i).let { row ->
+            Activity(row.getString("k").also { require(it in activities) }, Names.clean(row.getString("n")) ?: error("name"),
+                if (row.has("ti")) com.ketvoice.app.handoff.HandoffMessage.clean(row.getString("ti").take(200)).takeIf { it.isNotBlank() } else null)
+        } }
+    }
 
     fun decode(text: String): TogetherMsg {
         require(text.length <= MAX_TEXT)
@@ -189,15 +239,17 @@ object TogetherCodec {
                 TogetherMsg.State(o.tokenOf("sid"), o.seqOf(), o.getLong("at"), Names.clean(o.getString("hn")) ?: error("host"),
                     o.optJSONObject("cur")?.let(TrackRef::decode), if (o.has("e")) o.tokenOf("e") else null, o.bool("av"),
                     o.position("pos"), o.bool("pl"), o.bool("bu"), upcoming, pending,
-                    Policy(o.bool("pc"), o.bool("pa")), o.getInt("qv"))
+                    Policy(o.bool("pc"), o.bool("pa"), Policy.limit(o.optInt("lim", Policy.MAX_LIMIT))), o.getInt("qv"),
+                    away(o.optJSONArray("aw")), activity(o.optJSONArray("log")))
             }
+            "rm" -> TogetherMsg.Remove(o.tokenOf("sid"), o.seqOf(), o.tokenOf("to"), o.getString("why").also { require(it in removals) })
             "tick" -> TogetherMsg.Tick(o.tokenOf("sid"), o.seqOf(), o.getLong("at"), if (o.has("e")) o.tokenOf("e") else null,
                 o.position("pos"), o.bool("pl"), o.bool("bu"), o.getInt("qv"))
             "pong" -> TogetherMsg.Pong(o.tokenOf("sid"), o.seqOf(), o.tokenOf("to"), o.getLong("c"), o.getLong("h"))
             "end" -> TogetherMsg.End(o.tokenOf("sid"), o.seqOf(), o.tokenOf("why"))
             "answer" -> TogetherMsg.Answer(o.tokenOf("sid"), o.seqOf(), o.tokenOf("to"), o.tokenOf("p"), o.bool("ok"))
             "hello" -> TogetherMsg.Hello(Names.clean(o.getString("n")) ?: error("name"))
-            "ping" -> TogetherMsg.Ping(o.getLong("c"))
+            "ping" -> TogetherMsg.Ping(o.getLong("c"), if (o.has("d")) o.getLong("d").coerceIn(-86_400_000, 86_400_000) else null)
             "req" -> TogetherMsg.Request(o.getString("a").also { require(it in actions) }, o.optLong("pos", 0L).coerceIn(0, 86_400_000))
             "prop" -> TogetherMsg.Propose(o.tokenOf("id"), TrackRef.decode(o.getJSONObject("r")))
             "react" -> TogetherMsg.React(o.getString("e").also { require(it in reactions) })

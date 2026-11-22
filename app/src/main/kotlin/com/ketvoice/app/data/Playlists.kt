@@ -98,8 +98,13 @@ object PlaylistStore {
     /** Several titles at once (an album, a selection), each once: titles already in the playlist are not added again. */
     suspend fun addAll(id: String, tracks: List<Track>) { change { rows -> rows.map { row ->
         if (row.id != id) row else row.copy(entries = row.entries + PlaylistRules.newEntries(row.entries, tracks))
-    } } }
-    suspend fun add(id: String, track: Track) { change { rows -> rows.map { if (it.id == id) it.copy(entries = it.entries + PlaylistRules.entry(track)) else it } } }
+    } }; ownAdditions(id, tracks) }
+    suspend fun add(id: String, track: Track) { change { rows -> rows.map { if (it.id == id) it.copy(entries = it.entries + PlaylistRules.entry(track)) else it } }; ownAdditions(id, listOf(track)) }
+    /** What the listener adds to a downloaded playlist is never announced as new (8.4, set by `PlaylistUpdates` on Android). */
+    @Volatile internal var ownAdditionHook: ((String, List<String>) -> Unit)? = null
+    /** The playlists changed from elsewhere (the account's sync, a shared playlist): `PlaylistUpdates` checks them soon. */
+    @Volatile internal var elsewhereHook: (() -> Unit)? = null
+    private fun ownAdditions(id: String, tracks: List<Track>) { runCatching { ownAdditionHook?.invoke(id, tracks.map { it.id }) } }
     suspend fun remove(id: String, entry: String) { change { rows -> rows.map { if (it.id == id) it.copy(entries = it.entries.filterNot { e -> e.id == entry }) else it } } }
     suspend fun move(id: String, from: Int, to: Int) { change { rows -> rows.map { if (it.id == id) it.copy(entries = PlaylistRules.move(it.entries, from, to)) else it } } }
     suspend fun setOrder(id: String, orderedIds: List<String>) {
@@ -124,6 +129,7 @@ object PlaylistStore {
         change { current -> current.filter { PlaylistRules.isShared(it.id) } +
             rows.filterNot { PlaylistRules.isShared(it.id) }.map { playlist -> playlist.copy(name = PlaylistRules.name(playlist.name),
                 entries = playlist.entries.map { it.copy(track = it.track?.let(PlaylistRules::safe)) }) } }
+        runCatching { elsewhereHook?.invoke() }
     }
 
     /**
@@ -133,6 +139,7 @@ object PlaylistStore {
      */
     internal suspend fun putShared(compute: (List<LocalPlaylist>) -> List<LocalPlaylist>) {
         change { current -> compute(current.filter { PlaylistRules.isShared(it.id) }) + current.filterNot { PlaylistRules.isShared(it.id) } }
+        runCatching { elsewhereHook?.invoke() }
     }
 
     /** Restore only missing identities; never replace a playlist edited on this device. */

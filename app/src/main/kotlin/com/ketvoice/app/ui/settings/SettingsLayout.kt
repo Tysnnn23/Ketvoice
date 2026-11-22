@@ -16,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -35,9 +36,33 @@ import com.ketvoice.app.ui.common.Text
 
 internal val LocalSettingsCategory = staticCompositionLocalOf<SettingsCategory?> { null }
 internal val LocalSettingsTopInset = staticCompositionLocalOf { 0.dp }
+/** The row a search result asked for (8.4): it scrolls into view and lights up once, then the mark is cleared. */
+internal val LocalSettingsFocus = staticCompositionLocalOf<MutableState<String?>> { mutableStateOf(null) }
+
+/** The row titled [title] answers [LocalSettingsFocus]: brought into view, then a short highlight (still under reduced motion). */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+@Composable
+internal fun Modifier.settingsTarget(title: String): Modifier {
+    val focus = LocalSettingsFocus.current
+    if (focus.value != title) return this
+    val requester = remember { androidx.compose.foundation.relocation.BringIntoViewRequester() }
+    val glow = remember { androidx.compose.animation.core.Animatable(1f) }
+    val accent = LocalTheme.current.accent
+    LaunchedEffect(title) {
+        // After the page's first layout, so the scroll knows where the row is.
+        androidx.compose.runtime.withFrameNanos { }
+        runCatching { requester.bringIntoView() }
+        if (com.ketvoice.app.ui.motion.Motion.reduced) kotlinx.coroutines.delay(1_600)
+        else { kotlinx.coroutines.delay(500); glow.animateTo(0f, androidx.compose.animation.core.tween(1_400)) }
+        if (focus.value == title) focus.value = null
+    }
+    return this.bringIntoViewRequester(requester)
+        .drawBehind { drawRect(accent.copy(alpha = .20f * glow.value)) }.testTag("settings-focus")
+}
 
 @Composable
-internal fun SettingsLayout(category: SettingsCategory?, onBack: () -> Unit, content: @Composable () -> Unit) {
+internal fun SettingsLayout(category: SettingsCategory?, onBack: () -> Unit, focus: MutableState<String?> = remember { mutableStateOf(null) },
+                            content: @Composable () -> Unit) {
     val theme = LocalTheme.current
     val background = rememberGlassBackdrop(theme.background)
     val density = androidx.compose.ui.platform.LocalDensity.current
@@ -45,7 +70,7 @@ internal fun SettingsLayout(category: SettingsCategory?, onBack: () -> Unit, con
     val inset = with(density) { headerHeight.toDp() }.coerceAtLeast(
         WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 72.dp)
     Box(Modifier.fillMaxSize().pageBackground(theme), contentAlignment = Alignment.TopCenter) {
-        CompositionLocalProvider(LocalSettingsCategory provides category, LocalSettingsTopInset provides inset) {
+        CompositionLocalProvider(LocalSettingsCategory provides category, LocalSettingsTopInset provides inset, LocalSettingsFocus provides focus) {
             BackdropCapture(background, Modifier.widthIn(max = 840.dp).fillMaxSize()) {
                 content()
             }
@@ -105,12 +130,17 @@ internal fun Modifier.settingsGroup(): Modifier {
 }
 
 @Composable
-internal fun SettingsHome(connected: Boolean, name: String, onCategory: (SettingsCategory) -> Unit) {
+internal fun SettingsHome(connected: Boolean, name: String, onResult: (SettingEntry) -> Unit = {}, onCategory: (SettingsCategory) -> Unit) {
     val theme = LocalTheme.current
     Column(Modifier.fillMaxSize().testTag("settings-home").verticalScroll(rememberScrollState())
         .navigationBarsPadding().padding(horizontal = Ket27.Metrics.margin).padding(top = LocalSettingsTopInset.current + 8.dp, bottom = 32.dp)) {
         Text("Réglages", color = theme.onBackground, style = Ket27.Type.largeTitle,
             modifier = Modifier.padding(start = 4.dp, bottom = 14.dp).semantics { heading() }.testTag("ket27-large-title"))
+        // « Recherche dans les réglages » (8.4): every row of every page, from here.
+        var query by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("") }
+        com.ketvoice.app.ui.common.CompactSearchField(query, { query = it.take(80) }, {},
+            Modifier.padding(bottom = 14.dp).testTag("settings-search"), placeholder = "Rechercher un réglage")
+        if (query.isNotBlank()) { SettingsSearchResults(query, onResult); return@Column }
         Row(Modifier.fillMaxWidth().settingsGroup()
             .clickable(role = Role.Button) { onCategory(SettingsCategory.Account) }
             .heightIn(min = 76.dp).padding(horizontal = 16.dp, vertical = 12.dp),
@@ -152,6 +182,37 @@ internal fun SettingsHome(connected: Boolean, name: String, onCategory: (Setting
         SettingsCategoryGroup(listOf(SettingsCategory.About), onCategory)
         Text("KETVOICE  ${BuildConfig.VERSION_NAME}", localize = false, color = theme.secondary,
             fontSize = 11.sp, letterSpacing = 1.3.sp, modifier = Modifier.padding(start = 4.dp, top = 24.dp))
+    }
+}
+
+/** What the search finds, each row with the page it is on; touched, it opens that page at the row. */
+@Composable
+private fun SettingsSearchResults(query: String, onResult: (SettingEntry) -> Unit) {
+    val theme = LocalTheme.current
+    val language = com.ketvoice.app.data.AppSettings.language.value
+    val found = remember(query, language) { SettingsSearch.search(query) }
+    if (found.isEmpty()) {
+        Text(com.ketvoice.app.data.AppText.t("Aucun réglage ne correspond à « {0} »").replace("{0}", query.trim()), localize = false,
+            color = theme.secondary, fontSize = 15.sp, lineHeight = 21.sp,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 24.dp).fillMaxWidth().testTag("settings-search-empty"))
+        return
+    }
+    Column(Modifier.fillMaxWidth().settingsGroup().testTag("settings-search-results")) {
+        found.forEachIndexed { index, entry ->
+            Row(Modifier.fillMaxWidth().rowPress { onResult(entry) }.heightIn(min = Ket27.Metrics.row)
+                .padding(horizontal = 16.dp, vertical = 10.dp).testTag("settings-result"), verticalAlignment = Alignment.CenterVertically) {
+                Ket27Tile(entry.category.icon(), entry.category.ordinal)
+                Column(Modifier.weight(1f).padding(start = 12.dp, end = 12.dp)) {
+                    Text(entry.title, color = theme.onBackground, fontSize = 17.sp, lineHeight = 22.sp)
+                    Text(com.ketvoice.app.data.AppText.t(entry.category.title) +
+                        (if (entry.sub.isNotEmpty()) " · " + com.ketvoice.app.data.AppText.t(entry.sub) else ""), localize = false,
+                        color = theme.secondary, fontSize = 13.sp, lineHeight = 18.sp, maxLines = 2,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.padding(top = 3.dp))
+                }
+                Icon(KetIcons.ChevronRight, null, tint = theme.secondary.copy(alpha = .8f), modifier = Modifier.size(17.dp))
+            }
+            if (index != found.lastIndex) SettingsCellDivider()
+        }
     }
 }
 

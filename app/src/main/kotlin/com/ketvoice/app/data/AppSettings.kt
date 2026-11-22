@@ -35,6 +35,8 @@ object AppSettings {
     /** The reflections of the glass follow the phone's tilt (never on Quest, with reduced motion or in the performance mode). */
     val glassTilt = mutableStateOf(true)
     val downloadsWifiOnly = mutableStateOf(false)
+    /** « Playlists téléchargées à jour » (8.4): new titles of a downloaded playlist are announced, to download in a touch. */
+    val playlistUpdates = mutableStateOf(true)
     /** A title made a favourite is downloaded for listening offline. */
     val autoOfflineFavorites = mutableStateOf(true)
     /** « Hors ligne intelligent » (7.0): what the listener plays most and their new favourites, downloaded on their own; off by default. */
@@ -82,6 +84,8 @@ object AppSettings {
     val standbyMode = mutableStateOf(false)
     /** Lyrics videos carry the song's sound (5.10.0). */
     val lyricVideoSound = mutableStateOf(true)
+    /** « Bande-son du récap annuel » (8.4): Wrapped's pages play the best part of their titles; the story's mute button turns it off. */
+    val wrappedSound = mutableStateOf(true)
     val systemReduceMotion = mutableStateOf(false)
     val canvasWithMobileData = mutableStateOf(false)
     /** A notification when an artist the listener follows puts out a release (6.3, see ReleaseWatch). */
@@ -111,6 +115,8 @@ object AppSettings {
     /** A light vibration when the bass passes from one title to the next (app in front only). */
     val ketmixHaptics = mutableStateOf(false)
     val lyricsSource = mutableStateOf("auto")
+    /** « Ordre des sources de paroles » (8.4): the automatic lookup's order, ids joined by commas; empty is the default ([LyricsOrder]). */
+    val lyricsOrder = mutableStateOf("")
     val betterLyricsKey = mutableStateOf("")
     val lyricaUrl = mutableStateOf("")
     val translationSource = mutableStateOf("en")

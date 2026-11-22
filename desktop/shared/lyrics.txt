@@ -1,4 +1,5 @@
 data/LyricsRepo.kt
+data/LyricsOrder.kt
 data/LyricsDuet.kt
 data/LyricsFormats.kt
 data/LyricsOffsets.kt

@@ -72,6 +72,7 @@ class PlaybackService : MediaLibraryService() {
     }
     private val audioDevices = object : android.media.AudioDeviceCallback() {
         override fun onAudioDevicesAdded(addedDevices: Array<out android.media.AudioDeviceInfo>) {
+            AudioOutputs.refresh(AudioOutputs.read(this@PlaybackService))
             // Re-negotiate when a wired/USB output appears, but never tear down
             // an idle player that has nothing to re-prepare.
             if (AppSettings.bitPerfect.value && ::player.isInitialized && player.currentMediaItem != null &&
@@ -81,6 +82,8 @@ class PlaybackService : MediaLibraryService() {
         }
 
         override fun onAudioDevicesRemoved(removedDevices: Array<out android.media.AudioDeviceInfo>) {
+            // 8.4: a chosen output that went away gives the music back to Android's route.
+            AudioOutputs.refresh(AudioOutputs.read(this@PlaybackService))
             if (AppSettings.bitPerfect.value && ::player.isInitialized &&
                 removedDevices.any { it.isSink && it.isExactOutput() }) {
                 // Never unexpectedly continue on the loudspeaker after a DAC unplug.
@@ -105,6 +108,8 @@ class PlaybackService : MediaLibraryService() {
         runCatching { com.ketvoice.app.data.ArtistPrefs.init(applicationContext) }
         player = buildPlayer()
         getSystemService(android.media.AudioManager::class.java).registerAudioDeviceCallback(audioDevices, android.os.Handler(mainLooper))
+        // « Choix de la sortie audio » (8.4): Ketvoice's own decks go to the output the listener picked.
+        serviceScope.launch { AudioOutputs.chosen.collect { applyOutput() } }
         // A title separated while it plays (the voice slider, 6.0.0 Beta 3) has its voice level at once.
         serviceScope.launch { com.ketvoice.app.stems.VoiceSeparation.separated.collect { takeUpVoice(it) } }
         // A library session (Android Auto, 6.0.0): the browse tree and the car's requests live in AutoLibrary.kt.
@@ -333,6 +338,7 @@ class PlaybackService : MediaLibraryService() {
             .build()
         owner = player
         if (!exactRequested) decks[player] = deck
+        preferredOutput()?.let { runCatching { player.setPreferredAudioDevice(it) } }
         player.skipSilenceEnabled = AppSettings.skipSilence.value && !exactRequested
         player.addAnalyticsListener(object : androidx.media3.exoplayer.analytics.AnalyticsListener {
             private var manifestReported = false
@@ -455,6 +461,15 @@ class PlaybackService : MediaLibraryService() {
             }
         })
         return player
+    }
+
+    private fun preferredOutput(): android.media.AudioDeviceInfo? = AudioOutputs.device(this, AudioOutputs.chosen.value)
+
+    /** Points the decks at the chosen output (null: Android's own route); other apps are not moved. */
+    private fun applyOutput() {
+        if (!::player.isInitialized) return
+        val device = preferredOutput()
+        (decks.keys + player).distinct().forEach { deck -> if (deck !in released) runCatching { deck.setPreferredAudioDevice(device) } }
     }
 
     private fun rebuildAudioMode() {

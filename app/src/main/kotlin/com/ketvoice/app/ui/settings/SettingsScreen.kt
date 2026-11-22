@@ -88,6 +88,7 @@ fun SettingsScreen() {
     var editSetting by remember { mutableStateOf("") }
     var accentOpen by remember { mutableStateOf(false) }
     var lyricsDiag by remember { mutableStateOf(false) }
+    var lyricsOrderOpen by remember { mutableStateOf(false) }
     var backupOpen by rememberSaveable { mutableStateOf(false) }
     var categoryKey by rememberSaveable { mutableStateOf<String?>(null) }
     val category = SettingsCategory.fromKey(categoryKey)
@@ -105,8 +106,10 @@ fun SettingsScreen() {
         else -> categoryKey = null
     } }
     androidx.activity.compose.BackHandler(enabled = category != null) { back() }
-    SettingsLayout(category, onBack = ::back) {
-        if (category == null) SettingsHome(youtube.connected, youtube.name) { categoryKey = it.name }
+    val focus = remember { mutableStateOf<String?>(null) }
+    SettingsLayout(category, onBack = ::back, focus = focus) {
+        if (category == null) SettingsHome(youtube.connected, youtube.name,
+            onResult = { focus.value = it.title; categoryKey = it.category.name }) { categoryKey = it.name }
         else key(category) {
         Column(
             Modifier
@@ -591,6 +594,11 @@ fun SettingsScreen() {
                         Player.state.value.current?.let { LyricsRepo.load(it, force = true) }
                     }
                 }
+                // 8.4: the order the automatic lookup tries the sources in.
+                SRow(KetIcons.Lyrics, "Ordre des sources de paroles",
+                    sub = "Les sources sont essayées dans cet ordre : la première qui a des paroles gagne",
+                    value = if (com.ketvoice.app.data.LyricsOrder.custom(AppSettings.lyricsOrder.value)) "Personnalisé" else "Par défaut"
+                ) { lyricsOrderOpen = true }
                 SRow(
                     KetIcons.Lyrics, "Mode des paroles",
                     sub = "Syllabes ou mots seulement si la source les fournit",
@@ -736,6 +744,14 @@ fun SettingsScreen() {
                     AppSettings.autoOfflineFavorites.value) { AppSettings.autoOfflineFavorites.value = it; SettingsStore.save() }
                 SToggle(KetIcons.Wifi, "Téléchargements en Wi-Fi uniquement", "Les transferts attendent une connexion Wi-Fi", AppSettings.downloadsWifiOnly.value) {
                     AppSettings.downloadsWifiOnly.value = it; SettingsStore.save()
+                    runCatching { com.ketvoice.app.data.PlaylistUpdates.schedule(ctx, replace = true) }
+                }
+                // 8.4: new titles of a downloaded playlist, announced in the background.
+                SToggle(KetIcons.Bell, "Playlists téléchargées à jour",
+                    "Une notification quand une playlist téléchargée reçoit de nouveaux titres : touchez-la pour télécharger seulement ceux-là",
+                    AppSettings.playlistUpdates.value) {
+                    AppSettings.playlistUpdates.value = it; SettingsStore.save()
+                    runCatching { com.ketvoice.app.data.PlaylistUpdates.schedule(ctx, replace = true) }
                 }
                 SRow(
                     KetIcons.Download, "Qualité de téléchargement",
@@ -865,6 +881,7 @@ fun SettingsScreen() {
     }
 
     if (lyricsDiag) LyricsDiagnosticsDialog(onClose = { lyricsDiag = false })
+    if (lyricsOrderOpen) LyricsOrderSheet(onClose = { lyricsOrderOpen = false })
     if (backupOpen) PersonalBackupSheet(onClose = { backupOpen = false })
 
     if (editSetting.isNotBlank()) {
@@ -1162,7 +1179,7 @@ internal fun ColumnScope.SRow(
 ) {
     val th = LocalTheme.current
     Row(
-        Modifier.fillMaxWidth()
+        Modifier.fillMaxWidth().settingsTarget(title)
             .then(if (onClick != null) Modifier.rowPress(onClick = onClick) else Modifier)
             .heightIn(min = Ket27.Metrics.row).padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -1263,7 +1280,7 @@ internal fun ColumnScope.SToggle(
     // Ket 27: flipping a switch is felt, as on iOS.
     val tick = com.ketvoice.app.ui.motion.rememberHaptics()
     Row(
-        Modifier.fillMaxWidth().toggleable(checked, role = Role.Switch,
+        Modifier.fillMaxWidth().settingsTarget(title).toggleable(checked, role = Role.Switch,
             onValueChange = { tick(com.ketvoice.app.ui.motion.Haptics.Kind.Tick); onChecked(it) })
             .heightIn(min = Ket27.Metrics.row).padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically

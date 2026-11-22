@@ -72,6 +72,28 @@ internal object KetogetherLook {
         Color(0xFF6155F5), Color(0xFF00C3D0), Color(0xFFCB30E0), Color(0xFFFFCC00))
     fun avatar(id: String): Color = avatars[Math.floorMod(id.hashCode(), avatars.size)]
 
+    /** A line of the recent activity (8.4), as a French source text with the name and the title put in. */
+    fun activity(a: com.ketvoice.app.together.Activity): String = AppText.t(when (a.kind) {
+        "pause" -> "{0} a mis en pause"
+        "play" -> "{0} a relancé la lecture"
+        "next" -> "{0} est passé au titre suivant"
+        "previous" -> "{0} est revenu au titre précédent"
+        "seek" -> "{0} a déplacé la lecture"
+        "add" -> "{0} a ajouté {1}"
+        "join" -> "{0} a rejoint la session"
+        "away" -> "{0} est absent · place gardée"
+        "back" -> "{0} est de retour"
+        "leave" -> "{0} a quitté la session"
+        else -> "{0} a été retiré de la session"
+    }).replace("{0}", a.name).replace("{1}", a.title.orEmpty())
+
+    /**
+     * The live « Synchronisé · N ms » (8.4): on a guest's phone how far it is from the host; on the host's, the
+     * furthest guest at their last report. Null while nothing has been measured yet.
+     */
+    fun syncMs(ui: TogetherUi): Long? = if (ui.role == TogetherRole.Guest) ui.driftMs?.let { kotlin.math.abs(it) }
+        else ui.members.filter { !it.me && !it.away }.mapNotNull { it.syncMs }.maxOrNull()
+
     /** What the end of a session says, as a French source text. */
     fun ending(reason: String?): String = when (reason) {
         "hostEnded" -> "L'hôte a terminé la session"
@@ -81,6 +103,8 @@ internal object KetogetherLook {
         "connection" -> "Connexion perdue · la session a pris fin"
         "refused" -> "Le serveur n'accepte pas la session pour le moment"
         "left" -> "Vous avez quitté la session"
+        "removed" -> "L'hôte vous a retiré de la session"
+        "full" -> "La session est complète"
         else -> "Session terminée"
     }
 }
@@ -145,7 +169,7 @@ private fun KetogetherSheet(onClose: () -> Unit) {
                 close = onClose,
                 again = { Ketogether.dismiss() },
                 policy = Ketogether::setPolicy, accept = Ketogether::accept, refuse = Ketogether::refuse,
-                skip = Ketogether::skip, react = Ketogether::react))
+                skip = Ketogether::skip, react = Ketogether::react, remove = Ketogether::remove))
     }
     if (confirmEnd) AppAlertDialog(onDismissRequest = { confirmEnd = false },
         confirmButton = { KetTextButton("Terminer", { confirmEnd = false; Ketogether.leave() }, destructive = true) },
@@ -164,7 +188,8 @@ private fun share(context: android.content.Context, ui: TogetherUi) {
 internal class KetogetherActions(
     val create: () -> Unit = {}, val join: () -> Unit = {}, val share: () -> Unit = {}, val leave: () -> Unit = {},
     val close: () -> Unit = {}, val again: () -> Unit = {}, val policy: (Policy) -> Unit = {}, val accept: (String) -> Unit = {},
-    val refuse: (String) -> Unit = {}, val skip: () -> Unit = {}, val react: (String) -> Unit = {}
+    val refuse: (String) -> Unit = {}, val skip: () -> Unit = {}, val react: (String) -> Unit = {},
+    val remove: (String) -> Unit = {}
 )
 
 /** What the sheet shows for [ui]; stateless, so it renders the same on the host and on a phone. */
@@ -277,9 +302,21 @@ private fun LiveContent(ui: TogetherUi, actions: KetogetherActions, initialQr: B
             Modifier.align(Alignment.CenterHorizontally).size(208.dp))
     }
 
-    SectionTitle(AppText.t("Participants") + " · " + ui.members.size)
+    SyncStatus(ui)
+    SectionTitle(AppText.t("Participants") + " · " + ui.members.size + "/" + ui.policy.limit)
+    // 8.4: the host touches a listener to take them out of the session.
+    var removing by remember { mutableStateOf<Member?>(null) }
     androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        ui.members.forEach { MemberAvatar(it) }
+        ui.members.forEach { member ->
+            MemberAvatar(member, if (ui.role == TogetherRole.Host && !member.me) ({ removing = member }) else null)
+        }
+    }
+    removing?.let { member ->
+        AppAlertDialog(onDismissRequest = { removing = null },
+            confirmButton = { KetTextButton("Retirer", { removing = null; actions.remove(member.id) }, destructive = true) },
+            dismissButton = { KetTextButton("Annuler", { removing = null }) },
+            title = { Text(AppText.t("Retirer {0} de la session ?").replace("{0}", member.name), localize = false) },
+            text = { Text("Sa musique s'arrête de suivre la vôtre et il ne pourra pas revenir dans cette session.") })
     }
 
     SectionTitle("En cours")
@@ -350,8 +387,11 @@ private fun LiveContent(ui: TogetherUi, actions: KetogetherActions, initialQr: B
     if (ui.upcoming.size > 8) Text("+" + (ui.upcoming.size - 8), localize = false,
         color = theme.secondary, style = Ket27.Type.caption)
 
+    ActivityLog(ui)
+
     SectionTitle("Règles de la session")
     if (ui.role == TogetherRole.Host) {
+        LimitRow(ui.policy.limit) { actions.policy(ui.policy.copy(limit = Policy.limit(it))) }
         PolicyRow("Tout le monde contrôle", "Lecture, pause, titre suivant et position", ui.policy.everyoneControls) {
             actions.policy(ui.policy.copy(everyoneControls = it))
         }
@@ -382,10 +422,57 @@ private fun PolicyRow(title: String, sub: String, checked: Boolean, onChange: (B
     }
 }
 
+/** « Synchronisé · N ms » (8.4), with the live dot; « Synchronisation… » until a first measure. */
 @Composable
-private fun MemberAvatar(member: Member) {
+private fun SyncStatus(ui: TogetherUi) {
     val theme = LocalTheme.current
-    Column(Modifier.width(64.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+    val ms = KetogetherLook.syncMs(ui)
+    if (ms == null && (ui.role == TogetherRole.Host && ui.members.none { !it.me })) return
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.testTag("ketogether-sync")) {
+        Box(Modifier.size(7.dp).clip(CircleShape).background(if (ms != null && ui.phase == TogetherPhase.Live) KetogetherLook.live else KetogetherLook.waiting))
+        Spacer(Modifier.width(8.dp))
+        Text(if (ms == null || ui.phase != TogetherPhase.Live) AppText.t("Synchronisation…") else AppText.t("Synchronisé · {0} ms").replace("{0}", ms.toString()),
+            localize = false, color = theme.secondary, style = Ket27.Type.footnote)
+    }
+}
+
+/** « Activité récente » (8.4): who paused, skipped, added, joined or left, newest first. */
+@Composable
+private fun ActivityLog(ui: TogetherUi) {
+    if (ui.log.isEmpty()) return
+    val theme = LocalTheme.current
+    SectionTitle("Activité récente")
+    Column(Modifier.testTag("ketogether-activity"), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        ui.log.forEach { Text(KetogetherLook.activity(it), localize = false, color = theme.onBackground, style = Ket27.Type.footnote,
+            maxLines = 1, overflow = TextOverflow.Ellipsis) }
+    }
+}
+
+/** « Participants maximum » (8.4): 2 to 10, the host included; who is already in stays. */
+@Composable
+private fun LimitRow(limit: Int, onLimit: (Int) -> Unit) {
+    val theme = LocalTheme.current
+    Row(Modifier.fillMaxWidth().testTag("ketogether-limit"), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text("Participants maximum", color = theme.onBackground, style = Ket27.Type.body)
+            Text("Vous compris ; ceux déjà présents restent", color = theme.secondary, style = Ket27.Type.footnote)
+        }
+        KetTextButton("−", { onLimit(limit - 1) }, enabled = limit > Policy.MIN_LIMIT, localize = false,
+            modifier = Modifier.semantics { contentDescription = AppText.t("Moins de participants") })
+        Text(limit.toString(), localize = false, color = theme.onBackground, style = Ket27.Type.headline,
+            modifier = Modifier.widthIn(min = 28.dp).testTag("ketogether-limit-value"), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+        KetTextButton("+", { onLimit(limit + 1) }, enabled = limit < Policy.MAX_LIMIT, localize = false,
+            modifier = Modifier.semantics { contentDescription = AppText.t("Plus de participants") })
+    }
+}
+
+@Composable
+private fun MemberAvatar(member: Member, onRemove: (() -> Unit)? = null) {
+    val theme = LocalTheme.current
+    val label = AppText.t("Retirer") + " " + member.name
+    Column(Modifier.width(72.dp).graphicsLayer { alpha = if (member.away) .5f else 1f }
+        .then(if (onRemove != null) Modifier.clickable(role = Role.Button, onClickLabel = label, onClick = onRemove) else Modifier)
+        .testTag("ketogether-member"), horizontalAlignment = Alignment.CenterHorizontally) {
         Box(Modifier.size(46.dp).clip(CircleShape).background(KetogetherLook.avatar(member.id))
             .then(if (member.host) Modifier.border(2.dp, theme.onBackground.copy(alpha = .85f), CircleShape) else Modifier),
             contentAlignment = Alignment.Center) {
@@ -393,7 +480,12 @@ private fun MemberAvatar(member: Member) {
         }
         Text(if (member.me) AppText.t("Vous") else member.name, localize = false, color = theme.onBackground, style = Ket27.Type.caption,
             maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
-        if (member.host) Text("Hôte", color = theme.secondary, fontSize = 10.sp)
+        when {
+            member.host -> Text("Hôte", color = theme.secondary, fontSize = 10.sp)
+            member.away -> Text("Absent · place gardée", color = theme.secondary, fontSize = 10.sp, maxLines = 2,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center, lineHeight = 12.sp)
+            member.syncMs != null && !member.me -> Text(member.syncMs.toString() + " ms", localize = false, color = theme.secondary, fontSize = 10.sp)
+        }
     }
 }
 
